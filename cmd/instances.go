@@ -362,24 +362,36 @@ in swift/localfs but not couchdb.
 	},
 }
 
+func appOrKonnectorTokenInstance(cmd *cobra.Command, args []string, appType string) error {
+	if len(args) < 2 {
+		return cmd.Usage()
+	}
+	c := newAdminClient()
+	token, err := c.GetToken(&client.TokenOptions{
+		Domain:   args[0],
+		Subject:  args[1],
+		Audience: appType,
+	})
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Println(token)
+	return err
+}
+
 var appTokenInstanceCmd = &cobra.Command{
 	Use:   "token-app [domain] [slug]",
 	Short: "Generate a new application token",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) < 2 {
-			return cmd.Usage()
-		}
-		c := newAdminClient()
-		token, err := c.GetToken(&client.TokenOptions{
-			Domain:   args[0],
-			Subject:  args[1],
-			Audience: "app",
-		})
-		if err != nil {
-			return err
-		}
-		_, err = fmt.Println(token)
-		return err
+		return appOrKonnectorTokenInstance(cmd, args, "app")
+	},
+}
+
+var konnectorTokenInstanceCmd = &cobra.Command{
+	Use:   "token-konnector [domain] [slug]",
+	Short: "Generate a new konnector token",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return appOrKonnectorTokenInstance(cmd, args, "konn")
 	},
 }
 
@@ -547,6 +559,7 @@ func init() {
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
 	instanceCmdGroup.AddCommand(fsckInstanceCmd)
 	instanceCmdGroup.AddCommand(appTokenInstanceCmd)
+	instanceCmdGroup.AddCommand(konnectorTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(cliTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthRefreshTokenInstanceCmd)
