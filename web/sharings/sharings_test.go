@@ -40,7 +40,7 @@ var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
 var bobContact *contacts.Contact
-var sharingID string
+var sharingID, state, clientID string
 
 // Things that live on Bob's Cozy
 var tsB *httptest.Server
@@ -48,8 +48,7 @@ var bobInstance *instance.Instance
 
 // Bob's browser
 var bobUA *http.Client
-var discoveryLink string
-var authorizeLink string
+var discoveryLink, authorizeLink string
 var csrfToken string
 
 func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
@@ -77,7 +76,7 @@ func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
 	assert.Equal(t, owner["status"], "owner")
 	assert.Equal(t, owner["name"], "Alice")
 	assert.Equal(t, owner["email"], "alice@example.net")
-	assert.Equal(t, owner["instance"], aliceInstance.Domain)
+	assert.Equal(t, owner["instance"], "https://"+aliceInstance.Domain)
 	recipient := members[1].(map[string]interface{})
 	assert.Equal(t, recipient["status"], "mail-not-sent")
 	assert.Equal(t, recipient["name"], "Bob")
@@ -172,6 +171,7 @@ func assertOAuthClientHasBeenRegistered(t *testing.T) {
 	assert.Equal(t, client["client_name"], "Alice")
 	assert.Equal(t, client["client_kind"], "sharing")
 	assert.Equal(t, client["client_uri"], "https://"+aliceInstance.Domain)
+	clientID = client["_id"].(string)
 }
 
 func assertSharingRequestHasBeenCreated(t *testing.T) {
@@ -192,7 +192,7 @@ func assertSharingRequestHasBeenCreated(t *testing.T) {
 	assert.Equal(t, owner.Status, "owner")
 	assert.Equal(t, owner.Name, "Alice")
 	assert.Equal(t, owner.Email, "alice@example.net")
-	assert.Equal(t, owner.Instance, aliceInstance.Domain)
+	assert.Equal(t, owner.Instance, "https://"+aliceInstance.Domain)
 	recipient := s.Members[1]
 	assert.Equal(t, recipient.Status, "mail-not-sent")
 	assert.Equal(t, recipient.Name, "Bob")
@@ -212,7 +212,7 @@ func TestDiscovery(t *testing.T) {
 	assert.NoError(t, err)
 	u.Scheme = parts[0]
 	u.Host = parts[1]
-	state := u.Query()["state"][0]
+	state = u.Query()["state"][0]
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	assert.NoError(t, err)
 	res, err := bobUA.Do(req)
@@ -266,6 +266,21 @@ func bobLogin(t *testing.T) {
 	assert.Contains(t, res.Header.Get("Location"), "drive")
 }
 
+func assertAuthorizePageShowsTheSharing(t *testing.T, body string) {
+	assert.Contains(t, body, "would like to share the following data with you")
+	assert.Contains(t, body, `<input type="hidden" name="client_id" value="`+clientID)
+	assert.Contains(t, body, `<input type="hidden" name="sharing_id" value="`+sharingID)
+	assert.Contains(t, body, `<input type="hidden" name="state" value="`+state)
+	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
+	matches := re.FindStringSubmatch(body)
+	if assert.Len(t, matches, 2) {
+		csrfToken = matches[1]
+	}
+	assert.Contains(t, body, `<li class="io.cozy.tests">test one</li>`)
+	assert.Contains(t, body, `<li>Your Cozy: `+bobInstance.Domain+`</li>`)
+	assert.Contains(t, body, `<li>Your contact&#39;s Cozy: `+aliceInstance.Domain+`</li>`)
+}
+
 func TestAuthorizeSharing(t *testing.T) {
 	bobLogin(t)
 
@@ -275,12 +290,8 @@ func TestAuthorizeSharing(t *testing.T) {
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), "would like to share the following data with you")
-	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
-	matches := re.FindStringSubmatch(string(body))
-	if assert.Len(t, matches, 2) {
-		csrfToken = matches[1]
-	}
+
+	assertAuthorizePageShowsTheSharing(t, string(body))
 }
 
 func TestMain(m *testing.M) {

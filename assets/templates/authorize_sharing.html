@@ -19,27 +19,24 @@
           <form method="POST" action="/auth/sharing/authorize" class="login auth">
             <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
             <input type="hidden" name="client_id" value="{{.Client.ClientID}}" />
+            <input type="hidden" name="sharing_id" value="{{.Sharing.SID}}" />
             <input type="hidden" name="state" value="{{.State}}" />
-            <input type="hidden" name="scope" value="{{.Scope}}" />
             <div role="region">
               <h1>{{t "Authorize Sharing Title" .Client.ClientName}}</h1>
-              {{if .Client.LogoURI}}
-              <img class="client-logo" src="{{.Client.LogoURI}}" />
-              {{end}}
               <p class="help">
-                {{t "Authorize Sharing Request" .Client.ClientName}}
+                {{- t "Authorize Sharing Request" .Client.ClientName -}}
               </p>
               <ul class="perm-list">
-                {{range $index, $perm := .Permissions}}
-                <li class="{{ $perm.Type }}">
-                  {{- t $perm.TranslationKey -}}
+                {{range $index, $rule := .Sharing.Rules}}
+                <li class="{{ $rule.DocType }}">
+                  {{- $rule.Title -}}
                 </li>
                 {{end}}
               </ul>
               <p>
                 {{t "Authorize Sharing Permission start"}}
                 <strong>
-                  {{- if .ReadOnly}}
+                  {{- if .Sharing.ReadOnly}}
                     {{t "Authorize Sharing Permission readonly"}}
                   {{else}}
                     {{t "Authorize Sharing Permission readwrite"}}
@@ -47,21 +44,17 @@
                 </strong>
                 {{t "Authorize Sharing Permission end"}}
               </p>
-              <p>
-                {{t "Authorize Sharing Sync"}}
-              </p>
+              <p>{{t "Authorize Sharing Sync"}}</p>
               <ul>
-                <li>
-                  {{t "Authorize Sharing Self" .Domain}}
-                </li>
-                <li>
-                  {{t "Authorize Sharing Client" .ClientDomain}}
-                </li>
+                <li>{{t "Authorize Sharing Self" .Domain}}</li>
+                <li>{{t "Authorize Sharing Client" .SharerDomain}}</li>
               </ul>
             </div>
             <footer>
               <div class="controls">
-                <button type="submit" class="btn btn-primary">{{t "Authorize Submit Sharing"}}</button>
+                <button type="submit" class="btn btn-primary">
+                  {{- t "Authorize Submit Sharing" -}}
+                </button>
               </div>
             </footer>
           </form>

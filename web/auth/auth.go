@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
@@ -674,6 +675,7 @@ func authorizeSharingForm(c echo.Context) error {
 	if hasError, err := checkAuthorizeSharingParams(c, &params); hasError {
 		return err
 	}
+	params.client.ClientID = params.clientID
 
 	if !middlewares.IsLoggedIn(c) {
 		u := instance.PageURL("/auth/login", url.Values{
@@ -682,37 +684,43 @@ func authorizeSharingForm(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, u)
 	}
 
-	// TODO load sharing, parse rules and readonly
-	params.client.ClientID = params.client.CouchID
-
-	var clientDomain string
-	clientURL, err := url.Parse(params.client.ClientURI)
+	s, err := sharing.FindSharing(instance, params.sharingID)
 	if err != nil {
-		clientDomain = params.client.ClientURI
+		return err
+	}
+	if s.Owner || s.Active || len(s.Members) < 2 {
+		return sharing.ErrInvalidSharing
+	}
+
+	var sharerDomain string
+	sharerURL, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		sharerDomain = s.Members[0].Instance
 	} else {
-		clientDomain = clientURL.Hostname()
+		sharerDomain = sharerURL.Host
 	}
 
 	return c.Render(http.StatusOK, "authorize_sharing.html", echo.Map{
-		"Domain":       instance.Domain,
-		"ClientDomain": clientDomain,
 		"Locale":       instance.Locale,
+		"Domain":       instance.Domain,
+		"SharerDomain": sharerDomain,
 		"Client":       params.client,
 		"State":        params.state,
+		"Sharing":      s,
 		"CSRF":         c.Get("csrf"),
 	})
 }
 
 func authorizeSharing(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	params := authorizeParams{
-		instance: instance,
-		state:    c.FormValue("state"),
-		clientID: c.FormValue("client_id"),
-		scope:    c.FormValue("scope"),
+	params := authorizeSharingParams{
+		instance:  instance,
+		state:     c.QueryParam("state"),
+		clientID:  c.QueryParam("client_id"),
+		sharingID: c.QueryParam("sharing_id"),
 	}
 
-	if hasError, err := checkAuthorizeParams(c, &params); hasError {
+	if hasError, err := checkAuthorizeSharingParams(c, &params); hasError {
 		return err
 	}
 
@@ -721,19 +729,6 @@ func authorizeSharing(c echo.Context) error {
 			"Domain": instance.Domain,
 			"Error":  "Error Must be authenticated",
 		})
-	}
-
-	_, err := url.ParseRequestURI(params.redirectURI)
-	if err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": instance.Domain,
-			"Error":  "Error Invalid redirect_uri",
-		})
-	}
-
-	_, err = oauth.CreateAccessCode(params.instance, params.clientID, params.scope)
-	if err != nil {
-		return err
 	}
 
 	return errors.New("Not implemented") // TODO

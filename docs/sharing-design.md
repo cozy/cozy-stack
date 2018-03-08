@@ -223,7 +223,8 @@ Else, we restore the trashed parent.
   * `false` if only the owner can add a new recipient
 * Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`)
 * A list of sharing `rules`, each rule being composed of:
-  * a `title`
+  * a `title`, that will be displayed to the recipients before they accept the
+    sharing
   * a `doctype`
   * a `selector` (by default, it’s the `id`) and `values` (one identifier, a
     list of identifiers, files and folders inside a folder, files that are

@@ -126,6 +126,17 @@ func (s *Sharing) Clone() couchdb.Doc {
 	return &cloned
 }
 
+// ReadOnly returns true only if the rules forbid that a change on the
+// recipients' cozy instances can be propagated to the sharer's cozy.
+func (s *Sharing) ReadOnly() bool {
+	for _, rule := range s.Rules {
+		if rule.Add == "sync" || rule.Update == "sync" || rule.Remove == "sync" {
+			return false
+		}
+	}
+	return true
+}
+
 // BeOwner is a function that setup a sharing on the cozy of its owner
 func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 	s.Active = true
@@ -149,7 +160,7 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 	s.Members[0].Status = MemberStatusOwner
 	s.Members[0].Name = name
 	s.Members[0].Email = email
-	s.Members[0].Instance = inst.Domain
+	s.Members[0].Instance = inst.PageURL("", nil)
 
 	return nil
 }
