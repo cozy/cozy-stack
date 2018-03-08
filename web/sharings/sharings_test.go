@@ -184,15 +184,17 @@ func TestGetSharing(t *testing.T) {
 
 func assertOAuthClientHasBeenRegistered(t *testing.T) string {
 	var results []map[string]interface{}
-	req := couchdb.AllDocsRequest{Descending: true, Limit: 1}
+	req := couchdb.AllDocsRequest{}
 	err := couchdb.GetAllDocs(bobInstance, consts.OAuthClients, &req, &results)
 	assert.NoError(t, err)
-	assert.Len(t, results, 1)
-	client := results[0]
-	assert.Equal(t, client["client_kind"], "sharing")
-	assert.Equal(t, client["client_uri"], "https://"+aliceInstance.Domain)
-	clientID = client["_id"].(string)
-	return client["client_name"].(string)
+	if assert.True(t, len(results) > 0) {
+		client := results[len(results)-1]
+		assert.Equal(t, client["client_kind"], "sharing")
+		assert.Equal(t, client["client_uri"], "https://"+aliceInstance.Domain)
+		clientID = client["_id"].(string)
+		return client["client_name"].(string)
+	}
+	return ""
 }
 
 func assertSharingRequestHasBeenCreated(t *testing.T) {
