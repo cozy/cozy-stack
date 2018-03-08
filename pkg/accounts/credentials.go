@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"golang.org/x/crypto/nacl/box"
 )
 
@@ -62,7 +63,12 @@ func DecryptCredentials(encryptedCreds []byte) (login, password string, err erro
 	if decryptorKey == nil {
 		return "", "", errCannotDecrypt
 	}
+	return DecryptCredentialsWithKey(decryptorKey, encryptedCreds)
+}
 
+// DecryptCredentialsWithKey takes an encrypted credentials, constiting of a
+// login / password pair, and decrypts it using the given private key.
+func DecryptCredentialsWithKey(decryptorKey *keymgmt.NACLKey, encryptedCreds []byte) (login, password string, err error) {
 	// check the cipher text starts with the cipher header
 	if !bytes.HasPrefix(encryptedCreds, []byte(cipherHeader)) {
 		return "", "", errBadCredentials
