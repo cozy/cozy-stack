@@ -31,7 +31,7 @@ func CreateSharing(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
-	if err := s.BeOwner(inst, slug); err != nil {
+	if err = s.BeOwner(inst, slug); err != nil {
 		return wrapErrors(err)
 	}
 
@@ -39,7 +39,7 @@ func CreateSharing(c echo.Context) error {
 		if data, ok := rel.Data.([]interface{}); ok {
 			for _, ref := range data {
 				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-					if err := s.AddContact(inst, id); err != nil {
+					if err = s.AddContact(inst, id); err != nil {
 						return err
 					}
 				}
@@ -47,13 +47,16 @@ func CreateSharing(c echo.Context) error {
 		}
 	}
 
-	if err := s.Create(inst); err != nil {
+	if err = s.Create(inst); err != nil {
 		return wrapErrors(err)
 	}
 	if err = s.SendMails(inst); err != nil {
 		return wrapErrors(err)
 	}
-	as := &sharing.APISharing{&s, nil}
+	as := &sharing.APISharing{
+		Sharing:     &s,
+		Credentials: nil,
+	}
 	return jsonapi.Data(c, http.StatusCreated, as, nil)
 }
 
@@ -71,7 +74,10 @@ func PutSharing(c echo.Context) error {
 	if err := s.CreateRequest(inst); err != nil {
 		return wrapErrors(err)
 	}
-	as := &sharing.APISharing{&s, nil}
+	as := &sharing.APISharing{
+		Sharing:     &s,
+		Credentials: nil,
+	}
 	return jsonapi.Data(c, http.StatusCreated, as, nil)
 }
 
@@ -139,11 +145,14 @@ func PostDiscovery(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	if err := s.RegisterCozyURL(inst, member, u); err != nil {
+	if err = s.RegisterCozyURL(inst, member, u); err != nil {
 		return wrapErrors(err)
 	}
 
 	redirectURL, err := member.GenerateOAuthURL(s)
+	if err != nil {
+		return wrapErrors(err)
+	}
 	if c.Request().Header.Get("Accept") == "application/json" {
 		return c.JSON(http.StatusOK, echo.Map{
 			"redirect": redirectURL,
