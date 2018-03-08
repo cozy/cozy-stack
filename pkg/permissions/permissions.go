@@ -30,20 +30,24 @@ const (
 	// allowed by registerToken
 	TypeRegister = "register"
 
-	// TypeWebapp if the value of Permission.Type for an application
+	// TypeWebapp is the value of Permission.Type for an application
 	TypeWebapp = "app"
 
-	// TypeKonnector if the value of Permission.Type for an application
+	// TypeKonnector is the value of Permission.Type for an application
 	TypeKonnector = "konnector"
 
-	// TypeOauth if the value of Permission.Type for a oauth permission doc
+	// TypeOauth is the value of Permission.Type for a oauth permission doc
 	TypeOauth = "oauth"
 
-	// TypeCLI if the value of Permission.Type for a command-line permission doc
+	// TypeCLI is the value of Permission.Type for a command-line permission doc
 	TypeCLI = "cli"
 
-	// TypeShareByLink if the value of Permission.Type for a share (by link) permission doc
+	// TypeShareByLink is the value of Permission.Type for a share (by link) permission doc
 	TypeShareByLink = "share"
+
+	// TypeSharePreview is the value of Permission.Type to preview a
+	// cozy-to-cozy sharing
+	TypeSharePreview = "share-preview"
 )
 
 // ID implements jsonapi.Doc
@@ -175,6 +179,11 @@ func GetForWebapp(db couchdb.Database, slug string) (*Permission, error) {
 // GetForKonnector retrieves the Permission doc for a given konnector
 func GetForKonnector(db couchdb.Database, slug string) (*Permission, error) {
 	return getFromSource(db, TypeKonnector, consts.Konnectors, slug)
+}
+
+// GetForSharePreview retrieves the Permission doc for a given sharing preview
+func GetForSharePreview(db couchdb.Database, sharingID string) (*Permission, error) {
+	return getFromSource(db, TypeSharePreview, consts.Sharings, sharingID)
 }
 
 func getFromSource(db couchdb.Database, permType, docType, slug string) (*Permission, error) {
@@ -341,6 +350,21 @@ func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]st
 		return nil, err
 	}
 
+	return doc, nil
+}
+
+// CreateSharePreviewSet creates a Permission doc for previewing a sharing
+func CreateSharePreviewSet(db couchdb.Database, sharingID string, codes map[string]string, set Set) (*Permission, error) {
+	doc := &Permission{
+		Type:        TypeSharePreview,
+		Permissions: set,
+		Codes:       codes,
+		SourceID:    consts.Sharings + "/" + sharingID,
+	}
+	err := couchdb.CreateDoc(db, doc)
+	if err != nil {
+		return nil, err
+	}
 	return doc, nil
 }
 

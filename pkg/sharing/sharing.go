@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
@@ -144,6 +145,9 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 	if s.AppSlug == "" {
 		s.AppSlug = slug
 	}
+	if s.AppSlug == "" {
+		s.PreviewPath = ""
+	}
 	s.CreatedAt = time.Now()
 	s.UpdatedAt = s.CreatedAt
 
@@ -190,23 +194,57 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 	return nil
 }
 
+// CreatePreviewPermissions creates the permissions doc for previewing this sharing
+func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]string, error) {
+	codes := make(map[string]string, len(s.Members)-1)
+	for i, m := range s.Members {
+		if i == 0 {
+			continue
+		}
+		var err error
+		codes[m.Email], err = inst.CreateShareCode(m.Email)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	set := make(permissions.Set, len(s.Rules))
+	getVerb := permissions.VerbSplit("GET")
+	for i, rule := range s.Rules {
+		set[i] = permissions.Rule{
+			Type:     rule.DocType,
+			Title:    rule.Title,
+			Verbs:    getVerb,
+			Selector: rule.Selector,
+			Values:   rule.Values,
+		}
+	}
+
+	_, err := permissions.CreateSharePreviewSet(inst, s.SID, codes, set)
+	if err != nil {
+		return nil, err
+	}
+	return codes, nil
+}
+
 // Create checks that the sharing is OK and it persists it in CouchDB if it is the case.
-func (s *Sharing) Create(inst *instance.Instance) error {
+func (s *Sharing) Create(inst *instance.Instance) (map[string]string, error) {
 	// TODO validate the doctype of each rule
 	if len(s.Rules) == 0 {
-		return ErrNoRules
+		return nil, ErrNoRules
 	}
 	if len(s.Members) < 2 {
-		return ErrNoRecipients
+		return nil, ErrNoRecipients
 	}
 
 	if err := couchdb.CreateDoc(inst, s); err != nil {
-		return err
+		return nil, err
 	}
-	if s.Owner && s.AppSlug != "" && s.PreviewPath != "" {
-		// TODO create the permissions set for preview
+
+	if s.Owner && s.PreviewPath != "" {
+		return s.CreatePreviewPermissions(inst)
 	}
-	return nil
+	return nil, nil
 }
 
 // CreateRequest prepares a sharing as just a request that the user will have to
@@ -251,6 +289,31 @@ func (s *Sharing) FindMemberByState(db couchdb.Database, state string) (*Member,
 				return nil, ErrInvalidSharing
 			}
 			return &s.Members[i+1], nil
+		}
+	}
+	return nil, ErrMemberNotFound
+}
+
+// FindMemberBySharecode returns the member that is linked to the sharing by
+// the given sharecode
+func (s *Sharing) FindMemberBySharecode(db couchdb.Database, sharecode string) (*Member, error) {
+	if !s.Owner {
+		return nil, ErrInvalidSharing
+	}
+	perms, err := permissions.GetForSharePreview(db, s.SID)
+	if err != nil {
+		return nil, err
+	}
+	var email string
+	for e, code := range perms.Codes {
+		if code == sharecode {
+			email = e
+			break
+		}
+	}
+	for i, m := range s.Members {
+		if m.Email == email {
+			return &s.Members[i], nil
 		}
 	}
 	return nil, ErrMemberNotFound

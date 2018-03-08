@@ -22,7 +22,7 @@ type MailTemplateValues struct {
 
 // SendMails sends invitation mails to the recipients that were in the
 // mail-not-sent status
-func (s *Sharing) SendMails(inst *instance.Instance) error {
+func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) error {
 	if !s.Owner {
 		return ErrInvalidSharing
 	}
@@ -43,7 +43,7 @@ func (s *Sharing) SendMails(inst *instance.Instance) error {
 		if i == 0 || m.Status != MemberStatusMailNotSent { //i == 0 is for the owner
 			continue
 		}
-		link := m.MailLink(inst, s, &s.Credentials[i-1])
+		link := m.MailLink(inst, s, &s.Credentials[i-1], codes)
 		if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
 			inst.Logger().Errorf("[sharing] Can't send email for %#v: %s", m.Email, err)
 			return ErrMailNotSent
@@ -56,8 +56,16 @@ func (s *Sharing) SendMails(inst *instance.Instance) error {
 
 // MailLink generates an HTTP link where the recipient can start the process of
 // accepting the sharing
-func (m *Member) MailLink(inst *instance.Instance, s *Sharing, creds *Credentials) string {
-	// TODO link for preview
+func (m *Member) MailLink(inst *instance.Instance, s *Sharing, creds *Credentials, codes map[string]string) string {
+	if s.Owner && s.PreviewPath != "" && codes != nil {
+		if code, ok := codes[m.Email]; ok {
+			u := inst.SubDomain(s.AppSlug)
+			u.Path = s.PreviewPath
+			u.RawQuery = url.Values{"sharecode": {code}}.Encode()
+			return u.String()
+		}
+	}
+
 	query := url.Values{"state": {creds.State}}
 	path := fmt.Sprintf("/sharings/%s/discovery", s.SID)
 	return inst.PageURL(path, query)

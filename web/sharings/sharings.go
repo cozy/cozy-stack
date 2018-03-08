@@ -47,10 +47,11 @@ func CreateSharing(c echo.Context) error {
 		}
 	}
 
-	if err = s.Create(inst); err != nil {
+	codes, err := s.Create(inst)
+	if err != nil {
 		return wrapErrors(err)
 	}
-	if err = s.SendMails(inst); err != nil {
+	if err = s.SendMails(inst, codes); err != nil {
 		return wrapErrors(err)
 	}
 	as := &sharing.APISharing{
@@ -129,6 +130,7 @@ func PostDiscovery(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
 	state := c.FormValue("state")
+	sharecode := c.FormValue("sharecode")
 	cozyURL := c.FormValue("url")
 
 	s, err := sharing.FindSharing(inst, sharingID)
@@ -136,10 +138,17 @@ func PostDiscovery(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	// TODO find member by sharecode (preview)
-	member, err := s.FindMemberByState(inst, state)
-	if err != nil {
-		return wrapErrors(err)
+	var member *sharing.Member
+	if sharecode != "" {
+		member, err = s.FindMemberBySharecode(inst, sharecode)
+		if err != nil {
+			return wrapErrors(err)
+		}
+	} else {
+		member, err = s.FindMemberByState(inst, state)
+		if err != nil {
+			return wrapErrors(err)
+		}
 	}
 	u, err := url.Parse(strings.TrimSpace(cozyURL))
 	if err != nil {
