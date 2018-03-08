@@ -270,6 +270,14 @@ func (sfs *swiftVFSV2) DestroyDirContent(doc *vfs.DirDoc) error {
 		objNames[i] = MakeObjectName(id)
 	}
 	_, err = sfs.c.BulkDelete(sfs.container, objNames)
+	if err == swift.Forbidden {
+		err = nil
+		for _, objName := range objNames {
+			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil {
+				err = errd
+			}
+		}
+	}
 	return err
 }
 
@@ -287,6 +295,14 @@ func (sfs *swiftVFSV2) DestroyDirAndContent(doc *vfs.DirDoc) error {
 		objNames[i] = MakeObjectName(id)
 	}
 	_, err = sfs.c.BulkDelete(sfs.container, objNames)
+	if err == swift.Forbidden {
+		err = nil
+		for _, objName := range objNames {
+			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil {
+				err = errd
+			}
+		}
+	}
 	return err
 }
 
