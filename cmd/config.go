@@ -2,13 +2,16 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 
+	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
@@ -161,6 +164,42 @@ keyfiles written in:
 	},
 }
 
+var decryptCredentialsCmd = &cobra.Command{
+	Use:     "decrypt-creds [keyfile] [ciphertext]",
+	Aliases: []string{"decrypt-credentials"},
+	Short:   "Decrypt the given credentials cipher text with the specified decryption keyfile.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 2 {
+			return cmd.Usage()
+		}
+
+		keyBytes, err := ioutil.ReadFile(args[0])
+		if err != nil {
+			return err
+		}
+		credsDecryptor, err := keymgmt.UnmarshalNACLKey(keyBytes)
+		if err != nil {
+			return err
+		}
+
+		credentialsEncrypted, err := base64.StdEncoding.DecodeString(args[1])
+		if err != nil {
+			return fmt.Errorf("Cipher text is not properly base64 encoded: %s", err)
+		}
+
+		login, password, err := accounts.DecryptCredentialsWithKey(credsDecryptor, credentialsEncrypted)
+		if err != nil {
+			return fmt.Errorf("Could not decrypt cipher text: %s", err)
+		}
+
+		fmt.Printf(`Decrypted credentials:
+login:    %q
+password: %q
+`, login, password)
+		return nil
+	},
+}
+
 func writeFile(filename string, data []byte, perm os.FileMode) error {
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)
 	if err != nil {
@@ -180,5 +219,6 @@ func init() {
 	configCmdGroup.AddCommand(configPrintCmd)
 	configCmdGroup.AddCommand(adminPasswdCmd)
 	configCmdGroup.AddCommand(genKeysCmd)
+	configCmdGroup.AddCommand(decryptCredentialsCmd)
 	RootCmd.AddCommand(configCmdGroup)
 }
