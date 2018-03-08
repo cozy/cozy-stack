@@ -5,7 +5,6 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -715,9 +714,9 @@ func authorizeSharing(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	params := authorizeSharingParams{
 		instance:  instance,
-		state:     c.QueryParam("state"),
-		clientID:  c.QueryParam("client_id"),
-		sharingID: c.QueryParam("sharing_id"),
+		state:     c.FormValue("state"),
+		clientID:  c.FormValue("client_id"),
+		sharingID: c.FormValue("sharing_id"),
 	}
 
 	if hasError, err := checkAuthorizeSharingParams(c, &params); hasError {
@@ -731,7 +730,15 @@ func authorizeSharing(c echo.Context) error {
 		})
 	}
 
-	return errors.New("Not implemented") // TODO
+	s, err := sharing.FindSharing(instance, params.sharingID)
+	if err != nil {
+		return err
+	}
+	if s.Owner || s.Active || len(s.Members) < 2 {
+		return sharing.ErrInvalidSharing
+	}
+
+	return c.Redirect(http.StatusSeeOther, instance.DefaultRedirection().String())
 }
 
 func authorizeAppForm(c echo.Context) error {

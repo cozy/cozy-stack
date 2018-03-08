@@ -292,6 +292,23 @@ func TestAuthorizeSharing(t *testing.T) {
 	body, _ := ioutil.ReadAll(res.Body)
 
 	assertAuthorizePageShowsTheSharing(t, string(body))
+
+	v := &url.Values{
+		"state":      {state},
+		"client_id":  {clientID},
+		"sharing_id": {sharingID},
+		"csrf_token": {csrfToken},
+	}
+	buf := bytes.NewBufferString(v.Encode())
+	req, err := http.NewRequest(http.MethodPost, tsB.URL+"/auth/authorize/sharing", buf)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	assert.NoError(t, err)
+	res, err = bobUA.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
+	location := res.Header.Get("Location")
+	assert.Contains(t, location, "drive."+bobInstance.Domain)
 }
 
 func TestMain(m *testing.M) {
