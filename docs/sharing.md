@@ -193,7 +193,14 @@ Location: https://bob.example.net/auth/sharing?...
 #### JSON
 
 This version can be more convenient for applications that implement the
-preview page.
+preview page. To do that, an application must give a `preview_path` when
+creating the sharing. This path must be a public route of this application.
+The recipients will receive a link to the application subdomain, on this page,
+and with a `sharecode` in the query string (like for a share by link).
+
+To know the `sharing-id`, it's possible to ask `GET /permissions/self`, with
+the `sharecode` in the `Authorization` header (it's a JWT token). In the
+response, the `source_id` field will be `io.cozy.sharings/<sharing-id>`.
 
 ##### Parameters
 
@@ -201,9 +208,6 @@ preview page.
 | --------- | ------------------------------------- |
 | sharecode | a code that identify the recipient    |
 | url       | the URL of the Cozy for the recipient |
-
-The sharecode is the same as the one used on the preview page to give the user
-the right to display the to-be-shared documents.
 
 ##### Example
 
