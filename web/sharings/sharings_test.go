@@ -51,6 +51,19 @@ var bobUA *http.Client
 var discoveryLink, authorizeLink string
 var csrfToken string
 
+func assertSharingByAliceToBob(t *testing.T, members []interface{}) {
+	assert.Len(t, members, 2)
+	owner := members[0].(map[string]interface{})
+	assert.Equal(t, owner["status"], "owner")
+	assert.Equal(t, owner["name"], "Alice")
+	assert.Equal(t, owner["email"], "alice@example.net")
+	assert.Equal(t, owner["instance"], "https://"+aliceInstance.Domain)
+	recipient := members[1].(map[string]interface{})
+	assert.Equal(t, recipient["status"], "mail-not-sent")
+	assert.Equal(t, recipient["name"], "Bob")
+	assert.Equal(t, recipient["email"], "bob@example.net")
+}
+
 func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
 	var result map[string]interface{}
 	assert.NoError(t, json.NewDecoder(body).Decode(&result))
@@ -71,16 +84,7 @@ func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
 	assert.Nil(t, attrs["credentials"])
 
 	members := attrs["members"].([]interface{})
-	assert.Len(t, members, 2)
-	owner := members[0].(map[string]interface{})
-	assert.Equal(t, owner["status"], "owner")
-	assert.Equal(t, owner["name"], "Alice")
-	assert.Equal(t, owner["email"], "alice@example.net")
-	assert.Equal(t, owner["instance"], "https://"+aliceInstance.Domain)
-	recipient := members[1].(map[string]interface{})
-	assert.Equal(t, recipient["status"], "mail-not-sent")
-	assert.Equal(t, recipient["name"], "Bob")
-	assert.Equal(t, recipient["email"], "bob@example.net")
+	assertSharingByAliceToBob(t, members)
 
 	rules := attrs["rules"].([]interface{})
 	assert.Len(t, rules, 1)
@@ -90,7 +94,7 @@ func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
 	assert.Equal(t, rule["values"], []interface{}{"foobar"})
 }
 
-func assertInvitationMailWasSent(t *testing.T) {
+func assertInvitationMailWasSent(t *testing.T) string {
 	var jobs []jobs.Job
 	couchReq := &couchdb.FindRequest{
 		UseIndex: "by-worker-and-state",
@@ -98,6 +102,9 @@ func assertInvitationMailWasSent(t *testing.T) {
 			mango.Equal("worker", "sendmail"),
 			mango.Exists("state"),
 		),
+		Sort: mango.SortBy{
+			mango.SortByField{Field: "worker", Direction: "desc"},
+		},
 		Limit: 1,
 	}
 	err := couchdb.FindDocs(aliceInstance, consts.Jobs, couchReq, &jobs)
@@ -111,9 +118,8 @@ func assertInvitationMailWasSent(t *testing.T) {
 	values := msg["template_values"].(map[string]interface{})
 	assert.Equal(t, values["RecipientName"], "Bob")
 	assert.Equal(t, values["SharerPublicName"], "Alice")
-	assert.Equal(t, values["Description"], "this is a test")
 	discoveryLink = values["SharingLink"].(string)
-	assert.Contains(t, discoveryLink, "/discovery?state=")
+	return values["Description"].(string)
 }
 
 func TestCreateSharingSuccess(t *testing.T) {
@@ -158,20 +164,22 @@ func TestCreateSharingSuccess(t *testing.T) {
 	defer res.Body.Close()
 
 	assertSharingIsCorrectOnSharer(t, res.Body)
-	assertInvitationMailWasSent(t)
+	description := assertInvitationMailWasSent(t)
+	assert.Equal(t, description, "this is a test")
+	assert.Contains(t, discoveryLink, "/discovery?state=")
 }
 
-func assertOAuthClientHasBeenRegistered(t *testing.T) {
+func assertOAuthClientHasBeenRegistered(t *testing.T) string {
 	var results []map[string]interface{}
-	req := couchdb.AllDocsRequest{}
+	req := couchdb.AllDocsRequest{Descending: true, Limit: 1}
 	err := couchdb.GetAllDocs(bobInstance, consts.OAuthClients, &req, &results)
 	assert.NoError(t, err)
 	assert.Len(t, results, 1)
 	client := results[0]
-	assert.Equal(t, client["client_name"], "Alice")
 	assert.Equal(t, client["client_kind"], "sharing")
 	assert.Equal(t, client["client_uri"], "https://"+aliceInstance.Domain)
 	clientID = client["_id"].(string)
+	return client["client_name"].(string)
 }
 
 func assertSharingRequestHasBeenCreated(t *testing.T) {
@@ -242,7 +250,8 @@ func TestDiscovery(t *testing.T) {
 	assert.Contains(t, authorizeLink, tsB.URL)
 	assert.Contains(t, authorizeLink, "/auth/authorize/sharing")
 
-	assertOAuthClientHasBeenRegistered(t)
+	clientName := assertOAuthClientHasBeenRegistered(t)
+	assert.Equal(t, clientName, "Alice")
 	assertSharingRequestHasBeenCreated(t)
 }
 
@@ -309,6 +318,127 @@ func TestAuthorizeSharing(t *testing.T) {
 	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
 	location := res.Header.Get("Location")
 	assert.Contains(t, location, "drive."+bobInstance.Domain)
+}
+
+func assertSharingWithPreviewIsCorrect(t *testing.T, body io.Reader) {
+	var result map[string]interface{}
+	assert.NoError(t, json.NewDecoder(body).Decode(&result))
+	data := result["data"].(map[string]interface{})
+	assert.Equal(t, data["type"], consts.Sharings)
+	sharingID = data["id"].(string)
+	assert.NotEmpty(t, sharingID)
+	assert.NotEmpty(t, data["meta"].(map[string]interface{})["rev"])
+	self := "/sharings/" + sharingID
+	assert.Equal(t, data["links"].(map[string]interface{})["self"], self)
+
+	attrs := data["attributes"].(map[string]interface{})
+	assert.Equal(t, attrs["description"], "this is a test with preview")
+	assert.Equal(t, attrs["app_slug"], "testapp")
+	assert.Equal(t, attrs["preview_path"], "/preview")
+	assert.Equal(t, attrs["owner"], true)
+	assert.NotEmpty(t, attrs["created_at"])
+	assert.NotEmpty(t, attrs["updated_at"])
+	assert.Nil(t, attrs["credentials"])
+
+	members := attrs["members"].([]interface{})
+	assertSharingByAliceToBob(t, members)
+
+	rules := attrs["rules"].([]interface{})
+	assert.Len(t, rules, 1)
+	rule := rules[0].(map[string]interface{})
+	assert.Equal(t, rule["title"], "test two")
+	assert.Equal(t, rule["doctype"], iocozytests)
+	assert.Equal(t, rule["values"], []interface{}{"foobaz"})
+}
+
+func TestCreateSharingWithPreview(t *testing.T) {
+	assert.NotEmpty(t, aliceAppToken)
+	assert.NotNil(t, bobContact)
+
+	v := echo.Map{
+		"data": echo.Map{
+			"type": consts.Sharings,
+			"attributes": echo.Map{
+				"description":  "this is a test with preview",
+				"preview_path": "/preview",
+				"rules": []interface{}{
+					echo.Map{
+						"title":   "test two",
+						"doctype": iocozytests,
+						"values":  []string{"foobaz"},
+					},
+				},
+			},
+			"relationships": echo.Map{
+				"recipients": echo.Map{
+					"data": []interface{}{
+						echo.Map{
+							"id":      bobContact.ID(),
+							"doctype": bobContact.DocType(),
+						},
+					},
+				},
+			},
+		},
+	}
+	body, _ := json.Marshal(v)
+	r := bytes.NewReader(body)
+
+	req, err := http.NewRequest(http.MethodPost, tsA.URL+"/sharings/", r)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
+	defer res.Body.Close()
+
+	assertSharingWithPreviewIsCorrect(t, res.Body)
+	description := assertInvitationMailWasSent(t)
+	assert.Equal(t, description, "this is a test with preview")
+	assert.Contains(t, discoveryLink, aliceInstance.Domain)
+	assert.Contains(t, discoveryLink, "/preview?sharecode=")
+}
+
+func assertCorrectRedirection(t *testing.T, body io.Reader) {
+	var result map[string]interface{}
+	assert.NoError(t, json.NewDecoder(body).Decode(&result))
+	redirectURI := result["redirect"]
+	assert.NotEmpty(t, redirectURI)
+	assert.Contains(t, redirectURI, tsB.URL)
+	u, err := url.Parse(redirectURI.(string))
+	assert.NoError(t, err)
+	assert.Equal(t, u.Path, "/auth/authorize/sharing")
+	assert.Equal(t, u.Query()["client_id"][0], clientID)
+	assert.Equal(t, u.Query()["sharing_id"][0], sharingID)
+	assert.NotEmpty(t, u.Query()["state"][0])
+}
+
+func TestDiscoveryWithPreview(t *testing.T) {
+	parts := strings.Split(tsA.URL, "://")
+	u, err := url.Parse(discoveryLink)
+	assert.NoError(t, err)
+	u.Scheme = parts[0]
+	u.Host = parts[1]
+	u.Path = "/sharings/" + sharingID + "/discovery"
+	sharecode := u.Query()["sharecode"][0]
+	u.RawQuery = ""
+	v := &url.Values{
+		"sharecode": {sharecode},
+		"url":       {tsB.URL},
+	}
+	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBufferString(v.Encode()))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Accept", "application/json")
+	assert.NoError(t, err)
+	res, err := bobUA.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	clientName := assertOAuthClientHasBeenRegistered(t)
+	assert.Equal(t, clientName, "Alice-2")
+	assertCorrectRedirection(t, res.Body)
 }
 
 func TestMain(m *testing.M) {
