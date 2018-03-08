@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -80,6 +81,26 @@ func PutSharing(c echo.Context) error {
 		Credentials: nil,
 	}
 	return jsonapi.Data(c, http.StatusCreated, as, nil)
+}
+
+// GetSharing returns the sharing document associated to the given sharingID.
+// The requester must have the permission on at least one doctype declared in
+// the sharing document.
+func GetSharing(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if err = checkGetPermissions(c, s); err != nil {
+		return wrapErrors(err)
+	}
+	as := &sharing.APISharing{
+		Sharing:     s,
+		Credentials: nil,
+	}
+	return jsonapi.Data(c, http.StatusOK, as, nil)
 }
 
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state string, m *sharing.Member) error {
@@ -175,6 +196,7 @@ func Routes(router *echo.Group) {
 	// Create a sharing
 	router.POST("/", CreateSharing)        // On the sharer
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
+	router.GET("/:sharing-id", GetSharing)
 
 	// Register the URL of their Cozy for recipients
 	router.GET("/:sharing-id/discovery", GetDiscovery)
@@ -218,6 +240,39 @@ func checkCreatePermissions(c echo.Context, s *sharing.Sharing) (string, error) 
 		return "", nil
 	}
 	return extractSlugFromSourceID(requestPerm.SourceID)
+}
+
+// checkGetPermissions checks the requester's token has at least one doctype
+// permission declared in the rules of the sharing document
+func checkGetPermissions(c echo.Context, s *sharing.Sharing) error {
+	requestPerm, err := perm.GetPermission(c)
+	if err != nil {
+		return err
+	}
+
+	// TODO add tests
+	if requestPerm.Type == permissions.TypeSharePreview &&
+		requestPerm.SourceID == consts.Sharings+"/"+s.SID {
+		return nil
+	}
+	if requestPerm.Type != permissions.TypeWebapp &&
+		requestPerm.Type != permissions.TypeOauth {
+		return permissions.ErrInvalidAudience
+	}
+
+	for _, r := range s.Rules {
+		pr := permissions.Rule{
+			Title:    r.Title,
+			Type:     r.DocType,
+			Verbs:    permissions.Verbs(permissions.GET),
+			Selector: r.Selector,
+			Values:   r.Values,
+		}
+		if requestPerm.Permissions.RuleInSubset(pr) {
+			return nil
+		}
+	}
+	return echo.NewHTTPError(http.StatusForbidden)
 }
 
 // wrapErrors returns a formatted error

@@ -169,6 +169,19 @@ func TestCreateSharingSuccess(t *testing.T) {
 	assert.Contains(t, discoveryLink, "/discovery?state=")
 }
 
+func TestGetSharing(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/"+sharingID, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	defer res.Body.Close()
+
+	assertSharingIsCorrectOnSharer(t, res.Body)
+}
+
 func assertOAuthClientHasBeenRegistered(t *testing.T) string {
 	var results []map[string]interface{}
 	req := couchdb.AllDocsRequest{Descending: true, Limit: 1}
