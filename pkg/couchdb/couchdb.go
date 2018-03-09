@@ -547,9 +547,14 @@ func UpdateDoc(db Database, doc Doc) error {
 
 // BulkUpdateDocs is used to update several docs in one call, as a bulk.
 func BulkUpdateDocs(db Database, doctype string, docs []interface{}) error {
+	if len(docs) == 0 {
+		return nil
+	}
 	body := struct {
 		Docs []interface{} `json:"docs"`
-	}{docs}
+	}{
+		Docs: docs,
+	}
 	var res []updateResponse
 	if err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
 		return err
@@ -561,6 +566,36 @@ func BulkUpdateDocs(db Database, doctype string, docs []interface{}) error {
 		if d, ok := doc.(Doc); ok {
 			d.SetRev(res[i].Rev)
 			rtevent(db, realtime.EventUpdate, d, nil)
+		}
+	}
+	return nil
+}
+
+// BulkDeleteDocs is used to delete serveral documents in one call.
+func BulkDeleteDocs(db Database, doctype string, docs []interface{}) error {
+	if len(docs) == 0 {
+		return nil
+	}
+	body := struct {
+		Docs []json.RawMessage `json:"docs"`
+	}{
+		Docs: make([]json.RawMessage, 0, len(docs)),
+	}
+	for _, doc := range docs {
+		if d, ok := doc.(Doc); ok {
+			body.Docs = append(body.Docs, json.RawMessage(
+				fmt.Sprintf(`{"_id":"%s","_rev":"%s","_deleted":true}`, d.ID(), d.Rev()),
+			))
+		}
+	}
+	var res []updateResponse
+	if err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
+		return err
+	}
+	for i, doc := range docs {
+		if d, ok := doc.(Doc); ok {
+			d.SetRev(res[i].Rev)
+			rtevent(db, realtime.EventDelete, d, nil)
 		}
 	}
 	return nil

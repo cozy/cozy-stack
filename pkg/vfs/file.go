@@ -286,6 +286,7 @@ func TrashFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if strings.HasPrefix(oldpath, TrashDirName) {
 		return nil, ErrFileInTrash
 	}
@@ -294,14 +295,16 @@ func TrashFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 	restorePath := path.Dir(oldpath)
 
 	var newdoc *FileDoc
-	tryOrUseSuffix(olddoc.DocName, conflictFormat, func(name string) error {
-		newdoc, err = ModifyFileMetadata(fs, olddoc, &DocPatch{
-			DirID:       &trashDirID,
-			RestorePath: &restorePath,
-			Name:        &name,
-		})
-		return err
+	err = tryOrUseSuffix(olddoc.DocName, conflictFormat, func(name string) error {
+		newdoc = olddoc.Clone().(*FileDoc)
+		newdoc.DirID = trashDirID
+		newdoc.RestorePath = restorePath
+		newdoc.DocName = name
+		newdoc.Trashed = true
+		newdoc.fullpath = path.Join(TrashDirName, name)
+		return fs.UpdateFileDoc(olddoc, newdoc)
 	})
+
 	return newdoc, err
 }
 
@@ -311,21 +314,25 @@ func RestoreFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	restoreDir, err := getRestoreDir(fs, oldpath, olddoc.RestorePath)
 	if err != nil {
 		return nil, err
 	}
-	var newdoc *FileDoc
-	var emptyStr string
+
 	name := stripSuffix(olddoc.DocName, conflictSuffix)
-	tryOrUseSuffix(name, "%s (%s)", func(name string) error {
-		newdoc, err = ModifyFileMetadata(fs, olddoc, &DocPatch{
-			DirID:       &restoreDir.DocID,
-			RestorePath: &emptyStr,
-			Name:        &name,
-		})
-		return err
+
+	var newdoc *FileDoc
+	err = tryOrUseSuffix(name, "%s (%s)", func(name string) error {
+		newdoc = olddoc.Clone().(*FileDoc)
+		newdoc.DirID = restoreDir.DocID
+		newdoc.RestorePath = ""
+		newdoc.DocName = name
+		newdoc.Trashed = false
+		newdoc.fullpath = path.Join(restoreDir.Fullpath, name)
+		return fs.UpdateFileDoc(olddoc, newdoc)
 	})
+
 	return newdoc, err
 }
 

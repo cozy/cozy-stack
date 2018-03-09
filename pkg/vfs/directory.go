@@ -228,27 +228,13 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 	return newdoc, nil
 }
 
-func setTrashedForFilesInsideDir(fs VFS, doc *DirDoc, trashed bool) error {
-	files := []*FileDoc{}
-	err := walk(fs, doc.Name(), doc, nil, func(name string, dir *DirDoc, file *FileDoc, err error) error {
-		if file != nil {
-			file.Trashed = trashed
-			files = append(files, file)
-		}
-		return err
-	}, 0)
-	if err != nil {
-		return err
-	}
-	return fs.UpdateFileDocs(files)
-}
-
 // TrashDir is used to delete a directory given its document
 func TrashDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 	oldpath, err := olddoc.Path(fs)
 	if err != nil {
 		return nil, err
 	}
+
 	if strings.HasPrefix(oldpath, TrashDirName) {
 		return nil, ErrFileInTrash
 	}
@@ -256,23 +242,18 @@ func TrashDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 	trashDirID := consts.TrashDirID
 	restorePath := path.Dir(oldpath)
 
-	if err = setTrashedForFilesInsideDir(fs, olddoc, true); err != nil {
-		return nil, err
-	}
-
 	var newdoc *DirDoc
-	tryOrUseSuffix(olddoc.DocName, conflictFormat, func(name string) error {
-		newdoc, err = ModifyDirMetadata(fs, olddoc, &DocPatch{
-			DirID:       &trashDirID,
-			RestorePath: &restorePath,
-			Name:        &name,
-		})
-		return err
+	err = tryOrUseSuffix(olddoc.DocName, conflictFormat, func(name string) error {
+		newdoc = olddoc.Clone().(*DirDoc)
+		newdoc.DirID = trashDirID
+		newdoc.RestorePath = restorePath
+		newdoc.DocName = name
+		newdoc.Fullpath = path.Join(TrashDirName, name)
+		return fs.UpdateDirDoc(olddoc, newdoc)
 	})
 	if err != nil {
 		return nil, err
 	}
-
 	return newdoc, nil
 }
 
@@ -282,27 +263,24 @@ func RestoreDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	restoreDir, err := getRestoreDir(fs, oldpath, olddoc.RestorePath)
 	if err != nil {
 		return nil, err
 	}
 
-	var newdoc *DirDoc
-	var emptyStr string
 	name := stripSuffix(olddoc.DocName, conflictSuffix)
-	tryOrUseSuffix(name, "%s (%s)", func(name string) error {
-		newdoc, err = ModifyDirMetadata(fs, olddoc, &DocPatch{
-			DirID:       &restoreDir.DocID,
-			RestorePath: &emptyStr,
-			Name:        &name,
-		})
-		return err
+
+	var newdoc *DirDoc
+	err = tryOrUseSuffix(name, "%s (%s)", func(name string) error {
+		newdoc = olddoc.Clone().(*DirDoc)
+		newdoc.DirID = restoreDir.DocID
+		newdoc.RestorePath = ""
+		newdoc.DocName = name
+		newdoc.Fullpath = path.Join(restoreDir.Fullpath, name)
+		return fs.UpdateDirDoc(olddoc, newdoc)
 	})
 	if err != nil {
-		return nil, err
-	}
-
-	if err := setTrashedForFilesInsideDir(fs, olddoc, false); err != nil {
 		return nil, err
 	}
 

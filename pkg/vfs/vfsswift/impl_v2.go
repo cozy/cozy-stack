@@ -21,7 +21,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/swift"
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 )
 
@@ -262,7 +261,24 @@ func (sfs *swiftVFSV2) DestroyDirContent(doc *vfs.DirDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	return sfs.destroyDirContent(doc)
+	ids, err := sfs.Indexer.DeleteDirDocAndContent(doc, true)
+	if err != nil {
+		return err
+	}
+	objNames := make([]string, len(ids))
+	for i, id := range ids {
+		objNames[i] = MakeObjectName(id)
+	}
+	_, err = sfs.c.BulkDelete(sfs.container, objNames)
+	if err == swift.Forbidden {
+		err = nil
+		for _, objName := range objNames {
+			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil {
+				err = errd
+			}
+		}
+	}
+	return err
 }
 
 func (sfs *swiftVFSV2) DestroyDirAndContent(doc *vfs.DirDoc) error {
@@ -270,7 +286,24 @@ func (sfs *swiftVFSV2) DestroyDirAndContent(doc *vfs.DirDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	return sfs.destroyDirAndContent(doc)
+	ids, err := sfs.Indexer.DeleteDirDocAndContent(doc, false)
+	if err != nil {
+		return err
+	}
+	objNames := make([]string, len(ids))
+	for i, id := range ids {
+		objNames[i] = MakeObjectName(id)
+	}
+	_, err = sfs.c.BulkDelete(sfs.container, objNames)
+	if err == swift.Forbidden {
+		err = nil
+		for _, objName := range objNames {
+			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil {
+				err = errd
+			}
+		}
+	}
+	return err
 }
 
 func (sfs *swiftVFSV2) DestroyFile(doc *vfs.FileDoc) error {
@@ -278,39 +311,6 @@ func (sfs *swiftVFSV2) DestroyFile(doc *vfs.FileDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	return sfs.destroyFile(doc)
-}
-
-func (sfs *swiftVFSV2) destroyDirContent(doc *vfs.DirDoc) (err error) {
-	iter := sfs.DirIterator(doc, nil)
-	for {
-		d, f, erri := iter.Next()
-		if erri == vfs.ErrIteratorDone {
-			return
-		}
-		if erri != nil {
-			return erri
-		}
-		var errd error
-		if d != nil {
-			errd = sfs.destroyDirAndContent(d)
-		} else {
-			errd = sfs.destroyFile(f)
-		}
-		if errd != nil {
-			err = multierror.Append(err, errd)
-		}
-	}
-}
-
-func (sfs *swiftVFSV2) destroyDirAndContent(doc *vfs.DirDoc) error {
-	if err := sfs.destroyDirContent(doc); err != nil {
-		return err
-	}
-	return sfs.Indexer.DeleteDirDoc(doc)
-}
-
-func (sfs *swiftVFSV2) destroyFile(doc *vfs.FileDoc) error {
 	return sfs.Indexer.DeleteFileDoc(doc)
 }
 
