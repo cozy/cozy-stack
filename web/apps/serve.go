@@ -213,15 +213,16 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	res.Header().Set("Cache-Control", "private, no-store, must-revalidate")
 	res.WriteHeader(http.StatusOK)
 	return tmpl.Execute(res, echo.Map{
-		"Token":        token,
-		"Domain":       i.Domain,
-		"Locale":       i.Locale,
-		"AppName":      app.Name,
-		"AppEditor":    app.Editor,
-		"IconPath":     app.Icon,
-		"CozyBar":      cozybar(i),
-		"CozyClientJS": cozyclientjs(i),
-		"Tracking":     tracking,
+		"Token":         token,
+		"Domain":        i.Domain,
+		"Locale":        i.Locale,
+		"AppName":       app.Name,
+		"AppEditor":     app.Editor,
+		"AppNamePrefix": app.NamePrefix,
+		"IconPath":      app.Icon,
+		"CozyBar":       cozybar(i),
+		"CozyClientJS":  cozyclientjs(i),
+		"Tracking":      tracking,
 	})
 }
 
