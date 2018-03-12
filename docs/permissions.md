@@ -223,7 +223,8 @@ via the `codes` parameter in the query string. These codes can then be sent to
 other people as a way to give these permissions (sharing by links). The
 parameter is comma separed list of values. The role of these values is to
 identify the codes if you want to revoke some of them later. A `ttl` parameter
-can also be given to make the codes expires after a delay.
+can also be given to make the codes expires after a delay ([bigduration
+format](https://github.com/justincampbell/bigduration/blob/master/README.md)).
 
 **Note**: it is only possible to create a strict subset of the permissions
 associated to the sent token.

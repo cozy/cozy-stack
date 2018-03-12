@@ -104,10 +104,11 @@ func createPermission(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "no parent")
 	}
 
-	var expiresAt interface{}
+	var expiresAt *time.Time
 	if ttl != "" {
-		if d, errd := bigduration.ParseDuration(ttl); errd != nil {
-			expiresAt = time.Now().Add(d)
+		if d, errd := bigduration.ParseDuration(ttl); errd == nil {
+			ex := time.Now().Add(d)
+			expiresAt = &ex
 		}
 	}
 
