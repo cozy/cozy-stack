@@ -31,7 +31,7 @@ adapt to your own system.
 docker run -it --rm --name cozy-stack \
     -v $(pwd):/go/src/github.com/cozy/cozy-stack \
     -v $(pwd):/go/bin \
-    golang:1.8 \
+    golang:1.10 \
     go get -v github.com/cozy/cozy-stack
 ```
 
