@@ -14,15 +14,13 @@ import (
 // Permission is a storable object containing a set of rules and
 // several codes
 type Permission struct {
-	PID         string `json:"_id,omitempty"`
-	PRev        string `json:"_rev,omitempty"`
-	Type        string `json:"type,omitempty"`
-	SourceID    string `json:"source_id,omitempty"`
-	Permissions Set    `json:"permissions,omitempty"`
-
-	// XXX omitempty does not work for time.Time, thus the interface{} type
-	ExpiresAt interface{}       `json:"expires_at,omitempty"`
-	Codes     map[string]string `json:"codes,omitempty"`
+	PID         string            `json:"_id,omitempty"`
+	PRev        string            `json:"_rev,omitempty"`
+	Type        string            `json:"type,omitempty"`
+	SourceID    string            `json:"source_id,omitempty"`
+	Permissions Set               `json:"permissions,omitempty"`
+	ExpiresAt   *time.Time        `json:"expires_at,omitempty"`
+	Codes       map[string]string `json:"codes,omitempty"`
 }
 
 const (
@@ -76,7 +74,7 @@ func (p *Permission) Expired() bool {
 	if p.ExpiresAt == nil {
 		return false
 	}
-	return p.ExpiresAt.(time.Time).Before(time.Now())
+	return p.ExpiresAt.Before(time.Now())
 }
 
 // AddRules add some rules to the permission doc
@@ -308,7 +306,7 @@ func updateAppSet(db couchdb.Database, doc *Permission, typ, docType, slug strin
 }
 
 // CreateShareSet creates a Permission doc for sharing by link
-func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set Set, expiresAt interface{}) (*Permission, error) {
+func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set Set, expiresAt *time.Time) (*Permission, error) {
 	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
 		return nil, ErrOnlyAppCanCreateSubSet
 	}
