@@ -39,5 +39,5 @@ $ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/
 
 ### SEE ALSO
 
-* [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the cozy applications
+* [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the applications
 

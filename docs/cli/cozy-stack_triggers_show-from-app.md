@@ -1,19 +1,19 @@
-## cozy-stack apps update
+## cozy-stack triggers show-from-app
 
-Update the application with the specified slug name.
+Show the application triggers
 
 ### Synopsis
 
-Update the application with the specified slug name.
+Show the application triggers
 
 ```
-cozy-stack apps update [slug] [sourceurl] [flags]
+cozy-stack triggers show-from-app [slug] [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for update
+  -h, --help   help for show-from-app
 ```
 
 ### Options inherited from parent commands
@@ -21,15 +21,13 @@ cozy-stack apps update [slug] [sourceurl] [flags]
 ```
       --admin-host string   administration server host (default "localhost")
       --admin-port int      administration server port (default 6060)
-      --all-domains         work on all domains iterativelly
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
-      --domain string       specify the domain name of the instance (default "cozy.tools:8080")
       --host string         server host (default "localhost")
   -p, --port int            server port (default 8080)
 ```
 
 ### SEE ALSO
 
-* [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the applications
+* [cozy-stack triggers](cozy-stack_triggers.md)	 - Interact with the triggers
 

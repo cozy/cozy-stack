@@ -1,6 +1,6 @@
 ## cozy-stack konnectors
 
-Interact with the cozy applications
+Interact with the konnectors
 
 ### Synopsis
 

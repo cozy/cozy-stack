@@ -32,5 +32,5 @@ cozy-stack konnectors update [slug] [sourceurl] [flags]
 
 ### SEE ALSO
 
-* [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the cozy applications
+* [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the konnectors
 

@@ -1,19 +1,19 @@
-## cozy-stack apps update
+## cozy-stack instances token-konnector
 
-Update the application with the specified slug name.
+Generate a new konnector token
 
 ### Synopsis
 
-Update the application with the specified slug name.
+Generate a new konnector token
 
 ```
-cozy-stack apps update [slug] [sourceurl] [flags]
+cozy-stack instances token-konnector [domain] [slug] [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for update
+  -h, --help   help for token-konnector
 ```
 
 ### Options inherited from parent commands
@@ -21,15 +21,13 @@ cozy-stack apps update [slug] [sourceurl] [flags]
 ```
       --admin-host string   administration server host (default "localhost")
       --admin-port int      administration server port (default 6060)
-      --all-domains         work on all domains iterativelly
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
-      --domain string       specify the domain name of the instance (default "cozy.tools:8080")
       --host string         server host (default "localhost")
   -p, --port int            server port (default 8080)
 ```
 
 ### SEE ALSO
 
-* [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the applications
+* [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

@@ -40,5 +40,5 @@ $ cozy-stack konnectors install --domain cozy.tools:8080 trainline 'git://github
 
 ### SEE ALSO
 
-* [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the cozy applications
+* [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the konnectors
 

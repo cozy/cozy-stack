@@ -53,6 +53,7 @@ cozy-stack instances [command] [flags]
 * [cozy-stack instances show](cozy-stack_instances_show.md)	 - Show the instance of the specified domain
 * [cozy-stack instances token-app](cozy-stack_instances_token-app.md)	 - Generate a new application token
 * [cozy-stack instances token-cli](cozy-stack_instances_token-cli.md)	 - Generate a new CLI access token (global access)
+* [cozy-stack instances token-konnector](cozy-stack_instances_token-konnector.md)	 - Generate a new konnector token
 * [cozy-stack instances token-oauth](cozy-stack_instances_token-oauth.md)	 - Generate a new OAuth access token
 * [cozy-stack instances update](cozy-stack_instances_update.md)	 - Start the updates for the specified domain instance.
 

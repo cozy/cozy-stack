@@ -31,5 +31,5 @@ cozy-stack apps show [slug] [flags]
 
 ### SEE ALSO
 
-* [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the cozy applications
+* [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the applications
 
