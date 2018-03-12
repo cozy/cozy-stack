@@ -212,17 +212,19 @@ Else, we restore the trashed parent.
 ### Description of a sharing
 
 * An identifier (the same for all members of the sharing)
-* An `owner` and a list of `recipients`. For each member (owner or recipient),
-  we have the URL of the cozy, a public name, a status and some credentials to
-  authorize the transfer of data between the owner and the recipients
+* A list of `members`. The first one is the owner. For each member,
+  we have the URL of the cozy, a public name, an email, a status and some
+  credentials to authorize the transfer of data between the owner and the
+  recipients
 * A `description` (one sentence that will help people understand what is shared
   and why)
-* Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`)
 * a flag `open_sharing`:
   * `true` if any member of the sharing can add a new recipient
   * `false` if only the owner can add a new recipient
+* Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`)
 * A list of sharing `rules`, each rule being composed of:
-  * a `name`
+  * a `title`, that will be displayed to the recipients before they accept the
+    sharing
   * a `doctype`
   * a `selector` (by default, it’s the `id`) and `values` (one identifier, a
     list of identifiers, files and folders inside a folder, files that are
@@ -230,13 +232,13 @@ Else, we restore the trashed parent.
   * `local`: by default `false`, but it can false `true` for documents that are
     useful for the preview page but doesn’t need to be send to the recipients
     (e.g. a setting document of the application)
-  * `edit`: a behavior when a document matched by this rule is modified. Can be:
-    * `none`: the updates are never propagated (the default)
-    * `push`: the updates made on the owner are sent to the recipients
-    * `sync`: the updates on any member are propagated to the other members
   * `add`: a behavior when a new document matches this rule (the document is
     created, or it was a document that didn’t match the rule and is modified and
     the new version matches the rule):
+    * `none`: the updates are never propagated (the default)
+    * `push`: the updates made on the owner are sent to the recipients
+    * `sync`: the updates on any member are propagated to the other members
+  * `update`: a behavior when a document matched by this rule is modified. Can be:
     * `none`: the updates are never propagated (the default)
     * `push`: the updates made on the owner are sent to the recipients
     * `sync`: the updates on any member are propagated to the other members
@@ -251,28 +253,28 @@ Else, we restore the trashed parent.
 #### Example: I want to share a folder in read/write mode
 
 * rule 1
-  * name: `folder`
+  * title: `folder`
   * doctype: `io.cozy.files`
   * values: `"ca527016-0d83-11e8-a580-3b965c80c7f7"`
-  * edit: `sync`
   * add: `sync`
+  * update: `sync`
   * remove: `sync`
 
 #### Example: I want to share a playlist where I’m the only one that can add and remove items
 
 * rule 1
-  * name: `playlist`
+  * title: `playlist`
   * doctype: `io.cozy.music.playlists`
   * values: `"99445b14-0d84-11e8-ae72-4b96fcbf0552"`
-  * edit: `none`
+  * update: `none`
   * remove: `revoke`
 * rule 2
-  * name: `items`
+  * title: `items`
   * doctype: `io.cozy.files`
   * selector: `referenced_by`
   * values: `"io.cozy.files/ca527016-0d83-11e8-a580-3b965c80c7f7"`
-  * edit: `none`
   * add: `push`
+  * update: `none`
   * remove: `push`
 
 ### `io.cozy.shared`

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+  <head>
+    <meta charset="utf-8">
+    <title>Cozy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css"}}">
+    <link rel="icon" type="image/png" href="{{asset .Domain "/images/happycloud.png"}}" />
+    <link rel="shortcut icon" type="image/x-icon" href="{{asset .Domain "/favicon.ico"}}">
+  </head>
+  <body>
+    <main role="application">
+      <section class="popup">
+        <header>
+          <a href="https://cozy.io" target="_blank" title="Cozy Website" class="shield"></a>
+        </header>
+        <div class="container">
+          <form method="POST" action="/auth/sharing/authorize" class="login auth">
+            <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+            <input type="hidden" name="client_id" value="{{.Client.ClientID}}" />
+            <input type="hidden" name="sharing_id" value="{{.Sharing.SID}}" />
+            <input type="hidden" name="state" value="{{.State}}" />
+            <div role="region">
+              <h1>{{t "Authorize Sharing Title" .Client.ClientName}}</h1>
+              <p class="help">
+                {{- t "Authorize Sharing Request" .Client.ClientName -}}
+              </p>
+              <ul class="perm-list">
+                {{range $index, $rule := .Sharing.Rules}}
+                <li class="{{ $rule.DocType }}">
+                  {{- $rule.Title -}}
+                </li>
+                {{end}}
+              </ul>
+              <p>
+                {{t "Authorize Sharing Permission start"}}
+                <strong>
+                  {{- if .Sharing.ReadOnly}}
+                    {{t "Authorize Sharing Permission readonly"}}
+                  {{else}}
+                    {{t "Authorize Sharing Permission readwrite"}}
+                  {{end -}}
+                </strong>
+                {{t "Authorize Sharing Permission end"}}
+              </p>
+              <p>{{t "Authorize Sharing Sync"}}</p>
+              <ul>
+                <li>{{t "Authorize Sharing Self" .Domain}}</li>
+                <li>{{t "Authorize Sharing Client" .SharerDomain}}</li>
+              </ul>
+            </div>
+            <footer>
+              <div class="controls">
+                <button type="submit" class="btn btn-primary">
+                  {{- t "Authorize Submit Sharing" -}}
+                </button>
+              </div>
+            </footer>
+          </form>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

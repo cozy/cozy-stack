@@ -48,7 +48,7 @@ Create a new sharing. The sharing rules and recipients must be specified. The
 
 ```http
 POST /sharings/ HTTP/1.1
-Host: cozy.example.net
+Host: alice.example.net
 Content-Type: application/vnd.api+json
 ```
 
@@ -61,7 +61,7 @@ Content-Type: application/vnd.api+json
       "preview_path": "/preview-sharing",
       "rules": [
         {
-          "title": "folder",
+          "title": "Hawaii",
           "doctype": "io.cozy.files",
           "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"],
           "add": "sync",
@@ -116,12 +116,12 @@ Content-Type: application/vnd.api+json
         {
           "status": "mail-not-sent",
           "name": "Bob",
-          "email": "bob@example.net",
-        },
+          "email": "bob@example.net"
+        }
       ],
       "rules": [
         {
-          "title": "folder",
+          "title": "Hawaii",
           "doctype": "io.cozy.files",
           "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"],
           "add": "sync",
@@ -136,5 +136,208 @@ Content-Type: application/vnd.api+json
   }
 }
 ```
+
+### GET /sharings/:sharing-id/discovery
+
+If no preview_path is set, it's an URL to this route that will be sent to the
+users to notify them that someone wants to share something with them. On this
+page, they can fill the URL of their Cozy (if the user has already filled its
+Cozy URL in a previous sharing, the form will be pre-filled and the user will
+just have to click OK).
+
+#### Query-String
+
+| Parameter | Description                        |
+| --------- | ---------------------------------- |
+| state     | a code that identify the recipient |
+
+#### Example
+
+```http
+GET /sharings/ce8835a061d0ef68947afe69a0046722/discovery?state=eiJ3iepoaihohz1Y HTTP/1.1
+Host: alice.example.net
+```
+
+### POST /sharings/:sharing-id/discovery
+
+Give to the cozy of the sharer the URL of the Cozy of one recipient. The sharer
+will register its-self as an OAuth client on the recipient cozy, and then will
+ask the recipient to accept the permissions on its instance.
+
+This route exists in two versions, the version is selected by the HTTP header
+`Accept`
+
+#### Classical (`x-www-url-encoded`)
+
+| Parameter | Description                           |
+| --------- | ------------------------------------- |
+| state     | a code that identify the recipient    |
+| url       | the URL of the Cozy for the recipient |
+
+##### Example
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/discovery HTTP/1.1
+Host: alice.example.org
+Content-Type: application/x-www-form-urlencoded
+Accept: text/html
+
+state=eiJ3iepoaihohz1Y&url=https://bob.example.net/
+```
+
+```http
+HTTP/1.1 302 Moved Temporarily
+Location: https://bob.example.net/auth/sharing?...
+```
+
+#### JSON
+
+This version can be more convenient for applications that implement the
+preview page. To do that, an application must give a `preview_path` when
+creating the sharing. This path must be a public route of this application.
+The recipients will receive a link to the application subdomain, on this page,
+and with a `sharecode` in the query string (like for a share by link).
+
+To know the `sharing-id`, it's possible to ask `GET /permissions/self`, with
+the `sharecode` in the `Authorization` header (it's a JWT token). In the
+response, the `source_id` field will be `io.cozy.sharings/<sharing-id>`.
+
+##### Parameters
+
+| Parameter | Description                           |
+| --------- | ------------------------------------- |
+| sharecode | a code that identify the recipient    |
+| url       | the URL of the Cozy for the recipient |
+
+##### Example
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/discovery HTTP/1.1
+Host: alice.example.org
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+sharecode=eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhcHAiLCJpYXQiOjE1MjAzNDM4NTc&url=https://bob.example.net/
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "redirect": "https://bob.example.net/auth/sharing?..."
+}
+```
+
+### PUT /sharings/:sharing-id
+
+The sharer's cozy sends a request to this route on the recipient's cozy to
+create a sharing request, with most of the informations about the sharing.
+These informations will be displayed to the recipient just before its final
+acceptation of the sharing, to be sure he/she knows what will be shared.
+
+#### Request
+
+```http
+PUT /sharings/ce8835a061d0ef68947afe69a0046722 HTTP/1.1
+Host: bob.example.net
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "attributes": {
+      "description": "sharing test",
+      "preview_path": "/preview-sharing",
+      "app_slug": "drive",
+      "owner": true,
+      "created_at": "2018-01-04T12:35:08Z",
+      "updated_at": "2018-01-04T13:45:43Z",
+      "members": [
+        {
+          "status": "owner",
+          "name": "Alice",
+          "email": "alice@example.net",
+          "instance": "alice.example.net"
+        },
+        {
+          "status": "mail-not-sent",
+          "name": "Bob",
+          "email": "bob@example.net",
+          "instance": "bob.example.net"
+        }
+      ],
+      "rules": [
+        {
+          "title": "Hawaii",
+          "doctype": "io.cozy.files",
+          "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"],
+          "add": "sync",
+          "update": "sync",
+          "remove": "sync"
+        }
+      ]
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "meta": {
+      "rev": "1-f579a69a9fa5dd720010a1dbb82320be"
+    },
+    "attributes": {
+      "description": "sharing test",
+      "preview_path": "/preview-sharing",
+      "app_slug": "drive",
+      "owner": true,
+      "created_at": "2018-01-04T12:35:08Z",
+      "updated_at": "2018-01-04T13:45:43Z",
+      "members": [
+        {
+          "status": "owner",
+          "name": "Alice",
+          "email": "alice@example.net",
+          "instance": "alice.example.net"
+        },
+        {
+          "status": "mail-not-sent",
+          "name": "Bob",
+          "email": "bob@example.net",
+          "instance": "bob.example.net"
+        }
+      ],
+      "rules": [
+        {
+          "title": "Hawaii",
+          "doctype": "io.cozy.files",
+          "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"],
+          "add": "sync",
+          "update": "sync",
+          "remove": "sync"
+        }
+      ]
+    },
+    "links": {
+      "self": "/sharings/ce8835a061d0ef68947afe69a0046722"
+    }
+  }
+}
+```
+
 
 {% endraw %}

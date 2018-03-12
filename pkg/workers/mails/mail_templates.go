@@ -358,6 +358,18 @@ func init() {
 				// },
 			},
 		},
+		{
+			Name:    "sharing_request",
+			Subject: "Mail Sharing Request Subject",
+			Intro:   "Mail Sharing Request Intro",
+			Actions: []MailAction{
+				{
+					Instructions: "Mail Sharing Request Button instruction",
+					Text:         "Mail Sharing Request Button text",
+					Link:         "{{.SharingLink}}",
+				},
+			},
+		},
 	}}
 }
 

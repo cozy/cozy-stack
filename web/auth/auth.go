@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
@@ -121,6 +122,9 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	} else if redirect.Host == i.Domain && redirect.Path == "/auth/authorize" {
 		title = i.Translate("Login Connect from oauth title")
 		help = i.Translate("Login Connect from oauth help")
+	} else if redirect.Host == i.Domain && redirect.Path == "/auth/authorize/sharing" {
+		title = i.Translate("Login Connect from sharing title")
+		help = i.Translate("Login Connect from sharing help")
 	} else {
 		if publicName == "" {
 			title = i.Translate("Login Welcome")
@@ -472,16 +476,16 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 			"Error":  "Error No redirect_uri parameter",
 		})
 	}
-	if params.scope == "" {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.Domain,
-			"Error":  "Error No scope parameter",
-		})
-	}
 	if params.resType != "code" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": params.instance.Domain,
 			"Error":  "Error Invalid response type",
+		})
+	}
+	if params.scope == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.Domain,
+			"Error":  "Error No scope parameter",
 		})
 	}
 
@@ -617,6 +621,124 @@ func authorize(c echo.Context) error {
 	u.Fragment = ""
 
 	return c.Redirect(http.StatusFound, u.String()+"#")
+}
+
+type authorizeSharingParams struct {
+	instance  *instance.Instance
+	state     string
+	clientID  string
+	sharingID string
+	client    *oauth.Client
+}
+
+func checkAuthorizeSharingParams(c echo.Context, params *authorizeSharingParams) (bool, error) {
+	if params.state == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.Domain,
+			"Error":  "Error No state parameter",
+		})
+	}
+	if params.clientID == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.Domain,
+			"Error":  "Error No client_id parameter",
+		})
+	}
+	if params.sharingID == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.Domain,
+			"Error":  "Error No sharing_id parameter",
+		})
+	}
+
+	params.client = new(oauth.Client)
+	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.Domain,
+			"Error":  "Error No registered client",
+		})
+	}
+
+	return false, nil
+}
+
+func authorizeSharingForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	params := authorizeSharingParams{
+		instance:  instance,
+		state:     c.QueryParam("state"),
+		clientID:  c.QueryParam("client_id"),
+		sharingID: c.QueryParam("sharing_id"),
+	}
+
+	if hasError, err := checkAuthorizeSharingParams(c, &params); hasError {
+		return err
+	}
+	params.client.ClientID = params.clientID
+
+	if !middlewares.IsLoggedIn(c) {
+		u := instance.PageURL("/auth/login", url.Values{
+			"redirect": {instance.FromURL(c.Request().URL)},
+		})
+		return c.Redirect(http.StatusSeeOther, u)
+	}
+
+	s, err := sharing.FindSharing(instance, params.sharingID)
+	if err != nil {
+		return err
+	}
+	if s.Owner || s.Active || len(s.Members) < 2 {
+		return sharing.ErrInvalidSharing
+	}
+
+	var sharerDomain string
+	sharerURL, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		sharerDomain = s.Members[0].Instance
+	} else {
+		sharerDomain = sharerURL.Host
+	}
+
+	return c.Render(http.StatusOK, "authorize_sharing.html", echo.Map{
+		"Locale":       instance.Locale,
+		"Domain":       instance.Domain,
+		"SharerDomain": sharerDomain,
+		"Client":       params.client,
+		"State":        params.state,
+		"Sharing":      s,
+		"CSRF":         c.Get("csrf"),
+	})
+}
+
+func authorizeSharing(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	params := authorizeSharingParams{
+		instance:  instance,
+		state:     c.FormValue("state"),
+		clientID:  c.FormValue("client_id"),
+		sharingID: c.FormValue("sharing_id"),
+	}
+
+	if hasError, err := checkAuthorizeSharingParams(c, &params); hasError {
+		return err
+	}
+
+	if !middlewares.IsLoggedIn(c) {
+		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
+			"Domain": instance.Domain,
+			"Error":  "Error Must be authenticated",
+		})
+	}
+
+	s, err := sharing.FindSharing(instance, params.sharingID)
+	if err != nil {
+		return err
+	}
+	if s.Owner || s.Active || len(s.Members) < 2 {
+		return sharing.ErrInvalidSharing
+	}
+
+	return c.Redirect(http.StatusSeeOther, instance.DefaultRedirection().String())
 }
 
 func authorizeAppForm(c echo.Context) error {
@@ -947,6 +1069,10 @@ func Routes(router *echo.Group) {
 	authorizeGroup := router.Group("/authorize", noCSRF)
 	authorizeGroup.GET("", authorizeForm)
 	authorizeGroup.POST("", authorize)
+	if config.IsDevRelease() {
+		authorizeGroup.GET("/sharing", authorizeSharingForm)
+		authorizeGroup.POST("/sharing", authorizeSharing)
+	}
 	authorizeGroup.GET("/app", authorizeAppForm)
 	authorizeGroup.POST("/app", authorizeApp)
 
