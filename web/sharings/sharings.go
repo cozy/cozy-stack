@@ -21,7 +21,7 @@ func CreateSharing(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	var s sharing.Sharing
-	obj, err := jsonapi.Bind(c.Request(), &s)
+	obj, err := jsonapi.Bind(c.Request().Body, &s)
 	if err != nil {
 		return jsonapi.BadJSON()
 	}
@@ -66,7 +66,7 @@ func PutSharing(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	var s sharing.Sharing
-	obj, err := jsonapi.Bind(c.Request(), &s)
+	obj, err := jsonapi.Bind(c.Request().Body, &s)
 	if err != nil {
 		return jsonapi.BadJSON()
 	}
@@ -112,7 +112,7 @@ func AnswerSharing(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	var creds sharing.Credentials
-	if _, err := jsonapi.Bind(c.Request(), &creds); err != nil {
+	if _, err := jsonapi.Bind(c.Request().Body, &creds); err != nil {
 		return jsonapi.BadJSON()
 	}
 	ac, err := s.ProcessAnswer(inst, &creds)

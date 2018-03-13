@@ -238,7 +238,16 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		return ErrRequestFailed
 	}
 
-	// TODO parse response
+	if !s.ReadOnly() {
+		var creds Credentials
+		if _, err = jsonapi.Bind(res.Body, &creds); err != nil {
+			return ErrRequestFailed
+		}
+		s.Credentials[0].AccessToken = creds.AccessToken
+		s.Credentials[0].Client = creds.Client
+		return couchdb.UpdateDoc(inst, s)
+	}
+
 	return nil
 }
 
@@ -249,8 +258,8 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 	}
 	for i, c := range s.Credentials {
 		if c.State == creds.State {
-			c.Client = creds.Client
-			c.AccessToken = creds.AccessToken
+			s.Credentials[i].Client = creds.Client
+			s.Credentials[i].AccessToken = creds.AccessToken
 			if err := couchdb.UpdateDoc(inst, s); err != nil {
 				return nil, err
 			}

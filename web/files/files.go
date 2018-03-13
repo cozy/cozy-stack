@@ -244,7 +244,7 @@ func ModifyMetadataByPathHandler(c echo.Context) error {
 func getPatch(c echo.Context) (*vfs.DocPatch, error) {
 	var patch vfs.DocPatch
 
-	obj, err := jsonapi.Bind(c.Request(), &patch)
+	obj, err := jsonapi.Bind(c.Request().Body, &patch)
 	if err != nil {
 		return nil, jsonapi.BadJSON()
 	}
@@ -477,7 +477,7 @@ func ReadFileContentFromPathHandler(c echo.Context) error {
 // paremeters with a secret to be used in download handler below.s
 func ArchiveDownloadCreateHandler(c echo.Context) error {
 	archive := &vfs.Archive{}
-	if _, err := jsonapi.Bind(c.Request(), archive); err != nil {
+	if _, err := jsonapi.Bind(c.Request().Body, archive); err != nil {
 		return err
 	}
 	if len(archive.Files) == 0 && len(archive.IDs) == 0 {

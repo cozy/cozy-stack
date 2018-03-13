@@ -51,16 +51,7 @@ func (c *APICredentials) SetRev(rev string) {}
 
 // Clone is part of jsonapi.Object interface
 func (c *APICredentials) Clone() couchdb.Doc {
-	cloned := *c
-	if c.Client != nil {
-		cl := *c.Client
-		cloned.Client = &cl
-	}
-	if c.AccessToken != nil {
-		at := *c.AccessToken
-		cloned.AccessToken = &at
-	}
-	return &cloned
+	panic("APICredentials must not be cloned")
 }
 
 // Included is part of jsonapi.Object interface

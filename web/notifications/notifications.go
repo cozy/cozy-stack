@@ -36,7 +36,7 @@ func (n *apiNotif) MarshalJSON() ([]byte, error) {
 func createHandler(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	n := &notifications.Notification{}
-	if _, err := jsonapi.Bind(c.Request(), &n); err != nil {
+	if _, err := jsonapi.Bind(c.Request().Body, &n); err != nil {
 		return err
 	}
 	err := permissions.Allow(c, permissions.POST, n)

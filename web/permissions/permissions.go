@@ -85,7 +85,7 @@ func createPermission(c echo.Context) error {
 	}
 
 	var subdoc permissions.Permission
-	if _, err = jsonapi.Bind(c.Request(), &subdoc); err != nil {
+	if _, err = jsonapi.Bind(c.Request().Body, &subdoc); err != nil {
 		return err
 	}
 
@@ -226,7 +226,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 		}
 
 		var patch permissions.Permission
-		if _, err = jsonapi.Bind(c.Request(), &patch); err != nil {
+		if _, err = jsonapi.Bind(c.Request().Body, &patch); err != nil {
 			return err
 		}
 

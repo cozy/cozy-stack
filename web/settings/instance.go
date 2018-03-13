@@ -58,7 +58,7 @@ func updateInstance(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	doc := &couchdb.JSONDoc{}
-	obj, err := jsonapi.Bind(c.Request(), doc)
+	obj, err := jsonapi.Bind(c.Request().Body, doc)
 	if err != nil {
 		return err
 	}
