@@ -3,7 +3,6 @@ package sharings
 import (
 	"errors"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -191,11 +190,7 @@ func PostDiscovery(c echo.Context) error {
 			return wrapErrors(err)
 		}
 	}
-	u, err := url.Parse(strings.TrimSpace(cozyURL))
-	if err != nil {
-		return wrapErrors(err)
-	}
-	if err = s.RegisterCozyURL(inst, member, u); err != nil {
+	if err := s.RegisterCozyURL(inst, member, cozyURL); err != nil {
 		return wrapErrors(err)
 	}
 

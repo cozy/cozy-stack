@@ -359,6 +359,7 @@ Content-Type: application/vnd.api+json
     "id": "ce8835a061d0ef68947afe69a0046722",
     "attributes": {
       "state": "eiJ3iepoaihohz1Y",
+      "client": {...},
       "access_token": "uia7b85928e5cf"
     }
   }

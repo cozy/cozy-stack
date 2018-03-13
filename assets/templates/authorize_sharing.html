@@ -18,13 +18,12 @@
         <div class="container">
           <form method="POST" action="/auth/sharing/authorize" class="login auth">
             <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
-            <input type="hidden" name="client_id" value="{{.Client.ClientID}}" />
             <input type="hidden" name="sharing_id" value="{{.Sharing.SID}}" />
             <input type="hidden" name="state" value="{{.State}}" />
             <div role="region">
-              <h1>{{t "Authorize Sharing Title" .Client.ClientName}}</h1>
+              <h1>{{t "Authorize Sharing Title" .SharerName}}</h1>
               <p class="help">
-                {{- t "Authorize Sharing Request" .Client.ClientName -}}
+                {{- t "Authorize Sharing Request" .SharerName -}}
               </p>
               <ul class="perm-list">
                 {{range $index, $rule := .Sharing.Rules}}
