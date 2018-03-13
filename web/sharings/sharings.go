@@ -112,7 +112,7 @@ func AnswerSharing(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	var creds sharing.Credentials
-	if _, err := jsonapi.Bind(c.Request().Body, &creds); err != nil {
+	if _, err = jsonapi.Bind(c.Request().Body, &creds); err != nil {
 		return jsonapi.BadJSON()
 	}
 	ac, err := s.ProcessAnswer(inst, &creds)
@@ -190,7 +190,7 @@ func PostDiscovery(c echo.Context) error {
 			return wrapErrors(err)
 		}
 	}
-	if err := s.RegisterCozyURL(inst, member, cozyURL); err != nil {
+	if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
 		return wrapErrors(err)
 	}
 

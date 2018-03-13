@@ -626,9 +626,7 @@ func authorize(c echo.Context) error {
 type authorizeSharingParams struct {
 	instance  *instance.Instance
 	state     string
-	clientID  string
 	sharingID string
-	client    *oauth.Client
 }
 
 func checkAuthorizeSharingParams(c echo.Context, params *authorizeSharingParams) (bool, error) {
