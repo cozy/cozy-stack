@@ -301,16 +301,52 @@ func assertAuthorizePageShowsTheSharing(t *testing.T, body string) {
 	assert.Contains(t, body, `<li>Your contact&#39;s Cozy: 127.0.0.1:`)
 }
 
-func assertOAuthClientHasBeenRegistered(t *testing.T) {
-	var results []map[string]interface{}
+func assertCredentialsHasBeenExchanged(t *testing.T) {
+	var resultsA []map[string]interface{}
 	req := couchdb.AllDocsRequest{}
-	err := couchdb.GetAllDocs(bobInstance, consts.OAuthClients, &req, &results)
+	err := couchdb.GetAllDocs(bobInstance, consts.OAuthClients, &req, &resultsA)
 	assert.NoError(t, err)
-	if assert.True(t, len(results) > 0) {
-		client := results[len(results)-1]
-		assert.Equal(t, client["client_kind"], "sharing")
-		assert.Equal(t, client["client_uri"], tsA.URL+"/")
-		assert.Equal(t, client["client_name"], "Sharing Alice")
+	assert.True(t, len(resultsA) > 0)
+	clientA := resultsA[len(resultsA)-1]
+	assert.Equal(t, clientA["client_kind"], "sharing")
+	assert.Equal(t, clientA["client_uri"], tsA.URL+"/")
+	assert.Equal(t, clientA["client_name"], "Sharing Alice")
+
+	var resultsB []map[string]interface{}
+	err = couchdb.GetAllDocs(aliceInstance, consts.OAuthClients, &req, &resultsB)
+	assert.NoError(t, err)
+	assert.True(t, len(resultsB) > 0)
+	clientB := resultsB[len(resultsB)-1]
+	assert.Equal(t, clientB["client_kind"], "sharing")
+	assert.Equal(t, clientB["client_uri"], tsB.URL+"/")
+	assert.Equal(t, clientB["client_name"], "Sharing Bob")
+
+	var sharingsA []*sharing.Sharing
+	err = couchdb.GetAllDocs(aliceInstance, consts.Sharings, &req, &sharingsA)
+	assert.NoError(t, err)
+	assert.True(t, len(sharingsA) > 0)
+	assert.Len(t, sharingsA[0].Credentials, 1)
+	credentials := sharingsA[0].Credentials[0]
+	if assert.NotNil(t, credentials.Client) {
+		assert.Equal(t, credentials.Client.ClientID, clientA["_id"])
+	}
+	if assert.NotNil(t, credentials.AccessToken) {
+		assert.NotEmpty(t, credentials.AccessToken.AccessToken)
+		assert.NotEmpty(t, credentials.AccessToken.RefreshToken)
+	}
+
+	var sharingsB []*sharing.Sharing
+	err = couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &sharingsB)
+	assert.NoError(t, err)
+	assert.True(t, len(sharingsB) > 0)
+	assert.Len(t, sharingsB[0].Credentials, 1)
+	credentials = sharingsB[0].Credentials[0]
+	if assert.NotNil(t, credentials.Client) {
+		assert.Equal(t, credentials.Client.ClientID, clientB["_id"])
+	}
+	if assert.NotNil(t, credentials.AccessToken) {
+		assert.NotEmpty(t, credentials.AccessToken.AccessToken)
+		assert.NotEmpty(t, credentials.AccessToken.RefreshToken)
 	}
 }
 
@@ -343,7 +379,7 @@ func TestAuthorizeSharing(t *testing.T) {
 	location := res.Header.Get("Location")
 	assert.Contains(t, location, "drive."+bobInstance.Domain)
 
-	assertOAuthClientHasBeenRegistered(t)
+	assertCredentialsHasBeenExchanged(t)
 }
 
 func assertSharingWithPreviewIsCorrect(t *testing.T, body io.Reader) {
