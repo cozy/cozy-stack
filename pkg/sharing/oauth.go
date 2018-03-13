@@ -109,7 +109,7 @@ func (m *Member) GenerateOAuthURL(s *Sharing) (string, error) {
 	if creds == nil {
 		return "", ErrInvalidSharing
 	}
-	if m.Instance == "" || creds.Client.ClientID == "" {
+	if m.Instance == "" {
 		return "", ErrNoOAuthClient
 	}
 
@@ -187,7 +187,7 @@ func createAccessToken(inst *instance.Instance, cli *oauth.Client, sharingID str
 
 // SendAnswer says to the sharer's Cozy that the sharing has been accepted, and
 // materialize that by an exchange of credentials.
-func (s *Sharing) SendAnswer(inst *instance.Instance) error {
+func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if s.Owner || len(s.Members) < 2 || len(s.Credentials) != 1 {
 		return ErrInvalidSharing
 	}
@@ -205,7 +205,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance) error {
 	}
 	ac := APICredentials{
 		Credentials: &Credentials{
-			State:       s.Credentials[0].State,
+			State:       state,
 			Client:      convertOAuthClient(cli),
 			AccessToken: token,
 		},

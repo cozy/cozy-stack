@@ -720,7 +720,7 @@ func authorizeSharing(c echo.Context) error {
 		return sharing.ErrInvalidSharing
 	}
 
-	if err = s.SendAnswer(instance); err != nil {
+	if err = s.SendAnswer(instance, params.state); err != nil {
 		return err
 	}
 	return c.Redirect(http.StatusSeeOther, instance.DefaultRedirection().String())
