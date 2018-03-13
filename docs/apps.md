@@ -24,6 +24,7 @@ filename for this file: `manifest.webapp`.
 | Field             | Description                                                                          |
 | ------------------| ------------------------------------------------------------------------------------ |
 | name              | the name to display on the home                                                      |
+| name_prefix       | the prefix to display with the name                                                      |
 | slug              | the default slug (it can be changed at install time)                                 |
 | editor            | the editor's name to display on the cozy-bar of the app                              |
 | icon              | an icon for the home                                                                 |

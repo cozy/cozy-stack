@@ -134,6 +134,7 @@ a template and will insert the relevant values.
 * `{{.Domain}}` will be replaced by the stack hostname.
 * `{{.Locale}}` will be replaced by the locale for the instance.
 * `{{.AppName}}`: will be replaced by the application name.
+* `{{.AppNamePrefix}}`: will be replaced by the application name prefix.
 * `{{.AppEditor}}`: will be replaced by the application's editor.
 * `{{.IconPath}}`: will be replaced by the application's icon path.
 * `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.
