@@ -8,9 +8,12 @@ import (
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
@@ -172,4 +175,81 @@ func (m *Member) GenerateOAuthURL(s *Sharing) (string, error) {
 	u.RawQuery = q.Encode()
 
 	return u.String(), nil
+}
+
+// Create an OAuth client for a recipient of the given sharing
+func createOAuthClient(inst *instance.Instance, m *Member) (*oauth.Client, error) {
+	if m.Instance == "" {
+		return nil, ErrInvalidURL
+	}
+	cli := oauth.Client{
+		RedirectURIs: []string{m.Instance + "/sharings/answer"},
+		ClientName:   "Sharing " + m.Name,
+		ClientKind:   "sharing",
+		SoftwareID:   "github.com/cozy/cozy-stack",
+		ClientURI:    m.Instance + "/",
+	}
+	if err := cli.Create(inst); err != nil {
+		return nil, ErrInternalServerError
+	}
+	return &cli, nil
+}
+
+// Convert an OAuth client from one type (pkg/oauth.Client) to another
+// (client/auth.Client)
+func convertOAuthClient(c *oauth.Client) *auth.Client {
+	return &auth.Client{
+		ClientID:          c.ClientID,
+		ClientSecret:      c.ClientSecret,
+		SecretExpiresAt:   c.SecretExpiresAt,
+		RegistrationToken: c.RegistrationToken,
+		RedirectURIs:      c.RedirectURIs,
+		ClientName:        c.ClientName,
+		ClientKind:        c.ClientKind,
+		ClientURI:         c.ClientURI,
+		LogoURI:           c.LogoURI,
+		PolicyURI:         c.PolicyURI,
+		SoftwareID:        c.SoftwareID,
+		SoftwareVersion:   c.SoftwareVersion,
+	}
+}
+
+// ProcessAnswer takes somes credentials and update the sharing with those.
+func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*APICredentials, error) {
+	if !s.Owner || len(s.Members) != len(s.Credentials)+1 {
+		return nil, ErrInvalidSharing
+	}
+	for i, c := range s.Credentials {
+		if c.State == creds.State {
+			c.AccessToken = creds.AccessToken
+			if err := couchdb.UpdateDoc(inst, s); err != nil {
+				return nil, err
+			}
+			ac := APICredentials{CID: s.SID, Credentials: &Credentials{}}
+			if !s.ReadOnly() {
+				cli, err := createOAuthClient(inst, &s.Members[i+1])
+				if err != nil {
+					return &ac, nil
+				}
+				ac.Credentials.Client = convertOAuthClient(cli)
+				scope := consts.Sharings + ":" + s.SID
+				refresh, err := cli.CreateJWT(inst, permissions.RefreshTokenAudience, scope)
+				if err != nil {
+					return &ac, nil
+				}
+				access, err := cli.CreateJWT(inst, permissions.AccessTokenAudience, scope)
+				if err != nil {
+					return &ac, nil
+				}
+				ac.Credentials.AccessToken = &auth.AccessToken{
+					TokenType:    "bearer",
+					AccessToken:  access,
+					RefreshToken: refresh,
+					Scope:        scope,
+				}
+			}
+			return &ac, nil
+		}
+	}
+	return nil, ErrMemberNotFound
 }

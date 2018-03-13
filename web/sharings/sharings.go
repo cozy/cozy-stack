@@ -103,6 +103,26 @@ func GetSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, as, nil)
 }
 
+// AnswerSharing is used to exchange credentials between 2 cozys, after the
+// recipient has accepted a sharing.
+func AnswerSharing(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	var creds sharing.Credentials
+	if _, err := jsonapi.Bind(c.Request(), &creds); err != nil {
+		return jsonapi.BadJSON()
+	}
+	ac, err := s.ProcessAnswer(inst, &creds)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	return jsonapi.Data(c, http.StatusOK, ac, nil)
+}
+
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state string, m *sharing.Member) error {
 	publicName, _ := inst.PublicName()
 	return c.Render(code, "sharing_discovery.html", echo.Map{
@@ -197,6 +217,7 @@ func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)        // On the sharer
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
+	router.POST("/:sharing-id/answer", AnswerSharing)
 
 	// Register the URL of their Cozy for recipients
 	router.GET("/:sharing-id/discovery", GetDiscovery)
@@ -294,6 +315,8 @@ func wrapErrors(err error) error {
 		return jsonapi.BadGateway(err)
 	case sharing.ErrNoOAuthClient:
 		return jsonapi.BadRequest(err)
+	case sharing.ErrInternalServerError:
+		return jsonapi.InternalServerError(err)
 	}
 	return err
 }

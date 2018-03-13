@@ -23,4 +23,6 @@ var (
 	// ErrNoOAuthClient is used when the owner of the Cozy has not yet
 	// registered to the recipient as an OAuth client.
 	ErrNoOAuthClient = errors.New("No OAuth client was found")
+	// ErrInternalServerError is used for CouchDB errors
+	ErrInternalServerError = errors.New("Internal Server Error")
 )

@@ -37,9 +37,6 @@ type Credentials struct {
 	// Information needed to send data to the member
 	Client      *auth.Client      `json:"client,omitempty"`
 	AccessToken *auth.AccessToken `json:"access_token,omitempty"`
-
-	// The OAuth ClientID used for authentifying incoming requests from the member
-	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
 // AddContact adds the contact with the given identifier

@@ -48,6 +48,8 @@ const (
 	Settings = "io.cozy.settings"
 	// Sharings doc type for document and file sharing
 	Sharings = "io.cozy.sharings"
+	// SharingsAnswer doc type for credentials exchange for sharings
+	SharingsAnswer = "io.cozy.sharings.answer"
 	// Triggers doc type for triggers, jobs launchers
 	Triggers = "io.cozy.triggers"
 	// TriggersState doc type for triggers current state, jobs launchers
