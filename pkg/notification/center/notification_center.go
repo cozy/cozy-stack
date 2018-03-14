@@ -135,16 +135,11 @@ func sendPush(inst *instance.Instance, collapsible bool, n *notification.Notific
 }
 
 func sendMail(inst *instance.Instance, n *notification.Notification) error {
-	var parts []*mails.Part
+	parts := []*mails.Part{
+		{Body: n.Content, Type: "text/plain"},
+	}
 	if n.ContentHTML == "" {
-		parts = []*mails.Part{
-			{Body: n.Content, Type: "text/plain"},
-		}
-	} else {
-		parts = []*mails.Part{
-			{Body: n.ContentHTML, Type: "text/html"},
-			{Body: n.Content, Type: "text/plain"},
-		}
+		parts = append(parts, &mails.Part{Body: n.ContentHTML, Type: "text/html"})
 	}
 	mail := mails.Options{
 		Mode:    mails.ModeNoReply,
