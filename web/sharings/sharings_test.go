@@ -334,6 +334,7 @@ func assertCredentialsHasBeenExchanged(t *testing.T) {
 		assert.NotEmpty(t, credentials.AccessToken.AccessToken)
 		assert.NotEmpty(t, credentials.AccessToken.RefreshToken)
 	}
+	assert.Equal(t, sharingsA[0].Members[1].Status, "ready")
 
 	var sharingsB []*sharing.Sharing
 	err = couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &sharingsB)

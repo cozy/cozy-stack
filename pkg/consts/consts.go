@@ -46,6 +46,8 @@ const (
 	SessionsLogins = "io.cozy.sessions.logins"
 	// Settings doc type for settings to customize an instance
 	Settings = "io.cozy.settings"
+	// Shared doc type for keepking track of documents in sharings
+	Shared = "io.cozy.shared"
 	// Sharings doc type for document and file sharing
 	Sharings = "io.cozy.sharings"
 	// SharingsAnswer doc type for credentials exchange for sharings

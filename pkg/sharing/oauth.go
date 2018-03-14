@@ -258,6 +258,7 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 	}
 	for i, c := range s.Credentials {
 		if c.State == creds.State {
+			s.Members[i+1].Status = MemberStatusReady
 			s.Credentials[i].Client = creds.Client
 			s.Credentials[i].AccessToken = creds.AccessToken
 			if err := couchdb.UpdateDoc(inst, s); err != nil {
