@@ -68,6 +68,7 @@ type WebappManifest struct {
 	DocRev string `json:"_rev,omitempty"` // WebappManifest revision
 
 	Name             string      `json:"name"`
+	NamePrefix       string      `json:"name_prefix"`
 	Type             string      `json:"type,omitempty"`
 	Editor           string      `json:"editor"`
 	DocSlug          string      `json:"slug"`
