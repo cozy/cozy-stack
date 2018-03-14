@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/notifications"
+	"github.com/cozy/cozy-stack/pkg/notifications/notificationscenter"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -39,15 +40,11 @@ func createHandler(c echo.Context) error {
 	if _, err := jsonapi.Bind(c.Request(), &n); err != nil {
 		return err
 	}
-	err := permissions.Allow(c, permissions.POST, n)
+	perm, err := permissions.GetPermission(c)
 	if err != nil {
 		return err
 	}
-	sourceID, err := permissions.GetSourceID(c)
-	if err != nil {
-		return err
-	}
-	if err := notifications.Create(inst, sourceID, n); err != nil {
+	if err := notificationscenter.Push(inst, perm, n); err != nil {
 		return wrapErrors(err)
 	}
 	return jsonapi.Data(c, http.StatusCreated, &apiNotif{n}, nil)
@@ -58,8 +55,10 @@ func wrapErrors(err error) error {
 		return nil
 	}
 	switch err {
-	case notifications.ErrBadNotification:
+	case notificationscenter.ErrBadNotification:
 		return jsonapi.BadRequest(err)
+	case notificationscenter.ErrUnauthorized:
+		return jsonapi.Forbidden(err)
 	case apps.ErrNotFound:
 		return jsonapi.NotFound(err)
 	}

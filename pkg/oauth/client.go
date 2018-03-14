@@ -114,6 +114,21 @@ func GetAll(i *instance.Instance) ([]*Client, error) {
 	return clients, nil
 }
 
+// GetNotifiables loads al the clients from the database containing a non-empty
+// `notification_plaform` field.
+func GetNotifiables(i *instance.Instance) ([]*Client, error) {
+	var clients []*Client
+	req := &couchdb.FindRequest{
+		UseIndex: "by-plaform-notification",
+		Selector: mango.Exists("notification_platform"),
+	}
+	err := couchdb.FindDocs(i, consts.OAuthClients, req, &clients)
+	if err != nil {
+		return nil, err
+	}
+	return clients, nil
+}
+
 // FindClient loads a client from the database
 func FindClient(i *instance.Instance, id string) (*Client, error) {
 	var c Client

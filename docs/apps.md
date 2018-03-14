@@ -21,28 +21,29 @@ didn't match our expectations. The
 is a better fit. We took a lot of inspirations from it, starting with the
 filename for this file: `manifest.webapp`.
 
-| Field             | Description                                                                          |
-| ------------------| ------------------------------------------------------------------------------------ |
-| name              | the name to display on the home                                                      |
+| Field             | Description                                                                              |
+| ------------------| -----------------------------------------------------------------------------------------|
+| name              | the name to display on the home                                                          |
 | name_prefix       | the prefix to display with the name                                                      |
-| slug              | the default slug (it can be changed at install time)                                 |
-| editor            | the editor's name to display on the cozy-bar of the app                              |
-| icon              | an icon for the home                                                                 |
-| screenshots       | an array of path to the screenshots of the application                               |
-| category          | the category of the application                                                      |
-| short_description | a short description of the application                                               |
-| long_description  | a long description of the application                                                |
-| source            | where the files of the app can be downloaded                                         |
-| developer         | `name` and `url` for the developer                                                   |
-| locales           | translations of the name and description fields in other locales                     |
-| langs             | list of languages tags supported by the application                                  |
-| version           | the current version number                                                           |
-| license           | [the SPDX license identifier](https://spdx.org/licenses/)                            |
-| platforms         | a list of `type`, `url` values for derivate of the application for other devices     |
-| intents           | a list of intents provided by this app (see [here](intents.md) for more details)     |
-| permissions       | a map of permissions needed by the app (see [here](permissions.md) for more details) |
-| services          | a map of the services associated with the app (see below for more details)           |
-| routes            | a map of routes for the app (see below for more details)                             |
+| slug              | the default slug (it can be changed at install time)                                     |
+| editor            | the editor's name to display on the cozy-bar of the app                                  |
+| icon              | an icon for the home                                                                     |
+| screenshots       | an array of path to the screenshots of the application                                   |
+| category          | the category of the application                                                          |
+| short_description | a short description of the application                                                   |
+| long_description  | a long description of the application                                                    |
+| source            | where the files of the app can be downloaded                                             |
+| developer         | `name` and `url` for the developer                                                       |
+| locales           | translations of the name and description fields in other locales                         |
+| langs             | list of languages tags supported by the application                                      |
+| version           | the current version number                                                               |
+| license           | [the SPDX license identifier](https://spdx.org/licenses/)                                |
+| platforms         | a list of `type`, `url` values for derivate of the application for other devices         |
+| intents           | a list of intents provided by this app (see [here](intents.md) for more details)         |
+| permissions       | a map of permissions needed by the app (see [here](permissions.md) for more details)     |
+| notifications     | a map of notifications needed by the app (see [here](notifications.md) for more details) |
+| services          | a map of the services associated with the app (see below for more details)               |
+| routes            | a map of routes for the app (see below for more details)                                 |
 
 ### Routes
 
@@ -127,6 +128,30 @@ service and its parameters following this example:
 The `trigger` field should follow the available triggers described in the
 [jobs documentation](./jobs.md). The `file` field should specify the service
 code run and the `type` field describe the code type (only `"node"` for now).
+
+### Notifications
+
+For more informations on how te declare notifications in the manifest, see
+the [notifications documentation](./notifications.md).
+
+Here is an example:
+
+```json
+{
+  "notifications": {
+    "account-balance": {
+      "description": "Alert the user when its account balance is negative",
+      "collapsible": true,        // only interested in the last value of the notification
+      "multiple": true,           // require sub-categories for each account
+      "stateful": false,
+      "default_priority": "high", // high priority for this notification
+      "templates": {
+        "mail": "file:./notifications/account-balance-mail.tpl",
+      }
+    }
+  }
+}
+```
 
 ## Resource caching
 

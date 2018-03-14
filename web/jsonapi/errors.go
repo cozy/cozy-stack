@@ -134,6 +134,16 @@ func InvalidAttribute(attribute string, err error) *Error {
 	}
 }
 
+// Forbidden returns a 403 Forbidden error formatted when an action is
+// fobidden.
+func Forbidden(err error) *Error {
+	return &Error{
+		Status: http.StatusForbidden,
+		Title:  "Forbidden",
+		Detail: err.Error(),
+	}
+}
+
 // BadGateway returns a 502 formatted error
 func BadGateway(err error) *Error {
 	return &Error{

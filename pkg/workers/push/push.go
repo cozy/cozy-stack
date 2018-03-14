@@ -2,7 +2,9 @@ package push
 
 import (
 	"crypto/ecdsa"
+	"crypto/md5"
 	"crypto/tls"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -42,14 +44,15 @@ func init() {
 
 // Message contains a push notification request.
 type Message struct {
+	Source      string `json:"source"`
 	ClientID    string `json:"client_id,omitempty"`
 	Platform    string `json:"platform,omitempty"`
 	DeviceToken string `json:"device_token,omitempty"`
-	Topic       string `json:"topic,omitempty"`
 	Title       string `json:"title,omitempty"`
 	Message     string `json:"message,omitempty"`
 	Priority    string `json:"priority,omitempty"`
 	Sound       string `json:"sound,omitempty"`
+	Collapsible bool   `json:"collapsible,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty"`
 }
@@ -145,17 +148,21 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 		priority = "high"
 	}
 
-	notification := &fcm.Message{
-		To:       msg.DeviceToken,
-		Priority: priority,
-		Notification: &fcm.Notification{
-			Body:  msg.Message,
-			Title: msg.Title,
-			Sound: msg.Sound,
-		},
-		Data: map[string]interface{}{"topic": msg.Topic},
+	n := &fcm.Notification{
+		Body:  msg.Message,
+		Title: msg.Title,
+		Sound: msg.Sound,
 	}
-	if len(msg.Data) > 0 {
+	notification := &fcm.Message{
+		To:           msg.DeviceToken,
+		Priority:     priority,
+		Notification: n,
+	}
+	if msg.Collapsible {
+		notification.CollapseKey = hashSource(msg.Source)
+	}
+	if l := len(msg.Data); l > 0 {
+		notification.Data = make(map[string]interface{}, l)
 		for k, v := range msg.Data {
 			notification.Data[k] = v
 		}
@@ -209,7 +216,7 @@ func pushToIOS(ctx *jobs.WorkerContext, msg *Message) error {
 		DeviceToken: msg.DeviceToken,
 		Payload:     payload,
 		Priority:    priority,
-		Topic:       msg.Topic,
+		CollapseID:  hashSource(msg.Source), // CollapseID should not exceed 64 bytes
 	}
 
 	res, err := iosClient.PushWithContext(ctx, notification)
@@ -220,4 +227,10 @@ func pushToIOS(ctx *jobs.WorkerContext, msg *Message) error {
 		return fmt.Errorf("failed to push apns notification: %d %s", res.StatusCode, res.Reason)
 	}
 	return nil
+}
+
+func hashSource(source string) string {
+	h := md5.New()
+	h.Write([]byte(source))
+	return hex.EncodeToString(h.Sum(nil))
 }
