@@ -20,6 +20,15 @@ type Properties struct {
 	Templates       map[string]string `json:"templates,omitempty"`
 }
 
+func (p *Properties) Clone() *Properties {
+	cloned := *p
+	cloned.Templates = make(map[string]string, len(p.Templates))
+	for k, v := range p.Templates {
+		cloned.Templates[k] = v
+	}
+	return &cloned
+}
+
 // Notification data containing associated to an application a list of actions
 type Notification struct {
 	NID  string `json:"_id,omitempty"`
