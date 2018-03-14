@@ -220,12 +220,17 @@ func cleanURLError(err error) error {
 	if erru, ok := err.(*url.Error); ok {
 		u, err := url.Parse(erru.URL)
 		if err != nil {
-			erru.URL = ""
+			return erru
+		}
+		if u.User == nil {
 			return erru
 		}
 		u.User = nil
-		erru.URL = u.String()
-		return erru
+		return &url.Error{
+			Op:  erru.Op,
+			URL: u.String(),
+			Err: erru.Err,
+		}
 	}
 	return err
 }
