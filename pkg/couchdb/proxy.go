@@ -137,7 +137,7 @@ type bulkTransport struct {
 func (t *bulkTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	resp, err = t.RoundTripper.RoundTrip(req)
 	if err != nil {
-		return nil, err
+		return nil, newConnectionError(err)
 	}
 	defer func() {
 		if errc := resp.Body.Close(); err == nil && errc != nil {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -156,7 +157,7 @@ func newRequestError(originalError error) error {
 		StatusCode: http.StatusServiceUnavailable,
 		Name:       "no_couch",
 		Reason:     "could not create a request to the server",
-		Original:   originalError,
+		Original:   cleanURLError(originalError),
 	}
 }
 
@@ -165,7 +166,7 @@ func newConnectionError(originalError error) error {
 		StatusCode: http.StatusServiceUnavailable,
 		Name:       "no_couch",
 		Reason:     "could not create connection with the server",
-		Original:   originalError,
+		Original:   cleanURLError(originalError),
 	}
 }
 
@@ -174,7 +175,7 @@ func newIOReadError(originalError error) error {
 		StatusCode: http.StatusServiceUnavailable,
 		Name:       "no_couch",
 		Reason:     "could not read data from the server",
-		Original:   originalError,
+		Original:   cleanURLError(originalError),
 	}
 }
 
@@ -212,5 +213,19 @@ func newCouchdbError(statusCode int, couchdbJSON []byte) error {
 		err.Reason = parseErr.Error()
 	}
 	err.StatusCode = statusCode
+	return err
+}
+
+func cleanURLError(err error) error {
+	if erru, ok := err.(*url.Error); ok {
+		u, err := url.Parse(erru.URL)
+		if err != nil {
+			erru.URL = ""
+			return erru
+		}
+		u.User = nil
+		erru.URL = u.String()
+		return erru
+	}
 	return err
 }
