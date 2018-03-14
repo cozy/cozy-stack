@@ -20,6 +20,7 @@ type Properties struct {
 	Templates       map[string]string `json:"templates,omitempty"`
 }
 
+// Clone returns a cloned Properties struct pointer.
 func (p *Properties) Clone() *Properties {
 	cloned := *p
 	cloned.Templates = make(map[string]string, len(p.Templates))
