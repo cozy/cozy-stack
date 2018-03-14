@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 14
+const IndexViewsVersion int = 15
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -31,9 +31,14 @@ var Indexes = []*mango.Index{
 
 	// Used to lookup oauth clients by name
 	mango.IndexOnFields(OAuthClients, "by-client-name", []string{"client_name"}),
+	mango.IndexOnFields(OAuthClients, "by-notification-platform", []string{"notification_platform"}),
 
-	// Used to looked login history by OS, browser, and IP
+	// Used to lookup login history by OS, browser, and IP
 	mango.IndexOnFields(SessionsLogins, "by-os-browser-ip", []string{"os", "browser", "ip"}),
+
+	// Used to lookup notifications by their source, ordered by their creation
+	// date
+	mango.IndexOnFields(Notifications, "by-source-id", []string{"source_id", "created_at"}),
 }
 
 // DiskUsageView is the view used for computing the disk usage

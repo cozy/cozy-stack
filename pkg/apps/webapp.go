@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/notification"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 )
@@ -40,6 +41,10 @@ type Service struct {
 // Services is a map to define services assciated with an application.
 type Services map[string]*Service
 
+// Notifications is a map to define the notifications properties used by the
+// application.
+type Notifications map[string]*notification.Properties
+
 // Locales is a map to define the available locales of the application.
 type Locales map[string]interface{}
 
@@ -67,22 +72,22 @@ type Intent struct {
 type WebappManifest struct {
 	DocRev string `json:"_rev,omitempty"` // WebappManifest revision
 
-	Name             string      `json:"name"`
-	NamePrefix       string      `json:"name_prefix"`
-	Type             string      `json:"type,omitempty"`
-	Editor           string      `json:"editor"`
-	DocSlug          string      `json:"slug"`
-	Developer        Developer   `json:"developer"`
-	ShortDescription string      `json:"short_description"`
-	LongDescription  string      `json:"long_description"`
-	Category         string      `json:"category"`
-	Locales          Locales     `json:"locales"`
-	Langs            []string    `json:"langs"`
-	Tags             []string    `json:"tags"`
-	Icon             string      `json:"icon"`
-	Screenshots      []string    `json:"screenshots"`
-	Platforms        []*Platform `json:"platforms,omitempty"`
-	License          string      `json:"license"`
+	Name             string     `json:"name"`
+	NamePrefix       string     `json:"name_prefix"`
+	Type             string     `json:"type,omitempty"`
+	Editor           string     `json:"editor"`
+	DocSlug          string     `json:"slug"`
+	Developer        Developer  `json:"developer"`
+	ShortDescription string     `json:"short_description"`
+	LongDescription  string     `json:"long_description"`
+	Category         string     `json:"category"`
+	Locales          Locales    `json:"locales"`
+	Langs            []string   `json:"langs"`
+	Tags             []string   `json:"tags"`
+	Icon             string     `json:"icon"`
+	Screenshots      []string   `json:"screenshots"`
+	Platforms        []Platform `json:"platforms,omitempty"`
+	License          string     `json:"license"`
 
 	DocState       State           `json:"state"`
 	DocSource      string          `json:"source"`
@@ -91,6 +96,7 @@ type WebappManifest struct {
 	Intents        []Intent        `json:"intents"`
 	Routes         Routes          `json:"routes"`
 	Services       Services        `json:"services"`
+	Notifications  Notifications   `json:"notifications"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -134,8 +140,16 @@ func (m *WebappManifest) Clone() couchdb.Doc {
 		cloned.Locales[k] = v
 	}
 
+	cloned.Notifications = make(Notifications, len(m.Notifications))
+	for k, v := range m.Notifications {
+		cloned.Notifications[k] = v.Clone()
+	}
+
 	cloned.Intents = make([]Intent, len(m.Intents))
 	copy(cloned.Intents, m.Intents)
+
+	cloned.Platforms = make([]Platform, len(m.Platforms))
+	copy(cloned.Platforms, m.Platforms)
 
 	cloned.DocPermissions = make(permissions.Set, len(m.DocPermissions))
 	copy(cloned.DocPermissions, m.DocPermissions)
