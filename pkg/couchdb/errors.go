@@ -216,8 +216,8 @@ func newCouchdbError(statusCode int, couchdbJSON []byte) error {
 	return err
 }
 
-func cleanURLError(err error) error {
-	if erru, ok := err.(*url.Error); ok {
+func cleanURLError(e error) error {
+	if erru, ok := e.(*url.Error); ok {
 		u, err := url.Parse(erru.URL)
 		if err != nil {
 			return erru
@@ -232,5 +232,5 @@ func cleanURLError(err error) error {
 			Err: erru.Err,
 		}
 	}
-	return err
+	return e
 }
