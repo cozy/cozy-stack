@@ -84,7 +84,8 @@ func newAdminClient() *client.Client {
 			fmt.Printf("Password:")
 			pass, err = gopass.GetPasswdMasked()
 			if err != nil {
-				panic(err)
+				errPrintf("Could not get password from standard input: %s", err)
+				os.Exit(1)
 			}
 		}
 	}
