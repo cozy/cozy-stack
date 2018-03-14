@@ -399,7 +399,9 @@ Authorization: Bearer J9l-ZhwP...
   "client_kind": "web",
   "client_uri": "https://client.example.org/",
   "logo_uri": "https://client.example.org/client-logo.svg",
-  "policy_uri": "https://client/example.org/policy"
+  "policy_uri": "https://client/example.org/policy",
+  "notification_platform": "android",
+  "notification_device_token": "XXXXxxxx..."
 }
 ```
 
