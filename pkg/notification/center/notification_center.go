@@ -63,19 +63,19 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 		}
 	}
 
-	preferedChannel := n.PreferedChannel
+	preferredChannel := n.PreferredChannel
 
 	n.NID = ""
 	n.NRev = ""
 	n.SourceID = n.Source()
 	n.CreatedAt = time.Now()
-	n.PreferedChannel = ""
+	n.PreferredChannel = ""
 
 	if err := couchdb.CreateDoc(inst, n); err != nil {
 		return err
 	}
 
-	if !retroCompatMode && preferedChannel == "mobile" {
+	if !retroCompatMode && preferredChannel == "mobile" {
 		return sendPush(inst, p.Collapsible, n)
 	}
 	return sendMail(inst, n)
