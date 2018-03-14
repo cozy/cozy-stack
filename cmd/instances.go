@@ -469,7 +469,7 @@ var oauthClientInstanceCmd = &cobra.Command{
 			return cmd.Usage()
 		}
 		c := newAdminClient()
-		client, err := c.RegisterOAuthClient(&client.OAuthClientOptions{
+		oauthClient, err := c.RegisterOAuthClient(&client.OAuthClientOptions{
 			Domain:      args[0],
 			RedirectURI: args[1],
 			ClientName:  args[2],
@@ -481,9 +481,9 @@ var oauthClientInstanceCmd = &cobra.Command{
 		if flagJSON {
 			encoder := json.NewEncoder(os.Stdout)
 			encoder.SetIndent("", "\t")
-			err = encoder.Encode(client)
+			err = encoder.Encode(oauthClient)
 		} else {
-			_, err = fmt.Println(client["client_id"])
+			_, err = fmt.Println(oauthClient["client_id"])
 		}
 		return err
 	},

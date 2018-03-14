@@ -256,11 +256,11 @@ func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
-	path, err := afs.Indexer.FilePath(doc)
+	name, err := afs.Indexer.FilePath(doc)
 	if err != nil {
 		return err
 	}
-	err = afs.fs.Remove(path)
+	err = afs.fs.Remove(name)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
