@@ -68,12 +68,23 @@ guidelines from the Go community (gofmt,
 [Effective Go](https://golang.org/doc/effective_go.html), comment the code,
 etc.).
 
+We are using [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports)
+to format code, and [gometalinter](https://github.com/alecthomas/gometalinter)
+to detect code smells.
+
 #### Step 4: Test
 
 Don't forget to add tests and be sure they are green:
 
 ```
 $ go test -v ./...
+```
+
+If you want to play with the modified cozy-stack (for example, testing it with
+a webapp), you can build it locally and start it with this command:
+
+```
+$ go build && ./cozy-stack serve
 ```
 
 #### Step 5: Commit
