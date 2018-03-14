@@ -84,16 +84,20 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "category": "account-balance",
-  "category_id": "my-bank",
-  "title": "Your account balance is not OK",
-  "message": "Warning: we have detected a negative balance in your my-bank",
-  "priority": "high",
-  "state": "-1",
-  "prefered_channel": "mobile",
   "data": {
-    "key1": "value1",
-    "key2": "value2"
+    "attributes": {
+      "category": "account-balance",
+      "category_id": "my-bank",
+      "title": "Your account balance is not OK",
+      "message": "Warning: we have detected a negative balance in your my-bank",
+      "priority": "high",
+      "state": "-1",
+      "prefered_channel": "mobile",
+      "data": {
+        "key1": "value1",
+        "key2": "value2"
+      }
+    }
   }
 }
 ```
