@@ -92,7 +92,7 @@ Content-Type: application/vnd.api+json
       "message": "Warning: we have detected a negative balance in your my-bank",
       "priority": "high",
       "state": "-1",
-      "prefered_channel": "mobile",
+      "preferred_channel": "mobile",
       "data": {
         "key1": "value1",
         "key2": "value2"
