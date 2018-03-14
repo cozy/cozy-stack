@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/notifications"
+	"github.com/cozy/cozy-stack/pkg/notification"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 )
@@ -43,7 +43,7 @@ type Services map[string]*Service
 
 // Notifications is a map to define the notifications properties used by the
 // application.
-type Notifications map[string]*notifications.Properties
+type Notifications map[string]*notification.Properties
 
 // Locales is a map to define the available locales of the application.
 type Locales map[string]interface{}

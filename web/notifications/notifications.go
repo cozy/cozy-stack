@@ -7,8 +7,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/notifications"
-	"github.com/cozy/cozy-stack/pkg/notifications/notificationscenter"
+	"github.com/cozy/cozy-stack/pkg/notification"
+	"github.com/cozy/cozy-stack/pkg/notification/center"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -16,7 +16,7 @@ import (
 )
 
 type apiNotif struct {
-	n *notifications.Notification
+	n *notification.Notification
 }
 
 func (n *apiNotif) ID() string                             { return n.n.ID() }
@@ -36,7 +36,7 @@ func (n *apiNotif) MarshalJSON() ([]byte, error) {
 
 func createHandler(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	n := &notifications.Notification{}
+	n := &notification.Notification{}
 	if _, err := jsonapi.Bind(c.Request(), &n); err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func createHandler(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := notificationscenter.Push(inst, perm, n); err != nil {
+	if err := center.Push(inst, perm, n); err != nil {
 		return wrapErrors(err)
 	}
 	return jsonapi.Data(c, http.StatusCreated, &apiNotif{n}, nil)
@@ -55,9 +55,9 @@ func wrapErrors(err error) error {
 		return nil
 	}
 	switch err {
-	case notificationscenter.ErrBadNotification:
+	case center.ErrBadNotification:
 		return jsonapi.BadRequest(err)
-	case notificationscenter.ErrUnauthorized:
+	case center.ErrUnauthorized:
 		return jsonapi.Forbidden(err)
 	case apps.ErrNotFound:
 		return jsonapi.NotFound(err)

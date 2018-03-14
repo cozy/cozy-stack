@@ -1,4 +1,4 @@
-package notificationscenter
+package center
 
 import "errors"
 

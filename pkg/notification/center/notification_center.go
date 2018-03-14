@@ -1,4 +1,4 @@
-package notificationscenter
+package center
 
 import (
 	"strings"
@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/notifications"
+	"github.com/cozy/cozy-stack/pkg/notification"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
@@ -22,7 +22,7 @@ import (
 // Push creates and send a new notification in database. This method verifies
 // the permissions associated with this creation in order to check that it is
 // granted to create a notification and to extract its source.
-func Push(inst *instance.Instance, perm *permissions.Permission, n *notifications.Notification) error {
+func Push(inst *instance.Instance, perm *permissions.Permission, n *notification.Notification) error {
 	if n.Title == "" {
 		return ErrBadNotification
 	}
@@ -30,7 +30,7 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 	// XXX Retro-compatible notifications with content/content_html fields.
 	retroCompatMode := n.Content != "" || n.ContentHTML != ""
 
-	var p *notifications.Properties
+	var p *notification.Properties
 	if !retroCompatMode {
 
 		switch perm.Type {
@@ -81,8 +81,8 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 	return sendMail(inst, n)
 }
 
-func findLastNotification(inst *instance.Instance, source string) (*notifications.Notification, error) {
-	var notifs []*notifications.Notification
+func findLastNotification(inst *instance.Instance, source string) (*notification.Notification, error) {
+	var notifs []*notification.Notification
 	req := &couchdb.FindRequest{
 		UseIndex: "by-source-id",
 		Selector: mango.Equal("source", source),
@@ -102,7 +102,7 @@ func findLastNotification(inst *instance.Instance, source string) (*notification
 	return notifs[0], nil
 }
 
-func sendPush(inst *instance.Instance, collapsible bool, n *notifications.Notification) error {
+func sendPush(inst *instance.Instance, collapsible bool, n *notification.Notification) error {
 	clients, err := oauth.GetNotifiables(inst)
 	if err != nil {
 		return err
@@ -134,7 +134,7 @@ func sendPush(inst *instance.Instance, collapsible bool, n *notifications.Notifi
 	return errm
 }
 
-func sendMail(inst *instance.Instance, n *notifications.Notification) error {
+func sendMail(inst *instance.Instance, n *notification.Notification) error {
 	var parts []*mails.Part
 	if n.ContentHTML == "" {
 		parts = []*mails.Part{
