@@ -67,9 +67,9 @@ Notifications fields are:
     sent to the underlying channel to prioritize the notification
   - `state` (string): state of the notification, used for `stateful`
     notification categories, to distinguish notifications
-  - `preferred_channel` (string): to select a preferred channel for this
-    notification: either `"mobile"` or `"mail"`. The stack may chose another
-    channel.
+  - `preferred_channels` (array of string): to select a list of preferred
+    channels for this notification: either `"mobile"` or `"mail"`. The stack
+    may chose another channels.
   - `data` (map): key/value map used to create the notification from its
     template, or sent in the notification payload for mobiles
 
@@ -92,7 +92,7 @@ Content-Type: application/vnd.api+json
       "message": "Warning: we have detected a negative balance in your my-bank",
       "priority": "high",
       "state": "-1",
-      "preferred_channel": "mobile",
+      "preferred_channels": ["mobile"],
       "data": {
         "key1": "value1",
         "key2": "value2"

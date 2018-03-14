@@ -27,58 +27,65 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 		return ErrBadNotification
 	}
 
-	// XXX Retro-compatible notifications with content/content_html fields.
-	retroCompatMode := n.Content != "" || n.ContentHTML != ""
-
 	var p *notification.Properties
-	if !retroCompatMode {
-
-		switch perm.Type {
-		// Applications and services have TypeWebapp permissions
-		case permissions.TypeWebapp:
-			slug := strings.TrimPrefix(perm.SourceID, consts.Apps)
-			man, err := apps.GetWebappBySlug(inst, slug)
-			if err != nil {
-				return err
-			}
-			var ok bool
-			p, ok = man.Notifications[n.Category]
-			if !ok {
-				return ErrUnauthorized
-			}
-		default:
-			return ErrUnauthorized
+	switch perm.Type {
+	// Applications and services have TypeWebapp permissions
+	case permissions.TypeWebapp:
+		slug := strings.TrimPrefix(perm.SourceID, consts.Apps)
+		man, err := apps.GetWebappBySlug(inst, slug)
+		if err != nil {
+			return err
 		}
+		p = man.Notifications[n.Category]
+	default:
+		return ErrUnauthorized
+	}
 
-		if p.Stateful {
-			l, err := findLastNotification(inst, n.Source())
-			if err != nil {
-				return err
-			}
-			// when the state is the same for the last notification from this source,
-			// we do not bother sending or creating a new notification.
-			if l != nil && l.State == n.State {
-				return nil
-			}
+	// XXX: for retro-compatibility, we do not yet block applications from
+	// sending notification from unknown category.
+	if p != nil && p.Stateful {
+		l, err := findLastNotification(inst, n.Source())
+		if err != nil {
+			return err
+		}
+		// when the state is the same for the last notification from this source,
+		// we do not bother sending or creating a new notification.
+		if l != nil && l.State == n.State {
+			return nil
 		}
 	}
 
-	preferredChannel := n.PreferredChannel
+	preferredChannels := n.PreferredChannels
+	if len(preferredChannels) == 0 {
+		preferredChannels = []string{"mail"}
+	}
 
 	n.NID = ""
 	n.NRev = ""
 	n.SourceID = n.Source()
 	n.CreatedAt = time.Now()
-	n.PreferredChannel = ""
+	n.PreferredChannels = nil
 
 	if err := couchdb.CreateDoc(inst, n); err != nil {
 		return err
 	}
 
-	if !retroCompatMode && preferredChannel == "mobile" {
-		return sendPush(inst, p.Collapsible, n)
+	var errm error
+	for _, channel := range preferredChannels {
+		switch channel {
+		case "mobile":
+			if p != nil {
+				if err := sendPush(inst, p.Collapsible, n); err != nil {
+					errm = multierror.Append(errm, err)
+				}
+			}
+		case "mail":
+			if err := sendMail(inst, n); err != nil {
+				errm = multierror.Append(errm, err)
+			}
+		}
 	}
-	return sendMail(inst, n)
+	return errm
 }
 
 func findLastNotification(inst *instance.Instance, source string) (*notification.Notification, error) {
