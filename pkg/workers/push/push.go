@@ -149,11 +149,14 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 		To:       msg.DeviceToken,
 		Priority: priority,
 		Notification: &fcm.Notification{
-			Body:  msg.Message,
-			Title: msg.Title,
 			Sound: msg.Sound,
 		},
-		Data: map[string]interface{}{"topic": msg.Topic},
+		Data: map[string]interface{}{
+			"topic":             msg.Topic,
+			"content-available": 1,
+			"title":             msg.Title,
+			"body":              msg.Message,
+		},
 	}
 	if len(msg.Data) > 0 {
 		for k, v := range msg.Data {
