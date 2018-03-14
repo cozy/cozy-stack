@@ -40,7 +40,7 @@ var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
 var bobContact *contacts.Contact
-var sharingID, state string
+var sharingID, state, aliceAccessToken string
 
 // Things that live on Bob's Cozy
 var tsB *httptest.Server
@@ -333,6 +333,7 @@ func assertCredentialsHasBeenExchanged(t *testing.T) {
 	if assert.NotNil(t, credentials.AccessToken) {
 		assert.NotEmpty(t, credentials.AccessToken.AccessToken)
 		assert.NotEmpty(t, credentials.AccessToken.RefreshToken)
+		aliceAccessToken = credentials.AccessToken.AccessToken
 	}
 	assert.Equal(t, sharingsA[0].Members[1].Status, "ready")
 
@@ -381,6 +382,29 @@ func TestAuthorizeSharing(t *testing.T) {
 	assert.Contains(t, location, "drive."+bobInstance.Domain)
 
 	assertCredentialsHasBeenExchanged(t)
+}
+
+func TestPermissions(t *testing.T) {
+	assert.NotNil(t, aliceAccessToken)
+
+	body, _ := json.Marshal(echo.Map{})
+	r := bytes.NewReader(body)
+	req, err := http.NewRequest(http.MethodPost, tsB.URL+"/sharings/"+sharingID+"/revs_diff", r)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/json")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
+	defer res.Body.Close()
+
+	req, err = http.NewRequest(http.MethodPost, tsB.URL+"/sharings/"+sharingID+"/revs_diff", r)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAccessToken)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	defer res.Body.Close()
 }
 
 func assertSharingWithPreviewIsCorrect(t *testing.T, body io.Reader) {

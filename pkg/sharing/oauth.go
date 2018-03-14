@@ -168,7 +168,8 @@ func convertOAuthClient(c *oauth.Client) *auth.Client {
 // createAccessToken creates an access token for the given OAuth client,
 // with a scope on this sharing.
 func createAccessToken(inst *instance.Instance, cli *oauth.Client, sharingID string) (*auth.AccessToken, error) {
-	scope := consts.Sharings + ":" + sharingID
+	scope := consts.Sharings + ":ALL:" + sharingID
+	cli.CouchID = cli.ClientID // XXX CouchID is required by CreateJWT
 	refresh, err := cli.CreateJWT(inst, permissions.RefreshTokenAudience, scope)
 	if err != nil {
 		return nil, err
