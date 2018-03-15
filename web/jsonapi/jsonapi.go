@@ -160,8 +160,8 @@ func DataErrorList(c echo.Context, errs ...*Error) error {
 
 // Bind is used to unmarshal an input JSONApi document. It binds an
 // incoming request to a attribute type.
-func Bind(req *http.Request, attrs interface{}) (*ObjectMarshalling, error) {
-	decoder := json.NewDecoder(req.Body)
+func Bind(body io.Reader, attrs interface{}) (*ObjectMarshalling, error) {
+	decoder := json.NewDecoder(body)
 	var doc *Document
 	if err := decoder.Decode(&doc); err != nil {
 		return nil, err

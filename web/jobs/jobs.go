@@ -140,7 +140,7 @@ func pushJob(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	req := apiJobRequest{}
-	if _, err := jsonapi.Bind(c.Request(), &req); err != nil {
+	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
 		return wrapJobsError(err)
 	}
 
@@ -170,7 +170,7 @@ func newTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	sched := globals.GetScheduler()
 	req := apiTriggerRequest{}
-	if _, err := jsonapi.Bind(c.Request(), &req); err != nil {
+	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
 		return wrapJobsError(err)
 	}
 

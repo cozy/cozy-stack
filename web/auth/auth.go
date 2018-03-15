@@ -626,9 +626,7 @@ func authorize(c echo.Context) error {
 type authorizeSharingParams struct {
 	instance  *instance.Instance
 	state     string
-	clientID  string
 	sharingID string
-	client    *oauth.Client
 }
 
 func checkAuthorizeSharingParams(c echo.Context, params *authorizeSharingParams) (bool, error) {
@@ -638,27 +636,12 @@ func checkAuthorizeSharingParams(c echo.Context, params *authorizeSharingParams)
 			"Error":  "Error No state parameter",
 		})
 	}
-	if params.clientID == "" {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.Domain,
-			"Error":  "Error No client_id parameter",
-		})
-	}
 	if params.sharingID == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": params.instance.Domain,
 			"Error":  "Error No sharing_id parameter",
 		})
 	}
-
-	params.client = new(oauth.Client)
-	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.Domain,
-			"Error":  "Error No registered client",
-		})
-	}
-
 	return false, nil
 }
 
@@ -667,14 +650,12 @@ func authorizeSharingForm(c echo.Context) error {
 	params := authorizeSharingParams{
 		instance:  instance,
 		state:     c.QueryParam("state"),
-		clientID:  c.QueryParam("client_id"),
 		sharingID: c.QueryParam("sharing_id"),
 	}
 
 	if hasError, err := checkAuthorizeSharingParams(c, &params); hasError {
 		return err
 	}
-	params.client.ClientID = params.clientID
 
 	if !middlewares.IsLoggedIn(c) {
 		u := instance.PageURL("/auth/login", url.Values{
@@ -703,7 +684,7 @@ func authorizeSharingForm(c echo.Context) error {
 		"Locale":       instance.Locale,
 		"Domain":       instance.Domain,
 		"SharerDomain": sharerDomain,
-		"Client":       params.client,
+		"SharerName":   s.Members[0].Name,
 		"State":        params.state,
 		"Sharing":      s,
 		"CSRF":         c.Get("csrf"),
@@ -715,7 +696,6 @@ func authorizeSharing(c echo.Context) error {
 	params := authorizeSharingParams{
 		instance:  instance,
 		state:     c.FormValue("state"),
-		clientID:  c.FormValue("client_id"),
 		sharingID: c.FormValue("sharing_id"),
 	}
 
@@ -738,6 +718,9 @@ func authorizeSharing(c echo.Context) error {
 		return sharing.ErrInvalidSharing
 	}
 
+	if err = s.SendAnswer(instance, params.state); err != nil {
+		return err
+	}
 	return c.Redirect(http.StatusSeeOther, instance.DefaultRedirection().String())
 }
 

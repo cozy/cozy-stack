@@ -339,5 +339,51 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /sharings/:sharing-id/answer
+
+This route is used by the Cozy of a recipient to exchange credentials with the
+Cozy of the sharer, after the recipient has accepted a sharing.
+
+#### Request
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/answer
+Host: alice.example.net
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings.answer",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "attributes": {
+      "state": "eiJ3iepoaihohz1Y",
+      "client": {...},
+      "access_token": "uia7b85928e5cf"
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings.answer",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "attributes": {
+      "client": {...},
+      "access_token": "ui77bd4670fbd3"
+    }
+  }
+}
+```
 
 {% endraw %}

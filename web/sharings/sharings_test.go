@@ -40,7 +40,7 @@ var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
 var bobContact *contacts.Contact
-var sharingID, state, clientID string
+var sharingID, state string
 
 // Things that live on Bob's Cozy
 var tsB *httptest.Server
@@ -136,6 +136,7 @@ func TestCreateSharingSuccess(t *testing.T) {
 						"title":   "test one",
 						"doctype": iocozytests,
 						"values":  []string{"foobar"},
+						"add":     "sync",
 					},
 				},
 			},
@@ -180,21 +181,6 @@ func TestGetSharing(t *testing.T) {
 	defer res.Body.Close()
 
 	assertSharingIsCorrectOnSharer(t, res.Body)
-}
-
-func assertOAuthClientHasBeenRegistered(t *testing.T) string {
-	var results []map[string]interface{}
-	req := couchdb.AllDocsRequest{}
-	err := couchdb.GetAllDocs(bobInstance, consts.OAuthClients, &req, &results)
-	assert.NoError(t, err)
-	if assert.True(t, len(results) > 0) {
-		client := results[len(results)-1]
-		assert.Equal(t, client["client_kind"], "sharing")
-		assert.Equal(t, client["client_uri"], "https://"+aliceInstance.Domain)
-		clientID = client["_id"].(string)
-		return client["client_name"].(string)
-	}
-	return ""
 }
 
 func assertSharingRequestHasBeenCreated(t *testing.T) {
@@ -265,8 +251,6 @@ func TestDiscovery(t *testing.T) {
 	assert.Contains(t, authorizeLink, tsB.URL)
 	assert.Contains(t, authorizeLink, "/auth/authorize/sharing")
 
-	clientName := assertOAuthClientHasBeenRegistered(t)
-	assert.Equal(t, clientName, "Alice")
 	assertSharingRequestHasBeenCreated(t)
 }
 
@@ -290,9 +274,21 @@ func bobLogin(t *testing.T) {
 	assert.Contains(t, res.Header.Get("Location"), "drive")
 }
 
+func fakeAliceInstance(t *testing.T) {
+	var results []*sharing.Sharing
+	req := couchdb.AllDocsRequest{}
+	err := couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &results)
+	assert.NoError(t, err)
+	assert.Len(t, results, 1)
+	s := results[0]
+	assert.Len(t, s.Members, 2)
+	s.Members[0].Instance = tsA.URL
+	err = couchdb.UpdateDoc(bobInstance, s)
+	assert.NoError(t, err)
+}
+
 func assertAuthorizePageShowsTheSharing(t *testing.T, body string) {
 	assert.Contains(t, body, "would like to share the following data with you")
-	assert.Contains(t, body, `<input type="hidden" name="client_id" value="`+clientID)
 	assert.Contains(t, body, `<input type="hidden" name="sharing_id" value="`+sharingID)
 	assert.Contains(t, body, `<input type="hidden" name="state" value="`+state)
 	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
@@ -302,11 +298,61 @@ func assertAuthorizePageShowsTheSharing(t *testing.T, body string) {
 	}
 	assert.Contains(t, body, `<li class="io.cozy.tests">test one</li>`)
 	assert.Contains(t, body, `<li>Your Cozy: `+bobInstance.Domain+`</li>`)
-	assert.Contains(t, body, `<li>Your contact&#39;s Cozy: `+aliceInstance.Domain+`</li>`)
+	assert.Contains(t, body, `<li>Your contact&#39;s Cozy: 127.0.0.1:`)
+}
+
+func assertCredentialsHasBeenExchanged(t *testing.T) {
+	var resultsA []map[string]interface{}
+	req := couchdb.AllDocsRequest{}
+	err := couchdb.GetAllDocs(bobInstance, consts.OAuthClients, &req, &resultsA)
+	assert.NoError(t, err)
+	assert.True(t, len(resultsA) > 0)
+	clientA := resultsA[len(resultsA)-1]
+	assert.Equal(t, clientA["client_kind"], "sharing")
+	assert.Equal(t, clientA["client_uri"], tsA.URL+"/")
+	assert.Equal(t, clientA["client_name"], "Sharing Alice")
+
+	var resultsB []map[string]interface{}
+	err = couchdb.GetAllDocs(aliceInstance, consts.OAuthClients, &req, &resultsB)
+	assert.NoError(t, err)
+	assert.True(t, len(resultsB) > 0)
+	clientB := resultsB[len(resultsB)-1]
+	assert.Equal(t, clientB["client_kind"], "sharing")
+	assert.Equal(t, clientB["client_uri"], tsB.URL+"/")
+	assert.Equal(t, clientB["client_name"], "Sharing Bob")
+
+	var sharingsA []*sharing.Sharing
+	err = couchdb.GetAllDocs(aliceInstance, consts.Sharings, &req, &sharingsA)
+	assert.NoError(t, err)
+	assert.True(t, len(sharingsA) > 0)
+	assert.Len(t, sharingsA[0].Credentials, 1)
+	credentials := sharingsA[0].Credentials[0]
+	if assert.NotNil(t, credentials.Client) {
+		assert.Equal(t, credentials.Client.ClientID, clientA["_id"])
+	}
+	if assert.NotNil(t, credentials.AccessToken) {
+		assert.NotEmpty(t, credentials.AccessToken.AccessToken)
+		assert.NotEmpty(t, credentials.AccessToken.RefreshToken)
+	}
+
+	var sharingsB []*sharing.Sharing
+	err = couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &sharingsB)
+	assert.NoError(t, err)
+	assert.True(t, len(sharingsB) > 0)
+	assert.Len(t, sharingsB[0].Credentials, 1)
+	credentials = sharingsB[0].Credentials[0]
+	if assert.NotNil(t, credentials.Client) {
+		assert.Equal(t, credentials.Client.ClientID, clientB["_id"])
+	}
+	if assert.NotNil(t, credentials.AccessToken) {
+		assert.NotEmpty(t, credentials.AccessToken.AccessToken)
+		assert.NotEmpty(t, credentials.AccessToken.RefreshToken)
+	}
 }
 
 func TestAuthorizeSharing(t *testing.T) {
 	bobLogin(t)
+	fakeAliceInstance(t)
 
 	res, err := bobUA.Get(authorizeLink)
 	assert.NoError(t, err)
@@ -319,7 +365,6 @@ func TestAuthorizeSharing(t *testing.T) {
 
 	v := &url.Values{
 		"state":      {state},
-		"client_id":  {clientID},
 		"sharing_id": {sharingID},
 		"csrf_token": {csrfToken},
 	}
@@ -333,6 +378,8 @@ func TestAuthorizeSharing(t *testing.T) {
 	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
 	location := res.Header.Get("Location")
 	assert.Contains(t, location, "drive."+bobInstance.Domain)
+
+	assertCredentialsHasBeenExchanged(t)
 }
 
 func assertSharingWithPreviewIsCorrect(t *testing.T, body io.Reader) {
@@ -424,7 +471,6 @@ func assertCorrectRedirection(t *testing.T, body io.Reader) {
 	u, err := url.Parse(redirectURI.(string))
 	assert.NoError(t, err)
 	assert.Equal(t, u.Path, "/auth/authorize/sharing")
-	assert.Equal(t, u.Query()["client_id"][0], clientID)
 	assert.Equal(t, u.Query()["sharing_id"][0], sharingID)
 	assert.NotEmpty(t, u.Query()["state"][0])
 }
@@ -451,8 +497,6 @@ func TestDiscoveryWithPreview(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
-	clientName := assertOAuthClientHasBeenRegistered(t)
-	assert.Equal(t, clientName, "Alice-2")
 	assertCorrectRedirection(t, res.Body)
 }
 
