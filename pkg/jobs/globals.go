@@ -25,6 +25,9 @@ var globalJobSystem *JobSystem
 // SystemStart initializes and starts the global jobs system with the given
 // broker, scheduler instances and workers list.
 func SystemStart(b Broker, s Scheduler, workersList WorkersList) error {
+	if globalJobSystem != nil {
+		panic("Job system already started")
+	}
 	globalJobSystem = &JobSystem{b, s}
 	if err := b.StartWorkers(workersList); err != nil {
 		return err
