@@ -350,8 +350,8 @@ func (w *konnectorWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
 	// 	return nil
 	// }
 
-	// sched := globals.GetScheduler()
-	// t, err := sched.Get(ctx.Domain(), triggerID)
+	// sched := jobs.System()
+	// t, err := sched.GetTrigger(ctx.Domain(), triggerID)
 	// if err != nil {
 	// 	return err
 	// }
@@ -392,7 +392,7 @@ func (w *konnectorWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
 	// }
 
 	// ctx.Logger().Info("Konnector has failed definitively, should send mail.", mail)
-	// _, err = globals.GetBroker().PushJob(&jobs.JobRequest{
+	// _, err = jobs.System().PushJob(&jobs.JobRequest{
 	// 	Domain:     ctx.Domain(),
 	// 	WorkerType: "sendmail",
 	// 	Message:    msg,

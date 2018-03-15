@@ -1,4 +1,4 @@
-package scheduler
+package jobs
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -54,7 +53,7 @@ return t`
 // RedisScheduler is a centralized scheduler of many triggers. It starts all of
 // them and schedules jobs accordingly.
 type RedisScheduler struct {
-	broker  jobs.Broker
+	broker  Broker
 	client  redis.UniversalClient
 	closed  chan struct{}
 	stopped chan struct{}
@@ -79,8 +78,9 @@ func eventsKey(domain string) string {
 	return "events-" + domain
 }
 
-// Start a goroutine that will fetch triggers in redis to schedule their jobs
-func (s *RedisScheduler) Start(b jobs.Broker) error {
+// StartScheduler a goroutine that will fetch triggers in redis to schedule
+// their jobs.
+func (s *RedisScheduler) StartScheduler(b Broker) error {
 	s.broker = b
 	s.closed = make(chan struct{})
 	s.startEventDispatcher()
@@ -146,7 +146,7 @@ func (s *RedisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 			if !eventMatchPermission(event, &rule) {
 				continue
 			}
-			t, err := s.Get(event.Domain, triggerID)
+			t, err := s.GetTrigger(event.Domain, triggerID)
 			if err != nil {
 				s.log.Warnf("[scheduler] Could not fetch @event trigger %s %s: %s",
 					event.Domain, triggerID, err.Error())
@@ -162,9 +162,11 @@ func (s *RedisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 						Member: redisKey(t.Infos()),
 					})
 					continue
+				} else {
+					s.log.Warnf("[scheduler] Trigger %s %s has an invalid debounce: %s",
+						et.infos.Domain, et.infos.TID, et.infos.Debounce)
+					continue
 				}
-				s.log.Warnf("[scheduler] Trigger %s %s has an invalid debounce: %s",
-					et.infos.Domain, et.infos.TID, et.infos.Debounce)
 			}
 			jobRequest, err := et.Infos().JobRequestWithEvent(event)
 			if err != nil {
@@ -219,7 +221,7 @@ func (s *RedisScheduler) Poll(now int64) error {
 			s.client.ZRem(SchedKey, results[0])
 			return fmt.Errorf("Invalid key %s", res)
 		}
-		t, err := s.Get(parts[0], parts[1])
+		t, err := s.GetTrigger(parts[0], parts[1])
 		if err != nil {
 			if err == ErrNotFoundTrigger {
 				s.client.ZRem(SchedKey, results[0])
@@ -265,9 +267,9 @@ func (s *RedisScheduler) Poll(now int64) error {
 	}
 }
 
-// Add a trigger to the system, by persisting it and using redis for scheduling
-// its jobs
-func (s *RedisScheduler) Add(t Trigger) error {
+// AddTrigger a trigger to the system, by persisting it and using redis for
+// scheduling its jobs
+func (s *RedisScheduler) AddTrigger(t Trigger) error {
 	infos := t.Infos()
 	db := couchdb.SimpleDatabasePrefix(infos.Domain)
 	if err := couchdb.CreateDoc(db, infos); err != nil {
@@ -303,8 +305,8 @@ func (s *RedisScheduler) addToRedis(t Trigger, prev time.Time) error {
 	return err
 }
 
-// Get returns the trigger with the specified ID.
-func (s *RedisScheduler) Get(domain, id string) (Trigger, error) {
+// GetTrigger returns the trigger with the specified ID.
+func (s *RedisScheduler) GetTrigger(domain, id string) (Trigger, error) {
 	var infos TriggerInfos
 	db := couchdb.SimpleDatabasePrefix(domain)
 	if err := couchdb.GetDoc(db, consts.Triggers, id, &infos); err != nil {
@@ -316,10 +318,10 @@ func (s *RedisScheduler) Get(domain, id string) (Trigger, error) {
 	return NewTrigger(&infos)
 }
 
-// Delete removes the trigger with the specified ID. The trigger is unscheduled
-// and remove from the storage.
-func (s *RedisScheduler) Delete(domain, id string) error {
-	t, err := s.Get(domain, id)
+// DeleteTrigger removes the trigger with the specified ID. The trigger is
+// unscheduled and remove from the storage.
+func (s *RedisScheduler) DeleteTrigger(domain, id string) error {
+	t, err := s.GetTrigger(domain, id)
 	if err != nil {
 		return err
 	}
@@ -344,8 +346,8 @@ func (s *RedisScheduler) deleteTrigger(t Trigger) error {
 	return nil
 }
 
-// GetAll returns all the triggers for a domain, from couch.
-func (s *RedisScheduler) GetAll(domain string) ([]Trigger, error) {
+// GetAllTriggers returns all the triggers for a domain, from couch.
+func (s *RedisScheduler) GetAllTriggers(domain string) ([]Trigger, error) {
 	var infos []*TriggerInfos
 	db := couchdb.SimpleDatabasePrefix(domain)
 	err := couchdb.ForeachDocs(db, consts.Triggers, func(data []byte) error {
@@ -379,7 +381,7 @@ func (s *RedisScheduler) RebuildRedis(domain string) error {
 	if err != nil {
 		return err
 	}
-	triggers, err := s.GetAll(domain)
+	triggers, err := s.GetAllTriggers(domain)
 	if err != nil {
 		return err
 	}

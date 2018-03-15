@@ -35,16 +35,16 @@ type (
 	// particular domain. A broker can be used to create jobs that are pushed in
 	// the job system.
 	Broker interface {
-		Start(workersList WorkersList) error
+		StartWorkers(workersList WorkersList) error
 		Shutdown(ctx context.Context) error
 
 		// PushJob will push try to push a new job from the specified job request.
 		// This method is asynchronous.
 		PushJob(request *JobRequest) (*Job, error)
 
-		// QueueLen returns the total element in the queue of the specified worker
-		// type.
-		QueueLen(workerType string) (int, error)
+		// WorkerQueueLen returns the total element in the queue of the specified
+		// worker type.
+		WorkerQueueLen(workerType string) (int, error)
 		// WorkersTypes returns the list of registered workers types.
 		WorkersTypes() []string
 	}

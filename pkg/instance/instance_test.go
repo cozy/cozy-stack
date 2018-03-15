@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -375,12 +374,11 @@ func TestMain(m *testing.M) {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
-	b, s, _, err := stack.Start()
+	_, err = stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	globals.Set(b, s)
 
 	instance.Destroy("test.cozycloud.cc")
 	instance.Destroy("test2.cozycloud.cc")

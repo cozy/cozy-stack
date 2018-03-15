@@ -38,8 +38,8 @@ func NewRedisBroker(client redis.UniversalClient) Broker {
 	}
 }
 
-// Start polling jobs from redis queues
-func (b *redisBroker) Start(ws WorkersList) error {
+// StartWorkers polling jobs from redis queues
+func (b *redisBroker) StartWorkers(ws WorkersList) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 0, 1) {
 		return ErrClosed
 	}
@@ -204,7 +204,7 @@ func (b *redisBroker) PushJob(req *JobRequest) (*Job, error) {
 
 // QueueLen returns the size of the number of elements in queue of the
 // specified worker type.
-func (b *redisBroker) QueueLen(workerType string) (int, error) {
+func (b *redisBroker) WorkerQueueLen(workerType string) (int, error) {
 	key := redisPrefix + workerType
 	l1, err := b.client.LLen(key).Result()
 	if err != nil {

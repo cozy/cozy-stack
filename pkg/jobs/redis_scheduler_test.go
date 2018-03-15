@@ -1,4 +1,4 @@
-package scheduler_test
+package jobs_test
 
 import (
 	"context"
@@ -10,11 +10,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -41,7 +39,7 @@ type mockBroker struct {
 	jobs []*jobs.JobRequest
 }
 
-func (b *mockBroker) Start(workersList jobs.WorkersList) error {
+func (b *mockBroker) StartWorkers(workersList jobs.WorkersList) error {
 	return nil
 }
 
@@ -54,7 +52,7 @@ func (b *mockBroker) PushJob(request *jobs.JobRequest) (*jobs.Job, error) {
 	return nil, nil
 }
 
-func (b *mockBroker) QueueLen(workerType string) (int, error) {
+func (b *mockBroker) WorkerQueueLen(workerType string) (int, error) {
 	count := 0
 	for _, job := range b.jobs {
 		if job.WorkerType == workerType {
@@ -72,7 +70,7 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	var wAt sync.WaitGroup
 	var wIn sync.WaitGroup
 	bro := jobs.NewMemBroker()
-	bro.Start(jobs.WorkersList{
+	bro.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "worker",
 			Concurrency:  1,
@@ -100,14 +98,14 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	wAt.Add(1) // 1 time in @at
 	wIn.Add(1) // 1 time in @in
 
-	at := &scheduler.TriggerInfos{
+	at := &jobs.TriggerInfos{
 		Type:       "@at",
 		Domain:     instanceName,
 		Arguments:  time.Now().Add(2 * time.Second).Format(time.RFC3339),
 		WorkerType: "worker",
 		Message:    msg1,
 	}
-	in := &scheduler.TriggerInfos{
+	in := &jobs.TriggerInfos{
 		Domain:     instanceName,
 		Type:       "@in",
 		Arguments:  "1s",
@@ -115,23 +113,23 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 		Message:    msg2,
 	}
 
-	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
+	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
 	sch.Shutdown(context.Background())
-	sch.Start(bro)
+	sch.StartScheduler(bro)
 
-	tat, err := scheduler.NewTrigger(at)
+	tat, err := jobs.NewTrigger(at)
 	assert.NoError(t, err)
-	err = sch.Add(tat)
+	err = sch.AddTrigger(tat)
 	assert.NoError(t, err)
 	atID := tat.Infos().TID
 
-	tin, err := scheduler.NewTrigger(in)
+	tin, err := jobs.NewTrigger(in)
 	assert.NoError(t, err)
-	err = sch.Add(tin)
+	err = sch.AddTrigger(tin)
 	assert.NoError(t, err)
 	inID := tin.Infos().TID
 
-	ts, err := sch.GetAll(instanceName)
+	ts, err := sch.GetAllTriggers(instanceName)
 	assert.NoError(t, err)
 	assert.Len(t, ts, 3) // 1 @event for thumbnails + 1 @at + 1 @in
 
@@ -171,40 +169,40 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	_, err = sch.Get(instanceName, atID)
+	_, err = sch.GetTrigger(instanceName, atID)
 	assert.Error(t, err)
-	assert.Equal(t, scheduler.ErrNotFoundTrigger, err)
+	assert.Equal(t, jobs.ErrNotFoundTrigger, err)
 
-	_, err = sch.Get(instanceName, inID)
+	_, err = sch.GetTrigger(instanceName, inID)
 	assert.Error(t, err)
-	assert.Equal(t, scheduler.ErrNotFoundTrigger, err)
+	assert.Equal(t, jobs.ErrNotFoundTrigger, err)
 }
 
 func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	err := client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
+	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
 	sch.Shutdown(context.Background())
-	sch.Start(bro)
+	sch.StartScheduler(bro)
 	sch.Shutdown(context.Background())
-	defer sch.Start(bro)
+	defer sch.StartScheduler(bro)
 
 	msg, _ := jobs.NewMessage("@cron")
 
-	infos := &scheduler.TriggerInfos{
+	infos := &jobs.TriggerInfos{
 		Type:       "@cron",
 		Domain:     instanceName,
 		Arguments:  "*/3 * * * * *",
 		WorkerType: "incr",
 		Message:    msg,
 	}
-	trigger, err := scheduler.NewTrigger(infos)
+	trigger, err := jobs.NewTrigger(infos)
 	assert.NoError(t, err)
-	err = sch.Add(trigger)
+	err = sch.AddTrigger(trigger)
 	assert.NoError(t, err)
 
 	now := time.Now().UTC().Unix()
@@ -212,27 +210,27 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 		err = sch.Poll(now + i + 4)
 		assert.NoError(t, err)
 	}
-	count, _ := bro.QueueLen("incr")
+	count, _ := bro.WorkerQueueLen("incr")
 	assert.Equal(t, 6, count)
 }
 
 func TestRedisPollFromSchedKey(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	err := client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
+	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
 	sch.Shutdown(context.Background())
-	sch.Start(bro)
+	sch.StartScheduler(bro)
 	sch.Shutdown(context.Background())
-	defer sch.Start(bro)
+	defer sch.StartScheduler(bro)
 
 	now := time.Now()
 	msg, _ := jobs.NewMessage("@at")
 
-	at := &scheduler.TriggerInfos{
+	at := &jobs.TriggerInfos{
 		Type:       "@at",
 		Domain:     instanceName,
 		Arguments:  now.Format(time.RFC3339),
@@ -245,7 +243,7 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 
 	ts := now.UTC().Unix()
 	key := instanceName + "/" + at.TID
-	err = client.ZAdd(scheduler.SchedKey, redis.Z{
+	err = client.ZAdd(jobs.SchedKey, redis.Z{
 		Score:  float64(ts + 1),
 		Member: key,
 	}).Err()
@@ -254,37 +252,37 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	err = sch.Poll(ts + 2)
 	assert.NoError(t, err)
 	<-time.After(1 * time.Millisecond)
-	count, _ := bro.QueueLen("incr")
+	count, _ := bro.WorkerQueueLen("incr")
 	assert.Equal(t, 0, count)
 
 	err = sch.Poll(ts + 13)
 	assert.NoError(t, err)
 	<-time.After(1 * time.Millisecond)
-	count, _ = bro.QueueLen("incr")
+	count, _ = bro.WorkerQueueLen("incr")
 	assert.Equal(t, 1, count)
 }
 
 func TestRedisTriggerEvent(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	err := client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
+	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
 	sch.Shutdown(context.Background())
 	time.Sleep(1 * time.Second)
-	sch.Start(bro)
+	sch.StartScheduler(bro)
 
-	evTrigger := &scheduler.TriggerInfos{
+	evTrigger := &jobs.TriggerInfos{
 		Type:       "@event",
 		Domain:     instanceName,
 		Arguments:  "io.cozy.event-test:CREATED",
 		WorkerType: "incr",
 	}
-	tri, err := scheduler.NewTrigger(evTrigger)
+	tri, err := jobs.NewTrigger(evTrigger)
 	assert.NoError(t, err)
-	sch.Add(tri)
+	sch.AddTrigger(tri)
 
 	realtime.GetHub().Publish(&realtime.Event{
 		Domain: instanceName,
@@ -297,7 +295,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	count, _ := bro.QueueLen("incr")
+	count, _ := bro.WorkerQueueLen("incr")
 	if !assert.Equal(t, 1, count) {
 		return
 	}
@@ -335,7 +333,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	count, _ = bro.QueueLen("incr")
+	count, _ = bro.WorkerQueueLen("incr")
 	assert.Equal(t, 1, count)
 }
 
@@ -351,14 +349,14 @@ func (d fakeFilePather) FilePath(doc *vfs.FileDoc) (string, error) {
 func TestRedisTriggerEventForDirectories(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	err := client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
+	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
 	sch.Shutdown(context.Background())
 	time.Sleep(1 * time.Second)
-	sch.Start(bro)
+	sch.StartScheduler(bro)
 
 	dir := &vfs.DirDoc{
 		Type:      "directory",
@@ -371,18 +369,18 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	err = testInstance.VFS().CreateDirDoc(dir)
 	assert.NoError(t, err)
 
-	evTrigger := &scheduler.TriggerInfos{
+	evTrigger := &jobs.TriggerInfos{
 		Type:       "@event",
 		Domain:     instanceName,
 		Arguments:  "io.cozy.files:CREATED:" + dir.DocID,
 		WorkerType: "incr",
 	}
-	tri, err := scheduler.NewTrigger(evTrigger)
+	tri, err := jobs.NewTrigger(evTrigger)
 	assert.NoError(t, err)
-	sch.Add(tri)
+	sch.AddTrigger(tri)
 
 	time.Sleep(1 * time.Second)
-	count, _ := bro.QueueLen("incr")
+	count, _ := bro.WorkerQueueLen("incr")
 	if !assert.Equal(t, 0, count) {
 		return
 	}
@@ -404,7 +402,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	})
 
 	time.Sleep(100 * time.Millisecond)
-	count, _ = bro.QueueLen("incr")
+	count, _ = bro.WorkerQueueLen("incr")
 	assert.Equal(t, 1, count)
 
 	bazID := utils.RandomString(10)
@@ -433,7 +431,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	})
 
 	time.Sleep(100 * time.Millisecond)
-	count, _ = bro.QueueLen("incr")
+	count, _ = bro.WorkerQueueLen("incr")
 	assert.Equal(t, 2, count)
 
 	// Simulate that /foo/bar/baz is moved to /quux
@@ -463,32 +461,32 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	})
 
 	time.Sleep(100 * time.Millisecond)
-	count, _ = bro.QueueLen("incr")
+	count, _ = bro.WorkerQueueLen("incr")
 	assert.Equal(t, 3, count)
 }
 
 func TestRedisSchedulerWithDebounce(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	err := client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
+	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
 	sch.Shutdown(context.Background())
 	time.Sleep(1 * time.Second)
-	sch.Start(bro)
+	sch.StartScheduler(bro)
 
-	evTrigger := &scheduler.TriggerInfos{
+	evTrigger := &jobs.TriggerInfos{
 		Type:       "@event",
 		Domain:     instanceName,
 		Arguments:  "io.cozy.debounce-test:CREATED",
 		WorkerType: "incr",
 		Debounce:   "2s",
 	}
-	tri, err := scheduler.NewTrigger(evTrigger)
+	tri, err := jobs.NewTrigger(evTrigger)
 	assert.NoError(t, err)
-	sch.Add(tri)
+	sch.AddTrigger(tri)
 
 	event := &realtime.Event{
 		Domain: instanceName,
@@ -505,7 +503,7 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 	}
 
 	time.Sleep(12 * time.Second)
-	count, _ := bro.QueueLen("incr")
+	count, _ := bro.WorkerQueueLen("incr")
 	assert.Equal(t, 2, count)
 }
 
@@ -529,7 +527,7 @@ func TestMain(m *testing.M) {
 		cfg.Jobs.RedisConfig = was
 		opts, _ := redis.ParseURL(redisURL)
 		client := redis.NewClient(opts)
-		return client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+		return client.Del(jobs.TriggersKey, jobs.SchedKey).Err()
 	})
 
 	os.Exit(setup.Run())

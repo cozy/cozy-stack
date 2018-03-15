@@ -1,4 +1,4 @@
-package scheduler
+package jobs
 
 import (
 	"errors"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -52,15 +51,15 @@ func (t *EventTrigger) ID() string {
 // Valid implements the permissions.Validable interface
 func (t *EventTrigger) Valid(key, value string) bool {
 	switch key {
-	case jobs.WorkerType:
+	case WorkerType:
 		return t.infos.WorkerType == value
 	}
 	return false
 }
 
 // Schedule implements the Schedule method of the Trigger interface.
-func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
-	ch := make(chan *jobs.JobRequest)
+func (t *EventTrigger) Schedule() <-chan *JobRequest {
+	ch := make(chan *JobRequest)
 	go func() {
 		sub := realtime.GetHub().Subscriber(t.infos.Domain)
 		sub.Subscribe(t.mask.Type)

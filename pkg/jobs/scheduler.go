@@ -1,4 +1,4 @@
-package scheduler
+package jobs
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
@@ -20,7 +19,7 @@ type (
 		Infos() *TriggerInfos
 		// Schedule should return a channel on which the trigger can send job
 		// requests when it decides to.
-		Schedule() <-chan *jobs.JobRequest
+		Schedule() <-chan *JobRequest
 		// Unschedule should be used to clean the trigger states and should close
 		// the returns jobs channel.
 		Unschedule()
@@ -29,33 +28,33 @@ type (
 	// Scheduler interface is used to represent a scheduler that is responsible
 	// to listen respond to triggers jobs requests and send them to the broker.
 	Scheduler interface {
-		Start(broker jobs.Broker) error
+		StartScheduler(broker Broker) error
 		Shutdown(ctx context.Context) error
-		Add(trigger Trigger) error
-		Get(domain, id string) (Trigger, error)
-		Delete(domain, id string) error
-		GetAll(domain string) ([]Trigger, error)
+		AddTrigger(trigger Trigger) error
+		GetTrigger(domain, id string) (Trigger, error)
+		DeleteTrigger(domain, id string) error
+		GetAllTriggers(domain string) ([]Trigger, error)
 		RebuildRedis(domain string) error
 	}
 
 	// TriggerInfos is a struct containing all the options of a trigger.
 	TriggerInfos struct {
-		TID          string           `json:"_id,omitempty"`
-		TRev         string           `json:"_rev,omitempty"`
-		Domain       string           `json:"domain"`
-		Type         string           `json:"type"`
-		WorkerType   string           `json:"worker"`
-		Arguments    string           `json:"arguments"`
-		Debounce     string           `json:"debounce"`
-		Options      *jobs.JobOptions `json:"options"`
-		Message      jobs.Message     `json:"message"`
-		CurrentState *TriggerState    `json:"current_state,omitempty"`
+		TID          string        `json:"_id,omitempty"`
+		TRev         string        `json:"_rev,omitempty"`
+		Domain       string        `json:"domain"`
+		Type         string        `json:"type"`
+		WorkerType   string        `json:"worker"`
+		Arguments    string        `json:"arguments"`
+		Debounce     string        `json:"debounce"`
+		Options      *JobOptions   `json:"options"`
+		Message      Message       `json:"message"`
+		CurrentState *TriggerState `json:"current_state,omitempty"`
 	}
 
 	// TriggerState represent the current state of the trigger
 	TriggerState struct {
 		TID                 string     `json:"trigger_id"`
-		Status              jobs.State `json:"status"`
+		Status              State      `json:"status"`
 		LastSuccess         *time.Time `json:"last_success,omitempty"`
 		LastSuccessfulJobID string     `json:"last_successful_job_id,omitempty"`
 		LastExecution       *time.Time `json:"last_execution,omitempty"`
@@ -112,8 +111,8 @@ func (t *TriggerInfos) Clone() couchdb.Doc {
 }
 
 // JobRequest returns a job request associated with the scheduler informations.
-func (t *TriggerInfos) JobRequest() *jobs.JobRequest {
-	return &jobs.JobRequest{
+func (t *TriggerInfos) JobRequest() *JobRequest {
+	return &JobRequest{
 		Domain:     t.Domain,
 		WorkerType: t.WorkerType,
 		TriggerID:  t.ID(),
@@ -124,8 +123,8 @@ func (t *TriggerInfos) JobRequest() *jobs.JobRequest {
 
 // JobRequestWithEvent returns a job request associated with the scheduler
 // informations associated to the specified realtime event.
-func (t *TriggerInfos) JobRequestWithEvent(event *realtime.Event) (*jobs.JobRequest, error) {
-	evt, err := jobs.NewEvent(event)
+func (t *TriggerInfos) JobRequestWithEvent(event *realtime.Event) (*JobRequest, error) {
+	evt, err := NewEvent(event)
 	if err != nil {
 		return nil, err
 	}
@@ -150,13 +149,13 @@ func (t *TriggerInfos) Valid(key, value string) bool {
 }
 
 // GetJobs returns the jobs launched by the given trigger.
-func GetJobs(t Trigger, limit int) ([]*jobs.Job, error) {
+func GetJobs(t Trigger, limit int) ([]*Job, error) {
 	triggerInfos := t.Infos()
 	db := couchdb.SimpleDatabasePrefix(triggerInfos.Domain)
 	if limit <= 0 || limit > 50 {
 		limit = 50
 	}
-	var jobs []*jobs.Job
+	var jobs []*Job
 	req := &couchdb.FindRequest{
 		UseIndex: "by-trigger-id",
 		Selector: mango.Equal("trigger_id", triggerInfos.ID()),
@@ -174,7 +173,7 @@ func GetJobs(t Trigger, limit int) ([]*jobs.Job, error) {
 }
 
 // GetTriggerState returns the state of the trigger, calculated from the last
-// launched jobs.
+// launched
 func GetTriggerState(t Trigger) (*TriggerState, error) {
 	js, err := GetJobs(t, 0)
 	if err != nil {
@@ -183,7 +182,7 @@ func GetTriggerState(t Trigger) (*TriggerState, error) {
 
 	var state TriggerState
 
-	state.Status = jobs.Done
+	state.Status = Done
 	state.TID = t.ID()
 
 	// jobs are ordered from the oldest to most recent job
@@ -191,15 +190,15 @@ func GetTriggerState(t Trigger) (*TriggerState, error) {
 		j := js[i]
 		startedAt := &j.StartedAt
 		switch j.State {
-		case jobs.Errored:
+		case Errored:
 			state.LastFailure = startedAt
 			state.LastFailedJobID = j.ID()
 			state.LastError = j.Error
-		case jobs.Done:
+		case Done:
 			state.LastSuccess = startedAt
 			state.LastSuccessfulJobID = j.ID()
 		}
-		if j.Manual && (j.State == jobs.Done || j.State == jobs.Errored) {
+		if j.Manual && (j.State == Done || j.State == Errored) {
 			state.LastManualExecution = startedAt
 			state.LastManualJobID = j.ID()
 		}

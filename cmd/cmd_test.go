@@ -16,7 +16,6 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/stack"
@@ -37,12 +36,11 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	b, s, _, err := stack.Start()
+	_, err = stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	globals.Set(b, s)
 
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {

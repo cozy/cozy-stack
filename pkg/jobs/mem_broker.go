@@ -86,7 +86,7 @@ func NewMemBroker() Broker {
 	}
 }
 
-func (b *memBroker) Start(ws WorkersList) error {
+func (b *memBroker) StartWorkers(ws WorkersList) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 0, 1) {
 		return ErrClosed
 	}
@@ -169,9 +169,9 @@ func (b *memBroker) PushJob(req *JobRequest) (*Job, error) {
 	return job, nil
 }
 
-// QueueLen returns the size of the number of elements in queue of the
+// WorkerQueueLen returns the size of the number of elements in queue of the
 // specified worker type.
-func (b *memBroker) QueueLen(workerType string) (int, error) {
+func (b *memBroker) WorkerQueueLen(workerType string) (int, error) {
 	q, ok := b.queues[workerType]
 	if !ok {
 		return 0, ErrUnknownWorker

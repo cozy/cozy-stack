@@ -1,4 +1,4 @@
-package scheduler
+package jobs
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/stretchr/testify/assert"
 )
@@ -38,21 +37,21 @@ func TestTriggersBadArguments(t *testing.T) {
 
 func TestMemSchedulerWithDebounce(t *testing.T) {
 	called := 0
-	bro := jobs.NewMemBroker()
-	bro.Start(jobs.WorkersList{
+	bro := NewMemBroker()
+	bro.StartWorkers(WorkersList{
 		{
 			WorkerType:   "worker",
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx *jobs.WorkerContext) error {
+			WorkerFunc: func(ctx *WorkerContext) error {
 				called++
 				return nil
 			},
 		},
 	})
 
-	msg, _ := jobs.NewMessage("@event")
+	msg, _ := NewMessage("@event")
 	ti := &TriggerInfos{
 		Type:       "@event",
 		Domain:     "cozy.local.withdebounce",
@@ -64,20 +63,20 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 
 	triggers := []*TriggerInfos{ti}
 	sch := newMemScheduler()
-	sch.Start(bro)
+	sch.StartScheduler(bro)
 
 	for _, infos := range triggers {
 		trigger, err := NewTrigger(infos)
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = sch.Add(trigger)
+		err = sch.AddTrigger(trigger)
 		if !assert.NoError(t, err) {
 			return
 		}
 	}
 
-	ts, err := sch.GetAll("cozy.local.withdebounce")
+	ts, err := sch.GetAllTriggers("cozy.local.withdebounce")
 	assert.NoError(t, err)
 	assert.Len(t, ts, len(triggers))
 
@@ -104,7 +103,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	assert.Equal(t, 3, called)
 
 	for _, trigger := range triggers {
-		err = sch.Delete(trigger.Domain, trigger.TID)
+		err = sch.DeleteTrigger(trigger.Domain, trigger.TID)
 		assert.NoError(t, err)
 	}
 

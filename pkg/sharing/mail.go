@@ -5,7 +5,6 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
@@ -93,7 +92,7 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 	if err != nil {
 		return err
 	}
-	_, err = globals.GetBroker().PushJob(&jobs.JobRequest{
+	_, err = jobs.System().PushJob(&jobs.JobRequest{
 		Domain:     inst.Domain,
 		WorkerType: "sendmail",
 		Options:    nil,

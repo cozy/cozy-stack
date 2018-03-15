@@ -1,10 +1,9 @@
-package scheduler
+package jobs
 
 import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 )
 
 // maxPastTriggerTime is the maximum duration in the past for which the at
@@ -66,15 +65,15 @@ func (a *AtTrigger) ID() string {
 // Valid implements the permissions.Validable interface
 func (a *AtTrigger) Valid(key, value string) bool {
 	switch key {
-	case jobs.WorkerType:
+	case WorkerType:
 		return a.in.WorkerType == value
 	}
 	return false
 }
 
 // Schedule implements the Schedule method of the Trigger interface.
-func (a *AtTrigger) Schedule() <-chan *jobs.JobRequest {
-	ch := make(chan *jobs.JobRequest)
+func (a *AtTrigger) Schedule() <-chan *JobRequest {
+	ch := make(chan *JobRequest)
 	go func() {
 		duration := -time.Since(a.at)
 		if duration < 0 {

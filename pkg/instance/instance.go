@@ -19,14 +19,12 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
@@ -629,13 +627,13 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 	if err := i.createDefaultFilesTree(); err != nil {
 		return nil, err
 	}
-	sched := globals.GetScheduler()
+	sched := jobs.System()
 	for _, trigger := range Triggers(i.Domain) {
-		t, err := scheduler.NewTrigger(&trigger)
+		t, err := jobs.NewTrigger(&trigger)
 		if err != nil {
 			return nil, err
 		}
-		if err = sched.Add(t); err != nil {
+		if err = sched.AddTrigger(t); err != nil {
 			return nil, err
 		}
 	}
@@ -765,11 +763,11 @@ func DestroyWithoutHooks(domain string) error {
 	if err != nil {
 		return err
 	}
-	sched := globals.GetScheduler()
-	triggers, err := sched.GetAll(domain)
+	sched := jobs.System()
+	triggers, err := sched.GetAllTriggers(domain)
 	if err == nil {
 		for _, t := range triggers {
-			if err = sched.Delete(domain, t.Infos().TID); err != nil {
+			if err = sched.DeleteTrigger(domain, t.Infos().TID); err != nil {
 				logger.WithDomain(domain).Error(
 					"Failed to remove trigger: ", err)
 			}
@@ -862,7 +860,7 @@ func (i *Instance) SendMail(m *Mail) error {
 	if err != nil {
 		return err
 	}
-	_, err = globals.GetBroker().PushJob(&jobs.JobRequest{
+	_, err = jobs.System().PushJob(&jobs.JobRequest{
 		Domain:     i.Domain,
 		WorkerType: "sendmail",
 		Message:    msg,

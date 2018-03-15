@@ -1,4 +1,4 @@
-package scheduler
+package jobs
 
 import (
 	"context"
@@ -7,13 +7,12 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/stretchr/testify/assert"
 )
 
-func makeMessage(t *testing.T, msg string) jobs.Message {
-	out, err := jobs.NewMessage(msg)
+func makeMessage(t *testing.T, msg string) Message {
+	out, err := NewMessage(msg)
 	assert.NoError(t, err)
 	return out
 }
@@ -22,14 +21,14 @@ func TestTriggerEvent(t *testing.T) {
 	var wg sync.WaitGroup
 	var called = make(map[string]bool)
 
-	bro := jobs.NewMemBroker()
-	bro.Start(jobs.WorkersList{
+	bro := NewMemBroker()
+	bro.StartWorkers(WorkersList{
 		{
 			WorkerType:   "worker_event",
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx *jobs.WorkerContext) error {
+			WorkerFunc: func(ctx *WorkerContext) error {
 				defer wg.Done()
 				var msg string
 				if err := ctx.UnmarshalMessage(&msg); err != nil {
@@ -93,14 +92,14 @@ func TestTriggerEvent(t *testing.T) {
 	}
 
 	sch := newMemScheduler()
-	sch.Start(bro)
+	sch.StartScheduler(bro)
 
 	for _, infos := range triggers {
 		trigger, err := NewTrigger(infos)
 		if !assert.NoError(t, err) {
 			return
 		}
-		err = sch.Add(trigger)
+		err = sch.AddTrigger(trigger)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -133,7 +132,7 @@ func TestTriggerEvent(t *testing.T) {
 	assert.False(t, called["message-correct-verb-bad-value"])
 
 	for _, trigger := range triggers {
-		err := sch.Delete(trigger.Domain, trigger.TID)
+		err := sch.DeleteTrigger(trigger.Domain, trigger.TID)
 		assert.NoError(t, err)
 	}
 
