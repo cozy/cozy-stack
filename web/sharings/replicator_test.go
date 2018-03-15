@@ -61,7 +61,8 @@ func TestCreateSharingForReplicatorTest(t *testing.T) {
 }
 
 func uuidv4() string {
-	return fmt.Sprintf("%s", uuid.NewV4())
+	id, _ := uuid.NewV4()
+	return fmt.Sprintf("%s", id)
 }
 
 func createShared(t *testing.T, id string, revisions []string) *sharing.SharedDoc {
