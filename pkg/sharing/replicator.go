@@ -153,11 +153,11 @@ func (s *Sharing) callRevsDiff(m *Member, changes *Changes) (*Missings, error) {
 // ComputeRevsDiff takes a map of id->[revisions] and returns the missing
 // revisions for those documents on the current instance.
 func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Missings, error) {
-	ids := make([]string, len(changes), 0)
+	ids := make([]string, 0, len(changes))
 	for id := range changes {
 		ids = append(ids, id)
 	}
-	results := make([]SharedDoc, len(changes), 0)
+	results := make([]SharedDoc, 0, len(changes))
 	req := couchdb.AllDocsRequest{Keys: ids}
 	err := couchdb.GetAllDocs(inst, consts.Shared, &req, &results)
 	if err != nil {
@@ -168,15 +168,22 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Mi
 		missings[id] = MissingEntry{Missing: revs}
 	}
 	for _, result := range results {
-		if change, ok := changes[result.SID]; ok {
-			for _, rev := range result.Revisions {
-				for i, r := range change {
-					if rev == r {
-						change = append(change[:i], change[i+1:]...)
-						break
-					}
+		if _, ok := changes[result.SID]; !ok {
+			continue
+		}
+		for _, rev := range result.Revisions {
+			for i, r := range changes[result.SID] {
+				if rev == r {
+					change := changes[result.SID]
+					changes[result.SID] = append(change[:i], change[i+1:]...)
+					break
 				}
 			}
+		}
+		if len(changes[result.SID]) == 0 {
+			delete(missings, result.SID)
+		} else {
+			missings[result.SID] = MissingEntry{Missing: changes[result.SID]}
 		}
 	}
 	return &missings, nil

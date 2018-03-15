@@ -128,8 +128,8 @@ func (m *Member) GenerateOAuthURL(s *Sharing) (string, error) {
 	return u.String(), nil
 }
 
-// createOAuthClient creates an OAuth client for a recipient of the given sharing
-func createOAuthClient(inst *instance.Instance, m *Member) (*oauth.Client, error) {
+// CreateOAuthClient creates an OAuth client for a recipient of the given sharing
+func CreateOAuthClient(inst *instance.Instance, m *Member) (*oauth.Client, error) {
 	if m.Instance == "" {
 		return nil, ErrInvalidURL
 	}
@@ -146,9 +146,9 @@ func createOAuthClient(inst *instance.Instance, m *Member) (*oauth.Client, error
 	return &cli, nil
 }
 
-// convertOAuthClient converts an OAuth client from one type (pkg/oauth.Client)
+// ConvertOAuthClient converts an OAuth client from one type (pkg/oauth.Client)
 // to another (client/auth.Client)
-func convertOAuthClient(c *oauth.Client) *auth.Client {
+func ConvertOAuthClient(c *oauth.Client) *auth.Client {
 	return &auth.Client{
 		ClientID:          c.ClientID,
 		ClientSecret:      c.ClientSecret,
@@ -165,9 +165,9 @@ func convertOAuthClient(c *oauth.Client) *auth.Client {
 	}
 }
 
-// createAccessToken creates an access token for the given OAuth client,
+// CreateAccessToken creates an access token for the given OAuth client,
 // with a scope on this sharing.
-func createAccessToken(inst *instance.Instance, cli *oauth.Client, sharingID string) (*auth.AccessToken, error) {
+func CreateAccessToken(inst *instance.Instance, cli *oauth.Client, sharingID string) (*auth.AccessToken, error) {
 	scope := consts.Sharings + ":ALL:" + sharingID
 	cli.CouchID = cli.ClientID // XXX CouchID is required by CreateJWT
 	refresh, err := cli.CreateJWT(inst, permissions.RefreshTokenAudience, scope)
@@ -196,18 +196,18 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if s.Members[0].Instance == "" || err != nil {
 		return ErrInvalidSharing
 	}
-	cli, err := createOAuthClient(inst, &s.Members[0])
+	cli, err := CreateOAuthClient(inst, &s.Members[0])
 	if err != nil {
 		return err
 	}
-	token, err := createAccessToken(inst, cli, s.SID)
+	token, err := CreateAccessToken(inst, cli, s.SID)
 	if err != nil {
 		return err
 	}
 	ac := APICredentials{
 		Credentials: &Credentials{
 			State:       state,
-			Client:      convertOAuthClient(cli),
+			Client:      ConvertOAuthClient(cli),
 			AccessToken: token,
 		},
 		CID: s.SID,
@@ -267,12 +267,12 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 			}
 			ac := APICredentials{CID: s.SID, Credentials: &Credentials{}}
 			if !s.ReadOnly() {
-				cli, err := createOAuthClient(inst, &s.Members[i+1])
+				cli, err := CreateOAuthClient(inst, &s.Members[i+1])
 				if err != nil {
 					return &ac, nil
 				}
-				ac.Credentials.Client = convertOAuthClient(cli)
-				token, err := createAccessToken(inst, cli, s.SID)
+				ac.Credentials.Client = ConvertOAuthClient(cli)
+				token, err := CreateAccessToken(inst, cli, s.SID)
 				if err != nil {
 					return &ac, nil
 				}

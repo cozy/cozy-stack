@@ -384,29 +384,6 @@ func TestAuthorizeSharing(t *testing.T) {
 	assertCredentialsHasBeenExchanged(t)
 }
 
-func TestPermissions(t *testing.T) {
-	assert.NotNil(t, aliceAccessToken)
-
-	body, _ := json.Marshal(echo.Map{})
-	r := bytes.NewReader(body)
-	req, err := http.NewRequest(http.MethodPost, tsB.URL+"/sharings/"+sharingID+"/revs_diff", r)
-	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderContentType, "application/json")
-	res, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusUnauthorized, res.StatusCode)
-	defer res.Body.Close()
-
-	req, err = http.NewRequest(http.MethodPost, tsB.URL+"/sharings/"+sharingID+"/revs_diff", r)
-	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderContentType, "application/json")
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAccessToken)
-	res, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, res.StatusCode)
-	defer res.Body.Close()
-}
-
 func assertSharingWithPreviewIsCorrect(t *testing.T, body io.Reader) {
 	var result map[string]interface{}
 	assert.NoError(t, json.NewDecoder(body).Decode(&result))
@@ -555,13 +532,13 @@ func TestMain(m *testing.M) {
 	}
 
 	// Prepare Bob's instance
-	altSetup := testutils.NewSetup(m, "sharing_test_bob")
+	bobSetup := testutils.NewSetup(m, "sharing_test_bob")
 	var settingsB couchdb.JSONDoc
 	settingsB.M = map[string]interface{}{
 		"email":       "bob@example.net",
 		"public_name": "Bob",
 	}
-	bobInstance = altSetup.GetTestInstance(&instance.Options{
+	bobInstance = bobSetup.GetTestInstance(&instance.Options{
 		Settings: settingsB,
 	})
 	bobInstance.RegisterPassphrase([]byte("MyPassphrase"), bobInstance.RegisterToken)
@@ -569,7 +546,7 @@ func TestMain(m *testing.M) {
 	if err := instance.Update(bobInstance); err != nil {
 		testutils.Fatal(err)
 	}
-	tsB = altSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+	tsB = bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/auth": func(g *echo.Group) {
 			g.Use(middlewares.LoadSession)
 			auth.Routes(g)
@@ -578,8 +555,16 @@ func TestMain(m *testing.M) {
 	})
 	tsB.Config.Handler.(*echo.Echo).Renderer = render
 
+	// Prepare another instance for the replicator tests
+	replSetup := testutils.NewSetup(m, "sharing_test_replicator")
+	replInstance = replSetup.GetTestInstance()
+	tsR = replSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/sharings": sharings.Routes,
+	})
+
 	setup.AddCleanup(func() error {
-		altSetup.Cleanup()
+		bobSetup.Cleanup()
+		replSetup.Cleanup()
 		return nil
 	})
 	os.Exit(setup.Run())

@@ -841,8 +841,19 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 	v.Add("include_docs", "true")
 
 	var response AllDocsResponse
-	url := "_all_docs?" + v.Encode()
-	err = makeRequest(db, doctype, http.MethodGet, url, nil, &response)
+	if len(req.Keys) == 0 {
+		url := "_all_docs?" + v.Encode()
+		err = makeRequest(db, doctype, http.MethodGet, url, nil, &response)
+	} else {
+		v.Del("keys")
+		url := "_all_docs?" + v.Encode()
+		body := struct {
+			Keys []string `json:"keys"`
+		}{
+			Keys: req.Keys,
+		}
+		err = makeRequest(db, doctype, http.MethodPost, url, body, &response)
+	}
 	if err != nil {
 		return err
 	}

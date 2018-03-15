@@ -22,6 +22,9 @@ func RevsDiff(c echo.Context) error {
 	if err = c.Bind(&changes); err != nil {
 		return wrapErrors(err)
 	}
+	if changes == nil {
+		return echo.NewHTTPError(http.StatusBadRequest)
+	}
 	missings, err := s.ComputeRevsDiff(inst, changes)
 	if err != nil {
 		return wrapErrors(err)
@@ -45,6 +48,6 @@ func checkSharingPermissions(next echo.HandlerFunc) echo.HandlerFunc {
 		if !requestPerm.Permissions.AllowID("GET", consts.Sharings, sharingID) {
 			return echo.NewHTTPError(http.StatusForbidden)
 		}
-		return nil
+		return next(c)
 	}
 }
