@@ -23,6 +23,9 @@ import (
 	"github.com/labstack/echo"
 )
 
+// This flag avoid starting the stack twice.
+var stackStarted bool
+
 // Fatal prints a message and immediately exit the process
 func Fatal(msg ...interface{}) {
 	fmt.Println(msg...)
@@ -58,7 +61,6 @@ func NewSetup(testingM *testing.M, name string) *TestSetup {
 		host:     name + "_" + utils.RandomString(10) + ".cozy.local",
 		cleanup:  func() {},
 	}
-
 	return &setup
 }
 
@@ -102,9 +104,13 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 	if c.inst != nil {
 		return c.inst
 	}
-	_, err := stack.Start()
-	if err != nil {
-		c.CleanupAndDie("Error while starting job system", err)
+	var err error
+	if !stackStarted {
+		_, err = stack.Start()
+		if err != nil {
+			c.CleanupAndDie("Error while starting job system", err)
+		}
+		stackStarted = true
 	}
 	if len(opts) == 0 {
 		opts = []*instance.Options{{}}

@@ -16,7 +16,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -392,10 +391,6 @@ func TestMain(m *testing.M) {
 	})
 
 	testInstance = setup.GetTestInstance()
-	_, err := stack.Start()
-	if err != nil {
-		testutils.Fatal(err)
-	}
 
 	scope := strings.Join([]string{
 		consts.Jobs + ":ALL:print:worker",
