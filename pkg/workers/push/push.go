@@ -148,24 +148,24 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 		priority = "high"
 	}
 
-	n := &fcm.Notification{
-		Body:  msg.Message,
-		Title: msg.Title,
-		Sound: msg.Sound,
-	}
 	notification := &fcm.Message{
 		To:           msg.DeviceToken,
 		Priority:     priority,
-		Notification: n,
+		Notification: &fcm.Notification{Sound: msg.Sound},
+		Data: map[string]interface{}{
+			// Fields required by phonegap-plugin-push
+			// see: https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/PAYLOAD.md#android-behaviour
+			"content-available": true,
+
+			"title": msg.Title,
+			"body":  msg.Message,
+		},
 	}
 	if msg.Collapsible {
 		notification.CollapseKey = hashSource(msg.Source)
 	}
-	if l := len(msg.Data); l > 0 {
-		notification.Data = make(map[string]interface{}, l)
-		for k, v := range msg.Data {
-			notification.Data[k] = v
-		}
+	for k, v := range msg.Data {
+		notification.Data[k] = v
 	}
 
 	res, err := fcmClient.Send(notification)
