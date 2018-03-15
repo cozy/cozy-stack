@@ -3,7 +3,6 @@ package sharings_test
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -62,7 +61,7 @@ func TestCreateSharingForReplicatorTest(t *testing.T) {
 
 func uuidv4() string {
 	id, _ := uuid.NewV4()
-	return fmt.Sprintf("%s", id)
+	return id.String()
 }
 
 func createShared(t *testing.T, id string, revisions []string) *sharing.SharedDoc {
