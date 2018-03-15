@@ -957,13 +957,14 @@ type FindRequest struct {
 
 // AllDocsRequest is used to build a _all_docs request
 type AllDocsRequest struct {
-	Descending    bool   `url:"descending,omitempty"`
-	Limit         int    `url:"limit,omitempty"`
-	Skip          int    `url:"skip,omitempty"`
-	StartKey      string `url:"startkey,omitempty"`
-	StartKeyDocID string `url:"startkey_docid,omitempty"`
-	EndKey        string `url:"endkey,omitempty"`
-	EndKeyDocID   string `url:"endkey_docid,omitempty"`
+	Descending    bool     `url:"descending,omitempty"`
+	Limit         int      `url:"limit,omitempty"`
+	Skip          int      `url:"skip,omitempty"`
+	StartKey      string   `url:"startkey,omitempty"`
+	StartKeyDocID string   `url:"startkey_docid,omitempty"`
+	EndKey        string   `url:"endkey,omitempty"`
+	EndKeyDocID   string   `url:"endkey_docid,omitempty"`
+	Keys          []string `url:"keys,omitempty"`
 }
 
 // AllDocsResponse is the response we receive from an _all_docs request

@@ -103,9 +103,12 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance) (*Changes, error) {
 }
 
 // Missings is a struct for the response of revs_diff
-type Missings map[string]struct {
-	Missing   []string `json:"missing"`
-	Ancestors []string `json:"possible_ancestors,omitempty"`
+type Missings map[string]MissingEntry
+
+// MissingEntry is a struct with the missing revisions for an id
+type MissingEntry struct {
+	Missing []string `json:"missing"`
+	// TODO possible_ancestors?
 }
 
 // callRevsDiff asks the other cozy to compute the revs_diff
@@ -143,6 +146,38 @@ func (s *Sharing) callRevsDiff(m *Member, changes *Changes) (*Missings, error) {
 	missings := make(Missings)
 	if err = json.NewDecoder(res.Body).Decode(&missings); err != nil {
 		return nil, err
+	}
+	return &missings, nil
+}
+
+// ComputeRevsDiff takes a map of id->[revisions] and returns the missing
+// revisions for those documents on the current instance.
+func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Missings, error) {
+	ids := make([]string, len(changes), 0)
+	for id := range changes {
+		ids = append(ids, id)
+	}
+	results := make([]SharedDoc, len(changes), 0)
+	req := couchdb.AllDocsRequest{Keys: ids}
+	err := couchdb.GetAllDocs(inst, consts.Shared, &req, &results)
+	if err != nil {
+		return nil, err
+	}
+	missings := make(Missings)
+	for id, revs := range changes {
+		missings[id] = MissingEntry{Missing: revs}
+	}
+	for _, result := range results {
+		if change, ok := changes[result.SID]; ok {
+			for _, rev := range result.Revisions {
+				for i, r := range change {
+					if rev == r {
+						change = append(change[:i], change[i+1:]...)
+						break
+					}
+				}
+			}
+		}
 	}
 	return &missings, nil
 }
