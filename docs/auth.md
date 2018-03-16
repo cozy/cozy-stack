@@ -270,7 +270,7 @@ It can also send the optional fields:
   document that describes how the deployment organization collects, uses,
   retains, and discloses personal data
 * `software_version`, a version identifier string for the client software.
-* `notifications_platform`, to activate notifications on the associated
+* `notification_platform`, to activate notifications on the associated
   device, this field specify the platform used to send notifications:
   - `"android"`: for Android devices with notifications via Firebase Cloud
     Messageing
