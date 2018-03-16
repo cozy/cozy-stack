@@ -30,7 +30,7 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 	switch perm.Type {
 	// Applications and services have TypeWebapp permissions
 	case permissions.TypeWebapp:
-		slug := strings.TrimPrefix(perm.SourceID, consts.Apps)
+		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")
 		man, err := apps.GetWebappBySlug(inst, slug)
 		if err != nil {
 			return err
