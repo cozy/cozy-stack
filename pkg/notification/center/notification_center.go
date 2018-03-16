@@ -113,9 +113,11 @@ func sendPush(inst *instance.Instance, collapsible bool, n *notification.Notific
 	if err != nil {
 		return err
 	}
+	source := n.Source()
 	var errm error
 	for _, c := range clients {
 		push := push.Message{
+			Source:      source,
 			Title:       n.Title,
 			Message:     n.Message,
 			Priority:    n.Priority,
