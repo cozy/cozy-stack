@@ -76,7 +76,7 @@ func (b *redisBroker) WorkersTypes() []string {
 	return b.workersTypes
 }
 
-func (b *redisBroker) Shutdown(ctx context.Context) error {
+func (b *redisBroker) ShutdownWorkers(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 1, 0) {
 		return ErrClosed
 	}

@@ -43,7 +43,7 @@ func (b *mockBroker) StartWorkers(workersList jobs.WorkersList) error {
 	return nil
 }
 
-func (b *mockBroker) Shutdown(ctx context.Context) error {
+func (b *mockBroker) ShutdownWorkers(ctx context.Context) error {
 	return nil
 }
 

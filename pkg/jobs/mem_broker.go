@@ -119,7 +119,7 @@ func (b *memBroker) StartWorkers(ws WorkersList) error {
 	return nil
 }
 
-func (b *memBroker) Shutdown(ctx context.Context) error {
+func (b *memBroker) ShutdownWorkers(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 1, 0) {
 		return ErrClosed
 	}

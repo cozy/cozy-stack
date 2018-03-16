@@ -184,8 +184,8 @@ func (s *RedisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 	}
 }
 
-// Shutdown the scheduling of triggers
-func (s *RedisScheduler) Shutdown(ctx context.Context) error {
+// ShutdownScheduler shuts down the the scheduling of triggers
+func (s *RedisScheduler) ShutdownScheduler(ctx context.Context) error {
 	if s.closed == nil {
 		return nil
 	}

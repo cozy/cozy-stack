@@ -36,7 +36,7 @@ type (
 	// the job system.
 	Broker interface {
 		StartWorkers(workersList WorkersList) error
-		Shutdown(ctx context.Context) error
+		ShutdownWorkers(ctx context.Context) error
 
 		// PushJob will push try to push a new job from the specified job request.
 		// This method is asynchronous.

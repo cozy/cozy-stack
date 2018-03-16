@@ -86,8 +86,8 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	return nil
 }
 
-// Shutdown the scheduling of triggers
-func (s *memScheduler) Shutdown(ctx context.Context) error {
+// ShutdownScheduler shuts down the scheduling of triggers
+func (s *memScheduler) ShutdownScheduler(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	fmt.Print("  shutting down in-memory scheduler...")

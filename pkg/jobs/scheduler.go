@@ -29,7 +29,7 @@ type (
 	// to listen respond to triggers jobs requests and send them to the broker.
 	Scheduler interface {
 		StartScheduler(broker Broker) error
-		Shutdown(ctx context.Context) error
+		ShutdownScheduler(ctx context.Context) error
 		AddTrigger(trigger Trigger) error
 		GetTrigger(domain, id string) (Trigger, error)
 		DeleteTrigger(domain, id string) error
