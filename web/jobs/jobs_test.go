@@ -13,12 +13,9 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/scheduler"
-	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -112,9 +109,9 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 
 	var v struct {
 		Data struct {
-			ID         string                  `json:"id"`
-			Type       string                  `json:"type"`
-			Attributes *scheduler.TriggerInfos `json:"attributes"`
+			ID         string             `json:"id"`
+			Type       string             `json:"type"`
+			Attributes *jobs.TriggerInfos `json:"attributes"`
 		}
 	}
 	err = json.NewDecoder(res1.Body).Decode(&v)
@@ -200,9 +197,9 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 
 	var v struct {
 		Data struct {
-			ID         string                  `json:"id"`
-			Type       string                  `json:"type"`
-			Attributes *scheduler.TriggerInfos `json:"attributes"`
+			ID         string             `json:"id"`
+			Type       string             `json:"type"`
+			Attributes *jobs.TriggerInfos `json:"attributes"`
 		}
 	}
 	err = json.NewDecoder(res1.Body).Decode(&v)
@@ -268,9 +265,9 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 func TestGetAllJobs(t *testing.T) {
 	var v struct {
 		Data []struct {
-			ID         string                  `json:"id"`
-			Type       string                  `json:"type"`
-			Attributes *scheduler.TriggerInfos `json:"attributes"`
+			ID         string             `json:"id"`
+			Type       string             `json:"type"`
+			Attributes *jobs.TriggerInfos `json:"attributes"`
 		}
 	}
 
@@ -394,11 +391,6 @@ func TestMain(m *testing.M) {
 	})
 
 	testInstance = setup.GetTestInstance()
-	b, s, _, err := stack.Start()
-	if err != nil {
-		testutils.Fatal(err)
-	}
-	globals.Set(b, s)
 
 	scope := strings.Join([]string{
 		consts.Jobs + ":ALL:print:worker",

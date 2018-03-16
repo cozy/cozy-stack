@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/stack"
 )
 
@@ -138,12 +137,11 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	b, s, _, err := stack.Start()
+	_, err = stack.Start()
 	if err != nil {
 		fmt.Println("Error while starting job system", err)
 		os.Exit(1)
 	}
-	globals.Set(b, s)
 
 	apps.ManifestClient = &http.Client{
 		Transport: &transport{},

@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/move"
@@ -35,7 +34,7 @@ func exporter(c echo.Context) error {
 		return err
 	}
 
-	broker := globals.GetBroker()
+	broker := jobs.System()
 	_, err = broker.PushJob(&jobs.JobRequest{
 		Domain:     instance.Domain,
 		WorkerType: "sendmail",

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web"
@@ -85,11 +84,10 @@ example), you can use the --appdir flag like this:
 			}
 		}
 
-		broker, schder, processes, err := stack.Start()
+		processes, err := stack.Start()
 		if err != nil {
 			return err
 		}
-		globals.Set(broker, schder)
 
 		var servers *web.Servers
 		if apps != nil {

@@ -6,7 +6,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
@@ -80,10 +79,9 @@ func (ac *Account) Valid(field, expected string) bool {
 func init() {
 	couchdb.AddHook(consts.Accounts, couchdb.EventDelete,
 		func(domain string, doc couchdb.Doc, old couchdb.Doc) error {
-			sched := globals.GetScheduler()
-			broker := globals.GetBroker()
+			jobsSystem := jobs.System()
 
-			trigs, err := sched.GetAll(domain)
+			trigs, err := jobsSystem.GetAllTriggers(domain)
 			if err != nil {
 				logger.WithDomain(domain).Error(
 					"Failed to fetch triggers after account deletion: ", err)
@@ -106,7 +104,7 @@ func init() {
 					toDelete = true
 				}
 				if toDelete {
-					if err := sched.Delete(domain, t.ID()); err != nil {
+					if err := jobsSystem.DeleteTrigger(domain, t.ID()); err != nil {
 						logger.WithDomain(domain).Errorln("failed to delete orphan trigger", err)
 					}
 				}
@@ -159,7 +157,7 @@ func init() {
 				if err != nil {
 					return err
 				}
-				if _, err = broker.PushJob(&jobs.JobRequest{
+				if _, err = jobsSystem.PushJob(&jobs.JobRequest{
 					Domain:     domain,
 					WorkerType: "konnector",
 					Message:    msg,

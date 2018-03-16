@@ -13,11 +13,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
@@ -219,7 +217,7 @@ func rebuildRedis(c echo.Context) error {
 		return wrapError(err)
 	}
 	for _, i := range instances {
-		err = globals.GetScheduler().RebuildRedis(i.Domain)
+		err = jobs.System().RebuildRedis(i.Domain)
 		if err != nil {
 			return wrapError(err)
 		}
@@ -229,9 +227,9 @@ func rebuildRedis(c echo.Context) error {
 
 func cleanOrphanAccounts(c echo.Context) error {
 	type result struct {
-		Result  string                  `json:"result"`
-		Error   string                  `json:"error,omitempty"`
-		Trigger *scheduler.TriggerInfos `json:"trigger,omitempty"`
+		Result  string             `json:"result"`
+		Error   string             `json:"error,omitempty"`
+		Trigger *jobs.TriggerInfos `json:"trigger,omitempty"`
 	}
 
 	dryRun, _ := strconv.ParseBool(c.QueryParam("DryRun"))
@@ -252,8 +250,8 @@ func cleanOrphanAccounts(c echo.Context) error {
 		return err
 	}
 
-	sched := globals.GetScheduler()
-	ts, err := sched.GetAll(domain)
+	sched := jobs.System()
+	ts, err := sched.GetAllTriggers(domain)
 	if couchdb.IsNoDatabaseError(err) {
 		return c.JSON(http.StatusOK, results)
 	}
@@ -322,7 +320,7 @@ func cleanOrphanAccounts(c echo.Context) error {
 		}
 
 		var r result
-		infos := &scheduler.TriggerInfos{
+		infos := &jobs.TriggerInfos{
 			WorkerType: "konnector",
 			Domain:     domain,
 			Type:       "@cron",
@@ -330,14 +328,14 @@ func cleanOrphanAccounts(c echo.Context) error {
 			Message:    jobs.Message(msg),
 		}
 		r.Trigger = infos
-		t, err := scheduler.NewTrigger(infos)
+		t, err := jobs.NewTrigger(infos)
 		if err != nil {
 			r.Result = "failed"
 			r.Error = err.Error()
 			continue
 		}
 		if !dryRun {
-			err = sched.Add(t)
+			err = sched.AddTrigger(t)
 		} else {
 			err = nil
 		}

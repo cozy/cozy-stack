@@ -1,4 +1,4 @@
-package scheduler
+package jobs
 
 import (
 	"context"
@@ -10,15 +10,14 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/sirupsen/logrus"
 )
 
-// MemScheduler is a centralized scheduler of many triggers. It starts all of
+// memScheduler is a centralized scheduler of many triggers. It starts all of
 // them and schedules jobs accordingly.
-type MemScheduler struct {
-	broker jobs.Broker
+type memScheduler struct {
+	broker Broker
 
 	ts  map[string]Trigger
 	mu  sync.RWMutex
@@ -31,17 +30,17 @@ func NewMemScheduler() Scheduler {
 	return newMemScheduler()
 }
 
-func newMemScheduler() *MemScheduler {
-	return &MemScheduler{
+func newMemScheduler() *memScheduler {
+	return &memScheduler{
 		ts:  make(map[string]Trigger),
 		log: logger.WithNamespace("mem-scheduler"),
 	}
 }
 
-// Start will start the scheduler by actually loading all triggers from the
-// scheduler's storage and associate for each of them a go routine in which
-// they wait for the trigger send job requests.
-func (s *MemScheduler) Start(b jobs.Broker) error {
+// StartScheduler will start the scheduler by actually loading all triggers
+// from the scheduler's storage and associate for each of them a go routine in
+// which they wait for the trigger send job requests.
+func (s *memScheduler) StartScheduler(b Broker) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -87,8 +86,8 @@ func (s *MemScheduler) Start(b jobs.Broker) error {
 	return nil
 }
 
-// Shutdown the scheduling of triggers
-func (s *MemScheduler) Shutdown(ctx context.Context) error {
+// ShutdownScheduler shuts down the scheduling of triggers
+func (s *memScheduler) ShutdownScheduler(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	fmt.Print("  shutting down in-memory scheduler...")
@@ -99,9 +98,9 @@ func (s *MemScheduler) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// Add will add a new trigger to the scheduler. The trigger is persisted in
-// storage.
-func (s *MemScheduler) Add(t Trigger) error {
+// AddTrigger will add a new trigger to the scheduler. The trigger is persisted
+// in storage.
+func (s *memScheduler) AddTrigger(t Trigger) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	db := couchdb.SimpleDatabasePrefix(t.Infos().Domain)
@@ -113,8 +112,8 @@ func (s *MemScheduler) Add(t Trigger) error {
 	return nil
 }
 
-// Get returns the trigger with the specified ID.
-func (s *MemScheduler) Get(domain, id string) (Trigger, error) {
+// GetTrigger returns the trigger with the specified ID.
+func (s *memScheduler) GetTrigger(domain, id string) (Trigger, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	t, ok := s.ts[id]
@@ -124,9 +123,9 @@ func (s *MemScheduler) Get(domain, id string) (Trigger, error) {
 	return t, nil
 }
 
-// Delete removes the trigger with the specified ID. The trigger is unscheduled
+// DeleteTrigger removes the trigger with the specified ID. The trigger is unscheduled
 // and remove from the storage.
-func (s *MemScheduler) Delete(domain, id string) error {
+func (s *memScheduler) DeleteTrigger(domain, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	t, ok := s.ts[id]
@@ -139,8 +138,8 @@ func (s *MemScheduler) Delete(domain, id string) error {
 	return couchdb.DeleteDoc(db, t.Infos())
 }
 
-// GetAll returns all the running in-memory triggers.
-func (s *MemScheduler) GetAll(domain string) ([]Trigger, error) {
+// GetAllTriggers returns all the running in-memory triggers.
+func (s *memScheduler) GetAllTriggers(domain string) ([]Trigger, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	v := make([]Trigger, 0)
@@ -152,12 +151,12 @@ func (s *MemScheduler) GetAll(domain string) ([]Trigger, error) {
 	return v, nil
 }
 
-func (s *MemScheduler) schedule(t Trigger) {
+func (s *memScheduler) schedule(t Trigger) {
 	s.log.Debugf("[scheduler] trigger %s(%s): Starting trigger",
 		t.Type(), t.Infos().TID)
 	ch := t.Schedule()
 	var debounced <-chan time.Time
-	var originalReq *jobs.JobRequest
+	var originalReq *JobRequest
 	var d time.Duration
 	infos := t.Infos()
 	if infos.Debounce != "" {
@@ -187,7 +186,7 @@ func (s *MemScheduler) schedule(t Trigger) {
 	}
 }
 
-func (s *MemScheduler) pushJob(t Trigger, req *jobs.JobRequest) {
+func (s *memScheduler) pushJob(t Trigger, req *JobRequest) {
 	log := s.log.WithField("domain", req.Domain)
 	log.Infof(
 		"[scheduler] trigger %s(%s): Pushing new job %s",
@@ -198,10 +197,14 @@ func (s *MemScheduler) pushJob(t Trigger, req *jobs.JobRequest) {
 	}
 }
 
-// RebuildRedis does nothing for the in memory scheduler. It's just here to
-// implement the Scheduler interface.
-func (s *MemScheduler) RebuildRedis(domain string) error {
-	return errors.New("MemScheduler does not use redis")
+func (s *memScheduler) PollScheduler(now int64) error {
+	return errors.New("memScheduler cannot be polled")
 }
 
-var _ Scheduler = &MemScheduler{}
+// RebuildRedis does nothing for the in memory scheduler. It's just
+// here to implement the Scheduler interface.
+func (s *memScheduler) RebuildRedis(domain string) error {
+	return errors.New("memScheduler does not use redis")
+}
+
+var _ Scheduler = &memScheduler{}

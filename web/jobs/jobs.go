@@ -8,9 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -39,11 +37,11 @@ type (
 		workerType string
 	}
 	apiTrigger struct {
-		t *scheduler.TriggerInfos
+		t *jobs.TriggerInfos
 	}
 	apiTriggerState struct {
-		t *scheduler.TriggerInfos
-		s *scheduler.TriggerState
+		t *jobs.TriggerInfos
+		s *jobs.TriggerState
 	}
 	apiTriggerRequest struct {
 		Type            string           `json:"type"`
@@ -158,7 +156,7 @@ func pushJob(c echo.Context) error {
 		return err
 	}
 
-	job, err := globals.GetBroker().PushJob(jr)
+	job, err := jobs.System().PushJob(jr)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -168,7 +166,7 @@ func pushJob(c echo.Context) error {
 
 func newTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := globals.GetScheduler()
+	sched := jobs.System()
 	req := apiTriggerRequest{}
 	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
 		return wrapJobsError(err)
@@ -180,7 +178,7 @@ func newTrigger(c echo.Context) error {
 		}
 	}
 
-	t, err := scheduler.NewTrigger(&scheduler.TriggerInfos{
+	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
 		Type:       req.Type,
 		WorkerType: req.WorkerType,
 		Domain:     instance.Domain,
@@ -200,7 +198,7 @@ func newTrigger(c echo.Context) error {
 		return err
 	}
 
-	if err = sched.Add(t); err != nil {
+	if err = sched.AddTrigger(t); err != nil {
 		return wrapJobsError(err)
 	}
 	return jsonapi.Data(c, http.StatusCreated, apiTrigger{t.Infos()}, nil)
@@ -208,8 +206,8 @@ func newTrigger(c echo.Context) error {
 
 func getTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := globals.GetScheduler()
-	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
+	sched := jobs.System()
+	t, err := sched.GetTrigger(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -217,7 +215,7 @@ func getTrigger(c echo.Context) error {
 		return err
 	}
 	tInfos := t.Infos()
-	tInfos.CurrentState, err = scheduler.GetTriggerState(t)
+	tInfos.CurrentState, err = jobs.GetTriggerState(t)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -226,15 +224,15 @@ func getTrigger(c echo.Context) error {
 
 func getTriggerState(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := globals.GetScheduler()
-	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
+	sched := jobs.System()
+	t, err := sched.GetTrigger(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
 	if err = permissions.Allow(c, permissions.GET, t); err != nil {
 		return err
 	}
-	state, err := scheduler.GetTriggerState(t)
+	state, err := jobs.GetTriggerState(t)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -254,8 +252,8 @@ func getTriggerJobs(c echo.Context) error {
 		}
 	}
 
-	sched := globals.GetScheduler()
-	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
+	sched := jobs.System()
+	t, err := sched.GetTrigger(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -263,7 +261,7 @@ func getTriggerJobs(c echo.Context) error {
 		return err
 	}
 
-	js, err := scheduler.GetJobs(t, limit)
+	js, err := jobs.GetJobs(t, limit)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -278,7 +276,7 @@ func getTriggerJobs(c echo.Context) error {
 
 func launchTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	t, err := globals.GetScheduler().Get(instance.Domain, c.Param("trigger-id"))
+	t, err := jobs.System().GetTrigger(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -287,7 +285,7 @@ func launchTrigger(c echo.Context) error {
 	}
 	req := t.Infos().JobRequest()
 	req.Manual = true
-	j, err := globals.GetBroker().PushJob(req)
+	j, err := jobs.System().PushJob(req)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -296,15 +294,15 @@ func launchTrigger(c echo.Context) error {
 
 func deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := globals.GetScheduler()
-	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
+	sched := jobs.System()
+	t, err := sched.GetTrigger(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
 	if err := permissions.Allow(c, permissions.DELETE, t); err != nil {
 		return err
 	}
-	if err := sched.Delete(instance.Domain, c.Param("trigger-id")); err != nil {
+	if err := sched.DeleteTrigger(instance.Domain, c.Param("trigger-id")); err != nil {
 		return wrapJobsError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -318,14 +316,14 @@ func getAllTriggers(c echo.Context) error {
 		if workerType == "" {
 			return err
 		}
-		o := &scheduler.TriggerInfos{WorkerType: workerType}
+		o := &jobs.TriggerInfos{WorkerType: workerType}
 		if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
 			return err
 		}
 	}
 
-	sched := globals.GetScheduler()
-	ts, err := sched.GetAll(instance.Domain)
+	sched := jobs.System()
+	ts, err := sched.GetAllTriggers(instance.Domain)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -335,7 +333,7 @@ func getAllTriggers(c echo.Context) error {
 	for _, t := range ts {
 		tInfos := t.Infos()
 		if workerType == "" || tInfos.WorkerType == workerType {
-			tInfos.CurrentState, err = scheduler.GetTriggerState(t)
+			tInfos.CurrentState, err = jobs.GetTriggerState(t)
 			if err != nil {
 				return wrapJobsError(err)
 			}
@@ -413,11 +411,11 @@ func Routes(router *echo.Group) {
 
 func wrapJobsError(err error) error {
 	switch err {
-	case scheduler.ErrNotFoundTrigger,
+	case jobs.ErrNotFoundTrigger,
 		jobs.ErrNotFoundJob,
 		jobs.ErrUnknownWorker:
 		return jsonapi.NotFound(err)
-	case scheduler.ErrUnknownTrigger:
+	case jobs.ErrUnknownTrigger:
 		return jsonapi.InvalidAttribute("Type", err)
 	}
 	return err

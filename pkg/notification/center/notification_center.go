@@ -8,7 +8,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/notification"
@@ -129,7 +128,7 @@ func sendPush(inst *instance.Instance, collapsible bool, n *notification.Notific
 		if err != nil {
 			return err
 		}
-		_, err = globals.GetBroker().PushJob(&jobs.JobRequest{
+		_, err = jobs.System().PushJob(&jobs.JobRequest{
 			Domain:     inst.Domain,
 			WorkerType: "push",
 			Message:    msg,
@@ -157,7 +156,7 @@ func sendMail(inst *instance.Instance, n *notification.Notification) error {
 	if err != nil {
 		return err
 	}
-	_, err = globals.GetBroker().PushJob(&jobs.JobRequest{
+	_, err = jobs.System().PushJob(&jobs.JobRequest{
 		Domain:     inst.Domain,
 		WorkerType: "sendmail",
 		Message:    msg,

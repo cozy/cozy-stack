@@ -1,11 +1,13 @@
 package instance
 
-import "github.com/cozy/cozy-stack/pkg/scheduler"
+import (
+	"github.com/cozy/cozy-stack/pkg/jobs"
+)
 
 // Triggers returns the list of the triggers to add when an instance is created
-func Triggers(domain string) []scheduler.TriggerInfos {
+func Triggers(domain string) []jobs.TriggerInfos {
 	// Create/update/remove thumbnails when an image is created/updated/removed
-	return []scheduler.TriggerInfos{
+	return []jobs.TriggerInfos{
 		{
 			Domain:     domain,
 			Type:       "@event",

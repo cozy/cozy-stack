@@ -2,16 +2,13 @@ package jobs
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/go-redis/redis"
 	"github.com/stretchr/testify/assert"
@@ -20,14 +17,19 @@ import (
 const redisURL1 = "redis://localhost:6379/0"
 const redisURL2 = "redis://localhost:6379/1"
 
-var client1 *redis.Client
-var client2 *redis.Client
-
 func randomMicro(min, max int) time.Duration {
 	return time.Duration(rand.Intn(max-min)+min) * time.Microsecond
 }
 
 func TestRedisJobs(t *testing.T) {
+	config.UseTestFile()
+
+	redisBRPopTimeout = 1 * time.Second
+	opts1, _ := redis.ParseURL(redisURL1)
+	opts2, _ := redis.ParseURL(redisURL2)
+	client1 := redis.NewClient(opts1)
+	client2 := redis.NewClient(opts2)
+
 	n := 10
 	v := 100
 
@@ -63,11 +65,11 @@ func TestRedisJobs(t *testing.T) {
 	}
 
 	broker1 := NewRedisBroker(client1)
-	err := broker1.Start(workersTestList)
+	err := broker1.StartWorkers(workersTestList)
 	assert.NoError(t, err)
 
 	broker2 := NewRedisBroker(client2)
-	err = broker2.Start(workersTestList)
+	err = broker2.StartWorkers(workersTestList)
 	assert.NoError(t, err)
 
 	msg, _ := NewMessage("z-0")
@@ -107,25 +109,9 @@ func TestRedisJobs(t *testing.T) {
 
 	w.Wait()
 
-	err = broker1.Shutdown(context.Background())
+	err = broker1.ShutdownWorkers(context.Background())
 	assert.NoError(t, err)
-	err = broker2.Shutdown(context.Background())
+	err = broker2.ShutdownWorkers(context.Background())
 	assert.NoError(t, err)
 	time.Sleep(1 * time.Second)
-}
-
-func TestMain(m *testing.M) {
-	redisBRPopTimeout = 1 * time.Second
-	config.UseTestFile()
-	db, err := checkup.HTTPChecker{URL: config.CouchURL().String()}.Check()
-	if err != nil || db.Status() != checkup.Healthy {
-		fmt.Println("This test need couchdb to run.")
-		os.Exit(1)
-	}
-
-	opts1, _ := redis.ParseURL(redisURL1)
-	opts2, _ := redis.ParseURL(redisURL2)
-	client1 = redis.NewClient(opts1)
-	client2 = redis.NewClient(opts2)
-	os.Exit(m.Run())
 }

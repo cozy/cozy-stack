@@ -9,11 +9,9 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/notification"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/scheduler"
 )
 
 // Route is a struct to serve a folder inside an app
@@ -320,9 +318,9 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 		created = append(created, newService)
 	}
 
-	sched := globals.GetScheduler()
+	sched := jobs.System()
 	for _, service := range deleted {
-		if err := sched.Delete(domain, service.TriggerID); err != nil {
+		if err := sched.DeleteTrigger(domain, service.TriggerID); err != nil {
 			return err
 		}
 	}
@@ -345,7 +343,7 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 		if err != nil {
 			return err
 		}
-		trigger, err := scheduler.NewTrigger(&scheduler.TriggerInfos{
+		trigger, err := jobs.NewTrigger(&jobs.TriggerInfos{
 			Type:       triggerType,
 			WorkerType: "service",
 			Debounce:   service.Debounce,
@@ -356,7 +354,7 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 		if err != nil {
 			return err
 		}
-		if err = sched.Add(trigger); err != nil {
+		if err = sched.AddTrigger(trigger); err != nil {
 			return err
 		}
 		service.TriggerID = trigger.ID()
