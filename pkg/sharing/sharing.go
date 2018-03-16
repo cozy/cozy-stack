@@ -95,7 +95,7 @@ func (s *Sharing) ReadOnly() bool {
 	return true
 }
 
-// BeOwner is a function that setup a sharing on the cozy of its owner
+// BeOwner initializes a sharing on the cozy of its owner
 func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 	s.Active = true
 	s.Owner = true

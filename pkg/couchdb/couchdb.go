@@ -841,8 +841,19 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 	v.Add("include_docs", "true")
 
 	var response AllDocsResponse
-	url := "_all_docs?" + v.Encode()
-	err = makeRequest(db, doctype, http.MethodGet, url, nil, &response)
+	if len(req.Keys) == 0 {
+		url := "_all_docs?" + v.Encode()
+		err = makeRequest(db, doctype, http.MethodGet, url, nil, &response)
+	} else {
+		v.Del("keys")
+		url := "_all_docs?" + v.Encode()
+		body := struct {
+			Keys []string `json:"keys"`
+		}{
+			Keys: req.Keys,
+		}
+		err = makeRequest(db, doctype, http.MethodPost, url, body, &response)
+	}
 	if err != nil {
 		return err
 	}
@@ -957,13 +968,14 @@ type FindRequest struct {
 
 // AllDocsRequest is used to build a _all_docs request
 type AllDocsRequest struct {
-	Descending    bool   `url:"descending,omitempty"`
-	Limit         int    `url:"limit,omitempty"`
-	Skip          int    `url:"skip,omitempty"`
-	StartKey      string `url:"startkey,omitempty"`
-	StartKeyDocID string `url:"startkey_docid,omitempty"`
-	EndKey        string `url:"endkey,omitempty"`
-	EndKeyDocID   string `url:"endkey_docid,omitempty"`
+	Descending    bool     `url:"descending,omitempty"`
+	Limit         int      `url:"limit,omitempty"`
+	Skip          int      `url:"skip,omitempty"`
+	StartKey      string   `url:"startkey,omitempty"`
+	StartKeyDocID string   `url:"startkey_docid,omitempty"`
+	EndKey        string   `url:"endkey,omitempty"`
+	EndKeyDocID   string   `url:"endkey_docid,omitempty"`
+	Keys          []string `url:"keys,omitempty"`
 }
 
 // AllDocsResponse is the response we receive from an _all_docs request

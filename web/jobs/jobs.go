@@ -21,6 +21,7 @@ import (
 	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
 	_ "github.com/cozy/cozy-stack/pkg/workers/migrations"
 	_ "github.com/cozy/cozy-stack/pkg/workers/push"
+	_ "github.com/cozy/cozy-stack/pkg/workers/share"
 	_ "github.com/cozy/cozy-stack/pkg/workers/thumbnail"
 	_ "github.com/cozy/cozy-stack/pkg/workers/unzip"
 )

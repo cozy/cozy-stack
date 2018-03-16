@@ -25,4 +25,7 @@ var (
 	ErrNoOAuthClient = errors.New("No OAuth client was found")
 	// ErrInternalServerError is used for CouchDB errors
 	ErrInternalServerError = errors.New("Internal Server Error")
+	// ErrClientError is used when an OAuth client has made a request, and the
+	// response was a 4xx error
+	ErrClientError = errors.New("OAuth client request was in error")
 )

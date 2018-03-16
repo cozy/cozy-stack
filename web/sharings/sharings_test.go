@@ -40,7 +40,7 @@ var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
 var bobContact *contacts.Contact
-var sharingID, state string
+var sharingID, state, aliceAccessToken string
 
 // Things that live on Bob's Cozy
 var tsB *httptest.Server
@@ -333,7 +333,9 @@ func assertCredentialsHasBeenExchanged(t *testing.T) {
 	if assert.NotNil(t, credentials.AccessToken) {
 		assert.NotEmpty(t, credentials.AccessToken.AccessToken)
 		assert.NotEmpty(t, credentials.AccessToken.RefreshToken)
+		aliceAccessToken = credentials.AccessToken.AccessToken
 	}
+	assert.Equal(t, sharingsA[0].Members[1].Status, "ready")
 
 	var sharingsB []*sharing.Sharing
 	err = couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &sharingsB)
@@ -530,13 +532,13 @@ func TestMain(m *testing.M) {
 	}
 
 	// Prepare Bob's instance
-	altSetup := testutils.NewSetup(m, "sharing_test_bob")
+	bobSetup := testutils.NewSetup(m, "sharing_test_bob")
 	var settingsB couchdb.JSONDoc
 	settingsB.M = map[string]interface{}{
 		"email":       "bob@example.net",
 		"public_name": "Bob",
 	}
-	bobInstance = altSetup.GetTestInstance(&instance.Options{
+	bobInstance = bobSetup.GetTestInstance(&instance.Options{
 		Settings: settingsB,
 	})
 	bobInstance.RegisterPassphrase([]byte("MyPassphrase"), bobInstance.RegisterToken)
@@ -544,7 +546,7 @@ func TestMain(m *testing.M) {
 	if err := instance.Update(bobInstance); err != nil {
 		testutils.Fatal(err)
 	}
-	tsB = altSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+	tsB = bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/auth": func(g *echo.Group) {
 			g.Use(middlewares.LoadSession)
 			auth.Routes(g)
@@ -553,8 +555,16 @@ func TestMain(m *testing.M) {
 	})
 	tsB.Config.Handler.(*echo.Echo).Renderer = render
 
+	// Prepare another instance for the replicator tests
+	replSetup := testutils.NewSetup(m, "sharing_test_replicator")
+	replInstance = replSetup.GetTestInstance()
+	tsR = replSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/sharings": sharings.Routes,
+	})
+
 	setup.AddCleanup(func() error {
-		altSetup.Cleanup()
+		bobSetup.Cleanup()
+		replSetup.Cleanup()
 		return nil
 	})
 	os.Exit(setup.Run())

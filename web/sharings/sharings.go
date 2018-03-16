@@ -217,6 +217,9 @@ func Routes(router *echo.Group) {
 	// Register the URL of their Cozy for recipients
 	router.GET("/:sharing-id/discovery", GetDiscovery)
 	router.POST("/:sharing-id/discovery", PostDiscovery)
+
+	// Replicator routes
+	replicatorRoutes(router)
 }
 
 func extractSlugFromSourceID(sourceID string) (string, error) {

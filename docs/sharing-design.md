@@ -286,9 +286,9 @@ Else, we restore the trashed parent.
 * `revisions`: an array with the last known `_rev`s of the shared object (for
   conflicts, we put
   [the winner](http://docs.couchdb.org/en/2.1.1/replication/conflicts.html#working-with-conflicting-documents))
-* `sharings`, a map of sharing ids → `{rule, removed, binary}`
+* `infos`, a map of sharing ids → `{rule, removed, binary}`
   * `rule` says which rule from the sharing must be applied for this document
   * `removed` will be true for a deleted document, a trashed file, or if the
-    document no longer matches the sharing rule
+    document does no longer match the sharing rule
   * `binary` is a boolean flag that is true only for files (and not even
     folders) with `removed: false`

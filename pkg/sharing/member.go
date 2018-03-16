@@ -18,6 +18,8 @@ const (
 	// MemberStatusPendingInvitation is for a recipient that has not (yet)
 	// accepted the sharing, but the invitation mail was sent
 	MemberStatusPendingInvitation = "pending"
+	// MemberStatusReady is for recipient that have accepted the sharing
+	MemberStatusReady = "ready"
 )
 
 // Member contains the information about a recipient (or the sharer) for a sharing
