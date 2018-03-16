@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -159,6 +160,7 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 
 			"title": msg.Title,
 			"body":  msg.Message,
+			"notId": rand.Intn(100),
 		},
 	}
 	if msg.Collapsible {
