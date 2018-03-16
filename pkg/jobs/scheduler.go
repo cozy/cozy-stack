@@ -173,7 +173,7 @@ func GetJobs(t Trigger, limit int) ([]*Job, error) {
 }
 
 // GetTriggerState returns the state of the trigger, calculated from the last
-// launched
+// launched jobs.
 func GetTriggerState(t Trigger) (*TriggerState, error) {
 	js, err := GetJobs(t, 0)
 	if err != nil {
