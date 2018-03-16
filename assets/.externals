@@ -11,8 +11,8 @@
 #
 
 name    ./js/cozy-client.min.js
-url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.7.2/dist/cozy-client.min.js
-sha256  f71075481977ce03682a210e92f73a468cc1e178d39be6b25038f5cc0a14fbd4
+url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.8.0/dist/cozy-client.min.js
+sha256  10dc8ef06ba386cf436ac52c9978b172d19566f3ba3e45d7134705f27ad4973d
 
 name    ./js/cozy-client.min.js.map
 url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.7.2/dist/cozy-client.min.js.map
