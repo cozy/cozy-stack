@@ -113,8 +113,8 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 		Message:    msg2,
 	}
 
-	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
-	sch.Shutdown(context.Background())
+	sch := jobs.System().(jobs.Scheduler)
+	sch.ShutdownScheduler(context.Background())
 	sch.StartScheduler(bro)
 
 	tat, err := jobs.NewTrigger(at)
@@ -185,10 +185,10 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
-	sch.Shutdown(context.Background())
+	sch := jobs.System().(jobs.Scheduler)
+	sch.ShutdownScheduler(context.Background())
 	sch.StartScheduler(bro)
-	sch.Shutdown(context.Background())
+	sch.ShutdownScheduler(context.Background())
 	defer sch.StartScheduler(bro)
 
 	msg, _ := jobs.NewMessage("@cron")
@@ -207,7 +207,7 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 
 	now := time.Now().UTC().Unix()
 	for i := int64(0); i < 15; i++ {
-		err = sch.Poll(now + i + 4)
+		err = sch.PollScheduler(now + i + 4)
 		assert.NoError(t, err)
 	}
 	count, _ := bro.WorkerQueueLen("incr")
@@ -221,10 +221,10 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
-	sch.Shutdown(context.Background())
+	sch := jobs.System().(jobs.Scheduler)
+	sch.ShutdownScheduler(context.Background())
 	sch.StartScheduler(bro)
-	sch.Shutdown(context.Background())
+	sch.ShutdownScheduler(context.Background())
 	defer sch.StartScheduler(bro)
 
 	now := time.Now()
@@ -249,13 +249,13 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	}).Err()
 	assert.NoError(t, err)
 
-	err = sch.Poll(ts + 2)
+	err = sch.PollScheduler(ts + 2)
 	assert.NoError(t, err)
 	<-time.After(1 * time.Millisecond)
 	count, _ := bro.WorkerQueueLen("incr")
 	assert.Equal(t, 0, count)
 
-	err = sch.Poll(ts + 13)
+	err = sch.PollScheduler(ts + 13)
 	assert.NoError(t, err)
 	<-time.After(1 * time.Millisecond)
 	count, _ = bro.WorkerQueueLen("incr")
@@ -269,8 +269,8 @@ func TestRedisTriggerEvent(t *testing.T) {
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
-	sch.Shutdown(context.Background())
+	sch := jobs.System().(jobs.Scheduler)
+	sch.ShutdownScheduler(context.Background())
 	time.Sleep(1 * time.Second)
 	sch.StartScheduler(bro)
 
@@ -353,8 +353,8 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
-	sch.Shutdown(context.Background())
+	sch := jobs.System().(jobs.Scheduler)
+	sch.ShutdownScheduler(context.Background())
 	time.Sleep(1 * time.Second)
 	sch.StartScheduler(bro)
 
@@ -472,8 +472,8 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := jobs.System().Scheduler.(*jobs.RedisScheduler)
-	sch.Shutdown(context.Background())
+	sch := jobs.System().(jobs.Scheduler)
+	sch.ShutdownScheduler(context.Background())
 	time.Sleep(1 * time.Second)
 	sch.StartScheduler(bro)
 

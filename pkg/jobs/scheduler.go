@@ -30,6 +30,7 @@ type (
 	Scheduler interface {
 		StartScheduler(broker Broker) error
 		ShutdownScheduler(ctx context.Context) error
+		PollScheduler(now int64) error
 		AddTrigger(trigger Trigger) error
 		GetTrigger(domain, id string) (Trigger, error)
 		DeleteTrigger(domain, id string) error

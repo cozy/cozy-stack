@@ -107,6 +107,6 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	err = sch.Shutdown(context.Background())
+	err = sch.ShutdownScheduler(context.Background())
 	assert.NoError(t, err)
 }

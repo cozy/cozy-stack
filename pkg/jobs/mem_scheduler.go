@@ -197,10 +197,14 @@ func (s *memScheduler) pushJob(t Trigger, req *JobRequest) {
 	}
 }
 
+func (s *memScheduler) PollScheduler(now int64) error {
+	return errors.New("memScheduler cannot be polled")
+}
+
 // RebuildRedis does nothing for the in memory scheduler. It's just
 // here to implement the Scheduler interface.
 func (s *memScheduler) RebuildRedis(domain string) error {
-	return errors.New("MemScheduler does not use redis")
+	return errors.New("memScheduler does not use redis")
 }
 
 var _ Scheduler = &memScheduler{}

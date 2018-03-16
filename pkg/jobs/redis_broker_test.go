@@ -109,9 +109,9 @@ func TestRedisJobs(t *testing.T) {
 
 	w.Wait()
 
-	err = broker1.Shutdown(context.Background())
+	err = broker1.ShutdownWorkers(context.Background())
 	assert.NoError(t, err)
-	err = broker2.Shutdown(context.Background())
+	err = broker2.ShutdownWorkers(context.Background())
 	assert.NoError(t, err)
 	time.Sleep(1 * time.Second)
 }
