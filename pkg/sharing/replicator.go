@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -114,7 +115,7 @@ type Missings map[string]MissingEntry
 // MissingEntry is a struct with the missing revisions for an id
 type MissingEntry struct {
 	Missing []string `json:"missing"`
-	// TODO possible_ancestors?
+	PAs     []string `json:"possible_ancestors"`
 }
 
 // callRevsDiff asks the other cozy to compute the revs_diff
@@ -160,6 +161,41 @@ func (s *Sharing) callRevsDiff(m *Member, changes *Changes) (*Missings, error) {
 	return &missings, nil
 }
 
+// computePossibleAncestors find the revisions in haves that have a generation
+// number just inferior to a generation number of a revision in wants.
+func computePossibleAncestors(wants []string, haves []string) []string {
+	// Build a sorted array of unique generation number for revisions of wants
+	var wgs []int
+	seen := make(map[int]bool)
+	for _, rev := range wants {
+		g := generation(rev)
+		if !seen[g] {
+			wgs = append(wgs, g)
+		}
+		seen[g] = true
+	}
+	sort.Ints(wgs)
+
+	var pas []string
+	i := 0
+	for j, rev := range haves {
+		g := generation(rev)
+		found := false
+		for i < len(wgs) && g >= wgs[i] {
+			found = true
+			i++
+		}
+		if found && j > 0 {
+			pas = append(pas, haves[j-1])
+		}
+	}
+	if i != len(wgs) {
+		pas = append(pas, haves[len(haves)-1])
+	}
+
+	return pas
+}
+
 // ComputeRevsDiff takes a map of id->[revisions] and returns the missing
 // revisions for those documents on the current instance.
 func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Missings, error) {
@@ -193,7 +229,11 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Mi
 		if len(changes[result.SID]) == 0 {
 			delete(missings, result.SID)
 		} else {
-			missings[result.SID] = MissingEntry{Missing: changes[result.SID]}
+			pas := computePossibleAncestors(changes[result.SID], result.Revisions)
+			missings[result.SID] = MissingEntry{
+				Missing: changes[result.SID],
+				PAs:     pas,
+			}
 		}
 	}
 	return &missings, nil

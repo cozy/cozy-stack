@@ -1,6 +1,9 @@
 package sharing
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -26,7 +29,8 @@ type SharedDoc struct {
 	SID  string `json:"_id,omitempty"`
 	SRev string `json:"_rev,omitempty"`
 
-	// Revisions is an array with the last known _rev of the shared object
+	// Revisions is an array with the last known _rev of the shared object.
+	// The revisions are sorted by growing generation (the number before the hyphen).
 	// TODO it should be a tree, not an array (conflicts)
 	Revisions []string `json:"revisions"`
 
@@ -53,6 +57,16 @@ func (s *SharedDoc) SetRev(rev string) { s.SRev = rev }
 func (s *SharedDoc) Clone() couchdb.Doc {
 	cloned := *s
 	return &cloned
+}
+
+// generation returns the number before the hyphen, called the generation of a revision
+func generation(rev string) int {
+	parts := strings.SplitN(rev, "-", 2)
+	gen, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0
+	}
+	return gen
 }
 
 var _ couchdb.Doc = &SharedDoc{}

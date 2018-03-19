@@ -128,7 +128,7 @@ func TestRevsDiff(t *testing.T) {
 		id1: []string{"3-1a"},
 		id2: []string{"2-2a"},
 		id3: []string{"5-3b"},
-		id4: []string{"3-4b"},
+		id4: []string{"2-4b", "2-4c", "4-4d"},
 		id6: []string{"1-6b"},
 	})
 	r := bytes.NewReader(body)
@@ -156,10 +156,12 @@ func TestRevsDiff(t *testing.T) {
 	// id3 was updated on the source
 	assert.Contains(t, missings, id3)
 	assert.Equal(t, missings[id3].Missing, []string{"5-3b"})
+	assert.Equal(t, missings[id3].PAs, []string{"3-3a"})
 
 	// id4 is a conflict
 	assert.Contains(t, missings, id4)
-	assert.Equal(t, missings[id4].Missing, []string{"3-4b"})
+	assert.Equal(t, missings[id4].Missing, []string{"2-4b", "2-4c", "4-4d"})
+	assert.Equal(t, missings[id4].PAs, []string{"1-4a", "3-4a"})
 
 	// id5 has been created on the target
 	assert.NotContains(t, missings, id5)
@@ -167,4 +169,5 @@ func TestRevsDiff(t *testing.T) {
 	// id6 has been created on the source
 	assert.Contains(t, missings, id6)
 	assert.Equal(t, missings[id6].Missing, []string{"1-6b"})
+	assert.Empty(t, missings[id6].PAs)
 }
