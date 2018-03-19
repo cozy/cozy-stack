@@ -39,6 +39,7 @@ func (s *Sharing) Replicate(inst *instance.Instance) error {
 
 // ReplicateTo starts a replicator on this sharing to the given member.
 // See http://docs.couchdb.org/en/2.1.1/replication/protocol.html
+// and https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js
 func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member) error {
 	if m.Instance == "" {
 		return ErrInvalidURL
@@ -51,6 +52,8 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member) error {
 		return err
 	}
 	fmt.Printf("changes = %#v\n", changes)
+	// TODO pouch use the pending property of changes for its replicator
+	// https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js#L298-L301
 
 	missings, err := s.callRevsDiff(m, changes)
 	if err != nil {
@@ -64,10 +67,13 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member) error {
 	// for doctype, ids := range byDoctypes {
 	// Get the documents in a bulk
 	// http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#post--db-_all_docs
+	// or https://github.com/couchbase/sync_gateway/wiki/Bulk-GET
 	// TODO docs := getBulkDocs(ids)
 
 	// Send them in a bulk
 	// http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#db-bulk-docs
+	// https://wiki.apache.org/couchdb/HTTP_Bulk_Document_API#Posting_Existing_Revisions
+	// https://gist.github.com/nono/42aee18de6314a621f9126f284e303bb
 	// TODO responses := sendBulkDocs(docs)
 	// TODO check for errors
 	// }

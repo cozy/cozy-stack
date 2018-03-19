@@ -27,6 +27,7 @@ type SharedDoc struct {
 	SRev string `json:"_rev,omitempty"`
 
 	// Revisions is an array with the last known _rev of the shared object
+	// TODO it should be a tree, not an array (conflicts)
 	Revisions []string `json:"revisions"`
 
 	// Infos is a map of sharing ids -> informations
