@@ -406,5 +406,6 @@ func isPlatformApp(man Manifest) bool {
 		"drive",
 		"store",
 		"banks",
+		"contacts",
 	})
 }
