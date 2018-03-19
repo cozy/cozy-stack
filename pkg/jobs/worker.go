@@ -262,6 +262,17 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			parentCtx.Logger().Errorf("[job] error while acking job done: %s",
 				err.Error())
 		}
+
+		// Delete the trigger associated with the job (if any) when we receive a
+		// ErrBadTrigger.
+		//
+		// XXX: better retro-action between broker and scheduler to avoid going
+		// through the global job-system.
+		if job.TriggerID != "" && globalJobSystem != nil {
+			if _, ok := err.(ErrBadTrigger); ok {
+				globalJobSystem.DeleteTrigger(job.Domain, job.TriggerID)
+			}
+		}
 	}
 	joblog.Debugf("[job] %s: worker shut down", workerID)
 	closed <- struct{}{}
@@ -391,9 +402,14 @@ func (t *task) exec(ctx *WorkerContext) (err error) {
 func (t *task) nextDelay(prevError error) (bool, time.Duration, time.Duration) {
 	// for certain kinds of errors, we do not have a retry since these error
 	// cannot be recovered from
-	switch prevError {
-	case ErrAbort, ErrMessageUnmarshal, ErrMessageNil:
-		return false, 0, 0
+	{
+		if _, ok := prevError.(ErrBadTrigger); ok {
+			return false, 0, 0
+		}
+		switch prevError {
+		case ErrAbort, ErrMessageUnmarshal, ErrMessageNil:
+			return false, 0, 0
+		}
 	}
 
 	c := t.conf

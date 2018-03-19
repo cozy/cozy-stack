@@ -18,15 +18,16 @@ import (
 
 // ServiceOptions contains the options to execute a service.
 type ServiceOptions struct {
-	Slug        string          `json:"slug"`
-	Type        string          `json:"type"`
-	ServiceFile string          `json:"service_file"`
-	Message     *ServiceOptions `json:"message"`
+	Slug string `json:"slug"`
+	Name string `json:"name"`
+	File string `json:"service_file"`
+
+	Message *ServiceOptions `json:"message"`
 }
 
 type serviceWorker struct {
-	opts *ServiceOptions
 	man  *apps.WebappManifest
+	slug string
 }
 
 func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir string, err error) {
@@ -39,9 +40,13 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 	}
 
 	slug := opts.Slug
+	name := opts.Name
 
 	man, err := apps.GetWebappBySlug(i, slug)
 	if err != nil {
+		if err == apps.ErrNotFound {
+			err = jobs.ErrBadTrigger{err}
+		}
 		return
 	}
 	if man.State() != apps.Ready {
@@ -49,8 +54,25 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 		return
 	}
 
-	w.opts = opts
+	var service *apps.Service
+	var ok bool
+	if name != "" {
+		service, ok = man.Services[name]
+	} else {
+		for _, s := range man.Services {
+			if s.File == opts.File {
+				service, ok = s, true
+				break
+			}
+		}
+	}
+	if !ok {
+		err = jobs.ErrBadTrigger{fmt.Errorf("Service %q was not found", name)}
+		return
+	}
+
 	w.man = man
+	w.slug = slug
 
 	osFS := afero.NewOsFs()
 	workDir, err = afero.TempDir(osFS, "", "service-"+slug)
@@ -60,7 +82,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fs := i.AppsFileServer()
-	src, err := fs.Open(man.Slug(), man.Version(), path.Join("/", opts.ServiceFile))
+	src, err := fs.Open(man.Slug(), man.Version(), path.Join("/", service.File))
 	if err != nil {
 		return
 	}
@@ -81,10 +103,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 }
 
 func (w *serviceWorker) Slug() string {
-	if w.opts != nil {
-		return w.opts.Slug
-	}
-	return ""
+	return w.slug
 }
 
 func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {

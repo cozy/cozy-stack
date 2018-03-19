@@ -31,3 +31,13 @@ var (
 	// ErrMalformedTrigger is used to indicate the trigger is unparsable
 	ErrMalformedTrigger = echo.NewHTTPError(http.StatusBadRequest, "Trigger unparsable")
 )
+
+// ErrBadTrigger is an error conveying the information of a trigger that is not
+// valid, and could be deleted.
+type ErrBadTrigger struct {
+	Err error
+}
+
+func (e ErrBadTrigger) Error() string {
+	return e.Err.Error()
+}
