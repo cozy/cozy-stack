@@ -148,6 +148,7 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 		priority = "high"
 	}
 
+	hashedSource := hashSource(msg.Source)
 	notification := &fcm.Message{
 		To:           msg.DeviceToken,
 		Priority:     priority,
@@ -156,13 +157,14 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 			// Fields required by phonegap-plugin-push
 			// see: https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/PAYLOAD.md#android-behaviour
 			"content-available": true,
+			"notId":             hashedSource,
 
 			"title": msg.Title,
 			"body":  msg.Message,
 		},
 	}
 	if msg.Collapsible {
-		notification.CollapseKey = hashSource(msg.Source)
+		notification.CollapseKey = hashedSource
 	}
 	for k, v := range msg.Data {
 		notification.Data[k] = v
