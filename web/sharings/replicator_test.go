@@ -125,10 +125,10 @@ func TestRevsDiff(t *testing.T) {
 	id6 := replDoctype + "/" + uuidv4()
 
 	body, _ := json.Marshal(sharing.Changes{
-		id1: []string{"1-1a", "2-1a", "3-1a"},
-		id2: []string{"1-2a", "2-2a"},
-		id3: []string{"1-3a", "2-3a", "3-3a", "4-3b", "5-3b"},
-		id4: []string{"1-4a", "2-4a", "3-4b"},
+		id1: []string{"3-1a"},
+		id2: []string{"2-2a"},
+		id3: []string{"5-3b"},
+		id4: []string{"3-4b"},
 		id6: []string{"1-6b"},
 	})
 	r := bytes.NewReader(body)
@@ -155,7 +155,7 @@ func TestRevsDiff(t *testing.T) {
 
 	// id3 was updated on the source
 	assert.Contains(t, missings, id3)
-	assert.Equal(t, missings[id3].Missing, []string{"4-3b", "5-3b"})
+	assert.Equal(t, missings[id3].Missing, []string{"5-3b"})
 
 	// id4 is a conflict
 	assert.Contains(t, missings, id4)

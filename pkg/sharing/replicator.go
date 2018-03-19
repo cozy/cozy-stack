@@ -124,7 +124,11 @@ func (s *Sharing) callRevsDiff(m *Member, changes *Changes) (*Missings, error) {
 	if err != nil {
 		return nil, err
 	}
-	body, err := json.Marshal(changes)
+	leafRevs := make(map[string][]string) // "doctype-docid" -> [leaf revisions]
+	for key, revs := range *changes {
+		leafRevs[key] = revs[len(revs)-1:]
+	}
+	body, err := json.Marshal(leafRevs)
 	if err != nil {
 		return nil, err
 	}
