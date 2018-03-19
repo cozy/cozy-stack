@@ -29,6 +29,8 @@ type Routes map[string]Route
 
 // Service is a struct to define a service executed by the stack.
 type Service struct {
+	name string
+
 	Type           string `json:"type"`
 	File           string `json:"file"`
 	Debounce       string `json:"debounce"`
@@ -295,9 +297,11 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 	var clone = make(Services)
 	for newName, newService := range newServices {
 		clone[newName] = newService
+		newService.name = newName
 	}
 
 	for name, oldService := range oldServices {
+		oldService.name = name
 		newService, ok := newServices[name]
 		if !ok {
 			deleted = append(deleted, oldService)
@@ -313,6 +317,7 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 		} else {
 			*newService = *oldService
 		}
+		newService.name = name
 	}
 	for _, newService := range clone {
 		created = append(created, newService)
@@ -336,9 +341,8 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 			triggerArgs = strings.TrimSpace(triggerOpts[1])
 		}
 		msg, err := jobs.NewMessage(map[string]string{
-			"slug":         slug,
-			"type":         service.Type,
-			"service_file": service.File,
+			"slug": slug,
+			"name": service.name,
 		})
 		if err != nil {
 			return err
