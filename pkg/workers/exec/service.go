@@ -45,7 +45,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 	man, err := apps.GetWebappBySlug(i, slug)
 	if err != nil {
 		if err == apps.ErrNotFound {
-			err = jobs.ErrBadTrigger{err}
+			err = jobs.ErrBadTrigger{Err: err}
 		}
 		return
 	}
@@ -67,12 +67,12 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 		}
 	}
 	if !ok {
-		err = jobs.ErrBadTrigger{fmt.Errorf("Service %q was not found", name)}
+		err = jobs.ErrBadTrigger{Err: fmt.Errorf("Service %q was not found", name)}
 		return
 	}
 	if triggerID, ok := ctx.TriggerID(); ok && service.TriggerID != "" {
 		if triggerID != service.TriggerID {
-			err = jobs.ErrBadTrigger{fmt.Errorf("Trigger %q is orphan", triggerID)}
+			err = jobs.ErrBadTrigger{Err: fmt.Errorf("Trigger %q is orphan", triggerID)}
 			return
 		}
 	}
