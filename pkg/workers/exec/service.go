@@ -70,6 +70,12 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 		err = jobs.ErrBadTrigger{fmt.Errorf("Service %q was not found", name)}
 		return
 	}
+	if triggerID, ok := ctx.TriggerID(); ok && service.TriggerID != "" {
+		if triggerID != service.TriggerID {
+			err = jobs.ErrBadTrigger{fmt.Errorf("Trigger %q is orphan", triggerID)}
+			return
+		}
+	}
 
 	w.man = man
 	w.slug = slug
