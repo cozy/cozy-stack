@@ -171,7 +171,7 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 		Data: map[string]interface{}{
 			// Fields required by phonegap-plugin-push
 			// see: https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/PAYLOAD.md#android-behaviour
-			"content-available": true,
+			"content-available": 1,
 			"notId":             notID,
 
 			"title": msg.Title,
