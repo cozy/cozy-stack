@@ -2,6 +2,9 @@ package accounts
 
 import (
 	"bytes"
+	cryptorand "crypto/rand"
+	"encoding/json"
+	"io"
 	"math/rand"
 	"os"
 	"testing"
@@ -111,7 +114,7 @@ func TestDecryptCredentialsRandom(t *testing.T) {
 	}
 }
 
-func TestRandomBitFlips(t *testing.T) {
+func TestRandomBitFlipsCredentials(t *testing.T) {
 	original, err := EncryptCredentials("toto@titi.com", "X3hVYLJLRiUyCs")
 	if !assert.NoError(t, err) {
 		return
@@ -149,6 +152,73 @@ func TestRandomBitFlips(t *testing.T) {
 			flipped[flipValue/8] ^= mask
 		}
 		_, _, err := DecryptCredentials(flipped)
+		if !assert.Error(t, err) {
+			t.Fatalf("Failed with flips %v", flipsSet)
+			return
+		}
+	}
+}
+
+func TestEncryptDecryptData(t *testing.T) {
+	var data interface{}
+	err := json.Unmarshal([]byte(`{"foo":"bar","baz":{"quz": "quuz"}}`), &data)
+	if !assert.NoError(t, err) {
+		return
+	}
+	encBuffer, err := EncryptCredentialsData(data)
+	if !assert.NoError(t, err) {
+		return
+	}
+	decData, err := DecryptCredentialsData(encBuffer)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.EqualValues(t, data, decData)
+}
+
+func TestRandomBitFlipsBuffer(t *testing.T) {
+	plainBuffer := make([]byte, 256)
+	_, err := io.ReadFull(cryptorand.Reader, plainBuffer)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	original, err := EncryptBufferWithKey(config.GetVault().CredentialsEncryptorKey(), plainBuffer)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	flipped := make([]byte, len(original))
+	copy(flipped, original)
+	testBuffer, err := DecryptBufferWithKey(config.GetVault().CredentialsDecryptorKey(), flipped)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.True(t, bytes.Equal(plainBuffer, testBuffer))
+
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < 100000; i++ {
+		copy(flipped, original)
+		flipsLen := rng.Intn(30) + 1
+		flipsSet := make([]int, 0, flipsLen)
+		for len(flipsSet) < flipsLen {
+			flipValue := rng.Intn(len(original) * 8)
+			flipFound := false
+			for j := 0; j < len(flipsSet); j++ {
+				if flipsSet[j] == flipValue {
+					flipFound = true
+					break
+				}
+			}
+			if !flipFound {
+				flipsSet = append(flipsSet, flipValue)
+			}
+		}
+		for _, flipValue := range flipsSet {
+			mask := byte(0x1 << uint(flipValue%8))
+			flipped[flipValue/8] ^= mask
+		}
+		_, err := DecryptBufferWithKey(config.GetVault().CredentialsDecryptorKey(), flipped)
 		if !assert.Error(t, err) {
 			t.Fatalf("Failed with flips %v", flipsSet)
 			return

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"io"
 
@@ -53,6 +54,36 @@ func EncryptCredentials(login, password string) ([]byte, error) {
 	copy(encryptedOut[len(cipherHeader):], nonce[:])
 
 	encryptedCreds := box.Seal(encryptedOut, creds, &nonce, encryptorKey.PublicKey(), encryptorKey.PrivateKey())
+	return encryptedCreds, nil
+}
+
+// EncryptCredentialsData takes any json encodable data and encode and encrypts
+// it using the vault public key.
+func EncryptCredentialsData(data interface{}) ([]byte, error) {
+	encryptorKey := config.GetVault().CredentialsEncryptorKey()
+	if encryptorKey == nil {
+		return nil, errCannotEncrypt
+	}
+	buf, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return EncryptBufferWithKey(encryptorKey, buf)
+}
+
+// EncryptBufferWithKey encrypts the given bytee buffer with the specified encryption
+// key.
+func EncryptBufferWithKey(encryptorKey *keymgmt.NACLKey, buf []byte) ([]byte, error) {
+	var nonce [nonceLen]byte
+	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
+		panic(err)
+	}
+
+	encryptedOut := make([]byte, len(cipherHeader)+len(nonce))
+	copy(encryptedOut[0:], cipherHeader)
+	copy(encryptedOut[len(cipherHeader):], nonce[:])
+
+	encryptedCreds := box.Seal(encryptedOut, buf, &nonce, encryptorKey.PublicKey(), encryptorKey.PrivateKey())
 	return encryptedCreds, nil
 }
 
@@ -108,4 +139,55 @@ func DecryptCredentialsWithKey(decryptorKey *keymgmt.NACLKey, encryptedCreds []b
 
 	// split the credentials into login / password
 	return string(creds[:loginLen]), string(creds[loginLen:]), nil
+}
+
+// DecryptCredentialsData takes an encryted buffer and decrypts and decode its
+// content.
+func DecryptCredentialsData(encryptedData []byte) (interface{}, error) {
+	decryptorKey := config.GetVault().CredentialsDecryptorKey()
+	if decryptorKey == nil {
+		return nil, errCannotDecrypt
+	}
+	plainBuffer, err := DecryptBufferWithKey(decryptorKey, encryptedData)
+	if err != nil {
+		return nil, err
+	}
+	var data interface{}
+	if err = json.Unmarshal(plainBuffer, &data); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// DecryptBufferWithKey takes an encrypted buffer and decrypts it using the
+// given private key.
+func DecryptBufferWithKey(decryptorKey *keymgmt.NACLKey, encryptedBuffer []byte) ([]byte, error) {
+	// check the cipher text starts with the cipher header
+	if !bytes.HasPrefix(encryptedBuffer, []byte(cipherHeader)) {
+		return nil, errBadCredentials
+	}
+
+	// skip the cipher header
+	encryptedBuffer = encryptedBuffer[len(cipherHeader):]
+
+	// check the encrypted creds contains the space for the nonce as prefix
+	if len(encryptedBuffer) < nonceLen {
+		return nil, errBadCredentials
+	}
+
+	// extrct the nonce from the first 24 bytes
+	var nonce [nonceLen]byte
+	copy(nonce[:], encryptedBuffer[:nonceLen])
+
+	// skip the nonce
+	encryptedBuffer = encryptedBuffer[nonceLen:]
+
+	// decrypt the cipher text and check that the plain text is more the 4 bytes
+	// long, to contain the login length
+	plainBuffer, ok := box.Open(nil, encryptedBuffer, &nonce, decryptorKey.PublicKey(), decryptorKey.PrivateKey())
+	if !ok {
+		return nil, errBadCredentials
+	}
+
+	return plainBuffer, nil
 }
