@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/md5"
 	"crypto/tls"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -44,15 +45,16 @@ func init() {
 
 // Message contains a push notification request.
 type Message struct {
-	Source      string `json:"source"`
-	ClientID    string `json:"client_id,omitempty"`
-	Platform    string `json:"platform,omitempty"`
-	DeviceToken string `json:"device_token,omitempty"`
-	Title       string `json:"title,omitempty"`
-	Message     string `json:"message,omitempty"`
-	Priority    string `json:"priority,omitempty"`
-	Sound       string `json:"sound,omitempty"`
-	Collapsible bool   `json:"collapsible,omitempty"`
+	NotificationID string `json:"notification_id"`
+	Source         string `json:"source"`
+	ClientID       string `json:"client_id,omitempty"`
+	Platform       string `json:"platform,omitempty"`
+	DeviceToken    string `json:"device_token,omitempty"`
+	Title          string `json:"title,omitempty"`
+	Message        string `json:"message,omitempty"`
+	Priority       string `json:"priority,omitempty"`
+	Sound          string `json:"sound,omitempty"`
+	Collapsible    bool   `json:"collapsible,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty"`
 }
@@ -148,7 +150,20 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 		priority = "high"
 	}
 
-	hashedSource := hashSource(msg.Source)
+	var hashedSource []byte
+	if msg.Collapsible {
+		hashedSource = hashSource(msg.Source)
+	} else {
+		hashedSource = hashSource(msg.Source + msg.NotificationID)
+	}
+
+	// notID should be an integer, we take the first 32bits of the hashed source
+	// value.
+	notID := int32(binary.BigEndian.Uint32(hashedSource[:4]))
+	if notID < 0 {
+		notID = -notID
+	}
+
 	notification := &fcm.Message{
 		To:           msg.DeviceToken,
 		Priority:     priority,
@@ -157,14 +172,14 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 			// Fields required by phonegap-plugin-push
 			// see: https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/PAYLOAD.md#android-behaviour
 			"content-available": true,
-			"notId":             hashedSource,
+			"notId":             notID,
 
 			"title": msg.Title,
 			"body":  msg.Message,
 		},
 	}
 	if msg.Collapsible {
-		notification.CollapseKey = hashedSource
+		notification.CollapseKey = hex.EncodeToString(hashedSource)
 	}
 	for k, v := range msg.Data {
 		notification.Data[k] = v
@@ -218,7 +233,7 @@ func pushToIOS(ctx *jobs.WorkerContext, msg *Message) error {
 		DeviceToken: msg.DeviceToken,
 		Payload:     payload,
 		Priority:    priority,
-		CollapseID:  hashSource(msg.Source), // CollapseID should not exceed 64 bytes
+		CollapseID:  hex.EncodeToString(hashSource(msg.Source)), // CollapseID should not exceed 64 bytes
 	}
 
 	res, err := iosClient.PushWithContext(ctx, notification)
@@ -231,8 +246,8 @@ func pushToIOS(ctx *jobs.WorkerContext, msg *Message) error {
 	return nil
 }
 
-func hashSource(source string) string {
+func hashSource(source string) []byte {
 	h := md5.New()
 	h.Write([]byte(source))
-	return hex.EncodeToString(h.Sum(nil))
+	return h.Sum(nil)
 }

@@ -117,14 +117,15 @@ func sendPush(inst *instance.Instance, collapsible bool, n *notification.Notific
 	var errm error
 	for _, c := range clients {
 		push := push.Message{
-			Source:      source,
-			Title:       n.Title,
-			Message:     n.Message,
-			Priority:    n.Priority,
-			Sound:       n.Sound,
-			Collapsible: collapsible,
-			Platform:    c.NotificationPlatform,
-			DeviceToken: c.NotificationDeviceToken,
+			NotificationID: n.ID(),
+			Source:         source,
+			Title:          n.Title,
+			Message:        n.Message,
+			Priority:       n.Priority,
+			Sound:          n.Sound,
+			Collapsible:    collapsible,
+			Platform:       c.NotificationPlatform,
+			DeviceToken:    c.NotificationDeviceToken,
 		}
 		msg, err := jobs.NewMessage(&push)
 		if err != nil {
