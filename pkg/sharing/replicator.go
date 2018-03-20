@@ -106,7 +106,7 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance) (*Changes, error) {
 	return &changes, nil
 }
 
-// Missings is a struct for the response of revs_diff
+// Missings is a struct for the response of _revs_diff
 type Missings map[string]MissingEntry
 
 // MissingEntry is a struct with the missing revisions for an id
@@ -214,6 +214,7 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Mi
 		if _, ok := changes[result.SID]; !ok {
 			continue
 		}
+		// TODO check that result.Info[s.SID] exists
 		for _, rev := range result.Revisions {
 			for i, r := range changes[result.SID] {
 				if rev == r {
@@ -265,4 +266,21 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*
 		docs[doctype] = append(docs[doctype], results...)
 	}
 	return &docs, nil
+}
+
+// BulkDocsReponse is a map of doctype -> slices of infos about a document
+type BulkDocsReponse map[string][]couchdb.UpdateResponse
+
+// ApplyBulkDocs is a multi-doctypes version of the POST _bulk_docs endpoint of CouchDB
+func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) (*BulkDocsReponse, error) {
+	var resp BulkDocsReponse
+	for doctype, docs := range payload {
+		updates, err := couchdb.BulkForceUpdateDocs(inst, doctype, docs)
+		// TODO call rtevent
+		if err != nil {
+			return nil, err
+		}
+		resp[doctype] = updates
+	}
+	return &resp, nil
 }

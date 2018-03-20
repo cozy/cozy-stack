@@ -183,7 +183,7 @@ func BulkUpdateDocs(db Database, doctype string, docs []interface{}) error {
 	}{
 		Docs: docs,
 	}
-	var res []updateResponse
+	var res []UpdateResponse
 	if err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
 		return err
 	}
@@ -216,7 +216,7 @@ func BulkDeleteDocs(db Database, doctype string, docs []interface{}) error {
 			))
 		}
 	}
-	var res []updateResponse
+	var res []UpdateResponse
 	if err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
 		return err
 	}
@@ -227,4 +227,26 @@ func BulkDeleteDocs(db Database, doctype string, docs []interface{}) error {
 		}
 	}
 	return nil
+}
+
+// BulkForceUpdateDocs is used to update several docs in one call, and to force
+// the revisions history. It is used by replications.
+func BulkForceUpdateDocs(db Database, doctype string, docs []map[string]interface{}) ([]UpdateResponse, error) {
+	if len(docs) == 0 {
+		return nil, nil
+	}
+	body := struct {
+		Docs []map[string]interface{} `json:"docs"`
+	}{
+		Docs: docs,
+	}
+	var res []UpdateResponse
+	err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs?new_edits=false", body, &res)
+	if err != nil {
+		return nil, err
+	}
+	if len(res) != len(docs) {
+		return nil, errors.New("BulkUpdateDoc receive an unexpected number of responses")
+	}
+	return res, nil
 }

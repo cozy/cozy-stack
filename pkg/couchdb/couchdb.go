@@ -494,7 +494,7 @@ func DeleteDoc(db Database, doc Doc) error {
 			Infof("Deleting account %s", doc.ID())
 	}
 
-	var res updateResponse
+	var res UpdateResponse
 	url := url.PathEscape(id) + "?rev=" + url.QueryEscape(doc.Rev())
 	err = makeRequest(db, doc.DocType(), http.MethodDelete, url, nil, &res)
 	if err != nil {
@@ -533,7 +533,7 @@ func UpdateDoc(db Database, doc Doc) error {
 	if err != nil {
 		return err
 	}
-	var res updateResponse
+	var res UpdateResponse
 	err = makeRequest(db, doctype, http.MethodPut, url, doc, &res)
 	if err != nil {
 		return err
@@ -556,7 +556,7 @@ func CreateNamedDoc(db Database, doc Doc) error {
 	if doc.Rev() != "" || id == "" || doctype == "" {
 		return fmt.Errorf("CreateNamedDoc should have type and id but no rev")
 	}
-	var res updateResponse
+	var res UpdateResponse
 	err = makeRequest(db, doctype, http.MethodPut, url.PathEscape(id), doc, &res)
 	if err != nil {
 		return err
@@ -625,7 +625,7 @@ func createDocOrDb(db Database, doc Doc, response interface{}) error {
 // with the document's new ID and Rev.
 // This function creates a database if this is the first document of its type
 func CreateDoc(db Database, doc Doc) error {
-	var res *updateResponse
+	var res *UpdateResponse
 
 	if doc.ID() != "" {
 		return newDefinedIDError()
@@ -786,7 +786,7 @@ type IndexCreationResponse struct {
 	Name   string `json:"name,omitempty"`
 }
 
-type updateResponse struct {
+type UpdateResponse struct {
 	ID  string `json:"id"`
 	Rev string `json:"rev"`
 	Ok  bool   `json:"ok"`

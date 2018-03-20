@@ -32,10 +32,33 @@ func RevsDiff(c echo.Context) error {
 	return c.JSON(http.StatusOK, missings)
 }
 
+// BulkDocs is part of the replicator
+func BulkDocs(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	var docs sharing.DocsByDoctype
+	if err = c.Bind(&docs); err != nil {
+		return wrapErrors(err)
+	}
+	if docs == nil {
+		return echo.NewHTTPError(http.StatusBadRequest)
+	}
+	resp, err := s.ApplyBulkDocs(inst, docs)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	return c.JSON(http.StatusOK, resp)
+}
+
 // replicatorRoutes sets the routing for the replicator
 func replicatorRoutes(router *echo.Group) {
 	group := router.Group("", checkSharingPermissions)
-	group.POST("/:sharing-id/revs_diff", RevsDiff, checkSharingPermissions)
+	group.POST("/:sharing-id/_revs_diff", RevsDiff, checkSharingPermissions)
+	group.POST("/:sharing-id/_bulk_docs", BulkDocs, checkSharingPermissions)
 }
 
 func checkSharingPermissions(next echo.HandlerFunc) echo.HandlerFunc {

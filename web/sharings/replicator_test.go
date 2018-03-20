@@ -84,7 +84,7 @@ func TestPermissions(t *testing.T) {
 	body, _ := json.Marshal(sharing.Changes{
 		"id": doc.Revisions,
 	})
-	u := tsR.URL + "/sharings/" + replSharingID + "/revs_diff"
+	u := tsR.URL + "/sharings/" + replSharingID + "/_revs_diff"
 
 	r := bytes.NewReader(body)
 	req, err := http.NewRequest(http.MethodPost, u, r)
@@ -132,7 +132,7 @@ func TestRevsDiff(t *testing.T) {
 		id6: []string{"1-6b"},
 	})
 	r := bytes.NewReader(body)
-	u := tsR.URL + "/sharings/" + replSharingID + "/revs_diff"
+	u := tsR.URL + "/sharings/" + replSharingID + "/_revs_diff"
 	req, err := http.NewRequest(http.MethodPost, u, r)
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAccept, "application/json")
