@@ -147,7 +147,7 @@ func sendMail(inst *instance.Instance, n *notification.Notification) error {
 	parts := []*mails.Part{
 		{Body: n.Content, Type: "text/plain"},
 	}
-	if n.ContentHTML == "" {
+	if n.ContentHTML != "" {
 		parts = append(parts, &mails.Part{Body: n.ContentHTML, Type: "text/html"})
 	}
 	mail := mails.Options{
