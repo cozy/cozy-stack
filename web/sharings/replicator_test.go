@@ -64,8 +64,8 @@ func uuidv4() string {
 	return id.String()
 }
 
-func createShared(t *testing.T, id string, revisions []string) *sharing.SharedDoc {
-	doc := sharing.SharedDoc{
+func createShared(t *testing.T, id string, revisions []string) *sharing.SharedRef {
+	doc := sharing.SharedRef{
 		SID:       id,
 		Revisions: revisions,
 	}

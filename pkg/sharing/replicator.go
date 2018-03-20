@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -62,14 +63,11 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member) error {
 	}
 	fmt.Printf("missings = %#v\n", missings)
 
-	// Regroup the missing revisions by doctypes
-	// TODO byDoctypes := partitionByDoctype(missings)
-
-	// for doctype, ids := range byDoctypes {
-	// Get the documents in a bulk
-	// http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#post--db-_all_docs
-	// or https://github.com/couchbase/sync_gateway/wiki/Bulk-GET
-	// TODO docs := getBulkDocs(ids)
+	docs, err := s.getMissingDocs(inst, missings)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("docs = %#v\n", docs)
 
 	// Send them in a bulk
 	// http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#db-bulk-docs
@@ -77,7 +75,6 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member) error {
 	// https://gist.github.com/nono/42aee18de6314a621f9126f284e303bb
 	// TODO responses := sendBulkDocs(docs)
 	// TODO check for errors
-	// }
 
 	// TODO save the sequence number
 
@@ -203,7 +200,7 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Mi
 	for id := range changes {
 		ids = append(ids, id)
 	}
-	results := make([]SharedDoc, 0, len(changes))
+	results := make([]SharedRef, 0, len(changes))
 	req := couchdb.AllDocsRequest{Keys: ids}
 	err := couchdb.GetAllDocs(inst, consts.Shared, &req, &results)
 	if err != nil {
@@ -237,4 +234,35 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Mi
 		}
 	}
 	return &missings, nil
+}
+
+// DocsByDoctype is a map of doctype -> slice of documents of this doctype
+type DocsByDoctype map[string][]map[string]interface{}
+
+// getMissingDocs fetches the documents in bulk, partitionned by their doctype.
+// See https://github.com/apache/couchdb-documentation/pull/263/files
+// TODO use the possible ancestors
+func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*DocsByDoctype, error) {
+	queries := make(map[string][]couchdb.IDRev) // doctype -> payload for _bulk_get
+	for key, missing := range *missings {
+		parts := strings.SplitN(key, "/", 2)
+		if len(parts) != 2 {
+			return nil, ErrInternalServerError
+		}
+		doctype := parts[0]
+		for _, rev := range missing.Missing {
+			ir := couchdb.IDRev{ID: parts[1], Rev: rev}
+			queries[doctype] = append(queries[doctype], ir)
+		}
+	}
+
+	var docs DocsByDoctype
+	for doctype, query := range queries {
+		results, err := couchdb.BulkGetDocs(inst, doctype, query)
+		if err != nil {
+			return nil, err
+		}
+		docs[doctype] = append(docs[doctype], results...)
+	}
+	return &docs, nil
 }
