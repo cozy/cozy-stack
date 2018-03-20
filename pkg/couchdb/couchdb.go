@@ -3,7 +3,6 @@ package couchdb
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -15,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/google/go-querystring/query"
 	"github.com/sirupsen/logrus"
 )
 
@@ -545,62 +543,6 @@ func UpdateDoc(db Database, doc Doc) error {
 	return nil
 }
 
-// BulkUpdateDocs is used to update several docs in one call, as a bulk.
-func BulkUpdateDocs(db Database, doctype string, docs []interface{}) error {
-	if len(docs) == 0 {
-		return nil
-	}
-	body := struct {
-		Docs []interface{} `json:"docs"`
-	}{
-		Docs: docs,
-	}
-	var res []updateResponse
-	if err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
-		return err
-	}
-	if len(res) != len(docs) {
-		return errors.New("BulkUpdateDoc receive an unexpected number of responses")
-	}
-	for i, doc := range docs {
-		if d, ok := doc.(Doc); ok {
-			d.SetRev(res[i].Rev)
-			rtevent(db, realtime.EventUpdate, d, nil)
-		}
-	}
-	return nil
-}
-
-// BulkDeleteDocs is used to delete serveral documents in one call.
-func BulkDeleteDocs(db Database, doctype string, docs []interface{}) error {
-	if len(docs) == 0 {
-		return nil
-	}
-	body := struct {
-		Docs []json.RawMessage `json:"docs"`
-	}{
-		Docs: make([]json.RawMessage, 0, len(docs)),
-	}
-	for _, doc := range docs {
-		if d, ok := doc.(Doc); ok {
-			body.Docs = append(body.Docs, json.RawMessage(
-				fmt.Sprintf(`{"_id":"%s","_rev":"%s","_deleted":true}`, d.ID(), d.Rev()),
-			))
-		}
-	}
-	var res []updateResponse
-	if err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
-		return err
-	}
-	for i, doc := range docs {
-		if d, ok := doc.(Doc); ok {
-			d.SetRev(res[i].Rev)
-			rtevent(db, realtime.EventDelete, d, nil)
-		}
-	}
-	return nil
-}
-
 // CreateNamedDoc persist a document with an ID.
 // if the document already exist, it will return a 409 error.
 // The document ID should be fillled.
@@ -820,107 +762,6 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 	return json.Unmarshal(response.Docs, results)
 }
 
-// CountAllDocs returns the number of documents of the given doctype.
-func CountAllDocs(db Database, doctype string) (int, error) {
-	var response AllDocsResponse
-	url := "_all_docs?limit=0"
-	err := makeRequest(db, doctype, http.MethodGet, url, nil, &response)
-	if err != nil {
-		return 0, err
-	}
-	return response.TotalRows, nil
-}
-
-// GetAllDocs returns all documents of a specified doctype. It filters
-// out the possible _design document.
-func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) error {
-	v, err := query.Values(req)
-	if err != nil {
-		return err
-	}
-	v.Add("include_docs", "true")
-
-	var response AllDocsResponse
-	if len(req.Keys) == 0 {
-		url := "_all_docs?" + v.Encode()
-		err = makeRequest(db, doctype, http.MethodGet, url, nil, &response)
-	} else {
-		v.Del("keys")
-		url := "_all_docs?" + v.Encode()
-		body := struct {
-			Keys []string `json:"keys"`
-		}{
-			Keys: req.Keys,
-		}
-		err = makeRequest(db, doctype, http.MethodPost, url, body, &response)
-	}
-	if err != nil {
-		return err
-	}
-
-	var docs []json.RawMessage
-	for _, row := range response.Rows {
-		if !strings.HasPrefix(row.ID, "_design") {
-			docs = append(docs, row.Doc)
-		}
-	}
-	// TODO: better way to unmarshal returned data. For now we re-
-	// marshal the doc fields a a json array before unmarshalling it
-	// again...
-	data, err := json.Marshal(docs)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, results)
-}
-
-// ForeachDocs traverse all the documents from the given database with the
-// specified doctype and calls a function for each document.
-func ForeachDocs(db Database, doctype string, fn func([]byte) error) error {
-	var startKey string
-	limit := 100
-	for {
-		skip := 0
-		if startKey != "" {
-			skip = 1
-		}
-		req := &AllDocsRequest{
-			StartKeyDocID: startKey,
-			Skip:          skip,
-			Limit:         limit,
-		}
-		v, err := query.Values(req)
-		if err != nil {
-			return err
-		}
-		v.Add("include_docs", "true")
-
-		var res AllDocsResponse
-		url := "_all_docs?" + v.Encode()
-		err = makeRequest(db, doctype, http.MethodGet, url, nil, &res)
-		if err != nil {
-			return err
-		}
-
-		var count int
-		startKey = ""
-		for _, row := range res.Rows {
-			if !strings.HasPrefix(row.ID, "_design") {
-				if err = fn(row.Doc); err != nil {
-					return err
-				}
-				startKey = row.ID
-				count++
-			}
-		}
-		if count == 0 || len(res.Rows) < limit {
-			break
-		}
-	}
-
-	return nil
-}
-
 func validateDocID(id string) (string, error) {
 	if len(id) > 0 && id[0] == '_' {
 		return "", newBadIDError(id)
@@ -964,28 +805,6 @@ type FindRequest struct {
 	Skip     int          `json:"skip,omitempty"`
 	Sort     mango.SortBy `json:"sort,omitempty"`
 	Fields   []string     `json:"fields,omitempty"`
-}
-
-// AllDocsRequest is used to build a _all_docs request
-type AllDocsRequest struct {
-	Descending    bool     `url:"descending,omitempty"`
-	Limit         int      `url:"limit,omitempty"`
-	Skip          int      `url:"skip,omitempty"`
-	StartKey      string   `url:"startkey,omitempty"`
-	StartKeyDocID string   `url:"startkey_docid,omitempty"`
-	EndKey        string   `url:"endkey,omitempty"`
-	EndKeyDocID   string   `url:"endkey_docid,omitempty"`
-	Keys          []string `url:"keys,omitempty"`
-}
-
-// AllDocsResponse is the response we receive from an _all_docs request
-type AllDocsResponse struct {
-	Offset    int `json:"offset"`
-	TotalRows int `json:"total_rows"`
-	Rows      []struct {
-		ID  string          `json:"id"`
-		Doc json.RawMessage `json:"doc"`
-	} `json:"rows"`
 }
 
 // ViewRequest are all params that can be passed to a view
