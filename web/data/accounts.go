@@ -142,6 +142,7 @@ func decryptAccount(doc couchdb.JSONDoc) bool {
 func encryptMap(m map[string]interface{}) bool {
 	encrypted := false
 	var passwordEncrypted []byte
+	var authEncrypted []byte
 	var err error
 	for k, v := range m {
 		var ok bool
@@ -152,6 +153,9 @@ func encryptMap(m map[string]interface{}) bool {
 				passwordEncrypted, err = accounts.EncryptCredentials(login, password)
 				encrypted = err == nil
 			}
+		} else if k == "auth" {
+			authEncrypted, err = accounts.EncryptCredentialsData(v)
+			encrypted = err == nil
 		} else if mm, ok := v.(map[string]interface{}); ok && encryptMap(mm) {
 			encrypted = true
 		}
@@ -160,12 +164,17 @@ func encryptMap(m map[string]interface{}) bool {
 		delete(m, "password")
 		m["credentials_encrypted"] = base64.StdEncoding.EncodeToString(passwordEncrypted)
 	}
+	if len(authEncrypted) > 0 {
+		delete(m, "auth")
+		m["auth_encrypted"] = base64.StdEncoding.EncodeToString(authEncrypted)
+	}
 	return encrypted
 }
 
 func decryptMap(m map[string]interface{}) bool {
 	decrypted := false
 	var login, password string
+	var auth interface{}
 	for k, v := range m {
 		if k == "credentials_encrypted" {
 			encodedEncryptedCreds, ok := v.(string)
@@ -176,14 +185,27 @@ func decryptMap(m map[string]interface{}) bool {
 					decrypted = err == nil
 				}
 			}
+		} else if k == "auth_encrypted" {
+			encodedEncryptedCreds, ok := v.(string)
+			if ok {
+				encryptedCreds, err := base64.StdEncoding.DecodeString(encodedEncryptedCreds)
+				if err == nil {
+					auth, err = accounts.DecryptCredentialsData(encryptedCreds)
+					decrypted = err == nil
+				}
+			}
 		} else if mm, ok := v.(map[string]interface{}); ok && decryptMap(mm) {
 			decrypted = true
 		}
 	}
 	if decrypted {
 		delete(m, "credentials_encrypted")
+		delete(m, "auth_encrypted")
 		m["login"] = login
 		m["password"] = password
+		if auth != nil {
+			m["auth"] = auth
+		}
 	}
 	return decrypted
 }
