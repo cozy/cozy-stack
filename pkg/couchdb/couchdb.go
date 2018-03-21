@@ -786,6 +786,7 @@ type IndexCreationResponse struct {
 	Name   string `json:"name,omitempty"`
 }
 
+// UpdateResponse is the response from couchdb when updating documents
 type UpdateResponse struct {
 	ID  string `json:"id"`
 	Rev string `json:"rev"`

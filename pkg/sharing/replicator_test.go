@@ -6,10 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGeneration(t *testing.T) {
-	assert.Equal(t, 1, generation("1-aaa"))
-	assert.Equal(t, 3, generation("3-123"))
-	assert.Equal(t, 10, generation("10-1f2"))
+func TestRevGeneration(t *testing.T) {
+	assert.Equal(t, 1, RevGeneration("1-aaa"))
+	assert.Equal(t, 3, RevGeneration("3-123"))
+	assert.Equal(t, 10, RevGeneration("10-1f2"))
 }
 
 func TestComputePossibleAncestors(t *testing.T) {

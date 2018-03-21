@@ -459,7 +459,7 @@ Authorization: Bearer ...
     "_rev": "4-2ee767305024673cfb3f5af037cd2729",
     "_revisions": {
       "start": 4,
-      "revisions": [
+      "ids": [
         "2ee767305024673cfb3f5af037cd2729",
         "753875d51501a6b1883a9d62b4d33f91",
       ]
@@ -476,13 +476,7 @@ Content-Type: application/json
 ```
 
 ```json
-{
-  "io.cozy.files": [{
-    "id": "44f5752a-2cec-11e8-b227-abfc3cfd4b6e",
-    "rev": "4-2ee767305024673cfb3f5af037cd2729",
-    "ok": true
-  }]
-}
+[]
 ```
 
 {% endraw %}

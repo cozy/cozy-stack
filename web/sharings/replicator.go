@@ -33,6 +33,7 @@ func RevsDiff(c echo.Context) error {
 }
 
 // BulkDocs is part of the replicator
+// TODO add a meaningfull response to the _bulk_docs endpoint
 func BulkDocs(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
@@ -47,11 +48,11 @@ func BulkDocs(c echo.Context) error {
 	if docs == nil {
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
-	resp, err := s.ApplyBulkDocs(inst, docs)
+	err = s.ApplyBulkDocs(inst, docs)
 	if err != nil {
 		return wrapErrors(err)
 	}
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, []interface{}{})
 }
 
 // replicatorRoutes sets the routing for the replicator

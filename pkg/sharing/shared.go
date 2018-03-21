@@ -60,8 +60,8 @@ func (s *SharedRef) Clone() couchdb.Doc {
 	return &cloned
 }
 
-// generation returns the number before the hyphen, called the generation of a revision
-func generation(rev string) int {
+// RevGeneration returns the number before the hyphen, called the generation of a revision
+func RevGeneration(rev string) int {
 	parts := strings.SplitN(rev, "-", 2)
 	gen, err := strconv.Atoi(parts[0])
 	if err != nil {

@@ -69,11 +69,10 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member) error {
 	}
 	fmt.Printf("docs = %#v\n", docs)
 
-	responses, err := s.sendBulkDocs(m, docs)
+	err = s.sendBulkDocs(m, docs)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("responses = %#v\n", responses)
 
 	// TODO check for errors
 	// TODO save the sequence number
@@ -165,7 +164,7 @@ func computePossibleAncestors(wants []string, haves []string) []string {
 	var wgs []int
 	seen := make(map[int]bool)
 	for _, rev := range wants {
-		g := generation(rev)
+		g := RevGeneration(rev)
 		if !seen[g] {
 			wgs = append(wgs, g)
 		}
@@ -176,7 +175,7 @@ func computePossibleAncestors(wants []string, haves []string) []string {
 	var pas []string
 	i := 0
 	for j, rev := range haves {
-		g := generation(rev)
+		g := RevGeneration(rev)
 		found := false
 		for i < len(wgs) && g >= wgs[i] {
 			found = true
@@ -268,21 +267,18 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*
 	return &docs, nil
 }
 
-// BulkDocsReponse is a map of doctype -> slices of infos about a document
-type BulkDocsReponse map[string][]couchdb.UpdateResponse
-
 // sendBulkDocs takes a bulk of documents and send them to the other cozy
 // http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#db-bulk-docs
 // https://wiki.apache.org/couchdb/HTTP_Bulk_Document_API#Posting_Existing_Revisions
 // https://gist.github.com/nono/42aee18de6314a621f9126f284e303bb
-func (s *Sharing) sendBulkDocs(m *Member, docs *DocsByDoctype) (*BulkDocsReponse, error) {
+func (s *Sharing) sendBulkDocs(m *Member, docs *DocsByDoctype) error {
 	u, err := url.Parse(m.Instance)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	body, err := json.Marshal(docs)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	res, err := request.Req(&request.Options{
 		Method: http.MethodPost,
@@ -296,32 +292,27 @@ func (s *Sharing) sendBulkDocs(m *Member, docs *DocsByDoctype) (*BulkDocsReponse
 		Body: bytes.NewReader(body),
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer res.Body.Close()
 	if res.StatusCode/100 == 5 {
-		return nil, ErrInternalServerError
+		return ErrInternalServerError
 	}
 	if res.StatusCode/100 != 2 {
-		return nil, ErrClientError
+		return ErrClientError
 	}
-	responses := make(BulkDocsReponse)
-	if err = json.NewDecoder(res.Body).Decode(&responses); err != nil {
-		return nil, err
-	}
-	return &responses, nil
+	return nil
 }
 
 // ApplyBulkDocs is a multi-doctypes version of the POST _bulk_docs endpoint of CouchDB
-func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) (*BulkDocsReponse, error) {
-	var resp BulkDocsReponse
+func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) error {
 	for doctype, docs := range payload {
-		updates, err := couchdb.BulkForceUpdateDocs(inst, doctype, docs)
+		// TODO what if the database for doctype does not exist
+		// TODO update the io.cozy.shared database
 		// TODO call rtevent
-		if err != nil {
-			return nil, err
+		if err := couchdb.BulkForceUpdateDocs(inst, doctype, docs); err != nil {
+			return err
 		}
-		resp[doctype] = updates
 	}
-	return &resp, nil
+	return nil
 }

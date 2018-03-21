@@ -231,22 +231,18 @@ func BulkDeleteDocs(db Database, doctype string, docs []interface{}) error {
 
 // BulkForceUpdateDocs is used to update several docs in one call, and to force
 // the revisions history. It is used by replications.
-func BulkForceUpdateDocs(db Database, doctype string, docs []map[string]interface{}) ([]UpdateResponse, error) {
+func BulkForceUpdateDocs(db Database, doctype string, docs []map[string]interface{}) error {
 	if len(docs) == 0 {
-		return nil, nil
+		return nil
 	}
 	body := struct {
-		Docs []map[string]interface{} `json:"docs"`
+		NewEdits bool                     `json:"new_edits"`
+		Docs     []map[string]interface{} `json:"docs"`
 	}{
-		Docs: docs,
+		NewEdits: false,
+		Docs:     docs,
 	}
-	var res []UpdateResponse
-	err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs?new_edits=false", body, &res)
-	if err != nil {
-		return nil, err
-	}
-	if len(res) != len(docs) {
-		return nil, errors.New("BulkUpdateDoc receive an unexpected number of responses")
-	}
-	return res, nil
+	// XXX CouchDB returns just an empty array when new_edits is false, so we
+	// ignore the response
+	return makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, nil)
 }
