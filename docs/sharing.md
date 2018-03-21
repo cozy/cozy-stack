@@ -386,4 +386,103 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /sharings/:sharing-id/\_revs_diff
+
+This endpoint is used by the sharing replicator of the stack to know which
+documents must be sent to the other cozy. It is inspired by
+http://docs.couchdb.org/en/2.1.1/api/database/misc.html#db-revs-diff.
+
+#### Request
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/_revs_diff
+Host: bob.example.net
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer ...
+```
+
+```json
+{
+  "io.cozy.files/29631902-2cec-11e8-860d-435b24c2cc58": [
+    "2-4a7e4ae49c4366eaed8edeaea8f784ad"
+  ],
+  "io.cozy.files/44f5752a-2cec-11e8-b227-abfc3cfd4b6e": [
+    "4-2ee767305024673cfb3f5af037cd2729",
+    "4-efc54218773c6acd910e2e97fea2a608"
+  ]
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "io.cozy.files/44f5752a-2cec-11e8-b227-abfc3cfd4b6e": {
+    "missing": [
+      "4-2ee767305024673cfb3f5af037cd2729"
+    ],
+    "possible_ancestors": [
+      "3-753875d51501a6b1883a9d62b4d33f91"
+    ]
+  }
+}
+```
+
+### POST /sharings/:sharing-id/\_bulk_docs
+
+This endpoint is used by the sharing replicator of the stack to send
+documents in a bulk to the other cozy. It is inspired by
+http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#db-bulk-docs.
+
+**Note**: we force `new_edits` to `false`.
+
+#### Request
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/_bulk_docs
+Host: bob.example.net
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer ...
+```
+
+```json
+{
+  "io.cozy.files": [{
+    "_id": "44f5752a-2cec-11e8-b227-abfc3cfd4b6e",
+    "_rev": "4-2ee767305024673cfb3f5af037cd2729",
+    "_revisions": {
+      "start": 4,
+      "revisions": [
+        "2ee767305024673cfb3f5af037cd2729",
+        "753875d51501a6b1883a9d62b4d33f91",
+      ]
+    }
+  }]
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "io.cozy.files": [{
+    "id": "44f5752a-2cec-11e8-b227-abfc3cfd4b6e",
+    "rev": "4-2ee767305024673cfb3f5af037cd2729",
+    "ok": true
+  }]
+}
+```
+
 {% endraw %}
