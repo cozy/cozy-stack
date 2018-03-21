@@ -112,6 +112,7 @@ func (s *Sharing) UpdateLastSequenceNumber(inst *instance.Instance, m *Member, s
 		if !couchdb.IsNotFoundError(err) {
 			return err
 		}
+		result = make(map[string]interface{})
 	} else {
 		if prev, ok := result["last_seq"].(string); ok {
 			if RevGeneration(seq) <= RevGeneration(prev) {
