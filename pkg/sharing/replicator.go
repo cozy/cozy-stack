@@ -42,14 +42,19 @@ func (s *Sharing) Replicate(inst *instance.Instance) error {
 // ReplicateTo starts a replicator on this sharing to the given member.
 // http://docs.couchdb.org/en/2.1.1/replication/protocol.html
 // https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js
+// TODO check for errors
 func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member) error {
 	if m.Instance == "" {
 		return ErrInvalidURL
 	}
 
-	// TODO get the last sequence number
+	lastSeq, err := s.getLastSeqNumber(inst, m)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("lastSeq = %s\n", lastSeq)
 
-	changes, err := s.callChangesFeed(inst)
+	changes, seq, err := s.callChangesFeed(inst, lastSeq)
 	if err != nil {
 		return err
 	}
@@ -70,10 +75,63 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member) error {
 	fmt.Printf("docs = %#v\n", docs)
 
 	err = s.sendBulkDocs(m, docs)
-	return err
+	if err != nil {
+		return err
+	}
 
-	// TODO check for errors
-	// TODO save the sequence number
+	return s.UpdateLastSequenceNumber(inst, m, seq)
+}
+
+// getLastSeqNumber returns the last sequence number of the previous
+// replication to this member
+func (s *Sharing) getLastSeqNumber(inst *instance.Instance, m *Member) (string, error) {
+	id, err := s.replicationID(m)
+	if err != nil {
+		return "", err
+	}
+	result, err := couchdb.GetLocal(inst, consts.Shared, id)
+	if couchdb.IsNotFoundError(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	seq, _ := result["last_seq"].(string)
+	return seq, nil
+}
+
+// UpdateLastSequenceNumber updates the last sequence number for this
+// replication if it's superior to the number in CouchDB
+func (s *Sharing) UpdateLastSequenceNumber(inst *instance.Instance, m *Member, seq string) error {
+	id, err := s.replicationID(m)
+	if err != nil {
+		return err
+	}
+	result, err := couchdb.GetLocal(inst, consts.Shared, id)
+	if err != nil {
+		if !couchdb.IsNotFoundError(err) {
+			return err
+		}
+	} else {
+		if prev, ok := result["last_seq"].(string); ok {
+			if RevGeneration(seq) <= RevGeneration(prev) {
+				return nil
+			}
+		}
+	}
+	result["last_seq"] = seq
+	return couchdb.PutLocal(inst, consts.Shared, id, result)
+}
+
+// replicationID gives an identifier for this replicator
+func (s *Sharing) replicationID(m *Member) (string, error) {
+	for i := range s.Members {
+		if &s.Members[i] == m {
+			id := fmt.Sprintf("sharing-%s-%d", s.SID, i)
+			return id, nil
+		}
+	}
+	return "", ErrMemberNotFound
 }
 
 // Changes is a map of "doctype-docid" -> [revisions]
@@ -82,14 +140,16 @@ type Changes map[string][]string
 
 // callChangesFeed fetches the last changes from the changes feed
 // http://docs.couchdb.org/en/2.1.1/api/database/changes.html
-// TODO add Limit, add Since, add a filter on the sharing
-func (s *Sharing) callChangesFeed(inst *instance.Instance) (*Changes, error) {
+// TODO add a filter on the sharing
+func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Changes, string, error) {
 	response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
 		DocType:     consts.Shared,
 		IncludeDocs: true,
+		Since:       since,
+		Limit:       100,
 	})
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	changes := make(Changes)
 	for _, r := range response.Results {
@@ -98,7 +158,7 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance) (*Changes, error) {
 			changes[r.DocID][i] = c.Rev
 		}
 	}
-	return &changes, nil
+	return &changes, response.LastSeq, nil
 }
 
 // Missings is a struct for the response of _revs_diff
