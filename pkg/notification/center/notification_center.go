@@ -123,6 +123,7 @@ func sendPush(inst *instance.Instance, collapsible bool, n *notification.Notific
 			Message:        n.Message,
 			Priority:       n.Priority,
 			Sound:          n.Sound,
+			Data:           n.Data,
 			Collapsible:    collapsible,
 			Platform:       c.NotificationPlatform,
 			DeviceToken:    c.NotificationDeviceToken,
