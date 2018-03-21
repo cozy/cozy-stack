@@ -371,6 +371,21 @@ func TestJSONDocClone(t *testing.T) {
 	assert.NotEqual(t, hdr1.Len, hdr4.Len)
 }
 
+func TestLocalDocuments(t *testing.T) {
+	id := "foo"
+	_, err := GetLocal(TestPrefix, TestDoctype, id)
+	assert.True(t, IsNotFoundError(err))
+
+	doc := map[string]interface{}{"bar": "baz"}
+	err = PutLocal(TestPrefix, TestDoctype, id, doc)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, doc["_rev"])
+
+	out, err := GetLocal(TestPrefix, TestDoctype, id)
+	assert.NoError(t, err)
+	assert.Equal(t, "baz", out["bar"])
+}
+
 func assertGotEvent(t *testing.T, eventType, id string) bool {
 	receivedEventsMutex.Lock()
 	_, ok := receivedEvents[eventType+id]
