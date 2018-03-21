@@ -70,14 +70,10 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member) error {
 	fmt.Printf("docs = %#v\n", docs)
 
 	err = s.sendBulkDocs(m, docs)
-	if err != nil {
-		return err
-	}
+	return err
 
 	// TODO check for errors
 	// TODO save the sequence number
-
-	return nil
 }
 
 // Changes is a map of "doctype-docid" -> [revisions]
