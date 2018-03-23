@@ -1,6 +1,9 @@
 package sharing
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -20,13 +23,16 @@ type SharedInfo struct {
 	Binary bool `json:"binary,omitempty"`
 }
 
-// SharedDoc is the struct for the documents in io.cozy.shared.
+// SharedRef is the struct for the documents in io.cozy.shared.
 // They are used to track which documents is in which sharings.
-type SharedDoc struct {
+type SharedRef struct {
+	// SID is the identifier, it is doctype + / + id of the referenced doc
 	SID  string `json:"_id,omitempty"`
 	SRev string `json:"_rev,omitempty"`
 
-	// Revisions is an array with the last known _rev of the shared object
+	// Revisions is an array with the last known _rev of the shared object.
+	// The revisions are sorted by growing generation (the number before the hyphen).
+	// TODO it should be a tree, not an array (conflicts)
 	Revisions []string `json:"revisions"`
 
 	// Infos is a map of sharing ids -> informations
@@ -34,24 +40,34 @@ type SharedDoc struct {
 }
 
 // ID returns the sharing qualified identifier
-func (s *SharedDoc) ID() string { return s.SID }
+func (s *SharedRef) ID() string { return s.SID }
 
 // Rev returns the sharing revision
-func (s *SharedDoc) Rev() string { return s.SRev }
+func (s *SharedRef) Rev() string { return s.SRev }
 
 // DocType returns the sharing document type
-func (s *SharedDoc) DocType() string { return consts.Shared }
+func (s *SharedRef) DocType() string { return consts.Shared }
 
 // SetID changes the sharing qualified identifier
-func (s *SharedDoc) SetID(id string) { s.SID = id }
+func (s *SharedRef) SetID(id string) { s.SID = id }
 
 // SetRev changes the sharing revision
-func (s *SharedDoc) SetRev(rev string) { s.SRev = rev }
+func (s *SharedRef) SetRev(rev string) { s.SRev = rev }
 
 // Clone implements couchdb.Doc
-func (s *SharedDoc) Clone() couchdb.Doc {
+func (s *SharedRef) Clone() couchdb.Doc {
 	cloned := *s
 	return &cloned
 }
 
-var _ couchdb.Doc = &SharedDoc{}
+// RevGeneration returns the number before the hyphen, called the generation of a revision
+func RevGeneration(rev string) int {
+	parts := strings.SplitN(rev, "-", 2)
+	gen, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0
+	}
+	return gen
+}
+
+var _ couchdb.Doc = &SharedRef{}

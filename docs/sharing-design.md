@@ -279,11 +279,11 @@ Else, we restore the trashed parent.
 
 ### `io.cozy.shared`
 
-* `_id`: its identifier is the doctype and id of the shared objet, separated by
+* `_id`: its identifier is the doctype and id of the referenced objet, separated by
   a `/` (e.g. `io.cozy.contacts/c1f5dae4-0d87-11e8-b91b-1f41c005768b`)
 * `_rev`: the CouchDB default revision for this document (not very meaningful,
   it’s here to avoid concurrency issues)
-* `revisions`: an array with the last known `_rev`s of the shared object (for
+* `revisions`: an array with the last known `_rev`s of the referenced object (for
   conflicts, we put
   [the winner](http://docs.couchdb.org/en/2.1.1/replication/conflicts.html#working-with-conflicting-documents))
 * `infos`, a map of sharing ids → `{rule, removed, binary}`
