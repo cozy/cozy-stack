@@ -178,7 +178,8 @@ func (s *Sharing) callRevsDiff(m *Member, changes *Changes) (*Missings, error) {
 	if err != nil {
 		return nil, err
 	}
-	leafRevs := make(map[string][]string) // "doctype-docid" -> [leaf revisions]
+	// "doctype-docid" -> [leaf revisions]
+	leafRevs := make(map[string][]string, len(*changes))
 	for key, revs := range *changes {
 		leafRevs[key] = revs[len(revs)-1:]
 	}
@@ -219,13 +220,13 @@ func (s *Sharing) callRevsDiff(m *Member, changes *Changes) (*Missings, error) {
 func computePossibleAncestors(wants []string, haves []string) []string {
 	// Build a sorted array of unique generation number for revisions of wants
 	var wgs []int
-	seen := make(map[int]bool)
+	seen := make(map[int]struct{})
 	for _, rev := range wants {
 		g := RevGeneration(rev)
-		if !seen[g] {
+		if _, ok := seen[g]; !ok {
 			wgs = append(wgs, g)
 		}
-		seen[g] = true
+		seen[g] = struct{}{}
 	}
 	sort.Ints(wgs)
 
