@@ -13,14 +13,15 @@ import (
 
 // AllDocsRequest is used to build a _all_docs request
 type AllDocsRequest struct {
-	Descending    bool     `url:"descending,omitempty"`
-	Limit         int      `url:"limit,omitempty"`
-	Skip          int      `url:"skip,omitempty"`
-	StartKey      string   `url:"startkey,omitempty"`
-	StartKeyDocID string   `url:"startkey_docid,omitempty"`
-	EndKey        string   `url:"endkey,omitempty"`
-	EndKeyDocID   string   `url:"endkey_docid,omitempty"`
-	Keys          []string `url:"keys,omitempty"`
+	Descending       bool     `url:"descending,omitempty"`
+	Limit            int      `url:"limit,omitempty"`
+	Skip             int      `url:"skip,omitempty"`
+	StartKey         string   `url:"startkey,omitempty"`
+	StartKeyDocID    string   `url:"startkey_docid,omitempty"`
+	EndKey           string   `url:"endkey,omitempty"`
+	EndKeyDocID      string   `url:"endkey_docid,omitempty"`
+	Keys             []string `url:"keys,omitempty"`
+	DoNotIncludeDocs bool     `url:"-"`
 }
 
 // AllDocsResponse is the response we receive from an _all_docs request
@@ -66,7 +67,9 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 	if err != nil {
 		return err
 	}
-	v.Add("include_docs", "true")
+	if !req.DoNotIncludeDocs {
+		v.Add("include_docs", "true")
+	}
 
 	var response AllDocsResponse
 	if req == nil || len(req.Keys) == 0 {
