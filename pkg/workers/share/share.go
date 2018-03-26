@@ -42,5 +42,5 @@ func WorkerReplicate(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	return s.Replicate(inst)
+	return s.Replicate(inst, msg.Errors)
 }
