@@ -48,8 +48,6 @@ type Message struct {
 	NotificationID string `json:"notification_id"`
 	Source         string `json:"source"`
 	ClientID       string `json:"client_id,omitempty"`
-	Platform       string `json:"platform,omitempty"`
-	DeviceToken    string `json:"device_token,omitempty"`
 	Title          string `json:"title,omitempty"`
 	Message        string `json:"message,omitempty"`
 	Priority       string `json:"priority,omitempty"`
@@ -115,31 +113,47 @@ func Worker(ctx *jobs.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	if msg.ClientID != "" {
-		inst, err := instance.Get(ctx.Domain())
-		if err != nil {
-			return err
-		}
-		c, err := oauth.FindClient(inst, msg.ClientID)
-		if err != nil {
-			return err
-		}
-		msg.Platform = c.NotificationPlatform
-		msg.DeviceToken = c.NotificationDeviceToken
+	inst, err := instance.Get(ctx.Domain())
+	if err != nil {
+		return err
 	}
-	switch msg.Platform {
+	var cs []*oauth.Client
+	if msg.ClientID != "" {
+		var c *oauth.Client
+		c, err = oauth.FindClient(inst, msg.ClientID)
+		if err == nil {
+			cs = []*oauth.Client{c}
+		}
+	} else {
+		cs, err = oauth.GetNotifiables(inst)
+	}
+	if err != nil {
+		return err
+	}
+	var errm error
+	for _, c := range cs {
+		err = push(ctx, c.NotificationPlatform, c.NotificationDeviceToken, &msg)
+		if err != nil {
+			errm = multierror.Append(errm, err)
+		}
+	}
+	return errm
+}
+
+func push(ctx *jobs.WorkerContext, platform, deviceToken string, msg *Message) error {
+	switch platform {
 	case oauth.AndroidPlatform:
-		return pushToAndroid(ctx, &msg)
+		return pushToAndroid(ctx, deviceToken, msg)
 	case oauth.IOSPlatform:
-		return pushToIOS(ctx, &msg)
+		return pushToIOS(ctx, deviceToken, msg)
 	default:
-		return fmt.Errorf("notifications: unknown platform %q", msg.Platform)
+		return fmt.Errorf("notifications: unknown platform %q", platform)
 	}
 }
 
 // Firebase Cloud Messaging HTTP Protocol
 // https://firebase.google.com/docs/cloud-messaging/http-server-ref
-func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
+func pushToAndroid(ctx *jobs.WorkerContext, deviceToken string, msg *Message) error {
 	if fcmClient == nil {
 		ctx.Logger().Warn("Could not send android notification: not configured")
 		return nil
@@ -165,7 +179,7 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 	}
 
 	notification := &fcm.Message{
-		To:               msg.DeviceToken,
+		To:               deviceToken,
 		Priority:         priority,
 		ContentAvailable: true,
 		Notification: &fcm.Notification{
@@ -208,7 +222,7 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 	return errm
 }
 
-func pushToIOS(ctx *jobs.WorkerContext, msg *Message) error {
+func pushToIOS(ctx *jobs.WorkerContext, deviceToken string, msg *Message) error {
 	if iosClient == nil {
 		ctx.Logger().Warn("Could not send iOS notification: not configured")
 		return nil
@@ -231,7 +245,7 @@ func pushToIOS(ctx *jobs.WorkerContext, msg *Message) error {
 	}
 
 	notification := &apns.Notification{
-		DeviceToken: msg.DeviceToken,
+		DeviceToken: deviceToken,
 		Payload:     payload,
 		Priority:    priority,
 		CollapseID:  hex.EncodeToString(hashSource(msg.Source)), // CollapseID should not exceed 64 bytes
