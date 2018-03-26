@@ -168,12 +168,13 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 		To:               msg.DeviceToken,
 		Priority:         priority,
 		ContentAvailable: true,
-		Notification:     &fcm.Notification{Sound: msg.Sound},
+		Notification: &fcm.Notification{
+			Sound: msg.Sound,
+		},
 		Data: map[string]interface{}{
 			// Fields required by phonegap-plugin-push
 			// see: https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/PAYLOAD.md#android-behaviour
 			"notId": notID,
-
 			"title": msg.Title,
 			"body":  msg.Message,
 		},
