@@ -47,7 +47,6 @@ func init() {
 type Message struct {
 	NotificationID string `json:"notification_id"`
 	Source         string `json:"source"`
-	ClientID       string `json:"client_id,omitempty"`
 	Title          string `json:"title,omitempty"`
 	Message        string `json:"message,omitempty"`
 	Priority       string `json:"priority,omitempty"`
@@ -117,16 +116,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	var cs []*oauth.Client
-	if msg.ClientID != "" {
-		var c *oauth.Client
-		c, err = oauth.FindClient(inst, msg.ClientID)
-		if err == nil {
-			cs = []*oauth.Client{c}
-		}
-	} else {
-		cs, err = oauth.GetNotifiables(inst)
-	}
+	cs, err := oauth.GetNotifiables(inst)
 	if err != nil {
 		return err
 	}
