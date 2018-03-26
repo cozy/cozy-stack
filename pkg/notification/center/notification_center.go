@@ -11,7 +11,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/notification"
-	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/pkg/workers/push"
@@ -109,39 +108,26 @@ func findLastNotification(inst *instance.Instance, source string) (*notification
 }
 
 func sendPush(inst *instance.Instance, collapsible bool, n *notification.Notification) error {
-	clients, err := oauth.GetNotifiables(inst)
+	push := push.Message{
+		NotificationID: n.ID(),
+		Source:         n.Source(),
+		Title:          n.Title,
+		Message:        n.Message,
+		Priority:       n.Priority,
+		Sound:          n.Sound,
+		Data:           n.Data,
+		Collapsible:    collapsible,
+	}
+	msg, err := jobs.NewMessage(&push)
 	if err != nil {
 		return err
 	}
-	source := n.Source()
-	var errm error
-	for _, c := range clients {
-		push := push.Message{
-			NotificationID: n.ID(),
-			Source:         source,
-			Title:          n.Title,
-			Message:        n.Message,
-			Priority:       n.Priority,
-			Sound:          n.Sound,
-			Data:           n.Data,
-			Collapsible:    collapsible,
-			Platform:       c.NotificationPlatform,
-			DeviceToken:    c.NotificationDeviceToken,
-		}
-		msg, err := jobs.NewMessage(&push)
-		if err != nil {
-			return err
-		}
-		_, err = jobs.System().PushJob(&jobs.JobRequest{
-			Domain:     inst.Domain,
-			WorkerType: "push",
-			Message:    msg,
-		})
-		if err != nil {
-			errm = multierror.Append(errm, err)
-		}
-	}
-	return errm
+	_, err = jobs.System().PushJob(&jobs.JobRequest{
+		Domain:     inst.Domain,
+		WorkerType: "push",
+		Message:    msg,
+	})
+	return err
 }
 
 func sendMail(inst *instance.Instance, n *notification.Notification) error {
