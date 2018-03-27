@@ -2,6 +2,10 @@ package accounts
 
 import (
 	"bytes"
+	cryptorand "crypto/rand"
+	"encoding/base64"
+	"encoding/json"
+	"io"
 	"math/rand"
 	"os"
 	"testing"
@@ -26,7 +30,7 @@ func TestEncryptDecrytCredentials(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.False(t, bytes.Equal(encryptedCreds1, encryptedCreds2))
+	assert.NotEqual(t, encryptedCreds1, encryptedCreds2)
 
 	{
 		login, password, err := DecryptCredentials(encryptedCreds1)
@@ -88,7 +92,6 @@ func TestEncryptDecrytUTF8Credentials(t *testing.T) {
 			return
 		}
 
-		assert.True(t, bytes.Equal(encryptedCreds[:len(cipherHeader)], []byte(cipherHeader)))
 		assert.Equal(t, loginDec, login)
 		assert.Equal(t, passwordDec, password)
 	}
@@ -97,7 +100,7 @@ func TestEncryptDecrytUTF8Credentials(t *testing.T) {
 func TestDecryptCredentialsRandom(t *testing.T) {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 1024; i++ {
-		encrypted := crypto.GenerateRandomBytes(rng.Intn(256))
+		encrypted := base64.StdEncoding.EncodeToString(crypto.GenerateRandomBytes(rng.Intn(256)))
 		_, _, err := DecryptCredentials(encrypted)
 		assert.Error(t, err)
 	}
@@ -106,25 +109,96 @@ func TestDecryptCredentialsRandom(t *testing.T) {
 		encryptedWithHeader := make([]byte, len(cipherHeader)+len(encrypted))
 		copy(encryptedWithHeader[0:], cipherHeader)
 		copy(encryptedWithHeader[len(cipherHeader):], encrypted)
-		_, _, err := DecryptCredentials(encryptedWithHeader)
+		_, _, err := DecryptCredentials(base64.StdEncoding.EncodeToString(encryptedWithHeader))
 		assert.Error(t, err)
 	}
 }
 
-func TestRandomBitFlips(t *testing.T) {
+func TestRandomBitFlipsCredentials(t *testing.T) {
 	original, err := EncryptCredentials("toto@titi.com", "X3hVYLJLRiUyCs")
+	if !assert.NoError(t, err) {
+		return
+	}
+	originalBuffer, err := base64.StdEncoding.DecodeString(original)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	flipped := make([]byte, len(originalBuffer))
+	copy(flipped, originalBuffer)
+	login, passwd, err := DecryptCredentials(base64.StdEncoding.EncodeToString(flipped))
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, "toto@titi.com", login)
+	assert.Equal(t, "X3hVYLJLRiUyCs", passwd)
+
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < 100000; i++ {
+		copy(flipped, originalBuffer)
+		flipsLen := rng.Intn(30) + 1
+		flipsSet := make([]int, 0, flipsLen)
+		for len(flipsSet) < flipsLen {
+			flipValue := rng.Intn(len(originalBuffer) * 8)
+			flipFound := false
+			for j := 0; j < len(flipsSet); j++ {
+				if flipsSet[j] == flipValue {
+					flipFound = true
+					break
+				}
+			}
+			if !flipFound {
+				flipsSet = append(flipsSet, flipValue)
+			}
+		}
+		for _, flipValue := range flipsSet {
+			mask := byte(0x1 << uint(flipValue%8))
+			flipped[flipValue/8] ^= mask
+		}
+		_, _, err := DecryptCredentials(base64.StdEncoding.EncodeToString(flipped))
+		if !assert.Error(t, err) {
+			t.Fatalf("Failed with flips %v", flipsSet)
+			return
+		}
+	}
+}
+
+func TestEncryptDecryptData(t *testing.T) {
+	var data interface{}
+	err := json.Unmarshal([]byte(`{"foo":"bar","baz":{"quz": "quuz"}}`), &data)
+	if !assert.NoError(t, err) {
+		return
+	}
+	encBuffer, err := EncryptCredentialsData(data)
+	if !assert.NoError(t, err) {
+		return
+	}
+	decData, err := DecryptCredentialsData(encBuffer)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.EqualValues(t, data, decData)
+}
+
+func TestRandomBitFlipsBuffer(t *testing.T) {
+	plainBuffer := make([]byte, 256)
+	_, err := io.ReadFull(cryptorand.Reader, plainBuffer)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	original, err := EncryptBufferWithKey(config.GetVault().CredentialsEncryptorKey(), plainBuffer)
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	flipped := make([]byte, len(original))
 	copy(flipped, original)
-	login, passwd, err := DecryptCredentials(flipped)
+	testBuffer, err := DecryptBufferWithKey(config.GetVault().CredentialsDecryptorKey(), flipped)
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.Equal(t, "toto@titi.com", login)
-	assert.Equal(t, "X3hVYLJLRiUyCs", passwd)
+	assert.True(t, bytes.Equal(plainBuffer, testBuffer))
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 100000; i++ {
@@ -148,7 +222,7 @@ func TestRandomBitFlips(t *testing.T) {
 			mask := byte(0x1 << uint(flipValue%8))
 			flipped[flipValue/8] ^= mask
 		}
-		_, _, err := DecryptCredentials(flipped)
+		_, err := DecryptBufferWithKey(config.GetVault().CredentialsDecryptorKey(), flipped)
 		if !assert.Error(t, err) {
 			t.Fatalf("Failed with flips %v", flipsSet)
 			return
