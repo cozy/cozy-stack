@@ -16,10 +16,10 @@ Content-Type: application/json
 
 {
   "status": 402,
-  "error": "cgu_updated",
-  "title": "CGU Updated",
-  "details": "CGU have been updated",
-  "links": { "action": "https://manager.cozycloud.cc/cozy/cgu?domain=..." }
+  "error": "tos_updated",
+  "title": "TOS Updated",
+  "details": "TOS have been updated",
+  "links": { "action": "https://manager.cozycloud.cc/cozy/tos?domain=..." }
 }
 
 ```
@@ -40,10 +40,10 @@ GET /settings/warnings
 
 [
 {
-  "error": "cgu_updated",
-  "title": "CGU Updated",
-  "details": "CGU have been updated",
-  "links": { "action": "https://manager.cozycloud.cc/cozy/cgu?domain=..." }
+  "error": "tos_updated",
+  "title": "TOS Updated",
+  "details": "TOS have been updated",
+  "links": { "action": "https://manager.cozycloud.cc/cozy/tos?domain=..." }
 },
 ]
 
