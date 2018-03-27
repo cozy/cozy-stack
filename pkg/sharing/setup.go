@@ -32,21 +32,37 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 	if rule.Local || len(rule.Values) == 0 {
 		return nil
 	}
+	docs, err := findDocsToCopy(inst, rule)
+	if err != nil {
+		return err
+	}
+	refs, err := s.buildReferences(inst, rule, r, docs)
+	if err != nil {
+		return err
+	}
+	refs = compactSlice(refs)
+	if len(refs) == 0 {
+		return nil
+	}
+	return couchdb.BulkUpdateDocs(inst, consts.Shared, refs)
+}
 
+// findDocsToCopy finds the documents that match the given rule
+func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, error) {
 	var docs []couchdb.JSONDoc
 	if rule.Selector == "" || rule.Selector == "id" {
 		req := &couchdb.AllDocsRequest{
 			Keys: rule.Values,
 		}
 		if err := couchdb.GetAllDocs(inst, rule.DocType, req, &docs); err != nil {
-			return err
+			return nil, err
 		}
 	} else {
 		// Create index based on selector to retrieve documents to share
 		name := "by-" + rule.Selector
 		idx := mango.IndexOnFields(rule.DocType, name, []string{rule.Selector})
 		if err := couchdb.DefineIndex(inst, idx); err != nil {
-			return err
+			return nil, err
 		}
 		// Request the index for all values
 		for _, val := range rule.Values {
@@ -56,12 +72,17 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 				Selector: mango.Equal(rule.Selector, val),
 			}
 			if err := couchdb.FindDocs(inst, rule.DocType, req, &results); err != nil {
-				return err
+				return nil, err
 			}
 			docs = append(docs, results...)
 		}
 	}
+	return docs, nil
+}
 
+// buildReferences build the SharedRef to add/update the given docs in the
+// io.cozy.shared database
+func (s *Sharing) buildReferences(inst *instance.Instance, rule Rule, r int, docs []couchdb.JSONDoc) ([]interface{}, error) {
 	ids := make([]string, len(docs))
 	for i, doc := range docs {
 		ids[i] = rule.DocType + "/" + doc.ID()
@@ -69,7 +90,7 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 	req := &couchdb.AllDocsRequest{Keys: ids}
 	var srefs []*SharedRef
 	if err := couchdb.GetAllDocs(inst, consts.Shared, req, &srefs); err != nil {
-		return err
+		return nil, err
 	}
 
 	refs := make([]interface{}, len(docs))
@@ -103,11 +124,7 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 		}
 	}
 
-	refs = compactSlice(refs)
-	if len(refs) == 0 {
-		return nil
-	}
-	return couchdb.BulkUpdateDocs(inst, consts.Shared, refs)
+	return refs, nil
 }
 
 // compactSlice returns the given slice without the nil values
