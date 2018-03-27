@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -35,10 +36,8 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 	var docs []couchdb.JSONDoc
 	if rule.Selector == "" || rule.Selector == "id" {
 		req := &couchdb.AllDocsRequest{
-			Keys:             rule.Values,
-			DoNotIncludeDocs: true,
+			Keys: rule.Values,
 		}
-		// TODO do we get the revision in docs?
 		if err := couchdb.GetAllDocs(inst, rule.DocType, req, &docs); err != nil {
 			return err
 		}
@@ -46,13 +45,12 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 		// Create index based on selector to retrieve documents to share
 		name := "by-" + rule.Selector
 		idx := mango.IndexOnFields(rule.DocType, name, []string{rule.Selector})
-		// TODO what if the index already exists?
 		if err := couchdb.DefineIndex(inst, idx); err != nil {
 			return err
 		}
 		// Request the index for all values
-		var results []couchdb.JSONDoc
 		for _, val := range rule.Values {
+			var results []couchdb.JSONDoc
 			req := &couchdb.FindRequest{
 				UseIndex: name,
 				Selector: mango.Equal(rule.Selector, val),
@@ -75,5 +73,5 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 			},
 		}
 	}
-	return couchdb.BulkUpdateDocs(inst, rule.DocType, refs)
+	return couchdb.BulkUpdateDocs(inst, consts.Shared, refs)
 }

@@ -16,7 +16,7 @@ type SharedInfo struct {
 
 	// Removed is true for a deleted document, a trashed file, or if the
 	// document does no longer match the sharing rule
-	Remove bool `json:"removed,omitempty"`
+	Removed bool `json:"removed,omitempty"`
 
 	// Binary is a boolean flag that is true only for files (and not even
 	// folders) with `removed: false`
