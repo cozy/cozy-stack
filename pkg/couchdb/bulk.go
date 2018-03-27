@@ -69,7 +69,7 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 	v.Add("include_docs", "true")
 
 	var response AllDocsResponse
-	if len(req.Keys) == 0 {
+	if req == nil || len(req.Keys) == 0 {
 		url := "_all_docs?" + v.Encode()
 		err = makeRequest(db, doctype, http.MethodGet, url, nil, &response)
 	} else {
