@@ -103,6 +103,18 @@ func createDoc(t *testing.T, doctype, id string, attrs map[string]interface{}) *
 	return &doc
 }
 
+func updateDoc(t *testing.T, doctype, id, rev string, attrs map[string]interface{}) *couchdb.JSONDoc {
+	doc := couchdb.JSONDoc{
+		M:    attrs,
+		Type: doctype,
+	}
+	doc.SetID(id)
+	doc.SetRev(rev)
+	err := couchdb.UpdateDoc(inst, &doc)
+	assert.NoError(t, err)
+	return &doc
+}
+
 func getSharedRef(t *testing.T, doctype, id string) *SharedRef {
 	var ref SharedRef
 	err := couchdb.GetDoc(inst, consts.Shared, doctype+"/"+id, &ref)
@@ -127,9 +139,7 @@ func TestInitialCopy(t *testing.T) {
 		createDoc(t, testDoctype, id, map[string]interface{}{"foo": id})
 	}
 
-	s := Sharing{
-		SID: uuidv4(),
-	}
+	s := Sharing{SID: uuidv4()}
 
 	// Rule 0 is local => no copy of documents
 	settingsDocID := uuidv4()
@@ -214,10 +224,18 @@ func TestInitialCopy(t *testing.T) {
 	}
 	assertNbSharedRef(t, nbShared)
 
-	// A document is added and a third member accepts the sharing
+	// A document is added
 	addID := uuidv4()
 	twoIDs = append(twoIDs, addID)
 	createDoc(t, testDoctype, addID, map[string]interface{}{"foo": "bar"})
+
+	// A document is updated
+	updateID := twoIDs[0]
+	updateRef := getSharedRef(t, testDoctype, updateID)
+	updateRev := updateRef.Revisions[0]
+	updateDoc := updateDoc(t, testDoctype, updateID, updateRev, map[string]interface{}{"foo": "bar", "updated": true})
+
+	// A third member accepts the sharing
 	for r, rule := range s.Rules {
 		s.InitialCopy(inst, rule, r)
 	}
@@ -228,6 +246,30 @@ func TestInitialCopy(t *testing.T) {
 		assert.NotNil(t, twoRef)
 		assert.Contains(t, twoRef.Infos, s.SID)
 		assert.Equal(t, 2, twoRef.Infos[s.SID].Rule)
+		if id == updateID {
+			assert.Len(t, twoRef.Revisions, 2)
+			assert.Equal(t, updateRev, twoRef.Revisions[0])
+			assert.Equal(t, updateDoc.Rev(), twoRef.Revisions[1])
+		}
+	}
+
+	// Another sharing
+	s2 := Sharing{SID: uuidv4()}
+	s2.Rules = append(s2.Rules, Rule{
+		Title:    "the foo: baz documents",
+		DocType:  testDoctype,
+		Selector: "foo",
+		Values:   []string{"qux", "quux", "quuux"},
+	})
+	s2.InitialCopy(inst, s2.Rules[len(s2.Rules)-1], len(s2.Rules)-1)
+	assertNbSharedRef(t, nbShared)
+	for _, id := range threeIDs {
+		threeRef := getSharedRef(t, testDoctype, id)
+		assert.NotNil(t, threeRef)
+		assert.Contains(t, threeRef.Infos, s.SID)
+		assert.Equal(t, 3, threeRef.Infos[s.SID].Rule)
+		assert.Contains(t, threeRef.Infos, s2.SID)
+		assert.Equal(t, 0, threeRef.Infos[s2.SID].Rule)
 	}
 }
 

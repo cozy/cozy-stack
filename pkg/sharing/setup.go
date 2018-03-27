@@ -62,15 +62,40 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 		}
 	}
 
-	// TODO some io.cozy.shared may already exist
+	ids := make([]string, len(docs))
+	for i, doc := range docs {
+		ids[i] = rule.DocType + "/" + doc.ID()
+	}
+	req := &couchdb.AllDocsRequest{Keys: ids}
+	var srefs []*SharedRef
+	if err := couchdb.GetAllDocs(inst, consts.Shared, req, &srefs); err != nil {
+		return err
+	}
+
 	refs := make([]interface{}, len(docs))
 	for i, doc := range docs {
-		refs[i] = SharedRef{
-			SID:       rule.DocType + "/" + doc.ID(),
-			Revisions: []string{doc.Rev()},
-			Infos: map[string]SharedInfo{
-				s.SID: {Rule: r},
-			},
+		rev := doc.Rev()
+		if srefs[i] == nil {
+			refs[i] = SharedRef{
+				SID:       rule.DocType + "/" + doc.ID(),
+				Revisions: []string{rev},
+				Infos: map[string]SharedInfo{
+					s.SID: {Rule: r},
+				},
+			}
+		} else {
+			found := false
+			for _, revision := range srefs[i].Revisions {
+				if revision == rev {
+					found = true
+					break
+				}
+			}
+			if !found {
+				srefs[i].Revisions = append(srefs[i].Revisions, rev)
+			}
+			srefs[i].Infos[s.SID] = SharedInfo{Rule: r}
+			refs[i] = *srefs[i]
 		}
 	}
 	return couchdb.BulkUpdateDocs(inst, consts.Shared, refs)
