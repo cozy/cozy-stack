@@ -247,9 +247,10 @@ func TestInitialCopy(t *testing.T) {
 		assert.Contains(t, twoRef.Infos, s.SID)
 		assert.Equal(t, 2, twoRef.Infos[s.SID].Rule)
 		if id == updateID {
-			assert.Len(t, twoRef.Revisions, 2)
-			assert.Equal(t, updateRev, twoRef.Revisions[0])
-			assert.Equal(t, updateDoc.Rev(), twoRef.Revisions[1])
+			if assert.Len(t, twoRef.Revisions, 2) {
+				assert.Equal(t, updateRev, twoRef.Revisions[0])
+				assert.Equal(t, updateDoc.Rev(), twoRef.Revisions[1])
+			}
 		}
 	}
 

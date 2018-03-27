@@ -91,12 +91,33 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 					break
 				}
 			}
-			if !found {
+			if found {
+				if _, ok := srefs[i].Infos[s.SID]; ok {
+					continue
+				}
+			} else {
 				srefs[i].Revisions = append(srefs[i].Revisions, rev)
 			}
 			srefs[i].Infos[s.SID] = SharedInfo{Rule: r}
 			refs[i] = *srefs[i]
 		}
 	}
+
+	refs = compactSlice(refs)
+	if len(refs) == 0 {
+		return nil
+	}
 	return couchdb.BulkUpdateDocs(inst, consts.Shared, refs)
+}
+
+// compactSlice returns the given slice without the nil values
+// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
+func compactSlice(a []interface{}) []interface{} {
+	b := a[:0]
+	for _, x := range a {
+		if x != nil {
+			b = append(b, x)
+		}
+	}
+	return b
 }
