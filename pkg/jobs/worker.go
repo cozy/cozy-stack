@@ -244,23 +244,24 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			conf: w.defaultedConf(job.Options),
 		}
 		var runResultLabel string
-		err := t.run()
-		if err == ErrAbort {
-			err = nil
+		var errAck error
+		errRun := t.run()
+		if errRun == ErrAbort {
+			errRun = nil
 		}
-		if err != nil {
+		if errRun != nil {
 			parentCtx.Logger().Errorf("[job] error while performing job: %s",
-				err.Error())
+				errRun.Error())
 			runResultLabel = metrics.WorkerExecResultErrored
-			err = job.Nack(err)
+			errAck = job.Nack(errRun)
 		} else {
 			runResultLabel = metrics.WorkerExecResultSuccess
-			err = job.Ack()
+			errAck = job.Ack()
 		}
 		metrics.WorkerExecCounter.WithLabelValues(w.Type, runResultLabel).Inc()
-		if err != nil {
+		if errAck != nil {
 			parentCtx.Logger().Errorf("[job] error while acking job done: %s",
-				err.Error())
+				errAck.Error())
 		}
 
 		// Delete the trigger associated with the job (if any) when we receive a
@@ -269,7 +270,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 		// XXX: better retro-action between broker and scheduler to avoid going
 		// through the global job-system.
 		if job.TriggerID != "" && globalJobSystem != nil {
-			if _, ok := err.(ErrBadTrigger); ok {
+			if _, ok := errRun.(ErrBadTrigger); ok {
 				globalJobSystem.DeleteTrigger(job.Domain, job.TriggerID)
 			}
 		}
