@@ -20,6 +20,7 @@ Then save the data in the console
 http PUT localhost:5984/secrets%2Fio-cozy-accounts_types/google
 grant_mode=authorization_code
 redirect_uri="https://oauthcallback.mycozy.cloud/accounts/google/redirect"
+token_mode=basic
 token_endpoint="https://www.googleapis.com/oauth2/v4/token"
 auth_endpoint="https://accounts.google.com/o/oauth2/v2/auth"
 client_id=$CLIENT_ID
