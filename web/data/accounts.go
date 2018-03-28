@@ -1,9 +1,9 @@
 package data
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -139,53 +139,65 @@ func decryptAccount(doc couchdb.JSONDoc) bool {
 	return decryptMap(doc.M)
 }
 
-func encryptMap(m map[string]interface{}) bool {
-	encrypted := false
-	var passwordEncrypted []byte
-	var err error
-	for k, v := range m {
-		var ok bool
-		var password string
-		if k == "password" {
-			if password, ok = v.(string); ok && len(password) > 0 {
-				login, _ := m["login"].(string)
-				passwordEncrypted, err = accounts.EncryptCredentials(login, password)
-				encrypted = err == nil
-			}
-		} else if mm, ok := v.(map[string]interface{}); ok && encryptMap(mm) {
-			encrypted = true
+func encryptMap(m map[string]interface{}) (encrypted bool) {
+	auth, ok := m["auth"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	login, _ := auth["login"].(string)
+	cloned := make(map[string]interface{}, len(auth))
+	for k, v := range auth {
+		if k == "login" || strings.HasSuffix(k, "_encrypted") {
+			cloned[k] = v
+			continue
+		}
+		var err error
+		switch k {
+		case "password":
+			str, _ := v.(string)
+			cloned["credentials_encrypted"], err = accounts.EncryptCredentials(login, str)
+		case "secret", "dob", "code", "answer", "access_token":
+			cloned[k+"_encrypted"], err = accounts.EncryptCredentialsData(v)
+		}
+		if !encrypted {
+			encrypted = err == nil
 		}
 	}
-	if len(passwordEncrypted) > 0 {
-		delete(m, "password")
-		m["credentials_encrypted"] = base64.StdEncoding.EncodeToString(passwordEncrypted)
-	}
-	return encrypted
+	m["auth"] = cloned
+	return
 }
 
-func decryptMap(m map[string]interface{}) bool {
-	decrypted := false
-	var login, password string
-	for k, v := range m {
-		if k == "credentials_encrypted" {
-			encodedEncryptedCreds, ok := v.(string)
-			if ok {
-				encryptedCreds, err := base64.StdEncoding.DecodeString(encodedEncryptedCreds)
-				if err == nil {
-					login, password, err = accounts.DecryptCredentials(encryptedCreds)
-					decrypted = err == nil
-				}
-			}
-		} else if mm, ok := v.(map[string]interface{}); ok && decryptMap(mm) {
-			decrypted = true
+func decryptMap(m map[string]interface{}) (decrypted bool) {
+	auth, ok := m["auth"].(map[string]interface{})
+	if !ok {
+		return
+	}
+	cloned := make(map[string]interface{}, len(auth))
+	for k, v := range auth {
+		if !strings.HasSuffix(k, "_encrypted") {
+			cloned[k] = v
+			continue
 		}
+		k = strings.TrimSuffix(k, "_encrypted")
+		var str string
+		str, ok = v.(string)
+		if !ok {
+			cloned[k] = v
+			continue
+		}
+		var err error
+		if k == "credentials" {
+			cloned["password"], auth["login"], err = accounts.DecryptCredentials(str)
+		} else {
+			cloned[k], err = accounts.DecryptCredentialsData(str)
+		}
+		if !decrypted {
+			decrypted = err == nil
+		}
+		delete(auth, k)
 	}
-	if decrypted {
-		delete(m, "credentials_encrypted")
-		m["login"] = login
-		m["password"] = password
-	}
-	return decrypted
+	m["auth"] = cloned
+	return
 }
 
 func createAccount(c echo.Context) error {
