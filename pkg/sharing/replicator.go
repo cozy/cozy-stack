@@ -446,15 +446,7 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 	}
 
 	for doctype, docs := range payload {
-		toAdd := make([]map[string]interface{}, 0, len(docs))
-		toUpdate := make([]map[string]interface{}, 0, len(docs))
-		for i, doc := range docs {
-			if refs[i] == nil {
-				toAdd = append(toAdd, doc)
-			} else {
-				toUpdate = append(toUpdate, doc)
-			}
-		}
+		toAdd, toUpdate := partitionDocsWithRefs(docs, refs)
 
 		if err := couchdb.BulkForceUpdateDocs(inst, doctype, append(toAdd, toUpdate...)); err != nil {
 			return err
@@ -475,4 +467,19 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 	// TODO call rtevent
 
 	return nil
+}
+
+// partitionDocsWithRefs returns two slices: the first with documents that have
+// no shared reference, the second with documents that have one
+func partitionDocsWithRefs(docs []map[string]interface{}, refs []*SharedRef) ([]map[string]interface{}, []map[string]interface{}) {
+	toAdd := make([]map[string]interface{}, 0, len(docs))
+	toUpdate := make([]map[string]interface{}, 0, len(docs))
+	for i, doc := range docs {
+		if refs[i] == nil {
+			toAdd = append(toAdd, doc)
+		} else {
+			toUpdate = append(toUpdate, doc)
+		}
+	}
+	return toAdd, toUpdate
 }
