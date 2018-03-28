@@ -370,6 +370,20 @@ func init() {
 				},
 			},
 		},
+
+		// Notifications
+		{
+			Name:    "notifications_diskquota",
+			Subject: "Notifications Disk Quota Subject",
+			Intro:   "Notifications Disk Quota Intro",
+			Actions: []MailAction{
+				{
+					Instructions: "Notifications Disk Quota instruction",
+					Text:         "Notifications Disk Quota text",
+					Link:         "{{.OffersLink}}",
+				},
+			},
+		},
 	}}
 }
 

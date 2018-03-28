@@ -174,7 +174,7 @@ func (c *couchdbIndexer) DeleteDirDoc(doc *DirDoc) error {
 	return couchdb.DeleteDoc(c.db, doc)
 }
 
-func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (ids []string, err error) {
+func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (n int64, ids []string, err error) {
 	var files []couchdb.Doc
 	if !onlyContent {
 		files = append(files, doc)
@@ -191,6 +191,7 @@ func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (
 		} else {
 			files = append(files, file)
 			ids = append(ids, file.ID())
+			n += file.ByteSize
 		}
 		return err
 	}, 0)

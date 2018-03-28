@@ -31,6 +31,7 @@ type swiftVFS struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 	c         *swift.Connection
+	domain    string
 	container string
 	version   string
 	mu        lock.ErrorRWLocker
@@ -39,7 +40,7 @@ type swiftVFS struct {
 
 // New returns a vfs.VFS instance associated with the specified indexer and the
 // swift storage url.
-func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, domain string) (vfs.VFS, error) {
+func New(domain string, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
 	if domain == "" {
 		return nil, fmt.Errorf("vfsswift: specified domain is empty")
 	}
@@ -48,11 +49,16 @@ func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, dom
 		DiskThresholder: disk,
 
 		c:         config.GetSwiftConnection(),
+		domain:    domain,
 		container: swiftV1ContainerPrefix + domain,
 		version:   swiftV1ContainerPrefix + domain + versionSuffix,
 		mu:        mu,
 		log:       logger.WithDomain(domain),
 	}, nil
+}
+
+func (sfs *swiftVFS) Domain() string {
+	return sfs.domain
 }
 
 func (sfs *swiftVFS) InitFs() error {
@@ -157,7 +163,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 
 	diskQuota := sfs.DiskQuota()
 
-	var maxsize, newsize, oldsize int64
+	var maxsize, newsize, oldsize, capsize int64
 	newsize = newdoc.ByteSize
 	if diskQuota > 0 {
 		diskUsage, err := sfs.DiskUsage()
@@ -170,6 +176,9 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		maxsize = diskQuota - diskUsage
 		if maxsize > maxFileSize {
 			maxsize = maxFileSize
+		}
+		if capQuota := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage < capQuota {
+			capsize = capQuota - diskUsage
 		}
 	} else {
 		maxsize = maxFileSize
@@ -245,6 +254,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		newdoc:  newdoc,
 		olddoc:  olddoc,
 		maxsize: maxsize,
+		capsize: capsize,
 	}, nil
 }
 
@@ -253,7 +263,12 @@ func (sfs *swiftVFS) DestroyDirContent(doc *vfs.DirDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	return sfs.destroyDirContent(doc)
+	diskUsage, _ := sfs.Indexer.DiskUsage()
+	destroyed, err := sfs.destroyDirContent(doc)
+	if err == nil {
+		vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
+	}
+	return err
 }
 
 func (sfs *swiftVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
@@ -261,7 +276,12 @@ func (sfs *swiftVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	return sfs.destroyDirAndContent(doc)
+	diskUsage, _ := sfs.Indexer.DiskUsage()
+	destroyed, err := sfs.destroyDirAndContent(doc)
+	if err == nil {
+		vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
+	}
+	return err
 }
 
 func (sfs *swiftVFS) DestroyFile(doc *vfs.FileDoc) error {
@@ -269,42 +289,52 @@ func (sfs *swiftVFS) DestroyFile(doc *vfs.FileDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	return sfs.destroyFile(doc)
+	diskUsage, _ := sfs.Indexer.DiskUsage()
+	err := sfs.destroyFile(doc)
+	if err == nil {
+		vfs.DiskQuotaAfterDestroy(sfs, diskUsage, doc.ByteSize)
+	}
+	return err
 }
 
-func (sfs *swiftVFS) destroyDirContent(doc *vfs.DirDoc) error {
+func (sfs *swiftVFS) destroyDirContent(doc *vfs.DirDoc) (int64, error) {
 	iter := sfs.DirIterator(doc, nil)
+	var n int64
 	var errm error
 	for {
 		d, f, erri := iter.Next()
 		if erri == vfs.ErrIteratorDone {
-			return errm
+			return n, errm
 		}
 		if erri != nil {
-			return erri
+			return n, erri
 		}
 		var errd error
+		var destroyed int64
 		if d != nil {
-			errd = sfs.destroyDirAndContent(d)
+			destroyed, errd = sfs.destroyDirAndContent(d)
 		} else {
-			errd = sfs.destroyFile(f)
+			destroyed, errd = f.ByteSize, sfs.destroyFile(f)
 		}
 		if errd != nil {
 			errm = multierror.Append(errm, errd)
+		} else {
+			n += destroyed
 		}
 	}
 }
 
-func (sfs *swiftVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
-	err := sfs.destroyDirContent(doc)
+func (sfs *swiftVFS) destroyDirAndContent(doc *vfs.DirDoc) (int64, error) {
+	n, err := sfs.destroyDirContent(doc)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	err = sfs.c.ObjectDelete(sfs.container, doc.DirID+"/"+doc.DocName)
 	if err != nil && err != swift.ObjectNotFound {
-		return err
+		return 0, err
 	}
-	return sfs.Indexer.DeleteDirDoc(doc)
+	err = sfs.Indexer.DeleteDirDoc(doc)
+	return n, err
 }
 
 func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
@@ -699,6 +729,7 @@ type swiftFileCreation struct {
 	newdoc  *vfs.FileDoc
 	olddoc  *vfs.FileDoc
 	maxsize int64
+	capsize int64
 }
 
 func (f *swiftFileCreation) Read(p []byte) (int, error) {
@@ -743,7 +774,11 @@ func (f *swiftFileCreation) Write(p []byte) (int, error) {
 
 func (f *swiftFileCreation) Close() (err error) {
 	defer func() {
-		if err != nil {
+		if err == nil {
+			if f.capsize > 0 && f.size > f.capsize {
+				vfs.PushDiskQuotaAlert(f.fs, true)
+			}
+		} else {
 			// Deleting the object should be secure since we use X-Versions-Location
 			// on the container and the old object should be restored.
 			f.fs.c.ObjectDelete(f.fs.container, f.name) // #nosec

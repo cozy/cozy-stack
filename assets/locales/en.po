@@ -526,3 +526,15 @@ msgstr "http://cozy-cloud-help.helpscoutdocs.com/article/113-a-is-for-cozy-addre
 
 msgid "Sharing Online help"
 msgstr "Try out online help."
+
+msgid "Notifications Disk Quota Subject"
+msgstr "You have reached 90% of your available storage. When reach your storage quota, you will not be able to add any more files to your Cozy."
+
+msgid "Notifications Disk Quota Intro"
+msgstr "In order to keep your account below its storage quota, you can delete files from your Cozy or subscribe to a new option."
+
+msgid "Notifications Disk Quota instruction"
+msgstr "Click on this button to subscribe to a new option and get more data in your Cozy."
+
+msgid "Notifications Disk Quota text"
+msgstr "Subscribe for more data"

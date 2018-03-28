@@ -13,10 +13,49 @@ import (
 	"github.com/cozy/cozy-stack/pkg/notification"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/pkg/workers/push"
 	multierror "github.com/hashicorp/go-multierror"
 )
+
+const (
+	// NotificationDiskQuota category for sending alert when reaching 90% of disk
+	// usage quota.
+	NotificationDiskQuota = 0
+)
+
+var (
+	stackNotifications = []*notification.Properties{
+		NotificationDiskQuota: {
+			Description:  "Warn about the diskquota reaching a high level",
+			Collapsible:  true,
+			Stateful:     true,
+			MailTemplate: "notifications_diskquota",
+		},
+	}
+)
+
+func init() {
+	vfs.RegisterDiskQuotaAlertCallback(func(domain string, exceeded bool) {
+		n := &notification.Notification{
+			State: exceeded,
+			Data: map[string]interface{}{
+				"OffersLink": "", //config.GetConfig().,
+			},
+		}
+		pushStack(domain, NotificationDiskQuota, n)
+	})
+}
+
+func pushStack(domain string, p int, n *notification.Notification) error {
+	inst, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
+	n.Originator = "stack"
+	return makePush(inst, stackNotifications[p], n)
+}
 
 // Push creates and send a new notification in database. This method verifies
 // the permissions associated with this creation in order to check that it is
@@ -67,6 +106,10 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 		return ErrUnauthorized
 	}
 
+	return makePush(inst, p, n)
+}
+
+func makePush(inst *instance.Instance, p *notification.Properties, n *notification.Notification) error {
 	// XXX: for retro-compatibility, we do not yet block applications from
 	// sending notification from unknown category.
 	if p != nil && p.Stateful {
@@ -95,18 +138,25 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 	if err := couchdb.CreateDoc(inst, n); err != nil {
 		return err
 	}
+	if p != nil && p.Stateful {
+		if b, ok := n.State.(bool); ok && !b {
+			return nil
+		} else if i, ok := n.State.(int); ok && i == 0 {
+			return nil
+		}
+	}
 
 	var errm error
 	for _, channel := range preferredChannels {
 		switch channel {
 		case "mobile":
 			if p != nil {
-				if err := sendPush(inst, p.Collapsible, n); err != nil {
+				if err := sendPush(inst, p, n); err != nil {
 					errm = multierror.Append(errm, err)
 				}
 			}
 		case "mail":
-			if err := sendMail(inst, n); err != nil {
+			if err := sendMail(inst, p, n); err != nil {
 				errm = multierror.Append(errm, err)
 			}
 		}
@@ -135,7 +185,7 @@ func findLastNotification(inst *instance.Instance, source string) (*notification
 	return notifs[0], nil
 }
 
-func sendPush(inst *instance.Instance, collapsible bool, n *notification.Notification) error {
+func sendPush(inst *instance.Instance, p *notification.Properties, n *notification.Notification) error {
 	push := push.Message{
 		NotificationID: n.ID(),
 		Source:         n.Source(),
@@ -144,7 +194,7 @@ func sendPush(inst *instance.Instance, collapsible bool, n *notification.Notific
 		Priority:       n.Priority,
 		Sound:          n.Sound,
 		Data:           n.Data,
-		Collapsible:    collapsible,
+		Collapsible:    p.Collapsible,
 	}
 	msg, err := jobs.NewMessage(&push)
 	if err != nil {
@@ -158,18 +208,27 @@ func sendPush(inst *instance.Instance, collapsible bool, n *notification.Notific
 	return err
 }
 
-func sendMail(inst *instance.Instance, n *notification.Notification) error {
-	parts := []*mails.Part{
-		{Body: n.Content, Type: "text/plain"},
+func sendMail(inst *instance.Instance, p *notification.Properties, n *notification.Notification) error {
+	mail := mails.Options{Mode: mails.ModeNoReply}
+
+	// Notifications from the stack have their own mail templates defined
+	if p.MailTemplate != "" {
+		mail.TemplateName = p.MailTemplate
+		mail.TemplateValues = n.Data
+	} else if n.ContentHTML != "" {
+		mail.Parts = make([]*mails.Part, 0, 2)
+		if n.Content != "" {
+			mail.Parts = append(mail.Parts,
+				&mails.Part{Body: n.Content, Type: "text/plain"})
+		}
+		if n.ContentHTML == "" {
+			mail.Parts = append(mail.Parts,
+				&mails.Part{Body: n.ContentHTML, Type: "text/html"})
+		}
+	} else {
+		return nil
 	}
-	if n.ContentHTML != "" {
-		parts = append(parts, &mails.Part{Body: n.ContentHTML, Type: "text/html"})
-	}
-	mail := mails.Options{
-		Mode:    mails.ModeNoReply,
-		Subject: n.Title,
-		Parts:   parts,
-	}
+
 	msg, err := jobs.NewMessage(&mail)
 	if err != nil {
 		return err
