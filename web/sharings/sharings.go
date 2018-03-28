@@ -313,6 +313,8 @@ func wrapErrors(err error) error {
 		return jsonapi.BadGateway(err)
 	case sharing.ErrNoOAuthClient:
 		return jsonapi.BadRequest(err)
+	case sharing.ErrMissingID:
+		return jsonapi.BadRequest(err)
 	case sharing.ErrInternalServerError:
 		return jsonapi.InternalServerError(err)
 	}

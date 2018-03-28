@@ -87,6 +87,9 @@ func createShared(t *testing.T, sid string, revisions []string) *sharing.SharedR
 	ref := sharing.SharedRef{
 		SID:       sid,
 		Revisions: revisions,
+		Infos: map[string]sharing.SharedInfo{
+			replSharingID: {Rule: 0},
+		},
 	}
 	err = couchdb.CreateNamedDocWithDB(replInstance, &ref)
 	assert.NoError(t, err)

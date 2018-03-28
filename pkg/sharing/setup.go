@@ -92,9 +92,8 @@ func (s *Sharing) buildReferences(inst *instance.Instance, rule Rule, r int, doc
 	for i, doc := range docs {
 		ids[i] = rule.DocType + "/" + doc.ID()
 	}
-	req := &couchdb.AllDocsRequest{Keys: ids}
-	var srefs []*SharedRef
-	if err := couchdb.GetAllDocs(inst, consts.Shared, req, &srefs); err != nil {
+	srefs, err := FindReferences(inst, ids)
+	if err != nil {
 		return nil, err
 	}
 

@@ -21,6 +21,9 @@ import (
 // MaxRetries is the maximal number of retries for a replicator
 const MaxRetries = 10
 
+// BatchSize is the maximal number of documents mainpulated at once by the replicator
+const BatchSize = 100
+
 // ReplicateMsg is used for jobs on the share-replicate worker.
 type ReplicateMsg struct {
 	SharingID string `json:"sharing_id"`
@@ -189,12 +192,13 @@ type Changes map[string][]string
 // callChangesFeed fetches the last changes from the changes feed
 // http://docs.couchdb.org/en/2.1.1/api/database/changes.html
 // TODO add a filter on the sharing
+// TODO what if there are more changes in the feed that BatchSize?
 func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Changes, string, error) {
 	response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
 		DocType:     consts.Shared,
 		IncludeDocs: true,
 		Since:       since,
-		Limit:       100,
+		Limit:       BatchSize,
 	})
 	if err != nil {
 		return nil, "", err
@@ -330,8 +334,10 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Mi
 		if _, ok := changes[result.SID]; !ok {
 			continue
 		}
-		// TODO check that result.Info[s.SID] exists
 		for _, rev := range result.Revisions {
+			if _, ok := result.Infos[s.SID]; !ok {
+				continue
+			}
 			for i, r := range changes[result.SID] {
 				if rev == r {
 					change := changes[result.SID]
@@ -424,13 +430,49 @@ func (s *Sharing) sendBulkDocs(m *Member, docs *DocsByDoctype) error {
 
 // ApplyBulkDocs is a multi-doctypes version of the POST _bulk_docs endpoint of CouchDB
 func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) error {
+	ids := make([]string, 0, BatchSize)
 	for doctype, docs := range payload {
-		// TODO what if the database for doctype does not exist
-		// TODO update the io.cozy.shared database
-		// TODO call rtevent
-		if err := couchdb.BulkForceUpdateDocs(inst, doctype, docs); err != nil {
-			return err
+		for _, doc := range docs {
+			id, ok := doc["_id"].(string)
+			if !ok {
+				return ErrMissingID
+			}
+			ids = append(ids, doctype+"/"+id)
 		}
 	}
+	refs, err := FindReferences(inst, ids)
+	if err != nil {
+		return err
+	}
+
+	for doctype, docs := range payload {
+		toAdd := make([]map[string]interface{}, 0, len(docs))
+		toUpdate := make([]map[string]interface{}, 0, len(docs))
+		for i, doc := range docs {
+			if refs[i] == nil {
+				toAdd = append(toAdd, doc)
+			} else {
+				toUpdate = append(toUpdate, doc)
+			}
+		}
+
+		if err := couchdb.BulkForceUpdateDocs(inst, doctype, append(toAdd, toUpdate...)); err != nil {
+			return err
+		}
+		// TODO remove this assertion when this function will be stabilized
+		if len(refs) < len(docs) {
+			panic("too much refs have not been consumed")
+		}
+		refs = refs[len(docs):]
+	}
+
+	// TODO remove this assertion when this function will be stabilized
+	if len(refs) != 0 {
+		panic("all refs have not been consumed")
+	}
+
+	// TODO update the io.cozy.shared database
+	// TODO call rtevent
+
 	return nil
 }
