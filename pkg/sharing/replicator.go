@@ -445,7 +445,8 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 	}
 
 	for doctype, docs := range payload {
-		toAdd, toUpdate := partitionDocsWithRefs(docs, refs)
+		toAdd, toUpdate := s.partitionDocsWithRefs(docs, refs)
+		toAdd = s.filterDocsThatCanBeAdded(inst, doctype, toAdd)
 
 		if err := couchdb.BulkForceUpdateDocs(inst, doctype, append(toAdd, toUpdate...)); err != nil {
 			return err
@@ -470,15 +471,36 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 
 // partitionDocsWithRefs returns two slices: the first with documents that have
 // no shared reference, the second with documents that have one
-func partitionDocsWithRefs(docs []map[string]interface{}, refs []*SharedRef) ([]map[string]interface{}, []map[string]interface{}) {
+func (s *Sharing) partitionDocsWithRefs(docs []map[string]interface{}, refs []*SharedRef) ([]map[string]interface{}, []map[string]interface{}) {
 	toAdd := make([]map[string]interface{}, 0, len(docs))
 	toUpdate := make([]map[string]interface{}, 0, len(docs))
 	for i, doc := range docs {
 		if refs[i] == nil {
 			toAdd = append(toAdd, doc)
-		} else {
+		} else if infos, ok := refs[i].Infos[s.SID]; ok && !infos.Removed {
 			toUpdate = append(toUpdate, doc)
 		}
 	}
 	return toAdd, toUpdate
+}
+
+// filterDocsThatCanBeAdded returns a subset of the docs slice with just the
+// documents that can be safely added
+// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
+func (s *Sharing) filterDocsThatCanBeAdded(inst *instance.Instance, doctype string, docs []map[string]interface{}) []map[string]interface{} {
+	filtered := docs[:0]
+	for _, doc := range docs {
+		r := -1
+		for i, rule := range s.Rules {
+			if rule.Accept(doctype, doc) {
+				r = i
+				break
+			}
+		}
+		// TODO check that the document does not already exist
+		if r >= 0 {
+			filtered = append(filtered, doc)
+		}
+	}
+	return filtered
 }

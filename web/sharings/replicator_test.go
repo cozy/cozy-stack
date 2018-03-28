@@ -225,6 +225,7 @@ func TestBulkDocs(t *testing.T) {
 					"ids":   []string{"ccc", "bbb"},
 				},
 				"this": "is document " + id1 + " at revision 3-ccc",
+				"foo":  "bar",
 			},
 			{
 				"_id":  id2,
@@ -234,6 +235,7 @@ func TestBulkDocs(t *testing.T) {
 					"ids":   []string{"fff", "eee", "dd"},
 				},
 				"this": "is document " + id2 + " at revision 3-fff",
+				"foo":  "baz",
 			},
 		},
 	})
