@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -56,7 +55,7 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 // retryReplicate will add a job to retry a failed replication
 func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 	if errors == MaxRetries {
-		logger.WithDomain(inst.Domain).Warnf("[sharing] Max retries reached")
+		inst.Logger().Warnf("[sharing] Max retries reached")
 		return
 	}
 	// TODO add a delay between retries
@@ -65,7 +64,7 @@ func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 		Errors:    errors,
 	})
 	if err != nil {
-		logger.WithDomain(inst.Domain).Warnf("[sharing] Error on retry to replicate: %s", err)
+		inst.Logger().Warnf("[sharing] Error on retry to replicate: %s", err)
 		return
 	}
 	_, err = jobs.System().PushJob(&jobs.JobRequest{
@@ -74,7 +73,7 @@ func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 		Message:    msg,
 	})
 	if err != nil {
-		logger.WithDomain(inst.Domain).Warnf("[sharing] Error on retry to replicate: %s", err)
+		inst.Logger().Warnf("[sharing] Error on retry to replicate: %s", err)
 	}
 }
 

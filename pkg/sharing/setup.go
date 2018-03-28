@@ -5,7 +5,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
 // Setup is used when a member accept a sharing to prepare the io.cozy.shared
@@ -21,12 +20,12 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	// TODO add triggers to update io.cozy.shared if not yet configured
 	for i, rule := range s.Rules {
 		if err := s.InitialCopy(inst, rule, i); err != nil {
-			logger.WithDomain(inst.Domain).Warnf("[sharing] Error on initial copy for %s: %s", rule.Title, err)
+			inst.Logger().Warnf("[sharing] Error on initial copy for %s: %s", rule.Title, err)
 		}
 	}
 	// TODO add a trigger for next replications if not yet configured
 	if err := s.ReplicateTo(inst, m, true); err != nil {
-		logger.WithDomain(inst.Domain).Warnf("[sharing] Error on initial replication: %s", err)
+		inst.Logger().Warnf("[sharing] Error on initial replication: %s", err)
 		s.retryReplicate(inst, 1)
 	}
 }
