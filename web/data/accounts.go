@@ -187,7 +187,7 @@ func decryptMap(m map[string]interface{}) (decrypted bool) {
 		}
 		var err error
 		if k == "credentials" {
-			cloned["password"], auth["login"], err = accounts.DecryptCredentials(str)
+			cloned["login"], auth["password"], err = accounts.DecryptCredentials(str)
 		} else {
 			cloned[k], err = accounts.DecryptCredentialsData(str)
 		}
