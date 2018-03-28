@@ -12,6 +12,11 @@ import (
 // database and start an initial replication. It is meant to be used in a new
 // goroutine and, as such, does not return errors but log them.
 func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
+	// Don't do the setup for most tests
+	if !inst.OnboardingFinished {
+		return
+	}
+
 	// TODO lock
 	// TODO add triggers to update io.cozy.shared if not yet configured
 	for i, rule := range s.Rules {
