@@ -20,7 +20,7 @@ type Rule struct {
 	Title    string   `json:"title"`
 	DocType  string   `json:"doctype"`
 	Selector string   `json:"selector,omitempty"`
-	Values   []string `json:"values"`
+	Values   []string `json:"values,omitempty"`
 	Local    bool     `json:"local,omitempty"`
 	Add      string   `json:"add"`
 	Update   string   `json:"update"`

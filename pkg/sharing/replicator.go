@@ -13,37 +13,75 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	multierror "github.com/hashicorp/go-multierror"
 )
+
+// MaxRetries is the maximal number of retries for a replicator
+const MaxRetries = 10
 
 // ReplicateMsg is used for jobs on the share-replicate worker.
 type ReplicateMsg struct {
 	SharingID string `json:"sharing_id"`
+	Errors    int    `json:"errors"`
 }
 
 // Replicate starts a replicator on this sharing.
-func (s *Sharing) Replicate(inst *instance.Instance) error {
-	if !s.Owner {
-		return s.ReplicateTo(inst, &s.Members[0])
-	}
+func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
+	// TODO lock
 	var errm error
-	for i, m := range s.Members {
-		if i == 0 {
-			continue
+	if !s.Owner {
+		errm = s.ReplicateTo(inst, &s.Members[0], false)
+	} else {
+		for i, m := range s.Members {
+			if i == 0 {
+				continue
+			}
+			if m.Status == MemberStatusReady {
+				err := s.ReplicateTo(inst, &s.Members[i], false)
+				errm = multierror.Append(errm, err)
+			}
 		}
-		if m.Status == MemberStatusReady {
-			err := s.ReplicateTo(inst, &s.Members[i])
-			errm = multierror.Append(errm, err)
-		}
+	}
+	if errm != nil {
+		s.retryReplicate(inst, errors+1)
 	}
 	return errm
+}
+
+// retryReplicate will add a job to retry a failed replication
+func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
+	if errors == MaxRetries {
+		logger.WithDomain(inst.Domain).Warnf("[sharing] Max retries reached")
+		return
+	}
+	// TODO add a delay between retries
+	msg, err := jobs.NewMessage(&ReplicateMsg{
+		SharingID: s.SID,
+		Errors:    errors,
+	})
+	if err != nil {
+		logger.WithDomain(inst.Domain).Warnf("[sharing] Error on retry to replicate: %s", err)
+		return
+	}
+	_, err = jobs.System().PushJob(&jobs.JobRequest{
+		Domain:     inst.Domain,
+		WorkerType: "share-replicate",
+		Message:    msg,
+	})
+	if err != nil {
+		logger.WithDomain(inst.Domain).Warnf("[sharing] Error on retry to replicate: %s", err)
+	}
 }
 
 // ReplicateTo starts a replicator on this sharing to the given member.
 // http://docs.couchdb.org/en/2.1.1/replication/protocol.html
 // https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js
 // TODO check for errors
-func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member) error {
+// TODO pouch use the pending property of changes for its replicator
+// https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js#L298-L301
+func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) error {
 	if m.Instance == "" {
 		return ErrInvalidURL
 	}
@@ -58,25 +96,34 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member) error {
 	if err != nil {
 		return err
 	}
+	if seq == lastSeq {
+		return nil
+	}
 	fmt.Printf("changes = %#v\n", changes)
-	// TODO pouch use the pending property of changes for its replicator
-	// https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js#L298-L301
+	// TODO filter the changes according to the sharing rules
 
-	missings, err := s.callRevsDiff(m, changes)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("missings = %#v\n", missings)
+	if len(*changes) > 0 {
+		var missings *Missings
+		if initial {
+			missings = transformChangesInMissings(changes)
+		} else {
+			missings, err = s.callRevsDiff(m, changes)
+			if err != nil {
+				return err
+			}
+		}
+		fmt.Printf("missings = %#v\n", missings)
 
-	docs, err := s.getMissingDocs(inst, missings)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("docs = %#v\n", docs)
+		docs, err := s.getMissingDocs(inst, missings)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("docs = %#v\n", docs)
 
-	err = s.sendBulkDocs(m, docs)
-	if err != nil {
-		return err
+		err = s.sendBulkDocs(m, docs)
+		if err != nil {
+			return err
+		}
 	}
 
 	return s.UpdateLastSequenceNumber(inst, m, seq)
@@ -169,6 +216,18 @@ type Missings map[string]MissingEntry
 type MissingEntry struct {
 	Missing []string `json:"missing"`
 	PAs     []string `json:"possible_ancestors"`
+}
+
+// transformChangesInMissings is used for the initial replication (revs_diff is
+// not called), to prepare the payload for the bulk_get calls
+func transformChangesInMissings(changes *Changes) *Missings {
+	missings := make(Missings, len(*changes))
+	for key, revs := range *changes {
+		missings[key] = MissingEntry{
+			Missing: []string{revs[len(revs)-1]},
+		}
+	}
+	return &missings
 }
 
 // callRevsDiff asks the other cozy to compute the _revs_diff
@@ -300,6 +359,7 @@ type DocsByDoctype map[string][]map[string]interface{}
 // getMissingDocs fetches the documents in bulk, partitionned by their doctype.
 // https://github.com/apache/couchdb-documentation/pull/263/files
 // TODO use the possible ancestors
+// TODO what if we fetch an old revision on a compacted database?
 func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*DocsByDoctype, error) {
 	queries := make(map[string][]couchdb.IDRev) // doctype -> payload for _bulk_get
 	for key, missing := range *missings {

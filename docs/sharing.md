@@ -347,7 +347,7 @@ Cozy of the sharer, after the recipient has accepted a sharing.
 #### Request
 
 ```http
-POST /sharings/ce8835a061d0ef68947afe69a0046722/answer
+POST /sharings/ce8835a061d0ef68947afe69a0046722/answer HTTP/1.1
 Host: alice.example.net
 Content-Type: application/vnd.api+json
 ```
@@ -395,7 +395,7 @@ http://docs.couchdb.org/en/2.1.1/api/database/misc.html#db-revs-diff.
 #### Request
 
 ```http
-POST /sharings/ce8835a061d0ef68947afe69a0046722/_revs_diff
+POST /sharings/ce8835a061d0ef68947afe69a0046722/_revs_diff HTTP/1.1
 Host: bob.example.net
 Accept: application/json
 Content-Type: application/json
@@ -445,7 +445,7 @@ http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#db-bulk-docs.
 #### Request
 
 ```http
-POST /sharings/ce8835a061d0ef68947afe69a0046722/_bulk_docs
+POST /sharings/ce8835a061d0ef68947afe69a0046722/_bulk_docs HTTP/1.1
 Host: bob.example.net
 Accept: application/json
 Content-Type: application/json
