@@ -21,6 +21,8 @@ type Permission struct {
 	Permissions Set               `json:"permissions,omitempty"`
 	ExpiresAt   *time.Time        `json:"expires_at,omitempty"`
 	Codes       map[string]string `json:"codes,omitempty"`
+
+	Client interface{} `json:"-"` // Contains the *oauth.Client client pointer for Oauth permission type
 }
 
 const (
@@ -143,7 +145,7 @@ func GetForRegisterToken() *Permission {
 }
 
 // GetForOauth create a non-persisted permissions doc from a oauth token scopes
-func GetForOauth(claims *Claims) (*Permission, error) {
+func GetForOauth(claims *Claims, c interface{}) (*Permission, error) {
 	set, err := UnmarshalScopeString(claims.Scope)
 	if err != nil {
 		return nil, err
@@ -152,6 +154,7 @@ func GetForOauth(claims *Claims) (*Permission, error) {
 		Type:        TypeOauth,
 		Permissions: set,
 		SourceID:    claims.Subject,
+		Client:      c,
 	}
 	return pdoc, nil
 }
