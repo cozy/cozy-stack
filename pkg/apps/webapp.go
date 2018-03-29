@@ -70,33 +70,35 @@ type Intent struct {
 // WebappManifest contains all the informations associated with an installed web
 // application.
 type WebappManifest struct {
-	DocRev string `json:"_rev,omitempty"` // WebappManifest revision
+	DocRev string `json:"_rev,omitempty"`
 
-	Name             string     `json:"name"`
-	NamePrefix       string     `json:"name_prefix"`
-	Type             string     `json:"type,omitempty"`
-	Editor           string     `json:"editor"`
-	DocSlug          string     `json:"slug"`
-	Developer        Developer  `json:"developer"`
-	ShortDescription string     `json:"short_description"`
-	LongDescription  string     `json:"long_description"`
-	Category         string     `json:"category"`
-	Locales          Locales    `json:"locales"`
-	Langs            []string   `json:"langs"`
-	Tags             []string   `json:"tags"`
-	Icon             string     `json:"icon"`
-	Screenshots      []string   `json:"screenshots"`
-	Platforms        []Platform `json:"platforms,omitempty"`
-	License          string     `json:"license"`
+	Name       string `json:"name"`
+	NamePrefix string `json:"name_prefix,omitempty"`
+	Editor     string `json:"editor"`
+	Icon       string `json:"icon"`
 
+	Type        string           `json:"type,omitempty"`
+	License     string           `json:"license,omitempty"`
+	Language    string           `json:"language,omitempty"`
+	Languages   *json.RawMessage `json:"languages,omitempty"`
+	Locales     *json.RawMessage `json:"locales,omitempty"`
+	Langs       *json.RawMessage `json:"langs,omitempty"`
+	Platforms   *json.RawMessage `json:"platforms,omitempty"`
+	Categories  *json.RawMessage `json:"categories,omitempty"`
+	Developer   *json.RawMessage `json:"developer,omitempty"`
+	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
+	Tags        *json.RawMessage `json:"tags,omitempty"`
+
+	DocSlug        string          `json:"slug"`
 	DocState       State           `json:"state"`
 	DocSource      string          `json:"source"`
 	DocVersion     string          `json:"version"`
 	DocPermissions permissions.Set `json:"permissions"`
-	Intents        []Intent        `json:"intents"`
-	Routes         Routes          `json:"routes"`
-	Services       Services        `json:"services"`
-	Notifications  Notifications   `json:"notifications"`
+
+	Intents       []Intent      `json:"intents"`
+	Routes        Routes        `json:"routes"`
+	Services      Services      `json:"services"`
+	Notifications Notifications `json:"notifications"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -135,21 +137,22 @@ func (m *WebappManifest) Clone() couchdb.Doc {
 		cloned.Services[k] = v
 	}
 
-	cloned.Locales = make(Locales, len(m.Locales))
-	for k, v := range m.Locales {
-		cloned.Locales[k] = v
-	}
-
 	cloned.Notifications = make(Notifications, len(m.Notifications))
 	for k, v := range m.Notifications {
 		cloned.Notifications[k] = v.Clone()
 	}
 
+	cloned.Languages = cloneRawMessage(m.Languages)
+	cloned.Locales = cloneRawMessage(m.Locales)
+	cloned.Langs = cloneRawMessage(m.Langs)
+	cloned.Platforms = cloneRawMessage(m.Platforms)
+	cloned.Categories = cloneRawMessage(m.Categories)
+	cloned.Developer = cloneRawMessage(m.Developer)
+	cloned.Screenshots = cloneRawMessage(m.Screenshots)
+	cloned.Tags = cloneRawMessage(m.Tags)
+
 	cloned.Intents = make([]Intent, len(m.Intents))
 	copy(cloned.Intents, m.Intents)
-
-	cloned.Platforms = make([]Platform, len(m.Platforms))
-	copy(cloned.Platforms, m.Platforms)
 
 	cloned.DocPermissions = make(permissions.Set, len(m.DocPermissions))
 	copy(cloned.DocPermissions, m.DocPermissions)
@@ -445,6 +448,15 @@ func ListWebapps(db couchdb.Database) ([]*WebappManifest, error) {
 		return nil, err
 	}
 	return docs, nil
+}
+
+func cloneRawMessage(m *json.RawMessage) *json.RawMessage {
+	if m != nil {
+		v := make(json.RawMessage, len(*m))
+		copy(v, *m)
+		return &v
+	}
+	return nil
 }
 
 var _ Manifest = &WebappManifest{}

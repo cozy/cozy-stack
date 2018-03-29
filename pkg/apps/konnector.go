@@ -13,33 +13,36 @@ import (
 // KonnManifest contains all the informations associated with an installed
 // konnector.
 type KonnManifest struct {
-	DocRev string `json:"_rev,omitempty"` // KonnManifest revision
+	DocRev string `json:"_rev,omitempty"`
 
-	Name             string      `json:"name"`
-	Editor           string      `json:"editor"`
-	DocSlug          string      `json:"slug"`
-	Developer        Developer   `json:"developer"`
-	Language         string      `json:"language,omitempty"`
-	LongDescription  string      `json:"long_description"`
-	ShortDescription string      `json:"short_description"`
-	Category         string      `json:"category"`
-	Locales          Locales     `json:"locales"`
-	Langs            []string    `json:"langs"`
-	Tags             []string    `json:"tags"`
-	Icon             string      `json:"icon"`
-	Screenshots      []string    `json:"screenshots"`
-	Platforms        []*Platform `json:"platforms"`
-	License          string      `json:"license"`
+	Name       string `json:"name"`
+	NamePrefix string `json:"name_prefix,omitempty"`
+	Editor     string `json:"editor"`
+	Icon       string `json:"icon"`
 
-	DocState       State            `json:"state"`
-	DocSource      string           `json:"source"`
-	Parameters     *json.RawMessage `json:"parameters"`
-	DocVersion     string           `json:"version"`
-	DocPermissions permissions.Set  `json:"permissions"`
+	Type        string           `json:"type,omitempty"`
+	License     string           `json:"license,omitempty"`
+	Language    string           `json:"language,omitempty"`
+	Languages   *json.RawMessage `json:"languages,omitempty"`
+	Locales     *json.RawMessage `json:"locales,omitempty"`
+	Langs       *json.RawMessage `json:"langs,omitempty"`
+	Platforms   *json.RawMessage `json:"platforms,omitempty"`
+	Categories  *json.RawMessage `json:"categories,omitempty"`
+	Developer   *json.RawMessage `json:"developer,omitempty"`
+	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
+	Tags        *json.RawMessage `json:"tags,omitempty"`
+
+	Parameters *json.RawMessage `json:"parameters,omitempty"`
 
 	// OnDeleteAccount can be used to specify a file path which will be executed
 	// when an account associated with the konnector is deleted.
 	OnDeleteAccount string `json:"on_delete_account,omitempty"`
+
+	DocSlug        string          `json:"slug"`
+	DocState       State           `json:"state"`
+	DocSource      string          `json:"source"`
+	DocVersion     string          `json:"version"`
+	DocPermissions permissions.Set `json:"permissions"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -61,20 +64,18 @@ func (m *KonnManifest) DocType() string { return consts.Konnectors }
 func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned := *m
 
-	cloned.Locales = make(Locales, len(m.Locales))
-	for k, v := range m.Locales {
-		cloned.Locales[k] = v
-	}
-
 	cloned.DocPermissions = make(permissions.Set, len(m.DocPermissions))
 	copy(cloned.DocPermissions, m.DocPermissions)
 
-	if m.Parameters != nil {
-		v := make(json.RawMessage, len(*m.Parameters))
-		copy(v, *m.Parameters)
-		cloned.Parameters = &v
-	}
-
+	cloned.Languages = cloneRawMessage(m.Languages)
+	cloned.Locales = cloneRawMessage(m.Locales)
+	cloned.Langs = cloneRawMessage(m.Langs)
+	cloned.Platforms = cloneRawMessage(m.Platforms)
+	cloned.Categories = cloneRawMessage(m.Categories)
+	cloned.Developer = cloneRawMessage(m.Developer)
+	cloned.Screenshots = cloneRawMessage(m.Screenshots)
+	cloned.Tags = cloneRawMessage(m.Tags)
+	cloned.Parameters = cloneRawMessage(m.Parameters)
 	return &cloned
 }
 
