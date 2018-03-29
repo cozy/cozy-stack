@@ -147,22 +147,18 @@ func encryptMap(m map[string]interface{}) (encrypted bool) {
 	login, _ := auth["login"].(string)
 	cloned := make(map[string]interface{}, len(auth))
 	for k, v := range auth {
-		if k == "login" || strings.HasSuffix(k, "_encrypted") {
-			cloned[k] = v
-			continue
-		}
 		var err error
 		switch k {
 		case "password":
-			str, _ := v.(string)
-			cloned["credentials_encrypted"], err = accounts.EncryptCredentials(login, str)
-			if !encrypted {
-				encrypted = err == nil
+			password, _ := v.(string)
+			cloned["credentials_encrypted"], err = accounts.EncryptCredentials(login, password)
+			if err == nil {
+				encrypted = true
 			}
-		case "secret", "dob", "code", "answer", "access_token":
+		case "secret", "dob", "code", "answer", "access_token", "refresh_token":
 			cloned[k+"_encrypted"], err = accounts.EncryptCredentialsData(v)
-			if !encrypted {
-				encrypted = err == nil
+			if err == nil {
+				encrypted = true
 			}
 		default:
 			cloned[k] = v
