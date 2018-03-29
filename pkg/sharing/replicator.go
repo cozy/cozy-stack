@@ -358,8 +358,11 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Mi
 	return &missings, nil
 }
 
+// DocsList is a slice of raw documents
+type DocsList []map[string]interface{}
+
 // DocsByDoctype is a map of doctype -> slice of documents of this doctype
-type DocsByDoctype map[string][]map[string]interface{}
+type DocsByDoctype map[string]DocsList
 
 // getMissingDocs fetches the documents in bulk, partitionned by their doctype.
 // https://github.com/apache/couchdb-documentation/pull/263/files
@@ -429,65 +432,65 @@ func (s *Sharing) sendBulkDocs(m *Member, docs *DocsByDoctype) error {
 
 // ApplyBulkDocs is a multi-doctypes version of the POST _bulk_docs endpoint of CouchDB
 func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) error {
-	ids := make([]string, 0, BatchSize)
-	for doctype, docs := range payload {
-		for _, doc := range docs {
-			id, ok := doc["_id"].(string)
-			if !ok {
-				return ErrMissingID
-			}
-			ids = append(ids, doctype+"/"+id)
-		}
-	}
-	refs, err := FindReferences(inst, ids)
-	if err != nil {
-		return err
-	}
+	var refs []SharedRef
 
 	for doctype, docs := range payload {
-		toAdd, toUpdate := s.partitionDocsWithRefs(docs, refs)
-		toAdd = s.filterDocsThatCanBeAdded(inst, doctype, toAdd)
-
-		if err := couchdb.BulkForceUpdateDocs(inst, doctype, append(toAdd, toUpdate...)); err != nil {
+		newDocs, existingDocs, err := partitionDocsPayload(inst, doctype, docs)
+		if err != nil {
 			return err
 		}
-		// TODO remove this assertion when this function will be stabilized
-		if len(refs) < len(docs) {
-			panic("too much refs have not been consumed")
+		okDocs, newRefs := s.filterDocsToAdd(inst, doctype, newDocs)
+		docsToUpdate, existingRefs, err := s.filterDocsToUpdate(inst, doctype, existingDocs)
+		if err != nil {
+			return err
 		}
-		refs = refs[len(docs):]
+		okDocs = append(okDocs, docsToUpdate...)
+		if err = couchdb.BulkForceUpdateDocs(inst, doctype, okDocs); err != nil {
+			return err
+		}
+		refs = append(refs, newRefs...)
+		refs = append(refs, existingRefs...)
 	}
 
-	// TODO remove this assertion when this function will be stabilized
-	if len(refs) != 0 {
-		panic("all refs have not been consumed")
+	// TODO call rtevent, both for docs and refs
+	refsToUpdate := make([]interface{}, len(refs))
+	for i, ref := range refs {
+		refsToUpdate[i] = ref
 	}
-
-	// TODO update the io.cozy.shared database
-	// TODO call rtevent
-
-	return nil
+	return couchdb.BulkUpdateDocs(inst, consts.Shared, refsToUpdate)
 }
 
-// partitionDocsWithRefs returns two slices: the first with documents that have
-// no shared reference, the second with documents that have one
-func (s *Sharing) partitionDocsWithRefs(docs []map[string]interface{}, refs []*SharedRef) ([]map[string]interface{}, []map[string]interface{}) {
-	toAdd := make([]map[string]interface{}, 0, len(docs))
-	toUpdate := make([]map[string]interface{}, 0, len(docs))
+// partitionDocsPayload returns two slices: the first with documents that are new,
+// the second with documents that already exist on this cozy and must be updated.
+func partitionDocsPayload(inst *instance.Instance, doctype string, docs DocsList) (news DocsList, existings DocsList, err error) {
+	ids := make([]string, len(docs))
 	for i, doc := range docs {
-		if refs[i] == nil {
-			toAdd = append(toAdd, doc)
-		} else if infos, ok := refs[i].Infos[s.SID]; ok && !infos.Removed {
-			toUpdate = append(toUpdate, doc)
+		var ok bool
+		ids[i], ok = doc["_id"].(string)
+		if !ok {
+			return nil, nil, ErrMissingID
 		}
 	}
-	return toAdd, toUpdate
+	results := make([]interface{}, 0, len(docs))
+	req := couchdb.AllDocsRequest{Keys: ids}
+	if err = couchdb.GetAllDocs(inst, doctype, &req, &results); err != nil {
+		return nil, nil, err
+	}
+	for i, doc := range docs {
+		if results[i] == nil {
+			news = append(news, doc)
+		} else {
+			existings = append(existings, doc)
+		}
+	}
+	return news, existings, nil
 }
 
-// filterDocsThatCanBeAdded returns a subset of the docs slice with just the
-// documents that can be safely added
+// filterDocsToAdd returns a subset of the docs slice with just the documents
+// that match a rule of the sharing. It also returns a reference documents to
+// put in the io.cozy.shared database.
 // https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
-func (s *Sharing) filterDocsThatCanBeAdded(inst *instance.Instance, doctype string, docs []map[string]interface{}) []map[string]interface{} {
+func (s *Sharing) filterDocsToAdd(inst *instance.Instance, doctype string, docs DocsList) (DocsList, []SharedRef) {
 	filtered := docs[:0]
 	for _, doc := range docs {
 		r := -1
@@ -497,10 +500,40 @@ func (s *Sharing) filterDocsThatCanBeAdded(inst *instance.Instance, doctype stri
 				break
 			}
 		}
-		// TODO check that the document does not already exist
 		if r >= 0 {
 			filtered = append(filtered, doc)
 		}
 	}
-	return filtered
+	// TODO return refs
+	return filtered, nil
+}
+
+// filterDocsToUpdate returns a subset of the docs slice with just the documents
+// that are referenced for this sharing in the io.cozy.shared database.
+func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, docs DocsList) (DocsList, []SharedRef, error) {
+	ids := make([]string, len(docs))
+	for i, doc := range docs {
+		id, ok := doc["_id"].(string)
+		if !ok {
+			return nil, nil, ErrMissingID
+		}
+		ids[i] = doctype + "/" + id
+	}
+	refs, err := FindReferences(inst, ids)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	filtered := docs[:0]
+	for i, doc := range docs {
+		if refs[i] != nil {
+			infos, ok := refs[i].Infos[s.SID]
+			if ok && !infos.Removed {
+				filtered = append(filtered, doc)
+			}
+		}
+	}
+
+	// TODO return refs
+	return filtered, nil, nil
 }
