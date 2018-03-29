@@ -164,6 +164,11 @@ func encryptMap(m map[string]interface{}) (encrypted bool) {
 		}
 	}
 	m["auth"] = cloned
+	if data, ok := m["data"].(map[string]interface{}); ok {
+		if encryptMap(data) && !encrypted {
+			encrypted = true
+		}
+	}
 	return
 }
 
@@ -197,6 +202,11 @@ func decryptMap(m map[string]interface{}) (decrypted bool) {
 		delete(auth, k)
 	}
 	m["auth"] = cloned
+	if data, ok := m["data"].(map[string]interface{}); ok {
+		if decryptMap(data) && !decrypted {
+			decrypted = true
+		}
+	}
 	return
 }
 
