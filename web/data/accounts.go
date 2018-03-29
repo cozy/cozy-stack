@@ -156,11 +156,16 @@ func encryptMap(m map[string]interface{}) (encrypted bool) {
 		case "password":
 			str, _ := v.(string)
 			cloned["credentials_encrypted"], err = accounts.EncryptCredentials(login, str)
+			if !encrypted {
+				encrypted = err == nil
+			}
 		case "secret", "dob", "code", "answer", "access_token":
 			cloned[k+"_encrypted"], err = accounts.EncryptCredentialsData(v)
-		}
-		if !encrypted {
-			encrypted = err == nil
+			if !encrypted {
+				encrypted = err == nil
+			}
+		default:
+			cloned[k] = v
 		}
 	}
 	m["auth"] = cloned
