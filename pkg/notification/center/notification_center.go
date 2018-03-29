@@ -50,6 +50,19 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 			p = m.Notifications[n.Category]
 		}
 		n.Originator = "app"
+	case permissions.TypeKonnector:
+		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")
+		m, err := apps.GetKonnectorBySlug(inst, slug)
+		if err != nil {
+			return err
+		}
+		if m.Notifications != nil {
+			p = m.Notifications[n.Category]
+		}
+		if p == nil {
+			return ErrUnauthorized
+		}
+		n.Originator = "konnector"
 	default:
 		return ErrUnauthorized
 	}

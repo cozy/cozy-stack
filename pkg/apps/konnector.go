@@ -32,7 +32,8 @@ type KonnManifest struct {
 	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
 	Tags        *json.RawMessage `json:"tags,omitempty"`
 
-	Parameters *json.RawMessage `json:"parameters,omitempty"`
+	Parameters    *json.RawMessage `json:"parameters,omitempty"`
+	Notifications Notifications    `json:"notifications"`
 
 	// OnDeleteAccount can be used to specify a file path which will be executed
 	// when an account associated with the konnector is deleted.
