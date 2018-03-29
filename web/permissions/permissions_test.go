@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -25,6 +26,7 @@ import (
 var ts *httptest.Server
 var token string
 var testInstance *instance.Instance
+var clientVal *oauth.Client
 var clientID string
 
 func TestMain(m *testing.M) {
@@ -35,6 +37,7 @@ func TestMain(m *testing.M) {
 	testInstance = testSetup.GetTestInstance()
 	scopes := "io.cozy.contacts io.cozy.files:GET io.cozy.events"
 	client, tok := testSetup.GetTestClient(scopes)
+	clientVal = client
 	clientID = client.ClientID
 	token = tok
 
@@ -401,7 +404,7 @@ func TestListPermission(t *testing.T) {
 			Subject:  clientID,
 		},
 		Scope: "io.cozy.events",
-	})
+	}, clientVal)
 	p1 := permissions.Set{
 		permissions.Rule{
 			Type:   "io.cozy.events",

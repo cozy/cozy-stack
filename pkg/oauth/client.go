@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/notification"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -57,6 +58,8 @@ type Client struct {
 	SoftwareVersion string   `json:"software_version,omitempty"` // Declared by the client (optional)
 
 	// Notifications parameters
+	Notifications map[string]*notification.Properties `json:"notifications"`
+
 	NotificationPlatform    string `json:"notification_platform,omitempty"`     // Declared by the client (optional)
 	NotificationDeviceToken string `json:"notification_device_token,omitempty"` // Declared by the client (optional)
 

@@ -86,13 +86,14 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	switch claims.Audience {
 	case permissions.AccessTokenAudience:
 		// An OAuth2 token is only valid if the client has not been revoked
-		if _, err := oauth.FindClient(instance, claims.Subject); err != nil {
+		c, err := oauth.FindClient(instance, claims.Subject)
+		if err != nil {
 			if couchdb.IsInternalServerError(err) {
 				return nil, err
 			}
 			return nil, permissions.ErrInvalidToken
 		}
-		return permissions.GetForOauth(&claims)
+		return permissions.GetForOauth(&claims, c)
 
 	case permissions.CLIAudience:
 		// do not check client existence

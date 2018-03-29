@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/notification"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/pkg/workers/push"
@@ -27,14 +28,28 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 
 	var p *notification.Properties
 	switch perm.Type {
-	// Applications and services have TypeWebapp permissions
+	case permissions.TypeOauth:
+		c, ok := perm.Client.(*oauth.Client)
+		if !ok {
+			return ErrUnauthorized
+		}
+		if c.Notifications != nil {
+			p = c.Notifications[n.Category]
+		}
+		if p == nil {
+			return ErrUnauthorized
+		}
+		n.Originator = "oauth"
 	case permissions.TypeWebapp:
 		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")
-		man, err := apps.GetWebappBySlug(inst, slug)
+		m, err := apps.GetWebappBySlug(inst, slug)
 		if err != nil {
 			return err
 		}
-		p = man.Notifications[n.Category]
+		if m.Notifications != nil {
+			p = m.Notifications[n.Category]
+		}
+		n.Originator = "app"
 	default:
 		return ErrUnauthorized
 	}
