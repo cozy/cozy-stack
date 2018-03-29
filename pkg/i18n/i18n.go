@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/leonelquinteros/gotext"
+	gotext "gopkg.in/leonelquinteros/gotext.v1"
 )
 
 // DefaultLocale is the default locale tag, used for fallback.
