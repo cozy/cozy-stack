@@ -80,7 +80,6 @@ func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 // ReplicateTo starts a replicator on this sharing to the given member.
 // http://docs.couchdb.org/en/2.1.1/replication/protocol.html
 // https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js
-// TODO check for errors
 // TODO pouch use the pending property of changes for its replicator
 // https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js#L298-L301
 func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) error {
@@ -435,21 +434,31 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 	var refs []*SharedRef
 
 	for doctype, docs := range payload {
+		var okDocs, docsToUpdate DocsList
+		var newRefs, existingRefs []*SharedRef
 		newDocs, existingDocs, err := partitionDocsPayload(inst, doctype, docs)
-		if err != nil {
-			return err
+		if err == nil {
+			okDocs, newRefs = s.filterDocsToAdd(inst, doctype, newDocs)
+			docsToUpdate, existingRefs, err = s.filterDocsToUpdate(inst, doctype, existingDocs)
+			if err != nil {
+				return err
+			}
+			okDocs = append(okDocs, docsToUpdate...)
+		} else {
+			okDocs, newRefs = s.filterDocsToAdd(inst, doctype, docs)
+			if len(okDocs) > 0 {
+				if err = couchdb.CreateDB(inst, doctype); err != nil {
+					return err
+				}
+			}
 		}
-		okDocs, newRefs := s.filterDocsToAdd(inst, doctype, newDocs)
-		docsToUpdate, existingRefs, err := s.filterDocsToUpdate(inst, doctype, existingDocs)
-		if err != nil {
-			return err
+		if len(okDocs) > 0 {
+			if err = couchdb.BulkForceUpdateDocs(inst, doctype, okDocs); err != nil {
+				return err
+			}
+			refs = append(refs, newRefs...)
+			refs = append(refs, existingRefs...)
 		}
-		okDocs = append(okDocs, docsToUpdate...)
-		if err = couchdb.BulkForceUpdateDocs(inst, doctype, okDocs); err != nil {
-			return err
-		}
-		refs = append(refs, newRefs...)
-		refs = append(refs, existingRefs...)
 	}
 
 	// TODO call rtevent, both for docs and refs

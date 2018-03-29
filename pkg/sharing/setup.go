@@ -17,6 +17,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	}
 
 	// TODO lock
+	// TODO ensure io.cozy.shared db exists
 	// TODO add triggers to update io.cozy.shared if not yet configured
 	for i, rule := range s.Rules {
 		if err := s.InitialCopy(inst, rule, i); err != nil {
