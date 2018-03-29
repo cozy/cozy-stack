@@ -432,7 +432,7 @@ func (s *Sharing) sendBulkDocs(m *Member, docs *DocsByDoctype) error {
 
 // ApplyBulkDocs is a multi-doctypes version of the POST _bulk_docs endpoint of CouchDB
 func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) error {
-	var refs []SharedRef
+	var refs []*SharedRef
 
 	for doctype, docs := range payload {
 		newDocs, existingDocs, err := partitionDocsPayload(inst, doctype, docs)
@@ -465,7 +465,10 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 func partitionDocsPayload(inst *instance.Instance, doctype string, docs DocsList) (news DocsList, existings DocsList, err error) {
 	ids := make([]string, len(docs))
 	for i, doc := range docs {
-		var ok bool
+		_, ok := doc["_rev"].(string)
+		if !ok {
+			return nil, nil, ErrMissingRev
+		}
 		ids[i], ok = doc["_id"].(string)
 		if !ok {
 			return nil, nil, ErrMissingID
@@ -490,8 +493,9 @@ func partitionDocsPayload(inst *instance.Instance, doctype string, docs DocsList
 // that match a rule of the sharing. It also returns a reference documents to
 // put in the io.cozy.shared database.
 // https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
-func (s *Sharing) filterDocsToAdd(inst *instance.Instance, doctype string, docs DocsList) (DocsList, []SharedRef) {
+func (s *Sharing) filterDocsToAdd(inst *instance.Instance, doctype string, docs DocsList) (DocsList, []*SharedRef) {
 	filtered := docs[:0]
+	refs := make([]*SharedRef, 0, len(docs))
 	for _, doc := range docs {
 		r := -1
 		for i, rule := range s.Rules {
@@ -501,16 +505,24 @@ func (s *Sharing) filterDocsToAdd(inst *instance.Instance, doctype string, docs 
 			}
 		}
 		if r >= 0 {
+			// TODO _rev is enough or should we use _revisions?
+			ref := SharedRef{
+				SID:       doctype + "/" + doc["_id"].(string),
+				Revisions: []string{doc["_rev"].(string)},
+				Infos: map[string]SharedInfo{
+					s.SID: {Rule: r},
+				},
+			}
+			refs = append(refs, &ref)
 			filtered = append(filtered, doc)
 		}
 	}
-	// TODO return refs
-	return filtered, nil
+	return filtered, refs
 }
 
 // filterDocsToUpdate returns a subset of the docs slice with just the documents
 // that are referenced for this sharing in the io.cozy.shared database.
-func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, docs DocsList) (DocsList, []SharedRef, error) {
+func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, docs DocsList) (DocsList, []*SharedRef, error) {
 	ids := make([]string, len(docs))
 	for i, doc := range docs {
 		id, ok := doc["_id"].(string)
@@ -525,15 +537,27 @@ func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, do
 	}
 
 	filtered := docs[:0]
+	frefs := refs[:0]
 	for i, doc := range docs {
 		if refs[i] != nil {
 			infos, ok := refs[i].Infos[s.SID]
 			if ok && !infos.Removed {
+				rev := doc["_rev"].(string)
+				exists := false
+				for _, r := range refs[i].Revisions {
+					if r == rev {
+						exists = true
+						break
+					}
+				}
+				if !exists {
+					refs[i].Revisions = append(refs[i].Revisions, rev)
+				}
+				frefs = append(frefs, refs[i])
 				filtered = append(filtered, doc)
 			}
 		}
 	}
 
-	// TODO return refs
-	return filtered, nil, nil
+	return filtered, frefs, nil
 }

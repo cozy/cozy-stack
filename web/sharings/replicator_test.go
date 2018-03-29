@@ -3,6 +3,7 @@ package sharings_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -67,7 +68,7 @@ func uuidv4() string {
 }
 
 func createShared(t *testing.T, sid string, revisions []string) *sharing.SharedRef {
-	rev := revisions[0]
+	rev := fmt.Sprintf("%d-%s", len(revisions), revisions[0])
 	parts := strings.SplitN(sid, "/", 2)
 	doctype := parts[0]
 	id := parts[1]
@@ -84,9 +85,13 @@ func createShared(t *testing.T, sid string, revisions []string) *sharing.SharedR
 	}
 	err := couchdb.BulkForceUpdateDocs(replInstance, doctype, docs)
 	assert.NoError(t, err)
+	revs := make([]string, len(revisions))
+	for i := range revisions {
+		revs[i] = fmt.Sprintf("%d-%s", i+1, revisions[len(revisions)-i-1])
+	}
 	ref := sharing.SharedRef{
 		SID:       sid,
-		Revisions: revisions,
+		Revisions: revs,
 		Infos: map[string]sharing.SharedInfo{
 			replSharingID: {Rule: 0},
 		},
@@ -101,7 +106,7 @@ func TestPermissions(t *testing.T) {
 	assert.NotNil(t, replAccessToken)
 
 	id := replDoctype + "/" + uuidv4()
-	doc := createShared(t, id, []string{"1-111111111"})
+	doc := createShared(t, id, []string{"111111111"})
 
 	body, _ := json.Marshal(sharing.Changes{
 		"id": doc.Revisions,
@@ -135,15 +140,15 @@ func TestRevsDiff(t *testing.T) {
 	assert.NotEmpty(t, replAccessToken)
 
 	sid1 := replDoctype + "/" + uuidv4()
-	createShared(t, sid1, []string{"1-1a", "2-1a", "3-1a"})
+	createShared(t, sid1, []string{"1a", "1a", "1a"})
 	sid2 := replDoctype + "/" + uuidv4()
-	createShared(t, sid2, []string{"1-2a", "2-2a", "3-2a"})
+	createShared(t, sid2, []string{"2a", "2a", "2a"})
 	sid3 := replDoctype + "/" + uuidv4()
-	createShared(t, sid3, []string{"1-3a", "2-3a", "3-3a"})
+	createShared(t, sid3, []string{"3a", "3a", "3a"})
 	sid4 := replDoctype + "/" + uuidv4()
-	createShared(t, sid4, []string{"1-4a", "2-4a", "3-4a"})
+	createShared(t, sid4, []string{"4a", "4a", "4a"})
 	sid5 := replDoctype + "/" + uuidv4()
-	createShared(t, sid5, []string{"1-5a", "2-5a", "3-5a"})
+	createShared(t, sid5, []string{"5a", "5a", "5a"})
 	sid6 := replDoctype + "/" + uuidv4()
 
 	body, _ := json.Marshal(sharing.Changes{
@@ -211,7 +216,7 @@ func TestBulkDocs(t *testing.T) {
 
 	id1 := uuidv4()
 	sid1 := replDoctype + "/" + id1
-	createShared(t, sid1, []string{"1-aaa", "2-bbb"})
+	createShared(t, sid1, []string{"aaa", "bbb"})
 	id2 := uuidv4()
 	sid2 := replDoctype + "/" + id2
 
