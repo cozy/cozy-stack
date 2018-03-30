@@ -15,16 +15,16 @@ func (ml *memLock) Unlock()      { ml.RWMutex.Unlock() }
 func (ml *memLock) RUnlock()     { ml.RWMutex.RUnlock() }
 
 // getMemReadWriteLock returns a sync.RWMutex.
-func getMemReadWriteLock(domain string) ErrorRWLocker {
+func getMemReadWriteLock(name string) ErrorRWLocker {
 	locksMu.Lock()
 	defer locksMu.Unlock()
 	if locks == nil {
 		locks = make(map[string]*memLock)
 	}
-	l, ok := locks[domain]
+	l, ok := locks[name]
 	if !ok {
 		l = &memLock{}
-		locks[domain] = l
+		locks[name] = l
 	}
 	return l
 }

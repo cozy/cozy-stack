@@ -2,13 +2,15 @@ package lock
 
 import "github.com/cozy/cozy-stack/pkg/config"
 
-// ReadWrite returns the read/write lock for the given name
-func ReadWrite(domain string) ErrorRWLocker {
+// ReadWrite returns the read/write lock for the given name.
+// By convention, the name should be prefixed by the instance domain on which
+// it applies, then a slash and the package name (ie alice.example.net/vfs).
+func ReadWrite(name string) ErrorRWLocker {
 	cli := config.GetConfig().Lock.Client()
 	if cli != nil {
-		return getRedisReadWriteLock(cli, domain)
+		return getRedisReadWriteLock(cli, name)
 	}
-	return getMemReadWriteLock(domain)
+	return getMemReadWriteLock(name)
 }
 
 // An ErrorLocker is a locker which can fail (returns an error)

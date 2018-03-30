@@ -30,8 +30,8 @@ func (l fakeRWLock) RLock() error { return nil }
 func (l fakeRWLock) Unlock()      { l.ErrorLocker.Unlock() }
 func (l fakeRWLock) RUnlock()     {}
 
-func getRedisReadWriteLock(c subRedisInterface, ns string) ErrorRWLocker {
-	return fakeRWLock{getRedisSimpleLock(c, ns)}
+func getRedisReadWriteLock(c subRedisInterface, name string) ErrorRWLocker {
+	return fakeRWLock{getRedisSimpleLock(c, name)}
 }
 
 const (
