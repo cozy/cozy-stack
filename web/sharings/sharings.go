@@ -301,7 +301,7 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case sharing.ErrInvalidURL:
 		return jsonapi.InvalidParameter("url", err)
-	case sharing.ErrInvalidSharing:
+	case sharing.ErrInvalidSharing, sharing.ErrInvalidRule:
 		return jsonapi.BadRequest(err)
 	case sharing.ErrMemberNotFound:
 		return jsonapi.NotFound(err)
