@@ -33,7 +33,6 @@ func RevsDiff(c echo.Context) error {
 }
 
 // BulkDocs is part of the replicator
-// TODO add a meaningfull response to the _bulk_docs endpoint
 func BulkDocs(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
