@@ -21,7 +21,10 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	// TODO ensure io.cozy.shared db exists
+	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
+		inst.Logger().Warnf("[sharing] Can't ensure io.cozy.shared exists: %s", err)
+	}
+
 	// TODO add triggers to update io.cozy.shared if not yet configured
 	for i, rule := range s.Rules {
 		if err := s.InitialCopy(inst, rule, i); err != nil {

@@ -238,7 +238,6 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if res.StatusCode/100 != 2 {
 		return ErrRequestFailed
 	}
-	// TODO ensure io.cozy.shared db exists
 
 	if !s.ReadOnly() {
 		var creds Credentials
@@ -250,7 +249,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		return couchdb.UpdateDoc(inst, s)
 	}
 
-	return nil
+	return couchdb.EnsureDBExist(inst, consts.Shared)
 }
 
 // ProcessAnswer takes somes credentials and update the sharing with those.

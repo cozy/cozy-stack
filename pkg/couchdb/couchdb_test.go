@@ -283,6 +283,15 @@ func TestChangesSuccess(t *testing.T) {
 	assert.Len(t, response.Results, 2)
 }
 
+func TestEnsureDBExist(t *testing.T) {
+	defer DeleteDB(TestPrefix, "io.cozy.tests.db1")
+	_, err := DBStatus(TestPrefix, "io.cozy.tests.db1")
+	assert.True(t, IsNoDatabaseError(err))
+	assert.NoError(t, EnsureDBExist(TestPrefix, "io.cozy.tests.db1"))
+	_, err = DBStatus(TestPrefix, "io.cozy.tests.db1")
+	assert.NoError(t, err)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
