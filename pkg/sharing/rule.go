@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
@@ -59,26 +60,47 @@ func (s *Sharing) ValidateRules() error {
 }
 
 // Accept returns true if the document matches the rule criteria
-// TODO detect if it's a deletion
-// TODO improve to detect if the rule is applied on the owner or the recipient
+// TODO use add, update and remove properties of the rule
 func (r Rule) Accept(doctype string, doc map[string]interface{}) bool {
 	if r.Local || doctype != r.DocType {
 		return false
 	}
-	var ok bool
-	var val string
+	var obj interface{} = doc
 	if r.Selector == "" || r.Selector == "id" {
-		val, ok = doc["_id"].(string)
+		obj = doc["_id"]
+	} else if doctype == consts.Files && r.Selector == couchdb.SelectorReferencedBy {
+		if o, k := doc["referenced_by"].([]map[string]interface{}); k {
+			refs := make([]string, len(o))
+			for i, ref := range o {
+				refs[i] = ref["type"].(string) + "/" + ref["id"].(string)
+			}
+			obj = refs
+		}
 	} else {
-		// TODO pick nested value if the selector contains dots
-		val, ok = doc[r.Selector].(string)
+		keys := strings.Split(r.Selector, ".")
+		for _, key := range keys {
+			if o, k := obj.(map[string]interface{}); k {
+				obj = o[key]
+			} else {
+				obj = nil
+				break
+			}
+		}
 	}
-	if !ok {
-		return false
+	if val, ok := obj.(string); ok {
+		for _, v := range r.Values {
+			if v == val {
+				return true
+			}
+		}
 	}
-	for _, v := range r.Values {
-		if v == val {
-			return true
+	if val, ok := obj.([]string); ok {
+		for _, vv := range val {
+			for _, v := range r.Values {
+				if v == vv {
+					return true
+				}
+			}
 		}
 	}
 	return false
