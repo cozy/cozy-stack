@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	perms "github.com/cozy/cozy-stack/pkg/permissions"
@@ -132,11 +133,17 @@ func updateAccount(c echo.Context) error {
 }
 
 func encryptAccount(doc couchdb.JSONDoc) bool {
-	return encryptMap(doc.M)
+	if config.GetVault().CredentialsEncryptorKey() != nil {
+		return encryptMap(doc.M)
+	}
+	return false
 }
 
 func decryptAccount(doc couchdb.JSONDoc) bool {
-	return decryptMap(doc.M)
+	if config.GetVault().CredentialsDecryptorKey() != nil {
+		return decryptMap(doc.M)
+	}
+	return false
 }
 
 func encryptMap(m map[string]interface{}) (encrypted bool) {
