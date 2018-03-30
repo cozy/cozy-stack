@@ -8,6 +8,19 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
+const (
+	// ActionRuleNone is used when an add/update/remove should not be
+	// replicated to the other cozys
+	ActionRuleNone = "none"
+	// ActionRulePush is used when an add/update/remove should be replicated
+	// only if it happened on the owner's cozy
+	ActionRulePush = "push"
+	// ActionRuleSync is used when an add/update/remove should be always replicated
+	ActionRuleSync = "sync"
+	// ActionRuleRevoke is used when a remove should revoke the sharing
+	ActionRuleRevoke = "revoke"
+)
+
 // Rule describes how the sharing behave when a document matching the rule is
 // added, updated or deleted.
 type Rule struct {
@@ -35,24 +48,31 @@ func (s *Sharing) ValidateRules() error {
 			return ErrInvalidRule
 		}
 		if rule.Add == "" {
-			rule.Add = "none"
+			rule.Add = ActionRuleNone
 		}
 		rule.Add = strings.ToLower(rule.Add)
-		if rule.Add != "none" && rule.Add != "push" && rule.Add != "sync" {
+		if rule.Add != ActionRuleNone &&
+			rule.Add != ActionRulePush &&
+			rule.Add != ActionRuleSync {
 			return ErrInvalidRule
 		}
 		if rule.Update == "" {
-			rule.Update = "none"
+			rule.Update = ActionRuleNone
 		}
 		rule.Update = strings.ToLower(rule.Update)
-		if rule.Update != "none" && rule.Update != "push" && rule.Update != "sync" {
+		if rule.Update != ActionRuleNone &&
+			rule.Update != ActionRulePush &&
+			rule.Update != ActionRuleSync {
 			return ErrInvalidRule
 		}
 		if rule.Remove == "" {
-			rule.Remove = "none"
+			rule.Remove = ActionRuleNone
 		}
 		rule.Remove = strings.ToLower(rule.Remove)
-		if rule.Remove != "none" && rule.Remove != "push" && rule.Remove != "sync" && rule.Remove != "revoke" {
+		if rule.Remove != ActionRuleNone &&
+			rule.Remove != ActionRulePush &&
+			rule.Remove != ActionRuleSync &&
+			rule.Remove != ActionRuleRevoke {
 			return ErrInvalidRule
 		}
 	}
