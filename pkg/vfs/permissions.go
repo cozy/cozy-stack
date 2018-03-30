@@ -8,22 +8,20 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
-// Validable extends on permissions.validable with hierarchy functions
-type Validable interface {
-	permissions.Validable
+// Matcher extends on permissions.Matcher with hierarchy functions
+type Matcher interface {
+	permissions.Matcher
 	parentID() string
 	Path(fs FilePather) (string, error)
 	Parent(fs VFS) (*DirDoc, error)
 }
 
-// FileDoc & DirDoc are vfs.Validable
-var _ Validable = (*FileDoc)(nil)
-var _ Validable = (*DirDoc)(nil)
+// FileDoc & DirDoc are vfs.Matcher
+var _ Matcher = (*FileDoc)(nil)
+var _ Matcher = (*DirDoc)(nil)
 
 // Allows check if a permSet allows verb on given file
-// µoptim : we can probably make this function iterate less on pset.Rules, but
-//  it will lower readability ...
-func Allows(fs VFS, pset permissions.Set, v permissions.Verb, fd Validable) error {
+func Allows(fs VFS, pset permissions.Set, v permissions.Verb, fd Matcher) error {
 	allowedIDs := []string{}
 	otherRules := []permissions.Rule{}
 
@@ -50,7 +48,7 @@ func Allows(fs VFS, pset permissions.Set, v permissions.Verb, fd Validable) erro
 		}
 
 		// permission by attributes values (tags, mime ...) on self
-		var valid = func(value string) bool { return fd.Valid(r.Selector, value) }
+		var valid = func(value string) bool { return fd.Match(r.Selector, value) }
 		if r.SomeValue(valid) {
 			return nil
 		}
@@ -90,7 +88,7 @@ func Allows(fs VFS, pset permissions.Set, v permissions.Verb, fd Validable) erro
 		}
 		for cur.ID() != consts.RootDirID {
 			for _, rule := range otherRules {
-				if rule.ValuesValid(cur) {
+				if rule.ValuesMatch(cur) {
 					return nil
 				}
 				cur, err = cur.Parent(fs)
@@ -134,8 +132,8 @@ func contains(haystack []string, needle string) bool {
 func (f *FileDoc) parentID() string { return f.DirID }
 func (d *DirDoc) parentID() string  { return d.DirID }
 
-// Valid implements permissions.Validable on FileDoc
-func (f *FileDoc) Valid(field, expected string) bool {
+// Match implements permissions.Matcher on FileDoc
+func (f *FileDoc) Match(field, expected string) bool {
 	switch field {
 	case "type":
 		return f.Type == expected
@@ -168,8 +166,8 @@ func (f *FileDoc) Valid(field, expected string) bool {
 	}
 }
 
-// Valid implements permissions.Validable on DirDOc
-func (d *DirDoc) Valid(field, expected string) bool {
+// Match implements permissions.Matcher on DirDOc
+func (d *DirDoc) Match(field, expected string) bool {
 	switch field {
 	case "type":
 		return d.Type == expected

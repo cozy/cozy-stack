@@ -31,7 +31,7 @@ func (c *apiContext) Links() *jsonapi.LinksList {
 func (c *apiContext) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.doc)
 }
-func (c *apiContext) Valid(field, expected string) bool {
+func (c *apiContext) Match(field, expected string) bool {
 	return false
 }
 

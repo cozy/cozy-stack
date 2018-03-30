@@ -52,18 +52,18 @@ func (a *AtTrigger) Type() string {
 	return a.in.Type
 }
 
-// DocType implements the permissions.Validable interface
+// DocType implements the permissions.Matcher interface
 func (a *AtTrigger) DocType() string {
 	return consts.Triggers
 }
 
-// ID implements the permissions.Validable interface
+// ID implements the permissions.Matcher interface
 func (a *AtTrigger) ID() string {
 	return a.in.TID
 }
 
-// Valid implements the permissions.Validable interface
-func (a *AtTrigger) Valid(key, value string) bool {
+// Match implements the permissions.Matcher interface
+func (a *AtTrigger) Match(key, value string) bool {
 	switch key {
 	case WorkerType:
 		return a.in.WorkerType == value

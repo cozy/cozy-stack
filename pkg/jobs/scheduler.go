@@ -14,7 +14,7 @@ import (
 type (
 	// Trigger interface is used to represent a trigger.
 	Trigger interface {
-		permissions.Validable
+		permissions.Matcher
 		Type() string
 		Infos() *TriggerInfos
 		// Schedule should return a channel on which the trigger can send job
@@ -140,8 +140,8 @@ func (t *TriggerInfos) SetID(id string) { t.TID = id }
 // SetRev implements the couchdb.Doc interface
 func (t *TriggerInfos) SetRev(rev string) { t.TRev = rev }
 
-// Valid implements the permissions.Validable interface
-func (t *TriggerInfos) Valid(key, value string) bool {
+// Match implements the permissions.Matcher interface
+func (t *TriggerInfos) Match(key, value string) bool {
 	switch key {
 	case "worker":
 		return t.WorkerType == value

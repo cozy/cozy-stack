@@ -61,7 +61,7 @@ type SubDomainer interface {
 // that can represent either a webapp or konnector manifest
 type Manifest interface {
 	couchdb.Doc
-	Valid(field, expected string) bool
+	Match(field, expected string) bool
 	ReadManifest(i io.Reader, slug, sourceURL string) error
 
 	Create(db couchdb.Database) error

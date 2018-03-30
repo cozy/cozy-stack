@@ -91,10 +91,10 @@ func (r Rule) SomeValue(predicate func(v string) bool) bool {
 	return false
 }
 
-// ValuesValid returns true if any value statisfy the predicate
-func (r Rule) ValuesValid(o Validable) bool {
+// ValuesMatch returns true if any value statisfy the predicate
+func (r Rule) ValuesMatch(o Matcher) bool {
 	for _, v := range r.Values {
-		if o.Valid(r.Selector, v) {
+		if o.Match(r.Selector, v) {
 			return true
 		}
 	}

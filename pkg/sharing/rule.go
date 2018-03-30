@@ -25,6 +25,7 @@ func (r Rule) Accept(doctype string, doc map[string]interface{}) bool {
 	if r.Selector == "" || r.Selector == "id" {
 		val, ok = doc["_id"].(string)
 	} else {
+		// TODO pick nested value if the selector contains dots
 		val, ok = doc[r.Selector].(string)
 	}
 	if !ok {
