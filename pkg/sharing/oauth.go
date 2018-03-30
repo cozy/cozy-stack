@@ -20,7 +20,12 @@ import (
 // CreateSharingRequest sends information about the sharing to the recipient's cozy
 func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, u *url.URL) error {
 	// TODO translate ids of files/folders in the rules sent to the recipients
-	// TODO skip local rules
+	rules := make([]Rule, 0, len(s.Rules))
+	for _, rule := range s.Rules {
+		if !rule.Local {
+			rules = append(rules, rule)
+		}
+	}
 	sh := APISharing{
 		&Sharing{
 			SID:         s.SID,
@@ -32,7 +37,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, u *ur
 			PreviewPath: s.PreviewPath,
 			CreatedAt:   s.CreatedAt,
 			UpdatedAt:   s.UpdatedAt,
-			Rules:       s.Rules,
+			Rules:       rules,
 			Members:     s.Members,
 		},
 		nil,
