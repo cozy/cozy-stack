@@ -36,7 +36,11 @@ func NewError(status int, msg ...interface{}) *Error {
 		Title:  http.StatusText(status),
 	}
 	if len(msg) > 0 {
-		je.Detail = fmt.Sprintf(msg[0].(string), msg[1:]...)
+		if format, ok := msg[0].(string); ok {
+			je.Detail = fmt.Sprintf(format, msg[1:]...)
+		} else {
+			je.Detail = fmt.Sprint(msg...)
+		}
 	}
 	return je
 }
