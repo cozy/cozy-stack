@@ -375,12 +375,14 @@ func (s *redisScheduler) GetAllTriggers(domain string) ([]Trigger, error) {
 	return v, nil
 }
 
+// CleanRedis removes clean redis by removing the two sets holding the triggers
+// states.
+func (s *redisScheduler) CleanRedis() error {
+	return s.client.Del(TriggersKey, SchedKey).Err()
+}
+
 // RebuildRedis puts all the triggers in redis (idempotent)
 func (s *redisScheduler) RebuildRedis(domain string) error {
-	err := s.client.Del(TriggersKey, SchedKey).Err()
-	if err != nil {
-		return err
-	}
 	triggers, err := s.GetAllTriggers(domain)
 	if err != nil {
 		return err

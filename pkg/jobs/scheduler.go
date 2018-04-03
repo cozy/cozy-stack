@@ -35,6 +35,7 @@ type (
 		GetTrigger(domain, id string) (Trigger, error)
 		DeleteTrigger(domain, id string) error
 		GetAllTriggers(domain string) ([]Trigger, error)
+		CleanRedis() error
 		RebuildRedis(domain string) error
 	}
 

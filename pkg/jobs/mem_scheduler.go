@@ -201,6 +201,12 @@ func (s *memScheduler) PollScheduler(now int64) error {
 	return errors.New("memScheduler cannot be polled")
 }
 
+// CleanRedis does nothing for the in memory scheduler. It's just
+// here to implement the Scheduler interface.
+func (s *memScheduler) CleanRedis() error {
+	return errors.New("memScheduler does not use redis")
+}
+
 // RebuildRedis does nothing for the in memory scheduler. It's just
 // here to implement the Scheduler interface.
 func (s *memScheduler) RebuildRedis(domain string) error {

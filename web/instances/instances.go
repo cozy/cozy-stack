@@ -216,6 +216,9 @@ func rebuildRedis(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
+	if err = jobs.System().CleanRedis(); err != nil {
+		return wrapError(err)
+	}
 	for _, i := range instances {
 		err = jobs.System().RebuildRedis(i.Domain)
 		if err != nil {
