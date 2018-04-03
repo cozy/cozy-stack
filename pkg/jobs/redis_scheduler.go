@@ -390,6 +390,8 @@ func (s *redisScheduler) RebuildRedis(domain string) error {
 			return err
 		}
 	}
+	joblog.Infof("Redis rebuilt for domain %q with %d triggers created",
+		domain, len(triggers))
 	return nil
 }
 
