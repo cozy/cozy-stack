@@ -9,6 +9,20 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
+// TrackMessage is used for jobs on the share-track worker.
+// It's the same for all the jobs of a trigger.
+type TrackMessage struct {
+	SharingID string `json:"sharing_id"`
+	RuleIndex int    `json:"rule_index"`
+}
+
+// TrackEvent is used for jobs on the share-track worker.
+// It's unique per job.
+type TrackEvent struct {
+	Verb string          `json:"verb"`
+	Doc  couchdb.JSONDoc `json:"doc"`
+}
+
 // SharedInfo gives informations about how to apply the sharing to the shared
 // document
 type SharedInfo struct {
@@ -79,6 +93,15 @@ func FindReferences(inst *instance.Instance, ids []string) ([]*SharedRef, error)
 		return nil, err
 	}
 	return refs, nil
+}
+
+// UpdateShared updates the io.cozy.shared database when a document is
+// created/update/removed
+func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) error {
+	// TODO lock
+	// TODO find the io.cozy.shared ref
+	// TODO create/update it
+	return nil
 }
 
 var _ couchdb.Doc = &SharedRef{}

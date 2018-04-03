@@ -7,7 +7,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 )
 
@@ -24,6 +23,15 @@ func init() {
 		Timeout:      300 * time.Second,
 		WorkerFunc:   WorkerReplicate,
 	})
+
+	// TODO write documentation about this worker
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType:   "share-track",
+		Concurrency:  runtime.NumCPU(),
+		MaxExecCount: 2,
+		Timeout:      30 * time.Second,
+		WorkerFunc:   WorkerTrack,
+	})
 }
 
 // WorkerReplicate is used for the replication of documents to the other
@@ -33,14 +41,32 @@ func WorkerReplicate(ctx *jobs.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	logger.WithDomain(ctx.Domain()).Info(msg)
 	inst, err := instance.Get(ctx.Domain())
 	if err != nil {
 		return err
 	}
+	inst.Logger().Info(msg)
 	s, err := sharing.FindSharing(inst, msg.SharingID)
 	if err != nil {
 		return err
 	}
 	return s.Replicate(inst, msg.Errors)
+}
+
+// WorkerTrack is used to update the io.cozy.shared database when a document
+// that matches a sharing rule is created/updated/remove
+func WorkerTrack(ctx *jobs.WorkerContext) error {
+	var msg sharing.TrackMessage
+	if err := ctx.UnmarshalMessage(&msg); err != nil {
+		return err
+	}
+	var evt sharing.TrackEvent
+	if err := ctx.UnmarshalEvent(&evt); err != nil {
+		return err
+	}
+	inst, err := instance.Get(ctx.Domain())
+	if err != nil {
+		return err
+	}
+	return sharing.UpdateShared(inst, msg, evt)
 }
