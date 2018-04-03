@@ -205,8 +205,8 @@ func (m *WebappManifest) SetError(err error) {
 // Error is part of the Manifest interface
 func (m *WebappManifest) Error() error { return m.err }
 
-// Valid is part of the Manifest interface
-func (m *WebappManifest) Valid(field, value string) bool {
+// Match is part of the Manifest interface
+func (m *WebappManifest) Match(field, value string) bool {
 	switch field {
 	case "slug":
 		return m.DocSlug == value

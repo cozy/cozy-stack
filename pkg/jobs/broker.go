@@ -135,8 +135,8 @@ func (j *Job) SetID(id string) { j.JobID = id }
 // SetRev implements the couchdb.Doc interface
 func (j *Job) SetRev(rev string) { j.JobRev = rev }
 
-// Valid implements the permissions.Validable interface
-func (j *Job) Valid(key, value string) bool {
+// Match implements the permissions.Matcher interface
+func (j *Job) Match(key, value string) bool {
 	switch key {
 	case WorkerType:
 		return j.WorkerType == value
@@ -144,14 +144,14 @@ func (j *Job) Valid(key, value string) bool {
 	return false
 }
 
-// ID implements the permissions.Validable interface
+// ID implements the permissions.Matcher interface
 func (jr *JobRequest) ID() string { return "" }
 
-// DocType implements the permissions.Validable interface
+// DocType implements the permissions.Matcher interface
 func (jr *JobRequest) DocType() string { return consts.Jobs }
 
-// Valid implements the permissions.Validable interface
-func (jr *JobRequest) Valid(key, value string) bool {
+// Match implements the permissions.Matcher interface
+func (jr *JobRequest) Match(key, value string) bool {
 	switch key {
 	case WorkerType:
 		return jr.WorkerType == value
@@ -331,6 +331,6 @@ func (e Event) Unmarshal(evt interface{}) error {
 }
 
 var (
-	_ permissions.Validable = (*JobRequest)(nil)
-	_ permissions.Validable = (*Job)(nil)
+	_ permissions.Matcher = (*JobRequest)(nil)
+	_ permissions.Matcher = (*Job)(nil)
 )

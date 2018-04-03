@@ -208,7 +208,7 @@ func (j JSONDoc) Get(key string) interface{} {
 	return j.M[key]
 }
 
-// Valid implements permissions.Validable on JSONDoc.
+// Match implements permissions.Matcher on JSONDoc.
 //
 // The `referenced_by` selector is a special case: the `values` field of such
 // rule has the format "doctype/id" and it cannot directly be compared to the
@@ -217,7 +217,7 @@ func (j JSONDoc) Get(key string) interface{} {
 //     {"type": "doctype1", "id": "id1"},
 //     {"type": "doctype2", "id": "id2"},
 // ]
-func (j JSONDoc) Valid(field, value string) bool {
+func (j JSONDoc) Match(field, value string) bool {
 	if field == SelectorReferencedBy {
 		rawReferences := j.Get(field)
 		references, ok := rawReferences.([]interface{})
@@ -260,7 +260,6 @@ func escapeCouchdbName(name string) string {
 }
 
 func makeDBName(db Database, doctype string) string {
-	// @TODO This should be better analysed
 	dbname := escapeCouchdbName(db.Prefix() + "/" + doctype)
 	return url.PathEscape(dbname)
 }

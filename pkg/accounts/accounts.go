@@ -71,8 +71,8 @@ func (ac *Account) Clone() couchdb.Doc {
 	return &cloned
 }
 
-// Valid implements permissions.Validable
-func (ac *Account) Valid(field, expected string) bool {
+// Match implements permissions.Matcher
+func (ac *Account) Match(field, expected string) bool {
 	return field == "account_type" && expected == ac.AccountType
 }
 

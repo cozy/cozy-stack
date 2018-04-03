@@ -125,8 +125,8 @@ func (m *KonnManifest) SetError(err error) {
 // Error is part of the Manifest interface
 func (m *KonnManifest) Error() error { return m.err }
 
-// Valid is part of the Manifest interface
-func (m *KonnManifest) Valid(field, value string) bool {
+// Match is part of the Manifest interface
+func (m *KonnManifest) Match(field, value string) bool {
 	switch field {
 	case "slug":
 		return m.DocSlug == value

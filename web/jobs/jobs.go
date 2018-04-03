@@ -71,7 +71,7 @@ func (j apiJob) MarshalJSON() ([]byte, error) {
 
 func (q apiQueue) ID() string      { return q.workerType }
 func (q apiQueue) DocType() string { return consts.Jobs }
-func (q apiQueue) Valid(key, value string) bool {
+func (q apiQueue) Match(key, value string) bool {
 	switch key {
 	case "worker":
 		return q.workerType == value

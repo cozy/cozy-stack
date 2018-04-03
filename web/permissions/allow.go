@@ -28,7 +28,7 @@ func AllowWholeType(c echo.Context, v permissions.Verb, doctype string) error {
 }
 
 // Allow validates the validable object against the context permission set
-func Allow(c echo.Context, v permissions.Verb, o permissions.Validable) error {
+func Allow(c echo.Context, v permissions.Verb, o permissions.Matcher) error {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ func Allow(c echo.Context, v permissions.Verb, o permissions.Validable) error {
 
 // AllowOnFields validates the validable object againt the context permission
 // set and ensure the selector validates the given fields.
-func AllowOnFields(c echo.Context, v permissions.Verb, o permissions.Validable, fields ...string) error {
+func AllowOnFields(c echo.Context, v permissions.Verb, o permissions.Matcher, fields ...string) error {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
@@ -64,8 +64,8 @@ func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) erro
 	return nil
 }
 
-// AllowVFS validates a vfs.Validable against the context permission set
-func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Validable) error {
+// AllowVFS validates a vfs.Matcher against the context permission set
+func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Matcher) error {
 	instance := middlewares.GetInstance(c)
 	pdoc, err := GetPermission(c)
 	if err != nil {
@@ -117,7 +117,7 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) e
 
 // AllowForApp checks that the permissions is valid and comes from an
 // application. If valid, the application's slug is returned.
-func AllowForApp(c echo.Context, v permissions.Verb, o permissions.Validable) (slug string, err error) {
+func AllowForApp(c echo.Context, v permissions.Verb, o permissions.Matcher) (slug string, err error) {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return "", err

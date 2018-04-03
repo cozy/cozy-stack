@@ -31,7 +31,7 @@ func (j *apiDiskUsage) Links() *jsonapi.LinksList {
 }
 
 // Settings objects permissions are only on ID
-func (j *apiDiskUsage) Valid(k, f string) bool { return false }
+func (j *apiDiskUsage) Match(k, f string) bool { return false }
 
 func diskUsage(c echo.Context) error {
 	instance := middlewares.GetInstance(c)

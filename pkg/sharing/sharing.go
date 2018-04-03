@@ -148,9 +148,8 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 
 // Create checks that the sharing is OK and it persists it in CouchDB if it is the case.
 func (s *Sharing) Create(inst *instance.Instance) (map[string]string, error) {
-	// TODO validate the doctype of each rule
-	if len(s.Rules) == 0 {
-		return nil, ErrNoRules
+	if err := s.ValidateRules(); err != nil {
+		return nil, err
 	}
 	if len(s.Members) < 2 {
 		return nil, ErrNoRecipients
@@ -169,9 +168,8 @@ func (s *Sharing) Create(inst *instance.Instance) (map[string]string, error) {
 // CreateRequest prepares a sharing as just a request that the user will have to
 // accept before it does anything.
 func (s *Sharing) CreateRequest(inst *instance.Instance) error {
-	// TODO validate the doctype of each rule
-	if len(s.Rules) == 0 {
-		return ErrNoRules
+	if err := s.ValidateRules(); err != nil {
+		return err
 	}
 	if len(s.Members) < 2 {
 		return ErrNoRecipients

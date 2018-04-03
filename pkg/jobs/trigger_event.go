@@ -38,18 +38,18 @@ func (t *EventTrigger) Type() string {
 	return t.infos.Type
 }
 
-// DocType implements the permissions.Validable interface
+// DocType implements the permissions.Matcher interface
 func (t *EventTrigger) DocType() string {
 	return consts.Triggers
 }
 
-// ID implements the permissions.Validable interface
+// ID implements the permissions.Matcher interface
 func (t *EventTrigger) ID() string {
 	return t.infos.TID
 }
 
-// Valid implements the permissions.Validable interface
-func (t *EventTrigger) Valid(key, value string) bool {
+// Match implements the permissions.Matcher interface
+func (t *EventTrigger) Match(key, value string) bool {
 	switch key {
 	case WorkerType:
 		return t.infos.WorkerType == value
@@ -132,14 +132,14 @@ func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
 		return false
 	}
 
-	if v, ok := e.Doc.(permissions.Validable); ok {
-		if rule.ValuesValid(v) {
+	if v, ok := e.Doc.(permissions.Matcher); ok {
+		if rule.ValuesMatch(v) {
 			return true
 		}
 		// Particular case where the new doc is not valid but the old one was.
 		if e.OldDoc != nil {
-			if vOld, okOld := e.OldDoc.(permissions.Validable); okOld {
-				return rule.ValuesValid(vOld)
+			if vOld, okOld := e.OldDoc.(permissions.Matcher); okOld {
+				return rule.ValuesMatch(vOld)
 			}
 		}
 	}

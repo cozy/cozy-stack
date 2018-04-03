@@ -83,8 +83,8 @@ func (n *Notification) SetID(id string) { n.NID = id }
 // SetRev is used to implement the couchdb.Doc interface
 func (n *Notification) SetRev(rev string) { n.NRev = rev }
 
-// Valid implements permissions.Validable
-func (n *Notification) Valid(k, f string) bool { return false }
+// Match implements permissions.Matcher
+func (n *Notification) Match(k, f string) bool { return false }
 
 // Source returns the complete normalized source value. This should be recorded
 // in the `source_id` field.

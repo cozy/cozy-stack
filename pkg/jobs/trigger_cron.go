@@ -47,18 +47,18 @@ func (c *CronTrigger) Type() string {
 	return c.infos.Type
 }
 
-// DocType implements the permissions.Validable interface
+// DocType implements the permissions.Matcher interface
 func (c *CronTrigger) DocType() string {
 	return consts.Triggers
 }
 
-// ID implements the permissions.Validable interface
+// ID implements the permissions.Matcher interface
 func (c *CronTrigger) ID() string {
 	return c.infos.TID
 }
 
-// Valid implements the permissions.Validable interface
-func (c *CronTrigger) Valid(key, value string) bool {
+// Match implements the permissions.Matcher interface
+func (c *CronTrigger) Match(key, value string) bool {
 	switch key {
 	case WorkerType:
 		return c.infos.WorkerType == value

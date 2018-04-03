@@ -242,7 +242,6 @@ func checkCreatePermissions(c echo.Context, s *sharing.Sharing) (string, error) 
 		requestPerm.Type != permissions.TypeOauth {
 		return "", permissions.ErrInvalidAudience
 	}
-	// TODO add tests
 	for _, r := range s.Rules {
 		pr := permissions.Rule{
 			Title:    r.Title,
@@ -269,7 +268,6 @@ func checkGetPermissions(c echo.Context, s *sharing.Sharing) error {
 		return err
 	}
 
-	// TODO add tests
 	if requestPerm.Type == permissions.TypeSharePreview &&
 		requestPerm.SourceID == consts.Sharings+"/"+s.SID {
 		return nil
@@ -303,7 +301,7 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case sharing.ErrInvalidURL:
 		return jsonapi.InvalidParameter("url", err)
-	case sharing.ErrInvalidSharing:
+	case sharing.ErrInvalidSharing, sharing.ErrInvalidRule:
 		return jsonapi.BadRequest(err)
 	case sharing.ErrMemberNotFound:
 		return jsonapi.NotFound(err)

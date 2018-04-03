@@ -502,6 +502,76 @@ func TestDiscoveryWithPreview(t *testing.T) {
 	assertCorrectRedirection(t, res.Body)
 }
 
+func TestCheckPermissions(t *testing.T) {
+	v := echo.Map{
+		"data": echo.Map{
+			"type": consts.Sharings,
+			"attributes": echo.Map{
+				"description": "this is a test",
+				"rules": []interface{}{
+					echo.Map{
+						"title":   "test one",
+						"doctype": iocozytests,
+						"values":  []string{"foobar"},
+						"add":     "sync",
+					},
+					echo.Map{
+						"title":   "test two",
+						"doctype": consts.Contacts,
+						"values":  []string{"foobar"},
+						"add":     "sync",
+					},
+				},
+			},
+			"relationships": echo.Map{
+				"recipients": echo.Map{
+					"data": []interface{}{
+						echo.Map{
+							"id":      bobContact.ID(),
+							"doctype": bobContact.DocType(),
+						},
+					},
+				},
+			},
+		},
+	}
+	body, _ := json.Marshal(v)
+	r := bytes.NewReader(body)
+
+	req, err := http.NewRequest(http.MethodPost, tsA.URL+"/sharings/", r)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, res.StatusCode)
+	defer res.Body.Close()
+
+	other := &sharing.Sharing{
+		Description: "Another sharing",
+		Rules: []sharing.Rule{
+			{
+				Title:   "a directory",
+				DocType: consts.Files,
+				Values:  []string{"6836cc06-33e9-11e8-8157-dfc1aca099b6"},
+			},
+		},
+	}
+	assert.NoError(t, other.BeOwner(aliceInstance, "drive"))
+	assert.NoError(t, other.AddContact(aliceInstance, bobContact.ID()))
+	_, err = other.Create(aliceInstance)
+	assert.NoError(t, err)
+
+	req, err = http.NewRequest(http.MethodGet, tsA.URL+"/sharings/"+other.ID(), nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, res.StatusCode)
+	defer res.Body.Close()
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
