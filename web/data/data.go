@@ -401,7 +401,7 @@ func couchdbStyleErrorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 
 		if je, ok := err.(*jsonapi.Error); ok {
-			return c.JSON(je.Status, echo.Map{"error": je.Title})
+			return c.JSON(je.Status, echo.Map{"error": je.Error()})
 		}
 
 		return c.JSON(http.StatusInternalServerError, echo.Map{

@@ -102,6 +102,10 @@ type ChangesRequest struct {
 	// view filter in case if map function emits at least one record for them.
 	// See _view for more info.
 	View string `url:"view,omitempty"`
+	// SeqInterval tells CouchDB to only calculate the update seq with every
+	// Nth result returned. It is used by PouchDB replication, and helps to
+	// lower the load on a CouchDB cluster.
+	SeqInterval int `url:"seq_interval,omitempty"`
 }
 
 // A ChangesResponse is the response provided by a GetChanges call
