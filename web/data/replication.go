@@ -161,6 +161,7 @@ var allowedChangesParams = map[string]bool{
 	"include_docs": true,
 	"heartbeat":    true, // Pouchdb sends heartbeet even for non-continuous
 	"_nonce":       true, // Pouchdb sends a request hash to avoid agressive caching by some browsers
+	"seq_interval": true,
 }
 
 func changesFeed(c echo.Context) error {
@@ -188,7 +189,15 @@ func changesFeed(c echo.Context) error {
 	limit := 0
 	if limitString != "" {
 		if limit, err = strconv.Atoi(limitString); err != nil {
-			return jsonapi.NewError(http.StatusBadRequest, "Invalid limit value '%s'", err.Error())
+			return jsonapi.NewError(http.StatusBadRequest, "Invalid limit value '%s': %s", limitString, err.Error())
+		}
+	}
+
+	seqIntervalString := c.QueryParam("seq_interval")
+	seqInterval := 0
+	if seqIntervalString != "" {
+		if seqInterval, err = strconv.Atoi(seqIntervalString); err != nil {
+			return jsonapi.NewError(http.StatusBadRequest, "Invalid seq_interval value '%s': %s", seqIntervalString, err.Error())
 		}
 	}
 
@@ -209,6 +218,7 @@ func changesFeed(c echo.Context) error {
 		Since:       c.QueryParam("since"),
 		Limit:       limit,
 		IncludeDocs: includeDocs,
+		SeqInterval: seqInterval,
 	})
 
 	if err != nil {
