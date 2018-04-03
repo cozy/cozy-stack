@@ -14,19 +14,6 @@ const (
 	StateLen = 16
 )
 
-// Rule describes how the sharing behave when a document matching the rule is
-// added, updated or deleted.
-type Rule struct {
-	Title    string   `json:"title"`
-	DocType  string   `json:"doctype"`
-	Selector string   `json:"selector,omitempty"`
-	Values   []string `json:"values,omitempty"`
-	Local    bool     `json:"local,omitempty"`
-	Add      string   `json:"add"`
-	Update   string   `json:"update"`
-	Remove   string   `json:"remove"`
-}
-
 // Sharing contains all the information about a sharing.
 type Sharing struct {
 	SID  string `json:"_id,omitempty"`

@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
 // SharedInfo gives informations about how to apply the sharing to the shared
@@ -68,6 +69,16 @@ func RevGeneration(rev string) int {
 		return 0
 	}
 	return gen
+}
+
+// FindReferences returns the io.cozy.shared references to the given identifiers
+func FindReferences(inst *instance.Instance, ids []string) ([]*SharedRef, error) {
+	var refs []*SharedRef
+	req := &couchdb.AllDocsRequest{Keys: ids}
+	if err := couchdb.GetAllDocs(inst, consts.Shared, req, &refs); err != nil {
+		return nil, err
+	}
+	return refs, nil
 }
 
 var _ couchdb.Doc = &SharedRef{}

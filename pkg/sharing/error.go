@@ -28,4 +28,8 @@ var (
 	// ErrClientError is used when an OAuth client has made a request, and the
 	// response was a 4xx error
 	ErrClientError = errors.New("OAuth client request was in error")
+	// ErrMissingID is used when _id is missing on a doc for a bulk operation
+	ErrMissingID = errors.New("An identifier is missing")
+	// ErrMissingRev is used when _rev is missing on a doc for a bulk operation
+	ErrMissingRev = errors.New("A revision is missing")
 )

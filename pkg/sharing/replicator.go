@@ -14,12 +14,14 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
 // MaxRetries is the maximal number of retries for a replicator
 const MaxRetries = 10
+
+// BatchSize is the maximal number of documents mainpulated at once by the replicator
+const BatchSize = 100
 
 // ReplicateMsg is used for jobs on the share-replicate worker.
 type ReplicateMsg struct {
@@ -53,7 +55,7 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 // retryReplicate will add a job to retry a failed replication
 func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 	if errors == MaxRetries {
-		logger.WithDomain(inst.Domain).Warnf("[sharing] Max retries reached")
+		inst.Logger().Warnf("[sharing] Max retries reached")
 		return
 	}
 	// TODO add a delay between retries
@@ -62,7 +64,7 @@ func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 		Errors:    errors,
 	})
 	if err != nil {
-		logger.WithDomain(inst.Domain).Warnf("[sharing] Error on retry to replicate: %s", err)
+		inst.Logger().Warnf("[sharing] Error on retry to replicate: %s", err)
 		return
 	}
 	_, err = jobs.System().PushJob(&jobs.JobRequest{
@@ -71,14 +73,13 @@ func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 		Message:    msg,
 	})
 	if err != nil {
-		logger.WithDomain(inst.Domain).Warnf("[sharing] Error on retry to replicate: %s", err)
+		inst.Logger().Warnf("[sharing] Error on retry to replicate: %s", err)
 	}
 }
 
 // ReplicateTo starts a replicator on this sharing to the given member.
 // http://docs.couchdb.org/en/2.1.1/replication/protocol.html
 // https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js
-// TODO check for errors
 // TODO pouch use the pending property of changes for its replicator
 // https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js#L298-L301
 func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) error {
@@ -189,12 +190,13 @@ type Changes map[string][]string
 // callChangesFeed fetches the last changes from the changes feed
 // http://docs.couchdb.org/en/2.1.1/api/database/changes.html
 // TODO add a filter on the sharing
+// TODO what if there are more changes in the feed that BatchSize?
 func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Changes, string, error) {
 	response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
 		DocType:     consts.Shared,
 		IncludeDocs: true,
 		Since:       since,
-		Limit:       100,
+		Limit:       BatchSize,
 	})
 	if err != nil {
 		return nil, "", err
@@ -330,8 +332,10 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Mi
 		if _, ok := changes[result.SID]; !ok {
 			continue
 		}
-		// TODO check that result.Info[s.SID] exists
 		for _, rev := range result.Revisions {
+			if _, ok := result.Infos[s.SID]; !ok {
+				continue
+			}
 			for i, r := range changes[result.SID] {
 				if rev == r {
 					change := changes[result.SID]
@@ -353,8 +357,11 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Mi
 	return &missings, nil
 }
 
+// DocsList is a slice of raw documents
+type DocsList []map[string]interface{}
+
 // DocsByDoctype is a map of doctype -> slice of documents of this doctype
-type DocsByDoctype map[string][]map[string]interface{}
+type DocsByDoctype map[string]DocsList
 
 // getMissingDocs fetches the documents in bulk, partitionned by their doctype.
 // https://github.com/apache/couchdb-documentation/pull/263/files
@@ -424,13 +431,142 @@ func (s *Sharing) sendBulkDocs(m *Member, docs *DocsByDoctype) error {
 
 // ApplyBulkDocs is a multi-doctypes version of the POST _bulk_docs endpoint of CouchDB
 func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) error {
+	var refs []*SharedRef
+
 	for doctype, docs := range payload {
-		// TODO what if the database for doctype does not exist
-		// TODO update the io.cozy.shared database
-		// TODO call rtevent
-		if err := couchdb.BulkForceUpdateDocs(inst, doctype, docs); err != nil {
-			return err
+		var okDocs, docsToUpdate DocsList
+		var newRefs, existingRefs []*SharedRef
+		newDocs, existingDocs, err := partitionDocsPayload(inst, doctype, docs)
+		if err == nil {
+			okDocs, newRefs = s.filterDocsToAdd(inst, doctype, newDocs)
+			docsToUpdate, existingRefs, err = s.filterDocsToUpdate(inst, doctype, existingDocs)
+			if err != nil {
+				return err
+			}
+			okDocs = append(okDocs, docsToUpdate...)
+		} else {
+			okDocs, newRefs = s.filterDocsToAdd(inst, doctype, docs)
+			if len(okDocs) > 0 {
+				if err = couchdb.CreateDB(inst, doctype); err != nil {
+					return err
+				}
+			}
+		}
+		if len(okDocs) > 0 {
+			if err = couchdb.BulkForceUpdateDocs(inst, doctype, okDocs); err != nil {
+				return err
+			}
+			refs = append(refs, newRefs...)
+			refs = append(refs, existingRefs...)
 		}
 	}
-	return nil
+
+	// TODO call rtevent, both for docs and refs
+	refsToUpdate := make([]interface{}, len(refs))
+	for i, ref := range refs {
+		refsToUpdate[i] = ref
+	}
+	return couchdb.BulkUpdateDocs(inst, consts.Shared, refsToUpdate)
+}
+
+// partitionDocsPayload returns two slices: the first with documents that are new,
+// the second with documents that already exist on this cozy and must be updated.
+func partitionDocsPayload(inst *instance.Instance, doctype string, docs DocsList) (news DocsList, existings DocsList, err error) {
+	ids := make([]string, len(docs))
+	for i, doc := range docs {
+		_, ok := doc["_rev"].(string)
+		if !ok {
+			return nil, nil, ErrMissingRev
+		}
+		ids[i], ok = doc["_id"].(string)
+		if !ok {
+			return nil, nil, ErrMissingID
+		}
+	}
+	results := make([]interface{}, 0, len(docs))
+	req := couchdb.AllDocsRequest{Keys: ids}
+	if err = couchdb.GetAllDocs(inst, doctype, &req, &results); err != nil {
+		return nil, nil, err
+	}
+	for i, doc := range docs {
+		if results[i] == nil {
+			news = append(news, doc)
+		} else {
+			existings = append(existings, doc)
+		}
+	}
+	return news, existings, nil
+}
+
+// filterDocsToAdd returns a subset of the docs slice with just the documents
+// that match a rule of the sharing. It also returns a reference documents to
+// put in the io.cozy.shared database.
+// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
+func (s *Sharing) filterDocsToAdd(inst *instance.Instance, doctype string, docs DocsList) (DocsList, []*SharedRef) {
+	filtered := docs[:0]
+	refs := make([]*SharedRef, 0, len(docs))
+	for _, doc := range docs {
+		r := -1
+		for i, rule := range s.Rules {
+			if rule.Accept(doctype, doc) {
+				r = i
+				break
+			}
+		}
+		if r >= 0 {
+			// TODO _rev is enough or should we use _revisions?
+			ref := SharedRef{
+				SID:       doctype + "/" + doc["_id"].(string),
+				Revisions: []string{doc["_rev"].(string)},
+				Infos: map[string]SharedInfo{
+					s.SID: {Rule: r},
+				},
+			}
+			refs = append(refs, &ref)
+			filtered = append(filtered, doc)
+		}
+	}
+	return filtered, refs
+}
+
+// filterDocsToUpdate returns a subset of the docs slice with just the documents
+// that are referenced for this sharing in the io.cozy.shared database.
+func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, docs DocsList) (DocsList, []*SharedRef, error) {
+	ids := make([]string, len(docs))
+	for i, doc := range docs {
+		id, ok := doc["_id"].(string)
+		if !ok {
+			return nil, nil, ErrMissingID
+		}
+		ids[i] = doctype + "/" + id
+	}
+	refs, err := FindReferences(inst, ids)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	filtered := docs[:0]
+	frefs := refs[:0]
+	for i, doc := range docs {
+		if refs[i] != nil {
+			infos, ok := refs[i].Infos[s.SID]
+			if ok && !infos.Removed {
+				rev := doc["_rev"].(string)
+				exists := false
+				for _, r := range refs[i].Revisions {
+					if r == rev {
+						exists = true
+						break
+					}
+				}
+				if !exists {
+					refs[i].Revisions = append(refs[i].Revisions, rev)
+				}
+				frefs = append(frefs, refs[i])
+				filtered = append(filtered, doc)
+			}
+		}
+	}
+
+	return filtered, frefs, nil
 }

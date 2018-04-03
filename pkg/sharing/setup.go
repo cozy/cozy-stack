@@ -5,23 +5,28 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
 // Setup is used when a member accept a sharing to prepare the io.cozy.shared
 // database and start an initial replication. It is meant to be used in a new
 // goroutine and, as such, does not return errors but log them.
 func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
+	// Don't do the setup for most tests
+	if !inst.OnboardingFinished {
+		return
+	}
+
 	// TODO lock
+	// TODO ensure io.cozy.shared db exists
 	// TODO add triggers to update io.cozy.shared if not yet configured
 	for i, rule := range s.Rules {
 		if err := s.InitialCopy(inst, rule, i); err != nil {
-			logger.WithDomain(inst.Domain).Warnf("[sharing] Error on initial copy for %s: %s", rule.Title, err)
+			inst.Logger().Warnf("[sharing] Error on initial copy for %s: %s", rule.Title, err)
 		}
 	}
 	// TODO add a trigger for next replications if not yet configured
 	if err := s.ReplicateTo(inst, m, true); err != nil {
-		logger.WithDomain(inst.Domain).Warnf("[sharing] Error on initial replication: %s", err)
+		inst.Logger().Warnf("[sharing] Error on initial replication: %s", err)
 		s.retryReplicate(inst, 1)
 	}
 }
@@ -87,9 +92,8 @@ func (s *Sharing) buildReferences(inst *instance.Instance, rule Rule, r int, doc
 	for i, doc := range docs {
 		ids[i] = rule.DocType + "/" + doc.ID()
 	}
-	req := &couchdb.AllDocsRequest{Keys: ids}
-	var srefs []*SharedRef
-	if err := couchdb.GetAllDocs(inst, consts.Shared, req, &srefs); err != nil {
+	srefs, err := FindReferences(inst, ids)
+	if err != nil {
 		return nil, err
 	}
 

@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -15,7 +16,11 @@ import (
 
 var inst *instance.Instance
 
+// Some doctypes for the tests
 const testDoctype = "io.cozy.sharing.tests"
+const foos = "io.cozy.sharing.test.foos"
+const bars = "io.cozy.sharing.test.bars"
+const bazs = "io.cozy.sharing.test.bazs"
 
 func TestRevGeneration(t *testing.T) {
 	assert.Equal(t, 1, RevGeneration("1-aaa"))
@@ -272,6 +277,353 @@ func TestInitialCopy(t *testing.T) {
 		assert.Contains(t, threeRef.Infos, s2.SID)
 		assert.Equal(t, 0, threeRef.Infos[s2.SID].Rule)
 	}
+}
+
+func getDoc(t *testing.T, doctype, id string) *couchdb.JSONDoc {
+	var doc couchdb.JSONDoc
+	err := couchdb.GetDoc(inst, doctype, id, &doc)
+	assert.NoError(t, err)
+	return &doc
+}
+
+func assertNoDoc(t *testing.T, doctype, id string) {
+	var doc couchdb.JSONDoc
+	err := couchdb.GetDoc(inst, doctype, id, &doc)
+	assert.Error(t, err)
+}
+
+func TestApplyBulkDocs(t *testing.T) {
+	// Start with an empty io.cozy.shared database
+	couchdb.DeleteDB(inst, consts.Shared)
+	couchdb.CreateDB(inst, consts.Shared)
+	couchdb.CreateDB(inst, foos)
+
+	s := Sharing{
+		SID: uuidv4(),
+		Rules: []Rule{
+			{
+				Title:    "foos rule",
+				DocType:  foos,
+				Selector: "hello",
+				Values:   []string{"world"},
+			},
+			{
+				Title:    "bars rule",
+				DocType:  bars,
+				Selector: "hello",
+				Values:   []string{"world"},
+			},
+			{
+				Title:    "bazs rule",
+				DocType:  bazs,
+				Selector: "hello",
+				Values:   []string{"world"},
+			},
+		},
+	}
+	s2 := Sharing{
+		SID: uuidv4(),
+		Rules: []Rule{
+			{
+				Title:    "bars rule",
+				DocType:  bars,
+				Selector: "hello",
+				Values:   []string{"world"},
+			},
+		},
+	}
+
+	// Add a new document
+	fooOneID := uuidv4()
+	payload := DocsByDoctype{
+		foos: DocsList{
+			{
+				"_id":  fooOneID,
+				"_rev": "1-abc",
+				"_revisions": map[string]interface{}{
+					"start": 1,
+					"ids":   []string{"abc"},
+				},
+				"hello":  "world",
+				"number": "one",
+			},
+		},
+	}
+	err := s.ApplyBulkDocs(inst, payload)
+	assert.NoError(t, err)
+	nbShared := 1
+	assertNbSharedRef(t, nbShared)
+	doc := getDoc(t, foos, fooOneID)
+	assert.Equal(t, "1-abc", doc.Rev())
+	assert.Equal(t, "one", doc.Get("number"))
+	ref := getSharedRef(t, foos, fooOneID)
+	assert.Equal(t, []string{"1-abc"}, ref.Revisions)
+	assert.Contains(t, ref.Infos, s.SID)
+	assert.Equal(t, 0, ref.Infos[s.SID].Rule)
+
+	// Update a document
+	payload = DocsByDoctype{
+		foos: DocsList{
+			{
+				"_id":  fooOneID,
+				"_rev": "2-def",
+				"_revisions": map[string]interface{}{
+					"start": 2,
+					"ids":   []string{"def", "abc"},
+				},
+				"hello":  "world",
+				"number": "one bis",
+			},
+		},
+	}
+	err = s.ApplyBulkDocs(inst, payload)
+	assert.NoError(t, err)
+	assertNbSharedRef(t, nbShared)
+	doc = getDoc(t, foos, fooOneID)
+	assert.Equal(t, "2-def", doc.Rev())
+	assert.Equal(t, "one bis", doc.Get("number"))
+	ref = getSharedRef(t, foos, fooOneID)
+	assert.Equal(t, []string{"1-abc", "2-def"}, ref.Revisions)
+	assert.Contains(t, ref.Infos, s.SID)
+	assert.Equal(t, 0, ref.Infos[s.SID].Rule)
+
+	// Create a reference for another sharing, on a database that does not exist
+	barZeroID := uuidv4()
+	payload = DocsByDoctype{
+		bars: DocsList{
+			{
+				"_id":  barZeroID,
+				"_rev": "1-111",
+				"_revisions": map[string]interface{}{
+					"start": 1,
+					"ids":   []string{"111"},
+				},
+				"hello":  "world",
+				"number": "zero",
+			},
+		},
+	}
+	err = s2.ApplyBulkDocs(inst, payload)
+	assert.NoError(t, err)
+	nbShared++
+	assertNbSharedRef(t, nbShared)
+	doc = getDoc(t, bars, barZeroID)
+	assert.Equal(t, "1-111", doc.Rev())
+	assert.Equal(t, "zero", doc.Get("number"))
+	ref = getSharedRef(t, bars, barZeroID)
+	assert.Equal(t, []string{"1-111"}, ref.Revisions)
+	assert.Contains(t, ref.Infos, s2.SID)
+	assert.Equal(t, 0, ref.Infos[s2.SID].Rule)
+
+	// Add documents for two doctypes at the same time
+	barTwoID := uuidv4()
+	bazThreeID := uuidv4()
+	bazFourID := uuidv4()
+	payload = DocsByDoctype{
+		bars: DocsList{
+			{
+				"_id":  barTwoID,
+				"_rev": "2-caa",
+				"_revisions": map[string]interface{}{
+					"start": 2,
+					"ids":   []string{"caa", "baa"},
+				},
+				"hello":  "world",
+				"number": "two",
+			},
+		},
+		bazs: DocsList{
+			{
+				"_id":  bazThreeID,
+				"_rev": "1-ddd",
+				"_revisions": map[string]interface{}{
+					"start": 1,
+					"ids":   []string{"ddd"},
+				},
+				"hello":  "world",
+				"number": "three",
+			},
+			{
+				"_id":  bazFourID,
+				"_rev": "1-eee",
+				"_revisions": map[string]interface{}{
+					"start": 1,
+					"ids":   []string{"eee"},
+				},
+				"hello":  "world",
+				"number": "four",
+			},
+		},
+	}
+	err = s.ApplyBulkDocs(inst, payload)
+	assert.NoError(t, err)
+	nbShared += 3
+	assertNbSharedRef(t, nbShared)
+	doc = getDoc(t, bars, barTwoID)
+	assert.Equal(t, "2-caa", doc.Rev())
+	assert.Equal(t, "two", doc.Get("number"))
+	ref = getSharedRef(t, bars, barTwoID)
+	assert.Equal(t, []string{"2-caa"}, ref.Revisions)
+	assert.Contains(t, ref.Infos, s.SID)
+	assert.Equal(t, 1, ref.Infos[s.SID].Rule)
+	doc = getDoc(t, bazs, bazThreeID)
+	assert.Equal(t, "1-ddd", doc.Rev())
+	assert.Equal(t, "three", doc.Get("number"))
+	ref = getSharedRef(t, bazs, bazThreeID)
+	assert.Equal(t, []string{"1-ddd"}, ref.Revisions)
+	assert.Contains(t, ref.Infos, s.SID)
+	assert.Equal(t, 2, ref.Infos[s.SID].Rule)
+	doc = getDoc(t, bazs, bazFourID)
+	assert.Equal(t, "1-eee", doc.Rev())
+	assert.Equal(t, "four", doc.Get("number"))
+	ref = getSharedRef(t, bazs, bazFourID)
+	assert.Equal(t, []string{"1-eee"}, ref.Revisions)
+	assert.Contains(t, ref.Infos, s.SID)
+	assert.Equal(t, 2, ref.Infos[s.SID].Rule)
+
+	// And a mix of all cases
+	fooFiveID := uuidv4()
+	barSixID := uuidv4()
+	barSevenID := uuidv4()
+	barEightID := uuidv4()
+	barEightRev := createDoc(t, bars, barEightID, map[string]interface{}{"hello": "world", "number": "8"}).Rev()
+	payload = DocsByDoctype{
+		foos: DocsList{
+			{
+				"_id":  fooOneID,
+				"_rev": "3-fab",
+				"_revisions": map[string]interface{}{
+					"start": 3,
+					"ids":   []string{"fab", "def", "abc"},
+				},
+				"hello":  "world",
+				"number": "one ter",
+			},
+			{
+				"_id":  fooFiveID,
+				"_rev": "1-aab",
+				"_revisions": map[string]interface{}{
+					"start": 1,
+					"ids":   []string{"aab"},
+				},
+				"hello":  "world",
+				"number": "five",
+			},
+		},
+		bars: DocsList{
+			{
+				"_id":  barSixID,
+				"_rev": "1-aac",
+				"_revisions": map[string]interface{}{
+					"start": 1,
+					"ids":   []string{"aac"},
+				},
+				"hello":  "world",
+				"number": "six",
+			},
+			{
+				"_id":  barSevenID,
+				"_rev": "1-bad",
+				"_revisions": map[string]interface{}{
+					"start": 1,
+					"ids":   []string{"bad"},
+				},
+				"not":    "shared",
+				"number": "seven",
+			},
+			{
+				"_id":  barEightID,
+				"_rev": barEightRev,
+				"_revisions": map[string]interface{}{
+					"start": 1,
+					"ids":   []string{strings.Replace(barEightRev, "1-", "", 1)},
+				},
+				"hello":  "world",
+				"number": "8 bis",
+			},
+			{
+				"_id":  barZeroID,
+				"_rev": "2-222",
+				"_revisions": map[string]interface{}{
+					"start": 2,
+					"ids":   []string{"222", "111"},
+				},
+				"hello":  "world",
+				"number": "zero bis",
+			},
+			{
+				"_id":  barTwoID,
+				"_rev": "3-daa",
+				"_revisions": map[string]interface{}{
+					"start": 3,
+					"ids":   []string{"daa", "caa", "baa"},
+				},
+				"hello":  "world",
+				"number": "two bis",
+			},
+		},
+		bazs: DocsList{
+			{
+				"_id":  bazThreeID,
+				"_rev": "3-ddf",
+				"_revisions": map[string]interface{}{
+					"start": 3,
+					"ids":   []string{"ddf", "dde", "ddd"},
+				},
+				"hello":  "world",
+				"number": "three bis",
+			},
+		},
+	}
+	err = s.ApplyBulkDocs(inst, payload)
+	assert.NoError(t, err)
+	nbShared += 2 // fooFiveID and barSixID
+	assertNbSharedRef(t, nbShared)
+	doc = getDoc(t, foos, fooOneID)
+	assert.Equal(t, "3-fab", doc.Rev())
+	assert.Equal(t, "one ter", doc.Get("number"))
+	ref = getSharedRef(t, foos, fooOneID)
+	assert.Equal(t, []string{"1-abc", "2-def", "3-fab"}, ref.Revisions)
+	assert.Contains(t, ref.Infos, s.SID)
+	assert.Equal(t, 0, ref.Infos[s.SID].Rule)
+	doc = getDoc(t, foos, fooFiveID)
+	assert.Equal(t, "1-aab", doc.Rev())
+	assert.Equal(t, "five", doc.Get("number"))
+	ref = getSharedRef(t, foos, fooFiveID)
+	assert.Equal(t, []string{"1-aab"}, ref.Revisions)
+	assert.Contains(t, ref.Infos, s.SID)
+	assert.Equal(t, 0, ref.Infos[s.SID].Rule)
+	doc = getDoc(t, bazs, bazThreeID)
+	assert.Equal(t, "3-ddf", doc.Rev())
+	assert.Equal(t, "three bis", doc.Get("number"))
+	ref = getSharedRef(t, bazs, bazThreeID)
+	assert.Equal(t, []string{"1-ddd", "3-ddf"}, ref.Revisions)
+	assert.Contains(t, ref.Infos, s.SID)
+	assert.Equal(t, 2, ref.Infos[s.SID].Rule)
+	doc = getDoc(t, bars, barSixID)
+	assert.Equal(t, "1-aac", doc.Rev())
+	assert.Equal(t, "six", doc.Get("number"))
+	ref = getSharedRef(t, bars, barSixID)
+	assert.Equal(t, []string{"1-aac"}, ref.Revisions)
+	assert.Contains(t, ref.Infos, s.SID)
+	assert.Equal(t, 1, ref.Infos[s.SID].Rule)
+	doc = getDoc(t, bars, barTwoID)
+	assert.Equal(t, "3-daa", doc.Rev())
+	assert.Equal(t, "two bis", doc.Get("number"))
+	ref = getSharedRef(t, bars, barTwoID)
+	assert.Equal(t, []string{"2-caa", "3-daa"}, ref.Revisions)
+	assert.Contains(t, ref.Infos, s.SID)
+	assert.Equal(t, 1, ref.Infos[s.SID].Rule)
+	// New document rejected because it doesn't match the rules
+	assertNoDoc(t, bars, barSevenID)
+	// Existing document with no shared reference
+	doc = getDoc(t, bars, barEightID)
+	assert.Equal(t, barEightRev, doc.Rev())
+	assert.Equal(t, "8", doc.Get("number"))
+	// Existing document with a shared reference, but not for the good sharing
+	doc = getDoc(t, bars, barZeroID)
+	assert.Equal(t, "1-111", doc.Rev())
+	assert.Equal(t, "zero", doc.Get("number"))
 }
 
 func TestMain(m *testing.M) {

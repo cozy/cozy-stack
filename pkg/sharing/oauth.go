@@ -12,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -89,7 +88,7 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL st
 	m.Instance = u.String()
 
 	if err = m.CreateSharingRequest(inst, s, u); err != nil {
-		logger.WithDomain(inst.Domain).Warnf("[sharing] Error on sharing request: %s", err)
+		inst.Logger().Warnf("[sharing] Error on sharing request: %s", err)
 		return ErrRequestFailed
 	}
 	return couchdb.UpdateDoc(inst, s)
@@ -239,6 +238,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if res.StatusCode/100 != 2 {
 		return ErrRequestFailed
 	}
+	// TODO ensure io.cozy.shared db exists
 
 	if !s.ReadOnly() {
 		var creds Credentials
