@@ -170,7 +170,7 @@ func changesFeed(c echo.Context) error {
 	// Drop a clear error for parameters not supported by stack
 	for key := range c.QueryParams() {
 		if !allowedChangesParams[key] {
-			return jsonapi.NewError(http.StatusBadRequest, "Unsuported query parameter '%s'", key)
+			return jsonapi.NewError(http.StatusBadRequest, "Unsupported query parameter '%s'", key)
 		}
 	}
 
