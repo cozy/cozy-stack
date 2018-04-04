@@ -1,7 +1,6 @@
 package apps
 
 import (
-	"archive/tar"
 	"compress/gzip"
 	"io"
 	"os"
@@ -208,83 +207,6 @@ func (f *aferoCopier) Commit() error {
 
 func (f *aferoCopier) Abort() error {
 	return f.fs.RemoveAll(f.tmpDir)
-}
-
-type tarCopier struct {
-	src  Copier
-	name string
-
-	tmp afero.File
-	fs  afero.Fs
-	tw  *tar.Writer
-}
-
-// newTarCopier defines a Copier that will copy all the files into an tar
-// archive before copying that archive into the specified source Copier.
-func newTarCopier(src Copier, name string) Copier {
-	return &tarCopier{
-		src:  src,
-		name: name,
-	}
-}
-
-func (t *tarCopier) Start(slug, version string) (bool, error) {
-	if exists, err := t.src.Start(slug, version); err != nil || exists {
-		return exists, err
-	}
-	fs := afero.NewOsFs()
-	tmp, err := afero.TempFile(fs, "", "konnector-")
-	if err != nil {
-		return false, err
-	}
-	tw := tar.NewWriter(tmp)
-	t.tmp = tmp
-	t.fs = fs
-	t.tw = tw
-	return false, nil
-}
-
-func (t *tarCopier) Copy(stat os.FileInfo, src io.Reader) error {
-	hdr := &tar.Header{
-		Name: stat.Name(),
-		Mode: int64(stat.Mode()),
-		Size: stat.Size(),
-	}
-	if err := t.tw.WriteHeader(hdr); err != nil {
-		return err
-	}
-	_, err := io.Copy(t.tw, src)
-	return err
-}
-
-func (t *tarCopier) Commit() (err error) {
-	defer func() {
-		if t.tmp != nil {
-			t.fs.Remove(t.tmp.Name()) // #nosec
-		}
-		if err != nil {
-			t.src.Abort()
-		} else {
-			err = t.src.Commit()
-		}
-	}()
-	if t.tw == nil || t.tmp == nil {
-		return nil
-	}
-	if err = t.tw.Flush(); err != nil {
-		return err
-	}
-	if _, err = t.tmp.Seek(0, 0); err != nil {
-		return err
-	}
-	return t.src.Copy(&fileInfo{name: KonnectorArchiveName}, t.tmp)
-}
-
-func (t *tarCopier) Abort() error {
-	if t.tmp != nil {
-		t.fs.Remove(t.tmp.Name())
-	}
-	return t.src.Abort()
 }
 
 type fileInfo struct {

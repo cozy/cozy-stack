@@ -83,13 +83,6 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		return nil, err
 	}
 
-	// For konnectors applications, we actually create a tar archive in which the
-	// sources are stored before copying the archive into the application
-	// storage.
-	if man.AppType() == Konnector {
-		fs = newTarCopier(fs, KonnectorArchiveName)
-	}
-
 	var src *url.URL
 	switch opts.Operation {
 	case Install:

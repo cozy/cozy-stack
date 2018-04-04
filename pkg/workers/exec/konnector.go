@@ -130,14 +130,22 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	if err != nil {
 		return
 	}
+
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fileServer := i.KonnectorsFileServer()
 	tarFile, err := fileServer.Open(slug, man.Version(), apps.KonnectorArchiveName)
+	if err == nil {
+		err = extractTar(workFS, tarFile)
+		if errc := tarFile.Close(); err == nil {
+			err = errc
+		}
+	} else if os.IsNotExist(err) {
+		err = copyFiles(workFS, fileServer, slug, man.Version())
+	}
 	if err != nil {
 		return
 	}
-	defer tarFile.Close()
 
 	// Create the folder in which the konnector has the right to write.
 	// {
@@ -165,42 +173,81 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	// 	}
 	// }
 
+	if fileExecPath != "" {
+		workDir = path.Join(workDir, fileExecPath)
+	}
+	return
+}
+
+func copyFiles(workFS afero.Fs, fileServer apps.FileServer, slug, version string) error {
+	files, err := fileServer.FilesList(slug, version)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		var src io.ReadCloser
+		var dst io.WriteCloser
+		src, err = fileServer.Open(slug, version, file)
+		if err != nil {
+			return err
+		}
+		dirname := path.Dir(file)
+		if dirname != "." {
+			if err = workFS.MkdirAll(dirname, 0755); err != nil {
+				return err
+			}
+		}
+		dst, err = workFS.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0640)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(dst, src)
+		errc1 := dst.Close()
+		errc2 := src.Close()
+		if err != nil {
+			return err
+		}
+		if errc1 != nil {
+			return errc1
+		}
+		if errc2 != nil {
+			return errc2
+		}
+	}
+	return nil
+}
+
+func extractTar(workFS afero.Fs, tarFile io.ReadCloser) error {
 	tr := tar.NewReader(tarFile)
 	for {
 		var hdr *tar.Header
-		hdr, err = tr.Next()
+		hdr, err := tr.Next()
 		if err == io.EOF {
-			err = nil
-			break
+			return nil
 		}
 		if err != nil {
-			return
+			return err
 		}
 		dirname := path.Dir(hdr.Name)
 		if dirname != "." {
 			if err = workFS.MkdirAll(dirname, 0755); err != nil {
-				return
+				return err
 			}
 		}
 		var f afero.File
 		f, err = workFS.OpenFile(hdr.Name, os.O_CREATE|os.O_WRONLY, 0640)
 		if err != nil {
-			return
+			return err
 		}
 		_, err = io.Copy(f, tr)
 		errc := f.Close()
 		if err != nil {
-			return
+			return err
 		}
 		if errc != nil {
-			err = errc
-			return
+			return errc
 		}
 	}
-	if fileExecPath != "" {
-		workDir = path.Join(workDir, fileExecPath)
-	}
-	return
 }
 
 func (w *konnectorWorker) Slug() string {
