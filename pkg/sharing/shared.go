@@ -7,6 +7,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/lock"
 )
 
 // TrackMessage is used for jobs on the share-track worker.
@@ -108,10 +109,40 @@ func FindReferences(inst *instance.Instance, ids []string) ([]*SharedRef, error)
 // UpdateShared updates the io.cozy.shared database when a document is
 // created/update/removed
 func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) error {
-	// TODO lock
-	// TODO find the io.cozy.shared ref
-	// TODO create/update it
-	return nil
+	mu := lock.ReadWrite(inst.Domain + "/shared")
+	mu.Lock()
+	defer mu.Unlock()
+
+	sid := evt.Doc.DocType() + "/" + evt.Doc.ID()
+	var ref SharedRef
+	if err := couchdb.GetDoc(inst, consts.Shared, sid, &ref); err != nil {
+		if !couchdb.IsNotFoundError(err) {
+			return err
+		}
+		ref.SID = sid
+	}
+
+	if _, ok := ref.Infos[msg.SharingID]; !ok {
+		ref.Infos[msg.SharingID] = SharedInfo{
+			Rule: msg.RuleIndex,
+		}
+	}
+	// TODO detect when a document goes out of a sharing
+	if evt.Verb == "DELETED" {
+		infos := ref.Infos[msg.SharingID]
+		infos.Removed = true
+	}
+
+	// TODO to be improved when we will work on conflicts
+	rev := evt.Doc.Rev()
+	if len(ref.Revisions) == 0 || ref.Revisions[len(ref.Revisions)-1] != rev {
+		ref.Revisions = append(ref.Revisions, rev)
+	}
+
+	if ref.Rev() == "" {
+		return couchdb.CreateDoc(inst, &ref)
+	}
+	return couchdb.UpdateDoc(inst, &ref)
 }
 
 var _ couchdb.Doc = &SharedRef{}

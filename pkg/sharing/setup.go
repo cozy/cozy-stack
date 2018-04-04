@@ -120,6 +120,11 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 	if rule.Local || len(rule.Values) == 0 {
 		return nil
 	}
+
+	mu := lock.ReadWrite(inst.Domain + "/shared")
+	mu.Lock()
+	defer mu.Unlock()
+
 	docs, err := findDocsToCopy(inst, rule)
 	if err != nil {
 		return err
