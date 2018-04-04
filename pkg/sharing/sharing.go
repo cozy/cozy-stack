@@ -19,6 +19,12 @@ type Sharing struct {
 	SID  string `json:"_id,omitempty"`
 	SRev string `json:"_rev,omitempty"`
 
+	// Triggers keep record of which triggers are active
+	Triggers struct {
+		Track     bool `json:"track,omitempty"`
+		Replicate bool `json:"replicate,omitempty"`
+	} `json:"triggers"`
+
 	Active      bool      `json:"active,omitempty"`
 	Owner       bool      `json:"owner,omitempty"`
 	Open        bool      `json:"open_sharing,omitempty"`
@@ -27,12 +33,6 @@ type Sharing struct {
 	PreviewPath string    `json:"preview_path,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
-
-	// Triggers keep record of which triggers are active
-	Triggers struct {
-		Track     bool `json:"track,omitempty"`
-		Replicate bool `json:"replicate,omitempty"`
-	} `json:"triggers"`
 
 	Rules []Rule `json:"rules"`
 
