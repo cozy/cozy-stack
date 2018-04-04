@@ -86,6 +86,13 @@ func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned.Screenshots = cloneRawMessage(m.Screenshots)
 	cloned.Tags = cloneRawMessage(m.Tags)
 	cloned.Parameters = cloneRawMessage(m.Parameters)
+
+	cloned.DataType = cloneRawMessage(m.DataType)
+	cloned.Doctypes = cloneRawMessage(m.Doctypes)
+	cloned.Fields = cloneRawMessage(m.Fields)
+	cloned.Messages = cloneRawMessage(m.Messages)
+	cloned.OAuth = cloneRawMessage(m.OAuth)
+	cloned.TimeInterval = cloneRawMessage(m.TimeInterval)
 	return &cloned
 }
 
