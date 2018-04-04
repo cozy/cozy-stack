@@ -8,6 +8,10 @@ Manage instances of a stack
 cozy-stack instances add allows to create an instance on the cozy for a
 given domain.
 
+If the COZY_DISABLE_INSTANCES_ADD_RM env variable is set, creating and
+destroying instances will be desactivated and the content of this variable will
+be used as the error message.
+
 
 ```
 cozy-stack instances add [domain] [flags]
