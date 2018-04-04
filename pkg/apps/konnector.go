@@ -23,6 +23,7 @@ type KonnManifest struct {
 	Type        string           `json:"type,omitempty"`
 	License     string           `json:"license,omitempty"`
 	Language    string           `json:"language,omitempty"`
+	VendorLink  string           `json:"vendor_link"`
 	Languages   *json.RawMessage `json:"languages,omitempty"`
 	Locales     *json.RawMessage `json:"locales,omitempty"`
 	Langs       *json.RawMessage `json:"langs,omitempty"`
@@ -31,6 +32,14 @@ type KonnManifest struct {
 	Developer   *json.RawMessage `json:"developer,omitempty"`
 	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
 	Tags        *json.RawMessage `json:"tags,omitempty"`
+
+	Frequency    string           `json:"frequency"`
+	DataType     *json.RawMessage `json:"data_type"`
+	Doctypes     *json.RawMessage `json:"doctypes"`
+	Fields       *json.RawMessage `json:"fields"`
+	Messages     *json.RawMessage `json:"messages"`
+	OAuth        *json.RawMessage `json:"oauth"`
+	TimeInterval *json.RawMessage `json:"time_interval"`
 
 	Parameters    *json.RawMessage `json:"parameters,omitempty"`
 	Notifications Notifications    `json:"notifications"`
