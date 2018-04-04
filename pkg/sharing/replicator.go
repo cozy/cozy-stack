@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -31,7 +32,10 @@ type ReplicateMsg struct {
 
 // Replicate starts a replicator on this sharing.
 func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
-	// TODO lock
+	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID)
+	mu.Lock()
+	defer mu.Unlock()
+
 	var errm error
 	if !s.Owner {
 		errm = s.ReplicateTo(inst, &s.Members[0], false)

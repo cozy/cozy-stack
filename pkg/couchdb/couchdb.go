@@ -418,6 +418,17 @@ func GetDocRev(db Database, doctype, id, rev string, out Doc) error {
 	return makeRequest(db, doctype, http.MethodGet, url, nil, out)
 }
 
+// EnsureDBExist creates the database for the doctype if it doesn't exist
+func EnsureDBExist(db Database, doctype string) error {
+	if _, err := DBStatus(db, doctype); IsNoDatabaseError(err) {
+		if err = CreateDB(db, doctype); err != nil {
+			_, err = DBStatus(db, doctype)
+			return err
+		}
+	}
+	return nil
+}
+
 // CreateDB creates the necessary database for a doctype
 func CreateDB(db Database, doctype string) error {
 	return makeRequest(db, doctype, http.MethodPut, "", nil, nil)

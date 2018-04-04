@@ -190,7 +190,7 @@ func (i *Instance) makeVFS() error {
 		return nil
 	}
 	fsURL := config.FsURL()
-	mutex := lock.ReadWrite(i.Domain)
+	mutex := lock.ReadWrite(i.Domain + "/vfs")
 	index := vfs.NewCouchdbIndexer(i)
 	disk := vfs.DiskThresholder(i)
 	var err error

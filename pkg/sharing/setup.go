@@ -5,6 +5,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/lock"
 )
 
 // Setup is used when a member accept a sharing to prepare the io.cozy.shared
@@ -16,8 +17,14 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		return
 	}
 
-	// TODO lock
-	// TODO ensure io.cozy.shared db exists
+	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID)
+	mu.Lock()
+	defer mu.Unlock()
+
+	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
+		inst.Logger().Warnf("[sharing] Can't ensure io.cozy.shared exists: %s", err)
+	}
+
 	// TODO add triggers to update io.cozy.shared if not yet configured
 	for i, rule := range s.Rules {
 		if err := s.InitialCopy(inst, rule, i); err != nil {
