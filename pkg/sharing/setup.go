@@ -5,6 +5,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
 )
 
@@ -22,20 +23,58 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	defer mu.Unlock()
 
 	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
-		inst.Logger().Warnf("[sharing] Can't ensure io.cozy.shared exists: %s", err)
+		inst.Logger().Warnf("[sharing] Can't ensure io.cozy.shared exists (%s): %s", s.SID, err)
 	}
 
-	// TODO add triggers to update io.cozy.shared if not yet configured
+	if err := s.AddTrackTriggers(inst); err != nil {
+		inst.Logger().Warnf("[sharing] Errors on setup of track triggers (%s): %s", s.SID, err)
+	}
+	// TODO add triggers for rules that can revoke the sharing
 	for i, rule := range s.Rules {
 		if err := s.InitialCopy(inst, rule, i); err != nil {
-			inst.Logger().Warnf("[sharing] Error on initial copy for %s: %s", rule.Title, err)
+			inst.Logger().Warnf("[sharing] Error on initial copy for %s (%s): %s", rule.Title, s.SID, err)
 		}
 	}
 	// TODO add a trigger for next replications if not yet configured
 	if err := s.ReplicateTo(inst, m, true); err != nil {
-		inst.Logger().Warnf("[sharing] Error on initial replication: %s", err)
+		inst.Logger().Warnf("[sharing] Error on initial replication (%s): %s", s.SID, err)
 		s.retryReplicate(inst, 1)
 	}
+}
+
+// AddTrackTriggers creates the share-track triggers for each rule of the
+// sharing that will update the io.cozy.shared database.
+func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
+	sched := jobs.System()
+	for i, rule := range s.Rules {
+		args := rule.TriggerArgs(s.Owner)
+		if args == "" {
+			continue
+		}
+		msg, err := jobs.NewMessage(&TrackMessage{
+			SharingID: s.SID,
+			RuleIndex: i,
+		})
+		if err != nil {
+			return err
+		}
+		t, err := jobs.NewTrigger(&jobs.TriggerInfos{
+			Domain:     inst.Domain,
+			Type:       "@event",
+			WorkerType: "share-track",
+			Message:    msg,
+			Arguments:  args,
+		})
+		if err != nil {
+			return err
+		}
+		if err = sched.AddTrigger(t); err != nil {
+			return err
+		}
+	}
+	// TODO persist in the sharing that the triggers have been created to avoid
+	// creating them several times
+	return nil
 }
 
 // InitialCopy lists the shared documents and put a reference in the
