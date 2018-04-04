@@ -88,6 +88,16 @@ func (s *Sharing) ReadOnly() bool {
 	return true
 }
 
+// HasFiles returns true if some files can be exchanged by this sharing
+func (s *Sharing) HasFiles() bool {
+	for _, rule := range s.Rules {
+		if !rule.Local && rule.DocType == consts.Files {
+			return true
+		}
+	}
+	return false
+}
+
 // BeOwner initializes a sharing on the cozy of its owner
 func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 	s.Active = true

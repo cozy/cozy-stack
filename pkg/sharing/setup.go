@@ -9,7 +9,19 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 )
 
-// Setup is used when a member accept a sharing to prepare the io.cozy.shared
+// SetupReceiver is used on the receivers' cozy to make sure the cozy can
+// receive the shared documents.
+func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
+	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
+		return err
+	}
+	if s.HasFiles() {
+		return EnsureSharedWithMeDir(inst)
+	}
+	return nil
+}
+
+// Setup is used when a member accepts a sharing to prepare the io.cozy.shared
 // database and start an initial replication. It is meant to be used in a new
 // goroutine and, as such, does not return errors but log them.
 func (s *Sharing) Setup(inst *instance.Instance, m *Member) {

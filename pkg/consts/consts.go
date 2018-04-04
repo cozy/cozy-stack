@@ -91,6 +91,9 @@ const (
 	RootDirID = "io.cozy.files.root-dir"
 	// TrashDirID is the trash directory identifier
 	TrashDirID = "io.cozy.files.trash-dir"
+	// SharedWithMeDirID is the identifier of the directory where the sharings
+	// will put their folders for the shared files
+	SharedWithMeDirID = "io.cozy.files.shared-with-me-dir"
 )
 
 const (

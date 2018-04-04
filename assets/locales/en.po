@@ -15,6 +15,9 @@ msgstr "Uploaded from Cozy Photos"
 msgid "Tree Backed up from my mobile"
 msgstr "Backed up from my mobile"
 
+msgid "Tree Shared with me"
+msgstr "Shared with me"
+
 msgid "Login Credentials error"
 msgstr "The password you entered is incorrect, please try again."
 

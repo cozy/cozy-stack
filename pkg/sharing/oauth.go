@@ -254,7 +254,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		return couchdb.UpdateDoc(inst, s)
 	}
 
-	return couchdb.EnsureDBExist(inst, consts.Shared)
+	return s.SetupReceiver(inst)
 }
 
 // ProcessAnswer takes somes credentials and update the sharing with those.
