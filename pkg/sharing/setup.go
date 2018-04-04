@@ -35,7 +35,9 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 			inst.Logger().Warnf("[sharing] Error on initial copy for %s (%s): %s", rule.Title, s.SID, err)
 		}
 	}
-	// TODO add a trigger for next replications if not yet configured
+	if err := s.AddReplicateTrigger(inst); err != nil {
+		inst.Logger().Warnf("[sharing] Error on setup replicate trigger (%s): %s", s.SID, err)
+	}
 	if err := s.ReplicateTo(inst, m, true); err != nil {
 		inst.Logger().Warnf("[sharing] Error on initial replication (%s): %s", s.SID, err)
 		s.retryReplicate(inst, 1)
@@ -45,6 +47,9 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 // AddTrackTriggers creates the share-track triggers for each rule of the
 // sharing that will update the io.cozy.shared database.
 func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
+	if s.Triggers.Track {
+		return nil
+	}
 	sched := jobs.System()
 	for i, rule := range s.Rules {
 		args := rule.TriggerArgs(s.Owner)
@@ -72,9 +77,41 @@ func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
 			return err
 		}
 	}
-	// TODO persist in the sharing that the triggers have been created to avoid
-	// creating them several times
-	return nil
+	s.Triggers.Track = true
+	return couchdb.UpdateDoc(inst, s)
+}
+
+// AddReplicateTrigger creates the share-replicate trigger for this sharing:
+// it will starts the replicator when some changes are made to the
+// io.cozy.shared database.
+func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
+	if s.Triggers.Replicate {
+		return nil
+	}
+	msg, err := jobs.NewMessage(&ReplicateMsg{
+		SharingID: s.SID,
+		Errors:    0,
+	})
+	if err != nil {
+		return err
+	}
+	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
+	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
+		Domain:     inst.Domain,
+		Type:       "@event",
+		WorkerType: "share-replicate",
+		Message:    msg,
+		Arguments:  args,
+	})
+	if err != nil {
+		return err
+	}
+	sched := jobs.System()
+	if err = sched.AddTrigger(t); err != nil {
+		return err
+	}
+	s.Triggers.Replicate = true
+	return couchdb.UpdateDoc(inst, s)
 }
 
 // InitialCopy lists the shared documents and put a reference in the

@@ -28,6 +28,12 @@ type Sharing struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
+	// Triggers keep record of which triggers are active
+	Triggers struct {
+		Track     bool `json:"track,omitempty"`
+		Replicate bool `json:"replicate,omitempty"`
+	} `json:"triggers"`
+
 	Rules []Rule `json:"rules"`
 
 	// Members[0] is the owner, Members[1...] are the recipients

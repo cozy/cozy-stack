@@ -75,6 +75,16 @@ func (s *SharedRef) Clone() couchdb.Doc {
 	return &cloned
 }
 
+// Match implements the permissions.Matcher interface
+func (s *SharedRef) Match(key, value string) bool {
+	switch key {
+	case "sharing":
+		_, ok := s.Infos[value]
+		return ok
+	}
+	return false
+}
+
 // RevGeneration returns the number before the hyphen, called the generation of a revision
 func RevGeneration(rev string) int {
 	parts := strings.SplitN(rev, "-", 2)
