@@ -385,7 +385,7 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*
 		}
 	}
 
-	var docs DocsByDoctype
+	docs := make(DocsByDoctype, len(queries))
 	for doctype, query := range queries {
 		results, err := couchdb.BulkGetDocs(inst, doctype, query)
 		if err != nil {
