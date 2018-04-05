@@ -114,6 +114,7 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 		WorkerType: "share-replicate",
 		Message:    msg,
 		Arguments:  args,
+		Debounce:   "5s",
 	})
 	if err != nil {
 		return err
