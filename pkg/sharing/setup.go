@@ -1,6 +1,9 @@
 package sharing
 
 import (
+	"fmt"
+	"runtime"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -25,6 +28,22 @@ func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
 // database and start an initial replication. It is meant to be used in a new
 // goroutine and, as such, does not return errors but log them.
 func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
+	defer func() {
+		if r := recover(); r != nil {
+			var err error
+			switch r := r.(type) {
+			case error:
+				err = r
+			default:
+				err = fmt.Errorf("%v", r)
+			}
+			stack := make([]byte, 4<<10) // 4 KB
+			length := runtime.Stack(stack, false)
+			log := inst.Logger().WithField("panic", true)
+			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
+		}
+	}()
+
 	// Don't do the setup for most tests
 	if !inst.OnboardingFinished {
 		return
