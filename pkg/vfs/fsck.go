@@ -2,16 +2,27 @@ package vfs
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path"
+
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 // FsckLogType is the type of a FsckLog
 type FsckLogType int
 
 const (
+	// IndexMissingRoot is used when the index does not have a root object
+	IndexMissingRoot FsckLogType = iota
+	// IndexOrphanTree used when a part of the tree is detached from the main
+	// root of the index.
+	IndexOrphanTree
+	// IndexBadFullpath used when a directory does not have the correct path
+	// field given its position in the index.
+	IndexBadFullpath
 	// FileMissing used when a file data is missing from its index entry.
-	FileMissing FsckLogType = iota
+	FileMissing
 	// IndexMissing is used when the index entry is missing from a file data.
 	IndexMissing
 	// TypeMismatch is used when a document type does not match in the index and
@@ -27,8 +38,10 @@ type FsckLog struct {
 	Type        FsckLogType
 	FileDoc     *FileDoc
 	OldFileDoc  *FileDoc
-	IsFile      bool
 	DirDoc      *DirDoc
+	OldDirDoc   *DirDoc
+	Deletions   []couchdb.Doc
+	IsFile      bool
 	Filename    string
 	PruneAction string
 	PruneError  error
@@ -37,6 +50,15 @@ type FsckLog struct {
 // String returns a string describing the FsckLog
 func (f *FsckLog) String() string {
 	switch f.Type {
+	case IndexMissingRoot:
+		return "the root directory is not present in the index"
+	case IndexOrphanTree:
+		if f.IsFile {
+			return "the file's parent is missing from the index: orphan file"
+		}
+		return "the directory's parent is missing from the index: orphan tree"
+	case IndexBadFullpath:
+		return "the directory does not have the correct path information given its position in the index"
 	case FileMissing:
 		if f.IsFile {
 			return "the file is present in the index but not on the filesystem"
@@ -78,6 +100,40 @@ func (f *FsckLog) MarshalJSON() ([]byte, error) {
 // FsckPrune tries to fix the given entry in the VFS
 func FsckPrune(fs VFS, indexer Indexer, entry *FsckLog, dryrun bool) {
 	switch entry.Type {
+	case IndexMissingRoot:
+		entry.PruneAction = "no action: requires manual inspection"
+	case IndexOrphanTree:
+		if entry.IsFile {
+			if entry.FileDoc.Trashed {
+				entry.PruneAction = "deleting the entry"
+				if !dryrun {
+					if err := indexer.DeleteFileDoc(entry.FileDoc); err != nil {
+						entry.PruneError = err
+					}
+				}
+			} else {
+				entry.PruneAction = "no action: requires manual inspection"
+			}
+		} else {
+			if len(entry.Deletions) > 0 {
+				entry.PruneAction = "deleting the orphan directory and its children from the index"
+				if !dryrun {
+					if err := indexer.BatchDelete(entry.Deletions); err != nil {
+						entry.PruneError = err
+					}
+				}
+			} else {
+				entry.PruneAction = "no action: requires manual inspection"
+			}
+		}
+	case IndexBadFullpath:
+		entry.PruneAction = fmt.Sprintf("updating the path attribute of the directory to: %q",
+			entry.Filename)
+		if !dryrun {
+			if err := indexer.UpdateDirDoc(entry.OldDirDoc, entry.DirDoc); err != nil {
+				entry.PruneError = err
+			}
+		}
 	case FileMissing:
 		entry.PruneAction = "deleting entry from index"
 		if dryrun {
