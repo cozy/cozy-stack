@@ -1,6 +1,8 @@
 package sharing
 
 import (
+	"net/url"
+
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -106,4 +108,39 @@ func (s *Sharing) FindMemberBySharecode(db couchdb.Database, sharecode string) (
 		}
 	}
 	return nil, ErrMemberNotFound
+}
+
+// FindCredentials returns the credentials for the given member
+func (s *Sharing) FindCredentials(m *Member) *Credentials {
+	if s.Owner {
+		for i, member := range s.Members {
+			if i > 0 && *m == member {
+				return &s.Credentials[i-1]
+			}
+		}
+	} else {
+		if *m == s.Members[0] {
+			return &s.Credentials[0]
+		}
+	}
+	return nil
+}
+
+// Refresh will refresh the access token, and persist the new access token in
+// the sharing
+func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) error {
+	u, err := url.Parse(m.Instance)
+	if err != nil {
+		return err
+	}
+	r := &auth.Request{
+		Scheme: u.Scheme,
+		Domain: u.Host,
+	}
+	token, err := r.RefreshToken(c.Client, c.AccessToken)
+	if err != nil {
+		return err
+	}
+	c.AccessToken.AccessToken = token.AccessToken
+	return couchdb.UpdateDoc(inst, s)
 }

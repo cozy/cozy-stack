@@ -105,12 +105,7 @@ func (m *Member) GenerateOAuthURL(s *Sharing) (string, error) {
 	if !s.Owner || len(s.Members) != len(s.Credentials)+1 {
 		return "", ErrInvalidSharing
 	}
-	var creds *Credentials
-	for i, member := range s.Members {
-		if *m == member {
-			creds = &s.Credentials[i-1]
-		}
-	}
+	creds := s.FindCredentials(m)
 	if creds == nil {
 		return "", ErrInvalidSharing
 	}
