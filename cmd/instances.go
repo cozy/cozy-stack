@@ -104,9 +104,16 @@ var addInstanceCmd = &cobra.Command{
 	Long: `
 cozy-stack instances add allows to create an instance on the cozy for a
 given domain.
+
+If the COZY_DISABLE_INSTANCES_ADD_RM env variable is set, creating and
+destroying instances will be desactivated and the content of this variable will
+be used as the error message.
 `,
 	Example: "$ cozy-stack instances add --dev --passphrase cozy --apps drive,photos,settings cozy.tools:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if reason := os.Getenv("COZY_DISABLE_INSTANCES_ADD_RM"); reason != "" {
+			return fmt.Errorf("Sorry, instances add is disabled: %s", reason)
+		}
 		if len(args) == 0 {
 			return cmd.Usage()
 		}
@@ -284,6 +291,9 @@ and all its data.
 `,
 	Aliases: []string{"rm"},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if reason := os.Getenv("COZY_DISABLE_INSTANCES_ADD_RM"); reason != "" {
+			return fmt.Errorf("Sorry, instances add is disabled: %s", reason)
+		}
 		if len(args) == 0 {
 			return cmd.Usage()
 		}
