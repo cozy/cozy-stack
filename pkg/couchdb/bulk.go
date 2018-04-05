@@ -200,7 +200,7 @@ func BulkUpdateDocs(db Database, doctype string, docs []interface{}) error {
 }
 
 // BulkDeleteDocs is used to delete serveral documents in one call.
-func BulkDeleteDocs(db Database, doctype string, docs []interface{}) error {
+func BulkDeleteDocs(db Database, doctype string, docs []Doc) error {
 	if len(docs) == 0 {
 		return nil
 	}
@@ -210,11 +210,9 @@ func BulkDeleteDocs(db Database, doctype string, docs []interface{}) error {
 		Docs: make([]json.RawMessage, 0, len(docs)),
 	}
 	for _, doc := range docs {
-		if d, ok := doc.(Doc); ok {
-			body.Docs = append(body.Docs, json.RawMessage(
-				fmt.Sprintf(`{"_id":"%s","_rev":"%s","_deleted":true}`, d.ID(), d.Rev()),
-			))
-		}
+		body.Docs = append(body.Docs, json.RawMessage(
+			fmt.Sprintf(`{"_id":"%s","_rev":"%s","_deleted":true}`, doc.ID(), doc.Rev()),
+		))
 	}
 	var res []UpdateResponse
 	if err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {

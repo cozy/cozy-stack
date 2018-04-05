@@ -85,8 +85,13 @@ type Fs interface {
 	OpenFile(doc *FileDoc) (File, error)
 
 	// Fsck return the list of inconsistencies in the VFS
-	Fsck() (logbook []*FsckLog, err error)
-	FsckPrune(logbook []*FsckLog, dryrun bool)
+	Fsck(opts FsckOptions) (logbook []*FsckLog, err error)
+}
+
+// FsckOptions contains the options for the filesystem check process.
+type FsckOptions struct {
+	Prune  bool
+	DryRun bool
 }
 
 // File is a reader, writer, seeker, closer iterface representing an opened
@@ -176,6 +181,9 @@ type Indexer interface {
 	DirBatch(*DirDoc, couchdb.Cursor) ([]DirOrFileDoc, error)
 	DirLength(*DirDoc) (int, error)
 	DirChildExists(dirID, filename string) (bool, error)
+	BatchDelete([]couchdb.Doc) error
+
+	CheckIndexIntegrity() ([]*FsckLog, error)
 }
 
 // DiskThresholder it an interface that can be implemeted to known how many space

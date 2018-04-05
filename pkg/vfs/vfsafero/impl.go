@@ -283,23 +283,34 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &aferoFileOpen{f}, nil
 }
 
-func (afs *aferoVFS) Fsck() ([]*vfs.FsckLog, error) {
+func (afs *aferoVFS) Fsck(opts vfs.FsckOptions) (logbook []*vfs.FsckLog, err error) {
 	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return nil, lockerr
 	}
 	defer afs.mu.Unlock()
+	logbook, err = afs.Indexer.CheckIndexIntegrity()
+	if err != nil {
+		return
+	}
+	if opts.Prune {
+		afs.fsckPrune(logbook, opts.DryRun)
+	}
 	root, err := afs.Indexer.DirByPath("/")
 	if err != nil {
 		return nil, err
 	}
-	var logbook []*vfs.FsckLog
-	logbook, err = afs.fsckWalk(root, logbook)
+	var newLogs []*vfs.FsckLog
+	newLogs, err = afs.fsckWalk(root, newLogs)
 	if err != nil {
 		return nil, err
 	}
-	sort.Slice(logbook, func(i, j int) bool {
-		return logbook[i].Filename < logbook[j].Filename
+	sort.Slice(newLogs, func(i, j int) bool {
+		return newLogs[i].Filename < newLogs[j].Filename
 	})
+	logbook = append(logbook, newLogs...)
+	if opts.Prune {
+		afs.fsckPrune(newLogs, opts.DryRun)
+	}
 	return logbook, nil
 }
 
@@ -429,11 +440,11 @@ func fileInfosToFileDoc(dir *vfs.DirDoc, fullpath string, fileinfo os.FileInfo) 
 		nil)
 }
 
-// FsckPrune tries to fix the given list on inconsistencies in the VFS
-func (afs *aferoVFS) FsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
+// fsckPrune tries to fix the given list on inconsistencies in the VFS
+func (afs *aferoVFS) fsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
 	for _, entry := range logbook {
 		switch entry.Type {
-		case vfs.FileMissing, vfs.IndexMissing:
+		case vfs.IndexOrphanTree, vfs.IndexBadFullpath, vfs.FileMissing, vfs.IndexMissing:
 			vfs.FsckPrune(afs, afs.Indexer, entry, dryrun)
 		case vfs.TypeMismatch:
 			if entry.IsFile {

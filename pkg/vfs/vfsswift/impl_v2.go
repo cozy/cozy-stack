@@ -335,24 +335,33 @@ type fsckFile struct {
 	fullpath string
 }
 
-func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
+func (sfs *swiftVFSV2) Fsck(opts vfs.FsckOptions) (logbook []*vfs.FsckLog, err error) {
 	if lockerr := sfs.mu.RLock(); lockerr != nil {
 		return nil, lockerr
 	}
 	defer sfs.mu.RUnlock()
 
+	logbook, err = sfs.Indexer.CheckIndexIntegrity()
+	if err != nil {
+		return
+	}
+
+	if opts.Prune {
+		sfs.fsckPrune(logbook, opts.DryRun)
+	}
+
+	var newLogs []*vfs.FsckLog
+
 	root, err := sfs.Indexer.DirByID(consts.RootDirID)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	entries := make(map[string]fsckFile, 256)
 	err = sfs.fsckWalk(root, entries)
 	if err != nil {
-		return nil, err
+		return
 	}
-
-	var logbook []*vfs.FsckLog
 
 	err = sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
 		var objs []swift.Object
@@ -370,7 +379,7 @@ func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
 				if err != nil {
 					return nil, err
 				}
-				logbook = append(logbook, &vfs.FsckLog{
+				newLogs = append(newLogs, &vfs.FsckLog{
 					Type:     vfs.IndexMissing,
 					IsFile:   true,
 					FileDoc:  fileDoc,
@@ -386,7 +395,7 @@ func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
 					olddoc := f.file
 					newdoc := olddoc.Clone().(*vfs.FileDoc)
 					newdoc.MD5Sum = md5sum
-					logbook = append(logbook, &vfs.FsckLog{
+					newLogs = append(newLogs, &vfs.FsckLog{
 						Type:       vfs.ContentMismatch,
 						IsFile:     true,
 						FileDoc:    newdoc,
@@ -400,7 +409,7 @@ func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
 		return objs, err
 	})
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	// entries should contain only data that does not contain an associated
@@ -408,7 +417,7 @@ func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
 	for docID, f := range entries {
 		_, _, err = sfs.c.Object(sfs.container, docID)
 		if err == swift.ObjectNotFound {
-			logbook = append(logbook, &vfs.FsckLog{
+			newLogs = append(newLogs, &vfs.FsckLog{
 				Type:     vfs.FileMissing,
 				IsFile:   true,
 				FileDoc:  f.file,
@@ -418,11 +427,17 @@ func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
 			return nil, err
 		}
 	}
-	sort.Slice(logbook, func(i, j int) bool {
-		return logbook[i].Filename < logbook[j].Filename
+	sort.Slice(newLogs, func(i, j int) bool {
+		return newLogs[i].Filename < newLogs[j].Filename
 	})
 
-	return logbook, nil
+	logbook = append(logbook, newLogs...)
+
+	if opts.Prune {
+		sfs.fsckPrune(newLogs, opts.DryRun)
+	}
+
+	return
 }
 
 func (sfs *swiftVFSV2) fsckWalk(dir *vfs.DirDoc, entries map[string]fsckFile) error {
@@ -445,8 +460,8 @@ func (sfs *swiftVFSV2) fsckWalk(dir *vfs.DirDoc, entries map[string]fsckFile) er
 	return nil
 }
 
-// FsckPrune tries to fix the given list on inconsistencies in the VFS
-func (sfs *swiftVFSV2) FsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
+// fsckPrune tries to fix the given list on inconsistencies in the VFS
+func (sfs *swiftVFSV2) fsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
 	for _, entry := range logbook {
 		vfs.FsckPrune(sfs, sfs.Indexer, entry, dryrun)
 	}

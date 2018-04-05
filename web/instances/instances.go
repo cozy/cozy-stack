@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 )
@@ -201,12 +202,12 @@ func fsckHandler(c echo.Context) error {
 	prune, _ := strconv.ParseBool(c.QueryParam("Prune"))
 	dryRun, _ := strconv.ParseBool(c.QueryParam("DryRun"))
 	fs := i.VFS()
-	logbook, err := fs.Fsck()
+	logbook, err := fs.Fsck(vfs.FsckOptions{
+		Prune:  prune,
+		DryRun: dryRun,
+	})
 	if err != nil {
 		return wrapError(err)
-	}
-	if prune {
-		fs.FsckPrune(logbook, dryRun)
 	}
 	return c.JSON(http.StatusOK, logbook)
 }
