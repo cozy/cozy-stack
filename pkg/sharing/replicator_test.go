@@ -279,6 +279,98 @@ func TestInitialCopy(t *testing.T) {
 	}
 }
 
+func stripGenerations(revs ...string) []interface{} {
+	res := make([]interface{}, len(revs))
+	for i, rev := range revs {
+		parts := strings.SplitN(rev, "-", 2)
+		res[i] = parts[1]
+	}
+	return res
+}
+
+func TestGetMissingDocs(t *testing.T) {
+	hellos := "io.cozy.tests.hellos"
+	couchdb.CreateDB(inst, hellos)
+
+	id1 := uuidv4()
+	doc1 := createDoc(t, hellos, id1, map[string]interface{}{"hello": id1})
+	id2 := uuidv4()
+	doc2 := createDoc(t, hellos, id2, map[string]interface{}{"hello": id2})
+	doc2b := updateDoc(t, hellos, id2, doc2.Rev(), map[string]interface{}{"hello": id2, "bis": true})
+	id3 := uuidv4()
+	doc3 := createDoc(t, hellos, id3, map[string]interface{}{"hello": id3})
+	doc3b := updateDoc(t, hellos, id3, doc3.Rev(), map[string]interface{}{"hello": id3, "bis": true})
+	s := Sharing{
+		SID: uuidv4(),
+		Rules: []Rule{
+			{
+				Title:   "hellos rule",
+				DocType: hellos,
+				Values:  []string{id1, id2, id3},
+			},
+		},
+	}
+
+	missings := &Missings{
+		hellos + "/" + id1: MissingEntry{
+			Missing: []string{doc1.Rev()},
+		},
+		hellos + "/" + id2: MissingEntry{
+			Missing: []string{doc2.Rev(), doc2b.Rev()},
+		},
+		hellos + "/" + id3: MissingEntry{
+			Missing: []string{doc3b.Rev()},
+			PAs:     []string{doc3.Rev()},
+		},
+	}
+	results, err := s.getMissingDocs(inst, missings)
+	assert.NoError(t, err)
+	assert.Contains(t, *results, hellos)
+	assert.Len(t, (*results)[hellos], 4)
+
+	var one, two, twob, three map[string]interface{}
+	for i, doc := range (*results)[hellos] {
+		switch doc["_id"] {
+		case id1:
+			one = (*results)[hellos][i]
+		case id2:
+			if _, ok := doc["bis"]; ok {
+				twob = (*results)[hellos][i]
+			} else {
+				two = (*results)[hellos][i]
+			}
+		case id3:
+			three = (*results)[hellos][i]
+		}
+	}
+	assert.NotNil(t, twob)
+	assert.NotNil(t, three)
+
+	assert.NotNil(t, one)
+	assert.Equal(t, doc1.Rev(), one["_rev"])
+	assert.Equal(t, id1, one["hello"])
+	assert.Equal(t, float64(1), one["_revisions"].(map[string]interface{})["start"])
+	assert.Equal(t, stripGenerations(doc1.Rev()), one["_revisions"].(map[string]interface{})["ids"])
+
+	assert.NotNil(t, two)
+	assert.Equal(t, doc2.Rev(), two["_rev"])
+	assert.Equal(t, id2, two["hello"])
+	assert.Equal(t, float64(1), two["_revisions"].(map[string]interface{})["start"])
+	assert.Equal(t, stripGenerations(doc2.Rev()), two["_revisions"].(map[string]interface{})["ids"])
+
+	assert.NotNil(t, twob)
+	assert.Equal(t, doc2b.Rev(), twob["_rev"])
+	assert.Equal(t, id2, twob["hello"])
+	assert.Equal(t, float64(2), twob["_revisions"].(map[string]interface{})["start"])
+	assert.Equal(t, stripGenerations(doc2b.Rev(), doc2.Rev()), twob["_revisions"].(map[string]interface{})["ids"])
+
+	assert.NotNil(t, three)
+	assert.Equal(t, doc3b.Rev(), three["_rev"])
+	assert.Equal(t, id3, three["hello"])
+	assert.Equal(t, float64(2), three["_revisions"].(map[string]interface{})["start"])
+	assert.Equal(t, stripGenerations(doc3b.Rev(), doc3.Rev()), three["_revisions"].(map[string]interface{})["ids"])
+}
+
 func getDoc(t *testing.T, doctype, id string) *couchdb.JSONDoc {
 	var doc couchdb.JSONDoc
 	err := couchdb.GetDoc(inst, doctype, id, &doc)
