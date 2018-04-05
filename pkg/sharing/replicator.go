@@ -207,9 +207,9 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 	}
 	changes := make(Changes)
 	for _, r := range response.Results {
-		changes[r.DocID] = make([]string, len(r.Changes))
-		for i, c := range r.Changes {
-			changes[r.DocID][i] = c.Rev
+		if revisions, ok := r.Doc.Get("revisions").([]interface{}); ok && len(revisions) > 0 {
+			rev, _ := revisions[len(revisions)-1].(string)
+			changes[r.DocID] = []string{rev}
 		}
 	}
 	return &changes, response.LastSeq, nil

@@ -53,7 +53,7 @@ func uuidv4() string {
 	return id.String()
 }
 
-func createSharedRef(t *testing.T) {
+func createASharedRef(t *testing.T) {
 	ref := SharedRef{
 		SID:       testDoctype + "/" + uuidv4(),
 		Revisions: []string{"1-aaa"},
@@ -65,7 +65,7 @@ func createSharedRef(t *testing.T) {
 func TestSequenceNumber(t *testing.T) {
 	nb := 5
 	for i := 0; i < nb; i++ {
-		createSharedRef(t)
+		createASharedRef(t)
 	}
 	s := &Sharing{SID: uuidv4(), Members: []Member{
 		{Status: MemberStatusOwner, Name: "Alice"},
@@ -277,6 +277,64 @@ func TestInitialCopy(t *testing.T) {
 		assert.Contains(t, threeRef.Infos, s2.SID)
 		assert.Equal(t, 0, threeRef.Infos[s2.SID].Rule)
 	}
+}
+
+func createSharedRef(t *testing.T, sid string, revisions []string) *SharedRef {
+	ref := SharedRef{
+		SID:       sid,
+		Revisions: revisions,
+	}
+	err := couchdb.CreateNamedDocWithDB(inst, &ref)
+	assert.NoError(t, err)
+	return &ref
+}
+
+func appendRevisionToSharedRef(t *testing.T, ref *SharedRef, revision string) {
+	ref.Revisions = append(ref.Revisions, revision)
+	err := couchdb.UpdateDoc(inst, ref)
+	assert.NoError(t, err)
+}
+
+func TestCallChangesFeed(t *testing.T) {
+	// Start with an empty io.cozy.shared database
+	couchdb.DeleteDB(inst, consts.Shared)
+	couchdb.CreateDB(inst, consts.Shared)
+
+	foobars := "io.cozy.tests.foobars"
+	id1 := uuidv4()
+	ref1 := createSharedRef(t, foobars+"/"+id1, []string{"1-aaa"})
+	id2 := uuidv4()
+	ref2 := createSharedRef(t, foobars+"/"+id2, []string{"3-bbb"})
+	appendRevisionToSharedRef(t, ref1, "2-ccc")
+	s := Sharing{
+		SID: uuidv4(),
+		Rules: []Rule{
+			{
+				Title:   "foobars rule",
+				DocType: foobars,
+				Values:  []string{id1, id2},
+			},
+		},
+	}
+	changes, seq, err := s.callChangesFeed(inst, "")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, seq)
+	assert.Equal(t, 3, RevGeneration(seq))
+	assert.Equal(t, []string{"2-ccc"}, (*changes)[ref1.SID])
+	assert.Equal(t, []string{"3-bbb"}, (*changes)[ref2.SID])
+
+	changes, newSeq, err := s.callChangesFeed(inst, seq)
+	assert.NoError(t, err)
+	assert.Equal(t, seq, newSeq)
+	assert.Empty(t, changes)
+
+	appendRevisionToSharedRef(t, ref1, "3-ddd")
+	changes, newSeq, err = s.callChangesFeed(inst, seq)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, seq)
+	assert.Equal(t, 4, RevGeneration(newSeq))
+	assert.Equal(t, []string{"3-ddd"}, (*changes)[ref1.SID])
+	assert.NotContains(t, *changes, ref2.SID)
 }
 
 func stripGenerations(revs ...string) []interface{} {
