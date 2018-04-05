@@ -76,9 +76,8 @@ func newClient(domain string, scopes ...string) *client.Client {
 }
 
 func newAdminClient() *client.Client {
-	var pass []byte
+	pass := []byte(os.Getenv("COZY_ADMIN_PASSWORD"))
 	if !config.IsDevRelease() {
-		pass = []byte(os.Getenv("COZY_ADMIN_PASSWORD"))
 		if len(pass) == 0 {
 			var err error
 			fmt.Printf("Password:")
