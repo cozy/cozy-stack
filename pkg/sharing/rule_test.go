@@ -156,3 +156,31 @@ func TestRuleAccept(t *testing.T) {
 	r.Values = []string{"io.cozy.playlists/list3"}
 	assert.False(t, r.Accept(consts.Files, file))
 }
+
+func TestTriggersArgs(t *testing.T) {
+	r := Rule{
+		Title:    "test triggers args",
+		DocType:  consts.Files,
+		Selector: "referenced_by",
+		Values:   []string{"io.cozy.playlists/list1"},
+		Update:   "sync",
+	}
+	expected := "io.cozy.files:UPDATED:io.cozy.playlists/list1:referenced_by"
+	assert.Equal(t, expected, r.TriggerArgs(false))
+
+	doctype := "io.cozy.test.foos"
+	r = Rule{
+		Title:   "test",
+		DocType: doctype,
+		Values:  []string{"foo"},
+		Add:     "push",
+		Update:  "push",
+		Remove:  "revoke",
+	}
+	expected = "io.cozy.test.foos:CREATED,UPDATED:foo"
+	assert.Equal(t, expected, r.TriggerArgs(true))
+	assert.Equal(t, "", r.TriggerArgs(false))
+
+	r.Local = true
+	assert.Equal(t, "", r.TriggerArgs(true))
+}

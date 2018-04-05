@@ -7,7 +7,22 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/lock"
 )
+
+// TrackMessage is used for jobs on the share-track worker.
+// It's the same for all the jobs of a trigger.
+type TrackMessage struct {
+	SharingID string `json:"sharing_id"`
+	RuleIndex int    `json:"rule_index"`
+}
+
+// TrackEvent is used for jobs on the share-track worker.
+// It's unique per job.
+type TrackEvent struct {
+	Verb string          `json:"verb"`
+	Doc  couchdb.JSONDoc `json:"doc"`
+}
 
 // SharedInfo gives informations about how to apply the sharing to the shared
 // document
@@ -61,6 +76,16 @@ func (s *SharedRef) Clone() couchdb.Doc {
 	return &cloned
 }
 
+// Match implements the permissions.Matcher interface
+func (s *SharedRef) Match(key, value string) bool {
+	switch key {
+	case "sharing":
+		_, ok := s.Infos[value]
+		return ok
+	}
+	return false
+}
+
 // RevGeneration returns the number before the hyphen, called the generation of a revision
 func RevGeneration(rev string) int {
 	parts := strings.SplitN(rev, "-", 2)
@@ -79,6 +104,45 @@ func FindReferences(inst *instance.Instance, ids []string) ([]*SharedRef, error)
 		return nil, err
 	}
 	return refs, nil
+}
+
+// UpdateShared updates the io.cozy.shared database when a document is
+// created/update/removed
+func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) error {
+	mu := lock.ReadWrite(inst.Domain + "/shared")
+	mu.Lock()
+	defer mu.Unlock()
+
+	sid := evt.Doc.DocType() + "/" + evt.Doc.ID()
+	var ref SharedRef
+	if err := couchdb.GetDoc(inst, consts.Shared, sid, &ref); err != nil {
+		if !couchdb.IsNotFoundError(err) {
+			return err
+		}
+		ref.SID = sid
+	}
+
+	if _, ok := ref.Infos[msg.SharingID]; !ok {
+		ref.Infos[msg.SharingID] = SharedInfo{
+			Rule: msg.RuleIndex,
+		}
+	}
+	// TODO detect when a document goes out of a sharing
+	if evt.Verb == "DELETED" {
+		infos := ref.Infos[msg.SharingID]
+		infos.Removed = true
+	}
+
+	// TODO to be improved when we will work on conflicts
+	rev := evt.Doc.Rev()
+	if len(ref.Revisions) == 0 || ref.Revisions[len(ref.Revisions)-1] != rev {
+		ref.Revisions = append(ref.Revisions, rev)
+	}
+
+	if ref.Rev() == "" {
+		return couchdb.CreateDoc(inst, &ref)
+	}
+	return couchdb.UpdateDoc(inst, &ref)
 }
 
 var _ couchdb.Doc = &SharedRef{}
