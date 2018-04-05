@@ -1,6 +1,7 @@
 package center
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -38,10 +39,30 @@ var (
 
 func init() {
 	vfs.RegisterDiskQuotaAlertCallback(func(domain string, exceeded bool) {
+		i, err := instance.Get(domain)
+		if err != nil {
+			return
+		}
+		ctx, err := i.Context()
+		if err != nil {
+			return
+		}
+		settings, err := i.SettingsDocument()
+		if err != nil {
+			return
+		}
+		uuid, ok := settings.Get("uuid").(string)
+		if !ok {
+			return
+		}
+		managerURL, ok := ctx["manager_url"].(string)
+		if !ok {
+			return
+		}
 		n := &notification.Notification{
 			State: exceeded,
 			Data: map[string]interface{}{
-				"OffersLink": "", //config.GetConfig().,
+				"OffersLink": fmt.Sprintf("%s/cozy/accounts/%s", managerURL, uuid),
 			},
 		}
 		pushStack(domain, NotificationDiskQuota, n)
