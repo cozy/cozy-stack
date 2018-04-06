@@ -808,7 +808,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 
 	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
-	aferoFs, err := vfsafero.New(index, &diskImpl{}, lock.ReadWrite("io.cozy.vfs.test"),
+	aferoFs, err := vfsafero.New("io.cozy.vfs.test", index, &diskImpl{}, lock.ReadWrite("io.cozy.vfs.test"),
 		&url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, "io.cozy.vfs.test")
 	if err != nil {
 		return nil, nil, err
@@ -858,11 +858,11 @@ func makeSwiftFS(layoutV2 bool) (vfs.VFS, func(), error) {
 
 	var swiftFs vfs.VFS
 	if layoutV2 {
-		swiftFs, err = vfsswift.NewV2(index, &diskImpl{}, lock.ReadWrite("io.cozy.vfs.test"),
-			"io.cozy.vfs.test")
+		swiftFs, err = vfsswift.NewV2("io.cozy.vfs.test",
+			index, &diskImpl{}, lock.ReadWrite("io.cozy.vfs.test"))
 	} else {
-		swiftFs, err = vfsswift.New(index, &diskImpl{}, lock.ReadWrite("io.cozy.vfs.test"),
-			"io.cozy.vfs.test")
+		swiftFs, err = vfsswift.New("io.cozy.vfs.test",
+			index, &diskImpl{}, lock.ReadWrite("io.cozy.vfs.test"))
 	}
 	if err != nil {
 		return nil, nil, err

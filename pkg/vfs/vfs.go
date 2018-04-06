@@ -60,9 +60,13 @@ var ErrWalkOverflow = errors.New("vfs: walk overflow")
 // Fs is an interface providing a set of high-level methods to interact with
 // the file-system binaries and metadata.
 type Fs interface {
+	Domain() string
 	InitFs() error
 	Delete() error
 
+	// OpenFile return a file handler for reading associated with the given file
+	// document. The file handler implements io.ReadCloser and io.Seeker.
+	OpenFile(doc *FileDoc) (File, error)
 	// CreateDir is used to create a new directory from its document.
 	CreateDir(doc *DirDoc) error
 	// CreateFile creates a new file or update the content of an existing file.
@@ -80,9 +84,6 @@ type Fs interface {
 	DestroyDirAndContent(doc *DirDoc) error
 	// DestroyFile  destroys a file from the trash.
 	DestroyFile(doc *FileDoc) error
-	// OpenFile return a file handler for reading associated with the given file
-	// document. The file handler implements io.ReadCloser and io.Seeker.
-	OpenFile(doc *FileDoc) (File, error)
 
 	// Fsck return the list of inconsistencies in the VFS
 	Fsck(opts FsckOptions) (logbook []*FsckLog, err error)
@@ -150,7 +151,7 @@ type Indexer interface {
 	// DeleteDirDocAndContent removes from the index the specified directory as
 	// well all its children. It returns the list of the children files ids that
 	// were removed.
-	DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) ([]string, error)
+	DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (int64, []string, error)
 
 	// DirByID returns the directory document information associated with the
 	// specified identifier.
@@ -635,6 +636,37 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 func ExtractMimeAndClassFromFilename(name string) (mime, class string) {
 	ext := path.Ext(name)
 	return ExtractMimeAndClass(mimetype.TypeByExtension(ext))
+}
+
+var cbDiskQuotaAlert func(domain string, exceeded bool)
+
+// RegisterDiskQuotaAlertCallback allows to register a callback function called
+// when the instance reaches, a fall behind, 90% of its quota capacity.
+func RegisterDiskQuotaAlertCallback(cb func(domain string, exceeded bool)) {
+	cbDiskQuotaAlert = cb
+}
+
+// PushDiskQuotaAlert can be used to notify when the VFS reaches, or fall
+// behind, its quota alert of 90% of its total capacity.
+func PushDiskQuotaAlert(fs VFS, exceeded bool) {
+	if cbDiskQuotaAlert != nil {
+		cbDiskQuotaAlert(fs.Domain(), exceeded)
+	}
+}
+
+// DiskQuotaAfterDestroy is a helper function that can be used after files or
+// directories have be erased from the disk in order to register that the disk
+// quota alert has fall behind (or not).
+func DiskQuotaAfterDestroy(fs VFS, diskUsageBeforeWrite, destroyed int64) {
+	if diskUsageBeforeWrite <= 0 {
+		return
+	}
+	diskQuota := fs.DiskQuota()
+	quotaBytes := int64(9.0 / 10.0 * float64(diskQuota))
+	if diskUsageBeforeWrite >= quotaBytes &&
+		diskUsageBeforeWrite-destroyed < quotaBytes {
+		PushDiskQuotaAlert(fs, false)
+	}
 }
 
 // getRestoreDir returns the restoration directory document from a file a

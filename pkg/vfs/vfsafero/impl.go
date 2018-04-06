@@ -27,9 +27,10 @@ type aferoVFS struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 
-	fs  afero.Fs
-	mu  lock.ErrorRWLocker
-	pth string
+	domain string
+	fs     afero.Fs
+	mu     lock.ErrorRWLocker
+	pth    string
 
 	// whether or not the localfilesystem requires an initialisation of its root
 	// directory
@@ -41,7 +42,7 @@ type aferoVFS struct {
 //
 // The supported scheme of the storage url are file://, for an OS-FS store, and
 // mem:// for an in-memory store. The backend used is the afero package.
-func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, fsURL *url.URL, pathSegment string) (vfs.VFS, error) {
+func New(domain string, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, fsURL *url.URL, pathSegment string) (vfs.VFS, error) {
 	if fsURL.Scheme != "mem" && fsURL.Path == "" {
 		return nil, fmt.Errorf("vfsafero: please check the supplied fs url: %s",
 			fsURL.String())
@@ -63,13 +64,18 @@ func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, fsU
 		Indexer:         index,
 		DiskThresholder: disk,
 
-		fs:  fs,
-		mu:  mu,
-		pth: pth,
+		domain: domain,
+		fs:     fs,
+		mu:     mu,
+		pth:    pth,
 		// for now, only the file:// scheme needs a specific initialisation of its
 		// root directory.
 		osFS: fsURL.Scheme == "file",
 	}, nil
+}
+
+func (afs *aferoVFS) Domain() string {
+	return afs.domain
 }
 
 // Init creates the root directory document and the trash directory for this
@@ -138,7 +144,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 
 	diskQuota := afs.DiskQuota()
 
-	var maxsize, newsize int64
+	var maxsize, newsize, capsize int64
 	newsize = newdoc.ByteSize
 	if diskQuota > 0 {
 		diskUsage, err := afs.DiskUsage()
@@ -153,6 +159,10 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		maxsize = diskQuota - diskUsage
 		if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
 			return nil, vfs.ErrFileTooBig
+		}
+
+		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
+			capsize = quotaBytes - diskUsage
 		}
 	} else {
 		maxsize = -1 // no limit
@@ -206,6 +216,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		bakpath: bakpath,
 		newpath: newpath,
 		maxsize: maxsize,
+		capsize: capsize,
 
 		hash: hash,
 		meta: extractor,
@@ -217,10 +228,12 @@ func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
-	_, err := afs.Indexer.DeleteDirDocAndContent(doc, true)
+	diskUsage, _ := afs.DiskUsage()
+	destroyed, _, err := afs.Indexer.DeleteDirDocAndContent(doc, true)
 	if err != nil {
 		return err
 	}
+	vfs.DiskQuotaAfterDestroy(afs, diskUsage, destroyed)
 	infos, err := afero.ReadDir(afs.fs, doc.Fullpath)
 	if err != nil {
 		return err
@@ -244,10 +257,12 @@ func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
-	_, err := afs.Indexer.DeleteDirDocAndContent(doc, false)
+	diskUsage, _ := afs.DiskUsage()
+	destroyed, _, err := afs.Indexer.DeleteDirDocAndContent(doc, false)
 	if err != nil {
 		return err
 	}
+	vfs.DiskQuotaAfterDestroy(afs, diskUsage, destroyed)
 	return afs.fs.RemoveAll(doc.Fullpath)
 }
 
@@ -256,10 +271,12 @@ func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
+	diskUsage, _ := afs.DiskUsage()
 	name, err := afs.Indexer.FilePath(doc)
 	if err != nil {
 		return err
 	}
+	vfs.DiskQuotaAfterDestroy(afs, diskUsage, doc.ByteSize)
 	err = afs.fs.Remove(name)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -641,6 +658,7 @@ type aferoFileCreation struct {
 	newpath string             // file new path
 	bakpath string             // backup file path in case of modifying an existing file
 	maxsize int64              // maximum size allowed for the file
+	capsize int64              // size cap from which we send a notification to the user
 	hash    hash.Hash          // hash we build up along the file
 	meta    *vfs.MetaExtractor // extracts metadata from the content
 	err     error              // write error
@@ -689,9 +707,14 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 
 func (f *aferoFileCreation) Close() (err error) {
 	defer func() {
-		if err == nil && f.olddoc != nil {
-			// remove the backup if no error occured
-			f.afs.fs.Remove(f.bakpath) // #nosec
+		if err == nil {
+			if f.olddoc != nil {
+				// remove the backup if no error occured
+				f.afs.fs.Remove(f.bakpath) // #nosec
+			}
+			if f.capsize > 0 && f.size >= f.capsize {
+				vfs.PushDiskQuotaAlert(f.afs, true)
+			}
 		} else if err != nil && f.olddoc != nil {
 			// put back backup file revision in case on error occurred
 			f.afs.fs.Rename(f.bakpath, f.newpath) // #nosec

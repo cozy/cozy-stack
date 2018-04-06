@@ -28,6 +28,7 @@ type swiftVFSV2 struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 	c             *swift.Connection
+	domain        string
 	container     string
 	version       string
 	dataContainer string
@@ -46,7 +47,7 @@ const (
 // This version implements a simpler layout where swift does not contain any
 // hierarchy: meaning no index informations. This help with index incoherency
 // and as many performance improvements regarding moving / renaming folders.
-func NewV2(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, domain string) (vfs.VFS, error) {
+func NewV2(domain string, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
 	if domain == "" {
 		return nil, fmt.Errorf("vfsswift: specified domain is empty")
 	}
@@ -55,6 +56,7 @@ func NewV2(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, d
 		DiskThresholder: disk,
 
 		c:             config.GetSwiftConnection(),
+		domain:        domain,
 		container:     swiftV2ContainerPrefixCozy + domain,
 		version:       swiftV2ContainerPrefixCozy + domain + versionSuffix,
 		dataContainer: swiftV2ContainerPrefixData + domain,
@@ -78,6 +80,10 @@ func makeDocID(objName string) string {
 		return objName
 	}
 	return objName[:22] + objName[23:28] + objName[29:]
+}
+
+func (sfs *swiftVFSV2) Domain() string {
+	return sfs.domain
 }
 
 func (sfs *swiftVFSV2) InitFs() error {
@@ -160,7 +166,7 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 
 	diskQuota := sfs.DiskQuota()
 
-	var maxsize, newsize, oldsize int64
+	var maxsize, newsize, oldsize, capsize int64
 	newsize = newdoc.ByteSize
 	if diskQuota > 0 {
 		diskUsage, err := sfs.DiskUsage()
@@ -173,6 +179,9 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 		maxsize = diskQuota - diskUsage
 		if maxsize > maxFileSize {
 			maxsize = maxFileSize
+		}
+		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
+			capsize = quotaBytes - diskUsage
 		}
 	} else {
 		maxsize = maxFileSize
@@ -253,6 +262,7 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 		newdoc:  newdoc,
 		olddoc:  olddoc,
 		maxsize: maxsize,
+		capsize: capsize,
 	}, nil
 }
 
@@ -261,10 +271,12 @@ func (sfs *swiftVFSV2) DestroyDirContent(doc *vfs.DirDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	ids, err := sfs.Indexer.DeleteDirDocAndContent(doc, true)
+	diskUsage, _ := sfs.Indexer.DiskUsage()
+	destroyed, ids, err := sfs.Indexer.DeleteDirDocAndContent(doc, true)
 	if err != nil {
 		return err
 	}
+	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
 	objNames := make([]string, len(ids))
 	for i, id := range ids {
 		objNames[i] = MakeObjectName(id)
@@ -286,10 +298,12 @@ func (sfs *swiftVFSV2) DestroyDirAndContent(doc *vfs.DirDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	ids, err := sfs.Indexer.DeleteDirDocAndContent(doc, false)
+	diskUsage, _ := sfs.Indexer.DiskUsage()
+	destroyed, ids, err := sfs.Indexer.DeleteDirDocAndContent(doc, false)
 	if err != nil {
 		return err
 	}
+	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
 	objNames := make([]string, len(ids))
 	for i, id := range ids {
 		objNames[i] = MakeObjectName(id)
@@ -311,7 +325,12 @@ func (sfs *swiftVFSV2) DestroyFile(doc *vfs.FileDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	return sfs.Indexer.DeleteFileDoc(doc)
+	diskUsage, _ := sfs.Indexer.DiskUsage()
+	err := sfs.Indexer.DeleteFileDoc(doc)
+	if err == nil {
+		vfs.DiskQuotaAfterDestroy(sfs, diskUsage, doc.ByteSize)
+	}
+	return err
 }
 
 func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
@@ -580,6 +599,7 @@ type swiftFileCreationV2 struct {
 	newdoc  *vfs.FileDoc
 	olddoc  *vfs.FileDoc
 	maxsize int64
+	capsize int64
 }
 
 func (f *swiftFileCreationV2) Read(p []byte) (int, error) {
@@ -624,7 +644,11 @@ func (f *swiftFileCreationV2) Write(p []byte) (int, error) {
 
 func (f *swiftFileCreationV2) Close() (err error) {
 	defer func() {
-		if err != nil {
+		if err == nil {
+			if f.capsize > 0 && f.size >= f.capsize {
+				vfs.PushDiskQuotaAlert(f.fs, true)
+			}
+		} else {
 			// Deleting the object should be secure since we use X-Versions-Location
 			// on the container and the old object should be restored.
 			f.fs.c.ObjectDelete(f.fs.container, f.name) // #nosec

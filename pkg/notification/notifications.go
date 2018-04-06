@@ -18,6 +18,9 @@ type Properties struct {
 	DefaultPriority string            `json:"default_priority,omitempty"`
 	TimeToLive      time.Duration     `json:"time_to_live,omitempty"`
 	Templates       map[string]string `json:"templates,omitempty"`
+	MinInterval     time.Duration     `json:"min_interval,omitempty"`
+
+	MailTemplate string `json:"-"`
 }
 
 // Clone returns a cloned Properties struct pointer.
@@ -42,13 +45,13 @@ type Notification struct {
 	CategoryID string `json:"category_id,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
+	LastSent  time.Time `json:"last_sent"`
 
-	Topic    string                 `json:"topic,omitempty"`
 	Title    string                 `json:"title,omitempty"`
 	Message  string                 `json:"message,omitempty"`
 	Priority string                 `json:"priority,omitempty"`
 	Sound    string                 `json:"sound,omitempty"`
-	State    string                 `json:"state,omitempty"`
+	State    interface{}            `json:"state,omitempty"`
 	Data     map[string]interface{} `json:"data,omitempty"`
 
 	PreferredChannels []string `json:"preferred_channels,omitempty"`
