@@ -90,6 +90,14 @@ func TestValidatesRules(t *testing.T) {
 		},
 	}
 	assert.NoError(t, s.ValidateRules())
+	s.Rules = []Rule{
+		{
+			Title:   "root cannot be shared",
+			DocType: consts.Files,
+			Values:  []string{consts.RootDirID},
+		},
+	}
+	assert.Equal(t, ErrInvalidRule, s.ValidateRules())
 }
 
 func TestRuleAccept(t *testing.T) {

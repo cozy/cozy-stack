@@ -44,7 +44,15 @@ func (s *Sharing) ValidateRules() error {
 		if rule.Title == "" || rule.DocType == "" || len(rule.Values) == 0 {
 			return ErrInvalidRule
 		}
-		if rule.DocType != consts.Files && permissions.CheckWritable(rule.DocType) != nil {
+		if rule.DocType == consts.Files {
+			for _, val := range rule.Values {
+				if val == consts.RootDirID ||
+					val == consts.TrashDirID ||
+					val == consts.SharedWithMeDirID {
+					return ErrInvalidRule
+				}
+			}
+		} else if permissions.CheckWritable(rule.DocType) != nil {
 			return ErrInvalidRule
 		}
 		if rule.Add == "" {
