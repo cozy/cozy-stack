@@ -113,6 +113,6 @@ var AppsRegistry = map[string]string{
 	"photos":     "git://github.com/cozy/cozy-drive.git#latest-photos",
 	"settings":   "git://github.com/cozy/cozy-settings.git#latest",
 	"collect":    "git://github.com/cozy/cozy-collect.git#latest",
-	"banks":      "git://gitlab.cozycloud.cc/labs/cozy-bank.git#latest",
+	"banks":      "git://github.com/cozy/cozy-banks.git#latest",
 	"contacts":   "git://github.com/cozy/cozy-contacts.git#latest",
 }
