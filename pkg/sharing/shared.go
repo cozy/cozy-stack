@@ -15,6 +15,7 @@ import (
 type TrackMessage struct {
 	SharingID string `json:"sharing_id"`
 	RuleIndex int    `json:"rule_index"`
+	DocType   string `json:"doctype"`
 }
 
 // TrackEvent is used for jobs on the share-track worker.
@@ -113,7 +114,8 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	mu.Lock()
 	defer mu.Unlock()
 
-	sid := evt.Doc.DocType() + "/" + evt.Doc.ID()
+	evt.Doc.Type = msg.DocType
+	sid := evt.Doc.Type + "/" + evt.Doc.ID()
 	var ref SharedRef
 	if err := couchdb.GetDoc(inst, consts.Shared, sid, &ref); err != nil {
 		if !couchdb.IsNotFoundError(err) {

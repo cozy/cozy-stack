@@ -90,6 +90,7 @@ func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
 		msg, err := jobs.NewMessage(&TrackMessage{
 			SharingID: s.SID,
 			RuleIndex: i,
+			DocType:   rule.DocType,
 		})
 		if err != nil {
 			return err
