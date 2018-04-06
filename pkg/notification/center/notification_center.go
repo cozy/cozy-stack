@@ -24,16 +24,17 @@ import (
 const (
 	// NotificationDiskQuota category for sending alert when reaching 90% of disk
 	// usage quota.
-	NotificationDiskQuota = 0
+	NotificationDiskQuota = "disk-quota"
 )
 
 var (
-	stackNotifications = []*notification.Properties{
+	stackNotifications = map[string]*notification.Properties{
 		NotificationDiskQuota: {
 			Description:  "Warn about the diskquota reaching a high level",
 			Collapsible:  true,
 			Stateful:     true,
 			MailTemplate: "notifications_diskquota",
+			MinInterval:  7 * 24 * time.Hour,
 		},
 	}
 )
@@ -73,13 +74,18 @@ func init() {
 	})
 }
 
-func pushStack(domain string, p int, n *notification.Notification) error {
+func pushStack(domain string, category string, n *notification.Notification) error {
 	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
 	n.Originator = "stack"
-	return makePush(inst, stackNotifications[p], n)
+	n.Category = category
+	p := stackNotifications[category]
+	if p == nil {
+		return ErrCategoryNotFound
+	}
+	return makePush(inst, p, n)
 }
 
 // Push creates and send a new notification in database. This method verifies
@@ -135,17 +141,37 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 }
 
 func makePush(inst *instance.Instance, p *notification.Properties, n *notification.Notification) error {
+	lastSent := time.Now()
+	skipNotification := false
+
 	// XXX: for retro-compatibility, we do not yet block applications from
 	// sending notification from unknown category.
 	if p != nil && p.Stateful {
-		l, err := findLastNotification(inst, n.Source())
+		last, err := findLastNotification(inst, n.Source())
 		if err != nil {
 			return err
 		}
 		// when the state is the same for the last notification from this source,
 		// we do not bother sending or creating a new notification.
-		if l != nil && l.State == n.State {
-			return nil
+		if last != nil {
+			if last.State == n.State {
+				return nil
+			}
+			if p.MinInterval > 0 && time.Until(last.LastSent) <= p.MinInterval {
+				skipNotification = true
+			}
+		}
+
+		if p.Stateful && !skipNotification {
+			if b, ok := n.State.(bool); ok && !b {
+				skipNotification = true
+			} else if i, ok := n.State.(int); ok && i == 0 {
+				skipNotification = true
+			}
+		}
+
+		if skipNotification && last != nil {
+			lastSent = last.LastSent
 		}
 	}
 
@@ -158,17 +184,14 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 	n.NRev = ""
 	n.SourceID = n.Source()
 	n.CreatedAt = time.Now()
+	n.LastSent = lastSent
 	n.PreferredChannels = nil
 
 	if err := couchdb.CreateDoc(inst, n); err != nil {
 		return err
 	}
-	if p != nil && p.Stateful {
-		if b, ok := n.State.(bool); ok && !b {
-			return nil
-		} else if i, ok := n.State.(int); ok && i == 0 {
-			return nil
-		}
+	if skipNotification {
+		return nil
 	}
 
 	var errm error
@@ -193,7 +216,7 @@ func findLastNotification(inst *instance.Instance, source string) (*notification
 	var notifs []*notification.Notification
 	req := &couchdb.FindRequest{
 		UseIndex: "by-source-id",
-		Selector: mango.Equal("source", source),
+		Selector: mango.Equal("source_id", source),
 		Sort: mango.SortBy{
 			{Field: "source_id", Direction: mango.Desc},
 			{Field: "created_at", Direction: mango.Desc},

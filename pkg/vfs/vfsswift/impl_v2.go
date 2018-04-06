@@ -325,7 +325,12 @@ func (sfs *swiftVFSV2) DestroyFile(doc *vfs.FileDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	return sfs.Indexer.DeleteFileDoc(doc)
+	diskUsage, _ := sfs.Indexer.DiskUsage()
+	err := sfs.Indexer.DeleteFileDoc(doc)
+	if err == nil {
+		vfs.DiskQuotaAfterDestroy(sfs, diskUsage, doc.ByteSize)
+	}
+	return err
 }
 
 func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {

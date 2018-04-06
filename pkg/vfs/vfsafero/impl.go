@@ -271,10 +271,12 @@ func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
+	diskUsage, _ := afs.DiskUsage()
 	name, err := afs.Indexer.FilePath(doc)
 	if err != nil {
 		return err
 	}
+	vfs.DiskQuotaAfterDestroy(afs, diskUsage, doc.ByteSize)
 	err = afs.fs.Remove(name)
 	if err != nil && !os.IsNotExist(err) {
 		return err

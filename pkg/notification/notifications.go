@@ -18,6 +18,7 @@ type Properties struct {
 	DefaultPriority string            `json:"default_priority,omitempty"`
 	TimeToLive      time.Duration     `json:"time_to_live,omitempty"`
 	Templates       map[string]string `json:"templates,omitempty"`
+	MinInterval     time.Duration     `json:"min_interval,omitempty"`
 
 	MailTemplate string `json:"-"`
 }
@@ -44,6 +45,7 @@ type Notification struct {
 	CategoryID string `json:"category_id,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
+	LastSent  time.Time `json:"last_sent"`
 
 	Title    string                 `json:"title,omitempty"`
 	Message  string                 `json:"message,omitempty"`
