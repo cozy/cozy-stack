@@ -120,6 +120,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 			return err
 		}
 		ref.SID = sid
+		ref.Infos = make(map[string]SharedInfo)
 	}
 
 	if _, ok := ref.Infos[msg.SharingID]; !ok {
