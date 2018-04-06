@@ -161,7 +161,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 			return nil, vfs.ErrFileTooBig
 		}
 
-		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage < quotaBytes {
+		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
 			capsize = quotaBytes - diskUsage
 		}
 	} else {
@@ -710,7 +710,7 @@ func (f *aferoFileCreation) Close() (err error) {
 				// remove the backup if no error occured
 				f.afs.fs.Remove(f.bakpath) // #nosec
 			}
-			if f.capsize > 0 && f.size > f.capsize {
+			if f.capsize > 0 && f.size >= f.capsize {
 				vfs.PushDiskQuotaAlert(f.afs, true)
 			}
 		} else if err != nil && f.olddoc != nil {

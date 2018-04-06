@@ -180,8 +180,8 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 		if maxsize > maxFileSize {
 			maxsize = maxFileSize
 		}
-		if capQuota := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage < capQuota {
-			capsize = capQuota - diskUsage
+		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
+			capsize = quotaBytes - diskUsage
 		}
 	} else {
 		maxsize = maxFileSize
@@ -640,7 +640,7 @@ func (f *swiftFileCreationV2) Write(p []byte) (int, error) {
 func (f *swiftFileCreationV2) Close() (err error) {
 	defer func() {
 		if err == nil {
-			if f.capsize > 0 && f.size > f.capsize {
+			if f.capsize > 0 && f.size >= f.capsize {
 				vfs.PushDiskQuotaAlert(f.fs, true)
 			}
 		} else {
