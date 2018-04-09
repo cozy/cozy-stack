@@ -92,9 +92,6 @@ func createHandler(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
-	in.OAuthSecret = nil
-	in.SessionSecret = nil
-	in.PassphraseHash = nil
 	pass := c.QueryParam("Passphrase")
 	if pass != "" {
 		if err = in.RegisterPassphrase([]byte(pass), in.RegisterToken); err != nil {
@@ -107,6 +104,9 @@ func createHandler(c echo.Context) error {
 			return err
 		}
 	}
+	in.OAuthSecret = nil
+	in.SessionSecret = nil
+	in.PassphraseHash = nil
 	return jsonapi.Data(c, http.StatusCreated, &apiInstance{in}, nil)
 }
 
