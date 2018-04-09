@@ -92,6 +92,10 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	if m.Instance == "" {
 		return ErrInvalidURL
 	}
+	creds := s.FindCredentials(m)
+	if creds == nil {
+		return ErrInvalidSharing
+	}
 
 	lastSeq, err := s.getLastSeqNumber(inst, m)
 	if err != nil {
@@ -114,7 +118,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		if initial {
 			missings = transformChangesInMissings(changes)
 		} else {
-			missings, err = s.callRevsDiff(inst, m, changes)
+			missings, err = s.callRevsDiff(inst, m, creds, changes)
 			if err != nil {
 				return err
 			}
@@ -127,7 +131,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		}
 		fmt.Printf("docs = %#v\n", docs)
 
-		err = s.sendBulkDocs(inst, m, docs)
+		err = s.sendBulkDocs(inst, m, creds, docs)
 		if err != nil {
 			return err
 		}
@@ -189,7 +193,7 @@ func (s *Sharing) replicationID(m *Member) (string, error) {
 	return "", ErrMemberNotFound
 }
 
-// Changes is a map of "doctype-docid" -> [revisions]
+// Changes is a map of "doctype/docid" -> [revisions]
 // It's the format for the request body of our _revs_diff
 type Changes map[string][]string
 
@@ -238,25 +242,31 @@ func transformChangesInMissings(changes *Changes) *Missings {
 	return &missings
 }
 
-// callRevsDiff asks the other cozy to compute the _revs_diff
+// callRevsDiff asks the other cozy to compute the _revs_diff.
+// This function does the ID transformation for files in both ways.
 // http://docs.couchdb.org/en/2.1.1/api/database/misc.html#db-revs-diff
-func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, changes *Changes) (*Missings, error) {
+func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Credentials, changes *Changes) (*Missings, error) {
 	u, err := url.Parse(m.Instance)
 	if err != nil {
 		return nil, err
 	}
-	// "doctype-docid" -> [leaf revisions]
+	// "io.cozy.files/docid" for recipient -> "io.cozy.files/docid" for sender
+	xored := make(map[string]string)
+	// "doctype/docid" -> [leaf revisions]
 	leafRevs := make(map[string][]string, len(*changes))
 	for key, revs := range *changes {
+		if strings.HasPrefix(key, consts.Files+"/") {
+			old := key
+			parts := strings.SplitN(key, "/", 2)
+			parts[1] = XorID(parts[1], creds.XorKey)
+			key = parts[0] + "/" + parts[1]
+			xored[key] = old
+		}
 		leafRevs[key] = revs[len(revs)-1:]
 	}
 	body, err := json.Marshal(leafRevs)
 	if err != nil {
 		return nil, err
-	}
-	creds := s.FindCredentials(m)
-	if creds == nil {
-		return nil, ErrInvalidSharing
 	}
 	res, err := request.Req(&request.Options{
 		Method: http.MethodPost,
@@ -304,6 +314,12 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, changes *Chan
 	missings := make(Missings)
 	if err = json.NewDecoder(res.Body).Decode(&missings); err != nil {
 		return nil, err
+	}
+	for k, v := range missings {
+		if old, ok := xored[k]; ok {
+			missings[old] = v
+			delete(missings, k)
+		}
 	}
 	return &missings, nil
 }
@@ -424,22 +440,27 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*
 	return &docs, nil
 }
 
-// sendBulkDocs takes a bulk of documents and send them to the other cozy
+// sendBulkDocs takes a bulk of documents and send them to the other cozy.
+// This function does the id and parent_id transformation before sending files.
 // http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#db-bulk-docs
 // https://wiki.apache.org/couchdb/HTTP_Bulk_Document_API#Posting_Existing_Revisions
 // https://gist.github.com/nono/42aee18de6314a621f9126f284e303bb
-func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, docs *DocsByDoctype) error {
+func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Credentials, docs *DocsByDoctype) error {
 	u, err := url.Parse(m.Instance)
 	if err != nil {
 		return err
 	}
+	if files, ok := (*docs)[consts.Files]; ok {
+		for i, file := range files {
+			file["_id"] = XorID(file["_id"].(string), creds.XorKey)
+			// TODO update parent_id
+			files[i] = file
+		}
+		(*docs)[consts.Files] = files
+	}
 	body, err := json.Marshal(docs)
 	if err != nil {
 		return err
-	}
-	creds := s.FindCredentials(m)
-	if creds == nil {
-		return ErrInvalidSharing
 	}
 	res, err := request.Req(&request.Options{
 		Method: http.MethodPost,
