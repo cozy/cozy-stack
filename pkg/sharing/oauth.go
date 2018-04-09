@@ -18,13 +18,20 @@ import (
 )
 
 // CreateSharingRequest sends information about the sharing to the recipient's cozy
-func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, u *url.URL) error {
-	// TODO translate ids of files/folders in the rules sent to the recipients
+func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Credentials, u *url.URL) error {
 	rules := make([]Rule, 0, len(s.Rules))
 	for _, rule := range s.Rules {
-		if !rule.Local {
-			rules = append(rules, rule)
+		if rule.Local {
+			continue
 		}
+		if rule.FilesByID() {
+			values := make([]string, len(rule.Values))
+			for i, v := range rule.Values {
+				values[i] = XorID(v, c.XorKey)
+			}
+			rule.Values = values
+		}
+		rules = append(rules, rule)
 	}
 	sh := APISharing{
 		&Sharing{
@@ -92,7 +99,11 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL st
 	u.Fragment = ""
 	m.Instance = u.String()
 
-	if err = m.CreateSharingRequest(inst, s, u); err != nil {
+	creds := s.FindCredentials(m)
+	if creds == nil {
+		return ErrInvalidSharing
+	}
+	if err = m.CreateSharingRequest(inst, s, creds, u); err != nil {
 		inst.Logger().Warnf("[sharing] Error on sharing request: %s", err)
 		return ErrRequestFailed
 	}
@@ -243,14 +254,17 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		return err
 	}
 
+	var creds Credentials
+	if _, err = jsonapi.Bind(res.Body, &creds); err != nil {
+		return ErrRequestFailed
+	}
+	s.Credentials[0].XorKey = creds.XorKey
 	if !s.ReadOnly() {
-		var creds Credentials
-		if _, err = jsonapi.Bind(res.Body, &creds); err != nil {
-			return ErrRequestFailed
-		}
 		s.Credentials[0].AccessToken = creds.AccessToken
 		s.Credentials[0].Client = creds.Client
-		return couchdb.UpdateDoc(inst, s)
+	}
+	if err = couchdb.UpdateDoc(inst, s); err != nil {
+		return err
 	}
 	return nil
 }
@@ -268,7 +282,12 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 			if err := couchdb.UpdateDoc(inst, s); err != nil {
 				return nil, err
 			}
-			ac := APICredentials{CID: s.SID, Credentials: &Credentials{}}
+			ac := APICredentials{
+				CID: s.SID,
+				Credentials: &Credentials{
+					XorKey: creds.XorKey,
+				},
+			}
 			if !s.ReadOnly() {
 				cli, err := CreateOAuthClient(inst, &s.Members[i+1])
 				if err != nil {

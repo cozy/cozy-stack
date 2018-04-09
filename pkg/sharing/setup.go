@@ -180,6 +180,7 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 }
 
 // findDocsToCopy finds the documents that match the given rule
+// TODO select all files and sub-folders inside a folder for a FilesById rule
 func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, error) {
 	var docs []couchdb.JSONDoc
 	if rule.Selector == "" || rule.Selector == "id" {

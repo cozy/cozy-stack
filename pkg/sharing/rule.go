@@ -34,6 +34,16 @@ type Rule struct {
 	Remove   string   `json:"remove"`
 }
 
+// FilesByID returns true if the rule is for the files by doctype and the
+// selector is an id (not a referenced_by). With such a rule, the identifiers
+// must be xored before being sent to another cozy instance.
+func (r Rule) FilesByID() bool {
+	if r.DocType != consts.Files {
+		return false
+	}
+	return r.Selector == "" || r.Selector == "id" || r.Selector == "_id"
+}
+
 // ValidateRules returns an error if the rules are invalid (the doctype is
 // missing for example)
 func (s *Sharing) ValidateRules() error {
