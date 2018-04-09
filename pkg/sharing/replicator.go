@@ -46,7 +46,9 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 			}
 			if m.Status == MemberStatusReady {
 				err := s.ReplicateTo(inst, &s.Members[i], false)
-				errm = multierror.Append(errm, err)
+				if err != nil {
+					errm = multierror.Append(errm, err)
+				}
 			}
 		}
 	}
