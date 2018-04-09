@@ -239,6 +239,10 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		return ErrRequestFailed
 	}
 
+	if err = s.SetupReceiver(inst); err != nil {
+		return err
+	}
+
 	if !s.ReadOnly() {
 		var creds Credentials
 		if _, err = jsonapi.Bind(res.Body, &creds); err != nil {
@@ -248,8 +252,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		s.Credentials[0].Client = creds.Client
 		return couchdb.UpdateDoc(inst, s)
 	}
-
-	return s.SetupReceiver(inst)
+	return nil
 }
 
 // ProcessAnswer takes somes credentials and update the sharing with those.
