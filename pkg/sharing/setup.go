@@ -21,6 +21,13 @@ func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
 	if s.HasFiles() {
 		return EnsureSharedWithMeDir(inst)
 	}
+	if err := s.AddTrackTriggers(inst); err != nil {
+		return err
+	}
+	// TODO do not add the share-replicate trigger for a one-way sharing
+	if err := s.AddReplicateTrigger(inst); err != nil {
+		return err
+	}
 	return nil
 }
 
