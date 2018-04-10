@@ -143,7 +143,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	}
 
 	if ref.Rev() == "" {
-		return couchdb.CreateDoc(inst, &ref)
+		return couchdb.CreateNamedDoc(inst, &ref)
 	}
 	return couchdb.UpdateDoc(inst, &ref)
 }
