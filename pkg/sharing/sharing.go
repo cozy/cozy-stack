@@ -197,7 +197,7 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 	s.UpdatedAt = time.Now()
 	s.Credentials = make([]Credentials, 1)
 
-	return couchdb.CreateNamedDoc(inst, s)
+	return couchdb.CreateNamedDocWithDB(inst, s)
 }
 
 // FindSharing retrieves a sharing document from its ID
