@@ -10,7 +10,6 @@ func TestMakeXorKey(t *testing.T) {
 	key := MakeXorKey()
 	assert.Len(t, key, 16)
 	for _, k := range key {
-		assert.True(t, k >= 0)
 		assert.True(t, k < 16)
 	}
 }
