@@ -25,7 +25,7 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 			default:
 				errHTTP = echo.NewHTTPError(http.StatusInternalServerError, err)
 			}
-			errHTTP.Inner = err
+			errHTTP.Internal = err
 			return errHTTP
 		}
 		c.Set("instance", i)
