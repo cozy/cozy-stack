@@ -55,7 +55,8 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 
 	if dir == nil {
 		name := inst.Translate("Tree Shared with me")
-		dir, err = vfs.NewDirDocWithPath(name, consts.SharedWithMeDirID, "/", nil)
+		dir, err = vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)
+		dir.DocID = consts.SharedWithMeDirID
 		if err != nil {
 			return nil, err
 		}
@@ -98,13 +99,13 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error
 		return err
 	}
 	fs := inst.VFS()
-	dir, err := vfs.NewDirDoc(fs, rule.Title, parent.DocID, []string{"from-sharing-" + s.SID})
+	dir, err := vfs.NewDirDocWithParent(rule.Title, parent, []string{"from-sharing-" + s.SID})
+	if rule.Selector == "" || rule.Selector == "id" || rule.Selector == "_id" {
+		dir.DocID = rule.Values[0]
+	}
 	dir.AddReferencedBy(couchdb.DocReference{
 		ID:   s.SID,
 		Type: consts.Sharings,
 	})
-	if rule.Selector == "" || rule.Selector == "id" || rule.Selector == "_id" {
-		dir.DocID = rule.Values[0]
-	}
 	return fs.CreateDir(dir)
 }
