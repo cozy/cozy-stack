@@ -155,3 +155,14 @@ func (r Rule) TriggerArgs(owner bool) string {
 	}
 	return args
 }
+
+// RuleHasSync returns true if at least one rule has an ActionRuleSync defined
+func (s *Sharing) RuleHasSync() bool {
+	for _, r := range s.Rules {
+		if r.Add == ActionRuleSync || r.Update == ActionRuleSync ||
+			r.Remove == ActionRuleSync {
+			return true
+		}
+	}
+	return false
+}
