@@ -40,6 +40,7 @@ const (
 const (
 	FormTokenAuthMode  = "form"
 	BasicTokenAuthMode = "basic"
+	GetTokenAuthMode   = "get"
 )
 
 // RefreshToken is the refresh grant type
@@ -171,13 +172,23 @@ func (at *AccountType) RequestAccessToken(i *instance.Instance, accessCode, stat
 	}
 
 	body := data.Encode()
-	req, err := http.NewRequest("POST", at.TokenEndpoint, strings.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
+	var req *http.Request
+	var err error
+	if at.TokenAuthMode == GetTokenAuthMode {
+		urlWithParams := at.TokenEndpoint + "?" + body
+		req, err = http.NewRequest("GET", urlWithParams, nil)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		req, err = http.NewRequest("POST", at.TokenEndpoint, strings.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
 
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Accept", "application/json")
+		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Add("Accept", "application/json")
+	}
 
 	if at.TokenAuthMode == BasicTokenAuthMode {
 		auth := []byte(at.ClientID + ":" + at.ClientSecret)
