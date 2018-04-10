@@ -17,7 +17,7 @@ request to
 ## Publishing on our official registries
 
 In order for you to publish on our official registries, please follow
-[this howto](./registry_publish.md) describing how to obtain a token and
+[this howto](./registry-publish.md) describing how to obtain a token and
 parameter you repository to automatically publish versions.
 
 ## Channels
