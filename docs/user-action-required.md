@@ -24,7 +24,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "status": 402,
-  "error": "tos_updated",
+  "error": "tos-updated",
   "title": "TOS Updated",
   "details": "Terms of services have been updated",
   "links": { "action": "https://manager.cozycloud.cc/cozy/tos?domain=..." }
@@ -55,7 +55,7 @@ GET /settings/warnings HTTP/1.1
 ```json
 [
   {
-    "error": "tos_updated",
+    "error": "tos-updated",
     "title": "TOS Updated",
     "details": "Terms of services have been updated",
     "links": { "action": "https://manager.cozycloud.cc/cozy/tos?domain=..." }

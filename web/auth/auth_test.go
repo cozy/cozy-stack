@@ -1260,13 +1260,10 @@ func TestPassphraseRenewFormWithToken(t *testing.T) {
 func TestPassphraseRenew(t *testing.T) {
 	d := "test.cozycloud.cc.web_reset_form"
 	instance.Destroy(d)
-	var settings couchdb.JSONDoc
-	settings.M = make(map[string]interface{})
-	settings.M["email"] = "alice@example.com"
 	in1, err := instance.Create(&instance.Options{
-		Domain:   d,
-		Locale:   "en",
-		Settings: settings,
+		Domain: d,
+		Locale: "en",
+		Email:  "alice@example.com",
 	})
 	if !assert.NoError(t, err) {
 		return
@@ -1327,13 +1324,10 @@ func TestMain(m *testing.M) {
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "auth_test")
 
-	testInstance = setup.GetTestInstance(&instance.Options{Domain: domain})
-	testInstance.RegisterPassphrase([]byte("MyPassphrase"), testInstance.RegisterToken)
-	testInstance.OnboardingFinished = true
-	err := instance.Update(testInstance)
-	if err != nil {
-		testutils.Fatal(err)
-	}
+	testInstance = setup.GetTestInstance(&instance.Options{
+		Domain:     domain,
+		Passphrase: "MyPassphrase",
+	})
 
 	jar = setup.GetCookieJar()
 	client = &http.Client{

@@ -20,10 +20,17 @@ type Instance struct {
 	Attrs struct {
 		Domain               string    `json:"domain"`
 		Locale               string    `json:"locale"`
+		UUID                 string    `json:"uuid,omitempty"`
+		ContextName          string    `json:"context,omitempty"`
+		TOSSigned            string    `json:"tos,omitempty"`
+		TOSLatest            string    `json:"tos_latest,omitempty"`
+		AuthMode             int       `json:"auth_mode,omitempty"`
+		NoAutoUpdate         bool      `json:"no_auto_update,omitempty"`
 		Dev                  bool      `json:"dev"`
 		OnboardingFinished   bool      `json:"onboarding_finished"`
 		BytesDiskQuota       int64     `json:"disk_quota,string,omitempty"`
 		IndexViewsVersion    int       `json:"indexes_version"`
+		SwiftCluster         int       `json:"swift_cluster,omitempty"`
 		PassphraseResetToken []byte    `json:"passphrase_reset_token"`
 		PassphraseResetTime  time.Time `json:"passphrase_reset_time"`
 		RegisterToken        []byte    `json:"register_token,omitempty"`
@@ -34,17 +41,20 @@ type Instance struct {
 type InstanceOptions struct {
 	Domain             string
 	Locale             string
+	UUID               string
+	TOSSigned          string
+	TOSLatest          string
 	Timezone           string
 	Email              string
 	PublicName         string
 	Settings           string
-	SwiftCluster       *int
-	DiskQuota          *int64
+	SwiftCluster       int
+	DiskQuota          int64
 	Apps               []string
-	Dev                bool
 	Passphrase         string
 	Debug              *bool
 	OnboardingFinished *bool
+	Dev                bool
 }
 
 // TokenOptions is a struct holding all the options to generate a token.
@@ -97,21 +107,19 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 		return nil, fmt.Errorf("Invalid domain: %s", opts.Domain)
 	}
 	q := url.Values{
-		"Domain":     {opts.Domain},
-		"Locale":     {opts.Locale},
-		"Timezone":   {opts.Timezone},
-		"Email":      {opts.Email},
-		"PublicName": {opts.PublicName},
-		"Settings":   {opts.Settings},
-		"Apps":       {strings.Join(opts.Apps, ",")},
-		"Dev":        {strconv.FormatBool(opts.Dev)},
-		"Passphrase": {opts.Passphrase},
-	}
-	if opts.DiskQuota != nil {
-		q.Add("DiskQuota", strconv.FormatInt(*opts.DiskQuota, 10))
-	}
-	if opts.SwiftCluster != nil {
-		q.Add("SwiftCluster", strconv.Itoa(*opts.SwiftCluster))
+		"Domain":       {opts.Domain},
+		"Locale":       {opts.Locale},
+		"UUID":         {opts.UUID},
+		"TOSSigned":    {opts.TOSSigned},
+		"Timezone":     {opts.Timezone},
+		"Email":        {opts.Email},
+		"PublicName":   {opts.PublicName},
+		"Settings":     {opts.Settings},
+		"SwiftCluster": {strconv.Itoa(opts.SwiftCluster)},
+		"DiskQuota":    {strconv.FormatInt(opts.DiskQuota, 10)},
+		"Apps":         {strings.Join(opts.Apps, ",")},
+		"Passphrase":   {opts.Passphrase},
+		"Dev":          {strconv.FormatBool(opts.Dev)},
 	}
 	res, err := c.Req(&request.Options{
 		Method:  "POST",
@@ -146,16 +154,22 @@ func (c *Client) ModifyInstance(domain string, opts *InstanceOptions) (*Instance
 		return nil, fmt.Errorf("Invalid domain: %s", domain)
 	}
 	q := url.Values{
-		"Locale": {opts.Locale},
+		"Locale":       {opts.Locale},
+		"UUID":         {opts.UUID},
+		"TOSSigned":    {opts.TOSSigned},
+		"TOSLatest":    {opts.TOSLatest},
+		"Timezone":     {opts.Timezone},
+		"Email":        {opts.Email},
+		"PublicName":   {opts.PublicName},
+		"Settings":     {opts.Settings},
+		"SwiftCluster": {strconv.Itoa(opts.SwiftCluster)},
+		"DiskQuota":    {strconv.FormatInt(opts.DiskQuota, 10)},
 	}
 	if opts.Debug != nil {
 		q.Add("Debug", strconv.FormatBool(*opts.Debug))
 	}
 	if opts.OnboardingFinished != nil {
 		q.Add("OnboardingFinished", strconv.FormatBool(*opts.OnboardingFinished))
-	}
-	if opts.DiskQuota != nil {
-		q.Add("DiskQuota", strconv.FormatInt(*opts.DiskQuota, 10))
 	}
 	res, err := c.Req(&request.Options{
 		Method:  "PATCH",

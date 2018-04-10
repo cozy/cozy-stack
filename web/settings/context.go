@@ -41,8 +41,9 @@ func onboarded(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, i.PageURL("/auth/login", nil))
 	}
 	if !i.OnboardingFinished {
-		i.OnboardingFinished = true
-		if err := instance.Update(i); err != nil {
+		t := true
+		err := instance.Patch(i, &instance.Options{OnboardingFinished: &t})
+		if err != nil {
 			return err
 		}
 	}

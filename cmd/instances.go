@@ -118,19 +118,13 @@ be used as the error message.
 			return cmd.Usage()
 		}
 
-		var quota *int64
+		var diskQuota int64
 		if flagDiskQuota != "" {
 			diskQuotaU, err := humanize.ParseBytes(flagDiskQuota)
 			if err != nil {
 				return err
 			}
-			diskQuota := int64(diskQuotaU)
-			quota = &diskQuota
-		}
-
-		var swiftCluster *int
-		if flagSwiftCluster > 0 {
-			swiftCluster = &flagSwiftCluster
+			diskQuota = int64(diskQuotaU)
 		}
 
 		domain := args[0]
@@ -143,8 +137,8 @@ be used as the error message.
 			Email:        flagEmail,
 			PublicName:   flagPublicName,
 			Settings:     flagSettings,
-			DiskQuota:    quota,
-			SwiftCluster: swiftCluster,
+			DiskQuota:    diskQuota,
+			SwiftCluster: flagSwiftCluster,
 			Dev:          flagDev,
 			Passphrase:   flagPassphrase,
 		})
@@ -196,11 +190,10 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 		if err != nil {
 			return fmt.Errorf("Could not parse disk-quota: %s", err)
 		}
-		quota := int64(diskQuota)
 		domain := args[0]
 		c := newAdminClient()
 		_, err = c.ModifyInstance(domain, &client.InstanceOptions{
-			DiskQuota: &quota,
+			DiskQuota: int64(diskQuota),
 		})
 		return err
 	},

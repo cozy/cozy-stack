@@ -60,15 +60,12 @@ func TestCreateInstance(t *testing.T) {
 }
 
 func TestCreateInstanceWithSettings(t *testing.T) {
-	var settings couchdb.JSONDoc
-	settings.M = make(map[string]interface{})
-	settings.M["tz"] = "Europe/Berlin"
-	settings.M["email"] = "alice@example.com"
-	settings.M["offer"] = "freemium"
 	instance, err := instance.Create(&instance.Options{
 		Domain:   "test2.cozycloud.cc",
 		Locale:   "en",
-		Settings: settings,
+		Timezone: "Europe/Berlin",
+		Email:    "alice@example.com",
+		Settings: "offer:freemium",
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, instance.Domain, "test2.cozycloud.cc")

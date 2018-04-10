@@ -45,16 +45,11 @@ func init() {
 		if err != nil {
 			return
 		}
+		if i.UUID == "" {
+			return
+		}
 		ctx, err := i.Context()
 		if err != nil {
-			return
-		}
-		settings, err := i.SettingsDocument()
-		if err != nil {
-			return
-		}
-		uuid, ok := settings.Get("uuid").(string)
-		if !ok {
 			return
 		}
 		managerURL, ok := ctx["manager_url"].(string)
@@ -65,7 +60,7 @@ func init() {
 		if err != nil {
 			return
 		}
-		offersLink.Path = fmt.Sprintf("/cozy/accounts/%s", url.PathEscape(uuid))
+		offersLink.Path = fmt.Sprintf("/cozy/accounts/%s", url.PathEscape(i.UUID))
 		n := &notification.Notification{
 			State: exceeded,
 			Data:  map[string]interface{}{"OffersLink": offersLink.String()},
