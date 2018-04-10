@@ -46,7 +46,9 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 			}
 			if m.Status == MemberStatusReady {
 				err := s.ReplicateTo(inst, &s.Members[i], false)
-				errm = multierror.Append(errm, err)
+				if err != nil {
+					errm = multierror.Append(errm, err)
+				}
 			}
 		}
 	}
@@ -112,7 +114,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		if initial {
 			missings = transformChangesInMissings(changes)
 		} else {
-			missings, err = s.callRevsDiff(m, changes)
+			missings, err = s.callRevsDiff(inst, m, changes)
 			if err != nil {
 				return err
 			}
@@ -125,7 +127,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		}
 		fmt.Printf("docs = %#v\n", docs)
 
-		err = s.sendBulkDocs(m, docs)
+		err = s.sendBulkDocs(inst, m, docs)
 		if err != nil {
 			return err
 		}
@@ -207,9 +209,9 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 	}
 	changes := make(Changes)
 	for _, r := range response.Results {
-		changes[r.DocID] = make([]string, len(r.Changes))
-		for i, c := range r.Changes {
-			changes[r.DocID][i] = c.Rev
+		if revisions, ok := r.Doc.Get("revisions").([]interface{}); ok && len(revisions) > 0 {
+			rev, _ := revisions[len(revisions)-1].(string)
+			changes[r.DocID] = []string{rev}
 		}
 	}
 	return &changes, response.LastSeq, nil
@@ -238,7 +240,7 @@ func transformChangesInMissings(changes *Changes) *Missings {
 
 // callRevsDiff asks the other cozy to compute the _revs_diff
 // http://docs.couchdb.org/en/2.1.1/api/database/misc.html#db-revs-diff
-func (s *Sharing) callRevsDiff(m *Member, changes *Changes) (*Missings, error) {
+func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, changes *Changes) (*Missings, error) {
 	u, err := url.Parse(m.Instance)
 	if err != nil {
 		return nil, err
@@ -252,19 +254,45 @@ func (s *Sharing) callRevsDiff(m *Member, changes *Changes) (*Missings, error) {
 	if err != nil {
 		return nil, err
 	}
+	creds := s.FindCredentials(m)
+	if creds == nil {
+		return nil, ErrInvalidSharing
+	}
 	res, err := request.Req(&request.Options{
 		Method: http.MethodPost,
 		Scheme: u.Scheme,
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/_revs_diff",
 		Headers: request.Headers{
-			"Accept":       "application/json",
-			"Content-Type": "application/json",
+			"Accept":        "application/json",
+			"Content-Type":  "application/json",
+			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 		},
 		Body: bytes.NewReader(body),
 	})
 	if err != nil {
 		return nil, err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if err = creds.Refresh(inst, s, m); err != nil {
+			return nil, err
+		}
+		res, err = request.Req(&request.Options{
+			Method: http.MethodPost,
+			Scheme: u.Scheme,
+			Domain: u.Host,
+			Path:   "/sharings/" + s.SID + "/_revs_diff",
+			Headers: request.Headers{
+				"Accept":        "application/json",
+				"Content-Type":  "application/json",
+				"Authorization": "Bearer " + creds.AccessToken.AccessToken,
+			},
+			Body: bytes.NewReader(body),
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	defer res.Body.Close()
 	if res.StatusCode/100 == 5 {
@@ -385,7 +413,7 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*
 		}
 	}
 
-	var docs DocsByDoctype
+	docs := make(DocsByDoctype, len(queries))
 	for doctype, query := range queries {
 		results, err := couchdb.BulkGetDocs(inst, doctype, query)
 		if err != nil {
@@ -400,7 +428,7 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*
 // http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#db-bulk-docs
 // https://wiki.apache.org/couchdb/HTTP_Bulk_Document_API#Posting_Existing_Revisions
 // https://gist.github.com/nono/42aee18de6314a621f9126f284e303bb
-func (s *Sharing) sendBulkDocs(m *Member, docs *DocsByDoctype) error {
+func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, docs *DocsByDoctype) error {
 	u, err := url.Parse(m.Instance)
 	if err != nil {
 		return err
@@ -409,19 +437,45 @@ func (s *Sharing) sendBulkDocs(m *Member, docs *DocsByDoctype) error {
 	if err != nil {
 		return err
 	}
+	creds := s.FindCredentials(m)
+	if creds == nil {
+		return ErrInvalidSharing
+	}
 	res, err := request.Req(&request.Options{
 		Method: http.MethodPost,
 		Scheme: u.Scheme,
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/_bulk_docs",
 		Headers: request.Headers{
-			"Accept":       "application/json",
-			"Content-Type": "application/json",
+			"Accept":        "application/json",
+			"Content-Type":  "application/json",
+			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 		},
 		Body: bytes.NewReader(body),
 	})
 	if err != nil {
 		return err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if err = creds.Refresh(inst, s, m); err != nil {
+			return err
+		}
+		res, err = request.Req(&request.Options{
+			Method: http.MethodPost,
+			Scheme: u.Scheme,
+			Domain: u.Host,
+			Path:   "/sharings/" + s.SID + "/_bulk_docs",
+			Headers: request.Headers{
+				"Accept":        "application/json",
+				"Content-Type":  "application/json",
+				"Authorization": "Bearer " + creds.AccessToken.AccessToken,
+			},
+			Body: bytes.NewReader(body),
+		})
+		if err != nil {
+			return err
+		}
 	}
 	defer res.Body.Close()
 	if res.StatusCode/100 == 5 {

@@ -53,7 +53,7 @@ func uuidv4() string {
 	return id.String()
 }
 
-func createSharedRef(t *testing.T) {
+func createASharedRef(t *testing.T) {
 	ref := SharedRef{
 		SID:       testDoctype + "/" + uuidv4(),
 		Revisions: []string{"1-aaa"},
@@ -65,7 +65,7 @@ func createSharedRef(t *testing.T) {
 func TestSequenceNumber(t *testing.T) {
 	nb := 5
 	for i := 0; i < nb; i++ {
-		createSharedRef(t)
+		createASharedRef(t)
 	}
 	s := &Sharing{SID: uuidv4(), Members: []Member{
 		{Status: MemberStatusOwner, Name: "Alice"},
@@ -277,6 +277,156 @@ func TestInitialCopy(t *testing.T) {
 		assert.Contains(t, threeRef.Infos, s2.SID)
 		assert.Equal(t, 0, threeRef.Infos[s2.SID].Rule)
 	}
+}
+
+func createSharedRef(t *testing.T, sid string, revisions []string) *SharedRef {
+	ref := SharedRef{
+		SID:       sid,
+		Revisions: revisions,
+	}
+	err := couchdb.CreateNamedDocWithDB(inst, &ref)
+	assert.NoError(t, err)
+	return &ref
+}
+
+func appendRevisionToSharedRef(t *testing.T, ref *SharedRef, revision string) {
+	ref.Revisions = append(ref.Revisions, revision)
+	err := couchdb.UpdateDoc(inst, ref)
+	assert.NoError(t, err)
+}
+
+func TestCallChangesFeed(t *testing.T) {
+	// Start with an empty io.cozy.shared database
+	couchdb.DeleteDB(inst, consts.Shared)
+	couchdb.CreateDB(inst, consts.Shared)
+
+	foobars := "io.cozy.tests.foobars"
+	id1 := uuidv4()
+	ref1 := createSharedRef(t, foobars+"/"+id1, []string{"1-aaa"})
+	id2 := uuidv4()
+	ref2 := createSharedRef(t, foobars+"/"+id2, []string{"3-bbb"})
+	appendRevisionToSharedRef(t, ref1, "2-ccc")
+	s := Sharing{
+		SID: uuidv4(),
+		Rules: []Rule{
+			{
+				Title:   "foobars rule",
+				DocType: foobars,
+				Values:  []string{id1, id2},
+			},
+		},
+	}
+	changes, seq, err := s.callChangesFeed(inst, "")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, seq)
+	assert.Equal(t, 3, RevGeneration(seq))
+	assert.Equal(t, []string{"2-ccc"}, (*changes)[ref1.SID])
+	assert.Equal(t, []string{"3-bbb"}, (*changes)[ref2.SID])
+
+	changes, newSeq, err := s.callChangesFeed(inst, seq)
+	assert.NoError(t, err)
+	assert.Equal(t, seq, newSeq)
+	assert.Empty(t, changes)
+
+	appendRevisionToSharedRef(t, ref1, "3-ddd")
+	changes, newSeq, err = s.callChangesFeed(inst, seq)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, seq)
+	assert.Equal(t, 4, RevGeneration(newSeq))
+	assert.Equal(t, []string{"3-ddd"}, (*changes)[ref1.SID])
+	assert.NotContains(t, *changes, ref2.SID)
+}
+
+func stripGenerations(revs ...string) []interface{} {
+	res := make([]interface{}, len(revs))
+	for i, rev := range revs {
+		parts := strings.SplitN(rev, "-", 2)
+		res[i] = parts[1]
+	}
+	return res
+}
+
+func TestGetMissingDocs(t *testing.T) {
+	hellos := "io.cozy.tests.hellos"
+	couchdb.CreateDB(inst, hellos)
+
+	id1 := uuidv4()
+	doc1 := createDoc(t, hellos, id1, map[string]interface{}{"hello": id1})
+	id2 := uuidv4()
+	doc2 := createDoc(t, hellos, id2, map[string]interface{}{"hello": id2})
+	doc2b := updateDoc(t, hellos, id2, doc2.Rev(), map[string]interface{}{"hello": id2, "bis": true})
+	id3 := uuidv4()
+	doc3 := createDoc(t, hellos, id3, map[string]interface{}{"hello": id3})
+	doc3b := updateDoc(t, hellos, id3, doc3.Rev(), map[string]interface{}{"hello": id3, "bis": true})
+	s := Sharing{
+		SID: uuidv4(),
+		Rules: []Rule{
+			{
+				Title:   "hellos rule",
+				DocType: hellos,
+				Values:  []string{id1, id2, id3},
+			},
+		},
+	}
+
+	missings := &Missings{
+		hellos + "/" + id1: MissingEntry{
+			Missing: []string{doc1.Rev()},
+		},
+		hellos + "/" + id2: MissingEntry{
+			Missing: []string{doc2.Rev(), doc2b.Rev()},
+		},
+		hellos + "/" + id3: MissingEntry{
+			Missing: []string{doc3b.Rev()},
+			PAs:     []string{doc3.Rev()},
+		},
+	}
+	results, err := s.getMissingDocs(inst, missings)
+	assert.NoError(t, err)
+	assert.Contains(t, *results, hellos)
+	assert.Len(t, (*results)[hellos], 4)
+
+	var one, two, twob, three map[string]interface{}
+	for i, doc := range (*results)[hellos] {
+		switch doc["_id"] {
+		case id1:
+			one = (*results)[hellos][i]
+		case id2:
+			if _, ok := doc["bis"]; ok {
+				twob = (*results)[hellos][i]
+			} else {
+				two = (*results)[hellos][i]
+			}
+		case id3:
+			three = (*results)[hellos][i]
+		}
+	}
+	assert.NotNil(t, twob)
+	assert.NotNil(t, three)
+
+	assert.NotNil(t, one)
+	assert.Equal(t, doc1.Rev(), one["_rev"])
+	assert.Equal(t, id1, one["hello"])
+	assert.Equal(t, float64(1), one["_revisions"].(map[string]interface{})["start"])
+	assert.Equal(t, stripGenerations(doc1.Rev()), one["_revisions"].(map[string]interface{})["ids"])
+
+	assert.NotNil(t, two)
+	assert.Equal(t, doc2.Rev(), two["_rev"])
+	assert.Equal(t, id2, two["hello"])
+	assert.Equal(t, float64(1), two["_revisions"].(map[string]interface{})["start"])
+	assert.Equal(t, stripGenerations(doc2.Rev()), two["_revisions"].(map[string]interface{})["ids"])
+
+	assert.NotNil(t, twob)
+	assert.Equal(t, doc2b.Rev(), twob["_rev"])
+	assert.Equal(t, id2, twob["hello"])
+	assert.Equal(t, float64(2), twob["_revisions"].(map[string]interface{})["start"])
+	assert.Equal(t, stripGenerations(doc2b.Rev(), doc2.Rev()), twob["_revisions"].(map[string]interface{})["ids"])
+
+	assert.NotNil(t, three)
+	assert.Equal(t, doc3b.Rev(), three["_rev"])
+	assert.Equal(t, id3, three["hello"])
+	assert.Equal(t, float64(2), three["_revisions"].(map[string]interface{})["start"])
+	assert.Equal(t, stripGenerations(doc3b.Rev(), doc3.Rev()), three["_revisions"].(map[string]interface{})["ids"])
 }
 
 func getDoc(t *testing.T, doctype, id string) *couchdb.JSONDoc {

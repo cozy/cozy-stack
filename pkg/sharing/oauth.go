@@ -105,12 +105,7 @@ func (m *Member) GenerateOAuthURL(s *Sharing) (string, error) {
 	if !s.Owner || len(s.Members) != len(s.Credentials)+1 {
 		return "", ErrInvalidSharing
 	}
-	var creds *Credentials
-	for i, member := range s.Members {
-		if *m == member {
-			creds = &s.Credentials[i-1]
-		}
-	}
+	creds := s.FindCredentials(m)
 	if creds == nil {
 		return "", ErrInvalidSharing
 	}
@@ -244,6 +239,10 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		return ErrRequestFailed
 	}
 
+	if err = s.SetupReceiver(inst); err != nil {
+		return err
+	}
+
 	if !s.ReadOnly() {
 		var creds Credentials
 		if _, err = jsonapi.Bind(res.Body, &creds); err != nil {
@@ -253,8 +252,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		s.Credentials[0].Client = creds.Client
 		return couchdb.UpdateDoc(inst, s)
 	}
-
-	return s.SetupReceiver(inst)
+	return nil
 }
 
 // ProcessAnswer takes somes credentials and update the sharing with those.

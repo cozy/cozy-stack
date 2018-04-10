@@ -143,7 +143,7 @@ func SetupRoutes(router *echo.Echo) error {
 	if config.IsDevRelease() {
 		router.GET("/dev/mails/:name", devMailsHandler)
 		router.GET("/dev/templates/:name", devTemplatesHandler)
-		sharings.Routes(router.Group("/sharings"))
+		sharings.Routes(router.Group("/sharings", mws...))
 	}
 
 	setupRecover(router)

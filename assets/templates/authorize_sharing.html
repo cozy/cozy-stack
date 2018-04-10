@@ -16,7 +16,7 @@
           <a href="https://cozy.io" target="_blank" title="Cozy Website" class="shield"></a>
         </header>
         <div class="container">
-          <form method="POST" action="/auth/sharing/authorize" class="login auth">
+          <form method="POST" action="/auth/authorize/sharing" class="login auth">
             <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
             <input type="hidden" name="sharing_id" value="{{.Sharing.SID}}" />
             <input type="hidden" name="state" value="{{.State}}" />
