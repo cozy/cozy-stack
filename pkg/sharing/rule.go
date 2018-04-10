@@ -185,3 +185,13 @@ func (s *Sharing) TwoWays() bool {
 	}
 	return false
 }
+
+// FirstFilesRule returns the first not-local rules for the files doctype
+func (s *Sharing) FirstFilesRule() *Rule {
+	for i, rule := range s.Rules {
+		if !rule.Local && rule.DocType == consts.Files {
+			return &s.Rules[i]
+		}
+	}
+	return nil
+}

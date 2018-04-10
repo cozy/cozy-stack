@@ -46,30 +46,33 @@ func XorID(id string, key []byte) string {
 
 // EnsureSharedWithMeDir returns the shared-with-me directory, and create it if
 // it doesn't exist
-func EnsureSharedWithMeDir(inst *instance.Instance) error {
+func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	fs := inst.VFS()
 	dir, _, err := fs.DirOrFileByID(consts.SharedWithMeDirID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if dir == nil {
 		name := inst.Translate("Tree Shared with me")
 		dir, err = vfs.NewDirDocWithPath(name, consts.SharedWithMeDirID, "/", nil)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		return fs.CreateDir(dir)
+		if err = fs.CreateDir(dir); err != nil {
+			return nil, err
+		}
+		return dir, nil
 	}
 
 	if dir.RestorePath != "" {
 		_, err = vfs.RestoreDir(fs, dir)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		children, err := fs.DirBatch(dir, &couchdb.SkipCursor{})
 		if err != nil {
-			return err
+			return nil, err
 		}
 		for _, child := range children {
 			d, f := child.Refine()
@@ -79,10 +82,29 @@ func EnsureSharedWithMeDir(inst *instance.Instance) error {
 				_, err = vfs.TrashFile(fs, f)
 			}
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
-	return nil
+	return dir, nil
+}
+
+// CreateDirForSharing creates the directory where files for this sharing will
+// be put. This directory will be initially inside the Shared with me folder.
+func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error {
+	parent, err := EnsureSharedWithMeDir(inst)
+	if err != nil {
+		return err
+	}
+	fs := inst.VFS()
+	dir, err := vfs.NewDirDoc(fs, rule.Title, parent.DocID, []string{"from-sharing-" + s.SID})
+	dir.AddReferencedBy(couchdb.DocReference{
+		ID:   s.SID,
+		Type: consts.Sharings,
+	})
+	if rule.Selector == "" || rule.Selector == "id" || rule.Selector == "_id" {
+		dir.DocID = rule.Values[0]
+	}
+	return fs.CreateDir(dir)
 }

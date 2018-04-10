@@ -18,8 +18,10 @@ func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
 	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
 		return err
 	}
-	if s.HasFiles() {
-		return EnsureSharedWithMeDir(inst)
+	if rule := s.FirstFilesRule(); rule != nil {
+		if err := s.CreateDirForSharing(inst, rule); err != nil {
+			return err
+		}
 	}
 	if err := s.AddTrackTriggers(inst); err != nil {
 		return err
