@@ -188,6 +188,11 @@ func NewWorker(conf *WorkerConfig) *Worker {
 	}
 }
 
+// Manual returns if the job was started manually
+func (c *WorkerContext) Manual() bool {
+	return c.job.Manual
+}
+
 // Start is used to start the worker consumption of messages from its queue.
 func (w *Worker) Start(jobs chan *Job) error {
 	if !atomic.CompareAndSwapUint32(&w.running, 0, 1) {

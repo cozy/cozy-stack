@@ -382,12 +382,15 @@ extended to all workers pre-validating worker arguments ?
 
 Start the konnector through Rkt, passing as ENV variables :
 
+    - `COZY_URL`:          the starting instance URL
     - `COZY_CREDENTIALS`:  security token to communicate with Cozy
     - `COZY_FIELDS`:       JSON-encoded worker_arguments
     - `COZY_PARAMETERS`:   JSON-encoded parameters associated with the konnector
     - `COZY_LANGUAGE`:     the language field of the konnector (eg. "node" etc.)
     - `COZY_LOCALE`:       the locale of the user (eg. "en" etc.)
-    - `COZY_URL`:          the starting instance URL
+    - `COZY_TIME_LIMIT`: how much time the konnector has to run
+    - `COZY_JOB_ID`: id of the job
+    - `COZY_JOB_MANUAL_EXECUTION`: whether the job was started manually (in Collect) or automatically (via a cron trigger or event)
 
 The konnector process can send events trough it's stdout (newline separated JSON
 object), the konnector worker pass these events to the realtime hub as
