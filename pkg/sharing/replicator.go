@@ -441,7 +441,7 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*
 }
 
 // sendBulkDocs takes a bulk of documents and send them to the other cozy.
-// This function does the id and parent_id transformation before sending files.
+// This function does the id and dir_id transformation before sending files.
 // http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#db-bulk-docs
 // https://wiki.apache.org/couchdb/HTTP_Bulk_Document_API#Posting_Existing_Revisions
 // https://gist.github.com/nono/42aee18de6314a621f9126f284e303bb
@@ -453,7 +453,7 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 	if files, ok := (*docs)[consts.Files]; ok {
 		for i, file := range files {
 			file["_id"] = XorID(file["_id"].(string), creds.XorKey)
-			// TODO update parent_id
+			file["dir_id"] = XorID(file["dir_id"].(string), creds.XorKey)
 			files[i] = file
 		}
 		(*docs)[consts.Files] = files

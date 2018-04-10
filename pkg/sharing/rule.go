@@ -55,6 +55,7 @@ func (s *Sharing) ValidateRules() error {
 			return ErrInvalidRule
 		}
 		if rule.DocType == consts.Files {
+			// TODO forbid to share folders in the trash
 			for _, val := range rule.Values {
 				if val == consts.RootDirID ||
 					val == consts.TrashDirID ||
