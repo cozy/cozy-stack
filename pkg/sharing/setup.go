@@ -24,7 +24,7 @@ func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
 	if err := s.AddTrackTriggers(inst); err != nil {
 		return err
 	}
-	if s.RuleHasSync() {
+	if s.TwoWays() {
 		return s.AddReplicateTrigger(inst)
 	}
 	return nil
