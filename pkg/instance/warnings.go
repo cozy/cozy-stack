@@ -43,14 +43,16 @@ func (i *Instance) CheckTOSSigned(args ...string) (notSigned, deadlineReached bo
 	}
 	signed, _, ok := parseTOSVersion(i.TOSSigned)
 	if !ok {
-		notSigned = true
 		return
 	}
 	if signed >= latest {
 		return
 	}
-	notSigned = true
-	deadlineReached = time.Since(latestDate) > 15*24*time.Hour
+	now := time.Now()
+	notSigned = now.After(latestDate.Add(-15 * 24 * time.Hour))
+	if notSigned {
+		deadlineReached = now.After(latestDate)
+	}
 	return
 }
 
