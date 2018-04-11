@@ -13,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/justincampbell/bigduration"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 // exports all constants from pkg/permissions to avoid double imports

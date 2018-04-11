@@ -22,7 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 
 	_ "github.com/cozy/cozy-stack/pkg/workers/thumbnail"

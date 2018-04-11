@@ -11,7 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 // Proxy generate a httputil.ReverseProxy which forwards the request to the

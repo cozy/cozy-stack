@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 var readable = true

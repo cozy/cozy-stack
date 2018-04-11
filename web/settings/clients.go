@@ -14,7 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 

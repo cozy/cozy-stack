@@ -10,7 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 )
 

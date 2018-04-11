@@ -20,7 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/errors"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 // This flag avoid starting the stack twice.

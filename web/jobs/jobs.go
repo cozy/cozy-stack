@@ -13,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 
 	// import workers
 	_ "github.com/cozy/cozy-stack/pkg/workers/exec"

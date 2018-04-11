@@ -20,8 +20,8 @@ import (
 	webapps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/middlewares"
 
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"github.com/cozy/echo"
+	"github.com/cozy/echo/middleware"
 
 	"github.com/cozy/afero"
 	statikFS "github.com/cozy/statik/fs"

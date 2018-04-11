@@ -5,8 +5,8 @@ import (
 	"runtime"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"github.com/cozy/echo"
+	"github.com/cozy/echo/middleware"
 )
 
 // RecoverConfig defines the config for Recover middleware.

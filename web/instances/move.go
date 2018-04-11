@@ -10,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/move"
 	workers "github.com/cozy/cozy-stack/pkg/workers/mails"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 func exporter(c echo.Context) error {

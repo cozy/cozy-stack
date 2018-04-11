@@ -6,7 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/web/statik"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 // devMailHandler allow to easily render a mail from a route of the stack. The

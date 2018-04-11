@@ -3,7 +3,7 @@ package permissions
 import (
 	"net/http"
 
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 var (
