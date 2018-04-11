@@ -49,7 +49,7 @@ func XorID(id string, key []byte) string {
 func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	fs := inst.VFS()
 	dir, _, err := fs.DirOrFileByID(consts.SharedWithMeDirID)
-	if err != nil {
+	if err != nil && !couchdb.IsNotFoundError(err) {
 		return nil, err
 	}
 
