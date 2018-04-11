@@ -30,9 +30,22 @@ func (i *Instance) Warnings() (warnings []*Warning) {
 	return
 }
 
+// TOSDeadline represent the state for reaching the TOS deadline.
+type TOSDeadline int
+
+const (
+	// TOSNone when no deadline is reached.
+	TOSNone TOSDeadline = iota
+	// TOSWarning when the warning deadline is reached, 2 weeks before the actual
+	// activation of the CGU.
+	TOSWarning
+	// TOSBlocked when the deadline is reached and the access should be blocked.
+	TOSBlocked
+)
+
 // CheckTOSSigned checks whether or not the current Term of Services have been
 // signed by the user.
-func (i *Instance) CheckTOSSigned(args ...string) (notSigned, deadlineReached bool) {
+func (i *Instance) CheckTOSSigned(args ...string) (notSigned bool, deadline TOSDeadline) {
 	tosLatest := i.TOSLatest
 	if len(args) > 0 {
 		tosLatest = args[0]
@@ -48,10 +61,14 @@ func (i *Instance) CheckTOSSigned(args ...string) (notSigned, deadlineReached bo
 	if signed >= latest {
 		return
 	}
+	notSigned = true
 	now := time.Now()
-	notSigned = now.After(latestDate.Add(-15 * 24 * time.Hour))
-	if notSigned {
-		deadlineReached = now.After(latestDate)
+	if now.After(latestDate) {
+		deadline = TOSBlocked
+	} else if now.After(latestDate.Add(-15 * 24 * time.Hour)) {
+		deadline = TOSWarning
+	} else {
+		deadline = TOSNone
 	}
 	return
 }

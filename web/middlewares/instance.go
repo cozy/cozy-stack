@@ -39,8 +39,8 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 func CheckInstanceTOS(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
-		_, deadlineReached := i.CheckTOSSigned()
-		if deadlineReached {
+		_, deadline := i.CheckTOSSigned()
+		if deadline == instance.TOSBlocked {
 			if !IsLoggedIn(c) {
 				return echo.NewHTTPError(http.StatusUnauthorized)
 			}
