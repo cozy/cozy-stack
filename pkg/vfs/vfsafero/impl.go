@@ -100,10 +100,6 @@ func (afs *aferoVFS) InitFs() error {
 	return nil
 }
 
-func (afs *aferoVFS) Index() vfs.Indexer {
-	return afs.Indexer
-}
-
 // Delete removes all the elements associated with the filesystem.
 func (afs *aferoVFS) Delete() error {
 	if lockerr := afs.mu.Lock(); lockerr != nil {
