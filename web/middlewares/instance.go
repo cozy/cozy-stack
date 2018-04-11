@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/echo"
 )
 
@@ -29,6 +30,28 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 			return errHTTP
 		}
 		c.Set("instance", i)
+		return next(c)
+	}
+}
+
+// CheckInstanceTOS is a middleware that blocks the routing access if the term-
+// of-services have not been signed and have reach its deadline.
+func CheckInstanceTOS(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		i := GetInstance(c)
+		_, deadlineReached := i.CheckTOSSigned()
+		if deadlineReached {
+			if !IsLoggedIn(c) {
+				return echo.NewHTTPError(http.StatusUnauthorized)
+			}
+			contentType := AcceptedContentType(c)
+			switch contentType {
+			case jsonapi.ContentType, echo.MIMEApplicationJSON:
+				return c.JSON(http.StatusPaymentRequired, i.Warnings())
+			default:
+				return echo.NewHTTPError(http.StatusPaymentRequired)
+			}
+		}
 		return next(c)
 	}
 }

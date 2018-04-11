@@ -49,6 +49,12 @@ func Serve(c echo.Context) error {
 		}
 	}
 
+	notSigned, deadlineReached := i.CheckTOSSigned()
+	if notSigned && deadlineReached {
+		redirect, _ := i.ManagerURL(instance.ManagerTOSURL)
+		return c.Redirect(http.StatusFound, redirect)
+	}
+
 	app, err := apps.GetWebappBySlug(i, slug)
 	if err != nil {
 		switch err {
@@ -295,10 +301,11 @@ func init() {
 		`<script defer src="{{asset .Domain "/js/cozy-client.min.js"}}"></script>`,
 	))
 
-	barTemplate = template.Must(template.New("cozy-bar").Funcs(funcsMap).Parse(`` +
-		`<link rel="stylesheet" type="text/css" href="{{asset .Domain "/fonts/fonts.css"}}">` +
-		`<link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-bar.min.css"}}">` +
-		`<script defer src="{{asset .Domain "/js/cozy-bar.min.js"}}"></script>`,
+	barTemplate = template.Must(template.New("cozy-bar").Funcs(funcsMap).Parse(`
+<link rel="stylesheet" type="text/css" href="{{asset .Domain "/fonts/fonts.css"}}">
+<link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-bar.min.css"}}">
+{{range .Warnings}}<meta name="user-action-required" data-error="{{ .Error }}" data-link="{{ .Link }}" data-details={{ .Details }} />{{end}}
+<script defer src="{{asset .Domain "/js/cozy-bar.min.js"}}"></script>`,
 	))
 }
 
@@ -313,7 +320,10 @@ func cozyclientjs(i *instance.Instance) template.HTML {
 
 func cozybar(i *instance.Instance) template.HTML {
 	buf := new(bytes.Buffer)
-	err := barTemplate.Execute(buf, echo.Map{"Domain": i.Domain})
+	err := barTemplate.Execute(buf, echo.Map{
+		"Domain":   i.Domain,
+		"Warnings": i.Warnings(),
+	})
 	if err != nil {
 		return template.HTML("")
 	}

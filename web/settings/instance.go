@@ -42,12 +42,14 @@ func getInstance(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
 	doc.M["locale"] = inst.Locale
 	doc.M["onboarding_finished"] = inst.OnboardingFinished
 	doc.M["auto_update"] = !inst.NoAutoUpdate
 	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
 	doc.M["tos"] = inst.TOSSigned
 	doc.M["uuid"] = inst.UUID
+	doc.M["context"] = inst.ContextName
 
 	if err = webpermissions.Allow(c, permissions.GET, doc); err != nil {
 		return err
@@ -83,6 +85,8 @@ func updateInstance(c echo.Context) error {
 	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
 	doc.M["tos"] = inst.TOSSigned
 	doc.M["uuid"] = inst.UUID
+	doc.M["context"] = inst.ContextName
+
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
 

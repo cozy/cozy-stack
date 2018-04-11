@@ -130,6 +130,7 @@ type Options struct {
 	TOSSigned    string
 	TOSLatest    string
 	Timezone     string
+	ContextName  string
 	Email        string
 	PublicName   string
 	Settings     string
@@ -327,12 +328,8 @@ func (i *Instance) SettingsEMail() (string, error) {
 
 // Context returns the map from the config that matches the context of this instance
 func (i *Instance) Context() (map[string]interface{}, error) {
-	doc, err := i.SettingsDocument()
-	if err != nil {
-		return nil, err
-	}
-	ctx, ok := doc.M["context"].(string)
-	if !ok {
+	ctx := i.ContextName
+	if ctx == "" {
 		ctx = "default"
 	}
 	context, ok := config.GetConfig().Contexts[ctx].(map[string]interface{})
@@ -344,16 +341,12 @@ func (i *Instance) Context() (map[string]interface{}, error) {
 
 // Registries returns the list of registries associated with the instance.
 func (i *Instance) Registries() ([]*url.URL, error) {
-	doc, err := i.SettingsDocument()
-	if err != nil {
-		return nil, err
-	}
-	ctx, ok := doc.M["context"].(string)
-	if !ok {
-		ctx = "default"
-	}
 	registries := config.GetConfig().Registries
-	regs, ok := registries[ctx]
+	var regs []*url.URL
+	var ok bool
+	if i.ContextName != "" {
+		regs, ok = registries[i.ContextName]
+	}
 	if !ok {
 		regs, ok = registries["default"]
 		if !ok {
@@ -419,6 +412,54 @@ func (i *Instance) PageURL(path string, queries url.Values) string {
 		RawQuery: query,
 	}
 	return u.String()
+}
+
+// ManagerURLKind is an enum type for the different kinds of manager URLs.
+type ManagerURLKind int
+
+const (
+	// ManagerTOSURL is the kind for changes of TOS URL.
+	ManagerTOSURL ManagerURLKind = iota
+	// ManagerPremiumURL is the kind for changing the account type of the
+	// instance.
+	ManagerPremiumURL
+)
+
+// ManagerURL returns an external string for the given ManagerURL kind.
+func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
+	defer func() {
+		if !ok {
+			s = i.PageURL("/", nil)
+		}
+	}()
+	if i.UUID == "" {
+		return
+	}
+	ctx, err := i.Context()
+	if err != nil {
+		return
+	}
+	managerURL, ok := ctx["manager_url"].(string)
+	if !ok {
+		return
+	}
+	u, err := url.Parse(managerURL)
+	if err != nil {
+		return
+	}
+	var path string
+	switch k {
+	// TODO: we may want to rely on the contexts to avoid hardcoding the path
+	// values of these kinds.
+	case ManagerPremiumURL:
+		path = fmt.Sprintf("/cozy/accounts/%s", url.PathEscape(i.UUID))
+	case ManagerTOSURL:
+		path = fmt.Sprintf("/cozy/instances/%s/tos", url.PathEscape(i.UUID))
+	}
+	u.Path = path
+	s = u.String()
+	ok = true
+	return
 }
 
 // PublicName returns the settings' public name or a default one if missing
@@ -775,9 +816,17 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 		}
 	}
 
+	if contextName, ok := settings.M["context"].(string); ok {
+		opts.ContextName = contextName
+		delete(settings.M, "context")
+	}
 	if locale, ok := settings.M["locale"].(string); ok {
 		opts.Locale = locale
 		delete(settings.M, "locale")
+	}
+	if onboardingFinished, ok := settings.M["onboarding_finished"].(bool); ok {
+		opts.OnboardingFinished = &onboardingFinished
+		delete(settings.M, "onboarding_finished")
 	}
 	if uuid, ok := settings.M["uuid"].(string); ok {
 		opts.UUID = uuid
@@ -815,10 +864,7 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 // Patch updates the given instance with the specified options if necessary. It
 // can also update the settings document if provided in the options.
 func Patch(i *Instance, opts *Options) error {
-	if i != nil {
-		opts.Domain = i.Domain
-	}
-
+	opts.Domain = i.Domain
 	settings, settingsUpdate := buildSettings(opts)
 
 	for {
@@ -830,8 +876,7 @@ func Patch(i *Instance, opts *Options) error {
 			}
 		}
 
-		var needUpdate bool
-
+		needUpdate := false
 		if opts.Locale != "" && opts.Locale != i.Locale {
 			i.Locale = opts.Locale
 			needUpdate = true
@@ -854,7 +899,7 @@ func Patch(i *Instance, opts *Options) error {
 			}
 		}
 
-		if opts.SwiftCluster != 0 && opts.SwiftCluster != i.SwiftCluster {
+		if opts.SwiftCluster > 0 && opts.SwiftCluster != i.SwiftCluster {
 			i.SwiftCluster = opts.SwiftCluster
 			needUpdate = true
 		}
@@ -874,27 +919,25 @@ func Patch(i *Instance, opts *Options) error {
 			needUpdate = true
 		}
 
-		if tosLatest := opts.TOSLatest; tosLatest != "" {
-			_, _, ok := ParseTOSVersion(tosLatest)
-			if !ok {
+		if opts.TOSLatest != "" {
+			if _, _, ok := parseTOSVersion(opts.TOSLatest); !ok {
 				return ErrBadTOSVersion
 			}
-			if i.TOSLatest != tosLatest {
-				if notSigned, _ := i.CheckTOSSigned(tosLatest); notSigned {
-					i.TOSLatest = tosLatest
+			if i.TOSLatest != opts.TOSLatest {
+				if notSigned, _ := i.CheckTOSSigned(opts.TOSLatest); notSigned {
+					i.TOSLatest = opts.TOSLatest
 					needUpdate = true
 				}
 			}
 		}
 
-		if tosSigned := opts.TOSSigned; tosSigned != "" {
-			_, _, ok := ParseTOSVersion(tosSigned)
-			if !ok {
+		if opts.TOSSigned != "" {
+			if _, _, ok := parseTOSVersion(opts.TOSSigned); !ok {
 				return ErrBadTOSVersion
 			}
-			if i.TOSSigned != tosSigned {
-				i.TOSSigned = tosSigned
-				if notSigned, _ := i.CheckTOSSigned(i.TOSLatest); !notSigned {
+			if i.TOSSigned != opts.TOSSigned {
+				i.TOSSigned = opts.TOSSigned
+				if notSigned, _ := i.CheckTOSSigned(); !notSigned {
 					i.TOSLatest = ""
 				}
 				needUpdate = true

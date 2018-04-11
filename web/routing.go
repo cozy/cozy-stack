@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/web/instances"
 	"github.com/cozy/cozy-stack/web/intents"
 	"github.com/cozy/cozy-stack/web/jobs"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/konnectorsauth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/notifications"
@@ -101,19 +102,29 @@ func SetupRoutes(router *echo.Echo) error {
 		BlackList: []string{"/auth/"},
 	}))
 
-	mws := []echo.MiddlewareFunc{
-		middlewares.NeedInstance,
-		middlewares.LoadSession,
-	}
-
 	// non-authentified HTML routes for authentication (login, OAuth, ...)
 	{
+		mws := []echo.MiddlewareFunc{
+			middlewares.NeedInstance,
+			middlewares.LoadSession,
+			middlewares.Accept(middlewares.AcceptOptions{
+				DefaultContentTypeOffer: echo.MIMETextHTML,
+			}),
+		}
 		router.GET("/", auth.Home, mws...)
 		auth.Routes(router.Group("/auth", mws...))
 	}
 
 	// authentified JSON API routes
 	{
+		mws := []echo.MiddlewareFunc{
+			middlewares.NeedInstance,
+			middlewares.LoadSession,
+			middlewares.Accept(middlewares.AcceptOptions{
+				DefaultContentTypeOffer: jsonapi.ContentType,
+			}),
+			middlewares.CheckInstanceTOS,
+		}
 		apps.WebappsRoutes(router.Group("/apps", mws...))
 		apps.KonnectorRoutes(router.Group("/konnectors", mws...))
 		registry.Routes(router.Group("/registry", mws...))
@@ -131,6 +142,10 @@ func SetupRoutes(router *echo.Echo) error {
 		// applied to this group in web/routing since they should not be used for
 		// oauth redirection.
 		konnectorsauth.Routes(router.Group("/accounts"))
+
+		if config.IsDevRelease() {
+			sharings.Routes(router.Group("/sharings", mws...))
+		}
 	}
 
 	// non-authentified JSON API routes
@@ -143,7 +158,6 @@ func SetupRoutes(router *echo.Echo) error {
 	if config.IsDevRelease() {
 		router.GET("/dev/mails/:name", devMailsHandler)
 		router.GET("/dev/templates/:name", devTemplatesHandler)
-		sharings.Routes(router.Group("/sharings", mws...))
 	}
 
 	setupRecover(router)

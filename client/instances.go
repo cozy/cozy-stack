@@ -45,6 +45,7 @@ type InstanceOptions struct {
 	TOSSigned          string
 	TOSLatest          string
 	Timezone           string
+	ContextName        string
 	Email              string
 	PublicName         string
 	Settings           string
@@ -112,6 +113,7 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 		"UUID":         {opts.UUID},
 		"TOSSigned":    {opts.TOSSigned},
 		"Timezone":     {opts.Timezone},
+		"ContextName":  {opts.ContextName},
 		"Email":        {opts.Email},
 		"PublicName":   {opts.PublicName},
 		"Settings":     {opts.Settings},
@@ -159,6 +161,7 @@ func (c *Client) ModifyInstance(domain string, opts *InstanceOptions) (*Instance
 		"TOSSigned":    {opts.TOSSigned},
 		"TOSLatest":    {opts.TOSLatest},
 		"Timezone":     {opts.Timezone},
+		"ContextName":  {opts.ContextName},
 		"Email":        {opts.Email},
 		"PublicName":   {opts.PublicName},
 		"Settings":     {opts.Settings},
