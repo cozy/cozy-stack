@@ -887,6 +887,11 @@ func Patch(i *Instance, opts *Options) error {
 			needUpdate = true
 		}
 
+		if opts.ContextName != "" && opts.ContextName != i.ContextName {
+			i.ContextName = opts.ContextName
+			needUpdate = true
+		}
+
 		if opts.AuthMode != "" {
 			var authMode AuthMode
 			authMode, err = StringToAuthMode(opts.AuthMode)

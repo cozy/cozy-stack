@@ -15,8 +15,10 @@ import (
 
 // Instance is a struct holding the representation of an instance on the API.
 type Instance struct {
-	ID    string `json:"id"`
-	Rev   string `json:"rev"`
+	ID   string `json:"id"`
+	Meta struct {
+		Rev string `json:"rev"`
+	} `json:"meta"`
 	Attrs struct {
 		Domain               string    `json:"domain"`
 		Locale               string    `json:"locale"`
@@ -151,7 +153,8 @@ func (c *Client) ListInstances() ([]*Instance, error) {
 }
 
 // ModifyInstance is used to update an instance.
-func (c *Client) ModifyInstance(domain string, opts *InstanceOptions) (*Instance, error) {
+func (c *Client) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
+	domain := opts.Domain
 	if !validDomain(domain) {
 		return nil, fmt.Errorf("Invalid domain: %s", domain)
 	}

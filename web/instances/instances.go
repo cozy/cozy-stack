@@ -102,21 +102,30 @@ func showHandler(c echo.Context) error {
 func modifyHandler(c echo.Context) error {
 	domain := c.Param("domain")
 	opts := &instance.Options{
-		Domain:     domain,
-		Locale:     c.QueryParam("Locale"),
-		Timezone:   c.QueryParam("Timezone"),
-		Email:      c.QueryParam("Email"),
-		PublicName: c.QueryParam("PublicName"),
-		Settings:   c.QueryParam("Settings"),
-		TOSLatest:  c.QueryParam("TOSLatest"),
-		TOSSigned:  c.QueryParam("TOSSigned"),
+		Domain:      domain,
+		Locale:      c.QueryParam("Locale"),
+		UUID:        c.QueryParam("UUID"),
+		TOSSigned:   c.QueryParam("TOSSigned"),
+		TOSLatest:   c.QueryParam("TOSLatest"),
+		Timezone:    c.QueryParam("Timezone"),
+		ContextName: c.QueryParam("ContextName"),
+		Email:       c.QueryParam("Email"),
+		PublicName:  c.QueryParam("PublicName"),
+		Settings:    c.QueryParam("Settings"),
 	}
-	if quota := c.QueryParam("DiskQuota"); quota != "" {
-		diskQuota, err := strconv.ParseInt(quota, 10, 64)
+	if swiftCluster := c.QueryParam("SwiftCluster"); swiftCluster != "" {
+		i, err := strconv.ParseInt(swiftCluster, 10, 64)
 		if err != nil {
 			return wrapError(err)
 		}
-		opts.DiskQuota = diskQuota
+		opts.SwiftCluster = int(i)
+	}
+	if quota := c.QueryParam("DiskQuota"); quota != "" {
+		i, err := strconv.ParseInt(quota, 10, 64)
+		if err != nil {
+			return wrapError(err)
+		}
+		opts.DiskQuota = i
 	}
 	if onboardingFinished, err := strconv.ParseBool(c.QueryParam("OnboardingFinished")); err == nil {
 		opts.OnboardingFinished = &onboardingFinished
