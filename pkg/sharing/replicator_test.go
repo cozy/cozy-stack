@@ -53,24 +53,27 @@ func uuidv4() string {
 	return id.String()
 }
 
-func createASharedRef(t *testing.T) {
+func createASharedRef(t *testing.T, id string) {
 	ref := SharedRef{
 		SID:       testDoctype + "/" + uuidv4(),
 		Revisions: []string{"1-aaa"},
+		Infos: map[string]SharedInfo{
+			id: {Rule: 0},
+		},
 	}
 	err := couchdb.CreateNamedDocWithDB(inst, &ref)
 	assert.NoError(t, err)
 }
 
 func TestSequenceNumber(t *testing.T) {
-	nb := 5
-	for i := 0; i < nb; i++ {
-		createASharedRef(t)
-	}
 	s := &Sharing{SID: uuidv4(), Members: []Member{
 		{Status: MemberStatusOwner, Name: "Alice"},
 		{Status: MemberStatusReady, Name: "Bob"},
 	}}
+	nb := 5
+	for i := 0; i < nb; i++ {
+		createASharedRef(t, s.SID)
+	}
 	m := &s.Members[1]
 
 	rid, err := s.replicationID(m)
@@ -80,7 +83,7 @@ func TestSequenceNumber(t *testing.T) {
 	seq, err := s.getLastSeqNumber(inst, m)
 	assert.NoError(t, err)
 	assert.Empty(t, seq)
-	_, seq, err = s.callChangesFeed(inst, seq)
+	_, _, seq, err = s.callChangesFeed(inst, seq)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, seq)
 	assert.Equal(t, nb, RevGeneration(seq))
@@ -279,10 +282,13 @@ func TestInitialCopy(t *testing.T) {
 	}
 }
 
-func createSharedRef(t *testing.T, sid string, revisions []string) *SharedRef {
+func createSharedRef(t *testing.T, sharingID, sid string, revisions []string) *SharedRef {
 	ref := SharedRef{
 		SID:       sid,
 		Revisions: revisions,
+		Infos: map[string]SharedInfo{
+			sharingID: {Rule: 0},
+		},
 	}
 	err := couchdb.CreateNamedDocWithDB(inst, &ref)
 	assert.NoError(t, err)
@@ -302,10 +308,7 @@ func TestCallChangesFeed(t *testing.T) {
 
 	foobars := "io.cozy.tests.foobars"
 	id1 := uuidv4()
-	ref1 := createSharedRef(t, foobars+"/"+id1, []string{"1-aaa"})
 	id2 := uuidv4()
-	ref2 := createSharedRef(t, foobars+"/"+id2, []string{"3-bbb"})
-	appendRevisionToSharedRef(t, ref1, "2-ccc")
 	s := Sharing{
 		SID: uuidv4(),
 		Rules: []Rule{
@@ -316,20 +319,29 @@ func TestCallChangesFeed(t *testing.T) {
 			},
 		},
 	}
-	changes, seq, err := s.callChangesFeed(inst, "")
+	ref1 := createSharedRef(t, s.SID, foobars+"/"+id1, []string{"1-aaa"})
+	ref2 := createSharedRef(t, s.SID, foobars+"/"+id2, []string{"3-bbb"})
+	appendRevisionToSharedRef(t, ref1, "2-ccc")
+
+	changes, indexes, seq, err := s.callChangesFeed(inst, "")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, seq)
 	assert.Equal(t, 3, RevGeneration(seq))
 	assert.Equal(t, []string{"2-ccc"}, (*changes)[ref1.SID])
 	assert.Equal(t, []string{"3-bbb"}, (*changes)[ref2.SID])
+	expected := map[string]int{
+		foobars + "/" + id1: 0,
+		foobars + "/" + id2: 0,
+	}
+	assert.Equal(t, expected, indexes)
 
-	changes, newSeq, err := s.callChangesFeed(inst, seq)
+	changes, _, newSeq, err := s.callChangesFeed(inst, seq)
 	assert.NoError(t, err)
 	assert.Equal(t, seq, newSeq)
 	assert.Empty(t, changes)
 
 	appendRevisionToSharedRef(t, ref1, "3-ddd")
-	changes, newSeq, err = s.callChangesFeed(inst, seq)
+	changes, _, newSeq, err = s.callChangesFeed(inst, seq)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, seq)
 	assert.Equal(t, 4, RevGeneration(newSeq))

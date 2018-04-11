@@ -63,6 +63,12 @@ func (s *Sharing) ValidateRules() error {
 					return ErrInvalidRule
 				}
 			}
+			// XXX Currently, we only support one file/folder per rule for the id selector
+			if rule.Selector == "" || rule.Selector == "id" || rule.Selector == "_id" {
+				if len(rule.Values) > 1 {
+					return ErrInvalidRule
+				}
+			}
 		} else if permissions.CheckWritable(rule.DocType) != nil {
 			return ErrInvalidRule
 		}

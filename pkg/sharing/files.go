@@ -44,6 +44,45 @@ func XorID(id string, key []byte) string {
 	return string(buf)
 }
 
+// TransformFileToSent transforms an io.cozy.files document before sending it
+// to another cozy instance:
+// - its identifier is XORed
+// - its dir_id is XORed or removed
+// - the path is removed (directory only)
+//
+// ruleIndexes is a map of "doctype-docid" -> rule index
+// TODO the file/folder has been moved outside the shared directory
+func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndexes map[string]int) map[string]interface{} {
+	if doc["type"] == "directory" {
+		delete(doc, "path")
+	}
+	id, ok := doc["_id"].(string)
+	if !ok {
+		return doc
+	}
+	doc["_id"] = XorID(id, xorKey)
+	dir, ok := doc["dir_id"].(string)
+	if !ok {
+		return doc
+	}
+	rule := s.Rules[ruleIndexes[id]]
+	noDirID := rule.Selector == "referenced_by"
+	if !noDirID {
+		for i, v := range rule.Values {
+			if v == dir {
+				noDirID = true
+				break
+			}
+		}
+	}
+	if noDirID {
+		delete(doc, "dir_id")
+	} else {
+		doc["dir_id"] = XorID(dir, xorKey)
+	}
+	return doc
+}
+
 // EnsureSharedWithMeDir returns the shared-with-me directory, and create it if
 // it doesn't exist
 func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
@@ -102,9 +141,6 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error
 	dir, err := vfs.NewDirDocWithParent(rule.Title, parent, []string{"from-sharing-" + s.SID})
 	if err != nil {
 		return err
-	}
-	if rule.Selector == "" || rule.Selector == "id" || rule.Selector == "_id" {
-		dir.DocID = rule.Values[0]
 	}
 	dir.AddReferencedBy(couchdb.DocReference{
 		ID:   s.SID,
