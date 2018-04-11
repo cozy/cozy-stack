@@ -30,7 +30,7 @@ import (
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
 
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

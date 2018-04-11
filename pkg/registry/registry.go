@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/cozy/httpcache"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 const defaultLimit = 50

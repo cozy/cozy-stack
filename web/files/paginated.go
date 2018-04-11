@@ -10,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 const (

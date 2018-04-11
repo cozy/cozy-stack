@@ -12,7 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 

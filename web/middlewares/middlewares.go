@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 // Compose can be used to compose a list of middlewares together with a main

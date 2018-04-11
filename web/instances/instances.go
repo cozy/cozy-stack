@@ -19,7 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 type apiInstance struct {

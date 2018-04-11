@@ -22,7 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/httpcache"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 var (

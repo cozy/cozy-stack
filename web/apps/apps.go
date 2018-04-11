@@ -17,7 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 // JSMimeType is the content-type for javascript

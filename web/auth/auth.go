@@ -23,8 +23,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"github.com/cozy/echo"
+	"github.com/cozy/echo/middleware"
 )
 
 const (

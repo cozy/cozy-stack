@@ -12,7 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/sharing"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )

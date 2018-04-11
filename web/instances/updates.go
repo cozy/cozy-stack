@@ -5,7 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 func updatesHandler(c echo.Context) error {

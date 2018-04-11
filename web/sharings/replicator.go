@@ -7,7 +7,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	perm "github.com/cozy/cozy-stack/web/permissions"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 // RevsDiff is part of the replicator

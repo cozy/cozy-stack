@@ -7,7 +7,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 type authType int

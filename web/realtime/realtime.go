@@ -14,7 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/gorilla/websocket"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 const (

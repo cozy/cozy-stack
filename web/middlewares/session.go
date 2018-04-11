@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 const sessionKey = "session"
