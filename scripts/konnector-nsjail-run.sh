@@ -136,6 +136,7 @@ nsjail \
   -E "COZY_PARAMETERS=${COZY_PARAMETERS}" \
   -E "COZY_CREDENTIALS=${COZY_CREDENTIALS}" \
   -E "COZY_LOCALE=${COZY_LOCALE}" \
+  -E "COZY_JOB_MANUAL_EXECUTION=${COZY_JOB_MANUAL_EXECUTION}" \
   -R "${rundir}:/usr/src/konnector/" \
   -R /lib \
   -R /lib64 \
@@ -164,6 +165,7 @@ nsjail \
 #   -E "COZY_FIELDS=${COZY_FIELDS}" \
 #   -E "COZY_PARAMETERS=${COZY_PARAMETERS}" \
 #   -E "COZY_CREDENTIALS=${COZY_CREDENTIALS}" \
+#   -E "COZY_JOB_MANUAL_EXECUTION=${COZY_JOB_MANUAL_EXECUTION}" \
 #   -E "COZY_LOCALE=${COZY_LOCALE}" \
 #   -R "${rundir}:/usr/src/konnector/" \
 #   -- /usr/bin/nodejs "${runfile}"

@@ -14,6 +14,7 @@ echo "COZY_FIELDS=${COZY_FIELDS}" >> "${env_file}"
 echo "COZY_PARAMETERS=${COZY_PARAMETERS}" >> "${env_file}"
 echo "COZY_CREDENTIALS=${COZY_CREDENTIALS}" >> "${env_file}"
 echo "COZY_LOCALE=${COZY_LOCALE}" >> "${env_file}"
+echo "COZY_JOB_MANUAL_EXECUTION=${COZY_JOB_MANUAL_EXECUTION}" >> "${env_file}"
 
 rkt_name=$(echo $COZY_JOB_ID | tr A-Z a-z | sed -e 's/[^a-z0-9\-]/-/g')
 
