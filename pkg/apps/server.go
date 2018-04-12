@@ -155,10 +155,14 @@ func (s *swiftServer) FilesList(slug, version string) ([]string, error) {
 		return nil, err
 	}
 	prefix := s.makeObjectName(slug, version, "")
-	for i, n := range names {
-		names[i] = strings.TrimPrefix(n, prefix)
+	filtered := names[:0]
+	for _, n := range names {
+		n = strings.TrimPrefix(n, prefix)
+		if n != "" {
+			filtered = append(filtered, n)
+		}
 	}
-	return names, nil
+	return filtered, nil
 }
 
 // NewAferoFileServer returns a simple wrapper of the afero.Fs interface that
@@ -247,12 +251,18 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 			w.Header().Set("Content-Encoding", "gzip")
 		} else {
 			var gr *gzip.Reader
+			var b []byte
 			gr, err = gzip.NewReader(content)
 			if err != nil {
 				return err
 			}
 			defer gr.Close()
-			content = gr
+			b, err = ioutil.ReadAll(gr)
+			if err != nil {
+				return err
+			}
+			size = int64(len(b))
+			content = bytes.NewReader(b)
 		}
 	}
 
@@ -266,8 +276,8 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 
 func (s *aferoServer) FilesList(slug, version string) ([]string, error) {
 	var names []string
-	rootPath := path.Join(s.mkPath(slug, version, ""), "/")
-	err := afero.Walk(s.fs, s.mkPath(slug, version, ""), func(path string, infos os.FileInfo, err error) error {
+	rootPath := s.mkPath(slug, version, "")
+	err := afero.Walk(s.fs, rootPath, func(path string, infos os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
