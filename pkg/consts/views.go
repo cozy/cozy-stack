@@ -150,6 +150,21 @@ function(doc) {
 `,
 }
 
+// DocsSharedBySharingID is the view for fetching a list of shared doctype/id
+// associated with a sharingid
+var SharedDocsBySharingID = &couchdb.View{
+	Name:    "shared-docs-by-sharingid",
+	Doctype: Shared,
+	Map: `
+function(doc) {
+  if (doc.infos) {
+	Object.keys(doc.infos).forEach(function(k) {
+	  emit(k, doc._id);
+	});
+  }
+}`,
+}
+
 // Views is the list of all views that are created by the stack.
 var Views = []*couchdb.View{
 	DiskUsageView,
@@ -159,6 +174,7 @@ var Views = []*couchdb.View{
 	PermissionsShareByCView,
 	PermissionsShareByDocView,
 	PermissionsByDoctype,
+	SharedDocsBySharingID,
 }
 
 // ViewsByDoctype returns the list of views for a specified doc type.
