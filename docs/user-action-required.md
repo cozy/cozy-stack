@@ -18,7 +18,7 @@ provided within the body of the response (see examples below).
 ```http
 HTTP/1.1 402 Payment Required
 Content-Length: ...
-Content-Type: application/json
+Content-Type: application/vnd.api+json
 ```
 
 ```json
@@ -44,9 +44,13 @@ a premium account, etc.
 
 # Anticipating these errors and warning the user
 
+## Request
+
 ```http
-GET /settings/warnings
+GET /settings/warnings HTTP/1.1
 ```
+
+## Response
 
 ```json
 [
