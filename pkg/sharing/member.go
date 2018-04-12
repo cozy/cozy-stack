@@ -41,6 +41,9 @@ type Credentials struct {
 	// Information needed to send data to the member
 	Client      *auth.Client      `json:"client,omitempty"`
 	AccessToken *auth.AccessToken `json:"access_token,omitempty"`
+
+	// XorKey is used to transform file identifiers
+	XorKey []byte `json:"xor_key,omitempty"`
 }
 
 // AddContact adds the contact with the given identifier
@@ -62,7 +65,8 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 	s.Members = append(s.Members, m)
 	state := crypto.Base64Encode(crypto.GenerateRandomBytes(StateLen))
 	creds := Credentials{
-		State: string(state),
+		State:  string(state),
+		XorKey: MakeXorKey(),
 	}
 	s.Credentials = append(s.Credentials, creds)
 	return nil

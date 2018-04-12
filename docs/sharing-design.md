@@ -194,7 +194,7 @@ that). In such a case, we create a copy of the file with one version, while
 keeping the other version in the original file. Else, the reconciliation rules
 are:
 
-* `name`, `dirID` and `metadata`: we keep those of the CouchDB winner
+* `name`, `dir_id` and `metadata`: we keep those of the CouchDB winner
 * `trashed` and `executable`: false wins
 * `updated_at`: the most recent date wins
 * `mime` and `class`: the last in alphabetical order wins (to avoid the default
