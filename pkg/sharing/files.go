@@ -229,6 +229,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	if err != nil {
 		return err
 	}
+	dir.SetID(target["_id"].(string))
 	// TODO what about tags, created_at, updated_at and referenced_by
 	// TODO force the correct revision
 	// TODO manage conflicts

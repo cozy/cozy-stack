@@ -63,3 +63,61 @@ func TestSharingDir(t *testing.T) {
 		assert.Equal(t, s.SID, dir.ReferencedBy[0].ID)
 	}
 }
+
+func TestCreateDir(t *testing.T) {
+	s := Sharing{
+		SID: uuidv4(),
+		Rules: []Rule{
+			{
+				Title:   "Test create dir",
+				DocType: consts.Files,
+				Values:  []string{uuidv4()},
+			},
+		},
+	}
+	assert.NoError(t, s.CreateDirForSharing(inst, &s.Rules[0]))
+
+	idFoo := uuidv4()
+	target := map[string]interface{}{
+		"_id":  idFoo,
+		"_rev": "1-6b501ca58928b02b90c430fd730e8b17",
+		"_revisions": map[string]interface{}{
+			"start": 1,
+			"ids": []string{
+				"6b501ca58928b02b90c430fd730e8b17",
+			},
+		},
+		"name": "Foo",
+	}
+	assert.NoError(t, s.CreateDir(inst, target))
+	dir, err := inst.VFS().DirByID(idFoo)
+	assert.NoError(t, err)
+	if assert.NotNil(t, dir) {
+		assert.Equal(t, idFoo, dir.DocID)
+		assert.Equal(t, "Foo", dir.DocName)
+		assert.Equal(t, "/Tree Shared with me/Test create dir/Foo", dir.Fullpath)
+	}
+
+	idBar := uuidv4()
+	target = map[string]interface{}{
+		"_id":  idBar,
+		"_rev": "4-2ee767305024673cfb3f5af037cd2729",
+		"_revisions": map[string]interface{}{
+			"start": 4,
+			"ids": []string{
+				"2ee767305024673cfb3f5af037cd2729",
+				"753875d51501a6b1883a9d62b4d33f91",
+			},
+		},
+		"dir_id": idFoo,
+		"name":   "Bar",
+	}
+	assert.NoError(t, s.CreateDir(inst, target))
+	dir, err = inst.VFS().DirByID(idBar)
+	assert.NoError(t, err)
+	if assert.NotNil(t, dir) {
+		assert.Equal(t, idBar, dir.DocID)
+		assert.Equal(t, "Bar", dir.DocName)
+		assert.Equal(t, "/Tree Shared with me/Test create dir/Foo/Bar", dir.Fullpath)
+	}
+}
