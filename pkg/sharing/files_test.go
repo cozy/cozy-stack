@@ -3,6 +3,7 @@ package sharing
 import (
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,4 +38,28 @@ func TestXorID(t *testing.T) {
 
 	expected = "133b5777-bb3d-9fee-e327-cbf1bfea422e"
 	assert.Equal(t, expected, XorID(id, []byte{0, 1, 0, 15}))
+}
+
+func TestSharingDir(t *testing.T) {
+	s := Sharing{
+		SID: uuidv4(),
+		Rules: []Rule{
+			{
+				Title:   "Test sharing dir",
+				DocType: consts.Files,
+				Values:  []string{uuidv4()},
+			},
+		},
+	}
+	assert.NoError(t, s.CreateDirForSharing(inst, &s.Rules[0]))
+
+	dir, err := s.GetSharingDir(inst)
+	assert.NoError(t, err)
+	if assert.NotNil(t, dir) {
+		assert.Equal(t, "Test sharing dir", dir.DocName)
+		assert.Equal(t, "/Tree Shared with me/Test sharing dir", dir.Fullpath)
+		assert.Len(t, dir.ReferencedBy, 1)
+		assert.Equal(t, consts.Sharings, dir.ReferencedBy[0].Type)
+		assert.Equal(t, s.SID, dir.ReferencedBy[0].ID)
+	}
 }

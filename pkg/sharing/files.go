@@ -151,6 +151,25 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error
 	return fs.CreateDir(dir)
 }
 
+// GetSharingDir returns the directory used by this sharing for putting files
+// and folders that have no dir_id.
+func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
+	key := []string{consts.Sharings, s.SID}
+	end := []string{key[0], key[1], couchdb.MaxString}
+	req := &couchdb.ViewRequest{
+		StartKey:    key,
+		EndKey:      end,
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res)
+	if err != nil || len(res.Rows) == 0 {
+		// TODO log
+		return nil, ErrInternalServerError
+	}
+	return inst.VFS().DirByID(res.Rows[0].ID)
+}
+
 // ApplyBulkFiles takes a list of documents for the io.cozy.files doctype and
 // will apply changes to the VFS according to those documents.
 func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
@@ -171,7 +190,11 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			return err
 		}
 		if ref == nil && doc == nil {
-			// TODO create the directory
+			err = s.CreateDir(inst, target)
+			if err != nil {
+				return err
+			}
+			// TODO update the io.cozy.shared reference?
 		} else if ref == nil {
 			// TODO be safe => return an error
 		} else if doc == nil {
@@ -182,4 +205,32 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		}
 	}
 	return nil
+}
+
+// CreateDir creates a directory on this cozy to reflect a change on another
+// cozy instance of this sharing.
+func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
+	fs := inst.VFS()
+	var parent *vfs.DirDoc
+	var err error
+	if dirID, ok := target["dir_id"].(string); ok {
+		parent, err = fs.DirByID(dirID)
+		// TODO better handling of this conflict
+		if err != nil {
+			return err
+		}
+	} else {
+		parent, err = s.GetSharingDir(inst)
+		if err != nil {
+			return err
+		}
+	}
+	dir, err := vfs.NewDirDocWithParent(target["name"].(string), parent, []string{})
+	if err != nil {
+		return err
+	}
+	// TODO what about tags, created_at, updated_at and referenced_by
+	// TODO force the correct revision
+	// TODO manage conflicts
+	return fs.CreateDir(dir)
 }
