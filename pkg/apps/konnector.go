@@ -33,7 +33,7 @@ type KonnManifest struct {
 	Tags        *json.RawMessage `json:"tags,omitempty"`
 
 	Frequency    string           `json:"frequency"`
-	DataType     *json.RawMessage `json:"data_type"`
+	DataTypes    *json.RawMessage `json:"data_types"`
 	Doctypes     *json.RawMessage `json:"doctypes"`
 	Fields       *json.RawMessage `json:"fields"`
 	Messages     *json.RawMessage `json:"messages"`
@@ -85,7 +85,7 @@ func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned.Tags = cloneRawMessage(m.Tags)
 	cloned.Parameters = cloneRawMessage(m.Parameters)
 
-	cloned.DataType = cloneRawMessage(m.DataType)
+	cloned.DataTypes = cloneRawMessage(m.DataTypes)
 	cloned.Doctypes = cloneRawMessage(m.Doctypes)
 	cloned.Fields = cloneRawMessage(m.Fields)
 	cloned.Messages = cloneRawMessage(m.Messages)
