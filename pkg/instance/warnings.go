@@ -1,30 +1,25 @@
 package instance
 
 import (
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
-// Warning is a struct describing a warning associated with the instance. For
-// example, when the TOS have not been signed yet by the user.
-type Warning struct {
-	Title   string `json:"title"`
-	Error   string `json:"error"`
-	Details string `json:"details"`
-	Link    string `json:"link"`
-}
-
 // Warnings returns a list of possible warnings associated with the instance.
-func (i *Instance) Warnings() (warnings []*Warning) {
+func (i *Instance) Warnings() (warnings []*jsonapi.Error) {
 	notSigned, _ := i.CheckTOSSigned()
 	if notSigned {
 		tosLink, _ := i.ManagerURL(ManagerTOSURL)
-		warnings = append(warnings, &Warning{
-			Title:   "TOS Updated",
-			Error:   "tos-updated",
-			Details: "Terms of services have been updated",
-			Link:    tosLink,
+		warnings = append(warnings, &jsonapi.Error{
+			Status: http.StatusPaymentRequired,
+			Title:  "TOS Updated",
+			Code:   "tos-updated",
+			Detail: "Terms of services have been updated",
+			Links:  &jsonapi.LinksList{Self: tosLink},
 		})
 	}
 	return

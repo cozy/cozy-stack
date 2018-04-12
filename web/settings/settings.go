@@ -8,7 +8,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -60,10 +59,10 @@ func warnings(c echo.Context) error {
 
 	warnings := inst.Warnings()
 	if warnings == nil {
-		warnings = []*instance.Warning{}
+		warnings = []*jsonapi.Error{}
 	}
 
-	return c.JSON(http.StatusOK, warnings)
+	return jsonapi.DataErrorList(c, warnings...)
 }
 
 // Routes sets the routing for the settings service
