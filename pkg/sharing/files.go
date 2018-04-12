@@ -210,7 +210,20 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 // CreateDir creates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
-	fs := inst.VFS()
+	rev, ok := target["_rev"].(string)
+	if !ok {
+		// TODO add logs or better error
+		return ErrInternalServerError
+	}
+	revisions, ok := target["_revisions"].(map[string]interface{})
+	if !ok {
+		return ErrInternalServerError
+	}
+	indexer := NewSharingIndexer(inst, &bulkRevs{
+		Rev:       rev,
+		Revisions: revisions,
+	})
+	fs := inst.VFS().UseSharingIndexer(indexer)
 	var parent *vfs.DirDoc
 	var err error
 	if dirID, ok := target["dir_id"].(string); ok {
@@ -231,7 +244,6 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	}
 	dir.SetID(target["_id"].(string))
 	// TODO what about tags, created_at, updated_at and referenced_by
-	// TODO force the correct revision
 	// TODO manage conflicts
 	return fs.CreateDir(dir)
 }

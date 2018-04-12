@@ -219,6 +219,10 @@ type VFS interface {
 	Indexer
 	DiskThresholder
 	Fs
+
+	// UseSharingIndexer returns a new Fs with an overload indexer that can be
+	// used for the special purpose of the sharing.
+	UseSharingIndexer(Indexer) VFS
 }
 
 // ErrIteratorDone is returned by the Next() method of the iterator when

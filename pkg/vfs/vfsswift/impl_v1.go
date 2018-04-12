@@ -61,6 +61,19 @@ func (sfs *swiftVFS) Domain() string {
 	return sfs.domain
 }
 
+func (sfs *swiftVFS) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
+	return &swiftVFS{
+		Indexer:         index,
+		DiskThresholder: sfs.DiskThresholder,
+		c:               sfs.c,
+		domain:          sfs.domain,
+		container:       sfs.container,
+		version:         sfs.version,
+		mu:              sfs.mu,
+		log:             sfs.log,
+	}
+}
+
 func (sfs *swiftVFS) InitFs() error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr

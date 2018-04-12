@@ -94,6 +94,7 @@ func TestCreateDir(t *testing.T) {
 	assert.NoError(t, err)
 	if assert.NotNil(t, dir) {
 		assert.Equal(t, idFoo, dir.DocID)
+		assert.Equal(t, target["_rev"], dir.DocRev)
 		assert.Equal(t, "Foo", dir.DocName)
 		assert.Equal(t, "/Tree Shared with me/Test create dir/Foo", dir.Fullpath)
 	}
@@ -117,6 +118,7 @@ func TestCreateDir(t *testing.T) {
 	assert.NoError(t, err)
 	if assert.NotNil(t, dir) {
 		assert.Equal(t, idBar, dir.DocID)
+		assert.Equal(t, target["_rev"], dir.DocRev)
 		assert.Equal(t, "Bar", dir.DocName)
 		assert.Equal(t, "/Tree Shared with me/Test create dir/Foo/Bar", dir.Fullpath)
 	}
