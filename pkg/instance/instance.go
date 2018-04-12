@@ -745,10 +745,22 @@ func Get(domain string) (*Instance, error) {
 		cache.Set(domain, i)
 	}
 
-	if i.IndexViewsVersion != consts.IndexViewsVersion {
-		i.Logger().Debugf("Indexes outdated: wanted %d; got %d",
-			consts.IndexViewsVersion, i.IndexViewsVersion)
+	// This retry-loop handles the probability to hit an Update conflict from
+	// this version update, since the instance document may be updated different
+	// processes at the same time.
+	for {
+		if i == nil {
+			i, err = getFromCouch(domain)
+			if err != nil {
+				return nil, err
+			}
+		}
 
+		if i.IndexViewsVersion == consts.IndexViewsVersion {
+			break
+		}
+
+		i.Logger().Debugf("Indexes outdated: wanted %d; got %d", consts.IndexViewsVersion, i.IndexViewsVersion)
 		if err = i.defineViewsAndIndex(); err != nil {
 			i.Logger().Errorf("Could not re-define indexes and views: %s", err.Error())
 			return nil, err
@@ -759,38 +771,29 @@ func Get(domain string) (*Instance, error) {
 		if i.TOSSigned == "" || i.UUID == "" || i.ContextName == "" {
 			var settings *couchdb.JSONDoc
 			settings, err = i.SettingsDocument()
-			if err == nil {
-				i.UUID, _ = settings.M["uuid"].(string)
-				i.TOSSigned, _ = settings.M["tos"].(string)
-				i.ContextName, _ = settings.M["context"].(string)
-				// TOS version number hardcoded before we used a semver-like version
-				// scheme. We consider it to be the version 1.0.0.
-				if i.TOSSigned == "20171211" {
-					i.TOSSigned = "1.0.0-20171211"
-				}
-			}
-		}
-
-		for {
-			// This retry-loop handles the probability to hit an Update conflict from
-			// this version update, since the instance document may be updated
-			// different processes at the same time.
-			err = i.update()
-			if err == nil {
-				break
-			}
-			if !couchdb.IsConflictError(err) {
-				return nil, err
-			}
-			i, err = getFromCouch(domain)
 			if err != nil {
 				return nil, err
 			}
-			if i.IndexViewsVersion == consts.IndexViewsVersion {
-				break
+			i.UUID, _ = settings.M["uuid"].(string)
+			i.TOSSigned, _ = settings.M["tos"].(string)
+			i.ContextName, _ = settings.M["context"].(string)
+			// TOS version number were YYYYMMDD dates, before we used a semver-like
+			// version scheme. We consider them to be the versions 1.0.0.
+			if len(i.TOSSigned) == 8 {
+				i.TOSSigned = "1.0.0-" + i.TOSSigned
 			}
-			i.IndexViewsVersion = consts.IndexViewsVersion
 		}
+
+		err = i.update()
+		if err == nil {
+			break
+		}
+
+		if !couchdb.IsConflictError(err) {
+			return nil, err
+		}
+
+		i = nil
 	}
 
 	if err = i.makeVFS(); err != nil {
