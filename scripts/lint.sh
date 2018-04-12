@@ -4,7 +4,7 @@ set -ev
 if git grep -l \
   -e 'github.com/labstack/gommon/log' \
   -e 'github.com/dgrijalva/jwt-go' \
-  -e 'github.com/cozy/echo' \
+  -e 'github.com/labstack/echo' \
   -e 'github.com/spf13/afero' \
   -- '*.go'; then
   echo "Forbidden packages"
