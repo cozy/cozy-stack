@@ -10,7 +10,8 @@ import (
 type APISharing struct {
 	*Sharing
 	// XXX Hide the credentials
-	Credentials *interface{} `json:"credentials,omitempty"`
+	Credentials *interface{}           `json:"credentials,omitempty"`
+	SharedDocs  []couchdb.DocReference `json:"shared_docs,omitempty"`
 }
 
 // Included is part of jsonapi.Object interface

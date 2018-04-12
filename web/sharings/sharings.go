@@ -57,6 +57,7 @@ func CreateSharing(c echo.Context) error {
 	as := &sharing.APISharing{
 		Sharing:     &s,
 		Credentials: nil,
+		SharedDocs:  nil,
 	}
 	return jsonapi.Data(c, http.StatusCreated, as, nil)
 }
@@ -78,11 +79,13 @@ func PutSharing(c echo.Context) error {
 	as := &sharing.APISharing{
 		Sharing:     &s,
 		Credentials: nil,
+		SharedDocs:  nil,
 	}
 	return jsonapi.Data(c, http.StatusCreated, as, nil)
 }
 
-// GetSharing returns the sharing document associated to the given sharingID.
+// GetSharing returns the sharing document associated to the given sharingID
+// and which documents have been shared.
 // The requester must have the permission on at least one doctype declared in
 // the sharing document.
 func GetSharing(c echo.Context) error {
@@ -95,9 +98,15 @@ func GetSharing(c echo.Context) error {
 	if err = checkGetPermissions(c, s); err != nil {
 		return wrapErrors(err)
 	}
+	docs, err := sharing.GetSharedDocsBySharingID(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
 	as := &sharing.APISharing{
 		Sharing:     s,
 		Credentials: nil,
+		SharedDocs:  docs,
 	}
 	return jsonapi.Data(c, http.StatusOK, as, nil)
 }
