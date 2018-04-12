@@ -525,6 +525,12 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 	var refs []*SharedRef
 
 	for doctype, docs := range payload {
+		if doctype == consts.Files {
+			err := s.ApplyBulkFiles(inst, docs)
+			if err != nil {
+				return err
+			}
+		}
 		var okDocs, docsToUpdate DocsList
 		var newRefs, existingRefs []*SharedRef
 		newDocs, existingDocs, err := partitionDocsPayload(inst, doctype, docs)

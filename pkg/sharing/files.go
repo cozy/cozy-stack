@@ -1,6 +1,8 @@
 package sharing
 
 import (
+	"os"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -68,7 +70,7 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 	rule := s.Rules[ruleIndexes[id]]
 	noDirID := rule.Selector == "referenced_by"
 	if !noDirID {
-		for i, v := range rule.Values {
+		for _, v := range rule.Values {
 			if v == dir {
 				noDirID = true
 				break
@@ -147,4 +149,37 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error
 		Type: consts.Sharings,
 	})
 	return fs.CreateDir(dir)
+}
+
+// ApplyBulkFiles takes a list of documents for the io.cozy.files doctype and
+// will apply changes to the VFS according to those documents.
+func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
+	fs := inst.VFS()
+	for _, target := range docs {
+		id, ok := target["_id"].(string)
+		if !ok {
+			return ErrMissingID
+		}
+		var ref *SharedRef
+		err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+id, ref)
+		if err != nil && !couchdb.IsNotFoundError(err) {
+			return err
+		}
+		// TODO it's only for directory currently, code needs to be adapted for files
+		doc, err := fs.DirByID(id) // TODO DirOrFileByID
+		if err != nil && err != os.ErrNotExist {
+			return err
+		}
+		if ref == nil && doc == nil {
+			// TODO create the directory
+		} else if ref == nil {
+			// TODO be safe => return an error
+		} else if doc == nil {
+			// TODO manage the conflict: doc was deleted/moved outside the
+			// sharing on this cozy and updated on the other cozy
+		} else {
+			// TODO update the directory
+		}
+	}
+	return nil
 }
