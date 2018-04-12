@@ -24,7 +24,6 @@ type KonnManifest struct {
 	License     string           `json:"license,omitempty"`
 	Language    string           `json:"language,omitempty"`
 	VendorLink  string           `json:"vendor_link"`
-	Languages   *json.RawMessage `json:"languages,omitempty"`
 	Locales     *json.RawMessage `json:"locales,omitempty"`
 	Langs       *json.RawMessage `json:"langs,omitempty"`
 	Platforms   *json.RawMessage `json:"platforms,omitempty"`
@@ -77,7 +76,6 @@ func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned.DocPermissions = make(permissions.Set, len(m.DocPermissions))
 	copy(cloned.DocPermissions, m.DocPermissions)
 
-	cloned.Languages = cloneRawMessage(m.Languages)
 	cloned.Locales = cloneRawMessage(m.Locales)
 	cloned.Langs = cloneRawMessage(m.Langs)
 	cloned.Platforms = cloneRawMessage(m.Platforms)
