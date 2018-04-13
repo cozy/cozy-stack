@@ -207,7 +207,6 @@ func decryptMap(m map[string]interface{}) (decrypted bool) {
 		if !decrypted {
 			decrypted = err == nil
 		}
-		delete(auth, k)
 	}
 	m["auth"] = cloned
 	if data, ok := m["data"].(map[string]interface{}); ok {
