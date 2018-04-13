@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 15
+const IndexViewsVersion int = 16
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -158,9 +158,9 @@ var SharedDocsBySharingID = &couchdb.View{
 	Map: `
 function(doc) {
   if (doc.infos) {
-	Object.keys(doc.infos).forEach(function(k) {
-	  emit(k, doc._id);
-	});
+    Object.keys(doc.infos).forEach(function(k) {
+      emit(k, doc._id);
+    });
   }
 }`,
 }
