@@ -278,17 +278,21 @@ Content-Type: application/vnd.api+json
           "update": "sync",
           "remove": "sync"
         }
-    ],
-    "shared_docs": [
-        {
-          "id": "612acf1c-1d72-11e8-b043-ef239d3074dd",
-          "type": "io.cozy.files"
-        },
-        {
-          "id": "a34528d2-13fb-9482-8d20-bf1972531225",
-          "type": "io.cozy.files"
-        },
-      ]
+      ],
+    },
+    "relationships": {
+      "shared_docs": {
+        "data": [
+          {
+            "id": "612acf1c-1d72-11e8-b043-ef239d3074dd",
+            "type": "io.cozy.files"
+          },
+          {
+            "id": "a34528d2-13fb-9482-8d20-bf1972531225",
+            "type": "io.cozy.files"
+          }
+        ]
+      }
     },
     "links": {
       "self": "/sharings/ce8835a061d0ef68947afe69a0046722"
