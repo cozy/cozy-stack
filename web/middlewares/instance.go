@@ -41,9 +41,6 @@ func CheckInstanceTOS(next echo.HandlerFunc) echo.HandlerFunc {
 		i := GetInstance(c)
 		_, deadline := i.CheckTOSSigned()
 		if deadline == instance.TOSBlocked {
-			if !IsLoggedIn(c) {
-				return echo.NewHTTPError(http.StatusUnauthorized)
-			}
 			contentType := AcceptedContentType(c)
 			switch contentType {
 			case jsonapi.ContentType, echo.MIMEApplicationJSON:
