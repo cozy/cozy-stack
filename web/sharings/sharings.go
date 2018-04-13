@@ -112,6 +112,37 @@ func GetSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, as, nil)
 }
 
+// GetSharingsInfoByDocType returns
+func GetSharingsInfoByDocType(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	docType := c.Param("doctype")
+
+	sharingIDs, err := sharing.GetSharingsByDocType(inst, docType)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	sharings := make([]*sharing.APISharing, len(sharingIDs))
+
+	for i, sharingID := range sharingIDs {
+		s, err := sharing.FindSharing(inst, sharingID)
+		if err != nil {
+			return wrapErrors(err)
+		}
+		docs, err := sharing.GetSharedDocsBySharingID(inst, sharingID)
+		if err != nil {
+			return wrapErrors(err)
+		}
+		as := &sharing.APISharing{
+			Sharing:     s,
+			Credentials: nil,
+			SharedDocs:  docs,
+		}
+		sharings[i] = as
+	}
+
+	return sharing.InfoByDocTypeData(c, http.StatusOK, sharings)
+}
+
 // AnswerSharing is used to exchange credentials between 2 cozys, after the
 // recipient has accepted a sharing.
 func AnswerSharing(c echo.Context) error {
@@ -223,6 +254,8 @@ func Routes(router *echo.Group) {
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
+
+	router.GET("/doctype/:doctype", GetSharingsInfoByDocType)
 
 	// Register the URL of their Cozy for recipients
 	router.GET("/:sharing-id/discovery", GetDiscovery)

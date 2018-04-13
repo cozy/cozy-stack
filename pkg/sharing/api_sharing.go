@@ -1,10 +1,28 @@
 package sharing
 
 import (
+	"net/http"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/cozy/echo"
 )
+
+type InfoByDocType struct {
+	included []jsonapi.Object
+}
+
+func InfoByDocTypeData(c echo.Context, statusCode int, sharings []*APISharing) error {
+	included := make([]jsonapi.Object, len(sharings))
+
+	for i, s := range sharings {
+		included[i] = s
+	}
+
+	return jsonapi.DataRelations(c, http.StatusOK, nil, 0, nil, included)
+
+}
 
 // APISharing is used to serialize a Sharing to JSON-API
 type APISharing struct {

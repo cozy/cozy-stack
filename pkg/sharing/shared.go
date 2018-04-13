@@ -178,4 +178,23 @@ func GetSharedDocsBySharingID(inst *instance.Instance, sharingID string) ([]couc
 	return result, nil
 }
 
+// GetSharingsByDocType returns the sharingids related to the
+// given docType
+func GetSharingsByDocType(inst *instance.Instance, docType string) ([]string, error) {
+	var req = &couchdb.ViewRequest{
+		Key:         docType,
+		IncludeDocs: false,
+	}
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(inst, consts.SharedDocsByDocType, req, &res)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]string, len(res.Rows))
+	for i, row := range res.Rows {
+		result[i] = row.Value.(string)
+	}
+	return result, nil
+}
+
 var _ couchdb.Doc = &SharedRef{}
