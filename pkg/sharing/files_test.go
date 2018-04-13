@@ -110,8 +110,11 @@ func TestCreateDir(t *testing.T) {
 				"753875d51501a6b1883a9d62b4d33f91",
 			},
 		},
-		"dir_id": idFoo,
-		"name":   "Bar",
+		"dir_id":     idFoo,
+		"name":       "Bar",
+		"created_at": "2018-04-13T15:06:00.012345678+01:00",
+		"updated_at": "2018-04-13T15:08:32.581420274+01:00",
+		"tags":       []interface{}{"qux", "courge"},
 	}
 	assert.NoError(t, s.CreateDir(inst, target))
 	dir, err = inst.VFS().DirByID(idBar)
@@ -121,5 +124,75 @@ func TestCreateDir(t *testing.T) {
 		assert.Equal(t, target["_rev"], dir.DocRev)
 		assert.Equal(t, "Bar", dir.DocName)
 		assert.Equal(t, "/Tree Shared with me/Test create dir/Foo/Bar", dir.Fullpath)
+		assert.Equal(t, "2018-04-13 15:06:00.012345678 +0100 +0100", dir.CreatedAt.String())
+		assert.Equal(t, "2018-04-13 15:08:32.581420274 +0100 +0100", dir.UpdatedAt.String())
+		assert.Equal(t, []string{"qux", "courge"}, dir.Tags)
+	}
+}
+
+func TestUpdateDir(t *testing.T) {
+	s := Sharing{
+		SID: uuidv4(),
+		Rules: []Rule{
+			{
+				Title:   "Test update dir",
+				DocType: consts.Files,
+				Values:  []string{uuidv4()},
+			},
+		},
+	}
+	assert.NoError(t, s.CreateDirForSharing(inst, &s.Rules[0]))
+
+	idFoo := uuidv4()
+	target := map[string]interface{}{
+		"_id":  idFoo,
+		"_rev": "1-4fff5291a41bf1f493460d2070694c5a",
+		"_revisions": map[string]interface{}{
+			"start": 1,
+			"ids": []string{
+				"4fff5291a41bf1f493460d2070694c5a",
+			},
+		},
+		"name":       "Foo",
+		"created_at": "2018-04-13T15:06:00.012345678+01:00",
+		"updated_at": "2018-04-13T15:08:32.581420274+01:00",
+		"tags":       []interface{}{"qux", "courge"},
+	}
+	assert.NoError(t, s.CreateDir(inst, target))
+	dir, err := inst.VFS().DirByID(idFoo)
+	assert.NoError(t, err)
+	if assert.NotNil(t, dir) {
+		assert.Equal(t, idFoo, dir.DocID)
+		assert.Equal(t, target["_rev"], dir.DocRev)
+		assert.Equal(t, "Foo", dir.DocName)
+		assert.Equal(t, "/Tree Shared with me/Test update dir/Foo", dir.Fullpath)
+	}
+
+	target = map[string]interface{}{
+		"_id":  idFoo,
+		"_rev": "2-96c72d35f3ad802484a61df501b0f1bb",
+		"_revisions": map[string]interface{}{
+			"start": 2,
+			"ids": []string{
+				"96c72d35f3ad802484a61df501b0f1bb",
+				"4fff5291a41bf1f493460d2070694c5a",
+			},
+		},
+		"name":       "Foo",
+		"created_at": "2018-04-13T15:06:00.012345678+01:00",
+		"updated_at": "2018-04-13T15:10:57.364765745+01:00",
+		"tags":       []interface{}{"quux", "courge"},
+	}
+	assert.NoError(t, s.UpdateDir(inst, target, dir))
+	dir, err = inst.VFS().DirByID(idFoo)
+	assert.NoError(t, err)
+	if assert.NotNil(t, dir) {
+		assert.Equal(t, idFoo, dir.DocID)
+		assert.Equal(t, target["_rev"], dir.DocRev)
+		assert.Equal(t, "Foo", dir.DocName)
+		assert.Equal(t, "/Tree Shared with me/Test update dir/Foo", dir.Fullpath)
+		assert.Equal(t, "2018-04-13 15:06:00.012345678 +0100 +0100", dir.CreatedAt.String())
+		assert.Equal(t, "2018-04-13 15:10:57.364765745 +0100 +0100", dir.UpdatedAt.String())
+		assert.Equal(t, []string{"quux", "courge"}, dir.Tags)
 	}
 }

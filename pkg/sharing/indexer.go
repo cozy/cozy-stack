@@ -20,7 +20,7 @@ type sharingIndexer struct {
 
 // NewSharingIndexer creates an Indexer for the special purpose of the sharing.
 // It intercepts some requests to force the id and revisions of some documents,
-// and proxifies other request to the normal couchdbIndexer for others.
+// and proxifies other requests to the normal couchdbIndexer (reads).
 func NewSharingIndexer(inst *instance.Instance, bulkRevs *bulkRevs) vfs.Indexer {
 	return &sharingIndexer{
 		db:       inst,
@@ -62,6 +62,11 @@ func (s *sharingIndexer) CreateDirDoc(doc *vfs.DirDoc) error {
 }
 
 func (s *sharingIndexer) CreateNamedDirDoc(doc *vfs.DirDoc) error {
+	return s.UpdateDirDoc(nil, doc)
+}
+
+// TODO update io.cozy.shared & rtevent
+func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	docs := make([]map[string]interface{}, 1)
 	docs[0] = map[string]interface{}{
 		"type":       doc.Type,
@@ -83,10 +88,6 @@ func (s *sharingIndexer) CreateNamedDirDoc(doc *vfs.DirDoc) error {
 	return couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs)
 }
 
-func (s *sharingIndexer) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
-	return ErrInternalServerError
-}
-
 func (s *sharingIndexer) DeleteDirDoc(doc *vfs.DirDoc) error {
 	return ErrInternalServerError
 }
@@ -96,10 +97,6 @@ func (s *sharingIndexer) DeleteDirDocAndContent(doc *vfs.DirDoc, onlyContent boo
 }
 
 func (s *sharingIndexer) BatchDelete(docs []couchdb.Doc) error {
-	return ErrInternalServerError
-}
-
-func (s *sharingIndexer) moveDir(oldpath, newpath string) error {
 	return ErrInternalServerError
 }
 
@@ -145,10 +142,6 @@ func (s *sharingIndexer) DirLength(doc *vfs.DirDoc) (int, error) {
 
 func (s *sharingIndexer) DirChildExists(dirID, name string) (bool, error) {
 	return s.indexer.DirChildExists(dirID, name)
-}
-
-func (s *sharingIndexer) setTrashedForFilesInsideDir(*vfs.DirDoc, bool) error {
-	return ErrInternalServerError
 }
 
 func (s *sharingIndexer) CheckIndexIntegrity() ([]*vfs.FsckLog, error) {

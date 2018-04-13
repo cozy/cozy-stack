@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"os"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -53,6 +54,7 @@ func XorID(id string, key []byte) string {
 // - the path is removed (directory only)
 //
 // ruleIndexes is a map of "doctype-docid" -> rule index
+// TODO remove referenced_by that are not relevant to this sharing
 // TODO the file/folder has been moved outside the shared directory
 func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndexes map[string]int) map[string]interface{} {
 	if doc["type"] == "directory" {
@@ -197,19 +199,50 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			// TODO update the io.cozy.shared reference?
 		} else if ref == nil {
 			// TODO be safe => return an error
+			continue
 		} else if doc == nil {
 			// TODO manage the conflict: doc was deleted/moved outside the
 			// sharing on this cozy and updated on the other cozy
+			continue
 		} else {
 			// TODO update the directory
+			err = s.UpdateDir(inst, target, doc)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
+func copyTagsAndDatesToDir(target map[string]interface{}, dir *vfs.DirDoc) {
+	if tags, ok := target["tags"].([]interface{}); ok {
+		dir.Tags = make([]string, 0, len(tags))
+		for _, tag := range tags {
+			if t, ok := tag.(string); ok {
+				dir.Tags = append(dir.Tags, t)
+			}
+		}
+	}
+	if created, ok := target["created_at"].(string); ok {
+		if at, err := time.Parse(time.RFC3339Nano, created); err == nil {
+			dir.CreatedAt = at
+		}
+	}
+	if updated, ok := target["updated_at"].(string); ok {
+		if at, err := time.Parse(time.RFC3339Nano, updated); err == nil {
+			dir.UpdatedAt = at
+		}
+	}
+}
+
 // CreateDir creates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
+	name, ok := target["name"].(string)
+	if !ok {
+		return ErrInternalServerError
+	}
 	rev, ok := target["_rev"].(string)
 	if !ok {
 		// TODO add logs or better error
@@ -224,6 +257,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		Revisions: revisions,
 	})
 	fs := inst.VFS().UseSharingIndexer(indexer)
+
 	var parent *vfs.DirDoc
 	var err error
 	if dirID, ok := target["dir_id"].(string); ok {
@@ -238,12 +272,38 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 			return err
 		}
 	}
-	dir, err := vfs.NewDirDocWithParent(target["name"].(string), parent, []string{})
+
+	dir, err := vfs.NewDirDocWithParent(name, parent, nil)
 	if err != nil {
 		return err
 	}
 	dir.SetID(target["_id"].(string))
-	// TODO what about tags, created_at, updated_at and referenced_by
+	copyTagsAndDatesToDir(target, dir)
+	// TODO referenced_by
 	// TODO manage conflicts
 	return fs.CreateDir(dir)
+}
+
+// UpdateDir updates a directory on this cozy to reflect a change on another
+// cozy instance of this sharing.
+func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface{}, dir *vfs.DirDoc) error {
+	rev, ok := target["_rev"].(string)
+	if !ok {
+		// TODO add logs or better error
+		return ErrInternalServerError
+	}
+	revisions, ok := target["_revisions"].(map[string]interface{})
+	if !ok {
+		return ErrInternalServerError
+	}
+	indexer := NewSharingIndexer(inst, &bulkRevs{
+		Rev:       rev,
+		Revisions: revisions,
+	})
+	copyTagsAndDatesToDir(target, dir)
+	// TODO what if name or dir_id has changed
+	// TODO referenced_by
+	// TODO trash
+	// TODO manage conflicts
+	return indexer.UpdateDirDoc(nil, dir) // TODO oldDoc
 }
