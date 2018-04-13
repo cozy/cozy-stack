@@ -172,7 +172,6 @@ func GetSharedDocsBySharingID(inst *instance.Instance, sharingID string) ([]couc
 		doc.Type = slice[0]
 		result[i] = doc
 	}
-
 	return result, nil
 }
 

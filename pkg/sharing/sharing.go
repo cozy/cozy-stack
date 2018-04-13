@@ -42,6 +42,9 @@ type Sharing struct {
 	// On the owner, credentials[i] is associated to members[i+1]
 	// On a recipient, there is only credentials[0] (for the owner)
 	Credentials []Credentials `json:"credentials,omitempty"`
+
+	// SharedDocs are the documents impacted by this sharing
+	SharedDocs []couchdb.DocReference `json:"shared_docs,omitempty"`
 }
 
 // ID returns the sharing qualified identifier
@@ -74,6 +77,11 @@ func (s *Sharing) Clone() couchdb.Doc {
 	for i := range s.Rules {
 		cloned.Rules[i] = s.Rules[i]
 	}
+	cloned.SharedDocs = make([]couchdb.DocReference, len(s.SharedDocs))
+	for i := range s.SharedDocs {
+		cloned.SharedDocs[i] = s.SharedDocs[i]
+	}
+
 	return &cloned
 }
 
