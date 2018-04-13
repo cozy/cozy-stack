@@ -697,6 +697,86 @@ func TestUnsupportedOption(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestAccountsEncryptDecrypt(t *testing.T) {
+	config.UseTestFile()
+
+	v := []byte(`
+{
+    "_id": "d01aa821781612dce542a13d6989e6d0",
+    "_rev": "5-c8fc2169ff3226165688865e7cb609ef",
+    "_type": "io.cozy.accounts",
+    "account_type": "labanquepostale44",
+    "auth": {
+        "accountName": "Perso",
+        "identifier": "WHATYOUWANT",
+        "secret": "YOUWANTTOREADMYSECRET"
+    },
+    "data": {
+        "account_type": "linxo",
+        "auth": {
+            "login": "linxo.SOMEID@cozy.rocks",
+            "password": "SOMEPASSWORD"
+        },
+        "status": "connected",
+        "token": "4D757B74AD",
+        "uuid": "f6bb19cf-1c03-4d80-92e9-af66c18c4aa4"
+    },
+    "type": "io.cozy.accounts"
+}
+`)
+
+	var encrypted, decrypted bool
+	var m1 map[string]interface{} // original
+	var m2 map[string]interface{} // encrypted
+	var m3 map[string]interface{} // decrypted
+	json.Unmarshal(v, &m1)
+	json.Unmarshal(v, &m2)
+	json.Unmarshal(v, &m3)
+
+	encrypted = encryptMap(m2)
+	assert.True(t, encrypted)
+
+	{
+		auth1 := m2["auth"].(map[string]interface{})
+		auth2 := m2["data"].(map[string]interface{})["auth"].(map[string]interface{})
+		{
+			_, ok1 := auth1["secret"]
+			_, ok2 := auth1["secret_encrypted"]
+			assert.False(t, ok1)
+			assert.True(t, ok2)
+		}
+		{
+			_, ok1 := auth2["password"]
+			_, ok2 := auth2["credentials_encrypted"]
+			assert.False(t, ok1)
+			assert.True(t, ok2)
+		}
+	}
+
+	encrypted = encryptMap(m3)
+	decrypted = decryptMap(m3)
+	assert.True(t, encrypted)
+	assert.True(t, decrypted)
+	assert.EqualValues(t, m1, m3)
+
+	{
+		auth1 := m3["auth"].(map[string]interface{})
+		auth2 := m3["data"].(map[string]interface{})["auth"].(map[string]interface{})
+		{
+			_, ok1 := auth1["secret"]
+			_, ok2 := auth1["secret_encrypted"]
+			assert.True(t, ok1)
+			assert.False(t, ok2)
+		}
+		{
+			_, ok1 := auth2["password"]
+			_, ok2 := auth2["credentials_encrypted"]
+			assert.True(t, ok1)
+			assert.False(t, ok2)
+		}
+	}
+}
+
 func TestGetAllDocs(t *testing.T) {
 	url := ts.URL + "/data/" + Type + "/_all_docs?include_docs=true"
 	req, _ := http.NewRequest("GET", url, nil)
