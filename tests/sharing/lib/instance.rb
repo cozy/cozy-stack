@@ -23,7 +23,7 @@ class Instance
     when Contact
       @stack.install_app self, "contacts"
       "http://contacts.#{@domain}/"
-    when File
+    when Folder
       @stack.install_app self, "drive"
       "http://drive.#{@domain}/"
     else
@@ -72,5 +72,18 @@ class Instance
     }
     res = @client["/files/#{doc.dir_id}?Type=directory&Name=#{doc.name}"].post nil, opts
     doc.couch_id = JSON.parse(res.body)["data"]["id"]
+  end
+
+  def register_sharing(sharing)
+    doctypes = sharing.rules.map(&:doctype).uniq
+    token = @stack.token_for self, doctypes
+    opts = {
+      accept: "application/vnd.api+json",
+      content_type: "application/vnd.api+json",
+      authorization: "Bearer #{token}"
+    }
+    body = JSON.generate sharing.as_json_api
+    res = @client["/sharings/"].post body, opts
+    sharing.couch_id = JSON.parse(res.body)["data"]["id"]
   end
 end

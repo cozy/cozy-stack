@@ -34,4 +34,11 @@ class Contact
       phone: @phones
     }
   end
+
+  def as_reference
+    {
+      doctype: doctype,
+      id: @couch_id
+    }
+  end
 end
