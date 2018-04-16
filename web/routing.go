@@ -43,7 +43,7 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	mws := []echo.MiddlewareFunc{
 		middlewares.LoadAppSession,
 	}
-	if !config.IsDevRelease() || !config.GetConfig().CSPDisabled {
+	if !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:    hstsMaxAge,
 			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
@@ -96,7 +96,7 @@ func SetupAssets(router *echo.Echo, assetsPath string) (err error) {
 func SetupRoutes(router *echo.Echo) error {
 	router.Use(timersMiddleware)
 
-	if !config.IsDevRelease() || !config.GetConfig().CSPDisabled {
+	if !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:    hstsMaxAge,
 			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf},
