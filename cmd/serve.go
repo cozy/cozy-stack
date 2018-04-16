@@ -23,7 +23,6 @@ import (
 var flagAllowRoot bool
 var flagAppdirs []string
 var flagDisableCSP bool
-var flagCSPWhitelist string
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
