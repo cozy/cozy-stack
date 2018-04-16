@@ -43,14 +43,17 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	mws := []echo.MiddlewareFunc{
 		middlewares.LoadAppSession,
 	}
-	if !config.GetConfig().DisableCSP {
+	if !config.IsDevRelease() || !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:    hstsMaxAge,
 			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
 			CSPStyleSrc:   []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPUnsafeInline},
 			CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcParent},
-			CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcBlob, middlewares.CSPSrcParent, middlewares.CSPSrcWhitelist},
+			CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcBlob, middlewares.CSPSrcParent},
 			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcSiblings},
+
+			CSPDefaultSrcWhitelist: config.GetConfig().CSPWhitelist,
+
 			XFrameOptions: middlewares.XFrameSameOrigin,
 		})
 		mws = append([]echo.MiddlewareFunc{secure}, mws...)
@@ -89,7 +92,7 @@ func SetupAssets(router *echo.Echo, assetsPath string) (err error) {
 func SetupRoutes(router *echo.Echo) error {
 	router.Use(timersMiddleware)
 
-	if !config.GetConfig().DisableCSP {
+	if !config.IsDevRelease() || !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:    hstsMaxAge,
 			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf},

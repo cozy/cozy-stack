@@ -23,6 +23,7 @@ import (
 var flagAllowRoot bool
 var flagAppdirs []string
 var flagDisableCSP bool
+var flagCSPWhitelist string
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -58,7 +59,7 @@ example), you can use the --appdir flag like this:
 			if !config.IsDevRelease() {
 				return errors.New("Using --disable-csp is allowed only for development")
 			}
-			config.GetConfig().DisableCSP = true
+			config.GetConfig().CSPDisabled = true
 		}
 
 		var apps map[string]string
@@ -209,8 +210,13 @@ func init() {
 	flags.String("password-reset-interval", "15m", "minimal duration between two password reset")
 	checkNoErr(viper.BindPFlag("password_reset_interval", flags.Lookup("password-reset-interval")))
 
+	flags.BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
+	flags.StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
+
+	flags.BoolVar(&flagDisableCSP, "disable-csp", false, "Disable the Content Security Policy (only available for development)")
+
+	flags.String("csp-whitelist", "", "Whitelisted domains for the default allowed origins of the Content Secury Policy")
+	checkNoErr(viper.BindPFlag("csp.whitelist", flags.Lookup("csp-whitelist")))
+
 	RootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
-	serveCmd.Flags().StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
-	serveCmd.Flags().BoolVar(&flagDisableCSP, "disable-csp", false, "Disable the Content Security Policy (only available for development)")
 }
