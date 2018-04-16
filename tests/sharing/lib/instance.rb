@@ -1,0 +1,2 @@
+class Instance
+end
