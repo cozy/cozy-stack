@@ -83,7 +83,7 @@ func TestSequenceNumber(t *testing.T) {
 	_, seq, err = s.callChangesFeed(inst, seq)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, seq)
-	assert.Equal(t, nb, RevGeneration(seq))
+	assert.Equal(t, nb+1, RevGeneration(seq)) // +1 because of the view creation
 	err = s.UpdateLastSequenceNumber(inst, m, seq)
 	assert.NoError(t, err)
 	seq2, err := s.getLastSeqNumber(inst, m)

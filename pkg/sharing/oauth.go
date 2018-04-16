@@ -48,6 +48,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 			Members:     s.Members,
 		},
 		nil,
+		nil,
 	}
 	data, err := jsonapi.MarshalObject(&sh)
 	if err != nil {

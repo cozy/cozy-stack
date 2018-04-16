@@ -148,4 +148,31 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	return couchdb.UpdateDoc(inst, &ref)
 }
 
+// GetSharedDocsBySharingID returns the shared documents related to the
+// given sharingID
+func GetSharedDocsBySharingID(inst *instance.Instance, sharingID string) ([]couchdb.DocReference, error) {
+	var req = &couchdb.ViewRequest{
+		Key:         sharingID,
+		IncludeDocs: false,
+	}
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(inst, consts.SharedDocsBySharingID, req, &res)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]couchdb.DocReference, len(res.Rows))
+	for i, row := range res.Rows {
+		var doc couchdb.DocReference
+		value := row.Value.(string)
+		slice := strings.Split(value, "/")
+		if len(slice) != 2 {
+			continue
+		}
+		doc.ID = slice[1]
+		doc.Type = slice[0]
+		result[i] = doc
+	}
+	return result, nil
+}
+
 var _ couchdb.Doc = &SharedRef{}
