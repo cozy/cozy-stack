@@ -1,4 +1,5 @@
 class Contact
+  attr_accessor :couch_id
   attr_reader :name, :fullname, :emails, :addresses, :phones
 
   def doctype

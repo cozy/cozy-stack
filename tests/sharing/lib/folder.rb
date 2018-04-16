@@ -1,4 +1,5 @@
 class Folder
+  attr_accessor :couch_id
   attr_reader :name, :dir_id
 
   def doctype

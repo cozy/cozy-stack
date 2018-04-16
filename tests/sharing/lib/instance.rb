@@ -60,7 +60,8 @@ class Instance
       authorization: "Bearer #{token}"
     }
     body = JSON.generate doc.as_json
-    @client["/data/#{doc.doctype}/"].post body, opts
+    res = @client["/data/#{doc.doctype}/"].post body, opts
+    doc.couch_id = JSON.parse(res.body)["id"]
   end
 
   def create_file_doc(doc)
@@ -69,6 +70,7 @@ class Instance
       accept: "application/vnd.api+json",
       authorization: "Bearer #{token}"
     }
-    @client["/files/#{doc.dir_id}?Type=directory&Name=#{doc.name}"].post nil, opts
+    res = @client["/files/#{doc.dir_id}?Type=directory&Name=#{doc.name}"].post nil, opts
+    doc.couch_id = JSON.parse(res.body)["data"]["id"]
   end
 end
