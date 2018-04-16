@@ -35,6 +35,17 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	// cspScriptSrcWhitelist is a whitelist for default allowed domains in CSP.
+	cspScriptSrcWhitelist = "https://piwik.cozycloud.cc"
+
+	// cspImgSrcWhitelist is a whitelist of images domains that are allowed in
+	// CSP.
+	cspImgSrcWhitelist = "https://piwik.cozycloud.cc " +
+		"https://*.tile.openstreetmap.org https://*.tile.osm.org " +
+		"https://*.tiles.mapbox.com https://api.mapbox.com"
+)
+
 var hstsMaxAge = 365 * 24 * time.Hour // 1 year
 
 // SetupAppsHandler adds all the necessary middlewares for the application
@@ -43,14 +54,22 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	mws := []echo.MiddlewareFunc{
 		middlewares.LoadAppSession,
 	}
-	if !config.GetConfig().DisableCSP {
+	if !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:    hstsMaxAge,
 			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
-			CSPStyleSrc:   []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPUnsafeInline},
-			CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcParent},
-			CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcBlob, middlewares.CSPSrcParent, middlewares.CSPSrcWhitelist},
+			CSPStyleSrc:   []middlewares.CSPSource{middlewares.CSPUnsafeInline},
+			CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcData},
+			CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcData, middlewares.CSPSrcBlob},
 			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcSiblings},
+
+			CSPDefaultSrcWhitelist: config.GetConfig().CSPWhitelist["default"],
+			CSPImgSrcWhitelist:     config.GetConfig().CSPWhitelist["img"] + " " + cspImgSrcWhitelist,
+			CSPScriptSrcWhitelist:  config.GetConfig().CSPWhitelist["script"] + " " + cspScriptSrcWhitelist,
+			CSPConnectSrcWhitelist: config.GetConfig().CSPWhitelist["connect"] + " " + cspScriptSrcWhitelist,
+			CSPStyleSrcWhitelist:   config.GetConfig().CSPWhitelist["style"],
+			CSPFontSrcWhitelist:    config.GetConfig().CSPWhitelist["font"],
+
 			XFrameOptions: middlewares.XFrameSameOrigin,
 		})
 		mws = append([]echo.MiddlewareFunc{secure}, mws...)
@@ -89,7 +108,7 @@ func SetupAssets(router *echo.Echo, assetsPath string) (err error) {
 func SetupRoutes(router *echo.Echo) error {
 	router.Use(timersMiddleware)
 
-	if !config.GetConfig().DisableCSP {
+	if !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:    hstsMaxAge,
 			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf},

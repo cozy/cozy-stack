@@ -207,6 +207,13 @@ notifications:
   # ios_key_id: my_key_id_if_any
   # ios_team_id: my_team_id_if_any
 
+# whitelisted domains for the CSP policy used in hosted web applications
+csp_whitelist:
+  # script: https://whitelisted1.domain.com/ https://whitelisted2.domain.com/
+  # img:    https://whitelisted.domain.com/
+  # style:  https://whitelisted.domain.com/
+  # font:   https://whitelisted.domain.com/
+
 log:
   # logger level (debug, info, warning, panic, fatal) - flags: --log-level
   level: info
