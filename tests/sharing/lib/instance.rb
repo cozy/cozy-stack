@@ -23,6 +23,9 @@ class Instance
     when Contact
       @stack.install_app self, "contacts"
       "http://contacts.#{@domain}/"
+    when File
+      @stack.install_app self, "drive"
+      "http://drive.#{@domain}/"
     else
       "http://#{@domain}/"
     end
@@ -41,6 +44,15 @@ class Instance
   end
 
   def create_doc(doc)
+    case doc
+    when Folder
+      create_file_doc(doc)
+    else
+      create_data_doc(doc)
+    end
+  end
+
+  def create_data_doc(doc)
     token = @stack.token_for self, [doc.doctype]
     opts = {
       content_type: :json,
@@ -49,5 +61,14 @@ class Instance
     }
     body = JSON.generate doc.as_json
     @client["/data/#{doc.doctype}/"].post body, opts
+  end
+
+  def create_file_doc(doc)
+    token = @stack.token_for self, [doc.doctype]
+    opts = {
+      accept: "application/vnd.api+json",
+      authorization: "Bearer #{token}"
+    }
+    @client["/files/#{doc.dir_id}?Type=directory&Name=#{doc.name}"].post nil, opts
   end
 end
