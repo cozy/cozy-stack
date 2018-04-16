@@ -56,7 +56,6 @@ func TestUnknownApp(t *testing.T) {
 }
 
 func TestBadFileExec(t *testing.T) {
-	account := "123456"
 	folderToSave := "7890"
 
 	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
@@ -77,7 +76,6 @@ func TestBadFileExec(t *testing.T) {
 
 	msg, err := jobs.NewMessage(map[string]interface{}{
 		"konnector":      "my-konnector-1",
-		"account":        account,
 		"folder_to_save": folderToSave,
 	})
 	assert.NoError(t, err)
@@ -125,8 +123,6 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 	if !assert.NoError(t, err) {
 		return
 	}
-
-	account := "123456"
 
 	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
 		&apps.InstallerOptions{
@@ -183,7 +179,6 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 
 	msg, err := jobs.NewMessage(map[string]interface{}{
 		"konnector": "my-konnector-2",
-		"account":   account,
 	})
 	assert.NoError(t, err)
 

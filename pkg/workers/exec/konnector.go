@@ -100,6 +100,15 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 		return
 	}
 
+	// Check that the associated account is present.
+	if msg.Account != "" && !ctx.Manual() && !msg.AccountDeleted {
+		err = couchdb.GetDoc(i, consts.Accounts, msg.Account, nil)
+		if couchdb.IsNotFoundError(err) {
+			err = jobs.ErrBadTrigger{Err: err}
+			return
+		}
+	}
+
 	man := w.man
 
 	// If we get the AccountDeleted flag on, we check if the konnector manifest
