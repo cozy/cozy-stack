@@ -85,7 +85,8 @@ const (
 
 	// cspImgSrcWhitelist is a whitelist of images domains that are allowed in
 	// CSP.
-	cspImgSrcWhitelist = "https://*.tile.openstreetmap.org https://*.tile.osm.org " +
+	cspImgSrcWhitelist = "https://piwik.cozycloud.cc " +
+		"https://*.tile.openstreetmap.org https://*.tile.osm.org " +
 		"https://*.tiles.mapbox.com https://api.mapbox.com"
 )
 
