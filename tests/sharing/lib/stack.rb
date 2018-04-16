@@ -19,7 +19,8 @@ class Stack
   def start
     cmd = ["cozy-stack", "serve", "--log-level", "debug",
            "--mail-disable-tls", "--mail-port", "1025",
-           "--port", @port, "--admin-port", @admin]
+           "--port", @port, "--admin-port", @admin,
+           "--fs-url", "file://#{Helpers.current_dir}/"]
     Helpers.spawn cmd.join(" "), log: "stack-#{@port}.log"
     sleep 1
   end

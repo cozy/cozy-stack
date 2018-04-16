@@ -36,7 +36,7 @@ module Helpers
 
     def cleanup
       clean_tmp
-      couch.clean_test_dbs
+      couch.clean_test
     end
 
     def clean_tmp
