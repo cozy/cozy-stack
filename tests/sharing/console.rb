@@ -3,6 +3,7 @@
 require_relative 'boot'
 require 'pry'
 
+at_exit { Helpers.cleanup }
 Helpers.scenario "interactive"
 Helpers.start_mailhog
 
