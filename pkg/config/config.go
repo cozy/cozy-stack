@@ -123,7 +123,7 @@ type Config struct {
 	Registries map[string][]*url.URL
 
 	CSPDisabled  bool
-	CSPWhitelist string
+	CSPWhitelist map[string]string
 }
 
 // Vault contains security keys used for various encryption or signing of
@@ -614,7 +614,7 @@ func UseViper(v *viper.Viper) error {
 		Contexts:   v.GetStringMap("contexts"),
 		Registries: regs,
 
-		CSPWhitelist: v.GetString("csp.whitelist"),
+		CSPWhitelist: v.GetStringMapString("csp_whitelist"),
 	}
 
 	return logger.Init(config.Logger)

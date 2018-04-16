@@ -33,7 +33,17 @@ type (
 		CSPStyleSrc    []CSPSource
 		CSPWorkerSrc   []CSPSource
 
-		CSPDefaultSrcWhitelist string
+		CSPDefaultSrcWhitelist  string
+		CSPScriptSrcWhitelist   string
+		CSPFrameSrcWhitelist    string
+		CSPConnectSrcWhitelist  string
+		CSPFontSrcWhitelist     string
+		CSPImgSrcWhitelist      string
+		CSPManifestSrcWhitelist string
+		CSPMediaSrcWhitelist    string
+		CSPObjectSrcWhitelist   string
+		CSPStyleSrcWhitelist    string
+		CSPWorkerSrcWhitelist   string
 
 		XFrameOptions XFrameOption
 		XFrameAllowed string
@@ -67,13 +77,16 @@ const (
 	// CSPUnsafeInline is the  'unsafe-inline' option. It allows to have inline
 	// styles or scripts to be injected in the page.
 	CSPUnsafeInline
+	// CSPWhitelist inserts a whitelist of domains.
+	CSPWhitelist
 
-	// cspTilesWhitelist is a whitelist of tiles domains that are allowed in CSP.
-	// It's not permanent, this whitelist will be removed when we will have a
-	// more generic way to enable client-side apps to access some domains
-	// (proxy).
-	cspTilesWhitelist = "https://piwik.cozycloud.cc https://*.tile.openstreetmap.org " +
-		"https://*.tile.osm.org https://*.tiles.mapbox.com https://api.mapbox.com"
+	// cspScriptSrcWhitelist is a whitelist for default allowed domains in CSP.
+	cspScriptSrcWhitelist = "https://piwik.cozycloud.cc"
+
+	// cspImgSrcWhitelist is a whitelist of images domains that are allowed in
+	// CSP.
+	cspImgSrcWhitelist = "https://*.tile.openstreetmap.org https://*.tile.osm.org " +
+		"https://*.tiles.mapbox.com https://api.mapbox.com"
 )
 
 // Secure returns a Middlefunc that can be used to define all the necessary
@@ -95,7 +108,28 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 		xFrameHeader = fmt.Sprintf("%s %s", XFrameAllowFrom, conf.XFrameAllowed)
 	}
 
-	conf.CSPDefaultSrcWhitelist = validCSPList(conf.CSPDefaultSrcWhitelist)
+	conf.CSPDefaultSrc, conf.CSPDefaultSrcWhitelist =
+		validCSPList(conf.CSPDefaultSrc, conf.CSPDefaultSrc, conf.CSPDefaultSrcWhitelist)
+	conf.CSPScriptSrc, conf.CSPScriptSrcWhitelist =
+		validCSPList(conf.CSPScriptSrc, conf.CSPDefaultSrc, conf.CSPScriptSrcWhitelist, cspScriptSrcWhitelist)
+	conf.CSPFrameSrc, conf.CSPFrameSrcWhitelist =
+		validCSPList(conf.CSPFrameSrc, conf.CSPDefaultSrc, conf.CSPFrameSrcWhitelist)
+	conf.CSPConnectSrc, conf.CSPConnectSrcWhitelist =
+		validCSPList(conf.CSPConnectSrc, conf.CSPDefaultSrc, conf.CSPConnectSrcWhitelist, cspScriptSrcWhitelist)
+	conf.CSPFontSrc, conf.CSPFontSrcWhitelist =
+		validCSPList(conf.CSPFontSrc, conf.CSPDefaultSrc, conf.CSPFontSrcWhitelist)
+	conf.CSPImgSrc, conf.CSPImgSrcWhitelist =
+		validCSPList(conf.CSPImgSrc, conf.CSPDefaultSrc, conf.CSPImgSrcWhitelist, cspImgSrcWhitelist)
+	conf.CSPManifestSrc, conf.CSPManifestSrcWhitelist =
+		validCSPList(conf.CSPManifestSrc, conf.CSPDefaultSrc, conf.CSPManifestSrcWhitelist)
+	conf.CSPMediaSrc, conf.CSPMediaSrcWhitelist =
+		validCSPList(conf.CSPMediaSrc, conf.CSPDefaultSrc, conf.CSPMediaSrcWhitelist)
+	conf.CSPObjectSrc, conf.CSPObjectSrcWhitelist =
+		validCSPList(conf.CSPObjectSrc, conf.CSPDefaultSrc, conf.CSPObjectSrcWhitelist)
+	conf.CSPStyleSrc, conf.CSPStyleSrcWhitelist =
+		validCSPList(conf.CSPStyleSrc, conf.CSPDefaultSrc, conf.CSPStyleSrcWhitelist)
+	conf.CSPWorkerSrc, conf.CSPWorkerSrcWhitelist =
+		validCSPList(conf.CSPWorkerSrc, conf.CSPDefaultSrc, conf.CSPWorkerSrcWhitelist)
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -116,34 +150,34 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 				cspHeader += makeCSPHeader(parent, siblings, "default-src", conf.CSPDefaultSrcWhitelist, conf.CSPDefaultSrc, isSecure)
 			}
 			if len(conf.CSPScriptSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "script-src", "", conf.CSPScriptSrc, isSecure)
+				cspHeader += makeCSPHeader(parent, siblings, "script-src", conf.CSPScriptSrcWhitelist, conf.CSPScriptSrc, isSecure)
 			}
 			if len(conf.CSPFrameSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "frame-src", "", conf.CSPFrameSrc, isSecure)
+				cspHeader += makeCSPHeader(parent, siblings, "frame-src", conf.CSPFrameSrcWhitelist, conf.CSPFrameSrc, isSecure)
 			}
 			if len(conf.CSPConnectSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "connect-src", "", conf.CSPConnectSrc, isSecure)
+				cspHeader += makeCSPHeader(parent, siblings, "connect-src", conf.CSPConnectSrcWhitelist, conf.CSPConnectSrc, isSecure)
 			}
 			if len(conf.CSPFontSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "font-src", "", conf.CSPFontSrc, isSecure)
+				cspHeader += makeCSPHeader(parent, siblings, "font-src", conf.CSPFontSrcWhitelist, conf.CSPFontSrc, isSecure)
 			}
 			if len(conf.CSPImgSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "img-src", cspTilesWhitelist, conf.CSPImgSrc, isSecure)
+				cspHeader += makeCSPHeader(parent, siblings, "img-src", conf.CSPImgSrcWhitelist, conf.CSPImgSrc, isSecure)
 			}
 			if len(conf.CSPManifestSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "manifest-src", "", conf.CSPManifestSrc, isSecure)
+				cspHeader += makeCSPHeader(parent, siblings, "manifest-src", conf.CSPManifestSrcWhitelist, conf.CSPManifestSrc, isSecure)
 			}
 			if len(conf.CSPMediaSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "media-src", "", conf.CSPMediaSrc, isSecure)
+				cspHeader += makeCSPHeader(parent, siblings, "media-src", conf.CSPMediaSrcWhitelist, conf.CSPMediaSrc, isSecure)
 			}
 			if len(conf.CSPObjectSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "object-src", "", conf.CSPObjectSrc, isSecure)
+				cspHeader += makeCSPHeader(parent, siblings, "object-src", conf.CSPObjectSrcWhitelist, conf.CSPObjectSrc, isSecure)
 			}
 			if len(conf.CSPStyleSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "style-src", "", conf.CSPStyleSrc, isSecure)
+				cspHeader += makeCSPHeader(parent, siblings, "style-src", conf.CSPStyleSrcWhitelist, conf.CSPStyleSrc, isSecure)
 			}
 			if len(conf.CSPWorkerSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "worker-src", "", conf.CSPWorkerSrc, isSecure)
+				cspHeader += makeCSPHeader(parent, siblings, "worker-src", conf.CSPWorkerSrcWhitelist, conf.CSPWorkerSrc, isSecure)
 			}
 			if cspHeader != "" {
 				h.Set(echo.HeaderContentSecurityPolicy, cspHeader)
@@ -154,10 +188,11 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	}
 }
 
-func validCSPList(list string) string {
-	fields := strings.Fields(list)
-	filter := fields[:0]
-	for _, s := range fields {
+func validCSPList(sources, defaults []CSPSource, whitelists ...string) ([]CSPSource, string) {
+	whitelist := strings.Join(whitelists, " ")
+	whitelistFields := strings.Fields(whitelist)
+	whitelistFilter := whitelistFields[:0]
+	for _, s := range whitelistFields {
 		u, err := url.Parse(s)
 		if err != nil {
 			continue
@@ -166,9 +201,36 @@ func validCSPList(list string) string {
 		if u.Path == "" {
 			u.Path = "/"
 		}
-		filter = append(filter, u.String())
+		whitelistFilter = append(whitelistFilter, u.String())
 	}
-	return strings.Join(filter, " ")
+
+	if len(whitelistFilter) > 0 {
+		whitelist = strings.Join(whitelistFilter, " ")
+		sources = append(sources, CSPWhitelist)
+	} else {
+		whitelist = ""
+	}
+
+	if len(sources) == 0 && whitelist == "" {
+		return nil, ""
+	}
+
+	sources = append(sources, defaults...)
+	sourcesUnique := sources[:0]
+	for _, source := range sources {
+		var found bool
+		for _, s := range sourcesUnique {
+			if s == source {
+				found = true
+				break
+			}
+		}
+		if !found {
+			sourcesUnique = append(sourcesUnique, source)
+		}
+	}
+
+	return sourcesUnique, whitelist
 }
 
 func makeCSPHeader(parent, siblings, header, cspWhitelist string, sources []CSPSource, isSecure bool) string {
@@ -203,10 +265,9 @@ func makeCSPHeader(parent, siblings, header, cspWhitelist string, sources []CSPS
 			headers[i] = "*"
 		case CSPUnsafeInline:
 			headers[i] = "'unsafe-inline'"
+		case CSPWhitelist:
+			headers[i] = cspWhitelist
 		}
-	}
-	if cspWhitelist != "" {
-		headers = append(headers, cspWhitelist)
 	}
 	return header + " " + strings.Join(headers, " ") + ";"
 }

@@ -216,7 +216,7 @@ func init() {
 	flags.BoolVar(&flagDisableCSP, "disable-csp", false, "Disable the Content Security Policy (only available for development)")
 
 	flags.String("csp-whitelist", "", "Whitelisted domains for the default allowed origins of the Content Secury Policy")
-	checkNoErr(viper.BindPFlag("csp.whitelist", flags.Lookup("csp-whitelist")))
+	checkNoErr(viper.BindPFlag("csp_whitelist", flags.Lookup("csp-whitelist")))
 
 	RootCmd.AddCommand(serveCmd)
 }

@@ -47,12 +47,16 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:    hstsMaxAge,
 			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
-			CSPStyleSrc:   []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPUnsafeInline},
-			CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcParent},
-			CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcBlob, middlewares.CSPSrcParent},
+			CSPStyleSrc:   []middlewares.CSPSource{middlewares.CSPUnsafeInline},
+			CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcData},
+			CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcData, middlewares.CSPSrcBlob},
 			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcSiblings},
 
-			CSPDefaultSrcWhitelist: config.GetConfig().CSPWhitelist,
+			CSPDefaultSrcWhitelist: config.GetConfig().CSPWhitelist["default"],
+			CSPScriptSrcWhitelist:  config.GetConfig().CSPWhitelist["script"],
+			CSPStyleSrcWhitelist:   config.GetConfig().CSPWhitelist["style"],
+			CSPImgSrcWhitelist:     config.GetConfig().CSPWhitelist["img"],
+			CSPFontSrcWhitelist:    config.GetConfig().CSPWhitelist["font"],
 
 			XFrameOptions: middlewares.XFrameSameOrigin,
 		})
