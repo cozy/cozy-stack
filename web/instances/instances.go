@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
@@ -15,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -46,63 +44,45 @@ func (i *apiInstance) Included() []jsonapi.Object {
 }
 
 func createHandler(c echo.Context) error {
-	var diskQuota int64
-	if c.QueryParam("DiskQuota") != "" {
-		var err error
-		diskQuota, err = strconv.ParseInt(c.QueryParam("DiskQuota"), 10, 64)
+	var err error
+	opts := &instance.Options{
+		Domain:     c.QueryParam("Domain"),
+		Locale:     c.QueryParam("Locale"),
+		UUID:       c.QueryParam("UUID"),
+		TOSSigned:  c.QueryParam("TOSSigned"),
+		TOSLatest:  c.QueryParam("TOSLatest"),
+		Timezone:   c.QueryParam("Timezone"),
+		Email:      c.QueryParam("Email"),
+		PublicName: c.QueryParam("PublicName"),
+		Settings:   c.QueryParam("Settings"),
+		AuthMode:   c.QueryParam("AuthMode"),
+		Passphrase: c.QueryParam("Passphrase"),
+		Apps:       utils.SplitTrimString(c.QueryParam("Apps"), ","),
+		Dev:        (c.QueryParam("Dev") == "true"),
+	}
+	if autoUpdate := c.QueryParam("AutoUpdate"); autoUpdate != "" {
+		var b bool
+		b, err = strconv.ParseBool(autoUpdate)
 		if err != nil {
 			return wrapError(err)
 		}
+		opts.AutoUpdate = &b
 	}
-	var settings couchdb.JSONDoc
-	settings.M = make(map[string]interface{})
-	for _, setting := range strings.Split(c.QueryParam("Settings"), ",") {
-		if parts := strings.SplitN(setting, ":", 2); len(parts) == 2 {
-			settings.M[parts[0]] = parts[1]
-		}
-	}
-	if tz := c.QueryParam("Timezone"); tz != "" {
-		settings.M["tz"] = tz
-	}
-	if email := c.QueryParam("Email"); email != "" {
-		settings.M["email"] = email
-	}
-	if name := c.QueryParam("PublicName"); name != "" {
-		settings.M["public_name"] = name
-	}
-
-	var swiftCluster int
 	if cluster := c.QueryParam("SwiftCluster"); cluster != "" {
-		var err error
-		swiftCluster, err = strconv.Atoi(cluster)
+		opts.SwiftCluster, err = strconv.Atoi(cluster)
 		if err != nil {
 			return wrapError(err)
 		}
 	}
-
-	in, err := instance.Create(&instance.Options{
-		Domain:       c.QueryParam("Domain"),
-		Locale:       c.QueryParam("Locale"),
-		DiskQuota:    diskQuota,
-		Settings:     settings,
-		SwiftCluster: swiftCluster,
-		Apps:         utils.SplitTrimString(c.QueryParam("Apps"), ","),
-		Dev:          (c.QueryParam("Dev") == "true"),
-	})
+	if diskQuota := c.QueryParam("DiskQuota"); diskQuota != "" {
+		opts.DiskQuota, err = strconv.ParseInt(diskQuota, 10, 64)
+		if err != nil {
+			return wrapError(err)
+		}
+	}
+	in, err := instance.Create(opts)
 	if err != nil {
 		return wrapError(err)
-	}
-	pass := c.QueryParam("Passphrase")
-	if pass != "" {
-		if err = in.RegisterPassphrase([]byte(pass), in.RegisterToken); err != nil {
-			return err
-		}
-		// set the onboarding finished when specifying a passphrase. we totally
-		// skip the onboarding in that case.
-		in.OnboardingFinished = true
-		if err = instance.Update(in); err != nil {
-			return err
-		}
 	}
 	in.OAuthSecret = nil
 	in.SessionSecret = nil
@@ -121,45 +101,44 @@ func showHandler(c echo.Context) error {
 
 func modifyHandler(c echo.Context) error {
 	domain := c.Param("domain")
+	opts := &instance.Options{
+		Domain:      domain,
+		Locale:      c.QueryParam("Locale"),
+		UUID:        c.QueryParam("UUID"),
+		TOSSigned:   c.QueryParam("TOSSigned"),
+		TOSLatest:   c.QueryParam("TOSLatest"),
+		Timezone:    c.QueryParam("Timezone"),
+		ContextName: c.QueryParam("ContextName"),
+		Email:       c.QueryParam("Email"),
+		PublicName:  c.QueryParam("PublicName"),
+		Settings:    c.QueryParam("Settings"),
+	}
+	if swiftCluster := c.QueryParam("SwiftCluster"); swiftCluster != "" {
+		i, err := strconv.ParseInt(swiftCluster, 10, 64)
+		if err != nil {
+			return wrapError(err)
+		}
+		opts.SwiftCluster = int(i)
+	}
+	if quota := c.QueryParam("DiskQuota"); quota != "" {
+		i, err := strconv.ParseInt(quota, 10, 64)
+		if err != nil {
+			return wrapError(err)
+		}
+		opts.DiskQuota = i
+	}
+	if onboardingFinished, err := strconv.ParseBool(c.QueryParam("OnboardingFinished")); err == nil {
+		opts.OnboardingFinished = &onboardingFinished
+	}
+	if debug, err := strconv.ParseBool(c.QueryParam("Debug")); err == nil {
+		opts.Debug = &debug
+	}
 	i, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}
-	var shouldUpdate bool
-	if quota := c.QueryParam("DiskQuota"); quota != "" {
-		var diskQuota int64
-		diskQuota, err = strconv.ParseInt(quota, 10, 64)
-		if err != nil {
-			return wrapError(err)
-		}
-		i.BytesDiskQuota = diskQuota
-		shouldUpdate = true
-	}
-	if locale := c.QueryParam("Locale"); locale != "" {
-		i.Locale = locale
-		shouldUpdate = true
-	}
-	if onboardingFinished := c.QueryParam("OnboardingFinished"); onboardingFinished != "" {
-		i.OnboardingFinished, err = strconv.ParseBool(onboardingFinished)
-		if err != nil {
-			return wrapError(err)
-		}
-		shouldUpdate = true
-	}
-	if shouldUpdate {
-		if err = instance.Update(i); err != nil {
-			return wrapError(err)
-		}
-	}
-	if debug, err := strconv.ParseBool(c.QueryParam("Debug")); err == nil {
-		if debug {
-			err = logger.AddDebugDomain(domain)
-		} else {
-			err = logger.RemoveDebugDomain(domain)
-		}
-		if err != nil {
-			return wrapError(err)
-		}
+	if err = instance.Patch(i, opts); err != nil {
+		return wrapError(err)
 	}
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
 }
@@ -370,6 +349,8 @@ func wrapError(err error) error {
 	case instance.ErrMissingPassphrase:
 		return jsonapi.BadRequest(err)
 	case instance.ErrInvalidPassphrase:
+		return jsonapi.BadRequest(err)
+	case instance.ErrBadTOSVersion:
 		return jsonapi.BadRequest(err)
 	}
 	return err

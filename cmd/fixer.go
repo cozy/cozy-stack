@@ -218,7 +218,8 @@ var onboardingsFixer = &cobra.Command{
 				continue
 			}
 			fmt.Printf("Setting onboarding finished flag on '%s'...", i.Attrs.Domain)
-			_, err = c.ModifyInstance(i.Attrs.Domain, &client.InstanceOptions{
+			_, err = c.ModifyInstance(&client.InstanceOptions{
+				Domain:             i.Attrs.Domain,
 				OnboardingFinished: &t,
 			})
 			if err != nil {

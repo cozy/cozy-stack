@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -72,22 +73,28 @@ var (
 	// ErrUnknownAuthMode is returned when an unknwon authentication mode is
 	// used.
 	ErrUnknownAuthMode = errors.New("Unknown authentication mode")
+	// ErrBadTOSVersion is returned when a malformed TOS version is provided.
+	ErrBadTOSVersion = errors.New("Bad format for TOS version")
 )
 
 // An Instance has the informations relatives to the logical cozy instance,
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID        string   `json:"_id,omitempty"`  // couchdb _id
-	DocRev       string   `json:"_rev,omitempty"` // couchdb _rev
-	Domain       string   `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
-	Locale       string   `json:"locale"`         // The locale used on the server
-	AuthMode     AuthMode `json:"auth_mode"`
+	DocID        string   `json:"_id,omitempty"`        // couchdb _id
+	DocRev       string   `json:"_rev,omitempty"`       // couchdb _rev
+	Domain       string   `json:"domain"`               // The main DNS domain, like example.cozycloud.cc
+	Locale       string   `json:"locale"`               // The locale used on the server
+	UUID         string   `json:"uuid,omitempty"`       // UUID associated with the instance
+	ContextName  string   `json:"context,omitempty"`    // The context attached to the instance
+	TOSSigned    string   `json:"tos,omitempty"`        // Terms of Service signed version
+	TOSLatest    string   `json:"tos_latest,omitempty"` // Terms of Service latest version
+	AuthMode     AuthMode `json:"auth_mode,omitempty"`
 	NoAutoUpdate bool     `json:"no_auto_update,omitempty"` // Whether or not the instance has auto updates for its applications
 	Dev          bool     `json:"dev,omitempty"`            // Whether or not the instance is for development
 
-	OnboardingFinished bool  `json:"onboarding_finished"`         // Whether or not the onboarding is complete.
-	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
+	OnboardingFinished bool  `json:"onboarding_finished,omitempty"` // Whether or not the onboarding is complete.
+	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"`   // The total size in bytes allowed to the user
 	IndexViewsVersion  int   `json:"indexes_version"`
 
 	// Swift cluster number, indexed from 1. If not zero, it indicates we're using swift layout 2, see pkg/vfs/swift.
@@ -95,9 +102,9 @@ type Instance struct {
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
-	PassphraseHash       []byte    `json:"passphrase_hash,omitempty"`
-	PassphraseResetToken []byte    `json:"passphrase_reset_token"`
-	PassphraseResetTime  time.Time `json:"passphrase_reset_time"`
+	PassphraseHash       []byte     `json:"passphrase_hash,omitempty"`
+	PassphraseResetToken []byte     `json:"passphrase_reset_token,omitempty"`
+	PassphraseResetTime  *time.Time `json:"passphrase_reset_time,omitempty"`
 
 	// Secure assets
 
@@ -119,11 +126,25 @@ type Instance struct {
 type Options struct {
 	Domain       string
 	Locale       string
+	UUID         string
+	TOSSigned    string
+	TOSLatest    string
+	Timezone     string
+	ContextName  string
+	Email        string
+	PublicName   string
+	Settings     string
+	SettingsObj  *couchdb.JSONDoc
+	AuthMode     string
+	Passphrase   string
+	SwiftCluster int
 	DiskQuota    int64
 	Apps         []string
-	SwiftCluster int
+	AutoUpdate   *bool
+	Debug        *bool
 	Dev          bool
-	Settings     couchdb.JSONDoc
+
+	OnboardingFinished *bool
 }
 
 // DocType implements couchdb.Doc
@@ -307,12 +328,8 @@ func (i *Instance) SettingsEMail() (string, error) {
 
 // Context returns the map from the config that matches the context of this instance
 func (i *Instance) Context() (map[string]interface{}, error) {
-	doc, err := i.SettingsDocument()
-	if err != nil {
-		return nil, err
-	}
-	ctx, ok := doc.M["context"].(string)
-	if !ok {
+	ctx := i.ContextName
+	if ctx == "" {
 		ctx = "default"
 	}
 	context, ok := config.GetConfig().Contexts[ctx].(map[string]interface{})
@@ -324,16 +341,12 @@ func (i *Instance) Context() (map[string]interface{}, error) {
 
 // Registries returns the list of registries associated with the instance.
 func (i *Instance) Registries() ([]*url.URL, error) {
-	doc, err := i.SettingsDocument()
-	if err != nil {
-		return nil, err
-	}
-	ctx, ok := doc.M["context"].(string)
-	if !ok {
-		ctx = "default"
-	}
 	registries := config.GetConfig().Registries
-	regs, ok := registries[ctx]
+	var regs []*url.URL
+	var ok bool
+	if i.ContextName != "" {
+		regs, ok = registries[i.ContextName]
+	}
 	if !ok {
 		regs, ok = registries["default"]
 		if !ok {
@@ -399,6 +412,54 @@ func (i *Instance) PageURL(path string, queries url.Values) string {
 		RawQuery: query,
 	}
 	return u.String()
+}
+
+// ManagerURLKind is an enum type for the different kinds of manager URLs.
+type ManagerURLKind int
+
+const (
+	// ManagerTOSURL is the kind for changes of TOS URL.
+	ManagerTOSURL ManagerURLKind = iota
+	// ManagerPremiumURL is the kind for changing the account type of the
+	// instance.
+	ManagerPremiumURL
+)
+
+// ManagerURL returns an external string for the given ManagerURL kind.
+func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
+	defer func() {
+		if !ok {
+			s = i.PageURL("/", nil)
+		}
+	}()
+	if i.UUID == "" {
+		return
+	}
+	ctx, err := i.Context()
+	if err != nil {
+		return
+	}
+	managerURL, ok := ctx["manager_url"].(string)
+	if !ok {
+		return
+	}
+	u, err := url.Parse(managerURL)
+	if err != nil {
+		return
+	}
+	var path string
+	switch k {
+	// TODO: we may want to rely on the contexts to avoid hardcoding the path
+	// values of these kinds.
+	case ManagerPremiumURL:
+		path = fmt.Sprintf("/cozy/accounts/%s", url.PathEscape(i.UUID))
+	case ManagerTOSURL:
+		path = fmt.Sprintf("/cozy/instances/%s/tos", url.PathEscape(i.UUID))
+	}
+	u.Path = path
+	s = u.String()
+	ok = true
+	return
 }
 
 // PublicName returns the settings' public name or a default one if missing
@@ -470,6 +531,15 @@ func (i *Instance) installApp(slug string) error {
 	return err
 }
 
+func (i *Instance) update() error {
+	if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
+		i.Logger().Errorf("Could not update: %s", err.Error())
+		return err
+	}
+	getCache().Revoke(i.Domain)
+	return nil
+}
+
 func (i *Instance) defineViewsAndIndex() error {
 	if err := couchdb.DefineIndexes(i, consts.Indexes); err != nil {
 		return err
@@ -534,11 +604,11 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	if config.GetConfig().Subdomains == config.FlatSubdomains {
-		parts := strings.SplitN(domain, ".", 2)
-		if strings.Contains(parts[0], "-") {
-			return nil, ErrIllegalDomain
+	if _, err = getFromCouch(domain); err != ErrNotFound {
+		if err == nil {
+			err = ErrExists
 		}
+		return nil, err
 	}
 
 	locale := opts.Locale
@@ -546,12 +616,19 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 		locale = DefaultLocale
 	}
 
+	settings, _ := buildSettings(opts)
 	i := new(Instance)
-	i.Locale = locale
 	i.Domain = domain
+	i.Locale = locale
+	i.UUID = opts.UUID
+	i.TOSSigned = opts.TOSSigned
 	i.BytesDiskQuota = opts.DiskQuota
 	i.Dev = opts.Dev
 	i.IndexViewsVersion = consts.IndexViewsVersion
+	i.RegisterToken = crypto.GenerateRandomBytes(RegisterTokenLen)
+	i.SessionSecret = crypto.GenerateRandomBytes(SessionSecretLen)
+	i.OAuthSecret = crypto.GenerateRandomBytes(OauthSecretLen)
+	i.CLISecret = crypto.GenerateRandomBytes(OauthSecretLen)
 
 	// If not cluster number is given, we rely on cluster one.
 	if opts.SwiftCluster == 0 {
@@ -560,13 +637,29 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 		i.SwiftCluster = opts.SwiftCluster
 	}
 
-	i.PassphraseHash = nil
-	i.PassphraseResetToken = nil
-	i.PassphraseResetTime = time.Time{}
-	i.RegisterToken = crypto.GenerateRandomBytes(RegisterTokenLen)
-	i.SessionSecret = crypto.GenerateRandomBytes(SessionSecretLen)
-	i.OAuthSecret = crypto.GenerateRandomBytes(OauthSecretLen)
-	i.CLISecret = crypto.GenerateRandomBytes(OauthSecretLen)
+	if opts.AuthMode != "" {
+		var authMode AuthMode
+		if authMode, err = StringToAuthMode(opts.AuthMode); err == nil {
+			i.AuthMode = authMode
+		}
+	}
+
+	if opts.Passphrase != "" {
+		if err = i.registerPassphrase([]byte(opts.Passphrase), i.RegisterToken); err != nil {
+			return nil, err
+		}
+		// set the onboarding finished when specifying a passphrase. we totally
+		// skip the onboarding in that case.
+		i.OnboardingFinished = true
+	}
+
+	if onboardingFinished := opts.OnboardingFinished; onboardingFinished != nil {
+		i.OnboardingFinished = *onboardingFinished
+	}
+
+	if autoUpdate := opts.AutoUpdate; autoUpdate != nil {
+		i.NoAutoUpdate = !(*opts.AutoUpdate)
+	}
 
 	if err := couchdb.CreateDB(couchdb.GlobalDB, consts.Instances); !couchdb.IsFileExists(err) {
 		if err != nil {
@@ -577,12 +670,6 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 		}
 	}
 
-	if _, err := getFromCouch(i.Domain); err != ErrNotFound {
-		if err == nil {
-			err = ErrExists
-		}
-		return nil, err
-	}
 	if err := couchdb.CreateDoc(couchdb.GlobalDB, i); err != nil {
 		return nil, err
 	}
@@ -613,12 +700,7 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 	if err := i.VFS().InitFs(); err != nil {
 		return nil, err
 	}
-	if opts.Settings.M == nil {
-		opts.Settings.M = make(map[string]interface{})
-	}
-	opts.Settings.M["_id"] = consts.InstanceSettingsID
-	opts.Settings.Type = consts.Settings
-	if err := couchdb.CreateNamedDoc(i, opts.Settings); err != nil {
+	if err := couchdb.CreateNamedDoc(i, settings); err != nil {
 		return nil, err
 	}
 	if err := i.defineViewsAndIndex(); err != nil {
@@ -653,6 +735,7 @@ func Get(domain string) (*Instance, error) {
 		return nil, err
 	}
 	cache := getCache()
+
 	i := cache.Get(domain)
 	if i == nil {
 		i, err = getFromCouch(domain)
@@ -661,22 +744,248 @@ func Get(domain string) (*Instance, error) {
 		}
 		cache.Set(domain, i)
 	}
-	if i.IndexViewsVersion != consts.IndexViewsVersion {
-		i.Logger().Infof("Indexes outdated: wanted %d; got %d",
-			consts.IndexViewsVersion, i.IndexViewsVersion)
+
+	// This retry-loop handles the probability to hit an Update conflict from
+	// this version update, since the instance document may be updated different
+	// processes at the same time.
+	for {
+		if i == nil {
+			i, err = getFromCouch(domain)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if i.IndexViewsVersion == consts.IndexViewsVersion {
+			break
+		}
+
+		i.Logger().Debugf("Indexes outdated: wanted %d; got %d", consts.IndexViewsVersion, i.IndexViewsVersion)
 		if err = i.defineViewsAndIndex(); err != nil {
-			i.Logger().Errorf("Could not re-define indexes and views: %s",
-				err.Error())
+			i.Logger().Errorf("Could not re-define indexes and views: %s", err.Error())
 			return nil, err
 		}
-		if err = Update(i); err != nil {
+
+		// Copy over the instance object some data that we used to store on the
+		// settings document.
+		if i.TOSSigned == "" || i.UUID == "" || i.ContextName == "" {
+			var settings *couchdb.JSONDoc
+			settings, err = i.SettingsDocument()
+			if err != nil {
+				return nil, err
+			}
+			i.UUID, _ = settings.M["uuid"].(string)
+			i.TOSSigned, _ = settings.M["tos"].(string)
+			i.ContextName, _ = settings.M["context"].(string)
+			// TOS version number were YYYYMMDD dates, before we used a semver-like
+			// version scheme. We consider them to be the versions 1.0.0.
+			if len(i.TOSSigned) == 8 {
+				i.TOSSigned = "1.0.0-" + i.TOSSigned
+			}
+		}
+
+		err = i.update()
+		if err == nil {
+			break
+		}
+
+		if !couchdb.IsConflictError(err) {
 			return nil, err
 		}
+
+		i = nil
 	}
+
 	if err = i.makeVFS(); err != nil {
 		return nil, err
 	}
 	return i, nil
+}
+
+func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
+	var settings *couchdb.JSONDoc
+	if opts.SettingsObj != nil {
+		settings = opts.SettingsObj
+	} else {
+		settings = &couchdb.JSONDoc{M: make(map[string]interface{})}
+	}
+
+	settings.Type = consts.Settings
+	settings.SetID(consts.InstanceSettingsID)
+
+	for _, s := range strings.Split(opts.Settings, ",") {
+		if parts := strings.SplitN(s, ":", 2); len(parts) == 2 {
+			settings.M[parts[0]] = parts[1]
+		}
+	}
+
+	if contextName, ok := settings.M["context"].(string); ok {
+		opts.ContextName = contextName
+		delete(settings.M, "context")
+	}
+	if locale, ok := settings.M["locale"].(string); ok {
+		opts.Locale = locale
+		delete(settings.M, "locale")
+	}
+	if onboardingFinished, ok := settings.M["onboarding_finished"].(bool); ok {
+		opts.OnboardingFinished = &onboardingFinished
+		delete(settings.M, "onboarding_finished")
+	}
+	if uuid, ok := settings.M["uuid"].(string); ok {
+		opts.UUID = uuid
+		delete(settings.M, "uuid")
+	}
+	if tos, ok := settings.M["tos"].(string); ok {
+		opts.TOSSigned = tos
+		delete(settings.M, "tos")
+	}
+	if autoUpdate, ok := settings.M["auto_update"].(string); ok {
+		if b, err := strconv.ParseBool(autoUpdate); err == nil {
+			opts.AutoUpdate = &b
+		}
+		delete(settings.M, "auto_update")
+	}
+	if authMode, ok := settings.M["auth_mode"].(string); ok {
+		opts.AuthMode = authMode
+		delete(settings.M, "auth_mode")
+	}
+
+	if tz := opts.Timezone; tz != "" {
+		settings.M["tz"] = tz
+	}
+	if email := opts.Email; email != "" {
+		settings.M["email"] = email
+	}
+	if name := opts.PublicName; name != "" {
+		settings.M["public_name"] = name
+	}
+
+	needUpdate := settings.Rev() != "" && len(settings.M) > 1
+	return settings, needUpdate
+}
+
+// Patch updates the given instance with the specified options if necessary. It
+// can also update the settings document if provided in the options.
+func Patch(i *Instance, opts *Options) error {
+	opts.Domain = i.Domain
+	settings, settingsUpdate := buildSettings(opts)
+
+	for {
+		var err error
+		if i == nil {
+			i, err = Get(opts.Domain)
+			if err != nil {
+				return err
+			}
+		}
+
+		needUpdate := false
+		if opts.Locale != "" && opts.Locale != i.Locale {
+			i.Locale = opts.Locale
+			needUpdate = true
+		}
+
+		if opts.UUID != "" && opts.UUID != i.UUID {
+			i.UUID = opts.UUID
+			needUpdate = true
+		}
+
+		if opts.ContextName != "" && opts.ContextName != i.ContextName {
+			i.ContextName = opts.ContextName
+			needUpdate = true
+		}
+
+		if opts.AuthMode != "" {
+			var authMode AuthMode
+			authMode, err = StringToAuthMode(opts.AuthMode)
+			if err != nil {
+				return err
+			}
+			if i.AuthMode != authMode {
+				i.AuthMode = authMode
+				needUpdate = true
+			}
+		}
+
+		if opts.SwiftCluster > 0 && opts.SwiftCluster != i.SwiftCluster {
+			i.SwiftCluster = opts.SwiftCluster
+			needUpdate = true
+		}
+
+		if opts.DiskQuota > 0 && opts.DiskQuota != i.BytesDiskQuota {
+			i.BytesDiskQuota = opts.DiskQuota
+			needUpdate = true
+		}
+
+		if opts.AutoUpdate != nil && !(*opts.AutoUpdate) != i.NoAutoUpdate {
+			i.NoAutoUpdate = !(*opts.AutoUpdate)
+			needUpdate = true
+		}
+
+		if opts.OnboardingFinished != nil && *opts.OnboardingFinished != i.OnboardingFinished {
+			i.OnboardingFinished = *opts.OnboardingFinished
+			needUpdate = true
+		}
+
+		if opts.TOSLatest != "" {
+			if _, _, ok := parseTOSVersion(opts.TOSLatest); !ok {
+				return ErrBadTOSVersion
+			}
+			if i.TOSLatest != opts.TOSLatest {
+				if notSigned, _ := i.CheckTOSSigned(opts.TOSLatest); notSigned {
+					i.TOSLatest = opts.TOSLatest
+					needUpdate = true
+				}
+			}
+		}
+
+		if opts.TOSSigned != "" {
+			if _, _, ok := parseTOSVersion(opts.TOSSigned); !ok {
+				return ErrBadTOSVersion
+			}
+			if i.TOSSigned != opts.TOSSigned {
+				i.TOSSigned = opts.TOSSigned
+				if notSigned, _ := i.CheckTOSSigned(); !notSigned {
+					i.TOSLatest = ""
+				}
+				needUpdate = true
+			}
+		}
+
+		if !needUpdate {
+			break
+		}
+
+		err = i.update()
+		if couchdb.IsConflictError(err) {
+			i = nil
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		break
+	}
+
+	if settingsUpdate {
+		if err := couchdb.UpdateDoc(i, settings); err != nil {
+			return err
+		}
+	}
+
+	if debug := opts.Debug; debug != nil {
+		var err error
+		if *debug {
+			err = logger.AddDebugDomain(i.Domain)
+		} else {
+			err = logger.RemoveDebugDomain(i.Domain)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func getFromCouch(domain string) (*Instance, error) {
@@ -732,17 +1041,6 @@ func ForeachInstances(fn func(*Instance) error) error {
 	})
 }
 
-// Update is used to save changes made to an instance, it will invalidate
-// caching
-func Update(i *Instance) error {
-	if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
-		i.Logger().Errorf("Could not update: %s", err.Error())
-		return err
-	}
-	getCache().Revoke(i.Domain)
-	return nil
-}
-
 // Destroy is used to remove the instance. All the data linked to this
 // instance will be permanently deleted.
 func Destroy(domain string) error {
@@ -788,8 +1086,7 @@ func DestroyWithoutHooks(domain string) error {
 	return couchdb.DeleteDoc(couchdb.GlobalDB, i)
 }
 
-// RegisterPassphrase replace the instance registerToken by a passphrase
-func (i *Instance) RegisterPassphrase(pass, tok []byte) error {
+func (i *Instance) registerPassphrase(pass, tok []byte) error {
 	if len(pass) == 0 {
 		return ErrMissingPassphrase
 	}
@@ -805,7 +1102,15 @@ func (i *Instance) RegisterPassphrase(pass, tok []byte) error {
 	}
 	i.RegisterToken = nil
 	i.setPassphraseAndSecret(hash)
-	return Update(i)
+	return nil
+}
+
+// RegisterPassphrase replace the instance registerToken by a passphrase
+func (i *Instance) RegisterPassphrase(pass, tok []byte) error {
+	if err := i.registerPassphrase(pass, tok); err != nil {
+		return err
+	}
+	return i.update()
 }
 
 // RequestPassphraseReset generates a new registration token for the user to
@@ -819,15 +1124,16 @@ func (i *Instance) RequestPassphraseReset() error {
 	}
 	// If a passphrase reset token is set and valid, we do not generate new one,
 	// and bail.
-	if i.PassphraseResetToken != nil &&
-		time.Now().UTC().Before(i.PassphraseResetTime) {
+	if i.PassphraseResetToken != nil && i.PassphraseResetTime != nil &&
+		time.Now().UTC().Before(*i.PassphraseResetTime) {
 		i.Logger().Infof("Passphrase reset ignored: already sent at %s",
 			i.PassphraseResetTime.String())
 		return ErrResetAlreadyRequested
 	}
+	resetTime := time.Now().UTC().Add(config.PasswordResetInterval())
 	i.PassphraseResetToken = crypto.GenerateRandomBytes(PasswordResetTokenLen)
-	i.PassphraseResetTime = time.Now().UTC().Add(config.PasswordResetInterval())
-	if err := Update(i); err != nil {
+	i.PassphraseResetTime = &resetTime
+	if err := i.update(); err != nil {
 		return err
 	}
 	// Send a mail containing the reset url for the user to actually reset its
@@ -874,7 +1180,7 @@ func (i *Instance) CheckPassphraseRenewToken(tok []byte) error {
 	if i.PassphraseResetToken == nil {
 		return ErrMissingToken
 	}
-	if !time.Now().UTC().Before(i.PassphraseResetTime) {
+	if i.PassphraseResetTime != nil && !time.Now().UTC().Before(*i.PassphraseResetTime) {
 		return ErrMissingToken
 	}
 	if subtle.ConstantTimeCompare(i.PassphraseResetToken, tok) != 1 {
@@ -895,9 +1201,9 @@ func (i *Instance) PassphraseRenew(pass, tok []byte) error {
 		return err
 	}
 	i.PassphraseResetToken = nil
-	i.PassphraseResetTime = time.Time{}
+	i.PassphraseResetTime = nil
 	i.setPassphraseAndSecret(hash)
-	return Update(i)
+	return i.update()
 }
 
 // UpdatePassphrase replace the passphrase
@@ -925,7 +1231,7 @@ func (i *Instance) UpdatePassphrase(pass, current []byte, twoFactorPasscode stri
 		return err
 	}
 	i.setPassphraseAndSecret(hash)
-	return Update(i)
+	return i.update()
 }
 
 func (i *Instance) setPassphraseAndSecret(hash []byte) {
@@ -954,7 +1260,7 @@ func (i *Instance) CheckPassphrase(pass []byte) error {
 	}
 
 	i.PassphraseHash = newHash
-	err = Update(i)
+	err = i.update()
 	if err != nil {
 		i.Logger().Error("Failed to update hash in db", err)
 	}
@@ -1040,7 +1346,14 @@ func validateDomain(domain string) (string, error) {
 	if strings.ContainsAny(domain[:1], illegalFirstChars) {
 		return "", ErrIllegalDomain
 	}
-	return strings.ToLower(domain), nil
+	domain = strings.ToLower(domain)
+	if config.GetConfig().Subdomains == config.FlatSubdomains {
+		parts := strings.SplitN(domain, ".", 2)
+		if strings.Contains(parts[0], "-") {
+			return "", ErrIllegalDomain
+		}
+	}
+	return domain, nil
 }
 
 // ensure Instance implements couchdb.Doc

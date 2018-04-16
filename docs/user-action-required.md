@@ -23,11 +23,17 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "status": 402,
-  "error": "tos_updated",
-  "title": "TOS Updated",
-  "details": "Terms of services have been updated",
-  "links": { "action": "https://manager.cozycloud.cc/cozy/tos?domain=..." }
+  "errors": [
+    {
+      "status": "402",
+      "title": "TOS Updated",
+      "code": "tos-updated",
+      "detail": "Terms of services have been updated",
+      "links": {
+        "self": "https://manager.cozycloud.cc/cozy/tos?domain=..."
+      }
+    }
+  ]
 }
 ```
 
@@ -52,13 +58,24 @@ GET /settings/warnings HTTP/1.1
 
 ## Response
 
+```http
+HTTP/1.1 402 Payment Required
+Content-Length: ...
+Content-Type: application/vnd.api+json
+```
+
 ```json
-[
-  {
-    "error": "tos_updated",
-    "title": "TOS Updated",
-    "details": "Terms of services have been updated",
-    "links": { "action": "https://manager.cozycloud.cc/cozy/tos?domain=..." }
-  }
-]
+{
+  "errors": [
+    {
+      "status": "402",
+      "title": "TOS Updated",
+      "code": "tos-updated",
+      "detail": "Terms of services have been updated",
+      "links": {
+        "self": "https://manager.cozycloud.cc/cozy/tos?domain=..."
+      }
+    }
+  ]
+}
 ```

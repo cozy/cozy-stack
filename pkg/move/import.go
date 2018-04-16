@@ -332,8 +332,7 @@ func Import(i *instance.Instance, filename, destination string, increaseQuota bo
 			}
 			usage = (usage/1e9 + 1) * 1e9 // Round to the superior Go
 			if usage > oldQuota {
-				i.BytesDiskQuota = usage
-				instance.Update(i)
+				instance.Patch(i, &instance.Options{DiskQuota: usage})
 			}
 		}()
 	}

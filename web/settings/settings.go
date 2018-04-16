@@ -50,6 +50,21 @@ func getSessions(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
+func warnings(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Settings); err != nil {
+		return err
+	}
+
+	warnings := inst.Warnings()
+	if warnings == nil {
+		warnings = []*jsonapi.Error{}
+	}
+
+	return jsonapi.DataErrorList(c, warnings...)
+}
+
 // Routes sets the routing for the settings service
 func Routes(router *echo.Group) {
 	router.GET("/disk-usage", diskUsage)
@@ -69,4 +84,5 @@ func Routes(router *echo.Group) {
 
 	router.GET("/onboarded", onboarded)
 	router.GET("/context", context)
+	router.GET("/warnings", warnings)
 }

@@ -37,6 +37,12 @@ var flagDirectory string
 var flagIncreaseQuota bool
 var flagForceRegistry bool
 var flagSwiftCluster int
+var flagUUID string
+var flagTOSSigned string
+var flagTOS string
+var flagTOSLatest string
+var flagContextName string
+var flagOnboardingFinished bool
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -118,35 +124,32 @@ be used as the error message.
 			return cmd.Usage()
 		}
 
-		var quota *int64
+		var diskQuota int64
 		if flagDiskQuota != "" {
 			diskQuotaU, err := humanize.ParseBytes(flagDiskQuota)
 			if err != nil {
 				return err
 			}
-			diskQuota := int64(diskQuotaU)
-			quota = &diskQuota
-		}
-
-		var swiftCluster *int
-		if flagSwiftCluster > 0 {
-			swiftCluster = &flagSwiftCluster
+			diskQuota = int64(diskQuotaU)
 		}
 
 		domain := args[0]
 		c := newAdminClient()
 		in, err := c.CreateInstance(&client.InstanceOptions{
 			Domain:       domain,
-			Apps:         flagApps,
 			Locale:       flagLocale,
+			UUID:         flagUUID,
+			TOSSigned:    flagTOSSigned,
 			Timezone:     flagTimezone,
+			ContextName:  flagContextName,
 			Email:        flagEmail,
 			PublicName:   flagPublicName,
 			Settings:     flagSettings,
-			DiskQuota:    quota,
-			SwiftCluster: swiftCluster,
-			Dev:          flagDev,
+			SwiftCluster: flagSwiftCluster,
+			DiskQuota:    diskQuota,
+			Apps:         flagApps,
 			Passphrase:   flagPassphrase,
+			Dev:          flagDev,
 		})
 		if err != nil {
 			errPrintfln(
@@ -180,6 +183,62 @@ be used as the error message.
 	},
 }
 
+var modifyInstanceCmd = &cobra.Command{
+	Use:     "modify [domain]",
+	Aliases: []string{"update"},
+	Short:   "Modify the instance properties",
+	Long: `
+cozy-stack instances modify allows to change the instance properties and
+settings for a specified domain.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Usage()
+		}
+
+		var diskQuota int64
+		if flagDiskQuota != "" {
+			diskQuotaU, err := humanize.ParseBytes(flagDiskQuota)
+			if err != nil {
+				return err
+			}
+			diskQuota = int64(diskQuotaU)
+		}
+
+		domain := args[0]
+		c := newAdminClient()
+		opts := &client.InstanceOptions{
+			Domain:       domain,
+			Locale:       flagLocale,
+			UUID:         flagUUID,
+			TOSSigned:    flagTOS,
+			TOSLatest:    flagTOSLatest,
+			Timezone:     flagTimezone,
+			ContextName:  flagContextName,
+			Email:        flagEmail,
+			PublicName:   flagPublicName,
+			Settings:     flagSettings,
+			SwiftCluster: flagSwiftCluster,
+			DiskQuota:    diskQuota,
+		}
+		if flagOnboardingFinished {
+			opts.OnboardingFinished = &flagOnboardingFinished
+		}
+		in, err := c.ModifyInstance(opts)
+		if err != nil {
+			errPrintfln(
+				"Failed to modify instance for domain %s", domain)
+			return err
+		}
+		json, err := json.MarshalIndent(in, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(json))
+		return nil
+	},
+}
+
 var quotaInstanceCmd = &cobra.Command{
 	Use:   "set-disk-quota [domain] [disk-quota]",
 	Short: "Change the disk-quota of the instance",
@@ -196,11 +255,11 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 		if err != nil {
 			return fmt.Errorf("Could not parse disk-quota: %s", err)
 		}
-		quota := int64(diskQuota)
 		domain := args[0]
 		c := newAdminClient()
-		_, err = c.ModifyInstance(domain, &client.InstanceOptions{
-			DiskQuota: &quota,
+		_, err = c.ModifyInstance(&client.InstanceOptions{
+			Domain:    domain,
+			DiskQuota: int64(diskQuota),
 		})
 		return err
 	},
@@ -223,8 +282,9 @@ specific domain.
 			return err
 		}
 		c := newAdminClient()
-		_, err = c.ModifyInstance(domain, &client.InstanceOptions{
-			Debug: &debug,
+		_, err = c.ModifyInstance(&client.InstanceOptions{
+			Domain: domain,
+			Debug:  &debug,
 		})
 		return err
 	},
@@ -562,6 +622,7 @@ var importCmd = &cobra.Command{
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(addInstanceCmd)
+	instanceCmdGroup.AddCommand(modifyInstanceCmd)
 	instanceCmdGroup.AddCommand(cleanInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
 	instanceCmdGroup.AddCommand(quotaInstanceCmd)
@@ -578,15 +639,30 @@ func init() {
 	instanceCmdGroup.AddCommand(exportCmd)
 	instanceCmdGroup.AddCommand(importCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
+	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
+	addInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "The TOS version signed")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
+	addInstanceCmd.Flags().StringVar(&flagContextName, "context-name", "", "Context name of the instance")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
 	addInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "The public name of the owner")
 	addInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "A list of settings (eg context:foo,offer:premium)")
+	addInstanceCmd.Flags().IntVar(&flagSwiftCluster, "swift-cluster", 0, "Specify a cluster number for swift")
 	addInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "The quota allowed to the instance's VFS")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
-	addInstanceCmd.Flags().IntVar(&flagSwiftCluster, "swift-cluster", 0, "Specify a cluster number for swift")
+	modifyInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "New locale")
+	modifyInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "New UUID")
+	modifyInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "Update the TOS version signed")
+	modifyInstanceCmd.Flags().StringVar(&flagTOSLatest, "tos-latest", "", "Update the latest TOS version")
+	modifyInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "New timezone")
+	modifyInstanceCmd.Flags().StringVar(&flagContextName, "context-name", "", "New context name")
+	modifyInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "New email")
+	modifyInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "New public name")
+	modifyInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "New list of settings (eg offer:premium)")
+	modifyInstanceCmd.Flags().IntVar(&flagSwiftCluster, "swift-cluster", 0, "New swift cluster")
+	modifyInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "Specify a new disk quota")
+	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckPrune, "prune", false, "Try to solve inconsistencies by modifying the file system")

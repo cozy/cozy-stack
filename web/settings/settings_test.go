@@ -12,7 +12,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/sessions"
@@ -376,13 +375,10 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "settings_test")
-	var settings couchdb.JSONDoc
-	settings.M = make(map[string]interface{})
-	settings.M["tz"] = "Europe/Berlin"
-	settings.M["email"] = "alice@example.com"
 	testInstance = setup.GetTestInstance(&instance.Options{
 		Locale:   "en",
-		Settings: settings,
+		Timezone: "Europe/Berlin",
+		Email:    "alice@example.com",
 	})
 	scope := consts.Settings + " " + consts.OAuthClients
 	_, token = setup.GetTestClient(scope)

@@ -1,8 +1,6 @@
 package center
 
 import (
-	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -45,30 +43,13 @@ func init() {
 		if err != nil {
 			return
 		}
-		ctx, err := i.Context()
-		if err != nil {
-			return
-		}
-		settings, err := i.SettingsDocument()
-		if err != nil {
-			return
-		}
-		uuid, ok := settings.Get("uuid").(string)
+		offersLink, ok := i.ManagerURL(instance.ManagerPremiumURL)
 		if !ok {
 			return
 		}
-		managerURL, ok := ctx["manager_url"].(string)
-		if !ok {
-			return
-		}
-		offersLink, err := url.Parse(managerURL)
-		if err != nil {
-			return
-		}
-		offersLink.Path = fmt.Sprintf("/cozy/accounts/%s", url.PathEscape(uuid))
 		n := &notification.Notification{
 			State: exceeded,
-			Data:  map[string]interface{}{"OffersLink": offersLink.String()},
+			Data:  map[string]interface{}{"OffersLink": offersLink},
 		}
 		pushStack(domain, NotificationDiskQuota, n)
 	})

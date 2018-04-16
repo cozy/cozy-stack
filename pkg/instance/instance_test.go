@@ -60,15 +60,12 @@ func TestCreateInstance(t *testing.T) {
 }
 
 func TestCreateInstanceWithSettings(t *testing.T) {
-	var settings couchdb.JSONDoc
-	settings.M = make(map[string]interface{})
-	settings.M["tz"] = "Europe/Berlin"
-	settings.M["email"] = "alice@example.com"
-	settings.M["offer"] = "freemium"
 	instance, err := instance.Create(&instance.Options{
 		Domain:   "test2.cozycloud.cc",
 		Locale:   "en",
-		Settings: settings,
+		Timezone: "Europe/Berlin",
+		Email:    "alice@example.com",
+		Settings: "offer:freemium",
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, instance.Domain, "test2.cozycloud.cc")
@@ -364,6 +361,83 @@ func TestInstanceDestroy(t *testing.T) {
 	if assert.Error(t, err) {
 		assert.Equal(t, instance.ErrNotFound, err)
 	}
+}
+
+func TestCheckTOSSigned(t *testing.T) {
+	instance.Destroy("tos.test.cozycloud.cc")
+
+	now := time.Now()
+
+	i, err := instance.Create(&instance.Options{
+		Domain:    "tos.test.cozycloud.cc",
+		Locale:    "en",
+		TOSSigned: "1.0.0-" + now.Format("20060102"),
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	notSigned, deadline := i.CheckTOSSigned()
+	assert.Empty(t, i.TOSLatest)
+	assert.False(t, notSigned)
+	assert.Equal(t, instance.TOSNone, deadline)
+
+	err = instance.Patch(i, &instance.Options{
+		TOSLatest: "1.0.1-" + now.Format("20060102"),
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	notSigned, deadline = i.CheckTOSSigned()
+	assert.Empty(t, i.TOSLatest)
+	assert.False(t, notSigned)
+	assert.Equal(t, instance.TOSNone, deadline)
+
+	err = instance.Patch(i, &instance.Options{
+		TOSLatest: "2.0.1-" + now.Add(20*24*time.Hour).Format("20060102"),
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	notSigned, deadline = i.CheckTOSSigned()
+	assert.NotEmpty(t, i.TOSLatest)
+	assert.True(t, notSigned)
+	assert.Equal(t, instance.TOSNone, deadline)
+
+	err = instance.Patch(i, &instance.Options{
+		TOSLatest: "2.0.1-" + now.Add(10*24*time.Hour).Format("20060102"),
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	notSigned, deadline = i.CheckTOSSigned()
+	assert.NotEmpty(t, i.TOSLatest)
+	assert.True(t, notSigned)
+	assert.Equal(t, instance.TOSWarning, deadline)
+
+	err = instance.Patch(i, &instance.Options{
+		TOSLatest: "2.0.1-" + now.Format("20060102"),
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	notSigned, deadline = i.CheckTOSSigned()
+	assert.NotEmpty(t, i.TOSLatest)
+	assert.True(t, notSigned)
+	assert.Equal(t, instance.TOSBlocked, deadline)
+
+	err = instance.Patch(i, &instance.Options{
+		TOSSigned: "2.0.1-" + now.Format("20060102"),
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	notSigned, deadline = i.CheckTOSSigned()
+	assert.Empty(t, i.TOSLatest)
+	assert.False(t, notSigned)
+	assert.Equal(t, instance.TOSNone, deadline)
 }
 
 func TestMain(m *testing.M) {

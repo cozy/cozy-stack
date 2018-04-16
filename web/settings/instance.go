@@ -42,10 +42,14 @@ func getInstance(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
 	doc.M["locale"] = inst.Locale
 	doc.M["onboarding_finished"] = inst.OnboardingFinished
 	doc.M["auto_update"] = !inst.NoAutoUpdate
 	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
+	doc.M["tos"] = inst.TOSSigned
+	doc.M["uuid"] = inst.UUID
+	doc.M["context"] = inst.ContextName
 
 	if err = webpermissions.Allow(c, permissions.GET, doc); err != nil {
 		return err
@@ -71,47 +75,7 @@ func updateInstance(c echo.Context) error {
 		return err
 	}
 
-	oldDoc, err := inst.SettingsDocument()
-	if err != nil {
-		return err
-	}
-
-	needUpdate := false
-
-	if locale, ok := doc.M["locale"].(string); ok {
-		delete(doc.M, "locale")
-		if inst.Locale != locale {
-			inst.Locale = locale
-			needUpdate = true
-		}
-	}
-
-	if autoUpdate, ok := doc.M["auto_update"].(bool); ok {
-		delete(doc.M, "auto_upate")
-		if inst.NoAutoUpdate != !autoUpdate {
-			inst.NoAutoUpdate = !autoUpdate
-			needUpdate = true
-		}
-	}
-
-	if _, ok := doc.M["auth_mode"]; ok {
-		delete(doc.M, "auth_mode")
-	}
-
-	// Only allow to change the TOS version and UUID via CLI
-	pdoc, err := webpermissions.GetPermission(c)
-	if err != nil || pdoc.Type != permissions.TypeCLI {
-		doc.M["tos"] = oldDoc.M["tos"]
-		doc.M["uuid"] = oldDoc.M["uuid"]
-	}
-
-	if needUpdate {
-		if err := instance.Update(inst); err != nil {
-			return err
-		}
-	}
-
-	if err := couchdb.UpdateDoc(inst, doc); err != nil {
+	if err := instance.Patch(inst, &instance.Options{SettingsObj: doc}); err != nil {
 		return err
 	}
 
@@ -119,6 +83,10 @@ func updateInstance(c echo.Context) error {
 	doc.M["onboarding_finished"] = inst.OnboardingFinished
 	doc.M["auto_update"] = !inst.NoAutoUpdate
 	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
+	doc.M["tos"] = inst.TOSSigned
+	doc.M["uuid"] = inst.UUID
+	doc.M["context"] = inst.ContextName
+
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
 
@@ -159,8 +127,8 @@ func updateInstanceAuthMode(c echo.Context) error {
 		}
 	}
 
-	inst.AuthMode = authMode
-	if err = instance.Update(inst); err != nil {
+	err = instance.Patch(inst, &instance.Options{AuthMode: args.AuthMode})
+	if err != nil {
 		return err
 	}
 

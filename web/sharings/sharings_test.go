@@ -581,13 +581,9 @@ func TestMain(m *testing.M) {
 
 	// Prepare Alice's instance
 	setup := testutils.NewSetup(m, "sharing_test_alice")
-	var settings couchdb.JSONDoc
-	settings.M = map[string]interface{}{
-		"email":       "alice@example.net",
-		"public_name": "Alice",
-	}
 	aliceInstance = setup.GetTestInstance(&instance.Options{
-		Settings: settings,
+		Email:      "alice@example.net",
+		PublicName: "Alice",
 	})
 	aliceAppToken = generateAppToken(aliceInstance, "testapp")
 	bobContact = createContact(aliceInstance, "Bob", "bob@example.net")
@@ -603,19 +599,11 @@ func TestMain(m *testing.M) {
 
 	// Prepare Bob's instance
 	bobSetup := testutils.NewSetup(m, "sharing_test_bob")
-	var settingsB couchdb.JSONDoc
-	settingsB.M = map[string]interface{}{
-		"email":       "bob@example.net",
-		"public_name": "Bob",
-	}
 	bobInstance = bobSetup.GetTestInstance(&instance.Options{
-		Settings: settingsB,
+		Email:      "bob@example.net",
+		PublicName: "Bob",
+		Passphrase: "MyPassphrase",
 	})
-	bobInstance.RegisterPassphrase([]byte("MyPassphrase"), bobInstance.RegisterToken)
-	bobInstance.OnboardingFinished = true
-	if err := instance.Update(bobInstance); err != nil {
-		testutils.Fatal(err)
-	}
 	tsB = bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/auth": func(g *echo.Group) {
 			g.Use(middlewares.LoadSession)

@@ -151,11 +151,7 @@ func commitSwiftV1ToV2(domain string, swiftCluster int) error {
 		return err
 	}
 
-	if swiftCluster == 0 {
-		swiftCluster = 1
-	}
-	inst.SwiftCluster = swiftCluster
-	return instance.Update(inst)
+	return instance.Patch(inst, &instance.Options{SwiftCluster: swiftCluster})
 }
 
 func readObjects(c *swift.Connection, objc chan object,

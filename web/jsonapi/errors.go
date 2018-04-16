@@ -18,8 +18,10 @@ type SourceError struct {
 type Error struct {
 	Status int         `json:"status,string"`
 	Title  string      `json:"title"`
-	Detail string      `json:"detail"`
+	Code   string      `json:"code,omitempty"`
+	Detail string      `json:"detail,omitempty"`
 	Source SourceError `json:"source,omitempty"`
+	Links  *LinksList  `json:"links,omitempty"`
 }
 
 // ErrorList is just an array of error objects
