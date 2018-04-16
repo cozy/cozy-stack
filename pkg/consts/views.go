@@ -150,7 +150,7 @@ function(doc) {
 `,
 }
 
-// DocsSharedBySharingID is the view for fetching a list of shared doctype/id
+// SharedDocsBySharingID is the view for fetching a list of shared doctype/id
 // associated with a sharingid
 var SharedDocsBySharingID = &couchdb.View{
 	Name:    "shared-docs-by-sharingid",

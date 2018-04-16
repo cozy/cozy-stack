@@ -223,7 +223,9 @@ sharecode=eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhcHAiLCJpYXQiOjE1MjAzN
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
+```
 
+```json
 {
   "redirect": "https://bob.example.net/auth/sharing?..."
 }
@@ -233,11 +235,18 @@ Content-Type: application/json
 
 Get the information about a sharing. This includes the content of the rules, the members, as well as the already shared documents for this sharing.
 
-### Request
+#### Request
 
 ```http
 GET /sharings/ce8835a061d0ef68947afe69a0046722 HTTP/1.1
 Host: alice.example.net
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
 Content-Type: application/vnd.api+json
 ```
 

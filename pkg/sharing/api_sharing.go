@@ -1,8 +1,6 @@
 package sharing
 
 import (
-	"encoding/json"
-
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -13,7 +11,7 @@ type APISharing struct {
 	*Sharing
 	// XXX Hide the credentials
 	Credentials *interface{}           `json:"credentials,omitempty"`
-	SharedDocs  []couchdb.DocReference `json:"shared_docs,omitempty"`
+	SharedDocs  []couchdb.DocReference `json:"-"`
 }
 
 // Included is part of jsonapi.Object interface
@@ -26,15 +24,6 @@ func (s *APISharing) Relationships() jsonapi.RelationshipMap {
 			Data: s.SharedDocs,
 		},
 	}
-}
-
-// MarshalJSON is part of jsonapi.Object interface
-func (s *APISharing) MarshalJSON() ([]byte, error) {
-	ref := s.SharedDocs
-	s.SharedDocs = nil
-	res, err := json.Marshal(s.Sharing)
-	s.SharedDocs = ref
-	return res, err
 }
 
 // Links is part of jsonapi.Object interface
