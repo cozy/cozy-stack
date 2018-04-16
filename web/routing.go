@@ -35,6 +35,17 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	// cspScriptSrcWhitelist is a whitelist for default allowed domains in CSP.
+	cspScriptSrcWhitelist = "https://piwik.cozycloud.cc"
+
+	// cspImgSrcWhitelist is a whitelist of images domains that are allowed in
+	// CSP.
+	cspImgSrcWhitelist = "https://piwik.cozycloud.cc " +
+		"https://*.tile.openstreetmap.org https://*.tile.osm.org " +
+		"https://*.tiles.mapbox.com https://api.mapbox.com"
+)
+
 var hstsMaxAge = 365 * 24 * time.Hour // 1 year
 
 // SetupAppsHandler adds all the necessary middlewares for the application
@@ -53,9 +64,10 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcSiblings},
 
 			CSPDefaultSrcWhitelist: config.GetConfig().CSPWhitelist["default"],
-			CSPScriptSrcWhitelist:  config.GetConfig().CSPWhitelist["script"],
+			CSPImgSrcWhitelist:     config.GetConfig().CSPWhitelist["img"] + " " + cspImgSrcWhitelist,
+			CSPScriptSrcWhitelist:  config.GetConfig().CSPWhitelist["script"] + " " + cspScriptSrcWhitelist,
+			CSPConnectSrcWhitelist: config.GetConfig().CSPWhitelist["connect"] + " " + cspScriptSrcWhitelist,
 			CSPStyleSrcWhitelist:   config.GetConfig().CSPWhitelist["style"],
-			CSPImgSrcWhitelist:     config.GetConfig().CSPWhitelist["img"],
 			CSPFontSrcWhitelist:    config.GetConfig().CSPWhitelist["font"],
 
 			XFrameOptions: middlewares.XFrameSameOrigin,

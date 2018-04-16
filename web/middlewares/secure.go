@@ -79,15 +79,6 @@ const (
 	CSPUnsafeInline
 	// CSPWhitelist inserts a whitelist of domains.
 	CSPWhitelist
-
-	// cspScriptSrcWhitelist is a whitelist for default allowed domains in CSP.
-	cspScriptSrcWhitelist = "https://piwik.cozycloud.cc"
-
-	// cspImgSrcWhitelist is a whitelist of images domains that are allowed in
-	// CSP.
-	cspImgSrcWhitelist = "https://piwik.cozycloud.cc " +
-		"https://*.tile.openstreetmap.org https://*.tile.osm.org " +
-		"https://*.tiles.mapbox.com https://api.mapbox.com"
 )
 
 // Secure returns a Middlefunc that can be used to define all the necessary
@@ -112,15 +103,15 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	conf.CSPDefaultSrc, conf.CSPDefaultSrcWhitelist =
 		validCSPList(conf.CSPDefaultSrc, conf.CSPDefaultSrc, conf.CSPDefaultSrcWhitelist)
 	conf.CSPScriptSrc, conf.CSPScriptSrcWhitelist =
-		validCSPList(conf.CSPScriptSrc, conf.CSPDefaultSrc, conf.CSPScriptSrcWhitelist, cspScriptSrcWhitelist)
+		validCSPList(conf.CSPScriptSrc, conf.CSPDefaultSrc, conf.CSPScriptSrcWhitelist)
 	conf.CSPFrameSrc, conf.CSPFrameSrcWhitelist =
 		validCSPList(conf.CSPFrameSrc, conf.CSPDefaultSrc, conf.CSPFrameSrcWhitelist)
 	conf.CSPConnectSrc, conf.CSPConnectSrcWhitelist =
-		validCSPList(conf.CSPConnectSrc, conf.CSPDefaultSrc, conf.CSPConnectSrcWhitelist, cspScriptSrcWhitelist)
+		validCSPList(conf.CSPConnectSrc, conf.CSPDefaultSrc, conf.CSPConnectSrcWhitelist)
 	conf.CSPFontSrc, conf.CSPFontSrcWhitelist =
 		validCSPList(conf.CSPFontSrc, conf.CSPDefaultSrc, conf.CSPFontSrcWhitelist)
 	conf.CSPImgSrc, conf.CSPImgSrcWhitelist =
-		validCSPList(conf.CSPImgSrc, conf.CSPDefaultSrc, conf.CSPImgSrcWhitelist, cspImgSrcWhitelist)
+		validCSPList(conf.CSPImgSrc, conf.CSPDefaultSrc, conf.CSPImgSrcWhitelist)
 	conf.CSPManifestSrc, conf.CSPManifestSrcWhitelist =
 		validCSPList(conf.CSPManifestSrc, conf.CSPDefaultSrc, conf.CSPManifestSrcWhitelist)
 	conf.CSPMediaSrc, conf.CSPMediaSrcWhitelist =
@@ -189,8 +180,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	}
 }
 
-func validCSPList(sources, defaults []CSPSource, whitelists ...string) ([]CSPSource, string) {
-	whitelist := strings.Join(whitelists, " ")
+func validCSPList(sources, defaults []CSPSource, whitelist string) ([]CSPSource, string) {
 	whitelistFields := strings.Fields(whitelist)
 	whitelistFilter := whitelistFields[:0]
 	for _, s := range whitelistFields {
