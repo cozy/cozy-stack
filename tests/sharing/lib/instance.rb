@@ -1,5 +1,5 @@
 class Instance
-  attr_reader :stack, :name, :domain, :passphrase, :email
+  attr_reader :stack, :name, :domain, :passphrase, :email, :client
 
   def self.create(opts = {})
     stack = Stack.get opts.delete(:port)
@@ -15,5 +15,17 @@ class Instance
     @domain = opts[:domain] || "#{@name.downcase}.test.cozy.tools:#{stack.port}"
     @passphrase = opts[:passphrase] || "cozy"
     @email = opts[:email] || "#{@name.downcase}+test@cozy.tools"
+    @client = RestClient::Resource.new "http://#{@domain}"
+  end
+
+  def create_doc(doc)
+    token = @stack.token_for self, [doc.doctype]
+    opts = {
+      content_type: :json,
+      accept: :json,
+      authorization: "Bearer #{token}"
+    }
+    body = JSON.generate doc.as_json
+    @client["/data/#{doc.doctype}/"].post body, opts
   end
 end
