@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -71,7 +72,7 @@ const (
 	// It's not permanent, this whitelist will be removed when we will have a
 	// more generic way to enable client-side apps to access some domains
 	// (proxy).
-	cspTilesWhitelist = "https://piwik.cozycloud.cc https://*.tile.openstreetmap.org" +
+	cspTilesWhitelist = "https://piwik.cozycloud.cc https://*.tile.openstreetmap.org " +
 		"https://*.tile.osm.org https://*.tiles.mapbox.com https://api.mapbox.com"
 )
 
@@ -93,6 +94,8 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	case XFrameAllowFrom:
 		xFrameHeader = fmt.Sprintf("%s %s", XFrameAllowFrom, conf.XFrameAllowed)
 	}
+
+	conf.CSPDefaultSrcWhitelist = validCSPList(conf.CSPDefaultSrcWhitelist)
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -149,6 +152,23 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 			return next(c)
 		}
 	}
+}
+
+func validCSPList(list string) string {
+	fields := strings.Fields(list)
+	filter := fields[:0]
+	for _, s := range fields {
+		u, err := url.Parse(s)
+		if err != nil {
+			continue
+		}
+		u.Scheme = "https"
+		if u.Path == "" {
+			u.Path = "/"
+		}
+		filter = append(filter, u.String())
+	}
+	return strings.Join(filter, " ")
 }
 
 func makeCSPHeader(parent, siblings, header, cspWhitelist string, sources []CSPSource, isSecure bool) string {
