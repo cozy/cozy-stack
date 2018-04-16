@@ -18,6 +18,28 @@ class Instance
     @client = RestClient::Resource.new "http://#{@domain}"
   end
 
+  def url_for(obj = nil)
+    case obj
+    when Contact
+      @stack.install_app self, "contacts"
+      "http://contacts.#{@domain}/"
+    else
+      "http://#{@domain}/"
+    end
+  end
+
+  def open(obj = nil, opts = {})
+    browser = opts[:browser] || ENV['BROWSER'] || 'firefox'
+    case browser
+    when /firefox/
+      `#{browser} -private-window #{url_for obj}`
+    when /chrom/
+      `#{browser} --incognito #{url_for obj}`
+    else
+      `#{browser} #{url_for obj}`
+    end
+  end
+
   def create_doc(doc)
     token = @stack.token_for self, [doc.doctype]
     opts = {

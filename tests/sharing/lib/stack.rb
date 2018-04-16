@@ -13,6 +13,7 @@ class Stack
     @port = port
     @admin = port - 2020
     @oauth_client_id = nil
+    @apps = {}
     @tokens = {}
   end
 
@@ -34,8 +35,19 @@ class Stack
     system cmd.join(" ")
   end
 
+  def install_app(inst, app)
+    key = inst.domain + "/" + app
+    return if @apps[key]
+    cmd = ["cozy-stack", "apps", "install", app,
+           "--domain", inst.domain,
+           "--port", @port, "--admin-port", @admin]
+    puts cmd.join(" ").green
+    @apps[key] = system cmd.join(" ")
+  end
+
   def token_for(inst, doctypes)
-    @tokens[doctypes.join " "] ||= generate_token_for(inst, doctypes)
+    key = inst.domain + "/" + doctypes.join(" ")
+    @tokens[key] ||= generate_token_for(inst, doctypes)
   end
 
   def generate_token_for(inst, doctypes)

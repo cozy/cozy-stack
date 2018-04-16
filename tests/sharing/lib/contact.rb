@@ -6,7 +6,7 @@ class Contact
   end
 
   def initialize(opts = {})
-    first = opts[:given_name] || Faker::Name.first_name,
+    first = opts[:given_name] || Faker::Name.first_name
     last = opts[:family_name] || Faker::Name.last_name
     @name = { givenName: first, familyName: last }
     @fullname = "#{first} #{last}"
