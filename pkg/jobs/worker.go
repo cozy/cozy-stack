@@ -340,7 +340,7 @@ func (t *task) run() (err error) {
 	for {
 		retry, delay, timeout := t.nextDelay(err)
 		if !retry {
-			return err
+			break
 		}
 		if err != nil {
 			t.ctx.Logger().Warnf("[job] error while performing job: %s (retry in %s)",
@@ -380,8 +380,9 @@ func (t *task) run() (err error) {
 			break
 		}
 	}
+
 	metrics.WorkerExecRetries.WithLabelValues(t.w.Type).Observe(float64(t.execCount))
-	return nil
+	return
 }
 
 func (t *task) exec(ctx *WorkerContext) (err error) {
