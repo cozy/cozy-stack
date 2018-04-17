@@ -122,9 +122,11 @@ func Worker(ctx *jobs.WorkerContext) error {
 	}
 	var errm error
 	for _, c := range cs {
-		err = push(ctx, c.NotificationPlatform, c.NotificationDeviceToken, &msg)
-		if err != nil {
-			errm = multierror.Append(errm, err)
+		if c.NotificationDeviceToken != "" {
+			err = push(ctx, c.NotificationPlatform, c.NotificationDeviceToken, &msg)
+			if err != nil {
+				errm = multierror.Append(errm, err)
+			}
 		}
 	}
 	return errm
