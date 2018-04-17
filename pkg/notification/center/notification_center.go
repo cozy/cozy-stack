@@ -253,7 +253,7 @@ func sendMail(inst *instance.Instance, p *notification.Properties, n *notificati
 			mail.Parts = append(mail.Parts,
 				&mails.Part{Body: n.Content, Type: "text/plain"})
 		}
-		if n.ContentHTML == "" {
+		if n.ContentHTML != "" {
 			mail.Parts = append(mail.Parts,
 				&mails.Part{Body: n.ContentHTML, Type: "text/html"})
 		}
