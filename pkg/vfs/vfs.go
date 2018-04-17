@@ -545,6 +545,23 @@ func Walk(fs Indexer, root string, walkFn WalkFn) error {
 	return walk(fs, root, dir, file, walkFn, 0)
 }
 
+// WalkByID walks the file tree document rooted at root. It should work
+// like filepath.Walk.
+func WalkByID(fs Indexer, fileID string, walkFn WalkFn) error {
+	dir, file, err := fs.DirOrFileByID(fileID)
+	if err != nil {
+		return walkFn("", dir, file, err)
+	}
+	if dir != nil {
+		return walk(fs, dir.Fullpath, dir, file, walkFn, 0)
+	}
+	root, err := file.Path(fs)
+	if err != nil {
+		return walkFn("", dir, file, err)
+	}
+	return walk(fs, root, dir, file, walkFn, 0)
+}
+
 func walk(fs Indexer, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn, count int) error {
 	if count >= maxWalkRecursive {
 		return ErrWalkOverflow

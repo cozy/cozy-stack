@@ -14,11 +14,18 @@ class Rule
     when Array
       values = obj.map(&:couch_id)
       doctype = obj.first.doctype
+      title = obj.first.name rescue nil
     else
       values = [obj.couch_id]
       doctype = obj.doctype
+      title = obj.name rescue nil
     end
-    Rule.new doctype: doctype, values: values, add: what, update: what, remove: what
+    Rule.new doctype: doctype,
+             title: title,
+             values: values,
+             add: what,
+             update: what,
+             remove: what
   end
 
   def initialize(opts = {})

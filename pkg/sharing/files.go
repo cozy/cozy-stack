@@ -184,11 +184,13 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		var ref *SharedRef
 		err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+id, ref)
 		if err != nil && !couchdb.IsNotFoundError(err) {
+			inst.Logger().Debugf("[bulk_files] Error on finding doc: %s", err)
 			return err
 		}
 		// TODO it's only for directory currently, code needs to be adapted for files
 		doc, err := fs.DirByID(id) // TODO DirOrFileByID
 		if err != nil && err != os.ErrNotExist {
+			inst.Logger().Debugf("[bulk_files] Error on finding ref: %s", err)
 			return err
 		}
 		if ref == nil && doc == nil {
@@ -241,15 +243,17 @@ func copyTagsAndDatesToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
 	name, ok := target["name"].(string)
 	if !ok {
+		inst.Logger().Debugf("[bulk_files] Missing name: %#v", target)
 		return ErrInternalServerError
 	}
 	rev, ok := target["_rev"].(string)
 	if !ok {
-		// TODO add logs or better error
+		inst.Logger().Debugf("[bulk_files] Missing _rev: %#v", target)
 		return ErrInternalServerError
 	}
 	revisions, ok := target["_revisions"].(map[string]interface{})
 	if !ok {
+		inst.Logger().Debugf("[bulk_files] Missing _revisions: %#v", target)
 		return ErrInternalServerError
 	}
 	indexer := NewSharingIndexer(inst, &bulkRevs{
@@ -264,24 +268,31 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		parent, err = fs.DirByID(dirID)
 		// TODO better handling of this conflict
 		if err != nil {
+			inst.Logger().Debugf("[bulk_files] Conflict for parent: %s", err)
 			return err
 		}
 	} else {
 		parent, err = s.GetSharingDir(inst)
 		if err != nil {
+			inst.Logger().Debugf("[bulk_files] Error on get sharing dir: %s", err)
 			return err
 		}
 	}
 
 	dir, err := vfs.NewDirDocWithParent(name, parent, nil)
 	if err != nil {
+		inst.Logger().Debugf("[bulk_files] Cannot initialize dir doc: %s", err)
 		return err
 	}
 	dir.SetID(target["_id"].(string))
 	copyTagsAndDatesToDir(target, dir)
 	// TODO referenced_by
 	// TODO manage conflicts
-	return fs.CreateDir(dir)
+	if err := fs.CreateDir(dir); err != nil {
+		inst.Logger().Debugf("[bulk_files] Cannot create dir: %s", err)
+		return err
+	}
+	return nil
 }
 
 // UpdateDir updates a directory on this cozy to reflect a change on another
@@ -306,4 +317,60 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	// TODO trash
 	// TODO manage conflicts
 	return indexer.UpdateDirDoc(nil, dir) // TODO oldDoc
+}
+
+// TODO referenced_by
+func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
+	doc := couchdb.JSONDoc{
+		Type: consts.Files,
+		M: map[string]interface{}{
+			"type":       dir.Type,
+			"_id":        dir.DocID,
+			"_rev":       dir.DocRev,
+			"name":       dir.DocName,
+			"created_at": dir.CreatedAt,
+			"updated_at": dir.UpdatedAt,
+			"tags":       dir.Tags,
+			"path":       dir.Fullpath,
+		},
+	}
+	if dir.DirID != "" {
+		doc.M["dir_id"] = dir.DirID
+	}
+	if dir.RestorePath != "" {
+		doc.M["restore_path"] = dir.RestorePath
+	}
+	return doc
+}
+
+// TODO referenced_by
+func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
+	doc := couchdb.JSONDoc{
+		Type: consts.Files,
+		M: map[string]interface{}{
+			"type":       file.Type,
+			"_id":        file.DocID,
+			"_rev":       file.DocRev,
+			"name":       file.DocName,
+			"created_at": file.CreatedAt,
+			"updated_at": file.UpdatedAt,
+			"size":       file.ByteSize,
+			"md5Sum":     file.MD5Sum,
+			"mime":       file.Mime,
+			"class":      file.Class,
+			"executable": file.Executable,
+			"trashed":    file.Trashed,
+			"tags":       file.Tags,
+		},
+	}
+	if file.DirID != "" {
+		doc.M["dir_id"] = file.DirID
+	}
+	if file.RestorePath != "" {
+		doc.M["restore_path"] = file.RestorePath
+	}
+	if len(file.Metadata) > 0 {
+		doc.M["metadata"] = file.Metadata
+	}
+	return doc
 }

@@ -101,7 +101,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	if err != nil {
 		return err
 	}
-	fmt.Printf("lastSeq = %s\n", lastSeq)
+	inst.Logger().Debugf("[replicator] lastSeq = %s\n", lastSeq)
 
 	changes, ruleIndexes, seq, err := s.callChangesFeed(inst, lastSeq)
 	if err != nil {
@@ -110,7 +110,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	if seq == lastSeq {
 		return nil
 	}
-	fmt.Printf("changes = %#v\n", changes)
+	inst.Logger().Debugf("[replicator] changes = %#v\n", changes)
 	// TODO filter the changes according to the sharing rules
 
 	if len(*changes) > 0 {
@@ -123,13 +123,13 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 				return err
 			}
 		}
-		fmt.Printf("missings = %#v\n", missings)
+		inst.Logger().Debugf("[replicator] missings = %#v\n", missings)
 
 		docs, err := s.getMissingDocs(inst, missings)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("docs = %#v\n", docs)
+		inst.Logger().Debugf("[replicator] docs = %#v\n", docs)
 
 		err = s.sendBulkDocs(inst, m, creds, docs, ruleIndexes)
 		if err != nil {
@@ -526,6 +526,7 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 	var refs []*SharedRef
 
 	for doctype, docs := range payload {
+		inst.Logger().Debugf("[bulk_docs] Apply %s: %#v", doctype, docs)
 		if doctype == consts.Files {
 			err := s.ApplyBulkFiles(inst, docs)
 			if err != nil {

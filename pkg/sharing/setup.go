@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
 // SetupReceiver is used on the receivers' cozy to make sure the cozy can
@@ -182,15 +183,33 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 }
 
 // findDocsToCopy finds the documents that match the given rule
-// TODO select all files and sub-folders inside a folder for a FilesById rule
 func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, error) {
 	var docs []couchdb.JSONDoc
 	if rule.Selector == "" || rule.Selector == "id" {
-		req := &couchdb.AllDocsRequest{
-			Keys: rule.Values,
-		}
-		if err := couchdb.GetAllDocs(inst, rule.DocType, req, &docs); err != nil {
-			return nil, err
+		if rule.DocType == consts.Files {
+			// TODO add a test for this case
+			// TODO support rules with several values
+			err := vfs.WalkByID(inst.VFS(), rule.Values[0], func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+				if err != nil {
+					return err
+				}
+				if dir != nil {
+					docs = append(docs, dirToJSONDoc(dir))
+				} else if file != nil {
+					docs = append(docs, fileToJSONDoc(file))
+				}
+				return nil
+			})
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			req := &couchdb.AllDocsRequest{
+				Keys: rule.Values,
+			}
+			if err := couchdb.GetAllDocs(inst, rule.DocType, req, &docs); err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		// Create index based on selector to retrieve documents to share

@@ -48,7 +48,7 @@ func WorkerReplicate(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	inst.Logger().Info(msg)
+	inst.Logger().Infof("[share] Replicate %#v", msg)
 	s, err := sharing.FindSharing(inst, msg.SharingID)
 	if err != nil {
 		return err
@@ -71,5 +71,6 @@ func WorkerTrack(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
+	inst.Logger().Debugf("[share] Track %#v", msg)
 	return sharing.UpdateShared(inst, msg, evt)
 }
