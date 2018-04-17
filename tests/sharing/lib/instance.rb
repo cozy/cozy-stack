@@ -18,6 +18,10 @@ class Instance
     @client = RestClient::Resource.new "http://#{@domain}"
   end
 
+  def install_app(slug)
+    @stack.install_app self, slug
+  end
+
   def url(obj = nil)
     case obj
     when Contact

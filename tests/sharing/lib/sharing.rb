@@ -6,7 +6,7 @@ class Sharing
     @description = opts[:description] || Faker::HitchhikersGuideToTheGalaxy.marvin_quote
     @app_slug = opts[:app_slug] || ""
     @rules = []
-    @members = []
+    @members = [] # Owner's instance + recipients contacts
   end
 
   def doctype
@@ -30,5 +30,9 @@ class Sharing
         }
       }
     }
+  end
+
+  def owner
+    @members.first
   end
 end
