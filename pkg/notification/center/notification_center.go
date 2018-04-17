@@ -247,6 +247,7 @@ func sendMail(inst *instance.Instance, p *notification.Properties, n *notificati
 		mail.TemplateName = p.MailTemplate
 		mail.TemplateValues = n.Data
 	} else if n.ContentHTML != "" {
+		mail.Subject = n.Title
 		mail.Parts = make([]*mails.Part, 0, 2)
 		if n.Content != "" {
 			mail.Parts = append(mail.Parts,
