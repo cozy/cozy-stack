@@ -77,7 +77,7 @@ func TestValidatesRules(t *testing.T) {
 		{
 			Title:   "files is OK",
 			DocType: consts.Files,
-			Values:  []string{"foo", "bar"},
+			Values:  []string{"foo"},
 		},
 	}
 	assert.NoError(t, s.ValidateRules())

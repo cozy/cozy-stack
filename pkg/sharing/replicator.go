@@ -103,7 +103,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	}
 	fmt.Printf("lastSeq = %s\n", lastSeq)
 
-	changes, seq, err := s.callChangesFeed(inst, lastSeq)
+	changes, ruleIndexes, seq, err := s.callChangesFeed(inst, lastSeq)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		}
 		fmt.Printf("docs = %#v\n", docs)
 
-		err = s.sendBulkDocs(inst, m, creds, docs)
+		err = s.sendBulkDocs(inst, m, creds, docs, ruleIndexes)
 		if err != nil {
 			return err
 		}
@@ -201,7 +201,7 @@ type Changes map[string][]string
 // http://docs.couchdb.org/en/2.1.1/api/database/changes.html
 // TODO add a filter on the sharing
 // TODO what if there are more changes in the feed that BatchSize?
-func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Changes, string, error) {
+func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Changes, map[string]int, string, error) {
 	response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
 		DocType:     consts.Shared,
 		IncludeDocs: true,
@@ -209,16 +209,30 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 		Limit:       BatchSize,
 	})
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 	changes := make(Changes)
+	rules := make(map[string]int)
 	for _, r := range response.Results {
+		infos, ok := r.Doc.Get("infos").(map[string]interface{})
+		if !ok {
+			continue
+		}
+		info, ok := infos[s.SID].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		idx, ok := info["rule"].(float64)
+		if !ok {
+			continue
+		}
+		rules[r.DocID] = int(idx)
 		if revisions, ok := r.Doc.Get("revisions").([]interface{}); ok && len(revisions) > 0 {
 			rev, _ := revisions[len(revisions)-1].(string)
 			changes[r.DocID] = []string{rev}
 		}
 	}
-	return &changes, response.LastSeq, nil
+	return &changes, rules, response.LastSeq, nil
 }
 
 // Missings is a struct for the response of _revs_diff
@@ -445,16 +459,15 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*
 // http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#db-bulk-docs
 // https://wiki.apache.org/couchdb/HTTP_Bulk_Document_API#Posting_Existing_Revisions
 // https://gist.github.com/nono/42aee18de6314a621f9126f284e303bb
-func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Credentials, docs *DocsByDoctype) error {
+func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Credentials, docs *DocsByDoctype, ruleIndexes map[string]int) error {
 	u, err := url.Parse(m.Instance)
 	if err != nil {
 		return err
 	}
 	if files, ok := (*docs)[consts.Files]; ok {
+		// TODO sort the files (by increasing depth for adds/updates, and then by decreasing depth for deletions)
 		for i, file := range files {
-			file["_id"] = XorID(file["_id"].(string), creds.XorKey)
-			file["dir_id"] = XorID(file["dir_id"].(string), creds.XorKey)
-			files[i] = file
+			files[i] = s.TransformFileToSent(file, creds.XorKey, ruleIndexes)
 		}
 		(*docs)[consts.Files] = files
 	}
@@ -513,6 +526,12 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 	var refs []*SharedRef
 
 	for doctype, docs := range payload {
+		if doctype == consts.Files {
+			err := s.ApplyBulkFiles(inst, docs)
+			if err != nil {
+				return err
+			}
+		}
 		var okDocs, docsToUpdate DocsList
 		var newRefs, existingRefs []*SharedRef
 		newDocs, existingDocs, err := partitionDocsPayload(inst, doctype, docs)

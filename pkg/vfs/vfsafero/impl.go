@@ -78,6 +78,18 @@ func (afs *aferoVFS) Domain() string {
 	return afs.domain
 }
 
+func (afs *aferoVFS) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
+	return &aferoVFS{
+		Indexer:         index,
+		DiskThresholder: afs.DiskThresholder,
+		domain:          afs.domain,
+		fs:              afs.fs,
+		mu:              afs.mu,
+		pth:             afs.pth,
+		osFS:            afs.osFS,
+	}
+}
+
 // Init creates the root directory document and the trash directory for this
 // file system.
 func (afs *aferoVFS) InitFs() error {
@@ -98,10 +110,6 @@ func (afs *aferoVFS) InitFs() error {
 		return err
 	}
 	return nil
-}
-
-func (afs *aferoVFS) Index() vfs.Indexer {
-	return afs.Indexer
 }
 
 // Delete removes all the elements associated with the filesystem.
