@@ -20,7 +20,7 @@ sha256  18c14eb881e3cb912b986335e4495f963bb70d2615aa0360791445d0f3a8eeb6
 
 name    ./js/cozy-bar.min.js
 url     https://unpkg.com/cozy-bar@4.10.2/dist/cozy-bar.min.js
-sha256  704d55c59c118ca266d3a8b04c29d8a5f845fe31e1b9333c28d15fa94ed404af
+sha256  812e22992daa944b2efc1e527769178ba12e0d7867b0ece639c2a1ebef0476bf
 
 name    ./css/cozy-bar.min.css
 url     https://unpkg.com/cozy-bar@4.10.2/dist/cozy-bar.min.css
