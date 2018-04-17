@@ -1,0 +1,7 @@
+source 'https://rubygems.org'
+
+gem "awesome_print"
+gem "faker"
+gem "pry"
+gem "pry-rescue"
+gem "rest-client"
