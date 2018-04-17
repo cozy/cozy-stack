@@ -318,3 +318,59 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	// TODO manage conflicts
 	return indexer.UpdateDirDoc(nil, dir) // TODO oldDoc
 }
+
+// TODO referenced_by
+func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
+	doc := couchdb.JSONDoc{
+		Type: consts.Files,
+		M: map[string]interface{}{
+			"type":       dir.Type,
+			"_id":        dir.DocID,
+			"_rev":       dir.DocRev,
+			"name":       dir.DocName,
+			"created_at": dir.CreatedAt,
+			"updated_at": dir.UpdatedAt,
+			"tags":       dir.Tags,
+			"path":       dir.Fullpath,
+		},
+	}
+	if dir.DirID != "" {
+		doc.M["dir_id"] = dir.DirID
+	}
+	if dir.RestorePath != "" {
+		doc.M["restore_path"] = dir.RestorePath
+	}
+	return doc
+}
+
+// TODO referenced_by
+func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
+	doc := couchdb.JSONDoc{
+		Type: consts.Files,
+		M: map[string]interface{}{
+			"type":       file.Type,
+			"_id":        file.DocID,
+			"_rev":       file.DocRev,
+			"name":       file.DocName,
+			"created_at": file.CreatedAt,
+			"updated_at": file.UpdatedAt,
+			"size":       file.ByteSize,
+			"md5Sum":     file.MD5Sum,
+			"mime":       file.Mime,
+			"class":      file.Class,
+			"executable": file.Executable,
+			"trashed":    file.Trashed,
+			"tags":       file.Tags,
+		},
+	}
+	if file.DirID != "" {
+		doc.M["dir_id"] = file.DirID
+	}
+	if file.RestorePath != "" {
+		doc.M["restore_path"] = file.RestorePath
+	}
+	if len(file.Metadata) > 0 {
+		doc.M["metadata"] = file.Metadata
+	}
+	return doc
+}
