@@ -1,12 +1,14 @@
 class Bootstrap
-  attr_reader :sharing, :owner, :recipients, :object
+  attr_reader :sharing, :owner, :recipients, :objects
 
   def initialize(owner, recipients, objects)
     @owner = owner
     @recipients = recipients
-    @object = object
+    @objects = objects
     @sharing = Sharing.new
-    @sharing.rules << Rule.push(objects)
+    objects.each do |o|
+      @sharing.rules << Rule.push(o)
+    end
     @sharing.members << owner
     recipients.each do |r|
       contact = owner.create_doc Contact.new given_name: r.name
@@ -16,7 +18,7 @@ class Bootstrap
   end
 
   def open
-    @owner.open @object
+    @owner.open @objects.first
   end
 
   def accept(recipient = nil)
