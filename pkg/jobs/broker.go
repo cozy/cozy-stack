@@ -65,12 +65,12 @@ type (
 		JobRev     string      `json:"_rev,omitempty"`
 		Domain     string      `json:"domain"`
 		WorkerType string      `json:"worker"`
-		TriggerID  string      `json:"trigger_id"`
+		TriggerID  string      `json:"trigger_id,omitempty"`
 		Message    Message     `json:"message"`
 		Event      Event       `json:"event"`
-		Manual     bool        `json:"manual_execution"`
-		Debounced  bool        `json:"debounced"`
-		Options    *JobOptions `json:"options"`
+		Manual     bool        `json:"manual_execution,omitempty"`
+		Debounced  bool        `json:"debounced,omitempty"`
+		Options    *JobOptions `json:"options,omitempty"`
 		State      State       `json:"state"`
 		QueuedAt   time.Time   `json:"queued_at"`
 		StartedAt  time.Time   `json:"started_at"`

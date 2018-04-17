@@ -55,18 +55,18 @@ type Attachment struct {
 // "sendmail" worker.
 type Options struct {
 	Mode           string                `json:"mode"`
-	From           *Address              `json:"from"`
-	To             []*Address            `json:"to"`
-	ReplyTo        *Address              `json:"reply_to,omitempty"`
 	Subject        string                `json:"subject"`
+	From           *Address              `json:"from,omitempty"`
+	To             []*Address            `json:"to,omitempty"`
+	ReplyTo        *Address              `json:"reply_to,omitempty"`
 	Dialer         *gomail.DialerOptions `json:"dialer,omitempty"`
-	Date           *time.Time            `json:"date"`
-	Parts          []*Part               `json:"parts"`
-	RecipientName  string                `json:"recipient_name"`
-	TemplateName   string                `json:"template_name"`
-	TemplateValues interface{}           `json:"template_values"`
+	Date           *time.Time            `json:"date,omitempty"`
+	Parts          []*Part               `json:"parts,omitempty"`
+	RecipientName  string                `json:"recipient_name,omitempty"`
+	TemplateName   string                `json:"template_name,omitempty"`
+	TemplateValues interface{}           `json:"template_values,omitempty"`
 	Attachments    []*Attachment         `json:"attachments,omitempty"`
-	Locale         string                `json:"locale"`
+	Locale         string                `json:"locale,omitempty"`
 	domain         string
 }
 
