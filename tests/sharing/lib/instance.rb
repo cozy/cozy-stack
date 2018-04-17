@@ -18,7 +18,7 @@ class Instance
     @client = RestClient::Resource.new "http://#{@domain}"
   end
 
-  def url_for(obj = nil)
+  def url(obj = nil)
     case obj
     when Contact
       @stack.install_app self, "contacts"
@@ -35,11 +35,11 @@ class Instance
     browser = opts[:browser] || ENV['BROWSER'] || 'firefox'
     case browser
     when /firefox/
-      `#{browser} -private-window #{url_for obj}`
+      `#{browser} -private-window #{url obj}`
     when /chrom/
-      `#{browser} --incognito #{url_for obj}`
+      `#{browser} --incognito #{url obj}`
     else
-      `#{browser} #{url_for obj}`
+      `#{browser} #{url obj}`
     end
   end
 
@@ -75,7 +75,7 @@ class Instance
     doc.couch_id = JSON.parse(res.body)["data"]["id"]
   end
 
-  def register_sharing(sharing)
+  def register(sharing)
     doctypes = sharing.rules.map(&:doctype).uniq
     token = @stack.token_for self, doctypes
     opts = {
@@ -86,5 +86,10 @@ class Instance
     body = JSON.generate sharing.as_json_api
     res = @client["/sharings/"].post body, opts
     sharing.couch_id = JSON.parse(res.body)["data"]["id"]
+  end
+
+  def accept(sharing)
+    @stack.install_app self, "drive"
+    Accept.new(sharing).on self
   end
 end

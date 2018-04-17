@@ -3,17 +3,27 @@
 require_relative '../boot'
 require 'minitest/autorun'
 
-describe "When an instance has a folder" do
-  before do
-    @inst = Instance.create name: 'alice'
-    folder = @inst.create_doc Folder.new
-    contact = @inst.create_doc Contact.new
-    @sharing = Sharing.new
-    @sharing.rules << Rule.push(folder)
-    @sharing.members << @inst << contact
-  end
+describe "A folder" do
+  Helpers.scenario "push_folder"
+  Helpers.start_mailhog
 
-  it "the folder can be shared (push) to a contact" do
-    @inst.register_sharing @sharing
+  it "can be shared to a recipient in push mode" do
+    # Create the folder
+    inst = Instance.create name: "Alice"
+    folder = inst.create_doc Folder.new
+    folder.couch_id.wont_be_empty
+
+    # Create the sharing
+    name = "Bob"
+    contact = inst.create_doc Contact.new givenName: name
+    sharing = Sharing.new
+    sharing.rules << Rule.push(folder)
+    sharing.members << inst << contact
+    inst.register sharing
+
+    # Accept the sharing
+    sleep 1
+    recipient = Instance.create name: name
+    recipient.accept sharing
   end
 end

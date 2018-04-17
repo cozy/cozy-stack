@@ -25,4 +25,8 @@ class Couch
     res = JSON.parse @client["/global%2Finstances/_all_docs"].get(params).body
     res["rows"].map {|row| row["doc"] }
   end
+
+  def get_doc(db, id)
+    JSON.parse @client["/#{db}/#{id}"].get.body
+  end
 end
