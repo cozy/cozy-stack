@@ -28,7 +28,7 @@ bundle exec ./console.rb
 To launch an automated scenario of tests:
 
 ```sh
-bundle exec ruby tests/push_folder.rb
+bundle exec ruby tests/push_folder.rb -v
 ```
 
 The tests clean the logs and databases from the previous runs when they start,

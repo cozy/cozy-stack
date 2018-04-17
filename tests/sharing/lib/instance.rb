@@ -50,6 +50,7 @@ class Instance
     else
       create_data_doc(doc)
     end
+    doc
   end
 
   def create_data_doc(doc)
