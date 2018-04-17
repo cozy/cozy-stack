@@ -2,6 +2,7 @@
 
 require_relative '../boot'
 require 'minitest/autorun'
+require 'pry-rescue/minitest'
 
 describe "A folder" do
   Helpers.scenario "push_folder"

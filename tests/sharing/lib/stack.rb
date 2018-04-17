@@ -30,17 +30,17 @@ class Stack
     cmd = ["cozy-stack", "instances", "add", inst.domain, "--dev",
            "--passphrase", inst.passphrase, "--public-name", inst.name,
            "--email", inst.email, "--settings", "context:test",
-           "--admin-port", @admin, "--locale", "fr"]
+           "--admin-port", @admin.to_s, "--locale", "fr"]
     puts cmd.join(" ").green
-    system cmd.join(" ")
+    system(*cmd)
   end
 
   def install_app(inst, app)
     key = inst.domain + "/" + app
     return if @apps[key]
     cmd = ["cozy-stack", "apps", "install", app,
-           "--domain", inst.domain,
-           "--port", @port, "--admin-port", @admin]
+           "--port", @port, "--admin-port", @admin,
+           "--domain", inst.domain, ">", "/dev/null"]
     puts cmd.join(" ").green
     @apps[key] = system cmd.join(" ")
   end
