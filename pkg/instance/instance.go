@@ -627,6 +627,8 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 	i.Locale = locale
 	i.UUID = opts.UUID
 	i.TOSSigned = opts.TOSSigned
+	i.TOSLatest = opts.TOSLatest
+	i.ContextName = opts.ContextName
 	i.BytesDiskQuota = opts.DiskQuota
 	i.Dev = opts.Dev
 	i.IndexViewsVersion = consts.IndexViewsVersion
@@ -842,6 +844,9 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 	}
 	if tos, ok := settings.M["tos"].(string); ok {
 		opts.TOSSigned = tos
+		if len(opts.TOSSigned) == 8 {
+			opts.TOSSigned = "1.0.0-" + opts.TOSSigned
+		}
 		delete(settings.M, "tos")
 	}
 	if autoUpdate, ok := settings.M["auto_update"].(string); ok {
