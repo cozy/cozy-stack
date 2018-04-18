@@ -172,6 +172,11 @@ func (i *Instance) Clone() couchdb.Doc {
 	cloned.PassphraseResetToken = make([]byte, len(i.PassphraseResetToken))
 	copy(cloned.PassphraseResetToken, i.PassphraseResetToken)
 
+	if i.PassphraseResetTime != nil {
+		tmp := *i.PassphraseResetTime
+		cloned.PassphraseResetTime = &tmp
+	}
+
 	cloned.RegisterToken = make([]byte, len(i.RegisterToken))
 	copy(cloned.RegisterToken, i.RegisterToken)
 
