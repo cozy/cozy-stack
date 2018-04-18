@@ -49,3 +49,15 @@ b.open
 b.accept
 b.recipients.first.open
 ```
+
+
+## Logs
+
+The log files for the stack are kept inside the `tmp/` directory. You can use
+[lnav](http://lnav.org/) tool to view them. The log format of cozy-stack can
+installed with:
+
+```sh
+lnav -i $(go env
+GOPATH)/src/github.com/cozy/cozy-stack/scripts/lnav_cozy_log.json
+```
