@@ -54,7 +54,7 @@ func XorID(id string, key []byte) string {
 // - the path is removed (directory only)
 //
 // ruleIndexes is a map of "doctype-docid" -> rule index
-// TODO remove referenced_by that are not relevant to this sharing
+// TODO keep referenced_by that are not relevant to this sharing
 // TODO the file/folder has been moved outside the shared directory
 func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndexes map[string]int) map[string]interface{} {
 	if doc["type"] == "directory" {
@@ -69,6 +69,7 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 	if !ok {
 		return doc
 	}
+	delete(doc, "referenced_by")
 	rule := s.Rules[ruleIndexes[id]]
 	noDirID := rule.Selector == "referenced_by"
 	if !noDirID {
