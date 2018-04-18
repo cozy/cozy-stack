@@ -47,36 +47,8 @@ class Instance
     end
   end
 
-  def create_doc(doc)
-    case doc
-    when Folder
-      create_file_doc(doc)
-    else
-      create_data_doc(doc)
-    end
-    doc
-  end
-
-  def create_data_doc(doc)
-    token = @stack.token_for self, [doc.doctype]
-    opts = {
-      content_type: :json,
-      accept: :json,
-      authorization: "Bearer #{token}"
-    }
-    body = JSON.generate doc.as_json
-    res = @client["/data/#{doc.doctype}/"].post body, opts
-    doc.couch_id = JSON.parse(res.body)["id"]
-  end
-
-  def create_file_doc(doc)
-    token = @stack.token_for self, [doc.doctype]
-    opts = {
-      accept: "application/vnd.api+json",
-      authorization: "Bearer #{token}"
-    }
-    res = @client["/files/#{doc.dir_id}?Type=directory&Name=#{doc.name}"].post nil, opts
-    doc.couch_id = JSON.parse(res.body)["data"]["id"]
+  def token_for(doctype)
+    @stack.token_for self, [doctype]
   end
 
   def register(sharing)

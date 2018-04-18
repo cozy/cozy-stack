@@ -11,12 +11,12 @@ describe "A folder" do
   it "can be shared to a recipient in push mode" do
     # Create the folder
     inst = Instance.create name: "Alice"
-    folder = inst.create_doc Folder.new
+    folder = Folder.create inst
     folder.couch_id.wont_be_empty
 
     # Create the sharing
     name = "Bob"
-    contact = inst.create_doc Contact.new givenName: name
+    contact = Contact.create inst, givenName: name
     sharing = Sharing.new
     sharing.rules << Rule.push(folder)
     sharing.members << inst << contact
