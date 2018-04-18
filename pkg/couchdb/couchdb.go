@@ -64,7 +64,7 @@ func SimpleDatabasePrefix(prefix string) Database {
 func rtevent(db Database, verb string, doc, oldDoc Doc) {
 	domain := db.Prefix()
 	if err := runHooks(domain, verb, doc, oldDoc); err != nil {
-		logger.WithDomain(db.Prefix()).Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
+		logger.WithDomain(db.Prefix()).WithField("nspace", "couchdb").Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
 	}
 
 	e := &realtime.Event{
@@ -287,7 +287,7 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 		path = makeDBName(db, doctype) + "/" + path
 	}
 
-	log := logger.WithDomain(db.Prefix())
+	log := logger.WithDomain(db.Prefix()).WithField("nspace", "couchdb")
 
 	// We do not log the account doctype to avoid printing account informations
 	// in the log files.
@@ -500,6 +500,7 @@ func DeleteDoc(db Database, doc Doc) error {
 				"domain":      db.Prefix(),
 				"account_id":  doc.ID(),
 				"account_rev": doc.Rev(),
+				"nspace":      "couchb",
 			}).
 			Infof("Deleting account %s", doc.ID())
 	}

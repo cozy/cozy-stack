@@ -167,7 +167,7 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	var res couchdb.ViewResponse
 	err := couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res)
 	if err != nil || len(res.Rows) == 0 {
-		// TODO log
+		inst.Logger().WithField("nspace", "sharing").Warnf("Sharing dir not found: %v (%s)", err, s.SID)
 		return nil, ErrInternalServerError
 	}
 	return inst.VFS().DirByID(res.Rows[0].ID)
@@ -185,13 +185,13 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		var ref *SharedRef
 		err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+id, ref)
 		if err != nil && !couchdb.IsNotFoundError(err) {
-			inst.Logger().Debugf("[bulk_files] Error on finding doc: %s", err)
+			inst.Logger().WithField("nspace", "replicator").Debugf("Error on finding doc of bulk files: %s", err)
 			return err
 		}
 		// TODO it's only for directory currently, code needs to be adapted for files
 		doc, err := fs.DirByID(id) // TODO DirOrFileByID
 		if err != nil && err != os.ErrNotExist {
-			inst.Logger().Debugf("[bulk_files] Error on finding ref: %s", err)
+			inst.Logger().WithField("nspace", "replicator").Debugf("Error on finding ref of bulk files: %s", err)
 			return err
 		}
 		if ref == nil && doc == nil {
@@ -244,17 +244,17 @@ func copyTagsAndDatesToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
 	name, ok := target["name"].(string)
 	if !ok {
-		inst.Logger().Debugf("[bulk_files] Missing name: %#v", target)
+		inst.Logger().WithField("nspace", "replicator").Debugf("Missing name for creating dir: %#v", target)
 		return ErrInternalServerError
 	}
 	rev, ok := target["_rev"].(string)
 	if !ok {
-		inst.Logger().Debugf("[bulk_files] Missing _rev: %#v", target)
+		inst.Logger().WithField("nspace", "replicator").Debugf("Missing _rev for creating dir: %#v", target)
 		return ErrInternalServerError
 	}
 	revisions, ok := target["_revisions"].(map[string]interface{})
 	if !ok {
-		inst.Logger().Debugf("[bulk_files] Missing _revisions: %#v", target)
+		inst.Logger().WithField("nspace", "replicator").Debugf("Missing _revisions for creating dir: %#v", target)
 		return ErrInternalServerError
 	}
 	indexer := NewSharingIndexer(inst, &bulkRevs{
@@ -269,20 +269,19 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		parent, err = fs.DirByID(dirID)
 		// TODO better handling of this conflict
 		if err != nil {
-			inst.Logger().Debugf("[bulk_files] Conflict for parent: %s", err)
+			inst.Logger().WithField("nspace", "replicator").Debugf("Conflict for parent on creating dir: %s", err)
 			return err
 		}
 	} else {
 		parent, err = s.GetSharingDir(inst)
 		if err != nil {
-			inst.Logger().Debugf("[bulk_files] Error on get sharing dir: %s", err)
 			return err
 		}
 	}
 
 	dir, err := vfs.NewDirDocWithParent(name, parent, nil)
 	if err != nil {
-		inst.Logger().Debugf("[bulk_files] Cannot initialize dir doc: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Warnf("Cannot initialize dir doc: %s", err)
 		return err
 	}
 	dir.SetID(target["_id"].(string))
@@ -290,7 +289,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	// TODO referenced_by
 	// TODO manage conflicts
 	if err := fs.CreateDir(dir); err != nil {
-		inst.Logger().Debugf("[bulk_files] Cannot create dir: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Debugf("Cannot create dir: %s", err)
 		return err
 	}
 	return nil

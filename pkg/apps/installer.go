@@ -119,7 +119,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		endState = Ready
 	}
 
-	log := logger.WithDomain(db.Prefix())
+	log := logger.WithDomain(db.Prefix()).WithField("nspace", "apps")
 
 	var manFilename string
 	switch man.AppType() {
@@ -254,7 +254,7 @@ func (i *Installer) RunSync() (Manifest, error) {
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) install() error {
-	i.log.Infof("[apps] Start install: %s %s", i.slug, i.src.String())
+	i.log.Infof("Start install: %s %s", i.slug, i.src.String())
 	args := []string{i.db.Prefix(), i.slug}
 	return hooks.Execute("install-app", args, func() error {
 		if err := i.ReadManifest(Installing); err != nil {
@@ -276,7 +276,7 @@ func (i *Installer) install() error {
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) update() error {
-	i.log.Infof("[apps] Start update: %s %s", i.slug, i.src.String())
+	i.log.Infof("Start update: %s %s", i.slug, i.src.String())
 	if err := i.checkState(i.man); err != nil {
 		return err
 	}
@@ -326,7 +326,7 @@ func (i *Installer) update() error {
 }
 
 func (i *Installer) delete() error {
-	i.log.Infof("[apps] Start delete: %s %s", i.slug, i.src.String())
+	i.log.Infof("Start delete: %s %s", i.slug, i.src.String())
 	if err := i.checkState(i.man); err != nil {
 		return err
 	}

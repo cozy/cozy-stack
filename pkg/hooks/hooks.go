@@ -35,14 +35,14 @@ func runHook(prefix, name string, args []string) error {
 		return nil
 	}
 	log := logger.WithNamespace("hooks")
-	log.Infof("[hooks] Execute %s with %v", script, args)
+	log.Infof("Execute %s with %v", script, args)
 	cmd := exec.Command(script, args...)
 	out, err := cmd.CombinedOutput()
 	if len(out) > 0 {
-		log.Infof("[hooks] Output: %s", out)
+		log.Infof("Output: %s", out)
 	}
 	if err != nil {
-		log.Errorf("[hooks] Execution failed: %s", err)
+		log.Errorf("Execution failed: %s", err)
 		return ErrHookFailed
 	}
 	return nil

@@ -61,7 +61,7 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 // retryReplicate will add a job to retry a failed replication
 func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 	if errors == MaxRetries {
-		inst.Logger().Warnf("[sharing] Max retries reached")
+		inst.Logger().WithField("nspace", "replicator").Warnf("Max retries reached")
 		return
 	}
 	// TODO add a delay between retries
@@ -70,7 +70,7 @@ func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 		Errors:    errors,
 	})
 	if err != nil {
-		inst.Logger().Warnf("[sharing] Error on retry to replicate: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Warnf("Error on retry to replicate: %s", err)
 		return
 	}
 	_, err = jobs.System().PushJob(&jobs.JobRequest{
@@ -79,7 +79,7 @@ func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 		Message:    msg,
 	})
 	if err != nil {
-		inst.Logger().Warnf("[sharing] Error on retry to replicate: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Warnf("Error on retry to replicate: %s", err)
 	}
 }
 
@@ -101,7 +101,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	if err != nil {
 		return err
 	}
-	inst.Logger().Debugf("[replicator] lastSeq = %s\n", lastSeq)
+	inst.Logger().WithField("nspace", "replicator").Debugf("lastSeq = %s\n", lastSeq)
 
 	changes, ruleIndexes, seq, err := s.callChangesFeed(inst, lastSeq)
 	if err != nil {
@@ -110,7 +110,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	if seq == lastSeq {
 		return nil
 	}
-	inst.Logger().Debugf("[replicator] changes = %#v\n", changes)
+	inst.Logger().WithField("nspace", "replicator").Debugf("changes = %#v\n", changes)
 	// TODO filter the changes according to the sharing rules
 
 	if len(*changes) > 0 {
@@ -123,13 +123,13 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 				return err
 			}
 		}
-		inst.Logger().Debugf("[replicator] missings = %#v\n", missings)
+		inst.Logger().WithField("nspace", "replicator").Debugf("missings = %#v\n", missings)
 
 		docs, err := s.getMissingDocs(inst, missings)
 		if err != nil {
 			return err
 		}
-		inst.Logger().Debugf("[replicator] docs = %#v\n", docs)
+		inst.Logger().WithField("nspace", "replicator").Debugf("docs = %#v\n", docs)
 
 		err = s.sendBulkDocs(inst, m, creds, docs, ruleIndexes)
 		if err != nil {
@@ -526,7 +526,7 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 	var refs []*SharedRef
 
 	for doctype, docs := range payload {
-		inst.Logger().Debugf("[bulk_docs] Apply %s: %#v", doctype, docs)
+		inst.Logger().WithField("nspace", "replicator").Debugf("Apply bulk docs %s: %#v", doctype, docs)
 		if doctype == consts.Files {
 			err := s.ApplyBulkFiles(inst, docs)
 			if err != nil {

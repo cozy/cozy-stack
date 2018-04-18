@@ -54,11 +54,11 @@ func InitSwiftConnection(swiftURL *url.URL) error {
 	}
 
 	if err = swiftConn.Authenticate(); err != nil {
-		log.Errorf("[swift] Authentication failed with the OpenStack Swift server on %s",
+		log.Errorf("Authentication failed with the OpenStack Swift server on %s",
 			swiftConn.AuthUrl)
 		return err
 	}
-	log.Infof("[swift] Successfully authenticated with server %s", swiftConn.AuthUrl)
+	log.Infof("Successfully authenticated with server %s", swiftConn.AuthUrl)
 	return nil
 }
 

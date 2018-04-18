@@ -53,7 +53,7 @@ func New(domain string, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.Err
 		container: swiftV1ContainerPrefix + domain,
 		version:   swiftV1ContainerPrefix + domain + versionSuffix,
 		mu:        mu,
-		log:       logger.WithDomain(domain),
+		log:       logger.WithDomain(domain).WithField("nspace", "vfsswift"),
 	}, nil
 }
 
@@ -84,34 +84,34 @@ func (sfs *swiftVFS) InitFs() error {
 	}
 	if err := sfs.c.VersionContainerCreate(sfs.container, sfs.version); err != nil {
 		if err != swift.Forbidden {
-			sfs.log.Errorf("[vfsswift] Could not create container %s: %s",
+			sfs.log.Errorf("Could not create container %s: %s",
 				sfs.container, err.Error())
 			return err
 		}
-		sfs.log.Errorf("[vfsswift] Could not activate versioning for container %s: %s",
+		sfs.log.Errorf("Could not activate versioning for container %s: %s",
 			sfs.container, err.Error())
 		if err = sfs.c.ContainerDelete(sfs.version); err != nil {
 			return err
 		}
 	}
-	sfs.log.Infof("[vfsswift] Created container %s", sfs.container)
+	sfs.log.Infof("Created container %s", sfs.container)
 	return nil
 }
 
 func (sfs *swiftVFS) Delete() error {
 	err := sfs.deleteContainer(sfs.version)
 	if err != nil {
-		sfs.log.Errorf("[vfsswift] Could not delete version container %s: %s",
+		sfs.log.Errorf("Could not delete version container %s: %s",
 			sfs.version, err.Error())
 		return err
 	}
 	err = sfs.deleteContainer(sfs.container)
 	if err != nil {
-		sfs.log.Errorf("[vfsswift] Could not delete container %s: %s",
+		sfs.log.Errorf("Could not delete container %s: %s",
 			sfs.container, err.Error())
 		return err
 	}
-	sfs.log.Infof("[vfsswift] Deleted container %s", sfs.container)
+	sfs.log.Infof("Deleted container %s", sfs.container)
 	return nil
 }
 
@@ -354,7 +354,7 @@ func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 	objName := doc.DirID + "/" + doc.DocName
 	err := sfs.destroyFileVersions(objName)
 	if err != nil {
-		sfs.log.Errorf("[vfsswift] Could not delete version of %s: %s",
+		sfs.log.Errorf("Could not delete version of %s: %s",
 			objName, err.Error())
 	}
 	err = sfs.c.ObjectDelete(sfs.container, objName)
@@ -637,7 +637,7 @@ func (sfs *swiftVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 			sfs.container, newdoc.DirID+"/"+newdoc.DocName,
 		)
 		if err != nil {
-			sfs.log.Errorf("[vfsswift] Could not move file %s/%s: %s",
+			sfs.log.Errorf("Could not move file %s/%s: %s",
 				sfs.container, olddoc.DirID+"/"+olddoc.DocName, err.Error())
 			return err
 		}
@@ -667,7 +667,7 @@ func (sfs *swiftVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
 			sfs.container, newdoc.DirID+"/"+newdoc.DocName,
 		)
 		if err != nil {
-			sfs.log.Errorf("[vfsswift] Could not move dir %s/%s: %s",
+			sfs.log.Errorf("Could not move dir %s/%s: %s",
 				sfs.container, olddoc.DirID+"/"+olddoc.DocName, err.Error())
 			return err
 		}

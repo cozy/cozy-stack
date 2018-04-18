@@ -70,7 +70,7 @@ func isGitlab(src *url.URL) bool {
 func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 	defer func() {
 		if err != nil {
-			g.log.Errorf("[git] Error while fetching app manifest %s: %s",
+			g.log.Errorf("Error while fetching app manifest %s: %s",
 				src.String(), err.Error())
 		}
 	}()
@@ -91,10 +91,10 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 		return nil, err
 	}
 
-	g.log.Infof("[git] Fetching manifest on %s", u)
+	g.log.Infof("Fetching manifest on %s", u)
 	res, err := ManifestClient.Get(u)
 	if err != nil || res.StatusCode != 200 {
-		g.log.Errorf("[git] Error while fetching manifest on %s", u)
+		g.log.Errorf("Error while fetching manifest on %s", u)
 		return nil, ErrManifestNotReachable
 	}
 
@@ -112,7 +112,7 @@ func (g *gitFetcher) fetchManifestFromGitArchive(src *url.URL) (io.ReadCloser, e
 		"--remote", src.String(),
 		fmt.Sprintf("refs/heads/%s", branch),
 		g.manFilename) // #nosec
-	g.log.Infof("[git] Fetching manifest %s", strings.Join(cmd.Args, " "))
+	g.log.Infof("Fetching manifest %s", strings.Join(cmd.Args, " "))
 	stdout, err := cmd.Output()
 	if err != nil {
 		if err == exec.ErrNotFound {
@@ -144,7 +144,7 @@ func (g *gitFetcher) fetchManifestFromGitArchive(src *url.URL) (io.ReadCloser, e
 func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	defer func() {
 		if err != nil {
-			g.log.Errorf("[git] Error while fetching or copying repository %s: %s",
+			g.log.Errorf("Error while fetching or copying repository %s: %s",
 				src.String(), err.Error())
 		}
 	}()
@@ -196,7 +196,7 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 	lsRemote, err := cmd.Output()
 	if err != nil {
 		if err != exec.ErrNotFound {
-			g.log.Errorf("[git] ls-remote error of %s: %s",
+			g.log.Errorf("ls-remote error of %s: %s",
 				strings.Join(cmd.Args, " "), err.Error())
 		}
 		return err
@@ -235,11 +235,11 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 		"--branch", branch,
 		"--", srcStr, gitDir) // #nosec
 
-	g.log.Infof("[git] Clone with git: %s", strings.Join(cmd.Args, " "))
+	g.log.Infof("Clone with git: %s", strings.Join(cmd.Args, " "))
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
 		if err != exec.ErrNotFound {
-			g.log.Errorf("[git] Clone error of %s %s: %s", srcStr, stdoutStderr,
+			g.log.Errorf("Clone error of %s %s: %s", srcStr, stdoutStderr,
 				err.Error())
 		}
 		return err
@@ -280,7 +280,7 @@ func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs Copier, man 
 	repch := make(chan *git.Repository)
 
 	srcStr := src.String()
-	g.log.Infof("[git] Clone with go-git %s %s in %s", srcStr, branch, gitDir)
+	g.log.Infof("Clone with go-git %s %s in %s", srcStr, branch, gitDir)
 	go func() {
 		repc, errc := git.Clone(storage, nil, &git.CloneOptions{
 			URL:           srcStr,
@@ -299,10 +299,10 @@ func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs Copier, man 
 	select {
 	case rep = <-repch:
 	case err = <-errch:
-		g.log.Errorf("[git] Clone error of %s: %s", srcStr, err.Error())
+		g.log.Errorf("Clone error of %s: %s", srcStr, err.Error())
 		return err
 	case <-time.After(cloneTimeout):
-		g.log.Errorf("[git] Clone timeout of %s", srcStr)
+		g.log.Errorf("Clone timeout of %s", srcStr)
 		return errCloneTimeout
 	}
 

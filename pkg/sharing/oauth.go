@@ -105,7 +105,7 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL st
 		return ErrInvalidSharing
 	}
 	if err = m.CreateSharingRequest(inst, s, creds, u); err != nil {
-		inst.Logger().Warnf("[sharing] Error on sharing request: %s", err)
+		inst.Logger().WithField("nspace", "sharing").Warnf("Error on sharing request: %s", err)
 		return ErrRequestFailed
 	}
 	return couchdb.UpdateDoc(inst, s)

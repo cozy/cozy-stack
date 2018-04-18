@@ -50,11 +50,11 @@ func ErrorHandler(err error, c echo.Context) {
 		var log *logrus.Entry
 		inst, ok := c.Get("instance").(*instance.Instance)
 		if ok {
-			log = inst.Logger()
+			log = inst.Logger().WithField("nspace", "http")
 		} else {
 			log = logger.WithNamespace("http")
 		}
-		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
+		log.Errorf("%s %s %s", req.Method, req.URL.Path, err)
 	}
 
 	if res.Committed {
@@ -84,11 +84,11 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	var log *logrus.Entry
 	inst, ok := c.Get("instance").(*instance.Instance)
 	if ok {
-		log = inst.Logger()
+		log = inst.Logger().WithField("nspace", "http")
 	} else {
 		log = logger.WithNamespace("http")
 	}
-	log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
+	log.Errorf("%s %s %s", req.Method, req.URL.Path, err)
 
 	var he *echo.HTTPError
 	if he, ok = err.(*echo.HTTPError); ok {
@@ -140,6 +140,6 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	}
 
 	if err != nil && log != nil {
-		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
+		log.Errorf("%s %s %s", req.Method, req.URL.Path, err)
 	}
 }

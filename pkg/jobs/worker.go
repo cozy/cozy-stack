@@ -96,7 +96,10 @@ func (w *WorkerConfig) Clone() *WorkerConfig {
 func NewWorkerContext(workerID string, job *Job) *WorkerContext {
 	ctx := context.Background()
 	id := fmt.Sprintf("%s/%s", workerID, job.ID())
-	log := logger.WithDomain(job.Domain).WithField("job_id", job.ID()).WithField("worker_id", workerID)
+	log := logger.WithDomain(job.Domain).
+		WithField("job_id", job.ID()).
+		WithField("worker_id", workerID).
+		WithField("nspace", "jobs")
 	return &WorkerContext{
 		Context: ctx,
 		job:     job,
@@ -233,12 +236,12 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 	for job := range w.jobs {
 		domain := job.Domain
 		if domain == "" {
-			joblog.Errorf("[job] %s: missing domain from job request", workerID)
+			joblog.Errorf("%s: missing domain from job request", workerID)
 			continue
 		}
 		parentCtx := NewWorkerContext(workerID, job)
 		if err := job.AckConsumed(); err != nil {
-			parentCtx.Logger().Errorf("[job] error acking consume job: %s",
+			parentCtx.Logger().Errorf("error acking consume job: %s",
 				err.Error())
 			continue
 		}
@@ -255,7 +258,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			errRun = nil
 		}
 		if errRun != nil {
-			parentCtx.Logger().Errorf("[job] error while performing job: %s",
+			parentCtx.Logger().Errorf("error while performing job: %s",
 				errRun.Error())
 			runResultLabel = metrics.WorkerExecResultErrored
 			errAck = job.Nack(errRun)
@@ -265,7 +268,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 		}
 		metrics.WorkerExecCounter.WithLabelValues(w.Type, runResultLabel).Inc()
 		if errAck != nil {
-			parentCtx.Logger().Errorf("[job] error while acking job done: %s",
+			parentCtx.Logger().Errorf("error while acking job done: %s",
 				errAck.Error())
 		}
 
@@ -280,7 +283,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			}
 		}
 	}
-	joblog.Debugf("[job] %s: worker shut down", workerID)
+	joblog.Debugf("%s: worker shut down", workerID)
 	closed <- struct{}{}
 }
 
@@ -332,7 +335,7 @@ func (t *task) run() (err error) {
 	defer func() {
 		if t.conf.WorkerCommit != nil {
 			if errc := t.conf.WorkerCommit(t.ctx, err); errc != nil {
-				t.ctx.Logger().Warnf("[job] error while commiting job: %s",
+				t.ctx.Logger().Warnf("Error while commiting job: %s",
 					errc.Error())
 			}
 		}
@@ -343,7 +346,7 @@ func (t *task) run() (err error) {
 			break
 		}
 		if err != nil {
-			t.ctx.Logger().Warnf("[job] error while performing job: %s (retry in %s)",
+			t.ctx.Logger().Warnf("Error while performing job: %s (retry in %s)",
 				err.Error(), delay)
 		}
 
@@ -351,7 +354,7 @@ func (t *task) run() (err error) {
 			time.Sleep(delay)
 		}
 
-		t.ctx.Logger().Debugf("[job] executing job (%d) (timeout set to %s)",
+		t.ctx.Logger().Debugf("Executing job (%d) (timeout set to %s)",
 			t.execCount, timeout)
 
 		var execResultLabel string

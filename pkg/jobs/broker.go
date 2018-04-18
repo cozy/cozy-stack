@@ -161,13 +161,13 @@ func (jr *JobRequest) Match(key, value string) bool {
 
 // Logger returns a logger associated with the job domain
 func (j *Job) Logger() *logrus.Entry {
-	return logger.WithDomain(j.Domain)
+	return logger.WithDomain(j.Domain).WithField("nspace", "jobs")
 }
 
 // AckConsumed sets the job infos state to Running an sends the new job infos
 // on the channel.
 func (j *Job) AckConsumed() error {
-	j.Logger().Debugf("[jobs] ack_consume %s ", j.ID())
+	j.Logger().Debugf("ack_consume %s ", j.ID())
 	j.StartedAt = time.Now()
 	j.State = Running
 	return j.Update()
@@ -176,7 +176,7 @@ func (j *Job) AckConsumed() error {
 // Ack sets the job infos state to Done an sends the new job infos on the
 // channel.
 func (j *Job) Ack() error {
-	j.Logger().Debugf("[jobs] ack %s ", j.ID())
+	j.Logger().Debugf("ack %s ", j.ID())
 	j.FinishedAt = time.Now()
 	j.State = Done
 	return j.Update()
@@ -185,7 +185,7 @@ func (j *Job) Ack() error {
 // Nack sets the job infos state to Errored, set the specified error has the
 // error field and sends the new job infos on the channel.
 func (j *Job) Nack(err error) error {
-	j.Logger().Debugf("[jobs] nack %s ", j.ID())
+	j.Logger().Debugf("nack %s ", j.ID())
 	j.FinishedAt = time.Now()
 	j.State = Errored
 	j.Error = err.Error()

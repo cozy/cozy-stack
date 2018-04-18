@@ -75,7 +75,7 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	for _, infos := range ts {
 		t, err := NewTrigger(infos)
 		if err != nil {
-			s.log.Errorf("[scheduler] scheduler: Could not load the trigger %s(%s) at startup: %s",
+			s.log.Errorf("scheduler: Could not load the trigger %s(%s) at startup: %s",
 				infos.Type, infos.TID, err.Error())
 			continue
 		}
@@ -152,7 +152,7 @@ func (s *memScheduler) GetAllTriggers(domain string) ([]Trigger, error) {
 }
 
 func (s *memScheduler) schedule(t Trigger) {
-	s.log.Debugf("[scheduler] trigger %s(%s): Starting trigger",
+	s.log.Debugf("trigger %s(%s): Starting trigger",
 		t.Type(), t.Infos().TID)
 	ch := t.Schedule()
 	var debounced <-chan time.Time
@@ -162,7 +162,7 @@ func (s *memScheduler) schedule(t Trigger) {
 	if infos.Debounce != "" {
 		var err error
 		if d, err = time.ParseDuration(infos.Debounce); err != nil {
-			s.log.Infof("[scheduler] trigger %s has an invalid debounce: %s",
+			s.log.Errorf("trigger %s has an invalid debounce: %s",
 				infos.TID, infos.Debounce)
 		}
 	}
@@ -188,11 +188,10 @@ func (s *memScheduler) schedule(t Trigger) {
 
 func (s *memScheduler) pushJob(t Trigger, req *JobRequest) {
 	log := s.log.WithField("domain", req.Domain)
-	log.Infof(
-		"[scheduler] trigger %s(%s): Pushing new job %s",
+	log.Warnf("trigger %s(%s): Pushing new job %s",
 		t.Type(), t.Infos().TID, req.WorkerType)
 	if _, err := s.broker.PushJob(req); err != nil {
-		log.Errorf("[scheduler] trigger %s(%s): Could not schedule a new job: %s",
+		log.Errorf("trigger %s(%s): Could not schedule a new job: %s",
 			t.Type(), t.Infos().TID, err.Error())
 	}
 }

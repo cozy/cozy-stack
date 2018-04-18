@@ -44,7 +44,8 @@ func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) er
 		}
 		link := m.MailLink(inst, s, &s.Credentials[i-1], codes)
 		if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
-			inst.Logger().Errorf("[sharing] Can't send email for %#v: %s", m.Email, err)
+			inst.Logger().WithField("nspace", "sharing").
+				Errorf("Can't send email for %#v: %s", m.Email, err)
 			return ErrMailNotSent
 		}
 		m.Status = MemberStatusPendingInvitation
