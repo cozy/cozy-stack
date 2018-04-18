@@ -844,9 +844,6 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 	}
 	if tos, ok := settings.M["tos"].(string); ok {
 		opts.TOSSigned = tos
-		if len(opts.TOSSigned) == 8 {
-			opts.TOSSigned = "1.0.0-" + opts.TOSSigned
-		}
 		delete(settings.M, "tos")
 	}
 	if autoUpdate, ok := settings.M["auto_update"].(string); ok {
@@ -868,6 +865,10 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 	}
 	if name := opts.PublicName; name != "" {
 		settings.M["public_name"] = name
+	}
+
+	if len(opts.TOSSigned) == 8 {
+		opts.TOSSigned = "1.0.0-" + opts.TOSSigned
 	}
 
 	needUpdate := settings.Rev() != "" && len(settings.M) > 1

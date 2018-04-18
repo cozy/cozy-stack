@@ -60,20 +60,66 @@ func TestCreateInstance(t *testing.T) {
 }
 
 func TestCreateInstanceWithSettings(t *testing.T) {
-	instance, err := instance.Create(&instance.Options{
-		Domain:   "test2.cozycloud.cc",
-		Locale:   "en",
-		Timezone: "Europe/Berlin",
-		Email:    "alice@example.com",
-		Settings: "offer:freemium",
-	})
-	assert.NoError(t, err)
-	assert.Equal(t, instance.Domain, "test2.cozycloud.cc")
-	doc, err := instance.SettingsDocument()
-	assert.NoError(t, err)
-	assert.Equal(t, "Europe/Berlin", doc.M["tz"].(string))
-	assert.Equal(t, "alice@example.com", doc.M["email"].(string))
-	assert.Equal(t, "freemium", doc.M["offer"].(string))
+	{
+		inst, err := instance.Create(&instance.Options{
+			Domain:       "test2.cozycloud.cc",
+			UUID:         "XXX",
+			Locale:       "en",
+			TOSSigned:    "20151111",
+			TOSLatest:    "1.0.0-20151111",
+			Timezone:     "Europe/Berlin",
+			ContextName:  "my_context",
+			Email:        "alice@example.com",
+			PublicName:   "Alice",
+			AuthMode:     "two_factor_mail",
+			Passphrase:   "password",
+			SwiftCluster: 2,
+			Settings:     "offer:freemium",
+		})
+
+		assert.NoError(t, err)
+		assert.Equal(t, inst.Domain, "test2.cozycloud.cc")
+		doc, err := inst.SettingsDocument()
+		assert.NoError(t, err)
+		assert.Equal(t, "Europe/Berlin", doc.M["tz"].(string))
+		assert.Equal(t, "alice@example.com", doc.M["email"].(string))
+		assert.Equal(t, "freemium", doc.M["offer"].(string))
+		assert.Equal(t, "Alice", doc.M["public_name"].(string))
+
+		assert.Equal(t, inst.Locale, "en")
+		assert.Equal(t, inst.TOSSigned, "1.0.0-20151111")
+		assert.Equal(t, inst.ContextName, "my_context")
+		assert.Equal(t, inst.AuthMode, instance.TwoFactorMail)
+		assert.Equal(t, inst.SwiftCluster, 2)
+	}
+
+	{
+		inst, err := instance.Create(&instance.Options{
+			Domain:       "test3.cozycloud.cc",
+			Timezone:     "Europe/Berlin",
+			Email:        "alice@example.com",
+			PublicName:   "Alice",
+			Passphrase:   "password",
+			SwiftCluster: 2,
+			Settings:     "offer:freemium,context:my_context,auth_mode:two_factor_mail,uuid:XXX,locale:en,tos:20151111",
+		})
+
+		assert.NoError(t, err)
+		assert.Equal(t, inst.Domain, "test3.cozycloud.cc")
+		doc, err := inst.SettingsDocument()
+		assert.NoError(t, err)
+		assert.Equal(t, "Europe/Berlin", doc.M["tz"].(string))
+		assert.Equal(t, "alice@example.com", doc.M["email"].(string))
+		assert.Equal(t, "freemium", doc.M["offer"].(string))
+		assert.Equal(t, "Alice", doc.M["public_name"].(string))
+
+		assert.Equal(t, inst.UUID, "XXX")
+		assert.Equal(t, inst.Locale, "en")
+		assert.Equal(t, inst.TOSSigned, "1.0.0-20151111")
+		assert.Equal(t, inst.ContextName, "my_context")
+		assert.Equal(t, inst.AuthMode, instance.TwoFactorMail)
+		assert.Equal(t, inst.SwiftCluster, 2)
+	}
 }
 
 func TestCreateInstanceBadDomain(t *testing.T) {
