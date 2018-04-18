@@ -75,6 +75,13 @@ func parseTOSVersion(v string) (major int, date time.Time, ok bool) {
 	if v == "" {
 		return
 	}
+	if len(v) == 8 {
+		var err error
+		major = 1
+		date, err = time.Parse("20060102", v)
+		ok = err == nil
+		return
+	}
 	if v[0] == 'v' {
 		v = v[1:]
 	}
