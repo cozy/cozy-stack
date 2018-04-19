@@ -340,7 +340,8 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface{}, dir *vfs.DirDoc) error {
 	rev, ok := target["_rev"].(string)
 	if !ok {
-		// TODO add logs or better error
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Missing _rev for updating directory %#v", target)
 		return ErrInternalServerError
 	}
 	revisions, ok := target["_revisions"].(map[string]interface{})
@@ -351,12 +352,13 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 		Rev:       rev,
 		Revisions: revisions,
 	})
+	oldDoc := dir.Clone().(*vfs.DirDoc)
 	copyTagsAndDatesToDir(target, dir)
 	// TODO what if name or dir_id has changed
 	// TODO referenced_by
 	// TODO trash
 	// TODO manage conflicts
-	return indexer.UpdateDirDoc(nil, dir) // TODO oldDoc
+	return indexer.UpdateDirDoc(oldDoc, dir)
 }
 
 // TODO referenced_by
