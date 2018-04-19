@@ -16,7 +16,7 @@ type UploadMsg struct {
 
 // Upload starts uploading files for this sharing
 func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
-	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID)
+	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID + "/upload")
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -52,10 +52,30 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 	}
 
 	if errm != nil {
-		// TODO s.retryReplicate(inst, errors)
+		s.retryWorker(inst, "share-upload", errors)
 		fmt.Printf("DEBUG errm=%s\n", errm)
 	}
 	return errm
+}
+
+// InitialUpload uploads files to just a member, for the first time
+func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
+	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID + "/upload")
+	mu.Lock()
+	defer mu.Unlock()
+
+	// TODO what if we have more than BatchSize files to upload?
+	for i := 0; i < BatchSize; i++ {
+		more, err := s.UploadTo(inst, m)
+		if err != nil {
+			return err
+		}
+		if !more {
+			return nil
+		}
+	}
+
+	return nil
 }
 
 // UploadTo uploads one file to the given member. It returns false if there

@@ -58,13 +58,13 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 		}
 	}
 	if errm != nil {
-		s.retryReplicate(inst, errors)
+		s.retryWorker(inst, "share-replicate", errors)
 	}
 	return errm
 }
 
-// retryReplicate will add a job to retry a failed replication
-func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
+// retryWorker will add a job to retry a failed replication or upload
+func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int) {
 	backoff := InitialBackoffPeriod << uint(errors*2)
 	errors++
 	if errors == MaxRetries {
@@ -77,24 +77,24 @@ func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 	})
 	if err != nil {
 		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Error on retry to replicate: %s", err)
+			Warnf("Error on retry to %s: %s", worker, err)
 		return
 	}
 	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
 		Domain:     inst.Domain,
 		Type:       "@in",
-		WorkerType: "share-replicate",
+		WorkerType: worker,
 		Message:    msg,
 		Arguments:  backoff.String(),
 	})
 	if err != nil {
 		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Error on retry to replicate: %s", err)
+			Warnf("Error on retry to %s: %s", worker, err)
 		return
 	}
 	if err = jobs.System().AddTrigger(t); err != nil {
 		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Error on retry to replicate: %s", err)
+			Warnf("Error on retry to %s: %s", worker, err)
 	}
 }
 
