@@ -84,7 +84,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	if err := s.ReplicateTo(inst, m, true); err != nil {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Error on initial replication (%s): %s", s.SID, err)
-		s.retryReplicate(inst, 1)
+		s.retryReplicate(inst, 0)
 	}
 }
 
