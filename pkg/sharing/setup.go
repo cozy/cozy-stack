@@ -194,12 +194,15 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 		if rule.DocType == consts.Files {
 			// TODO add a test for this case
 			// TODO support rules with several values
-			err := vfs.WalkByID(inst.VFS(), rule.Values[0], func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+			fileID := rule.Values[0]
+			err := vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 				if err != nil {
 					return err
 				}
 				if dir != nil {
-					docs = append(docs, dirToJSONDoc(dir))
+					if dir.DocID != fileID {
+						docs = append(docs, dirToJSONDoc(dir))
+					}
 				} else if file != nil {
 					docs = append(docs, fileToJSONDoc(file))
 				}
