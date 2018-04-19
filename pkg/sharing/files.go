@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 // MakeXorKey generates a key for transforming the file identifiers
@@ -83,7 +84,7 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 // - the path is removed (directory only)
 //
 // ruleIndexes is a map of "doctype-docid" -> rule index
-// TODO keep referenced_by that are not relevant to this sharing
+// TODO keep referenced_by that are relevant to this sharing
 // TODO the file/folder has been moved outside the shared directory
 func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndexes map[string]int) map[string]interface{} {
 	if doc["type"] == "directory" {
@@ -205,28 +206,33 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 // ApplyBulkFiles takes a list of documents for the io.cozy.files doctype and
 // will apply changes to the VFS according to those documents.
 func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
+	var errm error
 	fs := inst.VFS()
+
 	for _, target := range docs {
 		id, ok := target["_id"].(string)
 		if !ok {
-			return ErrMissingID
+			errm = multierror.Append(errm, ErrMissingID)
+			continue
 		}
 		var ref *SharedRef
 		err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+id, ref)
 		if err != nil && !couchdb.IsNotFoundError(err) {
 			inst.Logger().WithField("nspace", "replicator").Debugf("Error on finding doc of bulk files: %s", err)
-			return err
+			errm = multierror.Append(errm, err)
+			continue
 		}
 		// TODO it's only for directory currently, code needs to be adapted for files
 		doc, err := fs.DirByID(id) // TODO DirOrFileByID
 		if err != nil && err != os.ErrNotExist {
 			inst.Logger().WithField("nspace", "replicator").Debugf("Error on finding ref of bulk files: %s", err)
-			return err
+			errm = multierror.Append(errm, err)
+			continue
 		}
 		if ref == nil && doc == nil {
 			err = s.CreateDir(inst, target)
 			if err != nil {
-				return err
+				errm = multierror.Append(errm, err)
 			}
 			// TODO update the io.cozy.shared reference?
 		} else if ref == nil {
@@ -237,10 +243,9 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			// sharing on this cozy and updated on the other cozy
 			continue
 		} else {
-			// TODO update the directory
 			err = s.UpdateDir(inst, target, doc)
 			if err != nil {
-				return err
+				errm = multierror.Append(errm, err)
 			}
 		}
 	}
@@ -273,17 +278,20 @@ func copyTagsAndDatesToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
 	name, ok := target["name"].(string)
 	if !ok {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Missing name for creating dir: %#v", target)
+		inst.Logger().WithField("nspace", "replicator").
+			Debugf("Missing name for creating dir: %#v", target)
 		return ErrInternalServerError
 	}
 	rev, ok := target["_rev"].(string)
 	if !ok {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Missing _rev for creating dir: %#v", target)
+		inst.Logger().WithField("nspace", "replicator").
+			Debugf("Missing _rev for creating dir: %#v", target)
 		return ErrInternalServerError
 	}
 	revisions, ok := target["_revisions"].(map[string]interface{})
 	if !ok {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Missing _revisions for creating dir: %#v", target)
+		inst.Logger().WithField("nspace", "replicator").
+			Debugf("Missing _revisions for creating dir: %#v", target)
 		return ErrInternalServerError
 	}
 	indexer := NewSharingIndexer(inst, &bulkRevs{
@@ -298,7 +306,8 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		parent, err = fs.DirByID(dirID)
 		// TODO better handling of this conflict
 		if err != nil {
-			inst.Logger().WithField("nspace", "replicator").Debugf("Conflict for parent on creating dir: %s", err)
+			inst.Logger().WithField("nspace", "replicator").
+				Debugf("Conflict for parent on creating dir: %s", err)
 			return err
 		}
 	} else {
@@ -310,7 +319,8 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 
 	dir, err := vfs.NewDirDocWithParent(name, parent, nil)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").Warnf("Cannot initialize dir doc: %s", err)
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Cannot initialize dir doc: %s", err)
 		return err
 	}
 	dir.SetID(target["_id"].(string))
@@ -318,7 +328,8 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	// TODO referenced_by
 	// TODO manage conflicts
 	if err := fs.CreateDir(dir); err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Cannot create dir: %s", err)
+		inst.Logger().WithField("nspace", "replicator").
+			Debugf("Cannot create dir: %s", err)
 		return err
 	}
 	return nil
