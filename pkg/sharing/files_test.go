@@ -40,6 +40,20 @@ func TestXorID(t *testing.T) {
 	assert.Equal(t, expected, XorID(id, []byte{0, 1, 0, 15}))
 }
 
+func TestSortFilesToSent(t *testing.T) {
+	s := &Sharing{}
+	foo := map[string]interface{}{"type": "directory", "name": "foo", "path": "/foo"}
+	foobar := map[string]interface{}{"type": "directory", "name": "bar", "path": "/foo/bar"}
+	foobarbaz := map[string]interface{}{"type": "directory", "name": "baz", "path": "/foo/bar/baz"}
+	filea := map[string]interface{}{"type": "file", "name": "filea"}
+	fileb := map[string]interface{}{"type": "file", "name": "fileb"}
+	filec := map[string]interface{}{"type": "file", "name": "filec"}
+	files := []map[string]interface{}{filea, foobar, foobarbaz, fileb, filec, foo}
+	s.SortFilesToSent(files)
+	expected := []map[string]interface{}{foo, foobar, foobarbaz, filea, fileb, filec}
+	assert.Equal(t, expected, files)
+}
+
 func TestSharingDir(t *testing.T) {
 	s := Sharing{
 		SID: uuidv4(),

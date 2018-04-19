@@ -2,6 +2,8 @@ package sharing
 
 import (
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -45,6 +47,33 @@ func XorID(id string, key []byte) string {
 		}
 	}
 	return string(buf)
+}
+
+// SortFilesToSent sorts the files slice that will be sent in bulk_docs:
+// - directories must come before files (if a file is created in a new
+//   directory, we must create directory before the file)
+// - directories are sorted by increasing depth (if a sub-folder is created
+//   in a new directory, we must create the parent before the child)
+// TODO trashed / deleted files and folders
+func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
+	sort.SliceStable(files, func(i, j int) bool {
+		a, b := files[i], files[j]
+		if a["type"] == "file" {
+			return false
+		}
+		if b["type"] == "file" {
+			return true
+		}
+		p, ok := a["path"].(string)
+		if !ok {
+			return true
+		}
+		q, ok := b["path"].(string)
+		if !ok {
+			return false
+		}
+		return strings.Count(p, "/") < strings.Count(q, "/")
+	})
 }
 
 // TransformFileToSent transforms an io.cozy.files document before sending it

@@ -465,7 +465,7 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 		return err
 	}
 	if files, ok := (*docs)[consts.Files]; ok {
-		// TODO sort the files (by increasing depth for adds/updates, and then by decreasing depth for deletions)
+		s.SortFilesToSent(files)
 		for i, file := range files {
 			files[i] = s.TransformFileToSent(file, creds.XorKey, ruleIndexes)
 		}
