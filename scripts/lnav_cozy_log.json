@@ -6,7 +6,7 @@
     "regex": {
       "std": {
         "pattern":
-          "^time=\"(?<time>[\\dTZ:+-]+)\" level=(?<level>\\w+) msg=\"(?<message>.*)\" (nspace=(?<nspace>[\\w-]+) ?)?(domain=\"?(?<domain>[\\w:.]+)\"?)?"
+          "^time=\"(?<time>[\\dTZ:+-]+)\" level=(?<level>\\w+) msg=\"(?<message>.*)\" (domain=\"?(?<domain>[\\w:.]+)\"? ?)?(nspace=(?<nspace>[\\w-]+))?"
       },
       "http": {
         "pattern":
