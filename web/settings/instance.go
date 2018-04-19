@@ -75,6 +75,14 @@ func updateInstance(c echo.Context) error {
 		return err
 	}
 
+	pdoc, err := webpermissions.GetPermission(c)
+	if err != nil || pdoc.Type != permissions.TypeCLI {
+		delete(doc.M, "auth_mode")
+		delete(doc.M, "tos")
+		delete(doc.M, "uuid")
+		delete(doc.M, "context")
+	}
+
 	if err := instance.Patch(inst, &instance.Options{SettingsObj: doc}); err != nil {
 		return err
 	}
