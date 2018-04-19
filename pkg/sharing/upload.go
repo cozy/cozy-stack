@@ -81,6 +81,25 @@ func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
 // UploadTo uploads one file to the given member. It returns false if there
 // are no more files to upload to this member currently.
 func (s *Sharing) UploadTo(inst *instance.Instance, m *Member) (bool, error) {
-	// TODO WIP
-	return false, nil
+	if m.Instance == "" {
+		return false, ErrInvalidURL
+	}
+	creds := s.FindCredentials(m)
+	if creds == nil {
+		return false, ErrInvalidSharing
+	}
+
+	lastSeq, err := s.getLastSeqNumber(inst, m, "upload")
+	if err != nil {
+		return false, err
+	}
+	inst.Logger().WithField("nspace", "upload").Debugf("lastSeq = %s", lastSeq)
+
+	seq := lastSeq // TODO WIP
+
+	if seq == lastSeq {
+		return false, nil
+	}
+
+	return true, s.UpdateLastSequenceNumber(inst, m, "upload", seq)
 }

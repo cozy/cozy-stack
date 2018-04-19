@@ -80,22 +80,29 @@ func TestSequenceNumber(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "sharing-"+s.SID+"-1", rid)
 
-	seq, err := s.getLastSeqNumber(inst, m)
+	seq, err := s.getLastSeqNumber(inst, m, "replicator")
 	assert.NoError(t, err)
 	assert.Empty(t, seq)
 	_, _, seq, err = s.callChangesFeed(inst, seq)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, seq)
 	assert.Equal(t, nb+1, RevGeneration(seq)) // +1 because of the view creation
-	err = s.UpdateLastSequenceNumber(inst, m, seq)
+	err = s.UpdateLastSequenceNumber(inst, m, "replicator", seq)
 	assert.NoError(t, err)
-	seq2, err := s.getLastSeqNumber(inst, m)
+
+	seqU, err := s.getLastSeqNumber(inst, m, "upload")
+	assert.NoError(t, err)
+	assert.Empty(t, seqU)
+	err = s.UpdateLastSequenceNumber(inst, m, "upload", "2-abc")
+	assert.NoError(t, err)
+
+	seq2, err := s.getLastSeqNumber(inst, m, "replicator")
 	assert.NoError(t, err)
 	assert.Equal(t, seq, seq2)
 
-	err = s.UpdateLastSequenceNumber(inst, m, "2-abc")
+	err = s.UpdateLastSequenceNumber(inst, m, "replicator", "2-abc")
 	assert.NoError(t, err)
-	seq3, err := s.getLastSeqNumber(inst, m)
+	seq3, err := s.getLastSeqNumber(inst, m, "replicator")
 	assert.NoError(t, err)
 	assert.Equal(t, seq, seq3)
 }
