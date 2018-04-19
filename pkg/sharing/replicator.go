@@ -237,6 +237,9 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 		if !ok {
 			continue
 		}
+		if _, ok = info["binary"]; ok {
+			continue
+		}
 		idx, ok := info["rule"].(float64)
 		if !ok {
 			continue
