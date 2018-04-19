@@ -193,23 +193,23 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 	if rule.Selector == "" || rule.Selector == "id" {
 		if rule.DocType == consts.Files {
 			// TODO add a test for this case
-			// TODO support rules with several values
-			fileID := rule.Values[0]
-			err := vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
-				if err != nil {
-					return err
-				}
-				if dir != nil {
-					if dir.DocID != fileID {
-						docs = append(docs, dirToJSONDoc(dir))
+			for _, fileID := range rule.Values {
+				err := vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+					if err != nil {
+						return err
 					}
-				} else if file != nil {
-					docs = append(docs, fileToJSONDoc(file))
+					if dir != nil {
+						if dir.DocID != fileID {
+							docs = append(docs, dirToJSONDoc(dir))
+						}
+					} else if file != nil {
+						docs = append(docs, fileToJSONDoc(file))
+					}
+					return nil
+				})
+				if err != nil {
+					return nil, err
 				}
-				return nil
-			})
-			if err != nil {
-				return nil, err
 			}
 		} else {
 			req := &couchdb.AllDocsRequest{
@@ -257,13 +257,15 @@ func (s *Sharing) buildReferences(inst *instance.Instance, rule Rule, r int, doc
 	refs := make([]interface{}, len(docs))
 	for i, doc := range docs {
 		rev := doc.Rev()
+		info := SharedInfo{
+			Rule:   r,
+			Binary: rule.DocType == consts.Files && doc.Get("type") == "file",
+		}
 		if srefs[i] == nil {
 			refs[i] = SharedRef{
 				SID:       rule.DocType + "/" + doc.ID(),
 				Revisions: []string{rev},
-				Infos: map[string]SharedInfo{
-					s.SID: {Rule: r},
-				},
+				Infos:     map[string]SharedInfo{s.SID: info},
 			}
 		} else {
 			found := false
@@ -280,7 +282,7 @@ func (s *Sharing) buildReferences(inst *instance.Instance, rule Rule, r int, doc
 			} else {
 				srefs[i].Revisions = append(srefs[i].Revisions, rev)
 			}
-			srefs[i].Infos[s.SID] = SharedInfo{Rule: r}
+			srefs[i].Infos[s.SID] = info
 			refs[i] = *srefs[i]
 		}
 	}
