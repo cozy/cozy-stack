@@ -435,6 +435,10 @@ func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error
 	}
 
 	var triggerIDs []string
+	if app.Attrs.Services == nil {
+		fmt.Printf("No triggers\n")
+		return nil
+	}
 	for _, service := range *app.Attrs.Services {
 		triggerIDs = append(triggerIDs, service.TriggerID)
 	}
@@ -548,6 +552,7 @@ func init() {
 
 	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccountID, "account-id", "", "specify the account ID to use for running the konnector")
 
+	triggersCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
 	triggersCmdGroup.AddCommand(launchTriggerCmd)
 	triggersCmdGroup.AddCommand(showWebappTriggersCmd)
 
