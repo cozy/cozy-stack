@@ -113,24 +113,26 @@ func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 			}
 			return err
 		}
-		app := &apps.WebappManifest{}
-		if err = app.ReadManifest(manFile, slug, "file://localhost"+dir); err != nil {
+		var app apps.Manifest = &apps.WebappManifest{}
+		app, err = app.ReadManifest(manFile, slug, "file://localhost"+dir)
+		if err != nil {
 			return fmt.Errorf("Could not parse the %s file: %s",
 				apps.WebappManifestName, err.Error())
 		}
+		webapp := app.(*apps.WebappManifest)
 		i := middlewares.GetInstance(c)
 		f := apps.NewAferoFileServer(fs, func(_, _, file string) string {
 			return path.Join("/", file)
 		})
 		// Save permissions in couchdb before loading an index page
-		if _, file := app.FindRoute(path.Clean(c.Request().URL.Path)); file == "" {
-			if app.Permissions() != nil {
-				if err := permissions.ForceWebapp(i, app.Slug(), app.Permissions()); err != nil {
+		if _, file := webapp.FindRoute(path.Clean(c.Request().URL.Path)); file == "" {
+			if webapp.Permissions() != nil {
+				if err := permissions.ForceWebapp(i, webapp.Slug(), webapp.Permissions()); err != nil {
 					return err
 				}
 			}
 		}
-		return webapps.ServeAppFile(c, i, f, app)
+		return webapps.ServeAppFile(c, i, f, webapp)
 	})
 }
 

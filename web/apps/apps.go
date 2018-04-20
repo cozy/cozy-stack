@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -48,7 +49,7 @@ func (man *apiApp) Links() *jsonapi.LinksList {
 			links.Related = app.Instance.SubDomain(app.Slug()).String()
 		}
 	case (*apps.KonnManifest):
-		route = "konnectors"
+		route = "/konnectors/"
 		if app.Icon != "" {
 			links.Icon = "/konnectors/" + app.Slug() + "/icon"
 		}
@@ -179,6 +180,8 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 			w.Header().Set("Content-Type", typeTextEventStream)
 			w.WriteHeader(200)
 		}
+
+		permissionsAcked, _ := strconv.ParseBool(c.QueryParam("PermissionsAcked"))
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
 				Operation:  apps.Update,
@@ -187,6 +190,7 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 				Slug:       slug,
 				Registries: registries,
 
+				PermissionsAcked:    permissionsAcked,
 				OverridenParameters: overridenParameters,
 			},
 		)

@@ -91,16 +91,18 @@ type WebappManifest struct {
 	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
 	Tags        *json.RawMessage `json:"tags,omitempty"`
 
-	DocSlug        string          `json:"slug"`
-	DocState       State           `json:"state"`
-	DocSource      string          `json:"source"`
-	DocVersion     string          `json:"version"`
-	DocPermissions permissions.Set `json:"permissions"`
+	DocSlug          string          `json:"slug"`
+	DocState         State           `json:"state"`
+	DocSource        string          `json:"source"`
+	DocVersion       string          `json:"version"`
+	DocPermissions   permissions.Set `json:"permissions"`
+	AvailableVersion string          `json:"available_version,omitempty"`
 
 	Intents       []Intent      `json:"intents"`
 	Routes        Routes        `json:"routes"`
 	Services      Services      `json:"services"`
 	Notifications Notifications `json:"notifications"`
+	LatestVersion string        `json:"latest_version,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -190,6 +192,9 @@ func (m *WebappManifest) SetState(state State) { m.DocState = state }
 // SetVersion is part of the Manifest interface
 func (m *WebappManifest) SetVersion(version string) { m.DocVersion = version }
 
+// SetAvailableVersion is part of the Manifest interface
+func (m *WebappManifest) SetAvailableVersion(version string) { m.AvailableVersion = version }
+
 // AppType is part of the Manifest interface
 func (m *WebappManifest) AppType() AppType { return Webapp }
 
@@ -220,10 +225,10 @@ func (m *WebappManifest) Match(field, value string) bool {
 }
 
 // ReadManifest is part of the Manifest interface
-func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
+func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Manifest, error) {
 	var newManifest WebappManifest
 	if err := json.NewDecoder(r).Decode(&newManifest); err != nil {
-		return ErrBadManifest
+		return nil, ErrBadManifest
 	}
 
 	newManifest.SetID(m.ID())
@@ -243,8 +248,7 @@ func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) error
 		}
 	}
 
-	*m = newManifest
-	return nil
+	return &newManifest, nil
 }
 
 // Create is part of the Manifest interface

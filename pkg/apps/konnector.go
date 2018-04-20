@@ -43,16 +43,18 @@ type KonnManifest struct {
 
 	Parameters    *json.RawMessage `json:"parameters,omitempty"`
 	Notifications Notifications    `json:"notifications"`
+	LatestVersion string           `json:"latest_version,omitempty"`
 
 	// OnDeleteAccount can be used to specify a file path which will be executed
 	// when an account associated with the konnector is deleted.
 	OnDeleteAccount string `json:"on_delete_account,omitempty"`
 
-	DocSlug        string          `json:"slug"`
-	DocState       State           `json:"state"`
-	DocSource      string          `json:"source"`
-	DocVersion     string          `json:"version"`
-	DocPermissions permissions.Set `json:"permissions"`
+	DocSlug          string          `json:"slug"`
+	DocState         State           `json:"state"`
+	DocSource        string          `json:"source"`
+	DocVersion       string          `json:"version"`
+	DocPermissions   permissions.Set `json:"permissions"`
+	AvailableVersion string          `json:"available_version,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -128,6 +130,9 @@ func (m *KonnManifest) SetState(state State) { m.DocState = state }
 // SetVersion is part of the Manifest interface
 func (m *KonnManifest) SetVersion(version string) { m.DocVersion = version }
 
+// SetAvailableVersion is part of the Manifest interface
+func (m *KonnManifest) SetAvailableVersion(version string) { m.AvailableVersion = version }
+
 // AppType is part of the Manifest interface
 func (m *KonnManifest) AppType() AppType { return Konnector }
 
@@ -158,10 +163,10 @@ func (m *KonnManifest) Match(field, value string) bool {
 }
 
 // ReadManifest is part of the Manifest interface
-func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
+func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Manifest, error) {
 	var newManifest KonnManifest
 	if err := json.NewDecoder(r).Decode(&newManifest); err != nil {
-		return ErrBadManifest
+		return nil, ErrBadManifest
 	}
 
 	newManifest.SetID(m.ID())
@@ -174,8 +179,7 @@ func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 		newManifest.Parameters = m.Parameters
 	}
 
-	*m = newManifest
-	return nil
+	return &newManifest, nil
 }
 
 // Create is part of the Manifest interface
