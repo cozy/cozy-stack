@@ -1,13 +1,18 @@
 package sharing
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
 
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/lock"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -119,7 +124,7 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member) (bool, error) {
 // findNextFileToUpload uses the changes feed to find the next file that needs
 // to be uploaded. It returns a file document if there is one file to upload,
 // and the sequence number where it is in the changes feed.
-func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (*vfs.FileDoc, string, error) {
+func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (*couchdb.JSONDoc, string, error) {
 	for {
 		response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
 			DocType:     consts.Shared,
@@ -146,15 +151,120 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (*
 		if _, ok = info["binary"]; !ok {
 			continue
 		}
-		// TODO find the fileDoc
-		// TODO we need to also return _revisions?
-		return nil, since, nil
+		revisions, ok := r.Doc.Get("revisions").([]interface{})
+		if !ok {
+			continue
+		}
+		var file couchdb.JSONDoc
+		docID := strings.SplitN(r.DocID, "/", 2)[0]
+		if err = couchdb.GetDoc(inst, consts.Files, docID, &file); err != nil {
+			return nil, since, err
+		}
+		file.M["_revisions"] = revisions
+		return &file, since, nil
 	}
 	return nil, since, nil
 }
 
 // uploadFile uploads one file to the given member. It first try to just send
 // the metadata, and if it is not enough, it also send the binary.
-func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *vfs.FileDoc) error {
-	return ErrInternalServerError
+func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.JSONDoc) error {
+	creds := s.FindCredentials(m)
+	if creds == nil {
+		return ErrInvalidSharing
+	}
+	u, err := url.Parse(m.Instance)
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(file)
+	if err != nil {
+		return err
+	}
+
+	res, err := request.Req(&request.Options{
+		Method: http.MethodPut,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/io.cozy.files/" + file.ID() + "/metadata",
+		Headers: request.Headers{
+			"Accept":        "application/json",
+			"Content-Type":  "application/json",
+			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
+		},
+		Body: bytes.NewReader(body),
+	})
+	if err != nil {
+		return err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if err = creds.Refresh(inst, s, m); err != nil {
+			return err
+		}
+		res, err = request.Req(&request.Options{
+			Method: http.MethodPut,
+			Scheme: u.Scheme,
+			Domain: u.Host,
+			Path:   "/sharings/" + s.SID + "/io.cozy.files/" + file.ID() + "/metadata",
+			Headers: request.Headers{
+				"Accept":        "application/json",
+				"Content-Type":  "application/json",
+				"Authorization": "Bearer " + creds.AccessToken.AccessToken,
+			},
+			Body: bytes.NewReader(body),
+		})
+		if err != nil {
+			return err
+		}
+	}
+	defer res.Body.Close()
+	if res.StatusCode/100 == 5 {
+		return ErrInternalServerError
+	}
+	if res.StatusCode/100 != 2 {
+		return ErrClientError
+	}
+	if res.StatusCode == 204 {
+		return nil
+	}
+
+	var resBody map[string]string
+	if err = json.NewDecoder(res.Body).Decode(&resBody); err != nil {
+		return err
+	}
+
+	fs := inst.VFS()
+	fileDoc, err := fs.FileByID(file.ID())
+	if err != nil {
+		return err
+	}
+	content, err := fs.OpenFile(fileDoc)
+	if err != nil {
+		return err
+	}
+	defer content.Close()
+
+	// TODO send resBody["token"]
+	res2, err := request.Req(&request.Options{
+		Method: http.MethodPut,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/io.cozy.files/" + file.ID(),
+		Headers: request.Headers{
+			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
+			"Content-Type":  fileDoc.Mime,
+		},
+		Body: content,
+	})
+	if err != nil {
+		return err
+	}
+	if res2.StatusCode/100 == 5 {
+		return ErrInternalServerError
+	}
+	if res2.StatusCode/100 != 2 {
+		return ErrClientError
+	}
+	return nil
 }
