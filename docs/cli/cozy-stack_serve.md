@@ -42,10 +42,11 @@ example), you can use the --appdir flag like this:
       --assets string                    path to the directory with the assets (use the packed assets by default)
       --cache-url string                 URL for the cache, redis or in-memory
       --couchdb-url string               CouchDB URL (default "http://localhost:5984/")
+      --csp-whitelist string             Whitelisted domains for the default allowed origins of the Content Secury Policy
       --disable-csp                      Disable the Content Security Policy (only available for development)
       --doctypes string                  path to the directory with the doctypes (for developing/testing a remote doctype)
       --downloads-url string             URL for the download secret storage, redis or in-memory
-      --fs-url string                    filesystem url (default "file:///storage")
+      --fs-url string                    filesystem url (default "file:///home/nono/storage")
       --geodb string                     define the location of the database for IP -> City lookups (default ".")
   -h, --help                             help for serve
       --hooks string                     define the directory used for hook scripts (default ".")

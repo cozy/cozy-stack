@@ -26,17 +26,20 @@ $ cozy-stack instances add --dev --passphrase cozy --apps drive,photos,settings 
 ### Options
 
 ```
-      --apps strings         Apps to be preinstalled
-      --dev                  To create a development instance
-      --disk-quota string    The quota allowed to the instance's VFS
-      --email string         The email of the owner
-  -h, --help                 help for add
-      --locale string        Locale of the new cozy instance (default "en")
-      --passphrase string    Register the instance with this passphrase (useful for tests)
-      --public-name string   The public name of the owner
-      --settings string      A list of settings (eg context:foo,offer:premium)
-      --swift-cluster int    Specify a cluster number for swift
-      --tz string            The timezone for the user
+      --apps strings          Apps to be preinstalled
+      --context-name string   Context name of the instance
+      --dev                   To create a development instance
+      --disk-quota string     The quota allowed to the instance's VFS
+      --email string          The email of the owner
+  -h, --help                  help for add
+      --locale string         Locale of the new cozy instance (default "en")
+      --passphrase string     Register the instance with this passphrase (useful for tests)
+      --public-name string    The public name of the owner
+      --settings string       A list of settings (eg context:foo,offer:premium)
+      --swift-cluster int     Specify a cluster number for swift
+      --tos string            The TOS version signed
+      --tz string             The timezone for the user
+      --uuid string           The UUID of the instance
 ```
 
 ### Options inherited from parent commands

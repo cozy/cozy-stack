@@ -17,7 +17,8 @@ cozy-stack triggers [command] [flags]
 ### Options
 
 ```
-  -h, --help   help for triggers
+      --domain string   specify the domain name of the instance (default "cozy.tools:8080")
+  -h, --help            help for triggers
 ```
 
 ### Options inherited from parent commands
