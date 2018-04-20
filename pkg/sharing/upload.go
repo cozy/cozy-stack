@@ -3,8 +3,11 @@ package sharing
 import (
 	"fmt"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -95,11 +98,63 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member) (bool, error) {
 	}
 	inst.Logger().WithField("nspace", "upload").Debugf("lastSeq = %s", lastSeq)
 
-	seq := lastSeq // TODO WIP
+	file, seq, err := s.findNextFileToUpload(inst, lastSeq)
+	if err != nil {
+		return false, err
+	}
+	if file == nil {
+		if seq != lastSeq {
+			err = s.UpdateLastSequenceNumber(inst, m, "upload", seq)
+		}
+		return false, err
+	}
 
-	if seq == lastSeq {
-		return false, nil
+	if err = s.uploadFile(inst, m, file); err != nil {
+		return false, err
 	}
 
 	return true, s.UpdateLastSequenceNumber(inst, m, "upload", seq)
+}
+
+// findNextFileToUpload uses the changes feed to find the next file that needs
+// to be uploaded. It returns a file document if there is one file to upload,
+// and the sequence number where it is in the changes feed.
+func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (*vfs.FileDoc, string, error) {
+	for {
+		response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
+			DocType:     consts.Shared,
+			IncludeDocs: true,
+			Since:       since,
+			Limit:       1,
+		})
+		if err != nil {
+			return nil, since, err
+		}
+		since = response.LastSeq
+		if len(response.Results) == 0 {
+			break
+		}
+		r := response.Results[0]
+		infos, ok := r.Doc.Get("infos").(map[string]interface{})
+		if !ok {
+			continue
+		}
+		info, ok := infos[s.SID].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if _, ok = info["binary"]; !ok {
+			continue
+		}
+		// TODO find the fileDoc
+		// TODO we need to also return _revisions?
+		return nil, since, nil
+	}
+	return nil, since, nil
+}
+
+// uploadFile uploads one file to the given member. It first try to just send
+// the metadata, and if it is not enough, it also send the binary.
+func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *vfs.FileDoc) error {
+	return ErrInternalServerError
 }
