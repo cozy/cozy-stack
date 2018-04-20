@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -20,6 +21,10 @@ import (
 
 // MaxRetries is the maximal number of retries for a replicator
 const MaxRetries = 10
+
+// InitialBackoffPeriod is the initial duration to wait for the first retry
+// (each next retry will wait 4 times longer than its previous retry)
+const InitialBackoffPeriod = 15 * time.Second
 
 // BatchSize is the maximal number of documents mainpulated at once by the replicator
 const BatchSize = 100
@@ -53,33 +58,43 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 		}
 	}
 	if errm != nil {
-		s.retryReplicate(inst, errors+1)
+		s.retryReplicate(inst, errors)
 	}
 	return errm
 }
 
 // retryReplicate will add a job to retry a failed replication
 func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
+	backoff := InitialBackoffPeriod << uint(errors*2)
+	errors++
 	if errors == MaxRetries {
-		inst.Logger().Warnf("[sharing] Max retries reached")
+		inst.Logger().WithField("nspace", "replicator").Warnf("Max retries reached")
 		return
 	}
-	// TODO add a delay between retries
 	msg, err := jobs.NewMessage(&ReplicateMsg{
 		SharingID: s.SID,
 		Errors:    errors,
 	})
 	if err != nil {
-		inst.Logger().Warnf("[sharing] Error on retry to replicate: %s", err)
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Error on retry to replicate: %s", err)
 		return
 	}
-	_, err = jobs.System().PushJob(&jobs.JobRequest{
+	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
 		Domain:     inst.Domain,
+		Type:       "@in",
 		WorkerType: "share-replicate",
 		Message:    msg,
+		Arguments:  backoff.String(),
 	})
 	if err != nil {
-		inst.Logger().Warnf("[sharing] Error on retry to replicate: %s", err)
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Error on retry to replicate: %s", err)
+		return
+	}
+	if err = jobs.System().AddTrigger(t); err != nil {
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Error on retry to replicate: %s", err)
 	}
 }
 
@@ -101,7 +116,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	if err != nil {
 		return err
 	}
-	inst.Logger().Debugf("[replicator] lastSeq = %s\n", lastSeq)
+	inst.Logger().WithField("nspace", "replicator").Debugf("lastSeq = %s", lastSeq)
 
 	changes, ruleIndexes, seq, err := s.callChangesFeed(inst, lastSeq)
 	if err != nil {
@@ -110,7 +125,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	if seq == lastSeq {
 		return nil
 	}
-	inst.Logger().Debugf("[replicator] changes = %#v\n", changes)
+	inst.Logger().WithField("nspace", "replicator").Debugf("changes = %#v", changes)
 	// TODO filter the changes according to the sharing rules
 
 	if len(*changes) > 0 {
@@ -123,13 +138,13 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 				return err
 			}
 		}
-		inst.Logger().Debugf("[replicator] missings = %#v\n", missings)
+		inst.Logger().WithField("nspace", "replicator").Debugf("missings = %#v", missings)
 
 		docs, err := s.getMissingDocs(inst, missings)
 		if err != nil {
 			return err
 		}
-		inst.Logger().Debugf("[replicator] docs = %#v\n", docs)
+		inst.Logger().WithField("nspace", "replicator").Debugf("docs = %#v", docs)
 
 		err = s.sendBulkDocs(inst, m, creds, docs, ruleIndexes)
 		if err != nil {
@@ -465,7 +480,7 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 		return err
 	}
 	if files, ok := (*docs)[consts.Files]; ok {
-		// TODO sort the files (by increasing depth for adds/updates, and then by decreasing depth for deletions)
+		s.SortFilesToSent(files)
 		for i, file := range files {
 			files[i] = s.TransformFileToSent(file, creds.XorKey, ruleIndexes)
 		}
@@ -526,7 +541,7 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 	var refs []*SharedRef
 
 	for doctype, docs := range payload {
-		inst.Logger().Debugf("[bulk_docs] Apply %s: %#v", doctype, docs)
+		inst.Logger().WithField("nspace", "replicator").Debugf("Apply bulk docs %s: %#v", doctype, docs)
 		if doctype == consts.Files {
 			err := s.ApplyBulkFiles(inst, docs)
 			if err != nil {

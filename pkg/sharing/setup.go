@@ -48,7 +48,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 			}
 			stack := make([]byte, 4<<10) // 4 KB
 			length := runtime.Stack(stack, false)
-			log := inst.Logger().WithField("panic", true)
+			log := inst.Logger().WithField("panic", true).WithField("nspace", "sharing")
 			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 		}
 	}()
@@ -63,11 +63,13 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	defer mu.Unlock()
 
 	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
-		inst.Logger().Warnf("[sharing] Can't ensure io.cozy.shared exists (%s): %s", s.SID, err)
+		inst.Logger().WithField("nspace", "sharing").
+			Warnf("Can't ensure io.cozy.shared exists (%s): %s", s.SID, err)
 	}
 
 	if err := s.AddTrackTriggers(inst); err != nil {
-		inst.Logger().Warnf("[sharing] Errors on setup of track triggers (%s): %s", s.SID, err)
+		inst.Logger().WithField("nspace", "sharing").
+			Warnf("Errors on setup of track triggers (%s): %s", s.SID, err)
 	}
 	// TODO add triggers for rules that can revoke the sharing
 	for i, rule := range s.Rules {
@@ -76,11 +78,13 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		}
 	}
 	if err := s.AddReplicateTrigger(inst); err != nil {
-		inst.Logger().Warnf("[sharing] Error on setup replicate trigger (%s): %s", s.SID, err)
+		inst.Logger().WithField("nspace", "sharing").
+			Warnf("Error on setup replicate trigger (%s): %s", s.SID, err)
 	}
 	if err := s.ReplicateTo(inst, m, true); err != nil {
-		inst.Logger().Warnf("[sharing] Error on initial replication (%s): %s", s.SID, err)
-		s.retryReplicate(inst, 1)
+		inst.Logger().WithField("nspace", "sharing").
+			Warnf("Error on initial replication (%s): %s", s.SID, err)
+		s.retryReplicate(inst, 0)
 	}
 }
 
@@ -145,6 +149,7 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 		Arguments:  args,
 		Debounce:   "5s",
 	})
+	inst.Logger().WithField("nspace", "sharing").Warnf("Create trigger %#v", t)
 	if err != nil {
 		return err
 	}
@@ -189,12 +194,15 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 		if rule.DocType == consts.Files {
 			// TODO add a test for this case
 			// TODO support rules with several values
-			err := vfs.WalkByID(inst.VFS(), rule.Values[0], func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+			fileID := rule.Values[0]
+			err := vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 				if err != nil {
 					return err
 				}
 				if dir != nil {
-					docs = append(docs, dirToJSONDoc(dir))
+					if dir.DocID != fileID {
+						docs = append(docs, dirToJSONDoc(dir))
+					}
 				} else if file != nil {
 					docs = append(docs, fileToJSONDoc(file))
 				}

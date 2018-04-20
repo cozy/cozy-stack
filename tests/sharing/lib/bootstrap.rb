@@ -11,7 +11,7 @@ class Bootstrap
     end
     @sharing.members << owner
     recipients.each do |r|
-      contact = owner.create_doc Contact.new given_name: r.name
+      contact = Contact.create owner, given_name: r.name
       @sharing.members << contact
     end
     owner.register @sharing
@@ -28,7 +28,7 @@ class Bootstrap
 
   def self.push_folder
     owner = Instance.create name: "Alice"
-    object = owner.create_doc Folder.new
+    object = Folder.create owner
     recipient = Instance.create name: "Bob"
     [owner, recipient].map { |i| i.install_app "drive" }
     Bootstrap.new owner, [recipient], [object]

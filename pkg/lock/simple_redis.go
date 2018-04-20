@@ -118,7 +118,7 @@ func (rl *redisLock) Unlock() {
 	_, err := rl.client.Eval(luaRelease, []string{rl.key}, rl.token).Result()
 	rl.token = ""
 	if err != nil {
-		rl.log.Warnf("[redis-lock] Failed to unlock: %s", err.Error())
+		rl.log.Warnf("Failed to unlock: %s", err.Error())
 	}
 }
 
@@ -129,7 +129,7 @@ func makeRedisSimpleLock(c subRedisInterface, ns string) *redisLock {
 	return &redisLock{
 		client: c,
 		key:    basicLockNS + ns,
-		log:    logger.WithDomain(ns),
+		log:    logger.WithDomain(ns).WithField("nspace", "redis-lock"),
 		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }

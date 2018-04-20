@@ -64,7 +64,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 	}
 
 	log := ctx.Logger()
-	log.Debugf("thumbnail: %s %s", img.Verb, img.Doc.ID())
+	log.WithField("nspace", "thumbnail").Debugf("%s %s", img.Verb, img.Doc.ID())
 	i, err := instance.Get(ctx.Domain())
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 		return generateThumbnails(ctx, i, &img.Doc)
 	case "UPDATED":
 		if err = removeThumbnails(i, &img.Doc); err != nil {
-			log.Debugf("failed to remove thumbnails for %s: %s", img.Doc.ID(), err)
+			log.WithField("nspace", "thumbnail").Debugf("failed to remove thumbnails for %s: %s", img.Doc.ID(), err)
 		}
 		return generateThumbnails(ctx, i, &img.Doc)
 	case "DELETED":

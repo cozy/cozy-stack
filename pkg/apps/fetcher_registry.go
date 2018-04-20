@@ -35,7 +35,7 @@ func (f *registryFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	}
 	version, err := registry.GetLatestVersion(slug, channel, f.registries)
 	if err != nil {
-		f.log.Infof("[apps] Could not fetch manifest for %s: %s", src.String(), err.Error())
+		f.log.Infof("Could not fetch manifest for %s: %s", src.String(), err.Error())
 		return nil, ErrManifestNotReachable
 	}
 	f.version = version

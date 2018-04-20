@@ -63,7 +63,7 @@ func lookupIP(ip, locale string) (city, country string) {
 	}
 	db, err := maxminddb.Open(geodb)
 	if err != nil {
-		logger.WithNamespace("sessions").Errorf("[geodb] cannot open the geodb: %s", err)
+		logger.WithNamespace("sessions").Errorf("cannot open the geodb: %s", err)
 		return
 	}
 	defer db.Close()
@@ -79,7 +79,7 @@ func lookupIP(ip, locale string) (city, country string) {
 
 	err = db.Lookup(net.ParseIP(ip), &record)
 	if err != nil {
-		logger.WithNamespace("sessions").Infof("[geodb] cannot lookup %s: %s", ip, err)
+		logger.WithNamespace("sessions").Infof("cannot lookup %s: %s", ip, err)
 		return
 	}
 	if c, ok := record.City.Names[locale]; ok {

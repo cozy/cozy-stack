@@ -36,7 +36,6 @@ func Worker(ctx *jobs.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(msg); err != nil {
 		return err
 	}
-	ctx.Logger().Infof("[jobs] unzip %s in %s", msg.Zip, msg.Destination)
 	i, err := instance.Get(ctx.Domain())
 	if err != nil {
 		return err

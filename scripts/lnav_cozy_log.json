@@ -1,0 +1,61 @@
+{
+  "cozy_log": {
+    "title": "Cozy-stack",
+    "url":
+      "https://github.com/cozy/cozy-stack/blob/master/scripts/lnav_cozy_log.json",
+    "regex": {
+      "std": {
+        "pattern":
+          "^time=\"(?<time>[\\dTZ:+-]+)\" level=(?<level>\\w+) msg=\"(?<message>.*)\" (domain=\"?(?<domain>[\\w:.]+)\"? ?)?(nspace=(?<nspace>[\\w-]+))?"
+      },
+      "http": {
+        "pattern":
+          "^time=(?<time>[\\dTZ:+-]+)\\s+status=(?<status>\\d+)\\s+method=(?<method>\\w+)\\s+host=(?<domain>\\w+)\\s+uri=(?<uri>\\w+)"
+      }
+    },
+    "timestamp-field": "time",
+    "sample": [
+      {
+        "line":
+          "time=\"2018-04-18T14:26:12+02:00\" level=debug msg=\"Start worker sendmail/0\" nspace=jobs"
+      },
+      {
+        "line":
+          "time=\"2018-04-18T14:26:23+02:00\" level=debug msg=\"request: GET alice-test-cozy-tools-8081%2Fio-cozy-shared/_local/sharing-be7813ea5927dc06a5b044ca47010ffe-1 \" domain=\"alice.test.cozy.tools:8081\""
+      }
+    ],
+    "value": {
+      "time": {
+        "kind": "string",
+        "identifier": true
+      },
+      "level": {
+        "kind": "string",
+        "identifier": true
+      },
+      "message": {
+        "kind": "string"
+      },
+      "nspace": {
+        "kind": "string",
+        "identifier": true
+      },
+      "domain": {
+        "kind": "string",
+        "identifier": true
+      },
+      "status": {
+        "kind": "string",
+        "identifier": true
+      },
+      "method": {
+        "kind": "integer",
+        "identifier": true
+      },
+      "uri": {
+        "kind": "string",
+        "identifier": true
+      }
+    }
+  }
+}

@@ -13,8 +13,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
-	"github.com/gorilla/websocket"
 	"github.com/cozy/echo"
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -152,7 +152,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 		cmd := &command{}
 		if err = ws.ReadJSON(cmd); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
-				logger.WithDomain(ds.Domain).Infof("ws error: %s", err)
+				logger.WithDomain(ds.Domain).WithField("nspace", "realtime").Infof("Error: %s", err)
 			}
 			break
 		}
@@ -176,7 +176,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			err = ds.Watch(cmd.Payload.Type, cmd.Payload.ID)
 		}
 		if err != nil {
-			logger.WithDomain(ds.Domain).Warnf("realtime error: %s", err)
+			logger.WithDomain(ds.Domain).WithField("nspace", "realtime").Warnf("Error: %s", err)
 		}
 	}
 }

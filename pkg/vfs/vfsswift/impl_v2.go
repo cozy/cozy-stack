@@ -61,7 +61,7 @@ func NewV2(domain string, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.E
 		version:       swiftV2ContainerPrefixCozy + domain + versionSuffix,
 		dataContainer: swiftV2ContainerPrefixData + domain,
 		mu:            mu,
-		log:           logger.WithDomain(domain),
+		log:           logger.WithDomain(domain).WithField("nspace", "vfsswift"),
 	}, nil
 }
 
@@ -110,44 +110,44 @@ func (sfs *swiftVFSV2) InitFs() error {
 	}
 	if err := sfs.c.VersionContainerCreate(sfs.container, sfs.version); err != nil {
 		if err != swift.Forbidden {
-			sfs.log.Errorf("[vfsswift] Could not create container %s: %s",
+			sfs.log.Errorf("Could not create container %s: %s",
 				sfs.container, err.Error())
 			return err
 		}
-		sfs.log.Errorf("[vfsswift] Could not activate versioning for container %s: %s",
+		sfs.log.Errorf("Could not activate versioning for container %s: %s",
 			sfs.container, err.Error())
 		if err = sfs.c.ContainerDelete(sfs.version); err != nil {
 			return err
 		}
 	}
 	if err := sfs.c.ContainerCreate(sfs.dataContainer, nil); err != nil {
-		sfs.log.Errorf("[vfsswift] Could not create container %s: %s",
+		sfs.log.Errorf("Could not create container %s: %s",
 			sfs.dataContainer, err.Error())
 		return err
 	}
-	sfs.log.Infof("[vfsswift] Created container %s", sfs.container)
+	sfs.log.Infof("Created container %s", sfs.container)
 	return nil
 }
 
 func (sfs *swiftVFSV2) Delete() error {
 	containerMeta := swift.Metadata{"to-be-deleted": "1"}.ContainerHeaders()
-	sfs.log.Infof("[vfsswift] Marking containers %q, %q and %q as to-be-deleted",
+	sfs.log.Infof("Marking containers %q, %q and %q as to-be-deleted",
 		sfs.container, sfs.version, sfs.dataContainer)
 	err1 := sfs.c.ContainerUpdate(sfs.container, containerMeta)
 	err2 := sfs.c.ContainerUpdate(sfs.dataContainer, containerMeta)
 	err3 := sfs.c.ContainerUpdate(sfs.version, containerMeta)
 	if err1 != nil {
-		sfs.log.Errorf("[vfsswift] Could not mark container %q as to-be-deleted: %s",
+		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.container, err1)
 		return err1
 	}
 	if err2 != nil {
-		sfs.log.Errorf("[vfsswift] Could not mark container %q as to-be-deleted: %s",
+		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.dataContainer, err2)
 		return err2
 	}
 	if err3 != nil {
-		sfs.log.Errorf("[vfsswift] Could not mark container %q as to-be-deleted: %s",
+		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.version, err3)
 		return err3
 	}

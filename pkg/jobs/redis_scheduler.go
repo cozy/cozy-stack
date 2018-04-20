@@ -99,7 +99,7 @@ func (s *redisScheduler) pollLoop() {
 		case <-ticker.C:
 			now := time.Now().UTC().Unix()
 			if err := s.PollScheduler(now); err != nil {
-				s.log.Warnf("[scheduler] Failed to poll redis: %s", err)
+				s.log.Warnf("Failed to poll redis: %s", err)
 			}
 		}
 	}
@@ -132,14 +132,14 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 		key := eventsKey(event.Domain)
 		m, err := s.client.HGetAll(key).Result()
 		if err != nil {
-			s.log.Errorf("[scheduler] Could not fetch redis set %s: %s",
+			s.log.Errorf("Could not fetch redis set %s: %s",
 				key, err.Error())
 			continue
 		}
 		for triggerID, args := range m {
 			rule, err := permissions.UnmarshalRuleString(args)
 			if err != nil {
-				s.log.Warnf("[scheduler] Coud not unmarshal rule %s: %s",
+				s.log.Warnf("Coud not unmarshal rule %s: %s",
 					key, err.Error())
 				continue
 			}
@@ -148,7 +148,7 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 			}
 			t, err := s.GetTrigger(event.Domain, triggerID)
 			if err != nil {
-				s.log.Warnf("[scheduler] Could not fetch @event trigger %s %s: %s",
+				s.log.Warnf("Could not fetch @event trigger %s %s: %s",
 					event.Domain, triggerID, err.Error())
 				continue
 			}
@@ -163,20 +163,20 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 					})
 					continue
 				} else {
-					s.log.Warnf("[scheduler] Trigger %s %s has an invalid debounce: %s",
+					s.log.Warnf("Trigger %s %s has an invalid debounce: %s",
 						et.infos.Domain, et.infos.TID, et.infos.Debounce)
 					continue
 				}
 			}
 			jobRequest, err := et.Infos().JobRequestWithEvent(event)
 			if err != nil {
-				s.log.Warnf("[scheduler] Could not encode realtime event %s %s: %s",
+				s.log.Warnf("Could not encode realtime event %s %s: %s",
 					event.Domain, triggerID, err.Error())
 				continue
 			}
 			_, err = s.broker.PushJob(jobRequest)
 			if err != nil {
-				s.log.Warnf("[scheduler] Could not push job trigger by event %s %s: %s",
+				s.log.Warnf("Could not push job trigger by event %s %s: %s",
 					event.Domain, triggerID, err.Error())
 				continue
 			}
