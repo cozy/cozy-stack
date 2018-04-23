@@ -24,7 +24,7 @@ type sharingIndexer struct {
 func NewSharingIndexer(inst *instance.Instance, bulkRevs *bulkRevs) vfs.Indexer {
 	return &sharingIndexer{
 		db:       inst,
-		indexer:  inst.VFS(),
+		indexer:  vfs.NewCouchdbIndexer(inst),
 		bulkRevs: bulkRevs,
 	}
 }
