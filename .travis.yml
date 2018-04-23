@@ -27,8 +27,5 @@ before_script:
 script:
   - bash $COMMAND
 
-after_success:
-  - if [[ "$CODECOV" == "true" ]]; then cd tests && bash <(curl -s https://codecov.io/bash); fi
-
 after_failure:
   - docker ps -a
