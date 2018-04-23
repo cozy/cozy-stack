@@ -159,7 +159,8 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 // UpdateApp is used to update an application.
 func (c *Client) UpdateApp(opts *AppOptions) (*AppManifest, error) {
 	q := url.Values{
-		"Source": {opts.SourceURL},
+		"Source":           {opts.SourceURL},
+		"PermissionsAcked": {strconv.FormatBool(true)},
 	}
 	if opts.OverridenParameters != nil {
 		b, err := json.Marshal(opts.OverridenParameters)
