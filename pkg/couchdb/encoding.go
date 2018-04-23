@@ -49,3 +49,29 @@ func (vr *ViewRequest) Values() (url.Values, error) {
 
 	return v, nil
 }
+
+// Values transforms a AllDocsRequest into a query string suitable for couchdb
+// ie, where non-scalar fields have been JSON+URL encoded.
+func (adr *AllDocsRequest) Values() (url.Values, error) {
+
+	var v url.Values
+
+	v, err := query.Values(adr)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(adr.Keys) > 0 {
+		if err := maybeSet(v, "keys", adr.Keys); err != nil {
+			return nil, err
+		}
+	}
+	if err := maybeSet(v, "startkey", adr.StartKey); err != nil {
+		return nil, err
+	}
+	if err := maybeSet(v, "endkey", adr.EndKey); err != nil {
+		return nil, err
+	}
+
+	return v, nil
+}

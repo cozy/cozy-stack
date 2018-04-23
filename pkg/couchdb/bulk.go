@@ -62,7 +62,7 @@ func CountAllDocs(db Database, doctype string) (int, error) {
 // GetAllDocs returns all documents of a specified doctype. It filters
 // out the possible _design document.
 func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) error {
-	v, err := query.Values(req)
+	v, err := req.Values()
 	if err != nil {
 		return err
 	}
@@ -74,6 +74,9 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 		err = makeRequest(db, doctype, http.MethodGet, url, nil, &response)
 	} else {
 		v.Del("keys")
+		// startkey and endkey are not compatible with keys parameter
+		v.Del("startkey")
+		v.Del("endkey")
 		url := "_all_docs?" + v.Encode()
 		body := struct {
 			Keys []string `json:"keys"`
