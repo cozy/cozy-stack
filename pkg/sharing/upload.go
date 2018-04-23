@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -180,6 +181,7 @@ func (s *Sharing) createUploadKey(inst *instance.Instance, target *vfs.FileDoc) 
 
 // SyncFile tries to synchroniza a file with just the metadata. If it can't,
 // it will return a key to upload the content.
+// TODO _revisions is missing in vfs.FileDoc
 func (s *Sharing) SyncFile(inst *instance.Instance, target *vfs.FileDoc) (*KeyToUpload, error) {
 	fs := inst.VFS()
 	current, err := fs.FileByID(target.DocID)
@@ -215,6 +217,8 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.J
 	if err != nil {
 		return err
 	}
+	origFileID := file.ID()
+	// TODO TransformFileToSent
 	body, err := json.Marshal(file)
 	if err != nil {
 		return err
@@ -273,7 +277,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.J
 	}
 
 	fs := inst.VFS()
-	fileDoc, err := fs.FileByID(file.ID())
+	fileDoc, err := fs.FileByID(origFileID)
 	if err != nil {
 		return err
 	}
@@ -304,4 +308,33 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.J
 		return ErrClientError
 	}
 	return nil
+}
+
+// HandleFileUpload is used to receive a file upload when synchronizing just
+// the metadata was not enough.
+func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) error {
+	newdoc := getCache().Get(inst.Domain, key)
+	if newdoc == nil {
+		return ErrMissingFileMetadata
+	}
+
+	indexer := NewSharingIndexer(inst, nil) // TODO
+	fs := inst.VFS().UseSharingIndexer(indexer)
+	olddoc, err := fs.FileByID(newdoc.ID())
+	if err != nil {
+		return err
+	}
+	file, err := fs.CreateFile(newdoc, olddoc)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+	_, err = io.Copy(file, body)
+	// TODO update the io.cozy.shared reference?
+	return err
 }

@@ -324,6 +324,8 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case sharing.ErrInternalServerError:
 		return jsonapi.InternalServerError(err)
+	case sharing.ErrMissingFileMetadata:
+		return jsonapi.NotFound(err)
 	}
 	return err
 }
