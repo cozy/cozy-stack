@@ -38,22 +38,35 @@ type AppManifest struct {
 		Screenshots *json.RawMessage `json:"screenshots,omitempty"`
 		Tags        *json.RawMessage `json:"tags,omitempty"`
 
-		Slug        string           `json:"slug"`
-		State       string           `json:"state"`
-		Source      string           `json:"source"`
-		Version     string           `json:"version"`
-		Permissions *permissions.Set `json:"permissions"`
+		Frequency    string           `json:"frequency,omitempty"`
+		DataTypes    *json.RawMessage `json:"data_types,omitempty"`
+		Doctypes     *json.RawMessage `json:"doctypes,omitempty"`
+		Fields       *json.RawMessage `json:"fields,omitempty"`
+		Messages     *json.RawMessage `json:"messages,omitempty"`
+		OAuth        *json.RawMessage `json:"oauth,omitempty"`
+		TimeInterval *json.RawMessage `json:"time_interval,omitempty"`
+
+		Slug             string           `json:"slug"`
+		State            string           `json:"state"`
+		Source           string           `json:"source"`
+		Version          string           `json:"version"`
+		Permissions      *permissions.Set `json:"permissions"`
+		AvailableVersion string           `json:"available_version,omitempty"`
+
+		Parameters json.RawMessage `json:"parameters,omitempty"`
 
 		Intents []struct {
 			Action string   `json:"action"`
 			Types  []string `json:"type"`
 			Href   string   `json:"href"`
 		} `json:"intents"`
+
 		Routes *map[string]struct {
 			Folder string `json:"folder"`
 			Index  string `json:"index"`
 			Public bool   `json:"public"`
 		} `json:"routes,omitempty"`
+
 		Services *map[string]struct {
 			Type           string `json:"type"`
 			File           string `json:"file"`
@@ -76,18 +89,6 @@ type AppManifest struct {
 		UpdatedAt time.Time `json:"updated_at"`
 
 		Error string `json:"error,omitempty"`
-
-		// Konnectors
-
-		Frequency    string           `json:"frequency,omitempty"`
-		DataTypes    *json.RawMessage `json:"data_types,omitempty"`
-		Doctypes     *json.RawMessage `json:"doctypes,omitempty"`
-		Fields       *json.RawMessage `json:"fields,omitempty"`
-		Messages     *json.RawMessage `json:"messages,omitempty"`
-		OAuth        *json.RawMessage `json:"oauth,omitempty"`
-		TimeInterval *json.RawMessage `json:"time_interval,omitempty"`
-
-		Parameters json.RawMessage `json:"parameters,omitempty"`
 	} `json:"attributes,omitempty"`
 }
 

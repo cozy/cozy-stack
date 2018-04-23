@@ -33,17 +33,16 @@ type KonnManifest struct {
 	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
 	Tags        *json.RawMessage `json:"tags,omitempty"`
 
-	Frequency    string           `json:"frequency"`
-	DataTypes    *json.RawMessage `json:"data_types"`
-	Doctypes     *json.RawMessage `json:"doctypes"`
-	Fields       *json.RawMessage `json:"fields"`
-	Messages     *json.RawMessage `json:"messages"`
-	OAuth        *json.RawMessage `json:"oauth"`
-	TimeInterval *json.RawMessage `json:"time_interval"`
+	Frequency    string           `json:"frequency,omitempty"`
+	DataTypes    *json.RawMessage `json:"data_types,omitempty"`
+	Doctypes     *json.RawMessage `json:"doctypes,omitempty"`
+	Fields       *json.RawMessage `json:"fields,omitempty"`
+	Messages     *json.RawMessage `json:"messages,omitempty"`
+	OAuth        *json.RawMessage `json:"oauth,omitempty"`
+	TimeInterval *json.RawMessage `json:"time_interval,omitempty"`
 
 	Parameters    *json.RawMessage `json:"parameters,omitempty"`
 	Notifications Notifications    `json:"notifications"`
-	LatestVersion string           `json:"latest_version,omitempty"`
 
 	// OnDeleteAccount can be used to specify a file path which will be executed
 	// when an account associated with the konnector is deleted.

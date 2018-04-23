@@ -102,7 +102,6 @@ type WebappManifest struct {
 	Routes        Routes        `json:"routes"`
 	Services      Services      `json:"services"`
 	Notifications Notifications `json:"notifications"`
-	LatestVersion string        `json:"latest_version,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
