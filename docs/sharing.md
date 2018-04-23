@@ -576,6 +576,31 @@ Content-Type: application/json
 Authorization: Bearer ...
 ```
 
+```json
+{
+  "_id": "4b24ab130b2538b7b444fc65430198ad",
+  "_rev": "1-356bf77c03baa1da851a2be1f06aba81",
+  "type": "file",
+  "name": "cloudy.jpg",
+  "dir_id": "4b24ab130b2538b7b444fc65430188cd",
+  "created_at": "2018-01-03T16:10:36.885807013+01:00",
+  "updated_at": "2018-01-03T16:10:36.885807013+01:00",
+  "size": "84980",
+  "md5sum": "SuRJOiD/QPwDUpKpQujcVA==",
+  "mime": "image/jpeg",
+  "class": "image",
+  "executable": false,
+  "trashed": false,
+  "tags": [],
+  "metadata": {
+    "datetime": "2018-01-03T16:10:36.89118949+01:00",
+    "extractor_version": 2,
+    "height": 1200,
+    "width": 1600
+  }
+}
+```
+
 #### Response
 
 If only the metadata has changed (not the content), the response will be a

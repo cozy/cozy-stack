@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
@@ -183,10 +184,13 @@ func (s *Sharing) createUploadKey(inst *instance.Instance, target *vfs.FileDoc) 
 // it will return a key to upload the content.
 // TODO _revisions is missing in vfs.FileDoc
 func (s *Sharing) SyncFile(inst *instance.Instance, target *vfs.FileDoc) (*KeyToUpload, error) {
+	if len(target.MD5Sum) == 0 {
+		return nil, vfs.ErrInvalidHash
+	}
 	fs := inst.VFS()
 	current, err := fs.FileByID(target.DocID)
 	if err != nil {
-		if couchdb.IsNotFoundError(err) {
+		if err == os.ErrNotExist {
 			return s.createUploadKey(inst, target)
 		}
 		return nil, err
@@ -321,7 +325,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	indexer := NewSharingIndexer(inst, nil) // TODO
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	olddoc, err := fs.FileByID(newdoc.ID())
-	if err != nil {
+	if err != nil && err != os.ErrNotExist {
 		return err
 	}
 	file, err := fs.CreateFile(newdoc, olddoc)

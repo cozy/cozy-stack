@@ -21,6 +21,8 @@ import (
 var tsR *httptest.Server
 var replInstance *instance.Instance
 var replSharingID, replAccessToken string
+var fileSharingID, fileAccessToken string
+var fileOneID string
 
 const replDoctype = "io.cozy.replicator.tests"
 
@@ -258,4 +260,93 @@ func TestBulkDocs(t *testing.T) {
 
 	assertSharedDoc(t, sid1, "3-ccc")
 	assertSharedDoc(t, sid2, "3-fff")
+}
+
+// It's not really a test, more a setup for the io.cozy.files tests
+func TestCreateSharingForUploadFileTest(t *testing.T) {
+	fileOneID = uuidv4()
+	ruleOne := sharing.Rule{
+		Title:    "file one",
+		DocType:  "io.cozy.files",
+		Selector: "",
+		Values:   []string{fileOneID},
+		Add:      "push",
+		Update:   "push",
+		Remove:   "push",
+	}
+	s := sharing.Sharing{
+		Description: "upload files tests",
+		Rules:       []sharing.Rule{ruleOne},
+	}
+	assert.NoError(t, s.BeOwner(replInstance, ""))
+	s.Members = append(s.Members, sharing.Member{
+		Status:   sharing.MemberStatusReady,
+		Name:     "J. Doe",
+		Email:    "j.doe@example.net",
+		Instance: "https://j.example.net/",
+	})
+	s.Credentials = append(s.Credentials, sharing.Credentials{})
+	_, err := s.Create(replInstance)
+	assert.NoError(t, err)
+	fileSharingID = s.SID
+
+	cli, err := sharing.CreateOAuthClient(replInstance, &s.Members[1])
+	assert.NoError(t, err)
+	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
+	token, err := sharing.CreateAccessToken(replInstance, cli, s.SID)
+	assert.NoError(t, err)
+	s.Credentials[0].AccessToken = token
+	assert.NoError(t, couchdb.UpdateDoc(replInstance, &s))
+	fileAccessToken = token.AccessToken
+}
+
+func TestUploadNewFile(t *testing.T) {
+	assert.NotEmpty(t, fileSharingID)
+	assert.NotEmpty(t, fileAccessToken)
+	assert.NotEmpty(t, fileOneID)
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"_id":  fileOneID,
+		"_rev": "1-5f9ba207fefdc250e35f7cd866c84cc6",
+		"_revisions": map[string]interface{}{
+			"start": 1,
+			"ids":   []string{"5f9ba207fefdc250e35f7cd866c84cc6"},
+		},
+		"type":       "file",
+		"name":       "hello.txt",
+		"created_at": "2018-04-23T18:11:42.343937292+02:00",
+		"updated_at": "2018-04-23T18:11:42.343937292+02:00",
+		"size":       "6",
+		"md5sum":     "WReFt5RgHiErJg4lklY2/Q==",
+		"mime":       "text/plain",
+		"class":      "text",
+		"executable": false,
+		"trashed":    false,
+		"tags":       []string{},
+	})
+	r := bytes.NewReader(body)
+	u := tsR.URL + "/sharings/" + fileSharingID + "/io.cozy.files/" + fileOneID + "/metadata"
+	req, err := http.NewRequest(http.MethodPut, u, r)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAccept, "application/json")
+	req.Header.Add(echo.HeaderContentType, "application/json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+fileAccessToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	defer res.Body.Close()
+	var key map[string]string
+	assert.NoError(t, json.NewDecoder(res.Body).Decode(&key))
+	assert.NotEmpty(t, key["key"])
+
+	r2 := strings.NewReader("world\n")
+	u2 := tsR.URL + "/sharings/" + fileSharingID + "/io.cozy.files/" + key["key"]
+	req2, err := http.NewRequest(http.MethodPut, u2, r2)
+	assert.NoError(t, err)
+	req2.Header.Add(echo.HeaderContentType, "text/plain")
+	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+fileAccessToken)
+	res2, err := http.DefaultClient.Do(req2)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res2.StatusCode)
+	defer res.Body.Close()
 }
