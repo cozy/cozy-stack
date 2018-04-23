@@ -9,10 +9,7 @@ import (
 	"github.com/cozy/echo"
 )
 
-type InfoByDocType struct {
-	included []jsonapi.Object
-}
-
+// InfoByDocTypeData returns the sharings info as included in the JSON-API format
 func InfoByDocTypeData(c echo.Context, statusCode int, sharings []*APISharing) error {
 	included := make([]jsonapi.Object, len(sharings))
 

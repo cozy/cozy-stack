@@ -112,23 +112,26 @@ func GetSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, as, nil)
 }
 
-// GetSharingsInfoByDocType returns
+// GetSharingsInfoByDocType returns, for a given doctype, all the sharing
+// information, i.e. the involved sharings and the shared documents
 func GetSharingsInfoByDocType(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	docType := c.Param("doctype")
-
 	sharingIDs, err := sharing.GetSharingsByDocType(inst, docType)
 	if err != nil {
 		return wrapErrors(err)
 	}
-	sharings := make([]*sharing.APISharing, len(sharingIDs))
+	res := make([]*sharing.APISharing, len(sharingIDs))
 
-	for i, sharingID := range sharingIDs {
-		s, err := sharing.FindSharing(inst, sharingID)
-		if err != nil {
+	sharings, err := sharing.FindSharings(inst, sharingIDs)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	for i, s := range sharings {
+		if err = checkGetPermissions(c, s); err != nil {
 			return wrapErrors(err)
 		}
-		docs, err := sharing.GetSharedDocsBySharingID(inst, sharingID)
+		docs, err := sharing.GetSharedDocsBySharingID(inst, s.ID())
 		if err != nil {
 			return wrapErrors(err)
 		}
@@ -137,10 +140,9 @@ func GetSharingsInfoByDocType(c echo.Context) error {
 			Credentials: nil,
 			SharedDocs:  docs,
 		}
-		sharings[i] = as
+		res[i] = as
 	}
-
-	return sharing.InfoByDocTypeData(c, http.StatusOK, sharings)
+	return sharing.InfoByDocTypeData(c, http.StatusOK, res)
 }
 
 // AnswerSharing is used to exchange credentials between 2 cozys, after the
