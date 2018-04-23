@@ -5,6 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/sharing"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	perm "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
@@ -62,11 +63,39 @@ func BulkDocs(c echo.Context) error {
 	return c.JSON(http.StatusOK, []interface{}{})
 }
 
+// SyncFile will try to synchronize a file from just its metadata. If it's not
+// possible, it will respond with a key that allow to send the content to
+// finish the synchronization.
+func SyncFile(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		inst.Logger().WithField("nspace", "replicator").Debugf("Sharing was not found: %s", err)
+		return wrapErrors(err)
+	}
+	var fileDoc *vfs.FileDoc
+	if err = c.Bind(&fileDoc); err != nil {
+		inst.Logger().WithField("nspace", "replicator").Debugf("File cannot be bound: %s", err)
+		return wrapErrors(err)
+	}
+	key, err := s.SyncFile(inst, fileDoc)
+	if err != nil {
+		inst.Logger().WithField("nspace", "replicator").Debugf("Error on sync file: %s", err)
+		return wrapErrors(err)
+	}
+	if key == nil {
+		return c.NoContent(http.StatusNoContent)
+	}
+	return c.JSON(http.StatusOK, key)
+}
+
 // replicatorRoutes sets the routing for the replicator
 func replicatorRoutes(router *echo.Group) {
 	group := router.Group("", checkSharingPermissions)
 	group.POST("/:sharing-id/_revs_diff", RevsDiff, checkSharingPermissions)
 	group.POST("/:sharing-id/_bulk_docs", BulkDocs, checkSharingPermissions)
+	group.PUT("/:sharing-id/io.cozy.files/:file-id/metadata", SyncFile, checkSharingPermissions)
 }
 
 func checkSharingPermissions(next echo.HandlerFunc) echo.HandlerFunc {

@@ -215,12 +215,15 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			errm = multierror.Append(errm, ErrMissingID)
 			continue
 		}
-		var ref *SharedRef
+		ref := &SharedRef{}
 		err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+id, ref)
-		if err != nil && !couchdb.IsNotFoundError(err) {
-			inst.Logger().WithField("nspace", "replicator").Debugf("Error on finding doc of bulk files: %s", err)
-			errm = multierror.Append(errm, err)
-			continue
+		if err != nil {
+			if !couchdb.IsNotFoundError(err) {
+				inst.Logger().WithField("nspace", "replicator").Debugf("Error on finding doc of bulk files: %s", err)
+				errm = multierror.Append(errm, err)
+				continue
+			}
+			ref = nil
 		}
 		// TODO it's only for directory currently, code needs to be adapted for files
 		doc, err := fs.DirByID(id) // TODO DirOrFileByID

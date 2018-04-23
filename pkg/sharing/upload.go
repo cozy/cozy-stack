@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -166,6 +167,43 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (*
 	return nil, since, nil
 }
 
+// KeyToUpload contains the key for uploading a file (when syncing metadata is
+// not enough)
+type KeyToUpload struct {
+	Key string `json:"key"`
+}
+
+func (s *Sharing) createUploadKey(inst *instance.Instance, target *vfs.FileDoc) (*KeyToUpload, error) {
+	key := getCache().Save(inst.Domain, target)
+	return &KeyToUpload{Key: key}, nil
+}
+
+// SyncFile tries to synchroniza a file with just the metadata. If it can't,
+// it will return a key to upload the content.
+func (s *Sharing) SyncFile(inst *instance.Instance, target *vfs.FileDoc) (*KeyToUpload, error) {
+	fs := inst.VFS()
+	current, err := fs.FileByID(target.DocID)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return s.createUploadKey(inst, target)
+		}
+		return nil, err
+	}
+	var ref SharedRef
+	err = couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil, ErrInternalServerError // TODO better error for safety principal
+		}
+		return nil, err
+	}
+	if !bytes.Equal(target.MD5Sum, current.MD5Sum) {
+		return s.createUploadKey(inst, target)
+	}
+	// TODO sync
+	return nil, nil
+}
+
 // uploadFile uploads one file to the given member. It first try to just send
 // the metadata, and if it is not enough, it also send the binary.
 func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.JSONDoc) error {
@@ -229,7 +267,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.J
 		return nil
 	}
 
-	var resBody map[string]string
+	var resBody KeyToUpload
 	if err = json.NewDecoder(res.Body).Decode(&resBody); err != nil {
 		return err
 	}
@@ -245,12 +283,11 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.J
 	}
 	defer content.Close()
 
-	// TODO send resBody["token"]
 	res2, err := request.Req(&request.Options{
 		Method: http.MethodPut,
 		Scheme: u.Scheme,
 		Domain: u.Host,
-		Path:   "/sharings/" + s.SID + "/io.cozy.files/" + file.ID(),
+		Path:   "/sharings/" + s.SID + "/io.cozy.files/" + resBody.Key,
 		Headers: request.Headers{
 			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 			"Content-Type":  fileDoc.Mime,
