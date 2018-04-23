@@ -321,25 +321,37 @@ func listKonnectorsHandler(c echo.Context) error {
 }
 
 // iconHandler gives the icon of an application
-func iconHandler(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	slug := c.Param("slug")
-	app, err := apps.GetWebappBySlug(instance, slug)
-	if err != nil {
+func iconHandler(appType apps.AppType) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		instance := middlewares.GetInstance(c)
+		slug := c.Param("slug")
+		app, err := apps.GetBySlug(instance, slug, appType)
+		if err != nil {
+			return err
+		}
+
+		if err = permissions.Allow(c, permissions.GET, app); err != nil {
+			return err
+		}
+
+		var fs apps.FileServer
+		var filepath string
+		switch appType {
+		case apps.Webapp:
+			filepath = path.Join("/", app.(*apps.WebappManifest).Icon)
+			fs = instance.AppsFileServer()
+		case apps.Konnector:
+			filepath = path.Join("/", app.(*apps.KonnManifest).Icon)
+			fs = instance.KonnectorsFileServer()
+		}
+
+		err = fs.ServeFileContent(c.Response(), c.Request(),
+			app.Slug(), app.Version(), filepath)
+		if os.IsNotExist(err) {
+			return echo.NewHTTPError(http.StatusNotFound, err)
+		}
 		return err
 	}
-
-	if err = permissions.Allow(c, permissions.GET, app); err != nil {
-		return err
-	}
-
-	filepath := path.Join("/", app.Icon)
-	fs := instance.AppsFileServer()
-	err = fs.ServeFileContent(c.Response(), c.Request(), app.Slug(), app.Version(), filepath)
-	if os.IsNotExist(err) {
-		return echo.NewHTTPError(http.StatusNotFound, err)
-	}
-	return err
 }
 
 // WebappsRoutes sets the routing for the web apps service
@@ -349,7 +361,7 @@ func WebappsRoutes(router *echo.Group) {
 	router.POST("/:slug", installHandler(apps.Webapp))
 	router.PUT("/:slug", updateHandler(apps.Webapp))
 	router.DELETE("/:slug", deleteHandler(apps.Webapp))
-	router.GET("/:slug/icon", iconHandler)
+	router.GET("/:slug/icon", iconHandler(apps.Webapp))
 }
 
 // KonnectorRoutes sets the routing for the konnectors service
@@ -359,6 +371,7 @@ func KonnectorRoutes(router *echo.Group) {
 	router.POST("/:slug", installHandler(apps.Konnector))
 	router.PUT("/:slug", updateHandler(apps.Konnector))
 	router.DELETE("/:slug", deleteHandler(apps.Konnector))
+	router.GET("/:slug/icon", iconHandler(apps.Konnector))
 }
 
 func wrapAppsError(err error) error {

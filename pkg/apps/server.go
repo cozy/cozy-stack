@@ -24,6 +24,7 @@ import (
 // data files.
 type FileServer interface {
 	Open(slug, version, file string) (io.ReadCloser, error)
+	FilesList(slug, version string) ([]string, error)
 	ServeFileContent(w http.ResponseWriter, req *http.Request,
 		slug, version, file string) error
 }
@@ -146,6 +147,24 @@ func (s *swiftServer) makeObjectName(slug, version, file string) string {
 	return path.Join(slug, version, file)
 }
 
+func (s *swiftServer) FilesList(slug, version string) ([]string, error) {
+	names, err := s.c.ObjectNamesAll(s.container, &swift.ObjectsOpts{
+		Prefix: s.makeObjectName(slug, version, "/"),
+	})
+	if err != nil {
+		return nil, err
+	}
+	prefix := s.makeObjectName(slug, version, "")
+	filtered := names[:0]
+	for _, n := range names {
+		n = strings.TrimPrefix(n, prefix)
+		if n != "" {
+			filtered = append(filtered, n)
+		}
+	}
+	return filtered, nil
+}
+
 // NewAferoFileServer returns a simple wrapper of the afero.Fs interface that
 // provides the apps.FileServer interface.
 //
@@ -232,12 +251,18 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 			w.Header().Set("Content-Encoding", "gzip")
 		} else {
 			var gr *gzip.Reader
+			var b []byte
 			gr, err = gzip.NewReader(content)
 			if err != nil {
 				return err
 			}
 			defer gr.Close()
-			content = gr
+			b, err = ioutil.ReadAll(gr)
+			if err != nil {
+				return err
+			}
+			size = int64(len(b))
+			content = bytes.NewReader(b)
 		}
 	}
 
@@ -247,6 +272,23 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 	}
 	web_utils.ServeContent(w, req, contentType, size, content)
 	return nil
+}
+
+func (s *aferoServer) FilesList(slug, version string) ([]string, error) {
+	var names []string
+	rootPath := s.mkPath(slug, version, "")
+	err := afero.Walk(s.fs, rootPath, func(path string, infos os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !infos.IsDir() {
+			name := strings.TrimPrefix(path, rootPath)
+			name = strings.TrimSuffix(name, ".gz")
+			names = append(names, name)
+		}
+		return nil
+	})
+	return names, err
 }
 
 func defaultMakePath(slug, version, file string) string {
