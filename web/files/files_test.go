@@ -16,8 +16,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -1753,35 +1751,6 @@ func TestThumbnail(t *testing.T) {
 	res4, _ := download(t, small, "")
 	assert.Equal(t, 200, res4.StatusCode)
 	assert.True(t, strings.HasPrefix(res4.Header.Get("Content-Type"), "image/jpeg"))
-}
-
-func TestFindFiles(t *testing.T) {
-	err := couchdb.DefineIndex(testInstance, mango.IndexOnFields(consts.Files, "by-class", []string{"class"}))
-	if !assert.NoError(t, err) {
-		return
-	}
-	var query = strings.NewReader(`{"selector" : {"class": "image"}}`)
-	req, _ := http.NewRequest("POST", ts.URL+"/files/_find", query)
-	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
-	var out map[string]interface{}
-	err = extractJSONRes(res, &out)
-	if !assert.NoError(t, err) {
-		return
-	}
-	assert.NoError(t, err)
-	data := out["data"].([]interface{})
-	if !assert.True(t, len(data) > 0) {
-		return
-	}
-	first := data[0].(map[string]interface{})
-	links := first["links"].(map[string]interface{})
-	small := links["small"].(string)
-	assert.NotEmpty(t, small)
 }
 
 func TestMain(m *testing.M) {
