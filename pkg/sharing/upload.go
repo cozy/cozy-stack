@@ -162,7 +162,7 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 		if !ok || len(revisions) == 0 {
 			continue
 		}
-		docID := strings.SplitN(r.DocID, "/", 2)[0]
+		docID := strings.SplitN(r.DocID, "/", 2)[1]
 		ir := couchdb.IDRev{ID: docID, Rev: revisions[len(revisions)-1].(string)}
 		query := []couchdb.IDRev{ir}
 		results, err := couchdb.BulkGetDocs(inst, consts.Files, query)
@@ -190,7 +190,12 @@ type KeyToUpload struct {
 }
 
 func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
-	key := getCache().Save(inst.Domain, target)
+	key, err := getStore().Save(inst.Domain, target)
+	inst.Logger().WithField("nspace", "upload").
+		Debugf("Store save %s %s (%v)", inst.Domain, key, err)
+	if err != nil {
+		return nil, err
+	}
 	return &KeyToUpload{Key: key}, nil
 }
 
@@ -331,7 +336,12 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 // HandleFileUpload is used to receive a file upload when synchronizing just
 // the metadata was not enough.
 func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) (err error) {
-	newdoc := getCache().Get(inst.Domain, key)
+	inst.Logger().WithField("nspace", "upload").
+		Debugf("Store get %s %s (%v)", inst.Domain, key, err)
+	newdoc, err := getStore().Get(inst.Domain, key)
+	if err != nil {
+		return err
+	}
 	if newdoc == nil {
 		return ErrMissingFileMetadata
 	}
