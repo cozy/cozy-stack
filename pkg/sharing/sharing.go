@@ -23,6 +23,7 @@ type Sharing struct {
 	Triggers struct {
 		Track     bool `json:"track,omitempty"`
 		Replicate bool `json:"replicate,omitempty"`
+		Upload    bool `json:"upload,omitempty"`
 	} `json:"triggers"`
 
 	Active      bool      `json:"active,omitempty"`
