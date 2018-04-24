@@ -1,6 +1,8 @@
 package sharing
 
 import (
+	"fmt"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -56,7 +58,7 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 		"created_at": doc.CreatedAt,
 		"updated_at": doc.UpdatedAt,
 		"tags":       doc.Tags,
-		"size":       doc.ByteSize,
+		"size":       fmt.Sprintf("%d", doc.ByteSize), // XXX size must be serialized as a string, not an int
 		"md5Sum":     doc.MD5Sum,
 		"mime":       doc.Mime,
 		"class":      doc.Class,
