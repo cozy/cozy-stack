@@ -106,7 +106,7 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member) (bool, error) {
 	}
 	inst.Logger().WithField("nspace", "upload").Debugf("lastSeq = %s", lastSeq)
 
-	file, seq, err := s.findNextFileToUpload(inst, lastSeq)
+	file, ruleIndex, seq, err := s.findNextFileToUpload(inst, lastSeq)
 	if err != nil {
 		return false, err
 	}
@@ -117,7 +117,7 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member) (bool, error) {
 		return false, err
 	}
 
-	if err = s.uploadFile(inst, m, file); err != nil {
+	if err = s.uploadFile(inst, m, file, ruleIndex); err != nil {
 		return false, err
 	}
 
@@ -127,7 +127,7 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member) (bool, error) {
 // findNextFileToUpload uses the changes feed to find the next file that needs
 // to be uploaded. It returns a file document if there is one file to upload,
 // and the sequence number where it is in the changes feed.
-func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (*couchdb.JSONDoc, string, error) {
+func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (map[string]interface{}, int, string, error) {
 	for {
 		response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
 			DocType:     consts.Shared,
@@ -136,7 +136,7 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (*
 			Limit:       1,
 		})
 		if err != nil {
-			return nil, since, err
+			return nil, 0, since, err
 		}
 		since = response.LastSeq
 		if len(response.Results) == 0 {
@@ -154,19 +154,33 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (*
 		if _, ok = info["binary"]; !ok {
 			continue
 		}
-		revisions, ok := r.Doc.Get("revisions").([]interface{})
+		idx, ok := info["rule"].(float64)
 		if !ok {
 			continue
 		}
-		var file couchdb.JSONDoc
-		docID := strings.SplitN(r.DocID, "/", 2)[0]
-		if err = couchdb.GetDoc(inst, consts.Files, docID, &file); err != nil {
-			return nil, since, err
+		revisions, ok := r.Doc.Get("revisions").([]interface{})
+		if !ok || len(revisions) == 0 {
+			continue
 		}
-		file.M["_revisions"] = revisions
-		return &file, since, nil
+		docID := strings.SplitN(r.DocID, "/", 2)[0]
+		ir := couchdb.IDRev{ID: docID, Rev: revisions[len(revisions)-1].(string)}
+		query := []couchdb.IDRev{ir}
+		results, err := couchdb.BulkGetDocs(inst, consts.Files, query)
+		if err != nil {
+			return nil, 0, since, err
+		}
+		if len(results) == 0 {
+			return nil, 0, since, ErrInternalServerError
+		}
+		return results[0], int(idx), since, nil
 	}
-	return nil, since, nil
+	return nil, 0, since, nil
+}
+
+// FileDocWithRevisions is the struct of the payload for synchronizing a file
+type FileDocWithRevisions struct {
+	*vfs.FileDoc
+	Revisions map[string]interface{} `json:"_revisions"`
 }
 
 // KeyToUpload contains the key for uploading a file (when syncing metadata is
@@ -175,15 +189,14 @@ type KeyToUpload struct {
 	Key string `json:"key"`
 }
 
-func (s *Sharing) createUploadKey(inst *instance.Instance, target *vfs.FileDoc) (*KeyToUpload, error) {
+func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
 	key := getCache().Save(inst.Domain, target)
 	return &KeyToUpload{Key: key}, nil
 }
 
 // SyncFile tries to synchroniza a file with just the metadata. If it can't,
 // it will return a key to upload the content.
-// TODO _revisions is missing in vfs.FileDoc
-func (s *Sharing) SyncFile(inst *instance.Instance, target *vfs.FileDoc) (*KeyToUpload, error) {
+func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
 	if len(target.MD5Sum) == 0 {
 		return nil, vfs.ErrInvalidHash
 	}
@@ -212,7 +225,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *vfs.FileDoc) (*KeyTo
 
 // uploadFile uploads one file to the given member. It first try to just send
 // the metadata, and if it is not enough, it also send the binary.
-func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.JSONDoc) error {
+func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string]interface{}, ruleIndex int) error {
 	creds := s.FindCredentials(m)
 	if creds == nil {
 		return ErrInvalidSharing
@@ -221,8 +234,9 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.J
 	if err != nil {
 		return err
 	}
-	origFileID := file.ID()
-	// TODO TransformFileToSent
+	origFileID := file["_id"].(string)
+	s.TransformFileToSent(file, creds.XorKey, ruleIndex)
+	xoredFileID := file["_id"].(string)
 	body, err := json.Marshal(file)
 	if err != nil {
 		return err
@@ -232,7 +246,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.J
 		Method: http.MethodPut,
 		Scheme: u.Scheme,
 		Domain: u.Host,
-		Path:   "/sharings/" + s.SID + "/io.cozy.files/" + file.ID() + "/metadata",
+		Path:   "/sharings/" + s.SID + "/io.cozy.files/" + xoredFileID + "/metadata",
 		Headers: request.Headers{
 			"Accept":        "application/json",
 			"Content-Type":  "application/json",
@@ -252,7 +266,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.J
 			Method: http.MethodPut,
 			Scheme: u.Scheme,
 			Domain: u.Host,
-			Path:   "/sharings/" + s.SID + "/io.cozy.files/" + file.ID() + "/metadata",
+			Path:   "/sharings/" + s.SID + "/io.cozy.files/" + xoredFileID + "/metadata",
 			Headers: request.Headers{
 				"Accept":        "application/json",
 				"Content-Type":  "application/json",
@@ -322,17 +336,9 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 		return ErrMissingFileMetadata
 	}
 
-	rev := newdoc.Rev()
-	// TODO
-	// revisions, ok := newdoc["_revisions"].(map[string]interface{})
-	// if !ok {
-	// 	inst.Logger().WithField("nspace", "replicator").
-	// 		Debugf("Missing _revisions for file upload: %#v", target)
-	// 	return ErrInternalServerError
-	// }
 	indexer := NewSharingIndexer(inst, &bulkRevs{
-		Rev: rev,
-		// Revisions: revisions,
+		Rev:       newdoc.Rev(),
+		Revisions: newdoc.Revisions,
 	})
 	fs := inst.VFS().UseSharingIndexer(indexer)
 
@@ -356,7 +362,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	if err != nil && err != os.ErrNotExist {
 		return err
 	}
-	file, err := fs.CreateFile(newdoc, olddoc)
+	file, err := fs.CreateFile(newdoc.FileDoc, olddoc)
 	if err != nil {
 		inst.Logger().WithField("nspace", "replicator").
 			Debugf("Cannot create file: %s", err)

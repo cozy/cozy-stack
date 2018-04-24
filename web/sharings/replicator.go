@@ -6,7 +6,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/sharing"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	perm "github.com/cozy/cozy-stack/web/permissions"
@@ -76,7 +75,7 @@ func SyncFile(c echo.Context) error {
 		inst.Logger().WithField("nspace", "replicator").Debugf("Sharing was not found: %s", err)
 		return wrapErrors(err)
 	}
-	var fileDoc *vfs.FileDoc
+	var fileDoc *sharing.FileDocWithRevisions
 	if err = c.Bind(&fileDoc); err != nil {
 		inst.Logger().WithField("nspace", "replicator").Debugf("File cannot be bound: %s", err)
 		return wrapErrors(err)
