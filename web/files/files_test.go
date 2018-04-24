@@ -856,7 +856,7 @@ func TestModifyContentConcurrently(t *testing.T) {
 	assert.True(t, len(successes) >= 1, "there is at least one success")
 
 	for i, s := range successes {
-		assert.True(t, strings.HasPrefix(s.rev, strconv.Itoa(i+2)+"-"))
+		assert.True(t, strings.HasPrefix(s.rev, strconv.Itoa(i+3)+"-"))
 	}
 
 	storage := testInstance.VFS()
