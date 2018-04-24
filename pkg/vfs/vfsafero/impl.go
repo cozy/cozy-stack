@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/magic"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -203,6 +204,36 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		newdoc.SetID(olddoc.ID())
 		newdoc.SetRev(olddoc.Rev())
 		newdoc.CreatedAt = olddoc.CreatedAt
+	}
+
+	// Avoid storing negative size in the index.
+	if newdoc.ByteSize < 0 {
+		newdoc.ByteSize = 0
+	}
+
+	if olddoc == nil {
+		var exists bool
+		exists, err = afs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			return nil, os.ErrExist
+		}
+
+		// When added to the index, the document is first considered hidden. This
+		// flag will only be removed at the end of the upload when all its metadata
+		// are known. See the Close() method.
+		newdoc.Trashed = true
+
+		if newdoc.ID() == "" {
+			err = afs.Indexer.CreateFileDoc(newdoc)
+		} else {
+			err = afs.Indexer.CreateNamedFileDoc(newdoc)
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	f, err := safeCreateFile(newpath, newdoc.Mode(), afs.fs)
@@ -729,6 +760,11 @@ func (f *aferoFileCreation) Close() (err error) {
 		} else if err != nil {
 			// remove the new file if an error occured
 			f.afs.fs.Remove(f.newpath) // #nosec
+			// If an error has occured that is not due to the index update, we should
+			// delete the file from the index.
+			if _, isCouchErr := couchdb.IsCouchError(err); !isCouchErr {
+				f.afs.Indexer.DeleteFileDoc(f.newdoc) // #nosec
+			}
 		}
 	}()
 
@@ -762,7 +798,7 @@ func (f *aferoFileCreation) Close() (err error) {
 		return vfs.ErrInvalidHash
 	}
 
-	if newdoc.ByteSize < 0 {
+	if newdoc.ByteSize <= 0 {
 		newdoc.ByteSize = written
 	}
 
@@ -770,17 +806,20 @@ func (f *aferoFileCreation) Close() (err error) {
 		return vfs.ErrContentLengthMismatch
 	}
 
+	// The document is already added to the index when closing the file creation
+	// handler. When updating the content of the document with the final
+	// informations (size, md5, ...) we can reuse the same document as olddoc.
+	if olddoc == nil || !olddoc.Trashed {
+		newdoc.Trashed = false
+	}
+	if olddoc == nil {
+		olddoc = newdoc
+	}
 	lockerr := f.afs.mu.Lock()
 	if lockerr != nil {
 		return lockerr
 	}
 	defer f.afs.mu.Unlock()
-	if olddoc == nil {
-		if newdoc.ID() == "" {
-			return f.afs.Indexer.CreateFileDoc(newdoc)
-		}
-		return f.afs.Indexer.CreateNamedFileDoc(newdoc)
-	}
 	return f.afs.Indexer.UpdateFileDoc(olddoc, newdoc)
 }
 
