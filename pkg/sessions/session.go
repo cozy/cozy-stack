@@ -18,14 +18,8 @@ import (
 // SessionCookieName is name of the cookie created by cozy
 const SessionCookieName = "cozysessid"
 
-const (
-	// SessionMaxAge is the maximum duration of the session in seconds
-	SessionMaxAge = 7 * 24 * time.Hour
-
-	// AppCookieMaxAge is the maximum duration of the application cookie in
-	// seconds
-	AppCookieMaxAge = 24 * time.Hour
-)
+// SessionMaxAge is the maximum duration of the session in seconds
+const SessionMaxAge = 30 * 24 * time.Hour
 
 var (
 	// ErrNoCookie is returned by GetSession if there is no cookie
@@ -234,7 +228,7 @@ func (s *Session) ToAppCookie(domain, slug string) (*http.Cookie, error) {
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    string(encoded),
-		MaxAge:   int(AppCookieMaxAge.Seconds()),
+		MaxAge:   0, // "session cookie", expiring when the browser is closed
 		Path:     "/",
 		Domain:   utils.StripPort(domain),
 		Secure:   !s.Instance.Dev,
@@ -288,6 +282,5 @@ var cookieAppMACConfig = crypto.MACConfig{
 
 var cookieSessionMACConfig = crypto.MACConfig{
 	Name:   SessionCookieName,
-	MaxAge: AppCookieMaxAge,
 	MaxLen: 256,
 }
