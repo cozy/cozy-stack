@@ -12,8 +12,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/justincampbell/bigduration"
 	"github.com/cozy/echo"
+	"github.com/justincampbell/bigduration"
 )
 
 // exports all constants from pkg/permissions to avoid double imports
