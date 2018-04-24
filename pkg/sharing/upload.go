@@ -316,26 +316,58 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file *couchdb.J
 
 // HandleFileUpload is used to receive a file upload when synchronizing just
 // the metadata was not enough.
-func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) error {
+func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) (err error) {
 	newdoc := getCache().Get(inst.Domain, key)
 	if newdoc == nil {
 		return ErrMissingFileMetadata
 	}
 
-	indexer := NewSharingIndexer(inst, nil) // TODO
+	rev := newdoc.Rev()
+	// TODO
+	// revisions, ok := newdoc["_revisions"].(map[string]interface{})
+	// if !ok {
+	// 	inst.Logger().WithField("nspace", "replicator").
+	// 		Debugf("Missing _revisions for file upload: %#v", target)
+	// 	return ErrInternalServerError
+	// }
+	indexer := NewSharingIndexer(inst, &bulkRevs{
+		Rev: rev,
+		// Revisions: revisions,
+	})
 	fs := inst.VFS().UseSharingIndexer(indexer)
+
+	if newdoc.DirID != "" {
+		_, err = fs.DirByID(newdoc.DirID)
+		// TODO better handling of this conflict
+		if err != nil {
+			inst.Logger().WithField("nspace", "replicator").
+				Debugf("Conflict for parent on file upload: %s", err)
+			return err
+		}
+	} else {
+		parent, err := s.GetSharingDir(inst)
+		if err != nil {
+			return err
+		}
+		newdoc.DirID = parent.DocID
+	}
+
 	olddoc, err := fs.FileByID(newdoc.ID())
 	if err != nil && err != os.ErrNotExist {
 		return err
 	}
 	file, err := fs.CreateFile(newdoc, olddoc)
 	if err != nil {
+		inst.Logger().WithField("nspace", "replicator").
+			Debugf("Cannot create file: %s", err)
 		return err
 	}
 
 	defer func() {
 		if cerr := file.Close(); cerr != nil && err == nil {
 			err = cerr
+			inst.Logger().WithField("nspace", "replicator").
+				Debugf("Cannot close file descriptor: %s", err)
 		}
 	}()
 	_, err = io.Copy(file, body)

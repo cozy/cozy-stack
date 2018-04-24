@@ -290,6 +290,8 @@ func TestCreateSharingForUploadFileTest(t *testing.T) {
 	assert.NoError(t, err)
 	fileSharingID = s.SID
 
+	assert.NoError(t, s.CreateDirForSharing(replInstance, &s.Rules[0]))
+
 	cli, err := sharing.CreateOAuthClient(replInstance, &s.Members[1])
 	assert.NoError(t, err)
 	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
@@ -347,6 +349,6 @@ func TestUploadNewFile(t *testing.T) {
 	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+fileAccessToken)
 	res2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, res2.StatusCode)
+	assert.Equal(t, http.StatusNoContent, res2.StatusCode)
 	defer res.Body.Close()
 }
