@@ -171,6 +171,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error
 	}
 	fs := inst.VFS()
 	dir, err := vfs.NewDirDocWithParent(rule.Title, parent, []string{"from-sharing-" + s.SID})
+	dir.DocID = rule.Values[0]
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
@@ -77,7 +76,21 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
 		return err
 	}
-	couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
+	// Ensure that fullpath is filled because it's used in realtime/@events
+	if olddoc != nil {
+		if _, err := olddoc.Path(s); err != nil {
+			return err
+		}
+	}
+	if _, err := doc.Path(s); err != nil {
+		return err
+	}
+	// TODO the path is missing!
+	if olddoc != nil {
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
+	} else {
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, nil)
+	}
 	return nil
 }
 
@@ -120,11 +133,11 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
 		return err
 	}
-	log := logger.WithNamespace("sharingIndexer")
-	log.Debugf("UpdateDirDoc %#v\n", s.bulkRevs)
-	log.Debugf("-> newdoc = %#v\n", doc)
-	log.Debugf("-> olddoc = %#v\n", olddoc)
-	couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
+	if olddoc != nil {
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
+	} else {
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, nil)
+	}
 	return nil
 }
 
