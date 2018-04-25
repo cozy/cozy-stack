@@ -61,10 +61,12 @@ func SimpleDatabasePrefix(prefix string) Database {
 	return &simpleDB{prefix: prefix}
 }
 
-func rtevent(db Database, verb string, doc, oldDoc Doc) {
+// RTEvent published a realtime event for a couchDB change
+func RTEvent(db Database, verb string, doc, oldDoc Doc) {
 	domain := db.Prefix()
 	if err := runHooks(domain, verb, doc, oldDoc); err != nil {
-		logger.WithDomain(db.Prefix()).WithField("nspace", "couchdb").Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
+		logger.WithDomain(db.Prefix()).WithField("nspace", "couchdb").
+			Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
 	}
 
 	e := &realtime.Event{
@@ -512,7 +514,7 @@ func DeleteDoc(db Database, doc Doc) error {
 		return err
 	}
 	doc.SetRev(res.Rev)
-	rtevent(db, realtime.EventDelete, doc, old)
+	RTEvent(db, realtime.EventDelete, doc, old)
 	return nil
 }
 
@@ -534,7 +536,7 @@ func UpdateDoc(db Database, doc Doc) error {
 	}
 
 	url := url.PathEscape(id)
-	// The old doc is requested to be emitted throught rtevent.
+	// The old doc is requested to be emitted throught RTEvent.
 	// This is useful to keep track of the modifications for the triggers.
 	oldDoc := doc.Clone()
 	if r, ok := oldDoc.(Reseter); ok {
@@ -550,7 +552,7 @@ func UpdateDoc(db Database, doc Doc) error {
 		return err
 	}
 	doc.SetRev(res.Rev)
-	rtevent(db, realtime.EventUpdate, doc, oldDoc)
+	RTEvent(db, realtime.EventUpdate, doc, oldDoc)
 	return nil
 }
 
@@ -573,7 +575,7 @@ func CreateNamedDoc(db Database, doc Doc) error {
 		return err
 	}
 	doc.SetRev(res.Rev)
-	rtevent(db, realtime.EventCreate, doc, nil)
+	RTEvent(db, realtime.EventCreate, doc, nil)
 	return nil
 }
 
@@ -651,7 +653,7 @@ func CreateDoc(db Database, doc Doc) error {
 
 	doc.SetID(res.ID)
 	doc.SetRev(res.Rev)
-	rtevent(db, realtime.EventCreate, doc, nil)
+	RTEvent(db, realtime.EventCreate, doc, nil)
 	return nil
 }
 

@@ -192,7 +192,7 @@ func BulkUpdateDocs(db Database, doctype string, docs []interface{}) error {
 	for i, doc := range docs {
 		if d, ok := doc.(Doc); ok {
 			d.SetRev(res[i].Rev)
-			rtevent(db, realtime.EventUpdate, d, nil)
+			RTEvent(db, realtime.EventUpdate, d, nil)
 		}
 	}
 	return nil
@@ -220,7 +220,7 @@ func BulkDeleteDocs(db Database, doctype string, docs []Doc) error {
 	for i, doc := range docs {
 		if d, ok := doc.(Doc); ok {
 			d.SetRev(res[i].Rev)
-			rtevent(db, realtime.EventDelete, d, nil)
+			RTEvent(db, realtime.EventDelete, d, nil)
 		}
 	}
 	return nil

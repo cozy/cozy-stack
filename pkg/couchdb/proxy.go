@@ -90,7 +90,7 @@ func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.Re
 					} else {
 						event = realtime.EventUpdate
 					}
-					rtevent(db, event, doc, nil)
+					RTEvent(db, event, doc, nil)
 				}
 			} else {
 				var respValues []*respValue
@@ -120,7 +120,7 @@ func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.Re
 						event = realtime.EventUpdate
 					}
 					doc.SetRev(r.Rev)
-					rtevent(db, event, doc, nil)
+					RTEvent(db, event, doc, nil)
 				}
 			}
 		},
