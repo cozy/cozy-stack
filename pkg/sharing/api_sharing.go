@@ -9,16 +9,13 @@ import (
 	"github.com/cozy/echo"
 )
 
-// InfoByDocTypeData returns the sharings info as included in the JSON-API format
+// InfoByDocTypeData returns the sharings info as data array in the JSON-API format
 func InfoByDocTypeData(c echo.Context, statusCode int, sharings []*APISharing) error {
-	included := make([]jsonapi.Object, len(sharings))
-
+	data := make([]jsonapi.Object, len(sharings))
 	for i, s := range sharings {
-		included[i] = s
+		data[i] = s
 	}
-
-	return jsonapi.DataRelations(c, http.StatusOK, nil, 0, nil, included)
-
+	return jsonapi.DataList(c, http.StatusOK, data, nil)
 }
 
 // APISharing is used to serialize a Sharing to JSON-API
