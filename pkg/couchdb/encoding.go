@@ -8,7 +8,7 @@ import (
 )
 
 func maybeSet(u url.Values, k string, v interface{}) error {
-	if v == nil {
+	if v == nil || v == "" {
 		return nil
 	}
 

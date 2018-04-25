@@ -67,16 +67,12 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 		return err
 	}
 	v.Add("include_docs", "true")
-
 	var response AllDocsResponse
 	if req == nil || len(req.Keys) == 0 {
 		url := "_all_docs?" + v.Encode()
 		err = makeRequest(db, doctype, http.MethodGet, url, nil, &response)
 	} else {
 		v.Del("keys")
-		// startkey and endkey are not compatible with keys parameter
-		v.Del("startkey")
-		v.Del("endkey")
 		url := "_all_docs?" + v.Encode()
 		body := struct {
 			Keys []string `json:"keys"`
