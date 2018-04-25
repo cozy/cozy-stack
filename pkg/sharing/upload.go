@@ -361,9 +361,9 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 			return err
 		}
 	} else {
-		parent, err := s.GetSharingDir(inst)
-		if err != nil {
-			return err
+		parent, errb := s.GetSharingDir(inst)
+		if errb != nil {
+			return errb
 		}
 		newdoc.DirID = parent.DocID
 	}

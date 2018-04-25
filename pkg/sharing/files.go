@@ -59,10 +59,10 @@ func XorID(id string, key []byte) string {
 func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 	sort.SliceStable(files, func(i, j int) bool {
 		a, b := files[i], files[j]
-		if a["type"] == "file" {
+		if a["type"] == consts.FileType {
 			return false
 		}
-		if b["type"] == "file" {
+		if b["type"] == consts.FileType {
 			return true
 		}
 		p, ok := a["path"].(string)
@@ -87,7 +87,7 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 // TODO keep referenced_by that are relevant to this sharing
 // TODO the file/folder has been moved outside the shared directory
 func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndex int) map[string]interface{} {
-	if doc["type"] == "directory" {
+	if doc["type"] == consts.DirType {
 		delete(doc, "path")
 	}
 	id := doc["_id"].(string)

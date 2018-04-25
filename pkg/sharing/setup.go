@@ -279,7 +279,7 @@ func (s *Sharing) buildReferences(inst *instance.Instance, rule Rule, r int, doc
 		rev := doc.Rev()
 		info := SharedInfo{
 			Rule:   r,
-			Binary: rule.DocType == consts.Files && doc.Get("type") == "file",
+			Binary: rule.DocType == consts.Files && doc.Get("type") == consts.FileType,
 		}
 		if srefs[i] == nil {
 			refs[i] = SharedRef{

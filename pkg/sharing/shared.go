@@ -128,7 +128,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	if _, ok := ref.Infos[msg.SharingID]; !ok {
 		ref.Infos[msg.SharingID] = SharedInfo{
 			Rule:   msg.RuleIndex,
-			Binary: evt.Doc.Type == consts.Files && evt.Doc.Get("type") == "file",
+			Binary: evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.FileType,
 		}
 	}
 	// TODO detect when a file/folder is trashed
