@@ -195,7 +195,8 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	var res couchdb.ViewResponse
 	err := couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res)
 	if err != nil || len(res.Rows) == 0 {
-		inst.Logger().WithField("nspace", "sharing").Warnf("Sharing dir not found: %v (%s)", err, s.SID)
+		inst.Logger().WithField("nspace", "sharing").
+			Warnf("Sharing dir not found: %v (%s)", err, s.SID)
 		return nil, ErrInternalServerError
 	}
 	return inst.VFS().DirByID(res.Rows[0].ID)
@@ -349,15 +350,44 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	}
 	revisions, ok := target["_revisions"].(map[string]interface{})
 	if !ok {
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Missing _revisions for updating directory %#v", target)
 		return ErrInternalServerError
 	}
+	oldDoc := dir.Clone().(*vfs.DirDoc)
 	indexer := NewSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revisions,
 	})
-	oldDoc := dir.Clone().(*vfs.DirDoc)
+	fs := inst.VFS().UseSharingIndexer(indexer)
 	copyTagsAndDatesToDir(target, dir)
-	// TODO what if name or dir_id has changed
+	name, ok := target["name"].(string)
+	if !ok {
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Missing name for updating directory %#v", target)
+		return ErrInternalServerError
+	}
+	dir.DocName = name
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("Update dir name: %s", name)
+	if dirID, ok := target["dir_id"].(string); ok {
+		if dirID != dir.DirID {
+			parent, err := fs.DirByID(dirID)
+			// TODO better handling of this conflict
+			if err != nil {
+				inst.Logger().WithField("nspace", "replicator").
+					Debugf("Conflict for parent on updating dir: %s", err)
+				return err
+			}
+			dir.DirID = parent.DocID
+		}
+	} else {
+		parent, err := s.GetSharingDir(inst)
+		if err != nil {
+			return err
+		}
+		dir.DirID = parent.DocID
+	}
 	// TODO referenced_by
 	// TODO trash
 	// TODO manage conflicts
