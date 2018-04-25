@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/httpcache"
 	"github.com/cozy/echo"
+	"github.com/cozy/httpcache"
 )
 
 const defaultLimit = 50

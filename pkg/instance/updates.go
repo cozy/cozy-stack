@@ -264,7 +264,10 @@ func createInstaller(inst *Instance, registries []*url.URL, man apps.Manifest, o
 			} else {
 				channel = "stable"
 			}
-			sourceURL = fmt.Sprintf("registry://%s/%s", man.Slug(), channel)
+			_, err := registry.GetLatestVersion(man.Slug(), channel, registries)
+			if err == nil {
+				sourceURL = fmt.Sprintf("registry://%s/%s", man.Slug(), channel)
+			}
 		}
 	}
 	return apps.NewInstaller(inst, inst.AppsCopier(man.AppType()),
