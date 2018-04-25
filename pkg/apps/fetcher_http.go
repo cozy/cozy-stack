@@ -19,7 +19,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var httpClient = http.Client{Timeout: 20 * time.Second}
+var httpClient = http.Client{
+	Timeout: 2 * 60 * time.Second,
+}
 
 type httpFetcher struct {
 	manFilename string

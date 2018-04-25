@@ -193,6 +193,11 @@ func initManifest(db couchdb.Database, opts *InstallerOptions) (man Manifest, er
 	return man, nil
 }
 
+// Slug return the slug of the application being installed.
+func (i *Installer) Slug() string {
+	return i.slug
+}
+
 // Run will install, update or delete the application linked to the installer,
 // depending on specified operation. It will report its progress or error (see
 // Poll method) and should be run asynchronously.
