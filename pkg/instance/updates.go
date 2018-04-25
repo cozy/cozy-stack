@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/robfig/cron"
@@ -114,6 +115,9 @@ func UpdateAll(opts *UpdatesOptions) error {
 		go func() {
 			for installer := range insc {
 				_, err := installer.RunSync()
+				if err != nil {
+					err = fmt.Errorf("Could not update app %s: %s", installer.Slug(), err)
+				}
 				errc <- err
 			}
 			g.Done()
@@ -129,19 +133,16 @@ func UpdateAll(opts *UpdatesOptions) error {
 			return nil
 		})
 		close(insc)
+		g.Wait()
+		close(errc)
 	}()
 
 	var errm error
-	go func() {
-		for err := range errc {
-			if err != nil {
-				errm = multierror.Append(errm, err)
-			}
+	for err := range errc {
+		if err != nil {
+			errm = multierror.Append(errm, err)
 		}
-	}()
-
-	g.Wait()
-	close(errc)
+	}
 
 	return errm
 }
@@ -159,6 +160,9 @@ func UpdateInstance(inst *Instance, opts *UpdatesOptions) error {
 		go func() {
 			for installer := range insc {
 				_, err := installer.RunSync()
+				if err != nil {
+					err = fmt.Errorf("Could not update app %s: %s", installer.Slug(), err)
+				}
 				errc <- err
 			}
 			g.Done()
@@ -168,19 +172,16 @@ func UpdateInstance(inst *Instance, opts *UpdatesOptions) error {
 	go func() {
 		installerPush(inst, insc, errc, opts)
 		close(insc)
+		g.Wait()
+		close(errc)
 	}()
 
 	var errm error
-	go func() {
-		for err := range errc {
-			if err != nil {
-				errm = multierror.Append(errm, err)
-			}
+	for err := range errc {
+		if err != nil {
+			errm = multierror.Append(errm, err)
 		}
-	}()
-
-	g.Wait()
-	close(errc)
+	}
 
 	return errm
 }
@@ -208,7 +209,7 @@ func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, o
 			}
 			installer, err := createInstaller(inst, registries, app, opts)
 			if err != nil {
-				errc <- err
+				errc <- fmt.Errorf("Could not create installer for webapp %s: %s", app.Slug(), err)
 			} else {
 				insc <- installer
 			}
@@ -219,7 +220,7 @@ func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, o
 		defer g.Done()
 		konnectors, err := apps.ListKonnectors(inst)
 		if err != nil {
-			errc <- err
+			errc <- fmt.Errorf("Could not list konnectors: %s", err)
 			return
 		}
 		for _, app := range konnectors {
@@ -228,7 +229,7 @@ func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, o
 			}
 			installer, err := createInstaller(inst, registries, app, opts)
 			if err != nil {
-				errc <- err
+				errc <- fmt.Errorf("Could not create installer for konnector %s: %s", app.Slug(), err)
 			} else {
 				insc <- installer
 			}
