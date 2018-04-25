@@ -174,7 +174,7 @@ func TestTriggersArgs(t *testing.T) {
 		Update:   "sync",
 	}
 	expected := "io.cozy.files:UPDATED:io.cozy.playlists/list1:referenced_by"
-	assert.Equal(t, expected, r.TriggerArgs(false))
+	assert.Equal(t, expected, r.TriggerArgs())
 
 	doctype := "io.cozy.test.foos"
 	r = Rule{
@@ -186,9 +186,8 @@ func TestTriggersArgs(t *testing.T) {
 		Remove:  "revoke",
 	}
 	expected = "io.cozy.test.foos:CREATED,UPDATED:foo"
-	assert.Equal(t, expected, r.TriggerArgs(true))
-	assert.Equal(t, "", r.TriggerArgs(false))
+	assert.Equal(t, expected, r.TriggerArgs())
 
 	r.Local = true
-	assert.Equal(t, "", r.TriggerArgs(true))
+	assert.Equal(t, "", r.TriggerArgs())
 }

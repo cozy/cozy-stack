@@ -116,7 +116,7 @@ func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
 	}
 	sched := jobs.System()
 	for i, rule := range s.Rules {
-		args := rule.TriggerArgs(s.Owner)
+		args := rule.TriggerArgs()
 		if args == "" {
 			continue
 		}
