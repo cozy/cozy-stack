@@ -1,6 +1,7 @@
 # File is already taken by the stdlib
 class CozyFile
   include Model
+  include Model::Files
 
   attr_reader :name, :dir_id, :mime
 

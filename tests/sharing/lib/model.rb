@@ -35,4 +35,32 @@ module Model
     klass.extend ClassMethods
     klass.send :attr_accessor, :couch_id, :couch_rev
   end
+
+  module Files
+    def rename(inst, name)
+      patch inst, name: name
+    end
+
+    def move_to(inst, dir_id)
+      patch inst, dir_id: dir_id
+    end
+
+    def patch(inst, attrs)
+      body = {
+        data: {
+          type: "io.cozy.files",
+          id: @couch_id,
+          attributes: attrs
+        }
+      }
+      opts = {
+        accept: "application/vnd.api+json",
+        content_type: "application/vnd.api+json",
+        authorization: "Bearer #{inst.token_for doctype}"
+      }
+      res = inst.client["/files/#{@couch_id}"].patch body.to_json, opts
+      j = JSON.parse(res.body)["data"]
+      @couch_rev = j["meta"]["rev"]
+    end
+  end
 end
