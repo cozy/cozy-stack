@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 
@@ -156,24 +157,35 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 func GetSharedDocsBySharingID(inst *instance.Instance, sharingID string) ([]couchdb.DocReference, error) {
 	var req = &couchdb.ViewRequest{
 		Key:         sharingID,
-		IncludeDocs: false,
+		IncludeDocs: true,
 	}
 	var res couchdb.ViewResponse
+
 	err := couchdb.ExecView(inst, consts.SharedDocsBySharingID, req, &res)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]couchdb.DocReference, len(res.Rows))
-	for i, row := range res.Rows {
-		var doc couchdb.DocReference
-		value := row.Value.(string)
-		slice := strings.Split(value, "/")
-		if len(slice) != 2 {
-			continue
+
+	var result []couchdb.DocReference
+
+	for _, row := range res.Rows {
+		var doc SharedRef
+		err := json.Unmarshal(row.Doc, &doc)
+		if err != nil {
+			return nil, err
 		}
-		doc.ID = slice[1]
-		doc.Type = slice[0]
-		result[i] = doc
+		// Filter out the removed docs
+		if !doc.Infos[sharingID].Removed {
+			var d couchdb.DocReference
+			id := doc.ID()
+			slice := strings.Split(id, "/")
+			if len(slice) != 2 {
+				continue
+			}
+			d.ID = slice[1]
+			d.Type = slice[0]
+			result = append(result, d)
+		}
 	}
 	return result, nil
 }
@@ -196,7 +208,8 @@ func GetSharingsByDocType(inst *instance.Instance, docType string) ([]string, er
 	var sharingIDs []string
 	for _, doc := range docs {
 		for id := range doc.Infos {
-			if !keys[id] {
+			// Do not include removed docs
+			if !keys[id] && !doc.Infos[id].Removed {
 				keys[id] = true
 				sharingIDs = append(sharingIDs, id)
 			}
