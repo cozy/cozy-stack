@@ -215,6 +215,34 @@ func assertSharingRequestHasBeenCreated(t *testing.T) {
 	assert.Equal(t, rule.Values, []string{"foobar"})
 }
 
+func assertSharingInfoRequestIsCorrect(t *testing.T, body io.Reader, s1, s2 string) {
+	var result map[string]interface{}
+	assert.NoError(t, json.NewDecoder(body).Decode(&result))
+	d := result["data"].([]interface{})
+	data := make([]map[string]interface{}, len(d))
+	assert.Equal(t, 2, len(data))
+	for i := range d {
+		data[i] = d[i].(map[string]interface{})
+		assert.Equal(t, consts.Sharings, data[i]["type"])
+		sharingID = data[i]["id"].(string)
+		assert.NotEmpty(t, sharingID)
+		assert.Contains(t, []string{s1, s2}, sharingID)
+		rel := data[i]["relationships"].(map[string]interface{})
+		sharedDocs := rel["shared_docs"].(map[string]interface{})
+		sharedDocsData := sharedDocs["data"].([]interface{})
+		assert.NotEmpty(t, sharedDocs)
+
+		if sharingID == s1 {
+			assert.Equal(t, "fakeid1", sharedDocsData[0].(map[string]interface{})["id"])
+			assert.Equal(t, "fakeid2", sharedDocsData[1].(map[string]interface{})["id"])
+			assert.Equal(t, "fakeid3", sharedDocsData[2].(map[string]interface{})["id"])
+		} else {
+			assert.Equal(t, "fakeid4", sharedDocsData[0].(map[string]interface{})["id"])
+			assert.Equal(t, "fakeid5", sharedDocsData[1].(map[string]interface{})["id"])
+		}
+	}
+}
+
 func TestDiscovery(t *testing.T) {
 	parts := strings.Split(tsA.URL, "://")
 	u, err := url.Parse(discoveryLink)
@@ -572,6 +600,37 @@ func TestCheckPermissions(t *testing.T) {
 	defer res.Body.Close()
 }
 
+func TestCheckSharingInfoByDocType(t *testing.T) {
+	sharedDocs1 := []string{"fakeid1", "fakeid2", "fakeid3"}
+	sharedDocs2 := []string{"fakeid4", "fakeid5"}
+	s1 := createSharing(aliceInstance, sharedDocs1)
+	assert.NotNil(t, s1)
+	s2 := createSharing(aliceInstance, sharedDocs2)
+	assert.NotNil(t, s2)
+
+	for _, id := range sharedDocs1 {
+		sid := iocozytests + "/" + id
+		sd := createSharedDoc(aliceInstance, sid, s1.ID())
+		assert.NotNil(t, sd)
+	}
+	for _, id := range sharedDocs2 {
+		sid := iocozytests + "/" + id
+		sd := createSharedDoc(aliceInstance, sid, s2.ID())
+		assert.NotNil(t, sd)
+	}
+	req, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/"+iocozytests, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	defer res.Body.Close()
+
+	assertSharingInfoRequestIsCorrect(t, res.Body, s1.ID(), s2.ID())
+
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
@@ -640,6 +699,42 @@ func createContact(inst *instance.Instance, name, email string) *contacts.Contac
 		return nil
 	}
 	return c
+}
+
+func createSharing(inst *instance.Instance, values []string) *sharing.Sharing {
+	r := sharing.Rule{
+		Title:   "test",
+		DocType: iocozytests,
+		Values:  values,
+	}
+	m := sharing.Member{
+		Name:  bobContact.FullName,
+		Email: bobContact.Email[0].Address,
+	}
+	s := &sharing.Sharing{
+		Owner:   true,
+		Rules:   []sharing.Rule{r},
+		Members: []sharing.Member{m},
+	}
+	err := couchdb.CreateDoc(inst, s)
+	if err != nil {
+		return nil
+	}
+	return s
+}
+
+func createSharedDoc(inst *instance.Instance, id, sharingID string) *sharing.SharedRef {
+	ref := &sharing.SharedRef{
+		SID: id,
+		Infos: map[string]sharing.SharedInfo{
+			sharingID: {Rule: 0},
+		},
+	}
+	err := couchdb.CreateNamedDocWithDB(inst, ref)
+	if err != nil {
+		return nil
+	}
+	return ref
 }
 
 func generateAppToken(inst *instance.Instance, slug string) string {
