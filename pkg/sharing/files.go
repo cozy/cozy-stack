@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"os"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -370,7 +371,7 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 		Revisions: revisions,
 	})
 	fs := inst.VFS().UseSharingIndexer(indexer)
-	copySafeFieldsToDir(target, dir)
+
 	name, ok := target["name"].(string)
 	if !ok {
 		inst.Logger().WithField("nspace", "replicator").
@@ -378,8 +379,6 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 		return ErrInternalServerError
 	}
 	dir.DocName = name
-	inst.Logger().WithField("nspace", "replicator").
-		Debugf("Update dir name: %s", name)
 	if dirID, ok := target["dir_id"].(string); ok {
 		if dirID != dir.DirID {
 			parent, err := fs.DirByID(dirID)
@@ -390,6 +389,9 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 				return err
 			}
 			dir.DirID = parent.DocID
+			dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
+		} else {
+			dir.Fullpath = path.Join(path.Dir(dir.Fullpath), dir.DocName)
 		}
 	} else {
 		parent, err := s.GetSharingDir(inst)
@@ -397,11 +399,16 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 			return err
 		}
 		dir.DirID = parent.DocID
+		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
 	}
+
+	copySafeFieldsToDir(target, dir)
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("Update dir: %#v", dir)
 	// TODO referenced_by
 	// TODO trash
 	// TODO manage conflicts
-	return indexer.UpdateDirDoc(oldDoc, dir)
+	return fs.UpdateDirDoc(oldDoc, dir)
 }
 
 // TODO referenced_by
