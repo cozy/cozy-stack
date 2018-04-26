@@ -28,7 +28,14 @@ func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
 		return err
 	}
 	if s.TwoWays() {
-		return s.AddReplicateTrigger(inst)
+		if err := s.AddReplicateTrigger(inst); err != nil {
+			return err
+		}
+		if s.FirstFilesRule() != nil {
+			if err := s.AddUploadTrigger(inst); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -84,7 +91,20 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	if err := s.ReplicateTo(inst, m, true); err != nil {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Error on initial replication (%s): %s", s.SID, err)
-		s.retryReplicate(inst, 0)
+		s.retryWorker(inst, "share-replicate", 0)
+	} else {
+		if s.FirstFilesRule() == nil {
+			return
+		}
+		if err := s.AddUploadTrigger(inst); err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Warnf("Error on setup upload trigger (%s): %s", s.SID, err)
+		}
+		if err := s.InitialUpload(inst, m); err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Warnf("Error on initial upload (%s): %s", s.SID, err)
+			s.retryWorker(inst, "share-upload", 0)
+		}
 	}
 }
 
@@ -193,23 +213,23 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 	if rule.Selector == "" || rule.Selector == "id" {
 		if rule.DocType == consts.Files {
 			// TODO add a test for this case
-			// TODO support rules with several values
-			fileID := rule.Values[0]
-			err := vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
-				if err != nil {
-					return err
-				}
-				if dir != nil {
-					if dir.DocID != fileID {
-						docs = append(docs, dirToJSONDoc(dir))
+			for _, fileID := range rule.Values {
+				err := vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+					if err != nil {
+						return err
 					}
-				} else if file != nil {
-					docs = append(docs, fileToJSONDoc(file))
+					if dir != nil {
+						if dir.DocID != fileID {
+							docs = append(docs, dirToJSONDoc(dir))
+						}
+					} else if file != nil {
+						docs = append(docs, fileToJSONDoc(file))
+					}
+					return nil
+				})
+				if err != nil {
+					return nil, err
 				}
-				return nil
-			})
-			if err != nil {
-				return nil, err
 			}
 		} else {
 			req := &couchdb.AllDocsRequest{
@@ -257,13 +277,15 @@ func (s *Sharing) buildReferences(inst *instance.Instance, rule Rule, r int, doc
 	refs := make([]interface{}, len(docs))
 	for i, doc := range docs {
 		rev := doc.Rev()
+		info := SharedInfo{
+			Rule:   r,
+			Binary: rule.DocType == consts.Files && doc.Get("type") == consts.FileType,
+		}
 		if srefs[i] == nil {
 			refs[i] = SharedRef{
 				SID:       rule.DocType + "/" + doc.ID(),
 				Revisions: []string{rev},
-				Infos: map[string]SharedInfo{
-					s.SID: {Rule: r},
-				},
+				Infos:     map[string]SharedInfo{s.SID: info},
 			}
 		} else {
 			found := false
@@ -280,12 +302,47 @@ func (s *Sharing) buildReferences(inst *instance.Instance, rule Rule, r int, doc
 			} else {
 				srefs[i].Revisions = append(srefs[i].Revisions, rev)
 			}
-			srefs[i].Infos[s.SID] = SharedInfo{Rule: r}
+			srefs[i].Infos[s.SID] = info
 			refs[i] = *srefs[i]
 		}
 	}
 
 	return refs, nil
+}
+
+// AddUploadTrigger creates the share-upload trigger for this sharing:
+// it will starts the synchronization of the binaries when a file is added or
+// updated in the io.cozy.shared database.
+func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
+	if s.Triggers.Upload {
+		return nil
+	}
+	msg, err := jobs.NewMessage(&UploadMsg{
+		SharingID: s.SID,
+		Errors:    0,
+	})
+	if err != nil {
+		return err
+	}
+	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
+	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
+		Domain:     inst.Domain,
+		Type:       "@event",
+		WorkerType: "share-upload",
+		Message:    msg,
+		Arguments:  args,
+		Debounce:   "5s",
+	})
+	inst.Logger().WithField("nspace", "sharing").Warnf("Create trigger %#v", t)
+	if err != nil {
+		return err
+	}
+	sched := jobs.System()
+	if err = sched.AddTrigger(t); err != nil {
+		return err
+	}
+	s.Triggers.Upload = true
+	return couchdb.UpdateDoc(inst, s)
 }
 
 // compactSlice returns the given slice without the nil values

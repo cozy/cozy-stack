@@ -35,4 +35,7 @@ var (
 	ErrMissingID = errors.New("An identifier is missing")
 	// ErrMissingRev is used when _rev is missing on a doc for a bulk operation
 	ErrMissingRev = errors.New("A revision is missing")
+	// ErrMissingFileMetadata is used when uploading a file and the key is not
+	// in the cache (so no metadata and the upload can't succeed)
+	ErrMissingFileMetadata = errors.New("The metadata for this file were not found")
 )

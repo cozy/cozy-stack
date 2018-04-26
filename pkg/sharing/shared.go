@@ -127,13 +127,16 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 
 	if _, ok := ref.Infos[msg.SharingID]; !ok {
 		ref.Infos[msg.SharingID] = SharedInfo{
-			Rule: msg.RuleIndex,
+			Rule:   msg.RuleIndex,
+			Binary: evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.FileType,
 		}
 	}
+	// TODO detect when a file/folder is trashed
 	// TODO detect when a document goes out of a sharing
 	if evt.Verb == "DELETED" {
 		infos := ref.Infos[msg.SharingID]
 		infos.Removed = true
+		infos.Binary = false
 	}
 
 	// TODO to be improved when we will work on conflicts

@@ -58,13 +58,13 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 		}
 	}
 	if errm != nil {
-		s.retryReplicate(inst, errors)
+		s.retryWorker(inst, "share-replicate", errors)
 	}
 	return errm
 }
 
-// retryReplicate will add a job to retry a failed replication
-func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
+// retryWorker will add a job to retry a failed replication or upload
+func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int) {
 	backoff := InitialBackoffPeriod << uint(errors*2)
 	errors++
 	if errors == MaxRetries {
@@ -77,24 +77,24 @@ func (s *Sharing) retryReplicate(inst *instance.Instance, errors int) {
 	})
 	if err != nil {
 		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Error on retry to replicate: %s", err)
+			Warnf("Error on retry to %s: %s", worker, err)
 		return
 	}
 	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
 		Domain:     inst.Domain,
 		Type:       "@in",
-		WorkerType: "share-replicate",
+		WorkerType: worker,
 		Message:    msg,
 		Arguments:  backoff.String(),
 	})
 	if err != nil {
 		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Error on retry to replicate: %s", err)
+			Warnf("Error on retry to %s: %s", worker, err)
 		return
 	}
 	if err = jobs.System().AddTrigger(t); err != nil {
 		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Error on retry to replicate: %s", err)
+			Warnf("Error on retry to %s: %s", worker, err)
 	}
 }
 
@@ -112,7 +112,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		return ErrInvalidSharing
 	}
 
-	lastSeq, err := s.getLastSeqNumber(inst, m)
+	lastSeq, err := s.getLastSeqNumber(inst, m, "replicator")
 	if err != nil {
 		return err
 	}
@@ -152,17 +152,17 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		}
 	}
 
-	return s.UpdateLastSequenceNumber(inst, m, seq)
+	return s.UpdateLastSequenceNumber(inst, m, "replicator", seq)
 }
 
 // getLastSeqNumber returns the last sequence number of the previous
 // replication to this member
-func (s *Sharing) getLastSeqNumber(inst *instance.Instance, m *Member) (string, error) {
+func (s *Sharing) getLastSeqNumber(inst *instance.Instance, m *Member, worker string) (string, error) {
 	id, err := s.replicationID(m)
 	if err != nil {
 		return "", err
 	}
-	result, err := couchdb.GetLocal(inst, consts.Shared, id)
+	result, err := couchdb.GetLocal(inst, consts.Shared, id+"/"+worker)
 	if couchdb.IsNotFoundError(err) {
 		return "", nil
 	}
@@ -175,12 +175,12 @@ func (s *Sharing) getLastSeqNumber(inst *instance.Instance, m *Member) (string, 
 
 // UpdateLastSequenceNumber updates the last sequence number for this
 // replication if it's superior to the number in CouchDB
-func (s *Sharing) UpdateLastSequenceNumber(inst *instance.Instance, m *Member, seq string) error {
+func (s *Sharing) UpdateLastSequenceNumber(inst *instance.Instance, m *Member, worker, seq string) error {
 	id, err := s.replicationID(m)
 	if err != nil {
 		return err
 	}
-	result, err := couchdb.GetLocal(inst, consts.Shared, id)
+	result, err := couchdb.GetLocal(inst, consts.Shared, id+"/"+worker)
 	if err != nil {
 		if !couchdb.IsNotFoundError(err) {
 			return err
@@ -194,7 +194,7 @@ func (s *Sharing) UpdateLastSequenceNumber(inst *instance.Instance, m *Member, s
 		}
 	}
 	result["last_seq"] = seq
-	return couchdb.PutLocal(inst, consts.Shared, id, result)
+	return couchdb.PutLocal(inst, consts.Shared, id+"/"+worker, result)
 }
 
 // replicationID gives an identifier for this replicator
@@ -235,6 +235,9 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 		}
 		info, ok := infos[s.SID].(map[string]interface{})
 		if !ok {
+			continue
+		}
+		if _, ok = info["binary"]; ok {
 			continue
 		}
 		idx, ok := info["rule"].(float64)
@@ -482,7 +485,9 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 	if files, ok := (*docs)[consts.Files]; ok {
 		s.SortFilesToSent(files)
 		for i, file := range files {
-			files[i] = s.TransformFileToSent(file, creds.XorKey, ruleIndexes)
+			fileID := file["_id"].(string)
+			s.TransformFileToSent(file, creds.XorKey, ruleIndexes[fileID])
+			files[i] = file
 		}
 		(*docs)[consts.Files] = files
 	}

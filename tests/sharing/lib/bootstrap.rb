@@ -29,6 +29,9 @@ class Bootstrap
   def self.push_folder
     owner = Instance.create name: "Alice"
     object = Folder.create owner
+    Folder.create owner, dir_id: object.couch_id
+    f = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    CozyFile.create_from_fixture owner, f, dir_id: object.couch_id
     recipient = Instance.create name: "Bob"
     [owner, recipient].map { |i| i.install_app "drive" }
     Bootstrap.new owner, [recipient], [object]

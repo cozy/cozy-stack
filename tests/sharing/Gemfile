@@ -2,6 +2,7 @@ source 'https://rubygems.org'
 
 gem "awesome_print"
 gem "faker"
+gem "mimemagic"
 gem "pry"
 gem "pry-rescue"
 gem "rest-client"

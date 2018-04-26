@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	perm "github.com/cozy/cozy-stack/web/permissions"
@@ -324,6 +325,10 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case sharing.ErrInternalServerError:
 		return jsonapi.InternalServerError(err)
+	case sharing.ErrMissingFileMetadata:
+		return jsonapi.NotFound(err)
+	case vfs.ErrInvalidHash:
+		return jsonapi.InvalidParameter("md5sum", err)
 	}
 	return err
 }

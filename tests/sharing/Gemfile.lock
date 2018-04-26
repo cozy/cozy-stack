@@ -17,6 +17,7 @@ GEM
     mime-types (3.1)
       mime-types-data (~> 3.2015)
     mime-types-data (3.2016.0521)
+    mimemagic (0.3.2)
     netrc (0.11.0)
     pry (0.11.3)
       coderay (~> 1.1.0)
@@ -38,6 +39,7 @@ PLATFORMS
 DEPENDENCIES
   awesome_print
   faker
+  mimemagic
   pry
   pry-rescue
   rest-client

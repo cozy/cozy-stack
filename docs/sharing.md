@@ -561,4 +561,86 @@ Content-Type: application/json
 []
 ```
 
+### PUT /sharings/:sharing-id/io.cozy.files/:file-id/metadata
+
+This is an internal endpoint used by a stack to send the new metadata about a
+file that has changed.
+
+#### Request
+
+```http
+PUT /sharings/ce8835a061d0ef68947afe69a0046722/io.cozy.files/0c1116b028c6ae6f5cdafb949c088265/metadata HTTP/1.1
+Host: bob.example.net
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer ...
+```
+
+```json
+{
+  "_id": "4b24ab130b2538b7b444fc65430198ad",
+  "_rev": "1-356bf77c03baa1da851a2be1f06aba81",
+  "type": "file",
+  "name": "cloudy.jpg",
+  "dir_id": "4b24ab130b2538b7b444fc65430188cd",
+  "created_at": "2018-01-03T16:10:36.885807013+01:00",
+  "updated_at": "2018-01-03T16:10:36.885807013+01:00",
+  "size": "84980",
+  "md5sum": "SuRJOiD/QPwDUpKpQujcVA==",
+  "mime": "image/jpeg",
+  "class": "image",
+  "executable": false,
+  "trashed": false,
+  "tags": [],
+  "metadata": {
+    "datetime": "2018-01-03T16:10:36.89118949+01:00",
+    "extractor_version": 2,
+    "height": 1200,
+    "width": 1600
+  }
+}
+```
+
+#### Response
+
+If only the metadata has changed (not the content), the response will be a
+204:
+
+```http
+HTTP/1.1 204 No Content
+```
+
+Else, the content will need to be uploaded:
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "key": "dcd478c6-46cf-11e8-9c3f-535468cbce7b"
+}
+```
+
+### PUT /sharings/:sharing-id/io.cozy.files/:key
+
+Upload the content of a file (new file or its content has changed since the
+last synchronization).
+
+#### Request
+
+```http
+PUT /sharings/ce8835a061d0ef68947afe69a0046722/io.cozy.files/dcd478c6-46cf-11e8-9c3f-535468cbce7b HTTP/1.1
+Host: bob.example.net
+Content-Type: image/jpeg
+Authorization: Bearer ...
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 {% endraw %}

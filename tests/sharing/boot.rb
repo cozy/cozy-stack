@@ -1,6 +1,7 @@
 require 'awesome_print'
 require 'faker'
 require 'fileutils'
+require 'mimemagic'
 require 'json'
 require 'pry'
 require 'rest-client'

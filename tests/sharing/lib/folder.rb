@@ -8,6 +8,7 @@ class Folder
   end
 
   def initialize(opts = {})
+    ap opts
     @name = opts[:name] || Faker::Internet.slug
     @dir_id = opts[:dir_id] || "io.cozy.files.root-dir"
   end

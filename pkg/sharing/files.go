@@ -59,10 +59,10 @@ func XorID(id string, key []byte) string {
 func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 	sort.SliceStable(files, func(i, j int) bool {
 		a, b := files[i], files[j]
-		if a["type"] == "file" {
+		if a["type"] == consts.FileType {
 			return false
 		}
-		if b["type"] == "file" {
+		if b["type"] == consts.FileType {
 			return true
 		}
 		p, ok := a["path"].(string)
@@ -86,21 +86,18 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 // ruleIndexes is a map of "doctype-docid" -> rule index
 // TODO keep referenced_by that are relevant to this sharing
 // TODO the file/folder has been moved outside the shared directory
-func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndexes map[string]int) map[string]interface{} {
-	if doc["type"] == "directory" {
+func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndex int) map[string]interface{} {
+	if doc["type"] == consts.DirType {
 		delete(doc, "path")
 	}
-	id, ok := doc["_id"].(string)
-	if !ok {
-		return doc
-	}
+	id := doc["_id"].(string)
 	doc["_id"] = XorID(id, xorKey)
 	dir, ok := doc["dir_id"].(string)
 	if !ok {
 		return doc
 	}
 	delete(doc, "referenced_by")
-	rule := s.Rules[ruleIndexes[id]]
+	rule := s.Rules[ruleIndex]
 	noDirID := rule.Selector == "referenced_by"
 	if !noDirID {
 		for _, v := range rule.Values {
@@ -215,17 +212,22 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			errm = multierror.Append(errm, ErrMissingID)
 			continue
 		}
-		var ref *SharedRef
+		ref := &SharedRef{}
 		err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+id, ref)
-		if err != nil && !couchdb.IsNotFoundError(err) {
-			inst.Logger().WithField("nspace", "replicator").Debugf("Error on finding doc of bulk files: %s", err)
-			errm = multierror.Append(errm, err)
-			continue
+		if err != nil {
+			if !couchdb.IsNotFoundError(err) {
+				inst.Logger().WithField("nspace", "replicator").
+					Debugf("Error on finding doc of bulk files: %s", err)
+				errm = multierror.Append(errm, err)
+				continue
+			}
+			ref = nil
 		}
 		// TODO it's only for directory currently, code needs to be adapted for files
 		doc, err := fs.DirByID(id) // TODO DirOrFileByID
 		if err != nil && err != os.ErrNotExist {
-			inst.Logger().WithField("nspace", "replicator").Debugf("Error on finding ref of bulk files: %s", err)
+			inst.Logger().WithField("nspace", "replicator").
+				Debugf("Error on finding ref of bulk files: %s", err)
 			errm = multierror.Append(errm, err)
 			continue
 		}

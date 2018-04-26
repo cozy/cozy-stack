@@ -1,6 +1,8 @@
 package sharing
 
 import (
+	"fmt"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -24,7 +26,7 @@ type sharingIndexer struct {
 func NewSharingIndexer(inst *instance.Instance, bulkRevs *bulkRevs) vfs.Indexer {
 	return &sharingIndexer{
 		db:       inst,
-		indexer:  inst.VFS(),
+		indexer:  vfs.NewCouchdbIndexer(inst),
 		bulkRevs: bulkRevs,
 	}
 }
@@ -42,11 +44,35 @@ func (s *sharingIndexer) CreateFileDoc(doc *vfs.FileDoc) error {
 }
 
 func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
-	return ErrInternalServerError
+	return s.UpdateFileDoc(nil, doc)
 }
 
-func (s *sharingIndexer) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
-	return ErrInternalServerError
+// TODO update io.cozy.shared & rtevent
+func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
+	docs := make([]map[string]interface{}, 1)
+	docs[0] = map[string]interface{}{
+		"type":       doc.Type,
+		"_id":        doc.DocID,
+		"name":       doc.DocName,
+		"dir_id":     doc.DirID,
+		"created_at": doc.CreatedAt,
+		"updated_at": doc.UpdatedAt,
+		"tags":       doc.Tags,
+		"size":       fmt.Sprintf("%d", doc.ByteSize), // XXX size must be serialized as a string, not an int
+		"md5Sum":     doc.MD5Sum,
+		"mime":       doc.Mime,
+		"class":      doc.Class,
+		"executable": doc.Executable,
+		"trashed":    doc.Trashed,
+	}
+	if len(doc.ReferencedBy) > 0 {
+		docs[0]["referenced_by"] = doc.ReferencedBy
+	}
+	if s.bulkRevs != nil {
+		docs[0]["_rev"] = s.bulkRevs.Rev
+		docs[0]["_revisions"] = s.bulkRevs.Revisions
+	}
+	return couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs)
 }
 
 func (s *sharingIndexer) UpdateFileDocs(docs []*vfs.FileDoc) error {
