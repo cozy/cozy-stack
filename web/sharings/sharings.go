@@ -117,28 +117,31 @@ func GetSharing(c echo.Context) error {
 func GetSharingsInfoByDocType(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	docType := c.Param("doctype")
-	sharingIDs, err := sharing.GetSharingsByDocType(inst, docType)
+	sharingsInfo, err := sharing.GetSharingsByDocType(inst, docType)
 	if err != nil {
 		return wrapErrors(err)
 	}
-	res := make([]*sharing.APISharing, len(sharingIDs))
+	sharingIDs := make([]string, len(sharingsInfo))
+	i := 0
+	for sharingID := range sharingsInfo {
+		sharingIDs[i] = sharingID
+		i++
+	}
 
 	sharings, err := sharing.FindSharings(inst, sharingIDs)
 	if err != nil {
 		return wrapErrors(err)
 	}
+	res := make([]*sharing.APISharing, len(sharings))
+
 	for i, s := range sharings {
 		if err = checkGetPermissions(c, s); err != nil {
-			return wrapErrors(err)
-		}
-		docs, err := sharing.GetSharedDocsBySharingID(inst, s.ID())
-		if err != nil {
 			return wrapErrors(err)
 		}
 		as := &sharing.APISharing{
 			Sharing:     s,
 			Credentials: nil,
-			SharedDocs:  docs,
+			SharedDocs:  sharingsInfo[s.ID()],
 		}
 		res[i] = as
 	}

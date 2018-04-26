@@ -152,8 +152,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	return couchdb.UpdateDoc(inst, &ref)
 }
 
-// GetSharedDocsBySharingID returns the shared documents related to the
-// given sharingID
+// GetSharedDocsBySharingID returns the shared documents related to the given sharingID
 func GetSharedDocsBySharingID(inst *instance.Instance, sharingID string) ([]couchdb.DocReference, error) {
 	var req = &couchdb.ViewRequest{
 		Key:         sharingID,
@@ -176,23 +175,18 @@ func GetSharedDocsBySharingID(inst *instance.Instance, sharingID string) ([]couc
 		}
 		// Filter out the removed docs
 		if !doc.Infos[sharingID].Removed {
-			var d couchdb.DocReference
-			id := doc.ID()
-			slice := strings.Split(id, "/")
-			if len(slice) != 2 {
-				continue
-			}
-			d.ID = slice[1]
-			d.Type = slice[0]
-			result = append(result, d)
+			docRef := extractDocReferenceFromID(doc.ID())
+			result = append(result, *docRef)
 		}
 	}
 	return result, nil
 }
 
-// GetSharingsByDocType returns the sharingids related to the
-// given docType
-func GetSharingsByDocType(inst *instance.Instance, docType string) ([]string, error) {
+// GetSharingsByDocType returns a map associating the sharings ids to a list of
+// shared documents, for the given doctype
+func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string][]couchdb.DocReference, error) {
+	res := make(map[string][]couchdb.DocReference)
+
 	var req = &couchdb.AllDocsRequest{
 		StartKey: docType + "/",
 		EndKey:   docType + "/\uFFFF",
@@ -203,19 +197,29 @@ func GetSharingsByDocType(inst *instance.Instance, docType string) ([]string, er
 	if err != nil {
 		return nil, err
 	}
-	// Use a map to easily avoid duplicates
-	keys := make(map[string]bool)
-	var sharingIDs []string
 	for _, doc := range docs {
-		for id := range doc.Infos {
-			// Do not include removed docs
-			if !keys[id] && !doc.Infos[id].Removed {
-				keys[id] = true
-				sharingIDs = append(sharingIDs, id)
+		docRef := extractDocReferenceFromID(doc.ID())
+		for sharingID := range doc.Infos {
+			// Filter out removed docs
+			if !doc.Infos[sharingID].Removed {
+				res[sharingID] = append(res[sharingID], *docRef)
 			}
 		}
 	}
-	return sharingIDs, nil
+	return res, nil
+}
+
+// extractDocReferenceFromID takes a string formatted as doctype/docid and
+// returns a DocReference
+func extractDocReferenceFromID(id string) *couchdb.DocReference {
+	var ref couchdb.DocReference
+	slice := strings.Split(id, "/")
+	if len(slice) != 2 {
+		return nil
+	}
+	ref.ID = slice[1]
+	ref.Type = slice[0]
+	return &ref
 }
 
 var _ couchdb.Doc = &SharedRef{}
