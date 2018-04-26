@@ -53,7 +53,7 @@ func getSessions(c echo.Context) error {
 func warnings(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Settings); err != nil {
+	if _, err := permissions.GetPermission(c); err != nil {
 		return err
 	}
 
