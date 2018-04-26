@@ -54,7 +54,7 @@ class Stack
     @oauth_client_id ||= generate_client_id(inst)
     cmd = ["cozy-stack", "instances", "token-oauth", inst.domain,
            "--admin-port", @admin,
-           @oauth_client_id, doctypes.join(",")]
+           @oauth_client_id, "'#{doctypes.join(' ')}'"]
     puts cmd.join(" ").green
     `#{cmd.join(" ")}`.chomp
   end

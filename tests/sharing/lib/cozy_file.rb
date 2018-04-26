@@ -34,4 +34,23 @@ class CozyFile
     @couch_id = j["id"]
     @couch_rev = j["rev"]
   end
+
+  PHOTOS = %w(about apps architecture business community faq features try).freeze
+
+  def self.create_photos(inst, opts = {})
+    dir = File.expand_path "../.photos", Helpers.current_dir
+    PHOTOS.map do |photo|
+      create_from_fixture inst, "#{dir}/#{photo}.jpg", opts.dup
+    end
+  end
+
+  def self.ensure_photos_in_cache
+    dir = File.expand_path "../.photos", Helpers.current_dir
+    return if Dir.exist? dir
+    FileUtils.mkdir_p dir
+    PHOTOS.each do |photo|
+      url = "https://cozy.io/fr/images/bkg-#{photo}.jpg"
+      `wget -q #{url} -O #{dir}/#{photo}.jpg`
+    end
+  end
 end
