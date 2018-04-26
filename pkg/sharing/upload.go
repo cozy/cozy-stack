@@ -304,7 +304,7 @@ func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRe
 	return &KeyToUpload{Key: key}, nil
 }
 
-// SyncFile tries to synchroniza a file with just the metadata. If it can't,
+// SyncFile tries to synchronize a file with just the metadata. If it can't,
 // it will return a key to upload the content.
 func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
 	if len(target.MD5Sum) == 0 {

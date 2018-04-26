@@ -22,7 +22,6 @@ var tsR *httptest.Server
 var replInstance *instance.Instance
 var replSharingID, replAccessToken string
 var fileSharingID, fileAccessToken string
-var fileOneID string
 
 const replDoctype = "io.cozy.replicator.tests"
 
@@ -264,12 +263,12 @@ func TestBulkDocs(t *testing.T) {
 
 // It's not really a test, more a setup for the io.cozy.files tests
 func TestCreateSharingForUploadFileTest(t *testing.T) {
-	fileOneID = uuidv4()
+	dirID := uuidv4()
 	ruleOne := sharing.Rule{
 		Title:    "file one",
 		DocType:  "io.cozy.files",
 		Selector: "",
-		Values:   []string{fileOneID},
+		Values:   []string{dirID},
 		Add:      "push",
 		Update:   "push",
 		Remove:   "push",
@@ -305,8 +304,8 @@ func TestCreateSharingForUploadFileTest(t *testing.T) {
 func TestUploadNewFile(t *testing.T) {
 	assert.NotEmpty(t, fileSharingID)
 	assert.NotEmpty(t, fileAccessToken)
-	assert.NotEmpty(t, fileOneID)
 
+	fileOneID := uuidv4()
 	body, _ := json.Marshal(map[string]interface{}{
 		"_id":  fileOneID,
 		"_rev": "1-5f9ba207fefdc250e35f7cd866c84cc6",
