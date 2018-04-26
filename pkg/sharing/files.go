@@ -256,7 +256,17 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 	return nil
 }
 
-func copyTagsAndDatesToDir(target map[string]interface{}, dir *vfs.DirDoc) {
+func copySafeFieldsToFile(target, file *vfs.FileDoc) {
+	file.Tags = make([]string, len(target.Tags))
+	copy(file.Tags, target.Tags)
+	file.CreatedAt = target.CreatedAt
+	file.UpdatedAt = target.UpdatedAt
+	file.Mime = target.Mime
+	file.Class = target.Class
+	file.Executable = target.Executable
+}
+
+func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 	if tags, ok := target["tags"].([]interface{}); ok {
 		dir.Tags = make([]string, 0, len(tags))
 		for _, tag := range tags {
@@ -328,7 +338,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		return err
 	}
 	dir.SetID(target["_id"].(string))
-	copyTagsAndDatesToDir(target, dir)
+	copySafeFieldsToDir(target, dir)
 	// TODO referenced_by
 	// TODO manage conflicts
 	if err := fs.CreateDir(dir); err != nil {
@@ -360,7 +370,7 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 		Revisions: revisions,
 	})
 	fs := inst.VFS().UseSharingIndexer(indexer)
-	copyTagsAndDatesToDir(target, dir)
+	copySafeFieldsToDir(target, dir)
 	name, ok := target["name"].(string)
 	if !ok {
 		inst.Logger().WithField("nspace", "replicator").

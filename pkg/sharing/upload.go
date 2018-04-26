@@ -224,8 +224,21 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	if !bytes.Equal(target.MD5Sum, current.MD5Sum) {
 		return s.createUploadKey(inst, target)
 	}
-	// TODO sync
-	return nil, nil
+	if RevGeneration(current.DocRev) >= RevGeneration(target.DocRev) {
+		// TODO conflicts
+		return nil, nil
+	}
+	oldDoc := current.Clone().(*vfs.FileDoc)
+	indexer := NewSharingIndexer(inst, &bulkRevs{
+		Rev:       target.Rev(),
+		Revisions: target.Revisions,
+	})
+	copySafeFieldsToFile(target.FileDoc, current)
+	// TODO move/rename
+	// TODO referenced_by
+	// TODO trash
+	// TODO manage conflicts
+	return nil, indexer.UpdateFileDoc(oldDoc, current)
 }
 
 // uploadFile uploads one file to the given member. It first try to just send
