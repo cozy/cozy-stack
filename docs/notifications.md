@@ -16,21 +16,21 @@ Each application have to declare in its manifest the notifications it needs to
 send. The `notifications` fields of the manifest can be used to define all
 these notifications, with the following properties:
 
-  - `collapsible` (boolean): defines a notification category for which only
-    the last value is of interest to the user. For instance, a account-balance
-    quota for a user's bank account: such notification is only useful as its
-    last value.
-  - `stateful` (boolean): defines a notification storing a piece of state: for
-    each new notification, the stack will check that the last sent
-    notification has a different state.
-  - `multiple` (boolean): specify the possibility for a notification to have
-    different sub-categories, defined by a programmable/dynamic identifier.
-    `collapsible` and `stateful` properties are inherited for each sub-
-    categories.
-  - `default_priority`: default priority to use, with values "high" or
-    "normal". This is propagated to the underlying mobile notifications
-    system.
-  - `templates`: a link list to templates file contained in the application folder that can be used to write the content of the notification, depending on the communication channel.
+* `collapsible` (boolean): defines a notification category for which only
+  the last value is of interest to the user. For instance, a account-balance
+  quota for a user's bank account: such notification is only useful as its
+  last value.
+* `stateful` (boolean): defines a notification storing a piece of state: for
+  each new notification, the stack will check that the last sent
+  notification has a different state.
+* `multiple` (boolean): specify the possibility for a notification to have
+  different sub-categories, defined by a programmable/dynamic identifier.
+  `collapsible` and `stateful` properties are inherited for each sub-
+  categories.
+* `default_priority`: default priority to use, with values "high" or
+  "normal". This is propagated to the underlying mobile notifications
+  system.
+* `templates`: a link list to templates file contained in the application folder that can be used to write the content of the notification, depending on the communication channel.
 
 In this documentation, we take the example of an application with the following notification:
 
@@ -39,12 +39,12 @@ In this documentation, we take the example of an application with the following 
   "notifications": {
     "account-balance": {
       "description": "Alert the user when its account balance is negative",
-      "collapsible": true,        // only interested in the last value of the notification
-      "multiple": true,           // require sub-categories for each account
-      "stateful": true,           // piece of state to distinguish notifications
+      "collapsible": true, // only interested in the last value of the notification
+      "multiple": true, // require sub-categories for each account
+      "stateful": true, // piece of state to distinguish notifications
       "default_priority": "high", // high priority for this notification
       "templates": {
-        "mail": "file:./notifications/account-balance-mail.tpl",
+        "mail": "file:./notifications/account-balance-mail.tpl"
       }
     }
   }
@@ -59,19 +59,19 @@ This endpoint can be used to push a new notification to the user.
 
 Notifications fields are:
 
-  - `category` (string): name of the notification category
-  - `category_id` (string): category name if the category is multiple
-  - `title` (string): title of the notification (optionnal)
-  - `message` (string): message of of the notification (optionnal)
-  - `priority` (string): priority of the notification (`high` or `normal`),
-    sent to the underlying channel to prioritize the notification
-  - `state` (string): state of the notification, used for `stateful`
-    notification categories, to distinguish notifications
-  - `preferred_channels` (array of string): to select a list of preferred
-    channels for this notification: either `"mobile"` or `"mail"`. The stack
-    may chose another channels.
-  - `data` (map): key/value map used to create the notification from its
-    template, or sent in the notification payload for mobiles
+* `category` (string): name of the notification category
+* `category_id` (string): category name if the category is multiple
+* `title` (string): title of the notification (optionnal)
+* `message` (string): message of of the notification (optionnal)
+* `priority` (string): priority of the notification (`high` or `normal`),
+  sent to the underlying channel to prioritize the notification
+* `state` (string): state of the notification, used for `stateful`
+  notification categories, to distinguish notifications
+* `preferred_channels` (array of string): to select a list of preferred
+  channels for this notification: either `"mobile"` or `"mail"`. The stack
+  may chose another channels.
+* `data` (map): key/value map used to create the notification from its
+  template, or sent in the notification payload for mobiles
 
 #### Request
 

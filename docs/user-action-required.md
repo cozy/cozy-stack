@@ -41,12 +41,11 @@ If they receive such a code, the clients should block any further action on
 the stack, warn the user with the necessary message and provide a button
 allowing the user to perform the required action.
 
-- If the client knows the specific `error` code, display a beautiful message.
-- Otherwise, display the message provided by the stack and use the links.action on the button.
+* If the client knows the specific `error` code, display a beautiful message.
+* Otherwise, display the message provided by the stack and use the links.action on the button.
 
 Possible other codes in the future: `payment_required` for functions requiring
 a premium account, etc.
-
 
 # Anticipating these errors and warning the user
 

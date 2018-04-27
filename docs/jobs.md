@@ -537,10 +537,10 @@ To use this endpoint, an application needs a permission on the type
 Get the trigger current state, to give a big picture of the health of the
 trigger.
 
-- last executed job status (`done`, `errored`, `queued` or `running`)
-- last executed job that resulted in a successful executoin
-- last executed job that resulted in an error
-- last executed job from a manual execution (not executed by the trigger
+* last executed job status (`done`, `errored`, `queued` or `running`)
+* last executed job that resulted in a successful executoin
+* last executed job that resulted in an error
+* last executed job from a manual execution (not executed by the trigger
   directly)
 
 #### Request

@@ -128,8 +128,7 @@ Content-Type: application/json
 * If an index does not exist for the selector, an error 400 is returned
 * The sort field must contains all fields used in selector
 * The sort field must match an existing index
-* It is possible to sort in reverse direction `sort:[{"calendar":"desc"},
-  {"date": "desc"}]` but **all fields** must be sorted in same direction.
+* It is possible to sort in reverse direction `sort:[{"calendar":"desc"}, {"date": "desc"}]` but **all fields** must be sorted in same direction.
 * `use_index` is optional but recommended.
 
 ## Pagination cookbook

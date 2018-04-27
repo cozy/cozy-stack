@@ -479,6 +479,6 @@ Content-Type: application/json
 
 ## Others
 
-- The creation and usage of [Mango indexes](mango.md) is possible.
-- CouchDB behaviors are not always straight forward: see [some
+* The creation and usage of [Mango indexes](mango.md) is possible.
+* CouchDB behaviors are not always straight forward: see [some
   quirks](couchdb-quirks.md) for more details.

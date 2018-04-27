@@ -281,9 +281,10 @@ With this route, the user can ask for the activation of different
 authentication modes, like two-factor authentication.
 
 Available authentication modes:
-  - `basic`: basic authentication only with passphrase
-  - `two_factor_mail`: authentication with passphrase and validation with a
-    code sent via email to the user.
+
+* `basic`: basic authentication only with passphrase
+* `two_factor_mail`: authentication with passphrase and validation with a
+  code sent via email to the user.
 
 When asking for activation of the two-factor authentication, a side-effect can
 be triggered to send the user its code (via email for instance), and the
@@ -292,14 +293,16 @@ a code that can be used to finalize the activation of the two-factor
 authentication.
 
 Hence, this route has two behaviors:
-  - the code is not provided: the route is a side effect to ask for the
-    activation of 2FA, and a code is sent
-  - the code is provided, and valid: the two-factor authentication is actually
-    activated.
+
+* the code is not provided: the route is a side effect to ask for the
+  activation of 2FA, and a code is sent
+* the code is provided, and valid: the two-factor authentication is actually
+  activated.
 
 Status codes:
-  * `204 No Content`: when the mail has been confirmed and two-factor authentication is activated
-  * `422 Unprocessable Entity`: when the given confirmation code is not good.
+
+* `204 No Content`: when the mail has been confirmed and two-factor authentication is activated
+* `422 Unprocessable Entity`: when the given confirmation code is not good.
 
 #### Request
 
@@ -313,7 +316,7 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 ```json
 {
   "auth_mode": "two_factor_mail",
-  "two_factor_activation_code": "12345678",
+  "two_factor_activation_code": "12345678"
 }
 ```
 

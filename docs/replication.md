@@ -124,8 +124,7 @@ To suport this we need to:
 * Proxy `/data/:doctype/_changes` route with since, limit, feed=normal. Refuse
   all filter parameters with a clear error message.
   [(Doc)](http://docs.couchdb.org/en/2.1.0/api/database/changes.html)
-* Add support of `open_revs`, `revs`, `latest` query parameter to `GET
-  /data/:doctype/:docid`
+* Add support of `open_revs`, `revs`, `latest` query parameter to `GET /data/:doctype/:docid`
   [(Doc) ](http://docs.couchdb.org/en/2.1.0/api/document/common.html?highlight=open_revs#get--db-docid)
 * Proxy the `/data/:doctype/_revs_diff`
   [(Doc)](http://docs.couchdb.org/en/2.1.0/api/database/misc.html#db-revs-diff)

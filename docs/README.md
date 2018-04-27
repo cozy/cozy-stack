@@ -40,7 +40,7 @@
 * `/realtime` - [Realtime](realtime.md)
 * `/remote` - [Proxy for remote data/API](remote.md)
 * `/settings` - [Settings](settings.md)
-  - [Terms of Services](user-action-required.md)
+  * [Terms of Services](user-action-required.md)
 * `/sharings` - [Sharing](sharing.md)
   * [Request for comments](sharing-design.md)
 

@@ -32,7 +32,7 @@ The options are:
   "client_id": "abcdef123123123",
   "title": "My Notification",
   "message": "My notification content.",
-  "priority": "high",
+  "priority": "high"
 }
 ```
 

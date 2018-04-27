@@ -287,7 +287,7 @@ Content-Type: application/vnd.api+json
           "update": "sync",
           "remove": "sync"
         }
-      ],
+      ]
     },
     "relationships": {
       "shared_docs": {
@@ -364,7 +364,7 @@ Content-Type: application/vnd.api+json
             "update": "sync",
             "remove": "sync"
           }
-        ],
+        ]
       },
       "meta": {
         "rev": "1-4859c6c755143adf0838d225c5e97882"
@@ -419,7 +419,7 @@ Content-Type: application/vnd.api+json
             "update": "sync",
             "remove": "sync"
           }
-        ],
+        ]
       },
       "meta": {
         "rev": "1-7ac5f1252a0c513186a5d35b1a6fd350"
@@ -640,12 +640,8 @@ Content-Type: application/json
 ```json
 {
   "io.cozy.files/44f5752a-2cec-11e8-b227-abfc3cfd4b6e": {
-    "missing": [
-      "4-2ee767305024673cfb3f5af037cd2729"
-    ],
-    "possible_ancestors": [
-      "3-753875d51501a6b1883a9d62b4d33f91"
-    ]
+    "missing": ["4-2ee767305024673cfb3f5af037cd2729"],
+    "possible_ancestors": ["3-753875d51501a6b1883a9d62b4d33f91"]
   }
 }
 ```
@@ -670,17 +666,19 @@ Authorization: Bearer ...
 
 ```json
 {
-  "io.cozy.files": [{
-    "_id": "44f5752a-2cec-11e8-b227-abfc3cfd4b6e",
-    "_rev": "4-2ee767305024673cfb3f5af037cd2729",
-    "_revisions": {
-      "start": 4,
-      "ids": [
-        "2ee767305024673cfb3f5af037cd2729",
-        "753875d51501a6b1883a9d62b4d33f91",
-      ]
+  "io.cozy.files": [
+    {
+      "_id": "44f5752a-2cec-11e8-b227-abfc3cfd4b6e",
+      "_rev": "4-2ee767305024673cfb3f5af037cd2729",
+      "_revisions": {
+        "start": 4,
+        "ids": [
+          "2ee767305024673cfb3f5af037cd2729",
+          "753875d51501a6b1883a9d62b4d33f91"
+        ]
+      }
     }
-  }]
+  ]
 }
 ```
 

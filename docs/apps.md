@@ -22,7 +22,7 @@ is a better fit. We took a lot of inspirations from it, starting with the
 filename for this file: `manifest.webapp`.
 
 | Field             | Description                                                                              |
-| ------------------| -----------------------------------------------------------------------------------------|
+| ----------------- | ---------------------------------------------------------------------------------------- |
 | name              | the name to display on the home                                                          |
 | name_prefix       | the prefix to display with the name                                                      |
 | slug              | the default slug (it can be changed at install time)                                     |
@@ -141,12 +141,12 @@ Here is an example:
   "notifications": {
     "account-balance": {
       "description": "Alert the user when its account balance is negative",
-      "collapsible": true,        // only interested in the last value of the notification
-      "multiple": true,           // require sub-categories for each account
+      "collapsible": true, // only interested in the last value of the notification
+      "multiple": true, // require sub-categories for each account
       "stateful": false,
       "default_priority": "high", // high priority for this notification
       "templates": {
-        "mail": "file:./notifications/account-balance-mail.tpl",
+        "mail": "file:./notifications/account-balance-mail.tpl"
       }
     }
   }
