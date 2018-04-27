@@ -1,16 +1,17 @@
 class Folder
   include Model
+  include Model::Files
 
-  attr_reader :name, :dir_id
+  attr_reader :name, :dir_id, :children
 
   def doctype
     "io.cozy.files"
   end
 
   def initialize(opts = {})
-    ap opts
     @name = opts[:name] || Faker::Internet.slug
     @dir_id = opts[:dir_id] || "io.cozy.files.root-dir"
+    @children = []
   end
 
   def save(inst)

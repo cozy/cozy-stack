@@ -154,18 +154,18 @@ func (r Rule) Accept(doctype string, doc map[string]interface{}) bool {
 // TriggerArgs returns the string that can be used as an argument to create a
 // trigger for this rule. The result can be an empty string if the rule doesn't
 // need a trigger (a local or one-shot rule).
-func (r Rule) TriggerArgs(owner bool) string {
+func (r Rule) TriggerArgs() string {
 	if r.Local {
 		return ""
 	}
 	verbs := make([]string, 0, 3)
-	if r.Add == ActionRuleSync || (owner && r.Add == ActionRulePush) {
+	if r.Add == ActionRuleSync || r.Add == ActionRulePush {
 		verbs = append(verbs, "CREATED")
 	}
-	if r.Update == ActionRuleSync || (owner && r.Update == ActionRulePush) {
+	if r.Update == ActionRuleSync || r.Update == ActionRulePush {
 		verbs = append(verbs, "UPDATED")
 	}
-	if r.Remove == ActionRuleSync || (owner && r.Remove == ActionRulePush) {
+	if r.Remove == ActionRuleSync || r.Remove == ActionRulePush {
 		verbs = append(verbs, "UPDATED")
 	}
 	if len(verbs) == 0 {

@@ -263,7 +263,7 @@ func (c *couchdbIndexer) DirByID(fileID string) (*DirDoc, error) {
 	if doc.Type != consts.DirType {
 		return nil, os.ErrNotExist
 	}
-	return doc, err
+	return doc, nil
 }
 
 func (c *couchdbIndexer) DirByPath(name string) (*DirDoc, error) {

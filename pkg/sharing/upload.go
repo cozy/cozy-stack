@@ -177,57 +177,6 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 	return nil, 0, since, nil
 }
 
-// FileDocWithRevisions is the struct of the payload for synchronizing a file
-type FileDocWithRevisions struct {
-	*vfs.FileDoc
-	Revisions map[string]interface{} `json:"_revisions"`
-}
-
-// KeyToUpload contains the key for uploading a file (when syncing metadata is
-// not enough)
-type KeyToUpload struct {
-	Key string `json:"key"`
-}
-
-func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
-	key, err := getStore().Save(inst.Domain, target)
-	inst.Logger().WithField("nspace", "upload").
-		Debugf("Store save %s %s (%v)", inst.Domain, key, err)
-	if err != nil {
-		return nil, err
-	}
-	return &KeyToUpload{Key: key}, nil
-}
-
-// SyncFile tries to synchroniza a file with just the metadata. If it can't,
-// it will return a key to upload the content.
-func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
-	if len(target.MD5Sum) == 0 {
-		return nil, vfs.ErrInvalidHash
-	}
-	fs := inst.VFS()
-	current, err := fs.FileByID(target.DocID)
-	if err != nil {
-		if err == os.ErrNotExist {
-			return s.createUploadKey(inst, target)
-		}
-		return nil, err
-	}
-	var ref SharedRef
-	err = couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
-	if err != nil {
-		if couchdb.IsNotFoundError(err) {
-			return nil, ErrInternalServerError // TODO better error for safety principal
-		}
-		return nil, err
-	}
-	if !bytes.Equal(target.MD5Sum, current.MD5Sum) {
-		return s.createUploadKey(inst, target)
-	}
-	// TODO sync
-	return nil, nil
-}
-
 // uploadFile uploads one file to the given member. It first try to just send
 // the metadata, and if it is not enough, it also send the binary.
 func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string]interface{}, ruleIndex int) error {
@@ -333,6 +282,90 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	return nil
 }
 
+// FileDocWithRevisions is the struct of the payload for synchronizing a file
+type FileDocWithRevisions struct {
+	*vfs.FileDoc
+	Revisions map[string]interface{} `json:"_revisions"`
+}
+
+// KeyToUpload contains the key for uploading a file (when syncing metadata is
+// not enough)
+type KeyToUpload struct {
+	Key string `json:"key"`
+}
+
+func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
+	key, err := getStore().Save(inst.Domain, target)
+	inst.Logger().WithField("nspace", "upload").
+		Debugf("Store save %s %s (%v)", inst.Domain, key, err)
+	if err != nil {
+		return nil, err
+	}
+	return &KeyToUpload{Key: key}, nil
+}
+
+// SyncFile tries to synchronize a file with just the metadata. If it can't,
+// it will return a key to upload the content.
+func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
+	if len(target.MD5Sum) == 0 {
+		return nil, vfs.ErrInvalidHash
+	}
+	indexer := NewSharingIndexer(inst, &bulkRevs{
+		Rev:       target.Rev(),
+		Revisions: target.Revisions,
+	})
+	fs := inst.VFS().UseSharingIndexer(indexer)
+	current, err := fs.FileByID(target.DocID)
+	if err != nil {
+		if err == os.ErrNotExist {
+			return s.createUploadKey(inst, target)
+		}
+		return nil, err
+	}
+	var ref SharedRef
+	err = couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil, ErrInternalServerError // TODO better error for safety principal
+		}
+		return nil, err
+	}
+	if !bytes.Equal(target.MD5Sum, current.MD5Sum) {
+		return s.createUploadKey(inst, target)
+	}
+	if RevGeneration(current.DocRev) >= RevGeneration(target.DocRev) {
+		// TODO conflicts
+		return nil, nil
+	}
+	oldDoc := current.Clone().(*vfs.FileDoc)
+
+	current.DocName = target.DocName
+	if target.DirID == "" {
+		parent, err := s.GetSharingDir(inst)
+		if err != nil {
+			return nil, err
+		}
+		current.DirID = parent.DocID
+	} else if target.DirID != current.DirID {
+		parent, err := fs.DirByID(target.DirID)
+		// TODO better handling of this conflict
+		if err != nil {
+			inst.Logger().WithField("nspace", "upload").
+				Debugf("Conflict for parent on sync file: %s", err)
+			return nil, err
+		}
+		current.DirID = parent.DocID
+	}
+
+	copySafeFieldsToFile(target.FileDoc, current)
+	inst.Logger().WithField("nspace", "upload").
+		Debugf("Sync file: %#v", current)
+	// TODO referenced_by
+	// TODO trash
+	// TODO manage conflicts
+	return nil, fs.UpdateFileDoc(oldDoc, current)
+}
+
 // HandleFileUpload is used to receive a file upload when synchronizing just
 // the metadata was not enough.
 func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) (err error) {
@@ -356,7 +389,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 		_, err = fs.DirByID(newdoc.DirID)
 		// TODO better handling of this conflict
 		if err != nil {
-			inst.Logger().WithField("nspace", "replicator").
+			inst.Logger().WithField("nspace", "upload").
 				Debugf("Conflict for parent on file upload: %s", err)
 			return err
 		}
@@ -374,7 +407,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	}
 	file, err := fs.CreateFile(newdoc.FileDoc, olddoc)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").
+		inst.Logger().WithField("nspace", "upload").
 			Debugf("Cannot create file: %s", err)
 		return err
 	}
@@ -382,7 +415,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	defer func() {
 		if cerr := file.Close(); cerr != nil && err == nil {
 			err = cerr
-			inst.Logger().WithField("nspace", "replicator").
+			inst.Logger().WithField("nspace", "upload").
 				Debugf("Cannot close file descriptor: %s", err)
 		}
 	}()

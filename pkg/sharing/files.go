@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"os"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -171,6 +172,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error
 	}
 	fs := inst.VFS()
 	dir, err := vfs.NewDirDocWithParent(rule.Title, parent, []string{"from-sharing-" + s.SID})
+	dir.DocID = rule.Values[0]
 	if err != nil {
 		return err
 	}
@@ -194,7 +196,8 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	var res couchdb.ViewResponse
 	err := couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res)
 	if err != nil || len(res.Rows) == 0 {
-		inst.Logger().WithField("nspace", "sharing").Warnf("Sharing dir not found: %v (%s)", err, s.SID)
+		inst.Logger().WithField("nspace", "sharing").
+			Warnf("Sharing dir not found: %v (%s)", err, s.SID)
 		return nil, ErrInternalServerError
 	}
 	return inst.VFS().DirByID(res.Rows[0].ID)
@@ -254,7 +257,17 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 	return nil
 }
 
-func copyTagsAndDatesToDir(target map[string]interface{}, dir *vfs.DirDoc) {
+func copySafeFieldsToFile(target, file *vfs.FileDoc) {
+	file.Tags = make([]string, len(target.Tags))
+	copy(file.Tags, target.Tags)
+	file.CreatedAt = target.CreatedAt
+	file.UpdatedAt = target.UpdatedAt
+	file.Mime = target.Mime
+	file.Class = target.Class
+	file.Executable = target.Executable
+}
+
+func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 	if tags, ok := target["tags"].([]interface{}); ok {
 		dir.Tags = make([]string, 0, len(tags))
 		for _, tag := range tags {
@@ -326,7 +339,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		return err
 	}
 	dir.SetID(target["_id"].(string))
-	copyTagsAndDatesToDir(target, dir)
+	copySafeFieldsToDir(target, dir)
 	// TODO referenced_by
 	// TODO manage conflicts
 	if err := fs.CreateDir(dir); err != nil {
@@ -348,19 +361,54 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	}
 	revisions, ok := target["_revisions"].(map[string]interface{})
 	if !ok {
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Missing _revisions for updating directory %#v", target)
 		return ErrInternalServerError
 	}
+	oldDoc := dir.Clone().(*vfs.DirDoc)
 	indexer := NewSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revisions,
 	})
-	oldDoc := dir.Clone().(*vfs.DirDoc)
-	copyTagsAndDatesToDir(target, dir)
-	// TODO what if name or dir_id has changed
+	fs := inst.VFS().UseSharingIndexer(indexer)
+
+	name, ok := target["name"].(string)
+	if !ok {
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Missing name for updating directory %#v", target)
+		return ErrInternalServerError
+	}
+	dir.DocName = name
+	if dirID, ok := target["dir_id"].(string); ok {
+		if dirID != dir.DirID {
+			parent, err := fs.DirByID(dirID)
+			// TODO better handling of this conflict
+			if err != nil {
+				inst.Logger().WithField("nspace", "replicator").
+					Debugf("Conflict for parent on updating dir: %s", err)
+				return err
+			}
+			dir.DirID = parent.DocID
+			dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
+		} else {
+			dir.Fullpath = path.Join(path.Dir(dir.Fullpath), dir.DocName)
+		}
+	} else {
+		parent, err := s.GetSharingDir(inst)
+		if err != nil {
+			return err
+		}
+		dir.DirID = parent.DocID
+		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
+	}
+
+	copySafeFieldsToDir(target, dir)
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("Update dir: %#v", dir)
 	// TODO referenced_by
 	// TODO trash
 	// TODO manage conflicts
-	return indexer.UpdateDirDoc(oldDoc, dir)
+	return fs.UpdateDirDoc(oldDoc, dir)
 }
 
 // TODO referenced_by

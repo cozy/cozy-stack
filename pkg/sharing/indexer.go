@@ -6,6 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
@@ -47,7 +48,7 @@ func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
 	return s.UpdateFileDoc(nil, doc)
 }
 
-// TODO update io.cozy.shared & rtevent
+// TODO update io.cozy.shared
 func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 	docs := make([]map[string]interface{}, 1)
 	docs[0] = map[string]interface{}{
@@ -72,7 +73,25 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 		docs[0]["_rev"] = s.bulkRevs.Rev
 		docs[0]["_revisions"] = s.bulkRevs.Revisions
 	}
-	return couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs)
+	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
+		return err
+	}
+	// Ensure that fullpath is filled because it's used in realtime/@events
+	if olddoc != nil {
+		if _, err := olddoc.Path(s); err != nil {
+			return err
+		}
+	}
+	if _, err := doc.Path(s); err != nil {
+		return err
+	}
+	// TODO the path is missing!
+	if olddoc != nil {
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
+	} else {
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, nil)
+	}
+	return nil
 }
 
 func (s *sharingIndexer) UpdateFileDocs(docs []*vfs.FileDoc) error {
@@ -91,7 +110,7 @@ func (s *sharingIndexer) CreateNamedDirDoc(doc *vfs.DirDoc) error {
 	return s.UpdateDirDoc(nil, doc)
 }
 
-// TODO update io.cozy.shared & rtevent
+// TODO update io.cozy.shared
 func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	docs := make([]map[string]interface{}, 1)
 	docs[0] = map[string]interface{}{
@@ -111,7 +130,15 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 		docs[0]["_rev"] = s.bulkRevs.Rev
 		docs[0]["_revisions"] = s.bulkRevs.Revisions
 	}
-	return couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs)
+	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
+		return err
+	}
+	if olddoc != nil {
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
+	} else {
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, nil)
+	}
+	return nil
 }
 
 func (s *sharingIndexer) DeleteDirDoc(doc *vfs.DirDoc) error {
