@@ -43,7 +43,8 @@ class Bootstrap
     object = Folder.create owner
     dir = Folder.create owner, dir_id: object.couch_id
     f = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
-    file = CozyFile.create_from_fixture owner, f, dir_id: object.couch_id
+    opts = CozyFile.options_from_fixture(f, dir_id: object.couch_id)
+    file = CozyFile.create owner, opts
     object.children << dir << file
     recipient = Instance.create name: "Bob"
     [owner, recipient].map { |i| i.install_app "drive" }
