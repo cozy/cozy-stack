@@ -201,4 +201,17 @@ func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
 	return res, nil
 }
 
+// FindSharings retrieves an array of sharing documents from their IDs
+func FindSharings(db couchdb.Database, sharingIDs []string) ([]*Sharing, error) {
+	var req = &couchdb.AllDocsRequest{
+		Keys: sharingIDs,
+	}
+	var res []*Sharing
+	err := couchdb.GetAllDocs(db, consts.Sharings, req, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 var _ couchdb.Doc = &Sharing{}

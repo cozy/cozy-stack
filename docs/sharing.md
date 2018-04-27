@@ -310,6 +310,140 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### GET /sharings/doctype/:doctype
+
+Get information about all the sharings that have a rule for the given doctype. This includes the content of the rules, the members, as well as the already shared documents for this sharing.
+
+#### Request
+
+```http
+GET /sharings/doctype/io.cozy.files HTTP/1.1
+Host: alice.example.net
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.sharings",
+      "id": "ce8835a061d0ef68947afe69a0046722",
+      "attributes": {
+        "description": "sharing test",
+        "preview_path": "/preview-sharing",
+        "app_slug": "drive",
+        "owner": true,
+        "created_at": "2018-01-04T12:35:08Z",
+        "updated_at": "2018-01-04T13:45:43Z",
+        "members": [
+          {
+            "status": "owner",
+            "name": "Alice",
+            "email": "alice@example.net",
+            "instance": "alice.example.net"
+          },
+          {
+            "status": "ready",
+            "name": "Bob",
+            "email": "bob@example.net"
+          }
+        ],
+        "rules": [
+          {
+            "title": "Hawaii",
+            "doctype": "io.cozy.files",
+            "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"],
+            "add": "sync",
+            "update": "sync",
+            "remove": "sync"
+          }
+        ],
+      },
+      "meta": {
+        "rev": "1-4859c6c755143adf0838d225c5e97882"
+      },
+      "links": {
+        "self": "/sharings/ce8835a061d0ef68947afe69a0046722"
+      },
+      "relationships": {
+        "shared_docs": {
+          "data": [
+            {
+              "id": "612acf1c-1d72-11e8-b043-ef239d3074dd",
+              "type": "io.cozy.files"
+            },
+            {
+              "id": "a34528d2-13fb-9482-8d20-bf1972531225",
+              "type": "io.cozy.files"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "io.cozy.sharings",
+      "id": "b4e58d039c03d01742085de5e505284e",
+      "attributes": {
+        "description": "another sharing test",
+        "preview_path": "/preview-sharing",
+        "app_slug": "drive",
+        "owner": true,
+        "created_at": "2018-02-04T12:35:08Z",
+        "updated_at": "2018-02-04T13:45:43Z",
+        "members": [
+          {
+            "status": "owner",
+            "name": "Alice",
+            "email": "alice@example.net",
+            "instance": "alice.example.net"
+          },
+          {
+            "status": "ready",
+            "name": "Bob",
+            "email": "bob@example.net"
+          }
+        ],
+        "rules": [
+          {
+            "title": "Singapore",
+            "doctype": "io.cozy.files",
+            "values": ["e18e30e2-8eda-1bde-afce-edafc6b1a91b"],
+            "add": "sync",
+            "update": "sync",
+            "remove": "sync"
+          }
+        ],
+      },
+      "meta": {
+        "rev": "1-7ac5f1252a0c513186a5d35b1a6fd350"
+      },
+      "links": {
+        "self": "/sharings/b4e58d039c03d01742085de5e505284e"
+      },
+      "relationships": {
+        "shared_docs": {
+          "data": [
+            {
+              "id": "dcc52bee-1277-a6b3-b36f-369ffd81a4ee",
+              "type": "io.cozy.files"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "meta": {
+    "count": 3
+  }
+}
+```
 
 ### PUT /sharings/:sharing-id
 
