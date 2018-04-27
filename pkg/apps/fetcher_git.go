@@ -27,7 +27,7 @@ import (
 )
 
 var errCloneTimeout = errors.New("git: repository cloning timed out")
-var cloneTimeout = 20 * time.Second
+var cloneTimeout = 30 * time.Second
 
 const (
 	ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
