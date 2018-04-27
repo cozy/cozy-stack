@@ -152,9 +152,13 @@ func DataErrorList(c echo.Context, errs ...*Error) error {
 	doc := Document{
 		Errors: errs,
 	}
+	status := http.StatusNotFound
+	if len(errs) > 0 {
+		status = errs[0].Status
+	}
 	resp := c.Response()
 	resp.Header().Set("Content-Type", ContentType)
-	resp.WriteHeader(errs[0].Status)
+	resp.WriteHeader(status)
 	return json.NewEncoder(resp).Encode(doc)
 }
 
