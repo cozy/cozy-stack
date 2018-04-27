@@ -85,7 +85,6 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 	if _, err := doc.Path(s); err != nil {
 		return err
 	}
-	// TODO the path is missing!
 	if olddoc != nil {
 		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
 	} else {
