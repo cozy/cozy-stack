@@ -243,7 +243,7 @@ func sendMail(inst *instance.Instance, p *notification.Properties, n *notificati
 	mail := mails.Options{Mode: mails.ModeNoReply}
 
 	// Notifications from the stack have their own mail templates defined
-	if p.MailTemplate != "" {
+	if p != nil && p.MailTemplate != "" {
 		mail.TemplateName = p.MailTemplate
 		mail.TemplateValues = n.Data
 	} else if n.ContentHTML != "" {
