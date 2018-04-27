@@ -1,4 +1,6 @@
 module Helpers
+  SHARED_WITH_ME = "Partagés avec moi".freeze
+
   @current_dir = File.expand_path "../../tmp", __FILE__
 
   class <<self
@@ -46,6 +48,12 @@ module Helpers
           FileUtils.rm_r f
         end
       end
+    end
+
+    def fsdiff(a, b)
+      diff = `LANG=C diff -qr '#{a}' '#{b}'`
+      raise "Diff error" unless $?.success?
+      diff.lines.map(&:chomp)
     end
   end
 end
