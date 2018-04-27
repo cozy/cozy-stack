@@ -37,7 +37,7 @@ version` should show you the version if every thing is right.
 
 #### Using `go`
 
-[Install go](https://golang.org/doc/install), version >= 1.8. With `go`
+[Install go](https://golang.org/doc/install), version >= 1.9. With `go`
 installed and configured, you can run the following command:
 
 ```
