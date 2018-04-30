@@ -12,14 +12,15 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/cozy/echo"
+	multierror "github.com/hashicorp/go-multierror"
 
 	// import workers
 	_ "github.com/cozy/cozy-stack/pkg/workers/exec"
 	_ "github.com/cozy/cozy-stack/pkg/workers/log"
 	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
 	_ "github.com/cozy/cozy-stack/pkg/workers/migrations"
+	_ "github.com/cozy/cozy-stack/pkg/workers/move"
 	_ "github.com/cozy/cozy-stack/pkg/workers/push"
 	_ "github.com/cozy/cozy-stack/pkg/workers/share"
 	_ "github.com/cozy/cozy-stack/pkg/workers/thumbnail"
@@ -364,7 +365,7 @@ func cleanJobs(c echo.Context) error {
 	}
 	var ups []*jobs.Job
 	now := time.Now()
-	err := couchdb.ForeachDocs(instance, consts.Jobs, func(data []byte) error {
+	err := couchdb.ForeachDocs(instance, consts.Jobs, func(_ string, data json.RawMessage) error {
 		var job *jobs.Job
 		if err := json.Unmarshal(data, &job); err != nil {
 			return err

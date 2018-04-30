@@ -510,7 +510,7 @@ type treeError struct {
 
 func (c *couchdbIndexer) CheckIndexIntegrity() (logs []*FsckLog, err error) {
 	root, orphans, err := checkIndexIntegrity(func(cb func(entry *treeFile)) error {
-		return couchdb.ForeachDocs(c.db, consts.Files, func(data []byte) error {
+		return couchdb.ForeachDocs(c.db, consts.Files, func(_ string, data json.RawMessage) error {
 			var f treeFile
 			if err = json.Unmarshal(data, &f); err == nil {
 				cb(&f)

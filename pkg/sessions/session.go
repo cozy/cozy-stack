@@ -239,7 +239,7 @@ func (s *Session) ToAppCookie(domain, slug string) (*http.Cookie, error) {
 // DeleteOthers will remove all sessions except the one given in parameter.
 func DeleteOthers(i *instance.Instance, selfSessionID string) error {
 	var sessions []*Session
-	err := couchdb.ForeachDocs(i, consts.Sessions, func(data []byte) error {
+	err := couchdb.ForeachDocs(i, consts.Sessions, func(_ string, data json.RawMessage) error {
 		var s Session
 		if err := json.Unmarshal(data, &s); err != nil {
 			return err
