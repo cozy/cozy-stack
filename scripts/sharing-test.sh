@@ -2,5 +2,5 @@
 set -ev
 
 cd tests/sharing
-bundle install
+bundle install --jobs=3 --retry=3
 bundle exec ruby tests/*.rb
