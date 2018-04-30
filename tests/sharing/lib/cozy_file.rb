@@ -12,7 +12,7 @@ class CozyFile
     create inst, opts
   end
 
-  def doctype
+  def self.doctype
     "io.cozy.files"
   end
 

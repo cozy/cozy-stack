@@ -5,19 +5,6 @@ module Model
       obj.save inst
       obj
     end
-
-    def find(inst, id)
-      opts = {}
-      obj = new opts
-      obj.find inst, id
-    end
-
-    def find_by_name(inst, name)
-      opts = {}
-      obj = new opts
-      obj.find_by_name inst, name
-    end
-    
   end
 
   def to_json
@@ -38,6 +25,10 @@ module Model
     j = JSON.parse(res.body)
     @couch_id = j["id"]
     @couch_rev = j["rev"]
+  end
+
+  def doctype
+    self.class.doctype
   end
 
   def self.included(klass)

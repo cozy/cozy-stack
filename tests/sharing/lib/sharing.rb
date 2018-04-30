@@ -2,18 +2,6 @@ class Sharing
   attr_accessor :couch_id, :couch_rev
   attr_reader :description, :app_slug, :rules, :members
 
-  def self.get_shared_docs(inst, sharing_id, doctype)
-    opts = {
-      accept: "application/vnd.api+json",
-      content_type: "application/vnd.api+json",
-      authorization: "Bearer #{inst.token_for doctype}"
-    }
-    res = inst.client["/sharings/#{sharing_id}"].get opts
-    j = JSON.parse(res.body)["data"]
-    j = j["relationships"]["shared_docs"]["data"]
-
-  end
-
   def self.get_sharing_info(inst, sharing_id, doctype)
     opts = {
       accept: "application/vnd.api+json",
@@ -21,7 +9,12 @@ class Sharing
       authorization: "Bearer #{inst.token_for doctype}"
     }
     res = inst.client["/sharings/#{sharing_id}"].get opts
-    j = JSON.parse(res.body)["data"]
+    JSON.parse(res.body)["data"]
+  end
+
+  def self.get_shared_docs(inst, sharing_id, doctype)
+    j = get_sharing_info inst, sharing_id, doctype
+    j.dig "relationships", "shared_docs", "data"
   end
 
   def initialize(opts = {})
@@ -31,7 +24,7 @@ class Sharing
     @members = [] # Owner's instance + recipients contacts
   end
 
-  def doctype
+  def self.doctype
     "io.cozy.sharings"
   end
 
@@ -39,7 +32,7 @@ class Sharing
     recipients = @members.drop 1
     {
       data: {
-        doctype: doctype,
+        doctype: self.class.doctype,
         attributes: {
           description: @description,
           app_slug: @app_slug,

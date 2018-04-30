@@ -11,7 +11,7 @@ describe "A folder" do
   it "can be shared to a recipient in push mode" do
     recipient_name = "Bob"
 
-    # Create the instance
+    # Create the instance
     inst = Instance.create name: "Alice"
     inst_recipient = Instance.create name: recipient_name
 
@@ -31,8 +31,8 @@ describe "A folder" do
     inst_recipient.accept sharing
 
     # Check the recipient's folder is the same as the sender's
-    path = CGI::escape "/Partagés avec moi/#{folder.name}"
-    folder_recipient = Folder.find_by_name inst_recipient, path
+    path = CGI.escape "/Partagés avec moi/#{folder.name}"
+    folder_recipient = Folder.find_by_path inst_recipient, path
     assert_equal folder_recipient.name, folder.name
   end
 
