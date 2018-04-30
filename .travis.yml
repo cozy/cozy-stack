@@ -15,6 +15,8 @@ matrix:
       env: COMMAND=scripts/coverage.sh CODECOV=true
     - go: "1.9"
       env: COMMAND=scripts/unit-test.sh
+    - go: "1.10"
+      env: COMMAND=scripts/sharing-test.sh
 
 before_install:
   - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.1
