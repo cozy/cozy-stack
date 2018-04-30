@@ -286,7 +286,7 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 			ac := APICredentials{
 				CID: s.SID,
 				Credentials: &Credentials{
-					XorKey: creds.XorKey,
+					XorKey: c.XorKey,
 				},
 			}
 			if !s.ReadOnly() {

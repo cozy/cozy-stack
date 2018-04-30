@@ -26,6 +26,20 @@ class Bootstrap
     recipient.accept @sharing
   end
 
+  def self.sync_folder
+    owner = Instance.create name: "Alice"
+    object = Folder.create owner
+    dir = Folder.create owner, dir_id: object.couch_id
+    f = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    opts = CozyFile.options_from_fixture(f, dir_id: object.couch_id)
+    file = CozyFile.create owner, opts
+    object.children << dir << file
+    recipient = Instance.create name: "Bob"
+    [owner, recipient].map { |i| i.install_app "drive" }
+    rule = Rule.sync object
+    Bootstrap.new owner, [recipient], [rule]
+  end
+
   def self.push_folder
     owner = Instance.create name: "Alice"
     object = Folder.create owner
