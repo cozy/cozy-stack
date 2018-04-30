@@ -34,6 +34,14 @@ describe "A folder" do
     path = CGI.escape "/Partagés avec moi/#{folder.name}"
     folder_recipient = Folder.find_by_path inst_recipient, path
     assert_equal folder_recipient.name, folder.name
+
+    # Check that the files are the same on disk
+    sleep 7
+    da = File.join Helpers.current_dir, inst.domain, folder.name
+    db = File.join Helpers.current_dir, inst_recipient.domain,
+                   Helpers::SHARED_WITH_ME, sharing.rules.first.title
+    diff = Helpers.fsdiff da, db
+    diff.must_be_empty
   end
 
 end

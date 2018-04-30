@@ -198,10 +198,10 @@ func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string][
 		return nil, err
 	}
 	for _, doc := range docs {
-		docRef := extractDocReferenceFromID(doc.ID())
 		for sharingID := range doc.Infos {
 			// Filter out removed docs
 			if !doc.Infos[sharingID].Removed {
+				docRef := extractDocReferenceFromID(doc.ID())
 				res[sharingID] = append(res[sharingID], *docRef)
 			}
 		}
@@ -213,7 +213,7 @@ func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string][
 // returns a DocReference
 func extractDocReferenceFromID(id string) *couchdb.DocReference {
 	var ref couchdb.DocReference
-	slice := strings.Split(id, "/")
+	slice := strings.SplitN(id, "/", 2)
 	if len(slice) != 2 {
 		return nil
 	}

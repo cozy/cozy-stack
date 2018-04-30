@@ -181,7 +181,6 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 	if len(s.Members) < 2 {
 		return ErrNoRecipients
 	}
-	// TODO check members
 
 	s.Active = false
 	s.Owner = false

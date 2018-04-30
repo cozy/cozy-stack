@@ -1,5 +1,5 @@
 class Rule
-  attr_reader :title, :doctype, :selector, :values, :add, :update, :remove
+  attr_reader :title, :doctype, :selector, :values, :add, :update, :remove, :object
 
   def self.sync(obj)
     create_from_obj obj, "sync"
@@ -25,7 +25,8 @@ class Rule
              values: values,
              add: what,
              update: what,
-             remove: what
+             remove: what,
+             object: obj
   end
 
   def initialize(opts = {})
@@ -36,6 +37,7 @@ class Rule
     @add = opts[:add]
     @update = opts[:update]
     @remove = opts[:remove]
+    @object = opts[:object]
   end
 
   def as_json
