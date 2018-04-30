@@ -183,6 +183,26 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error
 	return fs.CreateDir(dir)
 }
 
+// AddReferenceForSharingDir adds a reference to the sharing on the sharing directory
+func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule) error {
+	fs := inst.VFS()
+	dir, err := fs.DirByID(rule.Values[0])
+	if err != nil {
+		return err
+	}
+	for _, ref := range dir.ReferencedBy {
+		if ref.Type == consts.Sharings && ref.ID == s.SID {
+			return nil
+		}
+	}
+	olddoc := dir.Clone().(*vfs.DirDoc)
+	dir.AddReferencedBy(couchdb.DocReference{
+		ID:   s.SID,
+		Type: consts.Sharings,
+	})
+	return fs.UpdateDirDoc(olddoc, dir)
+}
+
 // GetSharingDir returns the directory used by this sharing for putting files
 // and folders that have no dir_id.
 func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
