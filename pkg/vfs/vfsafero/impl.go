@@ -185,19 +185,9 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, vfs.ErrParentInTrash
 	}
 
-	var bakpath string
+	tmppath := newpath
 	if olddoc != nil {
-		bakpath = fmt.Sprintf("/.%s_%s", olddoc.ID(), olddoc.Rev())
-		if err = safeRenameFile(afs.fs, newpath, bakpath); err != nil {
-			// in case of a concurrent access to this method, it can happened
-			// that the file has already been renamed. In this case the
-			// safeRenameFile will return an os.ErrNotExist error. But this
-			// error is misleading since it does not reflect the conflict.
-			if os.IsNotExist(err) {
-				err = vfs.ErrConflict
-			}
-			return nil, err
-		}
+		tmppath = fmt.Sprintf("/.%s_%s", olddoc.ID(), olddoc.Rev())
 	}
 
 	if olddoc != nil {
@@ -236,7 +226,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		}
 	}
 
-	f, err := safeCreateFile(newpath, newdoc.Mode(), afs.fs)
+	f, err := safeCreateFile(tmppath, newdoc.Mode(), afs.fs)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +242,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		afs:     afs,
 		newdoc:  newdoc,
 		olddoc:  olddoc,
-		bakpath: bakpath,
+		tmppath: tmppath,
 		newpath: newpath,
 		maxsize: maxsize,
 		capsize: capsize,
@@ -695,7 +685,7 @@ type aferoFileCreation struct {
 	newdoc  *vfs.FileDoc       // new document
 	olddoc  *vfs.FileDoc       // old document
 	newpath string             // file new path
-	bakpath string             // backup file path in case of modifying an existing file
+	tmppath string             // temporary file path for uploading a new version of this file
 	maxsize int64              // maximum size allowed for the file
 	capsize int64              // size cap from which we send a notification to the user
 	hash    hash.Hash          // hash we build up along the file
@@ -748,22 +738,21 @@ func (f *aferoFileCreation) Close() (err error) {
 	defer func() {
 		if err == nil {
 			if f.olddoc != nil {
-				// remove the backup if no error occured
-				f.afs.fs.Remove(f.bakpath) // #nosec
+				// move the temporary file to its final location
+				f.afs.fs.Rename(f.tmppath, f.newpath) // #nosec
 			}
 			if f.capsize > 0 && f.size >= f.capsize {
 				vfs.PushDiskQuotaAlert(f.afs, true)
 			}
-		} else if err != nil && f.olddoc != nil {
-			// put back backup file revision in case on error occurred
-			f.afs.fs.Rename(f.bakpath, f.newpath) // #nosec
 		} else if err != nil {
-			// remove the new file if an error occured
-			f.afs.fs.Remove(f.newpath) // #nosec
+			// remove the temporary file if an error occured
+			f.afs.fs.Remove(f.tmppath) // #nosec
 			// If an error has occured that is not due to the index update, we should
 			// delete the file from the index.
-			if _, isCouchErr := couchdb.IsCouchError(err); !isCouchErr {
-				f.afs.Indexer.DeleteFileDoc(f.newdoc) // #nosec
+			if f.olddoc == nil {
+				if _, isCouchErr := couchdb.IsCouchError(err); !isCouchErr {
+					f.afs.Indexer.DeleteFileDoc(f.newdoc) // #nosec
+				}
 			}
 		}
 	}()
