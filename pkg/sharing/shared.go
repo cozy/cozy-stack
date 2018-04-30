@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
 // TrackMessage is used for jobs on the share-track worker.
@@ -108,8 +109,48 @@ func FindReferences(inst *instance.Instance, ids []string) ([]*SharedRef, error)
 	return refs, nil
 }
 
+// isNoLongerShared returns true for a document/file/folder that has matched a
+// rule of a sharing, but no longer does.
+func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) (bool, error) {
+	if msg.DocType != consts.Files {
+		return false, nil // TODO rules for documents with a selector
+	}
+	// TODO optim: we can probably shortcut if dir_id and referenced_by have not changed
+	s, err := FindSharing(inst, msg.SharingID)
+	if err != nil {
+		return false, err
+	}
+	rule := s.Rules[msg.RuleIndex]
+	// TODO referenced_by
+	var docPath string
+	if evt.Doc.Get("type") == consts.FileType {
+		dirID, ok := evt.Doc.Get("dir_id").(string)
+		if !ok {
+			return false, ErrInternalServerError
+		}
+		var parent *vfs.DirDoc
+		parent, err = inst.VFS().DirByID(dirID)
+		if err != nil {
+			return false, err
+		}
+		docPath = parent.Fullpath
+	} else {
+		p, ok := evt.Doc.Get("path").(string)
+		if !ok {
+			return false, ErrInternalServerError
+		}
+		docPath = p
+	}
+	sharingDir, err := inst.VFS().DirByID(rule.Values[0])
+	if err != nil {
+		return false, err
+	}
+	return !strings.HasPrefix(docPath+"/", sharingDir.Fullpath+"/"), nil
+}
+
 // UpdateShared updates the io.cozy.shared database when a document is
 // created/update/removed
+// TODO what if this method is called at the same time for the same doc in several sharings?
 func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) error {
 	mu := lock.ReadWrite(inst.Domain + "/shared")
 	mu.Lock()
@@ -132,12 +173,26 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 			Binary: evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.FileType,
 		}
 	}
-	// TODO detect when a document goes out of a sharing
+	// TODO can msg.RuleIndex be different to ref.Infos[msg.SharingID].Rule?
+
 	if evt.Verb == "DELETED" || isTrashed(evt.Doc) {
 		ref.Infos[msg.SharingID] = SharedInfo{
 			Rule:    ref.Infos[msg.SharingID].Rule,
 			Removed: true,
 			Binary:  false,
+		}
+	} else {
+		removed, err := isNoLongerShared(inst, msg, evt)
+		if err != nil {
+			return err
+		}
+		if removed {
+			ref.Infos[msg.SharingID] = SharedInfo{
+				Rule:    ref.Infos[msg.SharingID].Rule,
+				Removed: true,
+				Binary:  false,
+			}
+			// TODO for a folder, we should also mark files inside it as removed
 		}
 	}
 

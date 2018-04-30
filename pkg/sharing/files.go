@@ -15,6 +15,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 )
 
+// isTrashed returns true for a file or folder inside the trash
 func isTrashed(doc couchdb.JSONDoc) bool {
 	if doc.Type != consts.Files {
 		return false

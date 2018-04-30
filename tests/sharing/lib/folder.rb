@@ -1,4 +1,6 @@
 class Folder
+  ROOT_DIR = "io.cozy.files.root-dir".freeze
+
   include Model
   include Model::Files
   attr_reader :name, :dir_id, :children
