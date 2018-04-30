@@ -11,7 +11,7 @@ describe "A folder" do
   it "can be shared to a recipient in sync mode" do
     recipient_name = "Bob"
 
-    # Create the instances
+    # Create the instances
     inst = Instance.create name: "Alice"
     inst_recipient = Instance.create name: recipient_name
 
@@ -33,8 +33,9 @@ describe "A folder" do
 
     # Check the folders are the same
     sharing_info = Sharing.get_sharing_info inst_recipient, sharing.couch_id, folder.doctype
-    child1_id_recipient = sharing_info["relationships"]["shared_docs"]["data"][0]["id"]
-    folder_id_recipient = sharing_info["attributes"]["rules"][0]["values"][0]
+    child1_id_recipient = sharing_info.dig "relationships", "shared_docs", "data", 0, "id"
+    folder_id_recipient = sharing_info.dig "attributes", "rules", 0, "values", 0
+    folder_id_recipient.wont_be_empty
     f = Folder.find inst_recipient, child1_id_recipient
     assert_equal f.name, child1.name
 

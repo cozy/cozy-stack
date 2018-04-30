@@ -3,7 +3,7 @@ class Contact
 
   attr_reader :name, :fullname, :emails, :addresses, :phones
 
-  def doctype
+  def self.doctype
     "io.cozy.contacts"
   end
 
