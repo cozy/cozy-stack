@@ -9,14 +9,18 @@ describe "A folder" do
   Helpers.start_mailhog
 
   it "can be shared to a recipient in push mode" do
-    # Create the folder
+    recipient_name = "Bob"
+
+    # Create the instance
     inst = Instance.create name: "Alice"
+    inst_recipient = Instance.create name: recipient_name
+
+    # Create the folder
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
 
     # Create the sharing
-    name = "Bob"
-    contact = Contact.create inst, givenName: name
+    contact = Contact.create inst, givenName: recipient_name
     sharing = Sharing.new
     sharing.rules << Rule.push(folder)
     sharing.members << inst << contact
@@ -24,7 +28,12 @@ describe "A folder" do
 
     # Accept the sharing
     sleep 1
-    recipient = Instance.create name: name
-    recipient.accept sharing
+    inst_recipient.accept sharing
+
+    # Check the recipient's folder is the same as the sender's
+    path = CGI::escape "/Partagés avec moi/#{folder.name}"
+    folder_recipient = Folder.find_by_name inst_recipient, path
+    assert_equal folder_recipient.name, folder.name
   end
+
 end
