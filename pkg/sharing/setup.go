@@ -73,15 +73,21 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Can't ensure io.cozy.shared exists (%s): %s", s.SID, err)
 	}
+	if rule := s.FirstFilesRule(); rule != nil {
+		if err := s.AddReferenceForSharingDir(inst, rule); err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Warnf("Error on referenced_by for the sharing dir", s.SID, err)
+		}
+	}
 
 	if err := s.AddTrackTriggers(inst); err != nil {
 		inst.Logger().WithField("nspace", "sharing").
-			Warnf("Errors on setup of track triggers (%s): %s", s.SID, err)
+			Warnf("Error on setup of track triggers (%s): %s", s.SID, err)
 	}
 	// TODO add triggers for rules that can revoke the sharing
 	for i, rule := range s.Rules {
 		if err := s.InitialCopy(inst, rule, i); err != nil {
-			inst.Logger().Warnf("[sharing] Error on initial copy for %s (%s): %s", rule.Title, s.SID, err)
+			inst.Logger().Warnf("Error on initial copy for %s (%s): %s", rule.Title, s.SID, err)
 		}
 	}
 	if err := s.AddReplicateTrigger(inst); err != nil {
