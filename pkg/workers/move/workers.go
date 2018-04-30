@@ -1,14 +1,14 @@
 package move
 
 import (
-	"fmt"
-	"io"
-	"io/ioutil"
+	"encoding/base64"
+	"net/url"
 	"runtime"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
 func init() {
@@ -21,58 +21,39 @@ func init() {
 	})
 }
 
-type Options struct {
-	IncludeFiles  string
-	NoCompression bool
-	Output        io.Writer
-}
-
 func Worker(c *jobs.WorkerContext) error {
-	var opts Options
-	if err := c.UnmarshalMessage(&opts); err != nil {
-		return err
-	}
-
-	f, err := ioutil.TempFile("", "cozy-test")
-	if err != nil {
-		return err
-	}
-
-	opts.Output = f
-
 	i, err := instance.Get(c.Domain())
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(">>>>>>>>", f.Name())
-	err = Export(i, opts)
+	exportDoc, err := Export(i)
 	if err != nil {
 		return err
 	}
 
 	{
-		// 	link := fmt.Sprintf("http://%s%s%s", domain, c.Path(), filename)
-		// 	mail := mails.Options{
-		// 		Mode:           mails.ModeNoReply,
-		// 		TemplateName:   "archiver",
-		// 		TemplateValues: map[string]string{"ArchiveLink": link},
-		// 	}
+		link := i.PageURL("/move/exports",
+			url.Values{"Secret": {base64.URLEncoding.EncodeToString(exportDoc.Secret)}})
+		mail := mails.Options{
+			Mode:           mails.ModeNoReply,
+			TemplateName:   "archiver",
+			TemplateValues: map[string]string{"ArchiveLink": link},
+		}
 
-		// 	msg, err := jobs.NewMessage(&mail)
-		// 	if err != nil {
-		// 		return err
-		// 	}
+		msg, err := jobs.NewMessage(&mail)
+		if err != nil {
+			return err
+		}
 
-		// 	broker := jobs.System()
-		// 	_, err = broker.PushJob(&jobs.JobRequest{
-		// 		Domain:     instance.Domain,
-		// 		WorkerType: "sendmail",
-		// 		Message:    msg,
-		// 	})
-		// 	if err != nil {
-		// 		return err
-		// 	}
+		_, err = jobs.System().PushJob(&jobs.JobRequest{
+			Domain:     i.Domain,
+			WorkerType: "sendmail",
+			Message:    msg,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

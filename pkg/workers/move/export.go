@@ -4,23 +4,98 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
-	"io"
+	"io/ioutil"
 	"net/url"
 	"path"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
-func exportDocs(in *instance.Instance, now time.Time, tw *tar.Writer) error {
-	doctypes, err := couchdb.AllDoctypes(in)
+type ExportDoc struct {
+	DocID            string        `json:"_id"`
+	DocRev           string        `json:"_rev"`
+	Domain           string        `json:"domain"`
+	Secret           []byte        `json:"secret"`
+	CreatedAt        time.Time     `json:"created_at"`
+	ExpiresAt        time.Time     `json:"expires_at"`
+	TotalSize        int64         `json:"total_size"`
+	CreationDuration time.Duration `json:"creation_duration"`
+}
+
+func (e *ExportDoc) DocType() string   { return consts.Exports }
+func (e *ExportDoc) ID() string        { return e.DocID }
+func (e *ExportDoc) Rev() string       { return e.DocRev }
+func (e *ExportDoc) SetID(id string)   { e.DocID = id }
+func (e *ExportDoc) SetRev(rev string) { e.DocRev = rev }
+func (e *ExportDoc) Clone() couchdb.Doc {
+	clone := *e
+	return &clone
+}
+
+// Export is used to create a tarball with files and photos from an instance
+func Export(i *instance.Instance) (exportDoc *ExportDoc, err error) {
+	out, err := ioutil.TempFile("", "cozy-test")
 	if err != nil {
-		return err
+		return
 	}
 
+	createdAt := time.Now()
+	exportDoc = &ExportDoc{
+		Domain:    i.Domain,
+		CreatedAt: createdAt,
+		Secret:    crypto.GenerateRandomBytes(16),
+		TotalSize: -1,
+	}
+
+	if err = couchdb.CreateDoc(couchdb.GlobalDB, exportDoc); err != nil {
+		return
+	}
+
+	gw, err := gzip.NewWriterLevel(out, gzip.BestCompression)
+	if err != nil {
+		return
+	}
+	tw := tar.NewWriter(gw)
+
+	var size, n int64
+	if n, err = writeInstanceDoc(i, "instance", createdAt, tw, nil); err != nil {
+		return
+	}
+	size += n
+
+	settings, err := i.SettingsDocument()
+	if err != nil {
+		return
+	}
+	if n, err = writeDoc("", "settings", settings, createdAt, tw, nil); err != nil {
+		return
+	}
+	size += n
+
+	n, err = exportDocs(i, createdAt, tw)
+	if errc := tw.Close(); err == nil {
+		err = errc
+	}
+	if errc := gw.Close(); err == nil {
+		err = errc
+	}
+	size += n
+
+	exportDoc.CreationDuration = time.Until(createdAt)
+	exportDoc.TotalSize = size
+	err = couchdb.UpdateDoc(couchdb.GlobalDB, exportDoc)
+	return
+}
+
+func exportDocs(in *instance.Instance, now time.Time, tw *tar.Writer) (size int64, err error) {
+	doctypes, err := couchdb.AllDoctypes(in)
+	if err != nil {
+		return
+	}
 	for _, doctype := range doctypes {
 		switch doctype {
 		case consts.Jobs, consts.KonnectorLogs,
@@ -35,19 +110,22 @@ func exportDocs(in *instance.Instance, now time.Time, tw *tar.Writer) error {
 			dir := url.PathEscape(doctype)
 			err = couchdb.ForeachDocs(in, doctype,
 				func(id string, doc json.RawMessage) error {
-					return writeMarshaledDoc(dir, id, doc, now, tw, nil)
-				},
-			)
+					n, errw := writeMarshaledDoc(dir, id, doc, now, tw, nil)
+					if errw == nil {
+						size += n
+					}
+					return errw
+				})
 		}
 		if err != nil {
-			return err
+			return
 		}
 	}
-	return nil
+	return
 }
 
 func writeInstanceDoc(in *instance.Instance, name string,
-	now time.Time, tw *tar.Writer, records map[string]string) error {
+	now time.Time, tw *tar.Writer, records map[string]string) (int64, error) {
 	clone := in.Clone().(*instance.Instance)
 	clone.PassphraseHash = nil
 	clone.PassphraseResetToken = nil
@@ -61,16 +139,16 @@ func writeInstanceDoc(in *instance.Instance, name string,
 }
 
 func writeDoc(dir, name string, data interface{},
-	now time.Time, tw *tar.Writer, records map[string]string) error {
+	now time.Time, tw *tar.Writer, records map[string]string) (int64, error) {
 	doc, err := json.Marshal(data)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	return writeMarshaledDoc(dir, name, doc, now, tw, records)
 }
 
 func writeMarshaledDoc(dir, name string, doc json.RawMessage,
-	now time.Time, tw *tar.Writer, records map[string]string) error {
+	now time.Time, tw *tar.Writer, records map[string]string) (int64, error) {
 	hdr := &tar.Header{
 		Name:       path.Join(dir, name+".json"),
 		Mode:       0640,
@@ -80,43 +158,8 @@ func writeMarshaledDoc(dir, name string, doc json.RawMessage,
 		PAXRecords: records,
 	}
 	if err := tw.WriteHeader(hdr); err != nil {
-		return err
+		return 0, err
 	}
-	_, err := tw.Write(doc)
-	return err
-}
-
-// Export is used to create a tarball with files and photos from an instance
-func Export(in *instance.Instance, opts Options) (err error) {
-	var w io.WriteCloser
-	if opts.NoCompression {
-		w = utils.WriteCloser(opts.Output, nil)
-	} else {
-		w = gzip.NewWriter(opts.Output)
-	}
-
-	tw := tar.NewWriter(w)
-	now := time.Now()
-	if err = writeInstanceDoc(in, "instance", now, tw, nil); err != nil {
-		return err
-	}
-
-	{
-		settings, err := in.SettingsDocument()
-		if err != nil {
-			return err
-		}
-		if err = writeDoc("", "settings", settings, now, tw, nil); err != nil {
-			return err
-		}
-	}
-
-	err = exportDocs(in, now, tw)
-	if errc := tw.Close(); err == nil {
-		err = errc
-	}
-	if errc := w.Close(); err == nil {
-		err = errc
-	}
-	return
+	n, err := tw.Write(doc)
+	return int64(n), err
 }

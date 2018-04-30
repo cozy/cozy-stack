@@ -16,6 +16,8 @@ const (
 	KonnectorLogs = "io.cozy.konnectors.logs"
 	// Archives doc type for zip archives with files and directories
 	Archives = "io.cozy.files.archives"
+	// Exports doc type for global exports archives
+	Exports = "io.cozy.exports"
 	// Doctypes doc type for doctype list
 	Doctypes = "io.cozy.doctypes"
 	// Files doc type for type for files and directories

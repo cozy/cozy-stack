@@ -33,13 +33,13 @@ type FileDoc struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	ByteSize   int64    `json:"size,string"` // Serialized in JSON as a string, because JS has some issues with big numbers
-	MD5Sum     []byte   `json:"md5sum"`
-	Mime       string   `json:"mime"`
-	Class      string   `json:"class"`
-	Executable bool     `json:"executable"`
-	Trashed    bool     `json:"trashed"`
-	Tags       []string `json:"tags"`
+	ByteSize   int64    `json:"size,string,omitempty"` // Serialized in JSON as a string, because JS has some issues with big numbers
+	MD5Sum     []byte   `json:"md5sum,omitempty"`
+	Mime       string   `json:"mime,omitempty"`
+	Class      string   `json:"class,omitempty"`
+	Executable bool     `json:"executable,omitempty"`
+	Trashed    bool     `json:"trashed,omitempty"`
+	Tags       []string `json:"tags,omitempty"`
 
 	Metadata Metadata `json:"metadata,omitempty"`
 
