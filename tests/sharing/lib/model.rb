@@ -7,8 +7,17 @@ module Model
     end
 
     def find(inst, id)
-      ap "find #{inst} #{id}"
+      opts = {}
+      obj = new opts
+      obj.find inst, id
     end
+
+    def find_by_name(inst, name)
+      opts = {}
+      obj = new opts
+      obj.find_by_name inst, name
+    end
+    
   end
 
   def to_json

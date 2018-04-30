@@ -3,7 +3,8 @@
 ## Install
 
 ```sh
-apt install ruby
+apt install ruby ruby-dev
+gem install bundle
 cd $(go env GOPATH)/src/github.com/cozy/cozy-stack
 go install
 cd tests/sharing

@@ -1,8 +1,42 @@
 class Folder
   include Model
   include Model::Files
-
+  attr_accessor :couch_id, :couch_rev
   attr_reader :name, :dir_id, :children
+
+  def find_by_name(inst, path)
+    opts = {
+      content_type: :json,
+      accept: :json,
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    res = inst.client["/files/metadata?Path=#{path}"].get opts
+    j = JSON.parse(res.body)["data"]
+    id = j["id"]
+    rev = j["rev"]
+    j = j["attributes"]
+    f = Folder.new(name: j["name"], dir_id: j["dir_id"])
+    f.couch_id = id
+    f.couch_rev = rev
+    f
+  end
+
+  def find(inst, id)
+    opts = {
+      content_type: :json,
+      accept: :json,
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    res = inst.client["/files/#{id}"].get opts
+    j = JSON.parse(res.body)["data"]
+    id = j["id"]
+    rev = j["rev"]
+    j = j["attributes"]
+    f = Folder.new(name: j["name"], dir_id: j["dir_id"])
+    f.couch_id = id
+    f.couch_rev = rev
+    f
+  end
 
   def doctype
     "io.cozy.files"
