@@ -367,7 +367,7 @@ func WebappsRoutes(router *echo.Group) {
 // KonnectorRoutes sets the routing for the konnectors service
 func KonnectorRoutes(router *echo.Group) {
 	router.GET("/", listKonnectorsHandler)
-	router.GET("/:slug", getHandler(apps.Webapp))
+	router.GET("/:slug", getHandler(apps.Konnector))
 	router.POST("/:slug", installHandler(apps.Konnector))
 	router.PUT("/:slug", updateHandler(apps.Konnector))
 	router.DELETE("/:slug", deleteHandler(apps.Konnector))
