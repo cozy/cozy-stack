@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/url"
@@ -22,8 +23,9 @@ type ExportDoc struct {
 	DocID            string        `json:"_id"`
 	DocRev           string        `json:"_rev"`
 	Domain           string        `json:"domain"`
+	Salt             []byte        `json:"salt"`
+	State            string        `json:"state"`
 	IsRemoved        bool          `json:"is_removed"`
-	Secret           []byte        `json:"secret"`
 	CreatedAt        time.Time     `json:"created_at"`
 	ExpiresAt        time.Time     `json:"expires_at"`
 	TotalSize        int64         `json:"total_size"`
@@ -31,8 +33,24 @@ type ExportDoc struct {
 	Error            string        `json:"error"`
 }
 
+const (
+	ExportStateExporting = "exporting"
+	ExportStateDone      = "done"
+	ExportStateError     = "error"
+)
+
 var (
 	ErrArchiveNotFound = errors.New("export: archive not found")
+	ErrArchiveConflict = errors.New("export: an archive is already being created")
+)
+
+var (
+	archiveMaxAge    = 7 * 24 * time.Hour
+	archiveMACConfig = crypto.MACConfig{
+		Name:   "exports",
+		MaxAge: archiveMaxAge,
+		MaxLen: 256,
+	}
 )
 
 type Archiver interface {
@@ -53,12 +71,29 @@ func (e *ExportDoc) Clone() couchdb.Doc {
 	return &clone
 }
 
-func getExports(domain string) ([]*ExportDoc, error) {
+func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
+	msg, err := crypto.EncodeAuthMessage(archiveMACConfig, i.SessionSecret, nil, e.Salt)
+	if err != nil {
+		panic(fmt.Errorf("could not generate archive auth message: %s", err))
+	}
+	return msg
+}
+
+func (e *ExportDoc) VerifyAuthMessage(i *instance.Instance, msg []byte) bool {
+	_, err := crypto.DecodeAuthMessage(archiveMACConfig, i.SessionSecret, msg, e.Salt)
+	return err == nil
+}
+
+func GetExports(domain string) ([]*ExportDoc, error) {
 	var docs []*ExportDoc
 	req := &couchdb.FindRequest{
 		UseIndex: "by-domain",
 		Selector: mango.Equal("domain", domain),
-		Limit:    256,
+		Sort: mango.SortBy{
+			{Field: "domain", Direction: mango.Desc},
+			{Field: "created_at", Direction: mango.Desc},
+		},
+		Limit: 256,
 	}
 	err := couchdb.FindDocs(couchdb.GlobalDB, consts.Exports, req, &docs)
 	if err != nil && !couchdb.IsNoDatabaseError(err) {
@@ -69,25 +104,29 @@ func getExports(domain string) ([]*ExportDoc, error) {
 
 // Export is used to create a tarball with files and photos from an instance
 func Export(i *instance.Instance, archiver Archiver) (exportDoc *ExportDoc, err error) {
-	secret := crypto.GenerateRandomBytes(16)
+	salt := crypto.GenerateRandomBytes(16)
 	createdAt := time.Now()
 
 	exportDoc = &ExportDoc{
 		Domain:    i.Domain,
+		Salt:      salt,
+		State:     ExportStateExporting,
 		CreatedAt: createdAt,
-		Secret:    secret,
 		TotalSize: -1,
 	}
 
 	// Cleanup previously archived exports.
 	{
 		var exportedDocs []*ExportDoc
-		exportedDocs, err = getExports(i.Domain)
+		exportedDocs, err = GetExports(i.Domain)
 		if err != nil {
 			return
 		}
 		notRemovedDocs := exportedDocs[:0]
 		for _, e := range exportedDocs {
+			if e.State == ExportStateExporting && time.Since(e.CreatedAt) < 24*time.Hour {
+				return nil, ErrArchiveConflict
+			}
 			if !e.IsRemoved {
 				notRemovedDocs = append(notRemovedDocs, e)
 			}
@@ -102,10 +141,12 @@ func Export(i *instance.Instance, archiver Archiver) (exportDoc *ExportDoc, err 
 		return
 	}
 	defer func() {
-		exportDoc.CreationDuration = time.Until(createdAt)
+		exportDoc.CreationDuration = time.Since(createdAt)
 		if err == nil {
+			exportDoc.State = ExportStateDone
 			exportDoc.TotalSize = size
 		} else {
+			exportDoc.State = ExportStateError
 			exportDoc.Error = err.Error()
 		}
 		if erru := couchdb.UpdateDoc(couchdb.GlobalDB, exportDoc); err == nil {
@@ -227,6 +268,8 @@ func writeMarshaledDoc(dir, name string, doc json.RawMessage,
 	n, err := tw.Write(doc)
 	return int64(n), err
 }
+
+// --------- archivers implementations
 
 type nopArchiver struct{}
 

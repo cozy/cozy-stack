@@ -32,29 +32,24 @@ func Worker(c *jobs.WorkerContext) error {
 		return err
 	}
 
-	{
-		link := i.PageURL("/move/exports",
-			url.Values{"Secret": {base64.URLEncoding.EncodeToString(exportDoc.Secret)}})
-		mail := mails.Options{
-			Mode:           mails.ModeNoReply,
-			TemplateName:   "archiver",
-			TemplateValues: map[string]string{"ArchiveLink": link},
-		}
+	link := i.PageURL("/move/exports",
+		url.Values{"Secret": {base64.URLEncoding.EncodeToString(exportDoc.GenerateAuthMessage(i))}})
 
-		msg, err := jobs.NewMessage(&mail)
-		if err != nil {
-			return err
-		}
-
-		_, err = jobs.System().PushJob(&jobs.JobRequest{
-			Domain:     i.Domain,
-			WorkerType: "sendmail",
-			Message:    msg,
-		})
-		if err != nil {
-			return err
-		}
+	mail := mails.Options{
+		Mode:           mails.ModeNoReply,
+		TemplateName:   "archiver",
+		TemplateValues: map[string]string{"ArchiveLink": link},
 	}
 
-	return nil
+	msg, err := jobs.NewMessage(&mail)
+	if err != nil {
+		return err
+	}
+
+	_, err = jobs.System().PushJob(&jobs.JobRequest{
+		Domain:     i.Domain,
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	return err
 }
