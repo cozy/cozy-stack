@@ -384,7 +384,7 @@ func computePossibleAncestors(wants []string, haves []string) []string {
 			pas = append(pas, haves[j-1])
 		}
 	}
-	if i != len(wgs) {
+	if i != len(wgs) && len(haves) > 0 {
 		pas = append(pas, haves[len(haves)-1])
 	}
 

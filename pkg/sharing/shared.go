@@ -142,7 +142,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 
 	// TODO to be improved when we will work on conflicts
 	rev := evt.Doc.Rev()
-	if len(ref.Revisions) == 0 || ref.Revisions[len(ref.Revisions)-1] != rev {
+	if rev != "" && (len(ref.Revisions) == 0 || ref.Revisions[len(ref.Revisions)-1] != rev) {
 		ref.Revisions = append(ref.Revisions, rev)
 	}
 
