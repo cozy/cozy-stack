@@ -32,7 +32,7 @@ type DirDoc struct {
 	Tags      []string  `json:"tags,omitempty"`
 
 	// Directory path on VFS
-	Fullpath string `json:"path"`
+	Fullpath string `json:"path,omitempty"`
 
 	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
 }

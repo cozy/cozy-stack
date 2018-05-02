@@ -182,6 +182,7 @@ type Indexer interface {
 	DirChildExists(dirID, filename string) (bool, error)
 	BatchDelete([]couchdb.Doc) error
 
+	BuildTree() (*TreeFile, error)
 	CheckIndexIntegrity() ([]*FsckLog, error)
 }
 
@@ -260,11 +261,11 @@ type DirOrFileDoc struct {
 
 	// fields from FileDoc not contained in DirDoc
 	ByteSize   int64    `json:"size,string"`
-	MD5Sum     []byte   `json:"md5sum"`
-	Mime       string   `json:"mime"`
-	Class      string   `json:"class"`
-	Executable bool     `json:"executable"`
-	Trashed    bool     `json:"trashed"`
+	MD5Sum     []byte   `json:"md5sum,omitempty"`
+	Mime       string   `json:"mime,omitempty"`
+	Class      string   `json:"class,omitempty"`
+	Executable bool     `json:"executable,omitempty"`
+	Trashed    bool     `json:"trashed,omitempty"`
 	Metadata   Metadata `json:"metadata,omitempty"`
 }
 

@@ -231,6 +231,15 @@ func exportDocs(in *instance.Instance, now time.Time, tw *tar.Writer) (size int6
 			// ignore sharings ? TBD
 		case consts.Settings:
 			// already written out in a special file
+		case consts.Files:
+			root, err := in.VFS().BuildTree()
+			if err == nil {
+				var n int64
+				n, err = writeDoc("", "files-index", root, now, tw, nil)
+				if err == nil {
+					size += n
+				}
+			}
 		default:
 			dir := url.PathEscape(doctype)
 			err = couchdb.ForeachDocs(in, doctype,

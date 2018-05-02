@@ -1,7 +1,7 @@
 package move
 
 import (
-	"encoding/hex"
+	"encoding/base64"
 	"io"
 	"net/http"
 
@@ -35,7 +35,7 @@ func exportDataHandler(c echo.Context) error {
 
 	inst := middlewares.GetInstance(c)
 	exportID := c.Param("export-id")
-	exportMAC, _ := hex.DecodeString(c.QueryParam("mac"))
+	exportMAC, _ := base64.URLEncoding.DecodeString(c.QueryParam("mac"))
 	exportDoc, err := move.GetExport(inst, exportID)
 	if err != nil {
 		return err

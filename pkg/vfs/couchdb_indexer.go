@@ -479,39 +479,29 @@ func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) 
 	return couchdb.BulkUpdateDocs(c.db, consts.Files, files, olddocs)
 }
 
-type treeFile struct {
-	DocID  string `json:"_id"`
-	DocRev string `json:"_rev"`
-	Type   string `json:"type"`
-	Name   string `json:"name"`
-	DirID  string `json:"dir_id"`
-	Path   string `json:"path"`
+// TreeFile represent a subset of a file/directory structure that can be used
+// in a tree-like representation of the index.
+type TreeFile struct {
+	DirOrFileDoc
+	Children []*TreeFile `json:"children,omitempty"`
 
 	isDir    bool
 	hasCycle bool
 	visited  bool
-	children []*treeFile
 	errs     []*treeError
 }
 
-func (t *treeFile) ID() string         { return t.DocID }
-func (t *treeFile) Rev() string        { return t.DocRev }
-func (t *treeFile) DocType() string    { return consts.Files }
-func (t *treeFile) Clone() couchdb.Doc { cloned := *t; return &cloned }
-func (t *treeFile) SetID(id string)    { t.DocID = id }
-func (t *treeFile) SetRev(rev string)  { t.DocRev = rev }
-
-var _ couchdb.Doc = &treeFile{}
+var _ couchdb.Doc = &TreeFile{}
 
 type treeError struct {
-	file *treeFile
+	file *TreeFile
 	path string
 }
 
 func (c *couchdbIndexer) CheckIndexIntegrity() (logs []*FsckLog, err error) {
-	root, orphans, err := checkIndexIntegrity(func(cb func(entry *treeFile)) error {
+	root, orphans, err := checkIndexIntegrity(func(cb func(entry *TreeFile)) error {
 		return couchdb.ForeachDocs(c.db, consts.Files, func(_ string, data json.RawMessage) error {
-			var f treeFile
+			var f TreeFile
 			if err = json.Unmarshal(data, &f); err == nil {
 				cb(&f)
 			}
@@ -545,22 +535,51 @@ func (c *couchdbIndexer) CheckIndexIntegrity() (logs []*FsckLog, err error) {
 	return
 }
 
-func checkIndexIntegrity(generator func(func(entry *treeFile)) error) (root *treeFile, orphans map[string][]*treeFile, err error) {
-	orphans = make(map[string][]*treeFile, 32)
-	dirsmap := make(map[string]*treeFile, 256)
+func (c *couchdbIndexer) BuildTree() (root *TreeFile, err error) {
+	orphans := make(map[string][]*TreeFile, 32)
+	dirsmap := make(map[string]*TreeFile, 256)
 
-	err = generator(func(f *treeFile) {
+	err = couchdb.ForeachDocs(c.db, consts.Files, func(_ string, data json.RawMessage) error {
+		var f TreeFile
+		if erru := json.Unmarshal(data, &f); erru != nil {
+			return erru
+		}
+		f.isDir = f.Type == consts.DirType
+		if f.DocID == consts.RootDirID {
+			root = &f
+		} else if parent, ok := dirsmap[f.DirID]; ok {
+			parent.Children = append(parent.Children, &f)
+		} else {
+			orphans[f.DirID] = append(orphans[f.DirID], &f)
+		}
+		if f.isDir {
+			if bucket, ok := orphans[f.DocID]; ok {
+				f.Children = bucket
+				delete(orphans, f.DocID)
+			}
+			dirsmap[f.DocID] = &f
+		}
+		return nil
+	})
+	return
+}
+
+func checkIndexIntegrity(generator func(func(entry *TreeFile)) error) (root *TreeFile, orphans map[string][]*TreeFile, err error) {
+	orphans = make(map[string][]*TreeFile, 32)
+	dirsmap := make(map[string]*TreeFile, 256)
+
+	err = generator(func(f *TreeFile) {
 		f.isDir = f.Type == consts.DirType
 		if f.DocID == consts.RootDirID {
 			root = f
 		} else if parent, ok := dirsmap[f.DirID]; ok {
-			parent.children = append(parent.children, f)
+			parent.Children = append(parent.Children, f)
 		} else {
 			orphans[f.DirID] = append(orphans[f.DirID], f)
 		}
 		if f.isDir {
 			if bucket, ok := orphans[f.DocID]; ok {
-				f.children = bucket
+				f.Children = bucket
 				delete(orphans, f.DocID)
 			}
 			dirsmap[f.DocID] = f
@@ -590,12 +609,12 @@ func checkIndexIntegrity(generator func(func(entry *treeFile)) error) (root *tre
 	return
 }
 
-func reduceTree(root *treeFile, dirsmap map[string]*treeFile, errs []*treeError) []*treeError {
+func reduceTree(root *TreeFile, dirsmap map[string]*TreeFile, errs []*treeError) []*treeError {
 	delete(dirsmap, root.DocID)
-	for _, child := range root.children {
+	for _, child := range root.Children {
 		if child.isDir {
-			expected := path.Join(root.Path, child.Name)
-			if expected != child.Path {
+			expected := path.Join(root.Fullpath, child.DocName)
+			if expected != child.Fullpath {
 				errs = append(errs, &treeError{
 					file: child,
 					path: expected,
@@ -607,7 +626,7 @@ func reduceTree(root *treeFile, dirsmap map[string]*treeFile, errs []*treeError)
 	return errs
 }
 
-func getLocalTreeLogs(c *couchdbIndexer, root *treeFile) (logs []*FsckLog, errm error) {
+func getLocalTreeLogs(c *couchdbIndexer, root *TreeFile) (logs []*FsckLog, errm error) {
 	for _, e := range root.errs {
 		if e.path != "" {
 			olddoc, err := c.DirByID(e.file.DocID)
@@ -628,7 +647,7 @@ func getLocalTreeLogs(c *couchdbIndexer, root *treeFile) (logs []*FsckLog, errm 
 	return
 }
 
-func getOrphanTreeLog(c *couchdbIndexer, dirID string, orphan *treeFile) (log *FsckLog, err error) {
+func getOrphanTreeLog(c *couchdbIndexer, dirID string, orphan *TreeFile) (log *FsckLog, err error) {
 	// TODO: For now, we re-attach the orphan trees at the root of the user's
 	// directory. We may use the dirID to infer more precisely where we should
 	// re-attach this orphan tree. However we should be careful and check if this
@@ -659,12 +678,12 @@ func getOrphanTreeLog(c *couchdbIndexer, dirID string, orphan *treeFile) (log *F
 	return
 }
 
-func listChildren(root *treeFile, files []couchdb.Doc) []couchdb.Doc {
+func listChildren(root *TreeFile, files []couchdb.Doc) []couchdb.Doc {
 	if !root.visited {
 		files = append(files, root)
 		// avoid stackoverflow on cycles
 		root.visited = true
-		for _, child := range root.children {
+		for _, child := range root.Children {
 			if child.isDir {
 				files = listChildren(child, files)
 			} else {
