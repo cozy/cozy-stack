@@ -49,6 +49,9 @@ func (man *apiApp) Links() *jsonapi.LinksList {
 		}
 	case (*apps.KonnManifest):
 		route = "konnectors"
+		if app.Icon != "" {
+			links.Icon = "/konnectors/" + app.Slug() + "/icon"
+		}
 		links.Perms = "/permissions/konnectors/" + app.Slug()
 	}
 	if route != "" {
