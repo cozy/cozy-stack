@@ -67,7 +67,7 @@ func warnings(c echo.Context) error {
 		resp := c.Response()
 		resp.Header().Set("Content-Type", "application/vnd.api+json")
 		resp.WriteHeader(http.StatusNotFound)
-		_, err := resp.Write([]byte("{errors: []}"))
+		_, err := resp.Write([]byte("{\"errors\": []}"))
 		return err
 	}
 
