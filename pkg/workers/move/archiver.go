@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -31,7 +32,7 @@ var (
 )
 
 type Archiver interface {
-	OpenArchive(exportDoc *ExportDoc) (io.ReadCloser, error)
+	OpenArchive(inst *instance.Instance, exportDoc *ExportDoc, mac []byte) (io.ReadCloser, error)
 	CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error)
 	RemoveArchives(exportDocs []*ExportDoc) error
 }
@@ -61,7 +62,10 @@ func (a aferoArchiver) fileName(exportDoc *ExportDoc) string {
 	return path.Join(exportDoc.Domain, exportDoc.ID()+"tar.gz")
 }
 
-func (a aferoArchiver) OpenArchive(exportDoc *ExportDoc) (io.ReadCloser, error) {
+func (a aferoArchiver) OpenArchive(inst *instance.Instance, exportDoc *ExportDoc, mac []byte) (io.ReadCloser, error) {
+	if !exportDoc.VerifyAuthMessage(inst, mac) {
+		return nil, ErrMACInvalid
+	}
 	if exportDoc.HasExpired() {
 		return nil, ErrExportExpired
 	}
@@ -104,9 +108,12 @@ func (a *switfArchiver) init() error {
 	return a.c.ContainerCreate(a.container, nil)
 }
 
-func (a *switfArchiver) OpenArchive(exportDoc *ExportDoc) (io.ReadCloser, error) {
+func (a *switfArchiver) OpenArchive(inst *instance.Instance, exportDoc *ExportDoc, mac []byte) (io.ReadCloser, error) {
 	if err := a.init(); err != nil {
 		return nil, err
+	}
+	if !exportDoc.VerifyAuthMessage(inst, mac) {
+		return nil, ErrMACInvalid
 	}
 	if exportDoc.HasExpired() {
 		return nil, ErrExportExpired

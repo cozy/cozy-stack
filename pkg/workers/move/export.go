@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/echo"
 )
 
@@ -58,9 +59,15 @@ func (e *ExportDoc) Clone() couchdb.Doc {
 	return &clone
 }
 
+func (e *ExportDoc) Links() *jsonapi.LinksList              { return nil }
+func (e *ExportDoc) Relationships() jsonapi.RelationshipMap { return nil }
+func (e *ExportDoc) Included() []jsonapi.Object             { return nil }
+
 func (e *ExportDoc) HasExpired() bool {
 	return time.Until(e.ExpiresAt) <= 0
 }
+
+var _ jsonapi.Object = &ExportDoc{}
 
 func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
 	mac, err := crypto.EncodeAuthMessage(archiveMACConfig, i.SessionSecret, nil, e.Salt)
@@ -75,16 +82,13 @@ func (e *ExportDoc) VerifyAuthMessage(i *instance.Instance, mac []byte) bool {
 	return err == nil
 }
 
-func GetExport(inst *instance.Instance, id string, mac []byte) (*ExportDoc, error) {
+func GetExport(inst *instance.Instance, id string) (*ExportDoc, error) {
 	var exportDoc ExportDoc
 	if err := couchdb.GetDoc(inst, consts.Exports, id, &exportDoc); err != nil {
 		if couchdb.IsNotFoundError(err) || couchdb.IsNoDatabaseError(err) {
 			return nil, ErrExportNotFound
 		}
 		return nil, err
-	}
-	if !exportDoc.VerifyAuthMessage(inst, mac) {
-		return nil, ErrMACInvalid
 	}
 	return &exportDoc, nil
 }
