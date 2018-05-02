@@ -400,6 +400,7 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 		return ErrInternalServerError
 	}
 	dir.DocName = name
+	dir.SetRev(rev)
 	if dirID, ok := target["dir_id"].(string); ok {
 		if dirID != dir.DirID {
 			parent, err := fs.DirByID(dirID)
