@@ -359,6 +359,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		return err
 	}
 	dir.SetID(target["_id"].(string))
+	dir.SetRev(target["_rev"].(string))
 	copySafeFieldsToDir(target, dir)
 	// TODO referenced_by
 	// TODO manage conflicts
@@ -399,6 +400,7 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 		return ErrInternalServerError
 	}
 	dir.DocName = name
+	dir.SetRev(rev)
 	if dirID, ok := target["dir_id"].(string); ok {
 		if dirID != dir.DirID {
 			parent, err := fs.DirByID(dirID)
