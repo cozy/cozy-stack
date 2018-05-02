@@ -150,11 +150,12 @@ func TestBulkUpdateDocs(t *testing.T) {
 	results[0].Test = "after_1"
 	results[1].Test = "after_2"
 
+	olddocs := make([]interface{}, len(results))
 	docs := make([]interface{}, len(results))
 	for i, doc := range results {
 		docs[i] = doc
 	}
-	err = BulkUpdateDocs(TestPrefix, results[0].DocType(), docs)
+	err = BulkUpdateDocs(TestPrefix, results[0].DocType(), docs, olddocs)
 	assert.NoError(t, err)
 
 	err = GetAllDocs(TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)

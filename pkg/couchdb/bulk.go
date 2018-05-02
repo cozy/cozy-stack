@@ -173,7 +173,8 @@ func BulkGetDocs(db Database, doctype string, payload []IDRev) ([]map[string]int
 }
 
 // BulkUpdateDocs is used to update several docs in one call, as a bulk.
-func BulkUpdateDocs(db Database, doctype string, docs []interface{}) error {
+// olddocs parameter is used for realtime / event triggers.
+func BulkUpdateDocs(db Database, doctype string, docs, olddocs []interface{}) error {
 	if len(docs) == 0 {
 		return nil
 	}
@@ -192,7 +193,11 @@ func BulkUpdateDocs(db Database, doctype string, docs []interface{}) error {
 	for i, doc := range docs {
 		if d, ok := doc.(Doc); ok {
 			d.SetRev(res[i].Rev)
-			RTEvent(db, realtime.EventUpdate, d, nil)
+			if old, ok := olddocs[i].(Doc); ok {
+				RTEvent(db, realtime.EventUpdate, d, old)
+			} else {
+				RTEvent(db, realtime.EventUpdate, d, nil)
+			}
 		}
 	}
 	return nil
