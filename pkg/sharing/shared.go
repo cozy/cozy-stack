@@ -23,8 +23,9 @@ type TrackMessage struct {
 // TrackEvent is used for jobs on the share-track worker.
 // It's unique per job.
 type TrackEvent struct {
-	Verb string          `json:"verb"`
-	Doc  couchdb.JSONDoc `json:"doc"`
+	Verb   string           `json:"verb"`
+	Doc    couchdb.JSONDoc  `json:"doc"`
+	OldDoc *couchdb.JSONDoc `json:"old,omitempty"`
 }
 
 // SharedInfo gives informations about how to apply the sharing to the shared
@@ -109,13 +110,37 @@ func FindReferences(inst *instance.Instance, ids []string) ([]*SharedRef, error)
 	return refs, nil
 }
 
+// extractReferencedBy extracts the referenced_by slice from the given doc
+// and cast it to the right type
+func extractReferencedBy(doc *couchdb.JSONDoc) []couchdb.DocReference {
+	slice, _ := doc.Get("referenced_by").([]interface{})
+	refs := make([]couchdb.DocReference, len(slice))
+	for i, ref := range slice {
+		refs[i], _ = ref.(couchdb.DocReference)
+	}
+	return refs
+}
+
 // isNoLongerShared returns true for a document/file/folder that has matched a
 // rule of a sharing, but no longer does.
 func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) (bool, error) {
 	if msg.DocType != consts.Files {
 		return false, nil // TODO rules for documents with a selector
 	}
-	// TODO optim: we can probably shortcut if dir_id and referenced_by have not changed
+
+	// Optim: if dir_id and referenced_by have not changed, the file/folder
+	// can't have been removed from the sharing. Same if it has no old doc.
+	if evt.OldDoc == nil {
+		return false, nil
+	}
+	if evt.OldDoc.Get("dir_id") == evt.Doc.Get("dir_id") {
+		olds := extractReferencedBy(evt.OldDoc)
+		news := extractReferencedBy(&evt.Doc)
+		if vfs.SameReferences(olds, news) {
+			return false, nil
+		}
+	}
+
 	s, err := FindSharing(inst, msg.SharingID)
 	if err != nil {
 		return false, err

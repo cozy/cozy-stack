@@ -131,6 +131,19 @@ func (f *FileDoc) AddReferencedBy(ri ...couchdb.DocReference) {
 	f.ReferencedBy = append(f.ReferencedBy, ri...)
 }
 
+// SameReferences returns true if the two sets reference the same documents.
+func SameReferences(a, b []couchdb.DocReference) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for _, ref := range a {
+		if !containsReferencedBy(b, ref) {
+			return false
+		}
+	}
+	return true
+}
+
 func containsReferencedBy(haystack []couchdb.DocReference, needle couchdb.DocReference) bool {
 	for _, ref := range haystack {
 		if ref.ID == needle.ID && ref.Type == needle.Type {
