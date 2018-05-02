@@ -13,6 +13,8 @@ const IndexViewsVersion int = 16
 // properly.
 var GlobalIndexes = []*mango.Index{
 	mango.IndexOnFields(Instances, "by-domain", []string{"domain"}),
+
+	mango.IndexOnFields(Exports, "by-domain", []string{"domain"}),
 }
 
 // Indexes is the index list required by an instance to run properly.

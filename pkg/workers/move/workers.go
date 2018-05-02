@@ -27,7 +27,7 @@ func Worker(c *jobs.WorkerContext) error {
 		return err
 	}
 
-	exportDoc, err := Export(i)
+	exportDoc, err := Export(i, nopArchiver{})
 	if err != nil {
 		return err
 	}

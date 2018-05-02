@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
+	"io"
 	"io/ioutil"
 	"net/url"
 	"path"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 )
@@ -19,41 +22,106 @@ type ExportDoc struct {
 	DocID            string        `json:"_id"`
 	DocRev           string        `json:"_rev"`
 	Domain           string        `json:"domain"`
+	IsRemoved        bool          `json:"is_removed"`
 	Secret           []byte        `json:"secret"`
 	CreatedAt        time.Time     `json:"created_at"`
 	ExpiresAt        time.Time     `json:"expires_at"`
 	TotalSize        int64         `json:"total_size"`
 	CreationDuration time.Duration `json:"creation_duration"`
+	Error            string        `json:"error"`
 }
 
-func (e *ExportDoc) DocType() string   { return consts.Exports }
-func (e *ExportDoc) ID() string        { return e.DocID }
-func (e *ExportDoc) Rev() string       { return e.DocRev }
+var (
+	ErrArchiveNotFound = errors.New("export: archive not found")
+)
+
+type Archiver interface {
+	OpenArchive(exportDoc *ExportDoc) (io.ReadCloser, error)
+	CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error)
+	RemoveArchives(exportDocs []*ExportDoc) error
+}
+
+func (e *ExportDoc) DocType() string { return consts.Exports }
+func (e *ExportDoc) ID() string      { return e.DocID }
+func (e *ExportDoc) Rev() string     { return e.DocRev }
+
 func (e *ExportDoc) SetID(id string)   { e.DocID = id }
 func (e *ExportDoc) SetRev(rev string) { e.DocRev = rev }
+
 func (e *ExportDoc) Clone() couchdb.Doc {
 	clone := *e
 	return &clone
 }
 
-// Export is used to create a tarball with files and photos from an instance
-func Export(i *instance.Instance) (exportDoc *ExportDoc, err error) {
-	out, err := ioutil.TempFile("", "cozy-test")
-	if err != nil {
-		return
+func getExports(domain string) ([]*ExportDoc, error) {
+	var docs []*ExportDoc
+	req := &couchdb.FindRequest{
+		UseIndex: "by-domain",
+		Selector: mango.Equal("domain", domain),
+		Limit:    256,
 	}
+	err := couchdb.FindDocs(couchdb.GlobalDB, consts.Exports, req, &docs)
+	if err != nil && !couchdb.IsNoDatabaseError(err) {
+		return nil, err
+	}
+	return docs, nil
+}
 
+// Export is used to create a tarball with files and photos from an instance
+func Export(i *instance.Instance, archiver Archiver) (exportDoc *ExportDoc, err error) {
+	secret := crypto.GenerateRandomBytes(16)
 	createdAt := time.Now()
+
 	exportDoc = &ExportDoc{
 		Domain:    i.Domain,
 		CreatedAt: createdAt,
-		Secret:    crypto.GenerateRandomBytes(16),
+		Secret:    secret,
 		TotalSize: -1,
 	}
 
+	// Cleanup previously archived exports.
+	{
+		var exportedDocs []*ExportDoc
+		exportedDocs, err = getExports(i.Domain)
+		if err != nil {
+			return
+		}
+		notRemovedDocs := exportedDocs[:0]
+		for _, e := range exportedDocs {
+			if !e.IsRemoved {
+				notRemovedDocs = append(notRemovedDocs, e)
+			}
+		}
+		if len(notRemovedDocs) > 0 {
+			archiver.RemoveArchives(notRemovedDocs)
+		}
+	}
+
+	var size, n int64
 	if err = couchdb.CreateDoc(couchdb.GlobalDB, exportDoc); err != nil {
 		return
 	}
+	defer func() {
+		exportDoc.CreationDuration = time.Until(createdAt)
+		if err == nil {
+			exportDoc.TotalSize = size
+		} else {
+			exportDoc.Error = err.Error()
+		}
+		if erru := couchdb.UpdateDoc(couchdb.GlobalDB, exportDoc); err == nil {
+			err = erru
+		}
+	}()
+
+	out, err := archiver.CreateArchive(exportDoc)
+	if err != nil {
+		return
+	}
+	defer func() {
+		if errc := out.Close(); err == nil {
+			err = errc
+		}
+	}()
 
 	gw, err := gzip.NewWriterLevel(out, gzip.BestCompression)
 	if err != nil {
@@ -61,7 +129,6 @@ func Export(i *instance.Instance) (exportDoc *ExportDoc, err error) {
 	}
 	tw := tar.NewWriter(gw)
 
-	var size, n int64
 	if n, err = writeInstanceDoc(i, "instance", createdAt, tw, nil); err != nil {
 		return
 	}
@@ -85,9 +152,6 @@ func Export(i *instance.Instance) (exportDoc *ExportDoc, err error) {
 	}
 	size += n
 
-	exportDoc.CreationDuration = time.Until(createdAt)
-	exportDoc.TotalSize = size
-	err = couchdb.UpdateDoc(couchdb.GlobalDB, exportDoc)
 	return
 }
 
@@ -162,4 +226,18 @@ func writeMarshaledDoc(dir, name string, doc json.RawMessage,
 	}
 	n, err := tw.Write(doc)
 	return int64(n), err
+}
+
+type nopArchiver struct{}
+
+func (a nopArchiver) OpenArchive(exportDoc *ExportDoc) (io.ReadCloser, error) {
+	return nil, nil
+}
+
+func (a nopArchiver) CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error) {
+	return ioutil.TempFile("", "cozy-archive-test")
+}
+
+func (a nopArchiver) RemoveArchives(exportDocs []*ExportDoc) error {
+	return nil
 }
