@@ -152,6 +152,9 @@ func DataErrorList(c echo.Context, errs ...*Error) error {
 	doc := Document{
 		Errors: errs,
 	}
+	if len(errs) == 0 {
+		panic("jsonapi.DataErrorList called with empty list.")
+	}
 	resp := c.Response()
 	resp.Header().Set("Content-Type", ContentType)
 	resp.WriteHeader(errs[0].Status)
