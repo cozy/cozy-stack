@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/echo"
 )
 
@@ -52,6 +53,8 @@ func (e *ExportDoc) SetRev(rev string) { e.DocRev = rev }
 
 func (e *ExportDoc) Clone() couchdb.Doc {
 	clone := *e
+	clone.Salt = make([]byte, len(e.Salt))
+	copy(clone.Salt, e.Salt)
 	return &clone
 }
 
@@ -140,18 +143,31 @@ func Export(i *instance.Instance, archiver Archiver) (exportDoc *ExportDoc, err 
 	if err = couchdb.CreateDoc(couchdb.GlobalDB, exportDoc); err != nil {
 		return
 	}
+	realtime.GetHub().Publish(&realtime.Event{
+		Verb:   realtime.EventCreate,
+		Doc:    exportDoc.Clone(),
+		OldDoc: nil,
+		Domain: i.Domain,
+	})
 	defer func() {
-		exportDoc.CreationDuration = time.Since(createdAt)
+		newExportDoc := exportDoc.Clone().(*ExportDoc)
+		newExportDoc.CreationDuration = time.Since(createdAt)
 		if err == nil {
-			exportDoc.State = ExportStateDone
-			exportDoc.TotalSize = size
+			newExportDoc.State = ExportStateDone
+			newExportDoc.TotalSize = size
 		} else {
-			exportDoc.State = ExportStateError
-			exportDoc.Error = err.Error()
+			newExportDoc.State = ExportStateError
+			newExportDoc.Error = err.Error()
 		}
-		if erru := couchdb.UpdateDoc(couchdb.GlobalDB, exportDoc); err == nil {
+		if erru := couchdb.UpdateDoc(couchdb.GlobalDB, newExportDoc); err == nil {
 			err = erru
 		}
+		realtime.GetHub().Publish(&realtime.Event{
+			Verb:   realtime.EventUpdate,
+			Doc:    newExportDoc.Clone(),
+			OldDoc: exportDoc.Clone(),
+			Domain: i.Domain,
+		})
 	}()
 
 	out, err := archiver.CreateArchive(exportDoc)

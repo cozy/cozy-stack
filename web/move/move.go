@@ -14,6 +14,7 @@ func exportsHandler(c echo.Context) error {
 	if !middlewares.IsLoggedIn(c) {
 		return echo.NewHTTPError(http.StatusUnauthorized)
 	}
+
 	inst := middlewares.GetInstance(c)
 	exportID := c.Param("export-id")
 	exportMAC, _ := hex.DecodeString(c.QueryParam("mac"))
@@ -28,8 +29,7 @@ func exportsHandler(c echo.Context) error {
 	}
 	defer archive.Close()
 
-	buf := make([]byte, 32*1024)
-	_, err = io.CopyBuffer(c.Response(), archive, buf)
+	_, err = io.Copy(c.Response(), archive)
 	return err
 }
 
