@@ -359,6 +359,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		return err
 	}
 	dir.SetID(target["_id"].(string))
+	dir.SetRev(target["_rev"].(string))
 	copySafeFieldsToDir(target, dir)
 	// TODO referenced_by
 	// TODO manage conflicts
