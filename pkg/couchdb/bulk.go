@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -61,10 +62,15 @@ func CountAllDocs(db Database, doctype string) (int, error) {
 
 // GetAllDocs returns all documents of a specified doctype. It filters
 // out the possible _design document.
-func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) error {
-	v, err := req.Values()
-	if err != nil {
-		return err
+func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) (err error) {
+	var v url.Values
+	if req != nil {
+		v, err = req.Values()
+		if err != nil {
+			return err
+		}
+	} else {
+		v = make(url.Values)
 	}
 	v.Add("include_docs", "true")
 	var response AllDocsResponse
