@@ -4,23 +4,18 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
+	"net/http"
 	"net/url"
-	"os"
 	"path"
-	"strconv"
 	"time"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	multierror "github.com/hashicorp/go-multierror"
-	"github.com/ncw/swift"
+	"github.com/cozy/echo"
 )
 
 type ExportDoc struct {
@@ -29,7 +24,6 @@ type ExportDoc struct {
 	Domain           string        `json:"domain"`
 	Salt             []byte        `json:"salt"`
 	State            string        `json:"state"`
-	IsRemoved        bool          `json:"is_removed"`
 	CreatedAt        time.Time     `json:"created_at"`
 	ExpiresAt        time.Time     `json:"expires_at"`
 	TotalSize        int64         `json:"total_size"`
@@ -37,31 +31,17 @@ type ExportDoc struct {
 	Error            string        `json:"error"`
 }
 
+var (
+	ErrExportNotFound = echo.NewHTTPError(http.StatusNotFound, "exports: not found")
+	ErrExportExpired  = echo.NewHTTPError(http.StatusNotFound, "exports: has expired")
+	ErrMACInvalid     = echo.NewHTTPError(http.StatusUnauthorized, "exports: invalid mac")
+)
+
 const (
 	ExportStateExporting = "exporting"
 	ExportStateDone      = "done"
 	ExportStateError     = "error"
 )
-
-var (
-	ErrArchiveNotFound = errors.New("export: archive not found")
-	ErrArchiveConflict = errors.New("export: an archive is already being created")
-)
-
-var (
-	archiveMaxAge    = 7 * 24 * time.Hour
-	archiveMACConfig = crypto.MACConfig{
-		Name:   "exports",
-		MaxAge: archiveMaxAge,
-		MaxLen: 256,
-	}
-)
-
-type Archiver interface {
-	OpenArchive(exportDoc *ExportDoc) (io.ReadCloser, error)
-	CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error)
-	RemoveArchives(exportDocs []*ExportDoc) error
-}
 
 func (e *ExportDoc) DocType() string { return consts.Exports }
 func (e *ExportDoc) ID() string      { return e.DocID }
@@ -75,17 +55,35 @@ func (e *ExportDoc) Clone() couchdb.Doc {
 	return &clone
 }
 
+func (e *ExportDoc) HasExpired() bool {
+	return time.Until(e.ExpiresAt) <= 0
+}
+
 func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
-	msg, err := crypto.EncodeAuthMessage(archiveMACConfig, i.SessionSecret, nil, e.Salt)
+	mac, err := crypto.EncodeAuthMessage(archiveMACConfig, i.SessionSecret, nil, e.Salt)
 	if err != nil {
 		panic(fmt.Errorf("could not generate archive auth message: %s", err))
 	}
-	return msg
+	return mac
 }
 
-func (e *ExportDoc) VerifyAuthMessage(i *instance.Instance, msg []byte) bool {
-	_, err := crypto.DecodeAuthMessage(archiveMACConfig, i.SessionSecret, msg, e.Salt)
+func (e *ExportDoc) VerifyAuthMessage(i *instance.Instance, mac []byte) bool {
+	_, err := crypto.DecodeAuthMessage(archiveMACConfig, i.SessionSecret, mac, e.Salt)
 	return err == nil
+}
+
+func GetExport(inst *instance.Instance, id string, mac []byte) (*ExportDoc, error) {
+	var exportDoc ExportDoc
+	if err := couchdb.GetDoc(inst, consts.Exports, id, &exportDoc); err != nil {
+		if couchdb.IsNotFoundError(err) || couchdb.IsNoDatabaseError(err) {
+			return nil, ErrExportNotFound
+		}
+		return nil, err
+	}
+	if !exportDoc.VerifyAuthMessage(inst, mac) {
+		return nil, ErrMACInvalid
+	}
+	return &exportDoc, nil
 }
 
 func GetExports(domain string) ([]*ExportDoc, error) {
@@ -131,9 +129,7 @@ func Export(i *instance.Instance, archiver Archiver) (exportDoc *ExportDoc, err 
 			if e.State == ExportStateExporting && time.Since(e.CreatedAt) < 24*time.Hour {
 				return nil, ErrArchiveConflict
 			}
-			if !e.IsRemoved {
-				notRemovedDocs = append(notRemovedDocs, e)
-			}
+			notRemovedDocs = append(notRemovedDocs, e)
 		}
 		if len(notRemovedDocs) > 0 {
 			archiver.RemoveArchives(notRemovedDocs)
@@ -271,75 +267,4 @@ func writeMarshaledDoc(dir, name string, doc json.RawMessage,
 	}
 	n, err := tw.Write(doc)
 	return int64(n), err
-}
-
-// --------- archivers implementations
-
-type aferoArchiver struct {
-	fs afero.Fs
-}
-
-func (a aferoArchiver) fileName(exportDoc *ExportDoc) string {
-	return path.Join(exportDoc.Domain, exportDoc.ID()+"tar.gz")
-}
-
-func (a aferoArchiver) OpenArchive(exportDoc *ExportDoc) (io.ReadCloser, error) {
-	return a.fs.Open(a.fileName(exportDoc))
-}
-
-func (a aferoArchiver) CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error) {
-	f, err := a.fs.OpenFile(a.fileName(exportDoc), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-	if os.IsNotExist(err) {
-		if err = a.fs.MkdirAll(path.Join("/", exportDoc.Domain), 0700); err == nil {
-			f, err = a.fs.OpenFile(a.fileName(exportDoc), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-		}
-	}
-	return f, err
-}
-
-func (a aferoArchiver) RemoveArchives(exportDocs []*ExportDoc) error {
-	var errm error
-	for _, e := range exportDocs {
-		if err := a.fs.Remove(a.fileName(e)); err != nil {
-			errm = multierror.Append(errm, err)
-		}
-	}
-	return errm
-}
-
-type switfArchiver struct {
-	c         *swift.Connection
-	container string
-}
-
-func (a *switfArchiver) OpenArchive(exportDoc *ExportDoc) (io.ReadCloser, error) {
-	objectName := exportDoc.Domain + "/" + exportDoc.ID()
-	f, _, err := a.c.ObjectOpen(a.container, objectName, false, nil)
-	if err != nil {
-		return nil, err
-	}
-	return f, nil
-}
-
-func (a *switfArchiver) CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error) {
-	objectName := exportDoc.Domain + "/" + exportDoc.ID()
-	objectMeta := swift.Metadata{
-		"created-at": exportDoc.CreatedAt.Format(time.RFC3339),
-	}
-	headers := objectMeta.ObjectHeaders()
-	headers["X-Delete-At"] = strconv.FormatInt(exportDoc.ExpiresAt.Unix(), 10)
-	return a.c.ObjectCreate(a.container, objectName, false, "",
-		"application/tar+gzip", headers)
-}
-
-func (a *switfArchiver) RemoveArchives(exportDocs []*ExportDoc) error {
-	var objectNames []string
-	for _, e := range exportDocs {
-		objectNames = append(objectNames, e.Domain+"/"+e.ID())
-	}
-	if len(objectNames) > 0 {
-		_, err := a.c.BulkDelete(a.container, objectNames)
-		return err
-	}
-	return nil
 }
