@@ -62,6 +62,15 @@ func warnings(c echo.Context) error {
 		warnings = []*jsonapi.Error{}
 	}
 
+	if len(warnings) == 0 {
+		// Sends a 404 when there is no  warnings
+		resp := c.Response()
+		resp.Header().Set("Content-Type", "application/vnd.api+json")
+		resp.WriteHeader(http.StatusNotFound)
+		_, err := resp.Write([]byte("{errors: []}"))
+		return err
+	}
+
 	return jsonapi.DataErrorList(c, warnings...)
 }
 
