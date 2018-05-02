@@ -170,7 +170,9 @@ func testPath(dir *vfs.DirDoc, doc realtime.Doc) bool {
 			if strings.HasPrefix(f.DocRev, "1-") {
 				return false
 			}
-			return strings.HasPrefix(f.RestorePath, dir.Fullpath+"/")
+			if f.RestorePath != "" {
+				return strings.HasPrefix(f.RestorePath, dir.Fullpath+"/")
+			}
 		}
 		p, err := f.Path(dumpFilePather)
 		if err != nil {

@@ -464,8 +464,14 @@ func (c *couchdbIndexer) DirChildExists(dirID, name string) (bool, error) {
 
 func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) error {
 	var files []interface{}
+	parent := doc
 	err := walk(c, doc.Name(), doc, nil, func(name string, dir *DirDoc, file *FileDoc, err error) error {
+		if dir != nil {
+			parent = dir
+		}
 		if file != nil && file.Trashed != trashed {
+			// XXX fullpath is used by event triggers and should be pre-filled here
+			file.fullpath = path.Join(parent.Fullpath, file.DocName)
 			file.Trashed = trashed
 			files = append(files, file)
 		}
