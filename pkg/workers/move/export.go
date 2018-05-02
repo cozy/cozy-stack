@@ -7,21 +7,25 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"path"
+	"strconv"
 	"time"
 
+	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	multierror "github.com/hashicorp/go-multierror"
+	"github.com/ncw/swift"
 )
 
 type ExportDoc struct {
-	DocID            string        `json:"_id"`
-	DocRev           string        `json:"_rev"`
+	DocID            string        `json:"_id,omitempty"`
+	DocRev           string        `json:"_rev,omitempty"`
 	Domain           string        `json:"domain"`
 	Salt             []byte        `json:"salt"`
 	State            string        `json:"state"`
@@ -271,16 +275,71 @@ func writeMarshaledDoc(dir, name string, doc json.RawMessage,
 
 // --------- archivers implementations
 
-type nopArchiver struct{}
-
-func (a nopArchiver) OpenArchive(exportDoc *ExportDoc) (io.ReadCloser, error) {
-	return nil, nil
+type aferoArchiver struct {
+	fs afero.Fs
 }
 
-func (a nopArchiver) CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error) {
-	return ioutil.TempFile("", "cozy-archive-test")
+func (a aferoArchiver) fileName(exportDoc *ExportDoc) string {
+	return path.Join(exportDoc.Domain, exportDoc.ID()+"tar.gz")
 }
 
-func (a nopArchiver) RemoveArchives(exportDocs []*ExportDoc) error {
+func (a aferoArchiver) OpenArchive(exportDoc *ExportDoc) (io.ReadCloser, error) {
+	return a.fs.Open(a.fileName(exportDoc))
+}
+
+func (a aferoArchiver) CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error) {
+	f, err := a.fs.OpenFile(a.fileName(exportDoc), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if os.IsNotExist(err) {
+		if err = a.fs.MkdirAll(path.Join("/", exportDoc.Domain), 0700); err == nil {
+			f, err = a.fs.OpenFile(a.fileName(exportDoc), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		}
+	}
+	return f, err
+}
+
+func (a aferoArchiver) RemoveArchives(exportDocs []*ExportDoc) error {
+	var errm error
+	for _, e := range exportDocs {
+		if err := a.fs.Remove(a.fileName(e)); err != nil {
+			errm = multierror.Append(errm, err)
+		}
+	}
+	return errm
+}
+
+type switfArchiver struct {
+	c         *swift.Connection
+	container string
+}
+
+func (a *switfArchiver) OpenArchive(exportDoc *ExportDoc) (io.ReadCloser, error) {
+	objectName := exportDoc.Domain + "/" + exportDoc.ID()
+	f, _, err := a.c.ObjectOpen(a.container, objectName, false, nil)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+func (a *switfArchiver) CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error) {
+	objectName := exportDoc.Domain + "/" + exportDoc.ID()
+	objectMeta := swift.Metadata{
+		"created-at": exportDoc.CreatedAt.Format(time.RFC3339),
+	}
+	headers := objectMeta.ObjectHeaders()
+	headers["X-Delete-At"] = strconv.FormatInt(exportDoc.ExpiresAt.Unix(), 10)
+	return a.c.ObjectCreate(a.container, objectName, false, "",
+		"application/tar+gzip", headers)
+}
+
+func (a *switfArchiver) RemoveArchives(exportDocs []*ExportDoc) error {
+	var objectNames []string
+	for _, e := range exportDocs {
+		objectNames = append(objectNames, e.Domain+"/"+e.ID())
+	}
+	if len(objectNames) > 0 {
+		_, err := a.c.BulkDelete(a.container, objectNames)
+		return err
+	}
 	return nil
 }

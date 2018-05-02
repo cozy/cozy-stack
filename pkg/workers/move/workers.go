@@ -1,11 +1,14 @@
 package move
 
 import (
-	"encoding/base64"
-	"net/url"
+	"encoding/hex"
+	"os"
+	"path"
 	"runtime"
 	"time"
 
+	"github.com/cozy/afero"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
@@ -27,18 +30,18 @@ func Worker(c *jobs.WorkerContext) error {
 		return err
 	}
 
-	exportDoc, err := Export(i, nopArchiver{})
+	fs := afero.NewBasePathFs(afero.NewOsFs(), path.Join(os.TempDir()))
+	exportDoc, err := Export(i, aferoArchiver{fs})
 	if err != nil {
 		return err
 	}
 
-	link := i.PageURL("/move/exports",
-		url.Values{"Secret": {base64.URLEncoding.EncodeToString(exportDoc.GenerateAuthMessage(i))}})
-
+	link := i.SubDomain(consts.SettingsSlug)
+	link.Fragment = "/exports/" + hex.EncodeToString(exportDoc.GenerateAuthMessage(i))
 	mail := mails.Options{
 		Mode:           mails.ModeNoReply,
 		TemplateName:   "archiver",
-		TemplateValues: map[string]string{"ArchiveLink": link},
+		TemplateValues: map[string]string{"ArchiveLink": link.String()},
 	}
 
 	msg, err := jobs.NewMessage(&mail)
