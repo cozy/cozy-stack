@@ -75,12 +75,9 @@ func (f *FileDoc) Clone() couchdb.Doc {
 	for k, v := range f.Metadata {
 		cloned.Metadata[k] = v
 	}
+	// It happens that a cloned file is mutated => it's safer to clear the fullpath
+	cloned.fullpath = ""
 	return &cloned
-}
-
-// Reset removes the cached fullpath
-func (f *FileDoc) Reset() {
-	f.fullpath = ""
 }
 
 // SetID changes the file qualified identifier

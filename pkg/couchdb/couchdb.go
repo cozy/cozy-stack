@@ -518,11 +518,6 @@ func DeleteDoc(db Database, doc Doc) error {
 	return nil
 }
 
-// Reseter is a interface for reseting a cloned doc
-type Reseter interface {
-	Reset()
-}
-
 // UpdateDoc update a document. The document ID and Rev should be filled.
 // The doc SetRev function will be called with the new rev.
 func UpdateDoc(db Database, doc Doc) error {
@@ -539,9 +534,6 @@ func UpdateDoc(db Database, doc Doc) error {
 	// The old doc is requested to be emitted throught RTEvent.
 	// This is useful to keep track of the modifications for the triggers.
 	oldDoc := doc.Clone()
-	if r, ok := oldDoc.(Reseter); ok {
-		r.Reset()
-	}
 	err = makeRequest(db, doctype, http.MethodGet, url, nil, oldDoc)
 	if err != nil {
 		return err
