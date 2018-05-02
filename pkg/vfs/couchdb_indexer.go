@@ -104,21 +104,6 @@ func (c *couchdbIndexer) UpdateFileDoc(olddoc, newdoc *FileDoc) error {
 	return couchdb.UpdateDocWithOld(c.db, newdoc, olddoc)
 }
 
-func (c *couchdbIndexer) UpdateFileDocs(docs []*FileDoc) error {
-	if len(docs) == 0 {
-		return nil
-	}
-	// Ensure that fullpath is filled because it's used in realtime/@events
-	couchdocs := make([]interface{}, len(docs))
-	for i, doc := range docs {
-		if _, err := doc.Path(c); err != nil {
-			return err
-		}
-		couchdocs[i] = doc
-	}
-	return couchdb.BulkUpdateDocs(c.db, consts.Files, couchdocs)
-}
-
 func (c *couchdbIndexer) DeleteFileDoc(doc *FileDoc) error {
 	// Ensure that fullpath is filled because it's used in realtime/@events
 	if _, err := doc.Path(c); err != nil {

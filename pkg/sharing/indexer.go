@@ -93,10 +93,6 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 	return nil
 }
 
-func (s *sharingIndexer) UpdateFileDocs(docs []*vfs.FileDoc) error {
-	return ErrInternalServerError
-}
-
 func (s *sharingIndexer) DeleteFileDoc(doc *vfs.FileDoc) error {
 	return ErrInternalServerError
 }
