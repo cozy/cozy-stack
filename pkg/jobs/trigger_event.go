@@ -165,13 +165,12 @@ func testPath(dir *vfs.DirDoc, doc realtime.Doc) bool {
 	}
 	if f, ok := doc.(*vfs.FileDoc); ok {
 		if f.Trashed {
-			// XXX When a file is uploaded, a document is created in couchdb
-			// with trashed: true and a blank restore_path. We should not match
-			// this temporary document!
-			if f.RestorePath == "" {
+			// XXX When a new file is uploaded, a document is created in
+			// couchdb with trashed: true. We should ignore it.
+			if strings.HasPrefix(f.DocRev, "1-") {
 				return false
 			}
-			return strings.HasPrefix(f.RestorePath, dir.Fullpath)
+			return strings.HasPrefix(f.RestorePath, dir.Fullpath+"/")
 		}
 		p, err := f.Path(dumpFilePather)
 		if err != nil {
