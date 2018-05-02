@@ -101,7 +101,7 @@ func (c *couchdbIndexer) UpdateFileDoc(olddoc, newdoc *FileDoc) error {
 	}
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
-	return couchdb.UpdateDoc(c.db, newdoc)
+	return couchdb.UpdateDocWithOld(c.db, newdoc, olddoc)
 }
 
 func (c *couchdbIndexer) UpdateFileDocs(docs []*FileDoc) error {
@@ -157,7 +157,7 @@ func (c *couchdbIndexer) UpdateDirDoc(olddoc, newdoc *DirDoc) error {
 		}
 	}
 
-	if err := couchdb.UpdateDoc(c.db, newdoc); err != nil {
+	if err := couchdb.UpdateDocWithOld(c.db, newdoc, olddoc); err != nil {
 		return err
 	}
 

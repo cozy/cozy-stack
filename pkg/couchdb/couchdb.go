@@ -548,6 +548,29 @@ func UpdateDoc(db Database, doc Doc) error {
 	return nil
 }
 
+// UpdateDocWithOld updates a document, like UpdateDoc. The difference is that
+// if we already have oldDoc there is no need to refetch it from database.
+func UpdateDocWithOld(db Database, doc, oldDoc Doc) error {
+	id, err := validateDocID(doc.ID())
+	if err != nil {
+		return err
+	}
+	doctype := doc.DocType()
+	if id == "" || doc.Rev() == "" || doctype == "" {
+		return fmt.Errorf("UpdateDoc doc argument should have doctype, id and rev")
+	}
+
+	url := url.PathEscape(id)
+	var res UpdateResponse
+	err = makeRequest(db, doctype, http.MethodPut, url, doc, &res)
+	if err != nil {
+		return err
+	}
+	doc.SetRev(res.Rev)
+	RTEvent(db, realtime.EventUpdate, doc, oldDoc)
+	return nil
+}
+
 // CreateNamedDoc persist a document with an ID.
 // if the document already exist, it will return a 409 error.
 // The document ID should be fillled.
