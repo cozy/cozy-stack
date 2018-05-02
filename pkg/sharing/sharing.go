@@ -63,18 +63,12 @@ func (s *Sharing) SetRev(rev string) { s.SRev = rev }
 // Clone implements couchdb.Doc
 func (s *Sharing) Clone() couchdb.Doc {
 	cloned := *s
-	cloned.Members = make([]Member, len(s.Members))
-	for i := range s.Members {
-		cloned.Members[i] = s.Members[i]
-	}
-	cloned.Credentials = make([]Credentials, len(s.Credentials))
-	for i := range s.Credentials {
-		cloned.Credentials[i] = s.Credentials[i]
-	}
 	cloned.Rules = make([]Rule, len(s.Rules))
-	for i := range s.Rules {
-		cloned.Rules[i] = s.Rules[i]
-	}
+	copy(cloned.Rules, s.Rules)
+	cloned.Members = make([]Member, len(s.Members))
+	copy(cloned.Members, s.Members)
+	cloned.Credentials = make([]Credentials, len(s.Credentials))
+	copy(cloned.Credentials, s.Credentials)
 	return &cloned
 }
 

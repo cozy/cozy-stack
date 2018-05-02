@@ -77,6 +77,12 @@ func (s *SharedRef) SetRev(rev string) { s.SRev = rev }
 // Clone implements couchdb.Doc
 func (s *SharedRef) Clone() couchdb.Doc {
 	cloned := *s
+	cloned.Revisions = make([]string, len(s.Revisions))
+	copy(cloned.Revisions, s.Revisions)
+	cloned.Infos = make(map[string]SharedInfo, len(s.Infos))
+	for k, v := range s.Infos {
+		cloned.Infos[k] = v
+	}
 	return &cloned
 }
 
