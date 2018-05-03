@@ -555,6 +555,7 @@ func (c *couchdbIndexer) BuildTree() (root *TreeFile, err error) {
 			} else {
 				parent.FilesChildren = append(parent.FilesChildren, &f)
 				parent.FilesChildrenSize += f.ByteSize
+				f.Fullpath = path.Join(parent.Fullpath, f.DocName)
 			}
 		} else {
 			orphans[f.DirID] = append(orphans[f.DirID], &f)
@@ -567,6 +568,7 @@ func (c *couchdbIndexer) BuildTree() (root *TreeFile, err error) {
 					} else {
 						f.FilesChildren = append(f.FilesChildren, child)
 						f.FilesChildrenSize += child.ByteSize
+						child.Fullpath = path.Join(f.Fullpath, child.DocName)
 					}
 				}
 				delete(orphans, f.DocID)

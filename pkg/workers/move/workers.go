@@ -2,7 +2,7 @@ package move
 
 import (
 	"encoding/base64"
-	"net/url"
+	"fmt"
 	"runtime"
 	"time"
 
@@ -23,6 +23,7 @@ func init() {
 }
 
 type ExportOptions struct {
+	BucketSize   int64    `json:"bucket_size"`
 	WithDoctypes []string `json:"with_doctypes,omitempty"`
 	WithoutIndex bool     `json:"without_index,omitempty"`
 }
@@ -47,8 +48,7 @@ func ExportWorker(c *jobs.WorkerContext) error {
 
 	mac := base64.URLEncoding.EncodeToString(exportDoc.GenerateAuthMessage(i))
 	link := i.SubDomain(consts.SettingsSlug)
-	link.Fragment = "/exports/" + exportDoc.ID()
-	link.RawPath = url.Values{"mac": {mac}}.Encode()
+	link.Fragment = fmt.Sprintf("/exports/%s", mac)
 	mail := mails.Options{
 		Mode:           mails.ModeNoReply,
 		TemplateName:   "archiver",

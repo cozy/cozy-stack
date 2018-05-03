@@ -5,10 +5,12 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -28,17 +30,21 @@ type ExportDoc struct {
 	DocID             string        `json:"_id,omitempty"`
 	DocRev            string        `json:"_rev,omitempty"`
 	Domain            string        `json:"domain"`
-	Salt              []byte        `json:"salt"`
-	IndexFilesCursors []string      `json:"index_file_cursors"`
+	BucketSize        int64         `json:"bucket_size,omitempty"`
+	IndexFilesCursors []string      `json:"index_file_cursors,omitempty"`
 	State             string        `json:"state"`
 	WithDoctypes      []string      `json:"with_doctypes,omitempty"`
 	WithoutIndex      bool          `json:"without_index,omitempty"`
 	CreatedAt         time.Time     `json:"created_at"`
 	ExpiresAt         time.Time     `json:"expires_at"`
-	TotalSize         int64         `json:"total_size"`
-	CreationDuration  time.Duration `json:"creation_duration"`
-	Error             string        `json:"error"`
+	TotalSize         int64         `json:"total_size,omitempty"`
+	CreationDuration  time.Duration `json:"creation_duration,omitempty"`
+	Error             string        `json:"error,omitempty"`
 }
+
+// BucketSize is the default size of a file bucket, to split the index into
+// equal-sized parts.
+const BucketSize = 100 * 1024 * 1024 // 100 MB
 
 var (
 	// ErrExportNotFound is used when a export document could not be found
@@ -50,6 +56,11 @@ var (
 	ErrMACInvalid = echo.NewHTTPError(http.StatusUnauthorized, "exports: invalid mac")
 	// ErrExportConflict is used when an export is already being perfomed.
 	ErrExportConflict = echo.NewHTTPError(http.StatusConflict, "export: an archive is already being created")
+	// ErrExportDoesNotContainIndex is used when we could not find the index data
+	// in the archive.
+	ErrExportDoesNotContainIndex = echo.NewHTTPError(http.StatusBadRequest, "export: archive does not contain index data")
+	// ErrExportInvalidCursor is used when the given index cursor is invalid
+	ErrExportInvalidCursor = echo.NewHTTPError(http.StatusBadRequest, "export: cursor is invalid")
 )
 
 const (
@@ -82,9 +93,6 @@ func (e *ExportDoc) SetRev(rev string) { e.DocRev = rev }
 func (e *ExportDoc) Clone() couchdb.Doc {
 	clone := *e
 
-	clone.Salt = make([]byte, len(e.Salt))
-	copy(clone.Salt, e.Salt)
-
 	clone.IndexFilesCursors = make([]string, len(e.IndexFilesCursors))
 	copy(clone.IndexFilesCursors, e.IndexFilesCursors)
 
@@ -110,25 +118,29 @@ var _ jsonapi.Object = &ExportDoc{}
 // GenerateAuthMessage generates a MAC authentificating the access to the
 // export data.
 func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
-	mac, err := crypto.EncodeAuthMessage(archiveMACConfig, i.SessionSecret, nil, e.Salt)
+	mac, err := crypto.EncodeAuthMessage(archiveMACConfig, i.SessionSecret, []byte(e.ID()), nil)
 	if err != nil {
 		panic(fmt.Errorf("could not generate archive auth message: %s", err))
 	}
 	return mac
 }
 
-// VerifyAuthMessage verifies the given MAC to authenticate and grant the
+// verifyAuthMessage verifies the given MAC to authenticate and grant the
 // access to the export data.
-func (e *ExportDoc) VerifyAuthMessage(i *instance.Instance, mac []byte) bool {
-	_, err := crypto.DecodeAuthMessage(archiveMACConfig, i.SessionSecret, mac, e.Salt)
-	return err == nil
+func verifyAuthMessage(i *instance.Instance, mac []byte) (string, bool) {
+	exportID, err := crypto.DecodeAuthMessage(archiveMACConfig, i.SessionSecret, mac, nil)
+	return string(exportID), err == nil
 }
 
 // GetExport returns an Export document associated with the given instance and
 // with the given ID.
-func GetExport(inst *instance.Instance, id string) (*ExportDoc, error) {
+func GetExport(inst *instance.Instance, mac []byte) (*ExportDoc, error) {
+	exportID, ok := verifyAuthMessage(inst, mac)
+	if !ok {
+		return nil, ErrMACInvalid
+	}
 	var exportDoc ExportDoc
-	if err := couchdb.GetDoc(inst, consts.Exports, id, &exportDoc); err != nil {
+	if err := couchdb.GetDoc(couchdb.GlobalDB, consts.Exports, exportID, &exportDoc); err != nil {
 		if couchdb.IsNotFoundError(err) || couchdb.IsNoDatabaseError(err) {
 			return nil, ErrExportNotFound
 		}
@@ -156,19 +168,157 @@ func GetExports(domain string) ([]*ExportDoc, error) {
 	return docs, nil
 }
 
+// ExportData returns a io.ReadCloser of the metadata archive.
+func ExportData(inst *instance.Instance, archiver Archiver, mac []byte) (io.ReadCloser, int64, error) {
+	exportDoc, err := GetExport(inst, mac)
+	if err != nil {
+		return nil, 0, err
+	}
+	if exportDoc.HasExpired() {
+		return nil, 0, ErrExportExpired
+	}
+	return archiver.OpenArchive(inst, exportDoc)
+}
+
+// ExportCopyFiles does an HTTP copy of a part of the file indexes.
+func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Archiver, mac []byte, cursorStr string) error {
+	exportDoc, err := GetExport(inst, mac)
+	if err != nil {
+		return err
+	}
+	if exportDoc.HasExpired() {
+		return ErrExportExpired
+	}
+	if exportDoc.WithoutIndex {
+		return ErrExportDoesNotContainIndex
+	}
+
+	cursorPos := 0
+	// check that the given cursor is part of our pre-defined list of cursors.
+	if cursorStr != "" {
+		for i, c := range exportDoc.IndexFilesCursors {
+			if c == cursorStr {
+				cursorPos = i + 1
+				break
+			}
+		}
+		if cursorPos == 0 {
+			return ErrExportInvalidCursor
+		}
+	}
+
+	cursor, err := parseCursor(cursorStr)
+	if err != nil {
+		return ErrExportInvalidCursor
+	}
+
+	archive, _, err := archiver.OpenArchive(inst, exportDoc)
+	if err != nil {
+		return err
+	}
+
+	var root *vfs.TreeFile
+	gr, err := gzip.NewReader(archive)
+	if err != nil {
+		return err
+	}
+
+	tr := tar.NewReader(gr)
+	for {
+		var hdr *tar.Header
+		hdr, err = tr.Next()
+		if err != nil {
+			break
+		}
+		if hdr.Typeflag == tar.TypeReg && hdr.Name == "files-index.json" {
+			if err = json.NewDecoder(tr).Decode(&root); err != nil {
+				return err
+			}
+			break
+		}
+	}
+	if errc := gr.Close(); err == nil {
+		err = errc
+	}
+	if errc := archive.Close(); err == nil {
+		err = errc
+	}
+	if err != nil || root == nil {
+		return ErrExportDoesNotContainIndex
+	}
+
+	w.Header().Set("Content-Type", "application/tar+gzip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=cozy-files.part%d.tar.gz", cursorPos))
+	w.WriteHeader(http.StatusOK)
+
+	gw := gzip.NewWriter(w)
+	tw := tar.NewWriter(gw)
+
+	fs := inst.VFS()
+	list, _ := listFilesIndex(tw, root, nil, indexCursor{}, cursor,
+		exportDoc.BucketSize, exportDoc.BucketSize)
+	for _, file := range list {
+		_, fileDoc := file.file.Refine()
+		if fileDoc != nil {
+			var f vfs.File
+			f, err = fs.OpenFile(fileDoc)
+			if err != nil {
+				break
+			}
+			hdr := &tar.Header{
+				Name:       path.Join("cozy/", file.file.Fullpath),
+				Mode:       0640,
+				Size:       fileDoc.ByteSize,
+				AccessTime: fileDoc.CreatedAt,
+				ModTime:    fileDoc.UpdatedAt,
+				Typeflag:   tar.TypeReg,
+			}
+			if fileDoc.Executable {
+				hdr.Mode = 750
+			}
+			if err = tw.WriteHeader(hdr); err != nil {
+				break
+			}
+			if file.rangeStart > 0 {
+				_, err = f.Seek(file.rangeStart, 0)
+				if err != nil {
+					break
+				}
+			}
+			_, err = io.CopyN(tw, f, file.rangeEnd-file.rangeStart)
+			if err != nil {
+				break
+			}
+		}
+	}
+
+	if errc := tw.Close(); err == nil {
+		err = errc
+	}
+	if errc := gw.Close(); err == nil {
+		err = errc
+	}
+	return err
+}
+
 // Export is used to create a tarball with files and photos from an instance
 func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (exportDoc *ExportDoc, err error) {
-	salt := crypto.GenerateRandomBytes(16)
 	createdAt := time.Now()
+
+	bucketSize := opts.BucketSize
+	if bucketSize == 0 || bucketSize > BucketSize {
+		bucketSize = BucketSize
+	}
 
 	exportDoc = &ExportDoc{
 		Domain:       i.Domain,
-		Salt:         salt,
 		State:        ExportStateExporting,
 		CreatedAt:    createdAt,
+		ExpiresAt:    createdAt.Add(archiveMaxAge),
 		WithDoctypes: opts.WithDoctypes,
 		WithoutIndex: opts.WithoutIndex,
 		TotalSize:    -1,
+		BucketSize:   bucketSize,
 	}
 
 	// Cleanup previously archived exports.
@@ -263,8 +413,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		}
 		size += n
 
-		cursors, _ := splitFilesIndex(root, nil, BucketSize, BucketSize)
-		exportDoc.IndexFilesCursors = cursors
+		exportDoc.IndexFilesCursors, _ = splitFilesIndex(root, nil, nil, exportDoc.BucketSize, exportDoc.BucketSize)
 	}
 
 	n, err = exportDocs(i, opts.WithDoctypes, createdAt, tw)
@@ -279,10 +428,6 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 	return
 }
 
-// BucketSize is the default size of a file bucket, to split the index into
-// equal-sized parts.
-const BucketSize = 50 * 1024 * 1024 // 50 MB
-
 // splitFilesIndex devides the index into equal size bucket of maximum size
 // `bucketSize`. Files can be splitted into multiple parts to accomodate the
 // bucket size, using a range. It is used to be able to download the files into
@@ -292,28 +437,151 @@ const BucketSize = 50 * 1024 * 1024 // 50 MB
 // of a new bucket. A cursor has the following format:
 //
 //    ${dirname}/../${filename}-${byterange-start}
-func splitFilesIndex(root *vfs.TreeFile, cursors []string, bucketSize, sizeLeft int64) ([]string, int64) {
+func splitFilesIndex(root *vfs.TreeFile, cursor []string, cursors []string, bucketSize, sizeLeft int64) ([]string, int64) {
 	if root.FilesChildrenSize > sizeLeft {
-		for _, child := range root.FilesChildren {
+		for childIndex, child := range root.FilesChildren {
 			size := child.ByteSize
 			if size <= sizeLeft {
 				sizeLeft -= size
 				continue
 			}
-			size -= sizeLeft
+			if sizeLeft == 0 {
+				sizeLeft = bucketSize
+			} else {
+				size -= sizeLeft
+			}
 			for size > 0 {
 				rangeStart := (child.ByteSize - size)
-				cursor := path.Join(root.Fullpath, child.DocName) + ":" + strconv.FormatInt(rangeStart, 10)
-				cursors = append(cursors, cursor)
-				size -= bucketSize
+				cursorStr := strings.Join(append(cursor, strconv.Itoa(childIndex)), "/")
+				cursorStr += ":" + strconv.FormatInt(rangeStart, 10)
+				cursorStr = "/" + cursorStr
+				cursors = append(cursors, cursorStr)
+				sizeLeft = bucketSize
+				size -= sizeLeft
 			}
-			sizeLeft = bucketSize + size
+			sizeLeft = -size
 		}
 	}
-	for _, dir := range root.DirsChildren {
-		cursors, sizeLeft = splitFilesIndex(dir, cursors, bucketSize, sizeLeft)
+	for dirIndex, dir := range root.DirsChildren {
+		cursors, sizeLeft = splitFilesIndex(dir, append(cursor, strconv.Itoa(dirIndex)),
+			cursors, bucketSize, sizeLeft)
 	}
 	return cursors, sizeLeft
+}
+
+type fileRanged struct {
+	file       *vfs.TreeFile
+	rangeStart int64
+	rangeEnd   int64
+}
+
+// listFilesIndex browse the index with the given cursor and returns the
+// flatting list of file entering the bucket.
+func listFilesIndex(tw *tar.Writer, root *vfs.TreeFile, list []fileRanged, currentCursor, cursor indexCursor, bucketSize, sizeLeft int64) ([]fileRanged, int64) {
+	if sizeLeft <= 0 {
+		return list, sizeLeft
+	}
+
+	if cursorDiff := currentCursor.diff(cursor); cursorDiff >= 0 {
+		for childIndex, child := range root.FilesChildren {
+			var fileRangeStart, fileRangeEnd int64
+			if cursorDiff == 0 {
+				if childIndex < cursor.fileCursor {
+					continue
+				} else if childIndex == cursor.fileCursor {
+					fileRangeStart = cursor.fileRangeStart
+				}
+			}
+			size := child.ByteSize - fileRangeStart
+			if sizeLeft-size < 0 {
+				fileRangeEnd = fileRangeStart + sizeLeft
+			} else {
+				fileRangeEnd = child.ByteSize
+			}
+			list = append(list, fileRanged{child, fileRangeStart, fileRangeEnd})
+			sizeLeft -= size
+			if sizeLeft <= 0 {
+				break
+			}
+		}
+	}
+
+	for dirIndex, dir := range root.DirsChildren {
+		if sizeLeft <= 0 {
+			break
+		}
+		list, sizeLeft = listFilesIndex(tw, dir, list, currentCursor.next(dirIndex), cursor, bucketSize, sizeLeft)
+	}
+
+	return list, sizeLeft
+}
+
+type indexCursor struct {
+	dirCursor      []int
+	fileCursor     int
+	fileRangeStart int64
+}
+
+func (c indexCursor) diff(d indexCursor) int {
+	if len(c.dirCursor) < len(d.dirCursor) {
+		return -1
+	}
+	for i := 0; i < len(d.dirCursor); i++ {
+		if c.dirCursor[i] < d.dirCursor[i] {
+			return -1
+		}
+	}
+	if len(c.dirCursor) == len(d.dirCursor) {
+		return 0
+	}
+	return 1
+}
+
+func (c indexCursor) next(dirIndex int) (next indexCursor) {
+	next.dirCursor = append(c.dirCursor, dirIndex)
+	next.fileCursor = c.fileCursor
+	next.fileRangeStart = c.fileRangeStart
+	return
+}
+
+func parseCursor(cursor string) (c indexCursor, err error) {
+	if cursor == "" {
+		return
+	}
+	ss := strings.Split(cursor, "/")
+	if len(ss) < 2 {
+		err = ErrExportInvalidCursor
+		return
+	}
+	if ss[0] != "" {
+		err = ErrExportInvalidCursor
+		return
+	}
+	ss = ss[1:]
+	c.dirCursor = make([]int, len(ss)-1)
+	for i, s := range ss {
+		if i == len(ss)-1 {
+			rangeSplit := strings.SplitN(s, ":", 2)
+			if len(rangeSplit) != 2 {
+				err = ErrExportInvalidCursor
+				return
+			}
+			c.fileCursor, err = strconv.Atoi(rangeSplit[0])
+			if err != nil {
+				return
+			}
+			c.fileRangeStart, err = strconv.ParseInt(rangeSplit[1], 10, 64)
+			if err != nil {
+				return
+			}
+		} else {
+			c.dirCursor[i], err = strconv.Atoi(s)
+			if err != nil {
+				return
+			}
+		}
+	}
+	return
 }
 
 func exportDocs(in *instance.Instance, withDoctypes []string, now time.Time, tw *tar.Writer) (size int64, err error) {

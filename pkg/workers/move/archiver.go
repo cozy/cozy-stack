@@ -28,7 +28,7 @@ var (
 // Archiver is an interface describing an abstraction for storing archived
 // data.
 type Archiver interface {
-	OpenArchive(inst *instance.Instance, exportDoc *ExportDoc, mac []byte) (io.ReadCloser, error)
+	OpenArchive(inst *instance.Instance, exportDoc *ExportDoc) (io.ReadCloser, int64, error)
 	CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error)
 	RemoveArchives(exportDocs []*ExportDoc) error
 }
@@ -60,14 +60,18 @@ func (a aferoArchiver) fileName(exportDoc *ExportDoc) string {
 	return path.Join(exportDoc.Domain, exportDoc.ID()+"tar.gz")
 }
 
-func (a aferoArchiver) OpenArchive(inst *instance.Instance, exportDoc *ExportDoc, mac []byte) (io.ReadCloser, error) {
-	if !exportDoc.VerifyAuthMessage(inst, mac) {
-		return nil, ErrMACInvalid
+func (a aferoArchiver) OpenArchive(inst *instance.Instance, exportDoc *ExportDoc) (f io.ReadCloser, size int64, err error) {
+	var infos os.FileInfo
+	infos, err = a.fs.Stat(a.fileName(exportDoc))
+	if err != nil {
+		return
 	}
-	if exportDoc.HasExpired() {
-		return nil, ErrExportExpired
+	f, err = a.fs.Open(a.fileName(exportDoc))
+	if err != nil {
+		return
 	}
-	return a.fs.Open(a.fileName(exportDoc))
+	size = infos.Size()
+	return
 }
 
 func (a aferoArchiver) CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error) {
@@ -106,22 +110,20 @@ func (a *switfArchiver) init() error {
 	return a.c.ContainerCreate(a.container, nil)
 }
 
-func (a *switfArchiver) OpenArchive(inst *instance.Instance, exportDoc *ExportDoc, mac []byte) (io.ReadCloser, error) {
+func (a *switfArchiver) OpenArchive(inst *instance.Instance, exportDoc *ExportDoc) (io.ReadCloser, int64, error) {
 	if err := a.init(); err != nil {
-		return nil, err
-	}
-	if !exportDoc.VerifyAuthMessage(inst, mac) {
-		return nil, ErrMACInvalid
-	}
-	if exportDoc.HasExpired() {
-		return nil, ErrExportExpired
+		return nil, 0, err
 	}
 	objectName := exportDoc.Domain + "/" + exportDoc.ID()
 	f, _, err := a.c.ObjectOpen(a.container, objectName, false, nil)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return f, nil
+	size, err := f.Length()
+	if err != nil {
+		return nil, 0, err
+	}
+	return f, size, nil
 }
 
 func (a *switfArchiver) CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error) {
