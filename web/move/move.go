@@ -72,6 +72,7 @@ func exportsListHandler(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
+// Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
 	g.GET("/exports", exportsListHandler)
 	g.GET("/exports/:export-id", exportHandler)

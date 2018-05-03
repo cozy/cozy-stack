@@ -17,11 +17,13 @@ func init() {
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
 		Timeout:      10 * 60 * time.Second,
-		WorkerFunc:   Worker,
+		WorkerFunc:   ExportWorker,
 	})
 }
 
-func Worker(c *jobs.WorkerContext) error {
+// ExportWorker is the worker responsible for creating an export of the
+// instance.
+func ExportWorker(c *jobs.WorkerContext) error {
 	i, err := instance.Get(c.Domain())
 	if err != nil {
 		return err

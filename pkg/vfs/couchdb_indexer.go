@@ -485,7 +485,7 @@ type TreeFile struct {
 	DirOrFileDoc
 	FilesChildren     []*TreeFile `json:"children,omitempty"`
 	FilesChildrenSize int64       `json:"children_size,omitempty"`
-	DirsChildren      []*TreeFile `json:"directories,omitempty`
+	DirsChildren      []*TreeFile `json:"directories,omitempty"`
 
 	isDir    bool
 	hasCycle bool

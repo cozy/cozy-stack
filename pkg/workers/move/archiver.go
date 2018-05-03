@@ -1,7 +1,6 @@
 package move
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -18,11 +17,6 @@ import (
 )
 
 var (
-	ErrArchiveNotFound = errors.New("export: archive not found")
-	ErrArchiveConflict = errors.New("export: an archive is already being created")
-)
-
-var (
 	archiveMaxAge    = 7 * 24 * time.Hour
 	archiveMACConfig = crypto.MACConfig{
 		Name:   "exports",
@@ -31,12 +25,16 @@ var (
 	}
 )
 
+// Archiver is an interface describing an abstraction for storing archived
+// data.
 type Archiver interface {
 	OpenArchive(inst *instance.Instance, exportDoc *ExportDoc, mac []byte) (io.ReadCloser, error)
 	CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, error)
 	RemoveArchives(exportDocs []*ExportDoc) error
 }
 
+// SystemArchiver returns the global system archiver, corresponding to the
+// user's configuration.
 func SystemArchiver() Archiver {
 	fsURL := config.FsURL()
 	switch fsURL.Scheme {

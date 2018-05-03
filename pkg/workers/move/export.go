@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/echo"
 )
 
+// ExportDoc is a documents storing the metadata of an export.
 type ExportDoc struct {
 	DocID             string        `json:"_id,omitempty"`
 	DocRev            string        `json:"_rev,omitempty"`
@@ -37,24 +38,44 @@ type ExportDoc struct {
 }
 
 var (
+	// ErrExportNotFound is used when a export document could not be found
 	ErrExportNotFound = echo.NewHTTPError(http.StatusNotFound, "exports: not found")
-	ErrExportExpired  = echo.NewHTTPError(http.StatusNotFound, "exports: has expired")
-	ErrMACInvalid     = echo.NewHTTPError(http.StatusUnauthorized, "exports: invalid mac")
+	// ErrExportExpired is used when the export document has expired along with
+	// its associated data.
+	ErrExportExpired = echo.NewHTTPError(http.StatusNotFound, "exports: has expired")
+	// ErrMACInvalid is used when the given MAC is not valid.
+	ErrMACInvalid = echo.NewHTTPError(http.StatusUnauthorized, "exports: invalid mac")
+	// ErrExportConflict is used when an export is already being perfomed.
+	ErrExportConflict = echo.NewHTTPError(http.StatusConflict, "export: an archive is already being created")
 )
 
 const (
+	// ExportStateExporting is the state used when the export document is being
+	// created.
 	ExportStateExporting = "exporting"
-	ExportStateDone      = "done"
-	ExportStateError     = "error"
+	// ExportStateDone is used when the export document is finished, without
+	// error.
+	ExportStateDone = "done"
+	// ExportStateError is used when the export document is finshed with error.
+	ExportStateError = "error"
 )
 
+// DocType implements the couchdb.Doc interface
 func (e *ExportDoc) DocType() string { return consts.Exports }
-func (e *ExportDoc) ID() string      { return e.DocID }
-func (e *ExportDoc) Rev() string     { return e.DocRev }
 
-func (e *ExportDoc) SetID(id string)   { e.DocID = id }
+// ID implements the couchdb.Doc interface
+func (e *ExportDoc) ID() string { return e.DocID }
+
+// Rev implements the couchdb.Doc interface
+func (e *ExportDoc) Rev() string { return e.DocRev }
+
+// SetID implements the couchdb.Doc interface
+func (e *ExportDoc) SetID(id string) { e.DocID = id }
+
+// SetRev implements the couchdb.Doc interface
 func (e *ExportDoc) SetRev(rev string) { e.DocRev = rev }
 
+// Clone implements the couchdb.Doc interface
 func (e *ExportDoc) Clone() couchdb.Doc {
 	clone := *e
 
@@ -67,16 +88,24 @@ func (e *ExportDoc) Clone() couchdb.Doc {
 	return &clone
 }
 
-func (e *ExportDoc) Links() *jsonapi.LinksList              { return nil }
-func (e *ExportDoc) Relationships() jsonapi.RelationshipMap { return nil }
-func (e *ExportDoc) Included() []jsonapi.Object             { return nil }
+// Links implements the jsonapi.Object interface
+func (e *ExportDoc) Links() *jsonapi.LinksList { return nil }
 
+// Relationships implements the jsonapi.Object interface
+func (e *ExportDoc) Relationships() jsonapi.RelationshipMap { return nil }
+
+// Included implements the jsonapi.Object interface
+func (e *ExportDoc) Included() []jsonapi.Object { return nil }
+
+// HasExpired returns whether or not the export document has expired.
 func (e *ExportDoc) HasExpired() bool {
 	return time.Until(e.ExpiresAt) <= 0
 }
 
 var _ jsonapi.Object = &ExportDoc{}
 
+// GenerateAuthMessage generates a MAC authentificating the access to the
+// export data.
 func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
 	mac, err := crypto.EncodeAuthMessage(archiveMACConfig, i.SessionSecret, nil, e.Salt)
 	if err != nil {
@@ -85,11 +114,15 @@ func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
 	return mac
 }
 
+// VerifyAuthMessage verifies the given MAC to authenticate and grant the
+// access to the export data.
 func (e *ExportDoc) VerifyAuthMessage(i *instance.Instance, mac []byte) bool {
 	_, err := crypto.DecodeAuthMessage(archiveMACConfig, i.SessionSecret, mac, e.Salt)
 	return err == nil
 }
 
+// GetExport returns an Export document associated with the given instance and
+// with the given ID.
 func GetExport(inst *instance.Instance, id string) (*ExportDoc, error) {
 	var exportDoc ExportDoc
 	if err := couchdb.GetDoc(inst, consts.Exports, id, &exportDoc); err != nil {
@@ -101,6 +134,7 @@ func GetExport(inst *instance.Instance, id string) (*ExportDoc, error) {
 	return &exportDoc, nil
 }
 
+// GetExports returns the list of exported documents.
 func GetExports(domain string) ([]*ExportDoc, error) {
 	var docs []*ExportDoc
 	req := &couchdb.FindRequest{
@@ -142,7 +176,7 @@ func Export(i *instance.Instance, archiver Archiver) (exportDoc *ExportDoc, err 
 		notRemovedDocs := exportedDocs[:0]
 		for _, e := range exportedDocs {
 			if e.State == ExportStateExporting && time.Since(e.CreatedAt) < 24*time.Hour {
-				return nil, ErrArchiveConflict
+				return nil, ErrExportConflict
 			}
 			notRemovedDocs = append(notRemovedDocs, e)
 		}

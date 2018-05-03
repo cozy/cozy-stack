@@ -68,7 +68,7 @@ func RTEvent(db Database, verb string, doc, oldDoc Doc) {
 		logger.WithDomain(db.Prefix()).WithField("nspace", "couchdb").
 			Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
 	}
-	if domain != "global" || domain != "secrets" {
+	if domain != "global" && domain != "secrets" {
 		e := &realtime.Event{
 			Verb:   verb,
 			Doc:    doc.Clone(),
