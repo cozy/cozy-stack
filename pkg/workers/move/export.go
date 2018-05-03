@@ -258,7 +258,7 @@ func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Ar
 	list, _ := listFilesIndex(tw, root, nil, indexCursor{}, cursor,
 		exportDoc.BucketSize, exportDoc.BucketSize)
 	for _, file := range list {
-		_, fileDoc := file.file.Refine()
+		dirDoc, fileDoc := file.file.Refine()
 		if fileDoc != nil {
 			var f vfs.File
 			f, err = fs.OpenFile(fileDoc)
@@ -293,6 +293,17 @@ func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Ar
 			if err != nil {
 				break
 			}
+		} else {
+			hdr := &tar.Header{
+				Name:       path.Join("cozy/", dirDoc.Fullpath),
+				Mode:       0755,
+				ModTime:    dirDoc.UpdatedAt,
+				AccessTime: dirDoc.CreatedAt,
+				Typeflag:   tar.TypeDir,
+			}
+			if err = tw.WriteHeader(hdr); err != nil {
+				break
+			}
 		}
 	}
 
@@ -314,11 +325,16 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		bucketSize = BucketSize
 	}
 
+	maxAge := opts.MaxAge
+	if maxAge == 0 || maxAge > archiveMaxAge {
+		maxAge = archiveMaxAge
+	}
+
 	exportDoc = &ExportDoc{
 		Domain:       i.Domain,
 		State:        ExportStateExporting,
 		CreatedAt:    createdAt,
-		ExpiresAt:    createdAt.Add(archiveMaxAge),
+		ExpiresAt:    createdAt.Add(maxAge),
 		WithDoctypes: opts.WithDoctypes,
 		WithoutIndex: opts.WithoutIndex,
 		TotalSize:    -1,
@@ -507,6 +523,10 @@ func listFilesIndex(tw *tar.Writer, root *vfs.TreeFile, list []fileRanged, curre
 			if sizeLeft <= 0 {
 				break
 			}
+		}
+		// append empty directory so that we explicitly csreate them in the tarball
+		if len(root.DirsChildren) == 0 && len(root.FilesChildren) == 0 {
+			list = append(list, fileRanged{root, 0, 0})
 		}
 	}
 

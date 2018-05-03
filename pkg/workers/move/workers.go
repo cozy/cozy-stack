@@ -23,9 +23,10 @@ func init() {
 }
 
 type ExportOptions struct {
-	BucketSize   int64    `json:"bucket_size"`
-	WithDoctypes []string `json:"with_doctypes,omitempty"`
-	WithoutIndex bool     `json:"without_index,omitempty"`
+	BucketSize   int64         `json:"bucket_size"`
+	MaxAge       time.Duration `json:"max_age"`
+	WithDoctypes []string      `json:"with_doctypes,omitempty"`
+	WithoutIndex bool          `json:"without_index,omitempty"`
 }
 
 // ExportWorker is the worker responsible for creating an export of the
