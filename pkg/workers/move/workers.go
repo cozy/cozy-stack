@@ -22,15 +22,25 @@ func init() {
 	})
 }
 
+type ExportOptions struct {
+	WithDoctypes []string `json:"with_doctypes,omitempty"`
+	WithoutIndex bool     `json:"without_index,omitempty"`
+}
+
 // ExportWorker is the worker responsible for creating an export of the
 // instance.
 func ExportWorker(c *jobs.WorkerContext) error {
+	var opts ExportOptions
+	if err := c.UnmarshalMessage(&opts); err != nil {
+		return err
+	}
+
 	i, err := instance.Get(c.Domain())
 	if err != nil {
 		return err
 	}
 
-	exportDoc, err := Export(i, SystemArchiver())
+	exportDoc, err := Export(i, opts, SystemArchiver())
 	if err != nil {
 		return err
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/echo"
@@ -30,6 +31,8 @@ type ExportDoc struct {
 	Salt              []byte        `json:"salt"`
 	IndexFilesCursors []string      `json:"index_file_cursors"`
 	State             string        `json:"state"`
+	WithDoctypes      []string      `json:"with_doctypes,omitempty"`
+	WithoutIndex      bool          `json:"without_index,omitempty"`
 	CreatedAt         time.Time     `json:"created_at"`
 	ExpiresAt         time.Time     `json:"expires_at"`
 	TotalSize         int64         `json:"total_size"`
@@ -154,16 +157,18 @@ func GetExports(domain string) ([]*ExportDoc, error) {
 }
 
 // Export is used to create a tarball with files and photos from an instance
-func Export(i *instance.Instance, archiver Archiver) (exportDoc *ExportDoc, err error) {
+func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (exportDoc *ExportDoc, err error) {
 	salt := crypto.GenerateRandomBytes(16)
 	createdAt := time.Now()
 
 	exportDoc = &ExportDoc{
-		Domain:    i.Domain,
-		Salt:      salt,
-		State:     ExportStateExporting,
-		CreatedAt: createdAt,
-		TotalSize: -1,
+		Domain:       i.Domain,
+		Salt:         salt,
+		State:        ExportStateExporting,
+		CreatedAt:    createdAt,
+		WithDoctypes: opts.WithDoctypes,
+		WithoutIndex: opts.WithoutIndex,
+		TotalSize:    -1,
 	}
 
 	// Cleanup previously archived exports.
@@ -246,20 +251,23 @@ func Export(i *instance.Instance, archiver Archiver) (exportDoc *ExportDoc, err 
 	}
 	size += n
 
-	root, err := i.VFS().BuildTree()
-	if err != nil {
-		return
-	}
-	n, err = writeDoc("", "files-index", root, createdAt, tw, nil)
-	if err != nil {
-		return
-	}
-	size += n
+	if !opts.WithoutIndex {
+		var root *vfs.TreeFile
+		root, err = i.VFS().BuildTree()
+		if err != nil {
+			return
+		}
+		n, err = writeDoc("", "files-index", root, createdAt, tw, nil)
+		if err != nil {
+			return
+		}
+		size += n
 
-	cursors, _ := splitFilesIndex(root, nil, BucketSize, BucketSize)
-	exportDoc.IndexFilesCursors = cursors
+		cursors, _ := splitFilesIndex(root, nil, BucketSize, BucketSize)
+		exportDoc.IndexFilesCursors = cursors
+	}
 
-	n, err = exportDocs(i, createdAt, tw)
+	n, err = exportDocs(i, opts.WithDoctypes, createdAt, tw)
 	if errc := tw.Close(); err == nil {
 		err = errc
 	}
@@ -308,12 +316,15 @@ func splitFilesIndex(root *vfs.TreeFile, cursors []string, bucketSize, sizeLeft 
 	return cursors, sizeLeft
 }
 
-func exportDocs(in *instance.Instance, now time.Time, tw *tar.Writer) (size int64, err error) {
+func exportDocs(in *instance.Instance, withDoctypes []string, now time.Time, tw *tar.Writer) (size int64, err error) {
 	doctypes, err := couchdb.AllDoctypes(in)
 	if err != nil {
 		return
 	}
 	for _, doctype := range doctypes {
+		if len(withDoctypes) > 0 && !utils.IsInArray(doctype, withDoctypes) {
+			continue
+		}
 		switch doctype {
 		case consts.Jobs, consts.KonnectorLogs,
 			consts.Archives,
