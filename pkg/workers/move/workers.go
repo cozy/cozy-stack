@@ -2,6 +2,7 @@ package move
 
 import (
 	"encoding/base64"
+	"net/url"
 	"runtime"
 	"time"
 
@@ -34,8 +35,10 @@ func ExportWorker(c *jobs.WorkerContext) error {
 		return err
 	}
 
+	mac := base64.URLEncoding.EncodeToString(exportDoc.GenerateAuthMessage(i))
 	link := i.SubDomain(consts.SettingsSlug)
-	link.Fragment = "/exports/" + base64.URLEncoding.EncodeToString(exportDoc.GenerateAuthMessage(i))
+	link.Fragment = "/exports/" + exportDoc.ID()
+	link.RawPath = url.Values{"mac": {mac}}.Encode()
 	mail := mails.Options{
 		Mode:           mails.ModeNoReply,
 		TemplateName:   "archiver",
