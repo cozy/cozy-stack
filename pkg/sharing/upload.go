@@ -433,7 +433,9 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 }
 
 func (s *Sharing) updateFileContent(inst *instance.Instance, fs vfs.VFS, newdoc, olddoc *vfs.FileDoc, body io.ReadCloser) (err error) {
-	if olddoc != nil {
+	if olddoc == nil {
+		newdoc.DocRev = ""
+	} else {
 		newdoc.DocName = olddoc.DocName
 		newdoc.DirID = olddoc.DirID
 	}
