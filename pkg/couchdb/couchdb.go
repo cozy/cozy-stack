@@ -518,11 +518,6 @@ func DeleteDoc(db Database, doc Doc) error {
 	return nil
 }
 
-// Reseter is a interface for reseting a cloned doc
-type Reseter interface {
-	Reset()
-}
-
 // UpdateDoc update a document. The document ID and Rev should be filled.
 // The doc SetRev function will be called with the new rev.
 func UpdateDoc(db Database, doc Doc) error {
@@ -539,13 +534,33 @@ func UpdateDoc(db Database, doc Doc) error {
 	// The old doc is requested to be emitted throught RTEvent.
 	// This is useful to keep track of the modifications for the triggers.
 	oldDoc := doc.Clone()
-	if r, ok := oldDoc.(Reseter); ok {
-		r.Reset()
-	}
 	err = makeRequest(db, doctype, http.MethodGet, url, nil, oldDoc)
 	if err != nil {
 		return err
 	}
+	var res UpdateResponse
+	err = makeRequest(db, doctype, http.MethodPut, url, doc, &res)
+	if err != nil {
+		return err
+	}
+	doc.SetRev(res.Rev)
+	RTEvent(db, realtime.EventUpdate, doc, oldDoc)
+	return nil
+}
+
+// UpdateDocWithOld updates a document, like UpdateDoc. The difference is that
+// if we already have oldDoc there is no need to refetch it from database.
+func UpdateDocWithOld(db Database, doc, oldDoc Doc) error {
+	id, err := validateDocID(doc.ID())
+	if err != nil {
+		return err
+	}
+	doctype := doc.DocType()
+	if id == "" || doc.Rev() == "" || doctype == "" {
+		return fmt.Errorf("UpdateDoc doc argument should have doctype, id and rev")
+	}
+
+	url := url.PathEscape(id)
 	var res UpdateResponse
 	err = makeRequest(db, doctype, http.MethodPut, url, doc, &res)
 	if err != nil {

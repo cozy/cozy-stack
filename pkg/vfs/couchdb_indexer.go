@@ -101,22 +101,7 @@ func (c *couchdbIndexer) UpdateFileDoc(olddoc, newdoc *FileDoc) error {
 	}
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
-	return couchdb.UpdateDoc(c.db, newdoc)
-}
-
-func (c *couchdbIndexer) UpdateFileDocs(docs []*FileDoc) error {
-	if len(docs) == 0 {
-		return nil
-	}
-	// Ensure that fullpath is filled because it's used in realtime/@events
-	couchdocs := make([]interface{}, len(docs))
-	for i, doc := range docs {
-		if _, err := doc.Path(c); err != nil {
-			return err
-		}
-		couchdocs[i] = doc
-	}
-	return couchdb.BulkUpdateDocs(c.db, consts.Files, couchdocs)
+	return couchdb.UpdateDocWithOld(c.db, newdoc, olddoc)
 }
 
 func (c *couchdbIndexer) DeleteFileDoc(doc *FileDoc) error {
@@ -157,7 +142,7 @@ func (c *couchdbIndexer) UpdateDirDoc(olddoc, newdoc *DirDoc) error {
 		}
 	}
 
-	if err := couchdb.UpdateDoc(c.db, newdoc); err != nil {
+	if err := couchdb.UpdateDocWithOld(c.db, newdoc, olddoc); err != nil {
 		return err
 	}
 
@@ -206,10 +191,11 @@ func (c *couchdbIndexer) BatchDelete(docs []couchdb.Doc) error {
 }
 
 func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
-	var docs []interface{}
-	var children []*DirDoc
-
 	limit := 256
+	var children []*DirDoc
+	docs := make([]interface{}, 0, limit)
+	olddocs := make([]interface{}, 0, limit)
+
 	for {
 		sel := mango.StartWith("path", oldpath+"/")
 		req := &couchdb.FindRequest{
@@ -225,14 +211,13 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 		if len(children) == 0 {
 			break
 		}
-		if cap(docs) < len(children) {
-			docs = make([]interface{}, 0, len(children))
-		}
 		for _, child := range children {
+			cloned := child.Clone()
+			olddocs = append(olddocs, cloned)
 			child.Fullpath = path.Join(newpath, child.Fullpath[len(oldpath)+1:])
 			docs = append(docs, child)
 		}
-		if err = couchdb.BulkUpdateDocs(c.db, consts.Files, docs); err != nil {
+		if err = couchdb.BulkUpdateDocs(c.db, consts.Files, docs, olddocs); err != nil {
 			return err
 		}
 		if len(children) < limit {
@@ -240,6 +225,7 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 		}
 		children = children[:0]
 		docs = docs[:0]
+		olddocs = olddocs[:0]
 	}
 
 	return nil
@@ -463,18 +449,34 @@ func (c *couchdbIndexer) DirChildExists(dirID, name string) (bool, error) {
 }
 
 func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) error {
-	var files []interface{}
+	var files, olddocs []interface{}
+	parent := doc
 	err := walk(c, doc.Name(), doc, nil, func(name string, dir *DirDoc, file *FileDoc, err error) error {
+		if dir != nil {
+			parent = dir
+		}
 		if file != nil && file.Trashed != trashed {
+			// Fullpath is used by event triggers and should be pre-filled here
+			cloned := file.Clone().(*FileDoc)
+			fullpath := path.Join(parent.Fullpath, file.DocName)
+			fullpath = strings.TrimPrefix(fullpath, TrashDirName)
+			if trashed {
+				cloned.fullpath = fullpath
+				file.fullpath = TrashDirName + fullpath
+			} else {
+				cloned.fullpath = TrashDirName + fullpath
+				file.fullpath = fullpath
+			}
 			file.Trashed = trashed
 			files = append(files, file)
+			olddocs = append(olddocs, cloned)
 		}
 		return err
 	}, 0)
 	if err != nil {
 		return err
 	}
-	return couchdb.BulkUpdateDocs(c.db, consts.Files, files)
+	return couchdb.BulkUpdateDocs(c.db, consts.Files, files, olddocs)
 }
 
 type treeFile struct {

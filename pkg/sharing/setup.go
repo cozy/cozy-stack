@@ -210,7 +210,8 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 	if len(refs) == 0 {
 		return nil
 	}
-	return couchdb.BulkUpdateDocs(inst, consts.Shared, refs)
+	olds := make([]interface{}, len(refs))
+	return couchdb.BulkUpdateDocs(inst, consts.Shared, refs, olds)
 }
 
 // findDocsToCopy finds the documents that match the given rule

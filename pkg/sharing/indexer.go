@@ -70,6 +70,7 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 		docs[0]["referenced_by"] = doc.ReferencedBy
 	}
 	if s.bulkRevs != nil {
+		doc.SetRev(s.bulkRevs.Rev)
 		docs[0]["_rev"] = s.bulkRevs.Rev
 		docs[0]["_revisions"] = s.bulkRevs.Revisions
 	}
@@ -91,10 +92,6 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, nil)
 	}
 	return nil
-}
-
-func (s *sharingIndexer) UpdateFileDocs(docs []*vfs.FileDoc) error {
-	return ErrInternalServerError
 }
 
 func (s *sharingIndexer) DeleteFileDoc(doc *vfs.FileDoc) error {
@@ -126,6 +123,7 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 		docs[0]["referenced_by"] = doc.ReferencedBy
 	}
 	if s.bulkRevs != nil {
+		doc.SetRev(s.bulkRevs.Rev)
 		docs[0]["_rev"] = s.bulkRevs.Rev
 		docs[0]["_revisions"] = s.bulkRevs.Revisions
 	}

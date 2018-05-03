@@ -580,12 +580,13 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 		}
 	}
 
-	// TODO call rtevent, both for docs and refs
+	// TODO call rtevent for docs
 	refsToUpdate := make([]interface{}, len(refs))
 	for i, ref := range refs {
 		refsToUpdate[i] = ref
 	}
-	return couchdb.BulkUpdateDocs(inst, consts.Shared, refsToUpdate)
+	olds := make([]interface{}, len(refsToUpdate))
+	return couchdb.BulkUpdateDocs(inst, consts.Shared, refsToUpdate, olds)
 }
 
 // partitionDocsPayload returns two slices: the first with documents that are new,

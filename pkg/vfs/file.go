@@ -75,12 +75,9 @@ func (f *FileDoc) Clone() couchdb.Doc {
 	for k, v := range f.Metadata {
 		cloned.Metadata[k] = v
 	}
+	// It happens that a cloned file is mutated => it's safer to clear the fullpath
+	cloned.fullpath = ""
 	return &cloned
-}
-
-// Reset removes the cached fullpath
-func (f *FileDoc) Reset() {
-	f.fullpath = ""
 }
 
 // SetID changes the file qualified identifier
@@ -129,6 +126,19 @@ func (f *FileDoc) Sys() interface{} { return nil }
 // AddReferencedBy adds referenced_by to the file
 func (f *FileDoc) AddReferencedBy(ri ...couchdb.DocReference) {
 	f.ReferencedBy = append(f.ReferencedBy, ri...)
+}
+
+// SameReferences returns true if the two sets reference the same documents.
+func SameReferences(a, b []couchdb.DocReference) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for _, ref := range a {
+		if !containsReferencedBy(b, ref) {
+			return false
+		}
+	}
+	return true
 }
 
 func containsReferencedBy(haystack []couchdb.DocReference, needle couchdb.DocReference) bool {

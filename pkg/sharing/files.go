@@ -15,6 +15,17 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 )
 
+// isTrashed returns true for a file or folder inside the trash
+func isTrashed(doc couchdb.JSONDoc) bool {
+	if doc.Type != consts.Files {
+		return false
+	}
+	if doc.Get("type") == consts.FileType {
+		return doc.Get("trashed") == true
+	}
+	return strings.HasPrefix(doc.Get("path").(string), vfs.TrashDirName+"/")
+}
+
 // MakeXorKey generates a key for transforming the file identifiers
 func MakeXorKey() []byte {
 	random := crypto.GenerateRandomBytes(8)
