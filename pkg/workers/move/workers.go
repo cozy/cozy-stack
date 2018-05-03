@@ -22,6 +22,7 @@ func init() {
 	})
 }
 
+// ExportOptions contains the options for launching the export worker.
 type ExportOptions struct {
 	BucketSize   int64         `json:"bucket_size"`
 	MaxAge       time.Duration `json:"max_age"`

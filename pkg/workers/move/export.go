@@ -465,11 +465,7 @@ func splitFilesIndex(root *vfs.TreeFile, cursor []string, cursors []string, buck
 				sizeLeft -= size
 				continue
 			}
-			if sizeLeft == 0 {
-				sizeLeft = bucketSize
-			} else {
-				size -= sizeLeft
-			}
+			size -= sizeLeft
 			for size > 0 {
 				rangeStart := (child.ByteSize - size)
 				cursorStr := strings.Join(append(cursor, strconv.Itoa(childIndex)), "/")
