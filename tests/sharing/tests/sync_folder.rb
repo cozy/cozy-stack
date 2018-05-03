@@ -19,6 +19,9 @@ describe "A folder" do
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
     child1 = Folder.create inst, {dir_id: folder.couch_id}
+    file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
+    file = CozyFile.create inst, opts
 
     # Create the sharing
     contact = Contact.create inst, givenName: recipient_name
@@ -31,27 +34,54 @@ describe "A folder" do
     sleep 1
     inst_recipient.accept sharing
 
+    sleep 7
     # Check the folders are the same
-    sharing_info = Sharing.get_sharing_info inst_recipient, sharing.couch_id, folder.doctype
-    child1_id_recipient = sharing_info.dig "relationships", "shared_docs", "data", 0, "id"
-    folder_id_recipient = sharing_info.dig "attributes", "rules", 0, "values", 0
-    folder_id_recipient.wont_be_empty
-    f = Folder.find inst_recipient, child1_id_recipient
-    assert_equal f.name, child1.name
+    child1_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
+    child1_recipient = Folder.find_by_path inst_recipient, child1_path
+    child1_id_recipient = child1_recipient.couch_id
+    folder_id_recipient = child1_recipient.dir_id
+    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
+    file_recipient = Folder.find_by_path inst_recipient, file_path
+    file_id_recipient = file_recipient.couch_id
+    assert_equal child1.name, child1_recipient.name
+    assert_equal file.name, file_recipient.name
 
-    # Check the update sync sharer -> recipient
-    new_name = Faker::Internet.slug
-    child1.rename inst, new_name
+    # Check the sync (create + update) sharer -> recipient
+    # TODO move folder
+    new_folder_name = Faker::Internet.slug
+    new_file_name = "#{Faker::Internet.slug}.jpg"
+    child1.rename inst, new_folder_name
+    child2 = Folder.create inst, {dir_id: folder.couch_id}
+    file.rename inst, new_file_name
     sleep 7
     child1_recipient = Folder.find inst_recipient, child1_id_recipient
-    assert_equal child1_recipient.name, new_name
+    child2_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
+    child2_recipient = Folder.find_by_path inst_recipient, child2_path
+    file_recipient = CozyFile.find inst_recipient, file_id_recipient
+    assert_equal new_folder_name, child1_recipient.name
+    assert_equal child2.name, child2_recipient.name
+    assert_equal new_file_name, file_recipient.name
 
-    # Check the update sync recipient -> sharer
-    new_name = Faker::Internet.slug
-    child1_recipient.rename inst_recipient, new_name
+    # Check the sync (create + update) recipient -> sharer
+    # TODO rename file from recipient
+    new_folder_name = Faker::Internet.slug
+    child1_recipient.rename inst_recipient, new_folder_name
+    child3_recipient = Folder.create inst_recipient, {dir_id: folder_id_recipient}
+    file_recipient.rename inst_recipient, new_file_name
     sleep 7
     child1 = Folder.find inst, child1.couch_id
-    assert_equal child1.name, new_name
+    child3_path = CGI.escape "/#{folder.name}/#{child3_recipient.name}"
+    child3 = Folder.find_by_path inst, child3_path
+    file_id = file.couch_id
+    assert_equal new_folder_name, child1.name
+    assert_equal child3_recipient.name, child3.name
+
+    # Check that the files are the same on disk
+    da = File.join Helpers.current_dir, inst.domain, folder.name
+    db = File.join Helpers.current_dir, inst_recipient.domain,
+                   Helpers::SHARED_WITH_ME, sharing.rules.first.title
+    diff = Helpers.fsdiff da, db
+    diff.must_be_empty
   end
 
 end

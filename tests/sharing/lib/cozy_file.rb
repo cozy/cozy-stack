@@ -5,6 +5,31 @@ class CozyFile
 
   attr_reader :name, :dir_id, :mime
 
+  def self.load_from_url(inst, path)
+    opts = {
+      content_type: :json,
+      accept: :json,
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    res = inst.client[path].get opts
+    j = JSON.parse(res.body)["data"]
+    id = j["id"]
+    rev = j["rev"]
+    j = j["attributes"]
+    f = CozyFile.new(name: j["name"], dir_id: j["dir_id"])
+    f.couch_id = id
+    f.couch_rev = rev
+    f
+  end
+
+  def self.find_by_path(inst, path)
+    load_from_url inst, "/files/metadata?Path=#{path}"
+  end
+
+  def self.find(inst, id)
+    load_from_url inst, "/files/#{id}"
+  end
+
   def self.options_from_fixture(filename, opts = {})
     opts = opts.dup
     opts[:content] = File.read filename
