@@ -326,11 +326,10 @@ func exportDocs(in *instance.Instance, withDoctypes []string, now time.Time, tw 
 			continue
 		}
 		switch doctype {
-		case consts.Jobs, consts.KonnectorLogs,
-			consts.Archives,
-			consts.OAuthClients, consts.OAuthAccessCodes:
+		case consts.KonnectorLogs, consts.Archives,
+			consts.Sessions, consts.OAuthClients, consts.OAuthAccessCodes:
 			// ignore these doctypes
-		case consts.Sharings, consts.SharingsAnswer:
+		case consts.Sharings, consts.SharingsAnswer, consts.Shared:
 			// ignore sharings ? TBD
 		case consts.Files, consts.Settings:
 			// already written out in a special file
@@ -344,9 +343,9 @@ func exportDocs(in *instance.Instance, withDoctypes []string, now time.Time, tw 
 					}
 					return errw
 				})
-		}
-		if err != nil {
-			return
+			if err != nil {
+				return
+			}
 		}
 	}
 	return
