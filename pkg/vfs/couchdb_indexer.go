@@ -483,7 +483,9 @@ func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) 
 // in a tree-like representation of the index.
 type TreeFile struct {
 	DirOrFileDoc
-	Children []*TreeFile `json:"children,omitempty"`
+	FilesChildren     []*TreeFile `json:"children,omitempty"`
+	FilesChildrenSize int64       `json:"children_size,omitempty"`
+	DirsChildren      []*TreeFile `json:"directories,omitempty`
 
 	isDir    bool
 	hasCycle bool
@@ -548,13 +550,25 @@ func (c *couchdbIndexer) BuildTree() (root *TreeFile, err error) {
 		if f.DocID == consts.RootDirID {
 			root = &f
 		} else if parent, ok := dirsmap[f.DirID]; ok {
-			parent.Children = append(parent.Children, &f)
+			if f.isDir {
+				parent.DirsChildren = append(parent.DirsChildren, &f)
+			} else {
+				parent.FilesChildren = append(parent.FilesChildren, &f)
+				parent.FilesChildrenSize += f.ByteSize
+			}
 		} else {
 			orphans[f.DirID] = append(orphans[f.DirID], &f)
 		}
 		if f.isDir {
 			if bucket, ok := orphans[f.DocID]; ok {
-				f.Children = bucket
+				for _, child := range bucket {
+					if child.isDir {
+						f.DirsChildren = append(f.DirsChildren, child)
+					} else {
+						f.FilesChildren = append(f.FilesChildren, child)
+						f.FilesChildrenSize += child.ByteSize
+					}
+				}
 				delete(orphans, f.DocID)
 			}
 			dirsmap[f.DocID] = &f
@@ -573,13 +587,25 @@ func checkIndexIntegrity(generator func(func(entry *TreeFile)) error) (root *Tre
 		if f.DocID == consts.RootDirID {
 			root = f
 		} else if parent, ok := dirsmap[f.DirID]; ok {
-			parent.Children = append(parent.Children, f)
+			if f.isDir {
+				parent.DirsChildren = append(parent.DirsChildren, f)
+			} else {
+				parent.FilesChildren = append(parent.FilesChildren, f)
+				parent.FilesChildrenSize += f.ByteSize
+			}
 		} else {
 			orphans[f.DirID] = append(orphans[f.DirID], f)
 		}
 		if f.isDir {
 			if bucket, ok := orphans[f.DocID]; ok {
-				f.Children = bucket
+				for _, child := range bucket {
+					if child.isDir {
+						f.DirsChildren = append(f.DirsChildren, child)
+					} else {
+						f.FilesChildren = append(f.FilesChildren, child)
+						f.FilesChildrenSize += child.ByteSize
+					}
+				}
 				delete(orphans, f.DocID)
 			}
 			dirsmap[f.DocID] = f
@@ -611,15 +637,13 @@ func checkIndexIntegrity(generator func(func(entry *TreeFile)) error) (root *Tre
 
 func reduceTree(root *TreeFile, dirsmap map[string]*TreeFile, errs []*treeError) []*treeError {
 	delete(dirsmap, root.DocID)
-	for _, child := range root.Children {
-		if child.isDir {
-			expected := path.Join(root.Fullpath, child.DocName)
-			if expected != child.Fullpath {
-				errs = append(errs, &treeError{
-					file: child,
-					path: expected,
-				})
-			}
+	for _, child := range root.DirsChildren {
+		expected := path.Join(root.Fullpath, child.DocName)
+		if expected != child.Fullpath {
+			errs = append(errs, &treeError{
+				file: child,
+				path: expected,
+			})
 			errs = reduceTree(child, dirsmap, errs)
 		}
 	}
@@ -683,12 +707,11 @@ func listChildren(root *TreeFile, files []couchdb.Doc) []couchdb.Doc {
 		files = append(files, root)
 		// avoid stackoverflow on cycles
 		root.visited = true
-		for _, child := range root.Children {
-			if child.isDir {
-				files = listChildren(child, files)
-			} else {
-				files = append(files, child)
-			}
+		for _, child := range root.DirsChildren {
+			files = listChildren(child, files)
+		}
+		for _, child := range root.FilesChildren {
+			files = append(files, child)
 		}
 	}
 	return files

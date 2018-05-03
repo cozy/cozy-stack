@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -16,21 +17,23 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/echo"
 )
 
 type ExportDoc struct {
-	DocID            string        `json:"_id,omitempty"`
-	DocRev           string        `json:"_rev,omitempty"`
-	Domain           string        `json:"domain"`
-	Salt             []byte        `json:"salt"`
-	State            string        `json:"state"`
-	CreatedAt        time.Time     `json:"created_at"`
-	ExpiresAt        time.Time     `json:"expires_at"`
-	TotalSize        int64         `json:"total_size"`
-	CreationDuration time.Duration `json:"creation_duration"`
-	Error            string        `json:"error"`
+	DocID             string        `json:"_id,omitempty"`
+	DocRev            string        `json:"_rev,omitempty"`
+	Domain            string        `json:"domain"`
+	Salt              []byte        `json:"salt"`
+	IndexFilesCursors []string      `json:"index_file_cursors"`
+	State             string        `json:"state"`
+	CreatedAt         time.Time     `json:"created_at"`
+	ExpiresAt         time.Time     `json:"expires_at"`
+	TotalSize         int64         `json:"total_size"`
+	CreationDuration  time.Duration `json:"creation_duration"`
+	Error             string        `json:"error"`
 }
 
 var (
@@ -54,8 +57,13 @@ func (e *ExportDoc) SetRev(rev string) { e.DocRev = rev }
 
 func (e *ExportDoc) Clone() couchdb.Doc {
 	clone := *e
+
 	clone.Salt = make([]byte, len(e.Salt))
 	copy(clone.Salt, e.Salt)
+
+	clone.IndexFilesCursors = make([]string, len(e.IndexFilesCursors))
+	copy(clone.IndexFilesCursors, e.IndexFilesCursors)
+
 	return &clone
 }
 
@@ -204,6 +212,19 @@ func Export(i *instance.Instance, archiver Archiver) (exportDoc *ExportDoc, err 
 	}
 	size += n
 
+	root, err := i.VFS().BuildTree()
+	if err != nil {
+		return
+	}
+	n, err = writeDoc("", "files-index", root, createdAt, tw, nil)
+	if err != nil {
+		return
+	}
+	size += n
+
+	cursors, _ := splitFilesIndex(root, nil, BucketSize, BucketSize)
+	exportDoc.IndexFilesCursors = cursors
+
 	n, err = exportDocs(i, createdAt, tw)
 	if errc := tw.Close(); err == nil {
 		err = errc
@@ -214,6 +235,43 @@ func Export(i *instance.Instance, archiver Archiver) (exportDoc *ExportDoc, err 
 	size += n
 
 	return
+}
+
+// BucketSize is the default size of a file bucket, to split the index into
+// equal-sized parts.
+const BucketSize = 35 * 1024 * 1024 // 50 MB
+
+// splitFilesIndex devides the index into equal size bucket of maximum size
+// `bucketSize`. Files can be splitted into multiple parts to accomodate the
+// bucket size, using a range. It is used to be able to download the files into
+// separate chunks.
+//
+// The method returns a list of cursor into the index tree for each beginning
+// of a new bucket. A cursor has the following format:
+//
+//    ${dirname}/../${filename}-${byterange-start}
+func splitFilesIndex(root *vfs.TreeFile, cursors []string, bucketSize, sizeLeft int64) ([]string, int64) {
+	if root.FilesChildrenSize > sizeLeft {
+		for _, child := range root.FilesChildren {
+			size := child.ByteSize
+			if size <= sizeLeft {
+				sizeLeft -= size
+				continue
+			}
+			size -= sizeLeft
+			for size > 0 {
+				rangeStart := (child.ByteSize - size)
+				cursor := path.Join(root.Fullpath, child.DocName) + ":" + strconv.FormatInt(rangeStart, 10)
+				cursors = append(cursors, cursor)
+				size -= bucketSize
+			}
+			sizeLeft = bucketSize + size
+		}
+	}
+	for _, dir := range root.DirsChildren {
+		cursors, sizeLeft = splitFilesIndex(dir, cursors, bucketSize, sizeLeft)
+	}
+	return cursors, sizeLeft
 }
 
 func exportDocs(in *instance.Instance, now time.Time, tw *tar.Writer) (size int64, err error) {
@@ -229,17 +287,8 @@ func exportDocs(in *instance.Instance, now time.Time, tw *tar.Writer) (size int6
 			// ignore these doctypes
 		case consts.Sharings, consts.SharingsAnswer:
 			// ignore sharings ? TBD
-		case consts.Settings:
+		case consts.Files, consts.Settings:
 			// already written out in a special file
-		case consts.Files:
-			root, err := in.VFS().BuildTree()
-			if err == nil {
-				var n int64
-				n, err = writeDoc("", "files-index", root, now, tw, nil)
-				if err == nil {
-					size += n
-				}
-			}
 		default:
 			dir := url.PathEscape(doctype)
 			err = couchdb.ForeachDocs(in, doctype,
