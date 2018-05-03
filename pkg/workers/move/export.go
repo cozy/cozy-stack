@@ -265,16 +265,20 @@ func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Ar
 			if err != nil {
 				break
 			}
+			size := file.rangeEnd - file.rangeStart
 			hdr := &tar.Header{
 				Name:       path.Join("cozy/", file.file.Fullpath),
 				Mode:       0640,
-				Size:       fileDoc.ByteSize,
+				Size:       size,
 				AccessTime: fileDoc.CreatedAt,
 				ModTime:    fileDoc.UpdatedAt,
 				Typeflag:   tar.TypeReg,
 			}
 			if fileDoc.Executable {
 				hdr.Mode = 750
+			}
+			if size < file.file.ByteSize {
+				hdr.Name += fmt.Sprintf(".range%d-%d", file.rangeStart, file.rangeEnd)
 			}
 			if err = tw.WriteHeader(hdr); err != nil {
 				break
@@ -285,7 +289,7 @@ func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Ar
 					break
 				}
 			}
-			_, err = io.CopyN(tw, f, file.rangeEnd-file.rangeStart)
+			_, err = io.CopyN(tw, f, size)
 			if err != nil {
 				break
 			}
