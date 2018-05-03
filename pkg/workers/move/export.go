@@ -281,7 +281,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 
 // BucketSize is the default size of a file bucket, to split the index into
 // equal-sized parts.
-const BucketSize = 35 * 1024 * 1024 // 50 MB
+const BucketSize = 50 * 1024 * 1024 // 50 MB
 
 // splitFilesIndex devides the index into equal size bucket of maximum size
 // `bucketSize`. Files can be splitted into multiple parts to accomodate the
