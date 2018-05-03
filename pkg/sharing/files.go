@@ -257,15 +257,30 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			}
 			ref = nil
 		}
-		// TODO it's only for directory currently, code needs to be adapted for files
-		doc, err := fs.DirByID(id) // TODO DirOrFileByID
+		dir, file, err := fs.DirOrFileByID(id)
+		// TODO check why the methods (Dir|File)ByID can return a couchdb error or an os error
+		if couchdb.IsNotFoundError(err) {
+			err = os.ErrNotExist
+		}
 		if err != nil && err != os.ErrNotExist {
 			inst.Logger().WithField("nspace", "replicator").
 				Debugf("Error on finding ref of bulk files: %s", err)
 			errm = multierror.Append(errm, err)
 			continue
 		}
-		if ref == nil && doc == nil {
+		if _, ok := target["_deleted"]; ok {
+			if ref == nil || (dir == nil && file == nil) {
+				continue
+			}
+			if dir != nil {
+				err = s.TrashDir(inst, dir)
+			} else {
+				err = s.TrashFile(inst, file)
+			}
+			if err != nil {
+				errm = multierror.Append(errm, err)
+			}
+		} else if ref == nil && dir == nil {
 			err = s.CreateDir(inst, target)
 			if err != nil {
 				errm = multierror.Append(errm, err)
@@ -274,12 +289,12 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		} else if ref == nil {
 			// TODO be safe => return an error
 			continue
-		} else if doc == nil {
+		} else if dir == nil {
 			// TODO manage the conflict: doc was deleted/moved outside the
 			// sharing on this cozy and updated on the other cozy
 			continue
 		} else {
-			err = s.UpdateDir(inst, target, doc)
+			err = s.UpdateDir(inst, target, dir)
 			if err != nil {
 				errm = multierror.Append(errm, err)
 			}
@@ -437,9 +452,31 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	inst.Logger().WithField("nspace", "replicator").
 		Debugf("Update dir: %#v", dir)
 	// TODO referenced_by
-	// TODO trash
 	// TODO manage conflicts
 	return fs.UpdateDirDoc(oldDoc, dir)
+}
+
+// TrashDir puts the directory in the trash
+// TODO conflicts
+func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
+	if strings.HasPrefix(dir.Fullpath+"/", vfs.TrashDirName+"/") {
+		// nothing to do if the directory is already in the trash
+		return nil
+	}
+	_, err := vfs.TrashDir(inst.VFS(), dir)
+	return err
+}
+
+// TrashFile puts the file in the trash
+// TODO if file has references, we should keep it in a special folder
+// TODO conflicts
+func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc) error {
+	if file.Trashed {
+		// nothing to do if the directory is already in the trash
+		return nil
+	}
+	_, err := vfs.TrashFile(inst.VFS(), file)
+	return err
 }
 
 // TODO referenced_by
