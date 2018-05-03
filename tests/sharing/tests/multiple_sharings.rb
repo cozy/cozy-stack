@@ -24,8 +24,8 @@ describe "A folder" do
     # Share a folder with bob and charlie, in the same sharing
     folder = Folder.create inst_alice
     folder.couch_id.wont_be_empty
-    file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
-    opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
+    file_path = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    opts = CozyFile.options_from_fixture(file_path, dir_id: folder.couch_id)
     file = CozyFile.create inst_alice, opts
 
     sharing = Sharing.new
@@ -63,7 +63,7 @@ describe "A folder" do
     sleep 1
     inst_charlie.accept sharing
 
-    sleep 5
+    sleep 7
 
     path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
     child1_bob = Folder.find_by_path inst_bob, path
@@ -71,17 +71,28 @@ describe "A folder" do
     child1_charlie = Folder.find_by_path inst_charlie, path
     assert_equal child1_charlie.name, child1.name
 
-    # Propagate a change from Alice's side
+    # Propagate a change (rename dir + add file) from Alice's side
     new_name = Faker::Internet.slug
     child1.rename inst_alice, new_name
-    sleep 10
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{new_name}"
-    child1_bob = Folder.find_by_path inst_bob, path
-    assert_equal child1_bob.name, new_name
-    child1_charlie = Folder.find_by_path inst_charlie, path
-    assert_equal child1_charlie.name, new_name
+    opts = CozyFile.options_from_fixture(file_path, dir_id: folder.couch_id)
+    file = CozyFile.create inst_alice, opts
 
-    # Propagate a change from Bob's side
+    sleep 12
+    child1_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{new_name}"
+    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
+    puts "file path : #{file_path}"
+    child1_bob = Folder.find_by_path inst_bob, child1_path
+    file_bob = CozyFile.find_by_path inst_bob, file_path
+    puts "file bob : #{file_bob.name}"
+
+    file_charlie = CozyFile.find_by_path inst_charlie, file_path
+    child1_charlie = Folder.find_by_path inst_charlie, child1_path
+    assert_equal child1_bob.name, new_name
+    assert_equal child1_charlie.name, new_name
+    assert_equal file_bob.name, file.name
+    assert_equal file_charlie.name, file.name
+
+    # Propagate a change (rename file) from Bob's side
     new_name = Faker::Internet.slug
     child1_bob.rename inst_bob, new_name
     sleep 10

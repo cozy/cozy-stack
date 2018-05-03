@@ -63,8 +63,8 @@ describe "A folder" do
     assert_equal new_file_name, file_recipient.name
 
     # Check the sync (create + update) recipient -> sharer
-    # TODO rename file from recipient
     new_folder_name = Faker::Internet.slug
+    new_file_name = "#{Faker::Internet.slug}.jpg"
     child1_recipient.rename inst_recipient, new_folder_name
     child3_recipient = Folder.create inst_recipient, {dir_id: folder_id_recipient}
     file_recipient.rename inst_recipient, new_file_name
@@ -72,9 +72,10 @@ describe "A folder" do
     child1 = Folder.find inst, child1.couch_id
     child3_path = CGI.escape "/#{folder.name}/#{child3_recipient.name}"
     child3 = Folder.find_by_path inst, child3_path
-    file_id = file.couch_id
+    file = Folder.find inst, file.couch_id
     assert_equal new_folder_name, child1.name
     assert_equal child3_recipient.name, child3.name
+    assert_equal new_file_name, file.name
 
     # Check that the files are the same on disk
     da = File.join Helpers.current_dir, inst.domain, folder.name

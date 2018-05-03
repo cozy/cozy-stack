@@ -1,6 +1,6 @@
 class Sharing
   attr_accessor :couch_id, :couch_rev, :rules, :members
-  attr_reader :description, :app_slug, :rules, :members
+  attr_reader :description, :app_slug
 
   def self.get_sharing_info(inst, sharing_id, doctype)
     opts = {
