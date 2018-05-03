@@ -602,6 +602,101 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### DELETE /sharings/:sharing-id/recipients
+
+This route is used by an application on the owner's cozy to revoke the sharing
+for all the members. After that, the sharing active flag will be false, the
+credentials for all members will be revoked, the members that have accepted
+the sharing will have their cozy informed that the sharing has been revoked,
+and pending members can no longer accept this sharing.
+
+#### Request
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/recipients HTTP/1.1
+Host: alice.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### DELETE /sharings/:sharing-id/recipients/:index
+
+This route is used to revoke only one recipient of the sharing. The parameter
+is the index of this recipient in the `members` array of the sharing. The
+status for this member will be set to `revoked`, its cozy will be informed of
+the revokation, and the credentials for this cozy will be deleted.
+
+#### Request
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/recipients/1 HTTP/1.1
+Host: alice.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### DELETE /sharings/:sharing-id/recipients/self
+
+This route can be used by an application in the cozy of a recipient to remove
+it from the sharing.
+
+#### Request
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/recipients/self HTTP/1.1
+Host: bob.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### DELETE /sharings/:sharing-id
+
+This is an internal route used by the cozy of the sharing's owner to inform a
+recipient's cozy that it was revoked.
+
+#### Request
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722 HTTP/1.1
+Host: bob.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### DELETE /sharings/:sharing-id/answer
+
+This is an internal route used by a recipient's cozy to inform the owner's
+cozy that this recipient no longer wants to be part of the sharing.
+
+#### Request
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/answer HTTP/1.1
+Host: alice.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### POST /sharings/:sharing-id/\_revs_diff
 
 This endpoint is used by the sharing replicator of the stack to know which
