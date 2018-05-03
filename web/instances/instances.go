@@ -367,6 +367,8 @@ func Routes(router *echo.Group) {
 	router.POST("/updates", updatesHandler)
 	router.POST("/token", createToken)
 	router.POST("/oauth_client", registerClient)
+	router.POST("/:domain/export", exporter)
+	router.POST("/:domain/import", importer)
 	router.POST("/:domain/orphan_accounts", cleanOrphanAccounts)
 	router.POST("/redis", rebuildRedis)
 }
