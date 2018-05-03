@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -128,9 +129,9 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 	inst.Logger().WithField("nspace", "replicator").Debugf("changes = %#v", changes)
 	// TODO filter the changes according to the sharing rules
 
-	if len(*changes) > 0 {
+	if len(changes.Changed) > 0 {
 		var missings *Missings
-		if initial {
+		if initial || len(changes.Changed) == len(changes.Removed) {
 			missings = transformChangesInMissings(changes)
 		} else {
 			missings, err = s.callRevsDiff(inst, m, creds, changes)
@@ -140,7 +141,7 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		}
 		inst.Logger().WithField("nspace", "replicator").Debugf("missings = %#v", missings)
 
-		docs, err := s.getMissingDocs(inst, missings)
+		docs, err := s.getMissingDocs(inst, missings, changes)
 		if err != nil {
 			return err
 		}
@@ -208,9 +209,17 @@ func (s *Sharing) replicationID(m *Member) (string, error) {
 	return "", ErrMemberNotFound
 }
 
-// Changes is a map of "doctype/docid" -> [revisions]
-// It's the format for the request body of our _revs_diff
-type Changes map[string][]string
+// Changed is a map of "doctype/docid" -> [revisions]
+type Changed map[string][]string
+
+// Removed is a set of "doctype/docid"
+type Removed map[string]struct{}
+
+// Changes is a struct with informations from the changes feed of io.cozy.shared
+type Changes struct {
+	Changed Changed
+	Removed Removed
+}
 
 // callChangesFeed fetches the last changes from the changes feed
 // http://docs.couchdb.org/en/2.1.1/api/database/changes.html
@@ -226,7 +235,10 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 	if err != nil {
 		return nil, nil, "", err
 	}
-	changes := make(Changes)
+	changes := Changes{
+		Changed: make(Changed),
+		Removed: make(Removed),
+	}
 	rules := make(map[string]int)
 	for _, r := range response.Results {
 		infos, ok := r.Doc.Get("infos").(map[string]interface{})
@@ -240,6 +252,9 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 		if _, ok = info["binary"]; ok {
 			continue
 		}
+		if _, ok = info["removed"]; ok {
+			changes.Removed[r.DocID] = struct{}{}
+		}
 		idx, ok := info["rule"].(float64)
 		if !ok {
 			continue
@@ -247,7 +262,7 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 		rules[r.DocID] = int(idx)
 		if revisions, ok := r.Doc.Get("revisions").([]interface{}); ok && len(revisions) > 0 {
 			rev, _ := revisions[len(revisions)-1].(string)
-			changes[r.DocID] = []string{rev}
+			changes.Changed[r.DocID] = []string{rev}
 		}
 	}
 	return &changes, rules, response.LastSeq, nil
@@ -265,8 +280,8 @@ type MissingEntry struct {
 // transformChangesInMissings is used for the initial replication (revs_diff is
 // not called), to prepare the payload for the bulk_get calls
 func transformChangesInMissings(changes *Changes) *Missings {
-	missings := make(Missings, len(*changes))
-	for key, revs := range *changes {
+	missings := make(Missings, len(changes.Changed))
+	for key, revs := range changes.Changed {
 		missings[key] = MissingEntry{
 			Missing: []string{revs[len(revs)-1]},
 		}
@@ -285,8 +300,8 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 	// "io.cozy.files/docid" for recipient -> "io.cozy.files/docid" for sender
 	xored := make(map[string]string)
 	// "doctype/docid" -> [leaf revisions]
-	leafRevs := make(map[string][]string, len(*changes))
-	for key, revs := range *changes {
+	leafRevs := make(Changed, len(changes.Changed))
+	for key, revs := range changes.Changed {
 		if strings.HasPrefix(key, consts.Files+"/") {
 			old := key
 			parts := strings.SplitN(key, "/", 2)
@@ -393,43 +408,43 @@ func computePossibleAncestors(wants []string, haves []string) []string {
 
 // ComputeRevsDiff takes a map of id->[revisions] and returns the missing
 // revisions for those documents on the current instance.
-func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changes Changes) (*Missings, error) {
-	ids := make([]string, 0, len(changes))
-	for id := range changes {
+func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changed Changed) (*Missings, error) {
+	ids := make([]string, 0, len(changed))
+	for id := range changed {
 		ids = append(ids, id)
 	}
-	results := make([]SharedRef, 0, len(changes))
+	results := make([]SharedRef, 0, len(changed))
 	req := couchdb.AllDocsRequest{Keys: ids}
 	err := couchdb.GetAllDocs(inst, consts.Shared, &req, &results)
 	if err != nil {
 		return nil, err
 	}
 	missings := make(Missings)
-	for id, revs := range changes {
+	for id, revs := range changed {
 		missings[id] = MissingEntry{Missing: revs}
 	}
 	for _, result := range results {
-		if _, ok := changes[result.SID]; !ok {
+		if _, ok := changed[result.SID]; !ok {
 			continue
 		}
 		for _, rev := range result.Revisions {
 			if _, ok := result.Infos[s.SID]; !ok {
 				continue
 			}
-			for i, r := range changes[result.SID] {
+			for i, r := range changed[result.SID] {
 				if rev == r {
-					change := changes[result.SID]
-					changes[result.SID] = append(change[:i], change[i+1:]...)
+					change := changed[result.SID]
+					changed[result.SID] = append(change[:i], change[i+1:]...)
 					break
 				}
 			}
 		}
-		if len(changes[result.SID]) == 0 {
+		if len(changed[result.SID]) == 0 {
 			delete(missings, result.SID)
 		} else {
-			pas := computePossibleAncestors(changes[result.SID], result.Revisions)
+			pas := computePossibleAncestors(changed[result.SID], result.Revisions)
 			missings[result.SID] = MissingEntry{
-				Missing: changes[result.SID],
+				Missing: changed[result.SID],
 				PAs:     pas,
 			}
 		}
@@ -443,11 +458,34 @@ type DocsList []map[string]interface{}
 // DocsByDoctype is a map of doctype -> slice of documents of this doctype
 type DocsByDoctype map[string]DocsList
 
+// RevsStruct is a struct for revisions in bulk methods of CouchDB
+type RevsStruct struct {
+	Start int      `json:"start"`
+	Ids   []string `json:"ids"`
+}
+
+// revisionSliceToStruct transforms revisions from on format to another:
+// ["2-aa", "3-bb", "4-cc"] -> { start: 4, ids: ["cc", "bb", "aa"] }
+func revisionSliceToStruct(revs []string) RevsStruct {
+	s := RevsStruct{
+		Ids: make([]string, len(revs)),
+	}
+	var last string
+	for i, rev := range revs {
+		parts := strings.SplitN(rev, "-", 2)
+		last = parts[0]
+		s.Ids[len(s.Ids)-i-1] = parts[1]
+	}
+	s.Start, _ = strconv.Atoi(last)
+	return s
+}
+
 // getMissingDocs fetches the documents in bulk, partitionned by their doctype.
 // https://github.com/apache/couchdb-documentation/pull/263/files
 // TODO use the possible ancestors
 // TODO what if we fetch an old revision on a compacted database?
-func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*DocsByDoctype, error) {
+func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings, changes *Changes) (*DocsByDoctype, error) {
+	docs := make(DocsByDoctype)
 	queries := make(map[string][]couchdb.IDRev) // doctype -> payload for _bulk_get
 	for key, missing := range *missings {
 		parts := strings.SplitN(key, "/", 2)
@@ -455,13 +493,22 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings) (*
 			return nil, ErrInternalServerError
 		}
 		doctype := parts[0]
+		if _, ok := changes.Removed[key]; ok {
+			revisions := changes.Changed[key]
+			docs[doctype] = append(docs[doctype], map[string]interface{}{
+				"_id":        parts[1],
+				"_rev":       revisions[len(revisions)-1],
+				"_revisions": revisionSliceToStruct(revisions),
+				"_deleted":   true,
+			})
+			continue
+		}
 		for _, rev := range missing.Missing {
 			ir := couchdb.IDRev{ID: parts[1], Rev: rev}
 			queries[doctype] = append(queries[doctype], ir)
 		}
 	}
 
-	docs := make(DocsByDoctype, len(queries))
 	for doctype, query := range queries {
 		results, err := couchdb.BulkGetDocs(inst, doctype, query)
 		if err != nil {
@@ -546,7 +593,8 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 	var refs []*SharedRef
 
 	for doctype, docs := range payload {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Apply bulk docs %s: %#v", doctype, docs)
+		inst.Logger().WithField("nspace", "replicator").
+			Debugf("Apply bulk docs %s: %#v", doctype, docs)
 		if doctype == consts.Files {
 			err := s.ApplyBulkFiles(inst, docs)
 			if err != nil {
@@ -626,6 +674,9 @@ func (s *Sharing) filterDocsToAdd(inst *instance.Instance, doctype string, docs 
 	filtered := docs[:0]
 	refs := make([]*SharedRef, 0, len(docs))
 	for _, doc := range docs {
+		if _, ok := doc["_deleted"]; ok {
+			continue
+		}
 		r := -1
 		for i, rule := range s.Rules {
 			if rule.Accept(doctype, doc) {
@@ -678,6 +729,10 @@ func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, do
 						exists = true
 						break
 					}
+				}
+				if _, ok := doc["_deleted"]; ok {
+					infos.Removed = true
+					refs[i].Infos[s.SID] = infos
 				}
 				if !exists {
 					refs[i].Revisions = append(refs[i].Revisions, rev)
