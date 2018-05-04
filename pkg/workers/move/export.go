@@ -31,7 +31,7 @@ type ExportDoc struct {
 	DocRev           string        `json:"_rev,omitempty"`
 	Domain           string        `json:"domain"`
 	PartSize         int64         `json:"files_part_size,omitempty"`
-	FilesCursors     []string      `json:"files_cursors,omitempty"`
+	FilesCursors     []string      `json:"files_part_cursors,omitempty"`
 	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
 	WithoutFiles     bool          `json:"without_files,omitempty"`
 	State            string        `json:"state"`
@@ -133,12 +133,18 @@ func verifyAuthMessage(i *instance.Instance, mac []byte) (string, bool) {
 }
 
 // GetExport returns an Export document associated with the given instance and
-// with the given ID.
+// with the given MAC message.
 func GetExport(inst *instance.Instance, mac []byte) (*ExportDoc, error) {
 	exportID, ok := verifyAuthMessage(inst, mac)
 	if !ok {
 		return nil, ErrMACInvalid
 	}
+	return GetExportByID(inst, string(exportID))
+}
+
+// GetExportByID returns an Export document associated with the given instance
+// and with the given ID.
+func GetExportByID(inst *instance.Instance, exportID string) (*ExportDoc, error) {
 	var exportDoc ExportDoc
 	if err := couchdb.GetDoc(couchdb.GlobalDB, consts.Exports, exportID, &exportDoc); err != nil {
 		if couchdb.IsNotFoundError(err) || couchdb.IsNoDatabaseError(err) {

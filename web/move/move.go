@@ -16,16 +16,13 @@ import (
 )
 
 func exportHandler(c echo.Context) error {
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Settings); err != nil {
+	inst := middlewares.GetInstance(c)
+
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Exports); err != nil {
 		return err
 	}
 
-	inst := middlewares.GetInstance(c)
-	exportMAC, err := base64.URLEncoding.DecodeString(c.Param("export-mac"))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err)
-	}
-	exportDoc, err := move.GetExport(inst, exportMAC)
+	exportDoc, err := move.GetExportByID(inst, c.Param("export-id"))
 	if err != nil {
 		return err
 	}
@@ -79,11 +76,12 @@ func exportFilesHandler(c echo.Context) error {
 }
 
 func exportsListHandler(c echo.Context) error {
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Settings); err != nil {
+	inst := middlewares.GetInstance(c)
+
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Exports); err != nil {
 		return err
 	}
 
-	inst := middlewares.GetInstance(c)
 	exportDocs, err := move.GetExports(inst.Domain)
 	if err != nil {
 		return err
@@ -100,7 +98,7 @@ func exportsListHandler(c echo.Context) error {
 // Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
 	g.GET("/exports", exportsListHandler)
-	g.GET("/exports/:export-mac", exportHandler)
+	g.GET("/exports/:export-id", exportHandler)
 	g.GET("/exports/:export-mac/data", exportDataHandler)
 	g.GET("/exports/:export-mac/files", exportFilesHandler)
 }
