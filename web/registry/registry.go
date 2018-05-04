@@ -72,9 +72,9 @@ func Routes(router *echo.Group) {
 	router.GET("/", proxyListReq)
 	router.GET("/:app", proxyReq(perms, registry.WithCache))
 	router.GET("/:app/icon", proxyReq(authed, registry.NoCache))
-	router.GET("/:app/screenshots/:filename", proxyReq(authed, registry.NoCache))
+	router.GET("/:app/screenshots/*", proxyReq(authed, registry.NoCache))
 	router.GET("/:app/:version/icon", proxyReq(authed, registry.NoCache))
-	router.GET("/:app/:version/screenshots/:filename", proxyReq(authed, registry.NoCache))
+	router.GET("/:app/:version/screenshots/*", proxyReq(authed, registry.NoCache))
 	router.GET("/:app/:version", proxyReq(perms, registry.WithCache))
 	router.GET("/:app/:channel/latest", proxyReq(perms, registry.WithCache))
 }
