@@ -134,10 +134,10 @@ func Worker(ctx *jobs.WorkerContext) error {
 
 func push(ctx *jobs.WorkerContext, platform, deviceToken string, msg *Message) error {
 	switch platform {
-	case oauth.AndroidPlatform:
-		return pushToAndroid(ctx, deviceToken, msg)
-	case oauth.IOSPlatform:
-		return pushToIOS(ctx, deviceToken, msg)
+	case oauth.PlatformFirebase, "android", "ios":
+		return pushToFirebase(ctx, deviceToken, msg)
+	case oauth.PlatformAPNS:
+		return pushToAPNS(ctx, deviceToken, msg)
 	default:
 		return fmt.Errorf("notifications: unknown platform %q", platform)
 	}
@@ -145,7 +145,7 @@ func push(ctx *jobs.WorkerContext, platform, deviceToken string, msg *Message) e
 
 // Firebase Cloud Messaging HTTP Protocol
 // https://firebase.google.com/docs/cloud-messaging/http-server-ref
-func pushToAndroid(ctx *jobs.WorkerContext, deviceToken string, msg *Message) error {
+func pushToFirebase(ctx *jobs.WorkerContext, deviceToken string, msg *Message) error {
 	if fcmClient == nil {
 		ctx.Logger().Warn("Could not send android notification: not configured")
 		return nil
@@ -214,7 +214,7 @@ func pushToAndroid(ctx *jobs.WorkerContext, deviceToken string, msg *Message) er
 	return errm
 }
 
-func pushToIOS(ctx *jobs.WorkerContext, deviceToken string, msg *Message) error {
+func pushToAPNS(ctx *jobs.WorkerContext, deviceToken string, msg *Message) error {
 	if iosClient == nil {
 		ctx.Logger().Warn("Could not send iOS notification: not configured")
 		return nil

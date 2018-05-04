@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	// AndroidPlatform platform using Firebase Cloud Messaging (FCM)
-	AndroidPlatform = "android"
-	// IOSPlatform platform using APNS/2
-	IOSPlatform = "ios"
+	// PlatformFirebase platform using Firebase Cloud Messaging (FCM)
+	PlatformFirebase = "firebase"
+	// PlatformAPNS platform using APNS/2
+	PlatformAPNS = "apns"
 )
 
 // ClientSecretLen is the number of random bytes used for generating the client secret
@@ -191,7 +191,8 @@ func (c *Client) checkMandatoryFields(i *instance.Instance) *ClientRegistrationE
 	}
 	c.NotificationPlatform = strings.ToLower(c.NotificationPlatform)
 	switch c.NotificationPlatform {
-	case "", AndroidPlatform, IOSPlatform:
+	case "", PlatformFirebase, PlatformAPNS:
+	case "ios", "android": // retro-compatibility
 	default:
 		return &ClientRegistrationError{
 			Code:  http.StatusBadRequest,
