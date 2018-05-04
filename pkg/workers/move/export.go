@@ -139,7 +139,7 @@ func GetExport(inst *instance.Instance, mac []byte) (*ExportDoc, error) {
 	if !ok {
 		return nil, ErrMACInvalid
 	}
-	return GetExportByID(inst, string(exportID))
+	return GetExportByID(inst, exportID)
 }
 
 // GetExportByID returns an Export document associated with the given instance
@@ -413,7 +413,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 	}
 	tw := tar.NewWriter(gw)
 
-	if n, err = writeInstanceDoc(i, "instance", createdAt, tw, nil); err != nil {
+	if n, err = writeInstanceDoc(i, "instance", createdAt, tw); err != nil {
 		return
 	}
 	size += n
@@ -422,7 +422,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 	if err != nil {
 		return
 	}
-	if n, err = writeDoc("", "settings", settings, createdAt, tw, nil); err != nil {
+	if n, err = writeDoc("", "settings", settings, createdAt, tw); err != nil {
 		return
 	}
 	size += n
@@ -433,7 +433,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		if err != nil {
 			return
 		}
-		n, err = writeDoc("", "files-index", root, createdAt, tw, nil)
+		n, err = writeDoc("", "files-index", root, createdAt, tw)
 		if err != nil {
 			return
 		}
@@ -647,7 +647,7 @@ func exportDocs(in *instance.Instance, withDoctypes []string, now time.Time, tw 
 			dir := url.PathEscape(doctype)
 			err = couchdb.ForeachDocs(in, doctype,
 				func(id string, doc json.RawMessage) error {
-					n, errw := writeMarshaledDoc(dir, id, doc, now, tw, nil)
+					n, errw := writeMarshaledDoc(dir, id, doc, now, tw)
 					if errw == nil {
 						size += n
 					}
@@ -662,7 +662,7 @@ func exportDocs(in *instance.Instance, withDoctypes []string, now time.Time, tw 
 }
 
 func writeInstanceDoc(in *instance.Instance, name string,
-	now time.Time, tw *tar.Writer, records map[string]string) (int64, error) {
+	now time.Time, tw *tar.Writer) (int64, error) {
 	clone := in.Clone().(*instance.Instance)
 	clone.PassphraseHash = nil
 	clone.PassphraseResetToken = nil
@@ -672,27 +672,26 @@ func writeInstanceDoc(in *instance.Instance, name string,
 	clone.OAuthSecret = nil
 	clone.CLISecret = nil
 	clone.SwiftCluster = 0
-	return writeDoc("", name, clone, now, tw, records)
+	return writeDoc("", name, clone, now, tw)
 }
 
 func writeDoc(dir, name string, data interface{},
-	now time.Time, tw *tar.Writer, records map[string]string) (int64, error) {
+	now time.Time, tw *tar.Writer) (int64, error) {
 	doc, err := json.Marshal(data)
 	if err != nil {
 		return 0, err
 	}
-	return writeMarshaledDoc(dir, name, doc, now, tw, records)
+	return writeMarshaledDoc(dir, name, doc, now, tw)
 }
 
 func writeMarshaledDoc(dir, name string, doc json.RawMessage,
-	now time.Time, tw *tar.Writer, records map[string]string) (int64, error) {
+	now time.Time, tw *tar.Writer) (int64, error) {
 	hdr := &tar.Header{
-		Name:       path.Join(dir, name+".json"),
-		Mode:       0640,
-		Size:       int64(len(doc)),
-		Typeflag:   tar.TypeReg,
-		ModTime:    now,
-		PAXRecords: records,
+		Name:     path.Join(dir, name+".json"),
+		Mode:     0640,
+		Size:     int64(len(doc)),
+		Typeflag: tar.TypeReg,
+		ModTime:  now,
 	}
 	if err := tw.WriteHeader(hdr); err != nil {
 		return 0, err
