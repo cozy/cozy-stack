@@ -24,10 +24,10 @@ func init() {
 
 // ExportOptions contains the options for launching the export worker.
 type ExportOptions struct {
-	BucketSize   int64         `json:"bucket_size"`
+	PartSize     int64         `json:"files_part_size"`
 	MaxAge       time.Duration `json:"max_age"`
 	WithDoctypes []string      `json:"with_doctypes,omitempty"`
-	WithoutIndex bool          `json:"without_index,omitempty"`
+	WithoutFiles bool          `json:"without_files,omitempty"`
 }
 
 // ExportWorker is the worker responsible for creating an export of the

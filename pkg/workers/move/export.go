@@ -27,24 +27,24 @@ import (
 
 // ExportDoc is a documents storing the metadata of an export.
 type ExportDoc struct {
-	DocID             string        `json:"_id,omitempty"`
-	DocRev            string        `json:"_rev,omitempty"`
-	Domain            string        `json:"domain"`
-	BucketSize        int64         `json:"bucket_size,omitempty"`
-	IndexFilesCursors []string      `json:"index_file_cursors,omitempty"`
-	State             string        `json:"state"`
-	WithDoctypes      []string      `json:"with_doctypes,omitempty"`
-	WithoutIndex      bool          `json:"without_index,omitempty"`
-	CreatedAt         time.Time     `json:"created_at"`
-	ExpiresAt         time.Time     `json:"expires_at"`
-	TotalSize         int64         `json:"total_size,omitempty"`
-	CreationDuration  time.Duration `json:"creation_duration,omitempty"`
-	Error             string        `json:"error,omitempty"`
+	DocID            string        `json:"_id,omitempty"`
+	DocRev           string        `json:"_rev,omitempty"`
+	Domain           string        `json:"domain"`
+	PartSize         int64         `json:"files_part_size,omitempty"`
+	FilesCursors     []string      `json:"files_cursors,omitempty"`
+	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
+	WithoutFiles     bool          `json:"without_files,omitempty"`
+	State            string        `json:"state"`
+	CreatedAt        time.Time     `json:"created_at"`
+	ExpiresAt        time.Time     `json:"expires_at"`
+	TotalSize        int64         `json:"total_size,omitempty"`
+	CreationDuration time.Duration `json:"creation_duration,omitempty"`
+	Error            string        `json:"error,omitempty"`
 }
 
-// BucketSize is the default size of a file bucket, to split the index into
+// PartSize is the default size of a file bucket, to split the index into
 // equal-sized parts.
-const BucketSize = 100 * 1024 * 1024 // 100 MB
+const PartSize = 100 * 1024 * 1024 // 100 MB
 
 var (
 	// ErrExportNotFound is used when a export document could not be found
@@ -93,8 +93,8 @@ func (e *ExportDoc) SetRev(rev string) { e.DocRev = rev }
 func (e *ExportDoc) Clone() couchdb.Doc {
 	clone := *e
 
-	clone.IndexFilesCursors = make([]string, len(e.IndexFilesCursors))
-	copy(clone.IndexFilesCursors, e.IndexFilesCursors)
+	clone.FilesCursors = make([]string, len(e.FilesCursors))
+	copy(clone.FilesCursors, e.FilesCursors)
 
 	return &clone
 }
@@ -189,14 +189,14 @@ func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Ar
 	if exportDoc.HasExpired() {
 		return ErrExportExpired
 	}
-	if exportDoc.WithoutIndex {
+	if exportDoc.WithoutFiles {
 		return ErrExportDoesNotContainIndex
 	}
 
 	cursorPos := 0
 	// check that the given cursor is part of our pre-defined list of cursors.
 	if cursorStr != "" {
-		for i, c := range exportDoc.IndexFilesCursors {
+		for i, c := range exportDoc.FilesCursors {
 			if c == cursorStr {
 				cursorPos = i + 1
 				break
@@ -256,7 +256,7 @@ func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Ar
 
 	fs := inst.VFS()
 	list, _ := listFilesIndex(tw, root, nil, indexCursor{}, cursor,
-		exportDoc.BucketSize, exportDoc.BucketSize)
+		exportDoc.PartSize, exportDoc.PartSize)
 	for _, file := range list {
 		dirDoc, fileDoc := file.file.Refine()
 		if fileDoc != nil {
@@ -320,9 +320,9 @@ func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Ar
 func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (exportDoc *ExportDoc, err error) {
 	createdAt := time.Now()
 
-	bucketSize := opts.BucketSize
-	if bucketSize == 0 || bucketSize > BucketSize {
-		bucketSize = BucketSize
+	bucketSize := opts.PartSize
+	if bucketSize == 0 || bucketSize > PartSize {
+		bucketSize = PartSize
 	}
 
 	maxAge := opts.MaxAge
@@ -336,9 +336,9 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		CreatedAt:    createdAt,
 		ExpiresAt:    createdAt.Add(maxAge),
 		WithDoctypes: opts.WithDoctypes,
-		WithoutIndex: opts.WithoutIndex,
+		WithoutFiles: opts.WithoutFiles,
 		TotalSize:    -1,
-		BucketSize:   bucketSize,
+		PartSize:     bucketSize,
 	}
 
 	// Cleanup previously archived exports.
@@ -421,7 +421,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 	}
 	size += n
 
-	if !opts.WithoutIndex {
+	if !opts.WithoutFiles {
 		var root *vfs.TreeFile
 		root, err = i.VFS().BuildTree()
 		if err != nil {
@@ -433,7 +433,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		}
 		size += n
 
-		exportDoc.IndexFilesCursors, _ = splitFilesIndex(root, nil, nil, exportDoc.BucketSize, exportDoc.BucketSize)
+		exportDoc.FilesCursors, _ = splitFilesIndex(root, nil, nil, exportDoc.PartSize, exportDoc.PartSize)
 	}
 
 	n, err = exportDocs(i, opts.WithDoctypes, createdAt, tw)
@@ -498,32 +498,37 @@ func listFilesIndex(tw *tar.Writer, root *vfs.TreeFile, list []fileRanged, curre
 		return list, sizeLeft
 	}
 
-	if cursorDiff := currentCursor.diff(cursor); cursorDiff >= 0 {
-		for childIndex, child := range root.FilesChildren {
-			var fileRangeStart, fileRangeEnd int64
-			if cursorDiff == 0 {
-				if childIndex < cursor.fileCursor {
-					continue
-				} else if childIndex == cursor.fileCursor {
-					fileRangeStart = cursor.fileRangeStart
-				}
-			}
-			size := child.ByteSize - fileRangeStart
-			if sizeLeft-size < 0 {
-				fileRangeEnd = fileRangeStart + sizeLeft
-			} else {
-				fileRangeEnd = child.ByteSize
-			}
-			list = append(list, fileRanged{child, fileRangeStart, fileRangeEnd})
-			sizeLeft -= size
-			if sizeLeft <= 0 {
-				break
+	cursorDiff := cursor.diff(currentCursor)
+	if cursorDiff < 0 {
+		return list, sizeLeft
+	}
+
+	cursorEqual := cursorDiff == 0 && currentCursor.equal(cursor)
+	for childIndex, child := range root.FilesChildren {
+		var fileRangeStart, fileRangeEnd int64
+		if cursorEqual {
+			if childIndex < cursor.fileCursor {
+				continue
+			} else if childIndex == cursor.fileCursor {
+				fileRangeStart = cursor.fileRangeStart
 			}
 		}
-		// append empty directory so that we explicitly csreate them in the tarball
-		if len(root.DirsChildren) == 0 && len(root.FilesChildren) == 0 {
-			list = append(list, fileRanged{root, 0, 0})
+		size := child.ByteSize - fileRangeStart
+		if sizeLeft-size < 0 {
+			fileRangeEnd = fileRangeStart + sizeLeft
+		} else {
+			fileRangeEnd = child.ByteSize
 		}
+		list = append(list, fileRanged{child, fileRangeStart, fileRangeEnd})
+		sizeLeft -= size
+		if sizeLeft <= 0 {
+			break
+		}
+	}
+
+	// append empty directory so that we explicitly csreate them in the tarball
+	if len(root.DirsChildren) == 0 && len(root.FilesChildren) == 0 {
+		list = append(list, fileRanged{root, 0, 0})
 	}
 
 	for dirIndex, dir := range root.DirsChildren {
@@ -543,18 +548,29 @@ type indexCursor struct {
 }
 
 func (c indexCursor) diff(d indexCursor) int {
-	if len(c.dirCursor) < len(d.dirCursor) {
-		return -1
+	l := len(d.dirCursor)
+	if len(c.dirCursor) < l {
+		l = len(c.dirCursor)
 	}
-	for i := 0; i < len(d.dirCursor); i++ {
-		if c.dirCursor[i] < d.dirCursor[i] {
-			return -1
+	for i := 0; i < l; i++ {
+		if diff := d.dirCursor[i] - c.dirCursor[i]; diff != 0 {
+			return diff
 		}
 	}
-	if len(c.dirCursor) == len(d.dirCursor) {
-		return 0
+	return 0
+}
+
+func (c indexCursor) equal(d indexCursor) bool {
+	l := len(d.dirCursor)
+	if l != len(c.dirCursor) {
+		return false
 	}
-	return 1
+	for i := 0; i < l; i++ {
+		if d.dirCursor[i] != c.dirCursor[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func (c indexCursor) next(dirIndex int) (next indexCursor) {
