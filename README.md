@@ -1,4 +1,4 @@
-Cozy Cloud
+![Cozy Logo](https://cdn.rawgit.com/cozy/cozy-guidelines/master/templates/cozy_logo_small.svg)Cozy Cloud 
 ==========
 
 [![GoDoc](https://godoc.org/github.com/cozy/cozy-stack?status.svg)](https://godoc.org/github.com/cozy/cozy-stack)
@@ -7,7 +7,7 @@ Cozy Cloud
 [![codecov](https://codecov.io/gh/cozy/cozy-stack/branch/master/graph/badge.svg)](https://codecov.io/gh/cozy/cozy-stack)
 
 
-## What is Cozy?
+## What is Cozy? 
 
 ![Cozy Logo](assets/images/happycloud.png)
 
