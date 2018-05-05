@@ -1,4 +1,4 @@
-![Cozy Logo](https://cdn.rawgit.com/cozy/cozy-guidelines/master/templates/cozy_logo_small.svg)Cozy Cloud 
+Cozy Cloud 
 ==========
 
 [![GoDoc](https://godoc.org/github.com/cozy/cozy-stack?status.svg)](https://godoc.org/github.com/cozy/cozy-stack)
@@ -9,7 +9,7 @@
 
 ## What is Cozy? 
 
-![Cozy Logo](assets/images/happycloud.png)
+![Cozy Logo](https://cdn.rawgit.com/cozy/cozy-guidelines/master/templates/cozy_logo_small.svg)
 
 [Cozy](https://cozy.io) is a platform that brings all your web services in the
 same private space. With it, your web apps and your devices can share data
