@@ -23,6 +23,7 @@ import (
 var flagAllowRoot bool
 var flagAppdirs []string
 var flagDisableCSP bool
+var flagDevMode bool
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -52,6 +53,10 @@ example), you can use the --appdir flag like this:
 		if !flagAllowRoot && os.Getuid() == 0 {
 			errPrintfln("Use --allow-root if you really want to start with the root user")
 			return errors.New("Starting cozy-stack serve as root not allowed")
+		}
+
+		if flagDevMode {
+			config.BuildMode = config.ModeDev
 		}
 
 		if flagDisableCSP {
@@ -209,6 +214,7 @@ func init() {
 	flags.String("password-reset-interval", "15m", "minimal duration between two password reset")
 	checkNoErr(viper.BindPFlag("password_reset_interval", flags.Lookup("password-reset-interval")))
 
+	flags.BoolVar(&flagDevMode, "dev", false, "Allow to run without in dev release mode (disabled by default)")
 	flags.BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
 	flags.StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
 
