@@ -29,7 +29,7 @@ type DirDoc struct {
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	Tags      []string  `json:"tags,omitempty"`
+	Tags      []string  `json:"tags"`
 
 	// Directory path on VFS.
 	// Fullpath should always be present. It is marked "omitempty" because
