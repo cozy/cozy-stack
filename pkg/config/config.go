@@ -23,6 +23,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	// ModeDev is the development release value
+	ModeDev = "development"
+	// ModeProd is the production release value
+	ModeProd = "production"
+)
+
 var (
 	// Version of the release (see scripts/build.sh script)
 	Version string
@@ -31,10 +38,8 @@ var (
 	BuildTime string
 	// BuildMode is the build mode of the release. Should be either
 	// production or development.
-	BuildMode = "development"
+	BuildMode = ModeDev
 )
-
-var isDevRelease = (BuildMode == "development")
 
 // Filename is the default configuration filename that cozy
 // search for
@@ -290,7 +295,7 @@ func (rc *RedisConfig) Client() redis.UniversalClient {
 // IsDevRelease returns whether or not the binary is a development
 // release
 func IsDevRelease() bool {
-	return isDevRelease
+	return BuildMode == ModeDev
 }
 
 // GetConfig returns the configured instance of Config
