@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -382,6 +383,7 @@ func fetchUntilFound(registries []*url.URL, requestURI string, cache CacheContro
 
 func fetch(registry, ref *url.URL, cache CacheControl) (resp *http.Response, ok bool, err error) {
 	u := registry.ResolveReference(ref)
+	u.Path = path.Join(registry.Path, ref.Path)
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return
