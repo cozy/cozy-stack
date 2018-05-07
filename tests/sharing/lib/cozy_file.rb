@@ -3,7 +3,12 @@ class CozyFile
   include Model
   include Model::Files
 
-  attr_reader :name, :dir_id, :mime
+  attr_reader :name, :dir_id, :mime, :trashed, :md5sum
+
+  def self.get_id_from_path(inst, path)
+    file = CozyFile.find_by_path inst, path
+    file.couch_id
+  end
 
   def self.load_from_url(inst, path)
     opts = {
@@ -16,7 +21,12 @@ class CozyFile
     id = j["id"]
     rev = j["rev"]
     j = j["attributes"]
-    f = CozyFile.new(name: j["name"], dir_id: j["dir_id"])
+    f = CozyFile.new(
+      name: j["name"],
+      dir_id: j["dir_id"],
+      trashed: j["trashed"],
+      md5sum: j["md5sum"]
+    )
     f.couch_id = id
     f.couch_rev = rev
     f
@@ -47,6 +57,8 @@ class CozyFile
     @dir_id = opts[:dir_id] || "io.cozy.files.root-dir"
     @mime = opts[:mime] || "text/plain"
     @content = opts[:content] || "Hello world"
+    @trashed = opts[:trashed]
+    @md5sum = opts[:md5sum]
   end
 
   def save(inst)
@@ -72,6 +84,7 @@ class CozyFile
     res = inst.client["/files/#{@couch_id}"].put @content, opts
     j = JSON.parse(res.body)["data"]
     @couch_rev = j["meta"]["rev"]
+    @md5sum = j["attributes"]["md5sum"]
   end
 
   PHOTOS = %w(about apps architecture business community faq features try).freeze

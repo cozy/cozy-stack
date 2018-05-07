@@ -67,40 +67,35 @@ describe "A folder" do
 
     path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
     child1_bob = Folder.find_by_path inst_bob, path
-    assert_equal child1_bob.name, child1.name
     child1_charlie = Folder.find_by_path inst_charlie, path
+    child1_bob_id = child1_bob.couch_id
+    child1_charlie_id = child1_charlie.couch_id
+    assert_equal child1_bob.name, child1.name
     assert_equal child1_charlie.name, child1.name
 
     # Propagate a change (rename dir + add file) from Alice's side
-    new_name = Faker::Internet.slug
-    child1.rename inst_alice, new_name
+    child1.rename inst_alice, Faker::Internet.slug
     opts = CozyFile.options_from_fixture(file_path, dir_id: folder.couch_id)
     file = CozyFile.create inst_alice, opts
 
     sleep 12
-    child1_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{new_name}"
     file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
-    puts "file path : #{file_path}"
-    child1_bob = Folder.find_by_path inst_bob, child1_path
+    child1_bob = Folder.find inst_bob, child1_bob_id
     file_bob = CozyFile.find_by_path inst_bob, file_path
-    puts "file bob : #{file_bob.name}"
-
     file_charlie = CozyFile.find_by_path inst_charlie, file_path
-    child1_charlie = Folder.find_by_path inst_charlie, child1_path
-    assert_equal child1_bob.name, new_name
-    assert_equal child1_charlie.name, new_name
+    child1_charlie = Folder.find inst_charlie, child1_charlie_id
+    assert_equal child1_bob.name, child1.name
+    assert_equal child1_charlie.name, child1.name
     assert_equal file_bob.name, file.name
     assert_equal file_charlie.name, file.name
 
     # Propagate a change (rename file) from Bob's side
-    new_name = Faker::Internet.slug
-    child1_bob.rename inst_bob, new_name
-    sleep 10
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{new_name}"
+    child1_bob.rename inst_bob, Faker::Internet.slug
+    sleep 12
     child1_alice = Folder.find inst_alice, child1.couch_id
-    assert_equal child1_alice.name, new_name
-    child1_charlie = Folder.find_by_path inst_charlie, path
-    assert_equal child1_charlie.name, new_name
+    assert_equal child1_alice.name, child1_bob.name
+    child1_charlie = Folder.find inst_charlie, child1_charlie_id
+    assert_equal child1_charlie.name, child1_bob.name
 
     # Check that the files are the same on disk
     da = File.join Helpers.current_dir, inst_alice.domain, folder.name

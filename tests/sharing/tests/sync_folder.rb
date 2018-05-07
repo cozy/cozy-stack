@@ -48,34 +48,38 @@ describe "A folder" do
 
     # Check the sync (create + update) sharer -> recipient
     # TODO move folder
-    new_folder_name = Faker::Internet.slug
-    new_file_name = "#{Faker::Internet.slug}.jpg"
-    child1.rename inst, new_folder_name
+    child1.rename inst, Faker::Internet.slug
     child2 = Folder.create inst, {dir_id: folder.couch_id}
-    file.rename inst, new_file_name
+    file.rename inst, "#{Faker::Internet.slug}.txt"
+    file.overwrite inst, {}
     sleep 7
+
     child1_recipient = Folder.find inst_recipient, child1_id_recipient
     child2_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
     child2_recipient = Folder.find_by_path inst_recipient, child2_path
+    file = CozyFile.find inst, file.couch_id
     file_recipient = CozyFile.find inst_recipient, file_id_recipient
-    assert_equal new_folder_name, child1_recipient.name
+    assert_equal child1.name, child1_recipient.name
     assert_equal child2.name, child2_recipient.name
-    assert_equal new_file_name, file_recipient.name
+    assert_equal file.name, file_recipient.name
+    assert_equal file.md5sum, file_recipient.md5sum
 
     # Check the sync (create + update) recipient -> sharer
-    new_folder_name = Faker::Internet.slug
-    new_file_name = "#{Faker::Internet.slug}.jpg"
-    child1_recipient.rename inst_recipient, new_folder_name
+    child1_recipient.rename inst_recipient, Faker::Internet.slug
     child3_recipient = Folder.create inst_recipient, {dir_id: folder_id_recipient}
-    file_recipient.rename inst_recipient, new_file_name
+    file_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
+    file_recipient.overwrite inst_recipient, {content: "New content from recipient"}
+
     sleep 7
     child1 = Folder.find inst, child1.couch_id
     child3_path = CGI.escape "/#{folder.name}/#{child3_recipient.name}"
     child3 = Folder.find_by_path inst, child3_path
-    file = Folder.find inst, file.couch_id
-    assert_equal new_folder_name, child1.name
+    file = CozyFile.find inst, file.couch_id
+    assert_equal child1_recipient.name, child1.name
     assert_equal child3_recipient.name, child3.name
-    assert_equal new_file_name, file.name
+    assert_equal file_recipient.name, file.name
+    assert_equal file_recipient.md5sum, file.md5sum
+
 
     # Check that the files are the same on disk
     da = File.join Helpers.current_dir, inst.domain, folder.name
