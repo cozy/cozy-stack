@@ -1,7 +1,6 @@
-package instance
+package updates
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -9,89 +8,55 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
-	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/registry"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/robfig/cron"
 )
 
 const numUpdaters = 4
 const numUpdatersSingleInstance = 4
 
-var log = logger.WithNamespace("updates")
-var globalUpdating = make(chan struct{}, 1)
-
 func init() {
-	globalUpdating <- struct{}{}
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType:   "updates",
+		Concurrency:  1,
+		MaxExecCount: 1,
+		Timeout:      1 * time.Hour,
+		WorkerFunc:   Worker,
+	})
 }
 
-type updateCron struct {
-	stopped  chan struct{}
-	finished chan struct{}
-}
-
-// UpdatesOptions is the option handler for updates:
+// Options is the option handler for updates:
 //   - Slugs: allow to filter the application's slugs to update, if empty, all
 //     applications are updated
 //   - Force: forces the update, even if the user has not activated the auto-
 //     update
 //   - ForceRegistry: translates the git:// sourced application into
 //     registry://
-type UpdatesOptions struct {
+type Options struct {
 	Slugs         []string
+	Domain        string
+	AllDomains    bool
 	Force         bool
 	ForceRegistry bool
 }
 
-// StartUpdateCron starts the auto update process which launche a full auto
-// updates of all the instances existing.
-func StartUpdateCron() (utils.Shutdowner, error) {
-	autoUpdates := config.GetConfig().AutoUpdates
-
-	if !autoUpdates.Activated {
-		return utils.NopShutdown, nil
+// Worker is the worker method to launch the updates.
+func Worker(ctx *jobs.WorkerContext) error {
+	var opts Options
+	if err := ctx.UnmarshalMessage(&opts); err != nil {
+		return err
 	}
-
-	u := &updateCron{
-		stopped:  make(chan struct{}),
-		finished: make(chan struct{}),
+	if opts.AllDomains {
+		return UpdateAll(&opts)
 	}
-
-	spec := strings.TrimPrefix(autoUpdates.Schedule, "@cron ")
-	schedule, err := cron.Parse(spec)
-	if err != nil {
-		return nil, err
-	}
-
-	go func() {
-		next := time.Now()
-		defer func() { u.finished <- struct{}{} }()
-		for {
-			next = schedule.Next(next)
-			select {
-			case <-time.After(-time.Since(next)):
-				if err := UpdateAll(&UpdatesOptions{}); err != nil {
-					log.Error("Could not update all:", err)
-				}
-			case <-u.stopped:
-				return
-			}
+	if opts.Domain != "" {
+		inst, err := instance.Get(opts.Domain)
+		if err != nil {
+			return err
 		}
-	}()
-
-	return u, nil
-}
-
-func (u *updateCron) Shutdown(ctx context.Context) error {
-	fmt.Print("  shutting down updaters...")
-	u.stopped <- struct{}{}
-	select {
-	case <-ctx.Done():
-		fmt.Println("timeouted.")
-	case <-u.finished:
-		fmt.Println("ok.")
+		return UpdateInstance(inst, &opts)
 	}
 	return nil
 }
@@ -99,12 +64,7 @@ func (u *updateCron) Shutdown(ctx context.Context) error {
 // UpdateAll starts the auto-updates process for all instances. The slugs
 // parameters can be used optionnaly to filter (whitelist) the applications'
 // slug to update.
-func UpdateAll(opts *UpdatesOptions) error {
-	<-globalUpdating
-	defer func() {
-		globalUpdating <- struct{}{}
-	}()
-
+func UpdateAll(opts *Options) error {
 	insc := make(chan *apps.Installer)
 	errc := make(chan error)
 
@@ -127,7 +87,7 @@ func UpdateAll(opts *UpdatesOptions) error {
 
 	go func() {
 		// TODO: filter instances that are AutoUpdate only
-		ForeachInstances(func(inst *Instance) error {
+		instance.ForeachInstances(func(inst *instance.Instance) error {
 			if opts.Force || !inst.NoAutoUpdate {
 				installerPush(inst, insc, errc, opts)
 			}
@@ -150,7 +110,7 @@ func UpdateAll(opts *UpdatesOptions) error {
 
 // UpdateInstance starts the auto-update process on the given instance. The
 // slugs parameters can be used to filter (whitelist) the applications' slug
-func UpdateInstance(inst *Instance, opts *UpdatesOptions) error {
+func UpdateInstance(inst *instance.Instance, opts *Options) error {
 	insc := make(chan *apps.Installer)
 	errc := make(chan error)
 
@@ -188,7 +148,7 @@ func UpdateInstance(inst *Instance, opts *UpdatesOptions) error {
 	return errm
 }
 
-func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, opts *UpdatesOptions) {
+func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan error, opts *Options) {
 	registries, err := inst.Registries()
 	if err != nil {
 		errc <- err
@@ -255,7 +215,7 @@ func filterSlug(slug string, slugs []string) bool {
 	return true
 }
 
-func createInstaller(inst *Instance, registries []*url.URL, man apps.Manifest, opts *UpdatesOptions) (*apps.Installer, error) {
+func createInstaller(inst *instance.Instance, registries []*url.URL, man apps.Manifest, opts *Options) (*apps.Installer, error) {
 	var sourceURL string
 	if opts.ForceRegistry {
 		originalSourceURL, err := url.Parse(man.Source())

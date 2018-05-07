@@ -9,11 +9,11 @@ import (
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/cozy-stack/pkg/workers/updates"
 
 	"github.com/google/gops/agent"
 	"github.com/sirupsen/logrus"
@@ -92,8 +92,20 @@ security features. Please do not use this binary as your production server.
 		}
 	}
 
+	autoUpdates := config.GetConfig().AutoUpdates
+	cronSpecs := []jobs.CronSpec{
+		{
+			Activated:  autoUpdates.Activated,
+			Schedule:   autoUpdates.Schedule,
+			WorkerType: "updates",
+			WorkerTemplate: func() (jobs.Message, error) {
+				return jobs.NewMessage(updates.Options{AllDomains: true})
+			},
+		},
+	}
+
 	// Start update cron for auto-updates
-	cronUpdates, err := instance.StartUpdateCron()
+	crons, err := jobs.CronJobs(cronSpecs)
 	if err != nil {
 		return
 	}
@@ -123,7 +135,7 @@ security features. Please do not use this binary as your production server.
 	// Global shutdowner that composes all the running processes of the stack
 	processes = utils.NewGroupShutdown(
 		jobs.System(),
-		cronUpdates,
+		crons,
 		sessionSweeper,
 		gopAgent{},
 	)
