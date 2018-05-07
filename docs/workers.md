@@ -169,7 +169,7 @@ The progress of the export process can be followed with realtime events on the d
 
 Its options are:
 
-* `files_part_size`: the size in bytes of the sizes index splitting done for multi-part download of files data
+* `parts_size`: the size in bytes of the sizes index splitting done for multi-part download of files data
 * `max_age`: the maximum age duration of the archive before it expires
 * `with_doctypes`: list of string for a whitelist of doctypes to exports (exports all doctypes if empty)
 * `without_files`: boolean to avoid exporting the index (preventing download file data)
@@ -178,7 +178,7 @@ Its options are:
 
 ```json
 {
-  "files_part_size": 52428800,
+  "parts_size": 52428800,
   "max_age": 60000000000, // 1 minute
   "with_doctypes": ["io.cozy.accounts"], // empty or null means all doctypes
   "without_files": false

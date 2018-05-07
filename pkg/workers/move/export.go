@@ -2,10 +2,12 @@ package move
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -25,13 +27,19 @@ import (
 	"github.com/cozy/echo"
 )
 
+const (
+	FilesDir = "My Cozy/Files"
+	MetasDir = "My Cozy/Metadata"
+)
+
 // ExportDoc is a documents storing the metadata of an export.
 type ExportDoc struct {
-	DocID            string        `json:"_id,omitempty"`
-	DocRev           string        `json:"_rev,omitempty"`
-	Domain           string        `json:"domain"`
-	PartSize         int64         `json:"files_part_size,omitempty"`
-	FilesCursors     []string      `json:"files_part_cursors,omitempty"`
+	DocID     string `json:"_id,omitempty"`
+	DocRev    string `json:"_rev,omitempty"`
+	Domain    string `json:"domain"`
+	PartsSize int64  `json:"parts_size,omitempty"`
+
+	PartsCursors     []string      `json:"parts_cursors,omitempty"`
 	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
 	WithoutFiles     bool          `json:"without_files,omitempty"`
 	State            string        `json:"state"`
@@ -42,9 +50,9 @@ type ExportDoc struct {
 	Error            string        `json:"error,omitempty"`
 }
 
-// PartSize is the default size of a file bucket, to split the index into
+// PartsSize is the default size of a file bucket, to split the index into
 // equal-sized parts.
-const PartSize = 100 * 1024 * 1024 // 100 MB
+const PartsSize = 100 * 1024 * 1024 // 100 MB
 
 var (
 	// ErrExportNotFound is used when a export document could not be found
@@ -93,8 +101,8 @@ func (e *ExportDoc) SetRev(rev string) { e.DocRev = rev }
 func (e *ExportDoc) Clone() couchdb.Doc {
 	clone := *e
 
-	clone.FilesCursors = make([]string, len(e.FilesCursors))
-	copy(clone.FilesCursors, e.FilesCursors)
+	clone.PartsCursors = make([]string, len(e.PartsCursors))
+	copy(clone.PartsCursors, e.PartsCursors)
 
 	return &clone
 }
@@ -186,8 +194,8 @@ func ExportData(inst *instance.Instance, archiver Archiver, mac []byte) (io.Read
 	return archiver.OpenArchive(inst, exportDoc)
 }
 
-// ExportCopyFiles does an HTTP copy of a part of the file indexes.
-func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Archiver, mac []byte, cursorStr string) error {
+// ExportCopyData does an HTTP copy of a part of the file indexes.
+func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Archiver, mac []byte, cursorStr string) (err error) {
 	exportDoc, err := GetExport(inst, mac)
 	if err != nil {
 		return err
@@ -195,24 +203,24 @@ func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Ar
 	if exportDoc.HasExpired() {
 		return ErrExportExpired
 	}
-	if exportDoc.WithoutFiles {
-		return ErrExportDoesNotContainIndex
-	}
 
-	cursorPos := 0
+	partNumber := 0
 	// check that the given cursor is part of our pre-defined list of cursors.
 	if cursorStr != "" {
-		for i, c := range exportDoc.FilesCursors {
+		for i, c := range exportDoc.PartsCursors {
 			if c == cursorStr {
-				cursorPos = i + 1
+				partNumber = i + 1
 				break
 			}
 		}
-		if cursorPos == 0 {
+		if partNumber == 0 {
 			return ErrExportInvalidCursor
 		}
+	} else if exportDoc.WithoutFiles {
+		return ErrExportDoesNotContainIndex
 	}
 
+	exportMetadata := partNumber == 0
 	cursor, err := parseCursor(cursorStr)
 	if err != nil {
 		return ErrExportInvalidCursor
@@ -222,6 +230,21 @@ func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Ar
 	if err != nil {
 		return err
 	}
+
+	w.Header().Set("Content-Type", "application/tar+gzip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=cozy-export.part%d.tar.gz", partNumber))
+	w.WriteHeader(http.StatusOK)
+
+	gw := gzip.NewWriter(w)
+	tw := tar.NewWriter(gw)
+	defer func() {
+		if errc := tw.Close(); err == nil {
+			err = errc
+		}
+		if errc := gw.Close(); err == nil {
+			err = errc
+		}
+	}()
 
 	var root *vfs.TreeFile
 	gr, err := gzip.NewReader(archive)
@@ -233,47 +256,81 @@ func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Ar
 	for {
 		var hdr *tar.Header
 		hdr, err = tr.Next()
-		if err != nil {
+		if err == io.EOF {
+			err = nil
 			break
 		}
-		if hdr.Typeflag == tar.TypeReg && hdr.Name == "files-index.json" {
-			if err = json.NewDecoder(tr).Decode(&root); err != nil {
-				return err
+		if err != nil {
+			return
+		}
+		if hdr.Typeflag != tar.TypeReg && hdr.Typeflag != tar.TypeDir {
+			continue
+		}
+
+		isIndexFile := hdr.Typeflag == tar.TypeReg &&
+			hdr.Name == "My Cozy/Metadata/files-index.json"
+
+		if isIndexFile && !exportDoc.WithoutFiles {
+			var jsonData []byte
+			jsonData, err = ioutil.ReadAll(tr)
+			if err != nil {
+				return
 			}
+			if err = json.NewDecoder(bytes.NewReader(jsonData)).Decode(&root); err != nil {
+				return
+			}
+			if exportMetadata {
+				if err = tw.WriteHeader(hdr); err != nil {
+					return
+				}
+				_, err = io.Copy(tw, bytes.NewReader(jsonData))
+				if err != nil {
+					return
+				}
+			}
+		} else if exportMetadata {
+			if err = tw.WriteHeader(hdr); err != nil {
+				return
+			}
+			_, err = io.Copy(tw, tr)
+			if err != nil {
+				return
+			}
+		}
+
+		if isIndexFile && !exportMetadata {
 			break
 		}
 	}
+
 	if errc := gr.Close(); err == nil {
 		err = errc
 	}
 	if errc := archive.Close(); err == nil {
 		err = errc
 	}
-	if err != nil || root == nil {
+	if err != nil || exportDoc.WithoutFiles {
+		return
+	}
+
+	if root == nil {
 		return ErrExportDoesNotContainIndex
 	}
 
-	w.Header().Set("Content-Type", "application/tar+gzip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=cozy-files.part%d.tar.gz", cursorPos))
-	w.WriteHeader(http.StatusOK)
-
-	gw := gzip.NewWriter(w)
-	tw := tar.NewWriter(gw)
-
 	fs := inst.VFS()
 	list, _ := listFilesIndex(tw, root, nil, indexCursor{}, cursor,
-		exportDoc.PartSize, exportDoc.PartSize)
+		exportDoc.PartsSize, exportDoc.PartsSize)
 	for _, file := range list {
 		dirDoc, fileDoc := file.file.Refine()
 		if fileDoc != nil {
 			var f vfs.File
 			f, err = fs.OpenFile(fileDoc)
 			if err != nil {
-				break
+				return
 			}
 			size := file.rangeEnd - file.rangeStart
 			hdr := &tar.Header{
-				Name:       path.Join("cozy/", file.file.Fullpath),
+				Name:       path.Join(FilesDir, file.file.Fullpath),
 				Mode:       0640,
 				Size:       size,
 				AccessTime: fileDoc.CreatedAt,
@@ -287,48 +344,42 @@ func ExportCopyFiles(w http.ResponseWriter, inst *instance.Instance, archiver Ar
 				hdr.Name += fmt.Sprintf(".range%d-%d", file.rangeStart, file.rangeEnd)
 			}
 			if err = tw.WriteHeader(hdr); err != nil {
-				break
+				return
 			}
 			if file.rangeStart > 0 {
 				_, err = f.Seek(file.rangeStart, 0)
 				if err != nil {
-					break
+					return
 				}
 			}
 			_, err = io.CopyN(tw, f, size)
 			if err != nil {
-				break
+				return
 			}
 		} else {
 			hdr := &tar.Header{
-				Name:       path.Join("cozy/", dirDoc.Fullpath),
+				Name:       path.Join(FilesDir, dirDoc.Fullpath),
 				Mode:       0755,
 				ModTime:    dirDoc.UpdatedAt,
 				AccessTime: dirDoc.CreatedAt,
 				Typeflag:   tar.TypeDir,
 			}
 			if err = tw.WriteHeader(hdr); err != nil {
-				break
+				return
 			}
 		}
 	}
 
-	if errc := tw.Close(); err == nil {
-		err = errc
-	}
-	if errc := gw.Close(); err == nil {
-		err = errc
-	}
-	return err
+	return
 }
 
 // Export is used to create a tarball with files and photos from an instance
 func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (exportDoc *ExportDoc, err error) {
 	createdAt := time.Now()
 
-	bucketSize := opts.PartSize
-	if bucketSize == 0 || bucketSize > PartSize {
-		bucketSize = PartSize
+	bucketSize := opts.PartsSize
+	if bucketSize == 0 || bucketSize > PartsSize {
+		bucketSize = PartsSize
 	}
 
 	maxAge := opts.MaxAge
@@ -344,7 +395,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		WithDoctypes: opts.WithDoctypes,
 		WithoutFiles: opts.WithoutFiles,
 		TotalSize:    -1,
-		PartSize:     bucketSize,
+		PartsSize:    bucketSize,
 	}
 
 	// Cleanup previously archived exports.
@@ -439,7 +490,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		}
 		size += n
 
-		exportDoc.FilesCursors, _ = splitFilesIndex(root, nil, nil, exportDoc.PartSize, exportDoc.PartSize)
+		exportDoc.PartsCursors, _ = splitFilesIndex(root, nil, nil, exportDoc.PartsSize, exportDoc.PartsSize)
 	}
 
 	n, err = exportDocs(i, opts.WithDoctypes, createdAt, tw)
@@ -687,7 +738,7 @@ func writeDoc(dir, name string, data interface{},
 func writeMarshaledDoc(dir, name string, doc json.RawMessage,
 	now time.Time, tw *tar.Writer) (int64, error) {
 	hdr := &tar.Header{
-		Name:     path.Join(dir, name+".json"),
+		Name:     path.Join(MetasDir, dir, name+".json"),
 		Mode:     0640,
 		Size:     int64(len(doc)),
 		Typeflag: tar.TypeReg,

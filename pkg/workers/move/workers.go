@@ -24,7 +24,7 @@ func init() {
 
 // ExportOptions contains the options for launching the export worker.
 type ExportOptions struct {
-	PartSize     int64         `json:"files_part_size"`
+	PartsSize    int64         `json:"parts_size"`
 	MaxAge       time.Duration `json:"max_age"`
 	WithDoctypes []string      `json:"with_doctypes,omitempty"`
 	WithoutFiles bool          `json:"without_files,omitempty"`

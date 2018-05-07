@@ -23,9 +23,10 @@ This endpoint can be used to fetch the metadata of an export.
 
 Exports fields are:
 
-* `files_part_size` (int): the size in bytes of a tarball files part.
-* `files_part_cursors` (string array): the list of cursors to access to the
+* `parts_size` (int): the size in bytes of a tarball files part.
+* `parts_cursors` (string array): the list of cursors to access to the
   different files parts.
+* `parts_length` (int): number of parts
 * `with_doctypes` (string array): the list of whitelisted exported doctypes
   (if empty of null, all doctypes are exported)
 * `without_files` (boolean): whether or not the export contains the files
@@ -57,8 +58,8 @@ Content-Type: application/vnd.api+json
             "rev": "2-XXX",
         },
         "attributes": {
-            "files_part_size": 10240,
-            "files_part_cursors": ["AAA", "BBB", "CCC"],
+            "parts_size": 10240,
+            "parts_cursors": ["AAA", "BBB", "CCC"],
             "with_doctypes": [],
             "without_files": false,
             "state": "done",
@@ -96,8 +97,8 @@ Content-Type: application/vnd.api+json
                 "rev": "2-XXX",
             },
             "attributes": {
-                "files_part_size": 10240,
-                "files_part_cursors": ["AAA", "BBB", "CCC"],
+                "parts_size": 10240,
+                "parts_cursors": ["AAA", "BBB", "CCC"],
                 "with_doctypes": [],
                 "without_files": false,
                 "state": "done",
@@ -112,10 +113,10 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### GET /move/exports/:opaque-identifier/data
+### GET /move/exports/data/:opaque-identifier?cursor=XXX
 
-This endpoint will download an archive containing all the metadata of the user.
+This endpoint will download an archive containing the metadata and files of
+the user, as part of a multi-part download. The cursor given should be one of
+the defined in the export document `parts_cursors`.
 
-### GET /move/exports/:opaque-identifier/files?cursor=XXX
-
-This endpoint will download an archive containing the files of the user, as part of a multi-part download. The cursor given should be one of the defined in the export document `files_part_cursors`.
+Only the first part of part of the data contains the metadata.
