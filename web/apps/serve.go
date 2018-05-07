@@ -304,7 +304,9 @@ func init() {
 	barTemplate = template.Must(template.New("cozy-bar").Funcs(funcsMap).Parse(`
 <link rel="stylesheet" type="text/css" href="{{asset .Domain "/fonts/fonts.css"}}">
 <link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-bar.min.css"}}">
-{{range .Warnings}}<meta name="user-action-required" data-error="{{ .Error }}" data-link="{{ .Link }}" data-details={{ .Details }} />{{end}}
+{{range .Warnings}}
+<meta name="user-action-required" data-title="{{ .Title }}" data-code="{{ .Code }}" data-detail="{{ .Detail }}" data-links="{{ .Links.Self }}" />
+{{end}}
 <script defer src="{{asset .Domain "/js/cozy-bar.min.js"}}"></script>`,
 	))
 }

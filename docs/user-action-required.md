@@ -49,6 +49,18 @@ a premium account, etc.
 
 # Anticipating these errors and warning the user
 
+An enpoints exists to get the list of warnings that the user can anticipate.
+For applications these warnings are included directly into the HTML of the
+index page, as follow:
+
+```html
+<meta name="user-action-required"
+  data-title="{{ .Title }}"
+  data-code="{{ .Code }}"
+  data-detail="{{ .Detail }}"
+  data-links="{{ .Links.Self }}"} />
+```
+
 ## Request
 
 ```http
