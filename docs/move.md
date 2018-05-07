@@ -17,7 +17,7 @@ section](./workers.md#export) of the documentation.
 Endpoints described in this documentation require a permission on the
 `io.cozy.exports` doctype.
 
-### GET /move/exports/:export-id
+### GET /move/exports/:opaque-identifier
 
 This endpoint can be used to fetch the metadata of an export.
 
@@ -43,7 +43,7 @@ Exports fields are:
 #### Request
 
 ```http
-GET /move/exports/86dbb546ca49f0ed1ce0a1ff0d1b15e3 HTTP/1.1
+GET /move/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX HTTP/1.1
 Host: alice.cozy.tools
 Authorization: Bearer ...
 Content-Type: application/vnd.api+json
@@ -70,46 +70,6 @@ Content-Type: application/vnd.api+json
             "error": ""
         }
     }
-}
-```
-
-### GET /move/exports
-
-This endpoint can be used to fetch the list of all exports metadata already
-created by the user.
-
-#### Request
-
-```http
-GET /move/exports HTTP/1.1
-Host: alice.cozy.tools
-Authorization: Bearer ...
-Content-Type: application/vnd.api+json
-```
-
-```json
-{
-    "data": [
-        {
-            "type": "io.cozy.exports",
-            "id": "86dbb546ca49f0ed1ce0a1ff0d1b15e3",
-            "meta": {
-                "rev": "2-XXX",
-            },
-            "attributes": {
-                "parts_size": 10240,
-                "parts_cursors": ["AAA", "BBB", "CCC"],
-                "with_doctypes": [],
-                "without_files": false,
-                "state": "done",
-                "created_at": "2018-05-04T08:59:37.530693972+02:00",
-                "expires_at": "2018-05-11T08:59:37.530693972+02:00",
-                "total_size": 1123,
-                "creation_duration": 62978511,
-                "error": ""
-            }
-        }
-    ]
 }
 ```
 

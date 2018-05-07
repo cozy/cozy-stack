@@ -151,12 +151,6 @@ func GetExport(inst *instance.Instance, mac []byte) (*ExportDoc, error) {
 	if !ok {
 		return nil, ErrMACInvalid
 	}
-	return GetExportByID(inst, exportID)
-}
-
-// GetExportByID returns an Export document associated with the given instance
-// and with the given ID.
-func GetExportByID(inst *instance.Instance, exportID string) (*ExportDoc, error) {
 	var exportDoc ExportDoc
 	if err := couchdb.GetDoc(couchdb.GlobalDB, consts.Exports, exportID, &exportDoc); err != nil {
 		if couchdb.IsNotFoundError(err) || couchdb.IsNoDatabaseError(err) {
@@ -180,6 +174,12 @@ func GetExports(domain string) ([]*ExportDoc, error) {
 		Limit: 256,
 	}
 	err := couchdb.FindDocs(couchdb.GlobalDB, consts.Exports, req, &docs)
+	if couchdb.IsNoUsableIndexError(err) {
+		if err = couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes); err != nil {
+			return nil, err
+		}
+		err = couchdb.FindDocs(couchdb.GlobalDB, consts.Exports, req, &docs)
+	}
 	if err != nil && !couchdb.IsNoDatabaseError(err) {
 		return nil, err
 	}

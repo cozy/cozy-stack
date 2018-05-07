@@ -20,7 +20,12 @@ func exportHandler(c echo.Context) error {
 		return err
 	}
 
-	exportDoc, err := move.GetExportByID(inst, c.Param("export-id"))
+	exportMAC, err := base64.URLEncoding.DecodeString(c.Param("export-mac"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err)
+	}
+
+	exportDoc, err := move.GetExport(inst, exportMAC)
 	if err != nil {
 		return err
 	}
@@ -46,29 +51,8 @@ func exportDataHandler(c echo.Context) error {
 		c.QueryParam("cursor"))
 }
 
-func exportsListHandler(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Exports); err != nil {
-		return err
-	}
-
-	exportDocs, err := move.GetExports(inst.Domain)
-	if err != nil {
-		return err
-	}
-
-	objs := make([]jsonapi.Object, len(exportDocs))
-	for i, doc := range exportDocs {
-		objs[i] = doc
-	}
-
-	return jsonapi.DataList(c, http.StatusOK, objs, nil)
-}
-
 // Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
-	g.GET("/exports", exportsListHandler)
-	g.GET("/exports/:export-id", exportHandler)
+	g.GET("/exports/:export-mac", exportHandler)
 	g.GET("/exports/data/:export-mac", exportDataHandler)
 }
