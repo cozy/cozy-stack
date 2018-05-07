@@ -434,7 +434,7 @@ const (
 func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
 	defer func() {
 		if !ok {
-			s = i.PageURL("/", nil)
+			s = i.PageURL("/manager_url_is_not_specified", nil)
 		}
 	}()
 	if i.UUID == "" {
