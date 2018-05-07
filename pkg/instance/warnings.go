@@ -11,8 +11,8 @@ import (
 
 // Warnings returns a list of possible warnings associated with the instance.
 func (i *Instance) Warnings() (warnings []*jsonapi.Error) {
-	notSigned, _ := i.CheckTOSSigned()
-	if notSigned {
+	notSigned, deadline := i.CheckTOSSigned()
+	if notSigned && deadline >= TOSWarning {
 		tosLink, _ := i.ManagerURL(ManagerTOSURL)
 		warnings = append(warnings, &jsonapi.Error{
 			Status: http.StatusPaymentRequired,
