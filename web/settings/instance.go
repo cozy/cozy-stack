@@ -48,6 +48,7 @@ func getInstance(c echo.Context) error {
 	doc.M["auto_update"] = !inst.NoAutoUpdate
 	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
 	doc.M["tos"] = inst.TOSSigned
+	doc.M["tos_latest"] = inst.TOSLatest
 	doc.M["uuid"] = inst.UUID
 	doc.M["context"] = inst.ContextName
 
@@ -79,6 +80,7 @@ func updateInstance(c echo.Context) error {
 	if err != nil || pdoc.Type != permissions.TypeCLI {
 		delete(doc.M, "auth_mode")
 		delete(doc.M, "tos")
+		delete(doc.M, "tos_latest")
 		delete(doc.M, "uuid")
 		delete(doc.M, "context")
 	}
@@ -92,6 +94,7 @@ func updateInstance(c echo.Context) error {
 	doc.M["auto_update"] = !inst.NoAutoUpdate
 	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
 	doc.M["tos"] = inst.TOSSigned
+	doc.M["tos_latest"] = inst.TOSLatest
 	doc.M["uuid"] = inst.UUID
 	doc.M["context"] = inst.ContextName
 

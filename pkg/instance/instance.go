@@ -846,6 +846,10 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 		opts.TOSSigned = tos
 		delete(settings.M, "tos")
 	}
+	if tos, ok := settings.M["tos_latest"].(string); ok {
+		opts.TOSLatest = tos
+		delete(settings.M, "tos_latest")
+	}
 	if autoUpdate, ok := settings.M["auto_update"].(string); ok {
 		if b, err := strconv.ParseBool(autoUpdate); err == nil {
 			opts.AutoUpdate = &b
