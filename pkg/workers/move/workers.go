@@ -3,7 +3,6 @@ package move
 import (
 	"encoding/base64"
 	"fmt"
-	"runtime"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -15,9 +14,9 @@ import (
 func init() {
 	jobs.AddWorker(&jobs.WorkerConfig{
 		WorkerType:   "export",
-		Concurrency:  runtime.NumCPU(),
+		Concurrency:  4,
 		MaxExecCount: 1,
-		Timeout:      10 * 60 * time.Second,
+		Timeout:      5 * 60 * time.Second,
 		WorkerFunc:   ExportWorker,
 	})
 }

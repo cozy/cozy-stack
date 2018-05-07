@@ -28,8 +28,12 @@ import (
 )
 
 const (
-	FilesDir = "My Cozy/Files"
-	MetasDir = "My Cozy/Metadata"
+	// ExportFilesDir is the directory for storing the files in the export
+	// archive.
+	ExportFilesDir = "My Cozy/Files"
+	// ExportMetasDir is the directory for storing the metadata in the export
+	// archive.
+	ExportMetasDir = "My Cozy/Metadata"
 )
 
 // ExportDoc is a documents storing the metadata of an export.
@@ -330,7 +334,7 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 			}
 			size := file.rangeEnd - file.rangeStart
 			hdr := &tar.Header{
-				Name:       path.Join(FilesDir, file.file.Fullpath),
+				Name:       path.Join(ExportFilesDir, file.file.Fullpath),
 				Mode:       0640,
 				Size:       size,
 				AccessTime: fileDoc.CreatedAt,
@@ -358,7 +362,7 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 			}
 		} else {
 			hdr := &tar.Header{
-				Name:       path.Join(FilesDir, dirDoc.Fullpath),
+				Name:       path.Join(ExportFilesDir, dirDoc.Fullpath),
 				Mode:       0755,
 				ModTime:    dirDoc.UpdatedAt,
 				AccessTime: dirDoc.CreatedAt,
@@ -738,7 +742,7 @@ func writeDoc(dir, name string, data interface{},
 func writeMarshaledDoc(dir, name string, doc json.RawMessage,
 	now time.Time, tw *tar.Writer) (int64, error) {
 	hdr := &tar.Header{
-		Name:     path.Join(MetasDir, dir, name+".json"),
+		Name:     path.Join(ExportMetasDir, dir, name+".json"),
 		Mode:     0640,
 		Size:     int64(len(doc)),
 		Typeflag: tar.TypeReg,
