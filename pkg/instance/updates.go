@@ -259,7 +259,7 @@ func createInstaller(inst *Instance, registries []*url.URL, man apps.Manifest, o
 			originalSourceURL.Scheme == "git+ssh" ||
 			originalSourceURL.Scheme == "ssh+git") {
 			var channel string
-			if strings.HasPrefix(originalSourceURL.Fragment, "build") {
+			if man.AppType() == apps.Webapp && strings.HasPrefix(originalSourceURL.Fragment, "build") {
 				channel = "dev"
 			} else {
 				channel = "stable"
