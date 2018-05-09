@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/swift"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 )
 
@@ -151,7 +152,38 @@ func (sfs *swiftVFSV2) Delete() error {
 			sfs.version, err3)
 		return err3
 	}
-	return nil
+	var errm error
+	if err := sfs.deleteContainer(sfs.container); err != nil {
+		errm = multierror.Append(errm, err)
+	}
+	if err := sfs.deleteContainer(sfs.dataContainer); err != nil {
+		errm = multierror.Append(errm, err)
+	}
+	if err := sfs.deleteContainer(sfs.version); err != nil {
+		errm = multierror.Append(errm, err)
+	}
+	return errm
+}
+
+func (sfs *swiftVFSV2) deleteContainer(container string) error {
+	_, _, err := sfs.c.Container(container)
+	if err == swift.ContainerNotFound {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	objectNames, err := sfs.c.ObjectNamesAll(container, nil)
+	if err != nil {
+		return err
+	}
+	if len(objectNames) > 0 {
+		_, err = sfs.c.BulkDelete(container, objectNames)
+		if err != nil {
+			return err
+		}
+	}
+	return sfs.c.ContainerDelete(container)
 }
 
 func (sfs *swiftVFSV2) CreateDir(doc *vfs.DirDoc) error {
