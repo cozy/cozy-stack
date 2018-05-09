@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -117,6 +120,8 @@ func newAdminClient() *client.Client {
 func sslClient() *http.Client {
 	var rootCAs *x509.CertPool
 	var clientCertificate tls.Certificate
+	var verifyPeerCertificate func(_ [][]byte, verifiedChains [][]*x509.Certificate) error
+
 	if envRootCA := os.Getenv("COZY_ADMIN_HTTPS_CLIENT_ROOTCA_FILE"); envRootCA != "" {
 		rootCA, err := ioutil.ReadFile(envRootCA)
 		if err != nil {
@@ -125,6 +130,7 @@ func sslClient() *http.Client {
 		rootCAs = x509.NewCertPool()
 		rootCAs.AppendCertsFromPEM(rootCA)
 	}
+
 	if envClientCert := os.Getenv("COZY_ADMIN_HTTPS_CLIENT_CERT_FILE"); envClientCert != "" {
 		envClientKeyFile := os.Getenv("COZY_ADMIN_HTTPS_CLIENT_KEY_FILE")
 		cert, err := tls.LoadX509KeyPair(envClientCert, envClientKeyFile)
@@ -134,13 +140,48 @@ func sslClient() *http.Client {
 		}
 		clientCertificate = cert
 	}
+
+	if envKeyPinned := os.Getenv("COZY_ADMIN_HTTPS_CLIENT_KEYPINNED_FINGERPRINT"); envKeyPinned != "" {
+		pinnedFingerPrint, err := base64.StdEncoding.DecodeString(envKeyPinned)
+		if err != nil {
+			errFatalf("Invalid encoding for COZY_ADMIN_HTTPS_CLIENT_KEYPINNED_FINGERPRINT")
+		}
+		if len(pinnedFingerPrint) != sha256.Size {
+			errFatalf("Invalid size for COZY_ADMIN_HTTPS_CLIENT_KEYPINNED: expected %d got %d",
+				sha256.Size, len(pinnedFingerPrint))
+		}
+		verifyPeerCertificate = sslVerifyPinnedKey(pinnedFingerPrint)
+	}
+
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{clientCertificate},
-		RootCAs:      rootCAs,
+		Certificates:          []tls.Certificate{clientCertificate},
+		RootCAs:               rootCAs,
+		VerifyPeerCertificate: verifyPeerCertificate,
+		InsecureSkipVerify:    false, // should be false, we *need* rootca verification
 	}
 	return &http.Client{
 		Timeout:   15 * time.Second,
 		Transport: &http.Transport{TLSClientConfig: tlsConfig},
+	}
+}
+
+func sslVerifyPinnedKey(pinnedFingerPrint []byte) func(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
+	if len(pinnedFingerPrint) != sha256.Size {
+		panic("key len should be 32")
+	}
+	return func(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
+		// InsecureSkipVerify is not activated, the chain has been verified when we
+		// enter this callback. It should never be empty. This is an extra-check.
+		// For more infos: https://golang.org/pkg/crypto/tls/#Config
+		if len(verifiedChains) == 0 || len(verifiedChains[0]) == 0 {
+			return fmt.Errorf("ssl: certificate verified chains is empty")
+		}
+		verifiedCert := verifiedChains[0][0]
+		fingerPrint := sha256.Sum256(verifiedCert.RawSubjectPublicKeyInfo)
+		if !bytes.Equal(pinnedFingerPrint, fingerPrint[:]) {
+			return fmt.Errorf("ssl: could not find the valid pinned key from proposed ones")
+		}
+		return nil
 	}
 }
 
