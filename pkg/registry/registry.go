@@ -16,7 +16,7 @@ import (
 	"github.com/cozy/httpcache"
 )
 
-const defaultLimit = 50
+const defaultLimit = 100
 
 // A Version describes a specific release of an application.
 type Version struct {
@@ -203,7 +203,7 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 	var cursor, limit int
 	if fetchAll {
 		cursor = 0
-		limit = 50
+		limit = defaultLimit
 	} else {
 		cursor = r.cursor
 		limit = a.limit
@@ -396,7 +396,7 @@ func fetch(registry, ref *url.URL, cache CacheControl) (resp *http.Response, ok 
 		return
 	}
 	defer func() {
-		if err != nil {
+		if !ok {
 			resp.Body.Close()
 		}
 	}()
