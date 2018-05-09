@@ -2,6 +2,7 @@ package move
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
@@ -235,17 +236,13 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 		return err
 	}
 
-	w.Header().Set("Content-Type", "application/tar+gzip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=cozy-export.part%d.tar.gz", partNumber))
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=cozy-export.part%03d.zip", partNumber))
 	w.WriteHeader(http.StatusOK)
 
-	gw := gzip.NewWriter(w)
-	tw := tar.NewWriter(gw)
+	zw := zip.NewWriter(w)
 	defer func() {
-		if errc := tw.Close(); err == nil {
-			err = errc
-		}
-		if errc := gw.Close(); err == nil {
+		if errc := zw.Close(); err == nil {
 			err = errc
 		}
 	}()
@@ -256,6 +253,7 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 		return err
 	}
 
+	now := time.Now()
 	tr := tar.NewReader(gr)
 	for {
 		var hdr *tar.Header
@@ -271,8 +269,16 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 			continue
 		}
 
-		isIndexFile := hdr.Typeflag == tar.TypeReg &&
-			hdr.Name == "My Cozy/Metadata/files-index.json"
+		var zipFileWriter io.Writer
+		zipFileHdr := &zip.FileHeader{
+			Name:   path.Join(ExportMetasDir, hdr.Name),
+			Method: zip.Deflate,
+			Flags:  0x800, // bit 11 set to force utf-8
+		}
+		zipFileHdr.SetModTime(now) // nolint: megacheck
+		zipFileHdr.SetMode(0750)
+
+		isIndexFile := hdr.Typeflag == tar.TypeReg && hdr.Name == "files-index.json"
 
 		if isIndexFile && !exportDoc.WithoutFiles {
 			var jsonData []byte
@@ -284,19 +290,21 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 				return
 			}
 			if exportMetadata {
-				if err = tw.WriteHeader(hdr); err != nil {
+				zipFileWriter, err = zw.CreateHeader(zipFileHdr)
+				if err != nil {
 					return
 				}
-				_, err = io.Copy(tw, bytes.NewReader(jsonData))
+				_, err = io.Copy(zipFileWriter, bytes.NewReader(jsonData))
 				if err != nil {
 					return
 				}
 			}
 		} else if exportMetadata {
-			if err = tw.WriteHeader(hdr); err != nil {
+			zipFileWriter, err = zw.CreateHeader(zipFileHdr)
+			if err != nil {
 				return
 			}
-			_, err = io.Copy(tw, tr)
+			_, err = io.Copy(zipFileWriter, tr)
 			if err != nil {
 				return
 			}
@@ -322,7 +330,7 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 	}
 
 	fs := inst.VFS()
-	list, _ := listFilesIndex(tw, root, nil, indexCursor{}, cursor,
+	list, _ := listFilesIndex(root, nil, indexCursor{}, cursor,
 		exportDoc.PartsSize, exportDoc.PartsSize)
 	for _, file := range list {
 		dirDoc, fileDoc := file.file.Refine()
@@ -333,21 +341,23 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 				return
 			}
 			size := file.rangeEnd - file.rangeStart
-			hdr := &tar.Header{
-				Name:       path.Join(ExportFilesDir, file.file.Fullpath),
-				Mode:       0640,
-				Size:       size,
-				AccessTime: fileDoc.CreatedAt,
-				ModTime:    fileDoc.UpdatedAt,
-				Typeflag:   tar.TypeReg,
+			hdr := &zip.FileHeader{
+				Name:   path.Join(ExportFilesDir, file.file.Fullpath),
+				Method: zip.Deflate,
+				Flags:  0x800, // bit 11 set to force utf-8
 			}
+			hdr.SetModTime(fileDoc.UpdatedAt) // nolint: megacheck
 			if fileDoc.Executable {
-				hdr.Mode = 750
+				hdr.SetMode(0750)
+			} else {
+				hdr.SetMode(0640)
 			}
 			if size < file.file.ByteSize {
 				hdr.Name += fmt.Sprintf(".range%d-%d", file.rangeStart, file.rangeEnd)
 			}
-			if err = tw.WriteHeader(hdr); err != nil {
+			var zipFileWriter io.Writer
+			zipFileWriter, err = zw.CreateHeader(hdr)
+			if err != nil {
 				return
 			}
 			if file.rangeStart > 0 {
@@ -356,19 +366,20 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 					return
 				}
 			}
-			_, err = io.CopyN(tw, f, size)
+			_, err = io.CopyN(zipFileWriter, f, size)
 			if err != nil {
 				return
 			}
 		} else {
-			hdr := &tar.Header{
-				Name:       path.Join(ExportFilesDir, dirDoc.Fullpath),
-				Mode:       0755,
-				ModTime:    dirDoc.UpdatedAt,
-				AccessTime: dirDoc.CreatedAt,
-				Typeflag:   tar.TypeDir,
+			hdr := &zip.FileHeader{
+				Name:   path.Join(ExportFilesDir, dirDoc.Fullpath) + "/",
+				Method: zip.Deflate,
+				Flags:  0x800, // bit 11 set to force utf-8
 			}
-			if err = tw.WriteHeader(hdr); err != nil {
+			hdr.SetMode(0750)
+			hdr.SetModTime(dirDoc.UpdatedAt) // nolint: megacheck
+			_, err = zw.CreateHeader(hdr)
+			if err != nil {
 				return
 			}
 		}
@@ -467,6 +478,14 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		return
 	}
 	tw := tar.NewWriter(gw)
+	defer func() {
+		if errc := tw.Close(); err == nil {
+			err = errc
+		}
+		if errc := gw.Close(); err == nil {
+			err = errc
+		}
+	}()
 
 	if n, err = writeInstanceDoc(i, "instance", createdAt, tw); err != nil {
 		return
@@ -498,14 +517,9 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 	}
 
 	n, err = exportDocs(i, opts.WithDoctypes, createdAt, tw)
-	if errc := tw.Close(); err == nil {
-		err = errc
+	if err == nil {
+		size += n
 	}
-	if errc := gw.Close(); err == nil {
-		err = errc
-	}
-	size += n
-
 	return
 }
 
@@ -554,7 +568,7 @@ type fileRanged struct {
 
 // listFilesIndex browse the index with the given cursor and returns the
 // flatting list of file entering the bucket.
-func listFilesIndex(tw *tar.Writer, root *vfs.TreeFile, list []fileRanged, currentCursor, cursor indexCursor, bucketSize, sizeLeft int64) ([]fileRanged, int64) {
+func listFilesIndex(root *vfs.TreeFile, list []fileRanged, currentCursor, cursor indexCursor, bucketSize, sizeLeft int64) ([]fileRanged, int64) {
 	if sizeLeft <= 0 {
 		return list, sizeLeft
 	}
@@ -596,7 +610,7 @@ func listFilesIndex(tw *tar.Writer, root *vfs.TreeFile, list []fileRanged, curre
 		if sizeLeft <= 0 {
 			break
 		}
-		list, sizeLeft = listFilesIndex(tw, dir, list, currentCursor.next(dirIndex), cursor, bucketSize, sizeLeft)
+		list, sizeLeft = listFilesIndex(dir, list, currentCursor.next(dirIndex), cursor, bucketSize, sizeLeft)
 	}
 
 	return list, sizeLeft
@@ -742,7 +756,7 @@ func writeDoc(dir, name string, data interface{},
 func writeMarshaledDoc(dir, name string, doc json.RawMessage,
 	now time.Time, tw *tar.Writer) (int64, error) {
 	hdr := &tar.Header{
-		Name:     path.Join(ExportMetasDir, dir, name+".json"),
+		Name:     path.Join(dir, name+".json"),
 		Mode:     0640,
 		Size:     int64(len(doc)),
 		Typeflag: tar.TypeReg,
