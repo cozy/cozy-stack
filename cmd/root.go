@@ -141,13 +141,13 @@ func sslClient() *http.Client {
 		clientCertificate = cert
 	}
 
-	if envKeyPinned := os.Getenv("COZY_ADMIN_HTTPS_CLIENT_KEYPINNED_FINGERPRINT"); envKeyPinned != "" {
+	if envKeyPinned := os.Getenv("COZY_ADMIN_HTTPS_CLIENT_PINNED_KEY"); envKeyPinned != "" {
 		pinnedFingerPrint, err := base64.StdEncoding.DecodeString(envKeyPinned)
 		if err != nil {
-			errFatalf("Invalid encoding for COZY_ADMIN_HTTPS_CLIENT_KEYPINNED_FINGERPRINT")
+			errFatalf("Invalid encoding for COZY_ADMIN_HTTPS_CLIENT_PINNED_KEY")
 		}
 		if len(pinnedFingerPrint) != sha256.Size {
-			errFatalf("Invalid size for COZY_ADMIN_HTTPS_CLIENT_KEYPINNED: expected %d got %d",
+			errFatalf("Invalid size for COZY_ADMIN_HTTPS_CLIENT_PINNED_KEY: expected %d got %d",
 				sha256.Size, len(pinnedFingerPrint))
 		}
 		verifyPeerCertificate = sslVerifyPinnedKey(pinnedFingerPrint)
