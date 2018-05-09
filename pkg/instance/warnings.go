@@ -18,7 +18,7 @@ func (i *Instance) Warnings() (warnings []*jsonapi.Error) {
 			Status: http.StatusPaymentRequired,
 			Title:  "TOS Updated",
 			Code:   "tos-updated",
-			Detail: "Terms of services have been updated",
+			Detail: i.Translate("Terms of services have been updated"),
 			Links:  &jsonapi.LinksList{Self: tosLink},
 		})
 	}

@@ -540,3 +540,6 @@ msgstr "Click on this button to subscribe to a new option and get more data in y
 
 msgid "Notifications Disk Quota text"
 msgstr "Subscribe for more data"
+
+msgid "Terms of services have been updated"
+msgstr "Terms of services have been updated"
