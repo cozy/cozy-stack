@@ -542,4 +542,4 @@ msgid "Notifications Disk Quota text"
 msgstr "Subscribe for more data"
 
 msgid "Terms of services have been updated"
-msgstr "Terms of services have been updated"
+msgstr "To comply with the GDPR, Cozy Cloud has updated its Terms of Services that will take effect on May 25, 2018"
