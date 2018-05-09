@@ -159,3 +159,47 @@ permission. It is done by adding this to the manifest:
   }
 }
 ```
+
+## export
+
+The `export` worker can be used to generate allow the export of all data
+contained in the cozy. At the end of the export, a mail is sent to the user containing a link to access to its data.
+
+The progress of the export process can be followed with realtime events on the doctype `io.cozy.exports`.
+
+Its options are:
+
+* `parts_size`: the size in bytes of the sizes index splitting done for multi-part download of files data
+* `max_age`: the maximum age duration of the archive before it expires
+* `with_doctypes`: list of string for a whitelist of doctypes to exports (exports all doctypes if empty)
+* `without_files`: boolean to avoid exporting the index (preventing download file data)
+
+### Example
+
+```json
+{
+  "parts_size": 52428800,
+  "max_age": 60000000000, // 1 minute
+  "with_doctypes": ["io.cozy.accounts"], // empty or null means all doctypes
+  "without_files": false
+}
+```
+
+### Permissions
+
+To use this worker from a client-side application, you will need to ask the
+permission. It is done by adding this to the manifest:
+
+```json
+{
+  "permissions": {
+    "mail-from-the-user": {
+      "description": "Required to create a export of the user's data",
+      "type": "io.cozy.jobs",
+      "verbs": ["POST"],
+      "selector": "worker",
+      "values": ["export"]
+    }
+  }
+}
+```

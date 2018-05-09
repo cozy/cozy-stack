@@ -144,6 +144,16 @@ func IsConflictError(err error) bool {
 	return couchErr.StatusCode == http.StatusConflict
 }
 
+// IsNoUsableIndexError checks if the given error is an error form couch, for
+// an invalid request on an index that is not usable.
+func IsNoUsableIndexError(err error) bool {
+	couchErr, isCouchErr := IsCouchError(err)
+	if !isCouchErr {
+		return false
+	}
+	return couchErr.Name == "no_usable_index"
+}
+
 func isIndexError(err error) bool {
 	couchErr, isCouchErr := IsCouchError(err)
 	if !isCouchErr {

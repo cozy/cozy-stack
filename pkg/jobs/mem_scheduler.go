@@ -45,7 +45,7 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	defer s.mu.Unlock()
 
 	var ts []*TriggerInfos
-	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(data []byte) error {
+	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(_ string, data json.RawMessage) error {
 		var d struct {
 			Domain string `json:"domain"`
 		}
@@ -53,7 +53,7 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 			return err
 		}
 		db := couchdb.SimpleDatabasePrefix(d.Domain)
-		err := couchdb.ForeachDocs(db, consts.Triggers, func(data []byte) error {
+		err := couchdb.ForeachDocs(db, consts.Triggers, func(_ string, data json.RawMessage) error {
 			var t *TriggerInfos
 			if err := json.Unmarshal(data, &t); err != nil {
 				return err
@@ -188,7 +188,7 @@ func (s *memScheduler) schedule(t Trigger) {
 
 func (s *memScheduler) pushJob(t Trigger, req *JobRequest) {
 	log := s.log.WithField("domain", req.Domain)
-	log.Warnf("trigger %s(%s): Pushing new job %s",
+	log.Infof("trigger %s(%s): Pushing new job %s",
 		t.Type(), t.Infos().TID, req.WorkerType)
 	if _, err := s.broker.PushJob(req); err != nil {
 		log.Errorf("trigger %s(%s): Could not schedule a new job: %s",

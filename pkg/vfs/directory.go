@@ -31,8 +31,10 @@ type DirDoc struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Tags      []string  `json:"tags"`
 
-	// Directory path on VFS
-	Fullpath string `json:"path"`
+	// Directory path on VFS.
+	// Fullpath should always be present. It is marked "omitempty" because
+	// DirDoc is the base of the DirOrFile struct.
+	Fullpath string `json:"path,omitempty"`
 
 	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
 }

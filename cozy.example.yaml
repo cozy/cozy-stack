@@ -108,6 +108,11 @@ jobs:
     #   max_exec_count: 2
     #   timeout: 200s
 
+    # export:
+    #   concurrency: 4
+    #   max_exec_count: 1
+    #   timeout: 200s
+
     # push:     false
     # sendmail: false
 

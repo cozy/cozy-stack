@@ -350,7 +350,7 @@ func (s *redisScheduler) deleteTrigger(t Trigger) error {
 func (s *redisScheduler) GetAllTriggers(domain string) ([]Trigger, error) {
 	var infos []*TriggerInfos
 	db := couchdb.SimpleDatabasePrefix(domain)
-	err := couchdb.ForeachDocs(db, consts.Triggers, func(data []byte) error {
+	err := couchdb.ForeachDocs(db, consts.Triggers, func(_ string, data json.RawMessage) error {
 		var t *TriggerInfos
 		if err := json.Unmarshal(data, &t); err != nil {
 			return err

@@ -1047,7 +1047,7 @@ func List() ([]*Instance, error) {
 
 // ForeachInstances execute the given callback for each instances.
 func ForeachInstances(fn func(*Instance) error) error {
-	return couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(data []byte) error {
+	return couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(_ string, data json.RawMessage) error {
 		var doc *Instance
 		if err := json.Unmarshal(data, &doc); err != nil {
 			return err
