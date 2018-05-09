@@ -107,7 +107,12 @@ type switfArchiver struct {
 }
 
 func (a *switfArchiver) init() error {
-	return a.c.ContainerCreate(a.container, nil)
+	if _, _, err := a.c.Container(a.container); err == swift.ContainerNotFound {
+		if err = a.c.ContainerCreate(a.container, nil); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (a *switfArchiver) OpenArchive(inst *instance.Instance, exportDoc *ExportDoc) (io.ReadCloser, int64, error) {
