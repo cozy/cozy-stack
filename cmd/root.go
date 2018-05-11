@@ -170,18 +170,16 @@ func sslVerifyPinnedKey(pinnedFingerPrint []byte) func(_ [][]byte, verifiedChain
 		panic("key len should be 32")
 	}
 	return func(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
-		// InsecureSkipVerify is not activated, the chain has been verified when we
-		// enter this callback. It should never be empty. This is an extra-check.
-		// For more infos: https://golang.org/pkg/crypto/tls/#Config
-		if len(verifiedChains) == 0 || len(verifiedChains[0]) == 0 {
-			return fmt.Errorf("ssl: certificate verified chains is empty")
+		for _, verifiedChain := range verifiedChains {
+			if len(verifiedChain) > 0 {
+				verifiedCert := verifiedChain[0]
+				fingerPrint := sha256.Sum256(verifiedCert.RawSubjectPublicKeyInfo)
+				if bytes.Equal(pinnedFingerPrint, fingerPrint[:]) {
+					return nil
+				}
+			}
 		}
-		verifiedCert := verifiedChains[0][0]
-		fingerPrint := sha256.Sum256(verifiedCert.RawSubjectPublicKeyInfo)
-		if !bytes.Equal(pinnedFingerPrint, fingerPrint[:]) {
-			return fmt.Errorf("ssl: could not find the valid pinned key from proposed ones")
-		}
-		return nil
+		return fmt.Errorf("ssl: could not find the valid pinned key from proposed ones")
 	}
 }
 
