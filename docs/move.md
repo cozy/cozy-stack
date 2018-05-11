@@ -17,6 +17,41 @@ section](./workers.md#export) of the documentation.
 Endpoints described in this documentation require a permission on the
 `io.cozy.exports` doctype.
 
+### POST /move/exports
+
+This endpoint can be used to create a new export job.
+
+Exports options fields are:
+
+* `parts_size` (optional) (int): the size in bytes of a tarball files part.
+* `max_age` (optional) (duration / nanosecs): the maximum age of the export
+  data.
+* `with_doctypes` (optional) (string array): the list of whitelisted exported
+  doctypes
+* `without_files` (optional) (boolean): whether or not the export contains the
+  files index (if false, it is not possible to generate files tarball).
+
+#### Request
+
+```http
+POST /move/exports HTTP/1.1
+Host: alice.cozy.tools
+Authorization: Bearer ...
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "data": {
+        "attributes": {
+            "parts_size": 10240,
+            "with_doctypes": [],
+            "without_files": false,
+        }
+    }
+}
+```
+
 ### GET /move/exports/:opaque-identifier
 
 This endpoint can be used to fetch the metadata of an export.
