@@ -35,6 +35,11 @@ type ReplicateMsg struct {
 	Errors    int    `json:"errors"`
 }
 
+// ID returns the sharing id
+func (t *ReplicateMsg) ID() string {
+	return t.SharingID
+}
+
 // Replicate starts a replicator on this sharing.
 func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID)

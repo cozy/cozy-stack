@@ -6,13 +6,20 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 const (
 	// StateLen is the number of bytes for the OAuth state parameter
 	StateLen = 16
 )
+
+// Msg is an interface for the sharing worker messages
+type Msg interface {
+	ID() string
+}
 
 // Sharing contains all the information about a sharing.
 type Sharing struct {
@@ -76,11 +83,22 @@ func (s *Sharing) Clone() couchdb.Doc {
 // recipients' cozy instances can be propagated to the sharer's cozy.
 func (s *Sharing) ReadOnly() bool {
 	for _, rule := range s.Rules {
-		if rule.Add == "sync" || rule.Update == "sync" || rule.Remove == "sync" {
+		if rule.HasSync() {
 			return false
 		}
 	}
 	return true
+}
+
+// WithPropagation returns true if no rule allows that a change can be propagated, in
+// one way or another
+func (s *Sharing) WithPropagation() bool {
+	for _, rule := range s.Rules {
+		if rule.HasSync() || rule.HasPush() {
+			return true
+		}
+	}
+	return false
 }
 
 // BeOwner initializes a sharing on the cozy of its owner
@@ -182,6 +200,77 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 	s.Credentials = make([]Credentials, 1)
 
 	return couchdb.CreateNamedDocWithDB(inst, s)
+}
+
+// Revoke remove the credentials for all members, contact them, removes the
+// triggers and set the active flag to false.
+func (s *Sharing) Revoke(inst *instance.Instance) error {
+	var errm error
+
+	if !s.Owner {
+		return ErrInvalidSharing
+	}
+	for i := range s.Members {
+		if i != 0 {
+			if err := s.RevokeMember(inst, &s.Members[i], &s.Credentials[i-1]); err != nil {
+				multierror.Append(errm, err)
+			}
+		}
+	}
+	if s.WithPropagation() {
+		if err := s.RemoveTriggers(inst); err != nil {
+			return err
+		}
+	}
+	if err := RemoveReferences(inst, s.SID); err != nil {
+		return err
+	}
+	s.Active = false
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return err
+	}
+	return errm
+}
+
+// RemoveTriggers remove all the triggers associated to this sharing
+func (s *Sharing) RemoveTriggers(inst *instance.Instance) error {
+	var err error
+	sched := jobs.System()
+	// TODO: a view on WorkerType would be more efficient
+	triggers, err := sched.GetAllTriggers(inst.Domain)
+	if err != nil {
+		return err
+	}
+	for _, trigger := range triggers {
+		infos := trigger.Infos()
+		var sid string
+		if infos.WorkerType == "share-track" {
+			var m TrackMessage
+			sid, err = sharingIDFromMsg(infos.Message, &m)
+		} else if infos.WorkerType == "share-replicate" {
+			var m ReplicateMsg
+			sid, err = sharingIDFromMsg(infos.Message, &m)
+		} else if infos.WorkerType == "share-upload" {
+			var m UploadMsg
+			sid, err = sharingIDFromMsg(infos.Message, &m)
+		}
+		if err != nil {
+			return err
+		}
+		if sid == s.SID {
+			if err = sched.DeleteTrigger(inst.Domain, trigger.ID()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func sharingIDFromMsg(msg jobs.Message, m Msg) (string, error) {
+	if err := msg.Unmarshal(m); err != nil {
+		return "", err
+	}
+	return m.ID(), nil
 }
 
 // FindSharing retrieves a sharing document from its ID

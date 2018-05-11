@@ -1,9 +1,11 @@
 package sharing
 
 import (
+	"net/http"
 	"net/url"
 
 	"github.com/cozy/cozy-stack/client/auth"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -22,6 +24,8 @@ const (
 	MemberStatusPendingInvitation = "pending"
 	// MemberStatusReady is for recipient that have accepted the sharing
 	MemberStatusReady = "ready"
+	// MemberStatusRevoked is for a revoked member
+	MemberStatusRevoked = "revoked"
 )
 
 // Member contains the information about a recipient (or the sharer) for a sharing
@@ -146,5 +150,42 @@ func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) er
 		return err
 	}
 	c.AccessToken.AccessToken = token.AccessToken
+	return couchdb.UpdateDoc(inst, s)
+}
+
+// RevokeMember revoke the access granted to a member and contact it
+func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credentials) error {
+	u, err := url.Parse(m.Instance)
+	if m.Instance == "" || err != nil {
+		return ErrInvalidSharing
+	}
+
+	// No need to contact the revoked member if the sharing is not ready
+	if m.Status == MemberStatusReady {
+		res, err := request.Req(&request.Options{
+			Method: http.MethodDelete,
+			Scheme: u.Scheme,
+			Domain: u.Host,
+			Path:   "/sharings/" + s.SID,
+			Headers: request.Headers{
+				"Accept":       "application/vnd.api+json",
+				"Content-Type": "application/vnd.api+json",
+			},
+		})
+		if err != nil {
+			return err
+		}
+		if res.StatusCode/100 != 2 {
+			return ErrRequestFailed
+		}
+	}
+	m.Status = MemberStatusRevoked
+
+	// Do not remove the credential to preserve the members / credentials order
+	c.State = ""
+	c.XorKey = nil
+	c.Client = nil
+	c.AccessToken = nil
+
 	return couchdb.UpdateDoc(inst, s)
 }

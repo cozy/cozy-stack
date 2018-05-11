@@ -181,17 +181,6 @@ func (r Rule) TriggerArgs() string {
 	return args
 }
 
-// TwoWays returns true if at least one rule has an ActionRuleSync defined
-func (s *Sharing) TwoWays() bool {
-	for _, r := range s.Rules {
-		if r.Add == ActionRuleSync || r.Update == ActionRuleSync ||
-			r.Remove == ActionRuleSync {
-			return true
-		}
-	}
-	return false
-}
-
 // FirstFilesRule returns the first not-local rules for the files doctype
 func (s *Sharing) FirstFilesRule() *Rule {
 	for i, rule := range s.Rules {
@@ -200,4 +189,16 @@ func (s *Sharing) FirstFilesRule() *Rule {
 		}
 	}
 	return nil
+}
+
+// HasSync returns true if the rule has a sync behaviour
+func (r *Rule) HasSync() bool {
+	return r.Add == ActionRuleSync || r.Update == ActionRuleSync ||
+		r.Remove == ActionRuleSync
+}
+
+// HasPush returns true if the rule has a sync behaviour
+func (r *Rule) HasPush() bool {
+	return r.Add == ActionRulePush || r.Update == ActionRulePush ||
+		r.Remove == ActionRulePush
 }
