@@ -49,21 +49,23 @@ func (i *Instance) CheckTOSSigned(args ...string) (notSigned bool, deadline TOSD
 	if !ok {
 		return
 	}
+	defer func() {
+		if notSigned {
+			now := time.Now()
+			if now.After(latestDate) {
+				deadline = TOSBlocked
+			} else if now.After(latestDate.Add(-15 * 24 * time.Hour)) {
+				deadline = TOSWarning
+			} else {
+				deadline = TOSNone
+			}
+		}
+	}()
 	signed, _, ok := parseTOSVersion(i.TOSSigned)
 	if !ok {
-		return
-	}
-	if signed >= latest {
-		return
-	}
-	notSigned = true
-	now := time.Now()
-	if now.After(latestDate) {
-		deadline = TOSBlocked
-	} else if now.After(latestDate.Add(-15 * 24 * time.Hour)) {
-		deadline = TOSWarning
+		notSigned = true
 	} else {
-		deadline = TOSNone
+		notSigned = signed < latest
 	}
 	return
 }
