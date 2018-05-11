@@ -137,14 +137,14 @@ func SetupRoutes(router *echo.Echo) error {
 
 	// authentified JSON API routes
 	{
-		mws := []echo.MiddlewareFunc{
+		mwsNotBlocked := []echo.MiddlewareFunc{
 			middlewares.NeedInstance,
 			middlewares.LoadSession,
 			middlewares.Accept(middlewares.AcceptOptions{
 				DefaultContentTypeOffer: jsonapi.ContentType,
 			}),
-			middlewares.CheckInstanceTOS,
 		}
+		mws := append(mwsNotBlocked, middlewares.CheckInstanceTOS)
 		apps.WebappsRoutes(router.Group("/apps", mws...))
 		apps.KonnectorRoutes(router.Group("/konnectors", mws...))
 		registry.Routes(router.Group("/registry", mws...))
@@ -157,7 +157,9 @@ func SetupRoutes(router *echo.Echo) error {
 		permissions.Routes(router.Group("/permissions", mws...))
 		realtime.Routes(router.Group("/realtime", mws...))
 		remote.Routes(router.Group("/remote", mws...))
-		settings.Routes(router.Group("/settings", mws...))
+
+		// The settings routes needs not to be blocked
+		settings.Routes(router.Group("/settings", mwsNotBlocked...))
 
 		// Careful, the normal middlewares NeedInstance and LoadSession are not
 		// applied to this group in web/routing since they should not be used for
