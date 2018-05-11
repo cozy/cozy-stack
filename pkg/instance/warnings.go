@@ -46,7 +46,7 @@ func (i *Instance) CheckTOSSigned(args ...string) (notSigned bool, deadline TOSD
 		tosLatest = args[0]
 	}
 	latest, latestDate, ok := parseTOSVersion(tosLatest)
-	if !ok {
+	if !ok || latestDate.IsZero() {
 		return
 	}
 	defer func() {
@@ -97,6 +97,7 @@ func parseTOSVersion(v string) (major int, date time.Time, ok bool) {
 	}
 	suffix := strings.SplitN(a[2], "-", 2)
 	if len(suffix) < 2 {
+		ok = true
 		return
 	}
 	date, err = time.Parse("20060102", suffix[1])

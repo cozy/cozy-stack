@@ -943,7 +943,7 @@ func Patch(i *Instance, opts *Options) error {
 		}
 
 		if opts.TOSLatest != "" {
-			if _, _, ok := parseTOSVersion(opts.TOSLatest); !ok {
+			if _, date, ok := parseTOSVersion(opts.TOSLatest); !ok || date.IsZero() {
 				return ErrBadTOSVersion
 			}
 			if i.TOSLatest != opts.TOSLatest {
