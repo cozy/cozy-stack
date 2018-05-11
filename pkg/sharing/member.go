@@ -48,6 +48,9 @@ type Credentials struct {
 
 	// XorKey is used to transform file identifiers
 	XorKey []byte `json:"xor_key,omitempty"`
+
+	// LocalClientID is the ClientID of the member in the oauth db, for synced sharing
+	LocalClientID string `json:"local_client_id"`
 }
 
 // AddContact adds the contact with the given identifier
@@ -178,7 +181,13 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 		if res.StatusCode/100 != 2 {
 			return ErrRequestFailed
 		}
+		if !s.ReadOnly() {
+			if err := DeleteOAuthClient(inst, m, c); err != nil {
+				return err
+			}
+		}
 	}
+
 	m.Status = MemberStatusRevoked
 
 	// Do not remove the credential to preserve the members / credentials order
@@ -186,6 +195,7 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 	c.XorKey = nil
 	c.Client = nil
 	c.AccessToken = nil
+	c.LocalClientID = ""
 
 	return couchdb.UpdateDoc(inst, s)
 }

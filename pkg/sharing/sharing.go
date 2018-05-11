@@ -258,8 +258,8 @@ func (s *Sharing) RemoveTriggers(inst *instance.Instance) error {
 			return err
 		}
 		if sid == s.SID {
-			if err = sched.DeleteTrigger(inst.Domain, trigger.ID()); err != nil {
-				return err
+			if errt := sched.DeleteTrigger(inst.Domain, trigger.ID()); errt != nil {
+				return errt
 			}
 		}
 	}

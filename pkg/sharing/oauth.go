@@ -3,6 +3,7 @@ package sharing
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -158,6 +159,22 @@ func CreateOAuthClient(inst *instance.Instance, m *Member) (*oauth.Client, error
 	return &cli, nil
 }
 
+// DeleteOAuthClient removes the client associated to the given member
+func DeleteOAuthClient(inst *instance.Instance, m *Member, cred *Credentials) error {
+	if m.Instance == "" {
+		return ErrInvalidURL
+	}
+	clientID := cred.LocalClientID
+	client, err := oauth.FindClient(inst, clientID)
+	if err != nil {
+		return err
+	}
+	if cerr := client.Delete(inst); cerr != nil {
+		return errors.New(cerr.Error)
+	}
+	return nil
+}
+
 // ConvertOAuthClient converts an OAuth client from one type (pkg/oauth.Client)
 // to another (client/auth.Client)
 func ConvertOAuthClient(c *oauth.Client) *auth.Client {
@@ -280,9 +297,6 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 			s.Members[i+1].Status = MemberStatusReady
 			s.Credentials[i].Client = creds.Client
 			s.Credentials[i].AccessToken = creds.AccessToken
-			if err := couchdb.UpdateDoc(inst, s); err != nil {
-				return nil, err
-			}
 			ac := APICredentials{
 				CID: s.SID,
 				Credentials: &Credentials{
@@ -294,12 +308,17 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 				if err != nil {
 					return &ac, nil
 				}
+				s.Credentials[i].LocalClientID = cli.ClientID
+
 				ac.Credentials.Client = ConvertOAuthClient(cli)
 				token, err := CreateAccessToken(inst, cli, s.SID)
 				if err != nil {
 					return &ac, nil
 				}
 				ac.Credentials.AccessToken = token
+			}
+			if err := couchdb.UpdateDoc(inst, s); err != nil {
+				return nil, err
 			}
 			go s.Setup(inst, &s.Members[i+1])
 			return &ac, nil
