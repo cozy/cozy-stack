@@ -198,6 +198,11 @@ func (i *Installer) Slug() string {
 	return i.slug
 }
 
+// Domain return the domain of instance associated with the installer.
+func (i *Installer) Domain() string {
+	return i.db.Prefix()
+}
+
 // Run will install, update or delete the application linked to the installer,
 // depending on specified operation. It will report its progress or error (see
 // Poll method) and should be run asynchronously.

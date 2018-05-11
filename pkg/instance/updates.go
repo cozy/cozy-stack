@@ -116,7 +116,8 @@ func UpdateAll(opts *UpdatesOptions) error {
 			for installer := range insc {
 				_, err := installer.RunSync()
 				if err != nil {
-					err = fmt.Errorf("Could not update app %s: %s", installer.Slug(), err)
+					err = fmt.Errorf("Could not update app %s on %q: %s",
+						installer.Slug(), installer.Domain(), err)
 				}
 				errc <- err
 			}
@@ -161,7 +162,8 @@ func UpdateInstance(inst *Instance, opts *UpdatesOptions) error {
 			for installer := range insc {
 				_, err := installer.RunSync()
 				if err != nil {
-					err = fmt.Errorf("Could not update app %s: %s", installer.Slug(), err)
+					err = fmt.Errorf("Could not update app %s on %q: %s",
+						installer.Slug(), installer.Domain(), err)
 				}
 				errc <- err
 			}
@@ -209,7 +211,8 @@ func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, o
 			}
 			installer, err := createInstaller(inst, registries, app, opts)
 			if err != nil {
-				errc <- fmt.Errorf("Could not create installer for webapp %s: %s", app.Slug(), err)
+				errc <- fmt.Errorf("Could not create installer for webapp %s on %q: %s",
+					app.Slug(), inst.Domain, err)
 			} else {
 				insc <- installer
 			}
@@ -229,7 +232,8 @@ func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, o
 			}
 			installer, err := createInstaller(inst, registries, app, opts)
 			if err != nil {
-				errc <- fmt.Errorf("Could not create installer for konnector %s: %s", app.Slug(), err)
+				errc <- fmt.Errorf("Could not create installer for konnector %s on %q: %s",
+					app.Slug(), inst.Domain, err)
 			} else {
 				insc <- installer
 			}
