@@ -125,7 +125,7 @@ func fetchHTTP(src *url.URL, shasum []byte, fs Copier, man Manifest, prefix stri
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return ErrNotFound
+		return ErrSourceNotReachable
 	}
 
 	var reader io.Reader = resp.Body

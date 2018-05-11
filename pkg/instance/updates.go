@@ -17,7 +17,7 @@ import (
 	"github.com/robfig/cron"
 )
 
-const numUpdaters = 50
+const numUpdaters = 4
 const numUpdatersSingleInstance = 4
 
 var log = logger.WithNamespace("updates")
