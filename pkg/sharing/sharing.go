@@ -16,9 +16,11 @@ const (
 	StateLen = 16
 )
 
-// WorkerSharingMsg is an interface for the sharing worker messages
-type WorkerSharingMsg interface {
-	ID() string
+// Triggers keep record of which triggers are active
+type Triggers struct {
+	TrackID     string `json:"track_id,omitempty"`
+	ReplicateID string `json:"replicate_id,omitempty"`
+	UploadID    string `json:"upload_id,omitempty"`
 }
 
 // Sharing contains all the information about a sharing.
@@ -26,13 +28,7 @@ type Sharing struct {
 	SID  string `json:"_id,omitempty"`
 	SRev string `json:"_rev,omitempty"`
 
-	// Triggers keep record of which triggers are active
-	Triggers struct {
-		Track     bool `json:"track,omitempty"`
-		Replicate bool `json:"replicate,omitempty"`
-		Upload    bool `json:"upload,omitempty"`
-	} `json:"triggers"`
-
+	Triggers    Triggers  `json:"triggers"`
 	Active      bool      `json:"active,omitempty"`
 	Owner       bool      `json:"owner,omitempty"`
 	Open        bool      `json:"open_sharing,omitempty"`
@@ -233,43 +229,27 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 
 // RemoveTriggers remove all the triggers associated to this sharing
 func (s *Sharing) RemoveTriggers(inst *instance.Instance) error {
-	var err error
-	sched := jobs.System()
-	// TODO: a view on WorkerType would be more efficient
-	triggers, err := sched.GetAllTriggers(inst.Domain)
-	if err != nil {
+	if err := removeSharingTrigger(inst, s.Triggers.TrackID); err != nil {
 		return err
 	}
-	for _, trigger := range triggers {
-		infos := trigger.Infos()
-		var sid string
-		if infos.WorkerType == "share-track" {
-			var m TrackMessage
-			sid, err = sharingIDFromMsg(infos.Message, &m)
-		} else if infos.WorkerType == "share-replicate" {
-			var m ReplicateMsg
-			sid, err = sharingIDFromMsg(infos.Message, &m)
-		} else if infos.WorkerType == "share-upload" {
-			var m UploadMsg
-			sid, err = sharingIDFromMsg(infos.Message, &m)
-		}
-		if err != nil {
-			return err
-		}
-		if sid == s.SID {
-			if errt := sched.DeleteTrigger(inst.Domain, trigger.ID()); errt != nil {
-				return errt
-			}
-		}
+	if err := removeSharingTrigger(inst, s.Triggers.ReplicateID); err != nil {
+		return err
 	}
+	if err := removeSharingTrigger(inst, s.Triggers.UploadID); err != nil {
+		return err
+	}
+	s.Triggers = Triggers{}
 	return nil
 }
 
-func sharingIDFromMsg(msg jobs.Message, wsm WorkerSharingMsg) (string, error) {
-	if err := msg.Unmarshal(wsm); err != nil {
-		return "", err
+func removeSharingTrigger(inst *instance.Instance, triggerID string) error {
+	if triggerID != "" {
+		sched := jobs.System()
+		if err := sched.DeleteTrigger(inst.Domain, triggerID); err != nil {
+			return err
+		}
 	}
-	return wsm.ID(), nil
+	return nil
 }
 
 // FindSharing retrieves a sharing document from its ID

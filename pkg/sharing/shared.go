@@ -20,11 +20,6 @@ type TrackMessage struct {
 	DocType   string `json:"doctype"`
 }
 
-// ID returns the sharing id
-func (t *TrackMessage) ID() string {
-	return t.SharingID
-}
-
 // TrackEvent is used for jobs on the share-track worker.
 // It's unique per job.
 type TrackEvent struct {

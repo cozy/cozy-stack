@@ -25,11 +25,6 @@ type UploadMsg struct {
 	Errors    int    `json:"errors"`
 }
 
-// ID returns the sharing id
-func (t *UploadMsg) ID() string {
-	return t.SharingID
-}
-
 // Upload starts uploading files for this sharing
 func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID + "/upload")

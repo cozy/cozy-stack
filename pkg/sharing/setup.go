@@ -117,7 +117,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 // AddTrackTriggers creates the share-track triggers for each rule of the
 // sharing that will update the io.cozy.shared database.
 func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
-	if s.Triggers.Track {
+	if s.Triggers.TrackID != "" {
 		return nil
 	}
 	sched := jobs.System()
@@ -147,8 +147,8 @@ func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
 		if err = sched.AddTrigger(t); err != nil {
 			return err
 		}
+		s.Triggers.TrackID = t.ID()
 	}
-	s.Triggers.Track = true
 	return couchdb.UpdateDoc(inst, s)
 }
 
@@ -156,7 +156,7 @@ func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
 // it will starts the replicator when some changes are made to the
 // io.cozy.shared database.
 func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
-	if s.Triggers.Replicate {
+	if s.Triggers.ReplicateID != "" {
 		return nil
 	}
 	msg, err := jobs.NewMessage(&ReplicateMsg{
@@ -183,7 +183,7 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 	if err = sched.AddTrigger(t); err != nil {
 		return err
 	}
-	s.Triggers.Replicate = true
+	s.Triggers.ReplicateID = t.ID()
 	return couchdb.UpdateDoc(inst, s)
 }
 
@@ -321,7 +321,7 @@ func (s *Sharing) buildReferences(inst *instance.Instance, rule Rule, r int, doc
 // it will starts the synchronization of the binaries when a file is added or
 // updated in the io.cozy.shared database.
 func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
-	if s.Triggers.Upload {
+	if s.Triggers.UploadID != "" {
 		return nil
 	}
 	msg, err := jobs.NewMessage(&UploadMsg{
@@ -348,7 +348,7 @@ func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
 	if err = sched.AddTrigger(t); err != nil {
 		return err
 	}
-	s.Triggers.Upload = true
+	s.Triggers.UploadID = t.ID()
 	return couchdb.UpdateDoc(inst, s)
 }
 
