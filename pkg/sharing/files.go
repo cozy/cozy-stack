@@ -272,6 +272,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			if ref == nil || (dir == nil && file == nil) {
 				continue
 			}
+			// TODO if ref revision >= (dir|file) revision, we should manage the conflict
 			if dir != nil {
 				err = s.TrashDir(inst, dir)
 			} else {
@@ -280,18 +281,13 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			if err != nil {
 				errm = multierror.Append(errm, err)
 			}
-		} else if ref == nil && dir == nil {
+		} else if dir == nil {
 			err = s.CreateDir(inst, target)
 			if err != nil {
 				errm = multierror.Append(errm, err)
 			}
-			// TODO update the io.cozy.shared reference?
 		} else if ref == nil {
 			// TODO be safe => return an error
-			continue
-		} else if dir == nil {
-			// TODO manage the conflict: doc was deleted/moved outside the
-			// sharing on this cozy and updated on the other cozy
 			continue
 		} else {
 			err = s.UpdateDir(inst, target, dir)
@@ -457,7 +453,6 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 }
 
 // TrashDir puts the directory in the trash
-// TODO conflicts
 func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 	if strings.HasPrefix(dir.Fullpath+"/", vfs.TrashDirName+"/") {
 		// nothing to do if the directory is already in the trash
@@ -469,7 +464,6 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 
 // TrashFile puts the file in the trash
 // TODO if file has references, we should keep it in a special folder
-// TODO conflicts
 func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc) error {
 	if file.Trashed {
 		// nothing to do if the directory is already in the trash
