@@ -16,8 +16,8 @@ const (
 	StateLen = 16
 )
 
-// Msg is an interface for the sharing worker messages
-type Msg interface {
+// WorkerSharingMsg is an interface for the sharing worker messages
+type WorkerSharingMsg interface {
 	ID() string
 }
 
@@ -210,19 +210,18 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 	if !s.Owner {
 		return ErrInvalidSharing
 	}
-	for i := range s.Members {
-		if i != 0 {
-			if err := s.RevokeMember(inst, &s.Members[i], &s.Credentials[i-1]); err != nil {
-				multierror.Append(errm, err)
-			}
+	for i := range s.Credentials {
+		if err := s.RevokeMember(inst, &s.Members[i+1], &s.Credentials[i]); err != nil {
+			multierror.Append(errm, err)
 		}
 	}
+
 	if s.WithPropagation() {
 		if err := s.RemoveTriggers(inst); err != nil {
 			return err
 		}
 	}
-	if err := RemoveReferences(inst, s.SID); err != nil {
+	if err := RemoveSharedRefs(inst, s.SID); err != nil {
 		return err
 	}
 	s.Active = false
@@ -266,11 +265,11 @@ func (s *Sharing) RemoveTriggers(inst *instance.Instance) error {
 	return nil
 }
 
-func sharingIDFromMsg(msg jobs.Message, m Msg) (string, error) {
-	if err := msg.Unmarshal(m); err != nil {
+func sharingIDFromMsg(msg jobs.Message, wsm WorkerSharingMsg) (string, error) {
+	if err := msg.Unmarshal(wsm); err != nil {
 		return "", err
 	}
-	return m.ID(), nil
+	return wsm.ID(), nil
 }
 
 // FindSharing retrieves a sharing document from its ID

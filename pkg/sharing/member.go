@@ -191,11 +191,7 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 	m.Status = MemberStatusRevoked
 
 	// Do not remove the credential to preserve the members / credentials order
-	c.State = ""
-	c.XorKey = nil
-	c.Client = nil
-	c.AccessToken = nil
-	c.LocalClientID = ""
+	*c = Credentials{}
 
 	return couchdb.UpdateDoc(inst, s)
 }

@@ -244,8 +244,8 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	return couchdb.UpdateDoc(inst, &ref)
 }
 
-// RemoveReferences deletes the references containing the sharingid
-func RemoveReferences(inst *instance.Instance, sharingID string) error {
+// RemoveSharedRefs deletes the references containing the sharingid
+func RemoveSharedRefs(inst *instance.Instance, sharingID string) error {
 	var req = &couchdb.ViewRequest{
 		Key:         sharingID,
 		IncludeDocs: true,
