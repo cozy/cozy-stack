@@ -229,6 +229,8 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if err != nil {
 		return err
 	}
+	s.Credentials[0].LocalClientID = cli.ClientID
+
 	token, err := CreateAccessToken(inst, cli, s.SID)
 	if err != nil {
 		return err

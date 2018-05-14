@@ -171,8 +171,9 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 			Domain: u.Host,
 			Path:   "/sharings/" + s.SID,
 			Headers: request.Headers{
-				"Accept":       "application/vnd.api+json",
-				"Content-Type": "application/vnd.api+json",
+				"Accept":        "application/vnd.api+json",
+				"Content-Type":  "application/vnd.api+json",
+				"Authorization": "Bearer " + c.AccessToken.AccessToken,
 			},
 		})
 		if err != nil {

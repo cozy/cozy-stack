@@ -208,10 +208,9 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 	}
 	for i := range s.Credentials {
 		if err := s.RevokeMember(inst, &s.Members[i+1], &s.Credentials[i]); err != nil {
-			multierror.Append(errm, err)
+			errm = multierror.Append(errm, err)
 		}
 	}
-
 	if s.WithPropagation() {
 		if err := s.RemoveTriggers(inst); err != nil {
 			return err
@@ -250,6 +249,31 @@ func removeSharingTrigger(inst *instance.Instance, triggerID string) error {
 		}
 	}
 	return nil
+}
+
+// RevokeByNotification is called on the recipient side, after a revocation
+// performed by the sharer
+func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
+	if s.Owner {
+		return ErrInvalidSharing
+	}
+	if err := DeleteOAuthClient(inst, &s.Members[0], &s.Credentials[0]); err != nil {
+		return err
+	}
+	if !s.ReadOnly() {
+		if err := s.RemoveTriggers(inst); err != nil {
+			return err
+		}
+	}
+	if s.WithPropagation() {
+		if err := RemoveSharedRefs(inst, s.SID); err != nil {
+			return err
+		}
+	}
+	s.Credentials = nil
+	s.Active = false
+
+	return couchdb.UpdateDoc(inst, s)
 }
 
 // FindSharing retrieves a sharing document from its ID

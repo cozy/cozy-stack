@@ -186,6 +186,20 @@ func RevokeSharing(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// RevocationNotif is used to inform a recipient that the sharing is revoked
+func RevocationNotif(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if err = s.RevokeByNotification(inst); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state string, m *sharing.Member) error {
 	publicName, _ := inst.PublicName()
 	return c.Render(code, "sharing_discovery.html", echo.Map{
@@ -278,7 +292,8 @@ func Routes(router *echo.Group) {
 	router.GET("/:sharing-id", GetSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
 
-	router.DELETE("/:sharing-id/recipients", RevokeSharing)
+	router.DELETE("/:sharing-id/recipients", RevokeSharing)                 // On the sharer
+	router.DELETE("/:sharing-id", RevocationNotif, checkSharingPermissions) // On the recipient
 
 	router.GET("/doctype/:doctype", GetSharingsInfoByDocType)
 
