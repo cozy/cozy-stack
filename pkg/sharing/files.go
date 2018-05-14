@@ -136,7 +136,7 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	fs := inst.VFS()
 	dir, _, err := fs.DirOrFileByID(consts.SharedWithMeDirID)
-	if err != nil && !couchdb.IsNotFoundError(err) {
+	if err != nil && err != os.ErrNotExist {
 		return nil, err
 	}
 
@@ -262,10 +262,6 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			ref = nil
 		}
 		dir, file, err := fs.DirOrFileByID(id)
-		// TODO check why the methods (Dir|File)ByID can return a couchdb error or an os error
-		if couchdb.IsNotFoundError(err) {
-			err = os.ErrNotExist
-		}
 		if err != nil && err != os.ErrNotExist {
 			inst.Logger().WithField("nspace", "replicator").
 				Debugf("Error on finding ref of bulk files: %s", err)

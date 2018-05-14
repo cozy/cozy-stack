@@ -339,6 +339,9 @@ func (c *couchdbIndexer) DirOrFileByID(fileID string) (*DirDoc, *FileDoc, error)
 	dirOrFile := &DirOrFileDoc{}
 	err := couchdb.GetDoc(c.db, consts.Files, fileID, dirOrFile)
 	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			err = os.ErrNotExist
+		}
 		return nil, nil, err
 	}
 	dirDoc, fileDoc := dirOrFile.Refine()

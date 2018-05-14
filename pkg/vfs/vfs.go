@@ -168,7 +168,7 @@ type Indexer interface {
 	// DirOrFileByID returns the document from its identifier without knowing in
 	// advance its type. One of the returned argument is not nil.
 	DirOrFileByID(fileID string) (*DirDoc, *FileDoc, error)
-	// DirOrFileByID returns the document from its path without knowing in
+	// DirOrFileByPath returns the document from its path without knowing in
 	// advance its type. One of the returned argument is not nil.
 	DirOrFileByPath(name string) (*DirDoc, *FileDoc, error)
 
