@@ -807,6 +807,10 @@ Authorization: Bearer ...
 {
   "_id": "4b24ab130b2538b7b444fc65430198ad",
   "_rev": "1-356bf77c03baa1da851a2be1f06aba81",
+  "_revisions": {
+    "start": 1,
+    "ids": ["356bf77c03baa1da851a2be1f06aba81"]
+  },
   "type": "file",
   "name": "cloudy.jpg",
   "dir_id": "4b24ab130b2538b7b444fc65430188cd",
