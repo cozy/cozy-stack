@@ -67,7 +67,6 @@ func XorID(id string, key []byte) string {
 //   directory, we must create directory before the file)
 // - directories are sorted by increasing depth (if a sub-folder is created
 //   in a new directory, we must create the parent before the child)
-// TODO trashed / deleted files and folders
 func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 	sort.SliceStable(files, func(i, j int) bool {
 		a, b := files[i], files[j]
@@ -76,6 +75,12 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 		}
 		if b["type"] == consts.FileType {
 			return true
+		}
+		if removed, ok := a["_deleted"].(bool); ok && removed {
+			return true
+		}
+		if removed, ok := b["_deleted"].(bool); ok && removed {
+			return false
 		}
 		p, ok := a["path"].(string)
 		if !ok {
@@ -97,7 +102,6 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 //
 // ruleIndexes is a map of "doctype-docid" -> rule index
 // TODO keep referenced_by that are relevant to this sharing
-// TODO the file/folder has been moved outside the shared directory
 func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndex int) map[string]interface{} {
 	if doc["type"] == consts.DirType {
 		delete(doc, "path")
