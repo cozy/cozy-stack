@@ -259,7 +259,7 @@ func RemoveReferences(inst *instance.Instance, sharingID string) error {
 
 	for _, row := range res.Rows {
 		var doc SharedRef
-		if err := json.Unmarshal(row.Doc, &doc); err != nil {
+		if err = json.Unmarshal(row.Doc, &doc); err != nil {
 			return err
 		}
 		// Remove the ref if there are others sharings; remove the doc otherwise
