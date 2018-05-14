@@ -28,6 +28,13 @@ func TestRevGeneration(t *testing.T) {
 	assert.Equal(t, 10, RevGeneration("10-1f2"))
 }
 
+func TestRevisionSliceToStruct(t *testing.T) {
+	slice := []string{"2-aaa", "3-bbb", "4-ccc"}
+	revs := revisionSliceToStruct(slice)
+	assert.Equal(t, 4, revs.Start)
+	assert.Equal(t, []string{"ccc", "bbb", "aaa"}, revs.Ids)
+}
+
 func TestComputePossibleAncestors(t *testing.T) {
 	wants := []string{"2-b"}
 	haves := []string{"1-a", "2-a", "3-a"}
@@ -334,8 +341,8 @@ func TestCallChangesFeed(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, seq)
 	assert.Equal(t, 3, RevGeneration(seq))
-	assert.Equal(t, []string{"2-ccc"}, (*changes)[ref1.SID])
-	assert.Equal(t, []string{"3-bbb"}, (*changes)[ref2.SID])
+	assert.Equal(t, []string{"2-ccc"}, changes.Changed[ref1.SID])
+	assert.Equal(t, []string{"3-bbb"}, changes.Changed[ref2.SID])
 	expected := map[string]int{
 		foobars + "/" + id1: 0,
 		foobars + "/" + id2: 0,
@@ -345,15 +352,15 @@ func TestCallChangesFeed(t *testing.T) {
 	changes, _, newSeq, err := s.callChangesFeed(inst, seq)
 	assert.NoError(t, err)
 	assert.Equal(t, seq, newSeq)
-	assert.Empty(t, changes)
+	assert.Empty(t, changes.Changed)
 
 	appendRevisionToSharedRef(t, ref1, "3-ddd")
 	changes, _, newSeq, err = s.callChangesFeed(inst, seq)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, seq)
 	assert.Equal(t, 4, RevGeneration(newSeq))
-	assert.Equal(t, []string{"3-ddd"}, (*changes)[ref1.SID])
-	assert.NotContains(t, *changes, ref2.SID)
+	assert.Equal(t, []string{"3-ddd"}, changes.Changed[ref1.SID])
+	assert.NotContains(t, changes.Changed, ref2.SID)
 }
 
 func stripGenerations(revs ...string) []interface{} {
@@ -400,7 +407,11 @@ func TestGetMissingDocs(t *testing.T) {
 			PAs:     []string{doc3.Rev()},
 		},
 	}
-	results, err := s.getMissingDocs(inst, missings)
+	changes := &Changes{
+		Changed: make(Changed),
+		Removed: make(Removed),
+	}
+	results, err := s.getMissingDocs(inst, missings, changes)
 	assert.NoError(t, err)
 	assert.Contains(t, *results, hellos)
 	assert.Len(t, (*results)[hellos], 4)

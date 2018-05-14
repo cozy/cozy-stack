@@ -154,6 +154,9 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 		if _, ok = info["binary"]; !ok {
 			continue
 		}
+		if _, ok = info["removed"]; ok {
+			continue
+		}
 		idx, ok := info["rule"].(float64)
 		if !ok {
 			continue
@@ -359,7 +362,6 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	inst.Logger().WithField("nspace", "upload").
 		Debugf("Sync file: %#v", current)
 	// TODO referenced_by
-	// TODO trash
 	// TODO manage conflicts
 	return nil, fs.UpdateFileDoc(oldDoc, current)
 }
@@ -409,7 +411,6 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	}
 
 	// TODO referenced_by
-	// TODO trash
 	// TODO manage conflicts
 	newdoc := target.FileDoc.Clone().(*vfs.FileDoc)
 	olddoc, err := fs.FileByID(target.ID())
@@ -433,7 +434,9 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 }
 
 func (s *Sharing) updateFileContent(inst *instance.Instance, fs vfs.VFS, newdoc, olddoc *vfs.FileDoc, body io.ReadCloser) (err error) {
-	if olddoc != nil {
+	if olddoc == nil {
+		newdoc.DocRev = ""
+	} else {
 		newdoc.DocName = olddoc.DocName
 		newdoc.DirID = olddoc.DirID
 	}

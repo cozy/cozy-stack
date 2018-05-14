@@ -109,7 +109,7 @@ func TestPermissions(t *testing.T) {
 	id := replDoctype + "/" + uuidv4()
 	doc := createShared(t, id, []string{"111111111"})
 
-	body, _ := json.Marshal(sharing.Changes{
+	body, _ := json.Marshal(sharing.Changed{
 		"id": doc.Revisions,
 	})
 	u := tsR.URL + "/sharings/" + replSharingID + "/_revs_diff"
@@ -152,7 +152,7 @@ func TestRevsDiff(t *testing.T) {
 	createShared(t, sid5, []string{"5a", "5a", "5a"})
 	sid6 := replDoctype + "/" + uuidv4()
 
-	body, _ := json.Marshal(sharing.Changes{
+	body, _ := json.Marshal(sharing.Changed{
 		sid1: []string{"3-1a"},
 		sid2: []string{"2-2a"},
 		sid3: []string{"5-3b"},

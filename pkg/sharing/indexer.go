@@ -45,7 +45,7 @@ func (s *sharingIndexer) CreateFileDoc(doc *vfs.FileDoc) error {
 }
 
 func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
-	return s.UpdateFileDoc(nil, doc)
+	return s.indexer.CreateNamedFileDoc(doc)
 }
 
 // TODO update io.cozy.shared
