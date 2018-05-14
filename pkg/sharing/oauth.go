@@ -328,3 +328,23 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 	}
 	return nil, ErrMemberNotFound
 }
+
+// RefreshToken is used after a failed request with a 4xx error code.
+// It renews the access token and retries the request
+func RefreshToken(inst *instance.Instance, s *Sharing, m *Member, creds *Credentials, opts *request.Options) (*http.Response, error) {
+	if err := creds.Refresh(inst, s, m); err != nil {
+		return nil, err
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode/100 == 5 {
+		return nil, ErrInternalServerError
+	}
+	if res.StatusCode/100 != 2 {
+		return nil, ErrClientError
+	}
+	return res, nil
+}

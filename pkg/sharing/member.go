@@ -165,7 +165,7 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 
 	// No need to contact the revoked member if the sharing is not ready
 	if m.Status == MemberStatusReady {
-		res, err := request.Req(&request.Options{
+		opts := &request.Options{
 			Method: http.MethodDelete,
 			Scheme: u.Scheme,
 			Domain: u.Host,
@@ -175,12 +175,18 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 				"Content-Type":  "application/vnd.api+json",
 				"Authorization": "Bearer " + c.AccessToken.AccessToken,
 			},
-		})
+		}
+		res, err := request.Req(opts)
 		if err != nil {
 			return err
 		}
 		if res.StatusCode/100 != 2 {
 			return ErrRequestFailed
+		}
+		if res.StatusCode/100 == 4 {
+			if _, err := RefreshToken(inst, s, m, c, opts); err != nil {
+				return err
+			}
 		}
 		if !s.ReadOnly() {
 			if err := DeleteOAuthClient(inst, m, c); err != nil {
