@@ -81,17 +81,21 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 		return
 	}
 
+	instance := middlewares.GetInstance(c)
 	defer func() {
 		if cerr := file.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
+			instance.Logger().WithField("nspace", "files").
+				Warnf("Error on uploading file (close): %s", err)
 			err = cerr
 		}
 	}()
 
 	_, err = io.Copy(file, c.Request().Body)
 	if err != nil {
+		instance.Logger().WithField("nspace", "files").
+			Warnf("Error on uploading file (copy): %s", err)
 		return
 	}
-	instance := middlewares.GetInstance(c)
 	f = newFile(doc, instance)
 	return
 }
