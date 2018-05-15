@@ -260,10 +260,8 @@ func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
 	if err := DeleteOAuthClient(inst, &s.Members[0], &s.Credentials[0]); err != nil {
 		return err
 	}
-	if !s.ReadOnly() {
-		if err := s.RemoveTriggers(inst); err != nil {
-			return err
-		}
+	if err := s.RemoveTriggers(inst); err != nil {
+		return err
 	}
 	if s.WithPropagation() {
 		if err := RemoveSharedRefs(inst, s.SID); err != nil {
