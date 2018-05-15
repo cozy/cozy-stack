@@ -612,14 +612,14 @@ func TestCheckSharingInfoByDocType(t *testing.T) {
 
 	for _, id := range sharedDocs1 {
 		sid := iocozytests + "/" + id
-		sd, err := createSharedDoc(aliceInstance, sid, s1.ID())
-		assert.NoError(t, err)
+		sd, errs := createSharedDoc(aliceInstance, sid, s1.ID())
+		assert.NoError(t, errs)
 		assert.NotNil(t, sd)
 	}
 	for _, id := range sharedDocs2 {
 		sid := iocozytests + "/" + id
-		sd, err := createSharedDoc(aliceInstance, sid, s2.ID())
-		assert.NoError(t, err)
+		sd, errs := createSharedDoc(aliceInstance, sid, s2.ID())
+		assert.NoError(t, errs)
 		assert.NotNil(t, sd)
 	}
 	req, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/"+iocozytests, nil)
@@ -635,7 +635,6 @@ func TestCheckSharingInfoByDocType(t *testing.T) {
 }
 
 func TestRevokeSharing(t *testing.T) {
-
 	sharedDocs := []string{"mygreatid1", "mygreatid2"}
 	sharedRefs := []*sharing.SharedRef{}
 	s, err := createSharing(aliceInstance, sharedDocs)
@@ -643,9 +642,9 @@ func TestRevokeSharing(t *testing.T) {
 	assert.NotNil(t, s)
 	for _, id := range sharedDocs {
 		sid := iocozytests + "/" + id
-		sd, err := createSharedDoc(aliceInstance, sid, s.SID)
+		sd, errs := createSharedDoc(aliceInstance, sid, s.SID)
 		sharedRefs = append(sharedRefs, sd)
-		assert.NoError(t, err)
+		assert.NoError(t, errs)
 		assert.NotNil(t, sd)
 	}
 	assert.NoError(t, err)
