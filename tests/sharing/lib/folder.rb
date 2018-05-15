@@ -1,9 +1,16 @@
 class Folder
   ROOT_DIR = "io.cozy.files.root-dir".freeze
+  TRASH_DIR = "io.cozy.files.trash-dir".freeze
 
   include Model
   include Model::Files
-  attr_reader :name, :dir_id, :children
+  attr_reader :name, :dir_id, :children, :path, :restore_path
+
+
+  def self.get_id_from_path(inst, path)
+    folder = Folder.find_by_path inst, path
+    folder.couch_id
+  end
 
   def self.load_from_url(inst, path)
     opts = {
@@ -16,7 +23,12 @@ class Folder
     id = j["id"]
     rev = j["rev"]
     j = j["attributes"]
-    f = Folder.new(name: j["name"], dir_id: j["dir_id"])
+    f = Folder.new(
+      name: j["name"],
+      dir_id: j["dir_id"],
+      path: j["path"],
+      restore_path: j["restore_path"]
+    )
     f.couch_id = id
     f.couch_rev = rev
     f
@@ -36,7 +48,9 @@ class Folder
 
   def initialize(opts = {})
     @name = opts[:name] || Faker::Internet.slug
-    @dir_id = opts[:dir_id] || "io.cozy.files.root-dir"
+    @dir_id = opts[:dir_id] || ROOT_DIR
+    @path = opts[:path] || "/#{@name}"
+    @restore_path = opts[:restore_path]
     @children = []
   end
 

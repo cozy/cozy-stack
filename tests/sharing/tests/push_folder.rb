@@ -15,9 +15,12 @@ describe "A folder" do
     inst = Instance.create name: "Alice"
     inst_recipient = Instance.create name: recipient_name
 
-    # Create the folder
+    # Create the folder with a file
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
+    file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
+    file = CozyFile.create inst, opts
 
     # Create the sharing
     contact = Contact.create inst, givenName: recipient_name
@@ -31,7 +34,7 @@ describe "A folder" do
     inst_recipient.accept sharing
 
     # Check the recipient's folder is the same as the sender's
-    path = CGI.escape "/Partagés avec moi/#{folder.name}"
+    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
     folder_recipient = Folder.find_by_path inst_recipient, path
     assert_equal folder_recipient.name, folder.name
 
@@ -42,6 +45,7 @@ describe "A folder" do
                    Helpers::SHARED_WITH_ME, sharing.rules.first.title
     diff = Helpers.fsdiff da, db
     diff.must_be_empty
+
   end
 
 end
