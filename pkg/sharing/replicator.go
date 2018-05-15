@@ -332,13 +332,18 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 	if err != nil {
 		return nil, err
 	}
+	if res.StatusCode/100 == 5 {
+		return nil, ErrInternalServerError
+	}
 	if res.StatusCode/100 == 4 {
 		res.Body.Close()
-		res, err = RefreshToken(inst, s, m, creds, opts)
+		res, err = RefreshToken(inst, s, m, creds, opts, body)
 		if err != nil {
 			return nil, err
 		}
 	}
+	defer res.Body.Close()
+
 	missings := make(Missings)
 	if err = json.NewDecoder(res.Body).Decode(&missings); err != nil {
 		return nil, err
@@ -539,12 +544,17 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 	if err != nil {
 		return err
 	}
+	if res.StatusCode/100 == 5 {
+		return ErrInternalServerError
+	}
 	if res.StatusCode/100 == 4 {
 		res.Body.Close()
-		if _, err := RefreshToken(inst, s, m, creds, opts); err != nil {
+		if res, err = RefreshToken(inst, s, m, creds, opts, body); err != nil {
 			return err
 		}
 	}
+	res.Body.Close()
+
 	return nil
 }
 

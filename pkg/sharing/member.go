@@ -180,11 +180,11 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 		if err != nil {
 			return err
 		}
-		if res.StatusCode/100 != 2 {
-			return ErrRequestFailed
+		if res.StatusCode/100 == 5 {
+			return ErrInternalServerError
 		}
 		if res.StatusCode/100 == 4 {
-			if _, err := RefreshToken(inst, s, m, c, opts); err != nil {
+			if _, err := RefreshToken(inst, s, m, c, opts, nil); err != nil {
 				return err
 			}
 		}

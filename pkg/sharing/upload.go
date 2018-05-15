@@ -215,17 +215,21 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	if err != nil {
 		return err
 	}
+	if res.StatusCode/100 == 5 {
+		return ErrInternalServerError
+	}
 	if res.StatusCode/100 == 4 {
 		res.Body.Close()
-		res, err = RefreshToken(inst, s, m, creds, opts)
+		res, err = RefreshToken(inst, s, m, creds, opts, body)
 		if err != nil {
 			return err
 		}
 	}
+	defer res.Body.Close()
+
 	if res.StatusCode == 204 {
 		return nil
 	}
-
 	var resBody KeyToUpload
 	if err = json.NewDecoder(res.Body).Decode(&resBody); err != nil {
 		return err
