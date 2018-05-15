@@ -284,6 +284,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		s.Credentials[0].AccessToken = creds.AccessToken
 		s.Credentials[0].Client = creds.Client
 	}
+	s.Active = true
 	if err = couchdb.UpdateDoc(inst, s); err != nil {
 		return err
 	}
