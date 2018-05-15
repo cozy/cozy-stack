@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"sort"
@@ -417,8 +418,13 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	dir.SetID(target["_id"].(string))
 	copySafeFieldsToDir(target, dir)
 	// TODO referenced_by
-	// TODO manage conflicts
-	if err := fs.CreateDir(dir); err != nil {
+	err = fs.CreateDir(dir)
+	if err == os.ErrExist {
+		// TODO better handling of this conflict
+		dir.DocName = fmt.Sprintf("%s - conflict - %d", dir.DocName, time.Now().Unix())
+		err = fs.CreateDir(dir)
+	}
+	if err != nil {
 		inst.Logger().WithField("nspace", "replicator").
 			Debugf("Cannot create dir: %s", err)
 		return err
@@ -479,11 +485,19 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	}
 
 	copySafeFieldsToDir(target, dir)
-	inst.Logger().WithField("nspace", "replicator").
-		Debugf("Update dir: %#v", dir)
 	// TODO referenced_by
-	// TODO manage conflicts
-	return fs.UpdateDirDoc(oldDoc, dir)
+	err := fs.UpdateDirDoc(oldDoc, dir)
+	if err == os.ErrExist {
+		// TODO better handling of this conflict
+		dir.DocName = fmt.Sprintf("%s - conflict - %d", dir.DocName, time.Now().Unix())
+		err = fs.UpdateDirDoc(oldDoc, dir)
+	}
+	if err != nil {
+		inst.Logger().WithField("nspace", "replicator").
+			Debugf("Cannot update dir: %s", err)
+		return err
+	}
+	return nil
 }
 
 // TrashDir puts the directory in the trash
