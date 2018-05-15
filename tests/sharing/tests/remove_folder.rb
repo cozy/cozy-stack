@@ -2,8 +2,7 @@
 
 require_relative '../boot'
 require 'minitest/autorun'
-require 'pry-rescue/minitest'
-
+require 'pry-rescue/minitest' unless ENV['CI']
 
 describe "A shared folder" do
   Helpers.scenario "remove_folder"

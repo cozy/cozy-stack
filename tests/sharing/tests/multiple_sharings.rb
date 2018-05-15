@@ -2,7 +2,7 @@
 
 require_relative '../boot'
 require 'minitest/autorun'
-require 'pry-rescue/minitest'
+require 'pry-rescue/minitest' unless ENV['CI']
 
 describe "A folder" do
   Helpers.scenario "multiple_sharings"
