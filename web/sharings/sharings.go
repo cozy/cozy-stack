@@ -168,6 +168,24 @@ func AnswerSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, ac, nil)
 }
 
+// RevokeSharing is used to revoke a sharing by the sharer, for all recipients
+func RevokeSharing(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	_, err = checkCreatePermissions(c, s)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	if err = s.Revoke(inst); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state string, m *sharing.Member) error {
 	publicName, _ := inst.PublicName()
 	return c.Render(code, "sharing_discovery.html", echo.Map{
@@ -259,6 +277,8 @@ func Routes(router *echo.Group) {
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
+
+	router.DELETE("/:sharing-id/recipients", RevokeSharing)
 
 	router.GET("/doctype/:doctype", GetSharingsInfoByDocType)
 

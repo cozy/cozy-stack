@@ -239,6 +239,39 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	return couchdb.UpdateDoc(inst, &ref)
 }
 
+// RemoveSharedRefs deletes the references containing the sharingid
+func RemoveSharedRefs(inst *instance.Instance, sharingID string) error {
+	var req = &couchdb.ViewRequest{
+		Key:         sharingID,
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+
+	err := couchdb.ExecView(inst, consts.SharedDocsBySharingID, req, &res)
+	if err != nil {
+		return err
+	}
+
+	for _, row := range res.Rows {
+		var doc SharedRef
+		if err = json.Unmarshal(row.Doc, &doc); err != nil {
+			return err
+		}
+		// Remove the ref if there are others sharings; remove the doc otherwise
+		if len(doc.Infos) > 1 {
+			delete(doc.Infos, sharingID)
+			if err = couchdb.UpdateDoc(inst, &doc); err != nil {
+				return err
+			}
+		} else {
+			if err = couchdb.DeleteDoc(inst, &doc); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // GetSharedDocsBySharingID returns the shared documents related to the given sharingID
 func GetSharedDocsBySharingID(inst *instance.Instance, sharingID string) ([]couchdb.DocReference, error) {
 	var req = &couchdb.ViewRequest{
