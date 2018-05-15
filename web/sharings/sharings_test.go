@@ -603,12 +603,8 @@ func TestCheckPermissions(t *testing.T) {
 func TestCheckSharingInfoByDocType(t *testing.T) {
 	sharedDocs1 := []string{"fakeid1", "fakeid2", "fakeid3"}
 	sharedDocs2 := []string{"fakeid4", "fakeid5"}
-	s1, err := createSharing(aliceInstance, sharedDocs1)
-	assert.NoError(t, err)
-	assert.NotNil(t, s1)
-	s2, err := createSharing(aliceInstance, sharedDocs2)
-	assert.NoError(t, err)
-	assert.NotNil(t, s2)
+	s1 := createSharing(t, aliceInstance, sharedDocs1)
+	s2 := createSharing(t, aliceInstance, sharedDocs2)
 
 	for _, id := range sharedDocs1 {
 		sid := iocozytests + "/" + id
@@ -637,9 +633,7 @@ func TestCheckSharingInfoByDocType(t *testing.T) {
 func TestRevokeSharing(t *testing.T) {
 	sharedDocs := []string{"mygreatid1", "mygreatid2"}
 	sharedRefs := []*sharing.SharedRef{}
-	s, err := createSharing(aliceInstance, sharedDocs)
-	assert.NoError(t, err)
-	assert.NotNil(t, s)
+	s := createSharing(t, aliceInstance, sharedDocs)
 	for _, id := range sharedDocs {
 		sid := iocozytests + "/" + id
 		sd, errs := createSharedDoc(aliceInstance, sid, s.SID)
@@ -647,7 +641,6 @@ func TestRevokeSharing(t *testing.T) {
 		assert.NoError(t, errs)
 		assert.NotNil(t, sd)
 	}
-	assert.NoError(t, err)
 
 	cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[1])
 	assert.NoError(t, err)
@@ -757,7 +750,7 @@ func createContact(inst *instance.Instance, name, email string) *contacts.Contac
 	return c
 }
 
-func createSharing(inst *instance.Instance, values []string) (*sharing.Sharing, error) {
+func createSharing(t *testing.T, inst *instance.Instance, values []string) *sharing.Sharing {
 	r := sharing.Rule{
 		Title:   "test",
 		DocType: iocozytests,
@@ -774,16 +767,14 @@ func createSharing(inst *instance.Instance, values []string) (*sharing.Sharing, 
 		Rules: []sharing.Rule{r},
 	}
 	s.Credentials = append(s.Credentials, sharing.Credentials{})
-	if err := s.BeOwner(aliceInstance, ""); err != nil {
-		return nil, err
-	}
+	err := s.BeOwner(aliceInstance, "")
+	assert.NoError(t, err)
 	s.Members = append(s.Members, m)
 
-	err := couchdb.CreateDoc(inst, s)
-	if err != nil {
-		return nil, err
-	}
-	return s, nil
+	err = couchdb.CreateDoc(inst, s)
+	assert.NoError(t, err)
+	assert.NotNil(t, s)
+	return s
 }
 
 func createSharedDoc(inst *instance.Instance, id, sharingID string) (*sharing.SharedRef, error) {

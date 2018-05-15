@@ -344,9 +344,11 @@ func RefreshToken(inst *instance.Instance, s *Sharing, m *Member, creds *Credent
 		return nil, err
 	}
 	if res.StatusCode/100 == 5 {
+		res.Body.Close()
 		return nil, ErrInternalServerError
 	}
 	if res.StatusCode/100 != 2 {
+		res.Body.Close()
 		return nil, ErrClientError
 	}
 	return res, nil

@@ -216,6 +216,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 		return err
 	}
 	if res.StatusCode/100 == 5 {
+		res.Body.Close()
 		return ErrInternalServerError
 	}
 	if res.StatusCode/100 == 4 {

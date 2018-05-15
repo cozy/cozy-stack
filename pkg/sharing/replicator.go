@@ -333,6 +333,7 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 		return nil, err
 	}
 	if res.StatusCode/100 == 5 {
+		res.Body.Close()
 		return nil, ErrInternalServerError
 	}
 	if res.StatusCode/100 == 4 {
@@ -545,6 +546,7 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 		return err
 	}
 	if res.StatusCode/100 == 5 {
+		res.Body.Close()
 		return ErrInternalServerError
 	}
 	if res.StatusCode/100 == 4 {
