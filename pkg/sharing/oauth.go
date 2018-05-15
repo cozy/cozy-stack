@@ -164,7 +164,7 @@ func DeleteOAuthClient(inst *instance.Instance, m *Member, cred *Credentials) er
 	if m.Instance == "" {
 		return ErrInvalidURL
 	}
-	clientID := cred.LocalClientID
+	clientID := cred.InboundClientID
 	client, err := oauth.FindClient(inst, clientID)
 	if err != nil {
 		return err
@@ -310,8 +310,7 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 				if err != nil {
 					return &ac, nil
 				}
-				s.Credentials[i].LocalClientID = cli.ClientID
-
+				s.Credentials[i].InboundClientID = cli.ClientID
 				ac.Credentials.Client = ConvertOAuthClient(cli)
 				token, err := CreateAccessToken(inst, cli, s.SID)
 				if err != nil {

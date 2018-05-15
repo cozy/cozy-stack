@@ -238,6 +238,29 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	return inst.VFS().DirByID(res.Rows[0].ID)
 }
 
+// GetFolder returns informations about a folder (with XORed IDs)
+func (s *Sharing) GetFolder(inst *instance.Instance, m *Member, dirID string) (map[string]interface{}, error) {
+	ref := &SharedRef{}
+	err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+dirID, ref)
+	if err != nil {
+		return nil, err
+	}
+	info, ok := ref.Infos[s.SID]
+	if !ok || info.Removed {
+		return nil, ErrFolderNotFound
+	}
+	dir, err := inst.VFS().DirByID(dirID)
+	if err != nil {
+		return nil, err
+	}
+	creds := s.FindCredentials(m)
+	if creds == nil {
+		return nil, ErrInvalidSharing
+	}
+	doc := s.TransformFileToSent(dirToJSONDoc(dir).M, creds.XorKey, info.Rule)
+	return doc, nil
+}
+
 // ApplyBulkFiles takes a list of documents for the io.cozy.files doctype and
 // will apply changes to the VFS according to those documents.
 func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {

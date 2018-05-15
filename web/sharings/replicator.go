@@ -64,6 +64,28 @@ func BulkDocs(c echo.Context) error {
 	return c.JSON(http.StatusOK, []interface{}{})
 }
 
+// GetFolder returns informations about a folder
+func GetFolder(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		inst.Logger().WithField("nspace", "replicator").Debugf("Sharing was not found: %s", err)
+		return wrapErrors(err)
+	}
+	member, err := requestMember(c, s)
+	if err != nil {
+		inst.Logger().WithField("nspace", "replicator").Debugf("Member was not found: %s", err)
+		return wrapErrors(err)
+	}
+	folder, err := s.GetFolder(inst, member, c.Param("file-id"))
+	if err != nil {
+		inst.Logger().WithField("nspace", "replicator").Debugf("Folder was not found: %s", err)
+		return wrapErrors(err)
+	}
+	return c.JSON(http.StatusOK, folder)
+}
+
 // SyncFile will try to synchronize a file from just its metadata. If it's not
 // possible, it will respond with a key that allow to send the content to
 // finish the synchronization.
@@ -116,6 +138,7 @@ func replicatorRoutes(router *echo.Group) {
 	group := router.Group("", checkSharingPermissions)
 	group.POST("/:sharing-id/_revs_diff", RevsDiff, checkSharingPermissions)
 	group.POST("/:sharing-id/_bulk_docs", BulkDocs, checkSharingPermissions)
+	group.GET("/:sharing-id/io.cozy.files/:id", GetFolder, checkSharingPermissions)
 	group.PUT("/:sharing-id/io.cozy.files/:id/metadata", SyncFile, checkSharingPermissions)
 	group.PUT("/:sharing-id/io.cozy.files/:id", FileHandler, checkSharingPermissions)
 }
@@ -134,4 +157,12 @@ func checkSharingPermissions(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 		return next(c)
 	}
+}
+
+func requestMember(c echo.Context, s *sharing.Sharing) (*sharing.Member, error) {
+	requestPerm, err := perm.GetPermission(c)
+	if err != nil {
+		return nil, err
+	}
+	return s.FindMemberByInboundClientID(requestPerm.SourceID)
 }

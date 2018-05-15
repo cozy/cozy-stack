@@ -38,4 +38,7 @@ var (
 	// ErrMissingFileMetadata is used when uploading a file and the key is not
 	// in the cache (so no metadata and the upload can't succeed)
 	ErrMissingFileMetadata = errors.New("The metadata for this file were not found")
+	// ErrFolderNotFound is used when informations about a folder is asked,
+	// but this folder was not found
+	ErrFolderNotFound = errors.New("This folder was not found")
 )
