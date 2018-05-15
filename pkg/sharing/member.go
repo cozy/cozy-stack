@@ -50,7 +50,7 @@ type Credentials struct {
 	XorKey []byte `json:"xor_key,omitempty"`
 
 	// LocalClientID is the ClientID of the member in the oauth db, for synced sharing
-	LocalClientID string `json:"local_client_id"`
+	LocalClientID string `json:"local_client_id,omitempty"`
 }
 
 // AddContact adds the contact with the given identifier

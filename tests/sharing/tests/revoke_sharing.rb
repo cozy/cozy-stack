@@ -111,6 +111,5 @@ describe "A sharing" do
     file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{old_name}"
     file_recipient = Folder.find_by_path inst_recipient, file_path
     assert(file_recipient.name != file.name)
-
   end
 end

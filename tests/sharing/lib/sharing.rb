@@ -17,6 +17,17 @@ class Sharing
     j.dig "relationships", "shared_docs", "data"
   end
 
+
+  def revoke_by_sharer(inst, doctype)
+    opts = {
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    res = inst.client["/sharings/#{@couch_id}/recipients"].delete opts
+    res.code
+  end
+
+
+
   def initialize(opts = {})
     @description = opts[:description] || Faker::HitchhikersGuideToTheGalaxy.marvin_quote
     @app_slug = opts[:app_slug] || ""
