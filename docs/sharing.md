@@ -816,7 +816,7 @@ Content-Type: application/json
 ```json
 {
   "_id": "6d245d072be5522bd3a6f273dd000c65",
-  "_rev": "1-de4ec176ffa9ddafe8bdcc739dc60fed"
+  "_rev": "1-de4ec176ffa9ddafe8bdcc739dc60fed",
   "type": "directory",
   "name": "phone",
   "dir_id": "6d245d072be5522bd3a6f273dd007396",
