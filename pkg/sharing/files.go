@@ -239,7 +239,12 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 }
 
 // GetFolder returns informations about a folder (with XORed IDs)
-func (s *Sharing) GetFolder(inst *instance.Instance, m *Member, dirID string) (map[string]interface{}, error) {
+func (s *Sharing) GetFolder(inst *instance.Instance, m *Member, xoredID string) (map[string]interface{}, error) {
+	creds := s.FindCredentials(m)
+	if creds == nil {
+		return nil, ErrInvalidSharing
+	}
+	dirID := XorID(xoredID, creds.XorKey)
 	ref := &SharedRef{}
 	err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+dirID, ref)
 	if err != nil {
@@ -252,10 +257,6 @@ func (s *Sharing) GetFolder(inst *instance.Instance, m *Member, dirID string) (m
 	dir, err := inst.VFS().DirByID(dirID)
 	if err != nil {
 		return nil, err
-	}
-	creds := s.FindCredentials(m)
-	if creds == nil {
-		return nil, ErrInvalidSharing
 	}
 	doc := s.TransformFileToSent(dirToJSONDoc(dir).M, creds.XorKey, info.Rule)
 	return doc, nil

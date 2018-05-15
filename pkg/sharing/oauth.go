@@ -279,6 +279,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		return ErrRequestFailed
 	}
 	s.Credentials[0].XorKey = creds.XorKey
+	// TODO InboundClientID
 	if !s.ReadOnly() {
 		s.Credentials[0].AccessToken = creds.AccessToken
 		s.Credentials[0].Client = creds.Client

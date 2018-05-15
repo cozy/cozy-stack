@@ -78,7 +78,7 @@ func GetFolder(c echo.Context) error {
 		inst.Logger().WithField("nspace", "replicator").Debugf("Member was not found: %s", err)
 		return wrapErrors(err)
 	}
-	folder, err := s.GetFolder(inst, member, c.Param("file-id"))
+	folder, err := s.GetFolder(inst, member, c.Param("id"))
 	if err != nil {
 		inst.Logger().WithField("nspace", "replicator").Debugf("Folder was not found: %s", err)
 		return wrapErrors(err)
