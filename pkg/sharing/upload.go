@@ -325,23 +325,26 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	}
 	oldDoc := current.Clone().(*vfs.FileDoc)
 
-	current.DocName = target.DocName
+	var parent *vfs.DirDoc
 	if target.DirID == "" {
-		parent, errd := s.GetSharingDir(inst)
-		if errd != nil {
-			return nil, errd
+		parent, err = s.GetSharingDir(inst)
+		if err != nil {
+			return nil, err
 		}
 		current.DirID = parent.DocID
 	} else if target.DirID != current.DirID {
-		parent, errd := fs.DirByID(target.DirID)
-		// TODO better handling of this conflict
-		if errd != nil {
-			inst.Logger().WithField("nspace", "upload").
-				Debugf("Conflict for parent on sync file: %s", errd)
-			return nil, errd
+		parent, err = fs.DirByID(target.DirID)
+		if err == os.ErrNotExist {
+			parent, err = s.recreateParent(inst, target.DirID)
 		}
-		current.DirID = parent.DocID
+		if err != nil {
+			inst.Logger().WithField("nspace", "upload").
+				Debugf("Conflict for parent on sync file: %s", err)
+			return nil, err
+		}
 	}
+	current.DirID = parent.DocID
+	current.DocName = target.DocName
 
 	copySafeFieldsToFile(target.FileDoc, current)
 	// TODO referenced_by
