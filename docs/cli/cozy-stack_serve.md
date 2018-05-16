@@ -43,6 +43,7 @@ example), you can use the --appdir flag like this:
       --cache-url string                 URL for the cache, redis or in-memory
       --couchdb-url string               CouchDB URL (default "http://localhost:5984/")
       --csp-whitelist string             Whitelisted domains for the default allowed origins of the Content Secury Policy
+      --dev                              Allow to run without in dev release mode (disabled by default)
       --disable-csp                      Disable the Content Security Policy (only available for development)
       --doctypes string                  path to the directory with the doctypes (for developing/testing a remote doctype)
       --downloads-url string             URL for the download secret storage, redis or in-memory
