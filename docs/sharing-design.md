@@ -200,11 +200,10 @@ are:
   `application/octet-steam`)
 * `tags` and `referenced_by`: a union of the two versions is made
 
-For 3., we rename the file or folder with the later `updated_at`.
+For 3., we rename the file or folder with the smaller `id`.
 
-For 4., if a new directory with the same path that the trashed parent has been
-created, we will use it as the new parent for the created/updated files/folders.
-Else, we restore the trashed parent.
+For 4., we restore the trashed parent, or recreate it if it the trash was
+emptied.
 
 ## Schema
 

@@ -523,6 +523,7 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 
 	copySafeFieldsToDir(target, dir)
 	// TODO referenced_by
+	// TODO detect & resolve conflicts when both instances have updated the dir concurrently
 	err := fs.UpdateDirDoc(oldDoc, dir)
 	if err == os.ErrExist {
 		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)

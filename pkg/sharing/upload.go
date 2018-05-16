@@ -327,18 +327,18 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 
 	current.DocName = target.DocName
 	if target.DirID == "" {
-		parent, err := s.GetSharingDir(inst)
-		if err != nil {
-			return nil, err
+		parent, errd := s.GetSharingDir(inst)
+		if errd != nil {
+			return nil, errd
 		}
 		current.DirID = parent.DocID
 	} else if target.DirID != current.DirID {
-		parent, err := fs.DirByID(target.DirID)
+		parent, errd := fs.DirByID(target.DirID)
 		// TODO better handling of this conflict
-		if err != nil {
+		if errd != nil {
 			inst.Logger().WithField("nspace", "upload").
-				Debugf("Conflict for parent on sync file: %s", err)
-			return nil, err
+				Debugf("Conflict for parent on sync file: %s", errd)
+			return nil, errd
 		}
 		current.DirID = parent.DocID
 	}
@@ -455,7 +455,12 @@ func (s *Sharing) updateFileContent(inst *instance.Instance, fs vfs.VFS, newdoc,
 		}
 		if name != "" {
 			// TODO we should generate a new revision to let the other cozy know of this change
-			newdoc.DocName = name
+			if olddoc == nil {
+				newdoc.DocName = name
+			} else {
+				newdoc.DocName = olddoc.DocName
+				newdoc.DirID = olddoc.DirID
+			}
 		}
 		file, err = fs.CreateFile(newdoc, olddoc)
 	}
