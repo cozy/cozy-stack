@@ -344,11 +344,29 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	}
 
 	copySafeFieldsToFile(target.FileDoc, current)
-	inst.Logger().WithField("nspace", "upload").
-		Debugf("Sync file: %#v", current)
 	// TODO referenced_by
-	// TODO manage conflicts
-	return nil, fs.UpdateFileDoc(oldDoc, current)
+	err = fs.UpdateFileDoc(oldDoc, current)
+	if err == os.ErrExist {
+		pth, errp := current.Path(fs)
+		if errp != nil {
+			return nil, errp
+		}
+		name, errr := resolveConflictSamePath(inst, current.DocID, pth)
+		if errr != nil {
+			return nil, errr
+		}
+		if name != "" {
+			indexer.IncrementRevision()
+			current.DocName = name
+		}
+		err = fs.UpdateFileDoc(oldDoc, current)
+	}
+	if err != nil {
+		inst.Logger().WithField("nspace", "upload").
+			Debugf("Cannot update file: %s", err)
+		return nil, err
+	}
+	return nil, nil
 }
 
 // HandleFileUpload is used to receive a file upload when synchronizing just
@@ -426,6 +444,21 @@ func (s *Sharing) updateFileContent(inst *instance.Instance, fs vfs.VFS, newdoc,
 		newdoc.DirID = olddoc.DirID
 	}
 	file, err := fs.CreateFile(newdoc, olddoc)
+	if err == os.ErrExist {
+		pth, errp := newdoc.Path(fs)
+		if errp != nil {
+			return errp
+		}
+		name, errr := resolveConflictSamePath(inst, newdoc.DocID, pth)
+		if errr != nil {
+			return errr
+		}
+		if name != "" {
+			// TODO we should generate a new revision to let the other cozy know of this change
+			newdoc.DocName = name
+		}
+		file, err = fs.CreateFile(newdoc, olddoc)
+	}
 	if err != nil {
 		inst.Logger().WithField("nspace", "upload").
 			Debugf("Cannot create file: %s", err)

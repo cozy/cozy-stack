@@ -451,9 +451,9 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	// TODO referenced_by
 	err = fs.CreateDir(dir)
 	if err == os.ErrExist {
-		name, err := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
-		if err != nil {
-			return err
+		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
+		if errr != nil {
+			return errr
 		}
 		if name != "" {
 			indexer.IncrementRevision()
@@ -525,9 +525,9 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	// TODO referenced_by
 	err := fs.UpdateDirDoc(oldDoc, dir)
 	if err == os.ErrExist {
-		name, err := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
-		if err != nil {
-			return err
+		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
+		if errr != nil {
+			return errr
 		}
 		if name != "" {
 			indexer.IncrementRevision()
