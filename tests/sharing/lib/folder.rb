@@ -2,15 +2,9 @@ class Folder
   ROOT_DIR = "io.cozy.files.root-dir".freeze
   TRASH_DIR = "io.cozy.files.trash-dir".freeze
 
-  include Model
   include Model::Files
+
   attr_reader :name, :dir_id, :children, :path, :restore_path
-
-
-  def self.get_id_from_path(inst, path)
-    folder = Folder.find_by_path inst, path
-    folder.couch_id
-  end
 
   def self.load_from_url(inst, path)
     opts = {
@@ -32,18 +26,6 @@ class Folder
     f.couch_id = id
     f.couch_rev = rev
     f
-  end
-
-  def self.find_by_path(inst, path)
-    load_from_url inst, "/files/metadata?Path=#{path}"
-  end
-
-  def self.find(inst, id)
-    load_from_url inst, "/files/#{id}"
-  end
-
-  def self.doctype
-    "io.cozy.files"
   end
 
   def initialize(opts = {})

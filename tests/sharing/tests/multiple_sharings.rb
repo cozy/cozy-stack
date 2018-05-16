@@ -48,7 +48,7 @@ describe "A folder" do
     folder_charlie = Folder.find_by_path inst_charlie, path
     assert_equal folder_charlie.name, folder.name
 
-    #  Share a folder with Bob and Charlie, in 2 different sharings
+    # Share a folder with Bob and Charlie, in 2 different sharings
     folder = Folder.create inst_alice
     child1 = Folder.create inst_alice, {dir_id: folder.couch_id}
     sharing = Sharing.new
@@ -107,7 +107,5 @@ describe "A folder" do
     diff.must_be_empty
     diff = Helpers.fsdiff da, dc
     diff.must_be_empty
-
   end
-
 end

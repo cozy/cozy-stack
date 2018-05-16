@@ -9,7 +9,6 @@ describe "A shared folder" do
   Helpers.start_mailhog
 
   it "can be removed and end up in the trash" do
-
     recipient_name = "Bob"
 
     # Create the instance
@@ -40,7 +39,7 @@ describe "A shared folder" do
     inst_recipient.accept sharing
     sleep 7
 
-    # Get id for all dir/files to retrieve after delete
+    # Get id for all dir/files to retrieve after delete
     child2_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
     child2_recipient_id = Folder.get_id_from_path inst_recipient, child2_path
 
@@ -53,7 +52,7 @@ describe "A shared folder" do
     f2_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{f2.name}"
     f2_recipient_id = CozyFile.get_id_from_path inst_recipient, f2_path
 
-    # Remove a single file
+    # Remove a single file
     f2.remove inst
 
     # Move a dir out of the shared folder and update it
@@ -79,9 +78,5 @@ describe "A shared folder" do
 
     f1_recipient = CozyFile.find inst_recipient, f1_recipient_id
     assert_equal true, f1_recipient.trashed
-
-
-
   end
-
 end

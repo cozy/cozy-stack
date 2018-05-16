@@ -57,12 +57,9 @@ module Helpers
     end
 
     def db_name(domain, type)
-      domain = domain.gsub '.', '-'
-      domain = domain.gsub ':', '-'
-      type = type.gsub '.', '-'
-      db = "#{domain}%2F#{type}"
-      db
+      domain = domain.gsub(/[.:]/, '-')
+      type = type.gsub(/[.:]/, '-')
+      "#{domain}%2F#{type}"
     end
-
   end
 end

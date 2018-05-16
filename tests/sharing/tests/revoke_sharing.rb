@@ -2,8 +2,7 @@
 
 require_relative '../boot'
 require 'minitest/autorun'
-require 'pry-rescue/minitest'
-
+require 'pry-rescue/minitest' unless ENV['CI']
 
 def assert_not_found(db, id)
   assert_raises RestClient::NotFound do
@@ -16,14 +15,13 @@ describe "A sharing" do
   Helpers.start_mailhog
 
   it "can be revoked by the sharer" do
-
     recipient_name = "Bob"
 
     # Create the instance
     inst = Instance.create name: "Alice"
     inst_recipient = Instance.create name: recipient_name
 
-    # Create the folder
+    # Create the folder
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
     file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
@@ -42,7 +40,7 @@ describe "A sharing" do
     inst_recipient.accept sharing
     sleep 2
 
-    # Get the clients id and triggers id
+    # Get the clients id and triggers id
     db = Helpers.db_name inst.domain, Sharing.doctype
     doc = Helpers.couch.get_doc db, sharing.couch_id
     client_id = doc.dig "credentials", 0, "local_client_id"
@@ -69,7 +67,7 @@ describe "A sharing" do
     code = sharing.revoke_by_sharer(inst, Folder.doctype)
     assert_equal 204, code
 
-    # Check the sharing on the sharer
+    # Check the sharing on the sharer
     db = Helpers.db_name inst.domain, Sharing.doctype
     doc = Helpers.couch.get_doc db, sharing.couch_id
     assert_nil doc["active"]
@@ -79,7 +77,7 @@ describe "A sharing" do
     shared_docs = Sharing.get_shared_docs(inst, sharing.couch_id, Folder.doctype)
     assert_nil shared_docs
 
-    # Check the oauth client and triggers are deleted
+    # Check the oauth client and triggers are deleted
     db_oauth = Helpers.db_name inst.domain, "io.cozy.oauth"
     db_triggers = Helpers.db_name inst.domain, "io.cozy.triggers"
     assert_not_found db_oauth, client_id
@@ -87,7 +85,7 @@ describe "A sharing" do
     assert_not_found db_triggers, replicate_id
     assert_not_found db_triggers, upload_id
 
-    # Check the sharing on the recipient
+    # Check the sharing on the recipient
     db = Helpers.db_name(inst_recipient.domain, Sharing.doctype)
     doc = Helpers.couch.get_doc db, sharing.couch_id
     assert_nil doc["active"]
@@ -96,7 +94,7 @@ describe "A sharing" do
     shared_docs = Sharing.get_shared_docs(inst_recipient, sharing.couch_id, Folder.doctype)
     assert_nil shared_docs
 
-    # Check the oauth client and triggers are deleted
+    # Check the oauth client and triggers are deleted
     db_oauth = Helpers.db_name(inst_recipient.domain, "io.cozy.oauth")
     db_triggers = Helpers.db_name(inst_recipient.domain, "io.cozy.triggers")
     assert_not_found db_oauth, client_id_recipient

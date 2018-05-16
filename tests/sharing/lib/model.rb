@@ -38,6 +38,29 @@ module Model
 
 
   module Files
+    module ClassMethods
+      def doctype
+        "io.cozy.files"
+      end
+
+      def get_id_from_path(inst, path)
+        find_by_path(inst, path).couch_id
+      end
+
+      def find_by_path(inst, path)
+        load_from_url inst, "/files/metadata?Path=#{path}"
+      end
+
+      def find(inst, id)
+        load_from_url inst, "/files/#{id}"
+      end
+    end
+
+    def self.included(klass)
+      klass.include Model
+      klass.extend ClassMethods
+    end
+
     def rename(inst, name)
       patch inst, name: name
       @name = name
