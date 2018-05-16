@@ -1,13 +1,17 @@
 package sharing
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -396,6 +400,93 @@ func resolveConflictSamePath(inst *instance.Instance, id, pth string) (string, e
 	return "", fs.UpdateFileDoc(old, f)
 }
 
+//getDirDocFromInstance fetches informations about a directory from the given
+//member of the sharing.
+func (s *Sharing) getDirDocFromInstance(inst *instance.Instance, m *Member, creds *Credentials, dirID string) (*vfs.DirDoc, error) {
+	u, err := url.Parse(m.Instance)
+	if err != nil {
+		return nil, ErrInvalidSharing
+	}
+	opts := &request.Options{
+		Method: http.MethodGet,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/io.cozy.files/" + dirID,
+		Headers: request.Headers{
+			"Accept":        "application/json",
+			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
+		},
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		res, err = RefreshToken(inst, s, m, creds, opts, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+	defer res.Body.Close()
+	if res.StatusCode/100 == 5 {
+		return nil, ErrInternalServerError
+	}
+	var doc *vfs.DirDoc
+	if err = json.NewDecoder(res.Body).Decode(&doc); err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+// getDirDocFromNetwork fetches informations about a directory from the other
+// cozy instances of this sharing.
+func (s *Sharing) getDirDocFromNetwork(inst *instance.Instance, dirID string) (*vfs.DirDoc, error) {
+	if !s.Owner {
+		return s.getDirDocFromInstance(inst, &s.Members[0], &s.Credentials[0], dirID)
+	}
+	for i := range s.Credentials {
+		doc, err := s.getDirDocFromInstance(inst, &s.Members[i+1], &s.Credentials[i], dirID)
+		if err == nil {
+			return doc, nil
+		}
+	}
+	return nil, ErrFolderNotFound
+}
+
+// recreateParent is used when a file or folder is added by a cozy, and sent to
+// this instance, but its parent directory was trashed and deleted on this
+// cozy. To resolve the conflict, this instance will fetch informations from
+// the other instance about the parent directory and will recreate it. It can
+// be necessery to recurse if there were several levels of directories deleted.
+func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.DirDoc, error) {
+	doc, err := s.getDirDocFromNetwork(inst, dirID)
+	if err != nil {
+		return nil, err
+	}
+	fs := inst.VFS()
+	var parent *vfs.DirDoc
+	if doc.DirID == "" {
+		parent, err = s.GetSharingDir(inst)
+	} else {
+		parent, err = fs.DirByID(doc.DirID)
+		if err == os.ErrNotExist {
+			parent, err = s.recreateParent(inst, doc.DirID)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	doc.DirID = parent.DocID
+	doc.Fullpath = path.Join(parent.Fullpath, doc.DocName)
+	doc.SetRev("")
+	err = fs.CreateDir(doc)
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
 // CreateDir creates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
@@ -427,7 +518,9 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	var err error
 	if dirID, ok := target["dir_id"].(string); ok {
 		parent, err = fs.DirByID(dirID)
-		// TODO better handling of this conflict
+		if err == os.ErrNotExist {
+			parent, err = s.recreateParent(inst, dirID)
+		}
 		if err != nil {
 			inst.Logger().WithField("nspace", "replicator").
 				Debugf("Conflict for parent on creating dir: %s", err)
@@ -501,7 +594,9 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	if dirID, ok := target["dir_id"].(string); ok {
 		if dirID != dir.DirID {
 			parent, err := fs.DirByID(dirID)
-			// TODO better handling of this conflict
+			if err == os.ErrNotExist {
+				parent, err = s.recreateParent(inst, dirID)
+			}
 			if err != nil {
 				inst.Logger().WithField("nspace", "replicator").
 					Debugf("Conflict for parent on updating dir: %s", err)

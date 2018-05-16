@@ -73,12 +73,10 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
-
+	res.Body.Close()
 	if res.StatusCode/100 != 2 {
 		return ErrRequestFailed
 	}
-
 	return nil
 }
 

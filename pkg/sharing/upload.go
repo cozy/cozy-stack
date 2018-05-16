@@ -215,10 +215,6 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	if err != nil {
 		return err
 	}
-	if res.StatusCode/100 == 5 {
-		res.Body.Close()
-		return ErrInternalServerError
-	}
 	if res.StatusCode/100 == 4 {
 		res.Body.Close()
 		res, err = RefreshToken(inst, s, m, creds, opts, body)
@@ -227,6 +223,9 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 		}
 	}
 	defer res.Body.Close()
+	if res.StatusCode/100 == 5 {
+		return ErrInternalServerError
+	}
 
 	if res.StatusCode == 204 {
 		return nil
@@ -261,6 +260,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	if err != nil {
 		return err
 	}
+	res2.Body.Close()
 	if res2.StatusCode/100 == 5 {
 		return ErrInternalServerError
 	}

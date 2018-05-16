@@ -545,18 +545,16 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 	if err != nil {
 		return err
 	}
+	res.Body.Close()
 	if res.StatusCode/100 == 5 {
-		res.Body.Close()
 		return ErrInternalServerError
 	}
 	if res.StatusCode/100 == 4 {
-		res.Body.Close()
 		if res, err = RefreshToken(inst, s, m, creds, opts, body); err != nil {
 			return err
 		}
+		res.Body.Close()
 	}
-	res.Body.Close()
-
 	return nil
 }
 
