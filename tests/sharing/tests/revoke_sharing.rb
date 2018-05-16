@@ -43,40 +43,34 @@ describe "A sharing" do
     sleep 2
 
     # Get the clients id and triggers id
-    domain = inst.domain.gsub '.', '-'
-    domain = domain.gsub ':', '-'
-    type = Sharing.doctype.gsub '.', '-'
-    db = "#{domain}%2F#{type}"
+    db = Helpers.db_name inst.domain, Sharing.doctype
     doc = Helpers.couch.get_doc db, sharing.couch_id
-    client_id = doc.dig "credentials", 0, "client", "local_client_id"
+    client_id = doc.dig "credentials", 0, "local_client_id"
     track_id = doc.dig "triggers", "track_id"
     replicate_id = doc.dig "triggers", "replicate_id"
     upload_id = doc.dig "triggers", "upload_id"
-    assert(client_id != "")
-    assert(track_id != "")
-    assert(replicate_id != "")
-    assert(upload_id != "")
+    refute_empty(client_id)
+    refute_empty(track_id)
+    refute_empty(replicate_id)
+    refute_empty(upload_id)
 
-    domain_recipient = inst.domain.gsub '.', '-'
-    domain_recipient = domain_recipient.gsub ':', '-'
-    db = "#{domain_recipient}%2F#{type}"
+    db = Helpers.db_name inst_recipient.domain, Sharing.doctype
     doc = Helpers.couch.get_doc db, sharing.couch_id
-    client_id_recipient = doc.dig "credentials", 0, "client", "local_client_id"
+    client_id_recipient = doc.dig "credentials", 0, "local_client_id"
     track_id_recipient = doc.dig "triggers", "track_id"
     replicate_id_recipient = doc.dig "triggers", "replicate_id"
     upload_id_recipient = doc.dig "triggers", "upload_id"
-    assert(client_id_recipient != "")
-    assert(track_id_recipient != "")
-    assert(replicate_id_recipient != "")
-    assert(upload_id_recipient != "")
+    refute_empty(client_id_recipient)
+    refute_empty(track_id_recipient)
+    refute_empty(replicate_id_recipient)
+    refute_empty(upload_id_recipient)
 
     # Revoke the sharing
     code = sharing.revoke_by_sharer(inst, Folder.doctype)
     assert_equal 204, code
 
     # Check the sharing on the sharer
-    type = Sharing.doctype.gsub '.', '-'
-    db = "#{domain}%2F#{type}"
+    db = Helpers.db_name inst.domain, Sharing.doctype
     doc = Helpers.couch.get_doc db, sharing.couch_id
     assert_nil doc["active"]
     assert_empty doc["triggers"]
@@ -86,28 +80,29 @@ describe "A sharing" do
     assert_nil shared_docs
 
     # Check the oauth client and triggers are deleted
-    assert_not_found "#{domain}%2Fio-cozy-oauth", client_id
-    assert_not_found "#{domain}%2Fio-cozy-triggers", track_id
-    assert_not_found "#{domain}%2Fio-cozy-triggers", replicate_id
-    assert_not_found "#{domain}%2Fio-cozy-triggers", upload_id
+    db_oauth = Helpers.db_name inst.domain, "io.cozy.oauth"
+    db_triggers = Helpers.db_name inst.domain, "io.cozy.triggers"
+    assert_not_found db_oauth, client_id
+    assert_not_found db_triggers, track_id
+    assert_not_found db_triggers, replicate_id
+    assert_not_found db_triggers, upload_id
 
     # Check the sharing on the recipient
-    domain = inst_recipient.domain.gsub '.', '-'
-    domain = domain.gsub ':', '-'
-    db = "#{domain}%2F#{type}"
+    db = Helpers.db_name(inst_recipient.domain, Sharing.doctype)
     doc = Helpers.couch.get_doc db, sharing.couch_id
     assert_nil doc["active"]
     assert_empty doc["triggers"]
     assert_nil doc.dig("credentials")
     shared_docs = Sharing.get_shared_docs(inst_recipient, sharing.couch_id, Folder.doctype)
     assert_nil shared_docs
-    puts "check shared doc"
 
     # Check the oauth client and triggers are deleted
-    assert_not_found "#{domain_recipient}%2Fio-cozy-oauth", client_id_recipient
-    assert_not_found "#{domain_recipient}%2Fio-cozy-triggers", track_id_recipient
-    assert_not_found "#{domain_recipient}%2Fio-cozy-triggers", replicate_id_recipient
-    assert_not_found "#{domain_recipient}%2Fio-cozy-triggers", upload_id_recipient
+    db_oauth = Helpers.db_name(inst_recipient.domain, "io.cozy.oauth")
+    db_triggers = Helpers.db_name(inst_recipient.domain, "io.cozy.triggers")
+    assert_not_found db_oauth, client_id_recipient
+    assert_not_found db_triggers, track_id_recipient
+    assert_not_found db_triggers, replicate_id_recipient
+    assert_not_found db_triggers, upload_id_recipient
 
     # Make an update: it should not be propagated
     old_name = file.name

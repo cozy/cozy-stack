@@ -55,5 +55,14 @@ module Helpers
       raise "Diff error" unless $?.success?
       diff.lines.map(&:chomp)
     end
+
+    def db_name(domain, type)
+      domain = domain.gsub '.', '-'
+      domain = domain.gsub ':', '-'
+      type = type.gsub '.', '-'
+      db = "#{domain}%2F#{type}"
+      db
+    end
+
   end
 end
