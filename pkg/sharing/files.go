@@ -365,6 +365,37 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 	}
 }
 
+// resolveConflictSamePath is used when two files/folders are in conflict
+// because they have the same path. To resolve the conflict, we take the
+// file/folder with the greatest id as the winner and rename the other.
+// If the winner is the new file/folder from the other cozy, this function
+// rename the local file/folder and let the caller retry its operation.
+// If the winner is the local file/folder, this function returns the new name
+// and let the caller do its operation with the new name (the caller should
+// create a dummy revision to let the other cozy know of the renaming).
+func resolveConflictSamePath(inst *instance.Instance, id, pth string) (string, error) {
+	fs := inst.VFS()
+	d, f, err := fs.DirOrFileByPath(pth)
+	if err != nil {
+		return "", err
+	}
+	name := fmt.Sprintf("%s - conflict - %d", pth, time.Now().Unix())
+	if d != nil {
+		if d.DocID > id {
+			return name, nil
+		}
+		old := d.Clone().(*vfs.DirDoc)
+		d.DocName = name
+		return "", fs.UpdateDirDoc(old, d)
+	}
+	if f.DocID > id {
+		return name, nil
+	}
+	old := f.Clone().(*vfs.FileDoc)
+	f.DocName = name
+	return "", fs.UpdateFileDoc(old, f)
+}
+
 // CreateDir creates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
@@ -386,7 +417,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 			Debugf("Missing _revisions for creating dir: %#v", target)
 		return ErrInternalServerError
 	}
-	indexer := NewSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revisions,
 	})
@@ -420,8 +451,14 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	// TODO referenced_by
 	err = fs.CreateDir(dir)
 	if err == os.ErrExist {
-		// TODO better handling of this conflict
-		dir.DocName = fmt.Sprintf("%s - conflict - %d", dir.DocName, time.Now().Unix())
+		name, err := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
+		if err != nil {
+			return err
+		}
+		if name != "" {
+			indexer.IncrementRevision()
+			dir.DocName = name
+		}
 		err = fs.CreateDir(dir)
 	}
 	if err != nil {
@@ -448,7 +485,7 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 		return ErrInternalServerError
 	}
 	oldDoc := dir.Clone().(*vfs.DirDoc)
-	indexer := NewSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revisions,
 	})
@@ -488,8 +525,14 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	// TODO referenced_by
 	err := fs.UpdateDirDoc(oldDoc, dir)
 	if err == os.ErrExist {
-		// TODO better handling of this conflict
-		dir.DocName = fmt.Sprintf("%s - conflict - %d", dir.DocName, time.Now().Unix())
+		name, err := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
+		if err != nil {
+			return err
+		}
+		if name != "" {
+			indexer.IncrementRevision()
+			dir.DocName = name
+		}
 		err = fs.UpdateDirDoc(oldDoc, dir)
 	}
 	if err != nil {

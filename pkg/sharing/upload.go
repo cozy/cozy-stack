@@ -296,7 +296,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	if len(target.MD5Sum) == 0 {
 		return nil, vfs.ErrInvalidHash
 	}
-	indexer := NewSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       target.Rev(),
 		Revisions: target.Revisions,
 	})
@@ -373,7 +373,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 		return ErrMissingFileMetadata
 	}
 
-	indexer := NewSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       target.Rev(),
 		Revisions: target.Revisions,
 	})
