@@ -315,7 +315,7 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 	if err != nil {
 		return nil, err
 	}
-	res, err := request.Req(&request.Options{
+	opts := &request.Options{
 		Method: http.MethodPost,
 		Scheme: u.Scheme,
 		Domain: u.Host,
@@ -326,38 +326,25 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 		},
 		Body: bytes.NewReader(body),
-	})
+	}
+	var res *http.Response
+	res, err = request.Req(opts)
 	if err != nil {
 		return nil, err
 	}
+	if res.StatusCode/100 == 5 {
+		res.Body.Close()
+		return nil, ErrInternalServerError
+	}
 	if res.StatusCode/100 == 4 {
 		res.Body.Close()
-		if err = creds.Refresh(inst, s, m); err != nil {
-			return nil, err
-		}
-		res, err = request.Req(&request.Options{
-			Method: http.MethodPost,
-			Scheme: u.Scheme,
-			Domain: u.Host,
-			Path:   "/sharings/" + s.SID + "/_revs_diff",
-			Headers: request.Headers{
-				"Accept":        "application/json",
-				"Content-Type":  "application/json",
-				"Authorization": "Bearer " + creds.AccessToken.AccessToken,
-			},
-			Body: bytes.NewReader(body),
-		})
+		res, err = RefreshToken(inst, s, m, creds, opts, body)
 		if err != nil {
 			return nil, err
 		}
 	}
 	defer res.Body.Close()
-	if res.StatusCode/100 == 5 {
-		return nil, ErrInternalServerError
-	}
-	if res.StatusCode/100 != 2 {
-		return nil, ErrClientError
-	}
+
 	missings := make(Missings)
 	if err = json.NewDecoder(res.Body).Decode(&missings); err != nil {
 		return nil, err
@@ -542,7 +529,7 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 	if err != nil {
 		return err
 	}
-	res, err := request.Req(&request.Options{
+	opts := &request.Options{
 		Method: http.MethodPost,
 		Scheme: u.Scheme,
 		Domain: u.Host,
@@ -553,38 +540,23 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 		},
 		Body: bytes.NewReader(body),
-	})
+	}
+	res, err := request.Req(opts)
 	if err != nil {
 		return err
 	}
-	if res.StatusCode/100 == 4 {
-		res.Body.Close()
-		if err = creds.Refresh(inst, s, m); err != nil {
-			return err
-		}
-		res, err = request.Req(&request.Options{
-			Method: http.MethodPost,
-			Scheme: u.Scheme,
-			Domain: u.Host,
-			Path:   "/sharings/" + s.SID + "/_bulk_docs",
-			Headers: request.Headers{
-				"Accept":        "application/json",
-				"Content-Type":  "application/json",
-				"Authorization": "Bearer " + creds.AccessToken.AccessToken,
-			},
-			Body: bytes.NewReader(body),
-		})
-		if err != nil {
-			return err
-		}
-	}
-	defer res.Body.Close()
 	if res.StatusCode/100 == 5 {
+		res.Body.Close()
 		return ErrInternalServerError
 	}
-	if res.StatusCode/100 != 2 {
-		return ErrClientError
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if res, err = RefreshToken(inst, s, m, creds, opts, body); err != nil {
+			return err
+		}
 	}
+	res.Body.Close()
+
 	return nil
 }
 

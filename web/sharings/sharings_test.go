@@ -603,19 +603,19 @@ func TestCheckPermissions(t *testing.T) {
 func TestCheckSharingInfoByDocType(t *testing.T) {
 	sharedDocs1 := []string{"fakeid1", "fakeid2", "fakeid3"}
 	sharedDocs2 := []string{"fakeid4", "fakeid5"}
-	s1 := createSharing(aliceInstance, sharedDocs1)
-	assert.NotNil(t, s1)
-	s2 := createSharing(aliceInstance, sharedDocs2)
-	assert.NotNil(t, s2)
+	s1 := createSharing(t, aliceInstance, sharedDocs1)
+	s2 := createSharing(t, aliceInstance, sharedDocs2)
 
 	for _, id := range sharedDocs1 {
 		sid := iocozytests + "/" + id
-		sd := createSharedDoc(aliceInstance, sid, s1.ID())
+		sd, errs := createSharedDoc(aliceInstance, sid, s1.ID())
+		assert.NoError(t, errs)
 		assert.NotNil(t, sd)
 	}
 	for _, id := range sharedDocs2 {
 		sid := iocozytests + "/" + id
-		sd := createSharedDoc(aliceInstance, sid, s2.ID())
+		sd, errs := createSharedDoc(aliceInstance, sid, s2.ID())
+		assert.NoError(t, errs)
 		assert.NotNil(t, sd)
 	}
 	req, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/"+iocozytests, nil)
@@ -628,7 +628,56 @@ func TestCheckSharingInfoByDocType(t *testing.T) {
 	defer res.Body.Close()
 
 	assertSharingInfoRequestIsCorrect(t, res.Body, s1.ID(), s2.ID())
+}
 
+func TestRevokeSharing(t *testing.T) {
+	sharedDocs := []string{"mygreatid1", "mygreatid2"}
+	sharedRefs := []*sharing.SharedRef{}
+	s := createSharing(t, aliceInstance, sharedDocs)
+	for _, id := range sharedDocs {
+		sid := iocozytests + "/" + id
+		sd, errs := createSharedDoc(aliceInstance, sid, s.SID)
+		sharedRefs = append(sharedRefs, sd)
+		assert.NoError(t, errs)
+		assert.NotNil(t, sd)
+	}
+
+	cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[1])
+	assert.NoError(t, err)
+	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
+	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID)
+	assert.NoError(t, err)
+	s.Credentials[0].AccessToken = token
+	s.Members[1].Status = sharing.MemberStatusReady
+
+	err = couchdb.UpdateDoc(aliceInstance, s)
+	assert.NoError(t, err)
+
+	err = s.AddTrackTriggers(aliceInstance)
+	assert.NoError(t, err)
+	err = s.AddReplicateTrigger(aliceInstance)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodDelete, tsA.URL+"/sharings/"+s.ID()+"/recipients", nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
+	_, _ = http.DefaultClient.Do(req)
+
+	var sRevoke sharing.Sharing
+	err = couchdb.GetDoc(aliceInstance, s.DocType(), s.SID, &sRevoke)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "", sRevoke.Triggers.TrackID)
+	assert.Equal(t, "", sRevoke.Triggers.ReplicateID)
+	assert.Equal(t, "", sRevoke.Triggers.UploadID)
+	assert.Equal(t, false, sRevoke.Active)
+
+	var sdoc sharing.SharedRef
+	err = couchdb.GetDoc(aliceInstance, sharedRefs[0].DocType(), sharedRefs[0].ID(), &sdoc)
+	assert.EqualError(t, err, "CouchDB(not_found): deleted")
+	err = couchdb.GetDoc(aliceInstance, sharedRefs[1].DocType(), sharedRefs[1].ID(), &sdoc)
+	assert.EqualError(t, err, "CouchDB(not_found): deleted")
 }
 
 func TestMain(m *testing.M) {
@@ -701,29 +750,34 @@ func createContact(inst *instance.Instance, name, email string) *contacts.Contac
 	return c
 }
 
-func createSharing(inst *instance.Instance, values []string) *sharing.Sharing {
+func createSharing(t *testing.T, inst *instance.Instance, values []string) *sharing.Sharing {
 	r := sharing.Rule{
 		Title:   "test",
 		DocType: iocozytests,
 		Values:  values,
+		Add:     sharing.ActionRuleSync,
 	}
 	m := sharing.Member{
-		Name:  bobContact.FullName,
-		Email: bobContact.Email[0].Address,
+		Name:     bobContact.FullName,
+		Email:    bobContact.Email[0].Address,
+		Instance: tsB.URL,
 	}
 	s := &sharing.Sharing{
-		Owner:   true,
-		Rules:   []sharing.Rule{r},
-		Members: []sharing.Member{m},
+		Owner: true,
+		Rules: []sharing.Rule{r},
 	}
-	err := couchdb.CreateDoc(inst, s)
-	if err != nil {
-		return nil
-	}
+	s.Credentials = append(s.Credentials, sharing.Credentials{})
+	err := s.BeOwner(aliceInstance, "")
+	assert.NoError(t, err)
+	s.Members = append(s.Members, m)
+
+	err = couchdb.CreateDoc(inst, s)
+	assert.NoError(t, err)
+	assert.NotNil(t, s)
 	return s
 }
 
-func createSharedDoc(inst *instance.Instance, id, sharingID string) *sharing.SharedRef {
+func createSharedDoc(inst *instance.Instance, id, sharingID string) (*sharing.SharedRef, error) {
 	ref := &sharing.SharedRef{
 		SID: id,
 		Infos: map[string]sharing.SharedInfo{
@@ -732,9 +786,9 @@ func createSharedDoc(inst *instance.Instance, id, sharingID string) *sharing.Sha
 	}
 	err := couchdb.CreateNamedDocWithDB(inst, ref)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return ref
+	return ref, nil
 }
 
 func generateAppToken(inst *instance.Instance, slug string) string {

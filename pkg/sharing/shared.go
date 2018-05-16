@@ -246,7 +246,6 @@ func RemoveSharedRefs(inst *instance.Instance, sharingID string) error {
 		IncludeDocs: true,
 	}
 	var res couchdb.ViewResponse
-
 	err := couchdb.ExecView(inst, consts.SharedDocsBySharingID, req, &res)
 	if err != nil {
 		return err
