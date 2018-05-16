@@ -5,15 +5,9 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"strconv"
-	"time"
-
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -21,6 +15,13 @@ import (
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"strconv"
+	"time"
 )
 
 // DefaultStorageDir is the default directory name in which data
@@ -28,7 +29,6 @@ import (
 const DefaultStorageDir = "storage"
 
 var cfgFile string
-var flagClientUseHTTPS bool
 
 // ErrUsage is returned by the cmd.Usage() method
 var ErrUsage = errors.New("Bad usage of command")
@@ -54,6 +54,145 @@ profiles you.`,
 	SilenceErrors: true,
 }
 
+func sslVerifyPinnedKey(pinnedFingerPrint []byte) func(certs [][]byte, verifiedChains [][]*x509.Certificate) error {
+	if len(pinnedFingerPrint) != sha256.Size {
+		panic("key len should be 32")
+	}
+
+	return func(certs [][]byte, verifiedChains [][]*x509.Certificate) error {
+		// Check for leaf pinning first
+		for _, asn1 := range certs {
+			cert, err := x509.ParseCertificate(asn1)
+			if err != nil {
+				return err
+			}
+			fingerPrint := sha256.Sum256(cert.RawSubjectPublicKeyInfo)
+			if bytes.Equal(pinnedFingerPrint, fingerPrint[:]) {
+				return nil
+			}
+		}
+
+		// Then check for intermediate pinning
+		for _, verifiedChain := range verifiedChains {
+			if len(verifiedChain) > 0 {
+				verifiedCert := verifiedChain[0]
+				fingerPrint := sha256.Sum256(verifiedCert.RawSubjectPublicKeyInfo)
+				if bytes.Equal(pinnedFingerPrint, fingerPrint[:]) {
+					return nil
+				}
+			}
+		}
+		return fmt.Errorf("ssl: could not find the valid pinned key from proposed ones")
+	}
+}
+
+func sslClient(ca string, cert string, key string, fp string, verify bool, timeout time.Duration) (*http.Client, error) {
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: !verify,
+	}
+
+	if ca != "" {
+		data, err := ioutil.ReadFile(ca)
+		if err != nil {
+			return nil, fmt.Errorf("Could not read file %q: %s", ca, err)
+		}
+		pool := x509.NewCertPool()
+		pool.AppendCertsFromPEM(data)
+		tlsConfig.RootCAs = pool
+	}
+
+	if cert != "" && key != "" {
+		cert, err := tls.LoadX509KeyPair(cert, key)
+		if err != nil {
+			return nil, fmt.Errorf("Could not read client certificate files %q and %q: %s",
+				cert, key, err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	if fp != "" {
+		pinnedFingerPrint, err := hex.DecodeString(fp)
+		if err != nil {
+			return nil, fmt.Errorf("Invalid fingerprint encoding for %s", fp)
+		}
+		if len(pinnedFingerPrint) != sha256.Size {
+			return nil, fmt.Errorf("Invalid fingerprint size for %s, expected %d got %d", fp,
+				sha256.Size, len(pinnedFingerPrint))
+		}
+		tlsConfig.VerifyPeerCertificate = sslVerifyPinnedKey(pinnedFingerPrint)
+	}
+
+	return &http.Client{
+		Timeout:   timeout,
+		Transport: &http.Transport{TLSClientConfig: tlsConfig},
+	}, nil
+}
+
+func configureEndpoint(u *url.URL) (result *url.URL, client *http.Client, err error) {
+	if u.Scheme == "https" {
+		query := u.Query()
+		ca := query.Get("ca")
+		cert := query.Get("cert")
+		key := query.Get("key")
+		fp := query.Get("fp")
+		v := query.Get("validate")
+
+		var validate bool
+		if v == "" {
+			validate = true
+		} else {
+			validate, err = strconv.ParseBool(v)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		timeout := 0 * time.Second
+		t := query.Get("timeout")
+		if t != "" {
+			timeout, err = time.ParseDuration(t)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		client, err = sslClient(ca, cert, key, fp, validate, timeout)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// Remove others parts
+	result = &url.URL{
+		User:   u.User,
+		Scheme: u.Scheme,
+		Host:   u.Host,
+	}
+
+	return result, client, nil
+}
+
+func parseEndpoint(host string, port int) (*url.URL, *http.Client, error) {
+	u, err := url.Parse(host)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if u.Scheme == "" {
+		// We have host + port, HTTP implied
+		u = &url.URL{
+			Scheme: "http",
+			Host:   net.JoinHostPort(host, strconv.Itoa(port)),
+		}
+	}
+
+	url, client, err := configureEndpoint(u)
+	if err != nil {
+		return nil, nil, err
+	}
+	return url, client, nil
+}
+
 func newClient(domain string, scopes ...string) *client.Client {
 	// For the CLI client, we rely on the admin APIs to generate a CLI token.
 	// We may want in the future rely on OAuth to handle the permissions with
@@ -70,29 +209,21 @@ func newClient(domain string, scopes ...string) *client.Client {
 		errPrintfln("%s", err)
 		os.Exit(1)
 	}
-	var scheme string
-	if flagClientUseHTTPS {
-		scheme = "https"
-	} else {
-		scheme = "http"
-	}
+
+	cfg := config.GetConfig()
+	u, h, err := parseEndpoint(cfg.Host, cfg.Port)
+	checkNoErr(err)
+
 	return &client.Client{
-		Addr:       config.ServerAddr(),
+		Scheme:     u.Scheme,
+		Addr:       u.Host,
 		Domain:     domain,
-		Scheme:     scheme,
+		Client:     h,
 		Authorizer: &request.BearerAuthorizer{Token: token},
 	}
 }
 
 func newAdminClient() *client.Client {
-	var err error
-	useHTTPS := false
-	if envHTTPS := os.Getenv("COZY_ADMIN_HTTPS_CLIENT"); envHTTPS != "" {
-		useHTTPS, err = strconv.ParseBool(envHTTPS)
-		if err != nil {
-			errFatalf("Could not read COZY_ADMIN_HTTPS variable: %s", err)
-		}
-	}
 	pass := []byte(os.Getenv("COZY_ADMIN_PASSWORD"))
 	if !config.IsDevRelease() {
 		if len(pass) == 0 {
@@ -104,83 +235,20 @@ func newAdminClient() *client.Client {
 			}
 		}
 	}
+
+	cfg := config.GetConfig()
+	u, h, err := parseEndpoint(cfg.AdminHost, cfg.AdminPort)
+	checkNoErr(err)
+
 	c := &client.Client{
-		Domain:     config.AdminServerAddr(),
+		Scheme:     u.Scheme,
+		Addr:       u.Host,
+		Domain:     u.Host,
+		Client:     h,
 		Authorizer: &request.BasicAuthorizer{Password: string(pass)},
 	}
-	if useHTTPS {
-		c.Scheme = "https"
-		c.Client = sslClient()
-	} else {
-		c.Scheme = "http"
-	}
+
 	return c
-}
-
-func sslClient() *http.Client {
-	var rootCAs *x509.CertPool
-	var clientCertificate tls.Certificate
-	var verifyPeerCertificate func(_ [][]byte, verifiedChains [][]*x509.Certificate) error
-
-	if envRootCA := os.Getenv("COZY_ADMIN_HTTPS_CLIENT_ROOTCA_FILE"); envRootCA != "" {
-		rootCA, err := ioutil.ReadFile(envRootCA)
-		if err != nil {
-			errFatalf("Could not read file %q: %s", envRootCA, err)
-		}
-		rootCAs = x509.NewCertPool()
-		rootCAs.AppendCertsFromPEM(rootCA)
-	}
-
-	if envClientCert := os.Getenv("COZY_ADMIN_HTTPS_CLIENT_CERT_FILE"); envClientCert != "" {
-		envClientKeyFile := os.Getenv("COZY_ADMIN_HTTPS_CLIENT_KEY_FILE")
-		cert, err := tls.LoadX509KeyPair(envClientCert, envClientKeyFile)
-		if err != nil {
-			errFatalf("Could not read client certificate files %q and %q: %s",
-				envClientCert, envClientKeyFile, err)
-		}
-		clientCertificate = cert
-	}
-
-	if envKeyPinned := os.Getenv("COZY_ADMIN_HTTPS_CLIENT_PINNED_KEY"); envKeyPinned != "" {
-		pinnedFingerPrint, err := base64.StdEncoding.DecodeString(envKeyPinned)
-		if err != nil {
-			errFatalf("Invalid encoding for COZY_ADMIN_HTTPS_CLIENT_PINNED_KEY")
-		}
-		if len(pinnedFingerPrint) != sha256.Size {
-			errFatalf("Invalid size for COZY_ADMIN_HTTPS_CLIENT_PINNED_KEY: expected %d got %d",
-				sha256.Size, len(pinnedFingerPrint))
-		}
-		verifyPeerCertificate = sslVerifyPinnedKey(pinnedFingerPrint)
-	}
-
-	tlsConfig := &tls.Config{
-		Certificates:          []tls.Certificate{clientCertificate},
-		RootCAs:               rootCAs,
-		VerifyPeerCertificate: verifyPeerCertificate,
-		InsecureSkipVerify:    false, // should be false, we *need* rootca verification
-	}
-	return &http.Client{
-		Timeout:   15 * time.Second,
-		Transport: &http.Transport{TLSClientConfig: tlsConfig},
-	}
-}
-
-func sslVerifyPinnedKey(pinnedFingerPrint []byte) func(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
-	if len(pinnedFingerPrint) != sha256.Size {
-		panic("key len should be 32")
-	}
-	return func(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
-		for _, verifiedChain := range verifiedChains {
-			if len(verifiedChain) > 0 {
-				verifiedCert := verifiedChain[0]
-				fingerPrint := sha256.Sum256(verifiedCert.RawSubjectPublicKeyInfo)
-				if bytes.Equal(pinnedFingerPrint, fingerPrint[:]) {
-					return nil
-				}
-			}
-		}
-		return fmt.Errorf("ssl: could not find the valid pinned key from proposed ones")
-	}
 }
 
 func init() {
@@ -205,8 +273,6 @@ func init() {
 
 	flags.Int("admin-port", 6060, "administration server port")
 	checkNoErr(viper.BindPFlag("admin.port", flags.Lookup("admin-port")))
-
-	flags.BoolVar(&flagClientUseHTTPS, "client-use-https", false, "if set the client will use https to communicate with the server")
 }
 
 func checkNoErr(err error) {
