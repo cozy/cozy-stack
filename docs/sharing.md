@@ -788,6 +788,44 @@ Content-Type: application/json
 []
 ```
 
+### GET /sharings/:sharing-id/io.cozy.files/:file-id
+
+This is an internal endpoint used by a stack to get informations about a
+folder. It is used when a cozy sent to another cozy a file or folder inside a
+folder that was trashed (and trash was emptied): the recipient does no longer
+have any informations about the parent directory. To resolve the conflict, it
+recreates the missing parent directory by asking the other cozy informations
+about it.
+
+#### Request
+
+```http
+GET /sharings/ce8835a061d0ef68947afe69a0046722/io.cozy.files/6d245d072be5522bd3a6f273dd000c65 HTTP/1.1
+Host: alice.example.net
+Accept: application/json
+Authorization: Bearer ...
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "_id": "6d245d072be5522bd3a6f273dd000c65",
+  "_rev": "1-de4ec176ffa9ddafe8bdcc739dc60fed",
+  "type": "directory",
+  "name": "phone",
+  "dir_id": "6d245d072be5522bd3a6f273dd007396",
+  "created_at": "2016-09-19T12:35:08Z",
+  "updated_at": "2016-09-19T12:35:08Z",
+  "tags": ["bills"]
+}
+```
+
 ### PUT /sharings/:sharing-id/io.cozy.files/:file-id/metadata
 
 This is an internal endpoint used by a stack to send the new metadata about a
@@ -807,6 +845,10 @@ Authorization: Bearer ...
 {
   "_id": "4b24ab130b2538b7b444fc65430198ad",
   "_rev": "1-356bf77c03baa1da851a2be1f06aba81",
+  "_revisions": {
+    "start": 1,
+    "ids": ["356bf77c03baa1da851a2be1f06aba81"]
+  },
   "type": "file",
   "name": "cloudy.jpg",
   "dir_id": "4b24ab130b2538b7b444fc65430188cd",

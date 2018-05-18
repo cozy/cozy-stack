@@ -73,12 +73,10 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
-
+	res.Body.Close()
 	if res.StatusCode/100 != 2 {
 		return ErrRequestFailed
 	}
-
 	return nil
 }
 
@@ -164,7 +162,7 @@ func DeleteOAuthClient(inst *instance.Instance, m *Member, cred *Credentials) er
 	if m.Instance == "" {
 		return ErrInvalidURL
 	}
-	clientID := cred.LocalClientID
+	clientID := cred.InboundClientID
 	client, err := oauth.FindClient(inst, clientID)
 	if err != nil {
 		return err
@@ -229,7 +227,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if err != nil {
 		return err
 	}
-	s.Credentials[0].LocalClientID = cli.ClientID
+	s.Credentials[0].InboundClientID = cli.ClientID
 
 	token, err := CreateAccessToken(inst, cli, s.SID)
 	if err != nil {
@@ -279,14 +277,13 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		return ErrRequestFailed
 	}
 	s.Credentials[0].XorKey = creds.XorKey
+	// TODO InboundClientID
 	if !s.ReadOnly() {
 		s.Credentials[0].AccessToken = creds.AccessToken
 		s.Credentials[0].Client = creds.Client
 	}
-	if err = couchdb.UpdateDoc(inst, s); err != nil {
-		return err
-	}
-	return nil
+	s.Active = true
+	return couchdb.UpdateDoc(inst, s)
 }
 
 // ProcessAnswer takes somes credentials and update the sharing with those.
@@ -310,8 +307,7 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 				if err != nil {
 					return &ac, nil
 				}
-				s.Credentials[i].LocalClientID = cli.ClientID
-
+				s.Credentials[i].InboundClientID = cli.ClientID
 				ac.Credentials.Client = ConvertOAuthClient(cli)
 				token, err := CreateAccessToken(inst, cli, s.SID)
 				if err != nil {

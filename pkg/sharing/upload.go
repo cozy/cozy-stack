@@ -215,10 +215,6 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	if err != nil {
 		return err
 	}
-	if res.StatusCode/100 == 5 {
-		res.Body.Close()
-		return ErrInternalServerError
-	}
 	if res.StatusCode/100 == 4 {
 		res.Body.Close()
 		res, err = RefreshToken(inst, s, m, creds, opts, body)
@@ -227,6 +223,9 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 		}
 	}
 	defer res.Body.Close()
+	if res.StatusCode/100 == 5 {
+		return ErrInternalServerError
+	}
 
 	if res.StatusCode == 204 {
 		return nil
@@ -261,6 +260,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	if err != nil {
 		return err
 	}
+	res2.Body.Close()
 	if res2.StatusCode/100 == 5 {
 		return ErrInternalServerError
 	}
@@ -296,7 +296,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	if len(target.MD5Sum) == 0 {
 		return nil, vfs.ErrInvalidHash
 	}
-	indexer := NewSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       target.Rev(),
 		Revisions: target.Revisions,
 	})
@@ -325,30 +325,51 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	}
 	oldDoc := current.Clone().(*vfs.FileDoc)
 
-	current.DocName = target.DocName
+	var parent *vfs.DirDoc
 	if target.DirID == "" {
-		parent, err := s.GetSharingDir(inst)
+		parent, err = s.GetSharingDir(inst)
 		if err != nil {
 			return nil, err
 		}
 		current.DirID = parent.DocID
 	} else if target.DirID != current.DirID {
-		parent, err := fs.DirByID(target.DirID)
-		// TODO better handling of this conflict
+		parent, err = fs.DirByID(target.DirID)
+		if err == os.ErrNotExist {
+			parent, err = s.recreateParent(inst, target.DirID)
+		}
 		if err != nil {
 			inst.Logger().WithField("nspace", "upload").
 				Debugf("Conflict for parent on sync file: %s", err)
 			return nil, err
 		}
-		current.DirID = parent.DocID
 	}
+	current.DirID = parent.DocID
+	current.DocName = target.DocName
 
 	copySafeFieldsToFile(target.FileDoc, current)
-	inst.Logger().WithField("nspace", "upload").
-		Debugf("Sync file: %#v", current)
 	// TODO referenced_by
-	// TODO manage conflicts
-	return nil, fs.UpdateFileDoc(oldDoc, current)
+	err = fs.UpdateFileDoc(oldDoc, current)
+	if err == os.ErrExist {
+		pth, errp := current.Path(fs)
+		if errp != nil {
+			return nil, errp
+		}
+		name, errr := resolveConflictSamePath(inst, current.DocID, pth)
+		if errr != nil {
+			return nil, errr
+		}
+		if name != "" {
+			indexer.IncrementRevision()
+			current.DocName = name
+		}
+		err = fs.UpdateFileDoc(oldDoc, current)
+	}
+	if err != nil {
+		inst.Logger().WithField("nspace", "upload").
+			Debugf("Cannot update file: %s", err)
+		return nil, err
+	}
+	return nil, nil
 }
 
 // HandleFileUpload is used to receive a file upload when synchronizing just
@@ -373,7 +394,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 		return ErrMissingFileMetadata
 	}
 
-	indexer := NewSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       target.Rev(),
 		Revisions: target.Revisions,
 	})
@@ -426,6 +447,26 @@ func (s *Sharing) updateFileContent(inst *instance.Instance, fs vfs.VFS, newdoc,
 		newdoc.DirID = olddoc.DirID
 	}
 	file, err := fs.CreateFile(newdoc, olddoc)
+	if err == os.ErrExist {
+		pth, errp := newdoc.Path(fs)
+		if errp != nil {
+			return errp
+		}
+		name, errr := resolveConflictSamePath(inst, newdoc.DocID, pth)
+		if errr != nil {
+			return errr
+		}
+		if name != "" {
+			// TODO we should generate a new revision to let the other cozy know of this change
+			if olddoc == nil {
+				newdoc.DocName = name
+			} else {
+				newdoc.DocName = olddoc.DocName
+				newdoc.DirID = olddoc.DirID
+			}
+		}
+		file, err = fs.CreateFile(newdoc, olddoc)
+	}
 	if err != nil {
 		inst.Logger().WithField("nspace", "upload").
 			Debugf("Cannot create file: %s", err)

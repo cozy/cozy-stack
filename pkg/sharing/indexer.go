@@ -1,10 +1,12 @@
 package sharing
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -21,15 +23,33 @@ type sharingIndexer struct {
 	bulkRevs *bulkRevs
 }
 
-// NewSharingIndexer creates an Indexer for the special purpose of the sharing.
+// newSharingIndexer creates an Indexer for the special purpose of the sharing.
 // It intercepts some requests to force the id and revisions of some documents,
 // and proxifies other requests to the normal couchdbIndexer (reads).
-func NewSharingIndexer(inst *instance.Instance, bulkRevs *bulkRevs) vfs.Indexer {
+func newSharingIndexer(inst *instance.Instance, bulkRevs *bulkRevs) *sharingIndexer {
 	return &sharingIndexer{
 		db:       inst,
 		indexer:  vfs.NewCouchdbIndexer(inst),
 		bulkRevs: bulkRevs,
 	}
+}
+
+func (s *sharingIndexer) IncrementRevision() {
+	var start int64
+	switch s := s.bulkRevs.Revisions["start"].(type) {
+	case float64:
+		start = int64(s)
+	case int64:
+		start = s
+	default:
+		panic("start has an unexpected type")
+	}
+	start++
+	ids := s.bulkRevs.Revisions["ids"].([]string)
+	generated := hex.EncodeToString(crypto.GenerateRandomBytes(16))
+	s.bulkRevs.Rev = fmt.Sprintf("%d-%s", start, generated)
+	s.bulkRevs.Revisions["start"] = start
+	s.bulkRevs.Revisions["ids"] = append(ids, generated)
 }
 
 func (s *sharingIndexer) InitIndex() error {

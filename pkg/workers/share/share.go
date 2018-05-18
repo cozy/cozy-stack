@@ -84,6 +84,9 @@ func WorkerReplicate(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
+	if !s.Active {
+		return nil
+	}
 	return s.Replicate(inst, msg.Errors)
 }
 
@@ -101,6 +104,9 @@ func WorkerUpload(ctx *jobs.WorkerContext) error {
 	s, err := sharing.FindSharing(inst, msg.SharingID)
 	if err != nil {
 		return err
+	}
+	if !s.Active {
+		return nil
 	}
 	return s.Upload(inst, msg.Errors)
 }

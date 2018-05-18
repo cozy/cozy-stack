@@ -12,6 +12,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -861,6 +862,8 @@ func WrapVfsError(err error) error {
 	switch err {
 	case ErrDocTypeInvalid:
 		return jsonapi.InvalidAttribute("type", err)
+	case os.ErrNotExist:
+		return jsonapi.NotFound(err)
 	case vfs.ErrParentDoesNotExist:
 		return jsonapi.NotFound(err)
 	case vfs.ErrParentInTrash:

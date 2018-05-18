@@ -49,8 +49,9 @@ type Credentials struct {
 	// XorKey is used to transform file identifiers
 	XorKey []byte `json:"xor_key,omitempty"`
 
-	// LocalClientID is the ClientID of the member in the oauth db, for synced sharing
-	LocalClientID string `json:"local_client_id,omitempty"`
+	// InboundClientID is the OAuth ClientID used for authentifying incoming
+	// requests from the member
+	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
 // AddContact adds the contact with the given identifier
@@ -81,7 +82,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 
 // FindMemberByState returns the member that is linked to the sharing by
 // the given state
-func (s *Sharing) FindMemberByState(db couchdb.Database, state string) (*Member, error) {
+func (s *Sharing) FindMemberByState(state string) (*Member, error) {
 	if !s.Owner {
 		return nil, ErrInvalidSharing
 	}
@@ -116,6 +117,17 @@ func (s *Sharing) FindMemberBySharecode(db couchdb.Database, sharecode string) (
 	for i, m := range s.Members {
 		if m.Email == email {
 			return &s.Members[i], nil
+		}
+	}
+	return nil, ErrMemberNotFound
+}
+
+// FindMemberByInboundClientID returns the member that have used this client
+// ID to make a request on the given sharing
+func (s *Sharing) FindMemberByInboundClientID(clientID string) (*Member, error) {
+	for i, c := range s.Credentials {
+		if c.InboundClientID == clientID {
+			return &s.Members[i+1], nil
 		}
 	}
 	return nil, ErrMemberNotFound
@@ -179,17 +191,16 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 		if err != nil {
 			return err
 		}
+		res.Body.Close()
 		if res.StatusCode/100 == 5 {
-			res.Body.Close()
 			return ErrInternalServerError
 		}
 		if res.StatusCode/100 == 4 {
-			res.Body.Close()
 			if res, err = RefreshToken(inst, s, m, c, opts, nil); err != nil {
 				return err
 			}
+			res.Body.Close()
 		}
-		res.Body.Close()
 
 		if !s.ReadOnly() {
 			if err := DeleteOAuthClient(inst, m, c); err != nil {

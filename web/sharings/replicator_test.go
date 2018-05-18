@@ -9,9 +9,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/sharing"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/echo"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
@@ -22,6 +24,8 @@ var tsR *httptest.Server
 var replInstance *instance.Instance
 var replSharingID, replAccessToken string
 var fileSharingID, fileAccessToken string
+var dirID string
+var xorKey []byte
 
 const replDoctype = "io.cozy.replicator.tests"
 
@@ -263,15 +267,15 @@ func TestBulkDocs(t *testing.T) {
 
 // It's not really a test, more a setup for the io.cozy.files tests
 func TestCreateSharingForUploadFileTest(t *testing.T) {
-	dirID := uuidv4()
+	dirID = uuidv4()
 	ruleOne := sharing.Rule{
 		Title:    "file one",
 		DocType:  "io.cozy.files",
 		Selector: "",
 		Values:   []string{dirID},
-		Add:      "push",
-		Update:   "push",
-		Remove:   "push",
+		Add:      "sync",
+		Update:   "sync",
+		Remove:   "sync",
 	}
 	s := sharing.Sharing{
 		Description: "upload files tests",
@@ -291,14 +295,21 @@ func TestCreateSharingForUploadFileTest(t *testing.T) {
 
 	assert.NoError(t, s.CreateDirForSharing(replInstance, &s.Rules[0]))
 
-	cli, err := sharing.CreateOAuthClient(replInstance, &s.Members[1])
+	xorKey = sharing.MakeXorKey()
+	s.Credentials[0].XorKey = xorKey
+	cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[0])
 	assert.NoError(t, err)
 	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
-	token, err := sharing.CreateAccessToken(replInstance, cli, s.SID)
+	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID)
 	assert.NoError(t, err)
 	s.Credentials[0].AccessToken = token
+	cli2, err := sharing.CreateOAuthClient(replInstance, &s.Members[1])
+	assert.NoError(t, err)
+	s.Credentials[0].InboundClientID = cli2.ClientID
+	token2, err := sharing.CreateAccessToken(replInstance, cli2, s.SID)
+	assert.NoError(t, err)
+	fileAccessToken = token2.AccessToken
 	assert.NoError(t, couchdb.UpdateDoc(replInstance, &s))
-	fileAccessToken = token.AccessToken
 }
 
 func TestUploadNewFile(t *testing.T) {
@@ -350,4 +361,54 @@ func TestUploadNewFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, res2.StatusCode)
 	defer res.Body.Close()
+}
+
+func TestGetFolder(t *testing.T) {
+	assert.NotEmpty(t, fileSharingID)
+	assert.NotEmpty(t, fileAccessToken)
+
+	fs := replInstance.VFS()
+	folder, err := vfs.NewDirDoc(fs, "zorglub", dirID, nil)
+	assert.NoError(t, err)
+	assert.NoError(t, fs.CreateDir(folder))
+	msg := sharing.TrackMessage{
+		SharingID: fileSharingID,
+		RuleIndex: 0,
+		DocType:   consts.Files,
+	}
+	evt := sharing.TrackEvent{
+		Verb: "CREATED",
+		Doc: couchdb.JSONDoc{
+			Type: consts.Files,
+			M: map[string]interface{}{
+				"type":   folder.Type,
+				"_id":    folder.DocID,
+				"_rev":   folder.DocRev,
+				"name":   folder.DocName,
+				"path":   folder.Fullpath,
+				"dir_id": dirID,
+			},
+		},
+	}
+	assert.NoError(t, sharing.UpdateShared(replInstance, msg, evt))
+
+	xoredID := sharing.XorID(folder.DocID, xorKey)
+	u := tsR.URL + "/sharings/" + fileSharingID + "/io.cozy.files/" + xoredID
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAccept, "application/json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+fileAccessToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	defer res.Body.Close()
+	var attrs map[string]interface{}
+	assert.NoError(t, json.NewDecoder(res.Body).Decode(&attrs))
+	assert.Equal(t, xoredID, attrs["_id"])
+	assert.Equal(t, folder.DocRev, attrs["_rev"])
+	assert.Equal(t, "directory", attrs["type"])
+	assert.Equal(t, "zorglub", attrs["name"])
+	assert.Empty(t, attrs["dir_id"])
+	assert.NotEmpty(t, attrs["created_at"])
+	assert.NotEmpty(t, attrs["updated_at"])
 }

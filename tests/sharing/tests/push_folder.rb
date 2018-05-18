@@ -2,7 +2,7 @@
 
 require_relative '../boot'
 require 'minitest/autorun'
-require 'pry-rescue/minitest'
+require 'pry-rescue/minitest' unless ENV['CI']
 
 describe "A folder" do
   Helpers.scenario "push_folder"
@@ -45,7 +45,5 @@ describe "A folder" do
                    Helpers::SHARED_WITH_ME, sharing.rules.first.title
     diff = Helpers.fsdiff da, db
     diff.must_be_empty
-
   end
-
 end

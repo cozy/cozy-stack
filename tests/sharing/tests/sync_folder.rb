@@ -2,7 +2,7 @@
 
 require_relative '../boot'
 require 'minitest/autorun'
-require 'pry-rescue/minitest'
+require 'pry-rescue/minitest' unless ENV['CI']
 
 describe "A folder" do
   Helpers.scenario "sync_folder"
@@ -47,7 +47,7 @@ describe "A folder" do
     assert_equal file.name, file_recipient.name
 
     # Check the sync (create + update) sharer -> recipient
-    # TODO move folder
+    # TODO move folder
     child1.rename inst, Faker::Internet.slug
     child2 = Folder.create inst, {dir_id: folder.couch_id}
     file.rename inst, "#{Faker::Internet.slug}.txt"
@@ -80,7 +80,6 @@ describe "A folder" do
     assert_equal file_recipient.name, file.name
     assert_equal file_recipient.md5sum, file.md5sum
 
-
     # Check that the files are the same on disk
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_recipient.domain,
@@ -88,5 +87,4 @@ describe "A folder" do
     diff = Helpers.fsdiff da, db
     diff.must_be_empty
   end
-
 end

@@ -1,12 +1,17 @@
 package sharing
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -67,7 +72,6 @@ func XorID(id string, key []byte) string {
 //   directory, we must create directory before the file)
 // - directories are sorted by increasing depth (if a sub-folder is created
 //   in a new directory, we must create the parent before the child)
-// TODO trashed / deleted files and folders
 func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 	sort.SliceStable(files, func(i, j int) bool {
 		a, b := files[i], files[j]
@@ -76,6 +80,12 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 		}
 		if b["type"] == consts.FileType {
 			return true
+		}
+		if removed, ok := a["_deleted"].(bool); ok && removed {
+			return true
+		}
+		if removed, ok := b["_deleted"].(bool); ok && removed {
+			return false
 		}
 		p, ok := a["path"].(string)
 		if !ok {
@@ -97,7 +107,6 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 //
 // ruleIndexes is a map of "doctype-docid" -> rule index
 // TODO keep referenced_by that are relevant to this sharing
-// TODO the file/folder has been moved outside the shared directory
 func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndex int) map[string]interface{} {
 	if doc["type"] == consts.DirType {
 		delete(doc, "path")
@@ -132,7 +141,7 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	fs := inst.VFS()
 	dir, _, err := fs.DirOrFileByID(consts.SharedWithMeDirID)
-	if err != nil && !couchdb.IsNotFoundError(err) {
+	if err != nil && err != os.ErrNotExist {
 		return nil, err
 	}
 
@@ -234,6 +243,30 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	return inst.VFS().DirByID(res.Rows[0].ID)
 }
 
+// GetFolder returns informations about a folder (with XORed IDs)
+func (s *Sharing) GetFolder(inst *instance.Instance, m *Member, xoredID string) (map[string]interface{}, error) {
+	creds := s.FindCredentials(m)
+	if creds == nil {
+		return nil, ErrInvalidSharing
+	}
+	dirID := XorID(xoredID, creds.XorKey)
+	ref := &SharedRef{}
+	err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+dirID, ref)
+	if err != nil {
+		return nil, err
+	}
+	info, ok := ref.Infos[s.SID]
+	if !ok || info.Removed {
+		return nil, ErrFolderNotFound
+	}
+	dir, err := inst.VFS().DirByID(dirID)
+	if err != nil {
+		return nil, err
+	}
+	doc := s.TransformFileToSent(dirToJSONDoc(dir).M, creds.XorKey, info.Rule)
+	return doc, nil
+}
+
 // ApplyBulkFiles takes a list of documents for the io.cozy.files doctype and
 // will apply changes to the VFS according to those documents.
 func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
@@ -258,10 +291,6 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			ref = nil
 		}
 		dir, file, err := fs.DirOrFileByID(id)
-		// TODO check why the methods (Dir|File)ByID can return a couchdb error or an os error
-		if couchdb.IsNotFoundError(err) {
-			err = os.ErrNotExist
-		}
 		if err != nil && err != os.ErrNotExist {
 			inst.Logger().WithField("nspace", "replicator").
 				Debugf("Error on finding ref of bulk files: %s", err)
@@ -272,26 +301,32 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			if ref == nil || (dir == nil && file == nil) {
 				continue
 			}
+			rev := RevGeneration(ref.Revisions[len(ref.Revisions)-1])
 			if dir != nil {
+				if rev >= RevGeneration(dir.DocRev) {
+					// Either the dir is already in the trash, or the not
+					// trashed version should win => keep the dir as it is
+					continue
+				}
 				err = s.TrashDir(inst, dir)
 			} else {
+				if rev >= RevGeneration(file.DocRev) {
+					// Either the file is already in the trash, or the not
+					// trashed version should win => keep the file as it is
+					continue
+				}
 				err = s.TrashFile(inst, file)
 			}
 			if err != nil {
 				errm = multierror.Append(errm, err)
 			}
-		} else if ref == nil && dir == nil {
+		} else if dir == nil {
 			err = s.CreateDir(inst, target)
 			if err != nil {
 				errm = multierror.Append(errm, err)
 			}
-			// TODO update the io.cozy.shared reference?
 		} else if ref == nil {
 			// TODO be safe => return an error
-			continue
-		} else if dir == nil {
-			// TODO manage the conflict: doc was deleted/moved outside the
-			// sharing on this cozy and updated on the other cozy
 			continue
 		} else {
 			err = s.UpdateDir(inst, target, dir)
@@ -334,6 +369,124 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 	}
 }
 
+// resolveConflictSamePath is used when two files/folders are in conflict
+// because they have the same path. To resolve the conflict, we take the
+// file/folder with the greatest id as the winner and rename the other.
+// If the winner is the new file/folder from the other cozy, this function
+// rename the local file/folder and let the caller retry its operation.
+// If the winner is the local file/folder, this function returns the new name
+// and let the caller do its operation with the new name (the caller should
+// create a dummy revision to let the other cozy know of the renaming).
+func resolveConflictSamePath(inst *instance.Instance, id, pth string) (string, error) {
+	fs := inst.VFS()
+	d, f, err := fs.DirOrFileByPath(pth)
+	if err != nil {
+		return "", err
+	}
+	name := fmt.Sprintf("%s - conflict - %d", pth, time.Now().Unix())
+	if d != nil {
+		if d.DocID > id {
+			return name, nil
+		}
+		old := d.Clone().(*vfs.DirDoc)
+		d.DocName = name
+		return "", fs.UpdateDirDoc(old, d)
+	}
+	if f.DocID > id {
+		return name, nil
+	}
+	old := f.Clone().(*vfs.FileDoc)
+	f.DocName = name
+	return "", fs.UpdateFileDoc(old, f)
+}
+
+//getDirDocFromInstance fetches informations about a directory from the given
+//member of the sharing.
+func (s *Sharing) getDirDocFromInstance(inst *instance.Instance, m *Member, creds *Credentials, dirID string) (*vfs.DirDoc, error) {
+	u, err := url.Parse(m.Instance)
+	if err != nil {
+		return nil, ErrInvalidSharing
+	}
+	opts := &request.Options{
+		Method: http.MethodGet,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/io.cozy.files/" + dirID,
+		Headers: request.Headers{
+			"Accept":        "application/json",
+			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
+		},
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		res, err = RefreshToken(inst, s, m, creds, opts, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+	defer res.Body.Close()
+	if res.StatusCode/100 == 5 {
+		return nil, ErrInternalServerError
+	}
+	var doc *vfs.DirDoc
+	if err = json.NewDecoder(res.Body).Decode(&doc); err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+// getDirDocFromNetwork fetches informations about a directory from the other
+// cozy instances of this sharing.
+func (s *Sharing) getDirDocFromNetwork(inst *instance.Instance, dirID string) (*vfs.DirDoc, error) {
+	if !s.Owner {
+		return s.getDirDocFromInstance(inst, &s.Members[0], &s.Credentials[0], dirID)
+	}
+	for i := range s.Credentials {
+		doc, err := s.getDirDocFromInstance(inst, &s.Members[i+1], &s.Credentials[i], dirID)
+		if err == nil {
+			return doc, nil
+		}
+	}
+	return nil, ErrFolderNotFound
+}
+
+// recreateParent is used when a file or folder is added by a cozy, and sent to
+// this instance, but its parent directory was trashed and deleted on this
+// cozy. To resolve the conflict, this instance will fetch informations from
+// the other instance about the parent directory and will recreate it. It can
+// be necessary to recurse if there were several levels of directories deleted.
+func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.DirDoc, error) {
+	doc, err := s.getDirDocFromNetwork(inst, dirID)
+	if err != nil {
+		return nil, err
+	}
+	fs := inst.VFS()
+	var parent *vfs.DirDoc
+	if doc.DirID == "" {
+		parent, err = s.GetSharingDir(inst)
+	} else {
+		parent, err = fs.DirByID(doc.DirID)
+		if err == os.ErrNotExist {
+			parent, err = s.recreateParent(inst, doc.DirID)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	doc.DirID = parent.DocID
+	doc.Fullpath = path.Join(parent.Fullpath, doc.DocName)
+	doc.SetRev("")
+	err = fs.CreateDir(doc)
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
 // CreateDir creates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
@@ -355,7 +508,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 			Debugf("Missing _revisions for creating dir: %#v", target)
 		return ErrInternalServerError
 	}
-	indexer := NewSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revisions,
 	})
@@ -365,7 +518,9 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	var err error
 	if dirID, ok := target["dir_id"].(string); ok {
 		parent, err = fs.DirByID(dirID)
-		// TODO better handling of this conflict
+		if err == os.ErrNotExist {
+			parent, err = s.recreateParent(inst, dirID)
+		}
 		if err != nil {
 			inst.Logger().WithField("nspace", "replicator").
 				Debugf("Conflict for parent on creating dir: %s", err)
@@ -387,8 +542,19 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	dir.SetID(target["_id"].(string))
 	copySafeFieldsToDir(target, dir)
 	// TODO referenced_by
-	// TODO manage conflicts
-	if err := fs.CreateDir(dir); err != nil {
+	err = fs.CreateDir(dir)
+	if err == os.ErrExist {
+		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
+		if errr != nil {
+			return errr
+		}
+		if name != "" {
+			indexer.IncrementRevision()
+			dir.DocName = name
+		}
+		err = fs.CreateDir(dir)
+	}
+	if err != nil {
 		inst.Logger().WithField("nspace", "replicator").
 			Debugf("Cannot create dir: %s", err)
 		return err
@@ -412,7 +578,7 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 		return ErrInternalServerError
 	}
 	oldDoc := dir.Clone().(*vfs.DirDoc)
-	indexer := NewSharingIndexer(inst, &bulkRevs{
+	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revisions,
 	})
@@ -428,7 +594,9 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	if dirID, ok := target["dir_id"].(string); ok {
 		if dirID != dir.DirID {
 			parent, err := fs.DirByID(dirID)
-			// TODO better handling of this conflict
+			if err == os.ErrNotExist {
+				parent, err = s.recreateParent(inst, dirID)
+			}
 			if err != nil {
 				inst.Logger().WithField("nspace", "replicator").
 					Debugf("Conflict for parent on updating dir: %s", err)
@@ -449,15 +617,29 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	}
 
 	copySafeFieldsToDir(target, dir)
-	inst.Logger().WithField("nspace", "replicator").
-		Debugf("Update dir: %#v", dir)
 	// TODO referenced_by
-	// TODO manage conflicts
-	return fs.UpdateDirDoc(oldDoc, dir)
+	// TODO detect & resolve conflicts when both instances have updated the dir concurrently
+	err := fs.UpdateDirDoc(oldDoc, dir)
+	if err == os.ErrExist {
+		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
+		if errr != nil {
+			return errr
+		}
+		if name != "" {
+			indexer.IncrementRevision()
+			dir.DocName = name
+		}
+		err = fs.UpdateDirDoc(oldDoc, dir)
+	}
+	if err != nil {
+		inst.Logger().WithField("nspace", "replicator").
+			Debugf("Cannot update dir: %s", err)
+		return err
+	}
+	return nil
 }
 
 // TrashDir puts the directory in the trash
-// TODO conflicts
 func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 	if strings.HasPrefix(dir.Fullpath+"/", vfs.TrashDirName+"/") {
 		// nothing to do if the directory is already in the trash
@@ -469,7 +651,6 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 
 // TrashFile puts the file in the trash
 // TODO if file has references, we should keep it in a special folder
-// TODO conflicts
 func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc) error {
 	if file.Trashed {
 		// nothing to do if the directory is already in the trash

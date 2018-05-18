@@ -45,12 +45,14 @@ func TestSortFilesToSent(t *testing.T) {
 	foo := map[string]interface{}{"type": "directory", "name": "foo", "path": "/foo"}
 	foobar := map[string]interface{}{"type": "directory", "name": "bar", "path": "/foo/bar"}
 	foobarbaz := map[string]interface{}{"type": "directory", "name": "baz", "path": "/foo/bar/baz"}
+	dela := map[string]interface{}{"_deleted": true, "name": "dela"}
+	delb := map[string]interface{}{"_deleted": true, "name": "delb"}
 	filea := map[string]interface{}{"type": "file", "name": "filea"}
 	fileb := map[string]interface{}{"type": "file", "name": "fileb"}
 	filec := map[string]interface{}{"type": "file", "name": "filec"}
-	files := []map[string]interface{}{filea, foobar, foobarbaz, fileb, filec, foo}
+	files := []map[string]interface{}{filea, foobar, foobarbaz, dela, delb, fileb, filec, foo}
 	s.SortFilesToSent(files)
-	expected := []map[string]interface{}{foo, foobar, foobarbaz, filea, fileb, filec}
+	expected := []map[string]interface{}{delb, dela, foo, foobar, foobarbaz, filea, fileb, filec}
 	assert.Equal(t, expected, files)
 }
 

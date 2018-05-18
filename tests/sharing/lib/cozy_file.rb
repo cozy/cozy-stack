@@ -1,14 +1,8 @@
 # File is already taken by the stdlib
 class CozyFile
-  include Model
   include Model::Files
 
   attr_reader :name, :dir_id, :mime, :trashed, :md5sum
-
-  def self.get_id_from_path(inst, path)
-    file = CozyFile.find_by_path inst, path
-    file.couch_id
-  end
 
   def self.load_from_url(inst, path)
     opts = {
@@ -32,24 +26,12 @@ class CozyFile
     f
   end
 
-  def self.find_by_path(inst, path)
-    load_from_url inst, "/files/metadata?Path=#{path}"
-  end
-
-  def self.find(inst, id)
-    load_from_url inst, "/files/#{id}"
-  end
-
   def self.options_from_fixture(filename, opts = {})
     opts = opts.dup
     opts[:content] = File.read filename
     opts[:name] ||= "#{Faker::Internet.slug}#{File.extname(filename)}"
     opts[:mime] ||= MimeMagic.by_path filename
     opts
-  end
-
-  def self.doctype
-    "io.cozy.files"
   end
 
   def initialize(opts = {})

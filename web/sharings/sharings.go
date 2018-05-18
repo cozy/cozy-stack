@@ -229,7 +229,7 @@ func GetDiscovery(c echo.Context) error {
 		})
 	}
 
-	member, err := s.FindMemberByState(inst, state)
+	member, err := s.FindMemberByState(state)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": inst.Domain,
@@ -263,7 +263,7 @@ func PostDiscovery(c echo.Context) error {
 			return wrapErrors(err)
 		}
 	} else {
-		member, err = s.FindMemberByState(inst, state)
+		member, err = s.FindMemberByState(state)
 		if err != nil {
 			return wrapErrors(err)
 		}
@@ -402,6 +402,8 @@ func wrapErrors(err error) error {
 		return jsonapi.NotFound(err)
 	case vfs.ErrInvalidHash:
 		return jsonapi.InvalidParameter("md5sum", err)
+	case sharing.ErrFolderNotFound:
+		return jsonapi.NotFound(err)
 	}
 	return err
 }
