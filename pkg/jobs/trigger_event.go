@@ -16,20 +16,25 @@ import (
 type EventTrigger struct {
 	unscheduled chan struct{}
 	infos       *TriggerInfos
-	mask        permissions.Rule
+	mask        []permissions.Rule
 }
 
 // NewEventTrigger returns a new instance of EventTrigger given the specified
 // options.
 func NewEventTrigger(infos *TriggerInfos) (*EventTrigger, error) {
-	rule, err := permissions.UnmarshalRuleString(infos.Arguments)
-	if err != nil {
-		return nil, err
+	args := strings.Split(infos.Arguments, " ")
+	rules := make([]permissions.Rule, len(args))
+	for i, arg := range args {
+		rule, err := permissions.UnmarshalRuleString(arg)
+		if err != nil {
+			return nil, err
+		}
+		rules[i] = rule
 	}
 	return &EventTrigger{
 		unscheduled: make(chan struct{}),
 		infos:       infos,
-		mask:        rule,
+		mask:        rules,
 	}, nil
 }
 
@@ -62,7 +67,9 @@ func (t *EventTrigger) Schedule() <-chan *JobRequest {
 	ch := make(chan *JobRequest)
 	go func() {
 		sub := realtime.GetHub().Subscriber(t.infos.Domain)
-		sub.Subscribe(t.mask.Type)
+		for _, m := range t.mask {
+			sub.Subscribe(m.Type)
+		}
 		defer func() {
 			sub.Close()
 			close(ch)
@@ -70,7 +77,14 @@ func (t *EventTrigger) Schedule() <-chan *JobRequest {
 		for {
 			select {
 			case e := <-sub.Channel:
-				if eventMatchPermission(e, &t.mask) {
+				found := false
+				for _, m := range t.mask {
+					if eventMatchPermission(e, &m) {
+						found = true
+						break
+					}
+				}
+				if found {
 					if evt, err := t.Infos().JobRequestWithEvent(e); err == nil {
 						ch <- evt
 					}

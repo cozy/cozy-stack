@@ -136,14 +136,21 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 				key, err.Error())
 			continue
 		}
-		for triggerID, args := range m {
-			rule, err := permissions.UnmarshalRuleString(args)
-			if err != nil {
-				s.log.Warnf("Coud not unmarshal rule %s: %s",
-					key, err.Error())
-				continue
+		for triggerID, arguments := range m {
+			found := false
+			for _, args := range strings.Split(arguments, " ") {
+				rule, err := permissions.UnmarshalRuleString(args)
+				if err != nil {
+					s.log.Warnf("Coud not unmarshal rule %s: %s",
+						key, err.Error())
+					continue
+				}
+				if eventMatchPermission(event, &rule) {
+					found = true
+					break
+				}
 			}
-			if !eventMatchPermission(event, &rule) {
+			if !found {
 				continue
 			}
 			t, err := s.GetTrigger(event.Domain, triggerID)
