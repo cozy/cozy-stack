@@ -458,7 +458,7 @@ func (s *Sharing) getDirDocFromNetwork(inst *instance.Instance, dirID string) (*
 // this instance, but its parent directory was trashed and deleted on this
 // cozy. To resolve the conflict, this instance will fetch informations from
 // the other instance about the parent directory and will recreate it. It can
-// be necessery to recurse if there were several levels of directories deleted.
+// be necessary to recurse if there were several levels of directories deleted.
 func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.DirDoc, error) {
 	doc, err := s.getDirDocFromNetwork(inst, dirID)
 	if err != nil {
