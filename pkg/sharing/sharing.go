@@ -211,10 +211,8 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 			errm = multierror.Append(errm, err)
 		}
 	}
-	if s.WithPropagation() {
-		if err := s.RemoveTriggers(inst); err != nil {
-			return err
-		}
+	if err := s.RemoveTriggers(inst); err != nil {
+		return err
 	}
 	if err := RemoveSharedRefs(inst, s.SID); err != nil {
 		return err
@@ -224,6 +222,32 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 		return err
 	}
 	return errm
+}
+
+// RevokeRecipient revoke only one recipient on the sharer. After that, if the
+// sharing has still at least one active member, we keep it as is. Else, we
+// desactive the sharing.
+func (s *Sharing) RevokeRecipient(inst *instance.Instance, index int) error {
+	if !s.Owner {
+		return ErrInvalidSharing
+	}
+	if err := s.RevokeMember(inst, &s.Members[index], &s.Credentials[index-1]); err != nil {
+		return err
+	}
+
+	for _, m := range s.Members {
+		if m.Status == MemberStatusReady {
+			return nil
+		}
+	}
+	if err := s.RemoveTriggers(inst); err != nil {
+		return err
+	}
+	if err := RemoveSharedRefs(inst, s.SID); err != nil {
+		return err
+	}
+	s.Active = false
+	return couchdb.UpdateDoc(inst, s)
 }
 
 // RemoveTriggers remove all the triggers associated to this sharing
