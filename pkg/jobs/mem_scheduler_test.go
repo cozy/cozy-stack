@@ -55,7 +55,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	ti := &TriggerInfos{
 		Type:       "@event",
 		Domain:     "cozy.local.withdebounce",
-		Arguments:  "io.cozy.testdebounce",
+		Arguments:  "io.cozy.testdebounce io.cozy.moredebounce",
 		Debounce:   "1s",
 		WorkerType: "worker",
 		Message:    msg,
@@ -101,6 +101,12 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 
 	time.Sleep(1500 * time.Millisecond)
 	assert.Equal(t, 3, called)
+
+	realtime.GetHub().Publish(event)
+	doc.Type = "io.cozy.moredebounce"
+	realtime.GetHub().Publish(event)
+	time.Sleep(1500 * time.Millisecond)
+	assert.Equal(t, 4, called)
 
 	for _, trigger := range triggers {
 		err = sch.DeleteTrigger(trigger.Domain, trigger.TID)

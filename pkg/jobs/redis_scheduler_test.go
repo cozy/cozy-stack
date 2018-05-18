@@ -480,7 +480,7 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 	evTrigger := &jobs.TriggerInfos{
 		Type:       "@event",
 		Domain:     instanceName,
-		Arguments:  "io.cozy.debounce-test:CREATED",
+		Arguments:  "io.cozy.debounce-test:CREATED io.cozy.debounce-more:CREATED",
 		WorkerType: "incr",
 		Debounce:   "2s",
 	}
@@ -488,13 +488,14 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 	assert.NoError(t, err)
 	sch.AddTrigger(tri)
 
+	doc := testDoc{
+		id:      "foo",
+		doctype: "io.cozy.debounce-test",
+	}
 	event := &realtime.Event{
 		Domain: instanceName,
-		Doc: &testDoc{
-			id:      "foo",
-			doctype: "io.cozy.debounce-test",
-		},
-		Verb: realtime.EventCreate,
+		Doc:    &doc,
+		Verb:   realtime.EventCreate,
 	}
 
 	for i := 0; i < 10; i++ {
@@ -502,9 +503,16 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 		realtime.GetHub().Publish(event)
 	}
 
-	time.Sleep(12 * time.Second)
+	time.Sleep(2500 * time.Millisecond)
 	count, _ := bro.WorkerQueueLen("incr")
 	assert.Equal(t, 2, count)
+
+	realtime.GetHub().Publish(event)
+	doc.doctype = "io.cozy.debounce-more"
+	realtime.GetHub().Publish(event)
+	time.Sleep(2500 * time.Millisecond)
+	count, _ = bro.WorkerQueueLen("incr")
+	assert.Equal(t, 3, count)
 }
 
 func TestMain(m *testing.M) {
