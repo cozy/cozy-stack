@@ -69,6 +69,15 @@ func (s *Sharing) ValidateRules() error {
 					return ErrInvalidRule
 				}
 			}
+			if rule.Selector == "referenced_by" {
+				// For a referenced_by rule, values should be "doctype/docid"
+				for _, val := range rule.Values {
+					parts := strings.SplitN(val, "/", 2)
+					if len(parts) != 2 {
+						return ErrInvalidRule
+					}
+				}
+			}
 		} else if permissions.CheckWritable(rule.DocType) != nil {
 			return ErrInvalidRule
 		}
