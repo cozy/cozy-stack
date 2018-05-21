@@ -31,4 +31,20 @@ class Couch
   def get_doc(db, id)
     JSON.parse @client["/#{db}/#{id}"].get.body
   end
+
+  def create_named_doc(db, id, doc)
+    opts = {
+      content_type: "application/json"
+    }
+    @client["/#{db}/#{id}"].put(doc.to_json, opts)
+  end
+
+  def update_doc(db, doc)
+    opts = {
+      content_type: "application/json"
+    }
+    id = doc["_id"]
+    @client["/#{db}/#{id}"].put(doc.to_json, opts)
+  end
+
 end

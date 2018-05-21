@@ -56,6 +56,10 @@ module Helpers
       diff.lines.map(&:chomp)
     end
 
+    def file_exists_in_fs(path)
+      File.exist?(path)
+    end
+
     def db_name(domain, type)
       domain = domain.gsub(/[.:]/, '-')
       type = type.gsub(/[.:]/, '-')

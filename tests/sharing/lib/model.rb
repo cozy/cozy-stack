@@ -77,7 +77,7 @@ module Model
         content_type: "application/vnd.api+json",
         authorization: "Bearer #{inst.token_for doctype}"
       }
-      res = inst.client["/files/#{@couch_id}"].delete opts
+      inst.client["/files/#{@couch_id}"].delete opts
     end
 
     def patch(inst, attrs)
