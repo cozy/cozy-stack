@@ -106,7 +106,6 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 // - the path is removed (directory only)
 //
 // ruleIndexes is a map of "doctype-docid" -> rule index
-// TODO keep referenced_by that are relevant to this sharing
 func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndex int) map[string]interface{} {
 	if doc["type"] == consts.DirType {
 		delete(doc, "path")
@@ -117,9 +116,28 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 	if !ok {
 		return doc
 	}
-	delete(doc, "referenced_by")
 	rule := s.Rules[ruleIndex]
-	noDirID := rule.Selector == "referenced_by"
+	var noDirID bool
+	if rule.Selector == "referenced_by" {
+		noDirID = true
+		if refs, ok := doc["referenced_by"].([]interface{}); ok {
+			kept := make([]interface{}, 0)
+			for _, ref := range refs {
+				if r, ok := ref.(map[string]interface{}); ok {
+					for _, val := range rule.Values {
+						v := r["id"].(string) + "/" + r["type"].(string)
+						if val == v {
+							kept = append(kept, ref)
+						}
+					}
+				}
+			}
+			doc["referenced_by"] = kept
+		}
+	} else {
+		noDirID = false
+		delete(doc, "referenced_by")
+	}
 	if !noDirID {
 		for _, v := range rule.Values {
 			if v == dir {
@@ -660,19 +678,19 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc) error {
 	return err
 }
 
-// TODO referenced_by
 func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		Type: consts.Files,
 		M: map[string]interface{}{
-			"type":       dir.Type,
-			"_id":        dir.DocID,
-			"_rev":       dir.DocRev,
-			"name":       dir.DocName,
-			"created_at": dir.CreatedAt,
-			"updated_at": dir.UpdatedAt,
-			"tags":       dir.Tags,
-			"path":       dir.Fullpath,
+			"type":          dir.Type,
+			"_id":           dir.DocID,
+			"_rev":          dir.DocRev,
+			"name":          dir.DocName,
+			"created_at":    dir.CreatedAt,
+			"updated_at":    dir.UpdatedAt,
+			"tags":          dir.Tags,
+			"path":          dir.Fullpath,
+			"referenced_by": dir.ReferencedBy,
 		},
 	}
 	if dir.DirID != "" {
@@ -684,24 +702,24 @@ func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
 	return doc
 }
 
-// TODO referenced_by
 func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		Type: consts.Files,
 		M: map[string]interface{}{
-			"type":       file.Type,
-			"_id":        file.DocID,
-			"_rev":       file.DocRev,
-			"name":       file.DocName,
-			"created_at": file.CreatedAt,
-			"updated_at": file.UpdatedAt,
-			"size":       file.ByteSize,
-			"md5Sum":     file.MD5Sum,
-			"mime":       file.Mime,
-			"class":      file.Class,
-			"executable": file.Executable,
-			"trashed":    file.Trashed,
-			"tags":       file.Tags,
+			"type":          file.Type,
+			"_id":           file.DocID,
+			"_rev":          file.DocRev,
+			"name":          file.DocName,
+			"created_at":    file.CreatedAt,
+			"updated_at":    file.UpdatedAt,
+			"size":          file.ByteSize,
+			"md5Sum":        file.MD5Sum,
+			"mime":          file.Mime,
+			"class":         file.Class,
+			"executable":    file.Executable,
+			"trashed":       file.Trashed,
+			"tags":          file.Tags,
+			"referenced_by": file.ReferencedBy,
 		},
 	}
 	if file.DirID != "" {
