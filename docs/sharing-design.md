@@ -63,7 +63,8 @@ instances are ready to start to replicate data to the other instances. So, letâ€
 do the initial replication.
 
 Aliceâ€™s instance starts to fill the `io.cozy.shared` database with all the
-documents that match a rule of the sharing (except the rules with `local: true`), and create triggers for the future documents to be also added in this
+documents that match a rule of the sharing (except the rules with `local:
+true`), and create triggers for the future documents to be also added in this
 database (the exact triggers depend of the parameters of the rules). And, when
 done, it creates a job for the replicator, and setups a trigger for future
 changes in the `io.cozy.shared` start a replicator job.

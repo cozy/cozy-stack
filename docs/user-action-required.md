@@ -1,5 +1,7 @@
 [Table of contents](README.md#table-of-contents)
 
+{% raw %}
+
 # User action is required
 
 This document explains how the stack can alert applications that an user
@@ -90,3 +92,5 @@ Content-Type: application/vnd.api+json
   ]
 }
 ```
+
+{% endraw %}
