@@ -170,36 +170,11 @@ func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) er
 
 // RevokeMember revoke the access granted to a member and contact it
 func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credentials) error {
-	u, err := url.Parse(m.Instance)
-	if m.Instance == "" || err != nil {
-		return ErrInvalidSharing
-	}
-
 	// No need to contact the revoked member if the sharing is not ready
 	if m.Status == MemberStatusReady {
-		opts := &request.Options{
-			Method: http.MethodDelete,
-			Scheme: u.Scheme,
-			Domain: u.Host,
-			Path:   "/sharings/" + s.SID,
-			Headers: request.Headers{
-				"Authorization": "Bearer " + c.AccessToken.AccessToken,
-			},
-		}
-		var res *http.Response
-		res, err := request.Req(opts)
-		if err != nil {
-			return err
-		}
-		res.Body.Close()
-		if res.StatusCode/100 == 5 {
-			return ErrInternalServerError
-		}
-		if res.StatusCode/100 == 4 {
-			if res, err = RefreshToken(inst, s, m, c, opts, nil); err != nil {
-				return err
-			}
-			res.Body.Close()
+		if err := s.NotifyMemberRevocation(inst, m, c); err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Warnf("Error on revocation notification: %s", err)
 		}
 
 		if !s.ReadOnly() {
@@ -214,4 +189,38 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 	*c = Credentials{}
 
 	return couchdb.UpdateDoc(inst, s)
+}
+
+// NotifyMemberRevocation send a notification to this member that he/she was
+// revoked from this sharing
+func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *Credentials) error {
+	u, err := url.Parse(m.Instance)
+	if m.Instance == "" || err != nil {
+		return ErrInvalidSharing
+	}
+
+	opts := &request.Options{
+		Method: http.MethodDelete,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID,
+		Headers: request.Headers{
+			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+		},
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return err
+	}
+	res.Body.Close()
+	if res.StatusCode/100 == 5 {
+		return ErrInternalServerError
+	}
+	if res.StatusCode/100 == 4 {
+		if res, err = RefreshToken(inst, s, m, c, opts, nil); err != nil {
+			return err
+		}
+		res.Body.Close()
+	}
+	return nil
 }

@@ -662,7 +662,9 @@ func TestRevokeSharing(t *testing.T) {
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
-	_, _ = http.DefaultClient.Do(req)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
 
 	var sRevoke sharing.Sharing
 	err = couchdb.GetDoc(aliceInstance, s.DocType(), s.SID, &sRevoke)
@@ -672,6 +674,92 @@ func TestRevokeSharing(t *testing.T) {
 	assert.Equal(t, "", sRevoke.Triggers.ReplicateID)
 	assert.Equal(t, "", sRevoke.Triggers.UploadID)
 	assert.Equal(t, false, sRevoke.Active)
+
+	var sdoc sharing.SharedRef
+	err = couchdb.GetDoc(aliceInstance, sharedRefs[0].DocType(), sharedRefs[0].ID(), &sdoc)
+	assert.EqualError(t, err, "CouchDB(not_found): deleted")
+	err = couchdb.GetDoc(aliceInstance, sharedRefs[1].DocType(), sharedRefs[1].ID(), &sdoc)
+	assert.EqualError(t, err, "CouchDB(not_found): deleted")
+}
+
+func TestRevokeRecipient(t *testing.T) {
+	sharedDocs := []string{"mygreatid3", "mygreatid4"}
+	sharedRefs := []*sharing.SharedRef{}
+	s := createSharing(t, aliceInstance, sharedDocs)
+	for _, id := range sharedDocs {
+		sid := iocozytests + "/" + id
+		sd, errs := createSharedDoc(aliceInstance, sid, s.SID)
+		sharedRefs = append(sharedRefs, sd)
+		assert.NoError(t, errs)
+		assert.NotNil(t, sd)
+	}
+
+	cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[1])
+	assert.NoError(t, err)
+	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
+	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID)
+	assert.NoError(t, err)
+	s.Credentials[0].AccessToken = token
+	s.Members[1].Status = sharing.MemberStatusReady
+
+	s.Members = append(s.Members, sharing.Member{
+		Status:   sharing.MemberStatusReady,
+		Name:     "Charlie",
+		Email:    "charlie@cozy.local",
+		Instance: tsB.URL,
+	})
+	clientC, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[2])
+	assert.NoError(t, err)
+	tokenC, err := sharing.CreateAccessToken(aliceInstance, clientC, s.SID)
+	assert.NoError(t, err)
+	s.Credentials = append(s.Credentials, sharing.Credentials{
+		Client:      sharing.ConvertOAuthClient(clientC),
+		AccessToken: tokenC,
+	})
+
+	err = couchdb.UpdateDoc(aliceInstance, s)
+	assert.NoError(t, err)
+
+	err = s.AddTrackTriggers(aliceInstance)
+	assert.NoError(t, err)
+	err = s.AddReplicateTrigger(aliceInstance)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodDelete, tsA.URL+"/sharings/"+s.ID()+"/recipients/1", nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
+
+	var sRevokedBob sharing.Sharing
+	err = couchdb.GetDoc(aliceInstance, s.DocType(), s.SID, &sRevokedBob)
+	assert.NoError(t, err)
+
+	assert.Equal(t, sharing.MemberStatusRevoked, sRevokedBob.Members[1].Status)
+	assert.Equal(t, sharing.MemberStatusReady, sRevokedBob.Members[2].Status)
+	assert.NotEmpty(t, sRevokedBob.Triggers.TrackID)
+	assert.NotEmpty(t, sRevokedBob.Triggers.ReplicateID)
+	assert.True(t, sRevokedBob.Active)
+
+	req2, err := http.NewRequest(http.MethodDelete, tsA.URL+"/sharings/"+s.ID()+"/recipients/2", nil)
+	assert.NoError(t, err)
+	req2.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
+	res2, err := http.DefaultClient.Do(req2)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res2.StatusCode)
+
+	var sRevokedCharlie sharing.Sharing
+	err = couchdb.GetDoc(aliceInstance, s.DocType(), s.SID, &sRevokedCharlie)
+	assert.NoError(t, err)
+
+	assert.Equal(t, sharing.MemberStatusRevoked, sRevokedCharlie.Members[1].Status)
+	assert.Equal(t, sharing.MemberStatusRevoked, sRevokedCharlie.Members[2].Status)
+	assert.Empty(t, sRevokedCharlie.Triggers.TrackID)
+	assert.Empty(t, sRevokedCharlie.Triggers.ReplicateID)
+	assert.False(t, sRevokedCharlie.Active)
 
 	var sdoc sharing.SharedRef
 	err = couchdb.GetDoc(aliceInstance, sharedRefs[0].DocType(), sharedRefs[0].ID(), &sdoc)

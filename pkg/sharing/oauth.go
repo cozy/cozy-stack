@@ -163,6 +163,9 @@ func DeleteOAuthClient(inst *instance.Instance, m *Member, cred *Credentials) er
 		return ErrInvalidURL
 	}
 	clientID := cred.InboundClientID
+	if clientID == "" {
+		return nil
+	}
 	client, err := oauth.FindClient(inst, clientID)
 	if err != nil {
 		return err

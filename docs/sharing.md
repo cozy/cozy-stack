@@ -630,6 +630,8 @@ is the index of this recipient in the `members` array of the sharing. The
 status for this member will be set to `revoked`, its cozy will be informed of
 the revokation, and the credentials for this cozy will be deleted.
 
+**Note**: 0 is not accepted for `index`, as it is the sharer him-self.
+
 #### Request
 
 ```http
