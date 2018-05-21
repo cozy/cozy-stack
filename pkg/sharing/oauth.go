@@ -197,8 +197,8 @@ func ConvertOAuthClient(c *oauth.Client) *auth.Client {
 
 // CreateAccessToken creates an access token for the given OAuth client,
 // with a scope on this sharing.
-func CreateAccessToken(inst *instance.Instance, cli *oauth.Client, sharingID string) (*auth.AccessToken, error) {
-	scope := consts.Sharings + ":ALL:" + sharingID
+func CreateAccessToken(inst *instance.Instance, cli *oauth.Client, sharingID string, verb permissions.VerbSet) (*auth.AccessToken, error) {
+	scope := consts.Sharings + ":" + verb.String() + ":" + sharingID
 	cli.CouchID = cli.ClientID // XXX CouchID is required by CreateJWT
 	refresh, err := cli.CreateJWT(inst, permissions.RefreshTokenAudience, scope)
 	if err != nil {
@@ -230,9 +230,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if err != nil {
 		return err
 	}
-	s.Credentials[0].InboundClientID = cli.ClientID
-
-	token, err := CreateAccessToken(inst, cli, s.SID)
+	token, err := CreateAccessToken(inst, cli, s.SID, permissions.ALL)
 	if err != nil {
 		return err
 	}
@@ -280,11 +278,9 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		return ErrRequestFailed
 	}
 	s.Credentials[0].XorKey = creds.XorKey
-	// TODO InboundClientID
-	if !s.ReadOnly() {
-		s.Credentials[0].AccessToken = creds.AccessToken
-		s.Credentials[0].Client = creds.Client
-	}
+	s.Credentials[0].InboundClientID = cli.ClientID
+	s.Credentials[0].AccessToken = creds.AccessToken
+	s.Credentials[0].Client = creds.Client
 	s.Active = true
 	return couchdb.UpdateDoc(inst, s)
 }
@@ -305,19 +301,27 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 					XorKey: c.XorKey,
 				},
 			}
-			if !s.ReadOnly() {
-				cli, err := CreateOAuthClient(inst, &s.Members[i+1])
-				if err != nil {
-					return &ac, nil
-				}
-				s.Credentials[i].InboundClientID = cli.ClientID
-				ac.Credentials.Client = ConvertOAuthClient(cli)
-				token, err := CreateAccessToken(inst, cli, s.SID)
-				if err != nil {
-					return &ac, nil
-				}
-				ac.Credentials.AccessToken = token
+			// Create the credentials for the recipient
+			cli, err := CreateOAuthClient(inst, &s.Members[i+1])
+			if err != nil {
+				return &ac, nil
 			}
+			s.Credentials[i].InboundClientID = cli.ClientID
+			ac.Credentials.Client = ConvertOAuthClient(cli)
+			var verb permissions.VerbSet
+			// In case of read-only, The recipient only needs read access on the
+			// sharing, e.g. to notify the sharer of a revocation
+			if s.ReadOnly() {
+				verb = permissions.Verbs(permissions.GET)
+			} else {
+				verb = permissions.ALL
+			}
+			token, err := CreateAccessToken(inst, cli, s.SID, verb)
+			if err != nil {
+				return &ac, nil
+			}
+			ac.Credentials.AccessToken = token
+
 			if err := couchdb.UpdateDoc(inst, s); err != nil {
 				return nil, err
 			}
