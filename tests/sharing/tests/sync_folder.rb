@@ -18,7 +18,7 @@ describe "A folder" do
     # Create the folders
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
-    child1 = Folder.create inst, {dir_id: folder.couch_id}
+    child1 = Folder.create inst, dir_id: folder.couch_id
     file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
     file = CozyFile.create inst, opts
@@ -47,9 +47,9 @@ describe "A folder" do
     assert_equal file.name, file_recipient.name
 
     # Check the sync (create + update) sharer -> recipient
-    # TODO move folder
     child1.rename inst, Faker::Internet.slug
-    child2 = Folder.create inst, {dir_id: folder.couch_id}
+    child2 = Folder.create inst, dir_id: folder.couch_id
+    child1.move_to inst, child2.couch_id
     file.rename inst, "#{Faker::Internet.slug}.txt"
     file.overwrite inst, {}
     sleep 7
@@ -61,14 +61,16 @@ describe "A folder" do
     file_recipient = CozyFile.find inst_recipient, file_id_recipient
     assert_equal child1.name, child1_recipient.name
     assert_equal child2.name, child2_recipient.name
+    assert_equal child1_recipient.dir_id, child2_recipient.couch_id
     assert_equal file.name, file_recipient.name
     assert_equal file.md5sum, file_recipient.md5sum
 
     # Check the sync (create + update) recipient -> sharer
     child1_recipient.rename inst_recipient, Faker::Internet.slug
-    child3_recipient = Folder.create inst_recipient, {dir_id: folder_id_recipient}
+    child3_recipient = Folder.create inst_recipient, dir_id: folder_id_recipient
+    child1_recipient.move_to inst_recipient, child3_recipient.couch_id
     file_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
-    file_recipient.overwrite inst_recipient, {content: "New content from recipient"}
+    file_recipient.overwrite inst_recipient, content: "New content from recipient"
 
     sleep 7
     child1 = Folder.find inst, child1.couch_id
@@ -77,6 +79,7 @@ describe "A folder" do
     file = CozyFile.find inst, file.couch_id
     assert_equal child1_recipient.name, child1.name
     assert_equal child3_recipient.name, child3.name
+    assert_equal child1.dir_id, child3.couch_id
     assert_equal file_recipient.name, file.name
     assert_equal file_recipient.md5sum, file.md5sum
 
