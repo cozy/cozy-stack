@@ -322,6 +322,7 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 			}
 			ac.Credentials.AccessToken = token
 
+			s.Active = true
 			if err := couchdb.UpdateDoc(inst, s); err != nil {
 				return nil, err
 			}

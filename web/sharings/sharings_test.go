@@ -645,7 +645,7 @@ func TestRevokeSharing(t *testing.T) {
 	cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[1])
 	assert.NoError(t, err)
 	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
-	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID)
+	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID, permissions.ALL)
 	assert.NoError(t, err)
 	s.Credentials[0].AccessToken = token
 	s.Members[1].Status = sharing.MemberStatusReady
@@ -697,7 +697,7 @@ func TestRevokeRecipient(t *testing.T) {
 	cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[1])
 	assert.NoError(t, err)
 	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
-	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID)
+	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID, permissions.ALL)
 	assert.NoError(t, err)
 	s.Credentials[0].AccessToken = token
 	s.Members[1].Status = sharing.MemberStatusReady
@@ -710,7 +710,7 @@ func TestRevokeRecipient(t *testing.T) {
 	})
 	clientC, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[2])
 	assert.NoError(t, err)
-	tokenC, err := sharing.CreateAccessToken(aliceInstance, clientC, s.SID)
+	tokenC, err := sharing.CreateAccessToken(aliceInstance, clientC, s.SID, permissions.ALL)
 	assert.NoError(t, err)
 	s.Credentials = append(s.Credentials, sharing.Credentials{
 		Client:      sharing.ConvertOAuthClient(clientC),

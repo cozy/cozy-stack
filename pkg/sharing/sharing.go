@@ -234,17 +234,24 @@ func (s *Sharing) RevokeRecipient(inst *instance.Instance, index int) error {
 	if err := s.RevokeMember(inst, &s.Members[index], &s.Credentials[index-1]); err != nil {
 		return err
 	}
+	return s.NoMoreRecipient(inst)
+}
 
-	for _, m := range s.Members {
-		if m.Status == MemberStatusReady {
-			return nil
-		}
+// RevokeRecipientBySelf revoke the sharing on the recipient side
+func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance) error {
+	if s.Owner {
+		return ErrInvalidSharing
+	}
+	if err := s.RevokeOwner(inst); err != nil {
+		return err
 	}
 	if err := s.RemoveTriggers(inst); err != nil {
 		return err
 	}
-	if err := RemoveSharedRefs(inst, s.SID); err != nil {
-		return err
+	if s.WithPropagation() {
+		if err := RemoveSharedRefs(inst, s.SID); err != nil {
+			return err
+		}
 	}
 	s.Active = false
 	return couchdb.UpdateDoc(inst, s)
@@ -295,6 +302,39 @@ func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
 	s.Credentials = nil
 	s.Active = false
 
+	return couchdb.UpdateDoc(inst, s)
+}
+
+// RevokeRecipientByNotification is called on the sharer side, after a
+// revocation performed by the recipient
+func (s *Sharing) RevokeRecipientByNotification(inst *instance.Instance, m *Member) error {
+	if !s.Owner {
+		return ErrInvalidSharing
+	}
+	c := s.FindCredentials(m)
+	if err := DeleteOAuthClient(inst, m, c); err != nil {
+		return err
+	}
+	m.Status = MemberStatusRevoked
+	*c = Credentials{}
+
+	return s.NoMoreRecipient(inst)
+}
+
+// NoMoreRecipient cleans up the sharing if there is no more active recipient
+func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
+	for _, m := range s.Members {
+		if m.Status == MemberStatusReady {
+			return couchdb.UpdateDoc(inst, s)
+		}
+	}
+	if err := s.RemoveTriggers(inst); err != nil {
+		return err
+	}
+	if err := RemoveSharedRefs(inst, s.SID); err != nil {
+		return err
+	}
+	s.Active = false
 	return couchdb.UpdateDoc(inst, s)
 }
 
