@@ -356,6 +356,21 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 	return nil
 }
 
+func updateReferencedBy(target, file *vfs.FileDoc, rule *Rule) {
+	refs := file.ReferencedBy[:0]
+	for _, ref := range file.ReferencedBy {
+		if !rule.hasReferencedBy(ref) {
+			refs = append(refs, ref)
+		}
+	}
+	for _, ref := range target.ReferencedBy {
+		if rule.hasReferencedBy(ref) {
+			refs = append(refs, ref)
+		}
+	}
+	file.ReferencedBy = refs
+}
+
 func copySafeFieldsToFile(target, file *vfs.FileDoc) {
 	file.Tags = make([]string, len(target.Tags))
 	copy(file.Tags, target.Tags)
@@ -559,7 +574,6 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	}
 	dir.SetID(target["_id"].(string))
 	copySafeFieldsToDir(target, dir)
-	// TODO referenced_by
 	err = fs.CreateDir(dir)
 	if err == os.ErrExist {
 		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
@@ -635,7 +649,6 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	}
 
 	copySafeFieldsToDir(target, dir)
-	// TODO referenced_by
 	// TODO detect & resolve conflicts when both instances have updated the dir concurrently
 	err := fs.UpdateDirDoc(oldDoc, dir)
 	if err == os.ErrExist {
@@ -658,6 +671,7 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 }
 
 // TrashDir puts the directory in the trash
+// TODO if dir has references, we should keep it in a special folder
 func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 	if strings.HasPrefix(dir.Fullpath+"/", vfs.TrashDirName+"/") {
 		// nothing to do if the directory is already in the trash

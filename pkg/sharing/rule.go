@@ -211,3 +211,17 @@ func (r *Rule) HasPush() bool {
 	return r.Add == ActionRulePush || r.Update == ActionRulePush ||
 		r.Remove == ActionRulePush
 }
+
+// hasReferencedBy returns true if the rule matches a file that has this reference
+func (r *Rule) hasReferencedBy(ref couchdb.DocReference) bool {
+	if r.Selector != "referenced_by" {
+		return false
+	}
+	v := ref.Type + "/" + ref.ID
+	for _, val := range r.Values {
+		if val == v {
+			return true
+		}
+	}
+	return false
+}
