@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 16
+const IndexViewsVersion int = 17
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -167,6 +167,23 @@ function(doc) {
 }`,
 }
 
+// SharingsByDocTypeView is the view for fetching a list of sharings
+// associated with a doctype
+var SharingsByDocTypeView = &couchdb.View{
+	Name:    "sharings-by-doctype",
+	Doctype: Sharings,
+	Map: `
+function(doc) {
+	if (isArray(doc.rules)) {
+		for (var i = 0; i < doc.rules.length; i++) {
+			if (!doc.rules[i].local) {
+				emit(doc.rules[i].doctype, doc._id);
+			}
+		}
+	}
+}`,
+}
+
 // Views is the list of all views that are created by the stack.
 var Views = []*couchdb.View{
 	DiskUsageView,
@@ -177,6 +194,7 @@ var Views = []*couchdb.View{
 	PermissionsShareByDocView,
 	PermissionsByDoctype,
 	SharedDocsBySharingID,
+	SharingsByDocTypeView,
 }
 
 // ViewsByDoctype returns the list of views for a specified doc type.
