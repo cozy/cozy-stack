@@ -176,7 +176,9 @@ var SharingsByDocTypeView = &couchdb.View{
 function(doc) {
 	if (isArray(doc.rules)) {
 		for (var i = 0; i < doc.rules.length; i++) {
-			emit(doc.rules[i].doctype, doc._id);
+			if (!doc.rules[i].local) {
+				emit(doc.rules[i].doctype, doc._id);
+			}
 		}
 	}
 }`,
