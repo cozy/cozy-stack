@@ -380,19 +380,14 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 				continue
 			}
 			rev := RevGeneration(ref.Revisions[len(ref.Revisions)-1])
+			if rev >= RevGeneration(target["_rev"].(string)) {
+				// Either the file/dir is already in the trash, or the not
+				// trashed version should win => keep the file/dir as it is
+				continue
+			}
 			if dir != nil {
-				if rev >= RevGeneration(dir.DocRev) {
-					// Either the dir is already in the trash, or the not
-					// trashed version should win => keep the dir as it is
-					continue
-				}
 				err = s.TrashDir(inst, dir)
 			} else {
-				if rev >= RevGeneration(file.DocRev) {
-					// Either the file is already in the trash, or the not
-					// trashed version should win => keep the file as it is
-					continue
-				}
 				err = s.TrashFile(inst, file, &s.Rules[infos.Rule])
 			}
 			if err != nil {

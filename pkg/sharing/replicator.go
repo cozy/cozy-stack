@@ -570,6 +570,7 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 			if err != nil {
 				return err
 			}
+			continue
 		}
 		var okDocs, docsToUpdate DocsList
 		var newRefs, existingRefs []*SharedRef
