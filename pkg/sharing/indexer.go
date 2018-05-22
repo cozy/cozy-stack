@@ -89,6 +89,9 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 	if len(doc.ReferencedBy) > 0 {
 		docs[0]["referenced_by"] = doc.ReferencedBy
 	}
+	if doc.Metadata != nil {
+		docs[0]["metadata"] = doc.Metadata
+	}
 	if s.bulkRevs != nil {
 		doc.SetRev(s.bulkRevs.Rev)
 		docs[0]["_rev"] = s.bulkRevs.Rev
