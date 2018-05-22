@@ -220,27 +220,32 @@ func assertSharingInfoRequestIsCorrect(t *testing.T, body io.Reader, s1, s2 stri
 	assert.NoError(t, json.NewDecoder(body).Decode(&result))
 	d := result["data"].([]interface{})
 	data := make([]map[string]interface{}, len(d))
-	assert.Equal(t, 2, len(data))
+	s1Found := false
+	s2Found := false
 	for i := range d {
 		data[i] = d[i].(map[string]interface{})
 		assert.Equal(t, consts.Sharings, data[i]["type"])
 		sharingID = data[i]["id"].(string)
 		assert.NotEmpty(t, sharingID)
-		assert.Contains(t, []string{s1, s2}, sharingID)
 		rel := data[i]["relationships"].(map[string]interface{})
 		sharedDocs := rel["shared_docs"].(map[string]interface{})
-		sharedDocsData := sharedDocs["data"].([]interface{})
 		assert.NotEmpty(t, sharedDocs)
 
 		if sharingID == s1 {
+			sharedDocsData := sharedDocs["data"].([]interface{})
 			assert.Equal(t, "fakeid1", sharedDocsData[0].(map[string]interface{})["id"])
 			assert.Equal(t, "fakeid2", sharedDocsData[1].(map[string]interface{})["id"])
 			assert.Equal(t, "fakeid3", sharedDocsData[2].(map[string]interface{})["id"])
-		} else {
+			s1Found = true
+		} else if sharingID == s2 {
+			sharedDocsData := sharedDocs["data"].([]interface{})
 			assert.Equal(t, "fakeid4", sharedDocsData[0].(map[string]interface{})["id"])
 			assert.Equal(t, "fakeid5", sharedDocsData[1].(map[string]interface{})["id"])
+			s2Found = true
 		}
 	}
+	assert.Equal(t, true, s1Found)
+	assert.Equal(t, true, s2Found)
 }
 
 func TestDiscovery(t *testing.T) {

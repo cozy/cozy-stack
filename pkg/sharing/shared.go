@@ -271,10 +271,15 @@ func RemoveSharedRefs(inst *instance.Instance, sharingID string) error {
 	return nil
 }
 
-// GetSharedDocsBySharingID returns the shared documents related to the given sharingID
-func GetSharedDocsBySharingID(inst *instance.Instance, sharingID string) ([]couchdb.DocReference, error) {
+// GetSharedDocsBySharingIDs returns a map associating each given sharingID
+// to a list of DocReference, which are the shared documents
+func GetSharedDocsBySharingIDs(inst *instance.Instance, sharingIDs []string) (map[string][]couchdb.DocReference, error) {
+	keys := make([]interface{}, len(sharingIDs))
+	for i, id := range sharingIDs {
+		keys[i] = id
+	}
 	var req = &couchdb.ViewRequest{
-		Key:         sharingID,
+		Keys:        keys,
 		IncludeDocs: true,
 	}
 	var res couchdb.ViewResponse
@@ -283,8 +288,7 @@ func GetSharedDocsBySharingID(inst *instance.Instance, sharingID string) ([]couc
 	if err != nil {
 		return nil, err
 	}
-
-	var result []couchdb.DocReference
+	result := make(map[string][]couchdb.DocReference, len(res.Rows))
 
 	for _, row := range res.Rows {
 		var doc SharedRef
@@ -292,40 +296,42 @@ func GetSharedDocsBySharingID(inst *instance.Instance, sharingID string) ([]couc
 		if err != nil {
 			return nil, err
 		}
+		sID := row.Key.(string)
 		// Filter out the removed docs
-		if !doc.Infos[sharingID].Removed {
+		if !doc.Infos[sID].Removed {
 			docRef := extractDocReferenceFromID(doc.ID())
-			result = append(result, *docRef)
+			result[sID] = append(result[sID], *docRef)
 		}
 	}
 	return result, nil
 }
 
-// GetSharingsByDocType returns a map associating the sharings ids to a list of
-// shared documents, for the given doctype
-func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string][]couchdb.DocReference, error) {
-	res := make(map[string][]couchdb.DocReference)
-
-	var req = &couchdb.AllDocsRequest{
-		StartKey: docType + "/",
-		EndKey:   docType + "/\uFFFF",
+// GetSharingsByDocType returns all the sharings for the given doctype
+func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string]*Sharing, error) {
+	var req = &couchdb.ViewRequest{
+		Key:         docType,
+		IncludeDocs: true,
 	}
-
-	var docs []*SharedRef
-	err := couchdb.GetAllDocs(inst, consts.Shared, req, &docs)
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(inst, consts.SharingsByDocTypeView, req, &res)
 	if err != nil {
 		return nil, err
 	}
-	for _, doc := range docs {
-		for sharingID := range doc.Infos {
-			// Filter out removed docs
-			if !doc.Infos[sharingID].Removed {
-				docRef := extractDocReferenceFromID(doc.ID())
-				res[sharingID] = append(res[sharingID], *docRef)
-			}
+	sharings := make(map[string]*Sharing, len(res.Rows))
+
+	for _, row := range res.Rows {
+		var doc Sharing
+		err := json.Unmarshal(row.Doc, &doc)
+		if err != nil {
+			return nil, err
+		}
+		// Avoid duplicates, i.e. a set a rules having the same doctype
+		sID := row.Value.(string)
+		if _, ok := sharings[sID]; !ok {
+			sharings[sID] = &doc
 		}
 	}
-	return res, nil
+	return sharings, nil
 }
 
 // extractDocReferenceFromID takes a string formatted as doctype/docid and

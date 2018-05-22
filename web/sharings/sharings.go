@@ -100,10 +100,11 @@ func GetSharing(c echo.Context) error {
 	if err = checkGetPermissions(c, s); err != nil {
 		return wrapErrors(err)
 	}
-	docs, err := sharing.GetSharedDocsBySharingID(inst, sharingID)
+	sharedDocs, err := sharing.GetSharedDocsBySharingIDs(inst, []string{sharingID})
 	if err != nil {
 		return wrapErrors(err)
 	}
+	docs := sharedDocs[sharingID]
 
 	as := &sharing.APISharing{
 		Sharing:     s,
@@ -118,33 +119,35 @@ func GetSharing(c echo.Context) error {
 func GetSharingsInfoByDocType(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	docType := c.Param("doctype")
-	sharingsInfo, err := sharing.GetSharingsByDocType(inst, docType)
+
+	sharings, err := sharing.GetSharingsByDocType(inst, docType)
 	if err != nil {
 		return wrapErrors(err)
 	}
-	sharingIDs := make([]string, len(sharingsInfo))
+	sharingIDs := make([]string, len(sharings))
 	i := 0
-	for sharingID := range sharingsInfo {
-		sharingIDs[i] = sharingID
-		i++
-	}
-
-	sharings, err := sharing.FindSharings(inst, sharingIDs)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	res := make([]*sharing.APISharing, len(sharings))
-
-	for i, s := range sharings {
+	for sID, s := range sharings {
 		if err = checkGetPermissions(c, s); err != nil {
 			return wrapErrors(err)
 		}
+		sharingIDs[i] = sID
+		i++
+	}
+	sDocs, err := sharing.GetSharedDocsBySharingIDs(inst, sharingIDs)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	res := make([]*sharing.APISharing, len(sharings))
+	i = 0
+	for sID, s := range sharings {
 		as := &sharing.APISharing{
 			Sharing:     s,
+			SharedDocs:  sDocs[sID],
 			Credentials: nil,
-			SharedDocs:  sharingsInfo[s.ID()],
 		}
 		res[i] = as
+		i++
 	}
 	return sharing.InfoByDocTypeData(c, http.StatusOK, res)
 }
