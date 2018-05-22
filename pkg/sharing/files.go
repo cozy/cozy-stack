@@ -261,6 +261,58 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	return inst.VFS().DirByID(res.Rows[0].ID)
 }
 
+// GetNoLongerSharedDir returns the directory used for files and folders that
+// are removed from a sharing, but are still used via a reference. It the
+// directory does not exist, it is created.
+func (s *Sharing) GetNoLongerSharedDir(inst *instance.Instance) (*vfs.DirDoc, error) {
+	fs := inst.VFS()
+	dir, _, err := fs.DirOrFileByID(consts.NoLongerSharedDirID)
+	if err != nil && err != os.ErrNotExist {
+		return nil, err
+	}
+
+	if dir == nil {
+		parent, err := EnsureSharedWithMeDir(inst)
+		if err != nil {
+			return nil, err
+		}
+		name := inst.Translate("Tree No longer shared")
+		dir, err = vfs.NewDirDocWithParent(name, parent, nil)
+		dir.DocID = consts.NoLongerSharedDirID
+		if err != nil {
+			return nil, err
+		}
+		if err = fs.CreateDir(dir); err != nil {
+			return nil, err
+		}
+		return dir, nil
+	}
+
+	if dir.RestorePath != "" {
+		_, err = vfs.RestoreDir(fs, dir)
+		if err != nil {
+			return nil, err
+		}
+		children, err := fs.DirBatch(dir, &couchdb.SkipCursor{})
+		if err != nil {
+			return nil, err
+		}
+		for _, child := range children {
+			d, f := child.Refine()
+			if d != nil {
+				_, err = vfs.TrashDir(fs, d)
+			} else {
+				_, err = vfs.TrashFile(fs, f)
+			}
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return dir, nil
+}
+
 // GetFolder returns informations about a folder (with XORed IDs)
 func (s *Sharing) GetFolder(inst *instance.Instance, m *Member, xoredID string) (map[string]interface{}, error) {
 	creds := s.FindCredentials(m)
@@ -670,15 +722,25 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	return nil
 }
 
-// TrashDir puts the directory in the trash
-// TODO if dir has references, we should keep it in a special folder
+// TrashDir puts the directory in the trash (except if the directory has a
+// reference, in which case, we keep it in a special folder)
 func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 	if strings.HasPrefix(dir.Fullpath+"/", vfs.TrashDirName+"/") {
 		// nothing to do if the directory is already in the trash
 		return nil
 	}
-	_, err := vfs.TrashDir(inst.VFS(), dir)
-	return err
+	if len(dir.ReferencedBy) == 0 {
+		_, err := vfs.TrashDir(inst.VFS(), dir)
+		return err
+	}
+	olddoc := dir.Clone().(*vfs.DirDoc)
+	parent, err := s.GetNoLongerSharedDir(inst)
+	if err != nil {
+		return err
+	}
+	dir.DirID = parent.DocID
+	dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
+	return inst.VFS().UpdateDirDoc(olddoc, dir)
 }
 
 // TrashFile puts the file in the trash

@@ -96,6 +96,9 @@ const (
 	// SharedWithMeDirID is the identifier of the directory where the sharings
 	// will put their folders for the shared files
 	SharedWithMeDirID = "io.cozy.files.shared-with-me-dir"
+	// NoLongerSharedDirID is the identifier of the directory where the files &
+	// folders removed from a sharing but still used via a reference are put
+	NoLongerSharedDirID = "io.cozy.files.no-longer-shared-dir"
 )
 
 const (
