@@ -360,6 +360,11 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			}
 			ref = nil
 		}
+		infos, ok := ref.Infos[s.SID]
+		if !ok {
+			errm = multierror.Append(errm, ErrInternalServerError) // TODO better error
+			continue
+		}
 		dir, file, err := fs.DirOrFileByID(id)
 		if err != nil && err != os.ErrNotExist {
 			inst.Logger().WithField("nspace", "replicator").
@@ -385,7 +390,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 					// trashed version should win => keep the file as it is
 					continue
 				}
-				err = s.TrashFile(inst, file)
+				err = s.TrashFile(inst, file, &s.Rules[infos.Rule])
 			}
 			if err != nil {
 				errm = multierror.Append(errm, err)
@@ -406,6 +411,27 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		}
 	}
 	return nil
+}
+
+func removeReferencesFromRule(file *vfs.FileDoc, rule *Rule) {
+	if rule.Selector != "referenced_by" {
+		return
+	}
+	refs := file.ReferencedBy[:0]
+	for _, ref := range file.ReferencedBy {
+		v := ref.Type + "/" + ref.ID
+		found := false
+		for _, val := range rule.Values {
+			if v == val {
+				found = true
+				break
+			}
+		}
+		if !found {
+			refs = append(refs, ref)
+		}
+	}
+	file.ReferencedBy = refs
 }
 
 func buildReferencedBy(target, file *vfs.FileDoc, rule *Rule) []couchdb.DocReference {
@@ -743,15 +769,25 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 	return inst.VFS().UpdateDirDoc(olddoc, dir)
 }
 
-// TrashFile puts the file in the trash
-// TODO if file has references, we should keep it in a special folder
-func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc) error {
+// TrashFile puts the file in the trash (except if the file has a reference, in
+// which case, we keep it in a special folder)
+func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Rule) error {
 	if file.Trashed {
 		// nothing to do if the directory is already in the trash
 		return nil
 	}
-	_, err := vfs.TrashFile(inst.VFS(), file)
-	return err
+	olddoc := file.Clone().(*vfs.FileDoc)
+	removeReferencesFromRule(file, rule)
+	if len(file.ReferencedBy) == 0 {
+		_, err := vfs.TrashFile(inst.VFS(), file)
+		return err
+	}
+	parent, err := s.GetNoLongerSharedDir(inst)
+	if err != nil {
+		return err
+	}
+	file.DirID = parent.DocID
+	return inst.VFS().UpdateFileDoc(olddoc, file)
 }
 
 func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
