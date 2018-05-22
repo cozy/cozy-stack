@@ -68,7 +68,7 @@ class Bootstrap
     rules << Rule.new(doctype: photos.first.doctype,
                       title: "photos",
                       selector: "referenced_by",
-                      values: [album.couch_id],
+                      values: ["#{album.doctype}/#{album.couch_id}"],
                       add: :push,
                       update: :push,
                       remove: :push)

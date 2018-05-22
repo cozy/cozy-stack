@@ -125,9 +125,10 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 			for _, ref := range refs {
 				if r, ok := ref.(map[string]interface{}); ok {
 					for _, val := range rule.Values {
-						v := r["id"].(string) + "/" + r["type"].(string)
+						v := r["type"].(string) + "/" + r["id"].(string)
 						if val == v {
 							kept = append(kept, ref)
+							break
 						}
 					}
 				}
@@ -210,7 +211,8 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error
 	}
 	fs := inst.VFS()
 	dir, err := vfs.NewDirDocWithParent(rule.Title, parent, []string{"from-sharing-" + s.SID})
-	dir.DocID = rule.Values[0]
+	parts := strings.Split(rule.Values[0], "/")
+	dir.DocID = parts[len(parts)-1]
 	if err != nil {
 		return err
 	}
@@ -224,7 +226,8 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error
 // AddReferenceForSharingDir adds a reference to the sharing on the sharing directory
 func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule) error {
 	fs := inst.VFS()
-	dir, err := fs.DirByID(rule.Values[0])
+	parts := strings.Split(rule.Values[0], "/")
+	dir, err := fs.DirByID(parts[len(parts)-1])
 	if err != nil {
 		return err
 	}

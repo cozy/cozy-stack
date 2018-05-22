@@ -78,7 +78,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	if rule := s.FirstFilesRule(); rule != nil {
 		if err := s.AddReferenceForSharingDir(inst, rule); err != nil {
 			inst.Logger().WithField("nspace", "sharing").
-				Warnf("Error on referenced_by for the sharing dir", s.SID, err)
+				Warnf("Error on referenced_by for the sharing dir (%s): %s", s.SID, err)
 		}
 	}
 
@@ -260,8 +260,8 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 				if err != nil {
 					return nil, err
 				}
-				var doc couchdb.JSONDoc
 				for _, row := range res.Rows {
+					var doc couchdb.JSONDoc
 					if err = json.Unmarshal(row.Doc, &doc); err == nil {
 						docs = append(docs, doc)
 					}
