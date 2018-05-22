@@ -360,10 +360,13 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			}
 			ref = nil
 		}
-		infos, ok := ref.Infos[s.SID]
-		if !ok {
-			errm = multierror.Append(errm, ErrInternalServerError) // TODO better error
-			continue
+		var infos SharedInfo
+		if ref != nil {
+			infos, ok = ref.Infos[s.SID]
+			if !ok {
+				errm = multierror.Append(errm, ErrInternalServerError) // TODO better error
+				continue
+			}
 		}
 		dir, file, err := fs.DirOrFileByID(id)
 		if err != nil && err != os.ErrNotExist {
@@ -428,9 +431,11 @@ func removeReferencesFromRule(file *vfs.FileDoc, rule *Rule) {
 
 func buildReferencedBy(target, file *vfs.FileDoc, rule *Rule) []couchdb.DocReference {
 	refs := make([]couchdb.DocReference, 0)
-	for _, ref := range file.ReferencedBy {
-		if !rule.hasReferencedBy(ref) {
-			refs = append(refs, ref)
+	if file != nil {
+		for _, ref := range file.ReferencedBy {
+			if !rule.hasReferencedBy(ref) {
+				refs = append(refs, ref)
+			}
 		}
 	}
 	for _, ref := range target.ReferencedBy {
