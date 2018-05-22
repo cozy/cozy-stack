@@ -356,8 +356,8 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 	return nil
 }
 
-func updateReferencedBy(target, file *vfs.FileDoc, rule *Rule) {
-	refs := file.ReferencedBy[:0]
+func buildReferencedBy(target, file *vfs.FileDoc, rule *Rule) []couchdb.DocReference {
+	refs := make([]couchdb.DocReference, 0)
 	for _, ref := range file.ReferencedBy {
 		if !rule.hasReferencedBy(ref) {
 			refs = append(refs, ref)
@@ -368,7 +368,7 @@ func updateReferencedBy(target, file *vfs.FileDoc, rule *Rule) {
 			refs = append(refs, ref)
 		}
 	}
-	file.ReferencedBy = refs
+	return refs
 }
 
 func copySafeFieldsToFile(target, file *vfs.FileDoc) {

@@ -6,6 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
 const (
@@ -194,6 +195,39 @@ func (r Rule) TriggerArgs() string {
 func (s *Sharing) FirstFilesRule() *Rule {
 	for i, rule := range s.Rules {
 		if !rule.Local && rule.DocType == consts.Files {
+			return &s.Rules[i]
+		}
+	}
+	return nil
+}
+
+func (s *Sharing) findRuleForNewFile(file *vfs.FileDoc) *Rule {
+	for i, rule := range s.Rules {
+		if rule.Local || rule.DocType != consts.Files {
+			continue
+		}
+		if rule.Selector != "referenced_by" {
+			return &s.Rules[i]
+		}
+		if len(file.ReferencedBy) == 0 {
+			continue
+		}
+		allFound := true
+		for _, ref := range file.ReferencedBy {
+			v := ref.Type + "/" + ref.ID
+			found := false
+			for _, val := range rule.Values {
+				if val == v {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allFound = false
+				break
+			}
+		}
+		if allFound {
 			return &s.Rules[i]
 		}
 	}

@@ -358,7 +358,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 	current.DocName = target.DocName
 
 	copySafeFieldsToFile(target.FileDoc, current)
-	updateReferencedBy(target.FileDoc, current, rule)
+	current.ReferencedBy = buildReferencedBy(target.FileDoc, current, rule)
 	err = fs.UpdateFileDoc(oldDoc, current)
 	if err == os.ErrExist {
 		pth, errp := current.Path(fs)
@@ -427,14 +427,38 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 		target.DirID = parent.DocID
 	}
 
-	// TODO referenced_by
 	// TODO manage conflicts
 	newdoc := target.FileDoc.Clone().(*vfs.FileDoc)
 	olddoc, err := fs.FileByID(target.ID())
 	if err != nil && err != os.ErrNotExist {
 		return err
 	}
-	if olddoc == nil || (newdoc.DocName == olddoc.DocName && newdoc.DirID == olddoc.DirID) {
+	if olddoc == nil {
+		rule := s.findRuleForNewFile(newdoc)
+		if rule == nil {
+			return ErrInternalServerError // TODO better error
+		}
+		newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, nil, rule)
+		// TODO create the io.cozy.shared reference?
+		return s.updateFileContent(inst, fs, newdoc, nil, body)
+	}
+
+	var ref SharedRef
+	err = couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return ErrInternalServerError // TODO better error for safety principal
+		}
+		return err
+	}
+	infos, ok := ref.Infos[s.SID]
+	if !ok {
+		return ErrInternalServerError // TODO better error for safety principal
+	}
+	rule := &s.Rules[infos.Rule]
+	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, olddoc, rule)
+
+	if newdoc.DocName == olddoc.DocName && newdoc.DirID == olddoc.DirID {
 		// TODO update the io.cozy.shared reference?
 		return s.updateFileContent(inst, fs, newdoc, olddoc, body)
 	}
