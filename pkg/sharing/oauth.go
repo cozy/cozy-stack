@@ -309,7 +309,7 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*A
 			s.Credentials[i].InboundClientID = cli.ClientID
 			ac.Credentials.Client = ConvertOAuthClient(cli)
 			var verb permissions.VerbSet
-			// In case of read-only, The recipient only needs read access on the
+			// In case of read-only, the recipient only needs read access on the
 			// sharing, e.g. to notify the sharer of a revocation
 			if s.ReadOnly() {
 				verb = permissions.Verbs(permissions.GET)
