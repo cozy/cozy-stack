@@ -419,15 +419,7 @@ func removeReferencesFromRule(file *vfs.FileDoc, rule *Rule) {
 	}
 	refs := file.ReferencedBy[:0]
 	for _, ref := range file.ReferencedBy {
-		v := ref.Type + "/" + ref.ID
-		found := false
-		for _, val := range rule.Values {
-			if v == val {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !rule.hasReferencedBy(ref) {
 			refs = append(refs, ref)
 		}
 	}

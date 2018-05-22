@@ -152,7 +152,16 @@ func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent)
 		return false, err
 	}
 	rule := s.Rules[msg.RuleIndex]
-	// TODO referenced_by
+	if rule.Selector == "referenced_by" {
+		refs := extractReferencedBy(&evt.Doc)
+		for _, ref := range refs {
+			if rule.hasReferencedBy(ref) {
+				return false, nil
+			}
+		}
+		return true, nil
+	}
+
 	var docPath string
 	if evt.Doc.Get("type") == consts.FileType {
 		dirID, ok := evt.Doc.Get("dir_id").(string)
