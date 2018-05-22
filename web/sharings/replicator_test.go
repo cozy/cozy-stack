@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/echo"
@@ -59,7 +60,7 @@ func TestCreateSharingForReplicatorTest(t *testing.T) {
 	cli, err := sharing.CreateOAuthClient(replInstance, &s.Members[1])
 	assert.NoError(t, err)
 	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
-	token, err := sharing.CreateAccessToken(replInstance, cli, s.SID)
+	token, err := sharing.CreateAccessToken(replInstance, cli, s.SID, permissions.ALL)
 	assert.NoError(t, err)
 	s.Credentials[0].AccessToken = token
 	assert.NoError(t, couchdb.UpdateDoc(replInstance, &s))
@@ -300,13 +301,13 @@ func TestCreateSharingForUploadFileTest(t *testing.T) {
 	cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[0])
 	assert.NoError(t, err)
 	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
-	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID)
+	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID, permissions.ALL)
 	assert.NoError(t, err)
 	s.Credentials[0].AccessToken = token
 	cli2, err := sharing.CreateOAuthClient(replInstance, &s.Members[1])
 	assert.NoError(t, err)
 	s.Credentials[0].InboundClientID = cli2.ClientID
-	token2, err := sharing.CreateAccessToken(replInstance, cli2, s.SID)
+	token2, err := sharing.CreateAccessToken(replInstance, cli2, s.SID, permissions.ALL)
 	assert.NoError(t, err)
 	fileAccessToken = token2.AccessToken
 	assert.NoError(t, couchdb.UpdateDoc(replInstance, &s))

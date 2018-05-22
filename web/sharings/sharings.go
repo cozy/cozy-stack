@@ -209,8 +209,8 @@ func RevokeRecipient(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// RevocationNotif is used to inform a recipient that the sharing is revoked
-func RevocationNotif(c echo.Context) error {
+// RevocationRecipientNotif is used to inform a recipient that the sharing is revoked
+func RevocationRecipientNotif(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
 	s, err := sharing.FindSharing(inst, sharingID)
@@ -218,6 +218,44 @@ func RevocationNotif(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	if err = s.RevokeByNotification(inst); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+// RevocationOwnerNotif is used to inform the owner that a recipient has revoked
+// himself/herself from the sharing
+func RevocationOwnerNotif(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	member, err := requestMember(c, s)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if err = s.RevokeRecipientByNotification(inst, member); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+// RevokeRecipientBySelf is used by a recipient to revoke himself/herself
+// from the sharing
+func RevokeRecipientBySelf(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	_, err = checkCreatePermissions(c, s)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	if err = s.RevokeRecipientBySelf(inst); err != nil {
 		return wrapErrors(err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -316,9 +354,11 @@ func Routes(router *echo.Group) {
 	router.POST("/:sharing-id/answer", AnswerSharing)
 
 	// Revocations
-	router.DELETE("/:sharing-id/recipients", RevokeSharing)                 // On the sharer
-	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)        // On the sharer
-	router.DELETE("/:sharing-id", RevocationNotif, checkSharingPermissions) // On the recipient
+	router.DELETE("/:sharing-id/recipients", RevokeSharing)                             // On the sharer
+	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                    // On the sharer
+	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingPermissions)    // On the recipient
+	router.DELETE("/:sharing-id/recipients/self", RevokeRecipientBySelf)                // On the recipient
+	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif, checkSharingPermissions) // On the sharer
 
 	router.GET("/doctype/:doctype", GetSharingsInfoByDocType)
 

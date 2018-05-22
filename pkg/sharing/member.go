@@ -177,17 +177,31 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 				Warnf("Error on revocation notification: %s", err)
 		}
 
-		if !s.ReadOnly() {
-			if err := DeleteOAuthClient(inst, m, c); err != nil {
-				return err
-			}
+		if err := DeleteOAuthClient(inst, m, c); err != nil {
+			return err
 		}
 	}
 	m.Status = MemberStatusRevoked
-
 	// Do not remove the credential to preserve the members / credentials order
 	*c = Credentials{}
 
+	return couchdb.UpdateDoc(inst, s)
+}
+
+// RevokeOwner revoke the access granted to the owner and notify it
+func (s *Sharing) RevokeOwner(inst *instance.Instance) error {
+	m := &s.Members[0]
+	c := &s.Credentials[0]
+
+	if err := s.NotifyMemberRevocation(inst, m, c); err != nil {
+		inst.Logger().WithField("nspace", "sharing").
+			Warnf("Error on revocation notification: %s", err)
+	}
+	if err := DeleteOAuthClient(inst, m, c); err != nil {
+		return err
+	}
+	m.Status = MemberStatusRevoked
+	s.Credentials = nil
 	return couchdb.UpdateDoc(inst, s)
 }
 
@@ -198,12 +212,18 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 	if m.Instance == "" || err != nil {
 		return ErrInvalidSharing
 	}
+	var path string
+	if m.Status == MemberStatusOwner {
+		path = "/sharings/" + s.SID + "/answer"
+	} else {
+		path = "/sharings/" + s.SID
+	}
 
 	opts := &request.Options{
 		Method: http.MethodDelete,
 		Scheme: u.Scheme,
 		Domain: u.Host,
-		Path:   "/sharings/" + s.SID,
+		Path:   path,
 		Headers: request.Headers{
 			"Authorization": "Bearer " + c.AccessToken.AccessToken,
 		},
