@@ -248,7 +248,7 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 			}
 		}
 	} else {
-		if rule.Selector == "referenced_by" {
+		if rule.Selector == couchdb.SelectorReferencedBy {
 			for _, val := range rule.Values {
 				req := &couchdb.ViewRequest{
 					Key:         strings.SplitN(val, "/", 2),

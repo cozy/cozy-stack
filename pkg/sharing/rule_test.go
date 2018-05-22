@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -85,7 +86,7 @@ func TestValidatesRules(t *testing.T) {
 		{
 			Title:    "referenced_by is OK",
 			DocType:  consts.Files,
-			Selector: "referenced_by",
+			Selector: couchdb.SelectorReferencedBy,
 			Values:   []string{"io.cozy.tests/123"},
 		},
 	}
@@ -149,7 +150,7 @@ func TestRuleAccept(t *testing.T) {
 	// Referenced_by
 	file := map[string]interface{}{
 		"_id": "84fa49e2-3409-11e8-86de-7fff926238b1",
-		"referenced_by": []map[string]interface{}{
+		couchdb.SelectorReferencedBy: []map[string]interface{}{
 			{"type": "io.cozy.playlists", "id": "list1"},
 			{"type": "io.cozy.playlists", "id": "list2"},
 		},
@@ -157,7 +158,7 @@ func TestRuleAccept(t *testing.T) {
 	r = Rule{
 		Title:    "test referenced_by",
 		DocType:  consts.Files,
-		Selector: "referenced_by",
+		Selector: couchdb.SelectorReferencedBy,
 		Values:   []string{"io.cozy.playlists/list1"},
 	}
 	assert.True(t, r.Accept(consts.Files, file))
@@ -169,7 +170,7 @@ func TestTriggersArgs(t *testing.T) {
 	r := Rule{
 		Title:    "test triggers args",
 		DocType:  consts.Files,
-		Selector: "referenced_by",
+		Selector: couchdb.SelectorReferencedBy,
 		Values:   []string{"io.cozy.playlists/list1"},
 		Update:   "sync",
 	}
