@@ -86,11 +86,12 @@ func sslVerifyPinnedKey(pinnedFingerPrint []byte) func(certs [][]byte, verifiedC
 	}
 }
 
-func sslClient(ca string, cert string, key string, fp string, verify bool, timeout time.Duration) (*http.Client, error) {
+func sslClient(e *endpoint) (*http.Client, error) {
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: !verify,
+		InsecureSkipVerify: !e.Validate,
 	}
 
+	ca := e.CA
 	if ca != "" {
 		data, err := ioutil.ReadFile(ca)
 		if err != nil {
@@ -101,8 +102,10 @@ func sslClient(ca string, cert string, key string, fp string, verify bool, timeo
 		tlsConfig.RootCAs = pool
 	}
 
+	cert := e.Cert
+	key := e.Key
 	if cert != "" && key != "" {
-		cert, err := tls.LoadX509KeyPair(cert, key)
+		cert, err := tls.LoadX509KeyPair(e.Cert, key)
 		if err != nil {
 			return nil, fmt.Errorf("Could not read client certificate files %q and %q: %s",
 				cert, key, err)
@@ -110,6 +113,7 @@ func sslClient(ca string, cert string, key string, fp string, verify bool, timeo
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
 
+	fp := e.Fingerprint
 	if fp != "" {
 		pinnedFingerPrint, err := hex.DecodeString(fp)
 		if err != nil {
@@ -123,59 +127,25 @@ func sslClient(ca string, cert string, key string, fp string, verify bool, timeo
 	}
 
 	return &http.Client{
-		Timeout:   timeout,
+		Timeout:   e.Timeout,
 		Transport: &http.Transport{TLSClientConfig: tlsConfig},
 	}, nil
 }
 
-func configureEndpoint(u *url.URL) (result *url.URL, client *http.Client, err error) {
-	if u.Scheme == "https" {
-		query := u.Query()
-		ca := query.Get("ca")
-		cert := query.Get("cert")
-		key := query.Get("key")
-		fp := query.Get("fp")
-		v := query.Get("validate")
-
-		var validate bool
-		if v == "" {
-			validate = true
-		} else {
-			validate, err = strconv.ParseBool(v)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-
-		timeout := 0 * time.Second
-		t := query.Get("timeout")
-		if t != "" {
-			timeout, err = time.ParseDuration(t)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-
-		client, err = sslClient(ca, cert, key, fp, validate, timeout)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	// Remove others parts
-	result = &url.URL{
-		User:   u.User,
-		Scheme: u.Scheme,
-		Host:   u.Host,
-	}
-
-	return result, client, nil
+type endpoint struct {
+	URL         *url.URL
+	Cert        string
+	Key         string
+	CA          string
+	Fingerprint string
+	Validate    bool
+	Timeout     time.Duration
 }
 
-func parseEndpoint(host string, port int) (*url.URL, *http.Client, error) {
+func (e *endpoint) generateURL(host string, port int) error {
 	u, err := url.Parse(host)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	if u.Scheme == "" {
@@ -186,11 +156,107 @@ func parseEndpoint(host string, port int) (*url.URL, *http.Client, error) {
 		}
 	}
 
-	url, client, err := configureEndpoint(u)
-	if err != nil {
-		return nil, nil, err
+	e.URL = u
+
+	return nil
+}
+
+func (e *endpoint) configureFromURL() error {
+	u := e.URL
+	query := u.Query()
+
+	if t := query.Get("timeout"); t != "" {
+		timeout, err := time.ParseDuration(t)
+		if err != nil {
+			return err
+		}
+		e.Timeout = timeout
 	}
-	return url, client, nil
+
+	if u.Scheme == "https" {
+		if t := query.Get("ca"); t != "" {
+			e.CA = t
+		}
+		if t := query.Get("cert"); t != "" {
+			e.Cert = t
+		}
+		if t := query.Get("key"); t != "" {
+			e.Key = t
+		}
+		if t := query.Get("fp"); t != "" {
+			e.Fingerprint = t
+		}
+		if t := query.Get("validate"); t != "" {
+			validate, err := strconv.ParseBool(t)
+			if err != nil {
+				return err
+			}
+			e.Validate = validate
+		}
+	}
+
+	return nil
+}
+
+func (e *endpoint) configureFromEnv(prefix string) error {
+	if t := os.Getenv(prefix + "_CERT"); t != "" {
+		e.Cert = t
+	}
+	if t := os.Getenv(prefix + "_KEY"); t != "" {
+		e.Key = t
+	}
+	if t := os.Getenv(prefix + "_CA"); t != "" {
+		e.CA = t
+	}
+	if t := os.Getenv(prefix + "_FINGERPRINT"); t != "" {
+		e.Fingerprint = t
+	}
+
+	if t := os.Getenv(prefix + "_VALIDATE"); t != "" {
+		validate, err := strconv.ParseBool(t)
+		if err != nil {
+			return err
+		}
+		e.Validate = validate
+	}
+
+	if t := os.Getenv(prefix + "_TIMEOUT"); t != "" {
+		timeout, err := time.ParseDuration(t)
+		if err != nil {
+			return err
+		}
+		e.Timeout = timeout
+	}
+
+	return nil
+}
+
+func (e *endpoint) configure(prefix string, host string, port int) error {
+	e.Validate = true
+	e.Timeout = 15 * time.Second
+
+	if err := e.generateURL(host, port); err != nil {
+		return err
+	}
+	if err := e.configureFromEnv(prefix); err != nil {
+		return err
+	}
+	if err := e.configureFromURL(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (e *endpoint) getClient() (*http.Client, error) {
+	u := e.URL
+	if u.Scheme == "https" {
+		return sslClient(e)
+	} else {
+		return &http.Client{
+			Timeout: e.Timeout,
+		}, nil
+	}
 }
 
 func newClient(domain string, scopes ...string) *client.Client {
@@ -211,8 +277,14 @@ func newClient(domain string, scopes ...string) *client.Client {
 	}
 
 	cfg := config.GetConfig()
-	u, h, err := parseEndpoint(cfg.Host, cfg.Port)
+	endpoint := endpoint{}
+	err = endpoint.configure("COZY_HOST", cfg.Host, cfg.Port)
 	checkNoErr(err)
+
+	h, err := endpoint.getClient()
+	checkNoErr(err)
+
+	u := endpoint.URL
 
 	return &client.Client{
 		Scheme:     u.Scheme,
@@ -237,9 +309,15 @@ func newAdminClient() *client.Client {
 	}
 
 	cfg := config.GetConfig()
-	u, h, err := parseEndpoint(cfg.AdminHost, cfg.AdminPort)
+	endpoint := endpoint{}
+
+	err := endpoint.configure("COZY_ADMIN", cfg.AdminHost, cfg.AdminPort)
 	checkNoErr(err)
 
+	h, err := endpoint.getClient()
+	checkNoErr(err)
+
+	u := endpoint.URL
 	c := &client.Client{
 		Scheme:     u.Scheme,
 		Addr:       u.Host,
