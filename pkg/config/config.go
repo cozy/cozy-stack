@@ -89,14 +89,16 @@ var log = logger.WithNamespace("config")
 
 // Config contains the configuration values of the application
 type Config struct {
-	Host                  string
-	Port                  int
+	Host string
+	Port int
+
+	AdminHost           string
+	AdminPort           int
+	AdminSecretFileName string
+
 	Assets                string
 	Doctypes              string
 	Subdomains            SubdomainType
-	AdminHost             string
-	AdminPort             int
-	AdminSecretFileName   string
 	NoReplyAddr           string
 	NoReplyName           string
 	Hooks                 string
@@ -553,18 +555,20 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	config = &Config{
-		Host:                v.GetString("host"),
-		Port:                v.GetInt("port"),
-		Subdomains:          subdomains,
+		Host: v.GetString("host"),
+		Port: v.GetInt("port"),
+
 		AdminHost:           v.GetString("admin.host"),
 		AdminPort:           v.GetInt("admin.port"),
 		AdminSecretFileName: adminSecretFile,
-		Assets:              v.GetString("assets"),
-		Doctypes:            v.GetString("doctypes"),
-		NoReplyAddr:         v.GetString("mail.noreply_address"),
-		NoReplyName:         v.GetString("mail.noreply_name"),
-		Hooks:               v.GetString("hooks"),
-		GeoDB:               v.GetString("geodb"),
+
+		Subdomains:  subdomains,
+		Assets:      v.GetString("assets"),
+		Doctypes:    v.GetString("doctypes"),
+		NoReplyAddr: v.GetString("mail.noreply_address"),
+		NoReplyName: v.GetString("mail.noreply_name"),
+		Hooks:       v.GetString("hooks"),
+		GeoDB:       v.GetString("geodb"),
 		PasswordResetInterval: v.GetDuration("password_reset_interval"),
 
 		RemoteAssets: v.GetStringMapString("remote_assets"),
