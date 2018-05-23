@@ -131,7 +131,7 @@ describe "A sharing" do
     sleep 3
     file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{old_name}"
     file_recipient = Folder.find_by_path inst_recipient, file_path
-    assert(file_recipient.name != file.name)
+    refute_equal file_recipient.name, file.name
   end
 
   it "can have a recipient revoked" do
@@ -229,7 +229,7 @@ describe "A sharing" do
     file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{old_name}"
     file_bob = Folder.find_by_path inst_bob, file_path
     file_charlie = Folder.find_by_path inst_charlie, file_path
-    assert(file_bob.name != file.name)
-    assert(file_charlie.name != file.name)
+    refute_equal file_bob.name,  file.name
+    refute_equal file_charlie.name,  file.name
   end
 end
