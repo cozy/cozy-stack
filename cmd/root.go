@@ -54,9 +54,17 @@ profiles you.`,
 	SilenceErrors: true,
 }
 
-func sslVerifyPinnedKey(pinnedFingerPrint []byte) func(certs [][]byte, verifiedChains [][]*x509.Certificate) error {
-	if len(pinnedFingerPrint) != sha256.Size {
-		panic("key len should be 32")
+func sslVerifyPinnedKey(fingerprint string) (func(certs [][]byte, verifiedChains [][]*x509.Certificate) error, error) {
+	pinnedFingerPrint, err := hex.DecodeString(fingerprint)
+	if err != nil {
+		return nil, fmt.Errorf("Invalid fingerprint encoding for %s", fingerprint)
+	}
+
+	expected := sha256.Size
+	given := len(pinnedFingerPrint)
+	if given != expected {
+		return nil, fmt.Errorf("Invalid fingerprint size for %s, expected %d got %d", fingerprint,
+			expected, given)
 	}
 
 	return func(certs [][]byte, verifiedChains [][]*x509.Certificate) error {
@@ -83,7 +91,7 @@ func sslVerifyPinnedKey(pinnedFingerPrint []byte) func(certs [][]byte, verifiedC
 			}
 		}
 		return fmt.Errorf("ssl: could not find the valid pinned key from proposed ones")
-	}
+	}, nil
 }
 
 func sslClient(e *endpoint) (*http.Client, error) {
@@ -115,15 +123,11 @@ func sslClient(e *endpoint) (*http.Client, error) {
 
 	fp := e.Fingerprint
 	if fp != "" {
-		pinnedFingerPrint, err := hex.DecodeString(fp)
+		check, err := sslVerifyPinnedKey(fp)
 		if err != nil {
-			return nil, fmt.Errorf("Invalid fingerprint encoding for %s", fp)
+			return nil, err
 		}
-		if len(pinnedFingerPrint) != sha256.Size {
-			return nil, fmt.Errorf("Invalid fingerprint size for %s, expected %d got %d", fp,
-				sha256.Size, len(pinnedFingerPrint))
-		}
-		tlsConfig.VerifyPeerCertificate = sslVerifyPinnedKey(pinnedFingerPrint)
+		tlsConfig.VerifyPeerCertificate = check
 	}
 
 	return &http.Client{
