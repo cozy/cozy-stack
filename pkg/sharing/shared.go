@@ -43,6 +43,104 @@ type SharedInfo struct {
 	Binary bool `json:"binary,omitempty"`
 }
 
+// RevsTree is a tree of revisions, like CouchDB has.
+// The revisions are sorted by growing generation (the number before the hyphen).
+// http://docs.couchdb.org/en/2.1.1/replication/conflicts.html#revision-tree
+type RevsTree struct {
+	// Rev is a revision, with the generation and the id
+	// e.g. 1-1bad9a88f0a608ea78c12ab49882ac41
+	Rev string `json:"rev"`
+
+	// Branches is the list of revisions that have this revision for parent.
+	// The general case is to have only one branch, but we can have more with
+	// conflicts.
+	Branches []RevsTree `json:"branches"`
+}
+
+// Clone duplicates the RevsTree
+func (rt *RevsTree) Clone() RevsTree {
+	cloned := RevsTree{Rev: rt.Rev}
+	cloned.Branches = make([]RevsTree, len(rt.Branches))
+	for i, b := range rt.Branches {
+		cloned.Branches[i] = b.Clone()
+	}
+	return cloned
+}
+
+// Generation returns the maximal generation of a revision in this tree
+// TODO add tests
+func (rt *RevsTree) Generation() int {
+	if len(rt.Branches) == 0 {
+		return RevGeneration(rt.Rev)
+	}
+	max := 0
+	for _, b := range rt.Branches {
+		if g := b.Generation(); g > max {
+			max = g
+		}
+	}
+	return max
+}
+
+// Find returns the sub-tree for the given revision, or nil if not found.
+// TODO add tests
+func (rt *RevsTree) Find(rev string) *RevsTree {
+	if rt.Rev == rev {
+		return rt
+	}
+	for i := range rt.Branches {
+		if sub := rt.Branches[i].Find(rev); sub != nil {
+			return sub
+		}
+	}
+	return nil
+}
+
+// Add inserts the given revision in the main branch.
+// TODO add tests
+func (rt *RevsTree) Add(rev string) {
+	if len(rt.Branches) > 0 {
+		rt.Branches[0].Add(rev)
+		return
+	}
+	rt.Branches = []RevsTree{
+		{Rev: rev},
+	}
+}
+
+// InsertAfter inserts the given revision in the tree as a child of the second
+// revision.
+// TODO add tests
+func (rt *RevsTree) InsertAfter(rev, parent string) {
+	subtree := rt.Find(parent)
+	if subtree == nil {
+		// TODO what if parent is not found?
+		return
+	}
+	// TODO check that RevGeneration(subtree.Rev) + 1 == RevGeneration(rev) ?
+	for _, b := range subtree.Branches {
+		if b.Rev == rev {
+			return
+		}
+	}
+	subtree.Branches = append(subtree.Branches, RevsTree{Rev: rev})
+	// TODO rebalance
+}
+
+// InsertChain inserts a chain of revisions, ie the first revision is the
+// parent of the second revision, which is itself the parent of the third
+// revision, etc. The first revisions of the chain are very probably already in
+// the tree, the last one is certainly not.
+// TODO add tests
+func (rt *RevsTree) InsertChain(chain []string) {
+	// TODO we can do better
+	prev := chain[0]
+	for _, rev := range chain[:1] {
+		rt.InsertAfter(rev, prev)
+		prev = rev
+	}
+}
+
 // SharedRef is the struct for the documents in io.cozy.shared.
 // They are used to track which documents is in which sharings.
 type SharedRef struct {
@@ -50,10 +148,8 @@ type SharedRef struct {
 	SID  string `json:"_id,omitempty"`
 	SRev string `json:"_rev,omitempty"`
 
-	// Revisions is an array with the last known _rev of the shared object.
-	// The revisions are sorted by growing generation (the number before the hyphen).
-	// TODO it should be a tree, not an array (conflicts)
-	Revisions []string `json:"revisions"`
+	// Revisions is a tree with the last known _rev of the shared object.
+	Revisions *RevsTree `json:"revisions"`
 
 	// Infos is a map of sharing ids -> informations
 	Infos map[string]SharedInfo `json:"infos"`
@@ -77,8 +173,8 @@ func (s *SharedRef) SetRev(rev string) { s.SRev = rev }
 // Clone implements couchdb.Doc
 func (s *SharedRef) Clone() couchdb.Doc {
 	cloned := *s
-	cloned.Revisions = make([]string, len(s.Revisions))
-	copy(cloned.Revisions, s.Revisions)
+	revs := s.Revisions.Clone()
+	cloned.Revisions = &revs
 	cloned.Infos = make(map[string]SharedInfo, len(s.Infos))
 	for k, v := range s.Infos {
 		cloned.Infos[k] = v
@@ -190,7 +286,6 @@ func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent)
 
 // UpdateShared updates the io.cozy.shared database when a document is
 // created/update/removed
-// TODO what if this method is called at the same time for the same doc in several sharings?
 func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) error {
 	mu := lock.ReadWrite(inst.Domain + "/shared")
 	mu.Lock()
@@ -236,15 +331,16 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		}
 	}
 
-	// TODO to be improved when we will work on conflicts
 	rev := evt.Doc.Rev()
-	if len(ref.Revisions) == 0 || ref.Revisions[len(ref.Revisions)-1] != rev {
-		ref.Revisions = append(ref.Revisions, rev)
-	}
-
 	if ref.Rev() == "" {
+		ref.Revisions = &RevsTree{Rev: rev}
 		return couchdb.CreateNamedDoc(inst, &ref)
 	}
+	var oldrev string
+	if evt.OldDoc != nil {
+		oldrev = evt.OldDoc.Rev()
+	}
+	ref.Revisions.InsertAfter(rev, oldrev)
 	return couchdb.UpdateDoc(inst, &ref)
 }
 

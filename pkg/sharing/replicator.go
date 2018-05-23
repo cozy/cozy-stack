@@ -259,6 +259,7 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 			continue
 		}
 		rules[r.DocID] = int(idx)
+		// TODO revisions is no longer a []interface{}
 		if revisions, ok := r.Doc.Get("revisions").([]interface{}); ok && len(revisions) > 0 {
 			rev, _ := revisions[len(revisions)-1].(string)
 			changes.Changed[r.DocID] = []string{rev}
@@ -377,23 +378,20 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changed Changed) (*Mi
 		if _, ok := changed[result.SID]; !ok {
 			continue
 		}
-		for _, rev := range result.Revisions {
-			if _, ok := result.Infos[s.SID]; !ok {
-				continue
-			}
-			for i, r := range changed[result.SID] {
-				if rev == r {
-					change := changed[result.SID]
-					changed[result.SID] = append(change[:i], change[i+1:]...)
-					break
-				}
+		if _, ok := result.Infos[s.SID]; !ok {
+			continue
+		}
+		notFounds := changed[result.SID][:0]
+		for _, r := range changed[result.SID] {
+			if result.Revisions.Find(r) == nil {
+				notFounds = append(notFounds, r)
 			}
 		}
-		if len(changed[result.SID]) == 0 {
+		if len(notFounds) == 0 {
 			delete(missings, result.SID)
 		} else {
 			missings[result.SID] = MissingEntry{
-				Missing: changed[result.SID],
+				Missing: notFounds,
 			}
 		}
 	}
@@ -619,7 +617,7 @@ func (s *Sharing) filterDocsToAdd(inst *instance.Instance, doctype string, docs 
 			// TODO _rev is enough or should we use _revisions?
 			ref := SharedRef{
 				SID:       doctype + "/" + doc["_id"].(string),
-				Revisions: []string{doc["_rev"].(string)},
+				Revisions: &RevsTree{Rev: doc["_rev"].(string)},
 				Infos: map[string]SharedInfo{
 					s.SID: {Rule: r},
 				},
@@ -654,19 +652,15 @@ func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, do
 			infos, ok := refs[i].Infos[s.SID]
 			if ok && !infos.Removed {
 				rev := doc["_rev"].(string)
-				exists := false
-				for _, r := range refs[i].Revisions {
-					if r == rev {
-						exists = true
-						break
+				if refs[i].Revisions.Find(rev) == nil {
+					chain := transformRevsStructToChain(doc["_revisions"])
+					if chain != nil {
+						refs[i].Revisions.InsertChain(chain)
 					}
 				}
 				if _, ok := doc["_deleted"]; ok {
 					infos.Removed = true
 					refs[i].Infos[s.SID] = infos
-				}
-				if !exists {
-					refs[i].Revisions = append(refs[i].Revisions, rev)
 				}
 				frefs = append(frefs, refs[i])
 				filtered = append(filtered, doc)
@@ -675,4 +669,30 @@ func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, do
 	}
 
 	return filtered, frefs, nil
+}
+
+// transformRevsStructToChain takes an unmarshalled { start: 2, ids: [bbb, aaa] }
+// and transforms it to a ["1-aaa", "2-bbb"]
+// TODO add tests
+func transformRevsStructToChain(revs interface{}) []string {
+	m, ok := revs.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	s, ok := m["start"].(float64)
+	if !ok {
+		return nil
+	}
+	start := int64(s)
+	ids, ok := m["ids"].([]interface{})
+	if !ok {
+		return nil
+	}
+	chain := make([]string, len(ids))
+	for i, id := range ids {
+		rev := fmt.Sprintf("%d-%s", start, id)
+		chain[len(ids)-i-1] = rev
+		start--
+	}
+	return chain
 }
