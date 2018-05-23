@@ -95,7 +95,7 @@ func createShared(t *testing.T, sid string, revisions []string) *sharing.SharedR
 	var tree *sharing.RevsTree
 	for i, r := range revisions {
 		old := tree
-		tree := &sharing.RevsTree{
+		tree = &sharing.RevsTree{
 			Rev: fmt.Sprintf("%d-%s", start-i, r),
 		}
 		if old != nil {

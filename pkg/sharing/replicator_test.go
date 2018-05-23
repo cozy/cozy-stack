@@ -493,8 +493,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  fooOneID,
 				"_rev": "1-abc",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"abc"},
+					"start": float64(1),
+					"ids":   []interface{}{"abc"},
 				},
 				"hello":  "world",
 				"number": "one",
@@ -520,8 +520,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  fooOneID,
 				"_rev": "2-def",
 				"_revisions": map[string]interface{}{
-					"start": 2,
-					"ids":   []string{"def", "abc"},
+					"start": float64(2),
+					"ids":   []interface{}{"def", "abc"},
 				},
 				"hello":  "world",
 				"number": "one bis",
@@ -553,8 +553,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barZeroID,
 				"_rev": "1-111",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"111"},
+					"start": float64(1),
+					"ids":   []interface{}{"111"},
 				},
 				"hello":  "world",
 				"number": "zero",
@@ -583,8 +583,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barTwoID,
 				"_rev": "2-caa",
 				"_revisions": map[string]interface{}{
-					"start": 2,
-					"ids":   []string{"caa", "baa"},
+					"start": float64(2),
+					"ids":   []interface{}{"caa", "baa"},
 				},
 				"hello":  "world",
 				"number": "two",
@@ -595,8 +595,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  bazThreeID,
 				"_rev": "1-ddd",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"ddd"},
+					"start": float64(1),
+					"ids":   []interface{}{"ddd"},
 				},
 				"hello":  "world",
 				"number": "three",
@@ -605,8 +605,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  bazFourID,
 				"_rev": "1-eee",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"eee"},
+					"start": float64(1),
+					"ids":   []interface{}{"eee"},
 				},
 				"hello":  "world",
 				"number": "four",
@@ -651,8 +651,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  fooOneID,
 				"_rev": "3-fab",
 				"_revisions": map[string]interface{}{
-					"start": 3,
-					"ids":   []string{"fab", "def", "abc"},
+					"start": float64(3),
+					"ids":   []interface{}{"fab", "def", "abc"},
 				},
 				"hello":  "world",
 				"number": "one ter",
@@ -661,8 +661,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  fooFiveID,
 				"_rev": "1-aab",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"aab"},
+					"start": float64(1),
+					"ids":   []interface{}{"aab"},
 				},
 				"hello":  "world",
 				"number": "five",
@@ -673,8 +673,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barSixID,
 				"_rev": "1-aac",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"aac"},
+					"start": float64(1),
+					"ids":   []interface{}{"aac"},
 				},
 				"hello":  "world",
 				"number": "six",
@@ -683,8 +683,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barSevenID,
 				"_rev": "1-bad",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"bad"},
+					"start": float64(1),
+					"ids":   []interface{}{"bad"},
 				},
 				"not":    "shared",
 				"number": "seven",
@@ -693,8 +693,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barEightID,
 				"_rev": barEightRev,
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{strings.Replace(barEightRev, "1-", "", 1)},
+					"start": float64(1),
+					"ids":   []interface{}{strings.Replace(barEightRev, "1-", "", 1)},
 				},
 				"hello":  "world",
 				"number": "8 bis",
@@ -703,8 +703,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barZeroID,
 				"_rev": "2-222",
 				"_revisions": map[string]interface{}{
-					"start": 2,
-					"ids":   []string{"222", "111"},
+					"start": float64(2),
+					"ids":   []interface{}{"222", "111"},
 				},
 				"hello":  "world",
 				"number": "zero bis",
@@ -713,8 +713,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barTwoID,
 				"_rev": "3-daa",
 				"_revisions": map[string]interface{}{
-					"start": 3,
-					"ids":   []string{"daa", "caa", "baa"},
+					"start": float64(3),
+					"ids":   []interface{}{"daa", "caa"},
 				},
 				"hello":  "world",
 				"number": "two bis",
@@ -725,8 +725,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  bazThreeID,
 				"_rev": "3-ddf",
 				"_revisions": map[string]interface{}{
-					"start": 3,
-					"ids":   []string{"ddf", "dde", "ddd"},
+					"start": float64(3),
+					"ids":   []interface{}{"ddf", "dde", "ddd"},
 				},
 				"hello":  "world",
 				"number": "three bis",
@@ -742,7 +742,7 @@ func TestApplyBulkDocs(t *testing.T) {
 	assert.Equal(t, "one ter", doc.Get("number"))
 	ref = getSharedRef(t, foos, fooOneID)
 	expected = &RevsTree{Rev: "1-abc"}
-	expected.Add("2-dev")
+	expected.Add("2-def")
 	expected.Add("3-fab")
 	assert.Equal(t, expected, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)
@@ -758,7 +758,8 @@ func TestApplyBulkDocs(t *testing.T) {
 	assert.Equal(t, "3-ddf", doc.Rev())
 	assert.Equal(t, "three bis", doc.Get("number"))
 	ref = getSharedRef(t, bazs, bazThreeID)
-	expected = &RevsTree{Rev: "1ddd"}
+	expected = &RevsTree{Rev: "1-ddd"}
+	expected.Add("2-dde")
 	expected.Add("3-ddf")
 	assert.Equal(t, expected, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)

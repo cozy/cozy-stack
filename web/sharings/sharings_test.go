@@ -942,7 +942,8 @@ func createSharing(t *testing.T, inst *instance.Instance, values []string) *shar
 
 func createSharedDoc(inst *instance.Instance, id, sharingID string) (*sharing.SharedRef, error) {
 	ref := &sharing.SharedRef{
-		SID: id,
+		SID:       id,
+		Revisions: &sharing.RevsTree{Rev: "1-aaa"},
 		Infos: map[string]sharing.SharedInfo{
 			sharingID: {Rule: 0},
 		},

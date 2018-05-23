@@ -220,6 +220,25 @@ type Changes struct {
 	Removed Removed
 }
 
+func extractLastRevision(doc couchdb.JSONDoc) string {
+	// TODO conflicts
+	var rev string
+	subtree := doc.Get("revisions")
+	for {
+		m, ok := subtree.(map[string]interface{})
+		if !ok {
+			break
+		}
+		rev = m["rev"].(string)
+		branches, ok := m["branches"].([]interface{})
+		if !ok || len(branches) == 0 {
+			break
+		}
+		subtree = branches[0]
+	}
+	return rev
+}
+
 // callChangesFeed fetches the last changes from the changes feed
 // http://docs.couchdb.org/en/2.1.1/api/database/changes.html
 // TODO add a filter on the sharing
@@ -259,9 +278,7 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 			continue
 		}
 		rules[r.DocID] = int(idx)
-		// TODO revisions is no longer a []interface{}
-		if revisions, ok := r.Doc.Get("revisions").([]interface{}); ok && len(revisions) > 0 {
-			rev, _ := revisions[len(revisions)-1].(string)
+		if rev := extractLastRevision(r.Doc); rev != "" {
 			changes.Changed[r.DocID] = []string{rev}
 		}
 	}
