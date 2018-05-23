@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 require_relative '../boot'
 require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
@@ -18,9 +16,9 @@ describe "A shared folder" do
     # Create the hierarchy
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
-    child1 = Folder.create inst, {dir_id: folder.couch_id}
-    child2 = Folder.create inst, {dir_id: folder.couch_id}
-    child3 = Folder.create inst, {dir_id: child2.couch_id}
+    child1 = Folder.create inst, dir_id: folder.couch_id
+    child2 = Folder.create inst, dir_id: folder.couch_id
+    child3 = Folder.create inst, dir_id: child2.couch_id
     file_path = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file_path, dir_id: child1.couch_id)
     f1 = CozyFile.create inst, opts

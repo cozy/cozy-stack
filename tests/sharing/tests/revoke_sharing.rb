@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 require_relative '../boot'
 require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
@@ -229,7 +227,7 @@ describe "A sharing" do
     file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{old_name}"
     file_bob = Folder.find_by_path inst_bob, file_path
     file_charlie = Folder.find_by_path inst_charlie, file_path
-    refute_equal file_bob.name,  file.name
-    refute_equal file_charlie.name,  file.name
+    refute_equal file_bob.name, file.name
+    refute_equal file_charlie.name, file.name
   end
 end
