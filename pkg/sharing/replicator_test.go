@@ -35,26 +35,6 @@ func TestRevisionSliceToStruct(t *testing.T) {
 	assert.Equal(t, []string{"ccc", "bbb", "aaa"}, revs.Ids)
 }
 
-func TestComputePossibleAncestors(t *testing.T) {
-	wants := []string{"2-b"}
-	haves := []string{"1-a", "2-a", "3-a"}
-	pas := computePossibleAncestors(wants, haves)
-	expected := []string{"1-a"}
-	assert.Equal(t, expected, pas)
-
-	wants = []string{"2-b", "2-c", "4-b"}
-	haves = []string{"1-a", "2-a", "3-a", "4-a"}
-	pas = computePossibleAncestors(wants, haves)
-	expected = []string{"1-a", "3-a"}
-	assert.Equal(t, expected, pas)
-
-	wants = []string{"5-b"}
-	haves = []string{"1-a", "2-a", "3-a"}
-	pas = computePossibleAncestors(wants, haves)
-	expected = []string{"3-a"}
-	assert.Equal(t, expected, pas)
-}
-
 func uuidv4() string {
 	id, _ := uuid.NewV4()
 	return id.String()
@@ -404,7 +384,6 @@ func TestGetMissingDocs(t *testing.T) {
 		},
 		hellos + "/" + id3: MissingEntry{
 			Missing: []string{doc3b.Rev()},
-			PAs:     []string{doc3.Rev()},
 		},
 	}
 	changes := &Changes{

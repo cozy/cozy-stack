@@ -189,12 +189,10 @@ func TestRevsDiff(t *testing.T) {
 	// sid3 was updated on the source
 	assert.Contains(t, missings, sid3)
 	assert.Equal(t, missings[sid3].Missing, []string{"5-3b"})
-	assert.Equal(t, missings[sid3].PAs, []string{"3-3a"})
 
 	// sid4 is a conflict
 	assert.Contains(t, missings, sid4)
 	assert.Equal(t, missings[sid4].Missing, []string{"2-4b", "2-4c", "4-4d"})
-	assert.Equal(t, missings[sid4].PAs, []string{"1-4a", "3-4a"})
 
 	// sid5 has been created on the target
 	assert.NotContains(t, missings, sid5)
@@ -202,7 +200,6 @@ func TestRevsDiff(t *testing.T) {
 	// sid6 has been created on the source
 	assert.Contains(t, missings, sid6)
 	assert.Equal(t, missings[sid6].Missing, []string{"1-6b"})
-	assert.Empty(t, missings[sid6].PAs)
 }
 
 func assertSharedDoc(t *testing.T, sid, rev string) {

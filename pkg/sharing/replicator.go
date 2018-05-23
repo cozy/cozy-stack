@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -274,7 +273,6 @@ type Missings map[string]MissingEntry
 // MissingEntry is a struct with the missing revisions for an id
 type MissingEntry struct {
 	Missing []string `json:"missing"`
-	PAs     []string `json:"possible_ancestors"`
 }
 
 // transformChangesInMissings is used for the initial replication (revs_diff is
@@ -358,41 +356,6 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 	return &missings, nil
 }
 
-// computePossibleAncestors find the revisions in haves that have a generation
-// number just inferior to a generation number of a revision in wants.
-func computePossibleAncestors(wants []string, haves []string) []string {
-	// Build a sorted array of unique generation number for revisions of wants
-	var wgs []int
-	seen := make(map[int]struct{})
-	for _, rev := range wants {
-		g := RevGeneration(rev)
-		if _, ok := seen[g]; !ok {
-			wgs = append(wgs, g)
-		}
-		seen[g] = struct{}{}
-	}
-	sort.Ints(wgs)
-
-	var pas []string
-	i := 0
-	for j, rev := range haves {
-		g := RevGeneration(rev)
-		found := false
-		for i < len(wgs) && g >= wgs[i] {
-			found = true
-			i++
-		}
-		if found && j > 0 {
-			pas = append(pas, haves[j-1])
-		}
-	}
-	if i != len(wgs) {
-		pas = append(pas, haves[len(haves)-1])
-	}
-
-	return pas
-}
-
 // ComputeRevsDiff takes a map of id->[revisions] and returns the missing
 // revisions for those documents on the current instance.
 func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changed Changed) (*Missings, error) {
@@ -429,10 +392,8 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changed Changed) (*Mi
 		if len(changed[result.SID]) == 0 {
 			delete(missings, result.SID)
 		} else {
-			pas := computePossibleAncestors(changed[result.SID], result.Revisions)
 			missings[result.SID] = MissingEntry{
 				Missing: changed[result.SID],
-				PAs:     pas,
 			}
 		}
 	}
@@ -469,7 +430,6 @@ func revisionSliceToStruct(revs []string) RevsStruct {
 
 // getMissingDocs fetches the documents in bulk, partitionned by their doctype.
 // https://github.com/apache/couchdb-documentation/pull/263/files
-// TODO use the possible ancestors
 // TODO what if we fetch an old revision on a compacted database?
 func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings, changes *Changes) (*DocsByDoctype, error) {
 	docs := make(DocsByDoctype)
