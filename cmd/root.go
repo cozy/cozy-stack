@@ -105,12 +105,12 @@ func sslClient(e *endpoint) (*http.Client, error) {
 	cert := e.Cert
 	key := e.Key
 	if cert != "" && key != "" {
-		cert, err := tls.LoadX509KeyPair(e.Cert, key)
+		pair, err := tls.LoadX509KeyPair(cert, key)
 		if err != nil {
 			return nil, fmt.Errorf("Could not read client certificate files %q and %q: %s",
 				cert, key, err)
 		}
-		tlsConfig.Certificates = []tls.Certificate{cert}
+		tlsConfig.Certificates = []tls.Certificate{pair}
 	}
 
 	fp := e.Fingerprint
@@ -252,11 +252,10 @@ func (e *endpoint) getClient() (*http.Client, error) {
 	u := e.URL
 	if u.Scheme == "https" {
 		return sslClient(e)
-	} else {
-		return &http.Client{
-			Timeout: e.Timeout,
-		}, nil
 	}
+	return &http.Client{
+		Timeout: e.Timeout,
+	}, nil
 }
 
 func newClient(domain string, scopes ...string) *client.Client {
@@ -277,14 +276,14 @@ func newClient(domain string, scopes ...string) *client.Client {
 	}
 
 	cfg := config.GetConfig()
-	endpoint := endpoint{}
-	err = endpoint.configure("COZY_HOST", cfg.Host, cfg.Port)
+	e := endpoint{}
+	err = e.configure("COZY_HOST", cfg.Host, cfg.Port)
 	checkNoErr(err)
 
-	h, err := endpoint.getClient()
+	h, err := e.getClient()
 	checkNoErr(err)
 
-	u := endpoint.URL
+	u := e.URL
 
 	return &client.Client{
 		Scheme:     u.Scheme,
@@ -309,15 +308,15 @@ func newAdminClient() *client.Client {
 	}
 
 	cfg := config.GetConfig()
-	endpoint := endpoint{}
+	e := endpoint{}
 
-	err := endpoint.configure("COZY_ADMIN", cfg.AdminHost, cfg.AdminPort)
+	err := e.configure("COZY_ADMIN", cfg.AdminHost, cfg.AdminPort)
 	checkNoErr(err)
 
-	h, err := endpoint.getClient()
+	h, err := e.getClient()
 	checkNoErr(err)
 
-	u := endpoint.URL
+	u := e.URL
 	c := &client.Client{
 		Scheme:     u.Scheme,
 		Addr:       u.Host,
