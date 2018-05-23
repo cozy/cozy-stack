@@ -25,6 +25,22 @@ class Sharing
     res.code
   end
 
+  def revoke_recipient_by_sharer(inst, doctype, index)
+    opts = {
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    res = inst.client["/sharings/#{@couch_id}/recipients/#{index}"].delete opts
+    res.code
+  end
+
+  def revoke_recipient_by_itself(inst, doctype)
+    opts = {
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    res = inst.client["/sharings/#{@couch_id}/recipients/self"].delete opts
+    res.code
+  end
+
   def initialize(opts = {})
     @description = opts[:description] || Faker::HitchhikersGuideToTheGalaxy.marvin_quote
     @app_slug = opts[:app_slug] || ""
