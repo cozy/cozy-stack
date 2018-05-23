@@ -68,7 +68,6 @@ func (rt *RevsTree) Clone() RevsTree {
 }
 
 // Generation returns the maximal generation of a revision in this tree
-// TODO add tests
 func (rt *RevsTree) Generation() int {
 	if len(rt.Branches) == 0 {
 		return RevGeneration(rt.Rev)
@@ -83,7 +82,6 @@ func (rt *RevsTree) Generation() int {
 }
 
 // Find returns the sub-tree for the given revision, or nil if not found.
-// TODO add tests
 func (rt *RevsTree) Find(rev string) *RevsTree {
 	if rt.Rev == rev {
 		return rt
@@ -96,16 +94,16 @@ func (rt *RevsTree) Find(rev string) *RevsTree {
 	return nil
 }
 
-// Add inserts the given revision in the main branch.
-// TODO add tests
-func (rt *RevsTree) Add(rev string) {
+// Add inserts the given revision in the main branch
+func (rt *RevsTree) Add(rev string) *RevsTree {
+	// TODO check generations
 	if len(rt.Branches) > 0 {
-		rt.Branches[0].Add(rev)
-		return
+		return rt.Branches[0].Add(rev)
 	}
 	rt.Branches = []RevsTree{
 		{Rev: rev},
 	}
+	return &rt.Branches[0]
 }
 
 // InsertAfter inserts the given revision in the tree as a child of the second
@@ -114,10 +112,8 @@ func (rt *RevsTree) Add(rev string) {
 func (rt *RevsTree) InsertAfter(rev, parent string) {
 	subtree := rt.Find(parent)
 	if subtree == nil {
-		// TODO what if parent is not found?
-		return
+		subtree = rt.Add(parent)
 	}
-	// TODO check that RevGeneration(subtree.Rev) + 1 == RevGeneration(rev) ?
 	for _, b := range subtree.Branches {
 		if b.Rev == rev {
 			return
@@ -133,12 +129,31 @@ func (rt *RevsTree) InsertAfter(rev, parent string) {
 // the tree, the last one is certainly not.
 // TODO add tests
 func (rt *RevsTree) InsertChain(chain []string) {
-	// TODO we can do better
-	prev := chain[0]
-	for _, rev := range chain[:1] {
-		rt.InsertAfter(rev, prev)
-		prev = rev
+	if len(chain) == 0 {
+		return
 	}
+	subtree := rt.Find(chain[0])
+	if subtree == nil {
+		subtree = rt.Add(chain[0])
+	}
+	for _, rev := range chain[1:] {
+		if len(subtree.Branches) > 0 {
+			found := false
+			for i := range subtree.Branches {
+				if subtree.Branches[i].Rev == rev {
+					found = true
+					subtree = &subtree.Branches[i]
+					break
+				}
+			}
+			if found {
+				continue
+			}
+		}
+		subtree.Branches = append(subtree.Branches, RevsTree{Rev: rev})
+		subtree = &subtree.Branches[0]
+	}
+	// TODO rebalance
 }
 
 // SharedRef is the struct for the documents in io.cozy.shared.

@@ -22,19 +22,6 @@ const foos = "io.cozy.sharing.test.foos"
 const bars = "io.cozy.sharing.test.bars"
 const bazs = "io.cozy.sharing.test.bazs"
 
-func TestRevGeneration(t *testing.T) {
-	assert.Equal(t, 1, RevGeneration("1-aaa"))
-	assert.Equal(t, 3, RevGeneration("3-123"))
-	assert.Equal(t, 10, RevGeneration("10-1f2"))
-}
-
-func TestRevisionSliceToStruct(t *testing.T) {
-	slice := []string{"2-aaa", "3-bbb", "4-ccc"}
-	revs := revisionSliceToStruct(slice)
-	assert.Equal(t, 4, revs.Start)
-	assert.Equal(t, []string{"ccc", "bbb", "aaa"}, revs.Ids)
-}
-
 func uuidv4() string {
 	id, _ := uuid.NewV4()
 	return id.String()

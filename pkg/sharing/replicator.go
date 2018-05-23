@@ -673,7 +673,6 @@ func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, do
 
 // transformRevsStructToChain takes an unmarshalled { start: 2, ids: [bbb, aaa] }
 // and transforms it to a ["1-aaa", "2-bbb"]
-// TODO add tests
 func transformRevsStructToChain(revs interface{}) []string {
 	m, ok := revs.(map[string]interface{})
 	if !ok {
