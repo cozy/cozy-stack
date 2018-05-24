@@ -1,6 +1,7 @@
 class Folder
   ROOT_DIR = "io.cozy.files.root-dir".freeze
   TRASH_DIR = "io.cozy.files.trash-dir".freeze
+  NO_LONGER_SHARED_DIR = "io.cozy.files.no-longer-shared-dir".freeze
 
   include Model::Files
 

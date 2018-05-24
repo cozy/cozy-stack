@@ -2,7 +2,7 @@
 class CozyFile
   include Model::Files
 
-  attr_reader :name, :dir_id, :mime, :trashed, :md5sum
+  attr_reader :name, :dir_id, :mime, :trashed, :md5sum, :referenced_by
 
   def self.load_from_url(inst, path)
     opts = {
@@ -14,13 +14,17 @@ class CozyFile
     j = JSON.parse(res.body)["data"]
     id = j["id"]
     rev = j["rev"]
+    referenced_by = j.dig "relationships", "referenced_by", "data"
+
     j = j["attributes"]
     f = CozyFile.new(
       name: j["name"],
       dir_id: j["dir_id"],
       trashed: j["trashed"],
-      md5sum: j["md5sum"]
+      md5sum: j["md5sum"],
+      referenced_by: referenced_by
     )
+
     f.couch_id = id
     f.couch_rev = rev
     f
@@ -41,6 +45,7 @@ class CozyFile
     @content = opts[:content] || "Hello world"
     @trashed = opts[:trashed]
     @md5sum = opts[:md5sum]
+    @referenced_by = opts[:referenced_by]
   end
 
   def save(inst)
