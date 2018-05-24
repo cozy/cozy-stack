@@ -771,12 +771,12 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 		// Nothing to do if the directory is already in the trash
 		return nil
 	}
-	if s.Owner && rule.Selector == couchdb.SelectorReferencedBy {
-		// Do not move/trash photos removed from an album for the owner
-		return nil
-	}
 	olddoc := file.Clone().(*vfs.FileDoc)
 	removeReferencesFromRule(file, rule)
+	if s.Owner && rule.Selector == couchdb.SelectorReferencedBy {
+		// Do not move/trash photos removed from an album for the owner
+		return inst.VFS().UpdateFileDoc(olddoc, file)
+	}
 	if len(file.ReferencedBy) == 0 {
 		_, err := vfs.TrashFile(inst.VFS(), file)
 		return err
