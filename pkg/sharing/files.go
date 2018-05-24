@@ -768,7 +768,11 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 // which case, we keep it in a special folder)
 func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Rule) error {
 	if file.Trashed {
-		// nothing to do if the directory is already in the trash
+		// Nothing to do if the directory is already in the trash
+		return nil
+	}
+	if s.Owner && rule.Selector == couchdb.SelectorReferencedBy {
+		// Do not move/trash photos removed from an album for the owner
 		return nil
 	}
 	olddoc := file.Clone().(*vfs.FileDoc)
