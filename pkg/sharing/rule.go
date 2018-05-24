@@ -214,15 +214,7 @@ func (s *Sharing) findRuleForNewFile(file *vfs.FileDoc) *Rule {
 		}
 		allFound := true
 		for _, ref := range file.ReferencedBy {
-			v := ref.Type + "/" + ref.ID
-			found := false
-			for _, val := range rule.Values {
-				if val == v {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if !rule.hasReferencedBy(ref) {
 				allFound = false
 				break
 			}

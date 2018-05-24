@@ -124,8 +124,8 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 			kept := make([]interface{}, 0)
 			for _, ref := range refs {
 				if r, ok := ref.(map[string]interface{}); ok {
+					v := r["type"].(string) + "/" + r["id"].(string)
 					for _, val := range rule.Values {
-						v := r["type"].(string) + "/" + r["id"].(string)
 						if val == v {
 							kept = append(kept, ref)
 							break
