@@ -1,8 +1,10 @@
 package sharing
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -76,7 +78,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	if rule := s.FirstFilesRule(); rule != nil {
 		if err := s.AddReferenceForSharingDir(inst, rule); err != nil {
 			inst.Logger().WithField("nspace", "sharing").
-				Warnf("Error on referenced_by for the sharing dir", s.SID, err)
+				Warnf("Error on referenced_by for the sharing dir (%s): %s", s.SID, err)
 		}
 	}
 
@@ -219,7 +221,6 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 	var docs []couchdb.JSONDoc
 	if rule.Selector == "" || rule.Selector == "id" {
 		if rule.DocType == consts.Files {
-			// TODO add a test for this case
 			for _, fileID := range rule.Values {
 				err := vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 					if err != nil {
@@ -247,23 +248,44 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 			}
 		}
 	} else {
-		// Create index based on selector to retrieve documents to share
-		name := "by-" + rule.Selector
-		idx := mango.IndexOnFields(rule.DocType, name, []string{rule.Selector})
-		if err := couchdb.DefineIndex(inst, idx); err != nil {
-			return nil, err
-		}
-		// Request the index for all values
-		for _, val := range rule.Values {
-			var results []couchdb.JSONDoc
-			req := &couchdb.FindRequest{
-				UseIndex: name,
-				Selector: mango.Equal(rule.Selector, val),
+		if rule.Selector == couchdb.SelectorReferencedBy {
+			for _, val := range rule.Values {
+				req := &couchdb.ViewRequest{
+					Key:         strings.SplitN(val, "/", 2),
+					IncludeDocs: true,
+					Reduce:      false,
+				}
+				var res couchdb.ViewResponse
+				err := couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res)
+				if err != nil {
+					return nil, err
+				}
+				for _, row := range res.Rows {
+					var doc couchdb.JSONDoc
+					if err = json.Unmarshal(row.Doc, &doc); err == nil {
+						docs = append(docs, doc)
+					}
+				}
 			}
-			if err := couchdb.FindDocs(inst, rule.DocType, req, &results); err != nil {
+		} else {
+			// Create index based on selector to retrieve documents to share
+			name := "by-" + rule.Selector
+			idx := mango.IndexOnFields(rule.DocType, name, []string{rule.Selector})
+			if err := couchdb.DefineIndex(inst, idx); err != nil {
 				return nil, err
 			}
-			docs = append(docs, results...)
+			// Request the index for all values
+			for _, val := range rule.Values {
+				var results []couchdb.JSONDoc
+				req := &couchdb.FindRequest{
+					UseIndex: name,
+					Selector: mango.Equal(rule.Selector, val),
+				}
+				if err := couchdb.FindDocs(inst, rule.DocType, req, &results); err != nil {
+					return nil, err
+				}
+				docs = append(docs, results...)
+			}
 		}
 	}
 	return docs, nil

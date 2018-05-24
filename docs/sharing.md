@@ -233,7 +233,8 @@ Content-Type: application/json
 
 ### GET /sharings/:sharing-id
 
-Get the information about a sharing. This includes the content of the rules, the members, as well as the already shared documents for this sharing.
+Get the information about a sharing. This includes the content of the rules,
+the members, as well as the already shared documents for this sharing.
 
 #### Request
 
@@ -312,7 +313,9 @@ Content-Type: application/vnd.api+json
 
 ### GET /sharings/doctype/:doctype
 
-Get information about all the sharings that have a rule for the given doctype. This includes the content of the rules, the members, as well as the already shared documents for this sharing.
+Get information about all the sharings that have a rule for the given doctype.
+This includes the content of the rules, the members, as well as the already
+shared documents for this sharing.
 
 #### Request
 

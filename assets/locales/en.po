@@ -18,6 +18,9 @@ msgstr "Backed up from my mobile"
 msgid "Tree Shared with me"
 msgstr "Shared with me"
 
+msgid "Tree No longer shared"
+msgstr "No longer shared"
+
 msgid "Login Credentials error"
 msgstr "The password you entered is incorrect, please try again."
 

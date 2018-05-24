@@ -87,7 +87,10 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 		"trashed":    doc.Trashed,
 	}
 	if len(doc.ReferencedBy) > 0 {
-		docs[0]["referenced_by"] = doc.ReferencedBy
+		docs[0][couchdb.SelectorReferencedBy] = doc.ReferencedBy
+	}
+	if doc.Metadata != nil {
+		docs[0]["metadata"] = doc.Metadata
 	}
 	if s.bulkRevs != nil {
 		doc.SetRev(s.bulkRevs.Rev)
@@ -140,7 +143,7 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 		"path":       doc.Fullpath,
 	}
 	if len(doc.ReferencedBy) > 0 {
-		docs[0]["referenced_by"] = doc.ReferencedBy
+		docs[0][couchdb.SelectorReferencedBy] = doc.ReferencedBy
 	}
 	if s.bulkRevs != nil {
 		doc.SetRev(s.bulkRevs.Rev)

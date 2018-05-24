@@ -119,7 +119,7 @@ func FindReferences(inst *instance.Instance, ids []string) ([]*SharedRef, error)
 // extractReferencedBy extracts the referenced_by slice from the given doc
 // and cast it to the right type
 func extractReferencedBy(doc *couchdb.JSONDoc) []couchdb.DocReference {
-	slice, _ := doc.Get("referenced_by").([]interface{})
+	slice, _ := doc.Get(couchdb.SelectorReferencedBy).([]interface{})
 	refs := make([]couchdb.DocReference, len(slice))
 	for i, ref := range slice {
 		refs[i], _ = ref.(couchdb.DocReference)
@@ -152,7 +152,16 @@ func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent)
 		return false, err
 	}
 	rule := s.Rules[msg.RuleIndex]
-	// TODO referenced_by
+	if rule.Selector == couchdb.SelectorReferencedBy {
+		refs := extractReferencedBy(&evt.Doc)
+		for _, ref := range refs {
+			if rule.hasReferencedBy(ref) {
+				return false, nil
+			}
+		}
+		return true, nil
+	}
+
 	var docPath string
 	if evt.Doc.Get("type") == consts.FileType {
 		dirID, ok := evt.Doc.Get("dir_id").(string)

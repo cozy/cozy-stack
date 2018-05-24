@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 require_relative '../boot'
 require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
@@ -26,7 +24,7 @@ describe "A folder" do
     folder.couch_id.wont_be_empty
     file_path = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file_path, dir_id: folder.couch_id)
-    file = CozyFile.create inst_alice, opts
+    CozyFile.create inst_alice, opts
 
     sharing = Sharing.new
     sharing.rules << Rule.sync(folder)
@@ -50,7 +48,7 @@ describe "A folder" do
 
     # Share a folder with Bob and Charlie, in 2 different sharings
     folder = Folder.create inst_alice
-    child1 = Folder.create inst_alice, {dir_id: folder.couch_id}
+    child1 = Folder.create inst_alice, dir_id: folder.couch_id
     sharing = Sharing.new
     sharing.rules << Rule.sync(folder)
     sharing.members << inst_alice << contact_bob

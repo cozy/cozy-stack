@@ -106,7 +106,6 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 // - the path is removed (directory only)
 //
 // ruleIndexes is a map of "doctype-docid" -> rule index
-// TODO keep referenced_by that are relevant to this sharing
 func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndex int) map[string]interface{} {
 	if doc["type"] == consts.DirType {
 		delete(doc, "path")
@@ -117,9 +116,29 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 	if !ok {
 		return doc
 	}
-	delete(doc, "referenced_by")
 	rule := s.Rules[ruleIndex]
-	noDirID := rule.Selector == "referenced_by"
+	var noDirID bool
+	if rule.Selector == couchdb.SelectorReferencedBy {
+		noDirID = true
+		if refs, ok := doc[couchdb.SelectorReferencedBy].([]interface{}); ok {
+			kept := make([]interface{}, 0)
+			for _, ref := range refs {
+				if r, ok := ref.(map[string]interface{}); ok {
+					v := r["type"].(string) + "/" + r["id"].(string)
+					for _, val := range rule.Values {
+						if val == v {
+							kept = append(kept, ref)
+							break
+						}
+					}
+				}
+			}
+			doc[couchdb.SelectorReferencedBy] = kept
+		}
+	} else {
+		noDirID = false
+		delete(doc, couchdb.SelectorReferencedBy)
+	}
 	if !noDirID {
 		for _, v := range rule.Values {
 			if v == dir {
@@ -192,7 +211,8 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error
 	}
 	fs := inst.VFS()
 	dir, err := vfs.NewDirDocWithParent(rule.Title, parent, []string{"from-sharing-" + s.SID})
-	dir.DocID = rule.Values[0]
+	parts := strings.Split(rule.Values[0], "/")
+	dir.DocID = parts[len(parts)-1]
 	if err != nil {
 		return err
 	}
@@ -206,7 +226,8 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error
 // AddReferenceForSharingDir adds a reference to the sharing on the sharing directory
 func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule) error {
 	fs := inst.VFS()
-	dir, err := fs.DirByID(rule.Values[0])
+	parts := strings.Split(rule.Values[0], "/")
+	dir, err := fs.DirByID(parts[len(parts)-1])
 	if err != nil {
 		return err
 	}
@@ -241,6 +262,58 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		return nil, ErrInternalServerError
 	}
 	return inst.VFS().DirByID(res.Rows[0].ID)
+}
+
+// GetNoLongerSharedDir returns the directory used for files and folders that
+// are removed from a sharing, but are still used via a reference. It the
+// directory does not exist, it is created.
+func (s *Sharing) GetNoLongerSharedDir(inst *instance.Instance) (*vfs.DirDoc, error) {
+	fs := inst.VFS()
+	dir, _, err := fs.DirOrFileByID(consts.NoLongerSharedDirID)
+	if err != nil && err != os.ErrNotExist {
+		return nil, err
+	}
+
+	if dir == nil {
+		parent, errp := EnsureSharedWithMeDir(inst)
+		if errp != nil {
+			return nil, errp
+		}
+		name := inst.Translate("Tree No longer shared")
+		dir, err = vfs.NewDirDocWithParent(name, parent, nil)
+		dir.DocID = consts.NoLongerSharedDirID
+		if err != nil {
+			return nil, err
+		}
+		if err = fs.CreateDir(dir); err != nil {
+			return nil, err
+		}
+		return dir, nil
+	}
+
+	if dir.RestorePath != "" {
+		_, err = vfs.RestoreDir(fs, dir)
+		if err != nil {
+			return nil, err
+		}
+		children, err := fs.DirBatch(dir, &couchdb.SkipCursor{})
+		if err != nil {
+			return nil, err
+		}
+		for _, child := range children {
+			d, f := child.Refine()
+			if d != nil {
+				_, err = vfs.TrashDir(fs, d)
+			} else {
+				_, err = vfs.TrashFile(fs, f)
+			}
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return dir, nil
 }
 
 // GetFolder returns informations about a folder (with XORed IDs)
@@ -290,6 +363,14 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			}
 			ref = nil
 		}
+		var infos SharedInfo
+		if ref != nil {
+			infos, ok = ref.Infos[s.SID]
+			if !ok {
+				errm = multierror.Append(errm, ErrInternalServerError) // TODO better error
+				continue
+			}
+		}
 		dir, file, err := fs.DirOrFileByID(id)
 		if err != nil && err != os.ErrNotExist {
 			inst.Logger().WithField("nspace", "replicator").
@@ -302,20 +383,15 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 				continue
 			}
 			rev := RevGeneration(ref.Revisions[len(ref.Revisions)-1])
+			if rev >= RevGeneration(target["_rev"].(string)) {
+				// Either the file/dir is already in the trash, or the not
+				// trashed version should win => keep the file/dir as it is
+				continue
+			}
 			if dir != nil {
-				if rev >= RevGeneration(dir.DocRev) {
-					// Either the dir is already in the trash, or the not
-					// trashed version should win => keep the dir as it is
-					continue
-				}
 				err = s.TrashDir(inst, dir)
 			} else {
-				if rev >= RevGeneration(file.DocRev) {
-					// Either the file is already in the trash, or the not
-					// trashed version should win => keep the file as it is
-					continue
-				}
-				err = s.TrashFile(inst, file)
+				err = s.TrashFile(inst, file, &s.Rules[infos.Rule])
 			}
 			if err != nil {
 				errm = multierror.Append(errm, err)
@@ -336,6 +412,36 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		}
 	}
 	return nil
+}
+
+func removeReferencesFromRule(file *vfs.FileDoc, rule *Rule) {
+	if rule.Selector != couchdb.SelectorReferencedBy {
+		return
+	}
+	refs := file.ReferencedBy[:0]
+	for _, ref := range file.ReferencedBy {
+		if !rule.hasReferencedBy(ref) {
+			refs = append(refs, ref)
+		}
+	}
+	file.ReferencedBy = refs
+}
+
+func buildReferencedBy(target, file *vfs.FileDoc, rule *Rule) []couchdb.DocReference {
+	refs := make([]couchdb.DocReference, 0)
+	if file != nil {
+		for _, ref := range file.ReferencedBy {
+			if !rule.hasReferencedBy(ref) {
+				refs = append(refs, ref)
+			}
+		}
+	}
+	for _, ref := range target.ReferencedBy {
+		if rule.hasReferencedBy(ref) {
+			refs = append(refs, ref)
+		}
+	}
+	return refs
 }
 
 func copySafeFieldsToFile(target, file *vfs.FileDoc) {
@@ -541,7 +647,6 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	}
 	dir.SetID(target["_id"].(string))
 	copySafeFieldsToDir(target, dir)
-	// TODO referenced_by
 	err = fs.CreateDir(dir)
 	if err == os.ErrExist {
 		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
@@ -617,7 +722,6 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	}
 
 	copySafeFieldsToDir(target, dir)
-	// TODO referenced_by
 	// TODO detect & resolve conflicts when both instances have updated the dir concurrently
 	err := fs.UpdateDirDoc(oldDoc, dir)
 	if err == os.ErrExist {
@@ -639,28 +743,48 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	return nil
 }
 
-// TrashDir puts the directory in the trash
+// TrashDir puts the directory in the trash (except if the directory has a
+// reference, in which case, we keep it in a special folder)
 func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 	if strings.HasPrefix(dir.Fullpath+"/", vfs.TrashDirName+"/") {
 		// nothing to do if the directory is already in the trash
 		return nil
 	}
-	_, err := vfs.TrashDir(inst.VFS(), dir)
-	return err
+	if len(dir.ReferencedBy) == 0 {
+		_, err := vfs.TrashDir(inst.VFS(), dir)
+		return err
+	}
+	olddoc := dir.Clone().(*vfs.DirDoc)
+	parent, err := s.GetNoLongerSharedDir(inst)
+	if err != nil {
+		return err
+	}
+	dir.DirID = parent.DocID
+	dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
+	return inst.VFS().UpdateDirDoc(olddoc, dir)
 }
 
-// TrashFile puts the file in the trash
-// TODO if file has references, we should keep it in a special folder
-func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc) error {
+// TrashFile puts the file in the trash (except if the file has a reference, in
+// which case, we keep it in a special folder)
+func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Rule) error {
 	if file.Trashed {
 		// nothing to do if the directory is already in the trash
 		return nil
 	}
-	_, err := vfs.TrashFile(inst.VFS(), file)
-	return err
+	olddoc := file.Clone().(*vfs.FileDoc)
+	removeReferencesFromRule(file, rule)
+	if len(file.ReferencedBy) == 0 {
+		_, err := vfs.TrashFile(inst.VFS(), file)
+		return err
+	}
+	parent, err := s.GetNoLongerSharedDir(inst)
+	if err != nil {
+		return err
+	}
+	file.DirID = parent.DocID
+	return inst.VFS().UpdateFileDoc(olddoc, file)
 }
 
-// TODO referenced_by
 func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		Type: consts.Files,
@@ -673,6 +797,7 @@ func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
 			"updated_at": dir.UpdatedAt,
 			"tags":       dir.Tags,
 			"path":       dir.Fullpath,
+			couchdb.SelectorReferencedBy: dir.ReferencedBy,
 		},
 	}
 	if dir.DirID != "" {
@@ -684,7 +809,6 @@ func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
 	return doc
 }
 
-// TODO referenced_by
 func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		Type: consts.Files,
@@ -702,6 +826,7 @@ func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
 			"executable": file.Executable,
 			"trashed":    file.Trashed,
 			"tags":       file.Tags,
+			couchdb.SelectorReferencedBy: file.ReferencedBy,
 		},
 	}
 	if file.DirID != "" {

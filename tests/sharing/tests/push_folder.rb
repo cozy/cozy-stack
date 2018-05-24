@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 require_relative '../boot'
 require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
@@ -20,7 +18,7 @@ describe "A folder" do
     folder.couch_id.wont_be_empty
     file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
-    file = CozyFile.create inst, opts
+    CozyFile.create inst, opts
 
     # Create the sharing
     contact = Contact.create inst, givenName: recipient_name

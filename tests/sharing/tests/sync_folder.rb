@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 require_relative '../boot'
 require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']

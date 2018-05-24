@@ -296,14 +296,10 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	if len(target.MD5Sum) == 0 {
 		return nil, vfs.ErrInvalidHash
 	}
-	indexer := newSharingIndexer(inst, &bulkRevs{
-		Rev:       target.Rev(),
-		Revisions: target.Revisions,
-	})
-	fs := inst.VFS().UseSharingIndexer(indexer)
-	current, err := fs.FileByID(target.DocID)
+	current, err := inst.VFS().FileByID(target.DocID)
 	if err != nil {
 		if err == os.ErrNotExist {
+			// TODO check that there is a rule that allow to add this file
 			return s.createUploadKey(inst, target)
 		}
 		return nil, err
@@ -316,6 +312,11 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 		}
 		return nil, err
 	}
+	infos, ok := ref.Infos[s.SID]
+	if !ok {
+		return nil, ErrInternalServerError // TODO better error for safety principal
+	}
+	rule := &s.Rules[infos.Rule]
 	if RevGeneration(current.DocRev) >= RevGeneration(target.DocRev) {
 		// TODO conflicts
 		return nil, nil
@@ -323,13 +324,23 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	if !bytes.Equal(target.MD5Sum, current.MD5Sum) {
 		return s.createUploadKey(inst, target)
 	}
+	return nil, s.updateFileMetadata(inst, target, current, rule)
+}
+
+func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWithRevisions, current *vfs.FileDoc, rule *Rule) error {
+	indexer := newSharingIndexer(inst, &bulkRevs{
+		Rev:       target.Rev(),
+		Revisions: target.Revisions,
+	})
+	fs := inst.VFS().UseSharingIndexer(indexer)
 	oldDoc := current.Clone().(*vfs.FileDoc)
 
 	var parent *vfs.DirDoc
+	var err error
 	if target.DirID == "" {
 		parent, err = s.GetSharingDir(inst)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		current.DirID = parent.DocID
 	} else if target.DirID != current.DirID {
@@ -340,23 +351,23 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 		if err != nil {
 			inst.Logger().WithField("nspace", "upload").
 				Debugf("Conflict for parent on sync file: %s", err)
-			return nil, err
+			return err
 		}
 	}
 	current.DirID = parent.DocID
 	current.DocName = target.DocName
 
 	copySafeFieldsToFile(target.FileDoc, current)
-	// TODO referenced_by
+	current.ReferencedBy = buildReferencedBy(target.FileDoc, current, rule)
 	err = fs.UpdateFileDoc(oldDoc, current)
 	if err == os.ErrExist {
 		pth, errp := current.Path(fs)
 		if errp != nil {
-			return nil, errp
+			return errp
 		}
 		name, errr := resolveConflictSamePath(inst, current.DocID, pth)
 		if errr != nil {
-			return nil, errr
+			return errr
 		}
 		if name != "" {
 			indexer.IncrementRevision()
@@ -367,9 +378,9 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	if err != nil {
 		inst.Logger().WithField("nspace", "upload").
 			Debugf("Cannot update file: %s", err)
-		return nil, err
+		return err
 	}
-	return nil, nil
+	return nil
 }
 
 // HandleFileUpload is used to receive a file upload when synchronizing just
@@ -416,14 +427,38 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 		target.DirID = parent.DocID
 	}
 
-	// TODO referenced_by
 	// TODO manage conflicts
 	newdoc := target.FileDoc.Clone().(*vfs.FileDoc)
 	olddoc, err := fs.FileByID(target.ID())
 	if err != nil && err != os.ErrNotExist {
 		return err
 	}
-	if olddoc == nil || (newdoc.DocName == olddoc.DocName && newdoc.DirID == olddoc.DirID) {
+	if olddoc == nil {
+		rule := s.findRuleForNewFile(newdoc)
+		if rule == nil {
+			return ErrInternalServerError // TODO better error
+		}
+		newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, nil, rule)
+		// TODO create the io.cozy.shared reference?
+		return s.updateFileContent(inst, fs, newdoc, nil, body)
+	}
+
+	var ref SharedRef
+	err = couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return ErrInternalServerError // TODO better error for safety principal
+		}
+		return err
+	}
+	infos, ok := ref.Infos[s.SID]
+	if !ok {
+		return ErrInternalServerError // TODO better error for safety principal
+	}
+	rule := &s.Rules[infos.Rule]
+	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, olddoc, rule)
+
+	if newdoc.DocName == olddoc.DocName && newdoc.DirID == olddoc.DirID {
 		// TODO update the io.cozy.shared reference?
 		return s.updateFileContent(inst, fs, newdoc, olddoc, body)
 	}

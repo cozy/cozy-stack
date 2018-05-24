@@ -6,6 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
 const (
@@ -69,6 +70,15 @@ func (s *Sharing) ValidateRules() error {
 					return ErrInvalidRule
 				}
 			}
+			if rule.Selector == couchdb.SelectorReferencedBy {
+				// For a referenced_by rule, values should be "doctype/docid"
+				for _, val := range rule.Values {
+					parts := strings.SplitN(val, "/", 2)
+					if len(parts) != 2 {
+						return ErrInvalidRule
+					}
+				}
+			}
 		} else if permissions.CheckWritable(rule.DocType) != nil {
 			return ErrInvalidRule
 		}
@@ -114,7 +124,7 @@ func (r Rule) Accept(doctype string, doc map[string]interface{}) bool {
 	if r.Selector == "" || r.Selector == "id" {
 		obj = doc["_id"]
 	} else if doctype == consts.Files && r.Selector == couchdb.SelectorReferencedBy {
-		if o, k := doc["referenced_by"].([]map[string]interface{}); k {
+		if o, k := doc[couchdb.SelectorReferencedBy].([]map[string]interface{}); k {
 			refs := make([]string, len(o))
 			for i, ref := range o {
 				refs[i] = ref["type"].(string) + "/" + ref["id"].(string)
@@ -191,6 +201,31 @@ func (s *Sharing) FirstFilesRule() *Rule {
 	return nil
 }
 
+func (s *Sharing) findRuleForNewFile(file *vfs.FileDoc) *Rule {
+	for i, rule := range s.Rules {
+		if rule.Local || rule.DocType != consts.Files {
+			continue
+		}
+		if rule.Selector != couchdb.SelectorReferencedBy {
+			return &s.Rules[i]
+		}
+		if len(file.ReferencedBy) == 0 {
+			continue
+		}
+		allFound := true
+		for _, ref := range file.ReferencedBy {
+			if !rule.hasReferencedBy(ref) {
+				allFound = false
+				break
+			}
+		}
+		if allFound {
+			return &s.Rules[i]
+		}
+	}
+	return nil
+}
+
 // HasSync returns true if the rule has a sync behaviour
 func (r *Rule) HasSync() bool {
 	return r.Add == ActionRuleSync || r.Update == ActionRuleSync ||
@@ -201,4 +236,18 @@ func (r *Rule) HasSync() bool {
 func (r *Rule) HasPush() bool {
 	return r.Add == ActionRulePush || r.Update == ActionRulePush ||
 		r.Remove == ActionRulePush
+}
+
+// hasReferencedBy returns true if the rule matches a file that has this reference
+func (r *Rule) hasReferencedBy(ref couchdb.DocReference) bool {
+	if r.Selector != couchdb.SelectorReferencedBy {
+		return false
+	}
+	v := ref.Type + "/" + ref.ID
+	for _, val := range r.Values {
+		if val == v {
+			return true
+		}
+	}
+	return false
 }
