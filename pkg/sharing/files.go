@@ -674,6 +674,34 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	return nil
 }
 
+// prepareDirWithAncestors found the parent directory for dir, and recreates it
+// if it is missing.
+func (s *Sharing) prepareDirWithAncestors(inst *instance.Instance, dir *vfs.DirDoc, dirID string) error {
+	if dirID == "" {
+		parent, err := s.GetSharingDir(inst)
+		if err != nil {
+			return err
+		}
+		dir.DirID = parent.DocID
+		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
+	} else if dirID != dir.DirID {
+		parent, err := inst.VFS().DirByID(dirID)
+		if err == os.ErrNotExist {
+			parent, err = s.recreateParent(inst, dirID)
+		}
+		if err != nil {
+			inst.Logger().WithField("nspace", "replicator").
+				Debugf("Conflict for parent on updating dir: %s", err)
+			return err
+		}
+		dir.DirID = parent.DocID
+		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
+	} else {
+		dir.Fullpath = path.Join(path.Dir(dir.Fullpath), dir.DocName)
+	}
+	return nil
+}
+
 // UpdateDir updates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface{}, dir *vfs.DirDoc) error {
@@ -685,31 +713,10 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	fs := inst.VFS().UseSharingIndexer(indexer)
 
 	dir.DocName = name
-	if dirID, ok := target["dir_id"].(string); ok {
-		if dirID != dir.DirID {
-			parent, err := fs.DirByID(dirID)
-			if err == os.ErrNotExist {
-				parent, err = s.recreateParent(inst, dirID)
-			}
-			if err != nil {
-				inst.Logger().WithField("nspace", "replicator").
-					Debugf("Conflict for parent on updating dir: %s", err)
-				return err
-			}
-			dir.DirID = parent.DocID
-			dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
-		} else {
-			dir.Fullpath = path.Join(path.Dir(dir.Fullpath), dir.DocName)
-		}
-	} else {
-		parent, err := s.GetSharingDir(inst)
-		if err != nil {
-			return err
-		}
-		dir.DirID = parent.DocID
-		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
+	dirID, _ := target["dir_id"].(string)
+	if err = s.prepareDirWithAncestors(inst, dir, dirID); err != nil {
+		return err
 	}
-
 	copySafeFieldsToDir(target, dir)
 	// TODO detect & resolve conflicts when both instances have updated the dir concurrently
 	err = fs.UpdateDirDoc(oldDoc, dir)
