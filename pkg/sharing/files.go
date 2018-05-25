@@ -367,7 +367,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		if ref != nil {
 			infos, ok = ref.Infos[s.SID]
 			if !ok {
-				errm = multierror.Append(errm, ErrInternalServerError) // TODO better error
+				errm = multierror.Append(errm, ErrSafety)
 				continue
 			}
 		}
@@ -402,7 +402,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 				errm = multierror.Append(errm, err)
 			}
 		} else if ref == nil {
-			// TODO be safe => return an error
+			errm = multierror.Append(errm, ErrSafety)
 			continue
 		} else {
 			err = s.UpdateDir(inst, target, dir)
@@ -768,11 +768,15 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 // which case, we keep it in a special folder)
 func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Rule) error {
 	if file.Trashed {
-		// nothing to do if the directory is already in the trash
+		// Nothing to do if the directory is already in the trash
 		return nil
 	}
 	olddoc := file.Clone().(*vfs.FileDoc)
 	removeReferencesFromRule(file, rule)
+	if s.Owner && rule.Selector == couchdb.SelectorReferencedBy {
+		// Do not move/trash photos removed from an album for the owner
+		return inst.VFS().UpdateFileDoc(olddoc, file)
+	}
 	if len(file.ReferencedBy) == 0 {
 		_, err := vfs.TrashFile(inst.VFS(), file)
 		return err
