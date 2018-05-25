@@ -70,6 +70,10 @@ func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
 
 // TODO update io.cozy.shared
 func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
+	var oldDoc vfs.FileDoc
+	if olddoc != nil {
+		oldDoc = *olddoc
+	}
 	docs := make([]map[string]interface{}, 1)
 	docs[0] = map[string]interface{}{
 		"type":       doc.Type,
@@ -100,17 +104,18 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
 		return err
 	}
+
 	// Ensure that fullpath is filled because it's used in realtime/@events
-	if olddoc != nil {
-		if _, err := olddoc.Path(s); err != nil {
+	if &oldDoc != nil {
+		if _, err := oldDoc.Path(s); err != nil {
 			return err
 		}
 	}
 	if _, err := doc.Path(s); err != nil {
 		return err
 	}
-	if olddoc != nil {
-		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
+	if &oldDoc != nil {
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, &oldDoc)
 	} else {
 		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, nil)
 	}
@@ -131,6 +136,10 @@ func (s *sharingIndexer) CreateNamedDirDoc(doc *vfs.DirDoc) error {
 
 // TODO update io.cozy.shared
 func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
+	var oldDoc vfs.DirDoc
+	if olddoc != nil {
+		oldDoc = *olddoc
+	}
 	docs := make([]map[string]interface{}, 1)
 	docs[0] = map[string]interface{}{
 		"type":       doc.Type,
@@ -153,8 +162,8 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
 		return err
 	}
-	if olddoc != nil {
-		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
+	if &oldDoc != nil {
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, &oldDoc)
 	} else {
 		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, nil)
 	}
