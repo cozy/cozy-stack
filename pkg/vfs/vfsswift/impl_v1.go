@@ -868,7 +868,7 @@ func (f *swiftFileCreation) Close() (err error) {
 		newdoc.Trashed = false
 	}
 	if olddoc == nil {
-		olddoc = newdoc
+		olddoc = newdoc.Clone().(*vfs.FileDoc)
 	}
 	lockerr := f.fs.mu.Lock()
 	if lockerr != nil {
