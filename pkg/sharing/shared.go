@@ -43,117 +43,6 @@ type SharedInfo struct {
 	Binary bool `json:"binary,omitempty"`
 }
 
-// RevsTree is a tree of revisions, like CouchDB has.
-// The revisions are sorted by growing generation (the number before the hyphen).
-// http://docs.couchdb.org/en/2.1.1/replication/conflicts.html#revision-tree
-type RevsTree struct {
-	// Rev is a revision, with the generation and the id
-	// e.g. 1-1bad9a88f0a608ea78c12ab49882ac41
-	Rev string `json:"rev"`
-
-	// Branches is the list of revisions that have this revision for parent.
-	// The general case is to have only one branch, but we can have more with
-	// conflicts.
-	Branches []RevsTree `json:"branches"`
-}
-
-// Clone duplicates the RevsTree
-func (rt *RevsTree) Clone() RevsTree {
-	cloned := RevsTree{Rev: rt.Rev}
-	cloned.Branches = make([]RevsTree, len(rt.Branches))
-	for i, b := range rt.Branches {
-		cloned.Branches[i] = b.Clone()
-	}
-	return cloned
-}
-
-// Generation returns the maximal generation of a revision in this tree
-func (rt *RevsTree) Generation() int {
-	if len(rt.Branches) == 0 {
-		return RevGeneration(rt.Rev)
-	}
-	max := 0
-	for _, b := range rt.Branches {
-		if g := b.Generation(); g > max {
-			max = g
-		}
-	}
-	return max
-}
-
-// Find returns the sub-tree for the given revision, or nil if not found.
-func (rt *RevsTree) Find(rev string) *RevsTree {
-	if rt.Rev == rev {
-		return rt
-	}
-	for i := range rt.Branches {
-		if sub := rt.Branches[i].Find(rev); sub != nil {
-			return sub
-		}
-	}
-	return nil
-}
-
-// Add inserts the given revision in the main branch
-func (rt *RevsTree) Add(rev string) *RevsTree {
-	// TODO check generations (conflicts)
-	if len(rt.Branches) > 0 {
-		return rt.Branches[0].Add(rev)
-	}
-	rt.Branches = []RevsTree{
-		{Rev: rev},
-	}
-	return &rt.Branches[0]
-}
-
-// InsertAfter inserts the given revision in the tree as a child of the second
-// revision.
-func (rt *RevsTree) InsertAfter(rev, parent string) {
-	subtree := rt.Find(parent)
-	if subtree == nil {
-		subtree = rt.Add(parent)
-	}
-	for _, b := range subtree.Branches {
-		if b.Rev == rev {
-			return
-		}
-	}
-	subtree.Branches = append(subtree.Branches, RevsTree{Rev: rev})
-	// TODO rebalance (conflicts)
-}
-
-// InsertChain inserts a chain of revisions, ie the first revision is the
-// parent of the second revision, which is itself the parent of the third
-// revision, etc. The first revisions of the chain are very probably already in
-// the tree, the last one is certainly not.
-func (rt *RevsTree) InsertChain(chain []string) {
-	if len(chain) == 0 {
-		return
-	}
-	subtree := rt.Find(chain[0])
-	if subtree == nil {
-		subtree = rt.Add(chain[0])
-	}
-	for _, rev := range chain[1:] {
-		if len(subtree.Branches) > 0 {
-			found := false
-			for i := range subtree.Branches {
-				if subtree.Branches[i].Rev == rev {
-					found = true
-					subtree = &subtree.Branches[i]
-					break
-				}
-			}
-			if found {
-				continue
-			}
-		}
-		subtree.Branches = append(subtree.Branches, RevsTree{Rev: rev})
-		subtree = &subtree.Branches[0]
-	}
-	// TODO rebalance (conflicts)
-}
-
 // SharedRef is the struct for the documents in io.cozy.shared.
 // They are used to track which documents is in which sharings.
 type SharedRef struct {
@@ -315,7 +204,12 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		ref.Infos = make(map[string]SharedInfo)
 	}
 
-	if _, ok := ref.Infos[msg.SharingID]; !ok {
+	rev := evt.Doc.Rev()
+	if _, ok := ref.Infos[msg.SharingID]; ok {
+		if ref.Revisions.Find(rev) != nil {
+			return nil
+		}
+	} else {
 		ref.Infos[msg.SharingID] = SharedInfo{
 			Rule:   msg.RuleIndex,
 			Binary: evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.FileType,
@@ -343,7 +237,6 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		}
 	}
 
-	rev := evt.Doc.Rev()
 	if ref.Rev() == "" {
 		ref.Revisions = &RevsTree{Rev: rev}
 		return couchdb.CreateNamedDoc(inst, &ref)

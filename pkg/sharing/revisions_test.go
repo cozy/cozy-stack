@@ -12,19 +12,19 @@ func TestRevGeneration(t *testing.T) {
 	assert.Equal(t, 10, RevGeneration("10-1f2"))
 }
 
-func TestTransformRevsStructToChain(t *testing.T) {
+func TestRevsStructToChain(t *testing.T) {
 	input := map[string]interface{}{
 		"start": float64(3),
 		"ids":   []interface{}{"ccc", "bbb", "aaa"},
 	}
-	chain := transformRevsStructToChain(input)
+	chain := revsStructToChain(input)
 	expected := []string{"1-aaa", "2-bbb", "3-ccc"}
 	assert.Equal(t, expected, chain)
 }
 
-func TestRevisionSliceToStruct(t *testing.T) {
+func TestRevsChainToStruct(t *testing.T) {
 	slice := []string{"2-aaa", "3-bbb", "4-ccc"}
-	revs := revisionSliceToStruct(slice)
+	revs := revsChainToStruct(slice)
 	assert.Equal(t, 4, revs.Start)
 	assert.Equal(t, []string{"ccc", "bbb", "aaa"}, revs.Ids)
 }

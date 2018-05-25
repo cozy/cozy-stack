@@ -385,23 +385,20 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			if dir == nil && file == nil {
 				continue
 			}
-			gen := ref.Revisions.Generation()
-			if gen >= RevGeneration(target["_rev"].(string)) {
-				// Either the file/dir is already in the trash, or the not
-				// trashed version should win => keep the file/dir as it is
-				continue
-			}
 			if dir != nil {
 				err = s.TrashDir(inst, dir)
 			} else {
 				err = s.TrashFile(inst, file, &s.Rules[infos.Rule])
 			}
+		} else if file != nil {
+			err = multierror.Append(errm, ErrSafety)
+		} else if ref != nil && infos.Removed {
+			continue
 		} else if dir == nil {
 			err = s.CreateDir(inst, target)
 		} else if ref == nil {
 			err = multierror.Append(errm, ErrSafety)
 		} else {
-			// TODO what if infos.Removed?
 			err = s.UpdateDir(inst, target, dir)
 		}
 		if err != nil {
@@ -709,16 +706,27 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	if err != nil {
 		return err
 	}
-	oldDoc := dir.Clone().(*vfs.DirDoc)
-	fs := inst.VFS().UseSharingIndexer(indexer)
 
+	chain := revsStructToChain(indexer.bulkRevs.Revisions)
+	conflict := detectConflict(dir.DocRev, chain)
+	switch conflict {
+	case LostConflict:
+		return nil
+	case WonConflict:
+		// TODO update indexer to fix the conflict
+	case NoConflict:
+		// Nothing to do
+	}
+
+	fs := inst.VFS().UseSharingIndexer(indexer)
+	oldDoc := dir.Clone().(*vfs.DirDoc)
 	dir.DocName = name
 	dirID, _ := target["dir_id"].(string)
 	if err = s.prepareDirWithAncestors(inst, dir, dirID); err != nil {
 		return err
 	}
 	copySafeFieldsToDir(target, dir)
-	// TODO detect & resolve conflicts when both instances have updated the dir concurrently
+
 	err = fs.UpdateDirDoc(oldDoc, dir)
 	if err == os.ErrExist {
 		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
