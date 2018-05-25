@@ -4,12 +4,9 @@ require 'pry-rescue/minitest' unless ENV['CI']
 
 def file_has_album_reference(file, album_id)
   return false if file.referenced_by.nil?
-  file.referenced_by.each do |ref|
-    if ref["type"] == Album.doctype && ref["id"] == album_id
-      return true
-    end
+  file.referenced_by.any? do |ref|
+     ref["type"] == Album.doctype && ref["id"] == album_id
   end
-  false
 end
 
 describe "A photo" do
