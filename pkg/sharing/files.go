@@ -379,7 +379,10 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			continue
 		}
 		if _, ok := target["_deleted"]; ok {
-			if ref == nil || (dir == nil && file == nil) {
+			if ref == nil || infos.Removed {
+				continue
+			}
+			if dir == nil && file == nil {
 				continue
 			}
 			gen := ref.Revisions.Generation()
@@ -393,22 +396,16 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			} else {
 				err = s.TrashFile(inst, file, &s.Rules[infos.Rule])
 			}
-			if err != nil {
-				errm = multierror.Append(errm, err)
-			}
 		} else if dir == nil {
 			err = s.CreateDir(inst, target)
-			if err != nil {
-				errm = multierror.Append(errm, err)
-			}
 		} else if ref == nil {
-			errm = multierror.Append(errm, ErrSafety)
-			continue
+			err = multierror.Append(errm, ErrSafety)
 		} else {
+			// TODO what if infos.Removed?
 			err = s.UpdateDir(inst, target, dir)
-			if err != nil {
-				errm = multierror.Append(errm, err)
-			}
+		}
+		if err != nil {
+			errm = multierror.Append(errm, err)
 		}
 	}
 	return nil
@@ -593,35 +590,45 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 	return doc, nil
 }
 
-// CreateDir creates a directory on this cozy to reflect a change on another
-// cozy instance of this sharing.
-func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
+// extractNameAndIndexer takes a target document, extracts the name and creates
+// a sharing indexer with _rev and _revisions
+func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{}) (
+	string, *sharingIndexer, error) {
 	name, ok := target["name"].(string)
 	if !ok {
 		inst.Logger().WithField("nspace", "replicator").
-			Debugf("Missing name for creating dir: %#v", target)
-		return ErrInternalServerError
+			Warnf("Missing name for directory %#v", target)
+		return "", nil, ErrInternalServerError
 	}
 	rev, ok := target["_rev"].(string)
 	if !ok {
 		inst.Logger().WithField("nspace", "replicator").
-			Debugf("Missing _rev for creating dir: %#v", target)
-		return ErrInternalServerError
+			Warnf("Missing _rev for directory %#v", target)
+		return "", nil, ErrInternalServerError
 	}
 	revisions, ok := target["_revisions"].(map[string]interface{})
 	if !ok {
 		inst.Logger().WithField("nspace", "replicator").
-			Debugf("Missing _revisions for creating dir: %#v", target)
-		return ErrInternalServerError
+			Warnf("Missing _revisions for directory %#v", target)
+		return "", nil, ErrInternalServerError
 	}
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revisions,
 	})
+	return name, indexer, nil
+}
+
+// CreateDir creates a directory on this cozy to reflect a change on another
+// cozy instance of this sharing.
+func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
+	name, indexer, err := extractNameAndIndexer(inst, target)
+	if err != nil {
+		return err
+	}
 	fs := inst.VFS().UseSharingIndexer(indexer)
 
 	var parent *vfs.DirDoc
-	var err error
 	if dirID, ok := target["dir_id"].(string); ok {
 		parent, err = fs.DirByID(dirID)
 		if err == os.ErrNotExist {
@@ -670,31 +677,13 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 // UpdateDir updates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface{}, dir *vfs.DirDoc) error {
-	rev, ok := target["_rev"].(string)
-	if !ok {
-		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Missing _rev for updating directory %#v", target)
-		return ErrInternalServerError
-	}
-	revisions, ok := target["_revisions"].(map[string]interface{})
-	if !ok {
-		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Missing _revisions for updating directory %#v", target)
-		return ErrInternalServerError
+	name, indexer, err := extractNameAndIndexer(inst, target)
+	if err != nil {
+		return err
 	}
 	oldDoc := dir.Clone().(*vfs.DirDoc)
-	indexer := newSharingIndexer(inst, &bulkRevs{
-		Rev:       rev,
-		Revisions: revisions,
-	})
 	fs := inst.VFS().UseSharingIndexer(indexer)
 
-	name, ok := target["name"].(string)
-	if !ok {
-		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Missing name for updating directory %#v", target)
-		return ErrInternalServerError
-	}
 	dir.DocName = name
 	if dirID, ok := target["dir_id"].(string); ok {
 		if dirID != dir.DirID {
@@ -723,7 +712,7 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 
 	copySafeFieldsToDir(target, dir)
 	// TODO detect & resolve conflicts when both instances have updated the dir concurrently
-	err := fs.UpdateDirDoc(oldDoc, dir)
+	err = fs.UpdateDirDoc(oldDoc, dir)
 	if err == os.ErrExist {
 		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
 		if errr != nil {
