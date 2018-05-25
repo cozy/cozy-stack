@@ -9,6 +9,32 @@ class Rule
     create_from_obj obj, "push"
   end
 
+  def self.create_from_album(obj, what)
+    selector = "referenced_by"
+    values = ["#{obj.doctype}/#{obj.couch_id}"]
+    title = obj.name rescue nil
+    doctype = "io.cozy.files"
+    r1 = Rule.new doctype: doctype,
+                  title: title,
+                  values: values,
+                  selector: selector,
+                  add: what,
+                  update: what,
+                  remove: what,
+                  object: obj
+    values = [obj.couch_id]
+    title = obj.name rescue nil
+    doctype = obj.doctype
+    r2 = Rule.new doctype: doctype,
+                  title: title,
+                  values: values,
+                  add: what,
+                  update: what,
+                  remove: what,
+                  object: obj
+    [r1, r2]
+  end
+
   def self.create_from_obj(obj, what)
     case obj
     when Array
