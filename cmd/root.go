@@ -8,13 +8,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/cozy/cozy-stack/client"
-	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/howeyc/gopass"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -22,6 +15,14 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/howeyc/gopass"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // DefaultStorageDir is the default directory name in which data
@@ -237,7 +238,7 @@ func (e *endpoint) configureFromEnv(prefix string) error {
 
 func (e *endpoint) configure(prefix string, host string, port int) error {
 	e.Validate = true
-	e.Timeout = 15 * time.Second
+	e.Timeout = 5 * time.Minute
 
 	if err := e.generateURL(host, port); err != nil {
 		return err
