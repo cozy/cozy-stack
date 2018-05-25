@@ -382,8 +382,8 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			if ref == nil || (dir == nil && file == nil) {
 				continue
 			}
-			rev := RevGeneration(ref.Revisions[len(ref.Revisions)-1])
-			if rev >= RevGeneration(target["_rev"].(string)) {
+			gen := ref.Revisions.Generation()
+			if gen >= RevGeneration(target["_rev"].(string)) {
 				// Either the file/dir is already in the trash, or the not
 				// trashed version should win => keep the file/dir as it is
 				continue

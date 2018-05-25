@@ -161,12 +161,12 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 		if !ok {
 			continue
 		}
-		revisions, ok := r.Doc.Get("revisions").([]interface{})
-		if !ok || len(revisions) == 0 {
+		rev := extractLastRevision(r.Doc)
+		if rev == "" {
 			continue
 		}
 		docID := strings.SplitN(r.DocID, "/", 2)[1]
-		ir := couchdb.IDRev{ID: docID, Rev: revisions[len(revisions)-1].(string)}
+		ir := couchdb.IDRev{ID: docID, Rev: rev}
 		query := []couchdb.IDRev{ir}
 		results, err := couchdb.BulkGetDocs(inst, consts.Files, query)
 		if err != nil {

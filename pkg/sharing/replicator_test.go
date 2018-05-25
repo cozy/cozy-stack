@@ -22,39 +22,6 @@ const foos = "io.cozy.sharing.test.foos"
 const bars = "io.cozy.sharing.test.bars"
 const bazs = "io.cozy.sharing.test.bazs"
 
-func TestRevGeneration(t *testing.T) {
-	assert.Equal(t, 1, RevGeneration("1-aaa"))
-	assert.Equal(t, 3, RevGeneration("3-123"))
-	assert.Equal(t, 10, RevGeneration("10-1f2"))
-}
-
-func TestRevisionSliceToStruct(t *testing.T) {
-	slice := []string{"2-aaa", "3-bbb", "4-ccc"}
-	revs := revisionSliceToStruct(slice)
-	assert.Equal(t, 4, revs.Start)
-	assert.Equal(t, []string{"ccc", "bbb", "aaa"}, revs.Ids)
-}
-
-func TestComputePossibleAncestors(t *testing.T) {
-	wants := []string{"2-b"}
-	haves := []string{"1-a", "2-a", "3-a"}
-	pas := computePossibleAncestors(wants, haves)
-	expected := []string{"1-a"}
-	assert.Equal(t, expected, pas)
-
-	wants = []string{"2-b", "2-c", "4-b"}
-	haves = []string{"1-a", "2-a", "3-a", "4-a"}
-	pas = computePossibleAncestors(wants, haves)
-	expected = []string{"1-a", "3-a"}
-	assert.Equal(t, expected, pas)
-
-	wants = []string{"5-b"}
-	haves = []string{"1-a", "2-a", "3-a"}
-	pas = computePossibleAncestors(wants, haves)
-	expected = []string{"3-a"}
-	assert.Equal(t, expected, pas)
-}
-
 func uuidv4() string {
 	id, _ := uuid.NewV4()
 	return id.String()
@@ -63,7 +30,7 @@ func uuidv4() string {
 func createASharedRef(t *testing.T, id string) {
 	ref := SharedRef{
 		SID:       testDoctype + "/" + uuidv4(),
-		Revisions: []string{"1-aaa"},
+		Revisions: &RevsTree{Rev: "1-aaa"},
 		Infos: map[string]SharedInfo{
 			id: {Rule: 0},
 		},
@@ -190,7 +157,7 @@ func TestInitialCopy(t *testing.T) {
 	oneRef := getSharedRef(t, testDoctype, oneID)
 	assert.NotNil(t, oneRef)
 	assert.Equal(t, testDoctype+"/"+oneID, oneRef.SID)
-	assert.Equal(t, []string{oneDoc.Rev()}, oneRef.Revisions)
+	assert.Equal(t, &RevsTree{Rev: oneDoc.Rev()}, oneRef.Revisions)
 	assert.Contains(t, oneRef.Infos, s.SID)
 	assert.Equal(t, 1, oneRef.Infos[s.SID].Rule)
 
@@ -254,7 +221,7 @@ func TestInitialCopy(t *testing.T) {
 	// A document is updated
 	updateID := twoIDs[0]
 	updateRef := getSharedRef(t, testDoctype, updateID)
-	updateRev := updateRef.Revisions[0]
+	updateRev := updateRef.Revisions.Rev
 	updateDoc := updateDoc(t, testDoctype, updateID, updateRev, map[string]interface{}{"foo": "bar", "updated": true})
 
 	// A third member accepts the sharing
@@ -269,10 +236,8 @@ func TestInitialCopy(t *testing.T) {
 		assert.Contains(t, twoRef.Infos, s.SID)
 		assert.Equal(t, 2, twoRef.Infos[s.SID].Rule)
 		if id == updateID {
-			if assert.Len(t, twoRef.Revisions, 2) {
-				assert.Equal(t, updateRev, twoRef.Revisions[0])
-				assert.Equal(t, updateDoc.Rev(), twoRef.Revisions[1])
-			}
+			assert.Equal(t, updateRev, twoRef.Revisions.Rev)
+			assert.Equal(t, updateDoc.Rev(), twoRef.Revisions.Branches[0].Rev)
 		}
 	}
 
@@ -297,9 +262,17 @@ func TestInitialCopy(t *testing.T) {
 }
 
 func createSharedRef(t *testing.T, sharingID, sid string, revisions []string) *SharedRef {
+	tree := &RevsTree{Rev: revisions[0]}
+	sub := tree
+	for _, rev := range revisions[1:] {
+		sub.Branches = []RevsTree{
+			{Rev: rev},
+		}
+		sub = &sub.Branches[0]
+	}
 	ref := SharedRef{
 		SID:       sid,
-		Revisions: revisions,
+		Revisions: tree,
 		Infos: map[string]SharedInfo{
 			sharingID: {Rule: 0},
 		},
@@ -310,7 +283,7 @@ func createSharedRef(t *testing.T, sharingID, sid string, revisions []string) *S
 }
 
 func appendRevisionToSharedRef(t *testing.T, ref *SharedRef, revision string) {
-	ref.Revisions = append(ref.Revisions, revision)
+	ref.Revisions.Add(revision)
 	err := couchdb.UpdateDoc(inst, ref)
 	assert.NoError(t, err)
 }
@@ -404,7 +377,6 @@ func TestGetMissingDocs(t *testing.T) {
 		},
 		hellos + "/" + id3: MissingEntry{
 			Missing: []string{doc3b.Rev()},
-			PAs:     []string{doc3.Rev()},
 		},
 	}
 	changes := &Changes{
@@ -521,8 +493,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  fooOneID,
 				"_rev": "1-abc",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"abc"},
+					"start": float64(1),
+					"ids":   []interface{}{"abc"},
 				},
 				"hello":  "world",
 				"number": "one",
@@ -537,7 +509,7 @@ func TestApplyBulkDocs(t *testing.T) {
 	assert.Equal(t, "1-abc", doc.Rev())
 	assert.Equal(t, "one", doc.Get("number"))
 	ref := getSharedRef(t, foos, fooOneID)
-	assert.Equal(t, []string{"1-abc"}, ref.Revisions)
+	assert.Equal(t, &RevsTree{Rev: "1-abc"}, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)
 	assert.Equal(t, 0, ref.Infos[s.SID].Rule)
 
@@ -548,8 +520,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  fooOneID,
 				"_rev": "2-def",
 				"_revisions": map[string]interface{}{
-					"start": 2,
-					"ids":   []string{"def", "abc"},
+					"start": float64(2),
+					"ids":   []interface{}{"def", "abc"},
 				},
 				"hello":  "world",
 				"number": "one bis",
@@ -563,7 +535,13 @@ func TestApplyBulkDocs(t *testing.T) {
 	assert.Equal(t, "2-def", doc.Rev())
 	assert.Equal(t, "one bis", doc.Get("number"))
 	ref = getSharedRef(t, foos, fooOneID)
-	assert.Equal(t, []string{"1-abc", "2-def"}, ref.Revisions)
+	expected := &RevsTree{
+		Rev: "1-abc",
+		Branches: []RevsTree{
+			{Rev: "2-def"},
+		},
+	}
+	assert.Equal(t, expected, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)
 	assert.Equal(t, 0, ref.Infos[s.SID].Rule)
 
@@ -575,8 +553,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barZeroID,
 				"_rev": "1-111",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"111"},
+					"start": float64(1),
+					"ids":   []interface{}{"111"},
 				},
 				"hello":  "world",
 				"number": "zero",
@@ -591,7 +569,7 @@ func TestApplyBulkDocs(t *testing.T) {
 	assert.Equal(t, "1-111", doc.Rev())
 	assert.Equal(t, "zero", doc.Get("number"))
 	ref = getSharedRef(t, bars, barZeroID)
-	assert.Equal(t, []string{"1-111"}, ref.Revisions)
+	assert.Equal(t, &RevsTree{Rev: "1-111"}, ref.Revisions)
 	assert.Contains(t, ref.Infos, s2.SID)
 	assert.Equal(t, 0, ref.Infos[s2.SID].Rule)
 
@@ -605,8 +583,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barTwoID,
 				"_rev": "2-caa",
 				"_revisions": map[string]interface{}{
-					"start": 2,
-					"ids":   []string{"caa", "baa"},
+					"start": float64(2),
+					"ids":   []interface{}{"caa", "baa"},
 				},
 				"hello":  "world",
 				"number": "two",
@@ -617,8 +595,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  bazThreeID,
 				"_rev": "1-ddd",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"ddd"},
+					"start": float64(1),
+					"ids":   []interface{}{"ddd"},
 				},
 				"hello":  "world",
 				"number": "three",
@@ -627,8 +605,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  bazFourID,
 				"_rev": "1-eee",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"eee"},
+					"start": float64(1),
+					"ids":   []interface{}{"eee"},
 				},
 				"hello":  "world",
 				"number": "four",
@@ -643,21 +621,21 @@ func TestApplyBulkDocs(t *testing.T) {
 	assert.Equal(t, "2-caa", doc.Rev())
 	assert.Equal(t, "two", doc.Get("number"))
 	ref = getSharedRef(t, bars, barTwoID)
-	assert.Equal(t, []string{"2-caa"}, ref.Revisions)
+	assert.Equal(t, &RevsTree{Rev: "2-caa"}, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)
 	assert.Equal(t, 1, ref.Infos[s.SID].Rule)
 	doc = getDoc(t, bazs, bazThreeID)
 	assert.Equal(t, "1-ddd", doc.Rev())
 	assert.Equal(t, "three", doc.Get("number"))
 	ref = getSharedRef(t, bazs, bazThreeID)
-	assert.Equal(t, []string{"1-ddd"}, ref.Revisions)
+	assert.Equal(t, &RevsTree{Rev: "1-ddd"}, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)
 	assert.Equal(t, 2, ref.Infos[s.SID].Rule)
 	doc = getDoc(t, bazs, bazFourID)
 	assert.Equal(t, "1-eee", doc.Rev())
 	assert.Equal(t, "four", doc.Get("number"))
 	ref = getSharedRef(t, bazs, bazFourID)
-	assert.Equal(t, []string{"1-eee"}, ref.Revisions)
+	assert.Equal(t, &RevsTree{Rev: "1-eee"}, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)
 	assert.Equal(t, 2, ref.Infos[s.SID].Rule)
 
@@ -673,8 +651,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  fooOneID,
 				"_rev": "3-fab",
 				"_revisions": map[string]interface{}{
-					"start": 3,
-					"ids":   []string{"fab", "def", "abc"},
+					"start": float64(3),
+					"ids":   []interface{}{"fab", "def", "abc"},
 				},
 				"hello":  "world",
 				"number": "one ter",
@@ -683,8 +661,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  fooFiveID,
 				"_rev": "1-aab",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"aab"},
+					"start": float64(1),
+					"ids":   []interface{}{"aab"},
 				},
 				"hello":  "world",
 				"number": "five",
@@ -695,8 +673,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barSixID,
 				"_rev": "1-aac",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"aac"},
+					"start": float64(1),
+					"ids":   []interface{}{"aac"},
 				},
 				"hello":  "world",
 				"number": "six",
@@ -705,8 +683,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barSevenID,
 				"_rev": "1-bad",
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{"bad"},
+					"start": float64(1),
+					"ids":   []interface{}{"bad"},
 				},
 				"not":    "shared",
 				"number": "seven",
@@ -715,8 +693,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barEightID,
 				"_rev": barEightRev,
 				"_revisions": map[string]interface{}{
-					"start": 1,
-					"ids":   []string{strings.Replace(barEightRev, "1-", "", 1)},
+					"start": float64(1),
+					"ids":   []interface{}{strings.Replace(barEightRev, "1-", "", 1)},
 				},
 				"hello":  "world",
 				"number": "8 bis",
@@ -725,8 +703,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barZeroID,
 				"_rev": "2-222",
 				"_revisions": map[string]interface{}{
-					"start": 2,
-					"ids":   []string{"222", "111"},
+					"start": float64(2),
+					"ids":   []interface{}{"222", "111"},
 				},
 				"hello":  "world",
 				"number": "zero bis",
@@ -735,8 +713,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  barTwoID,
 				"_rev": "3-daa",
 				"_revisions": map[string]interface{}{
-					"start": 3,
-					"ids":   []string{"daa", "caa", "baa"},
+					"start": float64(3),
+					"ids":   []interface{}{"daa", "caa"},
 				},
 				"hello":  "world",
 				"number": "two bis",
@@ -747,8 +725,8 @@ func TestApplyBulkDocs(t *testing.T) {
 				"_id":  bazThreeID,
 				"_rev": "3-ddf",
 				"_revisions": map[string]interface{}{
-					"start": 3,
-					"ids":   []string{"ddf", "dde", "ddd"},
+					"start": float64(3),
+					"ids":   []interface{}{"ddf", "dde", "ddd"},
 				},
 				"hello":  "world",
 				"number": "three bis",
@@ -763,35 +741,43 @@ func TestApplyBulkDocs(t *testing.T) {
 	assert.Equal(t, "3-fab", doc.Rev())
 	assert.Equal(t, "one ter", doc.Get("number"))
 	ref = getSharedRef(t, foos, fooOneID)
-	assert.Equal(t, []string{"1-abc", "2-def", "3-fab"}, ref.Revisions)
+	expected = &RevsTree{Rev: "1-abc"}
+	expected.Add("2-def")
+	expected.Add("3-fab")
+	assert.Equal(t, expected, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)
 	assert.Equal(t, 0, ref.Infos[s.SID].Rule)
 	doc = getDoc(t, foos, fooFiveID)
 	assert.Equal(t, "1-aab", doc.Rev())
 	assert.Equal(t, "five", doc.Get("number"))
 	ref = getSharedRef(t, foos, fooFiveID)
-	assert.Equal(t, []string{"1-aab"}, ref.Revisions)
+	assert.Equal(t, &RevsTree{Rev: "1-aab"}, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)
 	assert.Equal(t, 0, ref.Infos[s.SID].Rule)
 	doc = getDoc(t, bazs, bazThreeID)
 	assert.Equal(t, "3-ddf", doc.Rev())
 	assert.Equal(t, "three bis", doc.Get("number"))
 	ref = getSharedRef(t, bazs, bazThreeID)
-	assert.Equal(t, []string{"1-ddd", "3-ddf"}, ref.Revisions)
+	expected = &RevsTree{Rev: "1-ddd"}
+	expected.Add("2-dde")
+	expected.Add("3-ddf")
+	assert.Equal(t, expected, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)
 	assert.Equal(t, 2, ref.Infos[s.SID].Rule)
 	doc = getDoc(t, bars, barSixID)
 	assert.Equal(t, "1-aac", doc.Rev())
 	assert.Equal(t, "six", doc.Get("number"))
 	ref = getSharedRef(t, bars, barSixID)
-	assert.Equal(t, []string{"1-aac"}, ref.Revisions)
+	assert.Equal(t, &RevsTree{Rev: "1-aac"}, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)
 	assert.Equal(t, 1, ref.Infos[s.SID].Rule)
 	doc = getDoc(t, bars, barTwoID)
 	assert.Equal(t, "3-daa", doc.Rev())
 	assert.Equal(t, "two bis", doc.Get("number"))
 	ref = getSharedRef(t, bars, barTwoID)
-	assert.Equal(t, []string{"2-caa", "3-daa"}, ref.Revisions)
+	expected = &RevsTree{Rev: "2-caa"}
+	expected.Add("3-daa")
+	assert.Equal(t, expected, ref.Revisions)
 	assert.Contains(t, ref.Infos, s.SID)
 	assert.Equal(t, 1, ref.Infos[s.SID].Rule)
 	// New document rejected because it doesn't match the rules

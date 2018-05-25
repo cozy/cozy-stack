@@ -313,23 +313,17 @@ func (s *Sharing) buildReferences(inst *instance.Instance, rule Rule, r int, doc
 		if srefs[i] == nil {
 			refs[i] = SharedRef{
 				SID:       rule.DocType + "/" + doc.ID(),
-				Revisions: []string{rev},
+				Revisions: &RevsTree{Rev: rev},
 				Infos:     map[string]SharedInfo{s.SID: info},
 			}
 		} else {
-			found := false
-			for _, revision := range srefs[i].Revisions {
-				if revision == rev {
-					found = true
-					break
-				}
-			}
+			found := srefs[i].Revisions.Find(rev) != nil
 			if found {
 				if _, ok := srefs[i].Infos[s.SID]; ok {
 					continue
 				}
 			} else {
-				srefs[i].Revisions = append(srefs[i].Revisions, rev)
+				srefs[i].Revisions.Add(rev)
 			}
 			srefs[i].Infos[s.SID] = info
 			refs[i] = *srefs[i]

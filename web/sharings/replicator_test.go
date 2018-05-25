@@ -78,12 +78,13 @@ func createShared(t *testing.T, sid string, revisions []string) *sharing.SharedR
 	parts := strings.SplitN(sid, "/", 2)
 	doctype := parts[0]
 	id := parts[1]
+	start := sharing.RevGeneration(rev)
 	docs := []map[string]interface{}{
 		{
 			"_id":  id,
 			"_rev": rev,
 			"_revisions": map[string]interface{}{
-				"start": sharing.RevGeneration(rev),
+				"start": start,
 				"ids":   revisions,
 			},
 			"this": "is document " + id + " at revision " + rev,
@@ -91,13 +92,19 @@ func createShared(t *testing.T, sid string, revisions []string) *sharing.SharedR
 	}
 	err := couchdb.BulkForceUpdateDocs(replInstance, doctype, docs)
 	assert.NoError(t, err)
-	revs := make([]string, len(revisions))
-	for i := range revisions {
-		revs[i] = fmt.Sprintf("%d-%s", i+1, revisions[len(revisions)-i-1])
+	var tree *sharing.RevsTree
+	for i, r := range revisions {
+		old := tree
+		tree = &sharing.RevsTree{
+			Rev: fmt.Sprintf("%d-%s", start-i, r),
+		}
+		if old != nil {
+			tree.Branches = []sharing.RevsTree{*old}
+		}
 	}
 	ref := sharing.SharedRef{
 		SID:       sid,
-		Revisions: revs,
+		Revisions: tree,
 		Infos: map[string]sharing.SharedInfo{
 			replSharingID: {Rule: 0},
 		},
@@ -112,10 +119,10 @@ func TestPermissions(t *testing.T) {
 	assert.NotNil(t, replAccessToken)
 
 	id := replDoctype + "/" + uuidv4()
-	doc := createShared(t, id, []string{"111111111"})
+	createShared(t, id, []string{"111111111"})
 
 	body, _ := json.Marshal(sharing.Changed{
-		"id": doc.Revisions,
+		"id": []string{"1-111111111"},
 	})
 	u := tsR.URL + "/sharings/" + replSharingID + "/_revs_diff"
 
@@ -189,12 +196,10 @@ func TestRevsDiff(t *testing.T) {
 	// sid3 was updated on the source
 	assert.Contains(t, missings, sid3)
 	assert.Equal(t, missings[sid3].Missing, []string{"5-3b"})
-	assert.Equal(t, missings[sid3].PAs, []string{"3-3a"})
 
 	// sid4 is a conflict
 	assert.Contains(t, missings, sid4)
 	assert.Equal(t, missings[sid4].Missing, []string{"2-4b", "2-4c", "4-4d"})
-	assert.Equal(t, missings[sid4].PAs, []string{"1-4a", "3-4a"})
 
 	// sid5 has been created on the target
 	assert.NotContains(t, missings, sid5)
@@ -202,7 +207,6 @@ func TestRevsDiff(t *testing.T) {
 	// sid6 has been created on the source
 	assert.Contains(t, missings, sid6)
 	assert.Equal(t, missings[sid6].Missing, []string{"1-6b"})
-	assert.Empty(t, missings[sid6].PAs)
 }
 
 func assertSharedDoc(t *testing.T, sid, rev string) {
