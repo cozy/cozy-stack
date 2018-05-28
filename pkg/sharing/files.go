@@ -671,7 +671,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	return nil
 }
 
-// prepareDirWithAncestors found the parent directory for dir, and recreates it
+// prepareDirWithAncestors find the parent directory for dir, and recreates it
 // if it is missing.
 func (s *Sharing) prepareDirWithAncestors(inst *instance.Instance, dir *vfs.DirDoc, dirID string) error {
 	if dirID == "" {

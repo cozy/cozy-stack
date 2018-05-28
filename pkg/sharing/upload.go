@@ -316,50 +316,66 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	if !ok {
 		return nil, ErrSafety
 	}
-	rule := &s.Rules[infos.Rule]
-	if RevGeneration(current.DocRev) >= RevGeneration(target.DocRev) {
-		// TODO conflicts
-		return nil, nil
-	}
 	if !bytes.Equal(target.MD5Sum, current.MD5Sum) {
 		return s.createUploadKey(inst, target)
 	}
+	rule := &s.Rules[infos.Rule]
 	return nil, s.updateFileMetadata(inst, target, current, rule)
 }
 
-func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWithRevisions, current *vfs.FileDoc, rule *Rule) error {
-	indexer := newSharingIndexer(inst, &bulkRevs{
-		Rev:       target.Rev(),
-		Revisions: target.Revisions,
-	})
-	fs := inst.VFS().UseSharingIndexer(indexer)
-	oldDoc := current.Clone().(*vfs.FileDoc)
-
-	var parent *vfs.DirDoc
-	var err error
-	if target.DirID == "" {
-		parent, err = s.GetSharingDir(inst)
+// prepareFileWithAncestors find the parent directory for file, and recreates it
+// if it is missing.
+func (s *Sharing) prepareFileWithAncestors(inst *instance.Instance, current *vfs.FileDoc, dirID string) error {
+	if dirID == "" {
+		parent, err := s.GetSharingDir(inst)
 		if err != nil {
 			return err
 		}
 		current.DirID = parent.DocID
-	} else if target.DirID != current.DirID {
-		parent, err = fs.DirByID(target.DirID)
+	} else if dirID != current.DirID {
+		parent, err := inst.VFS().DirByID(dirID)
 		if err == os.ErrNotExist {
-			parent, err = s.recreateParent(inst, target.DirID)
+			parent, err = s.recreateParent(inst, dirID)
 		}
 		if err != nil {
 			inst.Logger().WithField("nspace", "upload").
 				Debugf("Conflict for parent on sync file: %s", err)
 			return err
 		}
+		current.DirID = parent.DocID
 	}
-	current.DirID = parent.DocID
-	current.DocName = target.DocName
+	return nil
+}
 
+// updateFileMetadata updates a file document when only some metadata has
+// changed, but not the content.
+func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWithRevisions, current *vfs.FileDoc, rule *Rule) error {
+	indexer := newSharingIndexer(inst, &bulkRevs{
+		Rev:       target.DocRev,
+		Revisions: target.Revisions,
+	})
+
+	chain := revsStructToChain(target.Revisions)
+	conflict := detectConflict(current.DocRev, chain)
+	switch conflict {
+	case LostConflict:
+		return nil
+	case WonConflict:
+		indexer.WillResolveConflict(current.DocRev, chain)
+	case NoConflict:
+		// Nothing to do
+	}
+
+	fs := inst.VFS().UseSharingIndexer(indexer)
+	oldDoc := current.Clone().(*vfs.FileDoc)
+	current.DocName = target.DocName
+	if err := s.prepareFileWithAncestors(inst, current, target.DirID); err != nil {
+		return err
+	}
 	copySafeFieldsToFile(target.FileDoc, current)
 	current.ReferencedBy = buildReferencedBy(target.FileDoc, current, rule)
-	err = fs.UpdateFileDoc(oldDoc, current)
+
+	err := fs.UpdateFileDoc(oldDoc, current)
 	if err == os.ErrExist {
 		pth, errp := current.Path(fs)
 		if errp != nil {
