@@ -2,7 +2,6 @@ package sharing
 
 import (
 	"encoding/json"
-	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -92,16 +91,6 @@ func (s *SharedRef) Match(key, value string) bool {
 		return ok
 	}
 	return false
-}
-
-// RevGeneration returns the number before the hyphen, called the generation of a revision
-func RevGeneration(rev string) int {
-	parts := strings.SplitN(rev, "-", 2)
-	gen, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return 0
-	}
-	return gen
 }
 
 // FindReferences returns the io.cozy.shared references to the given identifiers
@@ -314,34 +303,6 @@ func GetSharedDocsBySharingIDs(inst *instance.Instance, sharingIDs []string) (ma
 		}
 	}
 	return result, nil
-}
-
-// GetSharingsByDocType returns all the sharings for the given doctype
-func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string]*Sharing, error) {
-	var req = &couchdb.ViewRequest{
-		Key:         docType,
-		IncludeDocs: true,
-	}
-	var res couchdb.ViewResponse
-	err := couchdb.ExecView(inst, consts.SharingsByDocTypeView, req, &res)
-	if err != nil {
-		return nil, err
-	}
-	sharings := make(map[string]*Sharing, len(res.Rows))
-
-	for _, row := range res.Rows {
-		var doc Sharing
-		err := json.Unmarshal(row.Doc, &doc)
-		if err != nil {
-			return nil, err
-		}
-		// Avoid duplicates, i.e. a set a rules having the same doctype
-		sID := row.Value.(string)
-		if _, ok := sharings[sID]; !ok {
-			sharings[sID] = &doc
-		}
-	}
-	return sharings, nil
 }
 
 // extractDocReferenceFromID takes a string formatted as doctype/docid and

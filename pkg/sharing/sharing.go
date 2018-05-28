@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -359,6 +360,34 @@ func FindSharings(db couchdb.Database, sharingIDs []string) ([]*Sharing, error) 
 		return nil, err
 	}
 	return res, nil
+}
+
+// GetSharingsByDocType returns all the sharings for the given doctype
+func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string]*Sharing, error) {
+	var req = &couchdb.ViewRequest{
+		Key:         docType,
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(inst, consts.SharingsByDocTypeView, req, &res)
+	if err != nil {
+		return nil, err
+	}
+	sharings := make(map[string]*Sharing, len(res.Rows))
+
+	for _, row := range res.Rows {
+		var doc Sharing
+		err := json.Unmarshal(row.Doc, &doc)
+		if err != nil {
+			return nil, err
+		}
+		// Avoid duplicates, i.e. a set a rules having the same doctype
+		sID := row.Value.(string)
+		if _, ok := sharings[sID]; !ok {
+			sharings[sID] = &doc
+		}
+	}
+	return sharings, nil
 }
 
 var _ couchdb.Doc = &Sharing{}

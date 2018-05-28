@@ -26,74 +26,6 @@ type RevsStruct struct {
 	Ids   []string `json:"ids"`
 }
 
-// revsChainToStruct transforms revisions from on format to another:
-// ["2-aa", "3-bb", "4-cc"] -> { start: 4, ids: ["cc", "bb", "aa"] }
-func revsChainToStruct(revs []string) RevsStruct {
-	s := RevsStruct{
-		Ids: make([]string, len(revs)),
-	}
-	var last string
-	for i, rev := range revs {
-		parts := strings.SplitN(rev, "-", 2)
-		last = parts[0]
-		s.Ids[len(s.Ids)-i-1] = parts[1]
-	}
-	s.Start, _ = strconv.Atoi(last)
-	return s
-}
-
-// revsStructToChain is the reverse of revsChainToStruct:
-// { start: 4, ids: ["cc", "bb", "aa"] } -> ["2-aa", "3-bb", "4-cc"]
-func revsStructToChain(revs interface{}) []string {
-	m, ok := revs.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-	s, ok := m["start"].(float64)
-	if !ok {
-		return nil
-	}
-	start := int64(s)
-	ids, ok := m["ids"].([]interface{})
-	if !ok {
-		return nil
-	}
-	chain := make([]string, len(ids))
-	for i, id := range ids {
-		rev := fmt.Sprintf("%d-%s", start, id)
-		chain[len(ids)-i-1] = rev
-		start--
-	}
-	return chain
-}
-
-// detectConflict says if there is a conflict (ie rev is not in the revisions
-// chain), and if it is the case, if the update should be made (WonConflict) or
-// aborted (LostConflict)
-// TODO add tests
-func detectConflict(rev string, chain []string) conflictStatus {
-	if len(chain) == 0 {
-		return LostConflict
-	}
-	for _, r := range chain {
-		if r == rev {
-			return NoConflict
-		}
-	}
-
-	last := chain[len(chain)-1]
-	genl := RevGeneration(last)
-	genr := RevGeneration(rev)
-	if genl > genr {
-		return WonConflict
-	} else if genl < genr {
-		return LostConflict
-	} else if last > rev {
-		return WonConflict
-	}
-	return LostConflict
-}
-
 // RevsTree is a tree of revisions, like CouchDB has.
 // The revisions are sorted by growing generation (the number before the hyphen).
 // http://docs.couchdb.org/en/2.1.1/replication/conflicts.html#revision-tree
@@ -203,4 +135,81 @@ func (rt *RevsTree) InsertChain(chain []string) {
 		subtree = &subtree.Branches[0]
 	}
 	// TODO rebalance (conflicts)
+}
+
+// RevGeneration returns the number before the hyphen, called the generation of a revision
+func RevGeneration(rev string) int {
+	parts := strings.SplitN(rev, "-", 2)
+	gen, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0
+	}
+	return gen
+}
+
+// revsChainToStruct transforms revisions from on format to another:
+// ["2-aa", "3-bb", "4-cc"] -> { start: 4, ids: ["cc", "bb", "aa"] }
+func revsChainToStruct(revs []string) RevsStruct {
+	s := RevsStruct{
+		Ids: make([]string, len(revs)),
+	}
+	var last string
+	for i, rev := range revs {
+		parts := strings.SplitN(rev, "-", 2)
+		last = parts[0]
+		s.Ids[len(s.Ids)-i-1] = parts[1]
+	}
+	s.Start, _ = strconv.Atoi(last)
+	return s
+}
+
+// revsStructToChain is the reverse of revsChainToStruct:
+// { start: 4, ids: ["cc", "bb", "aa"] } -> ["2-aa", "3-bb", "4-cc"]
+func revsStructToChain(revs interface{}) []string {
+	m, ok := revs.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	s, ok := m["start"].(float64)
+	if !ok {
+		return nil
+	}
+	start := int64(s)
+	ids, ok := m["ids"].([]interface{})
+	if !ok {
+		return nil
+	}
+	chain := make([]string, len(ids))
+	for i, id := range ids {
+		rev := fmt.Sprintf("%d-%s", start, id)
+		chain[len(ids)-i-1] = rev
+		start--
+	}
+	return chain
+}
+
+// detectConflict says if there is a conflict (ie rev is not in the revisions
+// chain), and if it is the case, if the update should be made (WonConflict) or
+// aborted (LostConflict)
+func detectConflict(rev string, chain []string) conflictStatus {
+	if len(chain) == 0 {
+		return LostConflict
+	}
+	for _, r := range chain {
+		if r == rev {
+			return NoConflict
+		}
+	}
+
+	last := chain[len(chain)-1]
+	genl := RevGeneration(last)
+	genr := RevGeneration(rev)
+	if genl > genr {
+		return WonConflict
+	} else if genl < genr {
+		return LostConflict
+	} else if last > rev {
+		return WonConflict
+	}
+	return LostConflict
 }
