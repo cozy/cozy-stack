@@ -98,8 +98,8 @@ func TestCreateDir(t *testing.T) {
 		"_id":  idFoo,
 		"_rev": "1-6b501ca58928b02b90c430fd730e8b17",
 		"_revisions": map[string]interface{}{
-			"start": 1,
-			"ids": []string{
+			"start": float64(1),
+			"ids": []interface{}{
 				"6b501ca58928b02b90c430fd730e8b17",
 			},
 		},
@@ -120,8 +120,8 @@ func TestCreateDir(t *testing.T) {
 		"_id":  idBar,
 		"_rev": "4-2ee767305024673cfb3f5af037cd2729",
 		"_revisions": map[string]interface{}{
-			"start": 4,
-			"ids": []string{
+			"start": float64(4),
+			"ids": []interface{}{
 				"2ee767305024673cfb3f5af037cd2729",
 				"753875d51501a6b1883a9d62b4d33f91",
 			},
@@ -164,8 +164,8 @@ func TestUpdateDir(t *testing.T) {
 		"_id":  idFoo,
 		"_rev": "1-4fff5291a41bf1f493460d2070694c5a",
 		"_revisions": map[string]interface{}{
-			"start": 1,
-			"ids": []string{
+			"start": float64(1),
+			"ids": []interface{}{
 				"4fff5291a41bf1f493460d2070694c5a",
 			},
 		},
@@ -188,8 +188,8 @@ func TestUpdateDir(t *testing.T) {
 		"_id":  idFoo,
 		"_rev": "2-96c72d35f3ad802484a61df501b0f1bb",
 		"_revisions": map[string]interface{}{
-			"start": 2,
-			"ids": []string{
+			"start": float64(2),
+			"ids": []interface{}{
 				"96c72d35f3ad802484a61df501b0f1bb",
 				"4fff5291a41bf1f493460d2070694c5a",
 			},

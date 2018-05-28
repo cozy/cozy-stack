@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -421,28 +420,6 @@ type DocsList []map[string]interface{}
 // DocsByDoctype is a map of doctype -> slice of documents of this doctype
 type DocsByDoctype map[string]DocsList
 
-// RevsStruct is a struct for revisions in bulk methods of CouchDB
-type RevsStruct struct {
-	Start int      `json:"start"`
-	Ids   []string `json:"ids"`
-}
-
-// revisionSliceToStruct transforms revisions from on format to another:
-// ["2-aa", "3-bb", "4-cc"] -> { start: 4, ids: ["cc", "bb", "aa"] }
-func revisionSliceToStruct(revs []string) RevsStruct {
-	s := RevsStruct{
-		Ids: make([]string, len(revs)),
-	}
-	var last string
-	for i, rev := range revs {
-		parts := strings.SplitN(rev, "-", 2)
-		last = parts[0]
-		s.Ids[len(s.Ids)-i-1] = parts[1]
-	}
-	s.Start, _ = strconv.Atoi(last)
-	return s
-}
-
 // getMissingDocs fetches the documents in bulk, partitionned by their doctype.
 // https://github.com/apache/couchdb-documentation/pull/263/files
 // TODO what if we fetch an old revision on a compacted database?
@@ -460,7 +437,7 @@ func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings, ch
 			docs[doctype] = append(docs[doctype], map[string]interface{}{
 				"_id":        parts[1],
 				"_rev":       revisions[len(revisions)-1],
-				"_revisions": revisionSliceToStruct(revisions),
+				"_revisions": revsChainToStruct(revisions),
 				"_deleted":   true,
 			})
 			continue
@@ -670,7 +647,7 @@ func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, do
 			if ok && !infos.Removed {
 				rev := doc["_rev"].(string)
 				if refs[i].Revisions.Find(rev) == nil {
-					chain := transformRevsStructToChain(doc["_revisions"])
+					chain := revsStructToChain(doc["_revisions"])
 					if chain != nil {
 						refs[i].Revisions.InsertChain(chain)
 					}
@@ -686,29 +663,4 @@ func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, do
 	}
 
 	return filtered, frefs, nil
-}
-
-// transformRevsStructToChain takes an unmarshalled { start: 2, ids: [bbb, aaa] }
-// and transforms it to a ["1-aaa", "2-bbb"]
-func transformRevsStructToChain(revs interface{}) []string {
-	m, ok := revs.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-	s, ok := m["start"].(float64)
-	if !ok {
-		return nil
-	}
-	start := int64(s)
-	ids, ok := m["ids"].([]interface{})
-	if !ok {
-		return nil
-	}
-	chain := make([]string, len(ids))
-	for i, id := range ids {
-		rev := fmt.Sprintf("%d-%s", start, id)
-		chain[len(ids)-i-1] = rev
-		start--
-	}
-	return chain
 }

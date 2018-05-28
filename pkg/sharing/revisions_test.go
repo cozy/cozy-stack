@@ -6,29 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRevGeneration(t *testing.T) {
-	assert.Equal(t, 1, RevGeneration("1-aaa"))
-	assert.Equal(t, 3, RevGeneration("3-123"))
-	assert.Equal(t, 10, RevGeneration("10-1f2"))
-}
-
-func TestTransformRevsStructToChain(t *testing.T) {
-	input := map[string]interface{}{
-		"start": float64(3),
-		"ids":   []interface{}{"ccc", "bbb", "aaa"},
-	}
-	chain := transformRevsStructToChain(input)
-	expected := []string{"1-aaa", "2-bbb", "3-ccc"}
-	assert.Equal(t, expected, chain)
-}
-
-func TestRevisionSliceToStruct(t *testing.T) {
-	slice := []string{"2-aaa", "3-bbb", "4-ccc"}
-	revs := revisionSliceToStruct(slice)
-	assert.Equal(t, 4, revs.Start)
-	assert.Equal(t, []string{"ccc", "bbb", "aaa"}, revs.Ids)
-}
-
 func TestRevsTreeGeneration(t *testing.T) {
 	tree := &RevsTree{Rev: "1-aaa"}
 	assert.Equal(t, 1, tree.Generation())
@@ -157,4 +134,45 @@ func TestRevsTreeInsertChain(t *testing.T) {
 	sub = sub.Branches[0]
 	assert.Equal(t, sub.Rev, "4-ddd")
 	assert.Len(t, sub.Branches, 0)
+}
+
+func TestRevGeneration(t *testing.T) {
+	assert.Equal(t, 1, RevGeneration("1-aaa"))
+	assert.Equal(t, 3, RevGeneration("3-123"))
+	assert.Equal(t, 10, RevGeneration("10-1f2"))
+}
+
+func TestRevsStructToChain(t *testing.T) {
+	input := map[string]interface{}{
+		"start": float64(3),
+		"ids":   []interface{}{"ccc", "bbb", "aaa"},
+	}
+	chain := revsStructToChain(input)
+	expected := []string{"1-aaa", "2-bbb", "3-ccc"}
+	assert.Equal(t, expected, chain)
+}
+
+func TestRevsChainToStruct(t *testing.T) {
+	slice := []string{"2-aaa", "3-bbb", "4-ccc"}
+	revs := revsChainToStruct(slice)
+	assert.Equal(t, 4, revs.Start)
+	assert.Equal(t, []string{"ccc", "bbb", "aaa"}, revs.Ids)
+}
+
+func TestDetectConflicts(t *testing.T) {
+	chain := []string{"1-aaa", "2-bbb", "3-ccc"}
+	assert.Equal(t, NoConflict, detectConflict("1-aaa", chain))
+	assert.Equal(t, NoConflict, detectConflict("2-bbb", chain))
+	assert.Equal(t, NoConflict, detectConflict("3-ccc", chain))
+	assert.Equal(t, WonConflict, detectConflict("2-ddd", chain))
+	assert.Equal(t, WonConflict, detectConflict("3-abc", chain))
+	assert.Equal(t, LostConflict, detectConflict("4-eee", chain))
+	assert.Equal(t, LostConflict, detectConflict("3-def", chain))
+}
+
+func TestMixupChainToResolveConflict(t *testing.T) {
+	chain := []string{"1-aaa", "2-bbb", "3-ccc", "4-ddd", "5-eee"}
+	altered := MixupChainToResolveConflict("3-abc", chain)
+	expected := []string{"3-abc", "4-ddd", "5-eee"}
+	assert.Equal(t, expected, altered)
 }
