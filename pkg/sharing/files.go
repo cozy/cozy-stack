@@ -2,7 +2,6 @@ package sharing
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -483,7 +482,7 @@ func resolveConflictSamePath(inst *instance.Instance, id, pth string) (string, e
 	if err != nil {
 		return "", err
 	}
-	name := fmt.Sprintf("%s - conflict - %d", pth, time.Now().Unix())
+	name := conflictName(path.Base(pth))
 	if d != nil {
 		if d.DocID > id {
 			return name, nil

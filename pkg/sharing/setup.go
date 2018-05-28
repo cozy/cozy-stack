@@ -176,7 +176,7 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 		Arguments:  args,
 		Debounce:   "5s",
 	})
-	inst.Logger().WithField("nspace", "sharing").Warnf("Create trigger %#v", t)
+	inst.Logger().WithField("nspace", "sharing").Infof("Create trigger %#v", t)
 	if err != nil {
 		return err
 	}
@@ -355,7 +355,7 @@ func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
 		Arguments:  args,
 		Debounce:   "5s",
 	})
-	inst.Logger().WithField("nspace", "sharing").Warnf("Create trigger %#v", t)
+	inst.Logger().WithField("nspace", "sharing").Infof("Create trigger %#v", t)
 	if err != nil {
 		return err
 	}

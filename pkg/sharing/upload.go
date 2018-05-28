@@ -519,13 +519,6 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	olddoc := newdoc.Clone().(*vfs.FileDoc)
 
-	chain := revsStructToChain(target.Revisions)
-	conflict := detectConflict(newdoc.DocRev, chain)
-	if conflict == LostConflict {
-		// TODO create a new file from body?
-		return nil
-	}
-
 	var ref SharedRef
 	err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
 	if err != nil {
@@ -543,8 +536,15 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	copySafeFieldsToFile(target.FileDoc, newdoc)
 	s.prepareFileWithAncestors(inst, newdoc, target.DirID)
 
-	if conflict == WonConflict {
+	chain := revsStructToChain(target.Revisions)
+	conflict := detectConflict(newdoc.DocRev, chain)
+	switch conflict {
+	case LostConflict:
+		return s.uploadLostConflict(inst, target, newdoc, body)
+	case WonConflict:
 		// TODO create a new file from olddoc
+	case NoConflict:
+		// Nothing to do
 	}
 
 	if newdoc.DocName == olddoc.DocName && newdoc.DirID == olddoc.DirID {
@@ -590,6 +590,32 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 		err = fs.UpdateFileDoc(tmpdoc, newdoc)
 	}
 	return err
+}
+
+// uploadLostConflict manager a upload where a file is in conflict, and the
+// uploaded file version goes to a new file.
+func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
+	rev := target.Rev()
+	indexer := newSharingIndexer(inst, &bulkRevs{
+		Rev:       rev,
+		Revisions: revsChainToMap([]string{rev}),
+	})
+	fs := inst.VFS().UseSharingIndexer(indexer)
+	newdoc.DocID = conflictID(newdoc.DocID, rev)
+	if _, err := fs.FileByID(newdoc.DocID); err != nil {
+		if err == os.ErrExist {
+			body.Close()
+			return nil
+		}
+		return err
+	}
+	newdoc.DocName = conflictName(newdoc.DocName)
+	newdoc.DocRev = ""
+	file, err := fs.CreateFile(newdoc, nil)
+	if err != nil {
+		return err
+	}
+	return s.copyFileContent(inst, file, body)
 }
 
 // copyFileContent will copy the body of the HTTP request to the file, and

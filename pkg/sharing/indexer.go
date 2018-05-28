@@ -13,7 +13,8 @@ import (
 )
 
 type bulkRevs struct {
-	Rev       string
+	Rev string
+	// TODO see if we can use a RevsStruct instead of a map for Revisions
 	Revisions map[string]interface{}
 }
 
@@ -75,9 +76,7 @@ func (s *sharingIndexer) WillResolveConflict(rev string, chain []string) {
 	}
 
 	altered := MixupChainToResolveConflict(rev, chain)
-	revs := revsChainToStruct(altered)
-	s.bulkRevs.Revisions["start"] = revs.Start
-	s.bulkRevs.Revisions["ids"] = revs.Ids
+	s.bulkRevs.Revisions = revsChainToMap(altered)
 	s.bulkRevs.Rev = last
 }
 

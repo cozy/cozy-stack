@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type conflictStatus int
@@ -163,6 +164,16 @@ func revsChainToStruct(revs []string) RevsStruct {
 	return s
 }
 
+// revsChainToMap does the same thing as revsChainToStruct, but it returns a
+// map instead of a struct.
+func revsChainToMap(revs []string) map[string]interface{} {
+	altered := revsChainToStruct(revs)
+	return map[string]interface{}{
+		"start": altered.Start,
+		"ids":   altered.Ids,
+	}
+}
+
 // revsStructToChain is the reverse of revsChainToStruct:
 // { start: 4, ids: ["cc", "bb", "aa"] } -> ["2-aa", "3-bb", "4-cc"]
 func revsStructToChain(revs interface{}) []string {
@@ -230,4 +241,18 @@ func MixupChainToResolveConflict(rev string, chain []string) []string {
 		}
 	}
 	return mixed
+}
+
+// conflictName generates a new name for a file/folder in conflict with another
+// that has the same path.
+func conflictName(name string) string {
+	return fmt.Sprintf("%s - conflict - %d", name, time.Now().Unix())
+}
+
+// conflictID generates a new ID for a file/folder that has a conflict between
+// two versions of its content.
+func conflictID(id, rev string) string {
+	parts := strings.SplitN(rev, "-", 2)
+	key := []byte(parts[1])
+	return XorID(id, key)
 }
