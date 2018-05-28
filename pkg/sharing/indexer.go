@@ -34,7 +34,15 @@ func newSharingIndexer(inst *instance.Instance, bulkRevs *bulkRevs) *sharingInde
 	}
 }
 
+// IncrementRevision is used when a conflict between 2 files/folders arise: to
+// resolve the conflict, a new name is changed and to ensure that this change
+// is propagated to the other cozy instances, we add a new revision to the
+// chain.
 func (s *sharingIndexer) IncrementRevision() {
+	if s.bulkRevs == nil {
+		return
+	}
+
 	var start int64
 	switch s := s.bulkRevs.Revisions["start"].(type) {
 	case float64:
@@ -50,6 +58,27 @@ func (s *sharingIndexer) IncrementRevision() {
 	s.bulkRevs.Rev = fmt.Sprintf("%d-%s", start, generated)
 	s.bulkRevs.Revisions["start"] = start
 	s.bulkRevs.Revisions["ids"] = append(ids, generated)
+}
+
+// WillResolveConflict is used when a conflict on a file/folder has been detected.
+// There are 2 cases:
+// 1. the file/folder has a revision on one side with a generation strictly
+// higher than the revision on the other side => we can use this revision on
+// both sides (but the chain of parents will not be the same)
+// 2. the two revisions for the file/folder are at the same generation => we
+// have to create a new revision that will be propagated to the other cozy.
+func (s *sharingIndexer) WillResolveConflict(rev string, chain []string) {
+	last := chain[len(chain)-1]
+	if RevGeneration(last) == RevGeneration(rev) {
+		s.bulkRevs = nil
+		return
+	}
+
+	altered := MixupChainToResolveConflict(rev, chain)
+	revs := revsChainToStruct(altered)
+	s.bulkRevs.Revisions["start"] = revs.Start
+	s.bulkRevs.Revisions["ids"] = revs.Ids
+	s.bulkRevs.Rev = last
 }
 
 func (s *sharingIndexer) InitIndex() error {
@@ -70,6 +99,10 @@ func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
 
 // TODO update io.cozy.shared
 func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
+	if s.bulkRevs == nil {
+		return s.indexer.UpdateFileDoc(olddoc, doc)
+	}
+
 	docs := make([]map[string]interface{}, 1)
 	docs[0] = map[string]interface{}{
 		"type":       doc.Type,
@@ -92,11 +125,9 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 	if doc.Metadata != nil {
 		docs[0]["metadata"] = doc.Metadata
 	}
-	if s.bulkRevs != nil {
-		doc.SetRev(s.bulkRevs.Rev)
-		docs[0]["_rev"] = s.bulkRevs.Rev
-		docs[0]["_revisions"] = s.bulkRevs.Revisions
-	}
+	doc.SetRev(s.bulkRevs.Rev)
+	docs[0]["_rev"] = s.bulkRevs.Rev
+	docs[0]["_revisions"] = s.bulkRevs.Revisions
 	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
 		return err
 	}
@@ -131,6 +162,10 @@ func (s *sharingIndexer) CreateNamedDirDoc(doc *vfs.DirDoc) error {
 
 // TODO update io.cozy.shared
 func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
+	if s.bulkRevs == nil {
+		return s.indexer.UpdateDirDoc(olddoc, doc)
+	}
+
 	docs := make([]map[string]interface{}, 1)
 	docs[0] = map[string]interface{}{
 		"type":       doc.Type,
@@ -145,11 +180,9 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	if len(doc.ReferencedBy) > 0 {
 		docs[0][couchdb.SelectorReferencedBy] = doc.ReferencedBy
 	}
-	if s.bulkRevs != nil {
-		doc.SetRev(s.bulkRevs.Rev)
-		docs[0]["_rev"] = s.bulkRevs.Rev
-		docs[0]["_revisions"] = s.bulkRevs.Revisions
-	}
+	doc.SetRev(s.bulkRevs.Rev)
+	docs[0]["_rev"] = s.bulkRevs.Rev
+	docs[0]["_revisions"] = s.bulkRevs.Revisions
 	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
 		return err
 	}

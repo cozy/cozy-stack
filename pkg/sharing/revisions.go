@@ -213,3 +213,21 @@ func detectConflict(rev string, chain []string) conflictStatus {
 	}
 	return LostConflict
 }
+
+// MixupChainToResolveConflict creates a new chain of revisions that can be
+// used to resolve a conflict: the new chain will start the old rev and include
+// other revisions from the chain with a greater generation.
+func MixupChainToResolveConflict(rev string, chain []string) []string {
+	gen := RevGeneration(rev)
+	mixed := make([]string, 0)
+	found := false
+	for _, r := range chain {
+		if found {
+			mixed = append(mixed, r)
+		} else if gen == RevGeneration(r) {
+			mixed = append(mixed, rev)
+			found = true
+		}
+	}
+	return mixed
+}

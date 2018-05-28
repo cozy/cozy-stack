@@ -713,7 +713,7 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	case LostConflict:
 		return nil
 	case WonConflict:
-		// TODO update indexer to fix the conflict
+		indexer.WillResolveConflict(dir.DocRev, chain)
 	case NoConflict:
 		// Nothing to do
 	}

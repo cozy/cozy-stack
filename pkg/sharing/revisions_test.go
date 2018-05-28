@@ -169,3 +169,10 @@ func TestDetectConflicts(t *testing.T) {
 	assert.Equal(t, LostConflict, detectConflict("4-eee", chain))
 	assert.Equal(t, LostConflict, detectConflict("3-def", chain))
 }
+
+func TestMixupChainToResolveConflict(t *testing.T) {
+	chain := []string{"1-aaa", "2-bbb", "3-ccc", "4-ddd", "5-eee"}
+	altered := MixupChainToResolveConflict("3-abc", chain)
+	expected := []string{"3-abc", "4-ddd", "5-eee"}
+	assert.Equal(t, expected, altered)
+}
