@@ -226,7 +226,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		"AppEditor":     app.Editor,
 		"AppNamePrefix": app.NamePrefix,
 		"IconPath":      app.Icon,
-		"CozyBar":       cozybar(i),
+		"CozyBar":       cozybar(i, isLoggedIn),
 		"CozyClientJS":  cozyclientjs(i),
 		"Tracking":      tracking,
 	})
@@ -304,8 +304,10 @@ func init() {
 	barTemplate = template.Must(template.New("cozy-bar").Funcs(funcsMap).Parse(`
 <link rel="stylesheet" type="text/css" href="{{asset .Domain "/fonts/fonts.css"}}">
 <link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-bar.min.css"}}">
+{{if .LoggedIn}}
 {{range .Warnings}}
 <meta name="user-action-required" data-title="{{ .Title }}" data-code="{{ .Code }}" data-detail="{{ .Detail }}" data-links="{{ .Links.Self }}" />
+{{end}}
 {{end}}
 <script defer src="{{asset .Domain "/js/cozy-bar.min.js"}}"></script>`,
 	))
@@ -320,11 +322,12 @@ func cozyclientjs(i *instance.Instance) template.HTML {
 	return template.HTML(buf.String()) // #nosec
 }
 
-func cozybar(i *instance.Instance) template.HTML {
+func cozybar(i *instance.Instance, loggedIn bool) template.HTML {
 	buf := new(bytes.Buffer)
 	err := barTemplate.Execute(buf, echo.Map{
 		"Domain":   i.Domain,
 		"Warnings": i.Warnings(),
+		"LoggedIn": loggedIn,
 	})
 	if err != nil {
 		return template.HTML("")
