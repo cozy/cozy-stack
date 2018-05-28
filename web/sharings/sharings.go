@@ -124,6 +124,9 @@ func GetSharingsInfoByDocType(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
+	if len(sharings) == 0 {
+		return jsonapi.DataList(c, http.StatusOK, nil, nil)
+	}
 	sharingIDs := make([]string, len(sharings))
 	i := 0
 	for sID, s := range sharings {

@@ -633,6 +633,15 @@ func TestCheckSharingInfoByDocType(t *testing.T) {
 	defer res.Body.Close()
 
 	assertSharingInfoRequestIsCorrect(t, res.Body, s1.ID(), s2.ID())
+
+	req2, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/io.cozy.notyet", nil)
+	assert.NoError(t, err)
+	req2.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
+	res2, err := http.DefaultClient.Do(req2)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res2.StatusCode)
+	res2.Body.Close()
 }
 
 func TestRevokeSharing(t *testing.T) {
