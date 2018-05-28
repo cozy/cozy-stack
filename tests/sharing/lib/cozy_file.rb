@@ -2,7 +2,8 @@
 class CozyFile
   include Model::Files
 
-  attr_reader :name, :dir_id, :mime, :trashed, :md5sum, :referenced_by
+  attr_reader :name, :dir_id, :mime, :trashed, :md5sum, :referenced_by,
+              :metadata, :size, :executable, :file_class
 
   def self.load_from_url(inst, path)
     opts = {
@@ -15,16 +16,18 @@ class CozyFile
     id = j["id"]
     rev = j["rev"]
     referenced_by = j.dig "relationships", "referenced_by", "data"
-
     j = j["attributes"]
     f = CozyFile.new(
       name: j["name"],
       dir_id: j["dir_id"],
       trashed: j["trashed"],
       md5sum: j["md5sum"],
+      size: j["size"],
+      executable: j["executable"],
+      file_class: j["class"],
+      metadata: j["metadata"],
       referenced_by: referenced_by
     )
-
     f.couch_id = id
     f.couch_rev = rev
     f
@@ -40,11 +43,15 @@ class CozyFile
 
   def initialize(opts = {})
     @name = opts[:name] || Faker::Internet.slug
-    @dir_id = opts[:dir_id] || "io.cozy.files.root-dir"
+    @dir_id = opts[:dir_id] || Folder::ROOT_DIR
     @mime = opts[:mime] || "text/plain"
     @content = opts[:content] || "Hello world"
     @trashed = opts[:trashed]
     @md5sum = opts[:md5sum]
+    @metadata = opts[:metadata]
+    @size = opts[:size]
+    @executable = opts[:executable]
+    @file_class = opts[:file_class]
     @referenced_by = opts[:referenced_by]
   end
 
