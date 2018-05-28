@@ -24,7 +24,7 @@ const (
 // RevsStruct is a struct for revisions in bulk methods of CouchDB
 type RevsStruct struct {
 	Start int      `json:"start"`
-	Ids   []string `json:"ids"`
+	IDs   []string `json:"ids"`
 }
 
 // RevsTree is a tree of revisions, like CouchDB has.
@@ -148,48 +148,51 @@ func RevGeneration(rev string) int {
 	return gen
 }
 
+// revsMapToStruct builds a RevsStruct from a json unmarshaled to a map
+func revsMapToStruct(revs interface{}) *RevsStruct {
+	revisions, ok := revs.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	start, ok := revisions["start"].(float64)
+	if !ok {
+		return nil
+	}
+	slice, ok := revisions["ids"].([]interface{})
+	if !ok {
+		return nil
+	}
+	ids := make([]string, len(slice))
+	for i, id := range slice {
+		ids[i], _ = id.(string)
+	}
+	return &RevsStruct{
+		Start: int(start),
+		IDs:   ids,
+	}
+}
+
 // revsChainToStruct transforms revisions from on format to another:
 // ["2-aa", "3-bb", "4-cc"] -> { start: 4, ids: ["cc", "bb", "aa"] }
 func revsChainToStruct(revs []string) RevsStruct {
 	s := RevsStruct{
-		Ids: make([]string, len(revs)),
+		IDs: make([]string, len(revs)),
 	}
 	var last string
 	for i, rev := range revs {
 		parts := strings.SplitN(rev, "-", 2)
 		last = parts[0]
-		s.Ids[len(s.Ids)-i-1] = parts[1]
+		s.IDs[len(s.IDs)-i-1] = parts[1]
 	}
 	s.Start, _ = strconv.Atoi(last)
 	return s
 }
 
-// revsChainToMap does the same thing as revsChainToStruct, but it returns a
-// map instead of a struct.
-func revsChainToMap(revs []string) map[string]interface{} {
-	altered := revsChainToStruct(revs)
-	return map[string]interface{}{
-		"start": altered.Start,
-		"ids":   altered.Ids,
-	}
-}
-
 // revsStructToChain is the reverse of revsChainToStruct:
 // { start: 4, ids: ["cc", "bb", "aa"] } -> ["2-aa", "3-bb", "4-cc"]
-func revsStructToChain(revs interface{}) []string {
-	m, ok := revs.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-	s, ok := m["start"].(float64)
-	if !ok {
-		return nil
-	}
-	start := int64(s)
-	ids, ok := m["ids"].([]interface{})
-	if !ok {
-		return nil
-	}
+func revsStructToChain(revs RevsStruct) []string {
+	start := revs.Start
+	ids := revs.IDs
 	chain := make([]string, len(ids))
 	for i, id := range ids {
 		rev := fmt.Sprintf("%d-%s", start, id)

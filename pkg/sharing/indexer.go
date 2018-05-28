@@ -13,9 +13,8 @@ import (
 )
 
 type bulkRevs struct {
-	Rev string
-	// TODO see if we can use a RevsStruct instead of a map for Revisions
-	Revisions map[string]interface{}
+	Rev       string
+	Revisions RevsStruct
 }
 
 type sharingIndexer struct {
@@ -44,21 +43,11 @@ func (s *sharingIndexer) IncrementRevision() {
 		return
 	}
 
-	var start int64
-	switch s := s.bulkRevs.Revisions["start"].(type) {
-	case float64:
-		start = int64(s)
-	case int64:
-		start = s
-	default:
-		panic("start has an unexpected type")
-	}
-	start++
-	ids := s.bulkRevs.Revisions["ids"].([]string)
+	start := s.bulkRevs.Revisions.Start
 	generated := hex.EncodeToString(crypto.GenerateRandomBytes(16))
 	s.bulkRevs.Rev = fmt.Sprintf("%d-%s", start, generated)
-	s.bulkRevs.Revisions["start"] = start
-	s.bulkRevs.Revisions["ids"] = append(ids, generated)
+	s.bulkRevs.Revisions.Start = start
+	s.bulkRevs.Revisions.IDs = append(s.bulkRevs.Revisions.IDs, generated)
 }
 
 // WillResolveConflict is used when a conflict on a file/folder has been detected.
@@ -76,7 +65,7 @@ func (s *sharingIndexer) WillResolveConflict(rev string, chain []string) {
 	}
 
 	altered := MixupChainToResolveConflict(rev, chain)
-	s.bulkRevs.Revisions = revsChainToMap(altered)
+	s.bulkRevs.Revisions = revsChainToStruct(altered)
 	s.bulkRevs.Rev = last
 }
 

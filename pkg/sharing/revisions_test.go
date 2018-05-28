@@ -143,9 +143,9 @@ func TestRevGeneration(t *testing.T) {
 }
 
 func TestRevsStructToChain(t *testing.T) {
-	input := map[string]interface{}{
-		"start": float64(3),
-		"ids":   []interface{}{"ccc", "bbb", "aaa"},
+	input := RevsStruct{
+		Start: 3,
+		IDs:   []string{"ccc", "bbb", "aaa"},
 	}
 	chain := revsStructToChain(input)
 	expected := []string{"1-aaa", "2-bbb", "3-ccc"}
@@ -156,7 +156,7 @@ func TestRevsChainToStruct(t *testing.T) {
 	slice := []string{"2-aaa", "3-bbb", "4-ccc"}
 	revs := revsChainToStruct(slice)
 	assert.Equal(t, 4, revs.Start)
-	assert.Equal(t, []string{"ccc", "bbb", "aaa"}, revs.Ids)
+	assert.Equal(t, []string{"ccc", "bbb", "aaa"}, revs.IDs)
 }
 
 func TestDetectConflicts(t *testing.T) {

@@ -273,7 +273,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 // FileDocWithRevisions is the struct of the payload for synchronizing a file
 type FileDocWithRevisions struct {
 	*vfs.FileDoc
-	Revisions map[string]interface{} `json:"_revisions"`
+	Revisions RevsStruct `json:"_revisions"`
 }
 
 // KeyToUpload contains the key for uploading a file (when syncing metadata is
@@ -551,9 +551,9 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 		if conflict == WonConflict {
 			indexer.WillResolveConflict(target.DocRev, chain)
 		}
-		file, err := fs.CreateFile(newdoc, olddoc)
-		if err != nil {
-			return err
+		file, errf := fs.CreateFile(newdoc, olddoc)
+		if errf != nil {
+			return errf
 		}
 		return s.copyFileContent(inst, file, body)
 	}
@@ -598,7 +598,7 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 	rev := target.Rev()
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
-		Revisions: revsChainToMap([]string{rev}),
+		Revisions: revsChainToStruct([]string{rev}),
 	})
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	newdoc.DocID = conflictID(newdoc.DocID, rev)

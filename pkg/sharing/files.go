@@ -588,8 +588,7 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 
 // extractNameAndIndexer takes a target document, extracts the name and creates
 // a sharing indexer with _rev and _revisions
-func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{}) (
-	string, *sharingIndexer, error) {
+func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{}) (string, *sharingIndexer, error) {
 	name, ok := target["name"].(string)
 	if !ok {
 		inst.Logger().WithField("nspace", "replicator").
@@ -602,15 +601,15 @@ func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{
 			Warnf("Missing _rev for directory %#v", target)
 		return "", nil, ErrInternalServerError
 	}
-	revisions, ok := target["_revisions"].(map[string]interface{})
-	if !ok {
+	revs := revsMapToStruct(target["_revisions"])
+	if revs == nil {
 		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Missing _revisions for directory %#v", target)
+			Warnf("Invalid _revisions for directory %#v", target)
 		return "", nil, ErrInternalServerError
 	}
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
-		Revisions: revisions,
+		Revisions: *revs,
 	})
 	return name, indexer, nil
 }
