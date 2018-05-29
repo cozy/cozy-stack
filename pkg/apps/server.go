@@ -148,13 +148,13 @@ func (s *swiftServer) makeObjectName(slug, version, file string) string {
 }
 
 func (s *swiftServer) FilesList(slug, version string) ([]string, error) {
+	prefix := s.makeObjectName(slug, version, "") + "/"
 	names, err := s.c.ObjectNamesAll(s.container, &swift.ObjectsOpts{
-		Prefix: s.makeObjectName(slug, version, "/"),
+		Prefix: prefix,
 	})
 	if err != nil {
 		return nil, err
 	}
-	prefix := s.makeObjectName(slug, version, "")
 	filtered := names[:0]
 	for _, n := range names {
 		n = strings.TrimPrefix(n, prefix)
