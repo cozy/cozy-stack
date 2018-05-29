@@ -116,6 +116,7 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	sch := jobs.System().(jobs.Scheduler)
 	sch.ShutdownScheduler(context.Background())
 	sch.StartScheduler(bro)
+	time.Sleep(50 * time.Millisecond)
 
 	tat, err := jobs.NewTrigger(at)
 	assert.NoError(t, err)
@@ -482,7 +483,7 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 		Domain:     instanceName,
 		Arguments:  "io.cozy.debounce-test:CREATED io.cozy.debounce-more:CREATED",
 		WorkerType: "incr",
-		Debounce:   "2s",
+		Debounce:   "4s",
 	}
 	tri, err := jobs.NewTrigger(evTrigger)
 	assert.NoError(t, err)
@@ -499,18 +500,18 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(600 * time.Millisecond)
 		realtime.GetHub().Publish(event)
 	}
 
-	time.Sleep(2500 * time.Millisecond)
+	time.Sleep(5000 * time.Millisecond)
 	count, _ := bro.WorkerQueueLen("incr")
 	assert.Equal(t, 2, count)
 
 	realtime.GetHub().Publish(event)
 	doc.doctype = "io.cozy.debounce-more"
 	realtime.GetHub().Publish(event)
-	time.Sleep(2500 * time.Millisecond)
+	time.Sleep(5000 * time.Millisecond)
 	count, _ = bro.WorkerQueueLen("incr")
 	assert.Equal(t, 3, count)
 }
