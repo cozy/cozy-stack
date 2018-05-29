@@ -832,7 +832,7 @@ func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
 			"created_at": file.CreatedAt,
 			"updated_at": file.UpdatedAt,
 			"size":       file.ByteSize,
-			"md5Sum":     file.MD5Sum,
+			"md5sum":     file.MD5Sum,
 			"mime":       file.Mime,
 			"class":      file.Class,
 			"executable": file.Executable,

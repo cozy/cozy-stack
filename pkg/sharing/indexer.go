@@ -131,7 +131,7 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 		"updated_at": doc.UpdatedAt,
 		"tags":       doc.Tags,
 		"size":       fmt.Sprintf("%d", doc.ByteSize), // XXX size must be serialized as a string, not an int
-		"md5Sum":     doc.MD5Sum,
+		"md5sum":     doc.MD5Sum,
 		"mime":       doc.Mime,
 		"class":      doc.Class,
 		"executable": doc.Executable,
