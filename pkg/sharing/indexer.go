@@ -44,10 +44,11 @@ func (s *sharingIndexer) IncrementRevision() {
 	}
 
 	start := s.bulkRevs.Revisions.Start
+	start++
 	generated := hex.EncodeToString(crypto.GenerateRandomBytes(16))
 	s.bulkRevs.Rev = fmt.Sprintf("%d-%s", start, generated)
 	s.bulkRevs.Revisions.Start = start
-	s.bulkRevs.Revisions.IDs = append(s.bulkRevs.Revisions.IDs, generated)
+	s.bulkRevs.Revisions.IDs = append([]string{generated}, s.bulkRevs.Revisions.IDs...)
 }
 
 // WillResolveConflict is used when a conflict on a file/folder has been detected.
@@ -82,6 +83,7 @@ func (s *sharingIndexer) StashRevision() string {
 	stash := s.bulkRevs.Revisions.IDs[0]
 	s.bulkRevs.Revisions.IDs = s.bulkRevs.Revisions.IDs[1:]
 	s.bulkRevs.Revisions.Start--
+	s.bulkRevs.Rev = fmt.Sprintf("%d-%s", s.bulkRevs.Revisions.Start, s.bulkRevs.Revisions.IDs[0])
 	return stash
 }
 
@@ -92,7 +94,8 @@ func (s *sharingIndexer) UnstashRevision(stash string) {
 		return
 	}
 	s.bulkRevs.Revisions.Start++
-	s.bulkRevs.Revisions.IDs = append(s.bulkRevs.Revisions.IDs, stash)
+	s.bulkRevs.Revisions.IDs = append([]string{stash}, s.bulkRevs.Revisions.IDs...)
+	s.bulkRevs.Rev = fmt.Sprintf("%d-%s", s.bulkRevs.Revisions.Start, stash)
 }
 
 func (s *sharingIndexer) InitIndex() error {
