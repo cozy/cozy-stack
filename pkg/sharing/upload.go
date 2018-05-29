@@ -299,7 +299,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	current, err := inst.VFS().FileByID(target.DocID)
 	if err != nil {
 		if err == os.ErrNotExist {
-			if s.findRuleForNewFile(target.FileDoc) == nil {
+			if rule, _ := s.findRuleForNewFile(target.FileDoc); rule == nil {
 				return nil, ErrSafety
 			}
 			return s.createUploadKey(inst, target)
@@ -314,15 +314,13 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 		}
 		return nil, err
 	}
-	infos, ok := ref.Infos[s.SID]
-	if !ok {
+	if _, ok := ref.Infos[s.SID]; !ok {
 		return nil, ErrSafety
 	}
 	if !bytes.Equal(target.MD5Sum, current.MD5Sum) {
 		return s.createUploadKey(inst, target)
 	}
-	rule := &s.Rules[infos.Rule]
-	return nil, s.updateFileMetadata(inst, target, current, rule)
+	return nil, s.updateFileMetadata(inst, target, current, &ref)
 }
 
 // prepareFileWithAncestors find the parent directory for file, and recreates it
@@ -351,11 +349,11 @@ func (s *Sharing) prepareFileWithAncestors(inst *instance.Instance, newdoc *vfs.
 
 // updateFileMetadata updates a file document when only some metadata has
 // changed, but not the content.
-func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, rule *Rule) error {
+func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, ref *SharedRef) error {
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       target.DocRev,
 		Revisions: target.Revisions,
-	})
+	}, ref)
 
 	chain := revsStructToChain(target.Revisions)
 	conflict := detectConflict(newdoc.DocRev, chain)
@@ -375,6 +373,8 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 		return err
 	}
 	copySafeFieldsToFile(target.FileDoc, newdoc)
+	infos := ref.Infos[s.SID]
+	rule := &s.Rules[infos.Rule]
 	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, newdoc, rule)
 
 	err := fs.UpdateFileDoc(olddoc, newdoc)
@@ -430,10 +430,13 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 
 // UploadNewFile is used to receive a new file.
 func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevisions, body io.ReadCloser) error {
+	ref := SharedRef{
+		Infos: make(map[string]SharedInfo),
+	}
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       target.Rev(),
 		Revisions: target.Revisions,
-	})
+	}, &ref)
 	fs := inst.VFS().UseSharingIndexer(indexer)
 
 	var err error
@@ -470,12 +473,14 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		return err
 	}
 	newdoc.SetID(target.DocID)
+	ref.SID = consts.Files + "/" + newdoc.DocID
 	copySafeFieldsToFile(target.FileDoc, newdoc)
 
-	rule := s.findRuleForNewFile(target.FileDoc)
+	rule, ruleIndex := s.findRuleForNewFile(target.FileDoc)
 	if rule == nil {
 		return ErrSafety
 	}
+	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex, Binary: true}
 	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, nil, rule)
 
 	file, err := fs.CreateFile(newdoc, nil)
@@ -513,13 +518,6 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 // the file (which is not what we want), a conflict of name+dir_id, the higher
 // revision wins and it should be the good one in our case.
 func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
-	indexer := newSharingIndexer(inst, &bulkRevs{
-		Rev:       target.Rev(),
-		Revisions: target.Revisions,
-	})
-	fs := inst.VFS().UseSharingIndexer(indexer)
-	olddoc := newdoc.Clone().(*vfs.FileDoc)
-
 	var ref SharedRef
 	err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
 	if err != nil {
@@ -528,6 +526,13 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 		}
 		return err
 	}
+	indexer := newSharingIndexer(inst, &bulkRevs{
+		Rev:       target.Rev(),
+		Revisions: target.Revisions,
+	}, &ref)
+	fs := inst.VFS().UseSharingIndexer(indexer)
+	olddoc := newdoc.Clone().(*vfs.FileDoc)
+
 	infos, ok := ref.Infos[s.SID]
 	if !ok {
 		return ErrSafety
@@ -600,7 +605,7 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revsChainToStruct([]string{rev}),
-	})
+	}, nil)
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	newdoc.DocID = conflictID(newdoc.DocID, rev)
 	if _, err := fs.FileByID(newdoc.DocID); err != nil {
@@ -622,9 +627,14 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 // uploadWonConflict manages an upload where a file is in conflict, and the
 // existing file is copied to a new file to let the upload suceed.
 func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) error {
-	fs := inst.VFS()
+	rev := src.Rev()
+	indexer := newSharingIndexer(inst, &bulkRevs{
+		Rev:       rev,
+		Revisions: revsChainToStruct([]string{rev}),
+	}, nil)
+	fs := inst.VFS().UseSharingIndexer(indexer)
 	dst := src.Clone().(*vfs.FileDoc)
-	dst.DocID = conflictID(dst.DocID, dst.DocRev)
+	dst.DocID = conflictID(dst.DocID, rev)
 	if _, err := fs.FileByID(dst.DocID); err != nil {
 		if err == os.ErrExist {
 			return nil

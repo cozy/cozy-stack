@@ -21,16 +21,18 @@ type sharingIndexer struct {
 	db       couchdb.Database
 	indexer  vfs.Indexer
 	bulkRevs *bulkRevs
+	shared   *SharedRef
 }
 
 // newSharingIndexer creates an Indexer for the special purpose of the sharing.
 // It intercepts some requests to force the id and revisions of some documents,
 // and proxifies other requests to the normal couchdbIndexer (reads).
-func newSharingIndexer(inst *instance.Instance, bulkRevs *bulkRevs) *sharingIndexer {
+func newSharingIndexer(inst *instance.Instance, bulkRevs *bulkRevs, shared *SharedRef) *sharingIndexer {
 	return &sharingIndexer{
 		db:       inst,
 		indexer:  vfs.NewCouchdbIndexer(inst),
 		bulkRevs: bulkRevs,
+		shared:   shared,
 	}
 }
 
@@ -114,7 +116,6 @@ func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
 	return s.indexer.CreateNamedFileDoc(doc)
 }
 
-// TODO update io.cozy.shared
 func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 	if s.bulkRevs == nil {
 		return s.indexer.UpdateFileDoc(olddoc, doc)
@@ -148,6 +149,11 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
 		return err
 	}
+
+	if err := UpdateFileShared(s.db, s.shared, s.bulkRevs.Revisions); err != nil {
+		return err
+	}
+
 	// Ensure that fullpath is filled because it's used in realtime/@events
 	if olddoc != nil {
 		if _, err := olddoc.Path(s); err != nil {
@@ -177,7 +183,6 @@ func (s *sharingIndexer) CreateNamedDirDoc(doc *vfs.DirDoc) error {
 	return s.UpdateDirDoc(nil, doc)
 }
 
-// TODO update io.cozy.shared
 func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	if s.bulkRevs == nil {
 		return s.indexer.UpdateDirDoc(olddoc, doc)
@@ -203,6 +208,11 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
 		return err
 	}
+
+	if err := UpdateFileShared(s.db, s.shared, s.bulkRevs.Revisions); err != nil {
+		return err
+	}
+
 	if olddoc != nil {
 		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
 	} else {

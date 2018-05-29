@@ -398,7 +398,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		} else if ref == nil {
 			err = multierror.Append(errm, ErrSafety)
 		} else {
-			err = s.UpdateDir(inst, target, dir)
+			err = s.UpdateDir(inst, target, dir, ref)
 		}
 		if err != nil {
 			errm = multierror.Append(errm, err)
@@ -588,7 +588,7 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 
 // extractNameAndIndexer takes a target document, extracts the name and creates
 // a sharing indexer with _rev and _revisions
-func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{}) (string, *sharingIndexer, error) {
+func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{}, ref *SharedRef) (string, *sharingIndexer, error) {
 	name, ok := target["name"].(string)
 	if !ok {
 		inst.Logger().WithField("nspace", "replicator").
@@ -610,14 +610,17 @@ func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: *revs,
-	})
+	}, ref)
 	return name, indexer, nil
 }
 
 // CreateDir creates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
-	name, indexer, err := extractNameAndIndexer(inst, target)
+	ref := SharedRef{
+		Infos: make(map[string]SharedInfo),
+	}
+	name, indexer, err := extractNameAndIndexer(inst, target, &ref)
 	if err != nil {
 		return err
 	}
@@ -648,7 +651,10 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		return err
 	}
 	dir.SetID(target["_id"].(string))
+	ref.SID = consts.Files + "/" + dir.DocID
 	copySafeFieldsToDir(target, dir)
+	_, ruleIndex := s.findRuleForNewDirectory(dir)
+	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex}
 	err = fs.CreateDir(dir)
 	if err == os.ErrExist {
 		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
@@ -699,8 +705,8 @@ func (s *Sharing) prepareDirWithAncestors(inst *instance.Instance, dir *vfs.DirD
 
 // UpdateDir updates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
-func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface{}, dir *vfs.DirDoc) error {
-	name, indexer, err := extractNameAndIndexer(inst, target)
+func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface{}, dir *vfs.DirDoc, ref *SharedRef) error {
+	name, indexer, err := extractNameAndIndexer(inst, target, ref)
 	if err != nil {
 		return err
 	}

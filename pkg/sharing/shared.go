@@ -238,6 +238,19 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	return couchdb.UpdateDoc(inst, &ref)
 }
 
+// UpdateFileShared creates or updates the io.cozy.shared for a file with
+// possibly multiple revisions.
+func UpdateFileShared(db couchdb.Database, ref *SharedRef, revs RevsStruct) error {
+	chain := revsStructToChain(revs)
+	if ref.Rev() == "" {
+		ref.Revisions = &RevsTree{Rev: chain[0]}
+		ref.Revisions.InsertChain(chain)
+		return couchdb.CreateNamedDoc(db, ref)
+	}
+	ref.Revisions.InsertChain(chain)
+	return couchdb.UpdateDoc(db, ref)
+}
+
 // RemoveSharedRefs deletes the references containing the sharingid
 func RemoveSharedRefs(inst *instance.Instance, sharingID string) error {
 	var req = &couchdb.ViewRequest{

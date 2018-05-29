@@ -40,6 +40,10 @@ func createASharedRef(t *testing.T, id string) {
 }
 
 func TestSequenceNumber(t *testing.T) {
+	// Start with an empty io.cozy.shared database
+	couchdb.DeleteDB(inst, consts.Shared)
+	couchdb.CreateDB(inst, consts.Shared)
+
 	s := &Sharing{SID: uuidv4(), Members: []Member{
 		{Status: MemberStatusOwner, Name: "Alice"},
 		{Status: MemberStatusReady, Name: "Bob"},
@@ -60,7 +64,7 @@ func TestSequenceNumber(t *testing.T) {
 	_, _, seq, err = s.callChangesFeed(inst, seq)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, seq)
-	assert.Equal(t, nb+1, RevGeneration(seq)) // +1 because of the view creation
+	assert.Equal(t, nb, RevGeneration(seq))
 	err = s.UpdateLastSequenceNumber(inst, m, "replicator", seq)
 	assert.NoError(t, err)
 
