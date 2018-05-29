@@ -208,11 +208,9 @@ func SetupAdminRoutes(router *echo.Echo) error {
 		mws = append(mws, middlewares.BasicAuth(config.GetConfig().AdminSecretFileName))
 	}
 
-	// XXX Do not set basic authentication on the /metrics routes.
-	metrics.Routes(router.Group("/metrics"))
-
 	instances.Routes(router.Group("/instances", mws...))
 	version.Routes(router.Group("/version", mws...))
+	metrics.Routes(router.Group("/metrics", mws...))
 
 	setupRecover(router)
 
