@@ -75,7 +75,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Can't ensure io.cozy.shared exists (%s): %s", s.SID, err)
 	}
-	if rule := s.FirstFilesRule(); rule != nil {
+	if rule := s.FirstFilesRule(); rule != nil && rule.Selector != couchdb.SelectorReferencedBy {
 		if err := s.AddReferenceForSharingDir(inst, rule); err != nil {
 			inst.Logger().WithField("nspace", "sharing").
 				Warnf("Error on referenced_by for the sharing dir (%s): %s", s.SID, err)

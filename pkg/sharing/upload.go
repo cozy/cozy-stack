@@ -472,7 +472,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 	newdoc.SetID(target.DocID)
 	copySafeFieldsToFile(target.FileDoc, newdoc)
 
-	rule := s.findRuleForNewFile(newdoc)
+	rule := s.findRuleForNewFile(target.FileDoc)
 	if rule == nil {
 		return ErrSafety
 	}
@@ -543,7 +543,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	case LostConflict:
 		return s.uploadLostConflict(inst, target, newdoc, body)
 	case WonConflict:
-		if err := s.uploadWonConflict(inst, olddoc); err != nil {
+		if err = s.uploadWonConflict(inst, olddoc); err != nil {
 			return err
 		}
 	case NoConflict:
