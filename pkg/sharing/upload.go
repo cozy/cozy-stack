@@ -535,6 +535,8 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	newdoc.DocName = target.DocName
 	s.prepareFileWithAncestors(inst, newdoc, target.DirID)
 	newdoc.ResetFullpath()
+	newdoc.ByteSize = target.ByteSize
+	newdoc.MD5Sum = target.MD5Sum
 
 	chain := revsStructToChain(target.Revisions)
 	conflict := detectConflict(newdoc.DocRev, chain)
