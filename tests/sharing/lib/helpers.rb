@@ -32,7 +32,11 @@ module Helpers
       puts "spawn #{cmd} &> #{log_file_name}".green
       log = "#{@current_dir}/#{log_file_name}"
       pid = Process.spawn cmd, [:out, :err] => [log, File::WRONLY | File::CREAT, 0o644]
-      at_exit { Process.kill :SIGINT, pid }
+      if defined? Minitest
+        Minitest.after_run { Process.kill :SIGINT, pid }
+      else
+        at_exit { Process.kill :SIGINT, pid }
+      end
       pid
     end
 
