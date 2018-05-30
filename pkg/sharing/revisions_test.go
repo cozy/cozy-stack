@@ -215,7 +215,7 @@ func TestIndexerStashRevision(t *testing.T) {
 		},
 	}
 
-	stash := indexer.StashRevision()
+	stash := indexer.StashRevision(false)
 	assert.Equal(t, "9a8d25e7fc9834dc85a252ca8c11723d", stash)
 	assert.Equal(t, "3-ac12db6cd9bd8190f98b2bfed6522d1f", indexer.bulkRevs.Rev)
 	assert.Equal(t, 3, indexer.bulkRevs.Revisions.Start)
@@ -241,9 +241,45 @@ func TestIndexerStashRevision(t *testing.T) {
 			},
 		},
 	}
-	stash = indexer.StashRevision()
+	stash = indexer.StashRevision(false)
 	assert.Empty(t, stash)
 	assert.Nil(t, indexer.bulkRevs)
 	indexer.UnstashRevision(stash)
 	assert.Nil(t, indexer.bulkRevs)
+
+	indexer.bulkRevs = &bulkRevs{
+		Rev: "2-a61b005843648f5822cc44e1e586c29c",
+		Revisions: RevsStruct{
+			Start: 2,
+			IDs: []string{
+				"a61b005843648f5822cc44e1e586c29c",
+			},
+		},
+	}
+	stash = indexer.StashRevision(true)
+	assert.Empty(t, stash)
+	assert.Nil(t, indexer.bulkRevs)
+	indexer.UnstashRevision(stash)
+	assert.Nil(t, indexer.bulkRevs)
+}
+
+func TestIndexerCreateBogusPrevRev(t *testing.T) {
+	indexer := &sharingIndexer{
+		bulkRevs: &bulkRevs{
+			Rev: "3-bf26bb2d42b0abf6a715ccf949d8e5f4",
+			Revisions: RevsStruct{
+				Start: 3,
+				IDs: []string{
+					"bf26bb2d42b0abf6a715ccf949d8e5f4",
+				},
+			},
+		},
+	}
+	indexer.CreateBogusPrevRev()
+	assert.Equal(t, 3, indexer.bulkRevs.Revisions.Start)
+	gen := RevGeneration(indexer.bulkRevs.Rev)
+	assert.Equal(t, 3, gen)
+	assert.Len(t, indexer.bulkRevs.Revisions.IDs, 2)
+	rev := fmt.Sprintf("%d-%s", gen, indexer.bulkRevs.Revisions.IDs[0])
+	assert.Equal(t, indexer.bulkRevs.Rev, rev)
 }

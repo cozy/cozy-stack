@@ -559,7 +559,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 		return copyFileContent(inst, file, body)
 	}
 
-	stash := indexer.StashRevision()
+	stash := indexer.StashRevision(false)
 	tmpdoc := newdoc.Clone().(*vfs.FileDoc)
 	tmpdoc.DocName = olddoc.DocName
 	tmpdoc.DirID = olddoc.DirID

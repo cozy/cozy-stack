@@ -64,7 +64,7 @@ func WorkerTrack(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	inst.Logger().WithField("nspace", "share").Debugf("Track %#v", msg)
+	inst.Logger().WithField("nspace", "share").Debugf("Track %#v - %#v", msg, evt)
 	return sharing.UpdateShared(inst, msg, evt)
 }
 

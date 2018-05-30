@@ -38,7 +38,7 @@ type RevsTree struct {
 	// Branches is the list of revisions that have this revision for parent.
 	// The general case is to have only one branch, but we can have more with
 	// conflicts.
-	Branches []RevsTree `json:"branches"`
+	Branches []RevsTree `json:"branches,omitempty"`
 }
 
 // Clone duplicates the RevsTree
