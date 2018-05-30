@@ -7,14 +7,13 @@ class CozyFile
 
   def self.load_from_url(inst, path)
     opts = {
-      content_type: :json,
-      accept: :json,
+      accept: "application/vnd.api+json",
       authorization: "Bearer #{inst.token_for doctype}"
     }
     res = inst.client[path].get opts
     j = JSON.parse(res.body)["data"]
     id = j["id"]
-    rev = j["rev"]
+    rev = j.dig "meta", "rev"
     referenced_by = j.dig "relationships", "referenced_by", "data"
     j = j["attributes"]
     f = CozyFile.new(

@@ -62,6 +62,7 @@ describe "A folder" do
     assert_equal child1_recipient.dir_id, child2_recipient.couch_id
     assert_equal file.name, file_recipient.name
     assert_equal file.md5sum, file_recipient.md5sum
+    assert_equal file.couch_rev, file_recipient.couch_rev
 
     # Check the sync (create + update) recipient -> sharer
     child1_recipient.rename inst_recipient, Faker::Internet.slug
@@ -80,6 +81,7 @@ describe "A folder" do
     assert_equal child1.dir_id, child3.couch_id
     assert_equal file_recipient.name, file.name
     assert_equal file_recipient.md5sum, file.md5sum
+    assert_equal file_recipient.couch_rev, file.couch_rev
 
     # Check that the files are the same on disk
     da = File.join Helpers.current_dir, inst.domain, folder.name

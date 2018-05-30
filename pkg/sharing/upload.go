@@ -412,8 +412,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) error {
 	defer body.Close()
 	target, err := getStore().Get(inst.Domain, key)
-	inst.Logger().WithField("nspace", "upload").
-		Debugf("target = %#v\n", target)
+	inst.Logger().WithField("nspace", "upload").Debugf("HandleFileUpload %#v", target)
 	if err != nil {
 		return err
 	}
@@ -436,6 +435,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 
 // UploadNewFile is used to receive a new file.
 func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevisions, body io.ReadCloser) error {
+	inst.Logger().WithField("nspace", "upload").Debugf("UploadNewFile")
 	ref := SharedRef{
 		Infos: make(map[string]SharedInfo),
 	}
@@ -515,6 +515,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 // the file (which is not what we want), a conflict of name+dir_id, the higher
 // revision wins and it should be the good one in our case.
 func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
+	inst.Logger().WithField("nspace", "upload").Debugf("UploadExistingFile")
 	var ref SharedRef
 	err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
 	if err != nil {
@@ -555,7 +556,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	case NoConflict:
 		// Nothing to do
 	}
-	indexer.WillResolveConflict(target.DocRev, chain)
+	indexer.WillResolveConflict(newdoc.DocRev, chain)
 
 	// Easy case: only the content has changed, not its path
 	if newdoc.DocName == olddoc.DocName && newdoc.DirID == olddoc.DirID {
@@ -603,6 +604,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 // uploadLostConflict manages an upload where a file is in conflict, and the
 // uploaded file version goes to a new file.
 func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
+	inst.Logger().WithField("nspace", "upload").Debugf("uploadLostConflict")
 	rev := target.Rev()
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
@@ -630,6 +632,7 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 // uploadWonConflict manages an upload where a file is in conflict, and the
 // existing file is copied to a new file to let the upload suceed.
 func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) error {
+	inst.Logger().WithField("nspace", "upload").Debugf("uploadWonConflict")
 	rev := src.Rev()
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
