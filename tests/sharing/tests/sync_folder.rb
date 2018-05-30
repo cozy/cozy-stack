@@ -48,8 +48,8 @@ describe "A folder" do
     child1.rename inst, Faker::Internet.slug
     child2 = Folder.create inst, dir_id: folder.couch_id
     child1.move_to inst, child2.couch_id
+    file.overwrite inst, mime: 'text/plain'
     file.rename inst, "#{Faker::Internet.slug}.txt"
-    file.overwrite inst, {}
     sleep 7
 
     child1_recipient = Folder.find inst_recipient, child1_id_recipient

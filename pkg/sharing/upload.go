@@ -3,7 +3,6 @@ package sharing
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -64,7 +63,7 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 
 	if errm != nil {
 		s.retryWorker(inst, "share-upload", errors)
-		fmt.Printf("DEBUG errm=%s\n", errm)
+		inst.Logger().WithField("nspace", "upload").Infof("errm=%s\n", errm)
 	}
 	return errm
 }
@@ -183,6 +182,8 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 // uploadFile uploads one file to the given member. It first try to just send
 // the metadata, and if it is not enough, it also send the binary.
 func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string]interface{}, ruleIndex int) error {
+	inst.Logger().WithField("nspace", "upload").Debugf("going to upload %#v", file)
+
 	creds := s.FindCredentials(m)
 	if creds == nil {
 		return ErrInvalidSharing
@@ -316,6 +317,10 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	}
 	if _, ok := ref.Infos[s.SID]; !ok {
 		return nil, ErrSafety
+	}
+	if ref.Revisions.Find(target.DocRev) != nil {
+		// It's just the echo, there is nothing to do
+		return nil, nil
 	}
 	if !bytes.Equal(target.MD5Sum, current.MD5Sum) {
 		return s.createUploadKey(inst, target)

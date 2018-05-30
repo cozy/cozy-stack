@@ -138,7 +138,7 @@ func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
 		s.CreateBogusPrevRev()
 	}
 	stash := s.StashRevision(true)
-	err := s.UpdateFileDoc(nil, doc)
+	err := s.bulkForceUpdateDoc(doc)
 	s.UnstashRevision(stash)
 	return err
 }
@@ -148,6 +148,30 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 		return s.indexer.UpdateFileDoc(olddoc, doc)
 	}
 
+	if err := s.bulkForceUpdateDoc(doc); err != nil {
+		return err
+	}
+
+	if err := UpdateFileShared(s.db, s.shared, s.bulkRevs.Revisions); err != nil {
+		return err
+	}
+
+	// Ensure that fullpath is filled because it's used in realtime/@events
+	if _, err := doc.Path(s); err != nil {
+		return err
+	}
+	if olddoc != nil {
+		if _, err := olddoc.Path(s); err != nil {
+			return err
+		}
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
+	} else {
+		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, nil)
+	}
+	return nil
+}
+
+func (s *sharingIndexer) bulkForceUpdateDoc(doc *vfs.FileDoc) error {
 	docs := make([]map[string]interface{}, 1)
 	docs[0] = map[string]interface{}{
 		"type":       doc.Type,
@@ -173,27 +197,7 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 	doc.SetRev(s.bulkRevs.Rev)
 	docs[0]["_rev"] = s.bulkRevs.Rev
 	docs[0]["_revisions"] = s.bulkRevs.Revisions
-	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
-		return err
-	}
-
-	if err := UpdateFileShared(s.db, s.shared, s.bulkRevs.Revisions); err != nil {
-		return err
-	}
-
-	// Ensure that fullpath is filled because it's used in realtime/@events
-	if _, err := doc.Path(s); err != nil {
-		return err
-	}
-	if olddoc != nil {
-		if _, err := olddoc.Path(s); err != nil {
-			return err
-		}
-		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
-	} else {
-		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, nil)
-	}
-	return nil
+	return couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs)
 }
 
 func (s *sharingIndexer) DeleteFileDoc(doc *vfs.FileDoc) error {
