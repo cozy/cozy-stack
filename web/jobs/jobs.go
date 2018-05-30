@@ -123,7 +123,7 @@ func getQueue(c echo.Context) error {
 		return err
 	}
 
-	js, err := jobs.GetQueuedJobs(instance.Domain, workerType)
+	js, err := jobs.GetQueuedJobs(instance, workerType)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -145,7 +145,6 @@ func pushJob(c echo.Context) error {
 	}
 
 	jr := &jobs.JobRequest{
-		Domain:     instance.Domain,
 		WorkerType: c.Param("worker-type"),
 		Options:    req.Options,
 		Message:    jobs.Message(req.Arguments),
@@ -158,7 +157,7 @@ func pushJob(c echo.Context) error {
 		return err
 	}
 
-	job, err := jobs.System().PushJob(jr)
+	job, err := jobs.System().PushJob(instance, jr)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -180,15 +179,14 @@ func newTrigger(c echo.Context) error {
 		}
 	}
 
-	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
+	t, err := jobs.NewTrigger(instance, jobs.TriggerInfos{
 		Type:       req.Type,
 		WorkerType: req.WorkerType,
 		Domain:     instance.Domain,
 		Arguments:  req.Arguments,
 		Debounce:   req.Debounce,
 		Options:    req.Options,
-		Message:    jobs.Message(req.WorkerArguments),
-	})
+	}, req.WorkerArguments)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -209,7 +207,7 @@ func newTrigger(c echo.Context) error {
 func getTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	sched := jobs.System()
-	t, err := sched.GetTrigger(instance.Domain, c.Param("trigger-id"))
+	t, err := sched.GetTrigger(instance, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -227,7 +225,7 @@ func getTrigger(c echo.Context) error {
 func getTriggerState(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	sched := jobs.System()
-	t, err := sched.GetTrigger(instance.Domain, c.Param("trigger-id"))
+	t, err := sched.GetTrigger(instance, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -255,7 +253,7 @@ func getTriggerJobs(c echo.Context) error {
 	}
 
 	sched := jobs.System()
-	t, err := sched.GetTrigger(instance.Domain, c.Param("trigger-id"))
+	t, err := sched.GetTrigger(instance, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -278,7 +276,7 @@ func getTriggerJobs(c echo.Context) error {
 
 func launchTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	t, err := jobs.System().GetTrigger(instance.Domain, c.Param("trigger-id"))
+	t, err := jobs.System().GetTrigger(instance, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -287,7 +285,7 @@ func launchTrigger(c echo.Context) error {
 	}
 	req := t.Infos().JobRequest()
 	req.Manual = true
-	j, err := jobs.System().PushJob(req)
+	j, err := jobs.System().PushJob(instance, req)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -297,14 +295,14 @@ func launchTrigger(c echo.Context) error {
 func deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	sched := jobs.System()
-	t, err := sched.GetTrigger(instance.Domain, c.Param("trigger-id"))
+	t, err := sched.GetTrigger(instance, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
 	if err := permissions.Allow(c, permissions.DELETE, t); err != nil {
 		return err
 	}
-	if err := sched.DeleteTrigger(instance.Domain, c.Param("trigger-id")); err != nil {
+	if err := sched.DeleteTrigger(instance, c.Param("trigger-id")); err != nil {
 		return wrapJobsError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -325,7 +323,7 @@ func getAllTriggers(c echo.Context) error {
 	}
 
 	sched := jobs.System()
-	ts, err := sched.GetAllTriggers(instance.Domain)
+	ts, err := sched.GetAllTriggers(instance)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -348,7 +346,7 @@ func getAllTriggers(c echo.Context) error {
 
 func getJob(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	job, err := jobs.Get(instance.Domain, c.Param("job-id"))
+	job, err := jobs.Get(instance, c.Param("job-id"))
 	if err != nil {
 		return err
 	}

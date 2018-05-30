@@ -13,7 +13,6 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
@@ -67,13 +66,7 @@ var cleanInstanceCmd = &cobra.Command{
 	Use:   "clean [domain]",
 	Short: "Clean badly removed instances",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			return cmd.Usage()
-		}
-
-		domain := args[0]
-		i := couchdb.SimpleDatabasePrefix(domain)
-		return couchdb.DeleteAllDBs(i)
+		return errors.New("This command is deprecated")
 	},
 }
 

@@ -14,6 +14,7 @@ import (
 type (
 	// Trigger interface is used to represent a trigger.
 	Trigger interface {
+		couchdb.Database
 		permissions.Matcher
 		Type() string
 		Infos() *TriggerInfos
@@ -32,11 +33,11 @@ type (
 		ShutdownScheduler(ctx context.Context) error
 		PollScheduler(now int64) error
 		AddTrigger(trigger Trigger) error
-		GetTrigger(domain, id string) (Trigger, error)
-		DeleteTrigger(domain, id string) error
-		GetAllTriggers(domain string) ([]Trigger, error)
+		GetTrigger(db couchdb.Database, id string) (Trigger, error)
+		DeleteTrigger(db couchdb.Database, id string) error
+		GetAllTriggers(db couchdb.Database) ([]Trigger, error)
 		CleanRedis() error
-		RebuildRedis(domain string) error
+		RebuildRedis(db couchdb.Database) error
 	}
 
 	// TriggerInfos is a struct containing all the options of a trigger.
@@ -44,6 +45,7 @@ type (
 		TID          string        `json:"_id,omitempty"`
 		TRev         string        `json:"_rev,omitempty"`
 		Domain       string        `json:"domain"`
+		Prefix       string        `json:"prefix"`
 		Type         string        `json:"type"`
 		WorkerType   string        `json:"worker"`
 		Arguments    string        `json:"arguments"`
@@ -69,9 +71,31 @@ type (
 	}
 )
 
+func (t *TriggerInfos) DBPrefix() string {
+	if t.Prefix != "" {
+		return t.Prefix
+	}
+	return t.Domain
+}
+
+func (t *TriggerInfos) DomainName() string {
+	return t.Domain
+}
+
 // NewTrigger creates the trigger associates with the specified trigger
 // options.
-func NewTrigger(infos *TriggerInfos) (Trigger, error) {
+func NewTrigger(db couchdb.Database, infos TriggerInfos, data interface{}) (Trigger, error) {
+	msg, err := NewMessage(data)
+	if err != nil {
+		return nil, err
+	}
+	infos.Message = msg
+	infos.Prefix = db.DBPrefix()
+	infos.Domain = db.DomainName()
+	return fromTriggerInfos(&infos)
+}
+
+func fromTriggerInfos(infos *TriggerInfos) (Trigger, error) {
 	switch infos.Type {
 	case "@at":
 		return NewAtTrigger(infos)
@@ -115,7 +139,6 @@ func (t *TriggerInfos) Clone() couchdb.Doc {
 // JobRequest returns a job request associated with the scheduler informations.
 func (t *TriggerInfos) JobRequest() *JobRequest {
 	return &JobRequest{
-		Domain:     t.Domain,
 		WorkerType: t.WorkerType,
 		TriggerID:  t.ID(),
 		Message:    t.Message,
@@ -152,22 +175,20 @@ func (t *TriggerInfos) Match(key, value string) bool {
 
 // GetJobs returns the jobs launched by the given trigger.
 func GetJobs(t Trigger, limit int) ([]*Job, error) {
-	triggerInfos := t.Infos()
-	db := couchdb.SimpleDatabasePrefix(triggerInfos.Domain)
 	if limit <= 0 || limit > 50 {
 		limit = 50
 	}
 	var jobs []*Job
 	req := &couchdb.FindRequest{
 		UseIndex: "by-trigger-id",
-		Selector: mango.Equal("trigger_id", triggerInfos.ID()),
+		Selector: mango.Equal("trigger_id", t.Infos().ID()),
 		Sort: mango.SortBy{
 			{Field: "trigger_id", Direction: mango.Desc},
 			{Field: "queued_at", Direction: mango.Desc},
 		},
 		Limit: limit,
 	}
-	err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
+	err := couchdb.FindDocs(t, consts.Jobs, req, &jobs)
 	if err != nil {
 		return nil, err
 	}

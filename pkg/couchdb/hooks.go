@@ -4,7 +4,7 @@ import "github.com/cozy/cozy-stack/pkg/realtime"
 
 // Hook is a function called before a change is made into
 // A hook can block the event by returning an error
-type listener func(domain string, doc Doc, old Doc) error
+type listener func(db Database, doc Doc, old Doc) error
 
 type key struct {
 	DocType string
@@ -21,10 +21,10 @@ const (
 )
 
 // Run runs all hooks for the given event.
-func runHooks(domain, event string, doc Doc, old Doc) error {
+func runHooks(db Database, event string, doc Doc, old Doc) error {
 	if hs, ok := hooks[key{doc.DocType(), event}]; ok {
 		for _, h := range hs {
-			err := h(domain, doc, old)
+			err := h(db, doc, old)
 			if err != nil {
 				return err
 			}

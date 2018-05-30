@@ -112,7 +112,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		endState = Ready
 	}
 
-	log := logger.WithDomain(db.Prefix()).WithField("nspace", "apps")
+	log := logger.WithDomain(db.DomainName()).WithField("nspace", "apps")
 
 	var manFilename string
 	switch man.AppType() {
@@ -200,7 +200,7 @@ func (i *Installer) Slug() string {
 
 // Domain return the domain of instance associated with the installer.
 func (i *Installer) Domain() string {
-	return i.db.Prefix()
+	return i.db.DomainName()
 }
 
 // Run will install, update or delete the application linked to the installer,
@@ -230,7 +230,8 @@ func (i *Installer) Run() {
 		realtime.GetHub().Publish(&realtime.Event{
 			Verb:   realtime.EventUpdate,
 			Doc:    man.Clone(),
-			Domain: i.db.Prefix(),
+			Domain: i.db.DomainName(),
+			Prefix: i.db.DBPrefix(),
 		})
 	}
 	i.manc <- man
@@ -258,7 +259,7 @@ func (i *Installer) RunSync() (Manifest, error) {
 // upgrading.
 func (i *Installer) install() error {
 	i.log.Infof("Start install: %s %s", i.slug, i.src.String())
-	args := []string{i.db.Prefix(), i.slug}
+	args := []string{i.db.DomainName(), i.slug}
 	return hooks.Execute("install-app", args, func() error {
 		if err := i.ReadManifest(Installing); err != nil {
 			return err
@@ -333,7 +334,7 @@ func (i *Installer) delete() error {
 	if err := i.checkState(i.man); err != nil {
 		return err
 	}
-	args := []string{i.db.Prefix(), i.slug}
+	args := []string{i.db.DomainName(), i.slug}
 	return hooks.Execute("uninstall-app", args, func() error {
 		return i.man.Delete(i.db)
 	})
@@ -381,7 +382,8 @@ func (i *Installer) ReadManifest(state State) error {
 	realtime.GetHub().Publish(&realtime.Event{
 		Verb:   realtime.EventUpdate,
 		Doc:    i.man.Clone(),
-		Domain: i.db.Prefix(),
+		Domain: i.db.DomainName(),
+		Prefix: i.db.DBPrefix(),
 	})
 
 	return nil

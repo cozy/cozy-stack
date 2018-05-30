@@ -84,6 +84,7 @@ type Instance struct {
 	DocID        string   `json:"_id,omitempty"`        // couchdb _id
 	DocRev       string   `json:"_rev,omitempty"`       // couchdb _rev
 	Domain       string   `json:"domain"`               // The main DNS domain, like example.cozycloud.cc
+	Prefix       string   `json:"prefix,omitempty"`     // Possible database prefix
 	Locale       string   `json:"locale"`               // The locale used on the server
 	UUID         string   `json:"uuid,omitempty"`       // UUID associated with the instance
 	ContextName  string   `json:"context,omitempty"`    // The context attached to the instance
@@ -191,9 +192,17 @@ func (i *Instance) Clone() couchdb.Doc {
 	return &cloned
 }
 
-// Prefix returns the prefix to use in database naming for the
+// DBPrefix returns the prefix to use in database naming for the
 // current instance
-func (i *Instance) Prefix() string {
+func (i *Instance) DBPrefix() string {
+	if i.Prefix != "" {
+		return i.Prefix
+	}
+	return i.Domain
+}
+
+// DomainName returns the main domain name of the instance.
+func (i *Instance) DomainName() string {
 	return i.Domain
 }
 
@@ -717,8 +726,8 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 		return nil, err
 	}
 	sched := jobs.System()
-	for _, trigger := range Triggers(i.Domain) {
-		t, err := jobs.NewTrigger(&trigger)
+	for _, trigger := range Triggers(i) {
+		t, err := jobs.NewTrigger(i, trigger, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -1076,23 +1085,22 @@ func DestroyWithoutHooks(domain string) error {
 	if err != nil {
 		return err
 	}
+	i, err := getFromCouch(domain)
+	if err != nil {
+		return err
+	}
 	sched := jobs.System()
-	triggers, err := sched.GetAllTriggers(domain)
+	triggers, err := sched.GetAllTriggers(i)
 	if err == nil {
 		for _, t := range triggers {
-			if err = sched.DeleteTrigger(domain, t.Infos().TID); err != nil {
+			if err = sched.DeleteTrigger(i, t.Infos().TID); err != nil {
 				logger.WithDomain(domain).Error(
 					"Failed to remove trigger: ", err)
 			}
 		}
 	}
-	i, err := getFromCouch(domain)
-	if err != nil {
-		return err
-	}
 	defer getCache().Revoke(domain)
-	db := couchdb.SimpleDatabasePrefix(domain)
-	if err = couchdb.DeleteAllDBs(db); err != nil {
+	if err = couchdb.DeleteAllDBs(i); err != nil {
 		return err
 	}
 	if err = i.VFS().Delete(); err != nil {
@@ -1181,8 +1189,7 @@ func (i *Instance) SendMail(m *Mail) error {
 	if err != nil {
 		return err
 	}
-	_, err = jobs.System().PushJob(&jobs.JobRequest{
-		Domain:     i.Domain,
+	_, err = jobs.System().PushJob(i, &jobs.JobRequest{
 		WorkerType: "sendmail",
 		Message:    msg,
 	})

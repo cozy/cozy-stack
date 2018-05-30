@@ -69,8 +69,7 @@ func createExport(c echo.Context) error {
 		return err
 	}
 
-	_, err = jobs.System().PushJob(&jobs.JobRequest{
-		Domain:     inst.Domain,
+	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
 		WorkerType: "export",
 		Message:    msg,
 	})

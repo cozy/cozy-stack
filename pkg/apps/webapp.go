@@ -285,8 +285,6 @@ func (m *WebappManifest) Delete(db couchdb.Database) error {
 }
 
 func diffServices(db couchdb.Database, slug string, oldServices, newServices Services) error {
-	domain := db.Prefix()
-
 	if oldServices == nil {
 		oldServices = make(Services)
 	}
@@ -328,7 +326,7 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 
 	sched := jobs.System()
 	for _, service := range deleted {
-		if err := sched.DeleteTrigger(domain, service.TriggerID); err != nil {
+		if err := sched.DeleteTrigger(db, service.TriggerID); err != nil {
 			return err
 		}
 	}
@@ -343,21 +341,16 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 		if len(triggerOpts) > 1 {
 			triggerArgs = strings.TrimSpace(triggerOpts[1])
 		}
-		msg, err := jobs.NewMessage(map[string]string{
+		msg := map[string]string{
 			"slug": slug,
 			"name": service.name,
-		})
-		if err != nil {
-			return err
 		}
-		trigger, err := jobs.NewTrigger(&jobs.TriggerInfos{
+		trigger, err := jobs.NewTrigger(db, jobs.TriggerInfos{
 			Type:       triggerType,
 			WorkerType: "service",
 			Debounce:   service.Debounce,
-			Domain:     domain,
 			Arguments:  triggerArgs,
-			Message:    msg,
-		})
+		}, msg)
 		if err != nil {
 			return err
 		}

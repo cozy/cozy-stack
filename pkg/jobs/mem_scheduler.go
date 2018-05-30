@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,6 +38,22 @@ func newMemScheduler() *memScheduler {
 	}
 }
 
+type inst struct {
+	Domain string `json:"domain"`
+	Prefix string `json:"prefix"`
+}
+
+func (i inst) DBPrefix() string {
+	if i.Prefix != "" {
+		return i.Prefix
+	}
+	return i.Domain
+}
+
+func (i inst) DomainName() string {
+	return i.Domain
+}
+
 // StartScheduler will start the scheduler by actually loading all triggers
 // from the scheduler's storage and associate for each of them a go routine in
 // which they wait for the trigger send job requests.
@@ -46,13 +63,10 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 
 	var ts []*TriggerInfos
 	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(_ string, data json.RawMessage) error {
-		var d struct {
-			Domain string `json:"domain"`
-		}
-		if err := json.Unmarshal(data, &d); err != nil {
+		var db inst
+		if err := json.Unmarshal(data, &db); err != nil {
 			return err
 		}
-		db := couchdb.SimpleDatabasePrefix(d.Domain)
 		err := couchdb.ForeachDocs(db, consts.Triggers, func(_ string, data json.RawMessage) error {
 			var t *TriggerInfos
 			if err := json.Unmarshal(data, &t); err != nil {
@@ -73,13 +87,11 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	s.broker = b
 
 	for _, infos := range ts {
-		t, err := NewTrigger(infos)
+		t, err := fromTriggerInfos(infos)
 		if err != nil {
-			s.log.Errorf("scheduler: Could not load the trigger %s(%s) at startup: %s",
-				infos.Type, infos.TID, err.Error())
-			continue
+			return err
 		}
-		s.ts[infos.TID] = t
+		s.ts[t.DBPrefix()+"/"+infos.TID] = t
 		go s.schedule(t)
 	}
 
@@ -103,21 +115,20 @@ func (s *memScheduler) ShutdownScheduler(ctx context.Context) error {
 func (s *memScheduler) AddTrigger(t Trigger) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	db := couchdb.SimpleDatabasePrefix(t.Infos().Domain)
-	if err := couchdb.CreateDoc(db, t.Infos()); err != nil {
+	if err := couchdb.CreateDoc(t, t.Infos()); err != nil {
 		return err
 	}
-	s.ts[t.Infos().TID] = t
+	s.ts[t.DBPrefix()+"/"+t.Infos().TID] = t
 	go s.schedule(t)
 	return nil
 }
 
 // GetTrigger returns the trigger with the specified ID.
-func (s *memScheduler) GetTrigger(domain, id string) (Trigger, error) {
+func (s *memScheduler) GetTrigger(db couchdb.Database, id string) (Trigger, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	t, ok := s.ts[id]
-	if !ok || t.Infos().Domain != domain {
+	t, ok := s.ts[db.DBPrefix()+"/"+id]
+	if !ok {
 		return nil, ErrNotFoundTrigger
 	}
 	return t, nil
@@ -125,26 +136,26 @@ func (s *memScheduler) GetTrigger(domain, id string) (Trigger, error) {
 
 // DeleteTrigger removes the trigger with the specified ID. The trigger is unscheduled
 // and remove from the storage.
-func (s *memScheduler) DeleteTrigger(domain, id string) error {
+func (s *memScheduler) DeleteTrigger(db couchdb.Database, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	t, ok := s.ts[id]
-	if !ok || t.Infos().Domain != domain {
+	t, ok := s.ts[db.DBPrefix()+"/"+id]
+	if !ok {
 		return ErrNotFoundTrigger
 	}
-	delete(s.ts, id)
+	delete(s.ts, db.DBPrefix()+"/"+id)
 	t.Unschedule()
-	db := couchdb.SimpleDatabasePrefix(t.Infos().Domain)
 	return couchdb.DeleteDoc(db, t.Infos())
 }
 
 // GetAllTriggers returns all the running in-memory triggers.
-func (s *memScheduler) GetAllTriggers(domain string) ([]Trigger, error) {
+func (s *memScheduler) GetAllTriggers(db couchdb.Database) ([]Trigger, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	prefix := db.DBPrefix() + "/"
 	v := make([]Trigger, 0)
-	for _, t := range s.ts {
-		if t.Infos().Domain == domain {
+	for n, t := range s.ts {
+		if strings.HasPrefix(n, prefix) {
 			v = append(v, t)
 		}
 	}
@@ -187,10 +198,10 @@ func (s *memScheduler) schedule(t Trigger) {
 }
 
 func (s *memScheduler) pushJob(t Trigger, req *JobRequest) {
-	log := s.log.WithField("domain", req.Domain)
+	log := s.log.WithField("domain", t.DomainName())
 	log.Infof("trigger %s(%s): Pushing new job %s",
 		t.Type(), t.Infos().TID, req.WorkerType)
-	if _, err := s.broker.PushJob(req); err != nil {
+	if _, err := s.broker.PushJob(t, req); err != nil {
 		log.Errorf("trigger %s(%s): Could not schedule a new job: %s",
 			t.Type(), t.Infos().TID, err.Error())
 	}
@@ -208,7 +219,7 @@ func (s *memScheduler) CleanRedis() error {
 
 // RebuildRedis does nothing for the in memory scheduler. It's just
 // here to implement the Scheduler interface.
-func (s *memScheduler) RebuildRedis(domain string) error {
+func (s *memScheduler) RebuildRedis(db couchdb.Database) error {
 	return errors.New("memScheduler does not use redis")
 }
 

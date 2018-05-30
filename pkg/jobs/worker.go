@@ -279,7 +279,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 		// through the global job-system.
 		if job.TriggerID != "" && globalJobSystem != nil {
 			if _, ok := errRun.(ErrBadTrigger); ok {
-				globalJobSystem.DeleteTrigger(job.Domain, job.TriggerID)
+				globalJobSystem.DeleteTrigger(job, job.TriggerID)
 			}
 		}
 	}

@@ -1,15 +1,17 @@
 package instance
 
 import (
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 )
 
 // Triggers returns the list of the triggers to add when an instance is created
-func Triggers(domain string) []jobs.TriggerInfos {
+func Triggers(db couchdb.Database) []jobs.TriggerInfos {
 	// Create/update/remove thumbnails when an image is created/updated/removed
 	return []jobs.TriggerInfos{
 		{
-			Domain:     domain,
+			Domain:     db.DomainName(),
+			Prefix:     db.DBPrefix(),
 			Type:       "@event",
 			WorkerType: "thumbnail",
 			Arguments:  "io.cozy.files:CREATED,UPDATED,DELETED:image:class",

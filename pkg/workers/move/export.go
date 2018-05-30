@@ -440,7 +440,8 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		Verb:   realtime.EventCreate,
 		Doc:    exportDoc.Clone(),
 		OldDoc: nil,
-		Domain: i.Domain,
+		Domain: i.DomainName(),
+		Prefix: i.DBPrefix(),
 	})
 	defer func() {
 		newExportDoc := exportDoc.Clone().(*ExportDoc)
@@ -459,7 +460,8 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 			Verb:   realtime.EventUpdate,
 			Doc:    newExportDoc.Clone(),
 			OldDoc: exportDoc.Clone(),
-			Domain: i.Domain,
+			Domain: i.DomainName(),
+			Prefix: i.DBPrefix(),
 		})
 	}()
 

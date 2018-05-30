@@ -276,7 +276,7 @@ func (s *Sharing) RemoveTriggers(inst *instance.Instance) error {
 func removeSharingTrigger(inst *instance.Instance, triggerID string) error {
 	if triggerID != "" {
 		sched := jobs.System()
-		if err := sched.DeleteTrigger(inst.Domain, triggerID); err != nil {
+		if err := sched.DeleteTrigger(inst, triggerID); err != nil {
 			return err
 		}
 	}

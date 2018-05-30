@@ -10,8 +10,8 @@ import (
 // CronTrigger implements the @cron trigger type. It schedules recurring jobs with
 // the weird but very used Cron syntax.
 type CronTrigger struct {
+	*TriggerInfos
 	sched cron.Schedule
-	infos *TriggerInfos
 	done  chan struct{}
 }
 
@@ -22,9 +22,9 @@ func NewCronTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 		return nil, ErrMalformedTrigger
 	}
 	return &CronTrigger{
-		sched: schedule,
-		infos: infos,
-		done:  make(chan struct{}),
+		TriggerInfos: infos,
+		sched:        schedule,
+		done:         make(chan struct{}),
 	}, nil
 }
 
@@ -36,15 +36,15 @@ func NewEveryTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 		return nil, ErrMalformedTrigger
 	}
 	return &CronTrigger{
-		sched: schedule,
-		infos: infos,
-		done:  make(chan struct{}),
+		TriggerInfos: infos,
+		sched:        schedule,
+		done:         make(chan struct{}),
 	}, nil
 }
 
 // Type implements the Type method of the Trigger interface.
 func (c *CronTrigger) Type() string {
-	return c.infos.Type
+	return c.TriggerInfos.Type
 }
 
 // DocType implements the permissions.Matcher interface
@@ -54,14 +54,14 @@ func (c *CronTrigger) DocType() string {
 
 // ID implements the permissions.Matcher interface
 func (c *CronTrigger) ID() string {
-	return c.infos.TID
+	return c.TriggerInfos.TID
 }
 
 // Match implements the permissions.Matcher interface
 func (c *CronTrigger) Match(key, value string) bool {
 	switch key {
 	case WorkerType:
-		return c.infos.WorkerType == value
+		return c.TriggerInfos.WorkerType == value
 	}
 	return false
 }
@@ -80,7 +80,7 @@ func (c *CronTrigger) Schedule() <-chan *JobRequest {
 			next = c.NextExecution(next)
 			select {
 			case <-time.After(-time.Since(next)):
-				ch <- c.infos.JobRequest()
+				ch <- c.TriggerInfos.JobRequest()
 			case <-c.done:
 				close(ch)
 				return
@@ -97,7 +97,7 @@ func (c *CronTrigger) Unschedule() {
 
 // Infos implements the Infos method of the Trigger interface.
 func (c *CronTrigger) Infos() *TriggerInfos {
-	return c.infos
+	return c.TriggerInfos
 }
 
 var _ Trigger = &CronTrigger{}

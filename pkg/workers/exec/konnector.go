@@ -328,7 +328,8 @@ func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instan
 	}
 
 	realtime.GetHub().Publish(&realtime.Event{
-		Domain: i.Domain,
+		Domain: i.DomainName(),
+		Prefix: i.DBPrefix(),
 		Verb:   realtime.EventCreate,
 		Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
 			"type":    msg.Type,

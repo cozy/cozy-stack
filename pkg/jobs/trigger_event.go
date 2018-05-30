@@ -14,8 +14,8 @@ import (
 
 // EventTrigger implements Trigger for realtime triggered events
 type EventTrigger struct {
+	*TriggerInfos
 	unscheduled chan struct{}
-	infos       *TriggerInfos
 	mask        []permissions.Rule
 }
 
@@ -32,15 +32,15 @@ func NewEventTrigger(infos *TriggerInfos) (*EventTrigger, error) {
 		rules[i] = rule
 	}
 	return &EventTrigger{
-		unscheduled: make(chan struct{}),
-		infos:       infos,
-		mask:        rules,
+		TriggerInfos: infos,
+		unscheduled:  make(chan struct{}),
+		mask:         rules,
 	}, nil
 }
 
 // Type implements the Type method of the Trigger interface.
 func (t *EventTrigger) Type() string {
-	return t.infos.Type
+	return t.TriggerInfos.Type
 }
 
 // DocType implements the permissions.Matcher interface
@@ -50,14 +50,14 @@ func (t *EventTrigger) DocType() string {
 
 // ID implements the permissions.Matcher interface
 func (t *EventTrigger) ID() string {
-	return t.infos.TID
+	return t.TriggerInfos.TID
 }
 
 // Match implements the permissions.Matcher interface
 func (t *EventTrigger) Match(key, value string) bool {
 	switch key {
 	case WorkerType:
-		return t.infos.WorkerType == value
+		return t.TriggerInfos.WorkerType == value
 	}
 	return false
 }
@@ -66,7 +66,7 @@ func (t *EventTrigger) Match(key, value string) bool {
 func (t *EventTrigger) Schedule() <-chan *JobRequest {
 	ch := make(chan *JobRequest)
 	go func() {
-		sub := realtime.GetHub().Subscriber(t.infos.Domain)
+		sub := realtime.GetHub().Subscriber(t.TriggerInfos.Domain)
 		for _, m := range t.mask {
 			sub.Subscribe(m.Type)
 		}
@@ -104,7 +104,7 @@ func (t *EventTrigger) Unschedule() {
 
 // Infos implements the Infos method of the Trigger interface.
 func (t *EventTrigger) Infos() *TriggerInfos {
-	return t.infos
+	return t.TriggerInfos
 }
 
 func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
@@ -128,8 +128,7 @@ func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
 
 			for _, value := range rule.Values {
 				var dir vfs.DirDoc
-				db := couchdb.SimpleDatabasePrefix(e.Domain)
-				if err := couchdb.GetDoc(db, consts.Files, value, &dir); err != nil {
+				if err := couchdb.GetDoc(e, consts.Files, value, &dir); err != nil {
 					logger.WithNamespace("event-trigger").Error(err)
 					return false
 				}

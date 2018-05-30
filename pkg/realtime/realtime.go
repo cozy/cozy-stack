@@ -24,9 +24,21 @@ type Doc interface {
 // Event is the basic message structure manipulated by the realtime package
 type Event struct {
 	Domain string `json:"domain"`
+	Prefix string `json:"prefix,omitempty"`
 	Verb   string `json:"verb"`
 	Doc    Doc    `json:"doc"`
 	OldDoc Doc    `json:"old,omitempty"`
+}
+
+func (e *Event) DBPrefix() string {
+	if e.Prefix != "" {
+		return e.Prefix
+	}
+	return e.Domain
+}
+
+func (e *Event) DomainName() string {
+	return e.Domain
 }
 
 // The following API is inspired by https://github.com/gocontrib/pubsub
