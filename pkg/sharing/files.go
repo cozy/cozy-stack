@@ -496,6 +496,7 @@ func resolveConflictSamePath(inst *instance.Instance, id, pth string) (string, e
 	}
 	old := f.Clone().(*vfs.FileDoc)
 	f.DocName = name
+	f.ResetFullpath()
 	return "", fs.UpdateFileDoc(old, f)
 }
 
@@ -794,6 +795,7 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 		return err
 	}
 	file.DirID = parent.DocID
+	file.ResetFullpath()
 	return inst.VFS().UpdateFileDoc(olddoc, file)
 }
 

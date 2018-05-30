@@ -586,6 +586,7 @@ func (sfs *swiftVFS) fsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
 				olddoc := entry.FileDoc
 				newdoc := entry.FileDoc.Clone().(*vfs.FileDoc)
 				newdoc.DirID = orphanDir.DirID
+				newdoc.ResetFullpath()
 				err = sfs.c.ObjectMove(
 					sfs.container, olddoc.DirID+"/"+olddoc.DocName,
 					sfs.container, newdoc.DirID+"/"+newdoc.DocName,

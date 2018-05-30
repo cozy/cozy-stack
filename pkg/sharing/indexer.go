@@ -155,15 +155,13 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 	}
 
 	// Ensure that fullpath is filled because it's used in realtime/@events
-	if olddoc != nil {
-		if _, err := olddoc.Path(s); err != nil {
-			return err
-		}
-	}
 	if _, err := doc.Path(s); err != nil {
 		return err
 	}
 	if olddoc != nil {
+		if _, err := olddoc.Path(s); err != nil {
+			return err
+		}
 		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, olddoc)
 	} else {
 		couchdb.RTEvent(s.db, realtime.EventUpdate, doc, nil)

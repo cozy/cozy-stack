@@ -372,6 +372,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 	if err := s.prepareFileWithAncestors(inst, newdoc, target.DirID); err != nil {
 		return err
 	}
+	newdoc.ResetFullpath()
 	copySafeFieldsToFile(target.FileDoc, newdoc)
 	infos := ref.Infos[s.SID]
 	rule := &s.Rules[infos.Rule]
@@ -531,7 +532,9 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	rule := &s.Rules[infos.Rule]
 	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, olddoc, rule)
 	copySafeFieldsToFile(target.FileDoc, newdoc)
+	newdoc.DocName = target.DocName
 	s.prepareFileWithAncestors(inst, newdoc, target.DirID)
+	newdoc.ResetFullpath()
 
 	chain := revsStructToChain(target.Revisions)
 	conflict := detectConflict(newdoc.DocRev, chain)
@@ -560,6 +563,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	tmpdoc := newdoc.Clone().(*vfs.FileDoc)
 	tmpdoc.DocName = olddoc.DocName
 	tmpdoc.DirID = olddoc.DirID
+	tmpdoc.ResetFullpath()
 	file, err := fs.CreateFile(tmpdoc, olddoc)
 	if err != nil {
 		return err
@@ -608,6 +612,7 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 	}
 	newdoc.DocName = conflictName(newdoc.DocName)
 	newdoc.DocRev = ""
+	newdoc.ResetFullpath()
 	file, err := fs.CreateFile(newdoc, nil)
 	if err != nil {
 		return err
@@ -633,6 +638,7 @@ func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) e
 		return err
 	}
 	dst.DocName = conflictName(dst.DocName)
+	dst.ResetFullpath()
 	content, err := fs.OpenFile(src)
 	if err != nil {
 		return err

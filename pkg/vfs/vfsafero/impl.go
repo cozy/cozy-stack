@@ -527,6 +527,7 @@ func (afs *aferoVFS) fsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
 				}
 				newdoc := entry.FileDoc.Clone().(*vfs.FileDoc)
 				newdoc.DirID = orphanDir.ID()
+				newdoc.ResetFullpath()
 				err = afs.Indexer.CreateFileDoc(newdoc)
 				if err != nil {
 					entry.PruneError = err
