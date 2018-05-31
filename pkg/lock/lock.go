@@ -1,14 +1,17 @@
 package lock
 
-import "github.com/cozy/cozy-stack/pkg/config"
+import (
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+)
 
 // ReadWrite returns the read/write lock for the given name.
 // By convention, the name should be prefixed by the instance domain on which
 // it applies, then a slash and the package name (ie alice.example.net/vfs).
-func ReadWrite(name string) ErrorRWLocker {
+func ReadWrite(db couchdb.Database, name string) ErrorRWLocker {
 	cli := config.GetConfig().Lock.Client()
 	if cli != nil {
-		return getRedisReadWriteLock(cli, name)
+		return getRedisReadWriteLock(cli, db.DBPrefix()+"/"+name)
 	}
 	return getMemReadWriteLock(name)
 }

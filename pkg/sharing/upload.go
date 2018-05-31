@@ -26,7 +26,7 @@ type UploadMsg struct {
 
 // Upload starts uploading files for this sharing
 func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
-	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID + "/upload")
+	mu := lock.ReadWrite(inst, "sharings/"+s.SID+"/upload")
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -71,7 +71,7 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 
 // InitialUpload uploads files to just a member, for the first time
 func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
-	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID + "/upload")
+	mu := lock.ReadWrite(inst, "sharings/"+s.SID+"/upload")
 	mu.Lock()
 	defer mu.Unlock()
 

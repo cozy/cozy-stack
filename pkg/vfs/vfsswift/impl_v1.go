@@ -3,7 +3,6 @@ package vfsswift
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -32,6 +31,7 @@ type swiftVFS struct {
 	vfs.DiskThresholder
 	c         *swift.Connection
 	domain    string
+	prefix    string
 	container string
 	version   string
 	mu        lock.ErrorRWLocker
@@ -40,24 +40,26 @@ type swiftVFS struct {
 
 // New returns a vfs.VFS instance associated with the specified indexer and the
 // swift storage url.
-func New(domain string, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
-	if domain == "" {
-		return nil, fmt.Errorf("vfsswift: specified domain is empty")
-	}
+func New(db couchdb.Database, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
 	return &swiftVFS{
 		Indexer:         index,
 		DiskThresholder: disk,
 
 		c:         config.GetSwiftConnection(),
-		domain:    domain,
-		container: swiftV1ContainerPrefix + domain,
-		version:   swiftV1ContainerPrefix + domain + versionSuffix,
+		domain:    db.DomainName(),
+		prefix:    db.DBPrefix(),
+		container: swiftV1ContainerPrefix + db.DBPrefix(),
+		version:   swiftV1ContainerPrefix + db.DBPrefix() + versionSuffix,
 		mu:        mu,
-		log:       logger.WithDomain(domain).WithField("nspace", "vfsswift"),
+		log:       logger.WithDomain(db.DomainName()).WithField("nspace", "vfsswift"),
 	}, nil
 }
 
-func (sfs *swiftVFS) Domain() string {
+func (sfs *swiftVFS) DBPrefix() string {
+	return sfs.prefix
+}
+
+func (sfs *swiftVFS) DomainName() string {
 	return sfs.domain
 }
 

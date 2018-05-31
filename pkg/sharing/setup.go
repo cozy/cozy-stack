@@ -67,7 +67,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		}
 	}()
 
-	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID)
+	mu := lock.ReadWrite(inst, "sharings/"+s.SID)
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -189,7 +189,7 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 		return nil
 	}
 
-	mu := lock.ReadWrite(inst.Domain + "/shared")
+	mu := lock.ReadWrite(inst, "shared")
 	mu.Lock()
 	defer mu.Unlock()
 

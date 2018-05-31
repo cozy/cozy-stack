@@ -30,6 +30,7 @@ type swiftVFSV2 struct {
 	vfs.DiskThresholder
 	c             *swift.Connection
 	domain        string
+	prefix        string
 	container     string
 	version       string
 	dataContainer string
@@ -48,21 +49,19 @@ const (
 // This version implements a simpler layout where swift does not contain any
 // hierarchy: meaning no index informations. This help with index incoherency
 // and as many performance improvements regarding moving / renaming folders.
-func NewV2(domain string, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
-	if domain == "" {
-		return nil, fmt.Errorf("vfsswift: specified domain is empty")
-	}
+func NewV2(db couchdb.Database, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
 	return &swiftVFSV2{
 		Indexer:         index,
 		DiskThresholder: disk,
 
 		c:             config.GetSwiftConnection(),
-		domain:        domain,
-		container:     swiftV2ContainerPrefixCozy + domain,
-		version:       swiftV2ContainerPrefixCozy + domain + versionSuffix,
-		dataContainer: swiftV2ContainerPrefixData + domain,
+		domain:        db.DomainName(),
+		prefix:        db.DBPrefix(),
+		container:     swiftV2ContainerPrefixCozy + db.DBPrefix(),
+		version:       swiftV2ContainerPrefixCozy + db.DBPrefix() + versionSuffix,
+		dataContainer: swiftV2ContainerPrefixData + db.DBPrefix(),
 		mu:            mu,
-		log:           logger.WithDomain(domain).WithField("nspace", "vfsswift"),
+		log:           logger.WithDomain(db.DomainName()).WithField("nspace", "vfsswift"),
 	}, nil
 }
 
@@ -83,7 +82,11 @@ func makeDocID(objName string) string {
 	return objName[:22] + objName[23:28] + objName[29:]
 }
 
-func (sfs *swiftVFSV2) Domain() string {
+func (sfs *swiftVFSV2) DBPrefix() string {
+	return sfs.prefix
+}
+
+func (sfs *swiftVFSV2) DomainName() string {
 	return sfs.domain
 }
 

@@ -60,7 +60,7 @@ var ErrWalkOverflow = errors.New("vfs: walk overflow")
 // Fs is an interface providing a set of high-level methods to interact with
 // the file-system binaries and metadata.
 type Fs interface {
-	Domain() string
+	couchdb.Database
 	InitFs() error
 	Delete() error
 
@@ -670,7 +670,7 @@ func RegisterDiskQuotaAlertCallback(cb func(domain string, exceeded bool)) {
 // behind, its quota alert of 90% of its total capacity.
 func PushDiskQuotaAlert(fs VFS, exceeded bool) {
 	if cbDiskQuotaAlert != nil {
-		cbDiskQuotaAlert(fs.Domain(), exceeded)
+		cbDiskQuotaAlert(fs.DomainName(), exceeded)
 	}
 }
 
