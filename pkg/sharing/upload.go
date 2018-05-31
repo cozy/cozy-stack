@@ -614,12 +614,12 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 	}, nil)
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	newdoc.DocID = conflictID(newdoc.DocID, rev)
-	if _, err := fs.FileByID(newdoc.DocID); err != nil {
-		if err == os.ErrExist {
-			body.Close()
-			return nil
+	if _, err := fs.FileByID(newdoc.DocID); err != os.ErrNotExist {
+		if err != nil {
+			return err
 		}
-		return err
+		body.Close()
+		return nil
 	}
 	newdoc.DocName = conflictName(newdoc.DocName)
 	newdoc.DocRev = ""
@@ -643,10 +643,7 @@ func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) e
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	dst := src.Clone().(*vfs.FileDoc)
 	dst.DocID = conflictID(dst.DocID, rev)
-	if _, err := fs.FileByID(dst.DocID); err != nil {
-		if err == os.ErrExist {
-			return nil
-		}
+	if _, err := fs.FileByID(dst.DocID); err != os.ErrNotExist {
 		return err
 	}
 	dst.DocName = conflictName(dst.DocName)
