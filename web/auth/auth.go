@@ -1052,10 +1052,8 @@ func Routes(router *echo.Group) {
 	authorizeGroup := router.Group("/authorize", noCSRF)
 	authorizeGroup.GET("", authorizeForm)
 	authorizeGroup.POST("", authorize)
-	if config.IsDevRelease() {
-		authorizeGroup.GET("/sharing", authorizeSharingForm)
-		authorizeGroup.POST("/sharing", authorizeSharing)
-	}
+	authorizeGroup.GET("/sharing", authorizeSharingForm)
+	authorizeGroup.POST("/sharing", authorizeSharing)
 	authorizeGroup.GET("/app", authorizeAppForm)
 	authorizeGroup.POST("/app", authorizeApp)
 
