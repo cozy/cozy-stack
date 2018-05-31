@@ -83,7 +83,7 @@ func New(i *instance.Instance) (*Session, error) {
 	if err := couchdb.CreateDoc(i, s); err != nil {
 		return nil, err
 	}
-	getCache().Set(i.Domain, s.DocID, s)
+	getCache().Set(i, s.DocID, s)
 	return s, nil
 }
 
@@ -91,7 +91,7 @@ func New(i *instance.Instance) (*Session, error) {
 func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	updateCache := false
 
-	s := getCache().Get(i.Domain, sessionID)
+	s := getCache().Get(i, sessionID)
 	if s == nil {
 		s = &Session{}
 		err := couchdb.GetDoc(i, consts.Sessions, sessionID, s)
@@ -112,7 +112,7 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 		if err != nil {
 			i.Logger().Warn("[session] Failed to delete expired session:", err)
 		}
-		getCache().Revoke(i.Domain, s.DocID)
+		getCache().Revoke(i, s.DocID)
 		return nil, ErrExpired
 	}
 
@@ -133,7 +133,7 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	}
 
 	if updateCache {
-		getCache().Set(i.Domain, s.DocID, s)
+		getCache().Set(i, s.DocID, s)
 	}
 
 	return s, nil
@@ -187,7 +187,7 @@ func GetAll(inst *instance.Instance) ([]*Session, error) {
 // and returns a cookie with a negative MaxAge to clear it
 func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 	err := couchdb.DeleteDoc(i, s)
-	getCache().Revoke(i.Domain, s.DocID)
+	getCache().Revoke(i, s.DocID)
 	if err != nil {
 		i.Logger().Error("[session] Failed to delete session:", err)
 	}

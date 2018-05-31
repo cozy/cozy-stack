@@ -8,13 +8,14 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/go-redis/redis"
 )
 
 // A UploadStore is essentially an object to store files metadata by key
 type UploadStore interface {
-	Get(domain, key string) (*FileDocWithRevisions, error)
-	Save(domain string, doc *FileDocWithRevisions) (string, error)
+	Get(db prefixer.Prefixer, key string) (*FileDocWithRevisions, error)
+	Save(db prefixer.Prefixer, doc *FileDocWithRevisions) (string, error)
 }
 
 // uploadStoreTTL is the time an entry stay alive
@@ -69,10 +70,10 @@ func (s *memStore) cleaner() {
 	}
 }
 
-func (s *memStore) Get(domain, key string) (*FileDocWithRevisions, error) {
+func (s *memStore) Get(db prefixer.Prefixer, key string) (*FileDocWithRevisions, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	key = domain + ":" + key
+	key = db.DBPrefix() + ":" + key
 	ref, ok := s.vals[key]
 	if !ok {
 		return nil, nil
@@ -83,11 +84,11 @@ func (s *memStore) Get(domain, key string) (*FileDocWithRevisions, error) {
 	return ref.val, nil
 }
 
-func (s *memStore) Save(domain string, doc *FileDocWithRevisions) (string, error) {
+func (s *memStore) Save(db prefixer.Prefixer, doc *FileDocWithRevisions) (string, error) {
 	key := makeSecret()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.vals[domain+":"+key] = &memRef{
+	s.vals[db.DBPrefix()+":"+key] = &memRef{
 		val: doc,
 		exp: time.Now().Add(uploadStoreTTL),
 	}
@@ -98,8 +99,8 @@ type redisStore struct {
 	c redis.UniversalClient
 }
 
-func (s *redisStore) Get(domain, key string) (*FileDocWithRevisions, error) {
-	b, err := s.c.Get(domain + ":" + key).Bytes()
+func (s *redisStore) Get(db prefixer.Prefixer, key string) (*FileDocWithRevisions, error) {
+	b, err := s.c.Get(db.DBPrefix() + ":" + key).Bytes()
 	if err == redis.Nil {
 		return nil, nil
 	}
@@ -113,13 +114,13 @@ func (s *redisStore) Get(domain, key string) (*FileDocWithRevisions, error) {
 	return &doc, nil
 }
 
-func (s *redisStore) Save(domain string, doc *FileDocWithRevisions) (string, error) {
+func (s *redisStore) Save(db prefixer.Prefixer, doc *FileDocWithRevisions) (string, error) {
 	v, err := json.Marshal(doc)
 	if err != nil {
 		return "", err
 	}
 	key := makeSecret()
-	if err = s.c.Set(domain+":"+key, v, uploadStoreTTL).Err(); err != nil {
+	if err = s.c.Set(db.DBPrefix()+":"+key, v, uploadStoreTTL).Err(); err != nil {
 		return "", err
 	}
 	return key, nil

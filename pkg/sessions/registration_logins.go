@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
@@ -85,9 +86,9 @@ func (s *sweeper) Shutdown(ctx context.Context) error {
 }
 
 // PushLoginRegistration pushes a new login into the registration queue.
-func PushLoginRegistration(domain string, login *LoginEntry, clientID string) error {
+func PushLoginRegistration(db prefixer.Prefixer, login *LoginEntry, clientID string) error {
 	entry := registrationEntry{
-		Domain:       domain,
+		Domain:       db.DomainName(),
 		ClientID:     clientID,
 		LoginEntryID: login.ID(),
 		Expire:       time.Now(),

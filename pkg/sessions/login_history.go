@@ -129,7 +129,7 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 	}
 
 	if clientID != "" {
-		if err := PushLoginRegistration(i.Domain, l, clientID); err != nil {
+		if err := PushLoginRegistration(i, l, clientID); err != nil {
 			i.Logger().Errorf("Could not push login in registration queue: %s", err)
 		}
 	} else if notifEnabled {

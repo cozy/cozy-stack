@@ -285,7 +285,7 @@ type KeyToUpload struct {
 }
 
 func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
-	key, err := getStore().Save(inst.Domain, target)
+	key, err := getStore().Save(inst, target)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRe
 // it will return a key to upload the content.
 func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
 	inst.Logger().WithField("nspace", "upload").Debugf("SyncFile %#v", target)
-	mu := lock.ReadWrite(inst.Domain + "/shared")
+	mu := lock.ReadWrite(inst, "shared")
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -417,7 +417,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 // the metadata was not enough.
 func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) error {
 	defer body.Close()
-	target, err := getStore().Get(inst.Domain, key)
+	target, err := getStore().Get(inst, key)
 	inst.Logger().WithField("nspace", "upload").Debugf("HandleFileUpload %#v", target)
 	if err != nil {
 		return err
@@ -425,7 +425,7 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	if target == nil {
 		return ErrMissingFileMetadata
 	}
-	mu := lock.ReadWrite(inst.Domain + "/shared")
+	mu := lock.ReadWrite(inst, "shared")
 	mu.Lock()
 	defer mu.Unlock()
 
