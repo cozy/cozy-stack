@@ -654,7 +654,10 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	dir.SetID(target["_id"].(string))
 	ref.SID = consts.Files + "/" + dir.DocID
 	copySafeFieldsToDir(target, dir)
-	_, ruleIndex := s.findRuleForNewDirectory(dir)
+	rule, ruleIndex := s.findRuleForNewDirectory(dir)
+	if rule == nil {
+		return ErrSafety
+	}
 	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex}
 	err = fs.CreateDir(dir)
 	if err == os.ErrExist {
