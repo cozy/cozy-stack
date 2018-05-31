@@ -38,38 +38,35 @@ class Folder
     }
     res = inst.client[path].get opts
     j = JSON.parse(res.body)["included"]
-    children = []
-    unless j.empty?
-      j.each do |child|
-        id = child["id"]
-        rev = child["rev"]
-        child = child["attributes"]
-        type = child["type"]
-        if type == "directory"
-          f = Folder.new(
-            name: child["name"],
-            dir_id: child["dir_id"],
-            path: child["path"],
-            restore_path: child["restore_path"]
-          )
-        else
-          f = CozyFile.new(
-            name: child["name"],
-            dir_id: child["dir_id"],
-            trashed: child["trashed"],
-            md5sum: child["md5sum"],
-            size: child["size"],
-            executable: child["executable"],
-            file_class: child["class"],
-            metadata: child["metadata"]
-          )
-        end
+
+    (j || []).map do |child|
+      id = child["id"]
+      rev = child["rev"]
+      child = child["attributes"]
+      type = child["type"]
+      if type == "directory"
+        f = Folder.new(
+          name: child["name"],
+          dir_id: child["dir_id"],
+          path: child["path"],
+          restore_path: child["restore_path"]
+        )
+      else
+        f = CozyFile.new(
+          name: child["name"],
+          dir_id: child["dir_id"],
+          trashed: child["trashed"],
+          md5sum: child["md5sum"],
+          size: child["size"],
+          executable: child["executable"],
+          file_class: child["class"],
+          metadata: child["metadata"]
+        )
+      end
         f.couch_id = id
         f.couch_rev = rev
-        children << f
-      end
+        f
     end
-    children
   end
 
   def initialize(opts = {})

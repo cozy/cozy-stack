@@ -1,7 +1,5 @@
 require_relative '../boot'
 
-$stdout.sync = true
-
 def create_instances(names)
   insts = Array.new(names.length)
   names.each_with_index do |name, i|
@@ -15,15 +13,14 @@ def create_sharing(insts, obj)
   sharing = Sharing.new
   sharing.rules << Rule.sync(obj)
   sharing.members << inst_sharer
-  insts.each_with_index do |inst, i|
-    if i != 0
-      contact = Contact.create inst_sharer, givenName: inst.name
-      sharing.members << contact
-    end
+  recipients = insts.drop 1
+  recipients.each do |inst|
+    contact = Contact.create inst_sharer, givenName: inst.name
+    sharing.members << contact
   end
   inst_sharer.register sharing
   sleep 1
-  insts.each_with_index { |inst, i| inst.accept sharing if i != 0 }
+  recipients.each { |inst| inst.accept sharing }
   sharing
 end
 
