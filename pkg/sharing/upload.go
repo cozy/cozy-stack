@@ -311,7 +311,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	err = couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
-			return nil, ErrSafety
+			return s.createUploadKey(inst, target)
 		}
 		return nil, err
 	}
@@ -520,7 +520,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
-			return ErrSafety
+			return s.updateFileContent(inst, fs, newdoc, olddoc, body)
 		}
 		return err
 	}
