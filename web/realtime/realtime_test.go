@@ -118,14 +118,10 @@ func TestWSSuccess(t *testing.T) {
 	var res map[string]interface{}
 	time.Sleep(10 * time.Millisecond)
 
-	h.Publish(&realtime.Event{
-		Domain: inst.Domain,
-		Verb:   realtime.EventUpdate,
-		Doc: &testDoc{
-			doctype: "io.cozy.foos",
-			id:      "foo-one",
-		},
-	})
+	h.Publish(inst, realtime.EventUpdate, &testDoc{
+		doctype: "io.cozy.foos",
+		id:      "foo-one",
+	}, nil)
 	err = c.ReadJSON(&res)
 	assert.NoError(t, err)
 	assert.Equal(t, "UPDATED", res["event"])
@@ -133,14 +129,10 @@ func TestWSSuccess(t *testing.T) {
 	assert.Equal(t, "io.cozy.foos", payload["type"])
 	assert.Equal(t, "foo-one", payload["id"])
 
-	h.Publish(&realtime.Event{
-		Domain: inst.Domain,
-		Verb:   realtime.EventDelete,
-		Doc: &testDoc{
-			doctype: "io.cozy.foos",
-			id:      "foo-two",
-		},
-	})
+	h.Publish(inst, realtime.EventDelete, &testDoc{
+		doctype: "io.cozy.foos",
+		id:      "foo-two",
+	}, nil)
 	err = c.ReadJSON(&res)
 	assert.NoError(t, err)
 	assert.Equal(t, "DELETED", res["event"])
@@ -148,24 +140,16 @@ func TestWSSuccess(t *testing.T) {
 	assert.Equal(t, "io.cozy.foos", payload["type"])
 	assert.Equal(t, "foo-two", payload["id"])
 
-	h.Publish(&realtime.Event{
-		Domain: inst.Domain,
-		Verb:   realtime.EventCreate,
-		Doc: &testDoc{
-			doctype: "io.cozy.bars",
-			id:      "bar-two",
-		},
-	})
+	h.Publish(inst, realtime.EventCreate, &testDoc{
+		doctype: "io.cozy.bars",
+		id:      "bar-two",
+	}, nil)
 	// No event
 
-	h.Publish(&realtime.Event{
-		Domain: inst.Domain,
-		Verb:   realtime.EventCreate,
-		Doc: &testDoc{
-			doctype: "io.cozy.bars",
-			id:      "bar-one",
-		},
-	})
+	h.Publish(inst, realtime.EventCreate, &testDoc{
+		doctype: "io.cozy.bars",
+		id:      "bar-one",
+	}, nil)
 	err = c.ReadJSON(&res)
 	assert.NoError(t, err)
 	assert.Equal(t, "CREATED", res["event"])

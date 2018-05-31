@@ -25,7 +25,7 @@ func TestErrors(t *testing.T) {
 
 const TestDoctype = "io.cozy.testobject"
 
-var TestPrefix = SimpleDatabasePrefix("couchdb-tests")
+var TestPrefix = NewDatabase("couchdb-tests")
 var receivedEventsMutex sync.Mutex
 var receivedEvents map[string]struct{}
 
@@ -310,7 +310,7 @@ func TestMain(m *testing.M) {
 	}
 
 	receivedEvents = make(map[string]struct{})
-	eventChan := realtime.GetHub().Subscriber(TestPrefix.Prefix())
+	eventChan := realtime.GetHub().Subscriber(TestPrefix)
 	eventChan.Subscribe(TestDoctype)
 	go func() {
 		for ev := range eventChan.Channel {

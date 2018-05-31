@@ -8,17 +8,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/stretchr/testify/assert"
 )
 
+var localDB = prefixer.NewPrefixer("cozy.local", "cozy.local")
+
 func TestProperSerial(t *testing.T) {
-	job := NewJob(&JobRequest{
-		Domain:     "cozy.tools:8080",
-		WorkerType: "",
-	})
+	job := NewJob(prefixer.NewPrefixer("cozy.tools:8080", "cozy.tools:8080"),
+		&JobRequest{
+			WorkerType: "",
+		})
 	assert.NoError(t, job.Create())
 	assert.NoError(t, job.AckConsumed())
-	job2, err := Get(job.Domain, job.ID())
+	job2, err := Get(job, job.ID())
 	assert.NoError(t, err)
 	assert.Equal(t, State(Running), job2.State)
 }
@@ -101,8 +104,7 @@ func TestInMemoryJobs(t *testing.T) {
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage("a-" + strconv.Itoa(i+1))
-			_, err := broker1.PushJob(&JobRequest{
-				Domain:     "cozy.local",
+			_, err := broker1.PushJob(localDB, &JobRequest{
 				WorkerType: "test",
 				Message:    msg,
 			})
@@ -116,8 +118,7 @@ func TestInMemoryJobs(t *testing.T) {
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage("b-" + strconv.Itoa(i+1))
-			_, err := broker2.PushJob(&JobRequest{
-				Domain:     "cozy.local",
+			_, err := broker2.PushJob(localDB, &JobRequest{
 				WorkerType: "test",
 				Message:    msg,
 			})
@@ -133,8 +134,7 @@ func TestInMemoryJobs(t *testing.T) {
 func TestUnknownWorkerError(t *testing.T) {
 	broker := NewMemBroker()
 	broker.StartWorkers(WorkersList{})
-	_, err := broker.PushJob(&JobRequest{
-		Domain:     "cozy.local",
+	_, err := broker.PushJob(localDB, &JobRequest{
 		WorkerType: "nope",
 		Message:    nil,
 	})
@@ -162,9 +162,8 @@ func TestUnknownMessageType(t *testing.T) {
 	})
 
 	w.Add(1)
-	_, err := broker.PushJob(&JobRequest{
+	_, err := broker.PushJob(localDB, &JobRequest{
 		WorkerType: "test",
-		Domain:     "cozy.local",
 		Message:    nil,
 	})
 
@@ -191,9 +190,8 @@ func TestTimeout(t *testing.T) {
 	})
 
 	w.Add(1)
-	_, err := broker.PushJob(&JobRequest{
+	_, err := broker.PushJob(localDB, &JobRequest{
 		WorkerType: "timeout",
-		Domain:     "cozy.local",
 		Message:    nil,
 	})
 
@@ -228,8 +226,7 @@ func TestRetry(t *testing.T) {
 	})
 
 	w.Add(maxExecCount)
-	_, err := broker.PushJob(&JobRequest{
-		Domain:     "cozy.local",
+	_, err := broker.PushJob(localDB, &JobRequest{
 		WorkerType: "test",
 		Message:    nil,
 	})
@@ -258,8 +255,7 @@ func TestPanicRetried(t *testing.T) {
 	})
 
 	w.Add(maxExecCount)
-	_, err := broker.PushJob(&JobRequest{
-		Domain:     "cozy.local",
+	_, err := broker.PushJob(localDB, &JobRequest{
 		WorkerType: "panic",
 		Message:    nil,
 	})
@@ -296,13 +292,13 @@ func TestPanic(t *testing.T) {
 	})
 	w.Add(2)
 	var err error
-	_, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: odd})
+	_, err = broker.PushJob(localDB, &JobRequest{WorkerType: "panic2", Message: odd})
 	assert.NoError(t, err)
-	_, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: even})
+	_, err = broker.PushJob(localDB, &JobRequest{WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
-	_, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: odd})
+	_, err = broker.PushJob(localDB, &JobRequest{WorkerType: "panic2", Message: odd})
 	assert.NoError(t, err)
-	_, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: even})
+	_, err = broker.PushJob(localDB, &JobRequest{WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
 	w.Wait()
 }

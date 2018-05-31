@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 func reader(rwm ErrorRWLocker, iterations int, activity *int32, cdone chan bool) {
@@ -94,7 +95,8 @@ func TestMemLock(t *testing.T) {
 	}
 	defer func() { config.GetConfig().Lock = backconf }()
 	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(-1))
-	l := ReadWrite("test-mem")
+	db := prefixer.NewPrefixer("cozy.local", "cozy.local")
+	l := ReadWrite(db, "test-mem")
 	HammerRWMutex(l, 1, 1, n)
 	HammerRWMutex(l, 1, 3, n)
 	HammerRWMutex(l, 1, 10, n)
@@ -116,7 +118,8 @@ func TestRedisLock(t *testing.T) {
 	}
 	defer func() { config.GetConfig().Lock = backconf }()
 	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(-1))
-	l := ReadWrite("test-redis")
+	db := prefixer.NewPrefixer("cozy.local", "cozy.local")
+	l := ReadWrite(db, "test-redis")
 	// @TODO use HammerRWMutex when redisLock is RW lock
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {

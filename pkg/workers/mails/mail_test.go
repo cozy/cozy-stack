@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/gomail"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,6 +30,8 @@ const serverString = `220 hello world
 250 Data ok
 221 Goodbye
 `
+
+var inst *instance.Instance
 
 func TestMailSendServer(t *testing.T) {
 	clientStrings := []string{`EHLO localhost
@@ -73,9 +75,8 @@ QUIT
 				},
 			},
 			Locale: "en",
-			domain: "cozy.example.com",
 		}
-		return sendMail(context.Background(), msg)
+		return sendMail(context.Background(), msg, "cozy.example.com")
 	})
 }
 
@@ -139,9 +140,8 @@ QUIT
 				{Body: mailBody, Type: "text/html"},
 			},
 			Locale: "en",
-			domain: "cozy.example.com",
 		}
-		return sendMail(context.Background(), msg)
+		return sendMail(context.Background(), msg, "cozy.example.com")
 	})
 }
 
@@ -151,7 +151,7 @@ func TestMailMissingSubject(t *testing.T) {
 		To:     []*Address{{Email: "you@you"}},
 		Locale: "en",
 	}
-	err := sendMail(context.Background(), msg)
+	err := sendMail(context.Background(), msg, "cozy.example.com")
 	if assert.Error(t, err) {
 		assert.Equal(t, "Missing mail subject", err.Error())
 	}
@@ -170,7 +170,7 @@ func TestMailBadBodyType(t *testing.T) {
 		},
 		Locale: "en",
 	}
-	err := sendMail(context.Background(), msg)
+	err := sendMail(context.Background(), msg, "cozy.example.com")
 	if assert.Error(t, err) {
 		assert.Equal(t, "Unknown body content-type text/qsdqsd", err.Error())
 	}
@@ -248,9 +248,8 @@ QUIT
 			TemplateName:   "test",
 			TemplateValues: data,
 			Locale:         "en",
-			domain:         "cozy.example.com",
 		}
-		return sendMail(context.Background(), msg)
+		return sendMail(context.Background(), msg, "cozy.example.com")
 	})
 }
 
@@ -350,28 +349,15 @@ func mailServer(t *testing.T, serverString string, clientStrings []string, expec
 }
 
 func TestSendMailNoReply(t *testing.T) {
-	sendMail = func(ctx context.Context, opts *Options) error {
+	sendMail = func(ctx context.Context, opts *Options, domain string) error {
 		assert.NotNil(t, opts.From)
 		assert.NotNil(t, opts.To)
 		assert.Len(t, opts.To, 1)
 		assert.Equal(t, "me@me", opts.To[0].Email)
-		assert.Equal(t, "noreply@noreply.triggers", opts.From.Email)
+		assert.Equal(t, "noreply@"+inst.Domain, opts.From.Email)
+		assert.Equal(t, inst.Domain, domain)
 		return errors.New("yes")
 	}
-	db := couchdb.SimpleDatabasePrefix("noreply.triggers")
-	doc := &couchdb.JSONDoc{
-		M:    map[string]interface{}{"email": "me@me"},
-		Type: consts.Settings,
-	}
-	doc.SetID(consts.InstanceSettingsID)
-	err := couchdb.CreateNamedDocWithDB(db, doc)
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer func() {
-		couchdb.DeleteDoc(db, doc)
-		sendMail = doSendMail
-	}()
 	msg, _ := jobs.NewMessage(Options{
 		Mode:    "noreply",
 		Subject: "Up?",
@@ -383,41 +369,27 @@ func TestSendMailNoReply(t *testing.T) {
 		},
 		Locale: "en",
 	})
-	j := jobs.NewJob(&jobs.JobRequest{
-		Domain:     "noreply.triggers",
+	j := jobs.NewJob(inst, &jobs.JobRequest{
 		Message:    msg,
 		WorkerType: "sendmail",
 	})
-	err = SendMail(jobs.NewWorkerContext("123", j))
+	err := SendMail(jobs.NewWorkerContext("123", j))
 	if assert.Error(t, err) {
 		assert.Equal(t, "yes", err.Error())
 	}
 }
 
 func TestSendMailFrom(t *testing.T) {
-	sendMail = func(ctx context.Context, opts *Options) error {
+	sendMail = func(ctx context.Context, opts *Options, domain string) error {
 		assert.NotNil(t, opts.From)
 		assert.NotNil(t, opts.To)
 		assert.Len(t, opts.To, 1)
 		assert.Equal(t, "you@you", opts.To[0].Email)
-		assert.Equal(t, "noreply@from.triggers", opts.From.Email)
+		assert.Equal(t, "noreply@"+inst.Domain, opts.From.Email)
 		assert.Equal(t, "me@me", opts.ReplyTo.Email)
+		assert.Equal(t, inst.Domain, domain)
 		return errors.New("yes")
 	}
-	db := couchdb.SimpleDatabasePrefix("from.triggers")
-	doc := &couchdb.JSONDoc{
-		M:    map[string]interface{}{"email": "me@me"},
-		Type: consts.Settings,
-	}
-	doc.SetID(consts.InstanceSettingsID)
-	err := couchdb.CreateNamedDocWithDB(db, doc)
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer func() {
-		couchdb.DeleteDoc(db, doc)
-		sendMail = doSendMail
-	}()
 	msg, _ := jobs.NewMessage(Options{
 		Mode:    "from",
 		Subject: "Up?",
@@ -430,12 +402,11 @@ func TestSendMailFrom(t *testing.T) {
 		},
 		Locale: "en",
 	})
-	j := jobs.NewJob(&jobs.JobRequest{
-		Domain:     "from.triggers",
+	j := jobs.NewJob(inst, &jobs.JobRequest{
 		Message:    msg,
 		WorkerType: "sendmail",
 	})
-	err = SendMail(jobs.NewWorkerContext("123", j))
+	err := SendMail(jobs.NewWorkerContext("123", j))
 	if assert.Error(t, err) {
 		assert.Equal(t, "yes", err.Error())
 	}
@@ -443,5 +414,7 @@ func TestSendMailFrom(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	setup := testutils.NewSetup(m, "mails_test")
+	inst = setup.GetTestInstance(&instance.Options{Email: "me@me"})
 	os.Exit(m.Run())
 }

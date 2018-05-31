@@ -1,6 +1,6 @@
 package prefixer
 
-// Pefixer interface describes a handle for a specific instance by its domain
+// Prefixer interface describes a handle for a specific instance by its domain
 // and a specific and unique prefix.
 type Prefixer interface {
 	DBPrefix() string

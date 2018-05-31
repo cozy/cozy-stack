@@ -66,12 +66,8 @@ func RTEvent(db Database, verb string, doc, oldDoc Doc) {
 			Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
 	}
 	if db != GlobalDB && db != GlobalSecretsDB {
-		e := &realtime.Event{
-			Verb:   verb,
-			Doc:    doc.Clone(),
-			OldDoc: oldDoc,
-		}
-		go realtime.GetHub().Publish(db, e)
+		docClone := doc.Clone()
+		go realtime.GetHub().Publish(db, verb, docClone, oldDoc)
 	}
 }
 

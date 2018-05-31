@@ -158,7 +158,7 @@ func TestMain(m *testing.M) {
 
 	setup := testutils.NewSetup(m, "export_test")
 	inst = setup.GetTestInstance()
-	testdb = couchdb.SimpleDatabasePrefix(inst.Domain)
+	testdb = couchdb.NewDatabase(inst.Domain)
 
 	os.Exit(setup.Run())
 }

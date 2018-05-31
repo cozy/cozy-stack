@@ -5,9 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/go-redis/redis"
 	"github.com/stretchr/testify/assert"
 )
+
+var testingDB = prefixer.NewPrefixer("testing", "testing")
 
 type testDoc struct {
 	id      string
@@ -23,8 +26,8 @@ func (t *testDoc) MarshalJSON() ([]byte, error) {
 
 func TestMemRealtime(t *testing.T) {
 	h := newMemHub()
-	c1 := h.Subscriber("testing")
-	c2 := h.Subscriber("testing")
+	c1 := h.Subscriber(testingDB)
+	c2 := h.Subscriber(testingDB)
 	c3 := h.SubscribeLocalAll()
 	wg := sync.WaitGroup{}
 
@@ -62,13 +65,7 @@ func TestMemRealtime(t *testing.T) {
 	}()
 
 	time.AfterFunc(10*time.Millisecond, func() {
-		h.Publish(&Event{
-			Domain: "testing",
-			Doc: &testDoc{
-				doctype: "io.cozy.testobject",
-				id:      "foo",
-			},
-		})
+		h.Publish(testingDB, EventCreate, &testDoc{doctype: "io.cozy.testobject", id: "foo"}, nil)
 	})
 
 	wg.Wait()
@@ -83,25 +80,13 @@ func TestMemRealtime(t *testing.T) {
 	err = c1.Close()
 	assert.Error(t, err)
 
-	h.Publish(&Event{
-		Domain: "testing",
-		Doc: &testDoc{
-			doctype: "io.cozy.testobject",
-			id:      "nobodywillseeme",
-		},
-	})
+	h.Publish(testingDB, EventCreate, &testDoc{doctype: "io.cozy.testobject", id: "nobodywillseeme"}, nil)
 
-	h.Publish(&Event{
-		Domain: "testing",
-		Doc: &testDoc{
-			doctype: "io.cozy.testobject",
-			id:      "meneither",
-		},
-	})
+	h.Publish(testingDB, EventCreate, &testDoc{doctype: "io.cozy.testobject", id: "meneither"}, nil)
 
 	time.Sleep(1 * time.Millisecond)
 
-	c4 := h.Subscriber("testing")
+	c4 := h.Subscriber(testingDB)
 	err = c4.Subscribe("io.cozy.testobject")
 	assert.NoError(t, err)
 	err = c4.Subscribe("io.cozy.testobject2")
@@ -121,22 +106,16 @@ func TestMemRealtime(t *testing.T) {
 	}()
 
 	time.AfterFunc(10*time.Millisecond, func() {
-		h.Publish(&Event{
-			Domain: "testing",
-			Doc: &testDoc{
-				doctype: "io.cozy.testobject",
-				id:      "bar",
-			},
-		})
+		h.Publish(testingDB, EventCreate, &testDoc{
+			doctype: "io.cozy.testobject",
+			id:      "bar",
+		}, nil)
 	})
 	time.AfterFunc(20*time.Millisecond, func() {
-		h.Publish(&Event{
-			Domain: "testing",
-			Doc: &testDoc{
-				doctype: "io.cozy.testobject2",
-				id:      "baz",
-			},
-		})
+		h.Publish(testingDB, EventCreate, &testDoc{
+			doctype: "io.cozy.testobject2",
+			id:      "baz",
+		}, nil)
 	})
 
 	wg.Wait()
@@ -144,7 +123,7 @@ func TestMemRealtime(t *testing.T) {
 
 func TestWatch(t *testing.T) {
 	h := newMemHub()
-	c1 := h.Subscriber("testing")
+	c1 := h.Subscriber(testingDB)
 	wg := sync.WaitGroup{}
 
 	err := c1.Watch("io.cozy.testobject", "id1")
@@ -166,31 +145,22 @@ func TestWatch(t *testing.T) {
 	}()
 
 	time.Sleep(1 * time.Millisecond)
-	h.Publish(&Event{
-		Domain: "testing",
-		Doc: &testDoc{
-			doctype: "io.cozy.testobject",
-			id:      "not-id1-and-not-id2",
-		},
-	})
+	h.Publish(testingDB, EventCreate, &testDoc{
+		doctype: "io.cozy.testobject",
+		id:      "not-id1-and-not-id2",
+	}, nil)
 
 	time.Sleep(1 * time.Millisecond)
-	h.Publish(&Event{
-		Domain: "testing",
-		Doc: &testDoc{
-			doctype: "io.cozy.testobject",
-			id:      "id1",
-		},
-	})
+	h.Publish(testingDB, EventCreate, &testDoc{
+		doctype: "io.cozy.testobject",
+		id:      "id1",
+	}, nil)
 
 	time.Sleep(1 * time.Millisecond)
-	h.Publish(&Event{
-		Domain: "testing",
-		Doc: &testDoc{
-			doctype: "io.cozy.testobject",
-			id:      "id2",
-		},
-	})
+	h.Publish(testingDB, EventCreate, &testDoc{
+		doctype: "io.cozy.testobject",
+		id:      "id2",
+	}, nil)
 
 	wg.Wait()
 
@@ -215,31 +185,22 @@ func TestWatch(t *testing.T) {
 	}()
 
 	time.Sleep(1 * time.Millisecond)
-	h.Publish(&Event{
-		Domain: "testing",
-		Doc: &testDoc{
-			doctype: "io.cozy.testobject",
-			id:      "id1",
-		},
-	})
+	h.Publish(testingDB, EventCreate, &testDoc{
+		doctype: "io.cozy.testobject",
+		id:      "id1",
+	}, nil)
 
 	time.Sleep(1 * time.Millisecond)
-	h.Publish(&Event{
-		Domain: "testing",
-		Doc: &testDoc{
-			doctype: "io.cozy.testobject",
-			id:      "id2",
-		},
-	})
+	h.Publish(testingDB, EventCreate, &testDoc{
+		doctype: "io.cozy.testobject",
+		id:      "id2",
+	}, nil)
 
 	time.Sleep(1 * time.Millisecond)
-	h.Publish(&Event{
-		Domain: "testing",
-		Doc: &testDoc{
-			doctype: "io.cozy.testobject",
-			id:      "id3",
-		},
-	})
+	h.Publish(testingDB, EventCreate, &testDoc{
+		doctype: "io.cozy.testobject",
+		id:      "id3",
+	}, nil)
 
 	wg.Wait()
 
@@ -252,8 +213,8 @@ func TestRedisRealtime(t *testing.T) {
 	assert.NoError(t, err)
 	client := redis.NewClient(opt)
 	h := newRedisHub(client)
-	c1 := h.Subscriber("testing")
-	c2 := h.Subscriber("testing")
+	c1 := h.Subscriber(testingDB)
+	c2 := h.Subscriber(testingDB)
 	c3 := h.SubscribeLocalAll()
 	wg := sync.WaitGroup{}
 
@@ -291,13 +252,10 @@ func TestRedisRealtime(t *testing.T) {
 	}()
 
 	time.AfterFunc(10*time.Millisecond, func() {
-		h.Publish(&Event{
-			Domain: "testing",
-			Doc: &testDoc{
-				doctype: "io.cozy.testobject",
-				id:      "foo",
-			},
-		})
+		h.Publish(testingDB, EventCreate, &testDoc{
+			doctype: "io.cozy.testobject",
+			id:      "foo",
+		}, nil)
 	})
 
 	wg.Wait()
@@ -312,25 +270,19 @@ func TestRedisRealtime(t *testing.T) {
 	err = c1.Close()
 	assert.Error(t, err)
 
-	h.Publish(&Event{
-		Domain: "testing",
-		Doc: &testDoc{
-			doctype: "io.cozy.testobject",
-			id:      "nobodywillseeme",
-		},
-	})
+	h.Publish(testingDB, EventCreate, &testDoc{
+		doctype: "io.cozy.testobject",
+		id:      "nobodywillseeme",
+	}, nil)
 	time.Sleep(100 * time.Millisecond)
 
-	h.Publish(&Event{
-		Domain: "testing",
-		Doc: &testDoc{
-			doctype: "io.cozy.testobject",
-			id:      "meneither",
-		},
-	})
+	h.Publish(testingDB, EventCreate, &testDoc{
+		doctype: "io.cozy.testobject",
+		id:      "meneither",
+	}, nil)
 	time.Sleep(100 * time.Millisecond)
 
-	c4 := h.Subscriber("testing")
+	c4 := h.Subscriber(testingDB)
 	err = c4.Subscribe("io.cozy.testobject")
 	assert.NoError(t, err)
 	err = c4.Subscribe("io.cozy.testobject2")
@@ -350,22 +302,16 @@ func TestRedisRealtime(t *testing.T) {
 	}()
 
 	time.AfterFunc(10*time.Millisecond, func() {
-		h.Publish(&Event{
-			Domain: "testing",
-			Doc: &testDoc{
-				doctype: "io.cozy.testobject",
-				id:      "bar",
-			},
-		})
+		h.Publish(testingDB, EventCreate, &testDoc{
+			doctype: "io.cozy.testobject",
+			id:      "bar",
+		}, nil)
 	})
 	time.AfterFunc(20*time.Millisecond, func() {
-		h.Publish(&Event{
-			Domain: "testing",
-			Doc: &testDoc{
-				doctype: "io.cozy.testobject2",
-				id:      "baz",
-			},
-		})
+		h.Publish(testingDB, EventCreate, &testDoc{
+			doctype: "io.cozy.testobject2",
+			id:      "baz",
+		}, nil)
 	})
 
 	wg.Wait()

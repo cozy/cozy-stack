@@ -151,7 +151,7 @@ func TestMain(m *testing.M) {
 		io.WriteString(w, manGen())
 	}))
 
-	db = couchdb.SimpleDatabasePrefix("apps-test")
+	db = couchdb.NewDatabase("apps-test")
 
 	err = couchdb.ResetDB(db, consts.Apps)
 	if err != nil {

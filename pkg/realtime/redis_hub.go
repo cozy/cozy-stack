@@ -98,14 +98,8 @@ func (h *redisHub) start() {
 		if je.Old != nil {
 			je.Old.Type = doctype
 		}
-		e := &Event{
-			Domain: je.Domain,
-			Prefix: je.Prefix,
-			Verb:   je.Verb,
-			Doc:    je.Doc,
-			OldDoc: je.Old,
-		}
-		h.mem.Publish(e, e)
+		db := prefixer.NewPrefixer(je.Domain, je.Prefix)
+		h.mem.Publish(db, je.Verb, je.Doc, je.Old)
 	}
 }
 
@@ -113,9 +107,8 @@ func (h *redisHub) GetTopic(db prefixer.Prefixer, doctype string) *topic {
 	return nil
 }
 
-func (h *redisHub) Publish(db prefixer.Prefixer, e *Event) {
-	e.Domain = db.DomainName()
-	e.Prefix = db.DBPrefix()
+func (h *redisHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
+	e := newEvent(db, verb, doc, oldDoc)
 	h.local.broadcast <- e
 	buf, err := json.Marshal(e)
 	if err != nil {

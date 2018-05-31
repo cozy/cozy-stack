@@ -327,13 +327,13 @@ func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instan
 		log.Error(msg.Message)
 	}
 
-	realtime.GetHub().Publish(i, &realtime.Event{
-		Verb: realtime.EventCreate,
-		Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
+	realtime.GetHub().Publish(i,
+		realtime.EventCreate,
+		couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
 			"type":    msg.Type,
 			"message": msg.Message,
 		}},
-	})
+		nil)
 	return nil
 }
 

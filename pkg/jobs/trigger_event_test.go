@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/stretchr/testify/assert"
 )
@@ -53,38 +54,35 @@ func TestTriggerEvent(t *testing.T) {
 		},
 	})
 
-	triggers := []*TriggerInfos{
+	db := prefixer.NewPrefixer("cozy.local.triggerevent", "cozy.local.triggerevent")
+
+	triggers := []TriggerInfos{
 		{
 			Type:       "@event",
-			Domain:     "cozy.local.triggerevent",
 			Arguments:  "io.cozy.testeventobject:DELETED",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-bad-verb"),
 		},
 		{
 			Type:       "@event",
-			Domain:     "cozy.local.triggerevent",
 			Arguments:  "io.cozy.testeventobject:CREATED:value:test",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-correct-verb-correct-value"),
 		},
 		{
 			Type:       "@event",
-			Domain:     "cozy.local.triggerevent",
 			Arguments:  "io.cozy.testeventobject:CREATED",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-correct-verb"),
 		},
 		{
 			Type:       "@event",
-			Domain:     "cozy.local.triggerevent",
 			Arguments:  "io.cozy.testeventobject:CREATED:notvalue:test",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-correct-verb-bad-value"),
 		},
 		{
 			Type:       "@event",
-			Domain:     "cozy.local.triggerevent",
 			Arguments:  "io.cozy.testeventobject",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-wholetype"),
@@ -95,7 +93,7 @@ func TestTriggerEvent(t *testing.T) {
 	sch.StartScheduler(bro)
 
 	for _, infos := range triggers {
-		trigger, err := NewTrigger(infos)
+		trigger, err := NewTrigger(db, infos, infos.Message)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -116,11 +114,7 @@ func TestTriggerEvent(t *testing.T) {
 				"test": "value",
 			},
 		}
-		realtime.GetHub().Publish(&realtime.Event{
-			Verb:   realtime.EventCreate,
-			Doc:    &doc,
-			Domain: "cozy.local.triggerevent",
-		})
+		realtime.GetHub().Publish(db, realtime.EventCreate, &doc, nil)
 	})
 
 	wg.Wait()
@@ -132,7 +126,7 @@ func TestTriggerEvent(t *testing.T) {
 	assert.False(t, called["message-correct-verb-bad-value"])
 
 	for _, trigger := range triggers {
-		err := sch.DeleteTrigger(trigger.Domain, trigger.TID)
+		err := sch.DeleteTrigger(db, trigger.TID)
 		assert.NoError(t, err)
 	}
 
