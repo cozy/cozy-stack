@@ -45,7 +45,6 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 		}
 	}
 
-	// TODO what if we have more than BatchSize files to upload?
 	for i := 0; i < BatchSize; i++ {
 		if len(members) == 0 {
 			break
@@ -64,6 +63,8 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 	if errm != nil {
 		s.retryWorker(inst, "share-upload", errors)
 		inst.Logger().WithField("nspace", "upload").Infof("errm=%s\n", errm)
+	} else if len(members) > 0 {
+		s.pushJob(inst, "share-upload")
 	}
 	return errm
 }
@@ -74,7 +75,6 @@ func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
 	mu.Lock()
 	defer mu.Unlock()
 
-	// TODO what if we have more than BatchSize files to upload?
 	for i := 0; i < BatchSize; i++ {
 		more, err := s.UploadTo(inst, m)
 		if err != nil {
@@ -85,6 +85,7 @@ func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
 		}
 	}
 
+	s.pushJob(inst, "share-upload")
 	return nil
 }
 

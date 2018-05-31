@@ -69,6 +69,8 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 
 // pushJob adds a new job to continue on the pending documents in the changes feed
 func (s *Sharing) pushJob(inst *instance.Instance, worker string) {
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("Push a new job for worker %s for sharing %s", worker, s.SID)
 	msg, err := jobs.NewMessage(&ReplicateMsg{
 		SharingID: s.SID,
 		Errors:    0,
@@ -92,6 +94,8 @@ func (s *Sharing) pushJob(inst *instance.Instance, worker string) {
 
 // retryWorker will add a job to retry a failed replication or upload
 func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int) {
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("Retry worker %s for sharing %s", worker, s.SID)
 	backoff := InitialBackoffPeriod << uint(errors*2)
 	errors++
 	if errors == MaxRetries {
