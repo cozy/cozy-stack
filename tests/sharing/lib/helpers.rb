@@ -56,7 +56,6 @@ module Helpers
 
     def fsdiff(a, b)
       diff = `LANG=C diff -qr '#{a}' '#{b}'`
-      raise "Diff error" unless $?.success?
       diff.lines.map(&:chomp)
     end
 
