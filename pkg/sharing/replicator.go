@@ -172,9 +172,9 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		}
 		inst.Logger().WithField("nspace", "replicator").Debugf("missings = %#v", missings)
 
-		docs, err := s.getMissingDocs(inst, missings, changes)
-		if err != nil {
-			return false, err
+		docs, errb := s.getMissingDocs(inst, missings, changes)
+		if errb != nil {
+			return false, errb
 		}
 		inst.Logger().WithField("nspace", "replicator").Debugf("docs = %#v", docs)
 
@@ -426,6 +426,8 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 // ComputeRevsDiff takes a map of id->[revisions] and returns the missing
 // revisions for those documents on the current instance.
 func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changed Changed) (*Missings, error) {
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("ComputeRevsDiff %#v", changed)
 	ids := make([]string, 0, len(changed))
 	for id := range changed {
 		ids = append(ids, id)

@@ -295,6 +295,7 @@ func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRe
 // SyncFile tries to synchronize a file with just the metadata. If it can't,
 // it will return a key to upload the content.
 func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
+	inst.Logger().WithField("nspace", "upload").Debugf("SyncFile %#v", target)
 	if len(target.MD5Sum) == 0 {
 		return nil, vfs.ErrInvalidHash
 	}

@@ -404,6 +404,11 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			errm = multierror.Append(errm, err)
 		}
 	}
+
+	if errm != nil {
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Error on apply bulk file: %s", errm)
+	}
 	return nil
 }
 
@@ -477,6 +482,8 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 // and let the caller do its operation with the new name (the caller should
 // create a dummy revision to let the other cozy know of the renaming).
 func resolveConflictSamePath(inst *instance.Instance, id, pth string) (string, error) {
+	inst.Logger().WithField("nspace", "replicator").
+		Infof("Resolve conflict for path=%s (docid=%s)", pth, id)
 	fs := inst.VFS()
 	d, f, err := fs.DirOrFileByPath(pth)
 	if err != nil {
@@ -560,6 +567,8 @@ func (s *Sharing) getDirDocFromNetwork(inst *instance.Instance, dirID string) (*
 // the other instance about the parent directory and will recreate it. It can
 // be necessary to recurse if there were several levels of directories deleted.
 func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.DirDoc, error) {
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("Recreate parent dirID=%s", dirID)
 	doc, err := s.getDirDocFromNetwork(inst, dirID)
 	if err != nil {
 		return nil, err
@@ -618,6 +627,8 @@ func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{
 // CreateDir creates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("CreateDir %v (%#v)", target["_id"], target)
 	ref := SharedRef{
 		Infos: make(map[string]SharedInfo),
 	}
@@ -710,6 +721,8 @@ func (s *Sharing) prepareDirWithAncestors(inst *instance.Instance, dir *vfs.DirD
 // UpdateDir updates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface{}, dir *vfs.DirDoc, ref *SharedRef) error {
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("UpdateDir %v (%#v)", target["_id"], target)
 	name, indexer, err := extractNameAndIndexer(inst, target, ref)
 	if err != nil {
 		return err
@@ -758,6 +771,8 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 // TrashDir puts the directory in the trash (except if the directory has a
 // reference, in which case, we keep it in a special folder)
 func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("TrashDir %s (%#v)", dir.DocID, dir)
 	if strings.HasPrefix(dir.Fullpath+"/", vfs.TrashDirName+"/") {
 		// nothing to do if the directory is already in the trash
 		return nil
@@ -779,6 +794,8 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 // TrashFile puts the file in the trash (except if the file has a reference, in
 // which case, we keep it in a special folder)
 func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Rule) error {
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("TrashFile %s (%#v)", file.DocID, file)
 	if file.Trashed {
 		// Nothing to do if the directory is already in the trash
 		return nil
