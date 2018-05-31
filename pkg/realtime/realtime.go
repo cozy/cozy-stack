@@ -31,6 +31,7 @@ type Event struct {
 	OldDoc Doc    `json:"old,omitempty"`
 }
 
+// DBPrefix implements the prefixer.Prefixer interface.
 func (e *Event) DBPrefix() string {
 	if e.Prefix != "" {
 		return e.Prefix
@@ -38,6 +39,7 @@ func (e *Event) DBPrefix() string {
 	return e.Domain
 }
 
+// DomainName implements the prefixer.Prefixer interface.
 func (e *Event) DomainName() string {
 	return e.Domain
 }
@@ -47,7 +49,7 @@ func (e *Event) DomainName() string {
 // Hub is an object which recive events and calls appropriate listener
 type Hub interface {
 	// Emit is used by publishers when an event occurs
-	Publish(event *Event)
+	Publish(db prefixer.Prefixer, event *Event)
 
 	// Subscriber creates a DynamicSubscriber that can subscribe to several
 	// doctypes. Call its Close method to Unsubscribe.

@@ -17,7 +17,9 @@ func newMemHub() *memHub {
 	return &memHub{topics: make(map[string]*topic)}
 }
 
-func (h *memHub) Publish(e *Event) {
+func (h *memHub) Publish(db prefixer.Prefixer, e *Event) {
+	e.Domain = db.DomainName()
+	e.Prefix = db.DBPrefix()
 	topic := h.get(e, e.Doc.DocType())
 	if topic != nil {
 		topic.broadcast <- e

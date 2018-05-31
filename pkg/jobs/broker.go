@@ -101,6 +101,7 @@ type (
 
 var joblog = logger.WithNamespace("jobs")
 
+// DBPrefix implements the prefixer.Prefixer interface.
 func (j *Job) DBPrefix() string {
 	if j.Prefix != "" {
 		return j.Prefix
@@ -108,6 +109,7 @@ func (j *Job) DBPrefix() string {
 	return j.Domain
 }
 
+// DomainName implements the prefixer.Prefixer interface.
 func (j *Job) DomainName() string {
 	return j.Domain
 }

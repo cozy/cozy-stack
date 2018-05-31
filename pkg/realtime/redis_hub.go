@@ -53,6 +53,7 @@ func toJSONDoc(d map[string]interface{}) *jsonDoc {
 
 type jsonEvent struct {
 	Domain string
+	Prefix string
 	Verb   string
 	Doc    *jsonDoc
 	Old    *jsonDoc
@@ -64,6 +65,7 @@ func (j *jsonEvent) UnmarshalJSON(buf []byte) error {
 		return err
 	}
 	j.Domain, _ = m["domain"].(string)
+	j.Prefix, _ = m["prefix"].(string)
 	j.Verb, _ = m["verb"].(string)
 	if doc, ok := m["doc"].(map[string]interface{}); ok {
 		j.Doc = toJSONDoc(doc)
@@ -98,11 +100,12 @@ func (h *redisHub) start() {
 		}
 		e := &Event{
 			Domain: je.Domain,
+			Prefix: je.Prefix,
 			Verb:   je.Verb,
 			Doc:    je.Doc,
 			OldDoc: je.Old,
 		}
-		h.mem.Publish(e)
+		h.mem.Publish(e, e)
 	}
 }
 
@@ -110,7 +113,9 @@ func (h *redisHub) GetTopic(db prefixer.Prefixer, doctype string) *topic {
 	return nil
 }
 
-func (h *redisHub) Publish(e *Event) {
+func (h *redisHub) Publish(db prefixer.Prefixer, e *Event) {
+	e.Domain = db.DomainName()
+	e.Prefix = db.DBPrefix()
 	h.local.broadcast <- e
 	buf, err := json.Marshal(e)
 	if err != nil {

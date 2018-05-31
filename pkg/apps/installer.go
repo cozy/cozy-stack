@@ -227,11 +227,9 @@ func (i *Installer) Run() {
 	man := i.man.Clone().(Manifest)
 	if err != nil {
 		man.SetError(err)
-		realtime.GetHub().Publish(&realtime.Event{
-			Verb:   realtime.EventUpdate,
-			Doc:    man.Clone(),
-			Domain: i.db.DomainName(),
-			Prefix: i.db.DBPrefix(),
+		realtime.GetHub().Publish(i.db, &realtime.Event{
+			Verb: realtime.EventUpdate,
+			Doc:  man.Clone(),
 		})
 	}
 	i.manc <- man
@@ -379,11 +377,9 @@ func (i *Installer) ReadManifest(state State) error {
 		}
 	}
 
-	realtime.GetHub().Publish(&realtime.Event{
-		Verb:   realtime.EventUpdate,
-		Doc:    i.man.Clone(),
-		Domain: i.db.DomainName(),
-		Prefix: i.db.DBPrefix(),
+	realtime.GetHub().Publish(i.db, &realtime.Event{
+		Verb: realtime.EventUpdate,
+		Doc:  i.man.Clone(),
 	})
 
 	return nil

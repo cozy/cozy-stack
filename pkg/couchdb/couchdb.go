@@ -70,10 +70,8 @@ func RTEvent(db Database, verb string, doc, oldDoc Doc) {
 			Verb:   verb,
 			Doc:    doc.Clone(),
 			OldDoc: oldDoc,
-			Domain: db.DomainName(),
-			Prefix: db.DBPrefix(),
 		}
-		go realtime.GetHub().Publish(e)
+		go realtime.GetHub().Publish(db, e)
 	}
 }
 

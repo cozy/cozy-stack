@@ -72,6 +72,7 @@ type (
 	}
 )
 
+// DBPrefix implements the prefixer.Prefixer interface.
 func (t *TriggerInfos) DBPrefix() string {
 	if t.Prefix != "" {
 		return t.Prefix
@@ -79,6 +80,7 @@ func (t *TriggerInfos) DBPrefix() string {
 	return t.Domain
 }
 
+// DomainName implements the prefixer.Prefixer interface.
 func (t *TriggerInfos) DomainName() string {
 	return t.Domain
 }
