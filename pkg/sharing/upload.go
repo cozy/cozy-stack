@@ -3,7 +3,6 @@ package sharing
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -64,7 +63,7 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 
 	if errm != nil {
 		s.retryWorker(inst, "share-upload", errors)
-		fmt.Printf("DEBUG errm=%s\n", errm)
+		inst.Logger().WithField("nspace", "upload").Infof("errm=%s\n", errm)
 	}
 	return errm
 }
@@ -183,6 +182,8 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 // uploadFile uploads one file to the given member. It first try to just send
 // the metadata, and if it is not enough, it also send the binary.
 func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string]interface{}, ruleIndex int) error {
+	inst.Logger().WithField("nspace", "upload").Debugf("going to upload %#v", file)
+
 	creds := s.FindCredentials(m)
 	if creds == nil {
 		return ErrInvalidSharing
@@ -273,7 +274,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 // FileDocWithRevisions is the struct of the payload for synchronizing a file
 type FileDocWithRevisions struct {
 	*vfs.FileDoc
-	Revisions map[string]interface{} `json:"_revisions"`
+	Revisions RevsStruct `json:"_revisions"`
 }
 
 // KeyToUpload contains the key for uploading a file (when syncing metadata is
@@ -299,7 +300,9 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	current, err := inst.VFS().FileByID(target.DocID)
 	if err != nil {
 		if err == os.ErrNotExist {
-			// TODO check that there is a rule that allow to add this file
+			if rule, _ := s.findRuleForNewFile(target.FileDoc); rule == nil {
+				return nil, ErrSafety
+			}
 			return s.createUploadKey(inst, target)
 		}
 		return nil, err
@@ -312,68 +315,89 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 		}
 		return nil, err
 	}
-	infos, ok := ref.Infos[s.SID]
-	if !ok {
+	if _, ok := ref.Infos[s.SID]; !ok {
 		return nil, ErrSafety
 	}
-	rule := &s.Rules[infos.Rule]
-	if RevGeneration(current.DocRev) >= RevGeneration(target.DocRev) {
-		// TODO conflicts
+	if ref.Revisions.Find(target.DocRev) != nil {
+		// It's just the echo, there is nothing to do
 		return nil, nil
 	}
 	if !bytes.Equal(target.MD5Sum, current.MD5Sum) {
 		return s.createUploadKey(inst, target)
 	}
-	return nil, s.updateFileMetadata(inst, target, current, rule)
+	return nil, s.updateFileMetadata(inst, target, current, &ref)
 }
 
-func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWithRevisions, current *vfs.FileDoc, rule *Rule) error {
-	indexer := newSharingIndexer(inst, &bulkRevs{
-		Rev:       target.Rev(),
-		Revisions: target.Revisions,
-	})
-	fs := inst.VFS().UseSharingIndexer(indexer)
-	oldDoc := current.Clone().(*vfs.FileDoc)
-
-	var parent *vfs.DirDoc
-	var err error
-	if target.DirID == "" {
-		parent, err = s.GetSharingDir(inst)
+// prepareFileWithAncestors find the parent directory for file, and recreates it
+// if it is missing.
+func (s *Sharing) prepareFileWithAncestors(inst *instance.Instance, newdoc *vfs.FileDoc, dirID string) error {
+	if dirID == "" {
+		parent, err := s.GetSharingDir(inst)
 		if err != nil {
 			return err
 		}
-		current.DirID = parent.DocID
-	} else if target.DirID != current.DirID {
-		parent, err = fs.DirByID(target.DirID)
+		newdoc.DirID = parent.DocID
+	} else if dirID != newdoc.DirID {
+		parent, err := inst.VFS().DirByID(dirID)
 		if err == os.ErrNotExist {
-			parent, err = s.recreateParent(inst, target.DirID)
+			parent, err = s.recreateParent(inst, dirID)
 		}
 		if err != nil {
 			inst.Logger().WithField("nspace", "upload").
 				Debugf("Conflict for parent on sync file: %s", err)
 			return err
 		}
+		newdoc.DirID = parent.DocID
 	}
-	current.DirID = parent.DocID
-	current.DocName = target.DocName
+	return nil
+}
 
-	copySafeFieldsToFile(target.FileDoc, current)
-	current.ReferencedBy = buildReferencedBy(target.FileDoc, current, rule)
-	err = fs.UpdateFileDoc(oldDoc, current)
+// updateFileMetadata updates a file document when only some metadata has
+// changed, but not the content.
+func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, ref *SharedRef) error {
+	indexer := newSharingIndexer(inst, &bulkRevs{
+		Rev:       target.DocRev,
+		Revisions: target.Revisions,
+	}, ref)
+
+	chain := revsStructToChain(target.Revisions)
+	conflict := detectConflict(newdoc.DocRev, chain)
+	switch conflict {
+	case LostConflict:
+		return nil
+	case WonConflict:
+		indexer.WillResolveConflict(newdoc.DocRev, chain)
+	case NoConflict:
+		// Nothing to do
+	}
+
+	fs := inst.VFS().UseSharingIndexer(indexer)
+	olddoc := newdoc.Clone().(*vfs.FileDoc)
+	newdoc.DocName = target.DocName
+	if err := s.prepareFileWithAncestors(inst, newdoc, target.DirID); err != nil {
+		return err
+	}
+	newdoc.ResetFullpath()
+	copySafeFieldsToFile(target.FileDoc, newdoc)
+	infos := ref.Infos[s.SID]
+	rule := &s.Rules[infos.Rule]
+	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, newdoc, rule)
+
+	err := fs.UpdateFileDoc(olddoc, newdoc)
 	if err == os.ErrExist {
-		pth, errp := current.Path(fs)
+		pth, errp := newdoc.Path(fs)
 		if errp != nil {
 			return errp
 		}
-		name, errr := resolveConflictSamePath(inst, current.DocID, pth)
+		name, errr := resolveConflictSamePath(inst, newdoc.DocID, pth)
 		if errr != nil {
 			return errr
 		}
 		if name != "" {
 			indexer.IncrementRevision()
-			current.DocName = name
+			newdoc.DocName = name
 		}
-		err = fs.UpdateFileDoc(oldDoc, current)
+		err = fs.UpdateFileDoc(olddoc, newdoc)
 	}
 	if err != nil {
 		inst.Logger().WithField("nspace", "upload").
@@ -385,19 +409,10 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 
 // HandleFileUpload is used to receive a file upload when synchronizing just
 // the metadata was not enough.
-//
-// Note: if file was renamed + its content has changed, we modify the content
-// first, then rename it, not trying to do both at the same time. We do it in
-// this order because the difficult case is if one operation succeeds and the
-// other fails (if the two suceeds, we are fine; if the two fails, we just
-// retry), and in that case, it is easier to manage a conflict on dir_id+name
-// than on content: a conflict on different content is resolved by a copy of
-// the file (which is not what we want), a conflict of name+dir_id, the higher
-// revision wins and it should be the good one in our case.
 func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) error {
+	defer body.Close()
 	target, err := getStore().Get(inst.Domain, key)
-	inst.Logger().WithField("nspace", "upload").
-		Debugf("target = %#v\n", target)
+	inst.Logger().WithField("nspace", "upload").Debugf("HandleFileUpload %#v", target)
 	if err != nil {
 		return err
 	}
@@ -405,83 +420,67 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 		return ErrMissingFileMetadata
 	}
 
+	current, err := inst.VFS().FileByID(target.DocID)
+	if err != nil && err != os.ErrNotExist {
+		inst.Logger().WithField("nspace", "upload").
+			Warnf("Upload has failed: %s", err)
+		return err
+	}
+
+	if current == nil {
+		return s.UploadNewFile(inst, target, body)
+	}
+	return s.UploadExistingFile(inst, target, current, body)
+}
+
+// UploadNewFile is used to receive a new file.
+func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevisions, body io.ReadCloser) error {
+	inst.Logger().WithField("nspace", "upload").Debugf("UploadNewFile")
+	ref := SharedRef{
+		Infos: make(map[string]SharedInfo),
+	}
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       target.Rev(),
 		Revisions: target.Revisions,
-	})
+	}, &ref)
 	fs := inst.VFS().UseSharingIndexer(indexer)
 
+	var err error
+	var parent *vfs.DirDoc
 	if target.DirID != "" {
-		_, err = fs.DirByID(target.DirID)
-		// TODO better handling of this conflict
+		parent, err = fs.DirByID(target.DirID)
+		if err == os.ErrNotExist {
+			parent, err = s.recreateParent(inst, target.DirID)
+		}
 		if err != nil {
 			inst.Logger().WithField("nspace", "upload").
 				Debugf("Conflict for parent on file upload: %s", err)
 			return err
 		}
 	} else {
-		parent, errb := s.GetSharingDir(inst)
-		if errb != nil {
-			return errb
+		parent, err = s.GetSharingDir(inst)
+		if err != nil {
+			return err
 		}
-		target.DirID = parent.DocID
 	}
 
-	// TODO manage conflicts
-	newdoc := target.FileDoc.Clone().(*vfs.FileDoc)
-	olddoc, err := fs.FileByID(target.ID())
-	if err != nil && err != os.ErrNotExist {
-		return err
-	}
-	if olddoc == nil {
-		rule := s.findRuleForNewFile(newdoc)
-		if rule == nil {
-			return ErrSafety
-		}
-		newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, nil, rule)
-		// TODO create the io.cozy.shared reference?
-		return s.updateFileContent(inst, fs, newdoc, nil, body)
-	}
-
-	var ref SharedRef
-	err = couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
+	newdoc, err := vfs.NewFileDoc(target.DocName, parent.DocID, target.Size(), target.MD5Sum,
+		target.Mime, target.Class, target.CreatedAt, target.Executable, false, target.Tags)
 	if err != nil {
-		if couchdb.IsNotFoundError(err) {
-			return ErrSafety
-		}
 		return err
 	}
-	infos, ok := ref.Infos[s.SID]
-	if !ok {
+	newdoc.SetID(target.DocID)
+	ref.SID = consts.Files + "/" + newdoc.DocID
+	copySafeFieldsToFile(target.FileDoc, newdoc)
+
+	rule, ruleIndex := s.findRuleForNewFile(target.FileDoc)
+	if rule == nil {
 		return ErrSafety
 	}
-	rule := &s.Rules[infos.Rule]
-	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, olddoc, rule)
+	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex, Binary: true}
+	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, nil, rule)
 
-	if newdoc.DocName == olddoc.DocName && newdoc.DirID == olddoc.DirID {
-		// TODO update the io.cozy.shared reference?
-		return s.updateFileContent(inst, fs, newdoc, olddoc, body)
-	}
-
-	// TODO Can we use a revision generated by CouchDB for the first operation
-	// (content modified), and not forcing a revision? If we can remove this
-	// revision after the renaming, it should be fine. Else, there is a risk
-	// that it can be seen as a conflict
-	if err = s.updateFileContent(inst, inst.VFS(), newdoc, olddoc, body); err != nil {
-		return err
-	}
-	// TODO update the io.cozy.shared reference?
-	return fs.UpdateFileDoc(newdoc, target.FileDoc)
-}
-
-func (s *Sharing) updateFileContent(inst *instance.Instance, fs vfs.VFS, newdoc, olddoc *vfs.FileDoc, body io.ReadCloser) (err error) {
-	if olddoc == nil {
-		newdoc.DocRev = ""
-	} else {
-		newdoc.DocName = olddoc.DocName
-		newdoc.DirID = olddoc.DirID
-	}
-	file, err := fs.CreateFile(newdoc, olddoc)
+	file, err := fs.CreateFile(newdoc, nil)
 	if err == os.ErrExist {
 		pth, errp := newdoc.Path(fs)
 		if errp != nil {
@@ -492,28 +491,184 @@ func (s *Sharing) updateFileContent(inst *instance.Instance, fs vfs.VFS, newdoc,
 			return errr
 		}
 		if name != "" {
-			// TODO we should generate a new revision to let the other cozy know of this change
-			if olddoc == nil {
-				newdoc.DocName = name
-			} else {
-				newdoc.DocName = olddoc.DocName
-				newdoc.DirID = olddoc.DirID
-			}
+			indexer.IncrementRevision()
+			newdoc.DocName = name
 		}
-		file, err = fs.CreateFile(newdoc, olddoc)
+		file, err = fs.CreateFile(newdoc, nil)
 	}
 	if err != nil {
 		inst.Logger().WithField("nspace", "upload").
 			Debugf("Cannot create file: %s", err)
 		return err
 	}
-	defer func() {
-		if cerr := file.Close(); cerr != nil && err == nil {
-			err = cerr
-			inst.Logger().WithField("nspace", "upload").
-				Debugf("Cannot close file descriptor: %s", err)
+	return copyFileContent(inst, file, body)
+}
+
+// UploadExistingFile is used to receive new content for an existing file.
+//
+// Note: if file was renamed + its content has changed, we modify the content
+// first, then rename it, not trying to do both at the same time. We do it in
+// this order because the difficult case is if one operation succeeds and the
+// other fails (if the two suceeds, we are fine; if the two fails, we just
+// retry), and in that case, it is easier to manage a conflict on dir_id+name
+// than on content: a conflict on different content is resolved by a copy of
+// the file (which is not what we want), a conflict of name+dir_id, the higher
+// revision wins and it should be the good one in our case.
+func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
+	inst.Logger().WithField("nspace", "upload").Debugf("UploadExistingFile")
+	var ref SharedRef
+	err := couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return ErrSafety
 		}
-	}()
-	_, err = io.Copy(file, body)
+		return err
+	}
+	indexer := newSharingIndexer(inst, &bulkRevs{
+		Rev:       target.Rev(),
+		Revisions: target.Revisions,
+	}, &ref)
+	fs := inst.VFS().UseSharingIndexer(indexer)
+	olddoc := newdoc.Clone().(*vfs.FileDoc)
+
+	infos, ok := ref.Infos[s.SID]
+	if !ok {
+		return ErrSafety
+	}
+	rule := &s.Rules[infos.Rule]
+	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, olddoc, rule)
+	copySafeFieldsToFile(target.FileDoc, newdoc)
+	newdoc.DocName = target.DocName
+	s.prepareFileWithAncestors(inst, newdoc, target.DirID)
+	newdoc.ResetFullpath()
+	newdoc.ByteSize = target.ByteSize
+	newdoc.MD5Sum = target.MD5Sum
+
+	chain := revsStructToChain(target.Revisions)
+	conflict := detectConflict(newdoc.DocRev, chain)
+	switch conflict {
+	case LostConflict:
+		return s.uploadLostConflict(inst, target, newdoc, body)
+	case WonConflict:
+		if err = s.uploadWonConflict(inst, olddoc); err != nil {
+			return err
+		}
+	case NoConflict:
+		// Nothing to do
+	}
+	indexer.WillResolveConflict(newdoc.DocRev, chain)
+
+	// Easy case: only the content has changed, not its path
+	if newdoc.DocName == olddoc.DocName && newdoc.DirID == olddoc.DirID {
+		file, errf := fs.CreateFile(newdoc, olddoc)
+		if errf != nil {
+			return errf
+		}
+		return copyFileContent(inst, file, body)
+	}
+
+	stash := indexer.StashRevision(false)
+	tmpdoc := newdoc.Clone().(*vfs.FileDoc)
+	tmpdoc.DocName = olddoc.DocName
+	tmpdoc.DirID = olddoc.DirID
+	tmpdoc.ResetFullpath()
+	file, err := fs.CreateFile(tmpdoc, olddoc)
+	if err != nil {
+		return err
+	}
+	if err = copyFileContent(inst, file, body); err != nil {
+		return err
+	}
+
+	indexer.UnstashRevision(stash)
+	newdoc.DocRev = tmpdoc.DocRev
+	err = fs.UpdateFileDoc(tmpdoc, newdoc)
+	if err == os.ErrExist {
+		pth, errp := newdoc.Path(fs)
+		if errp != nil {
+			return errp
+		}
+		name, errr := resolveConflictSamePath(inst, newdoc.DocID, pth)
+		if errr != nil {
+			return errr
+		}
+		if name != "" {
+			indexer.IncrementRevision()
+			newdoc.DocName = name
+		}
+		err = fs.UpdateFileDoc(tmpdoc, newdoc)
+	}
+	return err
+}
+
+// uploadLostConflict manages an upload where a file is in conflict, and the
+// uploaded file version goes to a new file.
+func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
+	inst.Logger().WithField("nspace", "upload").Debugf("uploadLostConflict")
+	rev := target.Rev()
+	indexer := newSharingIndexer(inst, &bulkRevs{
+		Rev:       rev,
+		Revisions: revsChainToStruct([]string{rev}),
+	}, nil)
+	fs := inst.VFS().UseSharingIndexer(indexer)
+	newdoc.DocID = conflictID(newdoc.DocID, rev)
+	if _, err := fs.FileByID(newdoc.DocID); err != nil {
+		if err == os.ErrExist {
+			body.Close()
+			return nil
+		}
+		return err
+	}
+	newdoc.DocName = conflictName(newdoc.DocName)
+	newdoc.DocRev = ""
+	newdoc.ResetFullpath()
+	file, err := fs.CreateFile(newdoc, nil)
+	if err != nil {
+		return err
+	}
+	return copyFileContent(inst, file, body)
+}
+
+// uploadWonConflict manages an upload where a file is in conflict, and the
+// existing file is copied to a new file to let the upload suceed.
+func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) error {
+	inst.Logger().WithField("nspace", "upload").Debugf("uploadWonConflict")
+	rev := src.Rev()
+	indexer := newSharingIndexer(inst, &bulkRevs{
+		Rev:       rev,
+		Revisions: revsChainToStruct([]string{rev}),
+	}, nil)
+	fs := inst.VFS().UseSharingIndexer(indexer)
+	dst := src.Clone().(*vfs.FileDoc)
+	dst.DocID = conflictID(dst.DocID, rev)
+	if _, err := fs.FileByID(dst.DocID); err != nil {
+		if err == os.ErrExist {
+			return nil
+		}
+		return err
+	}
+	dst.DocName = conflictName(dst.DocName)
+	dst.ResetFullpath()
+	content, err := fs.OpenFile(src)
+	if err != nil {
+		return err
+	}
+	defer content.Close()
+	file, err := fs.CreateFile(dst, nil)
+	if err != nil {
+		return err
+	}
+	return copyFileContent(inst, file, content)
+}
+
+// copyFileContent will copy the body of the HTTP request to the file, and
+// close the file descriptor at the end.
+func copyFileContent(inst *instance.Instance, file vfs.File, body io.ReadCloser) error {
+	_, err := io.Copy(file, body)
+	if cerr := file.Close(); cerr != nil && err == nil {
+		err = cerr
+		inst.Logger().WithField("nspace", "upload").
+			Debugf("Cannot close file descriptor: %s", err)
+	}
 	return err
 }

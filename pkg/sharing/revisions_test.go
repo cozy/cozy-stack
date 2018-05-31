@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -143,9 +144,9 @@ func TestRevGeneration(t *testing.T) {
 }
 
 func TestRevsStructToChain(t *testing.T) {
-	input := map[string]interface{}{
-		"start": float64(3),
-		"ids":   []interface{}{"ccc", "bbb", "aaa"},
+	input := RevsStruct{
+		Start: 3,
+		IDs:   []string{"ccc", "bbb", "aaa"},
 	}
 	chain := revsStructToChain(input)
 	expected := []string{"1-aaa", "2-bbb", "3-ccc"}
@@ -156,7 +157,7 @@ func TestRevsChainToStruct(t *testing.T) {
 	slice := []string{"2-aaa", "3-bbb", "4-ccc"}
 	revs := revsChainToStruct(slice)
 	assert.Equal(t, 4, revs.Start)
-	assert.Equal(t, []string{"ccc", "bbb", "aaa"}, revs.Ids)
+	assert.Equal(t, []string{"ccc", "bbb", "aaa"}, revs.IDs)
 }
 
 func TestDetectConflicts(t *testing.T) {
@@ -175,4 +176,110 @@ func TestMixupChainToResolveConflict(t *testing.T) {
 	altered := MixupChainToResolveConflict("3-abc", chain)
 	expected := []string{"3-abc", "4-ddd", "5-eee"}
 	assert.Equal(t, expected, altered)
+}
+
+func TestIndexerIncrementRevisions(t *testing.T) {
+	indexer := &sharingIndexer{
+		bulkRevs: &bulkRevs{
+			Rev: "3-bf26bb2d42b0abf6a715ccf949d8e5f4",
+			Revisions: RevsStruct{
+				Start: 3,
+				IDs: []string{
+					"bf26bb2d42b0abf6a715ccf949d8e5f4",
+					"031e47856210360b44db86669ee83cd1",
+				},
+			},
+		},
+	}
+	indexer.IncrementRevision()
+	assert.Equal(t, 4, indexer.bulkRevs.Revisions.Start)
+	gen := RevGeneration(indexer.bulkRevs.Rev)
+	assert.Equal(t, 4, gen)
+	assert.Len(t, indexer.bulkRevs.Revisions.IDs, 3)
+	rev := fmt.Sprintf("%d-%s", gen, indexer.bulkRevs.Revisions.IDs[0])
+	assert.Equal(t, indexer.bulkRevs.Rev, rev)
+}
+
+func TestIndexerStashRevision(t *testing.T) {
+	indexer := &sharingIndexer{
+		bulkRevs: &bulkRevs{
+			Rev: "4-9a8d25e7fc9834dc85a252ca8c11723d",
+			Revisions: RevsStruct{
+				Start: 4,
+				IDs: []string{
+					"9a8d25e7fc9834dc85a252ca8c11723d",
+					"ac12db6cd9bd8190f98b2bfed6522d1f",
+					"9822dfe81c0e30da3d7b4213f0dcca2a",
+				},
+			},
+		},
+	}
+
+	stash := indexer.StashRevision(false)
+	assert.Equal(t, "9a8d25e7fc9834dc85a252ca8c11723d", stash)
+	assert.Equal(t, "3-ac12db6cd9bd8190f98b2bfed6522d1f", indexer.bulkRevs.Rev)
+	assert.Equal(t, 3, indexer.bulkRevs.Revisions.Start)
+	assert.Len(t, indexer.bulkRevs.Revisions.IDs, 2)
+	assert.Equal(t, "ac12db6cd9bd8190f98b2bfed6522d1f", indexer.bulkRevs.Revisions.IDs[0])
+	assert.Equal(t, "9822dfe81c0e30da3d7b4213f0dcca2a", indexer.bulkRevs.Revisions.IDs[1])
+
+	indexer.UnstashRevision(stash)
+	assert.Equal(t, "4-9a8d25e7fc9834dc85a252ca8c11723d", indexer.bulkRevs.Rev)
+	assert.Equal(t, 4, indexer.bulkRevs.Revisions.Start)
+	assert.Len(t, indexer.bulkRevs.Revisions.IDs, 3)
+	assert.Equal(t, "9a8d25e7fc9834dc85a252ca8c11723d", indexer.bulkRevs.Revisions.IDs[0])
+	assert.Equal(t, "ac12db6cd9bd8190f98b2bfed6522d1f", indexer.bulkRevs.Revisions.IDs[1])
+	assert.Equal(t, "9822dfe81c0e30da3d7b4213f0dcca2a", indexer.bulkRevs.Revisions.IDs[2])
+
+	indexer.bulkRevs = &bulkRevs{
+		Rev: "2-a61b005843648f5822cc44e1e586c29c",
+		Revisions: RevsStruct{
+			Start: 2,
+			IDs: []string{
+				"a61b005843648f5822cc44e1e586c29c",
+				"7f0065d977dcfd49bbcd77f8630f185b",
+			},
+		},
+	}
+	stash = indexer.StashRevision(false)
+	assert.Empty(t, stash)
+	assert.Nil(t, indexer.bulkRevs)
+	indexer.UnstashRevision(stash)
+	assert.Nil(t, indexer.bulkRevs)
+
+	indexer.bulkRevs = &bulkRevs{
+		Rev: "2-a61b005843648f5822cc44e1e586c29c",
+		Revisions: RevsStruct{
+			Start: 2,
+			IDs: []string{
+				"a61b005843648f5822cc44e1e586c29c",
+			},
+		},
+	}
+	stash = indexer.StashRevision(true)
+	assert.Empty(t, stash)
+	assert.Nil(t, indexer.bulkRevs)
+	indexer.UnstashRevision(stash)
+	assert.Nil(t, indexer.bulkRevs)
+}
+
+func TestIndexerCreateBogusPrevRev(t *testing.T) {
+	indexer := &sharingIndexer{
+		bulkRevs: &bulkRevs{
+			Rev: "3-bf26bb2d42b0abf6a715ccf949d8e5f4",
+			Revisions: RevsStruct{
+				Start: 3,
+				IDs: []string{
+					"bf26bb2d42b0abf6a715ccf949d8e5f4",
+				},
+			},
+		},
+	}
+	indexer.CreateBogusPrevRev()
+	assert.Equal(t, 3, indexer.bulkRevs.Revisions.Start)
+	gen := RevGeneration(indexer.bulkRevs.Rev)
+	assert.Equal(t, 3, gen)
+	assert.Len(t, indexer.bulkRevs.Revisions.IDs, 2)
+	rev := fmt.Sprintf("%d-%s", gen, indexer.bulkRevs.Revisions.IDs[0])
+	assert.Equal(t, indexer.bulkRevs.Rev, rev)
 }

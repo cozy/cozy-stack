@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -199,7 +200,10 @@ func TestUpdateDir(t *testing.T) {
 		"updated_at": "2018-04-13T15:10:57.364765745+01:00",
 		"tags":       []interface{}{"quux", "courge"},
 	}
-	assert.NoError(t, s.UpdateDir(inst, target, dir))
+	var ref SharedRef
+	err = couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+idFoo, &ref)
+	assert.NoError(t, err)
+	assert.NoError(t, s.UpdateDir(inst, target, dir, &ref))
 	dir, err = inst.VFS().DirByID(idFoo)
 	assert.NoError(t, err)
 	if assert.NotNil(t, dir) {

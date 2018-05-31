@@ -75,8 +75,6 @@ func (f *FileDoc) Clone() couchdb.Doc {
 	for k, v := range f.Metadata {
 		cloned.Metadata[k] = v
 	}
-	// It happens that a cloned file is mutated => it's safer to clear the fullpath
-	cloned.fullpath = ""
 	return &cloned
 }
 
@@ -94,6 +92,11 @@ func (f *FileDoc) Path(fp FilePather) (string, error) {
 	var err error
 	f.fullpath, err = fp.FilePath(f)
 	return f.fullpath, err
+}
+
+// ResetFullpath clears the fullpath, so it can be recomputed with Path()
+func (f *FileDoc) ResetFullpath() {
+	f.fullpath = ""
 }
 
 // Parent returns the parent directory document

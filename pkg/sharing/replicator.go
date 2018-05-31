@@ -647,8 +647,9 @@ func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, do
 			if ok && !infos.Removed {
 				rev := doc["_rev"].(string)
 				if refs[i].Revisions.Find(rev) == nil {
-					chain := revsStructToChain(doc["_revisions"])
-					if chain != nil {
+					revs := revsMapToStruct(doc["_revisions"])
+					if revs != nil && len(revs.IDs) > 0 {
+						chain := revsStructToChain(*revs)
 						refs[i].Revisions.InsertChain(chain)
 					}
 				}

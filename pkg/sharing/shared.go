@@ -206,6 +206,10 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	}
 
 	if evt.Verb == "DELETED" || isTrashed(evt.Doc) {
+		// Ignore the first revision for new file (trashed=true)
+		if evt.Doc.Type == consts.Files && ref.Rev() == "" {
+			return nil
+		}
 		ref.Infos[msg.SharingID] = SharedInfo{
 			Rule:    ref.Infos[msg.SharingID].Rule,
 			Removed: true,
@@ -236,6 +240,19 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 	}
 	ref.Revisions.InsertAfter(rev, oldrev)
 	return couchdb.UpdateDoc(inst, &ref)
+}
+
+// UpdateFileShared creates or updates the io.cozy.shared for a file with
+// possibly multiple revisions.
+func UpdateFileShared(db couchdb.Database, ref *SharedRef, revs RevsStruct) error {
+	chain := revsStructToChain(revs)
+	if ref.Rev() == "" {
+		ref.Revisions = &RevsTree{Rev: chain[0]}
+		ref.Revisions.InsertChain(chain)
+		return couchdb.CreateNamedDoc(db, ref)
+	}
+	ref.Revisions.InsertChain(chain)
+	return couchdb.UpdateDoc(db, ref)
 }
 
 // RemoveSharedRefs deletes the references containing the sharingid

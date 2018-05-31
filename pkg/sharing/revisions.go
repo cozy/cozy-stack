@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type conflictStatus int
@@ -23,7 +24,7 @@ const (
 // RevsStruct is a struct for revisions in bulk methods of CouchDB
 type RevsStruct struct {
 	Start int      `json:"start"`
-	Ids   []string `json:"ids"`
+	IDs   []string `json:"ids"`
 }
 
 // RevsTree is a tree of revisions, like CouchDB has.
@@ -37,7 +38,7 @@ type RevsTree struct {
 	// Branches is the list of revisions that have this revision for parent.
 	// The general case is to have only one branch, but we can have more with
 	// conflicts.
-	Branches []RevsTree `json:"branches"`
+	Branches []RevsTree `json:"branches,omitempty"`
 }
 
 // Clone duplicates the RevsTree
@@ -147,17 +148,41 @@ func RevGeneration(rev string) int {
 	return gen
 }
 
+// revsMapToStruct builds a RevsStruct from a json unmarshaled to a map
+func revsMapToStruct(revs interface{}) *RevsStruct {
+	revisions, ok := revs.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+	start, ok := revisions["start"].(float64)
+	if !ok {
+		return nil
+	}
+	slice, ok := revisions["ids"].([]interface{})
+	if !ok {
+		return nil
+	}
+	ids := make([]string, len(slice))
+	for i, id := range slice {
+		ids[i], _ = id.(string)
+	}
+	return &RevsStruct{
+		Start: int(start),
+		IDs:   ids,
+	}
+}
+
 // revsChainToStruct transforms revisions from on format to another:
 // ["2-aa", "3-bb", "4-cc"] -> { start: 4, ids: ["cc", "bb", "aa"] }
 func revsChainToStruct(revs []string) RevsStruct {
 	s := RevsStruct{
-		Ids: make([]string, len(revs)),
+		IDs: make([]string, len(revs)),
 	}
 	var last string
 	for i, rev := range revs {
 		parts := strings.SplitN(rev, "-", 2)
 		last = parts[0]
-		s.Ids[len(s.Ids)-i-1] = parts[1]
+		s.IDs[len(s.IDs)-i-1] = parts[1]
 	}
 	s.Start, _ = strconv.Atoi(last)
 	return s
@@ -165,20 +190,9 @@ func revsChainToStruct(revs []string) RevsStruct {
 
 // revsStructToChain is the reverse of revsChainToStruct:
 // { start: 4, ids: ["cc", "bb", "aa"] } -> ["2-aa", "3-bb", "4-cc"]
-func revsStructToChain(revs interface{}) []string {
-	m, ok := revs.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-	s, ok := m["start"].(float64)
-	if !ok {
-		return nil
-	}
-	start := int64(s)
-	ids, ok := m["ids"].([]interface{})
-	if !ok {
-		return nil
-	}
+func revsStructToChain(revs RevsStruct) []string {
+	start := revs.Start
+	ids := revs.IDs
 	chain := make([]string, len(ids))
 	for i, id := range ids {
 		rev := fmt.Sprintf("%d-%s", start, id)
@@ -230,4 +244,18 @@ func MixupChainToResolveConflict(rev string, chain []string) []string {
 		}
 	}
 	return mixed
+}
+
+// conflictName generates a new name for a file/folder in conflict with another
+// that has the same path.
+func conflictName(name string) string {
+	return fmt.Sprintf("%s - conflict - %d", name, time.Now().Unix())
+}
+
+// conflictID generates a new ID for a file/folder that has a conflict between
+// two versions of its content.
+func conflictID(id, rev string) string {
+	parts := strings.SplitN(rev, "-", 2)
+	key := []byte(parts[1])
+	return XorID(id, key)
 }

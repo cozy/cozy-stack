@@ -200,13 +200,38 @@ func (s *Sharing) FirstFilesRule() *Rule {
 	return nil
 }
 
-func (s *Sharing) findRuleForNewFile(file *vfs.FileDoc) *Rule {
+func (s *Sharing) findRuleForNewDirectory(dir *vfs.DirDoc) (*Rule, int) {
 	for i, rule := range s.Rules {
 		if rule.Local || rule.DocType != consts.Files {
 			continue
 		}
 		if rule.Selector != couchdb.SelectorReferencedBy {
-			return &s.Rules[i]
+			return &s.Rules[i], i
+		}
+		if len(dir.ReferencedBy) == 0 {
+			continue
+		}
+		allFound := true
+		for _, ref := range dir.ReferencedBy {
+			if !rule.hasReferencedBy(ref) {
+				allFound = false
+				break
+			}
+		}
+		if allFound {
+			return &s.Rules[i], i
+		}
+	}
+	return nil, 0
+}
+
+func (s *Sharing) findRuleForNewFile(file *vfs.FileDoc) (*Rule, int) {
+	for i, rule := range s.Rules {
+		if rule.Local || rule.DocType != consts.Files {
+			continue
+		}
+		if rule.Selector != couchdb.SelectorReferencedBy {
+			return &s.Rules[i], i
 		}
 		if len(file.ReferencedBy) == 0 {
 			continue
@@ -219,10 +244,10 @@ func (s *Sharing) findRuleForNewFile(file *vfs.FileDoc) *Rule {
 			}
 		}
 		if allFound {
-			return &s.Rules[i]
+			return &s.Rules[i], i
 		}
 	}
-	return nil
+	return nil, 0
 }
 
 // HasSync returns true if the rule has a sync behaviour

@@ -2,7 +2,6 @@ package sharing
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -399,7 +398,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		} else if ref == nil {
 			err = multierror.Append(errm, ErrSafety)
 		} else {
-			err = s.UpdateDir(inst, target, dir)
+			err = s.UpdateDir(inst, target, dir, ref)
 		}
 		if err != nil {
 			errm = multierror.Append(errm, err)
@@ -483,7 +482,7 @@ func resolveConflictSamePath(inst *instance.Instance, id, pth string) (string, e
 	if err != nil {
 		return "", err
 	}
-	name := fmt.Sprintf("%s - conflict - %d", pth, time.Now().Unix())
+	name := conflictName(path.Base(pth))
 	if d != nil {
 		if d.DocID > id {
 			return name, nil
@@ -497,6 +496,7 @@ func resolveConflictSamePath(inst *instance.Instance, id, pth string) (string, e
 	}
 	old := f.Clone().(*vfs.FileDoc)
 	f.DocName = name
+	f.ResetFullpath()
 	return "", fs.UpdateFileDoc(old, f)
 }
 
@@ -589,8 +589,7 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 
 // extractNameAndIndexer takes a target document, extracts the name and creates
 // a sharing indexer with _rev and _revisions
-func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{}) (
-	string, *sharingIndexer, error) {
+func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{}, ref *SharedRef) (string, *sharingIndexer, error) {
 	name, ok := target["name"].(string)
 	if !ok {
 		inst.Logger().WithField("nspace", "replicator").
@@ -603,23 +602,26 @@ func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{
 			Warnf("Missing _rev for directory %#v", target)
 		return "", nil, ErrInternalServerError
 	}
-	revisions, ok := target["_revisions"].(map[string]interface{})
-	if !ok {
+	revs := revsMapToStruct(target["_revisions"])
+	if revs == nil {
 		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Missing _revisions for directory %#v", target)
+			Warnf("Invalid _revisions for directory %#v", target)
 		return "", nil, ErrInternalServerError
 	}
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
-		Revisions: revisions,
-	})
+		Revisions: *revs,
+	}, ref)
 	return name, indexer, nil
 }
 
 // CreateDir creates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
 func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
-	name, indexer, err := extractNameAndIndexer(inst, target)
+	ref := SharedRef{
+		Infos: make(map[string]SharedInfo),
+	}
+	name, indexer, err := extractNameAndIndexer(inst, target, &ref)
 	if err != nil {
 		return err
 	}
@@ -650,7 +652,13 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 		return err
 	}
 	dir.SetID(target["_id"].(string))
+	ref.SID = consts.Files + "/" + dir.DocID
 	copySafeFieldsToDir(target, dir)
+	rule, ruleIndex := s.findRuleForNewDirectory(dir)
+	if rule == nil {
+		return ErrSafety
+	}
+	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex}
 	err = fs.CreateDir(dir)
 	if err == os.ErrExist {
 		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
@@ -671,7 +679,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	return nil
 }
 
-// prepareDirWithAncestors found the parent directory for dir, and recreates it
+// prepareDirWithAncestors find the parent directory for dir, and recreates it
 // if it is missing.
 func (s *Sharing) prepareDirWithAncestors(inst *instance.Instance, dir *vfs.DirDoc, dirID string) error {
 	if dirID == "" {
@@ -701,8 +709,8 @@ func (s *Sharing) prepareDirWithAncestors(inst *instance.Instance, dir *vfs.DirD
 
 // UpdateDir updates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
-func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface{}, dir *vfs.DirDoc) error {
-	name, indexer, err := extractNameAndIndexer(inst, target)
+func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface{}, dir *vfs.DirDoc, ref *SharedRef) error {
+	name, indexer, err := extractNameAndIndexer(inst, target, ref)
 	if err != nil {
 		return err
 	}
@@ -790,6 +798,7 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 		return err
 	}
 	file.DirID = parent.DocID
+	file.ResetFullpath()
 	return inst.VFS().UpdateFileDoc(olddoc, file)
 }
 
@@ -828,7 +837,7 @@ func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
 			"created_at": file.CreatedAt,
 			"updated_at": file.UpdatedAt,
 			"size":       file.ByteSize,
-			"md5Sum":     file.MD5Sum,
+			"md5sum":     file.MD5Sum,
 			"mime":       file.Mime,
 			"class":      file.Class,
 			"executable": file.Executable,
