@@ -44,7 +44,7 @@ class CozyFile
     @name = opts[:name] || Faker::Internet.slug
     @dir_id = opts[:dir_id] || Folder::ROOT_DIR
     @mime = opts[:mime] || "text/plain"
-    @content = opts[:content] || "Hello world"
+    @content = opts[:content] || Faker::Friends.quote
     @trashed = opts[:trashed]
     @md5sum = opts[:md5sum]
     @metadata = opts[:metadata]
@@ -66,9 +66,9 @@ class CozyFile
     @couch_rev = j["meta"]["rev"]
   end
 
-  def overwrite(inst, opts)
+  def overwrite(inst, opts = {})
     @mime = opts[:mime] || @mime
-    @content = opts[:content] || "New content"
+    @content = opts[:content] || Faker::Friends.quote
     opts = {
       accept: "application/vnd.api+json",
       authorization: "Bearer #{inst.token_for doctype}",
