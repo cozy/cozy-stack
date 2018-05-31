@@ -46,7 +46,7 @@ type (
 		TID          string        `json:"_id,omitempty"`
 		TRev         string        `json:"_rev,omitempty"`
 		Domain       string        `json:"domain"`
-		Prefix       string        `json:"prefix"`
+		Prefix       string        `json:"prefix,omitempty"`
 		Type         string        `json:"type"`
 		WorkerType   string        `json:"worker"`
 		Arguments    string        `json:"arguments"`

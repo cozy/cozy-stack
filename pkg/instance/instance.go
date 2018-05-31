@@ -1,6 +1,7 @@
 package instance
 
 import (
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
@@ -631,8 +632,10 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 	}
 
 	settings, _ := buildSettings(opts)
+	prefix := sha256.Sum256([]byte(domain))
 	i := new(Instance)
 	i.Domain = domain
+	i.Prefix = "c-" + hex.EncodeToString(prefix[:16])
 	i.Locale = locale
 	i.UUID = opts.UUID
 	i.TOSSigned = opts.TOSSigned
