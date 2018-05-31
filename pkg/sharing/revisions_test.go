@@ -3,6 +3,7 @@ package sharing
 import (
 	"fmt"
 	"testing"
+	"unicode"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -282,4 +283,13 @@ func TestIndexerCreateBogusPrevRev(t *testing.T) {
 	assert.Len(t, indexer.bulkRevs.Revisions.IDs, 2)
 	rev := fmt.Sprintf("%d-%s", gen, indexer.bulkRevs.Revisions.IDs[0])
 	assert.Equal(t, indexer.bulkRevs.Rev, rev)
+}
+
+func TestConflictID(t *testing.T) {
+	id := "d9dfd293577eea9f6d29d140259fa71d"
+	rev := "3-bf26bb2d42b0abf6a715ccf949d8e5f4"
+	xored := conflictID(id, rev)
+	for _, c := range xored {
+		assert.True(t, unicode.IsDigit(c) || unicode.IsLetter(c))
+	}
 }

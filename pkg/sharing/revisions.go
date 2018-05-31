@@ -257,5 +257,15 @@ func conflictName(name string) string {
 func conflictID(id, rev string) string {
 	parts := strings.SplitN(rev, "-", 2)
 	key := []byte(parts[1])
+	for i, c := range key {
+		switch {
+		case '0' <= c && c <= '9':
+			key[i] = c - '0'
+		case 'a' <= c && c <= 'f':
+			key[i] = c - 'a' + 10
+		case 'A' <= c && c <= 'F':
+			key[i] = c - 'A' + 10
+		}
+	}
 	return XorID(id, key)
 }
