@@ -226,7 +226,6 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 				Removed: true,
 				Binary:  false,
 			}
-			// TODO for a folder, we should also mark files inside it as removed
 		}
 	}
 

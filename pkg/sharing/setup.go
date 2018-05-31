@@ -95,11 +95,14 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Error on setup replicate trigger (%s): %s", s.SID, err)
 	}
-	if err := s.ReplicateTo(inst, m, true); err != nil {
+	if pending, err := s.ReplicateTo(inst, m, true); err != nil {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Error on initial replication (%s): %s", s.SID, err)
 		s.retryWorker(inst, "share-replicate", 0)
 	} else {
+		if pending {
+			s.pushJob(inst, "share-replicate")
+		}
 		if s.FirstFilesRule() == nil {
 			return
 		}

@@ -61,11 +61,11 @@ func TestSequenceNumber(t *testing.T) {
 	seq, err := s.getLastSeqNumber(inst, m, "replicator")
 	assert.NoError(t, err)
 	assert.Empty(t, seq)
-	_, _, seq, err = s.callChangesFeed(inst, seq)
+	feed, err := s.callChangesFeed(inst, seq)
 	assert.NoError(t, err)
-	assert.NotEmpty(t, seq)
-	assert.Equal(t, nb, RevGeneration(seq))
-	err = s.UpdateLastSequenceNumber(inst, m, "replicator", seq)
+	assert.NotEmpty(t, feed.Seq)
+	assert.Equal(t, nb, RevGeneration(feed.Seq))
+	err = s.UpdateLastSequenceNumber(inst, m, "replicator", feed.Seq)
 	assert.NoError(t, err)
 
 	seqU, err := s.getLastSeqNumber(inst, m, "upload")
@@ -76,13 +76,13 @@ func TestSequenceNumber(t *testing.T) {
 
 	seq2, err := s.getLastSeqNumber(inst, m, "replicator")
 	assert.NoError(t, err)
-	assert.Equal(t, seq, seq2)
+	assert.Equal(t, feed.Seq, seq2)
 
 	err = s.UpdateLastSequenceNumber(inst, m, "replicator", "2-abc")
 	assert.NoError(t, err)
 	seq3, err := s.getLastSeqNumber(inst, m, "replicator")
 	assert.NoError(t, err)
-	assert.Equal(t, seq, seq3)
+	assert.Equal(t, feed.Seq, seq3)
 }
 
 func createDoc(t *testing.T, doctype, id string, attrs map[string]interface{}) *couchdb.JSONDoc {
@@ -314,28 +314,32 @@ func TestCallChangesFeed(t *testing.T) {
 	ref2 := createSharedRef(t, s.SID, foobars+"/"+id2, []string{"3-bbb"})
 	appendRevisionToSharedRef(t, ref1, "2-ccc")
 
-	changes, indexes, seq, err := s.callChangesFeed(inst, "")
+	feed, err := s.callChangesFeed(inst, "")
 	assert.NoError(t, err)
-	assert.NotEmpty(t, seq)
-	assert.Equal(t, 3, RevGeneration(seq))
+	assert.NotEmpty(t, feed.Seq)
+	assert.Equal(t, 3, RevGeneration(feed.Seq))
+	changes := &feed.Changes
 	assert.Equal(t, []string{"2-ccc"}, changes.Changed[ref1.SID])
 	assert.Equal(t, []string{"3-bbb"}, changes.Changed[ref2.SID])
 	expected := map[string]int{
 		foobars + "/" + id1: 0,
 		foobars + "/" + id2: 0,
 	}
-	assert.Equal(t, expected, indexes)
+	assert.Equal(t, expected, feed.RuleIndexes)
+	assert.False(t, feed.Pending)
 
-	changes, _, newSeq, err := s.callChangesFeed(inst, seq)
+	feed2, err := s.callChangesFeed(inst, feed.Seq)
 	assert.NoError(t, err)
-	assert.Equal(t, seq, newSeq)
+	assert.Equal(t, feed.Seq, feed2.Seq)
+	changes = &feed2.Changes
 	assert.Empty(t, changes.Changed)
 
 	appendRevisionToSharedRef(t, ref1, "3-ddd")
-	changes, _, newSeq, err = s.callChangesFeed(inst, seq)
+	feed3, err := s.callChangesFeed(inst, feed.Seq)
 	assert.NoError(t, err)
-	assert.NotEmpty(t, seq)
-	assert.Equal(t, 4, RevGeneration(newSeq))
+	assert.NotEmpty(t, feed3.Seq)
+	assert.Equal(t, 4, RevGeneration(feed3.Seq))
+	changes = &feed3.Changes
 	assert.Equal(t, []string{"3-ddd"}, changes.Changed[ref1.SID])
 	assert.NotContains(t, changes.Changed, ref2.SID)
 }
