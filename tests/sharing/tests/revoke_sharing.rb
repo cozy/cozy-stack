@@ -70,69 +70,6 @@ describe "A sharing" do
   Helpers.start_mailhog
 
   it "can be revoked" do
-    recipient_name = "Bob"
-    # Create the instance
-    inst = Instance.create name: "Alice"
-    inst_recipient = Instance.create name: recipient_name
-
-    # Create the folder
-    folder = Folder.create inst
-    folder.couch_id.wont_be_empty
-    file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
-    opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
-    file = CozyFile.create inst, opts
-
-    # Create the sharing
-    contact = Contact.create inst, givenName: recipient_name
-    sharing = Sharing.new
-    sharing.rules << Rule.sync(folder)
-    sharing.members << inst << contact
-    inst.register sharing
-
-    # Accept the sharing
-    sleep 1
-    inst_recipient.accept sharing
-    sleep 2
-
-    # Get the clients id and triggers id
-    db = Helpers.db_name inst.domain, Sharing.doctype
-    doc = Helpers.couch.get_doc db, sharing.couch_id
-    client_id = inbound_client_id doc, 0
-    tri_ids = triggers_ids doc
-    assert_oauth_client_not_empty client_id
-    assert_triggers_not_empty tri_ids
-
-    db = Helpers.db_name inst_recipient.domain, Sharing.doctype
-    doc = Helpers.couch.get_doc db, sharing.couch_id
-    client_id_recipient = inbound_client_id doc, 0
-    tri_ids_recipient = triggers_ids doc
-    assert_oauth_client_not_empty client_id_recipient
-    assert_triggers_not_empty tri_ids_recipient
-
-    # Revoke the sharing
-    code = sharing.revoke_by_sharer(inst, Folder.doctype)
-    assert_equal 204, code
-
-    # Check the sharing on the sharer
-    assert_sharing_revoked inst, sharing.couch_id, true
-    assert_no_triggers inst, tri_ids
-    assert_no_oauth_client inst, client_id
-
-    # Check the sharing on the recipient
-    assert_sharing_revoked inst_recipient, sharing.couch_id, false
-    assert_no_oauth_client inst_recipient, client_id_recipient
-    assert_no_triggers inst_recipient, tri_ids_recipient
-
-    # Make an update: it should not be propagated
-    old_name = file.name
-    file.rename inst, Faker::Internet.slug
-    sleep 3
-    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{old_name}"
-    file_recipient = Folder.find_by_path inst_recipient, file_path
-    refute_equal file_recipient.name, file.name
-  end
-
-  it "can have a recipient revoked" do
     bob = "Bob"
     charlie = "Charlie"
 
@@ -147,11 +84,64 @@ describe "A sharing" do
 
     # Create the folder
     folder = Folder.create inst_alice
+    folder.couch_id.wont_be_empty
     file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
     file = CozyFile.create inst_alice, opts
 
     # Create the sharing
+    sharing = Sharing.new
+    sharing.rules << Rule.sync(folder)
+    sharing.members << inst_alice << contact_bob
+    inst_alice.register sharing
+
+    # Accept the sharing
+    sleep 1
+    inst_bob.accept sharing
+    sleep 2
+
+    # Get the clients id and triggers id
+    db = Helpers.db_name inst_alice.domain, Sharing.doctype
+    doc = Helpers.couch.get_doc db, sharing.couch_id
+    client_id = inbound_client_id doc, 0
+    tri_ids = triggers_ids doc
+    assert_oauth_client_not_empty client_id
+    assert_triggers_not_empty tri_ids
+
+    db = Helpers.db_name inst_bob.domain, Sharing.doctype
+    doc = Helpers.couch.get_doc db, sharing.couch_id
+    client_id_recipient = inbound_client_id doc, 0
+    tri_ids_recipient = triggers_ids doc
+    assert_oauth_client_not_empty client_id_recipient
+    assert_triggers_not_empty tri_ids_recipient
+
+    # Revoke the sharing
+    code = sharing.revoke_by_sharer(inst_alice, Folder.doctype)
+    assert_equal 204, code
+
+    # Check the sharing on the sharer
+    assert_sharing_revoked inst_alice, sharing.couch_id, true
+    assert_no_triggers inst_alice, tri_ids
+    assert_no_oauth_client inst_alice, client_id
+
+    # Check the sharing on the recipient
+    assert_sharing_revoked inst_bob, sharing.couch_id, false
+    assert_no_oauth_client inst_bob, client_id_recipient
+    assert_no_triggers inst_bob, tri_ids_recipient
+
+    # Make an update: it should not be propagated
+    old_name = file.name
+    file.rename inst_alice, Faker::Internet.slug
+    sleep 3
+    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{old_name}"
+    file_recipient = Folder.find_by_path inst_bob, file_path
+    refute_equal file_recipient.name, file.name
+
+    # Create a new sharing with a new folder
+    folder = Folder.create inst_alice
+    file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
+    file = CozyFile.create inst_alice, opts
     sharing = Sharing.new
     sharing.rules << Rule.sync(folder)
     sharing.members << inst_alice << contact_bob
