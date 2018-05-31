@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // Account holds configuration information for an account
@@ -78,7 +79,7 @@ func (ac *Account) Match(field, expected string) bool {
 
 func init() {
 	couchdb.AddHook(consts.Accounts, couchdb.EventDelete,
-		func(db couchdb.Database, doc couchdb.Doc, old couchdb.Doc) error {
+		func(db prefixer.Prefixer, doc couchdb.Doc, old couchdb.Doc) error {
 			jobsSystem := jobs.System()
 
 			trigs, err := jobsSystem.GetAllTriggers(db)

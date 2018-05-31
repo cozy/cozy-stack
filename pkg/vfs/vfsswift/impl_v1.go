@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
@@ -40,7 +41,7 @@ type swiftVFS struct {
 
 // New returns a vfs.VFS instance associated with the specified indexer and the
 // swift storage url.
-func New(db couchdb.Database, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
+func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
 	return &swiftVFS{
 		Indexer:         index,
 		DiskThresholder: disk,

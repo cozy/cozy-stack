@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	redis "github.com/go-redis/redis"
 )
 
@@ -105,7 +106,7 @@ func (h *redisHub) start() {
 	}
 }
 
-func (h *redisHub) GetTopic(domain, doctype string) *topic {
+func (h *redisHub) GetTopic(db prefixer.Prefixer, doctype string) *topic {
 	return nil
 }
 
@@ -120,12 +121,12 @@ func (h *redisHub) Publish(e *Event) {
 	h.c.Publish(eventsRedisKey, e.Doc.DocType()+","+string(buf))
 }
 
-func (h *redisHub) Subscriber(domain string) *DynamicSubscriber {
-	return h.mem.Subscriber(domain)
+func (h *redisHub) Subscriber(db prefixer.Prefixer) *DynamicSubscriber {
+	return h.mem.Subscriber(db)
 }
 
 func (h *redisHub) SubscribeLocalAll() *DynamicSubscriber {
-	ds := newDynamicSubscriber(nil, "")
+	ds := newDynamicSubscriber(nil, globalPrefixer)
 	ds.addTopic(h.local, "")
 	return ds
 }

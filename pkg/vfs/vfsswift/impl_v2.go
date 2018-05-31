@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/swift"
@@ -49,7 +50,7 @@ const (
 // This version implements a simpler layout where swift does not contain any
 // hierarchy: meaning no index informations. This help with index incoherency
 // and as many performance improvements regarding moving / renaming folders.
-func NewV2(db couchdb.Database, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
+func NewV2(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
 	return &swiftVFSV2{
 		Indexer:         index,
 		DiskThresholder: disk,

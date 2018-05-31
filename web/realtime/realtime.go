@@ -152,7 +152,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 		cmd := &command{}
 		if err = ws.ReadJSON(cmd); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
-				logger.WithDomain(ds.Domain).WithField("nspace", "realtime").Infof("Error: %s", err)
+				logger.WithDomain(ds.DomainName()).WithField("nspace", "realtime").Infof("Error: %s", err)
 			}
 			break
 		}
@@ -176,7 +176,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			err = ds.Watch(cmd.Payload.Type, cmd.Payload.ID)
 		}
 		if err != nil {
-			logger.WithDomain(ds.Domain).WithField("nspace", "realtime").Warnf("Error: %s", err)
+			logger.WithDomain(ds.DomainName()).WithField("nspace", "realtime").Warnf("Error: %s", err)
 		}
 	}
 }
@@ -198,7 +198,7 @@ func ws(c echo.Context) error {
 		return ws.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
-	ds := realtime.GetHub().Subscriber(instance.Domain)
+	ds := realtime.GetHub().Subscriber(instance)
 	defer ds.Close()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

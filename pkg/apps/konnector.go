@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // KonnManifest contains all the informations associated with an installed
@@ -172,7 +173,7 @@ func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 }
 
 // Create is part of the Manifest interface
-func (m *KonnManifest) Create(db couchdb.Database) error {
+func (m *KonnManifest) Create(db prefixer.Prefixer) error {
 	m.CreatedAt = time.Now()
 	m.UpdatedAt = time.Now()
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
@@ -183,7 +184,7 @@ func (m *KonnManifest) Create(db couchdb.Database) error {
 }
 
 // Update is part of the Manifest interface
-func (m *KonnManifest) Update(db couchdb.Database) error {
+func (m *KonnManifest) Update(db prefixer.Prefixer) error {
 	m.UpdatedAt = time.Now()
 	err := couchdb.UpdateDoc(db, m)
 	if err != nil {
@@ -194,7 +195,7 @@ func (m *KonnManifest) Update(db couchdb.Database) error {
 }
 
 // Delete is part of the Manifest interface
-func (m *KonnManifest) Delete(db couchdb.Database) error {
+func (m *KonnManifest) Delete(db prefixer.Prefixer) error {
 	err := permissions.DestroyKonnector(db, m.Slug())
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
@@ -204,7 +205,7 @@ func (m *KonnManifest) Delete(db couchdb.Database) error {
 
 // GetKonnectorBySlug fetch the manifest of a konnector from the database given
 // a slug.
-func GetKonnectorBySlug(db couchdb.Database, slug string) (*KonnManifest, error) {
+func GetKonnectorBySlug(db prefixer.Prefixer, slug string) (*KonnManifest, error) {
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
@@ -222,7 +223,7 @@ func GetKonnectorBySlug(db couchdb.Database, slug string) (*KonnManifest, error)
 // ListKonnectors returns the list of installed konnectors applications.
 //
 // TODO: pagination
-func ListKonnectors(db couchdb.Database) ([]Manifest, error) {
+func ListKonnectors(db prefixer.Prefixer) ([]Manifest, error) {
 	var docs []*KonnManifest
 	req := &couchdb.AllDocsRequest{Limit: 100}
 	err := couchdb.GetAllDocs(db, consts.Konnectors, req, &docs)

@@ -1,10 +1,13 @@
 package couchdb
 
-import "github.com/cozy/cozy-stack/pkg/realtime"
+import (
+	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/realtime"
+)
 
 // Hook is a function called before a change is made into
 // A hook can block the event by returning an error
-type listener func(db Database, doc Doc, old Doc) error
+type listener func(db prefixer.Prefixer, doc Doc, old Doc) error
 
 type key struct {
 	DocType string

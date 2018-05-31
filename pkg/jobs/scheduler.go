@@ -8,13 +8,14 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
 type (
 	// Trigger interface is used to represent a trigger.
 	Trigger interface {
-		couchdb.Database
+		prefixer.Prefixer
 		permissions.Matcher
 		Type() string
 		Infos() *TriggerInfos
@@ -33,11 +34,11 @@ type (
 		ShutdownScheduler(ctx context.Context) error
 		PollScheduler(now int64) error
 		AddTrigger(trigger Trigger) error
-		GetTrigger(db couchdb.Database, id string) (Trigger, error)
-		DeleteTrigger(db couchdb.Database, id string) error
-		GetAllTriggers(db couchdb.Database) ([]Trigger, error)
+		GetTrigger(db prefixer.Prefixer, id string) (Trigger, error)
+		DeleteTrigger(db prefixer.Prefixer, id string) error
+		GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error)
 		CleanRedis() error
-		RebuildRedis(db couchdb.Database) error
+		RebuildRedis(db prefixer.Prefixer) error
 	}
 
 	// TriggerInfos is a struct containing all the options of a trigger.
@@ -84,7 +85,7 @@ func (t *TriggerInfos) DomainName() string {
 
 // NewTrigger creates the trigger associates with the specified trigger
 // options.
-func NewTrigger(db couchdb.Database, infos TriggerInfos, data interface{}) (Trigger, error) {
+func NewTrigger(db prefixer.Prefixer, infos TriggerInfos, data interface{}) (Trigger, error) {
 	msg, err := NewMessage(data)
 	if err != nil {
 		return nil, err

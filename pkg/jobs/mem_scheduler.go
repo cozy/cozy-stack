@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/sirupsen/logrus"
 )
 
@@ -124,7 +125,7 @@ func (s *memScheduler) AddTrigger(t Trigger) error {
 }
 
 // GetTrigger returns the trigger with the specified ID.
-func (s *memScheduler) GetTrigger(db couchdb.Database, id string) (Trigger, error) {
+func (s *memScheduler) GetTrigger(db prefixer.Prefixer, id string) (Trigger, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	t, ok := s.ts[db.DBPrefix()+"/"+id]
@@ -136,7 +137,7 @@ func (s *memScheduler) GetTrigger(db couchdb.Database, id string) (Trigger, erro
 
 // DeleteTrigger removes the trigger with the specified ID. The trigger is unscheduled
 // and remove from the storage.
-func (s *memScheduler) DeleteTrigger(db couchdb.Database, id string) error {
+func (s *memScheduler) DeleteTrigger(db prefixer.Prefixer, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	t, ok := s.ts[db.DBPrefix()+"/"+id]
@@ -149,7 +150,7 @@ func (s *memScheduler) DeleteTrigger(db couchdb.Database, id string) error {
 }
 
 // GetAllTriggers returns all the running in-memory triggers.
-func (s *memScheduler) GetAllTriggers(db couchdb.Database) ([]Trigger, error) {
+func (s *memScheduler) GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	prefix := db.DBPrefix() + "/"
@@ -219,7 +220,7 @@ func (s *memScheduler) CleanRedis() error {
 
 // RebuildRedis does nothing for the in memory scheduler. It's just
 // here to implement the Scheduler interface.
-func (s *memScheduler) RebuildRedis(db couchdb.Database) error {
+func (s *memScheduler) RebuildRedis(db prefixer.Prefixer) error {
 	return errors.New("memScheduler does not use redis")
 }
 

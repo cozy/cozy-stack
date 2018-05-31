@@ -66,7 +66,7 @@ func (t *EventTrigger) Match(key, value string) bool {
 func (t *EventTrigger) Schedule() <-chan *JobRequest {
 	ch := make(chan *JobRequest)
 	go func() {
-		sub := realtime.GetHub().Subscriber(t.TriggerInfos.Domain)
+		sub := realtime.GetHub().Subscriber(t)
 		for _, m := range t.mask {
 			sub.Subscribe(m.Type)
 		}

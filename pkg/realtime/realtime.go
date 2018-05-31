@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // Basic data events
@@ -50,7 +51,7 @@ type Hub interface {
 
 	// Subscriber creates a DynamicSubscriber that can subscribe to several
 	// doctypes. Call its Close method to Unsubscribe.
-	Subscriber(domain string) *DynamicSubscriber
+	Subscriber(prefixer.Prefixer) *DynamicSubscriber
 
 	// SubscribeLocalAll adds a listener for all events that happened in this
 	// cozy-stack process.
@@ -58,7 +59,7 @@ type Hub interface {
 
 	// GetTopic returns the topic for the given domain+doctype.
 	// It creates the topic if it does not exist.
-	GetTopic(domain, doctype string) *topic
+	GetTopic(db prefixer.Prefixer, doctype string) *topic
 }
 
 // MemSub is a chan of events
@@ -66,18 +67,18 @@ type MemSub chan *Event
 
 // DynamicSubscriber is used to subscribe to several doctypes
 type DynamicSubscriber struct {
+	prefixer.Prefixer
 	Channel MemSub
-	Domain  string
 	hub     Hub
 	topics  []*topic
 	c       uint32 // mark whether or not the sub is closed
 }
 
-func newDynamicSubscriber(hub Hub, domain string) *DynamicSubscriber {
+func newDynamicSubscriber(hub Hub, db prefixer.Prefixer) *DynamicSubscriber {
 	return &DynamicSubscriber{
-		Channel: make(chan *Event, 10),
-		hub:     hub,
-		Domain:  domain,
+		Prefixer: db,
+		Channel:  make(chan *Event, 10),
+		hub:      hub,
 	}
 }
 
@@ -86,7 +87,7 @@ func (ds *DynamicSubscriber) Subscribe(doctype string) error {
 	if ds.Closed() || ds.hub == nil {
 		return errors.New("Can't subscribe")
 	}
-	t := ds.hub.GetTopic(ds.Domain, doctype)
+	t := ds.hub.GetTopic(ds, doctype)
 	ds.addTopic(t, "")
 	return nil
 }
@@ -96,7 +97,7 @@ func (ds *DynamicSubscriber) Watch(doctype, id string) error {
 	if ds.Closed() || ds.hub == nil {
 		return errors.New("Can't subscribe")
 	}
-	t := ds.hub.GetTopic(ds.Domain, doctype)
+	t := ds.hub.GetTopic(ds, doctype)
 	ds.addTopic(t, id)
 	return nil
 }

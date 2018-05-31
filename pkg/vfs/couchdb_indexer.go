@@ -11,16 +11,17 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
 type couchdbIndexer struct {
-	db couchdb.Database
+	db prefixer.Prefixer
 }
 
 // NewCouchdbIndexer creates an Indexer instance based on couchdb to store
 // files and directories metadata and index them.
-func NewCouchdbIndexer(db couchdb.Database) Indexer {
+func NewCouchdbIndexer(db prefixer.Prefixer) Indexer {
 	return &couchdbIndexer{
 		db: db,
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/notification"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // Route is a struct to serve a folder inside an app
@@ -245,7 +246,7 @@ func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) error
 }
 
 // Create is part of the Manifest interface
-func (m *WebappManifest) Create(db couchdb.Database) error {
+func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 	if err := diffServices(db, m.Slug(), nil, m.Services); err != nil {
 		return err
 	}
@@ -259,7 +260,7 @@ func (m *WebappManifest) Create(db couchdb.Database) error {
 }
 
 // Update is part of the Manifest interface
-func (m *WebappManifest) Update(db couchdb.Database) error {
+func (m *WebappManifest) Update(db prefixer.Prefixer) error {
 	if err := diffServices(db, m.Slug(), m.oldServices, m.Services); err != nil {
 		return err
 	}
@@ -272,7 +273,7 @@ func (m *WebappManifest) Update(db couchdb.Database) error {
 }
 
 // Delete is part of the Manifest interface
-func (m *WebappManifest) Delete(db couchdb.Database) error {
+func (m *WebappManifest) Delete(db prefixer.Prefixer) error {
 	err := diffServices(db, m.Slug(), m.Services, nil)
 	if err != nil {
 		return err
@@ -284,7 +285,7 @@ func (m *WebappManifest) Delete(db couchdb.Database) error {
 	return couchdb.DeleteDoc(db, m)
 }
 
-func diffServices(db couchdb.Database, slug string, oldServices, newServices Services) error {
+func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Services) error {
 	if oldServices == nil {
 		oldServices = make(Services)
 	}
@@ -415,7 +416,7 @@ func (m *WebappManifest) FindIntent(action, typ string) *Intent {
 }
 
 // GetWebappBySlug fetch the WebappManifest from the database given a slug.
-func GetWebappBySlug(db couchdb.Database, slug string) (*WebappManifest, error) {
+func GetWebappBySlug(db prefixer.Prefixer, slug string) (*WebappManifest, error) {
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
@@ -433,7 +434,7 @@ func GetWebappBySlug(db couchdb.Database, slug string) (*WebappManifest, error) 
 // ListWebapps returns the list of installed web applications.
 //
 // TODO: pagination
-func ListWebapps(db couchdb.Database) ([]*WebappManifest, error) {
+func ListWebapps(db prefixer.Prefixer) ([]*WebappManifest, error) {
 	var docs []*WebappManifest
 	req := &couchdb.AllDocsRequest{Limit: 100}
 	err := couchdb.GetAllDocs(db, consts.Apps, req, &docs)

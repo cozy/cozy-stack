@@ -6,6 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 const iterMaxFetchSize = 256
@@ -13,7 +14,7 @@ const iterMaxFetchSize = 256
 // iter is a struct allowing to iterate over the children of a
 // directory. The iterator is not thread-safe.
 type iter struct {
-	db     couchdb.Database
+	db     prefixer.Prefixer
 	sel    mango.Filter
 	opt    *IteratorOptions
 	list   []*DirOrFileDoc
@@ -24,7 +25,7 @@ type iter struct {
 }
 
 // NewIterator return a new iterator.
-func NewIterator(db couchdb.Database, dir *DirDoc, opt *IteratorOptions) DirIterator {
+func NewIterator(db prefixer.Prefixer, dir *DirDoc, opt *IteratorOptions) DirIterator {
 	if opt == nil {
 		opt = &IteratorOptions{ByFetch: iterMaxFetchSize}
 	}

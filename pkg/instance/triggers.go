@@ -1,12 +1,12 @@
 package instance
 
 import (
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // Triggers returns the list of the triggers to add when an instance is created
-func Triggers(db couchdb.Database) []jobs.TriggerInfos {
+func Triggers(db prefixer.Prefixer) []jobs.TriggerInfos {
 	// Create/update/remove thumbnails when an image is created/updated/removed
 	return []jobs.TriggerInfos{
 		{

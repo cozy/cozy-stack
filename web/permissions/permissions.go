@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -65,7 +66,7 @@ func (p *APIPermission) Links() *jsonapi.LinksList {
 	return links
 }
 
-type getPermsFunc func(db couchdb.Database, id string) (*permissions.Permission, error)
+type getPermsFunc func(db prefixer.Prefixer, id string) (*permissions.Permission, error)
 
 func displayPermissions(c echo.Context) error {
 	doc, err := GetPermission(c)

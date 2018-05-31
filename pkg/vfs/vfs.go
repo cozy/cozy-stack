@@ -17,6 +17,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // DefaultContentType is used for files uploaded with no content-type
@@ -60,7 +61,7 @@ var ErrWalkOverflow = errors.New("vfs: walk overflow")
 // Fs is an interface providing a set of high-level methods to interact with
 // the file-system binaries and metadata.
 type Fs interface {
-	couchdb.Database
+	prefixer.Prefixer
 	InitFs() error
 	Delete() error
 

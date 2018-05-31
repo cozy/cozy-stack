@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
@@ -74,7 +75,7 @@ func redisKey(t Trigger) string {
 	return t.DBPrefix() + "/" + t.Infos().TID
 }
 
-func eventsKey(db couchdb.Database) string {
+func eventsKey(db prefixer.Prefixer) string {
 	return "events-" + db.DBPrefix()
 }
 
@@ -313,7 +314,7 @@ func (s *redisScheduler) addToRedis(t Trigger, prev time.Time) error {
 }
 
 // GetTrigger returns the trigger with the specified ID.
-func (s *redisScheduler) GetTrigger(db couchdb.Database, id string) (Trigger, error) {
+func (s *redisScheduler) GetTrigger(db prefixer.Prefixer, id string) (Trigger, error) {
 	var infos TriggerInfos
 	if err := couchdb.GetDoc(db, consts.Triggers, id, &infos); err != nil {
 		if couchdb.IsNotFoundError(err) {
@@ -326,7 +327,7 @@ func (s *redisScheduler) GetTrigger(db couchdb.Database, id string) (Trigger, er
 
 // DeleteTrigger removes the trigger with the specified ID. The trigger is
 // unscheduled and remove from the storage.
-func (s *redisScheduler) DeleteTrigger(db couchdb.Database, id string) error {
+func (s *redisScheduler) DeleteTrigger(db prefixer.Prefixer, id string) error {
 	t, err := s.GetTrigger(db, id)
 	if err != nil {
 		return err
@@ -352,7 +353,7 @@ func (s *redisScheduler) deleteTrigger(t Trigger) error {
 }
 
 // GetAllTriggers returns all the triggers for a domain, from couch.
-func (s *redisScheduler) GetAllTriggers(db couchdb.Database) ([]Trigger, error) {
+func (s *redisScheduler) GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error) {
 	var infos []*TriggerInfos
 	err := couchdb.ForeachDocs(db, consts.Triggers, func(_ string, data json.RawMessage) error {
 		var t *TriggerInfos
@@ -386,7 +387,7 @@ func (s *redisScheduler) CleanRedis() error {
 }
 
 // RebuildRedis puts all the triggers in redis (idempotent)
-func (s *redisScheduler) RebuildRedis(db couchdb.Database) error {
+func (s *redisScheduler) RebuildRedis(db prefixer.Prefixer) error {
 	triggers, err := s.GetAllTriggers(db)
 	if err != nil {
 		return err

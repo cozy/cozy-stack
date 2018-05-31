@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -148,7 +148,7 @@ func (b *memBroker) ShutdownWorkers(ctx context.Context) error {
 
 // PushJob will produce a new Job with the given options and enqueue the job in
 // the proper queue.
-func (b *memBroker) PushJob(db couchdb.Database, req *JobRequest) (*Job, error) {
+func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error) {
 	if atomic.LoadUint32(&b.running) == 0 {
 		return nil, ErrClosed
 	}

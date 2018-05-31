@@ -18,12 +18,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	vcardParser "github.com/emersion/go-vcard"
 )
 
-func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Database) error {
+func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db prefixer.Prefixer) error {
 	decoder := vcardParser.NewDecoder(tr)
 	vcard, err := decoder.Decode()
 	if err != nil {

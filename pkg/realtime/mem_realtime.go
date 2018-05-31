@@ -1,6 +1,12 @@
 package realtime
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/cozy/cozy-stack/pkg/prefixer"
+)
+
+var globalPrefixer = prefixer.NewPrefixer("", "*")
 
 type memHub struct {
 	sync.RWMutex
@@ -12,37 +18,37 @@ func newMemHub() *memHub {
 }
 
 func (h *memHub) Publish(e *Event) {
-	topic := h.get(e.Domain, e.Doc.DocType())
+	topic := h.get(e, e.Doc.DocType())
 	if topic != nil {
 		topic.broadcast <- e
 	}
-	topic = h.get("*", "*")
+	topic = h.get(globalPrefixer, "*")
 	if topic != nil {
 		topic.broadcast <- e
 	}
 }
 
-func (h *memHub) Subscriber(domain string) *DynamicSubscriber {
-	return newDynamicSubscriber(h, domain)
+func (h *memHub) Subscriber(db prefixer.Prefixer) *DynamicSubscriber {
+	return newDynamicSubscriber(h, db)
 }
 
 func (h *memHub) SubscribeLocalAll() *DynamicSubscriber {
-	ds := newDynamicSubscriber(nil, "")
-	t := h.GetTopic("*", "*")
+	ds := newDynamicSubscriber(nil, globalPrefixer)
+	t := h.GetTopic(globalPrefixer, "*")
 	ds.addTopic(t, "")
 	return ds
 }
 
-func (h *memHub) get(domain, doctype string) *topic {
+func (h *memHub) get(db prefixer.Prefixer, doctype string) *topic {
 	h.RLock()
 	defer h.RUnlock()
-	return h.topics[h.topicKey(domain, doctype)]
+	return h.topics[h.topicKey(db, doctype)]
 }
 
-func (h *memHub) GetTopic(domain, doctype string) *topic {
+func (h *memHub) GetTopic(db prefixer.Prefixer, doctype string) *topic {
 	h.Lock()
 	defer h.Unlock()
-	key := h.topicKey(domain, doctype)
+	key := h.topicKey(db, doctype)
 	it, exists := h.topics[key]
 	if !exists {
 		it = newTopic(key)
@@ -51,8 +57,8 @@ func (h *memHub) GetTopic(domain, doctype string) *topic {
 	return it
 }
 
-func (h *memHub) topicKey(domain, doctype string) string {
-	return domain + ":" + doctype
+func (h *memHub) topicKey(db prefixer.Prefixer, doctype string) string {
+	return db.DBPrefix() + ":" + doctype
 }
 
 type filter struct {

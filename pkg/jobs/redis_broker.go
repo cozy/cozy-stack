@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/go-redis/redis"
 	multierror "github.com/hashicorp/go-multierror"
@@ -174,7 +175,7 @@ func (b *redisBroker) pollLoop(key string, ch chan<- *Job) {
 
 // PushJob will produce a new Job with the given options and enqueue the job in
 // the proper queue.
-func (b *redisBroker) PushJob(db couchdb.Database, req *JobRequest) (*Job, error) {
+func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error) {
 	if atomic.LoadUint32(&b.running) == 0 {
 		return nil, ErrClosed
 	}

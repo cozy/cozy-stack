@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/sirupsen/logrus"
 )
@@ -40,7 +41,7 @@ type (
 
 		// PushJob will push try to push a new job from the specified job request.
 		// This method is asynchronous.
-		PushJob(db couchdb.Database, request *JobRequest) (*Job, error)
+		PushJob(db prefixer.Prefixer, request *JobRequest) (*Job, error)
 
 		// WorkerQueueLen returns the total element in the queue of the specified
 		// worker type.
@@ -244,7 +245,7 @@ func (m Message) MarshalJSON() ([]byte, error) {
 }
 
 // NewJob creates a new Job instance from a job request.
-func NewJob(db couchdb.Database, req *JobRequest) *Job {
+func NewJob(db prefixer.Prefixer, req *JobRequest) *Job {
 	return &Job{
 		Domain:     db.DomainName(),
 		Prefix:     db.DBPrefix(),
@@ -261,7 +262,7 @@ func NewJob(db couchdb.Database, req *JobRequest) *Job {
 }
 
 // Get returns the informations about a job.
-func Get(db couchdb.Database, jobID string) (*Job, error) {
+func Get(db prefixer.Prefixer, jobID string) (*Job, error) {
 	var job Job
 	if err := couchdb.GetDoc(db, consts.Jobs, jobID, &job); err != nil {
 		if couchdb.IsNotFoundError(err) {
@@ -273,7 +274,7 @@ func Get(db couchdb.Database, jobID string) (*Job, error) {
 }
 
 // GetQueuedJobs returns the list of jobs which states is "queued" or "running"
-func GetQueuedJobs(db couchdb.Database, workerType string) ([]*Job, error) {
+func GetQueuedJobs(db prefixer.Prefixer, workerType string) ([]*Job, error) {
 	var results []*Job
 	req := &couchdb.FindRequest{
 		UseIndex: "by-worker-and-state",

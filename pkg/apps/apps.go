@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 const (
@@ -64,9 +65,9 @@ type Manifest interface {
 	Match(field, expected string) bool
 	ReadManifest(i io.Reader, slug, sourceURL string) error
 
-	Create(db couchdb.Database) error
-	Update(db couchdb.Database) error
-	Delete(db couchdb.Database) error
+	Create(db prefixer.Prefixer) error
+	Update(db prefixer.Prefixer) error
+	Delete(db prefixer.Prefixer) error
 
 	AppType() AppType
 	Permissions() permissions.Set
@@ -84,7 +85,7 @@ type Manifest interface {
 }
 
 // GetBySlug returns an app manifest identified by its slug
-func GetBySlug(db couchdb.Database, slug string, appType AppType) (Manifest, error) {
+func GetBySlug(db prefixer.Prefixer, slug string, appType AppType) (Manifest, error) {
 	var man Manifest
 	var err error
 	switch appType {

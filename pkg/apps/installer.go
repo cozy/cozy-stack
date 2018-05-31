@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/sirupsen/logrus"
@@ -34,7 +34,7 @@ type Installer struct {
 	fetcher  Fetcher
 	op       Operation
 	fs       Copier
-	db       couchdb.Database
+	db       prefixer.Prefixer
 	endState State
 
 	overridenParameters *json.RawMessage
@@ -77,7 +77,7 @@ type Fetcher interface {
 }
 
 // NewInstaller creates a new Installer
-func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Installer, error) {
+func NewInstaller(db prefixer.Prefixer, fs Copier, opts *InstallerOptions) (*Installer, error) {
 	man, err := initManifest(db, opts)
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 	}, nil
 }
 
-func initManifest(db couchdb.Database, opts *InstallerOptions) (man Manifest, err error) {
+func initManifest(db prefixer.Prefixer, opts *InstallerOptions) (man Manifest, err error) {
 	if man = opts.Manifest; man != nil {
 		return man, nil
 	}
