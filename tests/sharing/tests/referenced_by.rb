@@ -15,7 +15,7 @@ describe "A photo" do
 
   recipient_name = "Bob"
 
-  it "does not transmit its references when shared through a folder" do
+  it "can be shared in a folder or an album" do
     # Create the instance
     inst = Instance.create name: "Alice"
     inst_recipient = Instance.create name: recipient_name
@@ -75,12 +75,6 @@ describe "A photo" do
     refute file_recipient.trashed
     assert_equal Folder::NO_LONGER_SHARED_DIR, file_recipient.dir_id
     assert file_has_album_reference(file_recipient, album_recipient.couch_id)
-  end
-
-  it "can be shared through an album" do
-    # Create the instance
-    inst = Instance.create name: "Alice"
-    inst_recipient = Instance.create name: recipient_name
 
     # Create a picture
     file_name = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
