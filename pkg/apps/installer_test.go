@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/stack"
 )
 
@@ -124,7 +125,7 @@ git checkout master`
 	}
 }
 
-var db couchdb.Database
+var db prefixer.Prefixer
 var fs apps.Copier
 var baseFS afero.Fs
 
@@ -151,7 +152,7 @@ func TestMain(m *testing.M) {
 		io.WriteString(w, manGen())
 	}))
 
-	db = couchdb.NewDatabase("apps-test")
+	db = prefixer.NewPrefixer("", "apps-test")
 
 	err = couchdb.ResetDB(db, consts.Apps)
 	if err != nil {

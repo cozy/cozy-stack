@@ -20,8 +20,6 @@ import (
 var inst *instance.Instance
 var filename string
 
-var testdb couchdb.Database
-
 func TestTardir(t *testing.T) {
 	fs := inst.VFS()
 
@@ -47,7 +45,7 @@ func TestTardir(t *testing.T) {
 	m := testJsondoc.ToMapWithType()
 	m["name"] = "albumTest"
 	delete(testJsondoc.M, "_type")
-	err = couchdb.CreateDoc(testdb, testJsondoc)
+	err = couchdb.CreateDoc(inst, testJsondoc)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, testJsondoc.Rev(), testJsondoc.ID())
 
@@ -72,7 +70,7 @@ func TestTardir(t *testing.T) {
 	assert.NoError(t, err)
 
 	image.AddReferencedBy(*testAlbumref)
-	err = couchdb.UpdateDoc(testdb, image)
+	err = couchdb.UpdateDoc(inst, image)
 	assert.NoError(t, err)
 
 	filename, err = Export(inst)
@@ -139,7 +137,7 @@ func TestImport(t *testing.T) {
 	assert.NotNil(t, photo.ReferencedBy)
 
 	var results []map[string]interface{}
-	err = couchdb.GetAllDocs(testdb, consts.PhotosAlbums, &couchdb.AllDocsRequest{}, &results)
+	err = couchdb.GetAllDocs(inst, consts.PhotosAlbums, &couchdb.AllDocsRequest{}, &results)
 	assert.NoError(t, err)
 
 	for _, val := range results {
@@ -158,7 +156,6 @@ func TestMain(m *testing.M) {
 
 	setup := testutils.NewSetup(m, "export_test")
 	inst = setup.GetTestInstance()
-	testdb = couchdb.NewDatabase(inst.Domain)
 
 	os.Exit(setup.Run())
 }

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/go-redis/redis"
@@ -162,8 +161,7 @@ func (b *redisBroker) pollLoop(key string, ch chan<- *Job) {
 		}
 
 		prefix, jobID := parts[0], parts[1]
-		db := couchdb.NewDatabase(prefix)
-		job, err := Get(db, jobID)
+		job, err := Get(prefixer.NewPrefixer("", prefix), jobID)
 		if err != nil {
 			joblog.Warnf("Cannot find job %s on domain %s: %s", parts[1], parts[0], err)
 			continue

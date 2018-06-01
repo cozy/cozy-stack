@@ -25,7 +25,7 @@ func TestErrors(t *testing.T) {
 
 const TestDoctype = "io.cozy.testobject"
 
-var TestPrefix = NewDatabase("couchdb-tests")
+var TestPrefix = newDatabase("couchdb-tests")
 var receivedEventsMutex sync.Mutex
 var receivedEvents map[string]struct{}
 

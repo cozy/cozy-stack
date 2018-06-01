@@ -229,8 +229,9 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 			s.client.ZRem(SchedKey, results[0])
 			return fmt.Errorf("Invalid key %s", res)
 		}
-		db := couchdb.NewDatabase(parts[0])
-		t, err := s.GetTrigger(db, parts[1])
+
+		prefix := parts[0]
+		t, err := s.GetTrigger(prefixer.NewPrefixer("", prefix), parts[1])
 		if err != nil {
 			if err == ErrNotFoundTrigger {
 				s.client.ZRem(SchedKey, results[0])

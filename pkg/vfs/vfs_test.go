@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
@@ -806,7 +807,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 		return nil, nil, errors.New("could not create temporary directory")
 	}
 
-	db := couchdb.NewDatabase("io.cozy.vfs.test")
+	db := prefixer.NewPrefixer("io.cozy.vfs.test", "io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
 	aferoFs, err := vfsafero.New(db, index, &diskImpl{}, lock.ReadWrite(db, "vfs-afero-test"),
 		&url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, "io.cozy.vfs.test")
@@ -840,7 +841,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 }
 
 func makeSwiftFS(layoutV2 bool) (vfs.VFS, func(), error) {
-	db := couchdb.NewDatabase("io.cozy.vfs.test")
+	db := prefixer.NewPrefixer("io.cozy.vfs.test", "io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
 	if err != nil {

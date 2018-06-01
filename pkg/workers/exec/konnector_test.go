@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
@@ -28,7 +29,7 @@ func TestUnknownDomain(t *testing.T) {
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	db := couchdb.NewDatabase("instance.does.not.exist")
+	db := prefixer.NewPrefixer("instance.does.not.exist", "instance.does.not.exist")
 	j := jobs.NewJob(db, &jobs.JobRequest{
 		Message:    msg,
 		WorkerType: "konnector",

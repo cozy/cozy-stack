@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/sirupsen/logrus"
 )
@@ -42,21 +43,11 @@ type Doc interface {
 	SetRev(rev string)
 }
 
-// Database is the type passed to every function in couchdb package
-// for now it is just a string with the database prefix.
-type Database interface {
-	DBPrefix() string
-	DomainName() string
-}
+type Database prefixer.Prefixer
 
-type simpleDB string
-
-func (sdb simpleDB) DBPrefix() string   { return string(sdb) }
-func (sdb simpleDB) DomainName() string { return "unknown" }
-
-// NewDatabase returns a Database from a prefix, useful for test
-func NewDatabase(prefix string) Database {
-	return simpleDB(prefix)
+// newDatabase returns a Database from a prefix, useful for test
+func newDatabase(prefix string) prefixer.Prefixer {
+	return prefixer.NewPrefixer("", prefix)
 }
 
 // RTEvent published a realtime event for a couchDB change
@@ -72,11 +63,11 @@ func RTEvent(db Database, verb string, doc, oldDoc Doc) {
 }
 
 // GlobalDB is the prefix used for stack-scoped db
-var GlobalDB = NewDatabase("global")
+var GlobalDB = newDatabase("global")
 
 // GlobalSecretsDB is the the prefix used for db which hold
 // a cozy stack secrets.
-var GlobalSecretsDB = NewDatabase("secrets")
+var GlobalSecretsDB = newDatabase("secrets")
 
 // View is the map/reduce thing in CouchDB
 type View struct {

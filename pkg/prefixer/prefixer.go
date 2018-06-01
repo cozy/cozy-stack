@@ -12,8 +12,14 @@ type prefixer struct {
 	prefix string
 }
 
-func (p *prefixer) DBPrefix() string   { return p.prefix }
-func (p *prefixer) DomainName() string { return p.domain }
+func (p *prefixer) DBPrefix() string { return p.prefix }
+
+func (p *prefixer) DomainName() string {
+	if p.domain == "" {
+		return "<unknown>"
+	}
+	return p.domain
+}
 
 // NewPrefixer returns a prefixer with the specified domain and prefix values.
 func NewPrefixer(domain, prefix string) Prefixer {
