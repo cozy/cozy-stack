@@ -152,8 +152,10 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 		return err
 	}
 
-	if err := UpdateFileShared(s.db, s.shared, s.bulkRevs.Revisions); err != nil {
-		return err
+	if s.shared != nil {
+		if err := UpdateFileShared(s.db, s.shared, s.bulkRevs.Revisions); err != nil {
+			return err
+		}
 	}
 
 	// Ensure that fullpath is filled because it's used in realtime/@events
@@ -200,8 +202,9 @@ func (s *sharingIndexer) bulkForceUpdateDoc(doc *vfs.FileDoc) error {
 	return couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs)
 }
 
+// DeleteFileDoc is used when uploading a new file fails (invalid md5sum for example)
 func (s *sharingIndexer) DeleteFileDoc(doc *vfs.FileDoc) error {
-	return ErrInternalServerError
+	return s.indexer.DeleteFileDoc(doc)
 }
 
 func (s *sharingIndexer) CreateDirDoc(doc *vfs.DirDoc) error {

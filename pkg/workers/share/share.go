@@ -4,17 +4,12 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 )
 
 func init() {
-	if !config.IsDevRelease() {
-		return
-	}
-
 	// TODO write documentation about this worker
 	jobs.AddWorker(&jobs.WorkerConfig{
 		WorkerType:   "share-track",

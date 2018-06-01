@@ -157,6 +157,7 @@ func SetupRoutes(router *echo.Echo) error {
 		permissions.Routes(router.Group("/permissions", mws...))
 		realtime.Routes(router.Group("/realtime", mws...))
 		remote.Routes(router.Group("/remote", mws...))
+		sharings.Routes(router.Group("/sharings", mws...))
 
 		// The settings routes needs not to be blocked
 		settings.Routes(router.Group("/settings", mwsNotBlocked...))
@@ -165,10 +166,6 @@ func SetupRoutes(router *echo.Echo) error {
 		// applied to this group in web/routing since they should not be used for
 		// oauth redirection.
 		konnectorsauth.Routes(router.Group("/accounts"))
-
-		if config.IsDevRelease() {
-			sharings.Routes(router.Group("/sharings", mws...))
-		}
 	}
 
 	// non-authentified JSON API routes

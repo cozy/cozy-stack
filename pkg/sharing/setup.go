@@ -18,6 +18,9 @@ import (
 // SetupReceiver is used on the receivers' cozy to make sure the cozy can
 // receive the shared documents.
 func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
+	inst.Logger().WithField("nspace", "sharing").
+		Debugf("Setup receiver on %#v", inst)
+
 	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
 		return err
 	}
@@ -46,6 +49,13 @@ func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
 // database and start an initial replication. It is meant to be used in a new
 // goroutine and, as such, does not return errors but log them.
 func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
+	// Don't do the setup for most tests
+	if !inst.OnboardingFinished {
+		return
+	}
+	inst.Logger().WithField("nspace", "sharing").
+		Debugf("Setup for member %#v on %#v", m, inst)
+
 	defer func() {
 		if r := recover(); r != nil {
 			var err error
@@ -61,11 +71,6 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 		}
 	}()
-
-	// Don't do the setup for most tests
-	if !inst.OnboardingFinished {
-		return
-	}
 
 	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID)
 	mu.Lock()
@@ -95,11 +100,14 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Error on setup replicate trigger (%s): %s", s.SID, err)
 	}
-	if err := s.ReplicateTo(inst, m, true); err != nil {
+	if pending, err := s.ReplicateTo(inst, m, true); err != nil {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Error on initial replication (%s): %s", s.SID, err)
 		s.retryWorker(inst, "share-replicate", 0)
 	} else {
+		if pending {
+			s.pushJob(inst, "share-replicate")
+		}
 		if s.FirstFilesRule() == nil {
 			return
 		}

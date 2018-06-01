@@ -40,30 +40,62 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 	mu.Lock()
 	defer mu.Unlock()
 
+	pending := false
 	var errm error
 	if !s.Owner {
-		errm = s.ReplicateTo(inst, &s.Members[0], false)
+		pending, errm = s.ReplicateTo(inst, &s.Members[0], false)
 	} else {
 		for i, m := range s.Members {
 			if i == 0 {
 				continue
 			}
 			if m.Status == MemberStatusReady {
-				err := s.ReplicateTo(inst, &s.Members[i], false)
+				p, err := s.ReplicateTo(inst, &s.Members[i], false)
 				if err != nil {
 					errm = multierror.Append(errm, err)
+				} else if p {
+					pending = true
 				}
 			}
 		}
 	}
 	if errm != nil {
 		s.retryWorker(inst, "share-replicate", errors)
+	} else if pending {
+		s.pushJob(inst, "share-replicate")
 	}
 	return errm
 }
 
+// pushJob adds a new job to continue on the pending documents in the changes feed
+func (s *Sharing) pushJob(inst *instance.Instance, worker string) {
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("Push a new job for worker %s for sharing %s", worker, s.SID)
+	msg, err := jobs.NewMessage(&ReplicateMsg{
+		SharingID: s.SID,
+		Errors:    0,
+	})
+	if err != nil {
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Error on push job to %s: %s", worker, err)
+		return
+	}
+	_, err = jobs.System().PushJob(&jobs.JobRequest{
+		Domain:     inst.Domain,
+		WorkerType: worker,
+		Message:    msg,
+	})
+	if err != nil {
+		inst.Logger().WithField("nspace", "replicator").
+			Warnf("Error on push job to %s: %s", worker, err)
+		return
+	}
+}
+
 // retryWorker will add a job to retry a failed replication or upload
 func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int) {
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("Retry worker %s for sharing %s", worker, s.SID)
 	backoff := InitialBackoffPeriod << uint(errors*2)
 	errors++
 	if errors == MaxRetries {
@@ -102,31 +134,32 @@ func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int
 // https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js
 // TODO pouch use the pending property of changes for its replicator
 // https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js#L298-L301
-func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) error {
+func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) (bool, error) {
 	if m.Instance == "" {
-		return ErrInvalidURL
+		return false, ErrInvalidURL
 	}
 	creds := s.FindCredentials(m)
 	if creds == nil {
-		return ErrInvalidSharing
+		return false, ErrInvalidSharing
 	}
 
 	lastSeq, err := s.getLastSeqNumber(inst, m, "replicator")
 	if err != nil {
-		return err
+		return false, err
 	}
 	inst.Logger().WithField("nspace", "replicator").Debugf("lastSeq = %s", lastSeq)
 
-	changes, ruleIndexes, seq, err := s.callChangesFeed(inst, lastSeq)
+	feed, err := s.callChangesFeed(inst, lastSeq)
 	if err != nil {
-		return err
+		return false, err
 	}
-	if seq == lastSeq {
-		return nil
+	if feed.Seq == lastSeq {
+		return false, nil
 	}
-	inst.Logger().WithField("nspace", "replicator").Debugf("changes = %#v", changes)
+	inst.Logger().WithField("nspace", "replicator").Debugf("changes = %#v", feed.Changes)
 	// TODO filter the changes according to the sharing rules
 
+	changes := &feed.Changes
 	if len(changes.Changed) > 0 {
 		var missings *Missings
 		if initial || len(changes.Changed) == len(changes.Removed) {
@@ -134,24 +167,25 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		} else {
 			missings, err = s.callRevsDiff(inst, m, creds, changes)
 			if err != nil {
-				return err
+				return false, err
 			}
 		}
 		inst.Logger().WithField("nspace", "replicator").Debugf("missings = %#v", missings)
 
-		docs, err := s.getMissingDocs(inst, missings, changes)
-		if err != nil {
-			return err
+		docs, errb := s.getMissingDocs(inst, missings, changes)
+		if errb != nil {
+			return false, errb
 		}
 		inst.Logger().WithField("nspace", "replicator").Debugf("docs = %#v", docs)
 
-		err = s.sendBulkDocs(inst, m, creds, docs, ruleIndexes)
+		err = s.sendBulkDocs(inst, m, creds, docs, feed.RuleIndexes)
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 
-	return s.UpdateLastSequenceNumber(inst, m, "replicator", seq)
+	err = s.UpdateLastSequenceNumber(inst, m, "replicator", feed.Seq)
+	return feed.Pending, err
 }
 
 // getLastSeqNumber returns the last sequence number of the previous
@@ -238,11 +272,23 @@ func extractLastRevision(doc couchdb.JSONDoc) string {
 	return rev
 }
 
+// changesResponse contains the useful informations from a call to the changes
+// feed in the replicator context
+type changesResponse struct {
+	// Changes is the list of changed documents
+	Changes Changes
+	// RuleIndexes is a mapping between the "doctype/docid" -> rule index
+	RuleIndexes map[string]int
+	// Seq is the sequence number after these changes
+	Seq string
+	// Pending is true if there are some other changes in the feed after those
+	Pending bool
+}
+
 // callChangesFeed fetches the last changes from the changes feed
 // http://docs.couchdb.org/en/2.1.1/api/database/changes.html
 // TODO add a filter on the sharing
-// TODO what if there are more changes in the feed that BatchSize?
-func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Changes, map[string]int, string, error) {
+func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*changesResponse, error) {
 	response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
 		DocType:     consts.Shared,
 		IncludeDocs: true,
@@ -250,13 +296,17 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 		Limit:       BatchSize,
 	})
 	if err != nil {
-		return nil, nil, "", err
+		return nil, err
 	}
-	changes := Changes{
-		Changed: make(Changed),
-		Removed: make(Removed),
+	res := changesResponse{
+		Changes: Changes{
+			Changed: make(Changed),
+			Removed: make(Removed),
+		},
+		RuleIndexes: make(map[string]int),
+		Seq:         response.LastSeq,
+		Pending:     response.Pending > 0,
 	}
-	rules := make(map[string]int)
 	for _, r := range response.Results {
 		infos, ok := r.Doc.Get("infos").(map[string]interface{})
 		if !ok {
@@ -270,18 +320,18 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*Chang
 			continue
 		}
 		if _, ok = info["removed"]; ok {
-			changes.Removed[r.DocID] = struct{}{}
+			res.Changes.Removed[r.DocID] = struct{}{}
 		}
 		idx, ok := info["rule"].(float64)
 		if !ok {
 			continue
 		}
-		rules[r.DocID] = int(idx)
+		res.RuleIndexes[r.DocID] = int(idx)
 		if rev := extractLastRevision(r.Doc); rev != "" {
-			changes.Changed[r.DocID] = []string{rev}
+			res.Changes.Changed[r.DocID] = []string{rev}
 		}
 	}
-	return &changes, rules, response.LastSeq, nil
+	return &res, nil
 }
 
 // Missings is a struct for the response of _revs_diff
@@ -376,6 +426,8 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 // ComputeRevsDiff takes a map of id->[revisions] and returns the missing
 // revisions for those documents on the current instance.
 func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changed Changed) (*Missings, error) {
+	inst.Logger().WithField("nspace", "replicator").
+		Debugf("ComputeRevsDiff %#v", changed)
 	ids := make([]string, 0, len(changed))
 	for id := range changed {
 		ids = append(ids, id)

@@ -45,7 +45,6 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 		}
 	}
 
-	// TODO what if we have more than BatchSize files to upload?
 	for i := 0; i < BatchSize; i++ {
 		if len(members) == 0 {
 			break
@@ -64,6 +63,8 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 	if errm != nil {
 		s.retryWorker(inst, "share-upload", errors)
 		inst.Logger().WithField("nspace", "upload").Infof("errm=%s\n", errm)
+	} else if len(members) > 0 {
+		s.pushJob(inst, "share-upload")
 	}
 	return errm
 }
@@ -74,7 +75,6 @@ func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
 	mu.Lock()
 	defer mu.Unlock()
 
-	// TODO what if we have more than BatchSize files to upload?
 	for i := 0; i < BatchSize; i++ {
 		more, err := s.UploadTo(inst, m)
 		if err != nil {
@@ -85,6 +85,7 @@ func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
 		}
 	}
 
+	s.pushJob(inst, "share-upload")
 	return nil
 }
 
@@ -294,6 +295,7 @@ func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRe
 // SyncFile tries to synchronize a file with just the metadata. If it can't,
 // it will return a key to upload the content.
 func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
+	inst.Logger().WithField("nspace", "upload").Debugf("SyncFile %#v", target)
 	if len(target.MD5Sum) == 0 {
 		return nil, vfs.ErrInvalidHash
 	}
@@ -612,12 +614,12 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 	}, nil)
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	newdoc.DocID = conflictID(newdoc.DocID, rev)
-	if _, err := fs.FileByID(newdoc.DocID); err != nil {
-		if err == os.ErrExist {
-			body.Close()
-			return nil
+	if _, err := fs.FileByID(newdoc.DocID); err != os.ErrNotExist {
+		if err != nil {
+			return err
 		}
-		return err
+		body.Close()
+		return nil
 	}
 	newdoc.DocName = conflictName(newdoc.DocName)
 	newdoc.DocRev = ""
@@ -641,10 +643,7 @@ func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) e
 	fs := inst.VFS().UseSharingIndexer(indexer)
 	dst := src.Clone().(*vfs.FileDoc)
 	dst.DocID = conflictID(dst.DocID, rev)
-	if _, err := fs.FileByID(dst.DocID); err != nil {
-		if err == os.ErrExist {
-			return nil
-		}
+	if _, err := fs.FileByID(dst.DocID); err != os.ErrNotExist {
 		return err
 	}
 	dst.DocName = conflictName(dst.DocName)
