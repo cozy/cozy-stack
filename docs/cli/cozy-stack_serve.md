@@ -47,7 +47,7 @@ example), you can use the --appdir flag like this:
       --disable-csp                      Disable the Content Security Policy (only available for development)
       --doctypes string                  path to the directory with the doctypes (for developing/testing a remote doctype)
       --downloads-url string             URL for the download secret storage, redis or in-memory
-      --fs-url string                    filesystem url (default "file:///home/nono/storage")
+      --fs-url string                    filesystem url (default "file:///storage")
       --geodb string                     define the location of the database for IP -> City lookups (default ".")
   -h, --help                             help for serve
       --hooks string                     define the directory used for hook scripts (default ".")
@@ -75,7 +75,6 @@ example), you can use the --appdir flag like this:
 ```
       --admin-host string   administration server host (default "localhost")
       --admin-port int      administration server port (default 6060)
-      --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
   -p, --port int            server port (default 8080)
