@@ -23,7 +23,7 @@ describe "A sharing" do
     # Create the sharing
     contact = Contact.create inst, givenName: recipient_name
     sharing = Sharing.new
-    sharing.rules << Rule.push(folder)
+    sharing.rules << Rule.sync(folder)
     sharing.members << inst << contact
     inst.register sharing
 
@@ -42,12 +42,12 @@ describe "A sharing" do
       child1_recipient.rename inst_recipient, Faker::Internet.slug
     end
 
-    sleep 10
+    sleep 12
     # Check the names are equal in db and disk
     child1 = Folder.find inst, child1.couch_id
     child1_recipient = Folder.find inst_recipient, child1_recipient.couch_id
     assert_equal child1.name, child1_recipient.name
-    assert_equal child1.rev, child1_recipient.rev
+    assert_equal child1.couch_rev, child1_recipient.couch_rev
 
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_recipient.domain,
@@ -55,8 +55,7 @@ describe "A sharing" do
     diff = Helpers.fsdiff da, db
     diff.must_be_empty
 
-
-    # Generate conflicts with no reconciliation
+    # Generate conflicts with no reconciliation
     path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
     file_recipient = CozyFile.find_by_path inst_recipient, path
     assert_equal file_recipient.name, file.name
@@ -66,7 +65,7 @@ describe "A sharing" do
       file_recipient.overwrite inst_recipient
     end
 
-    sleep 10
+    sleep 12
     # TODO assert
 
   end

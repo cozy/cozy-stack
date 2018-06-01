@@ -16,7 +16,7 @@ class Folder
     res = inst.client[path].get opts
     j = JSON.parse(res.body)["data"]
     id = j["id"]
-    rev = j["rev"]
+    rev = j.dig "meta", "rev"
     j = j["attributes"]
     f = Folder.new(
       name: j["name"],
