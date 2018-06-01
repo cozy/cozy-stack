@@ -298,8 +298,6 @@ func TestCreateSharingForUploadFileTest(t *testing.T) {
 	assert.NoError(t, err)
 	fileSharingID = s.SID
 
-	assert.NoError(t, s.CreateDirForSharing(replInstance, &s.Rules[0]))
-
 	xorKey = sharing.MakeXorKey()
 	s.Credentials[0].XorKey = xorKey
 	cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[0])
