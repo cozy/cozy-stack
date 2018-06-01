@@ -152,8 +152,10 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 		return err
 	}
 
-	if err := UpdateFileShared(s.db, s.shared, s.bulkRevs.Revisions); err != nil {
-		return err
+	if s.shared != nil {
+		if err := UpdateFileShared(s.db, s.shared, s.bulkRevs.Revisions); err != nil {
+			return err
+		}
 	}
 
 	// Ensure that fullpath is filled because it's used in realtime/@events
