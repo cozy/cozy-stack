@@ -164,3 +164,19 @@ func (c *Client) TriggerLaunch(triggerID string) (*Job, error) {
 	}
 	return j, nil
 }
+
+// ListTriggers returns the list of all triggers for an instance.
+func (c *Client) ListTriggers() ([]*Trigger, error) {
+	res, err := c.Req(&request.Options{
+		Method: "GET",
+		Path:   fmt.Sprintf("/jobs/triggers"),
+	})
+	if err != nil {
+		return nil, err
+	}
+	var list []*Trigger
+	if err := readJSONAPI(res.Body, &list); err != nil {
+		return nil, err
+	}
+	return list, nil
+}

@@ -460,6 +460,34 @@ func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error
 	return nil
 }
 
+var listTriggerCmd = &cobra.Command{
+	Use:     "ls",
+	Short:   `List triggers`,
+	Example: "$ cozy-stack triggers ls --domain cozy.tools:8080",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if flagAppsDomain == "" {
+			errPrintfln("%s", errAppsMissingDomain)
+			return cmd.Usage()
+		}
+		c := newClient(flagAppsDomain, consts.Triggers)
+		list, err := c.ListTriggers()
+		if err != nil {
+			return err
+		}
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		for _, t := range list {
+			fmt.Fprintf(w, "%s\t%s\t%s\t%v\t%s\n",
+				t.ID,
+				t.Attrs.WorkerType,
+				t.Attrs.Type,
+				t.Attrs.Arguments,
+				t.Attrs.Debounce,
+			)
+		}
+		return w.Flush()
+	},
+}
+
 var launchTriggerCmd = &cobra.Command{
 	Use:     "launch [triggerId]",
 	Short:   `Creates a job from a specific trigger`,
@@ -554,6 +582,7 @@ func init() {
 
 	triggersCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
 	triggersCmdGroup.AddCommand(launchTriggerCmd)
+	triggersCmdGroup.AddCommand(listTriggerCmd)
 	triggersCmdGroup.AddCommand(showWebappTriggersCmd)
 
 	webappsCmdGroup.AddCommand(lsWebappsCmd)
