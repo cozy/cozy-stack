@@ -230,6 +230,58 @@ In fact, it is used to acknowledge the writing and is helpful for conflict
 resolutions. It may be conter-intuitive, but removing them will harm the
 stability of the system, even if they do nothing most of the time.
 
+#### Example 1
+
+![File is renamed on both instance](diagrams/files-conflicts-1.png)
+
+Here, Alice uploads a file on her Cozy. It creates two revisions for this file
+(it's what the Virtual File System does). Then, she shares the directory with
+this file to her friend Bob. When Bob accepts the sharing, the file is sent to
+his Cozy, with the same revision (2-2aa).
+
+Later, Bob renames the file. It creates a new revision (3-3aa). The change is
+replicated to Alice's Cozy. And we have a replication from Alice to Bob to
+ensure that every thing is fine.
+
+Even later, Alice and Bob both renames the file at the same time. It creates a
+conflict. We have a first replication (from Alice to Bob), but nothing happens
+on B because the local revision (4-4bb) is greater than the candidate revision
+(4-4aa) and the content is the same.
+
+Just after that, we have a revision on the opposite direction (from Bob to
+Alice). The candidate revision wins (4-4bb), but for files, we don't use
+CouchDB conflict, thus it's not possible to write a new revision at the same
+generation (4). The only option is to create a new revision (5-5bb). This
+revision is then sent to Bob: Bob's Cozy accepts the new revision even if it
+has no effect on the file (it was already the good name), just to resolve the
+conflict.
+
+#### Example 2
+
+![A difficult conflict](diagrams/files-conflicts-2.png)
+
+Like in the last example, Alice uploads a file and share a directory to Bob
+with this file, Bob acccepts. But the, several actions are made on the file in
+a short lapse of time and it generates a difficult conflict:
+
+- Alice renames the file, and then uploads a new version with cozy-desktop
+- Bob moves the file to a sub-directory.
+
+So, when the replication comes, we have two versions of the file with
+different name, parent directory, and content. The winner is the higher
+revision (4-4aa). The resolution takes 4 steps:
+
+1. A copy of the file is created from the revision 3-3bb, with the new
+   identifier id2 = XorID(id, 3-3bb).
+2. The new content is written on Bob's Cozy: we can't use the revisions 3-3aa
+   (same generation as 3-3bb) and 4-4aa (it will mean the conflict is fixed,
+   but it's not the case, the filenames are still different), so a new
+   revision is used (4-4cc).
+3. The file is moved and renamed on Bob's Cozy, with a next revision (5-5bb).
+4. The two files are sent to Alice's Cozy: 5-5bb is accepted just to resolve
+   the conflict, and id2 is uploaded as a new file.
+
+
 ## Schema
 
 ### Description of a sharing
