@@ -635,7 +635,7 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 	prefix := sha256.Sum256([]byte(domain))
 	i := new(Instance)
 	i.Domain = domain
-	i.Prefix = "c-" + hex.EncodeToString(prefix[:16])
+	i.Prefix = "cozy" + hex.EncodeToString(prefix[:16])
 	i.Locale = locale
 	i.UUID = opts.UUID
 	i.TOSSigned = opts.TOSSigned
