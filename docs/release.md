@@ -30,3 +30,23 @@ Where:
 * `dirty`: added if the working if the working-directory is not clean (contains
   un-commited modifications). This is not allowed in production release.
 * `dev`: added for a development mode release
+
+# Sprint release
+
+At the end of a sprint, we release different versions of the stack:
+
+  - "Naked" stack, for GNU/Linux amd64/arm and FreeBSD amd64
+    - Create a tag `yyyyMmSs` and push it
+    - Generate all binaries, checksums and signatures with `./scripts/release.sh`
+    - Create a GitHub release and upload all previously generated assets with `./scripts/release.rb`
+
+  - Docker development image
+    - Copy `cozy-stack` GNU/Linux amd64 binary to `./scripts`
+    - Go into `./scripts`
+    - Generate docker image with `docker build -t cozy/cozy-app-dev:<tag>`
+    - Push image to the Docker hub with `docker push cozy/cozy-app-dev:<tag>`
+
+  - Debian self-hosting packages
+    - Create a new version `yyyyMmSs-1` on https://github.com/cozy/debian-cozy/blob/master/changelog
+    - Create and push a tag `yyyyMmSs-1` on `https://github.com/cozy/debian-cozy`
+    - Build and publish packages on our internal build machine

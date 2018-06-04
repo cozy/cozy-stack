@@ -3,7 +3,7 @@ set -xe
 
 RELEASE="$(git describe --tags)"
 
-go get -u -v ./... || true
+go get -u -v ./...
 
 GOOS=linux   GOARCH=amd64 ./scripts/build.sh release
 GOOS=linux   GOARCH=arm   ./scripts/build.sh release

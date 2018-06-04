@@ -15,9 +15,6 @@ github = Octokit::Client.new access_token: token
 user = github.user
 user.login
 
-# releases = github.releases REPO
-# releases.each { |r| github.delete_release r.url }
-
 assets = Dir["cozy-stack*-#{tag}*"]
 
 puts "Create release #{tag}"
