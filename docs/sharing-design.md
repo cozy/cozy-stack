@@ -177,6 +177,10 @@ folder or file in the database, the replicator checks that its parent exists,
 and if it’s not the case, it creates it. Last change, we will avoid CouchDB
 conflicts for files and folder by using a special conflict resolution process.
 
+### Sequence diagram
+
+![Replicator and upload](diagrams/replicator.png)
+
 ### Conflict resolution
 
 We have several cases of conflicts:
