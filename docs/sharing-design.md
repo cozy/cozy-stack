@@ -191,20 +191,44 @@ We have several cases of conflicts:
 For 1. and 2., we will reconciliate the changes except for a file with two
 versions having a distinct binary (we rely on `size` and `checksum` to detect
 that). In such a case, we create a copy of the file with one version, while
-keeping the other version in the original file. Else, the reconciliation rules
-are:
-
-* `name`, `dir_id` and `metadata`: we keep those of the CouchDB winner
-* `trashed` and `executable`: false wins
-* `updated_at`: the most recent date wins
-* `mime` and `class`: the last in alphabetical order wins (to avoid the default
-  `application/octet-steam`)
-* `tags` and `referenced_by`: a union of the two versions is made
+keeping the other version in the original file.
 
 For 3., we rename the file or folder with the smaller `id`.
 
 For 4., we restore the trashed parent, or recreate it if it the trash was
 emptied.
+
+### Conflict with no reconciliation
+
+When a file is modified concurrently on two cozy instances, and at least one
+change involve the content, we can't reconciliate the modifications. To know
+which version of the file is the "winner" and will keep the same identifier,
+and which version is the "loser" and will have a new identifier, we compare
+the revisions and the higher wins.
+
+This conflict is particulary tricky to resolve, with a lot of subcases. In
+particular, we try to converge to the same revisions on all the instances for
+the "winner" file (and for the "loser" too).
+
+We have 3 sets of attributes for files:
+
+- `size` and `md5sum` (they change when the content has changed)
+- `name` and `dir_id` (they change when the file is moved or renamed)
+- `created_at`, `updated_at`, `tags`, `referenced_by`, etc.
+
+For the first two sets, the operation on the Virtual File System will needs to
+reach the storage (Swift), not just CouchDB. For the third set, it's easy: we
+can do the change at the same time as another change, because these attributes
+are only used in CouchDB. But we can't do a change on the first two sets at
+the same time: the Virtual File System can't update the content and
+move/rename a file in the same operation. If we needs to do both, it will
+generate 2 revisions in CouchDB for the file.
+
+**Note:** you can see that using CouchDB-like replication protocol means that
+we have some replications that can look useless, just some echo to a writing.
+In fact, it is used to acknowledge the writing and is helpful for conflict
+resolutions. It may be conter-intuitive, but removing them will harm the
+stability of the system, even if they do nothing most of the time.
 
 ## Schema
 
