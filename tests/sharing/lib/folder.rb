@@ -41,7 +41,7 @@ class Folder
 
     (j || []).map do |child|
       id = child["id"]
-      rev = child["rev"]
+      rev = child.dig "meta", "rev"
       child = child["attributes"]
       type = child["type"]
       if type == "directory"
@@ -63,9 +63,9 @@ class Folder
           metadata: child["metadata"]
         )
       end
-        f.couch_id = id
-        f.couch_rev = rev
-        f
+      f.couch_id = id
+      f.couch_rev = rev
+      f
     end
   end
 
