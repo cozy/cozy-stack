@@ -26,7 +26,6 @@ cozy-stack triggers [command] [flags]
 ```
       --admin-host string   administration server host (default "localhost")
       --admin-port int      administration server port (default 6060)
-      --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
   -p, --port int            server port (default 8080)
@@ -36,5 +35,6 @@ cozy-stack triggers [command] [flags]
 
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack triggers launch](cozy-stack_triggers_launch.md)	 - Creates a job from a specific trigger
+* [cozy-stack triggers ls](cozy-stack_triggers_ls.md)	 - List triggers
 * [cozy-stack triggers show-from-app](cozy-stack_triggers_show-from-app.md)	 - Show the application triggers
 
