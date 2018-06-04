@@ -203,3 +203,22 @@ permission. It is done by adding this to the manifest:
   }
 }
 ```
+
+## share workers
+
+The stack have 3 workers to power the sharings (internal usage only):
+
+1. `share-track`, to update the `io.cozy.shared` database
+2. `share-replicate`, to start a replicator for most documents
+3. `share-upload`, to upload files
+
+### Share-track
+
+The message is composed of 3 fields: the sharing ID, the rule index, and the
+doctype. The event is similar to a realtime event: a verb, a document, and
+optionaly the old version of this document.
+
+### Share-replicate and share-upload
+
+The message is composed of a sharing ID and a count of the number of errors
+(ie the number of times this job was retried).

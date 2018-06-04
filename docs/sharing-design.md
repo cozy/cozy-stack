@@ -236,7 +236,7 @@ stability of the system, even if they do nothing most of the time.
 
 #### Example 1
 
-![File is renamed on both instance](diagrams/files-conflicts-1.png)
+![File is renamed on both instance](diagrams/files-conflict-1.png)
 
 Here, Alice uploads a file on her Cozy. It creates two revisions for this file
 (it's what the Virtual File System does). Then, she shares the directory with
@@ -262,7 +262,7 @@ conflict.
 
 #### Example 2
 
-![A difficult conflict](diagrams/files-conflicts-2.png)
+![A difficult conflict](diagrams/files-conflict-2.png)
 
 Like in the last example, Alice uploads a file and share a directory to Bob
 with this file, Bob acccepts. But the, several actions are made on the file in

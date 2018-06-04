@@ -10,7 +10,6 @@ import (
 )
 
 func init() {
-	// TODO write documentation about this worker
 	jobs.AddWorker(&jobs.WorkerConfig{
 		WorkerType:   "share-track",
 		Concurrency:  runtime.NumCPU(),
@@ -19,11 +18,10 @@ func init() {
 		WorkerFunc:   WorkerTrack,
 	})
 
-	// TODO write documentation about this worker
 	jobs.AddWorker(&jobs.WorkerConfig{
 		WorkerType:  "share-replicate",
 		Concurrency: runtime.NumCPU(),
-		// TODO the worker is not idempotent: if it fails, it adds a new job to
+		// XXX the worker is not idempotent: if it fails, it adds a new job to
 		// retry, but with MaxExecCount > 1, it can amplifies a lot the number
 		// of retries
 		MaxExecCount: 1,
@@ -31,11 +29,10 @@ func init() {
 		WorkerFunc:   WorkerReplicate,
 	})
 
-	// TODO write documentation about this worker
 	jobs.AddWorker(&jobs.WorkerConfig{
 		WorkerType:  "share-upload",
 		Concurrency: runtime.NumCPU(),
-		// TODO the worker is not idempotent: if it fails, it adds a new job to
+		// XXX the worker is not idempotent: if it fails, it adds a new job to
 		// retry, but with MaxExecCount > 1, it can amplifies a lot the number
 		// of retries
 		MaxExecCount: 1,
