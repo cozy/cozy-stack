@@ -48,10 +48,6 @@ func Init(opt Options) error {
 		go subscribeLoggersDebug(cli)
 	}
 	opts = opt
-	if logLevel != logrus.DebugLevel {
-		// remove logging from go-redis library
-		redis.SetLogger(nil)
-	}
 	return nil
 }
 
