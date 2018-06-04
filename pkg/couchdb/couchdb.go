@@ -43,6 +43,8 @@ type Doc interface {
 	SetRev(rev string)
 }
 
+// Database is the type passed to every function in couchdb package
+// for now it is just a string with the database prefix.
 type Database prefixer.Prefixer
 
 // newDatabase returns a Database from a prefix, useful for test

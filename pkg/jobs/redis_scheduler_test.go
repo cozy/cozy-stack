@@ -9,7 +9,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -133,9 +132,9 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	for _, trigger := range ts {
 		switch trigger.Infos().TID {
 		case atID:
-			assert.Equal(t, at, trigger.Infos())
+			assert.Equal(t, tat.Infos(), trigger.Infos())
 		case inID:
-			assert.Equal(t, in, trigger.Infos())
+			assert.Equal(t, tin.Infos(), trigger.Infos())
 		default:
 			// Just ignore the @event trigger for generating thumbnails
 			infos := trigger.Infos()
@@ -225,17 +224,20 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	now := time.Now()
 	msg, _ := jobs.NewMessage("@at")
 
-	at := &jobs.TriggerInfos{
+	at := jobs.TriggerInfos{
 		Type:       "@at",
 		Arguments:  now.Format(time.RFC3339),
 		WorkerType: "incr",
-		Message:    msg,
 	}
-	err = couchdb.CreateDoc(testInstance, at)
+
+	tat, err := jobs.NewTrigger(testInstance, at, msg)
+	assert.NoError(t, err)
+
+	err = sch.AddTrigger(tat)
 	assert.NoError(t, err)
 
 	ts := now.UTC().Unix()
-	key := testInstance.Domain + "/" + at.TID
+	key := testInstance.DBPrefix() + "/" + tat.ID()
 	err = client.ZAdd(jobs.SchedKey, redis.Z{
 		Score:  float64(ts + 1),
 		Member: key,

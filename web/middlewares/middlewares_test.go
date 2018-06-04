@@ -13,29 +13,25 @@ func TestSplitHost(t *testing.T) {
 	was := cfg.Subdomains
 	defer func() { cfg.Subdomains = was }()
 
-	host, app, siblings, ok := SplitHost("localhost")
+	host, app, siblings := SplitHost("localhost")
 	assert.Equal(t, "localhost", host)
 	assert.Equal(t, "", app)
 	assert.Equal(t, "", siblings)
-	assert.True(t, ok)
 
 	cfg.Subdomains = config.NestedSubdomains
-	host, app, siblings, ok = SplitHost("calendar.joe.example.net")
+	host, app, siblings = SplitHost("calendar.joe.example.net")
 	assert.Equal(t, "joe.example.net", host)
 	assert.Equal(t, "calendar", app)
 	assert.Equal(t, "*.joe.example.net", siblings)
-	assert.True(t, ok)
 
 	cfg.Subdomains = config.FlatSubdomains
-	host, app, siblings, ok = SplitHost("joe-calendar.example.net")
+	host, app, siblings = SplitHost("joe-calendar.example.net")
 	assert.Equal(t, "joe.example.net", host)
 	assert.Equal(t, "calendar", app)
 	assert.Equal(t, "*.example.net", siblings)
-	assert.True(t, ok)
 
-	host, app, siblings, ok = SplitHost("joe.example.net")
+	host, app, siblings = SplitHost("joe.example.net")
 	assert.Equal(t, "joe.example.net", host)
 	assert.Equal(t, "", app)
 	assert.Equal(t, "", siblings)
-	assert.True(t, ok)
 }

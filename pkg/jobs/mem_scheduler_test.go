@@ -59,13 +59,14 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 		Message:    msg,
 	}
 
-	triggers := []TriggerInfos{ti}
+	var triggers []Trigger
+	triggersInfos := []TriggerInfos{ti}
 	sch := newMemScheduler()
 	sch.StartScheduler(bro)
 
 	db := prefixer.NewPrefixer("cozy.local.withdebounce", "cozy.local.withdebounce")
 
-	for _, infos := range triggers {
+	for _, infos := range triggersInfos {
 		trigger, err := NewTrigger(db, infos, msg)
 		if !assert.NoError(t, err) {
 			return
@@ -74,6 +75,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		triggers = append(triggers, trigger)
 	}
 
 	ts, err := sch.GetAllTriggers(db)
@@ -104,7 +106,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	assert.Equal(t, 4, called)
 
 	for _, trigger := range triggers {
-		err = sch.DeleteTrigger(db, trigger.TID)
+		err = sch.DeleteTrigger(db, trigger.ID())
 		assert.NoError(t, err)
 	}
 

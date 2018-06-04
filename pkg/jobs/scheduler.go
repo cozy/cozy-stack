@@ -88,9 +88,13 @@ func (t *TriggerInfos) DomainName() string {
 // NewTrigger creates the trigger associates with the specified trigger
 // options.
 func NewTrigger(db prefixer.Prefixer, infos TriggerInfos, data interface{}) (Trigger, error) {
-	msg, err := NewMessage(data)
-	if err != nil {
-		return nil, err
+	var msg Message
+	var err error
+	if data != nil {
+		msg, err = NewMessage(data)
+		if err != nil {
+			return nil, err
+		}
 	}
 	infos.Message = msg
 	infos.Prefix = db.DBPrefix()

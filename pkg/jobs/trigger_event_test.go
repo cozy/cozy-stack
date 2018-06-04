@@ -56,7 +56,8 @@ func TestTriggerEvent(t *testing.T) {
 
 	db := prefixer.NewPrefixer("cozy.local.triggerevent", "cozy.local.triggerevent")
 
-	triggers := []TriggerInfos{
+	var triggers []Trigger
+	triggersInfos := []TriggerInfos{
 		{
 			Type:       "@event",
 			Arguments:  "io.cozy.testeventobject:DELETED",
@@ -92,7 +93,7 @@ func TestTriggerEvent(t *testing.T) {
 	sch := newMemScheduler()
 	sch.StartScheduler(bro)
 
-	for _, infos := range triggers {
+	for _, infos := range triggersInfos {
 		trigger, err := NewTrigger(db, infos, infos.Message)
 		if !assert.NoError(t, err) {
 			return
@@ -101,6 +102,7 @@ func TestTriggerEvent(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		triggers = append(triggers, trigger)
 	}
 
 	wg.Add(3)
@@ -126,7 +128,7 @@ func TestTriggerEvent(t *testing.T) {
 	assert.False(t, called["message-correct-verb-bad-value"])
 
 	for _, trigger := range triggers {
-		err := sch.DeleteTrigger(db, trigger.TID)
+		err := sch.DeleteTrigger(db, trigger.ID())
 		assert.NoError(t, err)
 	}
 
