@@ -54,7 +54,7 @@ func (i *Instance) CheckTOSSigned(args ...string) (notSigned bool, deadline TOSD
 			now := time.Now()
 			if now.After(latestDate) {
 				deadline = TOSBlocked
-			} else if now.After(latestDate.Add(-15 * 24 * time.Hour)) {
+			} else if now.After(latestDate.Add(-30 * 24 * time.Hour)) {
 				deadline = TOSWarning
 			} else {
 				deadline = TOSNone
