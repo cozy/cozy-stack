@@ -177,6 +177,10 @@ folder or file in the database, the replicator checks that its parent exists,
 and if it’s not the case, it creates it. Last change, we will avoid CouchDB
 conflicts for files and folder by using a special conflict resolution process.
 
+### Sequence diagram
+
+![Replicator and upload](diagrams/replicator.png)
+
 ### Conflict resolution
 
 We have several cases of conflicts:
@@ -191,20 +195,96 @@ We have several cases of conflicts:
 For 1. and 2., we will reconciliate the changes except for a file with two
 versions having a distinct binary (we rely on `size` and `checksum` to detect
 that). In such a case, we create a copy of the file with one version, while
-keeping the other version in the original file. Else, the reconciliation rules
-are:
-
-* `name`, `dir_id` and `metadata`: we keep those of the CouchDB winner
-* `trashed` and `executable`: false wins
-* `updated_at`: the most recent date wins
-* `mime` and `class`: the last in alphabetical order wins (to avoid the default
-  `application/octet-steam`)
-* `tags` and `referenced_by`: a union of the two versions is made
+keeping the other version in the original file.
 
 For 3., we rename the file or folder with the smaller `id`.
 
 For 4., we restore the trashed parent, or recreate it if it the trash was
 emptied.
+
+### Conflict with no reconciliation
+
+When a file is modified concurrently on two cozy instances, and at least one
+change involve the content, we can't reconciliate the modifications. To know
+which version of the file is the "winner" and will keep the same identifier,
+and which version is the "loser" and will have a new identifier, we compare
+the revisions and the higher wins.
+
+This conflict is particulary tricky to resolve, with a lot of subcases. In
+particular, we try to converge to the same revisions on all the instances for
+the "winner" file (and for the "loser" too).
+
+We have 3 sets of attributes for files:
+
+- `size` and `md5sum` (they change when the content has changed)
+- `name` and `dir_id` (they change when the file is moved or renamed)
+- `created_at`, `updated_at`, `tags`, `referenced_by`, etc.
+
+For the first two sets, the operation on the Virtual File System will needs to
+reach the storage (Swift), not just CouchDB. For the third set, it's easy: we
+can do the change at the same time as another change, because these attributes
+are only used in CouchDB. But we can't do a change on the first two sets at
+the same time: the Virtual File System can't update the content and
+move/rename a file in the same operation. If we needs to do both, it will
+generate 2 revisions in CouchDB for the file.
+
+**Note:** you can see that using CouchDB-like replication protocol means that
+we have some replications that can look useless, just some echo to a writing.
+In fact, it is used to acknowledge the writing and is helpful for conflict
+resolutions. It may be conter-intuitive, but removing them will harm the
+stability of the system, even if they do nothing most of the time.
+
+#### Example 1
+
+![File is renamed on both instance](diagrams/files-conflict-1.png)
+
+Here, Alice uploads a file on her Cozy. It creates two revisions for this file
+(it's what the Virtual File System does). Then, she shares the directory with
+this file to her friend Bob. When Bob accepts the sharing, the file is sent to
+his Cozy, with the same revision (2-2aa).
+
+Later, Bob renames the file. It creates a new revision (3-3aa). The change is
+replicated to Alice's Cozy. And we have a replication from Alice to Bob to
+ensure that every thing is fine.
+
+Even later, Alice and Bob both renames the file at the same time. It creates a
+conflict. We have a first replication (from Alice to Bob), but nothing happens
+on B because the local revision (4-4bb) is greater than the candidate revision
+(4-4aa) and the content is the same.
+
+Just after that, we have a revision on the opposite direction (from Bob to
+Alice). The candidate revision wins (4-4bb), but for files, we don't use
+CouchDB conflict, thus it's not possible to write a new revision at the same
+generation (4). The only option is to create a new revision (5-5bb). This
+revision is then sent to Bob: Bob's Cozy accepts the new revision even if it
+has no effect on the file (it was already the good name), just to resolve the
+conflict.
+
+#### Example 2
+
+![A difficult conflict](diagrams/files-conflict-2.png)
+
+Like in the last example, Alice uploads a file and share a directory to Bob
+with this file, Bob acccepts. But then, several actions are made on the file in
+a short lapse of time and it generates a difficult conflict:
+
+- Alice renames the file, and then uploads a new version with cozy-desktop
+- Bob moves the file to a sub-directory.
+
+So, when the replication comes, we have two versions of the file with
+different name, parent directory, and content. The winner is the higher
+revision (4-4aa). The resolution takes 4 steps:
+
+1. A copy of the file is created from the revision 3-3bb, with the new
+   identifier id2 = XorID(id, 3-3bb).
+2. The new content is written on Bob's Cozy: we can't use the revisions 3-3aa
+   (same generation as 3-3bb) and 4-4aa (it will mean the conflict is fixed,
+   but it's not the case, the filenames are still different), so a new
+   revision is used (4-4cc).
+3. The file is moved and renamed on Bob's Cozy, with a next revision (5-5bb).
+4. The two files are sent to Alice's Cozy: 5-5bb is accepted just to resolve
+   the conflict, and id2 is uploaded as a new file.
+
 
 ## Schema
 
@@ -217,10 +297,15 @@ emptied.
   recipients
 * A `description` (one sentence that will help people understand what is shared
   and why)
+- a flag `active` that says if the sharing is currently active for at least
+  one member
+- a flag `owner`, true for the document on the cozy of the sharer, and false
+  on the other cozy instance
 * a flag `open_sharing`:
   * `true` if any member of the sharing can add a new recipient
   * `false` if only the owner can add a new recipient
-* Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`)
+* Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`,
+  `triggers`, `credentials`)
 * A list of sharing `rules`, each rule being composed of:
   * a `title`, that will be displayed to the recipients before they accept the
     sharing
@@ -278,13 +363,14 @@ emptied.
 
 ### `io.cozy.shared`
 
+This doctype is an internal one for the stack. It is used to track what
+documents are shared, and to replicate changes from one Cozy to the others.
+
 * `_id`: its identifier is the doctype and id of the referenced objet, separated by
   a `/` (e.g. `io.cozy.contacts/c1f5dae4-0d87-11e8-b91b-1f41c005768b`)
 * `_rev`: the CouchDB default revision for this document (not very meaningful,
   it’s here to avoid concurrency issues)
-* `revisions`: an array with the last known `_rev`s of the referenced object (for
-  conflicts, we put
-  [the winner](http://docs.couchdb.org/en/2.1.1/replication/conflicts.html#working-with-conflicting-documents))
+* `revisions`: a tree with the last known `_rev`s of the referenced object
 * `infos`, a map of sharing ids → `{rule, removed, binary}`
   * `rule` says which rule from the sharing must be applied for this document
   * `removed` will be true for a deleted document, a trashed file, or if the

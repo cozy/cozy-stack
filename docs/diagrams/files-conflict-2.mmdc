@@ -1,0 +1,28 @@
+sequenceDiagram
+    %% https://mermaidjs.github.io/
+    participant A as Alice
+    participant B as Bob
+
+    note left of A: File is uploaded
+    A-->>A: 1-1aa
+    A-->>A: 2-2aa
+
+    note left of A: Sharing is setup
+    A-->>B: replication
+    B-->>B: 2-2aa
+    B-->>A: replication
+
+    note left of A: Rename
+    A-->>A: 3-3aa
+    note left of A: Upload
+    A-->>A: 4-4aa
+    note right of B: Move
+    B-->>B: 3-3bb
+    A-->>B: replication
+    B-->>B: id2 - 3-3bb
+    B-->>B: 4-4cc
+    B-->>B: 5-5bb
+    B-->>A: replication
+    A-->>A: id2 - 3-3bb
+    A-->>A: 5-5bb
+    A-->>B: replication
