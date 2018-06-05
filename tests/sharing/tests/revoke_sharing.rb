@@ -145,12 +145,19 @@ describe "A sharing" do
     sharing = Sharing.new
     sharing.rules << Rule.sync(folder)
     sharing.members << inst_alice << contact_bob
-    sharing.members << contact_charlie
     inst_alice.register sharing
 
     # Accept the sharing
     sleep 1
     inst_bob.accept sharing
+    sleep 2
+
+    # Add Charlie to the sharing
+    code = sharing.add_members inst_alice, [contact_charlie], Folder.doctype
+    assert_equal 200, code
+
+    # Accept the sharing
+    sleep 1
     inst_charlie.accept sharing
     sleep 2
 
