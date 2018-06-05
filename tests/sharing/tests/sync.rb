@@ -53,7 +53,7 @@ describe "A folder" do
     opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
     file = CozyFile.create inst, opts
 
-    # Create the sharing
+    # Create the sharing of a folder
     contact = Contact.create inst, givenName: recipient_name
     sharing = Sharing.new
     sharing.rules << Rule.sync(folder)
@@ -78,7 +78,7 @@ describe "A folder" do
     child1_id_recipient = child1_recipient.couch_id
     folder_id_recipient = child1_recipient.dir_id
     file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
-    file_recipient = Folder.find_by_path inst_recipient, file_path
+    file_recipient = CozyFile.find_by_path inst_recipient, file_path
     file_id_recipient = file_recipient.couch_id
     assert_equal child1.name, child1_recipient.name
     assert_equal file.name, file_recipient.name
@@ -158,5 +158,47 @@ describe "A folder" do
                      Helpers::SHARED_WITH_ME, sharing.rules.first.title,
                      child2_recipient.name
     assert !Helpers.file_exists_in_fs(path)
+
+    # Create the sharing of a file
+    file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    opts = CozyFile.options_from_fixture(file, dir_id: Folder::ROOT_DIR)
+    file = CozyFile.create inst, opts
+    sharing = Sharing.new
+    sharing.rules << Rule.sync(file)
+    sharing.members << inst << contact
+    inst.register sharing
+
+    # Accept the sharing
+    sleep 1
+    inst_recipient.accept sharing
+    sleep 7
+
+    # Check the files are the same
+    file = CozyFile.find inst, file.couch_id
+    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{file.name}"
+    file_recipient = CozyFile.find_by_path inst_recipient, file_path
+    file_id_recipient = file_recipient.couch_id
+    assert_equal file.name, file_recipient.name
+    assert_equal file.couch_rev, file_recipient.couch_rev
+
+    # Check the sync sharer -> recipient
+    file.overwrite inst, mime: 'text/plain'
+    file.rename inst, "#{Faker::Internet.slug}.txt"
+    sleep 7
+    file = CozyFile.find inst, file.couch_id
+    file_recipient = CozyFile.find inst_recipient, file_id_recipient
+    assert_equal file.name, file_recipient.name
+    assert_equal file.md5sum, file_recipient.md5sum
+    assert_equal file.couch_rev, file_recipient.couch_rev
+
+    # Check the sync recipient -> sharer
+    file_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
+    file_recipient.overwrite inst_recipient, content: "New content from recipient"
+    sleep 7
+    file = CozyFile.find inst, file.couch_id
+    file_recipient = CozyFile.find inst_recipient, file_id_recipient
+    assert_equal file.name, file_recipient.name
+    assert_equal file.md5sum, file_recipient.md5sum
+    assert_equal file.couch_rev, file_recipient.couch_rev
   end
 end

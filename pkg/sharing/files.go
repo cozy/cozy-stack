@@ -135,7 +135,11 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 			doc[couchdb.SelectorReferencedBy] = kept
 		}
 	} else {
-		noDirID = false
+		for _, v := range rule.Values {
+			if v == id {
+				noDirID = true
+			}
+		}
 		delete(doc, couchdb.SelectorReferencedBy)
 	}
 	if !noDirID {
@@ -203,31 +207,34 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 
 // CreateDirForSharing creates the directory where files for this sharing will
 // be put. This directory will be initially inside the Shared with me folder.
-func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) error {
+func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) (*vfs.DirDoc, error) {
 	parent, err := EnsureSharedWithMeDir(inst)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	fs := inst.VFS()
 	dir, err := vfs.NewDirDocWithParent(rule.Title, parent, []string{"from-sharing-" + s.SID})
 	parts := strings.Split(rule.Values[0], "/")
 	dir.DocID = parts[len(parts)-1]
 	if err != nil {
-		return err
+		return nil, err
 	}
 	dir.AddReferencedBy(couchdb.DocReference{
 		ID:   s.SID,
 		Type: consts.Sharings,
 	})
-	return fs.CreateDir(dir)
+	if err = fs.CreateDir(dir); err != nil {
+		return nil, err
+	}
+	return dir, err
 }
 
 // AddReferenceForSharingDir adds a reference to the sharing on the sharing directory
 func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule) error {
 	fs := inst.VFS()
 	parts := strings.Split(rule.Values[0], "/")
-	dir, err := fs.DirByID(parts[len(parts)-1])
-	if err != nil {
+	dir, _, err := fs.DirOrFileByID(parts[len(parts)-1])
+	if err != nil || dir == nil {
 		return err
 	}
 	for _, ref := range dir.ReferencedBy {
@@ -255,10 +262,17 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	}
 	var res couchdb.ViewResponse
 	err := couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res)
-	if err != nil || len(res.Rows) == 0 {
+	if err != nil {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Sharing dir not found: %v (%s)", err, s.SID)
 		return nil, ErrInternalServerError
+	}
+	if len(res.Rows) == 0 {
+		rule := s.FirstFilesRule()
+		if rule == nil {
+			return nil, ErrInternalServerError
+		}
+		return s.CreateDirForSharing(inst, rule)
 	}
 	return inst.VFS().DirByID(res.Rows[0].ID)
 }

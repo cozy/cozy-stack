@@ -296,6 +296,10 @@ func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRe
 // it will return a key to upload the content.
 func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
 	inst.Logger().WithField("nspace", "upload").Debugf("SyncFile %#v", target)
+	mu := lock.ReadWrite(inst.Domain + "/shared")
+	mu.Lock()
+	defer mu.Unlock()
+
 	if len(target.MD5Sum) == 0 {
 		return nil, vfs.ErrInvalidHash
 	}
@@ -421,6 +425,9 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	if target == nil {
 		return ErrMissingFileMetadata
 	}
+	mu := lock.ReadWrite(inst.Domain + "/shared")
+	mu.Lock()
+	defer mu.Unlock()
 
 	current, err := inst.VFS().FileByID(target.DocID)
 	if err != nil && err != os.ErrNotExist {
@@ -447,6 +454,11 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 	}, &ref)
 	fs := inst.VFS().UseSharingIndexer(indexer)
 
+	rule, ruleIndex := s.findRuleForNewFile(target.FileDoc)
+	if rule == nil {
+		return ErrSafety
+	}
+
 	var err error
 	var parent *vfs.DirDoc
 	if target.DirID != "" {
@@ -457,13 +469,14 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		if err != nil {
 			inst.Logger().WithField("nspace", "upload").
 				Debugf("Conflict for parent on file upload: %s", err)
-			return err
 		}
+	} else if target.DocID == rule.Values[0] {
+		parent, err = EnsureSharedWithMeDir(inst)
 	} else {
 		parent, err = s.GetSharingDir(inst)
-		if err != nil {
-			return err
-		}
+	}
+	if err != nil {
+		return err
 	}
 
 	newdoc, err := vfs.NewFileDoc(target.DocName, parent.DocID, target.Size(), target.MD5Sum,
@@ -475,10 +488,6 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 	ref.SID = consts.Files + "/" + newdoc.DocID
 	copySafeFieldsToFile(target.FileDoc, newdoc)
 
-	rule, ruleIndex := s.findRuleForNewFile(target.FileDoc)
-	if rule == nil {
-		return ErrSafety
-	}
 	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex, Binary: true}
 	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, nil, rule)
 

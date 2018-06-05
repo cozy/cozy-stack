@@ -68,16 +68,18 @@ func TestSharingDir(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, s.CreateDirForSharing(inst, &s.Rules[0]))
-
-	dir, err := s.GetSharingDir(inst)
+	d1, err := s.CreateDirForSharing(inst, &s.Rules[0])
 	assert.NoError(t, err)
-	if assert.NotNil(t, dir) {
-		assert.Equal(t, "Test sharing dir", dir.DocName)
-		assert.Equal(t, "/Tree Shared with me/Test sharing dir", dir.Fullpath)
-		assert.Len(t, dir.ReferencedBy, 1)
-		assert.Equal(t, consts.Sharings, dir.ReferencedBy[0].Type)
-		assert.Equal(t, s.SID, dir.ReferencedBy[0].ID)
+
+	d2, err := s.GetSharingDir(inst)
+	assert.NoError(t, err)
+	if assert.NotNil(t, d2) {
+		assert.Equal(t, d1.DocID, d2.DocID)
+		assert.Equal(t, "Test sharing dir", d2.DocName)
+		assert.Equal(t, "/Tree Shared with me/Test sharing dir", d2.Fullpath)
+		assert.Len(t, d2.ReferencedBy, 1)
+		assert.Equal(t, consts.Sharings, d2.ReferencedBy[0].Type)
+		assert.Equal(t, s.SID, d2.ReferencedBy[0].ID)
 	}
 }
 
@@ -92,7 +94,6 @@ func TestCreateDir(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, s.CreateDirForSharing(inst, &s.Rules[0]))
 
 	idFoo := uuidv4()
 	target := map[string]interface{}{
@@ -158,7 +159,6 @@ func TestUpdateDir(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, s.CreateDirForSharing(inst, &s.Rules[0]))
 
 	idFoo := uuidv4()
 	target := map[string]interface{}{
