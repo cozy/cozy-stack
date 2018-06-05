@@ -441,7 +441,7 @@ func TestCheckTOSSigned(t *testing.T) {
 	assert.Equal(t, instance.TOSNone, deadline)
 
 	err = instance.Patch(i, &instance.Options{
-		TOSLatest: "2.0.1-" + now.Add(20*24*time.Hour).Format("20060102"),
+		TOSLatest: "2.0.1-" + now.Add(40*24*time.Hour).Format("20060102"),
 	})
 	if !assert.NoError(t, err) {
 		return
