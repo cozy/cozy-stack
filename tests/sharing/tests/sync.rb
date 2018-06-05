@@ -191,7 +191,7 @@ describe "A folder" do
     assert_equal file.md5sum, file_recipient.md5sum
     assert_equal file.couch_rev, file_recipient.couch_rev
 
-    # Check the sync recipient -> recipient
+    # Check the sync recipient -> sharer
     file_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
     file_recipient.overwrite inst_recipient, content: "New content from recipient"
     sleep 7
