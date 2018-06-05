@@ -605,6 +605,109 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /sharings/:sharing-id/recipient
+
+This route allow to the sharer to add a new recipient to a sharing.
+
+#### Request
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/recipients HTTP/1.1
+Host: alice.example.net
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings.sharings",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "relationships": {
+      "recipients": {
+        "data": [
+          {
+            "id": "ce7b1dfbd460039159f228298a29b2aa",
+            "type": "io.cozy.contacts"
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "meta": {
+      "rev": "1-4859c6c755143adf0838d225c5e97882"
+    },
+    "attributes": {
+      "description": "sharing test",
+      "preview_path": "/preview-sharing",
+      "app_slug": "drive",
+      "owner": true,
+      "created_at": "2018-01-04T12:35:08Z",
+      "updated_at": "2018-01-04T13:45:43Z",
+      "members": [
+        {
+          "status": "owner",
+          "name": "Alice",
+          "email": "alice@example.net",
+          "instance": "alice.example.net"
+        },
+        {
+          "status": "ready",
+          "name": "Bob",
+          "email": "bob@example.net"
+        },
+        {
+          "status": "pending",
+          "name": "Charlie",
+          "email": "charlie@example.net"
+        }
+      ],
+      "rules": [
+        {
+          "title": "Hawaii",
+          "doctype": "io.cozy.files",
+          "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"],
+          "add": "sync",
+          "update": "sync",
+          "remove": "sync"
+        }
+      ]
+    },
+    "relationships": {
+      "shared_docs": {
+        "data": [
+          {
+            "id": "612acf1c-1d72-11e8-b043-ef239d3074dd",
+            "type": "io.cozy.files"
+          },
+          {
+            "id": "a34528d2-13fb-9482-8d20-bf1972531225",
+            "type": "io.cozy.files"
+          }
+        ]
+      }
+    },
+    "links": {
+      "self": "/sharings/ce8835a061d0ef68947afe69a0046722"
+    }
+  }
+}
+```
+
 ### DELETE /sharings/:sharing-id/recipients
 
 This route is used by an application on the owner's cozy to revoke the sharing
