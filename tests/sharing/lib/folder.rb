@@ -69,6 +69,17 @@ class Folder
     end
   end
 
+  def restore_from_trash(inst)
+    opts = {
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    res = inst.client["/files/trash/#{@couch_id}"].post nil, opts
+    j = JSON.parse(res.body)["data"]
+    @restore_path = nil
+    @path = j.dig "attributes", "path"
+    @dir_id = j.dig "attributes", "dir_id"
+  end
+
   def initialize(opts = {})
     @name = opts[:name] || Faker::Internet.slug
     @dir_id = opts[:dir_id] || ROOT_DIR

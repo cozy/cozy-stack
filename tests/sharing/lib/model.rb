@@ -97,5 +97,9 @@ module Model
       j = JSON.parse(res.body)["data"]
       @couch_rev = j["meta"]["rev"]
     end
+
+    def restore(inst)
+      restore_from_trash inst
+    end
   end
 end

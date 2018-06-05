@@ -32,6 +32,16 @@ class CozyFile
     f
   end
 
+  def restore_from_trash(inst)
+    opts = {
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    res = inst.client["/files/trash/#{@couch_id}"].post nil, opts
+    j = JSON.parse(res.body)["data"]
+    @trashed = false
+    @dir_id = j.dig "attributes", "dir_id"
+  end
+
   def self.options_from_fixture(filename, opts = {})
     opts = opts.dup
     opts[:content] = File.read filename
