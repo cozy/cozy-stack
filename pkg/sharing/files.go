@@ -492,29 +492,44 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 // resolveConflictSamePath is used when two files/folders are in conflict
 // because they have the same path. To resolve the conflict, we take the
 // file/folder with the greatest id as the winner and rename the other.
+//
+// Note: on the recipients, we have to transform the identifiers (XOR) to make
+// sure the comparison will have the same results that on the owner's cozy.
+//
 // If the winner is the new file/folder from the other cozy, this function
 // rename the local file/folder and let the caller retry its operation.
 // If the winner is the local file/folder, this function returns the new name
 // and let the caller do its operation with the new name (the caller should
 // create a dummy revision to let the other cozy know of the renaming).
-func resolveConflictSamePath(inst *instance.Instance, id, pth string) (string, error) {
+func (s *Sharing) resolveConflictSamePath(inst *instance.Instance, visitorID, pth string) (string, error) {
 	inst.Logger().WithField("nspace", "replicator").
-		Infof("Resolve conflict for path=%s (docid=%s)", pth, id)
+		Infof("Resolve conflict for path=%s (docid=%s)", pth, visitorID)
 	fs := inst.VFS()
 	d, f, err := fs.DirOrFileByPath(pth)
 	if err != nil {
 		return "", err
 	}
 	name := conflictName(path.Base(pth), "")
+	xorKey := s.Credentials[0].XorKey
 	if d != nil {
-		if d.DocID > id {
+		homeID := d.DocID
+		if !s.Owner {
+			homeID = XorID(homeID, xorKey)
+			visitorID = XorID(visitorID, xorKey)
+		}
+		if homeID > visitorID {
 			return name, nil
 		}
 		old := d.Clone().(*vfs.DirDoc)
 		d.DocName = name
 		return "", fs.UpdateDirDoc(old, d)
 	}
-	if f.DocID > id {
+	homeID := f.DocID
+	if !s.Owner {
+		homeID = XorID(homeID, xorKey)
+		visitorID = XorID(visitorID, xorKey)
+	}
+	if homeID > visitorID {
 		return name, nil
 	}
 	old := f.Clone().(*vfs.FileDoc)
@@ -688,7 +703,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex}
 	err = fs.CreateDir(dir)
 	if err == os.ErrExist {
-		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
+		name, errr := s.resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
 		if errr != nil {
 			return errr
 		}
@@ -766,7 +781,7 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 
 	err = fs.UpdateDirDoc(oldDoc, dir)
 	if err == os.ErrExist {
-		name, errr := resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
+		name, errr := s.resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
 		if errr != nil {
 			return errr
 		}

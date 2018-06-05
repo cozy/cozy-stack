@@ -395,7 +395,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 		if errp != nil {
 			return errp
 		}
-		name, errr := resolveConflictSamePath(inst, newdoc.DocID, pth)
+		name, errr := s.resolveConflictSamePath(inst, newdoc.DocID, pth)
 		if errr != nil {
 			return errr
 		}
@@ -497,7 +497,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		if errp != nil {
 			return errp
 		}
-		name, errr := resolveConflictSamePath(inst, newdoc.DocID, pth)
+		name, errr := s.resolveConflictSamePath(inst, newdoc.DocID, pth)
 		if errr != nil {
 			return errr
 		}
@@ -599,7 +599,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 		if errp != nil {
 			return errp
 		}
-		name, errr := resolveConflictSamePath(inst, newdoc.DocID, pth)
+		name, errr := s.resolveConflictSamePath(inst, newdoc.DocID, pth)
 		if errr != nil {
 			return errr
 		}
