@@ -395,7 +395,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 		if errp != nil {
 			return errp
 		}
-		name, errr := resolveConflictSamePath(inst, newdoc.DocID, pth)
+		name, errr := s.resolveConflictSamePath(inst, newdoc.DocID, pth)
 		if errr != nil {
 			return errr
 		}
@@ -497,7 +497,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		if errp != nil {
 			return errp
 		}
-		name, errr := resolveConflictSamePath(inst, newdoc.DocID, pth)
+		name, errr := s.resolveConflictSamePath(inst, newdoc.DocID, pth)
 		if errr != nil {
 			return errr
 		}
@@ -599,7 +599,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 		if errp != nil {
 			return errp
 		}
-		name, errr := resolveConflictSamePath(inst, newdoc.DocID, pth)
+		name, errr := s.resolveConflictSamePath(inst, newdoc.DocID, pth)
 		if errr != nil {
 			return errr
 		}
@@ -615,8 +615,8 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 // uploadLostConflict manages an upload where a file is in conflict, and the
 // uploaded file version goes to a new file.
 func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWithRevisions, newdoc *vfs.FileDoc, body io.ReadCloser) error {
-	inst.Logger().WithField("nspace", "upload").Debugf("uploadLostConflict")
 	rev := target.Rev()
+	inst.Logger().WithField("nspace", "upload").Debugf("uploadLostConflict %s", rev)
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revsChainToStruct([]string{rev}),
@@ -630,21 +630,22 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 		body.Close()
 		return nil
 	}
-	newdoc.DocName = conflictName(newdoc.DocName)
+	newdoc.DocName = conflictName(newdoc.DocName, rev)
 	newdoc.DocRev = ""
 	newdoc.ResetFullpath()
 	file, err := fs.CreateFile(newdoc, nil)
 	if err != nil {
 		return err
 	}
+	inst.Logger().WithField("nspace", "upload").Debugf("1. loser = %#v", newdoc)
 	return copyFileContent(inst, file, body)
 }
 
 // uploadWonConflict manages an upload where a file is in conflict, and the
 // existing file is copied to a new file to let the upload suceed.
 func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) error {
-	inst.Logger().WithField("nspace", "upload").Debugf("uploadWonConflict")
 	rev := src.Rev()
+	inst.Logger().WithField("nspace", "upload").Debugf("uploadWonConflict %s", rev)
 	indexer := newSharingIndexer(inst, &bulkRevs{
 		Rev:       rev,
 		Revisions: revsChainToStruct([]string{rev}),
@@ -655,7 +656,7 @@ func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) e
 	if _, err := fs.FileByID(dst.DocID); err != os.ErrNotExist {
 		return err
 	}
-	dst.DocName = conflictName(dst.DocName)
+	dst.DocName = conflictName(dst.DocName, rev)
 	dst.ResetFullpath()
 	content, err := fs.OpenFile(src)
 	if err != nil {
@@ -666,6 +667,7 @@ func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) e
 	if err != nil {
 		return err
 	}
+	inst.Logger().WithField("nspace", "upload").Debugf("2. loser = %#v", dst)
 	return copyFileContent(inst, file, content)
 }
 
