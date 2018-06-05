@@ -1,7 +1,5 @@
 [Table of contents](README.md#table-of-contents)
 
-{% raw %}
-
 # Develop a client-side application
 
 ## Using `cozy-app-dev`
@@ -177,5 +175,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ...
 ```
-
-{% endraw %}

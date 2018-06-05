@@ -1,7 +1,5 @@
 [Table of contents](README.md#table-of-contents)
 
-{% raw %}
-
 # Proxy for remote data/API
 
 The client side applications in Cozy are constrained and cannot speak with
@@ -176,5 +174,3 @@ repository and only then test it. So, the cozy-stack serve command will have a
 `--doctypes` option to gives a local directory with the doctypes. You can fork
 the repository, clone it, work on a new doctype inside, test it locally, and
 when OK, make a pull request for it.
-
-{% endraw %}

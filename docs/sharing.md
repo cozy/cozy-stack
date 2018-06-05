@@ -1,7 +1,5 @@
 [Table of contents](README.md#table-of-contents)
 
-{% raw %}
-
 # Sharing
 
 The owner of a cozy instance can share access to her documents to other users.
@@ -916,5 +914,3 @@ Authorization: Bearer ...
 ```http
 HTTP/1.1 204 No Content
 ```
-
-{% endraw %}

@@ -49,7 +49,7 @@ Like client-side applications, each konnector has an associated
 ### Triggers
 
 `io.cozy.triggers` are used to define when konnectors are launched See
-https://cozy.github.io/cozy-stack/jobs.html#post-jobstriggers
+https://docs.cozy.io/en/cozy-stack/jobs/#post-jobstriggers
 
 ---
 

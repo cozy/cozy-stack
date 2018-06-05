@@ -43,7 +43,7 @@ admin:
   secret_filename: cozy-admin-passphrase
 
 # vault contains keyfiles informations
-# See https://cozy.github.io/cozy-stack/cli/cozy-stack_config_gen-keys.html
+# See https://docs.cozy.io/en/cozy-stack/cli/cozy-stack_config_gen-keys/
 # to generate the keys
 vault:
   # the path to the key used to encrypt credentials
