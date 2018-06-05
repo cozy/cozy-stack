@@ -221,4 +221,4 @@ optionaly the old version of this document.
 ### Share-replicate and share-upload
 
 The message is composed of a sharing ID and a count of the number of errors
-(ie the number of times this job was retried).
+(i.e. the number of times this job was retried).

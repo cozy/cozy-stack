@@ -265,7 +265,7 @@ conflict.
 ![A difficult conflict](diagrams/files-conflict-2.png)
 
 Like in the last example, Alice uploads a file and share a directory to Bob
-with this file, Bob acccepts. But the, several actions are made on the file in
+with this file, Bob acccepts. But then, several actions are made on the file in
 a short lapse of time and it generates a difficult conflict:
 
 - Alice renames the file, and then uploads a new version with cozy-desktop
@@ -297,10 +297,15 @@ revision (4-4aa). The resolution takes 4 steps:
   recipients
 * A `description` (one sentence that will help people understand what is shared
   and why)
+- a flag `active` that says if the sharing is currently active for at least
+  one member
+- a flag `owner`, true for the document on the cozy of the sharer, and false
+  on the other cozy instance
 * a flag `open_sharing`:
   * `true` if any member of the sharing can add a new recipient
   * `false` if only the owner can add a new recipient
-* Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`)
+* Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`,
+  `triggers`, `credentials`)
 * A list of sharing `rules`, each rule being composed of:
   * a `title`, that will be displayed to the recipients before they accept the
     sharing
@@ -358,13 +363,14 @@ revision (4-4aa). The resolution takes 4 steps:
 
 ### `io.cozy.shared`
 
+This doctype is an internal one for the stack. It is used to track what
+documents are shared, and to replicate changes from one Cozy to the others.
+
 * `_id`: its identifier is the doctype and id of the referenced objet, separated by
   a `/` (e.g. `io.cozy.contacts/c1f5dae4-0d87-11e8-b91b-1f41c005768b`)
 * `_rev`: the CouchDB default revision for this document (not very meaningful,
   it’s here to avoid concurrency issues)
-* `revisions`: an array with the last known `_rev`s of the referenced object (for
-  conflicts, we put
-  [the winner](http://docs.couchdb.org/en/2.1.1/replication/conflicts.html#working-with-conflicting-documents))
+* `revisions`: a tree with the last known `_rev`s of the referenced object
 * `infos`, a map of sharing ids → `{rule, removed, binary}`
   * `rule` says which rule from the sharing must be applied for this document
   * `removed` will be true for a deleted document, a trashed file, or if the
