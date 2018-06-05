@@ -248,8 +248,11 @@ func MixupChainToResolveConflict(rev string, chain []string) []string {
 
 // conflictName generates a new name for a file/folder in conflict with another
 // that has the same path.
-func conflictName(name string) string {
-	return fmt.Sprintf("%s - conflict - %d", name, time.Now().Unix())
+func conflictName(name, suffix string) string {
+	if suffix == "" {
+		suffix = fmt.Sprintf("%d", time.Now().Unix())
+	}
+	return fmt.Sprintf("%s - conflict - %s", name, suffix)
 }
 
 // conflictID generates a new ID for a file/folder that has a conflict between

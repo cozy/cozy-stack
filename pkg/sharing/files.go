@@ -415,13 +415,15 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			err = s.UpdateDir(inst, target, dir, ref)
 		}
 		if err != nil {
+			inst.Logger().WithField("nspace", "replicator").
+				Debugf("Error on apply bulk file: %s (%#v - %#v)", err, target, ref)
 			errm = multierror.Append(errm, err)
 		}
 	}
 
 	if errm != nil {
 		inst.Logger().WithField("nspace", "replicator").
-			Warnf("Error on apply bulk file: %s", errm)
+			Warnf("Error on apply bulk files: %s", errm)
 	}
 	return nil
 }
@@ -503,7 +505,7 @@ func resolveConflictSamePath(inst *instance.Instance, id, pth string) (string, e
 	if err != nil {
 		return "", err
 	}
-	name := conflictName(path.Base(pth))
+	name := conflictName(path.Base(pth), "")
 	if d != nil {
 		if d.DocID > id {
 			return name, nil
