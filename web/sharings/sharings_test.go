@@ -39,7 +39,7 @@ const iocozytests = "io.cozy.tests"
 var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
-var bobContact *contacts.Contact
+var bobContact, charlieContact *contacts.Contact
 var sharingID, state, aliceAccessToken string
 
 // Things that live on Bob's Cozy
@@ -535,6 +535,61 @@ func TestDiscoveryWithPreview(t *testing.T) {
 	assertCorrectRedirection(t, res.Body)
 }
 
+func assertSharingByAliceToBobAndCharlie(t *testing.T, members []interface{}) {
+	assert.Len(t, members, 3)
+	owner := members[0].(map[string]interface{})
+	assert.Equal(t, owner["status"], "owner")
+	assert.Equal(t, owner["name"], "Alice")
+	assert.Equal(t, owner["email"], "alice@example.net")
+	assert.Equal(t, owner["instance"], "https://"+aliceInstance.Domain)
+	bob := members[1].(map[string]interface{})
+	assert.Equal(t, bob["status"], "mail-not-sent")
+	assert.Equal(t, bob["name"], "Bob")
+	assert.Equal(t, bob["email"], "bob@example.net")
+	charlie := members[2].(map[string]interface{})
+	assert.Equal(t, charlie["status"], "mail-not-sent")
+	assert.Equal(t, charlie["name"], "Charlie")
+	assert.Equal(t, charlie["email"], "charlie@example.net")
+}
+
+func TestAddRecipient(t *testing.T) {
+	assert.NotEmpty(t, aliceAppToken)
+	assert.NotNil(t, charlieContact)
+
+	v := echo.Map{
+		"data": echo.Map{
+			"type": consts.Sharings,
+			"relationships": echo.Map{
+				"recipients": echo.Map{
+					"data": []interface{}{
+						echo.Map{
+							"id":      charlieContact.ID(),
+							"doctype": charlieContact.DocType(),
+						},
+					},
+				},
+			},
+		},
+	}
+	body, _ := json.Marshal(v)
+	r := bytes.NewReader(body)
+	req, err := http.NewRequest(http.MethodPost, tsA.URL+"/sharings/"+sharingID+"/recipients", r)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	defer res.Body.Close()
+
+	var result map[string]interface{}
+	assert.NoError(t, json.NewDecoder(res.Body).Decode(&result))
+	data := result["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	members := attrs["members"].([]interface{})
+	assertSharingByAliceToBobAndCharlie(t, members)
+}
+
 func TestCheckPermissions(t *testing.T) {
 	v := echo.Map{
 		"data": echo.Map{
@@ -867,6 +922,7 @@ func TestMain(m *testing.M) {
 	})
 	aliceAppToken = generateAppToken(aliceInstance, "testapp")
 	bobContact = createContact(aliceInstance, "Bob", "bob@example.net")
+	charlieContact = createContact(aliceInstance, "Charlie", "charlie@example.net")
 	tsA = setup.GetTestServer("/sharings", sharings.Routes)
 	tsA.Config.Handler.(*echo.Echo).Renderer = render
 
