@@ -86,6 +86,23 @@ func PutSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, as, nil)
 }
 
+// jsonapiSharingWithDocs is an helper to send a JSON-API response for a
+// sharing with its shared docs
+func jsonapiSharingWithDocs(c echo.Context, s *sharing.Sharing) error {
+	inst := middlewares.GetInstance(c)
+	sharedDocs, err := sharing.GetSharedDocsBySharingIDs(inst, []string{s.SID})
+	if err != nil {
+		return wrapErrors(err)
+	}
+	docs := sharedDocs[s.SID]
+	as := &sharing.APISharing{
+		Sharing:     s,
+		Credentials: nil,
+		SharedDocs:  docs,
+	}
+	return jsonapi.Data(c, http.StatusOK, as, nil)
+}
+
 // GetSharing returns the sharing document associated to the given sharingID
 // and which documents have been shared.
 // The requester must have the permission on at least one doctype declared in
@@ -100,18 +117,7 @@ func GetSharing(c echo.Context) error {
 	if err = checkGetPermissions(c, s); err != nil {
 		return wrapErrors(err)
 	}
-	sharedDocs, err := sharing.GetSharedDocsBySharingIDs(inst, []string{sharingID})
-	if err != nil {
-		return wrapErrors(err)
-	}
-	docs := sharedDocs[sharingID]
-
-	as := &sharing.APISharing{
-		Sharing:     s,
-		Credentials: nil,
-		SharedDocs:  docs,
-	}
-	return jsonapi.Data(c, http.StatusOK, as, nil)
+	return jsonapiSharingWithDocs(c, s)
 }
 
 // GetSharingsInfoByDocType returns, for a given doctype, all the sharing
@@ -173,6 +179,45 @@ func AnswerSharing(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	return jsonapi.Data(c, http.StatusOK, ac, nil)
+}
+
+// AddRecipient is used to add a member to a sharing
+func AddRecipient(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if err = checkGetPermissions(c, s); err != nil {
+		return wrapErrors(err)
+	}
+	var body sharing.Sharing
+	obj, err := jsonapi.Bind(c.Request().Body, &body)
+	if err != nil {
+		return jsonapi.BadJSON()
+	}
+	if rel, ok := obj.GetRelationship("recipients"); ok {
+		if data, ok := rel.Data.([]interface{}); ok {
+			for _, ref := range data {
+				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
+					if err = s.AddContact(inst, id); err != nil {
+						return err
+					}
+				}
+			}
+			var codes map[string]string
+			if s.Owner && s.PreviewPath != "" {
+				if codes, err = s.CreatePreviewPermissions(inst); err != nil {
+					return wrapErrors(err)
+				}
+			}
+			if err = s.SendMails(inst, codes); err != nil {
+				return wrapErrors(err)
+			}
+		}
+	}
+	return jsonapiSharingWithDocs(c, s)
 }
 
 // RevokeSharing is used to revoke a sharing by the sharer, for all recipients
@@ -359,7 +404,8 @@ func Routes(router *echo.Group) {
 	router.GET("/:sharing-id", GetSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
 
-	// Revocations
+	// Managing recipients
+	router.POST("/:sharing-id/recipients", AddRecipient)
 	router.DELETE("/:sharing-id/recipients", RevokeSharing)                             // On the sharer
 	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                    // On the sharer
 	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingPermissions)    // On the recipient
