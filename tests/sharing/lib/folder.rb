@@ -16,7 +16,7 @@ class Folder
     res = inst.client[path].get opts
     j = JSON.parse(res.body)["data"]
     id = j["id"]
-    rev = j["rev"]
+    rev = j.dig "meta", "rev"
     j = j["attributes"]
     f = Folder.new(
       name: j["name"],
@@ -41,7 +41,7 @@ class Folder
 
     (j || []).map do |child|
       id = child["id"]
-      rev = child["rev"]
+      rev = child.dig "meta", "rev"
       child = child["attributes"]
       type = child["type"]
       if type == "directory"
@@ -63,10 +63,21 @@ class Folder
           metadata: child["metadata"]
         )
       end
-        f.couch_id = id
-        f.couch_rev = rev
-        f
+      f.couch_id = id
+      f.couch_rev = rev
+      f
     end
+  end
+
+  def restore_from_trash(inst)
+    opts = {
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    res = inst.client["/files/trash/#{@couch_id}"].post nil, opts
+    j = JSON.parse(res.body)["data"]
+    @restore_path = nil
+    @path = j.dig "attributes", "path"
+    @dir_id = j.dig "attributes", "dir_id"
   end
 
   def initialize(opts = {})
