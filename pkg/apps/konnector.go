@@ -163,7 +163,9 @@ func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 	newManifest.CreatedAt = m.CreatedAt
 	newManifest.DocSlug = slug
 	newManifest.DocSource = sourceURL
-	newManifest.Parameters = m.Parameters
+	if newManifest.Parameters == nil {
+		newManifest.Parameters = m.Parameters
+	}
 
 	*m = newManifest
 	return nil
