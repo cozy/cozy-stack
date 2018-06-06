@@ -122,7 +122,7 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 
 	s.Members = make([]Member, 1)
 	s.Members[0].Status = MemberStatusOwner
-	s.Members[0].Name = name
+	s.Members[0].PublicName = name
 	s.Members[0].Email = email
 	s.Members[0].Instance = inst.PageURL("", nil)
 

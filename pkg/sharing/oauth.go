@@ -146,7 +146,7 @@ func CreateOAuthClient(inst *instance.Instance, m *Member) (*oauth.Client, error
 	}
 	cli := oauth.Client{
 		RedirectURIs: []string{m.Instance + "/sharings/answer"},
-		ClientName:   "Sharing " + m.Name,
+		ClientName:   "Sharing " + m.PublicName,
 		ClientKind:   "sharing",
 		SoftwareID:   "github.com/cozy/cozy-stack",
 		ClientURI:    m.Instance + "/",
@@ -234,13 +234,19 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if err != nil {
 		return err
 	}
+	name, err := inst.PublicName()
+	if err != nil {
+		inst.Logger().WithField("nspace", "sharing").
+			Infof("No name for instance %v", inst)
+	}
 	ac := APICredentials{
 		Credentials: &Credentials{
 			State:       state,
 			Client:      ConvertOAuthClient(cli),
 			AccessToken: token,
 		},
-		CID: s.SID,
+		PublicName: name,
+		CID:        s.SID,
 	}
 	data, err := jsonapi.MarshalObject(&ac)
 	if err != nil {
@@ -286,13 +292,14 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 }
 
 // ProcessAnswer takes somes credentials and update the sharing with those.
-func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*APICredentials, error) {
+func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) (*APICredentials, error) {
 	if !s.Owner || len(s.Members) != len(s.Credentials)+1 {
 		return nil, ErrInvalidSharing
 	}
 	for i, c := range s.Credentials {
 		if c.State == creds.State {
 			s.Members[i+1].Status = MemberStatusReady
+			s.Members[i+1].PublicName = creds.PublicName
 			s.Credentials[i].Client = creds.Client
 			s.Credentials[i].AccessToken = creds.AccessToken
 			ac := APICredentials{

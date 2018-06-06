@@ -292,9 +292,9 @@ revision (4-4aa). The resolution takes 4 steps:
 
 * An identifier (the same for all members of the sharing)
 * A list of `members`. The first one is the owner. For each member,
-  we have the URL of the cozy, a public name, an email, a status and some
-  credentials to authorize the transfer of data between the owner and the
-  recipients
+  we have the URL of the cozy, a contact name, a public name, an email, a
+  status and some credentials to authorize the transfer of data between the
+  owner and the recipients
 * A `description` (one sentence that will help people understand what is shared
   and why)
 - a flag `active` that says if the sharing is currently active for at least

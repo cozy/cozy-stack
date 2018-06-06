@@ -55,7 +55,7 @@ func assertSharingByAliceToBob(t *testing.T, members []interface{}) {
 	assert.Len(t, members, 2)
 	owner := members[0].(map[string]interface{})
 	assert.Equal(t, owner["status"], "owner")
-	assert.Equal(t, owner["name"], "Alice")
+	assert.Equal(t, owner["public_name"], "Alice")
 	assert.Equal(t, owner["email"], "alice@example.net")
 	assert.Equal(t, owner["instance"], "https://"+aliceInstance.Domain)
 	recipient := members[1].(map[string]interface{})
@@ -199,7 +199,7 @@ func assertSharingRequestHasBeenCreated(t *testing.T) {
 	assert.Len(t, s.Members, 2)
 	owner := s.Members[0]
 	assert.Equal(t, owner.Status, "owner")
-	assert.Equal(t, owner.Name, "Alice")
+	assert.Equal(t, owner.PublicName, "Alice")
 	assert.Equal(t, owner.Email, "alice@example.net")
 	assert.Equal(t, owner.Instance, "https://"+aliceInstance.Domain)
 	recipient := s.Members[1]
@@ -539,7 +539,7 @@ func assertSharingByAliceToBobAndCharlie(t *testing.T, members []interface{}) {
 	assert.Len(t, members, 3)
 	owner := members[0].(map[string]interface{})
 	assert.Equal(t, owner["status"], "owner")
-	assert.Equal(t, owner["name"], "Alice")
+	assert.Equal(t, owner["public_name"], "Alice")
 	assert.Equal(t, owner["email"], "alice@example.net")
 	assert.Equal(t, owner["instance"], "https://"+aliceInstance.Domain)
 	bob := members[1].(map[string]interface{})

@@ -50,7 +50,8 @@ var _ jsonapi.Object = (*APISharing)(nil)
 // sharing.
 type APICredentials struct {
 	*Credentials
-	CID string `json:"_id,omitempty"`
+	PublicName string `json:"public_name,omitempty"`
+	CID        string `json:"_id,omitempty"`
 }
 
 // ID returns the sharing qualified identifier

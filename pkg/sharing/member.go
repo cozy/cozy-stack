@@ -30,10 +30,11 @@ const (
 
 // Member contains the information about a recipient (or the sharer) for a sharing
 type Member struct {
-	Status   string `json:"status"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Instance string `json:"instance,omitempty"`
+	Status     string `json:"status"`
+	Name       string `json:"name,omitempty"`
+	PublicName string `json:"public_name,omitempty"`
+	Email      string `json:"email"`
+	Instance   string `json:"instance,omitempty"`
 }
 
 // Credentials is the struct with the secret stuff used for authentication &

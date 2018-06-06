@@ -107,7 +107,7 @@ Content-Type: application/vnd.api+json
       "members": [
         {
           "status": "owner",
-          "name": "Alice",
+          "public_name": "Alice",
           "email": "alice@example.net",
           "instance": "alice.example.net"
         },
@@ -267,7 +267,7 @@ Content-Type: application/vnd.api+json
       "members": [
         {
           "status": "owner",
-          "name": "Alice",
+          "public_name": "Alice",
           "email": "alice@example.net",
           "instance": "alice.example.net"
         },
@@ -346,7 +346,7 @@ Content-Type: application/vnd.api+json
         "members": [
           {
             "status": "owner",
-            "name": "Alice",
+            "public_name": "Alice",
             "email": "alice@example.net",
             "instance": "alice.example.net"
           },
@@ -401,7 +401,7 @@ Content-Type: application/vnd.api+json
         "members": [
           {
             "status": "owner",
-            "name": "Alice",
+            "public_name": "Alice",
             "email": "alice@example.net",
             "instance": "alice.example.net"
           },
@@ -476,13 +476,12 @@ Content-Type: application/vnd.api+json
       "members": [
         {
           "status": "owner",
-          "name": "Alice",
+          "public_name": "Alice",
           "email": "alice@example.net",
           "instance": "alice.example.net"
         },
         {
           "status": "mail-not-sent",
-          "name": "Bob",
           "email": "bob@example.net",
           "instance": "bob.example.net"
         }
@@ -527,7 +526,7 @@ Content-Type: application/vnd.api+json
       "members": [
         {
           "status": "owner",
-          "name": "Alice",
+          "public_name": "Alice",
           "email": "alice@example.net",
           "instance": "alice.example.net"
         },
@@ -575,6 +574,7 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.sharings.answer",
     "id": "ce8835a061d0ef68947afe69a0046722",
     "attributes": {
+      "public_name": "Bob",
       "state": "eiJ3iepoaihohz1Y",
       "client": {...},
       "access_token": "uia7b85928e5cf"
@@ -659,13 +659,14 @@ Content-Type: application/vnd.api+json
       "members": [
         {
           "status": "owner",
-          "name": "Alice",
+          "public_name": "Alice",
           "email": "alice@example.net",
           "instance": "alice.example.net"
         },
         {
           "status": "ready",
           "name": "Bob",
+          "public_name": "Bob",
           "email": "bob@example.net"
         },
         {

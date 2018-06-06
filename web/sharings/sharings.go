@@ -170,7 +170,7 @@ func AnswerSharing(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	var creds sharing.Credentials
+	var creds sharing.APICredentials
 	if _, err = jsonapi.Bind(c.Request().Body, &creds); err != nil {
 		return jsonapi.BadJSON()
 	}
