@@ -34901,11 +34901,11 @@ DmzZPRGfenvX3aHb25pGsXdqyOdOx0vsO47Zb3+LbY530mvvM/ngb/+tYvJnAAAA
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /security.txt
-Size: 94
+Size: 91
 
 H4sIAAAAAAAC/3LOzytJTC6xUshNzMwpybcqTk0uLcosqXRIzq+qTM7JL03RS07m
-CsjPyUyutFLIKCkpKLbS1wdJ6qVnlmSUJull5oO5usUlicnZ+jD9ehkluTlcgAAA
-AP//RjoUyl4AAAA=
+CsjPyUyutFLIKCkpKLbS10/JTy7WA6nQy8zXT83TBzF1i0sSk7P1YQbocwECAAD/
+/0JyGVZbAAAA
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /styles/login.css
