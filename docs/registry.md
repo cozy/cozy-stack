@@ -97,7 +97,7 @@ Example:
       "short_description" : "L'application drive gestionnaire de fichier",
       "long_description" : "Avec Cozy Drive vous pourrez :\n- Sauvegarder et synchroniser gratuitement tous vos documents importants ..."
     }
-  }
+  },
   "tags": ["foo", "bar", "baz"],
   "screenshots": ["screen1.jpg", "screen2.jpg"],
   "versions": {
