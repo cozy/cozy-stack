@@ -200,8 +200,13 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		}
 	} else {
 		ref.Infos[msg.SharingID] = SharedInfo{
-			Rule:   msg.RuleIndex,
-			Binary: evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.FileType,
+			Rule: msg.RuleIndex,
+		}
+	}
+	if evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.FileType {
+		ref.Infos[msg.SharingID] = SharedInfo{
+			Rule:   ref.Infos[msg.SharingID].Rule,
+			Binary: true,
 		}
 	}
 
