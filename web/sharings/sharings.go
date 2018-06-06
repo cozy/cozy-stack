@@ -189,7 +189,7 @@ func AddRecipient(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	if err = checkGetPermissions(c, s); err != nil {
+	if _, err = checkCreatePermissions(c, s); err != nil {
 		return wrapErrors(err)
 	}
 	var body sharing.Sharing
