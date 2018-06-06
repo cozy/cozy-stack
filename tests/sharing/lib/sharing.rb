@@ -17,6 +17,26 @@ class Sharing
     j.dig "relationships", "shared_docs", "data"
   end
 
+  def add_members(inst, contacts, doctype)
+    opts = {
+      accept: "application/vnd.api+json",
+      content_type: "application/vnd.api+json",
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    data = {
+      data: {
+        relationships: {
+          recipients: {
+            data: contacts.map(&:as_reference)
+          }
+        }
+      }
+    }
+    body = JSON.generate data
+    res = inst.client["/sharings/#{@couch_id}/recipients"].post body, opts
+    res.code
+  end
+
   def revoke_by_sharer(inst, doctype)
     opts = {
       authorization: "Bearer #{inst.token_for doctype}"
