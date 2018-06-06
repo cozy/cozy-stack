@@ -62,11 +62,5 @@ module Helpers
     def file_exists_in_fs(path)
       File.exist?(path)
     end
-
-    def db_name(domain, type)
-      domain = domain.gsub(/[.:]/, '-')
-      type = type.gsub(/[.:]/, '-')
-      "#{domain}%2F#{type}"
-    end
   end
 end
