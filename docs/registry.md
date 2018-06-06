@@ -68,8 +68,6 @@ An application object contains the following fields:
 * `editor`: the application editor name
 * `name`: object containing a human readable name for the application in
   multiple languages
-* `description`: object containing the description description of the
-  application in multiple languages
 * `category`: the application category
 * `repository`: object with type and URL of package repository
 * `locales`: list of locales supported by the application
@@ -88,13 +86,18 @@ Example:
     "en": "Drive",
     "fr": "Drive"
   },
-  "description": {
-    "en": "The drive application",
-    "fr": "L'application drive gestionnaire de fichier"
-  },
   "category": "main",
   "repository": "https://github.com/cozy/cozy-drive",
-  "locales": ["en", "fr"],
+  "locales": {
+    "en": {
+      "short_description" : "The drive application",
+      "long_description" : "With Cozy Drive, you can easily:\n- Store your important files and keep them secure in your Cozy..."
+    },
+    "fr": {
+      "short_description" : "L'application drive gestionnaire de fichier",
+      "long_description" : "Avec Cozy Drive vous pourrez :\n- Sauvegarder et synchroniser gratuitement tous vos documents importants ..."
+    }
+  }
   "tags": ["foo", "bar", "baz"],
   "screenshots": ["screen1.jpg", "screen2.jpg"],
   "versions": {
