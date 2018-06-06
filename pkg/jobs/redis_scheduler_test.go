@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -233,7 +234,7 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	tat, err := jobs.NewTrigger(testInstance, at, msg)
 	assert.NoError(t, err)
 
-	err = sch.AddTrigger(tat)
+	err = couchdb.CreateDoc(testInstance, tat.Infos())
 	assert.NoError(t, err)
 
 	ts := now.UTC().Unix()
