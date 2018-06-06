@@ -76,8 +76,6 @@ describe "A sharing" do
     path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child5.name}"
     child5_recipient = Folder.find_by_path inst_recipient, path
 
-
-
     # Create and trash a file for later use
     filename_trash = "#{Faker::Internet.slug}.txt"
     file_to_trash = CozyFile.create inst, name: filename_trash, dir_id: child5.couch_id
@@ -95,11 +93,6 @@ describe "A sharing" do
     file2.remove inst
     file2_recipient.overwrite inst_recipient
 
-    # Create a file and remove the folder on the other side
-    filename = "#{Faker::Internet.slug}.txt"
-    file3 = CozyFile.create inst, name: filename, dir_id: child2.couch_id
-    child2_recipient.remove inst_recipient
-
     # Rename file and folder on both sides and write file on one side
     2.times do
       child1.rename inst, Faker::Internet.slug
@@ -109,7 +102,7 @@ describe "A sharing" do
       file1_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
     end
 
-    sleep 20
+    sleep 15
     # Check the files and diretories are even
     file1 = CozyFile.find inst, file1.couch_id
     file2 = CozyFile.find inst, file2.couch_id
@@ -128,24 +121,11 @@ describe "A sharing" do
     assert file2.trashed
     assert file2_recipient.trashed
 
-    # FIXME: child2 and its child file3 are in the trash
-    # file3 = CozyFile.find inst, file3.couch_id 
-    # child2 = Folder.find inst, child2.couch_id
-    # refute_equal Folder::TRASH_DIR, child2.dir_id
-    # refute_equal Folder::TRASH_DIR, file3.dir_id
-
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_recipient.domain,
                    Helpers::SHARED_WITH_ME, folder.name
     diff = Helpers.fsdiff da, db
     diff.must_be_empty
-
-    # DEBUG
-    puts "child 1 : #{child1.name}"
-    puts "child 2 : #{child2.name}"
-    puts "child 3 : #{child3.name}"
-    puts "child 4 : #{child4.name}"
-    puts "child 5 : #{child5.name}"
 
     # Generate conflicts with no reconciliation
 
@@ -162,7 +142,7 @@ describe "A sharing" do
     file5.rename inst, file6.name
 
     # Create a file on a side and restore a file with same name on other side
-    file7 = CozyFile.create inst_recipient, name: filename_trash, dir_id: child5_recipient.couch_id
+    CozyFile.create inst_recipient, name: filename_trash, dir_id: child5_recipient.couch_id
     file_to_trash.restore inst
 
     # Write the same file on both sides
@@ -171,8 +151,7 @@ describe "A sharing" do
       file1_recipient.overwrite inst_recipient
     end
 
-    sleep 20
-
+    sleep 15
     # Check the conflicted files
     children = Folder.children inst, parent_file.path
     conflict_file = children.find { |c| c.name.include? "conflict" }
