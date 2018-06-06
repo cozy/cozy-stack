@@ -1,5 +1,6 @@
 require 'awesome_print'
 require 'date'
+require 'digest'
 require 'faker'
 require 'fileutils'
 require 'mimemagic'
