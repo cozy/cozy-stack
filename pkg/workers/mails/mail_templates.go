@@ -512,7 +512,7 @@ func (dt *MailTheme) HTMLTemplate() string {
     }
     .body-sub a {
       word-break: break-all;
-      color:: #297EF1;
+      color: #297EF1;
       text-decoration: none;
     }
     .content-cell {
