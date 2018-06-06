@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 17
+const IndexViewsVersion int = 18
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -182,6 +182,21 @@ function(doc) {
 		}
 	}
 }`,
+}
+
+// ContactByEmail is used to find a contact by its email address
+var ContactByEmail = &couchdb.View{
+	Name:    "contacts-by-email",
+	Doctype: Contacts,
+	Map: `
+function(doc) {
+	if (isArray(doc.email)) {
+		for (var i = 0; i < doc.email.length; i++) {
+			emit(doc.email[i].address, doc._id);
+		}
+	}
+}
+`,
 }
 
 // Views is the list of all views that are created by the stack.

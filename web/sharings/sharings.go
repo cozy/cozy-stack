@@ -220,6 +220,26 @@ func AddRecipient(c echo.Context) error {
 	return jsonapiSharingWithDocs(c, s)
 }
 
+// PutRecipients is used to update the members list on the recipients cozy
+func PutRecipients(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	var body struct {
+		Members []sharing.Member `json:"data"`
+	}
+	if err = c.Bind(&body); err != nil {
+		return wrapErrors(err)
+	}
+	if err = s.UpdateRecipients(inst, body.Members); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // RevokeSharing is used to revoke a sharing by the sharer, for all recipients
 func RevokeSharing(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -406,6 +426,7 @@ func Routes(router *echo.Group) {
 
 	// Managing recipients
 	router.POST("/:sharing-id/recipients", AddRecipient)
+	router.PUT("/:sharing-id/recipients", PutRecipients, checkSharingPermissions)
 	router.DELETE("/:sharing-id/recipients", RevokeSharing)                             // On the sharer
 	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                    // On the sharer
 	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingPermissions)    // On the recipient

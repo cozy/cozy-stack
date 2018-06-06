@@ -81,6 +81,22 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 	return nil
 }
 
+// UpdateRecipients updates the list of recipients
+func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) error {
+	for i, m := range members {
+		if m.Email != s.Members[i].Email {
+			if contact, err := contacts.FindByEmail(inst, m.Email); err == nil {
+				s.Members[i].Name = contact.PrimaryName()
+			}
+		}
+		s.Members[i].Email = m.Email
+		s.Members[i].PublicName = m.PublicName
+		s.Members[i].Status = m.Status
+		s.Members[i].Instance = m.Instance
+	}
+	return couchdb.UpdateDoc(inst, s)
+}
+
 // FindMemberByState returns the member that is linked to the sharing by
 // the given state
 func (s *Sharing) FindMemberByState(state string) (*Member, error) {

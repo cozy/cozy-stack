@@ -234,6 +234,16 @@ Content-Type: application/json
 Get the information about a sharing. This includes the content of the rules,
 the members, as well as the already shared documents for this sharing.
 
+For a member, we can have the following informations:
+
+- a contact name (`name`), that is the name of this user as it appears in its
+  contact document (if there is one such document)
+- a public name (`public_name`), that is the name this user has put on his
+  cozy as a public name (it is used for sending emails for example)
+- an email addresse (`email`)
+- an instance URL (`instance`)
+- and a status (`status`).
+
 #### Request
 
 ```http
@@ -705,6 +715,50 @@ Content-Type: application/vnd.api+json
     }
   }
 }
+```
+
+### PUT /sharings/:sharing-id/recipients
+
+This internal route is used to update the list of members, their states and
+names, on the recipients cozy.
+
+#### Request
+
+```http
+PUT /sharings/ce8835a061d0ef68947afe69a0046722/recipients HTTP/1.1
+Host: bob.example.net
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    {
+      "status": "owner",
+      "public_name": "Alice",
+      "email": "alice@example.net",
+      "instance": "alice.example.net"
+    },
+    {
+      "status": "ready",
+      "name": "Bob",
+      "public_name": "Bob",
+      "email": "bob@example.net"
+    },
+    {
+      "status": "ready",
+      "name": "Charlie",
+      "public_name": "Charlie",
+      "email": "charlie@example.net"
+    }
+  ]
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
 ```
 
 ### DELETE /sharings/:sharing-id/recipients
