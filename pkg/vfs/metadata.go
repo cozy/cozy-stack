@@ -5,6 +5,7 @@ import (
 	"image"
 	"io"
 	"io/ioutil"
+	"math"
 	"time"
 
 	// Packages image/... are not used explicitly in the code below,
@@ -198,9 +199,11 @@ func (e *ExifExtractor) Result() Metadata {
 			m["flash"] = flash
 		}
 		if lat, long, err := x.LatLong(); err == nil {
-			m["gps"] = map[string]float64{
-				"lat":  lat,
-				"long": long,
+			if !math.IsNaN(lat) && !math.IsNaN(long) {
+				m["gps"] = map[string]float64{
+					"lat":  lat,
+					"long": long,
+				}
 			}
 		}
 		if _, ok := m["width"]; !ok {
