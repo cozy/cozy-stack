@@ -244,6 +244,14 @@ For a member, we can have the following informations:
 - an instance URL (`instance`)
 - and a status (`status`).
 
+**Notes:**
+
+- the first member is always the sharer
+- to display the list of members to a user, the `name` should be use if
+  available, and if it is not the case, you can use the `public_name` or the
+  `email`
+- on a recipient, the only member with an `instance` is the local user.
+
 #### Request
 
 ```http

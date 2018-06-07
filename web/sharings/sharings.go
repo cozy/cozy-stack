@@ -178,6 +178,7 @@ func AnswerSharing(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
+	go s.NotifyRecipients(inst)
 	return jsonapi.Data(c, http.StatusOK, ac, nil)
 }
 
@@ -215,6 +216,8 @@ func AddRecipient(c echo.Context) error {
 			if err = s.SendMails(inst, codes); err != nil {
 				return wrapErrors(err)
 			}
+			cloned := s.Clone().(*sharing.Sharing)
+			go cloned.NotifyRecipients(inst)
 		}
 	}
 	return jsonapiSharingWithDocs(c, s)
@@ -277,6 +280,7 @@ func RevokeRecipient(c echo.Context) error {
 	if err = s.RevokeRecipient(inst, index); err != nil {
 		return wrapErrors(err)
 	}
+	go s.NotifyRecipients(inst)
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -310,6 +314,7 @@ func RevocationOwnerNotif(c echo.Context) error {
 	if err = s.RevokeRecipientByNotification(inst, member); err != nil {
 		return wrapErrors(err)
 	}
+	go s.NotifyRecipients(inst)
 	return c.NoContent(http.StatusNoContent)
 }
 

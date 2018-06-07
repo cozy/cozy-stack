@@ -1,6 +1,8 @@
 package sharing
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/url"
 
@@ -92,7 +94,6 @@ func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) er
 		s.Members[i].Email = m.Email
 		s.Members[i].PublicName = m.PublicName
 		s.Members[i].Status = m.Status
-		s.Members[i].Instance = m.Instance
 	}
 	return couchdb.UpdateDoc(inst, s)
 }
@@ -260,4 +261,79 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 		res.Body.Close()
 	}
 	return nil
+}
+
+// NotifyRecipients will push the updated list of members of the sharing to the
+// active recipients. It is meant to be used in a goroutine, errors are just
+// logged (nothing critical here).
+func (s *Sharing) NotifyRecipients(inst *instance.Instance) {
+	if !s.Owner {
+		return
+	}
+	if len(s.Members) != len(s.Credentials)+1 {
+		return
+	}
+
+	active := false
+	for i, m := range s.Members {
+		if i > 0 && m.Status == MemberStatusReady {
+			active = true
+			break
+		}
+	}
+	if !active {
+		return
+	}
+
+	members := make([]Member, len(s.Members))
+	for i, m := range s.Members {
+		members[i] = m
+		members[i].Instance = "" // Instance is private
+	}
+	body, err := json.Marshal(members)
+	if err != nil {
+		inst.Logger().WithField("nspace", "sharing").
+			Warnf("Can't serialize the updated members list for %s: %s", s.SID, err)
+		return
+	}
+
+	for i, m := range s.Members {
+		if i == 0 || m.Status != MemberStatusReady { //i == 0 is for the owner
+			continue
+		}
+		u, err := url.Parse(m.Instance)
+		if m.Instance == "" || err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Infof("Invalid instance URL %s: %s", m.Instance, err)
+			continue
+		}
+		c := &s.Credentials[i-1]
+		opts := &request.Options{
+			Method: http.MethodPost,
+			Scheme: u.Scheme,
+			Domain: u.Host,
+			Path:   "/sharings/" + s.SID + "/recipients",
+			Headers: request.Headers{
+				"Accept":        "application/vnd.api+json",
+				"Content-Type":  "application/vnd.api+json",
+				"Authorization": "Bearer " + c.AccessToken.AccessToken,
+			},
+			Body: bytes.NewReader(body),
+		}
+		res, err := request.Req(opts)
+		if err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Infof("Can't notify %#v about the updated members list: %s", m, err)
+			continue
+		}
+		res.Body.Close()
+		if res.StatusCode/100 == 4 {
+			if res, err = RefreshToken(inst, s, &s.Members[i], c, opts, body); err != nil {
+				inst.Logger().WithField("nspace", "sharing").
+					Infof("Can't notify %#v about the updated members list: %s", m, err)
+				continue
+			}
+			res.Body.Close()
+		}
+	}
 }
