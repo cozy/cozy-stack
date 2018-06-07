@@ -21,6 +21,7 @@ describe "A folder" do
     # Create the instance
     inst = Instance.create name: "Alice"
     inst_recipient = Instance.create name: recipient_name
+    contact = Contact.create inst, given_name: recipient_name
 
     # Create the folder with a file
     folder = Folder.create inst
@@ -30,7 +31,6 @@ describe "A folder" do
     file = CozyFile.create inst, opts
 
     # Create the sharing
-    contact = Contact.create inst, given_name: recipient_name
     sharing = Sharing.new
     sharing.rules << Rule.push(folder)
     sharing.members << inst << contact
@@ -41,12 +41,12 @@ describe "A folder" do
     inst_recipient.accept sharing
 
     # Check the recipient's folder is the same as the sender's
+    sleep 7
     path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
     folder_recipient = Folder.find_by_path inst_recipient, path
     assert_equal folder_recipient.name, folder.name
 
     # Check that the files are the same on disk
-    sleep 7
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_recipient.domain,
                    Helpers::SHARED_WITH_ME, sharing.rules.first.title
@@ -71,5 +71,33 @@ describe "A folder" do
     base_path_a = File.join Helpers.current_dir, inst.domain, ".thumbs", short_id_a
     base_path_b = File.join Helpers.current_dir, inst_recipient.domain, ".thumbs", short_id_b
     assert_same_thumbs base_path_a, file.couch_id, base_path_b, file_recipient.couch_id
+
+    # Create a "one-shot" sharing
+    folder = Folder.create inst
+    folder.couch_id.wont_be_empty
+    file_path = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    opts = CozyFile.options_from_fixture(file_path, dir_id: folder.couch_id)
+    CozyFile.create inst, opts
+    oneshot = Sharing.new
+    oneshot.rules << Rule.none(folder)
+    oneshot.members << inst << contact
+    inst.register oneshot
+
+    # Accept the oneshot
+    sleep 1
+    inst_recipient.accept oneshot
+
+    # Check the recipient's folder is the same as the sender's
+    sleep 7
+    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
+    folder_recipient = Folder.find_by_path inst_recipient, path
+    assert_equal folder_recipient.name, folder.name
+
+    # Check that the files are the same on disk
+    da = File.join Helpers.current_dir, inst.domain, folder.name
+    db = File.join Helpers.current_dir, inst_recipient.domain,
+                   Helpers::SHARED_WITH_ME, oneshot.rules.first.title
+    diff = Helpers.fsdiff da, db
+    diff.must_be_empty
   end
 end
