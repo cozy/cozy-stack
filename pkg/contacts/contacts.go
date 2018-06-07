@@ -160,7 +160,7 @@ func Find(db couchdb.Database, contactID string) (*Contact, error) {
 func FindByEmail(db couchdb.Database, email string) (*Contact, error) {
 	var res couchdb.ViewResponse
 	err := couchdb.ExecView(db, consts.ContactByEmail, &couchdb.ViewRequest{
-		Key:         []string{email},
+		Key:         email,
 		IncludeDocs: true,
 		Limit:       1,
 	}, &res)

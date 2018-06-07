@@ -34,6 +34,19 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 		}
 		rules = append(rules, rule)
 	}
+	members := make([]Member, len(s.Members))
+	for i, m := range s.Members {
+		// Instance and name are private...
+		members[i] = Member{
+			Status:     m.Status,
+			PublicName: m.PublicName,
+			Email:      m.Email,
+		}
+		// ... except for the sharer and the recipient of this request
+		if i == 0 || &s.Credentials[i-1] == c {
+			members[i].Instance = m.Instance
+		}
+	}
 	sh := APISharing{
 		&Sharing{
 			SID:         s.SID,
@@ -46,7 +59,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 			CreatedAt:   s.CreatedAt,
 			UpdatedAt:   s.UpdatedAt,
 			Rules:       rules,
-			Members:     s.Members,
+			Members:     members,
 		},
 		nil,
 		nil,
@@ -273,6 +286,15 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	defer res.Body.Close()
 	if res.StatusCode/100 != 2 {
 		return ErrRequestFailed
+	}
+
+	for i, m := range s.Members {
+		if i > 0 && m.Instance != "" {
+			if m.Status == MemberStatusMailNotSent ||
+				m.Status == MemberStatusPendingInvitation {
+				m.Status = MemberStatusReady
+			}
+		}
 	}
 
 	if err = s.SetupReceiver(inst); err != nil {

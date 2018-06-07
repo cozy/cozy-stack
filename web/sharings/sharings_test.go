@@ -204,7 +204,6 @@ func assertSharingRequestHasBeenCreated(t *testing.T) {
 	assert.Equal(t, owner.Instance, "https://"+aliceInstance.Domain)
 	recipient := s.Members[1]
 	assert.Equal(t, recipient.Status, "mail-not-sent")
-	assert.Equal(t, recipient.Name, "Bob")
 	assert.Equal(t, recipient.Email, "bob@example.net")
 	assert.Equal(t, recipient.Instance, tsB.URL)
 

@@ -210,6 +210,7 @@ var Views = []*couchdb.View{
 	PermissionsByDoctype,
 	SharedDocsBySharingID,
 	SharingsByDocTypeView,
+	ContactByEmail,
 }
 
 // ViewsByDoctype returns the list of views for a specified doc type.

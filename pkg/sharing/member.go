@@ -3,8 +3,10 @@ package sharing
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
+	"runtime"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
@@ -86,6 +88,9 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 // UpdateRecipients updates the list of recipients
 func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) error {
 	for i, m := range members {
+		if i >= len(s.Members) {
+			s.Members = append(s.Members, Member{})
+		}
 		if m.Email != s.Members[i].Email {
 			if contact, err := contacts.FindByEmail(inst, m.Email); err == nil {
 				s.Members[i].Name = contact.PrimaryName()
@@ -266,7 +271,7 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 // NotifyRecipients will push the updated list of members of the sharing to the
 // active recipients. It is meant to be used in a goroutine, errors are just
 // logged (nothing critical here).
-func (s *Sharing) NotifyRecipients(inst *instance.Instance) {
+func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 	if !s.Owner {
 		return
 	}
@@ -274,9 +279,25 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance) {
 		return
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			var err error
+			switch r := r.(type) {
+			case error:
+				err = r
+			default:
+				err = fmt.Errorf("%v", r)
+			}
+			stack := make([]byte, 4<<10) // 4 KB
+			length := runtime.Stack(stack, false)
+			log := inst.Logger().WithField("panic", true).WithField("nspace", "sharing")
+			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
+		}
+	}()
+
 	active := false
 	for i, m := range s.Members {
-		if i > 0 && m.Status == MemberStatusReady {
+		if i > 0 && m.Status == MemberStatusReady && &s.Members[i] != except {
 			active = true
 			break
 		}
@@ -285,10 +306,17 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance) {
 		return
 	}
 
-	members := make([]Member, len(s.Members))
+	var members struct {
+		Members []Member `json:"data"`
+	}
+	members.Members = make([]Member, len(s.Members))
 	for i, m := range s.Members {
-		members[i] = m
-		members[i].Instance = "" // Instance is private
+		members.Members[i] = Member{
+			Status:     m.Status,
+			PublicName: m.PublicName,
+			Email:      m.Email,
+			// Instance and name are private
+		}
 	}
 	body, err := json.Marshal(members)
 	if err != nil {
@@ -298,7 +326,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance) {
 	}
 
 	for i, m := range s.Members {
-		if i == 0 || m.Status != MemberStatusReady { //i == 0 is for the owner
+		if i == 0 || m.Status != MemberStatusReady || &s.Members[i] == except {
 			continue
 		}
 		u, err := url.Parse(m.Instance)
@@ -309,7 +337,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance) {
 		}
 		c := &s.Credentials[i-1]
 		opts := &request.Options{
-			Method: http.MethodPost,
+			Method: http.MethodPut,
 			Scheme: u.Scheme,
 			Domain: u.Host,
 			Path:   "/sharings/" + s.SID + "/recipients",

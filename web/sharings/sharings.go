@@ -1,6 +1,7 @@
 package sharings
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -178,7 +179,6 @@ func AnswerSharing(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	go s.NotifyRecipients(inst)
 	return jsonapi.Data(c, http.StatusOK, ac, nil)
 }
 
@@ -217,7 +217,7 @@ func AddRecipient(c echo.Context) error {
 				return wrapErrors(err)
 			}
 			cloned := s.Clone().(*sharing.Sharing)
-			go cloned.NotifyRecipients(inst)
+			go cloned.NotifyRecipients(inst, nil)
 		}
 	}
 	return jsonapiSharingWithDocs(c, s)
@@ -234,7 +234,7 @@ func PutRecipients(c echo.Context) error {
 	var body struct {
 		Members []sharing.Member `json:"data"`
 	}
-	if err = c.Bind(&body); err != nil {
+	if err = json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
 		return wrapErrors(err)
 	}
 	if err = s.UpdateRecipients(inst, body.Members); err != nil {
@@ -280,7 +280,7 @@ func RevokeRecipient(c echo.Context) error {
 	if err = s.RevokeRecipient(inst, index); err != nil {
 		return wrapErrors(err)
 	}
-	go s.NotifyRecipients(inst)
+	go s.NotifyRecipients(inst, nil)
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -314,7 +314,7 @@ func RevocationOwnerNotif(c echo.Context) error {
 	if err = s.RevokeRecipientByNotification(inst, member); err != nil {
 		return wrapErrors(err)
 	}
-	go s.NotifyRecipients(inst)
+	go s.NotifyRecipients(inst, nil)
 	return c.NoContent(http.StatusNoContent)
 }
 
