@@ -15,7 +15,7 @@ def create_sharing(insts, obj)
   sharing.members << inst_sharer
   recipients = insts.drop 1
   recipients.each do |inst|
-    contact = Contact.create inst_sharer, givenName: inst.name
+    contact = Contact.create inst_sharer, given_name: inst.name
     sharing.members << contact
   end
   inst_sharer.register sharing

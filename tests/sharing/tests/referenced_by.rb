@@ -34,7 +34,7 @@ describe "A photo" do
     assert file_has_album_reference(file, album.couch_id)
 
     # Create the sharing
-    contact = Contact.create inst, givenName: recipient_name
+    contact = Contact.create inst, given_name: recipient_name
     sharing = Sharing.new
     sharing.rules << Rule.sync(folder)
     sharing.members << inst << contact
@@ -88,7 +88,7 @@ describe "A photo" do
     assert file_has_album_reference(file, album.couch_id)
 
     # Create the sharing
-    contact = Contact.create inst, givenName: recipient_name
+    contact = Contact.create inst, given_name: recipient_name
     sharing = Sharing.new
     sharing.rules = Rule.create_from_album(album, "sync")
     sharing.members << inst << contact

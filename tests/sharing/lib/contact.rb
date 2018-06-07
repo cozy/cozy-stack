@@ -10,7 +10,7 @@ class Contact
   def initialize(opts = {})
     first = opts[:given_name] || Faker::Name.first_name
     last = opts[:family_name] || Faker::Name.last_name
-    @name = { givenName: first, familyName: last }
+    @name = { given_name: first, familyName: last }
     @fullname = "#{first} #{last}"
 
     email = opts[:email] || Faker::Internet.email([first, last, @fullname].sample)
@@ -24,6 +24,10 @@ class Contact
 
     phone = opts[:phone] || Faker::PhoneNumber.cell_phone
     @phones = [{ number: phone }]
+  end
+
+  def primary_email
+    @emails.dig 0, :address
   end
 
   def as_json
