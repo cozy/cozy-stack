@@ -22,7 +22,7 @@ _via_ our [job system](jobs.md) and the [konnector worker](workers.md).
 | short_description | a short description of the application                                                                          |
 | long_description  | a long description of the application                                                                           |
 | source            | where the files of the app can be downloaded                                                                    |
-| developer         | `name` and `url` for the developer                                                                              |
+| developer         | `name` and `url` for the developer (`{"name": "Cozy", "url": "https://cozy.io"}`)                              |
 | default_locale    | the locale used for the name and description fields                                                             |
 | locales           | translations of the name and description fields in other locales                                                |
 | langs             | list of languages tags supported by the application                                                             |
