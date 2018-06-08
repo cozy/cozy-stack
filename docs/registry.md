@@ -66,14 +66,8 @@ An application object contains the following fields:
 * `slug`: the application slug (unique)
 * `type`: the application type ("webapp" or "konnector")
 * `editor`: the application editor name
-* `name`: object containing a human readable name for the application in
-  multiple languages
-* `category`: the application category
-* `repository`: object with type and URL of package repository
-* `locales`: list of locales supported by the application
-* `tags`: list of tags associated with the application
-* `screenshots`: array of screenshots filenames
 * `versions`: an object containing all the channels versions
+* `latest_version`: the latest available version
 
 Example:
 
@@ -82,29 +76,12 @@ Example:
   "slug": "drive",
   "type": "webapp",
   "editor": "cozy",
-  "name": {
-    "en": "Drive",
-    "fr": "Drive"
-  },
-  "category": "main",
-  "repository": "https://github.com/cozy/cozy-drive",
-  "locales": {
-    "en": {
-      "short_description" : "The drive application",
-      "long_description" : "With Cozy Drive, you can easily:\n- Store your important files and keep them secure in your Cozy..."
-    },
-    "fr": {
-      "short_description" : "L'application drive gestionnaire de fichier",
-      "long_description" : "Avec Cozy Drive vous pourrez :\n- Sauvegarder et synchroniser gratuitement tous vos documents importants ..."
-    }
-  },
-  "tags": ["foo", "bar", "baz"],
-  "screenshots": ["screen1.jpg", "screen2.jpg"],
   "versions": {
     "stable": ["3.1.1"],
     "beta": ["3.1.1-beta.1"],
     "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
-  }
+  },
+  "latest_version": { /* */ }
 }
 ```
 
@@ -327,17 +304,18 @@ Sorting is allowed on the following fields:
 
 #### Query-String
 
-| Parameter | Description                                              |
-| --------- | -------------------------------------------------------- |
-| cursor    | the cursor of the last application on the previous page  |
-| limit     | the maximum number of applications to show               |
-| filter[]  | a filter to apply on fields of the application           |
-| sort      | name of the field on which to apply the sort of the list |
+| Parameter            | Description                                              |
+| -------------------- | -------------------------------------------------------- |
+| cursor               | the cursor of the last application on the previous page  |
+| limit                | the maximum number of applications to show               |
+| filter[]             | a filter to apply on fields of the application           |
+| sort                 | name of the field on which to apply the sort of the list |
+| latestVersionChannel | the channel from which we select the latest version      |
 
 #### Request
 
 ```http
-GET /registry?filter[category]=main&limit=20&sort=slug HTTP/1.1
+GET /registry?filter[category]=main&limit=20&sort=slug&latest&latestVersionChannel=beta HTTP/1.1
 ```
 
 #### Response
@@ -354,15 +332,23 @@ Content-Type: application/json
       "slug": "drive",
       "type": "webapp",
       "editor": "cozy",
-      "category": "main",
-      "description": "The drive application",
       "versions": {
         "stable": ["3.1.1"],
         "beta": ["3.1.1-beta.1"],
         "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
       },
-      "repository": "https://github.com/cozy/cozy-drive",
-      "license": "BSD"
+      "latest_version": {
+        "slug": "drive",
+        "type": "webapp",
+        "version": "3.1.1",
+        "url": "http://.../3.1.1",
+        "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+        "size": "1000",
+        "created_at": "2017-07-05T07:54:40.982Z",
+        "manifest": {
+          /* ... */
+        }
+      },
     },
     {
       // ...
@@ -396,9 +382,18 @@ Content-Type: application/json
 {
   "slug": "drive",
   "editor": "cozy",
-  "description": "The drive application",
-  "repository": "https://github.com/cozy/cozy-drive",
-  "tags": ["foo", "bar", "baz"],
+  "latest_version": {
+    "slug": "drive",
+    "type": "webapp",
+    "version": "3.1.1",
+    "url": "http://.../3.1.1",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "size": "1000",
+    "created_at": "2017-07-05T07:54:40.982Z",
+    "manifest": {
+      /* ... */
+    }
+  },
   "versions": {
     "stable": ["3.1.1"],
     "beta": ["3.1.1-beta.1"],
