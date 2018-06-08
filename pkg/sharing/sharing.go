@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
@@ -123,7 +124,7 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 
 	s.Members = make([]Member, 1)
 	s.Members[0].Status = MemberStatusOwner
-	s.Members[0].Name = name
+	s.Members[0].PublicName = name
 	s.Members[0].Email = email
 	s.Members[0].Instance = inst.PageURL("", nil)
 
@@ -196,6 +197,12 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 	s.Owner = false
 	s.UpdatedAt = time.Now()
 	s.Credentials = make([]Credentials, 1)
+
+	for i, m := range s.Members {
+		if contact, err := contacts.FindByEmail(inst, m.Email); err == nil {
+			s.Members[i].Name = contact.PrimaryName()
+		}
+	}
 
 	return couchdb.CreateNamedDocWithDB(inst, s)
 }

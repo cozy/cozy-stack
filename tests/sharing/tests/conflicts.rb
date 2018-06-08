@@ -51,7 +51,7 @@ describe "A sharing" do
     file2 = CozyFile.create inst, name: filename2, dir_id: folder.couch_id
 
     # Create the sharing
-    contact = Contact.create inst, givenName: recipient_name
+    contact = Contact.create inst, given_name: recipient_name
     sharing = Sharing.new
     sharing.rules << Rule.sync(folder)
     sharing.members << inst << contact

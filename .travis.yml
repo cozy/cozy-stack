@@ -29,4 +29,3 @@ script:
 
 after_failure:
   - docker ps -a
-  - docker logs couch

@@ -1,6 +1,7 @@
 package sharings
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -170,7 +171,7 @@ func AnswerSharing(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	var creds sharing.Credentials
+	var creds sharing.APICredentials
 	if _, err = jsonapi.Bind(c.Request().Body, &creds); err != nil {
 		return jsonapi.BadJSON()
 	}
@@ -215,9 +216,31 @@ func AddRecipient(c echo.Context) error {
 			if err = s.SendMails(inst, codes); err != nil {
 				return wrapErrors(err)
 			}
+			cloned := s.Clone().(*sharing.Sharing)
+			go cloned.NotifyRecipients(inst, nil)
 		}
 	}
 	return jsonapiSharingWithDocs(c, s)
+}
+
+// PutRecipients is used to update the members list on the recipients cozy
+func PutRecipients(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	var body struct {
+		Members []sharing.Member `json:"data"`
+	}
+	if err = json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
+		return wrapErrors(err)
+	}
+	if err = s.UpdateRecipients(inst, body.Members); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 // RevokeSharing is used to revoke a sharing by the sharer, for all recipients
@@ -257,6 +280,7 @@ func RevokeRecipient(c echo.Context) error {
 	if err = s.RevokeRecipient(inst, index); err != nil {
 		return wrapErrors(err)
 	}
+	go s.NotifyRecipients(inst, nil)
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -290,6 +314,7 @@ func RevocationOwnerNotif(c echo.Context) error {
 	if err = s.RevokeRecipientByNotification(inst, member); err != nil {
 		return wrapErrors(err)
 	}
+	go s.NotifyRecipients(inst, nil)
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -406,6 +431,7 @@ func Routes(router *echo.Group) {
 
 	// Managing recipients
 	router.POST("/:sharing-id/recipients", AddRecipient)
+	router.PUT("/:sharing-id/recipients", PutRecipients, checkSharingPermissions)
 	router.DELETE("/:sharing-id/recipients", RevokeSharing)                             // On the sharer
 	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                    // On the sharer
 	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingPermissions)    // On the recipient

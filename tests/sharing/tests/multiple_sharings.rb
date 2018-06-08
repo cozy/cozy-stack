@@ -16,8 +16,8 @@ describe "A folder" do
     inst_charlie = Instance.create name: charlie
 
     # Create the contacts
-    contact_bob = Contact.create inst_alice, givenName: bob
-    contact_charlie = Contact.create inst_alice, givenName: charlie
+    contact_bob = Contact.create inst_alice, given_name: bob
+    contact_charlie = Contact.create inst_alice, given_name: charlie
 
     # Share a folder with bob and charlie, in the same sharing
     folder = Folder.create inst_alice

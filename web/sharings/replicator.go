@@ -148,11 +148,13 @@ func checkSharingPermissions(next echo.HandlerFunc) echo.HandlerFunc {
 		sharingID := c.Param("sharing-id")
 		requestPerm, err := perm.GetPermission(c)
 		if err != nil {
-			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").Debugf("[sharing] Invalid permission: %s", err)
+			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
+				Debugf("Invalid permission: %s", err)
 			return err
 		}
 		if !requestPerm.Permissions.AllowID("GET", consts.Sharings, sharingID) {
-			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").Debugf("[sharing] Not allowed (%s)", sharingID)
+			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
+				Debugf("Not allowed (%s)", sharingID)
 			return echo.NewHTTPError(http.StatusForbidden)
 		}
 		return next(c)

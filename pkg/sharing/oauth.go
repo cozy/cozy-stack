@@ -34,6 +34,19 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 		}
 		rules = append(rules, rule)
 	}
+	members := make([]Member, len(s.Members))
+	for i, m := range s.Members {
+		// Instance and name are private...
+		members[i] = Member{
+			Status:     m.Status,
+			PublicName: m.PublicName,
+			Email:      m.Email,
+		}
+		// ... except for the sharer and the recipient of this request
+		if i == 0 || &s.Credentials[i-1] == c {
+			members[i].Instance = m.Instance
+		}
+	}
 	sh := APISharing{
 		&Sharing{
 			SID:         s.SID,
@@ -46,7 +59,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 			CreatedAt:   s.CreatedAt,
 			UpdatedAt:   s.UpdatedAt,
 			Rules:       rules,
-			Members:     s.Members,
+			Members:     members,
 		},
 		nil,
 		nil,
@@ -146,7 +159,7 @@ func CreateOAuthClient(inst *instance.Instance, m *Member) (*oauth.Client, error
 	}
 	cli := oauth.Client{
 		RedirectURIs: []string{m.Instance + "/sharings/answer"},
-		ClientName:   "Sharing " + m.Name,
+		ClientName:   "Sharing " + m.PublicName,
 		ClientKind:   "sharing",
 		SoftwareID:   "github.com/cozy/cozy-stack",
 		ClientURI:    m.Instance + "/",
@@ -234,13 +247,19 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if err != nil {
 		return err
 	}
+	name, err := inst.PublicName()
+	if err != nil {
+		inst.Logger().WithField("nspace", "sharing").
+			Infof("No name for instance %v", inst)
+	}
 	ac := APICredentials{
 		Credentials: &Credentials{
 			State:       state,
 			Client:      ConvertOAuthClient(cli),
 			AccessToken: token,
 		},
-		CID: s.SID,
+		PublicName: name,
+		CID:        s.SID,
 	}
 	data, err := jsonapi.MarshalObject(&ac)
 	if err != nil {
@@ -269,6 +288,15 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		return ErrRequestFailed
 	}
 
+	for i, m := range s.Members {
+		if i > 0 && m.Instance != "" {
+			if m.Status == MemberStatusMailNotSent ||
+				m.Status == MemberStatusPendingInvitation {
+				m.Status = MemberStatusReady
+			}
+		}
+	}
+
 	if err = s.SetupReceiver(inst); err != nil {
 		return err
 	}
@@ -286,13 +314,14 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 }
 
 // ProcessAnswer takes somes credentials and update the sharing with those.
-func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *Credentials) (*APICredentials, error) {
+func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) (*APICredentials, error) {
 	if !s.Owner || len(s.Members) != len(s.Credentials)+1 {
 		return nil, ErrInvalidSharing
 	}
 	for i, c := range s.Credentials {
 		if c.State == creds.State {
 			s.Members[i+1].Status = MemberStatusReady
+			s.Members[i+1].PublicName = creds.PublicName
 			s.Credentials[i].Client = creds.Client
 			s.Credentials[i].AccessToken = creds.AccessToken
 			ac := APICredentials{

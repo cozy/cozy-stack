@@ -116,6 +116,8 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 			s.retryWorker(inst, "share-upload", 0)
 		}
 	}
+
+	go s.NotifyRecipients(inst, m)
 }
 
 // AddTrackTriggers creates the share-track triggers for each rule of the
