@@ -406,7 +406,10 @@ func PostDiscovery(c echo.Context) error {
 		}
 	}
 	if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
-		return wrapErrors(err)
+		if c.Request().Header.Get("Accept") == "application/json" {
+			return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
+		}
+		return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, member)
 	}
 
 	redirectURL, err := member.GenerateOAuthURL(s)

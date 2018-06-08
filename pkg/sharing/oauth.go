@@ -99,12 +99,13 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL st
 		return ErrInvalidSharing
 	}
 
-	u, err := url.Parse(strings.TrimSpace(cozyURL))
+	cozyURL = strings.TrimSpace(cozyURL)
+	if !strings.Contains(cozyURL, "://") {
+		cozyURL = "https://" + cozyURL
+	}
+	u, err := url.Parse(cozyURL)
 	if err != nil || u.Host == "" {
 		return ErrInvalidURL
-	}
-	if u.Scheme == "" {
-		u.Scheme = "https" // Set https as the default scheme
 	}
 	u.Path = ""
 	u.RawPath = ""
