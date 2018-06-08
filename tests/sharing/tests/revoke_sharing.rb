@@ -222,8 +222,7 @@ describe "A sharing" do
 
     # Check that Charlie has all info about the members of this sharing
     sleep 1
-    db = Helpers.db_name inst_charlie.domain, Sharing.doctype
-    doc = Helpers.couch.get_doc db, sharing.couch_id
+    doc = Helpers.couch.get_doc inst_charlie.domain, Sharing.doctype, sharing.couch_id
     owner = doc["members"].first
     assert_equal "owner", owner["status"]
     assert_equal "Alice", owner["public_name"]
