@@ -238,7 +238,7 @@ Content-Type: application/json
 Get the information about a sharing. This includes the content of the rules,
 the members, as well as the already shared documents for this sharing.
 
-For a member, we can have the following informations:
+For a member, we can have the following fields:
 
 - a contact name (`name`), that is the name of this user as it appears in its
   contact document (if there is one such document)
@@ -471,9 +471,9 @@ Content-Type: application/vnd.api+json
 ### PUT /sharings/:sharing-id
 
 The sharer's cozy sends a request to this route on the recipient's cozy to
-create a sharing request, with most of the informations about the sharing.
-These informations will be displayed to the recipient just before its final
-acceptation of the sharing, to be sure he/she knows what will be shared.
+create a sharing request, with most of the information about the sharing. This
+request will be displayed to the recipient just before its final acceptation
+of the sharing, to be sure he/she knows what will be shared.
 
 #### Request
 
@@ -963,10 +963,10 @@ Content-Type: application/json
 
 ### GET /sharings/:sharing-id/io.cozy.files/:file-id
 
-This is an internal endpoint used by a stack to get informations about a
+This is an internal endpoint used by a stack to get information about a
 folder. It is used when a cozy sent to another cozy a file or folder inside a
 folder that was trashed (and trash was emptied): the recipient does no longer
-have any informations about the parent directory. To resolve the conflict, it
+have information about the parent directory. To resolve the conflict, it
 recreates the missing parent directory by asking the other cozy informations
 about it.
 
