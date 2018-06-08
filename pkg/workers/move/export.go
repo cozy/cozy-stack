@@ -436,12 +436,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 	if err = couchdb.CreateDoc(couchdb.GlobalDB, exportDoc); err != nil {
 		return
 	}
-	realtime.GetHub().Publish(&realtime.Event{
-		Verb:   realtime.EventCreate,
-		Doc:    exportDoc.Clone(),
-		OldDoc: nil,
-		Domain: i.Domain,
-	})
+	realtime.GetHub().Publish(i, realtime.EventCreate, exportDoc.Clone(), nil)
 	defer func() {
 		newExportDoc := exportDoc.Clone().(*ExportDoc)
 		newExportDoc.CreationDuration = time.Since(createdAt)
@@ -455,12 +450,8 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		if erru := couchdb.UpdateDoc(couchdb.GlobalDB, newExportDoc); err == nil {
 			err = erru
 		}
-		realtime.GetHub().Publish(&realtime.Event{
-			Verb:   realtime.EventUpdate,
-			Doc:    newExportDoc.Clone(),
-			OldDoc: exportDoc.Clone(),
-			Domain: i.Domain,
-		})
+		realtime.GetHub().Publish(i, realtime.EventUpdate,
+			newExportDoc.Clone(), exportDoc.Clone())
 	}()
 
 	out, err := archiver.CreateArchive(exportDoc)

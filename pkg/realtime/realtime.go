@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // Basic data events
@@ -24,9 +25,33 @@ type Doc interface {
 // Event is the basic message structure manipulated by the realtime package
 type Event struct {
 	Domain string `json:"domain"`
+	Prefix string `json:"prefix,omitempty"`
 	Verb   string `json:"verb"`
 	Doc    Doc    `json:"doc"`
 	OldDoc Doc    `json:"old,omitempty"`
+}
+
+func newEvent(db prefixer.Prefixer, verb string, doc Doc, oldDoc Doc) *Event {
+	return &Event{
+		Domain: db.DomainName(),
+		Prefix: db.DBPrefix(),
+		Verb:   verb,
+		Doc:    doc,
+		OldDoc: oldDoc,
+	}
+}
+
+// DBPrefix implements the prefixer.Prefixer interface.
+func (e *Event) DBPrefix() string {
+	if e.Prefix != "" {
+		return e.Prefix
+	}
+	return e.Domain
+}
+
+// DomainName implements the prefixer.Prefixer interface.
+func (e *Event) DomainName() string {
+	return e.Domain
 }
 
 // The following API is inspired by https://github.com/gocontrib/pubsub
@@ -34,11 +59,11 @@ type Event struct {
 // Hub is an object which recive events and calls appropriate listener
 type Hub interface {
 	// Emit is used by publishers when an event occurs
-	Publish(event *Event)
+	Publish(db prefixer.Prefixer, verb string, doc Doc, oldDoc Doc)
 
 	// Subscriber creates a DynamicSubscriber that can subscribe to several
 	// doctypes. Call its Close method to Unsubscribe.
-	Subscriber(domain string) *DynamicSubscriber
+	Subscriber(prefixer.Prefixer) *DynamicSubscriber
 
 	// SubscribeLocalAll adds a listener for all events that happened in this
 	// cozy-stack process.
@@ -46,7 +71,7 @@ type Hub interface {
 
 	// GetTopic returns the topic for the given domain+doctype.
 	// It creates the topic if it does not exist.
-	GetTopic(domain, doctype string) *topic
+	GetTopic(db prefixer.Prefixer, doctype string) *topic
 }
 
 // MemSub is a chan of events
@@ -54,18 +79,18 @@ type MemSub chan *Event
 
 // DynamicSubscriber is used to subscribe to several doctypes
 type DynamicSubscriber struct {
+	prefixer.Prefixer
 	Channel MemSub
-	Domain  string
 	hub     Hub
 	topics  []*topic
 	c       uint32 // mark whether or not the sub is closed
 }
 
-func newDynamicSubscriber(hub Hub, domain string) *DynamicSubscriber {
+func newDynamicSubscriber(hub Hub, db prefixer.Prefixer) *DynamicSubscriber {
 	return &DynamicSubscriber{
-		Channel: make(chan *Event, 10),
-		hub:     hub,
-		Domain:  domain,
+		Prefixer: db,
+		Channel:  make(chan *Event, 10),
+		hub:      hub,
 	}
 }
 
@@ -74,7 +99,7 @@ func (ds *DynamicSubscriber) Subscribe(doctype string) error {
 	if ds.Closed() || ds.hub == nil {
 		return errors.New("Can't subscribe")
 	}
-	t := ds.hub.GetTopic(ds.Domain, doctype)
+	t := ds.hub.GetTopic(ds, doctype)
 	ds.addTopic(t, "")
 	return nil
 }
@@ -84,7 +109,7 @@ func (ds *DynamicSubscriber) Watch(doctype, id string) error {
 	if ds.Closed() || ds.hub == nil {
 		return errors.New("Can't subscribe")
 	}
-	t := ds.hub.GetTopic(ds.Domain, doctype)
+	t := ds.hub.GetTopic(ds, doctype)
 	ds.addTopic(t, id)
 	return nil
 }

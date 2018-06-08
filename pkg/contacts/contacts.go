@@ -3,6 +3,7 @@ package contacts
 import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
@@ -139,7 +140,7 @@ func (c *Contact) PrimaryCozyURL() string {
 }
 
 // Find returns the contact stored in database from a given ID
-func Find(db couchdb.Database, contactID string) (*Contact, error) {
+func Find(db prefixer.Prefixer, contactID string) (*Contact, error) {
 	doc := &Contact{}
 	err := couchdb.GetDoc(db, consts.Contacts, contactID, doc)
 	return doc, err

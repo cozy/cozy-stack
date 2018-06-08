@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -23,7 +24,6 @@ import (
 const redisURL = "redis://localhost:6379/15"
 
 var testInstance *instance.Instance
-var instanceName string
 
 type testDoc struct {
 	id      string
@@ -47,7 +47,7 @@ func (b *mockBroker) ShutdownWorkers(ctx context.Context) error {
 	return nil
 }
 
-func (b *mockBroker) PushJob(request *jobs.JobRequest) (*jobs.Job, error) {
+func (b *mockBroker) PushJob(db prefixer.Prefixer, request *jobs.JobRequest) (*jobs.Job, error) {
 	b.jobs = append(b.jobs, request)
 	return nil, nil
 }
@@ -98,19 +98,15 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	wAt.Add(1) // 1 time in @at
 	wIn.Add(1) // 1 time in @in
 
-	at := &jobs.TriggerInfos{
+	at := jobs.TriggerInfos{
 		Type:       "@at",
-		Domain:     instanceName,
 		Arguments:  time.Now().Add(2 * time.Second).Format(time.RFC3339),
 		WorkerType: "worker",
-		Message:    msg1,
 	}
-	in := &jobs.TriggerInfos{
-		Domain:     instanceName,
+	in := jobs.TriggerInfos{
 		Type:       "@in",
 		Arguments:  "1s",
 		WorkerType: "worker",
-		Message:    msg2,
 	}
 
 	sch := jobs.System().(jobs.Scheduler)
@@ -118,28 +114,28 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	sch.StartScheduler(bro)
 	time.Sleep(50 * time.Millisecond)
 
-	tat, err := jobs.NewTrigger(at)
+	tat, err := jobs.NewTrigger(testInstance, at, msg1)
 	assert.NoError(t, err)
 	err = sch.AddTrigger(tat)
 	assert.NoError(t, err)
 	atID := tat.Infos().TID
 
-	tin, err := jobs.NewTrigger(in)
+	tin, err := jobs.NewTrigger(testInstance, in, msg2)
 	assert.NoError(t, err)
 	err = sch.AddTrigger(tin)
 	assert.NoError(t, err)
 	inID := tin.Infos().TID
 
-	ts, err := sch.GetAllTriggers(instanceName)
+	ts, err := sch.GetAllTriggers(testInstance)
 	assert.NoError(t, err)
 	assert.Len(t, ts, 3) // 1 @event for thumbnails + 1 @at + 1 @in
 
 	for _, trigger := range ts {
 		switch trigger.Infos().TID {
 		case atID:
-			assert.Equal(t, at, trigger.Infos())
+			assert.Equal(t, tat.Infos(), trigger.Infos())
 		case inID:
-			assert.Equal(t, in, trigger.Infos())
+			assert.Equal(t, tin.Infos(), trigger.Infos())
 		default:
 			// Just ignore the @event trigger for generating thumbnails
 			infos := trigger.Infos()
@@ -170,11 +166,11 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	_, err = sch.GetTrigger(instanceName, atID)
+	_, err = sch.GetTrigger(testInstance, atID)
 	assert.Error(t, err)
 	assert.Equal(t, jobs.ErrNotFoundTrigger, err)
 
-	_, err = sch.GetTrigger(instanceName, inID)
+	_, err = sch.GetTrigger(testInstance, inID)
 	assert.Error(t, err)
 	assert.Equal(t, jobs.ErrNotFoundTrigger, err)
 }
@@ -194,14 +190,12 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 
 	msg, _ := jobs.NewMessage("@cron")
 
-	infos := &jobs.TriggerInfos{
+	infos := jobs.TriggerInfos{
 		Type:       "@cron",
-		Domain:     instanceName,
 		Arguments:  "*/3 * * * * *",
 		WorkerType: "incr",
-		Message:    msg,
 	}
-	trigger, err := jobs.NewTrigger(infos)
+	trigger, err := jobs.NewTrigger(testInstance, infos, msg)
 	assert.NoError(t, err)
 	err = sch.AddTrigger(trigger)
 	assert.NoError(t, err)
@@ -231,19 +225,20 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	now := time.Now()
 	msg, _ := jobs.NewMessage("@at")
 
-	at := &jobs.TriggerInfos{
+	at := jobs.TriggerInfos{
 		Type:       "@at",
-		Domain:     instanceName,
 		Arguments:  now.Format(time.RFC3339),
 		WorkerType: "incr",
-		Message:    msg,
 	}
-	db := couchdb.SimpleDatabasePrefix(instanceName)
-	err = couchdb.CreateDoc(db, at)
+
+	tat, err := jobs.NewTrigger(testInstance, at, msg)
+	assert.NoError(t, err)
+
+	err = couchdb.CreateDoc(testInstance, tat.Infos())
 	assert.NoError(t, err)
 
 	ts := now.UTC().Unix()
-	key := instanceName + "/" + at.TID
+	key := testInstance.DBPrefix() + "/" + tat.ID()
 	err = client.ZAdd(jobs.SchedKey, redis.Z{
 		Score:  float64(ts + 1),
 		Member: key,
@@ -275,24 +270,18 @@ func TestRedisTriggerEvent(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	sch.StartScheduler(bro)
 
-	evTrigger := &jobs.TriggerInfos{
+	evTrigger := jobs.TriggerInfos{
 		Type:       "@event",
-		Domain:     instanceName,
 		Arguments:  "io.cozy.event-test:CREATED",
 		WorkerType: "incr",
 	}
-	tri, err := jobs.NewTrigger(evTrigger)
+
+	tri, err := jobs.NewTrigger(testInstance, evTrigger, nil)
 	assert.NoError(t, err)
 	sch.AddTrigger(tri)
 
-	realtime.GetHub().Publish(&realtime.Event{
-		Domain: instanceName,
-		Doc: &testDoc{
-			id:      "foo",
-			doctype: "io.cozy.event-test",
-		},
-		Verb: realtime.EventCreate,
-	})
+	realtime.GetHub().Publish(testInstance, realtime.EventCreate,
+		&testDoc{id: "foo", doctype: "io.cozy.event-test"}, nil)
 
 	time.Sleep(1 * time.Second)
 
@@ -303,6 +292,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 
 	var evt struct {
 		Domain string `json:"domain"`
+		Prefix string `json:"prefix"`
 		Verb   string `json:"verb"`
 	}
 	var data string
@@ -311,26 +301,14 @@ func TestRedisTriggerEvent(t *testing.T) {
 	err = bro.jobs[0].Message.Unmarshal(&data)
 	assert.NoError(t, err)
 
-	assert.Equal(t, evt.Domain, instanceName)
+	assert.Equal(t, evt.Domain, testInstance.Domain)
 	assert.Equal(t, evt.Verb, "CREATED")
 
-	realtime.GetHub().Publish(&realtime.Event{
-		Domain: instanceName,
-		Doc: &testDoc{
-			id:      "foo",
-			doctype: "io.cozy.event-test",
-		},
-		Verb: realtime.EventUpdate,
-	})
+	realtime.GetHub().Publish(testInstance, realtime.EventUpdate,
+		&testDoc{id: "foo", doctype: "io.cozy.event-test"}, nil)
 
-	realtime.GetHub().Publish(&realtime.Event{
-		Domain: instanceName,
-		Doc: &testDoc{
-			id:      "foo",
-			doctype: "io.cozy.event-test.bad",
-		},
-		Verb: realtime.EventCreate,
-	})
+	realtime.GetHub().Publish(testInstance, realtime.EventCreate,
+		&testDoc{id: "foo", doctype: "io.cozy.event-test.bad"}, nil)
 
 	time.Sleep(10 * time.Millisecond)
 
@@ -370,13 +348,12 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	err = testInstance.VFS().CreateDirDoc(dir)
 	assert.NoError(t, err)
 
-	evTrigger := &jobs.TriggerInfos{
+	evTrigger := jobs.TriggerInfos{
 		Type:       "@event",
-		Domain:     instanceName,
 		Arguments:  "io.cozy.files:CREATED:" + dir.DocID,
 		WorkerType: "incr",
 	}
-	tri, err := jobs.NewTrigger(evTrigger)
+	tri, err := jobs.NewTrigger(testInstance, evTrigger, nil)
 	assert.NoError(t, err)
 	sch.AddTrigger(tri)
 
@@ -387,9 +364,8 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	}
 
 	barID := utils.RandomString(10)
-	realtime.GetHub().Publish(&realtime.Event{
-		Domain: instanceName,
-		Doc: &vfs.DirDoc{
+	realtime.GetHub().Publish(testInstance, realtime.EventCreate,
+		&vfs.DirDoc{
 			Type:      "directory",
 			DocID:     barID,
 			DocRev:    "1-" + utils.RandomString(10),
@@ -398,9 +374,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 			Fullpath:  "/foo/bar",
-		},
-		Verb: realtime.EventCreate,
-	})
+		}, nil)
 
 	time.Sleep(100 * time.Millisecond)
 	count, _ = bro.WorkerQueueLen("incr")
@@ -425,11 +399,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "/foo/bar/baz", p)
 
-	realtime.GetHub().Publish(&realtime.Event{
-		Domain: instanceName,
-		Doc:    baz,
-		Verb:   realtime.EventCreate,
-	})
+	realtime.GetHub().Publish(testInstance, realtime.EventCreate, baz, nil)
 
 	time.Sleep(100 * time.Millisecond)
 	count, _ = bro.WorkerQueueLen("incr")
@@ -454,12 +424,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "/quux", p)
 
-	realtime.GetHub().Publish(&realtime.Event{
-		Domain: instanceName,
-		Doc:    quux,
-		OldDoc: baz,
-		Verb:   realtime.EventCreate,
-	})
+	realtime.GetHub().Publish(testInstance, realtime.EventCreate, quux, baz)
 
 	time.Sleep(100 * time.Millisecond)
 	count, _ = bro.WorkerQueueLen("incr")
@@ -478,14 +443,13 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	sch.StartScheduler(bro)
 
-	evTrigger := &jobs.TriggerInfos{
+	evTrigger := jobs.TriggerInfos{
 		Type:       "@event",
-		Domain:     instanceName,
 		Arguments:  "io.cozy.debounce-test:CREATED io.cozy.debounce-more:CREATED",
 		WorkerType: "incr",
 		Debounce:   "4s",
 	}
-	tri, err := jobs.NewTrigger(evTrigger)
+	tri, err := jobs.NewTrigger(testInstance, evTrigger, nil)
 	assert.NoError(t, err)
 	sch.AddTrigger(tri)
 
@@ -493,24 +457,19 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 		id:      "foo",
 		doctype: "io.cozy.debounce-test",
 	}
-	event := &realtime.Event{
-		Domain: instanceName,
-		Doc:    &doc,
-		Verb:   realtime.EventCreate,
-	}
 
 	for i := 0; i < 10; i++ {
 		time.Sleep(600 * time.Millisecond)
-		realtime.GetHub().Publish(event)
+		realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
 	}
 
 	time.Sleep(5000 * time.Millisecond)
 	count, _ := bro.WorkerQueueLen("incr")
 	assert.Equal(t, 2, count)
 
-	realtime.GetHub().Publish(event)
+	realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
 	doc.doctype = "io.cozy.debounce-more"
-	realtime.GetHub().Publish(event)
+	realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
 	time.Sleep(5000 * time.Millisecond)
 	count, _ = bro.WorkerQueueLen("incr")
 	assert.Equal(t, 3, count)
@@ -530,7 +489,6 @@ func TestMain(m *testing.M) {
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "test_redis_scheduler")
 	testInstance = setup.GetTestInstance()
-	instanceName = testInstance.Domain
 
 	setup.AddCleanup(func() error {
 		cfg.Jobs.RedisConfig = was

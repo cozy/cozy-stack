@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
@@ -172,7 +173,7 @@ func readObjects(c *swift.Connection, objc chan object,
 	})
 }
 
-func copyObjects(c *swift.Connection, db couchdb.Database,
+func copyObjects(c *swift.Connection, db prefixer.Prefixer,
 	objc chan object,
 	errc chan error) {
 
@@ -196,7 +197,7 @@ func copyObjects(c *swift.Connection, db couchdb.Database,
 	errc <- nil
 }
 
-func copyFileDataObject(c *swift.Connection, db couchdb.Database,
+func copyFileDataObject(c *swift.Connection, db prefixer.Prefixer,
 	containerSrc, containerDst string,
 	objSrc swift.Object,
 	copyBuffer []byte) error {
@@ -222,7 +223,7 @@ func copyFileDataObject(c *swift.Connection, db couchdb.Database,
 	return copyObject(c, db, containerSrc, containerDst, objSrc, objNameDst, copyBuffer)
 }
 
-func copyThumbnailDataObject(c *swift.Connection, db couchdb.Database,
+func copyThumbnailDataObject(c *swift.Connection, db prefixer.Prefixer,
 	containerSrc, containerDst string,
 	objSrc swift.Object,
 	copyBuffer []byte) error {
@@ -235,7 +236,7 @@ func copyThumbnailDataObject(c *swift.Connection, db couchdb.Database,
 	return copyObject(c, db, containerSrc, containerDst, objSrc, objNameDst, copyBuffer)
 }
 
-func copyObject(c *swift.Connection, db couchdb.Database,
+func copyObject(c *swift.Connection, db prefixer.Prefixer,
 	containerSrc, containerDst string,
 	objSrc swift.Object, objNameDst string,
 	copyBuffer []byte) (err error) {

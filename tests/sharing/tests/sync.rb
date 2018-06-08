@@ -61,11 +61,10 @@ describe "A folder" do
     inst.register sharing
 
     # Manually set the xor_key
-    db = Helpers.db_name inst.domain, Sharing.doctype
-    doc = Helpers.couch.get_doc db, sharing.couch_id
+    doc = Helpers.couch.get_doc inst.domain, Sharing.doctype, sharing.couch_id
     key = make_xor_key
     doc["credentials"][0]["xor_key"] = key
-    Helpers.couch.update_doc db, doc
+    Helpers.couch.update_doc inst.domain, Sharing.doctype, doc
 
     # Accept the sharing
     sleep 1
@@ -142,9 +141,8 @@ describe "A folder" do
       created_at: "2018-05-11T12:18:37.558389182+02:00",
       updated_at: "2018-05-11T12:18:37.558389182+02:00"
     }
-    db = Helpers.db_name inst_recipient.domain, Folder.doctype
     id = xor_id(child2.couch_id, key)
-    Helpers.couch.create_named_doc db, id, doc
+    Helpers.couch.create_named_doc inst_recipient.domain, Folder.doctype, id, doc
 
     # Make an update
     child2.rename inst, Faker::Internet.slug

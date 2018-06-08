@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // Permission is a storable object containing a set of rules and
@@ -107,7 +108,7 @@ func (p *Permission) PatchCodes(codes map[string]string) {
 }
 
 // Revoke destroy a Permission
-func (p *Permission) Revoke(db couchdb.Database) error {
+func (p *Permission) Revoke(db prefixer.Prefixer) error {
 	return couchdb.DeleteDoc(db, p)
 }
 
@@ -119,7 +120,7 @@ func (p *Permission) ParentOf(child *Permission) bool {
 }
 
 // GetByID fetch a permission by its ID
-func GetByID(db couchdb.Database, id string) (*Permission, error) {
+func GetByID(db prefixer.Prefixer, id string) (*Permission, error) {
 	perm := &Permission{}
 	if err := couchdb.GetDoc(db, consts.Permissions, id, perm); err != nil {
 		return nil, err
@@ -174,21 +175,21 @@ func GetForCLI(claims *Claims) (*Permission, error) {
 }
 
 // GetForWebapp retrieves the Permission doc for a given webapp
-func GetForWebapp(db couchdb.Database, slug string) (*Permission, error) {
+func GetForWebapp(db prefixer.Prefixer, slug string) (*Permission, error) {
 	return getFromSource(db, TypeWebapp, consts.Apps, slug)
 }
 
 // GetForKonnector retrieves the Permission doc for a given konnector
-func GetForKonnector(db couchdb.Database, slug string) (*Permission, error) {
+func GetForKonnector(db prefixer.Prefixer, slug string) (*Permission, error) {
 	return getFromSource(db, TypeKonnector, consts.Konnectors, slug)
 }
 
 // GetForSharePreview retrieves the Permission doc for a given sharing preview
-func GetForSharePreview(db couchdb.Database, sharingID string) (*Permission, error) {
+func GetForSharePreview(db prefixer.Prefixer, sharingID string) (*Permission, error) {
 	return getFromSource(db, TypeSharePreview, consts.Sharings, sharingID)
 }
 
-func getFromSource(db couchdb.Database, permType, docType, slug string) (*Permission, error) {
+func getFromSource(db prefixer.Prefixer, permType, docType, slug string) (*Permission, error) {
 	var res []Permission
 	req := couchdb.FindRequest{
 		UseIndex: "by-source-and-type",
@@ -221,7 +222,7 @@ func getFromSource(db couchdb.Database, permType, docType, slug string) (*Permis
 }
 
 // GetForShareCode retrieves the Permission doc for a given sharing code
-func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error) {
+func GetForShareCode(db prefixer.Prefixer, tokenCode string) (*Permission, error) {
 	var res couchdb.ViewResponse
 	err := couchdb.ExecView(db, consts.PermissionsShareByCView, &couchdb.ViewRequest{
 		Key:         tokenCode,
@@ -265,7 +266,7 @@ func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error)
 }
 
 // CreateWebappSet creates a Permission doc for an app
-func CreateWebappSet(db couchdb.Database, slug string, set Set) (*Permission, error) {
+func CreateWebappSet(db prefixer.Prefixer, slug string, set Set) (*Permission, error) {
 	existing, _ := GetForWebapp(db, slug)
 	if existing != nil {
 		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
@@ -274,7 +275,7 @@ func CreateWebappSet(db couchdb.Database, slug string, set Set) (*Permission, er
 }
 
 // CreateKonnectorSet creates a Permission doc for a konnector
-func CreateKonnectorSet(db couchdb.Database, slug string, set Set) (*Permission, error) {
+func CreateKonnectorSet(db prefixer.Prefixer, slug string, set Set) (*Permission, error) {
 	existing, _ := GetForKonnector(db, slug)
 	if existing != nil {
 		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
@@ -282,7 +283,7 @@ func CreateKonnectorSet(db couchdb.Database, slug string, set Set) (*Permission,
 	return createAppSet(db, TypeKonnector, consts.Konnectors, slug, set)
 }
 
-func createAppSet(db couchdb.Database, typ, docType, slug string, set Set) (*Permission, error) {
+func createAppSet(db prefixer.Prefixer, typ, docType, slug string, set Set) (*Permission, error) {
 	doc := &Permission{
 		Type:        typ,
 		SourceID:    docType + "/" + slug,
@@ -296,7 +297,7 @@ func createAppSet(db couchdb.Database, typ, docType, slug string, set Set) (*Per
 }
 
 // UpdateWebappSet creates a Permission doc for an app
-func UpdateWebappSet(db couchdb.Database, slug string, set Set) (*Permission, error) {
+func UpdateWebappSet(db prefixer.Prefixer, slug string, set Set) (*Permission, error) {
 	doc, err := GetForWebapp(db, slug)
 	if err != nil {
 		return nil, err
@@ -305,7 +306,7 @@ func UpdateWebappSet(db couchdb.Database, slug string, set Set) (*Permission, er
 }
 
 // UpdateKonnectorSet creates a Permission doc for a konnector
-func UpdateKonnectorSet(db couchdb.Database, slug string, set Set) (*Permission, error) {
+func UpdateKonnectorSet(db prefixer.Prefixer, slug string, set Set) (*Permission, error) {
 	doc, err := GetForKonnector(db, slug)
 	if err != nil {
 		return nil, err
@@ -313,7 +314,7 @@ func UpdateKonnectorSet(db couchdb.Database, slug string, set Set) (*Permission,
 	return updateAppSet(db, doc, TypeKonnector, consts.Konnectors, slug, set)
 }
 
-func updateAppSet(db couchdb.Database, doc *Permission, typ, docType, slug string, set Set) (*Permission, error) {
+func updateAppSet(db prefixer.Prefixer, doc *Permission, typ, docType, slug string, set Set) (*Permission, error) {
 	doc.Permissions = set
 	err := couchdb.UpdateDoc(db, doc)
 	if err != nil {
@@ -323,7 +324,7 @@ func updateAppSet(db couchdb.Database, doc *Permission, typ, docType, slug strin
 }
 
 // CreateShareSet creates a Permission doc for sharing by link
-func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set Set, expiresAt *time.Time) (*Permission, error) {
+func CreateShareSet(db prefixer.Prefixer, parent *Permission, codes map[string]string, set Set, expiresAt *time.Time) (*Permission, error) {
 	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
 		return nil, ErrOnlyAppCanCreateSubSet
 	}
@@ -360,7 +361,7 @@ func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]st
 }
 
 // CreateSharePreviewSet creates a Permission doc for previewing a sharing
-func CreateSharePreviewSet(db couchdb.Database, sharingID string, codes map[string]string, set Set) (*Permission, error) {
+func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes map[string]string, set Set) (*Permission, error) {
 	doc := &Permission{
 		Type:        TypeSharePreview,
 		Permissions: set,
@@ -375,7 +376,7 @@ func CreateSharePreviewSet(db couchdb.Database, sharingID string, codes map[stri
 }
 
 // DeleteShareSet revokes all the code in a permission set
-func DeleteShareSet(db couchdb.Database, permID string) error {
+func DeleteShareSet(db prefixer.Prefixer, permID string) error {
 	var doc *Permission
 	err := couchdb.GetDoc(db, consts.Permissions, permID, doc)
 	if err != nil {
@@ -386,7 +387,7 @@ func DeleteShareSet(db couchdb.Database, permID string) error {
 }
 
 // ForceWebapp creates or updates a Permission doc for a given webapp
-func ForceWebapp(db couchdb.Database, slug string, set Set) error {
+func ForceWebapp(db prefixer.Prefixer, slug string, set Set) error {
 	existing, _ := GetForWebapp(db, slug)
 	doc := &Permission{
 		Type:        TypeWebapp,
@@ -403,16 +404,16 @@ func ForceWebapp(db couchdb.Database, slug string, set Set) error {
 }
 
 // DestroyWebapp remove all Permission docs for a given app
-func DestroyWebapp(db couchdb.Database, slug string) error {
+func DestroyWebapp(db prefixer.Prefixer, slug string) error {
 	return destroyApp(db, TypeWebapp, consts.Apps, slug)
 }
 
 // DestroyKonnector remove all Permission docs for a given konnector
-func DestroyKonnector(db couchdb.Database, slug string) error {
+func DestroyKonnector(db prefixer.Prefixer, slug string) error {
 	return destroyApp(db, TypeKonnector, consts.Konnectors, slug)
 }
 
-func destroyApp(db couchdb.Database, permType, docType, slug string) error {
+func destroyApp(db prefixer.Prefixer, permType, docType, slug string) error {
 	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
 		UseIndex: "by-source-and-type",
@@ -435,7 +436,7 @@ func destroyApp(db couchdb.Database, permType, docType, slug string) error {
 
 // GetPermissionsForIDs gets permissions for several IDs
 // returns for every id the combined allowed verbset
-func GetPermissionsForIDs(db couchdb.Database, doctype string, ids []string) (map[string]*VerbSet, error) {
+func GetPermissionsForIDs(db prefixer.Prefixer, doctype string, ids []string) (map[string]*VerbSet, error) {
 	var res struct {
 		Rows []struct {
 			ID    string   `json:"id"`
@@ -471,7 +472,7 @@ func GetPermissionsForIDs(db couchdb.Database, doctype string, ids []string) (ma
 // GetPermissionsByDoctype returns the list of all permissions of the given
 // type (shared-with-me by example) that have at least one rule for the given
 // doctype. The cursor will be modified in place.
-func GetPermissionsByDoctype(db couchdb.Database, permType, doctype string, cursor couchdb.Cursor) ([]Permission, error) {
+func GetPermissionsByDoctype(db prefixer.Prefixer, permType, doctype string, cursor couchdb.Cursor) ([]Permission, error) {
 	var req = &couchdb.ViewRequest{
 		Key:         [2]interface{}{doctype, permType},
 		IncludeDocs: true,

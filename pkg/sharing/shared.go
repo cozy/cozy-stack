@@ -178,7 +178,7 @@ func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent)
 // UpdateShared updates the io.cozy.shared database when a document is
 // created/update/removed
 func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) error {
-	mu := lock.ReadWrite(inst.Domain + "/shared")
+	mu := lock.ReadWrite(inst, "shared")
 	mu.Lock()
 	defer mu.Unlock()
 

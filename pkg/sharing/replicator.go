@@ -36,7 +36,7 @@ type ReplicateMsg struct {
 
 // Replicate starts a replicator on this sharing.
 func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
-	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID)
+	mu := lock.ReadWrite(inst, "sharings/"+s.SID)
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -80,8 +80,7 @@ func (s *Sharing) pushJob(inst *instance.Instance, worker string) {
 			Warnf("Error on push job to %s: %s", worker, err)
 		return
 	}
-	_, err = jobs.System().PushJob(&jobs.JobRequest{
-		Domain:     inst.Domain,
+	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
 		WorkerType: worker,
 		Message:    msg,
 	})
@@ -111,13 +110,11 @@ func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int
 			Warnf("Error on retry to %s: %s", worker, err)
 		return
 	}
-	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
-		Domain:     inst.Domain,
+	t, err := jobs.NewTrigger(inst, jobs.TriggerInfos{
 		Type:       "@in",
 		WorkerType: worker,
-		Message:    msg,
 		Arguments:  backoff.String(),
-	})
+	}, msg)
 	if err != nil {
 		inst.Logger().WithField("nspace", "replicator").
 			Warnf("Error on retry to %s: %s", worker, err)

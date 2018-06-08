@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/sirupsen/logrus"
 )
@@ -44,47 +45,31 @@ type Doc interface {
 
 // Database is the type passed to every function in couchdb package
 // for now it is just a string with the database prefix.
-type Database interface {
-	Prefix() string
-}
+type Database prefixer.Prefixer
 
-// SimpleDatabase implements the Database interface
-type simpleDB struct {
-	prefix string
-}
-
-// Prefix implements the Database interface on simpleDB
-func (sdb *simpleDB) Prefix() string { return sdb.prefix }
-
-// SimpleDatabasePrefix returns a Database from a prefix, useful for test
-func SimpleDatabasePrefix(prefix string) Database {
-	return &simpleDB{prefix: prefix}
+// newDatabase returns a Database from a prefix, useful for test
+func newDatabase(prefix string) prefixer.Prefixer {
+	return prefixer.NewPrefixer("", prefix)
 }
 
 // RTEvent published a realtime event for a couchDB change
 func RTEvent(db Database, verb string, doc, oldDoc Doc) {
-	domain := db.Prefix()
-	if err := runHooks(domain, verb, doc, oldDoc); err != nil {
-		logger.WithDomain(db.Prefix()).WithField("nspace", "couchdb").
+	if err := runHooks(db, verb, doc, oldDoc); err != nil {
+		logger.WithDomain(db.DomainName()).WithField("nspace", "couchdb").
 			Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
 	}
-	if domain != "global" && domain != "secrets" {
-		e := &realtime.Event{
-			Verb:   verb,
-			Doc:    doc.Clone(),
-			OldDoc: oldDoc,
-			Domain: domain,
-		}
-		go realtime.GetHub().Publish(e)
+	if db != GlobalDB && db != GlobalSecretsDB {
+		docClone := doc.Clone()
+		go realtime.GetHub().Publish(db, verb, docClone, oldDoc)
 	}
 }
 
 // GlobalDB is the prefix used for stack-scoped db
-var GlobalDB = SimpleDatabasePrefix("global")
+var GlobalDB = newDatabase("global")
 
 // GlobalSecretsDB is the the prefix used for db which hold
 // a cozy stack secrets.
-var GlobalSecretsDB = SimpleDatabasePrefix("secrets")
+var GlobalSecretsDB = newDatabase("secrets")
 
 // View is the map/reduce thing in CouchDB
 type View struct {
@@ -263,7 +248,7 @@ func escapeCouchdbName(name string) string {
 }
 
 func makeDBName(db Database, doctype string) string {
-	dbname := escapeCouchdbName(db.Prefix() + "/" + doctype)
+	dbname := escapeCouchdbName(db.DBPrefix() + "/" + doctype)
 	return url.PathEscape(dbname)
 }
 
@@ -290,7 +275,7 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 		path = makeDBName(db, doctype) + "/" + path
 	}
 
-	log := logger.WithDomain(db.Prefix()).WithField("nspace", "couchdb")
+	log := logger.WithDomain(db.DomainName()).WithField("nspace", "couchdb")
 
 	// We do not log the account doctype to avoid printing account informations
 	// in the log files.
@@ -380,7 +365,7 @@ func AllDoctypes(db Database) ([]string, error) {
 	if err := makeRequest(db, "", http.MethodGet, "_all_dbs", nil, &dbs); err != nil {
 		return nil, err
 	}
-	prefix := escapeCouchdbName(db.Prefix())
+	prefix := escapeCouchdbName(db.DBPrefix())
 	var doctypes []string
 	for _, dbname := range dbs {
 		parts := strings.Split(dbname, "/")
@@ -445,9 +430,7 @@ func DeleteDB(db Database, doctype string) error {
 // DeleteAllDBs will remove all the couchdb doctype databases for
 // a couchdb.DB.
 func DeleteAllDBs(db Database) error {
-
-	dbprefix := db.Prefix()
-
+	dbprefix := db.DBPrefix()
 	if dbprefix == "" {
 		return fmt.Errorf("You need to provide a valid database")
 	}
@@ -497,10 +480,9 @@ func DeleteDoc(db Database, doc Doc) error {
 	// XXX Specific log for the deletion of an account, to help monitor this
 	// metric.
 	if doc.DocType() == accountDocType {
-		logger.WithDomain(db.Prefix()).
+		logger.WithDomain(db.DomainName()).
 			WithFields(logrus.Fields{
 				"log_id":      "account_delete",
-				"domain":      db.Prefix(),
 				"account_id":  doc.ID(),
 				"account_rev": doc.Rev(),
 				"nspace":      "couchb",

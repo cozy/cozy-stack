@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
@@ -28,8 +29,8 @@ func TestUnknownDomain(t *testing.T) {
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	j := jobs.NewJob(&jobs.JobRequest{
-		Domain:     "instance.does.not.exist",
+	db := prefixer.NewPrefixer("instance.does.not.exist", "instance.does.not.exist")
+	j := jobs.NewJob(db, &jobs.JobRequest{
 		Message:    msg,
 		WorkerType: "konnector",
 	})
@@ -44,8 +45,7 @@ func TestUnknownApp(t *testing.T) {
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	j := jobs.NewJob(&jobs.JobRequest{
-		Domain:     inst.Domain,
+	j := jobs.NewJob(inst, &jobs.JobRequest{
 		Message:    msg,
 		WorkerType: "konnector",
 	})
@@ -80,8 +80,7 @@ func TestBadFileExec(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	j := jobs.NewJob(&jobs.JobRequest{
-		Domain:     inst.Domain,
+	j := jobs.NewJob(inst, &jobs.JobRequest{
 		Message:    msg,
 		WorkerType: "konnector",
 	})
@@ -144,7 +143,7 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 	wg.Add(1)
 
 	go func() {
-		evCh := realtime.GetHub().Subscriber(inst.Domain)
+		evCh := realtime.GetHub().Subscriber(inst)
 		evCh.Subscribe(consts.JobEvents)
 		ch := evCh.Channel
 		ev1 := <-ch
@@ -182,8 +181,7 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 	})
 	assert.NoError(t, err)
 
-	j := jobs.NewJob(&jobs.JobRequest{
-		Domain:     inst.Domain,
+	j := jobs.NewJob(inst, &jobs.JobRequest{
 		Message:    msg,
 		WorkerType: "konnector",
 	})

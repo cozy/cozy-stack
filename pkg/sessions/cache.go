@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/cache"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 const sessionCacheKey = "session"
@@ -13,18 +14,18 @@ type sessionsCache struct {
 	base cache.Cache
 }
 
-func (ic *sessionsCache) Get(domain, id string) *Session {
+func (ic *sessionsCache) Get(db prefixer.Prefixer, id string) *Session {
 	var s Session
-	if ok := ic.base.Get(domain+id, &s); ok {
+	if ok := ic.base.Get(db.DBPrefix()+id, &s); ok {
 		return &s
 	}
 	return nil
 }
-func (ic *sessionsCache) Set(domain, id string, s *Session) {
-	ic.base.Set(domain+id, s)
+func (ic *sessionsCache) Set(db prefixer.Prefixer, id string, s *Session) {
+	ic.base.Set(db.DBPrefix()+id, s)
 }
-func (ic *sessionsCache) Revoke(domain, id string) {
-	ic.base.Del(domain + id)
+func (ic *sessionsCache) Revoke(db prefixer.Prefixer, id string) {
+	ic.base.Del(db.DBPrefix() + id)
 }
 
 var mu sync.Mutex

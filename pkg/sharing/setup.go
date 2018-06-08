@@ -67,7 +67,7 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		}
 	}()
 
-	mu := lock.ReadWrite(inst.Domain + "/sharings/" + s.SID)
+	mu := lock.ReadWrite(inst, "sharings/"+s.SID)
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -130,21 +130,16 @@ func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
 		if args == "" {
 			continue
 		}
-		msg, err := jobs.NewMessage(&TrackMessage{
+		msg := &TrackMessage{
 			SharingID: s.SID,
 			RuleIndex: i,
 			DocType:   rule.DocType,
-		})
-		if err != nil {
-			return err
 		}
-		t, err := jobs.NewTrigger(&jobs.TriggerInfos{
-			Domain:     inst.Domain,
+		t, err := jobs.NewTrigger(inst, jobs.TriggerInfos{
 			Type:       "@event",
 			WorkerType: "share-track",
-			Message:    msg,
 			Arguments:  args,
-		})
+		}, msg)
 		if err != nil {
 			return err
 		}
@@ -163,22 +158,18 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 	if s.Triggers.ReplicateID != "" {
 		return nil
 	}
-	msg, err := jobs.NewMessage(&ReplicateMsg{
+	msg := &ReplicateMsg{
 		SharingID: s.SID,
 		Errors:    0,
-	})
-	if err != nil {
-		return err
 	}
 	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
-	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
+	t, err := jobs.NewTrigger(inst, jobs.TriggerInfos{
 		Domain:     inst.Domain,
 		Type:       "@event",
 		WorkerType: "share-replicate",
-		Message:    msg,
 		Arguments:  args,
 		Debounce:   "5s",
-	})
+	}, msg)
 	inst.Logger().WithField("nspace", "sharing").Infof("Create trigger %#v", t)
 	if err != nil {
 		return err
@@ -198,7 +189,7 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 		return nil
 	}
 
-	mu := lock.ReadWrite(inst.Domain + "/shared")
+	mu := lock.ReadWrite(inst, "shared")
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -342,22 +333,18 @@ func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
 	if s.Triggers.UploadID != "" {
 		return nil
 	}
-	msg, err := jobs.NewMessage(&UploadMsg{
+	msg := &UploadMsg{
 		SharingID: s.SID,
 		Errors:    0,
-	})
-	if err != nil {
-		return err
 	}
 	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
-	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
+	t, err := jobs.NewTrigger(inst, jobs.TriggerInfos{
 		Domain:     inst.Domain,
 		Type:       "@event",
 		WorkerType: "share-upload",
-		Message:    msg,
 		Arguments:  args,
 		Debounce:   "5s",
-	})
+	}, msg)
 	inst.Logger().WithField("nspace", "sharing").Infof("Create trigger %#v", t)
 	if err != nil {
 		return err

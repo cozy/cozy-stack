@@ -35,8 +35,7 @@ func exporter(c echo.Context) error {
 	}
 
 	broker := jobs.System()
-	_, err = broker.PushJob(&jobs.JobRequest{
-		Domain:     instance.Domain,
+	_, err = broker.PushJob(instance, &jobs.JobRequest{
 		WorkerType: "sendmail",
 		Message:    msg,
 	})

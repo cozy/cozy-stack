@@ -48,7 +48,7 @@ func ErrorHandler(err error, c echo.Context) {
 
 	if config.IsDevRelease() {
 		var log *logrus.Entry
-		inst, ok := c.Get("instance").(*instance.Instance)
+		inst, ok := middlewares.GetInstanceSafe(c)
 		if ok {
 			log = inst.Logger().WithField("nspace", "http")
 		} else {
@@ -82,7 +82,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	req := c.Request()
 
 	var log *logrus.Entry
-	inst, ok := c.Get("instance").(*instance.Instance)
+	inst, ok := middlewares.GetInstanceSafe(c)
 	if ok {
 		log = inst.Logger().WithField("nspace", "http")
 	} else {

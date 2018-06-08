@@ -8,15 +8,16 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/go-redis/redis"
 )
 
 // A DownloadStore is essentially an object to store Archives & Files by keys
 type DownloadStore interface {
-	AddFile(domain, filePath string) (string, error)
-	AddArchive(domain string, archive *Archive) (string, error)
-	GetFile(domain, key string) (string, error)
-	GetArchive(domain, key string) (*Archive, error)
+	AddFile(db prefixer.Prefixer, filePath string) (string, error)
+	AddArchive(db prefixer.Prefixer, archive *Archive) (string, error)
+	GetFile(db prefixer.Prefixer, key string) (string, error)
+	GetArchive(db prefixer.Prefixer, key string) (*Archive, error)
 }
 
 // downloadStoreTTL is the time an Archive stay alive
@@ -72,32 +73,32 @@ func (s *memStore) cleaner() {
 	}
 }
 
-func (s *memStore) AddFile(domain, filePath string) (string, error) {
+func (s *memStore) AddFile(db prefixer.Prefixer, filePath string) (string, error) {
 	key := makeSecret()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.vals[domain+":"+key] = &memRef{
+	s.vals[db.DBPrefix()+":"+key] = &memRef{
 		val: filePath,
 		exp: time.Now().Add(downloadStoreTTL),
 	}
 	return key, nil
 }
 
-func (s *memStore) AddArchive(domain string, archive *Archive) (string, error) {
+func (s *memStore) AddArchive(db prefixer.Prefixer, archive *Archive) (string, error) {
 	key := makeSecret()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.vals[domain+":"+key] = &memRef{
+	s.vals[db.DBPrefix()+":"+key] = &memRef{
 		val: archive,
 		exp: time.Now().Add(downloadStoreTTL),
 	}
 	return key, nil
 }
 
-func (s *memStore) GetFile(domain, key string) (string, error) {
+func (s *memStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	key = domain + ":" + key
+	key = db.DBPrefix() + ":" + key
 	ref, ok := s.vals[key]
 	if !ok {
 		return "", nil
@@ -113,10 +114,10 @@ func (s *memStore) GetFile(domain, key string) (string, error) {
 	return f, nil
 }
 
-func (s *memStore) GetArchive(domain, key string) (*Archive, error) {
+func (s *memStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	key = domain + ":" + key
+	key = db.DBPrefix() + ":" + key
 	ref, ok := s.vals[key]
 	if !ok {
 		return nil, nil
@@ -136,28 +137,28 @@ type redisStore struct {
 	c redis.UniversalClient
 }
 
-func (s *redisStore) AddFile(domain, filePath string) (string, error) {
+func (s *redisStore) AddFile(db prefixer.Prefixer, filePath string) (string, error) {
 	key := makeSecret()
-	if err := s.c.Set(domain+":"+key, filePath, downloadStoreTTL).Err(); err != nil {
+	if err := s.c.Set(db.DBPrefix()+":"+key, filePath, downloadStoreTTL).Err(); err != nil {
 		return "", err
 	}
 	return key, nil
 }
 
-func (s *redisStore) AddArchive(domain string, archive *Archive) (string, error) {
+func (s *redisStore) AddArchive(db prefixer.Prefixer, archive *Archive) (string, error) {
 	v, err := json.Marshal(archive)
 	if err != nil {
 		return "", err
 	}
 	key := makeSecret()
-	if err = s.c.Set(domain+":"+key, v, downloadStoreTTL).Err(); err != nil {
+	if err = s.c.Set(db.DBPrefix()+":"+key, v, downloadStoreTTL).Err(); err != nil {
 		return "", err
 	}
 	return key, nil
 }
 
-func (s *redisStore) GetFile(domain, key string) (string, error) {
-	f, err := s.c.Get(domain + ":" + key).Result()
+func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
+	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
 	if err == redis.Nil {
 		return "", nil
 	}
@@ -167,8 +168,8 @@ func (s *redisStore) GetFile(domain, key string) (string, error) {
 	return f, nil
 }
 
-func (s *redisStore) GetArchive(domain, key string) (*Archive, error) {
-	b, err := s.c.Get(domain + ":" + key).Bytes()
+func (s *redisStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, error) {
+	b, err := s.c.Get(db.DBPrefix() + ":" + key).Bytes()
 	if err == redis.Nil {
 		return nil, nil
 	}

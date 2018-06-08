@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -67,7 +65,6 @@ type Options struct {
 	TemplateValues interface{}           `json:"template_values,omitempty"`
 	Attachments    []*Attachment         `json:"attachments,omitempty"`
 	Locale         string                `json:"locale,omitempty"`
-	domain         string
 }
 
 // Part represent a part of the content of the mail. It has a type
@@ -84,15 +81,19 @@ func SendMail(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	opts.domain = ctx.Domain()
+	domain := ctx.Domain()
+	i, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
 	from := config.GetConfig().NoReplyAddr
 	name := config.GetConfig().NoReplyName
 	if from == "" {
-		from = "noreply@" + utils.StripPort(opts.domain)
+		from = "noreply@" + utils.StripPort(domain)
 	}
 	switch opts.Mode {
 	case ModeNoReply:
-		toAddr, err := addressFromDomain(opts.domain)
+		toAddr, err := addressFromInstance(i)
 		if err != nil {
 			return err
 		}
@@ -100,7 +101,7 @@ func SendMail(ctx *jobs.WorkerContext) error {
 		opts.From = &Address{Name: name, Email: from}
 		opts.RecipientName = toAddr.Name
 	case ModeFrom:
-		sender, err := addressFromDomain(opts.domain)
+		sender, err := addressFromInstance(i)
 		if err != nil {
 			return err
 		}
@@ -111,26 +112,19 @@ func SendMail(ctx *jobs.WorkerContext) error {
 		return fmt.Errorf("Mail sent with unknown mode %s", opts.Mode)
 	}
 	if opts.TemplateName != "" && opts.Locale == "" {
-		i, err := instance.Get(opts.domain)
-		if err != nil {
-			return err
-		}
 		opts.Locale = i.Locale
 	}
-	return sendMail(ctx, &opts)
+	return sendMail(ctx, &opts, i.Domain)
 }
 
-func addressFromDomain(domain string) (*Address, error) {
-	// TODO: cleanup this settings fetching
-	db := couchdb.SimpleDatabasePrefix(domain)
-	doc := &couchdb.JSONDoc{}
-	err := couchdb.GetDoc(db, consts.Settings, consts.InstanceSettingsID, doc)
+func addressFromInstance(i *instance.Instance) (*Address, error) {
+	doc, err := i.SettingsDocument()
 	if err != nil {
 		return nil, err
 	}
 	email, ok := doc.M["email"].(string)
 	if !ok {
-		return nil, fmt.Errorf("Domain %s has no email in its settings", domain)
+		return nil, fmt.Errorf("Domain %s has no email in its settings", i.Domain)
 	}
 	publicName, _ := doc.M["public_name"].(string)
 	return &Address{
@@ -139,7 +133,7 @@ func addressFromDomain(domain string) (*Address, error) {
 	}, nil
 }
 
-func doSendMail(ctx context.Context, opts *Options) error {
+func doSendMail(ctx context.Context, opts *Options, domain string) error {
 	if opts.TemplateName == "" && opts.Subject == "" {
 		return errors.New("Missing mail subject")
 	}
@@ -180,7 +174,7 @@ func doSendMail(ctx context.Context, opts *Options) error {
 		"From":    {mail.FormatAddress(opts.From.Email, opts.From.Name)},
 		"To":      toAddresses,
 		"Subject": {opts.Subject},
-		"X-Cozy":  {opts.domain},
+		"X-Cozy":  {domain},
 	}
 	if opts.ReplyTo != nil {
 		headers["Reply-To"] = []string{

@@ -73,8 +73,7 @@ func TestRedisJobs(t *testing.T) {
 	assert.NoError(t, err)
 
 	msg, _ := NewMessage("z-0")
-	_, err = broker1.PushJob(&JobRequest{
-		Domain:     "cozy.local.redisjobs",
+	_, err = broker1.PushJob(localDB, &JobRequest{
 		WorkerType: "test",
 		Message:    msg,
 	})
@@ -83,8 +82,7 @@ func TestRedisJobs(t *testing.T) {
 	go func() {
 		for i := 0; i < n; i++ {
 			msg, _ := NewMessage("a-" + strconv.Itoa(i+1))
-			_, err = broker1.PushJob(&JobRequest{
-				Domain:     "cozy.local.redisjobs",
+			_, err = broker1.PushJob(localDB, &JobRequest{
 				WorkerType: "test",
 				Message:    msg,
 			})
@@ -96,8 +94,7 @@ func TestRedisJobs(t *testing.T) {
 	go func() {
 		for i := 0; i < n; i++ {
 			msg, _ := NewMessage("b-" + strconv.Itoa(i+1))
-			_, err = broker2.PushJob(&JobRequest{
-				Domain:     "cozy.local.redisjobs",
+			_, err = broker2.PushJob(localDB, &JobRequest{
 				WorkerType: "test",
 				Message:    msg,
 				Manual:     true,

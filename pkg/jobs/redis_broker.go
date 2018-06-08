@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/go-redis/redis"
 	multierror "github.com/hashicorp/go-multierror"
@@ -159,8 +160,8 @@ func (b *redisBroker) pollLoop(key string, ch chan<- *Job) {
 			continue
 		}
 
-		domain, jobID := parts[0], parts[1]
-		job, err := Get(domain, jobID)
+		prefix, jobID := parts[0], parts[1]
+		job, err := Get(prefixer.NewPrefixer("", prefix), jobID)
 		if err != nil {
 			joblog.Warnf("Cannot find job %s on domain %s: %s", parts[1], parts[0], err)
 			continue
@@ -172,7 +173,7 @@ func (b *redisBroker) pollLoop(key string, ch chan<- *Job) {
 
 // PushJob will produce a new Job with the given options and enqueue the job in
 // the proper queue.
-func (b *redisBroker) PushJob(req *JobRequest) (*Job, error) {
+func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error) {
 	if atomic.LoadUint32(&b.running) == 0 {
 		return nil, ErrClosed
 	}
@@ -181,13 +182,13 @@ func (b *redisBroker) PushJob(req *JobRequest) (*Job, error) {
 		return nil, ErrUnknownWorker
 	}
 
-	job := NewJob(req)
+	job := NewJob(db, req)
 	if err := job.Create(); err != nil {
 		return nil, err
 	}
 
 	key := redisPrefix + job.WorkerType
-	val := job.Domain + "/" + job.JobID
+	val := job.DBPrefix() + "/" + job.JobID
 
 	// When the job is manual, it is being pushed in a specific prioritized
 	// queue.

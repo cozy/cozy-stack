@@ -6,30 +6,29 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTriggersBadArguments(t *testing.T) {
 	var err error
-	_, err = NewTrigger(&TriggerInfos{
-		Domain:    "cozy.local",
+	_, err = NewTrigger(localDB, TriggerInfos{
 		Type:      "@at",
 		Arguments: "garbage",
-	})
+	}, nil)
 	assert.Error(t, err)
 
-	_, err = NewTrigger(&TriggerInfos{
+	_, err = NewTrigger(localDB, TriggerInfos{
 		Type:      "@in",
 		Arguments: "garbage",
-	})
+	}, nil)
 	assert.Error(t, err)
 
-	_, err = NewTrigger(&TriggerInfos{
-		Domain:    "cozy.local",
+	_, err = NewTrigger(localDB, TriggerInfos{
 		Type:      "@unknown",
 		Arguments: "",
-	})
+	}, nil)
 	if assert.Error(t, err) {
 		assert.Equal(t, ErrUnknownTrigger, err)
 	}
@@ -52,21 +51,23 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	})
 
 	msg, _ := NewMessage("@event")
-	ti := &TriggerInfos{
+	ti := TriggerInfos{
 		Type:       "@event",
-		Domain:     "cozy.local.withdebounce",
 		Arguments:  "io.cozy.testdebounce io.cozy.moredebounce",
 		Debounce:   "2s",
 		WorkerType: "worker",
 		Message:    msg,
 	}
 
-	triggers := []*TriggerInfos{ti}
+	var triggers []Trigger
+	triggersInfos := []TriggerInfos{ti}
 	sch := newMemScheduler()
 	sch.StartScheduler(bro)
 
-	for _, infos := range triggers {
-		trigger, err := NewTrigger(infos)
+	db := prefixer.NewPrefixer("cozy.local.withdebounce", "cozy.local.withdebounce")
+
+	for _, infos := range triggersInfos {
+		trigger, err := NewTrigger(db, infos, msg)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -74,9 +75,10 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+		triggers = append(triggers, trigger)
 	}
 
-	ts, err := sch.GetAllTriggers("cozy.local.withdebounce")
+	ts, err := sch.GetAllTriggers(db)
 	assert.NoError(t, err)
 	assert.Len(t, ts, len(triggers))
 
@@ -88,28 +90,23 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 			"test": "value",
 		},
 	}
-	event := &realtime.Event{
-		Verb:   realtime.EventCreate,
-		Doc:    &doc,
-		Domain: "cozy.local.withdebounce",
-	}
 
 	for i := 0; i < 24; i++ {
 		time.Sleep(200 * time.Millisecond)
-		realtime.GetHub().Publish(event)
+		realtime.GetHub().Publish(db, realtime.EventCreate, &doc, nil)
 	}
 
 	time.Sleep(3000 * time.Millisecond)
 	assert.Equal(t, 3, called)
 
-	realtime.GetHub().Publish(event)
+	realtime.GetHub().Publish(db, realtime.EventCreate, &doc, nil)
 	doc.Type = "io.cozy.moredebounce"
-	realtime.GetHub().Publish(event)
+	realtime.GetHub().Publish(db, realtime.EventCreate, &doc, nil)
 	time.Sleep(3000 * time.Millisecond)
 	assert.Equal(t, 4, called)
 
 	for _, trigger := range triggers {
-		err = sch.DeleteTrigger(trigger.Domain, trigger.TID)
+		err = sch.DeleteTrigger(db, trigger.ID())
 		assert.NoError(t, err)
 	}
 

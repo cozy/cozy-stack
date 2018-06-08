@@ -93,8 +93,7 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 	if err != nil {
 		return err
 	}
-	_, err = jobs.System().PushJob(&jobs.JobRequest{
-		Domain:     inst.Domain,
+	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
 		WorkerType: "sendmail",
 		Options:    nil,
 		Message:    msg,

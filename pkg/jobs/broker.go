@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/sirupsen/logrus"
 )
@@ -40,7 +41,7 @@ type (
 
 		// PushJob will push try to push a new job from the specified job request.
 		// This method is asynchronous.
-		PushJob(request *JobRequest) (*Job, error)
+		PushJob(db prefixer.Prefixer, request *JobRequest) (*Job, error)
 
 		// WorkerQueueLen returns the total element in the queue of the specified
 		// worker type.
@@ -64,6 +65,7 @@ type (
 		JobID      string      `json:"_id,omitempty"`
 		JobRev     string      `json:"_rev,omitempty"`
 		Domain     string      `json:"domain"`
+		Prefix     string      `json:"prefix,omitempty"`
 		WorkerType string      `json:"worker"`
 		TriggerID  string      `json:"trigger_id,omitempty"`
 		Message    Message     `json:"message"`
@@ -80,7 +82,6 @@ type (
 
 	// JobRequest struct is used to represent a new job request.
 	JobRequest struct {
-		Domain     string
 		WorkerType string
 		TriggerID  string
 		Message    Message
@@ -99,6 +100,19 @@ type (
 )
 
 var joblog = logger.WithNamespace("jobs")
+
+// DBPrefix implements the prefixer.Prefixer interface.
+func (j *Job) DBPrefix() string {
+	if j.Prefix != "" {
+		return j.Prefix
+	}
+	return j.Domain
+}
+
+// DomainName implements the prefixer.Prefixer interface.
+func (j *Job) DomainName() string {
+	return j.Domain
+}
 
 // ID implements the couchdb.Doc interface
 func (j *Job) ID() string { return j.JobID }
@@ -194,16 +208,12 @@ func (j *Job) Nack(err error) error {
 
 // Update updates the job in couchdb
 func (j *Job) Update() error {
-	return couchdb.UpdateDoc(j.db(), j)
+	return couchdb.UpdateDoc(j, j)
 }
 
 // Create creates the job in couchdb
 func (j *Job) Create() error {
-	return couchdb.CreateDoc(j.db(), j)
-}
-
-func (j *Job) db() couchdb.Database {
-	return couchdb.SimpleDatabasePrefix(j.Domain)
+	return couchdb.CreateDoc(j, j)
 }
 
 // UnmarshalJSON implements json.Unmarshaler on Message. It should be retro-
@@ -237,9 +247,10 @@ func (m Message) MarshalJSON() ([]byte, error) {
 }
 
 // NewJob creates a new Job instance from a job request.
-func NewJob(req *JobRequest) *Job {
+func NewJob(db prefixer.Prefixer, req *JobRequest) *Job {
 	return &Job{
-		Domain:     req.Domain,
+		Domain:     db.DomainName(),
+		Prefix:     db.DBPrefix(),
 		WorkerType: req.WorkerType,
 		TriggerID:  req.TriggerID,
 		Manual:     req.Manual,
@@ -253,9 +264,8 @@ func NewJob(req *JobRequest) *Job {
 }
 
 // Get returns the informations about a job.
-func Get(domain, jobID string) (*Job, error) {
+func Get(db prefixer.Prefixer, jobID string) (*Job, error) {
 	var job Job
-	db := couchdb.SimpleDatabasePrefix(domain)
 	if err := couchdb.GetDoc(db, consts.Jobs, jobID, &job); err != nil {
 		if couchdb.IsNotFoundError(err) {
 			return nil, ErrNotFoundJob
@@ -266,9 +276,8 @@ func Get(domain, jobID string) (*Job, error) {
 }
 
 // GetQueuedJobs returns the list of jobs which states is "queued" or "running"
-func GetQueuedJobs(domain, workerType string) ([]*Job, error) {
+func GetQueuedJobs(db prefixer.Prefixer, workerType string) ([]*Job, error) {
 	var results []*Job
-	db := couchdb.SimpleDatabasePrefix(domain)
 	req := &couchdb.FindRequest{
 		UseIndex: "by-worker-and-state",
 		Selector: mango.And(

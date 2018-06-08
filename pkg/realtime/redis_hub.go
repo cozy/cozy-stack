@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	redis "github.com/go-redis/redis"
 )
 
@@ -52,6 +53,7 @@ func toJSONDoc(d map[string]interface{}) *jsonDoc {
 
 type jsonEvent struct {
 	Domain string
+	Prefix string
 	Verb   string
 	Doc    *jsonDoc
 	Old    *jsonDoc
@@ -63,6 +65,7 @@ func (j *jsonEvent) UnmarshalJSON(buf []byte) error {
 		return err
 	}
 	j.Domain, _ = m["domain"].(string)
+	j.Prefix, _ = m["prefix"].(string)
 	j.Verb, _ = m["verb"].(string)
 	if doc, ok := m["doc"].(map[string]interface{}); ok {
 		j.Doc = toJSONDoc(doc)
@@ -95,21 +98,17 @@ func (h *redisHub) start() {
 		if je.Old != nil {
 			je.Old.Type = doctype
 		}
-		e := &Event{
-			Domain: je.Domain,
-			Verb:   je.Verb,
-			Doc:    je.Doc,
-			OldDoc: je.Old,
-		}
-		h.mem.Publish(e)
+		db := prefixer.NewPrefixer(je.Domain, je.Prefix)
+		h.mem.Publish(db, je.Verb, je.Doc, je.Old)
 	}
 }
 
-func (h *redisHub) GetTopic(domain, doctype string) *topic {
+func (h *redisHub) GetTopic(db prefixer.Prefixer, doctype string) *topic {
 	return nil
 }
 
-func (h *redisHub) Publish(e *Event) {
+func (h *redisHub) Publish(db prefixer.Prefixer, verb string, doc, oldDoc Doc) {
+	e := newEvent(db, verb, doc, oldDoc)
 	h.local.broadcast <- e
 	buf, err := json.Marshal(e)
 	if err != nil {
@@ -120,12 +119,12 @@ func (h *redisHub) Publish(e *Event) {
 	h.c.Publish(eventsRedisKey, e.Doc.DocType()+","+string(buf))
 }
 
-func (h *redisHub) Subscriber(domain string) *DynamicSubscriber {
-	return h.mem.Subscriber(domain)
+func (h *redisHub) Subscriber(db prefixer.Prefixer) *DynamicSubscriber {
+	return h.mem.Subscriber(db)
 }
 
 func (h *redisHub) SubscribeLocalAll() *DynamicSubscriber {
-	ds := newDynamicSubscriber(nil, "")
+	ds := newDynamicSubscriber(nil, globalPrefixer)
 	ds.addTopic(h.local, "")
 	return ds
 }

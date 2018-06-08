@@ -1,5 +1,5 @@
 {
-  "Disable":  ["errcheck", "gocyclo", "interfacer", "dupl", "gotypex", "gas"],
+  "Disable":  ["errcheck", "gocyclo", "interfacer", "dupl", "gotypex", "gas", "maligned"],
   "DuplThreshold": 70,
   "MinOccurrences": 4,
   "Deadline": "180s"

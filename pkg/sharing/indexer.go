@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
@@ -18,7 +19,7 @@ type bulkRevs struct {
 }
 
 type sharingIndexer struct {
-	db       couchdb.Database
+	db       prefixer.Prefixer
 	indexer  vfs.Indexer
 	bulkRevs *bulkRevs
 	shared   *SharedRef

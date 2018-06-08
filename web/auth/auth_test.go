@@ -209,7 +209,7 @@ func TestLoginWithGoodPassphrase(t *testing.T) {
 
 		var results []*sessions.LoginEntry
 		err = couchdb.GetAllDocs(
-			couchdb.SimpleDatabasePrefix(domain),
+			testInstance,
 			consts.SessionsLogins,
 			&couchdb.AllDocsRequest{Limit: 100},
 			&results,

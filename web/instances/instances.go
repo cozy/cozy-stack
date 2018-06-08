@@ -200,7 +200,7 @@ func rebuildRedis(c echo.Context) error {
 		return wrapError(err)
 	}
 	for _, i := range instances {
-		err = jobs.System().RebuildRedis(i.Domain)
+		err = jobs.System().RebuildRedis(i)
 		if err != nil {
 			return wrapError(err)
 		}
@@ -234,7 +234,7 @@ func cleanOrphanAccounts(c echo.Context) error {
 	}
 
 	sched := jobs.System()
-	ts, err := sched.GetAllTriggers(domain)
+	ts, err := sched.GetAllTriggers(db)
 	if couchdb.IsNoDatabaseError(err) {
 		return c.JSON(http.StatusOK, results)
 	}
@@ -285,14 +285,14 @@ func cleanOrphanAccounts(c echo.Context) error {
 			continue
 		}
 
-		msg, _ := json.Marshal(struct {
+		msg := struct {
 			Account      string `json:"account"`
 			Konnector    string `json:"konnector"`
 			FolderToSave string `json:"folder_to_save"`
 		}{
 			Account:   account.ID(),
 			Konnector: account.AccountType,
-		})
+		}
 
 		var args string
 		{
@@ -303,15 +303,13 @@ func cleanOrphanAccounts(c echo.Context) error {
 		}
 
 		var r result
-		infos := &jobs.TriggerInfos{
+		infos := jobs.TriggerInfos{
 			WorkerType: "konnector",
-			Domain:     domain,
 			Type:       "@cron",
 			Arguments:  args,
-			Message:    jobs.Message(msg),
 		}
-		r.Trigger = infos
-		t, err := jobs.NewTrigger(infos)
+		r.Trigger = &infos
+		t, err := jobs.NewTrigger(db, infos, msg)
 		if err != nil {
 			r.Result = "failed"
 			r.Error = err.Error()

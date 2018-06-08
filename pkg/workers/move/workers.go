@@ -61,8 +61,7 @@ func ExportWorker(c *jobs.WorkerContext) error {
 		return err
 	}
 
-	_, err = jobs.System().PushJob(&jobs.JobRequest{
-		Domain:     i.Domain,
+	_, err = jobs.System().PushJob(i, &jobs.JobRequest{
 		WorkerType: "sendmail",
 		Message:    msg,
 	})

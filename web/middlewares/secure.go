@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/echo"
 )
 
@@ -126,7 +125,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			isSecure := true
-			if in := c.Get("instance"); in != nil && in.(*instance.Instance).Dev {
+			if in, ok := GetInstanceSafe(c); ok && in.Dev {
 				isSecure = false
 			}
 			h := c.Response().Header()

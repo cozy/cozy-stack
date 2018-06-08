@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 const (
@@ -99,7 +100,7 @@ func (s *Sharing) FindMemberByState(state string) (*Member, error) {
 
 // FindMemberBySharecode returns the member that is linked to the sharing by
 // the given sharecode
-func (s *Sharing) FindMemberBySharecode(db couchdb.Database, sharecode string) (*Member, error) {
+func (s *Sharing) FindMemberBySharecode(db prefixer.Prefixer, sharecode string) (*Member, error) {
 	if !s.Owner {
 		return nil, ErrInvalidSharing
 	}

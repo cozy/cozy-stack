@@ -13,8 +13,8 @@ class Accept
   end
 
   def extract_state_code
-    db = "#{@owner.domain.gsub(/\W/, '-')}%2Fio-cozy-sharings"
-    doc = Couch.new.get_doc db, @sharing.couch_id
+    doctype = "io-cozy-sharings"
+    doc = Couch.new.get_doc @owner.domain, doctype, @sharing.couch_id
     idx = doc["members"].find_index { |m| %w(pending mail-not-sent).include? m["status"] }
     doc["credentials"][idx-1]["state"] if idx
   end

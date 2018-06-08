@@ -5,14 +5,13 @@ class Couch
   end
 
   def clean_test
-    all_dbs.grep(/test[^a-zA-Z]/).each do |db|
-      @client["/#{db.sub '/', '%2f'}"].delete
-    end
     instances.each do |inst|
-      if inst["domain"] =~ /test[^a-zA-Z]/
-        params = { params: { rev: inst["_rev"] } }
-        @client["/global%2Finstances/#{inst["_id"]}"].delete params
+      next unless inst["domain"] =~ /test[^a-zA-Z]/
+      all_dbs.grep(/#{prefix inst['domain']}/).each do |db|
+        @client["/#{db.sub '/', '%2f'}"].delete
       end
+      params = { params: { rev: inst["_rev"] } }
+      @client["/global%2Finstances/#{inst['_id']}"].delete params
     end
   end
 
@@ -28,23 +27,29 @@ class Couch
     []
   end
 
-  def get_doc(db, id)
-    JSON.parse @client["/#{db}/#{id}"].get.body
+  def prefix(db)
+    "cozy" + Digest::SHA256.hexdigest(db)[0...32]
   end
 
-  def create_named_doc(db, id, doc)
+  def get_doc(domain, doctype, id)
+    doctype = doctype.gsub(/\W/, '-')
+    JSON.parse @client["/#{prefix domain}%2F#{doctype}/#{id}"].get.body
+  end
+
+  def create_named_doc(domain, doctype, id, doc)
     opts = {
       content_type: "application/json"
     }
-    @client["/#{db}/#{id}"].put(doc.to_json, opts)
+    doctype = doctype.gsub(/\W/, '-')
+    @client["/#{prefix domain}%2F#{doctype}/#{id}"].put(doc.to_json, opts)
   end
 
-  def update_doc(db, doc)
+  def update_doc(domain, doctype, doc)
     opts = {
       content_type: "application/json"
     }
     id = doc["_id"]
-    @client["/#{db}/#{id}"].put(doc.to_json, opts)
+    doctype = doctype.gsub(/\W/, '-')
+    @client["/#{prefix domain}%2F#{doctype}/#{id}"].put(doc.to_json, opts)
   end
-
 end

@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -276,7 +277,7 @@ func (s *Sharing) RemoveTriggers(inst *instance.Instance) error {
 func removeSharingTrigger(inst *instance.Instance, triggerID string) error {
 	if triggerID != "" {
 		sched := jobs.System()
-		if err := sched.DeleteTrigger(inst.Domain, triggerID); err != nil {
+		if err := sched.DeleteTrigger(inst, triggerID); err != nil {
 			return err
 		}
 	}
@@ -340,7 +341,7 @@ func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
 }
 
 // FindSharing retrieves a sharing document from its ID
-func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
+func FindSharing(db prefixer.Prefixer, sharingID string) (*Sharing, error) {
 	res := &Sharing{}
 	err := couchdb.GetDoc(db, consts.Sharings, sharingID, res)
 	if err != nil {
@@ -350,7 +351,7 @@ func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
 }
 
 // FindSharings retrieves an array of sharing documents from their IDs
-func FindSharings(db couchdb.Database, sharingIDs []string) ([]*Sharing, error) {
+func FindSharings(db prefixer.Prefixer, sharingIDs []string) ([]*Sharing, error) {
 	var req = &couchdb.AllDocsRequest{
 		Keys: sharingIDs,
 	}

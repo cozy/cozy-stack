@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // Account holds configuration information for an account
@@ -78,12 +79,12 @@ func (ac *Account) Match(field, expected string) bool {
 
 func init() {
 	couchdb.AddHook(consts.Accounts, couchdb.EventDelete,
-		func(domain string, doc couchdb.Doc, old couchdb.Doc) error {
+		func(db prefixer.Prefixer, doc couchdb.Doc, old couchdb.Doc) error {
 			jobsSystem := jobs.System()
 
-			trigs, err := jobsSystem.GetAllTriggers(domain)
+			trigs, err := jobsSystem.GetAllTriggers(db)
 			if err != nil {
-				logger.WithDomain(domain).Error(
+				logger.WithDomain(db.DomainName()).Error(
 					"Failed to fetch triggers after account deletion: ", err)
 				return err
 			}
@@ -104,8 +105,8 @@ func init() {
 					toDelete = true
 				}
 				if toDelete {
-					if err := jobsSystem.DeleteTrigger(domain, t.ID()); err != nil {
-						logger.WithDomain(domain).Errorln("failed to delete orphan trigger", err)
+					if err := jobsSystem.DeleteTrigger(db, t.ID()); err != nil {
+						logger.WithDomain(db.DomainName()).Errorln("failed to delete orphan trigger", err)
 					}
 				}
 			}
@@ -120,7 +121,7 @@ func init() {
 			// process really specific to the deletion of an account, which is our
 			// only detailed usecase.
 			if old != nil {
-				log := logger.WithDomain(domain).
+				log := logger.WithDomain(db.DomainName()).
 					WithField("account_id", old.ID()).
 					WithField("account_rev", old.Rev())
 
@@ -157,8 +158,7 @@ func init() {
 				if err != nil {
 					return err
 				}
-				if _, err = jobsSystem.PushJob(&jobs.JobRequest{
-					Domain:     domain,
+				if _, err = jobsSystem.PushJob(db, &jobs.JobRequest{
 					WorkerType: "konnector",
 					Message:    msg,
 				}); err != nil {

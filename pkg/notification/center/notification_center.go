@@ -231,8 +231,7 @@ func sendPush(inst *instance.Instance, p *notification.Properties, n *notificati
 	if err != nil {
 		return err
 	}
-	_, err = jobs.System().PushJob(&jobs.JobRequest{
-		Domain:     inst.Domain,
+	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
 		WorkerType: "push",
 		Message:    msg,
 	})
@@ -265,8 +264,7 @@ func sendMail(inst *instance.Instance, p *notification.Properties, n *notificati
 	if err != nil {
 		return err
 	}
-	_, err = jobs.System().PushJob(&jobs.JobRequest{
-		Domain:     inst.Domain,
+	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
 		WorkerType: "sendmail",
 		Message:    msg,
 	})
