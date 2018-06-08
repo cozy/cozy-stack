@@ -9,6 +9,10 @@ class Rule
     create_from_obj obj, "push"
   end
 
+  def self.none(obj)
+    create_from_obj obj, "none"
+  end
+
   def self.create_from_album(obj, what)
     selector = "referenced_by"
     values = ["#{obj.doctype}/#{obj.couch_id}"]
