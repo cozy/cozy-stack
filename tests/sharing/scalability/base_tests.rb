@@ -27,6 +27,16 @@ def create_sharing(insts, obj)
   sharing
 end
 
+def create_file_with_size(inst, dir_id, size)
+  file_path = "tmp/#{Faker::Internet.unique.slug}.txt"
+  buffer = "a" * (1024 * 1024)
+  File.open(file_path, 'w') do |f|
+    size.to_i.times { f.write(buffer) }
+  end
+  opts = CozyFile.options_from_fixture(file_path, dir_id: dir_id)
+  CozyFile.create inst, opts
+end
+
 def create_files(inst, n_files, dir_id)
   print "Create #{n_files} files... "
   files = Array.new(n_files)
