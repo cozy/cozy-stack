@@ -20,7 +20,10 @@ def create_sharing(insts, obj)
   end
   inst_sharer.register sharing
   sleep 1
-  recipients.each { |inst| inst.accept sharing }
+  recipients.each do |inst|
+    inst.accept sharing
+    sleep 2
+  end
   sharing
 end
 
@@ -53,8 +56,8 @@ def generate_updates(inst, n_updates, files)
   end
 end
 
-# Randomly generate updates on all instances
-def generate_updates_all_insts(insts, n_updates, *files)
+# Randomly generate updates on instances
+def generate_updates(insts, n_updates, *files)
   return unless insts.length == files.length
 
   n_updates.times do
@@ -69,12 +72,15 @@ def poll_for_diff(da, db)
   printf "Waiting for shared files to be consistent in file system... "
   start = Time.now
   loop do
-    diff = Helpers.fsdiff da, db
-    if diff.empty?
-      finish = Time.now
-      diff = finish - start
-      printf "Done in #{diff}s.\n"
-      break
+    begin
+      diff = Helpers.fsdiff da, db
+      if diff.empty?
+        finish = Time.now
+        diff = finish - start
+        printf "Done in #{diff}s.\n"
+        break
+      end
+    rescue
     end
     sleep 2
   end

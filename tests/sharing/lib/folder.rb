@@ -39,6 +39,8 @@ class Folder
     res = inst.client[path].get opts
     j = JSON.parse(res.body)["included"]
 
+    dirs = []
+    files = []
     (j || []).map do |child|
       id = child["id"]
       rev = child.dig "meta", "rev"
@@ -51,6 +53,7 @@ class Folder
           path: child["path"],
           restore_path: child["restore_path"]
         )
+        dirs << f
       else
         f = CozyFile.new(
           name: child["name"],
@@ -62,11 +65,12 @@ class Folder
           file_class: child["class"],
           metadata: child["metadata"]
         )
+        files << f
       end
       f.couch_id = id
       f.couch_rev = rev
-      f
     end
+    [dirs, files]
   end
 
   def restore_from_trash(inst)
