@@ -41,21 +41,43 @@ def create_files(inst, n_files, dir_id)
   print "Create #{n_files} files... "
   files = Array.new(n_files)
   n_files.times do |i|
-    file_name = "#{Faker::Internet.unique.slug}.txt"
-    files[i] = CozyFile.create inst, dir_id: dir_id, name: file_name
+    files[i] = create_file inst, dir_id
   end
   print "Done.\n"
   files
 end
 
-def rename_or_rewrite(inst, file)
-  i = Random.rand 2
-  if i.zero?
-    file.rename inst, Faker::Internet.unique.slug
-  else
-    file.overwrite inst
+def create_hierarchy(inst, root, n_elements)
+  files = []
+  dirs = [root]
+  n_elements.times do
+    create_dir_or_file inst, dirs, files
   end
-  file
+  [dirs, files]
+end
+
+def create_file(inst, dir_id)
+  file_name = "#{Faker::Internet.unique.slug}.txt"
+  CozyFile.create inst, dir_id: dir_id, name: file_name
+end
+
+def create_dir(inst, dir_id)
+  dir_name = Faker::Internet.unique.slug
+  Folder.create inst, dir_id: dir_id, name: dir_name
+end
+
+def create_dir_or_file(inst, dirs, files)
+  dir_id = pick_random_element(dirs).couch_id
+  name = Faker::Internet.unique.slug
+  create_folder = [true, false].sample
+
+  if create_folder
+    dir = Folder.create inst, dir_id: dir_id, name: name
+    dirs << dir
+  else
+    file = CozyFile.create inst, dir_id: dir_id, name: name
+    files << file
+  end
 end
 
 # Randomly generate updates
@@ -77,6 +99,15 @@ def generate_updates(insts, n_updates, *files)
   end
 end
 
+def rename_or_rewrite(inst, file)
+  rename = [true, false].sample
+  if rename
+    file.rename inst, "#{Faker::Internet.unique.slug}.txt"
+  else
+    file.overwrite inst
+  end
+end
+
 # Run a diff on folders until they are even
 def poll_for_diff(da, db)
   printf "Waiting for shared files to be consistent in file system... "
@@ -94,4 +125,8 @@ def poll_for_diff(da, db)
     end
     sleep 2
   end
+end
+
+def pick_random_element(array)
+  array[Random.rand array.length]
 end
