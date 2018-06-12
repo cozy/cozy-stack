@@ -196,7 +196,7 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 		Value:  "",
 		MaxAge: -1,
 		Path:   "/",
-		Domain: utils.StripPort("." + i.Domain),
+		Domain: utils.StripPort("." + i.ContextualDomain()),
 	}
 }
 
@@ -212,7 +212,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 		Value:    string(encoded),
 		MaxAge:   10 * 365 * 24 * 3600, // 10 years
 		Path:     "/",
-		Domain:   utils.StripPort("." + s.Instance.Domain),
+		Domain:   utils.StripPort("." + s.Instance.ContextualDomain()),
 		Secure:   !s.Instance.Dev,
 		HttpOnly: true,
 	}, nil
