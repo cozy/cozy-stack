@@ -175,12 +175,6 @@ func GetExports(domain string) ([]*ExportDoc, error) {
 		Limit: 256,
 	}
 	err := couchdb.FindDocs(couchdb.GlobalDB, consts.Exports, req, &docs)
-	if couchdb.IsNoUsableIndexError(err) {
-		if err = couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes); err != nil {
-			return nil, err
-		}
-		err = couchdb.FindDocs(couchdb.GlobalDB, consts.Exports, req, &docs)
-	}
 	if err != nil && !couchdb.IsNoDatabaseError(err) {
 		return nil, err
 	}

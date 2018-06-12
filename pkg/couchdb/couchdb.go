@@ -679,15 +679,38 @@ func DefineViews(db Database, views []*View) error {
 			if err != nil {
 				return err
 			}
-			doc.Rev = old.Rev
-			err = makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
+			if !equalViews(&old, doc) {
+				doc.Rev = old.Rev
+				err = makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
+			} else {
+				err = nil
+			}
 		}
-
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func equalViews(v1 *ViewDesignDoc, v2 *ViewDesignDoc) bool {
+	if v1.Lang != v2.Lang {
+		return false
+	}
+	if len(v1.Views) != len(v2.Views) {
+		return false
+	}
+	for name, view1 := range v1.Views {
+		view2, ok := v2.Views[name]
+		if !ok {
+			return false
+		}
+		if view1.Map != view2.Map ||
+			view1.Reduce != view2.Reduce {
+			return false
+		}
+	}
+	return true
 }
 
 // ExecView executes the specified view function

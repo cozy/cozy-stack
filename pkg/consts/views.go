@@ -9,12 +9,42 @@ import (
 // This number should be incremented when this file changes.
 const IndexViewsVersion int = 18
 
-// GlobalIndexes is the index list required on the global databases to run
+// globalIndexes is the index list required on the global databases to run
 // properly.
-var GlobalIndexes = []*mango.Index{
-	mango.IndexOnFields(Instances, "by-domain", []string{"domain"}),
-
+var globalIndexes = []*mango.Index{
 	mango.IndexOnFields(Exports, "by-domain", []string{"domain", "created_at"}),
+}
+
+// DomainAndAliasesView defines a view to fetch instances by domain and domain
+// aliases.
+var DomainAndAliasesView = &couchdb.View{
+	Name:    "domain-and-aliases",
+	Doctype: Instances,
+	Map: `
+function(doc) {
+  emit(doc.domain);
+  if (isArray(doc.domain_aliases)) {
+    for (var i = 0; i < doc.domain_aliases.length; i++) {
+      emit(doc.domain_aliases[i]);
+    }
+  }
+}
+`,
+}
+
+// globalViews is the list of all views that are created by the stack on the
+// global databases.
+var globalViews = []*couchdb.View{
+	DomainAndAliasesView,
+}
+
+// InitGlobalDB defines views and indexes on the global databases. It is called
+// on every startup of the stack.
+func InitGlobalDB() error {
+	if err := couchdb.DefineIndexes(couchdb.GlobalDB, globalIndexes); err != nil {
+		return err
+	}
+	return couchdb.DefineViews(couchdb.GlobalDB, globalViews)
 }
 
 // Indexes is the index list required by an instance to run properly.

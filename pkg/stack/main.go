@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -77,6 +78,9 @@ security features. Please do not use this binary as your production server.
 		}
 	}
 	if err != nil {
+		return
+	}
+	if err = consts.InitGlobalDB(); err != nil {
 		return
 	}
 
