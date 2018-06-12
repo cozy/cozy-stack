@@ -25,32 +25,53 @@ func newRedisHub(c redis.UniversalClient) *redisHub {
 	return hub
 }
 
-type jsonEvent struct {
-	Domain string                 `json:"domain"`
-	Prefix string                 `json:"prefix"`
-	Verb   string                 `json:"verb"`
-	Doc    map[string]interface{} `json:"doc"`
-	Old    map[string]interface{} `json:"old"`
-}
-
-// redefining couchdb.JSONDoc to avoid a dependency-cycle.
 type jsonDoc struct {
 	M    map[string]interface{}
 	Type string
 }
 
-func (j jsonDoc) ID() string {
-	id, _ := j.M["_id"].(string)
-	return id
+func (j jsonDoc) ID() string      { id, _ := j.M["_id"].(string); return id }
+func (j jsonDoc) DocType() string { return j.Type }
+func (j *jsonDoc) MarshalJSON() ([]byte, error) {
+	m := map[string]interface{}{"_type": j.Type}
+	if j.M != nil {
+		for k, v := range j.M {
+			m[k] = v
+		}
+	}
+	return json.Marshal(m)
 }
 
-func (j jsonDoc) DocType() string {
-	return j.Type
+func toJSONDoc(d map[string]interface{}) *jsonDoc {
+	if d == nil {
+		return nil
+	}
+	doctype, _ := d["_type"].(string)
+	delete(d, "_type")
+	return &jsonDoc{d, doctype}
 }
 
-func toJSONDoc(m map[string]interface{}, doctype string) *jsonDoc {
-	if m != nil {
-		return &jsonDoc{M: m, Type: doctype}
+type jsonEvent struct {
+	Domain string
+	Prefix string
+	Verb   string
+	Doc    *jsonDoc
+	Old    *jsonDoc
+}
+
+func (j *jsonEvent) UnmarshalJSON(buf []byte) error {
+	var m map[string]interface{}
+	if err := json.Unmarshal(buf, &m); err != nil {
+		return err
+	}
+	j.Domain, _ = m["domain"].(string)
+	j.Prefix, _ = m["prefix"].(string)
+	j.Verb, _ = m["verb"].(string)
+	if doc, ok := m["doc"].(map[string]interface{}); ok {
+		j.Doc = toJSONDoc(doc)
+	}
+	if old, ok := m["old"].(map[string]interface{}); ok {
+		j.Old = toJSONDoc(old)
 	}
 	return nil
 }
@@ -59,24 +80,26 @@ func (h *redisHub) start() {
 	sub := h.c.Subscribe(eventsRedisKey)
 	log := logger.WithNamespace("realtime-redis")
 	for msg := range sub.Channel() {
+		je := jsonEvent{}
 		parts := strings.SplitN(msg.Payload, ",", 2)
 		if len(parts) < 2 {
 			log.Warnf("Invalid payload: %s", msg.Payload)
 			continue
 		}
-		var je jsonEvent
-		doctype, payload := parts[0], parts[1]
-		if err := json.Unmarshal([]byte(payload), &je); err != nil {
+		doctype := parts[0]
+		buf := []byte(parts[1])
+		if err := json.Unmarshal(buf, &je); err != nil {
 			log.Warnf("Error on start: %s", err)
 			continue
 		}
-		if je.Doc == nil {
-			continue
+		if je.Doc != nil {
+			je.Doc.Type = doctype
+		}
+		if je.Old != nil {
+			je.Old.Type = doctype
 		}
 		db := prefixer.NewPrefixer(je.Domain, je.Prefix)
-		h.mem.Publish(db, je.Verb,
-			toJSONDoc(je.Doc, doctype),
-			toJSONDoc(je.Old, doctype))
+		h.mem.Publish(db, je.Verb, je.Doc, je.Old)
 	}
 }
 
