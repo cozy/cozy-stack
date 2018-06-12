@@ -63,29 +63,67 @@ end
 
 def create_dir(inst, dir_id)
   dir_name = Faker::Internet.unique.slug
-  Folder.create inst, dir_id: dir_id, name: dir_name
+  parent = Folder.find inst, dir_id
+  path = "#{parent.path}/#{dir_name}"
+  Folder.create inst, dir_id: dir_id, name: dir_name, path: path
 end
 
 def create_dir_or_file(inst, dirs, files)
   dir_id = pick_random_element(dirs).couch_id
-  name = Faker::Internet.unique.slug
   create_folder = [true, false].sample
 
   if create_folder
-    dir = Folder.create inst, dir_id: dir_id, name: name
+    dir = create_dir inst, dir_id
     dirs << dir
   else
-    file = CozyFile.create inst, dir_id: dir_id, name: name
+    file = create_file inst, dir_id
     files << file
   end
 end
 
-# Randomly generate updates
-def generate_updates(inst, n_updates, files)
-  n_updates.times do
-    i_file = Random.rand files.length
-    rename_or_rewrite inst, files[i_file]
+def remove_folder(inst, dirs, files)
+  return unless dirs.length > 2
+
+  removable_dirs = dirs - [dirs[0]] # do not remove the root folder
+  dir = pick_random_element removable_dirs
+  dir.remove inst
+  remove_folder_in_hierarchy dirs, files, dir
+end
+
+def remove_file(inst, files)
+  return unless files.length > 0
+
+  file = pick_random_element files
+  file.remove inst
+  files.delete file
+end
+
+def remove_folder_or_file(inst, dirs, files)
+  is_folder = [true, false].sample
+  if is_folder
+    remove_folder inst, dirs, files
+  else
+    remove_file inst, files
   end
+end
+
+# Returns true if the element is part of the root's hierarchy
+def child?(root, dirs, el)
+  return true unless el.dir_id != root.couch_id
+
+  parent = dirs.find { |dir| dir.couch_id == el.dir_id }
+  return false if parent.nil?
+  child? root, dirs, parent
+end
+
+# Remove all the descendants of the given folder
+def remove_folder_in_hierarchy(dirs, files, folder)
+  dirs_to_del = dirs.map { |dir| dir if child? folder, dirs, dir }.compact
+  dirs_to_del << folder
+  files_to_del = files.map { |file| file if child? folder, dirs, file }.compact
+
+  dirs_to_del.each { |dir| dirs.delete dir }
+  files_to_del.each { |file| files.delete file }
 end
 
 # Randomly generate updates on instances
