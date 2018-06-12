@@ -414,38 +414,6 @@ func TestUploadImage(t *testing.T) {
 	assert.Equal(t, "Off, Did not fire", flash)
 }
 
-func TestUploadConcurrently(t *testing.T) {
-	done := make(chan *http.Response)
-	errs := make(chan *http.Response)
-
-	doUpload := func(name, body string) {
-		res, _ := upload(t, "/files/?Type=file&Name="+name, "text/plain", body, "")
-		if res.StatusCode == 201 {
-			done <- res
-		} else {
-			errs <- res
-		}
-	}
-
-	n := 100
-	c := 0
-
-	for i := 0; i < n; i++ {
-		go doUpload("uploadedconcurrently", "body "+strconv.Itoa(i))
-	}
-
-	for i := 0; i < n; i++ {
-		select {
-		case res := <-errs:
-			assert.Equal(t, 409, res.StatusCode)
-		case <-done:
-			c = c + 1
-		}
-	}
-
-	assert.Equal(t, 1, c)
-}
-
 func TestUploadWithParentSuccess(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Name=fileparent&Type=directory")
 	assert.Equal(t, 201, res1.StatusCode)
