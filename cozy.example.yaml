@@ -80,12 +80,16 @@ jobs:
   #
   # List of available workers:
   #
-  #   - "konnector":      launching konnectors
-  #   - "push":           sending push notifications
-  #   - "sendmail":       sending mails
-  #   - "service":        launching services
-  #   - "thumbnail":      creatings and deleting thumbnails for images
-  #   - "unzip":          unzipping tarball
+  #   - "export":          exporting data from a cozy instance
+  #   - "konnector":       launching konnectors
+  #   - "push":            sending push notifications
+  #   - "sendmail":        sending mails
+  #   - "service":         launching services
+  #   - "thumbnail":       creatings and deleting thumbnails for images
+  #   - "share-replicate": for cozy to cozy sharing
+  #   - "share-track":     idem
+  #   - "share-upload":    idem
+  #   - "unzip":           unzipping tarball
   #
   # When no configuration is given for a worker, a default configuration is
   # used. When a false boolean value is given, the worker is deactivated.
