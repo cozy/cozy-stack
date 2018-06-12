@@ -122,7 +122,8 @@ type Instance struct {
 	// CLISecret is used to authenticate request from the CLI
 	CLISecret []byte `json:"cli_secret,omitempty"`
 
-	vfs vfs.VFS
+	vfs              vfs.VFS
+	contextualDomain string
 }
 
 // Options holds the parameters to create a new instance.
@@ -344,7 +345,7 @@ func (i *Instance) SettingsEMail() (string, error) {
 }
 
 // Context returns the map from the config that matches the context of this instance
-func (i *Instance) Context() (map[string]interface{}, error) {
+func (i *Instance) SettingsContext() (map[string]interface{}, error) {
 	ctx := i.ContextName
 	if ctx == "" {
 		ctx = "default"
@@ -378,6 +379,14 @@ func (i *Instance) DiskQuota() int64 {
 	return i.BytesDiskQuota
 }
 
+// WithContextualDomain the current instance context with the given hostname.
+func (i *Instance) WithContextualDomain(domain string) *Instance {
+	if i.HasDomain(domain) {
+		i.contextualDomain = domain
+	}
+	return i
+}
+
 // Scheme returns the scheme used for URLs. It is https by default and http
 // for development instances.
 func (i *Instance) Scheme() string {
@@ -387,14 +396,37 @@ func (i *Instance) Scheme() string {
 	return "https"
 }
 
+// ContextualDomain returns the domain with regard to the current domain
+// request.
+func (i *Instance) ContextualDomain() string {
+	if i.contextualDomain != "" {
+		return i.contextualDomain
+	}
+	return i.Domain
+}
+
+// HasDomain returns whether or not the given domain name is owned by this
+// instance, as part of its main domain name or its aliases.
+func (i *Instance) HasDomain(domain string) bool {
+	if domain == i.Domain {
+		return true
+	}
+	for _, alias := range i.DomainAliases {
+		if domain == alias {
+			return true
+		}
+	}
+	return false
+}
+
 // SubDomain returns the full url for a subdomain of this instance
 // useful with apps slugs
 func (i *Instance) SubDomain(s string) *url.URL {
-	var domain string
+	domain := i.ContextualDomain()
 	if config.GetConfig().Subdomains == config.NestedSubdomains {
-		domain = s + "." + i.Domain
+		domain = s + "." + domain
 	} else {
-		parts := strings.SplitN(i.Domain, ".", 2)
+		parts := strings.SplitN(domain, ".", 2)
 		domain = parts[0] + "-" + s + "." + parts[1]
 	}
 	return &url.URL{
@@ -408,7 +440,7 @@ func (i *Instance) SubDomain(s string) *url.URL {
 func (i *Instance) FromURL(u *url.URL) string {
 	u2 := url.URL{
 		Scheme:   i.Scheme(),
-		Host:     i.Domain,
+		Host:     i.ContextualDomain(),
 		Path:     u.Path,
 		RawQuery: u.RawQuery,
 		Fragment: u.Fragment,
@@ -424,7 +456,7 @@ func (i *Instance) PageURL(path string, queries url.Values) string {
 	}
 	u := url.URL{
 		Scheme:   i.Scheme(),
-		Host:     i.Domain,
+		Host:     i.ContextualDomain(),
 		Path:     path,
 		RawQuery: query,
 	}
@@ -452,7 +484,7 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
 	if i.UUID == "" {
 		return
 	}
-	ctx, err := i.Context()
+	ctx, err := i.SettingsContext()
 	if err != nil {
 		return
 	}
@@ -495,7 +527,7 @@ func (i *Instance) PublicName() (string, error) {
 }
 
 func (i *Instance) redirection(key, defaultSlug string) *url.URL {
-	context, err := i.Context()
+	context, err := i.SettingsContext()
 	if err != nil {
 		return i.SubDomain(defaultSlug)
 	}
@@ -554,6 +586,9 @@ func (i *Instance) update() error {
 		return err
 	}
 	getCache().Revoke(i.Domain)
+	for _, alias := range i.DomainAliases {
+		getCache().Revoke(alias)
+	}
 	return nil
 }
 
@@ -1136,7 +1171,12 @@ func DestroyWithoutHooks(domain string) error {
 			}
 		}
 	}
-	defer getCache().Revoke(domain)
+	defer func() {
+		getCache().Revoke(domain)
+		for _, alias := range i.DomainAliases {
+			getCache().Revoke(alias)
+		}
+	}()
 	if err = couchdb.DeleteAllDBs(i); err != nil {
 		return err
 	}

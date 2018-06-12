@@ -53,7 +53,7 @@ func onboarded(c echo.Context) error {
 
 func context(c echo.Context) error {
 	i := middlewares.GetInstance(c)
-	ctx, err := i.Context()
+	ctx, err := i.SettingsContext()
 	if err == instance.ErrContextNotFound {
 		return jsonapi.NotFound(err)
 	}

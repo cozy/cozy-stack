@@ -220,7 +220,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	res.WriteHeader(http.StatusOK)
 	return tmpl.Execute(res, echo.Map{
 		"Token":         token,
-		"Domain":        i.Domain,
+		"Domain":        i.ContextualDomain(),
 		"Locale":        i.Locale,
 		"AppName":       app.Name,
 		"AppEditor":     app.Editor,
@@ -257,7 +257,7 @@ func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
 		Value:  "",
 		MaxAge: -1,
 		Path:   "/",
-		Domain: utils.StripPort(i.Domain),
+		Domain: utils.StripPort(i.ContextualDomain()),
 	})
 
 	redirect := *(c.Request().URL)
@@ -315,7 +315,7 @@ func init() {
 
 func cozyclientjs(i *instance.Instance) template.HTML {
 	buf := new(bytes.Buffer)
-	err := clientTemplate.Execute(buf, echo.Map{"Domain": i.Domain})
+	err := clientTemplate.Execute(buf, echo.Map{"Domain": i.ContextualDomain()})
 	if err != nil {
 		return template.HTML("")
 	}
@@ -325,7 +325,7 @@ func cozyclientjs(i *instance.Instance) template.HTML {
 func cozybar(i *instance.Instance, loggedIn bool) template.HTML {
 	buf := new(bytes.Buffer)
 	err := barTemplate.Execute(buf, echo.Map{
-		"Domain":   i.Domain,
+		"Domain":   i.ContextualDomain(),
 		"Warnings": i.Warnings(),
 		"LoggedIn": loggedIn,
 	})
