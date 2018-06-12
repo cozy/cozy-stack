@@ -19,6 +19,7 @@ import (
 )
 
 var flagDomain string
+var flagDomainAliases []string
 var flagLocale string
 var flagTimezone string
 var flagEmail string
@@ -129,20 +130,21 @@ be used as the error message.
 		domain := args[0]
 		c := newAdminClient()
 		in, err := c.CreateInstance(&client.InstanceOptions{
-			Domain:       domain,
-			Locale:       flagLocale,
-			UUID:         flagUUID,
-			TOSSigned:    flagTOSSigned,
-			Timezone:     flagTimezone,
-			ContextName:  flagContextName,
-			Email:        flagEmail,
-			PublicName:   flagPublicName,
-			Settings:     flagSettings,
-			SwiftCluster: flagSwiftCluster,
-			DiskQuota:    diskQuota,
-			Apps:         flagApps,
-			Passphrase:   flagPassphrase,
-			Dev:          flagDev,
+			Domain:        domain,
+			DomainAliases: flagDomainAliases,
+			Locale:        flagLocale,
+			UUID:          flagUUID,
+			TOSSigned:     flagTOSSigned,
+			Timezone:      flagTimezone,
+			ContextName:   flagContextName,
+			Email:         flagEmail,
+			PublicName:    flagPublicName,
+			Settings:      flagSettings,
+			SwiftCluster:  flagSwiftCluster,
+			DiskQuota:     diskQuota,
+			Apps:          flagApps,
+			Passphrase:    flagPassphrase,
+			Dev:           flagDev,
 		})
 		if err != nil {
 			errPrintfln(
@@ -201,18 +203,19 @@ settings for a specified domain.
 		domain := args[0]
 		c := newAdminClient()
 		opts := &client.InstanceOptions{
-			Domain:       domain,
-			Locale:       flagLocale,
-			UUID:         flagUUID,
-			TOSSigned:    flagTOS,
-			TOSLatest:    flagTOSLatest,
-			Timezone:     flagTimezone,
-			ContextName:  flagContextName,
-			Email:        flagEmail,
-			PublicName:   flagPublicName,
-			Settings:     flagSettings,
-			SwiftCluster: flagSwiftCluster,
-			DiskQuota:    diskQuota,
+			Domain:        domain,
+			DomainAliases: flagDomainAliases,
+			Locale:        flagLocale,
+			UUID:          flagUUID,
+			TOSSigned:     flagTOS,
+			TOSLatest:     flagTOSLatest,
+			Timezone:      flagTimezone,
+			ContextName:   flagContextName,
+			Email:         flagEmail,
+			PublicName:    flagPublicName,
+			Settings:      flagSettings,
+			SwiftCluster:  flagSwiftCluster,
+			DiskQuota:     diskQuota,
 		}
 		if flagOnboardingFinished {
 			opts.OnboardingFinished = &flagOnboardingFinished
@@ -631,6 +634,7 @@ func init() {
 	instanceCmdGroup.AddCommand(updateCmd)
 	instanceCmdGroup.AddCommand(exportCmd)
 	instanceCmdGroup.AddCommand(importCmd)
+	addInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
 	addInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "The TOS version signed")
@@ -644,6 +648,7 @@ func init() {
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
+	modifyInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	modifyInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "New locale")
 	modifyInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "New UUID")
 	modifyInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "Update the TOS version signed")

@@ -79,15 +79,37 @@ func SplitTrimString(s, sep string) []string {
 	if s == "" {
 		return []string{}
 	}
-	parts := strings.Split(s, sep)
-	filteredParts := parts[:0]
-	for _, part := range parts {
+	return TrimStrings(strings.Split(s, sep))
+}
+
+// TrimStrings trim all strings and filter out the empty ones.
+func TrimStrings(strs []string) []string {
+	filteredStrs := strs[:0]
+	for _, part := range strs {
 		part = strings.TrimSpace(part)
 		if part != "" {
-			filteredParts = append(filteredParts, part)
+			filteredStrs = append(filteredStrs, part)
 		}
 	}
-	return filteredParts
+	return filteredStrs
+}
+
+// UniqueStrings returns a filtered slice without string duplicates.
+func UniqueStrings(strs []string) []string {
+	filteredStrs := strs[:0]
+	for _, str1 := range strs {
+		found := false
+		for _, str2 := range filteredStrs {
+			if str1 == str2 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			filteredStrs = append(filteredStrs, str1)
+		}
+	}
+	return filteredStrs
 }
 
 // FileExists returns whether or not the file exists on the current file

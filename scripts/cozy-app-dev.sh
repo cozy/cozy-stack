@@ -153,37 +153,35 @@ do_check_couchdb() {
 }
 
 do_create_instances() {
-	for host in "${cozy_dev_addr}" "localhost:${COZY_STACK_PORT}"
-	do
-		printf "creating instance %s" "${host}"
-		if [ -n "${COZY_STACK_PASS}" ]; then
-			printf " using passphrase \"%s\"" "${COZY_STACK_PASS}"
-		fi
-		printf "... "
+	printf "creating instance %s" "${cozy_dev_addr}"
+	if [ -n "${COZY_STACK_PASS}" ]; then
+		printf " using passphrase \"%s\"" "${COZY_STACK_PASS}"
+	fi
+	printf "... "
 
-		set +e
-		add_instance_val=$(
-			${COZY_STACK_PATH} instances add \
-				--context-name dev \
-				--dev \
-				--email dev@cozy.io \
-				--public-name "Jane Doe" \
-				--passphrase ${COZY_STACK_PASS} \
-				"${host}" 2>&1
-		)
-		add_instance_ret="${?}"
-		set -e
-		if [ "${add_instance_ret}" = "0" ]; then
-			echo "ok"
-		else
-			exists_test=$(grep -i "already exists" <<< "${add_instance_val}" || echo "")
-			if [ -z "${exists_test}" ]; then
-				echo_err "\n${add_instance_val} ${add_instance_ret}"
-				exit 1
-			fi
-			echo "ok (already created)"
+	set +e
+	add_instance_val=$(
+		${COZY_STACK_PATH} instances add \
+			--context-name dev \
+			--dev \
+			--email dev@cozy.io \
+			--public-name "Jane Doe" \
+			--passphrase ${COZY_STACK_PASS} \
+			--domain-aliases "localhost:${COZY_STACK_PORT}" \
+			"${cozy_dev_addr}" 2>&1
+	)
+	add_instance_ret="${?}"
+	set -e
+	if [ "${add_instance_ret}" = "0" ]; then
+		echo "ok"
+	else
+		exists_test=$(grep -i "already exists" <<< "${add_instance_val}" || echo "")
+		if [ -z "${exists_test}" ]; then
+			echo_err "\n${add_instance_val} ${add_instance_ret}"
+			exit 1
 		fi
-	done
+		echo "ok (already created)"
+	fi
 }
 
 wait_for() {
