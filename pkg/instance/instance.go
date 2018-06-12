@@ -344,7 +344,8 @@ func (i *Instance) SettingsEMail() (string, error) {
 	return email, nil
 }
 
-// Context returns the map from the config that matches the context of this instance
+// SettingsContext returns the map from the config that matches the context of
+// this instance
 func (i *Instance) SettingsContext() (map[string]interface{}, error) {
 	ctx := i.ContextName
 	if ctx == "" {
