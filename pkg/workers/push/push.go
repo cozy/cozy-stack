@@ -176,6 +176,8 @@ func pushToFirebase(ctx *jobs.WorkerContext, deviceToken string, msg *Message) e
 		ContentAvailable: true,
 		Notification: &fcm.Notification{
 			Sound: msg.Sound,
+			Title: msg.Title,
+			Body:  msg.Message,
 		},
 		Data: map[string]interface{}{
 			// Fields required by phonegap-plugin-push
