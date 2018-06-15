@@ -1,7 +1,7 @@
 require_relative './base_tests.rb'
 
 N_FILES_INIT = 100
-FILE_MAX_SIZE = 1000 # In MB
+FILE_MAX_SIZE = 1_000_000 # In KB
 
 # This test creates a sharing with large files
 
@@ -14,7 +14,7 @@ inst_b = insts[1]
 # Create the folder to share
 folder = Folder.create inst_a
 
-# Create files with size between 1 MB and FILE_MAX_SIZE MB
+# Create files with size between 1 MB and FILE_MAX_SIZE KB
 N_FILES_INIT.times do
   size = Random.rand FILE_MAX_SIZE
   create_file_with_size inst_a, folder.couch_id, size

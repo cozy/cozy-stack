@@ -27,13 +27,14 @@ def create_sharing(insts, obj)
   sharing
 end
 
+# Create a file with a fixed size, in KB
 def create_file_with_size(inst, dir_id, size)
   file_path = "tmp/#{Faker::Internet.unique.slug}.txt"
-  buffer = "a" * (1024 * 1024)
+  buffer = "a" * 1024
   File.open(file_path, 'w') do |f|
     size.to_i.times { f.write(buffer) }
   end
-  opts = CozyFile.options_from_fixture(file_path, dir_id: dir_id)
+  opts = CozyFile.options_from_fixture file_path, dir_id: dir_id
   CozyFile.create inst, opts
 end
 
@@ -41,24 +42,42 @@ def create_files(inst, n_files, dir_id)
   print "Create #{n_files} files... "
   files = Array.new(n_files)
   n_files.times do |i|
-    files[i] = create_file inst, dir_id
+    files[i] = create_file inst, dir_id, size
   end
   print "Done.\n"
   files
 end
 
-def create_hierarchy(inst, root, n_elements)
+def create_hierarchy(inst, root, n_elements, max_filesize = nil)
   files = []
   dirs = [root]
   n_elements.times do
-    create_dir_or_file inst, dirs, files
+    create_dir_or_file inst, dirs, files, max_filesize
   end
   [dirs, files]
 end
 
-def create_file(inst, dir_id)
-  file_name = "#{Faker::Internet.unique.slug}.txt"
-  CozyFile.create inst, dir_id: dir_id, name: file_name
+def get_hierarchy(inst, root)
+  dirs, files = Folder.children inst, CGI.escape(root.path)
+
+  if dirs.length > 0
+    dirs.each do |dir|
+      sdirs, sfiles = get_hierarchy inst, dir
+      dirs += sdirs
+      files += sfiles
+    end
+  end
+  dirs.unshift root
+  [dirs, files]
+end
+
+def create_file(inst, dir_id, filesize = nil)
+  if filesize.nil?
+    file_name = "#{Faker::Internet.unique.slug}.txt"
+    CozyFile.create inst, dir_id: dir_id, name: file_name
+  else
+    create_file_with_size inst, dir_id, filesize
+  end
 end
 
 def create_dir(inst, dir_id)
@@ -68,7 +87,7 @@ def create_dir(inst, dir_id)
   Folder.create inst, dir_id: dir_id, name: dir_name, path: path
 end
 
-def create_dir_or_file(inst, dirs, files)
+def create_dir_or_file(inst, dirs, files, max_filesize = nil)
   dir_id = pick_random_element(dirs).couch_id
   create_folder = [true, false].sample
 
@@ -76,7 +95,8 @@ def create_dir_or_file(inst, dirs, files)
     dir = create_dir inst, dir_id
     dirs << dir
   else
-    file = create_file inst, dir_id
+    filesize = Random.rand(1..max_filesize) unless max_filesize.nil?
+    file = create_file inst, dir_id, filesize
     files << file
   end
 end
@@ -126,6 +146,46 @@ def remove_folder_in_hierarchy(dirs, files, folder)
   files_to_del.each { |file| files.delete file }
 end
 
+def rename_dir_or_file(inst, dirs, files)
+  is_folder = [true, false].sample
+  if is_folder
+    dir = pick_random_element dirs
+    dir.rename inst, Faker::Internet.unique.slug unless dir.nil?
+  else
+    file = pick_random_element files
+    file.rename inst, "#{Faker::Internet.unique.slug}.txt" unless file.nil?
+  end
+end
+
+def rewrite_file(inst, files)
+  file = pick_random_element files
+  file.overwrite inst unless file.nil?
+end
+
+def move_dir_or_file(inst, dirs, files)
+  is_folder = [true, false].sample
+  parent = pick_random_element dirs
+
+  if is_folder
+    dir = pick_random_element dirs
+    dir.move_to inst, parent.couch_id unless dir.nil?
+  else
+    file = pick_random_element files
+    file.move_to inst, parent.couch_id unless file.nil?
+  end
+end
+
+def update_dir_or_file(inst, dirs, files)
+  case Random.rand(3)
+  when 0
+    rename_dir_or_file inst, dirs, files
+  when 1
+    move_dir_or_file inst, dirs, files
+  when 2
+    rewrite_file inst, files
+  end
+end
+
 # Randomly generate updates on instances
 def generate_updates(insts, n_updates, *files)
   return unless insts.length == files.length
@@ -166,5 +226,6 @@ def poll_for_diff(da, db)
 end
 
 def pick_random_element(array)
-  array[Random.rand array.length]
+  return nil if array.empty?
+  array.length == 1 ? array[0] : array[Random.rand array.length]
 end
