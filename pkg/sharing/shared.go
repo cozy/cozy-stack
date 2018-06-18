@@ -175,6 +175,29 @@ func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent)
 	return !strings.HasPrefix(docPath+"/", sharingDir.Fullpath+"/"), nil
 }
 
+// isTheSharingDirectory returns true if the event was for the directory that
+// is the root of the sharing: we don't want to track it in io.cozy.shared.
+func isTheSharingDirectory(inst *instance.Instance, msg TrackMessage, evt TrackEvent) (bool, error) {
+	if evt.Doc.Type != consts.Files || evt.Doc.Get("type") != consts.DirType {
+		return false, nil
+	}
+	s, err := FindSharing(inst, msg.SharingID)
+	if err != nil {
+		return false, err
+	}
+	rule := s.Rules[msg.RuleIndex]
+	if rule.Selector == couchdb.SelectorReferencedBy {
+		return false, nil
+	}
+	id := evt.Doc.ID()
+	for _, val := range rule.Values {
+		if val == id {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // UpdateShared updates the io.cozy.shared database when a document is
 // created/update/removed
 func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) error {
@@ -221,11 +244,17 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 			Binary:  false,
 		}
 	} else {
+		if skip, err := isTheSharingDirectory(inst, msg, evt); err != nil || skip {
+			return err
+		}
 		removed, err := isNoLongerShared(inst, msg, evt)
 		if err != nil {
 			return err
 		}
 		if removed {
+			if ref.Rev() == "" {
+				return nil
+			}
 			ref.Infos[msg.SharingID] = SharedInfo{
 				Rule:    ref.Infos[msg.SharingID].Rule,
 				Removed: true,
