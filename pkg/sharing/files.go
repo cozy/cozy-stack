@@ -105,7 +105,7 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 // - the path is removed (directory only)
 //
 // ruleIndexes is a map of "doctype-docid" -> rule index
-func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndex int) map[string]interface{} {
+func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndex int) {
 	if doc["type"] == consts.DirType {
 		delete(doc, "path")
 	}
@@ -113,7 +113,7 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 	doc["_id"] = XorID(id, xorKey)
 	dir, ok := doc["dir_id"].(string)
 	if !ok {
-		return doc
+		return
 	}
 	rule := s.Rules[ruleIndex]
 	var noDirID bool
@@ -155,7 +155,6 @@ func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte,
 	} else {
 		doc["dir_id"] = XorID(dir, xorKey)
 	}
-	return doc
 }
 
 // EnsureSharedWithMeDir returns the shared-with-me directory, and create it if
@@ -349,7 +348,8 @@ func (s *Sharing) GetFolder(inst *instance.Instance, m *Member, xoredID string) 
 	if err != nil {
 		return nil, err
 	}
-	doc := s.TransformFileToSent(dirToJSONDoc(dir).M, creds.XorKey, info.Rule)
+	doc := dirToJSONDoc(dir).M
+	s.TransformFileToSent(doc, creds.XorKey, info.Rule)
 	return doc, nil
 }
 
