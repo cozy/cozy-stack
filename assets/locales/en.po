@@ -404,10 +404,10 @@ msgid "Mail Two Factor Subject"
 msgstr "Verify your connection to Cozy"
 
 msgid "Mail Two Factor Intro"
-msgstr "Here is the code to use for two-factor authentication: {{.TwoFactorPasscode}}."
+msgstr "Two-factor authentication is enabled for your Cozy. Enter the following code to verify your identity : {{.TwoFactorPasscode}}."
 
 msgid "Mail Two Factor Outro"
-msgstr "If you think you are not the right recipient, please contact us at contact@cozycloud.cc"
+msgstr "Not sure what to do? Get some help from contact@cozycloud.cc"
 
 msgid "Mail Two Factor Mail Confirmation Subject"
 msgstr "You want to enable two-factor authentication on your Cozy"
