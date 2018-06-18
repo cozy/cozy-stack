@@ -17,16 +17,16 @@ files_a = create_files inst_a, N_FILES_INIT, folder.couch_id
 
 # Create the sharing and generate updates
 create_sharing insts, folder
-generate_updates inst_a, N_UPDATES, files_a
+generate_updates [inst_a], N_UPDATES, files_a
 
 # Make sure everything went well
 da = File.join Helpers.current_dir, inst_a.domain, folder.name
-db = File.join Helpers.current_dir, inst_b.domain, "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
+path_folder_b = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
+db = File.join Helpers.current_dir, inst_b.domain, path_folder_b
 poll_for_diff da, db
 
 # Generate updates from both sides
-path_folder_b = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
-files_b = Folder.children inst_b, path_folder_b
+_, files_b = Folder.children inst_b, CGI.escape(path_folder_b)
 
-generate_updates_all_insts insts, N_UPDATES, files_a, files_b
+generate_updates insts, N_UPDATES, files_a, files_b
 poll_for_diff da, db
