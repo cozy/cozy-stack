@@ -75,10 +75,10 @@ func (m *Member) MailLink(inst *instance.Instance, s *Sharing, creds *Credential
 func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, description, link string) error {
 	addr := &mails.Address{
 		Email: m.Email,
-		Name:  m.Name,
+		Name:  m.PrimaryName(),
 	}
 	mailValues := &MailTemplateValues{
-		RecipientName:    m.Name,
+		RecipientName:    addr.Name,
 		SharerPublicName: sharer,
 		Description:      description,
 		SharingLink:      link,
@@ -88,7 +88,7 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 		To:             []*mails.Address{addr},
 		TemplateName:   "sharing_request",
 		TemplateValues: mailValues,
-		RecipientName:  m.Name,
+		RecipientName:  addr.Name,
 	})
 	if err != nil {
 		return err

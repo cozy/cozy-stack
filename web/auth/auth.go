@@ -684,7 +684,7 @@ func authorizeSharingForm(c echo.Context) error {
 		"Locale":       instance.Locale,
 		"Domain":       instance.ContextualDomain(),
 		"SharerDomain": sharerDomain,
-		"SharerName":   s.Members[0].Name,
+		"SharerName":   s.Members[0].PrimaryName(),
 		"State":        params.state,
 		"Sharing":      s,
 		"CSRF":         c.Get("csrf"),

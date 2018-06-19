@@ -42,6 +42,17 @@ type Member struct {
 	Instance   string `json:"instance,omitempty"`
 }
 
+// PrimaryName returns the main name of this member
+func (m *Member) PrimaryName() string {
+	if m.Name != "" {
+		return m.Name
+	}
+	if m.PublicName != "" {
+		return m.PublicName
+	}
+	return m.Email
+}
+
 // Credentials is the struct with the secret stuff used for authentication &
 // authorization.
 type Credentials struct {
