@@ -1,6 +1,7 @@
 package updates
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -10,12 +11,15 @@ import (
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/registry"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/sirupsen/logrus"
 )
 
 const numUpdaters = 4
 const numUpdatersSingleInstance = 4
+
+var log = logger.WithNamespace("updates")
 
 func init() {
 	jobs.AddWorker(&jobs.WorkerConfig{
@@ -25,6 +29,35 @@ func init() {
 		Timeout:      1 * time.Hour,
 		WorkerFunc:   Worker,
 	})
+}
+
+type updateError struct {
+	domain string
+	slug   string
+	step   string
+	reason error
+}
+
+func (u *updateError) toFields() logrus.Fields {
+	fields := make(logrus.Fields, 4)
+	fields["step"] = u.step
+	fields["reason"] = u.reason.Error()
+	if u.domain != "" {
+		fields["domain"] = u.domain
+	}
+	if u.slug != "" {
+		fields["slug"] = u.slug
+	}
+	return fields
+}
+
+func updateErrorFromInstaller(inst *apps.Installer, step string, reason error) *updateError {
+	return &updateError{
+		domain: inst.Domain(),
+		slug:   inst.Slug(),
+		step:   step,
+		reason: reason,
+	}
 }
 
 // Options is the option handler for updates:
@@ -49,14 +82,14 @@ func Worker(ctx *jobs.WorkerContext) error {
 		return err
 	}
 	if opts.AllDomains {
-		return UpdateAll(&opts)
+		return UpdateAll(ctx, &opts)
 	}
 	if opts.Domain != "" {
 		inst, err := instance.Get(opts.Domain)
 		if err != nil {
 			return err
 		}
-		return UpdateInstance(inst, &opts)
+		return UpdateInstance(ctx, inst, &opts)
 	}
 	return nil
 }
@@ -64,9 +97,9 @@ func Worker(ctx *jobs.WorkerContext) error {
 // UpdateAll starts the auto-updates process for all instances. The slugs
 // parameters can be used optionnaly to filter (whitelist) the applications'
 // slug to update.
-func UpdateAll(opts *Options) error {
+func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
 	insc := make(chan *apps.Installer)
-	errc := make(chan error)
+	errc := make(chan *updateError)
 
 	var g sync.WaitGroup
 	g.Add(numUpdaters)
@@ -76,10 +109,8 @@ func UpdateAll(opts *Options) error {
 			for installer := range insc {
 				_, err := installer.RunSync()
 				if err != nil {
-					err = fmt.Errorf("Could not update app %s on %q: %s",
-						installer.Slug(), installer.Domain(), err)
+					errc <- updateErrorFromInstaller(installer, "RunSync", err)
 				}
-				errc <- err
 			}
 			g.Done()
 		}()
@@ -98,21 +129,23 @@ func UpdateAll(opts *Options) error {
 		close(errc)
 	}()
 
-	var errm error
+	hasErrored := false
 	for err := range errc {
-		if err != nil {
-			errm = multierror.Append(errm, err)
-		}
+		ctx.Logger().WithFields(err.toFields()).Error()
+		hasErrored = true
 	}
 
-	return errm
+	if hasErrored {
+		return errors.New("At least one error has happened during the updates")
+	}
+	return nil
 }
 
 // UpdateInstance starts the auto-update process on the given instance. The
 // slugs parameters can be used to filter (whitelist) the applications' slug
-func UpdateInstance(inst *instance.Instance, opts *Options) error {
+func UpdateInstance(ctx *jobs.WorkerContext, inst *instance.Instance, opts *Options) error {
 	insc := make(chan *apps.Installer)
-	errc := make(chan error)
+	errc := make(chan *updateError)
 
 	var g sync.WaitGroup
 	g.Add(numUpdatersSingleInstance)
@@ -122,10 +155,8 @@ func UpdateInstance(inst *instance.Instance, opts *Options) error {
 			for installer := range insc {
 				_, err := installer.RunSync()
 				if err != nil {
-					err = fmt.Errorf("Could not update app %s on %q: %s",
-						installer.Slug(), installer.Domain(), err)
+					errc <- updateErrorFromInstaller(installer, "RunSync", err)
 				}
-				errc <- err
 			}
 			g.Done()
 		}()
@@ -138,20 +169,22 @@ func UpdateInstance(inst *instance.Instance, opts *Options) error {
 		close(errc)
 	}()
 
-	var errm error
+	hasErrored := false
 	for err := range errc {
-		if err != nil {
-			errm = multierror.Append(errm, err)
-		}
+		ctx.Logger().WithFields(err.toFields()).Error()
+		hasErrored = true
 	}
 
-	return errm
+	if hasErrored {
+		return errors.New("At least one error has happened during the updates")
+	}
+	return nil
 }
 
-func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan error, opts *Options) {
+func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan *updateError, opts *Options) {
 	registries, err := inst.Registries()
 	if err != nil {
-		errc <- err
+		errc <- &updateError{step: "Registries", reason: err}
 		return
 	}
 
@@ -162,7 +195,11 @@ func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan
 		defer g.Done()
 		webapps, err := apps.ListWebapps(inst)
 		if err != nil {
-			errc <- err
+			errc <- &updateError{
+				domain: inst.Domain,
+				step:   "ListWebapps",
+				reason: err,
+			}
 			return
 		}
 		for _, app := range webapps {
@@ -171,8 +208,12 @@ func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan
 			}
 			installer, err := createInstaller(inst, registries, app, opts)
 			if err != nil {
-				errc <- fmt.Errorf("Could not create installer for webapp %s on %q: %s",
-					app.Slug(), inst.Domain, err)
+				errc <- &updateError{
+					domain: inst.Domain,
+					slug:   app.Slug(),
+					step:   "CreateInstaller",
+					reason: err,
+				}
 			} else {
 				insc <- installer
 			}
@@ -183,7 +224,11 @@ func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan
 		defer g.Done()
 		konnectors, err := apps.ListKonnectors(inst)
 		if err != nil {
-			errc <- fmt.Errorf("Could not list konnectors: %s", err)
+			errc <- &updateError{
+				domain: inst.Domain,
+				step:   "ListKonnectors",
+				reason: err,
+			}
 			return
 		}
 		for _, app := range konnectors {
@@ -192,8 +237,12 @@ func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan
 			}
 			installer, err := createInstaller(inst, registries, app, opts)
 			if err != nil {
-				errc <- fmt.Errorf("Could not create installer for konnector %s on %q: %s",
-					app.Slug(), inst.Domain, err)
+				errc <- &updateError{
+					domain: inst.Domain,
+					slug:   app.Slug(),
+					step:   "CreateInstaller",
+					reason: err,
+				}
 			} else {
 				insc <- installer
 			}
