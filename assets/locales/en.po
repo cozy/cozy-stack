@@ -263,8 +263,11 @@ msgstr "The link to confirm your email is truncated or has expired"
 msgid "Error Invalid sharing"
 msgstr "It looks like the sharing was not found or has been revoked"
 
+msgid "Error Sharing already accepted Title"
+msgstr "You have already accepted this sharing"
+
 msgid "Error Sharing already accepted"
-msgstr "You have already accepted this sharing and you should found it on your Cozy."
+msgstr "You should find this sharing on your Cozy."
 
 msgid "Error Sharing already accepted Button"
 msgstr "Go to my Cozy: %s"

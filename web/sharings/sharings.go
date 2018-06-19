@@ -377,6 +377,7 @@ func GetDiscovery(c echo.Context) error {
 		m.Status != sharing.MemberStatusPendingInvitation {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain":     inst.ContextualDomain(),
+			"ErrorTitle": "Error Sharing already accepted Title",
 			"Error":      "Error Sharing already accepted",
 			"Button":     inst.Translate("Error Sharing already accepted Button", m.Instance),
 			"ButtonLink": m.Instance,
