@@ -21,6 +21,7 @@ type Instance struct {
 	} `json:"meta"`
 	Attrs struct {
 		Domain               string    `json:"domain"`
+		DomainAliases        []string  `json:"domain_aliases,omitempty"`
 		Locale               string    `json:"locale"`
 		UUID                 string    `json:"uuid,omitempty"`
 		ContextName          string    `json:"context,omitempty"`
@@ -42,6 +43,7 @@ type Instance struct {
 // InstanceOptions contains the options passed on instance creation.
 type InstanceOptions struct {
 	Domain             string
+	DomainAliases      []string
 	Locale             string
 	UUID               string
 	TOSSigned          string
@@ -125,6 +127,9 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 		"Passphrase":   {opts.Passphrase},
 		"Dev":          {strconv.FormatBool(opts.Dev)},
 	}
+	if opts.DomainAliases != nil {
+		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))
+	}
 	res, err := c.Req(&request.Options{
 		Method:  "POST",
 		Path:    "/instances",
@@ -170,6 +175,9 @@ func (c *Client) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
 		"Settings":     {opts.Settings},
 		"SwiftCluster": {strconv.Itoa(opts.SwiftCluster)},
 		"DiskQuota":    {strconv.FormatInt(opts.DiskQuota, 10)},
+	}
+	if opts.DomainAliases != nil {
+		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))
 	}
 	if opts.Debug != nil {
 		q.Add("Debug", strconv.FormatBool(*opts.Debug))

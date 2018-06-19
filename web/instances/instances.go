@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
@@ -60,6 +61,9 @@ func createHandler(c echo.Context) error {
 		Apps:       utils.SplitTrimString(c.QueryParam("Apps"), ","),
 		Dev:        (c.QueryParam("Dev") == "true"),
 	}
+	if domainAliases := c.QueryParam("DomainAliases"); domainAliases != "" {
+		opts.DomainAliases = strings.Split(domainAliases, ",")
+	}
 	if autoUpdate := c.QueryParam("AutoUpdate"); autoUpdate != "" {
 		var b bool
 		b, err = strconv.ParseBool(autoUpdate)
@@ -112,6 +116,9 @@ func modifyHandler(c echo.Context) error {
 		Email:       c.QueryParam("Email"),
 		PublicName:  c.QueryParam("PublicName"),
 		Settings:    c.QueryParam("Settings"),
+	}
+	if domainAliases := c.QueryParam("DomainAliases"); domainAliases != "" {
+		opts.DomainAliases = strings.Split(domainAliases, ",")
 	}
 	if swiftCluster := c.QueryParam("SwiftCluster"); swiftCluster != "" {
 		i, err := strconv.ParseInt(swiftCluster, 10, 64)

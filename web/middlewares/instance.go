@@ -29,7 +29,7 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 			errHTTP.Inner = err
 			return errHTTP
 		}
-		c.Set("instance", i)
+		c.Set("instance", i.WithContextualDomain(c.Request().Host))
 		return next(c)
 	}
 }

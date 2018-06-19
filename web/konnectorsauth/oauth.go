@@ -141,7 +141,7 @@ func redirect(c echo.Context) error {
 		return err
 	}
 
-	c.Set("instance", i)
+	c.Set("instance", i.WithContextualDomain(c.Request().Host))
 	return redirectToDataCollect(c, account, clientState)
 }
 
