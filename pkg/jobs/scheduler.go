@@ -228,13 +228,15 @@ func GetTriggerState(t Trigger) (*TriggerState, error) {
 			state.LastSuccess = startedAt
 			state.LastSuccessfulJobID = j.ID()
 		}
-		if j.Manual && (j.State == Done || j.State == Errored) {
-			state.LastManualExecution = startedAt
-			state.LastManualJobID = j.ID()
+		if j.State == Done || j.State == Errored {
+			if j.Manual {
+				state.LastManualExecution = startedAt
+				state.LastManualJobID = j.ID()
+			}
+			state.LastExecution = startedAt
+			state.LastExecutedJobID = j.ID()
+			state.Status = j.State
 		}
-		state.LastExecution = startedAt
-		state.LastExecutedJobID = j.ID()
-		state.Status = j.State
 	}
 
 	return &state, nil
