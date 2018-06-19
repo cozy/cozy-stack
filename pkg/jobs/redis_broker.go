@@ -10,7 +10,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/go-redis/redis"
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -178,8 +177,20 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 		return nil, ErrClosed
 	}
 
-	if !utils.IsInArray(req.WorkerType, b.workersTypes) {
+	var worker *Worker
+	for _, w := range b.workers {
+		if w.Type == req.WorkerType {
+			worker = w
+			break
+		}
+	}
+	if worker == nil {
 		return nil, ErrUnknownWorker
+	}
+	if worker.Conf.BeforeHook != nil {
+		if ok, err := worker.Conf.BeforeHook(req); !ok || err != nil {
+			return nil, err
+		}
 	}
 
 	job := NewJob(db, req)

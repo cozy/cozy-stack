@@ -9,7 +9,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -152,18 +151,29 @@ func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error)
 	if atomic.LoadUint32(&b.running) == 0 {
 		return nil, ErrClosed
 	}
+
 	workerType := req.WorkerType
-	if !utils.IsInArray(req.WorkerType, b.workersTypes) {
+	var worker *Worker
+	for _, w := range b.workers {
+		if w.Type == workerType {
+			worker = w
+			break
+		}
+	}
+	if worker == nil {
 		return nil, ErrUnknownWorker
 	}
-	q, ok := b.queues[workerType]
-	if !ok {
-		return nil, ErrUnknownWorker
+	if worker.Conf.BeforeHook != nil {
+		if ok, err := worker.Conf.BeforeHook(req); !ok || err != nil {
+			return nil, err
+		}
 	}
+
 	job := NewJob(db, req)
 	if err := job.Create(); err != nil {
 		return nil, err
 	}
+	q := b.queues[workerType]
 	if err := q.Enqueue(job); err != nil {
 		return nil, err
 	}

@@ -145,9 +145,11 @@ func (t *TriggerInfos) Clone() couchdb.Doc {
 
 // JobRequest returns a job request associated with the scheduler informations.
 func (t *TriggerInfos) JobRequest() *JobRequest {
+	trigger, _ := fromTriggerInfos(t)
 	return &JobRequest{
 		WorkerType: t.WorkerType,
 		TriggerID:  t.ID(),
+		Trigger:    trigger,
 		Message:    t.Message,
 		Options:    t.Options,
 	}

@@ -84,6 +84,7 @@ type (
 	JobRequest struct {
 		WorkerType string
 		TriggerID  string
+		Trigger    Trigger
 		Message    Message
 		Event      Event
 		Manual     bool
