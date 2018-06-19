@@ -665,11 +665,11 @@ func authorizeSharingForm(c echo.Context) error {
 	}
 
 	s, err := sharing.FindSharing(instance, params.sharingID)
-	if err != nil {
-		return err
-	}
-	if s.Owner || s.Active || len(s.Members) < 2 {
-		return sharing.ErrInvalidSharing
+	if err != nil || s.Owner || s.Active || len(s.Members) < 2 {
+		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
+			"Domain": instance.ContextualDomain(),
+			"Error":  "Error Invalid sharing",
+		})
 	}
 
 	var sharerDomain string
@@ -768,7 +768,7 @@ func authorizeApp(c echo.Context) error {
 	if err != nil {
 		return c.Render(http.StatusInternalServerError, "error.html", echo.Map{
 			"Domain": instance.ContextualDomain(),
-			"Error":  fmt.Sprintf("Could not activate application: %s", err.Error()),
+			"Error":  instance.Translate("Could not activate application: %s", err.Error()),
 		})
 	}
 
@@ -787,7 +787,7 @@ func getApp(c echo.Context, instance *instance.Instance, slug string) (apps.Mani
 		}
 		return nil, false, c.Render(http.StatusInternalServerError, "error.html", echo.Map{
 			"Domain": instance.ContextualDomain(),
-			"Error":  fmt.Sprintf("Could not fetch application: %s", err.Error()),
+			"Error":  instance.Translate("Could not fetch application: %s", err.Error()),
 		})
 	}
 	if app.State() != apps.Installed {

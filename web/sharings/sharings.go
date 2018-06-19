@@ -340,7 +340,7 @@ func RevokeRecipientBySelf(c echo.Context) error {
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state string, m *sharing.Member) error {
 	publicName, _ := inst.PublicName()
 	return c.Render(code, "sharing_discovery.html", echo.Map{
-		"Domain":        inst.Domain,
+		"Domain":        inst.ContextualDomain(),
 		"Locale":        inst.Locale,
 		"PublicName":    publicName,
 		"RecipientCozy": m.Instance,
@@ -361,20 +361,29 @@ func GetDiscovery(c echo.Context) error {
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": inst.Domain,
-			"Error":  "Error Invalid sharing id",
+			"Domain": inst.ContextualDomain(),
+			"Error":  "Error Invalid sharing",
 		})
 	}
 
-	member, err := s.FindMemberByState(state)
-	if err != nil {
+	m, err := s.FindMemberByState(state)
+	if err != nil || m.Status == sharing.MemberStatusRevoked {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": inst.Domain,
-			"Error":  "Error Invalid state",
+			"Domain": inst.ContextualDomain(),
+			"Error":  "Error Invalid sharing",
+		})
+	}
+	if m.Status != sharing.MemberStatusMailNotSent &&
+		m.Status != sharing.MemberStatusPendingInvitation {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain":     inst.ContextualDomain(),
+			"Error":      "Error Sharing already accepted",
+			"Button":     inst.Translate("Error Sharing already accepted Button", m.Instance),
+			"ButtonLink": m.Instance,
 		})
 	}
 
-	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, state, member)
+	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, state, m)
 }
 
 // PostDiscovery is called when the recipient has given its Cozy URL. Either an
