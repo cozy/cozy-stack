@@ -84,6 +84,7 @@ type UpdatesOptions struct {
 	Domain        string
 	Slugs         []string
 	ForceRegistry bool
+	OnlyRegistry  bool
 }
 
 // ImportOptions is a struct with the options for importing a tarball.
@@ -288,6 +289,7 @@ func (c *Client) Updates(opts *UpdatesOptions) error {
 		"Domain":        {opts.Domain},
 		"Slugs":         {strings.Join(opts.Slugs, ",")},
 		"ForceRegistry": {strconv.FormatBool(opts.ForceRegistry)},
+		"OnlyRegistry":  {strconv.FormatBool(opts.OnlyRegistry)},
 	}
 	_, err := c.Req(&request.Options{
 		Method:     "POST",

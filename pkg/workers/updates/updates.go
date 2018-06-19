@@ -73,6 +73,7 @@ type Options struct {
 	AllDomains    bool
 	Force         bool
 	ForceRegistry bool
+	OnlyRegistry  bool
 }
 
 // Worker is the worker method to launch the updates.
@@ -206,6 +207,9 @@ func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan
 			if filterSlug(app.Slug(), opts.Slugs) {
 				continue
 			}
+			if opts.OnlyRegistry && strings.HasPrefix(app.Source(), "registry://") {
+				continue
+			}
 			installer, err := createInstaller(inst, registries, app, opts)
 			if err != nil {
 				errc <- &updateError{
@@ -233,6 +237,9 @@ func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan
 		}
 		for _, app := range konnectors {
 			if filterSlug(app.Slug(), opts.Slugs) {
+				continue
+			}
+			if opts.OnlyRegistry && strings.HasPrefix(app.Source(), "registry://") {
 				continue
 			}
 			installer, err := createInstaller(inst, registries, app, opts)
