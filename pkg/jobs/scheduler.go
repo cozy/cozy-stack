@@ -227,16 +227,17 @@ func GetTriggerState(t Trigger) (*TriggerState, error) {
 		case Done:
 			state.LastSuccess = startedAt
 			state.LastSuccessfulJobID = j.ID()
+		default:
+			// skip any job that is not done or errored
+			continue
 		}
-		if j.State == Done || j.State == Errored {
-			if j.Manual {
-				state.LastManualExecution = startedAt
-				state.LastManualJobID = j.ID()
-			}
-			state.LastExecution = startedAt
-			state.LastExecutedJobID = j.ID()
-			state.Status = j.State
+		if j.Manual {
+			state.LastManualExecution = startedAt
+			state.LastManualJobID = j.ID()
 		}
+		state.LastExecution = startedAt
+		state.LastExecutedJobID = j.ID()
+		state.Status = j.State
 	}
 
 	return &state, nil
