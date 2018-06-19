@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -85,10 +86,11 @@ func beforeHookKonnector(req *jobs.JobRequest) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if state.Status == jobs.Errored &&
-		(state.LastError == konnErrorLoginFailed ||
-			state.LastError == konnErrorUserActionNeeded) {
-		return false, nil
+	if state.Status == jobs.Errored {
+		if strings.HasPrefix(state.LastError, konnErrorLoginFailed) ||
+			strings.HasPrefix(state.LastError, konnErrorUserActionNeeded) {
+			return false, nil
+		}
 	}
 	return true, nil
 }
