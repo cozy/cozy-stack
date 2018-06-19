@@ -23,6 +23,11 @@ import (
 	"github.com/cozy/afero"
 )
 
+const (
+	konnErrorLoginFailed      = "LOGIN_FAILED"
+	konnErrorUserActionNeeded = "USER_ACTION_NEEDED"
+)
+
 type konnectorWorker struct {
 	slug string
 	msg  *konnectorMessage
@@ -67,6 +72,25 @@ type konnectorResult struct {
 	AccountRev  string    `json:"account_rev"`
 	State       string    `json:"state"`
 	Error       string    `json:"error"`
+}
+
+// beforeHookKonnector skips jobs from trigger that are failing on certain
+// errors.
+func beforeHookKonnector(req *jobs.JobRequest) (bool, error) {
+	if req.Manual || req.Trigger == nil {
+		return true, nil
+	}
+	trigger := req.Trigger
+	state, err := jobs.GetTriggerState(trigger)
+	if err != nil {
+		return false, err
+	}
+	if state.Status == jobs.Errored &&
+		(state.LastError == konnErrorLoginFailed ||
+			state.LastError == konnErrorUserActionNeeded) {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (r *konnectorResult) ID() string         { return r.DocID }
