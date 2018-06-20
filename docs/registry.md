@@ -103,6 +103,12 @@ An application version object contains the following fields:
 * `sha256`: the sha256 checksum of the application content
 * `tar_prefix`: optional tar prefix directory specified to properly extract the
   application content
+* `maintenance_activated`: boolean, true when the maintenance mode is activated on the application
+* `maintenance_options`: present only if `maintenance_activated` is true, object with the following fields:
+  - `flag_infra_maintenance`: bool, true iff the maintenance is internal to the cozy infrastructure
+  - `flag_short_maintenance`: bool, true iff the maintenance is a short maintenance, waiting for a correction on our side
+  - `flag_disallow_manual_exec`: bool, true iff the maintenance will disallow the execution on the application, even when manually executed
+  - `messages`: a list of localized messages containing a short and long information messages explaining the maintenance state
 
 The version string should follow the channels rule.
 
@@ -119,6 +125,12 @@ Example:
   "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
   "manifest": {
     /* ... */
+  },
+  "maintenance_activated": true,
+  "maintenance_options": {
+      "flag_infra_maintenance": true,
+      "flag_short_maintenance": false,
+      "flag_disallow_manual_exec": true
   }
 }
 ```
@@ -505,6 +517,46 @@ Content-Type: application/json
     /* ... */
   }
 }
+```
+
+### GET /registry/maintenance
+
+Get the list of applications with maintenance mode activated.
+
+#### Request
+
+```http
+GET /registry/maintenance HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+[
+  {
+    "slug": "drive",
+    "type": "webapp",
+    "version": "3.1.1",
+    "url": "http://.../3.1.1",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "size": "1000",
+    "created_at": "2017-07-05T07:54:40.982Z",
+    "manifest": {
+      /* ... */
+    },
+    "maintenance_activated": true,
+    "maintenance_options": {
+        "flag_infra_maintenance": true,
+        "flag_short_maintenance": false,
+        "flag_disallow_manual_exec": true
+    }
+  }
+]
 ```
 
 ## Attaching a cozy-stack to a registry or a list of registries
