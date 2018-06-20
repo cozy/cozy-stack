@@ -320,6 +320,23 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 }
 ```
 
+### PUT /settings/instance/sign_tos
+
+With this route, an OAuth client can sign the new TOS version.
+
+Status codes:
+
+* `204 No Content`: when the mail has been confirmed and two-factor authentication is activated
+
+#### Request
+
+```http
+PUT /settings/instance/sign_tos HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+Authorization: Bearer ...
+```
+
 ### GET /settings/sessions
 
 This route allows to get all the currently active sessions.
