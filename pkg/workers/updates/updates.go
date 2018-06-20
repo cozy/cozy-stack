@@ -1,7 +1,6 @@
 package updates
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -111,6 +110,8 @@ func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
 				_, err := installer.RunSync()
 				if err != nil {
 					errc <- updateErrorFromInstaller(installer, "RunSync", err)
+				} else {
+					errc <- nil
 				}
 			}
 			g.Done()
@@ -130,14 +131,19 @@ func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
 		close(errc)
 	}()
 
-	hasErrored := false
+	errors := 0
+	totals := 0
 	for err := range errc {
-		ctx.Logger().WithFields(err.toFields()).Error()
-		hasErrored = true
+		if err != nil {
+			ctx.Logger().WithFields(err.toFields()).Error()
+			errors++
+		}
+		totals++
 	}
 
-	if hasErrored {
-		return errors.New("At least one error has happened during the updates")
+	if errors > 0 {
+		return fmt.Errorf("At least one error has happened during the updates: "+
+			"%d errors for %d updates", errors, totals)
 	}
 	return nil
 }
@@ -157,6 +163,8 @@ func UpdateInstance(ctx *jobs.WorkerContext, inst *instance.Instance, opts *Opti
 				_, err := installer.RunSync()
 				if err != nil {
 					errc <- updateErrorFromInstaller(installer, "RunSync", err)
+				} else {
+					errc <- nil
 				}
 			}
 			g.Done()
@@ -170,14 +178,19 @@ func UpdateInstance(ctx *jobs.WorkerContext, inst *instance.Instance, opts *Opti
 		close(errc)
 	}()
 
-	hasErrored := false
+	errors := 0
+	totals := 0
 	for err := range errc {
-		ctx.Logger().WithFields(err.toFields()).Error()
-		hasErrored = true
+		if err != nil {
+			ctx.Logger().WithFields(err.toFields()).Error()
+			errors++
+		}
+		totals++
 	}
 
-	if hasErrored {
-		return errors.New("At least one error has happened during the updates")
+	if errors > 0 {
+		return fmt.Errorf("At least one error has happened during the updates: "+
+			"%d errors for %d updates", errors, totals)
 	}
 	return nil
 }
