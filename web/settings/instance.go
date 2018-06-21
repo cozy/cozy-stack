@@ -113,8 +113,7 @@ func updateInstanceTOS(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
-	err = instance.Patch(inst, &instance.Options{TOSSigned: inst.TOSLatest})
-	if err != nil {
+	if err := inst.ManagerSignTOS(c.Request()); err != nil {
 		return err
 	}
 
