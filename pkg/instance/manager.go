@@ -71,8 +71,10 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
 	return
 }
 
-func (m *Instance) ManagerSignTOS(originalReq *http.Request) error {
-	u, ok := m.ManagerURL(ManagerTOSURL)
+// ManagerSignTOS make a request to the manager in order to finalize the TOS
+// signing flow.
+func (i *Instance) ManagerSignTOS(originalReq *http.Request) error {
+	u, ok := i.ManagerURL(ManagerTOSURL)
 	if !ok {
 		return nil
 	}
