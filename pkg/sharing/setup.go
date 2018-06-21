@@ -166,7 +166,7 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 	}
 	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
 	t, err := jobs.NewTrigger(inst, jobs.TriggerInfos{
-		Domain:     inst.Domain,
+		Domain:     inst.ContextualDomain(),
 		Type:       "@event",
 		WorkerType: "share-replicate",
 		Arguments:  args,
@@ -341,7 +341,7 @@ func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
 	}
 	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
 	t, err := jobs.NewTrigger(inst, jobs.TriggerInfos{
-		Domain:     inst.Domain,
+		Domain:     inst.ContextualDomain(),
 		Type:       "@event",
 		WorkerType: "share-upload",
 		Arguments:  args,
