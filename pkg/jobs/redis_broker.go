@@ -46,12 +46,12 @@ func (b *redisBroker) StartWorkers(ws WorkersList) error {
 
 	for _, conf := range ws {
 		b.workersTypes = append(b.workersTypes, conf.WorkerType)
-		if conf.Concurrency <= 0 {
-			continue
-		}
 		ch := make(chan *Job)
 		w := NewWorker(conf)
 		b.workers = append(b.workers, w)
+		if conf.Concurrency <= 0 {
+			continue
+		}
 		if err := w.Start(ch); err != nil {
 			return err
 		}
