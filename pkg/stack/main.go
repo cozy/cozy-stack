@@ -92,24 +92,6 @@ security features. Please do not use this binary as your production server.
 		}
 	}
 
-	autoUpdates := config.GetConfig().AutoUpdates
-	cronSpecs := []jobs.CronSpec{
-		{
-			Activated:  autoUpdates.Activated,
-			Schedule:   autoUpdates.Schedule,
-			WorkerType: "updates",
-			WorkerTemplate: func() (jobs.Message, error) {
-				return jobs.NewMessage(updates.Options{AllDomains: true})
-			},
-		},
-	}
-
-	// Start update cron for auto-updates
-	crons, err := jobs.CronJobs(cronSpecs)
-	if err != nil {
-		return
-	}
-
 	workersList, err := jobs.GetWorkersList()
 	if err != nil {
 		return
@@ -127,6 +109,24 @@ security features. Please do not use this binary as your production server.
 	}
 
 	if err = jobs.SystemStart(broker, schder, workersList); err != nil {
+		return
+	}
+
+	autoUpdates := config.GetConfig().AutoUpdates
+	cronSpecs := []jobs.CronSpec{
+		{
+			Activated:  autoUpdates.Activated,
+			Schedule:   autoUpdates.Schedule,
+			WorkerType: "updates",
+			WorkerTemplate: func() (jobs.Message, error) {
+				return jobs.NewMessage(updates.Options{AllDomains: true})
+			},
+		},
+	}
+
+	// Start update cron for auto-updates
+	crons, err := jobs.CronJobs(cronSpecs)
+	if err != nil {
 		return
 	}
 

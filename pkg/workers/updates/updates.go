@@ -64,12 +64,12 @@ func updateErrorFromInstaller(inst *apps.Installer, step string, reason error) *
 //   - ForceRegistry: translates the git:// sourced application into
 //     registry://
 type Options struct {
-	Slugs         []string
-	Domain        string
-	AllDomains    bool
-	Force         bool
-	ForceRegistry bool
-	OnlyRegistry  bool
+	Slugs         []string `json:"slugs,omitempty"`
+	Domain        string   `json:"domain,omitempty"`
+	AllDomains    bool     `json:"all_domains"`
+	Force         bool     `json:"force"`
+	ForceRegistry bool     `json:"force_registry"`
+	OnlyRegistry  bool     `json:"only_registry"`
 }
 
 // Worker is the worker method to launch the updates.

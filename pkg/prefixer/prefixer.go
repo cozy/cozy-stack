@@ -30,4 +30,4 @@ func NewPrefixer(domain, prefix string) Prefixer {
 }
 
 // GlobalPrefixer returns a global prefixer with the wildcard '*' as prefix.
-var GlobalPrefixer = NewPrefixer("", "*")
+var GlobalPrefixer = NewPrefixer("", "global")
