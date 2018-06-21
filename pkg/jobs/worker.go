@@ -40,6 +40,11 @@ type (
 	// execution of the WorkerFunc.
 	WorkerCommit func(ctx *WorkerContext, errjob error) error
 
+	// WorkerBeforeHook is an optional method that is always called before the
+	// job is being pushed into the queue. It can be useful to skip the job
+	// beforehand.
+	WorkerBeforeHook func(req *JobRequest) (bool, error)
+
 	// WorkerConfig is the configuration parameter of a worker defined by the job
 	// system. It contains parameters of the worker along with the worker main
 	// function that perform the work against a job's message.
@@ -49,6 +54,7 @@ type (
 		WorkerFunc   WorkerFunc
 		WorkerCommit WorkerCommit
 		WorkerType   string
+		BeforeHook   WorkerBeforeHook
 		Concurrency  int
 		MaxExecCount int
 		Timeout      time.Duration

@@ -26,6 +26,7 @@ func init() {
 		WorkerStart: func(ctx *jobs.WorkerContext) (*jobs.WorkerContext, error) {
 			return ctx.WithCookie(&konnectorWorker{}), nil
 		},
+		BeforeHook:   beforeHookKonnector,
 		WorkerFunc:   worker,
 		WorkerCommit: commit,
 		Concurrency:  runtime.NumCPU() * 2,

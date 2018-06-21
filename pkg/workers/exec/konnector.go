@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -21,6 +22,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/cozy/afero"
+)
+
+const (
+	konnErrorLoginFailed      = "LOGIN_FAILED"
+	konnErrorUserActionNeeded = "USER_ACTION_NEEDED"
 )
 
 type konnectorWorker struct {
@@ -67,6 +73,26 @@ type konnectorResult struct {
 	AccountRev  string    `json:"account_rev"`
 	State       string    `json:"state"`
 	Error       string    `json:"error"`
+}
+
+// beforeHookKonnector skips jobs from trigger that are failing on certain
+// errors.
+func beforeHookKonnector(req *jobs.JobRequest) (bool, error) {
+	if req.Manual || req.Trigger == nil {
+		return true, nil
+	}
+	trigger := req.Trigger
+	state, err := jobs.GetTriggerState(trigger)
+	if err != nil {
+		return false, err
+	}
+	if state.Status == jobs.Errored {
+		if strings.HasPrefix(state.LastError, konnErrorLoginFailed) ||
+			strings.HasPrefix(state.LastError, konnErrorUserActionNeeded) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (r *konnectorResult) ID() string         { return r.DocID }
