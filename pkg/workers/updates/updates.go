@@ -64,12 +64,13 @@ func updateErrorFromInstaller(inst *apps.Installer, step string, reason error) *
 //   - ForceRegistry: translates the git:// sourced application into
 //     registry://
 type Options struct {
-	Slugs         []string `json:"slugs,omitempty"`
-	Domain        string   `json:"domain,omitempty"`
-	AllDomains    bool     `json:"all_domains"`
-	Force         bool     `json:"force"`
-	ForceRegistry bool     `json:"force_registry"`
-	OnlyRegistry  bool     `json:"only_registry"`
+	Slugs              []string `json:"slugs,omitempty"`
+	Domain             string   `json:"domain,omitempty"`
+	DomainsWithContext string   `json:"domains_with_context,omitempty"`
+	AllDomains         bool     `json:"all_domains"`
+	Force              bool     `json:"force"`
+	ForceRegistry      bool     `json:"force_registry"`
+	OnlyRegistry       bool     `json:"only_registry"`
 }
 
 // Worker is the worker method to launch the updates.
@@ -118,6 +119,10 @@ func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
 	go func() {
 		// TODO: filter instances that are AutoUpdate only
 		instance.ForeachInstances(func(inst *instance.Instance) error {
+			if opts.DomainsWithContext != "" &&
+				inst.ContextName != opts.DomainsWithContext {
+				return nil
+			}
 			if opts.Force || !inst.NoAutoUpdate {
 				installerPush(inst, insc, errc, opts)
 			}
@@ -150,6 +155,11 @@ func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
 func UpdateInstance(ctx *jobs.WorkerContext, inst *instance.Instance, opts *Options) error {
 	insc := make(chan *apps.Installer)
 	errc := make(chan *updateError)
+
+	if opts.DomainsWithContext != "" &&
+		inst.ContextName != opts.DomainsWithContext {
+		return nil
+	}
 
 	var g sync.WaitGroup
 	g.Add(numUpdatersSingleInstance)
