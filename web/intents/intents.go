@@ -44,17 +44,19 @@ func (i *apiIntent) Links() *jsonapi.LinksList {
 		Perms: "/permissions/" + perms.ID(),
 	}
 }
+
+// In the JSON-API, the client is the domain of the client-side app that
+// asked the intent (it is used for postMessage)
 func (i *apiIntent) MarshalJSON() ([]byte, error) {
-	// In the JSON-API, the client is the domain of the client-side app that
-	// asked the intent (it is used for postMessage)
+	was := i.doc.Client
 	parts := strings.SplitN(i.doc.Client, "/", 2)
 	if len(parts) < 2 {
-		return nil, echo.NewHTTPError(http.StatusForbidden)
+		i.doc.Client = ""
+	} else {
+		u := i.ins.SubDomain(parts[1])
+		u.Path = ""
+		i.doc.Client = u.String()
 	}
-	was := i.doc.Client
-	u := i.ins.SubDomain(parts[1])
-	u.Path = ""
-	i.doc.Client = u.String()
 	res, err := json.Marshal(i.doc)
 	i.doc.Client = was
 	return res, err
@@ -98,7 +100,7 @@ func getIntent(c echo.Context) error {
 	intent := &intents.Intent{}
 	id := c.Param("id")
 	pdoc, err := webpermissions.GetPermission(c)
-	if err != nil || pdoc.Type != permissions.TypeWebapp {
+	if err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	if err = couchdb.GetDoc(instance, consts.Intents, id, intent); err != nil {
