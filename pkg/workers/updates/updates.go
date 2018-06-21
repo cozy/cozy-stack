@@ -10,15 +10,12 @@ import (
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/sirupsen/logrus"
 )
 
 const numUpdaters = 4
 const numUpdatersSingleInstance = 4
-
-var log = logger.WithNamespace("updates")
 
 func init() {
 	jobs.AddWorker(&jobs.WorkerConfig{
