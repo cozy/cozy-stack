@@ -145,8 +145,6 @@ func SetupRoutes(router *echo.Echo) error {
 			}),
 		}
 		mws := append(mwsNotBlocked, middlewares.CheckInstanceTOS)
-		apps.WebappsRoutes(router.Group("/apps", mws...))
-		apps.KonnectorRoutes(router.Group("/konnectors", mws...))
 		registry.Routes(router.Group("/registry", mws...))
 		data.Routes(router.Group("/data", mws...))
 		files.Routes(router.Group("/files", mws...))
@@ -160,6 +158,8 @@ func SetupRoutes(router *echo.Echo) error {
 		sharings.Routes(router.Group("/sharings", mws...))
 
 		// The settings routes needs not to be blocked
+		apps.WebappsRoutes(router.Group("/apps", mwsNotBlocked...))
+		apps.KonnectorRoutes(router.Group("/konnectors", mwsNotBlocked...))
 		settings.Routes(router.Group("/settings", mwsNotBlocked...))
 
 		// Careful, the normal middlewares NeedInstance and LoadSession are not
