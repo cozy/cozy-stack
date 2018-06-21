@@ -90,6 +90,7 @@ jobs:
   #   - "share-track":     idem
   #   - "share-upload":    idem
   #   - "unzip":           unzipping tarball
+  #   - "updates":         run updates for installed applications
   #
   # When no configuration is given for a worker, a default configuration is
   # used. When a false boolean value is given, the worker is deactivated.
