@@ -118,16 +118,24 @@ func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
 
 	go func() {
 		// TODO: filter instances that are AutoUpdate only
-		instance.ForeachInstances(func(inst *instance.Instance) error {
+		errf := instance.ForeachInstances(func(inst *instance.Instance) error {
 			if opts.DomainsWithContext != "" &&
 				inst.ContextName != opts.DomainsWithContext {
 				return nil
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
 			}
 			if opts.Force || !inst.NoAutoUpdate {
 				installerPush(inst, insc, errc, opts)
 			}
 			return nil
 		})
+		if errf != nil {
+			errc <- &updateError{step: "ForeachInstances", reason: errf}
+		}
 		close(insc)
 		g.Wait()
 		close(errc)
