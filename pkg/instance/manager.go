@@ -74,11 +74,19 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
 // ManagerSignTOS make a request to the manager in order to finalize the TOS
 // signing flow.
 func (i *Instance) ManagerSignTOS(originalReq *http.Request) error {
+	if i.TOSLatest == "" {
+		return nil
+	}
+	split := strings.SplitN(i.TOSLatest, "-", 2)
+	if len(split) != 2 {
+		return nil
+	}
 	u, ok := i.ManagerURL(ManagerTOSURL)
 	if !ok {
 		return nil
 	}
-	res, err := doManagerRequest(http.MethodPut, u, nil, originalReq)
+	form := url.Values{"version": {split[0]}}
+	res, err := doManagerRequest(http.MethodPut, u, form, originalReq)
 	if err != nil {
 		return err
 	}
