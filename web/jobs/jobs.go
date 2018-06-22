@@ -25,6 +25,7 @@ import (
 	_ "github.com/cozy/cozy-stack/pkg/workers/share"
 	_ "github.com/cozy/cozy-stack/pkg/workers/thumbnail"
 	_ "github.com/cozy/cozy-stack/pkg/workers/unzip"
+	_ "github.com/cozy/cozy-stack/pkg/workers/updates"
 )
 
 type (

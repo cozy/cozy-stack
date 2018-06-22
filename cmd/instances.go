@@ -36,6 +36,7 @@ var flagJSON bool
 var flagDirectory string
 var flagIncreaseQuota bool
 var flagForceRegistry bool
+var flagOnlyRegistry bool
 var flagSwiftCluster int
 var flagUUID string
 var flagTOSSigned string
@@ -569,15 +570,18 @@ updated.`,
 			return c.Updates(&client.UpdatesOptions{
 				Slugs:         args,
 				ForceRegistry: flagForceRegistry,
+				OnlyRegistry:  flagOnlyRegistry,
 			})
 		}
 		if flagDomain == "" {
 			return errAppsMissingDomain
 		}
 		return c.Updates(&client.UpdatesOptions{
-			Domain:        flagDomain,
-			Slugs:         args,
-			ForceRegistry: flagForceRegistry,
+			Domain:             flagDomain,
+			DomainsWithContext: flagContextName,
+			Slugs:              args,
+			ForceRegistry:      flagForceRegistry,
+			OnlyRegistry:       flagOnlyRegistry,
 		})
 	},
 }
@@ -667,7 +671,9 @@ func init() {
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "Work on all domains iterativelly")
 	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
+	updateCmd.Flags().StringVar(&flagContextName, "context-name", "", "Work only on the instances with the given context name")
 	updateCmd.Flags().BoolVar(&flagForceRegistry, "force-registry", false, "Force to update all applications sources from git to the registry")
+	updateCmd.Flags().BoolVar(&flagOnlyRegistry, "only-registry", false, "Only update applications installed from the registry")
 	exportCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	importCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	importCmd.Flags().StringVar(&flagDirectory, "directory", "", "Put the imported files inside this directory")
