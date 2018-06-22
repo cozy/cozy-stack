@@ -123,6 +123,7 @@ type Instance struct {
 	CLISecret []byte `json:"cli_secret,omitempty"`
 
 	vfs              vfs.VFS
+	managerURL       *url.URL
 	contextualDomain string
 }
 
@@ -462,54 +463,6 @@ func (i *Instance) PageURL(path string, queries url.Values) string {
 		RawQuery: query,
 	}
 	return u.String()
-}
-
-// ManagerURLKind is an enum type for the different kinds of manager URLs.
-type ManagerURLKind int
-
-const (
-	// ManagerTOSURL is the kind for changes of TOS URL.
-	ManagerTOSURL ManagerURLKind = iota
-	// ManagerPremiumURL is the kind for changing the account type of the
-	// instance.
-	ManagerPremiumURL
-)
-
-// ManagerURL returns an external string for the given ManagerURL kind.
-func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
-	defer func() {
-		if !ok {
-			s = i.PageURL("/manager_url_is_not_specified", nil)
-		}
-	}()
-	if i.UUID == "" {
-		return
-	}
-	ctx, err := i.SettingsContext()
-	if err != nil {
-		return
-	}
-	managerURL, ok := ctx["manager_url"].(string)
-	if !ok {
-		return
-	}
-	u, err := url.Parse(managerURL)
-	if err != nil {
-		return
-	}
-	var path string
-	switch k {
-	// TODO: we may want to rely on the contexts to avoid hardcoding the path
-	// values of these kinds.
-	case ManagerPremiumURL:
-		path = fmt.Sprintf("/cozy/accounts/%s", url.PathEscape(i.UUID))
-	case ManagerTOSURL:
-		path = fmt.Sprintf("/cozy/instances/%s/tos", url.PathEscape(i.UUID))
-	}
-	u.Path = path
-	s = u.String()
-	ok = true
-	return
 }
 
 // PublicName returns the settings' public name or a default one if missing

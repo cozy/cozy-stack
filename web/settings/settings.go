@@ -84,6 +84,7 @@ func Routes(router *echo.Group) {
 	router.GET("/instance", getInstance)
 	router.PUT("/instance", updateInstance)
 	router.PUT("/instance/auth_mode", updateInstanceAuthMode)
+	router.PUT("/instance/sign_tos", updateInstanceTOS)
 
 	router.GET("/sessions", getSessions)
 

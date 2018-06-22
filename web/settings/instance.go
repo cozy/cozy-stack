@@ -101,6 +101,25 @@ func updateInstance(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
 
+func updateInstanceTOS(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	// Allow any request from OAuth tokens to use this route
+	pdoc, err := webpermissions.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	if pdoc.Type != permissions.TypeOauth {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
+	if err := inst.ManagerSignTOS(c.Request()); err != nil {
+		return err
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 func updateInstanceAuthMode(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
