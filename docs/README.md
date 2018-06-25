@@ -28,7 +28,7 @@
 * `/data` - [Data System](data-system.md)
   * [Mango](mango.md)
   * [Replication](replication.md)
-  - [CouchDB Quirks](couchdb-quirks.md)
+  - [CouchDB Quirks](couchdb-quirks.md) & [PouchDB Quirks](pouchdb-quirks.md)
 * `/files` - [Virtual File System](files.md)
   * [References of documents in VFS](references-docs-in-vfs.md)
 * `/intents` - [Intents](intents.md)
