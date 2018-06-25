@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"time"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
@@ -95,6 +96,23 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 	}
 	s.Credentials = append(s.Credentials, creds)
 	return nil
+}
+
+// AddDelegatedContact adds a contact on the owner cozy, but for a contact from
+// a recipient (open_sharing: true only)
+func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email string) string {
+	m := Member{
+		Status: MemberStatusPendingInvitation,
+		Email:  email,
+	}
+	s.Members = append(s.Members, m)
+	state := crypto.Base64Encode(crypto.GenerateRandomBytes(StateLen))
+	creds := Credentials{
+		State:  string(state),
+		XorKey: MakeXorKey(),
+	}
+	s.Credentials = append(s.Credentials, creds)
+	return creds.State
 }
 
 // UpdateRecipients updates the list of recipients
@@ -306,6 +324,9 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 		}
 	}()
+
+	// XXX Wait a bit to avoid pressure on recipients cozy after delegated operations
+	time.Sleep(3 * time.Second)
 
 	active := false
 	for i, m := range s.Members {
