@@ -176,11 +176,9 @@ func encryptMap(m map[string]interface{}) (encrypted bool) {
 			}
 		}
 	}
-	if encrypted {
-		for _, key := range encKeys {
-			if _, ok := cloned[key]; !ok {
-				cloned[key] = auth[key]
-			}
+	for _, key := range encKeys {
+		if _, ok := cloned[key]; !ok {
+			cloned[key] = auth[key]
 		}
 	}
 	m["auth"] = cloned
