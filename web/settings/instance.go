@@ -109,7 +109,7 @@ func updateInstanceTOS(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if pdoc.Type != permissions.TypeOauth {
+	if pdoc.Type != permissions.TypeOauth && pdoc.Type != permissions.TypeCLI {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
