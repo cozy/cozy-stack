@@ -625,9 +625,10 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### POST /sharings/:sharing-id/recipient
+### POST /sharings/:sharing-id/recipients
 
-This route allow to the sharer to add a new recipient to a sharing.
+This route allows the sharer to add new recipients to a sharing. It can also
+be used by a recipient when the sharing has `open_sharing` set to true.
 
 #### Request
 
@@ -640,7 +641,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.sharings.sharings",
+    "type": "io.cozy.sharings",
     "id": "ce8835a061d0ef68947afe69a0046722",
     "relationships": {
       "recipients": {
@@ -726,6 +727,51 @@ Content-Type: application/vnd.api+json
       "self": "/sharings/ce8835a061d0ef68947afe69a0046722"
     }
   }
+}
+```
+
+### POST /sharings/:sharing-id/recipients/delegated
+
+This is an internal route for the stack. It is called by the recipient cozy on
+the owner cozy to add recipients to the sharing (`open_sharing: true` only).
+
+#### Request
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/recipients/delegated HTTP/1.1
+Host: alice.example.net
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "relationships": {
+      "recipients": {
+        "data": [
+          {
+            "status": "pending",
+            "email": "dave@example.net"
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "dave@example.net": "uS6wN7fTYaLZ-GdC_P6UWA"
 }
 ```
 
