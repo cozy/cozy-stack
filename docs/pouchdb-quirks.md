@@ -1,5 +1,7 @@
 # Pouchdb Mango Quirks
 
+The findings below were obtained while working on sorting performance in Cozy Drive. For reference, the final PR [can be seen here](https://github.com/cozy/cozy-drive/pull/1002/files).
+
 ## Understanding what's going on
 
 Before diving into some of the quirks, it's important to understand some things when it comes to Pouchdb and especially Mango queries.
@@ -10,9 +12,9 @@ You will realize that Pouchdb operates in 2 phases : one part of your query may 
 
 ## About indexes
 
-Creating an index takes some time, but the first query will *also* take time — you are encouraged to warm up the indexes by firing a query that uses it before it is actually needed.
+Creating an index takes some time, but the first query will *also* take time — you are encouraged to warm up the indexes by firing a query that uses it before it is actually needed. An exemple implementation can be found [here](https://github.com/cozy/cozy-drive/blob/0326e3d253ca51e0fdb18a9e9b3b5c8ff0b87eba/src/drive/mobile/lib/replication.js#L15-L80).
 
-If there is a change in the underlying documents, the index will be partially recalculated on the next query. The post-replication callback may be a good place to warm up the index again.
+If there is a change in the underlying documents, the index will be partially recalculated on the next query. [The post-replication callback may be a good place to warm up the index again.](https://github.com/cozy/cozy-drive/blob/0326e3d253ca51e0fdb18a9e9b3b5c8ff0b87eba/src/drive/mobile/lib/replication.js#L86-L91)
 
 By default, Pouch will try to find the best index to use on your query. For more advanced queries, you generally want to force it with the `use_index` option. If the query and the index you force are not compatible, Pouch will emit an error and not run the query at all.
 
