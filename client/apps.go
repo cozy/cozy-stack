@@ -20,32 +20,31 @@ type AppManifest struct {
 	ID    string `json:"id"`
 	Rev   string `json:"rev"`
 	Attrs struct {
-		Name      string `json:"name"`
-		Editor    string `json:"editor"`
-		Slug      string `json:"slug"`
-		Developer struct {
-			Name string `json:"name"`
-			URL  string `json:"url,omitempty"`
-		} `json:"developer"`
-		ShortDescription string                 `json:"short_description"`
-		LongDescription  string                 `json:"long_description"`
-		Category         string                 `json:"category"`
-		Locales          map[string]interface{} `json:"locales"`
-		Langs            []string               `json:"langs"`
-		Tags             []string               `json:"tags"`
-		Icon             string                 `json:"icon"`
-		Screenshots      []string               `json:"screenshots"`
-		Platforms        []struct {
-			Type string `json:"type"`
-			URL  string `json:"url"`
-		} `json:"platforms,omitempty"`
-		License string `json:"license"`
+		Name       string `json:"name"`
+		NamePrefix string `json:"name_prefix,omitempty"`
+		Editor     string `json:"editor"`
+		Icon       string `json:"icon"`
 
+		Type        string           `json:"type,omitempty"`
+		License     string           `json:"license,omitempty"`
+		Language    string           `json:"language,omitempty"`
+		Category    string           `json:"category,omitempty"`
+		VendorLink  string           `json:"vendor_link"`
+		Locales     *json.RawMessage `json:"locales,omitempty"`
+		Langs       *json.RawMessage `json:"langs,omitempty"`
+		Platforms   *json.RawMessage `json:"platforms,omitempty"`
+		Categories  *json.RawMessage `json:"categories,omitempty"`
+		Developer   *json.RawMessage `json:"developer,omitempty"`
+		Screenshots *json.RawMessage `json:"screenshots,omitempty"`
+		Tags        *json.RawMessage `json:"tags,omitempty"`
+
+		Slug        string           `json:"slug"`
 		State       string           `json:"state"`
 		Source      string           `json:"source"`
 		Version     string           `json:"version"`
 		Permissions *permissions.Set `json:"permissions"`
-		Intents     []struct {
+
+		Intents []struct {
 			Action string   `json:"action"`
 			Types  []string `json:"type"`
 			Href   string   `json:"href"`
@@ -62,11 +61,31 @@ type AppManifest struct {
 			TriggerOptions string `json:"trigger"`
 			TriggerID      string `json:"trigger_id"`
 		} `json:"services"`
+		Notifications map[string]struct {
+			Description     string            `json:"description,omitempty"`
+			Collapsible     bool              `json:"collapsible,omitempty"`
+			Multiple        bool              `json:"multiple,omitempty"`
+			Stateful        bool              `json:"stateful,omitempty"`
+			DefaultPriority string            `json:"default_priority,omitempty"`
+			TimeToLive      time.Duration     `json:"time_to_live,omitempty"`
+			Templates       map[string]string `json:"templates,omitempty"`
+			MinInterval     time.Duration     `json:"min_interval,omitempty"`
+		} `json:"notifications,omitempty"`
 
 		CreatedAt time.Time `json:"created_at"`
 		UpdatedAt time.Time `json:"updated_at"`
 
 		Error string `json:"error,omitempty"`
+
+		// Konnectors
+
+		Frequency    string           `json:"frequency,omitempty"`
+		DataTypes    *json.RawMessage `json:"data_types,omitempty"`
+		Doctypes     *json.RawMessage `json:"doctypes,omitempty"`
+		Fields       *json.RawMessage `json:"fields,omitempty"`
+		Messages     *json.RawMessage `json:"messages,omitempty"`
+		OAuth        *json.RawMessage `json:"oauth,omitempty"`
+		TimeInterval *json.RawMessage `json:"time_interval,omitempty"`
 
 		Parameters json.RawMessage `json:"parameters,omitempty"`
 	} `json:"attributes,omitempty"`
