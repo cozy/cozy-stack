@@ -83,7 +83,7 @@ func (i *Instance) ManagerSignTOS(originalReq *http.Request) error {
 	}
 	u, ok := i.ManagerURL(ManagerTOSURL)
 	if !ok {
-		return nil
+		return Patch(i, &Options{TOSSigned: i.TOSLatest})
 	}
 	form := url.Values{"version": {split[0]}}
 	res, err := doManagerRequest(http.MethodPut, u, form, originalReq)
