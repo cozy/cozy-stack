@@ -752,7 +752,6 @@ Content-Type: application/vnd.api+json
       "recipients": {
         "data": [
           {
-            "status": "pending",
             "email": "dave@example.net"
           }
         ]

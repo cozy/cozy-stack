@@ -11,12 +11,14 @@ import (
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 const (
@@ -72,6 +74,28 @@ type Credentials struct {
 	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
+// AddContacts adds a list of contacts on the sharer cozy
+func (s *Sharing) AddContacts(inst *instance.Instance, contactIDs []string) error {
+	for _, id := range contactIDs {
+		if err := s.AddContact(inst, id); err != nil {
+			return err
+		}
+	}
+	var err error
+	var codes map[string]string
+	if s.PreviewPath != "" {
+		if codes, err = s.CreatePreviewPermissions(inst); err != nil {
+			return err
+		}
+	}
+	if err = s.SendMails(inst, codes); err != nil {
+		return err
+	}
+	cloned := s.Clone().(*Sharing)
+	go cloned.NotifyRecipients(inst, nil)
+	return nil
+}
+
 // AddContact adds the contact with the given identifier
 func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 	c, err := contacts.Find(inst, contactID)
@@ -96,6 +120,112 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 	}
 	s.Credentials = append(s.Credentials, creds)
 	return nil
+}
+
+// APIDelegateAddContacts is used to serialize a request to add contacts to
+// JSON-API
+type APIDelegateAddContacts struct {
+	members []Member
+}
+
+// ID returns the sharing qualified identifier
+func (a *APIDelegateAddContacts) ID() string { return "" }
+
+// Rev returns the sharing revision
+func (a *APIDelegateAddContacts) Rev() string { return "" }
+
+// DocType returns the sharing document type
+func (a *APIDelegateAddContacts) DocType() string { return consts.Sharings }
+
+// SetID changes the sharing qualified identifier
+func (a *APIDelegateAddContacts) SetID(id string) {}
+
+// SetRev changes the sharing revision
+func (a *APIDelegateAddContacts) SetRev(rev string) {}
+
+// Clone is part of jsonapi.Object interface
+func (a *APIDelegateAddContacts) Clone() couchdb.Doc {
+	panic("APIDelegateAddContacts must not be cloned")
+}
+
+// Links is part of jsonapi.Object interface
+func (a *APIDelegateAddContacts) Links() *jsonapi.LinksList { return nil }
+
+// Included is part of jsonapi.Object interface
+func (a *APIDelegateAddContacts) Included() []jsonapi.Object { return nil }
+
+// Relationships is part of jsonapi.Object interface
+func (a *APIDelegateAddContacts) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{
+		"recipients": jsonapi.Relationship{
+			Data: a.members,
+		},
+	}
+}
+
+var _ jsonapi.Object = (*APIDelegateAddContacts)(nil)
+
+// DelegateAddContacts adds a list of contacts on a recipient cozy. Part of
+// the work is delegated to owner cozy, but the invitation mail is still sent
+// from the recipient cozy.
+func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []string) error {
+	api := &APIDelegateAddContacts{}
+	for _, id := range contactIDs {
+		c, err := contacts.Find(inst, id)
+		if err != nil {
+			return err
+		}
+		addr, err := c.ToMailAddress()
+		if err != nil {
+			return err
+		}
+		m := Member{
+			Status:   MemberStatusMailNotSent,
+			Name:     addr.Name,
+			Email:    addr.Email,
+			Instance: c.PrimaryCozyURL(),
+		}
+		api.members = append(api.members, m)
+	}
+	body, err := jsonapi.MarshalObject(api)
+	if err != nil {
+		return err
+	}
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return err
+	}
+	c := &s.Credentials[0]
+	opts := &request.Options{
+		Method: http.MethodPut,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/recipients",
+		Headers: request.Headers{
+			"Accept":        "application/json",
+			"Content-Type":  "application/vnd.api+json",
+			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+		},
+		Body: bytes.NewReader(body),
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if res, err = RefreshToken(inst, s, &s.Members[0], c, opts, body); err != nil {
+			return err
+		}
+	}
+	defer res.Body.Close()
+	// TODO parse response
+	s.Members = append(s.Members, api.members...)
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return err
+	}
+	// TODO permissions for preview path
+	return s.SendMails(inst, nil) // TODO SendMails only work for the owner
 }
 
 // AddDelegatedContact adds a contact on the owner cozy, but for a contact from

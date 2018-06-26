@@ -201,24 +201,20 @@ func AddRecipients(c echo.Context) error {
 	}
 	if rel, ok := obj.GetRelationship("recipients"); ok {
 		if data, ok := rel.Data.([]interface{}); ok {
+			var ids []string
 			for _, ref := range data {
 				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-					if err = s.AddContact(inst, id); err != nil {
-						return wrapErrors(err)
-					}
+					ids = append(ids, id)
 				}
 			}
-			var codes map[string]string
-			if s.Owner && s.PreviewPath != "" {
-				if codes, err = s.CreatePreviewPermissions(inst); err != nil {
-					return wrapErrors(err)
-				}
+			if s.Owner {
+				err = s.AddContacts(inst, ids)
+			} else {
+				err = s.DelegateAddContacts(inst, ids)
 			}
-			if err = s.SendMails(inst, codes); err != nil {
+			if err != nil {
 				return wrapErrors(err)
 			}
-			cloned := s.Clone().(*sharing.Sharing)
-			go cloned.NotifyRecipients(inst, nil)
 		}
 	}
 	return jsonapiSharingWithDocs(c, s)
