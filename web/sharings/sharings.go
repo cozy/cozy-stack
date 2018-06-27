@@ -436,29 +436,45 @@ func PostDiscovery(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	var member *sharing.Member
-	if sharecode != "" {
-		member, err = s.FindMemberBySharecode(inst, sharecode)
+	var redirectURL string
+
+	if s.Owner {
+		var member *sharing.Member
+		if sharecode != "" {
+			member, err = s.FindMemberBySharecode(inst, sharecode)
+			if err != nil {
+				return wrapErrors(err)
+			}
+		} else {
+			member, err = s.FindMemberByState(state)
+			if err != nil {
+				return wrapErrors(err)
+			}
+		}
+		if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
+			if c.Request().Header.Get("Accept") == "application/json" {
+				return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
+			}
+			return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, member)
+		}
+		redirectURL, err = member.GenerateOAuthURL(s)
 		if err != nil {
 			return wrapErrors(err)
 		}
 	} else {
-		member, err = s.FindMemberByState(state)
+		// TODO sharecode for preview path
+		redirectURL, err = s.DelegateDiscovery(inst, state, cozyURL)
 		if err != nil {
+			if err == sharing.ErrInvalidURL {
+				if c.Request().Header.Get("Accept") == "application/json" {
+					return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
+				}
+				return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, &sharing.Member{})
+			}
 			return wrapErrors(err)
 		}
 	}
-	if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
-		if c.Request().Header.Get("Accept") == "application/json" {
-			return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
-		}
-		return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, member)
-	}
 
-	redirectURL, err := member.GenerateOAuthURL(s)
-	if err != nil {
-		return wrapErrors(err)
-	}
 	if c.Request().Header.Get("Accept") == "application/json" {
 		return c.JSON(http.StatusOK, echo.Map{
 			"redirect": redirectURL,

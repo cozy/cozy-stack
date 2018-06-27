@@ -219,7 +219,7 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []stri
 		}
 	}
 	defer res.Body.Close()
-	// TODO parse response
+	// TODO check status code & parse response
 	s.Members = append(s.Members, api.members...)
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return err
@@ -243,6 +243,55 @@ func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email string) str
 	}
 	s.Credentials = append(s.Credentials, creds)
 	return creds.State
+}
+
+// DelegateDiscovery delegates the POST discovery when a recipient has invited
+// another person to a sharing, and this person accepts the sharing on the
+// recipient cozy. The calls is delegated to the owner cozy.
+func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL string) (string, error) {
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return "", err
+	}
+	v := url.Values{}
+	v.Add("state", state)
+	v.Add("url", cozyURL)
+	body := []byte(v.Encode())
+	c := &s.Credentials[0]
+	opts := &request.Options{
+		Method: http.MethodPut,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/discovery",
+		Headers: request.Headers{
+			"Accept":        "application/json",
+			"Content-Type":  "application/x-www-form-urlencoded",
+			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+		},
+		Body: bytes.NewReader(body),
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return "", err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if res, err = RefreshToken(inst, s, &s.Members[0], c, opts, body); err != nil {
+			return "", err
+		}
+	}
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusBadRequest {
+		return "", ErrInvalidURL
+	}
+	if res.StatusCode/100 != 2 {
+		return "", ErrInternalServerError
+	}
+	var success map[string]string
+	if err = json.NewDecoder(res.Body).Decode(&success); err != nil {
+		return "", err
+	}
+	return success["redirect"], nil
 }
 
 // UpdateRecipients updates the list of recipients
