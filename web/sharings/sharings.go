@@ -462,7 +462,6 @@ func PostDiscovery(c echo.Context) error {
 			return wrapErrors(err)
 		}
 	} else {
-		// TODO sharecode for preview path
 		redirectURL, err = s.DelegateDiscovery(inst, state, cozyURL)
 		if err != nil {
 			if err == sharing.ErrInvalidURL {

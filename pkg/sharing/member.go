@@ -219,13 +219,18 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []stri
 		}
 	}
 	defer res.Body.Close()
-	// TODO check status code & parse response
+	if res.StatusCode != http.StatusOK {
+		return ErrInternalServerError
+	}
+	var states map[string]string
+	if err = json.NewDecoder(res.Body).Decode(&states); err != nil {
+		return err
+	}
 	s.Members = append(s.Members, api.members...)
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return err
 	}
-	// TODO permissions for preview path
-	return s.SendMails(inst, nil) // TODO SendMails only work for the owner
+	return s.SendMailsToMembers(inst, api.members, states)
 }
 
 // AddDelegatedContact adds a contact on the owner cozy, but for a contact from

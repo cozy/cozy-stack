@@ -20,7 +20,7 @@ type MailTemplateValues struct {
 }
 
 // SendMails sends invitation mails to the recipients that were in the
-// mail-not-sent status
+// mail-not-sent status (owner only)
 func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) error {
 	if !s.Owner {
 		return ErrInvalidSharing
@@ -28,21 +28,13 @@ func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) er
 	if len(s.Members) != len(s.Credentials)+1 {
 		return ErrInvalidSharing
 	}
-
-	sharer, _ := inst.PublicName()
-	if sharer == "" {
-		sharer = inst.Translate("Sharing Empty name")
-	}
-	desc := s.Description
-	if desc == "" {
-		desc = inst.Translate("Sharing Empty description")
-	}
+	sharer, desc := s.getSharerAndDescription(inst)
 
 	for i, m := range s.Members {
 		if i == 0 || m.Status != MemberStatusMailNotSent { //i == 0 is for the owner
 			continue
 		}
-		link := m.MailLink(inst, s, &s.Credentials[i-1], codes)
+		link := m.MailLink(inst, s, s.Credentials[i-1].State, codes)
 		if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
 			inst.Logger().WithField("nspace", "sharing").
 				Errorf("Can't send email for %#v: %s", m.Email, err)
@@ -54,9 +46,36 @@ func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) er
 	return couchdb.UpdateDoc(inst, s)
 }
 
+// SendMailsToMembers sends mails from a recipient (open_sharing) to their
+// contacts to invite them
+func (s *Sharing) SendMailsToMembers(inst *instance.Instance, members []Member, states map[string]string) error {
+	sharer, desc := s.getSharerAndDescription(inst)
+	for _, m := range members {
+		link := m.MailLink(inst, s, states[m.Email], nil)
+		if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Errorf("Can't send email for %#v: %s", m.Email, err)
+			return ErrMailNotSent
+		}
+	}
+	return nil
+}
+
+func (s *Sharing) getSharerAndDescription(inst *instance.Instance) (string, string) {
+	sharer, _ := inst.PublicName()
+	if sharer == "" {
+		sharer = inst.Translate("Sharing Empty name")
+	}
+	desc := s.Description
+	if desc == "" {
+		desc = inst.Translate("Sharing Empty description")
+	}
+	return sharer, desc
+}
+
 // MailLink generates an HTTP link where the recipient can start the process of
 // accepting the sharing
-func (m *Member) MailLink(inst *instance.Instance, s *Sharing, creds *Credentials, codes map[string]string) string {
+func (m *Member) MailLink(inst *instance.Instance, s *Sharing, state string, codes map[string]string) string {
 	if s.Owner && s.PreviewPath != "" && codes != nil {
 		if code, ok := codes[m.Email]; ok {
 			u := inst.SubDomain(s.AppSlug)
@@ -66,7 +85,7 @@ func (m *Member) MailLink(inst *instance.Instance, s *Sharing, creds *Credential
 		}
 	}
 
-	query := url.Values{"state": {creds.State}}
+	query := url.Values{"state": {state}}
 	path := fmt.Sprintf("/sharings/%s/discovery", s.SID)
 	return inst.PageURL(path, query)
 }
