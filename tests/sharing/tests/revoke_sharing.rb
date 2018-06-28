@@ -68,12 +68,14 @@ describe "A sharing" do
   it "can be revoked" do
     bob = "Bob"
     charlie = "Charlie"
+    dave = "Dave"
     lastname = Faker::Name.last_name
 
     # Create the instances
     inst_alice = Instance.create name: "Alice"
     inst_bob = Instance.create name: bob
     inst_charlie = Instance.create name: charlie
+    inst_dave = Instance.create name: dave
 
     # Create the contacts
     contact_bob = Contact.create inst_alice, given_name: bob
@@ -84,6 +86,8 @@ describe "A sharing" do
     Contact.create inst_bob, given_name: "Charlie",
                              family_name: lastname,
                              email: contact_charlie.primary_email
+    contact_dave = Contact.create inst_bob, given_name: charlie,
+                                            family_name: lastname
 
     # Create the folder
     folder = Folder.create inst_alice
@@ -153,14 +157,17 @@ describe "A sharing" do
     inst_bob.accept sharing
     sleep 2
 
-    # Add Charlie to the sharing
+    # Add Charlie and Dave to the sharing
     code = sharing.add_members inst_alice, [contact_charlie], Folder.doctype
     assert_equal 200, code
-
-    # Accept the sharing
     sleep 1
     inst_charlie.accept sharing
-    sleep 2
+    sleep 4
+    code = sharing.add_members inst_bob, [contact_dave], Folder.doctype
+    assert_equal 200, code
+    sleep 1
+    inst_dave.accept sharing
+    sleep 4
 
     # Get the clients id and triggers id on alice side
     doc = Helpers.couch.get_doc inst_alice.domain, Sharing.doctype, sharing.couch_id
@@ -197,6 +204,12 @@ describe "A sharing" do
     assert_equal contact_charlie.primary_email, recpt2["email"]
     assert_equal "Charlie #{lastname}", recpt2["name"]
     assert_nil recpt2["instance"]
+    recpt3 = doc["members"][3]
+    assert_equal "ready", recpt3["status"]
+    assert_equal "Dave", recpt3["public_name"]
+    assert_equal contact_dave.primary_email, recpt3["email"]
+    assert_equal "Charlie #{lastname}", recpt3["name"]
+    assert_nil recpt3["instance"]
 
     # Get the clients id and triggers id on charlie side
     doc = Helpers.couch.get_doc inst_charlie.domain, Sharing.doctype, sharing.couch_id
@@ -221,7 +234,7 @@ describe "A sharing" do
     assert_no_oauth_client inst_bob, client_id_bob
 
     # Check that Charlie has all info about the members of this sharing
-    sleep 1
+    sleep 4
     doc = Helpers.couch.get_doc inst_charlie.domain, Sharing.doctype, sharing.couch_id
     owner = doc["members"].first
     assert_equal "owner", owner["status"]
@@ -241,9 +254,16 @@ describe "A sharing" do
     assert_equal contact_charlie.primary_email, recpt2["email"]
     assert_equal "http://#{inst_charlie.domain}", recpt2["instance"]
     assert_nil recpt2["name"]
+    recpt3 = doc["members"][3]
+    assert_equal "ready", recpt3["status"]
+    assert_equal "Dave", recpt3["public_name"]
+    assert_equal contact_dave.primary_email, recpt3["email"]
+    assert_nil recpt3["instance"]
 
-    # Revoke charlie by alice
+    # Revoke charlie and dave by alice
     code = sharing.revoke_recipient_by_sharer inst_alice, Folder.doctype, 2
+    assert_equal 204, code
+    code = sharing.revoke_recipient_by_sharer inst_alice, Folder.doctype, 3
     assert_equal 204, code
 
     # Check the sharing on alice

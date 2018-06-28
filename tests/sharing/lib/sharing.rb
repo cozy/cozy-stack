@@ -80,7 +80,8 @@ class Sharing
         attributes: {
           description: @description,
           app_slug: @app_slug,
-          rules: @rules.map(&:as_json)
+          rules: @rules.map(&:as_json),
+          open_sharing: true
         },
         relationships: {
           recipients: {

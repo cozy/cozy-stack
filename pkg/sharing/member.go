@@ -125,11 +125,12 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 // APIDelegateAddContacts is used to serialize a request to add contacts to
 // JSON-API
 type APIDelegateAddContacts struct {
+	sid     string
 	members []Member
 }
 
 // ID returns the sharing qualified identifier
-func (a *APIDelegateAddContacts) ID() string { return "" }
+func (a *APIDelegateAddContacts) ID() string { return a.sid }
 
 // Rev returns the sharing revision
 func (a *APIDelegateAddContacts) Rev() string { return "" }
@@ -170,6 +171,7 @@ var _ jsonapi.Object = (*APIDelegateAddContacts)(nil)
 // from the recipient cozy.
 func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []string) error {
 	api := &APIDelegateAddContacts{}
+	api.sid = s.SID
 	for _, id := range contactIDs {
 		c, err := contacts.Find(inst, id)
 		if err != nil {
@@ -187,7 +189,11 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []stri
 		}
 		api.members = append(api.members, m)
 	}
-	body, err := jsonapi.MarshalObject(api)
+	data, err := jsonapi.MarshalObject(api)
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(jsonapi.Document{Data: &data})
 	if err != nil {
 		return err
 	}
@@ -197,10 +203,10 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []stri
 	}
 	c := &s.Credentials[0]
 	opts := &request.Options{
-		Method: http.MethodPut,
+		Method: http.MethodPost,
 		Scheme: u.Scheme,
 		Domain: u.Host,
-		Path:   "/sharings/" + s.SID + "/recipients",
+		Path:   "/sharings/" + s.SID + "/recipients/delegated",
 		Headers: request.Headers{
 			"Accept":        "application/json",
 			"Content-Type":  "application/vnd.api+json",
