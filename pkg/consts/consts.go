@@ -109,15 +109,3 @@ const (
 	// InstanceSettingsID is the id of settings document for the instance
 	InstanceSettingsID = "io.cozy.settings.instance"
 )
-
-// AppsRegistry is an hard-coded list of known apps, with their source URLs
-// TODO remove it when we will have a true registry
-var AppsRegistry = map[string]string{
-	"onboarding": "git://github.com/cozy/cozy-onboarding-v3.git#latest",
-	"drive":      "git://github.com/cozy/cozy-drive.git#latest-drive",
-	"photos":     "git://github.com/cozy/cozy-drive.git#latest-photos",
-	"settings":   "git://github.com/cozy/cozy-settings.git#latest",
-	"collect":    "git://github.com/cozy/cozy-collect.git#latest",
-	"banks":      "git://github.com/cozy/cozy-banks.git#latest",
-	"contacts":   "git://github.com/cozy/cozy-contacts.git#latest",
-}

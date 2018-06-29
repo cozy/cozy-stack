@@ -517,10 +517,7 @@ func (i *Instance) OnboardedRedirection() *url.URL {
 }
 
 func (i *Instance) installApp(slug string) error {
-	source, ok := consts.AppsRegistry[slug]
-	if !ok {
-		return errors.New("Unknown app")
-	}
+	source := "registry://" + slug + "/stable"
 	inst, err := apps.NewInstaller(i, i.AppsCopier(apps.Webapp), &apps.InstallerOptions{
 		Operation: apps.Install,
 		Type:      apps.Webapp,

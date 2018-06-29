@@ -54,7 +54,7 @@ var installWebappCmd = &cobra.Command{
 	Use: "install [slug] [sourceurl]",
 	Short: `Install an application with the specified slug name
 from the given source URL.`,
-	Example: "$ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-drive.git#latest-drive'",
+	Example: "$ cozy-stack apps install --domain cozy.tools:8080 drive registry://drive/stable",
 	Long:    "[Some schemes](../../docs/apps.md#sources) are allowed as `[sourceurl]`.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return installApp(cmd, args, consts.Apps)
@@ -129,7 +129,7 @@ var installKonnectorCmd = &cobra.Command{
 	Use: "install [slug] [sourceurl]",
 	Short: `Install a konnector with the specified slug name
 from the given source URL.`,
-	Example: "$ cozy-stack konnectors install --domain cozy.tools:8080 trainline 'git://github.com/cozy/cozy-konnector-trainline.git#build'",
+	Example: "$ cozy-stack konnectors install --domain cozy.tools:8080 trainline registry://trainline/stable",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return installApp(cmd, args, consts.Konnectors)
 	},
@@ -252,14 +252,8 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 		return cmd.Usage()
 	}
 	slug := args[0]
-	var source string
-	if len(args) == 1 {
-		s, ok := consts.AppsRegistry[slug]
-		if !ok {
-			return cmd.Usage()
-		}
-		source = s
-	} else {
+	source := "registry://" + slug + "/stable"
+	if len(args) > 1 {
 		source = args[1]
 	}
 	if flagAllDomains {
