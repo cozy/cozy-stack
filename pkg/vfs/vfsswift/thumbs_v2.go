@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/swift"
 )
@@ -18,8 +19,8 @@ var unixEpochZero = time.Time{}
 //
 // This version stores the thumbnails in the same container as the main data
 // container.
-func NewThumbsFsV2(c *swift.Connection, domain string) vfs.Thumbser {
-	return &thumbsV2{c: c, container: swiftV2ContainerPrefixData + domain}
+func NewThumbsFsV2(c *swift.Connection, db prefixer.Prefixer) vfs.Thumbser {
+	return &thumbsV2{c: c, container: swiftV2ContainerPrefixData + db.DBPrefix()}
 }
 
 type thumbsV2 struct {
