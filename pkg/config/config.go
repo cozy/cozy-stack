@@ -629,6 +629,10 @@ func UseViper(v *viper.Viper) error {
 		CSPWhitelist: v.GetStringMapString("csp_whitelist"),
 	}
 
+	if IsDevRelease() && v.GetBool("disable_csp") {
+		config.CSPDisabled = true
+	}
+
 	return logger.Init(config.Logger)
 }
 
