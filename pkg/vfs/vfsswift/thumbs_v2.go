@@ -59,7 +59,13 @@ func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler,
 	obj, err := t.c.ObjectCreate(t.container, name, false, "", img.Mime,
 		objMeta.ObjectHeaders())
 	if err != nil {
-		return nil, err
+		if _, _, errc := t.c.Container(t.container); errc == swift.ContainerNotFound {
+			if errc = t.c.ContainerCreate(t.container, nil); errc != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 	th := &thumb{
 		WriteCloser: obj,
