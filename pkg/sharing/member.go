@@ -302,6 +302,7 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL stri
 	if err = json.NewDecoder(res.Body).Decode(&success); err != nil {
 		return "", err
 	}
+	PersistInstanceURL(inst, success["email"], cozyURL)
 	return success["redirect"], nil
 }
 
@@ -321,6 +322,29 @@ func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) er
 		s.Members[i].Status = m.Status
 	}
 	return couchdb.UpdateDoc(inst, s)
+}
+
+// PersistInstanceURL updates the io.cozy.contacts document with the Cozy
+// instance URL
+func PersistInstanceURL(inst *instance.Instance, email, cozyURL string) {
+	if email == "" || cozyURL == "" {
+		return
+	}
+	contact, err := contacts.FindByEmail(inst, email)
+	if err != nil {
+		return
+	}
+	for _, cozy := range contact.Cozy {
+		if cozy.URL == cozyURL {
+			return
+		}
+	}
+	cozy := contacts.Cozy{URL: cozyURL}
+	contact.Cozy = append([]contacts.Cozy{cozy}, contact.Cozy...)
+	if err := couchdb.UpdateDoc(inst, contact); err != nil {
+		inst.Logger().WithField("nspace", "sharing").
+			Warnf("Error on saving contact: %s", err)
+	}
 }
 
 // FindMemberByState returns the member that is linked to the sharing by

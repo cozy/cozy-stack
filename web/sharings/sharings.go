@@ -436,7 +436,7 @@ func PostDiscovery(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	var redirectURL string
+	var redirectURL, email string
 
 	if s.Owner {
 		var member *sharing.Member
@@ -451,6 +451,7 @@ func PostDiscovery(c echo.Context) error {
 				return wrapErrors(err)
 			}
 		}
+		email = member.Email
 		if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
 			if c.Request().Header.Get("Accept") == "application/json" {
 				return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
@@ -461,6 +462,7 @@ func PostDiscovery(c echo.Context) error {
 		if err != nil {
 			return wrapErrors(err)
 		}
+		sharing.PersistInstanceURL(inst, member.Email, member.Instance)
 	} else {
 		redirectURL, err = s.DelegateDiscovery(inst, state, cozyURL)
 		if err != nil {
@@ -475,9 +477,11 @@ func PostDiscovery(c echo.Context) error {
 	}
 
 	if c.Request().Header.Get("Accept") == "application/json" {
-		return c.JSON(http.StatusOK, echo.Map{
-			"redirect": redirectURL,
-		})
+		m := echo.Map{"redirect": redirectURL}
+		if email != "" {
+			m["email"] = email
+		}
+		return c.JSON(http.StatusOK, m)
 	}
 	return c.Redirect(http.StatusFound, redirectURL)
 }
