@@ -270,7 +270,7 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL stri
 	body := []byte(v.Encode())
 	c := &s.Credentials[0]
 	opts := &request.Options{
-		Method: http.MethodPut,
+		Method: http.MethodPost,
 		Scheme: u.Scheme,
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/discovery",

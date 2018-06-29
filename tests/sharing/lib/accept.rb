@@ -1,7 +1,8 @@
 class Accept
-  def initialize(sharing)
+  def initialize(sharing, sharer = nil)
     @sharing = sharing
     @owner = @sharing.members.first
+    @sharer = sharer || @owner
   end
 
   def on(inst)
@@ -20,13 +21,13 @@ class Accept
   end
 
   def do_discovery(code)
-    body = { state: code, url: "http://#{@inst.domain}/" }
-    res = @owner.client["/sharings/#{@sharing.couch_id}/discovery"].post body, accept: :json
+    body = { state: code, url: @inst.url }
+    res = @sharer.client["/sharings/#{@sharing.couch_id}/discovery"].post body, accept: :json
     JSON.parse(res.body)["redirect"]
   end
 
   def connect_to_instance
-    client = RestClient::Resource.new "http://#{@inst.domain}"
+    client = RestClient::Resource.new @inst.url
     res = client["/auth/login"].get
     csrf_token = res.cookies["_csrf"]
     body = { csrf_token: csrf_token, passphrase: @inst.passphrase }
@@ -38,7 +39,7 @@ class Accept
   def click_on_accept(state, location, sessid)
     res = RestClient.get location, cookies: { cozysessid: sessid }
     csrf_token = res.cookies["_csrf"]
-    client = RestClient::Resource.new "http://#{@inst.domain}"
+    client = RestClient::Resource.new @inst.url
     body = { csrf_token: csrf_token, state: state, sharing_id: @sharing.couch_id }
     params = { cookies: res.cookies, accept: :json }
     client["/auth/authorize/sharing"].post body, params

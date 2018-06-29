@@ -86,7 +86,7 @@ describe "A sharing" do
     Contact.create inst_bob, given_name: "Charlie",
                              family_name: lastname,
                              email: contact_charlie.primary_email
-    contact_dave = Contact.create inst_bob, given_name: charlie,
+    contact_dave = Contact.create inst_bob, given_name: dave,
                                             family_name: lastname
 
     # Create the folder
@@ -119,6 +119,10 @@ describe "A sharing" do
     tri_ids_recipient = triggers_ids doc
     assert_oauth_client_not_empty client_id_recipient
     assert_triggers_not_empty tri_ids_recipient
+
+    # The instance URL has been added to the contact document
+    contact = Contact.find inst_alice, contact_bob.couch_id
+    assert_equal inst_bob.url, contact.cozy[0]["url"]
 
     # Revoke the sharing
     code = sharing.revoke_by_sharer(inst_alice, Folder.doctype)
@@ -166,7 +170,7 @@ describe "A sharing" do
     code = sharing.add_members inst_bob, [contact_dave], Folder.doctype
     assert_equal 200, code
     sleep 1
-    inst_dave.accept sharing
+    inst_dave.accept sharing, inst_bob
     sleep 4
 
     # Get the clients id and triggers id on alice side
@@ -185,18 +189,22 @@ describe "A sharing" do
     assert_oauth_client_not_empty client_id_bob
     assert_triggers_not_empty tri_ids_bob
 
+    # The instance URL has been added to the contact document
+    contact = Contact.find inst_bob, contact_dave.couch_id
+    assert_equal inst_dave.url, contact.cozy[0]["url"]
+
     # Check that Bob has all info about the members of this sharing
     owner = doc["members"].first
     assert_equal "owner", owner["status"]
     assert_equal "Alice", owner["public_name"]
     assert_equal "Alice #{lastname}", owner["name"]
     assert_equal "alice+test@cozy.tools", owner["email"]
-    assert_equal "http://#{inst_alice.domain}", owner["instance"]
+    assert_equal inst_alice.url, owner["instance"]
     recpt1 = doc["members"][1]
     assert_equal "ready", recpt1["status"]
     assert_equal "Bob", recpt1["public_name"]
     assert_equal contact_bob.primary_email, recpt1["email"]
-    assert_equal "http://#{inst_bob.domain}", recpt1["instance"]
+    assert_equal inst_bob.url, recpt1["instance"]
     assert_nil recpt1["name"]
     recpt2 = doc["members"][2]
     assert_equal "ready", recpt2["status"]
@@ -208,7 +216,7 @@ describe "A sharing" do
     assert_equal "ready", recpt3["status"]
     assert_equal "Dave", recpt3["public_name"]
     assert_equal contact_dave.primary_email, recpt3["email"]
-    assert_equal "Charlie #{lastname}", recpt3["name"]
+    assert_equal "Dave #{lastname}", recpt3["name"]
     assert_nil recpt3["instance"]
 
     # Get the clients id and triggers id on charlie side
@@ -240,7 +248,7 @@ describe "A sharing" do
     assert_equal "owner", owner["status"]
     assert_equal "Alice", owner["public_name"]
     assert_equal "alice+test@cozy.tools", owner["email"]
-    assert_equal "http://#{inst_alice.domain}", owner["instance"]
+    assert_equal inst_alice.url, owner["instance"]
     assert_nil owner["name"]
     recpt1 = doc["members"][1]
     assert_equal "revoked", recpt1["status"]
@@ -252,7 +260,7 @@ describe "A sharing" do
     assert_equal "ready", recpt2["status"]
     assert_equal "Charlie", recpt2["public_name"]
     assert_equal contact_charlie.primary_email, recpt2["email"]
-    assert_equal "http://#{inst_charlie.domain}", recpt2["instance"]
+    assert_equal inst_charlie.url, recpt2["instance"]
     assert_nil recpt2["name"]
     recpt3 = doc["members"][3]
     assert_equal "ready", recpt3["status"]

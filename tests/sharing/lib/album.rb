@@ -46,7 +46,7 @@ class Album
       created_at: j["created_at"]
     )
     album.couch_id = j["_id"]
-    album.couch_rev = ["_rev"]
+    album.couch_rev = j["_rev"]
     album
   end
 
