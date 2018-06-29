@@ -315,7 +315,7 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 		return vfsafero.NewThumbsFs(baseFS)
 	case config.SchemeSwift:
 		if i.SwiftCluster > 0 {
-			return vfsswift.NewThumbsFsV2(config.GetSwiftConnection(), i.Domain)
+			return vfsswift.NewThumbsFsV2(config.GetSwiftConnection(), i)
 		}
 		return vfsswift.NewThumbsFs(config.GetSwiftConnection(), i.Domain)
 	default:
