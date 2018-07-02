@@ -69,9 +69,18 @@ func extractInfos(pkgs []string) []info {
 						Value: generatorForType(f.Elem()),
 					})
 				case (*types.Named):
-					continue // FIXME
+					named := fmt.Sprintf("%s.%s", f.Obj().Pkg().Name(), f.Obj().Name())
+					switch named {
+					case "time.Time", "time.Duration":
+						// These structs are known to be safe
+					default:
+						panic(fmt.Errorf("Unknown named type: %s", named))
+					}
+				case (*types.Interface):
+					fmt.Fprintf(os.Stderr, "Warning: cannot check interfaces: %s.%s -> %s\n",
+						pkg.Name(), name, field)
 				case (*types.Basic):
-					continue
+					// Basic types are immutables
 				default:
 					panic(fmt.Errorf("Unknown type: %#v", field.Type()))
 				}
@@ -103,11 +112,11 @@ import (
 		fmt.Printf("func Test%s(t *testing.T) {\n", strings.Title(info.PkgName))
 		for name, fields := range info.Structs {
 			v := strings.ToLower(name)
-			fmt.Printf("\t%s := &%s.%s{}\n", v, info.PkgName, name)
+			fmt.Printf("\t%sA := &%s.%s{}\n", v, info.PkgName, name)
 			for _, field := range fields {
 				field.Initialize(v)
 			}
-			fmt.Printf("\t%sCloned := %s.Clone().(*%s.%s)\n", v, v, info.PkgName, name)
+			fmt.Printf("\t%sB := %sA.Clone().(*%s.%s)\n", v, v, info.PkgName, name)
 			for _, field := range fields {
 				field.Reassign(v)
 				field.Compare(v)
@@ -139,13 +148,16 @@ type sliceField struct {
 func (f *sliceField) String() string { return f.Name }
 
 func (f *sliceField) Initialize(v string) {
-	fmt.Printf("\t%s.%s = []%s{%s}\n", v, f.Name, f.Value.Type, f.Value.Initial)
+	if f.Value.Warning != "" {
+		fmt.Printf("\t// Warning: %s", f.Value.Warning)
+	}
+	fmt.Printf("\t%sA.%s = []%s{%s}\n", v, f.Name, f.Value.Type, f.Value.Initial)
 }
 func (f *sliceField) Reassign(v string) {
-	fmt.Printf("\t%s.%s[0] = %s\n", v, f.Name, f.Value.Altered)
+	fmt.Printf("\t%sA.%s[0] = %s\n", v, f.Name, f.Value.Altered)
 }
 func (f *sliceField) Compare(v string) {
-	fmt.Printf("\tif %sCloned.%s[0] != %s {\n", v, f.Name, f.Value.Initial)
+	fmt.Printf("\tif %sB.%s[0] != %s {\n", v, f.Name, f.Value.Initial)
 }
 
 type mapField struct {
@@ -157,13 +169,16 @@ type mapField struct {
 func (f *mapField) String() string { return f.Name }
 
 func (f *mapField) Initialize(v string) {
-	fmt.Printf("\t%s.%s = map[%s]%s{%s: %s}\n", v, f.Name, f.Key.Type, f.Value.Type, f.Key.Key, f.Value.Initial)
+	if f.Value.Warning != "" {
+		fmt.Printf("\t// Warning: %s\n", f.Value.Warning)
+	}
+	fmt.Printf("\t%sA.%s = map[%s]%s{%s: %s}\n", v, f.Name, f.Key.Type, f.Value.Type, f.Key.Key, f.Value.Initial)
 }
 func (f *mapField) Reassign(v string) {
-	fmt.Printf("\t%s.%s[%s] = %s\n", v, f.Name, f.Key.Key, f.Value.Altered)
+	fmt.Printf("\t%sA.%s[%s] = %s\n", v, f.Name, f.Key.Key, f.Value.Altered)
 }
 func (f *mapField) Compare(v string) {
-	fmt.Printf("\tif %sCloned.%s[%s] != %s {\n", v, f.Name, f.Key.Key, f.Value.Initial)
+	fmt.Printf("\tif %sB.%s[%s] != %s {\n", v, f.Name, f.Key.Key, f.Value.Initial)
 }
 
 func generatorForType(typ types.Type) generator {
@@ -175,9 +190,13 @@ func generatorForType(typ types.Type) generator {
 		default:
 			panic(fmt.Errorf("Unknown basic type: %s", t.Name()))
 		}
+	case (*types.Interface):
+		if t.Empty() {
+			return emptyInterfaceGenerator
+		}
 	}
 	//return stringGenerator
-	panic(fmt.Errorf("Unknown type: %#v", typ))
+	panic(fmt.Errorf("Unknown generator type: %#v", typ))
 }
 
 type generator struct {
@@ -185,6 +204,7 @@ type generator struct {
 	Key     string
 	Initial string
 	Altered string
+	Warning string
 }
 
 var stringGenerator = generator{
@@ -192,6 +212,14 @@ var stringGenerator = generator{
 	Key:     `"foo"`,
 	Initial: `"bar"`,
 	Altered: `"baz"`,
+}
+
+var emptyInterfaceGenerator = generator{
+	Type:    "interface{}",
+	Key:     "0",
+	Initial: "1",
+	Altered: "2",
+	Warning: "interface{} can contain nested data!",
 }
 
 // getDocIface returns the couchdb.Doc interface
