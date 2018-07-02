@@ -22,16 +22,6 @@ func main() {
 	generateTests(infos)
 }
 
-type mutableField struct {
-	Name string
-}
-
-type info struct {
-	PkgName string
-	PkgPath string
-	Structs map[string][]mutableField
-}
-
 func extractInfos(pkgs []string) []info {
 	infos := make([]info, 0)
 	docIface := getDocIface()
@@ -66,17 +56,25 @@ func extractInfos(pkgs []string) []info {
 			for i := 0; i < s.NumFields(); i++ {
 				field := s.Field(i)
 				// fmt.Printf(" - %d. %s - %s\n", i, field.Name(), field.Type())
-				switch field.Type().(type) {
+				switch f := field.Type().(type) {
 				case (*types.Slice):
-					// fmt.Printf("\t\tSlice\n")
-				// case (*types.Named):
-				// 	fmt.Printf("\t\tNamed\n")
-				default:
+					fields = append(fields, &sliceField{
+						Name:  field.Name(),
+						Value: generatorForType(f.Elem()),
+					})
+				case (*types.Map):
+					fields = append(fields, &mapField{
+						Name:  field.Name(),
+						Key:   generatorForType(f.Key()),
+						Value: generatorForType(f.Elem()),
+					})
+				case (*types.Named):
+					continue // FIXME
+				case (*types.Basic):
 					continue
+				default:
+					panic(fmt.Errorf("Unknown type: %#v", field.Type()))
 				}
-				fields = append(fields, mutableField{
-					Name: field.Name(),
-				})
 			}
 			if len(fields) > 0 {
 				info.Structs[name] = fields
@@ -107,17 +105,93 @@ import (
 			v := strings.ToLower(name)
 			fmt.Printf("\t%s := &%s.%s{}\n", v, info.PkgName, name)
 			for _, field := range fields {
-				fmt.Printf("\t%s.%s = []string{\"foo\"}\n", v, field.Name)
+				field.Initialize(v)
 			}
 			fmt.Printf("\t%sCloned := %s.Clone().(*%s.%s)\n", v, v, info.PkgName, name)
 			for _, field := range fields {
-				fmt.Printf("\t%s.%s[0] = \"bar\"\n", v, field.Name)
-				fmt.Printf("\tif %sCloned.%s[0] != \"foo\" {\n", v, field.Name)
-				fmt.Printf("\t\tt.Fatalf(\"Error for clone %s.%s.%s\")\n\t}\n", info.PkgName, name, field.Name)
+				field.Reassign(v)
+				field.Compare(v)
+				fmt.Printf("\t\tt.Fatalf(\"Error for clone %s.%s -> %s\")\n\t}\n", info.PkgName, name, field)
 			}
 		}
 		fmt.Printf("}\n\n")
 	}
+}
+
+type info struct {
+	PkgName string
+	PkgPath string
+	Structs map[string][]mutableField
+}
+
+type mutableField interface {
+	String() string
+	Initialize(v string)
+	Reassign(v string)
+	Compare(v string)
+}
+
+type sliceField struct {
+	Name  string
+	Value generator
+}
+
+func (f *sliceField) String() string { return f.Name }
+
+func (f *sliceField) Initialize(v string) {
+	fmt.Printf("\t%s.%s = []%s{%s}\n", v, f.Name, f.Value.Type, f.Value.Initial)
+}
+func (f *sliceField) Reassign(v string) {
+	fmt.Printf("\t%s.%s[0] = %s\n", v, f.Name, f.Value.Altered)
+}
+func (f *sliceField) Compare(v string) {
+	fmt.Printf("\tif %sCloned.%s[0] != %s {\n", v, f.Name, f.Value.Initial)
+}
+
+type mapField struct {
+	Name  string
+	Key   generator
+	Value generator
+}
+
+func (f *mapField) String() string { return f.Name }
+
+func (f *mapField) Initialize(v string) {
+	fmt.Printf("\t%s.%s = map[%s]%s{%s: %s}\n", v, f.Name, f.Key.Type, f.Value.Type, f.Key.Key, f.Value.Initial)
+}
+func (f *mapField) Reassign(v string) {
+	fmt.Printf("\t%s.%s[%s] = %s\n", v, f.Name, f.Key.Key, f.Value.Altered)
+}
+func (f *mapField) Compare(v string) {
+	fmt.Printf("\tif %sCloned.%s[%s] != %s {\n", v, f.Name, f.Key.Key, f.Value.Initial)
+}
+
+func generatorForType(typ types.Type) generator {
+	switch t := typ.(type) {
+	case (*types.Basic):
+		switch t.Name() {
+		case "string":
+			return stringGenerator
+		default:
+			panic(fmt.Errorf("Unknown basic type: %s", t.Name()))
+		}
+	}
+	//return stringGenerator
+	panic(fmt.Errorf("Unknown type: %#v", typ))
+}
+
+type generator struct {
+	Type    string
+	Key     string
+	Initial string
+	Altered string
+}
+
+var stringGenerator = generator{
+	Type:    "string",
+	Key:     `"foo"`,
+	Initial: `"bar"`,
+	Altered: `"baz"`,
 }
 
 // getDocIface returns the couchdb.Doc interface
