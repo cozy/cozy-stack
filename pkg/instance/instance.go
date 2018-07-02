@@ -172,6 +172,9 @@ func (i *Instance) SetRev(v string) { i.DocRev = v }
 func (i *Instance) Clone() couchdb.Doc {
 	cloned := *i
 
+	cloned.DomainAliases = make([]string, len(i.DomainAliases))
+	copy(cloned.DomainAliases, i.DomainAliases)
+
 	cloned.PassphraseHash = make([]byte, len(i.PassphraseHash))
 	copy(cloned.PassphraseHash, i.PassphraseHash)
 

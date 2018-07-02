@@ -77,6 +77,8 @@ func (n *Notification) Clone() couchdb.Doc {
 	for k, v := range n.Data {
 		cloned.Data[k] = v
 	}
+	cloned.PreferredChannels = make([]string, len(n.PreferredChannels))
+	copy(cloned.PreferredChannels, n.PreferredChannels)
 	return &cloned
 }
 
