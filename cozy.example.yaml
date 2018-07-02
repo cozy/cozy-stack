@@ -224,6 +224,9 @@ csp_whitelist:
   # style:  https://whitelisted.domain.com/
   # font:   https://whitelisted.domain.com/
 
+# It can useful to disable the CSP policy to debug and test things in local
+# disable_csp: true
+
 log:
   # logger level (debug, info, warning, panic, fatal) - flags: --log-level
   level: info

@@ -15,7 +15,7 @@ cozy-stack konnectors install [slug] [sourceurl] [flags]
 ### Examples
 
 ```
-$ cozy-stack konnectors install --domain cozy.tools:8080 trainline 'git://github.com/cozy/cozy-konnector-trainline.git#build'
+$ cozy-stack konnectors install --domain cozy.tools:8080 trainline registry://trainline/stable
 ```
 
 ### Options
