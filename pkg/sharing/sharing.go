@@ -71,6 +71,10 @@ func (s *Sharing) Clone() couchdb.Doc {
 	cloned := *s
 	cloned.Rules = make([]Rule, len(s.Rules))
 	copy(cloned.Rules, s.Rules)
+	for i := range cloned.Rules {
+		cloned.Rules[i].Values = make([]string, len(s.Rules[i].Values))
+		copy(cloned.Rules[i].Values, s.Rules[i].Values)
+	}
 	cloned.Members = make([]Member, len(s.Members))
 	copy(cloned.Members, s.Members)
 	cloned.Credentials = make([]Credentials, len(s.Credentials))
