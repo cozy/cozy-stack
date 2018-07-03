@@ -32,7 +32,7 @@ func extractInfos(pkgs []string) []info {
 			panic(err)
 		}
 
-		info := info{
+		in := info{
 			PkgName: pkg.Name(),
 			PkgPath: pkg.Path(),
 			Structs: make(map[string][]mutableField),
@@ -56,20 +56,20 @@ func extractInfos(pkgs []string) []info {
 			for i := 0; i < s.NumFields(); i++ {
 				field := s.Field(i)
 				// fmt.Printf(" - %d. %s - %s\n", i, field.Name(), field.Type())
-				switch f := field.Type().(type) {
+				switch t := field.Type().(type) {
 				case (*types.Slice):
 					fields = append(fields, &sliceField{
 						Name:  field.Name(),
-						Value: generatorForType(f.Elem()),
+						Value: generatorForType(t.Elem()),
 					})
 				case (*types.Map):
 					fields = append(fields, &mapField{
 						Name:  field.Name(),
-						Key:   generatorForType(f.Key()),
-						Value: generatorForType(f.Elem()),
+						Key:   generatorForType(t.Key()),
+						Value: generatorForType(t.Elem()),
 					})
 				case (*types.Named):
-					named := fmt.Sprintf("%s.%s", f.Obj().Pkg().Name(), f.Obj().Name())
+					named := fmt.Sprintf("%s.%s", t.Obj().Pkg().Name(), t.Obj().Name())
 					switch named {
 					case "time.Time", "time.Duration":
 						// These structs are known to be safe
@@ -86,11 +86,11 @@ func extractInfos(pkgs []string) []info {
 				}
 			}
 			if len(fields) > 0 {
-				info.Structs[name] = fields
+				in.Structs[name] = fields
 			}
 		}
-		if len(info.Structs) > 0 {
-			infos = append(infos, info)
+		if len(in.Structs) > 0 {
+			infos = append(infos, in)
 		}
 	}
 	return infos
@@ -116,7 +116,11 @@ import (
 			for _, field := range fields {
 				field.Initialize(v)
 			}
-			fmt.Printf("\t%sB := %sA.Clone().(*%s.%s)\n", v, v, info.PkgName, name)
+			ptr := "*"
+			if name == "JSONDoc" {
+				ptr = ""
+			}
+			fmt.Printf("\t%sB := %sA.Clone().(%s%s.%s)\n", v, v, ptr, info.PkgName, name)
 			for _, field := range fields {
 				field.Reassign(v)
 				field.Compare(v)
