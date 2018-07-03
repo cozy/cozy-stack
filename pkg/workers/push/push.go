@@ -18,8 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/sirupsen/logrus"
 
-	multierror "github.com/hashicorp/go-multierror"
-
 	fcm "github.com/appleboy/go-fcm"
 
 	apns "github.com/sideshow/apns2"
@@ -121,7 +119,6 @@ func Worker(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	var errm error
 	for _, c := range cs {
 		if c.NotificationDeviceToken != "" {
 			err = push(ctx, c, &msg)
@@ -131,12 +128,11 @@ func Worker(ctx *jobs.WorkerContext) error {
 						"device_id":       c.ID(),
 						"device_platform": c.NotificationPlatform,
 					}).
-					Warnf("could not send notification on device")
-				errm = multierror.Append(errm, err)
+					Warnf("could not send notification on device: %s", err)
 			}
 		}
 	}
-	return errm
+	return nil
 }
 
 func push(ctx *jobs.WorkerContext, c *oauth.Client, msg *Message) error {
@@ -209,18 +205,12 @@ func pushToFirebase(ctx *jobs.WorkerContext, c *oauth.Client, msg *Message) erro
 		return nil
 	}
 
-	var errm error
 	for _, result := range res.Results {
 		if err = result.Error; err != nil {
-			if errm != nil {
-				errm = multierror.Append(errm, err)
-			} else {
-				errm = err
-			}
+			return err
 		}
 	}
-
-	return errm
+	return nil
 }
 
 func pushToAPNS(ctx *jobs.WorkerContext, c *oauth.Client, msg *Message) error {
