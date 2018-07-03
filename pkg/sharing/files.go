@@ -224,6 +224,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) (*vfs
 	})
 	if err = fs.CreateDir(dir); err != nil {
 		dir.DocName = conflictName(dir.DocName, "")
+		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
 		if err = fs.CreateDir(dir); err != nil {
 			inst.Logger().WithField("nspace", "sharing").
 				Errorf("Cannot create the sharing directory: %s", err)

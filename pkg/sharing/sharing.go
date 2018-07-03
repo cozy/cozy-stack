@@ -208,7 +208,19 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 		}
 	}
 
-	return couchdb.CreateNamedDocWithDB(inst, s)
+	err := couchdb.CreateNamedDocWithDB(inst, s)
+	if couchdb.IsConflictError(err) {
+		old, errb := FindSharing(inst, s.SID)
+		if errb != nil {
+			return errb
+		}
+		if old.Active {
+			return ErrInvalidSharing
+		}
+		s.SRev = old.SRev
+		err = couchdb.UpdateDoc(inst, s)
+	}
+	return err
 }
 
 // Revoke remove the credentials for all members, contact them, removes the

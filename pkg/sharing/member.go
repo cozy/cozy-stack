@@ -112,13 +112,31 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 		Email:    addr.Email,
 		Instance: c.PrimaryCozyURL(),
 	}
-	s.Members = append(s.Members, m)
+	idx := -1
+	for i, member := range s.Members {
+		if i == 0 {
+			continue // Skip the owner
+		}
+		if m.Email == member.Email && member.Status != MemberStatusReady {
+			idx = i
+			s.Members[i].Status = m.Status
+			s.Members[i].Name = m.Name
+			s.Members[i].Instance = m.Instance
+		}
+	}
+	if idx < 1 {
+		s.Members = append(s.Members, m)
+	}
 	state := crypto.Base64Encode(crypto.GenerateRandomBytes(StateLen))
 	creds := Credentials{
 		State:  string(state),
 		XorKey: MakeXorKey(),
 	}
-	s.Credentials = append(s.Credentials, creds)
+	if idx < 1 {
+		s.Credentials = append(s.Credentials, creds)
+	} else {
+		s.Credentials[idx-1] = creds
+	}
 	return nil
 }
 
@@ -232,7 +250,23 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []stri
 	if err = json.NewDecoder(res.Body).Decode(&states); err != nil {
 		return err
 	}
-	s.Members = append(s.Members, api.members...)
+	for _, m := range api.members {
+		found := false
+		for i, member := range s.Members {
+			if i == 0 {
+				continue // skip the owner
+			}
+			if m.Email == member.Email && member.Status != MemberStatusReady {
+				found = true
+				s.Members[i].Status = m.Status
+				s.Members[i].Name = m.Name
+				s.Members[i].Instance = m.Instance
+			}
+		}
+		if !found {
+			s.Members = append(s.Members, m)
+		}
+	}
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return err
 	}
