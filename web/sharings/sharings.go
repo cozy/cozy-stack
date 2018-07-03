@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
@@ -182,8 +183,8 @@ func AnswerSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, ac, nil)
 }
 
-// AddRecipient is used to add a member to a sharing
-func AddRecipient(c echo.Context) error {
+// AddRecipients is used to add a member to a sharing
+func AddRecipients(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
 	s, err := sharing.FindSharing(inst, sharingID)
@@ -200,27 +201,59 @@ func AddRecipient(c echo.Context) error {
 	}
 	if rel, ok := obj.GetRelationship("recipients"); ok {
 		if data, ok := rel.Data.([]interface{}); ok {
+			var ids []string
 			for _, ref := range data {
 				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-					if err = s.AddContact(inst, id); err != nil {
-						return err
-					}
+					ids = append(ids, id)
 				}
 			}
-			var codes map[string]string
-			if s.Owner && s.PreviewPath != "" {
-				if codes, err = s.CreatePreviewPermissions(inst); err != nil {
-					return wrapErrors(err)
-				}
+			if s.Owner {
+				err = s.AddContacts(inst, ids)
+			} else {
+				err = s.DelegateAddContacts(inst, ids)
 			}
-			if err = s.SendMails(inst, codes); err != nil {
+			if err != nil {
+				return wrapErrors(err)
+			}
+		}
+	}
+	return jsonapiSharingWithDocs(c, s)
+}
+
+// AddRecipientsDelegated is used to add a member to a sharing on the owner's cozy
+// when it's the recipient's cozy that sends the mail invitation.
+func AddRecipientsDelegated(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if !s.Owner || !s.Open {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	var body sharing.Sharing
+	obj, err := jsonapi.Bind(c.Request().Body, &body)
+	if err != nil {
+		return jsonapi.BadJSON()
+	}
+	states := make(map[string]string)
+	if rel, ok := obj.GetRelationship("recipients"); ok {
+		if data, ok := rel.Data.([]interface{}); ok {
+			for _, ref := range data {
+				contact, _ := ref.(map[string]interface{})
+				email, _ := contact["email"].(string)
+				state := s.AddDelegatedContact(inst, email)
+				states[email] = state
+			}
+			if err := couchdb.UpdateDoc(inst, s); err != nil {
 				return wrapErrors(err)
 			}
 			cloned := s.Clone().(*sharing.Sharing)
 			go cloned.NotifyRecipients(inst, nil)
 		}
 	}
-	return jsonapiSharingWithDocs(c, s)
+	return c.JSON(http.StatusOK, states)
 }
 
 // PutRecipients is used to update the members list on the recipients cozy
@@ -403,33 +436,52 @@ func PostDiscovery(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	var member *sharing.Member
-	if sharecode != "" {
-		member, err = s.FindMemberBySharecode(inst, sharecode)
+	var redirectURL, email string
+
+	if s.Owner {
+		var member *sharing.Member
+		if sharecode != "" {
+			member, err = s.FindMemberBySharecode(inst, sharecode)
+			if err != nil {
+				return wrapErrors(err)
+			}
+		} else {
+			member, err = s.FindMemberByState(state)
+			if err != nil {
+				return wrapErrors(err)
+			}
+		}
+		email = member.Email
+		if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
+			if c.Request().Header.Get("Accept") == "application/json" {
+				return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
+			}
+			return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, member)
+		}
+		redirectURL, err = member.GenerateOAuthURL(s)
 		if err != nil {
 			return wrapErrors(err)
 		}
+		sharing.PersistInstanceURL(inst, member.Email, member.Instance)
 	} else {
-		member, err = s.FindMemberByState(state)
+		redirectURL, err = s.DelegateDiscovery(inst, state, cozyURL)
 		if err != nil {
+			if err == sharing.ErrInvalidURL {
+				if c.Request().Header.Get("Accept") == "application/json" {
+					return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
+				}
+				return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, &sharing.Member{})
+			}
 			return wrapErrors(err)
 		}
-	}
-	if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
-		if c.Request().Header.Get("Accept") == "application/json" {
-			return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
-		}
-		return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, member)
 	}
 
-	redirectURL, err := member.GenerateOAuthURL(s)
-	if err != nil {
-		return wrapErrors(err)
-	}
 	if c.Request().Header.Get("Accept") == "application/json" {
-		return c.JSON(http.StatusOK, echo.Map{
-			"redirect": redirectURL,
-		})
+		m := echo.Map{"redirect": redirectURL}
+		if email != "" {
+			m["email"] = email
+		}
+		return c.JSON(http.StatusOK, m)
 	}
 	return c.Redirect(http.StatusFound, redirectURL)
 }
@@ -443,13 +495,16 @@ func Routes(router *echo.Group) {
 	router.POST("/:sharing-id/answer", AnswerSharing)
 
 	// Managing recipients
-	router.POST("/:sharing-id/recipients", AddRecipient)
+	router.POST("/:sharing-id/recipients", AddRecipients)
 	router.PUT("/:sharing-id/recipients", PutRecipients, checkSharingPermissions)
 	router.DELETE("/:sharing-id/recipients", RevokeSharing)                             // On the sharer
 	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                    // On the sharer
 	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingPermissions)    // On the recipient
 	router.DELETE("/:sharing-id/recipients/self", RevokeRecipientBySelf)                // On the recipient
 	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif, checkSharingPermissions) // On the sharer
+
+	// Delegated routes for open sharing
+	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingPermissions)
 
 	router.GET("/doctype/:doctype", GetSharingsInfoByDocType)
 

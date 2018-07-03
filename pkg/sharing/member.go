@@ -7,15 +7,18 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"time"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 const (
@@ -71,6 +74,28 @@ type Credentials struct {
 	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
+// AddContacts adds a list of contacts on the sharer cozy
+func (s *Sharing) AddContacts(inst *instance.Instance, contactIDs []string) error {
+	for _, id := range contactIDs {
+		if err := s.AddContact(inst, id); err != nil {
+			return err
+		}
+	}
+	var err error
+	var codes map[string]string
+	if s.PreviewPath != "" {
+		if codes, err = s.CreatePreviewPermissions(inst); err != nil {
+			return err
+		}
+	}
+	if err = s.SendMails(inst, codes); err != nil {
+		return err
+	}
+	cloned := s.Clone().(*Sharing)
+	go cloned.NotifyRecipients(inst, nil)
+	return nil
+}
+
 // AddContact adds the contact with the given identifier
 func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 	c, err := contacts.Find(inst, contactID)
@@ -97,6 +122,190 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 	return nil
 }
 
+// APIDelegateAddContacts is used to serialize a request to add contacts to
+// JSON-API
+type APIDelegateAddContacts struct {
+	sid     string
+	members []Member
+}
+
+// ID returns the sharing qualified identifier
+func (a *APIDelegateAddContacts) ID() string { return a.sid }
+
+// Rev returns the sharing revision
+func (a *APIDelegateAddContacts) Rev() string { return "" }
+
+// DocType returns the sharing document type
+func (a *APIDelegateAddContacts) DocType() string { return consts.Sharings }
+
+// SetID changes the sharing qualified identifier
+func (a *APIDelegateAddContacts) SetID(id string) {}
+
+// SetRev changes the sharing revision
+func (a *APIDelegateAddContacts) SetRev(rev string) {}
+
+// Clone is part of jsonapi.Object interface
+func (a *APIDelegateAddContacts) Clone() couchdb.Doc {
+	panic("APIDelegateAddContacts must not be cloned")
+}
+
+// Links is part of jsonapi.Object interface
+func (a *APIDelegateAddContacts) Links() *jsonapi.LinksList { return nil }
+
+// Included is part of jsonapi.Object interface
+func (a *APIDelegateAddContacts) Included() []jsonapi.Object { return nil }
+
+// Relationships is part of jsonapi.Object interface
+func (a *APIDelegateAddContacts) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{
+		"recipients": jsonapi.Relationship{
+			Data: a.members,
+		},
+	}
+}
+
+var _ jsonapi.Object = (*APIDelegateAddContacts)(nil)
+
+// DelegateAddContacts adds a list of contacts on a recipient cozy. Part of
+// the work is delegated to owner cozy, but the invitation mail is still sent
+// from the recipient cozy.
+func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []string) error {
+	api := &APIDelegateAddContacts{}
+	api.sid = s.SID
+	for _, id := range contactIDs {
+		c, err := contacts.Find(inst, id)
+		if err != nil {
+			return err
+		}
+		addr, err := c.ToMailAddress()
+		if err != nil {
+			return err
+		}
+		m := Member{
+			Status:   MemberStatusMailNotSent,
+			Name:     addr.Name,
+			Email:    addr.Email,
+			Instance: c.PrimaryCozyURL(),
+		}
+		api.members = append(api.members, m)
+	}
+	data, err := jsonapi.MarshalObject(api)
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(jsonapi.Document{Data: &data})
+	if err != nil {
+		return err
+	}
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return err
+	}
+	c := &s.Credentials[0]
+	opts := &request.Options{
+		Method: http.MethodPost,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/recipients/delegated",
+		Headers: request.Headers{
+			"Accept":        "application/json",
+			"Content-Type":  "application/vnd.api+json",
+			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+		},
+		Body: bytes.NewReader(body),
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if res, err = RefreshToken(inst, s, &s.Members[0], c, opts, body); err != nil {
+			return err
+		}
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return ErrInternalServerError
+	}
+	var states map[string]string
+	if err = json.NewDecoder(res.Body).Decode(&states); err != nil {
+		return err
+	}
+	s.Members = append(s.Members, api.members...)
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return err
+	}
+	return s.SendMailsToMembers(inst, api.members, states)
+}
+
+// AddDelegatedContact adds a contact on the owner cozy, but for a contact from
+// a recipient (open_sharing: true only)
+func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email string) string {
+	m := Member{
+		Status: MemberStatusPendingInvitation,
+		Email:  email,
+	}
+	s.Members = append(s.Members, m)
+	state := crypto.Base64Encode(crypto.GenerateRandomBytes(StateLen))
+	creds := Credentials{
+		State:  string(state),
+		XorKey: MakeXorKey(),
+	}
+	s.Credentials = append(s.Credentials, creds)
+	return creds.State
+}
+
+// DelegateDiscovery delegates the POST discovery when a recipient has invited
+// another person to a sharing, and this person accepts the sharing on the
+// recipient cozy. The calls is delegated to the owner cozy.
+func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL string) (string, error) {
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return "", err
+	}
+	v := url.Values{}
+	v.Add("state", state)
+	v.Add("url", cozyURL)
+	body := []byte(v.Encode())
+	c := &s.Credentials[0]
+	opts := &request.Options{
+		Method: http.MethodPost,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/discovery",
+		Headers: request.Headers{
+			"Accept":        "application/json",
+			"Content-Type":  "application/x-www-form-urlencoded",
+			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+		},
+		Body: bytes.NewReader(body),
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return "", err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if res, err = RefreshToken(inst, s, &s.Members[0], c, opts, body); err != nil {
+			return "", err
+		}
+	}
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusBadRequest {
+		return "", ErrInvalidURL
+	}
+	if res.StatusCode/100 != 2 {
+		return "", ErrInternalServerError
+	}
+	var success map[string]string
+	if err = json.NewDecoder(res.Body).Decode(&success); err != nil {
+		return "", err
+	}
+	PersistInstanceURL(inst, success["email"], cozyURL)
+	return success["redirect"], nil
+}
+
 // UpdateRecipients updates the list of recipients
 func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) error {
 	for i, m := range members {
@@ -113,6 +322,29 @@ func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) er
 		s.Members[i].Status = m.Status
 	}
 	return couchdb.UpdateDoc(inst, s)
+}
+
+// PersistInstanceURL updates the io.cozy.contacts document with the Cozy
+// instance URL
+func PersistInstanceURL(inst *instance.Instance, email, cozyURL string) {
+	if email == "" || cozyURL == "" {
+		return
+	}
+	contact, err := contacts.FindByEmail(inst, email)
+	if err != nil {
+		return
+	}
+	for _, cozy := range contact.Cozy {
+		if cozy.URL == cozyURL {
+			return
+		}
+	}
+	cozy := contacts.Cozy{URL: cozyURL}
+	contact.Cozy = append([]contacts.Cozy{cozy}, contact.Cozy...)
+	if err := couchdb.UpdateDoc(inst, contact); err != nil {
+		inst.Logger().WithField("nspace", "sharing").
+			Warnf("Error on saving contact: %s", err)
+	}
 }
 
 // FindMemberByState returns the member that is linked to the sharing by
@@ -306,6 +538,9 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 		}
 	}()
+
+	// XXX Wait a bit to avoid pressure on recipients cozy after delegated operations
+	time.Sleep(3 * time.Second)
 
 	active := false
 	for i, m := range s.Members {

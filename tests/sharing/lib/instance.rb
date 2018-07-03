@@ -1,5 +1,5 @@
 class Instance
-  attr_reader :stack, :name, :domain, :passphrase, :email, :client
+  attr_reader :stack, :name, :domain, :passphrase, :email
 
   def self.create(opts = {})
     stack = Stack.get opts.delete(:port)
@@ -15,11 +15,14 @@ class Instance
     @domain = opts[:domain] || "#{@name.downcase}.test.cozy.tools:#{stack.port}"
     @passphrase = opts[:passphrase] || "cozy"
     @email = opts[:email] || "#{@name.downcase}+test@cozy.tools"
-    @client = RestClient::Resource.new "http://#{@domain}"
   end
 
   def install_app(slug)
     @stack.install_app self, slug
+  end
+
+  def client
+    @client ||= RestClient::Resource.new url
   end
 
   def url(obj = nil)
@@ -31,7 +34,7 @@ class Instance
       @stack.install_app self, "drive"
       "http://drive.#{@domain}/"
     else
-      "http://#{@domain}/"
+      "http://#{@domain}"
     end
   end
 
@@ -64,8 +67,8 @@ class Instance
     sharing.couch_id = JSON.parse(res.body)["data"]["id"]
   end
 
-  def accept(sharing)
+  def accept(sharing, sharer = nil)
     @stack.install_app self, "drive"
-    Accept.new(sharing).on self
+    Accept.new(sharing, sharer).on self
   end
 end
