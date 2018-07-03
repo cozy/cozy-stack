@@ -27,3 +27,9 @@ func PutLocal(db Database, doctype, id string, doc map[string]interface{}) error
 	doc["_rev"] = out.Rev
 	return nil
 }
+
+// DeleteLocal will delete a local document in CouchDB.
+func DeleteLocal(db Database, doctype, id string) error {
+	u := "_local/" + url.PathEscape(id)
+	return makeRequest(db, doctype, http.MethodDelete, u, nil, nil)
+}

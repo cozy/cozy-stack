@@ -266,6 +266,11 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance) error {
 			return err
 		}
 	}
+	if s.FirstFilesRule() != nil {
+		if err := s.RemoveSharingDir(inst); err != nil {
+			return err
+		}
+	}
 	s.Active = false
 	return couchdb.UpdateDoc(inst, s)
 }
@@ -309,6 +314,11 @@ func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
 	}
 	if s.WithPropagation() {
 		if err := RemoveSharedRefs(inst, s.SID); err != nil {
+			return err
+		}
+	}
+	if s.FirstFilesRule() != nil {
+		if err := s.RemoveSharingDir(inst); err != nil {
 			return err
 		}
 	}

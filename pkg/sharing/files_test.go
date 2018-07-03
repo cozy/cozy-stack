@@ -81,6 +81,21 @@ func TestSharingDir(t *testing.T) {
 		assert.Equal(t, consts.Sharings, d2.ReferencedBy[0].Type)
 		assert.Equal(t, s.SID, d2.ReferencedBy[0].ID)
 	}
+
+	err = s.RemoveSharingDir(inst)
+	assert.NoError(t, err)
+
+	key := []string{consts.Sharings, s.SID}
+	end := []string{key[0], key[1], couchdb.MaxString}
+	req := &couchdb.ViewRequest{
+		StartKey:    key,
+		EndKey:      end,
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+	err = couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res)
+	assert.NoError(t, err)
+	assert.Len(t, res.Rows, 0)
 }
 
 func TestCreateDir(t *testing.T) {

@@ -394,6 +394,12 @@ func TestLocalDocuments(t *testing.T) {
 	out, err := GetLocal(TestPrefix, TestDoctype, id)
 	assert.NoError(t, err)
 	assert.Equal(t, "baz", out["bar"])
+
+	err = DeleteLocal(TestPrefix, TestDoctype, id)
+	assert.NoError(t, err)
+
+	_, err = GetLocal(TestPrefix, TestDoctype, id)
+	assert.True(t, IsNotFoundError(err))
 }
 
 func assertGotEvent(t *testing.T, eventType, id string) bool {
