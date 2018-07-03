@@ -202,7 +202,7 @@ auto_updates:
 
 # Registries used for applications and konnectors
 registries:
-  - https://apps-registry.cozy.io/
+  - https://apps-registry.cozycloud.cc/
 
 notifications:
   # Activate development APIs (iOS only)
