@@ -227,6 +227,29 @@ func (s *Sharing) UpdateLastSequenceNumber(inst *instance.Instance, m *Member, w
 	return couchdb.PutLocal(inst, consts.Shared, id+"/"+worker, result)
 }
 
+// ClearLastSequenceNumbers removes the last sequence numbers for a member
+func (s *Sharing) ClearLastSequenceNumbers(inst *instance.Instance, m *Member) error {
+	errr := s.clearLastSequenceNumber(inst, m, "replicator")
+	erru := s.clearLastSequenceNumber(inst, m, "upload")
+	if errr != nil {
+		return errr
+	}
+	return erru
+}
+
+// clearLastSequenceNumber removes a last sequence number for a member on a given worker
+func (s *Sharing) clearLastSequenceNumber(inst *instance.Instance, m *Member, worker string) error {
+	id, err := s.replicationID(m)
+	if err != nil {
+		return err
+	}
+	err = couchdb.DeleteLocal(inst, consts.Shared, id+"/"+worker)
+	if !couchdb.IsNotFoundError(err) {
+		return nil
+	}
+	return err
+}
+
 // replicationID gives an identifier for this replicator
 func (s *Sharing) replicationID(m *Member) (string, error) {
 	for i := range s.Members {
