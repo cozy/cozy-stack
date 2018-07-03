@@ -313,7 +313,7 @@ revision (4-4aa). The resolution takes 4 steps:
   * a `selector` (by default, it’s the `id`) and `values` (one identifier, a
     list of identifiers, files and folders inside a folder, files that are
     referenced by the same document, documents bound to a previous sharing rule)
-  * `local`: by default `false`, but it can false `true` for documents that are
+  * `local`: by default `false`, but it can be `true` for documents that are
     useful for the preview page but doesn’t need to be send to the recipients
     (e.g. a setting document of the application)
   * `add`: a behavior when a new document matches this rule (the document is
