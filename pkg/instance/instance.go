@@ -521,11 +521,16 @@ func (i *Instance) OnboardedRedirection() *url.URL {
 
 func (i *Instance) installApp(slug string) error {
 	source := "registry://" + slug + "/stable"
+	registries, err := i.Registries()
+	if err != nil {
+		return err
+	}
 	inst, err := apps.NewInstaller(i, i.AppsCopier(apps.Webapp), &apps.InstallerOptions{
-		Operation: apps.Install,
-		Type:      apps.Webapp,
-		SourceURL: source,
-		Slug:      slug,
+		Operation:  apps.Install,
+		Type:       apps.Webapp,
+		SourceURL:  source,
+		Slug:       slug,
+		Registries: registries,
 	})
 	if err != nil {
 		return err
