@@ -1,6 +1,8 @@
 package intents
 
 import (
+	"strings"
+
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -61,8 +63,12 @@ func (in *Intent) Save(instance *instance.Instance) error {
 // GenerateHref creates the href where the service can be called for an intent
 func (in *Intent) GenerateHref(instance *instance.Instance, slug, target string) string {
 	u := instance.SubDomain(slug)
-	if len(target) > 0 {
-		u.Path = target
+	parts := strings.SplitN(target, "#", 2)
+	if len(parts[0]) > 0 {
+		u.Path = parts[0]
+	}
+	if len(parts) == 2 && len(parts[1]) > 0 {
+		u.Fragment = parts[1]
 	}
 	u.RawQuery = "intent=" + in.ID()
 	return u.String()
