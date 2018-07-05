@@ -645,7 +645,7 @@ func TestCheckPermissions(t *testing.T) {
 		},
 	}
 	assert.NoError(t, other.BeOwner(aliceInstance, "drive"))
-	assert.NoError(t, other.AddContact(aliceInstance, bobContact.ID()))
+	assert.NoError(t, other.AddContact(aliceInstance, bobContact.ID(), false))
 	_, err = other.Create(aliceInstance)
 	assert.NoError(t, err)
 
