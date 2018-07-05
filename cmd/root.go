@@ -29,6 +29,8 @@ import (
 // is stored relatively to the cozy-stack binary.
 const DefaultStorageDir = "storage"
 
+const defaultDevDomain = "cozy.tools:8080"
+
 var cfgFile string
 
 // ErrUsage is returned by the cmd.Usage() method

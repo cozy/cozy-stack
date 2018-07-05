@@ -51,6 +51,20 @@ func Init(opt Options) error {
 	return nil
 }
 
+// Clone clones a logrus.Logger struct.
+func Clone(in *logrus.Logger) *logrus.Logger {
+	out := &logrus.Logger{
+		Out:       in.Out,
+		Hooks:     make(logrus.LevelHooks),
+		Formatter: in.Formatter,
+		Level:     in.Level,
+	}
+	for k, v := range in.Hooks {
+		out.Hooks[k] = v
+	}
+	return out
+}
+
 // AddDebugDomain adds the specified domain to the debug list.
 func AddDebugDomain(domain string) error {
 	if cli := opts.Redis; cli != nil {

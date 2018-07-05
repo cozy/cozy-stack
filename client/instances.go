@@ -320,7 +320,7 @@ func (c *Client) Updates(opts *UpdatesOptions) error {
 		State string `json:"state"`
 		Error string `json:"error"`
 	}
-	if err := json.NewDecoder(res.Body).Decode(&job); err != nil {
+	if err = json.NewDecoder(res.Body).Decode(&job); err != nil {
 		return err
 	}
 	for evt := range channel.Channel() {

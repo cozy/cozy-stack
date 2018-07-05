@@ -129,7 +129,7 @@ func (c *Client) JobPush(r *JobOptions) (*Job, error) {
 	}
 
 	var j *Job
-	if err := readJSONAPI(res.Body, &j); err != nil {
+	if err = readJSONAPI(res.Body, &j); err != nil {
 		return nil, err
 	}
 

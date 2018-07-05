@@ -113,15 +113,10 @@ func NewWorkerContext(workerID string, job *Job) *WorkerContext {
 	if job.ForwardLogs {
 		// we need to clone the underlying logger in order to add a specific hook
 		// only on this logger.
-		logger := *log.Logger
-		lhooks := logger.Hooks
-		logger.Hooks = make(logrus.LevelHooks)
-		for k, v := range lhooks {
-			logger.Hooks[k] = v
-		}
-		logger.AddHook(realtime.LogHook(job, realtime.GetHub(),
+		loggerClone := logger.Clone(log.Logger)
+		loggerClone.AddHook(realtime.LogHook(job, realtime.GetHub(),
 			consts.Jobs, job.ID()))
-		log.Logger = &logger
+		log.Logger = loggerClone
 	}
 
 	return &WorkerContext{

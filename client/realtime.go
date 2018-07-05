@@ -10,26 +10,36 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// RealtimeOptions contains the options to create the realtime subscription
+// channel.
 type RealtimeOptions struct {
 	DocTypes []string
 }
 
+// RealtimeChannel is used to create a realtime connection with the server. The
+// Channel method can be used to retrieve a channel on which the realtime
+// events can be received.
 type RealtimeChannel struct {
 	socket *websocket.Conn
 	ch     chan *RealtimeServerMessage
 	closed uint32
 }
 
+// RealtimeClientMessage is a struct containing the structure of the client
+// messages sent to the server.
 type RealtimeClientMessage struct {
 	Method  string      `json:"method"`
 	Payload interface{} `json:"payload"`
 }
 
+// RealtimeServerMessage is a struct containing the structure of the server
+// messages received by the client.
 type RealtimeServerMessage struct {
 	Event   string                `json:"event"`
 	Payload RealtimeServerPayload `json:"payload"`
 }
 
+// RealtimeServerPayload is the payload content of the RealtimeServerMessage.
 type RealtimeServerPayload struct {
 	// Response payload
 	Type string          `json:"type"`
@@ -42,6 +52,8 @@ type RealtimeServerPayload struct {
 	Title  string `json:"title"`
 }
 
+// RealtimeClient returns a new RealtimeChannel that instantiate a realtime
+// connection with the client server.
 func (c *Client) RealtimeClient(opts RealtimeOptions) (*RealtimeChannel, error) {
 	var scheme string
 	if c.Scheme == "https" {
@@ -105,6 +117,8 @@ func (c *Client) RealtimeClient(opts RealtimeOptions) (*RealtimeChannel, error) 
 	return channel, nil
 }
 
+// Channel returns the channe of reatime server messages received by the client
+// from the server.
 func (r *RealtimeChannel) Channel() <-chan *RealtimeServerMessage {
 	return r.ch
 }
@@ -127,6 +141,8 @@ func (r *RealtimeChannel) pump() (err error) {
 	}
 }
 
+// Close will close the underlying connection of the realtime channel and close
+// the channel of messages.
 func (r *RealtimeChannel) Close() error {
 	if atomic.CompareAndSwapUint32(&r.closed, 0, 1) {
 		err := r.socket.Close()

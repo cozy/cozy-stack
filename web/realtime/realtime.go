@@ -187,82 +187,82 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 	}
 }
 
-func ws(withAuthentication bool) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		var inst *instance.Instance
-		var db prefixer.Prefixer
+func ws(c echo.Context) error {
+	var db prefixer.Prefixer
 
-		if withAuthentication {
-			inst = middlewares.GetInstance(c)
-			db = inst
-		} else {
-			db = prefixer.GlobalPrefixer
-		}
+	// The realtime webservice can be plugged in a context without instance
+	// fetching. For instance in the administration server. In such case, we do
+	// not need authentication
+	inst, withAuthentication := middlewares.GetInstanceSafe(c)
+	if !withAuthentication {
+		db = prefixer.GlobalPrefixer
+	} else {
+		db = inst
+	}
 
-		ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
-		if err != nil {
-			return err
-		}
-		defer ws.Close()
+	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
+	if err != nil {
+		return err
+	}
+	defer ws.Close()
 
-		ws.SetReadLimit(maxMessageSize)
-		if err = ws.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-			return nil
-		}
-		ws.SetPongHandler(func(string) error {
-			return ws.SetReadDeadline(time.Now().Add(pongWait))
-		})
+	ws.SetReadLimit(maxMessageSize)
+	if err = ws.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		return nil
+	}
+	ws.SetPongHandler(func(string) error {
+		return ws.SetReadDeadline(time.Now().Add(pongWait))
+	})
 
-		ds := realtime.GetHub().Subscriber(db)
-		defer ds.Close()
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		errc := make(chan *wsError)
-		go readPump(ctx, c, inst, ws, ds, errc, withAuthentication)
+	ds := realtime.GetHub().Subscriber(db)
+	defer ds.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	errc := make(chan *wsError)
+	go readPump(ctx, c, inst, ws, ds, errc, withAuthentication)
 
-		ticker := time.NewTicker(pingPeriod)
-		defer ticker.Stop()
+	ticker := time.NewTicker(pingPeriod)
+	defer ticker.Stop()
 
-		for {
-			select {
-			case e, ok := <-errc:
-				if !ok { // Websocket has been closed by the client
-					return nil
-				}
-				if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-					return nil
-				}
-				if err := ws.WriteJSON(e); err != nil {
-					return nil
-				}
-			case e := <-ds.Channel:
-				if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-					return err
-				}
-				res := wsResponse{
-					Event: e.Verb,
-					Payload: wsResponsePayload{
-						Type: e.Doc.DocType(),
-						ID:   e.Doc.ID(),
-						Doc:  e.Doc,
-					},
-				}
-				if err := ws.WriteJSON(res); err != nil {
-					return nil
-				}
-			case <-ticker.C:
-				if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-					return err
-				}
-				if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-					return nil
-				}
+	for {
+		select {
+		case e, ok := <-errc:
+			if !ok { // Websocket has been closed by the client
+				return nil
+			}
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return nil
+			}
+			if err := ws.WriteJSON(e); err != nil {
+				return nil
+			}
+		case e := <-ds.Channel:
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return err
+			}
+			res := wsResponse{
+				Event: e.Verb,
+				Payload: wsResponsePayload{
+					Type: e.Doc.DocType(),
+					ID:   e.Doc.ID(),
+					Doc:  e.Doc,
+				},
+			}
+			if err := ws.WriteJSON(res); err != nil {
+				return nil
+			}
+		case <-ticker.C:
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return err
+			}
+			if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				return nil
 			}
 		}
 	}
 }
 
 // Routes set the routing for the realtime service
-func Routes(router *echo.Group, withAuthentication bool) {
-	router.GET("/", ws(withAuthentication))
+func Routes(router *echo.Group) {
+	router.GET("/", ws)
 }

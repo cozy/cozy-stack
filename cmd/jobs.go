@@ -66,7 +66,7 @@ var jobsRunCmd = &cobra.Command{
 func init() {
 	domain := os.Getenv("COZY_DOMAIN")
 	if domain == "" && config.IsDevRelease() {
-		domain = "cozy.tools:8080"
+		domain = defaultDevDomain
 	}
 
 	jobsCmdGroup.PersistentFlags().StringVar(&flagDomain, "domain", domain, "specify the domain name of the instance")
