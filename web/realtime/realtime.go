@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
@@ -126,26 +127,31 @@ func sendErr(ctx context.Context, errc chan *wsError, e *wsError) {
 }
 
 func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *websocket.Conn,
-	ds *realtime.DynamicSubscriber, errc chan *wsError) {
+	ds *realtime.DynamicSubscriber, errc chan *wsError, withAuthentication bool) {
 	defer close(errc)
 
-	var auth map[string]string
-	if err := ws.ReadJSON(&auth); err != nil {
-		sendErr(ctx, errc, unknownMethod(auth["method"], auth))
-		return
-	}
-	if strings.ToUpper(auth["method"]) != "AUTH" {
-		sendErr(ctx, errc, unknownMethod(auth["method"], auth))
-		return
-	}
-	if auth["payload"] == "" {
-		sendErr(ctx, errc, unauthorized(auth))
-		return
-	}
-	pdoc, err := webpermissions.ParseJWT(c, i, auth["payload"])
-	if err != nil {
-		sendErr(ctx, errc, unauthorized(auth))
-		return
+	var err error
+	var pdoc *permissions.Permission
+
+	if withAuthentication {
+		var auth map[string]string
+		if err = ws.ReadJSON(&auth); err != nil {
+			sendErr(ctx, errc, unknownMethod(auth["method"], auth))
+			return
+		}
+		if strings.ToUpper(auth["method"]) != "AUTH" {
+			sendErr(ctx, errc, unknownMethod(auth["method"], auth))
+			return
+		}
+		if auth["payload"] == "" {
+			sendErr(ctx, errc, unauthorized(auth))
+			return
+		}
+		pdoc, err = webpermissions.ParseJWT(c, i, auth["payload"])
+		if err != nil {
+			sendErr(ctx, errc, unauthorized(auth))
+			return
+		}
 	}
 
 	for {
@@ -165,7 +171,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			sendErr(ctx, errc, missingType(cmd))
 			continue
 		}
-		if !pdoc.Permissions.AllowWholeType(permissions.GET, cmd.Payload.Type) {
+		if withAuthentication && !pdoc.Permissions.AllowWholeType(permissions.GET, cmd.Payload.Type) {
 			sendErr(ctx, errc, forbidden(cmd))
 			continue
 		}
@@ -181,72 +187,82 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 	}
 }
 
-func ws(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+func ws(withAuthentication bool) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		var inst *instance.Instance
+		var db prefixer.Prefixer
 
-	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
-	if err != nil {
-		return err
-	}
-	defer ws.Close()
+		if withAuthentication {
+			inst = middlewares.GetInstance(c)
+			db = inst
+		} else {
+			db = prefixer.GlobalPrefixer
+		}
 
-	ws.SetReadLimit(maxMessageSize)
-	if err = ws.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-		return nil
-	}
-	ws.SetPongHandler(func(string) error {
-		return ws.SetReadDeadline(time.Now().Add(pongWait))
-	})
+		ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
+		if err != nil {
+			return err
+		}
+		defer ws.Close()
 
-	ds := realtime.GetHub().Subscriber(instance)
-	defer ds.Close()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	errc := make(chan *wsError)
-	go readPump(ctx, c, instance, ws, ds, errc)
+		ws.SetReadLimit(maxMessageSize)
+		if err = ws.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+			return nil
+		}
+		ws.SetPongHandler(func(string) error {
+			return ws.SetReadDeadline(time.Now().Add(pongWait))
+		})
 
-	ticker := time.NewTicker(pingPeriod)
-	defer ticker.Stop()
+		ds := realtime.GetHub().Subscriber(db)
+		defer ds.Close()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		errc := make(chan *wsError)
+		go readPump(ctx, c, inst, ws, ds, errc, withAuthentication)
 
-	for {
-		select {
-		case e, ok := <-errc:
-			if !ok { // Websocket has been closed by the client
-				return nil
-			}
-			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				return nil
-			}
-			if err := ws.WriteJSON(e); err != nil {
-				return nil
-			}
-		case e := <-ds.Channel:
-			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				return err
-			}
-			res := wsResponse{
-				Event: e.Verb,
-				Payload: wsResponsePayload{
-					Type: e.Doc.DocType(),
-					ID:   e.Doc.ID(),
-					Doc:  e.Doc,
-				},
-			}
-			if err := ws.WriteJSON(res); err != nil {
-				return nil
-			}
-		case <-ticker.C:
-			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				return err
-			}
-			if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-				return nil
+		ticker := time.NewTicker(pingPeriod)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case e, ok := <-errc:
+				if !ok { // Websocket has been closed by the client
+					return nil
+				}
+				if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+					return nil
+				}
+				if err := ws.WriteJSON(e); err != nil {
+					return nil
+				}
+			case e := <-ds.Channel:
+				if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+					return err
+				}
+				res := wsResponse{
+					Event: e.Verb,
+					Payload: wsResponsePayload{
+						Type: e.Doc.DocType(),
+						ID:   e.Doc.ID(),
+						Doc:  e.Doc,
+					},
+				}
+				if err := ws.WriteJSON(res); err != nil {
+					return nil
+				}
+			case <-ticker.C:
+				if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+					return err
+				}
+				if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+					return nil
+				}
 			}
 		}
 	}
 }
 
 // Routes set the routing for the realtime service
-func Routes(router *echo.Group) {
-	router.GET("/", ws)
+func Routes(router *echo.Group, withAuthentication bool) {
+	router.GET("/", ws(withAuthentication))
 }

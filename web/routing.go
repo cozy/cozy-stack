@@ -153,7 +153,7 @@ func SetupRoutes(router *echo.Echo) error {
 		notifications.Routes(router.Group("/notifications", mws...))
 		move.Routes(router.Group("/move", mws...))
 		permissions.Routes(router.Group("/permissions", mws...))
-		realtime.Routes(router.Group("/realtime", mws...))
+		realtime.Routes(router.Group("/realtime", mws...), true /* = with authentication */)
 		remote.Routes(router.Group("/remote", mws...))
 		sharings.Routes(router.Group("/sharings", mws...))
 
@@ -208,6 +208,7 @@ func SetupAdminRoutes(router *echo.Echo) error {
 	instances.Routes(router.Group("/instances", mws...))
 	version.Routes(router.Group("/version", mws...))
 	metrics.Routes(router.Group("/metrics", mws...))
+	realtime.Routes(router.Group("/realtime", mws...), false /* = without authentication */)
 
 	setupRecover(router)
 
