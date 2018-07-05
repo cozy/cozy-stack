@@ -10,15 +10,17 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metrics"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
 var (
 	defaultConcurrency  = runtime.NumCPU()
-	defaultMaxExecCount = 3
+	defaultMaxExecCount = 1
 	defaultRetryDelay   = 60 * time.Millisecond
 	defaultTimeout      = 10 * time.Second
 )
@@ -106,6 +108,21 @@ func NewWorkerContext(workerID string, job *Job) *WorkerContext {
 		WithField("job_id", job.ID()).
 		WithField("worker_id", workerID).
 		WithField("nspace", "jobs")
+
+	if job.ForwardLogs {
+		// we need to clone the underlying logger in order to add a specific hook
+		// only on this logger.
+		logger := *log.Logger
+		lhooks := logger.Hooks
+		logger.Hooks = make(logrus.LevelHooks)
+		for k, v := range lhooks {
+			logger.Hooks[k] = v
+		}
+		logger.AddHook(realtime.LogHook(job, realtime.GetHub(),
+			consts.Jobs, job.ID()))
+		log.Logger = &logger
+	}
+
 	return &WorkerContext{
 		Context: ctx,
 		job:     job,
