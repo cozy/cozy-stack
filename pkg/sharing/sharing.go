@@ -71,6 +71,10 @@ func (s *Sharing) Clone() couchdb.Doc {
 	cloned := *s
 	cloned.Rules = make([]Rule, len(s.Rules))
 	copy(cloned.Rules, s.Rules)
+	for i := range cloned.Rules {
+		cloned.Rules[i].Values = make([]string, len(s.Rules[i].Values))
+		copy(cloned.Rules[i].Values, s.Rules[i].Values)
+	}
 	cloned.Members = make([]Member, len(s.Members))
 	copy(cloned.Members, s.Members)
 	cloned.Credentials = make([]Credentials, len(s.Credentials))
@@ -204,7 +208,19 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 		}
 	}
 
-	return couchdb.CreateNamedDocWithDB(inst, s)
+	err := couchdb.CreateNamedDocWithDB(inst, s)
+	if couchdb.IsConflictError(err) {
+		old, errb := FindSharing(inst, s.SID)
+		if errb != nil {
+			return errb
+		}
+		if old.Active {
+			return ErrInvalidSharing
+		}
+		s.SRev = old.SRev
+		err = couchdb.UpdateDoc(inst, s)
+	}
+	return err
 }
 
 // Revoke remove the credentials for all members, contact them, removes the
@@ -218,6 +234,9 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 	for i := range s.Credentials {
 		if err := s.RevokeMember(inst, &s.Members[i+1], &s.Credentials[i]); err != nil {
 			errm = multierror.Append(errm, err)
+		}
+		if err := s.ClearLastSequenceNumbers(inst, &s.Members[i+1]); err != nil {
+			return err
 		}
 	}
 	if err := s.RemoveTriggers(inst); err != nil {
@@ -243,6 +262,9 @@ func (s *Sharing) RevokeRecipient(inst *instance.Instance, index int) error {
 	if err := s.RevokeMember(inst, &s.Members[index], &s.Credentials[index-1]); err != nil {
 		return err
 	}
+	if err := s.ClearLastSequenceNumbers(inst, &s.Members[index]); err != nil {
+		return err
+	}
 	return s.NoMoreRecipient(inst)
 }
 
@@ -257,8 +279,16 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance) error {
 	if err := s.RemoveTriggers(inst); err != nil {
 		return err
 	}
+	if err := s.ClearLastSequenceNumbers(inst, &s.Members[0]); err != nil {
+		return err
+	}
 	if s.WithPropagation() {
 		if err := RemoveSharedRefs(inst, s.SID); err != nil {
+			return err
+		}
+	}
+	if s.FirstFilesRule() != nil {
+		if err := s.RemoveSharingDir(inst); err != nil {
 			return err
 		}
 	}
@@ -303,8 +333,16 @@ func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
 	if err := s.RemoveTriggers(inst); err != nil {
 		return err
 	}
+	if err := s.ClearLastSequenceNumbers(inst, &s.Members[0]); err != nil {
+		return err
+	}
 	if s.WithPropagation() {
 		if err := RemoveSharedRefs(inst, s.SID); err != nil {
+			return err
+		}
+	}
+	if s.FirstFilesRule() != nil {
+		if err := s.RemoveSharingDir(inst); err != nil {
 			return err
 		}
 	}
@@ -322,6 +360,9 @@ func (s *Sharing) RevokeRecipientByNotification(inst *instance.Instance, m *Memb
 	}
 	c := s.FindCredentials(m)
 	if err := DeleteOAuthClient(inst, m, c); err != nil {
+		return err
+	}
+	if err := s.ClearLastSequenceNumbers(inst, m); err != nil {
 		return err
 	}
 	m.Status = MemberStatusRevoked

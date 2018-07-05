@@ -224,6 +224,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) (*vfs
 	})
 	if err = fs.CreateDir(dir); err != nil {
 		dir.DocName = conflictName(dir.DocName, "")
+		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
 		if err = fs.CreateDir(dir); err != nil {
 			inst.Logger().WithField("nspace", "sharing").
 				Errorf("Cannot create the sharing directory: %s", err)
@@ -279,6 +280,23 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		return s.CreateDirForSharing(inst, rule)
 	}
 	return inst.VFS().DirByID(res.Rows[0].ID)
+}
+
+// RemoveSharingDir removes the reference on the sharing directory.
+// It should be called when a sharing is revoked, on the recipient Cozy.
+func (s *Sharing) RemoveSharingDir(inst *instance.Instance) error {
+	dir, err := s.GetSharingDir(inst)
+	if couchdb.IsNotFoundError(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	olddoc := dir.Clone().(*vfs.DirDoc)
+	dir.RemoveReferencedBy(couchdb.DocReference{
+		ID:   s.SID,
+		Type: consts.Sharings,
+	})
+	return inst.VFS().UpdateDirDoc(olddoc, dir)
 }
 
 // GetNoLongerSharedDir returns the directory used for files and folders that
