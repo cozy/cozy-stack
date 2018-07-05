@@ -86,9 +86,19 @@ func (t *AccessToken) AuthHeader() string {
 	return "Bearer " + t.AccessToken
 }
 
+// RealtimeToken implements the Tokener interface for the access token
+func (t *AccessToken) RealtimeToken() string {
+	return t.AccessToken
+}
+
 // AuthHeader implements the Tokener interface for the request
 func (r *Request) AuthHeader() string {
 	return r.token.AuthHeader()
+}
+
+// RealtimeToken implements the Tokener interface for the access token
+func (r *Request) RealtimeToken() string {
+	return r.token.RealtimeToken()
 }
 
 // defaultClient defaults some values of the given client

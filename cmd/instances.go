@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -567,10 +568,21 @@ updated.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newAdminClient()
 		if flagAllDomains {
+			logs := make(chan *client.JobLog)
+			go func() {
+				for log := range logs {
+					fmt.Printf("[%s][time:%s]", log.Level, log.Time.Format(time.RFC3339))
+					for k, v := range log.Data {
+						fmt.Printf("[%s:%s]", k, v)
+					}
+					fmt.Printf(" %s\n", log.Message)
+				}
+			}()
 			return c.Updates(&client.UpdatesOptions{
 				Slugs:         args,
 				ForceRegistry: flagForceRegistry,
 				OnlyRegistry:  flagOnlyRegistry,
+				Logs:          logs,
 			})
 		}
 		if flagDomain == "" {

@@ -86,6 +86,7 @@ type UpdatesOptions struct {
 	Slugs              []string
 	ForceRegistry      bool
 	OnlyRegistry       bool
+	Logs               chan *JobLog
 }
 
 // ImportOptions is a struct with the options for importing a tarball.
@@ -293,12 +294,63 @@ func (c *Client) Updates(opts *UpdatesOptions) error {
 		"ForceRegistry":      {strconv.FormatBool(opts.ForceRegistry)},
 		"OnlyRegistry":       {strconv.FormatBool(opts.OnlyRegistry)},
 	}
-	_, err := c.Req(&request.Options{
-		Method:     "POST",
-		Path:       "/instances/updates",
-		Queries:    q,
-		NoResponse: true,
+	channel, err := c.RealtimeClient(RealtimeOptions{
+		DocTypes: []string{"io.cozy.jobs", "io.cozy.jobs.logs"},
 	})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if opts.Logs != nil {
+			close(opts.Logs)
+		}
+		channel.Close()
+	}()
+	res, err := c.Req(&request.Options{
+		Method:  "POST",
+		Path:    "/instances/updates",
+		Queries: q,
+	})
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	var job struct {
+		ID    string `json:"_id"`
+		State string `json:"state"`
+		Error string `json:"error"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&job); err != nil {
+		return err
+	}
+	for evt := range channel.Channel() {
+		if evt.Event == "error" {
+			return fmt.Errorf("realtime: %s", evt.Payload.Title)
+		}
+		if evt.Payload.ID != job.ID {
+			continue
+		}
+		switch evt.Payload.Type {
+		case "io.cozy.jobs":
+			if err = json.Unmarshal(evt.Payload.Doc, &job); err != nil {
+				return err
+			}
+			if job.State == "errored" {
+				return fmt.Errorf("error executing updates: %s", job.Error)
+			}
+			if job.State == "done" {
+				return nil
+			}
+		case "io.cozy.jobs.logs":
+			if opts.Logs != nil {
+				var log JobLog
+				if err = json.Unmarshal(evt.Payload.Doc, &log); err != nil {
+					return err
+				}
+				opts.Logs <- &log
+			}
+		}
+	}
 	return err
 }
 
