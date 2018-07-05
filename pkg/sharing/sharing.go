@@ -85,6 +85,16 @@ func (s *Sharing) Clone() couchdb.Doc {
 // ReadOnly returns true only if the rules forbid that a change on the
 // recipient's cozy instance can be propagated to the sharer's cozy.
 func (s *Sharing) ReadOnly() bool {
+	if !s.Owner {
+		for i, m := range s.Members {
+			if i == 0 {
+				continue // skip owner
+			}
+			if m.Instance != "" {
+				return m.ReadOnly
+			}
+		}
+	}
 	for _, rule := range s.Rules {
 		if rule.HasSync() {
 			return false

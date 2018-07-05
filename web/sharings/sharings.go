@@ -519,15 +519,15 @@ func Routes(router *echo.Group) {
 
 	// Managing recipients
 	router.POST("/:sharing-id/recipients", AddRecipients)
-	router.PUT("/:sharing-id/recipients", PutRecipients, checkSharingPermissions)
-	router.DELETE("/:sharing-id/recipients", RevokeSharing)                             // On the sharer
-	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                    // On the sharer
-	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingPermissions)    // On the recipient
-	router.DELETE("/:sharing-id/recipients/self", RevokeRecipientBySelf)                // On the recipient
-	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif, checkSharingPermissions) // On the sharer
+	router.PUT("/:sharing-id/recipients", PutRecipients, checkSharingWritePermissions)
+	router.DELETE("/:sharing-id/recipients", RevokeSharing)                                  // On the sharer
+	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                         // On the sharer
+	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingWritePermissions)    // On the recipient
+	router.DELETE("/:sharing-id/recipients/self", RevokeRecipientBySelf)                     // On the recipient
+	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif, checkSharingWritePermissions) // On the sharer
 
 	// Delegated routes for open sharing
-	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingPermissions)
+	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingWritePermissions)
 
 	router.GET("/doctype/:doctype", GetSharingsInfoByDocType)
 

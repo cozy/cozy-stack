@@ -342,7 +342,7 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 			var verb permissions.VerbSet
 			// In case of read-only, the recipient only needs read access on the
 			// sharing, e.g. to notify the sharer of a revocation
-			if s.ReadOnly() {
+			if s.ReadOnly() || s.Members[i+1].ReadOnly {
 				verb = permissions.Verbs(permissions.GET)
 			} else {
 				verb = permissions.ALL
