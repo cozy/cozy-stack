@@ -59,6 +59,7 @@ type (
 		BeforeHook   WorkerBeforeHook
 		Concurrency  int
 		MaxExecCount int
+		AdminOnly    bool
 		Timeout      time.Duration
 		RetryDelay   time.Duration
 	}
