@@ -628,7 +628,8 @@ Content-Type: application/vnd.api+json
 ### POST /sharings/:sharing-id/recipients
 
 This route allows the sharer to add new recipients to a sharing. It can also
-be used by a recipient when the sharing has `open_sharing` set to true.
+be used by a recipient when the sharing has `open_sharing` set to true if the
+recipient doesn't have the `read_only` flag
 
 #### Request
 
@@ -648,7 +649,15 @@ Content-Type: application/vnd.api+json
         "data": [
           {
             "id": "ce7b1dfbd460039159f228298a29b2aa",
-            "type": "io.cozy.contacts"
+            "type": "io.cozy.contacts",
+          }
+        ]
+      },
+      "read_only_recipients": {
+        "data": [
+          {
+            "id": "e15384a1223ae2501cc1c4fa94008ea0",
+            "type": "io.cozy.contacts",
           }
         ]
       }
@@ -695,7 +704,13 @@ Content-Type: application/vnd.api+json
         {
           "status": "pending",
           "name": "Charlie",
-          "email": "charlie@example.net"
+          "email": "charlie@example.net",
+        },
+        {
+          "status": "pending",
+          "name": "Dave",
+          "email": "dave@example.net",
+          "read_only": true
         }
       ],
       "rules": [
@@ -806,7 +821,13 @@ Content-Type: application/vnd.api+json
       "status": "ready",
       "name": "Charlie",
       "public_name": "Charlie",
-      "email": "charlie@example.net"
+      "email": "charlie@example.net",
+    },
+    {
+      "status": "pending",
+      "name": "Dave",
+      "email": "dave@example.net",
+      "read_only": true
     }
   ]
 }
