@@ -189,6 +189,7 @@ func (m *MailTemplater) Execute(name, locale string, recipientName string, data 
 	var c *mailCache
 	{
 		tpl.cacheMu.Lock()
+		defer tpl.cacheMu.Unlock()
 
 		if tpl.cache == nil {
 			tpl.cache = make(map[string]*mailCache)
@@ -244,8 +245,6 @@ func (m *MailTemplater) Execute(name, locale string, recipientName string, data 
 			}
 			tpl.cache[locale] = c
 		}
-
-		tpl.cacheMu.Unlock()
 	}
 
 	body, err := c.ToBody(recipientName, data)
