@@ -244,11 +244,28 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 	if err := RemoveSharedRefs(inst, s.SID); err != nil {
 		return err
 	}
+	if s.PreviewPath != "" {
+		if err := s.RevokePreviewPermissions(inst); err != nil {
+			return err
+		}
+	}
 	s.Active = false
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return err
 	}
 	return errm
+}
+
+// RevokePreviewPermissions ensure that the permissions for the preview page
+// are no longer valid.
+func (s *Sharing) RevokePreviewPermissions(inst *instance.Instance) error {
+	perms, err := permissions.GetForSharePreview(inst, s.SID)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	perms.ExpiresAt = &now
+	return couchdb.UpdateDoc(inst, perms)
 }
 
 // RevokeRecipient revoke only one recipient on the sharer. After that, if the
