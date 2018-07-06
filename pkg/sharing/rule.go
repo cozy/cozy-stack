@@ -51,7 +51,7 @@ func (s *Sharing) ValidateRules() error {
 	if len(s.Rules) == 0 {
 		return ErrNoRules
 	}
-	for _, rule := range s.Rules {
+	for i, rule := range s.Rules {
 		if rule.Title == "" || rule.DocType == "" || len(rule.Values) == 0 {
 			return ErrInvalidRule
 		}
@@ -82,7 +82,8 @@ func (s *Sharing) ValidateRules() error {
 			return ErrInvalidRule
 		}
 		if rule.Add == "" {
-			rule.Add = ActionRuleNone
+			s.Rules[i].Add = ActionRuleNone
+			rule.Add = s.Rules[i].Add
 		}
 		rule.Add = strings.ToLower(rule.Add)
 		if rule.Add != ActionRuleNone &&
@@ -91,7 +92,8 @@ func (s *Sharing) ValidateRules() error {
 			return ErrInvalidRule
 		}
 		if rule.Update == "" {
-			rule.Update = ActionRuleNone
+			s.Rules[i].Update = ActionRuleNone
+			rule.Update = s.Rules[i].Update
 		}
 		rule.Update = strings.ToLower(rule.Update)
 		if rule.Update != ActionRuleNone &&
@@ -100,7 +102,8 @@ func (s *Sharing) ValidateRules() error {
 			return ErrInvalidRule
 		}
 		if rule.Remove == "" {
-			rule.Remove = ActionRuleNone
+			s.Rules[i].Remove = ActionRuleNone
+			rule.Remove = s.Rules[i].Remove
 		}
 		rule.Remove = strings.ToLower(rule.Remove)
 		if rule.Remove != ActionRuleNone &&
