@@ -270,6 +270,11 @@ type DirOrFileDoc struct {
 	Metadata   Metadata `json:"metadata,omitempty"`
 }
 
+// Clone is part of the couchdb.Doc interface
+func (fd *DirOrFileDoc) Clone() couchdb.Doc {
+	panic("DirOrFileDoc must not be cloned")
+}
+
 // Refine returns either a DirDoc or FileDoc pointer depending on the type of
 // the DirOrFileDoc
 func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {

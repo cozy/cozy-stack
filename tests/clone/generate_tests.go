@@ -52,9 +52,19 @@ func extractInfos(pkgs []string) []info {
 			if f != nil && !g {
 				continue
 			}
+			// Ignore structs that have a Clone method that panics
+			switch obj.Name() {
+			case "TreeFile", "DirOrFileDoc", "APICredentials":
+				continue
+			}
 			fields := make([]mutableField, 0)
 			for i := 0; i < s.NumFields(); i++ {
 				field := s.Field(i)
+				if !field.Exported() {
+					fmt.Fprintf(os.Stderr, "Warning: cannot check unexported field: %s.%s -> %s\n",
+						pkg.Name(), name, field)
+					continue
+				}
 				// fmt.Printf(" - %d. %s - %s\n", i, field.Name(), field.Type())
 				switch t := field.Type().(type) {
 				case (*types.Slice):
@@ -69,6 +79,14 @@ func extractInfos(pkgs []string) []info {
 						Value: generatorForType(t.Elem()),
 					})
 				case (*types.Named):
+					if u, ok := t.Underlying().(*types.Map); ok {
+						fields = append(fields, &mapField{
+							Name:  field.Name(),
+							Key:   generatorForType(u.Key()),
+							Value: generatorForType(u.Elem()),
+						})
+						continue
+					}
 					var named string
 					if p := t.Obj().Pkg(); p != nil {
 						named = fmt.Sprintf("%s.%s", p.Name(), t.Obj().Name())
@@ -230,6 +248,8 @@ func generatorForType(typ types.Type) *generator {
 		switch t.Name() {
 		case "string":
 			return &stringGenerator
+		case "byte":
+			return &byteGenerator
 		default:
 			panic(fmt.Errorf("Unknown basic type: %s", t.Name()))
 		}
@@ -258,6 +278,14 @@ type generator struct {
 	Warning  string
 	SubKey   string
 	SubValue string
+}
+
+var byteGenerator = generator{
+	Type:     "byte",
+	Key:      `'a'`,
+	Initial:  `'b'`,
+	Altered:  `'c'`,
+	SubValue: `'b'`,
 }
 
 var stringGenerator = generator{

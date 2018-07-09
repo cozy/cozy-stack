@@ -497,6 +497,11 @@ type TreeFile struct {
 	errs     []*treeError
 }
 
+// Clone is part of the couchdb.Doc interface
+func (t *TreeFile) Clone() couchdb.Doc {
+	panic("TreeFile must not be cloned")
+}
+
 var _ couchdb.Doc = &TreeFile{}
 
 type treeError struct {
