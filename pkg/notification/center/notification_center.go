@@ -81,15 +81,14 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 	switch perm.Type {
 	case permissions.TypeOauth:
 		c, ok := perm.Client.(*oauth.Client)
+		if !ok || c.Notifications == nil {
+			return ErrUnauthorized
+		}
+		notif, ok := c.Notifications[n.Category]
 		if !ok {
 			return ErrUnauthorized
 		}
-		if c.Notifications != nil {
-			p = c.Notifications[n.Category]
-		}
-		if p == nil {
-			return ErrUnauthorized
-		}
+		p = &notif
 		n.Originator = "oauth"
 	case permissions.TypeWebapp:
 		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")

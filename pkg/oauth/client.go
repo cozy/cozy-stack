@@ -58,7 +58,7 @@ type Client struct {
 	SoftwareVersion string   `json:"software_version,omitempty"` // Declared by the client (optional)
 
 	// Notifications parameters
-	Notifications map[string]*notification.Properties `json:"notifications"`
+	Notifications map[string]notification.Properties `json:"notifications"`
 
 	NotificationPlatform    string `json:"notification_platform,omitempty"`     // Declared by the client (optional)
 	NotificationDeviceToken string `json:"notification_device_token,omitempty"` // Declared by the client (optional)
@@ -87,6 +87,12 @@ func (c *Client) Clone() couchdb.Doc {
 
 	cloned.ResponseTypes = make([]string, len(c.ResponseTypes))
 	copy(cloned.ResponseTypes, c.ResponseTypes)
+
+	cloned.Notifications = make(map[string]notification.Properties)
+	for k, v := range c.Notifications {
+		props := (&v).Clone()
+		cloned.Notifications[k] = *props
+	}
 	return &cloned
 }
 

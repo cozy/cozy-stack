@@ -70,8 +70,8 @@ func extractInfos(pkgs []string) []info {
 					})
 				case (*types.Named):
 					var named string
-					if pkg := t.Obj().Pkg(); pkg != nil {
-						named = fmt.Sprintf("%s.%s", pkg.Name(), t.Obj().Name())
+					if p := t.Obj().Pkg(); p != nil {
+						named = fmt.Sprintf("%s.%s", p.Name(), t.Obj().Name())
 					}
 					switch named {
 					case "time.Time", "time.Duration":
@@ -189,7 +189,16 @@ func (f *mapField) Initialize(v string) {
 	fmt.Printf("\t%sA.%s = map[%s]%s{%s: %s}\n", v, f.Name, f.Key.Type, f.Value.Type, f.Key.Key, f.Value.Initial)
 }
 func (f *mapField) Reassign(v string) {
-	fmt.Printf("\t%sA.%s[%s]%s = %s\n", v, f.Name, f.Key.Key, f.Value.SubKey, f.Value.Altered)
+	if f.Value.SubKey == "" {
+		fmt.Printf("\t%sA.%s[%s] = %s\n", v, f.Name, f.Key.Key, f.Value.Altered)
+	} else {
+		fmt.Printf(`	{
+		tmp := %sA.%s[%s]
+		tmp%s = %s
+		%sA.%s[%s] = tmp
+	}
+`, v, f.Name, f.Key.Key, f.Value.SubKey, f.Value.Altered, v, f.Name, f.Key.Key)
+	}
 }
 func (f *mapField) Compare(v string) {
 	fmt.Printf("\tif %sB.%s[%s]%s != %s {\n", v, f.Name, f.Key.Key, f.Value.SubKey, f.Value.SubValue)
