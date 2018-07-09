@@ -77,40 +77,40 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 		return ErrBadNotification
 	}
 
-	var p *notification.Properties
+	var p notification.Properties
 	switch perm.Type {
 	case permissions.TypeOauth:
 		c, ok := perm.Client.(*oauth.Client)
 		if !ok || c.Notifications == nil {
 			return ErrUnauthorized
 		}
-		notif, ok := c.Notifications[n.Category]
+		p, ok = c.Notifications[n.Category]
 		if !ok {
 			return ErrUnauthorized
 		}
-		p = &notif
 		n.Originator = "oauth"
 	case permissions.TypeWebapp:
 		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")
 		m, err := apps.GetWebappBySlug(inst, slug)
-		if err != nil {
+		if err != nil || m.Notifications == nil {
 			return err
 		}
-		if m.Notifications != nil {
-			p = m.Notifications[n.Category]
+		var ok bool
+		p, ok = m.Notifications[n.Category]
+		if !ok {
+			return ErrUnauthorized
 		}
 		n.Slug = m.Slug()
 		n.Originator = "app"
 	case permissions.TypeKonnector:
 		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")
 		m, err := apps.GetKonnectorBySlug(inst, slug)
-		if err != nil {
+		if err != nil || m.Notifications == nil {
 			return err
 		}
-		if m.Notifications != nil {
-			p = m.Notifications[n.Category]
-		}
-		if p == nil {
+		var ok bool
+		p, ok = m.Notifications[n.Category]
+		if !ok {
 			return ErrUnauthorized
 		}
 		n.Slug = m.Slug()
@@ -119,7 +119,7 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 		return ErrUnauthorized
 	}
 
-	return makePush(inst, p, n)
+	return makePush(inst, &p, n)
 }
 
 func makePush(inst *instance.Instance, p *notification.Properties, n *notification.Notification) error {

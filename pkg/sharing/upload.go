@@ -278,6 +278,11 @@ type FileDocWithRevisions struct {
 	Revisions RevsStruct `json:"_revisions"`
 }
 
+// Clone is part of the couchdb.Doc interface
+func (f *FileDocWithRevisions) Clone() couchdb.Doc {
+	panic("FileDocWithRevisions must not be cloned")
+}
+
 // KeyToUpload contains the key for uploading a file (when syncing metadata is
 // not enough)
 type KeyToUpload struct {
