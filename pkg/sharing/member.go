@@ -43,6 +43,7 @@ type Member struct {
 	PublicName string `json:"public_name,omitempty"`
 	Email      string `json:"email"`
 	Instance   string `json:"instance,omitempty"`
+	ReadOnly   bool   `json:"read_only,omitempty"`
 }
 
 // PrimaryName returns the main name of this member
@@ -75,9 +76,9 @@ type Credentials struct {
 }
 
 // AddContacts adds a list of contacts on the sharer cozy
-func (s *Sharing) AddContacts(inst *instance.Instance, contactIDs []string) error {
-	for _, id := range contactIDs {
-		if err := s.AddContact(inst, id); err != nil {
+func (s *Sharing) AddContacts(inst *instance.Instance, contactIDs map[string]bool) error {
+	for id, ro := range contactIDs {
+		if err := s.AddContact(inst, id, ro); err != nil {
 			return err
 		}
 	}
@@ -97,7 +98,7 @@ func (s *Sharing) AddContacts(inst *instance.Instance, contactIDs []string) erro
 }
 
 // AddContact adds the contact with the given identifier
-func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
+func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly bool) error {
 	c, err := contacts.Find(inst, contactID)
 	if err != nil {
 		return err
@@ -111,6 +112,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 		Name:     addr.Name,
 		Email:    addr.Email,
 		Instance: c.PrimaryCozyURL(),
+		ReadOnly: readOnly,
 	}
 	idx := -1
 	for i, member := range s.Members {
@@ -122,6 +124,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 			s.Members[i].Status = m.Status
 			s.Members[i].Name = m.Name
 			s.Members[i].Instance = m.Instance
+			s.Members[i].ReadOnly = m.ReadOnly
 		}
 	}
 	if idx < 1 {
@@ -187,10 +190,10 @@ var _ jsonapi.Object = (*APIDelegateAddContacts)(nil)
 // DelegateAddContacts adds a list of contacts on a recipient cozy. Part of
 // the work is delegated to owner cozy, but the invitation mail is still sent
 // from the recipient cozy.
-func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []string) error {
+func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[string]bool) error {
 	api := &APIDelegateAddContacts{}
 	api.sid = s.SID
-	for _, id := range contactIDs {
+	for id, ro := range contactIDs {
 		c, err := contacts.Find(inst, id)
 		if err != nil {
 			return err
@@ -204,6 +207,7 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []stri
 			Name:     addr.Name,
 			Email:    addr.Email,
 			Instance: c.PrimaryCozyURL(),
+			ReadOnly: ro,
 		}
 		api.members = append(api.members, m)
 	}
@@ -261,6 +265,7 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []stri
 				s.Members[i].Status = m.Status
 				s.Members[i].Name = m.Name
 				s.Members[i].Instance = m.Instance
+				s.Members[i].ReadOnly = m.ReadOnly
 			}
 		}
 		if !found {
@@ -275,10 +280,11 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs []stri
 
 // AddDelegatedContact adds a contact on the owner cozy, but for a contact from
 // a recipient (open_sharing: true only)
-func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email string) string {
+func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email string, readOnly bool) string {
 	m := Member{
-		Status: MemberStatusPendingInvitation,
-		Email:  email,
+		Status:   MemberStatusPendingInvitation,
+		Email:    email,
+		ReadOnly: readOnly,
 	}
 	s.Members = append(s.Members, m)
 	state := crypto.Base64Encode(crypto.GenerateRandomBytes(StateLen))
@@ -354,6 +360,7 @@ func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) er
 		s.Members[i].Email = m.Email
 		s.Members[i].PublicName = m.PublicName
 		s.Members[i].Status = m.Status
+		s.Members[i].ReadOnly = m.ReadOnly
 	}
 	return couchdb.UpdateDoc(inst, s)
 }
@@ -596,6 +603,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			Status:     m.Status,
 			PublicName: m.PublicName,
 			Email:      m.Email,
+			ReadOnly:   m.ReadOnly,
 			// Instance and name are private
 		}
 	}

@@ -40,7 +40,7 @@ func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) er
 				Errorf("Can't send email for %#v: %s", m.Email, err)
 			return ErrMailNotSent
 		}
-		m.Status = MemberStatusPendingInvitation
+		s.Members[i].Status = MemberStatusPendingInvitation
 	}
 
 	return couchdb.UpdateDoc(inst, s)
@@ -57,8 +57,17 @@ func (s *Sharing) SendMailsToMembers(inst *instance.Instance, members []Member, 
 				Errorf("Can't send email for %#v: %s", m.Email, err)
 			return ErrMailNotSent
 		}
+		for i, member := range s.Members {
+			if i == 0 {
+				continue // skip the owner
+			}
+			if m.Email == member.Email && member.Status == MemberStatusMailNotSent {
+				s.Members[i].Status = MemberStatusPendingInvitation
+				break
+			}
+		}
 	}
-	return nil
+	return couchdb.UpdateDoc(inst, s)
 }
 
 func (s *Sharing) getSharerAndDescription(inst *instance.Instance) (string, string) {

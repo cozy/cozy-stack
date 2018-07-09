@@ -293,8 +293,8 @@ revision (4-4aa). The resolution takes 4 steps:
 * An identifier (the same for all members of the sharing)
 * A list of `members`. The first one is the owner. For each member,
   we have the URL of the cozy, a contact name, a public name, an email, a
-  status and some credentials to authorize the transfer of data between the
-  owner and the recipients
+  status, a read-only flag, and some credentials to authorize the transfer of
+  data between the owner and the recipients
 * A `description` (one sentence that will help people understand what is shared
   and why)
 - a flag `active` that says if the sharing is currently active for at least
@@ -302,7 +302,8 @@ revision (4-4aa). The resolution takes 4 steps:
 - a flag `owner`, true for the document on the cozy of the sharer, and false
   on the other cozy instance
 * a flag `open_sharing`:
-  * `true` if any member of the sharing can add a new recipient
+  * `true` if any member of the sharing except the read-only ones can add a
+    new recipient
   * `false` if only the owner can add a new recipient
 * Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`,
   `triggers`, `credentials`)
@@ -321,17 +322,17 @@ revision (4-4aa). The resolution takes 4 steps:
     the new version matches the rule):
     * `none`: the updates are never propagated (the default)
     * `push`: the updates made on the owner are sent to the recipients
-    * `sync`: the updates on any member are propagated to the other members
+    * `sync`: the updates on any member (except the read-only) are propagated to the other members
   * `update`: a behavior when a document matched by this rule is modified. Can be:
     * `none`: the updates are never propagated (the default)
     * `push`: the updates made on the owner are sent to the recipients
-    * `sync`: the updates on any member are propagated to the other members
+    * `sync`: the updates on any member (except the read-only) are propagated to the other members
   * `remove`: a behavior when a document no longer matches this rule (the
     document is deleted, or it was a document that matched the rule, and is
     modified and the new version doesn’t match the rule):
     * `none`: the updates are never propagated (the default)
     * `push`: the updates made on the owner are sent to the recipients
-    * `sync`: the updates on any member are propagated to the other members
+    * `sync`: the updates on any member (except the read-only) are propagated to the other members
     * `revoke`: the sharing is revoked.
 
 #### Example: I want to share a folder in read/write mode

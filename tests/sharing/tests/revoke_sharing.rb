@@ -102,6 +102,17 @@ describe "A sharing" do
     sharing.members << inst_alice << contact_bob
     inst_alice.register sharing
 
+    # Check members status
+    doc = Helpers.couch.get_doc inst_alice.domain, Sharing.doctype, sharing.couch_id
+    owner = doc["members"].first
+    assert_equal "owner", owner["status"]
+    assert_equal "Alice", owner["public_name"]
+    assert_equal "alice+test@cozy.tools", owner["email"]
+    assert_equal inst_alice.url, owner["instance"]
+    recpt1 = doc["members"][1]
+    assert_equal "pending", recpt1["status"]
+    assert_equal contact_bob.primary_email, recpt1["email"]
+
     # Accept the sharing
     sleep 1
     inst_bob.accept sharing

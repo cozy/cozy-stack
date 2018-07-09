@@ -39,7 +39,7 @@ const iocozytests = "io.cozy.tests"
 var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
-var bobContact, charlieContact *contacts.Contact
+var bobContact, charlieContact, daveContact *contacts.Contact
 var sharingID, state, aliceAccessToken string
 
 // Things that live on Bob's Cozy
@@ -51,17 +51,23 @@ var bobUA *http.Client
 var discoveryLink, authorizeLink string
 var csrfToken string
 
-func assertSharingByAliceToBob(t *testing.T, members []interface{}) {
-	assert.Len(t, members, 2)
+func assertSharingByAliceToBobAndDave(t *testing.T, members []interface{}) {
+	assert.Len(t, members, 3)
 	owner := members[0].(map[string]interface{})
 	assert.Equal(t, owner["status"], "owner")
 	assert.Equal(t, owner["public_name"], "Alice")
 	assert.Equal(t, owner["email"], "alice@example.net")
 	assert.Equal(t, owner["instance"], "https://"+aliceInstance.Domain)
 	recipient := members[1].(map[string]interface{})
-	assert.Equal(t, recipient["status"], "mail-not-sent")
+	assert.Equal(t, recipient["status"], "pending")
 	assert.Equal(t, recipient["name"], "Bob")
 	assert.Equal(t, recipient["email"], "bob@example.net")
+	assert.NotEqual(t, recipient["read_only"], true)
+	recipient = members[2].(map[string]interface{})
+	assert.Equal(t, recipient["status"], "pending")
+	assert.Equal(t, recipient["name"], "Dave")
+	assert.Equal(t, recipient["email"], "dave@example.net")
+	assert.Equal(t, recipient["read_only"], true)
 }
 
 func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
@@ -84,7 +90,7 @@ func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
 	assert.Nil(t, attrs["credentials"])
 
 	members := attrs["members"].([]interface{})
-	assertSharingByAliceToBob(t, members)
+	assertSharingByAliceToBobAndDave(t, members)
 
 	rules := attrs["rules"].([]interface{})
 	assert.Len(t, rules, 1)
@@ -105,14 +111,19 @@ func assertInvitationMailWasSent(t *testing.T) string {
 		Sort: mango.SortBy{
 			mango.SortByField{Field: "worker", Direction: "desc"},
 		},
-		Limit: 1,
+		Limit: 2,
 	}
 	err := couchdb.FindDocs(aliceInstance, consts.Jobs, couchReq, &jobs)
 	assert.NoError(t, err)
-	assert.Len(t, jobs, 1)
+	assert.Len(t, jobs, 2)
 	var msg map[string]interface{}
+	// Ignore the mail sent to Dave
 	err = json.Unmarshal(jobs[0].Message, &msg)
 	assert.NoError(t, err)
+	if msg["template_values"].(map[string]interface{})["RecipientName"] == "Dave" {
+		err = json.Unmarshal(jobs[1].Message, &msg)
+		assert.NoError(t, err)
+	}
 	assert.Equal(t, msg["mode"], "from")
 	assert.Equal(t, msg["template_name"], "sharing_request")
 	values := msg["template_values"].(map[string]interface{})
@@ -146,6 +157,14 @@ func TestCreateSharingSuccess(t *testing.T) {
 						echo.Map{
 							"id":      bobContact.ID(),
 							"doctype": bobContact.DocType(),
+						},
+					},
+				},
+				"read_only_recipients": echo.Map{
+					"data": []interface{}{
+						echo.Map{
+							"id":      daveContact.ID(),
+							"doctype": daveContact.DocType(),
 						},
 					},
 				},
@@ -196,16 +215,20 @@ func assertSharingRequestHasBeenCreated(t *testing.T) {
 	assert.Equal(t, s.Description, "this is a test")
 	assert.Equal(t, s.AppSlug, "testapp")
 
-	assert.Len(t, s.Members, 2)
+	assert.Len(t, s.Members, 3)
 	owner := s.Members[0]
 	assert.Equal(t, owner.Status, "owner")
 	assert.Equal(t, owner.PublicName, "Alice")
 	assert.Equal(t, owner.Email, "alice@example.net")
 	assert.Equal(t, owner.Instance, "https://"+aliceInstance.Domain)
 	recipient := s.Members[1]
-	assert.Equal(t, recipient.Status, "mail-not-sent")
+	assert.Equal(t, recipient.Status, "pending")
 	assert.Equal(t, recipient.Email, "bob@example.net")
 	assert.Equal(t, recipient.Instance, tsB.URL)
+	recipient = s.Members[2]
+	assert.Equal(t, recipient.Status, "pending")
+	assert.Equal(t, recipient.Email, "dave@example.net")
+	assert.Equal(t, recipient.ReadOnly, true)
 
 	assert.Len(t, s.Rules, 1)
 	rule := s.Rules[0]
@@ -313,7 +336,7 @@ func fakeAliceInstance(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, results, 1)
 	s := results[0]
-	assert.Len(t, s.Members, 2)
+	assert.Len(t, s.Members, 3)
 	s.Members[0].Instance = tsA.URL
 	err = couchdb.UpdateDoc(bobInstance, s)
 	assert.NoError(t, err)
@@ -357,7 +380,7 @@ func assertCredentialsHasBeenExchanged(t *testing.T) {
 	err = couchdb.GetAllDocs(aliceInstance, consts.Sharings, &req, &sharingsA)
 	assert.NoError(t, err)
 	assert.True(t, len(sharingsA) > 0)
-	assert.Len(t, sharingsA[0].Credentials, 1)
+	assert.Len(t, sharingsA[0].Credentials, 2)
 	credentials := sharingsA[0].Credentials[0]
 	if assert.NotNil(t, credentials.Client) {
 		assert.Equal(t, credentials.Client.ClientID, clientA["_id"])
@@ -368,6 +391,7 @@ func assertCredentialsHasBeenExchanged(t *testing.T) {
 		aliceAccessToken = credentials.AccessToken.AccessToken
 	}
 	assert.Equal(t, sharingsA[0].Members[1].Status, "ready")
+	assert.Equal(t, sharingsA[0].Members[2].Status, "pending")
 
 	var sharingsB []*sharing.Sharing
 	err = couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &sharingsB)
@@ -437,7 +461,7 @@ func assertSharingWithPreviewIsCorrect(t *testing.T, body io.Reader) {
 	assert.Nil(t, attrs["credentials"])
 
 	members := attrs["members"].([]interface{})
-	assertSharingByAliceToBob(t, members)
+	assertSharingByAliceToBobAndDave(t, members)
 
 	rules := attrs["rules"].([]interface{})
 	assert.Len(t, rules, 1)
@@ -471,6 +495,14 @@ func TestCreateSharingWithPreview(t *testing.T) {
 						echo.Map{
 							"id":      bobContact.ID(),
 							"doctype": bobContact.DocType(),
+						},
+					},
+				},
+				"read_only_recipients": echo.Map{
+					"data": []interface{}{
+						echo.Map{
+							"id":      daveContact.ID(),
+							"doctype": daveContact.DocType(),
 						},
 					},
 				},
@@ -534,19 +566,24 @@ func TestDiscoveryWithPreview(t *testing.T) {
 	assertCorrectRedirection(t, res.Body)
 }
 
-func assertSharingByAliceToBobAndCharlie(t *testing.T, members []interface{}) {
-	assert.Len(t, members, 3)
+func assertSharingByAliceToBobDaveAndCharlie(t *testing.T, members []interface{}) {
+	assert.Len(t, members, 4)
 	owner := members[0].(map[string]interface{})
 	assert.Equal(t, owner["status"], "owner")
 	assert.Equal(t, owner["public_name"], "Alice")
 	assert.Equal(t, owner["email"], "alice@example.net")
 	assert.Equal(t, owner["instance"], "https://"+aliceInstance.Domain)
 	bob := members[1].(map[string]interface{})
-	assert.Equal(t, bob["status"], "mail-not-sent")
+	assert.Equal(t, bob["status"], "pending")
 	assert.Equal(t, bob["name"], "Bob")
 	assert.Equal(t, bob["email"], "bob@example.net")
-	charlie := members[2].(map[string]interface{})
-	assert.Equal(t, charlie["status"], "mail-not-sent")
+	dave := members[2].(map[string]interface{})
+	assert.Equal(t, dave["status"], "pending")
+	assert.Equal(t, dave["name"], "Dave")
+	assert.Equal(t, dave["email"], "dave@example.net")
+	assert.Equal(t, dave["read_only"], true)
+	charlie := members[3].(map[string]interface{})
+	assert.Equal(t, charlie["status"], "pending")
 	assert.Equal(t, charlie["name"], "Charlie")
 	assert.Equal(t, charlie["email"], "charlie@example.net")
 }
@@ -586,7 +623,7 @@ func TestAddRecipient(t *testing.T) {
 	data := result["data"].(map[string]interface{})
 	attrs := data["attributes"].(map[string]interface{})
 	members := attrs["members"].([]interface{})
-	assertSharingByAliceToBobAndCharlie(t, members)
+	assertSharingByAliceToBobDaveAndCharlie(t, members)
 }
 
 func TestCheckPermissions(t *testing.T) {
@@ -645,7 +682,7 @@ func TestCheckPermissions(t *testing.T) {
 		},
 	}
 	assert.NoError(t, other.BeOwner(aliceInstance, "drive"))
-	assert.NoError(t, other.AddContact(aliceInstance, bobContact.ID()))
+	assert.NoError(t, other.AddContact(aliceInstance, bobContact.ID(), false))
 	_, err = other.Create(aliceInstance)
 	assert.NoError(t, err)
 
@@ -922,6 +959,7 @@ func TestMain(m *testing.M) {
 	aliceAppToken = generateAppToken(aliceInstance, "testapp")
 	bobContact = createContact(aliceInstance, "Bob", "bob@example.net")
 	charlieContact = createContact(aliceInstance, "Charlie", "charlie@example.net")
+	daveContact = createContact(aliceInstance, "Dave", "dave@example.net")
 	tsA = setup.GetTestServer("/sharings", sharings.Routes)
 	tsA.Config.Handler.(*echo.Echo).Renderer = render
 

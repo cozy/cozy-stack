@@ -136,11 +136,47 @@ func FileHandler(c echo.Context) error {
 // replicatorRoutes sets the routing for the replicator
 func replicatorRoutes(router *echo.Group) {
 	group := router.Group("", checkSharingPermissions)
-	group.POST("/:sharing-id/_revs_diff", RevsDiff, checkSharingPermissions)
-	group.POST("/:sharing-id/_bulk_docs", BulkDocs, checkSharingPermissions)
-	group.GET("/:sharing-id/io.cozy.files/:id", GetFolder, checkSharingPermissions)
-	group.PUT("/:sharing-id/io.cozy.files/:id/metadata", SyncFile, checkSharingPermissions)
-	group.PUT("/:sharing-id/io.cozy.files/:id", FileHandler, checkSharingPermissions)
+	group.POST("/:sharing-id/_revs_diff", RevsDiff, checkSharingWritePermissions)
+	group.POST("/:sharing-id/_bulk_docs", BulkDocs, checkSharingWritePermissions)
+	group.GET("/:sharing-id/io.cozy.files/:id", GetFolder, checkSharingReadPermissions)
+	group.PUT("/:sharing-id/io.cozy.files/:id/metadata", SyncFile, checkSharingWritePermissions)
+	group.PUT("/:sharing-id/io.cozy.files/:id", FileHandler, checkSharingWritePermissions)
+}
+
+func checkSharingReadPermissions(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		sharingID := c.Param("sharing-id")
+		requestPerm, err := perm.GetPermission(c)
+		if err != nil {
+			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
+				Debugf("Invalid permission: %s", err)
+			return err
+		}
+		if !requestPerm.Permissions.AllowID("GET", consts.Sharings, sharingID) {
+			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
+				Debugf("Not allowed (%s)", sharingID)
+			return echo.NewHTTPError(http.StatusForbidden)
+		}
+		return next(c)
+	}
+}
+
+func checkSharingWritePermissions(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		sharingID := c.Param("sharing-id")
+		requestPerm, err := perm.GetPermission(c)
+		if err != nil {
+			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
+				Debugf("Invalid permission: %s", err)
+			return err
+		}
+		if !requestPerm.Permissions.AllowID("POST", consts.Sharings, sharingID) {
+			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
+				Debugf("Not allowed (%s)", sharingID)
+			return echo.NewHTTPError(http.StatusForbidden)
+		}
+		return next(c)
+	}
 }
 
 func checkSharingPermissions(next echo.HandlerFunc) echo.HandlerFunc {

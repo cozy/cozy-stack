@@ -43,7 +43,19 @@ func CreateSharing(c echo.Context) error {
 		if data, ok := rel.Data.([]interface{}); ok {
 			for _, ref := range data {
 				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-					if err = s.AddContact(inst, id); err != nil {
+					if err = s.AddContact(inst, id, false); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	if rel, ok := obj.GetRelationship("read_only_recipients"); ok {
+		if data, ok := rel.Data.([]interface{}); ok {
+			for _, ref := range data {
+				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
+					if err = s.AddContact(inst, id, true); err != nil {
 						return err
 					}
 				}
@@ -183,6 +195,24 @@ func AnswerSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, ac, nil)
 }
 
+func addRecipientsToSharing(inst *instance.Instance, s *sharing.Sharing, rel *jsonapi.Relationship, readOnly bool) error {
+	var err error
+	if data, ok := rel.Data.([]interface{}); ok {
+		ids := make(map[string]bool)
+		for _, ref := range data {
+			if id, ok := ref.(map[string]interface{})["id"].(string); ok {
+				ids[id] = readOnly
+			}
+		}
+		if s.Owner {
+			err = s.AddContacts(inst, ids)
+		} else {
+			err = s.DelegateAddContacts(inst, ids)
+		}
+	}
+	return err
+}
+
 // AddRecipients is used to add a member to a sharing
 func AddRecipients(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -200,21 +230,13 @@ func AddRecipients(c echo.Context) error {
 		return jsonapi.BadJSON()
 	}
 	if rel, ok := obj.GetRelationship("recipients"); ok {
-		if data, ok := rel.Data.([]interface{}); ok {
-			var ids []string
-			for _, ref := range data {
-				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
-					ids = append(ids, id)
-				}
-			}
-			if s.Owner {
-				err = s.AddContacts(inst, ids)
-			} else {
-				err = s.DelegateAddContacts(inst, ids)
-			}
-			if err != nil {
-				return wrapErrors(err)
-			}
+		if err = addRecipientsToSharing(inst, s, rel, false); err != nil {
+			return wrapErrors(err)
+		}
+	}
+	if rel, ok := obj.GetRelationship("read_only_recipients"); ok {
+		if err = addRecipientsToSharing(inst, s, rel, true); err != nil {
+			return wrapErrors(err)
 		}
 	}
 	return jsonapiSharingWithDocs(c, s)
@@ -243,7 +265,8 @@ func AddRecipientsDelegated(c echo.Context) error {
 			for _, ref := range data {
 				contact, _ := ref.(map[string]interface{})
 				email, _ := contact["email"].(string)
-				state := s.AddDelegatedContact(inst, email)
+				ro, _ := contact["read_only"].(bool)
+				state := s.AddDelegatedContact(inst, email, ro)
 				states[email] = state
 			}
 			if err := couchdb.UpdateDoc(inst, s); err != nil {
@@ -496,15 +519,15 @@ func Routes(router *echo.Group) {
 
 	// Managing recipients
 	router.POST("/:sharing-id/recipients", AddRecipients)
-	router.PUT("/:sharing-id/recipients", PutRecipients, checkSharingPermissions)
-	router.DELETE("/:sharing-id/recipients", RevokeSharing)                             // On the sharer
-	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                    // On the sharer
-	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingPermissions)    // On the recipient
-	router.DELETE("/:sharing-id/recipients/self", RevokeRecipientBySelf)                // On the recipient
-	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif, checkSharingPermissions) // On the sharer
+	router.PUT("/:sharing-id/recipients", PutRecipients, checkSharingWritePermissions)
+	router.DELETE("/:sharing-id/recipients", RevokeSharing)                                  // On the sharer
+	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                         // On the sharer
+	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingWritePermissions)    // On the recipient
+	router.DELETE("/:sharing-id/recipients/self", RevokeRecipientBySelf)                     // On the recipient
+	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif, checkSharingWritePermissions) // On the sharer
 
 	// Delegated routes for open sharing
-	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingPermissions)
+	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingWritePermissions)
 
 	router.GET("/doctype/:doctype", GetSharingsInfoByDocType)
 

@@ -83,25 +83,24 @@ func (s *Sharing) Clone() couchdb.Doc {
 }
 
 // ReadOnly returns true only if the rules forbid that a change on the
-// recipients' cozy instances can be propagated to the sharer's cozy.
+// recipient's cozy instance can be propagated to the sharer's cozy.
 func (s *Sharing) ReadOnly() bool {
+	if !s.Owner {
+		for i, m := range s.Members {
+			if i == 0 {
+				continue // skip owner
+			}
+			if m.Instance != "" {
+				return m.ReadOnly
+			}
+		}
+	}
 	for _, rule := range s.Rules {
 		if rule.HasSync() {
 			return false
 		}
 	}
 	return true
-}
-
-// WithPropagation returns true if no rule allows that a change can be propagated, in
-// one way or another
-func (s *Sharing) WithPropagation() bool {
-	for _, rule := range s.Rules {
-		if rule.HasSync() || rule.HasPush() {
-			return true
-		}
-	}
-	return false
 }
 
 // BeOwner initializes a sharing on the cozy of its owner
@@ -245,11 +244,28 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 	if err := RemoveSharedRefs(inst, s.SID); err != nil {
 		return err
 	}
+	if s.PreviewPath != "" {
+		if err := s.RevokePreviewPermissions(inst); err != nil {
+			return err
+		}
+	}
 	s.Active = false
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return err
 	}
 	return errm
+}
+
+// RevokePreviewPermissions ensure that the permissions for the preview page
+// are no longer valid.
+func (s *Sharing) RevokePreviewPermissions(inst *instance.Instance) error {
+	perms, err := permissions.GetForSharePreview(inst, s.SID)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	perms.ExpiresAt = &now
+	return couchdb.UpdateDoc(inst, perms)
 }
 
 // RevokeRecipient revoke only one recipient on the sharer. After that, if the
@@ -282,10 +298,8 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance) error {
 	if err := s.ClearLastSequenceNumbers(inst, &s.Members[0]); err != nil {
 		return err
 	}
-	if s.WithPropagation() {
-		if err := RemoveSharedRefs(inst, s.SID); err != nil {
-			return err
-		}
+	if err := RemoveSharedRefs(inst, s.SID); err != nil {
+		return err
 	}
 	if s.FirstFilesRule() != nil {
 		if err := s.RemoveSharingDir(inst); err != nil {
@@ -336,10 +350,8 @@ func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
 	if err := s.ClearLastSequenceNumbers(inst, &s.Members[0]); err != nil {
 		return err
 	}
-	if s.WithPropagation() {
-		if err := RemoveSharedRefs(inst, s.SID); err != nil {
-			return err
-		}
+	if err := RemoveSharedRefs(inst, s.SID); err != nil {
+		return err
 	}
 	if s.FirstFilesRule() != nil {
 		if err := s.RemoveSharingDir(inst); err != nil {
