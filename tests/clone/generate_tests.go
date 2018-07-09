@@ -22,6 +22,9 @@ func main() {
 	generateTests(infos)
 }
 
+// TODO we should test recursively. For example, apps.WebappManifest has
+// Intents []Intent, and Intent has Types []string: we should check that
+// modifying the types of the intents of a manifest has no effect on its clone.
 func extractInfos(pkgs []string) []info {
 	infos := make([]info, 0)
 	docIface := getDocIface()
