@@ -79,6 +79,11 @@ func extractInfos(pkgs []string) []info {
 				case (*types.Interface):
 					fmt.Fprintf(os.Stderr, "Warning: cannot check interfaces: %s.%s -> %s\n",
 						pkg.Name(), name, field)
+				case (*types.Pointer):
+					fields = append(fields, &ptrField{
+						Name:  field.Name(),
+						Value: generatorForType(t.Elem()),
+					})
 				case (*types.Basic):
 					// Basic types are immutables
 				default:
@@ -158,10 +163,10 @@ func (f *sliceField) Initialize(v string) {
 	fmt.Printf("\t%sA.%s = []%s{%s}\n", v, f.Name, f.Value.Type, f.Value.Initial)
 }
 func (f *sliceField) Reassign(v string) {
-	fmt.Printf("\t%sA.%s[0] = %s\n", v, f.Name, f.Value.Altered)
+	fmt.Printf("\t%sA.%s[0]%s = %s\n", v, f.Name, f.Value.SubKey, f.Value.Altered)
 }
 func (f *sliceField) Compare(v string) {
-	fmt.Printf("\tif %sB.%s[0] != %s {\n", v, f.Name, f.Value.Initial)
+	fmt.Printf("\tif %sB.%s[0]%s != %s {\n", v, f.Name, f.Value.SubKey, f.Value.SubValue)
 }
 
 type mapField struct {
@@ -179,10 +184,30 @@ func (f *mapField) Initialize(v string) {
 	fmt.Printf("\t%sA.%s = map[%s]%s{%s: %s}\n", v, f.Name, f.Key.Type, f.Value.Type, f.Key.Key, f.Value.Initial)
 }
 func (f *mapField) Reassign(v string) {
-	fmt.Printf("\t%sA.%s[%s] = %s\n", v, f.Name, f.Key.Key, f.Value.Altered)
+	fmt.Printf("\t%sA.%s[%s]%s = %s\n", v, f.Name, f.Key.Key, f.Value.SubKey, f.Value.Altered)
 }
 func (f *mapField) Compare(v string) {
-	fmt.Printf("\tif %sB.%s[%s] != %s {\n", v, f.Name, f.Key.Key, f.Value.Initial)
+	fmt.Printf("\tif %sB.%s[%s]%s != %s {\n", v, f.Name, f.Key.Key, f.Value.SubKey, f.Value.SubValue)
+}
+
+type ptrField struct {
+	Name  string
+	Value generator
+}
+
+func (f *ptrField) String() string { return f.Name }
+
+func (f *ptrField) Initialize(v string) {
+	if f.Value.Warning != "" {
+		fmt.Printf("\t// Warning: %s", f.Value.Warning)
+	}
+	fmt.Printf("\t%sA.%s = &%s\n", v, f.Name, f.Value.Initial)
+}
+func (f *ptrField) Reassign(v string) {
+	fmt.Printf("\t%sA.%s%s = %s\n", v, f.Name, f.Value.SubKey, f.Value.Altered)
+}
+func (f *ptrField) Compare(v string) {
+	fmt.Printf("\tif %sB.%s%s != %s {\n", v, f.Name, f.Value.SubKey, f.Value.SubValue)
 }
 
 func generatorForType(typ types.Type) generator {
@@ -198,32 +223,52 @@ func generatorForType(typ types.Type) generator {
 		if t.Empty() {
 			return emptyInterfaceGenerator
 		}
+	case (*types.Named):
+		if s, ok := t.Obj().Type().Underlying().(*types.Struct); ok {
+			named := fmt.Sprintf("%s.%s", t.Obj().Pkg().Name(), t.Obj().Name())
+			return structGenerator(named, s)
+		}
 	}
-	//return stringGenerator
 	panic(fmt.Errorf("Unknown generator type: %#v", typ))
 }
 
 type generator struct {
-	Type    string
-	Key     string
-	Initial string
-	Altered string
-	Warning string
+	Type     string
+	Key      string
+	Initial  string
+	Altered  string
+	Warning  string
+	SubKey   string
+	SubValue string
 }
 
 var stringGenerator = generator{
-	Type:    "string",
-	Key:     `"foo"`,
-	Initial: `"bar"`,
-	Altered: `"baz"`,
+	Type:     "string",
+	Key:      `"foo"`,
+	Initial:  `"bar"`,
+	Altered:  `"baz"`,
+	SubValue: `"bar"`,
 }
 
 var emptyInterfaceGenerator = generator{
-	Type:    "interface{}",
-	Key:     "0",
-	Initial: "1",
-	Altered: "2",
-	Warning: "interface{} can contain nested data!",
+	Type:     "interface{}",
+	Key:      "0",
+	Initial:  "1",
+	Altered:  "2",
+	SubValue: "1",
+	Warning:  "interface{} can contain nested data!",
+}
+
+func structGenerator(name string, s *types.Struct) generator {
+	f := s.Field(0)
+	g := generatorForType(f.Type())
+	return generator{
+		Type:     "&ptr",
+		Initial:  fmt.Sprintf("%s{%s: %s}", name, f.Name(), g.Initial),
+		Altered:  g.Altered,
+		SubKey:   "." + f.Name(),
+		SubValue: g.SubValue,
+	}
 }
 
 // getDocIface returns the couchdb.Doc interface
