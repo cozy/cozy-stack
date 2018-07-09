@@ -75,7 +75,6 @@ func extractInfos(pkgs []string) []info {
 						pkg.Name(), name, field)
 					continue
 				}
-				// fmt.Printf(" - %d. %s - %s\n", i, field.Name(), field.Type())
 				switch t := field.Type().(type) {
 				case (*types.Slice):
 					fields = append(fields, &sliceField{
@@ -89,13 +88,28 @@ func extractInfos(pkgs []string) []info {
 						Value: generatorForType(t.Elem()),
 					})
 				case (*types.Named):
-					if u, ok := t.Underlying().(*types.Map); ok {
+					switch u := t.Underlying().(type) {
+					case (*types.Basic):
+						continue
+					case (*types.Signature): // functions or methods
+						continue
+					case (*types.Slice):
+						fields = append(fields, &sliceField{
+							Name:  field.Name(),
+							Value: generatorForType(u.Elem()),
+						})
+						continue
+					case (*types.Map):
 						fields = append(fields, &mapField{
 							Name:  field.Name(),
 							Key:   generatorForType(u.Key()),
 							Value: generatorForType(u.Elem()),
 						})
 						continue
+					case (*types.Struct):
+						if allFieldsAreBasic(u) {
+							continue
+						}
 					}
 					var named string
 					if p := t.Obj().Pkg(); p != nil {
@@ -260,6 +274,10 @@ func generatorForType(typ types.Type) *generator {
 			return &stringGenerator
 		case "byte":
 			return &byteGenerator
+		case "int":
+			return &intGenerator
+		case "uint64":
+			return &uint64Generator
 		default:
 			panic(fmt.Errorf("Unknown basic type: %s", t.Name()))
 		}
@@ -306,6 +324,22 @@ var stringGenerator = generator{
 	SubValue: `"bar"`,
 }
 
+var intGenerator = generator{
+	Type:     "int",
+	Key:      "0",
+	Initial:  "1",
+	Altered:  "2",
+	SubValue: "1",
+}
+
+var uint64Generator = generator{
+	Type:     "uint64",
+	Key:      "0",
+	Initial:  "1",
+	Altered:  "2",
+	SubValue: "1",
+}
+
 var emptyInterfaceGenerator = generator{
 	Type:     "interface{}",
 	Key:      "0",
@@ -340,6 +374,15 @@ func getDocIface() *types.Interface {
 	}
 	scope := lprog.Package(couchPkg).Pkg.Scope()
 	return scope.Lookup("Doc").Type().Underlying().(*types.Interface)
+}
+
+func allFieldsAreBasic(s *types.Struct) bool {
+	for i := 0; i < s.NumFields(); i++ {
+		if _, ok := s.Field(i).Type().(*types.Basic); !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // pkgInfoFromPath returns information about the package
