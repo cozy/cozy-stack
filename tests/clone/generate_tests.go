@@ -52,9 +52,19 @@ func extractInfos(pkgs []string) []info {
 			if f != nil && !g {
 				continue
 			}
-			// Ignore structs that have a Clone method that panics
 			switch obj.Name() {
-			case "TreeFile", "DirOrFileDoc", "APICredentials":
+			// Ignore structs that have a Clone method that panics
+			case "TreeFile", "DirOrFileDoc", "APICredentials", "FileDocWithRevisions":
+				continue
+			// TODO Services is not supported for the moment
+			case "WebappManifest":
+				continue
+			// TODO Credentials *interface{} is not supported
+			case "APISharing":
+				continue
+			// TODO notification.Properties, sharing.RevsTree, jobs.AtTrigger,
+			// jobs.CronTrigger, jobs.EventTrigger are not a couchdb.Doc
+			case "Properties", "RevsTree", "AtTrigger", "CronTrigger", "EventTrigger":
 				continue
 			}
 			fields := make([]mutableField, 0)
@@ -259,8 +269,8 @@ func generatorForType(typ types.Type) *generator {
 		}
 	case (*types.Named):
 		named := fmt.Sprintf("%s.%s", t.Obj().Pkg().Name(), t.Obj().Name())
-		if named == "json.RawMessage" {
-			// We consider that json.RawMessage is not modifiable in our code
+		if named == "json.RawMessage" || named == "time.Time" {
+			// We consider that json.RawMessage and time.Time are not modifiable in our code
 			return nil
 		}
 		if s, ok := t.Obj().Type().Underlying().(*types.Struct); ok {
