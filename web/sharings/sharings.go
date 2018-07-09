@@ -330,8 +330,11 @@ func RevokeRecipient(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	index, err := strconv.Atoi(c.Param("index"))
-	if err != nil || index == 0 || index >= len(s.Members) {
+	if err != nil {
 		return jsonapi.InvalidParameter("index", err)
+	}
+	if index == 0 || index >= len(s.Members) {
+		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
 	}
 	if err = s.RevokeRecipient(inst, index); err != nil {
 		return wrapErrors(err)
