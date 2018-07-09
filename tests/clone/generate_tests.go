@@ -69,7 +69,10 @@ func extractInfos(pkgs []string) []info {
 						Value: generatorForType(t.Elem()),
 					})
 				case (*types.Named):
-					named := fmt.Sprintf("%s.%s", t.Obj().Pkg().Name(), t.Obj().Name())
+					var named string
+					if pkg := t.Obj().Pkg(); pkg != nil {
+						named = fmt.Sprintf("%s.%s", pkg.Name(), t.Obj().Name())
+					}
 					switch named {
 					case "time.Time", "time.Duration":
 						// These structs are known to be safe
@@ -80,10 +83,12 @@ func extractInfos(pkgs []string) []info {
 					fmt.Fprintf(os.Stderr, "Warning: cannot check interfaces: %s.%s -> %s\n",
 						pkg.Name(), name, field)
 				case (*types.Pointer):
-					fields = append(fields, &ptrField{
-						Name:  field.Name(),
-						Value: generatorForType(t.Elem()),
-					})
+					if gen := generatorForType(t.Elem()); gen != nil {
+						fields = append(fields, &ptrField{
+							Name:  field.Name(),
+							Value: gen,
+						})
+					}
 				case (*types.Basic):
 					// Basic types are immutables
 				default:
@@ -151,7 +156,7 @@ type mutableField interface {
 
 type sliceField struct {
 	Name  string
-	Value generator
+	Value *generator
 }
 
 func (f *sliceField) String() string { return f.Name }
@@ -171,8 +176,8 @@ func (f *sliceField) Compare(v string) {
 
 type mapField struct {
 	Name  string
-	Key   generator
-	Value generator
+	Key   *generator
+	Value *generator
 }
 
 func (f *mapField) String() string { return f.Name }
@@ -192,7 +197,7 @@ func (f *mapField) Compare(v string) {
 
 type ptrField struct {
 	Name  string
-	Value generator
+	Value *generator
 }
 
 func (f *ptrField) String() string { return f.Name }
@@ -201,7 +206,7 @@ func (f *ptrField) Initialize(v string) {
 	if f.Value.Warning != "" {
 		fmt.Printf("\t// Warning: %s", f.Value.Warning)
 	}
-	fmt.Printf("\t%sA.%s = &%s\n", v, f.Name, f.Value.Initial)
+	fmt.Printf("\t%sA.%s = func() *%s { tmp := %s; return &tmp }()\n", v, f.Name, f.Value.Type, f.Value.Initial)
 }
 func (f *ptrField) Reassign(v string) {
 	fmt.Printf("\t%sA.%s%s = %s\n", v, f.Name, f.Value.SubKey, f.Value.Altered)
@@ -210,22 +215,26 @@ func (f *ptrField) Compare(v string) {
 	fmt.Printf("\tif %sB.%s%s != %s {\n", v, f.Name, f.Value.SubKey, f.Value.SubValue)
 }
 
-func generatorForType(typ types.Type) generator {
+func generatorForType(typ types.Type) *generator {
 	switch t := typ.(type) {
 	case (*types.Basic):
 		switch t.Name() {
 		case "string":
-			return stringGenerator
+			return &stringGenerator
 		default:
 			panic(fmt.Errorf("Unknown basic type: %s", t.Name()))
 		}
 	case (*types.Interface):
 		if t.Empty() {
-			return emptyInterfaceGenerator
+			return &emptyInterfaceGenerator
 		}
 	case (*types.Named):
+		named := fmt.Sprintf("%s.%s", t.Obj().Pkg().Name(), t.Obj().Name())
+		if named == "json.RawMessage" {
+			// We consider that json.RawMessage is not modifiable in our code
+			return nil
+		}
 		if s, ok := t.Obj().Type().Underlying().(*types.Struct); ok {
-			named := fmt.Sprintf("%s.%s", t.Obj().Pkg().Name(), t.Obj().Name())
 			return structGenerator(named, s)
 		}
 	}
@@ -259,11 +268,11 @@ var emptyInterfaceGenerator = generator{
 	Warning:  "interface{} can contain nested data!",
 }
 
-func structGenerator(name string, s *types.Struct) generator {
+func structGenerator(name string, s *types.Struct) *generator {
 	f := s.Field(0)
 	g := generatorForType(f.Type())
-	return generator{
-		Type:     "&ptr",
+	return &generator{
+		Type:     name,
 		Initial:  fmt.Sprintf("%s{%s: %s}", name, f.Name(), g.Initial),
 		Altered:  g.Altered,
 		SubKey:   "." + f.Name(),
