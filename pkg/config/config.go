@@ -169,6 +169,7 @@ type CouchDB struct {
 type Jobs struct {
 	RedisConfig
 	NoWorkers             bool
+	WhiteList             bool
 	Workers               []Worker
 	ImageMagickConvertCmd string
 	// XXX for retro-compatibility
@@ -505,13 +506,16 @@ func UseViper(v *viper.Viper) error {
 		ImageMagickConvertCmd: v.GetString("jobs.imagemagick_convert_cmd"),
 	}
 	{
+		isWhiteList := v.GetBool("jobs.whitelist")
+		if isWhiteList {
+			jobs.WhiteList = true
+		}
 		if nbWorkers := v.GetInt("jobs.workers"); nbWorkers > 0 {
 			jobs.NbWorkers = nbWorkers
 		} else if ws := v.GetString("jobs.workers"); ws == "false" || ws == "none" || ws == "0" {
 			jobs.NoWorkers = true
 		} else if workersMap := v.GetStringMap("jobs.workers"); len(workersMap) > 0 {
 			workers := make([]Worker, 0, len(workersMap))
-
 			for workerType, mapInterface := range workersMap {
 				w := Worker{WorkerType: workerType}
 

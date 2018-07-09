@@ -117,7 +117,7 @@ func updateSettings(c *client.Client, obj map[string]interface{}, args string) (
 func init() {
 	domain := os.Getenv("COZY_DOMAIN")
 	if domain == "" && config.IsDevRelease() {
-		domain = "cozy.tools:8080"
+		domain = defaultDevDomain
 	}
 
 	settingsCmd.PersistentFlags().StringVar(&flagSettingsDomain, "domain", domain, "specify the domain name of the instance")

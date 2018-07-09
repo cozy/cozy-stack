@@ -187,6 +187,10 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 	if worker == nil {
 		return nil, ErrUnknownWorker
 	}
+	if worker.Conf.AdminOnly && !req.Admin {
+		return nil, ErrUnknownWorker
+	}
+
 	if worker.Conf.BeforeHook != nil {
 		if ok, err := worker.Conf.BeforeHook(req); !ok || err != nil {
 			return nil, err

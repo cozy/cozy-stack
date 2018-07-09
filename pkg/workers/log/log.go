@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
 func init() {
@@ -24,6 +23,6 @@ func Worker(ctx *jobs.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	logger.WithDomain(ctx.Domain()).Info(msg)
+	ctx.Logger().Info(msg)
 	return nil
 }

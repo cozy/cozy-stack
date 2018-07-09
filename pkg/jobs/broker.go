@@ -62,34 +62,37 @@ type (
 	// Job contains all the metadata informations of a Job. It can be
 	// marshalled in JSON.
 	Job struct {
-		JobID      string      `json:"_id,omitempty"`
-		JobRev     string      `json:"_rev,omitempty"`
-		Domain     string      `json:"domain"`
-		Prefix     string      `json:"prefix,omitempty"`
-		WorkerType string      `json:"worker"`
-		TriggerID  string      `json:"trigger_id,omitempty"`
-		Message    Message     `json:"message"`
-		Event      Event       `json:"event"`
-		Manual     bool        `json:"manual_execution,omitempty"`
-		Debounced  bool        `json:"debounced,omitempty"`
-		Options    *JobOptions `json:"options,omitempty"`
-		State      State       `json:"state"`
-		QueuedAt   time.Time   `json:"queued_at"`
-		StartedAt  time.Time   `json:"started_at"`
-		FinishedAt time.Time   `json:"finished_at"`
-		Error      string      `json:"error,omitempty"`
+		JobID       string      `json:"_id,omitempty"`
+		JobRev      string      `json:"_rev,omitempty"`
+		Domain      string      `json:"domain"`
+		Prefix      string      `json:"prefix,omitempty"`
+		WorkerType  string      `json:"worker"`
+		TriggerID   string      `json:"trigger_id,omitempty"`
+		Message     Message     `json:"message"`
+		Event       Event       `json:"event"`
+		Manual      bool        `json:"manual_execution,omitempty"`
+		Debounced   bool        `json:"debounced,omitempty"`
+		Options     *JobOptions `json:"options,omitempty"`
+		State       State       `json:"state"`
+		QueuedAt    time.Time   `json:"queued_at"`
+		StartedAt   time.Time   `json:"started_at"`
+		FinishedAt  time.Time   `json:"finished_at"`
+		Error       string      `json:"error,omitempty"`
+		ForwardLogs bool        `json:"forward_logs,omitempty"`
 	}
 
 	// JobRequest struct is used to represent a new job request.
 	JobRequest struct {
-		WorkerType string
-		TriggerID  string
-		Trigger    Trigger
-		Message    Message
-		Event      Event
-		Manual     bool
-		Debounced  bool
-		Options    *JobOptions
+		WorkerType  string
+		TriggerID   string
+		Trigger     Trigger
+		Message     Message
+		Event       Event
+		Manual      bool
+		Debounced   bool
+		ForwardLogs bool
+		Admin       bool
+		Options     *JobOptions
 	}
 
 	// JobOptions struct contains the execution properties of the jobs.
@@ -250,17 +253,18 @@ func (m Message) MarshalJSON() ([]byte, error) {
 // NewJob creates a new Job instance from a job request.
 func NewJob(db prefixer.Prefixer, req *JobRequest) *Job {
 	return &Job{
-		Domain:     db.DomainName(),
-		Prefix:     db.DBPrefix(),
-		WorkerType: req.WorkerType,
-		TriggerID:  req.TriggerID,
-		Manual:     req.Manual,
-		Message:    req.Message,
-		Debounced:  req.Debounced,
-		Event:      req.Event,
-		Options:    req.Options,
-		State:      Queued,
-		QueuedAt:   time.Now(),
+		Domain:      db.DomainName(),
+		Prefix:      db.DBPrefix(),
+		WorkerType:  req.WorkerType,
+		TriggerID:   req.TriggerID,
+		Manual:      req.Manual,
+		Message:     req.Message,
+		Debounced:   req.Debounced,
+		Event:       req.Event,
+		Options:     req.Options,
+		ForwardLogs: req.ForwardLogs,
+		State:       Queued,
+		QueuedAt:    time.Now(),
 	}
 }
 

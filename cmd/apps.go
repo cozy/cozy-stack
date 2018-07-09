@@ -564,7 +564,7 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 func init() {
 	domain := os.Getenv("COZY_DOMAIN")
 	if domain == "" && config.IsDevRelease() {
-		domain = "cozy.tools:8080"
+		domain = defaultDevDomain
 	}
 
 	webappsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")

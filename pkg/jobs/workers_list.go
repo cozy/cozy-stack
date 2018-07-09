@@ -18,17 +18,30 @@ var workersList WorkersList
 // GetWorkersList returns a list of all activated workers, configured
 // as defined by the configuration file.
 func GetWorkersList() ([]*WorkerConfig, error) {
-	workersConfs := config.GetConfig().Jobs.Workers
+	jobsConf := config.GetConfig().Jobs
+	workersConfs := jobsConf.Workers
 	workers := make(WorkersList, 0, len(workersList))
+
 	for _, w := range workersList {
 		if config.GetConfig().Jobs.NoWorkers {
 			w = w.Clone()
 			w.Concurrency = 0
 		} else {
+			found := false
 			for _, c := range workersConfs {
 				if c.WorkerType == w.WorkerType {
 					w = applyWorkerConfig(w, c)
+					if found {
+						logger.WithNamespace("workers_list").Warnf(
+							"Configuration for the worker %q that is defined more than once",
+							c.WorkerType)
+					}
+					found = true
 				}
+			}
+			if jobsConf.WhiteList && !found {
+				zero := 0
+				w = applyWorkerConfig(w, config.Worker{Concurrency: &zero})
 			}
 		}
 		workers = append(workers, w)

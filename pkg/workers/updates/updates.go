@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/registry"
@@ -99,6 +101,17 @@ func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
 	insc := make(chan *apps.Installer)
 	errc := make(chan *updateError)
 
+	totalInstances, err := couchdb.CountAllDocs(couchdb.GlobalDB, consts.Instances)
+	if err != nil {
+		return err
+	}
+	totalInstances = totalInstances - 1
+
+	// log a message for every hundredth instances updated, rounded to the
+	// closest multiple of 100.
+	countMark := totalInstances / 100
+	countMark = ((countMark + 100 - 1) / 100) * 100
+
 	var g sync.WaitGroup
 	g.Add(numUpdaters)
 
@@ -117,6 +130,7 @@ func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
 	}
 
 	go func() {
+		count := 0
 		// TODO: filter instances that are AutoUpdate only
 		errf := instance.ForeachInstances(func(inst *instance.Instance) error {
 			if opts.DomainsWithContext != "" &&
@@ -128,8 +142,14 @@ func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
 				return ctx.Err()
 			default:
 			}
+			count++
 			if opts.Force || !inst.NoAutoUpdate {
 				installerPush(inst, insc, errc, opts)
+			}
+			if count == totalInstances {
+				ctx.Logger().Infof("updated %d instances -- finished", count)
+			} else if countMark > 0 && count%countMark == 0 {
+				ctx.Logger().Infof("updated %d instances", count)
 			}
 			return nil
 		})
