@@ -68,6 +68,13 @@ func (p *Permission) Clone() couchdb.Doc {
 	for k, v := range p.Codes {
 		cloned.Codes[k] = v
 	}
+	cloned.Permissions = make([]Rule, len(p.Permissions))
+	for i, r := range p.Permissions {
+		vals := r.Values
+		r.Values = make([]string, len(r.Values))
+		copy(r.Values, vals)
+		cloned.Permissions[i] = r
+	}
 	return &cloned
 }
 
