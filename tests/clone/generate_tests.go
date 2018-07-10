@@ -52,13 +52,10 @@ func extractInfos(pkgs []string) []info {
 
 			switch obj.Name() {
 			// Ignore structs that have a Clone method that panics
-			case "TreeFile", "DirOrFileDoc", "APICredentials", "FileDocWithRevisions":
+			case "TreeFile", "DirOrFileDoc", "APICredentials", "FileDocWithRevisions", "APISharing":
 				continue
 			// TODO Services is not supported for the moment
 			case "WebappManifest":
-				continue
-			// TODO Credentials *interface{} is not supported
-			case "APISharing":
 				continue
 			}
 

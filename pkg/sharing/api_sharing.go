@@ -43,6 +43,11 @@ func (s *APISharing) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/sharings/" + s.SID}
 }
 
+// Clone is part of the couchdb.Doc interface
+func (s *APISharing) Clone() couchdb.Doc {
+	panic("APISharing should not be cloned")
+}
+
 var _ jsonapi.Object = (*APISharing)(nil)
 
 // APICredentials is used to serialize credentials to JSON-API. It is used for
