@@ -136,7 +136,8 @@ func (m *WebappManifest) Clone() couchdb.Doc {
 
 	cloned.Services = make(Services, len(m.Services))
 	for k, v := range m.Services {
-		cloned.Services[k] = v
+		tmp := *v
+		cloned.Services[k] = &tmp
 	}
 
 	cloned.Notifications = make(Notifications, len(m.Notifications))

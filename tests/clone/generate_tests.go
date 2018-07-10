@@ -54,9 +54,6 @@ func extractInfos(pkgs []string) []info {
 			// Ignore structs that have a Clone method that panics
 			case "TreeFile", "DirOrFileDoc", "APICredentials", "FileDocWithRevisions", "APISharing":
 				continue
-			// TODO Services is not supported for the moment
-			case "WebappManifest":
-				continue
 			}
 
 			fields := make([]mutableField, 0)
@@ -110,6 +107,8 @@ func extractInfos(pkgs []string) []info {
 					switch named {
 					case "time.Time", "time.Duration":
 						// These structs are known to be safe
+					case "apps.SubDomainer":
+						// This struct is just an interface used for JSON-API links
 					default:
 						panic(fmt.Errorf("Unknown named type: %s", named))
 					}
@@ -286,6 +285,8 @@ func generatorForType(typ types.Type) *generator {
 		if s, ok := t.Obj().Type().Underlying().(*types.Struct); ok {
 			return structGenerator(named, s)
 		}
+	case (*types.Pointer):
+		return ptrGenerator(t)
 	}
 	panic(fmt.Errorf("Unknown generator type: %#v", typ))
 }
@@ -342,13 +343,37 @@ var emptyInterfaceGenerator = generator{
 }
 
 func structGenerator(name string, s *types.Struct) *generator {
-	f := s.Field(0)
+	var f *types.Var
+	for i := 0; i < s.NumFields(); i++ {
+		ff := s.Field(i)
+		if ff.Exported() {
+			f = ff
+			break
+		}
+	}
+	if f == nil {
+		panic(fmt.Errorf("No generator for a struct with no exported fields: %s", s))
+	}
 	g := generatorForType(f.Type())
 	return &generator{
 		Type:     name,
 		Initial:  fmt.Sprintf("%s{%s: %s}", name, f.Name(), g.Initial),
 		Altered:  g.Altered,
 		SubKey:   "." + f.Name(),
+		SubValue: g.SubValue,
+	}
+}
+
+func ptrGenerator(t *types.Pointer) *generator {
+	g := generatorForType(t.Elem())
+	if g == nil {
+		panic(fmt.Errorf("No generator for pointers to %s", t.Elem()))
+	}
+	return &generator{
+		Type:     "*" + g.Type,
+		Initial:  "&" + g.Initial,
+		Altered:  g.Altered,
+		SubKey:   g.SubKey,
 		SubValue: g.SubValue,
 	}
 }
