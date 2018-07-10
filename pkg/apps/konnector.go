@@ -92,6 +92,12 @@ func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned.Messages = cloneRawMessage(m.Messages)
 	cloned.OAuth = cloneRawMessage(m.OAuth)
 	cloned.TimeInterval = cloneRawMessage(m.TimeInterval)
+
+	cloned.Notifications = make(Notifications, len(m.Notifications))
+	for k, v := range m.Notifications {
+		props := (&v).Clone()
+		cloned.Notifications[k] = *props
+	}
 	return &cloned
 }
 

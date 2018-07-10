@@ -140,6 +140,10 @@ func (t *TriggerInfos) Clone() couchdb.Doc {
 		t.Message = make([]byte, len(tmp))
 		copy(t.Message[:], tmp)
 	}
+	if t.CurrentState != nil {
+		tmp := *t.CurrentState
+		cloned.CurrentState = &tmp
+	}
 	return &cloned
 }
 

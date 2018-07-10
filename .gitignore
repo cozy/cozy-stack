@@ -5,6 +5,7 @@
 /cozy-stack*
 /debian
 /storage
+/tests/clone/generated
 /tests/coverage.txt
 /tests/pouchdb-integration/node_modules
 /tests/pouchdb-integration/replication-target

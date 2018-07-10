@@ -109,6 +109,9 @@ func (e *ExportDoc) Clone() couchdb.Doc {
 	clone.PartsCursors = make([]string, len(e.PartsCursors))
 	copy(clone.PartsCursors, e.PartsCursors)
 
+	clone.WithDoctypes = make([]string, len(e.WithDoctypes))
+	copy(clone.WithDoctypes, e.WithDoctypes)
+
 	return &clone
 }
 

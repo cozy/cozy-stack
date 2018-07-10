@@ -44,7 +44,7 @@ type Services map[string]*Service
 
 // Notifications is a map to define the notifications properties used by the
 // application.
-type Notifications map[string]*notification.Properties
+type Notifications map[string]notification.Properties
 
 // Locales is a map to define the available locales of the application.
 type Locales map[string]interface{}
@@ -136,12 +136,14 @@ func (m *WebappManifest) Clone() couchdb.Doc {
 
 	cloned.Services = make(Services, len(m.Services))
 	for k, v := range m.Services {
-		cloned.Services[k] = v
+		tmp := *v
+		cloned.Services[k] = &tmp
 	}
 
 	cloned.Notifications = make(Notifications, len(m.Notifications))
 	for k, v := range m.Notifications {
-		cloned.Notifications[k] = v.Clone()
+		props := (&v).Clone()
+		cloned.Notifications[k] = *props
 	}
 
 	cloned.Locales = cloneRawMessage(m.Locales)

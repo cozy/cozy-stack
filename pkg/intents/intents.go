@@ -91,3 +91,5 @@ func (in *Intent) FillServices(instance *instance.Instance) error {
 	}
 	return nil
 }
+
+var _ couchdb.Doc = (*Intent)(nil)
