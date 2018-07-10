@@ -27,34 +27,29 @@ func main() {
 // modifying the types of the intents of a manifest has no effect on its clone.
 func extractInfos(pkgs []string) []info {
 	infos := make([]info, 0)
-	docIface := getDocIface()
 
 	for _, pkgPath := range pkgs {
 		pkg, err := pkgInfoFromPath(pkgPath)
 		if err != nil {
 			panic(err)
 		}
-
 		in := info{
 			PkgName: pkg.Name(),
 			PkgPath: pkg.Path(),
 			Structs: make(map[string][]mutableField),
 		}
 		scope := pkg.Scope()
+
 		for _, name := range scope.Names() {
 			obj := scope.Lookup(name)
 			s, ok := obj.Type().Underlying().(*types.Struct)
 			if !ok {
 				continue
 			}
-			ptr := types.NewPointer(obj.Type())
-			// FIXME implements returns false for intents.Intent but it should
-			// return true, find why!
-			// implements := types.Implements(ptr.Underlying(), docIface)
-			f, g := types.MissingMethod(ptr.Underlying(), docIface, true)
-			if f != nil && !g {
+			if !hasCloneMethod(obj) {
 				continue
 			}
+
 			switch obj.Name() {
 			// Ignore structs that have a Clone method that panics
 			case "TreeFile", "DirOrFileDoc", "APICredentials", "FileDocWithRevisions":
@@ -65,11 +60,8 @@ func extractInfos(pkgs []string) []info {
 			// TODO Credentials *interface{} is not supported
 			case "APISharing":
 				continue
-			// TODO notification.Properties, sharing.RevsTree, jobs.AtTrigger,
-			// jobs.CronTrigger, jobs.EventTrigger are not a couchdb.Doc
-			case "Properties", "RevsTree", "AtTrigger", "CronTrigger", "EventTrigger":
-				continue
 			}
+
 			fields := make([]mutableField, 0)
 			for i := 0; i < s.NumFields(); i++ {
 				field := s.Field(i)
@@ -364,19 +356,34 @@ func structGenerator(name string, s *types.Struct) *generator {
 	}
 }
 
-// getDocIface returns the couchdb.Doc interface
-func getDocIface() *types.Interface {
-	couchPkg := "github.com/cozy/cozy-stack/pkg/couchdb"
-	conf := loader.Config{
-		ParserMode: parser.SpuriousErrors,
+func hasCloneMethod(obj types.Object) bool {
+	named, ok := obj.Type().(*types.Named)
+	if !ok {
+		return false
 	}
-	conf.Import(couchPkg)
-	lprog, err := conf.Load()
-	if err != nil {
-		panic(err)
+	for i := 0; i < named.NumMethods(); i++ {
+		m := named.Method(i)
+		if m.Name() != "Clone" {
+			continue
+		}
+		sig, ok := m.Type().(*types.Signature)
+		if !ok {
+			continue
+		}
+		if sig.Params().Len() != 0 {
+			return false
+		}
+		if sig.Results().Len() != 1 {
+			return false
+		}
+		r, ok := sig.Results().At(0).Type().(*types.Named)
+		if !ok {
+			return false
+		}
+		o := r.Obj()
+		return o.Name() == "Doc" && o.Pkg().Name() == "couchdb"
 	}
-	scope := lprog.Package(couchPkg).Pkg.Scope()
-	return scope.Lookup("Doc").Type().Underlying().(*types.Interface)
+	return false
 }
 
 func allFieldsAreBasic(s *types.Struct) bool {
