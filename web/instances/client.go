@@ -48,7 +48,8 @@ func createToken(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Unknown audience %s", audience)
 	}
 	if e := c.QueryParam("Expire"); e != "" && e != "0s" {
-		if d, err := time.ParseDuration(e); err == nil {
+		var d time.Duration
+		if d, err = time.ParseDuration(e); err == nil {
 			issuedAt = issuedAt.Add(d - validity)
 		}
 	}
