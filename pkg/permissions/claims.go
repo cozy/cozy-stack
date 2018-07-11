@@ -19,13 +19,13 @@ const (
 
 // TokenValidityDuration is the duration where a token is valid in seconds (1 week)
 var (
-	defaultValidityDuration = 24 * time.Hour
+	DefaultValidityDuration = 24 * time.Hour
 
-	appTokenValidityDuration       = 24 * time.Hour
-	konnectorTokenValidityDuration = 30 * time.Minute
-	cliTokenValidityDuration       = 30 * time.Minute
+	AppTokenValidityDuration       = 24 * time.Hour
+	KonnectorTokenValidityDuration = 30 * time.Minute
+	CLITokenValidityDuration       = 30 * time.Minute
 
-	accessTokenValidityDuration = 7 * 24 * time.Hour
+	AccessTokenValidityDuration = 7 * 24 * time.Hour
 )
 
 // Claims is used for JWT used in OAuth2 flow and applications token
@@ -50,26 +50,26 @@ func (claims *Claims) Expired() bool {
 			// an app token with no session association is used for services which
 			// should have tokens that have the same properties as the konnector's
 			// tokens
-			validityDuration = konnectorTokenValidityDuration
+			validityDuration = KonnectorTokenValidityDuration
 		} else {
-			validityDuration = appTokenValidityDuration
+			validityDuration = AppTokenValidityDuration
 		}
 
 	case KonnectorAudience:
-		validityDuration = konnectorTokenValidityDuration
+		validityDuration = KonnectorTokenValidityDuration
 
 	case CLIAudience:
-		validityDuration = cliTokenValidityDuration
+		validityDuration = CLITokenValidityDuration
 
 	case AccessTokenAudience:
-		validityDuration = accessTokenValidityDuration
+		validityDuration = AccessTokenValidityDuration
 
 	// Share, RefreshToken and RegistrationToken never expire
 	case ShareAudience, RegistrationTokenAudience, RefreshTokenAudience:
 		return false
 
 	default:
-		validityDuration = defaultValidityDuration
+		validityDuration = DefaultValidityDuration
 	}
 	validUntil := claims.IssuedAtUTC().Add(validityDuration)
 	return validUntil.Before(time.Now().UTC())

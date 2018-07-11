@@ -27,21 +27,32 @@ func createToken(c echo.Context) error {
 			return wrapError(err)
 		}
 	}
+	issuedAt := time.Now()
+	validity := permissions.DefaultValidityDuration
 	switch audience {
 	case "app":
 		audience = permissions.AppAudience
+		validity = permissions.AppTokenValidityDuration
 	case "konn", "konnector":
 		audience = permissions.KonnectorAudience
+		validity = permissions.KonnectorTokenValidityDuration
 	case "access-token":
 		audience = permissions.AccessTokenAudience
+		validity = permissions.AccessTokenValidityDuration
 	case "refresh-token":
 		audience = permissions.RefreshTokenAudience
 	case "cli":
 		audience = permissions.CLIAudience
+		validity = permissions.CLITokenValidityDuration
 	default:
 		return echo.NewHTTPError(http.StatusBadRequest, "Unknown audience %s", audience)
 	}
-	issuedAt := time.Now()
+	if e := c.QueryParam("Expire"); e != "" && e != "0s" {
+		var d time.Duration
+		if d, err = time.ParseDuration(e); err == nil {
+			issuedAt = issuedAt.Add(d - validity)
+		}
+	}
 	token, err := in.MakeJWT(audience, subject, scope, "", issuedAt)
 	if err != nil {
 		return err

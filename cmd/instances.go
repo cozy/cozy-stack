@@ -45,6 +45,7 @@ var flagTOS string
 var flagTOSLatest string
 var flagContextName string
 var flagOnboardingFinished bool
+var flagExpire time.Duration
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -439,6 +440,7 @@ func appOrKonnectorTokenInstance(cmd *cobra.Command, args []string, appType stri
 		Domain:   args[0],
 		Subject:  args[1],
 		Audience: appType,
+		Expire:   &flagExpire,
 	})
 	if err != nil {
 		return err
@@ -497,6 +499,7 @@ var oauthTokenInstanceCmd = &cobra.Command{
 			Subject:  args[1],
 			Audience: "access-token",
 			Scope:    args[2:],
+			Expire:   &flagExpire,
 		})
 		if err != nil {
 			return err
@@ -681,6 +684,8 @@ func init() {
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckPrune, "prune", false, "Try to solve inconsistencies by modifying the file system")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
+	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
+	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "Work on all domains iterativelly")
 	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	updateCmd.Flags().StringVar(&flagContextName, "context-name", "", "Work only on the instances with the given context name")
