@@ -1,20 +1,16 @@
-## cozy-stack instances token-app
+## cozy-stack jobs
 
-Generate a new application token
+Launch and manage jobs and workers
 
 ### Synopsis
 
-Generate a new application token
-
-```
-cozy-stack instances token-app [domain] [slug] [flags]
-```
+Launch and manage jobs and workers
 
 ### Options
 
 ```
-      --expire duration   Make the token expires in this amount of time
-  -h, --help              help for token-app
+      --domain string   specify the domain name of the instance (default "cozy.tools:8080")
+  -h, --help            help for jobs
 ```
 
 ### Options inherited from parent commands
@@ -29,5 +25,6 @@ cozy-stack instances token-app [domain] [slug] [flags]
 
 ### SEE ALSO
 
-* [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
+* [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
+* [cozy-stack jobs run](cozy-stack_jobs_run.md)	 - 
 
