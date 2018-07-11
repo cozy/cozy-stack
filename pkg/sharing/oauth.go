@@ -294,7 +294,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		if i > 0 && m.Instance != "" {
 			if m.Status == MemberStatusMailNotSent ||
 				m.Status == MemberStatusPendingInvitation {
-				m.Status = MemberStatusReady
+				s.Members[i].Status = MemberStatusReady
 			}
 		}
 	}
