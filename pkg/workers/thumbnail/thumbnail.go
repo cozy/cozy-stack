@@ -40,7 +40,7 @@ func init() {
 		WorkerType:   "thumbnail",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
-		Timeout:      30 * time.Second,
+		Timeout:      60 * time.Second,
 		WorkerFunc:   Worker,
 	})
 
@@ -168,6 +168,11 @@ func calculateMetadata(fs vfs.VFS, img *vfs.FileDoc) (*vfs.Metadata, error) {
 }
 
 func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.FileDoc) error {
+	// Do not try to generate thumbnails for images that weight more than 100MB
+	if img.ByteSize > 100*1024*1024 {
+		return nil
+	}
+
 	fs := i.ThumbsFS()
 	var in io.Reader
 	in, err := i.VFS().OpenFile(img)
