@@ -839,6 +839,25 @@ Content-Type: application/vnd.api+json
 HTTP/1.1 204 No Content
 ```
 
+### DELETE /sharings/:sharing-id/recipients/:index/readonly
+
+This route is used to remove the read-only flag on a recipient of a sharing.
+
+**Note**: 0 is not accepted for `index`, as it is the sharer him-self.
+
+##### Request
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/recipients/3/readonly HTTP/1.1
+Host: alice.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### DELETE /sharings/:sharing-id/recipients
 
 This route is used by an application on the owner's cozy to revoke the sharing
