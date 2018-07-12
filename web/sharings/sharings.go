@@ -425,22 +425,25 @@ func GetDiscovery(c echo.Context) error {
 		})
 	}
 
-	m, err := s.FindMemberByState(state)
-	if err != nil || m.Status == sharing.MemberStatusRevoked {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": inst.ContextualDomain(),
-			"Error":  "Error Invalid sharing",
-		})
-	}
-	if m.Status != sharing.MemberStatusMailNotSent &&
-		m.Status != sharing.MemberStatusPendingInvitation {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain":     inst.ContextualDomain(),
-			"ErrorTitle": "Error Sharing already accepted Title",
-			"Error":      "Error Sharing already accepted",
-			"Button":     inst.Translate("Error Sharing already accepted Button", m.Instance),
-			"ButtonLink": m.Instance,
-		})
+	m := &sharing.Member{}
+	if s.Owner {
+		m, err = s.FindMemberByState(state)
+		if err != nil || m.Status == sharing.MemberStatusRevoked {
+			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Domain": inst.ContextualDomain(),
+				"Error":  "Error Invalid sharing",
+			})
+		}
+		if m.Status != sharing.MemberStatusMailNotSent &&
+			m.Status != sharing.MemberStatusPendingInvitation {
+			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Domain":     inst.ContextualDomain(),
+				"ErrorTitle": "Error Sharing already accepted Title",
+				"Error":      "Error Sharing already accepted",
+				"Button":     inst.Translate("Error Sharing already accepted Button", m.Instance),
+				"ButtonLink": m.Instance,
+			})
+		}
 	}
 
 	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, state, m)

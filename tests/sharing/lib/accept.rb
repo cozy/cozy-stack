@@ -21,6 +21,7 @@ class Accept
   end
 
   def do_discovery(code)
+    @sharer.client["/sharings/#{@sharing.couch_id}/discovery?state=#{code}"].get
     body = { state: code, url: @inst.url }
     res = @sharer.client["/sharings/#{@sharing.couch_id}/discovery"].post body, accept: :json
     JSON.parse(res.body)["redirect"]
