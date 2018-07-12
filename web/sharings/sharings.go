@@ -299,6 +299,35 @@ func PutRecipients(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// RemoveReadOnly is used to give read-write to a member that had the read-only flag
+func RemoveReadOnly(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	_, err = checkCreatePermissions(c, s)
+	if err != nil {
+		// It can be a delegated call from a member on an open sharing to the owner
+		if err = hasSharingWritePermissions(c); err != nil {
+			return err
+		}
+	}
+	index, err := strconv.Atoi(c.Param("index"))
+	if err != nil {
+		return jsonapi.InvalidParameter("index", err)
+	}
+	if index == 0 || index >= len(s.Members) {
+		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
+	}
+	if err = s.RemoveReadOnlyFlag(inst, index); err != nil {
+		return wrapErrors(err)
+	}
+	go s.NotifyRecipients(inst, nil)
+	return c.NoContent(http.StatusNoContent)
+}
+
 // RevokeSharing is used to revoke a sharing by the sharer, for all recipients
 func RevokeSharing(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -529,6 +558,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:sharing-id/recipients", PutRecipients, checkSharingWritePermissions)
 	router.DELETE("/:sharing-id/recipients", RevokeSharing)                                  // On the sharer
 	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                         // On the sharer
+	router.DELETE("/:sharing-id/recipients/:index/readonly", RemoveReadOnly)                 // On the sharer
 	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingWritePermissions)    // On the recipient
 	router.DELETE("/:sharing-id/recipients/self", RevokeRecipientBySelf)                     // On the recipient
 	router.DELETE("/:sharing-id/answer", RevocationOwnerNotif, checkSharingWritePermissions) // On the sharer

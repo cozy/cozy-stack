@@ -476,6 +476,16 @@ func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) er
 	return couchdb.UpdateDoc(inst, s)
 }
 
+// RemoveReadOnlyFlag removes the read-only flag of a recipient, and send
+// credentials to their cozy so that it can push its changes.
+func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
+	if !s.Members[index].ReadOnly {
+		return nil
+	}
+	s.Members[index].ReadOnly = true
+	return couchdb.UpdateDoc(inst, s)
+}
+
 // RevokeMember revoke the access granted to a member and contact it
 func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credentials) error {
 	// No need to contact the revoked member if the sharing is not ready
