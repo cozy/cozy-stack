@@ -69,6 +69,12 @@ jobs:
   # path to the imagemagick convert binary
   # imagemagick_convert_cmd: convert
 
+  # Specify whether the given list of jobs is a whitelist or blacklist. In case
+  # of a whitelist, all jobs are deactivated by default and only the listed one
+  # are activated.
+  #
+  # whitelist: false
+
   # workers individual configrations.
   #
   # For each worker type it is possible to configure the following fields:
