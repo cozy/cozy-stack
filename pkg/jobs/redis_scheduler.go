@@ -233,7 +233,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 		prefix := parts[0]
 		t, err := s.GetTrigger(prefixer.NewPrefixer("", prefix), parts[1])
 		if err != nil {
-			if err == ErrNotFoundTrigger {
+			if err == ErrNotFoundTrigger || err == ErrMalformedTrigger {
 				s.client.ZRem(SchedKey, results[0])
 			}
 			return err
