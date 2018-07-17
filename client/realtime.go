@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/json"
 	"io"
+	"net/http"
 	"net/url"
 	"sync/atomic"
 
@@ -62,23 +63,27 @@ func (c *Client) RealtimeClient(opts RealtimeOptions) (*RealtimeChannel, error) 
 		scheme = "ws"
 	}
 
-	u := url.URL{
-		Scheme: scheme,
-		Host:   c.Domain,
-		Path:   "/realtime/",
-	}
-
-	socket, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
+	var err error
 	var authorizer request.Authorizer
 	if c.Authorizer != nil {
 		authorizer = c.Authorizer
 	} else {
 		authorizer, err = c.Authenticate()
 	}
+	if err != nil {
+		return nil, err
+	}
+
+	u := url.URL{
+		Scheme: scheme,
+		Host:   c.Domain,
+		Path:   "/realtime/",
+	}
+	var headers http.Header
+	if authHeader := authorizer.AuthHeader(); authHeader != "" {
+		headers.Add("Authorization", authHeader)
+	}
+	socket, _, err := websocket.DefaultDialer.Dial(u.String(), headers)
 	if err != nil {
 		return nil, err
 	}
