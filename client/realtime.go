@@ -79,7 +79,7 @@ func (c *Client) RealtimeClient(opts RealtimeOptions) (*RealtimeChannel, error) 
 		Host:   c.Domain,
 		Path:   "/realtime/",
 	}
-	var headers http.Header
+	headers := make(http.Header)
 	if authHeader := authorizer.AuthHeader(); authHeader != "" {
 		headers.Add("Authorization", authHeader)
 	}
