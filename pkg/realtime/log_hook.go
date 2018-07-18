@@ -8,19 +8,19 @@ import (
 )
 
 type log struct {
+	LogID   string                 `json:"_id"`
 	Time    time.Time              `json:"time"`
 	Message string                 `json:"message"`
 	Level   string                 `json:"level"`
 	Data    map[string]interface{} `json:"data"`
 
-	id      string
 	docType string
 }
 
 func (l *log) DocType() string   { return l.docType }
-func (l *log) ID() string        { return l.id }
+func (l *log) ID() string        { return l.LogID }
 func (l *log) Rev() string       { return "" }
-func (l *log) SetID(id string)   {}
+func (l *log) SetID(id string)   { l.LogID = id }
 func (l *log) SetRev(rev string) {}
 
 type logHook struct {
@@ -54,12 +54,12 @@ func (r *logHook) Levels() []logrus.Level {
 
 func (r *logHook) Fire(entry *logrus.Entry) error {
 	doc := &log{
+		LogID:   r.docID,
 		Time:    entry.Time,
 		Message: entry.Message,
 		Level:   entry.Level.String(),
 		Data:    entry.Data,
 		docType: r.docType,
-		id:      r.docID,
 	}
 	r.Hub.Publish(r.db, EventCreate, doc, nil)
 	return nil
