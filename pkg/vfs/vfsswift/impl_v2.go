@@ -144,17 +144,14 @@ func (sfs *swiftVFSV2) Delete() error {
 	if err1 != nil {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.container, err1)
-		return err1
 	}
 	if err2 != nil {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.dataContainer, err2)
-		return err2
 	}
 	if err3 != nil {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.version, err3)
-		return err3
 	}
 	var errm error
 	if err := sfs.deleteContainer(sfs.container); err != nil {
