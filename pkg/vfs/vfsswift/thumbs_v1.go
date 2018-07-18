@@ -12,7 +12,7 @@ import (
 
 // NewThumbsFs creates a new thumb filesystem base on swift.
 func NewThumbsFs(c *swift.Connection, domain string) vfs.Thumbser {
-	return &thumbs{c: c, container: "data-" + domain}
+	return &thumbs{c: c, container: swiftV1DataContainerPrefix + domain}
 }
 
 type thumbs struct {
