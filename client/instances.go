@@ -22,6 +22,7 @@ type Instance struct {
 	Attrs struct {
 		Domain               string    `json:"domain"`
 		DomainAliases        []string  `json:"domain_aliases,omitempty"`
+		Prefix               string    `json:"prefix,omitempty"`
 		Locale               string    `json:"locale"`
 		UUID                 string    `json:"uuid,omitempty"`
 		ContextName          string    `json:"context,omitempty"`
