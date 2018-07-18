@@ -89,9 +89,9 @@ func addCodeToRedirect(redirect *url.URL, domain, sessionID string) *url.URL {
 }
 
 // SetCookieForNewSession creates a new session and sets the cookie on echo context
-func SetCookieForNewSession(c echo.Context) (string, error) {
+func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error) {
 	instance := middlewares.GetInstance(c)
-	session, err := sessions.New(instance)
+	session, err := sessions.New(instance, longRunSession)
 	if err != nil {
 		return "", err
 	}
@@ -208,6 +208,7 @@ func login(c echo.Context) error {
 	twoFactorTrustedDeviceToken := []byte(c.FormValue("two-factor-trusted-device-token"))
 	twoFactorGenerateTrustedDeviceToken, _ := strconv.ParseBool(c.FormValue("two-factor-generate-trusted-device-token"))
 	passphrase := []byte(c.FormValue("passphrase"))
+	longRunSession, _ := strconv.ParseBool(c.FormValue("long-run-session"))
 
 	var twoFactorGeneratedTrustedDeviceToken []byte
 
@@ -256,7 +257,7 @@ func login(c echo.Context) error {
 	}
 
 	if successfulAuthentication {
-		if sessionID, err = SetCookieForNewSession(c); err != nil {
+		if sessionID, err = SetCookieForNewSession(c, longRunSession); err != nil {
 			return err
 		}
 

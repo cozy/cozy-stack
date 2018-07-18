@@ -37,6 +37,7 @@ type Session struct {
 	DocRev    string             `json:"_rev,omitempty"`
 	CreatedAt time.Time          `json:"created_at"`
 	LastSeen  time.Time          `json:"last_seen"`
+	LongRun   bool               `json:"long_run"`
 }
 
 // DocType implements couchdb.Doc
@@ -73,12 +74,13 @@ func (s *Session) OlderThan(t time.Duration) bool {
 }
 
 // New creates a session in couchdb for the given instance
-func New(i *instance.Instance) (*Session, error) {
+func New(i *instance.Instance, longRun bool) (*Session, error) {
 	now := time.Now()
 	s := &Session{
 		Instance:  i,
 		LastSeen:  now,
 		CreatedAt: now,
+		LongRun:   longRun,
 	}
 	if err := couchdb.CreateDoc(i, s); err != nil {
 		return nil, err
@@ -207,10 +209,15 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 		return nil, err
 	}
 
+	maxAge := 0
+	if s.LongRun {
+		maxAge = 10 * 365 * 24 * 3600 // 10 years
+	}
+
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    string(encoded),
-		MaxAge:   10 * 365 * 24 * 3600, // 10 years
+		MaxAge:   maxAge,
 		Path:     "/",
 		Domain:   utils.StripPort("." + s.Instance.ContextualDomain()),
 		Secure:   !s.Instance.Dev,
