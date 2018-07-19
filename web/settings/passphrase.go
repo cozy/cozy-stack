@@ -94,10 +94,12 @@ func updatePassphrase(c echo.Context) error {
 		return jsonapi.BadRequest(err)
 	}
 
+	longRunSession := true
 	if hasSession {
-		if _, err = auth.SetCookieForNewSession(c, session.LongRun); err != nil {
-			return err
-		}
+		longRunSession = session.LongRun
+	}
+	if _, err = auth.SetCookieForNewSession(c, longRunSession); err != nil {
+		return err
 	}
 
 	return c.NoContent(http.StatusNoContent)
