@@ -486,6 +486,30 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 	return couchdb.UpdateDoc(inst, s)
 }
 
+// UpgradeToReadWrite is used to receive credentials on a read-only instance
+// to upgrade it to read-write.
+func (s *Sharing) UpgradeToReadWrite(inst *instance.Instance, creds *APICredentials) error {
+	if s.Owner {
+		return ErrInvalidSharing
+	}
+
+	for i, m := range s.Members {
+		if i > 0 && m.Instance != "" {
+			s.Members[i].ReadOnly = false
+			break
+		}
+	}
+
+	if err := s.SetupReceiver(inst); err != nil {
+		return err
+	}
+
+	s.Credentials[0].XorKey = creds.XorKey
+	s.Credentials[0].AccessToken = creds.AccessToken
+	s.Credentials[0].Client = creds.Client
+	return couchdb.UpdateDoc(inst, s)
+}
+
 // RevokeMember revoke the access granted to a member and contact it
 func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credentials) error {
 	// No need to contact the revoked member if the sharing is not ready
