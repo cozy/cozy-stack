@@ -366,7 +366,7 @@ msgid "Permissions cc.cozycloud.autocategorization"
 msgstr "Categorization model enrichment file"
 
 msgid "Permissions cc.cozycloud.sentry"
-msgstr "The application logs"
+msgstr "Application logs"
 
 msgid "Mail Greeting"
 msgstr "Hello"
