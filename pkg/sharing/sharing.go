@@ -307,6 +307,14 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance) error {
 		}
 	}
 	s.Active = false
+
+	for i, m := range s.Members {
+		if i > 0 && m.Instance != "" {
+			s.Members[i].Status = MemberStatusRevoked
+			break
+		}
+	}
+
 	return couchdb.UpdateDoc(inst, s)
 }
 
@@ -360,6 +368,13 @@ func (s *Sharing) RevokeByNotification(inst *instance.Instance) error {
 	}
 	s.Credentials = nil
 	s.Active = false
+
+	for i, m := range s.Members {
+		if i > 0 && m.Instance != "" {
+			s.Members[i].Status = MemberStatusRevoked
+			break
+		}
+	}
 
 	return couchdb.UpdateDoc(inst, s)
 }
