@@ -365,6 +365,9 @@ msgstr "Insurance claims (Maif)"
 msgid "Permissions cc.cozycloud.autocategorization"
 msgstr "Categorization model enrichment file"
 
+msgid "Permissions cc.cozycloud.sentry"
+msgstr "The application logs"
+
 msgid "Mail Greeting"
 msgstr "Hello"
 
