@@ -599,7 +599,7 @@ Content-Type: application/vnd.api+json
       "public_name": "Bob",
       "state": "eiJ3iepoaihohz1Y",
       "client": {...},
-      "access_token": "uia7b85928e5cf"
+      "access_token": {...}
     }
   }
 }
@@ -619,7 +619,7 @@ Content-Type: application/vnd.api+json
     "id": "ce8835a061d0ef68947afe69a0046722",
     "attributes": {
       "client": {...},
-      "access_token": "ui77bd4670fbd3"
+      "access_token": {...}
     }
   }
 }
@@ -850,6 +850,40 @@ This route is used to remove the read-only flag on a recipient of a sharing.
 ```http
 DELETE /sharings/ce8835a061d0ef68947afe69a0046722/recipients/3/readonly HTTP/1.1
 Host: alice.example.net
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### DELETE /sharings/:sharing-id/recipients/self/readonly
+
+This is an internal route for the stack. It's used to inform the recipient's
+cozy that it is no longer in read-only mode, and to give it the credentials
+for sending its updates.
+
+#### Request
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/recipients/self/readonly HTTP/1.1
+Host: bob.example.net
+Authorization: Bearer ...
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings.answer",
+    "id": "4dadbcae3f2d7a982e1b308eea000751",
+    "attributes": {
+      "client": {...},
+      "access_token": {...}
+    }
+  }
+}
 ```
 
 #### Response
