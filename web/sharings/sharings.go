@@ -459,6 +459,7 @@ func PostDiscovery(c echo.Context) error {
 	state := c.FormValue("state")
 	sharecode := c.FormValue("sharecode")
 	cozyURL := c.FormValue("url")
+	cozyURL = strings.Replace(cozyURL, "mycosy.cloud", "mycozy.cloud", 1)
 
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
