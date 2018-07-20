@@ -479,10 +479,74 @@ func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) er
 // RemoveReadOnlyFlag removes the read-only flag of a recipient, and send
 // credentials to their cozy so that it can push its changes.
 func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
+	if index <= 0 {
+		return ErrMemberNotFound
+	}
+	if s.ReadOnly() {
+		return ErrInvalidSharing
+	}
 	if !s.Members[index].ReadOnly {
 		return nil
 	}
 	s.Members[index].ReadOnly = true
+
+	ac := APICredentials{
+		CID: s.SID,
+		Credentials: &Credentials{
+			XorKey: s.Credentials[index-1].XorKey,
+		},
+	}
+	// Create the credentials for the recipient
+	cli, err := CreateOAuthClient(inst, &s.Members[index])
+	if err != nil {
+		return err
+	}
+	s.Credentials[index-1].InboundClientID = cli.ClientID
+	ac.Credentials.Client = ConvertOAuthClient(cli)
+	token, err := CreateAccessToken(inst, cli, s.SID, permissions.ALL)
+	if err != nil {
+		return err
+	}
+	ac.Credentials.AccessToken = token
+
+	u, err := url.Parse(s.Members[index].Instance)
+	if s.Members[index].Instance == "" || err != nil {
+		return ErrInvalidSharing
+	}
+	data, err := jsonapi.MarshalObject(&ac)
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(jsonapi.Document{Data: &data})
+	if err != nil {
+		return err
+	}
+	opts := &request.Options{
+		Method: http.MethodDelete,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/recipients/self/readonly",
+		Headers: request.Headers{
+			"Accept":       "application/vnd.api+json",
+			"Content-Type": "application/vnd.api+json",
+		},
+		Body: bytes.NewReader(body),
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if res, err = RefreshToken(inst, s, &s.Members[index], &s.Credentials[index-1], opts, body); err != nil {
+			return err
+		}
+	}
+	defer res.Body.Close()
+	if res.StatusCode/100 != 2 {
+		return ErrRequestFailed
+	}
+
 	return couchdb.UpdateDoc(inst, s)
 }
 
