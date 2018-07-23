@@ -321,10 +321,16 @@ func RemoveReadOnly(c echo.Context) error {
 	if index == 0 || index >= len(s.Members) {
 		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
 	}
-	if err = s.RemoveReadOnlyFlag(inst, index); err != nil {
-		return wrapErrors(err)
+	if s.Owner {
+		if err = s.RemoveReadOnlyFlag(inst, index); err != nil {
+			return wrapErrors(err)
+		}
+		go s.NotifyRecipients(inst, nil)
+	} else {
+		if err = s.DelegateRemoveReadOnlyFlag(inst, index); err != nil {
+			return wrapErrors(err)
+		}
 	}
-	go s.NotifyRecipients(inst, nil)
 	return c.NoContent(http.StatusNoContent)
 }
 
