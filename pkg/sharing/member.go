@@ -574,6 +574,43 @@ func (s *Sharing) UpgradeToReadWrite(inst *instance.Instance, creds *APICredenti
 	return couchdb.UpdateDoc(inst, s)
 }
 
+// DelegateRemoveReadOnlyFlag is used by a recipient to ask the sharer to
+// remove the read-only falg for another member of the sharing.
+func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int) error {
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return err
+	}
+	c := &s.Credentials[0]
+	opts := &request.Options{
+		Method: http.MethodDelete,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   fmt.Sprintf("/sharings/%s/recipients/%d/readonly", s.SID, index),
+		Headers: request.Headers{
+			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+		},
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if res, err = RefreshToken(inst, s, &s.Members[0], c, opts, nil); err != nil {
+			return err
+		}
+	}
+	res.Body.Close()
+	if res.StatusCode == http.StatusBadRequest {
+		return ErrInvalidURL
+	}
+	if res.StatusCode/100 != 2 {
+		return ErrInternalServerError
+	}
+	return nil
+}
+
 // RevokeMember revoke the access granted to a member and contact it
 func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credentials) error {
 	// No need to contact the revoked member if the sharing is not ready
