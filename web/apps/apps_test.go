@@ -247,7 +247,8 @@ func TestServeAppsWithACode(t *testing.T) {
 	assert.Equal(t, "/auth/login", location.Path)
 	assert.NotEmpty(t, location.Query().Get("redirect"))
 
-	session, _ := sessions.New(testInstance)
+	longRunSession := true
+	session, _ := sessions.New(testInstance, longRunSession)
 	code := sessions.BuildCode(session.ID(), appHost)
 
 	req, _ = http.NewRequest("GET", ts.URL+"/foo?code="+code.Value, nil)
@@ -371,7 +372,8 @@ func TestMain(m *testing.M) {
 
 	ts = setup.GetTestServer("/apps", webApps.WebappsRoutes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
-			session, _ := sessions.New(testInstance)
+			longRunSession := true
+			session, _ := sessions.New(testInstance, longRunSession)
 			cookie, _ := session.ToCookie()
 			c.SetCookie(cookie)
 			return c.HTML(http.StatusOK, "OK")

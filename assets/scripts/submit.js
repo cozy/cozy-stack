@@ -13,6 +13,7 @@
   const twoFactorPasscodeInput = document.getElementById('two-factor-passcode')
   const twoFactorTokenInput = document.getElementById('two-factor-token')
   const twoFactorTrustDeviceCheckbox = document.getElementById('two-factor-trust-device')
+  const longRunSessionCheckbox = document.getElementById('long-run-session')
   const twoFactorForms = document.getElementsByClassName('two-factor-form')
   const passwordForms = document.getElementsByClassName('password-form')
   const csrfTokenInput = document.getElementById('csrf_token')
@@ -51,6 +52,7 @@
     submitButton.setAttribute('disabled', true)
 
     const passphrase = passphraseInput.value
+    const longRunSession = longRunSessionCheckbox.checked ? '1' : '0'
     const twoFactorTrustedDeviceToken = (localStorage && localStorage.getItem(twoFactorTrustedDeviceTokenKey)) || ''
     const redirect = redirectInput.value + window.location.hash
     let headers = new Headers()
@@ -58,6 +60,7 @@
     headers.append('Accept', 'application/json')
     const reqBody = 'passphrase=' + encodeURIComponent(passphrase) +
       '&two-factor-trusted-device-token=' + encodeURIComponent(twoFactorTrustedDeviceToken) +
+      '&long-run-session=' + encodeURIComponent(longRunSession) +
       '&redirect=' + encodeURIComponent(redirect) +
       '&csrf_token=' + encodeURIComponent(csrfTokenInput.value);
     fetch('/auth/login', {

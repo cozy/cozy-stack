@@ -48,6 +48,9 @@ msgstr "show"
 msgid "Login Password button hide"
 msgstr "hide"
 
+msgid "Login Long Session"
+msgstr "Memorize the session"
+
 msgid "Login Submit"
 msgstr "Log in"
 
