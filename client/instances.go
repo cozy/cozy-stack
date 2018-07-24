@@ -30,6 +30,7 @@ type Instance struct {
 		TOSLatest            string    `json:"tos_latest,omitempty"`
 		AuthMode             int       `json:"auth_mode,omitempty"`
 		NoAutoUpdate         bool      `json:"no_auto_update,omitempty"`
+		Blocked              bool      `json:"blocked,omitempty"`
 		Dev                  bool      `json:"dev"`
 		OnboardingFinished   bool      `json:"onboarding_finished"`
 		BytesDiskQuota       int64     `json:"disk_quota,string,omitempty"`
@@ -59,6 +60,7 @@ type InstanceOptions struct {
 	Apps               []string
 	Passphrase         string
 	Debug              *bool
+	Blocked            *bool
 	OnboardingFinished *bool
 	Dev                bool
 }
@@ -186,6 +188,9 @@ func (c *Client) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
 	}
 	if opts.Debug != nil {
 		q.Add("Debug", strconv.FormatBool(*opts.Debug))
+	}
+	if opts.Blocked != nil {
+		q.Add("Blocked", strconv.FormatBool(*opts.Blocked))
 	}
 	if opts.OnboardingFinished != nil {
 		q.Add("OnboardingFinished", strconv.FormatBool(*opts.OnboardingFinished))

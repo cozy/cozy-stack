@@ -149,6 +149,7 @@ type Options struct {
 	Apps          []string
 	AutoUpdate    *bool
 	Debug         *bool
+	Blocked       *bool
 	Dev           bool
 
 	OnboardingFinished *bool
@@ -901,6 +902,11 @@ func Patch(i *Instance, opts *Options) error {
 		needUpdate := false
 		if opts.Locale != "" && opts.Locale != i.Locale {
 			i.Locale = opts.Locale
+			needUpdate = true
+		}
+
+		if opts.Blocked != nil && *opts.Blocked != i.Blocked {
+			i.Blocked = *opts.Blocked
 			needUpdate = true
 		}
 
