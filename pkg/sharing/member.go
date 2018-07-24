@@ -476,6 +476,126 @@ func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) er
 	return couchdb.UpdateDoc(inst, s)
 }
 
+// AddReadOnlyFlag adds the read-only flag of a recipient, and send
+// an access token with a short validity to let it synchronize its last
+// changes.
+func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
+	if index <= 0 {
+		return ErrMemberNotFound
+	}
+	if s.ReadOnly() {
+		return ErrInvalidSharing
+	}
+	if s.Members[index].ReadOnly {
+		return nil
+	}
+	s.Members[index].ReadOnly = true
+
+	ac := APICredentials{
+		CID:         s.SID,
+		Credentials: &Credentials{},
+	}
+	// We can't just revoke the tokens for the recipient (they are persisted
+	// on this cozy), so we have to revoke the client. And we create a new
+	// client for the temporary access token used to synchronize the last
+	// changes (the recipient won't have a refresh token).
+	cli, err := CreateOAuthClient(inst, &s.Members[index])
+	if err != nil {
+		return err
+	}
+	s.Credentials[index-1].InboundClientID = cli.ClientID
+	ac.Credentials.Client = ConvertOAuthClient(cli)
+	scope := consts.Sharings + ":ALL:" + s.SID
+	issuedAt := time.Now().Add(1*time.Hour - permissions.AccessTokenValidityDuration)
+	access, err := inst.MakeJWT(permissions.AccessTokenAudience, cli.ClientID, scope, "", issuedAt)
+	if err != nil {
+		return err
+	}
+	ac.Credentials.AccessToken = &auth.AccessToken{
+		TokenType:   "bearer",
+		AccessToken: access,
+		// No refresh token
+		Scope: scope,
+	}
+
+	u, err := url.Parse(s.Members[index].Instance)
+	if s.Members[index].Instance == "" || err != nil {
+		return ErrInvalidSharing
+	}
+	data, err := jsonapi.MarshalObject(&ac)
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(jsonapi.Document{Data: &data})
+	if err != nil {
+		return err
+	}
+	opts := &request.Options{
+		Method: http.MethodPost,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/recipients/self/readonly",
+		Headers: request.Headers{
+			"Accept":       "application/vnd.api+json",
+			"Content-Type": "application/vnd.api+json",
+		},
+		Body: bytes.NewReader(body),
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if res, err = RefreshToken(inst, s, &s.Members[index], &s.Credentials[index-1], opts, body); err != nil {
+			return err
+		}
+	}
+	defer res.Body.Close()
+	if res.StatusCode/100 != 2 {
+		return ErrRequestFailed
+	}
+
+	return couchdb.UpdateDoc(inst, s)
+}
+
+// DelegateAddReadOnlyFlag is used by a recipient to ask the sharer to
+// add the read-only falg for another member of the sharing.
+func (s *Sharing) DelegateAddReadOnlyFlag(inst *instance.Instance, index int) error {
+	u, err := url.Parse(s.Members[0].Instance)
+	if err != nil {
+		return err
+	}
+	c := &s.Credentials[0]
+	opts := &request.Options{
+		Method: http.MethodPost,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   fmt.Sprintf("/sharings/%s/recipients/%d/readonly", s.SID, index),
+		Headers: request.Headers{
+			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+		},
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return err
+	}
+	if res.StatusCode/100 == 4 {
+		res.Body.Close()
+		if res, err = RefreshToken(inst, s, &s.Members[0], c, opts, nil); err != nil {
+			return err
+		}
+	}
+	res.Body.Close()
+	if res.StatusCode == http.StatusBadRequest {
+		return ErrInvalidURL
+	}
+	if res.StatusCode/100 != 2 {
+		return ErrInternalServerError
+	}
+	return nil
+}
+
 // RemoveReadOnlyFlag removes the read-only flag of a recipient, and send
 // credentials to their cozy so that it can push its changes.
 func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
@@ -488,7 +608,7 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 	if !s.Members[index].ReadOnly {
 		return nil
 	}
-	s.Members[index].ReadOnly = true
+	s.Members[index].ReadOnly = false
 
 	ac := APICredentials{
 		CID: s.SID,
