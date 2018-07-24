@@ -93,6 +93,7 @@ type Instance struct {
 	TOSSigned     string   `json:"tos,omitempty"`        // Terms of Service signed version
 	TOSLatest     string   `json:"tos_latest,omitempty"` // Terms of Service latest version
 	AuthMode      AuthMode `json:"auth_mode,omitempty"`
+	Blocked       bool     `json:"blocked,omitempty"`        // Whether or not the instance is blocked
 	NoAutoUpdate  bool     `json:"no_auto_update,omitempty"` // Whether or not the instance has auto updates for its applications
 	Dev           bool     `json:"dev,omitempty"`            // Whether or not the instance is for development
 
@@ -958,7 +959,7 @@ func Patch(i *Instance, opts *Options) error {
 				return ErrBadTOSVersion
 			}
 			if i.TOSLatest != opts.TOSLatest {
-				if notSigned, _ := i.CheckTOSSigned(opts.TOSLatest); notSigned {
+				if i.CheckTOSNotSigned(opts.TOSLatest) {
 					i.TOSLatest = opts.TOSLatest
 					needUpdate = true
 				}
@@ -971,7 +972,7 @@ func Patch(i *Instance, opts *Options) error {
 			}
 			if i.TOSSigned != opts.TOSSigned {
 				i.TOSSigned = opts.TOSSigned
-				if notSigned, _ := i.CheckTOSSigned(); !notSigned {
+				if !i.CheckTOSNotSigned() {
 					i.TOSLatest = ""
 				}
 				needUpdate = true

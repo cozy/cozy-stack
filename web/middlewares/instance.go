@@ -34,13 +34,13 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// CheckInstanceTOS is a middleware that blocks the routing access if the term-
-// of-services have not been signed and have reach its deadline.
-func CheckInstanceTOS(next echo.HandlerFunc) echo.HandlerFunc {
+// CheckInstanceBlocked is a middleware that blocks the routing access (for
+// instance if the term- of-services have not been signed and have reach its
+// deadline)
+func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
-		_, deadline := i.CheckTOSSigned()
-		if deadline == instance.TOSBlocked {
+		if i.CheckInstanceBlocked() {
 			contentType := AcceptedContentType(c)
 			switch contentType {
 			case jsonapi.ContentType, echo.MIMEApplicationJSON:
