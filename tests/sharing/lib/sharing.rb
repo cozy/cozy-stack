@@ -37,6 +37,22 @@ class Sharing
     res.code
   end
 
+  def read_only(inst, index)
+    opts = {
+      authorization: "Bearer #{inst.token_for Folder.doctype}"
+    }
+    res = inst.client["/sharings/#{@couch_id}/recipients/#{index}/readonly"].post "", opts
+    res.code
+  end
+
+  def read_write(inst, index)
+    opts = {
+      authorization: "Bearer #{inst.token_for Folder.doctype}"
+    }
+    res = inst.client["/sharings/#{@couch_id}/recipients/#{index}/readonly"].delete opts
+    res.code
+  end
+
   def revoke_by_sharer(inst, doctype)
     opts = {
       authorization: "Bearer #{inst.token_for doctype}"

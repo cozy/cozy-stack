@@ -480,7 +480,7 @@ func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) er
 // an access token with a short validity to let it synchronize its last
 // changes.
 func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
-	if index <= 0 {
+	if index <= 1 {
 		return ErrMemberNotFound
 	}
 	if s.ReadOnly() {
@@ -536,8 +536,9 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/recipients/self/readonly",
 		Headers: request.Headers{
-			"Accept":       "application/vnd.api+json",
-			"Content-Type": "application/vnd.api+json",
+			"Accept":        "application/vnd.api+json",
+			"Content-Type":  "application/vnd.api+json",
+			"Authorization": "Bearer " + s.Credentials[index-1].AccessToken.AccessToken,
 		},
 		Body: bytes.NewReader(body),
 	}
@@ -636,7 +637,7 @@ func (s *Sharing) DowngradeToReadOnly(inst *instance.Instance, creds *APICredent
 // RemoveReadOnlyFlag removes the read-only flag of a recipient, and send
 // credentials to their cozy so that it can push its changes.
 func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
-	if index <= 0 {
+	if index <= 1 {
 		return ErrMemberNotFound
 	}
 	if s.ReadOnly() {
@@ -684,8 +685,9 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 		Domain: u.Host,
 		Path:   "/sharings/" + s.SID + "/recipients/self/readonly",
 		Headers: request.Headers{
-			"Accept":       "application/vnd.api+json",
-			"Content-Type": "application/vnd.api+json",
+			"Accept":        "application/vnd.api+json",
+			"Content-Type":  "application/vnd.api+json",
+			"Authorization": "Bearer " + s.Credentials[index-1].AccessToken.AccessToken,
 		},
 		Body: bytes.NewReader(body),
 	}
