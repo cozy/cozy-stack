@@ -49,7 +49,7 @@ msgid "Login Password button hide"
 msgstr "hide"
 
 msgid "Login Long Session"
-msgstr "Memorize the session"
+msgstr "Memorize"
 
 msgid "Login Submit"
 msgstr "Log in"
