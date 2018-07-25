@@ -163,20 +163,27 @@ func checkSharingReadPermissions(next echo.HandlerFunc) echo.HandlerFunc {
 
 func checkSharingWritePermissions(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		sharingID := c.Param("sharing-id")
-		requestPerm, err := perm.GetPermission(c)
-		if err != nil {
-			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
-				Debugf("Invalid permission: %s", err)
+		if err := hasSharingWritePermissions(c); err != nil {
 			return err
-		}
-		if !requestPerm.Permissions.AllowID("POST", consts.Sharings, sharingID) {
-			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
-				Debugf("Not allowed (%s)", sharingID)
-			return echo.NewHTTPError(http.StatusForbidden)
 		}
 		return next(c)
 	}
+}
+
+func hasSharingWritePermissions(c echo.Context) error {
+	sharingID := c.Param("sharing-id")
+	requestPerm, err := perm.GetPermission(c)
+	if err != nil {
+		middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
+			Debugf("Invalid permission: %s", err)
+		return err
+	}
+	if !requestPerm.Permissions.AllowID("POST", consts.Sharings, sharingID) {
+		middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
+			Debugf("Not allowed (%s)", sharingID)
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	return nil
 }
 
 func checkSharingPermissions(next echo.HandlerFunc) echo.HandlerFunc {
