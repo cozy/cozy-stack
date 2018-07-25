@@ -334,6 +334,25 @@ func AddReadOnly(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// DowngradeToReadOnly is used to receive the credentials for pushing last changes
+// on an instance of a recipient before going to read-only mode
+func DowngradeToReadOnly(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	var creds sharing.APICredentials
+	if _, err = jsonapi.Bind(c.Request().Body, &creds); err != nil {
+		return jsonapi.BadJSON()
+	}
+	if err = s.DowngradeToReadOnly(inst, &creds); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // RemoveReadOnly is used to give read-write to a member that had the read-only flag
 func RemoveReadOnly(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -619,6 +638,7 @@ func Routes(router *echo.Group) {
 	router.DELETE("/:sharing-id/recipients", RevokeSharing)                                                  // On the sharer
 	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                                         // On the sharer
 	router.POST("/:sharing-id/recipients/:index/readonly", AddReadOnly)                                      // On the sharer
+	router.POST("/:sharing-id/recipients/self/readonly", DowngradeToReadOnly, checkSharingWritePermissions)  // On the recipient
 	router.DELETE("/:sharing-id/recipients/:index/readonly", RemoveReadOnly)                                 // On the sharer
 	router.DELETE("/:sharing-id/recipients/self/readonly", UpgradeToReadWrite, checkSharingWritePermissions) // On the recipient
 	router.DELETE("/:sharing-id", RevocationRecipientNotif, checkSharingWritePermissions)                    // On the recipient

@@ -596,6 +596,43 @@ func (s *Sharing) DelegateAddReadOnlyFlag(inst *instance.Instance, index int) er
 	return nil
 }
 
+// DowngradeToReadOnly is used to receive credentials on a read-write instance
+// to sync the last changes before going to read-only mode.
+func (s *Sharing) DowngradeToReadOnly(inst *instance.Instance, creds *APICredentials) error {
+	if s.Owner {
+		return ErrInvalidSharing
+	}
+
+	for i, m := range s.Members {
+		if i > 0 && m.Instance != "" {
+			s.Members[i].ReadOnly = true
+			break
+		}
+	}
+
+	s.Credentials[0].AccessToken = creds.AccessToken
+	s.Credentials[0].Client = creds.Client
+
+	if err := removeSharingTrigger(inst, s.Triggers.ReplicateID); err != nil {
+		return err
+	}
+	s.Triggers.ReplicateID = ""
+	if err := removeSharingTrigger(inst, s.Triggers.UploadID); err != nil {
+		return err
+	}
+	s.Triggers.UploadID = ""
+
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return err
+	}
+
+	s.pushJob(inst, "share-replicate")
+	if s.FirstFilesRule() != nil {
+		s.pushJob(inst, "share-upload")
+	}
+	return nil
+}
+
 // RemoveReadOnlyFlag removes the read-only flag of a recipient, and send
 // credentials to their cozy so that it can push its changes.
 func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
