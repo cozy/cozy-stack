@@ -31,6 +31,7 @@ import (
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
+	"github.com/cozy/echo/middleware"
 
 	"github.com/cozy/echo"
 	"github.com/prometheus/client_golang/prometheus"
@@ -201,7 +202,11 @@ func timersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 // SetupAdminRoutes sets the routing for the administration HTTP endpoints
 func SetupAdminRoutes(router *echo.Echo) error {
 	var mws []echo.MiddlewareFunc
-	if !config.IsDevRelease() {
+	if config.IsDevRelease() {
+		mws = append(mws, middleware.LoggerWithConfig(middleware.LoggerConfig{
+			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
+		}))
+	} else {
 		mws = append(mws, middlewares.BasicAuth(config.GetConfig().AdminSecretFileName))
 	}
 
