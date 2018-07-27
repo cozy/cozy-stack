@@ -22,6 +22,8 @@ const (
 	// ManagerPremiumURL is the kind for changing the account type of the
 	// instance.
 	ManagerPremiumURL
+	// ManagerBlockedURL is the kind for a redirection of a blocked instance.
+	ManagerBlockedURL
 )
 
 // ManagerURL returns an external string for the given ManagerURL kind.
@@ -61,6 +63,8 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
 		path = fmt.Sprintf("/cozy/accounts/%s/premium", url.PathEscape(i.UUID))
 	case ManagerTOSURL:
 		path = fmt.Sprintf("/cozy/instances/%s/tos", url.PathEscape(i.UUID))
+	case ManagerBlockedURL:
+		path = fmt.Sprintf("/cozy/instances/%s/blocked", url.PathEscape(i.UUID))
 	default:
 		panic("unknown ManagerURLKind")
 	}

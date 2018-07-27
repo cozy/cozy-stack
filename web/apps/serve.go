@@ -49,9 +49,13 @@ func Serve(c echo.Context) error {
 		}
 	}
 
-	_, deadline := i.CheckTOSSigned()
-	if deadline == instance.TOSBlocked {
-		redirect, _ := i.ManagerURL(instance.ManagerTOSURL)
+	if i.CheckInstanceBlocked() {
+		var redirect string
+		if i.Blocked {
+			redirect, _ = i.ManagerURL(instance.ManagerBlockedURL)
+		} else {
+			redirect, _ = i.ManagerURL(instance.ManagerTOSURL)
+		}
 		return c.Redirect(http.StatusFound, redirect)
 	}
 

@@ -11,7 +11,7 @@ import (
 
 // Warnings returns a list of possible warnings associated with the instance.
 func (i *Instance) Warnings() (warnings []*jsonapi.Error) {
-	notSigned, deadline := i.CheckTOSSigned()
+	notSigned, deadline := i.CheckTOSNotSignedAndDeadline()
 	if notSigned && deadline >= TOSWarning {
 		tosLink, _ := i.ManagerURL(ManagerTOSURL)
 		warnings = append(warnings, &jsonapi.Error{
@@ -38,9 +38,30 @@ const (
 	TOSBlocked
 )
 
-// CheckTOSSigned checks whether or not the current Term of Services have been
-// signed by the user.
-func (i *Instance) CheckTOSSigned(args ...string) (notSigned bool, deadline TOSDeadline) {
+// CheckInstanceBlocked returns whether or not the instance is currently in a
+// blocked state: meaning it should be accessible.
+func (i *Instance) CheckInstanceBlocked() bool {
+	if i.Blocked {
+		return true
+	}
+	if len(i.RegisterToken) > 0 {
+		return false
+	}
+	_, deadline := i.CheckTOSNotSignedAndDeadline()
+	return deadline == TOSBlocked
+}
+
+// CheckTOSNotSigned checks whether or not the current Term of Services have
+// been signed by the user.
+func (i *Instance) CheckTOSNotSigned(args ...string) (notSigned bool) {
+	notSigned, _ = i.CheckTOSNotSignedAndDeadline(args...)
+	return
+}
+
+// CheckTOSNotSignedAndDeadline checks whether or not the current Term of
+// Services have been signed by the user and returns the deadline state to
+// perform this signature.
+func (i *Instance) CheckTOSNotSignedAndDeadline(args ...string) (notSigned bool, deadline TOSDeadline) {
 	tosLatest := i.TOSLatest
 	if len(args) > 0 {
 		tosLatest = args[0]

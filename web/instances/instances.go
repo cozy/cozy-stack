@@ -142,6 +142,9 @@ func modifyHandler(c echo.Context) error {
 	if debug, err := strconv.ParseBool(c.QueryParam("Debug")); err == nil {
 		opts.Debug = &debug
 	}
+	if blocked, err := strconv.ParseBool(c.QueryParam("Blocked")); err == nil {
+		opts.Blocked = &blocked
+	}
 	i, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)

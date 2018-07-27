@@ -409,7 +409,7 @@ func TestInstanceDestroy(t *testing.T) {
 	}
 }
 
-func TestCheckTOSSigned(t *testing.T) {
+func TestCheckTOSNotSigned(t *testing.T) {
 	instance.Destroy("tos.test.cozycloud.cc")
 
 	now := time.Now()
@@ -423,7 +423,7 @@ func TestCheckTOSSigned(t *testing.T) {
 		return
 	}
 
-	notSigned, deadline := i.CheckTOSSigned()
+	notSigned, deadline := i.CheckTOSNotSignedAndDeadline()
 	assert.Empty(t, i.TOSLatest)
 	assert.False(t, notSigned)
 	assert.Equal(t, instance.TOSNone, deadline)
@@ -435,7 +435,7 @@ func TestCheckTOSSigned(t *testing.T) {
 		return
 	}
 
-	notSigned, deadline = i.CheckTOSSigned()
+	notSigned, deadline = i.CheckTOSNotSignedAndDeadline()
 	assert.Empty(t, i.TOSLatest)
 	assert.False(t, notSigned)
 	assert.Equal(t, instance.TOSNone, deadline)
@@ -447,7 +447,7 @@ func TestCheckTOSSigned(t *testing.T) {
 		return
 	}
 
-	notSigned, deadline = i.CheckTOSSigned()
+	notSigned, deadline = i.CheckTOSNotSignedAndDeadline()
 	assert.NotEmpty(t, i.TOSLatest)
 	assert.True(t, notSigned)
 	assert.Equal(t, instance.TOSNone, deadline)
@@ -458,7 +458,7 @@ func TestCheckTOSSigned(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	notSigned, deadline = i.CheckTOSSigned()
+	notSigned, deadline = i.CheckTOSNotSignedAndDeadline()
 	assert.NotEmpty(t, i.TOSLatest)
 	assert.True(t, notSigned)
 	assert.Equal(t, instance.TOSWarning, deadline)
@@ -469,7 +469,7 @@ func TestCheckTOSSigned(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	notSigned, deadline = i.CheckTOSSigned()
+	notSigned, deadline = i.CheckTOSNotSignedAndDeadline()
 	assert.NotEmpty(t, i.TOSLatest)
 	assert.True(t, notSigned)
 	assert.Equal(t, instance.TOSBlocked, deadline)
@@ -480,7 +480,7 @@ func TestCheckTOSSigned(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	notSigned, deadline = i.CheckTOSSigned()
+	notSigned, deadline = i.CheckTOSNotSignedAndDeadline()
 	assert.Empty(t, i.TOSLatest)
 	assert.False(t, notSigned)
 	assert.Equal(t, instance.TOSNone, deadline)

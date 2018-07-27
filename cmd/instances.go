@@ -28,6 +28,7 @@ var flagPublicName string
 var flagSettings string
 var flagDiskQuota string
 var flagApps []string
+var flagBlocked bool
 var flagDev bool
 var flagPassphrase string
 var flagForce bool
@@ -219,6 +220,9 @@ settings for a specified domain.
 			Settings:      flagSettings,
 			SwiftCluster:  flagSwiftCluster,
 			DiskQuota:     diskQuota,
+		}
+		if flagBlocked {
+			opts.Blocked = &flagBlocked
 		}
 		if flagOnboardingFinished {
 			opts.OnboardingFinished = &flagOnboardingFinished
@@ -679,6 +683,7 @@ func init() {
 	modifyInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "New list of settings (eg offer:premium)")
 	modifyInstanceCmd.Flags().IntVar(&flagSwiftCluster, "swift-cluster", 0, "New swift cluster")
 	modifyInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "Specify a new disk quota")
+	modifyInstanceCmd.Flags().BoolVar(&flagBlocked, "blocked", false, "Block the instance")
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")

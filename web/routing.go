@@ -144,7 +144,7 @@ func SetupRoutes(router *echo.Echo) error {
 				DefaultContentTypeOffer: jsonapi.ContentType,
 			}),
 		}
-		mws := append(mwsNotBlocked, middlewares.CheckInstanceTOS)
+		mws := append(mwsNotBlocked, middlewares.CheckInstanceBlocked)
 		registry.Routes(router.Group("/registry", mws...))
 		data.Routes(router.Group("/data", mws...))
 		files.Routes(router.Group("/files", mws...))
