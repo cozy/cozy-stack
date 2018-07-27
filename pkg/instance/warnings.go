@@ -58,9 +58,9 @@ func (i *Instance) CheckTOSNotSigned(args ...string) (notSigned bool) {
 	return
 }
 
-// CheckTOSNotSigned checks whether or not the current Term of Services have
-// been signed by the user and returns the deadline state to perform this
-// signature.
+// CheckTOSNotSignedAndDeadline checks whether or not the current Term of
+// Services have been signed by the user and returns the deadline state to
+// perform this signature.
 func (i *Instance) CheckTOSNotSignedAndDeadline(args ...string) (notSigned bool, deadline TOSDeadline) {
 	tosLatest := i.TOSLatest
 	if len(args) > 0 {
