@@ -646,17 +646,17 @@ func checkIndexIntegrity(generator func(func(entry *TreeFile)) error) (root *Tre
 	return
 }
 
-func reduceTree(root *TreeFile, dirsmap map[string]*TreeFile, errs []*treeError) []*treeError {
-	delete(dirsmap, root.DocID)
-	for _, child := range root.DirsChildren {
-		expected := path.Join(root.Fullpath, child.DocName)
+func reduceTree(parent *TreeFile, dirsmap map[string]*TreeFile, errs []*treeError) []*treeError {
+	delete(dirsmap, parent.DocID)
+	for _, child := range parent.DirsChildren {
+		expected := path.Join(parent.Fullpath, child.DocName)
 		if expected != child.Fullpath {
 			errs = append(errs, &treeError{
 				file: child,
 				path: expected,
 			})
-			errs = reduceTree(child, dirsmap, errs)
 		}
+		errs = reduceTree(child, dirsmap, errs)
 	}
 	return errs
 }
