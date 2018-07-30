@@ -192,3 +192,12 @@ func TestTriggersArgs(t *testing.T) {
 	r.Local = true
 	assert.Equal(t, "", r.TriggerArgs())
 }
+
+func TestClearAppInHost(t *testing.T) {
+	host := clearAppInHost("example.mycozy.cloud")
+	assert.Equal(t, "example.mycozy.cloud", host)
+	host = clearAppInHost("example-drive.mycozy.cloud")
+	assert.Equal(t, "example.mycozy.cloud", host)
+	host = clearAppInHost("my-cozy.example.net")
+	assert.Equal(t, "my-cozy.example.net", host)
+}
