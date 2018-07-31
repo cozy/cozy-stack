@@ -137,6 +137,8 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 		// we do not bother sending or creating a new notification.
 		if last != nil {
 			if last.State == n.State {
+				inst.Logger().WithField("nspace", "notifications").
+					Debugf("Notification %v was not sent (collapsed by same state %s)", p, n.State)
 				return nil
 			}
 			if p.MinInterval > 0 && time.Until(last.LastSent) <= p.MinInterval {
