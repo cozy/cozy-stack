@@ -169,7 +169,12 @@ func calculateMetadata(fs vfs.VFS, img *vfs.FileDoc) (*vfs.Metadata, error) {
 
 func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.FileDoc) error {
 	// Do not try to generate thumbnails for images that weight more than 100MB
-	if img.ByteSize > 100*1024*1024 {
+	// (or 20MB for PSDs)
+	var limit int64 = 100 * 1024 * 1024
+	if img.Mime == "image/vnd.adobe.photoshop" {
+		limit = 20 * 1024 * 1024
+	}
+	if img.ByteSize > limit {
 		return nil
 	}
 
