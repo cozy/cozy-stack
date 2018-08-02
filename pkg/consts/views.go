@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 18
+const IndexViewsVersion int = 19
 
 // globalIndexes is the index list required on the global databases to run
 // properly.
@@ -195,6 +195,7 @@ function(doc) {
     });
   }
 }`,
+	Reduce: "_count",
 }
 
 // SharingsByDocTypeView is the view for fetching a list of sharings

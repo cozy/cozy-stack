@@ -156,11 +156,11 @@ Then messages are sent using json
 
 ```
 client > {"method": "AUTH",
-          "payload": "xxAppOrAuthTokenxx="
+          "payload": "xxAppOrAuthTokenxx="}
 client > {"method": "SUBSCRIBE",
-          "payload": {"type": "io.cozy.files"}
+          "payload": {"type": "io.cozy.files"}}
 client > {"method": "SUBSCRIBE",
-          "payload": {"type": "io.cozy.contacts"}
+          "payload": {"type": "io.cozy.contacts"}}
 server > {"event": "UPDATED",
           "payload": {"id": "idA", "rev": "2-705...", "type": "io.cozy.contacts", "doc": {embeded doc ...}}}
 server > {"event": "DELETED",

@@ -8,12 +8,14 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -517,7 +519,43 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 			Debugf("Cannot create file: %s", err)
 		return err
 	}
+	if s.NbFiles > 0 {
+		defer s.countReceivedFiles(inst)
+	}
 	return copyFileContent(inst, file, body)
+}
+
+// countReceivedFiles counts the number of files received during the initial
+// sync, and pushs an event to the real-time system with this count
+func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
+	// Let CouchDB updates its index
+	time.Sleep(1 * time.Second)
+
+	count := 0
+	var resCount couchdb.ViewResponse
+	reqCount := &couchdb.ViewRequest{Key: s.SID, Reduce: true}
+	err := couchdb.ExecView(inst, consts.FilesReferencedByView, reqCount, &resCount)
+	if err == nil && len(resCount.Rows) > 0 {
+		count = int(resCount.Rows[0].Value.(float64))
+	}
+
+	doc := couchdb.JSONDoc{
+		Type: consts.SharingsInitialSync,
+		M:    map[string]interface{}{"_id": s.SID},
+	}
+
+	if count >= s.NbFiles {
+		s.NbFiles = 0
+		if err = couchdb.UpdateDoc(inst, s); err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Errorf("Can't save sharing %v: %s", s, err)
+		}
+		realtime.GetHub().Publish(inst, realtime.EventDelete, doc, nil)
+		return
+	}
+
+	doc.M["count"] = count
+	realtime.GetHub().Publish(inst, realtime.EventUpdate, doc, nil)
 }
 
 // UploadExistingFile is used to receive new content for an existing file.

@@ -54,6 +54,9 @@ const (
 	Sharings = "io.cozy.sharings"
 	// SharingsAnswer doc type for credentials exchange for sharings
 	SharingsAnswer = "io.cozy.sharings.answer"
+	// SharingsInitialSync doc type for real-time events for initial sync of a
+	// sharing
+	SharingsInitialSync = "io.cozy.sharings.initial-sync"
 	// Triggers doc type for triggers, jobs launchers
 	Triggers = "io.cozy.triggers"
 	// TriggersState doc type for triggers current state, jobs launchers
