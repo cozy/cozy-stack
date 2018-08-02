@@ -69,6 +69,8 @@ describe "A folder" do
     # Accept the sharing
     sleep 1
     inst_recipient.accept sharing
+    doc = Helpers.couch.get_doc inst_recipient.domain, Sharing.doctype, sharing.couch_id
+    assert_equal 1, doc["initial_number_of_files_to_sync"]
 
     sleep 7
     # Check the folders are the same

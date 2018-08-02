@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
@@ -61,6 +62,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 			UpdatedAt:   s.UpdatedAt,
 			Rules:       rules,
 			Members:     members,
+			NbFiles:     s.countFiles(inst),
 		},
 		nil,
 		nil,
@@ -110,6 +112,40 @@ func clearAppInHost(host string) string {
 	domain := parts[1]
 	parts = strings.SplitN(sub, "-", 2)
 	return parts[0] + "." + domain
+}
+
+// countFiles returns the number of files that should be uploaded on the
+// initial synchronisation.
+func (s *Sharing) countFiles(inst *instance.Instance) int {
+	count := 0
+	for _, rule := range s.Rules {
+		if rule.DocType != consts.Files || rule.Local || len(rule.Values) == 0 {
+			continue
+		}
+		if rule.Selector == "" || rule.Selector == "id" {
+			for _, fileID := range rule.Values {
+				vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+					if err != nil {
+						return err
+					}
+					if file != nil {
+						count++
+					}
+					return nil
+				})
+			}
+		} else {
+			var resCount couchdb.ViewResponse
+			for _, val := range rule.Values {
+				reqCount := &couchdb.ViewRequest{Key: val, Reduce: true}
+				err := couchdb.ExecView(inst, consts.FilesReferencedByView, reqCount, &resCount)
+				if err == nil && len(resCount.Rows) > 0 {
+					count += int(resCount.Rows[0].Value.(float64))
+				}
+			}
+		}
+	}
+	return count
 }
 
 // RegisterCozyURL saves a new Cozy URL for a member

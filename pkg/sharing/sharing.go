@@ -43,6 +43,7 @@ type Sharing struct {
 	PreviewPath string    `json:"preview_path,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	NbFiles     int       `json:"initial_number_of_files_to_sync,omitempty"`
 
 	Rules []Rule `json:"rules"`
 

@@ -296,6 +296,7 @@ Content-Type: application/vnd.api+json
       "owner": true,
       "created_at": "2018-01-04T12:35:08Z",
       "updated_at": "2018-01-04T13:45:43Z",
+      "initial_number_of_files_to_sync": 42,
       "members": [
         {
           "status": "owner",
