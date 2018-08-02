@@ -109,3 +109,10 @@ const (
 	// InstanceSettingsID is the id of settings document for the instance
 	InstanceSettingsID = "io.cozy.settings.instance"
 )
+
+// KnownFlatDomains is a list of top-domains that can hosts cozy instances with
+// flat sub-domains.
+var KnownFlatDomains = []string{
+	"cozy.rocks",
+	"mycozy.cloud",
+}
