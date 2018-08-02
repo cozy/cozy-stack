@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -560,15 +559,23 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 // countReceivedFiles counts the number of files received during the initial
 // sync, and pushs an event to the real-time system with this count
 func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
-	// Let CouchDB updates its index
-	time.Sleep(1 * time.Second)
-
 	count := 0
-	var resCount couchdb.ViewResponse
-	reqCount := &couchdb.ViewRequest{Key: s.SID, Reduce: true}
-	err := couchdb.ExecView(inst, consts.FilesReferencedByView, reqCount, &resCount)
-	if err == nil && len(resCount.Rows) > 0 {
-		count = int(resCount.Rows[0].Value.(float64))
+	var req = &couchdb.ViewRequest{
+		Key:         s.SID,
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(inst, consts.SharedDocsBySharingID, req, &res)
+	if err == nil {
+		for _, row := range res.Rows {
+			var doc SharedRef
+			if err = json.Unmarshal(row.Doc, &doc); err != nil {
+				continue
+			}
+			if doc.Infos[s.SID].Binary {
+				count++
+			}
+		}
 	}
 
 	if count >= s.NbFiles {

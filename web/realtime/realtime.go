@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -171,7 +172,10 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			sendErr(ctx, errc, missingType(cmd))
 			continue
 		}
-		if withAuthentication && !pdoc.Permissions.AllowWholeType(permissions.GET, cmd.Payload.Type) {
+		// XXX: no permissions are required for io.cozy.sharings.initial-sync
+		if withAuthentication &&
+			cmd.Payload.Type != consts.SharingsInitialSync &&
+			!pdoc.Permissions.AllowWholeType(permissions.GET, cmd.Payload.Type) {
 			sendErr(ctx, errc, forbidden(cmd))
 			continue
 		}

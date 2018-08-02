@@ -2,11 +2,10 @@ source 'https://rubygems.org'
 
 gem "awesome_print"
 gem "faker"
+gem "faye-websocket"
 gem "mimemagic"
 gem "minitest"
 gem "pry"
 gem "pry-rescue"
+gem "pry-stack_explorer"
 gem "rest-client"
-
-# Added at 2018-05-21 09:30:04 +0200 by nono:
-gem "pry-stack_explorer", "~> 0.4.9"
