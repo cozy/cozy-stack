@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -43,6 +44,7 @@ type Sharing struct {
 	PreviewPath string    `json:"preview_path,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	NbFiles     int       `json:"initial_number_of_files_to_sync,omitempty"`
 
 	Rules []Rule `json:"rules"`
 
@@ -512,6 +514,23 @@ func (s *Sharing) RedirectAfterAuthorizeURL(inst *instance.Instance) *url.URL {
 		return inst.DefaultRedirection()
 	}
 	return inst.SubDomain(app.Slug())
+}
+
+// EndInitial is used to finish the initial sync phase of a sharing
+func (s *Sharing) EndInitial(inst *instance.Instance) error {
+	if s.NbFiles == 0 {
+		return nil
+	}
+	s.NbFiles = 0
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return err
+	}
+	doc := couchdb.JSONDoc{
+		Type: consts.SharingsInitialSync,
+		M:    map[string]interface{}{"_id": s.SID},
+	}
+	realtime.GetHub().Publish(inst, realtime.EventDelete, doc, nil)
+	return nil
 }
 
 var _ couchdb.Doc = &Sharing{}

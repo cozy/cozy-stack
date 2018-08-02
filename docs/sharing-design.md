@@ -307,6 +307,9 @@ revision (4-4aa). The resolution takes 4 steps:
   * `false` if only the owner can add a new recipient
 * Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`,
   `triggers`, `credentials`)
+* a number of files to synchronize for the initial sync,
+  `initial_number_of_files_to_sync` (if there are no files to sync or the
+  initial replication has finished, the field won't be here)
 * A list of sharing `rules`, each rule being composed of:
   * a `title`, that will be displayed to the recipients before they accept the
     sharing

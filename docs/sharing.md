@@ -296,6 +296,7 @@ Content-Type: application/vnd.api+json
       "owner": true,
       "created_at": "2018-01-04T12:35:08Z",
       "updated_at": "2018-01-04T13:45:43Z",
+      "initial_number_of_files_to_sync": 42,
       "members": [
         {
           "status": "owner",
@@ -1266,4 +1267,44 @@ Authorization: Bearer ...
 
 ```http
 HTTP/1.1 204 No Content
+```
+
+### DELETE /sharings/:sharing-id/initial
+
+This internal route is used by the sharer to inform a recipient's cozy that
+the initial sync is finished.
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/initial HTTP/1.1
+Host: bob.example.net
+Authorization: Bearer ...
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+## Real-time via websockets
+
+You can subscribe to the [realtime](realtime.md) API for the normal doctypes,
+but also for a special `io.cozy.sharings.initial-sync` doctype. For this
+doctype, you can give the id of a sharing and you will be notified when a file
+will be received during the initial synchronisation (`UPDATED`), and when the
+sync will be done (`DELETED`).
+
+### Example
+
+```
+client > {"method": "AUTH",
+          "payload": "xxAppOrAuthTokenxx="}
+client > {"method": "SUBSCRIBE",
+          "payload": {"type": "io.cozy.sharings.initial-sync", "id": "ce8835a061d0ef68947afe69a0046722"}
+server > {"event": "UPDATED",
+          "payload": {"id": "ce8835a061d0ef68947afe69a0046722", "type": "io.cozy.sharings.initial-sync", "doc": {"count": 12}}}
+server > {"event": "UPDATED",
+          "payload": {"id": "ce8835a061d0ef68947afe69a0046722", "type": "io.cozy.sharings.initial-sync", "doc": {"count": 13}}}
+server > {"event": "DELETED",
+          "payload": {"id": "ce8835a061d0ef68947afe69a0046722", "type": "io.cozy.sharings.initial-sync"}}
 ```

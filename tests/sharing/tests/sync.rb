@@ -1,5 +1,7 @@
 require_relative '../boot'
 require 'minitest/autorun'
+require 'faye/websocket'
+require 'eventmachine'
 require 'pry-rescue/minitest' unless ENV['CI']
 
 def make_xor_key
@@ -52,6 +54,9 @@ describe "A folder" do
     file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
     file = CozyFile.create inst, opts
+    zip  = "../fixtures/logos.zip"
+    opts = CozyFile.options_from_fixture(zip, dir_id: child1.couch_id)
+    CozyFile.create inst, opts
 
     # Create the sharing of a folder
     contact = Contact.create inst, given_name: recipient_name
@@ -69,8 +74,40 @@ describe "A folder" do
     # Accept the sharing
     sleep 1
     inst_recipient.accept sharing
+    doc = Helpers.couch.get_doc inst_recipient.domain, Sharing.doctype, sharing.couch_id
+    assert_equal 2, doc["initial_number_of_files_to_sync"]
 
-    sleep 7
+    # Check the realtime events
+    EM.run do
+      ws = Faye::WebSocket::Client.new("ws://#{inst_recipient.domain}/realtime/")
+
+      ws.on :open do
+        ws.send({
+          method: "AUTH",
+          payload: inst_recipient.token_for("io.cozy.files")
+        }.to_json)
+        ws.send({
+          method: "SUBSCRIBE",
+          payload: { type: "io.cozy.sharings.initial-sync", id: sharing.couch_id }
+        }.to_json)
+      end
+
+      ws.on :message do |event|
+        msg = JSON.parse(event.data)
+        if msg["event"] == "DELETED"
+          ws.close
+        else
+          assert_equal 1, msg.dig("payload", "doc", "count")
+        end
+      end
+
+      ws.on :close do
+        EM.stop
+      end
+    end
+    doc = Helpers.couch.get_doc inst_recipient.domain, Sharing.doctype, sharing.couch_id
+    assert_nil doc["initial_number_of_files_to_sync"]
+
     # Check the folders are the same
     child1_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
     child1_recipient = Folder.find_by_path inst_recipient, child1_path

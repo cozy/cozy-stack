@@ -3,6 +3,7 @@ package sharing
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -81,11 +83,42 @@ func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
 			return err
 		}
 		if !more {
-			return nil
+			return s.sendInitialEndNotif(inst, m)
 		}
 	}
 
 	s.pushJob(inst, "share-upload")
+	return nil
+}
+
+// sendInitialEndNotif sends a notification to the recipient that the initial
+// sync is finished
+func (s *Sharing) sendInitialEndNotif(inst *instance.Instance, m *Member) error {
+	u, err := url.Parse(m.Instance)
+	if err != nil {
+		return err
+	}
+	c := s.FindCredentials(m)
+	if c == nil {
+		return ErrInvalidSharing
+	}
+	opts := &request.Options{
+		Method: http.MethodDelete,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   fmt.Sprintf("/sharings/%s/initial", s.SID),
+		Headers: request.Headers{
+			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+		},
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return err
+	}
+	res.Body.Close()
+	if res.StatusCode/100 != 2 {
+		return ErrInternalServerError
+	}
 	return nil
 }
 
@@ -517,7 +550,50 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 			Debugf("Cannot create file: %s", err)
 		return err
 	}
+	if s.NbFiles > 0 {
+		defer s.countReceivedFiles(inst)
+	}
 	return copyFileContent(inst, file, body)
+}
+
+// countReceivedFiles counts the number of files received during the initial
+// sync, and pushs an event to the real-time system with this count
+func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
+	count := 0
+	var req = &couchdb.ViewRequest{
+		Key:         s.SID,
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(inst, consts.SharedDocsBySharingID, req, &res)
+	if err == nil {
+		for _, row := range res.Rows {
+			var doc SharedRef
+			if err = json.Unmarshal(row.Doc, &doc); err != nil {
+				continue
+			}
+			if doc.Infos[s.SID].Binary {
+				count++
+			}
+		}
+	}
+
+	if count >= s.NbFiles {
+		if err = s.EndInitial(inst); err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Errorf("Can't save sharing %v: %s", s, err)
+		}
+		return
+	}
+
+	doc := couchdb.JSONDoc{
+		Type: consts.SharingsInitialSync,
+		M: map[string]interface{}{
+			"_id":   s.SID,
+			"count": count,
+		},
+	}
+	realtime.GetHub().Publish(inst, realtime.EventUpdate, doc, nil)
 }
 
 // UploadExistingFile is used to receive new content for an existing file.
