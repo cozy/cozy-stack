@@ -329,7 +329,7 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 
 	sched := jobs.System()
 	for _, service := range deleted {
-		if err := sched.DeleteTrigger(db, service.TriggerID); err != nil {
+		if err := sched.DeleteTrigger(db, service.TriggerID); err != nil && err != jobs.ErrNotFoundTrigger {
 			return err
 		}
 	}
