@@ -3,6 +3,7 @@ package sharing
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -83,11 +84,42 @@ func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
 			return err
 		}
 		if !more {
-			return nil
+			return s.sendInitialEndNotif(inst, m)
 		}
 	}
 
 	s.pushJob(inst, "share-upload")
+	return nil
+}
+
+// sendInitialEndNotif sends a notification to the recipient that the initial
+// sync is finished
+func (s *Sharing) sendInitialEndNotif(inst *instance.Instance, m *Member) error {
+	u, err := url.Parse(m.Instance)
+	if err != nil {
+		return err
+	}
+	c := s.FindCredentials(m)
+	if c == nil {
+		return ErrInvalidSharing
+	}
+	opts := &request.Options{
+		Method: http.MethodDelete,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   fmt.Sprintf("/sharings/%s/initial", s.SID),
+		Headers: request.Headers{
+			"Authorization": "Bearer " + c.AccessToken.AccessToken,
+		},
+	}
+	res, err := request.Req(opts)
+	if err != nil {
+		return err
+	}
+	res.Body.Close()
+	if res.StatusCode/100 != 2 {
+		return ErrInternalServerError
+	}
 	return nil
 }
 
@@ -539,22 +571,21 @@ func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
 		count = int(resCount.Rows[0].Value.(float64))
 	}
 
-	doc := couchdb.JSONDoc{
-		Type: consts.SharingsInitialSync,
-		M:    map[string]interface{}{"_id": s.SID},
-	}
-
 	if count >= s.NbFiles {
-		s.NbFiles = 0
-		if err = couchdb.UpdateDoc(inst, s); err != nil {
+		if err = s.EndInitial(inst); err != nil {
 			inst.Logger().WithField("nspace", "sharing").
 				Errorf("Can't save sharing %v: %s", s, err)
 		}
-		realtime.GetHub().Publish(inst, realtime.EventDelete, doc, nil)
 		return
 	}
 
-	doc.M["count"] = count
+	doc := couchdb.JSONDoc{
+		Type: consts.SharingsInitialSync,
+		M: map[string]interface{}{
+			"_id":   s.SID,
+			"count": count,
+		},
+	}
 	realtime.GetHub().Publish(inst, realtime.EventUpdate, doc, nil)
 }
 

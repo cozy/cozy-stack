@@ -1269,6 +1269,23 @@ Authorization: Bearer ...
 HTTP/1.1 204 No Content
 ```
 
+### DELETE /sharings/:sharing-id/initial
+
+This internal route is used by the sharer to inform a recipient's cozy that
+the initial sync is finished.
+
+```http
+DELETE /sharings/ce8835a061d0ef68947afe69a0046722/initial HTTP/1.1
+Host: bob.example.net
+Authorization: Bearer ...
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Real-time via websockets
 
 You can subscribe to the [realtime](realtime.md) API for the normal doctypes,

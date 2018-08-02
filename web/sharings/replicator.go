@@ -133,6 +133,20 @@ func FileHandler(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// EndInitial is used for ending the initial sync phase of a sharing
+func EndInitial(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if err := s.EndInitial(inst); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // replicatorRoutes sets the routing for the replicator
 func replicatorRoutes(router *echo.Group) {
 	group := router.Group("", checkSharingPermissions)
@@ -141,6 +155,7 @@ func replicatorRoutes(router *echo.Group) {
 	group.GET("/:sharing-id/io.cozy.files/:id", GetFolder, checkSharingReadPermissions)
 	group.PUT("/:sharing-id/io.cozy.files/:id/metadata", SyncFile, checkSharingWritePermissions)
 	group.PUT("/:sharing-id/io.cozy.files/:id", FileHandler, checkSharingWritePermissions)
+	group.DELETE("/:sharing-id/initial", EndInitial, checkSharingWritePermissions)
 }
 
 func checkSharingReadPermissions(next echo.HandlerFunc) echo.HandlerFunc {
