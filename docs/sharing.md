@@ -34,6 +34,16 @@ If necessary, the application can list the permissions for the token by calling
 The owner of a cozy instance can send and synchronize documents to others cozy
 users.
 
+### Intents
+
+When a sharing is authorized, the user is redirected to their cozy on the
+application that was used for the sharing (when possible). It's possible to
+use a specific route to do so, via the intents. The application must declare
+an intent in its manifest for the action `SHARING`. The doctype of the intent
+must be the same as the doctype of the first rule of the sharing. In the
+redirect URL, the query string will have a `sharing` parameter with the
+sharing ID (but no intent parameter).
+
 ### Routes
 
 #### POST /sharings/
