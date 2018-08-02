@@ -722,7 +722,8 @@ func authorizeSharing(c echo.Context) error {
 	if err = s.SendAnswer(instance, params.state); err != nil {
 		return err
 	}
-	return c.Redirect(http.StatusSeeOther, instance.DefaultRedirection().String())
+	redirect := s.RedirectAfterAuthorizeURL(instance)
+	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 
 func authorizeAppForm(c echo.Context) error {
