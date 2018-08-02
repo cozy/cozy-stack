@@ -2,8 +2,11 @@ package sharing
 
 import (
 	"encoding/json"
+	"net/url"
+	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -464,6 +467,51 @@ func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string]*
 		}
 	}
 	return sharings, nil
+}
+
+func findIntentForRedirect(inst *instance.Instance, app *apps.WebappManifest, doctype string) (*apps.Intent, string) {
+	action := "SHARING"
+	if app != nil {
+		if intent := app.FindIntent(action, doctype); intent != nil {
+			return intent, app.Slug()
+		}
+	}
+	var mans []apps.WebappManifest
+	err := couchdb.GetAllDocs(inst, consts.Apps, &couchdb.AllDocsRequest{}, &mans)
+	if err != nil {
+		return nil, ""
+	}
+	for _, man := range mans {
+		if intent := man.FindIntent(action, doctype); intent != nil {
+			return intent, man.Slug()
+		}
+	}
+	return nil, ""
+}
+
+// RedirectAfterAuthorizeURL returns the URL for the redirection after a user
+// has authorized a sharing.
+func (s *Sharing) RedirectAfterAuthorizeURL(inst *instance.Instance) *url.URL {
+	doctype := s.Rules[0].DocType
+	app, _ := apps.GetWebappBySlug(inst, s.AppSlug)
+
+	if intent, slug := findIntentForRedirect(inst, app, doctype); intent != nil {
+		u := inst.SubDomain(slug)
+		parts := strings.SplitN(intent.Href, "#", 2)
+		if len(parts[0]) > 0 {
+			u.Path = parts[0]
+		}
+		if len(parts) == 2 && len(parts[1]) > 0 {
+			u.Fragment = parts[1]
+		}
+		u.RawQuery = "sharing=" + s.SID
+		return u
+	}
+
+	if app == nil {
+		return inst.DefaultRedirection()
+	}
+	return inst.SubDomain(app.Slug())
 }
 
 var _ couchdb.Doc = &Sharing{}
