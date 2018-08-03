@@ -50,7 +50,7 @@ var flagExpire time.Duration
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
-	Use:   "instances [command]",
+	Use:   "instances <command>",
 	Short: "Manage instances of a stack",
 	Long: `
 cozy-stack instances allows to manage the instances of this stack
@@ -67,16 +67,8 @@ create its CouchDB databases.
 	},
 }
 
-var cleanInstanceCmd = &cobra.Command{
-	Use:   "clean [domain]",
-	Short: "Clean badly removed instances",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return errors.New("This command is deprecated")
-	},
-}
-
 var showInstanceCmd = &cobra.Command{
-	Use:   "show [domain]",
+	Use:   "show <domain>",
 	Short: "Show the instance of the specified domain",
 	Long: `
 cozy-stack instances show allows to show the instance on the cozy for a
@@ -103,7 +95,7 @@ given domain.
 }
 
 var addInstanceCmd = &cobra.Command{
-	Use:   "add [domain]",
+	Use:   "add <domain>",
 	Short: "Manage instances of a stack",
 	Long: `
 cozy-stack instances add allows to create an instance on the cozy for a
@@ -183,7 +175,7 @@ be used as the error message.
 }
 
 var modifyInstanceCmd = &cobra.Command{
-	Use:     "modify [domain]",
+	Use:     "modify <domain>",
 	Aliases: []string{"update"},
 	Short:   "Modify the instance properties",
 	Long: `
@@ -243,7 +235,7 @@ settings for a specified domain.
 }
 
 var quotaInstanceCmd = &cobra.Command{
-	Use:   "set-disk-quota [domain] [disk-quota]",
+	Use:   "set-disk-quota <domain> <disk-quota>",
 	Short: "Change the disk-quota of the instance",
 	Long: `
 cozy-stack instances set-disk-quota allows to change the disk-quota of the
@@ -269,7 +261,7 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 }
 
 var debugInstanceCmd = &cobra.Command{
-	Use:   "debug [domain] [true/false]",
+	Use:   "debug <domain> <true/false>",
 	Short: "Activate or deactivate debugging of the instance",
 	Long: `
 cozy-stack instances debug allows to activate or deactivate the debugging of a
@@ -346,7 +338,7 @@ func formatOnboarded(i *client.Instance) string {
 }
 
 var destroyInstanceCmd = &cobra.Command{
-	Use:   "destroy [domain]",
+	Use:   "destroy <domain>",
 	Short: "Remove instance",
 	Long: `
 cozy-stack instances destroy allows to remove an instance
@@ -396,7 +388,7 @@ Type again the domain to confirm: `, domain)
 }
 
 var fsckInstanceCmd = &cobra.Command{
-	Use:   "fsck [domain]",
+	Use:   "fsck <domain>",
 	Short: "Check and repair a vfs",
 	Long: `
 The cozy-stack fsck command checks that the files in the VFS are not
@@ -454,7 +446,7 @@ func appOrKonnectorTokenInstance(cmd *cobra.Command, args []string, appType stri
 }
 
 var appTokenInstanceCmd = &cobra.Command{
-	Use:   "token-app [domain] [slug]",
+	Use:   "token-app <domain> <slug>",
 	Short: "Generate a new application token",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return appOrKonnectorTokenInstance(cmd, args, "app")
@@ -462,7 +454,7 @@ var appTokenInstanceCmd = &cobra.Command{
 }
 
 var konnectorTokenInstanceCmd = &cobra.Command{
-	Use:   "token-konnector [domain] [slug]",
+	Use:   "token-konnector <domain> <slug>",
 	Short: "Generate a new konnector token",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return appOrKonnectorTokenInstance(cmd, args, "konn")
@@ -470,7 +462,7 @@ var konnectorTokenInstanceCmd = &cobra.Command{
 }
 
 var cliTokenInstanceCmd = &cobra.Command{
-	Use:   "token-cli [domain] [scopes]",
+	Use:   "token-cli <domain> <scopes>",
 	Short: "Generate a new CLI access token (global access)",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
@@ -491,7 +483,7 @@ var cliTokenInstanceCmd = &cobra.Command{
 }
 
 var oauthTokenInstanceCmd = &cobra.Command{
-	Use:   "token-oauth [domain] [clientid] [scopes]",
+	Use:   "token-oauth <domain> <clientid> <scopes>",
 	Short: "Generate a new OAuth access token",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 3 {
@@ -514,7 +506,7 @@ var oauthTokenInstanceCmd = &cobra.Command{
 }
 
 var oauthRefreshTokenInstanceCmd = &cobra.Command{
-	Use:   "refresh-token-oauth [domain] [clientid] [scopes]",
+	Use:   "refresh-token-oauth <domain> <clientid> <scopes>",
 	Short: "Generate a new OAuth refresh token",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 3 {
@@ -536,7 +528,7 @@ var oauthRefreshTokenInstanceCmd = &cobra.Command{
 }
 
 var oauthClientInstanceCmd = &cobra.Command{
-	Use:   "client-oauth [domain] [redirect_uri] [client_name] [software_id]",
+	Use:   "client-oauth <domain> <redirect_uri> <client_name> <software_id>",
 	Short: "Register a new OAuth client",
 	Long:  `It registers a new OAuth client and returns its client_id`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -606,27 +598,21 @@ updated.`,
 }
 
 var exportCmd = &cobra.Command{
-	Use:   "export [domain]",
+	Use:   "export",
 	Short: "Export an instance to a tarball",
 	Long:  `Export the files and photos albums to a tarball (.tar.gz)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newAdminClient()
-		if flagDomain == "" {
-			return errAppsMissingDomain
-		}
 		return c.Export(flagDomain)
 	},
 }
 
 var importCmd = &cobra.Command{
-	Use:   "import [domain] [tarball]",
+	Use:   "import <tarball>",
 	Short: "Import a tarball",
 	Long:  `Import a tarball with files, photos albums and contacts to an instance`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newAdminClient()
-		if flagDomain == "" {
-			return errAppsMissingDomain
-		}
 		if len(args) < 1 {
 			return errors.New("The path to the tarball is missing")
 		}
@@ -642,7 +628,6 @@ func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(addInstanceCmd)
 	instanceCmdGroup.AddCommand(modifyInstanceCmd)
-	instanceCmdGroup.AddCommand(cleanInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
 	instanceCmdGroup.AddCommand(quotaInstanceCmd)
 	instanceCmdGroup.AddCommand(debugInstanceCmd)
@@ -700,5 +685,7 @@ func init() {
 	importCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	importCmd.Flags().StringVar(&flagDirectory, "directory", "", "Put the imported files inside this directory")
 	importCmd.Flags().BoolVar(&flagIncreaseQuota, "increase-quota", false, "Increase the disk quota if needed for importing all the files")
+	exportCmd.MarkFlagRequired("domain")
+	importCmd.MarkFlagRequired("domain")
 	RootCmd.AddCommand(instanceCmdGroup)
 }

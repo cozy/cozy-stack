@@ -24,7 +24,7 @@ var flagKonnectorAccountID string
 var flagKonnectorsParameters string
 
 var webappsCmdGroup = &cobra.Command{
-	Use:   "apps [command]",
+	Use:   "apps <command>",
 	Short: "Interact with the applications",
 	Long: `
 cozy-stack apps allows to interact with the cozy applications.
@@ -38,7 +38,7 @@ a cozy.
 }
 
 var triggersCmdGroup = &cobra.Command{
-	Use:   "triggers [command]",
+	Use:   "triggers <command>",
 	Short: "Interact with the triggers",
 	Long: `
 cozy-stack apps allows to interact with the cozy triggers.
@@ -51,7 +51,7 @@ It provides command to run a specific trigger.
 }
 
 var installWebappCmd = &cobra.Command{
-	Use: "install [slug] [sourceurl]",
+	Use: "install <slug> [sourceurl]",
 	Short: `Install an application with the specified slug name
 from the given source URL.`,
 	Example: "$ cozy-stack apps install --domain cozy.tools:8080 drive registry://drive/stable",
@@ -62,7 +62,7 @@ from the given source URL.`,
 }
 
 var updateWebappCmd = &cobra.Command{
-	Use:     "update [slug] [sourceurl]",
+	Use:     "update <slug> [sourceurl]",
 	Short:   "Update the application with the specified slug name.",
 	Aliases: []string{"upgrade"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -71,7 +71,7 @@ var updateWebappCmd = &cobra.Command{
 }
 
 var uninstallWebappCmd = &cobra.Command{
-	Use:     "uninstall [slug]",
+	Use:     "uninstall <slug>",
 	Short:   "Uninstall the application with the specified slug name.",
 	Aliases: []string{"rm"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -88,7 +88,7 @@ var lsWebappsCmd = &cobra.Command{
 }
 
 var showWebappCmd = &cobra.Command{
-	Use:   "show [slug]",
+	Use:   "show <slug>",
 	Short: "Show the application attributes",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return showApp(cmd, args, consts.Apps)
@@ -96,7 +96,7 @@ var showWebappCmd = &cobra.Command{
 }
 
 var showWebappTriggersCmd = &cobra.Command{
-	Use:   "show-from-app [slug]",
+	Use:   "show-from-app <slug>",
 	Short: "Show the application triggers",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return showWebAppTriggers(cmd, args, consts.Apps)
@@ -104,7 +104,7 @@ var showWebappTriggersCmd = &cobra.Command{
 }
 
 var showKonnectorCmd = &cobra.Command{
-	Use:   "show [slug]",
+	Use:   "show <slug>",
 	Short: "Show the application attributes",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return showApp(cmd, args, consts.Konnectors)
@@ -112,7 +112,7 @@ var showKonnectorCmd = &cobra.Command{
 }
 
 var konnectorsCmdGroup = &cobra.Command{
-	Use:   "konnectors [command]",
+	Use:   "konnectors <command>",
 	Short: "Interact with the konnectors",
 	Long: `
 cozy-stack konnectors allows to interact with the cozy konnectors.
@@ -126,7 +126,7 @@ a cozy.
 }
 
 var installKonnectorCmd = &cobra.Command{
-	Use: "install [slug] [sourceurl]",
+	Use: "install <slug> [sourceurl]",
 	Short: `Install a konnector with the specified slug name
 from the given source URL.`,
 	Example: "$ cozy-stack konnectors install --domain cozy.tools:8080 trainline registry://trainline/stable",
@@ -136,7 +136,7 @@ from the given source URL.`,
 }
 
 var updateKonnectorCmd = &cobra.Command{
-	Use:     "update [slug] [sourceurl]",
+	Use:     "update <slug> [sourceurl]",
 	Short:   "Update the konnector with the specified slug name.",
 	Aliases: []string{"upgrade"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -145,7 +145,7 @@ var updateKonnectorCmd = &cobra.Command{
 }
 
 var uninstallKonnectorCmd = &cobra.Command{
-	Use:     "uninstall [slug]",
+	Use:     "uninstall <slug>",
 	Short:   "Uninstall the konnector with the specified slug name.",
 	Aliases: []string{"rm"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -162,7 +162,7 @@ var lsKonnectorsCmd = &cobra.Command{
 }
 
 var runKonnectorsCmd = &cobra.Command{
-	Use:   "run [slug]",
+	Use:   "run <slug>",
 	Short: "Run a konnector.",
 	Long:  "Run a konnector named with specified slug using the specified options.",
 	RunE: func(cmd *cobra.Command, args []string) error {

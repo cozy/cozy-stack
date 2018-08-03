@@ -16,12 +16,12 @@ var flagJobPrintLogs bool
 var flagJobPrintLogsVerbose bool
 
 var jobsCmdGroup = &cobra.Command{
-	Use:   "jobs [command]",
+	Use:   "jobs <command>",
 	Short: "Launch and manage jobs and workers",
 }
 
 var jobsRunCmd = &cobra.Command{
-	Use:     "run [worker]",
+	Use:     "run <worker>",
 	Aliases: []string{"launch", "push"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
