@@ -775,6 +775,9 @@ func (f *aferoFileCreation) Close() (err error) {
 	}
 
 	newdoc, olddoc, written := f.newdoc, f.olddoc, f.w
+	if olddoc == nil {
+		olddoc = newdoc.Clone().(*vfs.FileDoc)
+	}
 
 	if f.meta != nil {
 		if errc := (*f.meta).Close(); errc == nil {
@@ -806,11 +809,8 @@ func (f *aferoFileCreation) Close() (err error) {
 	// The document is already added to the index when closing the file creation
 	// handler. When updating the content of the document with the final
 	// informations (size, md5, ...) we can reuse the same document as olddoc.
-	if olddoc == nil || !olddoc.Trashed {
+	if f.olddoc == nil || !f.olddoc.Trashed {
 		newdoc.Trashed = false
-	}
-	if olddoc == nil {
-		olddoc = newdoc.Clone().(*vfs.FileDoc)
 	}
 	lockerr := f.afs.mu.Lock()
 	if lockerr != nil {
