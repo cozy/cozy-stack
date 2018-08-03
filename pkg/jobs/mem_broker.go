@@ -17,6 +17,7 @@ type (
 	memQueue struct {
 		MaxCapacity int
 		Jobs        chan *Job
+		closed      chan struct{}
 
 		list *list.List
 		run  bool
@@ -29,15 +30,15 @@ type (
 		workers      []*Worker
 		workersTypes []string
 		running      uint32
-		closed       chan struct{}
 	}
 )
 
 // newMemQueue creates and a new in-memory queue.
 func newMemQueue(workerType string) *memQueue {
 	return &memQueue{
-		list: list.New(),
-		Jobs: make(chan *Job),
+		list:   list.New(),
+		Jobs:   make(chan *Job),
+		closed: make(chan struct{}),
 	}
 }
 
@@ -57,15 +58,29 @@ func (q *memQueue) send() {
 	for {
 		q.jmu.Lock()
 		e := q.list.Front()
-		if e == nil {
+		if e == nil || !q.run {
 			q.run = false
 			q.jmu.Unlock()
 			return
 		}
 		q.list.Remove(e)
 		q.jmu.Unlock()
-		q.Jobs <- e.Value.(*Job)
+		select {
+		case <-q.closed:
+			return
+		case q.Jobs <- e.Value.(*Job):
+		}
 	}
+}
+
+func (q *memQueue) close() {
+	q.jmu.Lock()
+	defer q.jmu.Unlock()
+	if !q.run {
+		return
+	}
+	q.run = false
+	go func() { q.closed <- struct{}{} }()
 }
 
 // Len returns the length of the queue
@@ -82,7 +97,6 @@ func (q *memQueue) Len() int {
 func NewMemBroker() Broker {
 	return &memBroker{
 		queues: make(map[string]*memQueue),
-		closed: make(chan struct{}),
 	}
 }
 
@@ -126,7 +140,13 @@ func (b *memBroker) ShutdownWorkers(ctx context.Context) error {
 	if len(b.workers) == 0 {
 		return nil
 	}
+
 	fmt.Print("  shutting down in-memory broker...")
+
+	for _, q := range b.queues {
+		q.close()
+	}
+
 	errs := make(chan error)
 	for _, w := range b.workers {
 		go func(w *Worker) { errs <- w.Shutdown(ctx) }(w)
@@ -137,6 +157,7 @@ func (b *memBroker) ShutdownWorkers(ctx context.Context) error {
 			errm = multierror.Append(errm, err)
 		}
 	}
+
 	if errm != nil {
 		fmt.Println("failed:", errm)
 	} else {
