@@ -181,7 +181,6 @@ redis:
   # databases number for each part of the stack using a specific database.
   databases:
     jobs: 0
-    cache: 1
     lock: 2
     sessions: 3
     downloads: 4

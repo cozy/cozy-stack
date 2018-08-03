@@ -40,7 +40,6 @@ example), you can use the --appdir flag like this:
       --allow-root                       Allow to start as root (disabled by default)
       --appdir strings                   Mount a directory as the 'app' application
       --assets string                    path to the directory with the assets (use the packed assets by default)
-      --cache-url string                 URL for the cache, redis or in-memory
       --couchdb-url string               CouchDB URL (default "http://localhost:5984/")
       --csp-whitelist string             Whitelisted domains for the default allowed origins of the Content Secury Policy
       --dev                              Allow to run without in dev release mode (disabled by default)

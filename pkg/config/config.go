@@ -119,7 +119,6 @@ type Config struct {
 	Notifications Notifications
 	Logger        logger.Options
 
-	Cache                       RedisConfig
 	Lock                        RedisConfig
 	SessionStorage              RedisConfig
 	DownloadStorage             RedisConfig
@@ -467,10 +466,6 @@ func UseViper(v *viper.Viper) error {
 	if err != nil {
 		return err
 	}
-	cacheRedis, err := GetRedisConfig(v, redisOptions, "cache", "url")
-	if err != nil {
-		return err
-	}
 	lockRedis, err := GetRedisConfig(v, redisOptions, "lock", "url")
 	if err != nil {
 		return err
@@ -608,7 +603,6 @@ func UseViper(v *viper.Viper) error {
 			IOSKeyID:               v.GetString("notifications.ios_key_id"),
 			IOSTeamID:              v.GetString("notifications.ios_team_id"),
 		},
-		Cache:                       cacheRedis,
 		Lock:                        lockRedis,
 		SessionStorage:              sessionsRedis,
 		DownloadStorage:             downloadRedis,
@@ -735,7 +729,6 @@ func createTestViper() *viper.Viper {
 	v.SetDefault("subdomains", "nested")
 	v.SetDefault("fs.url", "mem://test")
 	v.SetDefault("couchdb.url", "http://localhost:5984/")
-	v.SetDefault("cache.url", "redis://localhost:6379/0")
 	v.SetDefault("log.level", "info")
 	applyDefaults(v)
 	return v
