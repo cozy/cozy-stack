@@ -16,7 +16,7 @@ example: cozy-stack config passwd ~/.cozy/
 
 
 ```
-cozy-stack config passwd [filepath] [flags]
+cozy-stack config passwd <filepath> [flags]
 ```
 
 ### Options

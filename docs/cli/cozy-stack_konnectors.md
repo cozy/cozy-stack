@@ -12,7 +12,7 @@ a cozy.
 
 
 ```
-cozy-stack konnectors [command] [flags]
+cozy-stack konnectors <command> [flags]
 ```
 
 ### Options

@@ -10,7 +10,7 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 
 
 ```
-cozy-stack instances set-disk-quota [domain] [disk-quota] [flags]
+cozy-stack instances set-disk-quota <domain> <disk-quota> [flags]
 ```
 
 ### Examples

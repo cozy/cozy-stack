@@ -7,7 +7,7 @@ Import the specified file or directory into cozy
 Import the specified file or directory into cozy
 
 ```
-cozy-stack files import [--domain domain] [--from name] [--to name] [--match pattern] [flags]
+cozy-stack files import [--domain domain] [--match pattern] --from <name> --to <name> [flags]
 ```
 
 ### Options

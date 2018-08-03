@@ -7,7 +7,7 @@ Generate a new application token
 Generate a new application token
 
 ```
-cozy-stack instances token-app [domain] [slug] [flags]
+cozy-stack instances token-app <domain> <slug> [flags]
 ```
 
 ### Options

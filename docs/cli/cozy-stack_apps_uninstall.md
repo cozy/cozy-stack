@@ -7,7 +7,7 @@ Uninstall the application with the specified slug name.
 Uninstall the application with the specified slug name.
 
 ```
-cozy-stack apps uninstall [slug] [flags]
+cozy-stack apps uninstall <slug> [flags]
 ```
 
 ### Options

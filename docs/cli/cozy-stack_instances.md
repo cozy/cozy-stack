@@ -16,7 +16,7 @@ create its CouchDB databases.
 
 
 ```
-cozy-stack instances [command] [flags]
+cozy-stack instances <command> [flags]
 ```
 
 ### Options
@@ -39,7 +39,6 @@ cozy-stack instances [command] [flags]
 
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack instances add](cozy-stack_instances_add.md)	 - Manage instances of a stack
-* [cozy-stack instances clean](cozy-stack_instances_clean.md)	 - Clean badly removed instances
 * [cozy-stack instances client-oauth](cozy-stack_instances_client-oauth.md)	 - Register a new OAuth client
 * [cozy-stack instances debug](cozy-stack_instances_debug.md)	 - Activate or deactivate debugging of the instance
 * [cozy-stack instances destroy](cozy-stack_instances_destroy.md)	 - Remove instance

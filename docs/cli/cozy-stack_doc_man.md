@@ -7,7 +7,7 @@ Print the manpages of cozy-stack
 Print the manual pages for using cozy-stack in command-line
 
 ```
-cozy-stack doc man [directory] [flags]
+cozy-stack doc man <directory> [flags]
 ```
 
 ### Examples

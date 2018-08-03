@@ -12,7 +12,7 @@ a cozy.
 
 
 ```
-cozy-stack apps [command] [flags]
+cozy-stack apps <command> [flags]
 ```
 
 ### Options

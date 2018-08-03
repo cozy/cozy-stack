@@ -7,7 +7,7 @@ Show the application attributes
 Show the application attributes
 
 ```
-cozy-stack apps show [slug] [flags]
+cozy-stack apps show <slug> [flags]
 ```
 
 ### Options

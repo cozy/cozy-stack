@@ -7,7 +7,7 @@ Print the documentation
 Print the documentation about the usage of cozy-stack in command-line
 
 ```
-cozy-stack doc [command] [flags]
+cozy-stack doc <command> [flags]
 ```
 
 ### Options

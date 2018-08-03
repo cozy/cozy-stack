@@ -8,7 +8,7 @@ from the given source URL.
 [Some schemes](../../docs/apps.md#sources) are allowed as `[sourceurl]`.
 
 ```
-cozy-stack apps install [slug] [sourceurl] [flags]
+cozy-stack apps install <slug> [sourceurl] [flags]
 ```
 
 ### Examples

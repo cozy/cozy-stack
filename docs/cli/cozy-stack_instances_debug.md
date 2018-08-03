@@ -10,7 +10,7 @@ specific domain.
 
 
 ```
-cozy-stack instances debug [domain] [true/false] [flags]
+cozy-stack instances debug <domain> <true/false> [flags]
 ```
 
 ### Options

@@ -7,7 +7,7 @@ Register a new OAuth client
 It registers a new OAuth client and returns its client_id
 
 ```
-cozy-stack instances client-oauth [domain] [redirect_uri] [client_name] [software_id] [flags]
+cozy-stack instances client-oauth <domain> <redirect_uri> <client_name> <software_id> [flags]
 ```
 
 ### Options

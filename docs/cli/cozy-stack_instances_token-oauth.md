@@ -7,7 +7,7 @@ Generate a new OAuth access token
 Generate a new OAuth access token
 
 ```
-cozy-stack instances token-oauth [domain] [clientid] [scopes] [flags]
+cozy-stack instances token-oauth <domain> <clientid> <scopes> [flags]
 ```
 
 ### Options

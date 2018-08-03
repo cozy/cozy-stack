@@ -7,7 +7,7 @@ Fix the class computed from the mime-type
 Fix the class computed from the mime-type
 
 ```
-cozy-stack fixer mime [domain] [flags]
+cozy-stack fixer mime <domain> [flags]
 ```
 
 ### Options

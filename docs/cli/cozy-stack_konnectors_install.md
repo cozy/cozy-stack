@@ -9,7 +9,7 @@ Install a konnector with the specified slug name
 from the given source URL.
 
 ```
-cozy-stack konnectors install [slug] [sourceurl] [flags]
+cozy-stack konnectors install <slug> [sourceurl] [flags]
 ```
 
 ### Examples

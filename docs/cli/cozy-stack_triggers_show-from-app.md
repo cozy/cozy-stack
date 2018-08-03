@@ -7,7 +7,7 @@ Show the application triggers
 Show the application triggers
 
 ```
-cozy-stack triggers show-from-app [slug] [flags]
+cozy-stack triggers show-from-app <slug> [flags]
 ```
 
 ### Options

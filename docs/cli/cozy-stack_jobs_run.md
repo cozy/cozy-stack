@@ -7,7 +7,7 @@
 
 
 ```
-cozy-stack jobs run [worker] [flags]
+cozy-stack jobs run <worker> [flags]
 ```
 
 ### Options

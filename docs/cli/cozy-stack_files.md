@@ -14,7 +14,7 @@ current filesystem into cozy.
 
 
 ```
-cozy-stack files [command] [flags]
+cozy-stack files <command> [flags]
 ```
 
 ### Options

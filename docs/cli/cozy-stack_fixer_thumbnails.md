@@ -7,7 +7,7 @@ Rebuild thumbnails image for images files
 Rebuild thumbnails image for images files
 
 ```
-cozy-stack fixer thumbnails [domain] [flags]
+cozy-stack fixer thumbnails <domain> [flags]
 ```
 
 ### Options

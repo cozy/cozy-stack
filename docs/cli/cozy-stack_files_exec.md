@@ -7,20 +7,20 @@ Execute the given command on the specified domain and leave
 Execute a command on the VFS of the specified domain.
 Available commands:
 
-    mkdir [name]               Creates a directory with specified name
-    ls [-l] [-a] [-h] [name]   Prints the children of the specified directory
-    tree [name]                Prints the tree structure of the specified directory
-    attrs [name]               Prints the attributes of the specified file or directory
-    cat [name]                 Echo the file content in stdout
-    mv [from] [to]             Rename a file or directory
-    rm [-f] [-r] [name]        Move the file to trash, or delete it permanently with -f flag
-    restore [name]             Restore a file or directory from trash
+    mkdir <name>               Creates a directory with specified name
+    ls [-l] [-a] [-h] <name>   Prints the children of the specified directory
+    tree <name>                Prints the tree structure of the specified directory
+    attrs <name>               Prints the attributes of the specified file or directory
+    cat <name>                 Echo the file content in stdout
+    mv <from> <to>             Rename a file or directory
+    rm [-f] [-r] <name>        Move the file to trash, or delete it permanently with -f flag
+    restore <name>             Restore a file or directory from trash
 
 	Don't forget to put quotes around the command!
 
 
 ```
-cozy-stack files exec [--domain domain] [command] [flags]
+cozy-stack files exec [--domain domain] <command> [flags]
 ```
 
 ### Options
