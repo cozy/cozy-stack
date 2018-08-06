@@ -62,6 +62,9 @@ func Worker(ctx *jobs.WorkerContext) error {
 	if img.Verb != "DELETED" && img.Doc.Trashed {
 		return nil
 	}
+	if img.OldDoc != nil && sameImg(&img.Doc, img.OldDoc) {
+		return nil
+	}
 
 	log := ctx.Logger()
 	log.WithField("nspace", "thumbnail").Debugf("%s %s", img.Verb, img.Doc.ID())
@@ -81,6 +84,20 @@ func Worker(ctx *jobs.WorkerContext) error {
 		return removeThumbnails(i, &img.Doc)
 	}
 	return fmt.Errorf("Unknown type %s for image event", img.Verb)
+}
+
+func sameImg(doc, old *vfs.FileDoc) bool {
+	// XXX It is needed for a file that has just been uploaded. The first
+	// revision will have the size and md5sum, but is marked as trashed,
+	// and we have to wait for the second revision to have the file to generate
+	// the thumbnails
+	if doc.Trashed != old.Trashed {
+		return false
+	}
+	if doc.ByteSize != old.ByteSize {
+		return false
+	}
+	return bytes.Equal(doc.MD5Sum, old.MD5Sum)
 }
 
 type thumbnailMsg struct {
