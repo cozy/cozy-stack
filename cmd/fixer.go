@@ -23,7 +23,7 @@ var dryRunFlag bool
 var withMetadataFlag bool
 
 var fixerCmdGroup = &cobra.Command{
-	Use:   "fixer [command]",
+	Use:   "fixer <command>",
 	Short: "A set of tools to fix issues or migrate content for retro-compatibility.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
@@ -31,7 +31,7 @@ var fixerCmdGroup = &cobra.Command{
 }
 
 var albumsCreatedAtFixerCmd = &cobra.Command{
-	Use:   "albums-created-at [domain]",
+	Use:   "albums-created-at <domain>",
 	Short: "Add a created_at field for albums where it's missing",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
@@ -94,7 +94,7 @@ var albumsCreatedAtFixerCmd = &cobra.Command{
 }
 
 var md5FixerCmd = &cobra.Command{
-	Use:   "md5 [domain]",
+	Use:   "md5 <domain>",
 	Short: "Fix missing md5 from contents in the vfs",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
@@ -142,7 +142,7 @@ var md5FixerCmd = &cobra.Command{
 }
 
 var mimeFixerCmd = &cobra.Command{
-	Use:   "mime [domain]",
+	Use:   "mime <domain>",
 	Short: "Fix the class computed from the mime-type",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
@@ -174,7 +174,7 @@ var mimeFixerCmd = &cobra.Command{
 }
 
 var jobsFixer = &cobra.Command{
-	Use:   "jobs [domain]",
+	Use:   "jobs <domain>",
 	Short: "Take a look at the consistency of the jobs",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
@@ -246,7 +246,7 @@ var redisFixer = &cobra.Command{
 }
 
 var orphanAccountsFixer = &cobra.Command{
-	Use:     "accounts-orphans [domain]",
+	Use:     "accounts-orphans <domain>",
 	Aliases: []string{"account-orphans"},
 	Short:   "Rebuild triggers associated with orphan accounts",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -283,7 +283,7 @@ var orphanAccountsFixer = &cobra.Command{
 }
 
 var thumbnailsFixer = &cobra.Command{
-	Use:   "thumbnails [domain]",
+	Use:   "thumbnails <domain>",
 	Short: "Rebuild thumbnails image for images files",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {

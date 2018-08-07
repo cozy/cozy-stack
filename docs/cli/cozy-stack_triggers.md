@@ -11,7 +11,7 @@ It provides command to run a specific trigger.
 
 
 ```
-cozy-stack triggers [command] [flags]
+cozy-stack triggers <command> [flags]
 ```
 
 ### Options

@@ -20,7 +20,7 @@ keyfiles written in:
 
 
 ```
-cozy-stack config gen-keys [filepath] [flags]
+cozy-stack config gen-keys <filepath> [flags]
 ```
 
 ### Options

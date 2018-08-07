@@ -7,7 +7,7 @@ Import a tarball
 Import a tarball with files, photos albums and contacts to an instance
 
 ```
-cozy-stack instances import [domain] [tarball] [flags]
+cozy-stack instances import <tarball> [flags]
 ```
 
 ### Options

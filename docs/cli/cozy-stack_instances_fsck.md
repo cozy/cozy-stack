@@ -11,7 +11,7 @@ in swift/localfs but not couchdb.
 
 
 ```
-cozy-stack instances fsck [domain] [flags]
+cozy-stack instances fsck <domain> [flags]
 ```
 
 ### Options

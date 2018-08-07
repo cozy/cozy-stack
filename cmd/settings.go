@@ -27,8 +27,10 @@ var settingsCmd = &cobra.Command{
 cozy-stack settings displays the settings.
 
 It can also take a list of settings to update.
+
+If you give a blank value, the setting will be removed.
 `,
-	Example: "$ cozy-stack settings --domain cozy.tools:8080 context:beta,public_name:John",
+	Example: "$ cozy-stack settings --domain cozy.tools:8080 context:beta,public_name:John,to_remove:",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagSettingsDomain == "" {
 			errPrintfln("%s", errSettingsMissingDomain)

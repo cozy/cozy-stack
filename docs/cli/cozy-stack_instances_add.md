@@ -14,7 +14,7 @@ be used as the error message.
 
 
 ```
-cozy-stack instances add [domain] [flags]
+cozy-stack instances add <domain> [flags]
 ```
 
 ### Examples

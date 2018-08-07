@@ -7,7 +7,7 @@ Fix missing md5 from contents in the vfs
 Fix missing md5 from contents in the vfs
 
 ```
-cozy-stack fixer md5 [domain] [flags]
+cozy-stack fixer md5 <domain> [flags]
 ```
 
 ### Options

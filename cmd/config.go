@@ -21,7 +21,7 @@ import (
 )
 
 var configCmdGroup = &cobra.Command{
-	Use:   "config [command]",
+	Use:   "config <command>",
 	Short: "Show and manage configuration elements",
 	Long: `
 cozy-stack config allows to print and generate some parts of the configuration
@@ -45,7 +45,7 @@ the given parameters to display the configuration.`,
 }
 
 var adminPasswdCmd = &cobra.Command{
-	Use:     "passwd [filepath]",
+	Use:     "passwd <filepath>",
 	Aliases: []string{"password", "passphrase", "pass"},
 	Short:   "Generate an admin passphrase",
 	Long: `
@@ -124,7 +124,7 @@ example: cozy-stack config passwd ~/.cozy/
 }
 
 var genKeysCmd = &cobra.Command{
-	Use:   "gen-keys [filepath]",
+	Use:   "gen-keys <filepath>",
 	Short: "Generate an key pair for encryption and decryption of credentials",
 	Long: `
 cozy-stack config gen-keys generate a key-pair and save them in the
@@ -165,7 +165,7 @@ keyfiles written in:
 }
 
 var decryptCredentialsCmd = &cobra.Command{
-	Use:     "decrypt-creds [keyfile] [ciphertext]",
+	Use:     "decrypt-creds <keyfile> <ciphertext>",
 	Aliases: []string{"decrypt-credentials"},
 	Short:   "Decrypt the given credentials cipher text with the specified decryption keyfile.",
 	RunE: func(cmd *cobra.Command, args []string) error {

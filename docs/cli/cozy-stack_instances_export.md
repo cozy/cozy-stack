@@ -7,7 +7,7 @@ Export an instance to a tarball
 Export the files and photos albums to a tarball (.tar.gz)
 
 ```
-cozy-stack instances export [domain] [flags]
+cozy-stack instances export [flags]
 ```
 
 ### Options

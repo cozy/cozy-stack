@@ -9,7 +9,7 @@ import (
 
 // completionCmdGroup represents the completion command
 var completionCmd = &cobra.Command{
-	Use:   "completion [shell]",
+	Use:   "completion <shell>",
 	Short: "Output shell completion code for the specified shell",
 	Long: `
 Output shell completion code for the specified shell (bash or zsh).

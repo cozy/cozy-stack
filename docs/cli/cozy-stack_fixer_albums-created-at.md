@@ -7,7 +7,7 @@ Add a created_at field for albums where it's missing
 Add a created_at field for albums where it's missing
 
 ```
-cozy-stack fixer albums-created-at [domain] [flags]
+cozy-stack fixer albums-created-at <domain> [flags]
 ```
 
 ### Options

@@ -7,7 +7,7 @@ Print the documentation of cozy-stack as markdown
 Print the documentation of cozy-stack as markdown
 
 ```
-cozy-stack doc markdown [directory] [flags]
+cozy-stack doc markdown <directory> [flags]
 ```
 
 ### Examples

@@ -7,7 +7,7 @@ Generate a new konnector token
 Generate a new konnector token
 
 ```
-cozy-stack instances token-konnector [domain] [slug] [flags]
+cozy-stack instances token-konnector <domain> <slug> [flags]
 ```
 
 ### Options

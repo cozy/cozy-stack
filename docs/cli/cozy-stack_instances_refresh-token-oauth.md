@@ -7,7 +7,7 @@ Generate a new OAuth refresh token
 Generate a new OAuth refresh token
 
 ```
-cozy-stack instances refresh-token-oauth [domain] [clientid] [scopes] [flags]
+cozy-stack instances refresh-token-oauth <domain> <clientid> <scopes> [flags]
 ```
 
 ### Options

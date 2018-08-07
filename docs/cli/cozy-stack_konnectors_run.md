@@ -7,7 +7,7 @@ Run a konnector.
 Run a konnector named with specified slug using the specified options.
 
 ```
-cozy-stack konnectors run [slug] [flags]
+cozy-stack konnectors run <slug> [flags]
 ```
 
 ### Options

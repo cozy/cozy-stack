@@ -10,7 +10,7 @@ and all its data.
 
 
 ```
-cozy-stack instances destroy [domain] [flags]
+cozy-stack instances destroy <domain> [flags]
 ```
 
 ### Options

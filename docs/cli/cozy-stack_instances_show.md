@@ -10,7 +10,7 @@ given domain.
 
 
 ```
-cozy-stack instances show [domain] [flags]
+cozy-stack instances show <domain> [flags]
 ```
 
 ### Examples

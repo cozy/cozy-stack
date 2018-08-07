@@ -7,7 +7,7 @@ Update the konnector with the specified slug name.
 Update the konnector with the specified slug name.
 
 ```
-cozy-stack konnectors update [slug] [sourceurl] [flags]
+cozy-stack konnectors update <slug> [sourceurl] [flags]
 ```
 
 ### Options

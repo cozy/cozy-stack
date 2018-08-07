@@ -7,7 +7,7 @@ Rebuild triggers associated with orphan accounts
 Rebuild triggers associated with orphan accounts
 
 ```
-cozy-stack fixer accounts-orphans [domain] [flags]
+cozy-stack fixer accounts-orphans <domain> [flags]
 ```
 
 ### Options

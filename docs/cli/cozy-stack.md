@@ -10,7 +10,7 @@ with a new experience. You can install Cozy on your own hardware where no one
 profiles you.
 
 ```
-cozy-stack [flags]
+cozy-stack <command> [flags]
 ```
 
 ### Options

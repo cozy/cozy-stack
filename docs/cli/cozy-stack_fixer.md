@@ -7,7 +7,7 @@ A set of tools to fix issues or migrate content for retro-compatibility.
 A set of tools to fix issues or migrate content for retro-compatibility.
 
 ```
-cozy-stack fixer [command] [flags]
+cozy-stack fixer <command> [flags]
 ```
 
 ### Options

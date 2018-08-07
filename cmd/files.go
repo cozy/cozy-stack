@@ -27,14 +27,14 @@ var errFilesMissingDomain = errors.New("Missing --domain flag")
 
 const filesExecUsage = `Available commands:
 
-    mkdir [name]               Creates a directory with specified name
-    ls [-l] [-a] [-h] [name]   Prints the children of the specified directory
-    tree [name]                Prints the tree structure of the specified directory
-    attrs [name]               Prints the attributes of the specified file or directory
-    cat [name]                 Echo the file content in stdout
-    mv [from] [to]             Rename a file or directory
-    rm [-f] [-r] [name]        Move the file to trash, or delete it permanently with -f flag
-    restore [name]             Restore a file or directory from trash
+    mkdir <name>               Creates a directory with specified name
+    ls [-l] [-a] [-h] <name>   Prints the children of the specified directory
+    tree <name>                Prints the tree structure of the specified directory
+    attrs <name>               Prints the attributes of the specified file or directory
+    cat <name>                 Echo the file content in stdout
+    mv <from> <to>             Rename a file or directory
+    rm [-f] [-r] <name>        Move the file to trash, or delete it permanently with -f flag
+    restore <name>             Restore a file or directory from trash
 
 	Don't forget to put quotes around the command!
 `
@@ -47,7 +47,7 @@ var flagImportMatch string
 
 // filesCmdGroup represents the instances command
 var filesCmdGroup = &cobra.Command{
-	Use:   "files [command]",
+	Use:   "files <command>",
 	Short: "Interact with the cozy filesystem",
 	Long: `
 cozy-stack files allows to interact with the cozy filesystem.
@@ -63,7 +63,7 @@ current filesystem into cozy.
 }
 
 var execFilesCmd = &cobra.Command{
-	Use:   "exec [--domain domain] [command]",
+	Use:   "exec [--domain domain] <command>",
 	Short: "Execute the given command on the specified domain and leave",
 	Long:  "Execute a command on the VFS of the specified domain.\n" + filesExecUsage,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -85,7 +85,7 @@ var execFilesCmd = &cobra.Command{
 }
 
 var importFilesCmd = &cobra.Command{
-	Use:   "import [--domain domain] [--from name] [--to name] [--match pattern]",
+	Use:   "import [--domain domain] [--match pattern] --from <name> --to <name>",
 	Short: "Import the specified file or directory into cozy",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagFilesDomain == "" {
@@ -480,7 +480,9 @@ func init() {
 	filesCmdGroup.PersistentFlags().StringVar(&flagFilesDomain, "domain", domain, "specify the domain name of the instance")
 
 	importFilesCmd.Flags().StringVar(&flagImportFrom, "from", "", "directory to import from in cozy")
+	importFilesCmd.MarkFlagRequired("from")
 	importFilesCmd.Flags().StringVar(&flagImportTo, "to", "/", "directory to import to in cozy")
+	importFilesCmd.MarkFlagRequired("to")
 	importFilesCmd.Flags().BoolVar(&flagImportDryRun, "dry-run", false, "do not actually import the files")
 	importFilesCmd.Flags().StringVar(&flagImportMatch, "match", "", "pattern that the imported files must match")
 

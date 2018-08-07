@@ -7,7 +7,7 @@ Take a look at the consistency of the jobs
 Take a look at the consistency of the jobs
 
 ```
-cozy-stack fixer jobs [domain] [flags]
+cozy-stack fixer jobs <domain> [flags]
 ```
 
 ### Options

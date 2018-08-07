@@ -7,7 +7,7 @@ Update the application with the specified slug name.
 Update the application with the specified slug name.
 
 ```
-cozy-stack apps update [slug] [sourceurl] [flags]
+cozy-stack apps update <slug> [sourceurl] [flags]
 ```
 
 ### Options

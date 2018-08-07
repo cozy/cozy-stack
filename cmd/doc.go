@@ -7,7 +7,7 @@ import (
 
 // docCmdGroup represents the doc command
 var docCmdGroup = &cobra.Command{
-	Use:   "doc [command]",
+	Use:   "doc <command>",
 	Short: "Print the documentation",
 	Long:  "Print the documentation about the usage of cozy-stack in command-line",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -16,7 +16,7 @@ var docCmdGroup = &cobra.Command{
 }
 
 var manDocCmd = &cobra.Command{
-	Use:   "man [directory]",
+	Use:   "man <directory>",
 	Short: "Print the manpages of cozy-stack",
 	Long:  `Print the manual pages for using cozy-stack in command-line`,
 	Example: `$ mkdir -p ~/share/man
@@ -36,7 +36,7 @@ $ man cozy-stack`,
 }
 
 var markdownDocCmd = &cobra.Command{
-	Use:     "markdown [directory]",
+	Use:     "markdown <directory>",
 	Short:   "Print the documentation of cozy-stack as markdown",
 	Example: `$ cozy-stack doc markdown docs/cli`,
 	RunE: func(cmd *cobra.Command, args []string) error {

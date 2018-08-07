@@ -9,6 +9,8 @@ cozy-stack settings displays the settings.
 
 It can also take a list of settings to update.
 
+If you give a blank value, the setting will be removed.
+
 
 ```
 cozy-stack settings [settings] [flags]
@@ -17,7 +19,7 @@ cozy-stack settings [settings] [flags]
 ### Examples
 
 ```
-$ cozy-stack settings --domain cozy.tools:8080 context:beta,public_name:John
+$ cozy-stack settings --domain cozy.tools:8080 context:beta,public_name:John,to_remove:
 ```
 
 ### Options

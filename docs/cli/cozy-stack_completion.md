@@ -21,7 +21,7 @@ following line to the .bash_profile
     $ source $(brew --prefix)/etc/bash_completion
 
 ```
-cozy-stack completion [shell] [flags]
+cozy-stack completion <shell> [flags]
 ```
 
 ### Examples

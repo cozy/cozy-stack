@@ -10,12 +10,13 @@ settings for a specified domain.
 
 
 ```
-cozy-stack instances modify [domain] [flags]
+cozy-stack instances modify <domain> [flags]
 ```
 
 ### Options
 
 ```
+      --blocked                  Block the instance
       --context-name string      New context name
       --disk-quota string        Specify a new disk quota
       --domain-aliases strings   Specify one or more aliases domain for the instance (separated by ',')
