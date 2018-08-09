@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/echo"
 )
@@ -40,6 +41,10 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
+		pdoc, err := GetPermission(c)
+		if err == nil && pdoc.Type == permissions.TypeCLI {
+			return next(c)
+		}
 		if i.CheckInstanceBlocked() {
 			contentType := AcceptedContentType(c)
 			switch contentType {
