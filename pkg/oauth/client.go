@@ -29,6 +29,10 @@ const (
 // ClientSecretLen is the number of random bytes used for generating the client secret
 const ClientSecretLen = 24 // #nosec
 
+// ScopeLogin is the special scope used by the manager or any other client
+// for login/authentication purposes.
+const ScopeLogin = "login"
+
 // Client is a struct for OAuth2 client. Most of the fields are described in
 // the OAuth 2.0 Dynamic Client Registration Protocol. The exception is
 // `client_kind`, and it is an optional field.

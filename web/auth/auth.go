@@ -111,6 +111,12 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	}
 
 	redirectStr := redirect.String()
+	redirectQuery := redirect.Query()
+
+	var clientScope string
+	if clientScopes := redirectQuery["scope"]; len(clientScopes) > 0 {
+		clientScope = clientScopes[0]
+	}
 
 	if c.QueryParam("msg") == "passphrase-reset-requested" {
 		title = i.Translate("Login Connect after reset requested title")
@@ -118,7 +124,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	} else if strings.Contains(redirectStr, "reconnect") {
 		title = i.Translate("Login Reconnect title")
 		help = i.Translate("Login Reconnect help")
-	} else if i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" {
+	} else if i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin {
 		title = i.Translate("Login Connect from oauth title")
 		help = i.Translate("Login Connect from oauth help")
 	} else if i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize/sharing" {
@@ -526,6 +532,33 @@ func authorizeForm(c echo.Context) error {
 			"redirect": {instance.FromURL(c.Request().URL)},
 		})
 		return c.Redirect(http.StatusSeeOther, u)
+	}
+
+	// For a scope "login": such client is only used to transmit authentication
+	// for the manager. It does not require any authorization from the user, and
+	// generate a code without asking any permission.
+	if params.scope == oauth.ScopeLogin {
+		access, err := oauth.CreateAccessCode(params.instance, params.clientID, "" /* = scope */)
+		if err != nil {
+			return err
+		}
+
+		u, err := url.ParseRequestURI(params.redirectURI)
+		if err != nil {
+			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Domain": instance.ContextualDomain(),
+				"Error":  "Error Invalid redirect_uri",
+			})
+		}
+
+		q := u.Query()
+		q.Set("access_code", access.Code)
+		q.Set("state", params.state)
+		q.Set("client_id", params.clientID)
+		u.RawQuery = q.Encode()
+		u.Fragment = ""
+
+		return c.Redirect(http.StatusFound, u.String()+"#")
 	}
 
 	permissions, err := permissions.UnmarshalScopeString(params.scope)
