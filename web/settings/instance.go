@@ -52,7 +52,7 @@ func getInstance(c echo.Context) error {
 	doc.M["uuid"] = inst.UUID
 	doc.M["context"] = inst.ContextName
 
-	if err = webpermissions.Allow(c, permissions.GET, doc); err != nil {
+	if err = middlewares.Allow(c, permissions.GET, doc); err != nil {
 		return err
 	}
 
@@ -72,11 +72,11 @@ func updateInstance(c echo.Context) error {
 	doc.SetID(consts.InstanceSettingsID)
 	doc.SetRev(obj.Meta.Rev)
 
-	if err = webpermissions.Allow(c, webpermissions.PUT, doc); err != nil {
+	if err = middlewares.Allow(c, webpermissions.PUT, doc); err != nil {
 		return err
 	}
 
-	pdoc, err := webpermissions.GetPermission(c)
+	pdoc, err := middlewares.GetPermission(c)
 	if err != nil || pdoc.Type != permissions.TypeCLI {
 		delete(doc.M, "auth_mode")
 		delete(doc.M, "tos")
@@ -105,7 +105,7 @@ func updateInstanceTOS(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	// Allow any request from OAuth tokens to use this route
-	pdoc, err := webpermissions.GetPermission(c)
+	pdoc, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func updateInstanceTOS(c echo.Context) error {
 func updateInstanceAuthMode(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	if err := webpermissions.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
 		return err
 	}
 

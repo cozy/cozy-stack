@@ -33,7 +33,7 @@ func (s *apiSession) MarshalJSON() ([]byte, error)           { return json.Marsh
 func getSessions(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Sessions); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Sessions); err != nil {
 		return err
 	}
 
@@ -53,7 +53,7 @@ func getSessions(c echo.Context) error {
 func warnings(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	if _, err := permissions.GetPermission(c); err != nil {
+	if _, err := middlewares.GetPermission(c); err != nil {
 		return err
 	}
 

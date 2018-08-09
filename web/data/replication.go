@@ -24,7 +24,7 @@ func getDesignDoc(c echo.Context) error {
 	docid := c.Param("designdocid")
 	doctype := c.Get("doctype").(string)
 
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
@@ -41,7 +41,7 @@ func getLocalDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
@@ -56,7 +56,7 @@ func setLocalDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
@@ -70,7 +70,7 @@ func setLocalDoc(c echo.Context) error {
 func bulkGet(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
@@ -84,7 +84,7 @@ func bulkGet(c echo.Context) error {
 func bulkDocs(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := permissions.AllowWholeType(c, permissions.POST, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.POST, doctype); err != nil {
 		return err
 	}
 
@@ -113,7 +113,7 @@ func bulkDocs(c echo.Context) error {
 func createDB(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := permissions.AllowWholeType(c, permissions.POST, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.POST, doctype); err != nil {
 		return err
 	}
 
@@ -127,7 +127,7 @@ func createDB(c echo.Context) error {
 func fullCommit(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
@@ -141,7 +141,7 @@ func fullCommit(c echo.Context) error {
 func revsDiff(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
@@ -207,7 +207,7 @@ func changesFeed(c echo.Context) error {
 		return err
 	}
 
-	if err = permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err = middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
@@ -232,7 +232,7 @@ func dbStatus(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
 
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 

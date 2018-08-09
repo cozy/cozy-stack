@@ -44,7 +44,7 @@ func (c *apiOauthClient) Included() []jsonapi.Object {
 func listClients(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.OAuthClients); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, consts.OAuthClients); err != nil {
 		return err
 	}
 
@@ -63,7 +63,7 @@ func listClients(c echo.Context) error {
 func revokeClient(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	if err := permissions.AllowWholeType(c, permissions.DELETE, consts.OAuthClients); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.DELETE, consts.OAuthClients); err != nil {
 		return err
 	}
 
@@ -81,7 +81,7 @@ func revokeClient(c echo.Context) error {
 func synchronized(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	tok := permissions.GetRequestToken(c)
+	tok := middlewares.GetRequestToken(c)
 	if tok == "" {
 		return perms.ErrInvalidToken
 	}

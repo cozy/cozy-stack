@@ -119,10 +119,10 @@ func getQueue(c echo.Context) error {
 
 	o := apiQueue{workerType: workerType}
 	// TODO: uncomment to restric jobs permissions.
-	// if err := webpermissions.AllowOnFields(c, webpermissions.GET, o, "worker"); err != nil {
+	// if err := middlewares.AllowOnFields(c, webpermissions.GET, o, "worker"); err != nil {
 	// 	return err
 	// }
-	if err := webpermissions.Allow(c, webpermissions.GET, o); err != nil {
+	if err := middlewares.Allow(c, webpermissions.GET, o); err != nil {
 		return err
 	}
 
@@ -155,14 +155,14 @@ func pushJob(c echo.Context) error {
 	}
 
 	// TODO: uncomment to restric jobs permissions.
-	// if err := webpermissions.AllowOnFields(c, webpermissions.POST, jr, "worker"); err != nil {
+	// if err := middlewares.AllowOnFields(c, webpermissions.POST, jr, "worker"); err != nil {
 	// 	return err
 	// }
-	if err := webpermissions.Allow(c, webpermissions.POST, jr); err != nil {
+	if err := middlewares.Allow(c, webpermissions.POST, jr); err != nil {
 		return err
 	}
 
-	permd, err := webpermissions.GetPermission(c)
+	permd, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -204,10 +204,10 @@ func newTrigger(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 	// TODO: uncomment to restric jobs permissions.
-	// if err = webpermissions.AllowOnFields(c, webpermissions.POST, t, "worker"); err != nil {
+	// if err = middlewares.AllowOnFields(c, webpermissions.POST, t, "worker"); err != nil {
 	// 	return err
 	// }
-	if err = webpermissions.Allow(c, webpermissions.POST, t); err != nil {
+	if err = middlewares.Allow(c, webpermissions.POST, t); err != nil {
 		return err
 	}
 
@@ -224,7 +224,7 @@ func getTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err = webpermissions.Allow(c, webpermissions.GET, t); err != nil {
+	if err = middlewares.Allow(c, webpermissions.GET, t); err != nil {
 		return err
 	}
 	tInfos := t.Infos()
@@ -242,7 +242,7 @@ func getTriggerState(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err = webpermissions.Allow(c, webpermissions.GET, t); err != nil {
+	if err = middlewares.Allow(c, webpermissions.GET, t); err != nil {
 		return err
 	}
 	state, err := jobs.GetTriggerState(t)
@@ -270,7 +270,7 @@ func getTriggerJobs(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err = webpermissions.Allow(c, webpermissions.GET, t); err != nil {
+	if err = middlewares.Allow(c, webpermissions.GET, t); err != nil {
 		return err
 	}
 
@@ -293,7 +293,7 @@ func launchTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err = webpermissions.Allow(c, webpermissions.POST, t); err != nil {
+	if err = middlewares.Allow(c, webpermissions.POST, t); err != nil {
 		return err
 	}
 	req := t.Infos().JobRequest()
@@ -312,7 +312,7 @@ func deleteTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err := webpermissions.Allow(c, webpermissions.DELETE, t); err != nil {
+	if err := middlewares.Allow(c, webpermissions.DELETE, t); err != nil {
 		return err
 	}
 	if err := sched.DeleteTrigger(instance, c.Param("trigger-id")); err != nil {
@@ -325,12 +325,12 @@ func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerType := c.QueryParam("Worker")
 
-	if err := webpermissions.AllowWholeType(c, webpermissions.GET, consts.Triggers); err != nil {
+	if err := middlewares.AllowWholeType(c, webpermissions.GET, consts.Triggers); err != nil {
 		if workerType == "" {
 			return err
 		}
 		o := &jobs.TriggerInfos{WorkerType: workerType}
-		if err := webpermissions.AllowOnFields(c, webpermissions.GET, o, "worker"); err != nil {
+		if err := middlewares.AllowOnFields(c, webpermissions.GET, o, "worker"); err != nil {
 			return err
 		}
 	}
@@ -363,7 +363,7 @@ func getJob(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := webpermissions.Allow(c, webpermissions.GET, job); err != nil {
+	if err := middlewares.Allow(c, webpermissions.GET, job); err != nil {
 		return err
 	}
 	return jsonapi.Data(c, http.StatusOK, apiJob{job}, nil)
@@ -371,7 +371,7 @@ func getJob(c echo.Context) error {
 
 func cleanJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if err := webpermissions.AllowWholeType(c, webpermissions.POST, consts.Jobs); err != nil {
+	if err := middlewares.AllowWholeType(c, webpermissions.POST, consts.Jobs); err != nil {
 		return err
 	}
 	var ups []*jobs.Job

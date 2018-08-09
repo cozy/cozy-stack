@@ -69,7 +69,7 @@ func (p *APIPermission) Links() *jsonapi.LinksList {
 type getPermsFunc func(db prefixer.Prefixer, id string) (*permissions.Permission, error)
 
 func displayPermissions(c echo.Context) error {
-	doc, err := GetPermission(c)
+	doc, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func createPermission(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	names := strings.Split(c.QueryParam("codes"), ",")
 	ttl := c.QueryParam("ttl")
-	parent, err := GetPermission(c)
+	parent, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func listPermissionsByDoctype(c echo.Context, route, permType string) error {
 		return jsonapi.NewError(http.StatusBadRequest, "Missing doctype")
 	}
 
-	current, err := GetPermission(c)
+	current, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -221,7 +221,7 @@ func listPermissions(c echo.Context) error {
 func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
-		current, err := GetPermission(c)
+		current, err := middlewares.GetPermission(c)
 		if err != nil {
 			return err
 		}
@@ -273,7 +273,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 func revokePermission(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	current, err := GetPermission(c)
+	current, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}

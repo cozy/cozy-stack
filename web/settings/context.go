@@ -9,7 +9,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -62,7 +61,7 @@ func context(c echo.Context) error {
 	}
 
 	doc := &apiContext{ctx}
-	if _, err = webpermissions.GetPermission(c); err != nil {
+	if _, err = middlewares.GetPermission(c); err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 

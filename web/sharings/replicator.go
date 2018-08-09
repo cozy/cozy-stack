@@ -8,7 +8,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	perm "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -161,7 +160,7 @@ func replicatorRoutes(router *echo.Group) {
 func checkSharingReadPermissions(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sharingID := c.Param("sharing-id")
-		requestPerm, err := perm.GetPermission(c)
+		requestPerm, err := middlewares.GetPermission(c)
 		if err != nil {
 			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
 				Debugf("Invalid permission: %s", err)
@@ -187,7 +186,7 @@ func checkSharingWritePermissions(next echo.HandlerFunc) echo.HandlerFunc {
 
 func hasSharingWritePermissions(c echo.Context) error {
 	sharingID := c.Param("sharing-id")
-	requestPerm, err := perm.GetPermission(c)
+	requestPerm, err := middlewares.GetPermission(c)
 	if err != nil {
 		middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
 			Debugf("Invalid permission: %s", err)
@@ -204,7 +203,7 @@ func hasSharingWritePermissions(c echo.Context) error {
 func checkSharingPermissions(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sharingID := c.Param("sharing-id")
-		requestPerm, err := perm.GetPermission(c)
+		requestPerm, err := middlewares.GetPermission(c)
 		if err != nil {
 			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
 				Debugf("Invalid permission: %s", err)
@@ -220,7 +219,7 @@ func checkSharingPermissions(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func requestMember(c echo.Context, s *sharing.Sharing) (*sharing.Member, error) {
-	requestPerm, err := perm.GetPermission(c)
+	requestPerm, err := middlewares.GetPermission(c)
 	if err != nil {
 		return nil, err
 	}

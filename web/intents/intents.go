@@ -13,7 +13,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -63,7 +62,7 @@ func (i *apiIntent) MarshalJSON() ([]byte, error) {
 }
 
 func createIntent(c echo.Context) error {
-	pdoc, err := webpermissions.GetPermission(c)
+	pdoc, err := middlewares.GetPermission(c)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
@@ -99,7 +98,7 @@ func getIntent(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	intent := &intents.Intent{}
 	id := c.Param("id")
-	pdoc, err := webpermissions.GetPermission(c)
+	pdoc, err := middlewares.GetPermission(c)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}

@@ -6,7 +6,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -26,7 +25,7 @@ func proxyReq(auth authType, cacheControl registry.CacheControl) echo.HandlerFun
 				return echo.NewHTTPError(http.StatusForbidden)
 			}
 		case perms:
-			pdoc, err := webpermissions.GetPermission(c)
+			pdoc, err := middlewares.GetPermission(c)
 			if err != nil || pdoc.Type != permissions.TypeWebapp {
 				return echo.NewHTTPError(http.StatusForbidden)
 			}
@@ -50,7 +49,7 @@ func proxyReq(auth authType, cacheControl registry.CacheControl) echo.HandlerFun
 
 func proxyListReq(c echo.Context) error {
 	i := middlewares.GetInstance(c)
-	pdoc, err := webpermissions.GetPermission(c)
+	pdoc, err := middlewares.GetPermission(c)
 	if err != nil || pdoc.Type != permissions.TypeWebapp {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
