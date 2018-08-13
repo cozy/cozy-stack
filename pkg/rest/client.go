@@ -1,13 +1,14 @@
-package oauth
+package rest
 
 import (
 	"bytes"
 	"context"
-	"github.com/pkg/errors"
-	"golang.org/x/oauth2"
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/pkg/errors"
+	"golang.org/x/oauth2"
 )
 
 type tokenSource struct {
@@ -21,12 +22,12 @@ func (t *tokenSource) Token() (*oauth2.Token, error) {
 	return token, nil
 }
 
-type Rest struct {
+type Client struct {
 	baseURL string
 	client  *http.Client
 }
 
-func (r *Rest) Init(baseURL string, token string) {
+func (r *Client) Init(baseURL string, token string) {
 	r.baseURL = baseURL
 	tokenSource := &tokenSource{
 		AccessToken: token,
@@ -34,7 +35,7 @@ func (r *Rest) Init(baseURL string, token string) {
 	r.client = oauth2.NewClient(context.TODO(), tokenSource)
 }
 
-func (r *Rest) Do(req *http.Request) ([]byte, error) {
+func (r *Client) Do(req *http.Request) ([]byte, error) {
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return nil, nil
@@ -47,7 +48,7 @@ func (r *Rest) Do(req *http.Request) ([]byte, error) {
 	return ioutil.ReadAll(body)
 }
 
-func (r *Rest) newRequest(url string, method string, body []byte) (*http.Request, error) {
+func (r *Client) newRequest(url string, method string, body []byte) (*http.Request, error) {
 	url = r.baseURL + url
 	var reader io.Reader
 	if body != nil {
@@ -58,7 +59,7 @@ func (r *Rest) newRequest(url string, method string, body []byte) (*http.Request
 	return http.NewRequest(method, url, reader)
 }
 
-func (r *Rest) Get(url string) ([]byte, error) {
+func (r *Client) Get(url string) ([]byte, error) {
 	url = r.baseURL + url
 	req, err := http.NewRequest(url, "GET", nil)
 	if err != nil {
@@ -67,7 +68,7 @@ func (r *Rest) Get(url string) ([]byte, error) {
 	return r.Do(req)
 }
 
-func (r *Rest) Post(url string, contentType string, body []byte) ([]byte, error) {
+func (r *Client) Post(url string, contentType string, body []byte) ([]byte, error) {
 	req, err := r.newRequest(url, "POST", body)
 	if err != nil {
 		return nil, err
@@ -76,7 +77,7 @@ func (r *Rest) Post(url string, contentType string, body []byte) ([]byte, error)
 	return r.Do(req)
 }
 
-func (r *Rest) Put(url string, contentType string, body []byte) ([]byte, error) {
+func (r *Client) Put(url string, contentType string, body []byte) ([]byte, error) {
 	req, err := r.newRequest(url, "PUT", body)
 	if err != nil {
 		return nil, err
@@ -85,7 +86,7 @@ func (r *Rest) Put(url string, contentType string, body []byte) ([]byte, error) 
 	return r.Do(req)
 }
 
-func (r *Rest) Delete(url string) ([]byte, error) {
+func (r *Client) Delete(url string) ([]byte, error) {
 	req, err := r.newRequest(url, "DELETE", nil)
 	if err != nil {
 		return nil, err

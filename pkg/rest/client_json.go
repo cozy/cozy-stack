@@ -1,20 +1,20 @@
-package oauth
+package rest
 
 import (
 	"encoding/json"
 )
 
-type RestJSON struct {
-	*Rest
+type JSONClient struct {
+	*Client
 }
 
-func (r *RestJSON) Init(baseURL string, token string) {
-	r.Rest = &Rest{}
-	r.Rest.Init(baseURL, token)
+func (r *JSONClient) Init(baseURL string, token string) {
+	r.Client = &Client{}
+	r.Client.Init(baseURL, token)
 }
 
-func (r *RestJSON) Get(url string, result interface{}) error {
-	body, err := r.Rest.Get(url)
+func (r *JSONClient) Get(url string, result interface{}) error {
+	body, err := r.Client.Get(url)
 	if err != nil {
 		return err
 	}
@@ -24,12 +24,12 @@ func (r *RestJSON) Get(url string, result interface{}) error {
 	return nil
 }
 
-func (r *RestJSON) Post(url string, params interface{}, result interface{}) error {
+func (r *JSONClient) Post(url string, params interface{}, result interface{}) error {
 	body, err := json.Marshal(params)
 	if err != nil {
 		return err
 	}
-	body, err = r.Rest.Post(url, "application/json", body)
+	body, err = r.Client.Post(url, "application/json", body)
 	if err != nil {
 		return err
 	}
@@ -39,12 +39,12 @@ func (r *RestJSON) Post(url string, params interface{}, result interface{}) erro
 	return nil
 }
 
-func (r *RestJSON) Put(url string, params interface{}, result interface{}) error {
+func (r *JSONClient) Put(url string, params interface{}, result interface{}) error {
 	body, err := json.Marshal(params)
 	if err != nil {
 		return err
 	}
-	body, err = r.Rest.Put(url, "application/json", body)
+	body, err = r.Client.Put(url, "application/json", body)
 	if err != nil {
 		return err
 	}
@@ -54,12 +54,12 @@ func (r *RestJSON) Put(url string, params interface{}, result interface{}) error
 	return nil
 }
 
-func (r *RestJSON) Delete(url string, params interface{}, result interface{}) error {
+func (r *JSONClient) Delete(url string, params interface{}, result interface{}) error {
 	body, err := json.Marshal(params)
 	if err != nil {
 		return err
 	}
-	body, err = r.Rest.Delete(url)
+	body, err = r.Client.Delete(url)
 	if err != nil {
 		return err
 	}

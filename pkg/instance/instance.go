@@ -25,15 +25,15 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/rest"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/dgrijalva/jwt-go.v3"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 /* #nosec */
@@ -1059,7 +1059,7 @@ func Patch(i *Instance, opts *Options) error {
 	return nil
 }
 
-func (i *Instance) getClouderyClient() *oauth.RestJSON {
+func (i *Instance) getClouderyClient() *rest.JSONClient {
 	context, err := i.SettingsContext()
 	if err != nil {
 		return nil
@@ -1071,7 +1071,7 @@ func (i *Instance) getClouderyClient() *oauth.RestJSON {
 		return nil
 	}
 
-	cloudery := &oauth.RestJSON{}
+	cloudery := &rest.JSONClient{}
 	cloudery.Init(baseUrl, token)
 	return cloudery
 }
