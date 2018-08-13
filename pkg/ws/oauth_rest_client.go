@@ -1,4 +1,4 @@
-package rest
+package ws
 
 import (
 	"bytes"
@@ -22,12 +22,14 @@ func (t *tokenSource) Token() (*oauth2.Token, error) {
 	return token, nil
 }
 
-type Client struct {
+// OAuthRestClient is an OAuth client to access REST API
+type OAuthRestClient struct {
 	baseURL string
 	client  *http.Client
 }
 
-func (r *Client) Init(baseURL string, token string) {
+// Init initializes a client from base URL and OAuth token
+func (r *OAuthRestClient) Init(baseURL string, token string) {
 	r.baseURL = baseURL
 	tokenSource := &tokenSource{
 		AccessToken: token,
@@ -35,7 +37,8 @@ func (r *Client) Init(baseURL string, token string) {
 	r.client = oauth2.NewClient(context.TODO(), tokenSource)
 }
 
-func (r *Client) Do(req *http.Request) ([]byte, error) {
+// Do access REST resource with HTTP request
+func (r *OAuthRestClient) Do(req *http.Request) ([]byte, error) {
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return nil, nil
@@ -48,7 +51,7 @@ func (r *Client) Do(req *http.Request) ([]byte, error) {
 	return ioutil.ReadAll(body)
 }
 
-func (r *Client) newRequest(url string, method string, body []byte) (*http.Request, error) {
+func (r *OAuthRestClient) newRequest(url string, method string, body []byte) (*http.Request, error) {
 	url = r.baseURL + url
 	var reader io.Reader
 	if body != nil {
@@ -59,7 +62,8 @@ func (r *Client) newRequest(url string, method string, body []byte) (*http.Reque
 	return http.NewRequest(method, url, reader)
 }
 
-func (r *Client) Get(url string) ([]byte, error) {
+// Get access REST resource with GET request
+func (r *OAuthRestClient) Get(url string) ([]byte, error) {
 	url = r.baseURL + url
 	req, err := http.NewRequest(url, "GET", nil)
 	if err != nil {
@@ -68,7 +72,8 @@ func (r *Client) Get(url string) ([]byte, error) {
 	return r.Do(req)
 }
 
-func (r *Client) Post(url string, contentType string, body []byte) ([]byte, error) {
+// Post access REST resource with POST request
+func (r *OAuthRestClient) Post(url string, contentType string, body []byte) ([]byte, error) {
 	req, err := r.newRequest(url, "POST", body)
 	if err != nil {
 		return nil, err
@@ -77,7 +82,8 @@ func (r *Client) Post(url string, contentType string, body []byte) ([]byte, erro
 	return r.Do(req)
 }
 
-func (r *Client) Put(url string, contentType string, body []byte) ([]byte, error) {
+// Put access REST resource with PUT request
+func (r *OAuthRestClient) Put(url string, contentType string, body []byte) ([]byte, error) {
 	req, err := r.newRequest(url, "PUT", body)
 	if err != nil {
 		return nil, err
@@ -86,7 +92,8 @@ func (r *Client) Put(url string, contentType string, body []byte) ([]byte, error
 	return r.Do(req)
 }
 
-func (r *Client) Delete(url string) ([]byte, error) {
+// Delete access REST resource with DELETE request
+func (r *OAuthRestClient) Delete(url string) ([]byte, error) {
 	req, err := r.newRequest(url, "DELETE", nil)
 	if err != nil {
 		return nil, err
