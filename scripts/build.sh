@@ -180,7 +180,7 @@ do_deploy() {
 }
 
 do_assets() {
-	tx -r "${WORK_DIR}" pull -a || echo "Do you have configured transifex?"
+	tx --root "${WORK_DIR}" pull -a || echo "Do you have configured transifex?"
 	printf "executing go generate...\n"
 	go get -u github.com/cozy/statik
 	pushd "${WORK_DIR}" > /dev/null
