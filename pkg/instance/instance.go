@@ -1016,16 +1016,15 @@ func Patch(i *Instance, opts *Options) error {
 	}
 
 	if settingsUpdate {
-		old, err := i.SettingsEMail()
-		if err == nil {
+		oldSettings, err := i.SettingsDocument()
+		if err != nil {
+			old := oldSettings.M["email"]
 			new := settings.M["email"]
 			if old != new {
 				clouderyChanges["email"] = new
 			}
-		}
-		old, err = i.SettingsPublicName()
-		if err == nil {
-			new := settings.M["public_name"]
+			old = oldSettings.M["public_name"]
+			new = settings.M["public_name"]
 			if old != new {
 				clouderyChanges["public_name"] = new
 			}
