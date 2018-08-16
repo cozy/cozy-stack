@@ -161,6 +161,7 @@ func init() {
 				if _, err = jobsSystem.PushJob(db, &jobs.JobRequest{
 					WorkerType: "konnector",
 					Message:    msg,
+					Manual:     true, // Select high-priority for these jobs
 				}); err != nil {
 					return err
 				}

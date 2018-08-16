@@ -26,6 +26,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
@@ -1181,6 +1182,11 @@ func DestroyWithoutHooks(domain string) error {
 	if err != nil {
 		return err
 	}
+
+	// Deleting accounts manually to invoke the "account deletion hook" which may
+	// launch a worker in order to clean the account.
+	deleteAccounts(i)
+
 	sched := jobs.System()
 	triggers, err := sched.GetAllTriggers(i)
 	if err == nil {
@@ -1197,13 +1203,55 @@ func DestroyWithoutHooks(domain string) error {
 			getCache().Revoke(alias)
 		}
 	}()
+
 	if err = couchdb.DeleteAllDBs(i); err != nil {
-		return err
+		i.Logger().Errorf("Could not delete all CouchDB databases: %s", err.Error())
 	}
+
 	if err = i.VFS().Delete(); err != nil {
 		i.Logger().Errorf("Could not delete VFS: %s", err.Error())
 	}
+
 	return couchdb.DeleteDoc(couchdb.GlobalDB, i)
+}
+
+func deleteAccounts(i *Instance) {
+	var accounts []*couchdb.JSONDoc
+	if err := couchdb.GetAllDocs(i, consts.Accounts, nil, &accounts); err != nil || len(accounts) == 0 {
+		return
+	}
+
+	ds := realtime.GetHub().Subscriber(i)
+	defer ds.Close()
+
+	accountsCount := len(accounts)
+	for _, account := range accounts {
+		couchdb.DeleteDoc(i, account)
+	}
+
+	if err := ds.Subscribe(consts.Jobs); err != nil {
+		return
+	}
+
+	timeout := time.After(1 * time.Minute)
+	for {
+		select {
+		case e := <-ds.Channel:
+			j, ok := e.Doc.(*couchdb.JSONDoc)
+			if ok {
+				deleted, _ := j.M["account_deleted"].(bool)
+				state, _ := j.M["state"].(string)
+				if deleted && (state == jobs.Done || state == jobs.Errored) {
+					accountsCount--
+					if accountsCount == 0 {
+						return
+					}
+				}
+			}
+		case <-timeout:
+			return
+		}
+	}
 }
 
 func (i *Instance) registerPassphrase(pass, tok []byte) error {
