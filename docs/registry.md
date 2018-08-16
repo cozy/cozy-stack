@@ -130,7 +130,17 @@ Example:
   "maintenance_options": {
       "flag_infra_maintenance": true,
       "flag_short_maintenance": false,
-      "flag_disallow_manual_exec": true
+      "flag_disallow_manual_exec": true,
+      "messages": {
+        "en": {
+          "long_message": "The app is currently in maintenance because of ....",
+          "short_message": "The app is currently in maintenance"
+        },
+        "fr": {
+          "long_message": "L'application est en cours de maintenance à cause de ...",
+          "short_message": "L'application est en cours de maintenance"
+        }
+      }
   }
 }
 ```
