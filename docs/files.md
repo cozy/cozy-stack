@@ -54,6 +54,7 @@ Date: Mon, 19 Sep 2016 12:35:08 GMT
 * 201 Created, when the directory has been successfully created
 * 404 Not Found, when the parent directory does not exist
 * 409 Conflict, when a directory with the same name already exists
+* 413 Payload Too Large, when there is not enough available space on the cozy to upload the file
 * 422 Unprocessable Entity, when the `Type` or `Name` parameter is missing or
   invalid
 
