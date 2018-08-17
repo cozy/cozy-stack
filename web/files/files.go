@@ -448,7 +448,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	}
 
 	if checkPermission {
-		err = permissions.Allow(c, permissions.GET, doc)
+		err = middlewares.Allow(c, permissions.GET, doc)
 		if err != nil {
 			return err
 		}
@@ -766,7 +766,7 @@ func FindFilesMango(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Files); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Files); err != nil {
 		return err
 	}
 
@@ -969,10 +969,10 @@ func CheckIfMatch(c echo.Context, rev string) error {
 
 func checkPerm(c echo.Context, v pkgperm.Verb, d *vfs.DirDoc, f *vfs.FileDoc) error {
 	if d != nil {
-		return permissions.AllowVFS(c, v, d)
+		return middlewares.AllowVFS(c, v, d)
 	}
 
-	return permissions.AllowVFS(c, v, f)
+	return middlewares.AllowVFS(c, v, f)
 }
 
 func parseMD5Hash(md5B64 string) ([]byte, error) {

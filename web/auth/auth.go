@@ -22,7 +22,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 	"github.com/cozy/echo/middleware"
 )
@@ -54,7 +53,7 @@ func Home(c echo.Context) error {
 	}
 
 	if len(instance.RegisterToken) > 0 {
-		if !webpermissions.CheckRegisterToken(c, instance) {
+		if !middlewares.CheckRegisterToken(c, instance) {
 			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
 				"Domain": instance.ContextualDomain(),
 				"Locale": instance.Locale,
@@ -308,7 +307,7 @@ func logout(c echo.Context) error {
 	res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
 
 	instance := middlewares.GetInstance(c)
-	if !webpermissions.AllowLogout(c) {
+	if !middlewares.AllowLogout(c) {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "The user can logout only from client-side apps",
 		})
@@ -329,7 +328,7 @@ func logoutOthers(c echo.Context) error {
 	res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
 
 	instance := middlewares.GetInstance(c)
-	if !webpermissions.AllowLogout(c) {
+	if !middlewares.AllowLogout(c) {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "The user can logout only from client-side apps",
 		})

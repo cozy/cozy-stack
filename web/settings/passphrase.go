@@ -56,7 +56,7 @@ func updatePassphrase(c echo.Context) error {
 	// Even if the current passphrase is needed for this request to work, we
 	// enforce a valid permission to avoid having an unauthorized enpoint that
 	// can be bruteforced.
-	if err := permissions.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
 		return err
 	}
 

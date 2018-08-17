@@ -16,7 +16,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	perm "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -670,7 +669,7 @@ func extractSlugFromSourceID(sourceID string) (string, error) {
 // checkCreatePermissions checks the sharer's token has all the permissions
 // matching the ones defined in the sharing document
 func checkCreatePermissions(c echo.Context, s *sharing.Sharing) (string, error) {
-	requestPerm, err := perm.GetPermission(c)
+	requestPerm, err := middlewares.GetPermission(c)
 	if err != nil {
 		return "", err
 	}
@@ -699,7 +698,7 @@ func checkCreatePermissions(c echo.Context, s *sharing.Sharing) (string, error) 
 // checkGetPermissions checks the requester's token has at least one doctype
 // permission declared in the rules of the sharing document
 func checkGetPermissions(c echo.Context, s *sharing.Sharing) error {
-	requestPerm, err := perm.GetPermission(c)
+	requestPerm, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}

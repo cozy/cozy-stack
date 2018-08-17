@@ -39,7 +39,7 @@ func diskUsage(c echo.Context) error {
 
 	// Check permissions, but also allow every request from the logged-in user
 	// as this route is used by the cozy-bar from all the client-side apps
-	if err := permissions.Allow(c, permissions.GET, &result); err != nil {
+	if err := middlewares.Allow(c, permissions.GET, &result); err != nil {
 		if !middlewares.IsLoggedIn(c) {
 			return err
 		}

@@ -41,7 +41,7 @@ func getAccount(c echo.Context) error {
 	}
 	out.Type = doctype
 
-	if err = permissions.Allow(c, permissions.GET, &out); err != nil {
+	if err = middlewares.Allow(c, permissions.GET, &out); err != nil {
 		return err
 	}
 
@@ -51,7 +51,7 @@ func getAccount(c echo.Context) error {
 		}
 	}
 
-	perm, err := permissions.GetPermission(c)
+	perm, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func updateAccount(c echo.Context) error {
 		return createNamedDoc(c, doc)
 	}
 
-	errWhole := permissions.AllowWholeType(c, permissions.PUT, doc.DocType())
+	errWhole := middlewares.AllowWholeType(c, permissions.PUT, doc.DocType())
 	if errWhole != nil {
 		// we cant apply to whole type, let's fetch old doc and see if it applies there
 		var old couchdb.JSONDoc
@@ -96,13 +96,13 @@ func updateAccount(c echo.Context) error {
 		}
 		old.Type = doc.DocType()
 		// check if permissions set allows manipulating old doc
-		errOld := permissions.Allow(c, permissions.PUT, &old)
+		errOld := middlewares.Allow(c, permissions.PUT, &old)
 		if errOld != nil {
 			return errOld
 		}
 
 		// also check if permissions set allows manipulating new doc
-		errNew := permissions.Allow(c, permissions.PUT, &doc)
+		errNew := middlewares.Allow(c, permissions.PUT, &doc)
 		if errNew != nil {
 			return errNew
 		}
@@ -115,7 +115,7 @@ func updateAccount(c echo.Context) error {
 		return fixErrorNoDatabaseIsWrongDoctype(errUpdate)
 	}
 
-	perm, err := permissions.GetPermission(c)
+	perm, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func createAccount(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if err := permissions.Allow(c, permissions.POST, &doc); err != nil {
+	if err := middlewares.Allow(c, permissions.POST, &doc); err != nil {
 		return err
 	}
 

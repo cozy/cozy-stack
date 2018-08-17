@@ -51,7 +51,7 @@ func fixErrorNoDatabaseIsWrongDoctype(err error) error {
 func allDoctypes(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Doctypes); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Doctypes); err != nil {
 		return err
 	}
 
@@ -99,7 +99,7 @@ func getDoc(c echo.Context) error {
 
 	out.Type = doctype
 
-	if err := permissions.Allow(c, permissions.GET, &out); err != nil {
+	if err := middlewares.Allow(c, permissions.GET, &out); err != nil {
 		return err
 	}
 
@@ -125,7 +125,7 @@ func createDoc(c echo.Context) error {
 		return err
 	}
 
-	if err := permissions.Allow(c, permissions.POST, &doc); err != nil {
+	if err := middlewares.Allow(c, permissions.POST, &doc); err != nil {
 		return err
 	}
 
@@ -145,7 +145,7 @@ func createDoc(c echo.Context) error {
 func createNamedDoc(c echo.Context, doc couchdb.JSONDoc) error {
 	instance := middlewares.GetInstance(c)
 
-	err := permissions.Allow(c, permissions.POST, &doc)
+	err := middlewares.Allow(c, permissions.POST, &doc)
 	if err != nil {
 		return err
 	}
@@ -200,7 +200,7 @@ func UpdateDoc(c echo.Context) error {
 		return createNamedDoc(c, doc)
 	}
 
-	errWhole := permissions.AllowWholeType(c, permissions.PUT, doc.DocType())
+	errWhole := middlewares.AllowWholeType(c, permissions.PUT, doc.DocType())
 	if errWhole != nil {
 
 		// we cant apply to whole type, let's fetch old doc and see if it applies there
@@ -211,13 +211,13 @@ func UpdateDoc(c echo.Context) error {
 		}
 		old.Type = doc.DocType()
 		// check if permissions set allows manipulating old doc
-		errOld := permissions.Allow(c, permissions.PUT, &old)
+		errOld := middlewares.Allow(c, permissions.PUT, &old)
 		if errOld != nil {
 			return errOld
 		}
 
 		// also check if permissions set allows manipulating new doc
-		errNew := permissions.Allow(c, permissions.PUT, &doc)
+		errNew := middlewares.Allow(c, permissions.PUT, &doc)
 		if errNew != nil {
 			return errNew
 		}
@@ -269,7 +269,7 @@ func DeleteDoc(c echo.Context) error {
 	doc.Type = doctype
 	doc.SetRev(rev)
 
-	err = permissions.Allow(c, permissions.DELETE, &doc)
+	err = middlewares.Allow(c, permissions.DELETE, &doc)
 	if err != nil {
 		return err
 	}
@@ -301,7 +301,7 @@ func defineIndex(c echo.Context) error {
 		return err
 	}
 
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
@@ -333,7 +333,7 @@ func findDocuments(c echo.Context) error {
 		return err
 	}
 
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
@@ -371,7 +371,7 @@ func allDocs(c echo.Context) error {
 		return err
 	}
 
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 

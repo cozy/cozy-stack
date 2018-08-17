@@ -10,7 +10,7 @@ import (
 
 func remoteGet(c echo.Context) error {
 	doctype := c.Param("doctype")
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return wrapRemoteErr(err)
 	}
 	instance := middlewares.GetInstance(c)
@@ -30,7 +30,7 @@ func remoteGet(c echo.Context) error {
 
 func remotePost(c echo.Context) error {
 	doctype := c.Param("doctype")
-	if err := permissions.AllowWholeType(c, permissions.POST, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.POST, doctype); err != nil {
 		return wrapRemoteErr(err)
 	}
 	instance := middlewares.GetInstance(c)
@@ -49,7 +49,7 @@ func remotePost(c echo.Context) error {
 }
 
 func remoteAsset(c echo.Context) error {
-	_, err := permissions.GetPermission(c)
+	_, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}

@@ -11,7 +11,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/notification/center"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -40,7 +39,7 @@ func createHandler(c echo.Context) error {
 	if _, err := jsonapi.Bind(c.Request().Body, &n); err != nil {
 		return err
 	}
-	perm, err := permissions.GetPermission(c)
+	perm, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}

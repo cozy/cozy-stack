@@ -13,7 +13,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	webperm "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -156,7 +155,7 @@ func refresh(c echo.Context) error {
 		return err
 	}
 
-	if err := webperm.Allow(c, permissions.GET, &account); err != nil {
+	if err := middlewares.Allow(c, permissions.GET, &account); err != nil {
 		return err
 	}
 

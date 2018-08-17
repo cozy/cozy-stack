@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 	"github.com/gorilla/websocket"
 )
@@ -148,7 +147,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			sendErr(ctx, errc, unauthorized(auth))
 			return
 		}
-		pdoc, err = webpermissions.ParseJWT(c, i, auth["payload"])
+		pdoc, err = middlewares.ParseJWT(c, i, auth["payload"])
 		if err != nil {
 			sendErr(ctx, errc, unauthorized(auth))
 			return

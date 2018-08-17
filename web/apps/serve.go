@@ -20,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/echo"
 )
@@ -128,7 +127,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 
 	var needAuth bool
 	if len(i.RegisterToken) > 0 && file == route.Index {
-		if slug != consts.OnboardingSlug || !permissions.CheckRegisterToken(c, i) {
+		if slug != consts.OnboardingSlug || !middlewares.CheckRegisterToken(c, i) {
 			return c.Redirect(http.StatusFound, i.PageURL("/", nil))
 		}
 		needAuth = false

@@ -17,7 +17,7 @@ import (
 func exportHandler(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Exports); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Exports); err != nil {
 		return err
 	}
 
@@ -55,7 +55,7 @@ func exportDataHandler(c echo.Context) error {
 func createExport(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	if err := permissions.AllowWholeType(c, permissions.POST, consts.Exports); err != nil {
+	if err := middlewares.AllowWholeType(c, permissions.POST, consts.Exports); err != nil {
 		return err
 	}
 

@@ -43,7 +43,7 @@ func ListReferencesHandler(c echo.Context) error {
 	include := c.QueryParam("include")
 	includeDocs := include == "files"
 
-	if err := permissions.AllowTypeAndID(c, permissions.GET, doctype, id); err != nil {
+	if err := middlewares.AllowTypeAndID(c, permissions.GET, doctype, id); err != nil {
 		return err
 	}
 
@@ -151,7 +151,7 @@ func AddReferencesHandler(c echo.Context) error {
 		ID:   id,
 	}
 
-	if err := permissions.AllowTypeAndID(c, permissions.PUT, doctype, id); err != nil {
+	if err := middlewares.AllowTypeAndID(c, permissions.PUT, doctype, id); err != nil {
 		return err
 	}
 
@@ -193,7 +193,7 @@ func RemoveReferencesHandler(c echo.Context) error {
 		ID:   id,
 	}
 
-	if err := permissions.AllowTypeAndID(c, permissions.DELETE, doctype, id); err != nil {
+	if err := middlewares.AllowTypeAndID(c, permissions.DELETE, doctype, id); err != nil {
 		return err
 	}
 
