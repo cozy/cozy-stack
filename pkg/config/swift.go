@@ -48,7 +48,7 @@ func InitSwiftConnection(swiftURL *url.URL) error {
 		TenantId:       q.Get("ProjectID"),
 		TenantDomain:   q.Get("ProjectDomain"),
 		TenantDomainId: q.Get("ProjectDomainID"),
-		Region:		q.Get("Region"),
+		Region:         q.Get("Region"),
 		// Copying a file needs a long timeout on large files
 		ConnectTimeout: 300 * time.Second,
 		Timeout:        300 * time.Second,

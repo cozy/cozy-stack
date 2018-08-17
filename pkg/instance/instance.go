@@ -30,6 +30,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
+	"github.com/cozy/cozy-stack/pkg/ws"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -347,6 +348,17 @@ func (i *Instance) SettingsEMail() (string, error) {
 		return "", err
 	}
 	email, _ := settings.M["email"].(string)
+	return email, nil
+}
+
+// SettingsPublicName returns the public name defined in the settings of this
+// instance.
+func (i *Instance) SettingsPublicName() (string, error) {
+	settings, err := i.SettingsDocument()
+	if err != nil {
+		return "", err
+	}
+	email, _ := settings.M["public_name"].(string)
 	return email, nil
 }
 
@@ -890,6 +902,8 @@ func Patch(i *Instance, opts *Options) error {
 	opts.Domain = i.Domain
 	settings, settingsUpdate := buildSettings(opts)
 
+	clouderyChanges := make(map[string]interface{})
+
 	for {
 		var err error
 		if i == nil {
@@ -902,6 +916,7 @@ func Patch(i *Instance, opts *Options) error {
 		needUpdate := false
 		if opts.Locale != "" && opts.Locale != i.Locale {
 			i.Locale = opts.Locale
+			clouderyChanges["locale"] = i.Locale
 			needUpdate = true
 		}
 
@@ -1001,6 +1016,20 @@ func Patch(i *Instance, opts *Options) error {
 	}
 
 	if settingsUpdate {
+		oldSettings, err := i.SettingsDocument()
+		if err != nil {
+			old := oldSettings.M["email"]
+			new := settings.M["email"]
+			if old != new {
+				clouderyChanges["email"] = new
+			}
+			old = oldSettings.M["public_name"]
+			new = settings.M["public_name"]
+			if old != new {
+				clouderyChanges["public_name"] = new
+			}
+		}
+
 		if err := couchdb.UpdateDoc(i, settings); err != nil {
 			return err
 		}
@@ -1018,7 +1047,32 @@ func Patch(i *Instance, opts *Options) error {
 		}
 	}
 
+	if len(clouderyChanges) > 0 {
+		cloudery := i.getClouderyClient()
+		if cloudery != nil {
+			url := fmt.Sprintf("/api/v1/instances/%s", url.PathEscape(i.UUID))
+			cloudery.Put(url, clouderyChanges, nil)
+		}
+	}
+
 	return nil
+}
+
+func (i *Instance) getClouderyClient() *ws.OAuthRestJSONClient {
+	context, err := i.SettingsContext()
+	if err != nil {
+		return nil
+	}
+
+	baseURL := context["manager_url"].(string)
+	token := context["manager_token"].(string)
+	if baseURL == "" || token == "" {
+		return nil
+	}
+
+	cloudery := &ws.OAuthRestJSONClient{}
+	cloudery.Init(baseURL, token)
+	return cloudery
 }
 
 func checkAliases(i *Instance, aliases []string) ([]string, error) {
