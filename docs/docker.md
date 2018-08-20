@@ -14,7 +14,7 @@ $ docker run -d \
     --name cozy-stack-couch \
     -p 5984:5984 \
     -v $HOME/.cozy-stack-couch:/opt/couchdb/data \
-    apache/couchdb:2.1
+    apache/couchdb:2.2
 $ curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
 ```
 

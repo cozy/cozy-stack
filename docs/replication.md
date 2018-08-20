@@ -42,7 +42,7 @@ we can add a driver for cozy)
 ## Couchdb replication & limitation
 
 Couchdb 2 replication protocol is described
-[in details here](http://docs.couchdb.org/en/2.1.0/replication/protocol.html).
+[in details here](http://docs.couchdb.org/en/stable/replication/protocol.html).
 
 ### Quick summary
 
@@ -123,15 +123,15 @@ To suport this we need to:
 
 * Proxy `/data/:doctype/_changes` route with since, limit, feed=normal. Refuse
   all filter parameters with a clear error message.
-  [(Doc)](http://docs.couchdb.org/en/2.1.0/api/database/changes.html)
+  [(Doc)](http://docs.couchdb.org/en/stable/api/database/changes.html)
 * Add support of `open_revs`, `revs`, `latest` query parameter to `GET /data/:doctype/:docid`
-  [(Doc) ](http://docs.couchdb.org/en/2.1.0/api/document/common.html?highlight=open_revs#get--db-docid)
+  [(Doc) ](http://docs.couchdb.org/en/stable/api/document/common.html?highlight=open_revs#get--db-docid)
 * Proxy the `/data/:doctype/_revs_diff`
-  [(Doc)](http://docs.couchdb.org/en/2.1.0/api/database/misc.html#db-revs-diff)
+  [(Doc)](http://docs.couchdb.org/en/stable/api/database/misc.html#db-revs-diff)
   and `/data/:doctype/_bulk_docs` routes
-  [(Doc)](http://docs.couchdb.org/en/2.1.0/api/database/bulk-api.html) routes
+  [(Doc)](http://docs.couchdb.org/en/stable/api/database/bulk-api.html) routes
 * Have `/data/:doctype/_ensure_full_commit`
-  [(Doc)](http://docs.couchdb.org/en/2.1.0/api/database/compact.html#db-ensure-full-,
+  [(Doc)](http://docs.couchdb.org/en/stable/api/database/compact.html#db-ensure-full-,
   revs, latestcommit) returns 201
 
 This will cover documents part of the Devices use case.
@@ -175,7 +175,7 @@ Depending on benchmarking, we can do some optimization on the feed:
 
 To have some form of couchdb-to-stack continuous changes monitoring, we can
 monitor `_db_udpates`
-[(Doc)](http://docs.couchdb.org/en/2.1.0/api/server/common.html#db-updates)
+[(Doc)](http://docs.couchdb.org/en/stable/api/server/common.html#db-updates)
 which gives us an update when a couchdb has changed. We can then perform a
 `_changes` query on this database to get the changed docs and proxy that to the
 stack-to-client change feed.

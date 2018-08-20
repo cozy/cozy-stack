@@ -154,7 +154,7 @@ Etag: "3-6494e0ac6494e0ac"
 
 When some keys don't match an existing document, the response still has a status
 200 and the errors are included in the `rows` field (see above, same behavior as
-[CouchDB](http://docs.couchdb.org/en/2.1.0/api/database/bulk-api.html#post--db-_all_docs)).
+[CouchDB](http://docs.couchdb.org/en/stable/api/database/bulk-api.html#post--db-_all_docs)).
 
 ## Create a document
 
@@ -455,7 +455,7 @@ Content-Type: application/json
 ### Details
 
 See
-[`_all_docs` in couchdb docs](http://docs.couchdb.org/en/2.1.0/api/database/bulk-api.html#db-all-docs)
+[`_all_docs` in couchdb docs](http://docs.couchdb.org/en/stable/api/database/bulk-api.html#db-all-docs)
 
 ## List the known doctypes
 

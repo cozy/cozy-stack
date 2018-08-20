@@ -29,7 +29,7 @@ type RevsStruct struct {
 
 // RevsTree is a tree of revisions, like CouchDB has.
 // The revisions are sorted by growing generation (the number before the hyphen).
-// http://docs.couchdb.org/en/2.1.1/replication/conflicts.html#revision-tree
+// http://docs.couchdb.org/en/stable/replication/conflicts.html#revision-tree
 type RevsTree struct {
 	// Rev is a revision, with the generation and the id
 	// e.g. 1-1bad9a88f0a608ea78c12ab49882ac41

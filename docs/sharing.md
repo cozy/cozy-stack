@@ -1058,7 +1058,7 @@ HTTP/1.1 204 No Content
 
 This endpoint is used by the sharing replicator of the stack to know which
 documents must be sent to the other cozy. It is inspired by
-http://docs.couchdb.org/en/2.1.1/api/database/misc.html#db-revs-diff.
+http://docs.couchdb.org/en/stable/api/database/misc.html#db-revs-diff.
 
 #### Request
 
@@ -1102,7 +1102,7 @@ Content-Type: application/json
 
 This endpoint is used by the sharing replicator of the stack to send
 documents in a bulk to the other cozy. It is inspired by
-http://docs.couchdb.org/en/2.1.1/api/database/bulk-api.html#db-bulk-docs.
+http://docs.couchdb.org/en/stable/api/database/bulk-api.html#db-bulk-docs.
 
 **Note**: we force `new_edits` to `false`.
 

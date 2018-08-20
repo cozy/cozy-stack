@@ -5,10 +5,10 @@
 ### Exists operator
 
 The [`$exists`
-operator](http://docs.couchdb.org/en/2.1.1/api/database/find.html#condition-operators)
+operator](http://docs.couchdb.org/en/stable/api/database/find.html#condition-operators)
 can be used with a mango index for the `true` value, but not for the `false`
 value. For `false`, a more heavy solution is required: [a partial
-index](http://docs.couchdb.org/en/2.1.1/api/database/find.html#find-partial-indexes).
+index](http://docs.couchdb.org/en/stable/api/database/find.html#find-partial-indexes).
 
 ### Index selection
 
@@ -41,7 +41,7 @@ CouchDB keeps for each document a list of its revision (or more exactly a tree
 with replication and conflicts).
 
 It's possible to ask the list of the old revisions of a document with [`GET
-/db/{docid}?revs_info=true`](http://docs.couchdb.org/en/2.1.1/api/document/common.html#get--db-docid).
+/db/{docid}?revs_info=true`](http://docs.couchdb.org/en/stable/api/document/common.html#get--db-docid).
 It works only if the document has not been deleted. For a deleted document, [a
 trick](https://stackoverflow.com/questions/10854883/retrieve-just-deleted-document/10857330#10857330)
 is to query the changes feed to know the last revision of the document, and to
@@ -54,7 +54,7 @@ times.
 
 A `purge` operation consists to remove the tombstone for the deleted
 documents. It is a manual operation, triggered by a
-[`POST /db/_purge`](http://docs.couchdb.org/en/2.1.1/api/database/misc.html).
+[`POST /db/_purge`](http://docs.couchdb.org/en/stable/api/database/misc.html).
 
 
 ## Conflicts
