@@ -40,7 +40,7 @@ func init() {
 		WorkerType:   "thumbnail",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
-		Timeout:      60 * time.Second,
+		Timeout:      30 * time.Second,
 		WorkerFunc:   Worker,
 	})
 
@@ -186,10 +186,10 @@ func calculateMetadata(fs vfs.VFS, img *vfs.FileDoc) (*vfs.Metadata, error) {
 
 func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.FileDoc) error {
 	// Do not try to generate thumbnails for images that weight more than 100MB
-	// (or 20MB for PSDs)
+	// (or 5MB for PSDs)
 	var limit int64 = 100 * 1024 * 1024
 	if img.Mime == "image/vnd.adobe.photoshop" {
-		limit = 20 * 1024 * 1024
+		limit = 5 * 1024 * 1024
 	}
 	if img.ByteSize > limit {
 		return nil
