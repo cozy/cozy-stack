@@ -321,6 +321,9 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	} else {
 		dir, file, err = fs.DirOrFileByPath(patch.docPath)
 	}
+	if err != nil {
+		return err
+	}
 
 	var rev string
 	if dir != nil {
@@ -366,7 +369,7 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	return fileData(c, http.StatusOK, file, nil)
 }
 
-func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (err error) {
+func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) error {
 	type dirOrFile struct {
 		dir   *vfs.DirDoc
 		file  *vfs.FileDoc
@@ -385,6 +388,7 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (err error) {
 		dirOrFiles[i] = dirOrFile{dir, file, patch}
 	}
 
+	var err error
 	for _, p := range dirOrFiles {
 		if p.patch.Delete {
 			if p.dir != nil {
