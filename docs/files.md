@@ -635,6 +635,36 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 }
 ```
 
+### PATCH /files/
+
+Endpoint to update the metadata of files and directories in batch. It can be
+used, for instance, to move many files in a single request.
+
+#### Request
+
+```http
+PATCH /files/
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.files",
+      "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+      "meta": { "rev": "1-0e6d5b72" },
+      "attributes": { "dir_id": "f2f36fec-8018-11e6-abd8-8b3814d9a465" }
+    },
+    ...
+  ]
+}
+```
+
+#### Status codes
+
+The same status codes can be encountered as the `PATCH /files/:file-id` route.
+
 ### POST /files/archive
 
 Create an archive. The body of the request lists the files and directories that

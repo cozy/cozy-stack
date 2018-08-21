@@ -20,7 +20,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -213,18 +212,31 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 // It can be used to modify the file or directory metadata, as well as
 // moving and renaming it in the filesystem.
 func ModifyMetadataByIDHandler(c echo.Context) error {
-	patch, err := getPatch(c)
+	patch, err := getPatch(c, c.Param("file-id"), "")
 	if err != nil {
 		return WrapVfsError(err)
 	}
+	i := middlewares.GetInstance(c)
+	if err = applyPatch(c, i.VFS(), patch); err != nil {
+		return WrapVfsError(err)
+	}
+	return nil
+}
 
-	instance := middlewares.GetInstance(c)
-	dir, file, err := instance.VFS().DirOrFileByID(c.Param("file-id"))
+// ModifyMetadataByIDInBatchHandler handles PATCH requests on /files/.
+//
+// It can be used to modify many files or directories metadata, as well as
+// moving and renaming it in the filesystem, in batch.
+func ModifyMetadataByIDInBatchHandler(c echo.Context) error {
+	patches, err := getPatches(c)
 	if err != nil {
 		return WrapVfsError(err)
 	}
-
-	return applyPatch(c, instance, patch, dir, file)
+	i := middlewares.GetInstance(c)
+	if err = applyPatches(c, i.VFS(), patches); err != nil {
+		return WrapVfsError(err)
+	}
+	return nil
 }
 
 // ModifyMetadataByPathHandler handles PATCH requests on /files/:file-id
@@ -232,28 +244,26 @@ func ModifyMetadataByIDHandler(c echo.Context) error {
 // It can be used to modify the file or directory metadata, as well as
 // moving and renaming it in the filesystem.
 func ModifyMetadataByPathHandler(c echo.Context) error {
-	patch, err := getPatch(c)
+	patch, err := getPatch(c, "", c.QueryParam("Path"))
 	if err != nil {
 		return WrapVfsError(err)
 	}
-
-	instance := middlewares.GetInstance(c)
-	dir, file, err := instance.VFS().DirOrFileByPath(c.QueryParam("Path"))
-	if err != nil {
+	i := middlewares.GetInstance(c)
+	if err = applyPatch(c, i.VFS(), patch); err != nil {
 		return WrapVfsError(err)
 	}
-
-	return applyPatch(c, instance, patch, dir, file)
+	return nil
 }
 
-func getPatch(c echo.Context) (*vfs.DocPatch, error) {
+func getPatch(c echo.Context, docID, docPath string) (*vfs.DocPatch, error) {
 	var patch vfs.DocPatch
-
 	obj, err := jsonapi.Bind(c.Request().Body, &patch)
 	if err != nil {
 		return nil, jsonapi.BadJSON()
 	}
-
+	patch.DocID = docID
+	patch.DocPath = docPath
+	patch.RestorePath = nil
 	if rel, ok := obj.GetRelationship("parent"); ok {
 		rid, ok := rel.ResourceIdentifier()
 		if !ok {
@@ -261,12 +271,48 @@ func getPatch(c echo.Context) (*vfs.DocPatch, error) {
 		}
 		patch.DirID = &rid.ID
 	}
-
-	patch.RestorePath = nil
 	return &patch, nil
 }
 
-func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch, dir *vfs.DirDoc, file *vfs.FileDoc) error {
+func getPatches(c echo.Context) ([]*vfs.DocPatch, error) {
+	req := c.Request()
+	objs, err := jsonapi.BindCompound(req.Body)
+	if err != nil {
+		return nil, jsonapi.BadJSON()
+	}
+	patches := make([]*vfs.DocPatch, len(objs))
+	for i, obj := range objs {
+		var patch vfs.DocPatch
+		if obj.Attributes == nil {
+			return nil, jsonapi.BadJSON()
+		}
+		if err = json.Unmarshal(*obj.Attributes, &patch); err != nil {
+			return nil, err
+		}
+		patch.DocID = obj.ID
+		patch.DocPath = ""
+		patch.RestorePath = nil
+		if rel, ok := obj.GetRelationship("parent"); ok {
+			rid, ok := rel.ResourceIdentifier()
+			if !ok {
+				return nil, jsonapi.BadJSON()
+			}
+			patch.DirID = &rid.ID
+		}
+		patches[i] = &patch
+	}
+	return patches, nil
+}
+
+func applyPatch(c echo.Context, fs vfs.VFS, patch *vfs.DocPatch) (err error) {
+	var file *vfs.FileDoc
+	var dir *vfs.DirDoc
+	if patch.DocID != "" {
+		dir, file, err = fs.DirOrFileByID(patch.DocID)
+	} else {
+		dir, file, err = fs.DirOrFileByPath(patch.DocPath)
+	}
+
 	var rev string
 	if dir != nil {
 		rev = dir.Rev()
@@ -275,7 +321,7 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 	}
 
 	if err := CheckIfMatch(c, rev); err != nil {
-		return WrapVfsError(err)
+		return err
 	}
 
 	if err := checkPerm(c, permissions.PATCH, dir, file); err != nil {
@@ -283,18 +329,50 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 	}
 
 	if dir != nil {
-		doc, err := vfs.ModifyDirMetadata(instance.VFS(), dir, patch)
+		doc, err := vfs.ModifyDirMetadata(fs, dir, patch)
 		if err != nil {
-			return WrapVfsError(err)
+			return err
 		}
 		return dirData(c, http.StatusOK, doc)
 	}
 
-	doc, err := vfs.ModifyFileMetadata(instance.VFS(), file, patch)
+	doc, err := vfs.ModifyFileMetadata(fs, file, patch)
 	if err != nil {
-		return WrapVfsError(err)
+		return err
 	}
 	return fileData(c, http.StatusOK, doc, nil)
+}
+
+func applyPatches(c echo.Context, fs vfs.VFS, patches []*vfs.DocPatch) (err error) {
+	type dirOrFile struct {
+		dir   *vfs.DirDoc
+		file  *vfs.FileDoc
+		patch *vfs.DocPatch
+	}
+
+	dirOrFiles := make([]dirOrFile, len(patches))
+	for i, patch := range patches {
+		dir, file, err := fs.DirOrFileByID(patch.DocID)
+		if err != nil {
+			return err
+		}
+		if err = checkPerm(c, permissions.PATCH, dir, file); err != nil {
+			return err
+		}
+		dirOrFiles[i] = dirOrFile{dir, file, patch}
+	}
+
+	for _, p := range dirOrFiles {
+		if p.dir != nil {
+			_, err = vfs.ModifyDirMetadata(fs, p.dir, p.patch)
+		} else {
+			_, err = vfs.ModifyFileMetadata(fs, p.file, p.patch)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 // ReadMetadataFromIDHandler handles all GET requests on /files/:file-
@@ -832,6 +910,7 @@ func Routes(router *echo.Group) {
 
 	router.PATCH("/metadata", ModifyMetadataByPathHandler)
 	router.PATCH("/:file-id", ModifyMetadataByIDHandler)
+	router.PATCH("/", ModifyMetadataByIDInBatchHandler)
 
 	router.POST("/", CreationHandler)
 	router.POST("/:file-id", CreationHandler)
@@ -961,6 +1040,10 @@ func CheckIfMatch(c echo.Context, rev string) error {
 	if revQuery != "" && wantedRev == "" {
 		wantedRev = revQuery
 	}
+	return checkIfMatch(rev, wantedRev)
+}
+
+func checkIfMatch(rev, wantedRev string) error {
 	if wantedRev != "" && rev != wantedRev {
 		return jsonapi.PreconditionFailed("If-Match", fmt.Errorf("Revision does not match"))
 	}
@@ -971,7 +1054,6 @@ func checkPerm(c echo.Context, v pkgperm.Verb, d *vfs.DirDoc, f *vfs.FileDoc) er
 	if d != nil {
 		return middlewares.AllowVFS(c, v, d)
 	}
-
 	return middlewares.AllowVFS(c, v, f)
 }
 
