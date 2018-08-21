@@ -320,27 +320,27 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *vfs.DocPatch) (err error) {
 		rev = file.Rev()
 	}
 
-	if err := CheckIfMatch(c, rev); err != nil {
+	if err = CheckIfMatch(c, rev); err != nil {
 		return err
 	}
 
-	if err := checkPerm(c, permissions.PATCH, dir, file); err != nil {
+	if err = checkPerm(c, permissions.PATCH, dir, file); err != nil {
 		return err
 	}
 
 	if dir != nil {
-		doc, err := vfs.ModifyDirMetadata(fs, dir, patch)
+		dir, err = vfs.ModifyDirMetadata(fs, dir, patch)
 		if err != nil {
 			return err
 		}
-		return dirData(c, http.StatusOK, doc)
+		return dirData(c, http.StatusOK, dir)
 	}
 
-	doc, err := vfs.ModifyFileMetadata(fs, file, patch)
+	file, err = vfs.ModifyFileMetadata(fs, file, patch)
 	if err != nil {
 		return err
 	}
-	return fileData(c, http.StatusOK, doc, nil)
+	return fileData(c, http.StatusOK, file, nil)
 }
 
 func applyPatches(c echo.Context, fs vfs.VFS, patches []*vfs.DocPatch) (err error) {
