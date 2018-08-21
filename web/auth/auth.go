@@ -552,9 +552,11 @@ func authorizeForm(c echo.Context) error {
 		}
 
 		q := u.Query()
+		// We should be sending "code" only, but for compatibility reason, we keep
+		// the access_code parameter that we used to send in our first impl.
 		q.Set("access_code", access.Code)
+		q.Set("code", access.Code)
 		q.Set("state", params.state)
-		q.Set("client_id", params.clientID)
 		u.RawQuery = q.Encode()
 		u.Fragment = ""
 
@@ -647,9 +649,11 @@ func authorize(c echo.Context) error {
 	}
 
 	q := u.Query()
+	// We should be sending "code" only, but for compatibility reason, we keep
+	// the access_code parameter that we used to send in our first impl.
 	q.Set("access_code", access.Code)
+	q.Set("code", access.Code)
 	q.Set("state", params.state)
-	q.Set("client_id", params.clientID)
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
 
