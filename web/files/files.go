@@ -24,10 +24,14 @@ import (
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/cozy/cozy-stack/pkg/workers/thumbnail"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
+	web_utils "github.com/cozy/cozy-stack/web/utils"
+
 	"github.com/cozy/echo"
+	statikFS "github.com/cozy/statik/fs"
 )
 
 // TagSeparator is the character separating tags
@@ -436,7 +440,29 @@ func ThumbnailHandler(c echo.Context) error {
 	}
 
 	fs := instance.ThumbsFS()
-	return fs.ServeThumbContent(c.Response(), c.Request(), doc, c.Param("format"))
+	format := c.Param("format")
+	err = fs.ServeThumbContent(c.Response(), c.Request(), doc, format)
+	if err != nil {
+		return serveThumbnailPlaceholder(c.Response(), c.Request(), doc, format)
+	}
+	return nil
+}
+
+func serveThumbnailPlaceholder(res http.ResponseWriter, req *http.Request, doc *vfs.FileDoc, format string) error {
+	if !utils.IsInArray(format, thumbnail.FormatsNames) {
+		return echo.NewHTTPError(http.StatusNotFound, "Format does not exist")
+	}
+	f, ok := statikFS.Get("/placeholders/thumbnail-" + format + ".png")
+	if !ok {
+		return os.ErrNotExist
+	}
+	etag := f.Etag()
+	if web_utils.CheckPreconditions(res, req, etag) {
+		return nil
+	}
+	res.Header().Set("Etag", etag)
+	_, err := io.Copy(res, f.Reader())
+	return err
 }
 
 func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
