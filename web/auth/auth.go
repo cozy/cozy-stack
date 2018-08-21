@@ -418,6 +418,18 @@ func registerClient(c echo.Context) error {
 		return err
 	}
 	instance := middlewares.GetInstance(c)
+	// We do not allow the creation of clients allowed to have an empty scope
+	// ("login" scope), except via the CLI.
+	if client.AllowLoginScope {
+		perm, err := middlewares.GetPermission(c)
+		if err != nil {
+			return err
+		}
+		if perm.Type != permissions.TypeCLI {
+			return echo.NewHTTPError(http.StatusUnauthorized,
+				"Not authorized to create client with given parameters")
+		}
+	}
 	if err := client.Create(instance); err != nil {
 		return c.JSON(err.Code, err)
 	}
@@ -506,6 +518,12 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": params.instance.ContextualDomain(),
 			"Error":  "Error Incorrect redirect_uri",
+		})
+	}
+	if params.scope == oauth.ScopeLogin && !params.client.AllowLoginScope {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.ContextualDomain(),
+			"Error":  "Error No scope parameter",
 		})
 	}
 
