@@ -70,7 +70,7 @@ Content-Type: application/json
 
 Find allows to find documents using a mango selector. You can read more about
 mango selectors
-[here](http://docs.couchdb.org/en/2.1.0/api/database/find.html#selector-syntax)
+[here](http://docs.couchdb.org/en/stable/api/database/find.html#selector-syntax)
 
 ### Request
 

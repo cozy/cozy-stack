@@ -6,7 +6,7 @@ import (
 )
 
 // GetLocal fetch a local document from CouchDB
-// http://docs.couchdb.org/en/2.1.1/api/local.html#get--db-_local-docid
+// http://docs.couchdb.org/en/stable/api/local.html#get--db-_local-docid
 func GetLocal(db Database, doctype, id string) (map[string]interface{}, error) {
 	var out map[string]interface{}
 	u := "_local/" + url.PathEscape(id)
