@@ -546,7 +546,10 @@ Both endpoints can be used to update the metadata of a file or directory, or to
 rename/move it. The difference is the first one uses an id to identify the
 file/directory to update, and the second one uses the path.
 
-The `dir_id` attribute can be updated to move a file or directory.
+Some specific attributes of the patch can be used:
+  - `dir_id` attribute can be updated to move a file or directory
+  - `move_to_trash` boolean to specify that the file needs to be moved to the trash
+  - `permanent_delete` boolean to specify that the files needs to be deleted (after being trashed)
 
 #### HTTP headers
 
@@ -570,7 +573,6 @@ Content-Type: application/vnd.api+json
       "type": "file",
       "name": "hi.txt",
       "dir_id": "f2f36fec-8018-11e6-abd8-8b3814d9a465",
-      "trashed": false,
       "tags": ["poem"]
     }
   }

@@ -29,6 +29,15 @@ import (
 	"github.com/cozy/echo"
 )
 
+type docPatch struct {
+	docID   string
+	docPath string
+
+	Trash  bool `json:"move_to_trash,omitempty"`
+	Delete bool `json:"permanent_delete,omitempty"`
+	vfs.DocPatch
+}
+
 // TagSeparator is the character separating tags
 const TagSeparator = ","
 
@@ -255,14 +264,14 @@ func ModifyMetadataByPathHandler(c echo.Context) error {
 	return nil
 }
 
-func getPatch(c echo.Context, docID, docPath string) (*vfs.DocPatch, error) {
-	var patch vfs.DocPatch
+func getPatch(c echo.Context, docID, docPath string) (*docPatch, error) {
+	var patch docPatch
 	obj, err := jsonapi.Bind(c.Request().Body, &patch)
 	if err != nil {
 		return nil, jsonapi.BadJSON()
 	}
-	patch.DocID = docID
-	patch.DocPath = docPath
+	patch.docID = docID
+	patch.docPath = docPath
 	patch.RestorePath = nil
 	if rel, ok := obj.GetRelationship("parent"); ok {
 		rid, ok := rel.ResourceIdentifier()
@@ -274,23 +283,23 @@ func getPatch(c echo.Context, docID, docPath string) (*vfs.DocPatch, error) {
 	return &patch, nil
 }
 
-func getPatches(c echo.Context) ([]*vfs.DocPatch, error) {
+func getPatches(c echo.Context) ([]*docPatch, error) {
 	req := c.Request()
 	objs, err := jsonapi.BindCompound(req.Body)
 	if err != nil {
 		return nil, jsonapi.BadJSON()
 	}
-	patches := make([]*vfs.DocPatch, len(objs))
+	patches := make([]*docPatch, len(objs))
 	for i, obj := range objs {
-		var patch vfs.DocPatch
+		var patch docPatch
 		if obj.Attributes == nil {
 			return nil, jsonapi.BadJSON()
 		}
 		if err = json.Unmarshal(*obj.Attributes, &patch); err != nil {
 			return nil, err
 		}
-		patch.DocID = obj.ID
-		patch.DocPath = ""
+		patch.docID = obj.ID
+		patch.docPath = ""
 		patch.RestorePath = nil
 		if rel, ok := obj.GetRelationship("parent"); ok {
 			rid, ok := rel.ResourceIdentifier()
@@ -304,13 +313,13 @@ func getPatches(c echo.Context) ([]*vfs.DocPatch, error) {
 	return patches, nil
 }
 
-func applyPatch(c echo.Context, fs vfs.VFS, patch *vfs.DocPatch) (err error) {
+func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	var file *vfs.FileDoc
 	var dir *vfs.DirDoc
-	if patch.DocID != "" {
-		dir, file, err = fs.DirOrFileByID(patch.DocID)
+	if patch.docID != "" {
+		dir, file, err = fs.DirOrFileByID(patch.docID)
 	} else {
-		dir, file, err = fs.DirOrFileByPath(patch.DocPath)
+		dir, file, err = fs.DirOrFileByPath(patch.docPath)
 	}
 
 	var rev string
@@ -328,31 +337,45 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *vfs.DocPatch) (err error) {
 		return err
 	}
 
-	if dir != nil {
-		dir, err = vfs.ModifyDirMetadata(fs, dir, patch)
-		if err != nil {
-			return err
+	if patch.Delete {
+		if dir != nil {
+			err = fs.DestroyDirAndContent(dir)
+		} else {
+			err = fs.DestroyFile(file)
 		}
-		return dirData(c, http.StatusOK, dir)
+	} else if patch.Trash {
+		if dir != nil {
+			dir, err = vfs.TrashDir(fs, dir)
+		} else {
+			file, err = vfs.TrashFile(fs, file)
+		}
+	} else {
+		if dir != nil {
+			dir, err = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
+		} else {
+			file, err = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
+		}
 	}
-
-	file, err = vfs.ModifyFileMetadata(fs, file, patch)
 	if err != nil {
 		return err
+	}
+
+	if dir != nil {
+		return dirData(c, http.StatusOK, dir)
 	}
 	return fileData(c, http.StatusOK, file, nil)
 }
 
-func applyPatches(c echo.Context, fs vfs.VFS, patches []*vfs.DocPatch) (err error) {
+func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (err error) {
 	type dirOrFile struct {
 		dir   *vfs.DirDoc
 		file  *vfs.FileDoc
-		patch *vfs.DocPatch
+		patch *docPatch
 	}
 
 	dirOrFiles := make([]dirOrFile, len(patches))
 	for i, patch := range patches {
-		dir, file, err := fs.DirOrFileByID(patch.DocID)
+		dir, file, err := fs.DirOrFileByID(patch.docID)
 		if err != nil {
 			return err
 		}
@@ -363,10 +386,24 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*vfs.DocPatch) (err erro
 	}
 
 	for _, p := range dirOrFiles {
-		if p.dir != nil {
-			_, err = vfs.ModifyDirMetadata(fs, p.dir, p.patch)
+		if p.patch.Delete {
+			if p.dir != nil {
+				err = fs.DestroyDirAndContent(p.dir)
+			} else {
+				err = fs.DestroyFile(p.file)
+			}
+		} else if p.patch.Trash {
+			if p.dir != nil {
+				_, err = vfs.TrashDir(fs, p.dir)
+			} else {
+				_, err = vfs.TrashFile(fs, p.file)
+			}
 		} else {
-			_, err = vfs.ModifyFileMetadata(fs, p.file, p.patch)
+			if p.dir != nil {
+				_, err = vfs.ModifyDirMetadata(fs, p.dir, &p.patch.DocPatch)
+			} else {
+				_, err = vfs.ModifyFileMetadata(fs, p.file, &p.patch.DocPatch)
+			}
 		}
 		if err != nil {
 			return err
@@ -681,10 +718,6 @@ func TrashHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	fileID := c.Param("file-id")
-	if fileID == "" {
-		fileID = c.Param("docid") // Used by sharings.deleteDocument
-	}
-
 	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)

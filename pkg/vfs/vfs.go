@@ -245,8 +245,6 @@ type DirIterator interface {
 // DocPatch is a struct containing modifiable fields from file and
 // directory documents.
 type DocPatch struct {
-	DocID       string     `json:"doc_id"`
-	DocPath     string     `json:"doc_path"`
 	Name        *string    `json:"name,omitempty"`
 	DirID       *string    `json:"dir_id,omitempty"`
 	RestorePath *string    `json:"restore_path,omitempty"`
