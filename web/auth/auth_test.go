@@ -904,7 +904,7 @@ func TestAuthorizeSuccess(t *testing.T) {
 		couchdb.GetAllDocs(testInstance, consts.OAuthAccessCodes, req, &results)
 		if assert.Len(t, results, 1) {
 			code = results[0].Code
-			expected := fmt.Sprintf("https://example.org/oauth/callback?access_code=%s&client_id=%s&state=123456#", code, clientID)
+			expected := fmt.Sprintf("https://example.org/oauth/callback?access_code=%s&code=%s&state=123456#", code, code)
 			assert.Equal(t, expected, res.Header.Get("Location"))
 			assert.Equal(t, results[0].ClientID, clientID)
 			assert.Equal(t, results[0].Scope, "files:read")
