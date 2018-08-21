@@ -15,6 +15,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/magic"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -747,7 +748,9 @@ func (f *aferoFileCreation) Close() (err error) {
 		if err == nil {
 			if f.olddoc != nil {
 				// move the temporary file to its final location
-				f.afs.fs.Rename(f.tmppath, f.newpath) // #nosec
+				if errf := f.afs.fs.Rename(f.tmppath, f.newpath); errf != nil {
+					logger.WithNamespace("vfsafero").Warnf("Error on close file: %s", errf)
+				}
 			}
 			if f.capsize > 0 && f.size >= f.capsize {
 				vfs.PushDiskQuotaAlert(f.afs, true)
