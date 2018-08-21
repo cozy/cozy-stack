@@ -658,7 +658,12 @@ Content-Type: application/vnd.api+json
       "meta": { "rev": "1-0e6d5b72" },
       "attributes": { "dir_id": "f2f36fec-8018-11e6-abd8-8b3814d9a465" }
     },
-    ...
+    {
+      "type": "io.cozy.files",
+      "id": "9152d568-7e7c-11e6-a377-37cbfb190b4c",
+      "meta": { "rev": "2-123123" },
+      "attributes": { "move_to_trash": true }
+    }
   ]
 }
 ```
