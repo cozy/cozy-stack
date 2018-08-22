@@ -251,7 +251,6 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		newdoc:  newdoc,
 		olddoc:  olddoc,
 		tmppath: tmppath,
-		newpath: newpath,
 		maxsize: maxsize,
 		capsize: capsize,
 
@@ -693,7 +692,6 @@ type aferoFileCreation struct {
 	afs     *aferoVFS          // parent vfs
 	newdoc  *vfs.FileDoc       // new document
 	olddoc  *vfs.FileDoc       // old document
-	newpath string             // file new path
 	tmppath string             // temporary file path for uploading a new version of this file
 	maxsize int64              // maximum size allowed for the file
 	capsize int64              // size cap from which we send a notification to the user
@@ -744,11 +742,12 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 }
 
 func (f *aferoFileCreation) Close() (err error) {
+	var newpath string
 	defer func() {
 		if err == nil {
 			if f.olddoc != nil {
 				// move the temporary file to its final location
-				if errf := f.afs.fs.Rename(f.tmppath, f.newpath); errf != nil {
+				if errf := f.afs.fs.Rename(f.tmppath, newpath); errf != nil {
 					logger.WithNamespace("vfsafero").Warnf("Error on close file: %s", errf)
 				}
 			}
@@ -820,6 +819,15 @@ func (f *aferoFileCreation) Close() (err error) {
 		return lockerr
 	}
 	defer f.afs.mu.Unlock()
+
+	newpath, err = f.afs.Indexer.FilePath(newdoc)
+	if err != nil {
+		return err
+	}
+	if strings.HasPrefix(newpath, vfs.TrashDirName+"/") {
+		return vfs.ErrParentInTrash
+	}
+
 	return f.afs.Indexer.UpdateFileDoc(olddoc, newdoc)
 }
 
