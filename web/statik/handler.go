@@ -36,6 +36,7 @@ var (
 	privateAssets = []string{
 		"/templates/",
 		"/locales/",
+		"/placeholders/",
 	}
 )
 
