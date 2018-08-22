@@ -97,7 +97,7 @@ describe "A sharing" do
     2.times do
       child1.rename inst, Faker::Internet.slug
       file1.rename inst, "#{Faker::Internet.slug}.txt"
-      file1.overwrite inst
+      file1.overwrite inst, content: Faker::BackToTheFuture.quote
       child1_recipient.rename inst_recipient, Faker::Internet.slug
       file1_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
     end
@@ -147,11 +147,11 @@ describe "A sharing" do
 
     # Write the same file on both sides
     2.times do
-      file1.overwrite inst
+      file1.overwrite inst, content: Faker::BackToTheFuture.quote
       file1_recipient.overwrite inst_recipient
     end
 
-    sleep 15
+    sleep 20
     # Check the conflicted files
     _, files = Folder.children inst, parent_file.path
     conflict_file = files.find { |c| c.name.include? "conflict" }
