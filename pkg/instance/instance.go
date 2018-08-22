@@ -1224,9 +1224,15 @@ func deleteAccounts(i *Instance) {
 	ds := realtime.GetHub().Subscriber(i)
 	defer ds.Close()
 
-	accountsCount := len(accounts)
+	accountsCount := 0
 	for _, account := range accounts {
-		couchdb.DeleteDoc(i, account)
+		account.Type = consts.Accounts
+		if err := couchdb.DeleteDoc(i, account); err == nil {
+			accountsCount++
+		}
+	}
+	if accountsCount == 0 {
+		return
 	}
 
 	if err := ds.Subscribe(consts.Jobs); err != nil {
