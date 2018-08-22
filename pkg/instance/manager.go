@@ -24,8 +24,6 @@ const (
 	ManagerPremiumURL
 	// ManagerBlockedURL is the kind for a redirection of a blocked instance.
 	ManagerBlockedURL
-	// ManagerOAuthURL is the oauth redirection URL of the manager.
-	ManagerOAuthURL
 )
 
 // ManagerURL returns an external string for the given ManagerURL kind.
@@ -67,8 +65,6 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
 		path = fmt.Sprintf("/cozy/instances/%s/tos", url.PathEscape(i.UUID))
 	case ManagerBlockedURL:
 		path = fmt.Sprintf("/cozy/instances/%s/blocked", url.PathEscape(i.UUID))
-	case ManagerOAuthURL:
-		path = fmt.Sprintf("/cozy/instances/%s/oauth", url.PathEscape(i.UUID))
 	default:
 		panic("unknown ManagerURLKind")
 	}
