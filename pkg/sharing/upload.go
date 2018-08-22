@@ -218,6 +218,12 @@ func (s *Sharing) findNextFileToUpload(inst *instance.Instance, since string) (m
 func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string]interface{}, ruleIndex int) error {
 	inst.Logger().WithField("nspace", "upload").Debugf("going to upload %#v", file)
 
+	// Do not try to send a trashed file, the trash status will be synchronized
+	// via the CouchDB replication protocol
+	if file["trashed"].(bool) {
+		return nil
+	}
+
 	creds := s.FindCredentials(m)
 	if creds == nil {
 		return ErrInvalidSharing
