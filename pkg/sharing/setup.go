@@ -35,6 +35,15 @@ func (s *Sharing) SetupReceiver(inst *instance.Instance) error {
 			if err := s.AddUploadTrigger(inst); err != nil {
 				return err
 			}
+			// The sharing directory is created when the stack receives the
+			// first file (it allows to not create it if it's just a file that
+			// is shared, not a directory or an album). But, for an empty
+			// directory, no files are sent, so we need to create it now.
+			if s.NbFiles == 0 {
+				if _, err := s.GetSharingDir(inst); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
