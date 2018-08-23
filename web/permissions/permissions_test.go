@@ -53,17 +53,22 @@ func TestGetPermissions(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	defer res.Body.Close()
+
 	body, err := ioutil.ReadAll(res.Body)
 	if !assert.NoError(t, err) {
 		return
 	}
 	var out map[string]interface{}
 	err = json.Unmarshal(body, &out)
-
 	assert.NoError(t, err)
-	assert.Equal(t, "200 OK", res.Status, "should get a 200")
-	for key, r := range out {
+
+	data := out["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	perms := attrs["permissions"].(map[string]interface{})
+
+	for key, r := range perms {
 		rule := r.(map[string]interface{})
 		if key == "rule1" {
 			assert.Equal(t, "io.cozy.files", rule["type"])
@@ -147,9 +152,11 @@ func TestCreateSubPermission(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
-	assert.Len(t, out, 2)
-	assert.Equal(t, "io.cozy.files", out["whatever"].(map[string]interface{})["type"])
-
+	data := out["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	perms := attrs["permissions"].(map[string]interface{})
+	assert.Len(t, perms, 2)
+	assert.Equal(t, "io.cozy.files", perms["whatever"].(map[string]interface{})["type"])
 }
 
 func TestCreateSubSubFail(t *testing.T) {
