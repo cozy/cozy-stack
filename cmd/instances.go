@@ -213,7 +213,7 @@ settings for a specified domain.
 			SwiftCluster:  flagSwiftCluster,
 			DiskQuota:     diskQuota,
 		}
-		if flagBlocked {
+		if flag := cmd.Flag("blocked"); flag.Changed {
 			opts.Blocked = &flagBlocked
 		}
 		if flagOnboardingFinished {
