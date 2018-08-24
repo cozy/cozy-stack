@@ -139,6 +139,17 @@ main>div {
     margin: auto;
     padding: 3em 1em
 }
+#login-form {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+}
+#login-form .errors {
+    order: 1;
+}
+[role=region] p:last-child {
+    margin-bottom: 0;
+}
 header figure {
     margin: 0 auto 2em;
     text-align: center
