@@ -160,7 +160,7 @@ func Req(opts *Options) (*http.Response, error) {
 	}
 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return nil, parseError(opts, res)
+		return res, parseError(opts, res)
 	}
 
 	if opts.NoResponse {

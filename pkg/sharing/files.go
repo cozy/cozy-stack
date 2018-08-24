@@ -579,20 +579,16 @@ func (s *Sharing) getDirDocFromInstance(inst *instance.Instance, m *Member, cred
 		},
 	}
 	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, s, m, creds, opts, nil)
+	}
 	if err != nil {
+		if res != nil && res.StatusCode/100 == 5 {
+			return nil, ErrInternalServerError
+		}
 		return nil, err
 	}
-	if res.StatusCode/100 == 4 {
-		res.Body.Close()
-		res, err = RefreshToken(inst, s, m, creds, opts, nil)
-		if err != nil {
-			return nil, err
-		}
-	}
 	defer res.Body.Close()
-	if res.StatusCode/100 == 5 {
-		return nil, ErrInternalServerError
-	}
 	var doc *vfs.DirDoc
 	if err = json.NewDecoder(res.Body).Decode(&doc); err != nil {
 		return nil, err

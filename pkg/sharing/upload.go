@@ -116,9 +116,6 @@ func (s *Sharing) sendInitialEndNotif(inst *instance.Instance, m *Member) error 
 		return err
 	}
 	res.Body.Close()
-	if res.StatusCode/100 != 2 {
-		return ErrInternalServerError
-	}
 	return nil
 }
 
@@ -253,20 +250,16 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	}
 	var res *http.Response
 	res, err = request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, s, m, creds, opts, body)
+	}
 	if err != nil {
+		if res != nil && res.StatusCode/100 == 5 {
+			return ErrInternalServerError
+		}
 		return err
 	}
-	if res.StatusCode/100 == 4 {
-		res.Body.Close()
-		res, err = RefreshToken(inst, s, m, creds, opts, body)
-		if err != nil {
-			return err
-		}
-	}
 	defer res.Body.Close()
-	if res.StatusCode/100 == 5 {
-		return ErrInternalServerError
-	}
 
 	if res.StatusCode == 204 {
 		return nil
@@ -299,15 +292,12 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 		Body: content,
 	})
 	if err != nil {
+		if res2 != nil && res2.StatusCode/100 == 5 {
+			return ErrInternalServerError
+		}
 		return err
 	}
 	res2.Body.Close()
-	if res2.StatusCode/100 == 5 {
-		return ErrInternalServerError
-	}
-	if res2.StatusCode/100 != 2 {
-		return ErrClientError
-	}
 	return nil
 }
 

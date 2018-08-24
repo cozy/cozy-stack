@@ -414,19 +414,14 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 	}
 	var res *http.Response
 	res, err = request.Req(opts)
-	if err != nil {
-		return nil, err
-	}
-	if res.StatusCode/100 == 5 {
-		res.Body.Close()
-		return nil, ErrInternalServerError
-	}
-	if res.StatusCode/100 == 4 {
-		res.Body.Close()
+	if res != nil && res.StatusCode/100 == 4 {
 		res, err = RefreshToken(inst, s, m, creds, opts, body)
-		if err != nil {
-			return nil, err
+	}
+	if err != nil {
+		if res != nil && res.StatusCode/100 == 5 {
+			return nil, ErrInternalServerError
 		}
+		return nil, err
 	}
 	defer res.Body.Close()
 
@@ -566,19 +561,16 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 		Body: bytes.NewReader(body),
 	}
 	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, s, m, creds, opts, body)
+	}
 	if err != nil {
+		if res != nil && res.StatusCode/100 == 5 {
+			return ErrInternalServerError
+		}
 		return err
 	}
 	res.Body.Close()
-	if res.StatusCode/100 == 5 {
-		return ErrInternalServerError
-	}
-	if res.StatusCode/100 == 4 {
-		if res, err = RefreshToken(inst, s, m, creds, opts, body); err != nil {
-			return err
-		}
-		res.Body.Close()
-	}
 	return nil
 }
 

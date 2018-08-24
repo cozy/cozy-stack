@@ -237,14 +237,11 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 		Body: bytes.NewReader(body),
 	}
 	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, s, &s.Members[0], c, opts, body)
+	}
 	if err != nil {
 		return err
-	}
-	if res.StatusCode/100 == 4 {
-		res.Body.Close()
-		if res, err = RefreshToken(inst, s, &s.Members[0], c, opts, body); err != nil {
-			return err
-		}
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
@@ -322,22 +319,16 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL stri
 		Body: bytes.NewReader(body),
 	}
 	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, s, &s.Members[0], c, opts, body)
+	}
 	if err != nil {
+		if res != nil && res.StatusCode == http.StatusBadRequest {
+			return "", ErrInvalidURL
+		}
 		return "", err
 	}
-	if res.StatusCode/100 == 4 {
-		res.Body.Close()
-		if res, err = RefreshToken(inst, s, &s.Members[0], c, opts, body); err != nil {
-			return "", err
-		}
-	}
 	defer res.Body.Close()
-	if res.StatusCode == http.StatusBadRequest {
-		return "", ErrInvalidURL
-	}
-	if res.StatusCode/100 != 2 {
-		return "", ErrInternalServerError
-	}
 	var success map[string]string
 	if err = json.NewDecoder(res.Body).Decode(&success); err != nil {
 		return "", err
@@ -473,7 +464,10 @@ func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) er
 		return err
 	}
 	c.AccessToken.AccessToken = token.AccessToken
-	return couchdb.UpdateDoc(inst, s)
+	if err = couchdb.UpdateDoc(inst, s); err != nil && !couchdb.IsConflictError(err) {
+		return err
+	}
+	return nil
 }
 
 // AddReadOnlyFlag adds the read-only flag of a recipient, and send
@@ -543,19 +537,16 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 		Body: bytes.NewReader(body),
 	}
 	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, s, &s.Members[index], &s.Credentials[index-1], opts, body)
+	}
 	if err != nil {
+		if res != nil {
+			return ErrRequestFailed
+		}
 		return err
 	}
-	if res.StatusCode/100 == 4 {
-		res.Body.Close()
-		if res, err = RefreshToken(inst, s, &s.Members[index], &s.Credentials[index-1], opts, body); err != nil {
-			return err
-		}
-	}
 	defer res.Body.Close()
-	if res.StatusCode/100 != 2 {
-		return ErrRequestFailed
-	}
 
 	return couchdb.UpdateDoc(inst, s)
 }
@@ -578,22 +569,16 @@ func (s *Sharing) DelegateAddReadOnlyFlag(inst *instance.Instance, index int) er
 		},
 	}
 	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, s, &s.Members[0], c, opts, nil)
+	}
 	if err != nil {
+		if res != nil && res.StatusCode == http.StatusBadRequest {
+			return ErrInvalidURL
+		}
 		return err
 	}
-	if res.StatusCode/100 == 4 {
-		res.Body.Close()
-		if res, err = RefreshToken(inst, s, &s.Members[0], c, opts, nil); err != nil {
-			return err
-		}
-	}
 	res.Body.Close()
-	if res.StatusCode == http.StatusBadRequest {
-		return ErrInvalidURL
-	}
-	if res.StatusCode/100 != 2 {
-		return ErrInternalServerError
-	}
 	return nil
 }
 
@@ -692,20 +677,13 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 		Body: bytes.NewReader(body),
 	}
 	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, s, &s.Members[index], &s.Credentials[index-1], opts, body)
+	}
 	if err != nil {
 		return err
 	}
-	if res.StatusCode/100 == 4 {
-		res.Body.Close()
-		if res, err = RefreshToken(inst, s, &s.Members[index], &s.Credentials[index-1], opts, body); err != nil {
-			return err
-		}
-	}
-	defer res.Body.Close()
-	if res.StatusCode/100 != 2 {
-		return ErrRequestFailed
-	}
-
+	res.Body.Close()
 	return couchdb.UpdateDoc(inst, s)
 }
 
@@ -751,22 +729,16 @@ func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int)
 		},
 	}
 	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, s, &s.Members[0], c, opts, nil)
+	}
 	if err != nil {
+		if res != nil && res.StatusCode == http.StatusBadRequest {
+			return ErrInvalidURL
+		}
 		return err
 	}
-	if res.StatusCode/100 == 4 {
-		res.Body.Close()
-		if res, err = RefreshToken(inst, s, &s.Members[0], c, opts, nil); err != nil {
-			return err
-		}
-	}
 	res.Body.Close()
-	if res.StatusCode == http.StatusBadRequest {
-		return ErrInvalidURL
-	}
-	if res.StatusCode/100 != 2 {
-		return ErrInternalServerError
-	}
 	return nil
 }
 
@@ -831,19 +803,16 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 		},
 	}
 	res, err := request.Req(opts)
+	if res != nil && res.StatusCode/100 == 4 {
+		res, err = RefreshToken(inst, s, m, c, opts, nil)
+	}
 	if err != nil {
+		if res != nil && res.StatusCode/100 == 5 {
+			return ErrInternalServerError
+		}
 		return err
 	}
 	res.Body.Close()
-	if res.StatusCode/100 == 5 {
-		return ErrInternalServerError
-	}
-	if res.StatusCode/100 == 4 {
-		if res, err = RefreshToken(inst, s, m, c, opts, nil); err != nil {
-			return err
-		}
-		res.Body.Close()
-	}
 	return nil
 }
 
@@ -932,19 +901,14 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			Body: bytes.NewReader(body),
 		}
 		res, err := request.Req(opts)
+		if res != nil && res.StatusCode/100 == 4 {
+			res, err = RefreshToken(inst, s, &s.Members[i], c, opts, body)
+		}
 		if err != nil {
 			inst.Logger().WithField("nspace", "sharing").
 				Infof("Can't notify %#v about the updated members list: %s", m, err)
 			continue
 		}
 		res.Body.Close()
-		if res.StatusCode/100 == 4 {
-			if res, err = RefreshToken(inst, s, &s.Members[i], c, opts, body); err != nil {
-				inst.Logger().WithField("nspace", "sharing").
-					Infof("Can't notify %#v about the updated members list: %s", m, err)
-				continue
-			}
-			res.Body.Close()
-		}
 	}
 }
