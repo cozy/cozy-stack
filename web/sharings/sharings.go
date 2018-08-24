@@ -503,6 +503,16 @@ func RevokeRecipientBySelf(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL string) error {
+	return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+		"Domain":     inst.ContextualDomain(),
+		"ErrorTitle": "Error Sharing already accepted Title",
+		"Error":      "Error Sharing already accepted",
+		"Button":     inst.Translate("Error Sharing already accepted Button", cozyURL),
+		"ButtonLink": cozyURL,
+	})
+}
+
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state string, m *sharing.Member) error {
 	publicName, _ := inst.PublicName()
 	return c.Render(code, "sharing_discovery.html", echo.Map{
@@ -543,13 +553,7 @@ func GetDiscovery(c echo.Context) error {
 		}
 		if m.Status != sharing.MemberStatusMailNotSent &&
 			m.Status != sharing.MemberStatusPendingInvitation {
-			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain":     inst.ContextualDomain(),
-				"ErrorTitle": "Error Sharing already accepted Title",
-				"Error":      "Error Sharing already accepted",
-				"Button":     inst.Translate("Error Sharing already accepted Button", m.Instance),
-				"ButtonLink": m.Instance,
-			})
+			return renderAlreadyAccepted(c, inst, m.Instance)
 		}
 	}
 
@@ -592,6 +596,9 @@ func PostDiscovery(c echo.Context) error {
 		if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
 			if c.Request().Header.Get("Accept") == "application/json" {
 				return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
+			}
+			if err == sharing.ErrAlreadyAccepted {
+				return renderAlreadyAccepted(c, inst, cozyURL)
 			}
 			return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, member)
 		}
@@ -758,6 +765,8 @@ func wrapErrors(err error) error {
 		return jsonapi.NotFound(err)
 	case sharing.ErrSafety:
 		return jsonapi.BadRequest(err)
+	case sharing.ErrAlreadyAccepted:
+		return jsonapi.Conflict(err)
 	}
 	return err
 }

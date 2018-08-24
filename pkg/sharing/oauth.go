@@ -86,6 +86,9 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 		},
 		Body: bytes.NewReader(body),
 	})
+	if res != nil && res.StatusCode == http.StatusConflict {
+		return ErrAlreadyAccepted
+	}
 	if err != nil {
 		return err
 	}
@@ -175,6 +178,9 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL st
 	}
 	if err = m.CreateSharingRequest(inst, s, creds, u); err != nil {
 		inst.Logger().WithField("nspace", "sharing").Warnf("Error on sharing request: %s", err)
+		if err == ErrAlreadyAccepted {
+			return err
+		}
 		return ErrRequestFailed
 	}
 	return couchdb.UpdateDoc(inst, s)

@@ -219,7 +219,7 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 			return errb
 		}
 		if old.Active {
-			return ErrInvalidSharing
+			return ErrAlreadyAccepted
 		}
 		s.SRev = old.SRev
 		err = couchdb.UpdateDoc(inst, s)
