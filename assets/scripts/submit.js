@@ -36,7 +36,7 @@
     if (!errorPanel) {
       errorPanel = document.createElement('div')
       errorPanel.classList.add('errors')
-      loginForm.appendChild(errorPanel)
+      loginForm.insertBefore(errorPanel, loginForm.firstChild);
     }
 
     if (!errorPanel.firstChild) {
