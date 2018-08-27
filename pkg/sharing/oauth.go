@@ -90,9 +90,6 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 		return err
 	}
 	res.Body.Close()
-	if res.StatusCode/100 != 2 {
-		return ErrRequestFailed
-	}
 	return nil
 }
 
@@ -341,9 +338,6 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 		return err
 	}
 	defer res.Body.Close()
-	if res.StatusCode/100 != 2 {
-		return ErrRequestFailed
-	}
 
 	for i, m := range s.Members {
 		if i > 0 && m.Instance != "" {
@@ -431,15 +425,10 @@ func RefreshToken(inst *instance.Instance, s *Sharing, m *Member, creds *Credent
 	}
 	res, err := request.Req(opts)
 	if err != nil {
+		if res != nil && res.StatusCode/100 == 5 {
+			return nil, ErrInternalServerError
+		}
 		return nil, err
-	}
-	if res.StatusCode/100 == 5 {
-		res.Body.Close()
-		return nil, ErrInternalServerError
-	}
-	if res.StatusCode/100 != 2 {
-		res.Body.Close()
-		return nil, ErrClientError
 	}
 	return res, nil
 }

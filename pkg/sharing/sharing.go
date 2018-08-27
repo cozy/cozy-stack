@@ -84,6 +84,16 @@ func (s *Sharing) Clone() couchdb.Doc {
 	copy(cloned.Members, s.Members)
 	cloned.Credentials = make([]Credentials, len(s.Credentials))
 	copy(cloned.Credentials, s.Credentials)
+	for i := range s.Credentials {
+		if s.Credentials[i].Client != nil {
+			cloned.Credentials[i].Client = s.Credentials[i].Client.Clone()
+		}
+		if s.Credentials[i].AccessToken != nil {
+			cloned.Credentials[i].AccessToken = s.Credentials[i].AccessToken.Clone()
+		}
+		cloned.Credentials[i].XorKey = make([]byte, len(s.Credentials[i].XorKey))
+		copy(cloned.Credentials[i].XorKey, s.Credentials[i].XorKey)
+	}
 	return &cloned
 }
 

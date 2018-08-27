@@ -76,6 +76,36 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("Authentication error: %s (%s)", e.Description, e.Value)
 }
 
+// Clone returns a new Client with cloned values
+func (c *Client) Clone() *Client {
+	redirects := make([]string, len(c.RedirectURIs))
+	copy(redirects, c.RedirectURIs)
+	return &Client{
+		ClientID:          c.ClientID,
+		ClientSecret:      c.ClientSecret,
+		SecretExpiresAt:   c.SecretExpiresAt,
+		RegistrationToken: c.RegistrationToken,
+		RedirectURIs:      redirects,
+		ClientName:        c.ClientName,
+		ClientKind:        c.ClientKind,
+		ClientURI:         c.ClientURI,
+		LogoURI:           c.LogoURI,
+		PolicyURI:         c.PolicyURI,
+		SoftwareID:        c.SoftwareID,
+		SoftwareVersion:   c.SoftwareVersion,
+	}
+}
+
+// Clone returns a new AccessToken with cloned values
+func (t *AccessToken) Clone() *AccessToken {
+	return &AccessToken{
+		TokenType:    t.TokenType,
+		AccessToken:  t.AccessToken,
+		RefreshToken: t.RefreshToken,
+		Scope:        t.Scope,
+	}
+}
+
 // AuthHeader implements the Tokener interface for the client
 func (c *Client) AuthHeader() string {
 	return "Bearer " + c.RegistrationToken
