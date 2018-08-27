@@ -248,11 +248,7 @@ func (e *endpoint) configure(prefix string, host string, port int) error {
 	if err := e.configureFromEnv(prefix); err != nil {
 		return err
 	}
-	if err := e.configureFromURL(); err != nil {
-		return err
-	}
-
-	return nil
+	return e.configureFromURL()
 }
 
 func (e *endpoint) getClient() (*http.Client, error) {

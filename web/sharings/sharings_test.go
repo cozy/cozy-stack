@@ -1005,7 +1005,7 @@ func createContact(inst *instance.Instance, name, email string) *contacts.Contac
 	c := &contacts.Contact{
 		FullName: name,
 		Email: []contacts.Email{
-			contacts.Email{Address: email},
+			{Address: email},
 		},
 	}
 	err := couchdb.CreateDoc(inst, c)

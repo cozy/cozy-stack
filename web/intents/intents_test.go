@@ -140,7 +140,7 @@ func TestMain(m *testing.M) {
 		DocSlug:        "files",
 		DocPermissions: permissions.Set{},
 		Intents: []apps.Intent{
-			apps.Intent{
+			{
 				Action: "PICK",
 				Types:  []string{"io.cozy.files", "image/gif"},
 				Href:   "/pick",

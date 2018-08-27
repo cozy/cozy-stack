@@ -24,10 +24,7 @@ func (j jobSystem) Shutdown(ctx context.Context) error {
 	if err := j.Broker.ShutdownWorkers(ctx); err != nil {
 		return err
 	}
-	if err := j.Scheduler.ShutdownScheduler(ctx); err != nil {
-		return err
-	}
-	return nil
+	return j.Scheduler.ShutdownScheduler(ctx)
 }
 
 var globalJobSystem JobSystem
@@ -42,10 +39,7 @@ func SystemStart(b Broker, s Scheduler, workersList WorkersList) error {
 	if err := b.StartWorkers(workersList); err != nil {
 		return err
 	}
-	if err := s.StartScheduler(b); err != nil {
-		return err
-	}
-	return nil
+	return s.StartScheduler(b)
 }
 
 // System returns the global job system.

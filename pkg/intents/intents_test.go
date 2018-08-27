@@ -29,7 +29,7 @@ func TestFillServices(t *testing.T) {
 	files := &apps.WebappManifest{
 		DocSlug: "files",
 		Intents: []apps.Intent{
-			apps.Intent{
+			{
 				Action: "PICK",
 				Types:  []string{"io.cozy.files", "image/gif"},
 				Href:   "/pick",
@@ -41,12 +41,12 @@ func TestFillServices(t *testing.T) {
 	photos := &apps.WebappManifest{
 		DocSlug: "photos",
 		Intents: []apps.Intent{
-			apps.Intent{
+			{
 				Action: "PICK",
 				Types:  []string{"image/*"},
 				Href:   "/picker",
 			},
-			apps.Intent{
+			{
 				Action: "VIEW",
 				Types:  []string{"io.cozy.files"},
 				Href:   "/viewer",
