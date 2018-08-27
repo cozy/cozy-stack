@@ -171,25 +171,25 @@ func changesFeed(c echo.Context) error {
 	// Drop a clear error for parameters not supported by stack
 	for key := range c.QueryParams() {
 		if !allowedChangesParams[key] {
-			return jsonapi.NewError(http.StatusBadRequest, "Unsupported query parameter '%s'", key)
+			return jsonapi.Errorf(http.StatusBadRequest, "Unsupported query parameter '%s'", key)
 		}
 	}
 
 	feed, err := couchdb.ValidChangesMode(c.QueryParam("feed"))
 	if err != nil {
-		return jsonapi.NewError(http.StatusBadRequest, err)
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
 	feedStyle, err := couchdb.ValidChangesStyle(c.QueryParam("style"))
 	if err != nil {
-		return jsonapi.NewError(http.StatusBadRequest, err)
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
 	limitString := c.QueryParam("limit")
 	limit := 0
 	if limitString != "" {
 		if limit, err = strconv.Atoi(limitString); err != nil {
-			return jsonapi.NewError(http.StatusBadRequest, "Invalid limit value '%s': %s", limitString, err.Error())
+			return jsonapi.Errorf(http.StatusBadRequest, "Invalid limit value '%s': %s", limitString, err.Error())
 		}
 	}
 
@@ -197,7 +197,7 @@ func changesFeed(c echo.Context) error {
 	seqInterval := 0
 	if seqIntervalString != "" {
 		if seqInterval, err = strconv.Atoi(seqIntervalString); err != nil {
-			return jsonapi.NewError(http.StatusBadRequest, "Invalid seq_interval value '%s': %s", seqIntervalString, err.Error())
+			return jsonapi.Errorf(http.StatusBadRequest, "Invalid seq_interval value '%s': %s", seqIntervalString, err.Error())
 		}
 	}
 

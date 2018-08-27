@@ -335,7 +335,7 @@ func GetChildrenHandler(c echo.Context) error {
 	}
 
 	if file != nil {
-		return jsonapi.NewError(400, "cant read children of file "+fileID)
+		return jsonapi.Errorf(http.StatusBadRequest, "cant read children of file %v", fileID)
 	}
 
 	return dirDataList(c, http.StatusOK, dir)
@@ -789,7 +789,7 @@ func FindFilesMango(c echo.Context) error {
 	var findRequest map[string]interface{}
 
 	if err := json.NewDecoder(c.Request().Body).Decode(&findRequest); err != nil {
-		return jsonapi.NewError(http.StatusBadRequest, err)
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
 	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Files); err != nil {
@@ -910,7 +910,7 @@ func WrapVfsError(err error) error {
 		vfs.ErrDirNotEmpty:
 		return jsonapi.BadRequest(err)
 	case vfs.ErrFileTooBig:
-		return jsonapi.NewError(http.StatusRequestEntityTooLarge, err)
+		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	}
 	return err
 }

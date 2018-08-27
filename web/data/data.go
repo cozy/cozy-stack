@@ -26,14 +26,14 @@ func ValidDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		doctype := c.Param("doctype")
 		if doctype == "" {
-			return jsonapi.NewError(http.StatusBadRequest, "Invalid doctype '%s'", doctype)
+			return jsonapi.Errorf(http.StatusBadRequest, "Invalid doctype '%s'", doctype)
 		}
 		c.Set("doctype", doctype)
 
 		docidraw := c.Param("docid")
 		docid, err := url.QueryUnescape(docidraw)
 		if err != nil {
-			return jsonapi.NewError(http.StatusBadRequest, "Invalid docid '%s'", docid)
+			return jsonapi.Errorf(http.StatusBadRequest, "Invalid docid '%s'", docid)
 		}
 		c.Set("docid", docid)
 
@@ -118,7 +118,7 @@ func createDoc(c echo.Context) error {
 
 	doc := couchdb.JSONDoc{Type: doctype}
 	if err := json.NewDecoder(c.Request().Body).Decode(&doc.M); err != nil {
-		return jsonapi.NewError(http.StatusBadRequest, err)
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
 	if err := perm.CheckWritable(doctype); err != nil {
@@ -177,7 +177,7 @@ func UpdateDoc(c echo.Context) error {
 
 	var doc couchdb.JSONDoc
 	if err := json.NewDecoder(c.Request().Body).Decode(&doc); err != nil {
-		return jsonapi.NewError(http.StatusBadRequest, err)
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
 	doc.Type = doctype
@@ -187,12 +187,12 @@ func UpdateDoc(c echo.Context) error {
 	}
 
 	if (doc.ID() == "") != (doc.Rev() == "") {
-		return jsonapi.NewError(http.StatusBadRequest,
+		return jsonapi.Errorf(http.StatusBadRequest,
 			"You must either provide an _id and _rev in document (update) or neither (create with fixed id).")
 	}
 
 	if doc.ID() != "" && doc.ID() != c.Get("docid").(string) {
-		return jsonapi.NewError(http.StatusBadRequest, "document _id doesnt match url")
+		return jsonapi.Errorf(http.StatusBadRequest, "document _id doesnt match url")
 	}
 
 	if doc.ID() == "" {
@@ -247,14 +247,14 @@ func DeleteDoc(c echo.Context) error {
 	rev := ""
 
 	if revHeader != "" && revQuery != "" && revQuery != revHeader {
-		return jsonapi.NewError(http.StatusBadRequest,
+		return jsonapi.Errorf(http.StatusBadRequest,
 			"If-Match Header and rev query parameters mismatch")
 	} else if revHeader != "" {
 		rev = revHeader
 	} else if revQuery != "" {
 		rev = revQuery
 	} else {
-		return jsonapi.NewError(http.StatusBadRequest, "delete without revision")
+		return jsonapi.Errorf(http.StatusBadRequest, "delete without revision")
 	}
 
 	if err := perm.CheckWritable(doctype); err != nil {
@@ -294,7 +294,7 @@ func defineIndex(c echo.Context) error {
 
 	var definitionRequest map[string]interface{}
 	if err := json.NewDecoder(c.Request().Body).Decode(&definitionRequest); err != nil {
-		return jsonapi.NewError(http.StatusBadRequest, err)
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
 	if err := perm.CheckReadable(doctype); err != nil {
@@ -326,7 +326,7 @@ func findDocuments(c echo.Context) error {
 
 	var findRequest map[string]interface{}
 	if err := json.NewDecoder(c.Request().Body).Decode(&findRequest); err != nil {
-		return jsonapi.NewError(http.StatusBadRequest, err)
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
 	if err := perm.CheckReadable(doctype); err != nil {
