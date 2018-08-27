@@ -68,6 +68,26 @@ An application object contains the following fields:
 * `editor`: the application editor name
 * `versions`: an object containing all the channels versions
 * `latest_version`: the latest available version
+* `maintenance_activated`: boolean, true when the maintenance mode is activated on the application
+* `maintenance_options`: present only if `maintenance_activated` is true, object with the following fields:
+  - `flag_infra_maintenance`: bool, true iff the maintenance is internal to the cozy infrastructure
+  - `flag_short_maintenance`: bool, true iff the maintenance is a short maintenance, waiting for a correction on our side
+  - `flag_disallow_manual_exec`: bool, true iff the maintenance will disallow the execution on the application, even when manually executed
+  - `messages`: a list of localized messages containing a short and long information messages explaining the maintenance state
+* `label`: integer for a confidence grade from 0 to 5 (A to F), labelling the
+  application from a user privacy standpoint. It is calculated from the
+  `data_usage_commitment` and `data_usage_commitment_by` fields.
+* `data_usage_commitment_by`: specify a technical commitment from the
+  application editor:
+  - `user_ciphered`: technical commitment that the user's data is encrypted
+    and can only be known by him.
+  - `user_reserved`: commitment that the data is only used for the user, to
+    directly offer its service.
+  - `none`: no commitment
+* `data_usage_commitment_by`: specify what entity is taking the commitment:
+  - `cozy`: the commitment is taken by cozy
+  - `editor`: the commitment is taken by the application's editor
+  - `none`: no commitment is taken
 
 Example:
 
@@ -103,12 +123,6 @@ An application version object contains the following fields:
 * `sha256`: the sha256 checksum of the application content
 * `tar_prefix`: optional tar prefix directory specified to properly extract the
   application content
-* `maintenance_activated`: boolean, true when the maintenance mode is activated on the application
-* `maintenance_options`: present only if `maintenance_activated` is true, object with the following fields:
-  - `flag_infra_maintenance`: bool, true iff the maintenance is internal to the cozy infrastructure
-  - `flag_short_maintenance`: bool, true iff the maintenance is a short maintenance, waiting for a correction on our side
-  - `flag_disallow_manual_exec`: bool, true iff the maintenance will disallow the execution on the application, even when manually executed
-  - `messages`: a list of localized messages containing a short and long information messages explaining the maintenance state
 
 The version string should follow the channels rule.
 
