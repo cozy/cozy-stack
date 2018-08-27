@@ -77,7 +77,7 @@ An application object contains the following fields:
 * `label`: integer for a confidence grade from 0 to 5 (A to F), labelling the
   application from a user privacy standpoint. It is calculated from the
   `data_usage_commitment` and `data_usage_commitment_by` fields.
-* `data_usage_commitment_by`: specify a technical commitment from the
+* `data_usage_commitment`: specify a technical commitment from the
   application editor:
   - `user_ciphered`: technical commitment that the user's data is encrypted
     and can only be known by him.
