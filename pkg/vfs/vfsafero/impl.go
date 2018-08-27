@@ -755,9 +755,9 @@ func (f *aferoFileCreation) Close() (err error) {
 				vfs.PushDiskQuotaAlert(f.afs, true)
 			}
 		} else if err != nil {
-			// remove the temporary file if an error occured
+			// remove the temporary file if an error occurred
 			f.afs.fs.Remove(f.tmppath) // #nosec
-			// If an error has occured that is not due to the index update, we should
+			// If an error has occurred that is not due to the index update, we should
 			// delete the file from the index.
 			if f.olddoc == nil {
 				if _, isCouchErr := couchdb.IsCouchError(err); !isCouchErr {

@@ -60,7 +60,7 @@ type InstallerOptions struct {
 	Registries  []*url.URL
 
 	// Used to override the "Parameters" field of konnectors during installation.
-	// This modification is usefull to allow the parameterization of a konnector
+	// This modification is useful to allow the parameterization of a konnector
 	// at its installation as we do not have yet a registry up and running.
 	OverridenParameters *json.RawMessage
 }
@@ -99,7 +99,7 @@ func NewInstaller(db prefixer.Prefixer, fs Copier, opts *InstallerOptions) (*Ins
 		}
 		src, err = url.Parse(srcString)
 	default:
-		panic("Unknwon installer operation")
+		panic("Unknown installer operation")
 	}
 	if err != nil {
 		return nil, err

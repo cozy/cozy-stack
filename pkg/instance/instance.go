@@ -73,7 +73,7 @@ var (
 	ErrContextNotFound = errors.New("Context not found")
 	// ErrResetAlreadyRequested is returned when a passphrase reset token is already set and valid
 	ErrResetAlreadyRequested = errors.New("The passphrase reset has already been requested")
-	// ErrUnknownAuthMode is returned when an unknwon authentication mode is
+	// ErrUnknownAuthMode is returned when an unknown authentication mode is
 	// used.
 	ErrUnknownAuthMode = errors.New("Unknown authentication mode")
 	// ErrBadTOSVersion is returned when a malformed TOS version is provided.
@@ -1441,7 +1441,7 @@ func (i *Instance) CheckPassphrase(pass []byte) error {
 	return nil
 }
 
-// PickKey choose wich of the Instance keys to use depending on token audience
+// PickKey choose which of the Instance keys to use depending on token audience
 func (i *Instance) PickKey(audience string) ([]byte, error) {
 	switch audience {
 	case permissions.AppAudience,

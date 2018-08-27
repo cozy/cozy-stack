@@ -214,7 +214,7 @@ type ThumbFiler interface {
 }
 
 // VFS is composed of the Indexer and Fs interface. It is the common interface
-// used thoughout the stack to access the VFS.
+// used throughout the stack to access the VFS.
 type VFS interface {
 	Indexer
 	DiskThresholder

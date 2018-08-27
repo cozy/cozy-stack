@@ -512,7 +512,7 @@ func UpdateDoc(db Database, doc Doc) error {
 	}
 
 	url := url.PathEscape(id)
-	// The old doc is requested to be emitted throught RTEvent.
+	// The old doc is requested to be emitted thought RTEvent.
 	// This is useful to keep track of the modifications for the triggers.
 	oldDoc := doc.Clone()
 	err = makeRequest(db, doctype, http.MethodGet, url, nil, oldDoc)

@@ -378,7 +378,7 @@ Type again the domain to confirm: `, domain)
 		err := c.DestroyInstance(domain)
 		if err != nil {
 			errPrintfln(
-				"An error occured while destroying instance for domain %s", domain)
+				"An error occurred while destroying instance for domain %s", domain)
 			return err
 		}
 

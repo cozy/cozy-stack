@@ -160,7 +160,7 @@ var allowedChangesParams = map[string]bool{
 	"timeout":      true,
 	"include_docs": true,
 	"heartbeat":    true, // Pouchdb sends heartbeet even for non-continuous
-	"_nonce":       true, // Pouchdb sends a request hash to avoid agressive caching by some browsers
+	"_nonce":       true, // Pouchdb sends a request hash to avoid aggressive caching by some browsers
 	"seq_interval": true,
 }
 

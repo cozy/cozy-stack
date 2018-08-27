@@ -517,7 +517,7 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 	})
 }
 
-// GetDiscovery displays a form where a recipient can give the adress of their
+// GetDiscovery displays a form where a recipient can give the address of their
 // cozy instance
 func GetDiscovery(c echo.Context) error {
 	inst := middlewares.GetInstance(c)

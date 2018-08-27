@@ -607,7 +607,7 @@ func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
 // Note: if file was renamed + its content has changed, we modify the content
 // first, then rename it, not trying to do both at the same time. We do it in
 // this order because the difficult case is if one operation succeeds and the
-// other fails (if the two suceeds, we are fine; if the two fails, we just
+// other fails (if the two succeeds, we are fine; if the two fails, we just
 // retry), and in that case, it is easier to manage a conflict on dir_id+name
 // than on content: a conflict on different content is resolved by a copy of
 // the file (which is not what we want), a conflict of name+dir_id, the higher
@@ -729,7 +729,7 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 }
 
 // uploadWonConflict manages an upload where a file is in conflict, and the
-// existing file is copied to a new file to let the upload suceed.
+// existing file is copied to a new file to let the upload succeed.
 func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) error {
 	rev := src.Rev()
 	inst.Logger().WithField("nspace", "upload").Debugf("uploadWonConflict %s", rev)
