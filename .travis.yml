@@ -12,7 +12,7 @@ matrix:
     - go: "1.11"
       env: COMMAND=scripts/lint.sh
     - go: "1.11"
-      env: COMMAND=scripts/coverage.sh CODECOV=true
+      env: COMMAND=scripts/unit-test.sh
     - go: "1.10"
       env: COMMAND=scripts/unit-test.sh
     - go: "1.9"
