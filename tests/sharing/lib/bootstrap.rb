@@ -33,7 +33,7 @@ class Bootstrap
     file = CozyFile.create owner, opts
     object.children << dir << file
     recipient = Instance.create name: "Bob"
-    [owner, recipient].map { |i| i.install_app "drive" }
+    [owner, recipient].map { |i| i.install_app "home" }
     rule = Rule.sync object
     Bootstrap.new owner, [recipient], [rule]
   end
@@ -47,7 +47,7 @@ class Bootstrap
     file = CozyFile.create owner, opts
     object.children << dir << file
     recipient = Instance.create name: "Bob"
-    [owner, recipient].map { |i| i.install_app "drive" }
+    [owner, recipient].map { |i| i.install_app "home" }
     rule = Rule.push object
     Bootstrap.new owner, [recipient], [rule]
   end

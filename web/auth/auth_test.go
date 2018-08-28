@@ -198,7 +198,7 @@ func TestLoginWithGoodPassphrase(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://drive.cozy.example.net/",
+		assert.Equal(t, "https://home.cozy.example.net/",
 			res.Header.Get("Location"))
 		cookies := res.Cookies()
 		assert.Len(t, cookies, 2)
@@ -321,7 +321,7 @@ func TestHomeWhenLoggedIn(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://drive.cozy.example.net/",
+		assert.Equal(t, "https://home.cozy.example.net/",
 			res.Header.Get("Location"))
 	}
 }

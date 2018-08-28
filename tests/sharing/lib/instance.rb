@@ -68,7 +68,7 @@ class Instance
   end
 
   def accept(sharing, sharer = nil)
-    @stack.install_app self, "drive"
+    @stack.install_app self, "home"
     Accept.new(sharing, sharer).on self
   end
 end

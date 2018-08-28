@@ -80,6 +80,9 @@ const (
 	HomeSlug = "home"
 	// SettingsSlug is the slog of the settings application.
 	SettingsSlug = "settings"
+	// DriveSlug is the slug of the default app, files, where the user is
+	// redirected after login.
+	DriveSlug = "drive"
 )
 
 const (
