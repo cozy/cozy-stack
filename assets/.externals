@@ -20,12 +20,11 @@ sha256  1a85d1b5cfc977667afd45ef0c8444bdd97dfc75580a52773c73af7e1574a5a1
 
 name    ./js/cozy-bar.min.js
 url     https://unpkg.com/cozy-bar@5.2.0/dist/cozy-bar.min.js
-sha256  55128f4fbf97944f4e92fe1c32f79e0dd5ac34bc936800d9b17e652c60fec17b
+sha256  a37ee65cb7903a80d36a6cc4c5145d7bf3bfa8ab991b9fd84ba086d084462a68
 
 name    ./css/cozy-bar.min.css
 url     https://unpkg.com/cozy-bar@5.2.0/dist/cozy-bar.min.css
-sha256  7ca6e3d7779bf023812e5748942ff59c02063507889b788fb5c11b8030c581d2
-
+sha256  74da86104b4c391284aee24215b6ee524ef5e593fabaf608ed5cc6dce3d47a84
 
 name    ./js/piwik.js
 url     https://piwik.cozycloud.cc/piwik.js
