@@ -525,13 +525,13 @@ func (i *Instance) DefaultRedirection() *url.URL {
 	if !i.OnboardingFinished {
 		return i.SubDomain(consts.OnboardingSlug)
 	}
-	return i.redirection("default_redirection", consts.DriveSlug)
+	return i.redirection("default_redirection", consts.HomeSlug)
 }
 
 // OnboardedRedirection returns the URL where to redirect the user after
 // onboarding
 func (i *Instance) OnboardedRedirection() *url.URL {
-	return i.redirection("onboarded_redirection", consts.DriveSlug)
+	return i.redirection("onboarded_redirection", consts.HomeSlug)
 }
 
 func (i *Instance) installApp(slug string) error {

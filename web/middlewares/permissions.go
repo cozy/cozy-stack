@@ -16,7 +16,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/echo"
-
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
@@ -249,8 +248,7 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) e
 	case permissions.TypeCLI:
 		// OK
 	case permissions.TypeWebapp, permissions.TypeKonnector:
-		if pdoc.SourceID != consts.Apps+"/"+consts.CollectSlug &&
-			pdoc.SourceID != consts.Apps+"/"+consts.StoreSlug {
+		if pdoc.SourceID != consts.Apps+"/"+consts.StoreSlug {
 			return ErrForbidden
 		}
 	default:
