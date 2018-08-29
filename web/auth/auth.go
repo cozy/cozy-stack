@@ -152,7 +152,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	})
 }
 
-func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirect *url.URL, twoFactorToken []byte) error {
+func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirect *url.URL, twoFactorToken []byte, longRunSession bool) error {
 	var title string
 	publicName, err := i.PublicName()
 	if err != nil {
@@ -170,6 +170,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 		"PasswordHelp":     "",
 		"CredentialsError": nil,
 		"Redirect":         redirect.String(),
+		"LongRunSession":   longRunSession,
 		"TwoFactorForm":    true,
 		"TwoFactorToken":   string(twoFactorToken),
 		"CSRF":             c.Get("csrf"),
@@ -253,7 +254,7 @@ func login(c echo.Context) error {
 							"two_factor_token": string(twoFactorToken),
 						})
 					}
-					return renderTwoFactorForm(c, inst, http.StatusOK, redirect, twoFactorToken)
+					return renderTwoFactorForm(c, inst, http.StatusOK, redirect, twoFactorToken, longRunSession)
 				}
 			default:
 				successfulAuthentication = true

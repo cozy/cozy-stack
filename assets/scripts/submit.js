@@ -95,6 +95,7 @@
     event.preventDefault()
     submitButton.setAttribute('disabled', true)
 
+    const longRunSession = longRunSessionCheckbox && longRunSessionCheckbox.checked ? '1' : '0'
     const passcode = twoFactorPasscodeInput.value
     const token = twoFactorTokenInput.value
     const trustDevice = twoFactorTrustDeviceCheckbox.checked ? '1' : '0'
@@ -104,6 +105,7 @@
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
     headers.append('Accept', 'application/json')
     const reqBody = 'two-factor-passcode=' + encodeURIComponent(passcode) +
+      '&long-run-session=' + encodeURIComponent(longRunSession) +
       '&two-factor-token=' + encodeURIComponent(token) +
       '&two-factor-generate-trusted-device-token=' + encodeURIComponent(trustDevice) +
       '&redirect=' + encodeURIComponent(redirect) +
