@@ -489,7 +489,7 @@ URL:
 
 ```http
 HTTP/1.1 302 Moved Temporarily
-Location: https://client.org/?state=Eh6ahshepei5Oojo&access_code=Aih7ohth#
+Location: https://client.org/?state=Eh6ahshepei5Oojo&code=Aih7ohth#
 ```
 
 ### GET /auth/authorize/sharing & POST /auth/authorize/sharing
@@ -502,11 +502,10 @@ POST.
 ### POST /auth/access_token
 
 Now, the client can check that the state is correct, and if it is the case, ask
-for an `access_token`. It can use this route with the `code` (ie access_code)
-given above.
+for an `access_token`. It can use this route with the `code` given above.
 
 This endpoint is also used to refresh the access token, by sending the
-`refresh_token` instead of the `access_code`.
+`refresh_token` instead of the `code`.
 
 The parameters are:
 
