@@ -80,17 +80,17 @@ func TestFindIntent(t *testing.T) {
 	assert.Nil(t, found)
 
 	man.Intents = []Intent{
-		Intent{
+		{
 			Action: "PICK",
 			Types:  []string{"io.cozy.contacts", "io.cozy.calendars"},
 			Href:   "/pick",
 		},
-		Intent{
+		{
 			Action: "OPEN",
 			Types:  []string{"io.cozy.files", "image/gif"},
 			Href:   "/open",
 		},
-		Intent{
+		{
 			Action: "EDIT",
 			Types:  []string{"image/*"},
 			Href:   "/open",
@@ -118,7 +118,7 @@ func TestFindIntent(t *testing.T) {
 	assert.Equal(t, "EDIT", found.Action)
 
 	man.Intents = []Intent{
-		Intent{
+		{
 			Action: "PICK",
 			Href:   "/pick",
 		},

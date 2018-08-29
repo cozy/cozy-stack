@@ -700,7 +700,7 @@ func (f *swiftFileCreationV2) Close() (err error) {
 			// on the container and the old object should be restored.
 			f.fs.c.ObjectDelete(f.fs.container, f.name) // #nosec
 
-			// If an error has occured that is not due to the index update, we should
+			// If an error has occurred that is not due to the index update, we should
 			// delete the file from the index.
 			_, isCouchErr := couchdb.IsCouchError(err)
 			if !isCouchErr && f.olddoc == nil {

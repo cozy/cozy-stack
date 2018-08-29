@@ -22,10 +22,7 @@ func Execute(name string, args []string, fn func() error) error {
 	if err := fn(); err != nil {
 		return err
 	}
-	if err := runHook("post", name, args); err != nil {
-		return err
-	}
-	return nil
+	return runHook("post", name, args)
 }
 
 func runHook(prefix, name string, args []string) error {

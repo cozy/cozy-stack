@@ -556,7 +556,7 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 		}
 	}
 	if hasErr {
-		return errors.New("At least one error occured while executing this command")
+		return errors.New("At least one error occurred while executing this command")
 	}
 	return nil
 }

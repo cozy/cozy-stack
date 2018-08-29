@@ -333,7 +333,7 @@ func injectVariables(remote *Remote, vars map[string]string) error {
 	return err
 }
 
-// ProxyTo calls the external website and proxy the reponse
+// ProxyTo calls the external website and proxy the response
 func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.ResponseWriter, in *http.Request) error {
 	vars, err := extractVariables(remote.Verb, in)
 	if err != nil {

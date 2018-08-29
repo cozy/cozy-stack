@@ -193,7 +193,7 @@ func parseError(opts *Options, res *http.Response) (err error) {
 	return opts.ParseError(res, b)
 }
 
-// ErrSSEParse is used when an error occured while parsing the SSE stream.
+// ErrSSEParse is used when an error occurred while parsing the SSE stream.
 var ErrSSEParse = errors.New("could not parse event stream")
 
 // SSEEvent holds the data of a single SSE event.

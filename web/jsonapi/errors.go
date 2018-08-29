@@ -32,19 +32,18 @@ func (e *Error) Error() string {
 }
 
 // NewError creates a new generic Error
-func NewError(status int, msg ...interface{}) *Error {
-	je := &Error{
+func NewError(status int, detail string) *Error {
+	return &Error{
 		Status: status,
 		Title:  http.StatusText(status),
+		Detail: detail,
 	}
-	if len(msg) > 0 {
-		if format, ok := msg[0].(string); ok {
-			je.Detail = fmt.Sprintf(format, msg[1:]...)
-		} else {
-			je.Detail = fmt.Sprint(msg...)
-		}
-	}
-	return je
+}
+
+// Errorf creates a new generic Error with detail build as Sprintf
+func Errorf(status int, format string, args ...interface{}) *Error {
+	detail := fmt.Sprintf(format, args...)
+	return NewError(status, detail)
 }
 
 // NotFound returns a 404 formatted error

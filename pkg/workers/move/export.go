@@ -512,7 +512,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 }
 
 // splitFilesIndex devides the index into equal size bucket of maximum size
-// `bucketSize`. Files can be splitted into multiple parts to accomodate the
+// `bucketSize`. Files can be splitted into multiple parts to accommodate the
 // bucket size, using a range. It is used to be able to download the files into
 // separate chunks.
 //

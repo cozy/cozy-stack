@@ -62,7 +62,7 @@ func installMiniApp() error {
 		DocSource: "git://github.com/cozy/mini.git",
 		DocState:  apps.Ready,
 		Intents: []apps.Intent{
-			apps.Intent{
+			{
 				Action: "PICK",
 				Types:  []string{"io.cozy.foos"},
 				Href:   "/foo",

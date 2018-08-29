@@ -255,16 +255,16 @@ func ExtractPaginationCursor(c echo.Context, defaultLimit int) (couchdb.Cursor, 
 		var parts []interface{}
 		err := json.Unmarshal([]byte(cursor), &parts)
 		if err != nil {
-			return nil, NewError(http.StatusBadRequest, "bad json cursor %s", cursor)
+			return nil, Errorf(http.StatusBadRequest, "bad json cursor %s", cursor)
 		}
 
 		if len(parts) != 2 {
-			return nil, NewError(http.StatusBadRequest, "bad cursor length %s", cursor)
+			return nil, Errorf(http.StatusBadRequest, "bad cursor length %s", cursor)
 		}
 		nextKey := parts[0]
 		nextDocID, ok := parts[1].(string)
 		if !ok {
-			return nil, NewError(http.StatusBadRequest, "bad cursor id %s", cursor)
+			return nil, Errorf(http.StatusBadRequest, "bad cursor id %s", cursor)
 		}
 
 		return couchdb.NewKeyCursor(limit, nextKey, nextDocID), nil

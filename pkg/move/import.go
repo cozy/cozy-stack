@@ -173,7 +173,7 @@ func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc,
 	dirname := path.Join(dstDoc.Fullpath, path.Dir(name))
 	dirDoc, ok := dirs[dirname]
 	if !ok {
-		// XXX Tarball from cozy v2 exports can have files in a non-existant directory
+		// XXX Tarball from cozy v2 exports can have files in a non-existent directory
 		if dirDoc, err = vfs.MkdirAll(fs, dirname, nil); err != nil {
 			return err
 		}

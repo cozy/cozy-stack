@@ -29,7 +29,7 @@ func registerPassphrase(c echo.Context) error {
 
 	registerToken, err := hex.DecodeString(args.Register)
 	if err != nil {
-		return jsonapi.NewError(http.StatusBadRequest, err)
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
 	passphrase := []byte(args.Passphrase)

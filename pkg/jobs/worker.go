@@ -354,7 +354,7 @@ func (t *task) run() (err error) {
 	defer func() {
 		if t.conf.WorkerCommit != nil {
 			if errc := t.conf.WorkerCommit(t.ctx, err); errc != nil {
-				t.ctx.Logger().Warnf("Error while commiting job: %s",
+				t.ctx.Logger().Warnf("Error while committing job: %s",
 					errc.Error())
 			}
 		}
