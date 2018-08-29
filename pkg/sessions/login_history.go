@@ -185,11 +185,11 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry, clientRegistrati
 		changePassphraseURL.Fragment = "/profile"
 		templateName = "new_connexion"
 		templateValues = map[string]interface{}{
-			"City":    l.City,
-			"Country": l.Country,
-			"IP":      l.IP,
-			"Browser": l.Browser,
-			"OS":      l.OS,
+			"City":                 l.City,
+			"Country":              l.Country,
+			"IP":                   l.IP,
+			"Browser":              l.Browser,
+			"OS":                   l.OS,
 			"ChangePassphraseLink": changePassphraseURL.String(),
 		}
 	}

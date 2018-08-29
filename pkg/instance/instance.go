@@ -1246,7 +1246,8 @@ func deleteAccounts(i *Instance) {
 			j, ok := e.Doc.(*couchdb.JSONDoc)
 			if ok {
 				deleted, _ := j.M["account_deleted"].(bool)
-				state, _ := j.M["state"].(string)
+				stateStr, _ := j.M["state"].(string)
+				state := jobs.State(stateStr)
 				if deleted && (state == jobs.Done || state == jobs.Errored) {
 					accountsCount--
 					if accountsCount == 0 {
