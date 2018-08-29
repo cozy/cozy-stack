@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -57,9 +58,14 @@ func start(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, url)
 }
 
-func redirectToDataCollect(c echo.Context, account *accounts.Account, clientState string) error {
+func redirectToApp(c echo.Context, account *accounts.Account, clientState string) error {
 	instance := middlewares.GetInstance(c)
-	u := instance.SubDomain(consts.CollectSlug)
+	slug := consts.HomeSlug
+	man, err := apps.GetWebappBySlug(instance, slug)
+	if err != nil || man == nil {
+		slug = consts.CollectSlug
+	}
+	u := instance.SubDomain(slug)
 	vv := &url.Values{}
 	vv.Add("account", account.ID())
 	if clientState != "" {
@@ -141,7 +147,7 @@ func redirect(c echo.Context) error {
 	}
 
 	c.Set("instance", i.WithContextualDomain(c.Request().Host))
-	return redirectToDataCollect(c, account, clientState)
+	return redirectToApp(c, account, clientState)
 }
 
 // refresh is an internal route used by konnectors to refresh accounts

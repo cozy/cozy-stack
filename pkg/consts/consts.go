@@ -77,6 +77,9 @@ const (
 	// StoreSlug is the slug of the store application: it can install
 	// konnectors and applications.
 	StoreSlug = "store"
+	// HomeSlug is the slug of the default app, where the user is redirected
+	// after login.
+	HomeSlug = "home"
 	// CollectSlug is the slug of the collect application: it can install
 	// konnectors and applications.
 	CollectSlug = "collect"

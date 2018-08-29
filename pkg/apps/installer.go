@@ -396,6 +396,7 @@ func isPlatformApp(man Manifest) bool {
 		"onboarding",
 		"settings",
 		"collect",
+		"home",
 		"photos",
 		"drive",
 		"store",
