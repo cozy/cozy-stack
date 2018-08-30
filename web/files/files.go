@@ -113,7 +113,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 	var err error
 	if path != "" {
 		if c.QueryParam("Recursive") == "true" {
-			doc, err = vfs.MkdirAll(fs, path, tags)
+			doc, err = vfs.MkdirAll(fs, path)
 		} else {
 			doc, err = vfs.Mkdir(fs, path, tags)
 		}

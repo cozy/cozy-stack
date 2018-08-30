@@ -243,7 +243,7 @@ func ensureFolderToSave(inst *instance.Instance, msg *konnectorMessage, slug str
 		"?", "_", "<", "_", ">", "_", "{", "_", "}", "_")
 	accountName := r.Replace(account.Name)
 	folderPath := fmt.Sprintf("/%s/%s/%s", admin, strings.Title(slug), accountName)
-	dir, err := vfs.MkdirAll(fs, folderPath, nil)
+	dir, err := vfs.MkdirAll(fs, folderPath)
 	if err != nil {
 		log := inst.Logger().WithField("nspace", "konnector")
 		log.Warnf("Can't create the default folder %s: %s", folderPath, err)
