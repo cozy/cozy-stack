@@ -176,12 +176,29 @@ func Bind(body io.Reader, attrs interface{}) (*ObjectMarshalling, error) {
 	if err := json.Unmarshal(*doc.Data, &obj); err != nil {
 		return nil, err
 	}
-	if obj.Attributes != nil {
+	if obj.Attributes != nil && attrs != nil {
 		if err := json.Unmarshal(*obj.Attributes, &attrs); err != nil {
 			return nil, err
 		}
 	}
 	return obj, nil
+}
+
+// BindCompound is used to unmarshal an compound input JSONApi document.
+func BindCompound(body io.Reader) ([]*ObjectMarshalling, error) {
+	decoder := json.NewDecoder(body)
+	var doc *Document
+	if err := decoder.Decode(&doc); err != nil {
+		return nil, err
+	}
+	if doc.Data == nil {
+		return nil, BadJSON()
+	}
+	var objs []*ObjectMarshalling
+	if err := json.Unmarshal(*doc.Data, &objs); err != nil {
+		return nil, err
+	}
+	return objs, nil
 }
 
 // BindRelations extracts a Relationships request ( a list of ResourceIdentifier)

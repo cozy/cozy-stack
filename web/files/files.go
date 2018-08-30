@@ -20,7 +20,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -33,6 +32,15 @@ import (
 	"github.com/cozy/echo"
 	statikFS "github.com/cozy/statik/fs"
 )
+
+type docPatch struct {
+	docID   string
+	docPath string
+
+	Trash  bool `json:"move_to_trash,omitempty"`
+	Delete bool `json:"permanent_delete,omitempty"`
+	vfs.DocPatch
+}
 
 // TagSeparator is the character separating tags
 const TagSeparator = ","
@@ -217,18 +225,31 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 // It can be used to modify the file or directory metadata, as well as
 // moving and renaming it in the filesystem.
 func ModifyMetadataByIDHandler(c echo.Context) error {
-	patch, err := getPatch(c)
+	patch, err := getPatch(c, c.Param("file-id"), "")
 	if err != nil {
 		return WrapVfsError(err)
 	}
+	i := middlewares.GetInstance(c)
+	if err = applyPatch(c, i.VFS(), patch); err != nil {
+		return WrapVfsError(err)
+	}
+	return nil
+}
 
-	instance := middlewares.GetInstance(c)
-	dir, file, err := instance.VFS().DirOrFileByID(c.Param("file-id"))
+// ModifyMetadataByIDInBatchHandler handles PATCH requests on /files/.
+//
+// It can be used to modify many files or directories metadata, as well as
+// moving and renaming it in the filesystem, in batch.
+func ModifyMetadataByIDInBatchHandler(c echo.Context) error {
+	patches, err := getPatches(c)
 	if err != nil {
 		return WrapVfsError(err)
 	}
-
-	return applyPatch(c, instance, patch, dir, file)
+	i := middlewares.GetInstance(c)
+	if err = applyPatches(c, i.VFS(), patches); err != nil {
+		return WrapVfsError(err)
+	}
+	return nil
 }
 
 // ModifyMetadataByPathHandler handles PATCH requests on /files/:file-id
@@ -236,28 +257,26 @@ func ModifyMetadataByIDHandler(c echo.Context) error {
 // It can be used to modify the file or directory metadata, as well as
 // moving and renaming it in the filesystem.
 func ModifyMetadataByPathHandler(c echo.Context) error {
-	patch, err := getPatch(c)
+	patch, err := getPatch(c, "", c.QueryParam("Path"))
 	if err != nil {
 		return WrapVfsError(err)
 	}
-
-	instance := middlewares.GetInstance(c)
-	dir, file, err := instance.VFS().DirOrFileByPath(c.QueryParam("Path"))
-	if err != nil {
+	i := middlewares.GetInstance(c)
+	if err = applyPatch(c, i.VFS(), patch); err != nil {
 		return WrapVfsError(err)
 	}
-
-	return applyPatch(c, instance, patch, dir, file)
+	return nil
 }
 
-func getPatch(c echo.Context) (*vfs.DocPatch, error) {
-	var patch vfs.DocPatch
-
+func getPatch(c echo.Context, docID, docPath string) (*docPatch, error) {
+	var patch docPatch
 	obj, err := jsonapi.Bind(c.Request().Body, &patch)
 	if err != nil {
 		return nil, jsonapi.BadJSON()
 	}
-
+	patch.docID = docID
+	patch.docPath = docPath
+	patch.RestorePath = nil
 	if rel, ok := obj.GetRelationship("parent"); ok {
 		rid, ok := rel.ResourceIdentifier()
 		if !ok {
@@ -265,12 +284,51 @@ func getPatch(c echo.Context) (*vfs.DocPatch, error) {
 		}
 		patch.DirID = &rid.ID
 	}
-
-	patch.RestorePath = nil
 	return &patch, nil
 }
 
-func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch, dir *vfs.DirDoc, file *vfs.FileDoc) error {
+func getPatches(c echo.Context) ([]*docPatch, error) {
+	req := c.Request()
+	objs, err := jsonapi.BindCompound(req.Body)
+	if err != nil {
+		return nil, jsonapi.BadJSON()
+	}
+	patches := make([]*docPatch, len(objs))
+	for i, obj := range objs {
+		var patch docPatch
+		if obj.Attributes == nil {
+			return nil, jsonapi.BadJSON()
+		}
+		if err = json.Unmarshal(*obj.Attributes, &patch); err != nil {
+			return nil, err
+		}
+		patch.docID = obj.ID
+		patch.docPath = ""
+		patch.RestorePath = nil
+		if rel, ok := obj.GetRelationship("parent"); ok {
+			rid, ok := rel.ResourceIdentifier()
+			if !ok {
+				return nil, jsonapi.BadJSON()
+			}
+			patch.DirID = &rid.ID
+		}
+		patches[i] = &patch
+	}
+	return patches, nil
+}
+
+func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
+	var file *vfs.FileDoc
+	var dir *vfs.DirDoc
+	if patch.docID != "" {
+		dir, file, err = fs.DirOrFileByID(patch.docID)
+	} else {
+		dir, file, err = fs.DirOrFileByPath(patch.docPath)
+	}
+	if err != nil {
+		return err
+	}
+
 	var rev string
 	if dir != nil {
 		rev = dir.Rev()
@@ -278,27 +336,88 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 		rev = file.Rev()
 	}
 
-	if err := CheckIfMatch(c, rev); err != nil {
-		return WrapVfsError(err)
+	if err = CheckIfMatch(c, rev); err != nil {
+		return err
 	}
 
-	if err := checkPerm(c, permissions.PATCH, dir, file); err != nil {
+	if err = checkPerm(c, permissions.PATCH, dir, file); err != nil {
+		return err
+	}
+
+	if patch.Delete {
+		if dir != nil {
+			err = fs.DestroyDirAndContent(dir)
+		} else {
+			err = fs.DestroyFile(file)
+		}
+	} else if patch.Trash {
+		if dir != nil {
+			dir, err = vfs.TrashDir(fs, dir)
+		} else {
+			file, err = vfs.TrashFile(fs, file)
+		}
+	} else {
+		if dir != nil {
+			dir, err = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
+		} else {
+			file, err = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
+		}
+	}
+	if err != nil {
 		return err
 	}
 
 	if dir != nil {
-		doc, err := vfs.ModifyDirMetadata(instance.VFS(), dir, patch)
-		if err != nil {
-			return WrapVfsError(err)
-		}
-		return dirData(c, http.StatusOK, doc)
+		return dirData(c, http.StatusOK, dir)
+	}
+	return fileData(c, http.StatusOK, file, nil)
+}
+
+func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) error {
+	type dirOrFile struct {
+		dir   *vfs.DirDoc
+		file  *vfs.FileDoc
+		patch *docPatch
 	}
 
-	doc, err := vfs.ModifyFileMetadata(instance.VFS(), file, patch)
-	if err != nil {
-		return WrapVfsError(err)
+	dirOrFiles := make([]dirOrFile, len(patches))
+	for i, patch := range patches {
+		dir, file, err := fs.DirOrFileByID(patch.docID)
+		if err != nil {
+			return err
+		}
+		if err = checkPerm(c, permissions.PATCH, dir, file); err != nil {
+			return err
+		}
+		dirOrFiles[i] = dirOrFile{dir, file, patch}
 	}
-	return fileData(c, http.StatusOK, doc, nil)
+
+	var err error
+	for _, p := range dirOrFiles {
+		if p.patch.Delete {
+			if p.dir != nil {
+				err = fs.DestroyDirAndContent(p.dir)
+			} else {
+				err = fs.DestroyFile(p.file)
+			}
+		} else if p.patch.Trash {
+			if p.dir != nil {
+				_, err = vfs.TrashDir(fs, p.dir)
+			} else {
+				_, err = vfs.TrashFile(fs, p.file)
+			}
+		} else {
+			if p.dir != nil {
+				_, err = vfs.ModifyDirMetadata(fs, p.dir, &p.patch.DocPatch)
+			} else {
+				_, err = vfs.ModifyFileMetadata(fs, p.file, &p.patch.DocPatch)
+			}
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 // ReadMetadataFromIDHandler handles all GET requests on /files/:file-
@@ -629,10 +748,6 @@ func TrashHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	fileID := c.Param("file-id")
-	if fileID == "" {
-		fileID = c.Param("docid") // Used by sharings.deleteDocument
-	}
-
 	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)
@@ -858,6 +973,7 @@ func Routes(router *echo.Group) {
 
 	router.PATCH("/metadata", ModifyMetadataByPathHandler)
 	router.PATCH("/:file-id", ModifyMetadataByIDHandler)
+	router.PATCH("/", ModifyMetadataByIDInBatchHandler)
 
 	router.POST("/", CreationHandler)
 	router.POST("/:file-id", CreationHandler)
@@ -987,6 +1103,10 @@ func CheckIfMatch(c echo.Context, rev string) error {
 	if revQuery != "" && wantedRev == "" {
 		wantedRev = revQuery
 	}
+	return checkIfMatch(rev, wantedRev)
+}
+
+func checkIfMatch(rev, wantedRev string) error {
 	if wantedRev != "" && rev != wantedRev {
 		return jsonapi.PreconditionFailed("If-Match", fmt.Errorf("Revision does not match"))
 	}
@@ -997,7 +1117,6 @@ func checkPerm(c echo.Context, v pkgperm.Verb, d *vfs.DirDoc, f *vfs.FileDoc) er
 	if d != nil {
 		return middlewares.AllowVFS(c, v, d)
 	}
-
 	return middlewares.AllowVFS(c, v, f)
 }
 
