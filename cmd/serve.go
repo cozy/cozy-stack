@@ -146,9 +146,6 @@ func init() {
 	flags.String("couchdb-url", "http://localhost:5984/", "CouchDB URL")
 	checkNoErr(viper.BindPFlag("couchdb.url", flags.Lookup("couchdb-url")))
 
-	flags.String("cache-url", "", "URL for the cache, redis or in-memory")
-	checkNoErr(viper.BindPFlag("cache.url", flags.Lookup("cache-url")))
-
 	flags.String("lock-url", "", "URL for the locks, redis or in-memory")
 	checkNoErr(viper.BindPFlag("lock.url", flags.Lookup("lock-url")))
 

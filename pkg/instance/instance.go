@@ -559,10 +559,6 @@ func (i *Instance) update() error {
 		i.Logger().Errorf("Could not update: %s", err.Error())
 		return err
 	}
-	getCache().Revoke(i.Domain)
-	for _, alias := range i.DomainAliases {
-		getCache().Revoke(alias)
-	}
 	return nil
 }
 
@@ -759,15 +755,9 @@ func Get(domain string) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	cache := getCache()
-
-	i := cache.Get(domain)
-	if i == nil {
-		i, err = getFromCouch(domain)
-		if err != nil {
-			return nil, err
-		}
-		cache.Set(domain, i)
+	i, err := getFromCouch(domain)
+	if err != nil {
+		return nil, err
 	}
 
 	// This retry-loop handles the probability to hit an Update conflict from
@@ -1197,12 +1187,6 @@ func DestroyWithoutHooks(domain string) error {
 			}
 		}
 	}
-	defer func() {
-		getCache().Revoke(domain)
-		for _, alias := range i.DomainAliases {
-			getCache().Revoke(alias)
-		}
-	}()
 
 	if err = couchdb.DeleteAllDBs(i); err != nil {
 		i.Logger().Errorf("Could not delete all CouchDB databases: %s", err.Error())
