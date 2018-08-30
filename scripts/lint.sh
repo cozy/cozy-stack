@@ -11,6 +11,5 @@ if git grep -l \
   exit 1
 fi
 
-go get -u github.com/alecthomas/gometalinter
-gometalinter --install
-gometalinter --config=.golinter ./...
+go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+golangci-lint run -D errcheck -E gofmt

@@ -45,10 +45,10 @@ QUIT
 `}
 
 	expectedHeaders := map[string]string{
-		"From":    "me@me",
-		"To":      "you1@you",
-		"Subject": "Up?",
-		"Date":    "Mon, 01 Jan 0001 00:00:00 +0000",
+		"From":                      "me@me",
+		"To":                        "you1@you",
+		"Subject":                   "Up?",
+		"Date":                      "Mon, 01 Jan 0001 00:00:00 +0000",
 		"Content-Transfer-Encoding": "quoted-printable",
 		"Content-Type":              "text/plain; charset=UTF-8",
 		"Mime-Version":              "1.0",
@@ -101,10 +101,10 @@ QUIT
 `}
 
 	expectedHeaders := map[string]string{
-		"From":    "me@me",
-		"To":      "you1@you",
-		"Subject": "Up?",
-		"Date":    "Mon, 01 Jan 0001 00:00:00 +0000",
+		"From":                      "me@me",
+		"To":                        "you1@you",
+		"Subject":                   "Up?",
+		"Date":                      "Mon, 01 Jan 0001 00:00:00 +0000",
 		"Content-Transfer-Encoding": "quoted-printable",
 		"Content-Type":              "text/html; charset=UTF-8",
 		"Mime-Version":              "1.0",

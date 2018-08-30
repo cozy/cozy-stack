@@ -19,11 +19,11 @@ const (
 	// Queued state
 	Queued State = "queued"
 	// Running state
-	Running = "running"
+	Running State = "running"
 	// Done state
-	Done = "done"
+	Done State = "done"
 	// Errored state
-	Errored = "errored"
+	Errored State = "errored"
 )
 
 const (

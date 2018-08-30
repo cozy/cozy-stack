@@ -65,14 +65,14 @@ func (m *konnectorMessage) ToJSON() string {
 // konnectorResult stores the result of a konnector execution.
 // TODO: remove this type kept for retro-compatibility.
 type konnectorResult struct {
-	DocID       string    `json:"_id,omitempty"`
-	DocRev      string    `json:"_rev,omitempty"`
-	CreatedAt   time.Time `json:"last_execution"`
-	LastSuccess time.Time `json:"last_success"`
-	Account     string    `json:"account"`
-	AccountRev  string    `json:"account_rev"`
-	State       string    `json:"state"`
-	Error       string    `json:"error"`
+	DocID       string     `json:"_id,omitempty"`
+	DocRev      string     `json:"_rev,omitempty"`
+	CreatedAt   time.Time  `json:"last_execution"`
+	LastSuccess time.Time  `json:"last_success"`
+	Account     string     `json:"account"`
+	AccountRev  string     `json:"account_rev"`
+	State       jobs.State `json:"state"`
+	Error       string     `json:"error"`
 }
 
 // beforeHookKonnector skips jobs from trigger that are failing on certain
@@ -397,7 +397,8 @@ func (w *konnectorWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
 		lastResult = nil
 	}
 
-	var state, errstr string
+	var state jobs.State
+	var errstr string
 	var lastSuccess time.Time
 	if errjob != nil {
 		if lastResult != nil {
