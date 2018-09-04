@@ -174,7 +174,7 @@ func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc,
 	dirDoc, ok := dirs[dirname]
 	if !ok {
 		// XXX Tarball from cozy v2 exports can have files in a non-existent directory
-		if dirDoc, err = vfs.MkdirAll(fs, dirname, nil); err != nil {
+		if dirDoc, err = vfs.MkdirAll(fs, dirname); err != nil {
 			return err
 		}
 		dirs[dirname] = dirDoc
@@ -251,7 +251,7 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 						err = fs.CreateDir(dir)
 					}
 				} else {
-					dir, err = vfs.MkdirAll(fs, dirname, nil)
+					dir, err = vfs.MkdirAll(fs, dirname)
 				}
 				if err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import directory %s: %s", hdr.Name, err)

@@ -74,11 +74,11 @@ func unzip(fs vfs.VFS, zipID, destination string) error {
 			var ok bool
 			dirname = path.Join(dstDoc.Fullpath, dirname)
 			if dir, ok = dirs[dirname]; !ok {
-				dir, err = vfs.MkdirAll(fs, dirname, nil)
+				dir, err = vfs.MkdirAll(fs, dirname)
 				if err != nil {
 					if couchdb.IsConflictError(err) {
 						dirname = fmt.Sprintf("%s - conflict - %d", dirname, time.Now().Unix())
-						dir, err = vfs.MkdirAll(fs, dirname, nil)
+						dir, err = vfs.MkdirAll(fs, dirname)
 					}
 					if err != nil {
 						return err

@@ -405,7 +405,7 @@ func Mkdir(fs VFS, name string, tags []string) (*DirDoc, error) {
 
 // MkdirAll creates a directory named path, along with any necessary
 // parents, and returns nil, or else returns an error.
-func MkdirAll(fs VFS, name string, tags []string) (*DirDoc, error) {
+func MkdirAll(fs VFS, name string) (*DirDoc, error) {
 	var err error
 	var dirs []string
 	var base, file string
@@ -737,7 +737,7 @@ func getRestoreDir(fs VFS, name, restorePath string) (*DirDoc, error) {
 	// directory hierarchy to restore the file in.
 	restoreDir, err := fs.DirByPath(restorePath)
 	if os.IsNotExist(err) {
-		return MkdirAll(fs, restorePath, nil)
+		return MkdirAll(fs, restorePath)
 	}
 	return restoreDir, err
 }

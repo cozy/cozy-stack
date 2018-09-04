@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -19,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/sirupsen/logrus"
 
 	"github.com/cozy/afero"
@@ -102,70 +104,51 @@ func (r *konnectorResult) Clone() couchdb.Doc { c := *r; return &c }
 func (r *konnectorResult) SetID(id string)    { r.DocID = id }
 func (r *konnectorResult) SetRev(rev string)  { r.DocRev = rev }
 
-func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir string, err error) {
+func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (string, error) {
+	var err error
 	var data json.RawMessage
 	var msg konnectorMessage
-	{
-		if err = ctx.UnmarshalMessage(&data); err != nil {
-			return
-		}
-		if err = json.Unmarshal(data, &msg); err != nil {
-			return
-		}
-		msg.data = data
+	if err = ctx.UnmarshalMessage(&data); err != nil {
+		return "", err
 	}
+	if err = json.Unmarshal(data, &msg); err != nil {
+		return "", err
+	}
+	msg.data = data
 
 	slug := msg.Konnector
 	w.slug = slug
 	w.msg = &msg
 	w.man, err = apps.GetKonnectorBySlug(i, slug)
-	if err != nil {
-		if err == apps.ErrNotFound {
-			err = jobs.ErrBadTrigger{Err: err}
-		}
-		return
+	if err == apps.ErrNotFound {
+		return "", jobs.ErrBadTrigger{Err: err}
+	} else if err != nil {
+		return "", err
 	}
 
 	// Check that the associated account is present.
+	var account *accounts.Account
 	if msg.Account != "" && !ctx.Manual() && !msg.AccountDeleted {
-		err = couchdb.GetDoc(i, consts.Accounts, msg.Account, nil)
+		account := &accounts.Account{}
+		err = couchdb.GetDoc(i, consts.Accounts, msg.Account, account)
 		if couchdb.IsNotFoundError(err) {
-			err = jobs.ErrBadTrigger{Err: err}
-			return
-		}
-	}
-
-	man := w.man
-
-	// If we get the AccountDeleted flag on, we check if the konnector manifest
-	// has defined an "on_delete_account" field, containing the path of the file
-	// to execute on account deletation. If no such field is present, the job is
-	// aborted.
-	var fileExecPath string
-	if w.msg.AccountDeleted {
-		// make sure we are not executing a path outside of the konnector's
-		// directory
-		fileExecPath = path.Join("/", path.Clean(w.man.OnDeleteAccount))
-		fileExecPath = fileExecPath[1:]
-		if fileExecPath == "" {
-			err = jobs.ErrAbort
-			return
+			return "", jobs.ErrBadTrigger{Err: err}
 		}
 	}
 
 	// TODO: disallow konnectors on state Installed to be run when we define our
 	// workflow to accept permissions changes on konnectors.
+	man := w.man
 	if s := man.State(); s != apps.Ready && s != apps.Installed {
-		err = errors.New("Konnector is not ready")
-		return
+		return "", errors.New("Konnector is not ready")
 	}
 
+	var workDir string
 	osFS := afero.NewOsFs()
 	workDir, err = afero.TempDir(osFS, "", "konnector-"+slug)
 	if err != nil {
-		return
+		return "", err
 	}
-
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fileServer := i.KonnectorsFileServer()
@@ -179,39 +162,102 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 		err = copyFiles(workFS, fileServer, slug, man.Version())
 	}
 	if err != nil {
-		return
+		return "", err
 	}
 
 	// Create the folder in which the konnector has the right to write.
-	// {
-	// 	fs := i.VFS()
-	// 	folderToSave := msg.FolderToSave
-	// 	if folderToSave != "" {
-	// 		if _, err = fs.DirByID(folderToSave); os.IsNotExist(err) {
-	// 			folderToSave = ""
-	// 		}
-	// 	}
-	// 	if folderToSave == "" {
-	// 		defaultFolderPath := msg.DefaultFolderPath
-	// 		if defaultFolderPath == "" {
-	// 			name := i.Translate("Tree Administrative")
-	// 			defaultFolderPath = fmt.Sprintf("/%s/%s", name, strings.Title(slug))
-	// 		}
-	// 		var dir *vfs.DirDoc
-	// 		dir, err = vfs.MkdirAll(fs, defaultFolderPath, nil)
-	// 		if err != nil {
-	// 			log := logger.WithDomain(i.Domain)
-	// 			log.Warnf("Can't create the default folder %s for konnector %s: %s", defaultFolderPath, slug, err)
-	// 			return
-	// 		}
-	// 		msg.FolderToSave = dir.ID()
-	// 	}
-	// }
+	if err = ensureFolderToSave(i, &msg, slug, account); err != nil {
+		return "", nil
+	}
 
-	if fileExecPath != "" {
+	// If we get the AccountDeleted flag on, we check if the konnector manifest
+	// has defined an "on_delete_account" field, containing the path of the file
+	// to execute on account deletation. If no such field is present, the job is
+	// aborted.
+	if w.msg.AccountDeleted {
+		// make sure we are not executing a path outside of the konnector's
+		// directory
+		fileExecPath := path.Join("/", path.Clean(w.man.OnDeleteAccount))
+		fileExecPath = fileExecPath[1:]
+		if fileExecPath == "" {
+			return "", jobs.ErrAbort
+		}
 		workDir = path.Join(workDir, fileExecPath)
 	}
-	return
+
+	return workDir, nil
+}
+
+// ensureFolderToSave tries hard to give a folder to the konnector where it can
+// write its files if it needs to do so.
+func ensureFolderToSave(inst *instance.Instance, msg *konnectorMessage, slug string, account *accounts.Account) error {
+	fs := inst.VFS()
+
+	// 1. Check if the folder identified by its ID exists
+	if msg.FolderToSave != "" {
+		dir, err := fs.DirByID(msg.FolderToSave)
+		if err == nil {
+			if !strings.HasPrefix(dir.Fullpath, vfs.TrashDirName) {
+				return nil
+			}
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	// 2. Check if the konnector has a reference to a folder
+	start := []string{consts.Konnectors, consts.Konnectors + "/" + slug}
+	end := []string{start[0], start[1], couchdb.MaxString}
+	req := &couchdb.ViewRequest{
+		StartKey:    start,
+		EndKey:      end,
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+	if err := couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res); err == nil {
+		count := 0
+		dirID := ""
+		for _, row := range res.Rows {
+			dir := &vfs.DirDoc{}
+			if err := couchdb.GetDoc(inst, consts.Files, row.ID, dir); err == nil {
+				if !strings.HasPrefix(dir.Fullpath, vfs.TrashDirName) {
+					count++
+					dirID = row.ID
+				}
+			}
+		}
+		if count == 1 {
+			msg.FolderToSave = dirID
+			return nil
+		}
+	}
+
+	// 3. Recreate the folder
+	if account == nil {
+		return nil
+	}
+	admin := inst.Translate("Tree Administrative")
+	r := strings.NewReplacer("&", "_", "/", "_", "\\", "_", "#", "_",
+		",", "_", "+", "_", "(", "_", ")", "_", "$", "_", "@", "_", "~",
+		"_", "%", "_", ".", "_", "'", "_", "\"", "_", ":", "_", "*", "_",
+		"?", "_", "<", "_", ">", "_", "{", "_", "}", "_")
+	accountName := r.Replace(account.Name)
+	folderPath := fmt.Sprintf("/%s/%s/%s", admin, strings.Title(slug), accountName)
+	dir, err := vfs.MkdirAll(fs, folderPath)
+	if err != nil {
+		log := inst.Logger().WithField("nspace", "konnector")
+		log.Warnf("Can't create the default folder %s: %s", folderPath, err)
+		return err
+	}
+	msg.FolderToSave = dir.ID()
+	if len(dir.ReferencedBy) == 0 {
+		dir.AddReferencedBy(couchdb.DocReference{
+			Type: consts.Konnectors,
+			ID:   consts.Konnectors + "/" + slug,
+		})
+		couchdb.UpdateDoc(inst, dir)
+	}
+	return nil
 }
 
 func copyFiles(workFS afero.Fs, fileServer apps.FileServer, slug, version string) error {
