@@ -24,7 +24,10 @@ const bearerAuthScheme = "Bearer "
 const basicAuthScheme = "Basic "
 const contextPermissionDoc = "permissions_doc"
 
-var errForbidden = echo.NewHTTPError(http.StatusForbidden)
+// ErrForbidden is used to send a forbidden response when the request does not
+// have the right permissions.
+var ErrForbidden = echo.NewHTTPError(http.StatusForbidden)
+
 var errNoToken = echo.NewHTTPError(http.StatusUnauthorized, "No token in request")
 
 // CheckRegisterToken returns true if the registerToken is set and match the
@@ -166,7 +169,7 @@ func AllowWholeType(c echo.Context, v permissions.Verb, doctype string) error {
 		return err
 	}
 	if !pdoc.Permissions.AllowWholeType(v, doctype) {
-		return errForbidden
+		return ErrForbidden
 	}
 	return nil
 }
@@ -178,7 +181,7 @@ func Allow(c echo.Context, v permissions.Verb, o permissions.Matcher) error {
 		return err
 	}
 	if !pdoc.Permissions.Allow(v, o) {
-		return errForbidden
+		return ErrForbidden
 	}
 	return nil
 }
@@ -191,7 +194,7 @@ func AllowOnFields(c echo.Context, v permissions.Verb, o permissions.Matcher, fi
 		return err
 	}
 	if !pdoc.Permissions.AllowOnFields(v, o, fields...) {
-		return errForbidden
+		return ErrForbidden
 	}
 	return nil
 }
@@ -203,7 +206,7 @@ func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) erro
 		return err
 	}
 	if !pdoc.Permissions.AllowID(v, doctype, id) {
-		return errForbidden
+		return ErrForbidden
 	}
 	return nil
 }
@@ -217,7 +220,7 @@ func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Matcher) error {
 	}
 	err = vfs.Allows(instance.VFS(), pdoc.Permissions, v, o)
 	if err != nil {
-		return errForbidden
+		return ErrForbidden
 	}
 	return nil
 }
@@ -248,13 +251,13 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) e
 	case permissions.TypeWebapp, permissions.TypeKonnector:
 		if pdoc.SourceID != consts.Apps+"/"+consts.CollectSlug &&
 			pdoc.SourceID != consts.Apps+"/"+consts.StoreSlug {
-			return errForbidden
+			return ErrForbidden
 		}
 	default:
-		return errForbidden
+		return ErrForbidden
 	}
 	if !pdoc.Permissions.AllowWholeType(v, docType) {
-		return errForbidden
+		return ErrForbidden
 	}
 	return nil
 }
@@ -267,10 +270,10 @@ func AllowForApp(c echo.Context, v permissions.Verb, o permissions.Matcher) (slu
 		return "", err
 	}
 	if pdoc.Type != permissions.TypeWebapp && pdoc.Type != permissions.TypeKonnector {
-		return "", errForbidden
+		return "", ErrForbidden
 	}
 	if !pdoc.Permissions.Allow(v, o) {
-		return "", errForbidden
+		return "", ErrForbidden
 	}
 	return pdoc.SourceID, nil
 }
