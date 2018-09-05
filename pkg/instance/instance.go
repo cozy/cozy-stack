@@ -1055,8 +1055,8 @@ func (i *Instance) getClouderyClient() *ws.OAuthRestJSONClient {
 		return nil
 	}
 
-	baseURL := context["manager_url"].(string)
-	token := context["manager_token"].(string)
+	baseURL, _ := context["manager_url"].(string)
+	token, _ := context["manager_token"].(string)
 	if baseURL == "" || token == "" {
 		return nil
 	}
