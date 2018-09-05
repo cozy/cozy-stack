@@ -90,7 +90,9 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	for _, infos := range ts {
 		t, err := fromTriggerInfos(infos)
 		if err != nil {
-			return err
+			joblog.Errorf("Could not start trigger with ID %s: %s",
+				infos.ID(), err.Error())
+			continue
 		}
 		s.ts[t.DBPrefix()+"/"+infos.TID] = t
 		go s.schedule(t)
