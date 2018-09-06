@@ -23,6 +23,7 @@
         <div class="main-wrapper">
           <form method="POST" action="/sharings/{{.SharingID}}/discovery" class="login auth">
             <input type="hidden" name="state" value="{{.State}}" />
+            <input type="hidden" name="sharecode" value="{{.ShareCode}}" />
             <header>
               <figure role="group">
                 <div class="svg-wrapper">
