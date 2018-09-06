@@ -375,6 +375,9 @@ func (sfs *swiftVFSV2) DestroyFile(doc *vfs.FileDoc) error {
 	diskUsage, _ := sfs.Indexer.DiskUsage()
 	err := sfs.Indexer.DeleteFileDoc(doc)
 	if err == nil {
+		err = sfs.c.ObjectDelete(sfs.container, MakeObjectName(doc.DocID))
+	}
+	if err == nil {
 		vfs.DiskQuotaAfterDestroy(sfs, diskUsage, doc.ByteSize)
 	}
 	return err
