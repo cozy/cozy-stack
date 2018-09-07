@@ -7,12 +7,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/mail"
 	"net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/cozy/cozy-stack/pkg/contacts"
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
@@ -348,34 +351,28 @@ var contactEmailsFixer = &cobra.Command{
 				return err
 			}
 			defer res.Body.Close()
-			var result map[string]interface{}
-			err = json.NewDecoder(res.Body).Decode(&result)
+
+			var contacts struct {
+				Rows []struct {
+					Contact contacts.Contact `json:"doc"`
+				} `json:"rows"`
+			}
+			buf, err := ioutil.ReadAll(res.Body)
+			err = json.Unmarshal(buf, &contacts)
 			if err != nil {
 				return err
 			}
-			rows, ok := result["rows"].([]interface{})
-			if !ok {
-				return nil // no contacts
-			}
-			for _, r := range rows {
-				row := r.(map[string]interface{})
-				id := row["id"].(string)
+
+			for _, r := range contacts.Rows {
+				contact := r.Contact
+				id := contact.ID()
 				if strings.HasPrefix(id, "_design") {
 					continue
 				}
 
-				doc := row["doc"].(map[string]interface{})
-				emails, ok := doc["email"].([]interface{})
-				if !ok {
-					continue // no emails
-				}
 				changed := false
-				for _, e := range emails {
-					email := e.(map[string]interface{})
-					address, ok := email["address"].(string)
-					if !ok {
-						continue // no address
-					}
+				for _, email := range contact.Email {
+					address := email.Address
 					_, err := mail.ParseAddress(address)
 					if err != nil {
 						old := address
@@ -401,7 +398,7 @@ var contactEmailsFixer = &cobra.Command{
 						if err == nil {
 							fmt.Printf("    Email fixed: \"%s\" → \"%s\"\n", old, address)
 							changed = true
-							email["address"] = address
+							email.Address = address
 						} else {
 							fmt.Printf("    Invalid email: \"%s\" → \"%s\"\n", old, address)
 						}
@@ -409,7 +406,7 @@ var contactEmailsFixer = &cobra.Command{
 				}
 
 				if changed {
-					json, err := json.Marshal(doc)
+					json, err := json.Marshal(contact)
 					if err != nil {
 						return err
 					}
