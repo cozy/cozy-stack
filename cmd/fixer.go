@@ -324,8 +324,8 @@ var contactEmailsFixer = &cobra.Command{
 		}
 
 		semicolonAtEnd := regexp.MustCompile(";$")
-		dotAtStart := regexp.MustCompile("^\\.")
-		dotAtEnd := regexp.MustCompile("\\.$")
+		dotAtStart := regexp.MustCompile(`^\.`)
+		dotAtEnd := regexp.MustCompile(`\.$`)
 		lessThanStart := regexp.MustCompile("^<")
 		greaterThanEnd := regexp.MustCompile(">$")
 		mailto := regexp.MustCompile("^mailto:")
