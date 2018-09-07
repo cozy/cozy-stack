@@ -261,7 +261,7 @@ func (e *endpoint) getClient() (*http.Client, error) {
 	}, nil
 }
 
-func newClient(domain string, scopes ...string) *client.Client {
+func newClientSafe(domain string, scopes ...string) (*client.Client, error) {
 	// For the CLI client, we rely on the admin APIs to generate a CLI token.
 	// We may want in the future rely on OAuth to handle the permissions with
 	// more granularity.
@@ -273,18 +273,20 @@ func newClient(domain string, scopes ...string) *client.Client {
 		Scope:    scopes,
 	})
 	if err != nil {
-		errPrintfln("Could not generate access to domain %s", domain)
-		errPrintfln("%s", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	cfg := config.GetConfig()
 	e := endpoint{}
 	err = e.configure("COZY_HOST", cfg.Host, cfg.Port)
-	checkNoErr(err)
+	if err != nil {
+		return nil, err
+	}
 
 	h, err := e.getClient()
-	checkNoErr(err)
+	if err != nil {
+		return nil, err
+	}
 
 	u := e.URL
 
@@ -294,7 +296,17 @@ func newClient(domain string, scopes ...string) *client.Client {
 		Domain:     domain,
 		Client:     h,
 		Authorizer: &request.BearerAuthorizer{Token: token},
+	}, nil
+}
+
+func newClient(domain string, scopes ...string) *client.Client {
+	client, err := newClientSafe(domain, scopes...)
+	if err != nil {
+		errPrintfln("Could not generate access to domain %s", domain)
+		errPrintfln("%s", err)
+		os.Exit(1)
 	}
+	return client
 }
 
 func newAdminClient() *client.Client {
