@@ -358,6 +358,9 @@ var contactEmailsFixer = &cobra.Command{
 				} `json:"rows"`
 			}
 			buf, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				return err
+			}
 			err = json.Unmarshal(buf, &contacts)
 			if err != nil {
 				return err
