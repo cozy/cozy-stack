@@ -513,7 +513,7 @@ func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL stri
 	})
 }
 
-func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state string, m *sharing.Member) error {
+func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state, sharecode string, m *sharing.Member) error {
 	publicName, _ := inst.PublicName()
 	return c.Render(code, "sharing_discovery.html", echo.Map{
 		"Domain":        inst.ContextualDomain(),
@@ -523,6 +523,7 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 		"RecipientName": m.Name,
 		"SharingID":     sharingID,
 		"State":         state,
+		"ShareCode":     sharecode,
 		"URLError":      code != http.StatusOK,
 	})
 }
@@ -533,6 +534,7 @@ func GetDiscovery(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
 	state := c.QueryParam("state")
+	sharecode := c.FormValue("sharecode")
 
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
@@ -544,7 +546,11 @@ func GetDiscovery(c echo.Context) error {
 
 	m := &sharing.Member{}
 	if s.Owner {
-		m, err = s.FindMemberByState(state)
+		if sharecode != "" {
+			m, err = s.FindMemberBySharecode(inst, sharecode)
+		} else {
+			m, err = s.FindMemberByState(state)
+		}
 		if err != nil || m.Status == sharing.MemberStatusRevoked {
 			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
 				"Domain": inst.ContextualDomain(),
@@ -557,7 +563,7 @@ func GetDiscovery(c echo.Context) error {
 		}
 	}
 
-	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, state, m)
+	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, state, sharecode, m)
 }
 
 // PostDiscovery is called when the recipient has given its Cozy URL. Either an
@@ -600,7 +606,7 @@ func PostDiscovery(c echo.Context) error {
 			if err == sharing.ErrAlreadyAccepted {
 				return renderAlreadyAccepted(c, inst, cozyURL)
 			}
-			return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, member)
+			return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, sharecode, member)
 		}
 		redirectURL, err = member.GenerateOAuthURL(s)
 		if err != nil {
@@ -614,7 +620,7 @@ func PostDiscovery(c echo.Context) error {
 				if c.Request().Header.Get("Accept") == "application/json" {
 					return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
 				}
-				return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, &sharing.Member{})
+				return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, sharecode, &sharing.Member{})
 			}
 			return wrapErrors(err)
 		}
