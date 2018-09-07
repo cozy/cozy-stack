@@ -7,8 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/mail"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -311,6 +313,135 @@ var thumbnailsFixer = &cobra.Command{
 	},
 }
 
+var contactEmailsFixer = &cobra.Command{
+	Use:   "contact-emails",
+	Short: "Detect and try to fix invalid emails on contacts",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c := newAdminClient()
+		instances, err := c.ListInstances()
+		if err != nil {
+			return err
+		}
+
+		semicolonAtEnd := regexp.MustCompile(";$")
+		dotAtStart := regexp.MustCompile("^\\.")
+		dotAtEnd := regexp.MustCompile("\\.$")
+		lessThanStart := regexp.MustCompile("^<")
+		greaterThanEnd := regexp.MustCompile(">$")
+		mailto := regexp.MustCompile("^mailto:")
+
+		fixEmails := func(domain string) error {
+
+			c, err := newClientSafe(domain, consts.Contacts)
+			if err != nil {
+				return err
+			}
+
+			res, err := c.Req(&request.Options{
+				Method: "GET",
+				Path:   "/data/" + consts.Contacts + "/_all_docs",
+				Queries: url.Values{
+					"include_docs": {"true"},
+				},
+			})
+			if err != nil {
+				return err
+			}
+			defer res.Body.Close()
+			var result map[string]interface{}
+			err = json.NewDecoder(res.Body).Decode(&result)
+			if err != nil {
+				return err
+			}
+			rows, ok := result["rows"].([]interface{})
+			if !ok {
+				return nil // no contacts
+			}
+			for _, r := range rows {
+				row := r.(map[string]interface{})
+				id := row["id"].(string)
+				if strings.HasPrefix(id, "_design") {
+					continue
+				}
+
+				doc := row["doc"].(map[string]interface{})
+				emails, ok := doc["email"].([]interface{})
+				if !ok {
+					continue // no emails
+				}
+				changed := false
+				for _, e := range emails {
+					email := e.(map[string]interface{})
+					address, ok := email["address"].(string)
+					if !ok {
+						continue // no address
+					}
+					_, err := mail.ParseAddress(address)
+					if err != nil {
+						old := address
+						address = strings.TrimSpace(address)
+						address = strings.Replace(address, "\"", "", -1)
+						address = strings.Replace(address, ",", ".", -1)
+						address = strings.Replace(address, " .", ".", -1)
+						address = strings.Replace(address, ". ", ".", -1)
+						address = strings.Replace(address, ". ", ".", -1)
+						address = strings.Replace(address, "..", ".", -1)
+						address = strings.Replace(address, ".@", "@", -1)
+						address = strings.Replace(address, "@.", "@", -1)
+						address = strings.Replace(address, " @", "@", -1)
+						address = strings.Replace(address, "@ ", "@", -1)
+						address = mailto.ReplaceAllString(address, "")
+						address = semicolonAtEnd.ReplaceAllString(address, "")
+						address = dotAtStart.ReplaceAllString(address, "")
+						address = dotAtEnd.ReplaceAllString(address, "")
+						address = lessThanStart.ReplaceAllString(address, "")
+						address = greaterThanEnd.ReplaceAllString(address, "")
+						address = strings.TrimSpace(address)
+						_, err := mail.ParseAddress(address)
+						if err == nil {
+							fmt.Printf("    Email fixed: \"%s\" → \"%s\"\n", old, address)
+							changed = true
+							email["address"] = address
+						} else {
+							fmt.Printf("    Invalid email: \"%s\" → \"%s\"\n", old, address)
+						}
+					}
+				}
+
+				if changed {
+					json, err := json.Marshal(doc)
+					if err != nil {
+						return err
+					}
+					body := bytes.NewReader(json)
+
+					_, err = c.Req(&request.Options{
+						Method: "PUT",
+						Path:   "/data/" + consts.Contacts + "/" + id,
+						Body:   body,
+					})
+					if err != nil {
+						return err
+					}
+				}
+			}
+
+			return nil
+		}
+
+		for _, instance := range instances {
+			domain := instance.Attrs.Domain
+			fmt.Fprintf(os.Stderr, "Fixing %s contact emails...\n", domain)
+			err := fixEmails(domain)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error occured: %s\n", err)
+			}
+		}
+
+		return nil
+	},
+}
+
 func init() {
 	orphanAccountsFixer.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run")
 
@@ -325,6 +456,7 @@ func init() {
 	fixerCmdGroup.AddCommand(redisFixer)
 	fixerCmdGroup.AddCommand(orphanAccountsFixer)
 	fixerCmdGroup.AddCommand(thumbnailsFixer)
+	fixerCmdGroup.AddCommand(contactEmailsFixer)
 
 	RootCmd.AddCommand(fixerCmdGroup)
 }
