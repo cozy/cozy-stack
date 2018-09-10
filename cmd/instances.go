@@ -21,6 +21,7 @@ import (
 
 var flagDomain string
 var flagDomainAliases []string
+var flagListFields []string
 var flagLocale string
 var flagTimezone string
 var flagEmail string
@@ -298,19 +299,82 @@ by this server.
 		if err != nil {
 			return err
 		}
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		for _, i := range list {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\tv%d\n",
-				i.Attrs.Domain,
-				i.Attrs.Locale,
-				formatSize(i.Attrs.BytesDiskQuota),
-				formatDev(i.Attrs.Dev),
-				formatOnboarded(i),
-				i.Attrs.IndexViewsVersion,
-			)
+		if flagJSON {
+			if len(flagListFields) > 0 {
+				for _, inst := range list {
+					var values []interface{}
+					values, err = extractFields(inst.Attrs, flagListFields)
+					if err != nil {
+						return err
+					}
+					m := make(map[string]interface{}, len(flagListFields))
+					for i, fieldName := range flagListFields {
+						m[fieldName] = values[i]
+					}
+					if err = json.NewEncoder(os.Stdout).Encode(m); err != nil {
+						return err
+					}
+				}
+			} else {
+				for _, inst := range list {
+					if err = json.NewEncoder(os.Stdout).Encode(inst.Attrs); err != nil {
+						return err
+					}
+				}
+			}
+		} else {
+			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+			if len(flagListFields) > 0 {
+				format := strings.Repeat("%v\t", len(flagListFields))
+				format = format[:len(format)-1] + "\n"
+				for _, inst := range list {
+					var values []interface{}
+					values, err = extractFields(inst.Attrs, flagListFields)
+					if err != nil {
+						return err
+					}
+					fmt.Fprintf(w, format, values...)
+				}
+			} else {
+				for _, i := range list {
+					prefix := i.Attrs.Prefix
+					if prefix == "" {
+						prefix = i.Attrs.Domain
+					}
+					fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\tv%d\t%s\n",
+						i.Attrs.Domain,
+						i.Attrs.Locale,
+						formatSize(i.Attrs.BytesDiskQuota),
+						formatDev(i.Attrs.Dev),
+						formatOnboarded(i),
+						i.Attrs.IndexViewsVersion,
+						prefix,
+					)
+				}
+			}
+			w.Flush()
 		}
-		return w.Flush()
+		return nil
 	},
+}
+
+func extractFields(data interface{}, fieldsNames []string) (values []interface{}, err error) {
+	var m map[string]interface{}
+	var b []byte
+	b, err = json.Marshal(data)
+	if err != nil {
+		return
+	}
+	if err = json.Unmarshal(b, &m); err != nil {
+		return
+	}
+	values = make([]interface{}, len(fieldsNames))
+	for i, fieldName := range fieldsNames {
+		if v, ok := m[fieldName]; ok {
+			values[i] = v
+		}
+	}
+	return
 }
 
 func formatSize(size int64) string {
@@ -676,6 +740,8 @@ func init() {
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
+	lsInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Show each line as a json representation of the instance")
+	lsInstanceCmd.Flags().StringSliceVar(&flagListFields, "fields", nil, "Arguments shown for each line in the list")
 	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "Work on all domains iterativelly")
 	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	updateCmd.Flags().StringVar(&flagContextName, "context-name", "", "Work only on the instances with the given context name")
