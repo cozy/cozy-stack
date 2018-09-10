@@ -95,6 +95,33 @@ given domain.
 	},
 }
 
+var showPrefixInstanceCmd = &cobra.Command{
+	Use:   "show-prefix <domain>",
+	Short: "Show the instance prefix of the specified domain",
+	Long: `
+cozy-stack instances show allows to show the instance prefix on the cozy for a
+given domain. The prefix is used for databases and VFS prefixing.
+`,
+	Example: "$ cozy-stack instances show-prefix cozy.tools:8080",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		c := newAdminClient()
+		in, err := c.GetInstance(domain)
+		if err != nil {
+			return err
+		}
+		if in.Attrs.Prefix != "" {
+			fmt.Println(in.Attrs.Prefix)
+		} else {
+			fmt.Println(in.Attrs.Domain)
+		}
+		return nil
+	},
+}
+
 var addInstanceCmd = &cobra.Command{
 	Use:   "add <domain>",
 	Short: "Manage instances of a stack",
@@ -690,6 +717,7 @@ var importCmd = &cobra.Command{
 
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
+	instanceCmdGroup.AddCommand(showPrefixInstanceCmd)
 	instanceCmdGroup.AddCommand(addInstanceCmd)
 	instanceCmdGroup.AddCommand(modifyInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
