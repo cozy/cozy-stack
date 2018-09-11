@@ -172,7 +172,7 @@ func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
 	objName := doc.DirID + "/" + doc.DocName
 	f, err := sfs.c.ObjectCreate(sfs.container,
 		objName,
-		false,
+		true,
 		"",
 		dirContentType,
 		nil,
@@ -270,7 +270,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	f, err := sfs.c.ObjectCreate(
 		sfs.container,
 		objName,
-		hash != "",
+		true,
 		hash,
 		newdoc.Mime,
 		nil,
@@ -618,7 +618,7 @@ func (sfs *swiftVFS) fsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
 				}
 				_, err = sfs.c.ObjectCreate(sfs.container,
 					olddoc.DirID+"/"+olddoc.DocName,
-					false,
+					true,
 					"",
 					dirContentType,
 					nil,

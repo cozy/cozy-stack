@@ -85,7 +85,7 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 		contentType = "application/octet-stream"
 	}
 
-	file, err := f.c.ObjectCreate(f.container, objName, false, "",
+	file, err := f.c.ObjectCreate(f.container, objName, true, "",
 		contentType, objMeta.ObjectHeaders())
 	if err != nil {
 		return err
@@ -135,7 +135,7 @@ func (f *swiftCopier) Commit() error {
 			return f.Abort()
 		}
 	}
-	o, err := f.c.ObjectCreate(f.container, f.appObj, false, "", "", nil)
+	o, err := f.c.ObjectCreate(f.container, f.appObj, true, "", "", nil)
 	if err != nil {
 		return err
 	}

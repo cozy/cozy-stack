@@ -27,7 +27,7 @@ func (t *thumbs) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler, e
 		return nil, err
 	}
 	name := t.makeName(img, format)
-	obj, err := t.c.ObjectCreate(t.container, name, false, "", "", nil)
+	obj, err := t.c.ObjectCreate(t.container, name, true, "", "", nil)
 	if err != nil {
 		return nil, err
 	}

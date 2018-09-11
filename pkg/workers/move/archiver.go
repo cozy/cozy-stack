@@ -141,7 +141,7 @@ func (a *switfArchiver) CreateArchive(exportDoc *ExportDoc) (io.WriteCloser, err
 	}
 	headers := objectMeta.ObjectHeaders()
 	headers["X-Delete-At"] = strconv.FormatInt(exportDoc.ExpiresAt.Unix(), 10)
-	return a.c.ObjectCreate(a.container, objectName, false, "",
+	return a.c.ObjectCreate(a.container, objectName, true, "",
 		"application/tar+gzip", headers)
 }
 
