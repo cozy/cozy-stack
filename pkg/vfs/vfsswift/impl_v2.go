@@ -291,7 +291,7 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 	f, err := sfs.c.ObjectCreate(
 		sfs.container,
 		objName,
-		hash != "",
+		true,
 		hash,
 		newdoc.Mime,
 		objMeta.ObjectHeaders(),
