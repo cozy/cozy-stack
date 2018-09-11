@@ -132,6 +132,7 @@ a template and will insert the relevant values.
 * `{{.Domain}}` will be replaced by the stack hostname.
 * `{{.Locale}}` will be replaced by the locale for the instance.
 * `{{.AppName}}`: will be replaced by the application name.
+* `{{.AppSlug}}`: will be replaced by the application slug.
 * `{{.AppNamePrefix}}`: will be replaced by the application name prefix.
 * `{{.AppEditor}}`: will be replaced by the application's editor.
 * `{{.IconPath}}`: will be replaced by the application's icon path.
