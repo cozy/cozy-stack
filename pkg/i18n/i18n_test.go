@@ -7,13 +7,13 @@ import (
 )
 
 func TestTranslate(t *testing.T) {
-	LoadLocale("fr", `
+	LoadLocale("fr", []byte(`
 msgid "english"
 msgstr "french"
 
 msgid "hello %s"
 msgstr "bonjour %s"
-`)
+`))
 
 	s := Translate("english", "fr")
 	assert.Equal(t, "french", s)
