@@ -28,7 +28,7 @@ usage() {
 	echo -e "  release     builds a release of the current working-tree"
 	echo -e "  install     builds a release and install it the GOPATH"
 	echo -e "  deploy      builds a release of the current working-tree and deploys it"
-	echo -e "  docker-dev  builds a cozy-app-dev docker image"
+	echo -e "  dev         builds a dev version"
 	echo -e "  assets      move and download all the required assets (see: ./assets/externals)"
 	echo -e "  clean       remove all generated files from the working-tree"
 
@@ -241,8 +241,8 @@ case "${1}" in
 		do_assets
 		;;
 
-	docker-dev)
-		do_docker_dev_image
+	dev)
+		COZY_ENV=development do_build scripts/cozy-stack
 		;;
 
 	*)
