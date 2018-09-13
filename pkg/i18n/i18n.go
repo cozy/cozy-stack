@@ -17,7 +17,7 @@ var SupportedLocales = []string{"en", "fr"}
 var translations = make(map[string]*gotext.Po)
 
 // LoadLocale creates the translation object for a locale from the content of a .po file
-func LoadLocale(identifier, rawPO string) {
+func LoadLocale(identifier string, rawPO []byte) {
 	po := &gotext.Po{Language: identifier}
 	po.Parse(rawPO)
 	translations[identifier] = po
