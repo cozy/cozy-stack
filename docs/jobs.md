@@ -577,6 +577,11 @@ Accept: application/vnd.api+json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.triggers` for the verb `GET`.
 
+Also, for konnector trigger, any application sharing the same doctype
+permissions as the konnector launched by the trigger will be granted the
+permissions to fetch its state, even without permissions on the
+`io.cozy.triggers` doctype.
+
 ### GET /jobs/triggers/:trigger-id/jobs
 
 Get the jobs launched by the trigger with the specified ID.
@@ -663,6 +668,11 @@ Accept: application/vnd.api+json
 
 To use this endpoint, an application needs a permission on the type
 `io.cozy.triggers` for the verb `DELETE`.
+
+Also, for konnector trigger, any application sharing the same doctype
+permissions as the konnector launched by the trigger will be granted the
+permissions to delete the trigger, even without permissions on the
+`io.cozy.triggers` doctype.
 
 ### GET /jobs/triggers
 
