@@ -3,6 +3,7 @@ package couchdb
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -794,6 +795,41 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 	return json.Unmarshal(response.Docs, results)
 }
 
+// NormalDocs returns all the documents from a database, with pagination, but
+// it excludes the design docs.
+func NormalDocs(db Database, doctype string, skip, limit int) (*NormalDocsResponse, error) {
+	var findRes struct {
+		Docs []json.RawMessage `json:"docs"`
+	}
+	req := FindRequest{
+		Selector: mango.Gte("_id", nil),
+		Skip:     skip,
+		Limit:    limit,
+	}
+	err := makeRequest(db, doctype, http.MethodPost, "_find", &req, &findRes)
+	if err != nil {
+		return nil, err
+	}
+	res := NormalDocsResponse{
+		Rows: findRes.Docs,
+	}
+	if len(res.Rows) < limit {
+		res.Total = skip + len(res.Rows)
+	} else {
+		var designRes ViewResponse
+		err = makeRequest(db, doctype, http.MethodGet, "_design_docs", nil, &designRes)
+		if err != nil {
+			return nil, err
+		}
+		if designRes.Offset+designRes.Total < skip+len(res.Rows) {
+			// https://github.com/apache/couchdb/issues/1603
+			return nil, errors.New("Unexpected state")
+		}
+		res.Total = designRes.Total - len(designRes.Rows)
+	}
+	return &res, nil
+}
+
 func validateDocID(id string) (string, error) {
 	if len(id) > 0 && id[0] == '_' {
 		return "", newBadIDError(id)
@@ -875,8 +911,9 @@ type ViewResponseRow struct {
 
 // ViewResponse is the response we receive when executing a view
 type ViewResponse struct {
-	Total int                `json:"total_rows"`
-	Rows  []*ViewResponseRow `json:"rows"`
+	Total  int                `json:"total_rows"`
+	Offset int                `json:"offset,omitempty"`
+	Rows   []*ViewResponseRow `json:"rows"`
 }
 
 // DBStatusResponse is the response from DBStatus
@@ -899,4 +936,10 @@ type DBStatusResponse struct {
 	DataSize          int    `json:"data_size"`
 	CompactRunning    bool   `json:"compact_running"`
 	InstanceStartTime string `json:"instance_start_time"`
+}
+
+// NormalDocsResponse is the response the stack send for _normal_docs queries
+type NormalDocsResponse struct {
+	Total int               `json:"total_rows"`
+	Rows  []json.RawMessage `json:"rows"`
 }

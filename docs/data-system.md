@@ -457,6 +457,49 @@ Content-Type: application/json
 See
 [`_all_docs` in couchdb docs](http://docs.couchdb.org/en/stable/api/database/bulk-api.html#db-all-docs)
 
+## List all the documents (alternative)
+
+The `_all_docs` endpoint sends the design docs in the response. It makes it
+hard to use pagination on it. We have added a non-standard `_normal_docs`
+endpoint. This new endpoint skip the design docs (and does not count them in
+the `total_rows`). It only accepts two parameters in the query string: `skip`
+(default: 0) and `limit` (default: 100).
+
+Note that the response format is a bit different, it looks more like a `_find`
+response with mango.
+
+### Request
+
+```http
+GET /data/io.cozy.events/_normal_docs?skip=200&limit=100 HTTP/1.1
+Accept: application/json
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "rows": [
+    {
+      "_id": "16e458537602f5ef2a710089dffd9453",
+      "_rev": "1-967a00dff5e02add41819138abb3284d"
+      "field": "value"
+    },
+    {
+      "_id": "f4ca7773ddea715afebc4b4b15d4f0b3",
+      "_rev": "2-7051cbe5c8faecd085a3fa619e6e6337"
+      "field": "other-value"
+    }
+  ],
+  "total_rows": 202
+}
+```
+
 ## List the known doctypes
 
 ### Request

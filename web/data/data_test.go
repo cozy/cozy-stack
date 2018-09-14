@@ -798,3 +798,58 @@ func TestGetAllDocs(t *testing.T) {
 	value := doc["test"].(string)
 	assert.Equal(t, "value", value)
 }
+
+func TestNormalDocs(t *testing.T) {
+	view := &couchdb.View{
+		Name:    "foobar",
+		Doctype: Type,
+		Map: `
+function(doc) {
+  emit(doc.foobar, doc);
+}
+		`,
+	}
+	err := couchdb.DefineViews(testInstance, []*couchdb.View{view})
+	assert.NoError(t, err)
+
+	err = couchdb.CreateNamedDoc(testInstance, &couchdb.JSONDoc{
+		Type: Type,
+		M: map[string]interface{}{
+			"_id":  "four",
+			"test": "fourthvalue",
+		},
+	})
+	assert.NoError(t, err)
+
+	url := ts.URL + "/data/" + Type + "/_normal_docs?limit=2"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	out, res, err := doRequest(req, nil)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	totalRows := out["total_rows"].(float64)
+	assert.Equal(t, float64(4), totalRows)
+	rows := out["rows"].([]interface{})
+	assert.Len(t, rows, 2)
+	row := rows[0].(map[string]interface{})
+	id := row["_id"].(string)
+	assert.NotEmpty(t, id)
+	value := row["test"].(string)
+	assert.Equal(t, "value", value)
+
+	url = ts.URL + "/data/" + Type + "/_normal_docs?limit=2&skip=2"
+	req, _ = http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	out, res, err = doRequest(req, nil)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	totalRows = out["total_rows"].(float64)
+	assert.Equal(t, float64(4), totalRows)
+	rows = out["rows"].([]interface{})
+	assert.Len(t, rows, 2)
+	row = rows[1].(map[string]interface{})
+	id = row["_id"].(string)
+	assert.NotEmpty(t, id)
+	value = row["test"].(string)
+	assert.Equal(t, "fourthvalue", value)
+}
