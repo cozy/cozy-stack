@@ -487,12 +487,12 @@ Content-Type: application/json
   "rows": [
     {
       "_id": "16e458537602f5ef2a710089dffd9453",
-      "_rev": "1-967a00dff5e02add41819138abb3284d"
+      "_rev": "1-967a00dff5e02add41819138abb3284d",
       "field": "value"
     },
     {
       "_id": "f4ca7773ddea715afebc4b4b15d4f0b3",
-      "_rev": "2-7051cbe5c8faecd085a3fa619e6e6337"
+      "_rev": "2-7051cbe5c8faecd085a3fa619e6e6337",
       "field": "other-value"
     }
   ],
