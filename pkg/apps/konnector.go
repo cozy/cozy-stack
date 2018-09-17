@@ -33,13 +33,13 @@ type KonnManifest struct {
 	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
 	Tags        *json.RawMessage `json:"tags,omitempty"`
 
-	Frequency    string           `json:"frequency"`
-	DataTypes    *json.RawMessage `json:"data_types"`
-	Doctypes     *json.RawMessage `json:"doctypes"`
-	Fields       *json.RawMessage `json:"fields"`
-	Messages     *json.RawMessage `json:"messages"`
-	OAuth        *json.RawMessage `json:"oauth"`
-	TimeInterval *json.RawMessage `json:"time_interval"`
+	Frequency    string           `json:"frequency,omitempty"`
+	DataTypes    *json.RawMessage `json:"data_types,omitempty"`
+	Doctypes     *json.RawMessage `json:"doctypes,omitempty"`
+	Fields       *json.RawMessage `json:"fields,omitempty"`
+	Messages     *json.RawMessage `json:"messages,omitempty"`
+	OAuth        *json.RawMessage `json:"oauth,omitempty"`
+	TimeInterval *json.RawMessage `json:"time_interval,omitempty"`
 
 	Parameters    *json.RawMessage `json:"parameters,omitempty"`
 	Notifications Notifications    `json:"notifications"`
@@ -48,11 +48,12 @@ type KonnManifest struct {
 	// when an account associated with the konnector is deleted.
 	OnDeleteAccount string `json:"on_delete_account,omitempty"`
 
-	DocSlug        string          `json:"slug"`
-	DocState       State           `json:"state"`
-	DocSource      string          `json:"source"`
-	DocVersion     string          `json:"version"`
-	DocPermissions permissions.Set `json:"permissions"`
+	DocSlug          string          `json:"slug"`
+	DocState         State           `json:"state"`
+	DocSource        string          `json:"source"`
+	DocVersion       string          `json:"version"`
+	DocPermissions   permissions.Set `json:"permissions"`
+	AvailableVersion string          `json:"available_version,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -128,6 +129,9 @@ func (m *KonnManifest) SetState(state State) { m.DocState = state }
 // SetVersion is part of the Manifest interface
 func (m *KonnManifest) SetVersion(version string) { m.DocVersion = version }
 
+// SetAvailableVersion is part of the Manifest interface
+func (m *KonnManifest) SetAvailableVersion(version string) { m.AvailableVersion = version }
+
 // AppType is part of the Manifest interface
 func (m *KonnManifest) AppType() AppType { return Konnector }
 
@@ -158,10 +162,10 @@ func (m *KonnManifest) Match(field, value string) bool {
 }
 
 // ReadManifest is part of the Manifest interface
-func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
+func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Manifest, error) {
 	var newManifest KonnManifest
 	if err := json.NewDecoder(r).Decode(&newManifest); err != nil {
-		return ErrBadManifest
+		return nil, ErrBadManifest
 	}
 
 	newManifest.SetID(m.ID())
@@ -174,8 +178,7 @@ func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 		newManifest.Parameters = m.Parameters
 	}
 
-	*m = newManifest
-	return nil
+	return &newManifest, nil
 }
 
 // Create is part of the Manifest interface

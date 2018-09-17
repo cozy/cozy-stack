@@ -38,6 +38,7 @@ type Installer struct {
 	endState State
 
 	overridenParameters *json.RawMessage
+	permissionsAcked    bool
 
 	man  Manifest
 	src  *url.URL
@@ -51,13 +52,14 @@ type Installer struct {
 // InstallerOptions provides the slug name of the application along with the
 // source URL.
 type InstallerOptions struct {
-	Type        AppType
-	Operation   Operation
-	Manifest    Manifest
-	Slug        string
-	SourceURL   string
-	Deactivated bool
-	Registries  []*url.URL
+	Type             AppType
+	Operation        Operation
+	Manifest         Manifest
+	Slug             string
+	SourceURL        string
+	Deactivated      bool
+	PermissionsAcked bool
+	Registries       []*url.URL
 
 	// Used to override the "Parameters" field of konnectors during installation.
 	// This modification is useful to allow the parameterization of a konnector
@@ -144,6 +146,7 @@ func NewInstaller(db prefixer.Prefixer, fs Copier, opts *InstallerOptions) (*Ins
 		endState: endState,
 
 		overridenParameters: opts.OverridenParameters,
+		permissionsAcked:    opts.PermissionsAcked,
 
 		man:  man,
 		src:  src,
@@ -256,9 +259,12 @@ func (i *Installer) install() error {
 	i.log.Infof("Start install: %s %s", i.slug, i.src.String())
 	args := []string{i.db.DomainName(), i.slug}
 	return hooks.Execute("install-app", args, func() error {
-		if err := i.ReadManifest(Installing); err != nil {
+		newManifest, err := i.ReadManifest(Installing)
+		if err != nil {
 			return err
 		}
+		i.man = newManifest
+		i.sendRealtimeEvent()
 		i.manc <- i.man.Clone().(Manifest)
 		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
 			return err
@@ -280,13 +286,11 @@ func (i *Installer) update() error {
 		return err
 	}
 
-	version := i.man.Version()
-	oldPermissions := i.man.Permissions()
-	if err := i.ReadManifest(Upgrading); err != nil {
+	oldManifest := i.man
+	newManifest, err := i.ReadManifest(Upgrading)
+	if err != nil {
 		return err
 	}
-
-	i.manc <- i.man.Clone().(Manifest)
 
 	// Fast path for registry:// and http:// sources: we do not need to go
 	// further in the case where the fetched manifest has the same version has
@@ -294,33 +298,40 @@ func (i *Installer) update() error {
 	//
 	// For git:// and file:// sources, it may be more complicated since we need
 	// to actually fetch the data to extract the exact version of the manifest.
-	var sameVersion bool
+	makeUpdate := true
 	switch i.src.Scheme {
 	case "registry", "http", "https":
-		sameVersion = (version == i.man.Version())
+		makeUpdate = (newManifest.Version() != oldManifest.Version())
 	}
 
-	// TODO: decide what behavior to chose for auto-updating konnectors that
-	// would change their permissions...
-	if i.man.AppType() == Webapp && !isPlatformApp(i.man) {
-		// If the permissions have changed, we set the end state of the applications
-		// as "installed", meaning the user will have to accept the new set of
-		// permissions before accessing to set the application state as "ready".
-		newPermissions := i.man.Permissions()
+	// Check the possible permissions changes before updating. If the
+	// verifyPermissions flag is activated (for non manual updates for example),
+	// we cancel out the update and mark the UpdateAvailable field of the
+	// application instead of actually updating.
+	if makeUpdate && !isPlatformApp(oldManifest) {
+		oldPermissions := oldManifest.Permissions()
+		newPermissions := newManifest.Permissions()
 		samePermissions := newPermissions != nil && oldPermissions != nil &&
 			newPermissions.HasSameRules(oldPermissions)
-		if !samePermissions {
-			i.endState = Installed
+		if !samePermissions && !i.permissionsAcked {
+			makeUpdate = false
 		}
 	}
 
-	if !sameVersion {
+	if makeUpdate {
+		i.man = newManifest
+		i.sendRealtimeEvent()
+		i.manc <- i.man.Clone().(Manifest)
 		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
 			return err
 		}
+		i.man.SetState(i.endState)
+	} else {
+		i.man.SetAvailableVersion(newManifest.Version())
+		i.sendRealtimeEvent()
+		i.manc <- i.man.Clone().(Manifest)
 	}
 
-	i.man.SetState(i.endState)
 	return i.man.Update(i.db)
 }
 
@@ -352,30 +363,32 @@ func (i *Installer) checkState(man Manifest) error {
 // passed manifest pointer.
 //
 // The State field of the manifest will be set to the specified state.
-func (i *Installer) ReadManifest(state State) error {
+func (i *Installer) ReadManifest(state State) (Manifest, error) {
 	r, err := i.fetcher.FetchManifest(i.src)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer r.Close()
-	i.man.SetState(state)
 
-	err = i.man.ReadManifest(io.LimitReader(r, ManifestMaxSize), i.slug, i.src.String())
+	newManifest, err := i.man.ReadManifest(io.LimitReader(r, ManifestMaxSize), i.slug, i.src.String())
 	if err != nil {
-		return err
+		return nil, err
 	}
+	newManifest.SetState(state)
 
 	shouldOverrideParameters := (i.overridenParameters != nil &&
 		i.man.AppType() == Konnector &&
 		i.src.Scheme != "registry")
 	if shouldOverrideParameters {
-		if m, ok := i.man.(*KonnManifest); ok {
+		if m, ok := newManifest.(*KonnManifest); ok {
 			m.Parameters = i.overridenParameters
 		}
 	}
+	return newManifest, nil
+}
 
+func (i *Installer) sendRealtimeEvent() {
 	realtime.GetHub().Publish(i.db, realtime.EventUpdate, i.man.Clone(), nil)
-	return nil
 }
 
 // Poll should be used to monitor the progress of the Installer.

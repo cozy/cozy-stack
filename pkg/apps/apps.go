@@ -63,7 +63,7 @@ type SubDomainer interface {
 type Manifest interface {
 	couchdb.Doc
 	Match(field, expected string) bool
-	ReadManifest(i io.Reader, slug, sourceURL string) error
+	ReadManifest(i io.Reader, slug, sourceURL string) (Manifest, error)
 
 	Create(db prefixer.Prefixer) error
 	Update(db prefixer.Prefixer) error
@@ -73,6 +73,7 @@ type Manifest interface {
 	Permissions() permissions.Set
 	Source() string
 	Version() string
+	SetAvailableVersion(version string)
 	Slug() string
 	State() State
 	LastUpdate() time.Time
