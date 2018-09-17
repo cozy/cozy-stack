@@ -101,15 +101,11 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err := middlewares.AllowInstallApp(c, installerType, permissions.POST); err != nil {
 			return err
 		}
-		registries, err := instance.Registries()
-		if err != nil {
-			return err
-		}
 
 		var overridenParameters *json.RawMessage
 		if p := c.QueryParam("Parameters"); p != "" {
 			var v json.RawMessage
-			if err = json.Unmarshal([]byte(p), &v); err != nil {
+			if err := json.Unmarshal([]byte(p), &v); err != nil {
 				return echo.NewHTTPError(http.StatusBadRequest)
 			}
 			overridenParameters = &v
@@ -130,7 +126,7 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 				SourceURL:   c.QueryParam("Source"),
 				Slug:        slug,
 				Deactivated: c.QueryParam("Deactivated") == "true",
-				Registries:  registries,
+				Registries:  instance.Registries(),
 
 				OverridenParameters: overridenParameters,
 			},
@@ -159,15 +155,11 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err := middlewares.AllowInstallApp(c, installerType, permissions.POST); err != nil {
 			return err
 		}
-		registries, err := instance.Registries()
-		if err != nil {
-			return err
-		}
 
 		var overridenParameters *json.RawMessage
 		if p := c.QueryParam("Parameters"); p != "" {
 			var v json.RawMessage
-			if err = json.Unmarshal([]byte(p), &v); err != nil {
+			if err := json.Unmarshal([]byte(p), &v); err != nil {
 				return echo.NewHTTPError(http.StatusBadRequest)
 			}
 			overridenParameters = &v
@@ -188,7 +180,7 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 				Type:       installerType,
 				SourceURL:  c.QueryParam("Source"),
 				Slug:       slug,
-				Registries: registries,
+				Registries: instance.Registries(),
 
 				PermissionsAcked:    permissionsAcked,
 				OverridenParameters: overridenParameters,
@@ -219,16 +211,12 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err := middlewares.AllowInstallApp(c, installerType, permissions.DELETE); err != nil {
 			return err
 		}
-		registries, err := instance.Registries()
-		if err != nil {
-			return err
-		}
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
 				Operation:  apps.Delete,
 				Type:       installerType,
 				Slug:       slug,
-				Registries: registries,
+				Registries: instance.Registries(),
 			},
 		)
 		if err != nil {

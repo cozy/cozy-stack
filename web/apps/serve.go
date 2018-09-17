@@ -58,7 +58,8 @@ func Serve(c echo.Context) error {
 		return c.Redirect(http.StatusFound, redirect)
 	}
 
-	app, err := apps.GetWebappBySlug(i, slug)
+	app, err := apps.GetWebappBySlugAndUpdate(i, slug,
+		i.AppsCopier(apps.Webapp), i.Registries())
 	if err != nil {
 		switch err {
 		case apps.ErrNotFound:
