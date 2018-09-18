@@ -99,11 +99,15 @@ func (c *Client) JobPush(r *JobOptions) (*Job, error) {
 		opt.Timeout = r.Timeout
 	}
 
-	channel, err := c.RealtimeClient(RealtimeOptions{
-		DocTypes: []string{"io.cozy.jobs", "io.cozy.jobs.logs"},
-	})
-	if err != nil {
-		return nil, err
+	withLogs := r.Logs != nil
+	var channel *RealtimeChannel
+	if withLogs {
+		channel, err = c.RealtimeClient(RealtimeOptions{
+			DocTypes: []string{"io.cozy.jobs", "io.cozy.jobs.logs"},
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	job := struct {
@@ -111,7 +115,7 @@ func (c *Client) JobPush(r *JobOptions) (*Job, error) {
 	}{
 		Attrs: jobAttrs{
 			Arguments:   args,
-			ForwardLogs: r.Logs != nil,
+			ForwardLogs: withLogs,
 			Options:     opt,
 		},
 	}
@@ -134,34 +138,34 @@ func (c *Client) JobPush(r *JobOptions) (*Job, error) {
 	}
 
 	defer func() {
-		if r.Logs != nil {
+		if withLogs {
 			close(r.Logs)
 		}
 	}()
 
-	for evt := range channel.Channel() {
-		if evt.Event == "error" {
-			return nil, fmt.Errorf("realtime: %s", evt.Payload.Title)
-		}
-		switch evt.Payload.Type {
-		case "io.cozy.jobs":
-			var doc struct {
-				ID string `json:"_id"`
+	if withLogs {
+		for evt := range channel.Channel() {
+			if evt.Event == "error" {
+				return nil, fmt.Errorf("realtime: %s", evt.Payload.Title)
 			}
-			if err = json.Unmarshal(evt.Payload.Doc, &doc); err != nil {
-				return nil, err
-			}
-			if doc.ID != j.ID {
-				continue
-			}
-			if err = json.Unmarshal(evt.Payload.Doc, &j.Attrs); err != nil {
-				return nil, err
-			}
-			if j.Attrs.State == "done" || j.Attrs.State == "errored" {
-				return j, nil
-			}
-		case "io.cozy.jobs.logs":
-			if r.Logs != nil {
+			switch evt.Payload.Type {
+			case "io.cozy.jobs":
+				var doc struct {
+					ID string `json:"_id"`
+				}
+				if err = json.Unmarshal(evt.Payload.Doc, &doc); err != nil {
+					return nil, err
+				}
+				if doc.ID != j.ID {
+					continue
+				}
+				if err = json.Unmarshal(evt.Payload.Doc, &j.Attrs); err != nil {
+					return nil, err
+				}
+				if j.Attrs.State == "done" || j.Attrs.State == "errored" {
+					return j, nil
+				}
+			case "io.cozy.jobs.logs":
 				var log JobLog
 				if err = json.Unmarshal(evt.Payload.Doc, &log); err != nil {
 					return nil, err
