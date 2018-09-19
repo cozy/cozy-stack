@@ -2,6 +2,7 @@ package vfs
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"io"
 	"io/ioutil"
@@ -83,13 +84,22 @@ func NewImageExtractor(createdAt time.Time) *ImageExtractor {
 
 // Start is used in a goroutine to start the metadata extraction
 func (e *ImageExtractor) Start() {
-	cfg, _, err := image.DecodeConfig(e.r)
-	e.r.Close()
-	if err != nil {
-		e.ch <- err
-	} else {
-		e.ch <- cfg
-	}
+	var cfg image.Config
+	var err error
+	defer func() {
+		r := recover()
+		if errc := e.r.Close(); err == nil {
+			err = errc
+		}
+		if r != nil {
+			e.ch <- fmt.Errorf("metadata: recovered from image decoding: %s", r)
+		} else if err != nil {
+			e.ch <- err
+		} else {
+			e.ch <- cfg
+		}
+	}()
+	cfg, _, err = image.DecodeConfig(e.r)
 }
 
 // Write is called to push some bytes to the extractor
@@ -147,13 +157,22 @@ func NewExifExtractor(createdAt time.Time, withImageExtractor bool) *ExifExtract
 
 // Start is used in a goroutine to start the metadata extraction
 func (e *ExifExtractor) Start() {
-	x, err := exif.Decode(e.r)
-	e.r.Close()
-	if err != nil {
-		e.ch <- err
-	} else {
-		e.ch <- x
-	}
+	var x *exif.Exif
+	var err error
+	defer func() {
+		r := recover()
+		if errc := e.r.Close(); err == nil {
+			err = errc
+		}
+		if r != nil {
+			e.ch <- fmt.Errorf("metadata: recovered from exif extracting: %s", r)
+		} else if err != nil {
+			e.ch <- err
+		} else {
+			e.ch <- x
+		}
+	}()
+	x, err = exif.Decode(e.r)
 }
 
 // Write is called to push some bytes to the extractor
@@ -247,18 +266,29 @@ func NewAudioExtractor() *AudioExtractor {
 
 // Start is used in a goroutine to start the metadata extraction
 func (e *AudioExtractor) Start() {
-	buf, err := ioutil.ReadAll(e.r)
+	var tags tag.Metadata
+	var buf []byte
+	var err error
+	buf, err = ioutil.ReadAll(e.r)
 	if err != nil {
+		e.r.Close()
 		e.ch <- err
 		return
 	}
-	tags, err := tag.ReadFrom(bytes.NewReader(buf))
-	e.r.Close()
-	if err != nil {
-		e.ch <- err
-	} else {
-		e.ch <- tags
-	}
+	defer func() {
+		r := recover()
+		if errc := e.r.Close(); err == nil {
+			err = errc
+		}
+		if r != nil {
+			e.ch <- fmt.Errorf("metadata: recovered from audio extracting: %s", r)
+		} else if err != nil {
+			e.ch <- err
+		} else {
+			e.ch <- tags
+		}
+	}()
+	tags, err = tag.ReadFrom(bytes.NewReader(buf))
 }
 
 // Write is called to push some bytes to the extractor
