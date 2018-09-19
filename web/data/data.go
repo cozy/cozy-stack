@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -366,16 +367,37 @@ func findDocuments(c echo.Context) error {
 
 func allDocs(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
-
 	if err := perm.CheckReadable(doctype); err != nil {
 		return err
 	}
-
 	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
-
 	return proxy(c, "_all_docs")
+}
+
+func normalDocs(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	doctype := c.Get("doctype").(string)
+	if err := perm.CheckReadable(doctype); err != nil {
+		return err
+	}
+	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+		return err
+	}
+	skip, err := strconv.ParseInt(c.QueryParam("skip"), 10, 64)
+	if err != nil || skip < 0 {
+		skip = 0
+	}
+	limit, err := strconv.ParseInt(c.QueryParam("limit"), 10, 64)
+	if err != nil || limit < 0 || limit > maxMangoLimit {
+		limit = 100
+	}
+	res, err := couchdb.NormalDocs(instance, doctype, int(skip), int(limit))
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, res)
 }
 
 // mostly just to prevent couchdb crash on replications
@@ -432,6 +454,7 @@ func Routes(router *echo.Group) {
 	group.POST("/", createDoc)
 	group.GET("/_all_docs", allDocs)
 	group.POST("/_all_docs", allDocs)
+	group.GET("/_normal_docs", normalDocs)
 	group.POST("/_index", defineIndex)
 	group.POST("/_find", findDocuments)
 }
