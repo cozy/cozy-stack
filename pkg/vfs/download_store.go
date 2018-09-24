@@ -14,9 +14,9 @@ import (
 
 // A DownloadStore is essentially an object to store Archives & Files by keys
 type DownloadStore interface {
-	AddFile(db prefixer.Prefixer, filePath string) (string, error)
+	AddFile(db prefixer.Prefixer, filePath, appSlug string) (string, error)
 	AddArchive(db prefixer.Prefixer, archive *Archive) (string, error)
-	GetFile(db prefixer.Prefixer, key string) (string, error)
+	GetFile(db prefixer.Prefixer, key string) (string, string, error)
 	GetArchive(db prefixer.Prefixer, key string) (*Archive, error)
 }
 
@@ -31,8 +31,9 @@ var globalStoreMu sync.Mutex
 var globalStore DownloadStore
 
 type memRef struct {
-	val interface{}
-	exp time.Time
+	val     interface{}
+	appSlug interface{}
+	exp     time.Time
 }
 
 // GetStore returns the DownloadStore.
@@ -73,13 +74,14 @@ func (s *memStore) cleaner() {
 	}
 }
 
-func (s *memStore) AddFile(db prefixer.Prefixer, filePath string) (string, error) {
+func (s *memStore) AddFile(db prefixer.Prefixer, filePath, appSlug string) (string, error) {
 	key := makeSecret()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.vals[db.DBPrefix()+":"+key] = &memRef{
-		val: filePath,
-		exp: time.Now().Add(downloadStoreTTL),
+		val:     filePath,
+		appSlug: appSlug,
+		exp:     time.Now().Add(downloadStoreTTL),
 	}
 	return key, nil
 }
@@ -95,23 +97,24 @@ func (s *memStore) AddArchive(db prefixer.Prefixer, archive *Archive) (string, e
 	return key, nil
 }
 
-func (s *memStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
+func (s *memStore) GetFile(db prefixer.Prefixer, key string) (string, string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key = db.DBPrefix() + ":" + key
 	ref, ok := s.vals[key]
 	if !ok {
-		return "", nil
+		return "", "", nil
 	}
 	if time.Now().After(ref.exp) {
 		delete(s.vals, key)
-		return "", nil
+		return "", "", nil
 	}
 	f, ok := ref.val.(string)
 	if !ok {
-		return "", nil
+		return "", "", nil
 	}
-	return f, nil
+	slug, _ := ref.appSlug.(string)
+	return f, slug, nil
 }
 
 func (s *memStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, error) {
@@ -137,9 +140,12 @@ type redisStore struct {
 	c redis.UniversalClient
 }
 
-func (s *redisStore) AddFile(db prefixer.Prefixer, filePath string) (string, error) {
+func (s *redisStore) AddFile(db prefixer.Prefixer, filePath, appSlug string) (string, error) {
 	key := makeSecret()
 	if err := s.c.Set(db.DBPrefix()+":"+key, filePath, downloadStoreTTL).Err(); err != nil {
+		return "", err
+	}
+	if err := s.c.Set(db.DBPrefix()+":slug:"+key, appSlug, downloadStoreTTL).Err(); err != nil {
 		return "", err
 	}
 	return key, nil
@@ -157,15 +163,16 @@ func (s *redisStore) AddArchive(db prefixer.Prefixer, archive *Archive) (string,
 	return key, nil
 }
 
-func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
+func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, string, error) {
 	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
 	if err == redis.Nil {
-		return "", nil
+		return "", "", nil
 	}
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return f, nil
+	slug, _ := s.c.Get(db.DBPrefix() + ":slug:" + key).Result()
+	return f, slug, nil
 }
 
 func (s *redisStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, error) {

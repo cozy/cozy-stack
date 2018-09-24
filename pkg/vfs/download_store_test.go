@@ -16,22 +16,26 @@ func TestDownloadStoreInMemory(t *testing.T) {
 	store := newMemStore()
 
 	path := "/test/random/path.txt"
-	key1, err := store.AddFile(dbA, path)
+	slug := "drive"
+	key1, err := store.AddFile(dbA, path, slug)
 	assert.NoError(t, err)
 
-	path2, err := store.GetFile(dbB, key1)
+	path2, slug2, err := store.GetFile(dbB, key1)
 	assert.NoError(t, err)
 	assert.Zero(t, path2, "Inter-instances store leaking")
+	assert.Zero(t, slug2)
 
-	path3, err := store.GetFile(dbA, key1)
+	path3, slug3, err := store.GetFile(dbA, key1)
 	assert.NoError(t, err)
 	assert.Equal(t, path, path3)
+	assert.Equal(t, slug, slug3)
 
 	time.Sleep(2 * downloadStoreTTL)
 
-	path4, err := store.GetFile(dbA, key1)
+	path4, slug4, err := store.GetFile(dbA, key1)
 	assert.NoError(t, err)
 	assert.Zero(t, path4, "no expiration")
+	assert.Zero(t, slug4)
 
 	a := &Archive{
 		Name: "test",
@@ -62,22 +66,26 @@ func TestDownloadStoreInRedis(t *testing.T) {
 	store := GetStore()
 
 	path := "/test/random/path.txt"
-	key1, err := store.AddFile(dbA, path)
+	slug := "photos"
+	key1, err := store.AddFile(dbA, path, slug)
 	assert.NoError(t, err)
 
-	path2, err := store.GetFile(dbB, key1)
+	path2, slug2, err := store.GetFile(dbB, key1)
 	assert.NoError(t, err)
 	assert.Zero(t, path2, "Inter-instances store leaking")
+	assert.Zero(t, slug2)
 
-	path3, err := store.GetFile(dbA, key1)
+	path3, slug3, err := store.GetFile(dbA, key1)
 	assert.NoError(t, err)
 	assert.Equal(t, path, path3)
+	assert.Equal(t, slug, slug3)
 
 	time.Sleep(2 * downloadStoreTTL)
 
-	path4, err := store.GetFile(dbA, key1)
+	path4, slug4, err := store.GetFile(dbA, key1)
 	assert.NoError(t, err)
 	assert.Zero(t, path4, "no expiration")
+	assert.Zero(t, slug4)
 
 	a := &Archive{
 		Name: "test",
