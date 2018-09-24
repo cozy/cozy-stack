@@ -226,7 +226,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		"Domain":        i.ContextualDomain(),
 		"Locale":        i.Locale,
 		"AppSlug":       app.Slug(),
-		"AppName":       app.Name,
+		"AppName":       app.NameLocalized(i.Locale),
 		"AppEditor":     app.Editor,
 		"AppNamePrefix": app.NamePrefix,
 		"IconPath":      app.Icon,

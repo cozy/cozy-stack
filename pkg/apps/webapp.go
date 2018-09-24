@@ -46,21 +46,6 @@ type Services map[string]*Service
 // application.
 type Notifications map[string]notification.Properties
 
-// Locales is a map to define the available locales of the application.
-type Locales map[string]interface{}
-
-// Developer is the name and url of a developer.
-type Developer struct {
-	Name string `json:"name"`
-	URL  string `json:"url,omitempty"`
-}
-
-// Platform is a supported additional device platform of the application.
-type Platform struct {
-	Type string `json:"type"`
-	URL  string `json:"url"`
-}
-
 // Intent is a declaration of a service for other client-side apps
 type Intent struct {
 	Action string   `json:"action"`
@@ -221,6 +206,20 @@ func (m *WebappManifest) Match(field, value string) bool {
 		return m.DocState == State(value)
 	}
 	return false
+}
+
+func (m *WebappManifest) NameLocalized(locale string) string {
+	if m.Locales != nil && locale != "" {
+		var locales map[string]struct {
+			Name string `json:"name"`
+		}
+		if err := json.Unmarshal(*m.Locales, &locales); err == nil {
+			if v, ok := locales[locale]; ok && v.Name != "" {
+				return v.Name
+			}
+		}
+	}
+	return m.Name
 }
 
 // ReadManifest is part of the Manifest interface
