@@ -127,7 +127,7 @@ func worker(ctx *jobs.WorkerContext) (err error) {
 			}
 		}
 		if errs := scanOut.Err(); errs != nil {
-			log.Errorf("could not scan stdout: %s", err)
+			log.Errorf("could not scan stdout: %s", errs)
 		}
 	}()
 
