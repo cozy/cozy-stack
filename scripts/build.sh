@@ -23,12 +23,12 @@ echo_wrn() {
 }
 
 usage() {
-	echo -e "Usage: ${1} [release] [install] [deploy] [docker-dev] [assets] [clean]"
+	echo -e "Usage: ${1} [release] [install] [deploy] [dev] [assets] [clean]"
 	echo -e "\nCommands:\n"
 	echo -e "  release     builds a release of the current working-tree"
 	echo -e "  install     builds a release and install it the GOPATH"
 	echo -e "  deploy      builds a release of the current working-tree and deploys it"
-	echo -e "  docker-dev  builds a cozy-app-dev docker image"
+	echo -e "  dev         builds a dev version"
 	echo -e "  assets      move and download all the required assets (see: ./assets/externals)"
 	echo -e "  clean       remove all generated files from the working-tree"
 
@@ -189,26 +189,6 @@ do_assets() {
 	echo "ok"
 }
 
-do_docker_dev_image() {
-	docker_work_dir="${WORK_DIR}/.docker-work"
-	mkdir "${docker_work_dir}"
-
-	trap 'trap - SIGTERM && rm -rf "${docker_work_dir}" > /dev/null -- -${$}' SIGINT SIGTERM EXIT
-
-	cp "${WORK_DIR}/scripts/Dockerfile" "${docker_work_dir}"
-	cp "${WORK_DIR}/scripts/docker-entrypoint.sh" "${docker_work_dir}"
-	cp "${WORK_DIR}/scripts/cozy-app-dev.sh" "${docker_work_dir}"
-
-	export GOOS=linux
-	export GOARCH=amd64
-	export COZY_ENV=development
-	do_build "${docker_work_dir}/cozy-stack"
-
-	docker build -t cozy/cozy-app-dev "${docker_work_dir}"
-
-	rm -rf "${docker_work_dir}"
-}
-
 do_clean() {
 	find "${WORK_DIR}" -name "cozy-stack-*" -print -delete
 }
@@ -241,8 +221,8 @@ case "${1}" in
 		do_assets
 		;;
 
-	docker-dev)
-		do_docker_dev_image
+	dev)
+		COZY_ENV=development do_build scripts/cozy-stack
 		;;
 
 	*)

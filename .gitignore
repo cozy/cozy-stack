@@ -3,6 +3,7 @@
 /assets/locales/*.po
 !/assets/locales/en.po
 /cozy-stack*
+/scripts/cozy-stack*
 /debian
 /storage
 /tests/clone/generated
