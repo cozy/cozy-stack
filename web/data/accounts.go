@@ -163,7 +163,7 @@ func encryptMap(m map[string]interface{}) (encrypted bool) {
 			if err == nil {
 				encrypted = true
 			}
-		case "secret", "dob", "code", "answer", "access_token", "refresh_token":
+		case "secret", "dob", "code", "answer", "access_token", "refresh_token", "appSecret":
 			cloned[k+"_encrypted"], err = accounts.EncryptCredentialsData(v)
 			if err == nil {
 				encrypted = true
