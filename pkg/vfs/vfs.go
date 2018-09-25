@@ -87,13 +87,7 @@ type Fs interface {
 	DestroyFile(doc *FileDoc) error
 
 	// Fsck return the list of inconsistencies in the VFS
-	Fsck(opts FsckOptions) (logbook []*FsckLog, err error)
-}
-
-// FsckOptions contains the options for the filesystem check process.
-type FsckOptions struct {
-	Prune  bool
-	DryRun bool
+	Fsck(func(log *FsckLog)) (err error)
 }
 
 // File is a reader, writer, seeker, closer iterface representing an opened
@@ -183,8 +177,8 @@ type Indexer interface {
 	DirChildExists(dirID, filename string) (bool, error)
 	BatchDelete([]couchdb.Doc) error
 
-	BuildTree() (*TreeFile, error)
-	CheckIndexIntegrity() ([]*FsckLog, error)
+	BuildTree(each ...func(*TreeFile)) (root *TreeFile, dirsmap map[string]*TreeFile, orphans map[string][]*TreeFile, err error)
+	CheckIndexIntegrity(func(*FsckLog)) error
 }
 
 // DiskThresholder it an interface that can be implemeted to known how many space

@@ -491,7 +491,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 
 	if !opts.WithoutFiles {
 		var root *vfs.TreeFile
-		root, err = i.VFS().BuildTree()
+		root, _, _, err = i.VFS().BuildTree()
 		if err != nil {
 			return
 		}

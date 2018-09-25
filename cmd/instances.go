@@ -13,8 +13,10 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )
@@ -494,26 +496,51 @@ in swift/localfs but not couchdb.
 
 		domain := args[0]
 
-		c := newAdminClient()
-		list, err := c.FsckInstance(domain, flagFsckPrune, flagFsckDry)
+		fsURL := config.FsURL()
+		if fsURL.Scheme == config.SchemeSwift {
+			if err := config.InitSwiftConnection(fsURL); err != nil {
+				return err
+			}
+		}
+
+		i, err := instance.Get(domain)
 		if err != nil {
 			return err
 		}
 
-		if len(list) == 0 {
-			fmt.Printf("Instance for domain %s is clean\n", domain)
-		} else {
-			for _, entry := range list {
-				fmt.Printf("- %q: %s\n", entry["filename"], entry["message"])
-				if pruneAction := entry["prune_action"]; pruneAction != "" {
-					fmt.Printf("  %s...", pruneAction)
-					if pruneError := entry["prune_error"]; pruneError != "" {
-						fmt.Printf("error: %s\n", pruneError)
-					} else {
-						fmt.Println("ok")
-					}
-				}
+		var hasError bool
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		err = i.VFS().Fsck(func(log *vfs.FsckLog) {
+			hasError = true
+			var swiftLayout, swiftContainer string
+			if i.SwiftCluster > 0 {
+				swiftLayout = "v2"
+				swiftContainer = "cozy-v2-" + i.DBPrefix()
+			} else {
+				swiftLayout = "v1"
+				swiftContainer = "cozy-" + i.DBPrefix()
 			}
+			switch log.Type {
+			case vfs.ContentMismatch:
+				fmt.Fprintf(w, "%s;%s;%s;%s;%s;%s;%s;%s;%d;%d;%d\n",
+					i.Domain, swiftContainer, swiftLayout,
+					log.Filename,
+					log.FileDoc.DocID,
+					log.FileDoc.DocRev,
+					hex.EncodeToString(log.ContentMismatch.MD5SumIndex),
+					hex.EncodeToString(log.ContentMismatch.MD5SumFile),
+					log.ContentMismatch.SizeIndex,
+					log.ContentMismatch.SizeFile)
+			}
+			w.Flush()
+		})
+
+		if err != nil {
+			return fmt.Errorf("fsck error: %s", err)
+		}
+
+		if hasError {
+			os.Exit(1)
 		}
 		return nil
 	},

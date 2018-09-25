@@ -190,13 +190,20 @@ func fsckHandler(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
-	prune, _ := strconv.ParseBool(c.QueryParam("Prune"))
-	dryRun, _ := strconv.ParseBool(c.QueryParam("DryRun"))
+
+	indexIntegrityCheck, _ := strconv.ParseBool(c.QueryParam("IndexIntegrity"))
+
+	var logbook []*vfs.FsckLog
+	accumulate := func(log *vfs.FsckLog) {
+		logbook = append(logbook, log)
+	}
+
 	fs := i.VFS()
-	logbook, err := fs.Fsck(vfs.FsckOptions{
-		Prune:  prune,
-		DryRun: dryRun,
-	})
+	if indexIntegrityCheck {
+		err = fs.CheckIndexIntegrity(accumulate)
+	} else {
+		err = fs.Fsck(accumulate)
+	}
 	if err != nil {
 		return wrapError(err)
 	}

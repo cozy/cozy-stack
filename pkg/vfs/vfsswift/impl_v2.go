@@ -3,23 +3,19 @@ package vfsswift
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
@@ -404,30 +400,13 @@ type fsckFile struct {
 	fullpath string
 }
 
-func (sfs *swiftVFSV2) Fsck(opts vfs.FsckOptions) (logbook []*vfs.FsckLog, err error) {
-	if lockerr := sfs.mu.RLock(); lockerr != nil {
-		return nil, lockerr
-	}
-	defer sfs.mu.RUnlock()
-
-	logbook, err = sfs.Indexer.CheckIndexIntegrity()
-	if err != nil {
-		return
-	}
-
-	if opts.Prune {
-		sfs.fsckPrune(logbook, opts.DryRun)
-	}
-
-	var newLogs []*vfs.FsckLog
-
-	root, err := sfs.Indexer.DirByID(consts.RootDirID)
-	if err != nil {
-		return
-	}
-
-	entries := make(map[string]fsckFile, 256)
-	err = sfs.fsckWalk(root, entries)
+func (sfs *swiftVFSV2) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
+	entries := make(map[string]*vfs.TreeFile, 1024)
+	_, _, _, err = sfs.BuildTree(func(f *vfs.TreeFile) {
+		if !f.IsDir {
+			entries[f.DocID] = f
+		}
+	})
 	if err != nil {
 		return
 	}
@@ -448,7 +427,7 @@ func (sfs *swiftVFSV2) Fsck(opts vfs.FsckOptions) (logbook []*vfs.FsckLog, err e
 				if err != nil {
 					return nil, err
 				}
-				newLogs = append(newLogs, &vfs.FsckLog{
+				predicate(&vfs.FsckLog{
 					Type:     vfs.IndexMissing,
 					IsFile:   true,
 					FileDoc:  fileDoc,
@@ -460,16 +439,18 @@ func (sfs *swiftVFSV2) Fsck(opts vfs.FsckOptions) (logbook []*vfs.FsckLog, err e
 				if err != nil {
 					return nil, err
 				}
-				if !bytes.Equal(md5sum, f.file.MD5Sum) {
-					olddoc := f.file
-					newdoc := olddoc.Clone().(*vfs.FileDoc)
-					newdoc.MD5Sum = md5sum
-					newLogs = append(newLogs, &vfs.FsckLog{
-						Type:       vfs.ContentMismatch,
-						IsFile:     true,
-						FileDoc:    newdoc,
-						OldFileDoc: olddoc,
-						Filename:   f.fullpath,
+				if !bytes.Equal(md5sum, f.MD5Sum) || f.ByteSize != obj.Bytes {
+					predicate(&vfs.FsckLog{
+						Type:     vfs.ContentMismatch,
+						IsFile:   true,
+						FileDoc:  f.AsFile(),
+						Filename: f.Fullpath,
+						ContentMismatch: &vfs.FsckContentMismatch{
+							SizeFile:    obj.Bytes,
+							SizeIndex:   f.ByteSize,
+							MD5SumFile:  md5sum,
+							MD5SumIndex: f.MD5Sum,
+						},
 					})
 				}
 				delete(entries, docID)
@@ -483,57 +464,16 @@ func (sfs *swiftVFSV2) Fsck(opts vfs.FsckOptions) (logbook []*vfs.FsckLog, err e
 
 	// entries should contain only data that does not contain an associated
 	// index.
-	for docID, f := range entries {
-		_, _, err = sfs.c.Object(sfs.container, docID)
-		if err == swift.ObjectNotFound {
-			newLogs = append(newLogs, &vfs.FsckLog{
-				Type:     vfs.FileMissing,
-				IsFile:   true,
-				FileDoc:  f.file,
-				Filename: f.fullpath,
-			})
-		} else if err != nil {
-			return nil, err
-		}
-	}
-	sort.Slice(newLogs, func(i, j int) bool {
-		return newLogs[i].Filename < newLogs[j].Filename
-	})
-
-	logbook = append(logbook, newLogs...)
-
-	if opts.Prune {
-		sfs.fsckPrune(newLogs, opts.DryRun)
+	for _, f := range entries {
+		predicate(&vfs.FsckLog{
+			Type:     vfs.FileMissing,
+			IsFile:   true,
+			FileDoc:  f.AsFile(),
+			Filename: f.Fullpath,
+		})
 	}
 
 	return
-}
-
-func (sfs *swiftVFSV2) fsckWalk(dir *vfs.DirDoc, entries map[string]fsckFile) error {
-	iter := sfs.Indexer.DirIterator(dir, nil)
-	for {
-		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		if f != nil {
-			fullpath := path.Join(dir.Fullpath, f.DocName)
-			entries[f.DocID] = fsckFile{f, fullpath}
-		} else if err = sfs.fsckWalk(d, entries); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// fsckPrune tries to fix the given list on inconsistencies in the VFS
-func (sfs *swiftVFSV2) fsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
-	for _, entry := range logbook {
-		vfs.FsckPrune(sfs, sfs.Indexer, entry, dryrun)
-	}
 }
 
 // UpdateFileDoc calls the indexer UpdateFileDoc function and adds a few checks
@@ -835,28 +775,13 @@ func (f *swiftFileOpenV2) Close() error {
 }
 
 func objectToFileDocV2(c *swift.Connection, container string, object swift.Object) (filePath string, fileDoc *vfs.FileDoc, err error) {
-	var h swift.Headers
-	_, h, err = c.Object(container, object.Name)
-	if err != nil {
-		return
-	}
 	md5sum, err := hex.DecodeString(object.Hash)
 	if err != nil {
 		return
 	}
-	objMeta := h.ObjectMetadata()
-	name := objMeta["creation-name"]
-	if name == "" {
-		name = fmt.Sprintf("Unknown %s", utils.RandomString(10))
-	}
-	var cdate time.Time
-	if v := objMeta["created-at"]; v != "" {
-		cdate, _ = time.Parse(time.RFC3339, v)
-	}
-	if cdate.IsZero() {
-		cdate = time.Now()
-	}
-	executable, _ := strconv.ParseBool(objMeta["exec"])
+	name := "unknown"
+	cdate := time.Now()
+	executable := false
 	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
 	filePath = path.Join(vfs.OrphansDirName, name)
 	fileDoc, err = vfs.NewFileDoc(
@@ -870,6 +795,7 @@ func objectToFileDocV2(c *swift.Connection, container string, object swift.Objec
 		executable,
 		false,
 		nil)
+	fileDoc.DocID = makeDocID(object.Name)
 	return
 }
 

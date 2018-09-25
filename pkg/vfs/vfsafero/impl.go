@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"sort"
 	"strings"
 	"sync"
 
@@ -343,38 +342,15 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &aferoFileOpen{f}, nil
 }
 
-func (afs *aferoVFS) Fsck(opts vfs.FsckOptions) (logbook []*vfs.FsckLog, err error) {
-	if lockerr := afs.mu.Lock(); lockerr != nil {
-		return nil, lockerr
-	}
-	defer afs.mu.Unlock()
-	logbook, err = afs.Indexer.CheckIndexIntegrity()
-	if err != nil {
-		return
-	}
-	if opts.Prune {
-		afs.fsckPrune(logbook, opts.DryRun)
-	}
+func (afs *aferoVFS) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 	root, err := afs.Indexer.DirByPath("/")
 	if err != nil {
-		return nil, err
+		return err
 	}
-	var newLogs []*vfs.FsckLog
-	newLogs, err = afs.fsckWalk(root, newLogs)
-	if err != nil {
-		return nil, err
-	}
-	sort.Slice(newLogs, func(i, j int) bool {
-		return newLogs[i].Filename < newLogs[j].Filename
-	})
-	logbook = append(logbook, newLogs...)
-	if opts.Prune {
-		afs.fsckPrune(newLogs, opts.DryRun)
-	}
-	return logbook, nil
+	return afs.fsckWalk(root, predicate)
 }
 
-func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.FsckLog, error) {
+func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, predicate func(log *vfs.FsckLog)) error {
 	entries := make(map[string]struct{})
 	iter := afs.Indexer.DirIterator(dir, nil)
 	for {
@@ -383,7 +359,7 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 			break
 		}
 		if err != nil {
-			return nil, err
+			return err
 		}
 		var fullpath string
 		if f != nil {
@@ -392,21 +368,21 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 			fullpath = path.Join(dir.Fullpath, f.DocName)
 			stat, err = afs.fs.Stat(fullpath)
 			if _, ok := err.(*os.PathError); ok {
-				logbook = append(logbook, &vfs.FsckLog{
+				predicate(&vfs.FsckLog{
 					Type:     vfs.FileMissing,
 					IsFile:   true,
 					FileDoc:  f,
 					Filename: fullpath,
 				})
 			} else if err != nil {
-				return nil, err
+				return err
 			} else if stat.IsDir() {
 				var dirDoc *vfs.DirDoc
 				dirDoc, err = vfs.NewDirDocWithParent(f.DocName, dir, nil)
 				if err != nil {
-					return nil, err
+					return err
 				}
-				logbook = append(logbook, &vfs.FsckLog{
+				predicate(&vfs.FsckLog{
 					Type:     vfs.TypeMismatch,
 					IsFile:   true,
 					DirDoc:   dirDoc,
@@ -419,21 +395,21 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 			var stat os.FileInfo
 			stat, err = afs.fs.Stat(d.Fullpath)
 			if _, ok := err.(*os.PathError); ok {
-				logbook = append(logbook, &vfs.FsckLog{
+				predicate(&vfs.FsckLog{
 					Type:     vfs.FileMissing,
 					IsFile:   false,
 					DirDoc:   d,
 					Filename: d.Fullpath,
 				})
 			} else if err != nil {
-				return nil, err
+				return err
 			} else if !stat.IsDir() {
 				var fileDoc *vfs.FileDoc
 				fileDoc, err = fileInfosToFileDoc(dir, d.Fullpath, stat)
 				if err != nil {
-					return nil, err
+					return err
 				}
-				logbook = append(logbook, &vfs.FsckLog{
+				predicate(&vfs.FsckLog{
 					Type:     vfs.TypeMismatch,
 					IsFile:   false,
 					FileDoc:  fileDoc,
@@ -441,8 +417,8 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 					Filename: d.Fullpath,
 				})
 			} else {
-				if logbook, err = afs.fsckWalk(d, logbook); err != nil {
-					return nil, err
+				if err = afs.fsckWalk(d, predicate); err != nil {
+					return err
 				}
 			}
 		}
@@ -450,7 +426,7 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 
 	fileinfos, err := afero.ReadDir(afs.fs, dir.Fullpath)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, fileinfo := range fileinfos {
@@ -468,7 +444,7 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 			if err != nil {
 				continue
 			}
-			logbook = append(logbook, &vfs.FsckLog{
+			predicate(&vfs.FsckLog{
 				Type:     vfs.IndexMissing,
 				IsFile:   true,
 				FileDoc:  fileDoc,
@@ -477,7 +453,7 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 		}
 	}
 
-	return logbook, nil
+	return nil
 }
 
 func fileInfosToFileDoc(dir *vfs.DirDoc, fullpath string, fileinfo os.FileInfo) (*vfs.FileDoc, error) {
@@ -498,58 +474,6 @@ func fileInfosToFileDoc(dir *vfs.DirDoc, fullpath string, fileinfo os.FileInfo) 
 		false,
 		trashed,
 		nil)
-}
-
-// fsckPrune tries to fix the given list on inconsistencies in the VFS
-func (afs *aferoVFS) fsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
-	for _, entry := range logbook {
-		switch entry.Type {
-		case vfs.IndexOrphanTree, vfs.IndexBadFullpath, vfs.FileMissing, vfs.IndexMissing:
-			vfs.FsckPrune(afs, afs.Indexer, entry, dryrun)
-		case vfs.TypeMismatch:
-			if entry.IsFile {
-				// file on couchdb and directory on swift: we update the index to
-				// remove the file index and create a directory one
-				err := afs.Indexer.DeleteFileDoc(entry.FileDoc)
-				if err != nil {
-					entry.PruneError = err
-				}
-				err = afs.Indexer.CreateDirDoc(entry.DirDoc)
-				if err != nil {
-					entry.PruneError = err
-				}
-			} else {
-				// directory on couchdb and file on filesystem: we keep the directory
-				// and move the object into the orphan directory and create a new index
-				// associated with it.
-				orphanDir, err := vfs.Mkdir(afs, vfs.OrphansDirName, nil)
-				if err != nil {
-					entry.PruneError = err
-					continue
-				}
-				oldname := entry.Filename
-				newname := path.Join(vfs.OrphansDirName, entry.FileDoc.Name())
-				err = afs.fs.Rename(oldname, newname)
-				if err != nil {
-					entry.PruneError = err
-					continue
-				}
-				err = afs.fs.Mkdir(oldname, 0755)
-				if err != nil {
-					entry.PruneError = err
-					continue
-				}
-				newdoc := entry.FileDoc.Clone().(*vfs.FileDoc)
-				newdoc.DirID = orphanDir.ID()
-				newdoc.ResetFullpath()
-				err = afs.Indexer.CreateFileDoc(newdoc)
-				if err != nil {
-					entry.PruneError = err
-					continue
-				}
-			}
-		}
-	}
 }
 
 // UpdateFileDoc overrides the indexer's one since the afero.Fs is by essence
