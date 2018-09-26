@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,10 +15,10 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/cozy-stack/statik/fs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	web_utils "github.com/cozy/cozy-stack/web/utils"
 	"github.com/cozy/echo"
-	"github.com/cozy/statik/fs"
 )
 
 var (
@@ -38,6 +39,11 @@ var (
 		"/locales/",
 		"/placeholders/",
 	}
+)
+
+const (
+	assetsPrefix    = "/assets"
+	assetsExtPrefix = "/assets/ext"
 )
 
 // AssetRenderer is an interface for both a template renderer and an asset HTTP
@@ -75,12 +81,12 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 	}
 
 	t := template.New("stub")
-	h := http.StripPrefix("/assets", http.FileServer(dir(assetsPath)))
+	h := http.StripPrefix(assetsPrefix, http.FileServer(dir(assetsPath)))
 	funcsMap := template.FuncMap{
 		"t":     fmt.Sprintf,
 		"split": strings.Split,
-		"asset": func(domain, file string) string {
-			return AssetResolver(domain, path.Join("/assets", file))
+		"asset": func(domain, name string, context ...string) string {
+			return path.Join(assetsPrefix, name)
 		},
 	}
 
@@ -97,15 +103,13 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 // representation into the binary.
 func NewRenderer() (AssetRenderer, error) {
 	t := template.New("stub")
-	h := NewHandler(Options{
-		Prefix:   "/assets",
-		Privates: privateAssets,
-	})
+	h := NewHandler()
+
 	funcsMap := template.FuncMap{
 		"t":     fmt.Sprintf,
 		"split": strings.Split,
-		"asset": func(domain, file string) string {
-			return AssetResolver(domain, h.AssetPath(file))
+		"asset": func(domain, name string, context ...string) string {
+			return h.AssetPath(domain, name, context...)
 		},
 	}
 
@@ -148,141 +152,64 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return t.Funcs(funcMap).ExecuteTemplate(w, name, data)
 }
 
-// GetLanguageFromHeader return the language tag given the Accept-Language
-// header.
-func GetLanguageFromHeader(header http.Header) (lang string) {
-	// TODO: improve language detection with a package like
-	// "golang.org/x/text/language"
-	lang = i18n.DefaultLocale
-	acceptHeader := header.Get("Accept-Language")
-	if acceptHeader == "" {
-		return
-	}
-	acceptLanguages := utils.SplitTrimString(acceptHeader, ",")
-	for _, tag := range acceptLanguages {
-		// tag may contain a ';q=' for a quality factor that we do not take into
-		// account.
-		if i := strings.Index(tag, ";q="); i >= 0 {
-			tag = tag[:i]
-		}
-		// tag may contain a '-' to introduce a country variante, that we do not
-		// take into account.
-		if i := strings.IndexByte(tag, '-'); i >= 0 {
-			tag = tag[:i]
-		}
-		if utils.IsInArray(tag, i18n.SupportedLocales) {
-			lang = tag
-			return
-		}
-	}
-	return
-}
-
-// AssetResolver is a template helper returning a complete URL, with domain
-// name, for a given asset path.
-func AssetResolver(domain, file string) string {
-	if domain != "" {
-		return "//" + domain + file
-	}
-	return file
-}
-
-// ExtractAssetID checks if a long hexadecimal string is contained in given
-// file path and returns the original file name and ID (if any). For instance
-// <foo.badbeedbadbeef.min.js> = <foo.min.js, badbeefbadbeef>
-func ExtractAssetID(file string) (string, string) {
-	var id string
-	base := path.Base(file)
-	off1 := strings.IndexByte(base, '.') + 1
-	if off1 < len(base) {
-		off2 := off1 + strings.IndexByte(base[off1:], '.')
-		if off2 > off1 {
-			if s := base[off1:off2]; isLongHexString(s) || s == "immutable" {
-				dir := path.Dir(file)
-				id = s
-				file = base[:off1-1] + base[off2:]
-				if dir != "." {
-					file = path.Join(dir, file)
-				}
-			}
-		}
-	}
-	return file, id
-}
-
-// Handler implements http.Handler for a subpart of the available assets on a
+// Handler implements http.handler for a subpart of the available assets on a
 // specified prefix.
-type Handler struct {
-	prefix string
-	files  map[string]*fs.Asset
-}
-
-// Options contains the different options to create an asset handler.
-type Options struct {
-	Prefix   string
-	Privates []string
-}
+type Handler struct{}
 
 // NewHandler returns a new handler
-func NewHandler(opts Options) *Handler {
-	files := make(map[string]*fs.Asset)
-	fs.Foreach(func(name string, f *fs.Asset) {
-		isPrivate := false
-		for _, p := range opts.Privates {
-			if strings.HasPrefix(name, p) {
-				isPrivate = true
-				break
-			}
-		}
-		if !isPrivate {
-			files[name] = f
-		}
-	})
-	return &Handler{
-		prefix: opts.Prefix,
-		files:  files,
-	}
-}
-
-func isLongHexString(s string) bool {
-	if len(s) < 10 {
-		return false
-	}
-	for _, c := range s {
-		switch {
-		case c >= '0' && c <= '9':
-		case c >= 'a' && c <= 'f':
-		case c >= 'A' && c <= 'F':
-		default:
-			return false
-		}
-	}
-	return true
+func NewHandler() Handler {
+	return Handler{}
 }
 
 // AssetPath return the fullpath with unique identifier for a given asset file.
-func (h *Handler) AssetPath(file string) string {
-	f, ok := h.files[file]
-	if !ok {
-		return h.prefix + file
+func (h Handler) AssetPath(domain, name string, context ...string) string {
+	f, ok := fs.Get(name, context...)
+	if ok {
+		name = f.Name()
 	}
-	return h.prefix + f.Name()
+	if len(context) > 0 && context[0] != "" {
+		name = path.Join(assetsExtPrefix, url.PathEscape(context[0]), name)
+	} else {
+		name = path.Join(assetsPrefix, name)
+	}
+	if domain != "" {
+		return "//" + domain + name
+	}
+	return name
 }
 
 // ServeHTTP implements the http.Handler interface.
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
-	var id string
-	file := strings.TrimPrefix(r.URL.Path, h.prefix)
-	file, id = ExtractAssetID(file)
-	if len(file) > 0 && file[0] != '/' {
-		file = "/" + file
+	// The URL path should be formed in one on those forms:
+	// /assets/:file...
+	// /assets/ext/(:context-name)/:file...
+
+	var id, name, context string
+
+	if strings.HasPrefix(r.URL.Path, assetsExtPrefix+"/") {
+		nameWithContext := strings.TrimPrefix(r.URL.Path, assetsExtPrefix+"/")
+		nameWithContextSplit := strings.SplitN(nameWithContext, "/", 2)
+		if len(nameWithContextSplit) != 2 {
+			http.Error(w, "File not found", http.StatusNotFound)
+			return
+		}
+		context = nameWithContextSplit[0]
+		name = nameWithContextSplit[1]
+	} else {
+		name = strings.TrimPrefix(r.URL.Path, assetsPrefix)
 	}
-	f, ok := h.files[file]
+
+	name, id = ExtractAssetID(name)
+	if len(name) > 0 && name[0] != '/' {
+		name = "/" + name
+	}
+
+	f, ok := fs.Get(name, context)
 	if !ok {
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
@@ -320,4 +247,73 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			io.Copy(w, f.Reader())
 		}
 	}
+}
+
+// GetLanguageFromHeader return the language tag given the Accept-Language
+// header.
+func GetLanguageFromHeader(header http.Header) (lang string) {
+	// TODO: improve language detection with a package like
+	// "golang.org/x/text/language"
+	lang = i18n.DefaultLocale
+	acceptHeader := header.Get("Accept-Language")
+	if acceptHeader == "" {
+		return
+	}
+	acceptLanguages := utils.SplitTrimString(acceptHeader, ",")
+	for _, tag := range acceptLanguages {
+		// tag may contain a ';q=' for a quality factor that we do not take into
+		// account.
+		if i := strings.Index(tag, ";q="); i >= 0 {
+			tag = tag[:i]
+		}
+		// tag may contain a '-' to introduce a country variante, that we do not
+		// take into account.
+		if i := strings.IndexByte(tag, '-'); i >= 0 {
+			tag = tag[:i]
+		}
+		if utils.IsInArray(tag, i18n.SupportedLocales) {
+			lang = tag
+			return
+		}
+	}
+	return
+}
+
+// ExtractAssetID checks if a long hexadecimal string is contained in given
+// file path and returns the original file name and ID (if any). For instance
+// <foo.badbeedbadbeef.min.js> = <foo.min.js, badbeefbadbeef>
+func ExtractAssetID(file string) (string, string) {
+	var id string
+	base := path.Base(file)
+	off1 := strings.IndexByte(base, '.') + 1
+	if off1 < len(base) {
+		off2 := off1 + strings.IndexByte(base[off1:], '.')
+		if off2 > off1 {
+			if s := base[off1:off2]; isLongHexString(s) || s == "immutable" {
+				dir := path.Dir(file)
+				id = s
+				file = base[:off1-1] + base[off2:]
+				if dir != "." {
+					file = path.Join(dir, file)
+				}
+			}
+		}
+	}
+	return file, id
+}
+
+func isLongHexString(s string) bool {
+	if len(s) < 10 {
+		return false
+	}
+	for _, c := range s {
+		switch {
+		case c >= '0' && c <= '9':
+		case c >= 'a' && c <= 'f':
+		case c >= 'A' && c <= 'F':
+		default:
+			return false
+		}
+	}
+	return true
 }
