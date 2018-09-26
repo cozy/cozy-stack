@@ -447,10 +447,9 @@ func (sfs *swiftVFS) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 				}
 				if !bytes.Equal(md5sum, f.MD5Sum) || f.ByteSize != obj.Bytes {
 					predicate(&vfs.FsckLog{
-						Type:     vfs.ContentMismatch,
-						IsFile:   true,
-						FileDoc:  f.AsFile(),
-						Filename: f.Fullpath,
+						Type:    vfs.ContentMismatch,
+						IsFile:  true,
+						FileDoc: f,
 						ContentMismatch: &vfs.FsckContentMismatch{
 							SizeFile:    obj.Bytes,
 							SizeIndex:   f.ByteSize,
@@ -467,10 +466,9 @@ func (sfs *swiftVFS) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 
 	for _, f := range entries {
 		predicate(&vfs.FsckLog{
-			Type:     vfs.FileMissing,
-			IsFile:   true,
-			FileDoc:  f.AsFile(),
-			Filename: f.Fullpath,
+			Type:    vfs.FileMissing,
+			IsFile:  true,
+			FileDoc: f,
 		})
 	}
 

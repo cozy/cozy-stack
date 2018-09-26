@@ -421,17 +421,10 @@ func (sfs *swiftVFSV2) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 			docID := makeDocID(obj.Name)
 			f, ok := entries[docID]
 			if !ok {
-				var fileDoc *vfs.FileDoc
-				var filePath string
-				filePath, fileDoc, err = objectToFileDocV2(sfs.c, sfs.container, obj)
-				if err != nil {
-					return nil, err
-				}
 				predicate(&vfs.FsckLog{
-					Type:     vfs.IndexMissing,
-					IsFile:   true,
-					FileDoc:  fileDoc,
-					Filename: filePath,
+					Type:    vfs.IndexMissing,
+					IsFile:  true,
+					FileDoc: objectToFileDocV2(sfs.c, sfs.container, obj),
 				})
 			} else {
 				var md5sum []byte
@@ -441,10 +434,9 @@ func (sfs *swiftVFSV2) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 				}
 				if !bytes.Equal(md5sum, f.MD5Sum) || f.ByteSize != obj.Bytes {
 					predicate(&vfs.FsckLog{
-						Type:     vfs.ContentMismatch,
-						IsFile:   true,
-						FileDoc:  f.AsFile(),
-						Filename: f.Fullpath,
+						Type:    vfs.ContentMismatch,
+						IsFile:  true,
+						FileDoc: f,
 						ContentMismatch: &vfs.FsckContentMismatch{
 							SizeFile:    obj.Bytes,
 							SizeIndex:   f.ByteSize,
@@ -466,10 +458,9 @@ func (sfs *swiftVFSV2) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 	// index.
 	for _, f := range entries {
 		predicate(&vfs.FsckLog{
-			Type:     vfs.FileMissing,
-			IsFile:   true,
-			FileDoc:  f.AsFile(),
-			Filename: f.Fullpath,
+			Type:    vfs.FileMissing,
+			IsFile:  true,
+			FileDoc: f,
 		})
 	}
 
@@ -774,29 +765,28 @@ func (f *swiftFileOpenV2) Close() error {
 	return f.f.Close()
 }
 
-func objectToFileDocV2(c *swift.Connection, container string, object swift.Object) (filePath string, fileDoc *vfs.FileDoc, err error) {
-	md5sum, err := hex.DecodeString(object.Hash)
-	if err != nil {
-		return
-	}
+func objectToFileDocV2(c *swift.Connection, container string, object swift.Object) *vfs.TreeFile {
+	md5sum, _ := hex.DecodeString(object.Hash)
 	name := "unknown"
 	cdate := time.Now()
-	executable := false
 	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
-	filePath = path.Join(vfs.OrphansDirName, name)
-	fileDoc, err = vfs.NewFileDoc(
-		name,
-		"",
-		object.Bytes,
-		md5sum,
-		mime,
-		class,
-		cdate,
-		executable,
-		false,
-		nil)
-	fileDoc.DocID = makeDocID(object.Name)
-	return
+	return &vfs.TreeFile{
+		DirOrFileDoc: vfs.DirOrFileDoc{
+			DirDoc: &vfs.DirDoc{
+				DocID:     makeDocID(object.Name),
+				DocName:   name,
+				DirID:     "",
+				CreatedAt: cdate,
+				UpdatedAt: cdate,
+				Fullpath:  path.Join(vfs.OrphansDirName, name),
+			},
+			ByteSize:   object.Bytes,
+			Mime:       mime,
+			Class:      class,
+			Executable: false,
+			MD5Sum:     md5sum,
+		},
+	}
 }
 
 var (

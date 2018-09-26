@@ -30,15 +30,12 @@ const (
 
 // FsckLog is a struct for an inconsistency in the VFS
 type FsckLog struct {
-	Type            FsckLogType          `json:"type"`
-	FileDoc         *FileDoc             `json:"file_doc,omitempty"`
-	DirDoc          *DirDoc              `json:"dir_doc,omitempty"`
-	Deletions       []couchdb.Doc        `json:"deletions,omitempty"`
-	IsFile          bool                 `json:"is_file"`
-	Filename        string               `json:"filename,omitempty"`
-	PruneAction     string               `json:"prune_action,omitempty"`
-	PruneError      error                `json:"prune_error,omitempty"`
-	ContentMismatch *FsckContentMismatch `json:"content_mismatch,omitempty"`
+	Type             FsckLogType          `json:"type"`
+	FileDoc          *TreeFile            `json:"file_doc,omitempty"`
+	DirDoc           *TreeFile            `json:"dir_doc,omitempty"`
+	IsFile           bool                 `json:"is_file"`
+	ContentMismatch  *FsckContentMismatch `json:"content_mismatch,omitempty"`
+	ExpectedFullpath string               `json:"expected_fullpath,omitempty"`
 }
 
 // String returns a string describing the FsckLog
@@ -82,9 +79,9 @@ type FsckContentMismatch struct {
 // in a tree-like representation of the index.
 type TreeFile struct {
 	DirOrFileDoc
-	FilesChildren     []*TreeFile `json:"children,omitempty"`
-	FilesChildrenSize int64       `json:"children_size,omitempty"`
-	DirsChildren      []*TreeFile `json:"directories,omitempty"`
+	FilesChildren     []*TreeFile `json:"-"`
+	FilesChildrenSize int64       `json:"-"`
+	DirsChildren      []*TreeFile `json:"-"`
 	IsDir             bool        `json:"-"`
 
 	hasCycle bool

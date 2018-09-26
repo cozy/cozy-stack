@@ -514,18 +514,14 @@ func (c *couchdbIndexer) CheckIndexIntegrity(predicate func(*FsckLog)) (err erro
 				predicate(&FsckLog{
 					Type:    IndexOrphanTree,
 					IsFile:  true,
-					FileDoc: orphan.AsFile(),
+					FileDoc: orphan,
 				})
 			} else {
-				log := &FsckLog{
-					Type:     IndexOrphanTree,
-					DirDoc:   orphan.AsDir(),
-					Filename: orphan.Fullpath,
-				}
-				if orphan.hasCycle || strings.HasPrefix(orphan.Fullpath, TrashDirName) {
-					log.Deletions = listChildren(orphan, nil)
-				}
-				predicate(log)
+				predicate(&FsckLog{
+					Type:   IndexOrphanTree,
+					IsFile: false,
+					DirDoc: orphan,
+				})
 			}
 		}
 	}
@@ -599,9 +595,9 @@ func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, predicate func
 		expected := path.Join(parent.Fullpath, child.DocName)
 		if expected != child.Fullpath {
 			predicate(&FsckLog{
-				Type:     IndexBadFullpath,
-				DirDoc:   child.AsDir(),
-				Filename: expected,
+				Type:             IndexBadFullpath,
+				DirDoc:           child,
+				ExpectedFullpath: expected,
 			})
 		}
 		cleanDirsMap(child, dirsmap, predicate)

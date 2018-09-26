@@ -35,8 +35,6 @@ var flagBlocked bool
 var flagDev bool
 var flagPassphrase string
 var flagForce bool
-var flagFsckDry bool
-var flagFsckPrune bool
 var flagJSON bool
 var flagDirectory string
 var flagIncreaseQuota bool
@@ -512,19 +510,11 @@ in swift/localfs but not couchdb.
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		err = i.VFS().Fsck(func(log *vfs.FsckLog) {
 			hasError = true
-			var swiftLayout, swiftContainer string
-			if i.SwiftCluster > 0 {
-				swiftLayout = "v2"
-				swiftContainer = "cozy-v2-" + i.DBPrefix()
-			} else {
-				swiftLayout = "v1"
-				swiftContainer = "cozy-" + i.DBPrefix()
-			}
 			switch log.Type {
 			case vfs.ContentMismatch:
-				fmt.Fprintf(w, "%s;%s;%s;%s;%s;%s;%s;%s;%d;%d;%d\n",
-					i.Domain, swiftContainer, swiftLayout,
-					log.Filename,
+				fmt.Fprintf(w, "%s;%s;%s;%s;%s;%s;%d;%d\n",
+					i.Domain,
+					log.FileDoc.Fullpath,
 					log.FileDoc.DocID,
 					log.FileDoc.DocRev,
 					hex.EncodeToString(log.ContentMismatch.MD5SumIndex),
@@ -792,8 +782,6 @@ func init() {
 	modifyInstanceCmd.Flags().BoolVar(&flagBlocked, "blocked", false, "Block the instance")
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
-	fsckInstanceCmd.Flags().BoolVar(&flagFsckDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
-	fsckInstanceCmd.Flags().BoolVar(&flagFsckPrune, "prune", false, "Try to solve inconsistencies by modifying the file system")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagAllowLoginScope, "allow-login-scope", false, "Allow login scope")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
