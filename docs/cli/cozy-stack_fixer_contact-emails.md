@@ -1,24 +1,19 @@
-## cozy-stack instances ls
+## cozy-stack fixer contact-emails
 
-List instances
+Detect and try to fix invalid emails on contacts
 
 ### Synopsis
 
-
-cozy-stack instances ls allows to list all the instances that can be served
-by this server.
-
+Detect and try to fix invalid emails on contacts
 
 ```
-cozy-stack instances ls [flags]
+cozy-stack fixer contact-emails [flags]
 ```
 
 ### Options
 
 ```
-      --fields strings   Arguments shown for each line in the list
-  -h, --help             help for ls
-      --json             Show each line as a json representation of the instance
+  -h, --help   help for contact-emails
 ```
 
 ### Options inherited from parent commands
@@ -33,5 +28,5 @@ cozy-stack instances ls [flags]
 
 ### SEE ALSO
 
-* [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
+* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
 

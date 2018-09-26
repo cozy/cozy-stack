@@ -50,6 +50,7 @@ cozy-stack instances <command> [flags]
 * [cozy-stack instances refresh-token-oauth](cozy-stack_instances_refresh-token-oauth.md)	 - Generate a new OAuth refresh token
 * [cozy-stack instances set-disk-quota](cozy-stack_instances_set-disk-quota.md)	 - Change the disk-quota of the instance
 * [cozy-stack instances show](cozy-stack_instances_show.md)	 - Show the instance of the specified domain
+* [cozy-stack instances show-prefix](cozy-stack_instances_show-prefix.md)	 - Show the instance prefix of the specified domain
 * [cozy-stack instances token-app](cozy-stack_instances_token-app.md)	 - Generate a new application token
 * [cozy-stack instances token-cli](cozy-stack_instances_token-cli.md)	 - Generate a new CLI access token (global access)
 * [cozy-stack instances token-konnector](cozy-stack_instances_token-konnector.md)	 - Generate a new konnector token
