@@ -128,8 +128,8 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 
 	// Check that the associated account is present.
 	var account *accounts.Account
-	if msg.Account != "" && !ctx.Manual() && !msg.AccountDeleted {
-		account := &accounts.Account{}
+	if msg.Account != "" && !msg.AccountDeleted {
+		account = &accounts.Account{}
 		err = couchdb.GetDoc(i, consts.Accounts, msg.Account, account)
 		if couchdb.IsNotFoundError(err) {
 			return "", jobs.ErrBadTrigger{Err: err}
