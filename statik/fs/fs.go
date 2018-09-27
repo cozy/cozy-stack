@@ -91,7 +91,7 @@ type AssetOption struct {
 	Name    string `json:"name"`
 	Context string `json:"context"`
 	URL     string `json:"url"`
-	Shasum  []byte `json:"shasum"`
+	Shasum  string `json:"shasum"`
 }
 
 func RegisterCustomExternals(opts []AssetOption) error {
@@ -113,9 +113,10 @@ func RegisterCustomExternals(opts []AssetOption) error {
 	return nil
 }
 
-func registerCustomExternal(name, context, assetURL string, shasum []byte) (*Asset, error) {
+func registerCustomExternal(name, context, assetURL, shasum string) (*Asset, error) {
+	hexShasum, _ := hex.DecodeString(shasum)
 	if currentAsset, ok := Get(name, context); ok {
-		if bytes.Equal(currentAsset.unzippedShasum, shasum) {
+		if bytes.Equal(currentAsset.unzippedShasum, []byte(hexShasum)) {
 			return currentAsset, nil
 		}
 	}
@@ -168,9 +169,9 @@ func registerCustomExternal(name, context, assetURL string, shasum []byte) (*Ass
 	}
 
 	sum := h.Sum(nil)
-	if !bytes.Equal(sum, shasum) {
+	if !bytes.Equal(sum, []byte(hexShasum)) {
 		return nil, fmt.Errorf("external content checksum do not match: expected %x got %x on url %s",
-			shasum, sum, assetURL)
+			hexShasum, sum, assetURL)
 	}
 
 	return newAsset(name, context, sum, zippedDataBuf.Bytes(), unzippedData), nil
