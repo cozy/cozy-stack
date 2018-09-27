@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/workers/updates"
+	"github.com/cozy/cozy-stack/statik/fs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/echo"
 )
@@ -235,6 +236,15 @@ func rebuildRedis(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func assetsInfos(c echo.Context) error {
+	assetsMap := make(map[string][]string)
+	fs.Foreach(func(name, context string, f *fs.Asset) {
+		assetsMap[context] = append(assetsMap[context], name)
+		fmt.Printf("name: %s", name)
+	})
+	return c.JSON(http.StatusOK, assetsMap)
+}
+
 func cleanOrphanAccounts(c echo.Context) error {
 	type result struct {
 		Result  string             `json:"result"`
@@ -427,4 +437,5 @@ func Routes(router *echo.Group) {
 	router.POST("/:domain/import", importer)
 	router.POST("/:domain/orphan_accounts", cleanOrphanAccounts)
 	router.POST("/redis", rebuildRedis)
+	router.GET("/assets_infos", assetsInfos)
 }
