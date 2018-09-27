@@ -48,6 +48,7 @@ var flagTOSLatest string
 var flagContextName string
 var flagOnboardingFinished bool
 var flagExpire time.Duration
+var flagAllowLoginScope bool
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -628,10 +629,11 @@ var oauthClientInstanceCmd = &cobra.Command{
 		}
 		c := newAdminClient()
 		oauthClient, err := c.RegisterOAuthClient(&client.OAuthClientOptions{
-			Domain:      args[0],
-			RedirectURI: args[1],
-			ClientName:  args[2],
-			SoftwareID:  args[3],
+			Domain:          args[0],
+			RedirectURI:     args[1],
+			ClientName:      args[2],
+			SoftwareID:      args[3],
+			AllowLoginScope: flagAllowLoginScope,
 		})
 		if err != nil {
 			return err
@@ -766,6 +768,7 @@ func init() {
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckPrune, "prune", false, "Try to solve inconsistencies by modifying the file system")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
+	oauthClientInstanceCmd.Flags().BoolVar(&flagAllowLoginScope, "allow-login-scope", false, "Allow login scope")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	lsInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Show each line as a json representation of the instance")
