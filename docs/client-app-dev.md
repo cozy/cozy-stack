@@ -53,6 +53,12 @@ $ ./scripts/cozy-app-dev.sh -h
 If you do not want to install the required dependencies, we provide a Docker
 image which encapsulates the dev script and all its dependencies.
 
+To download the latest version, you can run this command:
+
+```sh
+docker pull cozy/cozy-app-dev
+```
+
 To run a ephemeral instance, on the `$HOME/myapp` directory, use the following
 command (warning: all the data stored by your application in couchdb and the VFS
 won't remain after):

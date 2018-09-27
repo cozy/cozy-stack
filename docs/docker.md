@@ -37,7 +37,5 @@ docker run -it --rm --name cozy-stack \
 
 ## Publishing a new cozy-app-dev image
 
-```bash
-./scripts/build.sh docker-dev
-docker push cozy/cozy-app-dev
-```
+We publish the cozy-app-dev image when we release a new version of the stack.
+See `scripts/release.sh` for details.
