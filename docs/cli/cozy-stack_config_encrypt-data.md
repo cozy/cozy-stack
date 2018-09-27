@@ -1,36 +1,28 @@
-## cozy-stack config gen-keys
+## cozy-stack config encrypt-data
 
-Generate an key pair for encryption and decryption of credentials
+Encrypt data with the specified encryption keyfile.
 
 ### Synopsis
 
-
-cozy-stack config gen-keys generate a key-pair and save them in the
-specified path.
-
-The decryptor key filename is given the ".dec" extension suffix.
-The encryptor key filename is given the ".enc" extension suffix.
-
-The files permissions are 0400.
+cozy-stack config encrypt-data encrypts any valid JSON data
 
 ```
-cozy-stack config gen-keys <filepath> [flags]
+cozy-stack config encrypt-data <encoding keyfile> <text> [flags]
 ```
 
 ### Examples
 
 ```
-$ cozy-stack config gen-keys ~/credentials-key
-keyfiles written in:
-	~/credentials-key.enc
-	~/credentials-key.dec
+
+$ ./cozy-stack config encrypt-data ~/.cozy/key.enc "{\"foo\": \"bar\"}"
+$ bmFjbNFjY+XZkS26YtVPUIKKm/JdnAGwG30n6A4ypS1p1dHev8hOtaRbW+lGneoO7PS9JCW8U5GSXhASu+c3UkaZ
 
 ```
 
 ### Options
 
 ```
-  -h, --help   help for gen-keys
+  -h, --help   help for encrypt-data
 ```
 
 ### Options inherited from parent commands
