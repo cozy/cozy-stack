@@ -2,6 +2,7 @@ package instances
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -65,10 +66,16 @@ func registerClient(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
+	allowLoginScope, err := strconv.ParseBool(c.QueryParam("AllowLoginScope"))
+	if err != nil {
+		return wrapError(err)
+	}
+
 	client := oauth.Client{
-		RedirectURIs: []string{c.QueryParam("RedirectURI")},
-		ClientName:   c.QueryParam("ClientName"),
-		SoftwareID:   c.QueryParam("SoftwareID"),
+		RedirectURIs:    []string{c.QueryParam("RedirectURI")},
+		ClientName:      c.QueryParam("ClientName"),
+		SoftwareID:      c.QueryParam("SoftwareID"),
+		AllowLoginScope: allowLoginScope,
 	}
 	if regErr := client.Create(in); regErr != nil {
 		return c.String(http.StatusBadRequest, regErr.Description)
