@@ -604,17 +604,17 @@ func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, predicate func
 	}
 }
 
-func listChildren(root *TreeFile, files []couchdb.Doc) []couchdb.Doc {
-	if !root.visited {
-		files = append(files, root)
-		// avoid stackoverflow on cycles
-		root.visited = true
-		for _, child := range root.DirsChildren {
-			files = listChildren(child, files)
-		}
-		for _, child := range root.FilesChildren {
-			files = append(files, child)
-		}
-	}
-	return files
-}
+// func listChildren(root *TreeFile, files []couchdb.Doc) []couchdb.Doc {
+// 	if !root.visited {
+// 		files = append(files, root)
+// 		// avoid stackoverflow on cycles
+// 		root.visited = true
+// 		for _, child := range root.DirsChildren {
+// 			files = listChildren(child, files)
+// 		}
+// 		for _, child := range root.FilesChildren {
+// 			files = append(files, child)
+// 		}
+// 	}
+// 	return files
+// }

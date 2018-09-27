@@ -12,20 +12,20 @@ const (
 	IndexMissingRoot FsckLogType = "index_missing_root"
 	// IndexOrphanTree used when a part of the tree is detached from the main
 	// root of the index.
-	IndexOrphanTree = "index_orphan_tree"
+	IndexOrphanTree FsckLogType = "index_orphan_tree"
 	// IndexBadFullpath used when a directory does not have the correct path
 	// field given its position in the index.
-	IndexBadFullpath = "index_bad_fullpath"
+	IndexBadFullpath FsckLogType = "index_bad_fullpath"
 	// FileMissing used when a file data is missing from its index entry.
-	FileMissing = "file_missing"
+	FileMissing FsckLogType = "file_missing"
 	// IndexMissing is used when the index entry is missing from a file data.
-	IndexMissing = "index_missing"
+	IndexMissing FsckLogType = "index_missing"
 	// TypeMismatch is used when a document type does not match in the index and
 	// underlying filesystem.
-	TypeMismatch = "type_mismatch"
+	TypeMismatch FsckLogType = "type_mismatch"
 	// ContentMismatch is used when a document content checksum does not match
 	// with the one in the underlying fs.
-	ContentMismatch = "content_mismatch"
+	ContentMismatch FsckLogType = "content_mismatch"
 )
 
 // FsckLog is a struct for an inconsistency in the VFS
@@ -71,8 +71,8 @@ func (f *FsckLog) String() string {
 type FsckContentMismatch struct {
 	SizeIndex   int64  `json:"size_index"`
 	SizeFile    int64  `json:"size_file"`
-	MD5SumIndex []byte `json:"md5sum_index`
-	MD5SumFile  []byte `json:"md5sum_file`
+	MD5SumIndex []byte `json:"md5sum_index"`
+	MD5SumFile  []byte `json:"md5sum_file"`
 }
 
 // TreeFile represent a subset of a file/directory structure that can be used
@@ -85,7 +85,7 @@ type TreeFile struct {
 	IsDir             bool        `json:"-"`
 
 	hasCycle bool
-	visited  bool
+	// visited  bool
 }
 
 func (t *TreeFile) AsFile() *FileDoc {

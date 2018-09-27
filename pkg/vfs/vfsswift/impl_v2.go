@@ -395,11 +395,6 @@ func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &swiftFileOpenV2{f, nil}, nil
 }
 
-type fsckFile struct {
-	file     *vfs.FileDoc
-	fullpath string
-}
-
 func (sfs *swiftVFSV2) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, _, _, err = sfs.BuildTree(func(f *vfs.TreeFile) {

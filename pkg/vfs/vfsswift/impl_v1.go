@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -472,29 +471,6 @@ func (sfs *swiftVFS) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 		})
 	}
 
-	return
-}
-
-func objectToFileDocV1(dir *vfs.DirDoc, object swift.Object) (filePath string, fileDoc *vfs.FileDoc, err error) {
-	trashed := strings.HasPrefix(dir.Fullpath, vfs.TrashDirName)
-	dirID := dir.DocID
-	filePath = path.Join(dir.Fullpath, path.Base(object.Name))
-	md5sum, err := hex.DecodeString(object.Hash)
-	if err != nil {
-		return
-	}
-	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
-	fileDoc, err = vfs.NewFileDoc(
-		path.Base(object.Name),
-		dirID,
-		object.Bytes,
-		md5sum,
-		mime,
-		class,
-		object.LastModified,
-		false,
-		trashed,
-		nil)
 	return
 }
 
