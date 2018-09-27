@@ -3,8 +3,6 @@
 package statik
 
 import (
-  "encoding/hex"
-
 	"github.com/cozy/cozy-stack/statik/fs"
 )
 
@@ -37362,16 +37360,4 @@ AP//LLMfaG0VAAA=
 -----END COZY ASSET-----
 `
 	fs.Register(data)
-  shasum, _ := hex.DecodeString("0763d6c2cebee0880eb3a9cc25d38cd23db39b5c3802f2dc379e408c877a2788")
-  err := fs.RegisterCustomExternals([]fs.AssetOption{
-    {
-      Name:   "/css/cozy-bar.min.css",
-      URL:    "file:///Users/pierre/go/src/github.com/cozy/cozy-stack/assets/styles/login.css",
-      Shasum: shasum,
-      Context: "plop",
-    },
-  })
-  if err != nil {
-    panic(err)
-  }
 }

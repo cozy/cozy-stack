@@ -1,6 +1,7 @@
 package instances
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -236,6 +237,7 @@ func rebuildRedis(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// Renders the assets list loaded in memory and served by the cozy
 func assetsInfos(c echo.Context) error {
 	assetsMap := make(map[string][]string)
 	fs.Foreach(func(name, context string, f *fs.Asset) {
@@ -243,6 +245,26 @@ func assetsInfos(c echo.Context) error {
 		fmt.Printf("name: %s", name)
 	})
 	return c.JSON(http.StatusOK, assetsMap)
+}
+
+func addAsset(c echo.Context) error {
+	context := c.QueryParam("context")
+	assetURL := c.QueryParam("asset_url")
+	name := c.QueryParam("name")
+
+	shasum, _ := hex.DecodeString("0763d6c2cebee0880eb3a9cc25d38cd23db39b5c3802f2dc379e408c877a2788")
+	err := fs.RegisterCustomExternals([]fs.AssetOption{
+		{
+			Name:    name,
+			URL:     assetURL,
+			Shasum:  shasum,
+			Context: context,
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+	return nil
 }
 
 func cleanOrphanAccounts(c echo.Context) error {
