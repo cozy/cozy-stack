@@ -24,10 +24,9 @@ var (
 	errBadCredentials = errors.New("accounts: bad credentials")
 )
 
-// EncryptCredentials takes a login / password and encrypts their values using
+// EncryptCredentialsWithKey takes a login / password and encrypts their values using
 // the vault public key.
-func EncryptCredentials(login, password string) (string, error) {
-	encryptorKey := config.GetVault().CredentialsEncryptorKey()
+func EncryptCredentialsWithKey(encryptorKey *keymgmt.NACLKey, login, password string) (string, error) {
 	if encryptorKey == nil {
 		return "", errCannotEncrypt
 	}
@@ -90,6 +89,16 @@ func EncryptBufferWithKey(encryptorKey *keymgmt.NACLKey, buf []byte) ([]byte, er
 
 	encryptedCreds := box.Seal(encryptedOut, buf, &nonce, encryptorKey.PublicKey(), encryptorKey.PrivateKey())
 	return encryptedCreds, nil
+}
+
+// EncryptCredentials encrypts the given credentials with the specified encryption
+// key.
+func EncryptCredentials(login, password string) (string, error) {
+	encryptorKey := config.GetVault().CredentialsEncryptorKey()
+	if encryptorKey == nil {
+		return "", errCannotEncrypt
+	}
+	return EncryptCredentialsWithKey(encryptorKey, login, password)
 }
 
 // DecryptCredentials takes an encrypted credentials, constiting of a login /
