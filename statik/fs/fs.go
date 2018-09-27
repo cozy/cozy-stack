@@ -52,16 +52,12 @@ type Asset struct {
 	unzippedData   []byte
 	unzippedSize   string
 	unzippedShasum []byte
-	etag           string
-	name           string
-	nameWithSum    string
-	mime           string
-	context        string
+	Etag           string `json:"etag"`
+	Name           string `json:"name"`
+	NameWithSum    string `json:"nameWithSum"`
+	Mime           string `json:"mime"`
+	Context        string `json:"context"`
 }
-
-func (f *Asset) Etag() string { return f.etag }
-func (f *Asset) Name() string { return f.nameWithSum }
-func (f *Asset) Mime() string { return f.mime }
 
 func (f *Asset) Size() string {
 	return f.unzippedSize
@@ -92,10 +88,10 @@ func Register(zipData string) {
 }
 
 type AssetOption struct {
-	Name    string
-	Context string
-	URL     string
-	Shasum  []byte
+	Name    string `json:"name"`
+	Context string `json:"context"`
+	URL     string `json:"url"`
+	Shasum  []byte `json:"shasum"`
 }
 
 func RegisterCustomExternals(opts []AssetOption) error {
@@ -235,17 +231,17 @@ func newAsset(name, context string, unzippedSum, zippedData, unzippedData []byte
 		unzippedSize:   strconv.Itoa(len(unzippedData)),
 		unzippedShasum: unzippedSum,
 
-		etag:        etag,
-		name:        name,
-		nameWithSum: nameWithSum,
-		mime:        mime,
-		context:     context,
+		Etag:        etag,
+		Name:        name,
+		NameWithSum: nameWithSum,
+		Mime:        mime,
+		Context:     context,
 	}
 }
 
 // threadsafe
 func storeAsset(asset *Asset) {
-	context := asset.context
+	context := asset.Context
 	if context == "" {
 		context = defaultContext
 	}
@@ -256,7 +252,7 @@ func storeAsset(asset *Asset) {
 		assetsForContext = new(sync.Map)
 		globalAssets[context] = assetsForContext
 	}
-	assetsForContext.Store(asset.name, asset)
+	assetsForContext.Store(asset.Name, asset)
 }
 
 func Get(name string, context ...string) (*Asset, bool) {

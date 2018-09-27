@@ -165,7 +165,7 @@ func NewHandler() Handler {
 func (h Handler) AssetPath(domain, name string, context ...string) string {
 	f, ok := fs.Get(name, context...)
 	if ok {
-		name = f.Name()
+		name = f.NameWithSum
 	}
 	if len(context) > 0 && context[0] != "" {
 		name = path.Join(assetsExtPrefix, url.PathEscape(context[0]), name)
@@ -216,12 +216,12 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	checkETag := id == ""
-	if checkETag && web_utils.CheckPreconditions(w, r, f.Etag()) {
+	if checkETag && web_utils.CheckPreconditions(w, r, f.Etag) {
 		return
 	}
 
 	headers := w.Header()
-	headers.Set("Content-Type", f.Mime())
+	headers.Set("Content-Type", f.Mime)
 	headers.Set("Content-Length", f.Size())
 	headers.Add("Vary", "Accept-Encoding")
 
@@ -234,7 +234,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if checkETag {
-		headers.Set("Etag", f.Etag())
+		headers.Set("Etag", f.Etag)
 		headers.Set("Cache-Control", "no-cache, public")
 	} else {
 		headers.Set("Cache-Control", "max-age=31536000, public, immutable")

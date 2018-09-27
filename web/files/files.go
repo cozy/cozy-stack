@@ -30,8 +30,8 @@ import (
 	"github.com/cozy/cozy-stack/web/permissions"
 	web_utils "github.com/cozy/cozy-stack/web/utils"
 
-	"github.com/cozy/echo"
 	statikFS "github.com/cozy/cozy-stack/statik/fs"
+	"github.com/cozy/echo"
 )
 
 type docPatch struct {
@@ -576,7 +576,7 @@ func serveThumbnailPlaceholder(res http.ResponseWriter, req *http.Request, doc *
 	if !ok {
 		return os.ErrNotExist
 	}
-	etag := f.Etag()
+	etag := f.Etag
 	if web_utils.CheckPreconditions(res, req, etag) {
 		return nil
 	}

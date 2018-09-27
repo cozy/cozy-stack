@@ -239,9 +239,9 @@ func rebuildRedis(c echo.Context) error {
 
 // Renders the assets list loaded in memory and served by the cozy
 func assetsInfos(c echo.Context) error {
-	assetsMap := make(map[string][]string)
+	assetsMap := make(map[string][]*fs.Asset)
 	fs.Foreach(func(name, context string, f *fs.Asset) {
-		assetsMap[context] = append(assetsMap[context], name)
+		assetsMap[context] = append(assetsMap[context], f)
 		fmt.Printf("name: %s", name)
 	})
 	return c.JSON(http.StatusOK, assetsMap)
@@ -459,5 +459,6 @@ func Routes(router *echo.Group) {
 	router.POST("/:domain/import", importer)
 	router.POST("/:domain/orphan_accounts", cleanOrphanAccounts)
 	router.POST("/redis", rebuildRedis)
-	router.GET("/assets_infos", assetsInfos)
+	router.GET("/assets", assetsInfos)
+	router.POST("/assets", addAsset)
 }

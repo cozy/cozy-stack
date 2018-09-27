@@ -64,7 +64,7 @@ func (h *h) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if etag == "" {
 				break
 			}
-			if etagWeakMatch(etag, f.Etag()) {
+			if etagWeakMatch(etag, f.Etag) {
 				match = true
 				break
 			}
@@ -77,9 +77,9 @@ func (h *h) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	headers := w.Header()
-	headers.Set("Content-Type", f.Mime())
+	headers.Set("Content-Type", f.Mime)
 	headers.Set("Content-Length", f.Size())
-	headers.Set("Etag", f.Etag())
+	headers.Set("Etag", f.Etag)
 	headers.Set("Cache-Control", "no-cache, public")
 
 	if r.Method == http.MethodGet {
