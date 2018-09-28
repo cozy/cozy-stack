@@ -95,9 +95,7 @@ type TreeFile struct {
 
 	IsDir    bool `json:"is_dir"`
 	IsOrphan bool `json:"is_orphan"`
-
-	hasCycle bool
-	visited  bool
+	HasCycle bool `json:"has_cycle"`
 }
 
 func (t *TreeFile) AsFile() *FileDoc {

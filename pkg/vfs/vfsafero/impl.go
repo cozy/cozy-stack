@@ -346,7 +346,9 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err = afs.BuildTree(func(f *vfs.TreeFile) {
-		entries[f.Fullpath] = f
+		if !f.IsOrphan {
+			entries[f.Fullpath] = f
+		}
 	})
 	if err != nil {
 		return

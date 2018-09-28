@@ -489,8 +489,10 @@ func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) (err err
 		return
 	}
 
+	// cleanDirsMap browse the given root tree recursively into its children
+	// directories, removing them from the dirsmap table along the way. In the
+	// end, only trees with cycles should stay in the dirsmap.
 	cleanDirsMap(tree.Root, tree.DirsMap, accumulate)
-
 	for _, entries := range tree.Orphans {
 		for _, f := range entries {
 			if f.IsDir {
@@ -500,16 +502,12 @@ func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) (err err
 	}
 
 	for _, orphanCycle := range tree.DirsMap {
-		orphanCycle.hasCycle = true
+		orphanCycle.HasCycle = true
 		tree.Orphans[orphanCycle.DirID] = append(tree.Orphans[orphanCycle.DirID], orphanCycle)
 	}
 
 	for _, orphansTree := range tree.Orphans {
 		for _, orphan := range orphansTree {
-			// TODO: For now, we re-attach the orphan trees at the root of the user's
-			// directory. We may use the dirID to infer more precisely where we
-			// should re-attach this orphan tree. However we should be careful and
-			// check if this directory is actually attached to the root.
 			if !orphan.IsDir {
 				accumulate(&FsckLog{
 					Type:    IndexOrphanTree,
@@ -536,6 +534,10 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 		DirsMap: make(map[string]*TreeFile, 256),  // DocID -> *FileDoc
 	}
 
+	// NOTE: the each method is called with objects in no particular order. The
+	// only enforcement is that either the Fullpath of the objet is informed or
+	// the IsOrphan flag is precised. It may be useful to gather along the way
+	// the files without having to browse the whole tree structure.
 	var each func(*TreeFile)
 	if len(eaches) > 0 {
 		each = eaches[0]
@@ -595,20 +597,16 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 }
 
 func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate func(*FsckLog)) {
-	if !parent.visited {
-		// avoid stackoverflow on cycles
-		parent.visited = true
-		delete(dirsmap, parent.DocID)
-		for _, child := range parent.DirsChildren {
-			expected := path.Join(parent.Fullpath, child.DocName)
-			if expected != child.Fullpath {
-				accumulate(&FsckLog{
-					Type:             IndexBadFullpath,
-					DirDoc:           child,
-					ExpectedFullpath: expected,
-				})
-			}
-			cleanDirsMap(child, dirsmap, accumulate)
+	delete(dirsmap, parent.DocID)
+	for _, child := range parent.DirsChildren {
+		expected := path.Join(parent.Fullpath, child.DocName)
+		if expected != child.Fullpath {
+			accumulate(&FsckLog{
+				Type:             IndexBadFullpath,
+				DirDoc:           child,
+				ExpectedFullpath: expected,
+			})
 		}
+		cleanDirsMap(child, dirsmap, accumulate)
 	}
 }
