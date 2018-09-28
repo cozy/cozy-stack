@@ -415,9 +415,9 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &swiftFileOpen{f, nil}, nil
 }
 
-func (sfs *swiftVFS) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
+func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 	entries := make(map[string]*vfs.TreeFile, 1024)
-	_, _, _, err = sfs.BuildTree(func(f *vfs.TreeFile) {
+	_, err = sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsDir {
 			entries[f.DirID+"/"+f.DocName] = f
 		}
@@ -445,7 +445,7 @@ func (sfs *swiftVFS) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 					return nil, err
 				}
 				if !bytes.Equal(md5sum, f.MD5Sum) || f.ByteSize != obj.Bytes {
-					predicate(&vfs.FsckLog{
+					accumulate(&vfs.FsckLog{
 						Type:    vfs.ContentMismatch,
 						IsFile:  true,
 						FileDoc: f,
@@ -464,7 +464,7 @@ func (sfs *swiftVFS) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 	})
 
 	for _, f := range entries {
-		predicate(&vfs.FsckLog{
+		accumulate(&vfs.FsckLog{
 			Type:    vfs.FileMissing,
 			IsFile:  true,
 			FileDoc: f,

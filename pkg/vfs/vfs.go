@@ -177,7 +177,7 @@ type Indexer interface {
 	DirChildExists(dirID, filename string) (bool, error)
 	BatchDelete([]couchdb.Doc) error
 
-	BuildTree(each ...func(*TreeFile)) (root *TreeFile, dirsmap map[string]*TreeFile, orphans map[string][]*TreeFile, err error)
+	BuildTree(each ...func(*TreeFile)) (tree *Tree, err error)
 	CheckIndexIntegrity(func(*FsckLog)) error
 }
 

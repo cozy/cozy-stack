@@ -395,9 +395,9 @@ func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &swiftFileOpenV2{f, nil}, nil
 }
 
-func (sfs *swiftVFSV2) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
+func (sfs *swiftVFSV2) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 	entries := make(map[string]*vfs.TreeFile, 1024)
-	_, _, _, err = sfs.BuildTree(func(f *vfs.TreeFile) {
+	_, err = sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsDir {
 			entries[f.DocID] = f
 		}
@@ -416,7 +416,7 @@ func (sfs *swiftVFSV2) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 			docID := makeDocID(obj.Name)
 			f, ok := entries[docID]
 			if !ok {
-				predicate(&vfs.FsckLog{
+				accumulate(&vfs.FsckLog{
 					Type:    vfs.IndexMissing,
 					IsFile:  true,
 					FileDoc: objectToFileDocV2(sfs.c, sfs.container, obj),
@@ -428,7 +428,7 @@ func (sfs *swiftVFSV2) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 					return nil, err
 				}
 				if !bytes.Equal(md5sum, f.MD5Sum) || f.ByteSize != obj.Bytes {
-					predicate(&vfs.FsckLog{
+					accumulate(&vfs.FsckLog{
 						Type:    vfs.ContentMismatch,
 						IsFile:  true,
 						FileDoc: f,
@@ -452,7 +452,7 @@ func (sfs *swiftVFSV2) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 	// entries should contain only data that does not contain an associated
 	// index.
 	for _, f := range entries {
-		predicate(&vfs.FsckLog{
+		accumulate(&vfs.FsckLog{
 			Type:    vfs.FileMissing,
 			IsFile:  true,
 			FileDoc: f,

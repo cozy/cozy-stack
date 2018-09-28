@@ -343,9 +343,9 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &aferoFileOpen{f}, nil
 }
 
-func (afs *aferoVFS) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
+func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 	entries := make(map[string]*vfs.TreeFile, 1024)
-	_, _, _, err = afs.BuildTree(func(f *vfs.TreeFile) {
+	_, err = afs.BuildTree(func(f *vfs.TreeFile) {
 		entries[f.Fullpath] = f
 	})
 	if err != nil {
@@ -365,21 +365,21 @@ func (afs *aferoVFS) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 
 		f, ok := entries[fullpath]
 		if !ok {
-			predicate(&vfs.FsckLog{
+			accumulate(&vfs.FsckLog{
 				Type:    vfs.IndexMissing,
 				IsFile:  true,
 				FileDoc: fileInfosToFileDoc(fullpath, info),
 			})
 		} else if f.IsDir != info.IsDir() {
 			if f.IsDir {
-				predicate(&vfs.FsckLog{
+				accumulate(&vfs.FsckLog{
 					Type:    vfs.TypeMismatch,
 					IsFile:  true,
 					FileDoc: f,
 					DirDoc:  fileInfosToDirDoc(fullpath, info),
 				})
 			} else {
-				predicate(&vfs.FsckLog{
+				accumulate(&vfs.FsckLog{
 					Type:    vfs.TypeMismatch,
 					IsFile:  false,
 					DirDoc:  f,
@@ -402,7 +402,7 @@ func (afs *aferoVFS) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 			}
 			md5sum := h.Sum(nil)
 			if !bytes.Equal(md5sum, f.MD5Sum) {
-				predicate(&vfs.FsckLog{
+				accumulate(&vfs.FsckLog{
 					Type:    vfs.ContentMismatch,
 					IsFile:  true,
 					FileDoc: f,
@@ -424,13 +424,13 @@ func (afs *aferoVFS) Fsck(predicate func(log *vfs.FsckLog)) (err error) {
 
 	for _, f := range entries {
 		if f.IsDir {
-			predicate(&vfs.FsckLog{
+			accumulate(&vfs.FsckLog{
 				Type:   vfs.FileMissing,
 				IsFile: false,
 				DirDoc: f,
 			})
 		} else {
-			predicate(&vfs.FsckLog{
+			accumulate(&vfs.FsckLog{
 				Type:    vfs.FileMissing,
 				IsFile:  true,
 				FileDoc: f,
