@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -447,6 +448,7 @@ func fileInfosToDirDoc(fullpath string, fileinfo os.FileInfo) *vfs.TreeFile {
 	return &vfs.TreeFile{
 		DirOrFileDoc: vfs.DirOrFileDoc{
 			DirDoc: &vfs.DirDoc{
+				Type:      consts.DirType,
 				DocName:   fileinfo.Name(),
 				DirID:     "",
 				CreatedAt: fileinfo.ModTime(),
@@ -464,6 +466,7 @@ func fileInfosToFileDoc(fullpath string, fileinfo os.FileInfo) *vfs.TreeFile {
 	return &vfs.TreeFile{
 		DirOrFileDoc: vfs.DirOrFileDoc{
 			DirDoc: &vfs.DirDoc{
+				Type:      consts.FileType,
 				DocName:   fileinfo.Name(),
 				DirID:     "",
 				CreatedAt: fileinfo.ModTime(),

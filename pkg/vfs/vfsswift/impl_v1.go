@@ -6,9 +6,11 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -471,7 +473,55 @@ func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 		})
 	}
 
+	for _, obj := range orphansObjs {
+		if obj.ContentType == dirContentType {
+			accumulate(&vfs.FsckLog{
+				Type:    vfs.IndexMissing,
+				IsFile:  false,
+				FileDoc: objectToFileDocV1(sfs.container, obj),
+			})
+		} else {
+			accumulate(&vfs.FsckLog{
+				Type:    vfs.IndexMissing,
+				IsFile:  true,
+				FileDoc: objectToFileDocV1(sfs.container, obj),
+			})
+		}
+	}
+
 	return
+}
+
+func objectToFileDocV1(container string, object swift.Object) *vfs.TreeFile {
+	var dirID, name string
+	if dirIDAndName := strings.SplitN(object.Name, "/", 2); len(dirIDAndName) == 2 {
+		dirID = dirIDAndName[0]
+		name = dirIDAndName[0]
+	}
+	docType := consts.FileType
+	if object.ContentType == dirContentType {
+		docType = consts.DirType
+	}
+	md5sum, _ := hex.DecodeString(object.Hash)
+	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
+	return &vfs.TreeFile{
+		DirOrFileDoc: vfs.DirOrFileDoc{
+			DirDoc: &vfs.DirDoc{
+				Type:      docType,
+				DocID:     makeDocID(object.Name),
+				DocName:   name,
+				DirID:     dirID,
+				CreatedAt: object.LastModified,
+				UpdatedAt: object.LastModified,
+				Fullpath:  path.Join(vfs.OrphansDirName, name),
+			},
+			ByteSize:   object.Bytes,
+			Mime:       mime,
+			Class:      class,
+			Executable: false,
+			MD5Sum:     md5sum,
+		},
+	}
 }
 
 // UpdateFileDoc overrides the indexer's one since the swift fs indexes files

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -419,7 +420,7 @@ func (sfs *swiftVFSV2) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 				accumulate(&vfs.FsckLog{
 					Type:    vfs.IndexMissing,
 					IsFile:  true,
-					FileDoc: objectToFileDocV2(sfs.c, sfs.container, obj),
+					FileDoc: objectToFileDocV2(sfs.container, obj),
 				})
 			} else {
 				var md5sum []byte
@@ -760,19 +761,19 @@ func (f *swiftFileOpenV2) Close() error {
 	return f.f.Close()
 }
 
-func objectToFileDocV2(c *swift.Connection, container string, object swift.Object) *vfs.TreeFile {
+func objectToFileDocV2(container string, object swift.Object) *vfs.TreeFile {
 	md5sum, _ := hex.DecodeString(object.Hash)
 	name := "unknown"
-	cdate := time.Now()
 	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
 	return &vfs.TreeFile{
 		DirOrFileDoc: vfs.DirOrFileDoc{
 			DirDoc: &vfs.DirDoc{
+				Type:      consts.FileType,
 				DocID:     makeDocID(object.Name),
 				DocName:   name,
 				DirID:     "",
-				CreatedAt: cdate,
-				UpdatedAt: cdate,
+				CreatedAt: object.LastModified,
+				UpdatedAt: object.LastModified,
 				Fullpath:  path.Join(vfs.OrphansDirName, name),
 			},
 			ByteSize:   object.Bytes,
