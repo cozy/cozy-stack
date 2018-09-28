@@ -25,6 +25,8 @@
 -   `/auth` - [Authentication & OAuth](auth.md)
 -   `/apps` - [Applications Management](apps.md)
     -   [Apps registry](registry.md)
+    -   [Konnectors](konnectors.md) &
+        [their workflow](konnectors-workflow.md)
 -   `/data` - [Data System](data-system.md)
     -   [Mango](mango.md)
     -   [Replication](replication.md)
@@ -34,7 +36,6 @@
     -   [References of documents in VFS](references-docs-in-vfs.md)
 -   `/intents` - [Intents](intents.md)
 -   `/jobs` - [Jobs](jobs.md)
-    -   [Konnectors](konnectors.md)
     -   [Workers](workers.md)
 -   `/move` - [Move, export and import an instance](move.md)
 -   `/notifications` - [Notifications](notifications.md)
@@ -52,4 +53,4 @@ These pages are the results of studies we made:
 
 -   [Moving](moving.md)
 -   [Golang Couchdb Plugins](couchdb-plugins.md)
--   [Konnectors design](konnectors_design.md)
+-   [Konnectors design](konnectors-design.md)

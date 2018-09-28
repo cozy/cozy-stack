@@ -49,11 +49,10 @@ const (
 )
 
 type konnectorMessage struct {
-	Account           string `json:"account"`
-	Konnector         string `json:"konnector"`
-	FolderToSave      string `json:"folder_to_save"`
-	DefaultFolderPath string `json:"default_folder_path"`
-	AccountDeleted    bool   `json:"account_deleted"`
+	Account        string `json:"account"`        // Account is the identifier of the account
+	Konnector      string `json:"konnector"`      // Konnector is the slug of the konnector
+	FolderToSave   string `json:"folder_to_save"` // FolderToSave is the identifier of the folder
+	AccountDeleted bool   `json:"account_deleted,omitempty"`
 
 	// Data contains the original value of the message, even fields that are not
 	// part of our message definition.

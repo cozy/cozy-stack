@@ -1,0 +1,22 @@
+sequenceDiagram
+    %% https://mermaidjs.github.io/
+    participant H as Home
+    participant C as Cozy-Stack
+    participant K as Konnector
+    participant S as External service
+
+    H ->> C: create folder
+	H ->> C: create a reference folder->konnector
+    H ->> C: create the account
+    H ->> C: create the trigger
+    H ->> C: launch the konnector
+
+    C ->> C: Ensure the konnector can write files
+    C ->> K: start the konnector
+    K ->> C: fetch the account
+    K ->> S: login
+    K -->> C: [log] login successful
+    C -->> H: [ws] login successful
+    K ->> S: fetch data
+    K ->> C: save documents and files
+    C -->>H: [ws] success / error
