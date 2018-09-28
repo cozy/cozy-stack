@@ -22,7 +22,7 @@ _via_ our [job system](jobs.md) and the [konnector worker](workers.md).
 | short_description | a short description of the application                                                                          |
 | long_description  | a long description of the application                                                                           |
 | source            | where the files of the app can be downloaded                                                                    |
-| developer         | `name` and `url` for the developer (`{"name": "Cozy", "url": "https://cozy.io"}`)                              |
+| developer         | `name` and `url` for the developer (`{"name": "Cozy", "url": "https://cozy.io"}`)                               |
 | default_locale    | the locale used for the name and description fields                                                             |
 | locales           | translations of the name and description fields in other locales                                                |
 | langs             | list of languages tags supported by the application                                                             |
@@ -47,13 +47,13 @@ konnector has been installed or failed.
 
 #### Status codes
 
-* 202 Accepted, when the konnector installation has been accepted.
-* 400 Bad-Request, when the manifest of the konnector could not be processed
-  (for instance, it is not valid JSON).
-* 404 Not Found, when the manifest or the source of the konnector is not
-  reachable.
-* 422 Unprocessable Entity, when the sent data is invalid (for example, the slug
-  is invalid or the Source parameter is not a proper or supported url)
+-   202 Accepted, when the konnector installation has been accepted.
+-   400 Bad-Request, when the manifest of the konnector could not be processed
+    (for instance, it is not valid JSON).
+-   404 Not Found, when the manifest or the source of the konnector is not
+    reachable.
+-   422 Unprocessable Entity, when the sent data is invalid (for example, the
+    slug is invalid or the Source parameter is not a proper or supported url)
 
 #### Query-String
 
@@ -152,13 +152,13 @@ Content-Type: application/vnd.api+json
 
 #### Status codes
 
-* 202 Accepted, when the konnector installation has been accepted.
-* 400 Bad-Request, when the manifest of the konnector could not be processed
-  (for instance, it is not valid JSON).
-* 404 Not Found, when the konnector with the specified slug was not found or
-  when the manifest or the source of the konnector is not reachable.
-* 422 Unprocessable Entity, when the sent data is invalid (for example, the slug
-  is invalid or the Source parameter is not a proper or supported url)
+-   202 Accepted, when the konnector installation has been accepted.
+-   400 Bad-Request, when the manifest of the konnector could not be processed
+    (for instance, it is not valid JSON).
+-   404 Not Found, when the konnector with the specified slug was not found or
+    when the manifest or the source of the konnector is not reachable.
+-   422 Unprocessable Entity, when the sent data is invalid (for example, the
+    slug is invalid or the Source parameter is not a proper or supported url)
 
 ## List installed konnectors
 

@@ -20,9 +20,9 @@ Content-Type: application/json
 
 ```json
 {
-  "index": {
-    "fields": ["calendar", "date"]
-  }
+    "index": {
+        "fields": ["calendar", "date"]
+    }
 }
 ```
 
@@ -37,19 +37,19 @@ Content-Type: application/json
 
 ```json
 {
-  "result": "created",
-  "id": "_design/a5f4711fc9448864a13c81dc71e660b524d7410c",
-  "name": "a5f4711fc9448864a13c81dc71e660b524d7410c"
+    "result": "created",
+    "id": "_design/a5f4711fc9448864a13c81dc71e660b524d7410c",
+    "name": "a5f4711fc9448864a13c81dc71e660b524d7410c"
 }
 ```
 
 ### Details
 
-* if the doctype does not exist, the database is created.
-* if the index already exists, a `{result: "exists"}` is returned, but the
-  response code is still 200
-* design doc & name can be provided in request. **This is not recommended**, let
-  couchdb handle naming and deduplication.
+-   if the doctype does not exist, the database is created.
+-   if the index already exists, a `{result: "exists"}` is returned, but the
+    response code is still 200
+-   design doc & name can be provided in request. **This is not recommended**,
+    let couchdb handle naming and deduplication.
 
 ```json
 {
@@ -61,10 +61,10 @@ Content-Type: application/json
 
 ### possible errors :
 
-* 401 unauthorized (no authentication has been provided)
-* 403 forbidden (the authentication does not provide permissions for this
-  action)
-* 500 internal server error
+-   401 unauthorized (no authentication has been provided)
+-   403 forbidden (the authentication does not provide permissions for this
+    action)
+-   500 internal server error
 
 ## Find documents
 
@@ -85,15 +85,15 @@ Content-Type: application/json
 
 ```json
 {
-  "selector": {
-    "calendar": "perso",
-    "date": { "$gt": "20161001T00:00:00" }
-  },
-  "limit": 2,
-  "skip": 3,
-  "sort": ["calendar", "date"],
-  "fields": ["_id", "_type", "_date"],
-  "use_index": "_design/a5f4711fc9448864a13c81dc71e660b524d7410c"
+    "selector": {
+        "calendar": "perso",
+        "date": { "$gt": "20161001T00:00:00" }
+    },
+    "limit": 2,
+    "skip": 3,
+    "sort": ["calendar", "date"],
+    "fields": ["_id", "_type", "_date"],
+    "use_index": "_design/a5f4711fc9448864a13c81dc71e660b524d7410c"
 }
 ```
 
@@ -108,28 +108,30 @@ Content-Type: application/json
 
 ```json
 {
-  "docs": [
-    {
-      "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-      "_type": "io.cozy.events",
-      "date": "20161023T160000Z"
-    },
-    {
-      "_id": "6494e0ac-dfcb-472e84a9cbee",
-      "_type": "io.cozy.events",
-      "date": "20161013T160000Z"
-    }
-  ]
+    "docs": [
+        {
+            "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+            "_type": "io.cozy.events",
+            "date": "20161023T160000Z"
+        },
+        {
+            "_id": "6494e0ac-dfcb-472e84a9cbee",
+            "_type": "io.cozy.events",
+            "date": "20161013T160000Z"
+        }
+    ]
 }
 ```
 
 ### Details
 
-* If an index does not exist for the selector, an error 400 is returned
-* The sort field must contains all fields used in selector
-* The sort field must match an existing index
-* It is possible to sort in reverse direction `sort:[{"calendar":"desc"}, {"date": "desc"}]` but **all fields** must be sorted in same direction.
-* `use_index` is optional but recommended.
+-   If an index does not exist for the selector, an error 400 is returned
+-   The sort field must contains all fields used in selector
+-   The sort field must match an existing index
+-   It is possible to sort in reverse direction
+    `sort:[{"calendar":"desc"}, {"date": "desc"}]` but **all fields** must be
+    sorted in same direction.
+-   `use_index` is optional but recommended.
 
 ## Pagination cookbook
 
@@ -143,9 +145,9 @@ If the limit cause some docs to not be returned, the response will have a
 
 ```json
 {
-  "limit": 100,
-  "next": true,
-  "docs": ["... first hundred docs ..."]
+    "limit": 100,
+    "next": true,
+    "docs": ["... first hundred docs ..."]
 }
 ```
 
@@ -153,9 +155,9 @@ If the number of docs is lower or equal to the limit, next will be false
 
 ```json
 {
-  "limit": 100,
-  "next": false,
-  "docs": ["... less than a hundred docs ..."]
+    "limit": 100,
+    "next": false,
+    "docs": ["... less than a hundred docs ..."]
 }
 ```
 

@@ -51,9 +51,9 @@ Here, we have two remote doctypes. Each one has a request defined for it.
 
 The format for the request file is:
 
-* the verb and the URL on the first line
-* then some lines that describe the HTTP headers
-* then a blank line and the body if the request is a POST
+-   the verb and the URL on the first line
+-   then some lines that describe the HTTP headers
+-   then a blank line and the body if the request is a POST
 
 For the path, the query-string, the headers, and the body, it's possible to have
 some dynamic part by using `{{`, a variable name, and `}}`.
@@ -64,10 +64,10 @@ the body part of the template.
 
 Available helpers:
 
-* `json`: for json parts (`{ "key": "{{json val}}" }`)
-* `html`: for html parts (`<p>{{html val}}</p>`)
-* `query`: for query parameter of a url (`http://foobar.com?q={{query q}}`)
-* `path`: for path component of a url (`http://foobar.com/{{path p}}`)
+-   `json`: for json parts (`{ "key": "{{json val}}" }`)
+-   `html`: for html parts (`<p>{{html val}}</p>`)
+-   `query`: for query parameter of a url (`http://foobar.com?q={{query q}}`)
+-   `path`: for path component of a url (`http://foobar.com/{{path p}}`)
 
 Values injected in the URL are automatically URI-escaped based on the part they
 are included in: namely as a query parameter or as a path component.
@@ -94,18 +94,17 @@ doctypes in its manifest, like for other doctypes:
 
 ```json
 {
-  "...": "...",
-  "permissions": {
-    "search": {
-      "description": "Required for searching on wikidata",
-      "type": "org.wikidata.search"
-    },
-    "entity": {
-      "description":
-        "Required for getting more informations about an entity on wikidata",
-      "type": "org.wikidata.entity"
+    "...": "...",
+    "permissions": {
+        "search": {
+            "description": "Required for searching on wikidata",
+            "type": "org.wikidata.search"
+        },
+        "entity": {
+            "description": "Required for getting more informations about an entity on wikidata",
+            "type": "org.wikidata.entity"
+        }
     }
-  }
 }
 ```
 
@@ -138,8 +137,8 @@ Content-Type: application/json
 
 ```json
 {
-  "query": "Qbhtynf Nqnzf",
-  "comment": "query is rot13 for Douglas Adams"
+    "query": "Qbhtynf Nqnzf",
+    "comment": "query is rot13 for Douglas Adams"
 }
 ```
 
@@ -150,8 +149,8 @@ something we want to allow).
 
 ### GET `/remote/assets/:asset-name`
 
-The client application can fetch a list of predefined assets via this route.
-The resources available are defined in the configuration file.
+The client application can fetch a list of predefined assets via this route. The
+resources available are defined in the configuration file.
 
 Example:
 

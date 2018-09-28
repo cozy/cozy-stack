@@ -2,19 +2,19 @@
 
 # Intents
 
-* [Overview](#overview)
-* [Glossary](#glossary)
-* [Proposal](#proposal)
-  * [1. Manifest](#1-manifest)
-  * [2. Intent Start](##2-intent-start)
-  * [3. Service Resolution](#3-service-resolution)
-  * [4. Handshake](#4-handshake)
-  * [5. Processing & Terminating](#5-processing--terminating)
-* [Routes](#routes)
-* [Annexes](#annexes)
-  * [Use cases](#use-cases)
-  * [Bibliography & Prior Art](#bibliography--prior-art)
-  * [Discarded Ideas](#discarded-ideas)
+-   [Overview](#overview)
+-   [Glossary](#glossary)
+-   [Proposal](#proposal)
+    -   [1. Manifest](#1-manifest)
+    -   [2. Intent Start](##2-intent-start)
+    -   [3. Service Resolution](#3-service-resolution)
+    -   [4. Handshake](#4-handshake)
+    -   [5. Processing & Terminating](#5-processing--terminating)
+-   [Routes](#routes)
+-   [Annexes](#annexes)
+    -   [Use cases](#use-cases)
+    -   [Bibliography & Prior Art](#bibliography--prior-art)
+    -   [Discarded Ideas](#discarded-ideas)
 
 ## Overview
 
@@ -31,15 +31,15 @@ neither painful for the users nor the developers.
 
 ## Glossary
 
-* **Intent**: Intents, sometimes also called Activities, is a pattern used in
-  environments where multiple apps with different purposes coexist. The idea is
-  that any app can express the need to do _something_ that it can't do itself,
-  and an app that _can_ do it will take over from there.
-* **Stack**: refers to [cozy-stack](https://github.com/cozy/cozy-stack/), the
-  server-side part of the Cozy infrastructure.
-* **Client**: the client is the application that _starts_ an intent.
-* **Service**: the service is the application that _handles_ an intent started
-  by a client.
+-   **Intent**: Intents, sometimes also called Activities, is a pattern used in
+    environments where multiple apps with different purposes coexist. The idea
+    is that any app can express the need to do _something_ that it can't do
+    itself, and an app that _can_ do it will take over from there.
+-   **Stack**: refers to [cozy-stack](https://github.com/cozy/cozy-stack/), the
+    server-side part of the Cozy infrastructure.
+-   **Client**: the client is the application that _starts_ an intent.
+-   **Service**: the service is the application that _handles_ an intent started
+    by a client.
 
 ## Proposal
 
@@ -54,18 +54,18 @@ Every app can register itself as a potential handler for one or more intents. To
 do so, it must provide the following information for each intent it wishes to
 handle:
 
-* `action`: A verb that describes what the service should do. The most common
-  actions are `CREATE`, `EDIT`, `OPEN`, `PICK`, and `SHARE`. While we recommend
-  using one of these verbs, the list is not exhaustive and may be extended by
-  any app.
-* `type`: One or more types of data on which the service knows how to operate
-  the `action`. A `type` can be expressed as a
-  [MIME type](https://en.wikipedia.org/wiki/Media_type) or a
-  [Cozy Document Type](https://github.com/cozy/cozy-stack/blob/master/docs/data-system.md#typing).
-  The application must have permissions for any Cozy Document Type listed here.
-  You can also think of the `type` as the intent's subject.
-* `href`: the relative URL of the route designed to handle this intent. A
-  query-string with the intent id will be added to this URL.
+-   `action`: A verb that describes what the service should do. The most common
+    actions are `CREATE`, `EDIT`, `OPEN`, `PICK`, and `SHARE`. While we
+    recommend using one of these verbs, the list is not exhaustive and may be
+    extended by any app.
+-   `type`: One or more types of data on which the service knows how to operate
+    the `action`. A `type` can be expressed as a
+    [MIME type](https://en.wikipedia.org/wiki/Media_type) or a
+    [Cozy Document Type](https://github.com/cozy/cozy-stack/blob/master/docs/data-system.md#typing).
+    The application must have permissions for any Cozy Document Type listed
+    here. You can also think of the `type` as the intent's subject.
+-   `href`: the relative URL of the route designed to handle this intent. A
+    query-string with the intent id will be added to this URL.
 
 These informations must be provided in the manifest of the application, inside
 the `intents` key.
@@ -123,27 +123,27 @@ the _client_.
 
 To start an intent, it must specify the following information:
 
-* `action` : an action verb, which will be matched against the actions declared
-  in services manifest files.
-* `type` : a **single** data type, which will be matched against the types
-  declared in services manifest files.
+-   `action` : an action verb, which will be matched against the actions
+    declared in services manifest files.
+-   `type` : a **single** data type, which will be matched against the types
+    declared in services manifest files.
 
 There are also two optional fields that can be defined at the start of the
 intent:
 
-* `data`: Any data that the client wants to make available to the service.
-  `data` must be a JSON object but its structure is left to the discretion of
-  the client. The only exception is when `type` is a MIME type and the client
-  wishes to send a file to the service. In that case, the file should be
-  represented as a base-64 encoded [Data URL](http://dataurl.net/#about) and
-  must be named `content`. This convention is also recomended when dealing with
-  other intent `type`s. See the examples below for an example of this.
-* `permissions` : When `type` is a Cozy Document Type and the client expects to
-  receive one or more documents as part of the reply from the service, the
-  `permissions` field allows the client to request permissions for these
-  documents. `permissions` is a list of HTTP Verbs. Refer
-  [to this section](https://github.com/cozy/cozy-stack/blob/master/docs/permissions.md#verbs)
-  of the permission documentation for more information.
+-   `data`: Any data that the client wants to make available to the service.
+    `data` must be a JSON object but its structure is left to the discretion of
+    the client. The only exception is when `type` is a MIME type and the client
+    wishes to send a file to the service. In that case, the file should be
+    represented as a base-64 encoded [Data URL](http://dataurl.net/#about) and
+    must be named `content`. This convention is also recomended when dealing
+    with other intent `type`s. See the examples below for an example of this.
+-   `permissions` : When `type` is a Cozy Document Type and the client expects
+    to receive one or more documents as part of the reply from the service, the
+    `permissions` field allows the client to request permissions for these
+    documents. `permissions` is a list of HTTP Verbs. Refer
+    [to this section](https://github.com/cozy/cozy-stack/blob/master/docs/permissions.md#verbs)
+    of the permission documentation for more information.
 
 **Note**: if the intent's subject is a Cozy Doctype that holds references to
 other Cozy Documents (such as an album referencing photos or a playlist
@@ -217,12 +217,12 @@ the intent.
 
 The stack then stores the information for that intent:
 
-* A unique id for that intent
-* Client URL
-* Service URL
-* `action`
-* `type`
-* `permissions`
+-   A unique id for that intent
+-   Client URL
+-   Service URL
+-   `action`
+-   `type`
+-   `permissions`
 
 Finally, the service URL is suffixed with `?intent=` followed by the intent's
 id, and then sent to the client.
@@ -336,14 +336,14 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.intents",
-    "attributes": {
-      "action": "PICK",
-      "type": "io.cozy.files",
-      "permissions": ["GET"]
+    "data": {
+        "type": "io.cozy.intents",
+        "attributes": {
+            "action": "PICK",
+            "type": "io.cozy.files",
+            "permissions": ["GET"]
+        }
     }
-  }
 }
 ```
 
@@ -356,27 +356,26 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "id": "77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
-    "type": "io.cozy.intents",
-    "attributes": {
-      "action": "PICK",
-      "type": "io.cozy.files",
-      "permissions": ["GET"],
-      "client": "https://contacts.cozy.example.net",
-      "services": [
-        {
-          "slug": "files",
-          "href":
-            "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
+    "data": {
+        "id": "77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
+        "type": "io.cozy.intents",
+        "attributes": {
+            "action": "PICK",
+            "type": "io.cozy.files",
+            "permissions": ["GET"],
+            "client": "https://contacts.cozy.example.net",
+            "services": [
+                {
+                    "slug": "files",
+                    "href": "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
+                }
+            ]
+        },
+        "links": {
+            "self": "/intents/77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
+            "permissions": "/permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6"
         }
-      ]
-    },
-    "links": {
-      "self": "/intents/77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
-      "permissions": "/permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6"
     }
-  }
 }
 ```
 
@@ -405,27 +404,26 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "id": "77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
-    "type": "io.cozy.intents",
-    "attributes": {
-      "action": "PICK",
-      "type": "io.cozy.files",
-      "permissions": ["GET"],
-      "client": "https://contacts.cozy.example.net",
-      "services": [
-        {
-          "slug": "files",
-          "href":
-            "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
+    "data": {
+        "id": "77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
+        "type": "io.cozy.intents",
+        "attributes": {
+            "action": "PICK",
+            "type": "io.cozy.files",
+            "permissions": ["GET"],
+            "client": "https://contacts.cozy.example.net",
+            "services": [
+                {
+                    "slug": "files",
+                    "href": "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
+                }
+            ]
+        },
+        "links": {
+            "self": "/intents/77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
+            "permissions": "/permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6"
         }
-      ]
-    },
-    "links": {
-      "self": "/intents/77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
-      "permissions": "/permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6"
     }
-  }
 }
 ```
 
@@ -435,33 +433,33 @@ Content-Type: application/vnd.api+json
 
 Here is a non exhaustive list of situations that _may_ use intents:
 
-* Configure a new connector account
-* Share a photo album via email
-* Add an attachment to an email
-* Attach a note to a contact
-* Create a contact based on an email
-* Save an attachment received in an email
-* Create a birthday event in a calendar, based on a contact
-* Create an event based on an email's content
-* Create an event based on an ICS file
-* Chose an avatar for a contact
-* Open a file from the file browser (music, PDF, image, ...)
-* Attach a receipt to an expense
-* Provide a tip for another application
+-   Configure a new connector account
+-   Share a photo album via email
+-   Add an attachment to an email
+-   Attach a note to a contact
+-   Create a contact based on an email
+-   Save an attachment received in an email
+-   Create a birthday event in a calendar, based on a contact
+-   Create an event based on an email's content
+-   Create an event based on an ICS file
+-   Chose an avatar for a contact
+-   Open a file from the file browser (music, PDF, image, ...)
+-   Attach a receipt to an expense
+-   Provide a tip for another application
 
 ### Bibliography & Prior Art
 
-* Prior art:
-  https://forum.cozy.io/t/cozy-tech-topic-inter-app-communication-architecture/2287
-* Web intents: http://webintents.org/
-* WebActivities: https://wiki.mozilla.org/WebAPI/WebActivities and
-  https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/API/Web_Activities
-* Siri Intents:
-  https://developer.apple.com/library/content/documentation/Intents/Conceptual/SiriIntegrationGuide/ResolvingandHandlingIntents.html#//apple_ref/doc/uid/TP40016875-CH5-SW1
-* Android Intents:
-  https://developer.android.com/reference/android/content/Intent.html
-* iOS extensions:
-  https://developer.apple.com/library/content/documentation/General/Conceptual/ExtensibilityPG/index.html
+-   Prior art:
+    https://forum.cozy.io/t/cozy-tech-topic-inter-app-communication-architecture/2287
+-   Web intents: http://webintents.org/
+-   WebActivities: https://wiki.mozilla.org/WebAPI/WebActivities and
+    https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/API/Web_Activities
+-   Siri Intents:
+    https://developer.apple.com/library/content/documentation/Intents/Conceptual/SiriIntegrationGuide/ResolvingandHandlingIntents.html#//apple_ref/doc/uid/TP40016875-CH5-SW1
+-   Android Intents:
+    https://developer.android.com/reference/android/content/Intent.html
+-   iOS extensions:
+    https://developer.apple.com/library/content/documentation/General/Conceptual/ExtensibilityPG/index.html
 
 ### Discarded Ideas
 

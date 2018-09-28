@@ -4,24 +4,24 @@
 
 ### Definitions
 
-* **Event:** Something happening in the stack. Most of them will come from
-  couchdb, some jobs and user actions might also trigger them.
-* **Events feed:** the feed of occurring events. There is two types of feeds:
-  * **continuous** allows to follow events as they occurs
-  * **interval** allow the see the history of the feed from any given time
-* **Realtime:** user experienced updates of the interface from change happening
-  from another source. _Ie, I have a folder opened in cozy-files on the browser,
-  I take some pictures from my smartphone, the pictures appears in the folder
-  without me needing to refresh the browser tab._
+-   **Event:** Something happening in the stack. Most of them will come from
+    couchdb, some jobs and user actions might also trigger them.
+-   **Events feed:** the feed of occurring events. There is two types of feeds:
+    -   **continuous** allows to follow events as they occurs
+    -   **interval** allow the see the history of the feed from any given time
+-   **Realtime:** user experienced updates of the interface from change
+    happening from another source. _Ie, I have a folder opened in cozy-files on
+    the browser, I take some pictures from my smartphone, the pictures appears
+    in the folder without me needing to refresh the browser tab._
 
 ### What couchdb offers
 
 Couchdb supports with its `_changes` API both events feeds types:
 
-* using `since=now&continuous=true` we get all events **continuous**ly as they
-  happen (SSE)
-* using `since=(last known seq_number)` we get all changes in the **interval**
-  between last known `seq_number` and now.
+-   using `since=now&continuous=true` we get all events **continuous**ly as they
+    happen (SSE)
+-   using `since=(last known seq_number)` we get all changes in the **interval**
+    between last known `seq_number` and now.
 
 Couchdb also offers a `_db_updates` route, which give us **continuous** changes
 at the database level. This routes does not support a since parameter, as there
@@ -42,8 +42,8 @@ Couchdb replication algorithm can work in one-shot mode, where it replicates
 changes since last sync up until now, or in continuous mode where it replicates
 changes as they happens.
 
-* The stack will not allow continuous mode for replication.
-* This is already supported with the `_changes` route
+-   The stack will not allow continuous mode for replication.
+-   This is already supported with the `_changes` route
 
 ### Sharing
 
@@ -76,24 +76,24 @@ sharing from).
 
 ### Options
 
-* **Polling:** regularly ask the server what happened since last time.
-* **COMET:** Leaving a normal HTTP connection open sending data and heartbeets
-  regularly to keep it open, reading xhr.responseText at intervals without
-  waiting for readyState == 4. Restart the connection when it breaks.
-* **SSE:** Normalized & standardized version of COMET with
-  [half-decent browser support (86% users)](http://caniuse.com/#feat=eventsource)
-  but easily polyfillable (it's just COMET). It is simpler and easier to debug.
-  It has some limitations (no HTTP headers in JS api, counts toward the maximum
-  number of http connection per domain).
-* **Websocket:** keep a socket open, it allows 2 way data communication which we
-  do not need, has
-  [better server support (92% users)](http://caniuse.com/#feat=websockets) but
-  is impossible to polyfill client side, more popular, there is a better
-  [golang package](https://godoc.org/github.com/gorilla/websocket)
-* **SockJS & cie** they are **a lot** of packages which imitate Websocket API
-  while using complicated client&server polyfill to allow support of older
-  browser. [SockJS](https://github.com/sockjs/) is a drop-in websocket
-  replacement with a go package and javascript client.
+-   **Polling:** regularly ask the server what happened since last time.
+-   **COMET:** Leaving a normal HTTP connection open sending data and heartbeets
+    regularly to keep it open, reading xhr.responseText at intervals without
+    waiting for readyState == 4. Restart the connection when it breaks.
+-   **SSE:** Normalized & standardized version of COMET with
+    [half-decent browser support (86% users)](http://caniuse.com/#feat=eventsource)
+    but easily polyfillable (it's just COMET). It is simpler and easier to
+    debug. It has some limitations (no HTTP headers in JS api, counts toward the
+    maximum number of http connection per domain).
+-   **Websocket:** keep a socket open, it allows 2 way data communication which
+    we do not need, has
+    [better server support (92% users)](http://caniuse.com/#feat=websockets) but
+    is impossible to polyfill client side, more popular, there is a better
+    [golang package](https://godoc.org/github.com/gorilla/websocket)
+-   **SockJS & cie** they are **a lot** of packages which imitate Websocket API
+    while using complicated client&server polyfill to allow support of older
+    browser. [SockJS](https://github.com/sockjs/) is a drop-in websocket
+    replacement with a go package and javascript client.
 
 ### Choice = Websocket
 
@@ -103,21 +103,21 @@ older browser supports becomes necessary we can use SockJS.
 
 ### optimization paths (future)
 
-* **bandwidth** Limiting the number of events sent by allowing the client to
-  specified it is only interested in events matching a selector _(files app only
-  care about changes in the files of the current folder view)_
-* **number of connections** Instead of 1 socket / tab, we can probably make 1
-  socket / browser using some hackish combination of SharedWorker /
-  iframe.postMessage and a client-side demultiplexer.
-* **both** No need for realtime if the user is not using the tab (for most
-  usecases), we could cut the realtime feed depending on
-  [Page Visibility API](https://www.w3.org/TR/2011/WD-page-visibility-20110602/)
+-   **bandwidth** Limiting the number of events sent by allowing the client to
+    specified it is only interested in events matching a selector _(files app
+    only care about changes in the files of the current folder view)_
+-   **number of connections** Instead of 1 socket / tab, we can probably make 1
+    socket / browser using some hackish combination of SharedWorker /
+    iframe.postMessage and a client-side demultiplexer.
+-   **both** No need for realtime if the user is not using the tab (for most
+    usecases), we could cut the realtime feed depending on
+    [Page Visibility API](https://www.w3.org/TR/2011/WD-page-visibility-20110602/)
 
 ## Go/Stack architecture
 
-* We assume all couchdb changes will originate from the stack
-* Events are generated at the stack level
-* We do **NOT** rely on couchdb `_changes?continuous` nor `_db_udpates`
+-   We assume all couchdb changes will originate from the stack
+-   Events are generated at the stack level
+-   We do **NOT** rely on couchdb `_changes?continuous` nor `_db_udpates`
 
 We create a realtime.Event interface, which we call in other packages. We accept
 websocket connection and bind them to a realtime.Dispatcher object.

@@ -45,11 +45,11 @@ hopefully prevent a full breach.
 All the requests to the cozy stack have a strict access control. It is based on
 several informations:
 
-* Is the user connected?
-* What is the application that makes this request?
-* What are the permissions for this application?
-* Which grant is used, in particular for applications with public pages?
-* What are the permissions for this grant?
+-   Is the user connected?
+-   What is the application that makes this request?
+-   What are the permissions for this application?
+-   Which grant is used, in particular for applications with public pages?
+-   What are the permissions for this grant?
 
 More informations [here](apps.md).
 
@@ -57,12 +57,12 @@ More informations [here](apps.md).
 
 This is mostly applying the state of the art:
 
-* Using HTTPS, with HSTS.
-* Using secure, httpOnly,
-  [sameSite](https://tools.ietf.org/html/draft-ietf-httpbis-cookie-same-site-00)
-  cookies to avoid cookies theft or misuse.
-* Using a Content Security Policy (CSP).
-* Using X-frame-options http header to protect against click-jacking.
+-   Using HTTPS, with HSTS.
+-   Using secure, httpOnly,
+    [sameSite](https://tools.ietf.org/html/draft-ietf-httpbis-cookie-same-site-00)
+    cookies to avoid cookies theft or misuse.
+-   Using a Content Security Policy (CSP).
+-   Using X-frame-options http header to protect against click-jacking.
 
 But we will use a CSP very restrictive by default (no access to other web
 domains for example).
@@ -82,14 +82,14 @@ bugs.
 Some data are encrypted before being saved in CouchDB (passwords for the
 accounts for example). Encrypting everything has some downsides:
 
-* It's not possible to index encryped documents or do computations on the
-  encrypted fields in reasonable time
-  ([homomorphic encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption)
-  is still an open subject).
-* Having more encrypted data can globally weaken the encryption, if it's not
-  handled properly.
-* If the encryption key is lost or a bug happen, the data is lost with no way to
-  recover them.
+-   It's not possible to index encryped documents or do computations on the
+    encrypted fields in reasonable time
+    ([homomorphic encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption)
+    is still an open subject).
+-   Having more encrypted data can globally weaken the encryption, if it's not
+    handled properly.
+-   If the encryption key is lost or a bug happen, the data is lost with no way
+    to recover them.
 
 So, we are more confortable to encrypt only some fields. And later, when we will
 have more experience and feedbacks from the user, extend the encryption to more
@@ -131,9 +131,9 @@ of security weaknesses in Cozy. We will respond in less than 72 hours.
 
 When a security flaw is found, the process is the following:
 
-* Make a pull-request to fix (on our private git instance) and test it.
-* Deploy the fix on cozycloud.cc
-* Publish a new version, announce it on
-  [the forum](https://forum.cozy.io/c/latest-information-about-cozy-security) as
-  a security update and on the mailing-lists.
-* 15 days later, add the details on the forum.
+-   Make a pull-request to fix (on our private git instance) and test it.
+-   Deploy the fix on cozycloud.cc
+-   Publish a new version, announce it on
+    [the forum](https://forum.cozy.io/c/latest-information-about-cozy-security)
+    as a security update and on the mailing-lists.
+-   15 days later, add the details on the forum.

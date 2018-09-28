@@ -9,22 +9,22 @@ instance Swift.
 
 ### Les fichiers/dossiers
 
-* les attributs étendus permettent à l’utilisateur d’un systeme de fichier
-  d’associer des métadonnées. `https://godoc.org/github.com/ivaxer/go-xattr`
-  librairie go supportant les attributs étendus
+-   les attributs étendus permettent à l’utilisateur d’un systeme de fichier
+    d’associer des métadonnées. `https://godoc.org/github.com/ivaxer/go-xattr`
+    librairie go supportant les attributs étendus
 
-* Extensible Metadata Platform ou XMP est un format de métadonnées basé sur XML.
-  XMP permet d'enregistrer sous forme d'un document XML des informations
-  relatives à un fichier XMP définit différentes méthodes pour stocker ce
-  document XML au sein même de fichiers JPEG, GIF, HTML….
+-   Extensible Metadata Platform ou XMP est un format de métadonnées basé sur
+    XML. XMP permet d'enregistrer sous forme d'un document XML des informations
+    relatives à un fichier XMP définit différentes méthodes pour stocker ce
+    document XML au sein même de fichiers JPEG, GIF, HTML….
 
-* stocker les fichiers json avec les métadonnées dans un autre répertoire et les
-  fichiers binaires à part pour pouvoir récupérer tous les fichiers lors de
-  l’export et remettre tout ca correctement lors de l’import avec les json.
+-   stocker les fichiers json avec les métadonnées dans un autre répertoire et
+    les fichiers binaires à part pour pouvoir récupérer tous les fichiers lors
+    de l’export et remettre tout ca correctement lors de l’import avec les json.
 
 ### Les albums (?)
 
-* répertoires avec le nom de l’album contenant les photos associées
+-   répertoires avec le nom de l’album contenant les photos associées
 
 ### Les contacts
 
@@ -36,8 +36,8 @@ certaines autres applications. Il prend également en charge l'importation de
 fichiers vCard à partir d'applications telles que le Carnet d'adresses Apple.)
 Les contacts iCloud sont importés et exportés au format vCard
 
-* vcard est un format standard ouvert d'échange de données personnelles (fichier
-  d’extension .vcf)
+-   vcard est un format standard ouvert d'échange de données personnelles
+    (fichier d’extension .vcf)
 
 Exemple
 
@@ -54,7 +54,7 @@ UID:
 END:VCARD
 ```
 
-* csv format utilisé pour les contacts également
+-   csv format utilisé pour les contacts également
 
 Exemple
 
@@ -67,8 +67,8 @@ Exemple
 
 ### Les calendriers
 
-* iCalendar est un format de données défini pour les échanges de données de
-  calendrier (fichier d’extension .ical, ou .ics comme owncloud)
+-   iCalendar est un format de données défini pour les échanges de données de
+    calendrier (fichier d’extension .ical, ou .ics comme owncloud)
 
 Exemple
 
@@ -88,14 +88,15 @@ END:VCALENDAR
 
 ### Les fichiers/dossiers
 
-* Un fichier est un contenu binaire avec certaines métadonnées. Un fichier Json
-  dans CouchDB contient un champ `id`, un champ `rev` et des `métadonnées`. Ce
-  fichier est relié au fichier binaire qui se trouve dans le systeme de fichier.
-  Un fichier a un champ parent et lorsqu'il est deplacé dans l'arboresence on ne
-  modifie que le fichier Json sans toucher au contenu dans le systeme de
-  fichier. Dans CouchDB, les fichers sont indexés et ont une structure
-  arborescente.
+-   Un fichier est un contenu binaire avec certaines métadonnées. Un fichier
+    Json dans CouchDB contient un champ `id`, un champ `rev` et des
+    `métadonnées`. Ce fichier est relié au fichier binaire qui se trouve dans le
+    systeme de fichier. Un fichier a un champ parent et lorsqu'il est deplacé
+    dans l'arboresence on ne modifie que le fichier Json sans toucher au contenu
+    dans le systeme de fichier. Dans CouchDB, les fichers sont indexés et ont
+    une structure arborescente.
 
 ### Les albums
 
-* L'album est un document dans CouchDB qui va lister les photos qu'il contient.
+-   L'album est un document dans CouchDB qui va lister les photos qu'il
+    contient.

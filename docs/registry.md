@@ -24,18 +24,19 @@ parameter you repository to automatically publish versions.
 
 We differentiate three channels of release for each application:
 
-* stable: for stable releases
-* beta: for application that can be tested in advance
-* dev: for the latest releases directly from the trunk of the repository
+-   stable: for stable releases
+-   beta: for application that can be tested in advance
+-   dev: for the latest releases directly from the trunk of the repository
 
 For each of these channels, the version string has a different format which
 differentiate the version channel:
 
-* stable: `X.Y.Z` where `X`, `Y` and `Z` are positive or null integers.
-* beta: `X.Y.Z-beta.M` where `X`, `Y`, `Z` and `M` are positive or null integers
-* dev: `X.Y.Z-dev.checksum` where `X`, `Y` and `Z` are positive or null integers
-  and `checksum` is a unique identifier of the dev release (typically a shasum
-  of the git commit)
+-   stable: `X.Y.Z` where `X`, `Y` and `Z` are positive or null integers.
+-   beta: `X.Y.Z-beta.M` where `X`, `Y`, `Z` and `M` are positive or null
+    integers
+-   dev: `X.Y.Z-dev.checksum` where `X`, `Y` and `Z` are positive or null
+    integers and `checksum` is a unique identifier of the dev release (typically
+    a shasum of the git commit)
 
 ## Version order
 
@@ -63,45 +64,53 @@ An application object is **mutable**.
 
 An application object contains the following fields:
 
-* `slug`: the application slug (unique)
-* `type`: the application type ("webapp" or "konnector")
-* `editor`: the application editor name
-* `versions`: an object containing all the channels versions
-* `latest_version`: the latest available version
-* `maintenance_activated`: boolean, true when the maintenance mode is activated on the application
-* `maintenance_options`: present only if `maintenance_activated` is true, object with the following fields:
-  - `flag_infra_maintenance`: bool, true iff the maintenance is internal to the cozy infrastructure
-  - `flag_short_maintenance`: bool, true iff the maintenance is a short maintenance, waiting for a correction on our side
-  - `flag_disallow_manual_exec`: bool, true iff the maintenance will disallow the execution on the application, even when manually executed
-  - `messages`: a list of localized messages containing a short and long information messages explaining the maintenance state
-* `label`: integer for a confidence grade from 0 to 5 (A to F), labelling the
-  application from a user privacy standpoint. It is calculated from the
-  `data_usage_commitment` and `data_usage_commitment_by` fields.
-* `data_usage_commitment`: specify a technical commitment from the
-  application editor:
-  - `user_ciphered`: technical commitment that the user's data is encrypted
-    and can only be known by him.
-  - `user_reserved`: commitment that the data is only used for the user, to
-    directly offer its service.
-  - `none`: no commitment
-* `data_usage_commitment_by`: specify what entity is taking the commitment:
-  - `cozy`: the commitment is taken by cozy
-  - `editor`: the commitment is taken by the application's editor
-  - `none`: no commitment is taken
+-   `slug`: the application slug (unique)
+-   `type`: the application type ("webapp" or "konnector")
+-   `editor`: the application editor name
+-   `versions`: an object containing all the channels versions
+-   `latest_version`: the latest available version
+-   `maintenance_activated`: boolean, true when the maintenance mode is
+    activated on the application
+-   `maintenance_options`: present only if `maintenance_activated` is true,
+    object with the following fields:
+    -   `flag_infra_maintenance`: bool, true iff the maintenance is internal to
+        the cozy infrastructure
+    -   `flag_short_maintenance`: bool, true iff the maintenance is a short
+        maintenance, waiting for a correction on our side
+    -   `flag_disallow_manual_exec`: bool, true iff the maintenance will
+        disallow the execution on the application, even when manually executed
+    -   `messages`: a list of localized messages containing a short and long
+        information messages explaining the maintenance state
+-   `label`: integer for a confidence grade from 0 to 5 (A to F), labelling the
+    application from a user privacy standpoint. It is calculated from the
+    `data_usage_commitment` and `data_usage_commitment_by` fields.
+-   `data_usage_commitment`: specify a technical commitment from the application
+    editor:
+    -   `user_ciphered`: technical commitment that the user's data is encrypted
+        and can only be known by him.
+    -   `user_reserved`: commitment that the data is only used for the user, to
+        directly offer its service.
+    -   `none`: no commitment
+-   `data_usage_commitment_by`: specify what entity is taking the commitment:
+    -   `cozy`: the commitment is taken by cozy
+    -   `editor`: the commitment is taken by the application's editor
+    -   `none`: no commitment is taken
 
 Example:
 
 ```json
 {
-  "slug": "drive",
-  "type": "webapp",
-  "editor": "cozy",
-  "versions": {
-    "stable": ["3.1.1"],
-    "beta": ["3.1.1-beta.1"],
-    "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
-  },
-  "latest_version": { /* */ }
+    "slug": "drive",
+    "type": "webapp",
+    "editor": "cozy",
+    "versions": {
+        "stable": ["3.1.1"],
+        "beta": ["3.1.1-beta.1"],
+        "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+    },
+    "latest_version": {
+        /* */
+    }
 }
 ```
 
@@ -113,16 +122,17 @@ A version object is **immutable**.
 
 An application version object contains the following fields:
 
-* `slug`: the application slug
-* `type`: the application type (webapp, konnector, ...)
-* `manifest`: the [entire](./apps.md#the-manifest)
-  [manifest](./konnectors.md#the-manifest) defined in the package
-* `created_at`: date of the release creation
-* `url`: URL of the tarball containing the application at specified version
-* `size`: the size of the application package (uncompressed) in bytes as string
-* `sha256`: the sha256 checksum of the application content
-* `tar_prefix`: optional tar prefix directory specified to properly extract the
-  application content
+-   `slug`: the application slug
+-   `type`: the application type (webapp, konnector, ...)
+-   `manifest`: the [entire](./apps.md#the-manifest)
+    [manifest](./konnectors.md#the-manifest) defined in the package
+-   `created_at`: date of the release creation
+-   `url`: URL of the tarball containing the application at specified version
+-   `size`: the size of the application package (uncompressed) in bytes as
+    string
+-   `sha256`: the sha256 checksum of the application content
+-   `tar_prefix`: optional tar prefix directory specified to properly extract
+    the application content
 
 The version string should follow the channels rule.
 
@@ -130,32 +140,32 @@ Example:
 
 ```json
 {
-  "slug": "drive",
-  "type": "webapp",
-  "version": "3.1.2",
-  "created_at": "2017-07-05T07:54:40.982Z",
-  "url": "http://.../3.1.2",
-  "size": "1000",
-  "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-  "manifest": {
-    /* ... */
-  },
-  "maintenance_activated": true,
-  "maintenance_options": {
-      "flag_infra_maintenance": true,
-      "flag_short_maintenance": false,
-      "flag_disallow_manual_exec": true,
-      "messages": {
-        "en": {
-          "long_message": "The app is currently in maintenance because of ....",
-          "short_message": "The app is currently in maintenance"
-        },
-        "fr": {
-          "long_message": "L'application est en cours de maintenance à cause de ...",
-          "short_message": "L'application est en cours de maintenance"
+    "slug": "drive",
+    "type": "webapp",
+    "version": "3.1.2",
+    "created_at": "2017-07-05T07:54:40.982Z",
+    "url": "http://.../3.1.2",
+    "size": "1000",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "manifest": {
+        /* ... */
+    },
+    "maintenance_activated": true,
+    "maintenance_options": {
+        "flag_infra_maintenance": true,
+        "flag_short_maintenance": false,
+        "flag_disallow_manual_exec": true,
+        "messages": {
+            "en": {
+                "long_message": "The app is currently in maintenance because of ....",
+                "short_message": "The app is currently in maintenance"
+            },
+            "fr": {
+                "long_message": "L'application est en cours de maintenance à cause de ...",
+                "short_message": "L'application est en cours de maintenance"
+            }
         }
-      }
-  }
+    }
 }
 ```
 
@@ -170,10 +180,10 @@ request should be a json object of an application.
 
 #### Status codes
 
-* 201 Created, when the application has been successfully added
-* 409 Conflict, when an application with the same slug already exists
-* 400 Bad request, if the given application data is malformed (bad slug, missing
-  editor, ...)
+-   201 Created, when the application has been successfully added
+-   409 Conflict, when an application with the same slug already exists
+-   400 Bad request, if the given application data is malformed (bad slug,
+    missing editor, ...)
 
 #### Request
 
@@ -184,17 +194,17 @@ Authorization: Token AbCdE
 
 ```json
 {
-  "slug": "drive",
-  "editor": "cozy",
-  "name": {
-    "en": "Drive",
-    "fr": "Drive"
-  },
-  "description": {
-    "en": "The drive application"
-  },
-  "repository": "https://github.com/cozy/cozy-drive",
-  "tags": ["foo", "bar", "baz"]
+    "slug": "drive",
+    "editor": "cozy",
+    "name": {
+        "en": "Drive",
+        "fr": "Drive"
+    },
+    "description": {
+        "en": "The drive application"
+    },
+    "repository": "https://github.com/cozy/cozy-drive",
+    "tags": ["foo", "bar", "baz"]
 }
 ```
 
@@ -207,30 +217,30 @@ The content of the manifest file extracted from the application data is used to
 fill the fields of the version. Before adding the application version to the
 registry, the registry should check the following:
 
-* the `manifest` file contained in the tarball should be checked and have its
-  fields checked against the application properties
-* the application content should check the sha256 checksum
+-   the `manifest` file contained in the tarball should be checked and have its
+    fields checked against the application properties
+-   the application content should check the sha256 checksum
 
 Fields of the object sent to this request:
 
-* **`url`**: the url where the application tarball is stored
-* **`sha256`**: the sha256 checksum of the tarball
-* **`version`**: the version value (should match the one in the manifest)
-* `parameters?`: an optional json value (any) that will override the
-  `parameters` field of the manifest
-* `icon?`: an optional path to override the `icon` field of the manifest
-* `screenshots?`: and optional array of path to override the `screenshots` field
-  of the manifest
+-   **`url`**: the url where the application tarball is stored
+-   **`sha256`**: the sha256 checksum of the tarball
+-   **`version`**: the version value (should match the one in the manifest)
+-   `parameters?`: an optional json value (any) that will override the
+    `parameters` field of the manifest
+-   `icon?`: an optional path to override the `icon` field of the manifest
+-   `screenshots?`: and optional array of path to override the `screenshots`
+    field of the manifest
 
 #### Status codes
 
-* 201 Created, when the version has been successfully added to the registry
-* 409 Conflict, when the version already exists
-* 404 Not Found, when the application does not exist
-* 412 Precondition Failed, when the sent application data is invalid (could not
-  fetch data URL, bad checksum, bad manifest in the tarball...)
-* 400 Bad request, when the request is invalid (bad checksum encoding, bad
-  URL...)
+-   201 Created, when the version has been successfully added to the registry
+-   409 Conflict, when the version already exists
+-   404 Not Found, when the application does not exist
+-   412 Precondition Failed, when the sent application data is invalid (could
+    not fetch data URL, bad checksum, bad manifest in the tarball...)
+-   400 Bad request, when the request is invalid (bad checksum encoding, bad
+    URL...)
 
 #### Request
 
@@ -243,9 +253,9 @@ Authorization: Token AbCdE
 
 ```json
 {
-  "version": "3.1.2",
-  "url": "https://github.com/cozy/cozy-drive/archive/v3.1.2.tar.gz",
-  "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f"
+    "version": "3.1.2",
+    "url": "https://github.com/cozy/cozy-drive/archive/v3.1.2.tar.gz",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f"
 }
 ```
 
@@ -258,10 +268,9 @@ Authorization: Token AbCdE
 
 ```json
 {
-  "version": "3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a",
-  "url":
-    "https://github.com/cozy/cozy-photos-v3/archive/7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
-  "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f"
+    "version": "3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a",
+    "url": "https://github.com/cozy/cozy-photos-v3/archive/7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f"
 }
 ```
 
@@ -274,11 +283,10 @@ Authorization: Token AbCdE
 
 ```json
 {
-  "version": "3.1.2",
-  "url":
-    "https://github.com/cozy/cozy-photos-v3/archive/7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
-  "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-  "parameters": { "foo": "bar", "baz": 123 }
+    "version": "3.1.2",
+    "url": "https://github.com/cozy/cozy-photos-v3/archive/7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "parameters": { "foo": "bar", "baz": 123 }
 }
 ```
 
@@ -292,16 +300,16 @@ Location: http://.../3.1.2
 
 ```json
 {
-  "slug": "drive",
-  "type": "webapp",
-  "version": "3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a",
-  "created_at": "2017-07-05T07:54:40.982Z",
-  "url": "http://.../7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
-  "size": "1000",
-  "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-  "manifest": {
-    /* ... */
-  }
+    "slug": "drive",
+    "type": "webapp",
+    "version": "3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a",
+    "created_at": "2017-07-05T07:54:40.982Z",
+    "url": "http://.../7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
+    "size": "1000",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "manifest": {
+        /* ... */
+    }
 }
 ```
 
@@ -320,10 +328,10 @@ The `filter[???]` query parameters can be used to filter by fields values.
 
 Filtering is allowed on the following fields:
 
-* `type`
-* `editor`
-* `category`
-* `tags`
+-   `type`
+-   `editor`
+-   `category`
+-   `tags`
 
 Filtering is allowed on multiple tags with the `,` separator. For example:
 `filter[tags]=foo,bar` will match the applications with both `foo` and `bar` as
@@ -331,12 +339,12 @@ tags.
 
 Sorting is allowed on the following fields:
 
-* `slug`
-* `type`
-* `editor`
-* `category`
-* `created_at`
-* `updated_at`
+-   `slug`
+-   `type`
+-   `editor`
+-   `category`
+-   `created_at`
+-   `updated_at`
 
 #### Query-String
 
@@ -363,37 +371,37 @@ Content-Type: application/json
 
 ```json
 {
-  "data": [
-    {
-      "slug": "drive",
-      "type": "webapp",
-      "editor": "cozy",
-      "versions": {
-        "stable": ["3.1.1"],
-        "beta": ["3.1.1-beta.1"],
-        "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
-      },
-      "latest_version": {
-        "slug": "drive",
-        "type": "webapp",
-        "version": "3.1.1",
-        "url": "http://.../3.1.1",
-        "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-        "size": "1000",
-        "created_at": "2017-07-05T07:54:40.982Z",
-        "manifest": {
-          /* ... */
+    "data": [
+        {
+            "slug": "drive",
+            "type": "webapp",
+            "editor": "cozy",
+            "versions": {
+                "stable": ["3.1.1"],
+                "beta": ["3.1.1-beta.1"],
+                "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+            },
+            "latest_version": {
+                "slug": "drive",
+                "type": "webapp",
+                "version": "3.1.1",
+                "url": "http://.../3.1.1",
+                "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+                "size": "1000",
+                "created_at": "2017-07-05T07:54:40.982Z",
+                "manifest": {
+                    /* ... */
+                }
+            }
+        },
+        {
+            // ...
         }
-      },
-    },
-    {
-      // ...
+    ],
+    "meta": {
+        "count": 2,
+        "next_cursor": "..."
     }
-  ],
-  "meta": {
-    "count": 2,
-    "next_cursor": "..."
-  }
 }
 ```
 
@@ -416,25 +424,25 @@ Content-Type: application/json
 
 ```json
 {
-  "slug": "drive",
-  "editor": "cozy",
-  "latest_version": {
     "slug": "drive",
-    "type": "webapp",
-    "version": "3.1.1",
-    "url": "http://.../3.1.1",
-    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-    "size": "1000",
-    "created_at": "2017-07-05T07:54:40.982Z",
-    "manifest": {
-      /* ... */
+    "editor": "cozy",
+    "latest_version": {
+        "slug": "drive",
+        "type": "webapp",
+        "version": "3.1.1",
+        "url": "http://.../3.1.1",
+        "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+        "size": "1000",
+        "created_at": "2017-07-05T07:54:40.982Z",
+        "manifest": {
+            /* ... */
+        }
+    },
+    "versions": {
+        "stable": ["3.1.1"],
+        "beta": ["3.1.1-beta.1"],
+        "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
     }
-  },
-  "versions": {
-    "stable": ["3.1.1"],
-    "beta": ["3.1.1-beta.1"],
-    "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
-  }
 }
 ```
 
@@ -498,16 +506,16 @@ Content-Type: application/json
 
 ```json
 {
-  "slug": "drive",
-  "type": "webapp",
-  "version": "3.1.1",
-  "url": "http://.../3.1.1",
-  "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-  "size": "1000",
-  "created_at": "2017-07-05T07:54:40.982Z",
-  "manifest": {
-    /* ... */
-  }
+    "slug": "drive",
+    "type": "webapp",
+    "version": "3.1.1",
+    "url": "http://.../3.1.1",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "size": "1000",
+    "created_at": "2017-07-05T07:54:40.982Z",
+    "manifest": {
+        /* ... */
+    }
 }
 ```
 
@@ -530,16 +538,16 @@ Content-Type: application/json
 
 ```json
 {
-  "slug": "drive",
-  "type": "webapp",
-  "version": "3.1.1",
-  "url": "http://.../3.1.1",
-  "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-  "size": "1000",
-  "created_at": "2017-07-05T07:54:40.982Z",
-  "manifest": {
-    /* ... */
-  }
+    "slug": "drive",
+    "type": "webapp",
+    "version": "3.1.1",
+    "url": "http://.../3.1.1",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "size": "1000",
+    "created_at": "2017-07-05T07:54:40.982Z",
+    "manifest": {
+        /* ... */
+    }
 }
 ```
 
@@ -562,24 +570,24 @@ Content-Type: application/json
 
 ```json
 [
-  {
-    "slug": "drive",
-    "type": "webapp",
-    "version": "3.1.1",
-    "url": "http://.../3.1.1",
-    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-    "size": "1000",
-    "created_at": "2017-07-05T07:54:40.982Z",
-    "manifest": {
-      /* ... */
-    },
-    "maintenance_activated": true,
-    "maintenance_options": {
-        "flag_infra_maintenance": true,
-        "flag_short_maintenance": false,
-        "flag_disallow_manual_exec": true
+    {
+        "slug": "drive",
+        "type": "webapp",
+        "version": "3.1.1",
+        "url": "http://.../3.1.1",
+        "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+        "size": "1000",
+        "created_at": "2017-07-05T07:54:40.982Z",
+        "manifest": {
+            /* ... */
+        },
+        "maintenance_activated": true,
+        "maintenance_options": {
+            "flag_infra_maintenance": true,
+            "flag_short_maintenance": false,
+            "flag_disallow_manual_exec": true
+        }
     }
-  }
 ]
 ```
 
@@ -600,8 +608,8 @@ different contexts. The `default` context is applied lastly.
 
 ```yaml
 registries:
-  - https://myregistry.home/
-  - https://main.registry.cozy.io/
+    - https://myregistry.home/
+    - https://main.registry.cozy.io/
 ```
 
 ```yaml
@@ -614,15 +622,15 @@ registries:
 #
 
 registries:
-  context1:
-    - https://context1.registry.cozy.io/
+    context1:
+        - https://context1.registry.cozy.io/
 
-  context2:
-    - https://context2.registry.cozy.io/
+    context2:
+        - https://context2.registry.cozy.io/
 
-  default:
-    - https://myregistry.home/
-    - https://registry.cozy.io/
+    default:
+        - https://myregistry.home/
+        - https://registry.cozy.io/
 ```
 
 # Authentication

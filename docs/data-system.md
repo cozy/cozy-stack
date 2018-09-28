@@ -40,13 +40,13 @@ Etag: "3-6494e0ac6494e0ac"
 
 ```json
 {
-  "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-  "_type": "io.cozy.events",
-  "_rev": "3-6494e0ac6494e0ac",
-  "startdate": "20160823T150000Z",
-  "enddate": "20160923T160000Z",
-  "summary": "A long month",
-  "description": "I could go on and on and on ...."
+    "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "_type": "io.cozy.events",
+    "_rev": "3-6494e0ac6494e0ac",
+    "startdate": "20160823T150000Z",
+    "enddate": "20160923T160000Z",
+    "summary": "A long month",
+    "description": "I could go on and on and on ...."
 }
 ```
 
@@ -60,24 +60,24 @@ Content-Type: application/json
 
 ```json
 {
-  "status": 404,
-  "error": "not_found",
-  "reason": "deleted",
-  "title": "Event deleted",
-  "details": "Event 6494e0ac-dfcb-11e5-88c1-472e84a9cbee was deleted",
-  "links": { "about": "https://cozy.github.io/cozy-stack/errors.md#deleted" }
+    "status": 404,
+    "error": "not_found",
+    "reason": "deleted",
+    "title": "Event deleted",
+    "details": "Event 6494e0ac-dfcb-11e5-88c1-472e84a9cbee was deleted",
+    "links": { "about": "https://cozy.github.io/cozy-stack/errors.md#deleted" }
 }
 ```
 
 ### possible errors :
 
-* 401 unauthorized (no authentication has been provided)
-* 403 forbidden (the authentication does not provide permissions for this
-  action)
-* 404 not_found
-  * reason: missing
-  * reason: deleted
-* 500 internal server error
+-   401 unauthorized (no authentication has been provided)
+-   403 forbidden (the authentication does not provide permissions for this
+    action)
+-   404 not_found
+    -   reason: missing
+    -   reason: deleted
+-   500 internal server error
 
 ## Access multiple documents at once
 
@@ -96,10 +96,10 @@ Accept: application/json
 
 ```json
 {
-  "keys": [
-    "7f46ed4ed2a775494da3b0b44e00314f",
-    "7f46ed4ed2a775494da3b0b44e003b18"
-  ]
+    "keys": [
+        "7f46ed4ed2a775494da3b0b44e00314f",
+        "7f46ed4ed2a775494da3b0b44e003b18"
+    ]
 }
 ```
 
@@ -115,40 +115,40 @@ Etag: "3-6494e0ac6494e0ac"
 
 ```json
 {
-  "total_rows": 11,
-  "rows": [
-    {
-      "id": "7f46ed4ed2a775494da3b0b44e00314f",
-      "key": "7f46ed4ed2a775494da3b0b44e00314f",
-      "value": {
-        "rev": "1-870e58f8a1b2130c3a41e767f9c7d93a"
-      },
-      "doc": {
-        "_id": "7f46ed4ed2a775494da3b0b44e00314f",
-        "_rev": "1-870e58f8a1b2130c3a41e767f9c7d93a",
-        "type": "directory",
-        "name": "Uploaded from Cozy Photos",
-        "dir_id": "7f46ed4ed2a775494da3b0b44e0027df",
-        "created_at": "2017-07-04T06:49:12.844631837Z",
-        "updated_at": "2017-07-04T06:49:12.844631837Z",
-        "tags": [],
-        "path": "/Photos/Uploaded from Cozy Photos"
-      }
-    },
-    {
-      "key": "7f46ed4ed2a775494da3b0b44e003b18",
-      "error": "not_found"
-    }
-  ]
+    "total_rows": 11,
+    "rows": [
+        {
+            "id": "7f46ed4ed2a775494da3b0b44e00314f",
+            "key": "7f46ed4ed2a775494da3b0b44e00314f",
+            "value": {
+                "rev": "1-870e58f8a1b2130c3a41e767f9c7d93a"
+            },
+            "doc": {
+                "_id": "7f46ed4ed2a775494da3b0b44e00314f",
+                "_rev": "1-870e58f8a1b2130c3a41e767f9c7d93a",
+                "type": "directory",
+                "name": "Uploaded from Cozy Photos",
+                "dir_id": "7f46ed4ed2a775494da3b0b44e0027df",
+                "created_at": "2017-07-04T06:49:12.844631837Z",
+                "updated_at": "2017-07-04T06:49:12.844631837Z",
+                "tags": [],
+                "path": "/Photos/Uploaded from Cozy Photos"
+            }
+        },
+        {
+            "key": "7f46ed4ed2a775494da3b0b44e003b18",
+            "error": "not_found"
+        }
+    ]
 }
 ```
 
 ### possible errors :
 
-* 401 unauthorized (no authentication has been provided)
-* 403 forbidden (the authentication does not provide permissions for this
-  action)
-* 500 internal server error
+-   401 unauthorized (no authentication has been provided)
+-   403 forbidden (the authentication does not provide permissions for this
+    action)
+-   500 internal server error
 
 ### Details
 
@@ -173,8 +173,8 @@ Accept: application/json
 
 ```json
 {
-  "startdate": "20160712T150000",
-  "enddate": "20160712T150000"
+    "startdate": "20160712T150000",
+    "enddate": "20160712T150000"
 }
 ```
 
@@ -188,33 +188,33 @@ Content-Type: application/json
 
 ```json
 {
-  "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-  "type": "io.cozy.events",
-  "ok": true,
-  "rev": "1-6494e0ac6494e0ac",
-  "data": {
-    "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-    "_type": "io.cozy.events",
-    "_rev": "1-6494e0ac6494e0ac",
-    "startdate": "20160712T150000",
-    "enddate": "20160712T150000"
-  }
+    "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "type": "io.cozy.events",
+    "ok": true,
+    "rev": "1-6494e0ac6494e0ac",
+    "data": {
+        "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+        "_type": "io.cozy.events",
+        "_rev": "1-6494e0ac6494e0ac",
+        "startdate": "20160712T150000",
+        "enddate": "20160712T150000"
+    }
 }
 ```
 
 ### possible errors :
 
-* 400 bad request
-* 401 unauthorized (no authentication has been provided)
-* 403 forbidden (the authentication does not provide permissions for this
-  action)
-* 500 internal server error
+-   400 bad request
+-   401 unauthorized (no authentication has been provided)
+-   403 forbidden (the authentication does not provide permissions for this
+    action)
+-   500 internal server error
 
 ### Details
 
-* A doc cannot contain an `_id` field, if so an error 400 is returned
-* A doc cannot contain any field starting with `_`, those are reserved for
-  future cozy & couchdb api evolution
+-   A doc cannot contain an `_id` field, if so an error 400 is returned
+-   A doc cannot contain any field starting with `_`, those are reserved for
+    future cozy & couchdb api evolution
 
 ## Update an existing document
 
@@ -233,11 +233,11 @@ Accept: application/json
 
 ```json
 {
-  "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-  "_type": "io.cozy.events",
-  "_rev": "1-6494e0ac6494e0ac",
-  "startdate": "20160712T150000",
-  "enddate": "20160712T200000"
+    "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "_type": "io.cozy.events",
+    "_rev": "1-6494e0ac6494e0ac",
+    "startdate": "20160712T150000",
+    "enddate": "20160712T200000"
 }
 ```
 
@@ -251,31 +251,31 @@ Content-Type: application/json
 
 ```json
 {
-  "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-  "type": "io.cozy.events",
-  "ok": true,
-  "rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
-  "data": {
-    "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-    "_type": "io.cozy.events",
-    "_rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
-    "startdate": "20160712T150000",
-    "enddate": "20160712T200000"
-  }
+    "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "type": "io.cozy.events",
+    "ok": true,
+    "rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
+    "data": {
+        "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+        "_type": "io.cozy.events",
+        "_rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
+        "startdate": "20160712T150000",
+        "enddate": "20160712T200000"
+    }
 }
 ```
 
 ### Possible errors :
 
-* 400 bad request
-* 401 unauthorized (no authentication has been provided)
-* 403 forbidden (the authentication does not provide permissions for this
-  action)
-* 404 not_found
-  * reason: missing
-  * reason: deleted
-* 409 Conflict (see Conflict prevention section below)
-* 500 internal server error
+-   400 bad request
+-   401 unauthorized (no authentication has been provided)
+-   403 forbidden (the authentication does not provide permissions for this
+    action)
+-   404 not_found
+    -   reason: missing
+    -   reason: deleted
+-   409 Conflict (see Conflict prevention section below)
+-   500 internal server error
 
 ### Conflict prevention
 
@@ -285,9 +285,9 @@ be returned.
 
 ### Details
 
-* If no id is provided in URL, an error 400 is returned
-* If the id provided in URL is not the same than the one in document, an error
-  400 is returned.
+-   If no id is provided in URL, an error 400 is returned
+-   If the id provided in URL is not the same than the one in document, an error
+    400 is returned.
 
 ## Create a document with a fixed id
 
@@ -306,8 +306,8 @@ Accept: application/json
 
 ```json
 {
-  "startdate": "20160712T150000",
-  "enddate": "20160712T200000"
+    "startdate": "20160712T150000",
+    "enddate": "20160712T200000"
 }
 ```
 
@@ -321,35 +321,35 @@ Content-Type: application/json
 
 ```json
 {
-  "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-  "type": "io.cozy.events",
-  "ok": true,
-  "rev": "1-056f5f44046ecafc08a2bc2b9c229e20",
-  "data": {
-    "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-    "_type": "io.cozy.events",
-    "_rev": "1-056f5f44046ecafc08a2bc2b9c229e20",
-    "startdate": "20160712T150000",
-    "enddate": "20160712T200000"
-  }
+    "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "type": "io.cozy.events",
+    "ok": true,
+    "rev": "1-056f5f44046ecafc08a2bc2b9c229e20",
+    "data": {
+        "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+        "_type": "io.cozy.events",
+        "_rev": "1-056f5f44046ecafc08a2bc2b9c229e20",
+        "startdate": "20160712T150000",
+        "enddate": "20160712T200000"
+    }
 }
 ```
 
 ### Possible errors :
 
-* 400 bad request
-* 401 unauthorized (no authentication has been provided)
-* 403 forbidden (the authentication does not provide permissions for this
-  action)
-* 404 not_found
-  * reason: missing
-  * reason: deleted
-* 409 Conflict (see Conflict prevention section below)
-* 500 internal server error
+-   400 bad request
+-   401 unauthorized (no authentication has been provided)
+-   403 forbidden (the authentication does not provide permissions for this
+    action)
+-   404 not_found
+    -   reason: missing
+    -   reason: deleted
+-   409 Conflict (see Conflict prevention section below)
+-   500 internal server error
 
 ### Details
 
-* No id should be provide in the document itself
+-   No id should be provide in the document itself
 
 ## Delete a document
 
@@ -374,38 +374,38 @@ Content-Type: application/json
 
 ```json
 {
-  "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-  "type": "io.cozy.events",
-  "ok": true,
-  "rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
-  "_deleted": true
+    "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "type": "io.cozy.events",
+    "ok": true,
+    "rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
+    "_deleted": true
 }
 ```
 
 ### Possible errors :
 
-* 400 bad request
-* 401 unauthorized (no authentication has been provided)
-* 403 forbidden (the authentication does not provide permissions for this
-  action)
-* 404 not_found
-  * reason: missing
-  * reason: deleted
-* 409 Conflict (see Conflict prevention section below)
-* 500 internal server error
+-   400 bad request
+-   401 unauthorized (no authentication has been provided)
+-   403 forbidden (the authentication does not provide permissions for this
+    action)
+-   404 not_found
+    -   reason: missing
+    -   reason: deleted
+-   409 Conflict (see Conflict prevention section below)
+-   500 internal server error
 
 ### Conflict prevention
 
 It is possible to use either a `rev` query string parameter or a HTTP `If-Match`
 header to prevent conflict on deletion:
 
-* If none is passed or they are different, an error 400 is returned
-* If only one is passed or they are equals, the document will only be deleted if
-  its `_rev` match the passed one. Otherwise, an error 409 is returned.
+-   If none is passed or they are different, an error 400 is returned
+-   If only one is passed or they are equals, the document will only be deleted
+    if its `_rev` match the passed one. Otherwise, an error 409 is returned.
 
 ### Details
 
-* If no id is provided in URL, an error 400 is returned
+-   If no id is provided in URL, an error 400 is returned
 
 ## List all the documents
 
@@ -425,30 +425,30 @@ Content-Type: application/json
 
 ```json
 {
-  "offset": 0,
-  "rows": [
-    {
-      "id": "16e458537602f5ef2a710089dffd9453",
-      "key": "16e458537602f5ef2a710089dffd9453",
-      "value": {
-        "rev": "1-967a00dff5e02add41819138abb3284d"
-      },
-      "doc": {
-        "field": "value"
-      }
-    },
-    {
-      "id": "f4ca7773ddea715afebc4b4b15d4f0b3",
-      "key": "f4ca7773ddea715afebc4b4b15d4f0b3",
-      "value": {
-        "rev": "2-7051cbe5c8faecd085a3fa619e6e6337"
-      },
-      "doc": {
-        "field": "other-value"
-      }
-    }
-  ],
-  "total_rows": 2
+    "offset": 0,
+    "rows": [
+        {
+            "id": "16e458537602f5ef2a710089dffd9453",
+            "key": "16e458537602f5ef2a710089dffd9453",
+            "value": {
+                "rev": "1-967a00dff5e02add41819138abb3284d"
+            },
+            "doc": {
+                "field": "value"
+            }
+        },
+        {
+            "id": "f4ca7773ddea715afebc4b4b15d4f0b3",
+            "key": "f4ca7773ddea715afebc4b4b15d4f0b3",
+            "value": {
+                "rev": "2-7051cbe5c8faecd085a3fa619e6e6337"
+            },
+            "doc": {
+                "field": "other-value"
+            }
+        }
+    ],
+    "total_rows": 2
 }
 ```
 
@@ -459,10 +459,10 @@ See
 
 ## List all the documents (alternative)
 
-The `_all_docs` endpoint sends the design docs in the response. It makes it
-hard to use pagination on it. We have added a non-standard `_normal_docs`
-endpoint. This new endpoint skip the design docs (and does not count them in
-the `total_rows`). It only accepts two parameters in the query string: `skip`
+The `_all_docs` endpoint sends the design docs in the response. It makes it hard
+to use pagination on it. We have added a non-standard `_normal_docs` endpoint.
+This new endpoint skip the design docs (and does not count them in the
+`total_rows`). It only accepts two parameters in the query string: `skip`
 (default: 0) and `limit` (default: 100).
 
 Note that the response format is a bit different, it looks more like a `_find`
@@ -484,19 +484,19 @@ Content-Type: application/json
 
 ```json
 {
-  "rows": [
-    {
-      "_id": "16e458537602f5ef2a710089dffd9453",
-      "_rev": "1-967a00dff5e02add41819138abb3284d",
-      "field": "value"
-    },
-    {
-      "_id": "f4ca7773ddea715afebc4b4b15d4f0b3",
-      "_rev": "2-7051cbe5c8faecd085a3fa619e6e6337",
-      "field": "other-value"
-    }
-  ],
-  "total_rows": 202
+    "rows": [
+        {
+            "_id": "16e458537602f5ef2a710089dffd9453",
+            "_rev": "1-967a00dff5e02add41819138abb3284d",
+            "field": "value"
+        },
+        {
+            "_id": "f4ca7773ddea715afebc4b4b15d4f0b3",
+            "_rev": "2-7051cbe5c8faecd085a3fa619e6e6337",
+            "field": "other-value"
+        }
+    ],
+    "total_rows": 202
 }
 ```
 
@@ -522,6 +522,6 @@ Content-Type: application/json
 
 ## Others
 
-* The creation and usage of [Mango indexes](mango.md) is possible.
-* CouchDB behaviors are not always straight forward: see [some
-  quirks](couchdb-quirks.md) for more details.
+-   The creation and usage of [Mango indexes](mango.md) is possible.
+-   CouchDB behaviors are not always straight forward: see
+    [some quirks](couchdb-quirks.md) for more details.

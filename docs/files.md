@@ -51,12 +51,13 @@ Date: Mon, 19 Sep 2016 12:35:08 GMT
 
 #### Status codes
 
-* 201 Created, when the directory has been successfully created
-* 404 Not Found, when the parent directory does not exist
-* 409 Conflict, when a directory with the same name already exists
-* 413 Payload Too Large, when there is not enough available space on the cozy to upload the file
-* 422 Unprocessable Entity, when the `Type` or `Name` parameter is missing or
-  invalid
+-   201 Created, when the directory has been successfully created
+-   404 Not Found, when the parent directory does not exist
+-   409 Conflict, when a directory with the same name already exists
+-   413 Payload Too Large, when there is not enough available space on the cozy
+    to upload the file
+-   422 Unprocessable Entity, when the `Type` or `Name` parameter is missing or
+    invalid
 
 #### Response
 
@@ -68,35 +69,35 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.files",
-    "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-    "meta": {
-      "rev": "1-ff3beeb456eb"
-    },
-    "attributes": {
-      "type": "directory",
-      "name": "phone",
-      "path": "/Documents/phone",
-      "created_at": "2016-09-19T12:35:08Z",
-      "updated_at": "2016-09-19T12:35:08Z",
-      "tags": ["bills"]
-    },
-    "relationships": {
-      "parent": {
-        "links": {
-          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+    "data": {
+        "type": "io.cozy.files",
+        "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+        "meta": {
+            "rev": "1-ff3beeb456eb"
         },
-        "data": {
-          "type": "io.cozy.files",
-          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        "attributes": {
+            "type": "directory",
+            "name": "phone",
+            "path": "/Documents/phone",
+            "created_at": "2016-09-19T12:35:08Z",
+            "updated_at": "2016-09-19T12:35:08Z",
+            "tags": ["bills"]
+        },
+        "relationships": {
+            "parent": {
+                "links": {
+                    "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                },
+                "data": {
+                    "type": "io.cozy.files",
+                    "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                }
+            }
+        },
+        "links": {
+            "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
         }
-      }
-    },
-    "links": {
-      "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
     }
-  }
 }
 ```
 
@@ -124,107 +125,106 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "links": {
-    "next":
-      "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?page[cursor]=9152d568-7e7c-11e6-a377-37cbfb190b4b"
-  },
-  "data": {
-    "type": "io.cozy.files",
-    "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81",
-    "meta": {
-      "rev": "1-e36ab092"
-    },
-    "attributes": {
-      "type": "directory",
-      "name": "Documents",
-      "path": "/Documents",
-      "created_at": "2016-09-19T12:35:00Z",
-      "updated_at": "2016-09-19T12:35:00Z",
-      "tags": []
-    },
-    "relationships": {
-      "contents": {
-        "data": [
-          {
-            "type": "io.cozy.files",
-            "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
-          },
-          {
-            "type": "io.cozy.files",
-            "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b"
-          }
-        ]
-      }
-    },
     "links": {
-      "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
-    }
-  },
-  "included": [
-    {
-      "type": "io.cozy.files",
-      "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-      "meta": {
-        "rev": "1-ff3beeb456eb"
-      },
-      "attributes": {
-        "type": "directory",
-        "name": "phone",
-        "path": "/Documents/phone",
-        "created_at": "2016-09-19T12:35:08Z",
-        "updated_at": "2016-09-19T12:35:08Z",
-        "tags": ["bills"]
-      },
-      "relationships": {
-        "parent": {
-          "links": {
-            "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
-          },
-          "data": {
-            "type": "io.cozy.files",
-            "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
-          }
-        }
-      },
-      "links": {
-        "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
-      }
+        "next": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?page[cursor]=9152d568-7e7c-11e6-a377-37cbfb190b4b"
     },
-    {
-      "type": "io.cozy.files",
-      "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-      "meta": {
-        "rev": "1-0e6d5b72"
-      },
-      "attributes": {
-        "type": "file",
-        "name": "hello.txt",
-        "trashed": false,
-        "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
-        "created_at": "2016-09-19T12:38:04Z",
-        "updated_at": "2016-09-19T12:38:04Z",
-        "tags": [],
-        "size": 12,
-        "executable": false,
-        "class": "document",
-        "mime": "text/plain"
-      },
-      "relationships": {
-        "parent": {
-          "links": {
-            "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
-          },
-          "data": {
-            "type": "io.cozy.files",
-            "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
-          }
+    "data": {
+        "type": "io.cozy.files",
+        "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81",
+        "meta": {
+            "rev": "1-e36ab092"
+        },
+        "attributes": {
+            "type": "directory",
+            "name": "Documents",
+            "path": "/Documents",
+            "created_at": "2016-09-19T12:35:00Z",
+            "updated_at": "2016-09-19T12:35:00Z",
+            "tags": []
+        },
+        "relationships": {
+            "contents": {
+                "data": [
+                    {
+                        "type": "io.cozy.files",
+                        "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
+                    },
+                    {
+                        "type": "io.cozy.files",
+                        "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b"
+                    }
+                ]
+            }
+        },
+        "links": {
+            "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
-      },
-      "links": {
-        "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
-      }
-    }
-  ]
+    },
+    "included": [
+        {
+            "type": "io.cozy.files",
+            "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+            "meta": {
+                "rev": "1-ff3beeb456eb"
+            },
+            "attributes": {
+                "type": "directory",
+                "name": "phone",
+                "path": "/Documents/phone",
+                "created_at": "2016-09-19T12:35:08Z",
+                "updated_at": "2016-09-19T12:35:08Z",
+                "tags": ["bills"]
+            },
+            "relationships": {
+                "parent": {
+                    "links": {
+                        "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                    },
+                    "data": {
+                        "type": "io.cozy.files",
+                        "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                    }
+                }
+            },
+            "links": {
+                "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
+            }
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+            "meta": {
+                "rev": "1-0e6d5b72"
+            },
+            "attributes": {
+                "type": "file",
+                "name": "hello.txt",
+                "trashed": false,
+                "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
+                "created_at": "2016-09-19T12:38:04Z",
+                "updated_at": "2016-09-19T12:38:04Z",
+                "tags": [],
+                "size": 12,
+                "executable": false,
+                "class": "document",
+                "mime": "text/plain"
+            },
+            "relationships": {
+                "parent": {
+                    "links": {
+                        "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                    },
+                    "data": {
+                        "type": "io.cozy.files",
+                        "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                    }
+                }
+            },
+            "links": {
+                "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
+            }
+        }
+    ]
 }
 ```
 
@@ -278,13 +278,14 @@ Hello world!
 
 #### Status codes
 
-* 201 Created, when the file has been successfully created
-* 404 Not Found, when the parent directory does not exist
-* 409 Conflict, when a file with the same name already exists
-* 412 Precondition Failed, when the md5sum is `Content-MD5` is not equal to the
-  md5sum computed by the server
-* 422 Unprocessable Entity, when the sent data is invalid (for example, the
-  parent doesn't exist, `Type` or `Name` parameter is missing or invalid, etc.)
+-   201 Created, when the file has been successfully created
+-   404 Not Found, when the parent directory does not exist
+-   409 Conflict, when a file with the same name already exists
+-   412 Precondition Failed, when the md5sum is `Content-MD5` is not equal to
+    the md5sum computed by the server
+-   422 Unprocessable Entity, when the sent data is invalid (for example, the
+    parent doesn't exist, `Type` or `Name` parameter is missing or invalid,
+    etc.)
 
 #### Response
 
@@ -296,63 +297,59 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.files",
-    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "meta": {
-      "rev": "1-0e6d5b72"
-    },
-    "attributes": {
-      "type": "file",
-      "name": "sunset.jpg",
-      "trashed": false,
-      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
-      "created_at": "2016-09-19T12:38:04Z",
-      "updated_at": "2016-09-19T12:38:04Z",
-      "tags": [],
-      "metadata": {
-        "datetime": "2016-09-18T20:38:04Z",
-        "height": 1080,
-        "width": 1920
-      },
-      "size": 12,
-      "executable": false,
-      "class": "image",
-      "mime": "image/jpg"
-    },
-    "relationships": {
-      "parent": {
-        "links": {
-          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+    "data": {
+        "type": "io.cozy.files",
+        "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+        "meta": {
+            "rev": "1-0e6d5b72"
         },
-        "data": {
-          "type": "io.cozy.files",
-          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        "attributes": {
+            "type": "file",
+            "name": "sunset.jpg",
+            "trashed": false,
+            "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
+            "created_at": "2016-09-19T12:38:04Z",
+            "updated_at": "2016-09-19T12:38:04Z",
+            "tags": [],
+            "metadata": {
+                "datetime": "2016-09-18T20:38:04Z",
+                "height": 1080,
+                "width": 1920
+            },
+            "size": 12,
+            "executable": false,
+            "class": "image",
+            "mime": "image/jpg"
+        },
+        "relationships": {
+            "parent": {
+                "links": {
+                    "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                },
+                "data": {
+                    "type": "io.cozy.files",
+                    "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                }
+            },
+            "referenced_by": {
+                "links": {
+                    "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
+                },
+                "data": [
+                    {
+                        "type": "io.cozy.albums",
+                        "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
+                    }
+                ]
+            }
+        },
+        "links": {
+            "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
+            "small": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/small",
+            "medium": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/medium",
+            "large": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/large"
         }
-      },
-      "referenced_by": {
-        "links": {
-          "self":
-            "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
-        },
-        "data": [
-          {
-            "type": "io.cozy.albums",
-            "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
-          }
-        ]
-      }
-    },
-    "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
-      "small":
-        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/small",
-      "medium":
-        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/medium",
-      "large":
-        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/large"
     }
-  }
 }
 ```
 
@@ -426,10 +423,10 @@ HELLO WORLD!
 
 #### Status codes
 
-* 200 OK, when the file has been successfully overwritten
-* 404 Not Found, when the file wasn't existing
-* 412 Precondition Failed, when the `If-Match` header is set and doesn't match
-  the last revision of the file
+-   200 OK, when the file has been successfully overwritten
+-   404 Not Found, when the file wasn't existing
+-   412 Precondition Failed, when the `If-Match` header is set and doesn't match
+    the last revision of the file
 
 #### Response
 
@@ -440,40 +437,40 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.files",
-    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "meta": {
-      "rev": "2-d903b54c"
-    },
-    "attributes": {
-      "type": "file",
-      "name": "hello.txt",
-      "trashed": false,
-      "md5sum": "YjU5YmMzN2Q2NDQxZDk2Nwo=",
-      "created_at": "2016-09-19T12:38:04Z",
-      "updated_at": "2016-09-19T12:38:04Z",
-      "tags": [],
-      "size": 12,
-      "executable": false,
-      "class": "document",
-      "mime": "text/plain"
-    },
-    "relationships": {
-      "parent": {
-        "links": {
-          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+    "data": {
+        "type": "io.cozy.files",
+        "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+        "meta": {
+            "rev": "2-d903b54c"
         },
-        "data": {
-          "type": "io.cozy.files",
-          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        "attributes": {
+            "type": "file",
+            "name": "hello.txt",
+            "trashed": false,
+            "md5sum": "YjU5YmMzN2Q2NDQxZDk2Nwo=",
+            "created_at": "2016-09-19T12:38:04Z",
+            "updated_at": "2016-09-19T12:38:04Z",
+            "tags": [],
+            "size": 12,
+            "executable": false,
+            "class": "document",
+            "mime": "text/plain"
+        },
+        "relationships": {
+            "parent": {
+                "links": {
+                    "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                },
+                "data": {
+                    "type": "io.cozy.files",
+                    "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                }
+            }
+        },
+        "links": {
+            "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
         }
-      }
-    },
-    "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
     }
-  }
 }
 ```
 
@@ -503,40 +500,40 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.files",
-    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "meta": {
-      "rev": "1-0e6d5b72"
-    },
-    "attributes": {
-      "type": "file",
-      "name": "hello.txt",
-      "trashed": false,
-      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
-      "created_at": "2016-09-19T12:38:04Z",
-      "updated_at": "2016-09-19T12:38:04Z",
-      "tags": [],
-      "size": 12,
-      "executable": false,
-      "class": "document",
-      "mime": "text/plain"
-    },
-    "relationships": {
-      "parent": {
-        "links": {
-          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+    "data": {
+        "type": "io.cozy.files",
+        "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+        "meta": {
+            "rev": "1-0e6d5b72"
         },
-        "data": {
-          "type": "io.cozy.files",
-          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        "attributes": {
+            "type": "file",
+            "name": "hello.txt",
+            "trashed": false,
+            "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
+            "created_at": "2016-09-19T12:38:04Z",
+            "updated_at": "2016-09-19T12:38:04Z",
+            "tags": [],
+            "size": 12,
+            "executable": false,
+            "class": "document",
+            "mime": "text/plain"
+        },
+        "relationships": {
+            "parent": {
+                "links": {
+                    "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                },
+                "data": {
+                    "type": "io.cozy.files",
+                    "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                }
+            }
+        },
+        "links": {
+            "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
         }
-      }
-    },
-    "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
     }
-  }
 }
 ```
 
@@ -547,9 +544,12 @@ rename/move it. The difference is the first one uses an id to identify the
 file/directory to update, and the second one uses the path.
 
 Some specific attributes of the patch can be used:
-  - `dir_id` attribute can be updated to move a file or directory
-  - `move_to_trash` boolean to specify that the file needs to be moved to the trash
-  - `permanent_delete` boolean to specify that the files needs to be deleted (after being trashed)
+
+-   `dir_id` attribute can be updated to move a file or directory
+-   `move_to_trash` boolean to specify that the file needs to be moved to the
+    trash
+-   `permanent_delete` boolean to specify that the files needs to be deleted
+    (after being trashed)
 
 #### HTTP headers
 
@@ -566,29 +566,29 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.files",
-    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "attributes": {
-      "type": "file",
-      "name": "hi.txt",
-      "dir_id": "f2f36fec-8018-11e6-abd8-8b3814d9a465",
-      "tags": ["poem"]
+    "data": {
+        "type": "io.cozy.files",
+        "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+        "attributes": {
+            "type": "file",
+            "name": "hi.txt",
+            "dir_id": "f2f36fec-8018-11e6-abd8-8b3814d9a465",
+            "tags": ["poem"]
+        }
     }
-  }
 }
 ```
 
 #### Status codes
 
-* 200 OK, when the file or directory metadata has been successfully updated
-* 400 Bad Request, when a the directory is asked to move to one of its
-  sub-directories
-* 404 Not Found, when the file/directory wasn't existing
-* 412 Precondition Failed, when the `If-Match` header is set and doesn't match
-  the last revision of the file/directory
-* 422 Unprocessable Entity, when the sent data is invalid (for example, the
-  parent doesn't exist)
+-   200 OK, when the file or directory metadata has been successfully updated
+-   400 Bad Request, when a the directory is asked to move to one of its
+    sub-directories
+-   404 Not Found, when the file/directory wasn't existing
+-   412 Precondition Failed, when the `If-Match` header is set and doesn't match
+    the last revision of the file/directory
+-   422 Unprocessable Entity, when the sent data is invalid (for example, the
+    parent doesn't exist)
 
 #### Response
 
@@ -600,40 +600,40 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.files",
-    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "meta": {
-      "rev": "1-0e6d5b72"
-    },
-    "attributes": {
-      "type": "file",
-      "name": "hi.txt",
-      "trashed": false,
-      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
-      "created_at": "2016-09-19T12:38:04Z",
-      "updated_at": "2016-09-19T12:38:04Z",
-      "tags": ["poem"],
-      "size": 12,
-      "executable": false,
-      "class": "document",
-      "mime": "text/plain"
-    },
-    "relationships": {
-      "parent": {
-        "links": {
-          "related": "/files/f2f36fec-8018-11e6-abd8-8b3814d9a465"
+    "data": {
+        "type": "io.cozy.files",
+        "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+        "meta": {
+            "rev": "1-0e6d5b72"
         },
-        "data": {
-          "type": "io.cozy.files",
-          "id": "f2f36fec-8018-11e6-abd8-8b3814d9a465"
+        "attributes": {
+            "type": "file",
+            "name": "hi.txt",
+            "trashed": false,
+            "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
+            "created_at": "2016-09-19T12:38:04Z",
+            "updated_at": "2016-09-19T12:38:04Z",
+            "tags": ["poem"],
+            "size": 12,
+            "executable": false,
+            "class": "document",
+            "mime": "text/plain"
+        },
+        "relationships": {
+            "parent": {
+                "links": {
+                    "related": "/files/f2f36fec-8018-11e6-abd8-8b3814d9a465"
+                },
+                "data": {
+                    "type": "io.cozy.files",
+                    "id": "f2f36fec-8018-11e6-abd8-8b3814d9a465"
+                }
+            }
+        },
+        "links": {
+            "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
         }
-      }
-    },
-    "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
     }
-  }
 }
 ```
 
@@ -651,20 +651,20 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    {
-      "type": "io.cozy.files",
-      "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-      "meta": { "rev": "1-0e6d5b72" },
-      "attributes": { "dir_id": "f2f36fec-8018-11e6-abd8-8b3814d9a465" }
-    },
-    {
-      "type": "io.cozy.files",
-      "id": "9152d568-7e7c-11e6-a377-37cbfb190b4c",
-      "meta": { "rev": "2-123123" },
-      "attributes": { "move_to_trash": true }
-    }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.files",
+            "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+            "meta": { "rev": "1-0e6d5b72" },
+            "attributes": { "dir_id": "f2f36fec-8018-11e6-abd8-8b3814d9a465" }
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "9152d568-7e7c-11e6-a377-37cbfb190b4c",
+            "meta": { "rev": "2-123123" },
+            "attributes": { "move_to_trash": true }
+        }
+    ]
 }
 ```
 
@@ -691,18 +691,18 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.files.archives",
-    "attributes": {
-      "name": "project-X",
-      "ids": ["a51aeeea-4f79-11e7-9dc4-83f67e9494ab"],
-      "files": [
-        "/Documents/bills",
-        "/Documents/images/sunset.jpg",
-        "/Documents/images/eiffel-tower.jpg"
-      ]
+    "data": {
+        "type": "io.cozy.files.archives",
+        "attributes": {
+            "name": "project-X",
+            "ids": ["a51aeeea-4f79-11e7-9dc4-83f67e9494ab"],
+            "files": [
+                "/Documents/bills",
+                "/Documents/images/sunset.jpg",
+                "/Documents/images/eiffel-tower.jpg"
+            ]
+        }
     }
-  }
 }
 ```
 
@@ -715,16 +715,16 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "links": {
-    "related": "/files/archive/4521DC87/project-X.zip"
-  },
-  "data": {
-    "type": "io.cozy.files.archives",
-    "id": "4521DC87",
-    "attributes": {
-      "href": "/files/archive/4521DC87/project-X.zip"
+    "links": {
+        "related": "/files/archive/4521DC87/project-X.zip"
+    },
+    "data": {
+        "type": "io.cozy.files.archives",
+        "id": "4521DC87",
+        "attributes": {
+            "href": "/files/archive/4521DC87/project-X.zip"
+        }
     }
-  }
 }
 ```
 
@@ -801,54 +801,54 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    {
-      "type": "io.cozy.files",
-      "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
-      "meta": {
-        "rev": "1-3b75377c"
-      },
-      "attributes": {
-        "type": "file",
-        "name": "foo.txt",
-        "trashed": true,
-        "md5sum": "YjAxMzQxZTc4MDNjODAwYwo=",
-        "created_at": "2016-09-19T12:38:04Z",
-        "updated_at": "2016-09-19T12:38:04Z",
-        "tags": [],
-        "size": 123,
-        "executable": false,
-        "class": "document",
-        "mime": "text/plain"
-      },
-      "links": {
-        "self": "/files/trash/df24aac0-7f3d-11e6-81c0-d38812bfa0a8"
-      }
-    },
-    {
-      "type": "io.cozy.files",
-      "id": "4a4fc582-7f3e-11e6-b9ca-278406b6ddd4",
-      "meta": {
-        "rev": "1-4a09030e"
-      },
-      "attributes": {
-        "type": "file",
-        "name": "bar.txt",
-        "trashed": true,
-        "md5sum": "YWVhYjg3ZWI0OWQzZjRlMAo=",
-        "created_at": "2016-09-19T12:38:04Z",
-        "updated_at": "2016-09-19T12:38:04Z",
-        "tags": [],
-        "size": 456,
-        "executable": false,
-        "class": "document",
-        "mime": "text/plain"
-      },
-      "links": {
-        "self": "/files/trash/4a4fc582-7f3e-11e6-b9ca-278406b6ddd4"
-      }
-    }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.files",
+            "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
+            "meta": {
+                "rev": "1-3b75377c"
+            },
+            "attributes": {
+                "type": "file",
+                "name": "foo.txt",
+                "trashed": true,
+                "md5sum": "YjAxMzQxZTc4MDNjODAwYwo=",
+                "created_at": "2016-09-19T12:38:04Z",
+                "updated_at": "2016-09-19T12:38:04Z",
+                "tags": [],
+                "size": 123,
+                "executable": false,
+                "class": "document",
+                "mime": "text/plain"
+            },
+            "links": {
+                "self": "/files/trash/df24aac0-7f3d-11e6-81c0-d38812bfa0a8"
+            }
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "4a4fc582-7f3e-11e6-b9ca-278406b6ddd4",
+            "meta": {
+                "rev": "1-4a09030e"
+            },
+            "attributes": {
+                "type": "file",
+                "name": "bar.txt",
+                "trashed": true,
+                "md5sum": "YWVhYjg3ZWI0OWQzZjRlMAo=",
+                "created_at": "2016-09-19T12:38:04Z",
+                "updated_at": "2016-09-19T12:38:04Z",
+                "tags": [],
+                "size": 456,
+                "executable": false,
+                "class": "document",
+                "mime": "text/plain"
+            },
+            "links": {
+                "self": "/files/trash/4a4fc582-7f3e-11e6-b9ca-278406b6ddd4"
+            }
+        }
+    ]
 }
 ```
 

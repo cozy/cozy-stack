@@ -7,10 +7,10 @@ on Travis to automatically publish new versions on the apps registry.
 
 In this tutorial, we assume:
 
-* you have a token allowing you to publish applications for your `editor`:
-  `AbCdEf`
-* you are working on a repository plugged on travis and named on github
-  `cozy/cozy-example`
+-   you have a token allowing you to publish applications for your `editor`:
+    `AbCdEf`
+-   you are working on a repository plugged on travis and named on github
+    `cozy/cozy-example`
 
 You first need to add the token to your travis configuration file `.travis.yml`.
 To do so, you need the
@@ -34,12 +34,12 @@ script.
 
 It contains environment variables that you can adapt as your need:
 
-* `COZY_APP_VERSION`: the version string of the deployed version
-* `COZY_APP_PARAMETERS`: an optional JSON object (string, object or array) that
-  will parameterize the application on its execution.
-* `COZY_BUILD_URL`: the URL of the deployed tarball for your application
-* `COZY_BUILD_BRANCH`: the name of the build branch from which the script
-  creates dev releases
+-   `COZY_APP_VERSION`: the version string of the deployed version
+-   `COZY_APP_PARAMETERS`: an optional JSON object (string, object or array)
+    that will parameterize the application on its execution.
+-   `COZY_BUILD_URL`: the URL of the deployed tarball for your application
+-   `COZY_BUILD_BRANCH`: the name of the build branch from which the script
+    creates dev releases
 
 ```bash
 #!/bin/bash

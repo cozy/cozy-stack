@@ -9,11 +9,11 @@ v2 that fetch data from different web sites and services, and save them into a
 Cozy. The 50+ connectors represent a lot of work from the community. So, we want
 to port it to Cozy v3. There will be 2 parts:
 
-* My Accounts, a client-side app, that will offer the possibility for the user
-  to configure her accounts, and choose when to start the import of data (see
-  [the architecture doc](https://github.com/cozy-labs/konnectors/blob/development/docs/client-side-architecture.md)).
-* Konnectors, a worker for the [job service](jobs.md), with the code to import
-  data from the web sites.
+-   My Accounts, a client-side app, that will offer the possibility for the user
+    to configure her accounts, and choose when to start the import of data (see
+    [the architecture doc](https://github.com/cozy-labs/konnectors/blob/development/docs/client-side-architecture.md)).
+-   Konnectors, a worker for the [job service](jobs.md), with the code to import
+    data from the web sites.
 
 ## Security
 
@@ -22,14 +22,14 @@ to port it to Cozy v3. There will be 2 parts:
 Konnectors is not just a random application. It's a very good target for attacks
 on Cozy because of these specificities:
 
-* It run on the server, where there is no Content Security Policy, or firewall
-  to protect the stack.
-* It has access to Internet, by design.
-* It is written in nodejs, with a lot of dependencies where it is easy to hide
-  malicious code.
-* It is a collection of connectors written by a lot of people. We welcome these
-  contributions, but it also means that we take into account that we can't
-  review in depth all the contributions.
+-   It run on the server, where there is no Content Security Policy, or firewall
+    to protect the stack.
+-   It has access to Internet, by design.
+-   It is written in nodejs, with a lot of dependencies where it is easy to hide
+    malicious code.
+-   It is a collection of connectors written by a lot of people. We welcome
+    these contributions, but it also means that we take into account that we
+    can't review in depth all the contributions.
 
 #### Access to couchdb
 
@@ -142,13 +142,13 @@ for just one command (technically, for a new session, not the current one).
 One feature Linux provides here is namespaces. There are a bunch of different
 kinds:
 
-* in a pid namespace you become PID 1 and then your children are other
-  processes. All the other programs are gone
-* in a networking namespace you can run programs on any port you want without it
-  conflicting with what’s already running
-* in a mount namespace you can mount and unmount filesystems without it
-  affecting the host filesystem. So you can have a totally different set of
-  devices mounted (usually less).
+-   in a pid namespace you become PID 1 and then your children are other
+    processes. All the other programs are gone
+-   in a networking namespace you can run programs on any port you want without
+    it conflicting with what’s already running
+-   in a mount namespace you can mount and unmount filesystems without it
+    affecting the host filesystem. So you can have a totally different set of
+    devices mounted (usually less).
 
 It turns out that making namespaces is totally easy! You can just run a program
 called [unshare](http://man7.org/linux/man-pages/man1/unshare.1.html).
@@ -221,15 +221,15 @@ tool.
 
 NsJail is:
 
-* easy to install : just a make away with standard build tools
-* offers a full list or isolation tools
-* lightly documented the only documentation is nsjail -h (also available in the
-  main github page) and it is quite cryptic for a non-sysadmin like me. I could
-  not find any help in any search engine. Some examples are available to run a
-  back in an isolated process and work but I could not run a full nodejs (only
-  nodejs -v worked)
-* The konnectors will need a full nodejs installed on the host
-* Is still actively maintained
+-   easy to install : just a make away with standard build tools
+-   offers a full list or isolation tools
+-   lightly documented the only documentation is nsjail -h (also available in
+    the main github page) and it is quite cryptic for a non-sysadmin like me. I
+    could not find any help in any search engine. Some examples are available to
+    run a back in an isolated process and work but I could not run a full nodejs
+    (only nodejs -v worked)
+-   The konnectors will need a full nodejs installed on the host
+-   Is still actively maintained
 
 ### Rkt
 
@@ -241,19 +241,19 @@ and without forcing self-hosted users to do complicated installation procedures.
 
 Rkt is :
 
-* easy to install : debian, rpm package available, archlinux community package :
-  https://github.com/coreos/rkt/releases
-* has network isolation like docker
-* offers CPU, memory limitation, seccomp isolation (but the set of rules to use
-  is out of my understanding)
-* is well [documented](https://coreos.com/rkt/docs/latest/), complete man pages,
-  but not as well known as docker, then there is not a lot of things to find
-  outside the official documentation.
-* can use docker image directly or can convert them to one runnable aci file
-  with one simple cli command (rkt export)
-* is in active developpement but relatively stable regarding core features.
-* container images can be easily signed and the signature is checked by default
-  when running a container.
+-   easy to install : debian, rpm package available, archlinux community package
+    : https://github.com/coreos/rkt/releases
+-   has network isolation like docker
+-   offers CPU, memory limitation, seccomp isolation (but the set of rules to
+    use is out of my understanding)
+-   is well [documented](https://coreos.com/rkt/docs/latest/), complete man
+    pages, but not as well known as docker, then there is not a lot of things to
+    find outside the official documentation.
+-   can use docker image directly or can convert them to one runnable aci file
+    with one simple cli command (rkt export)
+-   is in active developpement but relatively stable regarding core features.
+-   container images can be easily signed and the signature is checked by
+    default when running a container.
 
 I managed to run a nodejs container with just the following commands :
 
@@ -380,12 +380,12 @@ inside this directory. The lib directory will be the content of the
 
 The konnector will be run with the following environment variables :
 
-* `COZY_CREDENTIALS` : containing the response to Oauth request as json string
-* `COZY_URL` : to know what instance is running the konnector
-* `COZY_FIELDS` : as a json string with all the values from the account
-  associated to the konnector.
-* `COZY_PARAMETERS` : optional json string associated with the application, used
-  to parameterize a konnector based on a common set of code.
+-   `COZY_CREDENTIALS` : containing the response to Oauth request as json string
+-   `COZY_URL` : to know what instance is running the konnector
+-   `COZY_FIELDS` : as a json string with all the values from the account
+    associated to the konnector.
+-   `COZY_PARAMETERS` : optional json string associated with the application,
+    used to parameterize a konnector based on a common set of code.
 
 In the end of the konnector execution (or timeout), the logs are read in the
 log.txt file and added to the konnector own log file (in VFS) and the run
@@ -396,9 +396,9 @@ directory is then destroyed.
 This section is devoted to allow the user to use one account for multiple
 konnectors. It will follow the following constraints in mind:
 
-* The migration path must be as easy as possible
-* The developpement and maintainance of konnector must also be as easy as
-  possible
+-   The migration path must be as easy as possible
+-   The developpement and maintainance of konnector must also be as easy as
+    possible
 
 ### New doctype : io.cozy.accounts
 
@@ -480,62 +480,59 @@ problem. We are trying to find solution to handle that.
 
 We found 3 possible solutions :
 
-* Install the konnector on VFS as tar.gz files with all the dependencies
-  included by the konnector developper
-  * advantages : easy for the konnector developper, as performant as a cp, no
-    nedd for a compiled version of the konnector source, no duplication of code
-    in the repo
-  * drawbacks : The source are not readable in files application then more
-    complicated to study the konnector source, not really nice... , still could
-    take a lot of space on VFS
-* Use webpack with `target: node` option to make a node bundle of the
-  dependencies
-  * advantages : the konnector itself stays in clear on the VFS
-  * drawbacks : forces a compilation of the sources and then a sync between the
-    source and bundle in the git repo by the konnector developper, forces
-    konnector developpers to use webpack.
-* Install the npm dependencies with yarn in an immutable cache (--cache-folder
-  option) in a directory like deps-${konnector-git-sha1} not in VFS.
-  * advantages : easier for the konnector developper, no particular dependency
-    handling, no mandatory compilation, just a package.json in the git
-    repository, the cache can be shared by instances
-  * drawbacks : node only solution, maybe more work on the cozy-stack side
+-   Install the konnector on VFS as tar.gz files with all the dependencies
+    included by the konnector developper
+    -   advantages : easy for the konnector developper, as performant as a cp,
+        no nedd for a compiled version of the konnector source, no duplication
+        of code in the repo
+    -   drawbacks : The source are not readable in files application then more
+        complicated to study the konnector source, not really nice... , still
+        could take a lot of space on VFS
+-   Use webpack with `target: node` option to make a node bundle of the
+    dependencies
+    -   advantages : the konnector itself stays in clear on the VFS
+    -   drawbacks : forces a compilation of the sources and then a sync between
+        the source and bundle in the git repo by the konnector developper,
+        forces konnector developpers to use webpack.
+-   Install the npm dependencies with yarn in an immutable cache (--cache-folder
+    option) in a directory like deps-${konnector-git-sha1} not in VFS.
+    -   advantages : easier for the konnector developper, no particular
+        dependency handling, no mandatory compilation, just a package.json in
+        the git repository, the cache can be shared by instances
+    -   drawbacks : node only solution, maybe more work on the cozy-stack side
 
 ## TODO
 
-* [x] How to install and update the konnectors?
-* [x] Are the konnectors installed once per server or per instance (in the VFS
-      like client-side apps)?
-* [x] One git repository with all the konnectors (like now), or one repos per
-      konnector? Same question for package.json
-* [ ] What API to list the konnectors for My Accounts?
-* [ ] What workflow for developing a konnector?
-* [ ] How to test konnectors?
-* [x] How are managed the locales? : declared in manfiest.konnector
-* [x] Which version of nodejs? Last LTS version bundled in a rocket container
-* [ ] Do you keep coffeescript? Or move every konnector to ES2017?
-      * 28 konnectors in coffee
-      * 22 konnectors in JS
-* [ ] What about weboob?
-* [ ] What roadmap for transforming the konnectors-v2 in konnectors-v3?
-* [x] What format for the konnectors manifest?
-* [x] What permissions for a konnector?
-* [ ] For konnectors that import files, how can we let the user select a folder
-      and have an associated permission for the konnector in this folder (and
-      not anywhere else on the virtual file system)?
-* [ ] Can we associate the data retrieved by a konnector to a "profile"? The
-      goal is to allow a client-side to have a permission on this profile and be
-      able to read all the data fetched by a given konnector (or is tied to an
-      account)?
-* [ ] How are logged the data exported/synchronized by a "push" konnector?
-* [x] Analyze the konnectors node_modules
-      * no compiled modules currently
-      * 28 dependencies that install 65 MB for 271 modules in production
-      * 71 dependencies that install 611 MB for 858 modules with dev
-        dependencies
-* [ ] How are persisted the accounts?
-* [x] How is executed a konnector? In particular, how the credentials are given
-      to the konnector?
-* [ ] what should expose a konnector (data, functions, etc)?
-      * https://github.com/cozy-labs/konnectors/issues/695
-* [ ] How can we support konnectors with OAuth?
+-   [x] How to install and update the konnectors?
+-   [x] Are the konnectors installed once per server or per instance (in the VFS
+        like client-side apps)?
+-   [x] One git repository with all the konnectors (like now), or one repos per
+        konnector? Same question for package.json
+-   [ ] What API to list the konnectors for My Accounts?
+-   [ ] What workflow for developing a konnector?
+-   [ ] How to test konnectors?
+-   [x] How are managed the locales? : declared in manfiest.konnector
+-   [x] Which version of nodejs? Last LTS version bundled in a rocket container
+-   [ ] Do you keep coffeescript? Or move every konnector to ES2017? _ 28
+        konnectors in coffee _ 22 konnectors in JS
+-   [ ] What about weboob?
+-   [ ] What roadmap for transforming the konnectors-v2 in konnectors-v3?
+-   [x] What format for the konnectors manifest?
+-   [x] What permissions for a konnector?
+-   [ ] For konnectors that import files, how can we let the user select a
+        folder and have an associated permission for the konnector in this
+        folder (and not anywhere else on the virtual file system)?
+-   [ ] Can we associate the data retrieved by a konnector to a "profile"? The
+        goal is to allow a client-side to have a permission on this profile and
+        be able to read all the data fetched by a given konnector (or is tied to
+        an account)?
+-   [ ] How are logged the data exported/synchronized by a "push" konnector?
+-   [x] Analyze the konnectors node_modules _ no compiled modules currently _ 28
+        dependencies that install 65 MB for 271 modules in production \* 71
+        dependencies that install 611 MB for 858 modules with dev dependencies
+-   [ ] How are persisted the accounts?
+-   [x] How is executed a konnector? In particular, how the credentials are
+        given to the konnector?
+-   [ ] what should expose a konnector (data, functions, etc)? \*
+        https://github.com/cozy-labs/konnectors/issues/695
+-   [ ] How can we support konnectors with OAuth?

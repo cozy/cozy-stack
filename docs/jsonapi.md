@@ -38,11 +38,10 @@ GET /data/some-type/some-id/relationships/references HTTP/1.1
 
 ```json
 {
-  "data": ["... 100 docs ..."],
-  "links": {
-    "next":
-      "/data/some-type/some-id/relationships/references?page[limit]=100&page[cursor]=7845122548848454212"
-  }
+    "data": ["... 100 docs ..."],
+    "links": {
+        "next": "/data/some-type/some-id/relationships/references?page[limit]=100&page[cursor]=7845122548848454212"
+    }
 }
 ```
 
@@ -52,11 +51,10 @@ GET /data/some-type/some-id/relationships/references?page[limit]=10 HTTP/1.1
 
 ```json
 {
-  "data": ["... 10 docs ..."],
-  "links": {
-    "next":
-      "/data/some-type/some-id/relationships/references?page[limit]=10&page[cursor]=5487ba7596"
-  }
+    "data": ["... 10 docs ..."],
+    "links": {
+        "next": "/data/some-type/some-id/relationships/references?page[limit]=10&page[cursor]=5487ba7596"
+    }
 }
 ```
 
@@ -66,7 +64,7 @@ GET /data/some-type/some-id/relationships/references?page[limit]=100&page[cursor
 
 ```json
 {
-  "data": ["... 20 docs ..."]
+    "data": ["... 20 docs ..."]
 }
 ```
 
@@ -76,10 +74,9 @@ GET /data/some-type/some-id/relationships/references?page[limit]=10&page[skip]=0
 
 ```json
 {
-  "data": ["... 10 docs ..."],
-  "links": {
-    "next":
-      "/data/some-type/some-id/relationships/references?page[limit]=10&page[skip]=10"
-  }
+    "data": ["... 10 docs ..."],
+    "links": {
+        "next": "/data/some-type/some-id/relationships/references?page[limit]=10&page[skip]=10"
+    }
 }
 ```
