@@ -92,10 +92,12 @@ type TreeFile struct {
 	FilesChildren     []*TreeFile `json:"-"`
 	FilesChildrenSize int64       `json:"-"`
 	DirsChildren      []*TreeFile `json:"-"`
-	IsDir             bool        `json:"-"`
+
+	IsDir    bool `json:"is_dir"`
+	IsOrphan bool `json:"is_orphan"`
 
 	hasCycle bool
-	// visited  bool
+	visited  bool
 }
 
 func (t *TreeFile) AsFile() *FileDoc {

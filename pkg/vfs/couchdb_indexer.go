@@ -583,37 +583,32 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 		return nil
 	})
 	if t.Root == nil {
-		err = fmt.Errorf("could not find root file")
+		return nil, fmt.Errorf("could not find root file")
+	}
+	for _, bucket := range t.Orphans {
+		for _, child := range bucket {
+			child.IsOrphan = true
+			each(child)
+		}
 	}
 	return
 }
 
 func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate func(*FsckLog)) {
-	delete(dirsmap, parent.DocID)
-	for _, child := range parent.DirsChildren {
-		expected := path.Join(parent.Fullpath, child.DocName)
-		if expected != child.Fullpath {
-			accumulate(&FsckLog{
-				Type:             IndexBadFullpath,
-				DirDoc:           child,
-				ExpectedFullpath: expected,
-			})
+	if !parent.visited {
+		// avoid stackoverflow on cycles
+		parent.visited = true
+		delete(dirsmap, parent.DocID)
+		for _, child := range parent.DirsChildren {
+			expected := path.Join(parent.Fullpath, child.DocName)
+			if expected != child.Fullpath {
+				accumulate(&FsckLog{
+					Type:             IndexBadFullpath,
+					DirDoc:           child,
+					ExpectedFullpath: expected,
+				})
+			}
+			cleanDirsMap(child, dirsmap, accumulate)
 		}
-		cleanDirsMap(child, dirsmap, accumulate)
 	}
 }
-
-// func listChildren(root *TreeFile, files []couchdb.Doc) []couchdb.Doc {
-// 	if !root.visited {
-// 		files = append(files, root)
-// 		// avoid stackoverflow on cycles
-// 		root.visited = true
-// 		for _, child := range root.DirsChildren {
-// 			files = listChildren(child, files)
-// 		}
-// 		for _, child := range root.FilesChildren {
-// 			files = append(files, child)
-// 		}
-// 	}
-// 	return files
-// }
