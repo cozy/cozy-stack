@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/echo"
 	"github.com/cozy/httpcache"
 )
@@ -28,6 +30,21 @@ type Version struct {
 	Size      string          `json:"size"`
 	Manifest  json.RawMessage `json:"manifest"`
 	TarPrefix string          `json:"tar_prefix"`
+}
+
+// A MaintenanceOptions defines options about a maintenance
+type MaintenanceOptions struct {
+	FlagInfraMaintenance   bool `json:"flag_infra_maintenance"`
+	FlagShortMaintenance   bool `json:"flag_short_maintenance"`
+	FlagDisallowManualExec bool `json:"flag_disallow_manual_exec"`
+}
+
+// An Application describe an application on the registry
+type Application struct {
+	Slug                 string             `json:"slug"`
+	Type                 string             `json:"type"`
+	MaintenanceActivated bool               `json:"maintenance_activated,omitempty"`
+	MaintenanceOptions   MaintenanceOptions `json:"maintenance_options"`
 }
 
 var errVersionNotFound = errors.New("Version not found")
@@ -73,6 +90,27 @@ func GetLatestVersion(slug, channel string, registries []*url.URL) (*Version, er
 		return nil, err
 	}
 	return v, nil
+}
+
+// GetApplication returns an application from his slug
+func GetApplication(slug string) (*Application, error) {
+	var app *Application
+	requestURI := fmt.Sprintf("/registry/%s/", slug)
+	registries := config.GetConfig().Registries["default"]
+
+	resp, _, err := fetchUntilFound(registries, requestURI, WithCache)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	jsonBody, err := ioutil.ReadAll(resp.Body)
+
+	errc := json.Unmarshal(jsonBody, &app)
+	if errc != nil {
+		return nil, errc
+	}
+	return app, nil
 }
 
 // Proxy will proxy the given request to the registries in sequence and return

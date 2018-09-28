@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/sirupsen/logrus"
 
@@ -66,10 +67,35 @@ func (m *konnectorMessage) ToJSON() string {
 // beforeHookKonnector skips jobs from trigger that are failing on certain
 // errors.
 func beforeHookKonnector(req *jobs.JobRequest) (bool, error) {
-	if req.Manual || req.Trigger == nil {
+	trigger := req.Trigger
+
+	infos := trigger.Infos()
+
+	konnectorMessage := struct {
+		Account      string `json:"account"`
+		Konnector    string `json:"konnector"`
+		FolderToSave string `json:"folder_to_save"`
+	}{}
+
+	json.Unmarshal(infos.Message, &konnectorMessage)
+
+	application, err := registry.GetApplication(konnectorMessage.Konnector)
+	if err != nil {
+		return false, err
+	}
+
+	if application.MaintenanceActivated {
+		if req.Manual && !application.MaintenanceOptions.FlagDisallowManualExec {
+			return true, nil
+		}
+
+		return false, fmt.Errorf("konnector %s has not been triggered because of his maintenance status", konnectorMessage.Konnector)
+	}
+
+	if req.Manual || trigger == nil {
 		return true, nil
 	}
-	trigger := req.Trigger
+
 	state, err := jobs.GetTriggerState(trigger)
 	if err != nil {
 		return false, err
@@ -77,10 +103,11 @@ func beforeHookKonnector(req *jobs.JobRequest) (bool, error) {
 	if state.Status == jobs.Errored {
 		if strings.HasPrefix(state.LastError, konnErrorLoginFailed) ||
 			strings.HasPrefix(state.LastError, konnErrorUserActionNeeded) {
-			return false, nil
+			return false, fmt.Errorf("konnector %s has not been triggered because of user action needed", konnectorMessage.Konnector)
 		}
 	}
-	return true, nil
+
+	return false, fmt.Errorf("konnector %s has not been triggered, reason unknown", konnectorMessage.Konnector)
 }
 
 func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (string, error) {
