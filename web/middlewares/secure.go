@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/echo"
 )
 
@@ -187,7 +188,9 @@ func validCSPList(sources, defaults []CSPSource, whitelist string) ([]CSPSource,
 		if err != nil {
 			continue
 		}
-		u.Scheme = "https"
+		if !config.IsDevRelease() {
+			u.Scheme = "https"
+		}
 		if u.Path == "" {
 			u.Path = "/"
 		}
