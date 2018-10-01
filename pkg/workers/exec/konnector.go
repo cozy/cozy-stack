@@ -66,48 +66,45 @@ func (m *konnectorMessage) ToJSON() string {
 
 // beforeHookKonnector skips jobs from trigger that are failing on certain
 // errors.
-func beforeHookKonnector(req *jobs.JobRequest) (bool, error) {
-	trigger := req.Trigger
-
-	infos := trigger.Infos()
-
+func beforeHookKonnector(job *jobs.Job) (bool, error) {
 	konnectorMessage := struct {
 		Account      string `json:"account"`
 		Konnector    string `json:"konnector"`
 		FolderToSave string `json:"folder_to_save"`
 	}{}
 
-	json.Unmarshal(infos.Message, &konnectorMessage)
-
-	application, err := registry.GetApplication(konnectorMessage.Konnector)
-	if err != nil {
-		return false, err
-	}
-
-	if application.MaintenanceActivated {
-		if req.Manual && !application.MaintenanceOptions.FlagDisallowManualExec {
-			return true, nil
+	if err := json.Unmarshal(job.Message, &konnectorMessage); err == nil {
+		inst, err := instance.Get(job.DomainName())
+		if err != nil {
+			return false, err
 		}
-
-		return false, fmt.Errorf("konnector %s has not been triggered because of his maintenance status", konnectorMessage.Konnector)
+		app, err := registry.GetApplication(konnectorMessage.Konnector, inst.Registries())
+		if err != nil {
+			job.Logger().Warnf("konnector %q could not get application to fetch maintenance status", konnectorMessage.Konnector)
+		} else if app.MaintenanceActivated {
+			if job.Manual && !app.MaintenanceOptions.FlagDisallowManualExec {
+				return true, nil
+			}
+			job.Logger().Infof("konnector %q has not been triggered because of its maintenance status", konnectorMessage.Konnector)
+			return false, nil
+		}
 	}
 
-	if req.Manual || trigger == nil {
+	if job.Manual || job.TriggerID == "" {
 		return true, nil
 	}
 
-	state, err := jobs.GetTriggerState(trigger)
+	state, err := jobs.GetTriggerState(job, job.TriggerID)
 	if err != nil {
 		return false, err
 	}
 	if state.Status == jobs.Errored {
 		if strings.HasPrefix(state.LastError, konnErrorLoginFailed) ||
 			strings.HasPrefix(state.LastError, konnErrorUserActionNeeded) {
-			return false, fmt.Errorf("konnector %s has not been triggered because of user action needed", konnectorMessage.Konnector)
+			return false, nil
 		}
 	}
-
-	return false, fmt.Errorf("konnector %s has not been triggered, reason unknown", konnectorMessage.Konnector)
+	return true, nil
 }
 
 func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (string, error) {

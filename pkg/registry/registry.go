@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -13,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/echo"
 	"github.com/cozy/httpcache"
 )
@@ -49,15 +47,22 @@ type Application struct {
 
 var errVersionNotFound = errors.New("Version not found")
 
-var proxyClient = &http.Client{
-	Timeout:   10 * time.Second,
-	Transport: httpcache.NewMemoryCacheTransport(32),
-}
+var (
+	proxyClient = &http.Client{
+		Timeout:   10 * time.Second,
+		Transport: httpcache.NewMemoryCacheTransport(32),
+	}
 
-var latestVersionClient = &http.Client{
-	Timeout:   3 * time.Second,
-	Transport: httpcache.NewMemoryCacheTransport(256),
-}
+	appClient = &http.Client{
+		Timeout:   5 * time.Second,
+		Transport: httpcache.NewMemoryCacheTransport(256),
+	}
+
+	latestVersionClient = &http.Client{
+		Timeout:   5 * time.Second,
+		Transport: httpcache.NewMemoryCacheTransport(256),
+	}
+)
 
 // CacheControl defines whether or not to use caching for the request made to
 // the registries.
@@ -93,22 +98,16 @@ func GetLatestVersion(slug, channel string, registries []*url.URL) (*Version, er
 }
 
 // GetApplication returns an application from his slug
-func GetApplication(slug string) (*Application, error) {
-	var app *Application
+func GetApplication(slug string, registries []*url.URL) (*Application, error) {
 	requestURI := fmt.Sprintf("/registry/%s/", slug)
-	registries := config.GetConfig().Registries["default"]
-
-	resp, _, err := fetchUntilFound(registries, requestURI, WithCache)
+	resp, _, err := fetchUntilFound(appClient, registries, requestURI, WithCache)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	jsonBody, err := ioutil.ReadAll(resp.Body)
-
-	errc := json.Unmarshal(jsonBody, &app)
-	if errc != nil {
-		return nil, errc
+	var app *Application
+	if err = json.NewDecoder(resp.Body).Decode(&app); err != nil {
+		return nil, err
 	}
 	return app, nil
 }

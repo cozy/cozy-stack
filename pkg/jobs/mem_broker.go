@@ -190,7 +190,7 @@ func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error)
 
 	job := NewJob(db, req)
 	if worker.Conf.BeforeHook != nil {
-		ok, err := worker.Conf.BeforeHook(req)
+		ok, err := worker.Conf.BeforeHook(job)
 		if err != nil {
 			return nil, err
 		}
