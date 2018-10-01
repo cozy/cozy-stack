@@ -14,8 +14,7 @@ priority):
 * `/etc/cozy`
 
 The path of the configuration file can also be define from an absolute path
-given by the `--config` (or `-c`) flag of the [cozy-stack command](docs/cli
-/cozy-stack_serve.md).
+given by the `--config` (or `-c`) flag of the [cozy-stack command](./cli/cozy-stack_serve.md).
 
 ### Templating and Environment Variables
 
