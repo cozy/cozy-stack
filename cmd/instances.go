@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -17,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/statik/fs"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )
@@ -760,6 +762,47 @@ var importCmd = &cobra.Command{
 	},
 }
 
+var insertAssetCmd = &cobra.Command{
+	Use:     "insert-asset <url> <name> <shasum> <context>",
+	Short:   "Inserts and asset",
+	Long:    "Inserts an asset file in a specific context",
+	Example: "$ cozy-stack instances insert-asset file:///foo/bar/baz.js /foo/bar/baz.js 0763d6c2cebee0880eb3a9cc25d38cd23db39b5c3802f2dc379e408c877a2788 foocontext",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 4 {
+			return cmd.Usage()
+		}
+		// Check params
+		var customAssets []fs.AssetOption
+
+		assetOption := fs.AssetOption{
+			URL:     args[0],
+			Name:    args[1],
+			Shasum:  args[2],
+			Context: args[3],
+		}
+
+		customAssets = append(customAssets, assetOption)
+
+		marshaledAssets, err := json.Marshal(customAssets)
+		if err != nil {
+			return err
+		}
+
+		c := newAdminClient()
+		req := &request.Options{
+			Method: "POST",
+			Path:   "instances/assets",
+			Body:   bytes.NewReader(marshaledAssets),
+		}
+		res, err := c.Req(req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		return nil
+	},
+}
+
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(showPrefixInstanceCmd)
@@ -780,6 +823,7 @@ func init() {
 	instanceCmdGroup.AddCommand(updateCmd)
 	instanceCmdGroup.AddCommand(exportCmd)
 	instanceCmdGroup.AddCommand(importCmd)
+	instanceCmdGroup.AddCommand(insertAssetCmd)
 	addInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
