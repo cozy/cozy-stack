@@ -12,6 +12,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
@@ -22,6 +23,8 @@ import (
 
 	"github.com/cozy/afero"
 )
+
+var memfsMap sync.Map
 
 // aferoVFS is a struct implementing the vfs.VFS interface associated with
 // an afero.Fs filesystem. The indexing of the elements of the filesystem is
@@ -60,7 +63,11 @@ func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu l
 	case "file":
 		fs = afero.NewBasePathFs(afero.NewOsFs(), pth)
 	case "mem":
-		fs = afero.NewMemMapFs()
+		val, ok := memfsMap.Load(db.DomainName())
+		if !ok {
+			val, _ = memfsMap.LoadOrStore(db.DomainName(), afero.NewMemMapFs())
+		}
+		fs = val.(afero.Fs)
 	default:
 		return nil, fmt.Errorf("vfsafero: non supported scheme %s", fsURL.Scheme)
 	}
