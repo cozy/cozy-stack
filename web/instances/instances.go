@@ -242,7 +242,6 @@ func assetsInfos(c echo.Context) error {
 	assetsMap := make(map[string][]*fs.Asset)
 	fs.Foreach(func(name, context string, f *fs.Asset) {
 		assetsMap[context] = append(assetsMap[context], f)
-		fmt.Printf("name: %s", name)
 	})
 	return c.JSON(http.StatusOK, assetsMap)
 }
