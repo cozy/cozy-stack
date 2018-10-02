@@ -32,51 +32,50 @@ The references of a file are listed in its JSON-API representation in the
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.files",
-    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "meta": {
-      "rev": "1-0e6d5b72"
-    },
-    "attributes": {
-      "type": "file",
-      "name": "hello.txt",
-      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
-      "created_at": "2016-09-19T12:38:04Z",
-      "updated_at": "2016-09-19T12:38:04Z",
-      "tags": [],
-      "size": 12,
-      "executable": false,
-      "class": "document",
-      "mime": "text/plain"
-    },
-    "relationships": {
-      "parent": {
-        "links": {
-          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+    "data": {
+        "type": "io.cozy.files",
+        "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+        "meta": {
+            "rev": "1-0e6d5b72"
         },
-        "data": {
-          "type": "io.cozy.files",
-          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        "attributes": {
+            "type": "file",
+            "name": "hello.txt",
+            "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
+            "created_at": "2016-09-19T12:38:04Z",
+            "updated_at": "2016-09-19T12:38:04Z",
+            "tags": [],
+            "size": 12,
+            "executable": false,
+            "class": "document",
+            "mime": "text/plain"
+        },
+        "relationships": {
+            "parent": {
+                "links": {
+                    "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                },
+                "data": {
+                    "type": "io.cozy.files",
+                    "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+                }
+            },
+            "referenced_by": {
+                "links": {
+                    "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
+                },
+                "data": [
+                    {
+                        "type": "io.cozy.playlists",
+                        "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
+                    }
+                ]
+            }
+        },
+        "links": {
+            "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
         }
-      },
-      "referenced_by": {
-        "links": {
-          "self":
-            "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
-        },
-        "data": [
-          {
-            "type": "io.cozy.playlists",
-            "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
-          }
-        ]
-      }
-    },
-    "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
     }
-  }
 }
 ```
 
@@ -96,12 +95,12 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    {
-      "type": "io.cozy.playlists",
-      "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
-    }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.playlists",
+            "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
+        }
+    ]
 }
 ```
 
@@ -126,12 +125,12 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    {
-      "type": "io.cozy.playlists",
-      "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0"
-    }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.playlists",
+            "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0"
+        }
+    ]
 }
 ```
 
@@ -144,16 +143,16 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    {
-      "type": "io.cozy.playlists",
-      "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
-    },
-    {
-      "type": "io.cozy.playlists",
-      "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0"
-    }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.playlists",
+            "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
+        },
+        {
+            "type": "io.cozy.playlists",
+            "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0"
+        }
+    ]
 }
 ```
 
@@ -171,12 +170,12 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    {
-      "type": "io.cozy.playlists",
-      "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0"
-    }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.playlists",
+            "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0"
+        }
+    ]
 }
 ```
 
@@ -214,12 +213,24 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    { "type": "io.cozy.files", "id": "417c4e58-e2e4-11e6-b7dc-2b68ed7b77f4" },
-    { "type": "io.cozy.files", "id": "4504f55c-e2e4-11e6-88f2-d77aeecab549" },
-    { "type": "io.cozy.files", "id": "4587727a-e2e4-11e6-bfe9-ef1be7df7f26" },
-    { "type": "io.cozy.files", "id": "45d591d0-e2e4-11e6-ab9a-ff3b218e31cc" }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.files",
+            "id": "417c4e58-e2e4-11e6-b7dc-2b68ed7b77f4"
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "4504f55c-e2e4-11e6-88f2-d77aeecab549"
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "4587727a-e2e4-11e6-bfe9-ef1be7df7f26"
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "45d591d0-e2e4-11e6-ab9a-ff3b218e31cc"
+        }
+    ]
 }
 ```
 
@@ -238,12 +249,24 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    { "type": "io.cozy.files", "id": "417c4e58-e2e4-11e6-b7dc-2b68ed7b77f4" },
-    { "type": "io.cozy.files", "id": "4504f55c-e2e4-11e6-88f2-d77aeecab549" },
-    { "type": "io.cozy.files", "id": "4587727a-e2e4-11e6-bfe9-ef1be7df7f26" },
-    { "type": "io.cozy.files", "id": "45d591d0-e2e4-11e6-ab9a-ff3b218e31cc" }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.files",
+            "id": "417c4e58-e2e4-11e6-b7dc-2b68ed7b77f4"
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "4504f55c-e2e4-11e6-88f2-d77aeecab549"
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "4587727a-e2e4-11e6-bfe9-ef1be7df7f26"
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "45d591d0-e2e4-11e6-ab9a-ff3b218e31cc"
+        }
+    ]
 }
 ```
 
@@ -272,12 +295,24 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    { "type": "io.cozy.files", "id": "417c4e58-e2e4-11e6-b7dc-2b68ed7b77f4" },
-    { "type": "io.cozy.files", "id": "4504f55c-e2e4-11e6-88f2-d77aeecab549" },
-    { "type": "io.cozy.files", "id": "4587727a-e2e4-11e6-bfe9-ef1be7df7f26" },
-    { "type": "io.cozy.files", "id": "45d591d0-e2e4-11e6-ab9a-ff3b218e31cc" }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.files",
+            "id": "417c4e58-e2e4-11e6-b7dc-2b68ed7b77f4"
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "4504f55c-e2e4-11e6-88f2-d77aeecab549"
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "4587727a-e2e4-11e6-bfe9-ef1be7df7f26"
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "45d591d0-e2e4-11e6-ab9a-ff3b218e31cc"
+        }
+    ]
 }
 ```
 
@@ -295,10 +330,10 @@ Content-Type: application/vnd.api+json
 Before an application updates a file, it can check if the file has some
 references. If it is the case, it may offer to the user two choices:
 
-* update the file with the new version (the albums and playlists will use the
-  new version)
-* save the new version as a new file and preserve the old file (the old file may
-  be moved to a `originals` directory).
+-   update the file with the new version (the albums and playlists will use the
+    new version)
+-   save the new version as a new file and preserve the old file (the old file
+    may be moved to a `originals` directory).
 
 ### Moving a referenced file to the trash
 
@@ -315,7 +350,7 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": []
+    "data": []
 }
 ```
 
@@ -334,11 +369,11 @@ references in a folder.
 
 ```js
 map = function(doc) {
-  if (doc.type === "folder") emit(doc.path);
+    if (doc.type === "folder") emit(doc.path);
 };
 query = {
-  starkey: parent_folder_path + "/",
-  endkey: parent_folder_path + "/\uFFFF"
+    starkey: parent_folder_path + "/",
+    endkey: parent_folder_path + "/\uFFFF"
 };
 ```
 

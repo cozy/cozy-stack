@@ -23,10 +23,10 @@ The default passphrase will be "cozy"
 To run the `scripts/cozy-app-dev.sh` directly on you system, you'll need to
 following dependencies:
 
-* `go`
-* `curl`
-* `git`
-* `couchdb2`: you need at least a running instance of CouchDB 2
+-   `go`
+-   `curl`
+-   `git`
+-   `couchdb2`: you need at least a running instance of CouchDB 2
 
 Examples:
 
@@ -125,8 +125,8 @@ When an application makes a request to the stack, like loading a list of
 contacts, it sends two informations that will be used by the stack to allow or
 deny the access:
 
-* the user session cookie
-* a token that identifies the application (only when the user is connected).
+-   the user session cookie
+-   a token that identifies the application (only when the user is connected).
 
 So, the application needs such a token. It also needs to know where to send the
 requests for the stack (it can be guessed, but with the nested vs flat
@@ -134,17 +134,17 @@ subdomains structures, it's better to get the information from the stack). To do
 that, when the application loads its HTML index file, the stack will parse it as
 a template and will insert the relevant values.
 
-* `{{.Token}}` will be replaced by the token for the application.
-* `{{.Domain}}` will be replaced by the stack hostname.
-* `{{.Locale}}` will be replaced by the locale for the instance.
-* `{{.AppName}}`: will be replaced by the application name.
-* `{{.AppSlug}}`: will be replaced by the application slug.
-* `{{.AppNamePrefix}}`: will be replaced by the application name prefix.
-* `{{.AppEditor}}`: will be replaced by the application's editor.
-* `{{.IconPath}}`: will be replaced by the application's icon path.
-* `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.
-* `{{.CozyClientJS}}` will be replaced by the JavaScript to inject the
-  cozy-client-js.
+-   `{{.Token}}` will be replaced by the token for the application.
+-   `{{.Domain}}` will be replaced by the stack hostname.
+-   `{{.Locale}}` will be replaced by the locale for the instance.
+-   `{{.AppName}}`: will be replaced by the application name.
+-   `{{.AppSlug}}`: will be replaced by the application slug.
+-   `{{.AppNamePrefix}}`: will be replaced by the application name prefix.
+-   `{{.AppEditor}}`: will be replaced by the application's editor.
+-   `{{.IconPath}}`: will be replaced by the application's icon path.
+-   `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.
+-   `{{.CozyClientJS}}` will be replaced by the JavaScript to inject the
+    cozy-client-js.
 
 So, the `index.html` should probably looks like:
 
@@ -173,11 +173,11 @@ And `my-app.js`:
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const app = document.querySelector("[role=application]");
-  cozy.client.init({
-    cozyURL: "//" + app.dataset.cozyStack,
-    token: app.dataset.cozyToken
-  });
+    const app = document.querySelector("[role=application]");
+    cozy.client.init({
+        cozyURL: "//" + app.dataset.cozyStack,
+        token: app.dataset.cozyToken
+    });
 });
 
 // ...

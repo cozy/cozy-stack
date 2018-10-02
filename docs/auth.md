@@ -14,11 +14,12 @@ OAuth2 is about delegating an access to resources on a server to another party.
 It is a framework, not a strictly defined protocol, for organizing the
 interactions between these 4 actors:
 
-* the resource owner, the "user" that can click on buttons
-* the client, the website or application that would like to access the resources
-* the authorization server, whose role is limited to give tokens but is central
-  in OAuth2 interactions
-* the resources server, the server that controls the resources.
+-   the resource owner, the "user" that can click on buttons
+-   the client, the website or application that would like to access the
+    resources
+-   the authorization server, whose role is limited to give tokens but is
+    central in OAuth2 interactions
+-   the resources server, the server that controls the resources.
 
 For cozy, both the authorization server and the resources server roles are
 played by the cozy-stack. The resource owner is the owner of a cozy instance.
@@ -29,10 +30,10 @@ letting the client get a token issued by the authorization server, and using
 this token to access to the resources. OAuth2 describe 4 flows, called grant
 types, for the first part:
 
-* Authorization code
-* Implicit grant type
-* Client credentials grant type
-* Resource owner credentials grant type.
+-   Authorization code
+-   Implicit grant type
+-   Client credentials grant type
+-   Resource owner credentials grant type.
 
 On cozy, only the most typical one is used: authorization code. To start this
 flow, the client must have a `client_id` and `client_secret`. The Cozy stack
@@ -41,34 +42,34 @@ OAuth2) to allow the clients to obtain them.
 
 OAuth2 has also 3 ways to use a token:
 
-* in the query-string (even if the spec does not recommended it)
-* in the POST body
-* in the HTTP Authorization header.
+-   in the query-string (even if the spec does not recommended it)
+-   in the POST body
+-   in the HTTP Authorization header.
 
 On cozy, only the HTTP header is supported.
 
 OAuth2 has a lot of assumptions. Let's see some of them and their consequences
 on Cozy:
 
-* TLS is very important to secure the communications. in OAuth 1, there was a
-  mechanism to sign the requests. But it was very difficult to get it right for
-  the developers and was abandonned in OAuth2, in favor of using TLS. The Cozy
-  instance are already accessible only in HTTPS, so there is nothing particular
-  to do for that.
+-   TLS is very important to secure the communications. in OAuth 1, there was a
+    mechanism to sign the requests. But it was very difficult to get it right
+    for the developers and was abandonned in OAuth2, in favor of using TLS. The
+    Cozy instance are already accessible only in HTTPS, so there is nothing
+    particular to do for that.
 
-* There is a principle called TOFU, Trust On First Use. It said that if the user
-  will give his permission for delegating access to its resources when the
-  client will try to access them for the first time. Later, the client will be
-  able to keep accessing them even if the user is no longer here to give his
-  permissions.
+-   There is a principle called TOFU, Trust On First Use. It said that if the
+    user will give his permission for delegating access to its resources when
+    the client will try to access them for the first time. Later, the client
+    will be able to keep accessing them even if the user is no longer here to
+    give his permissions.
 
-* The client can't make the assumptions about when its tokens will work. The
-  tokens have no meaning for him (like cookies in a browser), they are just
-  something it got from the authorization server and can send with its request.
-  The access token can expire, the user can revoke them, etc.
+-   The client can't make the assumptions about when its tokens will work. The
+    tokens have no meaning for him (like cookies in a browser), they are just
+    something it got from the authorization server and can send with its
+    request. The access token can expire, the user can revoke them, etc.
 
-* OAuth 2.0 defines no cryptographic methods. But a developer that want to use
-  it will have to put her hands in that.
+-   OAuth 2.0 defines no cryptographic methods. But a developer that want to use
+    it will have to put her hands in that.
 
 If you want to learn OAuth 2 in details, I recommend the
 [OAuth 2 in Action book](https://www.manning.com/books/oauth-2-in-action).
@@ -253,36 +254,37 @@ for the details.
 
 The client must send a JSON request, with at least:
 
-* `redirect_uris`, an array of strings with the redirect URIs that the client
-  will use in the authorization flow
-* `client_name`, human-readable string name of the client to be presented to the
-  end-user during authorization
-* `software_id`, an identifier of the software used by the client (it should
-  remain the same for all instances of the client software, whereas `client_id`
-  varies between instances).
+-   `redirect_uris`, an array of strings with the redirect URIs that the client
+    will use in the authorization flow
+-   `client_name`, human-readable string name of the client to be presented to
+    the end-user during authorization
+-   `software_id`, an identifier of the software used by the client (it should
+    remain the same for all instances of the client software, whereas
+    `client_id` varies between instances).
 
 It can also send the optional fields:
 
-* `client_kind` (possible values: web, desktop, mobile, browser, etc.)
-* `client_uri`, URL string of a web page providing information about the client
-* `logo_uri`, to display an icon to the user in the authorization flow
-* `policy_uri`, URL string that points to a human-readable privacy policy
-  document that describes how the deployment organization collects, uses,
-  retains, and discloses personal data
-* `software_version`, a version identifier string for the client software.
-* `notification_platform`, to activate notifications on the associated
-  device, this field specify the platform used to send notifications:
-  * `"android"`: for Android devices with notifications via Firebase Cloud
-    Messageing
-  * `"ios"`: for iOS devices with notifications via APNS/2.
-* `notification_device_token`, the token used to identify the mobile device
-  for notifications
+-   `client_kind` (possible values: web, desktop, mobile, browser, etc.)
+-   `client_uri`, URL string of a web page providing information about the
+    client
+-   `logo_uri`, to display an icon to the user in the authorization flow
+-   `policy_uri`, URL string that points to a human-readable privacy policy
+    document that describes how the deployment organization collects, uses,
+    retains, and discloses personal data
+-   `software_version`, a version identifier string for the client software.
+-   `notification_platform`, to activate notifications on the associated device,
+    this field specify the platform used to send notifications:
+    -   `"android"`: for Android devices with notifications via Firebase Cloud
+        Messageing
+    -   `"ios"`: for iOS devices with notifications via APNS/2.
+-   `notification_device_token`, the token used to identify the mobile device
+    for notifications
 
 The server gives to the client the previous fields and these informations:
 
-* `client_id`
-* `client_secret`
-* `registration_access_token`
+-   `client_id`
+-   `client_secret`
+-   `registration_access_token`
 
 Example:
 
@@ -295,14 +297,14 @@ Accept: application/json
 
 ```json
 {
-  "redirect_uris": ["https://client.example.org/oauth/callback"],
-  "client_name": "Client",
-  "software_id": "github.com/example/client",
-  "software_version": "2.0.1",
-  "client_kind": "web",
-  "client_uri": "https://client.example.org/",
-  "logo_uri": "https://client.example.org/logo.svg",
-  "policy_uri": "https://client/example.org/policy"
+    "redirect_uris": ["https://client.example.org/oauth/callback"],
+    "client_name": "Client",
+    "software_id": "github.com/example/client",
+    "software_version": "2.0.1",
+    "client_kind": "web",
+    "client_uri": "https://client.example.org/",
+    "logo_uri": "https://client.example.org/logo.svg",
+    "policy_uri": "https://client/example.org/policy"
 }
 ```
 
@@ -313,20 +315,20 @@ Content-Type: application/json
 
 ```json
 {
-  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
-  "client_secret": "eyJpc3Mi[...omitted for brevity...]",
-  "client_secret_expires_at": 0,
-  "registration_access_token": "J9l-ZhwP[...omitted for brevity...]",
-  "grant_types": ["authorization_code", "refresh_token"],
-  "response_types": ["code"],
-  "redirect_uris": ["https://client.example.org/oauth/callback"],
-  "client_name": "Client",
-  "software_id": "github.com/example/client",
-  "software_version": "2.0.1",
-  "client_kind": "web",
-  "client_uri": "https://client.example.org/",
-  "logo_uri": "https://client.example.org/logo.svg",
-  "policy_uri": "https://client/example.org/policy"
+    "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+    "client_secret": "eyJpc3Mi[...omitted for brevity...]",
+    "client_secret_expires_at": 0,
+    "registration_access_token": "J9l-ZhwP[...omitted for brevity...]",
+    "grant_types": ["authorization_code", "refresh_token"],
+    "response_types": ["code"],
+    "redirect_uris": ["https://client.example.org/oauth/callback"],
+    "client_name": "Client",
+    "software_id": "github.com/example/client",
+    "software_version": "2.0.1",
+    "client_kind": "web",
+    "client_uri": "https://client.example.org/",
+    "logo_uri": "https://client.example.org/logo.svg",
+    "policy_uri": "https://client/example.org/policy"
 }
 ```
 
@@ -354,19 +356,19 @@ Content-Type: application/json
 
 ```json
 {
-  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
-  "client_secret": "eyJpc3Mi[...omitted for brevity...]",
-  "client_secret_expires_at": 0,
-  "grant_types": ["authorization_code", "refresh_token"],
-  "response_types": ["code"],
-  "redirect_uris": ["https://client.example.org/oauth/callback"],
-  "client_name": "Client",
-  "software_id": "github.com/example/client",
-  "software_version": "2.0.1",
-  "client_kind": "web",
-  "client_uri": "https://client.example.org/",
-  "logo_uri": "https://client.example.org/logo.svg",
-  "policy_uri": "https://client/example.org/policy"
+    "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+    "client_secret": "eyJpc3Mi[...omitted for brevity...]",
+    "client_secret_expires_at": 0,
+    "grant_types": ["authorization_code", "refresh_token"],
+    "response_types": ["code"],
+    "redirect_uris": ["https://client.example.org/oauth/callback"],
+    "client_name": "Client",
+    "software_id": "github.com/example/client",
+    "software_version": "2.0.1",
+    "client_kind": "web",
+    "client_uri": "https://client.example.org/",
+    "logo_uri": "https://client.example.org/logo.svg",
+    "policy_uri": "https://client/example.org/policy"
 }
 ```
 
@@ -390,18 +392,18 @@ Authorization: Bearer J9l-ZhwP...
 
 ```json
 {
-  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
-  "client_secret": "eyJpc3Mi[...omitted for brevity...]",
-  "redirect_uris": ["https://client.example.org/oauth/callback"],
-  "client_name": "Client",
-  "software_id": "github.com/example/client",
-  "software_version": "2.0.2",
-  "client_kind": "web",
-  "client_uri": "https://client.example.org/",
-  "logo_uri": "https://client.example.org/client-logo.svg",
-  "policy_uri": "https://client/example.org/policy",
-  "notification_platform": "android",
-  "notification_device_token": "XXXXxxxx..."
+    "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+    "client_secret": "eyJpc3Mi[...omitted for brevity...]",
+    "redirect_uris": ["https://client.example.org/oauth/callback"],
+    "client_name": "Client",
+    "software_id": "github.com/example/client",
+    "software_version": "2.0.2",
+    "client_kind": "web",
+    "client_uri": "https://client.example.org/",
+    "logo_uri": "https://client.example.org/client-logo.svg",
+    "policy_uri": "https://client/example.org/policy",
+    "notification_platform": "android",
+    "notification_device_token": "XXXXxxxx..."
 }
 ```
 
@@ -412,19 +414,19 @@ Content-Type: application/json
 
 ```json
 {
-  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
-  "client_secret": "IFais2Ah[...omitted for brevity...]",
-  "client_secret_expires_at": 0,
-  "grant_types": ["authorization_code", "refresh_token"],
-  "response_types": ["code"],
-  "redirect_uris": ["https://client.example.org/oauth/callback"],
-  "client_name": "Client",
-  "software_id": "github.com/example/client",
-  "software_version": "2.0.2",
-  "client_kind": "web",
-  "client_uri": "https://client.example.org/",
-  "logo_uri": "https://client.example.org/client-logo.svg",
-  "policy_uri": "https://client/example.org/policy"
+    "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+    "client_secret": "IFais2Ah[...omitted for brevity...]",
+    "client_secret_expires_at": 0,
+    "grant_types": ["authorization_code", "refresh_token"],
+    "response_types": ["code"],
+    "redirect_uris": ["https://client.example.org/oauth/callback"],
+    "client_name": "Client",
+    "software_id": "github.com/example/client",
+    "software_version": "2.0.2",
+    "client_kind": "web",
+    "client_uri": "https://client.example.org/",
+    "logo_uri": "https://client.example.org/client-logo.svg",
+    "policy_uri": "https://client/example.org/policy"
 }
 ```
 
@@ -452,15 +454,16 @@ and has an accept button if she is OK with that.
 
 The parameters are:
 
-* `client_id`, that identify the client
-* `redirect_uri`, it has to be exactly the same as the one used in registration
-* `state`, it's a protection against CSRF on the client (a random string
-  generated by the client, that it can check when the user will be redirected
-  with the authorization code. It can be used as a key in local storage for
-  storing a state in a SPA).
-* `response_type`, only `code` is supported
-* `scope`, a space separated list of the [permissions](permissions.md) asked
-  (like `io.cozy.files:GET` for read-only access to files).
+-   `client_id`, that identify the client
+-   `redirect_uri`, it has to be exactly the same as the one used in
+    registration
+-   `state`, it's a protection against CSRF on the client (a random string
+    generated by the client, that it can check when the user will be redirected
+    with the authorization code. It can be used as a key in local storage for
+    storing a state in a SPA).
+-   `response_type`, only `code` is supported
+-   `scope`, a space separated list of the [permissions](permissions.md) asked
+    (like `io.cozy.files:GET` for read-only access to files).
 
 ```http
 GET /auth/authorize?client_id=oauth-client-1&response_type=code&scope=io.cozy.files:GET%20io.cozy.contacts&state=Eh6ahshepei5Oojo&redirect_uri=https%3A%2F%2Fclient.org%2F HTTP/1.1
@@ -509,10 +512,10 @@ This endpoint is also used to refresh the access token, by sending the
 
 The parameters are:
 
-* `grant_type`, with `authorization_code` or `refresh_token` as value
-* `code` or `refresh_token`, depending on which grant type is used
-* `client_id`
-* `client_secret`
+-   `grant_type`, with `authorization_code` or `refresh_token` as value
+-   `code` or `refresh_token`, depending on which grant type is used
+-   `client_id`
+-   `client_secret`
 
 Example:
 
@@ -578,10 +581,10 @@ Here is how it works in more details:
 On each connection, when the 2FA is activated, the user is asked for its
 passphrase first. When entering correct passphrase, the user is then asked for:
 
-* a TOTP (Timebased One-Time password, RFC 6238) derived from a secret
-  associated with the instance.
-* a short term timestamped MAC with the same validity time-range and also
-  derived from the same secret.
+-   a TOTP (Timebased One-Time password, RFC 6238) derived from a secret
+    associated with the instance.
+-   a short term timestamped MAC with the same validity time-range and also
+    derived from the same secret.
 
 The TOTP is valid for a time range of about 5 minutes. When sending a correct
 and still-valid pair `(passcode, token)`, the user is granted with
@@ -631,9 +634,9 @@ cookie. A redirection will still happen to remove the code from the URL (it
 helps to avoid the code being saved in the browser history). For security
 reasons, the session code have the following properties:
 
-* It can only be used once.
-* It is tied to an application (`calendar` in our example).
-* It has a very short time span of validity (1 minute).
+-   It can only be used once.
+-   It is tied to an application (`calendar` in our example).
+-   It has a very short time span of validity (1 minute).
 
 ### How to use a token?
 
@@ -676,9 +679,9 @@ explained [above](#post-authregister).
 To get an access token, it's enough to follow the authorization code flow of
 OAuth2:
 
-* sending the user to the cozy, on the authorize page
-* if the user approves, she is then redirected back to the client
-* the client gets the access code and can exchange it to an access token.
+-   sending the user to the cozy, on the authorize page
+-   if the user approves, she is then redirected back to the client
+-   the client gets the access code and can exchange it to an access token.
 
 ### How to use a token?
 
@@ -765,11 +768,11 @@ flow. But it is mandatory to use it with Cozy.
 
 For more on this subject, here is a list of links:
 
-* https://www.owasp.org/index.php/Authentication_Cheat_Sheet
-* https://tools.ietf.org/html/rfc6749#page-53
-* https://tools.ietf.org/html/rfc6819
-* https://tools.ietf.org/html/draft-ietf-oauth-closing-redirectors-00
-* http://www.oauthsecurity.com/
+-   https://www.owasp.org/index.php/Authentication_Cheat_Sheet
+-   https://tools.ietf.org/html/rfc6749#page-53
+-   https://tools.ietf.org/html/rfc6819
+-   https://tools.ietf.org/html/draft-ietf-oauth-closing-redirectors-00
+-   http://www.oauthsecurity.com/
 
 ## Conclusion
 

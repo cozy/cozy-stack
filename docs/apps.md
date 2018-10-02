@@ -61,20 +61,20 @@ public page on `/public`, and shared assets in `/assets`:
 
 ```json
 {
-  "/admin": {
-    "folder": "/",
-    "index": "admin.html",
-    "public": false
-  },
-  "/public": {
-    "folder": "/public",
-    "index": "index.html",
-    "public": true
-  },
-  "/assets": {
-    "folder": "/assets",
-    "public": true
-  }
+    "/admin": {
+        "folder": "/",
+        "index": "admin.html",
+        "public": false
+    },
+    "/public": {
+        "folder": "/public",
+        "index": "index.html",
+        "public": true
+    },
+    "/assets": {
+        "folder": "/assets",
+        "public": true
+    }
 }
 ```
 
@@ -83,11 +83,11 @@ route, this default one:
 
 ```json
 {
-  "/": {
-    "folder": "/",
-    "index": "index.html",
-    "public": false
-  }
+    "/": {
+        "folder": "/",
+        "index": "index.html",
+        "public": false
+    }
 }
 ```
 
@@ -102,11 +102,11 @@ data and emit some notification or warning even without the user being on the
 application. These part of the application are called services and can be
 declared as part of the application in its manifest.
 
-In contrast to [konnectors](./konnectors.md), services have the same
-permissions as the web application and are not intended to collect outside
-informations but rather analyse the current set of collected information
-inside the cozy. However they share the same mechanisms as the konnectors to
-describe how and when they should be executed: via our trigger system.
+In contrast to [konnectors](./konnectors.md), services have the same permissions
+as the web application and are not intended to collect outside informations but
+rather analyse the current set of collected information inside the cozy. However
+they share the same mechanisms as the konnectors to describe how and when they
+should be executed: via our trigger system.
 
 To define a service, first the code needs to be stored with the application
 content, as single (packaged) javascript files. In the manifest, declare the
@@ -114,14 +114,14 @@ service and its parameters following this example:
 
 ```json
 {
-  "services": {
-    "low-budget-notification": {
-      "type": "node",
-      "file": "/services/low-budget-notification.js",
-      "trigger": "@cron 0 0 0 * * *"
+    "services": {
+        "low-budget-notification": {
+            "type": "node",
+            "file": "/services/low-budget-notification.js",
+            "trigger": "@cron 0 0 0 * * *"
+        }
+        // ...
     }
-    // ...
-  }
 }
 ```
 
@@ -131,25 +131,25 @@ code run and the `type` field describe the code type (only `"node"` for now).
 
 ### Notifications
 
-For more informations on how te declare notifications in the manifest, see
-the [notifications documentation](./notifications.md).
+For more informations on how te declare notifications in the manifest, see the
+[notifications documentation](./notifications.md).
 
 Here is an example:
 
 ```json
 {
-  "notifications": {
-    "account-balance": {
-      "description": "Alert the user when its account balance is negative",
-      "collapsible": true, // only interested in the last value of the notification
-      "multiple": true, // require sub-categories for each account
-      "stateful": false,
-      "default_priority": "high", // high priority for this notification
-      "templates": {
-        "mail": "file:./notifications/account-balance-mail.tpl"
-      }
+    "notifications": {
+        "account-balance": {
+            "description": "Alert the user when its account balance is negative",
+            "collapsible": true, // only interested in the last value of the notification
+            "multiple": true, // require sub-categories for each account
+            "stateful": false,
+            "default_priority": "high", // high priority for this notification
+            "templates": {
+                "mail": "file:./notifications/account-balance-mail.tpl"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -171,19 +171,19 @@ identifier on the building step of the application packages for all assets.
 
 Here is the available sources, defined by the scheme of the source URL:
 
-* `registry://`: to install an application from the instance registries
-* `git://` or `git+ssh://`: to install an application from a git repository
-* `http://` or `https://`: to install an application from an http server (via a
-  tarball)
-* `file://`: to install an application from a local directory (for instance:
-  `file:///home/user/code/cozy-app`)
+-   `registry://`: to install an application from the instance registries
+-   `git://` or `git+ssh://`: to install an application from a git repository
+-   `http://` or `https://`: to install an application from an http server (via
+    a tarball)
+-   `file://`: to install an application from a local directory (for instance:
+    `file:///home/user/code/cozy-app`)
 
 The `registry` scheme expect the following elements:
 
-* scheme: `registry`
-* host: the name of the application
-* path: `/:channel` the channel of the application (see the
-  [registry](docs/registry.md) doc)
+-   scheme: `registry`
+-   host: the name of the application
+-   path: `/:channel` the channel of the application (see the
+    [registry](docs/registry.md) doc)
 
 Examples: `registry://drive/stable`, `registry://drive/beta`, and
 `registry://drive/dev`.
@@ -210,13 +210,13 @@ application has been installed or failed.
 
 #### Status codes
 
-* 202 Accepted, when the application installation has been accepted.
-* 400 Bad-Request, when the manifest of the application could not be processed
-  (for instance, it is not valid JSON).
-* 404 Not Found, when the manifest or the source of the application is not
-  reachable.
-* 422 Unprocessable Entity, when the sent data is invalid (for example, the slug
-  is invalid or the Source parameter is not a proper or supported url)
+-   202 Accepted, when the application installation has been accepted.
+-   400 Bad-Request, when the manifest of the application could not be processed
+    (for instance, it is not valid JSON).
+-   404 Not Found, when the manifest or the source of the application is not
+    reachable.
+-   422 Unprocessable Entity, when the sent data is invalid (for example, the
+    slug is invalid or the Source parameter is not a proper or supported url)
 
 #### Query-String
 
@@ -315,13 +315,13 @@ Content-Type: application/vnd.api+json
 
 #### Status codes
 
-* 202 Accepted, when the application installation has been accepted.
-* 400 Bad-Request, when the manifest of the application could not be processed
-  (for instance, it is not valid JSON).
-* 404 Not Found, when the application with the specified slug was not found or
-  when the manifest or the source of the application is not reachable.
-* 422 Unprocessable Entity, when the sent data is invalid (for example, the slug
-  is invalid or the Source parameter is not a proper or supported url)
+-   202 Accepted, when the application installation has been accepted.
+-   400 Bad-Request, when the manifest of the application could not be processed
+    (for instance, it is not valid JSON).
+-   404 Not Found, when the application with the specified slug was not found or
+    when the manifest or the source of the application is not reachable.
+-   422 Unprocessable Entity, when the sent data is invalid (for example, the
+    slug is invalid or the Source parameter is not a proper or supported url)
 
 ## List installed applications
 
@@ -329,12 +329,12 @@ Content-Type: application/vnd.api+json
 
 An application can be in one of these states:
 
-* `installed`, the application is installed but still require some user
-  interaction to accept its permissions
-* `ready`, the user can use it
-* `installing`, the installation is running and the app will soon be usable
-* `upgrading`, a new version is being installed
-* `errored`, the app is in an error state and can not be used.
+-   `installed`, the application is installed but still require some user
+    interaction to accept its permissions
+-   `ready`, the user can use it
+-   `installing`, the installation is running and the app will soon be usable
+-   `upgrading`, a new version is being installed
+-   `errored`, the app is in an error state and can not be used.
 
 #### Request
 

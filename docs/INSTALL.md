@@ -2,11 +2,11 @@
 
 ## Dependencies
 
-* A reverse-proxy (nginx, caddy, haproxy, etc.)
-* A SMTP server
-* CouchDB 2
-* Git
-* Image Magick
+-   A reverse-proxy (nginx, caddy, haproxy, etc.)
+-   A SMTP server
+-   CouchDB 2
+-   Git
+-   Image Magick
 
 To install CouchDB 2 through Docker, take a look at our
 [Docker specific documentation](docker.md).
@@ -32,8 +32,8 @@ You can either download the binary or compile it.
 You can download a `cozy-stack` binary from our official releases:
 https://github.com/cozy/cozy-stack/releases. It is a just a single executable
 file (choose the one for your platform). Rename it to cozy-stack, give it the
-executable bit (`chmod +x cozy-stack`) and put it in your `$PATH`. `cozy-stack
-version` should show you the version if every thing is right.
+executable bit (`chmod +x cozy-stack`) and put it in your `$PATH`.
+`cozy-stack version` should show you the version if every thing is right.
 
 #### Using `go`
 

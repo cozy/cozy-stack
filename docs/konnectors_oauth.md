@@ -4,13 +4,13 @@
 
 ```json
 {
-  "fields": {
-    "account": {
-      "doctype": "io.cozy.accounts",
-      "account_type": "maif",
-      "scope": "openid profile offline_access"
+    "fields": {
+        "account": {
+            "doctype": "io.cozy.accounts",
+            "account_type": "maif",
+            "scope": "openid profile offline_access"
+        }
     }
-  }
 }
 ```
 
@@ -19,14 +19,14 @@ as the associated scope
 
 ```json
 {
-  "name": "Mon Compte Maif",
-  "account_type": "maif",
-  "status": "connected",
-  "oauth": {
-    "access_token": "akosaksoakso",
-    "refresh_token": "okoakozkaozk",
-    "scope": "openid profile offline_access"
-  }
+    "name": "Mon Compte Maif",
+    "account_type": "maif",
+    "status": "connected",
+    "oauth": {
+        "access_token": "akosaksoakso",
+        "refresh_token": "okoakozkaozk",
+        "scope": "openid profile offline_access"
+    }
 }
 ```
 
@@ -34,12 +34,12 @@ as the associated scope
 
 ```json
 {
-  "_id": "service.example",
-  "grant_mode": "authorization_code",
-  "client_id": "the registered client id",
-  "client_secret": "client_secret is necessary for server-flow",
-  "auth_endpoint": "https://service.example/auth",
-  "token_endpoint": "https://api.service.example/token"
+    "_id": "service.example",
+    "grant_mode": "authorization_code",
+    "client_id": "the registered client id",
+    "client_secret": "client_secret is necessary for server-flow",
+    "auth_endpoint": "https://service.example/auth",
+    "token_endpoint": "https://api.service.example/token"
 }
 ```
 
@@ -54,12 +54,12 @@ self-hosters.
 
 Oauth is divided in 3 steps
 
-* Client Registration: the client application (the Stack) needs to be registered
-  with the Service.
-* Obtaining & Refreshing Authorization: all the steps from client_id to
-  access_token, the Stack will handle those
-* Using the access_token: Ideally, the konnector should only concern itself with
-  this part; it receives an access_token and uses it.
+-   Client Registration: the client application (the Stack) needs to be
+    registered with the Service.
+-   Obtaining & Refreshing Authorization: all the steps from client_id to
+    access_token, the Stack will handle those
+-   Using the access_token: Ideally, the konnector should only concern itself
+    with this part; it receives an access_token and uses it.
 
 # Client Registration
 
@@ -143,13 +143,16 @@ D. The Service responds (server side) with (json)
 
 ```json
 {
-  "access_token": "ACCESS_TOKEN",
-  "token_type": "bearer",
-  "expires_in": 2592000,
-  "refresh_token": "REFRESH_TOKEN",
-  "scope": "read",
-  "uid": 100101,
-  "info": { "name": "Claude Douillet", "email": "claude.douillet@example.com" }
+    "access_token": "ACCESS_TOKEN",
+    "token_type": "bearer",
+    "expires_in": 2592000,
+    "refresh_token": "REFRESH_TOKEN",
+    "scope": "read",
+    "uid": 100101,
+    "info": {
+        "name": "Claude Douillet",
+        "email": "claude.douillet@example.com"
+    }
 }
 ```
 
@@ -232,20 +235,20 @@ POST https://bob-settings.cozy.rocks/accounts/:accountID/refresh
 The following is a few points to be careful for in konnectors when we start
 allowing non-cozy developped OAuth konnectors.
 
-* With SPA flow, because of advanced security concerns (confused deputy
-  problem), cozy should validate the `access_token`. However, the way to do that
-  depends on the provider and cannot be described in json, it is therefore the
-  responsibility of the konnector itself.
+-   With SPA flow, because of advanced security concerns (confused deputy
+    problem), cozy should validate the `access_token`. However, the way to do
+    that depends on the provider and cannot be described in json, it is
+    therefore the responsibility of the konnector itself.
 
 # Account types security rules
 
-* With server flow, an evil account type with proper `auth_endpoint` but bad
-  `token_endpoint` could retrieve a valid token as well as cozy client secret.
-  The reviewer of an `account_type` should make sure both these endpoints are on
-  domains belonging to the Service provider.
+-   With server flow, an evil account type with proper `auth_endpoint` but bad
+    `token_endpoint` could retrieve a valid token as well as cozy client secret.
+    The reviewer of an `account_type` should make sure both these endpoints are
+    on domains belonging to the Service provider.
 
 # Notes for MesInfos experiment
 
-* MAIF konnector uses the webserver flow without redirect_uri validation
-* Orange konnector uses the client-side proxy but hosted on their own servers
-  (/!\ redirect_uri vs redirect_url)
+-   MAIF konnector uses the webserver flow without redirect_uri validation
+-   Orange konnector uses the client-side proxy but hosted on their own servers
+    (/!\ redirect_uri vs redirect_url)

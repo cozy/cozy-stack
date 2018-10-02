@@ -27,15 +27,15 @@ Content-type: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.settings",
-    "id": "io.cozy.settings.disk-usage",
-    "attributes": {
-      "is_limited": true,
-      "quota": "123456789",
-      "used": "12345678"
+    "data": {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.disk-usage",
+        "attributes": {
+            "is_limited": true,
+            "quota": "123456789",
+            "used": "12345678"
+        }
     }
-  }
 }
 ```
 
@@ -56,8 +56,8 @@ Content-Type: application/json
 
 ```json
 {
-  "register_token": "37cddf40d7724988860fa0e03efd30fe",
-  "passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice"
+    "register_token": "37cddf40d7724988860fa0e03efd30fe",
+    "passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice"
 }
 ```
 
@@ -86,8 +86,8 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 
 ```json
 {
-  "current_passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice",
-  "new_passphrase": "AliceHasChangedHerPassphraseAndThisIsTheNewPassphrase"
+    "current_passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice",
+    "new_passphrase": "AliceHasChangedHerPassphraseAndThisIsTheNewPassphrase"
 }
 ```
 
@@ -114,7 +114,7 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 
 ```json
 {
-  "current_passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice"
+    "current_passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice"
 }
 ```
 
@@ -127,16 +127,14 @@ Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp
 
 ```json
 {
-  "two_factor_token": "YxOSUjxd0SNmuwEEDRHXfw=="
+    "two_factor_token": "YxOSUjxd0SNmuwEEDRHXfw=="
 }
 ```
 
-At this point, the current passphrase has been exchanged against a token, and
-a passcode should have been sent to the user to authenticate on the second
-step.
+At this point, the current passphrase has been exchanged against a token, and a
+passcode should have been sent to the user to authenticate on the second step.
 
-The token/passcode pair can be used on the second step to update the
-passphrase.
+The token/passcode pair can be used on the second step to update the passphrase.
 
 #### Request (second step)
 
@@ -149,9 +147,9 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 
 ```json
 {
-  "new_passphrase": "AliceHasChangedHerPassphraseAndThisIsTheNewPassphrase",
-  "two_factor_token": "YxOSUjxd0SNmuwEEDRHXfw==",
-  "two_factor_passcode": "4947178"
+    "new_passphrase": "AliceHasChangedHerPassphraseAndThisIsTheNewPassphrase",
+    "two_factor_token": "YxOSUjxd0SNmuwEEDRHXfw==",
+    "two_factor_passcode": "4947178"
 }
 ```
 
@@ -188,20 +186,20 @@ Cookie: sessionid=xxxx
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.settings",
-    "id": "io.cozy.settings.instance",
-    "meta": {
-      "rev": "3-56521545485448482"
-    },
-    "attributes": {
-      "locale": "fr",
-      "auto_update": true,
-      "email": "alice@example.com",
-      "public_name": "Alice Martin",
-      "auth_mode": "basic"
+    "data": {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.instance",
+        "meta": {
+            "rev": "3-56521545485448482"
+        },
+        "attributes": {
+            "locale": "fr",
+            "auto_update": true,
+            "email": "alice@example.com",
+            "public_name": "Alice Martin",
+            "auth_mode": "basic"
+        }
     }
-  }
 }
 ```
 
@@ -227,20 +225,20 @@ Authorization: Bearer settings-token
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.settings",
-    "id": "io.cozy.settings.instance",
-    "meta": {
-      "rev": "3-56521545485448482"
-    },
-    "attributes": {
-      "locale": "fr",
-      "email": "alice@example.com",
-      "public_name": "Alice Martin",
-      "timezone": "Europe/Berlin",
-      "auth_mode": "two_factor_mail"
+    "data": {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.instance",
+        "meta": {
+            "rev": "3-56521545485448482"
+        },
+        "attributes": {
+            "locale": "fr",
+            "email": "alice@example.com",
+            "public_name": "Alice Martin",
+            "timezone": "Europe/Berlin",
+            "auth_mode": "two_factor_mail"
+        }
     }
-  }
 }
 ```
 
@@ -253,20 +251,20 @@ Content-type: application/json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.settings",
-    "id": "io.cozy.settings.instance",
-    "meta": {
-      "rev": "4-5a3e315e"
-    },
-    "attributes": {
-      "locale": "fr",
-      "email": "alice@example.com",
-      "public_name": "Alice Martin",
-      "timezone": "Europe/Berlin",
-      "auth_mode": "two_factor_mail"
+    "data": {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.instance",
+        "meta": {
+            "rev": "4-5a3e315e"
+        },
+        "attributes": {
+            "locale": "fr",
+            "email": "alice@example.com",
+            "public_name": "Alice Martin",
+            "timezone": "Europe/Berlin",
+            "auth_mode": "two_factor_mail"
+        }
     }
-  }
 }
 ```
 
@@ -277,32 +275,33 @@ To use this endpoint, an application needs a permission on the type
 
 ### PUT /settings/instance/auth_mode
 
-With this route, the user can ask for the activation of different
-authentication modes, like two-factor authentication.
+With this route, the user can ask for the activation of different authentication
+modes, like two-factor authentication.
 
 Available authentication modes:
 
-* `basic`: basic authentication only with passphrase
-* `two_factor_mail`: authentication with passphrase and validation with a
-  code sent via email to the user.
+-   `basic`: basic authentication only with passphrase
+-   `two_factor_mail`: authentication with passphrase and validation with a code
+    sent via email to the user.
 
 When asking for activation of the two-factor authentication, a side-effect can
 be triggered to send the user its code (via email for instance), and the
-activation not being effective. This side-effect should provide the user with
-a code that can be used to finalize the activation of the two-factor
+activation not being effective. This side-effect should provide the user with a
+code that can be used to finalize the activation of the two-factor
 authentication.
 
 Hence, this route has two behaviors:
 
-* the code is not provided: the route is a side effect to ask for the
-  activation of 2FA, and a code is sent
-* the code is provided, and valid: the two-factor authentication is actually
-  activated.
+-   the code is not provided: the route is a side effect to ask for the
+    activation of 2FA, and a code is sent
+-   the code is provided, and valid: the two-factor authentication is actually
+    activated.
 
 Status codes:
 
-* `204 No Content`: when the mail has been confirmed and two-factor authentication is activated
-* `422 Unprocessable Entity`: when the given confirmation code is not good.
+-   `204 No Content`: when the mail has been confirmed and two-factor
+    authentication is activated
+-   `422 Unprocessable Entity`: when the given confirmation code is not good.
 
 #### Request
 
@@ -315,8 +314,8 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 
 ```json
 {
-  "auth_mode": "two_factor_mail",
-  "two_factor_activation_code": "12345678"
+    "auth_mode": "two_factor_mail",
+    "two_factor_activation_code": "12345678"
 }
 ```
 
@@ -326,7 +325,8 @@ With this route, an OAuth client can sign the new TOS version.
 
 Status codes:
 
-* `204 No Content`: when the mail has been confirmed and two-factor authentication is activated
+-   `204 No Content`: when the mail has been confirmed and two-factor
+    authentication is activated
 
 #### Request
 
@@ -355,17 +355,17 @@ Content-Type: application/json
 
 ```json
 {
-  "data": [
-    {
-      "id": "...",
-      "attributes": {
-        "last_seen": ""
-      },
-      "meta": {
-        "rev": "..."
-      }
-    }
-  ]
+    "data": [
+        {
+            "id": "...",
+            "attributes": {
+                "last_seen": ""
+            },
+            "meta": {
+                "rev": "..."
+            }
+        }
+    ]
 }
 ```
 
@@ -399,26 +399,26 @@ Content-type: application/json
 
 ```json
 {
-  "data": [
-    {
-      "type": "io.cozy.oauth.clients",
-      "id": "30e84c10-e6cf-11e6-9bfd-a7106972de51",
-      "attributes": {
-        "redirect_uris": ["http://localhost:4000/oauth/callback"],
-        "client_name": "Cozy-Desktop on my-new-laptop",
-        "client_kind": "desktop",
-        "client_uri": "https://docs.cozy.io/en/mobile/desktop.html",
-        "logo_uri": "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
-        "policy_uri": "https://cozy.io/policy",
-        "software_id": "/github.com/cozy-labs/cozy-desktop",
-        "software_version": "0.16.0",
-        "synchronized_at": "2017-09-05T16:23:04Z"
-      },
-      "links": {
-        "self": "/settings/clients/30e84c10-e6cf-11e6-9bfd-a7106972de51"
-      }
-    }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.oauth.clients",
+            "id": "30e84c10-e6cf-11e6-9bfd-a7106972de51",
+            "attributes": {
+                "redirect_uris": ["http://localhost:4000/oauth/callback"],
+                "client_name": "Cozy-Desktop on my-new-laptop",
+                "client_kind": "desktop",
+                "client_uri": "https://docs.cozy.io/en/mobile/desktop.html",
+                "logo_uri": "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
+                "policy_uri": "https://cozy.io/policy",
+                "software_id": "/github.com/cozy-labs/cozy-desktop",
+                "software_version": "0.16.0",
+                "synchronized_at": "2017-09-05T16:23:04Z"
+            },
+            "links": {
+                "self": "/settings/clients/30e84c10-e6cf-11e6-9bfd-a7106972de51"
+            }
+        }
+    ]
 }
 ```
 
@@ -493,18 +493,18 @@ Cookie: sessionid=xxxx
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.settings",
-    "id": "io.cozy.settings.context",
-    "attributes": {
-      "default_redirection": "drive/#/files",
-      "help_link": "https://forum.cozy.io/",
-      "onboarded_redirection": "collect/#/discovery/?intro"
-    },
-    "links": {
-      "self": "/settings/context"
+    "data": {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.context",
+        "attributes": {
+            "default_redirection": "drive/#/files",
+            "help_link": "https://forum.cozy.io/",
+            "onboarded_redirection": "collect/#/discovery/?intro"
+        },
+        "links": {
+            "self": "/settings/context"
+        }
     }
-  }
 }
 ```
 

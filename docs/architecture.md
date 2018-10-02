@@ -15,23 +15,23 @@ as 4 layers, from inside to outside:
 It's also a set of values: Simple, Versatile, Yours. These values mean a lot for
 Cozy in all aspects. From an architectural point of view, it declines to:
 
-* Simple to deploy and understand, not built as a galaxy of optimized
-  microservices managed by kubernetes that only experts can debug.
-* Versatile, can be hosted on a Raspberry Pi for geeks to massive scale on
-  multiple servers by specialized hosting. Users can install apps.
-* Yours, you own your data and you control it. If you want to take back your
-  data to go elsewhere, you can.
+-   Simple to deploy and understand, not built as a galaxy of optimized
+    microservices managed by kubernetes that only experts can debug.
+-   Versatile, can be hosted on a Raspberry Pi for geeks to massive scale on
+    multiple servers by specialized hosting. Users can install apps.
+-   Yours, you own your data and you control it. If you want to take back your
+    data to go elsewhere, you can.
 
 ## Overview
 
 The architecture of Cozy is composed of:
 
-* A reverse proxy
-* The cozy stack
-* A CouchDB instance to persist the JSON documents
-* A space for storing files
-* Optionally, Redis for caching and synchronization
-* Optionally, a metrics server.
+-   A reverse proxy
+-   The cozy stack
+-   A CouchDB instance to persist the JSON documents
+-   A space for storing files
+-   Optionally, Redis for caching and synchronization
+-   Optionally, a metrics server.
 
 All of this can run on a personal server, self-hosted at home, like a Raspberry
 Pi:
@@ -51,12 +51,12 @@ availability:
 
 This elasticity comes with some constraints:
 
-* Most applications are run in the browser, not in the server.
-* What must run on the server is mutualized inside the cozy stack.
-* The cozy stack is stateless.
-* The data is stored in couchdb and a space for files.
-* A couchdb database is specific to an instance (no mix of data from 2 users in
-  the same database).
+-   Most applications are run in the browser, not in the server.
+-   What must run on the server is mutualized inside the cozy stack.
+-   The cozy stack is stateless.
+-   The data is stored in couchdb and a space for files.
+-   A couchdb database is specific to an instance (no mix of data from 2 users
+    in the same database).
 
 ### Reverse proxy
 
@@ -141,8 +141,8 @@ developers to create their own apps.
 
 The cozy stack can run in several modes, set by a UNIX environment variable:
 
-* `production`, the default
-* `development`, for coding on the cozy stack.
+-   `production`, the default
+-   `development`, for coding on the cozy stack.
 
 This mode is set when compiling the cozy-stack. It is used to show more or less
 logs, and what is acceptable to be displayed in errors.
@@ -202,9 +202,9 @@ It's possible to store files on the cozy, including binary ones like photos and
 movies, thanks to the virtual file system. It's a facade, with several
 implementations, depending on where the files are effectively stored:
 
-* In a directory of a local file system (easier for self-hosted users)
-* Swift from Open Stack (convenient for massive hosting)
-* And more storage providers, like [minio](https://minio.io/), later.
+-   In a directory of a local file system (easier for self-hosted users)
+-   Swift from Open Stack (convenient for massive hosting)
+-   And more storage providers, like [minio](https://minio.io/), later.
 
 The range of possible operations with this endpoint goes from simple ones, like
 uploading a file, to more complex ones, like renaming a folder. It also ensure
@@ -393,10 +393,10 @@ files in a cozy instance with a laptop or desktop.
 Go (often referred as golang) is an open source programming language created at
 Google in 2007. It has nice properties for our usage:
 
-* Simplicity (the language can be learned in weeks, not years).
-* A focus on productivity.
-* Good performance.
-* A good support of concurrency with channels and goroutines.
+-   Simplicity (the language can be learned in weeks, not years).
+-   A focus on productivity.
+-   Good performance.
+-   A good support of concurrency with channels and goroutines.
 
 Moreover, Go is
 [used by a lot of companies](https://github.com/golang/go/wiki/GoUsers), is in
@@ -442,17 +442,17 @@ The golang web framework used for the cozy stack is
 
 There are some HTTP status codes that are generally used in the API:
 
-* 200 OK, when everything is OK
-* 201 Created, when a resource was created
-* 204 No Content, when a resource was deleted
-* 400 Bad Request, when the request has some unknown parameters and the request
-  body is not in the expected format
-* 401 Unauthorized, when the user is not authenticated
-* 403 Forbidden, when the permissions forbid this action
-* 404 Not Found, when the resouce can't be found
-* 500 Internal Server Error, when a bug occurs
-* 503 Service Unavailable, when the stack, CouchDB, Redis or Swift is
-  unavailable.
+-   200 OK, when everything is OK
+-   201 Created, when a resource was created
+-   204 No Content, when a resource was deleted
+-   400 Bad Request, when the request has some unknown parameters and the
+    request body is not in the expected format
+-   401 Unauthorized, when the user is not authenticated
+-   403 Forbidden, when the permissions forbid this action
+-   404 Not Found, when the resouce can't be found
+-   500 Internal Server Error, when a bug occurs
+-   503 Service Unavailable, when the stack, CouchDB, Redis or Swift is
+    unavailable.
 
 ### DocTypes
 
@@ -461,11 +461,11 @@ of thing it is. For example, a contact will have the docType `io.cozy.contacts`,
 and in the cozy-doctypes repository, there will be a contacts JSON file inside
 it that describes this doctype:
 
-* What are the mandatory and optional fields?
-* What is the type (string, integer, date) of the fields?
-* Is there a validation rule for a field?
-* How the fields can be indexed for full text search?
-* What is the role of each field (documentation)?
+-   What are the mandatory and optional fields?
+-   What is the type (string, integer, date) of the fields?
+-   Is there a validation rule for a field?
+-   How the fields can be indexed for full text search?
+-   What is the role of each field (documentation)?
 
 This description can be used by any cozy client library (JS, Golang, etc.) to
 generate some models to simplify the use of documents of this doctype.
@@ -509,13 +509,13 @@ One of the goals of the new architecture is to make it easier for developers to
 write new apps. It means having a good documentation, but also some devtools to
 help:
 
-* The `cozy` executable will have a command to setup a new project.
-* The devtools on the cozy interface will give documentation about the doctypes,
-  help explore the Rest API, and check if the permissions are OK.
-* `cozy-ui` will make it easy to reuse some widgets and offer an application
-  with a style coherent to the cozy identity.
-* Some docTypes with heavy logic will be available as JS classes to be reused in
-  the apps.
+-   The `cozy` executable will have a command to setup a new project.
+-   The devtools on the cozy interface will give documentation about the
+    doctypes, help explore the Rest API, and check if the permissions are OK.
+-   `cozy-ui` will make it easy to reuse some widgets and offer an application
+    with a style coherent to the cozy identity.
+-   Some docTypes with heavy logic will be available as JS classes to be reused
+    in the apps.
 
 #### Reporting a bug or suggesting a new feature
 
@@ -549,10 +549,10 @@ applications in a different server, or maybe in docker.
 The Cozy Stack will have no auto-update mechanism. For installing and updating
 it, you can use the classical ways:
 
-* Using a package manager, like apt for debian & ubuntu.
-* Using an official image for Raspberry Pi (and other embedded platforms).
-* Using the image and services of an hosting company.
-* Or compiling and installing it manually if you are really brave ;-)
+-   Using a package manager, like apt for debian & ubuntu.
+-   Using an official image for Raspberry Pi (and other embedded platforms).
+-   Using the image and services of an hosting company.
+-   Or compiling and installing it manually if you are really brave ;-)
 
 > How to add a cozy instance to a farm?
 
@@ -575,9 +575,9 @@ looks too complicated for a temporary thing.
 
 There are 2 sensitive places with data:
 
-* In CouchDB.
-* on the place used for the Virtual File System (a directory on the local
-  filesystem, or in Swift).
+-   In CouchDB.
+-   on the place used for the Virtual File System (a directory on the local
+    filesystem, or in Swift).
 
 You can use the tools of your choice to backup these 2 locations. The good old
 rsync works fine (CouchDB files are append-only, except when compaction happens,
@@ -593,10 +593,10 @@ instance to another, and so, it can be used as a backup.
 Yes, it's often easier to scale by separating concerns, and microservices is a
 way to achieve that. But, it has some serious downsides:
 
-* It takes more memory and it's probably a no-go for Raspberry Pi.
-* It's more complicated for a developper to install the whole stack before
-  coding its application.
-* It's harder to deploy in production.
+-   It takes more memory and it's probably a no-go for Raspberry Pi.
+-   It's more complicated for a developper to install the whole stack before
+    coding its application.
+-   It's harder to deploy in production.
 
 For the scalability, we can also deploy some specialized instances of the Cozy
 Stack. For example, we can have some Cozy Stack processes dedicated for
@@ -608,9 +608,9 @@ trafic from the load-balancer.
 If you want to develop your own app, you can use the framework and the tools you
 like, nothing is mandatory. For the official apps, we will want to move to:
 
-* es2017 (but converting the existing coffeescript code will take time)
-* npm scripts and webpack
-* preact & JSX.
+-   es2017 (but converting the existing coffeescript code will take time)
+-   npm scripts and webpack
+-   preact & JSX.
 
 More about this
 [here](https://forum.cozy.io/t/a-propos-de-la-pile-technique-front-about-our-frontend-stack/3849/1)

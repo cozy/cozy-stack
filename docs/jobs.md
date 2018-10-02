@@ -15,19 +15,19 @@ distributed infrastructures.
 
 This doc introduces two cozy types:
 
-* `io.cozy.jobs` for jobs
-* `io.cozy.triggers` for triggers
+-   `io.cozy.jobs` for jobs
+-   `io.cozy.triggers` for triggers
 
 ## Triggers
 
 Jobs can be launched by five different types of triggers:
 
-* `@at` to schedule a one-time job executed after at a specific time in the
-  future
-* `@in` to schedule a one-time job executed after a specific amount of time
-* `@every` to schedule periodic jobs executed at a given fix interval
-* `@cron` to schedule recurring jobs scheduled at specific times
-* `@event` to launch a job after a change in the cozy
+-   `@at` to schedule a one-time job executed after at a specific time in the
+    future
+-   `@in` to schedule a one-time job executed after a specific amount of time
+-   `@every` to schedule periodic jobs executed at a given fix interval
+-   `@cron` to schedule recurring jobs scheduled at specific times
+-   `@event` to launch a job after a change in the cozy
 
 These five triggers have specific syntaxes to describe when jobs should be
 scheduled. See below for more informations.
@@ -230,26 +230,26 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.jobs",
-    "id": "123123",
-    "attributes": {
-      "domain": "me.cozy.tools",
-      "worker": "sendmail",
-      "options": {
-        "priority": 3,
-        "timeout": 60,
-        "max_exec_count": 3
-      },
-      "state": "running",
-      "queued_at": "2016-09-19T12:35:08Z",
-      "started_at": "2016-09-19T12:35:08Z",
-      "error": ""
-    },
-    "links": {
-      "self": "/jobs/123123"
+    "data": {
+        "type": "io.cozy.jobs",
+        "id": "123123",
+        "attributes": {
+            "domain": "me.cozy.tools",
+            "worker": "sendmail",
+            "options": {
+                "priority": 3,
+                "timeout": 60,
+                "max_exec_count": 3
+            },
+            "state": "running",
+            "queued_at": "2016-09-19T12:35:08Z",
+            "started_at": "2016-09-19T12:35:08Z",
+            "error": ""
+        },
+        "links": {
+            "self": "/jobs/123123"
+        }
     }
-  }
 }
 ```
 
@@ -269,16 +269,16 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "attributes": {
-      "options": {
-        "priority": 3,
-        "timeout": 60,
-        "max_exec_count": 3
-      },
-      "arguments": {} // any json value used as arguments for the job
+    "data": {
+        "attributes": {
+            "options": {
+                "priority": 3,
+                "timeout": 60,
+                "max_exec_count": 3
+            },
+            "arguments": {} // any json value used as arguments for the job
+        }
     }
-  }
 }
 ```
 
@@ -286,26 +286,26 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.jobs",
-    "id": "123123",
-    "attributes": {
-      "domain": "me.cozy.tools",
-      "worker": "sendmail",
-      "options": {
-        "priority": 3,
-        "timeout": 60,
-        "max_exec_count": 3
-      },
-      "state": "running",
-      "queued_at": "2016-09-19T12:35:08Z",
-      "started_at": "2016-09-19T12:35:08Z",
-      "error": ""
-    },
-    "links": {
-      "self": "/jobs/123123"
+    "data": {
+        "type": "io.cozy.jobs",
+        "id": "123123",
+        "attributes": {
+            "domain": "me.cozy.tools",
+            "worker": "sendmail",
+            "options": {
+                "priority": 3,
+                "timeout": 60,
+                "max_exec_count": 3
+            },
+            "state": "running",
+            "queued_at": "2016-09-19T12:35:08Z",
+            "started_at": "2016-09-19T12:35:08Z",
+            "error": ""
+        },
+        "links": {
+            "self": "/jobs/123123"
+        }
     }
-  }
 }
 ```
 
@@ -318,15 +318,15 @@ allowed):
 
 ```json
 {
-  "permissions": {
-    "mail-from-the-user": {
-      "description": "Required to send mails from the user to his/her friends",
-      "type": "io.cozy.jobs",
-      "verbs": ["POST"],
-      "selector": "worker",
-      "values": ["sendmail"]
+    "permissions": {
+        "mail-from-the-user": {
+            "description": "Required to send mails from the user to his/her friends",
+            "type": "io.cozy.jobs",
+            "verbs": ["POST"],
+            "selector": "worker",
+            "values": ["sendmail"]
+        }
     }
-  }
 }
 ```
 
@@ -345,29 +345,29 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    {
-      "attributes": {
-        "domain": "cozy.tools:8080",
-        "options": null,
-        "queued_at": "2017-09-29T15:32:31.953878568+02:00",
-        "started_at": "0001-01-01T00:00:00Z",
-        "state": "queued",
-        "worker": "log"
-      },
-      "id": "77689bca9634b4fb08d6ca3d1643de5f",
-      "links": {
-        "self": "/jobs/log/77689bca9634b4fb08d6ca3d1643de5f"
-      },
-      "meta": {
-        "rev": "1-f823bcd2759103a5ad1a98f4bf083b36"
-      },
-      "type": "io.cozy.jobs"
+    "data": [
+        {
+            "attributes": {
+                "domain": "cozy.tools:8080",
+                "options": null,
+                "queued_at": "2017-09-29T15:32:31.953878568+02:00",
+                "started_at": "0001-01-01T00:00:00Z",
+                "state": "queued",
+                "worker": "log"
+            },
+            "id": "77689bca9634b4fb08d6ca3d1643de5f",
+            "links": {
+                "self": "/jobs/log/77689bca9634b4fb08d6ca3d1643de5f"
+            },
+            "meta": {
+                "rev": "1-f823bcd2759103a5ad1a98f4bf083b36"
+            },
+            "type": "io.cozy.jobs"
+        }
+    ],
+    "meta": {
+        "count": 0
     }
-  ],
-  "meta": {
-    "count": 0
-  }
 }
 ```
 
@@ -379,16 +379,15 @@ its permission to only one worker, like this:
 
 ```json
 {
-  "permissions": {
-    "mail-from-the-user": {
-      "description":
-        "Required to know the number of jobs in the sendmail queues",
-      "type": "io.cozy.jobs",
-      "verbs": ["GET"],
-      "selector": "worker",
-      "values": ["sendmail"]
+    "permissions": {
+        "mail-from-the-user": {
+            "description": "Required to know the number of jobs in the sendmail queues",
+            "type": "io.cozy.jobs",
+            "verbs": ["GET"],
+            "selector": "worker",
+            "values": ["sendmail"]
+        }
     }
-  }
 }
 ```
 
@@ -416,20 +415,20 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "attributes": {
-      "type": "@event",
-      "arguments": "io.cozy.invitations",
-      "debounce": "10m",
-      "worker": "sendmail",
-      "worker_arguments": {},
-      "options": {
-        "priority": 3,
-        "timeout": 60,
-        "max_exec_count": 3
-      }
+    "data": {
+        "attributes": {
+            "type": "@event",
+            "arguments": "io.cozy.invitations",
+            "debounce": "10m",
+            "worker": "sendmail",
+            "worker_arguments": {},
+            "options": {
+                "priority": 3,
+                "timeout": 60,
+                "max_exec_count": 3
+            }
+        }
     }
-  }
 }
 ```
 
@@ -437,24 +436,24 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.triggers",
-    "id": "123123",
-    "attributes": {
-      "type": "@every",
-      "arguments": "30m10s",
-      "debounce": "10m",
-      "worker": "sendmail",
-      "options": {
-        "priority": 3,
-        "timeout": 60,
-        "max_exec_count": 3
-      }
-    },
-    "links": {
-      "self": "/jobs/triggers/123123"
+    "data": {
+        "type": "io.cozy.triggers",
+        "id": "123123",
+        "attributes": {
+            "type": "@every",
+            "arguments": "30m10s",
+            "debounce": "10m",
+            "worker": "sendmail",
+            "options": {
+                "priority": 3,
+                "timeout": 60,
+                "max_exec_count": 3
+            }
+        },
+        "links": {
+            "self": "/jobs/triggers/123123"
+        }
     }
-  }
 }
 ```
 
@@ -466,16 +465,15 @@ restrict its permission to only one worker, like this:
 
 ```json
 {
-  "permissions": {
-    "mail-from-the-user": {
-      "description":
-        "Required to send regularly mails from the user to his/her friends",
-      "type": "io.cozy.triggers",
-      "verbs": ["POST"],
-      "selector": "worker",
-      "values": ["sendmail"]
+    "permissions": {
+        "mail-from-the-user": {
+            "description": "Required to send regularly mails from the user to his/her friends",
+            "type": "io.cozy.triggers",
+            "verbs": ["POST"],
+            "selector": "worker",
+            "values": ["sendmail"]
+        }
     }
-  }
 }
 ```
 
@@ -494,35 +492,35 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.triggers",
-    "id": "123123",
-    "attributes": {
-      "type": "@every",
-      "arguments": "30m10s",
-      "worker": "sendmail",
-      "options": {
-        "priority": 3,
-        "timeout": 60,
-        "max_exec_count": 3
-      },
-      "current_state": {
-        "status": "done",
-        "last_success": "2017-11-20T13:31:09.01641731",
-        "last_successful_job_id": "abcde",
-        "last_execution": "2017-11-20T13:31:09.01641731",
-        "last_executed_job_id": "abcde",
-        "last_failure": "2017-11-20T13:31:09.01641731",
-        "last_failed_job_id": "abcde",
-        "last_error": "error value",
-        "last_manual_execution": "2017-11-20T13:31:09.01641731",
-        "last_manual_job_id": "abcde"
-      }
-    },
-    "links": {
-      "self": "/jobs/triggers/123123"
+    "data": {
+        "type": "io.cozy.triggers",
+        "id": "123123",
+        "attributes": {
+            "type": "@every",
+            "arguments": "30m10s",
+            "worker": "sendmail",
+            "options": {
+                "priority": 3,
+                "timeout": 60,
+                "max_exec_count": 3
+            },
+            "current_state": {
+                "status": "done",
+                "last_success": "2017-11-20T13:31:09.01641731",
+                "last_successful_job_id": "abcde",
+                "last_execution": "2017-11-20T13:31:09.01641731",
+                "last_executed_job_id": "abcde",
+                "last_failure": "2017-11-20T13:31:09.01641731",
+                "last_failed_job_id": "abcde",
+                "last_error": "error value",
+                "last_manual_execution": "2017-11-20T13:31:09.01641731",
+                "last_manual_job_id": "abcde"
+            }
+        },
+        "links": {
+            "self": "/jobs/triggers/123123"
+        }
     }
-  }
 }
 ```
 
@@ -536,11 +534,11 @@ To use this endpoint, an application needs a permission on the type
 Get the trigger current state, to give a big picture of the health of the
 trigger.
 
-* last executed job status (`done`, `errored`, `queued` or `running`)
-* last executed job that resulted in a successful executoin
-* last executed job that resulted in an error
-* last executed job from a manual execution (not executed by the trigger
-  directly)
+-   last executed job status (`done`, `errored`, `queued` or `running`)
+-   last executed job that resulted in a successful executoin
+-   last executed job that resulted in an error
+-   last executed job from a manual execution (not executed by the trigger
+    directly)
 
 #### Request
 
@@ -553,22 +551,22 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.jobs.state",
-    "id": "123123",
-    "attributes": {
-      "status": "done",
-      "last_success": "2017-11-20T13:31:09.01641731",
-      "last_successful_job_id": "abcde",
-      "last_execution": "2017-11-20T13:31:09.01641731",
-      "last_executed_job_id": "abcde",
-      "last_failure": "2017-11-20T13:31:09.01641731",
-      "last_failed_job_id": "abcde",
-      "last_error": "error value",
-      "last_manual_execution": "2017-11-20T13:31:09.01641731",
-      "last_manual_job_id": "abcde"
+    "data": {
+        "type": "io.cozy.jobs.state",
+        "id": "123123",
+        "attributes": {
+            "status": "done",
+            "last_success": "2017-11-20T13:31:09.01641731",
+            "last_successful_job_id": "abcde",
+            "last_execution": "2017-11-20T13:31:09.01641731",
+            "last_executed_job_id": "abcde",
+            "last_failure": "2017-11-20T13:31:09.01641731",
+            "last_failed_job_id": "abcde",
+            "last_error": "error value",
+            "last_manual_execution": "2017-11-20T13:31:09.01641731",
+            "last_manual_job_id": "abcde"
+        }
     }
-  }
 }
 ```
 
@@ -588,7 +586,7 @@ Get the jobs launched by the trigger with the specified ID.
 
 Query parameters:
 
-* `Limit`: to specify the number of jobs to get out
+-   `Limit`: to specify the number of jobs to get out
 
 #### Request
 
@@ -601,16 +599,16 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    {
-      "type": "io.cozy.jobs",
-      "id": "123123",
-      "attributes": {},
-      "links": {
-        "self": "/jobs/123123"
-      }
-    }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.jobs",
+            "id": "123123",
+            "attributes": {},
+            "links": {
+                "self": "/jobs/123123"
+            }
+        }
+    ]
 }
 ```
 
@@ -629,22 +627,22 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.jobs",
-    "id": "123123",
-    "attributes": {
-      "domain": "me.cozy.tools",
-      "worker": "sendmail",
-      "options": {},
-      "state": "running",
-      "queued_at": "2016-09-19T12:35:08Z",
-      "started_at": "2016-09-19T12:35:08Z",
-      "error": ""
-    },
-    "links": {
-      "self": "/jobs/123123"
+    "data": {
+        "type": "io.cozy.jobs",
+        "id": "123123",
+        "attributes": {
+            "domain": "me.cozy.tools",
+            "worker": "sendmail",
+            "options": {},
+            "state": "running",
+            "queued_at": "2016-09-19T12:35:08Z",
+            "started_at": "2016-09-19T12:35:08Z",
+            "error": ""
+        },
+        "links": {
+            "self": "/jobs/123123"
+        }
     }
-  }
 }
 ```
 
@@ -680,7 +678,7 @@ Get the list of triggers.
 
 Query parameters:
 
-* `Worker`: to filter only triggers associated with a specific worker.
+-   `Worker`: to filter only triggers associated with a specific worker.
 
 #### Request
 
@@ -693,16 +691,16 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    {
-      "type": "io.cozy.triggers",
-      "id": "123123",
-      "attributes": {},
-      "links": {
-        "self": "/jobs/triggers/123123"
-      }
-    }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.triggers",
+            "id": "123123",
+            "attributes": {},
+            "links": {
+                "self": "/jobs/triggers/123123"
+            }
+        }
+    ]
 }
 ```
 

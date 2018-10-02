@@ -8,13 +8,13 @@
 
 ```json
 {
-  "name": "Gmail Perso",
-  "account_type": "google",
-  "status": "connected",
-  "auth": {
-    "user": "my-personal-account@gmail.com",
-    "password": "my-secret"
-  }
+    "name": "Gmail Perso",
+    "account_type": "google",
+    "status": "connected",
+    "auth": {
+        "user": "my-personal-account@gmail.com",
+        "password": "my-secret"
+    }
 }
 ```
 
@@ -22,14 +22,14 @@ accounts are manipulated through the `/data/` API.
 
 #### Accounts fields
 
-* **name** User defined name for the account ("Perso", "Pro")
-* **account_type** A type of account, like "google" or "trainlines", a list will
-  be published by Cozy Cloud for current konnectors and most commons one. It's
-  recommended to use the associated website domain otherwise.
-* **status** one of "NoAttempt" "Connected" or "Errored"
-* **error** the (optional) error for last connection to this account
-* **auth** An object defining auth method for this account. For now only {login,
-  password} is supported.
+-   **name** User defined name for the account ("Perso", "Pro")
+-   **account_type** A type of account, like "google" or "trainlines", a list
+    will be published by Cozy Cloud for current konnectors and most commons one.
+    It's recommended to use the associated website domain otherwise.
+-   **status** one of "NoAttempt" "Connected" or "Errored"
+-   **error** the (optional) error for last connection to this account
+-   **auth** An object defining auth method for this account. For now only
+    {login, password} is supported.
 
 OAuth accounts will be explored later. The auth fields will be encrypted on
 disk.
@@ -57,21 +57,21 @@ https://docs.cozy.io/en/cozy-stack/jobs/#post-jobstriggers
 
 **konnectors**
 
-* [ ] `GET /konnectors/marketplace` Lists available konnectors
-* [x] `POST /konnectors/:slug?Source=xxxx` Installs a konnector
-* [ ] `GET /konnectors` Lists installed konnectors
+-   [ ] `GET /konnectors/marketplace` Lists available konnectors
+-   [x] `POST /konnectors/:slug?Source=xxxx` Installs a konnector
+-   [ ] `GET /konnectors` Lists installed konnectors
 
 **triggers**
 
-* [x] `GET /jobs/triggers?Worker=konnector` Lists konnectors with a configured
-      recurrence.
-* [x] `POST /jobs/triggers` Enables a konnector recurrence.
-* [x] `DELETE /jobs/triggers/:triggerid` Disables a konnector recurrence
+-   [x] `GET /jobs/triggers?Worker=konnector` Lists konnectors with a configured
+        recurrence.
+-   [x] `POST /jobs/triggers` Enables a konnector recurrence.
+-   [x] `DELETE /jobs/triggers/:triggerid` Disables a konnector recurrence
 
 **jobs**
 
-* [x] `POST /jobs/queue/konnector` Starts a konnector now
-* [x] `GET /jobs/queue/konnector` Lists pending konnectors
+-   [x] `POST /jobs/queue/konnector` Starts a konnector now
+-   [x] `GET /jobs/queue/konnector` Lists pending konnectors
 
 ---
 
@@ -86,7 +86,7 @@ connector to retrieve my travel expenses
 
 ```javascript
 cozy.intents.start("CREATE", "io.cozy.konnectors", {
-  category: "transport"
+    category: "transport"
 });
 ```
 
@@ -105,38 +105,38 @@ GET /konnectors/manifests?Source=git://github.com/konnectors/trainlines.git
 
 ```json
 {
-  "name": "Trainline",
-  "type": "konnector",
-  "slug": "konnector-trainline",
-  "description": "Konnector for trainline . com",
-  "source": "https://github.com/konnectors/trainlines.git@build",
-  "developer": {
-    "name": "XXX",
-    "url": "https://www.xxx.fr"
-  },
-  "version": "3.0.0",
-  "licence": "AGPL-3.0",
-  "fields": {
-    "save_folder": {
-      "doctype": "io.cozy.files",
-      "type": "folder",
-      "verbs": ["ALL"]
+    "name": "Trainline",
+    "type": "konnector",
+    "slug": "konnector-trainline",
+    "description": "Konnector for trainline . com",
+    "source": "https://github.com/konnectors/trainlines.git@build",
+    "developer": {
+        "name": "XXX",
+        "url": "https://www.xxx.fr"
     },
-    "account": {
-      "doctype": "io.cozy.accounts",
-      "account_type": "trainlines",
-      "accountFormat": "login,password"
+    "version": "3.0.0",
+    "licence": "AGPL-3.0",
+    "fields": {
+        "save_folder": {
+            "doctype": "io.cozy.files",
+            "type": "folder",
+            "verbs": ["ALL"]
+        },
+        "account": {
+            "doctype": "io.cozy.accounts",
+            "account_type": "trainlines",
+            "accountFormat": "login,password"
+        }
+    },
+    "category": "transport",
+    "frequency": "weekly",
+    "permissions": {
+        "events": {
+            "description": "Connect train bill with  event in your calendar",
+            "type": "io.cozy.events",
+            "verbs": ["PATCH"]
+        }
     }
-  },
-  "category": "transport",
-  "frequency": "weekly",
-  "permissions": {
-    "events": {
-      "description": "Connect train bill with  event in your calendar",
-      "type": "io.cozy.events",
-      "verbs": ["PATCH"]
-    }
-  }
 }
 ```
 
@@ -148,12 +148,12 @@ POST /data/io.cozy.accounts
 
 ```json
 {
-  "account_type": "google",
-  "status": "PENDING",
-  "auth": {
-    "login": "xxxx",
-    "password": "yyyyy"
-  }
+    "account_type": "google",
+    "status": "PENDING",
+    "auth": {
+        "login": "xxxx",
+        "password": "yyyyy"
+    }
 }
 ```
 
@@ -163,14 +163,14 @@ HTTP/1.1 200 OK
 
 ```json
 {
-  "_id": "123-account-id-123",
-  "_rev": "1-asasasasa",
-  "account_type": "google",
-  "status": "PENDING",
-  "auth": {
-    "login": "xxxx",
-    "password": "yyyyy"
-  }
+    "_id": "123-account-id-123",
+    "_rev": "1-asasasasa",
+    "account_type": "google",
+    "status": "PENDING",
+    "auth": {
+        "login": "xxxx",
+        "password": "yyyyy"
+    }
 }
 ```
 
@@ -214,21 +214,21 @@ PATCH /permissions/456-permission-doc-id-456
 
 ```json
 {
-  "data": {
-    "id": "456-permission-doc-id-456",
-    "type": "io.cozy.permissions",
-    "attributes": {
-      "type": "app",
-      "source_id": "io.cozy.konnectors/trainlines",
-      "permissions": {
-        "save_folder": {
-          "type": "io.cozy.files",
-          "verbs": ["ALL"],
-          "values": ["123-selected-folder-id-123"]
+    "data": {
+        "id": "456-permission-doc-id-456",
+        "type": "io.cozy.permissions",
+        "attributes": {
+            "type": "app",
+            "source_id": "io.cozy.konnectors/trainlines",
+            "permissions": {
+                "save_folder": {
+                    "type": "io.cozy.files",
+                    "verbs": ["ALL"],
+                    "values": ["123-selected-folder-id-123"]
+                }
+            }
         }
-      }
     }
-  }
 }
 ```
 
@@ -238,26 +238,26 @@ HTTP/1.1 200 OK
 
 ```json
 {
-  "data": {
-    "id": "456-permission-doc-id-456",
-    "type": "io.cozy.permissions",
-    "attributes": {
-      "type": "app",
-      "source_id": "io.cozy.konnectors/trainlines",
-      "permissions": {
-        "events": {
-          "description": "Connect train bill with  event in your calendar",
-          "type": "io.cozy.events",
-          "verbs": ["PATCH"]
-        },
-        "save_folder": {
-          "type": "io.cozy.files",
-          "verbs": ["ALL"],
-          "values": ["123-selected-folder-id-123"]
+    "data": {
+        "id": "456-permission-doc-id-456",
+        "type": "io.cozy.permissions",
+        "attributes": {
+            "type": "app",
+            "source_id": "io.cozy.konnectors/trainlines",
+            "permissions": {
+                "events": {
+                    "description": "Connect train bill with  event in your calendar",
+                    "type": "io.cozy.events",
+                    "verbs": ["PATCH"]
+                },
+                "save_folder": {
+                    "type": "io.cozy.files",
+                    "verbs": ["ALL"],
+                    "values": ["123-selected-folder-id-123"]
+                }
+            }
         }
-      }
     }
-  }
 }
 ```
 
@@ -270,12 +270,12 @@ POST /files/123-selected-folder-id-123/relationships/referenced_by
 
 ```json
 {
-  "data": [
-    {
-      "type": "io.cozy.konnectors",
-      "id": "io.cozy.konnectors/trainlines"
-    }
-  ]
+    "data": [
+        {
+            "type": "io.cozy.konnectors",
+            "id": "io.cozy.konnectors/trainlines"
+        }
+    ]
 }
 ```
 
@@ -287,15 +287,15 @@ POST /jobs/queue/konnector
 
 ```json
 {
-  "data": {
-    "attributes": {
-      "arguments": {
-        "konnector": "trainline",
-        "account": "123-account-id-123",
-        "folder_to_save": "123-selected-folder-id-123"
-      }
+    "data": {
+        "attributes": {
+            "arguments": {
+                "konnector": "trainline",
+                "account": "123-account-id-123",
+                "folder_to_save": "123-selected-folder-id-123"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -305,29 +305,29 @@ HTTP/1.1 200 OK
 
 ```json
 {
-  "data": {
-    "id": "789-job-id-789",
-    "type": "io.cozy.jobs",
-    "attributes": {
-      "worker": "konnector",
-      "options": {
-        "priority": 3,
-        "timeout": 60,
-        "max_exec_count": 3
-      },
-      "arguments": {
-        "konnector": "trainline",
-        "account": "123-account-id-123",
-        "folder_to_save": "123-selected-folder-id-123"
-      },
-      "state": "running",
-      "try_count": 1,
-      "queued_at": "2016-09-19T12:35:08Z",
-      "started_at": "2016-09-19T12:35:08Z",
-      "errors": [],
-      "output": {}
+    "data": {
+        "id": "789-job-id-789",
+        "type": "io.cozy.jobs",
+        "attributes": {
+            "worker": "konnector",
+            "options": {
+                "priority": 3,
+                "timeout": 60,
+                "max_exec_count": 3
+            },
+            "arguments": {
+                "konnector": "trainline",
+                "account": "123-account-id-123",
+                "folder_to_save": "123-selected-folder-id-123"
+            },
+            "state": "running",
+            "try_count": 1,
+            "queued_at": "2016-09-19T12:35:08Z",
+            "started_at": "2016-09-19T12:35:08Z",
+            "errors": [],
+            "output": {}
+        }
     }
-  }
 }
 ```
 
@@ -338,9 +338,9 @@ It uses the [realtime](./realtime.md) to subscribes to changes on
 **TODO** Look at current konnectors sources to defines a protocol between
 konnectors and SettingsApp to display the nice progress modal.
 
-* [ ] 250 events imported
-* [ ] 150 / 3500 contacts importing
-* [ ] ...
+-   [ ] 250 events imported
+-   [ ] 150 / 3500 contacts importing
+-   [ ] ...
 
 **TODO** there should be some persistence for jobs error / status
 
@@ -352,18 +352,18 @@ POST /jobs/io.cozy.triggers
 
 ```json
 {
-  "data": {
-    "attributes": {
-      "type": "@cron",
-      "arguments": "0 0 0 0 1 1 ",
-      "worker": "konnector",
-      "worker_arguments": {
-        "konnector": "trainline",
-        "account": "5165621628784562148955",
-        "folder_to_save": "877854878455"
-      }
+    "data": {
+        "attributes": {
+            "type": "@cron",
+            "arguments": "0 0 0 0 1 1 ",
+            "worker": "konnector",
+            "worker_arguments": {
+                "konnector": "trainline",
+                "account": "5165621628784562148955",
+                "folder_to_save": "877854878455"
+            }
+        }
     }
-  }
 }
 ```
 
@@ -372,8 +372,8 @@ for the same konnector & various accounts.
 
 ### Relations and DELETE CASCADE
 
-* When a konnector is deleted, its triggers should be deleted
-* When an account is deleted, its triggers should be deleted
+-   When a konnector is deleted, its triggers should be deleted
+-   When an account is deleted, its triggers should be deleted
 
 **TODO** Should stack validate konnector value on trigger creation / to be
 extended to all workers pre-validating worker arguments ?
@@ -396,9 +396,10 @@ The konnector process can send events trough it's stdout (newline separated JSON
 object), the konnector worker pass these events to the realtime hub as
 `io.cozy.jobs.events`.
 
-* Only JSON formatted events are forwarded to the client-side throught realtime
-* Otherwise formatted lines (such as node Error) will be kept in some system
-  logs.
+-   Only JSON formatted events are forwarded to the client-side throught
+    realtime
+-   Otherwise formatted lines (such as node Error) will be kept in some system
+    logs.
 
 Konnectors should NOT log the received account login values in production.
 
