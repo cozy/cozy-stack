@@ -85,9 +85,7 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 	funcsMap := template.FuncMap{
 		"t":     fmt.Sprintf,
 		"split": strings.Split,
-		"asset": func(domain, name string, context ...string) string {
-			return path.Join(assetsPrefix, name)
-		},
+		"asset": assetPath,
 	}
 
 	var err error
@@ -103,14 +101,11 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 // representation into the binary.
 func NewRenderer() (AssetRenderer, error) {
 	t := template.New("stub")
-	h := NewHandler()
 
 	funcsMap := template.FuncMap{
 		"t":     fmt.Sprintf,
 		"split": strings.Split,
-		"asset": func(domain, name string, context ...string) string {
-			return h.AssetPath(domain, name, context...)
-		},
+		"asset": AssetPath,
 	}
 
 	for _, name := range templatesList {
@@ -128,7 +123,7 @@ func NewRenderer() (AssetRenderer, error) {
 		}
 	}
 
-	return &renderer{t: t, Handler: h}, nil
+	return &renderer{t: t, Handler: NewHandler()}, nil
 }
 
 type renderer struct {
@@ -152,21 +147,16 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return t.Funcs(funcMap).ExecuteTemplate(w, name, data)
 }
 
-// Handler implements http.handler for a subpart of the available assets on a
-// specified prefix.
-type Handler struct{}
-
-// NewHandler returns a new handler
-func NewHandler() Handler {
-	return Handler{}
-}
-
 // AssetPath return the fullpath with unique identifier for a given asset file.
-func (h Handler) AssetPath(domain, name string, context ...string) string {
+func AssetPath(domain, name string, context ...string) string {
 	f, ok := fs.Get(name, context...)
 	if ok {
 		name = f.NameWithSum
 	}
+	return assetPath(domain, name, context...)
+}
+
+func assetPath(domain, name string, context ...string) string {
 	if len(context) > 0 && context[0] != "" {
 		name = path.Join(assetsExtPrefix, url.PathEscape(context[0]), name)
 	} else {
@@ -176,6 +166,15 @@ func (h Handler) AssetPath(domain, name string, context ...string) string {
 		return "//" + domain + name
 	}
 	return name
+}
+
+// Handler implements http.handler for a subpart of the available assets on a
+// specified prefix.
+type Handler struct{}
+
+// NewHandler returns a new handler
+func NewHandler() Handler {
+	return Handler{}
 }
 
 // ServeHTTP implements the http.Handler interface.

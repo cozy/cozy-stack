@@ -289,14 +289,9 @@ var clientTemplate *template.Template
 var barTemplate *template.Template
 
 func init() {
-	h := statik.NewHandler()
-	assetHelper = func(domain, name string, context ...string) string {
-		return h.AssetPath(domain, name, context...)
-	}
-
 	funcsMap := template.FuncMap{
 		"split": strings.Split,
-		"asset": assetHelper,
+		"asset": statik.AssetPath,
 	}
 
 	clientTemplate = template.Must(template.New("cozy-client-js").Funcs(funcsMap).Parse(`` +
