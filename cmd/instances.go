@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -13,10 +14,9 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/client"
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )
@@ -49,6 +49,7 @@ var flagContextName string
 var flagOnboardingFinished bool
 var flagExpire time.Duration
 var flagAllowLoginScope bool
+var flagFsckIndexIntegrity bool
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -494,39 +495,25 @@ in swift/localfs but not couchdb.
 
 		domain := args[0]
 
-		fsURL := config.FsURL()
-		if fsURL.Scheme == config.SchemeSwift {
-			if err := config.InitSwiftConnection(fsURL); err != nil {
-				return err
-			}
-		}
-
-		i, err := instance.Get(domain)
+		c := newAdminClient()
+		res, err := c.Req(&request.Options{
+			Method: "GET",
+			Path:   "/instances/" + url.PathEscape(domain) + "/fsck",
+			Queries: url.Values{
+				"IndexIntegrity": {strconv.FormatBool(flagFsckIndexIntegrity)},
+			},
+		})
 		if err != nil {
 			return err
 		}
 
-		var hasError bool
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		err = i.VFS().Fsck(func(log *vfs.FsckLog) {
-			hasError = true
-			switch log.Type {
-			case vfs.ContentMismatch:
-				fmt.Fprintf(w, "%s;%s;%s;%s;%s;%s;%d;%d\n",
-					i.Domain,
-					log.FileDoc.Fullpath,
-					log.FileDoc.DocID,
-					log.FileDoc.DocRev,
-					hex.EncodeToString(log.ContentMismatch.MD5SumIndex),
-					hex.EncodeToString(log.ContentMismatch.MD5SumFile),
-					log.ContentMismatch.SizeIndex,
-					log.ContentMismatch.SizeFile)
+		hasError := false
+		scanner := bufio.NewScanner(res.Body)
+		for scanner.Scan() {
+			if err = scanner.Err(); err != nil {
+				return err
 			}
-			w.Flush()
-		})
-
-		if err != nil {
-			return fmt.Errorf("fsck error: %s", err)
+			fmt.Println(string(scanner.Bytes()))
 		}
 
 		if hasError {
@@ -782,6 +769,8 @@ func init() {
 	modifyInstanceCmd.Flags().BoolVar(&flagBlocked, "blocked", false, "Block the instance")
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
+	fsckInstanceCmd.Flags().BoolVar(&flagFsckIndexIntegrity, "index-indegrity", false, "Check the index integrity only")
+	fsckInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagAllowLoginScope, "allow-login-scope", false, "Allow login scope")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")

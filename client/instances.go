@@ -220,29 +220,6 @@ func (c *Client) DestroyInstance(domain string) error {
 	return err
 }
 
-// FsckInstance returns the list of the inconsistencies in the VFS.
-func (c *Client) FsckInstance(domain string, prune, dryRun bool) ([]map[string]string, error) {
-	if !validDomain(domain) {
-		return nil, fmt.Errorf("Invalid domain: %s", domain)
-	}
-	res, err := c.Req(&request.Options{
-		Method: "GET",
-		Path:   "/instances/" + url.PathEscape(domain) + "/fsck",
-		Queries: url.Values{
-			"Prune":  {strconv.FormatBool(prune)},
-			"DryRun": {strconv.FormatBool(dryRun)},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	var list []map[string]string
-	if err = json.NewDecoder(res.Body).Decode(&list); err != nil {
-		return nil, err
-	}
-	return list, nil
-}
-
 // GetToken is used to generate a toke with the specified options.
 func (c *Client) GetToken(opts *TokenOptions) (string, error) {
 	q := url.Values{

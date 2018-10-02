@@ -184,7 +184,7 @@ func deleteHandler(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func fsckHandler(c echo.Context) error {
+func fsckHandler(c echo.Context) (err error) {
 	domain := c.Param("domain")
 	i, err := instance.Get(domain)
 	if err != nil {
@@ -193,21 +193,29 @@ func fsckHandler(c echo.Context) error {
 
 	indexIntegrityCheck, _ := strconv.ParseBool(c.QueryParam("IndexIntegrity"))
 
-	var logbook []*vfs.FsckLog
-	accumulate := func(log *vfs.FsckLog) {
-		logbook = append(logbook, log)
-	}
+	logCh := make(chan *vfs.FsckLog)
+	go func() {
+		fs := i.VFS()
+		if indexIntegrityCheck {
+			err = fs.CheckIndexIntegrity(func(log *vfs.FsckLog) { logCh <- log })
+		} else {
+			err = fs.Fsck(func(log *vfs.FsckLog) { logCh <- log })
+		}
+		close(logCh)
+	}()
 
-	fs := i.VFS()
-	if indexIntegrityCheck {
-		err = fs.CheckIndexIntegrity(accumulate)
-	} else {
-		err = fs.Fsck(accumulate)
+	w := c.Response().Writer
+	w.WriteHeader(200)
+	encoder := json.NewEncoder(w)
+	for log := range logCh {
+		if errenc := encoder.Encode(log); errenc != nil {
+			return errenc
+		}
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
 	}
-	if err != nil {
-		return wrapError(err)
-	}
-	return c.JSON(http.StatusOK, logbook)
+	return err
 }
 
 func rebuildRedis(c echo.Context) error {
