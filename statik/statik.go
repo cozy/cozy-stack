@@ -159,6 +159,35 @@ func rename(src, dest string) error {
 	return err
 }
 
+func loadAsset(name, srcPath string) (*asset, error) {
+	data := new(bytes.Buffer)
+
+	f, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	r := io.TeeReader(f, h)
+	size, err := io.Copy(data, r)
+	if err != nil {
+		return nil, err
+	}
+
+	relPath, err := filepath.Rel(srcPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &asset{
+		name:   path.Join("/", filepath.ToSlash(relPath)),
+		size:   size,
+		sha256: h.Sum(nil),
+		data:   data.Bytes(),
+	}, nil
+}
+
 // Walks on the source path and generates source code
 // that contains source directory's contents as zip contents.
 // Generates source registers generated zip contents data to
@@ -198,35 +227,12 @@ func generateSource(destFilename, srcPath, externalsFile string) (f *os.File, no
 	for i := 0; i < 16; i++ {
 		go func() {
 			for name := range filesCh {
-				data := new(bytes.Buffer)
-
-				f, err := os.Open(name)
+				asset, err := loadAsset(name, srcPath)
 				if err != nil {
 					doneCh <- err
 					return
 				}
-				defer f.Close()
-
-				h := sha256.New()
-				r := io.TeeReader(f, h)
-				size, err := io.Copy(data, r)
-				if err != nil {
-					doneCh <- err
-					return
-				}
-
-				relPath, err := filepath.Rel(srcPath, name)
-				if err != nil {
-					doneCh <- err
-					return
-				}
-
-				assetsCh <- &asset{
-					name:   path.Join("/", filepath.ToSlash(relPath)),
-					size:   size,
-					sha256: h.Sum(nil),
-					data:   data.Bytes(),
-				}
+				assetsCh <- asset
 			}
 			doneCh <- nil
 		}()
@@ -516,12 +522,6 @@ func printZipData(dest io.Writer, assets []*asset) error {
 		}
 	}
 	return nil
-}
-
-func panicOnError(err error) {
-	if err != nil {
-		panic(fmt.Errorf("Unexpected error: %s", err))
-	}
 }
 
 // Prints out the error message and exists with a non-success signal.

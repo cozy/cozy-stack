@@ -33,12 +33,6 @@ var (
 		"passphrase_renew.html",
 		"sharing_discovery.html",
 	}
-
-	privateAssets = []string{
-		"/templates/",
-		"/locales/",
-		"/placeholders/",
-	}
 )
 
 const (

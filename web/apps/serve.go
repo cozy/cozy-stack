@@ -284,7 +284,6 @@ func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
 	return c.Redirect(http.StatusFound, u)
 }
 
-var assetHelper func(domain, name string, context ...string) string
 var clientTemplate *template.Template
 var barTemplate *template.Template
 

@@ -138,7 +138,7 @@ func registerCustomExternal(name, context, assetURL, shasum string) (*Asset, err
 			return nil, err
 		}
 		if res.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("could not load external asset on %s: status code %d", assetURL, assetURL, res.StatusCode)
+			return nil, fmt.Errorf("could not load external asset on %s: status code %d", assetURL, res.StatusCode)
 		}
 		defer res.Body.Close()
 		body = res.Body
