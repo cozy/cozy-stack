@@ -10,7 +10,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -64,19 +63,6 @@ func (m *konnectorMessage) ToJSON() string {
 	return string(m.data)
 }
 
-// konnectorResult stores the result of a konnector execution.
-// TODO: remove this type kept for retro-compatibility.
-type konnectorResult struct {
-	DocID       string     `json:"_id,omitempty"`
-	DocRev      string     `json:"_rev,omitempty"`
-	CreatedAt   time.Time  `json:"last_execution"`
-	LastSuccess time.Time  `json:"last_success"`
-	Account     string     `json:"account"`
-	AccountRev  string     `json:"account_rev"`
-	State       jobs.State `json:"state"`
-	Error       string     `json:"error"`
-}
-
 // beforeHookKonnector skips jobs from trigger that are failing on certain
 // errors.
 func beforeHookKonnector(req *jobs.JobRequest) (bool, error) {
@@ -96,13 +82,6 @@ func beforeHookKonnector(req *jobs.JobRequest) (bool, error) {
 	}
 	return true, nil
 }
-
-func (r *konnectorResult) ID() string         { return r.DocID }
-func (r *konnectorResult) Rev() string        { return r.DocRev }
-func (r *konnectorResult) DocType() string    { return consts.KonnectorResults }
-func (r *konnectorResult) Clone() couchdb.Doc { c := *r; return &c }
-func (r *konnectorResult) SetID(id string)    { r.DocID = id }
-func (r *konnectorResult) SetRev(rev string)  { r.DocRev = rev }
 
 func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (string, error) {
 	var err error
@@ -420,58 +399,7 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 }
 
 func (w *konnectorWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
-	if w.msg == nil {
-		return nil
-	}
-
-	// TODO: remove this retro-compatibility block
-	// <<<<<<<<<<<<<
-	accountID := w.msg.Account
-	domain := ctx.Domain()
-
-	inst, err := instance.Get(domain)
-	if err != nil {
-		return err
-	}
-
-	lastResult := &konnectorResult{}
-	err = couchdb.GetDoc(inst, consts.KonnectorResults, w.slug, lastResult)
-	if err != nil {
-		if !couchdb.IsNotFoundError(err) {
-			return err
-		}
-		lastResult = nil
-	}
-
-	var state jobs.State
-	var errstr string
-	var lastSuccess time.Time
-	if errjob != nil {
-		if lastResult != nil {
-			lastSuccess = lastResult.LastSuccess
-		}
-		errstr = errjob.Error()
-		state = jobs.Errored
-	} else {
-		lastSuccess = time.Now()
-		state = jobs.Done
-	}
-
-	result := &konnectorResult{
-		DocID:       w.slug,
-		Account:     accountID,
-		CreatedAt:   time.Now(),
-		LastSuccess: lastSuccess,
-		State:       state,
-		Error:       errstr,
-	}
-	if lastResult == nil {
-		err = couchdb.CreateNamedDocWithDB(inst, result)
-	} else {
-		result.SetRev(lastResult.Rev())
-		err = couchdb.UpdateDoc(inst, result)
-	}
-	return err
+	return nil
 	// >>>>>>>>>>>>>
 
 	// if errjob == nil {
