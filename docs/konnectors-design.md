@@ -2,6 +2,10 @@
 
 # Konnectors
 
+:warning: **Note:** this documentation is outdated. It is kept for historical
+reasons and shows the design and trade-offs we have made initially. But a lot
+of things have changed since, so don't expect the things to be still the same.
+
 ## What we want ?
 
 [Konnectors](https://github.com/cozy-labs/konnectors) is an application for Cozy

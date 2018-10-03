@@ -16,23 +16,25 @@
 - Services:
   - "/auth - Authentication & OAuth": ./auth.md
   - "/apps - Applications Management": ./apps.md
-  - "Apps registry": ./registry.md
+  - " /apps - Apps registry": ./registry.md
+  - " /apps - Konnectors": ./konnectors.md
+  - " /apps - Konnectors workflow": ./konnectors-workflow.md
   - "/data - Data System": ./data-system.md
-  - "Mango": ./mango.md
-  - "Replication": ./replication.md
-  - "CouchDB Quirks": ./couchdb-quirks.md
-  - "PouchDB Quirks": ./pouchdb-quirks.md
+  - " /data - Mango": ./mango.md
+  - " /data - Replication": ./replication.md
+  - " /data - CouchDB Quirks": ./couchdb-quirks.md
+  - " /data - PouchDB Quirks": ./pouchdb-quirks.md
   - "/files - Virtual File System": ./files.md
-  - "References of documents in VFS": ./references-docs-in-vfs.md
+  - " /files - References of documents in VFS": ./references-docs-in-vfs.md
   - "/intents - Intents": ./intents.md
-  - "/jobs Jobs": ./jobs.md
-  - "Konnectors": ./konnectors.md
-  - "Workers": ./workers.md
+  - "/jobs - Jobs": ./jobs.md
+  - " /jobs - Workers": ./workers.md
   - "/move - Move, export and import an instance": ./move.md
   - "/notifications - Notifications": ./notifications.md
   - "/permissions - Permissions": ./permissions.md
   - "/realtime - Realtime": ./realtime.md
   - "/remote - Proxy for remote data/API": ./remote.md
   - "/settings - Settings": ./settings.md
+  - " /settings - Terms of Services": ./user-action-required.md
   - "/sharings - Sharing": ./sharing.md
-  - "Request for comments": ./sharing-design.md
+  - " /sharings - Request for comments": ./sharing-design.md
