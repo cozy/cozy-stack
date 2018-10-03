@@ -968,6 +968,27 @@ func FindFilesMango(c echo.Context) error {
 
 }
 
+func fsckHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Files); err != nil {
+		return err
+	}
+
+	var logs []*vfs.FsckLog
+	err := instance.VFS().Fsck(func(log *vfs.FsckLog) {
+		switch log.Type {
+		case vfs.ContentMismatch:
+			logs = append(logs, log)
+		}
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, logs)
+}
+
 // Routes sets the routing for the files service
 func Routes(router *echo.Group) {
 	router.HEAD("/download", ReadFileContentFromPathHandler)
@@ -1009,6 +1030,7 @@ func Routes(router *echo.Group) {
 	router.DELETE("/trash/:file-id", DestroyFileHandler)
 
 	router.DELETE("/:file-id", TrashHandler)
+	router.GET("/fsck", fsckHandler)
 }
 
 // WrapVfsError returns a formatted error from a golang error emitted by the vfs

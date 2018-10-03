@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	humanize "github.com/dustin/go-humanize"
@@ -33,8 +35,6 @@ var flagBlocked bool
 var flagDev bool
 var flagPassphrase string
 var flagForce bool
-var flagFsckDry bool
-var flagFsckPrune bool
 var flagJSON bool
 var flagDirectory string
 var flagIncreaseQuota bool
@@ -49,6 +49,7 @@ var flagContextName string
 var flagOnboardingFinished bool
 var flagExpire time.Duration
 var flagAllowLoginScope bool
+var flagFsckIndexIntegrity bool
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -495,25 +496,28 @@ in swift/localfs but not couchdb.
 		domain := args[0]
 
 		c := newAdminClient()
-		list, err := c.FsckInstance(domain, flagFsckPrune, flagFsckDry)
+		res, err := c.Req(&request.Options{
+			Method: "GET",
+			Path:   "/instances/" + url.PathEscape(domain) + "/fsck",
+			Queries: url.Values{
+				"IndexIntegrity": {strconv.FormatBool(flagFsckIndexIntegrity)},
+			},
+		})
 		if err != nil {
 			return err
 		}
 
-		if len(list) == 0 {
-			fmt.Printf("Instance for domain %s is clean\n", domain)
-		} else {
-			for _, entry := range list {
-				fmt.Printf("- %q: %s\n", entry["filename"], entry["message"])
-				if pruneAction := entry["prune_action"]; pruneAction != "" {
-					fmt.Printf("  %s...", pruneAction)
-					if pruneError := entry["prune_error"]; pruneError != "" {
-						fmt.Printf("error: %s\n", pruneError)
-					} else {
-						fmt.Println("ok")
-					}
-				}
+		hasError := false
+		scanner := bufio.NewScanner(res.Body)
+		for scanner.Scan() {
+			if err = scanner.Err(); err != nil {
+				return err
 			}
+			fmt.Println(string(scanner.Bytes()))
+		}
+
+		if hasError {
+			os.Exit(1)
 		}
 		return nil
 	},
@@ -765,8 +769,8 @@ func init() {
 	modifyInstanceCmd.Flags().BoolVar(&flagBlocked, "blocked", false, "Block the instance")
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
-	fsckInstanceCmd.Flags().BoolVar(&flagFsckDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
-	fsckInstanceCmd.Flags().BoolVar(&flagFsckPrune, "prune", false, "Try to solve inconsistencies by modifying the file system")
+	fsckInstanceCmd.Flags().BoolVar(&flagFsckIndexIntegrity, "index-indegrity", false, "Check the index integrity only")
+	fsckInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagAllowLoginScope, "allow-login-scope", false, "Allow login scope")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")

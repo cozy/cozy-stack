@@ -7,10 +7,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"sort"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -417,223 +417,110 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &swiftFileOpen{f, nil}, nil
 }
 
-func (sfs *swiftVFS) Fsck(opts vfs.FsckOptions) (logbook []*vfs.FsckLog, err error) {
-	if lockerr := sfs.mu.RLock(); lockerr != nil {
-		return nil, lockerr
-	}
-	defer sfs.mu.RUnlock()
-	logbook, err = sfs.Indexer.CheckIndexIntegrity()
-	if err != nil {
-		return
-	}
-	if opts.Prune {
-		sfs.fsckPrune(logbook, opts.DryRun)
-	}
-	root, err := sfs.Indexer.DirByPath("/")
-	if err != nil {
-		return
-	}
-	var newLogs []*vfs.FsckLog
-	newLogs, err = sfs.fsckWalk(root, newLogs)
-	if err != nil {
-		return
-	}
-	sort.Slice(newLogs, func(i, j int) bool {
-		return newLogs[i].Filename < newLogs[j].Filename
-	})
-	logbook = append(logbook, newLogs...)
-	if opts.Prune {
-		sfs.fsckPrune(newLogs, opts.DryRun)
-	}
-	return
-}
-
-func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.FsckLog, error) {
-	entries := make(map[string]struct{})
-	iter := sfs.Indexer.DirIterator(dir, nil)
-	for {
-		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
-			break
+func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
+	entries := make(map[string]*vfs.TreeFile, 1024)
+	_, err = sfs.BuildTree(func(f *vfs.TreeFile) {
+		if !f.IsDir {
+			entries[f.DirID+"/"+f.DocName] = f
 		}
+	})
+	if err != nil {
+		return
+	}
+
+	var orphansObjs []swift.Object
+
+	err = sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
+		var objs []swift.Object
+		objs, err = sfs.c.Objects(sfs.container, opts)
 		if err != nil {
 			return nil, err
 		}
-
-		if f != nil {
-			var info swift.Object
-			fullpath := path.Join(dir.Fullpath, f.DocName)
-			entries[f.DocName] = struct{}{}
-			info, _, err = sfs.c.Object(sfs.container, f.DirID+"/"+f.DocName)
-			if err == swift.ObjectNotFound {
-				logbook = append(logbook, &vfs.FsckLog{
-					Type:     vfs.FileMissing,
-					IsFile:   true,
-					FileDoc:  f,
-					Filename: fullpath,
-				})
-			} else if err != nil {
-				return nil, err
-			} else if info.ContentType == dirContentType {
-				var dirDoc *vfs.DirDoc
-				name := path.Base(info.Name)
-				dirDoc, err = vfs.NewDirDocWithParent(name, dir, nil)
-				if err != nil {
-					return nil, err
-				}
-				logbook = append(logbook, &vfs.FsckLog{
-					Type:     vfs.TypeMismatch,
-					IsFile:   true,
-					DirDoc:   dirDoc,
-					FileDoc:  f,
-					Filename: fullpath,
-				})
-			}
-		} else {
-			entries[d.DocName] = struct{}{}
-			if d.Fullpath == vfs.TrashDirName {
-				continue
-			}
-			var info swift.Object
-			info, _, err = sfs.c.Object(sfs.container, d.DirID+"/"+d.DocName)
-			if err == swift.ObjectNotFound {
-				logbook = append(logbook, &vfs.FsckLog{
-					Type:     vfs.FileMissing,
-					IsFile:   false,
-					DirDoc:   d,
-					Filename: d.Fullpath,
-				})
-			} else if err != nil {
-				return nil, err
-			} else if info.ContentType != dirContentType {
-				var fileDoc *vfs.FileDoc
-				_, fileDoc, err = objectToFileDocV1(dir, info)
-				if err != nil {
-					continue
-				}
-				logbook = append(logbook, &vfs.FsckLog{
-					Type:     vfs.TypeMismatch,
-					IsFile:   false,
-					DirDoc:   d,
-					FileDoc:  fileDoc,
-					Filename: d.Fullpath,
-				})
+		for _, obj := range objs {
+			f, ok := entries[obj.Name]
+			if !ok {
+				orphansObjs = append(orphansObjs, obj)
 			} else {
-				if logbook, err = sfs.fsckWalk(d, logbook); err != nil {
+				var md5sum []byte
+				md5sum, err = hex.DecodeString(obj.Hash)
+				if err != nil {
 					return nil, err
 				}
+				if !bytes.Equal(md5sum, f.MD5Sum) || f.ByteSize != obj.Bytes {
+					accumulate(&vfs.FsckLog{
+						Type:    vfs.ContentMismatch,
+						IsFile:  true,
+						FileDoc: f,
+						ContentMismatch: &vfs.FsckContentMismatch{
+							SizeFile:    obj.Bytes,
+							SizeIndex:   f.ByteSize,
+							MD5SumFile:  md5sum,
+							MD5SumIndex: f.MD5Sum,
+						},
+					})
+				}
+				delete(entries, obj.Name)
 			}
 		}
+		return objs, err
+	})
+
+	for _, f := range entries {
+		accumulate(&vfs.FsckLog{
+			Type:    vfs.FileMissing,
+			IsFile:  true,
+			FileDoc: f,
+		})
 	}
 
-	objects, err := sfs.c.ObjectsAll(sfs.container, &swift.ObjectsOpts{
-		Path: dir.DocID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, object := range objects {
-		name := path.Base(object.Name)
-		if _, ok := entries[name]; !ok {
-			if object.Bytes == 0 {
-				continue
-			}
-			filePath, fileDoc, err := objectToFileDocV1(dir, object)
-			if err != nil {
-				continue
-			}
-			logbook = append(logbook, &vfs.FsckLog{
-				Type:     vfs.IndexMissing,
-				IsFile:   true,
-				FileDoc:  fileDoc,
-				Filename: filePath,
+	for _, obj := range orphansObjs {
+		if obj.ContentType == dirContentType {
+			accumulate(&vfs.FsckLog{
+				Type:    vfs.IndexMissing,
+				IsFile:  false,
+				FileDoc: objectToFileDocV1(sfs.container, obj),
+			})
+		} else {
+			accumulate(&vfs.FsckLog{
+				Type:    vfs.IndexMissing,
+				IsFile:  true,
+				FileDoc: objectToFileDocV1(sfs.container, obj),
 			})
 		}
 	}
 
-	return logbook, nil
-}
-
-func objectToFileDocV1(dir *vfs.DirDoc, object swift.Object) (filePath string, fileDoc *vfs.FileDoc, err error) {
-	trashed := strings.HasPrefix(dir.Fullpath, vfs.TrashDirName)
-	dirID := dir.DocID
-	filePath = path.Join(dir.Fullpath, path.Base(object.Name))
-	md5sum, err := hex.DecodeString(object.Hash)
-	if err != nil {
-		return
-	}
-	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
-	fileDoc, err = vfs.NewFileDoc(
-		path.Base(object.Name),
-		dirID,
-		object.Bytes,
-		md5sum,
-		mime,
-		class,
-		object.LastModified,
-		false,
-		trashed,
-		nil)
 	return
 }
 
-// fsckPrune tries to fix the given list on inconsistencies in the VFS
-func (sfs *swiftVFS) fsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
-	for _, entry := range logbook {
-		switch entry.Type {
-		case vfs.IndexOrphanTree, vfs.IndexBadFullpath, vfs.FileMissing, vfs.IndexMissing:
-			vfs.FsckPrune(sfs, sfs.Indexer, entry, dryrun)
-		case vfs.TypeMismatch:
-			if entry.IsFile {
-				// file on couchdb and directory on swift: we update the index to
-				// remove the file index and create a directory one
-				err := sfs.Indexer.DeleteFileDoc(entry.FileDoc)
-				if err != nil {
-					entry.PruneError = err
-				}
-				err = sfs.Indexer.CreateDirDoc(entry.DirDoc)
-				if err != nil {
-					entry.PruneError = err
-				}
-			} else {
-				// directory on couchdb and file on swift: we keep the directory and
-				// move the object into the orphan directory and create a new index
-				// associated with it.
-				orphanDir, err := vfs.Mkdir(sfs, vfs.OrphansDirName, nil)
-				if err != nil {
-					entry.PruneError = err
-					continue
-				}
-				olddoc := entry.FileDoc
-				newdoc := entry.FileDoc.Clone().(*vfs.FileDoc)
-				newdoc.DirID = orphanDir.DirID
-				newdoc.ResetFullpath()
-				err = sfs.c.ObjectMove(
-					sfs.container, olddoc.DirID+"/"+olddoc.DocName,
-					sfs.container, newdoc.DirID+"/"+newdoc.DocName,
-				)
-				if err != nil {
-					entry.PruneError = err
-					continue
-				}
-				_, err = sfs.c.ObjectCreate(sfs.container,
-					olddoc.DirID+"/"+olddoc.DocName,
-					true,
-					"",
-					dirContentType,
-					nil,
-				)
-				if err != nil {
-					entry.PruneError = err
-					continue
-				}
-				err = sfs.Indexer.CreateFileDoc(newdoc)
-				if err != nil {
-					entry.PruneError = err
-					continue
-				}
-			}
-		}
+func objectToFileDocV1(container string, object swift.Object) *vfs.TreeFile {
+	var dirID, name string
+	if dirIDAndName := strings.SplitN(object.Name, "/", 2); len(dirIDAndName) == 2 {
+		dirID = dirIDAndName[0]
+		name = dirIDAndName[0]
+	}
+	docType := consts.FileType
+	if object.ContentType == dirContentType {
+		docType = consts.DirType
+	}
+	md5sum, _ := hex.DecodeString(object.Hash)
+	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
+	return &vfs.TreeFile{
+		DirOrFileDoc: vfs.DirOrFileDoc{
+			DirDoc: &vfs.DirDoc{
+				Type:      docType,
+				DocID:     makeDocID(object.Name),
+				DocName:   name,
+				DirID:     dirID,
+				CreatedAt: object.LastModified,
+				UpdatedAt: object.LastModified,
+				Fullpath:  path.Join(vfs.OrphansDirName, name),
+			},
+			ByteSize:   object.Bytes,
+			Mime:       mime,
+			Class:      class,
+			Executable: false,
+			MD5Sum:     md5sum,
+		},
 	}
 }
 

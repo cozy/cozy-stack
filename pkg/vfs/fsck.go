@@ -1,50 +1,41 @@
 package vfs
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path"
-
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 // FsckLogType is the type of a FsckLog
-type FsckLogType int
+type FsckLogType string
 
 const (
 	// IndexMissingRoot is used when the index does not have a root object
-	IndexMissingRoot FsckLogType = iota
+	IndexMissingRoot FsckLogType = "index_missing_root"
 	// IndexOrphanTree used when a part of the tree is detached from the main
 	// root of the index.
-	IndexOrphanTree
+	IndexOrphanTree FsckLogType = "index_orphan_tree"
 	// IndexBadFullpath used when a directory does not have the correct path
 	// field given its position in the index.
-	IndexBadFullpath
+	IndexBadFullpath FsckLogType = "index_bad_fullpath"
 	// FileMissing used when a file data is missing from its index entry.
-	FileMissing
+	FileMissing FsckLogType = "file_missing"
 	// IndexMissing is used when the index entry is missing from a file data.
-	IndexMissing
+	IndexMissing FsckLogType = "index_missing"
 	// TypeMismatch is used when a document type does not match in the index and
 	// underlying filesystem.
-	TypeMismatch
+	TypeMismatch FsckLogType = "type_mismatch"
 	// ContentMismatch is used when a document content checksum does not match
 	// with the one in the underlying fs.
-	ContentMismatch
+	ContentMismatch FsckLogType = "content_mismatch"
 )
 
 // FsckLog is a struct for an inconsistency in the VFS
 type FsckLog struct {
-	Type        FsckLogType
-	FileDoc     *FileDoc
-	OldFileDoc  *FileDoc
-	DirDoc      *DirDoc
-	OldDirDoc   *DirDoc
-	Deletions   []couchdb.Doc
-	IsFile      bool
-	Filename    string
-	PruneAction string
-	PruneError  error
+	Type             FsckLogType          `json:"type"`
+	FileDoc          *TreeFile            `json:"file_doc,omitempty"`
+	DirDoc           *TreeFile            `json:"dir_doc,omitempty"`
+	IsFile           bool                 `json:"is_file"`
+	ContentMismatch  *FsckContentMismatch `json:"content_mismatch,omitempty"`
+	ExpectedFullpath string               `json:"expected_fullpath,omitempty"`
 }
 
 // String returns a string describing the FsckLog
@@ -72,131 +63,59 @@ func (f *FsckLog) String() string {
 	case IndexMissing:
 		return "the document is present on the local filesystem but not in the index"
 	case ContentMismatch:
-		return "then document content does not match the store content checksum"
+		return "the document content does not match the store content checksum"
 	}
 	panic("bad FsckLog type")
 }
 
-// MarshalJSON implements the json.Marshaler interface
-func (f *FsckLog) MarshalJSON() ([]byte, error) {
-	v := map[string]string{
-		"filename": f.Filename,
-		"message":  f.String(),
-	}
-	if f.IsFile {
-		v["file_id"] = f.FileDoc.ID()
-	} else {
-		v["file_id"] = f.DirDoc.ID()
-	}
-	if f.PruneAction != "" {
-		v["prune_action"] = f.PruneAction
-		if f.PruneError != nil {
-			v["prune_error"] = f.PruneError.Error()
-		}
-	}
-	return json.Marshal(v)
+type FsckContentMismatch struct {
+	SizeIndex   int64  `json:"size_index"`
+	SizeFile    int64  `json:"size_file"`
+	MD5SumIndex []byte `json:"md5sum_index"`
+	MD5SumFile  []byte `json:"md5sum_file"`
 }
 
-// FsckPrune tries to fix the given entry in the VFS
-func FsckPrune(fs VFS, indexer Indexer, entry *FsckLog, dryrun bool) {
-	switch entry.Type {
-	case IndexMissingRoot:
-		entry.PruneAction = "no action: requires manual inspection"
-	case IndexOrphanTree:
-		if entry.IsFile {
-			if entry.FileDoc.Trashed {
-				entry.PruneAction = "deleting the entry"
-				if !dryrun {
-					if err := indexer.DeleteFileDoc(entry.FileDoc); err != nil {
-						entry.PruneError = err
-					}
-				}
-			} else {
-				entry.PruneAction = "no action: requires manual inspection"
-			}
-		} else {
-			if len(entry.Deletions) > 0 {
-				entry.PruneAction = "deleting the orphan directory and its children from the index"
-				if !dryrun {
-					if err := indexer.BatchDelete(entry.Deletions); err != nil {
-						entry.PruneError = err
-					}
-				}
-			} else {
-				entry.PruneAction = "no action: requires manual inspection"
-			}
-		}
-	case IndexBadFullpath:
-		entry.PruneAction = fmt.Sprintf("updating the path attribute of the directory to: %q",
-			entry.Filename)
-		if !dryrun {
-			if err := indexer.UpdateDirDoc(entry.OldDirDoc, entry.DirDoc); err != nil {
-				entry.PruneError = err
-			}
-		}
-	case FileMissing:
-		entry.PruneAction = "deleting entry from index"
-		if dryrun {
-			return
-		}
-		if entry.IsFile {
-			if err := indexer.DeleteFileDoc(entry.FileDoc); err != nil {
-				entry.PruneError = err
-			}
-		} else {
-			if err := indexer.DeleteDirDoc(entry.DirDoc); err != nil {
-				entry.PruneError = err
-			}
-		}
-	case IndexMissing:
-		if !entry.IsFile {
-			return
-		}
-		fileDoc := entry.FileDoc
-		var orphan bool
-		if fileDoc.DirID == "" {
-			orphan = true
-		} else {
-			parentDir, err := indexer.DirByID(fileDoc.DirID)
-			if os.IsNotExist(err) {
-				orphan = true
-			} else if err != nil {
-				entry.PruneError = err
-				return
-			} else {
-				fullpath := path.Join(parentDir.Fullpath, fileDoc.Name())
-				if _, err := indexer.FileByPath(fullpath); err != nil {
-					entry.PruneError = err
-					return
-				}
-			}
-		}
-		if orphan {
-			entry.PruneAction = "creating index entry in orphan directory"
-		} else {
-			entry.PruneAction = "creating index entry in-place"
-		}
-		if dryrun {
-			return
-		}
-		if orphan {
-			orphanDir, err := Mkdir(fs, OrphansDirName, nil)
-			if err != nil {
-				entry.PruneError = err
-				return
-			}
-			fileDoc.DirID = orphanDir.ID()
-		}
-		if err := indexer.CreateFileDoc(fileDoc); err != nil {
-			entry.PruneError = err
-		}
-	case ContentMismatch:
-		if !entry.IsFile {
-			return
-		}
-		entry.PruneAction = "updating the index informations to match the stored data"
-		if err := indexer.UpdateFileDoc(entry.OldFileDoc, entry.FileDoc); err != nil {
-			entry.PruneError = err
-		}
-	}
+// Tree is returned by the BuildTree method on the indexes. In containes a
+// pointer to the root element of the tree, a map of directories indexed by
+// their ID, and a map of a potential list of orphan file or directories
+// indexed by their DirID.
+type Tree struct {
+	Root    *TreeFile
+	DirsMap map[string]*TreeFile
+	Orphans map[string][]*TreeFile
 }
+
+// TreeFile represent a subset of a file/directory structure that can be used
+// in a tree-like representation of the index.
+type TreeFile struct {
+	DirOrFileDoc
+	FilesChildren     []*TreeFile `json:"-"`
+	FilesChildrenSize int64       `json:"-"`
+	DirsChildren      []*TreeFile `json:"-"`
+
+	IsDir    bool `json:"is_dir"`
+	IsOrphan bool `json:"is_orphan"`
+	HasCycle bool `json:"has_cycle"`
+}
+
+func (t *TreeFile) AsFile() *FileDoc {
+	if t.IsDir {
+		panic("calling AsFile on a directory")
+	}
+	_, fileDoc := t.DirOrFileDoc.Refine()
+	return fileDoc
+}
+
+func (t *TreeFile) AsDir() *DirDoc {
+	if !t.IsDir {
+		panic("calling AsDir on a file")
+	}
+	return t.DirDoc.Clone().(*DirDoc)
+}
+
+// Clone is part of the couchdb.Doc interface
+func (t *TreeFile) Clone() couchdb.Doc {
+	panic("TreeFile must not be cloned")
+}
+
+var _ couchdb.Doc = &TreeFile{}

@@ -3,6 +3,7 @@ package vfs
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	multierror "github.com/hashicorp/go-multierror"
 )
 
 type couchdbIndexer struct {
@@ -483,247 +483,130 @@ func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) 
 	return couchdb.BulkUpdateDocs(c.db, consts.Files, files, olddocs)
 }
 
-// TreeFile represent a subset of a file/directory structure that can be used
-// in a tree-like representation of the index.
-type TreeFile struct {
-	DirOrFileDoc
-	FilesChildren     []*TreeFile `json:"children,omitempty"`
-	FilesChildrenSize int64       `json:"children_size,omitempty"`
-	DirsChildren      []*TreeFile `json:"directories,omitempty"`
-
-	isDir    bool
-	hasCycle bool
-	visited  bool
-	errs     []*treeError
-}
-
-// Clone is part of the couchdb.Doc interface
-func (t *TreeFile) Clone() couchdb.Doc {
-	panic("TreeFile must not be cloned")
-}
-
-var _ couchdb.Doc = &TreeFile{}
-
-type treeError struct {
-	file *TreeFile
-	path string
-}
-
-func (c *couchdbIndexer) CheckIndexIntegrity() (logs []*FsckLog, err error) {
-	root, orphans, err := checkIndexIntegrity(func(cb func(entry *TreeFile)) error {
-		return couchdb.ForeachDocs(c.db, consts.Files, func(_ string, data json.RawMessage) error {
-			var f TreeFile
-			if err = json.Unmarshal(data, &f); err == nil {
-				cb(&f)
-			}
-			return err
-		})
-	})
-	if err != nil {
-		return
-	}
-	if root == nil {
-		logs = append(logs, &FsckLog{Type: IndexMissingRoot})
-		return
-	}
-
-	logs, err = getLocalTreeLogs(c, root)
+func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) (err error) {
+	tree, err := c.BuildTree()
 	if err != nil {
 		return
 	}
 
-	for dirID, orphansTree := range orphans {
-		for _, entry := range orphansTree {
-			var log *FsckLog
-			log, err = getOrphanTreeLog(c, dirID, entry)
-			if err != nil {
-				return
+	// cleanDirsMap browse the given root tree recursively into its children
+	// directories, removing them from the dirsmap table along the way. In the
+	// end, only trees with cycles should stay in the dirsmap.
+	cleanDirsMap(tree.Root, tree.DirsMap, accumulate)
+	for _, entries := range tree.Orphans {
+		for _, f := range entries {
+			if f.IsDir {
+				cleanDirsMap(f, tree.DirsMap, accumulate)
 			}
-			logs = append(logs, log)
+		}
+	}
+
+	for _, orphanCycle := range tree.DirsMap {
+		orphanCycle.HasCycle = true
+		tree.Orphans[orphanCycle.DirID] = append(tree.Orphans[orphanCycle.DirID], orphanCycle)
+	}
+
+	for _, orphansTree := range tree.Orphans {
+		for _, orphan := range orphansTree {
+			if !orphan.IsDir {
+				accumulate(&FsckLog{
+					Type:    IndexOrphanTree,
+					IsFile:  true,
+					FileDoc: orphan,
+				})
+			} else {
+				accumulate(&FsckLog{
+					Type:   IndexOrphanTree,
+					IsFile: false,
+					DirDoc: orphan,
+				})
+			}
 		}
 	}
 
 	return
 }
 
-func (c *couchdbIndexer) BuildTree() (root *TreeFile, err error) {
-	orphans := make(map[string][]*TreeFile, 32)
-	dirsmap := make(map[string]*TreeFile, 256)
+func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err error) {
+	t = &Tree{
+		Root:    nil,
+		Orphans: make(map[string][]*TreeFile, 32), // DirID -> *FileDoc
+		DirsMap: make(map[string]*TreeFile, 256),  // DocID -> *FileDoc
+	}
+
+	// NOTE: the each method is called with objects in no particular order. The
+	// only enforcement is that either the Fullpath of the objet is informed or
+	// the IsOrphan flag is precised. It may be useful to gather along the way
+	// the files without having to browse the whole tree structure.
+	var each func(*TreeFile)
+	if len(eaches) > 0 {
+		each = eaches[0]
+	} else {
+		each = func(*TreeFile) {}
+	}
 
 	err = couchdb.ForeachDocs(c.db, consts.Files, func(_ string, data json.RawMessage) error {
-		var f TreeFile
+		var f *TreeFile
 		if erru := json.Unmarshal(data, &f); erru != nil {
 			return erru
 		}
-		f.isDir = f.Type == consts.DirType
+		f.IsDir = f.Type == consts.DirType
 		if f.DocID == consts.RootDirID {
-			root = &f
-		} else if parent, ok := dirsmap[f.DirID]; ok {
-			if f.isDir {
-				parent.DirsChildren = append(parent.DirsChildren, &f)
+			t.Root = f
+			each(f)
+		} else if parent, ok := t.DirsMap[f.DirID]; ok {
+			if f.IsDir {
+				parent.DirsChildren = append(parent.DirsChildren, f)
 			} else {
-				parent.FilesChildren = append(parent.FilesChildren, &f)
+				parent.FilesChildren = append(parent.FilesChildren, f)
 				parent.FilesChildrenSize += f.ByteSize
 				f.Fullpath = path.Join(parent.Fullpath, f.DocName)
 			}
+			each(f)
 		} else {
-			orphans[f.DirID] = append(orphans[f.DirID], &f)
+			t.Orphans[f.DirID] = append(t.Orphans[f.DirID], f)
 		}
-		if f.isDir {
-			if bucket, ok := orphans[f.DocID]; ok {
+		if f.IsDir {
+			if bucket, ok := t.Orphans[f.DocID]; ok {
 				for _, child := range bucket {
-					if child.isDir {
+					if child.IsDir {
 						f.DirsChildren = append(f.DirsChildren, child)
 					} else {
 						f.FilesChildren = append(f.FilesChildren, child)
 						f.FilesChildrenSize += child.ByteSize
 						child.Fullpath = path.Join(f.Fullpath, child.DocName)
 					}
+					each(child)
 				}
-				delete(orphans, f.DocID)
+				delete(t.Orphans, f.DocID)
 			}
-			dirsmap[f.DocID] = &f
+			t.DirsMap[f.DocID] = f
 		}
 		return nil
 	})
+	if t.Root == nil {
+		return nil, fmt.Errorf("could not find root file")
+	}
+	for _, bucket := range t.Orphans {
+		for _, child := range bucket {
+			child.IsOrphan = true
+			each(child)
+		}
+	}
 	return
 }
 
-func checkIndexIntegrity(generator func(func(entry *TreeFile)) error) (root *TreeFile, orphans map[string][]*TreeFile, err error) {
-	orphans = make(map[string][]*TreeFile, 32)
-	dirsmap := make(map[string]*TreeFile, 256)
-
-	err = generator(func(f *TreeFile) {
-		f.isDir = f.Type == consts.DirType
-		if f.DocID == consts.RootDirID {
-			root = f
-		} else if parent, ok := dirsmap[f.DirID]; ok {
-			if f.isDir {
-				parent.DirsChildren = append(parent.DirsChildren, f)
-			} else {
-				parent.FilesChildren = append(parent.FilesChildren, f)
-				parent.FilesChildrenSize += f.ByteSize
-			}
-		} else {
-			orphans[f.DirID] = append(orphans[f.DirID], f)
-		}
-		if f.isDir {
-			if bucket, ok := orphans[f.DocID]; ok {
-				for _, child := range bucket {
-					if child.isDir {
-						f.DirsChildren = append(f.DirsChildren, child)
-					} else {
-						f.FilesChildren = append(f.FilesChildren, child)
-						f.FilesChildrenSize += child.ByteSize
-					}
-				}
-				delete(orphans, f.DocID)
-			}
-			dirsmap[f.DocID] = f
-		}
-	})
-	if err != nil || root == nil {
-		return
-	}
-
-	root.errs = reduceTree(root, dirsmap, nil)
-	delete(dirsmap, consts.RootDirID)
-
-	for _, entries := range orphans {
-		for _, f := range entries {
-			if f.isDir {
-				f.errs = reduceTree(f, dirsmap, nil)
-				delete(dirsmap, f.DocID)
-			}
-		}
-	}
-
-	for _, orphanCycle := range dirsmap {
-		orphanCycle.hasCycle = true
-		orphans[orphanCycle.DirID] = append(orphans[orphanCycle.DirID], orphanCycle)
-	}
-
-	return
-}
-
-func reduceTree(parent *TreeFile, dirsmap map[string]*TreeFile, errs []*treeError) []*treeError {
+func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate func(*FsckLog)) {
 	delete(dirsmap, parent.DocID)
 	for _, child := range parent.DirsChildren {
 		expected := path.Join(parent.Fullpath, child.DocName)
 		if expected != child.Fullpath {
-			errs = append(errs, &treeError{
-				file: child,
-				path: expected,
+			accumulate(&FsckLog{
+				Type:             IndexBadFullpath,
+				DirDoc:           child,
+				ExpectedFullpath: expected,
 			})
 		}
-		errs = reduceTree(child, dirsmap, errs)
+		cleanDirsMap(child, dirsmap, accumulate)
 	}
-	return errs
-}
-
-func getLocalTreeLogs(c *couchdbIndexer, root *TreeFile) (logs []*FsckLog, errm error) {
-	for _, e := range root.errs {
-		if e.path != "" {
-			olddoc, err := c.DirByID(e.file.DocID)
-			if err != nil {
-				errm = multierror.Append(errm, err)
-				continue
-			}
-			newdoc := olddoc.Clone().(*DirDoc)
-			newdoc.Fullpath = e.path
-			logs = append(logs, &FsckLog{
-				Type:      IndexBadFullpath,
-				OldDirDoc: olddoc,
-				DirDoc:    newdoc,
-				Filename:  e.path,
-			})
-		}
-	}
-	return
-}
-
-func getOrphanTreeLog(c *couchdbIndexer, dirID string, orphan *TreeFile) (log *FsckLog, err error) {
-	// TODO: For now, we re-attach the orphan trees at the root of the user's
-	// directory. We may use the dirID to infer more precisely where we should
-	// re-attach this orphan tree. However we should be careful and check if this
-	// directory is actually attached to the root.
-	log = &FsckLog{}
-	log.Type = IndexOrphanTree
-	if !orphan.isDir {
-		var olddoc *FileDoc
-		olddoc, err = c.FileByID(orphan.DocID)
-		if err != nil {
-			return
-		}
-		log.IsFile = true
-		log.FileDoc = olddoc
-	} else {
-		var olddoc *DirDoc
-		olddoc, err = c.DirByID(orphan.DocID)
-		if err != nil {
-			return
-		}
-		log.DirDoc = olddoc
-		log.Filename = olddoc.Fullpath
-		if orphan.hasCycle || strings.HasPrefix(olddoc.Fullpath, TrashDirName) {
-			log.Deletions = listChildren(orphan, nil)
-			return
-		}
-	}
-	return
-}
-
-func listChildren(root *TreeFile, files []couchdb.Doc) []couchdb.Doc {
-	if !root.visited {
-		files = append(files, root)
-		// avoid stackoverflow on cycles
-		root.visited = true
-		for _, child := range root.DirsChildren {
-			files = listChildren(child, files)
-		}
-		for _, child := range root.FilesChildren {
-			files = append(files, child)
-		}
-	}
-	return files
 }

@@ -490,18 +490,18 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 	size += n
 
 	if !opts.WithoutFiles {
-		var root *vfs.TreeFile
-		root, err = i.VFS().BuildTree()
+		var tree *vfs.Tree
+		tree, err = i.VFS().BuildTree()
 		if err != nil {
 			return
 		}
-		n, err = writeDoc("", "files-index", root, createdAt, tw)
+		n, err = writeDoc("", "files-index", tree.Root, createdAt, tw)
 		if err != nil {
 			return
 		}
 		size += n
 
-		exportDoc.PartsCursors, _ = splitFilesIndex(root, nil, nil, exportDoc.PartsSize, exportDoc.PartsSize)
+		exportDoc.PartsCursors, _ = splitFilesIndex(tree.Root, nil, nil, exportDoc.PartsSize, exportDoc.PartsSize)
 	}
 
 	n, err = exportDocs(i, opts.WithDoctypes, createdAt, tw)

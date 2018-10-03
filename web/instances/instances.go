@@ -184,23 +184,38 @@ func deleteHandler(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func fsckHandler(c echo.Context) error {
+func fsckHandler(c echo.Context) (err error) {
 	domain := c.Param("domain")
 	i, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}
-	prune, _ := strconv.ParseBool(c.QueryParam("Prune"))
-	dryRun, _ := strconv.ParseBool(c.QueryParam("DryRun"))
-	fs := i.VFS()
-	logbook, err := fs.Fsck(vfs.FsckOptions{
-		Prune:  prune,
-		DryRun: dryRun,
-	})
-	if err != nil {
-		return wrapError(err)
+
+	indexIntegrityCheck, _ := strconv.ParseBool(c.QueryParam("IndexIntegrity"))
+
+	logCh := make(chan *vfs.FsckLog)
+	go func() {
+		fs := i.VFS()
+		if indexIntegrityCheck {
+			err = fs.CheckIndexIntegrity(func(log *vfs.FsckLog) { logCh <- log })
+		} else {
+			err = fs.Fsck(func(log *vfs.FsckLog) { logCh <- log })
+		}
+		close(logCh)
+	}()
+
+	w := c.Response().Writer
+	w.WriteHeader(200)
+	encoder := json.NewEncoder(w)
+	for log := range logCh {
+		if errenc := encoder.Encode(log); errenc != nil {
+			return errenc
+		}
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
 	}
-	return c.JSON(http.StatusOK, logbook)
+	return err
 }
 
 func rebuildRedis(c echo.Context) error {
