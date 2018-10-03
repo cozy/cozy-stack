@@ -88,15 +88,17 @@ GET /registry?... HTTP/1.1
     "version": "3.0.0",
     "licence": "AGPL-3.0",
     "fields": {
-        "save_folder": {
-            "doctype": "io.cozy.files",
-            "type": "folder",
-            "verbs": ["ALL"]
+        "login": {
+            "type": "text"
         },
-        "account": {
-            "doctype": "io.cozy.accounts",
-            "account_type": "trainline",
-            "accountFormat": "login,password"
+        "password": {
+            "type": "password"
+        },
+        "advancedFields": {
+            "folderPath": {
+                "advanced": true,
+                "isRequired": false
+            }
         }
     },
     "category": "transport",
@@ -117,7 +119,7 @@ GET /registry?... HTTP/1.1
 POST /konnectors/trainline HTTP/1.1
 ```
 
-6 - the Store then uses an intent to know which app can configures this konnector:
+6 - the Store then uses an intent to know which app can configure this konnector:
 
 ```javascript
 cozy.intents.start("REDIRECT", "io.cozy.accounts", {
