@@ -243,9 +243,6 @@ li[class^="io.cozy.files"]:before {
 li[class^="io.cozy.konnectors"]:before {
     background-image: url('../images/icon-konnectors.svg');
 }
-li[class^="io.cozy.konnectors.result"]:before {
-    background-image: url('../images/icon-konnectors-result.svg');
-}
 li[class^="io.cozy.notifications"]:before {
     background-image: url('../images/icon-notifications.svg');
 }

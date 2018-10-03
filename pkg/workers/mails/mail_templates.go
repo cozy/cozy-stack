@@ -293,11 +293,6 @@ func init() {
 			Outro: "Mail Reset Passphrase Outro",
 		},
 		{
-			Name:    "konnector_error",
-			Subject: "Mail Konnector Error Subject",
-			Intro:   "Mail Konnector Error Intro",
-		},
-		{
 			Name:    "archiver",
 			Subject: "Mail Archive Subject",
 			Intro:   "Mail Archive Intro",

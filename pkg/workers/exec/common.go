@@ -28,7 +28,6 @@ func init() {
 		},
 		BeforeHook:   beforeHookKonnector,
 		WorkerFunc:   worker,
-		WorkerCommit: commit,
 		Concurrency:  runtime.NumCPU() * 2,
 		MaxExecCount: 2,
 		Timeout:      defaultTimeout,
@@ -40,7 +39,6 @@ func init() {
 			return ctx.WithCookie(&serviceWorker{}), nil
 		},
 		WorkerFunc:   worker,
-		WorkerCommit: commit,
 		Concurrency:  runtime.NumCPU() * 2,
 		MaxExecCount: 2,
 		Timeout:      defaultTimeout,
@@ -54,7 +52,6 @@ type execWorker interface {
 	ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error
 	Error(i *instance.Instance, err error) error
 	Logger(ctx *jobs.WorkerContext) *logrus.Entry
-	Commit(ctx *jobs.WorkerContext, errjob error) error
 }
 
 func worker(ctx *jobs.WorkerContext) (err error) {
@@ -146,10 +143,6 @@ func worker(ctx *jobs.WorkerContext) (err error) {
 	}
 
 	return worker.Error(inst, err)
-}
-
-func commit(ctx *jobs.WorkerContext, errjob error) error {
-	return ctx.Cookie().(execWorker).Commit(ctx, errjob)
 }
 
 func ctxToTimeLimit(ctx *jobs.WorkerContext) string {
