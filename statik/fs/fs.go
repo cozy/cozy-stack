@@ -40,7 +40,7 @@ var assetsClient = &http.Client{
 	Timeout: 30 * time.Second,
 }
 
-var globalAssets map[string]*sync.Map // context -> sync.Map{path -> *Asset}
+var globalAssets *sync.Map // {context:path -> *Asset}
 
 const sumLen = 10
 const defaultContext = "default"
@@ -80,7 +80,7 @@ func Register(zipData string) {
 		panic("statik/fs: no zip data registered")
 	}
 	if globalAssets == nil {
-		globalAssets = make(map[string]*sync.Map)
+		globalAssets = &sync.Map{}
 	}
 	if err := unzip([]byte(zipData)); err != nil {
 		panic(fmt.Errorf("statik/fs: error unzipping data: %s", err))
@@ -96,7 +96,7 @@ type AssetOption struct {
 
 func RegisterCustomExternals(opts []AssetOption) error {
 	if globalAssets == nil {
-		globalAssets = make(map[string]*sync.Map)
+		globalAssets = &sync.Map{}
 	}
 
 	var loadedAssets []*Asset
@@ -246,14 +246,8 @@ func storeAsset(asset *Asset) {
 	if context == "" {
 		context = defaultContext
 	}
-	// NOTE(pierre): warning: to be completely threadsafe, this implies that
-	// contextual maps are not added concurrently.
-	assetsForContext, ok := globalAssets[context]
-	if !ok {
-		assetsForContext = new(sync.Map)
-		globalAssets[context] = assetsForContext
-	}
-	assetsForContext.Store(asset.Name, asset)
+	contextKey := marshalContextKey(context, asset.Name)
+	globalAssets.Store(contextKey, asset)
 }
 
 func Get(name string, context ...string) (*Asset, bool) {
@@ -266,21 +260,12 @@ func Get(name string, context ...string) (*Asset, bool) {
 	} else {
 		ctx = defaultContext
 	}
-	if assetsForContext, ok := globalAssets[ctx]; ok {
-		if v, ok := assetsForContext.Load(name); ok {
-			return v.(*Asset), true
-		}
+
+	asset, _ := globalAssets.Load(marshalContextKey(ctx, name))
+	if asset == nil {
+		return nil, false
 	}
-	// If we didn't find the asset in the specified context, with the given name,
-	// we seek into the default context.
-	if ctx != defaultContext {
-		if assetsForDefaultContext, ok := globalAssets[defaultContext]; ok {
-			if v, ok := assetsForDefaultContext.Load(name); ok {
-				return v.(*Asset), true
-			}
-		}
-	}
-	return nil, false
+	return asset.(*Asset), true
 }
 
 func Open(name string, context ...string) (*bytes.Reader, error) {
@@ -292,10 +277,21 @@ func Open(name string, context ...string) (*bytes.Reader, error) {
 }
 
 func Foreach(predicate func(name, context string, f *Asset)) {
-	for context, assetsForContext := range globalAssets {
-		assetsForContext.Range(func(name interface{}, v interface{}) bool {
-			predicate(name.(string), context, v.(*Asset))
-			return true
-		})
+	globalAssets.Range(func(contextKey interface{}, v interface{}) bool {
+		context, name, _ := unMarshalContextKey(contextKey.(string))
+		predicate(name, context, v.(*Asset))
+		return true
+	})
+}
+
+func marshalContextKey(context, name string) (marshaledKey string) {
+	return strings.Join([]string{context, name}, ":")
+}
+
+func unMarshalContextKey(contextKey string) (context string, name string, err error) {
+	unmarshaled := strings.SplitN(contextKey, ":", 2)
+	if len(unmarshaled) != 2 {
+		return "", "", fmt.Errorf("Bad contextKey")
 	}
+	return unmarshaled[0], unmarshaled[1], nil
 }
