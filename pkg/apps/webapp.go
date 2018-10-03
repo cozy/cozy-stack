@@ -3,6 +3,7 @@ package apps
 import (
 	"encoding/json"
 	"io"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -433,6 +434,20 @@ func GetWebappBySlug(db prefixer.Prefixer, slug string) (*WebappManifest, error)
 		return nil, err
 	}
 	return man, nil
+}
+
+// GetWebappBySlugAndUpdate fetch the WebappManifest and perform an update of
+// the application if necessary and if the application was installed from the
+// registry.
+func GetWebappBySlugAndUpdate(db prefixer.Prefixer, slug string, copier Copier, registries []*url.URL) (*WebappManifest, error) {
+	man, err := GetWebappBySlug(db, slug)
+	if err != nil {
+		return nil, err
+	}
+	if man.AvailableVersion != "" {
+		return man, nil
+	}
+	return doLazyUpdate(db, man, copier, registries).(*WebappManifest), nil
 }
 
 // ListWebapps returns the list of installed web applications.

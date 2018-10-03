@@ -378,7 +378,7 @@ func (i *Instance) SettingsContext() (map[string]interface{}, error) {
 }
 
 // Registries returns the list of registries associated with the instance.
-func (i *Instance) Registries() ([]*url.URL, error) {
+func (i *Instance) Registries() []*url.URL {
 	registries := config.GetConfig().Registries
 	var regs []*url.URL
 	var ok bool
@@ -391,7 +391,7 @@ func (i *Instance) Registries() ([]*url.URL, error) {
 			regs = make([]*url.URL, 0)
 		}
 	}
-	return regs, nil
+	return regs
 }
 
 // DiskQuota returns the number of bytes allowed on the disk to the user.
@@ -536,16 +536,12 @@ func (i *Instance) OnboardedRedirection() *url.URL {
 
 func (i *Instance) installApp(slug string) error {
 	source := "registry://" + slug + "/stable"
-	registries, err := i.Registries()
-	if err != nil {
-		return err
-	}
 	inst, err := apps.NewInstaller(i, i.AppsCopier(apps.Webapp), &apps.InstallerOptions{
 		Operation:  apps.Install,
 		Type:       apps.Webapp,
 		SourceURL:  source,
 		Slug:       slug,
-		Registries: registries,
+		Registries: i.Registries(),
 	})
 	if err != nil {
 		return err

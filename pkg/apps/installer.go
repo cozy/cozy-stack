@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/sirupsen/logrus"
 )
@@ -44,7 +45,6 @@ type Installer struct {
 	src  *url.URL
 	slug string
 
-	errc chan error
 	manc chan Manifest
 	log  *logrus.Entry
 }
@@ -152,7 +152,6 @@ func NewInstaller(db prefixer.Prefixer, fs Copier, opts *InstallerOptions) (*Ins
 		src:  src,
 		slug: man.Slug(),
 
-		errc: make(chan error, 1),
 		manc: make(chan Manifest, 2),
 		log:  log,
 	}, nil
@@ -210,42 +209,35 @@ func (i *Installer) Domain() string {
 // depending on specified operation. It will report its progress or error (see
 // Poll method) and should be run asynchronously.
 func (i *Installer) Run() {
-	var err error
-
-	if i.man == nil {
-		panic("Manifest is nil")
+	if err := i.run(); err != nil {
+		i.man.SetError(err)
+		realtime.GetHub().Publish(i.db, realtime.EventUpdate, i.man.Clone(), nil)
 	}
-
-	switch i.op {
-	case Install:
-		err = i.install()
-	case Update:
-		err = i.update()
-	case Delete:
-		err = i.delete()
-	default:
-		panic("Unknown operation")
-	}
-
-	man := i.man.Clone().(Manifest)
-	if err != nil {
-		man.SetError(err)
-		realtime.GetHub().Publish(i.db, realtime.EventUpdate, man.Clone(), nil)
-	}
-	i.manc <- man
+	i.notifyChannel()
 }
 
 // RunSync does the same work as Run but can be used synchronously.
 func (i *Installer) RunSync() (Manifest, error) {
-	go i.Run()
-	for {
-		man, done, err := i.Poll()
-		if err != nil {
-			return nil, err
-		}
-		if done {
-			return man, nil
-		}
+	i.manc = nil
+	if err := i.run(); err != nil {
+		return nil, err
+	}
+	return i.man.Clone().(Manifest), nil
+}
+
+func (i *Installer) run() (err error) {
+	if i.man == nil {
+		panic("Manifest is nil")
+	}
+	switch i.op {
+	case Install:
+		return i.install()
+	case Update:
+		return i.update()
+	case Delete:
+		return i.delete()
+	default:
+		panic("Unknown operation")
 	}
 }
 
@@ -265,7 +257,7 @@ func (i *Installer) install() error {
 		}
 		i.man = newManifest
 		i.sendRealtimeEvent()
-		i.manc <- i.man.Clone().(Manifest)
+		i.notifyChannel()
 		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
 			return err
 		}
@@ -321,7 +313,7 @@ func (i *Installer) update() error {
 	if makeUpdate {
 		i.man = newManifest
 		i.sendRealtimeEvent()
-		i.manc <- i.man.Clone().(Manifest)
+		i.notifyChannel()
 		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
 			return err
 		}
@@ -329,10 +321,16 @@ func (i *Installer) update() error {
 	} else {
 		i.man.SetAvailableVersion(newManifest.Version())
 		i.sendRealtimeEvent()
-		i.manc <- i.man.Clone().(Manifest)
+		i.notifyChannel()
 	}
 
 	return i.man.Update(i.db)
+}
+
+func (i *Installer) notifyChannel() {
+	if i.manc != nil {
+		i.manc <- i.man.Clone().(Manifest)
+	}
 }
 
 func (i *Installer) delete() error {
@@ -399,6 +397,31 @@ func (i *Installer) Poll() (Manifest, bool, error) {
 		done = true
 	}
 	return man, done, man.Error()
+}
+
+func doLazyUpdate(db prefixer.Prefixer, man Manifest, copier Copier, registries []*url.URL) Manifest {
+	src, err := url.Parse(man.Source())
+	if err != nil || src.Scheme != "registry" {
+		return man
+	}
+	v, errv := registry.GetLatestVersion(man.Slug(), getRegistryChannel(src), registries)
+	if errv != nil || v.Version == man.Version() {
+		return man
+	}
+	inst, err := NewInstaller(db, copier, &InstallerOptions{
+		Operation:  Update,
+		Manifest:   man,
+		Registries: registries,
+		SourceURL:  src.String(),
+	})
+	if err != nil {
+		return man
+	}
+	newman, err := inst.RunSync()
+	if err != nil {
+		return man
+	}
+	return newman
 }
 
 func isPlatformApp(man Manifest) bool {

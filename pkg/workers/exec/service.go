@@ -42,7 +42,8 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 	slug := opts.Slug
 	name := opts.Name
 
-	man, err := apps.GetWebappBySlug(i, slug)
+	man, err := apps.GetWebappBySlugAndUpdate(i, slug,
+		i.AppsCopier(apps.Webapp), i.Registries())
 	if err != nil {
 		if err == apps.ErrNotFound {
 			err = jobs.ErrBadTrigger{Err: err}

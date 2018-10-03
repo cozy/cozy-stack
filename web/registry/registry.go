@@ -32,12 +32,8 @@ func proxyReq(auth authType, cacheControl registry.CacheControl) echo.HandlerFun
 		default:
 			panic("unknown authType")
 		}
-		registries, err := i.Registries()
-		if err != nil {
-			return err
-		}
 		req := c.Request()
-		resp, err := registry.Proxy(req, registries, cacheControl)
+		resp, err := registry.Proxy(req, i.Registries(), cacheControl)
 		if err != nil {
 			return err
 		}
@@ -53,12 +49,8 @@ func proxyListReq(c echo.Context) error {
 	if err != nil || pdoc.Type != permissions.TypeWebapp {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
-	registries, err := i.Registries()
-	if err != nil {
-		return err
-	}
 	req := c.Request()
-	list, err := registry.ProxyList(req, registries)
+	list, err := registry.ProxyList(req, i.Registries())
 	if err != nil {
 		return err
 	}
