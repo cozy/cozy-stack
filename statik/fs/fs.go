@@ -40,7 +40,7 @@ var assetsClient = &http.Client{
 	Timeout: 30 * time.Second,
 }
 
-var globalAssets *sync.Map // {context:path -> *Asset}
+var globalAssets sync.Map // {context:path -> *Asset}
 
 const sumLen = 10
 const defaultContext = "default"
@@ -79,9 +79,6 @@ func Register(zipData string) {
 	if zipData == "" {
 		panic("statik/fs: no zip data registered")
 	}
-	if globalAssets == nil {
-		globalAssets = &sync.Map{}
-	}
 	if err := unzip([]byte(zipData)); err != nil {
 		panic(fmt.Errorf("statik/fs: error unzipping data: %s", err))
 	}
@@ -95,10 +92,6 @@ type AssetOption struct {
 }
 
 func RegisterCustomExternals(opts []AssetOption) error {
-	if globalAssets == nil {
-		globalAssets = &sync.Map{}
-	}
-
 	var loadedAssets []*Asset
 	for _, opt := range opts {
 		asset, err := registerCustomExternal(opt.Name, opt.Context, opt.URL, opt.Shasum)
@@ -251,9 +244,6 @@ func storeAsset(asset *Asset) {
 }
 
 func Get(name string, context ...string) (*Asset, bool) {
-	if globalAssets == nil {
-		panic("statik/fs: not registered")
-	}
 	var ctx string
 	if len(context) > 0 && context[0] != "" {
 		ctx = context[0]
@@ -285,13 +275,13 @@ func Foreach(predicate func(name, context string, f *Asset)) {
 }
 
 func marshalContextKey(context, name string) (marshaledKey string) {
-	return strings.Join([]string{context, name}, ":")
+	return context + ":" + name
 }
 
 func unMarshalContextKey(contextKey string) (context string, name string, err error) {
 	unmarshaled := strings.SplitN(contextKey, ":", 2)
 	if len(unmarshaled) != 2 {
-		return "", "", fmt.Errorf("Bad contextKey")
+		panic("statik/fs: the contextKey is malformed")
 	}
 	return unmarshaled[0], unmarshaled[1], nil
 }
