@@ -537,7 +537,7 @@ func ThumbnailHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	secret := c.Param("secret")
-	path, _, err := vfs.GetStore().GetFile(instance, secret)
+	path, err := vfs.GetStore().GetFile(instance, secret)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -584,7 +584,7 @@ func serveThumbnailPlaceholder(res http.ResponseWriter, req *http.Request, doc *
 	return err
 }
 
-func sendFileFromPath(c echo.Context, path string, checkPermission bool, slug string) error {
+func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	instance := middlewares.GetInstance(c)
 
 	doc, err := instance.VFS().FileByPath(path)
@@ -602,11 +602,10 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool, slug st
 	disposition := "inline"
 	if c.QueryParam("Dl") == "1" {
 		disposition = "attachment"
-	} else if !checkPermission && slug != "" {
+	} else if !checkPermission {
 		// Allow some files to be displayed by the browser in the client-side apps
 		if doc.Mime == "text/plain" || doc.Class == "image" || doc.Class == "audio" || doc.Class == "video" || doc.Mime == "application/pdf" {
-			xfoURI := fmt.Sprintf("ALLOW-FROM %s", instance.SubDomain(slug))
-			c.Response().Header().Set(echo.HeaderXFrameOptions, xfoURI)
+			c.Response().Header().Set(echo.HeaderXFrameOptions, "ALLOWALL")
 		}
 	}
 	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
@@ -621,7 +620,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool, slug st
 // aiming at downloading a file given its path. It serves the file in in
 // attachment mode.
 func ReadFileContentFromPathHandler(c echo.Context) error {
-	return sendFileFromPath(c, c.QueryParam("Path"), true, "")
+	return sendFileFromPath(c, c.QueryParam("Path"), true)
 }
 
 // ArchiveDownloadCreateHandler handles requests to /files/archive and stores the
@@ -695,23 +694,12 @@ func FileDownloadCreateHandler(c echo.Context) error {
 		}
 	}
 
-	pdoc, err := middlewares.GetPermission(c)
+	err = checkPerm(c, "GET", nil, doc)
 	if err != nil {
-		return WrapVfsError(err)
-	}
-	err = vfs.Allows(instance.VFS(), pdoc.Permissions, "GET", doc)
-	if err != nil {
-		return WrapVfsError(middlewares.ErrForbidden)
-	}
-	slug := ""
-	if pdoc.Type == pkgperm.TypeWebapp {
-		parts := strings.SplitN(pdoc.SourceID, "/", 2)
-		if len(parts) == 2 {
-			slug = parts[1]
-		}
+		return err
 	}
 
-	secret, err := vfs.GetStore().AddFile(instance, path, slug)
+	secret, err := vfs.GetStore().AddFile(instance, path)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -743,14 +731,14 @@ func ArchiveDownloadHandler(c echo.Context) error {
 func FileDownloadHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	secret := c.Param("secret")
-	path, appSlug, err := vfs.GetStore().GetFile(instance, secret)
+	path, err := vfs.GetStore().GetFile(instance, secret)
 	if err != nil {
 		return WrapVfsError(err)
 	}
 	if path == "" {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
-	return sendFileFromPath(c, path, false, appSlug)
+	return sendFileFromPath(c, path, false)
 }
 
 // TrashHandler handles all DELETE requests on /files/:file-id and
