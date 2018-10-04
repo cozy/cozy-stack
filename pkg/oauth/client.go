@@ -157,6 +157,27 @@ func FindClient(i *instance.Instance, id string) (*Client, error) {
 	return &c, nil
 }
 
+// FindClientBySoftwareID loads a client from the database
+func FindClientBySoftwareID(i *instance.Instance, softwareID string) (*Client, error) {
+	var c *Client
+	var results []*Client
+
+	req := couchdb.FindRequest{
+		Selector: mango.Equal("software_id", softwareID),
+		Limit:    1,
+	}
+	// We should have very few requests. Only on instance creation.
+	err := couchdb.FindDocsUnoptimized(i, consts.OAuthClients, &req, &results)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 1 {
+		c = results[0]
+		return c, nil
+	}
+	return nil, err
+}
+
 // ClientRegistrationError is a Client Registration Error Response, as described
 // in the Client Dynamic Registration Protocol
 // See https://tools.ietf.org/html/rfc7591#section-3.2.2 for errors
