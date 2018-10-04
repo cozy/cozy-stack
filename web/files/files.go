@@ -605,7 +605,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	} else if !checkPermission {
 		// Allow some files to be displayed by the browser in the client-side apps
 		if doc.Mime == "text/plain" || doc.Class == "image" || doc.Class == "audio" || doc.Class == "video" || doc.Mime == "application/pdf" {
-			c.Response().Header().Del(echo.HeaderXFrameOptions)
+			c.Response().Header().Set(echo.HeaderXFrameOptions, "ALLOWALL")
 		}
 	}
 	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
