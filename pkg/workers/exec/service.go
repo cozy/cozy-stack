@@ -156,3 +156,7 @@ func (w *serviceWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance
 func (w *serviceWorker) Error(i *instance.Instance, err error) error {
 	return err
 }
+
+func (w *serviceWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
+	return nil
+}
