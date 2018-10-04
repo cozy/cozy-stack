@@ -404,7 +404,7 @@ func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 				return err
 			}
 			md5sum := h.Sum(nil)
-			if !bytes.Equal(md5sum, f.MD5Sum) {
+			if !bytes.Equal(md5sum, f.MD5Sum) || f.ByteSize != info.Size() {
 				accumulate(&vfs.FsckLog{
 					Type:    vfs.ContentMismatch,
 					IsFile:  true,

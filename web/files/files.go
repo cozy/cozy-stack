@@ -975,7 +975,7 @@ func fsckHandler(c echo.Context) error {
 		return err
 	}
 
-	var logs []*vfs.FsckLog
+	logs := make([]*vfs.FsckLog, 0)
 	err := instance.VFS().Fsck(func(log *vfs.FsckLog) {
 		switch log.Type {
 		case vfs.ContentMismatch:
