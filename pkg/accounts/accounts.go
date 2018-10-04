@@ -17,6 +17,7 @@ type Account struct {
 	DocRev      string                 `json:"_rev,omitempty"`
 	Name        string                 `json:"name"`
 	AccountType string                 `json:"account_type"`
+	FolderPath  string                 `json:"folderPath,omitempty"`
 	Basic       *BasicInfo             `json:"auth,omitempty"`
 	Oauth       *OauthInfo             `json:"oauth,omitempty"`
 	Extras      map[string]interface{} `json:"oauth_callback_results,omitempty"`
@@ -35,8 +36,9 @@ type OauthInfo struct {
 
 // BasicInfo holds configuration information for an user/pass account
 type BasicInfo struct {
-	Login    string `json:"login,omitempty"`
-	Password string `json:"password,omitempty"`
+	Login      string `json:"login,omitempty"`
+	Password   string `json:"password,omitempty"`
+	FolderPath string `json:"folderPath,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface

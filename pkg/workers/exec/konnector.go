@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/sirupsen/logrus"
@@ -60,6 +61,14 @@ type konnectorMessage struct {
 
 func (m *konnectorMessage) ToJSON() string {
 	return string(m.data)
+}
+
+func (m *konnectorMessage) updateFolderToSave(dir string) {
+	m.FolderToSave = dir
+	var d map[string]interface{}
+	json.Unmarshal(m.data, &d)
+	d["folder_to_save"] = dir
+	m.data, _ = json.Marshal(d)
 }
 
 // beforeHookKonnector skips jobs from trigger that are failing on certain
@@ -146,8 +155,13 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	}
 
 	// Create the folder in which the konnector has the right to write.
-	if err = ensureFolderToSave(i, &msg, slug, account); err != nil {
-		return "", nil
+	if err = w.ensureFolderToSave(i, account); err != nil {
+		return "", err
+	}
+
+	// Make sure the konnector can write to this folder
+	if err = w.ensurePermissions(i); err != nil {
+		return "", err
 	}
 
 	// If we get the AccountDeleted flag on, we check if the konnector manifest
@@ -170,14 +184,22 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 
 // ensureFolderToSave tries hard to give a folder to the konnector where it can
 // write its files if it needs to do so.
-func ensureFolderToSave(inst *instance.Instance, msg *konnectorMessage, slug string, account *accounts.Account) error {
+func (w *konnectorWorker) ensureFolderToSave(inst *instance.Instance, account *accounts.Account) error {
 	fs := inst.VFS()
+	msg := w.msg
 
 	// 1. Check if the folder identified by its ID exists
 	if msg.FolderToSave != "" {
 		dir, err := fs.DirByID(msg.FolderToSave)
 		if err == nil {
 			if !strings.HasPrefix(dir.Fullpath, vfs.TrashDirName) {
+				if len(dir.ReferencedBy) == 0 {
+					dir.AddReferencedBy(couchdb.DocReference{
+						Type: consts.Konnectors,
+						ID:   consts.Konnectors + "/" + w.slug,
+					})
+					couchdb.UpdateDoc(inst, dir)
+				}
 				return nil
 			}
 		} else if !os.IsNotExist(err) {
@@ -186,7 +208,7 @@ func ensureFolderToSave(inst *instance.Instance, msg *konnectorMessage, slug str
 	}
 
 	// 2. Check if the konnector has a reference to a folder
-	start := []string{consts.Konnectors, consts.Konnectors + "/" + slug}
+	start := []string{consts.Konnectors, consts.Konnectors + "/" + w.slug}
 	end := []string{start[0], start[1], couchdb.MaxString}
 	req := &couchdb.ViewRequest{
 		StartKey:    start,
@@ -207,7 +229,7 @@ func ensureFolderToSave(inst *instance.Instance, msg *konnectorMessage, slug str
 			}
 		}
 		if count == 1 {
-			msg.FolderToSave = dirID
+			msg.updateFolderToSave(dirID)
 			return nil
 		}
 	}
@@ -216,28 +238,63 @@ func ensureFolderToSave(inst *instance.Instance, msg *konnectorMessage, slug str
 	if account == nil {
 		return nil
 	}
-	admin := inst.Translate("Tree Administrative")
-	r := strings.NewReplacer("&", "_", "/", "_", "\\", "_", "#", "_",
-		",", "_", "+", "_", "(", "_", ")", "_", "$", "_", "@", "_", "~",
-		"_", "%", "_", ".", "_", "'", "_", "\"", "_", ":", "_", "*", "_",
-		"?", "_", "<", "_", ">", "_", "{", "_", "}", "_")
-	accountName := r.Replace(account.Name)
-	folderPath := fmt.Sprintf("/%s/%s/%s", admin, strings.Title(slug), accountName)
+	folderPath := account.FolderPath
+	if folderPath == "" {
+		folderPath = account.Basic.FolderPath
+	}
+	if folderPath == "" {
+		admin := inst.Translate("Tree Administrative")
+		r := strings.NewReplacer("&", "_", "/", "_", "\\", "_", "#", "_",
+			",", "_", "+", "_", "(", "_", ")", "_", "$", "_", "@", "_", "~",
+			"_", "%", "_", ".", "_", "'", "_", "\"", "_", ":", "_", "*", "_",
+			"?", "_", "<", "_", ">", "_", "{", "_", "}", "_")
+		accountName := r.Replace(account.Name)
+		folderPath = fmt.Sprintf("/%s/%s/%s", admin, strings.Title(w.slug), accountName)
+	}
 	dir, err := vfs.MkdirAll(fs, folderPath)
 	if err != nil {
 		log := inst.Logger().WithField("nspace", "konnector")
 		log.Warnf("Can't create the default folder %s: %s", folderPath, err)
 		return err
 	}
-	msg.FolderToSave = dir.ID()
+	msg.updateFolderToSave(dir.ID())
 	if len(dir.ReferencedBy) == 0 {
 		dir.AddReferencedBy(couchdb.DocReference{
 			Type: consts.Konnectors,
-			ID:   consts.Konnectors + "/" + slug,
+			ID:   consts.Konnectors + "/" + w.slug,
 		})
 		couchdb.UpdateDoc(inst, dir)
 	}
 	return nil
+}
+
+// ensurePermissions checks that the konnector has the permissions to write
+// files in the folder referenced by the konnector, and adds the permission if
+// needed.
+func (w *konnectorWorker) ensurePermissions(inst *instance.Instance) error {
+	perms, err := permissions.GetForKonnector(inst, w.slug)
+	if err != nil {
+		return err
+	}
+	value := consts.Konnectors + "/" + w.slug
+	for _, rule := range perms.Permissions {
+		if rule.Type == consts.Files && rule.Selector == couchdb.SelectorReferencedBy {
+			for _, val := range rule.Values {
+				if val == value {
+					return nil
+				}
+			}
+		}
+	}
+	rule := permissions.Rule{
+		Type:        consts.Files,
+		Title:       "referenced folders",
+		Description: "folders referenced by the konnector",
+		Selector:    couchdb.SelectorReferencedBy,
+		Values:      []string{value},
+	}
+	perms.Permissions = append(perms.Permissions, rule)
+	return couchdb.UpdateDoc(inst, perms)
 }
 
 func copyFiles(workFS afero.Fs, fileServer apps.FileServer, slug, version string) error {
