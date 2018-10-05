@@ -1,6 +1,7 @@
 package instances
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -84,14 +85,20 @@ func registerClient(c echo.Context) error {
 }
 
 func findClientBySoftwareID(c echo.Context) error {
-	inst, err := instance.Get(c.QueryParam("domain"))
-	if err != nil {
-		return err
+	body := struct {
+		SoftwareID string `json:"software_id"`
+		Domain     string `json:"domain"`
+	}{}
+
+	bo := c.Request().Body
+	if bo != nil {
+		err := json.NewDecoder(bo).Decode(&body)
+		if err != nil {
+			return err
+		}
 	}
-
-	softwareID := c.QueryParam("software_id")
-
-	client, err := oauth.FindClientBySoftwareID(inst, softwareID)
+	inst, err := instance.Get(body.Domain)
+	client, err := oauth.FindClientBySoftwareID(inst, body.SoftwareID)
 	if err != nil {
 		return err
 	}
