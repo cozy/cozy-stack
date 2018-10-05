@@ -421,6 +421,7 @@ func Routes(router *echo.Group) {
 	router.GET("/:domain/fsck", fsckHandler)
 	router.POST("/updates", updatesHandler)
 	router.POST("/token", createToken)
+	router.GET("/oauth_client", findClientBySoftwareID)
 	router.POST("/oauth_client", registerClient)
 	router.POST("/:domain/export", exporter)
 	router.POST("/:domain/import", importer)
