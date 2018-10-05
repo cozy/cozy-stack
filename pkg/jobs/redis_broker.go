@@ -22,11 +22,12 @@ const (
 )
 
 type redisBroker struct {
-	client       redis.UniversalClient
-	workers      []*Worker
-	workersTypes []string
-	running      uint32
-	closed       chan struct{}
+	client         redis.UniversalClient
+	workers        []*Worker
+	workersRunning []*Worker
+	workersTypes   []string
+	running        uint32
+	closed         chan struct{}
 }
 
 // NewRedisBroker creates a new broker that will use redis to distribute
@@ -46,24 +47,25 @@ func (b *redisBroker) StartWorkers(ws WorkersList) error {
 
 	for _, conf := range ws {
 		b.workersTypes = append(b.workersTypes, conf.WorkerType)
+		w := NewWorker(conf)
+		b.workers = append(b.workers, w)
 		if conf.Concurrency <= 0 {
 			continue
 		}
+		b.workersRunning = append(b.workersRunning, w)
 		ch := make(chan *Job)
-		w := NewWorker(conf)
-		b.workers = append(b.workers, w)
 		if err := w.Start(ch); err != nil {
 			return err
 		}
 		go b.pollLoop(redisPrefix+conf.WorkerType, ch)
 	}
 
-	if len(b.workers) > 0 {
-		joblog.Infof("Started redis broker for %d workers type", len(b.workers))
+	if len(b.workersRunning) > 0 {
+		joblog.Infof("Started redis broker for %d workers type", len(b.workersRunning))
 	}
 
 	// XXX for retro-compat
-	if slots := config.GetConfig().Jobs.NbWorkers; len(b.workers) > 0 && slots > 0 {
+	if slots := config.GetConfig().Jobs.NbWorkers; len(b.workersRunning) > 0 && slots > 0 {
 		joblog.Warnf("Limiting the number of total concurrent workers to %d", slots)
 		joblog.Warnf("Please update your configuration file to avoid a hard limit")
 		setNbSlots(slots)
@@ -80,14 +82,14 @@ func (b *redisBroker) ShutdownWorkers(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 1, 0) {
 		return ErrClosed
 	}
-	if len(b.workers) == 0 {
+	if len(b.workersRunning) == 0 {
 		return nil
 	}
 
 	fmt.Print("  shutting down redis broker...")
 	defer b.client.Close()
 
-	for i := 0; i < len(b.workers); i++ {
+	for i := 0; i < len(b.workersRunning); i++ {
 		select {
 		case <-ctx.Done():
 			fmt.Println("failed:", ctx.Err())
@@ -97,12 +99,12 @@ func (b *redisBroker) ShutdownWorkers(ctx context.Context) error {
 	}
 
 	errs := make(chan error)
-	for _, w := range b.workers {
+	for _, w := range b.workersRunning {
 		go func(w *Worker) { errs <- w.Shutdown(ctx) }(w)
 	}
 
 	var errm error
-	for i := 0; i < len(b.workers); i++ {
+	for i := 0; i < len(b.workersRunning); i++ {
 		if err := <-errs; err != nil {
 			errm = multierror.Append(errm, err)
 		}
