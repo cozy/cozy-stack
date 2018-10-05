@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -653,6 +654,49 @@ var oauthClientInstanceCmd = &cobra.Command{
 	},
 }
 
+var findOauthClientCmd = &cobra.Command{
+	Use:   "find-oauth-client <domain> <software_id>",
+	Short: "Finds a OAuth client",
+	Long:  `Search an oauth client from his software_id`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return cmd.Usage()
+		}
+		c := newAdminClient()
+
+		body := struct {
+			Domain     string `json:"domain"`
+			SoftwareID string `json:"software_id"`
+		}{
+			Domain:     args[0],
+			SoftwareID: args[1],
+		}
+		// Make request
+		b, err := json.Marshal(body)
+		req := &request.Options{
+			Method: "GET",
+			Path:   "instances/oauth_client",
+			Body:   bytes.NewReader(b),
+		}
+		res, err := c.Req(req)
+		if err != nil {
+			return err
+		}
+		var v interface{}
+		err2 := json.NewDecoder(res.Body).Decode(&v)
+		if err2 != nil {
+			return err2
+		}
+		json, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(json))
+
+		return err
+	},
+}
+
 var updateCmd = &cobra.Command{
 	Use:   "update [slugs...]",
 	Short: "Start the updates for the specified domain instance.",
@@ -737,6 +781,7 @@ func init() {
 	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthRefreshTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthClientInstanceCmd)
+	instanceCmdGroup.AddCommand(findOauthClientCmd)
 	instanceCmdGroup.AddCommand(updateCmd)
 	instanceCmdGroup.AddCommand(exportCmd)
 	instanceCmdGroup.AddCommand(importCmd)
