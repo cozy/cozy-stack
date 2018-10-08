@@ -259,10 +259,6 @@ func dbNameHasPrefix(dbname, dbprefix string) (bool, string) {
 	return true, strings.Replace(dbname, dbprefix, "", 1)
 }
 
-func FindWithoutIndex(db Database, doctype, method, path string, reqBody interface{}, resBody interface{}) error {
-	return makeRequest(db, doctype, method, path, reqBody, resBody)
-}
-
 func makeRequest(db Database, doctype, method, path string, reqbody interface{}, resbody interface{}) error {
 	var reqjson []byte
 	var err error

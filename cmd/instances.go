@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -656,36 +655,32 @@ var oauthClientInstanceCmd = &cobra.Command{
 
 var findOauthClientCmd = &cobra.Command{
 	Use:   "find-oauth-client <domain> <software_id>",
-	Short: "Finds a OAuth client",
-	Long:  `Search an oauth client from his software_id`,
+	Short: "Find an OAuth client",
+	Long:  `Search an OAuth client from its SoftwareID`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			return cmd.Usage()
 		}
+		var v interface{}
 		c := newAdminClient()
 
-		body := struct {
-			Domain     string `json:"domain"`
-			SoftwareID string `json:"software_id"`
-		}{
-			Domain:     args[0],
-			SoftwareID: args[1],
+		q := url.Values{
+			"domain":      {args[0]},
+			"software_id": {args[1]},
 		}
-		// Make request
-		b, err := json.Marshal(body)
+
 		req := &request.Options{
-			Method: "GET",
-			Path:   "instances/oauth_client",
-			Body:   bytes.NewReader(b),
+			Method:  "GET",
+			Path:    "instances/oauth_client",
+			Queries: q,
 		}
 		res, err := c.Req(req)
 		if err != nil {
 			return err
 		}
-		var v interface{}
-		err2 := json.NewDecoder(res.Body).Decode(&v)
-		if err2 != nil {
-			return err2
+		errd := json.NewDecoder(res.Body).Decode(&v)
+		if err != nil {
+			return errd
 		}
 		json, err := json.MarshalIndent(v, "", "  ")
 		if err != nil {

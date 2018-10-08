@@ -159,7 +159,6 @@ func FindClient(i *instance.Instance, id string) (*Client, error) {
 
 // FindClientBySoftwareID loads a client from the database
 func FindClientBySoftwareID(i *instance.Instance, softwareID string) (*Client, error) {
-	var c *Client
 	var results []*Client
 
 	req := couchdb.FindRequest{
@@ -172,10 +171,9 @@ func FindClientBySoftwareID(i *instance.Instance, softwareID string) (*Client, e
 		return nil, err
 	}
 	if len(results) == 1 {
-		c = results[0]
-		return c, nil
+		return results[0], nil
 	}
-	return nil, err
+	return nil, fmt.Errorf("Could not find client with software_id %s", softwareID)
 }
 
 // ClientRegistrationError is a Client Registration Error Response, as described
