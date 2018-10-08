@@ -114,7 +114,22 @@ func NewInstaller(db prefixer.Prefixer, fs Copier, opts *InstallerOptions) (*Ins
 		endState = Ready
 	}
 
-	log := logger.WithDomain(db.DomainName()).WithField("nspace", "apps")
+	var installType string
+	switch opts.Operation {
+	case Install:
+		installType = "install"
+	case Update:
+		installType = "update"
+	case Delete:
+		installType = "delete"
+	}
+
+	log := logger.WithDomain(db.DomainName()).WithFields(logrus.Fields{
+		"nspace":        "apps",
+		"slug":          man.Slug(),
+		"version_start": man.Version(),
+		"type":          installType,
+	})
 
 	var manFilename string
 	switch man.AppType() {
@@ -229,6 +244,14 @@ func (i *Installer) run() (err error) {
 	if i.man == nil {
 		panic("Manifest is nil")
 	}
+	defer func() {
+		if err != nil {
+			i.log.Errorf("Could not commit installer process: %s", err)
+		} else {
+			i.log.Infof("Successful installer process: %s", i.man.Version())
+		}
+	}()
+	i.log.Info("Start")
 	switch i.op {
 	case Install:
 		return i.install()
@@ -248,7 +271,6 @@ func (i *Installer) run() (err error) {
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) install() error {
-	i.log.Infof("Start install: %s %s", i.slug, i.src.String())
 	args := []string{i.db.DomainName(), i.slug}
 	return hooks.Execute("install-app", args, func() error {
 		newManifest, err := i.ReadManifest(Installing)
@@ -273,7 +295,6 @@ func (i *Installer) install() error {
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) update() error {
-	i.log.Infof("Start update: %s %s", i.slug, i.src.String())
 	if err := i.checkState(i.man); err != nil {
 		return err
 	}
@@ -334,7 +355,6 @@ func (i *Installer) notifyChannel() {
 }
 
 func (i *Installer) delete() error {
-	i.log.Infof("Start delete: %s %s", i.slug, i.src.String())
 	if err := i.checkState(i.man); err != nil {
 		return err
 	}
