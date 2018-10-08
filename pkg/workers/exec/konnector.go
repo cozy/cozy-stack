@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/sirupsen/logrus"
 
@@ -73,12 +74,35 @@ func (m *konnectorMessage) updateFolderToSave(dir string) {
 
 // beforeHookKonnector skips jobs from trigger that are failing on certain
 // errors.
-func beforeHookKonnector(req *jobs.JobRequest) (bool, error) {
-	if req.Manual || req.Trigger == nil {
+func beforeHookKonnector(job *jobs.Job) (bool, error) {
+	konnectorMessage := struct {
+		Account      string `json:"account"`
+		Konnector    string `json:"konnector"`
+		FolderToSave string `json:"folder_to_save"`
+	}{}
+
+	if err := json.Unmarshal(job.Message, &konnectorMessage); err == nil {
+		inst, err := instance.Get(job.DomainName())
+		if err != nil {
+			return false, err
+		}
+		app, err := registry.GetApplication(konnectorMessage.Konnector, inst.Registries())
+		if err != nil {
+			job.Logger().Warnf("konnector %q could not get application to fetch maintenance status", konnectorMessage.Konnector)
+		} else if app.MaintenanceActivated {
+			if job.Manual && !app.MaintenanceOptions.FlagDisallowManualExec {
+				return true, nil
+			}
+			job.Logger().Infof("konnector %q has not been triggered because of its maintenance status", konnectorMessage.Konnector)
+			return false, nil
+		}
+	}
+
+	if job.Manual || job.TriggerID == "" {
 		return true, nil
 	}
-	trigger := req.Trigger
-	state, err := jobs.GetTriggerState(trigger)
+
+	state, err := jobs.GetTriggerState(job, job.TriggerID)
 	if err != nil {
 		return false, err
 	}

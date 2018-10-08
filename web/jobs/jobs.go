@@ -231,7 +231,7 @@ func getTrigger(c echo.Context) error {
 		return err
 	}
 	tInfos := t.Infos()
-	tInfos.CurrentState, err = jobs.GetTriggerState(t)
+	tInfos.CurrentState, err = jobs.GetTriggerState(t, t.ID())
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -256,7 +256,7 @@ func getTriggerState(c echo.Context) error {
 		}
 	}
 
-	state, err := jobs.GetTriggerState(t)
+	state, err := jobs.GetTriggerState(t, t.ID())
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -328,7 +328,7 @@ func getTriggerJobs(c echo.Context) error {
 		return err
 	}
 
-	js, err := jobs.GetJobs(t, limit)
+	js, err := jobs.GetJobs(t, t.ID(), limit)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -404,7 +404,7 @@ func getAllTriggers(c echo.Context) error {
 	for _, t := range ts {
 		tInfos := t.Infos()
 		if workerType == "" || tInfos.WorkerType == workerType {
-			tInfos.CurrentState, err = jobs.GetTriggerState(t)
+			tInfos.CurrentState, err = jobs.GetTriggerState(t, t.ID())
 			if err != nil {
 				return wrapJobsError(err)
 			}

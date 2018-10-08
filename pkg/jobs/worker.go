@@ -45,7 +45,7 @@ type (
 	// WorkerBeforeHook is an optional method that is always called before the
 	// job is being pushed into the queue. It can be useful to skip the job
 	// beforehand.
-	WorkerBeforeHook func(req *JobRequest) (bool, error)
+	WorkerBeforeHook func(job *Job) (bool, error)
 
 	// WorkerConfig is the configuration parameter of a worker defined by the job
 	// system. It contains parameters of the worker along with the worker main

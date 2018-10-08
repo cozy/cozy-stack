@@ -187,21 +187,21 @@ func (t *TriggerInfos) Match(key, value string) bool {
 }
 
 // GetJobs returns the jobs launched by the given trigger.
-func GetJobs(t Trigger, limit int) ([]*Job, error) {
+func GetJobs(db prefixer.Prefixer, triggerID string, limit int) ([]*Job, error) {
 	if limit <= 0 || limit > 50 {
 		limit = 50
 	}
 	var jobs []*Job
 	req := &couchdb.FindRequest{
 		UseIndex: "by-trigger-id",
-		Selector: mango.Equal("trigger_id", t.Infos().ID()),
+		Selector: mango.Equal("trigger_id", triggerID),
 		Sort: mango.SortBy{
 			{Field: "trigger_id", Direction: mango.Desc},
 			{Field: "queued_at", Direction: mango.Desc},
 		},
 		Limit: limit,
 	}
-	err := couchdb.FindDocs(t, consts.Jobs, req, &jobs)
+	err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
 	if err != nil {
 		return nil, err
 	}
@@ -210,8 +210,8 @@ func GetJobs(t Trigger, limit int) ([]*Job, error) {
 
 // GetTriggerState returns the state of the trigger, calculated from the last
 // launched jobs.
-func GetTriggerState(t Trigger) (*TriggerState, error) {
-	js, err := GetJobs(t, 0)
+func GetTriggerState(db prefixer.Prefixer, triggerID string) (*TriggerState, error) {
+	js, err := GetJobs(db, triggerID, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +219,7 @@ func GetTriggerState(t Trigger) (*TriggerState, error) {
 	var state TriggerState
 
 	state.Status = Done
-	state.TID = t.ID()
+	state.TID = triggerID
 
 	// jobs are ordered from the oldest to most recent job
 	for i := len(js) - 1; i >= 0; i-- {
