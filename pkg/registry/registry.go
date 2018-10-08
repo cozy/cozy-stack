@@ -45,7 +45,8 @@ type Application struct {
 	MaintenanceOptions   MaintenanceOptions `json:"maintenance_options"`
 }
 
-var errVersionNotFound = errors.New("Version not found")
+var errVersionNotFound = errors.New("registry: version not found")
+var errApplicationNotFound = errors.New("registry: application not found")
 
 var (
 	proxyClient = &http.Client{
@@ -100,9 +101,12 @@ func GetLatestVersion(slug, channel string, registries []*url.URL) (*Version, er
 // GetApplication returns an application from his slug
 func GetApplication(slug string, registries []*url.URL) (*Application, error) {
 	requestURI := fmt.Sprintf("/registry/%s/", slug)
-	resp, _, err := fetchUntilFound(appClient, registries, requestURI, WithCache)
+	resp, ok, err := fetchUntilFound(appClient, registries, requestURI, WithCache)
 	if err != nil {
 		return nil, err
+	}
+	if !ok {
+		return nil, errApplicationNotFound
 	}
 	defer resp.Body.Close()
 	var app *Application
