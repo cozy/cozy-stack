@@ -340,6 +340,7 @@ func (i *Installer) update() error {
 		}
 		i.man.SetState(i.endState)
 	} else {
+		i.man.SetSource(i.src)
 		i.man.SetAvailableVersion(newManifest.Version())
 		i.sendRealtimeEvent()
 		i.notifyChannel()
