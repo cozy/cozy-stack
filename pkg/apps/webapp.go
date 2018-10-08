@@ -156,6 +156,9 @@ func (m *WebappManifest) SetID(id string) {}
 // SetRev is part of the Manifest interface
 func (m *WebappManifest) SetRev(rev string) { m.DocRev = rev }
 
+// SetSource is part of the Manifest interface
+func (m *WebappManifest) SetSource(src *url.URL) { m.DocSource = src.String() }
+
 // Source is part of the Manifest interface
 func (m *WebappManifest) Source() string { return m.DocSource }
 

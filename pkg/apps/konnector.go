@@ -109,6 +109,9 @@ func (m *KonnManifest) SetID(id string) {}
 // SetRev is part of the Manifest interface
 func (m *KonnManifest) SetRev(rev string) { m.DocRev = rev }
 
+// SetSource is part of the Manifest interface
+func (m *KonnManifest) SetSource(src *url.URL) { m.DocSource = src.String() }
+
 // Source is part of the Manifest interface
 func (m *KonnManifest) Source() string { return m.DocSource }
 
