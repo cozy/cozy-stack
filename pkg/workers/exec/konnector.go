@@ -234,10 +234,15 @@ func (w *konnectorWorker) ensureFolderToSave(inst *instance.Instance, account *a
 		}
 	}
 
-	// 3. Recreate the folder
+	// 3 Check if a folder should be created
 	if account == nil {
 		return nil
 	}
+	if msg.FolderToSave == "" && account.FolderPath == "" && account.Basic.FolderPath == "" {
+		return nil
+	}
+
+	// 4. Recreate the folder
 	folderPath := account.FolderPath
 	if folderPath == "" {
 		folderPath = account.Basic.FolderPath
