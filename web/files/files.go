@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
@@ -958,9 +959,15 @@ func FindFilesMango(c echo.Context) error {
 
 func fsckHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	cacheStorage := config.GetConfig().CacheStorage
 
 	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Files); err != nil {
 		return err
+	}
+
+	key := "fsck:" + instance.DBPrefix()
+	if r, ok := cacheStorage.GetCompressed(key); ok {
+		return c.Stream(http.StatusOK, echo.MIMEApplicationJSON, r)
 	}
 
 	logs := make([]*vfs.FsckLog, 0)
@@ -974,7 +981,15 @@ func fsckHandler(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, logs)
+	logsData, err := json.Marshal(logs)
+	if err != nil {
+		return err
+	}
+
+	expiration := utils.DurationFuzzing(3*30*24*time.Hour, 0.10)
+	cacheStorage.SetCompressed(key, logsData, expiration)
+
+	return c.JSONBlob(http.StatusOK, logsData)
 }
 
 // Routes sets the routing for the files service

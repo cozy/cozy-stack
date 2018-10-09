@@ -15,6 +15,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -124,6 +125,8 @@ type Config struct {
 	DownloadStorage             RedisConfig
 	KonnectorsOauthStateStorage RedisConfig
 	Realtime                    RedisConfig
+
+	CacheStorage cache.Cache
 
 	Contexts   map[string]interface{}
 	Registries map[string][]*url.URL
@@ -491,6 +494,9 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	// cache entry is optional
+	cacheRedis, _ := GetRedisConfig(v, redisOptions, "cache", "url")
+
 	adminSecretFile := v.GetString("admin.secret_filename")
 	if adminSecretFile == "" {
 		adminSecretFile = defaultAdminSecretFileName
@@ -608,6 +614,7 @@ func UseViper(v *viper.Viper) error {
 		DownloadStorage:             downloadRedis,
 		KonnectorsOauthStateStorage: konnectorsOauthStateRedis,
 		Realtime:                    realtimeRedis,
+		CacheStorage:                cache.New(cacheRedis.Client()),
 		Logger: logger.Options{
 			Level:  v.GetString("log.level"),
 			Syslog: v.GetBool("log.syslog"),
