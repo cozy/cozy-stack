@@ -132,7 +132,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	w.msg = &msg
 
 	w.man, err = apps.GetKonnectorBySlugAndUpdate(i, slug,
-		i.AppsCopier(apps.Webapp), i.Registries())
+		i.AppsCopier(apps.Konnector), i.Registries())
 	if err == apps.ErrNotFound {
 		return "", jobs.ErrBadTrigger{Err: err}
 	} else if err != nil {
