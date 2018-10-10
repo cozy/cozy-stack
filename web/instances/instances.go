@@ -399,6 +399,23 @@ func showPrefix(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, instance.DBPrefix())
 }
+func getSwiftBucketName(c echo.Context) error {
+	domain := c.Param("domain")
+
+	instance, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
+
+	var prefix string
+	if instance.SwiftCluster > 0 {
+		prefix = "cozy-v2-" + instance.DBPrefix()
+	} else {
+		prefix = "cozy-" + instance.DBPrefix()
+	}
+
+	return c.JSON(http.StatusOK, prefix)
+}
 
 func wrapError(err error) error {
 	switch err {
@@ -439,4 +456,5 @@ func Routes(router *echo.Group) {
 	router.POST("/:domain/orphan_accounts", cleanOrphanAccounts)
 	router.POST("/redis", rebuildRedis)
 	router.GET("/prefix/:domain", showPrefix)
+	router.GET("/swift-prefix/:domain", getSwiftBucketName)
 }
