@@ -3,7 +3,6 @@ package instances
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -12,6 +11,8 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config_dyn"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -247,25 +248,15 @@ func assetsInfos(c echo.Context) error {
 }
 
 func addAssets(c echo.Context) error {
-
-	var bodyBytes []byte
 	var unmarshaledAssets []fs.AssetOption
-
-	if c.Request().Body != nil {
-		bodyBytes, _ = ioutil.ReadAll(c.Request().Body)
-	}
-
-	err := json.Unmarshal(bodyBytes, &unmarshaledAssets)
-	if err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(&unmarshaledAssets); err != nil {
 		return err
 	}
-
-	errc := fs.RegisterCustomExternals(unmarshaledAssets)
-	if errc != nil {
-		return errc
+	cacheStorage := config.GetConfig().CacheStorage
+	if err := fs.RegisterCustomExternals(cacheStorage, unmarshaledAssets, 0 /* = retry count */); err != nil {
+		return err
 	}
-
-	return nil
+	return config_dyn.UpdateAssetsList()
 }
 
 func cleanOrphanAccounts(c echo.Context) error {

@@ -33,6 +33,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/magic"
 )
 
@@ -45,18 +46,25 @@ var globalAssets sync.Map // {context:path -> *Asset}
 const sumLen = 10
 const defaultContext = "default"
 
+type AssetOption struct {
+	Name     string `json:"name"`
+	Context  string `json:"context"`
+	URL      string `json:"url"`
+	Shasum   string `json:"shasum"`
+	IsCustom bool   `json:"is_custom,omitempty"`
+}
+
 // Asset holds unzipped read-only file contents and file metadata.
 type Asset struct {
-	zippedData     []byte
-	zippedSize     string
-	unzippedData   []byte
-	unzippedSize   string
-	unzippedShasum []byte
-	Etag           string `json:"etag"`
-	Name           string `json:"name"`
-	NameWithSum    string `json:"nameWithSum"`
-	Mime           string `json:"mime"`
-	Context        string `json:"context"`
+	AssetOption
+	Etag        string `json:"etag"`
+	NameWithSum string `json:"name_with_sum"`
+	Mime        string `json:"mime"`
+
+	zippedData   []byte
+	zippedSize   string
+	unzippedData []byte
+	unzippedSize string
 }
 
 func (f *Asset) Size() string {
@@ -84,66 +92,96 @@ func Register(zipData string) {
 	}
 }
 
-type AssetOption struct {
-	Name    string `json:"name"`
-	Context string `json:"context"`
-	URL     string `json:"url"`
-	Shasum  string `json:"shasum"`
+type Cache interface {
+	Get(key string) (io.Reader, bool)
+	Set(key string, data []byte, expiration time.Duration) bool
 }
 
-func RegisterCustomExternals(opts []AssetOption) error {
-	var loadedAssets []*Asset
-	for _, opt := range opts {
-		asset, err := registerCustomExternal(opt.Name, opt.Context, opt.URL, opt.Shasum)
-		if err != nil {
-			return err
-		}
-		loadedAssets = append(loadedAssets, asset)
+func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) error {
+	if len(opts) == 0 {
+		return nil
 	}
-	for _, asset := range loadedAssets {
-		storeAsset(asset)
+
+	assetsCh := make(chan AssetOption)
+	doneCh := make(chan struct{})
+
+	for i := 0; i < 16; i++ {
+		go func() {
+			for opt := range assetsCh {
+				sleepDuration := 500 * time.Millisecond
+				for tryCount := 0; tryCount < maxTryCount+1; tryCount++ {
+					if err := registerCustomExternal(cache, opt); err == nil {
+						break
+					}
+					logger.WithNamespace("statik").
+						Errorf("Could not load asset from %q, retrying in %s", opt.URL, sleepDuration)
+					time.Sleep(sleepDuration)
+					sleepDuration *= 2
+				}
+			}
+			doneCh <- struct{}{}
+		}()
+	}
+
+	for _, opt := range opts {
+		assetsCh <- opt
+	}
+	close(assetsCh)
+
+	for i := 0; i < 16; i++ {
+		<-doneCh
 	}
 	return nil
 }
 
-func registerCustomExternal(name, context, assetURL, shasum string) (*Asset, error) {
-	hexShasum, _ := hex.DecodeString(shasum)
-	if currentAsset, ok := Get(name, context); ok {
-		if bytes.Equal(currentAsset.unzippedShasum, []byte(hexShasum)) {
-			return currentAsset, nil
+func registerCustomExternal(cache Cache, opt AssetOption) error {
+	name := normalizeAssetName(opt.Name)
+	if currentAsset, ok := Get(name, opt.Context); ok {
+		if currentAsset.Shasum != opt.Shasum {
+			return nil
 		}
 	}
 
-	u, err := url.Parse(assetURL)
-	if err != nil {
-		return nil, err
-	}
+	opt.IsCustom = true
+
+	assetURL := opt.URL
+	key := fmt.Sprintf("assets:%s:%s:%s", opt.Context, name, opt.Shasum)
 
 	var body io.Reader
+	var ok, storeInCache bool
+	if body, ok = cache.Get(key); !ok {
+		u, err := url.Parse(assetURL)
+		if err != nil {
+			return err
+		}
 
-	if u.Scheme == "http" || u.Scheme == "https" {
-		req, err := http.NewRequest(http.MethodGet, assetURL, nil)
-		if err != nil {
-			return nil, err
+		switch u.Scheme {
+		case "http", "https":
+			req, err := http.NewRequest(http.MethodGet, assetURL, nil)
+			if err != nil {
+				return err
+			}
+			res, err := assetsClient.Do(req)
+			if err != nil {
+				return err
+			}
+			if res.StatusCode != http.StatusOK {
+				return fmt.Errorf("could not load external asset on %s: status code %d", assetURL, res.StatusCode)
+			}
+			defer res.Body.Close()
+			body = res.Body
+		case "file":
+			f, err := os.Open(u.Path)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			body = f
+		default:
+			return fmt.Errorf("does not support externals assets with scheme %q", u.Scheme)
 		}
-		res, err := assetsClient.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		if res.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("could not load external asset on %s: status code %d", assetURL, res.StatusCode)
-		}
-		defer res.Body.Close()
-		body = res.Body
-	} else if u.Scheme == "file" {
-		f, err := os.Open(u.Path)
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-		body = f
-	} else {
-		return nil, fmt.Errorf("does not support externals assets with scheme %q", u.Scheme)
+
+		storeInCache = true
 	}
 
 	h := sha256.New()
@@ -154,20 +192,26 @@ func registerCustomExternal(name, context, assetURL, shasum string) (*Asset, err
 	teeReader := io.TeeReader(body, io.MultiWriter(h, gw))
 	unzippedData, err := ioutil.ReadAll(teeReader)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
 	if errc := gw.Close(); errc != nil {
-		return nil, err
+		return err
 	}
 
 	sum := h.Sum(nil)
-	if !bytes.Equal(sum, []byte(hexShasum)) {
-		return nil, fmt.Errorf("external content checksum do not match: expected %x got %x on url %s",
-			hexShasum, sum, assetURL)
+	if hex.EncodeToString(sum) != opt.Shasum {
+		return fmt.Errorf("external content checksum do not match: expected %s got %x on url %s",
+			opt.Shasum, sum, assetURL)
 	}
 
-	return newAsset(name, context, sum, zippedDataBuf.Bytes(), unzippedData), nil
+	if storeInCache {
+		expiration := 30 * 24 * time.Hour
+		cache.Set(key, unzippedData, expiration)
+	}
+
+	asset := newAsset(opt, zippedDataBuf.Bytes(), unzippedData)
+	storeAsset(asset)
+	return nil
 }
 
 func unzip(data []byte) (err error) {
@@ -194,15 +238,24 @@ func unzip(data []byte) (err error) {
 		}
 
 		name := block.Headers["Name"]
-		asset := newAsset(name, defaultContext, h.Sum(nil), zippedData, unzippedData)
+		opt := AssetOption{
+			Name:    name,
+			Context: defaultContext,
+			Shasum:  hex.EncodeToString(h.Sum(nil)),
+		}
+		asset := newAsset(opt, zippedData, unzippedData)
 		storeAsset(asset)
 		data = rest
 	}
 	return
 }
 
-func newAsset(name, context string, unzippedSum, zippedData, unzippedData []byte) *Asset {
-	mime := magic.MIMETypeByExtension(path.Ext(name))
+func normalizeAssetName(name string) string {
+	return path.Join("/", name)
+}
+
+func newAsset(opt AssetOption, zippedData, unzippedData []byte) *Asset {
+	mime := magic.MIMETypeByExtension(path.Ext(opt.Name))
 	if mime == "" {
 		mime = magic.MIMEType(unzippedData)
 	}
@@ -210,26 +263,28 @@ func newAsset(name, context string, unzippedSum, zippedData, unzippedData []byte
 		mime = "application/octet-stream"
 	}
 
-	sumx := hex.EncodeToString(unzippedSum)
+	sumx := opt.Shasum
 	etag := fmt.Sprintf(`"%s"`, sumx[:sumLen])
-	nameWithSum := name
-	if off := strings.IndexByte(name, '.'); off >= 0 {
-		nameWithSum = name[:off] + "." + sumx[:sumLen] + name[off:]
+
+	opt.Name = normalizeAssetName(opt.Name)
+
+	nameWithSum := opt.Name
+	nameBase := path.Base(opt.Name)
+	if off := strings.IndexByte(nameBase, '.'); off >= 0 {
+		nameDir := path.Dir(opt.Name)
+		nameWithSum = path.Join("/", nameDir, nameBase[:off]+"."+sumx[:sumLen]+nameBase[off:])
 	}
 
 	return &Asset{
-		zippedData: zippedData,
-		zippedSize: strconv.Itoa(len(zippedData)),
-
-		unzippedData:   unzippedData,
-		unzippedSize:   strconv.Itoa(len(unzippedData)),
-		unzippedShasum: unzippedSum,
-
+		AssetOption: opt,
 		Etag:        etag,
-		Name:        name,
 		NameWithSum: nameWithSum,
 		Mime:        mime,
-		Context:     context,
+		zippedData:  zippedData,
+		zippedSize:  strconv.Itoa(len(zippedData)),
+
+		unzippedData: unzippedData,
+		unzippedSize: strconv.Itoa(len(unzippedData)),
 	}
 }
 
@@ -250,7 +305,6 @@ func Get(name string, context ...string) (*Asset, bool) {
 	} else {
 		ctx = defaultContext
 	}
-
 	asset, _ := globalAssets.Load(marshalContextKey(ctx, name))
 	if asset == nil {
 		return nil, false
