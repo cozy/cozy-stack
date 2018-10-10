@@ -399,6 +399,7 @@ func showPrefix(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, instance.DBPrefix())
 }
+
 func getSwiftBucketName(c echo.Context) error {
 	domain := c.Param("domain")
 
@@ -455,6 +456,6 @@ func Routes(router *echo.Group) {
 	router.POST("/:domain/import", importer)
 	router.POST("/:domain/orphan_accounts", cleanOrphanAccounts)
 	router.POST("/redis", rebuildRedis)
-	router.GET("/prefix/:domain", showPrefix)
-	router.GET("/swift-prefix/:domain", getSwiftBucketName)
+	router.GET("/:domain/prefix", showPrefix)
+	router.GET("/:domain/swift-prefix", getSwiftBucketName)
 }

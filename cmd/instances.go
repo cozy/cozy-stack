@@ -774,7 +774,7 @@ var showSwiftPrefixInstanceCmd = &cobra.Command{
 
 		req := &request.Options{
 			Method: "GET",
-			Path:   "instances/swift-prefix/" + args[0],
+			Path:   "instances/" + args[0] + "/swift-prefix",
 		}
 		res, err := c.Req(req)
 		if err != nil {
