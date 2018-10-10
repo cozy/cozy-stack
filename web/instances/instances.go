@@ -389,6 +389,17 @@ func updatesHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, job)
 }
 
+func showPrefix(c echo.Context) error {
+	domain := c.Param("domain")
+
+	instance, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, instance.DBPrefix())
+}
+
 func wrapError(err error) error {
 	switch err {
 	case instance.ErrNotFound:
@@ -427,4 +438,5 @@ func Routes(router *echo.Group) {
 	router.POST("/:domain/import", importer)
 	router.POST("/:domain/orphan_accounts", cleanOrphanAccounts)
 	router.POST("/redis", rebuildRedis)
+	router.GET("/prefix/:domain", showPrefix)
 }
