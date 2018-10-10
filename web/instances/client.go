@@ -82,3 +82,18 @@ func registerClient(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, client)
 }
+
+func findClientBySoftwareID(c echo.Context) error {
+	domain := c.QueryParam("domain")
+	softwareID := c.QueryParam("software_id")
+
+	inst, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
+	client, err := oauth.FindClientBySoftwareID(inst, softwareID)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, client)
+}

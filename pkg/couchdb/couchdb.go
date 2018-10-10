@@ -769,9 +769,13 @@ func FindDocs(db Database, doctype string, req *FindRequest, results interface{}
 	return FindDocsRaw(db, doctype, req, results)
 }
 
-// FindDocsRaw find documents
-// TODO: pagination
-func FindDocsRaw(db Database, doctype string, req interface{}, results interface{}) error {
+// FindDocsUnoptimized allows search on non-indexed fields.
+// /!\ Use with care
+func FindDocsUnoptimized(db Database, doctype string, req interface{}, results interface{}) error {
+	return findDocsRaw(db, doctype, req, results, true)
+}
+
+func findDocsRaw(db Database, doctype string, req interface{}, results interface{}, ignoreUnoptimized bool) error {
 	url := "_find"
 	// prepare a structure to receive the results
 	var response findResponse
@@ -788,11 +792,17 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 		}
 		return err
 	}
-	if response.Warning != "" {
+	if !ignoreUnoptimized && response.Warning != "" {
 		// Developer should not rely on unoptimized index.
 		return unoptimalError()
 	}
 	return json.Unmarshal(response.Docs, results)
+}
+
+// FindDocsRaw find documents
+// TODO: pagination
+func FindDocsRaw(db Database, doctype string, req interface{}, results interface{}) error {
+	return findDocsRaw(db, doctype, req, results, false)
 }
 
 // NormalDocs returns all the documents from a database, with pagination, but
