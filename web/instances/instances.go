@@ -404,18 +404,21 @@ func getSwiftBucketName(c echo.Context) error {
 	domain := c.Param("domain")
 
 	instance, err := instance.Get(domain)
+
 	if err != nil {
 		return err
 	}
 
-	var prefix string
-	if instance.SwiftCluster > 0 {
-		prefix = "cozy-v2-" + instance.DBPrefix()
-	} else {
-		prefix = "cozy-" + instance.DBPrefix()
+	type swifter interface {
+		ContainersNames() []string
 	}
 
-	return c.JSON(http.StatusOK, prefix)
+	var containersNames []string
+	if obj, ok := instance.VFS().(swifter); ok {
+		containersNames = obj.ContainersNames()
+	}
+
+	return c.JSON(http.StatusOK, containersNames)
 }
 
 func wrapError(err error) error {
