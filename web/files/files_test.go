@@ -865,7 +865,7 @@ func TestDownloadFileByIDSuccess(t *testing.T) {
 	res2, resbody := download(t, "/files/download/"+fileID, "")
 	assert.Equal(t, 200, res2.StatusCode)
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "inline"))
-	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), "filename=downloadme1"))
+	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), `filename="downloadme1"`))
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "text/plain"))
 	assert.NotEmpty(t, res2.Header.Get("Etag"))
 	assert.Equal(t, res2.Header.Get("Etag")[:1], `"`)
@@ -882,7 +882,7 @@ func TestDownloadFileByPathSuccess(t *testing.T) {
 	res2, resbody := download(t, "/files/download?Dl=1&Path="+url.QueryEscape("/downloadme2"), "")
 	assert.Equal(t, 200, res2.StatusCode)
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "attachment"))
-	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), "filename=downloadme2"))
+	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), `filename="downloadme2"`))
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "text/plain"))
 	assert.Equal(t, res2.Header.Get("Content-Length"), "3")
 	assert.Equal(t, res2.Header.Get("Accept-Ranges"), "bytes")
@@ -1067,7 +1067,7 @@ func TestArchiveCreateAndDownload(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res2.StatusCode)
 	disposition := res2.Header.Get("Content-Disposition")
-	assert.Equal(t, `attachment; filename=archive.zip`, disposition)
+	assert.Equal(t, `attachment; filename="archive.zip"`, disposition)
 }
 
 func TestFileCreateAndDownloadByPath(t *testing.T) {
@@ -1101,14 +1101,14 @@ func TestFileCreateAndDownloadByPath(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res2.StatusCode)
 	disposition := res2.Header.Get("Content-Disposition")
-	assert.Equal(t, `inline; filename=todownload2steps`, disposition)
+	assert.Equal(t, `inline; filename="todownload2steps"`, disposition)
 
 	downloadURL := ts.URL + data["links"].(map[string]interface{})["related"].(string) + "?Dl=1"
 	res3, err := http.Get(downloadURL)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res3.StatusCode)
 	disposition = res3.Header.Get("Content-Disposition")
-	assert.Equal(t, `attachment; filename=todownload2steps`, disposition)
+	assert.Equal(t, `attachment; filename="todownload2steps"`, disposition)
 }
 
 func TestFileCreateAndDownloadByID(t *testing.T) {
@@ -1141,7 +1141,7 @@ func TestFileCreateAndDownloadByID(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res2.StatusCode)
 	disposition := res2.Header.Get("Content-Disposition")
-	assert.Equal(t, `inline; filename=todownload2stepsbis`, disposition)
+	assert.Equal(t, `inline; filename="todownload2stepsbis"`, disposition)
 }
 
 func TestHeadDirOrFileNotFound(t *testing.T) {
