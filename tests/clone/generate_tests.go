@@ -148,6 +148,9 @@ import (
 `)
 	for _, info := range infos {
 		fmt.Printf("\t\"%s\"\n", info.PkgPath)
+		if info.PkgPath == "github.com/cozy/cozy-stack/pkg/config_dyn" {
+			fmt.Printf("\t\"github.com/cozy/cozy-stack/pkg/statik/fs\"\n")
+		}
 	}
 	fmt.Printf(")\n\n")
 
