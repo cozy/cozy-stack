@@ -229,6 +229,15 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *inst
 	// delete it.
 	if normalizedFolderPath != "" && msg.FolderToSave == "" && account.FolderPath == "" && account.Basic.FolderPath == "" {
 		if dir, errp := fs.DirByPath(normalizedFolderPath); errp == nil {
+			if account.Name == "" {
+				innerDirPath := path.Join(normalizedFolderPath, strings.Title(w.slug))
+				if innerDir, errp := fs.DirByPath(innerDirPath); errp == nil {
+					if isEmpty, _ := innerDir.IsEmpty(fs); isEmpty {
+						w.Logger(ctx).Warnf("Deleting empty directory for konnector: %q:%q", innerDir.ID(), normalizedFolderPath)
+						fs.DeleteDirDoc(innerDir)
+					}
+				}
+			}
 			if isEmpty, _ := dir.IsEmpty(fs); isEmpty {
 				w.Logger(ctx).Warnf("Deleting empty directory for konnector: %q:%q", dir.ID(), normalizedFolderPath)
 				fs.DeleteDirDoc(dir)
