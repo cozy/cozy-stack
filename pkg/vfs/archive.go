@@ -53,7 +53,7 @@ func ContentDisposition(disposition, filename string) string {
 		escaped = "download"
 	}
 	if filename == escaped {
-		return fmt.Sprintf("%s; filename=%s", disposition, escaped)
+		return fmt.Sprintf(`%s; filename="%s"`, disposition, escaped)
 	}
 	// RFC5987 §3.2 - syntax of ext value
 	encoded := url.QueryEscape(filename)

@@ -582,7 +582,7 @@ func TestFileCollision(t *testing.T) {
 
 func TestContentDisposition(t *testing.T) {
 	foo := vfs.ContentDisposition("inline", "foo.jpg")
-	assert.Equal(t, `inline; filename=foo.jpg`, foo)
+	assert.Equal(t, `inline; filename="foo.jpg"`, foo)
 	space := vfs.ContentDisposition("inline", "foo bar.jpg")
 	assert.Equal(t, `inline; filename="foobar.jpg"; filename*=UTF-8''foo%20bar.jpg`, space)
 	accents := vfs.ContentDisposition("inline", "héçà")
@@ -634,7 +634,7 @@ func TestArchive(t *testing.T) {
 
 	res := w.Result()
 	disposition := res.Header.Get("Content-Disposition")
-	assert.Equal(t, `attachment; filename=test.zip`, disposition)
+	assert.Equal(t, `attachment; filename="test.zip"`, disposition)
 	assert.Equal(t, "application/zip", res.Header.Get("Content-Type"))
 
 	b, err := ioutil.ReadAll(res.Body)
