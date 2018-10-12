@@ -30,7 +30,7 @@ import (
 	"github.com/cozy/cozy-stack/web/permissions"
 	web_utils "github.com/cozy/cozy-stack/web/utils"
 
-	statikFS "github.com/cozy/cozy-stack/statik/fs"
+	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/echo"
 )
 

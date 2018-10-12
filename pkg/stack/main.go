@@ -13,9 +13,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/workers/updates"
-	"github.com/cozy/cozy-stack/statik/fs"
 
 	"github.com/google/gops/agent"
 	"github.com/sirupsen/logrus"

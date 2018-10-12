@@ -5,7 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/statik/fs"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
 )
 
 const assetsListID = "assets"

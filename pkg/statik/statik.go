@@ -291,7 +291,7 @@ func generateSource(destFilename, srcPath, externalsFile string) (f *os.File, no
 package %s
 
 import (
-	"github.com/cozy/cozy-stack/statik/fs"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
 )
 
 func init() {

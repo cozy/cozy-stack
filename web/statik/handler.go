@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/i18n"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/cozy-stack/statik/fs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	web_utils "github.com/cozy/cozy-stack/web/utils"
 	"github.com/cozy/echo"
