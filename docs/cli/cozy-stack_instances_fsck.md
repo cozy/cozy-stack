@@ -17,9 +17,9 @@ cozy-stack instances fsck <domain> [flags]
 ### Options
 
 ```
-      --dry     Don't modify the VFS, only show the inconsistencies
-  -h, --help    help for fsck
-      --prune   Try to solve inconsistencies by modifying the file system
+  -h, --help              help for fsck
+      --index-indegrity   Check the index integrity only
+      --json              Output more informations in JSON format
 ```
 
 ### Options inherited from parent commands

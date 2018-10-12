@@ -760,6 +760,36 @@ var importCmd = &cobra.Command{
 	},
 }
 
+var showSwiftPrefixInstanceCmd = &cobra.Command{
+	Use:     "show-swift-prefix <domain>",
+	Short:   "Show the instance swift prefix of the specified domain",
+	Example: "$ cozy-stack instances show-swift-prefix cozy.tools:8080",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var v string
+
+		c := newAdminClient()
+		if len(args) < 1 {
+			return errors.New("The domain is missing")
+		}
+
+		req := &request.Options{
+			Method: "GET",
+			Path:   "instances/" + args[0] + "/swift-prefix",
+		}
+		res, err := c.Req(req)
+		if err != nil {
+			return err
+		}
+		errd := json.NewDecoder(res.Body).Decode(&v)
+		if errd != nil {
+			return errd
+		}
+		fmt.Println(v)
+
+		return nil
+	},
+}
+
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(showPrefixInstanceCmd)
@@ -781,6 +811,7 @@ func init() {
 	instanceCmdGroup.AddCommand(exportCmd)
 	instanceCmdGroup.AddCommand(importCmd)
 	instanceCmdGroup.AddCommand(insertAssetCmd)
+	instanceCmdGroup.AddCommand(showSwiftPrefixInstanceCmd)
 	addInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
@@ -796,7 +827,7 @@ func init() {
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
 	modifyInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
-	modifyInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "New locale")
+	modifyInstanceCmd.Flags().StringVar(&flagLocale, "locale", "", "New locale")
 	modifyInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "New UUID")
 	modifyInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "Update the TOS version signed")
 	modifyInstanceCmd.Flags().StringVar(&flagTOSLatest, "tos-latest", "", "Update the latest TOS version")

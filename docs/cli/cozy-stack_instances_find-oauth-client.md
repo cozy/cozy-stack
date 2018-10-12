@@ -1,21 +1,19 @@
-## cozy-stack instances client-oauth
+## cozy-stack instances find-oauth-client
 
-Register a new OAuth client
+Find an OAuth client
 
 ### Synopsis
 
-It registers a new OAuth client and returns its client_id
+Search an OAuth client from its SoftwareID
 
 ```
-cozy-stack instances client-oauth <domain> <redirect_uri> <client_name> <software_id> [flags]
+cozy-stack instances find-oauth-client <domain> <software_id> [flags]
 ```
 
 ### Options
 
 ```
-      --allow-login-scope   Allow login scope
-  -h, --help                help for client-oauth
-      --json                Output more informations in JSON format
+  -h, --help   help for find-oauth-client
 ```
 
 ### Options inherited from parent commands
