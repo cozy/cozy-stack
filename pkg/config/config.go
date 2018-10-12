@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -15,6 +16,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/cozy/cozy-stack/client/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -165,8 +167,9 @@ type Fs struct {
 
 // CouchDB contains the configuration values of the database
 type CouchDB struct {
-	Auth *url.Userinfo
-	URL  *url.URL
+	Auth   *url.Userinfo
+	URL    *url.URL
+	Client *http.Client
 }
 
 // Jobs contains the configuration values for the jobs and triggers
@@ -424,6 +427,15 @@ func UseViper(v *viper.Viper) error {
 	if couchURL.Path == "" {
 		couchURL.Path = "/"
 	}
+	var couchClient *http.Client
+	couchClient, couchURL, err = tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
+		URL:       couchURL,
+		Timeout:   10 * time.Second,
+		EnvPrefix: "COZY_COUCHDB",
+	})
+	if err != nil {
+		return err
+	}
 
 	regs, err := makeRegistries(v)
 	if err != nil {
@@ -593,8 +605,9 @@ func UseViper(v *viper.Viper) error {
 			URL: fsURL,
 		},
 		CouchDB: CouchDB{
-			Auth: couchAuth,
-			URL:  couchURL,
+			Auth:   couchAuth,
+			URL:    couchURL,
+			Client: couchClient,
 		},
 		Jobs: jobs,
 		Konnectors: Konnectors{

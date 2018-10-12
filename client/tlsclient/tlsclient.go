@@ -20,6 +20,7 @@ import (
 )
 
 type HTTPEndpoint struct {
+	URL       *url.URL
 	Host      string
 	Port      int
 	Timeout   time.Duration
@@ -53,9 +54,13 @@ func generateURL(host string, port int) (*url.URL, error) {
 }
 
 func NewHTTPClient(opt HTTPEndpoint) (client *http.Client, u *url.URL, err error) {
-	u, err = generateURL(opt.Host, opt.Port)
-	if err != nil {
-		return
+	if opt.URL != nil {
+		u = opt.URL
+	} else {
+		u, err = generateURL(opt.Host, opt.Port)
+		if err != nil {
+			return
+		}
 	}
 	c := &tlsConfig{}
 	c, u, err = fromURL(c, u)
@@ -77,29 +82,28 @@ func NewHTTPClient(opt HTTPEndpoint) (client *http.Client, u *url.URL, err error
 
 func fromURL(c *tlsConfig, u *url.URL) (conf *tlsConfig, uCopy *url.URL, err error) {
 	uCopy = utils.CloneURL(u)
-	if u.Scheme != "https" {
-		return
-	}
 	q := uCopy.Query()
-	if rootCAFile := q.Get("ca"); rootCAFile != "" {
-		if err = c.LoadRootCAFile(rootCAFile); err != nil {
-			return
-		}
-	}
-	if certFile := q.Get("cert"); certFile != "" {
-		if keyFile := q.Get("key"); keyFile != "" {
-			if err = c.LoadClientCertificateFile(certFile, keyFile); err != nil {
+	if u.Scheme == "https" {
+		if rootCAFile := q.Get("ca"); rootCAFile != "" {
+			if err = c.LoadRootCAFile(rootCAFile); err != nil {
 				return
 			}
 		}
-	}
-	if hexPinnedKey := q.Get("fp"); hexPinnedKey != "" {
-		if err = c.AddHexPinnedKey(hexPinnedKey); err != nil {
-			return
+		if certFile := q.Get("cert"); certFile != "" {
+			if keyFile := q.Get("key"); keyFile != "" {
+				if err = c.LoadClientCertificateFile(certFile, keyFile); err != nil {
+					return
+				}
+			}
 		}
-	}
-	if t := q.Get("validate"); t == "0" || t == "false" || t == "FALSE" {
-		c.SetInsecureSkipValidation()
+		if hexPinnedKey := q.Get("fp"); hexPinnedKey != "" {
+			if err = c.AddHexPinnedKey(hexPinnedKey); err != nil {
+				return
+			}
+		}
+		if t := q.Get("validate"); t == "0" || t == "false" || t == "FALSE" {
+			c.SetInsecureSkipValidation()
+		}
 	}
 	q.Del("ca")
 	q.Del("cert")
@@ -137,7 +141,7 @@ func fromEnv(c *tlsConfig, envPrefix string) (conf *tlsConfig, err error) {
 func (s *tlsConfig) LoadClientCertificateFile(certFile, keyFile string) error {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("tlsclient: could not load client certificate file: %s", err)
 	}
 	s.clientCertificates = append(s.clientCertificates, cert)
 	return nil
@@ -146,7 +150,7 @@ func (s *tlsConfig) LoadClientCertificateFile(certFile, keyFile string) error {
 func (s *tlsConfig) LoadClientCertificate(certPEMBlock, keyPEMBlock []byte) error {
 	cert, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
 	if err != nil {
-		return err
+		return fmt.Errorf("tlsclient: could not load client certificate file: %s", err)
 	}
 	s.clientCertificates = append(s.clientCertificates, cert)
 	return nil
@@ -164,7 +168,7 @@ func (s *tlsConfig) LoadRootCA(rootCA []byte) error {
 func (s *tlsConfig) LoadRootCAFile(rootCAFile string) error {
 	pemCerts, err := ioutil.ReadFile(rootCAFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("tlsclient: could not load root CA file %q: %s", rootCAFile, err)
 	}
 	ok := false
 	for len(pemCerts) > 0 {
@@ -184,7 +188,7 @@ func (s *tlsConfig) LoadRootCAFile(rootCAFile string) error {
 		ok = true
 	}
 	if !ok {
-		return fmt.Errorf("ssl: could not load any certificate from the given ROOTCA file: %q", rootCAFile)
+		return fmt.Errorf("tlsclient: could not load any certificate from the given ROOTCA file: %q", rootCAFile)
 	}
 	return nil
 }
@@ -201,7 +205,7 @@ func (s *tlsConfig) AddHexPinnedKey(hexPinnedKey string) error {
 	expected := sha256.Size
 	given := len(pinnedKey)
 	if given != expected {
-		return fmt.Errorf("Invalid fingerprint size for %s, expected %d got %d", hexPinnedKey,
+		return fmt.Errorf("tlsclient: invalid fingerprint size for %s, expected %d got %d", hexPinnedKey,
 			expected, given)
 	}
 	s.pinnedKeys = append(s.pinnedKeys, pinnedKey)
@@ -258,6 +262,6 @@ func verifyCertificatePinnedKey(pinnedKeys [][]byte) func(certs [][]byte, verifi
 				}
 			}
 		}
-		return fmt.Errorf("ssl: could not find the valid pinned key from proposed ones")
+		return fmt.Errorf("tlsclient: could not find the valid pinned key from proposed ones")
 	}
 }
