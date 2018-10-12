@@ -61,14 +61,7 @@ func Serve(c echo.Context) error {
 	app, err := apps.GetWebappBySlugAndUpdate(i, slug,
 		i.AppsCopier(apps.Webapp), i.Registries())
 	if err != nil {
-		switch err {
-		case apps.ErrNotFound:
-			return echo.NewHTTPError(http.StatusNotFound, "Application not found")
-		case apps.ErrInvalidSlugName:
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		default:
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
+		return err
 	}
 
 	switch app.State() {

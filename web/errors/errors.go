@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -102,11 +103,19 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	}
 
 	var title, value string
-	if err == instance.ErrNotFound {
+	switch err {
+	case instance.ErrNotFound:
 		status = http.StatusNotFound
 		title = "Error Instance not found Title"
 		value = "Error Instance not found Message"
+	case apps.ErrNotFound:
+		status = http.StatusNotFound
+		title = "Error Application not found Title"
+		value = "Error Application not found Message"
+	case apps.ErrInvalidSlugName:
+		status = http.StatusBadRequest
 	}
+
 	if title == "" {
 		if status >= 500 {
 			title = "Error Internal Server Error Title"
@@ -130,10 +139,19 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		if ok {
 			domain = i.ContextualDomain()
 		}
+
+		var actionTitle, actionURL string
+		if ok && err == apps.ErrNotFound {
+			actionURL = i.DefaultRedirection().String()
+			actionTitle = "Error Application not found Action"
+		}
+
 		err = c.Render(status, "error.html", echo.Map{
-			"Domain":     domain,
-			"ErrorTitle": title,
-			"Error":      value,
+			"Domain":      domain,
+			"ErrorTitle":  title,
+			"Error":       value,
+			"ActionTitle": actionTitle,
+			"ActionURL":   actionURL,
 		})
 	} else {
 		err = c.String(status, fmt.Sprintf("%v", he.Message))

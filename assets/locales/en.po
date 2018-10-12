@@ -218,6 +218,15 @@ msgstr "Address of this Cozy does not exist"
 msgid "Error Instance not found Message"
 msgstr "You may have entered a wrong address form a typing mistake. To make sure, please check the address of your Cozy sent to you by e-mail during its creation."
 
+msgid "Error Application not found Title"
+msgstr "Application not yet available"
+
+msgid "Error Application not found Message"
+msgstr "We are sorry. This application is not yet available in your Cozy."
+
+msgid "Error Application not found Action"
+msgstr "Go to your home"
+
 msgid "Error Contact us"
 msgstr "A problem, a question ? Contact us at"
 
