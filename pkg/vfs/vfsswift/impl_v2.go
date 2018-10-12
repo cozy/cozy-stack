@@ -102,6 +102,10 @@ func (sfs *swiftVFSV2) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
 	}
 }
 
+func (sfs *swiftVFSV2) ContainersNames() []string {
+	return []string{sfs.container, sfs.version, sfs.dataContainer}
+}
+
 func (sfs *swiftVFSV2) InitFs() error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr

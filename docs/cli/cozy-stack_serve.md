@@ -82,3 +82,4 @@ example), you can use the --appdir flag like this:
 ### SEE ALSO
 
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
+

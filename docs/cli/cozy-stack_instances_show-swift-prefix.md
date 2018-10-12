@@ -1,21 +1,25 @@
-## cozy-stack instances client-oauth
+## cozy-stack instances show-swift-prefix
 
-Register a new OAuth client
+Show the instance swift prefix of the specified domain
 
 ### Synopsis
 
-It registers a new OAuth client and returns its client_id
+Show the instance swift prefix of the specified domain
 
 ```
-cozy-stack instances client-oauth <domain> <redirect_uri> <client_name> <software_id> [flags]
+cozy-stack instances show-swift-prefix <domain> [flags]
+```
+
+### Examples
+
+```
+$ cozy-stack instances show-swift-prefix cozy.tools:8080
 ```
 
 ### Options
 
 ```
-      --allow-login-scope   Allow login scope
-  -h, --help                help for client-oauth
-      --json                Output more informations in JSON format
+  -h, --help   help for show-swift-prefix
 ```
 
 ### Options inherited from parent commands
