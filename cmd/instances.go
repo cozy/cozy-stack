@@ -765,7 +765,7 @@ var showSwiftPrefixInstanceCmd = &cobra.Command{
 	Short:   "Show the instance swift prefix of the specified domain",
 	Example: "$ cozy-stack instances show-swift-prefix cozy.tools:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var v string
+		var v []string
 
 		c := newAdminClient()
 		if len(args) < 1 {
