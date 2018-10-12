@@ -27,6 +27,9 @@
                   <p>{{$p}}</p>
                   {{end}}
                 {{end}}
+                {{if .ActionURL }}
+                <p><a href="{{.ActionURL}}">{{t .ActionTitle}}</a></p>
+                {{end}}
                 <p><strong>{{t "Error Contact us" }} <a href="mailto:contact@cozycloud.cc">contact@cozycloud.cc</a>.</strong></p>
               </div>
             </div>
