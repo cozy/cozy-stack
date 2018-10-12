@@ -1,6 +1,6 @@
 [Table of contents](README.md#table-of-contents)
 
-# Cozy Architecture
+# Cozy Stack Architecture
 
 ## What is Cozy?
 
