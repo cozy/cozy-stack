@@ -1,23 +1,14 @@
 package cmd
 
 import (
-	"bytes"
-	"crypto/sha256"
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net"
-	"net/http"
-	"net/url"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/client/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/howeyc/gopass"
@@ -57,210 +48,6 @@ profiles you.`,
 	SilenceErrors: true,
 }
 
-func sslVerifyPinnedKey(fingerprint string) (func(certs [][]byte, verifiedChains [][]*x509.Certificate) error, error) {
-	pinnedFingerPrint, err := hex.DecodeString(fingerprint)
-	if err != nil {
-		return nil, fmt.Errorf("Invalid fingerprint encoding for %s", fingerprint)
-	}
-
-	expected := sha256.Size
-	given := len(pinnedFingerPrint)
-	if given != expected {
-		return nil, fmt.Errorf("Invalid fingerprint size for %s, expected %d got %d", fingerprint,
-			expected, given)
-	}
-
-	return func(certs [][]byte, verifiedChains [][]*x509.Certificate) error {
-		// Check for leaf pinning first
-		for _, asn1 := range certs {
-			cert, err := x509.ParseCertificate(asn1)
-			if err != nil {
-				return err
-			}
-			fingerPrint := sha256.Sum256(cert.RawSubjectPublicKeyInfo)
-			if bytes.Equal(pinnedFingerPrint, fingerPrint[:]) {
-				return nil
-			}
-		}
-
-		// Then check for intermediate pinning
-		for _, verifiedChain := range verifiedChains {
-			if len(verifiedChain) > 0 {
-				verifiedCert := verifiedChain[0]
-				fingerPrint := sha256.Sum256(verifiedCert.RawSubjectPublicKeyInfo)
-				if bytes.Equal(pinnedFingerPrint, fingerPrint[:]) {
-					return nil
-				}
-			}
-		}
-		return fmt.Errorf("ssl: could not find the valid pinned key from proposed ones")
-	}, nil
-}
-
-func sslClient(e *endpoint) (*http.Client, error) {
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: !e.Validate,
-	}
-
-	ca := e.CA
-	if ca != "" {
-		data, err := ioutil.ReadFile(ca)
-		if err != nil {
-			return nil, fmt.Errorf("Could not read file %q: %s", ca, err)
-		}
-		pool := x509.NewCertPool()
-		pool.AppendCertsFromPEM(data)
-		tlsConfig.RootCAs = pool
-	}
-
-	cert := e.Cert
-	key := e.Key
-	if cert != "" && key != "" {
-		pair, err := tls.LoadX509KeyPair(cert, key)
-		if err != nil {
-			return nil, fmt.Errorf("Could not read client certificate files %q and %q: %s",
-				cert, key, err)
-		}
-		tlsConfig.Certificates = []tls.Certificate{pair}
-	}
-
-	fp := e.Fingerprint
-	if fp != "" {
-		check, err := sslVerifyPinnedKey(fp)
-		if err != nil {
-			return nil, err
-		}
-		tlsConfig.VerifyPeerCertificate = check
-	}
-
-	return &http.Client{
-		Timeout:   e.Timeout,
-		Transport: &http.Transport{TLSClientConfig: tlsConfig},
-	}, nil
-}
-
-type endpoint struct {
-	URL         *url.URL
-	Cert        string
-	Key         string
-	CA          string
-	Fingerprint string
-	Validate    bool
-	Timeout     time.Duration
-}
-
-func (e *endpoint) generateURL(host string, port int) error {
-	u, err := url.Parse(host)
-	if err != nil {
-		return err
-	}
-
-	if u.Scheme == "" {
-		// We have host + port, HTTP implied
-		u = &url.URL{
-			Scheme: "http",
-			Host:   net.JoinHostPort(host, strconv.Itoa(port)),
-		}
-	}
-
-	e.URL = u
-
-	return nil
-}
-
-func (e *endpoint) configureFromURL() error {
-	u := e.URL
-	query := u.Query()
-
-	if t := query.Get("timeout"); t != "" {
-		timeout, err := time.ParseDuration(t)
-		if err != nil {
-			return err
-		}
-		e.Timeout = timeout
-	}
-
-	if u.Scheme == "https" {
-		if t := query.Get("ca"); t != "" {
-			e.CA = t
-		}
-		if t := query.Get("cert"); t != "" {
-			e.Cert = t
-		}
-		if t := query.Get("key"); t != "" {
-			e.Key = t
-		}
-		if t := query.Get("fp"); t != "" {
-			e.Fingerprint = t
-		}
-		if t := query.Get("validate"); t != "" {
-			validate, err := strconv.ParseBool(t)
-			if err != nil {
-				return err
-			}
-			e.Validate = validate
-		}
-	}
-
-	return nil
-}
-
-func (e *endpoint) configureFromEnv(prefix string) error {
-	if t := os.Getenv(prefix + "_CERT"); t != "" {
-		e.Cert = t
-	}
-	if t := os.Getenv(prefix + "_KEY"); t != "" {
-		e.Key = t
-	}
-	if t := os.Getenv(prefix + "_CA"); t != "" {
-		e.CA = t
-	}
-	if t := os.Getenv(prefix + "_FINGERPRINT"); t != "" {
-		e.Fingerprint = t
-	}
-
-	if t := os.Getenv(prefix + "_VALIDATE"); t != "" {
-		validate, err := strconv.ParseBool(t)
-		if err != nil {
-			return err
-		}
-		e.Validate = validate
-	}
-
-	if t := os.Getenv(prefix + "_TIMEOUT"); t != "" {
-		timeout, err := time.ParseDuration(t)
-		if err != nil {
-			return err
-		}
-		e.Timeout = timeout
-	}
-
-	return nil
-}
-
-func (e *endpoint) configure(prefix string, host string, port int) error {
-	e.Validate = true
-	e.Timeout = 5 * time.Minute
-
-	if err := e.generateURL(host, port); err != nil {
-		return err
-	}
-	if err := e.configureFromEnv(prefix); err != nil {
-		return err
-	}
-	return e.configureFromURL()
-}
-
-func (e *endpoint) getClient() (*http.Client, error) {
-	u := e.URL
-	if u.Scheme == "https" {
-		return sslClient(e)
-	}
-	return &http.Client{
-		Timeout: e.Timeout,
-	}, nil
-}
-
 func newClientSafe(domain string, scopes ...string) (*client.Client, error) {
 	// For the CLI client, we rely on the admin APIs to generate a CLI token.
 	// We may want in the future rely on OAuth to handle the permissions with
@@ -276,25 +63,20 @@ func newClientSafe(domain string, scopes ...string) (*client.Client, error) {
 		return nil, err
 	}
 
-	cfg := config.GetConfig()
-	e := endpoint{}
-	err = e.configure("COZY_HOST", cfg.Host, cfg.Port)
+	httpClient, adminURL, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
+		Host:      config.GetConfig().Host,
+		Port:      config.GetConfig().Port,
+		Timeout:   5 * time.Minute,
+		EnvPrefix: "COZY",
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	h, err := e.getClient()
-	if err != nil {
-		return nil, err
-	}
-
-	u := e.URL
-
 	return &client.Client{
-		Scheme:     u.Scheme,
-		Addr:       u.Host,
+		Scheme:     adminURL.Scheme,
+		Addr:       adminURL.Host,
 		Domain:     domain,
-		Client:     h,
+		Client:     httpClient,
 		Authorizer: &request.BearerAuthorizer{Token: token},
 	}, nil
 }
@@ -322,25 +104,21 @@ func newAdminClient() *client.Client {
 		}
 	}
 
-	cfg := config.GetConfig()
-	e := endpoint{}
-
-	err := e.configure("COZY_ADMIN", cfg.AdminHost, cfg.AdminPort)
+	httpClient, clientURL, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
+		Host:      config.GetConfig().AdminHost,
+		Port:      config.GetConfig().AdminPort,
+		Timeout:   10 * time.Minute,
+		EnvPrefix: "COZY_ADMIN",
+	})
 	checkNoErr(err)
 
-	h, err := e.getClient()
-	checkNoErr(err)
-
-	u := e.URL
-	c := &client.Client{
-		Scheme:     u.Scheme,
-		Addr:       u.Host,
-		Domain:     u.Host,
-		Client:     h,
+	return &client.Client{
+		Scheme:     clientURL.Scheme,
+		Addr:       clientURL.Host,
+		Domain:     clientURL.Host,
+		Client:     httpClient,
 		Authorizer: &request.BasicAuthorizer{Password: string(pass)},
 	}
-
-	return c
 }
 
 func init() {
