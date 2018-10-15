@@ -7,17 +7,18 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/i18n"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	web_utils "github.com/cozy/cozy-stack/web/utils"
 	"github.com/cozy/echo"
-	"github.com/cozy/statik/fs"
 )
 
 var (
@@ -32,12 +33,11 @@ var (
 		"passphrase_renew.html",
 		"sharing_discovery.html",
 	}
+)
 
-	privateAssets = []string{
-		"/templates/",
-		"/locales/",
-		"/placeholders/",
-	}
+const (
+	assetsPrefix    = "/assets"
+	assetsExtPrefix = "/assets/ext"
 )
 
 // AssetRenderer is an interface for both a template renderer and an asset HTTP
@@ -75,13 +75,11 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 	}
 
 	t := template.New("stub")
-	h := http.StripPrefix("/assets", http.FileServer(dir(assetsPath)))
+	h := http.StripPrefix(assetsPrefix, http.FileServer(dir(assetsPath)))
 	funcsMap := template.FuncMap{
 		"t":     fmt.Sprintf,
 		"split": strings.Split,
-		"asset": func(domain, file string) string {
-			return AssetResolver(domain, path.Join("/assets", file))
-		},
+		"asset": assetPath,
 	}
 
 	var err error
@@ -97,16 +95,11 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 // representation into the binary.
 func NewRenderer() (AssetRenderer, error) {
 	t := template.New("stub")
-	h := NewHandler(Options{
-		Prefix:   "/assets",
-		Privates: privateAssets,
-	})
+
 	funcsMap := template.FuncMap{
 		"t":     fmt.Sprintf,
 		"split": strings.Split,
-		"asset": func(domain, file string) string {
-			return AssetResolver(domain, h.AssetPath(file))
-		},
+		"asset": AssetPath,
 	}
 
 	for _, name := range templatesList {
@@ -124,7 +117,7 @@ func NewRenderer() (AssetRenderer, error) {
 		}
 	}
 
-	return &renderer{t: t, Handler: h}, nil
+	return &renderer{t: t, Handler: NewHandler()}, nil
 }
 
 type renderer struct {
@@ -146,6 +139,107 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		return err
 	}
 	return t.Funcs(funcMap).ExecuteTemplate(w, name, data)
+}
+
+// AssetPath return the fullpath with unique identifier for a given asset file.
+func AssetPath(domain, name string, context ...string) string {
+	f, ok := fs.Get(name, context...)
+	if ok {
+		name = f.NameWithSum
+	}
+	return assetPath(domain, name, context...)
+}
+
+func assetPath(domain, name string, context ...string) string {
+	if len(context) > 0 && context[0] != "" {
+		name = path.Join(assetsExtPrefix, url.PathEscape(context[0]), name)
+	} else {
+		name = path.Join(assetsPrefix, name)
+	}
+	if domain != "" {
+		return "//" + domain + name
+	}
+	return name
+}
+
+// Handler implements http.handler for a subpart of the available assets on a
+// specified prefix.
+type Handler struct{}
+
+// NewHandler returns a new handler
+func NewHandler() Handler {
+	return Handler{}
+}
+
+// ServeHTTP implements the http.Handler interface.
+func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// The URL path should be formed in one on those forms:
+	// /assets/:file...
+	// /assets/ext/(:context-name)/:file...
+
+	var id, name, context string
+
+	if strings.HasPrefix(r.URL.Path, assetsExtPrefix+"/") {
+		nameWithContext := strings.TrimPrefix(r.URL.Path, assetsExtPrefix+"/")
+		nameWithContextSplit := strings.SplitN(nameWithContext, "/", 2)
+		if len(nameWithContextSplit) != 2 {
+			http.Error(w, "File not found", http.StatusNotFound)
+			return
+		}
+		context = nameWithContextSplit[0]
+		name = nameWithContextSplit[1]
+	} else {
+		name = strings.TrimPrefix(r.URL.Path, assetsPrefix)
+	}
+
+	name, id = ExtractAssetID(name)
+	if len(name) > 0 && name[0] != '/' {
+		name = "/" + name
+	}
+
+	f, ok := fs.Get(name, context)
+	if !ok {
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+
+	checkETag := id == ""
+	if checkETag && web_utils.CheckPreconditions(w, r, f.Etag) {
+		return
+	}
+
+	headers := w.Header()
+	headers.Set("Content-Type", f.Mime)
+	headers.Set("Content-Length", f.Size())
+	headers.Add("Vary", "Accept-Encoding")
+
+	acceptsGZIP := strings.Contains(r.Header.Get("Accept-Encoding"), "gzip")
+	if acceptsGZIP {
+		headers.Set("Content-Encoding", "gzip")
+		headers.Set("Content-Length", f.GzipSize())
+	} else {
+		headers.Set("Content-Length", f.Size())
+	}
+
+	if checkETag {
+		headers.Set("Etag", f.Etag)
+		headers.Set("Cache-Control", "no-cache, public")
+	} else {
+		headers.Set("Cache-Control", "max-age=31536000, public, immutable")
+	}
+
+	if r.Method == http.MethodGet {
+		if acceptsGZIP {
+			io.Copy(w, f.GzipReader())
+		} else {
+			io.Copy(w, f.Reader())
+		}
+	}
 }
 
 // GetLanguageFromHeader return the language tag given the Accept-Language
@@ -178,15 +272,6 @@ func GetLanguageFromHeader(header http.Header) (lang string) {
 	return
 }
 
-// AssetResolver is a template helper returning a complete URL, with domain
-// name, for a given asset path.
-func AssetResolver(domain, file string) string {
-	if domain != "" {
-		return "//" + domain + file
-	}
-	return file
-}
-
 // ExtractAssetID checks if a long hexadecimal string is contained in given
 // file path and returns the original file name and ID (if any). For instance
 // <foo.badbeedbadbeef.min.js> = <foo.min.js, badbeefbadbeef>
@@ -210,40 +295,6 @@ func ExtractAssetID(file string) (string, string) {
 	return file, id
 }
 
-// Handler implements http.Handler for a subpart of the available assets on a
-// specified prefix.
-type Handler struct {
-	prefix string
-	files  map[string]*fs.Asset
-}
-
-// Options contains the different options to create an asset handler.
-type Options struct {
-	Prefix   string
-	Privates []string
-}
-
-// NewHandler returns a new handler
-func NewHandler(opts Options) *Handler {
-	files := make(map[string]*fs.Asset)
-	fs.Foreach(func(name string, f *fs.Asset) {
-		isPrivate := false
-		for _, p := range opts.Privates {
-			if strings.HasPrefix(name, p) {
-				isPrivate = true
-				break
-			}
-		}
-		if !isPrivate {
-			files[name] = f
-		}
-	})
-	return &Handler{
-		prefix: opts.Prefix,
-		files:  files,
-	}
-}
-
 func isLongHexString(s string) bool {
 	if len(s) < 10 {
 		return false
@@ -258,66 +309,4 @@ func isLongHexString(s string) bool {
 		}
 	}
 	return true
-}
-
-// AssetPath return the fullpath with unique identifier for a given asset file.
-func (h *Handler) AssetPath(file string) string {
-	f, ok := h.files[file]
-	if !ok {
-		return h.prefix + file
-	}
-	return h.prefix + f.Name()
-}
-
-// ServeHTTP implements the http.Handler interface.
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet && r.Method != http.MethodHead {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	var id string
-	file := strings.TrimPrefix(r.URL.Path, h.prefix)
-	file, id = ExtractAssetID(file)
-	if len(file) > 0 && file[0] != '/' {
-		file = "/" + file
-	}
-	f, ok := h.files[file]
-	if !ok {
-		http.Error(w, "File not found", http.StatusNotFound)
-		return
-	}
-
-	checkETag := id == ""
-	if checkETag && web_utils.CheckPreconditions(w, r, f.Etag()) {
-		return
-	}
-
-	headers := w.Header()
-	headers.Set("Content-Type", f.Mime())
-	headers.Set("Content-Length", f.Size())
-	headers.Add("Vary", "Accept-Encoding")
-
-	acceptsGZIP := strings.Contains(r.Header.Get("Accept-Encoding"), "gzip")
-	if acceptsGZIP {
-		headers.Set("Content-Encoding", "gzip")
-		headers.Set("Content-Length", f.GzipSize())
-	} else {
-		headers.Set("Content-Length", f.Size())
-	}
-
-	if checkETag {
-		headers.Set("Etag", f.Etag())
-		headers.Set("Cache-Control", "no-cache, public")
-	} else {
-		headers.Set("Cache-Control", "max-age=31536000, public, immutable")
-	}
-
-	if r.Method == http.MethodGet {
-		if acceptsGZIP {
-			io.Copy(w, f.GzipReader())
-		} else {
-			io.Copy(w, f.Reader())
-		}
-	}
 }

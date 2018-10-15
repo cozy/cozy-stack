@@ -30,8 +30,8 @@ import (
 	"github.com/cozy/cozy-stack/web/permissions"
 	web_utils "github.com/cozy/cozy-stack/web/utils"
 
+	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/echo"
-	statikFS "github.com/cozy/statik/fs"
 )
 
 type docPatch struct {
@@ -572,11 +572,11 @@ func serveThumbnailPlaceholder(res http.ResponseWriter, req *http.Request, doc *
 	if !utils.IsInArray(format, thumbnail.FormatsNames) {
 		return echo.NewHTTPError(http.StatusNotFound, "Format does not exist")
 	}
-	f, ok := statikFS.Get("/placeholders/thumbnail-" + format + ".png")
+	f, ok := statikFS.Get("/placeholders/thumbnail-"+format+".png", "")
 	if !ok {
 		return os.ErrNotExist
 	}
-	etag := f.Etag()
+	etag := f.Etag
 	if web_utils.CheckPreconditions(res, req, etag) {
 		return nil
 	}

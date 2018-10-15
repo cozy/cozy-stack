@@ -3,6 +3,9 @@ package consts
 // Instances doc type for User's instance document
 const Instances = "instances"
 
+// Configs doc type assets documents configuration
+const Configs = "configs"
+
 const (
 	// Apps doc type for client-side application manifests
 	Apps = "io.cozy.apps"

@@ -11,11 +11,14 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config_dyn"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/workers/updates"
@@ -233,6 +236,27 @@ func rebuildRedis(c echo.Context) error {
 		}
 	}
 	return c.NoContent(http.StatusNoContent)
+}
+
+// Renders the assets list loaded in memory and served by the cozy
+func assetsInfos(c echo.Context) error {
+	assetsMap := make(map[string][]*fs.Asset)
+	fs.Foreach(func(name, context string, f *fs.Asset) {
+		assetsMap[context] = append(assetsMap[context], f)
+	})
+	return c.JSON(http.StatusOK, assetsMap)
+}
+
+func addAssets(c echo.Context) error {
+	var unmarshaledAssets []fs.AssetOption
+	if err := json.NewDecoder(c.Request().Body).Decode(&unmarshaledAssets); err != nil {
+		return err
+	}
+	cacheStorage := config.GetConfig().CacheStorage
+	if err := fs.RegisterCustomExternals(cacheStorage, unmarshaledAssets, 0 /* = retry count */); err != nil {
+		return err
+	}
+	return config_dyn.UpdateAssetsList()
 }
 
 func cleanOrphanAccounts(c echo.Context) error {
@@ -458,6 +482,8 @@ func Routes(router *echo.Group) {
 	router.POST("/:domain/import", importer)
 	router.POST("/:domain/orphan_accounts", cleanOrphanAccounts)
 	router.POST("/redis", rebuildRedis)
+	router.GET("/assets", assetsInfos)
+	router.POST("/assets", addAssets)
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
 }

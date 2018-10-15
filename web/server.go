@@ -24,7 +24,7 @@ import (
 	"github.com/cozy/echo/middleware"
 
 	"github.com/cozy/afero"
-	statikFS "github.com/cozy/statik/fs"
+	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 )
 
 // ReadHeaderTimeout is the amount of time allowed to read request headers for

@@ -218,6 +218,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	return tmpl.Execute(res, echo.Map{
 		"Token":         token,
 		"Domain":        i.ContextualDomain(),
+		"ContextName":   i.ContextName,
 		"Locale":        i.Locale,
 		"AppSlug":       app.Slug(),
 		"AppName":       app.NameLocalized(i.Locale),
@@ -276,46 +277,39 @@ func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
 	return c.Redirect(http.StatusFound, u)
 }
 
-var assetHelper func(domain, file string) string
 var clientTemplate *template.Template
 var barTemplate *template.Template
 
 func init() {
-	h := statik.NewHandler(statik.Options{Prefix: "/assets"})
-	assetHelper = func(domain, file string) string {
-		file = h.AssetPath(file)
-		if domain != "" {
-			return "//" + domain + file
-		}
-		return file
-	}
-
 	funcsMap := template.FuncMap{
 		"split": strings.Split,
-		"asset": assetHelper,
+		"asset": statik.AssetPath,
 	}
 
 	clientTemplate = template.Must(template.New("cozy-client-js").Funcs(funcsMap).Parse(`` +
-		`<script defer src="{{asset .Domain "/js/cozy-client.min.js"}}"></script>`,
+		`<script defer src="{{asset .Domain "/js/cozy-client.min.js" .ContextName}}"></script>`,
 	))
 
 	barTemplate = template.Must(template.New("cozy-bar").Funcs(funcsMap).Parse(`
-<link rel="stylesheet" type="text/css" href="{{asset .Domain "/fonts/fonts.css"}}">
-<link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-bar.min.css"}}">
+<link rel="stylesheet" type="text/css" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
+<link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-bar.min.css" .ContextName}}">
 {{if .LoggedIn}}
 {{range .Warnings}}
 <meta name="user-action-required" data-title="{{ .Title }}" data-code="{{ .Code }}" data-detail="{{ .Detail }}" data-links="{{ .Links.Self }}" />
 {{end}}
 {{end}}
-<script defer src="{{asset .Domain "/js/cozy-bar.min.js"}}"></script>`,
+<script defer src="{{asset .Domain "/js/cozy-bar.min.js" .ContextName}}"></script>`,
 	))
 }
 
 func cozyclientjs(i *instance.Instance) template.HTML {
 	buf := new(bytes.Buffer)
-	err := clientTemplate.Execute(buf, echo.Map{"Domain": i.ContextualDomain()})
+	err := clientTemplate.Execute(buf, echo.Map{
+		"Domain":      i.ContextualDomain(),
+		"ContextName": i.ContextName,
+	})
 	if err != nil {
-		return template.HTML("")
+		panic(err)
 	}
 	return template.HTML(buf.String()) // #nosec
 }
@@ -323,12 +317,13 @@ func cozyclientjs(i *instance.Instance) template.HTML {
 func cozybar(i *instance.Instance, loggedIn bool) template.HTML {
 	buf := new(bytes.Buffer)
 	err := barTemplate.Execute(buf, echo.Map{
-		"Domain":   i.ContextualDomain(),
-		"Warnings": i.Warnings(),
-		"LoggedIn": loggedIn,
+		"Domain":      i.ContextualDomain(),
+		"Warnings":    i.Warnings(),
+		"ContextName": i.ContextName,
+		"LoggedIn":    loggedIn,
 	})
 	if err != nil {
-		return template.HTML("")
+		panic(err)
 	}
 	return template.HTML(buf.String()) // #nosec
 }

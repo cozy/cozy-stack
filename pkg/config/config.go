@@ -133,6 +133,9 @@ type Config struct {
 
 	CSPDisabled  bool
 	CSPWhitelist map[string]string
+
+	AssetsPollingDisabled bool
+	AssetsPollingInterval time.Duration
 }
 
 // Vault contains security keys used for various encryption or signing of
@@ -632,6 +635,9 @@ func UseViper(v *viper.Viper) error {
 		Registries: regs,
 
 		CSPWhitelist: v.GetStringMapString("csp_whitelist"),
+
+		AssetsPollingDisabled: v.GetBool("assets_polling_disabled"),
+		AssetsPollingInterval: v.GetDuration("assets_polling_interval"),
 	}
 
 	if IsDevRelease() && v.GetBool("disable_csp") {
@@ -737,6 +743,8 @@ func createTestViper() *viper.Viper {
 	v.SetDefault("fs.url", "mem://test")
 	v.SetDefault("couchdb.url", "http://localhost:5984/")
 	v.SetDefault("log.level", "info")
+	v.SetDefault("assets_polling_disabled", false)
+	v.SetDefault("assets_polling_interval", 2*time.Minute)
 	applyDefaults(v)
 	return v
 }

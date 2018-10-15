@@ -11,14 +11,21 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 )
+
+var flagURL string
+var flagName string
+var flagShasum string
+var flagContext string
 
 var configCmdGroup = &cobra.Command{
 	Use:   "config <command>",
@@ -308,6 +315,44 @@ func readKeyFromFile(filepath string) (*keymgmt.NACLKey, error) {
 	return keymgmt.UnmarshalNACLKey(keyBytes)
 }
 
+var insertAssetCmd = &cobra.Command{
+	Use:     "insert-asset --url <url> --name <name> --shasum <shasum> --context <context>",
+	Short:   "Inserts an asset",
+	Long:    "Inserts a custom asset in a specific context",
+	Example: "$ cozy-stack config insert-asset --url file:///foo/bar/baz.js --name /foo/bar/baz.js --shasum 0763d6c2cebee0880eb3a9cc25d38cd23db39b5c3802f2dc379e408c877a2788 --context foocontext",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Check params
+		var customAssets []fs.AssetOption
+
+		assetOption := fs.AssetOption{
+			URL:     flagURL,
+			Name:    flagName,
+			Shasum:  flagShasum,
+			Context: flagContext,
+		}
+
+		customAssets = append(customAssets, assetOption)
+
+		marshaledAssets, err := json.Marshal(customAssets)
+		if err != nil {
+			return err
+		}
+
+		c := newAdminClient()
+		req := &request.Options{
+			Method: "POST",
+			Path:   "instances/assets",
+			Body:   bytes.NewReader(marshaledAssets),
+		}
+		res, err := c.Req(req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		return nil
+	},
+}
+
 func init() {
 	configCmdGroup.AddCommand(configPrintCmd)
 	configCmdGroup.AddCommand(adminPasswdCmd)
@@ -316,5 +361,10 @@ func init() {
 	configCmdGroup.AddCommand(decryptCredentialsDataCmd)
 	configCmdGroup.AddCommand(encryptCredentialsCmd)
 	configCmdGroup.AddCommand(decryptCredentialsCmd)
+	configCmdGroup.AddCommand(insertAssetCmd)
 	RootCmd.AddCommand(configCmdGroup)
+	insertAssetCmd.Flags().StringVar(&flagURL, "url", "", "The URL of the asset")
+	insertAssetCmd.Flags().StringVar(&flagName, "name", "", "The name of the asset")
+	insertAssetCmd.Flags().StringVar(&flagShasum, "shasum", "", "The shasum of the asset")
+	insertAssetCmd.Flags().StringVar(&flagContext, "context", "", "The context of the asset")
 }

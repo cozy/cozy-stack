@@ -8,10 +8,12 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config_dyn"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/workers/updates"
 
@@ -110,6 +112,20 @@ security features. Please do not use this binary as your production server.
 
 	if err = jobs.SystemStart(broker, schder, workersList); err != nil {
 		return
+	}
+
+	assetsList, err := config_dyn.GetAssetsList()
+	if err != nil {
+		return
+	}
+	cacheStorage := config.GetConfig().CacheStorage
+	if err = fs.RegisterCustomExternals(cacheStorage, assetsList, 6 /*= retry count */); err != nil {
+		return
+	}
+	assetsPollingDisabled := config.GetConfig().AssetsPollingDisabled
+	if !assetsPollingDisabled {
+		pollingInterval := config.GetConfig().AssetsPollingInterval
+		go config_dyn.PollAssetsList(cacheStorage, pollingInterval)
 	}
 
 	autoUpdates := config.GetConfig().AutoUpdates

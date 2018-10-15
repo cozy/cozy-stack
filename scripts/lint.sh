@@ -6,6 +6,7 @@ if git grep -l \
   -e 'github.com/dgrijalva/jwt-go' \
   -e 'github.com/labstack/echo' \
   -e 'github.com/spf13/afero' \
+  -e 'github.com/cozy/statik' \
   -- '*.go'; then
   echo "Forbidden packages"
   exit 1
