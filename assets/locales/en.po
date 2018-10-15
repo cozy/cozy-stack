@@ -559,11 +559,17 @@ msgstr ""
 "You have reached 90% of your available storage. When reach your storage quota, you will not be able to add any more files to your Cozy.\"
 "In order to keep your account below its storage quota, you can delete files from your Cozy or subscribe to a new option."
 
-msgid "Notifications Disk Quota instruction"
+msgid "Notifications Disk Quota offers instruction"
 msgstr "Click on this button to subscribe to a new option and get more data in your Cozy."
 
-msgid "Notifications Disk Quota text"
+msgid "Notifications Disk Quota offers text"
 msgstr "Subscribe for more data"
+
+msgid "Notifications Disk Quota free instructions"
+msgstr "Click on this button to delete unused files in your Cozy."
+
+msgid "Notifications Disk Quota free text"
+msgstr "Free up storage space"
 
 msgid "Terms of services have been updated"
 msgstr "To comply with the GDPR, Cozy Cloud has updated its Terms of Services that have taken effect on May 25, 2018"

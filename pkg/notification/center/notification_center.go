@@ -47,9 +47,13 @@ func init() {
 		if !ok {
 			return
 		}
+		cozyDriveLink := i.SubDomain(consts.DriveSlug)
 		n := &notification.Notification{
 			State: exceeded,
-			Data:  map[string]interface{}{"OffersLink": offersLink},
+			Data: map[string]interface{}{
+				"OffersLink":    offersLink,
+				"CozyDriveLink": cozyDriveLink.String(),
+			},
 		}
 		pushStack(domain, NotificationDiskQuota, n)
 	})
