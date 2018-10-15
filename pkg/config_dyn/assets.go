@@ -64,6 +64,9 @@ func UpdateAssetsList() error {
 // PollAssetsList executes itself in its own goroutine to poll at regular
 // intervals the list of assets that should be delivered by the stack.
 func PollAssetsList(cacheStorage fs.Cache, pollingInterval time.Duration) {
+	if pollingInterval == 0 {
+		pollingInterval = 2 * time.Minute
+	}
 	for {
 		time.Sleep(pollingInterval)
 		assetsList, err := GetAssetsList()
