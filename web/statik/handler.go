@@ -144,6 +144,9 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 // AssetPath return the fullpath with unique identifier for a given asset file.
 func AssetPath(domain, name string, context ...string) string {
 	f, ok := fs.Get(name, context...)
+	if !ok && len(context) > 0 && context[0] != "" {
+		f, ok = fs.Get(name)
+	}
 	if ok {
 		name = f.NameWithSum
 	}

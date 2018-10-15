@@ -306,9 +306,6 @@ func Get(name string, context ...string) (*Asset, bool) {
 		ctx = defaultContext
 	}
 	asset, ok := globalAssets.Load(marshalContextKey(ctx, name))
-	if !ok && ctx != defaultContext {
-		asset, ok = globalAssets.Load(marshalContextKey(defaultContext, name))
-	}
 	if !ok {
 		return nil, false
 	}
