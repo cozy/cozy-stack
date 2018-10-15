@@ -784,7 +784,11 @@ var showSwiftPrefixInstanceCmd = &cobra.Command{
 		if errd != nil {
 			return errd
 		}
-		fmt.Println(v)
+		json, errj := json.MarshalIndent(v, "", "  ")
+		if errj != nil {
+			return errj
+		}
+		fmt.Println(string(json))
 
 		return nil
 	},
