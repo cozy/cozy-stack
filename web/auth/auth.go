@@ -269,7 +269,14 @@ func login(c echo.Context) error {
 
 		var clientID string
 		if inst.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" {
-			clientID = redirect.Query().Get("client_id")
+			// NOTE: the login scope is used by external clients for authentication.
+			// Typically, these clients are used for internal purposes, like
+			// authenticating to an external system via the cozy. For these clients
+			// we do not push a "client" notification, we only store a new login
+			// history.
+			if redirect.Query().Get("scope") != oauth.ScopeLogin {
+				clientID = redirect.Query().Get("client_id")
+			}
 		}
 
 		if err = sessions.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), true); err != nil {
