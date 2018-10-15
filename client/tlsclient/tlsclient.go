@@ -25,6 +25,11 @@ type HTTPEndpoint struct {
 	Port      int
 	Timeout   time.Duration
 	EnvPrefix string
+
+	RootCAFile             string
+	ClientCertificateFiles ClientCertificateFilePair
+	PinnedKey              string
+	InsecureSkipValidation bool
 }
 
 type ClientCertificateFilePair struct {
@@ -56,22 +61,39 @@ func generateURL(host string, port int) (*url.URL, error) {
 func NewHTTPClient(opt HTTPEndpoint) (client *http.Client, u *url.URL, err error) {
 	if opt.URL != nil {
 		u = opt.URL
-	} else {
+	} else if opt.Host != "" || opt.Port > 0 {
 		u, err = generateURL(opt.Host, opt.Port)
 		if err != nil {
 			return
 		}
 	}
 	c := &tlsConfig{}
-	c, u, err = fromURL(c, u)
-	if err != nil {
-		return
+	if u != nil {
+		c, u, err = fromURL(c, u)
+		if err != nil {
+			return
+		}
 	}
 	if opt.EnvPrefix != "" {
 		c, err = fromEnv(c, opt.EnvPrefix)
 		if err != nil {
 			return
 		}
+	}
+	if opt.RootCAFile != "" {
+		c.LoadRootCAFile(opt.RootCAFile)
+	}
+	if opt.ClientCertificateFiles.CertificateFile != "" {
+		c.LoadClientCertificateFile(
+			opt.ClientCertificateFiles.CertificateFile,
+			opt.ClientCertificateFiles.KeyFile,
+		)
+	}
+	if opt.PinnedKey != "" {
+		c.AddHexPinnedKey(opt.PinnedKey)
+	}
+	if opt.InsecureSkipValidation {
+		c.SetInsecureSkipValidation()
 	}
 	client = &http.Client{
 		Timeout:   opt.Timeout,
@@ -180,11 +202,9 @@ func (s *tlsConfig) LoadRootCAFile(rootCAFile string) error {
 		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
 			continue
 		}
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
+		if err = s.LoadRootCA(block.Bytes); err != nil {
 			continue
 		}
-		s.rootCAs = append(s.rootCAs, cert)
 		ok = true
 	}
 	if !ok {

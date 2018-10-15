@@ -427,11 +427,15 @@ func UseViper(v *viper.Viper) error {
 	if couchURL.Path == "" {
 		couchURL.Path = "/"
 	}
-	var couchClient *http.Client
-	couchClient, couchURL, err = tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
-		URL:       couchURL,
-		Timeout:   10 * time.Second,
-		EnvPrefix: "COZY_COUCHDB",
+	couchClient, _, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
+		Timeout:    10 * time.Second,
+		RootCAFile: v.GetString("couchdb.root_ca"),
+		ClientCertificateFiles: tlsclient.ClientCertificateFilePair{
+			CertificateFile: v.GetString("couchdb.client_cert"),
+			KeyFile:         v.GetString("couchdb.client_key"),
+		},
+		PinnedKey:              v.GetString("couchdb.pinned_key"),
+		InsecureSkipValidation: v.GetBool("couchdb.insecure_skip_validation"),
 	})
 	if err != nil {
 		return err
