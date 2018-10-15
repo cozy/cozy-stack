@@ -51,7 +51,7 @@ func (man *apiApp) Links() *jsonapi.LinksList {
 	case (*apps.KonnManifest):
 		route = "/konnectors/"
 		if app.Icon != "" {
-			links.Icon = "/konnectors/" + app.Slug() + "/icon"
+			links.Icon = "/konnectors/" + app.Slug() + "/icon/" + app.Version()
 		}
 		links.Perms = "/permissions/konnectors/" + app.Slug()
 	}
@@ -375,6 +375,7 @@ func KonnectorRoutes(router *echo.Group) {
 	router.PUT("/:slug", updateHandler(apps.Konnector))
 	router.DELETE("/:slug", deleteHandler(apps.Konnector))
 	router.GET("/:slug/icon", iconHandler(apps.Konnector))
+	router.GET("/:slug/icon/:version", iconHandler(apps.Konnector))
 }
 
 func wrapAppsError(err error) error {
