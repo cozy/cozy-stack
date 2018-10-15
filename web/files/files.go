@@ -965,9 +965,12 @@ func fsckHandler(c echo.Context) error {
 		return err
 	}
 
+	noCache, _ := strconv.ParseBool(c.QueryParam("NoCache"))
 	key := "fsck:" + instance.DBPrefix()
-	if r, ok := cacheStorage.GetCompressed(key); ok {
-		return c.Stream(http.StatusOK, echo.MIMEApplicationJSON, r)
+	if !noCache {
+		if r, ok := cacheStorage.GetCompressed(key); ok {
+			return c.Stream(http.StatusOK, echo.MIMEApplicationJSON, r)
+		}
 	}
 
 	logs := make([]*vfs.FsckLog, 0)
@@ -986,8 +989,10 @@ func fsckHandler(c echo.Context) error {
 		return err
 	}
 
-	expiration := utils.DurationFuzzing(3*30*24*time.Hour, 0.10)
-	cacheStorage.SetCompressed(key, logsData, expiration)
+	if !noCache {
+		expiration := utils.DurationFuzzing(3*30*24*time.Hour, 0.10)
+		cacheStorage.SetCompressed(key, logsData, expiration)
+	}
 
 	return c.JSONBlob(http.StatusOK, logsData)
 }
