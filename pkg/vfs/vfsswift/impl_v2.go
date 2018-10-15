@@ -102,8 +102,13 @@ func (sfs *swiftVFSV2) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
 	}
 }
 
-func (sfs *swiftVFSV2) ContainersNames() []string {
-	return []string{sfs.container, sfs.version, sfs.dataContainer}
+func (sfs *swiftVFSV2) ContainersNames() map[string]string {
+	m := map[string]string{
+		"container":      sfs.container,
+		"version":        sfs.version,
+		"data_container": sfs.dataContainer,
+	}
+	return m
 }
 
 func (sfs *swiftVFSV2) InitFs() error {

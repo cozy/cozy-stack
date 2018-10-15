@@ -408,12 +408,11 @@ func getSwiftBucketName(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-
 	type swifter interface {
-		ContainersNames() []string
+		ContainersNames() map[string]string
 	}
 
-	var containersNames []string
+	var containersNames map[string]string
 	if obj, ok := instance.VFS().(swifter); ok {
 		containersNames = obj.ContainersNames()
 	}
