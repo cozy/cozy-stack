@@ -6,6 +6,7 @@ set -m
 [ -z "${COZY_STACK_HOST}" ] && COZY_STACK_HOST="cozy.tools"
 [ -z "${COZY_STACK_PORT}" ] && COZY_STACK_PORT="8080"
 [ -z "${COZY_STACK_PASS}" ] && COZY_STACK_PASS="cozy"
+[ -z "${COZY_STACK_ADMIN_PORT}" ] && COZY_STACK_ADMIN_PORT="6060"
 [ -z "${COUCHDB_URL}" ] && COUCHDB_URL="http://localhost:5984/"
 
 if [ -d "${COZY_STACK_PATH}" ] && [ -f "${COZY_STACK_PATH}/cozy-stack" ]; then
@@ -37,6 +38,9 @@ usage() {
 	echo -e "\n  COZY_STACK_PORT"
 	echo -e "    specify the port on which the cozy-stack is listening."
 	echo -e "    default: 8080."
+	echo -e "\n  COZY_STACK_ADMIN_PORT"
+	echo -e "    specify the admin port on which the cozy-stack is listening."
+	echo -e "    default: 6060."
 	echo -e "\n  COZY_STACK_PASS"
 	echo -e "    specify the password to register the instance with."
 	echo -e "    default: cozy."
@@ -102,6 +106,7 @@ do_start() {
 		--appdir "${appdir}" \
 		--host "${COZY_STACK_HOST}" \
 		--port "${COZY_STACK_PORT}" \
+		--admin-port "${COZY_STACK_ADMIN_PORT}" \
 		--couchdb-url "${COUCHDB_URL}" \
 		--mail-host "${COZY_STACK_HOST}" \
 		--mail-port 1025 \

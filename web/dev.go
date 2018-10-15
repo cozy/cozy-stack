@@ -15,7 +15,10 @@ import (
 // "text/plain".
 func devMailsHandler(c echo.Context) error {
 	name := c.Param("name")
-	locale := statik.GetLanguageFromHeader(c.Request().Header)
+	locale := c.QueryParam("locale")
+	if locale == "" {
+		locale = statik.GetLanguageFromHeader(c.Request().Header)
+	}
 
 	recipientName := c.QueryParam("RecipientName")
 	if recipientName == "" {
