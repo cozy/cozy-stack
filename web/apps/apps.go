@@ -42,7 +42,7 @@ func (man *apiApp) Links() *jsonapi.LinksList {
 	case (*apps.WebappManifest):
 		route = "/apps/"
 		if app.Icon != "" {
-			links.Icon = "/apps/" + app.Slug() + "/icon"
+			links.Icon = "/apps/" + app.Slug() + "/icon/" + app.Version()
 		}
 		if (app.State() == apps.Ready || app.State() == apps.Installed) &&
 			app.Instance != nil {
@@ -320,13 +320,20 @@ func iconHandler(appType apps.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
+		version := c.Param("version")
 		app, err := apps.GetBySlug(instance, slug, appType)
 		if err != nil {
 			return err
 		}
 
-		if err = middlewares.Allow(c, permissions.GET, app); err != nil {
-			return err
+		if !middlewares.IsLoggedIn(c) {
+			return echo.NewHTTPError(http.StatusUnauthorized, "Not logged in")
+		}
+
+		if version != "" {
+			// The maximum cache-control recommanded is one year :
+			// https://www.ietf.org/rfc/rfc2616.txt
+			c.Response().Header().Set("Cache-Control", "max-age=31536000")
 		}
 
 		var fs apps.FileServer
@@ -357,6 +364,7 @@ func WebappsRoutes(router *echo.Group) {
 	router.PUT("/:slug", updateHandler(apps.Webapp))
 	router.DELETE("/:slug", deleteHandler(apps.Webapp))
 	router.GET("/:slug/icon", iconHandler(apps.Webapp))
+	router.GET("/:slug/icon/:version", iconHandler(apps.Webapp))
 }
 
 // KonnectorRoutes sets the routing for the konnectors service
