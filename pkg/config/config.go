@@ -385,6 +385,8 @@ func Setup(cfgFile string) (err error) {
 func applyDefaults(v *viper.Viper) {
 	v.SetDefault("password_reset_interval", defaultPasswordResetInterval)
 	v.SetDefault("jobs.imagemagick_convert_cmd", "convert")
+	v.SetDefault("assets_polling_disabled", false)
+	v.SetDefault("assets_polling_interval", 2*time.Minute)
 }
 
 func envMap() map[string]string {
