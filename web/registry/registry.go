@@ -16,7 +16,7 @@ const (
 	perms
 )
 
-func proxyReq(auth authType, cacheControl registry.CacheControl) echo.HandlerFunc {
+func proxyReq(auth authType, clientPermanentCache bool, proxyCacheControl registry.CacheControl) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := middlewares.GetInstance(c)
 		switch auth {
@@ -33,13 +33,16 @@ func proxyReq(auth authType, cacheControl registry.CacheControl) echo.HandlerFun
 			panic("unknown authType")
 		}
 		req := c.Request()
-		resp, err := registry.Proxy(req, i.Registries(), cacheControl)
+		proxyResp, err := registry.Proxy(req, i.Registries(), proxyCacheControl)
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
-		contentType := resp.Header.Get("content-type")
-		return c.Stream(resp.StatusCode, contentType, resp.Body)
+		defer proxyResp.Body.Close()
+		if clientPermanentCache {
+			c.Response().Header().Set("Cache-Control", "max-age=31536000, immutable")
+		}
+		contentType := proxyResp.Header.Get("content-type")
+		return c.Stream(proxyResp.StatusCode, contentType, proxyResp.Body)
 	}
 }
 
@@ -61,11 +64,11 @@ func proxyListReq(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("", proxyListReq)
 	router.GET("/", proxyListReq)
-	router.GET("/:app", proxyReq(perms, registry.WithCache))
-	router.GET("/:app/icon", proxyReq(authed, registry.NoCache))
-	router.GET("/:app/screenshots/*", proxyReq(authed, registry.NoCache))
-	router.GET("/:app/:version/icon", proxyReq(authed, registry.NoCache))
-	router.GET("/:app/:version/screenshots/*", proxyReq(authed, registry.NoCache))
-	router.GET("/:app/:version", proxyReq(perms, registry.WithCache))
-	router.GET("/:app/:channel/latest", proxyReq(perms, registry.WithCache))
+	router.GET("/:app", proxyReq(perms, false, registry.WithCache))
+	router.GET("/:app/icon", proxyReq(authed, false, registry.NoCache))
+	router.GET("/:app/screenshots/*", proxyReq(authed, false, registry.NoCache))
+	router.GET("/:app/:version/icon", proxyReq(authed, true, registry.NoCache))
+	router.GET("/:app/:version/screenshots/*", proxyReq(authed, true, registry.NoCache))
+	router.GET("/:app/:version", proxyReq(perms, true, registry.WithCache))
+	router.GET("/:app/:channel/latest", proxyReq(perms, false, registry.WithCache))
 }
