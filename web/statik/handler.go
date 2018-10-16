@@ -145,7 +145,11 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 func AssetPath(domain, name string, context ...string) string {
 	f, ok := fs.Get(name, context...)
 	if !ok && len(context) > 0 && context[0] != "" {
+		// fallback on default context if asset is not found in the given one.
 		f, ok = fs.Get(name)
+		if ok {
+			context = nil
+		}
 	}
 	if ok {
 		name = f.NameWithSum
