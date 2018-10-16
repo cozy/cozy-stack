@@ -46,7 +46,6 @@ cozy-stack instances <command> [flags]
 * [cozy-stack instances find-oauth-client](cozy-stack_instances_find-oauth-client.md)	 - Find an OAuth client
 * [cozy-stack instances fsck](cozy-stack_instances_fsck.md)	 - Check and repair a vfs
 * [cozy-stack instances import](cozy-stack_instances_import.md)	 - Import a tarball
-* [cozy-stack instances insert-asset](cozy-stack_instances_insert-asset.md)	 - Inserts an asset
 * [cozy-stack instances ls](cozy-stack_instances_ls.md)	 - List instances
 * [cozy-stack instances modify](cozy-stack_instances_modify.md)	 - Modify the instance properties
 * [cozy-stack instances refresh-token-oauth](cozy-stack_instances_refresh-token-oauth.md)	 - Generate a new OAuth refresh token
