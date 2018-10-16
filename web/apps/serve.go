@@ -61,6 +61,10 @@ func Serve(c echo.Context) error {
 	app, err := apps.GetWebappBySlugAndUpdate(i, slug,
 		i.AppsCopier(apps.Webapp), i.Registries())
 	if err != nil {
+		// Used for the "collect" => "home" renaming
+		if err == apps.ErrNotFound && slug == consts.CollectSlug {
+			return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
+		}
 		return err
 	}
 
