@@ -326,7 +326,7 @@ func TestListApps(t *testing.T) {
 	related := links["related"].(string)
 	assert.Equal(t, "https://cozywithapps-mini.example.net/", related)
 	icon := links["icon"].(string)
-	assert.Equal(t, "/apps/mini/icon", icon)
+	assert.Equal(t, "/apps/mini/icon/", icon)
 }
 
 func TestIconForApp(t *testing.T) {
