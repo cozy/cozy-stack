@@ -22,7 +22,7 @@ cozy-stack instances modify <domain> [flags]
       --domain-aliases strings   Specify one or more aliases domain for the instance (separated by ',')
       --email string             New email
   -h, --help                     help for modify
-      --locale string            New locale (default "en")
+      --locale string            New locale
       --onboarding-finished      Force the finishing of the onboarding
       --public-name string       New public name
       --settings string          New list of settings (eg offer:premium)
