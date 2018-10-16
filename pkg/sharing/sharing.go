@@ -149,7 +149,8 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 	return nil
 }
 
-// CreatePreviewPermissions creates the permissions doc for previewing this sharing
+// CreatePreviewPermissions creates the permissions doc for previewing this sharing,
+// or updates it with the new codes if the document already exists
 func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]string, error) {
 	codes := make(map[string]string, len(s.Members)-1)
 	for i, m := range s.Members {
@@ -175,9 +176,16 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 		}
 	}
 
-	_, err := permissions.CreateSharePreviewSet(inst, s.SID, codes, set)
-	if err != nil {
-		return nil, err
+	if doc, err := permissions.GetForSharePreview(inst, s.SID); err == nil {
+		doc.Codes = codes
+		if err = couchdb.UpdateDoc(inst, doc); err != nil {
+			return nil, err
+		}
+	} else {
+		_, err := permissions.CreateSharePreviewSet(inst, s.SID, codes, set)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return codes, nil
 }
