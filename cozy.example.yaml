@@ -64,6 +64,14 @@ couchdb:
   # CouchDB URL - flags: --couchdb-url
   url: http://localhost:5984/
 
+  # CouchDB advanced parameters to activate TLS properties:
+  #
+  # root_ca: /ca-certificates.pem
+  # client_cert: /client_cert.pem
+  # client_key: /client_key
+  # pinned_key: 57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6
+  # insecure_skip_validation: true
+
 # jobs parameters to configure the job system
 jobs:
   # path to the imagemagick convert binary
@@ -143,7 +151,7 @@ mail:
   # mail smtp port - flags: --mail-port
   port: 465
   # mail smtp username - flags: --mail-username
-  username: {{.Env.COZY_MAIL_USER}}
+  username: {{.Env.COZY_MAIL_USERNAME}}
   # mail smtp password - flags: --mail-password
   password: {{.Env.COZY_MAIL_PASSWORD}}
   # disable mail tls - flags: --mail-disable-tls

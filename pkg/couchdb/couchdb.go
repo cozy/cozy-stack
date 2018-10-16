@@ -232,10 +232,6 @@ func (j JSONDoc) Match(field, value string) bool {
 	return fmt.Sprintf("%v", j.Get(field)) == value
 }
 
-var couchdbClient = &http.Client{
-	Timeout: 10 * time.Second,
-}
-
 func unescapeCouchdbName(name string) string {
 	return strings.Replace(name, "-", ".", -1)
 }
@@ -305,7 +301,7 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 		}
 	}
 	start := time.Now()
-	resp, err := couchdbClient.Do(req)
+	resp, err := config.GetConfig().CouchDB.Client.Do(req)
 	elapsed := time.Since(start)
 	// Possible err = mostly connection failure
 	if err != nil {

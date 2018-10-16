@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -15,6 +16,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/cozy/cozy-stack/client/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -165,8 +167,9 @@ type Fs struct {
 
 // CouchDB contains the configuration values of the database
 type CouchDB struct {
-	Auth *url.Userinfo
-	URL  *url.URL
+	Auth   *url.Userinfo
+	URL    *url.URL
+	Client *http.Client
 }
 
 // Jobs contains the configuration values for the jobs and triggers
@@ -424,6 +427,19 @@ func UseViper(v *viper.Viper) error {
 	if couchURL.Path == "" {
 		couchURL.Path = "/"
 	}
+	couchClient, _, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
+		Timeout:    10 * time.Second,
+		RootCAFile: v.GetString("couchdb.root_ca"),
+		ClientCertificateFiles: tlsclient.ClientCertificateFilePair{
+			CertificateFile: v.GetString("couchdb.client_cert"),
+			KeyFile:         v.GetString("couchdb.client_key"),
+		},
+		PinnedKey:              v.GetString("couchdb.pinned_key"),
+		InsecureSkipValidation: v.GetBool("couchdb.insecure_skip_validation"),
+	})
+	if err != nil {
+		return err
+	}
 
 	regs, err := makeRegistries(v)
 	if err != nil {
@@ -593,8 +609,9 @@ func UseViper(v *viper.Viper) error {
 			URL: fsURL,
 		},
 		CouchDB: CouchDB{
-			Auth: couchAuth,
-			URL:  couchURL,
+			Auth:   couchAuth,
+			URL:    couchURL,
+			Client: couchClient,
 		},
 		Jobs: jobs,
 		Konnectors: Konnectors{
