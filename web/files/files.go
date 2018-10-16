@@ -247,10 +247,14 @@ func ModifyMetadataByIDInBatchHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 	i := middlewares.GetInstance(c)
-	if err = applyPatches(c, i.VFS(), patches); err != nil {
-		return WrapVfsError(err)
+	patchErrors, err := applyPatches(c, i.VFS(), patches)
+	if err != nil {
+		return err
 	}
-	return nil
+	if len(patchErrors) > 0 {
+		return jsonapi.DataErrorList(c, patchErrors...)
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 // ModifyMetadataByPathHandler handles PATCH requests on /files/:file-id
@@ -374,51 +378,46 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	return fileData(c, http.StatusOK, file, nil)
 }
 
-func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) error {
-	type dirOrFile struct {
-		dir   *vfs.DirDoc
-		file  *vfs.FileDoc
-		patch *docPatch
-	}
-
-	dirOrFiles := make([]dirOrFile, len(patches))
-	for i, patch := range patches {
-		dir, file, err := fs.DirOrFileByID(patch.docID)
-		if err != nil {
-			return err
+func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*jsonapi.Error, err error) {
+	for _, patch := range patches {
+		dir, file, errf := fs.DirOrFileByID(patch.docID)
+		if errf != nil {
+			jsonapiError := wrapVfsErrorJSONAPI(errf)
+			jsonapiError.Source.Parameter = "_id"
+			jsonapiError.Source.Pointer = patch.docID
+			errors = append(errors, jsonapiError)
+			continue
 		}
 		if err = checkPerm(c, permissions.PATCH, dir, file); err != nil {
-			return err
+			return
 		}
-		dirOrFiles[i] = dirOrFile{dir, file, patch}
+		var errp error
+		if patch.Delete {
+			if dir != nil {
+				errp = fs.DestroyDirAndContent(dir)
+			} else if file != nil {
+				errp = fs.DestroyFile(file)
+			}
+		} else if patch.Trash {
+			if dir != nil {
+				_, errp = vfs.TrashDir(fs, dir)
+			} else if file != nil {
+				_, errp = vfs.TrashFile(fs, file)
+			}
+		} else if dir != nil {
+			_, errp = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
+		} else if file != nil {
+			_, errp = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
+		}
+		if errp != nil {
+			jsonapiError := wrapVfsErrorJSONAPI(errp)
+			jsonapiError.Source.Parameter = "_id"
+			jsonapiError.Source.Pointer = patch.docID
+			errors = append(errors)
+		}
 	}
 
-	var err error
-	for _, p := range dirOrFiles {
-		if p.patch.Delete {
-			if p.dir != nil {
-				err = fs.DestroyDirAndContent(p.dir)
-			} else {
-				err = fs.DestroyFile(p.file)
-			}
-		} else if p.patch.Trash {
-			if p.dir != nil {
-				_, err = vfs.TrashDir(fs, p.dir)
-			} else {
-				_, err = vfs.TrashFile(fs, p.file)
-			}
-		} else {
-			if p.dir != nil {
-				_, err = vfs.ModifyDirMetadata(fs, p.dir, &p.patch.DocPatch)
-			} else {
-				_, err = vfs.ModifyFileMetadata(fs, p.file, &p.patch.DocPatch)
-			}
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return c.NoContent(http.StatusNoContent)
+	return
 }
 
 // ReadMetadataFromIDHandler handles all GET requests on /files/:file-
@@ -1043,6 +1042,20 @@ func Routes(router *echo.Group) {
 
 // WrapVfsError returns a formatted error from a golang error emitted by the vfs
 func WrapVfsError(err error) error {
+	if errj := wrapVfsError(err); errj != nil {
+		return errj
+	}
+	return err
+}
+
+func wrapVfsErrorJSONAPI(err error) *jsonapi.Error {
+	if errj := wrapVfsError(err); errj != nil {
+		return errj
+	}
+	return jsonapi.InternalServerError(err)
+}
+
+func wrapVfsError(err error) *jsonapi.Error {
 	switch err {
 	case ErrDocTypeInvalid:
 		return jsonapi.InvalidAttribute("type", err)
@@ -1070,7 +1083,7 @@ func WrapVfsError(err error) error {
 	case vfs.ErrFileTooBig:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	}
-	return err
+	return nil
 }
 
 // FileDocFromReq creates a FileDoc from an incoming request.
