@@ -34,7 +34,7 @@ const (
 
 type konnectorWorker struct {
 	slug string
-	msg  *konnectorMessage
+	msg  *KonnectorMessage
 	man  *apps.KonnManifest
 
 	err     error
@@ -49,7 +49,8 @@ const (
 	konnectorMsgTypeCritical = "critical"
 )
 
-type konnectorMessage struct {
+// KonnectorMessage is the message structure sent to the konnector worker.
+type KonnectorMessage struct {
 	Account        string `json:"account"`        // Account is the identifier of the account
 	Konnector      string `json:"konnector"`      // Konnector is the slug of the konnector
 	FolderToSave   string `json:"folder_to_save"` // FolderToSave is the identifier of the folder
@@ -60,11 +61,11 @@ type konnectorMessage struct {
 	data json.RawMessage
 }
 
-func (m *konnectorMessage) ToJSON() string {
+func (m *KonnectorMessage) ToJSON() string {
 	return string(m.data)
 }
 
-func (m *konnectorMessage) updateFolderToSave(dir string) {
+func (m *KonnectorMessage) updateFolderToSave(dir string) {
 	m.FolderToSave = dir
 	var d map[string]interface{}
 	json.Unmarshal(m.data, &d)
@@ -75,25 +76,21 @@ func (m *konnectorMessage) updateFolderToSave(dir string) {
 // beforeHookKonnector skips jobs from trigger that are failing on certain
 // errors.
 func beforeHookKonnector(job *jobs.Job) (bool, error) {
-	konnectorMessage := struct {
-		Account      string `json:"account"`
-		Konnector    string `json:"konnector"`
-		FolderToSave string `json:"folder_to_save"`
-	}{}
+	var msg KonnectorMessage
 
-	if err := json.Unmarshal(job.Message, &konnectorMessage); err == nil {
+	if err := json.Unmarshal(job.Message, &msg); err == nil {
 		inst, err := instance.Get(job.DomainName())
 		if err != nil {
 			return false, err
 		}
-		app, err := registry.GetApplication(konnectorMessage.Konnector, inst.Registries())
+		app, err := registry.GetApplication(msg.Konnector, inst.Registries())
 		if err != nil {
-			job.Logger().Warnf("konnector %q could not get application to fetch maintenance status", konnectorMessage.Konnector)
+			job.Logger().Warnf("konnector %q could not get application to fetch maintenance status", msg.Konnector)
 		} else if app.MaintenanceActivated {
 			if job.Manual && !app.MaintenanceOptions.FlagDisallowManualExec {
 				return true, nil
 			}
-			job.Logger().Infof("konnector %q has not been triggered because of its maintenance status", konnectorMessage.Konnector)
+			job.Logger().Infof("konnector %q has not been triggered because of its maintenance status", msg.Konnector)
 			return false, nil
 		}
 	}
@@ -118,7 +115,7 @@ func beforeHookKonnector(job *jobs.Job) (bool, error) {
 func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (string, error) {
 	var err error
 	var data json.RawMessage
-	var msg konnectorMessage
+	var msg KonnectorMessage
 	if err = ctx.UnmarshalMessage(&data); err != nil {
 		return "", err
 	}

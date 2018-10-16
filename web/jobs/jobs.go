@@ -20,7 +20,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 
 	// import workers
-	_ "github.com/cozy/cozy-stack/pkg/workers/exec"
+	"github.com/cozy/cozy-stack/pkg/workers/exec"
 	_ "github.com/cozy/cozy-stack/pkg/workers/log"
 	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
 	_ "github.com/cozy/cozy-stack/pkg/workers/migrations"
@@ -271,9 +271,7 @@ func extractKonnectorPermissions(c echo.Context, i *instance.Instance, t jobs.Tr
 	if err != nil {
 		return
 	}
-	var msg struct {
-		Konnector string `json:"konnector"`
-	}
+	var msg exec.KonnectorMessage
 	if err = t.Infos().Message.Unmarshal(&msg); err != nil {
 		return
 	}
