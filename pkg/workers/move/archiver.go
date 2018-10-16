@@ -41,7 +41,7 @@ func SystemArchiver() Archiver {
 	case config.SchemeFile, config.SchemeMem:
 		fs := afero.NewBasePathFs(afero.NewOsFs(), path.Join(fsURL.Path, "exports"))
 		return newAferoArchiver(fs)
-	case config.SchemeSwift:
+	case config.SchemeSwift, config.SchemeSwiftSecure:
 		return newSwiftArchiver()
 	default:
 		panic(fmt.Errorf("exports: unknown storage provider %s", fsURL.Scheme))

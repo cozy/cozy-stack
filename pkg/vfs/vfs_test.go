@@ -848,10 +848,12 @@ func makeSwiftFS(layoutV2 bool) (vfs.VFS, func(), error) {
 		return nil, nil, fmt.Errorf("failed to create swift server %s", err)
 	}
 
-	err = config.InitSwiftConnection(&url.URL{
-		Scheme:   "swift",
-		Host:     "localhost",
-		RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
+	err = config.InitSwiftConnection(config.Fs{
+		URL: &url.URL{
+			Scheme:   "swift",
+			Host:     "localhost",
+			RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
+		},
 	})
 	if err != nil {
 		return nil, nil, err

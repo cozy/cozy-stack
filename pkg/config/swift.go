@@ -10,25 +10,37 @@ import (
 
 var swiftConn *swift.Connection
 
+func InitDefaultSwiftConnection() error {
+	return InitSwiftConnection(config.Fs)
+}
+
 // InitSwiftConnection initialize the global swift handler connection. This is
 // not a thread-safe method.
-func InitSwiftConnection(swiftURL *url.URL) error {
-	q := swiftURL.Query()
+func InitSwiftConnection(fs Fs) error {
+	fsURL := fs.URL
+	if fsURL.Scheme != SchemeSwift && fsURL.Scheme != SchemeSwiftSecure {
+		return nil
+	}
+
+	q := fsURL.Query()
+	isSecure := fsURL.Scheme == SchemeSwiftSecure
 
 	var authURL *url.URL
 	var err error
 	auth := q.Get("AuthURL")
 	if auth == "" {
 		authURL = &url.URL{
-			Scheme: "http",
-			Host:   swiftURL.Host,
-			Path:   "/identity/v3",
+			Host: fsURL.Host,
+			Path: "/identity/v3",
 		}
 	} else {
 		authURL, err = url.Parse(auth)
 		if err != nil {
 			panic(fmt.Sprintf("swift: could not parse AuthURL %s", err))
 		}
+	}
+	if isSecure {
+		authURL.Scheme = "https"
 	}
 
 	var username, password string
@@ -50,6 +62,7 @@ func InitSwiftConnection(swiftURL *url.URL) error {
 		TenantDomainId: q.Get("ProjectDomainID"),
 		Region:         q.Get("Region"),
 		// Copying a file needs a long timeout on large files
+		Transport:      fs.Transport,
 		ConnectTimeout: 300 * time.Second,
 		Timeout:        300 * time.Second,
 	}

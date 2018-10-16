@@ -242,7 +242,7 @@ func (i *Instance) makeVFS() error {
 	switch fsURL.Scheme {
 	case config.SchemeFile, config.SchemeMem:
 		i.vfs, err = vfsafero.New(i, index, disk, mutex, fsURL, i.DirName())
-	case config.SchemeSwift:
+	case config.SchemeSwift, config.SchemeSwiftSecure:
 		if i.SwiftCluster > 0 {
 			i.vfs, err = vfsswift.NewV2(i, index, disk, mutex)
 		} else {
@@ -270,7 +270,7 @@ func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
 			path.Join(fsURL.Path, i.DirName(), baseDirName))
 		return apps.NewAferoCopier(baseFS)
-	case config.SchemeSwift:
+	case config.SchemeSwift, config.SchemeSwiftSecure:
 		return apps.NewSwiftCopier(config.GetSwiftConnection(), appsType)
 	default:
 		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
@@ -286,7 +286,7 @@ func (i *Instance) AppsFileServer() apps.FileServer {
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
 			path.Join(fsURL.Path, i.DirName(), vfs.WebappsDirName))
 		return apps.NewAferoFileServer(baseFS, nil)
-	case config.SchemeSwift:
+	case config.SchemeSwift, config.SchemeSwiftSecure:
 		return apps.NewSwiftFileServer(config.GetSwiftConnection(), apps.Webapp)
 	default:
 		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
@@ -302,7 +302,7 @@ func (i *Instance) KonnectorsFileServer() apps.FileServer {
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
 			path.Join(fsURL.Path, i.DirName(), vfs.KonnectorsDirName))
 		return apps.NewAferoFileServer(baseFS, nil)
-	case config.SchemeSwift:
+	case config.SchemeSwift, config.SchemeSwiftSecure:
 		return apps.NewSwiftFileServer(config.GetSwiftConnection(), apps.Konnector)
 	default:
 		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
@@ -318,7 +318,7 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
 			path.Join(fsURL.Path, i.DirName(), vfs.ThumbsDirName))
 		return vfsafero.NewThumbsFs(baseFS)
-	case config.SchemeSwift:
+	case config.SchemeSwift, config.SchemeSwiftSecure:
 		if i.SwiftCluster > 0 {
 			return vfsswift.NewThumbsFsV2(config.GetSwiftConnection(), i)
 		}

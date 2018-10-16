@@ -87,11 +87,8 @@ security features. Please do not use this binary as your production server.
 	}
 
 	// Init the main global connection to the swift server
-	fsURL := config.FsURL()
-	if fsURL.Scheme == config.SchemeSwift {
-		if err = config.InitSwiftConnection(fsURL); err != nil {
-			return
-		}
+	if err = config.InitDefaultSwiftConnection(); err != nil {
+		return
 	}
 
 	workersList, err := jobs.GetWorkersList()
