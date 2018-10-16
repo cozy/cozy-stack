@@ -333,7 +333,7 @@ func iconHandler(appType apps.AppType) echo.HandlerFunc {
 		if version != "" {
 			// The maximum cache-control recommanded is one year :
 			// https://www.ietf.org/rfc/rfc2616.txt
-			c.Response().Header().Set("Cache-Control", "max-age=31536000")
+			c.Response().Header().Set("Cache-Control", "max-age=31536000, immutable")
 		}
 
 		var fs apps.FileServer
