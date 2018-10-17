@@ -552,21 +552,19 @@ msgid "Sharing Online help"
 msgstr "Try out online help."
 
 msgid "Notifications Disk Quota Subject"
-msgstr "You have reached 90% of your available storage"
+msgstr "You have currently reached 90% of your Cozy space."
 
 msgid "Notifications Disk Quota Intro"
-msgstr ""
-"You have reached 90% of your available storage. When reach your storage quota, you will not be able to add any more files to your Cozy.\"
-"In order to keep your account below its storage quota, you can delete files from your Cozy or subscribe to a new option."
+msgstr "You have two options to get more space."
 
 msgid "Notifications Disk Quota offers instruction"
-msgstr "Click on this button to subscribe to a new option and get more data in your Cozy."
+msgstr "Option 1: Upgrade your Cozy by choosing new offer to get lots more space."
 
 msgid "Notifications Disk Quota offers text"
 msgstr "Subscribe for more data"
 
 msgid "Notifications Disk Quota free instructions"
-msgstr "Click on this button to delete unused files in your Cozy."
+msgstr "Option 2: Save space by deleting unneeded files."
 
 msgid "Notifications Disk Quota free text"
 msgstr "Free up storage space"
