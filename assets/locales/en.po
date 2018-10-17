@@ -558,13 +558,15 @@ msgid "Notifications Disk Quota Intro"
 msgstr "You have two options to get more space."
 
 msgid "Notifications Disk Quota offers instruction"
-msgstr "Option 1: Upgrade your Cozy by choosing new offer to get lots more space."
+msgstr "Option 1: Upgrade your account\n"
+"Upgrade your Cozy by choosing new offer to get lots more space"
 
 msgid "Notifications Disk Quota offers text"
-msgstr "Subscribe for more data"
+msgstr "Upgrade now"
 
 msgid "Notifications Disk Quota free instructions"
-msgstr "Option 2: Save space by deleting unneeded files."
+msgstr "Option 2: Free up space\n"
+"Save space by deleting unneeded files"
 
 msgid "Notifications Disk Quota free text"
 msgstr "Free up storage space"
