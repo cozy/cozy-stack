@@ -63,18 +63,18 @@ func newClientSafe(domain string, scopes ...string) (*client.Client, error) {
 		return nil, err
 	}
 
-	httpClient, adminURL, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
+	httpClient, clientURL, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
 		Host:      config.GetConfig().Host,
 		Port:      config.GetConfig().Port,
 		Timeout:   5 * time.Minute,
-		EnvPrefix: "COZY",
+		EnvPrefix: "COZY_HOST",
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &client.Client{
-		Scheme:     adminURL.Scheme,
-		Addr:       adminURL.Host,
+		Scheme:     clientURL.Scheme,
+		Addr:       clientURL.Host,
 		Domain:     domain,
 		Client:     httpClient,
 		Authorizer: &request.BearerAuthorizer{Token: token},
@@ -104,7 +104,7 @@ func newAdminClient() *client.Client {
 		}
 	}
 
-	httpClient, clientURL, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
+	httpClient, adminURL, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
 		Host:      config.GetConfig().AdminHost,
 		Port:      config.GetConfig().AdminPort,
 		Timeout:   10 * time.Minute,
@@ -113,9 +113,9 @@ func newAdminClient() *client.Client {
 	checkNoErr(err)
 
 	return &client.Client{
-		Scheme:     clientURL.Scheme,
-		Addr:       clientURL.Host,
-		Domain:     clientURL.Host,
+		Scheme:     adminURL.Scheme,
+		Addr:       adminURL.Host,
+		Domain:     adminURL.Host,
 		Client:     httpClient,
 		Authorizer: &request.BasicAuthorizer{Password: string(pass)},
 	}

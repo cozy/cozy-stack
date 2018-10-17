@@ -20,7 +20,6 @@ import (
 )
 
 type HTTPEndpoint struct {
-	URL       *url.URL
 	Host      string
 	Port      int
 	Timeout   time.Duration
@@ -50,18 +49,16 @@ func generateURL(host string, port int) (*url.URL, error) {
 		return nil, err
 	}
 	if u.Scheme == "" {
-		u.Scheme = "http"
-	}
-	if port > 0 {
-		u.Host = net.JoinHostPort(u.Host, strconv.Itoa(port))
+		u = &url.URL{
+			Scheme: "http",
+			Host:   net.JoinHostPort(host, strconv.Itoa(port)),
+		}
 	}
 	return u, nil
 }
 
 func NewHTTPClient(opt HTTPEndpoint) (client *http.Client, u *url.URL, err error) {
-	if opt.URL != nil {
-		u = opt.URL
-	} else if opt.Host != "" || opt.Port > 0 {
+	if opt.Host != "" || opt.Port > 0 {
 		u, err = generateURL(opt.Host, opt.Port)
 		if err != nil {
 			return
