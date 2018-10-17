@@ -336,10 +336,11 @@ func createInstaller(inst *instance.Instance, registries []*url.URL, man apps.Ma
 	}
 	return apps.NewInstaller(inst, inst.AppsCopier(man.AppType()),
 		&apps.InstallerOptions{
-			Operation:  apps.Update,
-			Manifest:   man,
-			Registries: registries,
-			SourceURL:  sourceURL,
+			Operation:        apps.Update,
+			Manifest:         man,
+			Registries:       registries,
+			SourceURL:        sourceURL,
+			PermissionsAcked: true,
 		},
 	)
 }

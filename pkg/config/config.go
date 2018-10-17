@@ -118,7 +118,6 @@ type Config struct {
 	Jobs          Jobs
 	Konnectors    Konnectors
 	Mail          *gomail.DialerOptions
-	AutoUpdates   AutoUpdates
 	Notifications Notifications
 	Logger        logger.Options
 
@@ -187,12 +186,6 @@ type Jobs struct {
 // Konnectors contains the configuration values for the konnectors
 type Konnectors struct {
 	Cmd string
-}
-
-// AutoUpdates contains the configuration values for auto updates
-type AutoUpdates struct {
-	Activated bool
-	Schedule  string
 }
 
 // Notifications contains the configuration for the mobile push-notification
@@ -616,10 +609,6 @@ func UseViper(v *viper.Viper) error {
 		Jobs: jobs,
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
-		},
-		AutoUpdates: AutoUpdates{
-			Activated: v.GetString("auto_updates.schedule") != "",
-			Schedule:  v.GetString("auto_updates.schedule"),
 		},
 		Notifications: Notifications{
 			Development: v.GetBool("notifications.development"),

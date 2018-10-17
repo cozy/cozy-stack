@@ -210,10 +210,6 @@ redis:
   # enables read only queries on slave nodes.
   # read_only_slave: false
 
-# Auto updates scheduler
-auto_updates:
-  schedule: "@cron 0 0 0 * * *"
-
 # Registries used for applications and konnectors
 registries:
   - https://apps-registry.cozycloud.cc/
