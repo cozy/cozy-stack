@@ -1004,7 +1004,7 @@ func Patch(i *Instance, opts *Options) error {
 
 	if settingsUpdate {
 		oldSettings, err := i.SettingsDocument()
-		if err != nil {
+		if err == nil {
 			old := oldSettings.M["email"]
 			new := settings.M["email"]
 			if old != new {
