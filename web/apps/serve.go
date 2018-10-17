@@ -2,7 +2,6 @@ package apps
 
 import (
 	"bytes"
-	"fmt"
 	"html/template"
 	"io/ioutil"
 	"net/http"
@@ -101,8 +100,7 @@ func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
 		return
 	}
 	from := i.SubDomain(parts[1]).String()
-	hdr := fmt.Sprintf("%s %s", middlewares.XFrameAllowFrom, from)
-	c.Response().Header().Set(echo.HeaderXFrameOptions, hdr)
+	middlewares.AppendCSPRule(c, "frame-ancestors", from)
 }
 
 // ServeAppFile will serve the requested file using the specified application
