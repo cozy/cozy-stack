@@ -253,8 +253,9 @@ func addAssets(c echo.Context) error {
 		return err
 	}
 	cacheStorage := config.GetConfig().CacheStorage
-	if err := fs.RegisterCustomExternals(cacheStorage, unmarshaledAssets, 0 /* = retry count */); err != nil {
-		return err
+	err := fs.RegisterCustomExternals(cacheStorage, unmarshaledAssets, 0 /* = retry count */)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
 	return config_dyn.UpdateAssetsList()
 }
