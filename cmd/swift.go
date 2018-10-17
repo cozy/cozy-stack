@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/swift"
 	"github.com/spf13/cobra"
 )
 
@@ -97,6 +99,29 @@ var swiftDeleteCmd = &cobra.Command{
 	},
 }
 
+var swiftLsCmd = &cobra.Command{
+	Use:     "ls <domain>",
+	Aliases: []string{"delete"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return cmd.Usage()
+		}
+		i, err := instance.Get(args[0])
+		if err != nil {
+			return err
+		}
+		sc := config.GetSwiftConnection()
+		container := swiftContainer(i)
+		return sc.ObjectsWalk(container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
+			names, err := sc.ObjectNames(container, opts)
+			if err == nil {
+				fmt.Println(strings.Join(names, "\n"))
+			}
+			return names, err
+		})
+	},
+}
+
 func swiftContainer(i *instance.Instance) string {
 	if i.SwiftCluster > 0 {
 		return "cozy-v2-" + i.DBPrefix()
@@ -110,6 +135,7 @@ func init() {
 	swiftCmdGroup.AddCommand(swiftGetCmd)
 	swiftCmdGroup.AddCommand(swiftPutCmd)
 	swiftCmdGroup.AddCommand(swiftDeleteCmd)
+	swiftCmdGroup.AddCommand(swiftLsCmd)
 
 	RootCmd.AddCommand(swiftCmdGroup)
 }
