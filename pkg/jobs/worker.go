@@ -324,7 +324,7 @@ func onBadTriggerError(job *Job) {
 		Account string `json:"account"`
 	}
 	if err = t.Infos().Message.Unmarshal(&msg); err == nil && msg.Account != "" {
-		var doc couchdb.JSONDoc
+		doc := couchdb.JSONDoc{Type: consts.Accounts}
 		if err = couchdb.GetDoc(job, consts.Accounts, msg.Account, &doc); err == nil {
 			couchdb.DeleteDoc(job, &doc)
 		}
