@@ -312,6 +312,7 @@ func (i *Installer) update() error {
 	// For git:// and file:// sources, it may be more complicated since we need
 	// to actually fetch the data to extract the exact version of the manifest.
 	makeUpdate := true
+	availableVersion := ""
 	switch i.src.Scheme {
 	case "registry", "http", "https":
 		makeUpdate = (newManifest.Version() != oldManifest.Version())
@@ -328,6 +329,7 @@ func (i *Installer) update() error {
 			newPermissions.HasSameRules(oldPermissions)
 		if !samePermissions && !i.permissionsAcked {
 			makeUpdate = false
+			availableVersion = newManifest.Version()
 		}
 	}
 
@@ -341,7 +343,9 @@ func (i *Installer) update() error {
 		i.man.SetState(i.endState)
 	} else {
 		i.man.SetSource(i.src)
-		i.man.SetAvailableVersion(newManifest.Version())
+		if availableVersion != "" {
+			i.man.SetAvailableVersion(availableVersion)
+		}
 		i.sendRealtimeEvent()
 		i.notifyChannel()
 	}

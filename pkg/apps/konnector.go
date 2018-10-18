@@ -241,9 +241,6 @@ func GetKonnectorBySlugAndUpdate(db prefixer.Prefixer, slug string, copier Copie
 	if err != nil {
 		return nil, err
 	}
-	if man.AvailableVersion != "" {
-		return man, nil
-	}
 	return doLazyUpdate(db, man, copier, registries).(*KonnManifest), nil
 }
 

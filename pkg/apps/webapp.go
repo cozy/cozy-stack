@@ -447,9 +447,6 @@ func GetWebappBySlugAndUpdate(db prefixer.Prefixer, slug string, copier Copier, 
 	if err != nil {
 		return nil, err
 	}
-	if man.AvailableVersion != "" {
-		return man, nil
-	}
 	return doLazyUpdate(db, man, copier, registries).(*WebappManifest), nil
 }
 
