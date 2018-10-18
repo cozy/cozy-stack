@@ -59,7 +59,8 @@ fs:
   # url: file://localhost/var/lib/cozy
   # url: swift://openstack/?UserName={{ .Env.OS_USERNAME }}&Password={{ .Env.OS_PASSWORD }}&ProjectName={{ .Env.OS_PROJECT_NAME }}&UserDomainName={{ .Env.OS_USER_DOMAIN_NAME }}
 
-  # Swift advanced parameters to activate TLS properties:
+  # Swift FS can be used with advanced parameters to activate TLS properties.
+  # For using swift with https, you must use the "swift+https" scheme.
   #
   # root_ca: /ca-certificates.pem
   # client_cert: /client_cert.pem
