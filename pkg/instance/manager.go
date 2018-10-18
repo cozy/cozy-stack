@@ -60,7 +60,7 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
 	// TODO: we may want to rely on the contexts to avoid hardcoding the path
 	// values of these kinds.
 	case ManagerPremiumURL:
-		path = fmt.Sprintf("/cozy/accounts/%s/premium", url.PathEscape(i.UUID))
+		path = fmt.Sprintf("/cozy/instances/%s/premium", url.PathEscape(i.UUID))
 	case ManagerTOSURL:
 		path = fmt.Sprintf("/cozy/instances/%s/tos", url.PathEscape(i.UUID))
 	case ManagerBlockedURL:
