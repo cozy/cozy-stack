@@ -29,7 +29,6 @@ cozy-stack fixer <command> [flags]
 ### SEE ALSO
 
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
-* [cozy-stack fixer accounts-orphans](cozy-stack_fixer_accounts-orphans.md)	 - Rebuild triggers associated with orphan accounts
 * [cozy-stack fixer albums-created-at](cozy-stack_fixer_albums-created-at.md)	 - Add a created_at field for albums where it's missing
 * [cozy-stack fixer contact-emails](cozy-stack_fixer_contact-emails.md)	 - Detect and try to fix invalid emails on contacts
 * [cozy-stack fixer jobs](cozy-stack_fixer_jobs.md)	 - Take a look at the consistency of the jobs
