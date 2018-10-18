@@ -1745,8 +1745,8 @@ func TestMain(m *testing.M) {
 	token = tok
 	ts = setup.GetTestServer("/files", Routes, func(r *echo.Echo) *echo.Echo {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
-			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf},
-			XFrameOptions: middlewares.XFrameDeny,
+			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf},
+			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcNone},
 		})
 		r.Use(secure)
 		return r

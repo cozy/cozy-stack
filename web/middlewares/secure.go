@@ -11,9 +11,6 @@ import (
 )
 
 type (
-	// XFrameOption type for the values of the X-Frame-Options header.
-	XFrameOption string
-
 	// CSPSource type are the different types of CSP headers sources definitions.
 	// Each source type defines a different acess policy.
 	CSPSource int
@@ -254,8 +251,12 @@ func makeCSPHeader(parent, siblings, header, cspWhitelist string, sources []CSPS
 
 // AppendCSPRule allows to patch inline the CSP headers to add a new rule.
 func AppendCSPRule(c echo.Context, ruleType string, appendedValues ...string) {
-	var newRules string
 	currentRules := c.Response().Header().Get(echo.HeaderContentSecurityPolicy)
+	newRules := appendCSPRule(currentRules, ruleType, appendedValues...)
+	c.Response().Header().Set(echo.HeaderContentSecurityPolicy, newRules)
+}
+
+func appendCSPRule(currentRules, ruleType string, appendedValues ...string) (newRules string) {
 	ruleIndex := strings.Index(currentRules, ruleType)
 	if ruleIndex >= 0 {
 		ruleTerminationIndex := strings.Index(currentRules[ruleIndex:], ";")
@@ -269,5 +270,5 @@ func AppendCSPRule(c echo.Context, ruleType string, appendedValues ...string) {
 	} else {
 		newRules = currentRules + ruleType + " " + strings.Join(appendedValues, " ") + ";"
 	}
-	c.Response().Header().Set(echo.HeaderContentSecurityPolicy, newRules)
+	return
 }
