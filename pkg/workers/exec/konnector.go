@@ -218,26 +218,26 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *inst
 			"?", "_", "<", "_", ">", "_", "{", "_", "}", "_")
 		accountName := r.Replace(account.Name)
 		normalizedFolderPath = fmt.Sprintf("/%s/%s/%s", admin, strings.Title(w.slug), accountName)
-	}
 
-	// This is code to handle legacy: if the konnector does not actually require
-	// a directory (for instance because it does not upload files), but a folder
-	// has been created in the past by the stack which is still empty, then we
-	// delete it.
-	if normalizedFolderPath != "" && msg.FolderToSave == "" && account.FolderPath == "" && account.Basic.FolderPath == "" {
-		if dir, errp := fs.DirByPath(normalizedFolderPath); errp == nil {
-			if account.Name == "" {
-				innerDirPath := path.Join(normalizedFolderPath, strings.Title(w.slug))
-				if innerDir, errp := fs.DirByPath(innerDirPath); errp == nil {
-					if isEmpty, _ := innerDir.IsEmpty(fs); isEmpty {
-						w.Logger(ctx).Warnf("Deleting empty directory for konnector: %q:%q", innerDir.ID(), normalizedFolderPath)
-						fs.DeleteDirDoc(innerDir)
+		// This is code to handle legacy: if the konnector does not actually require
+		// a directory (for instance because it does not upload files), but a folder
+		// has been created in the past by the stack which is still empty, then we
+		// delete it.
+		if msg.FolderToSave == "" && account.FolderPath == "" && account.Basic.FolderPath == "" {
+			if dir, errp := fs.DirByPath(normalizedFolderPath); errp == nil {
+				if account.Name == "" {
+					innerDirPath := path.Join(normalizedFolderPath, strings.Title(w.slug))
+					if innerDir, errp := fs.DirByPath(innerDirPath); errp == nil {
+						if isEmpty, _ := innerDir.IsEmpty(fs); isEmpty {
+							w.Logger(ctx).Warnf("Deleting empty directory for konnector: %q:%q", innerDir.ID(), normalizedFolderPath)
+							fs.DeleteDirDoc(innerDir)
+						}
 					}
 				}
-			}
-			if isEmpty, _ := dir.IsEmpty(fs); isEmpty {
-				w.Logger(ctx).Warnf("Deleting empty directory for konnector: %q:%q", dir.ID(), normalizedFolderPath)
-				fs.DeleteDirDoc(dir)
+				if isEmpty, _ := dir.IsEmpty(fs); isEmpty {
+					w.Logger(ctx).Warnf("Deleting empty directory for konnector: %q:%q", dir.ID(), normalizedFolderPath)
+					fs.DeleteDirDoc(dir)
+				}
 			}
 		}
 	}
