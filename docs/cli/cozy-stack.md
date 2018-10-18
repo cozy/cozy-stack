@@ -39,6 +39,7 @@ cozy-stack <command> [flags]
 * [cozy-stack serve](cozy-stack_serve.md)	 - Starts the stack and listens for HTTP calls
 * [cozy-stack settings](cozy-stack_settings.md)	 - Display and update settings
 * [cozy-stack status](cozy-stack_status.md)	 - Check if the HTTP server is running
+* [cozy-stack swift](cozy-stack_swift.md)	 - Interact directly with OpenStack Swift object storage
 * [cozy-stack triggers](cozy-stack_triggers.md)	 - Interact with the triggers
 * [cozy-stack version](cozy-stack_version.md)	 - Print the version number
 

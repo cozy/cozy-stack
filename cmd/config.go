@@ -353,6 +353,41 @@ var insertAssetCmd = &cobra.Command{
 	},
 }
 
+var listAssetCmd = &cobra.Command{
+	Use:     "ls-assets",
+	Short:   "List assets",
+	Long:    "List assets currently served by the stack",
+	Example: "$ cozy-stack config ls-assets",
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		c := newAdminClient()
+		req := &request.Options{
+			Method: "GET",
+			Path:   "instances/assets",
+		}
+		res, err := c.Req(req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+
+		var v interface{}
+
+		err = json.NewDecoder(res.Body).Decode(&v)
+		if err != nil {
+			return err
+		}
+
+		json, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(json))
+		return nil
+	},
+}
+
 func init() {
 	configCmdGroup.AddCommand(configPrintCmd)
 	configCmdGroup.AddCommand(adminPasswdCmd)
@@ -362,6 +397,7 @@ func init() {
 	configCmdGroup.AddCommand(encryptCredentialsCmd)
 	configCmdGroup.AddCommand(decryptCredentialsCmd)
 	configCmdGroup.AddCommand(insertAssetCmd)
+	configCmdGroup.AddCommand(listAssetCmd)
 	RootCmd.AddCommand(configCmdGroup)
 	insertAssetCmd.Flags().StringVar(&flagURL, "url", "", "The URL of the asset")
 	insertAssetCmd.Flags().StringVar(&flagName, "name", "", "The name of the asset")
