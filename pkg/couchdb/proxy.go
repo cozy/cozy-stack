@@ -70,6 +70,8 @@ func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.Re
 	var transport http.RoundTripper
 	if client := config.GetConfig().CouchDB.Client; client != nil {
 		transport = client.Transport
+	} else {
+		transport = http.DefaultTransport
 	}
 
 	p := Proxy(db, doctype, "/_bulk_docs")
