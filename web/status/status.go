@@ -14,6 +14,7 @@ import (
 func Status(c echo.Context) error {
 	checker := checkup.HTTPChecker{
 		Name:     "CouchDB",
+		Client:   config.GetConfig().CouchDB.Client,
 		URL:      config.CouchURL().String(),
 		Attempts: 3,
 	}
