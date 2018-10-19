@@ -59,12 +59,13 @@ security features. Please do not use this binary as your production server.
 		var db checkup.Result
 		db, err = checkup.HTTPChecker{
 			URL:         u.String(),
+			Client:      config.GetConfig().CouchDB.Client,
 			MustContain: `"version":"2`,
 		}.Check()
 		if err != nil {
 			err = fmt.Errorf("Could not reach Couchdb 2.0 database: %s", err.Error())
 		} else if db.Status() == checkup.Down {
-			err = fmt.Errorf("Could not reach Couchdb 2.0 database")
+			err = fmt.Errorf("Could not reach Couchdb 2.0 database: %s", db.String())
 		} else if db.Status() != checkup.Healthy {
 			log.Warnf("CouchDB does not seem to be in a healthy state, " +
 				"the cozy-stack will be starting anyway")

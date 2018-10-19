@@ -78,16 +78,22 @@ func NewHTTPClient(opt HTTPEndpoint) (client *http.Client, u *url.URL, err error
 		}
 	}
 	if opt.RootCAFile != "" {
-		c.LoadRootCAFile(opt.RootCAFile)
+		if err = c.LoadRootCAFile(opt.RootCAFile); err != nil {
+			return
+		}
 	}
 	if opt.ClientCertificateFiles.CertificateFile != "" {
-		c.LoadClientCertificateFile(
+		if err = c.LoadClientCertificateFile(
 			opt.ClientCertificateFiles.CertificateFile,
 			opt.ClientCertificateFiles.KeyFile,
-		)
+		); err != nil {
+			return
+		}
 	}
 	if opt.PinnedKey != "" {
-		c.AddHexPinnedKey(opt.PinnedKey)
+		if err = c.AddHexPinnedKey(opt.PinnedKey); err != nil {
+			return
+		}
 	}
 	if opt.InsecureSkipValidation {
 		c.SetInsecureSkipValidation()
@@ -217,7 +223,7 @@ func (s *tlsConfig) SetInsecureSkipValidation() {
 func (s *tlsConfig) AddHexPinnedKey(hexPinnedKey string) error {
 	pinnedKey, err := hex.DecodeString(hexPinnedKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("tlsclient: invalid hexadecimal fingerprint: %s", err)
 	}
 	expected := sha256.Size
 	given := len(pinnedKey)
