@@ -424,13 +424,16 @@ func (i *Installer) Poll() (Manifest, bool, error) {
 	return man, done, man.Error()
 }
 
-func doLazyUpdate(db prefixer.Prefixer, man Manifest, copier Copier, registries []*url.URL) Manifest {
+func doLazyUpdate(db prefixer.Prefixer, man Manifest, availableVersion string, copier Copier, registries []*url.URL) Manifest {
 	src, err := url.Parse(man.Source())
 	if err != nil || src.Scheme != "registry" {
 		return man
 	}
 	v, errv := registry.GetLatestVersion(man.Slug(), getRegistryChannel(src), registries)
 	if errv != nil || v.Version == man.Version() {
+		return man
+	}
+	if availableVersion != "" && v.Version == availableVersion {
 		return man
 	}
 	inst, err := NewInstaller(db, copier, &InstallerOptions{
