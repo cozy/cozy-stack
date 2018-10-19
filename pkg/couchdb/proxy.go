@@ -34,8 +34,16 @@ func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
 		}
 	}
 
+	var transport http.RoundTripper
+	if client := config.GetConfig().CouchDB.Client; client != nil {
+		transport = client.Transport
+	} else {
+		transport = http.DefaultTransport
+	}
+
 	return &httputil.ReverseProxy{
-		Director: director,
+		Director:  director,
+		Transport: transport,
 	}
 }
 
