@@ -5,7 +5,7 @@ from the given source URL.
 
 ### Synopsis
 
-[Some schemes](../../docs/apps.md#sources) are allowed as `[sourceurl]`.
+[Some schemes](https://docs.cozy.io/en/cozy-stack/apps/#sources) are allowed as `[sourceurl]`.
 
 ```
 cozy-stack apps install <slug> [sourceurl] [flags]
