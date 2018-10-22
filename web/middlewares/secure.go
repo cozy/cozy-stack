@@ -11,56 +11,48 @@ import (
 )
 
 type (
-	// XFrameOption type for the values of the X-Frame-Options header.
-	XFrameOption string
-
 	// CSPSource type are the different types of CSP headers sources definitions.
 	// Each source type defines a different acess policy.
 	CSPSource int
 
 	// SecureConfig defines the config for Secure middleware.
 	SecureConfig struct {
-		HSTSMaxAge     time.Duration
-		CSPDefaultSrc  []CSPSource
-		CSPScriptSrc   []CSPSource
-		CSPFrameSrc    []CSPSource
-		CSPConnectSrc  []CSPSource
-		CSPFontSrc     []CSPSource
-		CSPImgSrc      []CSPSource
-		CSPManifestSrc []CSPSource
-		CSPMediaSrc    []CSPSource
-		CSPObjectSrc   []CSPSource
-		CSPStyleSrc    []CSPSource
-		CSPWorkerSrc   []CSPSource
+		HSTSMaxAge time.Duration
 
-		CSPDefaultSrcWhitelist  string
-		CSPScriptSrcWhitelist   string
-		CSPFrameSrcWhitelist    string
-		CSPConnectSrcWhitelist  string
-		CSPFontSrcWhitelist     string
-		CSPImgSrcWhitelist      string
-		CSPManifestSrcWhitelist string
-		CSPMediaSrcWhitelist    string
-		CSPObjectSrcWhitelist   string
-		CSPStyleSrcWhitelist    string
-		CSPWorkerSrcWhitelist   string
+		CSPDefaultSrc     []CSPSource
+		CSPScriptSrc      []CSPSource
+		CSPFrameSrc       []CSPSource
+		CSPConnectSrc     []CSPSource
+		CSPFontSrc        []CSPSource
+		CSPImgSrc         []CSPSource
+		CSPManifestSrc    []CSPSource
+		CSPMediaSrc       []CSPSource
+		CSPObjectSrc      []CSPSource
+		CSPStyleSrc       []CSPSource
+		CSPWorkerSrc      []CSPSource
+		CSPFrameAncestors []CSPSource
 
-		XFrameOptions XFrameOption
-		XFrameAllowed string
+		CSPDefaultSrcWhitelist     string
+		CSPScriptSrcWhitelist      string
+		CSPFrameSrcWhitelist       string
+		CSPConnectSrcWhitelist     string
+		CSPFontSrcWhitelist        string
+		CSPImgSrcWhitelist         string
+		CSPManifestSrcWhitelist    string
+		CSPMediaSrcWhitelist       string
+		CSPObjectSrcWhitelist      string
+		CSPStyleSrcWhitelist       string
+		CSPWorkerSrcWhitelist      string
+		CSPFrameAncestorsWhitelist string
 	}
 )
 
 const (
-	// XFrameDeny is the DENY option of the X-Frame-Options header.
-	XFrameDeny XFrameOption = "DENY"
-	// XFrameSameOrigin is the SAMEORIGIN option of the X-Frame-Options header.
-	XFrameSameOrigin = "SAMEORIGIN"
-	// XFrameAllowFrom is the ALLOW-FROM option of the X-Frame-Options header. It
-	// should be used along with the XFrameAllowed field of SecureConfig.
-	XFrameAllowFrom = "ALLOW-FROM"
-
 	// CSPSrcSelf is the 'self' option of a CSP source.
 	CSPSrcSelf CSPSource = iota
+	// CSPSrcNone is the 'none' option. It denies all domains as an eligible
+	// source.
+	CSPSrcNone
 	// CSPSrcData is the 'data:' option of a CSP source.
 	CSPSrcData
 	// CSPSrcBlob is the 'blob:' option of a CSP source.
@@ -88,16 +80,6 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	if conf.HSTSMaxAge > 0 {
 		hstsHeader = fmt.Sprintf("max-age=%.f; includeSubDomains",
 			conf.HSTSMaxAge.Seconds())
-	}
-
-	var xFrameHeader string
-	switch conf.XFrameOptions {
-	case XFrameDeny:
-		xFrameHeader = string(XFrameDeny)
-	case XFrameSameOrigin:
-		xFrameHeader = string(XFrameSameOrigin)
-	case XFrameAllowFrom:
-		xFrameHeader = fmt.Sprintf("%s %s", XFrameAllowFrom, conf.XFrameAllowed)
 	}
 
 	conf.CSPDefaultSrc, conf.CSPDefaultSrcWhitelist =
@@ -133,9 +115,6 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 			if isSecure && hstsHeader != "" {
 				h.Set(echo.HeaderStrictTransportSecurity, hstsHeader)
 			}
-			if xFrameHeader != "" {
-				h.Set(echo.HeaderXFrameOptions, xFrameHeader)
-			}
 			var cspHeader string
 			parent, _, siblings := SplitHost(c.Request().Host)
 			if len(conf.CSPDefaultSrc) > 0 {
@@ -170,6 +149,9 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 			}
 			if len(conf.CSPWorkerSrc) > 0 {
 				cspHeader += makeCSPHeader(parent, siblings, "worker-src", conf.CSPWorkerSrcWhitelist, conf.CSPWorkerSrc, isSecure)
+			}
+			if len(conf.CSPFrameAncestors) > 0 {
+				cspHeader += makeCSPHeader(parent, siblings, "frame-ancestors", conf.CSPFrameAncestorsWhitelist, conf.CSPFrameAncestors, isSecure)
 			}
 			if cspHeader != "" {
 				h.Set(echo.HeaderContentSecurityPolicy, cspHeader)
@@ -232,6 +214,8 @@ func makeCSPHeader(parent, siblings, header, cspWhitelist string, sources []CSPS
 		switch src {
 		case CSPSrcSelf:
 			headers[i] = "'self'"
+		case CSPSrcNone:
+			headers[i] = "'none'"
 		case CSPSrcData:
 			headers[i] = "data:"
 		case CSPSrcBlob:
@@ -263,4 +247,28 @@ func makeCSPHeader(parent, siblings, header, cspWhitelist string, sources []CSPS
 		}
 	}
 	return header + " " + strings.Join(headers, " ") + ";"
+}
+
+// AppendCSPRule allows to patch inline the CSP headers to add a new rule.
+func AppendCSPRule(c echo.Context, ruleType string, appendedValues ...string) {
+	currentRules := c.Response().Header().Get(echo.HeaderContentSecurityPolicy)
+	newRules := appendCSPRule(currentRules, ruleType, appendedValues...)
+	c.Response().Header().Set(echo.HeaderContentSecurityPolicy, newRules)
+}
+
+func appendCSPRule(currentRules, ruleType string, appendedValues ...string) (newRules string) {
+	ruleIndex := strings.Index(currentRules, ruleType)
+	if ruleIndex >= 0 {
+		ruleTerminationIndex := strings.Index(currentRules[ruleIndex:], ";")
+		if ruleTerminationIndex <= 0 {
+			return
+		}
+		ruleFields := strings.Fields(currentRules[ruleIndex : ruleIndex+ruleTerminationIndex])
+		ruleFields = append(ruleFields, appendedValues...)
+		newRules = currentRules[:ruleIndex] + strings.Join(ruleFields, " ") +
+			currentRules[ruleIndex+ruleTerminationIndex:]
+	} else {
+		newRules = currentRules + ruleType + " " + strings.Join(appendedValues, " ") + ";"
+	}
+	return
 }

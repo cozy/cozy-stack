@@ -58,12 +58,13 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	}
 	if !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
-			HSTSMaxAge:    hstsMaxAge,
-			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
-			CSPStyleSrc:   []middlewares.CSPSource{middlewares.CSPUnsafeInline},
-			CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcData},
-			CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcData, middlewares.CSPSrcBlob},
-			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcSiblings},
+			HSTSMaxAge:        hstsMaxAge,
+			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
+			CSPStyleSrc:       []middlewares.CSPSource{middlewares.CSPUnsafeInline},
+			CSPFontSrc:        []middlewares.CSPSource{middlewares.CSPSrcData},
+			CSPImgSrc:         []middlewares.CSPSource{middlewares.CSPSrcData, middlewares.CSPSrcBlob},
+			CSPFrameSrc:       []middlewares.CSPSource{middlewares.CSPSrcSiblings},
+			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcSelf},
 
 			CSPDefaultSrcWhitelist: config.GetConfig().CSPWhitelist["default"],
 			CSPImgSrcWhitelist:     config.GetConfig().CSPWhitelist["img"] + " " + cspImgSrcWhitelist,
@@ -71,8 +72,6 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPConnectSrcWhitelist: config.GetConfig().CSPWhitelist["connect"] + " " + cspScriptSrcWhitelist,
 			CSPStyleSrcWhitelist:   config.GetConfig().CSPWhitelist["style"],
 			CSPFontSrcWhitelist:    config.GetConfig().CSPWhitelist["font"],
-
-			XFrameOptions: middlewares.XFrameSameOrigin,
 		})
 		mws = append([]echo.MiddlewareFunc{secure}, mws...)
 	}
@@ -112,9 +111,9 @@ func SetupRoutes(router *echo.Echo) error {
 
 	if !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
-			HSTSMaxAge:    hstsMaxAge,
-			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf},
-			XFrameOptions: middlewares.XFrameDeny,
+			HSTSMaxAge:        hstsMaxAge,
+			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf},
+			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcNone},
 		})
 		router.Use(secure)
 	}

@@ -61,36 +61,25 @@ func TestSecureMiddlewareCSP(t *testing.T) {
 	assert.Equal(t, "script-src https://*.cozy.local;frame-src *;connect-src https://cozy.local 'self';", rec3.Header().Get(echo.HeaderContentSecurityPolicy))
 }
 
-func TestSecureMiddlewareXFrame(t *testing.T) {
-	e1 := echo.New()
-	req1, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
-	rec1 := httptest.NewRecorder()
-	c1 := e1.NewContext(req1, rec1)
-	h1 := Secure(&SecureConfig{
-		XFrameOptions: XFrameDeny,
-	})(echo.NotFoundHandler)
-	h1(c1)
+func TestAppendCSPRule(t *testing.T) {
+	r := appendCSPRule("", "frame-ancestors", "new-rule")
+	assert.Equal(t, "frame-ancestors new-rule;", r)
 
-	e2 := echo.New()
-	req2, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
-	rec2 := httptest.NewRecorder()
-	c2 := e2.NewContext(req2, rec2)
-	h2 := Secure(&SecureConfig{
-		XFrameOptions: XFrameSameOrigin,
-	})(echo.NotFoundHandler)
-	h2(c2)
+	r = appendCSPRule("frame-ancestors;", "frame-ancestors", "new-rule")
+	assert.Equal(t, "frame-ancestors new-rule;", r)
 
-	e3 := echo.New()
-	req3, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
-	rec3 := httptest.NewRecorder()
-	c3 := e3.NewContext(req3, rec3)
-	h3 := Secure(&SecureConfig{
-		XFrameOptions: XFrameAllowFrom,
-		XFrameAllowed: "allowed.foobar",
-	})(echo.NotFoundHandler)
-	h3(c3)
+	r = appendCSPRule("frame-ancestors 1 2 3 ;", "frame-ancestors", "new-rule")
+	assert.Equal(t, "frame-ancestors 1 2 3 new-rule;", r)
 
-	assert.Equal(t, "DENY", rec1.Header().Get(echo.HeaderXFrameOptions))
-	assert.Equal(t, "SAMEORIGIN", rec2.Header().Get(echo.HeaderXFrameOptions))
-	assert.Equal(t, "ALLOW-FROM allowed.foobar", rec3.Header().Get(echo.HeaderXFrameOptions))
+	r = appendCSPRule("frame-ancestors 1 2 3 ;", "frame-ancestors", "new-rule", "new-rule-2")
+	assert.Equal(t, "frame-ancestors 1 2 3 new-rule new-rule-2;", r)
+
+	r = appendCSPRule("script '*'; frame-ancestors 'self';", "frame-ancestors", "new-rule")
+	assert.Equal(t, "script '*'; frame-ancestors 'self' new-rule;", r)
+
+	r = appendCSPRule("script '*'; frame-ancestors 'self'; plop plop;", "frame-ancestors", "new-rule")
+	assert.Equal(t, "script '*'; frame-ancestors 'self' new-rule; plop plop;", r)
+
+	r = appendCSPRule("script '*'; toto;", "frame-ancestors", "new-rule")
+	assert.Equal(t, "script '*'; toto;frame-ancestors new-rule;", r)
 }

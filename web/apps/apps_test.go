@@ -223,8 +223,8 @@ func TestServeWithAnIntents(t *testing.T) {
 	res, err := doGet(path, true)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	h := res.Header.Get(echo.HeaderXFrameOptions)
-	assert.Equal(t, "ALLOW-FROM https://test-app.cozywithapps.example.net/", h)
+	h := res.Header.Get(echo.HeaderContentSecurityPolicy)
+	assert.Contains(t, h, "frame-ancestors 'self' https://test-app.cozywithapps.example.net/;")
 }
 
 func TestServeAppsWithACode(t *testing.T) {
