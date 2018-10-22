@@ -564,6 +564,9 @@ func (s *Sharing) resolveConflictSamePath(inst *instance.Instance, visitorID, pt
 //getDirDocFromInstance fetches informations about a directory from the given
 //member of the sharing.
 func (s *Sharing) getDirDocFromInstance(inst *instance.Instance, m *Member, creds *Credentials, dirID string) (*vfs.DirDoc, error) {
+	if creds == nil || creds.AccessToken == nil {
+		return nil, ErrInvalidSharing
+	}
 	u, err := url.Parse(m.Instance)
 	if err != nil {
 		return nil, ErrInvalidSharing
@@ -873,14 +876,14 @@ func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		Type: consts.Files,
 		M: map[string]interface{}{
-			"type":                       dir.Type,
-			"_id":                        dir.DocID,
-			"_rev":                       dir.DocRev,
-			"name":                       dir.DocName,
-			"created_at":                 dir.CreatedAt,
-			"updated_at":                 dir.UpdatedAt,
-			"tags":                       dir.Tags,
-			"path":                       dir.Fullpath,
+			"type":       dir.Type,
+			"_id":        dir.DocID,
+			"_rev":       dir.DocRev,
+			"name":       dir.DocName,
+			"created_at": dir.CreatedAt,
+			"updated_at": dir.UpdatedAt,
+			"tags":       dir.Tags,
+			"path":       dir.Fullpath,
 			couchdb.SelectorReferencedBy: dir.ReferencedBy,
 		},
 	}
@@ -897,19 +900,19 @@ func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		Type: consts.Files,
 		M: map[string]interface{}{
-			"type":                       file.Type,
-			"_id":                        file.DocID,
-			"_rev":                       file.DocRev,
-			"name":                       file.DocName,
-			"created_at":                 file.CreatedAt,
-			"updated_at":                 file.UpdatedAt,
-			"size":                       file.ByteSize,
-			"md5sum":                     file.MD5Sum,
-			"mime":                       file.Mime,
-			"class":                      file.Class,
-			"executable":                 file.Executable,
-			"trashed":                    file.Trashed,
-			"tags":                       file.Tags,
+			"type":       file.Type,
+			"_id":        file.DocID,
+			"_rev":       file.DocRev,
+			"name":       file.DocName,
+			"created_at": file.CreatedAt,
+			"updated_at": file.UpdatedAt,
+			"size":       file.ByteSize,
+			"md5sum":     file.MD5Sum,
+			"mime":       file.Mime,
+			"class":      file.Class,
+			"executable": file.Executable,
+			"trashed":    file.Trashed,
+			"tags":       file.Tags,
 			couchdb.SelectorReferencedBy: file.ReferencedBy,
 		},
 	}
