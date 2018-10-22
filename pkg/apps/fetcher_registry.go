@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/url"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/sirupsen/logrus"
@@ -26,8 +27,18 @@ func (f *registryFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	if slug == "" {
 		return nil, ErrManifestNotReachable
 	}
-	channel := getRegistryChannel(src)
-	version, err := registry.GetLatestVersion(slug, channel, f.registries)
+	var version *registry.Version
+	var err error
+
+	channel, vnumber := getRegistryChannel(src)
+
+	if vnumber != "" {
+		slug = strings.Split(slug, ":")[0]
+		version, err = registry.GetVersion(slug, vnumber, f.registries)
+	} else {
+		version, err = registry.GetLatestVersion(slug, channel, f.registries)
+	}
+
 	if err != nil {
 		f.log.Infof("Could not fetch manifest for %s: %s", src.String(), err.Error())
 		return nil, ErrManifestNotReachable
@@ -50,13 +61,23 @@ func (f *registryFetcher) Fetch(src *url.URL, fs Copier, man Manifest) error {
 	return fetchHTTP(u, shasum, fs, man, v.TarPrefix)
 }
 
-func getRegistryChannel(src *url.URL) string {
-	channel := src.Path
-	if len(channel) > 0 && channel[0] == '/' {
-		channel = channel[1:]
+func getRegistryChannel(src *url.URL) (string, string) {
+	var channel, version string
+
+	splittedPath := strings.Split(src.String(), ":")
+	rawChan := splittedPath[1]
+	if len(rawChan) > 0 && strings.HasPrefix(rawChan, "//") {
+		if channelSplitted := strings.Split(rawChan[2:], "/"); len(channelSplitted) == 2 {
+			channel = channelSplitted[1]
+		} else {
+			channel = "stable"
+		}
 	}
-	if channel == "" {
-		channel = "stable"
+	if len(splittedPath) == 3 && splittedPath[2] != "latest" {
+		// Channel and version
+		// splittedPath == [registry //freemobile/stable 1.0.2]
+		version = splittedPath[2]
 	}
-	return channel
+
+	return channel, version
 }

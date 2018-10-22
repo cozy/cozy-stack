@@ -76,6 +76,26 @@ const (
 	NoCache
 )
 
+// GetVersion returns a specific version from a slug name
+func GetVersion(slug, version string, registries []*url.URL) (*Version, error) {
+	requestURI := fmt.Sprintf("/registry/%s/%s",
+		url.PathEscape(slug),
+		url.PathEscape(version))
+	resp, ok, err := fetchUntilFound(latestVersionClient, registries, requestURI, WithCache)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errVersionNotFound
+	}
+	defer resp.Body.Close()
+	var v *Version
+	if err = json.NewDecoder(resp.Body).Decode(&v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
 // GetLatestVersion returns the latest version available from the list of
 // registries by resolving them in sequence using the specified application
 // slug and channel name.
