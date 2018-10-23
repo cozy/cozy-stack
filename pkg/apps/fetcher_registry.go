@@ -6,8 +6,10 @@ import (
 	"io"
 	"io/ioutil"
 	"net/url"
+	"regexp"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/sirupsen/logrus"
 )
@@ -27,13 +29,12 @@ func (f *registryFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	if slug == "" {
 		return nil, ErrManifestNotReachable
 	}
+
 	var version *registry.Version
 	var err error
 
 	channel, vnumber := getRegistryChannel(src)
-
 	if vnumber != "" {
-		slug = strings.Split(slug, ":")[0]
 		version, err = registry.GetVersion(slug, vnumber, f.registries)
 	} else {
 		version, err = registry.GetLatestVersion(slug, channel, f.registries)
@@ -63,20 +64,32 @@ func (f *registryFetcher) Fetch(src *url.URL, fs Copier, man Manifest) error {
 
 func getRegistryChannel(src *url.URL) (string, string) {
 	var channel, version string
+	channel = "stable"
+	splittedPath := strings.Split(src.String(), "/")
+	log := logger.WithNamespace("fetcher_registry")
+	switch len(splittedPath) {
+	case 4: // Either channel or version
+		channelOrVersion := splittedPath[3]
 
-	splittedPath := strings.Split(src.String(), ":")
-	rawChan := splittedPath[1]
-	if len(rawChan) > 0 && strings.HasPrefix(rawChan, "//") {
-		if channelSplitted := strings.Split(rawChan[2:], "/"); len(channelSplitted) == 2 {
-			channel = channelSplitted[1]
-		} else {
-			channel = "stable"
+		// If it starts with a number, it is the version
+		versionRegex := "^\\d"
+		matched, err := regexp.MatchString(versionRegex, channelOrVersion)
+		if err != nil {
+			log.Errorf("fetcher_registry: Bad format for %s", src.String())
+			return "", ""
 		}
+		if matched {
+			version = channelOrVersion
+		} else {
+			channel = channelOrVersion
+		}
+	case 5: // Channel and version
+		channel = splittedPath[3]
+		version = splittedPath[4]
 	}
-	if len(splittedPath) == 3 && splittedPath[2] != "latest" {
-		// Channel and version
-		// splittedPath == [registry //freemobile/stable 1.0.2]
-		version = splittedPath[2]
+
+	if version == "latest" {
+		version = ""
 	}
 
 	return channel, version

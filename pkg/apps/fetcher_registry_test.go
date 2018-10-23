@@ -8,19 +8,19 @@ import (
 )
 
 func TestSplitChannelVersionRegistryFetcher(t *testing.T) {
-	url, err := url.Parse("registry://freemobile/stable:latest")
+	url, err := url.Parse("registry://freemobile/stable/latest")
 	c, v := getRegistryChannel(url)
 	assert.NoError(t, err)
 	assert.EqualValues(t, c, "stable")
 	assert.EqualValues(t, v, "")
 
-	url, err2 := url.Parse("registry://freemobile/stable:1.2.0")
+	url, err2 := url.Parse("registry://freemobile/stable/1.2.0")
 	c2, v2 := getRegistryChannel(url)
 	assert.NoError(t, err2)
 	assert.EqualValues(t, c2, "stable")
 	assert.EqualValues(t, v2, "1.2.0")
 
-	url, err3 := url.Parse("registry://freemobile:1.0.2")
+	url, err3 := url.Parse("registry://freemobile/1.0.2")
 	c3, v3 := getRegistryChannel(url)
 	assert.NoError(t, err3)
 	assert.EqualValues(t, c3, "stable")
