@@ -232,23 +232,23 @@ func (j JSONDoc) Match(field, value string) bool {
 	return fmt.Sprintf("%v", j.Get(field)) == value
 }
 
-func unescapeCouchdbName(name string) string {
+func UnescapeCouchdbName(name string) string {
 	return strings.Replace(name, "-", ".", -1)
 }
 
-func escapeCouchdbName(name string) string {
+func EscapeCouchdbName(name string) string {
 	name = strings.Replace(name, ".", "-", -1)
 	name = strings.Replace(name, ":", "-", -1)
 	return strings.ToLower(name)
 }
 
 func makeDBName(db Database, doctype string) string {
-	dbname := escapeCouchdbName(db.DBPrefix() + "/" + doctype)
+	dbname := EscapeCouchdbName(db.DBPrefix() + "/" + doctype)
 	return url.PathEscape(dbname)
 }
 
 func dbNameHasPrefix(dbname, dbprefix string) (bool, string) {
-	dbprefix = escapeCouchdbName(dbprefix + "/")
+	dbprefix = EscapeCouchdbName(dbprefix + "/")
 	if !strings.HasPrefix(dbname, dbprefix) {
 		return false, ""
 	}
@@ -360,12 +360,12 @@ func AllDoctypes(db Database) ([]string, error) {
 	if err := makeRequest(db, "", http.MethodGet, "_all_dbs", nil, &dbs); err != nil {
 		return nil, err
 	}
-	prefix := escapeCouchdbName(db.DBPrefix())
+	prefix := EscapeCouchdbName(db.DBPrefix())
 	var doctypes []string
 	for _, dbname := range dbs {
 		parts := strings.Split(dbname, "/")
 		if len(parts) == 2 && parts[0] == prefix {
-			doctype := unescapeCouchdbName(parts[1])
+			doctype := UnescapeCouchdbName(parts[1])
 			doctypes = append(doctypes, doctype)
 		}
 	}
