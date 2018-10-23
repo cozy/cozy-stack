@@ -97,14 +97,14 @@ given domain.
 	},
 }
 
-var showPrefixInstanceCmd = &cobra.Command{
-	Use:   "show-prefix <domain>",
-	Short: "Show the instance prefix of the specified domain",
+var showDBPrefixInstanceCmd = &cobra.Command{
+	Use:   "show-db-prefix <domain>",
+	Short: "Show the instance DB prefix of the specified domain",
 	Long: `
 cozy-stack instances show allows to show the instance prefix on the cozy for a
 given domain. The prefix is used for databases and VFS prefixing.
 `,
-	Example: "$ cozy-stack instances show-prefix cozy.tools:8080",
+	Example: "$ cozy-stack instances show-db-prefix cozy.tools:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return cmd.Usage()
@@ -796,7 +796,7 @@ var showSwiftPrefixInstanceCmd = &cobra.Command{
 
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
-	instanceCmdGroup.AddCommand(showPrefixInstanceCmd)
+	instanceCmdGroup.AddCommand(showDBPrefixInstanceCmd)
 	instanceCmdGroup.AddCommand(addInstanceCmd)
 	instanceCmdGroup.AddCommand(modifyInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
