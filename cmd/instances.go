@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -16,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
@@ -50,6 +52,7 @@ var flagOnboardingFinished bool
 var flagExpire time.Duration
 var flagAllowLoginScope bool
 var flagFsckIndexIntegrity bool
+var flagAvailableFields bool
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -97,14 +100,14 @@ given domain.
 	},
 }
 
-var showPrefixInstanceCmd = &cobra.Command{
-	Use:   "show-prefix <domain>",
-	Short: "Show the instance prefix of the specified domain",
+var showDBPrefixInstanceCmd = &cobra.Command{
+	Use:   "show-db-prefix <domain>",
+	Short: "Show the instance DB prefix of the specified domain",
 	Long: `
 cozy-stack instances show allows to show the instance prefix on the cozy for a
 given domain. The prefix is used for databases and VFS prefixing.
 `,
-	Example: "$ cozy-stack instances show-prefix cozy.tools:8080",
+	Example: "$ cozy-stack instances show-db-prefix cozy.tools:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return cmd.Usage()
@@ -118,7 +121,7 @@ given domain. The prefix is used for databases and VFS prefixing.
 		if in.Attrs.Prefix != "" {
 			fmt.Println(in.Attrs.Prefix)
 		} else {
-			fmt.Println(in.Attrs.Domain)
+			fmt.Println(couchdb.EscapeCouchdbName(in.Attrs.Domain))
 		}
 		return nil
 	},
@@ -328,18 +331,42 @@ by this server.
 		if err != nil {
 			return err
 		}
+		if flagAvailableFields {
+			instance := list[0]
+			val := reflect.ValueOf(instance.Attrs)
+			t := val.Type()
+			for i := 0; i < t.NumField(); i++ {
+				param := t.Field(i).Tag.Get("json")
+				fmt.Println(strings.TrimSuffix(param, ",omitempty"))
+			}
+			fmt.Println("db_prefix")
+			return nil
+		}
 		if flagJSON {
 			if len(flagListFields) > 0 {
 				for _, inst := range list {
-					var values []interface{}
+					var values map[string]interface{}
 					values, err = extractFields(inst.Attrs, flagListFields)
 					if err != nil {
 						return err
 					}
-					m := make(map[string]interface{}, len(flagListFields))
-					for i, fieldName := range flagListFields {
-						m[fieldName] = values[i]
+
+					// Insert the db_prefix value if needed
+					for _, v := range flagListFields {
+						if v == "db_prefix" {
+							values["db_prefix"] = couchdb.EscapeCouchdbName(inst.DBPrefix())
+						}
 					}
+
+					m := make(map[string]interface{}, len(flagListFields))
+					for _, fieldName := range flagListFields {
+						if v, ok := values[fieldName]; ok {
+							m[fieldName] = v
+						} else {
+							m[fieldName] = nil
+						}
+					}
+
 					if err = json.NewEncoder(os.Stdout).Encode(m); err != nil {
 						return err
 					}
@@ -357,20 +384,36 @@ by this server.
 				format := strings.Repeat("%v\t", len(flagListFields))
 				format = format[:len(format)-1] + "\n"
 				for _, inst := range list {
-					var values []interface{}
+					var values map[string]interface{}
+					var instancesLines []interface{}
+
 					values, err = extractFields(inst.Attrs, flagListFields)
 					if err != nil {
 						return err
 					}
-					fmt.Fprintf(w, format, values...)
+
+					// Insert the db_prefix value if needed
+					for _, v := range flagListFields {
+						if v == "db_prefix" {
+							values["db_prefix"] = couchdb.EscapeCouchdbName(inst.DBPrefix())
+						}
+					}
+					// We append to a list to print in the same order as
+					// requested
+					for _, fieldName := range flagListFields {
+						instancesLines = append(instancesLines, values[fieldName])
+					}
+
+					fmt.Fprintf(w, format, instancesLines...)
 				}
 			} else {
 				for _, i := range list {
 					prefix := i.Attrs.Prefix
+					DBPrefix := prefix
 					if prefix == "" {
-						prefix = i.Attrs.Domain
+						DBPrefix = couchdb.EscapeCouchdbName(i.Attrs.Domain)
 					}
-					fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\tv%d\t%s\n",
+					fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\tv%d\t%s\t%s\n",
 						i.Attrs.Domain,
 						i.Attrs.Locale,
 						formatSize(i.Attrs.BytesDiskQuota),
@@ -378,6 +421,7 @@ by this server.
 						formatOnboarded(i),
 						i.Attrs.IndexViewsVersion,
 						prefix,
+						DBPrefix,
 					)
 				}
 			}
@@ -387,7 +431,7 @@ by this server.
 	},
 }
 
-func extractFields(data interface{}, fieldsNames []string) (values []interface{}, err error) {
+func extractFields(data interface{}, fieldsNames []string) (values map[string]interface{}, err error) {
 	var m map[string]interface{}
 	var b []byte
 	b, err = json.Marshal(data)
@@ -397,10 +441,10 @@ func extractFields(data interface{}, fieldsNames []string) (values []interface{}
 	if err = json.Unmarshal(b, &m); err != nil {
 		return
 	}
-	values = make([]interface{}, len(fieldsNames))
-	for i, fieldName := range fieldsNames {
+	values = make(map[string]interface{}, len(fieldsNames))
+	for _, fieldName := range fieldsNames {
 		if v, ok := m[fieldName]; ok {
-			values[i] = v
+			values[fieldName] = v
 		}
 	}
 	return
@@ -796,7 +840,7 @@ var showSwiftPrefixInstanceCmd = &cobra.Command{
 
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
-	instanceCmdGroup.AddCommand(showPrefixInstanceCmd)
+	instanceCmdGroup.AddCommand(showDBPrefixInstanceCmd)
 	instanceCmdGroup.AddCommand(addInstanceCmd)
 	instanceCmdGroup.AddCommand(modifyInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
@@ -852,6 +896,7 @@ func init() {
 	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	lsInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Show each line as a json representation of the instance")
 	lsInstanceCmd.Flags().StringSliceVar(&flagListFields, "fields", nil, "Arguments shown for each line in the list")
+	lsInstanceCmd.Flags().BoolVar(&flagAvailableFields, "available-fields", false, "List available fields for --fields option")
 	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "Work on all domains iterativelly")
 	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	updateCmd.Flags().StringVar(&flagContextName, "context-name", "", "Work only on the instances with the given context name")

@@ -16,9 +16,10 @@ cozy-stack instances ls [flags]
 ### Options
 
 ```
-      --fields strings   Arguments shown for each line in the list
-  -h, --help             help for ls
-      --json             Show each line as a json representation of the instance
+      --available-fields   List available fields for --fields option
+      --fields strings     Arguments shown for each line in the list
+  -h, --help               help for ls
+      --json               Show each line as a json representation of the instance
 ```
 
 ### Options inherited from parent commands

@@ -101,6 +101,13 @@ type ImportOptions struct {
 	IncreaseQuota bool
 }
 
+func (i *Instance) DBPrefix() string {
+	if i.Attrs.Prefix != "" {
+		return i.Attrs.Prefix
+	}
+	return i.Attrs.Domain
+}
+
 // GetInstance returns the instance associated with the specified domain.
 func (c *Client) GetInstance(domain string) (*Instance, error) {
 	res, err := c.Req(&request.Options{

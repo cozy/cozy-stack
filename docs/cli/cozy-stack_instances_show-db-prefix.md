@@ -1,6 +1,6 @@
-## cozy-stack instances show-prefix
+## cozy-stack instances show-db-prefix
 
-Show the instance prefix of the specified domain
+Show the instance DB prefix of the specified domain
 
 ### Synopsis
 
@@ -10,19 +10,19 @@ given domain. The prefix is used for databases and VFS prefixing.
 
 
 ```
-cozy-stack instances show-prefix <domain> [flags]
+cozy-stack instances show-db-prefix <domain> [flags]
 ```
 
 ### Examples
 
 ```
-$ cozy-stack instances show-prefix cozy.tools:8080
+$ cozy-stack instances show-db-prefix cozy.tools:8080
 ```
 
 ### Options
 
 ```
-  -h, --help   help for show-prefix
+  -h, --help   help for show-db-prefix
 ```
 
 ### Options inherited from parent commands
