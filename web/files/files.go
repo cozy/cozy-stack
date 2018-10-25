@@ -316,6 +316,11 @@ func getPatches(c echo.Context) ([]*docPatch, error) {
 				return nil, jsonapi.BadJSON()
 			}
 			patch.DirID = &rid.ID
+		} else {
+			// Could not find the parent relationship
+			errp := jsonapi.Errorf(http.StatusBadRequest, "Cannot get parent relationship")
+			errp.Source = jsonapi.SourceError{Pointer: patch.docID, Parameter: "attributes"}
+			return nil, errp
 		}
 		patches[i] = &patch
 	}
