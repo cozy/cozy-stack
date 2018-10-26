@@ -81,36 +81,6 @@ The references of a file are listed in its JSON-API representation in the
 
 ## Routes
 
-### PATCH /files/:file-id/relationships/referenced_by
-
-Replace the references for a file with the new ones.
-
-#### Request
-
-```http
-PATCH /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/relationships/referenced_by HTTP/1.1
-Content-Type: application/vnd.api+json
-Accept: application/vnd.api+json
-```
-
-```json
-{
-    "data": [
-        {
-            "type": "io.cozy.playlists",
-            "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
-        }
-    ]
-}
-```
-
-#### Response
-
-```http
-HTTP/1.1 204 No Content
-Content-Type: application/vnd.api+json
-```
-
 ### POST /files/:file-id/relationships/referenced_by
 
 Add on a file one or more references to documents
@@ -337,22 +307,9 @@ references. If it is the case, it may offer to the user two choices:
 
 ### Moving a referenced file to the trash
 
-The stack will refuse to move a referenced file to the trash. It's the same for
-a folder that contains a referenced file. The application has to remove the
-references first. It's possible to clear all the references on a file with a
-`PATCH` request like this:
-
-```http
-PATCH /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/relationships/references HTTP/1.1
-Content-Type: application/vnd.api+json
-Accept: application/vnd.api+json
-```
-
-```json
-{
-    "data": []
-}
-```
+Before an application moves a file to the trash, if the file has some
+references, it should ask the user if they really want to trash the file. And
+it should also removes the references before trashing the file.
 
 ## Implementation
 
