@@ -31,19 +31,18 @@ import (
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
-	"github.com/cozy/echo/middleware"
-
 	"github.com/cozy/echo"
+	"github.com/cozy/echo/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
 	// cspScriptSrcWhitelist is a whitelist for default allowed domains in CSP.
-	cspScriptSrcWhitelist = "https://piwik.cozycloud.cc"
+	cspScriptSrcWhitelist = "https://piwik.cozycloud.cc https://matomo.cozycloud.cc"
 
 	// cspImgSrcWhitelist is a whitelist of images domains that are allowed in
 	// CSP.
-	cspImgSrcWhitelist = "https://piwik.cozycloud.cc " +
+	cspImgSrcWhitelist = "https://piwik.cozycloud.cc https://matomo.cozycloud.cc " +
 		"https://*.tile.openstreetmap.org https://*.tile.osm.org " +
 		"https://*.tiles.mapbox.com https://api.mapbox.com"
 )
