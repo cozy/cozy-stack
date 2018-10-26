@@ -5,8 +5,19 @@ from the given source URL.
 
 ### Synopsis
 
-Install a konnector with the specified slug name
-from the given source URL.
+
+Install a konnector with the specified slug name. You can also provide the
+version number to install a specific release if you use the registry:// scheme.
+Following formats are accepted:
+	registry://<konnector>/<channel>/<version>
+	registry://<konnector>/<channel>
+	registry://<konnector>/<version>
+	registry://<konnector>
+
+If you provide a channel and a version, the channel is ignored.
+Default channel is stable.
+Default version is latest.
+
 
 ```
 cozy-stack konnectors install <slug> [sourceurl] [flags]
@@ -15,7 +26,12 @@ cozy-stack konnectors install <slug> [sourceurl] [flags]
 ### Examples
 
 ```
+
+$ cozy-stack konnectors install --domain cozy.tools:8080 trainline registry://trainline/stable/1.0.1
 $ cozy-stack konnectors install --domain cozy.tools:8080 trainline registry://trainline/stable
+$ cozy-stack konnectors install --domain cozy.tools:8080 trainline registry://trainline/1.2.0
+$ cozy-stack konnectors install --domain cozy.tools:8080 trainline registry://trainline
+
 ```
 
 ### Options

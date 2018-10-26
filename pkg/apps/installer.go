@@ -429,7 +429,9 @@ func doLazyUpdate(db prefixer.Prefixer, man Manifest, availableVersion string, c
 	if err != nil || src.Scheme != "registry" {
 		return man
 	}
-	v, errv := registry.GetLatestVersion(man.Slug(), getRegistryChannel(src), registries)
+	var v *registry.Version
+	channel, _ := getRegistryChannel(src)
+	v, errv := registry.GetLatestVersion(man.Slug(), channel, registries)
 	if errv != nil || v.Version == man.Version() {
 		return man
 	}
