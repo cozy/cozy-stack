@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -23,8 +24,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/sirupsen/logrus"
-
-	"github.com/cozy/afero"
 )
 
 const (
@@ -61,6 +60,7 @@ type KonnectorMessage struct {
 	data json.RawMessage
 }
 
+// ToJSON returns a JSON reprensation of the KonnectorMessage
 func (m *KonnectorMessage) ToJSON() string {
 	return string(m.data)
 }
@@ -223,7 +223,7 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *inst
 		// a directory (for instance because it does not upload files), but a folder
 		// has been created in the past by the stack which is still empty, then we
 		// delete it.
-		if msg.FolderToSave == "" && account.FolderPath == "" && account.Basic.FolderPath == "" {
+		if msg.FolderToSave == "" && account.FolderPath == "" && (account.Basic == nil || account.Basic.FolderPath == "") {
 			if dir, errp := fs.DirByPath(normalizedFolderPath); errp == nil {
 				if account.Name == "" {
 					innerDirPath := path.Join(normalizedFolderPath, strings.Title(w.slug))
@@ -292,13 +292,13 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *inst
 	if account == nil {
 		return nil
 	}
-	if msg.FolderToSave == "" && account.FolderPath == "" && account.Basic.FolderPath == "" {
+	if msg.FolderToSave == "" && account.FolderPath == "" && (account.Basic == nil || account.Basic.FolderPath == "") {
 		return nil
 	}
 
 	// 4. Recreate the folder
 	folderPath := account.FolderPath
-	if folderPath == "" {
+	if folderPath == "" && account.Basic != nil {
 		folderPath = account.Basic.FolderPath
 	}
 	if folderPath == "" {
