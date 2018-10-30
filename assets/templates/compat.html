@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+  <head>
+    <meta charset="utf-8">
+    <title>{{t "Compat Title"}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css"}}">
+    <link rel="icon" type="image/png" href="{{asset .Domain "/images/happycloud.png"}}" />
+    <link rel="shortcut icon" type="image/x-icon" href="{{asset .Domain "/favicon.ico"}}">
+  </head>
+  <body>
+    <main role="application">
+      <section class="popup popup--large">
+        <header class="compat-header">
+          <img src="{{asset .Domain "/images/browser-unsupported.svg"}}" alt="">
+          <h1>{{t "Compat Title"}}</h1>
+        </header>
+        <div class="container">
+          <p>{{t "Compat Subtitle"}}</p>
+          <ul class="compat-browsers">
+            <li>
+              <a href="{{t "Compat Browser Chrome Link"}}">
+                <img src="{{asset .Domain "/images/chrome.svg"}}" alt="Google Chrome">
+                <span>Chrome</span>
+              </a>
+            </li>
+            <li>
+              <a href="{{t "Compat Browser Firefox Link"}}">
+                <img src="{{asset .Domain "/images/firefox.svg"}}" alt="Mozilla Firefox">
+                <span>Firefox</span>
+              </a>
+            </li>
+            <li>
+              <a href="{{t "Compat Browser Edge Link"}}">
+                <img src="{{asset .Domain "/images/edge.svg"}}" alt="Microsoft Edge">
+                <span>Edge</span>
+              </a>
+            </li>
+          </ul>
+          <ul class="compat-tips">
+            <li>{{t "Compat Tip 1"}}</li>
+            <li>{{t "Compat Tip 2"}}</li>
+          </ul>
+          <p class="compat-help">{{t "Compat Help"}} <a href='{{t "Compat Guide Link"}}'>{{t "Compat Guide"}}</a></p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

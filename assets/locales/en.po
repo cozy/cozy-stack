@@ -573,3 +573,33 @@ msgstr "Free up storage space"
 
 msgid "Terms of services have been updated"
 msgstr "To comply with the GDPR, Cozy Cloud has updated its Terms of Services that have taken effect on May 25, 2018"
+
+msgid "Compat Title"
+msgstr "Your web browser is no longer supported"
+
+msgid "Compat Subtitle"
+msgstr "Try one of these options to have better experience of your Cozy. We recommend Firefox!"
+
+msgid "Compat Browser Chrome Link"
+msgstr "https://www.google.com/chrome/"
+
+msgid "Compat Browser Firefox Link"
+msgstr "https://www.mozilla.org/en-US/firefox/new/"
+
+msgid "Compat Browser Edge Link"
+msgstr "https://www.microsoft.com/en-us/windows/microsoft-edge"
+
+msgid "Compat Tip 1"
+msgstr "Upgrading your web browser impliers safer browsing with better security."
+
+msgid "Compat Tip 2"
+msgstr "Your web browser will be faster and your experience of your Cozy will be improved."
+
+msgid "Compat Help"
+msgstr "Need more help?"
+
+msgid "Compat Guide"
+msgstr "Check out our support guide."
+
+msgid "Compat Guide Link"
+msgstr "https://help.cozy.io/article/274-ie-11-not-supported"

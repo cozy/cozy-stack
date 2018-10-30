@@ -102,6 +102,12 @@ a:focus {
     padding: 1em 0;
 }
 
+.popup--large {
+    -webkit-flex: 0 0 32rem;
+        -ms-flex: 0 0 32rem;
+            flex: 0 0 32rem;
+}
+
 .popup-btn, a.popup-btn {
     display: block;
     text-align: center;
@@ -140,6 +146,75 @@ h1 {
     font-size: 2rem;
     line-height: 1.25;
     letter-spacing: -0.5px;;
+}
+
+/* Browser compatibility */
+.compat-header  img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+.compat-header h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+.compat-browsers {
+    display: -webkit-flex;
+    display: -moz-flex;
+    display: -ms-flex;
+    display: -o-flex;
+    display: flex;
+    -webkit-box-orient: horizontal;
+    -webkit-box-direction: normal;
+    -ms-flex-direction: row;
+    flex-direction: row;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+    padding: 0;
+    list-style: none;
+}
+.compat-browsers li {
+    padding: 1rem;
+}
+.compat-browsers a {
+    display: block;
+}
+.compat-browsers img {
+    display: block;
+    margin-bottom: .5rem;
+    width: 5rem;
+    height: 5rem;
+}
+.compat-browsers span {
+    display: block;
+    text-align: center;
+    font-weight: bold;
+    color: #297ef2;
+}
+.compat-tips {
+    padding: 0;
+    list-style: none;
+}
+.compat-tips li:before {
+    content: '';
+    position: relative;
+    top: .1rem;
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-right: .5rem;
+    background: url('../images/icon-check-circle.svg') center center no-repeat;
+}
+.compat-help {
+    margin-top: 2rem;
+    text-align: center;
+    font-weight: bold;
 }
 
 /* Form controls */
