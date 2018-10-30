@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
+	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/workers/thumbnail"
@@ -29,8 +30,6 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	web_utils "github.com/cozy/cozy-stack/web/utils"
-
-	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/echo"
 )
 
@@ -316,11 +315,6 @@ func getPatches(c echo.Context) ([]*docPatch, error) {
 				return nil, jsonapi.BadJSON()
 			}
 			patch.DirID = &rid.ID
-		} else {
-			// Could not find the parent relationship
-			errp := jsonapi.Errorf(http.StatusBadRequest, "Cannot get parent relationship")
-			errp.Source = jsonapi.SourceError{Pointer: patch.docID, Parameter: "attributes"}
-			return nil, errp
 		}
 		patches[i] = &patch
 	}
@@ -418,7 +412,7 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*js
 			jsonapiError := wrapVfsErrorJSONAPI(errp)
 			jsonapiError.Source.Parameter = "_id"
 			jsonapiError.Source.Pointer = patch.docID
-			errors = append(errors)
+			errors = append(errors, jsonapiError)
 		}
 	}
 
