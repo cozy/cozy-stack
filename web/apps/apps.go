@@ -326,7 +326,7 @@ func iconHandler(appType apps.AppType) echo.HandlerFunc {
 			return err
 		}
 
-		if !middlewares.IsLoggedIn(c) {
+		if !middlewares.IsLoggedIn(c) && middlewares.Allow(c, permissions.GET, app) != nil {
 			return echo.NewHTTPError(http.StatusUnauthorized, "Not logged in")
 		}
 
