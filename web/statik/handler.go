@@ -32,6 +32,7 @@ var (
 		"passphrase_reset.html",
 		"passphrase_renew.html",
 		"sharing_discovery.html",
+		"compat.html",
 	}
 )
 
