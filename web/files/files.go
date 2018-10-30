@@ -316,11 +316,6 @@ func getPatches(c echo.Context) ([]*docPatch, error) {
 				return nil, jsonapi.BadJSON()
 			}
 			patch.DirID = &rid.ID
-		} else {
-			// Could not find the parent relationship
-			errp := jsonapi.Errorf(http.StatusBadRequest, "Cannot get parent relationship")
-			errp.Source = jsonapi.SourceError{Pointer: patch.docID, Parameter: "attributes"}
-			return nil, errp
 		}
 		patches[i] = &patch
 	}
@@ -386,6 +381,18 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*jsonapi.Error, err error) {
 	for _, patch := range patches {
 		dir, file, errf := fs.DirOrFileByID(patch.docID)
+
+		// Checks the existence of the directory
+		if *patch.DirID != "" {
+			if _, errd := fs.DirByID(*patch.DirID); errd != nil {
+				jsonapiError := wrapVfsErrorJSONAPI(errd)
+				jsonapiError.Source.Parameter = "_id"
+				jsonapiError.Source.Pointer = *patch.DirID
+				errors = append(errors, jsonapiError)
+				continue
+			}
+		}
+
 		if errf != nil {
 			jsonapiError := wrapVfsErrorJSONAPI(errf)
 			jsonapiError.Source.Parameter = "_id"
