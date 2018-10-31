@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/compat"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/files"
@@ -160,6 +161,7 @@ func SetupRoutes(router *echo.Echo) error {
 		apps.WebappsRoutes(router.Group("/apps", mwsNotBlocked...))
 		apps.KonnectorRoutes(router.Group("/konnectors", mwsNotBlocked...))
 		settings.Routes(router.Group("/settings", mwsNotBlocked...))
+		compat.Routes(router.Group("/compat", mwsNotBlocked...))
 
 		// Careful, the normal middlewares NeedInstance and LoadSession are not
 		// applied to this group in web/routing since they should not be used for
