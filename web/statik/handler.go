@@ -26,13 +26,13 @@ var (
 		"authorize.html",
 		"authorize_app.html",
 		"authorize_sharing.html",
+		"compat.html",
 		"error.html",
 		"login.html",
 		"need_onboarding.html",
 		"passphrase_reset.html",
 		"passphrase_renew.html",
 		"sharing_discovery.html",
-		"compat.html",
 	}
 )
 
