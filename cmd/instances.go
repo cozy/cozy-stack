@@ -16,6 +16,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -838,6 +839,38 @@ var showSwiftPrefixInstanceCmd = &cobra.Command{
 	},
 }
 
+var appsVersionsCmd = &cobra.Command{
+	Use:     "apps-versions",
+	Short:   `Show apps versions of all instances`,
+	Example: "$ cozy-stack instances apps-versions",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		instances, err := instance.List()
+		if err != nil {
+			return nil
+		}
+		counter := make(map[string]map[string]int)
+
+		for _, instance := range instances {
+			var apps []*apps.WebappManifest
+			req := &couchdb.AllDocsRequest{Limit: 100}
+			couchdb.GetAllDocs(instance, consts.Apps, req, &apps)
+
+			for _, app := range apps {
+				if _, ok := counter[app.Slug()]; !ok {
+					counter[app.Slug()] = map[string]int{app.Version(): 0}
+				}
+				counter[app.Slug()][app.Version()]++
+			}
+		}
+		json, err := json.MarshalIndent(counter, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(json))
+		return nil
+	},
+}
+
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(showDBPrefixInstanceCmd)
@@ -859,6 +892,7 @@ func init() {
 	instanceCmdGroup.AddCommand(exportCmd)
 	instanceCmdGroup.AddCommand(importCmd)
 	instanceCmdGroup.AddCommand(showSwiftPrefixInstanceCmd)
+	instanceCmdGroup.AddCommand(appsVersionsCmd)
 	addInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
