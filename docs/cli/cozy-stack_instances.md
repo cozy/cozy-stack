@@ -39,6 +39,7 @@ cozy-stack instances <command> [flags]
 
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack instances add](cozy-stack_instances_add.md)	 - Manage instances of a stack
+* [cozy-stack instances apps-versions](cozy-stack_instances_apps-versions.md)	 - Show apps versions of all instances
 * [cozy-stack instances client-oauth](cozy-stack_instances_client-oauth.md)	 - Register a new OAuth client
 * [cozy-stack instances debug](cozy-stack_instances_debug.md)	 - Activate or deactivate debugging of the instance
 * [cozy-stack instances destroy](cozy-stack_instances_destroy.md)	 - Remove instance
@@ -51,6 +52,7 @@ cozy-stack instances <command> [flags]
 * [cozy-stack instances refresh-token-oauth](cozy-stack_instances_refresh-token-oauth.md)	 - Generate a new OAuth refresh token
 * [cozy-stack instances set-disk-quota](cozy-stack_instances_set-disk-quota.md)	 - Change the disk-quota of the instance
 * [cozy-stack instances show](cozy-stack_instances_show.md)	 - Show the instance of the specified domain
+* [cozy-stack instances show-app-version](cozy-stack_instances_show-app-version.md)	 - Show instances that have a particular app version
 * [cozy-stack instances show-db-prefix](cozy-stack_instances_show-db-prefix.md)	 - Show the instance DB prefix of the specified domain
 * [cozy-stack instances show-swift-prefix](cozy-stack_instances_show-swift-prefix.md)	 - Show the instance swift prefix of the specified domain
 * [cozy-stack instances token-app](cozy-stack_instances_token-app.md)	 - Generate a new application token
