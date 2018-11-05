@@ -871,6 +871,47 @@ var appsVersionsCmd = &cobra.Command{
 	},
 }
 
+var instanceAppVersionCmd = &cobra.Command{
+	Use:     "show-app-version [app-slug] [version]",
+	Short:   `Show instances that have a particular app version`,
+	Example: "$ cozy-stack instances show-app-version drive 1.0.1",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 2 {
+			return cmd.Usage()
+		}
+
+		instances, err := instance.List()
+		if err != nil {
+			return nil
+		}
+		appSlug := args[0]
+		version := args[1]
+
+		var instancesAppVersion []string
+		var doc apps.WebappManifest
+
+		for _, instance := range instances {
+			err := couchdb.GetDoc(instance, consts.Apps, consts.Apps+"/"+appSlug, &doc)
+			if err == nil {
+				if doc.Version() == version {
+					instancesAppVersion = append(instancesAppVersion, instance.Domain)
+				}
+			}
+		}
+
+		if len(instancesAppVersion) == 0 {
+			return fmt.Errorf("No instances have application \"%s\" in version \"%s\"", appSlug, version)
+		}
+
+		json, err := json.MarshalIndent(instancesAppVersion, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(json))
+		return nil
+	},
+}
+
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(showDBPrefixInstanceCmd)
@@ -893,6 +934,7 @@ func init() {
 	instanceCmdGroup.AddCommand(importCmd)
 	instanceCmdGroup.AddCommand(showSwiftPrefixInstanceCmd)
 	instanceCmdGroup.AddCommand(appsVersionsCmd)
+	instanceCmdGroup.AddCommand(instanceAppVersionCmd)
 	addInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
