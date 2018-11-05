@@ -381,7 +381,7 @@ stack at .mycozy.cloud:
 Then save the data in the console
 
 ```
-http PUT localhost:5984/secrets%2Fio-cozy-accounts_types/google
+http PUT localhost:5984/secrets%2Fio-cozy-account_types/google
 grant_mode=authorization_code
 redirect_uri="https://oauthcallback.mycozy.cloud/accounts/google/redirect"
 token_mode=basic
