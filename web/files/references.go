@@ -44,7 +44,9 @@ func ListReferencesHandler(c echo.Context) error {
 	includeDocs := include == "files"
 
 	if err := middlewares.AllowTypeAndID(c, permissions.GET, doctype, id); err != nil {
-		return err
+		if middlewares.AllowWholeType(c, permissions.GET, consts.Files) != nil {
+			return err
+		}
 	}
 
 	cursor, err := jsonapi.ExtractPaginationCursor(c, maxRefLimit)
@@ -152,7 +154,9 @@ func AddReferencesHandler(c echo.Context) error {
 	}
 
 	if err := middlewares.AllowTypeAndID(c, permissions.PUT, doctype, id); err != nil {
-		return err
+		if middlewares.AllowWholeType(c, permissions.PATCH, consts.Files) != nil {
+			return err
+		}
 	}
 
 	for _, fRef := range references {
@@ -194,7 +198,9 @@ func RemoveReferencesHandler(c echo.Context) error {
 	}
 
 	if err := middlewares.AllowTypeAndID(c, permissions.DELETE, doctype, id); err != nil {
-		return err
+		if middlewares.AllowWholeType(c, permissions.PATCH, consts.Files) != nil {
+			return err
+		}
 	}
 
 	for _, fRef := range references {
