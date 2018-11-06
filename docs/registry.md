@@ -354,7 +354,7 @@ Sorting is allowed on the following fields:
 | limit                | the maximum number of applications to show               |
 | filter[]             | a filter to apply on fields of the application           |
 | sort                 | name of the field on which to apply the sort of the list |
-| latestVersionChannel | the channel from which we select the latest version      |
+| versionsChannel      | the channel from which we select the latest version      |
 
 #### Request
 
