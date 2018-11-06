@@ -33,7 +33,7 @@ func Serve(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	slug := c.Get("slug").(string)
 
-	if (!i.OnboardingFinished && slug != consts.OnboardingSlug && slug != consts.CollectSlug) ||
+	if (!i.OnboardingFinished && slug != consts.OnboardingSlug) ||
 		(i.OnboardingFinished && slug == consts.OnboardingSlug) {
 		return c.Redirect(http.StatusFound, i.PageURL("/", nil))
 	}
@@ -61,7 +61,7 @@ func Serve(c echo.Context) error {
 		i.AppsCopier(apps.Webapp), i.Registries())
 	if err != nil {
 		// Used for the "collect" => "home" renaming
-		if err == apps.ErrNotFound && slug == consts.CollectSlug {
+		if err == apps.ErrNotFound && slug == "collect" {
 			return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
 		}
 		return err

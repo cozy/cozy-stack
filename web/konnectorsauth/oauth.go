@@ -7,7 +7,6 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -60,12 +59,7 @@ func start(c echo.Context) error {
 
 func redirectToApp(c echo.Context, account *accounts.Account, clientState string) error {
 	instance := middlewares.GetInstance(c)
-	slug := consts.HomeSlug
-	man, err := apps.GetWebappBySlug(instance, slug)
-	if err != nil || man == nil {
-		slug = consts.CollectSlug
-	}
-	u := instance.SubDomain(slug)
+	u := instance.SubDomain(consts.HomeSlug)
 	vv := &url.Values{}
 	vv.Add("account", account.ID())
 	if clientState != "" {

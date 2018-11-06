@@ -326,7 +326,7 @@ func bobLogin(t *testing.T) {
 	assert.NoError(t, err)
 	res.Body.Close()
 	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
-	assert.Contains(t, res.Header.Get("Location"), "drive")
+	assert.Contains(t, res.Header.Get("Location"), "home")
 }
 
 func fakeAliceInstance(t *testing.T) {
@@ -435,7 +435,7 @@ func TestAuthorizeSharing(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
 	location := res.Header.Get("Location")
-	assert.Contains(t, location, "drive."+bobInstance.Domain)
+	assert.Contains(t, location, "home."+bobInstance.Domain)
 
 	assertCredentialsHasBeenExchanged(t)
 }
@@ -681,7 +681,7 @@ func TestCheckPermissions(t *testing.T) {
 			},
 		},
 	}
-	assert.NoError(t, other.BeOwner(aliceInstance, "drive"))
+	assert.NoError(t, other.BeOwner(aliceInstance, "home"))
 	assert.NoError(t, other.AddContact(aliceInstance, bobContact.ID(), false))
 	_, err = other.Create(aliceInstance)
 	assert.NoError(t, err)

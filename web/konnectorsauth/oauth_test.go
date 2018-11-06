@@ -75,7 +75,7 @@ func TestAccessCodeOauthFlow(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	if !assert.Contains(t, finalURL.String(), "collect") {
+	if !assert.Contains(t, finalURL.String(), "home") {
 		return
 	}
 
@@ -129,7 +129,7 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	if !assert.Contains(t, finalURL.String(), "collect") {
+	if !assert.Contains(t, finalURL.String(), "home") {
 		return
 	}
 
@@ -204,7 +204,7 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	if !assert.Contains(t, finalURL.String(), "collect") {
+	if !assert.Contains(t, finalURL.String(), "home") {
 		return
 	}
 
@@ -233,7 +233,7 @@ func TestMain(m *testing.M) {
 }
 
 func stopBeforeDataCollectFail(req *http.Request, via []*http.Request) error {
-	if strings.Contains(req.URL.String(), "collect") {
+	if strings.Contains(req.URL.String(), "home") {
 		return http.ErrUseLastResponse
 	}
 	return nil

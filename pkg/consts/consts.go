@@ -69,9 +69,6 @@ const (
 )
 
 const (
-	// DriveSlug is the slug of the default app, files, where the user is
-	// redirected after login.
-	DriveSlug = "drive"
 	// OnboardingSlug is the slug of the onboarding app, where the user is
 	// redirected when he has no passphrase.
 	OnboardingSlug = "onboarding"
@@ -81,11 +78,11 @@ const (
 	// HomeSlug is the slug of the default app, where the user is redirected
 	// after login.
 	HomeSlug = "home"
-	// CollectSlug is the slug of the collect application: it can install
-	// konnectors and applications.
-	CollectSlug = "collect"
 	// SettingsSlug is the slog of the settings application.
 	SettingsSlug = "settings"
+	// DriveSlug is the slug of the default app, files, where the user is
+	// redirected after login.
+	DriveSlug = "drive"
 )
 
 const (
