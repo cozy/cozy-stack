@@ -42,4 +42,5 @@ from the given source URL.
 * [cozy-stack apps show](cozy-stack_apps_show.md)	 - Show the application attributes
 * [cozy-stack apps uninstall](cozy-stack_apps_uninstall.md)	 - Uninstall the application with the specified slug name.
 * [cozy-stack apps update](cozy-stack_apps_update.md)	 - Update the application with the specified slug name.
+* [cozy-stack apps versions](cozy-stack_apps_versions.md)	 - Show apps versions of all instances
 
