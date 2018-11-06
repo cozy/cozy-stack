@@ -36,10 +36,10 @@ func TestUserAgent(t *testing.T) {
 
 	h := CheckIE(echo.NotFoundHandler)
 	err := h(c)
-	assert.NotEqual(t, err, nil)
+	assert.Error(t, err)
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko") // IE 11
 	h2 := CheckIE(echo.NotFoundHandler)
 	err2 := h2(c)
-	assert.Equal(t, err2, nil)
+	assert.NoError(t, err2, nil)
 }
