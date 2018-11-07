@@ -131,6 +131,7 @@ type Config struct {
 
 	Contexts   map[string]interface{}
 	Registries map[string][]*url.URL
+	Clouderies map[string]interface{}
 
 	CSPDisabled  bool
 	CSPWhitelist map[string]string
@@ -439,6 +440,12 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	tmp := v.Get("clouderies")
+	var clouderies map[string]interface{}
+	if tmp != nil {
+		clouderies = tmp.(map[string]interface{})
+	}
+
 	var subdomains SubdomainType
 	if subs := v.GetString("subdomains"); subs != "" {
 		switch subs {
@@ -641,6 +648,7 @@ func UseViper(v *viper.Viper) error {
 		},
 		Contexts:   v.GetStringMap("contexts"),
 		Registries: regs,
+		Clouderies: clouderies,
 
 		CSPWhitelist: v.GetStringMapString("csp_whitelist"),
 

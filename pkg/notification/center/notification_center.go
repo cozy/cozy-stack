@@ -43,8 +43,8 @@ func init() {
 		if err != nil {
 			return
 		}
-		offersLink, ok := i.ManagerURL(instance.ManagerPremiumURL)
-		if !ok {
+		offersLink, err := i.ManagerURL(instance.ManagerPremiumURL)
+		if err != nil {
 			return
 		}
 		cozyDriveLink := i.SubDomain(consts.DriveSlug)
