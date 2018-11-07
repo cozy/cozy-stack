@@ -39,3 +39,14 @@ docker run -it --rm --name cozy-stack \
 
 We publish the cozy-app-dev image when we release a new version of the stack.
 See `scripts/release.sh` for details.
+
+
+## Docker run and url name
+
+A precision for the app name :
+
+docker run --rm -it -p 8080:8080 -v "$(pwd)/build":/data/cozy-app/***my-app*** cozy/cozy-app-dev
+
+***my-app*** will be the first part of : ***my-app***.cozy.tools:8080
+
+
