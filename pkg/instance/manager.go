@@ -8,7 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/cozy-stack/pkg/config"
+
+	"github.com/cozy/cozy-stack/pkg/ws"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 var managerClient = &http.Client{Timeout: 30 * time.Second}
@@ -26,35 +30,89 @@ const (
 	ManagerBlockedURL
 )
 
-// ManagerURL returns an external string for the given ManagerURL kind.
-func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
-	defer func() {
-		if !ok {
-			s = i.PageURL("/manager_url_is_not_specified", nil)
-		}
-	}()
+type managerConfig struct {
+	API *struct {
+		URL   string
+		Token string
+	}
+}
 
-	if i.UUID == "" {
+func (i *Instance) getManagerConfig() *managerConfig {
+	contexts := config.GetConfig().Clouderies
+	context, ok := i.getFromContexts(contexts)
+	if !ok {
+		return nil
+	}
+
+	var config managerConfig
+	err := mapstructure.Decode(context, &config)
+	if err != nil {
+		return nil
+	}
+
+	return &config
+}
+
+func (i *Instance) managerClient() *ws.OAuthRestJSONClient {
+	config := i.getManagerConfig()
+	if config == nil {
+		return nil
+	}
+
+	api := config.API
+	if api == nil {
+		return nil
+	}
+
+	url := api.URL
+	token := api.Token
+	if url == "" || token == "" {
+		return nil
+	}
+
+	client := &ws.OAuthRestJSONClient{}
+	client.Init(url, token)
+	return client
+}
+
+func (i *Instance) managerUpdateSettings(changes map[string]interface{}) {
+	if i.UUID == "" || len(changes) == 0 {
 		return
 	}
 
-	if i.managerURL == nil {
-		ctx, err := i.SettingsContext()
-		if err != nil {
-			return
-		}
-		var u string
-		u, ok = ctx["manager_url"].(string)
-		if !ok {
-			return
-		}
-		i.managerURL, err = url.Parse(u)
-		if err != nil {
-			return
-		}
+	client := i.managerClient()
+	if client == nil {
+		return
 	}
 
-	managerURL := utils.CloneURL(i.managerURL)
+	url := fmt.Sprintf("/api/v1/instances/%s", url.PathEscape(i.UUID))
+	err := client.Put(url, changes, nil)
+	if err != nil {
+		i.Logger().Errorf("Error during cloudery settings update %s", err)
+	}
+}
+
+// ManagerURL returns an external string for the given ManagerURL kind.
+func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
+	if i.UUID == "" {
+		return "", nil
+	}
+
+	config, err := i.SettingsContext()
+	if err != nil {
+		return "", nil
+	}
+
+	base, ok := config["manager_url"]
+	if !ok {
+		return "", nil
+	}
+
+	baseURL, err := url.Parse(base.(string))
+	if err != nil {
+		return "", err
+	}
+
 	var path string
 	switch k {
 	// TODO: we may want to rely on the contexts to avoid hardcoding the path
@@ -68,11 +126,9 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (s string, ok bool) {
 	default:
 		panic("unknown ManagerURLKind")
 	}
-	managerURL.Path = path
+	baseURL.Path = path
 
-	s = managerURL.String()
-	ok = true
-	return
+	return baseURL.String(), nil
 }
 
 // ManagerSignTOS make a request to the manager in order to finalize the TOS
@@ -85,8 +141,8 @@ func (i *Instance) ManagerSignTOS(originalReq *http.Request) error {
 	if len(split) != 2 {
 		return nil
 	}
-	u, ok := i.ManagerURL(ManagerTOSURL)
-	if !ok {
+	u, err := i.ManagerURL(ManagerTOSURL)
+	if err != nil {
 		return Patch(i, &Options{TOSSigned: i.TOSLatest})
 	}
 	form := url.Values{"version": {split[0]}}

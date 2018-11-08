@@ -131,6 +131,7 @@ type Config struct {
 
 	Contexts   map[string]interface{}
 	Registries map[string][]*url.URL
+	Clouderies map[string]interface{}
 
 	CSPDisabled  bool
 	CSPWhitelist map[string]string
@@ -641,6 +642,7 @@ func UseViper(v *viper.Viper) error {
 		},
 		Contexts:   v.GetStringMap("contexts"),
 		Registries: regs,
+		Clouderies: v.GetStringMap("clouderies"),
 
 		CSPWhitelist: v.GetStringMapString("csp_whitelist"),
 

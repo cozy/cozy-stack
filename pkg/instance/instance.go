@@ -31,10 +31,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
-	"github.com/cozy/cozy-stack/pkg/ws"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
+	"gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 /* #nosec */
@@ -126,7 +125,6 @@ type Instance struct {
 	CLISecret []byte `json:"cli_secret,omitempty"`
 
 	vfs              vfs.VFS
-	managerURL       *url.URL
 	contextualDomain string
 }
 
@@ -363,35 +361,53 @@ func (i *Instance) SettingsPublicName() (string, error) {
 	return email, nil
 }
 
+func (i *Instance) getFromContexts(contexts map[string]interface{}) (interface{}, bool) {
+	if contexts == nil {
+		return nil, false
+	}
+
+	if i.ContextName != "" {
+		context, ok := contexts[i.ContextName]
+		if ok {
+			return context, true
+		}
+	}
+
+	context, ok := contexts["default"]
+	if ok && context != nil {
+		return context, ok
+	}
+
+	return nil, false
+}
+
 // SettingsContext returns the map from the config that matches the context of
 // this instance
 func (i *Instance) SettingsContext() (map[string]interface{}, error) {
-	ctx := i.ContextName
-	if ctx == "" {
-		ctx = "default"
-	}
-	context, ok := config.GetConfig().Contexts[ctx].(map[string]interface{})
+	contexts := config.GetConfig().Contexts
+	context, ok := i.getFromContexts(contexts)
 	if !ok {
 		return nil, ErrContextNotFound
 	}
-	return context, nil
+	settings := context.(map[string]interface{})
+	return settings, nil
 }
 
 // Registries returns the list of registries associated with the instance.
 func (i *Instance) Registries() []*url.URL {
-	registries := config.GetConfig().Registries
-	var regs []*url.URL
+	contexts := config.GetConfig().Registries
+	var context []*url.URL
 	var ok bool
 	if i.ContextName != "" {
-		regs, ok = registries[i.ContextName]
-	}
-	if !ok {
-		regs, ok = registries["default"]
+		context, ok = contexts[i.ContextName]
 		if !ok {
-			regs = make([]*url.URL, 0)
+			context, ok = contexts["default"]
+			if !ok {
+				context = make([]*url.URL, 0)
+			}
 		}
 	}
-	return regs
+	return context
 }
 
 // DiskQuota returns the number of bytes allowed on the disk to the user.
@@ -1034,32 +1050,9 @@ func Patch(i *Instance, opts *Options) error {
 		}
 	}
 
-	if len(clouderyChanges) > 0 {
-		cloudery := i.getClouderyClient()
-		if cloudery != nil {
-			url := fmt.Sprintf("/api/v1/instances/%s", url.PathEscape(i.UUID))
-			cloudery.Put(url, clouderyChanges, nil)
-		}
-	}
+	i.managerUpdateSettings(clouderyChanges)
 
 	return nil
-}
-
-func (i *Instance) getClouderyClient() *ws.OAuthRestJSONClient {
-	context, err := i.SettingsContext()
-	if err != nil {
-		return nil
-	}
-
-	baseURL, _ := context["manager_url"].(string)
-	token, _ := context["manager_token"].(string)
-	if baseURL == "" || token == "" {
-		return nil
-	}
-
-	cloudery := &ws.OAuthRestJSONClient{}
-	cloudery.Init(baseURL, token)
-	return cloudery
 }
 
 func checkAliases(i *Instance, aliases []string) ([]string, error) {
