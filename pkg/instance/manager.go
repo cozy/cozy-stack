@@ -31,8 +31,8 @@ const (
 )
 
 type managerConfig struct {
-	Api *struct {
-		Url   string
+	API *struct {
+		URL   string
 		Token string
 	}
 }
@@ -59,12 +59,12 @@ func (i *Instance) managerClient() *ws.OAuthRestJSONClient {
 		return nil
 	}
 
-	api := config.Api
+	api := config.API
 	if api == nil {
 		return nil
 	}
 
-	url := api.Url
+	url := api.URL
 	token := api.Token
 	if url == "" || token == "" {
 		return nil
@@ -108,7 +108,7 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
 		return "", nil
 	}
 
-	baseUrl, err := url.Parse(base.(string))
+	baseURL, err := url.Parse(base.(string))
 	if err != nil {
 		return "", err
 	}
@@ -126,9 +126,9 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
 	default:
 		panic("unknown ManagerURLKind")
 	}
-	baseUrl.Path = path
+	baseURL.Path = path
 
-	return baseUrl.String(), nil
+	return baseURL.String(), nil
 }
 
 // ManagerSignTOS make a request to the manager in order to finalize the TOS

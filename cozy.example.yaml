@@ -214,6 +214,13 @@ redis:
 registries:
   - https://apps-registry.cozycloud.cc/
 
+# [internal usage] Cloudery configuration
+clouderies:
+  default:
+    api:
+      url: https://manager.cozycloud.cc/
+      token: xxxxxx
+
 notifications:
   # Activate development APIs (iOS only)
   development: false
