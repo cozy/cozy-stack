@@ -425,7 +425,8 @@ func (i *Installer) Poll() (Manifest, bool, error) {
 	return man, done, man.Error()
 }
 
-func doLazyUpdate(db prefixer.Prefixer, man Manifest, availableVersion string, copier Copier, registries []*url.URL) Manifest {
+// DoLazyUpdate tries to update an application before using it
+func DoLazyUpdate(db prefixer.Prefixer, man Manifest, availableVersion string, copier Copier, registries []*url.URL) Manifest {
 	src, err := url.Parse(man.Source())
 	if err != nil || src.Scheme != "registry" {
 		return man
