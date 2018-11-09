@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -438,6 +439,9 @@ func doLazyUpdate(db prefixer.Prefixer, man Manifest, availableVersion string, c
 	if availableVersion != "" && v.Version == availableVersion {
 		return man
 	}
+	if channel == "stable" && !isMoreRecent(man.Version(), v.Version) {
+		return man
+	}
 	inst, err := NewInstaller(db, copier, &InstallerOptions{
 		Operation:  Update,
 		Manifest:   man,
@@ -452,6 +456,19 @@ func doLazyUpdate(db prefixer.Prefixer, man Manifest, availableVersion string, c
 		return man
 	}
 	return newman
+}
+
+// isMoreRecent returns true if b is greater than a
+func isMoreRecent(a, b string) bool {
+	vA, err := semver.NewVersion(a)
+	if err != nil {
+		return true
+	}
+	vB, err := semver.NewVersion(b)
+	if err != nil {
+		return false
+	}
+	return vB.GreaterThan(vA)
 }
 
 func isPlatformApp(man Manifest) bool {
