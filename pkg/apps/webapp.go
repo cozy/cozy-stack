@@ -447,7 +447,7 @@ func GetWebappBySlugAndUpdate(db prefixer.Prefixer, slug string, copier Copier, 
 	if err != nil {
 		return nil, err
 	}
-	return doLazyUpdate(db, man, man.AvailableVersion, copier, registries).(*WebappManifest), nil
+	return DoLazyUpdate(db, man, man.AvailableVersion, copier, registries).(*WebappManifest), nil
 }
 
 // ListWebapps returns the list of installed web applications.

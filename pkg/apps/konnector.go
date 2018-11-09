@@ -241,7 +241,7 @@ func GetKonnectorBySlugAndUpdate(db prefixer.Prefixer, slug string, copier Copie
 	if err != nil {
 		return nil, err
 	}
-	return doLazyUpdate(db, man, man.AvailableVersion, copier, registries).(*KonnManifest), nil
+	return DoLazyUpdate(db, man, man.AvailableVersion, copier, registries).(*KonnManifest), nil
 }
 
 // ListKonnectors returns the list of installed konnectors applications.
