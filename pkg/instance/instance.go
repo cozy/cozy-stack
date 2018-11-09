@@ -400,11 +400,11 @@ func (i *Instance) Registries() []*url.URL {
 	var ok bool
 	if i.ContextName != "" {
 		context, ok = contexts[i.ContextName]
+	}
+	if !ok {
+		context, ok = contexts["default"]
 		if !ok {
-			context, ok = contexts["default"]
-			if !ok {
-				context = make([]*url.URL, 0)
-			}
+			context = make([]*url.URL, 0)
 		}
 	}
 	return context
