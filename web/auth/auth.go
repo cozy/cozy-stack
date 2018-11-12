@@ -118,13 +118,15 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		clientScope = clientScopes[0]
 	}
 
+	oauth := i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
+
 	if c.QueryParam("msg") == "passphrase-reset-requested" {
 		title = i.Translate("Login Connect after reset requested title")
 		help = i.Translate("Login Connect after reset requested help")
 	} else if strings.Contains(redirectStr, "reconnect") {
 		title = i.Translate("Login Reconnect title")
 		help = i.Translate("Login Reconnect help")
-	} else if i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin {
+	} else if oauth {
 		title = i.Translate("Login Connect from oauth title")
 		help = i.Translate("Login Connect from oauth help")
 	} else if i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize/sharing" {
@@ -149,6 +151,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"TwoFactorForm":    false,
 		"TwoFactorToken":   "",
 		"CSRF":             c.Get("csrf"),
+		"OAuth":            oauth,
 	})
 }
 
@@ -163,6 +166,14 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 	} else {
 		title = i.Translate("Login Welcome name", publicName)
 	}
+
+	redirectQuery := redirect.Query()
+	var clientScope string
+	if clientScopes := redirectQuery["scope"]; len(clientScopes) > 0 {
+		clientScope = clientScopes[0]
+	}
+
+	oauth := i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
 	return c.Render(code, "login.html", echo.Map{
 		"Domain":           i.ContextualDomain(),
 		"Locale":           i.Locale,
@@ -174,6 +185,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 		"TwoFactorForm":    true,
 		"TwoFactorToken":   string(twoFactorToken),
 		"CSRF":             c.Get("csrf"),
+		"OAuth":            oauth,
 	})
 }
 

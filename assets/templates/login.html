@@ -56,10 +56,14 @@
                     data-hide="{{t "Login Password button hide"}}">{{t "Login Password button show"}}</button>
                   <input id="password" name="passphrase" pplaceholder="{{t "Login Password field"}}" type="password" autofocus="true" autocomplete="current-password" />
                 </p>
+                {{if not .OAuth}}
                 <p class="password-form">
                   <label class="long-run-session-label" for="long-run-session">{{t "Login Long Session"}}</label>
                   <input id="long-run-session" class="long-run-session-checkbox" name="long-run-session" type="checkbox" />
                 </p>
+                {{else}}
+                <input id="long-run-session" name="long-run-session" type="hidden" value="{{.LongRunSession}}" />
+                {{end}}
                 {{else}}
                 <input id="long-run-session" name="long-run-session" type="hidden" value="{{.LongRunSession}}" />
                 {{end}}
@@ -69,10 +73,14 @@
                   <label for="two-factor-passcode" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
                   <input id="two-factor-passcode" name="two-factor-passcode" placeholder="{{t "Login Two factor field"}}" type="text" autofocus="true" autocomplete="current-password" />
                 </p>
+                {{if not .OAuth}}
                 <p class="two-factor-form{{if not .TwoFactorForm}} display-none{{end}}">
                   <label class="two-factor-trust-device-label" for="two-factor-trust-device" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor device trust field"}}</label>
                   <input id="two-factor-trust-device" class="two-factor-trust-device-checkbox" name="two-factor-trust-device" type="checkbox" />
                 </p>
+                {{else}}
+                  <input id="two-factor-trust-device" class="two-factor-trust-device-checkbox" name="two-factor-trust-device" type="hidden" />
+                {{end}}
                 <!--
                 <p class="help two-factor-form{{if not .TwoFactorForm}} display-none{{end}}" id="login-two-factor-trust-device-tip">{{t "Login Two factor device trust help"}}</p>
                 -->
