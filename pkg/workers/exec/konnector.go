@@ -511,7 +511,10 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 }
 
 func (w *konnectorWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
-	log := w.Logger(ctx).WithField("account_id", w.msg.Account)
+	log := w.Logger(ctx)
+	if w.msg != nil {
+		log = log.WithField("account_id", w.msg.Account)
+	}
 	if errjob == nil {
 		log.Info("Konnector success")
 	} else {
