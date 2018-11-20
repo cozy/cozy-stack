@@ -112,7 +112,7 @@ func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
 // manifest and apps.FileServer context.
 //
 // It can be used to serve file application in another context than the VFS,
-// for instance for tests or development puposes where we want to serve an
+// for instance for tests or development purposes where we want to serve an
 // application that is not installed on the user's instance. However this
 // procedure should not be used for standard applications, use the Serve method
 // for that.
