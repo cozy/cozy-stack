@@ -54,7 +54,7 @@ func InitSwiftConnection(fs Fs) error {
 	endpointType := swift.EndpointTypePublic
 	if q.Get("EndpointType") == "internal" {
 		endpointType = swift.EndpointTypeInternal
-	} else if q.Get("EndpointType") == "internal" {
+	} else if q.Get("EndpointType") == "admin" {
 		endpointType = swift.EndpointTypeAdmin
 	}
 
