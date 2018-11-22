@@ -79,6 +79,9 @@ const (
 	SchemeMem = "mem"
 	// SchemeSwift is the URL scheme used to configure a swift filesystem.
 	SchemeSwift = "swift"
+	// SchemeSwiftSecure is the URL scheme used to configure the swift filesystem
+	// in secure mode (HTTPS).
+	SchemeSwiftSecure = "swift+https"
 )
 
 // defaultAdminSecretFileName is the default name of the file containing the
@@ -161,8 +164,9 @@ func (v *Vault) CredentialsDecryptorKey() *keymgmt.NACLKey {
 
 // Fs contains the configuration values of the file-system
 type Fs struct {
-	Auth *url.Userinfo
-	URL  *url.URL
+	Auth      *url.Userinfo
+	URL       *url.URL
+	Transport http.RoundTripper
 }
 
 // CouchDB contains the configuration values of the database
@@ -435,6 +439,19 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	fsClient, _, err := tlsclient.NewHTTPClient(tlsclient.HTTPEndpoint{
+		RootCAFile: v.GetString("fs.root_ca"),
+		ClientCertificateFiles: tlsclient.ClientCertificateFilePair{
+			CertificateFile: v.GetString("fs.client_cert"),
+			KeyFile:         v.GetString("fs.client_key"),
+		},
+		PinnedKey:              v.GetString("fs.pinned_key"),
+		InsecureSkipValidation: v.GetBool("fs.insecure_skip_validation"),
+	})
+	if err != nil {
+		return err
+	}
+
 	regs, err := makeRegistries(v)
 	if err != nil {
 		return err
@@ -600,7 +617,8 @@ func UseViper(v *viper.Viper) error {
 		CredentialsDecryptorKey: v.GetString("vault.credentials_decryptor_key"),
 
 		Fs: Fs{
-			URL: fsURL,
+			URL:       fsURL,
+			Transport: fsClient.Transport,
 		},
 		CouchDB: CouchDB{
 			Auth:   couchAuth,

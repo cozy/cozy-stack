@@ -24,7 +24,7 @@ var swiftCmdGroup = &cobra.Command{
 		if config.FsURL().Scheme != config.SchemeSwift {
 			return fmt.Errorf("swift: the configured filesystem does not rely on OpenStack Swift")
 		}
-		return config.InitSwiftConnection(config.FsURL())
+		return config.InitSwiftConnection(config.GetConfig().Fs)
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
