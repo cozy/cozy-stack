@@ -30,8 +30,9 @@ func InitSwiftConnection(fs Fs) error {
 	auth := q.Get("AuthURL")
 	if auth == "" {
 		authURL = &url.URL{
-			Host: fsURL.Host,
-			Path: "/identity/v3",
+			Scheme: "http",
+			Host:   fsURL.Host,
+			Path:   "/identity/v3",
 		}
 	} else {
 		authURL, err = url.Parse(auth)
