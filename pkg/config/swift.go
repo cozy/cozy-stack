@@ -51,6 +51,13 @@ func InitSwiftConnection(fs Fs) error {
 		password = q.Get("Token")
 	}
 
+	endpointType := swift.EndpointTypePublic
+	if q.Get("EndpointType") == "internal" {
+		endpointType = swift.EndpointTypeInternal
+	} else if q.Get("EndpointType") == "internal" {
+		endpointType = swift.EndpointTypeAdmin
+	}
+
 	swiftConn = &swift.Connection{
 		UserName:       username,
 		ApiKey:         password,
@@ -61,6 +68,7 @@ func InitSwiftConnection(fs Fs) error {
 		TenantDomain:   q.Get("ProjectDomain"),
 		TenantDomainId: q.Get("ProjectDomainID"),
 		Region:         q.Get("Region"),
+		EndpointType:   endpointType,
 		// Copying a file needs a long timeout on large files
 		Transport:      fs.Transport,
 		ConnectTimeout: 300 * time.Second,
