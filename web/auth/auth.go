@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/echo"
@@ -1128,6 +1129,42 @@ func passphraseRenew(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/login", nil))
 }
 
+// Used to trade a client_id+secret for an OAuth token
+func secretExchange(c echo.Context) error {
+	type exchange struct {
+		ClientID string `json:"client_id,omitempty"`
+		Secret   string `json:"secret,omitempty"`
+	}
+	e := exchange{}
+
+	var r string
+
+	instance := middlewares.GetInstance(c)
+	err := json.NewDecoder(c.Request().Body).Decode(&e)
+	if err != nil {
+		return err
+	}
+
+	if e.ClientID != "" {
+		doc, err := oauth.FindClient(instance, e.ClientID)
+
+		if err == nil {
+			if doc.OnboardingSecret != "" && doc.OnboardingSecret == e.Secret {
+				out := accessTokenReponse{
+					Type:  "bearer",
+					Scope: "",
+				}
+				out.Access, err = doc.CreateJWT(instance, permissions.AccessTokenAudience, out.Scope)
+				out.Refresh, err = doc.CreateJWT(instance, permissions.RefreshTokenAudience, out.Scope)
+				return c.JSON(http.StatusOK, out)
+			}
+			r = "Bad secret"
+		}
+	}
+	r = "Missing client_id"
+	return jsonapi.Errorf(http.StatusBadRequest, "%s", r)
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	noCSRF := middleware.CSRFWithConfig(middleware.CSRFConfig{
@@ -1164,4 +1201,5 @@ func Routes(router *echo.Group) {
 	authorizeGroup.POST("/app", authorizeApp)
 
 	router.POST("/access_token", accessToken)
+	router.POST("/secret_exchange", secretExchange)
 }
