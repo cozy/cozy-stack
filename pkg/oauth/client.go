@@ -69,7 +69,8 @@ type Client struct {
 	NotificationDeviceToken string `json:"notification_device_token,omitempty"` // Declared by the client (optional)
 
 	// XXX omitempty does not work for time.Time, thus the interface{} type
-	SynchronizedAt interface{} `json:"synchronized_at,omitempty"` // Date of the last synchronization, updated by /settings/synchronized
+	SynchronizedAt   interface{} `json:"synchronized_at,omitempty"`   // Date of the last synchronization, updated by /settings/synchronized
+	OnboardingSecret string      `json:"onboarding_secret,omitempty"` // Used to store a secret during Onboarding
 }
 
 // ID returns the client qualified identifier
