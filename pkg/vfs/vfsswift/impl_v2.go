@@ -336,9 +336,11 @@ func (sfs *swiftVFSV2) DestroyDirContent(doc *vfs.DirDoc) error {
 	}
 	_, err = sfs.c.BulkDelete(sfs.container, objNames)
 	if err == swift.Forbidden {
+		sfs.log.Infof("DestroyDirContent failed on BulkDelete: %s", err)
 		err = nil
 		for _, objName := range objNames {
 			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil {
+				sfs.log.Infof("DestroyDirContent failed on ObjectDelete: %s", err)
 				err = errd
 			}
 		}
@@ -363,9 +365,11 @@ func (sfs *swiftVFSV2) DestroyDirAndContent(doc *vfs.DirDoc) error {
 	}
 	_, err = sfs.c.BulkDelete(sfs.container, objNames)
 	if err == swift.Forbidden {
+		sfs.log.Infof("DestroyDirAndContent failed on BulkDelete: %s", err)
 		err = nil
 		for _, objName := range objNames {
 			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil {
+				sfs.log.Infof("DestroyDirAndContent failed on ObjectDelete: %s", err)
 				err = errd
 			}
 		}
