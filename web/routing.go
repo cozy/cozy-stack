@@ -114,6 +114,7 @@ func SetupRoutes(router *echo.Echo) error {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:        hstsMaxAge,
 			CSPDefaultSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf},
+			CSPImgSrc:         []middlewares.CSPSource{middlewares.CSPSrcData, middlewares.CSPSrcBlob},
 			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcNone},
 		})
 		router.Use(secure)
