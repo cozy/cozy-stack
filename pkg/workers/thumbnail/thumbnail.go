@@ -1,8 +1,11 @@
 package thumbnail
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"image/gif"
+	"image/jpeg"
 	"io"
 	"io/ioutil"
 	"os"
@@ -201,6 +204,20 @@ func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.
 	in, err := i.VFS().OpenFile(img)
 	if err != nil {
 		return err
+	}
+
+	// For a gif, we get the first embedded image to generate the thumbnail
+	if img.Mime == "image/gif" {
+		var b bytes.Buffer
+
+		firstImage, err := gif.Decode(in)
+		if err != nil {
+			return err
+		}
+
+		w := bufio.NewWriter(&b)
+		jpeg.Encode(w, firstImage, nil)
+		in = bytes.NewReader(b.Bytes())
 	}
 
 	var env []string
