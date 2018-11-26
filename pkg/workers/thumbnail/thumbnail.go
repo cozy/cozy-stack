@@ -275,7 +275,7 @@ func generateThumb(ctx *jobs.WorkerContext, in io.Reader, out io.Writer, fileID 
 	args := []string{
 		"-limit", "Memory", "2GB",
 		"-limit", "Map", "3GB",
-		"-",              // Takes the input from stdin
+		"-[0]",           // Takes the input from stdin
 		"-auto-orient",   // Rotate image according to the EXIF metadata
 		"-strip",         // Strip the EXIF metadata
 		"-quality", "82", // A good compromise between file size and quality
