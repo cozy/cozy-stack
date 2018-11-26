@@ -1,11 +1,8 @@
 package thumbnail
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
-	"image/gif"
-	"image/jpeg"
 	"io"
 	"io/ioutil"
 	"os"
@@ -206,20 +203,6 @@ func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.
 		return err
 	}
 
-	// For a gif, we get the first embedded image to generate the thumbnail
-	if img.Mime == "image/gif" {
-		var b bytes.Buffer
-
-		firstImage, err := gif.Decode(in)
-		if err != nil {
-			return err
-		}
-
-		w := bufio.NewWriter(&b)
-		jpeg.Encode(w, firstImage, nil)
-		in = bytes.NewReader(b.Bytes())
-	}
-
 	var env []string
 	{
 		var tempDir string
@@ -292,7 +275,7 @@ func generateThumb(ctx *jobs.WorkerContext, in io.Reader, out io.Writer, fileID 
 	args := []string{
 		"-limit", "Memory", "2GB",
 		"-limit", "Map", "3GB",
-		"-",              // Takes the input from stdin
+		"-[0]",           // Takes the input from stdin
 		"-auto-orient",   // Rotate image according to the EXIF metadata
 		"-strip",         // Strip the EXIF metadata
 		"-quality", "82", // A good compromise between file size and quality
