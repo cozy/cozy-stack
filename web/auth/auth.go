@@ -1129,7 +1129,7 @@ func passphraseRenew(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/login", nil))
 }
 
-// Used to trade a client_id+secret for an OAuth token
+// Used to trade a secret for OAuth client informations
 func secretExchange(c echo.Context) error {
 	type exchange struct {
 		Secret string `json:"secret,omitempty"`

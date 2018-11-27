@@ -1,8 +1,11 @@
 package settings
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -64,13 +67,21 @@ func onboarded(c echo.Context) error {
 			SoftwareID:   "github.com/cozy/cozy-stack",
 		}
 		OAuthClient.Create(i)
-
 		i.OnboardingClientID = OAuthClient.ClientID
 
 		// Redirection
+		// Generate state
+		b := make([]byte, 32)
+
+		if _, err := io.ReadFull(rand.Reader, b); err != nil {
+			return err
+		}
+		state := base64.StdEncoding.EncodeToString(b)
+
 		queryParams := url.Values{
 			"client_id":     {OAuthClient.ClientID},
 			"redirect_uri":  {deeplink},
+			"state":         {state},
 			"response_type": {"code"},
 			"scope":         {i.OnboardingPermissions},
 		}
