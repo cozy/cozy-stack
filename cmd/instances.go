@@ -281,9 +281,13 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 		if len(args) != 2 {
 			return cmd.Usage()
 		}
-		diskQuota, err := humanize.ParseBytes(args[1])
+		parsed, err := humanize.ParseBytes(args[1])
 		if err != nil {
 			return fmt.Errorf("Could not parse disk-quota: %s", err)
+		}
+		diskQuota := int64(parsed)
+		if diskQuota == 0 {
+			diskQuota = -1
 		}
 		domain := args[0]
 		c := newAdminClient()

@@ -966,6 +966,9 @@ func Patch(i *Instance, opts *Options) error {
 		if opts.DiskQuota > 0 && opts.DiskQuota != i.BytesDiskQuota {
 			i.BytesDiskQuota = opts.DiskQuota
 			needUpdate = true
+		} else if opts.DiskQuota == -1 {
+			i.BytesDiskQuota = 0
+			needUpdate = true
 		}
 
 		if opts.AutoUpdate != nil && !(*opts.AutoUpdate) != i.NoAutoUpdate {
