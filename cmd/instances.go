@@ -57,8 +57,9 @@ var flagAvailableFields bool
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
-	Use:   "instances <command>",
-	Short: "Manage instances of a stack",
+	Use:     "instances <command>",
+	Aliases: []string{"instance"},
+	Short:   "Manage instances of a stack",
 	Long: `
 cozy-stack instances allows to manage the instances of this stack
 
