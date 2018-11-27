@@ -1149,7 +1149,7 @@ func secretExchange(c echo.Context) error {
 		doc, err := oauth.FindClient(instance, e.ClientID)
 
 		if err == nil {
-			if doc.OnboardingSecret != "" && doc.OnboardingSecret == e.Secret {
+			if instance.OnboardingSecret != "" && instance.OnboardingSecret == e.Secret {
 				out := accessTokenReponse{
 					Type:  "bearer",
 					Scope: "",
