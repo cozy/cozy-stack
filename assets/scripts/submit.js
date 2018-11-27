@@ -18,7 +18,7 @@
   const passwordForms = document.getElementsByClassName('password-form')
   const csrfTokenInput = document.getElementById('csrf_token')
 
-  let errorPanel = loginForm && loginForm.querySelector('.errors')
+  let errorPanel = loginForm && loginForm.querySelector('.wizard-errors')
 
   const twoFactorTrustedDeviceTokenKey = 'two-factor-trusted-device-token'
   let localStorage = null
@@ -35,7 +35,7 @@
 
     if (!errorPanel) {
       errorPanel = document.createElement('div')
-      errorPanel.classList.add('errors')
+      errorPanel.classList.add('wizard-errors')
       loginForm.insertBefore(errorPanel, loginForm.firstChild);
     }
 
@@ -139,10 +139,10 @@
 
   function renderTwoFactorForm(twoFactorToken) {
     for (let i = 0; i < twoFactorForms.length; i++) {
-      twoFactorForms[i].classList.remove('display-none')
+      twoFactorForms[i].classList.remove('u-hide')
     }
     for (let i = 0; i < passwordForms.length; i++) {
-      passwordForms[i].classList.add('display-none')
+      passwordForms[i].classList.add('u-hide')
     }
     submitButton.removeAttribute('disabled')
     twoFactorTokenInput.value = twoFactorToken
