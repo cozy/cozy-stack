@@ -466,7 +466,7 @@ This new endpoint skip the design docs (and does not count them in the
 (default: 0) and `limit` (default: 100).
 
 Note that the response format is a bit different, it looks more like a `_find`
-response with mango.
+response with mango. And, like for `_find`, the limit cannot be more than 100.
 
 ### Request
 
