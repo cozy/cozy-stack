@@ -7,7 +7,6 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -53,8 +52,8 @@ func onboarded(c echo.Context) error {
 	}
 	redirect := i.OnboardedRedirection().String()
 
-	// Redirect to permissions screen
-	if i.OnboardingSecret != "" { // Mobile onboarding
+	// Redirect to permissions screen if we are in a mobile onboarding
+	if i.OnboardingSecret != "" {
 		// Generate the deeplink
 		deeplink := fmt.Sprintf("cozy%s://%s", i.OnboardingApp, i.Domain)
 
@@ -65,27 +64,12 @@ func onboarded(c echo.Context) error {
 			SoftwareID:   "github.com/cozy/cozy-stack",
 		}
 		OAuthClient.Create(i)
-		client, _ := oauth.FindClient(i, OAuthClient.ClientID)
 
-		type accessTokenReponse struct {
-			Type    string `json:"token_type"`
-			Scope   string `json:"scope"`
-			Access  string `json:"access_token"`
-			Refresh string `json:"refresh_token,omitempty"`
-		}
-
-		// Generate the access_token
-		accessCode, _ := oauth.CreateAccessCode(i, OAuthClient.ClientID, i.OnboardingPermissions)
-		out := accessTokenReponse{
-			Type: "bearer",
-		}
-		out.Scope = accessCode.Scope
-		out.Refresh, _ = client.CreateJWT(i, permissions.RefreshTokenAudience, out.Scope)
-		out.Access, _ = client.CreateJWT(i, permissions.AccessTokenAudience, out.Scope)
+		i.OnboardingClientID = OAuthClient.ClientID
 
 		// Redirection
 		queryParams := url.Values{
-			"client_id":     {client.ClientID},
+			"client_id":     {OAuthClient.ClientID},
 			"redirect_uri":  {deeplink},
 			"response_type": {"code"},
 			"scope":         {i.OnboardingPermissions},

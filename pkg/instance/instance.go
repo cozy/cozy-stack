@@ -98,10 +98,12 @@ type Instance struct {
 	NoAutoUpdate  bool     `json:"no_auto_update,omitempty"` // Whether or not the instance has auto updates for its applications
 	Dev           bool     `json:"dev,omitempty"`            // Whether or not the instance is for development
 
-	OnboardingFinished    bool   `json:"onboarding_finished,omitempty"` // Whether or not the onboarding is complete.
+	OnboardingFinished bool `json:"onboarding_finished,omitempty"` // Whether or not the onboarding is complete.
+
 	OnboardingSecret      string `json:"onboarding_secret,omitempty"`
 	OnboardingApp         string `json:"onboarding_app,omitempty"`
 	OnboardingPermissions string `json:"onboarding_permissions,omitempty"`
+	OnboardingClientID    string `json:"onboarding_clientID,omitempty"`
 	BytesDiskQuota        int64  `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
 	IndexViewsVersion     int    `json:"indexes_version"`
 

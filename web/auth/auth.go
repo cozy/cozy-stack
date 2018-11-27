@@ -1132,8 +1132,7 @@ func passphraseRenew(c echo.Context) error {
 // Used to trade a client_id+secret for an OAuth token
 func secretExchange(c echo.Context) error {
 	type exchange struct {
-		ClientID string `json:"client_id,omitempty"`
-		Secret   string `json:"secret,omitempty"`
+		Secret string `json:"secret,omitempty"`
 	}
 	e := exchange{}
 
@@ -1145,23 +1144,14 @@ func secretExchange(c echo.Context) error {
 		return err
 	}
 
-	if e.ClientID != "" {
-		doc, err := oauth.FindClient(instance, e.ClientID)
+	doc, err := oauth.FindClient(instance, instance.OnboardingClientID)
 
-		if err == nil {
-			if instance.OnboardingSecret != "" && instance.OnboardingSecret == e.Secret {
-				out := accessTokenReponse{
-					Type:  "bearer",
-					Scope: "",
-				}
-				out.Access, err = doc.CreateJWT(instance, permissions.AccessTokenAudience, out.Scope)
-				out.Refresh, err = doc.CreateJWT(instance, permissions.RefreshTokenAudience, out.Scope)
-				return c.JSON(http.StatusOK, out)
-			}
-			r = "Bad secret"
+	if err == nil {
+		if instance.OnboardingSecret != "" && instance.OnboardingSecret == e.Secret {
+			return c.JSON(http.StatusOK, doc)
 		}
+		r = "Bad secret"
 	}
-	r = "Missing client_id"
 	return jsonapi.Errorf(http.StatusBadRequest, "%s", r)
 }
 
