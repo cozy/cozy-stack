@@ -284,6 +284,9 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 		if err != nil {
 			return fmt.Errorf("Could not parse disk-quota: %s", err)
 		}
+		if diskQuota == 0 {
+			diskQuota = -1
+		}
 		domain := args[0]
 		c := newAdminClient()
 		_, err = c.ModifyInstance(&client.InstanceOptions{
