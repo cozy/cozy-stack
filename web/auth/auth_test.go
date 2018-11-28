@@ -1317,6 +1317,93 @@ func TestIsLoggedOutAfterLogout(t *testing.T) {
 	assert.Equal(t, "who_are_you", content)
 }
 
+func TestSecretExchangeGoodSecret(t *testing.T) {
+	body, _ := json.Marshal(echo.Map{"secret": "foobarsecret"})
+
+	var oauthClient oauth.Client
+
+	oauthClient.RedirectURIs = []string{"abc"}
+	oauthClient.ClientName = "cozy-test"
+	oauthClient.SoftwareID = "github.com/cozy/cozy-test"
+	oauthClient.OnboardingSecret = "foobarsecret"
+	oauthClient.Create(testInstance)
+
+	req, _ := http.NewRequest("POST", ts.URL+"/auth/secret_exchange", bytes.NewBuffer(body))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/json; charset=utf-8")
+	req.Header.Add("Accept", "application/json")
+
+	res, err := client.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	resBody, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(resBody), "client_secret")
+	defer res.Body.Close()
+}
+
+func TestSecretExchangeBadSecret(t *testing.T) {
+	body, _ := json.Marshal(echo.Map{"secret": "badbarsecret"})
+
+	var oauthClient oauth.Client
+
+	oauthClient.RedirectURIs = []string{"abc"}
+	oauthClient.ClientName = "cozy-test"
+	oauthClient.SoftwareID = "github.com/cozy/cozy-test"
+	oauthClient.OnboardingSecret = "foobarsecret"
+	oauthClient.Create(testInstance)
+
+	req, _ := http.NewRequest("POST", ts.URL+"/auth/secret_exchange", bytes.NewBuffer(body))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/json; charset=utf-8")
+	req.Header.Add("Accept", "application/json")
+
+	res, err := client.Do(req)
+
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	resBody, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(resBody), "errors")
+
+	defer res.Body.Close()
+}
+
+func TestSecretExchangeBadPayload(t *testing.T) {
+	body, _ := json.Marshal(echo.Map{"foo": "bar"})
+
+	req, _ := http.NewRequest("POST", ts.URL+"/auth/secret_exchange", bytes.NewBuffer(body))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/json; charset=utf-8")
+	req.Header.Add("Accept", "application/json")
+
+	res, err := client.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	resBody, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(resBody), "Missing secret")
+	defer res.Body.Close()
+}
+
+func TestSecretExchangeNoPayload(t *testing.T) {
+	req, _ := http.NewRequest("POST", ts.URL+"/auth/secret_exchange", nil)
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/json; charset=utf-8")
+	req.Header.Add("Accept", "application/json")
+
+	res, err := client.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.Equal(t, res.StatusCode, 400)
+	defer res.Body.Close()
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
