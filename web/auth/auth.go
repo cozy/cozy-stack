@@ -2,10 +2,12 @@
 package auth
 
 import (
+	"bytes"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -22,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/echo"
 	"github.com/cozy/echo/middleware"
 )
@@ -102,6 +105,31 @@ func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error)
 	return session.ID(), nil
 }
 
+var cozyUITemplate *template.Template
+
+func init() {
+	funcsMap := template.FuncMap{
+		"split": strings.Split,
+		"asset": statik.AssetPath,
+	}
+
+	cozyUITemplate = template.Must(template.New("cozy-ui").Funcs(funcsMap).Parse(`` +
+		`<link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-ui.min.css" .ContextName}}">`,
+	))
+}
+
+func cozyUI(i *instance.Instance) template.HTML {
+	buf := new(bytes.Buffer)
+	err := cozyUITemplate.Execute(buf, echo.Map{
+		"Domain":      i.ContextualDomain(),
+		"ContextName": i.ContextName,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return template.HTML(buf.String()) // #nosec
+}
+
 func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors string, redirect *url.URL) error {
 	var title, help string
 
@@ -118,13 +146,15 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		clientScope = clientScopes[0]
 	}
 
+	oauth := i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
+
 	if c.QueryParam("msg") == "passphrase-reset-requested" {
 		title = i.Translate("Login Connect after reset requested title")
 		help = i.Translate("Login Connect after reset requested help")
 	} else if strings.Contains(redirectStr, "reconnect") {
 		title = i.Translate("Login Reconnect title")
 		help = i.Translate("Login Reconnect help")
-	} else if i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin {
+	} else if oauth {
 		title = i.Translate("Login Connect from oauth title")
 		help = i.Translate("Login Connect from oauth help")
 	} else if i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize/sharing" {
@@ -140,6 +170,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	}
 
 	return c.Render(code, "login.html", echo.Map{
+		"CozyUI":           cozyUI(i),
 		"Domain":           i.ContextualDomain(),
 		"Locale":           i.Locale,
 		"Title":            title,
@@ -149,6 +180,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"TwoFactorForm":    false,
 		"TwoFactorToken":   "",
 		"CSRF":             c.Get("csrf"),
+		"OAuth":            oauth,
 	})
 }
 
@@ -163,7 +195,16 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 	} else {
 		title = i.Translate("Login Welcome name", publicName)
 	}
+
+	redirectQuery := redirect.Query()
+	var clientScope string
+	if clientScopes := redirectQuery["scope"]; len(clientScopes) > 0 {
+		clientScope = clientScopes[0]
+	}
+
+	oauth := i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
 	return c.Render(code, "login.html", echo.Map{
+		"CozyUI":           cozyUI(i),
 		"Domain":           i.ContextualDomain(),
 		"Locale":           i.Locale,
 		"Title":            title,
@@ -174,6 +215,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 		"TwoFactorForm":    true,
 		"TwoFactorToken":   string(twoFactorToken),
 		"CSRF":             c.Get("csrf"),
+		"OAuth":            oauth,
 	})
 }
 
