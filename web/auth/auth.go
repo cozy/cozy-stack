@@ -1135,12 +1135,16 @@ func secretExchange(c echo.Context) error {
 	type exchange struct {
 		Secret string `json:"secret"`
 	}
-	e := exchange{}
+	e := new(exchange)
 
 	instance := middlewares.GetInstance(c)
 	err := json.NewDecoder(c.Request().Body).Decode(&e)
 	if err != nil {
-		return err
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
+	}
+
+	if e.Secret == "" {
+		return jsonapi.BadRequest(errors.New("Missing secret"))
 	}
 
 	doc, err := oauth.FindClientByOnBoardingSecret(instance, e.Secret)
