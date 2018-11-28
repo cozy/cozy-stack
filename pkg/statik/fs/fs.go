@@ -198,6 +198,10 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 		storeInCache = true
 	}
 
+	if opt.Context == "" {
+		opt.Context = defaultContext
+	}
+
 	h := sha256.New()
 
 	zippedDataBuf := new(bytes.Buffer)
