@@ -2,10 +2,12 @@
 package auth
 
 import (
+	"bytes"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -22,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/echo"
 	"github.com/cozy/echo/middleware"
 )
@@ -102,6 +105,31 @@ func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error)
 	return session.ID(), nil
 }
 
+var cozyUITemplate *template.Template
+
+func init() {
+	funcsMap := template.FuncMap{
+		"split": strings.Split,
+		"asset": statik.AssetPath,
+	}
+
+	cozyUITemplate = template.Must(template.New("cozy-ui").Funcs(funcsMap).Parse(`` +
+		`<link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-ui.min.css" .ContextName}}">`,
+	))
+}
+
+func cozyUI(i *instance.Instance) template.HTML {
+	buf := new(bytes.Buffer)
+	err := cozyUITemplate.Execute(buf, echo.Map{
+		"Domain":      i.ContextualDomain(),
+		"ContextName": i.ContextName,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return template.HTML(buf.String()) // #nosec
+}
+
 func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors string, redirect *url.URL) error {
 	var title, help string
 
@@ -142,6 +170,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	}
 
 	return c.Render(code, "login.html", echo.Map{
+		"CozyUI":           cozyUI(i),
 		"Domain":           i.ContextualDomain(),
 		"Locale":           i.Locale,
 		"Title":            title,
@@ -175,6 +204,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 
 	oauth := i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
 	return c.Render(code, "login.html", echo.Map{
+		"CozyUI":           cozyUI(i),
 		"Domain":           i.ContextualDomain(),
 		"Locale":           i.Locale,
 		"Title":            title,
