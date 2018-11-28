@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -1132,11 +1133,9 @@ func passphraseRenew(c echo.Context) error {
 // Used to trade a secret for OAuth client informations
 func secretExchange(c echo.Context) error {
 	type exchange struct {
-		Secret string `json:"secret,omitempty"`
+		Secret string `json:"secret"`
 	}
 	e := exchange{}
-
-	var r string
 
 	instance := middlewares.GetInstance(c)
 	err := json.NewDecoder(c.Request().Body).Decode(&e)
@@ -1144,15 +1143,17 @@ func secretExchange(c echo.Context) error {
 		return err
 	}
 
-	doc, err := oauth.FindClient(instance, instance.OnboardingClientID)
+	doc, err := oauth.FindClientByOnBoardingSecret(instance, e.Secret)
 
-	if err == nil {
-		if instance.OnboardingSecret != "" && instance.OnboardingSecret == e.Secret {
-			return c.JSON(http.StatusOK, doc)
-		}
-		r = "Bad secret"
+	if err != nil {
+		return jsonapi.NotFound(err)
 	}
-	return jsonapi.Errorf(http.StatusBadRequest, "%s", r)
+
+	if doc.OnboardingSecret == "" || doc.OnboardingSecret != e.Secret {
+		return jsonapi.InvalidAttribute("secret", errors.New("Invalid secret"))
+	}
+
+	return c.JSON(http.StatusOK, doc)
 }
 
 // Routes sets the routing for the status service

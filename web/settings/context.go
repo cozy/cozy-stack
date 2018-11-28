@@ -1,11 +1,8 @@
 package settings
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 
@@ -55,35 +52,29 @@ func onboarded(c echo.Context) error {
 	}
 	redirect := i.OnboardedRedirection().String()
 
+	// Retreiving client
+	clientID := c.QueryParam("client_id")
+	client, err := oauth.FindClient(i, clientID)
+	if err != nil {
+		return err
+	}
+
 	// Redirect to permissions screen if we are in a mobile onboarding
-	if i.OnboardingSecret != "" {
-		// Generate the deeplink
-		deeplink := fmt.Sprintf("cozy%s://%s", i.OnboardingApp, i.Domain)
-
-		// Generate the OAuth client
-		OAuthClient := oauth.Client{
-			RedirectURIs: []string{deeplink},
-			ClientName:   i.OnboardingApp,
-			SoftwareID:   "github.com/cozy/cozy-stack",
-		}
-		OAuthClient.Create(i)
-		i.OnboardingClientID = OAuthClient.ClientID
-
-		// Redirection
-		// Generate state
-		b := make([]byte, 32)
-
-		if _, err := io.ReadFull(rand.Reader, b); err != nil {
+	if client.OnboardingSecret != "" {
+		if err != nil {
 			return err
 		}
-		state := base64.StdEncoding.EncodeToString(b)
 
+		// Generate the deeplink
+		deeplink := fmt.Sprintf("cozy%s://%s", client.OnboardingApp, i.Domain)
+
+		// Redirection
 		queryParams := url.Values{
-			"client_id":     {OAuthClient.ClientID},
+			"client_id":     {client.ClientID},
 			"redirect_uri":  {deeplink},
-			"state":         {state},
+			"state":         {client.OnboardingState},
 			"response_type": {"code"},
-			"scope":         {i.OnboardingPermissions},
+			"scope":         {client.OnboardingPermissions},
 		}
 		redirect = i.PageURL("/auth/authorize", queryParams)
 
