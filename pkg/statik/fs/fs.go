@@ -198,6 +198,10 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 		storeInCache = true
 	}
 
+	if opt.Context == "" {
+		opt.Context = defaultContext
+	}
+
 	h := sha256.New()
 
 	zippedDataBuf := new(bytes.Buffer)
@@ -213,6 +217,14 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 	}
 
 	sum := h.Sum(nil)
+
+	if opt.Shasum == "" {
+		log := logger.WithNamespace("custom_external")
+		log.Warnf("shasum was not provided for file %s, inserting unsafe content %s",
+			opt.Name, opt.URL)
+		opt.Shasum = hex.EncodeToString(sum)
+	}
+
 	if hex.EncodeToString(sum) != opt.Shasum {
 		return fmt.Errorf("external content checksum do not match: expected %s got %x on url %s",
 			opt.Shasum, sum, assetURL)
