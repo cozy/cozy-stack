@@ -200,6 +200,25 @@ func FindClientByOnBoardingSecret(i *instance.Instance, onboardingSecret string)
 	return nil, fmt.Errorf("Could not find client with onboarding_secret %s", onboardingSecret)
 }
 
+// FindOnboardingClient loads a client from the database with an OnboardingSecret
+func FindOnboardingClient(i *instance.Instance) (*Client, error) {
+	var results []*Client
+
+	req := couchdb.FindRequest{
+		Selector: mango.Exists("onboarding_secret"),
+		Limit:    1,
+	}
+	// We should have very few requests. Only on instance creation.
+	err := couchdb.FindDocsUnoptimized(i, consts.OAuthClients, &req, &results)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 1 {
+		return results[0], nil
+	}
+	return nil, fmt.Errorf("Could not find client with an onboarding_secret")
+}
+
 // ClientRegistrationError is a Client Registration Error Response, as described
 // in the Client Dynamic Registration Protocol
 // See https://tools.ietf.org/html/rfc7591#section-3.2.2 for errors

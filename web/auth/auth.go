@@ -1157,6 +1157,7 @@ func secretExchange(c echo.Context) error {
 		return jsonapi.InvalidAttribute("secret", errors.New("Invalid secret"))
 	}
 
+	doc.TransformIDAndRev()
 	return c.JSON(http.StatusOK, doc)
 }
 
