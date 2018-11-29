@@ -35,7 +35,7 @@
 
     if (!errorPanel) {
       errorPanel = document.createElement('div')
-      errorPanel.classList.add('wizard-errors')
+      errorPanel.classList.add('wizard-errors', 'u-error')
       loginForm.insertBefore(errorPanel, loginForm.firstChild);
     }
 
@@ -76,8 +76,8 @@
             renderTwoFactorForm(body.two_factor_token)
             return
           }
-          submitButton.innerHTML = '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'
-          submitButton.classList.add('btn-success')
+          submitButton.childNodes[1].innerHTML = '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'
+          submitButton.classList.add('c-btn--highlight')
           if (body.redirect) {
             window.location = body.redirect
           } else {
