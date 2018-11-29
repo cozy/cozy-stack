@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -38,6 +39,8 @@ const ContextPermissionSet = "permissions_set"
 // ContextClaims is the key used in echo context to store claims
 // #nosec
 const ContextClaims = "token_claims"
+
+const ShortCodeLen = 12
 
 // APIPermission is the struct that will be used to serialized a permission to
 // JSON-API
@@ -92,10 +95,17 @@ func createPermission(c echo.Context) error {
 	}
 
 	var codes map[string]string
+	var shortcodes map[string]string
+
 	if names != nil {
 		codes = make(map[string]string, len(names))
+		shortcodes = make(map[string]string, len(names))
 		for _, name := range names {
-			codes[name], err = instance.CreateShareCode(name)
+			longcode, err := instance.CreateShareCode(name)
+			shortcode := crypto.GenerateRandomString(ShortCodeLen)
+
+			codes[name] = longcode
+			shortcodes[name] = shortcode
 			if err != nil {
 				return err
 			}
@@ -114,7 +124,7 @@ func createPermission(c echo.Context) error {
 		}
 	}
 
-	pdoc, err := permissions.CreateShareSet(instance, parent, codes, subdoc.Permissions, expiresAt)
+	pdoc, err := permissions.CreateShareSet(instance, parent, codes, shortcodes, subdoc.Permissions, expiresAt)
 	if err != nil {
 		return err
 	}

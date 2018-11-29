@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -21,6 +22,8 @@ import (
 const (
 	// StateLen is the number of bytes for the OAuth state parameter
 	StateLen = 16
+	// ShortCodeLen is the number of chars for the shortcode
+	ShortCodeLen = 12
 )
 
 // Triggers keep record of which triggers are active
@@ -155,6 +158,7 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 	doc, _ := permissions.GetForSharePreview(inst, s.SID)
 
 	codes := make(map[string]string, len(s.Members)-1)
+	shortcodes := make(map[string]string, len(s.Members)-1)
 	for i, m := range s.Members {
 		if i == 0 {
 			continue
@@ -162,20 +166,24 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 		var err error
 
 		var previousVal string
+		var previousShortCode string
 		var ok bool
 
 		// Checks that we don't already have a sharing code
 		if doc != nil {
 			previousVal, ok = doc.Codes[m.Email]
+			previousShortCode, ok = doc.ShortCodes[m.Email]
 		}
 
 		if !ok {
 			codes[m.Email], err = inst.CreateShareCode(m.Email)
+			shortcodes[m.Email] = crypto.GenerateRandomString(ShortCodeLen)
 			if err != nil {
 				return nil, err
 			}
 		} else {
 			codes[m.Email] = previousVal
+			shortcodes[m.Email] = previousShortCode
 		}
 
 	}
@@ -198,7 +206,7 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 			return nil, err
 		}
 	} else {
-		_, err := permissions.CreateSharePreviewSet(inst, s.SID, codes, set)
+		_, err := permissions.CreateSharePreviewSet(inst, s.SID, codes, shortcodes, set)
 		if err != nil {
 			return nil, err
 		}
