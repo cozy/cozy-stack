@@ -77,11 +77,15 @@ type TokenOptions struct {
 // OAuthClientOptions is a struct holding all the options to generate an OAuth
 // client associated to an instance.
 type OAuthClientOptions struct {
-	Domain          string
-	RedirectURI     string
-	ClientName      string
-	SoftwareID      string
-	AllowLoginScope bool
+	Domain                string
+	RedirectURI           string
+	ClientName            string
+	SoftwareID            string
+	AllowLoginScope       bool
+	OnboardingSecret      string
+	OnboardingApp         string
+	OnboardingPermissions string
+	OnboardingState       string
 }
 
 // UpdatesOptions is a struct holding all the options to launch an update.
@@ -258,11 +262,15 @@ func (c *Client) GetToken(opts *TokenOptions) (string, error) {
 // instance.
 func (c *Client) RegisterOAuthClient(opts *OAuthClientOptions) (map[string]interface{}, error) {
 	q := url.Values{
-		"Domain":          {opts.Domain},
-		"RedirectURI":     {opts.RedirectURI},
-		"ClientName":      {opts.ClientName},
-		"SoftwareID":      {opts.SoftwareID},
-		"AllowLoginScope": {strconv.FormatBool(opts.AllowLoginScope)},
+		"Domain":                {opts.Domain},
+		"RedirectURI":           {opts.RedirectURI},
+		"ClientName":            {opts.ClientName},
+		"SoftwareID":            {opts.SoftwareID},
+		"AllowLoginScope":       {strconv.FormatBool(opts.AllowLoginScope)},
+		"OnboardingSecret":      {opts.OnboardingSecret},
+		"OnboardingApp":         {opts.OnboardingApp},
+		"OnboardingPermissions": {opts.OnboardingPermissions},
+		"OnboardingState":       {opts.OnboardingState},
 	}
 	res, err := c.Req(&request.Options{
 		Method:  "POST",
