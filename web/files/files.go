@@ -97,9 +97,9 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 	instance := middlewares.GetInstance(c)
 	defer func() {
 		if cerr := file.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
+			err = cerr
 			instance.Logger().WithField("nspace", "files").
 				Warnf("Error on uploading file (close): %s", err)
-			err = cerr
 		}
 	}()
 
