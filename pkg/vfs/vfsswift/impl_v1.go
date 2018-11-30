@@ -834,7 +834,11 @@ func (f *swiftFileOpen) ReadAt(p []byte, off int64) (int, error) {
 }
 
 func (f *swiftFileOpen) Seek(offset int64, whence int) (int64, error) {
-	return f.f.Seek(offset, whence)
+	n, err := f.f.Seek(offset, whence)
+	if err != nil {
+		logger.WithNamespace("vfsswift-v1").Warnf("Can't seek: %s", err)
+	}
+	return n, err
 }
 
 func (f *swiftFileOpen) Write(p []byte) (int, error) {
