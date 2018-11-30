@@ -115,7 +115,7 @@ func (sfs *swiftVFSV2) InitFs() error {
 	if err := sfs.Indexer.InitIndex(); err != nil {
 		return err
 	}
-	if err := sfs.c.ContainerCreate(sfs.container); err != nil {
+	if err := sfs.c.ContainerCreate(sfs.container, nil); err != nil {
 		sfs.log.Errorf("Could not create container %s: %s",
 			sfs.container, err.Error())
 		return err

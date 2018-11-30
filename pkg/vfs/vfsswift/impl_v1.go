@@ -92,7 +92,7 @@ func (sfs *swiftVFS) InitFs() error {
 	if err := sfs.Indexer.InitIndex(); err != nil {
 		return err
 	}
-	if err := sfs.c.ContainerCreate(sfs.container); err != nil {
+	if err := sfs.c.ContainerCreate(sfs.container, nil); err != nil {
 		sfs.log.Errorf("Could not create container %s: %s",
 			sfs.container, err.Error())
 		return err
@@ -362,7 +362,7 @@ func (sfs *swiftVFS) destroyDirAndContent(doc *vfs.DirDoc) (int64, error) {
 
 func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 	objName := doc.DirID + "/" + doc.DocName
-	err = sfs.c.ObjectDelete(sfs.container, objName)
+	err := sfs.c.ObjectDelete(sfs.container, objName)
 	if err != nil && err != swift.ObjectNotFound {
 		return err
 	}
