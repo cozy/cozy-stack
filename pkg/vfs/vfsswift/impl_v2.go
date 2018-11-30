@@ -30,7 +30,6 @@ type swiftVFSV2 struct {
 	domain        string
 	prefix        string
 	container     string
-	version       string
 	dataContainer string
 	mu            lock.ErrorRWLocker
 	log           *logrus.Entry
@@ -56,7 +55,6 @@ func NewV2(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu
 		domain:        db.DomainName(),
 		prefix:        db.DBPrefix(),
 		container:     swiftV2ContainerPrefixCozy + db.DBPrefix(),
-		version:       swiftV2ContainerPrefixCozy + db.DBPrefix() + versionSuffix,
 		dataContainer: swiftV2ContainerPrefixData + db.DBPrefix(),
 		mu:            mu,
 		log:           logger.WithDomain(db.DomainName()).WithField("nspace", "vfsswift"),
@@ -95,7 +93,6 @@ func (sfs *swiftVFSV2) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
 		c:               sfs.c,
 		domain:          sfs.domain,
 		container:       sfs.container,
-		version:         sfs.version,
 		dataContainer:   sfs.dataContainer,
 		mu:              sfs.mu,
 		log:             sfs.log,
@@ -105,7 +102,6 @@ func (sfs *swiftVFSV2) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
 func (sfs *swiftVFSV2) ContainersNames() map[string]string {
 	m := map[string]string{
 		"container":      sfs.container,
-		"version":        sfs.version,
 		"data_container": sfs.dataContainer,
 	}
 	return m
@@ -119,17 +115,10 @@ func (sfs *swiftVFSV2) InitFs() error {
 	if err := sfs.Indexer.InitIndex(); err != nil {
 		return err
 	}
-	if err := sfs.c.VersionContainerCreate(sfs.container, sfs.version); err != nil {
-		if err != swift.Forbidden {
-			sfs.log.Errorf("Could not create container %s: %s",
-				sfs.container, err.Error())
-			return err
-		}
-		sfs.log.Errorf("Could not activate versioning for container %s: %s",
+	if err := sfs.c.ContainerCreate(sfs.container); err != nil {
+		sfs.log.Errorf("Could not create container %s: %s",
 			sfs.container, err.Error())
-		if err = sfs.c.ContainerDelete(sfs.version); err != nil {
-			return err
-		}
+		return err
 	}
 	if err := sfs.c.ContainerCreate(sfs.dataContainer, nil); err != nil {
 		sfs.log.Errorf("Could not create container %s: %s",
@@ -143,10 +132,9 @@ func (sfs *swiftVFSV2) InitFs() error {
 func (sfs *swiftVFSV2) Delete() error {
 	containerMeta := swift.Metadata{"to-be-deleted": "1"}.ContainerHeaders()
 	sfs.log.Infof("Marking containers %q, %q and %q as to-be-deleted",
-		sfs.container, sfs.version, sfs.dataContainer)
+		sfs.container, sfs.dataContainer)
 	err1 := sfs.c.ContainerUpdate(sfs.container, containerMeta)
 	err2 := sfs.c.ContainerUpdate(sfs.dataContainer, containerMeta)
-	err3 := sfs.c.ContainerUpdate(sfs.version, containerMeta)
 	if err1 != nil {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.container, err1)
@@ -155,18 +143,11 @@ func (sfs *swiftVFSV2) Delete() error {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.dataContainer, err2)
 	}
-	if err3 != nil {
-		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
-			sfs.version, err3)
-	}
 	var errm error
 	if err := sfs.deleteContainer(sfs.container); err != nil {
 		errm = multierror.Append(errm, err)
 	}
 	if err := sfs.deleteContainer(sfs.dataContainer); err != nil {
-		errm = multierror.Append(errm, err)
-	}
-	if err := sfs.deleteContainer(sfs.version); err != nil {
 		errm = multierror.Append(errm, err)
 	}
 	return errm
