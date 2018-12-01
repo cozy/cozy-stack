@@ -103,7 +103,7 @@ func (sfs *swiftVFS) InitFs() error {
 
 func (sfs *swiftVFS) Delete() error {
 	containerMeta := swift.Metadata{"to-be-deleted": "1"}.ContainerHeaders()
-	sfs.log.Infof("Marking containers %q, %q and %q as to-be-deleted",
+	sfs.log.Infof("Marking containers %q and %q as to-be-deleted",
 		sfs.container, sfs.dataContainer)
 	err1 := sfs.c.ContainerUpdate(sfs.container, containerMeta)
 	err2 := sfs.c.ContainerUpdate(sfs.dataContainer, containerMeta)
