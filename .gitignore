@@ -5,6 +5,7 @@
 /cozy-stack*
 /scripts/cozy-stack*
 /debian
+/debug-assets
 /storage
 /tests/clone/generated
 /tests/coverage.txt

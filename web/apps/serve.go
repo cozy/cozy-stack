@@ -287,17 +287,13 @@ func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
 var clientTemplate *template.Template
 var barTemplate *template.Template
 
-func init() {
-	funcsMap := template.FuncMap{
-		"split": strings.Split,
-		"asset": statik.AssetPath,
-	}
-
-	clientTemplate = template.Must(template.New("cozy-client-js").Funcs(funcsMap).Parse(`` +
+// BuildTemplates ensure that cozy-client-js and the bar can be injected in templates
+func BuildTemplates() {
+	clientTemplate = template.Must(template.New("cozy-client-js").Funcs(statik.FuncsMap).Parse(`` +
 		`<script defer src="{{asset .Domain "/js/cozy-client.min.js" .ContextName}}"></script>`,
 	))
 
-	barTemplate = template.Must(template.New("cozy-bar").Funcs(funcsMap).Parse(`
+	barTemplate = template.Must(template.New("cozy-bar").Funcs(statik.FuncsMap).Parse(`
 <link rel="stylesheet" type="text/css" href="{{asset .Domain "/fonts/fonts.css" .ContextName}}">
 <link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-bar.min.css" .ContextName}}">
 {{if .LoggedIn}}

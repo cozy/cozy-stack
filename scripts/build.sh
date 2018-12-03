@@ -23,14 +23,15 @@ echo_wrn() {
 }
 
 usage() {
-	echo -e "Usage: ${1} [release] [install] [deploy] [dev] [assets] [clean]"
+	echo -e "Usage: ${1} [release] [install] [deploy] [dev] [assets] [debug-assets] [clean]"
 	echo -e "\nCommands:\n"
-	echo -e "  release     builds a release of the current working-tree"
-	echo -e "  install     builds a release and install it the GOPATH"
-	echo -e "  deploy      builds a release of the current working-tree and deploys it"
-	echo -e "  dev         builds a dev version"
-	echo -e "  assets      move and download all the required assets (see: ./assets/externals)"
-	echo -e "  clean       remove all generated files from the working-tree"
+	echo -e "  release       builds a release of the current working-tree"
+	echo -e "  install       builds a release and install it the GOPATH"
+	echo -e "  deploy        builds a release of the current working-tree and deploys it"
+	echo -e "  dev           builds a dev version"
+	echo -e "  assets        move and download all the required assets (see: ./assets/externals)"
+	echo -e "  debug-assets  create a debug-assets/ directory with all the assets"
+	echo -e "  clean         remove all generated files from the working-tree"
 
 	echo -e "\nEnvironment variables:"
 	echo -e "\n  COZY_ENV"
@@ -189,6 +190,65 @@ do_assets() {
 	echo "ok"
 }
 
+do_debug_assets() {
+	assets_dst="${WORK_DIR}/debug-assets"
+	rm -rf "${assets_dst}"
+	mkdir -p "${assets_dst}/css" "${assets_dst}/js"
+	pushd "$WORK_DIR" > /dev/null
+	for i in assets/* ; do
+		ln -s "${WORK_DIR}/${i}" "debug-${i}"
+	done
+	asset_name=""
+	asset_url=""
+	asset_sha=""
+	while IFS= read -r line; do
+		if [ "${line:0:1}" = "#" ]; then continue; fi
+		if [ -z "${line}" ]; then continue; fi
+		IFS=" " read -r -a line_split <<< "${line}"
+		case "${line_split[0]}" in
+			name)
+				asset_name="${line_split[1]}"
+				;;
+			url)
+				asset_url="${line_split[1]}"
+				;;
+			sha256)
+				asset_sha="${line_split[1]}"
+				download_debug_asset "${asset_name}" "${asset_url}" "${asset_sha}"
+				asset_name=""
+				asset_url=""
+				asset_sha=""
+				;;
+			*)
+				echo_err "Failed to parse assets/.externals file"
+				echo_err "Unknown field named \"${line_split[0]}\""
+				exit 1
+				;;
+			esac
+	done < "assets/.externals"
+	popd > /dev/null
+	echo 'You can now run `go run . serve --assets ./debug-assets` to debug the assets'
+}
+
+download_debug_asset() {
+	printf "downloading %s: " "${1}"
+	if ! curl -sSL --fail "${2}" 1> "${assets_dst}/${1}" 2>/dev/null; then
+		echo "failed"
+		echo_err "Could not fetch resource with curl: ${2}"
+		exit 1
+	fi
+	if [ -n "${3}" ]; then
+		dgst=$(openssl dgst -sha256 < "${assets_dst}/${1}" | sed 's/^.* //')
+		if [ "${3}" != "${dgst}" ]; then
+			echo "failed"
+			echo_err "Checksum SHA256 does not match for asset ${1} downloaded on ${2}:"
+			echo_err "  expecting \"${dgst}\", got \"${3}\"."
+			exit 1
+		fi
+	fi
+	echo "ok"
+}
+
 do_clean() {
 	find "${WORK_DIR}" -name "cozy-stack-*" -print -delete
 }
@@ -219,6 +279,10 @@ case "${1}" in
 
 	assets)
 		do_assets
+		;;
+
+	debug-assets)
+		do_debug_assets
 		;;
 
 	dev)
