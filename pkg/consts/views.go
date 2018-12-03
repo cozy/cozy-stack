@@ -155,9 +155,9 @@ var PermissionsShareByShortcodeView = &couchdb.View{
 	Map: `
 function(doc) {
 	if(doc.shortcodes) {
-			for(var idx in doc.shortcodes) {
-					emit(doc.shortcodes[idx], idx);
-			}
+		for(var idx in doc.shortcodes) {
+			emit(doc.shortcodes[idx], idx);
+		}
 	}
 }`,
 }

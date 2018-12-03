@@ -22,8 +22,6 @@ import (
 const (
 	// StateLen is the number of bytes for the OAuth state parameter
 	StateLen = 16
-	// ShortCodeLen is the number of chars for the shortcode
-	ShortCodeLen = 12
 )
 
 // Triggers keep record of which triggers are active
@@ -177,7 +175,7 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 
 		if !ok {
 			codes[m.Email], err = inst.CreateShareCode(m.Email)
-			shortcodes[m.Email] = crypto.GenerateRandomString(ShortCodeLen)
+			shortcodes[m.Email] = crypto.GenerateRandomString(consts.ShortCodeLen)
 			if err != nil {
 				return nil, err
 			}

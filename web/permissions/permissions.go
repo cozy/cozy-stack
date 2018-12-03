@@ -40,8 +40,6 @@ const ContextPermissionSet = "permissions_set"
 // #nosec
 const ContextClaims = "token_claims"
 
-const ShortCodeLen = 12
-
 // APIPermission is the struct that will be used to serialized a permission to
 // JSON-API
 type APIPermission struct {
@@ -102,7 +100,7 @@ func createPermission(c echo.Context) error {
 		shortcodes = make(map[string]string, len(names))
 		for _, name := range names {
 			longcode, err := instance.CreateShareCode(name)
-			shortcode := crypto.GenerateRandomString(ShortCodeLen)
+			shortcode := crypto.GenerateRandomString(consts.ShortCodeLen)
 
 			codes[name] = longcode
 			shortcodes[name] = shortcode
