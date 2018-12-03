@@ -165,22 +165,26 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 
 		var previousVal string
 		var previousShortCode string
-		var ok bool
+		var okShare bool
+		var okShort bool
 
 		// Checks that we don't already have a sharing code
 		if doc != nil {
-			previousVal, ok = doc.Codes[m.Email]
-			previousShortCode, ok = doc.ShortCodes[m.Email]
+			previousVal, okShare = doc.Codes[m.Email]
+			previousShortCode, okShort = doc.ShortCodes[m.Email]
 		}
 
-		if !ok {
+		if !okShare {
 			codes[m.Email], err = inst.CreateShareCode(m.Email)
-			shortcodes[m.Email] = crypto.GenerateRandomString(consts.ShortCodeLen)
 			if err != nil {
 				return nil, err
 			}
 		} else {
 			codes[m.Email] = previousVal
+		}
+		if !okShort {
+			shortcodes[m.Email] = crypto.GenerateRandomString(consts.ShortCodeLen)
+		} else {
 			shortcodes[m.Email] = previousShortCode
 		}
 
