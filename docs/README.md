@@ -17,6 +17,7 @@
 
 -   [Develop a client-side app](client-app-dev.md)
 -   [Running and building Docker images](docker.md)
+-   [Working the stack assets](assets.md)
 -   [Build a release](release.md)
 -   [The contributing guide](CONTRIBUTING.md)
 
