@@ -149,6 +149,10 @@ func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) e
 }
 
 func registerCustomExternal(cache Cache, opt AssetOption) error {
+	if opt.Context == "" {
+		return fmt.Errorf("you must provide a context")
+	}
+
 	name := normalizeAssetName(opt.Name)
 	if currentAsset, ok := Get(name, opt.Context); ok {
 		if currentAsset.Shasum == opt.Shasum {
@@ -196,10 +200,6 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 		}
 
 		storeInCache = true
-	}
-
-	if opt.Context == "" {
-		opt.Context = defaultContext
 	}
 
 	h := sha256.New()
