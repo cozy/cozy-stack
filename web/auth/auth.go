@@ -107,13 +107,9 @@ func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error)
 
 var cozyUITemplate *template.Template
 
-func init() {
-	funcsMap := template.FuncMap{
-		"split": strings.Split,
-		"asset": statik.AssetPath,
-	}
-
-	cozyUITemplate = template.Must(template.New("cozy-ui").Funcs(funcsMap).Parse(`` +
+// BuildTemplates ensure that the cozy-ui can be injected in templates
+func BuildTemplates() {
+	cozyUITemplate = template.Must(template.New("cozy-ui").Funcs(statik.FuncsMap).Parse(`` +
 		`<link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-ui.min.css" .ContextName}}">`,
 	))
 }
