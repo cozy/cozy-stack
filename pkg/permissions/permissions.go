@@ -66,8 +66,12 @@ func (p *Permission) DocType() string { return consts.Permissions }
 func (p *Permission) Clone() couchdb.Doc {
 	cloned := *p
 	cloned.Codes = make(map[string]string)
+	cloned.ShortCodes = make(map[string]string)
 	for k, v := range p.Codes {
 		cloned.Codes[k] = v
+	}
+	for k, v := range p.ShortCodes {
+		cloned.ShortCodes[k] = v
 	}
 	cloned.Permissions = make([]Rule, len(p.Permissions))
 	for i, r := range p.Permissions {
