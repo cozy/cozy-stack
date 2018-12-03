@@ -280,9 +280,8 @@ func GetForShareCode(db prefixer.Prefixer, tokenCode string) (*Permission, error
 // GetTokenFromShortcode retrieves the token doc for a given sharing shortcode
 func GetTokenFromShortcode(db prefixer.Prefixer, shortcode string) (string, error) {
 	var res couchdb.ViewResponse
-	var err error
 
-	err = couchdb.ExecView(db, consts.PermissionsShareByShortcodeView, &couchdb.ViewRequest{
+	err := couchdb.ExecView(db, consts.PermissionsShareByShortcodeView, &couchdb.ViewRequest{
 		Key:         shortcode,
 		IncludeDocs: true,
 	}, &res)
