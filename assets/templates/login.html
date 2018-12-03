@@ -48,7 +48,8 @@
           </div>
           {{end}}
           <header class="wizard-header">
-            <h1 class="wizard-title">{{.Title}}</h1>
+            <h1 class="wizard-title password-form u-mt-1">{{.Title}}</h1>
+            <h1 class="wizard-title two-factor-form {{if not .TwoFactorForm}} u-hide{{end}}">{{t "Login Two factor title"}}</h1>
             <h2 class="password-form wizard-subtitle u-coolGrey">{{.Domain}}</h2>
             <p class="two-factor-form wizard-header-help {{if not .TwoFactorForm}} u-hide{{end}}" id="login-two-factor-passcode-tip">{{t "Login Two factor help"}}</p>
           </header>
@@ -76,7 +77,7 @@
             </div>
             <p class="password-form wizard-notice wizard-notice--lost"><a href="/auth/passphrase_reset">{{t "Login Forgot password"}}</a></p>
             {{if not .OAuth}}
-            <p class="wizard-notice wizard-notice--remember password-form">
+            <p class="wizard-notice password-form">
               <label class="c-input-checkbox">
                 <input id="long-run-session" name="long-run-session" type="checkbox" />
                 <span>{{t "Login Long Session"}}</span>
@@ -91,7 +92,7 @@
             <input id="two-factor-token" type="hidden" name="two-factor-token" value="{{.TwoFactorToken}}" />
             <p class="line two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">
               <label for="two-factor-passcode" class="c-label" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
-              <input id="two-factor-passcode" class="wizard-password c-input-text" name="two-factor-passcode" type="text" pattern="\d*" autofocus autocomplete="current-password" />
+              <input id="two-factor-passcode" class="wizard-password c-input-text" name="two-factor-passcode" type="text" pattern="[0-9]*" inputmode="numeric" autofocus autocomplete="current-password" />
             </p>
             {{if not .OAuth}}
             <p class="wizard-notice two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">

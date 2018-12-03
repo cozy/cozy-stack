@@ -144,6 +144,7 @@
     for (let i = 0; i < passwordForms.length; i++) {
       passwordForms[i].classList.add('u-hide')
     }
+    errorPanel && errorPanel.firstChild.remove()
     submitButton.removeAttribute('disabled')
     twoFactorTokenInput.value = twoFactorToken
     twoFactorPasscodeInput.value = ''
