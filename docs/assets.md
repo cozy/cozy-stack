@@ -22,6 +22,25 @@ assets. It also downloads the external assets. The second command starts the
 cozy-stack with those assets. If you modify one of the assets (local or
 externals) and reload the page in your browser, you will see the new version.
 
+Tip: if you are debugging an external asset, you may find it practical to
+replace the file in `debug-assets` by a symlink from where you build this
+asset. For example:
+
+```sh
+$ rm debug-assets/css/cozy-ui.min.css
+$ ln -s path/to/cozy-ui/dist/cozy-ui.min.css debug/assets/css/cozy-ui.min.css
+```
+
+## `/dev` route
+
+In development mode, a `/dev` route is available to render a template or a mail
+with given parameter. For example:
+
+```
+http://cozy.tools:8080/dev/templates/error.html?Error=oops
+http://cozy.tools:8080/dev/mails/two_factor?TwoFactorPasscode=123456
+```
+
 ## In production
 
 The script `scripts/build.sh assets` download the externals assets, and
