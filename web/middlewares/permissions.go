@@ -67,7 +67,7 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	var claims permissions.Claims
 	var err error
 
-	if isShortCode, _ := regexp.MatchString("^\\w{12}$", token); isShortCode == true { // token is a shortcode
+	if isShortCode, _ := regexp.MatchString("^(\\w|\\d){12}$", token); isShortCode == true { // token is a shortcode
 		token, err = permissions.GetTokenFromShortcode(instance, token)
 		if err != nil {
 			return nil, err
