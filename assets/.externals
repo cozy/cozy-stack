@@ -31,5 +31,5 @@ url     https://unpkg.com/cozy-bar@6.8.3/dist/cozy-bar.min.css
 sha256  bc9bad09d768a7656c7f091c27aa8930622fae38b8eb3c3f622473eb48311d94
 
 name    ./js/piwik.js
-url     https://piwik.cozycloud.cc/piwik.js
+url     https://matomo.cozycloud.cc/piwik.js
 sha256  8b73bdb35d8412d8be46a0046e3da0081ed1169c11d50fcb6bde65b7fb6c5dda
