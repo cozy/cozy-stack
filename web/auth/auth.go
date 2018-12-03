@@ -150,9 +150,6 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	} else if strings.Contains(redirectStr, "reconnect") {
 		title = i.Translate("Login Reconnect title")
 		help = i.Translate("Login Reconnect help")
-	} else if oauth {
-		title = i.Translate("Login Connect from oauth title")
-		help = i.Translate("Login Connect from oauth help")
 	} else if i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize/sharing" {
 		title = i.Translate("Login Connect from sharing title", publicName)
 		help = i.Translate("Login Connect from sharing help")
@@ -181,16 +178,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 }
 
 func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirect *url.URL, twoFactorToken []byte, longRunSession bool) error {
-	var title string
-	publicName, err := i.PublicName()
-	if err != nil {
-		publicName = ""
-	}
-	if publicName == "" {
-		title = i.Translate("Login Welcome")
-	} else {
-		title = i.Translate("Login Welcome name", publicName)
-	}
+	title := i.Translate("Login Two factor title")
 
 	redirectQuery := redirect.Query()
 	var clientScope string
