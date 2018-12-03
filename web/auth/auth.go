@@ -178,9 +178,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 }
 
 func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirect *url.URL, twoFactorToken []byte, longRunSession bool) error {
-	var title string
-
-	title = i.Translate("Login Two factor title")
+	title := i.Translate("Login Two factor title")
 
 	redirectQuery := redirect.Query()
 	var clientScope string
