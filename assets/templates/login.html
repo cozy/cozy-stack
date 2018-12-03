@@ -49,11 +49,8 @@
           {{end}}
           <header class="wizard-header">
             <h1 class="wizard-title">{{.Title}}</h1>
-            {{if not .TwoFactorForm}}
-            <h2 class="wizard-subtitle u-coolGrey">{{.Domain}}</h2>
-            {{else}}
-            <p class="two-factor-form wizard-header-help" id="login-two-factor-passcode-tip">{{t "Login Two factor help"}}</p>
-            {{end}}
+            <h2 class="password-form wizard-subtitle u-coolGrey">{{.Domain}}</h2>
+            <p class="two-factor-form wizard-header-help {{if not .TwoFactorForm}} u-hide{{end}}" id="login-two-factor-passcode-tip">{{t "Login Two factor help"}}</p>
           </header>
           <div role="region" class="wizard-main">
             <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
@@ -73,12 +70,11 @@
                     <use class="u-hide" id="display-icon" xlink:href="#display"></use>
                     <use id="hide-icon" xlink:href="#hide"></use>
                   </svg>
-
                 </span>
               </button>
               <input id="password" class="wizard-password c-input-text" name="passphrase" placeholder="{{t "Login Password field"}}" type="password" autofocus autocomplete="current-password" />
             </div>
-            <p class="wizard-notice wizard-notice--lost"><a href="/auth/passphrase_reset">{{t "Login Forgot password"}}</a></p>
+            <p class="password-form wizard-notice wizard-notice--lost"><a href="/auth/passphrase_reset">{{t "Login Forgot password"}}</a></p>
             {{if not .OAuth}}
             <p class="wizard-notice wizard-notice--remember password-form">
               <label class="c-input-checkbox">
@@ -113,11 +109,8 @@
           </div>
           <footer class="wizard-footer u-pb-1 u-mt-1-half">
             <button id="login-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">
-              {{if not .TwoFactorForm}}
-              <span>{{t "Login Submit"}}</span>
-              {{else}}
-              <span>{{t "Login Confirm"}}</span>
-              {{end}}
+              <span class="password-form">{{t "Login Submit"}}</span>
+              <span class="two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">{{t "Login Confirm"}}</span>
             </button>
           </footer>
         </form>
