@@ -301,7 +301,7 @@ func GetTokenFromShortcode(db prefixer.Prefixer, shortcode string) (string, erro
 		return "", fmt.Errorf("Bad state: several permission docs for shortcode %v", shortcode)
 	}
 
-	perm := &Permission{}
+	perm := Permission{}
 	err = json.Unmarshal(res.Rows[0].Doc, &perm)
 
 	if err != nil {
