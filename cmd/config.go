@@ -324,6 +324,10 @@ var insertAssetCmd = &cobra.Command{
 		// Check params
 		var customAssets []fs.AssetOption
 
+		if flagContext == "" {
+			return fmt.Errorf("You must provide a context")
+		}
+
 		assetOption := fs.AssetOption{
 			URL:     flagURL,
 			Name:    flagName,
