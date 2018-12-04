@@ -416,7 +416,8 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, lockerr
 	}
 	defer sfs.mu.RUnlock()
-	f, _, err := sfs.c.ObjectOpen(sfs.container, doc.DirID+"/"+doc.DocName, false, nil)
+	f, headers, err := sfs.c.ObjectOpen(sfs.container, doc.DirID+"/"+doc.DocName, false, nil)
+	sfs.log.Debugf("OpenFile headers = %#v\n", headers)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
 	}
