@@ -416,14 +416,14 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, lockerr
 	}
 	defer sfs.mu.RUnlock()
-	f, headers, err := sfs.c.ObjectOpen(sfs.container, doc.DirID+"/"+doc.DocName, false, nil)
+	f, _, err := sfs.c.ObjectOpen(sfs.container, doc.DirID+"/"+doc.DocName, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &swiftFileOpen{f, nil, &headers}, nil
+	return &swiftFileOpen{f, nil}, nil
 }
 
 func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
@@ -813,9 +813,8 @@ func (f *swiftFileCreation) Close() (err error) {
 }
 
 type swiftFileOpen struct {
-	f       *swift.ObjectOpenFile
-	br      *bytes.Reader
-	headers *swift.Headers
+	f  *swift.ObjectOpenFile
+	br *bytes.Reader
 }
 
 func (f *swiftFileOpen) Read(p []byte) (int, error) {
@@ -839,9 +838,6 @@ func (f *swiftFileOpen) Seek(offset int64, whence int) (int64, error) {
 	if err != nil {
 		l := logger.WithNamespace("vfsswift-v1")
 		l.Warnf("Can't seek: %s", err)
-		if f.headers != nil {
-			l.Infof("Headers: %#v", f.headers)
-		}
 	}
 	return n, err
 }
