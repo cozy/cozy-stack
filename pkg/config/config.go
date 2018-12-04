@@ -447,6 +447,8 @@ func UseViper(v *viper.Viper) error {
 		},
 		PinnedKey:              v.GetString("fs.pinned_key"),
 		InsecureSkipValidation: v.GetBool("fs.insecure_skip_validation"),
+		MaxIdleConnsPerHost:    128,
+		DisableCompression:     true,
 	})
 	if err != nil {
 		return err

@@ -29,6 +29,8 @@ type HTTPEndpoint struct {
 	ClientCertificateFiles ClientCertificateFilePair
 	PinnedKey              string
 	InsecureSkipValidation bool
+	MaxIdleConnsPerHost    int
+	DisableCompression     bool
 }
 
 type ClientCertificateFilePair struct {
@@ -98,9 +100,16 @@ func NewHTTPClient(opt HTTPEndpoint) (client *http.Client, u *url.URL, err error
 	if opt.InsecureSkipValidation {
 		c.SetInsecureSkipValidation()
 	}
+	tr := http.Transport{TLSClientConfig: c.Config()}
+	if opt.MaxIdleConnsPerHost > 0 {
+		tr.MaxIdleConnsPerHost = opt.MaxIdleConnsPerHost
+	}
+	if opt.DisableCompression {
+		tr.DisableCompression = true
+	}
 	client = &http.Client{
 		Timeout:   opt.Timeout,
-		Transport: &http.Transport{TLSClientConfig: c.Config()},
+		Transport: &tr,
 	}
 	return
 }
