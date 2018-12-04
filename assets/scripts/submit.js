@@ -119,8 +119,8 @@
       const loginSuccess = response.status < 400
       response.json().then(function(body) {
         if (loginSuccess) {
-          submitButton.innerHTML = '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'
-          submitButton.classList.add('btn-success')
+          submitButton.childNodes[3].innerHTML = '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'
+          submitButton.classList.add('c-btn--highlight')
           if (localStorage && typeof body.two_factor_trusted_device_token == 'string') {
             localStorage.setItem(twoFactorTrustedDeviceTokenKey, body.two_factor_trusted_device_token)
           }
