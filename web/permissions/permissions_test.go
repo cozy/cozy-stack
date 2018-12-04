@@ -398,13 +398,13 @@ func doRequest(method, url, tok, body string) (map[string]interface{}, error) {
 }
 
 func TestGetPermissionsWithShortCode(t *testing.T) {
-	id, _, _ := createTestSubPermissions(token, "alice")
+	id, _, _ := createTestSubPermissions(token, "daniel")
 	perm, _ := permissions.GetByID(testInstance, id)
 
 	assert.NotNil(t, perm.ShortCodes)
 
 	req1, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
-	req1.Header.Add("Authorization", "Bearer "+perm.ShortCodes["alice"])
+	req1.Header.Add("Authorization", "Bearer "+perm.ShortCodes["daniel"])
 	res1, _ := http.DefaultClient.Do(req1)
 	assert.Equal(t, res1.StatusCode, http.StatusOK)
 }
