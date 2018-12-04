@@ -150,7 +150,8 @@ func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) e
 
 func registerCustomExternal(cache Cache, opt AssetOption) error {
 	if opt.Context == "" {
-		return fmt.Errorf("you must provide a context")
+		logger.WithNamespace("custom assets").Warningf("Could not load asset %s with empty context\n", opt.URL)
+		return nil
 	}
 
 	name := normalizeAssetName(opt.Name)
