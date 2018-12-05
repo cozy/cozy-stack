@@ -17,21 +17,21 @@ func RevsDiff(c echo.Context) error {
 	sharingID := c.Param("sharing-id")
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Sharing was not found: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Sharing was not found: %s", err)
 		return wrapErrors(err)
 	}
 	var changed sharing.Changed
 	if err = c.Bind(&changed); err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Changes cannot be bound: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Changes cannot be bound: %s", err)
 		return wrapErrors(err)
 	}
 	if changed == nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("No changes")
+		inst.Logger().WithField("nspace", "replicator").Infof("No changes")
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
 	missings, err := s.ComputeRevsDiff(inst, changed)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Error on compute: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Error on compute: %s", err)
 		return wrapErrors(err)
 	}
 	return c.JSON(http.StatusOK, missings)
@@ -43,21 +43,21 @@ func BulkDocs(c echo.Context) error {
 	sharingID := c.Param("sharing-id")
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Sharing was not found: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Sharing was not found: %s", err)
 		return wrapErrors(err)
 	}
 	var docs sharing.DocsByDoctype
 	if err = c.Bind(&docs); err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Docs cannot be bound: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Docs cannot be bound: %s", err)
 		return wrapErrors(err)
 	}
 	if docs == nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("No bulk docs")
+		inst.Logger().WithField("nspace", "replicator").Infof("No bulk docs")
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
 	err = s.ApplyBulkDocs(inst, docs)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Error on apply: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Error on apply: %s", err)
 		return wrapErrors(err)
 	}
 	return c.JSON(http.StatusOK, []interface{}{})
@@ -69,17 +69,17 @@ func GetFolder(c echo.Context) error {
 	sharingID := c.Param("sharing-id")
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Sharing was not found: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Sharing was not found: %s", err)
 		return wrapErrors(err)
 	}
 	member, err := requestMember(c, s)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Member was not found: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Member was not found: %s", err)
 		return wrapErrors(err)
 	}
 	folder, err := s.GetFolder(inst, member, c.Param("id"))
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Folder was not found: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Folder was not found: %s", err)
 		return wrapErrors(err)
 	}
 	return c.JSON(http.StatusOK, folder)
@@ -93,12 +93,12 @@ func SyncFile(c echo.Context) error {
 	sharingID := c.Param("sharing-id")
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Sharing was not found: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Sharing was not found: %s", err)
 		return wrapErrors(err)
 	}
 	var fileDoc *sharing.FileDocWithRevisions
 	if err = c.Bind(&fileDoc); err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("File cannot be bound: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("File cannot be bound: %s", err)
 		return wrapErrors(err)
 	}
 	if c.Param("id") != fileDoc.DocID {
@@ -107,7 +107,7 @@ func SyncFile(c echo.Context) error {
 	}
 	key, err := s.SyncFile(inst, fileDoc)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Error on sync file: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Error on sync file: %s", err)
 		return wrapErrors(err)
 	}
 	if key == nil {
@@ -122,11 +122,11 @@ func FileHandler(c echo.Context) error {
 	sharingID := c.Param("sharing-id")
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Sharing was not found: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Sharing was not found: %s", err)
 		return wrapErrors(err)
 	}
 	if err := s.HandleFileUpload(inst, c.Param("id"), c.Request().Body); err != nil {
-		inst.Logger().WithField("nspace", "replicator").Debugf("Error on file upload: %s", err)
+		inst.Logger().WithField("nspace", "replicator").Infof("Error on file upload: %s", err)
 		return wrapErrors(err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -163,12 +163,12 @@ func checkSharingReadPermissions(next echo.HandlerFunc) echo.HandlerFunc {
 		requestPerm, err := middlewares.GetPermission(c)
 		if err != nil {
 			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
-				Debugf("Invalid permission: %s", err)
+				Infof("Invalid permission: %s", err)
 			return err
 		}
 		if !requestPerm.Permissions.AllowID("GET", consts.Sharings, sharingID) {
 			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
-				Debugf("Not allowed (%s)", sharingID)
+				Infof("Not allowed (%s)", sharingID)
 			return echo.NewHTTPError(http.StatusForbidden)
 		}
 		return next(c)
@@ -189,12 +189,12 @@ func hasSharingWritePermissions(c echo.Context) error {
 	requestPerm, err := middlewares.GetPermission(c)
 	if err != nil {
 		middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
-			Debugf("Invalid permission: %s", err)
+			Infof("Invalid permission: %s", err)
 		return err
 	}
 	if !requestPerm.Permissions.AllowID("POST", consts.Sharings, sharingID) {
 		middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
-			Debugf("Not allowed (%s)", sharingID)
+			Infof("Not allowed (%s)", sharingID)
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	return nil
@@ -206,12 +206,12 @@ func checkSharingPermissions(next echo.HandlerFunc) echo.HandlerFunc {
 		requestPerm, err := middlewares.GetPermission(c)
 		if err != nil {
 			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
-				Debugf("Invalid permission: %s", err)
+				Infof("Invalid permission: %s", err)
 			return err
 		}
 		if !requestPerm.Permissions.AllowID("GET", consts.Sharings, sharingID) {
 			middlewares.GetInstance(c).Logger().WithField("nspace", "replicator").
-				Debugf("Not allowed (%s)", sharingID)
+				Infof("Not allowed (%s)", sharingID)
 			return echo.NewHTTPError(http.StatusForbidden)
 		}
 		return next(c)

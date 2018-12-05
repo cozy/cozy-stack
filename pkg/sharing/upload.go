@@ -755,7 +755,7 @@ func copyFileContent(inst *instance.Instance, file vfs.File, body io.ReadCloser)
 	if cerr := file.Close(); cerr != nil && err == nil {
 		err = cerr
 		inst.Logger().WithField("nspace", "upload").
-			Debugf("Cannot close file descriptor: %s", err)
+			Infof("Cannot close file descriptor: %s", err)
 	}
 	return err
 }
