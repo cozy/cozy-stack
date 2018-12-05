@@ -13,6 +13,12 @@ by this server.
 cozy-stack instances ls [flags]
 ```
 
+### Examples
+
+```
+$ cozy-stack instances ls
+```
+
 ### Options
 
 ```

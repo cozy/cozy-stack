@@ -210,9 +210,8 @@ be used as the error message.
 }
 
 var modifyInstanceCmd = &cobra.Command{
-	Use:     "modify <domain>",
-	Aliases: []string{"update"},
-	Short:   "Modify the instance properties",
+	Use:   "modify <domain>",
+	Short: "Modify the instance properties",
 	Long: `
 cozy-stack instances modify allows to change the instance properties and
 settings for a specified domain.
@@ -306,6 +305,7 @@ var debugInstanceCmd = &cobra.Command{
 cozy-stack instances debug allows to activate or deactivate the debugging of a
 specific domain.
 `,
+	Example: "$ cozy-stack instances debug cozy.tools:8080 true",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 2 {
 			return cmd.Usage()
@@ -331,6 +331,7 @@ var lsInstanceCmd = &cobra.Command{
 cozy-stack instances ls allows to list all the instances that can be served
 by this server.
 `,
+	Example: "$ cozy-stack instances ls",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newAdminClient()
 		list, err := c.ListInstances()

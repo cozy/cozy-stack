@@ -13,6 +13,12 @@ specific domain.
 cozy-stack instances debug <domain> <true/false> [flags]
 ```
 
+### Examples
+
+```
+$ cozy-stack instances debug cozy.tools:8080 true
+```
+
 ### Options
 
 ```
