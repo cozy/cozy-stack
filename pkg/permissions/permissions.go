@@ -117,6 +117,21 @@ func (p *Permission) RemoveRule(rule Rule) {
 // PatchCodes replace the permission docs codes
 func (p *Permission) PatchCodes(codes map[string]string) {
 	p.Codes = codes
+
+	// Removing associated shortcodes
+	if p.ShortCodes != nil {
+		updatedShortcodes := map[string]string{}
+
+		for codeName := range codes {
+			for shortcodeName, v := range p.ShortCodes {
+				if shortcodeName == codeName {
+					updatedShortcodes[shortcodeName] = v
+				}
+			}
+
+		}
+		p.ShortCodes = updatedShortcodes
+	}
 }
 
 // Revoke destroy a Permission
