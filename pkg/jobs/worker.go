@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -423,6 +424,18 @@ func (t *task) run() (err error) {
 		execResultLabel = metrics.WorkerExecResultErrored
 		timer.ObserveDuration()
 		t.endTime = time.Now()
+
+		if err == context.DeadlineExceeded { // This is a timeout
+			msg := map[string]string{}
+			slug := ""
+
+			if t.w.Type == "konnector" {
+				if err = json.Unmarshal(t.job.Message, &msg); err != nil {
+					slug = msg["konnector"]
+				}
+			}
+			metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug).Inc()
+		}
 
 		// Even though ctx should have expired already, it is good practice to call
 		// its cancelation function in any case. Failure to do so may keep the

@@ -44,6 +44,20 @@ from the queue.`,
 	[]string{"worker_type", "result"},
 )
 
+// WorkerExecTimeoutsCounter is a counter number of total timeouts,
+// labelled by worker type and result.
+var WorkerExecTimeoutsCounter = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Namespace: "workers",
+		Subsystem: "exec",
+		Name:      "timeouts",
+
+		Help: `Number of total timeouts, of the workers labelled by
+worker type and result.`,
+	},
+	[]string{"worker_type", "slug"},
+)
+
 // WorkerExecRetries is a histogram metric of the number of retries of the
 // workers labelled by worker type.
 var WorkerExecRetries = prometheus.NewHistogramVec(
@@ -85,6 +99,7 @@ func init() {
 		WorkerExecDurations,
 		WorkerExecCounter,
 		WorkerExecRetries,
+		WorkerExecTimeoutsCounter,
 
 		WorkersKonnectorsExecDurations,
 	)
