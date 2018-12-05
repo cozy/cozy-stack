@@ -277,7 +277,7 @@ Content-Type: application/vnd.api+json
                 "bob": "yuot7NaiaeGugh8T",
                 "jane": "Yohyoo8BHahh1lie"
             },
-            "shortcodes" {
+            "shortcodes": {
                 "bob": "abcdeFGHIJ01",
                 "jane": "123456aBCdef"
             },
@@ -326,7 +326,7 @@ Content-Type: application/vnd.api+json
                 "bob": "yuot7NaiaeGugh8T",
                 "jane": "Yohyoo8BHahh1lie"
             },
-            "shortcodes" {
+            "shortcodes": {
                 "bob": "abcdeFGHIJ01",
                 "jane": "123456aBCdef"
             },
@@ -443,7 +443,7 @@ Content-Type: application/vnd.api+json
             "codes": {
                 "bob": "yuot7NaiaeGugh8T"
             },
-            "shortcodes" {
+            "shortcodes": {
                 "bob": "abcdeFGHIJ01"
             },
             "expires_at": 1483951978,
@@ -573,9 +573,9 @@ Content-Type: application/vnd.api+json
                 "codes": {
                     "bob": "secret"
                 },
-                "shortcodes" {
+                "shortcodes": {
                     "bob": "abcdeFGHIJ01"
-                },
+                }
             },
             "meta": { "rev": "1-d46b6358683b80c8d59fc55d6de54127" },
             "links": { "self": "/permissions/c47f82396d09bfcd270343c5855b30a0" }
@@ -595,9 +595,9 @@ Content-Type: application/vnd.api+json
                 "codes": {
                     "bob": "secret"
                 },
-                "shortcodes" {
+                "shortcodes": {
                     "bob": "abcdeFGHIJ01"
-                },
+                }
             },
             "meta": { "rev": "1-920af658575a56e9e84685f1b09e5c23" },
             "links": { "self": "/permissions/c47f82396d09bfcd270343c5855b351a" }
