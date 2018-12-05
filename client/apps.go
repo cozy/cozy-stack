@@ -42,6 +42,7 @@ type AppManifest struct {
 		DataTypes    *json.RawMessage `json:"data_types,omitempty"`
 		Doctypes     *json.RawMessage `json:"doctypes,omitempty"`
 		Fields       *json.RawMessage `json:"fields,omitempty"`
+		Folders      *json.RawMessage `json:"folders,omitempty"`
 		Messages     *json.RawMessage `json:"messages,omitempty"`
 		OAuth        *json.RawMessage `json:"oauth,omitempty"`
 		TimeInterval *json.RawMessage `json:"time_interval,omitempty"`
