@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -64,7 +65,16 @@ func GetRequestToken(c echo.Context) string {
 // ParseJWT parses a JSON Web Token, and returns the associated permissions.
 func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permissions.Permission, error) {
 	var claims permissions.Claims
-	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
+	var err error
+
+	if isShortCode, _ := regexp.MatchString("^(\\w|\\d){12}$", token); isShortCode { // token is a shortcode
+		token, err = permissions.GetTokenFromShortcode(instance, token)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
 		return instance.PickKey(token.Claims.(*permissions.Claims).Audience)
 	}, &claims)
 

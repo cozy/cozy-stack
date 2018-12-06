@@ -11,7 +11,8 @@ A client-side application can propose sharing by links:
 1. The application must have a public route in its manifest. See
    [Apps documentation](apps.md#routes) for how to do that.
 2. The application can create a set of permissions for the shared documents,
-   with codes. See [permissions documentation](permissions.md) for the details.
+   with codes. Another code called `shortcode` is also generated and associated with the code. This `shortcode` is much smaller (but secure), which is easier to be shared.
+   See [permissions documentation](permissions.md) for the details.
 3. The application can then create a shareable link (e.g.
    `https://calendar.cozy.example.net/public?sharecode=eiJ3iepoaihohz1Y`) by
    putting together the app sub-domain, the public route path, and a code for
@@ -25,6 +26,9 @@ the corresponding `index.html` file, and replace `{{.Token}}` inside it by a
 token with the same set of permissions that `sharecode` offers. This token can
 then be used as a `Bearer` token in the `Authorization` header for requests to
 the stack (or via cozy-client-js).
+
+NB: The `shortcode` can also be used as the `Bearer`. In this case, the
+corresponding `sharecode` will be matched on server-side
 
 If necessary, the application can list the permissions for the token by calling
 `/permissions/self` with this token.

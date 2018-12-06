@@ -32,7 +32,7 @@ The owner of a cozy instance can share some documents and files with other
 users. It can be done in two ways:
 
 -   If the other user also has a cozy, it can be a cozy-to-cozy sharing.
--   Else, the owner can give to him a link with a code.
+-   Else, the owner can give to him a link with a code or a shortcode.
 
 ## What is a permission?
 
@@ -219,11 +219,13 @@ Content-Type: application/vnd.api+json
 
 Create a new set of permissions. It can also associates one or more codes to it,
 via the `codes` parameter in the query string. These codes can then be sent to
-other people as a way to give these permissions (sharing by links). The
-parameter is comma separed list of values. The role of these values is to
-identify the codes if you want to revoke some of them later. A `ttl` parameter
-can also be given to make the codes expires after a delay
-([bigduration format](https://github.com/justincampbell/bigduration/blob/master/README.md)).
+other people as a way to give these permissions (sharing by links). For each
+`code` created, a corresponding `shortcode` is generated and can be used to
+shorten links for sharing. The `code` parameter is a comma separed list of
+values. The role of these values is to identify the codes if you want to revoke
+some of them later. A `ttl` parameter can also be given to make the codes
+expires after a delay ([bigduration
+format](https://github.com/justincampbell/bigduration/blob/master/README.md)).
 
 **Note**: it is only possible to create a strict subset of the permissions
 associated to the sent token.
@@ -275,6 +277,10 @@ Content-Type: application/vnd.api+json
                 "bob": "yuot7NaiaeGugh8T",
                 "jane": "Yohyoo8BHahh1lie"
             },
+            "shortcodes": {
+                "bob": "abcdeFGHIJ01",
+                "jane": "123456aBCdef"
+            },
             "expires_at": 1483951978,
             "permissions": {
                 "images": {
@@ -319,6 +325,10 @@ Content-Type: application/vnd.api+json
             "codes": {
                 "bob": "yuot7NaiaeGugh8T",
                 "jane": "Yohyoo8BHahh1lie"
+            },
+            "shortcodes": {
+                "bob": "abcdeFGHIJ01",
+                "jane": "123456aBCdef"
             },
             "expires_at": 1483951978,
             "permissions": {
@@ -432,6 +442,9 @@ Content-Type: application/vnd.api+json
             "source_id": "io.cozy.apps/my-awesome-game",
             "codes": {
                 "bob": "yuot7NaiaeGugh8T"
+            },
+            "shortcodes": {
+                "bob": "abcdeFGHIJ01"
             },
             "expires_at": 1483951978,
             "permissions": {
@@ -557,7 +570,12 @@ Content-Type: application/vnd.api+json
                         "values": ["c47f82396d09bfcd270343c5855b0eea"]
                     }
                 },
-                "codes": { "bob": "secret" }
+                "codes": {
+                    "bob": "secret"
+                },
+                "shortcodes": {
+                    "bob": "abcdeFGHIJ01"
+                }
             },
             "meta": { "rev": "1-d46b6358683b80c8d59fc55d6de54127" },
             "links": { "self": "/permissions/c47f82396d09bfcd270343c5855b30a0" }
@@ -574,7 +592,12 @@ Content-Type: application/vnd.api+json
                         "values": ["c47f82396d09bfcd270343c5855b169b"]
                     }
                 },
-                "codes": { "bob": "secret" }
+                "codes": {
+                    "bob": "secret"
+                },
+                "shortcodes": {
+                    "bob": "abcdeFGHIJ01"
+                }
             },
             "meta": { "rev": "1-920af658575a56e9e84685f1b09e5c23" },
             "links": { "self": "/permissions/c47f82396d09bfcd270343c5855b351a" }

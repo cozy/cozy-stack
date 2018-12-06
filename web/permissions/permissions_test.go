@@ -397,6 +397,77 @@ func doRequest(method, url, tok, body string) (map[string]interface{}, error) {
 	return out, nil
 }
 
+func TestGetPermissionsWithShortCode(t *testing.T) {
+	id, _, _ := createTestSubPermissions(token, "daniel")
+	perm, _ := permissions.GetByID(testInstance, id)
+
+	assert.NotNil(t, perm.ShortCodes)
+
+	req1, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
+	req1.Header.Add("Authorization", "Bearer "+perm.ShortCodes["daniel"])
+	res1, _ := http.DefaultClient.Do(req1)
+	assert.Equal(t, res1.StatusCode, http.StatusOK)
+}
+
+func TestGetPermissionsWithBadShortCode(t *testing.T) {
+	id, _, _ := createTestSubPermissions(token, "alice")
+	perm, _ := permissions.GetByID(testInstance, id)
+
+	assert.NotNil(t, perm.ShortCodes)
+
+	req1, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
+	req1.Header.Add("Authorization", "Bearer "+"foobar")
+	res1, _ := http.DefaultClient.Do(req1)
+	assert.Equal(t, res1.StatusCode, http.StatusBadRequest)
+}
+
+func TestGetTokenFromShortCode(t *testing.T) {
+	id, _, _ := createTestSubPermissions(token, "alice")
+	perm, _ := permissions.GetByID(testInstance, id)
+
+	token, _ := permissions.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
+	assert.Equal(t, perm.Codes["alice"], token)
+}
+
+func TestGetBadShortCode(t *testing.T) {
+	createTestSubPermissions(token, "alice")
+	shortcode := "coincoin"
+
+	token, err := permissions.GetTokenFromShortcode(testInstance, shortcode)
+	assert.Empty(t, token)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "no permission doc for shortcode")
+}
+
+func TestGetMultipleShortCode(t *testing.T) {
+
+	id, _, _ := createTestSubPermissions(token, "alice")
+	id2, _, _ := createTestSubPermissions(token, "alice")
+	perm, _ := permissions.GetByID(testInstance, id)
+	perm2, _ := permissions.GetByID(testInstance, id2)
+
+	perm2.ShortCodes["alice"] = perm.ShortCodes["alice"]
+	couchdb.UpdateDoc(testInstance, perm2)
+
+	_, err := permissions.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
+
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "several permission docs for shortcode")
+
+}
+
+func TestCannotFindToken(t *testing.T) {
+	id, _, _ := createTestSubPermissions(token, "alice")
+	perm, _ := permissions.GetByID(testInstance, id)
+	perm.Codes = map[string]string{}
+	couchdb.UpdateDoc(testInstance, perm)
+
+	_, err := permissions.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "Cannot find token for shortcode")
+
+}
+
 func TestListPermission(t *testing.T) {
 
 	ev1, _ := createTestEvent(testInstance)
@@ -426,8 +497,8 @@ func TestListPermission(t *testing.T) {
 		}}
 
 	codes := map[string]string{"bob": "secret"}
-	permissions.CreateShareSet(testInstance, parent, codes, p1, nil)
-	permissions.CreateShareSet(testInstance, parent, codes, p2, nil)
+	permissions.CreateShareSet(testInstance, parent, codes, nil, p1, nil)
+	permissions.CreateShareSet(testInstance, parent, codes, nil, p2, nil)
 
 	reqbody := strings.NewReader(`{
 "data": [

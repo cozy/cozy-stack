@@ -155,6 +155,7 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 	doc, _ := permissions.GetForSharePreview(inst, s.SID)
 
 	codes := make(map[string]string, len(s.Members)-1)
+
 	for i, m := range s.Members {
 		if i == 0 {
 			continue
@@ -162,14 +163,14 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 		var err error
 
 		var previousVal string
-		var ok bool
+		var okShare bool
 
 		// Checks that we don't already have a sharing code
 		if doc != nil {
-			previousVal, ok = doc.Codes[m.Email]
+			previousVal, okShare = doc.Codes[m.Email]
 		}
 
-		if !ok {
+		if !okShare {
 			codes[m.Email], err = inst.CreateShareCode(m.Email)
 			if err != nil {
 				return nil, err

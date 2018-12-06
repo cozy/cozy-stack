@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 18
+const IndexViewsVersion int = 19
 
 // globalIndexes is the index list required on the global databases to run
 // properly.
@@ -147,6 +147,21 @@ function(doc) {
 }`,
 }
 
+// PermissionsShareByShortcodeView is the view for fetching the permissions associated
+// to a document via a token code.
+var PermissionsShareByShortcodeView = &couchdb.View{
+	Name:    "by-short-code",
+	Doctype: Permissions,
+	Map: `
+function(doc) {
+	if(doc.shortcodes) {
+		for(var idx in doc.shortcodes) {
+			emit(doc.shortcodes[idx], idx);
+		}
+	}
+}`,
+}
+
 // PermissionsShareByDocView is the view for fetching a list of permissions
 // associated to a list of IDs.
 var PermissionsShareByDocView = &couchdb.View{
@@ -238,6 +253,7 @@ var Views = []*couchdb.View{
 	PermissionsShareByCView,
 	PermissionsShareByDocView,
 	PermissionsByDoctype,
+	PermissionsShareByShortcodeView,
 	SharedDocsBySharingID,
 	SharingsByDocTypeView,
 	ContactByEmail,

@@ -39,3 +39,15 @@ func Base64Decode(value []byte) ([]byte, error) {
 	}
 	return dec[:b], nil
 }
+
+// GenerateRandomString generates a secure random string of length N
+func GenerateRandomString(n int) string {
+	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	bytes := GenerateRandomBytes(n)
+
+	for i, b := range bytes {
+		bytes[i] = letters[b%byte(len(letters))]
+	}
+
+	return string(bytes)
+}

@@ -23,6 +23,7 @@ type Permission struct {
 	Permissions Set               `json:"permissions,omitempty"`
 	ExpiresAt   *time.Time        `json:"expires_at,omitempty"`
 	Codes       map[string]string `json:"codes,omitempty"`
+	ShortCodes  map[string]string `json:"shortcodes,omitempty"`
 
 	Client interface{} `json:"-"` // Contains the *oauth.Client client pointer for Oauth permission type
 }
@@ -65,8 +66,12 @@ func (p *Permission) DocType() string { return consts.Permissions }
 func (p *Permission) Clone() couchdb.Doc {
 	cloned := *p
 	cloned.Codes = make(map[string]string)
+	cloned.ShortCodes = make(map[string]string)
 	for k, v := range p.Codes {
 		cloned.Codes[k] = v
+	}
+	for k, v := range p.ShortCodes {
+		cloned.ShortCodes[k] = v
 	}
 	cloned.Permissions = make([]Rule, len(p.Permissions))
 	for i, r := range p.Permissions {
@@ -112,6 +117,21 @@ func (p *Permission) RemoveRule(rule Rule) {
 // PatchCodes replace the permission docs codes
 func (p *Permission) PatchCodes(codes map[string]string) {
 	p.Codes = codes
+
+	// Removing associated shortcodes
+	if p.ShortCodes != nil {
+		updatedShortcodes := map[string]string{}
+
+		for codeName := range codes {
+			for shortcodeName, v := range p.ShortCodes {
+				if shortcodeName == codeName {
+					updatedShortcodes[shortcodeName] = v
+				}
+			}
+
+		}
+		p.ShortCodes = updatedShortcodes
+	}
 }
 
 // Revoke destroy a Permission
@@ -276,6 +296,42 @@ func GetForShareCode(db prefixer.Prefixer, tokenCode string) (*Permission, error
 	return perm, nil
 }
 
+// GetTokenFromShortcode retrieves the token doc for a given sharing shortcode
+func GetTokenFromShortcode(db prefixer.Prefixer, shortcode string) (string, error) {
+	var res couchdb.ViewResponse
+
+	err := couchdb.ExecView(db, consts.PermissionsShareByShortcodeView, &couchdb.ViewRequest{
+		Key:         shortcode,
+		IncludeDocs: true,
+	}, &res)
+	if err != nil {
+		return "", err
+	}
+
+	if len(res.Rows) == 0 {
+		return "", fmt.Errorf("no permission doc for shortcode %v", shortcode)
+	}
+
+	if len(res.Rows) > 1 {
+		return "", fmt.Errorf("Bad state: several permission docs for shortcode %v", shortcode)
+	}
+
+	perm := Permission{}
+	err = json.Unmarshal(res.Rows[0].Doc, &perm)
+
+	if err != nil {
+		return "", err
+	}
+
+	for mail, code := range perm.Codes {
+		if mail == res.Rows[0].Value {
+			return code, nil
+		}
+	}
+
+	return "", fmt.Errorf("Cannot find token for shortcode %s", res.Rows[0].Key)
+}
+
 // CreateWebappSet creates a Permission doc for an app
 func CreateWebappSet(db prefixer.Prefixer, slug string, set Set) (*Permission, error) {
 	existing, _ := GetForWebapp(db, slug)
@@ -335,7 +391,7 @@ func updateAppSet(db prefixer.Prefixer, doc *Permission, typ, docType, slug stri
 }
 
 // CreateShareSet creates a Permission doc for sharing by link
-func CreateShareSet(db prefixer.Prefixer, parent *Permission, codes map[string]string, set Set, expiresAt *time.Time) (*Permission, error) {
+func CreateShareSet(db prefixer.Prefixer, parent *Permission, codes, shortcodes map[string]string, set Set, expiresAt *time.Time) (*Permission, error) {
 	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
 		return nil, ErrOnlyAppCanCreateSubSet
 	}
@@ -360,6 +416,7 @@ func CreateShareSet(db prefixer.Prefixer, parent *Permission, codes map[string]s
 		SourceID:    parent.SourceID,
 		Permissions: set,
 		Codes:       codes,
+		ShortCodes:  shortcodes,
 		ExpiresAt:   expiresAt,
 	}
 
