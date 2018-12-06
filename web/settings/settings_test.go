@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 
@@ -23,6 +24,7 @@ import (
 )
 
 var ts *httptest.Server
+var tsB *httptest.Server
 var testInstance *instance.Instance
 var instanceRev string
 var token string
@@ -371,6 +373,44 @@ func TestRevokeClient(t *testing.T) {
 	assert.Len(t, data, 1)
 }
 
+func TestRedirectOnboardingSecret(t *testing.T) {
+	url := tsB.URL + "/settings/onboarded"
+
+	// Disable redirections
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}}
+	// Without onboarding
+	res, err := client.Get(url)
+	assert.NoError(t, err)
+	assert.Equal(t, res.StatusCode, http.StatusSeeOther)
+	loc, _ := res.Location()
+	assert.Equal(t, loc.String(), testInstance.OnboardedRedirection().String())
+
+	// With onboarding
+	deeplink := "cozydrive://testinstance.com"
+	oauthClient := &oauth.Client{
+		RedirectURIs:     []string{deeplink},
+		ClientName:       "CozyTest",
+		SoftwareID:       "/github.com/cozy-labs/cozy-desktop",
+		OnboardingSecret: "foobar",
+		OnboardingApp:    "test",
+	}
+
+	oauthClient.Create(testInstance)
+	res, err = client.Get(url)
+	assert.NoError(t, err)
+	assert.Equal(t, res.StatusCode, http.StatusSeeOther)
+
+	loc, _ = res.Location()
+	assert.NotEqual(t, loc.String(), testInstance.OnboardedRedirection().String())
+	assert.Contains(t, loc.String(), "/auth/authorize")
+
+	values := loc.Query()
+	redirectURI := fmt.Sprintf("cozy%s://%s", oauthClient.OnboardingApp, testInstance.Domain)
+	assert.Equal(t, values.Get("redirect_uri"), redirectURI)
+}
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
@@ -384,5 +424,27 @@ func TestMain(m *testing.M) {
 	_, token = setup.GetTestClient(scope)
 
 	ts = setup.GetTestServer("/settings", Routes)
+	tsB = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/auth": func(g *echo.Group) {
+			g.Use(fakeAuthentication)
+			auth.Routes(g)
+		},
+		"/settings": func(g *echo.Group) {
+			g.Use(fakeAuthentication)
+			Routes(g)
+		},
+	})
+
 	os.Exit(setup.Run())
+}
+
+// Fake middleware used to inject a false session to mislead the authentication
+// system
+func fakeAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		instance := c.Get("instance").(*instance.Instance)
+		session, _ := sessions.New(instance, true)
+		c.Set("session", session)
+		return next(c)
+	}
 }
