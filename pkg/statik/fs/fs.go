@@ -33,10 +33,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/magic"
+	"github.com/hashicorp/go-multierror"
 )
 
 var assetsClient = &http.Client{
@@ -105,32 +104,26 @@ func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) e
 	}
 
 	assetsCh := make(chan AssetOption)
-	doneCh := make(chan []error)
+	doneCh := make(chan error)
 
-	for i := 0; i < 16; i++ {
+	for i := 0; i < len(opts); i++ {
 		go func() {
 			var err error
-			var errorsResult []error
+			sleepDuration := 500 * time.Millisecond
+			opt := <-assetsCh
 
-			for opt := range assetsCh {
-				sleepDuration := 500 * time.Millisecond
-
-				for tryCount := 0; tryCount < maxTryCount+1; tryCount++ {
-					err = registerCustomExternal(cache, opt)
-					if err == nil {
-						break
-					}
-					if tryCount == maxTryCount {
-						errorsResult = append(errorsResult, err)
-					}
-					logger.WithNamespace("statik").
-						Errorf("Could not load asset from %q, retrying in %s", opt.URL, sleepDuration)
-					time.Sleep(sleepDuration)
-					sleepDuration *= 2
+			for tryCount := 0; tryCount < maxTryCount+1; tryCount++ {
+				err = registerCustomExternal(cache, opt)
+				if err == nil {
+					break
 				}
+				logger.WithNamespace("statik").
+					Errorf("Could not load asset from %q, retrying in %s", opt.URL, sleepDuration)
+				time.Sleep(sleepDuration)
+				sleepDuration *= 2
 			}
 
-			doneCh <- errorsResult
+			doneCh <- err
 		}()
 	}
 
@@ -140,9 +133,9 @@ func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) e
 	close(assetsCh)
 
 	var errm error
-	for i := 0; i < 16; i++ {
-		if errs := <-doneCh; len(errs) > 0 {
-			errm = multierror.Append(errm, errs...)
+	for i := 0; i < len(opts); i++ {
+		if err := <-doneCh; err != nil {
+			errm = multierror.Append(errm, err)
 		}
 	}
 	return errm
