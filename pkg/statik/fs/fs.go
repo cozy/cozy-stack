@@ -213,6 +213,7 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 
 	if opt.Shasum == "" {
 		opt.Shasum = hex.EncodeToString(sum)
+		key = fmt.Sprintf("assets:%s:%s:%s", opt.Context, name, opt.Shasum)
 		log := logger.WithNamespace("custom_external")
 		log.Warnf("shasum was not provided for file %s, inserting unsafe content %s: %s",
 			opt.Name, opt.URL, opt.Shasum)
