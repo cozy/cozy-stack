@@ -177,10 +177,10 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 			if err != nil {
 				return err
 			}
+			defer res.Body.Close()
 			if res.StatusCode != http.StatusOK {
 				return fmt.Errorf("could not load external asset on %s: status code %d", assetURL, res.StatusCode)
 			}
-			defer res.Body.Close()
 			body = res.Body
 		case "file":
 			f, err := os.Open(u.Path)
