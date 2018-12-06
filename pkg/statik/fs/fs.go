@@ -197,7 +197,6 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 	}
 
 	h := sha256.New()
-
 	zippedDataBuf := new(bytes.Buffer)
 	gw := gzip.NewWriter(zippedDataBuf)
 
@@ -207,16 +206,16 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 		return err
 	}
 	if errc := gw.Close(); errc != nil {
-		return err
+		return errc
 	}
 
 	sum := h.Sum(nil)
 
 	if opt.Shasum == "" {
-		log := logger.WithNamespace("custom_external")
-		log.Warnf("shasum was not provided for file %s, inserting unsafe content %s",
-			opt.Name, opt.URL)
 		opt.Shasum = hex.EncodeToString(sum)
+		log := logger.WithNamespace("custom_external")
+		log.Warnf("shasum was not provided for file %s, inserting unsafe content %s: %s",
+			opt.Name, opt.URL, opt.Shasum)
 	}
 
 	if hex.EncodeToString(sum) != opt.Shasum {
