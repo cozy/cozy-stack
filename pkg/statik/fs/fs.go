@@ -157,11 +157,15 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 	opt.IsCustom = true
 
 	assetURL := opt.URL
-	key := fmt.Sprintf("assets:%s:%s:%s", opt.Context, name, opt.Shasum)
 
+	var key string
 	var body io.Reader
 	var ok, storeInCache bool
-	if body, ok = cache.Get(key); !ok {
+	if opt.Shasum != "" {
+		key = fmt.Sprintf("assets:%s:%s:%s", opt.Context, name, opt.Shasum)
+		body, ok = cache.Get(key)
+	}
+	if !ok {
 		u, err := url.Parse(assetURL)
 		if err != nil {
 			return err
