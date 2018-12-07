@@ -3,7 +3,6 @@ package couchdb
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -232,10 +231,12 @@ func (j JSONDoc) Match(field, value string) bool {
 	return fmt.Sprintf("%v", j.Get(field)) == value
 }
 
-func UnescapeCouchdbName(name string) string {
+func unescapeCouchdbName(name string) string {
 	return strings.Replace(name, "-", ".", -1)
 }
 
+// EscapeCouchdbName can be used to build the name of a database from the
+// instance prefix and doctype.
 func EscapeCouchdbName(name string) string {
 	name = strings.Replace(name, ".", "-", -1)
 	name = strings.Replace(name, ":", "-", -1)
@@ -365,7 +366,7 @@ func AllDoctypes(db Database) ([]string, error) {
 	for _, dbname := range dbs {
 		parts := strings.Split(dbname, "/")
 		if len(parts) == 2 && parts[0] == prefix {
-			doctype := UnescapeCouchdbName(parts[1])
+			doctype := unescapeCouchdbName(parts[1])
 			doctypes = append(doctypes, doctype)
 		}
 	}
@@ -827,11 +828,17 @@ func NormalDocs(db Database, doctype string, skip, limit int) (*NormalDocsRespon
 		if err != nil {
 			return nil, err
 		}
-		if designRes.Offset+designRes.Total < skip+len(res.Rows) {
-			// https://github.com/apache/couchdb/issues/1603
-			return nil, errors.New("Unexpected state")
+		total := designRes.Total
+		// CouchDB response for the total_rows on the _design_docs endpoint:
+		// - is the total number of documents on CouchDB 2.2 (and before)
+		// - is the total number of design documents on CouchDB 2.3+
+		// See https://github.com/apache/couchdb/issues/1603
+		if total == len(designRes.Rows) {
+			if total, err = CountAllDocs(db, doctype); err != nil {
+				return nil, err
+			}
 		}
-		res.Total = designRes.Total - len(designRes.Rows)
+		res.Total = total - len(designRes.Rows)
 	}
 	return &res, nil
 }
@@ -931,7 +938,7 @@ type DBStatusResponse struct {
 		External int `json:"external"`
 		Active   int `json:"active"`
 	} `json:"sizes"`
-	PurgeSeq int `json:"purge_seq"`
+	PurgeSeq interface{} `json:"purge_seq"` // Was an int before CouchDB 2.3, and a string since then
 	Other    struct {
 		DataSize int `json:"data_size"`
 	} `json:"other"`
