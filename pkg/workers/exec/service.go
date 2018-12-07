@@ -158,5 +158,11 @@ func (w *serviceWorker) Error(i *instance.Instance, err error) error {
 }
 
 func (w *serviceWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
+	log := w.Logger(ctx)
+	if errjob == nil {
+		log.Info("Service success")
+	} else {
+		log.Infof("Service failure: %s", errjob)
+	}
 	return nil
 }
