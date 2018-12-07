@@ -158,7 +158,7 @@ Content-Type: application/vnd.api+json
 
 ### GET /data/:type/:doc-id/relationships/references
 
-Returns all the files associated to an album or playlist.
+Returns all the files id associated to an album or playlist.
 
 Contents is paginated following [jsonapi conventions](jsonapi.md#pagination).
 The default limit is 100 entries.
