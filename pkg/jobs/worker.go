@@ -78,7 +78,7 @@ type (
 	// execution and contains specific values from the job.
 	WorkerContext struct {
 		context.Context
-		job     *Job
+		Job     *Job
 		log     *logrus.Entry
 		id      string
 		cookie  interface{}
@@ -121,7 +121,7 @@ func NewWorkerContext(workerID string, job *Job) *WorkerContext {
 
 	return &WorkerContext{
 		Context: ctx,
-		job:     job,
+		Job:     job,
 		log:     log,
 		id:      id,
 	}
@@ -155,11 +155,15 @@ func (c *WorkerContext) NoRetry() bool {
 func (c *WorkerContext) clone() *WorkerContext {
 	return &WorkerContext{
 		Context: c.Context,
-		job:     c.job,
+		Job:     c.Job,
 		log:     c.log,
 		id:      c.id,
 		cookie:  c.cookie,
 	}
+}
+
+func (c *WorkerContext) UpdateJob() error {
+	return c.Job.Update()
 }
 
 // ID returns a unique identifier for the worker context.
@@ -174,26 +178,26 @@ func (c *WorkerContext) Logger() *logrus.Entry {
 
 // UnmarshalMessage unmarshals the message contained in the worker context.
 func (c *WorkerContext) UnmarshalMessage(v interface{}) error {
-	return c.job.Message.Unmarshal(v)
+	return c.Job.Message.Unmarshal(v)
 }
 
 // UnmarshalEvent unmarshals the event contained in the worker context.
 func (c *WorkerContext) UnmarshalEvent(v interface{}) error {
-	if c.job == nil || c.job.Event == nil {
+	if c.Job == nil || c.Job.Event == nil {
 		return errors.New("jobs: does not have an event associated")
 	}
-	return c.job.Event.Unmarshal(v)
+	return c.Job.Event.Unmarshal(v)
 }
 
 // Domain returns the domain associated with the worker context.
 func (c *WorkerContext) Domain() string {
-	return c.job.Domain
+	return c.Job.Domain
 }
 
 // TriggerID returns the possible trigger identifier responsible for launching
 // the job.
 func (c *WorkerContext) TriggerID() (string, bool) {
-	triggerID := c.job.TriggerID
+	triggerID := c.Job.TriggerID
 	return triggerID, triggerID != ""
 }
 
@@ -212,7 +216,7 @@ func NewWorker(conf *WorkerConfig) *Worker {
 
 // Manual returns if the job was started manually
 func (c *WorkerContext) Manual() bool {
-	return c.job.Manual
+	return c.Job.Manual
 }
 
 // Start is used to start the worker consumption of messages from its queue.

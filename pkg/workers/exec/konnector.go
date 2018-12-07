@@ -55,6 +55,7 @@ type KonnectorMessage struct {
 	FolderToSave   string `json:"folder_to_save"` // FolderToSave is the identifier of the folder
 	AccountDeleted bool   `json:"account_deleted,omitempty"`
 
+	Version string `json:"version"`
 	// Data contains the original value of the message, even fields that are not
 	// part of our message definition.
 	data json.RawMessage
@@ -135,6 +136,21 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	} else if err != nil {
 		return "", err
 	}
+
+	// Retrieve the job and updates it with the konnector version
+	var konnectorMsg KonnectorMessage
+
+	err = json.Unmarshal(ctx.Job.Message, &konnectorMsg)
+	if err != nil {
+		return "", err
+	}
+
+	konnectorMsg.Version = w.man.Version()
+	ctx.Job.Message, err = json.Marshal(konnectorMsg)
+	if err != nil {
+		return "", err
+	}
+	ctx.UpdateJob()
 
 	// Check that the associated account is present.
 	var account *accounts.Account
