@@ -938,7 +938,7 @@ type DBStatusResponse struct {
 		External int `json:"external"`
 		Active   int `json:"active"`
 	} `json:"sizes"`
-	PurgeSeq int `json:"purge_seq"`
+	PurgeSeq interface{} `json:"purge_seq"` // Was an int before CouchDB 2.3, and a string since then
 	Other    struct {
 		DataSize int `json:"data_size"`
 	} `json:"other"`
