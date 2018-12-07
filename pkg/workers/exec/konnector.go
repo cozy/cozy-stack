@@ -150,7 +150,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	if err != nil {
 		return "", err
 	}
-	ctx.UpdateJob()
+	ctx.Job.Update()
 
 	// Check that the associated account is present.
 	var account *accounts.Account

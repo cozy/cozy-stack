@@ -162,10 +162,6 @@ func (c *WorkerContext) clone() *WorkerContext {
 	}
 }
 
-func (c *WorkerContext) UpdateJob() error {
-	return c.Job.Update()
-}
-
 // ID returns a unique identifier for the worker context.
 func (c *WorkerContext) ID() string {
 	return c.id
