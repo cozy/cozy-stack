@@ -33,10 +33,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/magic"
+	"github.com/hashicorp/go-multierror"
 )
 
 var assetsClient = &http.Client{
@@ -105,32 +104,26 @@ func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) e
 	}
 
 	assetsCh := make(chan AssetOption)
-	doneCh := make(chan []error)
+	doneCh := make(chan error)
 
-	for i := 0; i < 16; i++ {
+	for i := 0; i < len(opts); i++ {
 		go func() {
 			var err error
-			var errorsResult []error
+			sleepDuration := 500 * time.Millisecond
+			opt := <-assetsCh
 
-			for opt := range assetsCh {
-				sleepDuration := 500 * time.Millisecond
-
-				for tryCount := 0; tryCount < maxTryCount+1; tryCount++ {
-					err = registerCustomExternal(cache, opt)
-					if err == nil {
-						break
-					}
-					if tryCount == maxTryCount {
-						errorsResult = append(errorsResult, err)
-					}
-					logger.WithNamespace("statik").
-						Errorf("Could not load asset from %q, retrying in %s", opt.URL, sleepDuration)
-					time.Sleep(sleepDuration)
-					sleepDuration *= 2
+			for tryCount := 0; tryCount < maxTryCount+1; tryCount++ {
+				err = registerCustomExternal(cache, opt)
+				if err == nil {
+					break
 				}
+				logger.WithNamespace("statik").
+					Errorf("Could not load asset from %q, retrying in %s", opt.URL, sleepDuration)
+				time.Sleep(sleepDuration)
+				sleepDuration *= 2
 			}
 
-			doneCh <- errorsResult
+			doneCh <- err
 		}()
 	}
 
@@ -140,9 +133,9 @@ func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) e
 	close(assetsCh)
 
 	var errm error
-	for i := 0; i < 16; i++ {
-		if errs := <-doneCh; len(errs) > 0 {
-			errm = multierror.Append(errm, errs...)
+	for i := 0; i < len(opts); i++ {
+		if err := <-doneCh; err != nil {
+			errm = multierror.Append(errm, err)
 		}
 	}
 	return errm
@@ -164,11 +157,15 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 	opt.IsCustom = true
 
 	assetURL := opt.URL
-	key := fmt.Sprintf("assets:%s:%s:%s", opt.Context, name, opt.Shasum)
 
+	var key string
 	var body io.Reader
 	var ok, storeInCache bool
-	if body, ok = cache.Get(key); !ok {
+	if opt.Shasum != "" {
+		key = fmt.Sprintf("assets:%s:%s:%s", opt.Context, name, opt.Shasum)
+		body, ok = cache.Get(key)
+	}
+	if !ok {
 		u, err := url.Parse(assetURL)
 		if err != nil {
 			return err
@@ -184,10 +181,10 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 			if err != nil {
 				return err
 			}
+			defer res.Body.Close()
 			if res.StatusCode != http.StatusOK {
 				return fmt.Errorf("could not load external asset on %s: status code %d", assetURL, res.StatusCode)
 			}
-			defer res.Body.Close()
 			body = res.Body
 		case "file":
 			f, err := os.Open(u.Path)
@@ -204,7 +201,6 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 	}
 
 	h := sha256.New()
-
 	zippedDataBuf := new(bytes.Buffer)
 	gw := gzip.NewWriter(zippedDataBuf)
 
@@ -214,16 +210,17 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 		return err
 	}
 	if errc := gw.Close(); errc != nil {
-		return err
+		return errc
 	}
 
 	sum := h.Sum(nil)
 
 	if opt.Shasum == "" {
-		log := logger.WithNamespace("custom_external")
-		log.Warnf("shasum was not provided for file %s, inserting unsafe content %s",
-			opt.Name, opt.URL)
 		opt.Shasum = hex.EncodeToString(sum)
+		key = fmt.Sprintf("assets:%s:%s:%s", opt.Context, name, opt.Shasum)
+		log := logger.WithNamespace("custom_external")
+		log.Warnf("shasum was not provided for file %s, inserting unsafe content %s: %s",
+			opt.Name, opt.URL, opt.Shasum)
 	}
 
 	if hex.EncodeToString(sum) != opt.Shasum {
