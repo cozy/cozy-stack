@@ -137,21 +137,6 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 		return "", err
 	}
 
-	// Retrieve the job and updates it with the konnector version
-	var konnectorMsg KonnectorMessage
-
-	err = json.Unmarshal(ctx.Job.Message, &konnectorMsg)
-	if err != nil {
-		return "", err
-	}
-
-	konnectorMsg.Version = w.man.Version()
-	ctx.Job.Message, err = json.Marshal(konnectorMsg)
-	if err != nil {
-		return "", err
-	}
-	ctx.Job.Update()
-
 	// Check that the associated account is present.
 	var account *accounts.Account
 	if msg.Account != "" && !msg.AccountDeleted {
@@ -529,7 +514,10 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 func (w *konnectorWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
 	log := w.Logger(ctx)
 	if w.msg != nil {
-		log = log.WithField("account_id", w.msg.Account)
+		log = log.WithFields(logrus.Fields{
+			"account_id": w.msg.Account,
+			"version":    w.man.Version(),
+		})
 	}
 	if errjob == nil {
 		log.Info("Konnector success")
