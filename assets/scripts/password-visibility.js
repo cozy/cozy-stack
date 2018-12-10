@@ -22,5 +22,7 @@
       ? passwordVisibilityButton.getAttribute('data-hide')
       : passwordVisibilityButton.getAttribute('data-show')
     )
+
+    passwordInput.focus();
   })
 })(window.document)

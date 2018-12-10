@@ -42,22 +42,22 @@
     <div role="application">
       <main class="wizard">
         <form id="login-form" method="POST" action="/auth/login" class="wizard-wrapper">
-          {{if .CredentialsError}}
-          <div class="wizard-errors u-error">
-            <p>{{.CredentialsError}}</p>
-          </div>
-          {{end}}
           <header class="wizard-header">
-            <h1 class="wizard-title password-form u-mt-1">{{.Title}}</h1>
+            <h1 class="wizard-title password-form">{{.Title}}</h1>
             <h1 class="wizard-title two-factor-form {{if not .TwoFactorForm}} u-hide{{end}}">{{t "Login Two factor title"}}</h1>
             <h2 class="password-form wizard-subtitle u-coolGrey">{{.Domain}}</h2>
             <p class="two-factor-form wizard-header-help {{if not .TwoFactorForm}} u-hide{{end}}" id="login-two-factor-passcode-tip">{{t "Login Two factor help"}}</p>
           </header>
-          <div role="region" class="wizard-main">
+          <div role="region" class="wizard-main" id="login-field">
+            {{if .CredentialsError}}
+            <p class="wizard-errors u-error">
+              {{.CredentialsError}}
+            </p>
+            {{end}}
             <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
             <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
             {{if not .TwoFactorForm}}
-            <div class="o-field password-form">
+            <div class="o-field password-form u-m-0">
               <label for="password" aria-describedby="login-password-tip" class="c-label">{{t "Login Password field"}}</label>
               <button id="password-visibility-button" class="wizard-showbutton c-btn c-btn--secondary"
                 type="button"
@@ -78,7 +78,7 @@
             <p class="password-form wizard-notice wizard-notice--lost"><a href="/auth/passphrase_reset">{{t "Login Forgot password"}}</a></p>
             {{if not .OAuth}}
             <p class="wizard-notice password-form">
-              <label class="c-input-checkbox">
+              <label class="c-input-checkbox u-m-0">
                 <input id="long-run-session" name="long-run-session" type="checkbox" />
                 <span>{{t "Login Long Session"}}</span>
               </label>
@@ -90,13 +90,13 @@
             <input id="long-run-session" name="long-run-session" type="hidden" value="{{.LongRunSession}}" />
             {{end}}
             <input id="two-factor-token" type="hidden" name="two-factor-token" value="{{.TwoFactorToken}}" />
-            <p class="line two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">
+            <div class="o-field u-m-0 two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">
               <label for="two-factor-passcode" class="c-label" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
-              <input id="two-factor-passcode" class="wizard-password c-input-text" name="two-factor-passcode" type="text" pattern="[0-9]*" inputmode="numeric" autofocus autocomplete="current-password" />
-            </p>
+              <input id="two-factor-passcode" class="wizard-password c-input-text" name="two-factor-passcode" type="text" pattern="[0-9]*" inputmode="numeric" maxlength="6" autofocus autocomplete="current-password" />
+            </div>
             {{if not .OAuth}}
             <p class="wizard-notice two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">
-              <label class="c-input-checkbox">
+              <label class="c-input-checkbox u-m-0">
                 <input id="two-factor-trust-device" name="two-factor-trust-device" type="checkbox" />
                 <span>{{t "Login Two factor device trust field"}}</span>
               </label>
@@ -108,7 +108,7 @@
             <p class="help two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}" id="login-two-factor-trust-device-tip">{{t "Login Two factor device trust help"}}</p>
             -->
           </div>
-          <footer class="wizard-footer u-pb-1 u-mt-1-half">
+          <footer class="wizard-footer u-pb-2">
             <button id="login-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">
               <span class="password-form">{{t "Login Submit"}}</span>
               <span class="two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">{{t "Login Confirm"}}</span>

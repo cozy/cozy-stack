@@ -3,6 +3,7 @@
   if (!window.fetch || !window.Headers || !window.FormData) return
 
   const loginForm = document.getElementById('login-form')
+  const loginField = document.getElementById('login-field')
   const resetForm = document.getElementById('renew-passphrase-form')
 
   const url = loginForm && loginForm.getAttribute('action')
@@ -34,16 +35,12 @@
     }
 
     if (!errorPanel) {
-      errorPanel = document.createElement('div')
+      errorPanel = document.createElement('p')
       errorPanel.classList.add('wizard-errors', 'u-error')
-      loginForm.insertBefore(errorPanel, loginForm.firstChild);
+      loginField.insertBefore(errorPanel, loginField.firstChild);
     }
 
-    if (!errorPanel.firstChild) {
-      errorPanel.appendChild(document.createElement('p'))
-    }
-
-    errorPanel.firstChild.textContent = error;
+    errorPanel.textContent = error;
     submitButton.removeAttribute('disabled')
   }
 
@@ -85,6 +82,7 @@
           }
         } else {
           showError(body.error)
+          passphraseInput.classList.add('is-error')
           passphraseInput.select()
         }
       }).catch(showError)
@@ -131,6 +129,7 @@
           }
         } else {
           showError(body.error)
+          twoFactorPasscodeInput.classList.add('is-error')
           twoFactorPasscodeInput.select()
         }
       }).catch(showError)
@@ -144,7 +143,7 @@
     for (let i = 0; i < passwordForms.length; i++) {
       passwordForms[i].classList.add('u-hide')
     }
-    errorPanel && errorPanel.firstChild.remove()
+    if (errorPanel) errorPanel.textContent = ''
     submitButton.removeAttribute('disabled')
     twoFactorTokenInput.value = twoFactorToken
     twoFactorPasscodeInput.value = ''
