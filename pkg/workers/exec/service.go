@@ -50,6 +50,9 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 		}
 		return
 	}
+
+	w.slug = slug
+
 	if man.State() != apps.Ready {
 		err = errors.New("Application is not ready")
 		return
@@ -79,7 +82,6 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 	}
 
 	w.man = man
-	w.slug = slug
 
 	osFS := afero.NewOsFs()
 	workDir, err = afero.TempDir(osFS, "", "service-"+slug)
@@ -158,5 +160,11 @@ func (w *serviceWorker) Error(i *instance.Instance, err error) error {
 }
 
 func (w *serviceWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
+	log := w.Logger(ctx)
+	if errjob == nil {
+		log.Info("Service success")
+	} else {
+		log.Infof("Service failure: %s", errjob)
+	}
 	return nil
 }

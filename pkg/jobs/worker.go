@@ -366,12 +366,14 @@ type task struct {
 	job  *Job
 
 	startTime time.Time
+	endTime   time.Time
 	execCount int
 }
 
 func (t *task) run() (err error) {
 	t.startTime = time.Now()
 	t.execCount = 0
+
 	if t.conf.WorkerStart != nil {
 		t.ctx, err = t.conf.WorkerStart(t.ctx)
 		if err != nil {
@@ -380,6 +382,7 @@ func (t *task) run() (err error) {
 	}
 	defer func() {
 		if t.conf.WorkerCommit != nil {
+			t.ctx.log = t.ctx.Logger().WithField("exec_time", t.endTime.Sub(t.startTime))
 			if errc := t.conf.WorkerCommit(t.ctx, err); errc != nil {
 				t.ctx.Logger().Warnf("Error while committing job: %s",
 					errc.Error())
@@ -413,11 +416,13 @@ func (t *task) run() (err error) {
 		if err == nil {
 			execResultLabel = metrics.WorkerExecResultSuccess
 			timer.ObserveDuration()
+			t.endTime = time.Now()
 			cancel()
 			break
 		}
 		execResultLabel = metrics.WorkerExecResultErrored
 		timer.ObserveDuration()
+		t.endTime = time.Now()
 
 		// Even though ctx should have expired already, it is good practice to call
 		// its cancelation function in any case. Failure to do so may keep the
