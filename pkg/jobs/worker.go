@@ -286,7 +286,24 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			runResultLabel = metrics.WorkerExecResultSuccess
 			errAck = job.Ack()
 		}
-		metrics.WorkerExecCounter.WithLabelValues(w.Type, runResultLabel).Inc()
+
+		// Distinguish classic job execution and konnector/account deletion
+
+		msg := struct {
+			Account        string `json:"account"`
+			AccountRev     string `json:"account_rev"`
+			Konnector      string `json:"konnector"`
+			AccountDeleted bool   `json:"account_deleted"`
+		}{}
+
+		err := json.Unmarshal(job.Message, &msg)
+
+		if err == nil && w.Type == "konnector" && msg.AccountDeleted {
+			metrics.WorkerKonnectorExecDeleteCounter.WithLabelValues(w.Type, runResultLabel).Inc()
+		} else {
+			metrics.WorkerExecCounter.WithLabelValues(w.Type, runResultLabel).Inc()
+		}
+
 		if errAck != nil {
 			parentCtx.Logger().Errorf("error while acking job done: %s",
 				errAck.Error())

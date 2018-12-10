@@ -44,6 +44,19 @@ from the queue.`,
 	[]string{"worker_type", "result"},
 )
 
+// WorkerKonnectorExecDeleteCounter is a counter number of total executions, without counting
+// retries, of the workers labelled by worker type and result.
+var WorkerKonnectorExecDeleteCounter = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Namespace: "workers",
+		Subsystem: "konnectors",
+		Name:      "delete_count",
+
+		Help: `Number of konnectors executions, with the "account_deleted": true parameter`,
+	},
+	[]string{"worker_type", "result"},
+)
+
 // WorkerExecTimeoutsCounter is a counter number of total timeouts,
 // labelled by worker type and result.
 var WorkerExecTimeoutsCounter = prometheus.NewCounterVec(
