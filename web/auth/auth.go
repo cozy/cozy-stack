@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/echo"
@@ -1112,6 +1114,37 @@ func passphraseRenew(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/login", nil))
 }
 
+// Used to trade a secret for OAuth client informations
+func secretExchange(c echo.Context) error {
+	type exchange struct {
+		Secret string `json:"secret"`
+	}
+	e := new(exchange)
+
+	instance := middlewares.GetInstance(c)
+	err := json.NewDecoder(c.Request().Body).Decode(&e)
+	if err != nil {
+		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
+	}
+
+	if e.Secret == "" {
+		return jsonapi.BadRequest(errors.New("Missing secret"))
+	}
+
+	doc, err := oauth.FindClientByOnBoardingSecret(instance, e.Secret)
+
+	if err != nil {
+		return jsonapi.NotFound(err)
+	}
+
+	if doc.OnboardingSecret == "" || doc.OnboardingSecret != e.Secret {
+		return jsonapi.InvalidAttribute("secret", errors.New("Invalid secret"))
+	}
+
+	doc.TransformIDAndRev()
+	return c.JSON(http.StatusOK, doc)
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	noCSRF := middleware.CSRFWithConfig(middleware.CSRFConfig{
@@ -1148,4 +1181,5 @@ func Routes(router *echo.Group) {
 	authorizeGroup.POST("/app", authorizeApp)
 
 	router.POST("/access_token", accessToken)
+	router.POST("/secret_exchange", secretExchange)
 }

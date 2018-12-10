@@ -70,6 +70,11 @@ type Client struct {
 
 	// XXX omitempty does not work for time.Time, thus the interface{} type
 	SynchronizedAt interface{} `json:"synchronized_at,omitempty"` // Date of the last synchronization, updated by /settings/synchronized
+
+	OnboardingSecret      string `json:"onboarding_secret,omitempty"`
+	OnboardingApp         string `json:"onboarding_app,omitempty"`
+	OnboardingPermissions string `json:"onboarding_permissions,omitempty"`
+	OnboardingState       string `json:"onboarding_state,omitempty"`
 }
 
 // ID returns the client qualified identifier
@@ -174,6 +179,44 @@ func FindClientBySoftwareID(i *instance.Instance, softwareID string) (*Client, e
 		return results[0], nil
 	}
 	return nil, fmt.Errorf("Could not find client with software_id %s", softwareID)
+}
+
+// FindClientByOnBoardingSecret loads a client from the database with an OnboardingSecret
+func FindClientByOnBoardingSecret(i *instance.Instance, onboardingSecret string) (*Client, error) {
+	var results []*Client
+
+	req := couchdb.FindRequest{
+		Selector: mango.Equal("onboarding_secret", onboardingSecret),
+		Limit:    1,
+	}
+	// We should have very few requests. Only on instance creation.
+	err := couchdb.FindDocsUnoptimized(i, consts.OAuthClients, &req, &results)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 1 {
+		return results[0], nil
+	}
+	return nil, fmt.Errorf("Could not find client with onboarding_secret %s", onboardingSecret)
+}
+
+// FindOnboardingClient loads a client from the database with an OnboardingSecret
+func FindOnboardingClient(i *instance.Instance) (*Client, error) {
+	var results []*Client
+
+	req := couchdb.FindRequest{
+		Selector: mango.Exists("onboarding_secret"),
+		Limit:    1,
+	}
+	// We should have very few requests. Only on instance creation.
+	err := couchdb.FindDocsUnoptimized(i, consts.OAuthClients, &req, &results)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 1 {
+		return results[0], nil
+	}
+	return nil, fmt.Errorf("Could not find client with an onboarding_secret")
 }
 
 // ClientRegistrationError is a Client Registration Error Response, as described

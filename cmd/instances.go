@@ -54,6 +54,10 @@ var flagExpire time.Duration
 var flagAllowLoginScope bool
 var flagFsckIndexIntegrity bool
 var flagAvailableFields bool
+var flagOnboardingSecret string
+var flagOnboardingApp string
+var flagOnboardingPermissions string
+var flagOnboardingState string
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -684,11 +688,15 @@ var oauthClientInstanceCmd = &cobra.Command{
 		}
 		c := newAdminClient()
 		oauthClient, err := c.RegisterOAuthClient(&client.OAuthClientOptions{
-			Domain:          args[0],
-			RedirectURI:     args[1],
-			ClientName:      args[2],
-			SoftwareID:      args[3],
-			AllowLoginScope: flagAllowLoginScope,
+			Domain:                args[0],
+			RedirectURI:           args[1],
+			ClientName:            args[2],
+			SoftwareID:            args[3],
+			AllowLoginScope:       flagAllowLoginScope,
+			OnboardingSecret:      flagOnboardingSecret,
+			OnboardingApp:         flagOnboardingApp,
+			OnboardingPermissions: flagOnboardingPermissions,
+			OnboardingState:       flagOnboardingState,
 		})
 		if err != nil {
 			return err
@@ -941,6 +949,10 @@ func init() {
 	fsckInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagAllowLoginScope, "allow-login-scope", false, "Allow login scope")
+	oauthClientInstanceCmd.Flags().StringVar(&flagOnboardingSecret, "onboarding-secret", "", "Specify an OnboardingSecret")
+	oauthClientInstanceCmd.Flags().StringVar(&flagOnboardingApp, "onboarding-app", "", "Specify an OnboardingApp")
+	oauthClientInstanceCmd.Flags().StringVar(&flagOnboardingPermissions, "onboarding-permissions", "", "Specify an OnboardingPermissions")
+	oauthClientInstanceCmd.Flags().StringVar(&flagOnboardingState, "onboarding-state", "", "Specify an OnboardingState")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	lsInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Show each line as a json representation of the instance")

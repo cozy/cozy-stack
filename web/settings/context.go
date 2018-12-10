@@ -2,11 +2,14 @@ package settings
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -47,6 +50,27 @@ func onboarded(c echo.Context) error {
 		}
 	}
 	redirect := i.OnboardedRedirection().String()
+
+	// Retreiving client
+	// If there is no onboarding client, we keep going
+	client, err := oauth.FindOnboardingClient(i)
+
+	// Redirect to permissions screen if we are in a mobile onboarding
+	if err == nil && client.OnboardingSecret != "" {
+		// Generate the deeplink
+		deeplink := fmt.Sprintf("cozy%s://%s", client.OnboardingApp, i.Domain)
+
+		// Redirection
+		queryParams := url.Values{
+			"client_id":     {client.ClientID},
+			"redirect_uri":  {deeplink},
+			"state":         {client.OnboardingState},
+			"response_type": {"code"},
+			"scope":         {client.OnboardingPermissions},
+		}
+		redirect = i.PageURL("/auth/authorize", queryParams)
+
+	}
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
