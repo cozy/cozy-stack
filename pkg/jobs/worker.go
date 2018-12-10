@@ -443,12 +443,17 @@ func (t *task) run() (err error) {
 		t.endTime = time.Now()
 
 		if err == context.DeadlineExceeded { // This is a timeout
+			var slug string
 			msg := map[string]string{}
-			slug := ""
 
-			if t.w.Type == "konnector" {
-				if err = json.Unmarshal(t.job.Message, &msg); err != nil {
+			if err = json.Unmarshal(t.job.Message, &msg); err != nil {
+				switch t.w.Type {
+				case "konnector":
 					slug = msg["konnector"]
+				case "service":
+					slug = msg["slug"]
+				default:
+					slug = ""
 				}
 			}
 			metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug).Inc()

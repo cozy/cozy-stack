@@ -45,28 +45,27 @@ from the queue.`,
 )
 
 // WorkerKonnectorExecDeleteCounter is a counter number of total executions, without counting
-// retries, of the workers labelled by worker type and result.
+// retries, of the konnectors jobs with the "accound_deleted: true" parameter
 var WorkerKonnectorExecDeleteCounter = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Namespace: "workers",
 		Subsystem: "konnectors",
 		Name:      "delete_count",
 
-		Help: `Number of konnectors executions, with the "account_deleted": true parameter`,
+		Help: `Number of konnectors executions, with the "account_deleted: true" parameter`,
 	},
 	[]string{"worker_type", "result"},
 )
 
 // WorkerExecTimeoutsCounter is a counter number of total timeouts,
-// labelled by worker type and result.
+// labelled by worker type and slug.
 var WorkerExecTimeoutsCounter = prometheus.NewCounterVec(
 	prometheus.CounterOpts{
 		Namespace: "workers",
 		Subsystem: "exec",
 		Name:      "timeouts",
 
-		Help: `Number of total timeouts, of the workers labelled by
-worker type and result.`,
+		Help: `Number of total timeouts, of the workers labelled by worker type and slug.`,
 	},
 	[]string{"worker_type", "slug"},
 )
@@ -113,6 +112,7 @@ func init() {
 		WorkerExecCounter,
 		WorkerExecRetries,
 		WorkerExecTimeoutsCounter,
+		WorkerKonnectorExecDeleteCounter,
 
 		WorkersKonnectorsExecDurations,
 	)
