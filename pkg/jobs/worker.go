@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -285,7 +286,24 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			runResultLabel = metrics.WorkerExecResultSuccess
 			errAck = job.Ack()
 		}
-		metrics.WorkerExecCounter.WithLabelValues(w.Type, runResultLabel).Inc()
+
+		// Distinguish classic job execution and konnector/account deletion
+
+		msg := struct {
+			Account        string `json:"account"`
+			AccountRev     string `json:"account_rev"`
+			Konnector      string `json:"konnector"`
+			AccountDeleted bool   `json:"account_deleted"`
+		}{}
+
+		err := json.Unmarshal(job.Message, &msg)
+
+		if err == nil && w.Type == "konnector" && msg.AccountDeleted {
+			metrics.WorkerKonnectorExecDeleteCounter.WithLabelValues(w.Type, runResultLabel).Inc()
+		} else {
+			metrics.WorkerExecCounter.WithLabelValues(w.Type, runResultLabel).Inc()
+		}
+
 		if errAck != nil {
 			parentCtx.Logger().Errorf("error while acking job done: %s",
 				errAck.Error())
@@ -423,6 +441,23 @@ func (t *task) run() (err error) {
 		execResultLabel = metrics.WorkerExecResultErrored
 		timer.ObserveDuration()
 		t.endTime = time.Now()
+
+		if err == context.DeadlineExceeded { // This is a timeout
+			var slug string
+			msg := map[string]string{}
+
+			if err = json.Unmarshal(t.job.Message, &msg); err != nil {
+				switch t.w.Type {
+				case "konnector":
+					slug = msg["konnector"]
+				case "service":
+					slug = msg["slug"]
+				default:
+					slug = ""
+				}
+			}
+			metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug).Inc()
+		}
 
 		// Even though ctx should have expired already, it is good practice to call
 		// its cancelation function in any case. Failure to do so may keep the
