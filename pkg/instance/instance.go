@@ -1169,6 +1169,13 @@ func DestroyWithoutHooks(domain string) error {
 	// launch a worker in order to clean the account.
 	deleteAccounts(i)
 
+	// Reload the instance, it can have been updated in CouchDB if the instance
+	// had at least one account and was not up-to-date for its indexes/views.
+	i, err = getFromCouch(domain)
+	if err != nil {
+		return err
+	}
+
 	sched := jobs.System()
 	triggers, err := sched.GetAllTriggers(i)
 	if err == nil {
