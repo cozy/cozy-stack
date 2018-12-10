@@ -55,7 +55,6 @@ type KonnectorMessage struct {
 	FolderToSave   string `json:"folder_to_save"` // FolderToSave is the identifier of the folder
 	AccountDeleted bool   `json:"account_deleted,omitempty"`
 
-	Version string `json:"version"`
 	// Data contains the original value of the message, even fields that are not
 	// part of our message definition.
 	data json.RawMessage
