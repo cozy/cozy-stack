@@ -161,7 +161,8 @@ Content-Type: application/vnd.api+json
 Returns all the files id associated to an album or playlist.
 
 Contents is paginated following [jsonapi conventions](jsonapi.md#pagination).
-The default limit is 100 entries.
+The default limit is 100 entries. The maximal number of entries per page is
+1000.
 
 It's also possible to sort the files by their datetime (for photos) with the
 `sort` query parameter: `?sort=datetime`.

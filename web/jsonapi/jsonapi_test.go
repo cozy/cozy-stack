@@ -191,7 +191,7 @@ func TestMain(m *testing.M) {
 		return Data(c, 200, courge, nil)
 	})
 	router.GET("/paginated", func(c echo.Context) error {
-		cursor, err := ExtractPaginationCursor(c, 13)
+		cursor, err := ExtractPaginationCursor(c, 13, 1000)
 		if err != nil {
 			return err
 		}

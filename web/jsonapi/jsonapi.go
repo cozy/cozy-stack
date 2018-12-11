@@ -254,18 +254,17 @@ func PaginationCursorToParams(cursor couchdb.Cursor) (url.Values, error) {
 }
 
 // ExtractPaginationCursor creates a Cursor from context Query.
-func ExtractPaginationCursor(c echo.Context, defaultLimit int) (couchdb.Cursor, error) {
-
-	var limit int
-
+func ExtractPaginationCursor(c echo.Context, defaultLimit, maxLimit int) (couchdb.Cursor, error) {
+	limit := defaultLimit
 	if limitString := c.QueryParam("page[limit]"); limitString != "" {
 		reqLimit, err := strconv.ParseInt(limitString, 10, 32)
 		if err != nil {
 			return nil, NewError(http.StatusBadRequest, "page limit is not a number")
 		}
 		limit = int(reqLimit)
-	} else {
-		limit = defaultLimit
+	}
+	if maxLimit > 0 && limit > maxLimit {
+		limit = maxLimit
 	}
 
 	if cursor := c.QueryParam("page[cursor]"); cursor != "" {
