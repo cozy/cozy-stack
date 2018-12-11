@@ -536,7 +536,9 @@ examples.
 
 ### GET /permissions/doctype/:doctype/shared-by-link
 
-List permissions for a doctype that are used for a "share by links"
+List permissions for a doctype that are used for a "share by links". This
+endpoint is paginated, with a default number of 30 items per page, and a limit
+of 100 items per page.
 
 #### Request
 

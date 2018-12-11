@@ -40,7 +40,7 @@ func getDirData(c echo.Context, doc *vfs.DirDoc) (int, couchdb.Cursor, []vfs.Dir
 	instance := middlewares.GetInstance(c)
 	fs := instance.VFS()
 
-	cursor, err := jsonapi.ExtractPaginationCursor(c, defPerPage)
+	cursor, err := jsonapi.ExtractPaginationCursor(c, defPerPage, 0)
 	if err != nil {
 		return 0, nil, nil, err
 	}

@@ -130,7 +130,10 @@ func createPermission(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &APIPermission{pdoc}, nil)
 }
 
-const limitPermissionsByDoctype = 30
+const (
+	defaultPermissionsByDoctype = 30
+	maxPermissionsByDoctype     = 100
+)
 
 func listPermissionsByDoctype(c echo.Context, route, permType string) error {
 	ins := middlewares.GetInstance(c)
@@ -149,7 +152,7 @@ func listPermissionsByDoctype(c echo.Context, route, permType string) error {
 			"You need GET permission on whole type to list its permissions")
 	}
 
-	cursor, err := jsonapi.ExtractPaginationCursor(c, limitPermissionsByDoctype)
+	cursor, err := jsonapi.ExtractPaginationCursor(c, defaultPermissionsByDoctype, maxPermissionsByDoctype)
 	if err != nil {
 		return err
 	}

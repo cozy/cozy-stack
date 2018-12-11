@@ -17,7 +17,10 @@ import (
 	"github.com/cozy/echo"
 )
 
-const maxRefLimit = 100
+const (
+	defaultRefsPerPage = 100
+	maxRefsPerPage     = 1000
+)
 
 func rawMessageToObject(i *instance.Instance, bb json.RawMessage) (jsonapi.Object, error) {
 	var dof vfs.DirOrFileDoc
@@ -49,7 +52,7 @@ func ListReferencesHandler(c echo.Context) error {
 		}
 	}
 
-	cursor, err := jsonapi.ExtractPaginationCursor(c, maxRefLimit)
+	cursor, err := jsonapi.ExtractPaginationCursor(c, defaultRefsPerPage, maxRefsPerPage)
 	if err != nil {
 		return err
 	}
