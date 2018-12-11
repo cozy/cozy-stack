@@ -357,6 +357,45 @@ var insertAssetCmd = &cobra.Command{
 	},
 }
 
+var rmAssetCmd = &cobra.Command{
+	Use:     "rm-asset [context] [name]",
+	Short:   "Removes an asset",
+	Long:    "Removes a custom asset in a specific context",
+	Example: "$ cozy-stack config rm-asset foobar /foo/bar/baz.js",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Check params
+		var customAssets []fs.AssetOption
+
+		if len(args) != 2 {
+			return cmd.Usage()
+		}
+		assetOption := fs.AssetOption{
+			Context: args[0],
+			Name:    args[1],
+		}
+
+		customAssets = append(customAssets, assetOption)
+
+		marshaledAssets, err := json.Marshal(customAssets)
+		if err != nil {
+			return err
+		}
+
+		c := newAdminClient()
+		req := &request.Options{
+			Method: "DELETE",
+			Path:   "instances/assets",
+			Body:   bytes.NewReader(marshaledAssets),
+		}
+		res, err := c.Req(req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		return nil
+	},
+}
+
 var listAssetCmd = &cobra.Command{
 	Use:     "ls-assets",
 	Short:   "List assets",
@@ -402,6 +441,7 @@ func init() {
 	configCmdGroup.AddCommand(decryptCredentialsCmd)
 	configCmdGroup.AddCommand(insertAssetCmd)
 	configCmdGroup.AddCommand(listAssetCmd)
+	configCmdGroup.AddCommand(rmAssetCmd)
 	RootCmd.AddCommand(configCmdGroup)
 	insertAssetCmd.Flags().StringVar(&flagURL, "url", "", "The URL of the asset")
 	insertAssetCmd.Flags().StringVar(&flagName, "name", "", "The name of the asset")
