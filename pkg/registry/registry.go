@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -459,7 +460,13 @@ func fetch(client *http.Client, registry, ref *url.URL, cache CacheControl) (res
 	}
 	resp, err = client.Do(req)
 	if err != nil {
-		return
+		// Try again for temporary errors
+		if ne, ok := err.(net.Error); ok && ne.Temporary() {
+			resp, err = client.Do(req)
+		}
+		if err != nil {
+			return
+		}
 	}
 	defer func() {
 		if !ok {
