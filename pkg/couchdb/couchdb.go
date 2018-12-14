@@ -354,11 +354,21 @@ func DBStatus(db Database, doctype string) (*DBStatusResponse, error) {
 	return &out, makeRequest(db, doctype, http.MethodGet, "", nil, &out)
 }
 
+func allDbs(db Database) ([]string, error) {
+	var dbs []string
+	prefix := db.DBPrefix()
+	u := fmt.Sprintf(`_all_dbs?start_key="%s"&end_key="%s"`, prefix+"/", prefix+"0")
+	if err := makeRequest(db, "", http.MethodGet, u, nil, &dbs); err != nil {
+		return nil, err
+	}
+	return dbs, nil
+}
+
 // AllDoctypes returns a list of all the doctypes that have a database
 // on a given instance
 func AllDoctypes(db Database) ([]string, error) {
-	var dbs []string
-	if err := makeRequest(db, "", http.MethodGet, "_all_dbs", nil, &dbs); err != nil {
+	dbs, err := allDbs(db)
+	if err != nil {
 		return nil, err
 	}
 	prefix := EscapeCouchdbName(db.DBPrefix())
@@ -431,8 +441,7 @@ func DeleteAllDBs(db Database) error {
 		return fmt.Errorf("You need to provide a valid database")
 	}
 
-	var dbsList []string
-	err := makeRequest(db, "", http.MethodGet, "_all_dbs", nil, &dbsList)
+	dbsList, err := allDbs(db)
 	if err != nil {
 		return err
 	}
