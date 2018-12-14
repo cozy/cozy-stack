@@ -1189,10 +1189,12 @@ func DestroyWithoutHooks(domain string) error {
 
 	if err = couchdb.DeleteAllDBs(i); err != nil {
 		i.Logger().Errorf("Could not delete all CouchDB databases: %s", err.Error())
+		return err
 	}
 
 	if err = i.VFS().Delete(); err != nil {
 		i.Logger().Errorf("Could not delete VFS: %s", err.Error())
+		return err
 	}
 
 	return couchdb.DeleteDoc(couchdb.GlobalDB, i)
