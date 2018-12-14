@@ -383,14 +383,37 @@ func (sfs *swiftVFSV2) DestroyFile(doc *vfs.FileDoc) error {
 	}
 	defer sfs.mu.Unlock()
 	diskUsage, _ := sfs.Indexer.DiskUsage()
+	objName := MakeObjectName(doc.DocID)
 	err := sfs.Indexer.DeleteFileDoc(doc)
 	if err == nil {
-		err = sfs.c.ObjectDelete(sfs.container, MakeObjectName(doc.DocID))
+		err = sfs.destroyFileVersions(objName)
+		if err != nil {
+			sfs.log.Errorf("Could not delete version of %s: %s",
+				objName, err.Error())
+		}
+		err = sfs.c.ObjectDelete(sfs.container, objName)
 	}
 	if err == nil {
 		vfs.DiskQuotaAfterDestroy(sfs, diskUsage, doc.ByteSize)
 	}
 	return err
+}
+
+func (sfs *swiftVFSV2) destroyFileVersions(objName string) error {
+	versionObjNames, err := sfs.c.VersionObjectList(sfs.version, objName)
+	// could happened if the versionning could not be enabled, in which case we
+	// do not propagate the error.
+	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if len(versionObjNames) > 0 {
+		_, err = sfs.c.BulkDelete(sfs.version, versionObjNames)
+		return err
+	}
+	return nil
 }
 
 func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
