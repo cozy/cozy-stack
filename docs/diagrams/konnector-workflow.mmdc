@@ -5,9 +5,11 @@ sequenceDiagram
     participant K as Konnector
     participant S as External service
 
-    H ->> C: create folder
-	H ->> C: create a reference folder->konnector
+    H -->> C: create aggregator account if needed
+    H -->> C: add aggregator account permissions for konnector
     H ->> C: create the account
+    H ->> C: create folder
+    H ->> C: create a reference folder->konnector
     H ->> C: create the trigger
     H ->> C: launch the konnector
 
@@ -17,6 +19,7 @@ sequenceDiagram
     K ->> S: login
     K -->> C: [log] login successful
     C -->> H: [ws] login successful
+    K -->> C: update aggregator account
     K ->> S: fetch data
     K ->> C: save documents and files
     C -->>H: [ws] success / error

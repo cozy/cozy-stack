@@ -29,6 +29,33 @@ saved in CouchDB, but we will show them as the konnectors will see them):
 
 Accounts are manipulated through the `/data/` API.
 
+#### Aggregator accounts
+
+Some konnectors are based on an aggregator service. An aggregator is declared
+in the konnector manifest and specify an `accountId` property. When Cozy-Home
+detects this property, it checks if an account with this given id exists. If not,
+it creates it. Every account created for a konnector based on an aggregator is
+then related to this aggregator account. This relationship is called `parent`
+account.
+
+```json
+{
+    "auth": {
+        "login": "000000000",
+        "password": "**********"
+    },
+    "folderPath": "/Administratif/Bankbank",
+    "label": "Bankbank",
+    "namePath": "Bankbank",
+    "relationships": {
+      "parent": {
+        "_id": "service-aggregator-account",
+        "_type": "io.cozy.accounts"
+      }
+    }
+}
+```
+
 **Note:** you can read more about the [accounts doctype
 here](https://docs.cozy.io/en/cozy-doctypes/docs/io.cozy.accounts/).
 
