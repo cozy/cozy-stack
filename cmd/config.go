@@ -110,13 +110,13 @@ example: cozy-stack config passwd ~/.cozy/
 		var out io.Writer
 		if filename != "" {
 			var f *os.File
-			f, err = os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0444)
+			f, err = os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0440)
 			if err != nil {
 				return err
 			}
 			defer f.Close()
 
-			if err = os.Chmod(filename, 0444); err != nil {
+			if err = os.Chmod(filename, 0440); err != nil {
 				return err
 			}
 
