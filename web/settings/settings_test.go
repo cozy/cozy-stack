@@ -408,9 +408,9 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 	assert.Contains(t, loc.String(), "/auth/authorize")
 
 	values := loc.Query()
-	redirectURI := fmt.Sprintf("cozy%s://%s", oauthClient.OnboardingApp, testInstance.Domain)
-	assert.Equal(t, values.Get("redirect_uri"), redirectURI)
+	assert.Equal(t, values.Get("redirect_uri"), deeplink)
 }
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
