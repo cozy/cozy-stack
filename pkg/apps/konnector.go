@@ -22,6 +22,8 @@ type KonnManifest struct {
 	Editor     string `json:"editor"`
 	Icon       string `json:"icon"`
 
+	Aggregator  *json.RawMessage `json:"aggregator,omitempty"`
+
 	Type        string           `json:"type,omitempty"`
 	License     string           `json:"license,omitempty"`
 	Language    string           `json:"language,omitempty"`
@@ -79,6 +81,8 @@ func (m *KonnManifest) Clone() couchdb.Doc {
 
 	cloned.DocPermissions = make(permissions.Set, len(m.DocPermissions))
 	copy(cloned.DocPermissions, m.DocPermissions)
+
+	cloned.Aggregator = cloneRawMessage(m.Aggregator)
 
 	cloned.Locales = cloneRawMessage(m.Locales)
 	cloned.Langs = cloneRawMessage(m.Langs)
