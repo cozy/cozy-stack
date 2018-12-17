@@ -62,7 +62,7 @@ func onboarded(c echo.Context) error {
 
 		// Redirection
 		queryParams := url.Values{
-			"client_id":     {client.ClientID},
+			"client_id":     {client.CouchID},
 			"redirect_uri":  {deeplink},
 			"state":         {client.OnboardingState},
 			"response_type": {"code"},
