@@ -77,6 +77,7 @@ type Manifest interface {
 	Slug() string
 	State() State
 	LastUpdate() time.Time
+	Terms() Terms
 
 	SetError(err error)
 	Error() error

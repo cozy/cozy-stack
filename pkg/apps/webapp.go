@@ -54,6 +54,12 @@ type Intent struct {
 	Href   string   `json:"href"`
 }
 
+// Terms of an application/konnector
+type Terms struct {
+	URL     string `json:"url"`
+	Version string `json:"version"`
+}
+
 // WebappManifest contains all the informations associated with an installed web
 // application.
 type WebappManifest struct {
@@ -83,6 +89,7 @@ type WebappManifest struct {
 	DocVersion       string          `json:"version"`
 	DocPermissions   permissions.Set `json:"permissions"`
 	AvailableVersion string          `json:"available_version,omitempty"`
+	DocTerms         Terms           `json:"terms,omitempty"`
 
 	Intents       []Intent      `json:"intents"`
 	Routes        Routes        `json:"routes"`
@@ -185,6 +192,9 @@ func (m *WebappManifest) SetAvailableVersion(version string) { m.AvailableVersio
 
 // AppType is part of the Manifest interface
 func (m *WebappManifest) AppType() AppType { return Webapp }
+
+// Terms is part of the Manifest interface
+func (m *WebappManifest) Terms() Terms { return m.DocTerms }
 
 // Permissions is part of the Manifest interface
 func (m *WebappManifest) Permissions() permissions.Set {

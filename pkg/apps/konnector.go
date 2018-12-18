@@ -58,6 +58,7 @@ type KonnManifest struct {
 	DocVersion       string          `json:"version"`
 	DocPermissions   permissions.Set `json:"permissions"`
 	AvailableVersion string          `json:"available_version,omitempty"`
+	DocTerms         Terms           `json:"terms,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -144,6 +145,9 @@ func (m *KonnManifest) SetAvailableVersion(version string) { m.AvailableVersion 
 
 // AppType is part of the Manifest interface
 func (m *KonnManifest) AppType() AppType { return Konnector }
+
+// Terms is part of the Manifest interface
+func (m *KonnManifest) Terms() Terms { return m.DocTerms }
 
 // Permissions is part of the Manifest interface
 func (m *KonnManifest) Permissions() permissions.Set {
