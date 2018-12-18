@@ -43,6 +43,8 @@ type KonnManifest struct {
 	OAuth        *json.RawMessage `json:"oauth,omitempty"`
 	TimeInterval *json.RawMessage `json:"time_interval,omitempty"`
 
+	Aggregator *json.RawMessage `json:"aggregator,omitempty"`
+
 	Parameters    *json.RawMessage `json:"parameters,omitempty"`
 	Notifications Notifications    `json:"notifications"`
 
@@ -96,6 +98,8 @@ func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned.Messages = cloneRawMessage(m.Messages)
 	cloned.OAuth = cloneRawMessage(m.OAuth)
 	cloned.TimeInterval = cloneRawMessage(m.TimeInterval)
+
+	cloned.Aggregator = cloneRawMessage(m.Aggregator)
 
 	cloned.Notifications = make(Notifications, len(m.Notifications))
 	for k, v := range m.Notifications {
