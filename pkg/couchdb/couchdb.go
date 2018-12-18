@@ -440,6 +440,7 @@ func DeleteAllDBs(db Database) error {
 	if dbprefix == "" {
 		return fmt.Errorf("You need to provide a valid database")
 	}
+	dbprefix = EscapeCouchdbName(dbprefix)
 
 	dbsList, err := allDbs(db)
 	if err != nil {
