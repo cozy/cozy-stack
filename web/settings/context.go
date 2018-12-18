@@ -2,7 +2,6 @@ package settings
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 
@@ -57,13 +56,15 @@ func onboarded(c echo.Context) error {
 
 	// Redirect to permissions screen if we are in a mobile onboarding
 	if err == nil && client.OnboardingSecret != "" {
-		// Generate the deeplink
-		deeplink := fmt.Sprintf("cozy%s://%s", client.OnboardingApp, i.Domain)
+		redirectURI := ""
+		if len(client.RedirectURIs) > 0 {
+			redirectURI = client.RedirectURIs[0]
+		}
 
 		// Redirection
 		queryParams := url.Values{
 			"client_id":     {client.CouchID},
-			"redirect_uri":  {deeplink},
+			"redirect_uri":  {redirectURI},
 			"state":         {client.OnboardingState},
 			"response_type": {"code"},
 			"scope":         {client.OnboardingPermissions},
