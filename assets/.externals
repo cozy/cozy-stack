@@ -23,11 +23,11 @@ url     https://unpkg.com/cozy-ui@17.5.1/dist/cozy-ui.min.css
 sha256  0b9532dfcd2ebfdcb678e9621e94a1044ae2def55a1755e3112e564f803bd2fe
 
 name    ./js/cozy-bar.min.js
-url     https://unpkg.com/cozy-bar@6.9.6/dist/cozy-bar.min.js
-sha256  f54199b633bc1e0495137011bd568d93c34ea2d494ca10bff32a2c1d52f90ea8
+url     https://unpkg.com/cozy-bar@6.9.7/dist/cozy-bar.min.js
+sha256  fa53b7f016a2399a82acaffa4731dc608e318d07fffc10bfb6faec0886613615
 
 name    ./css/cozy-bar.min.css
-url     https://unpkg.com/cozy-bar@6.9.6/dist/cozy-bar.min.css
+url     https://unpkg.com/cozy-bar@6.9.7/dist/cozy-bar.min.css
 sha256  417a5e35862270b7b06908922ddce705e389da1feccd830d2fe0f10c9a771e3b
 
 name    ./js/piwik.js
