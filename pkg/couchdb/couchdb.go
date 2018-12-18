@@ -356,7 +356,7 @@ func DBStatus(db Database, doctype string) (*DBStatusResponse, error) {
 
 func allDbs(db Database) ([]string, error) {
 	var dbs []string
-	prefix := db.DBPrefix()
+	prefix := EscapeCouchdbName(db.DBPrefix())
 	u := fmt.Sprintf(`_all_dbs?start_key="%s"&end_key="%s"`, prefix+"/", prefix+"0")
 	if err := makeRequest(db, "", http.MethodGet, u, nil, &dbs); err != nil {
 		return nil, err
@@ -440,7 +440,6 @@ func DeleteAllDBs(db Database) error {
 	if dbprefix == "" {
 		return fmt.Errorf("You need to provide a valid database")
 	}
-	dbprefix = EscapeCouchdbName(dbprefix)
 
 	dbsList, err := allDbs(db)
 	if err != nil {
