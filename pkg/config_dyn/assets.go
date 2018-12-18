@@ -61,8 +61,8 @@ func UpdateAssetsList() error {
 	return couchdb.Upsert(couchdb.GlobalDB, &doc)
 }
 
-// RemoveAssets remove assets from AssetList
-func RemoveAssets(assets []fs.AssetOption) error {
+// RemoveAsset remove an asset from AssetList
+func RemoveAsset(asset fs.AssetOption) error {
 	var doc AssetsList
 	var newAssetList []fs.AssetOption
 	var err error
@@ -73,21 +73,13 @@ func RemoveAssets(assets []fs.AssetOption) error {
 		}
 	}
 
-	var assetFound bool
-	fs.Foreach(func(name, context string, f *fs.Asset) {
-		assetFound = false
-		if f.IsCustom {
-			for _, a := range assets {
-				if f.Context == a.Context && f.Name == a.Name {
-					assetFound = true
-					break
-				}
-			}
-			if !assetFound {
-				newAssetList = append(newAssetList, f.AssetOption)
-			}
+	for _, a := range doc.AssetsList {
+		if a.IsCustom && a.Context == asset.Context && a.Name == asset.Name {
+			continue
+		} else {
+			newAssetList = append(newAssetList, a)
 		}
-	})
+	}
 	doc.AssetsList = newAssetList
 	return couchdb.Upsert(couchdb.GlobalDB, &doc)
 }

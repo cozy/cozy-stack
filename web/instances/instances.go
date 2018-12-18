@@ -261,12 +261,12 @@ func addAssets(c echo.Context) error {
 }
 
 func deleteAssets(c echo.Context) error {
-	var unmarshaledAssets []fs.AssetOption
+	context := c.Param("context")
+	name := c.Param("*")
 
-	if err := json.NewDecoder(c.Request().Body).Decode(&unmarshaledAssets); err != nil {
-		return err
-	}
-	err := config_dyn.RemoveAssets(unmarshaledAssets)
+	asset := fs.AssetOption{Context: context, Name: name}
+
+	err := config_dyn.RemoveAsset(asset)
 	if err != nil {
 		wrapError(err)
 	}
@@ -498,7 +498,7 @@ func Routes(router *echo.Group) {
 	router.POST("/redis", rebuildRedis)
 	router.GET("/assets", assetsInfos)
 	router.POST("/assets", addAssets)
-	router.DELETE("/assets", deleteAssets)
+	router.DELETE("/assets/:context/*", deleteAssets)
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
 }
