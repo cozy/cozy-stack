@@ -120,6 +120,7 @@ func worker(ctx *jobs.WorkerContext) (err error) {
 		return wrapErr(ctx, err)
 	}
 
+	waitDone := make(chan error)
 	go func() {
 		for scanOut.Scan() {
 			if errOut := worker.ScanOutput(ctx, inst, scanOut.Bytes()); errOut != nil {
@@ -129,10 +130,6 @@ func worker(ctx *jobs.WorkerContext) (err error) {
 		if errs := scanOut.Err(); errs != nil {
 			log.Errorf("could not scan stdout: %s", errs)
 		}
-	}()
-
-	waitDone := make(chan error)
-	go func() {
 		waitDone <- cmd.Wait()
 		close(waitDone)
 	}()
