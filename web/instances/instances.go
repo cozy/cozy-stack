@@ -264,9 +264,7 @@ func deleteAssets(c echo.Context) error {
 	context := c.Param("context")
 	name := c.Param("*")
 
-	asset := fs.AssetOption{Context: context, Name: name}
-
-	err := config_dyn.RemoveAsset(asset)
+	err := config_dyn.RemoveAsset(context, name)
 	if err != nil {
 		wrapError(err)
 	}

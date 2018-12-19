@@ -61,27 +61,13 @@ func UpdateAssetsList() error {
 	return couchdb.Upsert(couchdb.GlobalDB, &doc)
 }
 
-// RemoveAsset remove an asset from AssetList
-func RemoveAsset(asset fs.AssetOption) error {
-	var doc AssetsList
-	var newAssetList []fs.AssetOption
-	var err error
-
-	if err = couchdb.GetDoc(couchdb.GlobalDB, consts.Configs, assetsListID, &doc); err != nil {
-		if !couchdb.IsNoDatabaseError(err) && !couchdb.IsNotFoundError(err) {
-			return err
-		}
+// RemoveAsset removes an asset from AssetList
+func RemoveAsset(context, name string) error {
+	if asset, ok := fs.Get(name, context); ok && asset.IsCustom {
+		fs.DeleteAsset(asset)
+		return UpdateAssetsList()
 	}
-
-	for _, a := range doc.AssetsList {
-		if a.IsCustom && a.Context == asset.Context && a.Name == asset.Name {
-			continue
-		} else {
-			newAssetList = append(newAssetList, a)
-		}
-	}
-	doc.AssetsList = newAssetList
-	return couchdb.Upsert(couchdb.GlobalDB, &doc)
+	return nil
 }
 
 // PollAssetsList executes itself in its own goroutine to poll at regular
