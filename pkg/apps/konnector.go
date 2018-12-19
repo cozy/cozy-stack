@@ -33,6 +33,7 @@ type KonnManifest struct {
 	Developer   *json.RawMessage `json:"developer,omitempty"`
 	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
 	Tags        *json.RawMessage `json:"tags,omitempty"`
+	Partnership *json.RawMessage `json:"partnership,omitempty"`
 
 	Frequency    string           `json:"frequency,omitempty"`
 	DataTypes    *json.RawMessage `json:"data_types,omitempty"`

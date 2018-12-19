@@ -82,6 +82,7 @@ type WebappManifest struct {
 	Developer   *json.RawMessage `json:"developer,omitempty"`
 	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
 	Tags        *json.RawMessage `json:"tags,omitempty"`
+	Partnership *json.RawMessage `json:"partnership,omitempty"`
 
 	DocSlug          string          `json:"slug"`
 	DocState         State           `json:"state"`
