@@ -33,6 +33,7 @@ func TestRemoveCustomAsset(t *testing.T) {
 
 	// Adding the asset
 	tmpfile, err := os.OpenFile(filepath.Join(os.TempDir(), "foo.js"), os.O_CREATE, 0600)
+	assert.NoError(t, err)
 	asset.URL = fmt.Sprintf("file://%s", tmpfile.Name())
 
 	assets := []fs.AssetOption{asset}
@@ -48,6 +49,7 @@ func TestRemoveCustomAsset(t *testing.T) {
 	err = RemoveAsset(asset.Context, asset.Name)
 	assert.NoError(t, err)
 	finalAssetsList, err := GetAssetsList()
+	assert.NoError(t, err)
 	assert.Equal(t, len(finalAssetsList), len(assetsList))
 }
 
