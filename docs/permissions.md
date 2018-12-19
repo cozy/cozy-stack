@@ -390,6 +390,7 @@ Accept: application/vnd.api+json
 ```json
 {
     "data": {
+      "attributes": {
         "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
         "type": "io.cozy.permissions",
         "permissions": {
@@ -399,6 +400,7 @@ Accept: application/vnd.api+json
                 "values": ["some-picture-id"]
             }
         }
+      }
     }
 }
 ```
@@ -416,11 +418,13 @@ Accept: application/vnd.api+json
 ```json
 {
     "data": {
+      "attributes": {
         "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
         "type": "io.cozy.permissions",
         "permissions": {
             "remove-this": {}
         }
+      }
     }
 }
 ```
