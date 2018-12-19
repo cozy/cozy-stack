@@ -148,6 +148,7 @@ func (m *WebappManifest) Clone() couchdb.Doc {
 	cloned.Developer = cloneRawMessage(m.Developer)
 	cloned.Screenshots = cloneRawMessage(m.Screenshots)
 	cloned.Tags = cloneRawMessage(m.Tags)
+	cloned.Partnership = cloneRawMessage(m.Partnership)
 
 	cloned.Intents = make([]Intent, len(m.Intents))
 	copy(cloned.Intents, m.Intents)

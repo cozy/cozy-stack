@@ -91,6 +91,7 @@ func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned.Developer = cloneRawMessage(m.Developer)
 	cloned.Screenshots = cloneRawMessage(m.Screenshots)
 	cloned.Tags = cloneRawMessage(m.Tags)
+	cloned.Partnership = cloneRawMessage(m.Partnership)
 	cloned.Parameters = cloneRawMessage(m.Parameters)
 
 	cloned.DataTypes = cloneRawMessage(m.DataTypes)
