@@ -54,6 +54,12 @@ type Intent struct {
 	Href   string   `json:"href"`
 }
 
+// Terms of an application/konnector
+type Terms struct {
+	URL     string `json:"url"`
+	Version string `json:"version"`
+}
+
 // WebappManifest contains all the informations associated with an installed web
 // application.
 type WebappManifest struct {
@@ -76,6 +82,7 @@ type WebappManifest struct {
 	Developer   *json.RawMessage `json:"developer,omitempty"`
 	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
 	Tags        *json.RawMessage `json:"tags,omitempty"`
+	Partnership *json.RawMessage `json:"partnership,omitempty"`
 
 	DocSlug          string          `json:"slug"`
 	DocState         State           `json:"state"`
@@ -83,6 +90,7 @@ type WebappManifest struct {
 	DocVersion       string          `json:"version"`
 	DocPermissions   permissions.Set `json:"permissions"`
 	AvailableVersion string          `json:"available_version,omitempty"`
+	DocTerms         Terms           `json:"terms,omitempty"`
 
 	Intents       []Intent      `json:"intents"`
 	Routes        Routes        `json:"routes"`
@@ -140,6 +148,7 @@ func (m *WebappManifest) Clone() couchdb.Doc {
 	cloned.Developer = cloneRawMessage(m.Developer)
 	cloned.Screenshots = cloneRawMessage(m.Screenshots)
 	cloned.Tags = cloneRawMessage(m.Tags)
+	cloned.Partnership = cloneRawMessage(m.Partnership)
 
 	cloned.Intents = make([]Intent, len(m.Intents))
 	copy(cloned.Intents, m.Intents)
@@ -185,6 +194,9 @@ func (m *WebappManifest) SetAvailableVersion(version string) { m.AvailableVersio
 
 // AppType is part of the Manifest interface
 func (m *WebappManifest) AppType() AppType { return Webapp }
+
+// Terms is part of the Manifest interface
+func (m *WebappManifest) Terms() Terms { return m.DocTerms }
 
 // Permissions is part of the Manifest interface
 func (m *WebappManifest) Permissions() permissions.Set {

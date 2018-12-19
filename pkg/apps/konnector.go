@@ -33,6 +33,7 @@ type KonnManifest struct {
 	Developer   *json.RawMessage `json:"developer,omitempty"`
 	Screenshots *json.RawMessage `json:"screenshots,omitempty"`
 	Tags        *json.RawMessage `json:"tags,omitempty"`
+	Partnership *json.RawMessage `json:"partnership,omitempty"`
 
 	Frequency    string           `json:"frequency,omitempty"`
 	DataTypes    *json.RawMessage `json:"data_types,omitempty"`
@@ -58,6 +59,7 @@ type KonnManifest struct {
 	DocVersion       string          `json:"version"`
 	DocPermissions   permissions.Set `json:"permissions"`
 	AvailableVersion string          `json:"available_version,omitempty"`
+	DocTerms         Terms           `json:"terms,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -89,6 +91,7 @@ func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned.Developer = cloneRawMessage(m.Developer)
 	cloned.Screenshots = cloneRawMessage(m.Screenshots)
 	cloned.Tags = cloneRawMessage(m.Tags)
+	cloned.Partnership = cloneRawMessage(m.Partnership)
 	cloned.Parameters = cloneRawMessage(m.Parameters)
 
 	cloned.DataTypes = cloneRawMessage(m.DataTypes)
@@ -144,6 +147,9 @@ func (m *KonnManifest) SetAvailableVersion(version string) { m.AvailableVersion 
 
 // AppType is part of the Manifest interface
 func (m *KonnManifest) AppType() AppType { return Konnector }
+
+// Terms is part of the Manifest interface
+func (m *KonnManifest) Terms() Terms { return m.DocTerms }
 
 // Permissions is part of the Manifest interface
 func (m *KonnManifest) Permissions() permissions.Set {

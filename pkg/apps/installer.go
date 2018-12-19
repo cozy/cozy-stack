@@ -334,6 +334,17 @@ func (i *Installer) update() error {
 		}
 	}
 
+	oldTermsVersion := oldManifest.Terms().Version
+	newTermsVersion := newManifest.Terms().Version
+
+	termsAdded := oldTermsVersion == "" && newTermsVersion != ""
+	termsUpdated := oldTermsVersion != newTermsVersion
+
+	if termsAdded || termsUpdated {
+		makeUpdate = false
+		availableVersion = newManifest.Version()
+	}
+
 	if makeUpdate {
 		i.man = newManifest
 		i.sendRealtimeEvent()
