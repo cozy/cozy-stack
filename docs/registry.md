@@ -467,6 +467,27 @@ Content-Type: image/svg+xml
 </svg>
 ```
 
+### GET /registry/:app/partnership_icon
+
+Get the current application partnership_icon.
+
+#### Request
+
+```http
+GET /registry/drive/partnership_icon HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: image/svg+xml
+
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <g fill="none" fill-rule="evenodd"></g>
+</svg>
+```
+
 ### GET /registry/:app/screenshots/:filename
 
 Get the screenshot with the specified filename from the field `screenshots` of
