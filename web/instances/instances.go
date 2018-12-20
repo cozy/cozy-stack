@@ -260,6 +260,17 @@ func addAssets(c echo.Context) error {
 	return config_dyn.UpdateAssetsList()
 }
 
+func deleteAssets(c echo.Context) error {
+	context := c.Param("context")
+	name := c.Param("*")
+
+	err := config_dyn.RemoveAsset(context, name)
+	if err != nil {
+		wrapError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func cleanOrphanAccounts(c echo.Context) error {
 	type result struct {
 		Result  string             `json:"result"`
@@ -485,6 +496,7 @@ func Routes(router *echo.Group) {
 	router.POST("/redis", rebuildRedis)
 	router.GET("/assets", assetsInfos)
 	router.POST("/assets", addAssets)
+	router.DELETE("/assets/:context/*", deleteAssets)
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
 }

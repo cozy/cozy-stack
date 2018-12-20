@@ -245,8 +245,8 @@ func GetKonnectorBySlug(db prefixer.Prefixer, slug string) (*KonnManifest, error
 	return man, nil
 }
 
-// GetWebappBySlugAndUpdate fetch the KonnManifest and perform an update of
-// the application if necessary and if the application was installed from the
+// GetKonnectorBySlugAndUpdate fetch the KonnManifest and perform an update of
+// the konnector if necessary and if the konnector was installed from the
 // registry.
 func GetKonnectorBySlugAndUpdate(db prefixer.Prefixer, slug string, copier Copier, registries []*url.URL) (*KonnManifest, error) {
 	man, err := GetKonnectorBySlug(db, slug)

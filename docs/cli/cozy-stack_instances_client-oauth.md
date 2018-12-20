@@ -13,9 +13,13 @@ cozy-stack instances client-oauth <domain> <redirect_uri> <client_name> <softwar
 ### Options
 
 ```
-      --allow-login-scope   Allow login scope
-  -h, --help                help for client-oauth
-      --json                Output more informations in JSON format
+      --allow-login-scope               Allow login scope
+  -h, --help                            help for client-oauth
+      --json                            Output more informations in JSON format
+      --onboarding-app string           Specify an OnboardingApp
+      --onboarding-permissions string   Specify an OnboardingPermissions
+      --onboarding-secret string        Specify an OnboardingSecret
+      --onboarding-state string         Specify an OnboardingState
 ```
 
 ### Options inherited from parent commands

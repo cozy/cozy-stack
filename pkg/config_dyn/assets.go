@@ -61,6 +61,15 @@ func UpdateAssetsList() error {
 	return couchdb.Upsert(couchdb.GlobalDB, &doc)
 }
 
+// RemoveAsset removes an asset from AssetList
+func RemoveAsset(context, name string) error {
+	if asset, ok := fs.Get(name, context); ok && asset.IsCustom {
+		fs.DeleteAsset(asset)
+		return UpdateAssetsList()
+	}
+	return nil
+}
+
 // PollAssetsList executes itself in its own goroutine to poll at regular
 // intervals the list of assets that should be delivered by the stack.
 func PollAssetsList(cacheStorage fs.Cache, pollingInterval time.Duration) {

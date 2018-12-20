@@ -322,6 +322,15 @@ func storeAsset(asset *Asset) {
 	globalAssets.Store(contextKey, asset)
 }
 
+func DeleteAsset(asset *Asset) {
+	context := asset.Context
+	if context == "" {
+		context = defaultContext
+	}
+	contextKey := marshalContextKey(context, asset.Name)
+	globalAssets.Delete(contextKey)
+}
+
 func Get(name string, context ...string) (*Asset, bool) {
 	var ctx string
 	if len(context) > 0 && context[0] != "" {
