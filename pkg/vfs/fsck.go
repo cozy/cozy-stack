@@ -89,9 +89,9 @@ type Tree struct {
 // in a tree-like representation of the index.
 type TreeFile struct {
 	DirOrFileDoc
-	FilesChildren     []*TreeFile `json:"-"`
-	FilesChildrenSize int64       `json:"-"`
-	DirsChildren      []*TreeFile `json:"-"`
+	FilesChildren     []*TreeFile `json:"children,omitempty"`
+	FilesChildrenSize int64       `json:"children_size,omitempty"`
+	DirsChildren      []*TreeFile `json:"directories,omitempty"`
 
 	IsDir    bool `json:"is_dir"`
 	IsOrphan bool `json:"is_orphan"`
