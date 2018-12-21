@@ -340,7 +340,7 @@ func (i *Installer) update() error {
 	termsAdded := oldTermsVersion == "" && newTermsVersion != ""
 	termsUpdated := oldTermsVersion != newTermsVersion
 
-	if termsAdded || termsUpdated {
+	if (termsAdded || termsUpdated) && !i.permissionsAcked {
 		makeUpdate = false
 		availableVersion = newManifest.Version()
 	}
