@@ -1,0 +1,42 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+        <form id="myForm" method="POST" action="/settings/passphrase" onsubmit="submitform(event)">
+            <p>Choisissez votre password</p>
+            <input type="hidden" name="register_token" value={{.RegisterToken}}>
+            <input type="password" name="passphrase"><br><br>
+            <input type="submit" value="Submit">
+        </form>
+
+</body>
+<script type="text/javascript">
+    function submitform(e){
+        e.preventDefault();
+        var ab = document.getElementById("myForm");
+        var formData = new FormData(ab)
+
+        var object = {};
+        formData.forEach(function(value, key){
+            object[key] = value;
+        });
+        var json = JSON.stringify(object);
+        console.log(json);
+
+        var xhr = new XMLHttpRequest();
+        xhr.open(ab.method, ab.action, false);
+        xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+        xhr.send(json);
+
+        var onboarded = new XMLHttpRequest();
+        onboarded.open("GET", "/settings/onboarded", true)
+        onboarded.send();
+
+        return false;
+    }
+</script>
+</html>
