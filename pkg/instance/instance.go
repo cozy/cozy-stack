@@ -548,9 +548,6 @@ func (i *Instance) redirection(key, defaultSlug string) *url.URL {
 // DefaultRedirection returns the URL where to redirect the user afer login
 // (and in most other cases where we need a redirection URL)
 func (i *Instance) DefaultRedirection() *url.URL {
-	if !i.OnboardingFinished {
-		return i.SubDomain(consts.OnboardingSlug)
-	}
 	return i.redirection("default_redirection", consts.HomeSlug)
 }
 
