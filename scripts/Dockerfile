@@ -40,14 +40,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /usr/src/couchdb \
   # Cleanup
   && apt-get purge -y \
-    binutils \
     build-essential \
-    cpp \
     erlang-dev \
     libicu-dev \
     libmozjs185-dev \
     make \
-    perl \
   && printf "[chttpd]\\nbind_address = 0.0.0.0\\n" \
     > /usr/local/couchdb/etc/local.ini \
   && apt-get autoremove -y && apt-get clean \
