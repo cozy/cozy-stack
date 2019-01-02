@@ -122,7 +122,7 @@ func (c *Client) RealtimeClient(opts RealtimeOptions) (*RealtimeChannel, error) 
 	return channel, nil
 }
 
-// Channel returns the channe of reatime server messages received by the client
+// Channel returns the channel of realtime server messages received by the client
 // from the server.
 func (r *RealtimeChannel) Channel() <-chan *RealtimeServerMessage {
 	return r.ch
