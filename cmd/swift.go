@@ -100,7 +100,7 @@ var swiftDeleteCmd = &cobra.Command{
 }
 
 var swiftLsCmd = &cobra.Command{
-	Use:     "ls <domain>",
+	Use: "ls <domain>",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			return cmd.Usage()
