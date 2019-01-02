@@ -2,8 +2,32 @@
 # applications for cozy-stack. It installs couchdb 2 and the cozy-stack.
 # It should not be used for hosting your cozy cloud in production.
 
+
+# Multi-stage image: this step builds cozy-stack
+FROM golang:1.11 as build
+WORKDIR /go/src/github.com/cozy/cozy-stack
+
+# MailHog
+ENV MAILHOG_VERSION 1.0.0
+ENV MAILHOG_SRC_URL https://github.com/mailhog/MailHog/releases/download/v$MAILHOG_VERSION/MailHog_linux_amd64
+ENV MAILHOG_SRC_SHA256 ba921e04438e176c474d533447ae64707ffcdd1230f0153f86cb188d348f25c0
+RUN set -eu; curl -fsSL "$MAILHOG_SRC_URL" -o MailHog \
+  && echo "$MAILHOG_SRC_SHA256  MailHog" | sha256sum -c - \
+  && chmod +x MailHog
+
+# Build cozy-stack
+COPY . .
+RUN go get -d -v ./...
+RUN ./scripts/build.sh dev
+
+
+# Multi-stage image: the main image
 FROM debian:stretch-slim
 
+# cozy-stack
+ENV COZY_STACK_HOST cozy.tools
+ENV COZY_STACK_PORT 8080
+ENV COZY_STACK_PATH cozy-stack
 
 # CouchDB
 ENV COUCHDB_VERSION 2.3.0
@@ -12,7 +36,8 @@ ENV COUCHDB_SRC_SHA256 0b3868d042b158d9fd2f504804abd93cd22681c033952f832ce846672
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN set -eux; apt-get update \
+  && apt-get install -y --no-install-recommends \
     build-essential \
     ca-certificates \
     curl \
@@ -48,31 +73,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && printf "[chttpd]\\nbind_address = 0.0.0.0\\n" \
     > /usr/local/couchdb/etc/local.ini \
   && apt-get autoremove -y && apt-get clean \
-  && apt-get install -y libicu57 --no-install-recommends
+  && mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
 
 ENV PATH $PATH:/usr/local/couchdb/bin
 
-# MailHog
-ENV MAILHOG_VERSION 1.0.0
-ENV MAILHOG_SRC_URL https://github.com/mailhog/MailHog/releases/download/v$MAILHOG_VERSION/MailHog_linux_amd64
-ENV MAILHOG_SRC_SHA256 ba921e04438e176c474d533447ae64707ffcdd1230f0153f86cb188d348f25c0
+COPY --from=build \
+  /go/src/github.com/cozy/cozy-stack/cozy-stack \
+  /go/src/github.com/cozy/cozy-stack/scripts/docker-entrypoint.sh \
+  /go/src/github.com/cozy/cozy-stack/scripts/cozy-app-dev.sh \
+  /go/src/github.com/cozy/cozy-stack/MailHog \
+  /usr/bin/
 
-RUN curl -fsSL "$MAILHOG_SRC_URL" -o /usr/bin/MailHog \
-  && echo "$MAILHOG_SRC_SHA256  /usr/bin/MailHog" | sha256sum -c -
-
-# cozy-stack
-ENV COZY_STACK_HOST cozy.tools
-ENV COZY_STACK_PORT 8080
-ENV COZY_STACK_PATH cozy-stack
-
-COPY ./docker-entrypoint.sh /
-COPY ./cozy-app-dev.sh ./cozy-stack /usr/bin/
-
-RUN chmod +x /docker-entrypoint.sh \
-              /usr/bin/cozy-app-dev.sh \
-              /usr/bin/cozy-stack \
-              /usr/bin/MailHog \
-  && mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
-
-EXPOSE 8080 8025 5984
-ENTRYPOINT ["/docker-entrypoint.sh"]
+EXPOSE 8080 6060 8025 5984
+ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]

@@ -38,6 +38,70 @@ usage() {
 	echo -e "    can be \"production\" or \"development\". default: \"${COZY_ENV_DFL}\""
 }
 
+# The version string is deterministic and reflects entirely the state
+# of the working-directory from which the release is built from. It is
+# generated using the following format:
+#
+# 		<TAG>[-<NUMBER OF COMMITS AFTER TAG>][-dirty][-dev]
+#
+# Where:
+#  - <TAG>: closest annotated tag of the current working directory. If
+#    no tag is present, is uses the string "v0". This is not allowed
+#    in a production release.
+#  - <NUMBER OF COMMITS AFTER TAG>: number of commits after the
+#    closest tag if the current working directory does not point
+#    exactly to a tag
+#  - -dirty: added if the working if the working-directory is not
+#    clean (contains un-commited modifications). This is not allowed
+#    in production release.
+#  - -dev: added for a development mode relase
+#
+# The outputed binary is named "cozy-stack-${VERSION_STRING}". A
+# SHA256 checksum of the binary is also generated in a file named
+# "cozy-stack-${VERSION_STRING}.sha256".
+do_release() {
+	do_assets
+	do_build
+
+	openssl dgst -sha256 -hex "${BINARY}" > "${BINARY}.sha256"
+	printf "%s\t" "${BINARY}"
+	sed -E 's/SHA256\((.*)\)= ([a-f0-9]+)$/\2/g' < "${BINARY}.sha256"
+}
+
+do_install() {
+	check_env
+	do_prepare_ldflags
+
+	printf "installing cozy-stack in %s... " "$(go env GOPATH)"
+	go install -ldflags "\
+		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}"
+	echo "ok"
+}
+
+do_build() {
+	check_env
+	do_prepare_ldflags
+
+	if [ -z "${1}" ]; then
+		BINARY="$(pwd)/cozy-stack-${VERSION_OS_ARCH}-${VERSION_STRING}"
+	else
+		BINARY="${1}"
+	fi
+
+	printf "building cozy-stack in %s... " "${BINARY}"
+	pushd "${WORK_DIR}" > /dev/null
+	go build -ldflags "\
+		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}
+		" \
+		-o "${BINARY}"
+	popd > /dev/null
+	echo "ok"
+}
+
 do_prepare_ldflags() {
 	eval "$(go env)"
 
@@ -68,78 +132,10 @@ do_prepare_ldflags() {
 	BUILD_MODE="${COZY_ENV}"
 }
 
-# The version string is deterministic and reflects entirely the state
-# of the working-directory from which the release is built from. It is
-# generated using the following format:
-#
-# 		<TAG>[-<NUMBER OF COMMITS AFTER TAG>][-dirty][-dev]
-#
-# Where:
-#  - <TAG>: closest annotated tag of the current working directory. If
-#    no tag is present, is uses the string "v0". This is not allowed
-#    in a production release.
-#  - <NUMBER OF COMMITS AFTER TAG>: number of commits after the
-#    closest tag if the current working directory does not point
-#    exactly to a tag
-#  - -dirty: added if the working if the working-directory is not
-#    clean (contains un-commited modifications). This is not allowed
-#    in production release.
-#  - -dev: added for a development mode relase
-#
-# The outputed binary is named "cozy-stack-${VERSION_STRING}". A
-# SHA256 checksum of the binary is also generated in a file named
-# "cozy-stack-${VERSION_STRING}.sha256".
-do_release() {
-	check_env
-
-	do_build
-	openssl dgst -sha256 -hex "${BINARY}" > "${BINARY}.sha256"
-
-	printf "%s\t" "${BINARY}"
-	sed -E 's/SHA256\((.*)\)= ([a-f0-9]+)$/\2/g' < "${BINARY}.sha256"
-}
-
-do_install() {
-	check_env
-
-	do_prepare_ldflags
-
-	printf "installing cozy-stack in %s... " "$(go env GOPATH)"
-	go install -ldflags "\
-		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
-		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
-		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}"
-	echo "ok"
-}
-
-do_build() {
-	check_env
-
-	do_prepare_ldflags
-	do_assets
-
-	if [ -z "${1}" ]; then
-		BINARY="$(pwd)/cozy-stack-${VERSION_OS_ARCH}-${VERSION_STRING}"
-	else
-		BINARY="${1}"
-	fi
-
-	printf "building cozy-stack in %s... " "${BINARY}"
-	pushd "${WORK_DIR}" > /dev/null
-	go build -ldflags "\
-		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
-		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
-		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}
-		" \
-		-o "${BINARY}"
-	popd > /dev/null
-	echo "ok"
-}
-
 do_assets() {
 	tx --root "${WORK_DIR}" pull -a || echo "Do you have configured transifex?"
 	printf "executing go generate...\n"
-	go get -u github.com/cozy/cozy-stack/pkg/statik
+	go get github.com/cozy/cozy-stack/pkg/statik
 	pushd "${WORK_DIR}" > /dev/null
 	go generate ./web
 	popd > /dev/null
@@ -238,7 +234,7 @@ case "${1}" in
 		;;
 
 	dev)
-		COZY_ENV=development do_build scripts/cozy-stack
+		COZY_ENV=development do_build cozy-stack
 		;;
 
 	*)
