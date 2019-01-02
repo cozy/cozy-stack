@@ -23,11 +23,10 @@ echo_wrn() {
 }
 
 usage() {
-	echo -e "Usage: ${1} [release] [install] [deploy] [dev] [assets] [debug-assets] [clean]"
+	echo -e "Usage: ${1} [release] [install] [dev] [assets] [debug-assets] [clean]"
 	echo -e "\nCommands:\n"
 	echo -e "  release       builds a release of the current working-tree"
 	echo -e "  install       builds a release and install it the GOPATH"
-	echo -e "  deploy        builds a release of the current working-tree and deploys it"
 	echo -e "  dev           builds a dev version"
 	echo -e "  assets        move and download all the required assets (see: ./assets/externals)"
 	echo -e "  debug-assets  create a debug-assets/ directory with all the assets"
@@ -37,16 +36,6 @@ usage() {
 	echo -e "\n  COZY_ENV"
 	echo -e "    with release command, specify the environment of the release."
 	echo -e "    can be \"production\" or \"development\". default: \"${COZY_ENV_DFL}\""
-	echo -e "\n  COZY_DEPLOY_USER"
-	echo -e "    with deploy command, specify the user used to deploy."
-	echo -e "    default: \$USER (${USER})"
-	echo -e "\n  COZY_DEPLOY_SERVER"
-	echo -e "    with deploy command, specify the ssh server to deploy on."
-	echo -e "\n  COZY_DEPLOY_PROXY"
-	echo -e "    with deploy command, specify an ssh proxy to go through."
-	echo -e "\n  COZY_DEPLOY_POSTSCRIPT"
-	echo -e "    with deploy command, specify an optional script to execute"
-	echo -e "    on the deploy server after deploying."
 }
 
 do_prepare_ldflags() {
@@ -147,39 +136,6 @@ do_build() {
 	echo "ok"
 }
 
-# The deploy command will build a new release and deploy it on a
-# distant server using scp. To configure the distance server, you can
-# use the environment variables (see help usage):
-#
-#  - COZY_DEPLOY_USER: deploy user (default to $USER)
-#  - COZY_DEPLOY_SERVER: deploy server
-#  - COZY_DEPLOY_PROXY: deploy proxy (optional)
-#  - COZY_DEPLOY_POSTSCRIPT: deploy script to execute after deploy
-#    (optional)
-#
-do_deploy() {
-	check_env
-
-	do_release
-
-	if [ -z "${COZY_DEPLOY_PROXY}" ]; then
-		scp "${BINARY}" "${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack"
-	else
-		scp -oProxyCommand="ssh -W %h:%p ${COZY_DEPLOY_PROXY}" "${BINARY}" "${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack"
-	fi
-
-	if [ -n "${COZY_DEPLOY_POSTSCRIPT}" ]; then
-		if [ -z "${COZY_DEPLOY_PROXY}" ]; then
-			ssh "${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}" "${COZY_DEPLOY_POSTSCRIPT}"
-		else
-			ssh "${COZY_DEPLOY_PROXY}" ssh "${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}" "${COZY_DEPLOY_POSTSCRIPT}"
-		fi
-	fi
-
-	rm "${BINARY}"
-	rm "${BINARY}.sha256"
-}
-
 do_assets() {
 	tx --root "${WORK_DIR}" pull -a || echo "Do you have configured transifex?"
 	printf "executing go generate...\n"
@@ -267,10 +223,6 @@ case "${1}" in
 
 	install)
 		do_install
-		;;
-
-	deploy)
-		do_deploy
 		;;
 
 	clean)
