@@ -15,9 +15,10 @@ base = File.expand_path "..", __FILE__
 FileUtils.cd base do
   Faker::Config.locale = :fr
   FileUtils.mkdir_p "tmp/"
+  require_relative "lib/test/timeout.rb" if ENV['CI']
   require_relative "lib/model.rb"
   Dir["lib/*"].each do |f|
-    require_relative f
+    require_relative f if File.file? f
   end
   Helpers.setup
   Helpers.cleanup
