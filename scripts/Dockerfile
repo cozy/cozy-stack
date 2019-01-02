@@ -48,7 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmozjs185-dev \
     make \
     perl \
-  && echo "[chttpd]\nbind_address = 0.0.0.0" \
+  && printf "[chttpd]\\nbind_address = 0.0.0.0\\n" \
     > /usr/local/couchdb/etc/local.ini \
   && apt-get autoremove -y && apt-get clean \
   && apt-get install -y libicu57 --no-install-recommends

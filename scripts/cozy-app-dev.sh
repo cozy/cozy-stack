@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -eu
 set -m
 
 [ -z "${COZY_STACK_HOST}" ] && COZY_STACK_HOST="cozy.tools"
