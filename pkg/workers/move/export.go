@@ -521,25 +521,23 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 //
 //    ${dirname}/../${filename}-${byterange-start}
 func splitFilesIndex(root *vfs.TreeFile, cursor []string, cursors []string, bucketSize, sizeLeft int64) ([]string, int64) {
-	if root.FilesChildrenSize > sizeLeft {
-		for childIndex, child := range root.FilesChildren {
-			size := child.ByteSize
-			if size <= sizeLeft {
-				sizeLeft -= size
-				continue
-			}
-			size -= sizeLeft
-			for size > 0 {
-				rangeStart := (child.ByteSize - size)
-				cursorStr := strings.Join(append(cursor, strconv.Itoa(childIndex)), "/")
-				cursorStr += ":" + strconv.FormatInt(rangeStart, 10)
-				cursorStr = "/" + cursorStr
-				cursors = append(cursors, cursorStr)
-				sizeLeft = bucketSize
-				size -= sizeLeft
-			}
-			sizeLeft = -size
+	for childIndex, child := range root.FilesChildren {
+		size := child.ByteSize
+		if size <= sizeLeft {
+			sizeLeft -= size
+			continue
 		}
+		size -= sizeLeft
+		for size > 0 {
+			rangeStart := (child.ByteSize - size)
+			cursorStr := strings.Join(append(cursor, strconv.Itoa(childIndex)), "/")
+			cursorStr += ":" + strconv.FormatInt(rangeStart, 10)
+			cursorStr = "/" + cursorStr
+			cursors = append(cursors, cursorStr)
+			sizeLeft = bucketSize
+			size -= sizeLeft
+		}
+		sizeLeft = -size
 	}
 	for dirIndex, dir := range root.DirsChildren {
 		cursors, sizeLeft = splitFilesIndex(dir, append(cursor, strconv.Itoa(dirIndex)),
@@ -562,30 +560,29 @@ func listFilesIndex(root *vfs.TreeFile, list []fileRanged, currentCursor, cursor
 	}
 
 	cursorDiff := cursor.diff(currentCursor)
-	if cursorDiff < 0 {
-		return list, sizeLeft
-	}
-
 	cursorEqual := cursorDiff == 0 && currentCursor.equal(cursor)
-	for childIndex, child := range root.FilesChildren {
-		var fileRangeStart, fileRangeEnd int64
-		if cursorEqual {
-			if childIndex < cursor.fileCursor {
-				continue
-			} else if childIndex == cursor.fileCursor {
-				fileRangeStart = cursor.fileRangeStart
+
+	if cursorDiff >= 0 {
+		for childIndex, child := range root.FilesChildren {
+			var fileRangeStart, fileRangeEnd int64
+			if cursorEqual {
+				if childIndex < cursor.fileCursor {
+					continue
+				} else if childIndex == cursor.fileCursor {
+					fileRangeStart = cursor.fileRangeStart
+				}
 			}
-		}
-		size := child.ByteSize - fileRangeStart
-		if sizeLeft-size < 0 {
-			fileRangeEnd = fileRangeStart + sizeLeft
-		} else {
-			fileRangeEnd = child.ByteSize
-		}
-		list = append(list, fileRanged{child, fileRangeStart, fileRangeEnd})
-		sizeLeft -= size
-		if sizeLeft <= 0 {
-			break
+			size := child.ByteSize - fileRangeStart
+			if sizeLeft-size < 0 {
+				fileRangeEnd = fileRangeStart + sizeLeft
+			} else {
+				fileRangeEnd = child.ByteSize
+			}
+			list = append(list, fileRanged{child, fileRangeStart, fileRangeEnd})
+			sizeLeft -= size
+			if sizeLeft <= 0 {
+				break
+			}
 		}
 	}
 
@@ -619,6 +616,9 @@ func (c indexCursor) diff(d indexCursor) int {
 		if diff := d.dirCursor[i] - c.dirCursor[i]; diff != 0 {
 			return diff
 		}
+	}
+	if l != len(c.dirCursor) {
+		return -1
 	}
 	return 0
 }
