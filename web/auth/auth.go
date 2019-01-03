@@ -73,7 +73,7 @@ func Home(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
-	if len(instance.RegisterToken) > 0 {
+	if len(instance.RegisterToken) > 0 && !instance.OnboardingFinished {
 		if !middlewares.CheckRegisterToken(c, instance) {
 			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
 				"ThemeCSS":    ThemeCSS(instance),
@@ -1144,9 +1144,14 @@ func passphraseResetForm(c echo.Context) error {
 func passphraseForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	registerToken := c.QueryParams().Get("registerToken")
-	if registerToken == "" {
-		return echo.NotFoundHandler(c)
+
+	if registerToken == "" || !middlewares.CheckRegisterToken(c, instance) {
+		return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
+			"Domain": instance.ContextualDomain(),
+			"Locale": instance.Locale,
+		})
 	}
+
 	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
 		"Domain":        instance.ContextualDomain(),
 		"Locale":        instance.Locale,
