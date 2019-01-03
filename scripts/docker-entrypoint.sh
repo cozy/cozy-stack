@@ -1,7 +1,5 @@
 #!/bin/bash
-set -e
-
-echo "0.0.0.0 cozy.tools" >> /etc/hosts
+set -eu
 
 couchdb 2> /dev/null 1> /dev/null &
 MailHog 2> /dev/null 1> /dev/null &

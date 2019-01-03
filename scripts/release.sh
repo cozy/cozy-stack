@@ -5,8 +5,7 @@ RELEASE="$(git describe --tags)"
 
 go get -u -v ./...
 
-GOOS=linux   GOARCH=amd64 ./scripts/build.sh dev
-docker build -t "cozy/cozy-app-dev:${RELEASE}" scripts
+docker build -t "cozy/cozy-app-dev:${RELEASE}" -f scripts/Dockerfile .
 docker push "cozy/cozy-app-dev:${RELEASE}"
 docker tag "cozy/cozy-app-dev:${RELEASE}" cozy/cozy-app-dev
 docker push cozy/cozy-app-dev
