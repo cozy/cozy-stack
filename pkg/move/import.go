@@ -128,7 +128,7 @@ func createAlbums(i *instance.Instance, tr *tar.Reader, albums *AlbumReferences)
 		}
 	}
 
-	return nil
+	return bs.Err()
 }
 
 // AlbumReferences is used to associate photos to their albums, though we don't
@@ -159,7 +159,7 @@ func fillAlbums(i *instance.Instance, tr *tar.Reader, dstDoc *vfs.DirDoc, albums
 		}
 	}
 
-	return nil
+	return bs.Err()
 }
 
 func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, dirs map[string]*vfs.DirDoc) error {

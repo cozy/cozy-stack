@@ -402,6 +402,9 @@ func parseExternalsFile(filename string) (assets []*asset, err error) {
 			a = nil
 		}
 	}
+	if errs := scanner.Err(); errs != nil {
+		return nil, errs
+	}
 
 	return
 }
