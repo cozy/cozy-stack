@@ -534,8 +534,7 @@ func splitFilesIndex(root *vfs.TreeFile, cursor []string, cursors []string, buck
 			cursorStr += ":" + strconv.FormatInt(rangeStart, 10)
 			cursorStr = "/" + cursorStr
 			cursors = append(cursors, cursorStr)
-			sizeLeft = bucketSize
-			size -= sizeLeft
+			size -= bucketSize
 		}
 		sizeLeft = -size
 	}
@@ -584,18 +583,16 @@ func listFilesIndex(root *vfs.TreeFile, list []fileRanged, currentCursor, cursor
 				break
 			}
 		}
-	}
 
-	// append empty directory so that we explicitly csreate them in the tarball
-	if len(root.DirsChildren) == 0 && len(root.FilesChildren) == 0 {
-		list = append(list, fileRanged{root, 0, 0})
+		// append empty directory so that we explicitly create them in the tarball
+		if len(root.DirsChildren) == 0 && len(root.FilesChildren) == 0 {
+			list = append(list, fileRanged{root, 0, 0})
+		}
 	}
 
 	for dirIndex, dir := range root.DirsChildren {
-		if sizeLeft <= 0 {
-			break
-		}
-		list, sizeLeft = listFilesIndex(dir, list, currentCursor.next(dirIndex), cursor, bucketSize, sizeLeft)
+		list, sizeLeft = listFilesIndex(dir, list, currentCursor.next(dirIndex),
+			cursor, bucketSize, sizeLeft)
 	}
 
 	return list, sizeLeft
@@ -618,7 +615,7 @@ func (c indexCursor) diff(d indexCursor) int {
 		}
 	}
 	if l != len(c.dirCursor) {
-		return -1
+		return 1
 	}
 	return 0
 }
@@ -638,8 +635,8 @@ func (c indexCursor) equal(d indexCursor) bool {
 
 func (c indexCursor) next(dirIndex int) (next indexCursor) {
 	next.dirCursor = append(c.dirCursor, dirIndex)
-	next.fileCursor = c.fileCursor
-	next.fileRangeStart = c.fileRangeStart
+	next.fileCursor = 0
+	next.fileRangeStart = 0
 	return
 }
 
