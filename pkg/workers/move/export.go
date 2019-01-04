@@ -554,7 +554,7 @@ type fileRanged struct {
 // listFilesIndex browse the index with the given cursor and returns the
 // flatting list of file entering the bucket.
 func listFilesIndex(root *vfs.TreeFile, list []fileRanged, currentCursor, cursor indexCursor, bucketSize, sizeLeft int64) ([]fileRanged, int64) {
-	if sizeLeft <= 0 {
+	if sizeLeft < 0 {
 		return list, sizeLeft
 	}
 
@@ -571,6 +571,9 @@ func listFilesIndex(root *vfs.TreeFile, list []fileRanged, currentCursor, cursor
 					fileRangeStart = cursor.fileRangeStart
 				}
 			}
+			if sizeLeft <= 0 {
+				return list, sizeLeft
+			}
 			size := child.ByteSize - fileRangeStart
 			if sizeLeft-size < 0 {
 				fileRangeEnd = fileRangeStart + sizeLeft
@@ -579,8 +582,8 @@ func listFilesIndex(root *vfs.TreeFile, list []fileRanged, currentCursor, cursor
 			}
 			list = append(list, fileRanged{child, fileRangeStart, fileRangeEnd})
 			sizeLeft -= size
-			if sizeLeft <= 0 {
-				break
+			if sizeLeft < 0 {
+				return list, sizeLeft
 			}
 		}
 
@@ -614,8 +617,10 @@ func (c indexCursor) diff(d indexCursor) int {
 			return diff
 		}
 	}
-	if l != len(c.dirCursor) {
+	if len(d.dirCursor) > len(c.dirCursor) {
 		return 1
+	} else if len(d.dirCursor) < len(c.dirCursor) {
+		return -1
 	}
 	return 0
 }
