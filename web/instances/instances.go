@@ -211,6 +211,12 @@ func fsckHandler(c echo.Context) (err error) {
 	w.WriteHeader(200)
 	encoder := json.NewEncoder(w)
 	for log := range logCh {
+		// XXX do not serialize to JSON the children, as it can take more than 64ko
+		// and scanner will ignore such lines
+		if !log.IsFile {
+			log.DirDoc.DirsChildren = nil
+			log.DirDoc.FilesChildren = nil
+		}
 		if errenc := encoder.Encode(log); errenc != nil {
 			return errenc
 		}

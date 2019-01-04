@@ -18,7 +18,7 @@ cozy-stack instances fsck <domain> [flags]
 
 ```
   -h, --help              help for fsck
-      --index-indegrity   Check the index integrity only
+      --index-integrity   Check the index integrity only
       --json              Output more informations in JSON format
 ```
 

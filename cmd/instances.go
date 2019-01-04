@@ -547,7 +547,6 @@ in swift/localfs but not couchdb.
 		if len(args) == 0 {
 			return cmd.Usage()
 		}
-
 		domain := args[0]
 
 		c := newAdminClient()
@@ -562,18 +561,14 @@ in swift/localfs but not couchdb.
 			return err
 		}
 
-		hasError := false
 		scanner := bufio.NewScanner(res.Body)
 		for scanner.Scan() {
-			if err = scanner.Err(); err != nil {
-				return err
-			}
 			fmt.Println(string(scanner.Bytes()))
 		}
-
-		if hasError {
-			os.Exit(1)
+		if err = scanner.Err(); err != nil {
+			return err
 		}
+
 		return nil
 	},
 }
@@ -945,7 +940,7 @@ func init() {
 	modifyInstanceCmd.Flags().BoolVar(&flagBlocked, "blocked", false, "Block the instance")
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
-	fsckInstanceCmd.Flags().BoolVar(&flagFsckIndexIntegrity, "index-indegrity", false, "Check the index integrity only")
+	fsckInstanceCmd.Flags().BoolVar(&flagFsckIndexIntegrity, "index-integrity", false, "Check the index integrity only")
 	fsckInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagAllowLoginScope, "allow-login-scope", false, "Allow login scope")
