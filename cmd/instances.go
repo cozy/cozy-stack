@@ -561,18 +561,14 @@ in swift/localfs but not couchdb.
 			return err
 		}
 
-		hasError := false
 		scanner := bufio.NewScanner(res.Body)
 		for scanner.Scan() {
-			if err = scanner.Err(); err != nil {
-				return err
-			}
 			fmt.Println(string(scanner.Bytes()))
 		}
-
-		if hasError {
-			os.Exit(1)
+		if err = scanner.Err(); err != nil {
+			return err
 		}
+
 		return nil
 	},
 }
