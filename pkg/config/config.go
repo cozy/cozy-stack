@@ -372,7 +372,7 @@ func Setup(cfgFile string) (err error) {
 			return fmt.Errorf("Template error for config files %s: %s", cfgFile, err)
 		}
 
-		cfgFile = regexp.MustCompile("\\.local$").ReplaceAllString(cfgFile, "")
+		cfgFile = regexp.MustCompile(`\.local$`).ReplaceAllString(cfgFile, "")
 		if ext := filepath.Ext(cfgFile); len(ext) > 0 {
 			viper.SetConfigType(ext[1:])
 		}
