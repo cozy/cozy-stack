@@ -835,13 +835,17 @@ func FindConfigFile(name string) (string, error) {
 // taking precedence.
 func findConfigFiles(name string) ([]string, error) {
 	var configFiles []string
-	var configFile string
+	configFile := ""
 	for _, ext := range viper.SupportedExts {
 		configFile, _ = FindConfigFile(name + "." + ext)
 		if configFile != "" {
 			break
 		}
 	}
+	if configFile == "" {
+		return nil, nil
+	}
+
 	configFiles = append(configFiles, configFile)
 
 	configFile = configFile + ".local"
