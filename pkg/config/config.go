@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -51,6 +52,7 @@ const Filename = "cozy"
 // Paths is the list of directories used to search for a
 // configuration file
 var Paths = []string{
+	".",
 	".cozy",
 	"$HOME/.cozy",
 	"/etc/cozy",
@@ -331,52 +333,55 @@ func Setup(cfgFile string) (err error) {
 	viper.AutomaticEnv()
 	applyDefaults(viper.GetViper())
 
+	var cfgFiles []string
 	if cfgFile == "" {
-		for _, ext := range viper.SupportedExts {
-			var file string
-			file, err = FindConfigFile(Filename + "." + ext)
-			if file != "" && err == nil {
-				cfgFile = file
-				break
-			}
+		cfgFiles, err = findConfigFiles(Filename)
+		if err != nil {
+			return err
 		}
+	} else {
+		cfgFiles = []string{cfgFile}
 	}
 
-	if cfgFile == "" {
+	if len(cfgFiles) == 0 {
 		return UseViper(viper.GetViper())
 	}
 
-	log.Debugf("Using config file: %s", cfgFile)
+	log.Debugf("Using config files: %s", cfgFiles)
 
-	tmpl := template.New(filepath.Base(cfgFile))
-	tmpl = tmpl.Option("missingkey=zero")
-	tmpl, err = tmpl.Funcs(numericFuncsMap).ParseFiles(cfgFile)
-	if err != nil {
-		return fmt.Errorf("Unable to open and parse configuration file "+
-			"template %s: %s", cfgFile, err)
-	}
+	for _, cfgFile = range cfgFiles {
+		tmplName := filepath.Base(cfgFile)
+		tmpl := template.New(tmplName)
+		tmpl = tmpl.Option("missingkey=zero")
+		tmpl, err = tmpl.Funcs(numericFuncsMap).ParseFiles(cfgFile)
+		if err != nil {
+			return fmt.Errorf("Unable to open and parse configuration file "+
+				"template %s: %s", cfgFile, err)
+		}
 
-	dest := new(bytes.Buffer)
-	ctxt := &struct {
-		Env    map[string]string
-		NumCPU int
-	}{
-		Env:    envMap(),
-		NumCPU: runtime.NumCPU(),
-	}
-	err = tmpl.ExecuteTemplate(dest, filepath.Base(cfgFile), ctxt)
-	if err != nil {
-		return fmt.Errorf("Template error for config file %s: %s", cfgFile, err)
-	}
+		dest := new(bytes.Buffer)
+		ctxt := &struct {
+			Env    map[string]string
+			NumCPU int
+		}{
+			Env:    envMap(),
+			NumCPU: runtime.NumCPU(),
+		}
+		err = tmpl.ExecuteTemplate(dest, tmplName, ctxt)
+		if err != nil {
+			return fmt.Errorf("Template error for config files %s: %s", cfgFile, err)
+		}
 
-	if ext := filepath.Ext(cfgFile); len(ext) > 0 {
-		viper.SetConfigType(ext[1:])
-	}
-	if err := viper.ReadConfig(dest); err != nil {
-		if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
-			log.Errorf("Failed to read cozy-stack configurations from %s", cfgFile)
-			log.Errorf(dest.String())
-			return err
+		cfgFile = regexp.MustCompile(`\.local$`).ReplaceAllString(cfgFile, "")
+		if ext := filepath.Ext(cfgFile); len(ext) > 0 {
+			viper.SetConfigType(ext[1:])
+		}
+		if err := viper.MergeConfig(dest); err != nil {
+			if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
+				log.Errorf("Failed to read cozy-stack configurations from %s", cfgFile)
+				log.Errorf(dest.String())
+				return err
+			}
 		}
 	}
 
@@ -823,6 +828,33 @@ func FindConfigFile(name string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("Could not find config file %q", name)
+}
+
+// findConfigFiles search in the Paths directories for the first existing directory,
+// then look for supported Viper file for both .ext and .ext.local version, the later
+// taking precedence.
+func findConfigFiles(name string) ([]string, error) {
+	var configFiles []string
+	configFile := ""
+	for _, ext := range viper.SupportedExts {
+		configFile, _ = FindConfigFile(name + "." + ext)
+		if configFile != "" {
+			break
+		}
+	}
+	if configFile == "" {
+		return nil, nil
+	}
+
+	configFiles = append(configFiles, configFile)
+
+	configFile = configFile + ".local"
+	ok, _ := utils.FileExists(configFile)
+	if ok {
+		configFiles = append(configFiles, configFile)
+	}
+
+	return configFiles, nil
 }
 
 func parseURL(u string) (*url.URL, *url.Userinfo, error) {
