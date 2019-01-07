@@ -620,3 +620,19 @@ func TestWebappUninstallErrored(t *testing.T) {
 	assert.Nil(t, inst4)
 	assert.Equal(t, apps.ErrNotFound, err)
 }
+
+func TestWebappInstallBadType(t *testing.T) {
+	manGen = manifestKonnector
+	manName = apps.KonnectorManifestName
+
+	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Install,
+		Type:      apps.Webapp,
+		Slug:      "cozy-bad-type",
+		SourceURL: "git://localhost/",
+	})
+	assert.NoError(t, err)
+	_, err = inst.RunSync()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Manifest types are not the same")
+}

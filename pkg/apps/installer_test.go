@@ -54,6 +54,7 @@ func manifestWebapp() string {
   "name": "mini-app",
   "permissions": {},
   "slug": "mini",
+  "type": "webapp",
   "version": "` + localVersion + `",
   "services": ` + localServices + `
 }`
@@ -71,6 +72,7 @@ func manifestKonnector() string {
   "name": "mini-app",
   "permissions": {},
   "slug": "mini",
+  "type": "konnector",
   "version": "` + localVersion + `"
 }`
 }

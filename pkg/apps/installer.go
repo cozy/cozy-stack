@@ -1,7 +1,9 @@
 package apps
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/url"
 	"regexp"
@@ -405,7 +407,10 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 	}
 	defer r.Close()
 
-	newManifest, err := i.man.ReadManifest(io.LimitReader(r, ManifestMaxSize), i.slug, i.src.String())
+	var buf bytes.Buffer
+	tee := io.TeeReader(r, &buf)
+
+	newManifest, err := i.man.ReadManifest(io.LimitReader(tee, ManifestMaxSize), i.slug, i.src.String())
 	if err != nil {
 		return nil, err
 	}
@@ -418,6 +423,29 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 		if m, ok := newManifest.(*KonnManifest); ok {
 			m.Parameters = i.overridenParameters
 		}
+	}
+
+	// Checking the new manifest apptype to prevent human mistakes (like asking
+	// a konnector installation instead of a webapp)
+	newAppType := struct {
+		AppType string `json:"type"`
+	}{}
+
+	var newManifestAppType AppType
+	if err = json.Unmarshal(buf.Bytes(), &newAppType); err == nil {
+		if newAppType.AppType == "konnector" {
+			newManifestAppType = Konnector
+		}
+		if newAppType.AppType == "webapp" {
+			newManifestAppType = Webapp
+		}
+	}
+
+	appTypesEmpty := i.man.AppType() == 0 || newManifestAppType == 0
+	appTypesMismatch := i.man.AppType() != newManifestAppType
+
+	if !appTypesEmpty && appTypesMismatch {
+		return nil, fmt.Errorf("Manifest types are not the sames. Expected %d, got %d. Are you sure of %s type ? (konnector/webapp)", i.man.AppType(), newManifestAppType, i.man.Slug())
 	}
 	return newManifest, nil
 }
