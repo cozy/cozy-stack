@@ -805,12 +805,14 @@ func authorizeSharing(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if s.Owner || s.Active || len(s.Members) < 2 {
+	if s.Owner || len(s.Members) < 2 {
 		return sharing.ErrInvalidSharing
 	}
 
-	if err = s.SendAnswer(instance, params.state); err != nil {
-		return err
+	if !s.Active {
+		if err = s.SendAnswer(instance, params.state); err != nil {
+			return err
+		}
 	}
 	redirect := s.RedirectAfterAuthorizeURL(instance)
 	return c.Redirect(http.StatusSeeOther, redirect.String())
