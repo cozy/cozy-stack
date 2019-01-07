@@ -442,21 +442,28 @@ func (t *task) run() (err error) {
 		timer.ObserveDuration()
 		t.endTime = time.Now()
 
-		if err == context.DeadlineExceeded { // This is a timeout
-			var slug string
-			msg := map[string]string{}
+		// Incrementing timeouts counter
+		var slug string
+		var msg map[string]interface{}
 
-			if err = json.Unmarshal(t.job.Message, &msg); err != nil {
-				switch t.w.Type {
-				case "konnector":
-					slug = msg["konnector"]
-				case "service":
-					slug = msg["slug"]
-				default:
-					slug = ""
-				}
+		if errd := json.Unmarshal(t.job.Message, &msg); errd != nil {
+			ctx.Logger().Errorf("Cannot unmarshal job message %s", t.job.Message)
+		} else {
+			switch t.w.Type {
+			case "konnector":
+				slug = msg["konnector"].(string)
+			case "service":
+				slug = msg["slug"].(string)
+			default:
+				slug = ""
 			}
-			metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug).Inc()
+
+			// Forcing the timeout counter to 0 if it has not been initialized
+			metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug)
+
+			if err == context.DeadlineExceeded { // This is a timeout
+				metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug).Inc()
+			}
 		}
 
 		// Even though ctx should have expired already, it is good practice to call
