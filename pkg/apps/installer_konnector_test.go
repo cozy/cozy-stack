@@ -352,6 +352,7 @@ func TestKonnectorInstallBadType(t *testing.T) {
 		Slug:      "cozy-bad-type",
 		SourceURL: "git://localhost/",
 	})
+	assert.NoError(t, err)
 	_, err = inst.RunSync()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Manifest types are not the same")
