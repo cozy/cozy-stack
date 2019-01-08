@@ -431,6 +431,29 @@ func updatesHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, job)
 }
 
+type diskUsageResult struct {
+	Used  int64 `json:"used,string"`
+	Quota int64 `json:"quota,string,omitempty"`
+}
+
+func diskUsage(c echo.Context) error {
+	domain := c.Param("domain")
+	instance, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
+	fs := instance.VFS()
+
+	used, err := fs.DiskUsage()
+	if err != nil {
+		return err
+	}
+	result := &diskUsageResult{}
+	result.Used = used
+	result.Quota = fs.DiskQuota()
+	return c.JSON(http.StatusOK, result)
+}
+
 func showPrefix(c echo.Context) error {
 	domain := c.Param("domain")
 
@@ -503,6 +526,7 @@ func Routes(router *echo.Group) {
 	router.GET("/assets", assetsInfos)
 	router.POST("/assets", addAssets)
 	router.DELETE("/assets/:context/*", deleteAssets)
+	router.GET("/:domain/disk-usage", diskUsage)
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
 }
