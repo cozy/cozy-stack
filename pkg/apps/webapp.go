@@ -417,7 +417,7 @@ func (m *WebappManifest) FindRoute(vpath string) (Route, string) {
 // FindIntent returns an intent for the given action and type if the manifest has one
 func (m *WebappManifest) FindIntent(action, typ string) *Intent {
 	for _, intent := range m.Intents {
-		if strings.ToUpper(action) != strings.ToUpper(intent.Action) {
+		if !strings.EqualFold(action, intent.Action) {
 			continue
 		}
 		for _, t := range intent.Types {
