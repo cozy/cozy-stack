@@ -1585,6 +1585,81 @@ func TestSecretExchangeNoPayload(t *testing.T) {
 	defer res.Body.Close()
 }
 
+func TestPassphraseOnboarding(t *testing.T) {
+	// Here we create a new instance without passphrase
+	d := "test.cozycloud.cc.web_passphrase"
+	instance.Destroy(d)
+	inst, err := instance.Create(&instance.Options{
+		Domain: d,
+		Locale: "en",
+		Email:  "alice@example.com",
+	})
+	assert.NoError(t, err)
+	assert.False(t, inst.OnboardingFinished)
+
+	// Should redirect to /auth/passphrase
+	req, _ := http.NewRequest("GET", ts.URL+"/?registerToken="+hex.EncodeToString(inst.RegisterToken), nil)
+	req.Host = inst.Domain
+	res, err := client.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, 303, res.StatusCode)
+	assert.Contains(t, res.Header.Get("Location"), "/auth/passphrase?registerToken=")
+
+	// Adding a passphrase and check if we are redirected to home
+	pass := []byte("passphrase")
+	err = inst.RegisterPassphrase(pass, inst.RegisterToken)
+	assert.NoError(t, err)
+
+	inst.OnboardingFinished = true
+
+	req2, _ := http.NewRequest("GET", ts.URL+"/?registerToken="+hex.EncodeToString(inst.RegisterToken), nil)
+	req2.Host = inst.Domain
+	res2, err2 := client.Do(req2)
+	assert.NoError(t, err2)
+	assert.Contains(t, res2.Header.Get("Location"), "/auth/login")
+}
+
+func TestPassphraseOnboardingFinished(t *testing.T) {
+	// Using the testInstance which had already been onboarded
+	// Should redirect to home
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase", nil)
+	req.Host = domain
+
+	res, err := client.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, res.StatusCode, 303)
+	assert.Equal(t, res.Header.Get("Location"), "https://home.cozy.example.net/")
+}
+
+func TestPassphraseOnboardingBadRegisterToken(t *testing.T) {
+	// Should render need_onboarding
+	d := "test.cozycloud.cc.web_passphrase_bad_token"
+	instance.Destroy(d)
+	inst, err := instance.Create(&instance.Options{
+		Domain: d,
+		Locale: "en",
+		Email:  "alice@example.com",
+	})
+	assert.NoError(t, err)
+	assert.False(t, inst.OnboardingFinished)
+
+	// Should redirect to /auth/passphrase
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase?registerToken=coincoin", nil)
+	req.Host = inst.Domain
+	res, err := client.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	content, _ := ioutil.ReadAll(res.Body)
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Contains(t, string(content), "Your Cozy has not been yet activated.")
+
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	conf := config.GetConfig()
