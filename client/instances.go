@@ -105,6 +105,7 @@ type ImportOptions struct {
 	IncreaseQuota bool
 }
 
+// DBPrefix returns the database prefix for the instance
 func (i *Instance) DBPrefix() string {
 	if i.Attrs.Prefix != "" {
 		return i.Attrs.Prefix
@@ -398,6 +399,22 @@ func (c *Client) RebuildRedis() error {
 		NoResponse: true,
 	})
 	return err
+}
+
+// DiskUsage returns the information about disk usage and quota
+func (c *Client) DiskUsage(domain string) (map[string]interface{}, error) {
+	res, err := c.Req(&request.Options{
+		Method: "GET",
+		Path:   "/instances/" + domain + "/disk-usage",
+	})
+	if err != nil {
+		return nil, err
+	}
+	var info map[string]interface{}
+	if err = json.NewDecoder(res.Body).Decode(&info); err != nil {
+		return nil, err
+	}
+	return info, nil
 }
 
 func readInstance(res *http.Response) (*Instance, error) {

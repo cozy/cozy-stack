@@ -110,6 +110,27 @@ var importFilesCmd = &cobra.Command{
 	},
 }
 
+var usageFilesCmd = &cobra.Command{
+	Use:   "usage [--domain domain]",
+	Short: "Show the usage and quota for the files of this instance",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if flagFilesDomain == "" {
+			errPrintfln("%s", errFilesMissingDomain)
+			return cmd.Usage()
+		}
+		c := newAdminClient()
+		info, err := c.DiskUsage(flagFilesDomain)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Usage: %v\n", info["used"])
+		if quota, ok := info["quota"]; ok {
+			fmt.Printf("Quota: %v\n", quota)
+		}
+		return nil
+	},
+}
+
 func execCommand(c *client.Client, command string, w io.Writer) error {
 	args := splitArgs(command)
 	if len(args) == 0 {
@@ -488,6 +509,7 @@ func init() {
 
 	filesCmdGroup.AddCommand(execFilesCmd)
 	filesCmdGroup.AddCommand(importFilesCmd)
+	filesCmdGroup.AddCommand(usageFilesCmd)
 
 	RootCmd.AddCommand(filesCmdGroup)
 }

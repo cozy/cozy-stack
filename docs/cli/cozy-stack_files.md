@@ -39,4 +39,5 @@ cozy-stack files <command> [flags]
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack files exec](cozy-stack_files_exec.md)	 - Execute the given command on the specified domain and leave
 * [cozy-stack files import](cozy-stack_files_import.md)	 - Import the specified file or directory into cozy
+* [cozy-stack files usage](cozy-stack_files_usage.md)	 - Show the usage and quota for the files of this instance
 
