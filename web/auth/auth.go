@@ -1144,6 +1144,10 @@ func passphraseResetForm(c echo.Context) error {
 func passphraseForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	registerToken := c.QueryParams().Get("registerToken")
+	if instance.OnboardingFinished {
+		redirect := instance.DefaultRedirection()
+		return c.Redirect(http.StatusSeeOther, redirect.String())
+	}
 
 	if registerToken == "" || !middlewares.CheckRegisterToken(c, instance) {
 		return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
