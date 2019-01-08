@@ -244,6 +244,22 @@ Content-Type: application/x-www-form-urlencoded
 csrf_token=123456890&passphrase_reset_token=123456789&passphrase=mynewpassphrase
 ```
 
+### GET /auth/passphrase
+
+This page renders a form to set the password for an onboarding instance. This
+endpoint expects a valid `registerToken` parameter.
+
+In case of success, the instance is marked as onboarded and the user is
+redirected to his home.
+
+If the instance is already onboarded, the user is redirected to his home.
+
+```http
+GET /auth/passphrase/?registerToken=e0fbe2c5b90cdcdd9b3487b48b480e0b HTTP/1.1
+Host: cozy.example.org
+Content-Type: text/html
+```
+
 ### POST /auth/register
 
 This route is used by OAuth2 clients to dynamically register them-selves.
