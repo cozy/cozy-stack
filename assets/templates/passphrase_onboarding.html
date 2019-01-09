@@ -48,9 +48,7 @@
         xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
         xhr.send(json);
 
-        var onboarded = new XMLHttpRequest();
-        onboarded.open("GET", "/settings/onboarded", true)
-        onboarded.send();
+        window.location.replace("//{{.Domain}}/settings/onboarded")
 
         return false;
     }
