@@ -108,17 +108,33 @@ func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error)
 }
 
 var cozyUITemplate *template.Template
+var themeTemplate *template.Template
 
 // BuildTemplates ensure that the cozy-ui can be injected in templates
 func BuildTemplates() {
 	cozyUITemplate = template.Must(template.New("cozy-ui").Funcs(statik.FuncsMap).Parse(`` +
 		`<link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-ui.min.css" .ContextName}}">`,
 	))
+	themeTemplate = template.Must(template.New("theme").Funcs(statik.FuncsMap).Parse(`` +
+		`<link rel="stylesheet" type="text/css" href="{{asset .Domain "/styles/theme.css" .ContextName}}">`,
+	))
 }
 
 func cozyUI(i *instance.Instance) template.HTML {
 	buf := new(bytes.Buffer)
 	err := cozyUITemplate.Execute(buf, echo.Map{
+		"Domain":      i.ContextualDomain(),
+		"ContextName": i.ContextName,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return template.HTML(buf.String()) // #nosec
+}
+
+func themeCSS(i *instance.Instance) template.HTML {
+	buf := new(bytes.Buffer)
+	err := themeTemplate.Execute(buf, echo.Map{
 		"Domain":      i.ContextualDomain(),
 		"ContextName": i.ContextName,
 	})
@@ -166,6 +182,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 
 	return c.Render(code, "login.html", echo.Map{
 		"CozyUI":           cozyUI(i),
+		"ThemeCSS":         themeCSS(i),
 		"Domain":           i.ContextualDomain(),
 		"Locale":           i.Locale,
 		"Title":            title,
@@ -223,7 +240,6 @@ func loginForm(c echo.Context) error {
 		c.SetCookie(cookie)
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
-
 	return renderLoginForm(c, instance, http.StatusOK, "", redirect)
 }
 
