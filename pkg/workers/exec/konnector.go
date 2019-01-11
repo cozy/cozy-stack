@@ -162,14 +162,14 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fileServer := i.KonnectorsFileServer()
-	tarFile, err := fileServer.Open(slug, man.Version(), apps.KonnectorArchiveName)
+	tarFile, err := fileServer.Open(slug, man.Version(), man.Checksum(), apps.KonnectorArchiveName)
 	if err == nil {
 		err = extractTar(workFS, tarFile)
 		if errc := tarFile.Close(); err == nil {
 			err = errc
 		}
 	} else if os.IsNotExist(err) {
-		err = copyFiles(workFS, fileServer, slug, man.Version())
+		err = copyFiles(workFS, fileServer, slug, man.Version(), man.Checksum())
 	}
 	if err != nil {
 		return "", err
@@ -351,15 +351,15 @@ func (w *konnectorWorker) ensurePermissions(inst *instance.Instance) error {
 	return couchdb.UpdateDoc(inst, perms)
 }
 
-func copyFiles(workFS afero.Fs, fileServer apps.FileServer, slug, version string) error {
-	files, err := fileServer.FilesList(slug, version)
+func copyFiles(workFS afero.Fs, fileServer apps.FileServer, slug, version, shasum string) error {
+	files, err := fileServer.FilesList(slug, version, shasum)
 	if err != nil {
 		return err
 	}
 	for _, file := range files {
 		var src io.ReadCloser
 		var dst io.WriteCloser
-		src, err = fileServer.Open(slug, version, file)
+		src, err = fileServer.Open(slug, version, shasum, file)
 		if err != nil {
 			return err
 		}
