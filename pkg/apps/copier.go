@@ -18,7 +18,7 @@ import (
 // Copier is an interface defining a common set of functions for the installer
 // to copy the application into an unknown storage.
 type Copier interface {
-	Start(slug, version, shasum string) (exists bool, err error)
+	Start(slug, version string) (exists bool, err error)
 	Copy(stat os.FileInfo, src io.Reader) error
 	Abort() error
 	Commit() error
@@ -47,11 +47,8 @@ func NewSwiftCopier(conn *swift.Connection, appsType AppType) Copier {
 	}
 }
 
-func (f *swiftCopier) Start(slug, version, shasum string) (bool, error) {
+func (f *swiftCopier) Start(slug, version string) (bool, error) {
 	f.appObj = path.Join(slug, version)
-	if shasum != "" {
-		f.appObj += "-" + shasum
-	}
 	_, _, err := f.c.Object(f.container, f.appObj)
 	if err == nil {
 		return true, nil
@@ -154,11 +151,8 @@ func NewAferoCopier(fs afero.Fs) Copier {
 	return &aferoCopier{fs: fs}
 }
 
-func (f *aferoCopier) Start(slug, version, shasum string) (bool, error) {
+func (f *aferoCopier) Start(slug, version string) (bool, error) {
 	f.appDir = path.Join("/", slug, version)
-	if shasum != "" {
-		f.appDir += "-" + shasum
-	}
 	exists, err := afero.DirExists(f.fs, f.appDir)
 	if err != nil || exists {
 		return exists, err

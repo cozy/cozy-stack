@@ -23,10 +23,10 @@ import (
 // FileServer interface defines a way to access and serve the application's
 // data files.
 type FileServer interface {
-	Open(slug, version, shasum, file string) (io.ReadCloser, error)
-	FilesList(slug, version, shasum string) ([]string, error)
+	Open(slug, version, file string) (io.ReadCloser, error)
+	FilesList(slug, version string) ([]string, error)
 	ServeFileContent(w http.ResponseWriter, req *http.Request,
-		slug, version, shasum, file string) error
+		slug, version, file string) error
 }
 
 type swiftServer struct {
@@ -35,7 +35,7 @@ type swiftServer struct {
 }
 
 type aferoServer struct {
-	mkPath func(slug, version, shasum, file string) string
+	mkPath func(slug, version, file string) string
 	fs     afero.Fs
 }
 
@@ -79,8 +79,8 @@ func NewSwiftFileServer(conn *swift.Connection, appsType AppType) FileServer {
 	}
 }
 
-func (s *swiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, error) {
-	objName := s.makeObjectName(slug, version, shasum, file)
+func (s *swiftServer) Open(slug, version, file string) (io.ReadCloser, error) {
+	objName := s.makeObjectName(slug, version, file)
 	f, h, err := s.c.ObjectOpen(s.container, objName, false, nil)
 	if err != nil {
 		return nil, wrapSwiftErr(err)
@@ -92,8 +92,8 @@ func (s *swiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, e
 	return f, nil
 }
 
-func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, shasum, file string) error {
-	objName := s.makeObjectName(slug, version, shasum, file)
+func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, file string) error {
+	objName := s.makeObjectName(slug, version, file)
 	f, h, err := s.c.ObjectOpen(s.container, objName, false, nil)
 	if err != nil {
 		return wrapSwiftErr(err)
@@ -143,16 +143,12 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	return nil
 }
 
-func (s *swiftServer) makeObjectName(slug, version, shasum, file string) string {
-	basepath := path.Join("/", slug, version)
-	if shasum != "" {
-		basepath += "-" + shasum
-	}
-	return path.Join(basepath, file)
+func (s *swiftServer) makeObjectName(slug, version, file string) string {
+	return path.Join(slug, version, file)
 }
 
-func (s *swiftServer) FilesList(slug, version, shasum string) ([]string, error) {
-	prefix := s.makeObjectName(slug, version, shasum, "") + "/"
+func (s *swiftServer) FilesList(slug, version string) ([]string, error) {
+	prefix := s.makeObjectName(slug, version, "") + "/"
 	names, err := s.c.ObjectNamesAll(s.container, &swift.ObjectsOpts{
 		Prefix: prefix,
 	})
@@ -175,7 +171,7 @@ func (s *swiftServer) FilesList(slug, version, shasum string) ([]string, error) 
 // You can provide a makePath method to define how the file name should be
 // created from the application's slug, version and file name. If not provided,
 // the standard VFS concatenation (starting with vfs.WebappsDirName) is used.
-func NewAferoFileServer(fs afero.Fs, makePath func(slug, version, shasum, file string) string) FileServer {
+func NewAferoFileServer(fs afero.Fs, makePath func(slug, version, file string) string) FileServer {
 	if makePath == nil {
 		makePath = defaultMakePath
 	}
@@ -185,9 +181,9 @@ func NewAferoFileServer(fs afero.Fs, makePath func(slug, version, shasum, file s
 	}
 }
 
-func (s *aferoServer) Open(slug, version, shasum, file string) (io.ReadCloser, error) {
+func (s *aferoServer) Open(slug, version, file string) (io.ReadCloser, error) {
 	isGzipped := true
-	filepath := s.mkPath(slug, version, shasum, file)
+	filepath := s.mkPath(slug, version, file)
 	f, err := s.open(filepath + ".gz")
 	if os.IsNotExist(err) {
 		isGzipped = false
@@ -205,8 +201,8 @@ func (s *aferoServer) open(filepath string) (io.ReadCloser, error) {
 	return s.fs.Open(filepath)
 }
 
-func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, shasum, file string) error {
-	filepath := s.mkPath(slug, version, shasum, file)
+func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, file string) error {
+	filepath := s.mkPath(slug, version, file)
 	return s.serveFileContent(w, req, filepath)
 }
 func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request, filepath string) error {
@@ -278,9 +274,9 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 	return nil
 }
 
-func (s *aferoServer) FilesList(slug, version, shasum string) ([]string, error) {
+func (s *aferoServer) FilesList(slug, version string) ([]string, error) {
 	var names []string
-	rootPath := s.mkPath(slug, version, shasum, "")
+	rootPath := s.mkPath(slug, version, "")
 	err := afero.Walk(s.fs, rootPath, func(path string, infos os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -295,11 +291,8 @@ func (s *aferoServer) FilesList(slug, version, shasum string) ([]string, error) 
 	return names, err
 }
 
-func defaultMakePath(slug, version, shasum, file string) string {
+func defaultMakePath(slug, version, file string) string {
 	basepath := path.Join("/", slug, version)
-	if shasum != "" {
-		basepath += "-" + shasum
-	}
 	filepath := path.Join("/", file)
 	return path.Join(basepath, filepath)
 }

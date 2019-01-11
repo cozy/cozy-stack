@@ -59,7 +59,6 @@ func (f *registryFetcher) Fetch(src *url.URL, fs Copier, man Manifest) error {
 		return err
 	}
 	man.SetVersion(v.Version)
-	man.SetChecksum(v.Sha256)
 	return fetchHTTP(u, shasum, fs, man, v.TarPrefix)
 }
 

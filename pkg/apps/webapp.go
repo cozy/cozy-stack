@@ -87,7 +87,6 @@ type WebappManifest struct {
 	DocSlug          string          `json:"slug"`
 	DocState         State           `json:"state"`
 	DocSource        string          `json:"source"`
-	DocChecksum      string          `json:"checksum"`
 	DocVersion       string          `json:"version"`
 	DocPermissions   permissions.Set `json:"permissions"`
 	AvailableVersion string          `json:"available_version,omitempty"`
@@ -175,9 +174,6 @@ func (m *WebappManifest) Source() string { return m.DocSource }
 // Version is part of the Manifest interface
 func (m *WebappManifest) Version() string { return m.DocVersion }
 
-// Checksum is part of the Manifest interface
-func (m *WebappManifest) Checksum() string { return m.DocChecksum }
-
 // Slug is part of the Manifest interface
 func (m *WebappManifest) Slug() string { return m.DocSlug }
 
@@ -195,9 +191,6 @@ func (m *WebappManifest) SetVersion(version string) { m.DocVersion = version }
 
 // SetAvailableVersion is part of the Manifest interface
 func (m *WebappManifest) SetAvailableVersion(version string) { m.AvailableVersion = version }
-
-// SetChecksum is part of the Manifest interface
-func (m *WebappManifest) SetChecksum(shasum string) { m.DocChecksum = shasum }
 
 // AppType is part of the Manifest interface
 func (m *WebappManifest) AppType() AppType { return Webapp }

@@ -215,7 +215,7 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 	man.SetVersion(version)
 
 	// If the application folder already exists, we can bail early.
-	exists, err := fs.Start(slug, version, "")
+	exists, err := fs.Start(slug, version)
 	if err != nil || exists {
 		return err
 	}
@@ -319,7 +319,7 @@ func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs Copier, man 
 	man.SetVersion(version)
 
 	// If the application folder already exists, we can bail early.
-	exists, err := fs.Start(slug, version, "")
+	exists, err := fs.Start(slug, version)
 	if err != nil || exists {
 		return err
 	}

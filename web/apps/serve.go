@@ -156,7 +156,6 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 
 	filepath := path.Join("/", route.Folder, file)
 	version := app.Version()
-	shasum := app.Checksum()
 
 	if file != route.Index {
 		// If file is not the index, it is considered an asset of the application
@@ -170,7 +169,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 			c.Response().Header().Set("Cache-Control", "max-age=31536000, immutable")
 		}
 
-		err := fs.ServeFileContent(c.Response(), c.Request(), slug, version, shasum, filepath)
+		err := fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
 		if os.IsNotExist(err) {
 			return echo.NewHTTPError(http.StatusNotFound, "Asset not found")
 		}
@@ -187,7 +186,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 
 	// For index file, we inject the locale, the stack domain, and a token if the
 	// user is connected
-	content, err := fs.Open(slug, version, shasum, filepath)
+	content, err := fs.Open(slug, version, filepath)
 	if err != nil {
 		return err
 	}
@@ -201,7 +200,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	tmpl, err := template.New(file).Parse(string(buf))
 	if err != nil {
 		i.Logger().WithField("nspace", "apps").Warnf("%s cannot be parsed as a template: %s", file, err)
-		return fs.ServeFileContent(c.Response(), c.Request(), slug, version, shasum, filepath)
+		return fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
 	}
 
 	var token string

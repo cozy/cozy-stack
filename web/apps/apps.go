@@ -348,7 +348,7 @@ func iconHandler(appType apps.AppType) echo.HandlerFunc {
 		}
 
 		err = fs.ServeFileContent(c.Response(), c.Request(),
-			app.Slug(), app.Version(), app.Checksum(), filepath)
+			app.Slug(), app.Version(), filepath)
 		if os.IsNotExist(err) {
 			return echo.NewHTTPError(http.StatusNotFound, err)
 		}
