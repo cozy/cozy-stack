@@ -121,7 +121,7 @@ func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 		}
 		webapp := app.(*apps.WebappManifest)
 		i := middlewares.GetInstance(c)
-		f := apps.NewAferoFileServer(fs, func(_, _, file string) string {
+		f := apps.NewAferoFileServer(fs, func(_, _, _, file string) string {
 			return path.Join("/", file)
 		})
 		// Save permissions in couchdb before loading an index page

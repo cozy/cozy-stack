@@ -91,7 +91,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fs := i.AppsFileServer()
-	src, err := fs.Open(man.Slug(), man.Version(), path.Join("/", service.File))
+	src, err := fs.Open(man.Slug(), man.Version(), man.Checksum(), path.Join("/", service.File))
 	if err != nil {
 		return
 	}

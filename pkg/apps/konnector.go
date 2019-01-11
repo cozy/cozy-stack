@@ -57,6 +57,7 @@ type KonnManifest struct {
 	DocState         State           `json:"state"`
 	DocSource        string          `json:"source"`
 	DocVersion       string          `json:"version"`
+	DocChecksum      string          `json:"checksum"`
 	DocPermissions   permissions.Set `json:"permissions"`
 	AvailableVersion string          `json:"available_version,omitempty"`
 	DocTerms         Terms           `json:"terms,omitempty"`
@@ -127,6 +128,9 @@ func (m *KonnManifest) Source() string { return m.DocSource }
 // Version is part of the Manifest interface
 func (m *KonnManifest) Version() string { return m.DocVersion }
 
+// Checksum is part of the Manifest interface
+func (m *KonnManifest) Checksum() string { return m.DocChecksum }
+
 // Slug is part of the Manifest interface
 func (m *KonnManifest) Slug() string { return m.DocSlug }
 
@@ -144,6 +148,9 @@ func (m *KonnManifest) SetVersion(version string) { m.DocVersion = version }
 
 // SetAvailableVersion is part of the Manifest interface
 func (m *KonnManifest) SetAvailableVersion(version string) { m.AvailableVersion = version }
+
+// SetChecksum is part of the Manifest interface
+func (m *KonnManifest) SetChecksum(shasum string) { m.DocChecksum = shasum }
 
 // AppType is part of the Manifest interface
 func (m *KonnManifest) AppType() AppType { return Konnector }

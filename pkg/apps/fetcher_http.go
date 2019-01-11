@@ -103,7 +103,7 @@ func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 }
 
 func fetchHTTP(src *url.URL, shasum []byte, fs Copier, man Manifest, prefix string) (err error) {
-	exists, err := fs.Start(man.Slug(), man.Version())
+	exists, err := fs.Start(man.Slug(), man.Version(), man.Checksum())
 	if err != nil || exists {
 		return err
 	}
