@@ -145,6 +145,11 @@ a template and will insert the relevant values.
 -   `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.
 -   `{{.CozyClientJS}}` will be replaced by the JavaScript to inject the
     cozy-client-js.
+-   `{{.ThemeCSS}}` will be replaced by the `theme.css`. It is empty by default,
+    but can be overrided by using `contexts`. See
+    [contexts](https://docs.cozy.io/en/cozy-stack/assets/#contexts) and [dynamic
+    assets](https://docs.cozy.io/en/cozy-stack/cli/cozy-stack_config_insert-asset/)
+    for more informations.
 
 So, the `index.html` should probably looks like:
 

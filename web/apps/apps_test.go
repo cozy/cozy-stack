@@ -6,6 +6,7 @@ package apps_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -13,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -24,6 +26,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
@@ -338,6 +341,71 @@ func TestIconForApp(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, "<svg>...</svg>", string(body))
+}
+
+func TestTheme(t *testing.T) {
+	d := "test.cozycloud.cc.web_theme"
+	instance.Destroy(d)
+	inst, err := instance.Create(&instance.Options{
+		Domain: d,
+		Locale: "en",
+		Email:  "alice@example.com",
+	})
+	assert.NoError(t, err)
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
+	req.Host = inst.Domain
+	res, _ := client.Do(req)
+	body, _ := ioutil.ReadAll(res.Body)
+
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Contains(t, string(body), "/assets/styles/theme.css")
+
+	req2, _ := http.NewRequest("GET", ts.URL+"/assets/styles/theme.css", nil)
+	req2.Host = inst.Domain
+	res2, _ := client.Do(req2)
+	assert.Equal(t, 200, res2.StatusCode)
+	body2, _ := ioutil.ReadAll(res2.Body)
+	assert.Contains(t, string(body2), "Empty theme")
+}
+
+func TestThemeWithContext(t *testing.T) {
+	context := "foo"
+
+	asset, ok := fs.Get("/theme.css", context)
+	if ok {
+		fs.DeleteAsset(asset)
+	}
+	// Create and insert an asset in foo context
+	tmpdir := os.TempDir()
+	_, err := os.OpenFile(filepath.Join(tmpdir, "custom_theme.css"), os.O_RDWR|os.O_CREATE, 0600)
+	assert.NoError(t, err)
+
+	cacheStorage := config.GetConfig().CacheStorage
+	assetsOptions := []fs.AssetOption{{
+		URL:     fmt.Sprintf("file://%s", filepath.Join(tmpdir, "custom_theme.css")),
+		Name:    "/theme.css",
+		Context: context,
+	}}
+	err = fs.RegisterCustomExternals(cacheStorage, assetsOptions, 1)
+	assert.NoError(t, err)
+	// Test the theme
+	d := "test.cozycloud.cc.web_theme_with_context"
+	instance.Destroy(d)
+	inst, err := instance.Create(&instance.Options{
+		Domain:      d,
+		Locale:      "en",
+		Email:       "alice@example.com",
+		ContextName: context,
+	})
+	assert.NoError(t, err)
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
+	req.Host = inst.Domain
+	res, _ := client.Do(req)
+	body, _ := ioutil.ReadAll(res.Body)
+
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Contains(t, string(body), fmt.Sprintf("/assets/ext/%s/styles/theme.css", context))
+	assert.NotContains(t, string(body), "/assets/styles/theme.css")
 }
 
 func TestMain(m *testing.M) {

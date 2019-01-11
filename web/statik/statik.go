@@ -39165,6 +39165,13 @@ p4gEK6La78TD/l1CDlKCv28PReuXiVFl7d/O2n7XL879X+Rbz0gvi5fF/wMAAP//
 j1KGZ4wjAAA=
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
+Name: /styles/theme.css
+Size: 36
+
+H4sIAAAAAAAC/9LXUnDNLSipVCjJSM1NVShOLSpLTVFIqlRISU1LLM0pUdDS5wIE
+AAD//9FB1rIkAAAA
+-----END COZY ASSET-----
+-----BEGIN COZY ASSET-----
 Name: /templates/authorize.html
 Size: 3186
 
