@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/registry"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -275,9 +277,28 @@ func (c *Client) checkMandatoryFields(i *instance.Instance) *ClientRegistrationE
 	return nil
 }
 
+// CheckSoftwareID checks if a SoftwareID is valid
+func (c *Client) CheckSoftwareID(instance *instance.Instance) *ClientRegistrationError {
+	if strings.HasPrefix(c.SoftwareID, "registry://") {
+		appSlug := strings.TrimPrefix(c.SoftwareID, "registry://")
+		_, err := registry.GetApplication(appSlug, instance.Registries())
+		if err != nil {
+			return &ClientRegistrationError{
+				Code:        http.StatusBadRequest,
+				Error:       "unapproved_software_statement",
+				Description: "Application was not found on instance registries",
+			}
+		}
+	}
+	return nil
+}
+
 // Create is a function that sets some fields, and then save it in Couch.
 func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	if err := c.checkMandatoryFields(i); err != nil {
+		return err
+	}
+	if err := c.CheckSoftwareID(i); err != nil {
 		return err
 	}
 
