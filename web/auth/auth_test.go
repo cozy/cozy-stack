@@ -758,6 +758,25 @@ func TestAuthorizeFormSuccess(t *testing.T) {
 	}
 }
 
+func TestAuthorizeFormClientMobileApp(t *testing.T) {
+	var oauthClient oauth.Client
+
+	u := "https://example.org/oauth/callback"
+
+	oauthClient.RedirectURIs = []string{u}
+	oauthClient.ClientName = "cozy-test-2"
+	oauthClient.SoftwareID = "registry://drive"
+	oauthClient.Create(testInstance)
+
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&redirect_uri="+u+"&client_id="+oauthClient.ClientID, nil)
+	req.Host = testInstance.Domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	content, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(content), "io.cozy.files")
+	defer res.Body.Close()
+}
+
 func TestAuthorizeWhenNotLoggedIn(t *testing.T) {
 	anonymousClient := &http.Client{CheckRedirect: noRedirect}
 	v := &url.Values{

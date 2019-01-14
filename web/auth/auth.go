@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -552,12 +553,6 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 			"Error":  "Error Invalid response type",
 		})
 	}
-	if params.scope == "" {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error No scope parameter",
-		})
-	}
 
 	params.client = new(oauth.Client)
 	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
@@ -570,6 +565,44 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": params.instance.ContextualDomain(),
 			"Error":  "Error Incorrect redirect_uri",
+		})
+	}
+
+	if strings.HasPrefix(params.client.SoftwareID, "registry://") {
+		var webappManifest apps.WebappManifest
+		appSlug := strings.TrimPrefix(params.client.SoftwareID, "registry://")
+		webapp, err := registry.GetLatestVersion(appSlug, "stable", params.instance.Registries())
+
+		if err != nil {
+			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Domain": params.instance.ContextualDomain(),
+				"Error":  "Cannot find application on instance registries",
+			})
+		}
+
+		err = json.Unmarshal(webapp.Manifest, &webappManifest)
+		if err != nil {
+			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Domain": params.instance.ContextualDomain(),
+				"Error":  "Cannot decode application manifest",
+			})
+		}
+
+		perms := webappManifest.Permissions()
+		params.scope, err = perms.MarshalScopeString()
+		if err != nil {
+			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Domain": params.instance.ContextualDomain(),
+				"Error":  "Cannot marshal scope permissions",
+			})
+		}
+
+	}
+
+	if params.scope == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.ContextualDomain(),
+			"Error":  "Error No scope parameter",
 		})
 	}
 	if params.scope == oauth.ScopeLogin && !params.client.AllowLoginScope {
