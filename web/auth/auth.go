@@ -518,6 +518,11 @@ func deleteClient(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+type WebappParams struct {
+	Name string
+	Slug string
+}
+
 type authorizeParams struct {
 	instance    *instance.Instance
 	state       string
@@ -526,6 +531,7 @@ type authorizeParams struct {
 	scope       string
 	resType     string
 	client      *oauth.Client
+	webapp      *WebappParams
 }
 
 func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
@@ -595,6 +601,11 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 				"Domain": params.instance.ContextualDomain(),
 				"Error":  "Cannot marshal scope permissions",
 			})
+		}
+
+		params.webapp = &WebappParams{
+			Slug: webappManifest.Slug(),
+			Name: webappManifest.Name,
 		}
 
 	}
@@ -713,6 +724,7 @@ func authorizeForm(c echo.Context) error {
 		"Permissions":  permissions,
 		"ReadOnly":     readOnly,
 		"CSRF":         c.Get("csrf"),
+		"Webapp":       params.webapp,
 	})
 }
 

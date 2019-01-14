@@ -26,7 +26,14 @@
             <input type="hidden" name="response_type" value="code" />
             <div role="region">
               <h1>{{t "Authorize Title" .Client.ClientName}}</h1>
-              {{if .Client.LogoURI}}
+              {{if .Webapp}}
+                {{t "Authorize Webapp Title"}}</br>
+                <img class="client-logo" src="/registry/{{.Webapp.Slug}}/icon" />
+                {{.Webapp.Name}}
+              </br>
+                {{t "Authorize Webapp YourCozy"}}</br>
+                {{.Domain}}
+              {{else if .Client.LogoURI}}
               <img class="client-logo" src="{{.Client.LogoURI}}" />
               {{end}}
               <p class="help">
