@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -758,11 +759,6 @@ func authorize(c echo.Context) error {
 		})
 	}
 
-	access, err := oauth.CreateAccessCode(params.instance, params.clientID, params.scope)
-	if err != nil {
-		return err
-	}
-
 	// Install the application in case of mobile client
 	softwareID := params.client.SoftwareID
 	if IsLinkedApp(softwareID) {
@@ -781,6 +777,12 @@ func authorize(c echo.Context) error {
 			return err
 		}
 		installer.Run()
+		params.scope = "@" + manifest.Slug()
+	}
+
+	access, err := oauth.CreateAccessCode(params.instance, params.clientID, params.scope)
+	if err != nil {
+		return err
 	}
 
 	q := u.Query()
@@ -1021,6 +1023,13 @@ func accessToken(c echo.Context) error {
 		Type: "bearer",
 	}
 
+	if IsLinkedApp(client.SoftwareID) {
+		slug := GetLinkedAppSlug(client.SoftwareID)
+		if err := CheckLinkedAppInstalled(instance, slug); err != nil {
+			return err
+		}
+	}
+
 	switch grant {
 	case "authorization_code":
 		code := c.FormValue("code")
@@ -1228,11 +1237,28 @@ func secretExchange(c echo.Context) error {
 	return c.JSON(http.StatusOK, doc)
 }
 
+// CheckLinkedAppInstalled returns
+func CheckLinkedAppInstalled(instance *instance.Instance, slug string) error {
+	for i := 0; i < 10; i++ {
+		_, err := apps.GetWebappBySlug(instance, slug)
+		if err == nil {
+			return nil
+		}
+		time.Sleep(3 * time.Second)
+	}
+	return fmt.Errorf("%s is not installed", slug)
+}
+
+// GetLinkedAppSlug returns a linked app slug from a softwareID
+func GetLinkedAppSlug(softwareID string) string {
+	return strings.TrimPrefix(softwareID, "registry://")
+}
+
 // GetLinkedApp fetches the app manifest on the registry
 func GetLinkedApp(softwareID string, instance *instance.Instance) (*apps.WebappManifest, error) {
 	var webappManifest apps.WebappManifest
 
-	appSlug := strings.TrimPrefix(softwareID, "registry://")
+	appSlug := GetLinkedAppSlug(softwareID)
 	webapp, err := registry.GetLatestVersion(appSlug, "stable", instance.Registries())
 	if err != nil {
 		return nil, err
