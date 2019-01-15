@@ -931,6 +931,40 @@ func TestAuthorizeSuccess(t *testing.T) {
 	}
 }
 
+func TestInstallAppWithLinkedApp(t *testing.T) {
+	var oauthClient oauth.Client
+	u := "https://example.org/oauth/callback"
+	oauthClient.RedirectURIs = []string{u}
+	oauthClient.ClientName = "cozy-test-install-app"
+	oauthClient.SoftwareID = "registry://drive"
+	oauthClient.Create(testInstance)
+
+	res, err := postForm("/auth/authorize", &url.Values{
+		"state":         {"123456"},
+		"client_id":     {oauthClient.ClientID},
+		"redirect_uri":  {u},
+		"csrf_token":    {csrfToken},
+		"response_type": {"code"},
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, 302, res.StatusCode)
+	defer res.Body.Close()
+	couchdbURL := config.GetConfig().CouchDB.URL
+	db := testInstance.DBPrefix() + "%2F" + consts.Apps
+	err = couchdb.EnsureDBExist(testInstance, consts.Apps)
+	assert.NoError(t, err)
+	reqGetChanges, err := http.NewRequest("GET", couchdbURL.String()+couchdb.EscapeCouchdbName(db)+"/_changes?feed=longpoll", nil)
+	assert.NoError(t, err)
+	resGetChanges, err := client.Do(reqGetChanges)
+	assert.NoError(t, err)
+	defer resGetChanges.Body.Close()
+	assert.Equal(t, resGetChanges.StatusCode, 200)
+	body, err := ioutil.ReadAll(resGetChanges.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(body), "io.cozy.apps/drive")
+}
+
 func TestAccessTokenNoGrantType(t *testing.T) {
 	res, err := postForm("/auth/access_token", &url.Values{
 		"client_id":     {clientID},

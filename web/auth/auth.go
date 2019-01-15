@@ -763,6 +763,26 @@ func authorize(c echo.Context) error {
 		return err
 	}
 
+	// Install the application in case of mobile client
+	softwareID := params.client.SoftwareID
+	if IsLinkedApp(softwareID) {
+		manifest, err := GetLinkedApp(softwareID, instance)
+		if err != nil {
+			return err
+		}
+		installer, err := apps.NewInstaller(instance, instance.AppsCopier(apps.Webapp), &apps.InstallerOptions{
+			Operation:  apps.Install,
+			Type:       apps.Webapp,
+			SourceURL:  softwareID,
+			Slug:       manifest.Slug(),
+			Registries: instance.Registries(),
+		})
+		if err != nil {
+			return err
+		}
+		installer.Run()
+	}
+
 	q := u.Query()
 	// We should be sending "code" only, but for compatibility reason, we keep
 	// the access_code parameter that we used to send in our first impl.
@@ -1206,6 +1226,27 @@ func secretExchange(c echo.Context) error {
 
 	doc.TransformIDAndRev()
 	return c.JSON(http.StatusOK, doc)
+}
+
+// GetLinkedApp fetches the app manifest on the registry
+func GetLinkedApp(softwareID string, instance *instance.Instance) (*apps.WebappManifest, error) {
+	var webappManifest apps.WebappManifest
+
+	appSlug := strings.TrimPrefix(softwareID, "registry://")
+	webapp, err := registry.GetLatestVersion(appSlug, "stable", instance.Registries())
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(webapp.Manifest, &webappManifest)
+	if err != nil {
+		return nil, err
+	}
+	return &webappManifest, nil
+}
+
+// IsLinkedApp checks if an OAuth client has a linked app
+func IsLinkedApp(softwareID string) bool {
+	return strings.HasPrefix(softwareID, "registry://")
 }
 
 // Routes sets the routing for the status service
