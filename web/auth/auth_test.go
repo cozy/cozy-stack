@@ -1002,9 +1002,9 @@ func TestAccessTokenLinkedAppInstalled(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&response)
 	assert.NoError(t, err)
 	assert.Equal(t, "bearer", response["token_type"])
-	assert.Equal(t, "@drive", response["scope"])
-	assertValidToken(t, response["access_token"], "access", linkedClientID, "@drive")
-	assertValidToken(t, response["refresh_token"], "refresh", linkedClientID, "@drive")
+	assert.Equal(t, "@io.cozy.apps/drive", response["scope"])
+	assertValidToken(t, response["access_token"], "access", linkedClientID, "@io.cozy.apps/drive")
+	assertValidToken(t, response["refresh_token"], "refresh", linkedClientID, "@io.cozy.apps/drive")
 }
 
 func TestAccessTokenNoGrantType(t *testing.T) {
