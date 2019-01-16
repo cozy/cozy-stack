@@ -774,10 +774,12 @@ func authorize(c echo.Context) error {
 			Slug:       manifest.Slug(),
 			Registries: instance.Registries(),
 		})
-		if err != nil {
-			return err
+		if err != apps.ErrAlreadyExists {
+			if err != nil {
+				return err
+			}
+			installer.Run()
 		}
-		installer.Run()
 		params.scope = BuildLinkedAppScope(manifest.Slug())
 	}
 
