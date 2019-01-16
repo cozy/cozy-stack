@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"strconv"
 
 	"golang.org/x/crypto/scrypt"
@@ -150,5 +151,12 @@ func CompareHashAndPassphrase(hash []byte, passphrase []byte) (needUpdate bool, 
 	if err = h.Compare(passphrase); err != nil {
 		return false, err
 	}
+
+	// Force go to release the memory, as scrypt takes a lot of RAM by design
+	// and go has some GC heuristics that can keep it for some times.
+	// See https://github.com/golang/go/issues/20000
+	// and https://groups.google.com/forum/#!topic/golang-nuts/I9R9MKUS9bo
+	debug.FreeOSMemory()
+
 	return h.NeedUpdate(), nil
 }
