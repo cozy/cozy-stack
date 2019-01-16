@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -21,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -517,6 +519,11 @@ func deleteClient(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+type webappParams struct {
+	Name string
+	Slug string
+}
+
 type authorizeParams struct {
 	instance    *instance.Instance
 	state       string
@@ -525,6 +532,7 @@ type authorizeParams struct {
 	scope       string
 	resType     string
 	client      *oauth.Client
+	webapp      *webappParams
 }
 
 func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
@@ -552,12 +560,6 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 			"Error":  "Error Invalid response type",
 		})
 	}
-	if params.scope == "" {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error No scope parameter",
-		})
-	}
 
 	params.client = new(oauth.Client)
 	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
@@ -570,6 +572,49 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": params.instance.ContextualDomain(),
 			"Error":  "Error Incorrect redirect_uri",
+		})
+	}
+
+	if IsLinkedApp(params.client.SoftwareID) {
+		var webappManifest apps.WebappManifest
+		appSlug := GetLinkedAppSlug(params.client.SoftwareID)
+		webapp, err := registry.GetLatestVersion(appSlug, "stable", params.instance.Registries())
+
+		if err != nil {
+			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Domain": params.instance.ContextualDomain(),
+				"Error":  "Cannot find application on instance registries",
+			})
+		}
+
+		err = json.Unmarshal(webapp.Manifest, &webappManifest)
+		if err != nil {
+			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Domain": params.instance.ContextualDomain(),
+				"Error":  "Cannot decode application manifest",
+			})
+		}
+
+		perms := webappManifest.Permissions()
+		params.scope, err = perms.MarshalScopeString()
+		if err != nil {
+			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Domain": params.instance.ContextualDomain(),
+				"Error":  "Cannot marshal scope permissions",
+			})
+		}
+
+		params.webapp = &webappParams{
+			Slug: webappManifest.Slug(),
+			Name: webappManifest.Name,
+		}
+
+	}
+
+	if params.scope == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.ContextualDomain(),
+			"Error":  "Error No scope parameter",
 		})
 	}
 	if params.scope == oauth.ScopeLogin && !params.client.AllowLoginScope {
@@ -680,6 +725,8 @@ func authorizeForm(c echo.Context) error {
 		"Permissions":  permissions,
 		"ReadOnly":     readOnly,
 		"CSRF":         c.Get("csrf"),
+		"Webapp":       params.webapp,
+		"CozyUI":       cozyUI(instance),
 	})
 }
 
@@ -711,6 +758,29 @@ func authorize(c echo.Context) error {
 			"Domain": instance.ContextualDomain(),
 			"Error":  "Error Invalid redirect_uri",
 		})
+	}
+
+	// Install the application in case of mobile client
+	softwareID := params.client.SoftwareID
+	if IsLinkedApp(softwareID) {
+		manifest, err := GetLinkedApp(instance, softwareID)
+		if err != nil {
+			return err
+		}
+		installer, err := apps.NewInstaller(instance, instance.AppsCopier(apps.Webapp), &apps.InstallerOptions{
+			Operation:  apps.Install,
+			Type:       apps.Webapp,
+			SourceURL:  softwareID,
+			Slug:       manifest.Slug(),
+			Registries: instance.Registries(),
+		})
+		if err != apps.ErrAlreadyExists {
+			if err != nil {
+				return err
+			}
+			installer.Run()
+		}
+		params.scope = BuildLinkedAppScope(manifest.Slug())
 	}
 
 	access, err := oauth.CreateAccessCode(params.instance, params.clientID, params.scope)
@@ -956,6 +1026,13 @@ func accessToken(c echo.Context) error {
 		Type: "bearer",
 	}
 
+	if IsLinkedApp(client.SoftwareID) {
+		slug := GetLinkedAppSlug(client.SoftwareID)
+		if err := CheckLinkedAppInstalled(instance, slug); err != nil {
+			return err
+		}
+	}
+
 	switch grant {
 	case "authorization_code":
 		code := c.FormValue("code")
@@ -1161,6 +1238,53 @@ func secretExchange(c echo.Context) error {
 
 	doc.TransformIDAndRev()
 	return c.JSON(http.StatusOK, doc)
+}
+
+// CheckLinkedAppInstalled checks if a linked webapp has been installed to the
+// instance
+func CheckLinkedAppInstalled(instance *instance.Instance, slug string) error {
+	i := 0
+	for {
+		i++
+		_, err := apps.GetWebappBySlug(instance, slug)
+		if err == nil {
+			return nil
+		}
+		if i == 10 {
+			return fmt.Errorf("%s is not installed", slug)
+		}
+		time.Sleep(3 * time.Second)
+	}
+}
+
+// GetLinkedAppSlug returns a linked app slug from a softwareID
+func GetLinkedAppSlug(softwareID string) string {
+	return strings.TrimPrefix(softwareID, "registry://")
+}
+
+// BuildLinkedAppScope returns a formatted scope for a linked app
+func BuildLinkedAppScope(slug string) string {
+	return fmt.Sprintf("@%s/%s", consts.Apps, slug)
+}
+
+// GetLinkedApp fetches the app manifest on the registry
+func GetLinkedApp(instance *instance.Instance, softwareID string) (*apps.WebappManifest, error) {
+	var webappManifest apps.WebappManifest
+	appSlug := GetLinkedAppSlug(softwareID)
+	webapp, err := registry.GetLatestVersion(appSlug, "stable", instance.Registries())
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(webapp.Manifest, &webappManifest)
+	if err != nil {
+		return nil, err
+	}
+	return &webappManifest, nil
+}
+
+// IsLinkedApp checks if an OAuth client has a linked app
+func IsLinkedApp(softwareID string) bool {
+	return strings.HasPrefix(softwareID, "registry://")
 }
 
 // Routes sets the routing for the status service

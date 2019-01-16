@@ -200,6 +200,12 @@ msgstr "Confirm"
 msgid "Authorize Cancel"
 msgstr "Deny access"
 
+msgid "Authorize Webapp Title"
+msgstr "An application claims to be"
+
+msgid "Authorize Webapp YourCozy"
+msgstr "It requests access to your Cozy"
+
 msgid "Error Title"
 msgstr "Sorry, an error occurred."
 

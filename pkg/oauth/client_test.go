@@ -151,6 +151,26 @@ func TestParseJWTInvalidSubject(t *testing.T) {
 	assert.False(t, ok, "The token should be invalid")
 }
 
+func TestParseGoodSoftwareID(t *testing.T) {
+	goodClient := &oauth.Client{
+		ClientName:   "client-5",
+		RedirectURIs: []string{"https://foobar"},
+		SoftwareID:   "registry://drive",
+	}
+	err := goodClient.CheckSoftwareID(testInstance)
+	assert.Nil(t, err)
+}
+
+func TestParseHttpSoftwareID(t *testing.T) {
+	goodClient := &oauth.Client{
+		ClientName:   "client-5",
+		RedirectURIs: []string{"https://foobar"},
+		SoftwareID:   "https://github.com/cozy-labs/cozy-desktop",
+	}
+	err := goodClient.CheckSoftwareID(testInstance)
+	assert.Nil(t, err)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	setup := testutils.NewSetup(m, "oauth_client")

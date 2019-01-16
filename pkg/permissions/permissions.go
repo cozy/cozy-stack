@@ -173,21 +173,6 @@ func GetForRegisterToken() *Permission {
 	}
 }
 
-// GetForOauth create a non-persisted permissions doc from a oauth token scopes
-func GetForOauth(claims *Claims, c interface{}) (*Permission, error) {
-	set, err := UnmarshalScopeString(claims.Scope)
-	if err != nil {
-		return nil, err
-	}
-	pdoc := &Permission{
-		Type:        TypeOauth,
-		Permissions: set,
-		SourceID:    claims.Subject,
-		Client:      c,
-	}
-	return pdoc, nil
-}
-
 // GetForCLI create a non-persisted permissions doc for the command-line
 func GetForCLI(claims *Claims) (*Permission, error) {
 	set, err := UnmarshalScopeString(claims.Scope)

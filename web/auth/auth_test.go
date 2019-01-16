@@ -31,6 +31,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
@@ -53,6 +54,9 @@ var altRegistrationToken string
 var csrfToken string
 var code string
 var refreshToken string
+var linkedClientID string
+var linkedClientSecret string
+var linkedCode string
 
 func getSessionID(cookies []*http.Cookie) string {
 	for _, c := range cookies {
@@ -758,6 +762,25 @@ func TestAuthorizeFormSuccess(t *testing.T) {
 	}
 }
 
+func TestAuthorizeFormClientMobileApp(t *testing.T) {
+	var oauthClient oauth.Client
+
+	u := "https://example.org/oauth/callback"
+
+	oauthClient.RedirectURIs = []string{u}
+	oauthClient.ClientName = "cozy-test-2"
+	oauthClient.SoftwareID = "registry://drive"
+	oauthClient.Create(testInstance)
+
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&redirect_uri="+u+"&client_id="+oauthClient.ClientID, nil)
+	req.Host = testInstance.Domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	content, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(content), "io.cozy.files")
+	defer res.Body.Close()
+}
+
 func TestAuthorizeWhenNotLoggedIn(t *testing.T) {
 	anonymousClient := &http.Client{CheckRedirect: noRedirect}
 	v := &url.Values{
@@ -912,6 +935,78 @@ func TestAuthorizeSuccess(t *testing.T) {
 	}
 }
 
+func TestInstallAppWithLinkedApp(t *testing.T) {
+	var oauthClient oauth.Client
+	u := "https://example.org/oauth/callback"
+	oauthClient.RedirectURIs = []string{u}
+	oauthClient.ClientName = "cozy-test-install-app"
+	oauthClient.SoftwareID = "registry://drive"
+	oauthClient.Create(testInstance)
+
+	linkedClientID = oauthClient.ClientID         // Used for following tests
+	linkedClientSecret = oauthClient.ClientSecret // Used for following tests
+
+	res, err := postForm("/auth/authorize", &url.Values{
+		"state":         {"123456"},
+		"client_id":     {oauthClient.ClientID},
+		"redirect_uri":  {u},
+		"csrf_token":    {csrfToken},
+		"response_type": {"code"},
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, 302, res.StatusCode)
+	defer res.Body.Close()
+	couchdbURL := config.GetConfig().CouchDB.URL
+	db := testInstance.DBPrefix() + "%2F" + consts.Apps
+	err = couchdb.EnsureDBExist(testInstance, consts.Apps)
+	assert.NoError(t, err)
+	reqGetChanges, err := http.NewRequest("GET", couchdbURL.String()+couchdb.EscapeCouchdbName(db)+"/_changes?feed=longpoll", nil)
+	assert.NoError(t, err)
+	resGetChanges, err := client.Do(reqGetChanges)
+	assert.NoError(t, err)
+	defer resGetChanges.Body.Close()
+	assert.Equal(t, resGetChanges.StatusCode, 200)
+	body, err := ioutil.ReadAll(resGetChanges.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(body), "io.cozy.apps/drive")
+
+	var results []oauth.AccessCode
+	reqDocs := &couchdb.AllDocsRequest{}
+	couchdb.GetAllDocs(testInstance, consts.OAuthAccessCodes, reqDocs, &results)
+	for _, result := range results {
+		if result.ClientID == linkedClientID {
+			linkedCode = result.Code
+			break
+		}
+	}
+}
+
+func TestCheckLinkedAppInstalled(t *testing.T) {
+	// We use the webapp drive installed from the previous test
+	err := auth.CheckLinkedAppInstalled(testInstance, "drive")
+	assert.NoError(t, err)
+}
+
+func TestAccessTokenLinkedAppInstalled(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"authorization_code"},
+		"client_id":     {linkedClientID},
+		"client_secret": {linkedClientSecret},
+		"code":          {linkedCode},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 200, res.StatusCode)
+	var response map[string]string
+	err = json.NewDecoder(res.Body).Decode(&response)
+	assert.NoError(t, err)
+	assert.Equal(t, "bearer", response["token_type"])
+	assert.Equal(t, "@io.cozy.apps/drive", response["scope"])
+	assertValidToken(t, response["access_token"], "access", linkedClientID, "@io.cozy.apps/drive")
+	assertValidToken(t, response["refresh_token"], "refresh", linkedClientID, "@io.cozy.apps/drive")
+}
+
 func TestAccessTokenNoGrantType(t *testing.T) {
 	res, err := postForm("/auth/access_token", &url.Values{
 		"client_id":     {clientID},
@@ -1011,8 +1106,8 @@ func TestAccessTokenSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "bearer", response["token_type"])
 	assert.Equal(t, "files:read", response["scope"])
-	assertValidToken(t, response["access_token"], "access")
-	assertValidToken(t, response["refresh_token"], "refresh")
+	assertValidToken(t, response["access_token"], "access", clientID, "files:read")
+	assertValidToken(t, response["refresh_token"], "refresh", clientID, "files:read")
 	refreshToken = response["refresh_token"]
 }
 
@@ -1076,7 +1171,7 @@ func TestRefreshTokenSuccess(t *testing.T) {
 	assert.Equal(t, "bearer", response["token_type"])
 	assert.Equal(t, "files:read", response["scope"])
 	assert.Equal(t, "", response["refresh_token"])
-	assertValidToken(t, response["access_token"], "access")
+	assertValidToken(t, response["access_token"], "access", clientID, "files:read")
 }
 
 func TestLogoutNoToken(t *testing.T) {
@@ -1510,7 +1605,7 @@ func getTestURL() (string, error) {
 	return string(content), nil
 }
 
-func assertValidToken(t *testing.T, token, audience string) {
+func assertValidToken(t *testing.T, token, audience, subject, scope string) {
 	claims := permissions.Claims{}
 	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
 		return testInstance.OAuthSecret, nil
@@ -1518,8 +1613,8 @@ func assertValidToken(t *testing.T, token, audience string) {
 	assert.NoError(t, err)
 	assert.Equal(t, audience, claims.Audience)
 	assert.Equal(t, domain, claims.Issuer)
-	assert.Equal(t, clientID, claims.Subject)
-	assert.Equal(t, "files:read", claims.Scope)
+	assert.Equal(t, subject, claims.Subject)
+	assert.Equal(t, scope, claims.Scope)
 }
 
 func assertJSONError(t *testing.T, res *http.Response, message string) {
