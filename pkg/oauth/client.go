@@ -285,7 +285,7 @@ func (c *Client) CheckSoftwareID(instance *instance.Instance) *ClientRegistratio
 		if err != nil {
 			return &ClientRegistrationError{
 				Code:        http.StatusBadRequest,
-				Error:       "unapproved_software_statement",
+				Error:       "unapproved_software_id",
 				Description: "Application was not found on instance registries",
 			}
 		}

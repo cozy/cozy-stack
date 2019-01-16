@@ -519,7 +519,7 @@ func deleteClient(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-type WebappParams struct {
+type webappParams struct {
 	Name string
 	Slug string
 }
@@ -532,7 +532,7 @@ type authorizeParams struct {
 	scope       string
 	resType     string
 	client      *oauth.Client
-	webapp      *WebappParams
+	webapp      *webappParams
 }
 
 func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
@@ -575,9 +575,9 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		})
 	}
 
-	if strings.HasPrefix(params.client.SoftwareID, "registry://") {
+	if IsLinkedApp(params.client.SoftwareID) {
 		var webappManifest apps.WebappManifest
-		appSlug := strings.TrimPrefix(params.client.SoftwareID, "registry://")
+		appSlug := GetLinkedAppSlug(params.client.SoftwareID)
 		webapp, err := registry.GetLatestVersion(appSlug, "stable", params.instance.Registries())
 
 		if err != nil {
@@ -604,7 +604,7 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 			})
 		}
 
-		params.webapp = &WebappParams{
+		params.webapp = &webappParams{
 			Slug: webappManifest.Slug(),
 			Name: webappManifest.Name,
 		}
@@ -1263,7 +1263,6 @@ func BuildLinkedAppScope(slug string) string {
 // GetLinkedApp fetches the app manifest on the registry
 func GetLinkedApp(instance *instance.Instance, softwareID string) (*apps.WebappManifest, error) {
 	var webappManifest apps.WebappManifest
-
 	appSlug := GetLinkedAppSlug(softwareID)
 	webapp, err := registry.GetLatestVersion(appSlug, "stable", instance.Registries())
 	if err != nil {

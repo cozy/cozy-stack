@@ -160,6 +160,7 @@ func TestParseGoodSoftwareID(t *testing.T) {
 	err := goodClient.CheckSoftwareID(testInstance)
 	assert.Nil(t, err)
 }
+
 func TestParseHttpSoftwareID(t *testing.T) {
 	goodClient := &oauth.Client{
 		ClientName:   "client-5",
