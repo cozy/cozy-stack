@@ -332,6 +332,24 @@ Content-Type: application/json
 }
 ```
 
+#### Linked applications
+
+Some OAuth applications are a mobile or desktop version of a Cozy webapp. For
+them, it's possible to use a special `software_id` to make a link between the
+mobile/desktop application and the webapp. The `software_id` must be in a
+`registry://slug` format, like `registry://drive` for Cozy-Drive for example.
+When it is the case, the mobile/desktop will share its permissions with the
+webapp. It means several things:
+
+- The mobile/desktop app will have the same permissions that the linked webapp.
+- When a sharing by link is done in the mobile/desktop application, the linked
+  webapp will be able to revoke it later, and vice versa.
+- When the user accepts to give access to its Cozy to the mobile/desktop app,
+  the linked webapp will be installed on the Cozy if it was not already the
+  case.
+- When the linked webapp is uninstalled, the right to access the Cozy for the
+  mobile/desktop app will be revoked.
+
 ### GET /auth/register/:client-id
 
 This route is used by the clients to get informations about them-selves. The
