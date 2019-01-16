@@ -41,7 +41,6 @@ func BasicAuth(secretFileName string) echo.MiddlewareFunc {
 			if err != nil {
 				return echo.NewHTTPError(http.StatusInternalServerError, err)
 			}
-
 			b = bytes.TrimSpace(b)
 
 			needUpdate, err := crypto.CompareHashAndPassphrase(b, []byte(passphrase))
