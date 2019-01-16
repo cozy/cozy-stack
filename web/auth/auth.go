@@ -305,6 +305,14 @@ func login(c echo.Context) error {
 			default:
 				successfulAuthentication = true
 			}
+		} else { // Bad login passphrase
+			err := CheckRateLimit(inst, "auth")
+			if err != nil {
+				err = LoginRateExceeded(inst)
+				if err != nil {
+					inst.Logger().WithField("nspace", "auth").Warning(err)
+				}
+			}
 		}
 	}
 
