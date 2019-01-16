@@ -49,6 +49,30 @@ const (
 	Konnector
 )
 
+// String returns the human-readable doctype from the AppType
+func (at AppType) String() string {
+	switch at {
+	case Webapp:
+		return "io.cozy.apps"
+	case Konnector:
+		return "io.cozy.konnectors"
+	default:
+		return "unknown"
+	}
+}
+
+// NewAppType creates a new AppType from a string
+func NewAppType(doctype string) AppType {
+	switch doctype {
+	case "io.cozy.konnectors":
+		return Konnector
+	case "io.cozy.apps":
+		return Webapp
+	default:
+		return 0
+	}
+}
+
 // KonnectorArchiveName is the name of the archive created to store the
 // konnectors sources.
 const KonnectorArchiveName = "app.tar"
