@@ -31,9 +31,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/dgrijalva/jwt-go.v3"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 /* #nosec */
@@ -259,7 +259,7 @@ func (i *Instance) makeVFS() error {
 func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
 	fsURL := config.FsURL()
 	switch fsURL.Scheme {
-	case config.SchemeFile, config.SchemeMem:
+	case config.SchemeFile:
 		var baseDirName string
 		switch appsType {
 		case apps.Webapp:
@@ -269,6 +269,9 @@ func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
 		}
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
 			path.Join(fsURL.Path, i.DirName(), baseDirName))
+		return apps.NewAferoCopier(baseFS)
+	case config.SchemeMem:
+		baseFS := vfsafero.GetMemFS("apps")
 		return apps.NewAferoCopier(baseFS)
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		return apps.NewSwiftCopier(config.GetSwiftConnection(), appsType)
@@ -282,9 +285,12 @@ func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
 func (i *Instance) AppsFileServer() apps.FileServer {
 	fsURL := config.FsURL()
 	switch fsURL.Scheme {
-	case config.SchemeFile, config.SchemeMem:
+	case config.SchemeFile:
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
 			path.Join(fsURL.Path, i.DirName(), vfs.WebappsDirName))
+		return apps.NewAferoFileServer(baseFS, nil)
+	case config.SchemeMem:
+		baseFS := vfsafero.GetMemFS("apps")
 		return apps.NewAferoFileServer(baseFS, nil)
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		return apps.NewSwiftFileServer(config.GetSwiftConnection(), apps.Webapp)
@@ -298,9 +304,12 @@ func (i *Instance) AppsFileServer() apps.FileServer {
 func (i *Instance) KonnectorsFileServer() apps.FileServer {
 	fsURL := config.FsURL()
 	switch fsURL.Scheme {
-	case config.SchemeFile, config.SchemeMem:
+	case config.SchemeFile:
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
 			path.Join(fsURL.Path, i.DirName(), vfs.KonnectorsDirName))
+		return apps.NewAferoFileServer(baseFS, nil)
+	case config.SchemeMem:
+		baseFS := vfsafero.GetMemFS("apps")
 		return apps.NewAferoFileServer(baseFS, nil)
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		return apps.NewSwiftFileServer(config.GetSwiftConnection(), apps.Konnector)
@@ -314,9 +323,12 @@ func (i *Instance) KonnectorsFileServer() apps.FileServer {
 func (i *Instance) ThumbsFS() vfs.Thumbser {
 	fsURL := config.FsURL()
 	switch fsURL.Scheme {
-	case config.SchemeFile, config.SchemeMem:
+	case config.SchemeFile:
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
 			path.Join(fsURL.Path, i.DirName(), vfs.ThumbsDirName))
+		return vfsafero.NewThumbsFs(baseFS)
+	case config.SchemeMem:
+		baseFS := vfsafero.GetMemFS(i.DomainName() + "-thumbs")
 		return vfsafero.NewThumbsFs(baseFS)
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		if i.SwiftCluster > 0 {

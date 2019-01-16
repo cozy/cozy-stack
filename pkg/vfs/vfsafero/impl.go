@@ -45,6 +45,15 @@ type aferoVFS struct {
 	osFS bool
 }
 
+// GetMemFS returns a file system in memory for the given key
+func GetMemFS(key string) afero.Fs {
+	val, ok := memfsMap.Load(key)
+	if !ok {
+		val, _ = memfsMap.LoadOrStore(key, afero.NewMemMapFs())
+	}
+	return val.(afero.Fs)
+}
+
 // New returns a vfs.VFS instance associated with the specified indexer and
 // storage url.
 //
@@ -64,11 +73,7 @@ func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu l
 	case "file":
 		fs = afero.NewBasePathFs(afero.NewOsFs(), pth)
 	case "mem":
-		val, ok := memfsMap.Load(db.DomainName())
-		if !ok {
-			val, _ = memfsMap.LoadOrStore(db.DomainName(), afero.NewMemMapFs())
-		}
-		fs = val.(afero.Fs)
+		fs = GetMemFS(db.DomainName())
 	default:
 		return nil, fmt.Errorf("vfsafero: non supported scheme %s", fsURL.Scheme)
 	}
