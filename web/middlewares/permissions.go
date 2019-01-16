@@ -62,6 +62,52 @@ func GetRequestToken(c echo.Context) string {
 	return c.QueryParam("bearer_token")
 }
 
+type LinkedAppScope struct {
+	Doctype string
+	Slug    string
+}
+
+func ParseLinkedAppScope(scope string) (*LinkedAppScope, error) {
+	if !strings.HasPrefix(scope, "@") {
+		return nil, fmt.Errorf("Scope %s is not a linked-app", scope)
+	}
+	splitted := strings.Split(strings.TrimPrefix(scope, "@"), "/")
+
+	return &LinkedAppScope{
+		Doctype: splitted[0],
+		Slug:    splitted[1],
+	}, nil
+}
+
+// GetForOauth create a non-persisted permissions doc from a oauth token scopes
+func GetForOauth(instance *instance.Instance, claims *permissions.Claims, c interface{}) (*permissions.Permission, error) {
+	var set permissions.Set
+	linkedAppScope, err := ParseLinkedAppScope(claims.Scope)
+
+	if err == nil && linkedAppScope != nil {
+		// Translate to a real scope
+		at := apps.NewAppType(linkedAppScope.Doctype)
+		manifest, err := apps.GetBySlug(instance, linkedAppScope.Slug, at)
+		if err != nil {
+			return nil, err
+		}
+		set = manifest.Permissions()
+	} else {
+		set, err = permissions.UnmarshalScopeString(claims.Scope)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	pdoc := &permissions.Permission{
+		Type:        permissions.TypeOauth,
+		Permissions: set,
+		SourceID:    claims.Subject,
+		Client:      c,
+	}
+	return pdoc, nil
+}
+
 // ParseJWT parses a JSON Web Token, and returns the associated permissions.
 func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permissions.Permission, error) {
 	var claims permissions.Claims
@@ -110,7 +156,7 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 			}
 			return nil, permissions.ErrInvalidToken
 		}
-		return permissions.GetForOauth(&claims, c)
+		return GetForOauth(instance, &claims, c)
 
 	case permissions.CLIAudience:
 		// do not check client existence

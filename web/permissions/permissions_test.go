@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -19,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -468,13 +470,51 @@ func TestCannotFindToken(t *testing.T) {
 
 }
 
+func TestGetForOauth(t *testing.T) {
+	// Install app
+	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp), &apps.InstallerOptions{
+		Operation:  apps.Install,
+		Type:       apps.Webapp,
+		SourceURL:  "registry://settings",
+		Slug:       "settings",
+		Registries: testInstance.Registries(),
+	})
+	installer.Run()
+
+	// Get app manifest
+	manifest, err := apps.GetBySlug(testInstance, "settings", apps.Webapp)
+	assert.NoError(t, err)
+
+	// Create OAuth client
+	var oauthClient oauth.Client
+
+	u := "https://example.org/oauth/callback"
+
+	oauthClient.RedirectURIs = []string{u}
+	oauthClient.ClientName = "cozy-test-2"
+	oauthClient.SoftwareID = "registry://settings"
+	oauthClient.Create(testInstance)
+
+	parent, err := middlewares.GetForOauth(testInstance, &permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: permissions.AccessTokenAudience,
+			Issuer:   testInstance.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  clientID,
+		},
+		Scope: "@io.cozy.apps/settings",
+	}, oauthClient)
+	assert.NoError(t, err)
+	assert.True(t, parent.Permissions.HasSameRules(manifest.Permissions()))
+}
+
 func TestListPermission(t *testing.T) {
 
 	ev1, _ := createTestEvent(testInstance)
 	ev2, _ := createTestEvent(testInstance)
 	ev3, _ := createTestEvent(testInstance)
 
-	parent, _ := permissions.GetForOauth(&permissions.Claims{
+	parent, _ := middlewares.GetForOauth(testInstance, &permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
 			Audience: permissions.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
