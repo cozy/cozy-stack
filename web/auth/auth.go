@@ -1240,14 +1240,18 @@ func secretExchange(c echo.Context) error {
 // CheckLinkedAppInstalled checks if a linked webapp has been installed to the
 // instance
 func CheckLinkedAppInstalled(instance *instance.Instance, slug string) error {
-	for i := 0; i < 10; i++ {
+	i := 0
+	for {
+		i++
 		_, err := apps.GetWebappBySlug(instance, slug)
 		if err == nil {
 			return nil
 		}
+		if i == 10 {
+			return fmt.Errorf("%s is not installed", slug)
+		}
 		time.Sleep(3 * time.Second)
 	}
-	return fmt.Errorf("%s is not installed", slug)
 }
 
 // GetLinkedAppSlug returns a linked app slug from a softwareID
