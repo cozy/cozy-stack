@@ -3,10 +3,12 @@ package auth_test
 import (
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/go-redis/redis"
 	"github.com/stretchr/testify/assert"
 )
+
+const redisURL = "redis://localhost:6379/0"
 
 func TestLoginRateNotExceededMem(t *testing.T) {
 	auth.GlobalCounter = auth.NewMemCounter()
@@ -24,14 +26,16 @@ func TestLoginRateExceededMem(t *testing.T) {
 }
 
 func TestLoginRateNotExceededRedis(t *testing.T) {
-	client := config.GetConfig().DownloadStorage.Client()
+	opts, _ := redis.ParseURL(redisURL)
+	client := redis.NewClient(opts)
 	client.Del("auth:" + testInstance.Domain)
 	auth.GlobalCounter = &auth.RedisCounter{Client: client}
 
 	assert.NoError(t, auth.CheckRateLimit(testInstance, "auth"))
 }
 func TestLoginRateExceededRedis(t *testing.T) {
-	client := config.GetConfig().DownloadStorage.Client()
+	opts, _ := redis.ParseURL(redisURL)
+	client := redis.NewClient(opts)
 	auth.GlobalCounter = &auth.RedisCounter{Client: client}
 	client.Del("auth:" + testInstance.Domain)
 
