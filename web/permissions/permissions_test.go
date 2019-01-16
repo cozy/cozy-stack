@@ -479,6 +479,7 @@ func TestGetForOauth(t *testing.T) {
 		Slug:       "settings",
 		Registries: testInstance.Registries(),
 	})
+	assert.NoError(t, err)
 	installer.Run()
 
 	// Get app manifest
