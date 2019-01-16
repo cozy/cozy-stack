@@ -726,6 +726,7 @@ func authorizeForm(c echo.Context) error {
 		"ReadOnly":     readOnly,
 		"CSRF":         c.Get("csrf"),
 		"Webapp":       params.webapp,
+		"CozyUI":       cozyUI(instance),
 	})
 }
 
