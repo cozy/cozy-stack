@@ -200,11 +200,17 @@ msgstr "Confirm"
 msgid "Authorize Cancel"
 msgstr "Deny access"
 
-msgid "Authorize Webapp Title"
-msgstr "An application claims to be"
+msgid "Authorize Linked Title"
+msgstr "Permissions request"
 
-msgid "Authorize Webapp YourCozy"
-msgstr "It requests access to your Cozy"
+msgid "Authorize Linked Webapp"
+msgstr "An application claims to be:"
+
+msgid "Authorize Linked YourCozy"
+msgstr "It requests access to your Cozy:"
+
+msgid "Authorize Linked Help"
+msgstr "By accepting, it will give it permissions to:"
 
 msgid "Error Title"
 msgstr "Sorry, an error occurred."
