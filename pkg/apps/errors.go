@@ -31,4 +31,6 @@ var (
 	// ErrBadChecksum is used when the application checksum does not match the
 	// specified one.
 	ErrBadChecksum = errors.New("Application checksum does not match")
+	// ErrLinkedAppExists is used when
+	ErrLinkedAppExists = errors.New("A linked OAuth client exists for this app")
 )

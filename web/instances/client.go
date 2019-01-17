@@ -101,3 +101,9 @@ func findClientBySoftwareID(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, client)
 }
+
+func findLinkedClient(c echo.Context) error {
+	slug := c.QueryParam("slug")
+	c.QueryParams().Set("software_id", "registry://"+slug)
+	return findClientBySoftwareID(c)
+}

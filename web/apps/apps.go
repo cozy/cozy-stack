@@ -12,6 +12,8 @@ import (
 	"path"
 	"strconv"
 
+	"github.com/cozy/cozy-stack/pkg/oauth"
+
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -211,6 +213,14 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err := middlewares.AllowInstallApp(c, installerType, permissions.DELETE); err != nil {
 			return err
 		}
+
+		// Check if there is a mobile client attached to this app
+		oauthClient, err := oauth.FindClientBySoftwareID(instance, "registry://"+slug)
+
+		if installerType == apps.Webapp && err == nil && oauthClient != nil {
+			return wrapAppsError(apps.ErrLinkedAppExists)
+		}
+
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
 				Operation:  apps.Delete,
@@ -395,6 +405,8 @@ func wrapAppsError(err error) error {
 	case apps.ErrBadManifest:
 		return jsonapi.BadRequest(err)
 	case apps.ErrMissingSource:
+		return jsonapi.BadRequest(err)
+	case apps.ErrLinkedAppExists:
 		return jsonapi.BadRequest(err)
 	}
 	if _, ok := err.(*url.Error); ok {
