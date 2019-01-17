@@ -269,7 +269,7 @@ func login(c echo.Context) error {
 
 	var sessionID string
 	session, ok := middlewares.GetSession(c)
-	if ok {
+	if ok { // The user was already logged-in
 		sessionID = session.ID()
 	} else if twoFactorRequest {
 		successfulAuthentication = inst.ValidateTwoFactorPasscode(
@@ -281,25 +281,18 @@ func login(c echo.Context) error {
 		}
 		// Handle 2FA failed
 		if !successfulAuthentication {
-			err := CheckRateLimit(inst, "two-factor")
-			if err != nil {
-				err = TwoFactorRateExceeded(inst)
-				if err != nil {
+			if err := CheckRateLimit(inst, "two-factor"); err != nil {
+				if err = TwoFactorRateExceeded(inst); err != nil {
 					inst.Logger().WithField("nspace", "auth").Warning(err)
 				}
 			}
 		}
 	} else if passphraseRequest {
 		if inst.CheckPassphrase(passphrase) == nil {
-			switch {
 			// In case the second factor authentication mode is "mail", we also
 			// check that the mail has been confirmed. If not, 2FA is not actived.
-			case inst.HasAuthMode(instance.TwoFactorMail):
-				if len(twoFactorTrustedDeviceToken) > 0 {
-					successfulAuthentication = inst.ValidateTwoFactorTrustedDeviceSecret(
-						c.Request(), twoFactorTrustedDeviceToken)
-				}
-				if !successfulAuthentication {
+			if inst.HasAuthMode(instance.TwoFactorMail) {
+				if len(twoFactorTrustedDeviceToken) == 0 {
 					twoFactorToken, err = inst.SendTwoFactorPasscode()
 					if err != nil {
 						return err
@@ -312,14 +305,14 @@ func login(c echo.Context) error {
 					}
 					return renderTwoFactorForm(c, inst, http.StatusOK, redirect, twoFactorToken, longRunSession)
 				}
-			default:
+				successfulAuthentication = inst.ValidateTwoFactorTrustedDeviceSecret(
+					c.Request(), twoFactorTrustedDeviceToken)
+			} else {
 				successfulAuthentication = true
 			}
 		} else { // Bad login passphrase
-			err := CheckRateLimit(inst, "auth")
-			if err != nil {
-				err = LoginRateExceeded(inst)
-				if err != nil {
+			if err := CheckRateLimit(inst, "auth"); err != nil {
+				if err = LoginRateExceeded(inst); err != nil {
 					inst.Logger().WithField("nspace", "auth").Warning(err)
 				}
 			}
