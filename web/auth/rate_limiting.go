@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -124,6 +125,36 @@ func CheckRateLimit(inst *instance.Instance, passwordType string) error {
 // LoginRateExceeded blocks the instance after too many failed attempts to
 // login
 func LoginRateExceeded(i *instance.Instance) error {
+	err := fmt.Errorf("Instance was blocked because of too many login failed attempts")
+	i.Logger().WithField("nspace", "rate_limiting").Warning(err)
+
+	t := true
+	return instance.Patch(i, &instance.Options{
+		Blocked: &t,
+	})
+}
+
+// TwoFactorRateExceeded regenerates a new 2FA passcode after too many failed
+// attempts to login
+func TwoFactorRateExceeded(i *instance.Instance) error {
+	err := CheckRateLimit(i, "two-factor-generation")
+	if err != nil {
+		return TwoFactorGenerationExceeded(i)
+	}
+
+	_, err = i.SendTwoFactorPasscode()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// TwoFactorGenerationExceeded checks if there was too many attempts to
+// regenerate a 2FA code within an hour
+func TwoFactorGenerationExceeded(i *instance.Instance) error {
+	err := fmt.Errorf("Instance was blocked because of too many 2FA passcode generations")
+	i.Logger().WithField("nspace", "rate_limiting").Warning(err)
+
 	t := true
 	return instance.Patch(i, &instance.Options{
 		Blocked: &t,
