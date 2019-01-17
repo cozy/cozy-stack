@@ -144,7 +144,7 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 }
 
 func (s *swiftServer) makeObjectName(slug, version, shasum, file string) string {
-	basepath := path.Join("/", slug, version)
+	basepath := path.Join(slug, version)
 	if shasum != "" {
 		basepath += "-" + shasum
 	}
