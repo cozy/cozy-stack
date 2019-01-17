@@ -279,6 +279,16 @@ func login(c echo.Context) error {
 			twoFactorGeneratedTrustedDeviceToken, _ =
 				inst.GenerateTwoFactorTrustedDeviceSecret(c.Request())
 		}
+		// Handle 2FA failed
+		if !successfulAuthentication {
+			err := CheckRateLimit(inst, "two-factor")
+			if err != nil {
+				err = TwoFactorGenerationExceeded(inst)
+				if err != nil {
+					inst.Logger().WithField("nspace", "auth").Warning(err)
+				}
+			}
+		}
 	} else if passphraseRequest {
 		if inst.CheckPassphrase(passphrase) == nil {
 			switch {
