@@ -97,7 +97,7 @@ type Manifest interface {
 	Permissions() permissions.Set
 	Source() string
 	Version() string
-	SetAvailableVersion(version string)
+	Checksum() string
 	Slug() string
 	State() State
 	LastUpdate() time.Time
@@ -109,6 +109,8 @@ type Manifest interface {
 	SetSource(src *url.URL)
 	SetState(state State)
 	SetVersion(version string)
+	SetAvailableVersion(version string)
+	SetChecksum(shasum string)
 }
 
 // GetBySlug returns an app manifest identified by its slug
