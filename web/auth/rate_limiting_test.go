@@ -28,14 +28,14 @@ func TestLoginRateNotExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
 	client.Del("auth:" + testInstance.Domain)
-	auth.GlobalCounter = &auth.RedisCounter{Client: client}
+	auth.GlobalCounter = auth.NewRedisCounter(client)
 
 	assert.NoError(t, auth.CheckRateLimit(testInstance, "auth"))
 }
 func TestLoginRateExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	auth.GlobalCounter = &auth.RedisCounter{Client: client}
+	auth.GlobalCounter = auth.NewRedisCounter(client)
 	client.Del("auth:" + testInstance.Domain)
 
 	for i := 1; i <= 1000; i++ {
@@ -63,14 +63,14 @@ func Test2FAGenerationNotExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
 	client.Del("two-factor-generation:" + testInstance.Domain)
-	auth.GlobalCounter = &auth.RedisCounter{Client: client}
+	auth.GlobalCounter = auth.NewRedisCounter(client)
 
 	assert.NoError(t, auth.CheckRateLimit(testInstance, "two-factor-generation"))
 }
 func Test2FAGenerationExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	auth.GlobalCounter = &auth.RedisCounter{Client: client}
+	auth.GlobalCounter = auth.NewRedisCounter(client)
 	client.Del("two-factor-generation:" + testInstance.Domain)
 
 	for i := 1; i <= 20; i++ {
@@ -97,14 +97,14 @@ func Test2FANotExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
 	client.Del("two-factor:" + testInstance.Domain)
-	auth.GlobalCounter = &auth.RedisCounter{Client: client}
+	auth.GlobalCounter = auth.NewRedisCounter(client)
 
 	assert.NoError(t, auth.CheckRateLimit(testInstance, "two-factor"))
 }
 func Test2FAExceededRedis(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
-	auth.GlobalCounter = &auth.RedisCounter{Client: client}
+	auth.GlobalCounter = auth.NewRedisCounter(client)
 	client.Del("two-factor:" + testInstance.Domain)
 
 	for i := 1; i <= 10; i++ {
