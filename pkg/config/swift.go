@@ -10,6 +10,7 @@ import (
 
 var swiftConn *swift.Connection
 
+// InitDefaultSwiftConnection initializes the default swift handler.
 func InitDefaultSwiftConnection() error {
 	return InitSwiftConnection(config.Fs)
 }
