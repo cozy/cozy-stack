@@ -79,7 +79,7 @@ func Test2FAGenerationExceededRedis(t *testing.T) {
 	assert.Error(t, auth.CheckRateLimit(testInstance, "two-factor-generation"))
 }
 
-func TwoFactorRateExceededNotExceededMem(t *testing.T) {
+func Test2FARateExceededNotExceededMem(t *testing.T) {
 	auth.GlobalCounter = auth.NewMemCounter()
 	assert.NoError(t, auth.CheckRateLimit(testInstance, "two-factor"))
 }
