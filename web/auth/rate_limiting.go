@@ -11,26 +11,18 @@ import (
 	"github.com/go-redis/redis"
 )
 
+// Counter is an interface for counting number of attempts that can be used to
+// rate limit the number of logins and 2FA tries, and thus block bruteforce
+// attacks.
 type Counter interface {
 	Increment(key string, timeLimit time.Duration) (int64, error)
 }
 
+// GlobalCounter is the counter used by auth modules. It is exported for the
+// tests but you should use the GetCounter method to access it.
 var GlobalCounter Counter
 var globalCounterMu sync.Mutex
 var counterCleanInterval = 1 * time.Second
-
-type memRef struct {
-	val int64
-	exp time.Time
-}
-type memCounter struct {
-	mu   sync.Mutex
-	vals map[string]*memRef
-}
-
-type RedisCounter struct {
-	Client redis.UniversalClient
-}
 
 // GetCounter returns the Counter.
 func GetCounter() Counter {
@@ -43,11 +35,21 @@ func GetCounter() Counter {
 	if client == nil {
 		GlobalCounter = NewMemCounter()
 	} else {
-		GlobalCounter = &RedisCounter{client}
+		GlobalCounter = NewRedisCounter(client)
 	}
 	return GlobalCounter
 }
 
+type memRef struct {
+	val int64
+	exp time.Time
+}
+type memCounter struct {
+	mu   sync.Mutex
+	vals map[string]*memRef
+}
+
+// NewMemCounter returns a in-memory counter.
 func NewMemCounter() Counter {
 	counter := &memCounter{vals: make(map[string]*memRef)}
 	go counter.cleaner()
@@ -79,7 +81,17 @@ func (c *memCounter) Increment(key string, timeLimit time.Duration) (int64, erro
 	return c.vals[key].val, nil
 }
 
-func (r *RedisCounter) Increment(key string, timeLimit time.Duration) (int64, error) {
+type redisCounter struct {
+	Client redis.UniversalClient
+}
+
+// NewRedisCounter returns a counter that can be mutualized between several
+// cozy-stack processes by using redis.
+func NewRedisCounter(client redis.UniversalClient) Counter {
+	return &redisCounter{client}
+}
+
+func (r *redisCounter) Increment(key string, timeLimit time.Duration) (int64, error) {
 	return r.Client.Incr(key).Result()
 }
 
@@ -92,14 +104,7 @@ func CheckRateLimit(inst *instance.Instance, passwordType string) error {
 	var key string
 	var limit int64
 	var timeLimit time.Duration
-
-	counter := GetCounter()
-
 	switch passwordType {
-	case "two-factor":
-		key = "two-factor:" + inst.Domain
-		limit = Max2FATries
-		timeLimit = 300 * time.Second // 5 minutes
 	case "auth":
 		key = "auth:" + inst.Domain
 		limit = MaxAuthTries
@@ -108,17 +113,20 @@ func CheckRateLimit(inst *instance.Instance, passwordType string) error {
 		key = "two-factor-generation:" + inst.Domain
 		limit = MaxAuthGenerations
 		timeLimit = 3600 * time.Second // 1 hour
+	case "two-factor":
+		key = "two-factor:" + inst.Domain
+		limit = Max2FATries
+		timeLimit = 300 * time.Second // 5 minutes
 	}
 
+	counter := GetCounter()
 	val, err := counter.Increment(key, timeLimit)
 	if err != nil {
 		return err
 	}
-
 	if val <= limit {
 		return nil
 	}
-
 	return errors.New("Rate limit exceeded")
 }
 
@@ -127,7 +135,6 @@ func CheckRateLimit(inst *instance.Instance, passwordType string) error {
 func LoginRateExceeded(i *instance.Instance) error {
 	err := fmt.Errorf("Instance was blocked because of too many login failed attempts")
 	i.Logger().WithField("nspace", "rate_limiting").Warning(err)
-
 	t := true
 	return instance.Patch(i, &instance.Options{
 		Blocked: &t,
@@ -137,16 +144,11 @@ func LoginRateExceeded(i *instance.Instance) error {
 // TwoFactorRateExceeded regenerates a new 2FA passcode after too many failed
 // attempts to login
 func TwoFactorRateExceeded(i *instance.Instance) error {
-	err := CheckRateLimit(i, "two-factor-generation")
-	if err != nil {
+	if err := CheckRateLimit(i, "two-factor-generation"); err != nil {
 		return TwoFactorGenerationExceeded(i)
 	}
-
-	_, err = i.SendTwoFactorPasscode()
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := i.SendTwoFactorPasscode()
+	return err
 }
 
 // TwoFactorGenerationExceeded checks if there was too many attempts to
@@ -154,7 +156,6 @@ func TwoFactorRateExceeded(i *instance.Instance) error {
 func TwoFactorGenerationExceeded(i *instance.Instance) error {
 	err := fmt.Errorf("Instance was blocked because of too many 2FA passcode generations")
 	i.Logger().WithField("nspace", "rate_limiting").Warning(err)
-
 	t := true
 	return instance.Patch(i, &instance.Options{
 		Blocked: &t,
