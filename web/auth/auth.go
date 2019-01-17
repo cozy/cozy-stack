@@ -283,7 +283,7 @@ func login(c echo.Context) error {
 		if !successfulAuthentication {
 			err := CheckRateLimit(inst, "two-factor")
 			if err != nil {
-				err = TwoFactorGenerationExceeded(inst)
+				err = TwoFactorRateExceeded(inst)
 				if err != nil {
 					inst.Logger().WithField("nspace", "auth").Warning(err)
 				}
