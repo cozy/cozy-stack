@@ -157,11 +157,16 @@ func (sfs *swiftVFS) deleteContainer(container string) error {
 	if err != nil {
 		return err
 	}
-	if len(objectNames) > 0 {
-		_, err = sfs.c.BulkDelete(container, objectNames)
+	for len(objectNames) > 0 {
+		objectToDelete := objectNames
+		if len(objectToDelete) > 8000 {
+			objectToDelete = objectToDelete[:8000]
+		}
+		_, err = sfs.c.BulkDelete(container, objectToDelete)
 		if err != nil {
 			return err
 		}
+		objectNames = objectNames[len(objectToDelete):]
 	}
 	return sfs.c.ContainerDelete(container)
 }
