@@ -53,14 +53,14 @@ type KonnManifest struct {
 	// when an account associated with the konnector is deleted.
 	OnDeleteAccount string `json:"on_delete_account,omitempty"`
 
-	DocSlug          string          `json:"slug"`
-	DocState         State           `json:"state"`
-	DocSource        string          `json:"source"`
-	DocVersion       string          `json:"version"`
-	DocChecksum      string          `json:"checksum"`
-	DocPermissions   permissions.Set `json:"permissions"`
-	AvailableVersion string          `json:"available_version,omitempty"`
-	DocTerms         Terms           `json:"terms,omitempty"`
+	DocSlug             string          `json:"slug"`
+	DocState            State           `json:"state"`
+	DocSource           string          `json:"source"`
+	DocVersion          string          `json:"version"`
+	DocChecksum         string          `json:"checksum"`
+	DocPermissions      permissions.Set `json:"permissions"`
+	DocAvailableVersion string          `json:"available_version,omitempty"`
+	DocTerms            Terms           `json:"terms,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -128,6 +128,9 @@ func (m *KonnManifest) Source() string { return m.DocSource }
 // Version is part of the Manifest interface
 func (m *KonnManifest) Version() string { return m.DocVersion }
 
+// AvailableVersion is part of the Manifest interface
+func (m *KonnManifest) AvailableVersion() string { return m.DocAvailableVersion }
+
 // Checksum is part of the Manifest interface
 func (m *KonnManifest) Checksum() string { return m.DocChecksum }
 
@@ -147,7 +150,7 @@ func (m *KonnManifest) SetState(state State) { m.DocState = state }
 func (m *KonnManifest) SetVersion(version string) { m.DocVersion = version }
 
 // SetAvailableVersion is part of the Manifest interface
-func (m *KonnManifest) SetAvailableVersion(version string) { m.AvailableVersion = version }
+func (m *KonnManifest) SetAvailableVersion(version string) { m.DocAvailableVersion = version }
 
 // SetChecksum is part of the Manifest interface
 func (m *KonnManifest) SetChecksum(shasum string) { m.DocChecksum = shasum }
@@ -260,7 +263,7 @@ func GetKonnectorBySlugAndUpdate(db prefixer.Prefixer, slug string, copier Copie
 	if err != nil {
 		return nil, err
 	}
-	return DoLazyUpdate(db, man, man.AvailableVersion, copier, registries).(*KonnManifest), nil
+	return DoLazyUpdate(db, man, copier, registries).(*KonnManifest), nil
 }
 
 // ListKonnectors returns the list of installed konnectors applications.

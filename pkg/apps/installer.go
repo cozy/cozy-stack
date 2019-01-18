@@ -466,7 +466,7 @@ func (i *Installer) Poll() (Manifest, bool, error) {
 }
 
 // DoLazyUpdate tries to update an application before using it
-func DoLazyUpdate(db prefixer.Prefixer, man Manifest, availableVersion string, copier Copier, registries []*url.URL) Manifest {
+func DoLazyUpdate(db prefixer.Prefixer, man Manifest, copier Copier, registries []*url.URL) Manifest {
 	src, err := url.Parse(man.Source())
 	if err != nil || src.Scheme != "registry" {
 		return man
@@ -477,7 +477,7 @@ func DoLazyUpdate(db prefixer.Prefixer, man Manifest, availableVersion string, c
 	if errv != nil || v.Version == man.Version() {
 		return man
 	}
-	if availableVersion != "" && v.Version == availableVersion {
+	if man.AvailableVersion() != "" && v.Version == man.AvailableVersion() {
 		return man
 	}
 	if channel == "stable" && !isMoreRecent(man.Version(), v.Version) {
