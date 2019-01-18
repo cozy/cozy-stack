@@ -97,6 +97,7 @@ type Manifest interface {
 	Permissions() permissions.Set
 	Source() string
 	Version() string
+	AvailableVersion() string
 	Checksum() string
 	Slug() string
 	State() State

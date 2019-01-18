@@ -84,14 +84,14 @@ type WebappManifest struct {
 	Tags        *json.RawMessage `json:"tags,omitempty"`
 	Partnership *json.RawMessage `json:"partnership,omitempty"`
 
-	DocSlug          string          `json:"slug"`
-	DocState         State           `json:"state"`
-	DocSource        string          `json:"source"`
-	DocChecksum      string          `json:"checksum"`
-	DocVersion       string          `json:"version"`
-	DocPermissions   permissions.Set `json:"permissions"`
-	AvailableVersion string          `json:"available_version,omitempty"`
-	DocTerms         Terms           `json:"terms,omitempty"`
+	DocSlug             string          `json:"slug"`
+	DocState            State           `json:"state"`
+	DocSource           string          `json:"source"`
+	DocChecksum         string          `json:"checksum"`
+	DocVersion          string          `json:"version"`
+	DocPermissions      permissions.Set `json:"permissions"`
+	DocAvailableVersion string          `json:"available_version,omitempty"`
+	DocTerms            Terms           `json:"terms,omitempty"`
 
 	Intents       []Intent      `json:"intents"`
 	Routes        Routes        `json:"routes"`
@@ -175,6 +175,9 @@ func (m *WebappManifest) Source() string { return m.DocSource }
 // Version is part of the Manifest interface
 func (m *WebappManifest) Version() string { return m.DocVersion }
 
+// AvailableVersion is part of the Manifest interface
+func (m *WebappManifest) AvailableVersion() string { return m.DocAvailableVersion }
+
 // Checksum is part of the Manifest interface
 func (m *WebappManifest) Checksum() string { return m.DocChecksum }
 
@@ -194,7 +197,7 @@ func (m *WebappManifest) SetState(state State) { m.DocState = state }
 func (m *WebappManifest) SetVersion(version string) { m.DocVersion = version }
 
 // SetAvailableVersion is part of the Manifest interface
-func (m *WebappManifest) SetAvailableVersion(version string) { m.AvailableVersion = version }
+func (m *WebappManifest) SetAvailableVersion(version string) { m.DocAvailableVersion = version }
 
 // SetChecksum is part of the Manifest interface
 func (m *WebappManifest) SetChecksum(shasum string) { m.DocChecksum = shasum }
@@ -231,6 +234,7 @@ func (m *WebappManifest) Match(field, value string) bool {
 	return false
 }
 
+// NameLocalized returns the name of the app in the given locale
 func (m *WebappManifest) NameLocalized(locale string) string {
 	if m.Locales != nil && locale != "" {
 		var locales map[string]struct {
@@ -466,7 +470,7 @@ func GetWebappBySlugAndUpdate(db prefixer.Prefixer, slug string, copier Copier, 
 	if err != nil {
 		return nil, err
 	}
-	return DoLazyUpdate(db, man, man.AvailableVersion, copier, registries).(*WebappManifest), nil
+	return DoLazyUpdate(db, man, copier, registries).(*WebappManifest), nil
 }
 
 // ListWebapps returns the list of installed web applications.
