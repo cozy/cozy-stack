@@ -17,6 +17,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/cozy/cozy-stack/pkg/oauth"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -408,6 +411,108 @@ func TestThemeWithContext(t *testing.T) {
 	assert.NotContains(t, string(body), "/assets/styles/theme.css")
 }
 
+func TestUninstallAppWithLinkedClient(t *testing.T) {
+	// Install drive app
+	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp),
+		&apps.InstallerOptions{
+			Operation:  apps.Install,
+			Type:       apps.Webapp,
+			Slug:       "drive",
+			SourceURL:  "registry://drive",
+			Registries: testInstance.Registries(),
+		},
+	)
+	assert.NoError(t, err)
+	_, err = installer.RunSync()
+	assert.NoError(t, err)
+
+	// Link an OAuthClient to drive
+	oauthClient := &oauth.Client{
+		ClientName:   "test-linked",
+		RedirectURIs: []string{"https://foobar"},
+		SoftwareID:   "registry://drive",
+	}
+
+	oauthClient.Create(testInstance)
+	// Forcing the oauthClient to get a couchID for the purpose of later deletion
+	oauthClient, err = oauth.FindClient(testInstance, oauthClient.ClientID)
+	assert.NoError(t, err)
+
+	scope := "io.cozy.apps:ALL"
+	token, err := testInstance.MakeJWT("cli", "drive", scope, "", time.Now())
+	assert.NoError(t, err)
+
+	// Trying to remove this app
+	req, _ := http.NewRequest("DELETE", ts.URL+"/apps/drive", nil)
+	req.Host = testInstance.Domain
+
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, res.StatusCode)
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(body), "linked OAuth client exists")
+
+	// Cleaning
+	uninstaller, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp),
+		&apps.InstallerOptions{
+			Operation:  apps.Delete,
+			Type:       apps.Webapp,
+			Slug:       "drive",
+			SourceURL:  "registry://drive",
+			Registries: testInstance.Registries(),
+		},
+	)
+	assert.NoError(t, err)
+	uninstaller.RunSync()
+	errc := oauthClient.Delete(testInstance)
+	assert.Nil(t, errc)
+}
+
+func TestUninstallAppWithoutLinkedClient(t *testing.T) {
+	// Install drive app
+	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp),
+		&apps.InstallerOptions{
+			Operation:  apps.Install,
+			Type:       apps.Webapp,
+			Slug:       "drive",
+			SourceURL:  "registry://drive",
+			Registries: testInstance.Registries(),
+		},
+	)
+	assert.NoError(t, err)
+	_, err = installer.RunSync()
+	assert.NoError(t, err)
+
+	// Create an OAuth client not linked to drive
+	oauthClient := &oauth.Client{
+		ClientName:   "test-linked",
+		RedirectURIs: []string{"https://foobar"},
+		SoftwareID:   "foobarclient",
+	}
+	oauthClient.Create(testInstance)
+	// Forcing the oauthClient to get a couchID for the purpose of later deletion
+	oauthClient, err = oauth.FindClient(testInstance, oauthClient.ClientID)
+	assert.NoError(t, err)
+
+	scope := "io.cozy.apps:ALL"
+	token, err := testInstance.MakeJWT("cli", "drive", scope, "", time.Now())
+	assert.NoError(t, err)
+
+	// Trying to remove this app
+	req, _ := http.NewRequest("DELETE", ts.URL+"/apps/drive", nil)
+	req.Host = testInstance.Domain
+
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	// Cleaning
+	errc := oauthClient.Delete(testInstance)
+	assert.Nil(t, errc)
+}
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
