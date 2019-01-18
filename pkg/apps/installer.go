@@ -354,6 +354,7 @@ func (i *Installer) update() error {
 		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
 			return err
 		}
+		i.man.SetAvailableVersion("")
 		i.man.SetState(i.endState)
 	} else {
 		i.man.SetSource(i.src)
