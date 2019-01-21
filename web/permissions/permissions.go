@@ -313,6 +313,20 @@ func revokePermission(c echo.Context) error {
 		return err
 	}
 
+	// Check if the permission is linked to an OAuth Client
+	if current.Client != nil {
+		oauthClient := current.Client.(*oauth.Client)
+
+		if auth.IsLinkedApp(oauthClient.SoftwareID) {
+			slug := auth.GetLinkedAppSlug(oauthClient.SoftwareID)
+
+			// Changing the sourceID from the OAuth clientID to the classic
+			// io.cozy.apps/slug one
+			current.SourceID = consts.Apps + "/" + slug
+
+		}
+	}
+
 	if !current.ParentOf(toRevoke) {
 		return permissions.ErrNotParent
 	}
