@@ -16,6 +16,7 @@ import (
 // attacks.
 type Counter interface {
 	Increment(key string, timeLimit time.Duration) (int64, error)
+	Reset(key string) error
 }
 
 // GlobalCounter is the counter used by auth modules. It is exported for the
@@ -81,6 +82,11 @@ func (c *memCounter) Increment(key string, timeLimit time.Duration) (int64, erro
 	return c.vals[key].val, nil
 }
 
+func (c *memCounter) Reset(key string) error {
+	delete(c.vals, key)
+	return nil
+}
+
 type redisCounter struct {
 	Client redis.UniversalClient
 }
@@ -93,6 +99,11 @@ func NewRedisCounter(client redis.UniversalClient) Counter {
 
 func (r *redisCounter) Increment(key string, timeLimit time.Duration) (int64, error) {
 	return r.Client.Incr(key).Result()
+}
+
+func (r *redisCounter) Reset(key string) error {
+	_, err := r.Client.Del(key).Result()
+	return err
 }
 
 // CheckRateLimit takes care of bruteforcing
@@ -147,6 +158,10 @@ func TwoFactorRateExceeded(i *instance.Instance) error {
 	if err := CheckRateLimit(i, "two-factor-generation"); err != nil {
 		return TwoFactorGenerationExceeded(i)
 	}
+	// Reset the key and send a new passcode to the user
+	counter := GetCounter()
+	counter.Reset("two-factor:" + i.Domain)
+
 	_, err := i.SendTwoFactorPasscode()
 	return err
 }
