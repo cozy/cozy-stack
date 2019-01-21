@@ -81,6 +81,9 @@ msgstr "Enter your code"
 msgid "Login Two factor error"
 msgstr "The passcode you entered is incorrect, please try again."
 
+msgid "Login Two factor attempts error"
+msgstr "You entered too many bad passcodes. A new one was sent, check your emails."
+
 msgid "Login Two factor field"
 msgstr "Code (6 digits)"
 
