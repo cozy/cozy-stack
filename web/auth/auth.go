@@ -40,6 +40,9 @@ const (
 	// TwoFactorErrorKey is the key for translating the message showed to the
 	// user when he/she enters incorrect two factor secret
 	TwoFactorErrorKey = "Login Two factor error"
+	// TwoFactorExceededErrorKey is the key for translating the message showed to the
+	// user when there were too many attempts
+	TwoFactorExceededErrorKey = "Login Two factor attempts error"
 )
 
 // Home is the handler for /
@@ -263,6 +266,7 @@ func login(c echo.Context) error {
 	longRunSession, _ := strconv.ParseBool(c.FormValue("long-run-session"))
 
 	var twoFactorGeneratedTrustedDeviceToken []byte
+	var errCheckRateLimit error
 
 	twoFactorRequest := len(twoFactorToken) > 0 && twoFactorPasscode != ""
 	passphraseRequest := len(passphrase) > 0
@@ -281,7 +285,8 @@ func login(c echo.Context) error {
 		}
 		// Handle 2FA failed
 		if !successfulAuthentication {
-			if err := CheckRateLimit(inst, "two-factor"); err != nil {
+			errCheckRateLimit = CheckRateLimit(inst, "two-factor")
+			if errCheckRateLimit != nil {
 				if err = TwoFactorRateExceeded(inst); err != nil {
 					inst.Logger().WithField("nspace", "auth").Warning(err)
 				}
@@ -345,7 +350,11 @@ func login(c echo.Context) error {
 	if sessionID == "" {
 		var errorMessage string
 		if twoFactorRequest {
-			errorMessage = inst.Translate(TwoFactorErrorKey)
+			if errCheckRateLimit != nil {
+				errorMessage = inst.Translate(TwoFactorExceededErrorKey)
+			} else {
+				errorMessage = inst.Translate(TwoFactorErrorKey)
+			}
 		} else {
 			errorMessage = inst.Translate(CredentialsErrorKey)
 		}
