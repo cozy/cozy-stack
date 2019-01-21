@@ -1011,6 +1011,7 @@ func accessToken(c echo.Context) error {
 	clientID := c.FormValue("client_id")
 	clientSecret := c.FormValue("client_secret")
 	instance := middlewares.GetInstance(c)
+	var slug string
 
 	if grant == "" {
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -1047,7 +1048,7 @@ func accessToken(c echo.Context) error {
 	}
 
 	if IsLinkedApp(client.SoftwareID) {
-		slug := GetLinkedAppSlug(client.SoftwareID)
+		slug = GetLinkedAppSlug(client.SoftwareID)
 		if err := CheckLinkedAppInstalled(instance, slug); err != nil {
 			return err
 		}
@@ -1088,7 +1089,13 @@ func accessToken(c echo.Context) error {
 				"error": "invalid refresh token",
 			})
 		}
-		out.Scope = claims.Scope
+		// Code below is used to transform an old OAuth client token scope to
+		// the new linked-app scope
+		if slug != "" {
+			out.Scope = BuildLinkedAppScope(slug)
+		} else {
+			out.Scope = claims.Scope
+		}
 
 	default:
 		return c.JSON(http.StatusBadRequest, echo.Map{
