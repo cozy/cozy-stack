@@ -159,6 +159,10 @@ func (sfs *swiftVFSV2) Delete() error {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.version, err)
 	}
+	if err = sfs.c.VersionDisable(sfs.container); err != nil {
+		sfs.log.Errorf("Could not disable versioning on container %q: %s",
+			sfs.container, err)
+	}
 	var errm error
 	if err = sfs.deleteContainer(sfs.version); err != nil {
 		errm = multierror.Append(errm, err)
