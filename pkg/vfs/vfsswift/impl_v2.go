@@ -144,29 +144,29 @@ func (sfs *swiftVFSV2) Delete() error {
 	containerMeta := swift.Metadata{"to-be-deleted": "1"}.ContainerHeaders()
 	sfs.log.Infof("Marking containers %q, %q and %q as to-be-deleted",
 		sfs.container, sfs.version, sfs.dataContainer)
-	err1 := sfs.c.ContainerUpdate(sfs.container, containerMeta)
-	err2 := sfs.c.ContainerUpdate(sfs.dataContainer, containerMeta)
-	err3 := sfs.c.ContainerUpdate(sfs.version, containerMeta)
-	if err1 != nil {
+	err := sfs.c.ContainerUpdate(sfs.container, containerMeta)
+	if err != nil {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
-			sfs.container, err1)
+			sfs.container, err)
 	}
-	if err2 != nil {
+	err = sfs.c.ContainerUpdate(sfs.dataContainer, containerMeta)
+	if err != nil {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
-			sfs.dataContainer, err2)
+			sfs.dataContainer, err)
 	}
-	if err3 != nil {
+	err = sfs.c.ContainerUpdate(sfs.version, containerMeta)
+	if err != nil {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
-			sfs.version, err3)
+			sfs.version, err)
 	}
 	var errm error
-	if err := sfs.deleteContainer(sfs.container); err != nil {
+	if err = sfs.deleteContainer(sfs.version); err != nil {
 		errm = multierror.Append(errm, err)
 	}
-	if err := sfs.deleteContainer(sfs.dataContainer); err != nil {
+	if err = sfs.deleteContainer(sfs.container); err != nil {
 		errm = multierror.Append(errm, err)
 	}
-	if err := sfs.deleteContainer(sfs.version); err != nil {
+	if err = sfs.deleteContainer(sfs.dataContainer); err != nil {
 		errm = multierror.Append(errm, err)
 	}
 	return errm
