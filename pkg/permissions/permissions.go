@@ -376,7 +376,7 @@ func updateAppSet(db prefixer.Prefixer, doc *Permission, typ, docType, slug stri
 }
 
 // CreateShareSet creates a Permission doc for sharing by link
-func CreateShareSet(db prefixer.Prefixer, parent *Permission, codes, shortcodes map[string]string, set Set, expiresAt *time.Time) (*Permission, error) {
+func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, codes, shortcodes map[string]string, set Set, expiresAt *time.Time) (*Permission, error) {
 	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
 		return nil, ErrOnlyAppCanCreateSubSet
 	}
@@ -398,7 +398,7 @@ func CreateShareSet(db prefixer.Prefixer, parent *Permission, codes, shortcodes 
 	// SourceID stays the same, allow quick destruction of all children permissions
 	doc := &Permission{
 		Type:        TypeShareByLink,
-		SourceID:    parent.SourceID,
+		SourceID:    sourceID,
 		Permissions: set,
 		Codes:       codes,
 		ShortCodes:  shortcodes,
@@ -426,17 +426,6 @@ func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes map[str
 		return nil, err
 	}
 	return doc, nil
-}
-
-// DeleteShareSet revokes all the code in a permission set
-func DeleteShareSet(db prefixer.Prefixer, permID string) error {
-	var doc *Permission
-	err := couchdb.GetDoc(db, consts.Permissions, permID, doc)
-	if err != nil {
-		return err
-	}
-
-	return couchdb.DeleteDoc(db, doc)
 }
 
 // ForceWebapp creates or updates a Permission doc for a given webapp

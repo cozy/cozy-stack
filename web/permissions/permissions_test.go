@@ -48,6 +48,176 @@ func TestMain(m *testing.M) {
 	os.Exit(testSetup.Run())
 }
 
+func TestCreateShareSetByMobileRevokeByLinkedApp(t *testing.T) {
+	// Create OAuthLinkedClient
+	oauthLinkedClient := &oauth.Client{
+		ClientName:   "test-linked-shareset",
+		RedirectURIs: []string{"https://foobar"},
+		SoftwareID:   "registry://drive",
+	}
+	oauthLinkedClient.Create(testInstance)
+
+	// Install the app
+	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp), &apps.InstallerOptions{
+		Operation:  apps.Install,
+		Type:       apps.Webapp,
+		SourceURL:  "registry://drive",
+		Slug:       "drive",
+		Registries: testInstance.Registries(),
+	})
+	assert.NoError(t, err)
+	_, err = installer.RunSync()
+	assert.NoError(t, err)
+
+	// Generate a token for the client
+	tok, err := testInstance.MakeJWT(permissions.AccessTokenAudience,
+		oauthLinkedClient.ClientID, "@io.cozy.apps/drive", "", time.Now())
+	assert.NoError(t, err)
+
+	// Create body
+	bodyReq := fmt.Sprintf(`{"data": {"id": "%s","type": "io.cozy.permissions","attributes": {"permissions": {"files": {"type": "io.cozy.files","verbs": ["GET"]}}}}}`, oauthLinkedClient.ClientID)
+
+	// Request to create a permission
+	req, err := http.NewRequest("POST", ts.URL+"/permissions?codes=email", strings.NewReader(bodyReq))
+	assert.NoError(t, err)
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+tok)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	type minPerms struct {
+		Type       string                 `json:"type"`
+		ID         string                 `json:"id"`
+		Attributes permissions.Permission `json:"attributes"`
+	}
+
+	var perm struct {
+		Data minPerms `json:"data"`
+	}
+	err = json.NewDecoder(res.Body).Decode(&perm)
+	assert.NoError(t, err)
+	// Assert the permission received does not have the clientID as source_id
+	assert.NotEqual(t, perm.Data.Attributes.SourceID, oauthLinkedClient.ClientID)
+
+	// Create a webapp token
+	webAppToken, err := testInstance.MakeJWT(permissions.AppAudience, "drive", "", "", time.Now())
+	assert.NoError(t, err)
+
+	// Login to webapp and try to delete the shared link
+	delReq, err := http.NewRequest("DELETE", ts.URL+"/permissions/"+perm.Data.ID, nil)
+	delReq.Host = testInstance.Domain
+	delReq.Header.Add("Authorization", "Bearer "+webAppToken)
+	assert.NoError(t, err)
+	delRes, err := http.DefaultClient.Do(delReq)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, delRes.StatusCode)
+
+	// Cleaning
+	oauthLinkedClient, err = oauth.FindClientBySoftwareID(testInstance, "registry://drive")
+	assert.NoError(t, err)
+	oauthLinkedClient.Delete(testInstance)
+
+	uninstaller, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp),
+		&apps.InstallerOptions{
+			Operation:  apps.Delete,
+			Type:       apps.Webapp,
+			Slug:       "drive",
+			SourceURL:  "registry://drive",
+			Registries: testInstance.Registries(),
+		},
+	)
+	assert.NoError(t, err)
+
+	uninstaller.RunSync()
+
+}
+
+func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
+	// Create a webapp token
+	webAppToken, err := testInstance.MakeJWT(permissions.AppAudience, "drive", "", "", time.Now())
+	assert.NoError(t, err)
+
+	// Install the app
+	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp), &apps.InstallerOptions{
+		Operation:  apps.Install,
+		Type:       apps.Webapp,
+		SourceURL:  "registry://drive",
+		Slug:       "drive",
+		Registries: testInstance.Registries(),
+	})
+	assert.NoError(t, err)
+	_, err = installer.RunSync()
+	assert.NoError(t, err)
+
+	// Create body
+	bodyReq := fmt.Sprintf(`{"data": {"id": "%s","type": "io.cozy.permissions","attributes": {"permissions": {"files": {"type": "io.cozy.files","verbs": ["GET"]}}}}}`, "io.cozy.apps/drive")
+
+	// Request to create a permission
+	req, err := http.NewRequest("POST", ts.URL+"/permissions?codes=email", strings.NewReader(bodyReq))
+	assert.NoError(t, err)
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+webAppToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	type minPerms struct {
+		Type       string                 `json:"type"`
+		ID         string                 `json:"id"`
+		Attributes permissions.Permission `json:"attributes"`
+	}
+
+	var perm struct {
+		Data minPerms `json:"data"`
+	}
+	err = json.NewDecoder(res.Body).Decode(&perm)
+	assert.NoError(t, err)
+
+	// // Create OAuthLinkedClient
+	oauthLinkedClient := &oauth.Client{
+		ClientName:   "test-linked-shareset2",
+		RedirectURIs: []string{"https://foobar"},
+		SoftwareID:   "registry://drive",
+	}
+	oauthLinkedClient.Create(testInstance)
+
+	// // Generate a token for the client
+	tok, err := testInstance.MakeJWT(permissions.AccessTokenAudience,
+		oauthLinkedClient.ClientID, "@io.cozy.apps/drive", "", time.Now())
+	assert.NoError(t, err)
+
+	// // Assert the permission received does not have the clientID as source_id
+	// assert.NotEqual(t, perm.Data.Attributes.SourceID, oauthLinkedClient.ClientID)
+
+	// // Login to webapp and try to delete the shared link
+	delReq, err := http.NewRequest("DELETE", ts.URL+"/permissions/"+perm.Data.ID, nil)
+	delReq.Host = testInstance.Domain
+	delReq.Header.Add("Authorization", "Bearer "+tok)
+	assert.NoError(t, err)
+	delRes, err := http.DefaultClient.Do(delReq)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, delRes.StatusCode)
+
+	// Cleaning
+	oauthLinkedClient, err = oauth.FindClientBySoftwareID(testInstance, "registry://drive")
+	assert.NoError(t, err)
+	oauthLinkedClient.Delete(testInstance)
+
+	uninstaller, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp),
+		&apps.InstallerOptions{
+			Operation:  apps.Delete,
+			Type:       apps.Webapp,
+			Slug:       "drive",
+			SourceURL:  "registry://drive",
+			Registries: testInstance.Registries(),
+		},
+	)
+	assert.NoError(t, err)
+
+	uninstaller.RunSync()
+}
+
 func TestGetPermissions(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
@@ -538,8 +708,8 @@ func TestListPermission(t *testing.T) {
 		}}
 
 	codes := map[string]string{"bob": "secret"}
-	permissions.CreateShareSet(testInstance, parent, codes, nil, p1, nil)
-	permissions.CreateShareSet(testInstance, parent, codes, nil, p2, nil)
+	permissions.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, p1, nil)
+	permissions.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, p2, nil)
 
 	reqbody := strings.NewReader(`{
 "data": [

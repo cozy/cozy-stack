@@ -10,8 +10,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -83,6 +85,22 @@ func createPermission(c echo.Context) error {
 	names := strings.Split(c.QueryParam("codes"), ",")
 	ttl := c.QueryParam("ttl")
 	parent, err := middlewares.GetPermission(c)
+
+	sourceID := parent.SourceID
+
+	// Check if the permission is linked to an OAuth Client
+	if parent.Client != nil {
+		oauthClient := parent.Client.(*oauth.Client)
+
+		if auth.IsLinkedApp(oauthClient.SoftwareID) {
+			slug := auth.GetLinkedAppSlug(oauthClient.SoftwareID)
+
+			// Changing the sourceID from the OAuth clientID to the classic
+			// io.cozy.apps/slug one
+			sourceID = consts.Apps + "/" + slug
+		}
+	}
+
 	if err != nil {
 		return err
 	}
@@ -122,7 +140,7 @@ func createPermission(c echo.Context) error {
 		}
 	}
 
-	pdoc, err := permissions.CreateShareSet(instance, parent, codes, shortcodes, subdoc.Permissions, expiresAt)
+	pdoc, err := permissions.CreateShareSet(instance, parent, sourceID, codes, shortcodes, subdoc.Permissions, expiresAt)
 	if err != nil {
 		return err
 	}
@@ -293,6 +311,20 @@ func revokePermission(c echo.Context) error {
 	toRevoke, err := permissions.GetByID(instance, c.Param("permdocid"))
 	if err != nil {
 		return err
+	}
+
+	// Check if the permission is linked to an OAuth Client
+	if current.Client != nil {
+		oauthClient := current.Client.(*oauth.Client)
+
+		if auth.IsLinkedApp(oauthClient.SoftwareID) {
+			slug := auth.GetLinkedAppSlug(oauthClient.SoftwareID)
+
+			// Changing the sourceID from the OAuth clientID to the classic
+			// io.cozy.apps/slug one
+			current.SourceID = consts.Apps + "/" + slug
+
+		}
 	}
 
 	if !current.ParentOf(toRevoke) {
