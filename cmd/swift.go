@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +14,7 @@ import (
 )
 
 var flagSwiftObjectContentType string
+var flagShowDomains bool
 
 var swiftCmdGroup = &cobra.Command{
 	Use:   "swift <command>",
@@ -28,6 +30,51 @@ var swiftCmdGroup = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
+	},
+}
+
+var lsLayoutsCmd = &cobra.Command{
+	Use:     "ls-layouts",
+	Short:   `Count layouts v1 and layouts v2`,
+	Example: "$ cozy-stack swift ls-layouts",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		type layout struct {
+			Counter int      `json:"counter"`
+			Domains []string `json:"domains,omitempty"`
+		}
+		var layoutV1, layoutV2 layout
+
+		instances, err := instance.List()
+		if err != nil {
+			return err
+		}
+		for _, inst := range instances {
+			if inst.SwiftCluster == 0 {
+				layoutV1.Counter++
+				if flagShowDomains {
+					layoutV1.Domains = append(layoutV1.Domains, inst.Domain)
+				}
+			} else {
+				layoutV2.Counter++
+				if flagShowDomains {
+					layoutV2.Domains = append(layoutV2.Domains, inst.Domain)
+				}
+			}
+		}
+
+		output := make(map[string]interface{})
+		output["v1"] = layoutV1
+		output["v2"] = layoutV2
+		output["total"] = layoutV1.Counter + layoutV2.Counter
+
+		json, err := json.MarshalIndent(output, "", "  ")
+
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(json))
+		return nil
 	},
 }
 
@@ -130,11 +177,13 @@ func swiftContainer(i *instance.Instance) string {
 
 func init() {
 	swiftPutCmd.Flags().StringVar(&flagSwiftObjectContentType, "content-type", "", "Specify a Content-Type for the created object")
+	lsLayoutsCmd.Flags().BoolVar(&flagShowDomains, "show-domains", false, "Show the domains along the counter")
 
 	swiftCmdGroup.AddCommand(swiftGetCmd)
 	swiftCmdGroup.AddCommand(swiftPutCmd)
 	swiftCmdGroup.AddCommand(swiftDeleteCmd)
 	swiftCmdGroup.AddCommand(swiftLsCmd)
+	swiftCmdGroup.AddCommand(lsLayoutsCmd)
 
 	RootCmd.AddCommand(swiftCmdGroup)
 }
