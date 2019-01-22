@@ -122,15 +122,18 @@ func (c *Client) TransformIDAndRev() {
 	c.CouchRev = ""
 }
 
-// GetAll loads all the clients from the database, without the secrets
-func GetAll(i *instance.Instance) ([]*Client, error) {
+// GetAll loads all the clients from the database, with the option to hide the
+// client secret
+func GetAll(i *instance.Instance, withSecrets bool) ([]*Client, error) {
 	var clients []*Client
 	req := &couchdb.AllDocsRequest{Limit: 100}
 	if err := couchdb.GetAllDocs(i, consts.OAuthClients, req, &clients); err != nil {
 		return nil, err
 	}
-	for _, client := range clients {
-		client.ClientSecret = ""
+	if !withSecrets {
+		for _, client := range clients {
+			client.ClientSecret = ""
+		}
 	}
 	return clients, nil
 }

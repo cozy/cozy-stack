@@ -14,17 +14,27 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/contacts"
-
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/cozy/cozy-stack/web/auth"
+
 	"github.com/spf13/cobra"
 )
 
 var dryRunFlag bool
 var withMetadataFlag bool
+
+var softwareIDs = map[string]string{
+	"io.cozy.drive.mobile": "registry://drive",
+	"io.cozy.banks.mobile": "registry://banks",
+}
 
 var fixerCmdGroup = &cobra.Command{
 	Use:   "fixer <command>",
@@ -404,6 +414,59 @@ var contactEmailsFixer = &cobra.Command{
 	},
 }
 
+var linkedAppFixer = &cobra.Command{
+	Use:   "link-app <domain>",
+	Short: "Link an old OAuth client to a webapp",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		i, err := instance.Get(domain)
+		if err != nil {
+			return err
+		}
+		clients, err := oauth.GetAll(i, true)
+		if err != nil {
+			return err
+		}
+		for _, client := range clients {
+			for key, value := range softwareIDs {
+				if client.SoftwareID == key {
+					slug := auth.GetLinkedAppSlug(value)
+
+					// Change softwareID
+					client.SoftwareID = value
+
+					// Install app
+					installer, err := apps.NewInstaller(i, i.AppsCopier(apps.Webapp),
+						&apps.InstallerOptions{
+							Operation:  apps.Install,
+							Type:       apps.Webapp,
+							Slug:       slug,
+							SourceURL:  value,
+							Registries: i.Registries(),
+						})
+
+					if err != apps.ErrAlreadyExists {
+						if err != nil {
+							return err
+						}
+						installer.Run()
+					}
+
+					err = couchdb.UpdateDoc(i, client)
+					if err != nil {
+						return err
+					}
+					break
+				}
+			}
+		}
+		return nil
+	},
+}
+
 func init() {
 
 	thumbnailsFixer.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run")
@@ -417,6 +480,7 @@ func init() {
 	fixerCmdGroup.AddCommand(redisFixer)
 	fixerCmdGroup.AddCommand(thumbnailsFixer)
 	fixerCmdGroup.AddCommand(contactEmailsFixer)
+	fixerCmdGroup.AddCommand(linkedAppFixer)
 
 	RootCmd.AddCommand(fixerCmdGroup)
 }

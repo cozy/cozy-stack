@@ -48,7 +48,7 @@ func listClients(c echo.Context) error {
 		return err
 	}
 
-	clients, err := oauth.GetAll(instance)
+	clients, err := oauth.GetAll(instance, false)
 	if err != nil {
 		return err
 	}
