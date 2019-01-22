@@ -22,6 +22,7 @@ var errAppsMissingDomain = errors.New("Missing --domain flag, or COZY_DOMAIN env
 var flagAppsDomain string
 var flagAllDomains bool
 var flagAppsDeactivated bool
+var flagSafeUpdate bool
 
 var flagKonnectorAccountID string
 var flagKonnectorsParameters string
@@ -342,7 +343,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 				AppType:   appType,
 				Slug:      args[0],
 				SourceURL: src,
-			})
+			}, flagSafeUpdate)
 			if err != nil {
 				if err.Error() == "Application is not installed" {
 					return nil
@@ -371,7 +372,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 		SourceURL: src,
 
 		OverridenParameters: overridenParameters,
-	})
+	}, flagSafeUpdate)
 	if err != nil {
 		return err
 	}
@@ -624,6 +625,8 @@ func init() {
 	webappsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
 
 	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "ask-permissions", false, "specify that the application should not be activated after installation")
+	updateWebappCmd.PersistentFlags().BoolVar(&flagSafeUpdate, "safe", false, "do not upgrade if there are blocking changes")
+	updateKonnectorCmd.PersistentFlags().BoolVar(&flagSafeUpdate, "safe", false, "do not upgrade if there are blocking changes")
 
 	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccountID, "account-id", "", "specify the account ID to use for running the konnector")
 
