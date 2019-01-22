@@ -13,7 +13,7 @@ func TestImageMetadataExtractor(t *testing.T) {
 	doc := &FileDoc{Mime: "image/png"}
 	extractor := NewMetaExtractor(doc)
 	assert.NotNil(t, extractor)
-	f, err := os.Open("../../assets/images/happycloud.png")
+	f, err := os.Open("../../assets/favicon-32x32.png")
 	assert.NoError(t, err)
 	defer f.Close()
 	_, err = io.Copy(*extractor, f)
@@ -25,10 +25,10 @@ func TestImageMetadataExtractor(t *testing.T) {
 	assert.Equal(t, MetadataExtractorVersion, version)
 	w, ok := meta["width"].(int)
 	assert.True(t, ok, "width is present")
-	assert.Equal(t, 140, w)
+	assert.Equal(t, 32, w)
 	h, ok := meta["height"].(int)
 	assert.True(t, ok, "height is present")
-	assert.Equal(t, 140, h)
+	assert.Equal(t, 32, h)
 }
 
 func TestExifMetadataExtractor(t *testing.T) {
