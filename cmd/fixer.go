@@ -426,7 +426,7 @@ var linkedAppFixer = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		clients, err := oauth.GetAll(i)
+		clients, err := oauth.GetAll(i, true)
 		if err != nil {
 			return err
 		}
