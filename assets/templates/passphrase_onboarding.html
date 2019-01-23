@@ -5,6 +5,7 @@
     <title>Cozy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/password-strength.css"}}">
     {{.CozyUI}}
     {{.ThemeCSS}}
     <link rel="apple-touch-icon" sizes="180x180" href="{{asset .Domain "/apple-touch-icon.png"}}">
@@ -65,8 +66,10 @@
                 </span>
               </button>
               <input id="password" class="wizard-password c-input-text" name="passphrase" type="password" autofocus autocomplete="current-password" />
+              <progress id="password-strength" step="1" min="0" max="100" value="0" class="pw-indicator" />
             </div>
           </div>
+          <p class="u-coolGrey u-m-1">Utilisez au moins huit caractères avec des lettres, des chiffres et des symboles.</p>
           <footer class="wizard-footer u-pb-2">
             <button id="onboarding-password-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">
               <span class="password-form">{{t "Passphrase Onboarding Submit"}}</span>
@@ -75,7 +78,9 @@
         </form>
       </main>
     </div>
+    <script src="{{asset .Domain "/scripts/password-helper.js"}}"></script>
     <script src="{{asset .Domain "/scripts/password-visibility.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/passwd-strength-indicator.js"}}"></script>
     <script src="{{asset .Domain "/scripts/submit.js"}}"></script>
   </body>
 </html>

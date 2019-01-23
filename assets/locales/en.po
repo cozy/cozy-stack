@@ -118,7 +118,7 @@ msgid "Passphrase Onboarding Title"
 msgstr "Choose your password"
 
 msgid "Passphrase Onboarding Submit"
-msgstr "Submit"
+msgstr "Finish"
 
 msgid "Passphrase is reset Body"
 msgstr ""
