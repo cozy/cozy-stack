@@ -46,6 +46,9 @@
       <main class="wizard">
         <form id="login-form" method="POST" action="/auth/login" class="wizard-wrapper">
           <header class="wizard-header">
+            <div class="c-avatar c-avatar--large u-mh-auto u-mv-half">
+              <img class="c-avatar-image" src="/public/avatar" alt="" />
+            </div>
             <h1 class="wizard-title password-form">{{.Title}}</h1>
             <h1 class="wizard-title two-factor-form {{if not .TwoFactorForm}} u-hide{{end}}">{{t "Login Two factor title"}}</h1>
             <h2 class="password-form wizard-subtitle u-coolGrey">{{.Domain}}</h2>

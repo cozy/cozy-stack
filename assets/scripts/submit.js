@@ -171,4 +171,13 @@
 
   passphraseInput.focus()
   loginForm && submitButton.removeAttribute('disabled')
+
+  // Responsive design
+  if (document.body.clientWidth > 1024) {
+    const avatars = document.getElementsByClassName('c-avatar--large')
+    for (const avatar of avatars) {
+      avatar.classList.remove('c-avatar--large', 'u-mv-half')
+      avatar.classList.add('c-avatar--xlarge', 'u-mv-1')
+    }
+  }
 })(window, document)
