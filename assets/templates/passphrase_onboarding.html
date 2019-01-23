@@ -1,57 +1,81 @@
 <!DOCTYPE html>
 <html lang="{{.Locale}}">
-
-<head>
+  <head>
     <meta charset="utf-8">
     <title>Cozy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
-    <link rel="stylesheet" href="{{asset .Domain "/styles/login.css"}}">
-    <link rel="icon" type="image/png" href="{{asset .Domain "/images/happycloud.png"}}" />
-    <link rel="shortcut icon" type="image/x-icon" href="{{asset .Domain "/favicon.ico"}}">
-</head>
-
-<body>
-    <div class="main-wrapper">
-        <main role="application">
-            <section class="popup">
-                <header>
-                    <a href="https://cozy.io" target="_blank" title="Cozy Website" class="shield"></a>
-                    <h1>{{t "Passphrase Onboarding Title"}}</h1>
-                </header>
-                <div role="region">
-                    <form id="password-form" method="POST" action="/settings/passphrase" onsubmit="submitform(event)">
-                        <p class="line"></p>
-                        <input type="hidden" name="register_token" value={{.RegisterToken}}>
-                        <input type="password" name="passphrase" autocomplete="new-password" placeholder='e.g. "dEj875ghj9273;eR"'><br><br>
-                        <input type="submit" class="next" value={{t "Passphrase Onboarding Submit"}}>
-                    </form>
-                </div>
-            </section>
-        </main>
+    {{.CozyUI}}
+    {{.ThemeCSS}}
+    <link rel="apple-touch-icon" sizes="180x180" href="{{asset .Domain "/apple-touch-icon.png"}}">
+    <link rel="icon" type="image/png" href="{{asset .Domain "/favicon-32x32.png"}}" sizes="32x32">
+    <link rel="icon" type="image/png" href="{{asset .Domain "/favicon-16x16.png"}}" sizes="16x16">
+  </head>
+  <body>
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+      <defs>
+        <symbol viewBox="0 0 1792 1792" id="fa-check">
+          <path d="M1671 566q0 40-28 68l-724 724-136 136q-28 28-68 28t-68-28l-136-136-362-362q-28-28-28-68t28-68l136-136q28-28 68-28t68 28l294 295 656-657q28-28 68-28t68 28l136 136q28 28 28 68z" fill="#fff"/>
+        </symbol>
+        <symbol id="hide" viewBox="0 0 16 16">
+          <defs>
+            <path d="M8,12.038 C5.791,12.038 4,10.247 4,8.03800005 C4,7.45100005 4.134,6.89700005 4.361,6.39500005 L6,8.03400005 L6,8.03800005 C6,9.14200005 6.896,10.038 8,10.038 C8.001,10.038 8.003,10.038 8.004,10.038 L9.644,11.677 C9.141,11.904 8.587,12.038 8,12.038 Z M1.115,1.20000005 L13.842,13.905 L12.856,14.891 L11.296,13.329 C10.362,13.757 9.276,14.038 8,14.038 C2,14.038 0,8.03800005 0,8.03800005 C0,8.03800005 0.662,6.06900005 2.353,4.38600005 L0.141,2.17500005 L1.115,1.20000005 Z M6.3105,4.42470005 L4.6515,2.76570005 C5.5945,2.32370005 6.7005,2.03770005 7.9995,2.03770005 C13.9995,2.03770005 15.9995,8.03770005 15.9995,8.03770005 C15.9995,8.03770005 15.3285,10.0347 13.6105,11.7247 L11.6135,9.72770005 C11.8545,9.21270005 11.9995,8.64470005 11.9995,8.03770005 C11.9995,5.82870005 10.2085,4.03770005 7.9995,4.03770005 C7.3935,4.03770005 6.8255,4.18270005 6.3105,4.42470005 Z M8,6.03800005 C9.104,6.03800005 10,6.93400005 10,8.03800005 C10,8.06200005 9.994,8.08400005 9.993,8.10700005 L7.931,6.04500005 C7.954,6.04400005 7.977,6.03800005 8,6.03800005 Z" id="path-1"></path>
+          </defs>
+          <g id="icons/16/icon-hide" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+            <mask id="mask-2" fill="white">
+              <use xlink:href="#path-1"></use>
+            </mask>
+            <use id="Fill-1" fill="currentColor" xlink:href="#path-1"></use>
+          </g>
+        </symbol>
+        <symbol id="display" viewBox="0 0 16 16">
+          <defs>
+            <path d="M8,2 C11.637,2 14.742,4.488 16,8 C14.742,11.512 11.637,14 8,14 C4.363,14 1.258,11.512 0,8 C1.258,4.488 4.363,2 8,2 Z M8,12 C10.209,12 12,10.209 12,8 C12,5.791 10.209,4 8,4 C5.791,4 4,5.791 4,8 C4,10.209 5.791,12 8,12 Z M8,6 C9.104,6 10,6.896 10,8 C10,9.104 9.104,10 8,10 C6.896,10 6,9.104 6,8 C6,6.896 6.896,6 8,6 Z" id="path-2"></path>
+          </defs>
+          <g id="icons/16/icon-display" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+            <mask id="mask-3" fill="white">
+              <use xlink:href="#path-2"></use>
+            </mask>
+            <use id="Fill-2" fill="currentColor" xlink:href="#path-2"></use>
+          </g>
+        </symbol>
+      </defs>
+    </svg>
+    <div role="application">
+      <main class="wizard">
+        <form id="password-form" method="POST" action="/settings/passphrase" class="wizard-wrapper">
+          <header class="wizard-header">
+            <h1 class="wizard-title password-form">{{t "Passphrase Onboarding Title"}}</h1>
+          </header>
+          <div role="region" class="wizard-main" id="onboarding-password-field">
+            <input type="hidden" name="register_token" value={{.RegisterToken}}>
+            <div class="o-field password-form u-m-0">
+              <label for="password" aria-describedby="onboarding-password-tip" class="c-label">{{t "Login Password field"}}</label>
+              <button id="password-visibility-button" class="wizard-showbutton c-btn c-btn--secondary"
+                type="button"
+                name="password-visibility"
+                data-show="{{t "Login Password show"}}"
+                data-hide="{{t "Login Password hide"}}"
+                title="{{t "Login Password show"}}">
+                <span>
+                  <svg width="16" height="16" aria-hidden="true" focusable="false">
+                    <use class="u-hide" id="display-icon" xlink:href="#display"></use>
+                    <use id="hide-icon" xlink:href="#hide"></use>
+                  </svg>
+                </span>
+              </button>
+              <input id="password" class="wizard-password c-input-text" name="passphrase" type="password" autofocus autocomplete="current-password" />
+            </div>
+          </div>
+          <footer class="wizard-footer u-pb-2">
+            <button id="onboarding-password-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">
+              <span class="password-form">{{t "Passphrase Onboarding Submit"}}</span>
+            </button>
+          </footer>
+        </form>
+      </main>
     </div>
-</body>
-<script type="text/javascript">
-    function submitform(e) {
-        e.preventDefault();
-        var ab = document.getElementById("password-form");
-        var formData = new FormData(ab)
-
-        var object = {};
-        formData.forEach(function (value, key) {
-            object[key] = value;
-        });
-        var json = JSON.stringify(object);
-
-        var xhr = new XMLHttpRequest();
-        xhr.open(ab.method, ab.action, false);
-        xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
-        xhr.send(json);
-
-        window.location.replace("//{{.Domain}}/settings/onboarded")
-
-        return false;
-    }
-</script>
-
+    <script src="{{asset .Domain "/scripts/password-visibility.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/submit.js"}}"></script>
+  </body>
 </html>

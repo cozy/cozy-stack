@@ -1142,24 +1142,25 @@ func passphraseResetForm(c echo.Context) error {
 }
 
 func passphraseForm(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
 	registerToken := c.QueryParams().Get("registerToken")
-	if instance.OnboardingFinished {
-		redirect := instance.DefaultRedirection()
+	if inst.OnboardingFinished {
+		redirect := inst.DefaultRedirection()
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
-	if registerToken == "" || !middlewares.CheckRegisterToken(c, instance) {
+	if registerToken == "" || !middlewares.CheckRegisterToken(c, inst) {
 		return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-			"Domain": instance.ContextualDomain(),
-			"Locale": instance.Locale,
+			"Domain": inst.ContextualDomain(),
+			"Locale": inst.Locale,
 		})
 	}
 
 	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
-		"Domain":        instance.ContextualDomain(),
-		"Locale":        instance.Locale,
-		"CSRF":          c.Get("csrf"),
+		"CozyUI":        cozyUI(inst),
+		"ThemeCSS":      themeCSS(inst),
+		"Domain":        inst.ContextualDomain(),
+		"Locale":        inst.Locale,
 		"RegisterToken": registerToken,
 	})
 }
