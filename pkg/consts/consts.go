@@ -114,6 +114,10 @@ const (
 	InstanceSettingsID = "io.cozy.settings.instance"
 )
 
+// MaxItemsPerPageForMango is the maximal value accepted for the limit
+// parameter used for mango pagination
+const MaxItemsPerPageForMango = 1000
+
 // ShortCodeLen is the number of chars for the shortcode
 const ShortCodeLen = 12
 
