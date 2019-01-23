@@ -41,7 +41,29 @@ Content-type: application/vnd.api+json
 
 ## Passphrase
 
-### POST /settings/passphrase
+### POST /settings/passphrase (form)
+
+The suer can send its new passphrase to finish the onboarding.
+
+#### Request
+
+```http
+POST /settings/passphrase HTTP/1.1
+Host: alice.example.com
+Content-Type: application/x-www-form-urlencoded
+
+passphrase=ThisIsTheNewShinnyPassphraseChoosedByAlice&register_token=37cddf40d7724988860fa0e03efd30fe
+```
+
+#### Response
+
+```http
+HTTP/1.1 303 See Other
+Set-Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
+Location: https://alice-home.example.com/
+```
+
+### POST /settings/passphrase (json)
 
 The onboarding application can send a request to this endpoint to register the
 passphrase of the user. The registration token can only be used once.

@@ -182,7 +182,7 @@ ask the recipient to accept the permissions on its instance.
 This route exists in two versions, the version is selected by the HTTP header
 `Accept`
 
-#### Classical (`x-www-url-encoded`)
+#### Classical (`x-www-form-urlencoded`)
 
 | Parameter | Description                           |
 | --------- | ------------------------------------- |

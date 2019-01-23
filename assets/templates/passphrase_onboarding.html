@@ -44,7 +44,7 @@
     </svg>
     <div role="application">
       <main class="wizard">
-        <form id="password-form" method="POST" action="/settings/passphrase" class="wizard-wrapper">
+        <form id="onboarding-password-form" method="POST" action="/settings/passphrase" class="wizard-wrapper">
           <header class="wizard-header">
             <h1 class="wizard-title password-form">{{t "Passphrase Onboarding Title"}}</h1>
           </header>
@@ -71,7 +71,7 @@
           </div>
           <p class="u-coolGrey u-m-1">Utilisez au moins huit caractères avec des lettres, des chiffres et des symboles.</p>
           <footer class="wizard-footer u-pb-2">
-            <button id="onboarding-password-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">
+            <button id="onboarding-password-submit" class="c-btn c-btn--full wizard-button" form="onboarding-password-form" type="submit">
               <span class="password-form">{{t "Passphrase Onboarding Submit"}}</span>
             </button>
           </footer>
@@ -81,6 +81,5 @@
     <script src="{{asset .Domain "/scripts/password-helper.js"}}"></script>
     <script src="{{asset .Domain "/scripts/password-visibility.js"}}"></script>
     <script src="{{asset .Domain "/scripts/passwd-strength-indicator.js"}}"></script>
-    <script src="{{asset .Domain "/scripts/submit.js"}}"></script>
   </body>
 </html>
