@@ -500,7 +500,7 @@ POST /auth/authorize HTTP/1.1
 Host: cozy.example.org
 Content-Type: application/x-www-form-urlencoded
 
-state=Eh6ahshepei5Oojo&client_id=oauth-client-1&scope=io.cozy.files:GET%20io.cozy.contacts&csrf_token=johw6Sho
+state=Eh6ahshepei5Oojo&client_id=oauth-client-1&scope=io.cozy.files:GET%20io.cozy.contacts&csrf_token=johw6Sho&response_type=code&redirect_uri=https%3A%2F%2Fclient.org%2F
 ```
 
 **Note**: this endpoint is protected against CSRF attacks.
