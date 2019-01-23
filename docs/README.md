@@ -41,6 +41,7 @@
 -   `/move` - [Move, export and import an instance](move.md)
 -   `/notifications` - [Notifications](notifications.md)
 -   `/permissions` - [Permissions](permissions.md)
+-   `/public` - [Public](public.md)
 -   `/realtime` - [Realtime](realtime.md)
 -   `/remote` - [Proxy for remote data/API](remote.md)
 -   `/settings` - [Settings](settings.md)
