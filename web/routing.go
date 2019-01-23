@@ -24,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/web/move"
 	"github.com/cozy/cozy-stack/web/notifications"
 	"github.com/cozy/cozy-stack/web/permissions"
+	"github.com/cozy/cozy-stack/web/public"
 	"github.com/cozy/cozy-stack/web/realtime"
 	"github.com/cozy/cozy-stack/web/registry"
 	"github.com/cozy/cozy-stack/web/remote"
@@ -174,8 +175,9 @@ func SetupRoutes(router *echo.Echo) error {
 		konnectorsauth.Routes(router.Group("/accounts"))
 	}
 
-	// non-authentified JSON API routes
+	// other non-authentified routes
 	{
+		public.Routes(router.Group("/public"))
 		status.Routes(router.Group("/status"))
 		version.Routes(router.Group("/version"))
 	}

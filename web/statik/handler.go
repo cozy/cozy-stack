@@ -220,6 +220,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	checkETag := id == ""
+	h.ServeFile(w, r, f, checkETag)
+}
+
+// ServeFile can be used to respond with an asset file to an HTTP request
+func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *fs.Asset, checkETag bool) {
 	if checkETag && web_utils.CheckPreconditions(w, r, f.Etag) {
 		return
 	}
