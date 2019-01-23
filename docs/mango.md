@@ -135,8 +135,9 @@ Content-Type: application/json
 
 ## Pagination cookbook
 
-Pagination of mango query should be handled by the client. The stack will always
-limit query results to maximum 100 docs.
+Pagination of mango query should be handled by the client. The stack will limit
+query results to a maximum of 100 documents. This limit can be raised up to
+1000 documents per page with the `limit` parameter, but not further.
 
 The limit applied to a query is visible in the HTTP response.
 
@@ -163,7 +164,7 @@ If the number of docs is lower or equal to the limit, next will be false
 
 To paginate, the client should keep track of the value of the last index field.
 
-### Exemple :
+### Example:
 
 Index on io.cozy.events with fields `["calendar", "date"]`
 

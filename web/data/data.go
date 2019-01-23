@@ -319,8 +319,6 @@ func defineIndex(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
-const maxMangoLimit = 100
-
 func findDocuments(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
@@ -339,7 +337,7 @@ func findDocuments(c echo.Context) error {
 	}
 
 	limit, hasLimit := findRequest["limit"].(float64)
-	if !hasLimit || limit > maxMangoLimit {
+	if !hasLimit || limit > consts.MaxItemsPerPageForMango {
 		limit = 100
 	}
 
@@ -390,7 +388,7 @@ func normalDocs(c echo.Context) error {
 		skip = 0
 	}
 	limit, err := strconv.ParseInt(c.QueryParam("limit"), 10, 64)
-	if err != nil || limit < 0 || limit > maxMangoLimit {
+	if err != nil || limit < 0 || limit > consts.MaxItemsPerPageForMango {
 		limit = 100
 	}
 	res, err := couchdb.NormalDocs(instance, doctype, int(skip), int(limit))

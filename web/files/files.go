@@ -894,8 +894,6 @@ func DestroyFileHandler(c echo.Context) error {
 	return c.NoContent(204)
 }
 
-const maxMangoLimit = 100
-
 // FindFilesMango is the route POST /files/_find
 // used to retrieve files and their metadata from a mango query.
 func FindFilesMango(c echo.Context) error {
@@ -915,7 +913,7 @@ func FindFilesMango(c echo.Context) error {
 	delete(findRequest, "fields")
 
 	limit, hasLimit := findRequest["limit"].(float64)
-	if !hasLimit || limit > maxMangoLimit {
+	if !hasLimit || limit > consts.MaxItemsPerPageForMango {
 		limit = 100
 	}
 	skip := 0
