@@ -14,6 +14,7 @@ cozy-stack konnectors update <slug> [sourceurl] [flags]
 
 ```
   -h, --help   help for update
+      --safe   do not upgrade if there are blocking changes
 ```
 
 ### Options inherited from parent commands
