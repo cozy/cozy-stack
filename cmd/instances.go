@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"reflect"
@@ -268,6 +270,52 @@ settings for a specified domain.
 			return err
 		}
 		fmt.Println(string(json))
+		return nil
+	},
+}
+
+var updateInstancePassphraseCmd = &cobra.Command{
+	Use:     "set-passphrase <domain> <current-passphrase> <new-passphrase>",
+	Short:   "Change the passphrase of the instance",
+	Example: "$ cozy-stack instances set-passphrase cozy.tools:8080 foo bar",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 3 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		c := newClient(domain, consts.Settings)
+		body := struct {
+			Current string `json:"current_passphrase"`
+			New     string `json:"new_passphrase"`
+		}{
+			Current: args[1],
+			New:     args[2],
+		}
+
+		reqBody, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		res, err := c.Req(&request.Options{
+			Method: "PUT",
+			Path:   "/settings/passphrase",
+			Body:   bytes.NewReader(reqBody),
+			Headers: request.Headers{
+				"Content-Type": "application/json",
+			},
+		})
+
+		switch res.StatusCode {
+		case http.StatusNoContent:
+			fmt.Println("Passphrase has been changed for instance ", domain)
+		case http.StatusOK:
+			return fmt.Errorf("Instance %s has 2FA, you cannot change its password", domain)
+		case http.StatusBadRequest:
+			return fmt.Errorf("Bad current passphrase for instance %s", domain)
+		case http.StatusInternalServerError:
+			return fmt.Errorf("%s", err)
+		}
+
 		return nil
 	},
 }
@@ -911,6 +959,7 @@ func init() {
 	instanceCmdGroup.AddCommand(importCmd)
 	instanceCmdGroup.AddCommand(showSwiftPrefixInstanceCmd)
 	instanceCmdGroup.AddCommand(instanceAppVersionCmd)
+	instanceCmdGroup.AddCommand(updateInstancePassphraseCmd)
 	addInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
