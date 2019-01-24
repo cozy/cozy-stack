@@ -36,7 +36,7 @@ This file contains all the parameters and fields that can be used to configure
 the stack with some example values.
 
 Some fields can be overriden by the flags of the
-[cozy-stack serve command](docs/cli/cozy-stack_serve.md).
+[cozy-stack serve command](cli/cozy-stack_serve.md).
 
 ## Stack endpoints
 
