@@ -23,7 +23,8 @@ var swiftCmdGroup = &cobra.Command{
 		if err := config.Setup(cfgFile); err != nil {
 			return err
 		}
-		if config.FsURL().Scheme != config.SchemeSwift {
+		if config.FsURL().Scheme != config.SchemeSwift &&
+			config.FsURL().Scheme != config.SchemeSwiftSecure {
 			return fmt.Errorf("swift: the configured filesystem does not rely on OpenStack Swift")
 		}
 		return config.InitSwiftConnection(config.GetConfig().Fs)
