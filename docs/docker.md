@@ -12,7 +12,7 @@ This will run a new instance of CouchDB in `single` mode (no cluster) and in
 ```bash
 $ docker run -d \
     --name cozy-stack-couch \
-    -p 5984:5984 \
+    --net=host \
     -v $HOME/.cozy-stack-couch:/opt/couchdb/data \
     apache/couchdb:2.3
 $ curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
