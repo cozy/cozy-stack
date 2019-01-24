@@ -57,6 +57,10 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	mws := []echo.MiddlewareFunc{
 		middlewares.LoadAppSession,
 		middlewares.CheckIE,
+		middlewares.Accept(middlewares.AcceptOptions{
+			DefaultContentTypeOffer: echo.MIMETextHTML,
+		}),
+		middlewares.CheckInstanceBlocked,
 	}
 	if !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
@@ -136,6 +140,7 @@ func SetupRoutes(router *echo.Echo) error {
 				DefaultContentTypeOffer: echo.MIMETextHTML,
 			}),
 			middlewares.CheckIE,
+			middlewares.CheckInstanceBlocked,
 		}
 		router.GET("/", auth.Home, mws...)
 		auth.Routes(router.Group("/auth", mws...))
