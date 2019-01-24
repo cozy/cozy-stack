@@ -35,14 +35,14 @@ var swiftCmdGroup = &cobra.Command{
 
 var lsLayoutsCmd = &cobra.Command{
 	Use:     "ls-layouts",
-	Short:   `Count layouts v1 and layouts v2`,
+	Short:   `Count layouts by types (v1, v2a, v2b)`,
 	Example: "$ cozy-stack swift ls-layouts",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		type layout struct {
 			Counter int      `json:"counter"`
 			Domains []string `json:"domains,omitempty"`
 		}
-		var layoutV1, layoutV2 layout
+		var layoutV1, layoutV2a, layoutV2b, layoutUnknown layout
 
 		instances, err := instance.List()
 		if err != nil {
@@ -54,18 +54,33 @@ var lsLayoutsCmd = &cobra.Command{
 				if flagShowDomains {
 					layoutV1.Domains = append(layoutV1.Domains, inst.Domain)
 				}
-			} else {
-				layoutV2.Counter++
-				if flagShowDomains {
-					layoutV2.Domains = append(layoutV2.Domains, inst.Domain)
+			} else { // v2
+				switch inst.DBPrefix() {
+				case inst.Domain:
+					layoutV2a.Counter++
+					if flagShowDomains {
+						layoutV2a.Domains = append(layoutV2a.Domains, inst.Domain)
+					}
+				case inst.Prefix:
+					layoutV2b.Counter++
+					if flagShowDomains {
+						layoutV2b.Domains = append(layoutV2b.Domains, inst.Domain)
+					}
+				default:
+					layoutUnknown.Counter++
+					if flagShowDomains {
+						layoutUnknown.Domains = append(layoutUnknown.Domains, inst.Domain)
+					}
 				}
 			}
 		}
 
 		output := make(map[string]interface{})
 		output["v1"] = layoutV1
-		output["v2"] = layoutV2
-		output["total"] = layoutV1.Counter + layoutV2.Counter
+		output["v2a"] = layoutV2a
+		output["v2b"] = layoutV2b
+		output["unknown"] = layoutUnknown
+		output["total"] = layoutV1.Counter + layoutV2a.Counter + layoutV2b.Counter + layoutUnknown.Counter
 
 		json, err := json.MarshalIndent(output, "", "  ")
 

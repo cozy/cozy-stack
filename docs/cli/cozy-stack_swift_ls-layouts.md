@@ -1,10 +1,10 @@
 ## cozy-stack swift ls-layouts
 
-Count layouts v1 and layouts v2
+Count layouts by types (v1, v2a, v2b)
 
 ### Synopsis
 
-Count layouts v1 and layouts v2
+Count layouts by types (v1, v2a, v2b)
 
 ```
 cozy-stack swift ls-layouts [flags]
