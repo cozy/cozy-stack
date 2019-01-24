@@ -20,8 +20,9 @@ func CheckIE(next echo.HandlerFunc) echo.HandlerFunc {
 			browser == "Internet Explorer" {
 			instance := GetInstance(c)
 			return c.Render(http.StatusOK, "compat.html", echo.Map{
-				"Domain": instance.ContextualDomain(),
-				"Locale": instance.Locale,
+				"Domain":      instance.ContextualDomain(),
+				"ContextName": instance.ContextName,
+				"Locale":      instance.Locale,
 			})
 		}
 

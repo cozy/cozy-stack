@@ -45,6 +45,17 @@ const (
 	TwoFactorExceededErrorKey = "Login Two factor attempts error"
 )
 
+func renderError(c echo.Context, code int, msg string) error {
+	instance := middlewares.GetInstance(c)
+	return c.Render(code, "error.html", echo.Map{
+		"CozyUI":      cozyUI(instance),
+		"ThemeCSS":    ThemeCSS(instance),
+		"Domain":      instance.ContextualDomain(),
+		"ContextName": instance.ContextName,
+		"Error":       msg,
+	})
+}
+
 // Home is the handler for /
 // It redirects to the login page is the user is not yet authentified
 // Else, it redirects to its home application (or onboarding)
@@ -65,8 +76,10 @@ func Home(c echo.Context) error {
 	if len(instance.RegisterToken) > 0 {
 		if !middlewares.CheckRegisterToken(c, instance) {
 			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-				"Domain": instance.ContextualDomain(),
-				"Locale": instance.Locale,
+				"ThemeCSS":    ThemeCSS(instance),
+				"Domain":      instance.ContextualDomain(),
+				"ContextName": instance.ContextName,
+				"Locale":      instance.Locale,
 			})
 		}
 		redirect := instance.SubDomain(consts.OnboardingSlug)
@@ -137,7 +150,9 @@ func cozyUI(i *instance.Instance) template.HTML {
 	return template.HTML(buf.String()) // #nosec
 }
 
-func themeCSS(i *instance.Instance) template.HTML {
+// ThemeCSS returns an HTML template for inserting the HTML tag for the custom
+// CSS theme
+func ThemeCSS(i *instance.Instance) template.HTML {
 	buf := new(bytes.Buffer)
 	err := themeTemplate.Execute(buf, echo.Map{
 		"Domain":      i.ContextualDomain(),
@@ -187,8 +202,9 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 
 	return c.Render(code, "login.html", echo.Map{
 		"CozyUI":           cozyUI(i),
-		"ThemeCSS":         themeCSS(i),
+		"ThemeCSS":         ThemeCSS(i),
 		"Domain":           i.ContextualDomain(),
+		"ContextName":      i.ContextName,
 		"Locale":           i.Locale,
 		"Title":            title,
 		"PasswordHelp":     help,
@@ -213,7 +229,9 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 	oauth := i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
 	return c.Render(code, "login.html", echo.Map{
 		"CozyUI":           cozyUI(i),
+		"ThemeCSS":         ThemeCSS(i),
 		"Domain":           i.ContextualDomain(),
+		"ContextName":      i.ContextName,
 		"Locale":           i.Locale,
 		"Title":            title,
 		"PasswordHelp":     "",
@@ -557,42 +575,24 @@ type authorizeParams struct {
 
 func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
 	if params.state == "" {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error No state parameter",
-		})
+		return true, renderError(c, http.StatusBadRequest, "Error No state parameter")
 	}
 	if params.clientID == "" {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error No client_id parameter",
-		})
+		return true, renderError(c, http.StatusBadRequest, "Error No client_id parameter")
 	}
 	if params.redirectURI == "" {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error No redirect_uri parameter",
-		})
+		return true, renderError(c, http.StatusBadRequest, "Error No redirect_uri parameter")
 	}
 	if params.resType != "code" {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error Invalid response type",
-		})
+		return true, renderError(c, http.StatusBadRequest, "Error Invalid response type")
 	}
 
 	params.client = new(oauth.Client)
 	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error No registered client",
-		})
+		return true, renderError(c, http.StatusBadRequest, "Error No registered client")
 	}
 	if !params.client.AcceptRedirectURI(params.redirectURI) {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error Incorrect redirect_uri",
-		})
+		return true, renderError(c, http.StatusBadRequest, "Error Incorrect redirect_uri")
 	}
 
 	if IsLinkedApp(params.client.SoftwareID) {
@@ -601,27 +601,18 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		webapp, err := registry.GetLatestVersion(appSlug, "stable", params.instance.Registries())
 
 		if err != nil {
-			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain": params.instance.ContextualDomain(),
-				"Error":  "Cannot find application on instance registries",
-			})
+			return true, renderError(c, http.StatusBadRequest, "Cannot find application on instance registries")
 		}
 
 		err = json.Unmarshal(webapp.Manifest, &webappManifest)
 		if err != nil {
-			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain": params.instance.ContextualDomain(),
-				"Error":  "Cannot decode application manifest",
-			})
+			return true, renderError(c, http.StatusBadRequest, "Cannot decode application manifest")
 		}
 
 		perms := webappManifest.Permissions()
 		params.scope, err = perms.MarshalScopeString()
 		if err != nil {
-			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain": params.instance.ContextualDomain(),
-				"Error":  "Cannot marshal scope permissions",
-			})
+			return true, renderError(c, http.StatusBadRequest, "Cannot marshal scope permissions")
 		}
 
 		params.webapp = &webappParams{
@@ -632,16 +623,10 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	}
 
 	if params.scope == "" {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error No scope parameter",
-		})
+		return true, renderError(c, http.StatusBadRequest, "Error No scope parameter")
 	}
 	if params.scope == oauth.ScopeLogin && !params.client.AllowLoginScope {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error No scope parameter",
-		})
+		return true, renderError(c, http.StatusBadRequest, "Error No scope parameter")
 	}
 
 	return false, nil
@@ -680,10 +665,7 @@ func authorizeForm(c echo.Context) error {
 
 		u, err := url.ParseRequestURI(params.redirectURI)
 		if err != nil {
-			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain": instance.ContextualDomain(),
-				"Error":  "Error Invalid redirect_uri",
-			})
+			return renderError(c, http.StatusBadRequest, "Error Invalid redirect_uri")
 		}
 
 		q := u.Query()
@@ -700,10 +682,7 @@ func authorizeForm(c echo.Context) error {
 
 	permissions, err := permissions.UnmarshalScopeString(params.scope)
 	if err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": instance.ContextualDomain(),
-			"Error":  "Error Invalid scope",
-		})
+		return renderError(c, http.StatusBadRequest, "Error Invalid scope")
 	}
 	readOnly := true
 	for _, p := range permissions {
@@ -735,7 +714,10 @@ func authorizeForm(c echo.Context) error {
 	}
 
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
+		"CozyUI":       cozyUI(instance),
+		"ThemeCSS":     ThemeCSS(instance),
 		"Domain":       instance.ContextualDomain(),
+		"ContextName":  instance.ContextName,
 		"ClientDomain": clientDomain,
 		"Locale":       instance.Locale,
 		"Client":       params.client,
@@ -746,7 +728,6 @@ func authorizeForm(c echo.Context) error {
 		"ReadOnly":     readOnly,
 		"CSRF":         c.Get("csrf"),
 		"Webapp":       params.webapp,
-		"CozyUI":       cozyUI(instance),
 	})
 }
 
@@ -766,18 +747,12 @@ func authorize(c echo.Context) error {
 	}
 
 	if !middlewares.IsLoggedIn(c) {
-		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
-			"Domain": instance.ContextualDomain(),
-			"Error":  "Error Must be authenticated",
-		})
+		return renderError(c, http.StatusUnauthorized, "Error Must be authenticated")
 	}
 
 	u, err := url.ParseRequestURI(params.redirectURI)
 	if err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": instance.ContextualDomain(),
-			"Error":  "Error Invalid redirect_uri",
-		})
+		return renderError(c, http.StatusBadRequest, "Error Invalid redirect_uri")
 	}
 
 	// Install the application in case of mobile client
@@ -828,16 +803,10 @@ type authorizeSharingParams struct {
 
 func checkAuthorizeSharingParams(c echo.Context, params *authorizeSharingParams) (bool, error) {
 	if params.state == "" {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error No state parameter",
-		})
+		return true, renderError(c, http.StatusBadRequest, "Error No state parameter")
 	}
 	if params.sharingID == "" {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.ContextualDomain(),
-			"Error":  "Error No sharing_id parameter",
-		})
+		return true, renderError(c, http.StatusBadRequest, "Error No sharing_id parameter")
 	}
 	return false, nil
 }
@@ -863,10 +832,7 @@ func authorizeSharingForm(c echo.Context) error {
 
 	s, err := sharing.FindSharing(instance, params.sharingID)
 	if err != nil || s.Owner || s.Active || len(s.Members) < 2 {
-		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
-			"Domain": instance.ContextualDomain(),
-			"Error":  "Error Invalid sharing",
-		})
+		return renderError(c, http.StatusUnauthorized, "Error Invalid sharing")
 	}
 
 	var sharerDomain string
@@ -878,8 +844,11 @@ func authorizeSharingForm(c echo.Context) error {
 	}
 
 	return c.Render(http.StatusOK, "authorize_sharing.html", echo.Map{
-		"Locale":       instance.Locale,
+		"CozyUI":       cozyUI(instance),
+		"ThemeCSS":     ThemeCSS(instance),
 		"Domain":       instance.ContextualDomain(),
+		"ContextName":  instance.ContextName,
+		"Locale":       instance.Locale,
 		"SharerDomain": sharerDomain,
 		"SharerName":   s.Members[0].PrimaryName(),
 		"State":        params.state,
@@ -901,10 +870,7 @@ func authorizeSharing(c echo.Context) error {
 	}
 
 	if !middlewares.IsLoggedIn(c) {
-		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
-			"Domain": instance.ContextualDomain(),
-			"Error":  "Error Must be authenticated",
-		})
+		return renderError(c, http.StatusUnauthorized, "Error Must be authenticated")
 	}
 
 	s, err := sharing.FindSharing(instance, params.sharingID)
@@ -941,7 +907,9 @@ func authorizeAppForm(c echo.Context) error {
 
 	permissions := app.Permissions()
 	return c.Render(http.StatusOK, "authorize_app.html", echo.Map{
+		"ThemeCSS":    ThemeCSS(instance),
 		"Domain":      instance.ContextualDomain(),
+		"ContextName": instance.ContextName,
 		"Slug":        app.Slug(),
 		"Permissions": permissions,
 		"CSRF":        c.Get("csrf"),
@@ -952,10 +920,7 @@ func authorizeApp(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	if !middlewares.IsLoggedIn(c) {
-		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
-			"Domain": instance.ContextualDomain(),
-			"Error":  "Error Must be authenticated",
-		})
+		return renderError(c, http.StatusUnauthorized, "Error Must be authenticated")
 	}
 
 	app, ok, err := getApp(c, instance, c.FormValue("slug"))
@@ -966,10 +931,8 @@ func authorizeApp(c echo.Context) error {
 	app.SetState(apps.Ready)
 	err = app.Update(instance)
 	if err != nil {
-		return c.Render(http.StatusInternalServerError, "error.html", echo.Map{
-			"Domain": instance.ContextualDomain(),
-			"Error":  instance.Translate("Could not activate application: %s", err.Error()),
-		})
+		msg := instance.Translate("Could not activate application: %s", err.Error())
+		return renderError(c, http.StatusUnauthorized, msg)
 	}
 
 	u := instance.SubDomain(app.Slug())
@@ -980,21 +943,15 @@ func getApp(c echo.Context, instance *instance.Instance, slug string) (apps.Mani
 	app, err := apps.GetWebappBySlug(instance, slug)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
-			return nil, false, c.Render(http.StatusNotFound, "error.html", echo.Map{
-				"Domain": instance.ContextualDomain(),
-				"Error":  `Application should have state "installed"`,
-			})
+			return nil, false, renderError(c, http.StatusNotFound,
+				`Application should have state "installed"`)
 		}
-		return nil, false, c.Render(http.StatusInternalServerError, "error.html", echo.Map{
-			"Domain": instance.ContextualDomain(),
-			"Error":  instance.Translate("Could not fetch application: %s", err.Error()),
-		})
+		return nil, false, renderError(c, http.StatusInternalServerError,
+			instance.Translate("Could not fetch application: %s", err.Error()))
 	}
 	if app.State() != apps.Installed {
-		return nil, false, c.Render(http.StatusExpectationFailed, "error.html", echo.Map{
-			"Domain": instance.ContextualDomain(),
-			"Error":  `Application should have state "installed"`,
-		})
+		return nil, false, renderError(c, http.StatusExpectationFailed,
+			`Application should have state "installed"`)
 	}
 	return app, true, nil
 }
@@ -1144,9 +1101,11 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 func passphraseResetForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
-		"Domain": instance.ContextualDomain(),
-		"Locale": instance.Locale,
-		"CSRF":   c.Get("csrf"),
+		"ThemeCSS":    ThemeCSS(instance),
+		"Domain":      instance.ContextualDomain(),
+		"ContextName": instance.ContextName,
+		"Locale":      instance.Locale,
+		"CSRF":        c.Get("csrf"),
 	})
 }
 
@@ -1166,11 +1125,13 @@ func passphraseReset(c echo.Context) error {
 		c.SetCookie(session.Delete(i))
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
-		"Domain":     i.ContextualDomain(),
-		"ErrorTitle": "Passphrase is reset Title",
-		"Error":      "Passphrase is reset Body",
-		"Button":     "Passphrase is reset Login Button",
-		"ButtonLink": i.PageURL("/auth/login", nil),
+		"ThemeCSS":    ThemeCSS(i),
+		"Domain":      i.ContextualDomain(),
+		"ContextName": i.ContextName,
+		"ErrorTitle":  "Passphrase is reset Title",
+		"Error":       "Passphrase is reset Body",
+		"Button":      "Passphrase is reset Login Button",
+		"ButtonLink":  i.PageURL("/auth/login", nil),
 	})
 }
 
@@ -1184,24 +1145,20 @@ func passphraseRenewForm(c echo.Context) error {
 	// token value checking is also done on the passphraseRenew handler.
 	token, err := hex.DecodeString(c.QueryParam("token"))
 	if err != nil || len(token) == 0 {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": inst.ContextualDomain(),
-			"Error":  "Error Invalid reset token",
-		})
+		return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 	}
 	if err = inst.CheckPassphraseRenewToken(token); err != nil {
 		if err == instance.ErrMissingToken {
-			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain": inst.ContextualDomain(),
-				"Error":  "Error Invalid reset token",
-			})
+			return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid_token",
 		})
 	}
 	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
+		"ThemeCSS":             ThemeCSS(inst),
 		"Domain":               inst.ContextualDomain(),
+		"ContextName":          inst.ContextName,
 		"Locale":               inst.Locale,
 		"PassphraseResetToken": hex.EncodeToString(token),
 		"CSRF":                 c.Get("csrf"),
@@ -1217,17 +1174,11 @@ func passphraseRenew(c echo.Context) error {
 	pass := []byte(c.FormValue("passphrase"))
 	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
 	if err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": inst.ContextualDomain(),
-			"Error":  "Error Invalid reset token",
-		})
+		return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 	}
 	if err := inst.PassphraseRenew(pass, token); err != nil {
 		if err == instance.ErrMissingToken {
-			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain": inst.ContextualDomain(),
-				"Error":  "Error Invalid reset token",
-			})
+			return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid_token",
