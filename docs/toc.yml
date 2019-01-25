@@ -8,6 +8,7 @@
   - "Configuration file": ./config.md
   - "Managing Instances": ./instance.md
   - "Onboarding": ./onboarding.md
+  - "Context customization": ./custom-context.md
 - For developpers:
   - "Develop a client-side app": ./client-app-dev.md
   - "Running and building Docker images": ./docker.md

@@ -12,6 +12,7 @@
 -   [Configuration file](config.md)
 -   [Managing Instances](instance.md)
 -   [Onboarding](onboarding.md)
+-   [Context customization](custom-context.md)
 
 ## For developpers
 
