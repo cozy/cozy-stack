@@ -4,10 +4,12 @@ package settings
 
 import (
 	"encoding/hex"
+	"fmt"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	perms "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -65,12 +67,33 @@ func updatePassphrase(c echo.Context) error {
 		Passphrase        string `json:"new_passphrase"`
 		TwoFactorPasscode string `json:"two_factor_passcode"`
 		TwoFactorToken    []byte `json:"two_factor_token"`
+		Force             bool   `json:"force,omitempty"`
 	}{}
 	err := c.Bind(&args)
 	if err != nil {
 		return jsonapi.BadRequest(err)
 	}
 
+	// If we want to force the update
+	if args.Force {
+		p, err := middlewares.GetPermission(c)
+		if err != nil {
+			return err
+		}
+
+		if p.Type == perms.TypeCLI { // We limit the authorization only to CLI
+			err := inst.ForceUpdatePassphrase([]byte(args.Passphrase))
+			if err != nil {
+				return err
+			}
+		} else {
+			err = fmt.Errorf("You must have a CLI audience to force change the password")
+			return jsonapi.BadRequest(err)
+		}
+		return c.NoContent(http.StatusNoContent)
+	}
+
+	// Else, we keep going on the standard checks (2FA, current passphrase, ...)
 	newPassphrase := []byte(args.Passphrase)
 	currentPassphrase := []byte(args.Current)
 

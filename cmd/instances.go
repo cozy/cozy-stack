@@ -275,21 +275,21 @@ settings for a specified domain.
 }
 
 var updateInstancePassphraseCmd = &cobra.Command{
-	Use:     "set-passphrase <domain> <current-passphrase> <new-passphrase>",
+	Use:     "set-passphrase <domain> <new-passphrase>",
 	Short:   "Change the passphrase of the instance",
-	Example: "$ cozy-stack instances set-passphrase cozy.tools:8080 foo bar",
+	Example: "$ cozy-stack instances set-passphrase cozy.tools:8080 myN3wP4ssowrd!",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 3 {
+		if len(args) != 2 {
 			return cmd.Usage()
 		}
 		domain := args[0]
 		c := newClient(domain, consts.Settings)
 		body := struct {
-			Current string `json:"current_passphrase"`
-			New     string `json:"new_passphrase"`
+			New   string `json:"new_passphrase"`
+			Force bool   `json:"force"`
 		}{
-			Current: args[1],
-			New:     args[2],
+			New:   args[1],
+			Force: true,
 		}
 
 		reqBody, err := json.Marshal(body)
@@ -304,12 +304,13 @@ var updateInstancePassphraseCmd = &cobra.Command{
 				"Content-Type": "application/json",
 			},
 		})
+		if err != nil {
+			return err
+		}
 
 		switch res.StatusCode {
 		case http.StatusNoContent:
 			fmt.Println("Passphrase has been changed for instance ", domain)
-		case http.StatusOK:
-			return fmt.Errorf("Instance %s has 2FA, you cannot change its password", domain)
 		case http.StatusBadRequest:
 			return fmt.Errorf("Bad current passphrase for instance %s", domain)
 		case http.StatusInternalServerError:

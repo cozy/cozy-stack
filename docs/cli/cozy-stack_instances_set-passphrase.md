@@ -7,13 +7,13 @@ Change the passphrase of the instance
 Change the passphrase of the instance
 
 ```
-cozy-stack instances set-passphrase <domain> <old-passphrase> <new-passphrase> [flags]
+cozy-stack instances set-passphrase <domain> <new-passphrase> [flags]
 ```
 
 ### Examples
 
 ```
-$ cozy-stack instances set-passphrase cozy.tools:8080 foo bar
+$ cozy-stack instances set-passphrase cozy.tools:8080 myN3wP4ssowrd!
 ```
 
 ### Options

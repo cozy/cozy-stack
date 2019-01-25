@@ -1405,6 +1405,20 @@ func (i *Instance) UpdatePassphrase(pass, current []byte, twoFactorPasscode stri
 	return i.update()
 }
 
+// ForceUpdatePassphrase replace the passphrase without checking the current one
+func (i *Instance) ForceUpdatePassphrase(newPassword []byte) error {
+	if len(newPassword) == 0 {
+		return ErrMissingPassphrase
+	}
+
+	hash, err := crypto.GenerateFromPassphrase(newPassword)
+	if err != nil {
+		return err
+	}
+	i.setPassphraseAndSecret(hash)
+	return i.update()
+}
+
 func (i *Instance) setPassphraseAndSecret(hash []byte) {
 	i.PassphraseHash = hash
 	i.SessionSecret = crypto.GenerateRandomBytes(SessionSecretLen)
