@@ -103,10 +103,11 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 		}
 	}()
 
-	_, err = io.Copy(file, c.Request().Body)
+	n, err := io.Copy(file, c.Request().Body)
 	if err != nil {
+		cl := c.Request().ContentLength
 		instance.Logger().WithField("nspace", "files").
-			Warnf("Error on uploading file (copy): %s", err)
+			Warnf("Error on uploading file (copy): %s (%d bytes written - expected %d)", err, n, cl)
 		return
 	}
 	f = newFile(doc, instance)
@@ -1087,6 +1088,7 @@ func wrapVfsError(err error) *jsonapi.Error {
 func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.FileDoc, error) {
 	header := c.Request().Header
 
+	// TODO use c.Request().ContentLength?
 	size, err := parseContentLength(header.Get("Content-Length"))
 	if err != nil {
 		err = jsonapi.InvalidParameter("Content-Length", err)
