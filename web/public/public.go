@@ -15,9 +15,13 @@ import (
 
 // Avatar returns the default avatar currently.
 func Avatar(c echo.Context) error {
-	f, ok := fs.Get("/images/default-avatar.png", "")
+	inst := middlewares.GetInstance(c)
+	f, ok := fs.Get("/images/default-avatar.png", inst.ContextName)
 	if !ok {
-		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
+		f, ok = fs.Get("/images/default-avatar.png", "")
+		if !ok {
+			return echo.NewHTTPError(http.StatusNotFound, "Page not found")
+		}
 	}
 	handler := statik.NewHandler()
 	handler.ServeFile(c.Response(), c.Request(), f, true)
@@ -29,5 +33,5 @@ func Routes(router *echo.Group) {
 	cacheControl := middlewares.CacheControl(middlewares.CacheOptions{
 		MaxAge: 24 * time.Hour,
 	})
-	router.GET("/avatar", Avatar, cacheControl)
+	router.GET("/avatar", Avatar, cacheControl, middlewares.NeedInstance)
 }
