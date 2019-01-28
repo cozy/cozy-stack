@@ -68,6 +68,8 @@ func (f *FsckLog) String() string {
 	panic("bad FsckLog type")
 }
 
+// FsckContentMismatch is a struct used by the FSCK where CouchDB and Swift
+// haven't the same information about a file content (md5sum and size).
 type FsckContentMismatch struct {
 	SizeIndex   int64  `json:"size_index"`
 	SizeFile    int64  `json:"size_file"`
@@ -98,6 +100,7 @@ type TreeFile struct {
 	HasCycle bool `json:"has_cycle"`
 }
 
+// AsFile returns the FileDoc part from this more complex struct
 func (t *TreeFile) AsFile() *FileDoc {
 	if t.IsDir {
 		panic("calling AsFile on a directory")
@@ -106,6 +109,7 @@ func (t *TreeFile) AsFile() *FileDoc {
 	return fileDoc
 }
 
+// AsDir returns the DirDoc part from this more complex struct
 func (t *TreeFile) AsDir() *DirDoc {
 	if !t.IsDir {
 		panic("calling AsDir on a file")

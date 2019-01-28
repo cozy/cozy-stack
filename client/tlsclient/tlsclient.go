@@ -19,6 +19,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
+// HTTPEndpoint is a struct for specifying which parameters to use when
+// connecting to a HTTP(S) endpoint
 type HTTPEndpoint struct {
 	Host      string
 	Port      int
@@ -33,6 +35,7 @@ type HTTPEndpoint struct {
 	DisableCompression     bool
 }
 
+// ClientCertificateFilePair is a struct with a certificate and a key pair
 type ClientCertificateFilePair struct {
 	KeyFile         string
 	CertificateFile string
@@ -59,6 +62,7 @@ func generateURL(host string, port int) (*url.URL, error) {
 	return u, nil
 }
 
+// NewHTTPClient creates a http.Client and an url.URL for the given HTTP endpoint
 func NewHTTPClient(opt HTTPEndpoint) (client *http.Client, u *url.URL, err error) {
 	if opt.Host != "" || opt.Port > 0 {
 		u, err = generateURL(opt.Host, opt.Port)
