@@ -3,6 +3,7 @@ package compat
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
@@ -11,8 +12,10 @@ import (
 func Compat(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	return c.Render(http.StatusOK, "compat.html", echo.Map{
-		"Domain": instance.ContextualDomain(),
-		"Locale": instance.Locale,
+		"ThemeCSS":    auth.ThemeCSS(instance),
+		"Domain":      instance.ContextualDomain(),
+		"ContextName": instance.ContextName,
+		"Locale":      instance.Locale,
 	})
 }
 
