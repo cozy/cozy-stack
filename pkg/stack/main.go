@@ -8,7 +8,7 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/config_dyn"
+	"github.com/cozy/cozy-stack/pkg/config/dynamic"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -111,7 +111,7 @@ security features. Please do not use this binary as your production server.
 		return
 	}
 
-	assetsList, err := config_dyn.GetAssetsList()
+	assetsList, err := dynamic.GetAssetsList()
 	if err != nil {
 		return
 	}
@@ -122,7 +122,7 @@ security features. Please do not use this binary as your production server.
 	assetsPollingDisabled := config.GetConfig().AssetsPollingDisabled
 	if !assetsPollingDisabled {
 		pollingInterval := config.GetConfig().AssetsPollingInterval
-		go config_dyn.PollAssetsList(cacheStorage, pollingInterval)
+		go dynamic.PollAssetsList(cacheStorage, pollingInterval)
 	}
 
 	sessionSweeper := sessions.SweepLoginRegistrations()
