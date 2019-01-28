@@ -8,31 +8,27 @@ FROM golang:1.11 as build
 WORKDIR /go/src/github.com/cozy/cozy-stack
 
 # MailHog
-ENV MAILHOG_VERSION 1.0.0
-ENV MAILHOG_SRC_URL https://github.com/mailhog/MailHog/releases/download/v$MAILHOG_VERSION/MailHog_linux_amd64
-ENV MAILHOG_SRC_SHA256 ba921e04438e176c474d533447ae64707ffcdd1230f0153f86cb188d348f25c0
+ENV MAILHOG_SRC_URL=https://github.com/mailhog/MailHog/releases/download/v1.0.0/MailHog_linux_amd64 \
+	MAILHOG_SRC_SHA256=ba921e04438e176c474d533447ae64707ffcdd1230f0153f86cb188d348f25c0
 RUN set -eu; curl -fsSL "$MAILHOG_SRC_URL" -o MailHog \
   && echo "$MAILHOG_SRC_SHA256  MailHog" | sha256sum -c - \
   && chmod +x MailHog
 
 # Build cozy-stack
 COPY . .
-RUN go get -d -v ./...
-RUN ./scripts/build.sh dev
+RUN go get -d -v ./... && ./scripts/build.sh dev
 
 
 # Multi-stage image: the main image
 FROM debian:stretch-slim
 
 # cozy-stack
-ENV COZY_STACK_HOST cozy.tools
-ENV COZY_STACK_PORT 8080
-ENV COZY_STACK_PATH cozy-stack
-
-# CouchDB
-ENV COUCHDB_VERSION 2.3.0
-ENV COUCHDB_SRC_URL https://dist.apache.org/repos/dist/release/couchdb/source/$COUCHDB_VERSION/apache-couchdb-$COUCHDB_VERSION.tar.gz
-ENV COUCHDB_SRC_SHA256 0b3868d042b158d9fd2f504804abd93cd22681c033952f832ce846672c31f352
+ENV COZY_STACK_HOST=cozy.tools \
+	COZY_STACK_PORT=8080 \
+	COZY_STACK_PATH=cozy-stack \
+	COUCHDB_SRC_URL=https://dist.apache.org/repos/dist/release/couchdb/source/2.3.0/apache-couchdb-2.3.0.tar.gz \
+	COUCHDB_SRC_SHA256=0b3868d042b158d9fd2f504804abd93cd22681c033952f832ce846672c31f352 \
+	PATH="$PATH:/usr/local/couchdb/bin"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -75,7 +71,6 @@ RUN set -eux; apt-get update \
   && apt-get autoremove -y && apt-get clean \
   && mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
 
-ENV PATH $PATH:/usr/local/couchdb/bin
 
 COPY --from=build \
   /go/src/github.com/cozy/cozy-stack/cozy-stack \
