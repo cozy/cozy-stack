@@ -49,10 +49,10 @@ describe "A sharing" do
     file1_charlie.rename inst_charlie, name1b
     code = sharing.read_only inst_bob, 2
     assert_equal 204, code
-    sleep 7
+    sleep 8
     name2b = "#{Faker::HitchhikersGuideToTheGalaxy.marvin_quote}.txt"
     file2_charlie.rename inst_charlie, name2b
-    sleep 7
+    sleep 8
 
     # Check that the replicate and upload trigger have been removed
     doc = Helpers.couch.get_doc inst_charlie.domain, Sharing.doctype, sharing.couch_id

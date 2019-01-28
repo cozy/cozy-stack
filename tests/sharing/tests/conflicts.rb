@@ -102,7 +102,7 @@ describe "A sharing" do
       file1_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
     end
 
-    sleep 15
+    sleep 20
     # Check the files and diretories are even
     file1 = CozyFile.find inst, file1.couch_id
     file2 = CozyFile.find inst, file2.couch_id

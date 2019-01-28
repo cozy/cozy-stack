@@ -96,6 +96,9 @@ module Model
       res = inst.client["/files/#{@couch_id}"].patch body.to_json, opts
       j = JSON.parse(res.body)["data"]
       @couch_rev = j["meta"]["rev"]
+    rescue RestClient::InternalServerError => e
+      puts "InternalServerError: #{e.http_body}"
+      raise e
     end
 
     def restore(inst)
