@@ -75,7 +75,7 @@ type FsckContentMismatch struct {
 	MD5SumFile  []byte `json:"md5sum_file"`
 }
 
-// Tree is returned by the BuildTree method on the indexes. In containes a
+// Tree is returned by the BuildTree method on the indexes. It contains a
 // pointer to the root element of the tree, a map of directories indexed by
 // their ID, and a map of a potential list of orphan file or directories
 // indexed by their DirID.
