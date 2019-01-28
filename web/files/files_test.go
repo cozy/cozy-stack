@@ -399,7 +399,8 @@ func TestUploadImage(t *testing.T) {
 	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__©M4Dz.jpg")
 	assert.NoError(t, err)
 	defer f.Close()
-	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=wet.jpg", f)
+	m := `{"gps":{"city":"Paris","country":"France"}}`
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=wet.jpg&Metadata="+m, f)
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, obj := doUploadOrMod(t, req, "image/jpeg", "tHWYYuXBBflJ8wXgJ2c2yg==")
@@ -412,6 +413,9 @@ func TestUploadImage(t *testing.T) {
 	assert.Equal(t, float64(vfs.MetadataExtractorVersion), v)
 	flash := meta["flash"].(string)
 	assert.Equal(t, "Off, Did not fire", flash)
+	gps := meta["gps"].(map[string]interface{})
+	assert.Equal(t, "Paris", gps["city"])
+	assert.Equal(t, "France", gps["country"])
 }
 
 func TestUploadWithParentSuccess(t *testing.T) {

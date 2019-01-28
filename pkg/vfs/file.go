@@ -356,6 +356,17 @@ func getFileMode(executable bool) os.FileMode {
 	return 0644 // -rw-r--r--
 }
 
+// MergeMetadata takes a metadata map and merges it in the FileDoc
+func MergeMetadata(doc *FileDoc, meta Metadata) {
+	if doc.Metadata == nil {
+		doc.Metadata = meta
+	} else {
+		for k, v := range meta {
+			doc.Metadata[k] = v
+		}
+	}
+}
+
 var (
 	_ couchdb.Doc = &FileDoc{}
 	_ os.FileInfo = &FileDoc{}

@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
 	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -1087,14 +1088,9 @@ func wrapVfsError(err error) *jsonapi.Error {
 // FileDocFromReq creates a FileDoc from an incoming request.
 func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.FileDoc, error) {
 	header := c.Request().Header
+	size := c.Request().ContentLength
 
-	// TODO use c.Request().ContentLength?
-	size, err := parseContentLength(header.Get("Content-Length"))
-	if err != nil {
-		err = jsonapi.InvalidParameter("Content-Length", err)
-		return nil, err
-	}
-
+	var err error
 	var md5Sum []byte
 	if md5Str := header.Get("Content-MD5"); md5Str != "" {
 		md5Sum, err = parseMD5Hash(md5Str)
@@ -1131,7 +1127,7 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 
 	executable := c.QueryParam("Executable") == "true"
 	trashed := false
-	return vfs.NewFileDoc(
+	doc, err := vfs.NewFileDoc(
 		name,
 		dirID,
 		size,
@@ -1143,6 +1139,12 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 		trashed,
 		tags,
 	)
+	if meta := c.QueryParam("Metadata"); err == nil && meta != "" {
+		if err := json.Unmarshal([]byte(meta), &doc.Metadata); err != nil {
+			logger.WithNamespace("files").Debugf("Invalid Metadata at upload: %s", err)
+		}
+	}
+	return doc, err
 }
 
 // CheckIfMatch checks if the revision provided matches the revision number
@@ -1191,16 +1193,4 @@ func parseMD5Hash(md5B64 string) ([]byte, error) {
 	}
 
 	return md5Sum, nil
-}
-
-func parseContentLength(contentLength string) (int64, error) {
-	if contentLength == "" {
-		return -1, nil
-	}
-
-	size, err := strconv.ParseInt(contentLength, 10, 64)
-	if err != nil {
-		err = fmt.Errorf("Invalid content length")
-	}
-	return size, err
 }
