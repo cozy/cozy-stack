@@ -2,6 +2,7 @@ package instances
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -431,6 +432,38 @@ func updatesHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, job)
 }
 
+func setAuthMode(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
+	m := echo.Map{}
+	if err := c.Bind(&m); err != nil {
+		return err
+	}
+
+	authModeString, ok := m["auth_mode"]
+	if !ok {
+		return jsonapi.BadRequest(errors.New("Missing auth_mode key"))
+	}
+
+	authMode, err := instance.StringToAuthMode(authModeString.(string))
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	if !inst.HasAuthMode(authMode) {
+		inst.AuthMode = authMode
+		couchdb.UpdateDoc(couchdb.GlobalDB, inst)
+	} else {
+		alreadyAuthMode := fmt.Sprintf("Instance has already %s auth mode", authModeString)
+		return c.JSON(http.StatusOK, alreadyAuthMode)
+	}
+	// Return success
+	return c.JSON(http.StatusNoContent, nil)
+}
+
 type diskUsageResult struct {
 	Used  int64 `json:"used,string"`
 	Quota int64 `json:"quota,string,omitempty"`
@@ -529,4 +562,5 @@ func Routes(router *echo.Group) {
 	router.GET("/:domain/disk-usage", diskUsage)
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
+	router.POST("/:domain/auth-mode", setAuthMode)
 }

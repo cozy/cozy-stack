@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -934,6 +935,57 @@ var instanceAppVersionCmd = &cobra.Command{
 	},
 }
 
+var setAuthModeCmd = &cobra.Command{
+	Use:     "auth-mode [domain] [auth-mode]",
+	Short:   `Set instance auth-mode`,
+	Example: "$ cozy-stack instances auth-mode cozy.tools:8080 two_factor_mail",
+	Long: `Change the authentication mode for an instance. Two options are allowed:
+- two_factor_mail
+- basic
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 2 {
+			return cmd.Usage()
+		}
+
+		domain := args[0]
+		c := newAdminClient()
+
+		body := struct {
+			AuthMode string `json:"auth_mode"`
+		}{
+			AuthMode: args[1],
+		}
+
+		reqBody, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+
+		res, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   "/instances/" + url.PathEscape(domain) + "/auth-mode",
+			Body:   bytes.NewReader(reqBody),
+			Headers: request.Headers{
+				"Content-Type": "application/json",
+			},
+		})
+		if err != nil {
+			return err
+		}
+		if res.StatusCode == http.StatusNoContent {
+			fmt.Printf("Auth mode has been changed for %s\n", domain)
+		} else {
+			resBody, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(resBody))
+		}
+		return nil
+	},
+}
+
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(showDBPrefixInstanceCmd)
@@ -957,6 +1009,7 @@ func init() {
 	instanceCmdGroup.AddCommand(showSwiftPrefixInstanceCmd)
 	instanceCmdGroup.AddCommand(instanceAppVersionCmd)
 	instanceCmdGroup.AddCommand(updateInstancePassphraseCmd)
+	instanceCmdGroup.AddCommand(setAuthModeCmd)
 	addInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
