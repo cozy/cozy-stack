@@ -1087,14 +1087,9 @@ func wrapVfsError(err error) *jsonapi.Error {
 // FileDocFromReq creates a FileDoc from an incoming request.
 func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.FileDoc, error) {
 	header := c.Request().Header
+	size := c.Request().ContentLength
 
-	// TODO use c.Request().ContentLength?
-	size, err := parseContentLength(header.Get("Content-Length"))
-	if err != nil {
-		err = jsonapi.InvalidParameter("Content-Length", err)
-		return nil, err
-	}
-
+	var err error
 	var md5Sum []byte
 	if md5Str := header.Get("Content-MD5"); md5Str != "" {
 		md5Sum, err = parseMD5Hash(md5Str)
@@ -1191,16 +1186,4 @@ func parseMD5Hash(md5B64 string) ([]byte, error) {
 	}
 
 	return md5Sum, nil
-}
-
-func parseContentLength(contentLength string) (int64, error) {
-	if contentLength == "" {
-		return -1, nil
-	}
-
-	size, err := strconv.ParseInt(contentLength, 10, 64)
-	if err != nil {
-		err = fmt.Errorf("Invalid content length")
-	}
-	return size, err
 }
