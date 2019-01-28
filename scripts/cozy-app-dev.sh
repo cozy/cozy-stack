@@ -104,11 +104,9 @@ do_start() {
 
 	${COZY_STACK_PATH} serve --allow-root \
 		--appdir "${appdir}" \
-		--host "${COZY_STACK_HOST}" \
 		--port "${COZY_STACK_PORT}" \
 		--admin-port "${COZY_STACK_ADMIN_PORT}" \
 		--couchdb-url "${COUCHDB_URL}" \
-		--mail-host "${COZY_STACK_HOST}" \
 		--mail-port 1025 \
 		--mail-disable-tls \
 		--fs-url "file://localhost${vfsdir}" &
