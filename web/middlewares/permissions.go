@@ -62,18 +62,18 @@ func GetRequestToken(c echo.Context) string {
 	return c.QueryParam("bearer_token")
 }
 
-type LinkedAppScope struct {
+type linkedAppScope struct {
 	Doctype string
 	Slug    string
 }
 
-func ParseLinkedAppScope(scope string) (*LinkedAppScope, error) {
+func parseLinkedAppScope(scope string) (*linkedAppScope, error) {
 	if !strings.HasPrefix(scope, "@") {
 		return nil, fmt.Errorf("Scope %s is not a linked-app", scope)
 	}
 	splitted := strings.Split(strings.TrimPrefix(scope, "@"), "/")
 
-	return &LinkedAppScope{
+	return &linkedAppScope{
 		Doctype: splitted[0],
 		Slug:    splitted[1],
 	}, nil
@@ -82,7 +82,7 @@ func ParseLinkedAppScope(scope string) (*LinkedAppScope, error) {
 // GetForOauth create a non-persisted permissions doc from a oauth token scopes
 func GetForOauth(instance *instance.Instance, claims *permissions.Claims, c interface{}) (*permissions.Permission, error) {
 	var set permissions.Set
-	linkedAppScope, err := ParseLinkedAppScope(claims.Scope)
+	linkedAppScope, err := parseLinkedAppScope(claims.Scope)
 
 	if err == nil && linkedAppScope != nil {
 		// Translate to a real scope

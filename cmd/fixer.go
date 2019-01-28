@@ -406,7 +406,7 @@ var contactEmailsFixer = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Fixing %s contact emails...\n", domain)
 			err := fixEmails(domain)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error occured: %s\n", err)
+				fmt.Fprintf(os.Stderr, "Error occurred: %s\n", err)
 			}
 		}
 

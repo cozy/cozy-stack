@@ -71,13 +71,7 @@ describe "A folder" do
     doc["credentials"][0]["xor_key"] = key
     Helpers.couch.update_doc inst.domain, Sharing.doctype, doc
 
-    # Accept the sharing
-    sleep 1
-    inst_recipient.accept sharing
-    doc = Helpers.couch.get_doc inst_recipient.domain, Sharing.doctype, sharing.couch_id
-    assert_equal 2, doc["initial_number_of_files_to_sync"]
-
-    # Check the realtime events
+    # Accept the sharing and check the realtime events to see when files are synchronized
     EM.run do
       ws = Faye::WebSocket::Client.new("ws://#{inst_recipient.domain}/realtime/")
 
@@ -104,6 +98,11 @@ describe "A folder" do
       ws.on :close do
         EM.stop
       end
+
+      sleep 1
+      inst_recipient.accept sharing
+      doc = Helpers.couch.get_doc inst_recipient.domain, Sharing.doctype, sharing.couch_id
+      assert_equal 2, doc["initial_number_of_files_to_sync"]
     end
     doc = Helpers.couch.get_doc inst_recipient.domain, Sharing.doctype, sharing.couch_id
     assert_nil doc["initial_number_of_files_to_sync"]

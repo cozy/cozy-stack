@@ -72,7 +72,7 @@ func populateTree(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc, nb int, stats *S
 func TestExportFiles(t *testing.T) {
 	fs := inst.VFS()
 
-	// The partsSize is volontary really small to have a lot of parts,
+	// The partsSize is voluntary really small to have a lot of parts,
 	// which can help to test the edge cases
 	var partsSize int64 = 10
 

@@ -12,7 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/config_dyn"
+	"github.com/cozy/cozy-stack/pkg/config/dynamic"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -263,14 +263,14 @@ func addAssets(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
-	return config_dyn.UpdateAssetsList()
+	return dynamic.UpdateAssetsList()
 }
 
 func deleteAssets(c echo.Context) error {
 	context := c.Param("context")
 	name := c.Param("*")
 
-	err := config_dyn.RemoveAsset(context, name)
+	err := dynamic.RemoveAsset(context, name)
 	if err != nil {
 		wrapError(err)
 	}

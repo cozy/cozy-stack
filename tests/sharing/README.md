@@ -59,6 +59,5 @@ The log files for the stack are kept inside the `tmp/` directory. You can use
 installed with:
 
 ```sh
-lnav -i $(go env
-GOPATH)/src/github.com/cozy/cozy-stack/scripts/lnav_cozy_log.json
+lnav -i $(go env GOPATH)/src/github.com/cozy/cozy-stack/scripts/lnav_cozy_log.json
 ```

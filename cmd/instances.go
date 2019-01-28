@@ -614,11 +614,7 @@ in swift/localfs but not couchdb.
 		for scanner.Scan() {
 			fmt.Println(string(scanner.Bytes()))
 		}
-		if err = scanner.Err(); err != nil {
-			return err
-		}
-
-		return nil
+		return scanner.Err()
 	},
 }
 
