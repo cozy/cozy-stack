@@ -315,6 +315,17 @@ func login(c echo.Context) error {
 			// In case the second factor authentication mode is "mail", we also
 			// check that the mail has been confirmed. If not, 2FA is not actived.
 			if inst.HasAuthMode(instance.TwoFactorMail) {
+
+				successfulAuthentication = inst.ValidateTwoFactorTrustedDeviceSecret(
+					c.Request(), twoFactorTrustedDeviceToken)
+
+				if len(twoFactorTrustedDeviceToken) > 0 && !successfulAuthentication {
+					// If the token is bad, maybe the password had been changed, and
+					// the token is now expired. We are going to empty it and ask a
+					// regeneration
+					twoFactorTrustedDeviceToken = []byte{}
+				}
+
 				if len(twoFactorTrustedDeviceToken) == 0 {
 					twoFactorToken, err = inst.SendTwoFactorPasscode()
 					if err != nil {
@@ -328,8 +339,6 @@ func login(c echo.Context) error {
 					}
 					return renderTwoFactorForm(c, inst, http.StatusOK, redirect, twoFactorToken, longRunSession)
 				}
-				successfulAuthentication = inst.ValidateTwoFactorTrustedDeviceSecret(
-					c.Request(), twoFactorTrustedDeviceToken)
 			} else {
 				successfulAuthentication = true
 			}
