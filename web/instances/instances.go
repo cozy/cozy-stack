@@ -519,26 +519,13 @@ func getSwiftBucketName(c echo.Context) error {
 }
 
 func lsContexts(c echo.Context) error {
-	var res couchdb.ViewResponse
+	contexts := config.GetConfig().Contexts
+	result := []string{}
 
-	err := couchdb.ExecView(couchdb.GlobalDB, consts.InstancesByContext, &couchdb.ViewRequest{
-		Reduce: true,
-		Group:  true,
-	}, &res)
-
-	if err != nil {
-		return jsonapi.BadRequest(err)
+	for name := range contexts {
+		result = append(result, name)
 	}
-	contexts := []string{}
-
-	for _, row := range res.Rows {
-		if row.Key == nil {
-			contexts = append(contexts, "default")
-		} else {
-			contexts = append(contexts, row.Key.(string))
-		}
-	}
-	return c.JSON(http.StatusOK, contexts)
+	return c.JSON(http.StatusOK, result)
 }
 
 func wrapError(err error) error {
