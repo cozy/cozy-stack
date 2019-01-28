@@ -704,7 +704,7 @@ func (f *swiftFileCreationV2) Close() (err error) {
 
 	if f.meta != nil {
 		if errc := (*f.meta).Close(); errc == nil {
-			newdoc.Metadata = (*f.meta).Result()
+			vfs.MergeMetadata(newdoc, (*f.meta).Result())
 		}
 	}
 

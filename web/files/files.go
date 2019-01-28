@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
 	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -1126,7 +1127,7 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 
 	executable := c.QueryParam("Executable") == "true"
 	trashed := false
-	return vfs.NewFileDoc(
+	doc, err := vfs.NewFileDoc(
 		name,
 		dirID,
 		size,
@@ -1138,6 +1139,12 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 		trashed,
 		tags,
 	)
+	if meta := c.QueryParam("Metadata"); err == nil && meta != "" {
+		if err := json.Unmarshal([]byte(meta), &doc.Metadata); err != nil {
+			logger.WithNamespace("files").Debugf("Invalid Metadata at upload: %s", err)
+		}
+	}
+	return doc, err
 }
 
 // CheckIfMatch checks if the revision provided matches the revision number

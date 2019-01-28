@@ -253,6 +253,7 @@ Upload a file
 | Name       | the file name                                      |
 | Tags       | an array of tags                                   |
 | Executable | `true` if the file is executable (UNIX permission) |
+| Metadata   | a JSON with metadata on this file (gps, persons)   |
 
 #### HTTP headers
 
