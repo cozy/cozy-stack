@@ -104,6 +104,7 @@ do_start() {
 
 	${COZY_STACK_PATH} serve --allow-root \
 		--appdir "${appdir}" \
+		--host "::" \
 		--port "${COZY_STACK_PORT}" \
 		--admin-port "${COZY_STACK_ADMIN_PORT}" \
 		--couchdb-url "${COUCHDB_URL}" \
