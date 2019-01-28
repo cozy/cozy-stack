@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 19
+const IndexViewsVersion int = 20
 
 // globalIndexes is the index list required on the global databases to run
 // properly.
@@ -36,6 +36,7 @@ function(doc) {
 // global databases.
 var globalViews = []*couchdb.View{
 	DomainAndAliasesView,
+	InstancesByContext,
 }
 
 // InitGlobalDB defines views and indexes on the global databases. It is called
@@ -242,6 +243,18 @@ function(doc) {
 	}
 }
 `,
+}
+
+// InstancesByContext lists the contexts of the database
+var InstancesByContext = &couchdb.View{
+	Name:    "instances-by-contexts",
+	Doctype: Instances,
+	Map: `
+function (doc) {
+	emit(doc.context, 1);
+}
+`,
+	Reduce: "_sum",
 }
 
 // Views is the list of all views that are created by the stack.

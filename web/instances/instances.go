@@ -518,6 +518,29 @@ func getSwiftBucketName(c echo.Context) error {
 	return c.JSON(http.StatusOK, containersNames)
 }
 
+func lsContexts(c echo.Context) error {
+	var res couchdb.ViewResponse
+
+	err := couchdb.ExecView(couchdb.GlobalDB, consts.InstancesByContext, &couchdb.ViewRequest{
+		Reduce: true,
+		Group:  true,
+	}, &res)
+
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+	contexts := []string{}
+
+	for _, row := range res.Rows {
+		if row.Key == nil {
+			contexts = append(contexts, "default")
+		} else {
+			contexts = append(contexts, row.Key.(string))
+		}
+	}
+	return c.JSON(http.StatusOK, contexts)
+}
+
 func wrapError(err error) error {
 	switch err {
 	case instance.ErrNotFound:
@@ -563,4 +586,5 @@ func Routes(router *echo.Group) {
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
 	router.POST("/:domain/auth-mode", setAuthMode)
+	router.GET("/contexts", lsContexts)
 }
