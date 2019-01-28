@@ -435,7 +435,9 @@ func updatesHandler(c echo.Context) error {
 func setAuthMode(c echo.Context) error {
 	domain := c.Param("domain")
 	inst, err := instance.Get(domain)
-
+	if err != nil {
+		return err
+	}
 	m := echo.Map{}
 	if err := c.Bind(&m); err != nil {
 		return err
