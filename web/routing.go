@@ -136,6 +136,7 @@ func SetupRoutes(router *echo.Echo) error {
 				DefaultContentTypeOffer: echo.MIMETextHTML,
 			}),
 			middlewares.CheckIE,
+			middlewares.CheckInstanceBlocked,
 		}
 		router.GET("/", auth.Home, mws...)
 		auth.Routes(router.Group("/auth", mws...))
