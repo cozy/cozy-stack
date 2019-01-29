@@ -71,6 +71,32 @@ func getSessionID(cookies []*http.Cookie) string {
 	return ""
 }
 
+func TestInstanceBlocked(t *testing.T) {
+	// Block the instance
+	testInstance.Blocked = true
+	couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
+
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
+	req.Host = testInstance.Domain
+
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusPaymentRequired, res.StatusCode)
+
+	// Trying with a Accept: text/html header to simulate a browser
+	req.Header.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	res2, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusPaymentRequired, res2.StatusCode)
+	body, err := ioutil.ReadAll(res2.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(body), "<title>Cozy</title>")
+
+	// Unblock the instance
+	testInstance.Blocked = false
+	couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
+}
+
 func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
 	content, err := getTestURL()
 	assert.NoError(t, err)

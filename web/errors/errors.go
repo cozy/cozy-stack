@@ -135,9 +135,11 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		err = c.JSON(status, echo.Map{"error": he.Message})
 	} else if acceptHTML {
 		var domain string
+		var context string
 		i, ok := middlewares.GetInstanceSafe(c)
 		if ok {
 			domain = i.ContextualDomain()
+			context = i.ContextName
 		}
 
 		var actionTitle, actionURL string
@@ -152,6 +154,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			"Error":       value,
 			"ActionTitle": actionTitle,
 			"ActionURL":   actionURL,
+			"ContextName": context,
 		})
 	} else {
 		err = c.String(status, fmt.Sprintf("%v", he.Message))
