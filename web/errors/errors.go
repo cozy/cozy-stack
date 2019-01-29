@@ -152,6 +152,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			"Error":       value,
 			"ActionTitle": actionTitle,
 			"ActionURL":   actionURL,
+			"ContextName": i.ContextName,
 		})
 	} else {
 		err = c.String(status, fmt.Sprintf("%v", he.Message))
