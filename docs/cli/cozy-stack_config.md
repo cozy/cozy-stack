@@ -34,6 +34,7 @@ cozy-stack config allows to print and generate some parts of the configuration
 * [cozy-stack config gen-keys](cozy-stack_config_gen-keys.md)	 - Generate an key pair for encryption and decryption of credentials
 * [cozy-stack config insert-asset](cozy-stack_config_insert-asset.md)	 - Inserts an asset
 * [cozy-stack config ls-assets](cozy-stack_config_ls-assets.md)	 - List assets
+* [cozy-stack config ls-contexts](cozy-stack_config_ls-contexts.md)	 - List contexts
 * [cozy-stack config passwd](cozy-stack_config_passwd.md)	 - Generate an admin passphrase
 * [cozy-stack config print](cozy-stack_config_print.md)	 - Display the configuration
 * [cozy-stack config rm-asset](cozy-stack_config_rm-asset.md)	 - Removes an asset

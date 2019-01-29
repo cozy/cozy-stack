@@ -518,6 +518,16 @@ func getSwiftBucketName(c echo.Context) error {
 	return c.JSON(http.StatusOK, containersNames)
 }
 
+func lsContexts(c echo.Context) error {
+	contexts := config.GetConfig().Contexts
+	result := []string{}
+
+	for name := range contexts {
+		result = append(result, name)
+	}
+	return c.JSON(http.StatusOK, result)
+}
+
 func wrapError(err error) error {
 	switch err {
 	case instance.ErrNotFound:
@@ -563,4 +573,5 @@ func Routes(router *echo.Group) {
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
 	router.POST("/:domain/auth-mode", setAuthMode)
+	router.GET("/contexts", lsContexts)
 }
