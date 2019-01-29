@@ -88,6 +88,9 @@ func TestInstanceBlocked(t *testing.T) {
 	res2, err := client.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusPaymentRequired, res2.StatusCode)
+	body, err := ioutil.ReadAll(res2.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(body), "<title>Cozy</title>")
 
 	// Unblock the instance
 	testInstance.Blocked = false
