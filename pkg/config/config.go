@@ -34,6 +34,9 @@ const (
 	ModeProd = "production"
 )
 
+// DefaultInstanceContext is the default context name for an instance
+const DefaultInstanceContext = "default"
+
 var (
 	// Version of the release (see scripts/build.sh script)
 	Version string
@@ -134,9 +137,10 @@ type Config struct {
 
 	CacheStorage cache.Cache
 
-	Contexts   map[string]interface{}
-	Registries map[string][]*url.URL
-	Clouderies map[string]interface{}
+	Contexts       map[string]interface{}
+	Authentication map[string]interface{}
+	Registries     map[string][]*url.URL
+	Clouderies     map[string]interface{}
 
 	CSPDisabled  bool
 	CSPWhitelist map[string]string
@@ -665,9 +669,10 @@ func UseViper(v *viper.Viper) error {
 			DisableTLS:                v.GetBool("mail.disable_tls"),
 			SkipCertificateValidation: v.GetBool("mail.skip_certificate_validation"),
 		},
-		Contexts:   v.GetStringMap("contexts"),
-		Registries: regs,
-		Clouderies: v.GetStringMap("clouderies"),
+		Contexts:       v.GetStringMap("contexts"),
+		Authentication: v.GetStringMap("authentication"),
+		Registries:     regs,
+		Clouderies:     v.GetStringMap("clouderies"),
 
 		CSPWhitelist: v.GetStringMapString("csp_whitelist"),
 
@@ -729,7 +734,7 @@ func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {
 			}
 			urlList[i] = u
 		}
-		regs["default"] = urlList
+		regs[DefaultInstanceContext] = urlList
 	} else {
 		for k, v := range v.GetStringMap("registries") {
 			list, ok := v.([]interface{})
@@ -750,13 +755,13 @@ func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {
 		}
 	}
 
-	defaults, ok := regs["default"]
+	defaults, ok := regs[DefaultInstanceContext]
 	if !ok {
 		defaults = []*url.URL{hardcodedRegistry}
-		regs["default"] = defaults
+		regs[DefaultInstanceContext] = defaults
 	}
 	for ctx, urls := range regs {
-		if ctx == "default" {
+		if ctx == DefaultInstanceContext {
 			continue
 		}
 		regs[ctx] = append(urls, defaults...)

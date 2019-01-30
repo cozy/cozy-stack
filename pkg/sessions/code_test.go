@@ -1,10 +1,8 @@
 package sessions
 
 import (
-	"os"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,9 +44,4 @@ func TestExpiredCode(t *testing.T) {
 	code.ExpiresAt -= 100
 	found := FindCode(code.Value, appDomain)
 	assert.Nil(t, found)
-}
-
-func TestMain(m *testing.M) {
-	config.UseTestFile()
-	os.Exit(m.Run())
 }

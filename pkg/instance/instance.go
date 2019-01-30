@@ -385,7 +385,7 @@ func (i *Instance) getFromContexts(contexts map[string]interface{}) (interface{}
 		}
 	}
 
-	context, ok := contexts["default"]
+	context, ok := contexts[config.DefaultInstanceContext]
 	if ok && context != nil {
 		return context, ok
 	}
@@ -414,7 +414,7 @@ func (i *Instance) Registries() []*url.URL {
 		context, ok = contexts[i.ContextName]
 	}
 	if !ok {
-		context, ok = contexts["default"]
+		context, ok = contexts[config.DefaultInstanceContext]
 		if !ok {
 			context = make([]*url.URL, 0)
 		}
