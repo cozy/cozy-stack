@@ -53,19 +53,20 @@ func (i *apiInstance) Included() []jsonapi.Object {
 func createHandler(c echo.Context) error {
 	var err error
 	opts := &instance.Options{
-		Domain:     c.QueryParam("Domain"),
-		Locale:     c.QueryParam("Locale"),
-		UUID:       c.QueryParam("UUID"),
-		TOSSigned:  c.QueryParam("TOSSigned"),
-		TOSLatest:  c.QueryParam("TOSLatest"),
-		Timezone:   c.QueryParam("Timezone"),
-		Email:      c.QueryParam("Email"),
-		PublicName: c.QueryParam("PublicName"),
-		Settings:   c.QueryParam("Settings"),
-		AuthMode:   c.QueryParam("AuthMode"),
-		Passphrase: c.QueryParam("Passphrase"),
-		Apps:       utils.SplitTrimString(c.QueryParam("Apps"), ","),
-		Dev:        (c.QueryParam("Dev") == "true"),
+		Domain:      c.QueryParam("Domain"),
+		Locale:      c.QueryParam("Locale"),
+		UUID:        c.QueryParam("UUID"),
+		TOSSigned:   c.QueryParam("TOSSigned"),
+		TOSLatest:   c.QueryParam("TOSLatest"),
+		Timezone:    c.QueryParam("Timezone"),
+		ContextName: c.QueryParam("ContextName"),
+		Email:       c.QueryParam("Email"),
+		PublicName:  c.QueryParam("PublicName"),
+		Settings:    c.QueryParam("Settings"),
+		AuthMode:    c.QueryParam("AuthMode"),
+		Passphrase:  c.QueryParam("Passphrase"),
+		Apps:        utils.SplitTrimString(c.QueryParam("Apps"), ","),
+		Dev:         (c.QueryParam("Dev") == "true"),
 	}
 	if domainAliases := c.QueryParam("DomainAliases"); domainAliases != "" {
 		opts.DomainAliases = strings.Split(domainAliases, ",")
