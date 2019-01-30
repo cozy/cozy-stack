@@ -3,10 +3,9 @@ package sessions
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"time"
 
-	"gopkg.in/dgrijalva/jwt-go.v3"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -43,10 +42,8 @@ func CheckDelegatedJWT(instance *instance.Instance, token string) error {
 	keyFunc := func(token *jwt.Token) (interface{}, error) {
 		return base64.StdEncoding.DecodeString(JWTSecret.(string))
 	}
-	tmp, err := keyFunc(nil)
-	fmt.Println(">>>>>>>> tmp", string(tmp.([]byte)), err)
 
-	err = crypto.ParseJWT(token, keyFunc, &claims)
+	err := crypto.ParseJWT(token, keyFunc, &claims)
 	if err != nil {
 		return err
 	}

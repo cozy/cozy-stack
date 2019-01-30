@@ -2,7 +2,6 @@ package sessions
 
 import (
 	"encoding/base64"
-	"fmt"
 	"os"
 	"testing"
 
@@ -13,15 +12,13 @@ import (
 var JWTSecret = []byte("foobar")
 
 func TestMain(m *testing.M) {
-	delegatedInst = &instance.Instance{Domain: "external.notmycozy.com"}
 	config.UseTestFile()
 	conf := config.GetConfig()
-	confAuth := make(map[string]interface{})
-	fmt.Println(">>>>>>>> conf", conf)
 	conf.Authentication = make(map[string]interface{})
-	conf.Authentication[config.DefaultInstanceContext] = confAuth
+	confAuth := make(map[string]interface{})
 	confAuth["jwt_secret"] = base64.StdEncoding.EncodeToString(JWTSecret)
+	conf.Authentication[config.DefaultInstanceContext] = confAuth
 
-	config.UseTestFile()
+	delegatedInst = &instance.Instance{Domain: "external.notmycozy.net"}
 	os.Exit(m.Run())
 }
