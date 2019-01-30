@@ -263,6 +263,22 @@ func loginForm(c echo.Context) error {
 		c.SetCookie(cookie)
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
+	if token := c.QueryParam("jwt"); token != "" {
+		err := sessions.CheckDelegatedJWT(instance, token)
+		if err != nil {
+			instance.Logger().Warningf("Delegated token check failed: %s", err)
+		} else {
+			sessionID, err := SetCookieForNewSession(c, false)
+			if err != nil {
+				return err
+			}
+			if err = sessions.StoreNewLoginEntry(instance, sessionID, "", c.Request(), true); err != nil {
+				instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+			}
+			redirect = addCodeToRedirect(redirect, instance.ContextualDomain(), sessionID)
+			return c.Redirect(http.StatusSeeOther, redirect.String())
+		}
+	}
 	return renderLoginForm(c, instance, http.StatusOK, "", redirect)
 }
 

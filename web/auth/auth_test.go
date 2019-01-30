@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	app "github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -39,6 +40,8 @@ import (
 )
 
 const domain = "cozy.example.net"
+
+var JWTSecret = []byte("foobar")
 
 var ts *httptest.Server
 var testInstance *instance.Instance
@@ -273,6 +276,27 @@ func TestLoginWithRedirect(t *testing.T) {
 		assert.Equal(t, "https://sub.cozy.example.net/#myfragment",
 			res2.Header.Get("Location"))
 	}
+}
+
+func TestDelegatedJWTLoginWithRedirect(t *testing.T) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, sessions.ExternalClaims{
+		StandardClaims: jwt.StandardClaims{
+			Subject:   "sruti",
+			IssuedAt:  time.Now().Unix(),
+			ExpiresAt: time.Now().Add(time.Hour).Unix(),
+		},
+		Name:  domain,
+		Email: "sruti@external.notmycozy.net",
+		Code:  "student",
+	})
+	signed, err := token.SignedString(JWTSecret)
+	assert.NoError(t, err)
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/login?jwt="+signed, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
 }
 
 func TestLoginWithSessionCode(t *testing.T) {
@@ -1527,7 +1551,14 @@ func TestSecretExchangeNoPayload(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	config.GetConfig().Assets = "../../assets"
+	conf := config.GetConfig()
+	conf.Assets = "../../assets"
+
+	conf.Authentication = make(map[string]interface{})
+	confAuth := make(map[string]interface{})
+	confAuth["jwt_secret"] = base64.StdEncoding.EncodeToString(JWTSecret)
+	conf.Authentication[config.DefaultInstanceContext] = confAuth
+
 	web.LoadSupportedLocales()
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "auth_test")
