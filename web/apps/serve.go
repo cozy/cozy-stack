@@ -149,6 +149,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		subdomain.Fragment = reqURL.Fragment
 		redirect := url.Values{
 			"redirect": {subdomain.String()},
+			"jwt":      {c.QueryParam("jwt")},
 		}
 		return c.Redirect(http.StatusFound, i.PageURL("/auth/login", redirect))
 	}

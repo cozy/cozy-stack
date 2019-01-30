@@ -14,7 +14,6 @@ import (
 var delegatedInst *instance.Instance
 
 func TestGoodCheckDelegatedJWT(t *testing.T) {
-	// token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzcnV0aSIsIm5hbWUiOiJleHRlcm5hbC5ub3RteWNvenkuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE2MDc3MzEyMDAsImVtYWlsIjoic3J1dGlAYWMtcmVubmVzLmZyIiwiY29kZSI6InN0dWRlbnQifQ.mHYke9WhLeggCmv7RdqoAWtQVT45KwT3bz_-fPMcuMc"
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ExternalClaims{
 		StandardClaims: jwt.StandardClaims{
 			Subject:   "sruti",
