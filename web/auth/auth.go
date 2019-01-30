@@ -87,7 +87,10 @@ func Home(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
-	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
+	params := url.Values{
+		"jwt": {c.QueryParam("jwt")},
+	}
+	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", params))
 }
 
 // With the nested subdomains structure, the cookie set on the main domain can
@@ -263,6 +266,7 @@ func loginForm(c echo.Context) error {
 		c.SetCookie(cookie)
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
+	// Delegated JWT
 	if token := c.QueryParam("jwt"); token != "" {
 		err := sessions.CheckDelegatedJWT(instance, token)
 		if err != nil {

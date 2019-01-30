@@ -118,6 +118,18 @@ func TestHomeWhenNotLoggedIn(t *testing.T) {
 	}
 }
 
+func TestHomeWhenNotLoggedInWithJWT(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/?jwt=foobar", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://cozy.example.net/auth/login?jwt=foobar",
+			res.Header.Get("Location"))
+	}
+}
+
 func TestShowLoginPage(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
 	req.Host = domain
