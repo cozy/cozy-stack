@@ -87,8 +87,9 @@ func Home(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
-	params := url.Values{
-		"jwt": {c.QueryParam("jwt")},
+	var params url.Values
+	if jwt := c.QueryParam("jwt"); jwt != "" {
+		params = url.Values{"jwt": {jwt}}
 	}
 	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", params))
 }

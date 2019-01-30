@@ -147,11 +147,13 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		subdomain.Path = reqURL.Path
 		subdomain.RawQuery = reqURL.RawQuery
 		subdomain.Fragment = reqURL.Fragment
-		redirect := url.Values{
+		params := url.Values{
 			"redirect": {subdomain.String()},
-			"jwt":      {c.QueryParam("jwt")},
 		}
-		return c.Redirect(http.StatusFound, i.PageURL("/auth/login", redirect))
+		if jwt := c.QueryParam("jwt"); jwt != "" {
+			params.Add("jwt", jwt)
+		}
+		return c.Redirect(http.StatusFound, i.PageURL("/auth/login", params))
 	}
 
 	filepath := path.Join("/", route.Folder, file)

@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
+// ExternalClaims is the format for JWT for authentication from external sources
 type ExternalClaims struct {
 	jwt.StandardClaims
 	Name  string `json:"name"`
