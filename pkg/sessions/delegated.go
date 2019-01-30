@@ -3,6 +3,7 @@ package sessions
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"time"
 
 	"gopkg.in/dgrijalva/jwt-go.v3"
@@ -42,12 +43,15 @@ func CheckDelegatedJWT(instance *instance.Instance, token string) error {
 	keyFunc := func(token *jwt.Token) (interface{}, error) {
 		return base64.StdEncoding.DecodeString(JWTSecret.(string))
 	}
-	err := crypto.ParseJWT(token, keyFunc, &claims)
+	tmp, err := keyFunc(nil)
+	fmt.Println(">>>>>>>> tmp", string(tmp.([]byte)), err)
+
+	err = crypto.ParseJWT(token, keyFunc, &claims)
 	if err != nil {
 		return err
 	}
 
-	if claims.ExpiresAt < time.Now().Unix() {
+	if claims.StandardClaims.ExpiresAt < time.Now().Unix() {
 		return errors.New("Token has expired")
 	}
 
