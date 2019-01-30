@@ -30,6 +30,113 @@ var instanceRev string
 var token string
 var oauthClientID string
 
+func TestPatchWithGoodRev(t *testing.T) {
+	// We are going to patch an instance with newer values, and give the good rev
+	body := `{
+		"data": {
+			"type": "io.cozy.settings",
+			"id": "io.cozy.settings.instance",
+			"meta": {
+				"rev": "%s"
+			},
+			"attributes": {
+				"tz": "Europe/London",
+				"email": "alice@example.org",
+				"locale": "fr"
+			}
+		}
+	}`
+	body = fmt.Sprintf(body, instanceRev)
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+}
+
+func TestPatchWithBadRev(t *testing.T) {
+	// We are going to patch an instance with newer values, but with a totally
+	// random rev
+	rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
+	body := `{
+		"data": {
+			"type": "io.cozy.settings",
+			"id": "io.cozy.settings.instance",
+			"meta": {
+				"rev": "%s"
+			},
+			"attributes": {
+				"tz": "Europe/London",
+				"email": "alice@example.org",
+				"locale": "fr"
+			}
+		}
+	}`
+	body = fmt.Sprintf(body, rev)
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusConflict, res.StatusCode)
+}
+
+func TestPatchWithBadRevNoChanges(t *testing.T) {
+	// We are defining a random rev, but make no changes in the instance values
+	rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
+	body := `{
+		"data": {
+			"type": "io.cozy.settings",
+			"id": "io.cozy.settings.instance",
+			"meta": {
+				"rev": "%s"
+			},
+			"attributes": {
+				"tz": "Europe/Berlin",
+				"email": "alice@example.com",
+				"locale": "en"
+			}
+		}
+	}`
+	body = fmt.Sprintf(body, rev)
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+}
+
+func TestPatchWithBadRevAndChanges(t *testing.T) {
+	// We are defining a random rev, but make changes in the instance values
+	rev := "6-2d9b7ef014d10549c2b4e206672d3e44"
+	body := `{
+			"data": {
+				"type": "io.cozy.settings",
+				"id": "io.cozy.settings.instance",
+				"meta": {
+					"rev": "%s"
+				},
+				"attributes": {
+					"tz": "Europe/London",
+					"email": "alice@example.com",
+					"locale": "en"
+				}
+			}
+		}`
+	body = fmt.Sprintf(body, rev)
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusConflict, res.StatusCode)
+}
 func TestDiskUsage(t *testing.T) {
 	res, err := http.Get(ts.URL + "/settings/disk-usage")
 	assert.NoError(t, err)
