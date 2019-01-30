@@ -87,7 +87,11 @@ func Home(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
-	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
+	var params url.Values
+	if jwt := c.QueryParam("jwt"); jwt != "" {
+		params = url.Values{"jwt": {jwt}}
+	}
+	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", params))
 }
 
 // With the nested subdomains structure, the cookie set on the main domain can
@@ -262,6 +266,23 @@ func loginForm(c echo.Context) error {
 		}
 		c.SetCookie(cookie)
 		return c.Redirect(http.StatusSeeOther, redirect.String())
+	}
+	// Delegated JWT
+	if token := c.QueryParam("jwt"); token != "" {
+		err := sessions.CheckDelegatedJWT(instance, token)
+		if err != nil {
+			instance.Logger().Warningf("Delegated token check failed: %s", err)
+		} else {
+			sessionID, err := SetCookieForNewSession(c, false)
+			if err != nil {
+				return err
+			}
+			if err = sessions.StoreNewLoginEntry(instance, sessionID, "", c.Request(), true); err != nil {
+				instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+			}
+			redirect = addCodeToRedirect(redirect, instance.ContextualDomain(), sessionID)
+			return c.Redirect(http.StatusSeeOther, redirect.String())
+		}
 	}
 	return renderLoginForm(c, instance, http.StatusOK, "", redirect)
 }

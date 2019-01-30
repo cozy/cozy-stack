@@ -33,6 +33,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/magic"
 	"github.com/hashicorp/go-multierror"
@@ -45,7 +46,6 @@ var assetsClient = &http.Client{
 var globalAssets sync.Map // {context:path -> *Asset}
 
 const sumLen = 10
-const defaultContext = "default"
 
 type AssetOption struct {
 	Name     string `json:"name"`
@@ -264,7 +264,7 @@ func unzip(data []byte) (err error) {
 		name := block.Headers["Name"]
 		opt := AssetOption{
 			Name:    name,
-			Context: defaultContext,
+			Context: config.DefaultInstanceContext,
 			Shasum:  hex.EncodeToString(h.Sum(nil)),
 		}
 		asset := newAsset(opt, zippedData, unzippedData)
@@ -316,7 +316,7 @@ func newAsset(opt AssetOption, zippedData, unzippedData []byte) *Asset {
 func storeAsset(asset *Asset) {
 	context := asset.Context
 	if context == "" {
-		context = defaultContext
+		context = config.DefaultInstanceContext
 	}
 	contextKey := marshalContextKey(context, asset.Name)
 	globalAssets.Store(contextKey, asset)
@@ -325,7 +325,7 @@ func storeAsset(asset *Asset) {
 func DeleteAsset(asset *Asset) {
 	context := asset.Context
 	if context == "" {
-		context = defaultContext
+		context = config.DefaultInstanceContext
 	}
 	contextKey := marshalContextKey(context, asset.Name)
 	globalAssets.Delete(contextKey)
@@ -336,7 +336,7 @@ func Get(name string, context ...string) (*Asset, bool) {
 	if len(context) > 0 && context[0] != "" {
 		ctx = context[0]
 	} else {
-		ctx = defaultContext
+		ctx = config.DefaultInstanceContext
 	}
 	asset, ok := globalAssets.Load(marshalContextKey(ctx, name))
 	if !ok {

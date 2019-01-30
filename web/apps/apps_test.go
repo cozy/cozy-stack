@@ -283,6 +283,25 @@ func TestServeAppsWithACode(t *testing.T) {
 	assert.Equal(t, expected, string(body))
 }
 
+func TestServeAppsWithJWTNotLogged(t *testing.T) {
+	config.GetConfig().Subdomains = config.FlatSubdomains
+	appHost := "cozywithapps-mini.example.net"
+
+	req, _ := http.NewRequest("GET", ts.URL+"/foo?jwt=abc", nil)
+	req.Host = appHost
+	c := &http.Client{CheckRedirect: noRedirect}
+	res, err := c.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 302, res.StatusCode)
+	location, err := url.Parse(res.Header.Get("Location"))
+	assert.NoError(t, err)
+	assert.Equal(t, "/auth/login", location.Path)
+
+	assert.Equal(t, testInstance.Domain, location.Host)
+	assert.NotEmpty(t, location.Query().Get("redirect"))
+	assert.Equal(t, "abc", location.Query().Get("jwt"))
+}
+
 func TestOauthAppCantInstallApp(t *testing.T) {
 	req, _ := http.NewRequest("POST", ts.URL+"/apps/mini-bis?Source=git://github.com/nono/cozy-mini.git", nil)
 	req.Header.Add("Authorization", "Bearer "+token)

@@ -94,7 +94,7 @@ registries:
 
 	assert.EqualValues(t, []string{"http://abc", "http://def", "https://default"}, regsToStrings(GetConfig().Registries["foo"]))
 	assert.EqualValues(t, []string{"http://def", "http://abc", "https://default"}, regsToStrings(GetConfig().Registries["bar"]))
-	assert.EqualValues(t, []string{"https://default"}, regsToStrings(GetConfig().Registries["default"]))
+	assert.EqualValues(t, []string{"https://default"}, regsToStrings(GetConfig().Registries[DefaultInstanceContext]))
 }
 
 func regsToStrings(regs []*url.URL) []string {
