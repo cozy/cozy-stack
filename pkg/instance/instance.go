@@ -1035,21 +1035,30 @@ func Patch(i *Instance, opts *Options) error {
 
 	if settingsUpdate {
 		oldSettings, err := i.SettingsDocument()
+		update := false
 		if err == nil {
 			old := oldSettings.M["email"]
 			new := settings.M["email"]
 			if old != new {
 				clouderyChanges["email"] = new
+				update = true
 			}
 			old = oldSettings.M["public_name"]
 			new = settings.M["public_name"]
 			if old != new {
 				clouderyChanges["public_name"] = new
+				update = true
+			}
+			old = oldSettings.M["tz"]
+			new = settings.M["tz"]
+			if old != new {
+				update = true
 			}
 		}
-
-		if err := couchdb.UpdateDoc(i, settings); err != nil {
-			return err
+		if update {
+			if err := couchdb.UpdateDoc(i, settings); err != nil {
+				return err
+			}
 		}
 	}
 
