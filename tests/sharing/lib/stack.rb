@@ -27,7 +27,7 @@ class Stack
   end
 
   def create_instance(inst)
-    cmd = ["cozy-stack", "instances", "add", inst.domain, "--dev",
+    cmd = ["cozy-stack", "instances", "add", inst.domain,
            "--passphrase", inst.passphrase, "--public-name", inst.name,
            "--email", inst.email, "--settings", "context:test",
            "--admin-port", @admin.to_s, "--locale", "fr"]

@@ -107,10 +107,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			isSecure := true
-			if in, ok := GetInstanceSafe(c); ok && in.Dev {
-				isSecure = false
-			}
+			isSecure := !config.IsDevRelease()
 			h := c.Response().Header()
 			if isSecure && hstsHeader != "" {
 				h.Set(echo.HeaderStrictTransportSecurity, hstsHeader)

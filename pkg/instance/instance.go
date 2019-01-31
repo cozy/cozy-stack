@@ -96,7 +96,6 @@ type Instance struct {
 	AuthMode      AuthMode `json:"auth_mode,omitempty"`
 	Blocked       bool     `json:"blocked,omitempty"`        // Whether or not the instance is blocked
 	NoAutoUpdate  bool     `json:"no_auto_update,omitempty"` // Whether or not the instance has auto updates for its applications
-	Dev           bool     `json:"dev,omitempty"`            // Whether or not the instance is for development
 
 	OnboardingFinished bool  `json:"onboarding_finished,omitempty"` // Whether or not the onboarding is complete.
 	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"`   // The total size in bytes allowed to the user
@@ -150,7 +149,6 @@ type Options struct {
 	AutoUpdate    *bool
 	Debug         *bool
 	Blocked       *bool
-	Dev           bool
 
 	OnboardingFinished *bool
 }
@@ -438,7 +436,7 @@ func (i *Instance) WithContextualDomain(domain string) *Instance {
 // Scheme returns the scheme used for URLs. It is https by default and http
 // for development instances.
 func (i *Instance) Scheme() string {
-	if i.Dev {
+	if config.IsDevRelease() {
 		return "http"
 	}
 	return "https"
@@ -677,7 +675,6 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 	i.TOSLatest = opts.TOSLatest
 	i.ContextName = opts.ContextName
 	i.BytesDiskQuota = opts.DiskQuota
-	i.Dev = opts.Dev
 	i.IndexViewsVersion = consts.IndexViewsVersion
 	i.RegisterToken = crypto.GenerateRandomBytes(RegisterTokenLen)
 	i.SessionSecret = crypto.GenerateRandomBytes(SessionSecretLen)

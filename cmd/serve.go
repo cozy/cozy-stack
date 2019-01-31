@@ -206,7 +206,7 @@ func init() {
 	flags.String("password-reset-interval", "15m", "minimal duration between two password reset")
 	checkNoErr(viper.BindPFlag("password_reset_interval", flags.Lookup("password-reset-interval")))
 
-	flags.BoolVar(&flagDevMode, "dev", false, "Allow to run without in dev release mode (disabled by default)")
+	flags.BoolVar(&flagDevMode, "dev", false, "Allow to run in dev mode for a prod release (disabled by default)")
 	flags.BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
 	flags.StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
 

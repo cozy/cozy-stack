@@ -147,13 +147,16 @@ If the COZY_DISABLE_INSTANCES_ADD_RM env variable is set, creating and
 destroying instances will be desactivated and the content of this variable will
 be used as the error message.
 `,
-	Example: "$ cozy-stack instances add --dev --passphrase cozy --apps drive,photos,settings cozy.tools:8080",
+	Example: "$ cozy-stack instances add --passphrase cozy --apps drive,photos,settings cozy.tools:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if reason := os.Getenv("COZY_DISABLE_INSTANCES_ADD_RM"); reason != "" {
 			return fmt.Errorf("Sorry, instances add is disabled: %s", reason)
 		}
 		if len(args) == 0 {
 			return cmd.Usage()
+		}
+		if flagDev {
+			errPrintfln("The --dev flag has been deprecated")
 		}
 
 		var diskQuota int64
@@ -182,7 +185,6 @@ be used as the error message.
 			DiskQuota:     diskQuota,
 			Apps:          flagApps,
 			Passphrase:    flagPassphrase,
-			Dev:           flagDev,
 		})
 		if err != nil {
 			errPrintfln(
@@ -474,11 +476,10 @@ by this server.
 					if prefix == "" {
 						DBPrefix = couchdb.EscapeCouchdbName(i.Attrs.Domain)
 					}
-					fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\tv%d\t%s\t%s\n",
+					fmt.Fprintf(w, "%s\t%s\t%s\t%s\tv%d\t%s\t%s\n",
 						i.Attrs.Domain,
 						i.Attrs.Locale,
 						formatSize(i.Attrs.BytesDiskQuota),
-						formatDev(i.Attrs.Dev),
 						formatOnboarded(i),
 						i.Attrs.IndexViewsVersion,
 						prefix,
@@ -516,13 +517,6 @@ func formatSize(size int64) string {
 		return "unlimited"
 	}
 	return humanize.Bytes(uint64(size))
-}
-
-func formatDev(dev bool) string {
-	if dev {
-		return "dev"
-	}
-	return "prod"
 }
 
 func formatOnboarded(i *client.Instance) string {
@@ -1022,7 +1016,7 @@ func init() {
 	addInstanceCmd.Flags().IntVar(&flagSwiftCluster, "swift-cluster", 0, "Specify a cluster number for swift")
 	addInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "The quota allowed to the instance's VFS")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
-	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
+	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance (deprecated)")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
 	modifyInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	modifyInstanceCmd.Flags().StringVar(&flagLocale, "locale", "", "New locale")

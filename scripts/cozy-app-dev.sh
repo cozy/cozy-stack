@@ -167,7 +167,6 @@ do_create_instances() {
 	add_instance_val=$(
 		${COZY_STACK_PATH} instances add \
 			--context-name dev \
-			--dev \
 			--email dev@cozy.io \
 			--public-name "Jane Doe" \
 			--passphrase ${COZY_STACK_PASS} \

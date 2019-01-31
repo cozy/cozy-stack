@@ -31,7 +31,6 @@ type Instance struct {
 		AuthMode             int       `json:"auth_mode,omitempty"`
 		NoAutoUpdate         bool      `json:"no_auto_update,omitempty"`
 		Blocked              bool      `json:"blocked,omitempty"`
-		Dev                  bool      `json:"dev"`
 		OnboardingFinished   bool      `json:"onboarding_finished"`
 		BytesDiskQuota       int64     `json:"disk_quota,string,omitempty"`
 		IndexViewsVersion    int       `json:"indexes_version"`
@@ -62,7 +61,6 @@ type InstanceOptions struct {
 	Debug              *bool
 	Blocked            *bool
 	OnboardingFinished *bool
-	Dev                bool
 }
 
 // TokenOptions is a struct holding all the options to generate a token.
@@ -145,7 +143,6 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 		"DiskQuota":    {strconv.FormatInt(opts.DiskQuota, 10)},
 		"Apps":         {strings.Join(opts.Apps, ",")},
 		"Passphrase":   {opts.Passphrase},
-		"Dev":          {strconv.FormatBool(opts.Dev)},
 	}
 	if opts.DomainAliases != nil {
 		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))

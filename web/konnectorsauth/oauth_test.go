@@ -222,7 +222,6 @@ func TestMain(m *testing.M) {
 	ts = setup.GetTestServer("/accounts", Routes)
 	testInstance = setup.GetTestInstance(&instance.Options{
 		Domain: strings.Replace(ts.URL, "http://127.0.0.1", "cozy.tools", 1),
-		Dev:    true,
 	})
 	couchdb.ResetDB(couchdb.GlobalSecretsDB, consts.AccountTypes)
 	setup.AddCleanup(func() error {
