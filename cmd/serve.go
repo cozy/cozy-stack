@@ -167,6 +167,9 @@ func init() {
 	flags.String("realtime-url", "", "URL for realtime in the browser via webocket, redis or in-memory")
 	checkNoErr(viper.BindPFlag("realtime.url", flags.Lookup("realtime-url")))
 
+	flags.String("rate-limiting-url", "", "URL for rate-limiting counters, redis or in-memory")
+	checkNoErr(viper.BindPFlag("rate_limiting.url", flags.Lookup("rate-limiting-url")))
+
 	flags.String("log-level", "info", "define the log level")
 	checkNoErr(viper.BindPFlag("log.level", flags.Lookup("log-level")))
 
