@@ -21,7 +21,7 @@ var accountsClient = &http.Client{
 }
 
 // This file contains the account_type object as defined in
-// docs/konnectors_oauth
+// docs/konnectors-workflow.md
 
 // Various grant types
 // - AuthorizationCode is the server-side grant type.
@@ -62,6 +62,7 @@ type AccountType struct {
 	TokenAuthMode         string            `json:"token_mode,omitempty"`
 	RegisteredRedirectURI string            `json:"redirect_uri,omitempty"`
 	ExtraAuthQuery        map[string]string `json:"extras,omitempty"`
+	Secret                interface{}       `json:"secret,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface
