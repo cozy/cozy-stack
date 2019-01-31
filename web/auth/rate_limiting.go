@@ -32,7 +32,7 @@ func GetCounter() Counter {
 	if GlobalCounter != nil {
 		return GlobalCounter
 	}
-	client := config.GetConfig().DownloadStorage.Client()
+	client := config.GetConfig().RateLimitingStorage.Client()
 	if client == nil {
 		GlobalCounter = NewMemCounter()
 	} else {
@@ -98,7 +98,14 @@ func NewRedisCounter(client redis.UniversalClient) Counter {
 }
 
 func (r *redisCounter) Increment(key string, timeLimit time.Duration) (int64, error) {
-	return r.Client.Incr(key).Result()
+	count, err := r.Client.Incr(key).Result()
+	if err != nil {
+		return 0, err
+	}
+	if count == 1 {
+		r.Client.Expire(key, timeLimit)
+	}
+	return count, nil
 }
 
 func (r *redisCounter) Reset(key string) error {
