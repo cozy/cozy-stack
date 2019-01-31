@@ -20,7 +20,7 @@ cozy-stack instances add <domain> [flags]
 ### Examples
 
 ```
-$ cozy-stack instances add --dev --passphrase cozy --apps drive,photos,settings cozy.tools:8080
+$ cozy-stack instances add --passphrase cozy --apps drive,photos,settings cozy.tools:8080
 ```
 
 ### Options
@@ -28,7 +28,7 @@ $ cozy-stack instances add --dev --passphrase cozy --apps drive,photos,settings 
 ```
       --apps strings             Apps to be preinstalled
       --context-name string      Context name of the instance
-      --dev                      To create a development instance
+      --dev                      To create a development instance (deprecated)
       --disk-quota string        The quota allowed to the instance's VFS
       --domain-aliases strings   Specify one or more aliases domain for the instance (separated by ',')
       --email string             The email of the owner

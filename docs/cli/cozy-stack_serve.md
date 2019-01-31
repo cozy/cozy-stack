@@ -42,7 +42,7 @@ example), you can use the --appdir flag like this:
       --assets string                    path to the directory with the assets (use the packed assets by default)
       --couchdb-url string               CouchDB URL (default "http://localhost:5984/")
       --csp-whitelist string             Whitelisted domains for the default allowed origins of the Content Secury Policy
-      --dev                              Allow to run without in dev release mode (disabled by default)
+      --dev                              Allow to run in dev mode for a prod release (disabled by default)
       --disable-csp                      Disable the Content Security Policy (only available for development)
       --doctypes string                  path to the directory with the doctypes (for developing/testing a remote doctype)
       --downloads-url string             URL for the download secret storage, redis or in-memory
@@ -64,6 +64,7 @@ example), you can use the --appdir flag like this:
       --mail-port int                    mail smtp port (default 465)
       --mail-username string             mail smtp username
       --password-reset-interval string   minimal duration between two password reset (default "15m")
+      --rate-limiting-url string         URL for rate-limiting counters, redis or in-memory
       --realtime-url string              URL for realtime in the browser via webocket, redis or in-memory
       --sessions-url string              URL for the sessions storage, redis or in-memory
       --subdomains string                how to structure the subdomains for apps (can be nested or flat) (default "nested")

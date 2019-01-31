@@ -3,7 +3,7 @@
 go build
 ./cozy-stack serve &
 sleep 5
-./cozy-stack instances add --dev --passphrase cozytest localhost:8080
+./cozy-stack instances add --passphrase cozytest localhost:8080
 
 export CLIENT_ID=$(./cozy-stack instances client-oauth localhost:8080 http://localhost/ test github.com/cozy/cozy-stack/integration)
 export TEST_TOKEN=$(./cozy-stack instances token-oauth localhost:8080 $CLIENT_ID io.cozy.pouchtestobject)

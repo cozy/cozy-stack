@@ -216,13 +216,13 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	config.BuildMode = config.ModeDev
 	testutils.NeedCouchdb()
 
 	setup = testutils.NewSetup(m, "oauth-konnectors")
 	ts = setup.GetTestServer("/accounts", Routes)
 	testInstance = setup.GetTestInstance(&instance.Options{
 		Domain: strings.Replace(ts.URL, "http://127.0.0.1", "cozy.tools", 1),
-		Dev:    true,
 	})
 	couchdb.ResetDB(couchdb.GlobalSecretsDB, consts.AccountTypes)
 	setup.AddCleanup(func() error {

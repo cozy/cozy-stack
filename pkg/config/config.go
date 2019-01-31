@@ -799,6 +799,7 @@ func createTestViper() *viper.Viper {
 // from a cozy.test.* file. If it can not find this file in your
 // $HOME/.cozy directory it will use the default one.
 func UseTestFile() {
+	BuildMode = ModeProd
 	v := createTestViper()
 
 	if err := v.ReadInConfig(); err != nil {

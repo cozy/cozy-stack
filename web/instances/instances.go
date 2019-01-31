@@ -66,7 +66,6 @@ func createHandler(c echo.Context) error {
 		AuthMode:    c.QueryParam("AuthMode"),
 		Passphrase:  c.QueryParam("Passphrase"),
 		Apps:        utils.SplitTrimString(c.QueryParam("Apps"), ","),
-		Dev:         (c.QueryParam("Dev") == "true"),
 	}
 	if domainAliases := c.QueryParam("DomainAliases"); domainAliases != "" {
 		opts.DomainAliases = strings.Split(domainAliases, ",")

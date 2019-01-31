@@ -204,7 +204,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 		MaxAge:   maxAge,
 		Path:     "/",
 		Domain:   utils.StripPort("." + s.Instance.ContextualDomain()),
-		Secure:   !s.Instance.Dev,
+		Secure:   !config.IsDevRelease(),
 		HttpOnly: true,
 	}, nil
 }
@@ -222,7 +222,7 @@ func (s *Session) ToAppCookie(domain, slug string) (*http.Cookie, error) {
 		MaxAge:   0, // "session cookie", expiring when the browser is closed
 		Path:     "/",
 		Domain:   utils.StripPort(domain),
-		Secure:   !s.Instance.Dev,
+		Secure:   !config.IsDevRelease(),
 		HttpOnly: true,
 	}, nil
 }

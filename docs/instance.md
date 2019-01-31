@@ -8,18 +8,6 @@ A single cozy-stack can manage several instances. Requests to different
 instances are identified through the `Host` HTTP Header, any reverse proxy
 placed in front of the cozy-stack should forward this header.
 
-To simplify development, a `dev` instance name is used when no Host Header is
-provided. This behaviour will be kept when the stack is started in dev mode but
-will be blocked in production environment.
-
-**Exemple:**
-
--   `curl -H "Host: bob.cozycloud.cc" localhost:8080` →
-    `localhost:5984/bob-cozycloud.cc`
--   `curl -H "Host: alice.cozycloud.cc" localhost:8080` →
-    `localhost:5984/alice-cozycloud.cc`
--   `curl localhost:8080` → `localhost:5984/dev` (in dev mode only)
-
 ## Creation
 
 An instance is created on the command line:
