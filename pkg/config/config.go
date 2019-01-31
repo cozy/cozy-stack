@@ -133,6 +133,7 @@ type Config struct {
 	SessionStorage              RedisConfig
 	DownloadStorage             RedisConfig
 	KonnectorsOauthStateStorage RedisConfig
+	RateLimitingStorage         RedisConfig
 	Realtime                    RedisConfig
 
 	CacheStorage cache.Cache
@@ -524,6 +525,10 @@ func UseViper(v *viper.Viper) error {
 	if err != nil {
 		return err
 	}
+	rateLimitingRedis, err := GetRedisConfig(v, redisOptions, "rate_limiting", "url")
+	if err != nil {
+		return err
+	}
 	konnectorsOauthStateRedis, err := GetRedisConfig(v, redisOptions, "konnectors", "oauthstate")
 	if err != nil {
 		return err
@@ -653,6 +658,7 @@ func UseViper(v *viper.Viper) error {
 		Lock:                        lockRedis,
 		SessionStorage:              sessionsRedis,
 		DownloadStorage:             downloadRedis,
+		RateLimitingStorage:         rateLimitingRedis,
 		KonnectorsOauthStateStorage: konnectorsOauthStateRedis,
 		Realtime:                    realtimeRedis,
 		CacheStorage:                cache.New(cacheRedis.Client()),

@@ -32,7 +32,7 @@ func GetCounter() Counter {
 	if GlobalCounter != nil {
 		return GlobalCounter
 	}
-	client := config.GetConfig().DownloadStorage.Client()
+	client := config.GetConfig().RateLimitingStorage.Client()
 	if client == nil {
 		GlobalCounter = NewMemCounter()
 	} else {
