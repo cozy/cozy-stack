@@ -98,10 +98,14 @@ func NewRedisCounter(client redis.UniversalClient) Counter {
 }
 
 func (r *redisCounter) Increment(key string, timeLimit time.Duration) (int64, error) {
-	if _, err := r.Client.Get(key).Result(); err != nil {
-		r.Client.Set(key, 0, timeLimit)
+	count, err := r.Client.Incr(key).Result()
+	if err != nil {
+		return 0, err
 	}
-	return r.Client.Incr(key).Result()
+	if count == 1 {
+		r.Client.Expire(key, timeLimit)
+	}
+	return count, nil
 }
 
 func (r *redisCounter) Reset(key string) error {
