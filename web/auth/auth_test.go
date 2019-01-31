@@ -997,6 +997,30 @@ func TestAuthorizeSuccess(t *testing.T) {
 	}
 }
 
+func TestAuthorizeSuccessOnboarding(t *testing.T) {
+	var oauthClient oauth.Client
+	u := "https://example.org/oauth/callback"
+	oauthClient.RedirectURIs = []string{u}
+	oauthClient.ClientName = "cozy-test-install-app"
+	oauthClient.SoftwareID = "io.cozy.mobile.drive"
+	oauthClient.OnboardingSecret = "toto"
+	oauthClient.Create(testInstance)
+
+	res, err := postForm("/auth/authorize", &url.Values{
+		"state":         {"123456"},
+		"client_id":     {oauthClient.ClientID},
+		"redirect_uri":  {"https://example.org/oauth/callback"},
+		"scope":         {"files:read"},
+		"csrf_token":    {csrfToken},
+		"response_type": {"code"},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "302 Found", res.Status) {
+		assert.Contains(t, res.Header.Get("Location"), "cozy_url="+testInstance.Domain)
+	}
+}
+
 func TestInstallAppWithLinkedApp(t *testing.T) {
 	var oauthClient oauth.Client
 	u := "https://example.org/oauth/callback"

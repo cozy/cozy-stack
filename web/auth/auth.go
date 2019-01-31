@@ -819,6 +819,10 @@ func authorize(c echo.Context) error {
 	q.Set("access_code", access.Code)
 	q.Set("code", access.Code)
 	q.Set("state", params.state)
+
+	if params.client.OnboardingSecret != "" {
+		q.Set("cozy_url", instance.Domain)
+	}
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
 
