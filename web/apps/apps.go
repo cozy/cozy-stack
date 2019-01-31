@@ -100,7 +100,8 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
-		if err := middlewares.AllowInstallApp(c, installerType, permissions.POST); err != nil {
+		source := c.QueryParam("Source")
+		if err := middlewares.AllowInstallApp(c, installerType, source, permissions.POST); err != nil {
 			return err
 		}
 
@@ -125,7 +126,7 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 			&apps.InstallerOptions{
 				Operation:   apps.Install,
 				Type:        installerType,
-				SourceURL:   c.QueryParam("Source"),
+				SourceURL:   source,
 				Slug:        slug,
 				Deactivated: c.QueryParam("Deactivated") == "true",
 				Registries:  instance.Registries(),
@@ -154,7 +155,8 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
-		if err := middlewares.AllowInstallApp(c, installerType, permissions.POST); err != nil {
+		source := c.QueryParam("Source")
+		if err := middlewares.AllowInstallApp(c, installerType, source, permissions.POST); err != nil {
 			return err
 		}
 
@@ -180,7 +182,7 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 			&apps.InstallerOptions{
 				Operation:  apps.Update,
 				Type:       installerType,
-				SourceURL:  c.QueryParam("Source"),
+				SourceURL:  source,
 				Slug:       slug,
 				Registries: instance.Registries(),
 
@@ -210,7 +212,8 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
-		if err := middlewares.AllowInstallApp(c, installerType, permissions.DELETE); err != nil {
+		source := "registry://" + slug
+		if err := middlewares.AllowInstallApp(c, installerType, source, permissions.DELETE); err != nil {
 			return err
 		}
 
