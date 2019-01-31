@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -519,11 +520,51 @@ func getSwiftBucketName(c echo.Context) error {
 }
 
 func lsContexts(c echo.Context) error {
-	contexts := config.GetConfig().Contexts
-	result := []string{}
+	type contextAPI struct {
+		Context          string   `json:"context"`
+		Registries       []string `json:"registries"`
+		ClouderyEndpoint string   `json:"cloudery_endpoint"`
+	}
 
-	for name := range contexts {
-		result = append(result, name)
+	contexts := config.GetConfig().Contexts
+	clouderies := config.GetConfig().Clouderies
+	registries := config.GetConfig().Registries
+
+	result := []contextAPI{}
+	for contextName := range contexts {
+		var clouderyEndpoint string
+		var registriesList []string
+
+		// Clouderies
+		var cloudery interface{}
+
+		cloudery, ok := clouderies[contextName]
+
+		if !ok {
+			cloudery = clouderies["default"]
+		}
+
+		if cloudery != nil {
+			api := cloudery.(map[string]interface{})["api"]
+			clouderyEndpoint = api.(map[string]interface{})["url"].(string)
+		}
+
+		// Registries
+		var registryURLs []*url.URL
+
+		// registriesURLs contains context-specific urls and default ones
+		if registryURLs, ok = registries[contextName]; !ok {
+			registryURLs = registries["default"]
+		}
+		for _, url := range registryURLs {
+			registriesList = append(registriesList, url.String())
+		}
+
+		result = append(result, contextAPI{
+			Context:          contextName,
+			Registries:       registriesList,
+			ClouderyEndpoint: clouderyEndpoint,
+		})
 	}
 	return c.JSON(http.StatusOK, result)
 }
