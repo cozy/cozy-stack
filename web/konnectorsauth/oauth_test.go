@@ -216,6 +216,7 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	config.BuildMode = config.ModeDev
 	testutils.NeedCouchdb()
 
 	setup = testutils.NewSetup(m, "oauth-konnectors")
