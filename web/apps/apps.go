@@ -156,6 +156,8 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
 		source := c.QueryParam("Source")
+		keepSource := c.QueryParam("keep_source")
+
 		if err := middlewares.AllowInstallApp(c, installerType, source, permissions.POST); err != nil {
 			return err
 		}
@@ -180,11 +182,12 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 		permissionsAcked, _ := strconv.ParseBool(c.QueryParam("PermissionsAcked"))
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
-				Operation:  apps.Update,
-				Type:       installerType,
-				SourceURL:  source,
-				Slug:       slug,
-				Registries: instance.Registries(),
+				Operation:     apps.Update,
+				Type:          installerType,
+				SourceURL:     source,
+				Slug:          slug,
+				Registries:    instance.Registries(),
+				KeepSourceURL: keepSource == "true",
 
 				PermissionsAcked:    permissionsAcked,
 				OverridenParameters: overridenParameters,

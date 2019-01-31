@@ -23,6 +23,7 @@ var flagAppsDomain string
 var flagAllDomains bool
 var flagAppsDeactivated bool
 var flagSafeUpdate bool
+var flagKeepSource bool
 
 var flagKonnectorAccountID string
 var flagKonnectorsParameters string
@@ -340,9 +341,10 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 		return foreachDomains(func(in *client.Instance) error {
 			c := newClient(in.Attrs.Domain, appType)
 			_, err := c.UpdateApp(&client.AppOptions{
-				AppType:   appType,
-				Slug:      args[0],
-				SourceURL: src,
+				AppType:       appType,
+				Slug:          args[0],
+				SourceURL:     src,
+				KeepSourceURL: flagKeepSource,
 			}, flagSafeUpdate)
 			if err != nil {
 				if err.Error() == "Application is not installed" {
@@ -367,10 +369,10 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 
 	c := newClient(flagAppsDomain, appType)
 	app, err := c.UpdateApp(&client.AppOptions{
-		AppType:   appType,
-		Slug:      args[0],
-		SourceURL: src,
-
+		AppType:             appType,
+		Slug:                args[0],
+		SourceURL:           src,
+		KeepSourceURL:       flagKeepSource,
 		OverridenParameters: overridenParameters,
 	}, flagSafeUpdate)
 	if err != nil {
@@ -626,7 +628,9 @@ func init() {
 
 	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "ask-permissions", false, "specify that the application should not be activated after installation")
 	updateWebappCmd.PersistentFlags().BoolVar(&flagSafeUpdate, "safe", false, "do not upgrade if there are blocking changes")
+	updateWebappCmd.PersistentFlags().BoolVar(&flagKeepSource, "keep-source", false, "update the webapp to specified version, but keep the old source/channel")
 	updateKonnectorCmd.PersistentFlags().BoolVar(&flagSafeUpdate, "safe", false, "do not upgrade if there are blocking changes")
+	updateKonnectorCmd.PersistentFlags().BoolVar(&flagKeepSource, "keep-source", false, "update the konnector to specified version, but keep the old source/channel")
 
 	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccountID, "account-id", "", "specify the account ID to use for running the konnector")
 

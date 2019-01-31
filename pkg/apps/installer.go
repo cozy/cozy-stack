@@ -43,6 +43,7 @@ type Installer struct {
 
 	overridenParameters *json.RawMessage
 	permissionsAcked    bool
+	keepSourceURL       bool
 
 	man  Manifest
 	src  *url.URL
@@ -60,6 +61,7 @@ type InstallerOptions struct {
 	Manifest         Manifest
 	Slug             string
 	SourceURL        string
+	KeepSourceURL    bool
 	Deactivated      bool
 	PermissionsAcked bool
 	Registries       []*url.URL
@@ -165,6 +167,7 @@ func NewInstaller(db prefixer.Prefixer, fs Copier, opts *InstallerOptions) (*Ins
 
 		overridenParameters: opts.OverridenParameters,
 		permissionsAcked:    opts.PermissionsAcked,
+		keepSourceURL:       opts.KeepSourceURL,
 
 		man:  man,
 		src:  src,
@@ -364,7 +367,15 @@ func (i *Installer) update() error {
 		i.sendRealtimeEvent()
 		i.notifyChannel()
 	}
-
+	// In case of a webapp/konnector update to a specific version, we may want
+	// to keep the old-manifest channel
+	if i.keepSourceURL {
+		src, err := url.Parse(oldManifest.Source())
+		if err != nil {
+			return err
+		}
+		i.man.SetSource(src)
+	}
 	return i.man.Update(i.db)
 }
 

@@ -98,6 +98,7 @@ type AppOptions struct {
 	AppType             string
 	Slug                string
 	SourceURL           string
+	KeepSourceURL       bool
 	Deactivated         bool
 	OverridenParameters *json.RawMessage
 }
@@ -162,7 +163,9 @@ func (c *Client) UpdateApp(opts *AppOptions, safe bool) (*AppManifest, error) {
 	q := url.Values{
 		"Source":           {opts.SourceURL},
 		"PermissionsAcked": {strconv.FormatBool(!safe)},
+		"keep_source":      {strconv.FormatBool(opts.KeepSourceURL)},
 	}
+
 	if opts.OverridenParameters != nil {
 		b, err := json.Marshal(opts.OverridenParameters)
 		if err != nil {
