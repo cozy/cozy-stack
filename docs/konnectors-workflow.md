@@ -366,7 +366,7 @@ are not related to OAuth. The document still need to be injected manually in
 }
 ```
 
-**Note**: `grant_mode` must be `secret`, `slug` must be the sluf of the
+**Note**: `grant_mode` must be `secret`, `slug` must be the slug of the
 konnector,  but `secret` can be a map instead of a simple string if several
 secrets are needed for this service.
 
