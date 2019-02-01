@@ -1151,15 +1151,18 @@ func passphraseForm(c echo.Context) error {
 
 	if registerToken == "" || !middlewares.CheckRegisterToken(c, inst) {
 		return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
-			"Domain": inst.ContextualDomain(),
-			"Locale": inst.Locale,
+			"ThemeCSS":    ThemeCSS(inst),
+			"Domain":      inst.ContextualDomain(),
+			"ContextName": inst.ContextName,
+			"Locale":      inst.Locale,
 		})
 	}
 
 	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
 		"CozyUI":        cozyUI(inst),
-		"ThemeCSS":      themeCSS(inst),
+		"ThemeCSS":      ThemeCSS(inst),
 		"Domain":        inst.ContextualDomain(),
+		"ContextName":   inst.ContextName,
 		"Locale":        inst.Locale,
 		"RegisterToken": registerToken,
 	})
