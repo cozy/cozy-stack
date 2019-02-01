@@ -90,10 +90,10 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	body, _ := json.Marshal(&jsonapiReq{
 		Data: &jsonapiData{
 			Attributes: &map[string]interface{}{
-				"type":             "@at",
-				"arguments":        at,
-				"worker":           "print",
-				"worker_arguments": "foo",
+				"type":      "@at",
+				"arguments": at,
+				"worker":    "print",
+				"message":   "foo",
 			},
 		},
 	})
@@ -130,10 +130,10 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	body, _ = json.Marshal(&jsonapiReq{
 		Data: &jsonapiData{
 			Attributes: map[string]interface{}{
-				"type":             "@at",
-				"arguments":        "garbage",
-				"worker":           "print",
-				"worker_arguments": "foo",
+				"type":      "@at",
+				"arguments": "garbage",
+				"worker":    "print",
+				"message":   "foo",
 			},
 		},
 	})
@@ -178,10 +178,10 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	body, _ := json.Marshal(&jsonapiReq{
 		Data: &jsonapiData{
 			Attributes: map[string]interface{}{
-				"type":             "@in",
-				"arguments":        "1s",
-				"worker":           "print",
-				"worker_arguments": "foo",
+				"type":      "@in",
+				"arguments": "1s",
+				"worker":    "print",
+				"message":   "foo",
 			},
 		},
 	})
@@ -218,10 +218,10 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	body, _ = json.Marshal(&jsonapiReq{
 		Data: &jsonapiData{
 			Attributes: map[string]interface{}{
-				"type":             "@in",
-				"arguments":        "garbage",
-				"worker":           "print",
-				"worker_arguments": "foo",
+				"type":      "@in",
+				"arguments": "garbage",
+				"worker":    "print",
+				"message":   "foo",
 			},
 		},
 	})
@@ -292,9 +292,11 @@ func TestGetAllJobs(t *testing.T) {
 	body, _ := json.Marshal(&jsonapiReq{
 		Data: &jsonapiData{
 			Attributes: map[string]interface{}{
-				"type":             "@in",
-				"arguments":        "10s",
-				"worker":           "print",
+				"type":      "@in",
+				"arguments": "10s",
+				"worker":    "print",
+				// worker_arguments is deprecated but should still works
+				// we are using it here to check that it still works
 				"worker_arguments": "foo",
 			},
 		},
