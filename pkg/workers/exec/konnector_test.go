@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/cozy/afero"
+	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -172,6 +173,92 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		}, &claims)
 		assert.NoError(t, err)
 		assert.Equal(t, permissions.KonnectorAudience, claims.Audience)
+		wg.Done()
+	}()
+
+	wg.Wait()
+	wg.Add(1)
+	msg, err := jobs.NewMessage(map[string]interface{}{
+		"konnector": "my-konnector-1",
+	})
+	assert.NoError(t, err)
+
+	j := jobs.NewJob(inst, &jobs.JobRequest{
+		Message:    msg,
+		WorkerType: "konnector",
+	})
+
+	config.GetConfig().Konnectors.Cmd = tmpScript
+	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
+	err = worker(ctx)
+	assert.NoError(t, err)
+
+	wg.Wait()
+}
+
+func TestSecretFromAccountType(t *testing.T) {
+	script := `#!/bin/bash
+
+SECRET=$(echo "$COZY_PARAMETERS" | sed -e 's/.*secret"://' -e 's/[},].*//')
+echo "{\"type\": \"params\", \"message\": "${SECRET}" }"
+`
+	osFs := afero.NewOsFs()
+	tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
+	defer osFs.RemoveAll(tmpScript)
+
+	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	err = osFs.Chmod(tmpScript, 0777)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	at := &accounts.AccountType{
+		GrantMode: "secret",
+		Slug:      "my-konnector-1",
+		Secret:    "s3cr3t",
+	}
+	err = couchdb.CreateDoc(couchdb.GlobalSecretsDB, at)
+	assert.NoError(t, err)
+
+	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
+		&apps.InstallerOptions{
+			Operation: apps.Install,
+			Type:      apps.Konnector,
+			Slug:      "my-konnector-1",
+			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
+		},
+	)
+	if err != apps.ErrAlreadyExists {
+		if !assert.NoError(t, err) {
+			return
+		}
+		_, err = installer.RunSync()
+		if !assert.NoError(t, err) {
+			return
+		}
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		evCh := realtime.GetHub().Subscriber(inst)
+		evCh.Subscribe(consts.JobEvents)
+		wg.Done()
+		ch := evCh.Channel
+		ev1 := <-ch
+		err = evCh.Close()
+		assert.NoError(t, err)
+		doc1 := ev1.Doc.(couchdb.JSONDoc)
+
+		assert.Equal(t, inst.Domain, ev1.Domain)
+		assert.Equal(t, "params", doc1.M["type"])
+		msg1 := doc1.M["message"]
+		assert.Equal(t, "s3cr3t", msg1)
 		wg.Done()
 	}()
 

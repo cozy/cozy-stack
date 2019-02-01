@@ -7,12 +7,18 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 19
+const IndexViewsVersion int = 20
 
 // globalIndexes is the index list required on the global databases to run
 // properly.
 var globalIndexes = []*mango.Index{
 	mango.IndexOnFields(Exports, "by-domain", []string{"domain", "created_at"}),
+}
+
+// secretIndexes is the index list required on the secret databases to run
+// properly
+var secretIndexes = []*mango.Index{
+	mango.IndexOnFields(AccountTypes, "by-slug", []string{"slug"}),
 }
 
 // DomainAndAliasesView defines a view to fetch instances by domain and domain
@@ -41,6 +47,9 @@ var globalViews = []*couchdb.View{
 // InitGlobalDB defines views and indexes on the global databases. It is called
 // on every startup of the stack.
 func InitGlobalDB() error {
+	if err := couchdb.DefineIndexes(couchdb.GlobalSecretsDB, secretIndexes); err != nil {
+		return err
+	}
 	if err := couchdb.DefineIndexes(couchdb.GlobalDB, globalIndexes); err != nil {
 		return err
 	}

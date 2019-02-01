@@ -427,7 +427,22 @@ func (w *konnectorWorker) Slug() string {
 }
 
 func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
-	paramsJSON, err := json.Marshal(w.man.Parameters)
+	var parameters interface{} = w.man.Parameters
+
+	accountTypes, err := accounts.FindAccountTypesBySlug(w.slug)
+	if err == nil && len(accountTypes) == 1 && accountTypes[0].GrantMode == "secret" {
+		secret := accountTypes[0].Secret
+		if w.man.Parameters == nil {
+			parameters = map[string]interface{}{"secret": secret}
+		} else {
+			var params map[string]interface{}
+			json.Unmarshal(*w.man.Parameters, &params)
+			params["secret"] = secret
+			parameters = params
+		}
+	}
+
+	paramsJSON, err := json.Marshal(parameters)
 	if err != nil {
 		return
 	}
