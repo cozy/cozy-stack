@@ -200,7 +200,7 @@ func TestSecretFromAccountType(t *testing.T) {
 	script := `#!/bin/bash
 
 SECRET=$(echo "$COZY_PARAMETERS" | sed -e 's/.*secret"://' -e 's/[},].*//')
-echo "{\"type\": \"params\", \"message\": "${SECRET}" }"
+echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 `
 	osFs := afero.NewOsFs()
 	tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
@@ -223,6 +223,13 @@ echo "{\"type\": \"params\", \"message\": "${SECRET}" }"
 	}
 	err = couchdb.CreateDoc(couchdb.GlobalSecretsDB, at)
 	assert.NoError(t, err)
+	defer func() {
+		// Clean the account types
+		ats, _ := accounts.FindAccountTypesBySlug("my-konnector-1")
+		for _, at = range ats {
+			couchdb.DeleteDoc(couchdb.GlobalSecretsDB, at)
+		}
+	}()
 
 	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
 		&apps.InstallerOptions{
