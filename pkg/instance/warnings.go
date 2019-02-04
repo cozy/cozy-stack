@@ -41,10 +41,7 @@ const (
 // CheckInstanceBlocked returns whether or not the instance is currently in a
 // blocked state: meaning it should be accessible.
 func (i *Instance) CheckInstanceBlocked() bool {
-	if i.Blocked {
-		return true
-	}
-	return false
+	return i.Blocked
 }
 
 // CheckTOSNotSigned checks whether or not the current Term of Services have
