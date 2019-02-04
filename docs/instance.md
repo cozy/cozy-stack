@@ -2,8 +2,6 @@
 
 # Instances
 
-**TODO** it's still a work in progress that needs to be completed.
-
 A single cozy-stack can manage several instances. Requests to different
 instances are identified through the `Host` HTTP Header, any reverse proxy
 placed in front of the cozy-stack should forward this header.
@@ -13,85 +11,56 @@ placed in front of the cozy-stack should forward this header.
 An instance is created on the command line:
 
 ```sh
-$ cozy-stack instances add <domain>
+$ cozy-stack instances add <domain> [flags]
 ```
 
-With some possible additional options
-
--   `--locale <lang>`
--   `--tz <timezone>`
--   `--email <email>`
--   `--apps <app1,app2,app3>`
+The flags are documented in the
+[`instances add manpage`](cli/cozy-stack_instances_add.md).
 
 It registers the instance in a global couchdb database `global/instances`
-
-```json
-{
-    "hostname": "example.cozycloud.cc",
-    "dbprefix": "example-clozycloud-cc/",
-    "fsroot": "/var/lib/cozy/example.cozycloud.cc/fs/"
-}
-```
-
 and creates the proper databases ($PREFIX/$DOCTYPE) for these doctypes:
 
 -   `io.cozy.apps`
+-   `io.cozy.contacts`
 -   `io.cozy.files`
+-   `io.cozy.jobs`
+-   `io.cozy.konnectors`
 -   `io.cozy.notifications`
+-   `io.cozy.oauth.clients`
+-   `io.cozy.permissions`
+-   `io.cozy.sessions.logins`
 -   `io.cozy.settings`
+-   `io.cozy.shared`
+-   `io.cozy.sharings`
+-   `io.cozy.triggers`
 
-Then, it creates the following indexes for these doctypes :
-
--   **TODO :** complete this list of indexes
-
-Then, it creates some directories:
+Then, it creates some indexes for these doctypes, and some directories:
 
 -   `/`, with the id `io.cozy.files.root-dir`
--   `/Apps`, with the id `io.cozy.files.apps-dir`
--   `/Documents`, with the id `io.cozy.files.documents-dir`
--   `/Documents/Downloads`, with the id `io.cozy.files.downloads-dir`
--   `/Documents/Pictures`, with the id `io.cozy.files.pictures-dir`
--   `/Documents/Music`, with the id `io.cozy.files.music-dir`
--   `/Documents/Videos`, with the id `io.cozy.files.videos-dir`
-
-**The ids are forced to known values:** even if these directories are moved or
-renamed, they can still be found for the permissions.
+-   the trash, with the id `io.cozy.files.trash-dir`
+-   `/Administrative`
+-   `/Photos`
+-   `/Photos/Uploaded from Cozy Photos`
+-   `/Photos/Backed up from my mobile`
 
 **The names are localized:** If a locale is provided through the CLI, the
-directories will be created with names in this locale. Otherwise, theses
-directories will be created in english and renamed to localized name the first
-time the locale is set (during onboarding).
+directories will be created with names in this locale.
 
-Then it creates the basic settings
-
--   `email` if an email was provided through the CLI
--   `locale` if a locale was provided through the CLI
--   `tz` if a timezone was provided through the CLI
-
-Settings are created as named id in the `$PREFIX/io.cozy.settings` database.
-During onboarding, the fields will be prefilled with these value if they were
-provided.
+Then it creates the basic settings with the options from the CLI.
 
 Finally, applications from the `--apps` CLI option are installed.
 
----
+## Onboarding
 
-## Renaming
-
-An instance is renamed through the command line.
-
-```sh
-$ cozy-stack instances rename <olddomain> <newdomain>
-```
-
-Renaming an instance only change the HostName in global/instances base.
-
----
+At the end of the instance creation, the CLI returns a token, called
+`registerToken`. The `registerToken` can be used to send a link to the user,
+where they will be able to choose their password. After that, the instance
+is said to be onboarded, and the user can use it normally.
 
 ## Destroying
 
 An instance is destroyed through the command line. A confirmation is asked from
-the CLI user unless the --yes flag is passed
+the CLI user unless the --force flag is passed:
 
 ```sh
 $ cozy-stack instances destroy <domain>

@@ -7,7 +7,6 @@
 -   [Install the cozy-stack](INSTALL.md)
 -   [Configuration file](config.md)
 -   [Managing Instances](instance.md)
--   [Onboarding](onboarding.md)
 -   [Security](security.md)
 -   [Manpages of the command-line tool](cli/cozy-stack.md)
 
@@ -33,6 +32,7 @@ kept as an archive to help understanding what were out original intentions when
 designing new services.
 
 -   [General overview of the initial architecture](architecture.md)
+-   [Onboarding with an application](onboarding.md)
 -   [Moving](moving.md)
 -   [Golang Couchdb Plugins](couchdb-plugins.md)
 -   [Konnectors design](konnectors-design.md)
