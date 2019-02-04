@@ -12,7 +12,7 @@
 - For developpers:
   - "Develop a client-side app": ./client-app-dev.md
   - "Running and building Docker images": ./docker.md
-  - "Working with the stacka assets": ./assets.md
+  - "Working with the stack assets": ./assets.md
   - "Build a release": ./release.md
   - "The contributing guide": ./CONTRIBUTING.md
 - Services:

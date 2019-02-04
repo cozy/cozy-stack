@@ -323,6 +323,41 @@ Content-Type: application/vnd.api+json
 -   422 Unprocessable Entity, when the sent data is invalid (for example, the
     slug is invalid or the Source parameter is not a proper or supported url)
 
+#### Advanced usage
+
+Two optional query parameters are available for an app update:
+- `PermissionsAcked`: (defaults to `true`)
+  - Tells that the user accepted the permissions/ToS. It is useful if there are
+    newer permissions or Terms Of Service and you want to be sure they were read
+    or accepted. If set to `false`, the update will be blocked and the user will
+    be told that a new app version is available
+
+- `Source` (defaults to `SourceURL` installation parameter):
+  - Use a different source to update this app (e.g. to install a `beta` or `dev`
+    app version)
+
+##### Examples:
+
+- You have an email application on a `stable` channel, and you want to update it
+  to a particular `beta` version:
+  ```http
+  PUT /apps/emails?Source=https://<apps-repository>/emails/1.0.0-beta HTTP/1.1
+  Accept: application/vnd.api+json
+  ```
+
+- You want to attempt the email app update, but prevent it if new permissions
+  were added
+  ```http
+  PUT /apps/emails?PermissionsAcked=false HTTP/1.1
+  Accept: application/vnd.api+json
+  ```
+
+You can combine these parameters to use a precise app version and stay on
+another channel (when permissions are different):
+- Install a version (e.g. `1.0.0`)
+- Ask an update to `stable` channel with `PermissionsAcked` to `false`
+- `Source` will be `stable`, and your version remains `1.0.0`
+
 ## List installed applications
 
 ### GET /apps/
