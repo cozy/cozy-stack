@@ -73,7 +73,7 @@ func Home(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
-	if len(instance.RegisterToken) > 0 {
+	if len(instance.RegisterToken) > 0 && !instance.OnboardingFinished {
 		if !middlewares.CheckRegisterToken(c, instance) {
 			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
 				"ThemeCSS":    ThemeCSS(instance),
@@ -82,9 +82,7 @@ func Home(c echo.Context) error {
 				"Locale":      instance.Locale,
 			})
 		}
-		redirect := instance.SubDomain(consts.OnboardingSlug)
-		redirect.RawQuery = c.Request().URL.RawQuery
-		return c.Redirect(http.StatusSeeOther, redirect.String())
+		return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/passphrase", c.QueryParams()))
 	}
 
 	var params url.Values
@@ -1143,6 +1141,33 @@ func passphraseResetForm(c echo.Context) error {
 	})
 }
 
+func passphraseForm(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	registerToken := c.QueryParams().Get("registerToken")
+	if inst.OnboardingFinished {
+		redirect := inst.DefaultRedirection()
+		return c.Redirect(http.StatusSeeOther, redirect.String())
+	}
+
+	if registerToken == "" || !middlewares.CheckRegisterToken(c, inst) {
+		return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
+			"ThemeCSS":    ThemeCSS(inst),
+			"Domain":      inst.ContextualDomain(),
+			"ContextName": inst.ContextName,
+			"Locale":      inst.Locale,
+		})
+	}
+
+	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
+		"CozyUI":        cozyUI(inst),
+		"ThemeCSS":      ThemeCSS(inst),
+		"Domain":        inst.ContextualDomain(),
+		"ContextName":   inst.ContextName,
+		"Locale":        inst.Locale,
+		"RegisterToken": registerToken,
+	})
+}
+
 func passphraseReset(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	// TODO: check user informations to allow the reset of the passphrase since
@@ -1320,6 +1345,7 @@ func Routes(router *echo.Group) {
 	router.POST("/passphrase_reset", passphraseReset, noCSRF)
 	router.GET("/passphrase_renew", passphraseRenewForm, noCSRF)
 	router.POST("/passphrase_renew", passphraseRenew, noCSRF)
+	router.GET("/passphrase", passphraseForm, noCSRF)
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)

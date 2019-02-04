@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -21,9 +22,12 @@ import (
 func registerPassphrase(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	args := &struct {
-		Register   string `json:"register_token"`
-		Passphrase string `json:"passphrase"`
+	accept := c.Request().Header.Get("Accept")
+	acceptHTML := strings.Contains(accept, echo.MIMETextHTML)
+
+	args := struct {
+		Register   string `json:"register_token" form:"register_token"`
+		Passphrase string `json:"passphrase" form:"passphrase"`
 	}{}
 	if err := c.Bind(&args); err != nil {
 		return err
@@ -48,6 +52,9 @@ func registerPassphrase(c echo.Context) error {
 		instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 
+	if acceptHTML {
+		return finishOnboarding(c)
+	}
 	return c.NoContent(http.StatusNoContent)
 }
 

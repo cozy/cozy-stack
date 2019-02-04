@@ -114,6 +114,12 @@ msgstr "Reset password"
 msgid "Passphrase is reset Title"
 msgstr "Check your emails !"
 
+msgid "Passphrase Onboarding Title"
+msgstr "Choose your password"
+
+msgid "Passphrase Onboarding Submit"
+msgstr "Finish"
+
 msgid "Passphrase is reset Body"
 msgstr ""
 "We just sent you a (very) special link by mail. Click on it to reset your password.\n"

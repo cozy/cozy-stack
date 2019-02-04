@@ -32,6 +32,7 @@ var (
 		"need_onboarding.html",
 		"passphrase_reset.html",
 		"passphrase_renew.html",
+		"passphrase_onboarding.html",
 		"sharing_discovery.html",
 	}
 )
