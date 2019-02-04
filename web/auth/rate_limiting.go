@@ -153,10 +153,8 @@ func CheckRateLimit(inst *instance.Instance, passwordType string) error {
 func LoginRateExceeded(i *instance.Instance) error {
 	err := fmt.Errorf("Instance was blocked because of too many login failed attempts")
 	i.Logger().WithField("nspace", "rate_limiting").Warning(err)
-	t := true
-	return instance.Patch(i, &instance.Options{
-		Blocked: &t,
-	})
+	_, err = i.Block(instance.BlockedLoginFailed.Code)
+	return err
 }
 
 // TwoFactorRateExceeded regenerates a new 2FA passcode after too many failed
@@ -178,8 +176,7 @@ func TwoFactorRateExceeded(i *instance.Instance) error {
 func TwoFactorGenerationExceeded(i *instance.Instance) error {
 	err := fmt.Errorf("Instance was blocked because of too many 2FA passcode generations")
 	i.Logger().WithField("nspace", "rate_limiting").Warning(err)
-	t := true
-	return instance.Patch(i, &instance.Options{
-		Blocked: &t,
-	})
+
+	_, err = i.Block(instance.BlockedLoginFailed.Code)
+	return err
 }

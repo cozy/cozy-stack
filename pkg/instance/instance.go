@@ -145,26 +145,27 @@ type Instance struct {
 
 // Options holds the parameters to create a new instance.
 type Options struct {
-	Domain        string
-	DomainAliases []string
-	Locale        string
-	UUID          string
-	TOSSigned     string
-	TOSLatest     string
-	Timezone      string
-	ContextName   string
-	Email         string
-	PublicName    string
-	Settings      string
-	SettingsObj   *couchdb.JSONDoc
-	AuthMode      string
-	Passphrase    string
-	SwiftCluster  int
-	DiskQuota     int64
-	Apps          []string
-	AutoUpdate    *bool
-	Debug         *bool
-	Blocked       *bool
+	Domain         string
+	DomainAliases  []string
+	Locale         string
+	UUID           string
+	TOSSigned      string
+	TOSLatest      string
+	Timezone       string
+	ContextName    string
+	Email          string
+	PublicName     string
+	Settings       string
+	SettingsObj    *couchdb.JSONDoc
+	AuthMode       string
+	Passphrase     string
+	SwiftCluster   int
+	DiskQuota      int64
+	Apps           []string
+	AutoUpdate     *bool
+	Debug          *bool
+	Blocked        *bool
+	BlockingReason string
 
 	OnboardingFinished *bool
 }
@@ -953,6 +954,11 @@ func Patch(i *Instance, opts *Options) error {
 			needUpdate = true
 		}
 
+		if opts.BlockingReason != "" && opts.BlockingReason != i.BlockingReason {
+			i.BlockingReason = opts.BlockingReason
+			needUpdate = true
+		}
+
 		if aliases := opts.DomainAliases; aliases != nil {
 			i.DomainAliases, err = checkAliases(i, aliases)
 			if err != nil {
@@ -1540,6 +1546,27 @@ func (i *Instance) CreateShareCode(subject string) (string, error) {
 	scope := ""
 	sessionID := ""
 	return i.MakeJWT(permissions.ShareAudience, subject, scope, sessionID, time.Now())
+}
+
+// Block function blocks an instance with an optional reason parameter
+func (i *Instance) Block(reason ...string) (bool, error) {
+	var r string
+
+	if len(reason) == 1 {
+		r = reason[0]
+	} else {
+		r = BlockedUnknown.Code
+	}
+	blocked := true
+
+	err := Patch(i, &Options{
+		Blocked:        &blocked,
+		BlockingReason: r,
+	})
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func validateDomain(domain string) (string, error) {
