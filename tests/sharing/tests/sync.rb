@@ -99,6 +99,11 @@ describe "A folder" do
         EM.stop
       end
 
+      # Add a timeout after 1 minute to make the tests more reliable on travis
+      EM::Timer.new(60) do
+        EM.stop
+      end
+
       sleep 1
       inst_recipient.accept sharing
       doc = Helpers.couch.get_doc inst_recipient.domain, Sharing.doctype, sharing.couch_id
