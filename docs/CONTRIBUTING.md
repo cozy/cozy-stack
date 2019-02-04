@@ -69,7 +69,7 @@ guidelines from the Go community (gofmt,
 etc.).
 
 We are using [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) to
-format code, and [gometalinter](https://github.com/alecthomas/gometalinter) to
+format code, and [golangci-lint](https://github.com/golangci/golangci-lint) to
 detect code smells.
 
 #### Step 4: Test
