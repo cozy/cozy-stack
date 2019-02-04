@@ -1,20 +1,18 @@
 # Table of contents
 
-## Architecture
+## How-to guides
 
--   [General overview](architecture.md)
--   [Security](security.md)
-
-## Usage
+### Usage
 
 -   [Install the cozy-stack](INSTALL.md)
--   [Manpages of the command-line tool](cli/cozy-stack.md)
 -   [Configuration file](config.md)
 -   [Managing Instances](instance.md)
 -   [Onboarding](onboarding.md)
 -   [Context customization](custom-context.md)
+-   [Security](security.md)
+-   [Manpages of the command-line tool](cli/cozy-stack.md)
 
-## For developpers
+### For developpers
 
 -   [Develop a client-side app](client-app-dev.md)
 -   [Running and building Docker images](docker.md)
@@ -22,13 +20,32 @@
 -   [Build a release](release.md)
 -   [The contributing guide](CONTRIBUTING.md)
 
-## Services
+## Explanation
+
+### Up-to-date
+
+-   [Sharing design](sharing-design.md)
+-   [Workflow of the konnectors](konnectors-workflow.md)
+
+### Archives
+
+These pages are the results of studies we made. They may be outdated and are
+kept as an archive to help understanding what were out original intentions when
+designing new services.
+
+-   [General overview of the initial architecture](architecture.md)
+-   [Moving](moving.md)
+-   [Golang Couchdb Plugins](couchdb-plugins.md)
+-   [Konnectors design](konnectors-design.md)
+
+## Reference
+
+### List of services
 
 -   `/auth` - [Authentication & OAuth](auth.md)
 -   `/apps` - [Applications Management](apps.md)
     -   [Apps registry](registry.md)
-    -   [Konnectors](konnectors.md) &
-        [their workflow](konnectors-workflow.md)
+    -   [Konnectors](konnectors.md)
 -   `/data` - [Data System](data-system.md)
     -   [Mango](mango.md)
     -   [Replication](replication.md)
@@ -48,12 +65,3 @@
 -   `/settings` - [Settings](settings.md)
     -   [Terms of Services](user-action-required.md)
 -   `/sharings` - [Sharing](sharing.md)
-    -   [Request for comments](sharing-design.md)
-
-## Archives
-
-These pages are the results of studies we made:
-
--   [Moving](moving.md)
--   [Golang Couchdb Plugins](couchdb-plugins.md)
--   [Konnectors design](konnectors-design.md)
