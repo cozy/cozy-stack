@@ -47,16 +47,6 @@ func Serve(c echo.Context) error {
 		}
 	}
 
-	if i.CheckInstanceBlocked() {
-		var redirect string
-		if i.Blocked {
-			redirect, _ = i.ManagerURL(instance.ManagerBlockedURL)
-		} else {
-			redirect, _ = i.ManagerURL(instance.ManagerTOSURL)
-		}
-		return c.Redirect(http.StatusFound, redirect)
-	}
-
 	app, err := apps.GetWebappBySlug(i, slug)
 	if err != nil {
 		// Used for the "collect" => "home" renaming

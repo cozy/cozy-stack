@@ -79,23 +79,39 @@ var (
 	ErrBadTOSVersion = errors.New("Bad format for TOS version")
 )
 
+// BlockingReason structs holds a reason why an instance had been blocked
+type BlockingReason struct {
+	Code    string
+	Message string
+}
+
+var (
+	// BlockedLoginFailed is used when a security issue has been detected on the instance
+	BlockedLoginFailed = BlockingReason{Code: "LOGIN_FAILED", Message: "The instance was block because of too many login failed attempts"}
+	// BlockedPaymentFailed is used when a payment is missing for the instance
+	BlockedPaymentFailed = BlockingReason{Code: "PAYMENT_FAILED", Message: "The instance requires a payment"}
+	// BlockedUnknown is used when an instance is blocked but the reason is unknown
+	BlockedUnknown = BlockingReason{Code: "UNKNOWN", Message: "This instance is blocked for an unknown reason"}
+)
+
 // An Instance has the informations relatives to the logical cozy instance,
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID         string   `json:"_id,omitempty"`  // couchdb _id
-	DocRev        string   `json:"_rev,omitempty"` // couchdb _rev
-	Domain        string   `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
-	DomainAliases []string `json:"domain_aliases,omitempty"`
-	Prefix        string   `json:"prefix,omitempty"`     // Possible database prefix
-	Locale        string   `json:"locale"`               // The locale used on the server
-	UUID          string   `json:"uuid,omitempty"`       // UUID associated with the instance
-	ContextName   string   `json:"context,omitempty"`    // The context attached to the instance
-	TOSSigned     string   `json:"tos,omitempty"`        // Terms of Service signed version
-	TOSLatest     string   `json:"tos_latest,omitempty"` // Terms of Service latest version
-	AuthMode      AuthMode `json:"auth_mode,omitempty"`
-	Blocked       bool     `json:"blocked,omitempty"`        // Whether or not the instance is blocked
-	NoAutoUpdate  bool     `json:"no_auto_update,omitempty"` // Whether or not the instance has auto updates for its applications
+	DocID          string   `json:"_id,omitempty"`  // couchdb _id
+	DocRev         string   `json:"_rev,omitempty"` // couchdb _rev
+	Domain         string   `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	DomainAliases  []string `json:"domain_aliases,omitempty"`
+	Prefix         string   `json:"prefix,omitempty"`     // Possible database prefix
+	Locale         string   `json:"locale"`               // The locale used on the server
+	UUID           string   `json:"uuid,omitempty"`       // UUID associated with the instance
+	ContextName    string   `json:"context,omitempty"`    // The context attached to the instance
+	TOSSigned      string   `json:"tos,omitempty"`        // Terms of Service signed version
+	TOSLatest      string   `json:"tos_latest,omitempty"` // Terms of Service latest version
+	AuthMode       AuthMode `json:"auth_mode,omitempty"`
+	Blocked        bool     `json:"blocked,omitempty"`         // Whether or not the instance is blocked
+	BlockingReason string   `json:"blocking_reason,omitempty"` // Why the instance is blocked
+	NoAutoUpdate   bool     `json:"no_auto_update,omitempty"`  // Whether or not the instance has auto updates for its applications
 
 	OnboardingFinished bool  `json:"onboarding_finished,omitempty"` // Whether or not the onboarding is complete.
 	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"`   // The total size in bytes allowed to the user

@@ -57,6 +57,11 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	mws := []echo.MiddlewareFunc{
 		middlewares.LoadAppSession,
 		middlewares.CheckIE,
+		middlewares.Accept(middlewares.AcceptOptions{
+			DefaultContentTypeOffer: echo.MIMETextHTML,
+		}),
+		middlewares.CheckInstanceBlocked,
+		middlewares.CheckTOSDeadlineExpired,
 	}
 	if !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{

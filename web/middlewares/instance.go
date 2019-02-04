@@ -46,13 +46,52 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 			return next(c)
 		}
 		if i.CheckInstanceBlocked() {
+			if url, _ := i.ManagerURL(instance.ManagerBlockedURL); url != "" {
+				return c.Redirect(http.StatusFound, url)
+			}
+
+			var returnCode int
+			reason := i.BlockingReason
+
+			switch i.BlockingReason {
+			case instance.BlockedLoginFailed.Code:
+				returnCode = http.StatusUnavailableForLegalReasons
+				reason = instance.BlockedLoginFailed.Message
+			case instance.BlockedPaymentFailed.Code:
+				returnCode = http.StatusPaymentRequired
+				reason = instance.BlockedPaymentFailed.Message
+			default:
+				// Used for retro-compatibility reasons. Will be deprecated.
+				returnCode = http.StatusPaymentRequired
+				if reason == "" {
+					reason = http.StatusText(http.StatusPaymentRequired)
+				}
+			}
+
 			contentType := AcceptedContentType(c)
 			switch contentType {
 			case jsonapi.ContentType, echo.MIMEApplicationJSON:
-				return c.JSON(http.StatusPaymentRequired, i.Warnings())
+				return c.JSON(returnCode, i.Warnings())
 			default:
-				return echo.NewHTTPError(http.StatusPaymentRequired)
+				return echo.NewHTTPError(returnCode, reason)
 			}
+		}
+		return next(c)
+	}
+}
+
+// CheckTOSDeadlineExpired checks if there is not signed ToS and the deadline is
+// exceeded
+func CheckTOSDeadlineExpired(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		i := GetInstance(c)
+		notSigned, deadline := i.CheckTOSNotSignedAndDeadline()
+		if notSigned && deadline == instance.TOSBlocked {
+			redirect, _ := i.ManagerURL(instance.ManagerTOSURL)
+			if redirect != "" {
+				return c.Redirect(http.StatusFound, redirect)
+			}
+			return echo.NewHTTPError(http.StatusPaymentRequired) // Compatibility reasons
 		}
 		return next(c)
 	}
