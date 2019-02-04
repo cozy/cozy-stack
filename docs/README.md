@@ -8,7 +8,6 @@
 -   [Configuration file](config.md)
 -   [Managing Instances](instance.md)
 -   [Onboarding](onboarding.md)
--   [Context customization](custom-context.md)
 -   [Security](security.md)
 -   [Manpages of the command-line tool](cli/cozy-stack.md)
 
