@@ -1,4 +1,4 @@
-package konnectorsauth
+package accounts
 
 import (
 	"encoding/json"

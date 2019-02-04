@@ -300,7 +300,7 @@ or returns with a non-zero status code.
 instance is in debug mode. It would be too verbose to do otherwise.
 
 
-## OAuth
+## OAuth (and service secrets)
 
 ### Doctypes
 
@@ -350,6 +350,28 @@ as the associated scope
 `io.cozy.account_types` are not accessible to the applications: they are
 injected directly in CouchDB in a global database
 `secrets/io-cozy-accounts_type`.
+
+### Secrets that are not OAuth
+
+The `io.cozy.account_types` doctype can also be used for storing secrets that
+are not related to OAuth. The document still need to be injected manually in
+`secrets/io-cozy-accounts_type`:
+
+```
+{
+    "_id": "service.example",
+    "grant_mode": "secret",
+    "slug": "service"
+    "secret": "th1$_1$_th3_s3cr3t!"
+}
+```
+
+**Note**: `grant_mode` must be `secret`, `slug` must be the slug of the
+konnector,  but `secret` can be a map instead of a simple string if several
+secrets are needed for this service.
+
+The secret is given to the konnector in the `COZY_PARAMETERS` env variable.
+
 
 ### Reminder OAuth flow
 

@@ -225,7 +225,8 @@ func (i *Installer) Domain() string {
 
 // Run will install, update or delete the application linked to the installer,
 // depending on specified operation. It will report its progress or error (see
-// Poll method) and should be run asynchronously.
+// Poll method) and should be run asynchronously inside a new goroutine:
+// `go installer.Run()`.
 func (i *Installer) Run() {
 	if err := i.run(); err != nil {
 		i.man.SetError(err)

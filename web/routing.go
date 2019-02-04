@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/metrics"
+	"github.com/cozy/cozy-stack/web/accounts"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/compat"
@@ -19,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/web/intents"
 	"github.com/cozy/cozy-stack/web/jobs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	"github.com/cozy/cozy-stack/web/konnectorsauth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/move"
 	"github.com/cozy/cozy-stack/web/notifications"
@@ -173,7 +173,7 @@ func SetupRoutes(router *echo.Echo) error {
 		// Careful, the normal middlewares NeedInstance and LoadSession are not
 		// applied to this group in web/routing since they should not be used for
 		// oauth redirection.
-		konnectorsauth.Routes(router.Group("/accounts"))
+		accounts.Routes(router.Group("/accounts"))
 	}
 
 	// other non-authentified routes

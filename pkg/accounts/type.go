@@ -13,6 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
@@ -21,7 +22,7 @@ var accountsClient = &http.Client{
 }
 
 // This file contains the account_type object as defined in
-// docs/konnectors_oauth
+// docs/konnectors-workflow.md
 
 // Various grant types
 // - AuthorizationCode is the server-side grant type.
@@ -62,6 +63,8 @@ type AccountType struct {
 	TokenAuthMode         string            `json:"token_mode,omitempty"`
 	RegisteredRedirectURI string            `json:"redirect_uri,omitempty"`
 	ExtraAuthQuery        map[string]string `json:"extras,omitempty"`
+	Slug                  string            `json:"slug,omitempty"`
+	Secret                interface{}       `json:"secret,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface
@@ -332,4 +335,18 @@ func TypeInfo(id string) (*AccountType, error) {
 		return nil, err
 	}
 	return &a, nil
+}
+
+// FindAccountTypesBySlug returns the AccountType documents for the given slug
+func FindAccountTypesBySlug(slug string) ([]*AccountType, error) {
+	var docs []*AccountType
+	req := &couchdb.FindRequest{
+		UseIndex: "by-slug",
+		Selector: mango.Equal("slug", slug),
+	}
+	err := couchdb.FindDocs(couchdb.GlobalSecretsDB, consts.AccountTypes, req, &docs)
+	if err != nil {
+		return nil, err
+	}
+	return docs, nil
 }

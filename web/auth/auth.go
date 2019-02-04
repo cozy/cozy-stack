@@ -803,7 +803,7 @@ func authorize(c echo.Context) error {
 			if err != nil {
 				return err
 			}
-			installer.Run()
+			go installer.Run()
 		}
 		params.scope = BuildLinkedAppScope(manifest.Slug())
 	}

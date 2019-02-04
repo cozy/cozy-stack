@@ -1,12 +1,14 @@
 package exec
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/cozy/afero"
+	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -63,7 +65,7 @@ func TestBadFileExec(t *testing.T) {
 			Operation: apps.Install,
 			Type:      apps.Konnector,
 			Slug:      "my-konnector-1",
-			SourceURL: "git://github.com/cozy/cozy-konnector-trainline.git",
+			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
 		},
 	)
 	if !assert.NoError(t, err) {
@@ -97,8 +99,6 @@ func TestBadFileExec(t *testing.T) {
 }
 
 func TestSuccess(t *testing.T) {
-	t.Skip()
-
 	script := `#!/bin/bash
 
 echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL} ${COZY_CREDENTIALS}\"}"
@@ -107,18 +107,15 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 >&2 echo "log error"
 `
 	osFs := afero.NewOsFs()
-	tmpScript, err := afero.TempFile(osFs, "", "")
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer osFs.RemoveAll(tmpScript.Name())
+	tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
+	defer osFs.RemoveAll(tmpScript)
 
-	err = afero.WriteFile(osFs, tmpScript.Name(), []byte(script), 0)
+	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	err = osFs.Chmod(tmpScript.Name(), 0777)
+	err = osFs.Chmod(tmpScript, 0777)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -127,16 +124,18 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		&apps.InstallerOptions{
 			Operation: apps.Install,
 			Type:      apps.Konnector,
-			Slug:      "my-konnector-2",
-			SourceURL: "git://github.com/cozy/cozy-konnector-trainline.git",
+			Slug:      "my-konnector-1",
+			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
 		},
 	)
-	if !assert.NoError(t, err) {
-		return
-	}
-	_, err = installer.RunSync()
-	if !assert.NoError(t, err) {
-		return
+	if err != apps.ErrAlreadyExists {
+		if !assert.NoError(t, err) {
+			return
+		}
+		_, err = installer.RunSync()
+		if !assert.NoError(t, err) {
+			return
+		}
 	}
 
 	var wg sync.WaitGroup
@@ -145,6 +144,7 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 	go func() {
 		evCh := realtime.GetHub().Subscriber(inst)
 		evCh.Subscribe(consts.JobEvents)
+		wg.Done()
 		ch := evCh.Channel
 		ev1 := <-ch
 		ev2 := <-ch
@@ -176,8 +176,10 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		wg.Done()
 	}()
 
+	wg.Wait()
+	wg.Add(1)
 	msg, err := jobs.NewMessage(map[string]interface{}{
-		"konnector": "my-konnector-2",
+		"konnector": "my-konnector-1",
 	})
 	assert.NoError(t, err)
 
@@ -186,7 +188,100 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		WorkerType: "konnector",
 	})
 
-	config.GetConfig().Konnectors.Cmd = tmpScript.Name()
+	config.GetConfig().Konnectors.Cmd = tmpScript
+	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
+	err = worker(ctx)
+	assert.NoError(t, err)
+
+	wg.Wait()
+}
+
+func TestSecretFromAccountType(t *testing.T) {
+	script := `#!/bin/bash
+
+SECRET=$(echo "$COZY_PARAMETERS" | sed -e 's/.*secret"://' -e 's/[},].*//')
+echo "{\"type\": \"params\", \"message\": ${SECRET} }"
+`
+	osFs := afero.NewOsFs()
+	tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
+	defer osFs.RemoveAll(tmpScript)
+
+	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	err = osFs.Chmod(tmpScript, 0777)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	at := &accounts.AccountType{
+		GrantMode: "secret",
+		Slug:      "my-konnector-1",
+		Secret:    "s3cr3t",
+	}
+	err = couchdb.CreateDoc(couchdb.GlobalSecretsDB, at)
+	assert.NoError(t, err)
+	defer func() {
+		// Clean the account types
+		ats, _ := accounts.FindAccountTypesBySlug("my-konnector-1")
+		for _, at = range ats {
+			couchdb.DeleteDoc(couchdb.GlobalSecretsDB, at)
+		}
+	}()
+
+	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
+		&apps.InstallerOptions{
+			Operation: apps.Install,
+			Type:      apps.Konnector,
+			Slug:      "my-konnector-1",
+			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
+		},
+	)
+	if err != apps.ErrAlreadyExists {
+		if !assert.NoError(t, err) {
+			return
+		}
+		_, err = installer.RunSync()
+		if !assert.NoError(t, err) {
+			return
+		}
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		evCh := realtime.GetHub().Subscriber(inst)
+		evCh.Subscribe(consts.JobEvents)
+		wg.Done()
+		ch := evCh.Channel
+		ev1 := <-ch
+		err = evCh.Close()
+		assert.NoError(t, err)
+		doc1 := ev1.Doc.(couchdb.JSONDoc)
+
+		assert.Equal(t, inst.Domain, ev1.Domain)
+		assert.Equal(t, "params", doc1.M["type"])
+		msg1 := doc1.M["message"]
+		assert.Equal(t, "s3cr3t", msg1)
+		wg.Done()
+	}()
+
+	wg.Wait()
+	wg.Add(1)
+	msg, err := jobs.NewMessage(map[string]interface{}{
+		"konnector": "my-konnector-1",
+	})
+	assert.NoError(t, err)
+
+	j := jobs.NewJob(inst, &jobs.JobRequest{
+		Message:    msg,
+		WorkerType: "konnector",
+	})
+
+	config.GetConfig().Konnectors.Cmd = tmpScript
 	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.NoError(t, err)
