@@ -31,11 +31,11 @@ These pages are the results of studies we made. They may be outdated and are
 kept as an archive to help understanding what were out original intentions when
 designing new services.
 
--   [General overview of the initial architecture](architecture.md)
--   [Onboarding with an application](onboarding.md)
--   [Moving](moving.md)
--   [Golang Couchdb Plugins](couchdb-plugins.md)
--   [Konnectors design](konnectors-design.md)
+-   [General overview of the initial architecture](archives/architecture.md)
+-   [Onboarding with an application](archives/onboarding.md)
+-   [Moving](archives/moving.md)
+-   [Golang Couchdb Plugins](archives/couchdb-plugins.md)
+-   [Konnectors design](archives/konnectors-design.md)
 
 ## Reference
 
