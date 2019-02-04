@@ -221,7 +221,7 @@ POST /jobs/io.cozy.triggers
             "type": "@cron",
             "arguments": "0 0 0 0 1 1 ",
             "worker": "konnector",
-            "worker_arguments": {
+            "message": {
                 "konnector": "trainline",
                 "account": "5165621628784562148955",
                 "folder_to_save": "877854878455"
@@ -261,8 +261,8 @@ Start the konnector through nsjail, passing as ENV variables :
 
     - `COZY_URL`:          the starting instance URL
     - `COZY_CREDENTIALS`:  security token to communicate with Cozy
-    - `COZY_FIELDS`:       JSON-encoded worker_arguments
-    - `COZY_PARAMETERS`:   JSON-encoded parameters associated with the konnector
+    - `COZY_FIELDS`:       JSON-encoded message with the arguments from the trigger
+    - `COZY_PARAMETERS`:   JSON-encoded parameters from the konnector manifest
     - `COZY_LANGUAGE`:     the language field of the konnector (eg. "node" etc.)
     - `COZY_LOCALE`:       the locale of the user (eg. "en" etc.)
     - `COZY_TIME_LIMIT`:   how much time the konnector can run before being killed

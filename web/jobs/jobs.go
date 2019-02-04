@@ -55,6 +55,7 @@ type (
 		Type            string           `json:"type"`
 		Arguments       string           `json:"arguments"`
 		WorkerType      string           `json:"worker"`
+		Message         json.RawMessage  `json:"message"`
 		WorkerArguments json.RawMessage  `json:"worker_arguments"`
 		Debounce        string           `json:"debounce"`
 		Options         *jobs.JobOptions `json:"options"`
@@ -195,6 +196,10 @@ func newTrigger(c echo.Context) error {
 		}
 	}
 
+	msg := req.Message
+	if req.Message == nil || len(req.Message) == 0 {
+		msg = req.WorkerArguments
+	}
 	t, err := jobs.NewTrigger(instance, jobs.TriggerInfos{
 		Type:       req.Type,
 		WorkerType: req.WorkerType,
@@ -202,7 +207,7 @@ func newTrigger(c echo.Context) error {
 		Arguments:  req.Arguments,
 		Debounce:   req.Debounce,
 		Options:    req.Options,
-	}, req.WorkerArguments)
+	}, msg)
 	if err != nil {
 		return wrapJobsError(err)
 	}

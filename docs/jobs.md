@@ -421,7 +421,7 @@ Accept: application/vnd.api+json
             "arguments": "io.cozy.invitations",
             "debounce": "10m",
             "worker": "sendmail",
-            "worker_arguments": {},
+            "message": {},
             "options": {
                 "priority": 3,
                 "timeout": 60,
@@ -431,6 +431,9 @@ Accept: application/vnd.api+json
     }
 }
 ```
+
+**Note**: the `message` field was previously called `worker_arguments`. The
+latter version still works but is deprecated, you should use `message` instead.
 
 #### Response
 
