@@ -361,7 +361,7 @@ are not related to OAuth. The document still need to be injected manually in
 {
     "_id": "service.example",
     "grant_mode": "secret",
-    "slug": "service"
+    "slug": "service",
     "secret": "th1$_1$_th3_s3cr3t!"
 }
 ```
