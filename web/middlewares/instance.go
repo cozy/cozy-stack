@@ -46,17 +46,20 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 			return next(c)
 		}
 		if i.CheckInstanceBlocked() {
-			if url, _ := i.ManagerURL(instance.ManagerBlockedURL); url != "" {
+			// Standard checks
+			if i.BlockingReason == instance.BlockedLoginFailed.Code {
+				return echo.NewHTTPError(http.StatusServiceUnavailable, instance.BlockedLoginFailed.Message)
+			}
+
+			if url, _ := i.ManagerURL(instance.ManagerBlockedURL); url != "" && IsLoggedIn(c) {
 				return c.Redirect(http.StatusFound, url)
 			}
 
+			// Fallback by trying to determine the blocking reason
 			var returnCode int
 			reason := i.BlockingReason
 
 			switch i.BlockingReason {
-			case instance.BlockedLoginFailed.Code:
-				returnCode = http.StatusUnavailableForLegalReasons
-				reason = instance.BlockedLoginFailed.Message
 			case instance.BlockedPaymentFailed.Code:
 				returnCode = http.StatusPaymentRequired
 				reason = instance.BlockedPaymentFailed.Message
@@ -67,7 +70,6 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 					reason = http.StatusText(http.StatusPaymentRequired)
 				}
 			}
-
 			contentType := AcceptedContentType(c)
 			switch contentType {
 			case jsonapi.ContentType, echo.MIMEApplicationJSON:
@@ -85,16 +87,18 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 func CheckTOSDeadlineExpired(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
-		if len(i.RegisterToken) > 0 {
+
+		redirect, _ := i.ManagerURL(instance.ManagerTOSURL)
+
+		// Skip check if the instance does not have a ManagerURL or a
+		// registerToken
+		if len(i.RegisterToken) > 0 || redirect == "" {
 			return next(c)
 		}
+
 		notSigned, deadline := i.CheckTOSNotSignedAndDeadline()
 		if notSigned && deadline == instance.TOSBlocked {
-			redirect, _ := i.ManagerURL(instance.ManagerTOSURL)
-			if redirect != "" {
-				return c.Redirect(http.StatusFound, redirect)
-			}
-			return echo.NewHTTPError(http.StatusPaymentRequired) // Compatibility reasons
+			return c.Redirect(http.StatusFound, redirect)
 		}
 		return next(c)
 	}
