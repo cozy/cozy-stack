@@ -50,7 +50,7 @@ describe "A sharing" do
     code = sharing.read_only inst_bob, 2
     assert_equal 204, code
     sleep 8
-    name2b = "#{Faker::HitchhikersGuideToTheGalaxy.marvin_quote}.txt"
+    name2b = "#{Faker::DrWho.villian}.txt"
     file2_charlie.rename inst_charlie, name2b
     sleep 8
 
@@ -71,7 +71,7 @@ describe "A sharing" do
     code = sharing.read_write inst_bob, 2
     assert_equal 204, code
     sleep 1
-    name1c = "#{Faker::DrWho.quote}.txt"
+    name1c = "#{Faker::DrWho.specie}.txt"
     file1_charlie.rename inst_charlie, name1c
     sleep 6
     file1 = CozyFile.find inst_alice, file1.couch_id

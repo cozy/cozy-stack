@@ -78,7 +78,7 @@ class Sharing
   end
 
   def initialize(opts = {})
-    @description = opts[:description] || Faker::HitchhikersGuideToTheGalaxy.marvin_quote
+    @description = opts[:description] || Faker::DrWho.catch_phrase
     @app_slug = opts[:app_slug] || ""
     @rules = []
     @members = [] # Owner's instance + recipients contacts
