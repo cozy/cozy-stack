@@ -11,15 +11,15 @@
 To install CouchDB 2 through Docker, take a look at our
 [Docker specific documentation](docker.md).
 
-**Note:** to generate thumbnails for heic/heif images, the version 7.0.7-22 of
+**Note:** to generate thumbnails for heic/heif images, the version 7.0.7-22+ of
 Image Magick is required.
 
 ## Install for self-hosting
 
 We have started to write documentation on how to install cozy on your own
-server. [The guide](https://docs.cozy.io/en/install/manual/) is still work in
-progress. So, don't hesitate to report issues with it. It will help us improve
-it.
+server. We have [a guide for
+debian](https://docs.cozy.io/en/tutorials/selfhost-debian/). Don't hesitate to
+report issues with it. It will help us improve it.
 
 ## Install for development / local tests
 
@@ -67,7 +67,7 @@ cozy-stack serve
 And then create an instance for development:
 
 ```bash
-cozy-stack instances add --apps drive,photos,settings --passphrase cozy "cozy.tools:8080"
+cozy-stack instances add --apps home,drive,settings,store --passphrase cozy "cozy.tools:8080"
 ```
 
 The cozy-stack server listens on http://cozy.tools:8080/ by default. See

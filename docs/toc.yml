@@ -1,26 +1,24 @@
 - README: ./README.md
-- Architecture:
-  - "General overview": ./architecture.md
-  - Security: ./security.md
 - Usage:
   - "Install the cozy-stack": ./INSTALL.md
-  - "Manpages of the command-line tool": ./cli/cozy-stack.md
   - "Configuration file": ./config.md
   - "Managing Instances": ./instance.md
-  - "Onboarding": ./onboarding.md
-  - "Context customization": ./custom-context.md
-- For developpers:
+  - "Security": ./security.md
+  - "Manpages of the command-line tool": ./cli/cozy-stack.md
+- How-to guides for developpers:
   - "Develop a client-side app": ./client-app-dev.md
   - "Running and building Docker images": ./docker.md
   - "Working with the stack assets": ./assets.md
   - "Build a release": ./release.md
   - "The contributing guide": ./CONTRIBUTING.md
-- Services:
+- Explanations
+  - "Sharing design": ./sharing-design.md
+  - "Workflow of the konnectors": ./konnectors-workflow.md
+- List of services:
   - "/auth - Authentication & OAuth": ./auth.md
   - "/apps - Applications Management": ./apps.md
   - " /apps - Apps registry": ./registry.md
   - " /apps - Konnectors": ./konnectors.md
-  - " /apps - Konnectors workflow": ./konnectors-workflow.md
   - "/data - Data System": ./data-system.md
   - " /data - Mango": ./mango.md
   - " /data - Replication": ./replication.md
@@ -40,4 +38,3 @@
   - "/settings - Settings": ./settings.md
   - " /settings - Terms of Services": ./user-action-required.md
   - "/sharings - Sharing": ./sharing.md
-  - " /sharings - Request for comments": ./sharing-design.md

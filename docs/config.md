@@ -62,9 +62,7 @@ environment variables.
             <th>COZY_HOST / COZY_ADMIN_HOST</th>
             <td>localhost</td>
 <td>
-
 `[http[s]://]<fqdn>[:<port>]`
-
 </td>
         </tr>
         <tr>
@@ -78,7 +76,6 @@ environment variables.
             <th>COZY_HOST_TIMEOUT / COZY_ADMIN_TIMOUT</th>
             <td>15s</td>
 <td>
-            
 HTTP timeout to use  
 Must be [a valid golang duration](https://golang.org/pkg/time/#ParseDuration) like `10s` or `1m`
 </td>
@@ -88,11 +85,9 @@ Must be [a valid golang duration](https://golang.org/pkg/time/#ParseDuration) li
                     <th>COZY_HOST_VALIDATE / COZY_ADMIN_VALIDATE</th>
                     <td>true</td>
 <td>
-
 Enable HTTPS certificate validation  
 Can also be set via host URL query part, like
 `https://localhost:6060?validate=false`
-
 </td>
         </tr>
         <tr>
@@ -100,10 +95,8 @@ Can also be set via host URL query part, like
                     <th>COZY_HOST_CA / COZY_ADMIN_CA</th>
                     <td>none</td>
 <td>
-
 CA file to use for HTTPS certificate validation  
 Can also be set via host URL query part, like `https://localhost:6060?ca=<ca>`
-
 </td>
         </tr>
         <tr>
@@ -111,11 +104,9 @@ Can also be set via host URL query part, like `https://localhost:6060?ca=<ca>`
                     <th>COZY_HOST_CERT / COZY_ADMIN_CERT</th>
                     <td>none</td>
 <td>
-
 Client certificate to use  
 Can also be set via host URL query part, like
 `https://localhost:6060?cert=<cert>`
-
 </td>
         </tr>
         <tr>
@@ -123,10 +114,8 @@ Can also be set via host URL query part, like
                     <th>COZY_HOST_KEY / COZY_ADMIN_KEY</th>
                     <td>none</td>
 <td>
-
 Client certificate to use  
 Can also be set via host URL query part, like `https://localhost:6060?key=<key>`
-
 </td>
         </tr>
         <tr>
@@ -134,7 +123,6 @@ Can also be set via host URL query part, like `https://localhost:6060?key=<key>`
                     <th>COZY_HOST_FINGERPRINT / COZY_ADMIN_FINGERPRINT</th>
                     <td>none</td>
 <td>
-
 Hex-encoded SHA-256 key pinning to use  
 Can also be set via host URL query part, like `https://localhost:6060?fp=<fp>`
 
@@ -142,7 +130,6 @@ You can get the fingerprint of a given certificate with
 `openssl x509 -in <certificat.crt> -pubkey | openssl pkey -pubin -outform der | openssl dgst -sha256 -hex`  
 Or directly from a private key with
 `openssl pkey -in <key.pem> -pubout -outform der | openssl dgst -sha256 -hex`
-
 </td>
         </tr>
     </tbody>
@@ -155,10 +142,9 @@ should be stored in a `cozy-admin-passphrase`. This file should be in one of the
 configuration directories, along with the main config file.
 
 The passphrase is stored in a salted-hashed representation using scrypt. To
-generate this file, you can use the
-`cozy-stack config passwd [config directory]` command. This command will ask you
-for a passphrase and will create the `cozy-admin-passphrase` in the specified
-directory.
+generate this file, you can use the `cozy-stack config passwd [filepath]`
+command. This command will ask you for a passphrase and will create the
+`cozy-admin-passphrase` at the specified path.
 
 You can use the `COZY_ADMIN_PASSWORD` env variable if you do not want to type
 the passphrase each time you call `cozy-stack`.
@@ -166,10 +152,12 @@ the passphrase each time you call `cozy-stack`.
 ### Example
 
 ```sh
-cozy-stack config passwd ~/.cozy
-# Hashed passphrase outputed in ~/.cozy/cozy-admin-passphrase
-cat ~/.cozy/cozy-admin-passphrase
-# scrypt$16384$8$1$936bd62faf633b5f946f653c21161a9b$4e0d11dfa5fc1676ed329938b11a6584d30e603e0d06b8a63a99e8cec392d682
+$ mkdir ~/.cozy && cozy-stack config passwd ~/.cozy/cozy-admin-passphrase
+Hashed passphrase will be writtent in ~/.cozy/cozy-admin-passphrase
+Passphrase:
+Confirmation:
+$ cat ~/.cozy/cozy-admin-passphrase
+scrypt$16384$8$1$936bd62faf633b5f946f653c21161a9b$4e0d11dfa5fc1676ed329938b11a6584d30e603e0d06b8a63a99e8cec392d682
 ```
 
 ## Hooks
@@ -231,3 +219,29 @@ for example. It is called with the following parameters:
 
 1. the instance on which the application has been uninstalled
 2. the application name that has been uninstalled.
+
+## Customizing a context
+
+### Intro
+
+In the config file of cozy-stack, it's possible to declare some contexts, that
+are a way to regroup some cozy instances to give similar configuration. For
+example, it is possible to give a `default_redirection` that will be used
+when the user logs into their cozy. You can find more example in the example
+config file.
+
+### Assets
+
+The visual appearance of a cozy instance can be customized via some assets
+(CSS, JS, images). These assets can be inserted from the command-line with the
+[`cozy-stack config insert-asset`](../cli/cozy-stack_config_insert-asset.md)
+command.
+
+Here are a small list of assets that you may want to customize:
+
+- `/styles/theme.css`: a CSS file where you can override the colors and put
+  other CSS rules
+- `/favicon-16x16.png` and `/favicon-32x32.png`: the two variants of the
+  favicon
+- `/apple-touch-icon.png`: the same but for Apple
+- `/images/default-avatar.png`: the image to use as the default avatar.

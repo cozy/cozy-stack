@@ -30,16 +30,13 @@ var flagContext string
 var configCmdGroup = &cobra.Command{
 	Use:   "config <command>",
 	Short: "Show and manage configuration elements",
-	Long: `
-cozy-stack config allows to print and generate some parts of the configuration
-`,
+	Long:  `cozy-stack config allows to print and generate some parts of the configuration`,
 }
 
 var configPrintCmd = &cobra.Command{
 	Use:   "print",
 	Short: "Display the configuration",
-	Long: `Read the environment variables, the config file and
-the given parameters to display the configuration.`,
+	Long:  `Read the environment variables, the config file and the given parameters to display the configuration.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := json.MarshalIndent(config.GetConfig(), "", "  ")
 		if err != nil {
@@ -56,15 +53,11 @@ var adminPasswdCmd = &cobra.Command{
 	Aliases: []string{"password", "passphrase", "pass"},
 	Short:   "Generate an admin passphrase",
 	Long: `
-cozy-stack instances passphrase generate a passphrase hash and save it to the
-specified file. If no file is specified, it is directly printed in standard output.
-This passphrase is the one used to authenticate accesses to the administration API.
+cozy-stack instances passphrase generate a passphrase hash and save it to the specified file. If no file is specified, it is directly printed in standard output. This passphrase is the one used to authenticate accesses to the administration API.
 
-The environment variable 'COZY_ADMIN_PASSPHRASE' can be used to pass the passphrase
-if needed.
-
-example: cozy-stack config passwd ~/.cozy/
+The environment variable 'COZY_ADMIN_PASSPHRASE' can be used to pass the passphrase if needed.
 `,
+	Example: "$ cozy-stack config passwd ~/.cozy/cozy-admin-passphrase",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 1 {
 			return cmd.Usage()
@@ -134,8 +127,7 @@ var genKeysCmd = &cobra.Command{
 	Use:   "gen-keys <filepath>",
 	Short: "Generate an key pair for encryption and decryption of credentials",
 	Long: `
-cozy-stack config gen-keys generate a key-pair and save them in the
-specified path.
+cozy-stack config gen-keys generate a key-pair and save them in the specified path.
 
 The decryptor key filename is given the ".dec" extension suffix.
 The encryptor key filename is given the ".enc" extension suffix.

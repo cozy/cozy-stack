@@ -1,4 +1,6 @@
-[Table of contents](README.md#table-of-contents)
+[Table of contents](../README.md#table-of-contents)
+
+This document was written in september 2016.
 
 # Cozy Stack Architecture
 
@@ -36,18 +38,18 @@ The architecture of Cozy is composed of:
 All of this can run on a personal server, self-hosted at home, like a Raspberry
 Pi:
 
-![Architecture for a self-hosted](diagrams/self-hosted.png)
+![Architecture for a self-hosted](../diagrams/self-hosted.png)
 
 But it's also possible to deploy a cozy on a more powerful server in order to
 host dozens of cozy instances (an association for example). It will looks like
 this:
 
-![Architecture for a medium instance](diagrams/middle-instance.png)
+![Architecture for a medium instance](../diagrams/middle-instance.png)
 
 And even to scale to thousands of cozy instances on a server farm, with high
 availability:
 
-![Architecture for a big instance](diagrams/big-instance.png)
+![Architecture for a big instance](../diagrams/big-instance.png)
 
 This elasticity comes with some constraints:
 
@@ -179,7 +181,7 @@ mercurial, npm or even just a tarball). Also, we want to offer two channels for
 our official apps: one with a stable and well tested release, and one with more
 frequent updates for our more adventurous users.
 
-More informations [here](apps.md).
+More informations [here](../apps.md).
 
 ### Data System `/data`
 
@@ -194,7 +196,7 @@ selection of photos. This album can then be associated to a context to be shared
 with friends of the owner. These friends can access the album and see the
 photos, but not anonymous people.
 
-More informations [here](data-system.md).
+More informations [here](../data-system.md).
 
 ### Virtual File System `/files`
 
@@ -211,7 +213,7 @@ uploading a file, to more complex ones, like renaming a folder. It also ensure
 that an instance is not exceeding its quota, and keeps a trash to recover files
 recently deleted.
 
-More informations [here](files.md).
+More informations [here](../files.md).
 
 ### Sharing `/sharings`
 
@@ -535,7 +537,7 @@ language, or reviewing an existing one, is really appreciated.
 
 No, they won't. The business logic to scrap data from the many sources will be
 kept and they will be adapted to fit in this new architecture. It is explained
-how we will do that [here](konnectors.md).
+how we will do that [here](../konnectors.md).
 
 > So, it's not possible to have a custom application with a server part, like
 > the lounge IRC client?

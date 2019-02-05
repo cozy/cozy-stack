@@ -1,5 +1,7 @@
 [Table of contents](README.md#table-of-contents)
 
+This document was written in october 2016.
+
 # Couchdb plugins analysis
 
 (original discussion is at https://github.com/cozy/cozy-stack/issues/9)

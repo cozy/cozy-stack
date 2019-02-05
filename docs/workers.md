@@ -11,6 +11,11 @@ more about the API context in which you can see how to use these arguments.
 The `log` worker will just print in the log file the job sent to it. It can
 useful for debugging for example.
 
+## thumbnail worker
+
+The `thumbnail` worker is used internally by the stack to generate thumbnails
+from the image files of a cozy instance.
+
 ## push worker
 
 The `push` worker can be used to send push-notifications to a user's device. The
@@ -226,3 +231,16 @@ optionaly the old version of this document.
 
 The message is composed of a sharing ID and a count of the number of errors
 (i.e. the number of times this job was retried).
+
+## Deprecated workers
+
+### migrations
+
+The `migrations` worker was used for migrating cozy instance that had their
+files in swift from a V1 layout to a V2 layout. The code is probably not in
+a good shape, and it would be safer to rework it before using it.
+
+### updates
+
+The `updates` worker was used for updating applications when there were no
+auto-update mechanism.

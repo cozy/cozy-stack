@@ -1,5 +1,7 @@
 [Table of contents](README.md#table-of-contents)
 
+This document was written on february and march 2017.
+
 # Konnectors
 
 :warning: **Note:** this documentation is outdated. It is kept for historical

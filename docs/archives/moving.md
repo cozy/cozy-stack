@@ -1,5 +1,7 @@
 [Table of contents](README.md#table-of-contents)
 
+This document was written in october 2016.
+
 # Moving
 
 This document is a stub to hold information about moving one's cozy from an

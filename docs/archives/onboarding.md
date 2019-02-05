@@ -1,5 +1,7 @@
 [Table of contents](README.md#table-of-contents)
 
+This document was written in november and december 2016.
+
 # Onboarding
 
 This document explains the architecture and process allowing a cozy instance
