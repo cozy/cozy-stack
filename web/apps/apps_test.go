@@ -62,6 +62,7 @@ func createFile(dir, filename, content string) error {
 
 func installMiniApp() error {
 	manifest = &apps.WebappManifest{
+		DocID:     consts.Apps + "/" + slug,
 		Name:      "Mini",
 		Icon:      "icon.svg",
 		DocSlug:   slug,

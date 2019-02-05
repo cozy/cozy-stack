@@ -122,6 +122,7 @@ func TestMain(m *testing.M) {
 	_, token = setup.GetTestClient(consts.Settings)
 
 	app := &apps.WebappManifest{
+		DocID:          consts.Apps + "/app",
 		DocSlug:        "app",
 		DocPermissions: permissions.Set{},
 	}
@@ -137,6 +138,7 @@ func TestMain(m *testing.M) {
 	}
 	appToken = ins.BuildAppToken(app, "")
 	files := &apps.WebappManifest{
+		DocID:          consts.Apps + "/files",
 		DocSlug:        "files",
 		DocPermissions: permissions.Set{},
 		Intents: []apps.Intent{

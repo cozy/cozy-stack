@@ -63,6 +63,7 @@ type Terms struct {
 // WebappManifest contains all the informations associated with an installed web
 // application.
 type WebappManifest struct {
+	DocID  string `json:"_id,omitempty"`
 	DocRev string `json:"_rev,omitempty"`
 
 	Name       string `json:"name"`
@@ -113,7 +114,7 @@ type WebappManifest struct {
 }
 
 // ID is part of the Manifest interface
-func (m *WebappManifest) ID() string { return m.DocType() + "/" + m.DocSlug }
+func (m *WebappManifest) ID() string { return m.DocID }
 
 // Rev is part of the Manifest interface
 func (m *WebappManifest) Rev() string { return m.DocRev }
@@ -161,7 +162,7 @@ func (m *WebappManifest) Clone() couchdb.Doc {
 }
 
 // SetID is part of the Manifest interface
-func (m *WebappManifest) SetID(id string) {}
+func (m *WebappManifest) SetID(id string) { m.DocID = id }
 
 // SetRev is part of the Manifest interface
 func (m *WebappManifest) SetRev(rev string) { m.DocRev = rev }
@@ -256,7 +257,7 @@ func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Mani
 		return nil, ErrBadManifest
 	}
 
-	newManifest.SetID(m.ID())
+	newManifest.SetID(consts.Apps + "/" + slug)
 	newManifest.SetRev(m.Rev())
 	newManifest.SetState(m.State())
 	newManifest.CreatedAt = m.CreatedAt
@@ -281,6 +282,7 @@ func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 	if err := diffServices(db, m.Slug(), nil, m.Services); err != nil {
 		return err
 	}
+	m.DocID = consts.Apps + "/" + m.DocSlug
 	m.CreatedAt = time.Now()
 	m.UpdatedAt = time.Now()
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
