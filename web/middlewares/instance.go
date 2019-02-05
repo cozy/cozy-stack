@@ -56,20 +56,15 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 
 			// Fallback by trying to determine the blocking reason
-			var returnCode int
 			reason := i.BlockingReason
+			returnCode := http.StatusPaymentRequired
 
-			switch i.BlockingReason {
-			case instance.BlockedPaymentFailed.Code:
-				returnCode = http.StatusPaymentRequired
+			if reason == "" {
+				reason = http.StatusText(http.StatusPaymentRequired)
+			} else if reason == instance.BlockedPaymentFailed.Code {
 				reason = instance.BlockedPaymentFailed.Message
-			default:
-				// Used for retro-compatibility reasons. Will be deprecated.
-				returnCode = http.StatusPaymentRequired
-				if reason == "" {
-					reason = http.StatusText(http.StatusPaymentRequired)
-				}
 			}
+
 			contentType := AcceptedContentType(c)
 			switch contentType {
 			case jsonapi.ContentType, echo.MIMEApplicationJSON:
