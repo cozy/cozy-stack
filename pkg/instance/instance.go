@@ -1549,7 +1549,7 @@ func (i *Instance) CreateShareCode(subject string) (string, error) {
 }
 
 // Block function blocks an instance with an optional reason parameter
-func (i *Instance) Block(reason ...string) (bool, error) {
+func (i *Instance) Block(reason ...string) error {
 	var r string
 
 	if len(reason) == 1 {
@@ -1564,9 +1564,9 @@ func (i *Instance) Block(reason ...string) (bool, error) {
 		BlockingReason: r,
 	})
 	if err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }
 
 func validateDomain(domain string) (string, error) {

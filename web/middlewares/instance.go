@@ -85,6 +85,9 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 func CheckTOSDeadlineExpired(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
+		if len(i.RegisterToken) > 0 {
+			return next(c)
+		}
 		notSigned, deadline := i.CheckTOSNotSignedAndDeadline()
 		if notSigned && deadline == instance.TOSBlocked {
 			redirect, _ := i.ManagerURL(instance.ManagerTOSURL)
