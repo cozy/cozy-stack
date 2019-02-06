@@ -87,7 +87,7 @@ type BlockingReason struct {
 
 var (
 	// BlockedLoginFailed is used when a security issue has been detected on the instance
-	BlockedLoginFailed = BlockingReason{Code: "LOGIN_FAILED", Message: "The instance was block because of too many login failed attempts"}
+	BlockedLoginFailed = BlockingReason{Code: "LOGIN_FAILED", Message: "The instance was blocked because of too many login failed attempts"}
 	// BlockedPaymentFailed is used when a payment is missing for the instance
 	BlockedPaymentFailed = BlockingReason{Code: "PAYMENT_FAILED", Message: "The instance requires a payment"}
 	// BlockedUnknown is used when an instance is blocked but the reason is unknown
