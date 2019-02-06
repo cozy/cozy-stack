@@ -248,6 +248,12 @@ msgstr "Go to your home"
 msgid "Error Contact us"
 msgstr "A problem, a question ? Contact us at"
 
+msgid "Error Contact instance blocked"
+msgstr "Please contact us at"
+
+msgid "Error Message instance blocked"
+msgstr "Your Cozy has been blocked"
+
 msgid "Error No state parameter"
 msgstr "The state parameter is mandatory"
 

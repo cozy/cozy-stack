@@ -34,6 +34,7 @@ var (
 		"passphrase_renew.html",
 		"passphrase_onboarding.html",
 		"sharing_discovery.html",
+		"instance_blocked.html",
 	}
 )
 
