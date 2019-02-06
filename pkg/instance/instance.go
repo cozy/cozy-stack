@@ -869,6 +869,7 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 		}
 	}
 
+	// Handling global/instance settings
 	if contextName, ok := settings.M["context"].(string); ok {
 		opts.ContextName = contextName
 		delete(settings.M, "context")
@@ -904,6 +905,7 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 		delete(settings.M, "auth_mode")
 	}
 
+	// Handling instance settings document
 	if tz := opts.Timezone; tz != "" {
 		settings.M["tz"] = tz
 	}
@@ -918,7 +920,7 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 		opts.TOSSigned = "1.0.0-" + opts.TOSSigned
 	}
 
-	needUpdate := settings.Rev() != "" && len(settings.M) > 1
+	needUpdate := settings.Rev() != "" && len(settings.M) > 2 // _id and _rev
 	return settings, needUpdate
 }
 
@@ -1052,24 +1054,41 @@ func Patch(i *Instance, opts *Options) error {
 	if settingsUpdate {
 		oldSettings, err := i.SettingsDocument()
 		update := false
+
+		// Make a copy of settings to progressively remove params and test later
+		// if there is new keys
+		settingsU := make(map[string]interface{}, len(settings.M))
+		for k, v := range settings.M {
+			settingsU[k] = v
+		}
+
 		if err == nil {
 			old := oldSettings.M["email"]
 			new := settings.M["email"]
 			if old != new {
 				clouderyChanges["email"] = new
+				delete(settingsU, "email")
 				update = true
 			}
 			old = oldSettings.M["public_name"]
 			new = settings.M["public_name"]
 			if old != new {
 				clouderyChanges["public_name"] = new
+				delete(settingsU, "public_name")
 				update = true
 			}
 			old = oldSettings.M["tz"]
 			new = settings.M["tz"]
 			if old != new {
+				delete(settingsU, "tz")
 				update = true
 			}
+
+			// Check new params to update
+			if len(settingsU) > 2 { // _id and _rev attributes
+				update = true
+			}
+
 		}
 		if update {
 			if err := couchdb.UpdateDoc(i, settings); err != nil {
