@@ -7,6 +7,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
+	"github.com/cozy/echo/middleware"
 )
 
 type authType int
@@ -62,8 +63,9 @@ func proxyListReq(c echo.Context) error {
 
 // Routes sets the routing for the registry
 func Routes(router *echo.Group) {
-	router.GET("", proxyListReq)
-	router.GET("/", proxyListReq)
+	gzip := middleware.Gzip()
+	router.GET("", proxyListReq, gzip)
+	router.GET("/", proxyListReq, gzip)
 	router.GET("/:app", proxyReq(perms, false, registry.WithCache))
 	router.GET("/:app/icon", proxyReq(authed, false, registry.NoCache))
 	router.GET("/:app/partnership_icon", proxyReq(authed, false, registry.NoCache))
