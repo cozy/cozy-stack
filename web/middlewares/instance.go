@@ -51,6 +51,8 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 				return c.Render(http.StatusServiceUnavailable, "instance_blocked.html", echo.Map{
 					"Domain":      i.ContextualDomain(),
 					"ContextName": i.ContextName,
+					"Locale":      i.Locale,
+					"ThemeCSS":    ThemeCSS(i),
 					"Reason":      instance.BlockedLoginFailed.Message,
 				})
 			}
@@ -77,6 +79,8 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 				return c.Render(returnCode, "instance_blocked.html", echo.Map{
 					"Domain":      i.ContextualDomain(),
 					"ContextName": i.ContextName,
+					"Locale":      i.Locale,
+					"ThemeCSS":    ThemeCSS(i),
 					"Reason":      reason,
 				})
 			}

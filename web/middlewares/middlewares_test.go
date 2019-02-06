@@ -1,9 +1,10 @@
-package middlewares
+package middlewares_test
 
 import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,24 +14,24 @@ func TestSplitHost(t *testing.T) {
 	was := cfg.Subdomains
 	defer func() { cfg.Subdomains = was }()
 
-	host, app, siblings := SplitHost("localhost")
+	host, app, siblings := middlewares.SplitHost("localhost")
 	assert.Equal(t, "localhost", host)
 	assert.Equal(t, "", app)
 	assert.Equal(t, "", siblings)
 
 	cfg.Subdomains = config.NestedSubdomains
-	host, app, siblings = SplitHost("calendar.joe.example.net")
+	host, app, siblings = middlewares.SplitHost("calendar.joe.example.net")
 	assert.Equal(t, "joe.example.net", host)
 	assert.Equal(t, "calendar", app)
 	assert.Equal(t, "*.joe.example.net", siblings)
 
 	cfg.Subdomains = config.FlatSubdomains
-	host, app, siblings = SplitHost("joe-calendar.example.net")
+	host, app, siblings = middlewares.SplitHost("joe-calendar.example.net")
 	assert.Equal(t, "joe.example.net", host)
 	assert.Equal(t, "calendar", app)
 	assert.Equal(t, "*.example.net", siblings)
 
-	host, app, siblings = SplitHost("joe.example.net")
+	host, app, siblings = middlewares.SplitHost("joe.example.net")
 	assert.Equal(t, "joe.example.net", host)
 	assert.Equal(t, "", app)
 	assert.Equal(t, "", siblings)

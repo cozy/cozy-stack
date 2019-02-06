@@ -43,9 +43,6 @@ const (
 	assetsExtPrefix = "/assets/ext"
 )
 
-// FuncsMap is a the helper functions used in templates
-var FuncsMap template.FuncMap
-
 // AssetRenderer is an interface for both a template renderer and an asset HTTP
 // handler.
 type AssetRenderer interface {
@@ -82,14 +79,14 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 
 	t := template.New("stub")
 	h := http.StripPrefix(assetsPrefix, http.FileServer(dir(assetsPath)))
-	FuncsMap = template.FuncMap{
+	middlewares.FuncsMap = template.FuncMap{
 		"t":     fmt.Sprintf,
 		"split": strings.Split,
 		"asset": assetPath,
 	}
 
 	var err error
-	t, err = t.Funcs(FuncsMap).ParseFiles(list...)
+	t, err = t.Funcs(middlewares.FuncsMap).ParseFiles(list...)
 	if err != nil {
 		return nil, fmt.Errorf("Can't load the assets from %q: %s", assetsPath, err)
 	}
@@ -102,14 +99,14 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 func NewRenderer() (AssetRenderer, error) {
 	t := template.New("stub")
 
-	FuncsMap = template.FuncMap{
+	middlewares.FuncsMap = template.FuncMap{
 		"t":     fmt.Sprintf,
 		"split": strings.Split,
 		"asset": AssetPath,
 	}
 
 	for _, name := range templatesList {
-		tmpl := t.New(name).Funcs(FuncsMap)
+		tmpl := t.New(name).Funcs(middlewares.FuncsMap)
 		f, err := fs.Open("/templates/" + name)
 		if err != nil {
 			return nil, fmt.Errorf("Can't load asset %q: %s", name, err)

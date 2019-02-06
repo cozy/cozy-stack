@@ -949,7 +949,7 @@ func TestMain(m *testing.M) {
 	web.LoadSupportedLocales()
 	testutils.NeedCouchdb()
 	render, _ := statik.NewDirRenderer("../../assets")
-	auth.BuildTemplates()
+	middlewares.BuildTemplates()
 
 	// Prepare Alice's instance
 	setup := testutils.NewSetup(m, "sharing_test_alice")
