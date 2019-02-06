@@ -187,6 +187,7 @@ func TestInstanceHasIndexes(t *testing.T) {
 
 func TestBuildAppToken(t *testing.T) {
 	manifest := &apps.WebappManifest{
+		DocID:   consts.Apps + "/my-app",
 		DocSlug: "my-app",
 	}
 	i := &instance.Instance{

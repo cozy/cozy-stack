@@ -15,6 +15,7 @@ import (
 // KonnManifest contains all the informations associated with an installed
 // konnector.
 type KonnManifest struct {
+	DocID  string `json:"_id,omitempty"`
 	DocRev string `json:"_rev,omitempty"`
 
 	Name       string `json:"name"`
@@ -70,7 +71,7 @@ type KonnManifest struct {
 }
 
 // ID is part of the Manifest interface
-func (m *KonnManifest) ID() string { return m.DocType() + "/" + m.DocSlug }
+func (m *KonnManifest) ID() string { return m.DocID }
 
 // Rev is part of the Manifest interface
 func (m *KonnManifest) Rev() string { return m.DocRev }
@@ -114,7 +115,7 @@ func (m *KonnManifest) Clone() couchdb.Doc {
 }
 
 // SetID is part of the Manifest interface
-func (m *KonnManifest) SetID(id string) {}
+func (m *KonnManifest) SetID(id string) { m.DocID = id }
 
 // SetRev is part of the Manifest interface
 func (m *KonnManifest) SetRev(rev string) { m.DocRev = rev }
@@ -194,7 +195,7 @@ func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Manife
 		return nil, ErrBadManifest
 	}
 
-	newManifest.SetID(m.ID())
+	newManifest.SetID(consts.Konnectors + "/" + slug)
 	newManifest.SetRev(m.Rev())
 	newManifest.SetState(m.State())
 	newManifest.CreatedAt = m.CreatedAt
@@ -209,6 +210,7 @@ func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Manife
 
 // Create is part of the Manifest interface
 func (m *KonnManifest) Create(db prefixer.Prefixer) error {
+	m.DocID = consts.Konnectors + "/" + m.DocSlug
 	m.CreatedAt = time.Now()
 	m.UpdatedAt = time.Now()
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {

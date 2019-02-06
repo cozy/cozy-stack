@@ -1272,7 +1272,10 @@ func TestLogoutNoToken(t *testing.T) {
 }
 
 func TestLogoutSuccess(t *testing.T) {
-	a := app.WebappManifest{DocSlug: "home"}
+	a := app.WebappManifest{
+		DocID:   consts.Apps + "/home",
+		DocSlug: "home",
+	}
 	token := testInstance.BuildAppToken(&a, getSessionID(jar.Cookies(nil)))
 	permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
@@ -1331,7 +1334,10 @@ func TestLogoutOthers(t *testing.T) {
 	cookies2 := res2.Cookies()
 	assert.Len(t, cookies2, 2)
 
-	a := app.WebappManifest{DocSlug: "home"}
+	a := app.WebappManifest{
+		DocID:   consts.Apps + "/home",
+		DocSlug: "home",
+	}
 	token := testInstance.BuildAppToken(&a, getSessionID(cookies1))
 	permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
 

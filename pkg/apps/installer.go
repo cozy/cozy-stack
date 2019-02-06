@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -195,9 +196,15 @@ func initManifest(db prefixer.Prefixer, opts *InstallerOptions) (man Manifest, e
 		}
 		switch opts.Type {
 		case Webapp:
-			man = &WebappManifest{DocSlug: slug}
+			man = &WebappManifest{
+				DocID:   consts.Apps + "/" + slug,
+				DocSlug: slug,
+			}
 		case Konnector:
-			man = &KonnManifest{DocSlug: slug}
+			man = &KonnManifest{
+				DocID:   consts.Konnectors + "/" + slug,
+				DocSlug: slug,
+			}
 		}
 	} else {
 		man, err = GetBySlug(db, slug, opts.Type)

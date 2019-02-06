@@ -1075,6 +1075,7 @@ func generateAppToken(inst *instance.Instance, slug string) string {
 		return ""
 	}
 	manifest := &apps.WebappManifest{
+		DocID:          consts.Apps + "/" + slug,
 		DocSlug:        slug,
 		DocPermissions: rules,
 	}
