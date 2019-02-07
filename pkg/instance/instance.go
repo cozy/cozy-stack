@@ -674,7 +674,7 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 		locale = DefaultLocale
 	}
 
-	settings, _ := buildSettings(opts)
+	settings := buildSettings(opts)
 	prefix := sha256.Sum256([]byte(domain))
 	i := new(Instance)
 	i.Domain = domain
@@ -852,7 +852,7 @@ func Get(domain string) (*Instance, error) {
 	return i, nil
 }
 
-func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
+func buildSettings(opts *Options) *couchdb.JSONDoc {
 	var settings *couchdb.JSONDoc
 	if opts.SettingsObj != nil {
 		settings = opts.SettingsObj
@@ -869,6 +869,7 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 		}
 	}
 
+	// Handling global/instance settings
 	if contextName, ok := settings.M["context"].(string); ok {
 		opts.ContextName = contextName
 		delete(settings.M, "context")
@@ -904,6 +905,7 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 		delete(settings.M, "auth_mode")
 	}
 
+	// Handling instance settings document
 	if tz := opts.Timezone; tz != "" {
 		settings.M["tz"] = tz
 	}
@@ -918,15 +920,14 @@ func buildSettings(opts *Options) (*couchdb.JSONDoc, bool) {
 		opts.TOSSigned = "1.0.0-" + opts.TOSSigned
 	}
 
-	needUpdate := settings.Rev() != "" && len(settings.M) > 1
-	return settings, needUpdate
+	return settings
 }
 
 // Patch updates the given instance with the specified options if necessary. It
 // can also update the settings document if provided in the options.
 func Patch(i *Instance, opts *Options) error {
 	opts.Domain = i.Domain
-	settings, settingsUpdate := buildSettings(opts)
+	settings := buildSettings(opts)
 
 	clouderyChanges := make(map[string]interface{})
 
@@ -1049,31 +1050,19 @@ func Patch(i *Instance, opts *Options) error {
 		break
 	}
 
-	if settingsUpdate {
-		oldSettings, err := i.SettingsDocument()
-		update := false
-		if err == nil {
-			old := oldSettings.M["email"]
-			new := settings.M["email"]
-			if old != new {
-				clouderyChanges["email"] = new
-				update = true
-			}
-			old = oldSettings.M["public_name"]
-			new = settings.M["public_name"]
-			if old != new {
-				clouderyChanges["public_name"] = new
-				update = true
-			}
-			old = oldSettings.M["tz"]
-			new = settings.M["tz"]
-			if old != new {
-				update = true
-			}
+	// Update the settings doc
+	if ok, err := i.needsSettingsUpdate(settings.M); settings.Rev() != "" && err == nil && ok {
+		if err := couchdb.UpdateDoc(i, settings); err != nil {
+			return err
 		}
-		if update {
-			if err := couchdb.UpdateDoc(i, settings); err != nil {
-				return err
+
+		if err == nil {
+			clouderyUpdateKeys := []string{"email", "public_name"}
+
+			for _, key := range clouderyUpdateKeys {
+				if v, ok := settings.M[key]; ok {
+					clouderyChanges[key] = v
+				}
 			}
 		}
 	}
@@ -1093,6 +1082,37 @@ func Patch(i *Instance, opts *Options) error {
 	i.managerUpdateSettings(clouderyChanges)
 
 	return nil
+}
+
+// needsSettingsUpdate compares the old instance io.cozy.settings with the new
+// bunch of settings and tells if it needs an update
+func (i *Instance) needsSettingsUpdate(newSettings map[string]interface{}) (bool, error) {
+	oldSettings, err := i.SettingsDocument()
+
+	if err != nil {
+		return false, err
+	}
+
+	for k, newValue := range newSettings {
+		if k == "_id" || k == "_rev" {
+			continue
+		}
+		// Check if we have the key in old settings and the value is different,
+		// or if we don't have the key at all
+		if oldValue, ok := oldSettings.M[k]; !ok || oldValue != newValue {
+			return true, nil
+		}
+	}
+
+	// Handles if a key was removed in the new settings but exists in the old
+	// settings, and therefore needs an update
+	for oldKey := range oldSettings.M {
+		if _, ok := newSettings[oldKey]; !ok {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func checkAliases(i *Instance, aliases []string) ([]string, error) {
