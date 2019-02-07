@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -516,6 +517,151 @@ func TestRedirectOnboardingSecret(t *testing.T) {
 
 	values := loc.Query()
 	assert.Equal(t, values.Get("redirect_uri"), deeplink)
+}
+
+func TestPatchInstanceSameParams(t *testing.T) {
+	doc1, err := testInstance.SettingsDocument()
+	assert.NoError(t, err)
+
+	body := `{
+			"data": {
+				"type": "io.cozy.settings",
+				"id": "io.cozy.settings.instance",
+				"meta": {
+					"rev": "%s"
+				},
+				"attributes": {
+					"tz": "Europe/London",
+					"email": "alice@example.org",
+					"locale": "en"
+				}
+			}
+		}`
+	body = fmt.Sprintf(body, doc1.Rev())
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	content, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, content)
+
+	doc2, err := testInstance.SettingsDocument()
+	assert.NoError(t, err)
+	// Assert no changes
+	assert.Equal(t, doc1.Rev(), doc2.Rev())
+}
+func TestPatchInstanceChangeParams(t *testing.T) {
+	doc, err := testInstance.SettingsDocument()
+	assert.NoError(t, err)
+
+	body := `{
+			"data": {
+				"type": "io.cozy.settings",
+				"id": "io.cozy.settings.instance",
+				"meta": {
+					"rev": "%s"
+				},
+				"attributes": {
+					"tz": "Antarctica/McMurdo",
+					"email": "alice@expat.eu",
+					"locale": "de"
+				}
+			}
+		}`
+	body = fmt.Sprintf(body, doc.Rev())
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	content, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, content)
+
+	doc, err = testInstance.SettingsDocument()
+	assert.NoError(t, err)
+
+	assert.Equal(t, "Antarctica/McMurdo", doc.M["tz"].(string))
+	assert.Equal(t, "alice@expat.eu", doc.M["email"].(string))
+}
+
+func TestPatchInstanceAddParam(t *testing.T) {
+	doc1, err := testInstance.SettingsDocument()
+	assert.NoError(t, err)
+
+	body := `{
+			"data": {
+				"type": "io.cozy.settings",
+				"id": "io.cozy.settings.instance",
+				"meta": {
+					"rev": "%s"
+				},
+				"attributes": {
+					"tz": "Europe/Berlin",
+					"email": "alice@example.com",
+					"how_old_are_you": "42"
+				}
+			}
+		}`
+	body = fmt.Sprintf(body, doc1.Rev())
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	content, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, content)
+
+	doc2, err := testInstance.SettingsDocument()
+	assert.NoError(t, err)
+	assert.NotEqual(t, doc1.Rev(), doc2.Rev())
+	assert.Equal(t, "42", doc2.M["how_old_are_you"].(string))
+	assert.Equal(t, "Europe/Berlin", doc2.M["tz"].(string))
+	assert.Equal(t, "alice@example.com", doc2.M["email"].(string))
+}
+func TestPatchInstanceRemoveParams(t *testing.T) {
+	doc1, err := testInstance.SettingsDocument()
+	assert.NoError(t, err)
+
+	body := `{
+			"data": {
+				"type": "io.cozy.settings",
+				"id": "io.cozy.settings.instance",
+				"meta": {
+					"rev": "%s"
+				},
+				"attributes": {
+					"tz": "Europe/Berlin"
+				}
+			}
+		}`
+	body = fmt.Sprintf(body, doc1.Rev())
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	content, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, content)
+
+	doc2, err := testInstance.SettingsDocument()
+	assert.NoError(t, err)
+	assert.NotEqual(t, doc1.Rev(), doc2.Rev())
+	assert.Equal(t, "Europe/Berlin", doc2.M["tz"].(string))
+	_, ok := doc2.M["email"]
+	assert.False(t, ok)
 }
 
 func TestMain(m *testing.M) {
