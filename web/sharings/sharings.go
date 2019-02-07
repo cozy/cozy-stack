@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -506,7 +505,7 @@ func RevokeRecipientBySelf(c echo.Context) error {
 
 func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL string) error {
 	return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-		"ThemeCSS":    auth.ThemeCSS(inst),
+		"ThemeCSS":    middlewares.ThemeCSS(inst),
 		"Domain":      inst.ContextualDomain(),
 		"ContextName": inst.ContextName,
 		"ErrorTitle":  "Error Sharing already accepted Title",
@@ -519,7 +518,7 @@ func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL stri
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state, sharecode string, m *sharing.Member) error {
 	publicName, _ := inst.PublicName()
 	return c.Render(code, "sharing_discovery.html", echo.Map{
-		"ThemeCSS":      auth.ThemeCSS(inst),
+		"ThemeCSS":      middlewares.ThemeCSS(inst),
 		"Domain":        inst.ContextualDomain(),
 		"ContextName":   inst.ContextName,
 		"Locale":        inst.Locale,
@@ -544,7 +543,7 @@ func GetDiscovery(c echo.Context) error {
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"ThemeCSS":    auth.ThemeCSS(inst),
+			"ThemeCSS":    middlewares.ThemeCSS(inst),
 			"Domain":      inst.ContextualDomain(),
 			"ContextName": inst.ContextName,
 			"Error":       "Error Invalid sharing",
@@ -560,7 +559,7 @@ func GetDiscovery(c echo.Context) error {
 		}
 		if err != nil || m.Status == sharing.MemberStatusRevoked {
 			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"ThemeCSS":    auth.ThemeCSS(inst),
+				"ThemeCSS":    middlewares.ThemeCSS(inst),
 				"Domain":      inst.ContextualDomain(),
 				"ContextName": inst.ContextName,
 				"Error":       "Error Invalid sharing",

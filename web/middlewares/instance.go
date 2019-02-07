@@ -48,7 +48,13 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 		if i.CheckInstanceBlocked() {
 			// Standard checks
 			if i.BlockingReason == instance.BlockedLoginFailed.Code {
-				return echo.NewHTTPError(http.StatusServiceUnavailable, instance.BlockedLoginFailed.Message)
+				return c.Render(http.StatusServiceUnavailable, "instance_blocked.html", echo.Map{
+					"Domain":      i.ContextualDomain(),
+					"ContextName": i.ContextName,
+					"Locale":      i.Locale,
+					"ThemeCSS":    ThemeCSS(i),
+					"Reason":      instance.BlockedLoginFailed.Message,
+				})
 			}
 
 			if url, _ := i.ManagerURL(instance.ManagerBlockedURL); url != "" && IsLoggedIn(c) {
@@ -70,7 +76,13 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 			case jsonapi.ContentType, echo.MIMEApplicationJSON:
 				return c.JSON(returnCode, i.Warnings())
 			default:
-				return echo.NewHTTPError(returnCode, reason)
+				return c.Render(returnCode, "instance_blocked.html", echo.Map{
+					"Domain":      i.ContextualDomain(),
+					"ContextName": i.ContextName,
+					"Locale":      i.Locale,
+					"ThemeCSS":    ThemeCSS(i),
+					"Reason":      reason,
+				})
 			}
 		}
 		return next(c)

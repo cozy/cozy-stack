@@ -94,6 +94,7 @@ func TestInstanceBlocked(t *testing.T) {
 	body, err := ioutil.ReadAll(res2.Body)
 	assert.NoError(t, err)
 	assert.Contains(t, string(body), "<title>Cozy</title>")
+	assert.Contains(t, string(body), "<h1>Your Cozy has been blocked</h1>")
 
 	// Unblock the instance
 	testInstance.Blocked = false

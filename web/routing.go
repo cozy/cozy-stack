@@ -98,7 +98,7 @@ func SetupAssets(router *echo.Echo, assetsPath string) (err error) {
 	if err != nil {
 		return err
 	}
-	auth.BuildTemplates()
+	middlewares.BuildTemplates()
 	apps.BuildTemplates()
 
 	cacheControl := middlewares.CacheControl(middlewares.CacheOptions{
