@@ -45,7 +45,12 @@
     <div role="application">
       <main class="wizard">
         <form id="login-form" method="POST" action="/auth/login" class="wizard-wrapper">
-          <header class="wizard-header">
+          <div role="region" class="wizard-main" id="login-field">
+            {{if .CredentialsError}}
+            <p class="wizard-errors u-error">
+              {{.CredentialsError}}
+            </p>
+            {{end}}
             <div class="c-avatar u-mh-auto u-mv-0">
               <img class="c-avatar-image" src="/public/avatar" alt="" />
             </div>
@@ -53,13 +58,6 @@
             <h1 class="wizard-title two-factor-form {{if not .TwoFactorForm}} u-hide{{end}}">{{t "Login Two factor title"}}</h1>
             <h2 class="password-form wizard-subtitle u-coolGrey">{{.Domain}}</h2>
             <p class="two-factor-form wizard-header-help {{if not .TwoFactorForm}} u-hide{{end}}" id="login-two-factor-passcode-tip">{{t "Login Two factor help"}}</p>
-          </header>
-          <div role="region" class="wizard-main" id="login-field">
-            {{if .CredentialsError}}
-            <p class="wizard-errors u-error">
-              {{.CredentialsError}}
-            </p>
-            {{end}}
             <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
             <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
             {{if not .TwoFactorForm}}
@@ -78,7 +76,7 @@
                   </svg>
                 </span>
               </button>
-              <input id="password" class="wizard-password c-input-text" name="passphrase" type="password" autofocus autocomplete="current-password" />
+              <input id="password" class="wizard-input c-input-text" name="passphrase" type="password" autofocus autocomplete="current-password" />
             </div>
             <p class="password-form wizard-notice wizard-notice--lost"><a href="/auth/passphrase_reset">{{t "Login Forgot password"}}</a></p>
             {{if not .OAuth}}
@@ -97,7 +95,7 @@
             <input id="two-factor-token" type="hidden" name="two-factor-token" value="{{.TwoFactorToken}}" />
             <div class="o-field u-m-0 two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">
               <label for="two-factor-passcode" class="c-label" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
-              <input id="two-factor-passcode" class="wizard-password c-input-text" name="two-factor-passcode" type="text" pattern="[0-9]*" inputmode="numeric" maxlength="6" autofocus autocomplete="current-password" />
+              <input id="two-factor-passcode" class="wizard-input c-input-text" name="two-factor-passcode" type="text" pattern="[0-9]*" inputmode="numeric" maxlength="6" autofocus autocomplete="current-password" />
             </div>
             {{if not .OAuth}}
             <p class="wizard-notice two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">
