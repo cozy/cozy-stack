@@ -151,7 +151,7 @@ be improved.
 
 The Cozy Stack is translated on a platform called
 [Transifex](https://www.transifex.com/cozy/).
-[This tutorial](http://docs.transifex.com/getting-started/translators/) can help
+[This tutorial](https://docs.transifex.com/getting-started-1/translators) can help
 you to learn how to make your first steps here. If you have any question, don't
 hesitate to ask us!
 
