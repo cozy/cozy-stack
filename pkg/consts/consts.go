@@ -29,7 +29,7 @@ const (
 	Intents = "io.cozy.intents"
 	// Jobs doc type for queued jobs
 	Jobs = "io.cozy.jobs"
-	// JobEvents doc type for realt time events sent by jobs
+	// JobEvents doc type for real time events sent by jobs
 	JobEvents = "io.cozy.jobs.events"
 	// Notifications doc type for notifications
 	Notifications = "io.cozy.notifications"
