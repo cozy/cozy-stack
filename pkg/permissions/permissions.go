@@ -213,10 +213,10 @@ func getFromSource(db prefixer.Prefixer, permType, docType, slug string) (*Permi
 	}
 	err := couchdb.FindDocs(db, consts.Permissions, &req, &res)
 	if err != nil {
-		// FIXME https://issues.apache.org/jira/browse/COUCHDB-3336
 		// With a cluster of couchdb, we can have a race condition where we
 		// query an index before it has been updated for an app that has
 		// just been created.
+		// Cf https://issues.apache.org/jira/browse/COUCHDB-3336
 		time.Sleep(1 * time.Second)
 		err = couchdb.FindDocs(db, consts.Permissions, &req, &res)
 		if err != nil {

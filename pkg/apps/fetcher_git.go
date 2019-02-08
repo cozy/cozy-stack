@@ -408,7 +408,6 @@ func resolveGitlabURL(src *url.URL, filename string) (string, error) {
 }
 
 func resolveManifestURL(src *url.URL, filename string) (string, error) {
-	// TODO check that it works with a branch
 	srccopy, _ := url.Parse(src.String())
 	srccopy.Scheme = "http"
 	if srccopy.Path == "" || srccopy.Path[len(srccopy.Path)-1] != '/' {
