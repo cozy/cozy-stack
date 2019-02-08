@@ -47,7 +47,6 @@ func toInt64(v interface{}) int64 {
 		if tv <= math.MaxInt64 {
 			return int64(tv)
 		}
-		// TODO: What is the sensible thing to do here?
 		return math.MaxInt64
 	case reflect.Float32, reflect.Float64:
 		return int64(val.Float())
