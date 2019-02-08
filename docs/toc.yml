@@ -11,7 +11,7 @@
   - "Working with the stack assets": ./assets.md
   - "Build a release": ./release.md
   - "The contributing guide": ./CONTRIBUTING.md
-- Explanations
+- Explanations:
   - "Sharing design": ./sharing-design.md
   - "Workflow of the konnectors": ./konnectors-workflow.md
 - List of services:
