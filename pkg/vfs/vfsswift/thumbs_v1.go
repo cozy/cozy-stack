@@ -21,8 +21,6 @@ type thumbs struct {
 }
 
 func (t *thumbs) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler, error) {
-	// TODO(optim): proper initialization of the container to avoir having to
-	// recreate it every time.
 	if err := t.c.ContainerCreate(t.container, nil); err != nil {
 		return nil, err
 	}

@@ -831,7 +831,6 @@ func (f *swiftFileOpen) Read(p []byte) (int, error) {
 }
 
 func (f *swiftFileOpen) ReadAt(p []byte, off int64) (int, error) {
-	// TODO find something smarter than keeping the whole file in memory
 	if f.br == nil {
 		buf, err := ioutil.ReadAll(f.f)
 		if err != nil {
