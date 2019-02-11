@@ -229,6 +229,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		"CozyClientJS":  cozyclientjs(i),
 		"ThemeCSS":      themecss(i),
 		"Tracking":      tracking,
+		"Favicon":       favicon(i),
 	})
 }
 
@@ -281,6 +282,7 @@ func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
 var clientTemplate *template.Template
 var barTemplate *template.Template
 var themeTemplate *template.Template
+var faviconTemplate *template.Template
 
 // BuildTemplates ensure that cozy-client-js and the bar can be injected in templates
 func BuildTemplates() {
@@ -302,6 +304,24 @@ func BuildTemplates() {
 	themeTemplate = template.Must(template.New("theme").Funcs(middlewares.FuncsMap).Parse(`
 <link rel="stylesheet" type="text/css" href="{{asset .Domain "/styles/theme.css" .ContextName}}">
 	`))
+
+	faviconTemplate = template.Must(template.New("favicon").Funcs(middlewares.FuncsMap).Parse(`
+<link rel="icon" href="{{asset .Domain "/favicon.ico" .ContextName}}">
+<link rel="icon" type="image/png" href="{{asset .Domain "/favicon-16x16.png" .ContextName}}" sizes="16x16">
+<link rel="icon" type="image/png" href="{{asset .Domain "/favicon-32x32.png" .ContextName}}" sizes="32x32">
+	`))
+}
+
+func favicon(i *instance.Instance) template.HTML {
+	buf := new(bytes.Buffer)
+	err := faviconTemplate.Execute(buf, echo.Map{
+		"Domain":      i.ContextualDomain(),
+		"ContextName": i.ContextName,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return template.HTML(buf.String()) // #nosec
 }
 
 func cozyclientjs(i *instance.Instance) template.HTML {
