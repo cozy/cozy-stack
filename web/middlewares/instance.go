@@ -36,7 +36,7 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 // CheckInstanceBlocked is a middleware that blocks the routing access (for
-// instance if the term- of-services have not been signed and have reach its
+// instance if the term-of-services have not been signed and have reach its
 // deadline)
 func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {

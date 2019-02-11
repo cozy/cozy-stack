@@ -6,6 +6,7 @@ package apps_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -13,11 +14,13 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -116,7 +119,7 @@ func installMiniApp() error {
 	if err != nil {
 		return err
 	}
-	err = createFile(appdir, "index.html", `this is index.html. <a lang="{{.Locale}}" href="https://{{.Domain}}/status/">Status</a>`)
+	err = createFile(appdir, "index.html", `this is index.html. <a lang="{{.Locale}}" href="https://{{.Domain}}/status/">Status</a> {{.Favicon}}`)
 	if err != nil {
 		return err
 	}
@@ -158,7 +161,7 @@ func assertGet(t *testing.T, contentType, content string, res *http.Response) {
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Equal(t, contentType, res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Equal(t, content, string(body))
+	assert.Contains(t, string(body), content)
 }
 
 func assertAuthGet(t *testing.T, path, contentType, content string) {
@@ -278,7 +281,67 @@ func TestServeAppsWithACode(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
 	expected := `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`
-	assert.Equal(t, expected, string(body))
+	assert.Contains(t, string(body), expected)
+}
+
+func TestFaviconWithContext(t *testing.T) {
+	context := "foo"
+
+	asset, ok := fs.Get("/favicon-32x32.png", context)
+	if ok {
+		fs.DeleteAsset(asset)
+	}
+	// Create and insert an asset in foo context
+	tmpdir := os.TempDir()
+	_, err := os.OpenFile(filepath.Join(tmpdir, "custom_favicon.png"), os.O_RDWR|os.O_CREATE, 0600)
+	assert.NoError(t, err)
+
+	cacheStorage := config.GetConfig().CacheStorage
+	assetsOptions := []fs.AssetOption{{
+		URL:     fmt.Sprintf("file://%s", filepath.Join(tmpdir, "custom_favicon.png")),
+		Name:    "/favicon-32x32.png",
+		Context: context,
+	}}
+	err = fs.RegisterCustomExternals(cacheStorage, assetsOptions, 1)
+	assert.NoError(t, err)
+
+	// Test the theme
+	instance.Patch(testInstance, &instance.Options{
+		ContextName: context,
+	})
+	assert.NoError(t, err)
+
+	config.GetConfig().Subdomains = config.FlatSubdomains
+	appHost := "cozywithapps-mini.example.net"
+	appURL, _ := url.Parse("https://" + appHost + "/")
+	j, _ := cookiejar.New(nil)
+	ja := &testutils.CookieJar{Jar: j, URL: appURL}
+	c := &http.Client{Jar: ja, CheckRedirect: noRedirect}
+
+	longRunSession := true
+	session, _ := sessions.New(testInstance, longRunSession)
+	code := sessions.BuildCode(session.ID(), appHost)
+
+	req, _ := http.NewRequest("GET", ts.URL+"/foo?code="+code.Value, nil)
+	req.Host = appHost
+	res, err := c.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 302, res.StatusCode)
+	cookies := res.Cookies()
+	assert.Len(t, cookies, 1)
+	assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
+	assert.NotEmpty(t, cookies[0].Value)
+
+	req, _ = http.NewRequest("GET", ts.URL+"/foo", nil)
+	req.Host = appHost
+	res, err = c.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	body, _ := ioutil.ReadAll(res.Body)
+	expected := `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`
+	assert.Contains(t, string(body), expected)
+	assert.Contains(t, string(body), fmt.Sprintf("/assets/ext/%s/favicon-32x32.png", context))
+	assert.NotContains(t, string(body), "/assets/favicon-32x32.png")
 }
 
 func TestServeAppsWithJWTNotLogged(t *testing.T) {
