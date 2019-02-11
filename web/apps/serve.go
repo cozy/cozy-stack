@@ -309,6 +309,7 @@ func BuildTemplates() {
 <link rel="icon" href="{{asset .Domain "/favicon.ico" .ContextName}}">
 <link rel="icon" type="image/png" href="{{asset .Domain "/favicon-16x16.png" .ContextName}}" sizes="16x16">
 <link rel="icon" type="image/png" href="{{asset .Domain "/favicon-32x32.png" .ContextName}}" sizes="32x32">
+<link rel="apple-touch-icon" sizes="180x180" href="{{asset .Domain "/apple-touch-icon.png" .ContextName}}"/>
 	`))
 }
 
