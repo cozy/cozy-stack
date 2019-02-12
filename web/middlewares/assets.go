@@ -9,11 +9,12 @@ import (
 )
 
 // FuncsMap is a the helper functions used in templates.
-// It is filled in wen/statik but declared here to avoid circular imports.
+// It is filled in web/statik but declared here to avoid circular imports.
 var FuncsMap template.FuncMap
 
 var cozyUITemplate *template.Template
 var themeTemplate *template.Template
+var faviconTemplate *template.Template
 
 // BuildTemplates ensure that the cozy-ui can be injected in templates
 func BuildTemplates() {
@@ -23,6 +24,12 @@ func BuildTemplates() {
 	themeTemplate = template.Must(template.New("theme").Funcs(FuncsMap).Parse(`` +
 		`<link rel="stylesheet" type="text/css" href="{{asset .Domain "/styles/theme.css" .ContextName}}">`,
 	))
+	faviconTemplate = template.Must(template.New("favicon").Funcs(FuncsMap).Parse(`
+	<link rel="icon" href="{{asset .Domain "/favicon.ico" .ContextName}}">
+	<link rel="icon" type="image/png" href="{{asset .Domain "/favicon-16x16.png" .ContextName}}" sizes="16x16">
+	<link rel="icon" type="image/png" href="{{asset .Domain "/favicon-32x32.png" .ContextName}}" sizes="32x32">
+	<link rel="apple-touch-icon" sizes="180x180" href="{{asset .Domain "/apple-touch-icon.png" .ContextName}}"/>
+		`))
 }
 
 func CozyUI(i *instance.Instance) template.HTML {
@@ -42,6 +49,18 @@ func CozyUI(i *instance.Instance) template.HTML {
 func ThemeCSS(i *instance.Instance) template.HTML {
 	buf := new(bytes.Buffer)
 	err := themeTemplate.Execute(buf, echo.Map{
+		"Domain":      i.ContextualDomain(),
+		"ContextName": i.ContextName,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return template.HTML(buf.String()) // #nosec
+}
+
+func Favicon(i *instance.Instance) template.HTML {
+	buf := new(bytes.Buffer)
+	err := faviconTemplate.Execute(buf, echo.Map{
 		"Domain":      i.ContextualDomain(),
 		"ContextName": i.ContextName,
 	})
