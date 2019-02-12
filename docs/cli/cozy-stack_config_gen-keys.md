@@ -5,8 +5,7 @@ Generate an key pair for encryption and decryption of credentials
 ### Synopsis
 
 
-cozy-stack config gen-keys generate a key-pair and save them in the
-specified path.
+cozy-stack config gen-keys generate a key-pair and save them in the specified path.
 
 The decryptor key filename is given the ".dec" extension suffix.
 The encryptor key filename is given the ".enc" extension suffix.

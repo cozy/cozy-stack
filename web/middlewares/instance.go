@@ -46,14 +46,15 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 			return next(c)
 		}
 		if i.CheckInstanceBlocked() {
+			returnCode := http.StatusServiceUnavailable
 			// Standard checks
 			if i.BlockingReason == instance.BlockedLoginFailed.Code {
-				return c.Render(http.StatusServiceUnavailable, "instance_blocked.html", echo.Map{
+				return c.Render(returnCode, "instance_blocked.html", echo.Map{
 					"Domain":      i.ContextualDomain(),
 					"ContextName": i.ContextName,
 					"Locale":      i.Locale,
 					"ThemeCSS":    ThemeCSS(i),
-					"Reason":      instance.BlockedLoginFailed.Message,
+					"Reason":      i.Translate(instance.BlockedLoginFailed.Message),
 				})
 			}
 
@@ -63,12 +64,12 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 
 			// Fallback by trying to determine the blocking reason
 			reason := i.BlockingReason
-			returnCode := http.StatusPaymentRequired
 
 			if reason == "" {
-				reason = http.StatusText(http.StatusPaymentRequired)
+				reason = i.Translate(instance.BlockedUnknown.Message)
 			} else if reason == instance.BlockedPaymentFailed.Code {
-				reason = instance.BlockedPaymentFailed.Message
+				returnCode = http.StatusPaymentRequired
+				reason = i.Translate(instance.BlockedPaymentFailed.Message)
 			}
 
 			contentType := AcceptedContentType(c)
