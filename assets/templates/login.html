@@ -51,7 +51,7 @@
               {{.CredentialsError}}
             </p>
             {{end}}
-            <div class="c-avatar u-mh-auto u-mv-0">
+            <div class="c-avatar u-mh-auto u-mt-1">
               <img class="c-avatar-image" src="/public/avatar" alt="" />
             </div>
             <h1 class="wizard-title password-form">{{.Title}}</h1>
@@ -111,7 +111,7 @@
             <p class="help two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}" id="login-two-factor-trust-device-tip">{{t "Login Two factor device trust help"}}</p>
             -->
           </div>
-          <footer class="wizard-footer u-m-half">
+          <footer class="wizard-footer u-pb-half">
             <button id="login-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">
               <span class="password-form">{{t "Login Submit"}}</span>
               <span class="two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">{{t "Login Confirm"}}</span>
