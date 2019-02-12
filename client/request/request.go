@@ -17,9 +17,10 @@ import (
 const defaultUserAgent = "go-cozy-client"
 
 // defaultClient is the client used by default to access the stack. We avoid
-// the use of http.DefaultClient which does not have any timeout.
+// the use of http.DefaultClient which does not have a timeout for awaiting
+// HTTP headers.
 var defaultClient = &http.Client{
-	Timeout: 15 * time.Second,
+	Timeout: 60 * time.Second,
 }
 
 type (
