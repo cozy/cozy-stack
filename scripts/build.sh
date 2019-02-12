@@ -60,7 +60,7 @@ usage() {
 # SHA256 checksum of the binary is also generated in a file named
 # "cozy-stack-${VERSION_STRING}.sha256".
 do_release() {
-	do_assets
+	#do_assets
 	do_build
 
 	openssl dgst -sha256 -hex "${BINARY}" > "${BINARY}.sha256"
