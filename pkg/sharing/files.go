@@ -184,7 +184,7 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		if err != nil {
 			return nil, err
 		}
-		children, err := fs.DirBatch(dir, &couchdb.SkipCursor{})
+		children, err := fs.DirBatch(dir, couchdb.NewSkipCursor(0, 0))
 		if err != nil {
 			return nil, err
 		}
@@ -331,7 +331,7 @@ func (s *Sharing) GetNoLongerSharedDir(inst *instance.Instance) (*vfs.DirDoc, er
 		if err != nil {
 			return nil, err
 		}
-		children, err := fs.DirBatch(dir, &couchdb.SkipCursor{})
+		children, err := fs.DirBatch(dir, couchdb.NewSkipCursor(0, 0))
 		if err != nil {
 			return nil, err
 		}
