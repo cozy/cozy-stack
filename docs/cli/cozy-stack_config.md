@@ -4,9 +4,7 @@ Show and manage configuration elements
 
 ### Synopsis
 
-
 cozy-stack config allows to print and generate some parts of the configuration
-
 
 ### Options
 
