@@ -68,6 +68,7 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 			if reason == "" {
 				reason = i.Translate(instance.BlockedUnknown.Message)
 			} else if reason == instance.BlockedPaymentFailed.Code {
+				returnCode = http.StatusPaymentRequired
 				reason = i.Translate(instance.BlockedPaymentFailed.Message)
 			}
 
