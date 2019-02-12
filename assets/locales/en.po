@@ -254,6 +254,15 @@ msgstr "Please contact us at"
 msgid "Error Message instance blocked"
 msgstr "Your Cozy has been blocked"
 
+msgid "Instance Blocked Login"
+msgstr "The Cozy was blocked because of too many login attempts"
+
+msgid "Instance Blocked Payment"
+msgstr "The Cozy requires a payment"
+
+msgid "Instance Blocked Unknown"
+msgstr "The Cozy is blocked for an unknown reason"
+
 msgid "Error No state parameter"
 msgstr "The state parameter is mandatory"
 
