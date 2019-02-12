@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -420,6 +421,15 @@ var linkedAppFixer = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return cmd.Usage()
+		}
+		if err := config.Setup(cfgFile); err != nil {
+			return err
+		}
+		if config.FsURL().Scheme == config.SchemeSwift ||
+			config.FsURL().Scheme == config.SchemeSwiftSecure {
+			if err := config.InitSwiftConnection(config.GetConfig().Fs); err != nil {
+				return err
+			}
 		}
 		domain := args[0]
 		i, err := instance.Get(domain)
