@@ -494,9 +494,9 @@ func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 	for _, obj := range orphansObjs {
 		if obj.ContentType == dirContentType {
 			accumulate(&vfs.FsckLog{
-				Type:    vfs.IndexMissing,
-				IsFile:  false,
-				FileDoc: objectToFileDocV1(sfs.container, obj),
+				Type:   vfs.IndexMissing,
+				IsFile: false,
+				DirDoc: objectToFileDocV1(sfs.container, obj),
 			})
 		} else {
 			accumulate(&vfs.FsckLog{
