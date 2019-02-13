@@ -477,7 +477,7 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 	if index <= 1 {
 		return ErrMemberNotFound
 	}
-	if s.ReadOnly() {
+	if s.ReadOnlyFlag() {
 		return ErrInvalidSharing
 	}
 	if s.Members[index].ReadOnly {
@@ -625,7 +625,7 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 	if index <= 1 {
 		return ErrMemberNotFound
 	}
-	if s.ReadOnly() {
+	if s.ReadOnlyFlag() {
 		return ErrInvalidSharing
 	}
 	if !s.Members[index].ReadOnly {

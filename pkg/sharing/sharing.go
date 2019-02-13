@@ -97,9 +97,9 @@ func (s *Sharing) Clone() couchdb.Doc {
 	return &cloned
 }
 
-// ReadOnly returns true only if the rules forbid that a change on the
-// recipient's cozy instance can be propagated to the sharer's cozy.
-func (s *Sharing) ReadOnly() bool {
+// ReadOnlyFlag returns true only if the given instance is declared a read-only
+// member of the sharing.
+func (s *Sharing) ReadOnlyFlag() bool {
 	if !s.Owner {
 		for i, m := range s.Members {
 			if i == 0 {
@@ -110,12 +110,24 @@ func (s *Sharing) ReadOnly() bool {
 			}
 		}
 	}
+	return false
+}
+
+// ReadOnlyRules returns true if the rules forbid that a change on the
+// recipient's cozy instance can be propagated to the sharer's cozy.
+func (s *Sharing) ReadOnlyRules() bool {
 	for _, rule := range s.Rules {
 		if rule.HasSync() {
 			return false
 		}
 	}
 	return true
+}
+
+// ReadOnly returns true if the member has the read-only flag, or if the rules
+// forces a read-only mode.
+func (s *Sharing) ReadOnly() bool {
+	return s.ReadOnlyFlag() || s.ReadOnlyRules()
 }
 
 // BeOwner initializes a sharing on the cozy of its owner

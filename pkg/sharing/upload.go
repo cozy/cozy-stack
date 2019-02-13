@@ -289,7 +289,8 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 			"Content-Type":  fileDoc.Mime,
 		},
-		Body: content,
+		Body:   content,
+		Client: http.DefaultClient,
 	})
 	if err != nil {
 		if res2 != nil && res2.StatusCode/100 == 5 {
