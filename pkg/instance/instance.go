@@ -1093,6 +1093,10 @@ func (i *Instance) needsSettingsUpdate(newSettings map[string]interface{}) (bool
 		return false, err
 	}
 
+	if oldSettings.M == nil {
+		return true, nil
+	}
+
 	for k, newValue := range newSettings {
 		if k == "_id" || k == "_rev" {
 			continue
