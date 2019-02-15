@@ -38,6 +38,7 @@ the doctype, localized on transifex, and an icon to illustrate it.
 Here are the relevant places:
 
 - https://github.com/cozy/cozy-store/blob/master/src/locales/en.json
+- https://github.com/cozy/cozy-store/blob/master/src/config/permissionsIcons.json
 - https://github.com/cozy/cozy-store/tree/master/src/assets/icons/permissions
 - https://github.com/cozy/cozy-stack/blob/master/assets/locales/en.po
 - https://github.com/cozy/cozy-stack/blob/master/assets/styles/stack.css

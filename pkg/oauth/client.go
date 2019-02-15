@@ -65,7 +65,7 @@ type Client struct {
 	SoftwareVersion string   `json:"software_version,omitempty"` // Declared by the client (optional)
 
 	// Notifications parameters
-	Notifications map[string]notification.Properties `json:"notifications"`
+	Notifications map[string]notification.Properties `json:"notifications,omitempty"`
 
 	NotificationPlatform    string `json:"notification_platform,omitempty"`     // Declared by the client (optional)
 	NotificationDeviceToken string `json:"notification_device_token,omitempty"` // Declared by the client (optional)
