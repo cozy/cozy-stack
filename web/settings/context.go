@@ -80,7 +80,8 @@ func finishOnboarding(c echo.Context) error {
 		// Redirection
 		queryParams := url.Values{
 			"client_id":     {client.CouchID},
-			"redirect_uri":  {redirectURI, fallbackURI.String()},
+			"redirect_uri":  {redirectURI},
+			"fallback_uri":  {fallbackURI.String()},
 			"state":         {client.OnboardingState},
 			"response_type": {"code"},
 			"scope":         {client.OnboardingPermissions},
