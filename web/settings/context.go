@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -58,7 +59,6 @@ func finishOnboarding(c echo.Context) error {
 	// Retreiving client
 	// If there is no onboarding client, we keep going
 	client, err := oauth.FindOnboardingClient(i)
-
 	// Redirect to permissions screen if we are in a mobile onboarding
 	if err == nil && client.OnboardingSecret != "" {
 		redirectURI := ""
@@ -66,10 +66,21 @@ func finishOnboarding(c echo.Context) error {
 			redirectURI = client.RedirectURIs[0]
 		}
 
+		// Create and adding a fallbackURI in case of no-supporting custom
+		// protocol cozy<app>://
+		// Basically, it parses the app slug and computes the web app url
+		// Example: cozydrive:// => http://drive.alice.cozy.tools:8080/
+		r, err := url.Parse(redirectURI)
+		if err != nil {
+			return err
+		}
+		appSlug := strings.TrimLeft(r.Scheme, "cozy")
+		fallbackURI := i.SubDomain(appSlug)
+
 		// Redirection
 		queryParams := url.Values{
 			"client_id":     {client.CouchID},
-			"redirect_uri":  {redirectURI},
+			"redirect_uri":  {redirectURI, fallbackURI.String()},
 			"state":         {client.OnboardingState},
 			"response_type": {"code"},
 			"scope":         {client.OnboardingPermissions},
