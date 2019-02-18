@@ -130,7 +130,10 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	}
 
 	session, isLoggedIn := middlewares.GetSession(c)
-	if needAuth && !isLoggedIn {
+	filepath := path.Join("/", route.Folder, file)
+	isRobotsTxt := filepath == "/robots.txt"
+
+	if needAuth && !isLoggedIn && !isRobotsTxt {
 		if file != route.Index {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
 		}
@@ -148,7 +151,6 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		return c.Redirect(http.StatusFound, i.PageURL("/auth/login", params))
 	}
 
-	filepath := path.Join("/", route.Folder, file)
 	version := app.Version()
 	shasum := app.Checksum()
 
@@ -166,7 +168,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 
 		err := fs.ServeFileContent(c.Response(), c.Request(), slug, version, shasum, filepath)
 		if os.IsNotExist(err) {
-			if filepath == "/robots.txt" {
+			if isRobotsTxt {
 				if f, ok := statikfs.Get("/robots.txt", i.ContextName); ok {
 					_, err = io.Copy(c.Response(), f.Reader())
 					return err
