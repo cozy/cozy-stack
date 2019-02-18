@@ -58,6 +58,7 @@ func finishOnboarding(c echo.Context) error {
 	// Retreiving client
 	// If there is no onboarding client, we keep going
 	client, err := oauth.FindOnboardingClient(i)
+
 	// Redirect to permissions screen if we are in a mobile onboarding
 	if err == nil && client.OnboardingSecret != "" {
 		redirectURI := ""

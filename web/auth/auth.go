@@ -792,7 +792,6 @@ func authorize(c echo.Context) error {
 	if params.client.OnboardingSecret != "" {
 		q.Set("cozy_url", instance.Domain)
 	}
-
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
 
