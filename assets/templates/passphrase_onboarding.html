@@ -51,7 +51,7 @@
           <div role="region" class="wizard-main" id="onboarding-password-field">
             <input type="hidden" name="register_token" value={{.RegisterToken}}>
             <div class="o-field password-form u-m-0">
-              <label for="password" aria-describedby="onboarding-password-tip" class="c-label">{{t "Login Password field"}}</label>
+              <label for="password" class="c-label">{{t "Login Password field"}}</label>
               <button id="password-visibility-button" class="wizard-showbutton c-btn c-btn--secondary"
                 type="button"
                 name="password-visibility"
@@ -66,10 +66,10 @@
                 </span>
               </button>
               <input id="password" class="wizard-password c-input-text" name="passphrase" type="password" autofocus autocomplete="current-password" />
-              <progress id="password-strength" step="1" min="0" max="100" value="0" class="pw-indicator" />
+              <progress id="password-strength" max="100" value="0" class="pw-indicator u-m-0"></progress>
             </div>
           </div>
-          <p class="u-coolGrey u-m-1">Utilisez au moins huit caractères avec des lettres, des chiffres et des symboles.</p>
+          <p id="password-tip" class="u-coolGrey u-m-1">Utilisez au moins huit caractères avec des lettres, des chiffres et des symboles.</p>
           <footer class="wizard-footer u-pb-2">
             <button id="onboarding-password-submit" class="c-btn c-btn--full wizard-button" form="onboarding-password-form" type="submit">
               <span class="password-form">{{t "Passphrase Onboarding Submit"}}</span>
