@@ -998,6 +998,48 @@ func TestAuthorizeSuccess(t *testing.T) {
 	}
 }
 
+func TestAuthorizeSuccessOnboardingNoDeeplink(t *testing.T) {
+	u := url.QueryEscape("https://example.org/oauth/callback")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+clientID, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "200 OK", res.Status)
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "would like permission to access your Cozy")
+	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
+	matches := re.FindStringSubmatch(string(body))
+	if assert.Len(t, matches, 2) {
+		csrfToken = matches[1]
+	}
+
+	var oauthClient oauth.Client
+	u = "cozydrive://"
+	oauthClient.RedirectURIs = []string{u}
+	oauthClient.ClientName = "cozy-test-install-app"
+	oauthClient.SoftwareID = "io.cozy.mobile.drive"
+	oauthClient.OnboardingSecret = "toto"
+	oauthClient.Create(testInstance)
+
+	res, err = postForm("/auth/authorize", &url.Values{
+		"state":           {"123456"},
+		"client_id":       {oauthClient.ClientID},
+		"redirect_uri":    {"cozydrive://"},
+		"scope":           {"files:read"},
+		"csrf_token":      {csrfToken},
+		"response_type":   {"code"},
+		"handle_deeplink": {"false"},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "302 Found", res.Status) {
+		res.Header.Get("Location")
+		assert.Contains(t, res.Header.Get("Location"), "cozy_url="+testInstance.Domain)
+	}
+}
+
 func TestAuthorizeSuccessOnboarding(t *testing.T) {
 	var oauthClient oauth.Client
 	u := "https://example.org/oauth/callback"
