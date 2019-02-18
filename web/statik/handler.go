@@ -82,6 +82,9 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 	middlewares.FuncsMap = template.FuncMap{
 		"t":     fmt.Sprintf,
 		"split": strings.Split,
+		// XXX We are using assetPath (and not AssetPath) here to avoid caching
+		// the assets via the sum in the URL. But it means that we have no
+		// fallback to the default context.
 		"asset": assetPath,
 	}
 
