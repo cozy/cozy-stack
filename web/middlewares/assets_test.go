@@ -56,7 +56,7 @@ func TestThemeWithContext(t *testing.T) {
 	cacheStorage := config.GetConfig().CacheStorage
 	assetsOptions := []fs.AssetOption{{
 		URL:     fmt.Sprintf("file://%s", filepath.Join(tmpdir, "custom_theme.css")),
-		Name:    "/theme.css",
+		Name:    "/styles/theme.css",
 		Context: context,
 	}}
 	err = fs.RegisterCustomExternals(cacheStorage, assetsOptions, 1)
