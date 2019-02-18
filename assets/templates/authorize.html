@@ -26,6 +26,7 @@
             <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}" />
             <input type="hidden" name="scope" value="{{.Scope}}" />
             <input type="hidden" name="response_type" value="code" />
+            <input type="hidden" name="handle_deeplink" id="handle_deeplink" value="true" />
             <div role="region">
               {{if .Webapp}}
               <h1 class="u-title-h1 u-ta-center">{{t "Authorize Linked Title"}}</h1>
@@ -92,5 +93,6 @@
       </section>
     </main>
     <script src="{{asset .Domain "/scripts/cancel-button.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/check-deeplink.js"}}"></script>
   </body>
 </html>

@@ -741,6 +741,19 @@ func authorize(c echo.Context) error {
 		return renderError(c, http.StatusBadRequest, "Error Invalid redirect_uri")
 	}
 
+	if c.FormValue("handle_deeplink") == "false" {
+		// Altering the redirectURI in case of no-supporting custom
+		// protocol cozy<app>://
+		// Basically, it parses the app slug and computes the web app url
+		// Example: cozydrive:// => http://drive.alice.cozy.tools:8080/
+		r, err := url.Parse(params.redirectURI)
+		if err != nil {
+			return err
+		}
+		appSlug := strings.TrimLeft(r.Scheme, "cozy")
+		u = instance.SubDomain(appSlug)
+	}
+
 	// Install the application in case of mobile client
 	softwareID := params.client.SoftwareID
 	if IsLinkedApp(softwareID) {
@@ -779,6 +792,7 @@ func authorize(c echo.Context) error {
 	if params.client.OnboardingSecret != "" {
 		q.Set("cozy_url", instance.Domain)
 	}
+
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
 
