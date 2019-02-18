@@ -82,7 +82,7 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 	middlewares.FuncsMap = template.FuncMap{
 		"t":     fmt.Sprintf,
 		"split": strings.Split,
-		"asset": assetPath,
+		"asset": AssetPath,
 	}
 
 	var err error
