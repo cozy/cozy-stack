@@ -36,7 +36,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/magic"
-	"github.com/hashicorp/go-multierror"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 var assetsClient = &http.Client{
@@ -95,7 +95,7 @@ func Register(zipData string) {
 
 type Cache interface {
 	Get(key string) (io.Reader, bool)
-	Set(key string, data []byte, expiration time.Duration) bool
+	Set(key string, data []byte, expiration time.Duration)
 }
 
 func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) error {
