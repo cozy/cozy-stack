@@ -150,6 +150,7 @@ a template and will insert the relevant values.
     [contexts](https://docs.cozy.io/en/cozy-stack/assets/#contexts) and [dynamic
     assets](https://docs.cozy.io/en/cozy-stack/cli/cozy-stack_config_insert-asset/)
     for more informations.
+-   `{{.Favicon}}` will be replaced by the favicon served by the stack.
 
 So, the `index.html` should probably looks like:
 
@@ -159,15 +160,27 @@ So, the `index.html` should probably looks like:
   <head>
     <meta charset="utf-8">
     <title>My Awesome App for Cozy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials">
     <link rel="stylesheet" src="my-app.css">
+    {{.ThemeCSS}}
     {{.CozyClientJS}}
     {{.CozyBar}}
-    <script defer src="my-app.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
-    <div role="application" data-cozy-token="{{.Token}}" data-cozy-stack="{{.Domain}}">
+    <div
+      role="application"
+      data-cozy-token="{{.Token}}"
+      data-cozy-domain="{{.Domain}}"
+      data-cozy-locale="{{.Locale}}"
+      data-cozy-app-editor="{{.AppEditor}}"
+      data-cozy-app-name="{{.AppName}}"
+      data-cozy-app-slug="{{.AppSlug}}"
+      data-cozy-icon-path="{{.IconPath}}"
+      >
     </div>
+    <script src="my-app.js"></script>
   </body>
 </html>
 ```
@@ -178,12 +191,21 @@ And `my-app.js`:
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
-    const app = document.querySelector("[role=application]");
-    cozy.client.init({
-        cozyURL: "//" + app.dataset.cozyStack,
-        token: app.dataset.cozyToken
-    });
-});
+  const app = document.querySelector("[role=application]");
+  const data = app.dataset;
 
-// ...
+  cozy.client.init({
+      cozyURL: "//" + data.cozyStack,
+      token: data.cozyToken
+  });
+
+  cozy.bar.init({
+    appEditor: data.cozyAppEditor,
+    appName: data.cozyAppName,
+    iconPath: data.cozyIconPath,
+    lang: data.cozyLocale
+  });
+
+  // ...
+});
 ```
