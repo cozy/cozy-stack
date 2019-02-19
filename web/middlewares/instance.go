@@ -95,6 +95,10 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 func CheckTOSDeadlineExpired(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
+		pdoc, err := GetPermission(c)
+		if err == nil && pdoc.Type == permissions.TypeCLI {
+			return next(c)
+		}
 
 		redirect, _ := i.ManagerURL(instance.ManagerTOSURL)
 
