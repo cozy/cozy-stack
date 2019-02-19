@@ -173,6 +173,10 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 					_, err = io.Copy(c.Response(), f.Reader())
 					return err
 				}
+				if f, ok := statikfs.Get("/robots.txt", ""); ok {
+					_, err = io.Copy(c.Response(), f.Reader())
+					return err
+				}
 			}
 			return echo.NewHTTPError(http.StatusNotFound, "Asset not found")
 		}
