@@ -117,6 +117,9 @@ msgstr "Check your emails !"
 msgid "Passphrase Onboarding Title"
 msgstr "Choose your password"
 
+msgid "Passphrase Onboarding Help"
+msgstr "Use at least eight characters with letters, digits and symbols."
+
 msgid "Passphrase Onboarding Submit"
 msgstr "Finish"
 
