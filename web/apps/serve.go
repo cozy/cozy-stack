@@ -299,7 +299,7 @@ var barTemplate *template.Template
 // BuildTemplates ensure that cozy-client-js and the bar can be injected in templates
 func BuildTemplates() {
 	clientTemplate = template.Must(template.New("cozy-client-js").Funcs(middlewares.FuncsMap).Parse(`` +
-		`<script defer src="{{asset .Domain "/js/cozy-client.min.js" .ContextName}}"></script>`,
+		`<script src="{{asset .Domain "/js/cozy-client.min.js" .ContextName}}"></script>`,
 	))
 
 	barTemplate = template.Must(template.New("cozy-bar").Funcs(middlewares.FuncsMap).Parse(`
@@ -310,7 +310,7 @@ func BuildTemplates() {
 <meta name="user-action-required" data-title="{{ .Title }}" data-code="{{ .Code }}" data-detail="{{ .Detail }}" data-links="{{ .Links.Self }}" />
 {{end}}
 {{end}}
-<script defer src="{{asset .Domain "/js/cozy-bar.min.js" .ContextName}}"></script>`,
+<script src="{{asset .Domain "/js/cozy-bar.min.js" .ContextName}}"></script>`,
 	))
 
 }
