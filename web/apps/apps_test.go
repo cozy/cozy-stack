@@ -209,7 +209,7 @@ func TestServe(t *testing.T) {
 func TestCozyBar(t *testing.T) {
 	body := doGetAll(t, "/bar/", true)
 	assert.Contains(t, string(body), `<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar`)
-	assert.Contains(t, string(body), `<script defer src="//cozywithapps.example.net/assets/js/cozy-bar`)
+	assert.Contains(t, string(body), `<script src="//cozywithapps.example.net/assets/js/cozy-bar`)
 }
 
 func TestServeWithAnIntents(t *testing.T) {
