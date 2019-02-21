@@ -425,7 +425,7 @@ func RefreshToken(inst *instance.Instance, s *Sharing, m *Member, creds *Credent
 	if err := creds.Refresh(inst, s, m); err != nil {
 		return nil, err
 	}
-	opts.Headers["Authorization"] = creds.AccessToken.AccessToken
+	opts.Headers["Authorization"] = "Bearer " + creds.AccessToken.AccessToken
 	if body != nil {
 		opts.Body = bytes.NewReader(body)
 	}
