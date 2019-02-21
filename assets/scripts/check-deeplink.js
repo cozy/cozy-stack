@@ -71,21 +71,6 @@ function openUriWithTimeoutHack(uri, failCb, successCb) {
   window.location = uri;
 }
 
-function openUriUsingFirefox(uri, failCb, successCb) {
-  var iframe = document.querySelector("#hiddenIframe");
-  if (!iframe) {
-    iframe = _createHiddenIframe(document.body, "about:blank");
-  }
-  try {
-    iframe.contentWindow.location.href = uri;
-    successCb();
-  } catch (e) {
-    if (e.name == "NS_ERROR_UNKNOWN_PROTOCOL") {
-      failCb();
-    }
-  }
-}
-
 function openUriWithMsLaunchUri(uri, failCb, successCb) {
   navigator.msLaunchUri(uri, successCb, failCb);
 }
