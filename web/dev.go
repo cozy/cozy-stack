@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/echo"
@@ -71,6 +72,9 @@ func devData(c echo.Context) echo.Map {
 	}
 	if _, ok := data["Domain"]; !ok {
 		data["Domain"] = c.Request().Host
+	}
+	if _, ok := data["ContextName"]; !ok {
+		data["ContextName"] = config.DefaultInstanceContext
 	}
 	return data
 }
