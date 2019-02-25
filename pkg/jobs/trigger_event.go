@@ -132,6 +132,9 @@ func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
 					logger.WithNamespace("event-trigger").Error(err)
 					return false
 				}
+				if dir.Type != consts.DirType { // The trigger was for a file, not a dir
+					return false
+				}
 				if testPath(&dir, e.Doc) {
 					return true
 				}
