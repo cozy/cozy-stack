@@ -5,7 +5,9 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/echo"
 )
@@ -75,6 +77,11 @@ func devData(c echo.Context) echo.Map {
 	}
 	if _, ok := data["ContextName"]; !ok {
 		data["ContextName"] = config.DefaultInstanceContext
+	}
+	if i, err := instance.Get(c.Request().Host); err == nil {
+		data["CozyUI"] = middlewares.CozyUI(i)
+		data["ThemeCSS"] = middlewares.ThemeCSS(i)
+		data["Favicon"] = middlewares.Favicon(i)
 	}
 	return data
 }
