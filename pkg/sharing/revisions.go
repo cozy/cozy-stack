@@ -95,6 +95,11 @@ func (rt *RevsTree) Add(rev string) *RevsTree {
 func (rt *RevsTree) InsertAfter(rev, parent string) {
 	subtree := rt.Find(parent)
 	if subtree == nil {
+		// XXX This condition shouldn't be true, but it can help to limit
+		// damage in case bugs happen.
+		if rt.Find(rev) != nil {
+			return
+		}
 		subtree = rt.Add(parent)
 	}
 	for _, b := range subtree.Branches {
