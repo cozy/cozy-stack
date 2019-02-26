@@ -267,11 +267,14 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		ref.Revisions = &RevsTree{Rev: rev}
 		return couchdb.CreateNamedDoc(inst, &ref)
 	}
-	var oldrev string
-	if evt.OldDoc != nil {
-		oldrev = evt.OldDoc.Rev()
+	if evt.OldDoc == nil {
+		inst.Logger().WithField("nspace", "sharing").
+			Warnf("Updating an io.cozy.shared with no previous revision: %v %v\n", evt, ref)
+		ref.Revisions.Add(rev)
+	} else {
+		oldrev := evt.OldDoc.Rev()
+		ref.Revisions.InsertAfter(rev, oldrev)
 	}
-	ref.Revisions.InsertAfter(rev, oldrev)
 	return couchdb.UpdateDoc(inst, &ref)
 }
 
