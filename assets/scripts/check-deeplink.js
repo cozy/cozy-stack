@@ -124,7 +124,7 @@ function check(uri, failCb, successCb, unsupportedCb) {
   let redirect = params.get("redirect_uri");
   const fallbackUri = params.get("fallback_uri");
 
-  document.getElementById("loginform").addEventListener("submit", e => {
+  document.getElementById("authorizeform").addEventListener("submit", e => {
     check(redirect, () => {
       window.location.href = fallbackUri;
     });
