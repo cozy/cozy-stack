@@ -121,10 +121,12 @@ function check(uri, failCb, successCb, unsupportedCb) {
   let url = window.location.href;
   let queryString = url.split("?")[1];
   let params = new URLSearchParams(queryString);
-
   let redirect = params.get("redirect_uri");
+  const fallbackUri = params.get("fallback_uri");
 
-  check(redirect, function() {
-    document.getElementById("handle_deeplink").value = "false";
+  document.getElementById("loginform").addEventListener("submit", e => {
+    check(redirect, () => {
+      window.location.href = fallbackUri;
+    });
   });
 })(window);
