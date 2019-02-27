@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime"
 	"net/http"
 	"os"
 	"path"
@@ -15,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/magic"
 	web_utils "github.com/cozy/cozy-stack/web/utils"
 	"github.com/cozy/swift"
 )
@@ -129,11 +129,9 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 
 	ext := path.Ext(file)
 	if contentType == "" {
-		contentType = magic.MIMETypeByExtension(ext)
+		contentType = mime.TypeByExtension(ext)
 	}
-	if contentType == "text/html" {
-		contentType = "text/html; charset=utf-8"
-	} else if contentType == "text/xml" && ext == ".svg" {
+	if contentType == "text/xml" && ext == ".svg" {
 		// override for files with text/xml content because of leading <?xml tag
 		contentType = "image/svg+xml"
 	}
@@ -270,10 +268,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 		}
 	}
 
-	contentType := magic.MIMETypeByExtension(path.Ext(filepath))
-	if contentType == "text/html" {
-		contentType = "text/html; charset=utf-8"
-	}
+	contentType := mime.TypeByExtension(path.Ext(filepath))
 	web_utils.ServeContent(w, req, contentType, size, content)
 	return nil
 }

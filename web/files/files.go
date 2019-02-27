@@ -1111,17 +1111,21 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 	contentType := header.Get("Content-Type")
 	if contentType == "" {
 		mime, class = vfs.ExtractMimeAndClassFromFilename(name)
-	} else if contentType == "application/octet-stream" {
-		// TODO: remove this special path for the heic/heif file extensions with
-		// when we deal with a better detection of the files magic numbers.
-		switch strings.ToLower(path.Ext(name)) {
-		case ".heif":
-			contentType = "image/heif"
-		case ".heic":
-			contentType = "image/heic"
-		}
-		mime, class = vfs.ExtractMimeAndClass(contentType)
 	} else {
+		// Some browsers may use Mime-Type sniffing and they may sent an
+		// inaccurate Content-Type.
+		ext := strings.ToLower(path.Ext(name))
+		if contentType == "application/octet-stream" {
+			switch ext {
+			case ".heif":
+				contentType = "image/heif"
+			case ".heic":
+				contentType = "image/heic"
+			}
+		}
+		if contentType == "text/xml" && ext == "svg" {
+			contentType = "image/svg+xml"
+		}
 		mime, class = vfs.ExtractMimeAndClass(contentType)
 	}
 
