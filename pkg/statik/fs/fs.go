@@ -34,8 +34,8 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/magic"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -279,12 +279,9 @@ func normalizeAssetName(name string) string {
 }
 
 func newAsset(opt AssetOption, zippedData, unzippedData []byte) *Asset {
-	mime := magic.MIMETypeByExtension(path.Ext(opt.Name))
+	mime := filetype.ByExtension(path.Ext(opt.Name))
 	if mime == "" {
-		mime = magic.MIMEType(unzippedData)
-	}
-	if mime == "" {
-		mime = "application/octet-stream"
+		mime = filetype.Match(unzippedData)
 	}
 
 	sumx := opt.Shasum

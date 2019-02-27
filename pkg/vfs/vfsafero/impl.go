@@ -16,9 +16,9 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/magic"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 
@@ -830,7 +830,7 @@ func extractContentTypeAndMD5(filename string) (contentType string, md5sum []byt
 	}
 	defer f.Close()
 	var r io.Reader
-	contentType, r = magic.MIMETypeFromReader(f)
+	contentType, r = filetype.FromReader(f)
 	h := md5.New() // #nosec
 	if _, err = io.Copy(h, r); err != nil {
 		return

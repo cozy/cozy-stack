@@ -8,7 +8,6 @@ package vfs
 import (
 	"errors"
 	"io"
-	mimetype "mime"
 	"net/http"
 	"os"
 	"path"
@@ -17,11 +16,9 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
-
-// DefaultContentType is used for files uploaded with no content-type
-const DefaultContentType = "application/octet-stream"
 
 // ForbiddenFilenameChars is the list of forbidden characters in a filename.
 const ForbiddenFilenameChars = "/\x00\n\r"
@@ -602,7 +599,7 @@ func walk(fs Indexer, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn, co
 // the type as the class and the whole type as mime.
 func ExtractMimeAndClass(contentType string) (mime, class string) {
 	if contentType == "" {
-		contentType = DefaultContentType
+		contentType = filetype.DefaultType
 	}
 
 	charsetIndex := strings.Index(contentType, ";")
@@ -614,7 +611,7 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 
 	mime = strings.TrimSpace(mime)
 	switch mime {
-	case DefaultContentType:
+	case filetype.DefaultType:
 		class = "files"
 	case "application/x-apple-diskimage", "application/x-msdownload":
 		class = "binary"
@@ -655,7 +652,7 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 // filename.
 func ExtractMimeAndClassFromFilename(name string) (mime, class string) {
 	ext := path.Ext(name)
-	return ExtractMimeAndClass(mimetype.TypeByExtension(ext))
+	return ExtractMimeAndClass(filetype.ByExtension(ext))
 }
 
 var cbDiskQuotaAlert func(domain string, exceeded bool)

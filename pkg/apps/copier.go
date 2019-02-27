@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/magic"
+	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/swift"
 )
@@ -80,12 +80,9 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 		"original-content-length": strconv.FormatInt(stat.Size(), 10),
 	}
 
-	contentType := magic.MIMETypeByExtension(path.Ext(stat.Name()))
+	contentType := filetype.ByExtension(path.Ext(stat.Name()))
 	if contentType == "" {
-		contentType, src = magic.MIMETypeFromReader(src)
-	}
-	if contentType == "" {
-		contentType = "application/octet-stream"
+		contentType, src = filetype.FromReader(src)
 	}
 
 	file, err := f.c.ObjectCreate(f.container, objName, true, "",
