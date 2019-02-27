@@ -1024,13 +1024,12 @@ func TestAuthorizeSuccessOnboardingNoDeeplink(t *testing.T) {
 	oauthClient.Create(testInstance)
 
 	res, err = postForm("/auth/authorize", &url.Values{
-		"state":           {"123456"},
-		"client_id":       {oauthClient.ClientID},
-		"redirect_uri":    {"cozydrive://"},
-		"scope":           {"files:read"},
-		"csrf_token":      {csrfToken},
-		"response_type":   {"code"},
-		"handle_deeplink": {"false"},
+		"state":         {"123456"},
+		"client_id":     {oauthClient.ClientID},
+		"redirect_uri":  {"cozydrive://"},
+		"scope":         {"files:read"},
+		"csrf_token":    {csrfToken},
+		"response_type": {"code"},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
