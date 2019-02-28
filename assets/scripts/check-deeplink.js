@@ -13,12 +13,12 @@ function openUriWithHiddenFrame(uri, failCb) {
     handler.remove();
   }, 500);
 
-  let iframe = document.querySelector("hiddenIframe");
+  let iframe = document.getElementById("hiddenIframe");
   if (!iframe) {
     iframe = _createHiddenIframe(document.body, "about:blank");
   }
 
-  const handler = window.addEventListener("blur", onBlur);
+  var handler = window.addEventListener("blur", onBlur);
   function onBlur() {
     clearTimeout(timeout);
     handler.remove();
@@ -39,7 +39,7 @@ function openUriWithTimeoutHack(uri, failCb) {
     target = target.parent;
   }
 
-  const handler = target.addEventListener("blur", onBlur);
+  var handler = target.addEventListener("blur", onBlur);
   function onBlur() {
     if (handler) {
       clearTimeout(timeout);
@@ -71,9 +71,6 @@ function checkBrowser() {
 }
 
 function check(uri, failCb) {
-  function failCallback() {
-    failCb && failCb();
-  }
   if (navigator.msLaunchUri) {
     //for IE and Edge in Win 8 and Win 10
     openUriWithMsLaunchUri(uri, failCb);
@@ -81,24 +78,23 @@ function check(uri, failCb) {
     const browser = checkBrowser();
 
     if (browser.isChrome || browser.isIOS) {
-      openUriWithTimeoutHack(uri, failCallback);
+      openUriWithTimeoutHack(uri, failCb);
     } else if (browser.isSafari || browser.isFirefox) {
-      openUriWithHiddenFrame(uri, failCallback);
+      openUriWithHiddenFrame(uri, failCb);
     } else {
-      failCallback();
+      failCb();
     }
   }
 }
 
 (function(window) {
-  let url = window.location.href;
-  let queryString = url.split("?")[1];
-  let params = new URLSearchParams(queryString);
+  let params = new URLSearchParams(document.location.search.substring(1));
+
   const fallbackUri = params.get("fallback_uri");
   const form = document.getElementById("authorizeform");
-  form.addEventListener("submit", async e => {
+  form.addEventListener("submit", function(e) {
     /*
-      We want to call manullaly the /authorize route 
+      We want to call manually the /authorize route 
       in order to get a JSON response containing the deeplink
       to use.
       So we need to create the request 
@@ -113,21 +109,26 @@ function check(uri, failCb) {
     }
     const bodyString = arr.join("&");
     const action = form.action;
-    const response = await fetch(action, {
-      method: "POST",
-      body: bodyString,
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      }
-    });
-    const deeplink = await response.json();
     /*
       We check if the client can open the deeplink. If not, we force the
       redirection to the fallbackURI
     */
 
-    check(deeplink, () => {
-      window.location.href = fallbackUri;
-    });
+    fetch(action, {
+      method: "POST",
+      body: bodyString,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json"
+      }
+    })
+      .then(function(response) {
+        return response.json();
+      })
+      .then(function(json) {
+        check(json.deeplink, function() {
+          window.location.href = fallbackUri;
+        });
+      });
   });
 })(window);
