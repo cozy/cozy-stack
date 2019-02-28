@@ -787,7 +787,8 @@ func authorize(c echo.Context) error {
 	u.Fragment = ""
 	if params.client.OnboardingSecret != "" {
 		q.Set("cozy_url", instance.Domain)
-		return c.JSON(http.StatusOK, u.String())
+		u.RawQuery = q.Encode()
+		return c.JSON(http.StatusOK, u.String()+"#")
 	}
 
 	return c.Redirect(http.StatusFound, u.String()+"#")
