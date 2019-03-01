@@ -19,7 +19,7 @@
           <a href="https://cozy.io" target="_blank" title="Cozy Website" class="shield"></a>
         </header>
         <div class="container">
-          <form method="POST" action="/auth/authorize" class="login auth">
+          <form method="POST" action="/auth/authorize" class="login auth" id="authorizeform">
             <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
             <input type="hidden" name="client_id" value="{{.Client.ClientID}}" />
             <input type="hidden" name="state" value="{{.State}}" />
@@ -92,5 +92,8 @@
       </section>
     </main>
     <script src="{{asset .Domain "/scripts/cancel-button.js"}}"></script>
+    {{if .RedirectIsDeeplink}}
+      <script src="{{asset .Domain "/scripts/check-deeplink.js"}}"></script>
+    {{end}}
   </body>
 </html>

@@ -699,21 +699,28 @@ func authorizeForm(c echo.Context) error {
 		}
 	}
 
+	redirectURL, err := url.Parse(params.redirectURI)
+	if err != nil {
+		return err
+	}
+	isDeeplink := strings.Contains(redirectURL.Scheme, "cozy")
+
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
-		"CozyUI":       middlewares.CozyUI(instance),
-		"ThemeCSS":     middlewares.ThemeCSS(instance),
-		"Domain":       instance.ContextualDomain(),
-		"ContextName":  instance.ContextName,
-		"ClientDomain": clientDomain,
-		"Locale":       instance.Locale,
-		"Client":       params.client,
-		"State":        params.state,
-		"RedirectURI":  params.redirectURI,
-		"Scope":        params.scope,
-		"Permissions":  permissions,
-		"ReadOnly":     readOnly,
-		"CSRF":         c.Get("csrf"),
-		"Webapp":       params.webapp,
+		"CozyUI":             middlewares.CozyUI(instance),
+		"ThemeCSS":           middlewares.ThemeCSS(instance),
+		"Domain":             instance.ContextualDomain(),
+		"ContextName":        instance.ContextName,
+		"ClientDomain":       clientDomain,
+		"Locale":             instance.Locale,
+		"Client":             params.client,
+		"State":              params.state,
+		"RedirectURI":        params.redirectURI,
+		"Scope":              params.scope,
+		"Permissions":        permissions,
+		"ReadOnly":           readOnly,
+		"CSRF":               c.Get("csrf"),
+		"RedirectIsDeeplink": isDeeplink,
+		"Webapp":             params.webapp,
 	})
 }
 
@@ -776,11 +783,16 @@ func authorize(c echo.Context) error {
 	q.Set("code", access.Code)
 	q.Set("state", params.state)
 
-	if params.client.OnboardingSecret != "" {
-		q.Set("cozy_url", instance.Domain)
-	}
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
+
+	if params.client.OnboardingSecret != "" {
+		q.Set("cozy_url", instance.Domain)
+		u.RawQuery = q.Encode()
+
+		deeplink := u.String() + "#"
+		return c.JSON(http.StatusOK, echo.Map{"deeplink": deeplink})
+	}
 
 	return c.Redirect(http.StatusFound, u.String()+"#")
 }
