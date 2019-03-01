@@ -1033,9 +1033,11 @@ func TestAuthorizeSuccessOnboardingNoDeeplink(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	if assert.Equal(t, "302 Found", res.Status) {
-		res.Header.Get("Location")
-		assert.Contains(t, res.Header.Get("Location"), "cozy_url="+testInstance.Domain)
+	assert.Equal(t, 200, res.StatusCode)
+	if assert.Equal(t, "200 OK", res.Status) {
+		content, err := ioutil.ReadAll(res.Body)
+		assert.NoError(t, err)
+		assert.Contains(t, string(content), "\"deeplink\":")
 	}
 }
 
@@ -1058,9 +1060,7 @@ func TestAuthorizeSuccessOnboarding(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	if assert.Equal(t, "302 Found", res.Status) {
-		assert.Contains(t, res.Header.Get("Location"), "cozy_url="+testInstance.Domain)
-	}
+	assert.Equal(t, "200 OK", res.Status)
 }
 
 func TestInstallAppWithLinkedApp(t *testing.T) {
