@@ -786,15 +786,12 @@ func authorize(c echo.Context) error {
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
 
-	type resp struct {
-		Deeplink string `json:"deeplink"`
-	}
-
 	if params.client.OnboardingSecret != "" {
 		q.Set("cozy_url", instance.Domain)
 		u.RawQuery = q.Encode()
 
-		return c.JSON(http.StatusOK, resp{Deeplink: u.String() + "#"})
+		deeplink := u.String() + "#"
+		return c.JSON(http.StatusOK, echo.Map{"deeplink": deeplink})
 	}
 
 	return c.Redirect(http.StatusFound, u.String()+"#")
