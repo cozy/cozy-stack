@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/sirupsen/logrus"
@@ -85,7 +86,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 		return UpdateAll(ctx, &opts)
 	}
 	if opts.Domain != "" {
-		inst, err := instance.Get(opts.Domain)
+		inst, err := lifecycle.GetInstance(opts.Domain)
 		if err != nil {
 			return err
 		}

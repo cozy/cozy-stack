@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -79,7 +80,7 @@ func beforeHookKonnector(job *jobs.Job) (bool, error) {
 	var msg KonnectorMessage
 
 	if err := json.Unmarshal(job.Message, &msg); err == nil {
-		inst, err := instance.Get(job.DomainName())
+		inst, err := lifecycle.GetInstance(job.DomainName())
 		if err != nil {
 			return false, err
 		}

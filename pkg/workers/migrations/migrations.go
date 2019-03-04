@@ -10,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
@@ -85,7 +85,7 @@ type object struct {
 
 func migrateSwiftV1ToV2(domain string) error {
 	c := config.GetSwiftConnection()
-	inst, err := instance.Get(domain)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func migrateSwiftV1ToV2(domain string) error {
 }
 
 func commitSwiftV1ToV2(domain string, swiftCluster int) error {
-	inst, err := instance.Get(domain)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func commitSwiftV1ToV2(domain string, swiftCluster int) error {
 		return err
 	}
 
-	return instance.Patch(inst, &instance.Options{SwiftCluster: swiftCluster})
+	return lifecycle.Patch(inst, &lifecycle.Options{SwiftCluster: swiftCluster})
 }
 
 func readObjects(c *swift.Connection, objc chan object,

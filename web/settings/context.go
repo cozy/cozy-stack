@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -49,7 +50,7 @@ func finishOnboarding(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	if !i.OnboardingFinished {
 		t := true
-		err := instance.Patch(i, &instance.Options{OnboardingFinished: &t})
+		err := lifecycle.Patch(i, &lifecycle.Options{OnboardingFinished: &t})
 		if err != nil {
 			return err
 		}

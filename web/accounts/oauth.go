@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -84,7 +84,7 @@ func redirect(c echo.Context) error {
 		return err
 	}
 
-	i, _ := instance.Get(c.Request().Host)
+	i, _ := lifecycle.GetInstance(c.Request().Host)
 	clientState := ""
 	var account *accounts.Account
 
@@ -109,7 +109,7 @@ func redirect(c echo.Context) error {
 			return errors.New("bad state")
 		}
 		if i == nil {
-			i, err = instance.Get(state.InstanceDomain)
+			i, err = lifecycle.GetInstance(state.InstanceDomain)
 			if err != nil {
 				return errors.New("bad state")
 			}

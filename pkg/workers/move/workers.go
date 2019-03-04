@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
@@ -37,7 +37,7 @@ func ExportWorker(c *jobs.WorkerContext) error {
 		return err
 	}
 
-	i, err := instance.Get(c.Domain())
+	i, err := lifecycle.GetInstance(c.Domain())
 	if err != nil {
 		return err
 	}

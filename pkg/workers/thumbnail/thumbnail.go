@@ -12,6 +12,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	multierror "github.com/hashicorp/go-multierror"
@@ -69,7 +70,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 
 	log := ctx.Logger()
 	log.WithField("nspace", "thumbnail").Debugf("%s %s", img.Verb, img.Doc.ID())
-	i, err := instance.Get(ctx.Domain())
+	i, err := lifecycle.GetInstance(ctx.Domain())
 	if err != nil {
 		return err
 	}
@@ -108,7 +109,7 @@ type thumbnailMsg struct {
 // WorkerCheck is a worker function that checks all the images to generate
 // missing thumbnails.
 func WorkerCheck(ctx *jobs.WorkerContext) error {
-	i, err := instance.Get(ctx.Domain())
+	i, err := lifecycle.GetInstance(ctx.Domain())
 	if err != nil {
 		return err
 	}

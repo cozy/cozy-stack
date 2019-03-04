@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -333,7 +334,7 @@ func Import(i *instance.Instance, filename, destination string, increaseQuota bo
 			}
 			usage = (usage/1e9 + 1) * 1e9 // Round to the superior Go
 			if usage > oldQuota {
-				instance.Patch(i, &instance.Options{DiskQuota: usage})
+				lifecycle.Patch(i, &lifecycle.Options{DiskQuota: usage})
 			}
 		}()
 	}

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/web/accounts"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -254,7 +254,7 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 	main.Renderer = router.Renderer
 	main.Any("/*", func(c echo.Context) error {
 		if parent, slug, _ := middlewares.SplitHost(c.Request().Host); slug != "" {
-			if i, err := instance.Get(parent); err == nil {
+			if i, err := lifecycle.GetInstance(parent); err == nil {
 				c.Set("instance", i.WithContextualDomain(parent))
 				c.Set("slug", slug)
 				return appsHandler(c)

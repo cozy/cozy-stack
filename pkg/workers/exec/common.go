@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -61,7 +62,7 @@ func worker(ctx *jobs.WorkerContext) (err error) {
 	worker := ctx.Cookie().(execWorker)
 	domain := ctx.Domain()
 
-	inst, err := instance.Get(domain)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}

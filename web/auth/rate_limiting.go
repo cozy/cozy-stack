@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/go-redis/redis"
 )
 
@@ -153,7 +154,7 @@ func CheckRateLimit(inst *instance.Instance, passwordType string) error {
 func LoginRateExceeded(i *instance.Instance) error {
 	err := fmt.Errorf("Instance was blocked because of too many login failed attempts")
 	i.Logger().WithField("nspace", "rate_limiting").Warning(err)
-	return i.Block(instance.BlockedLoginFailed.Code)
+	return lifecycle.Block(i, instance.BlockedLoginFailed.Code)
 }
 
 // TwoFactorRateExceeded regenerates a new 2FA passcode after too many failed
@@ -166,7 +167,7 @@ func TwoFactorRateExceeded(i *instance.Instance) error {
 	counter := GetCounter()
 	counter.Reset("two-factor:" + i.Domain)
 
-	_, err := i.SendTwoFactorPasscode()
+	_, err := lifecycle.SendTwoFactorPasscode(i)
 	return err
 }
 
@@ -176,5 +177,5 @@ func TwoFactorGenerationExceeded(i *instance.Instance) error {
 	err := fmt.Errorf("Instance was blocked because of too many 2FA passcode generations")
 	i.Logger().WithField("nspace", "rate_limiting").Warning(err)
 
-	return i.Block(instance.BlockedLoginFailed.Code)
+	return lifecycle.Block(i, instance.BlockedLoginFailed.Code)
 }

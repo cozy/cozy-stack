@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 )
@@ -52,7 +52,7 @@ func WorkerTrack(ctx *jobs.WorkerContext) error {
 	if err := ctx.UnmarshalEvent(&evt); err != nil {
 		return err
 	}
-	inst, err := instance.Get(ctx.Domain())
+	inst, err := lifecycle.GetInstance(ctx.Domain())
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func WorkerReplicate(ctx *jobs.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	inst, err := instance.Get(ctx.Domain())
+	inst, err := lifecycle.GetInstance(ctx.Domain())
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func WorkerUpload(ctx *jobs.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	inst, err := instance.Get(ctx.Domain())
+	inst, err := lifecycle.GetInstance(ctx.Domain())
 	if err != nil {
 		return err
 	}

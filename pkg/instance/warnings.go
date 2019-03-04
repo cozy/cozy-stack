@@ -59,7 +59,7 @@ func (i *Instance) CheckTOSNotSignedAndDeadline(args ...string) (notSigned bool,
 	if len(args) > 0 {
 		tosLatest = args[0]
 	}
-	latest, latestDate, ok := parseTOSVersion(tosLatest)
+	latest, latestDate, ok := ParseTOSVersion(tosLatest)
 	if !ok || latestDate.IsZero() {
 		return
 	}
@@ -75,7 +75,7 @@ func (i *Instance) CheckTOSNotSignedAndDeadline(args ...string) (notSigned bool,
 			}
 		}
 	}()
-	signed, _, ok := parseTOSVersion(i.TOSSigned)
+	signed, _, ok := ParseTOSVersion(i.TOSSigned)
 	if !ok {
 		notSigned = true
 	} else {
@@ -84,10 +84,10 @@ func (i *Instance) CheckTOSNotSignedAndDeadline(args ...string) (notSigned bool,
 	return
 }
 
-// parseTOSVersion returns the "major" and the date encoded in a version string
+// ParseTOSVersion returns the "major" and the date encoded in a version string
 // with the following format:
 //    parseTOSVersion(A.B.C-YYYYMMDD) -> (A, YYYY, true)
-func parseTOSVersion(v string) (major int, date time.Time, ok bool) {
+func ParseTOSVersion(v string) (major int, date time.Time, ok bool) {
 	if v == "" {
 		return
 	}

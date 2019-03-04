@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -36,7 +36,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(msg); err != nil {
 		return err
 	}
-	i, err := instance.Get(ctx.Domain())
+	i, err := lifecycle.GetInstance(ctx.Domain())
 	if err != nil {
 		return err
 	}
