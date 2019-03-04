@@ -10,6 +10,12 @@
 cozy-stack jobs run <worker> [flags]
 ```
 
+### Examples
+
+```
+$ cozy-stack jobs run service --domain example.mycozy.cloud --json '{"slug": "banks", "name": "onOperationOrBillCreate", "file": "onOperationOrBillCreate.js"}'
+```
+
 ### Options
 
 ```
