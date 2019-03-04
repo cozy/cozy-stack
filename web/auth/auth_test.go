@@ -998,7 +998,14 @@ func TestAuthorizeSuccess(t *testing.T) {
 	}
 }
 
-func TestAuthorizeSuccessOnboardingNoDeeplink(t *testing.T) {
+func TestAuthorizeSuccessOnboardingDeeplink(t *testing.T) {
+	var oauthClient oauth.Client
+	oauthClient.RedirectURIs = []string{"cozydrive://"}
+	oauthClient.ClientName = "cozy-test-install-app"
+	oauthClient.SoftwareID = "io.cozy.mobile.drive"
+	oauthClient.OnboardingSecret = "toto"
+	oauthClient.Create(testInstance)
+
 	u := url.QueryEscape("https://example.org/oauth/callback")
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+clientID, nil)
 	req.Host = domain
@@ -1015,26 +1022,23 @@ func TestAuthorizeSuccessOnboardingNoDeeplink(t *testing.T) {
 		csrfToken = matches[1]
 	}
 
-	var oauthClient oauth.Client
-	u = "cozydrive://"
-	oauthClient.RedirectURIs = []string{u}
-	oauthClient.ClientName = "cozy-test-install-app"
-	oauthClient.SoftwareID = "io.cozy.mobile.drive"
-	oauthClient.OnboardingSecret = "toto"
-	oauthClient.Create(testInstance)
-
-	res, err = postForm("/auth/authorize", &url.Values{
+	v := &url.Values{
 		"state":         {"123456"},
 		"client_id":     {oauthClient.ClientID},
 		"redirect_uri":  {"cozydrive://"},
 		"scope":         {"files:read"},
 		"csrf_token":    {csrfToken},
 		"response_type": {"code"},
-	})
+	}
+	req, err = http.NewRequest("POST", ts.URL+"/auth/authorize", bytes.NewBufferString(v.Encode()))
+	assert.NoError(t, err)
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Accept", "application/json")
+	res, err = client.Do(req)
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	assert.Equal(t, 200, res.StatusCode)
-	if assert.Equal(t, "200 OK", res.Status) {
+	if assert.Equal(t, 200, res.StatusCode) {
 		content, err := ioutil.ReadAll(res.Body)
 		assert.NoError(t, err)
 		assert.Contains(t, string(content), "\"deeplink\":")
@@ -1060,7 +1064,7 @@ func TestAuthorizeSuccessOnboarding(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	assert.Equal(t, "200 OK", res.Status)
+	assert.Equal(t, 302, res.StatusCode)
 }
 
 func TestInstallAppWithLinkedApp(t *testing.T) {
