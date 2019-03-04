@@ -782,19 +782,19 @@ func authorize(c echo.Context) error {
 	q.Set("access_code", access.Code)
 	q.Set("code", access.Code)
 	q.Set("state", params.state)
-
-	u.RawQuery = q.Encode()
-	u.Fragment = ""
-
 	if params.client.OnboardingSecret != "" {
 		q.Set("cozy_url", instance.Domain)
-		u.RawQuery = q.Encode()
+	}
+	u.RawQuery = q.Encode()
+	u.Fragment = ""
+	location := u.String() + "#"
 
-		deeplink := u.String() + "#"
-		return c.JSON(http.StatusOK, echo.Map{"deeplink": deeplink})
+	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
+	if wantsJSON {
+		return c.JSON(http.StatusOK, echo.Map{"deeplink": location})
 	}
 
-	return c.Redirect(http.StatusFound, u.String()+"#")
+	return c.Redirect(http.StatusFound, location)
 }
 
 type authorizeSharingParams struct {
