@@ -288,14 +288,12 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 		}
 
 		// Distinguish classic job execution and konnector/account deletion
-
 		msg := struct {
 			Account        string `json:"account"`
 			AccountRev     string `json:"account_rev"`
 			Konnector      string `json:"konnector"`
 			AccountDeleted bool   `json:"account_deleted"`
 		}{}
-
 		err := json.Unmarshal(job.Message, &msg)
 
 		if err == nil && w.Type == "konnector" && msg.AccountDeleted {
@@ -311,44 +309,14 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 
 		// Delete the trigger associated with the job (if any) when we receive a
 		// ErrBadTrigger.
-		//
-		// XXX: better retro-action between broker and scheduler to avoid going
-		// through the global job-system.
 		if job.TriggerID != "" && globalJobSystem != nil {
 			if _, ok := errRun.(ErrBadTrigger); ok {
-				onBadTriggerError(job)
+				globalJobSystem.DeleteTrigger(job, job.TriggerID)
 			}
 		}
 	}
 	joblog.Debugf("%s: worker shut down", workerID)
 	closed <- struct{}{}
-}
-
-// onBadTriggerError is the handler executed when we receive a specific
-// ErrBadTrigger error message:
-//   - delete the associated trigger
-//   - delete the account document associated with this trigger if any (not activated)
-func onBadTriggerError(job *Job) {
-	// XXX: the account deletion is not activated for now
-	// t, err := globalJobSystem.GetTrigger(job, job.TriggerID)
-	// if err != nil {
-	// 	return
-	// }
-
-	globalJobSystem.DeleteTrigger(job, job.TriggerID)
-
-	// if job.WorkerType != "konnector" {
-	// 	return
-	// }
-	// var msg struct {
-	// 	Account string `json:"account"`
-	// }
-	// if err = t.Infos().Message.Unmarshal(&msg); err == nil && msg.Account != "" {
-	// 	doc := couchdb.JSONDoc{Type: consts.Accounts}
-	// 	if err = couchdb.GetDoc(job, consts.Accounts, msg.Account, &doc); err == nil {
-	// 		couchdb.DeleteDoc(job, &doc)
-	// 	}
-	// }
 }
 
 func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
