@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
@@ -116,7 +117,7 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "intents_test")
-	ins = setup.GetTestInstance(&instance.Options{
+	ins = setup.GetTestInstance(&lifecycle.Options{
 		Domain: "cozy.example.net",
 	})
 	_, token = setup.GetTestClient(consts.Settings)

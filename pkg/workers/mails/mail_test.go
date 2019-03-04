@@ -15,6 +15,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/gomail"
@@ -415,6 +416,6 @@ func TestSendMailFrom(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	setup := testutils.NewSetup(m, "mails_test")
-	inst = setup.GetTestInstance(&instance.Options{Email: "me@me"})
+	inst = setup.GetTestInstance(&lifecycle.Options{Email: "me@me"})
 	os.Exit(m.Run())
 }
