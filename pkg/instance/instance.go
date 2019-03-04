@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -1103,7 +1104,7 @@ func (i *Instance) needsSettingsUpdate(newSettings map[string]interface{}) (bool
 		}
 		// Check if we have the key in old settings and the value is different,
 		// or if we don't have the key at all
-		if oldValue, ok := oldSettings.M[k]; !ok || oldValue != newValue {
+		if oldValue, ok := oldSettings.M[k]; !ok || !reflect.DeepEqual(oldValue, newValue) {
 			return true, nil
 		}
 	}
