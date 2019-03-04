@@ -81,5 +81,9 @@
     <script src="{{asset .Domain "/scripts/password-helper.js"}}"></script>
     <script src="{{asset .Domain "/scripts/password-visibility.js"}}"></script>
     <script src="{{asset .Domain "/scripts/passwd-strength-indicator.js"}}"></script>
+    {{if .MatomoURL}}
+    <script src="{{asset .Domain "./js/piwik.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/tracking-onboarding.js"}}" data-matomo-url="{{.MatomoURL}}" data-matomo-site-id="{{.MatomoSiteID}}" data-matomo-app-id="{{.MatomoAppID}}"></script>
+    {{end}}
   </body>
 </html>
