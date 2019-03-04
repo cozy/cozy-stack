@@ -23,6 +23,12 @@ Launch and manage jobs and workers
   -p, --port int            server port (default 8080)
 ```
 
+### Example
+
+```bash
+cozy-stack jobs run service --domain dalailama.mycozy.cloud --json '{"slug": "banks", "name": "onOperationOrBillCreate", "file": "onOperationOrBillCreate.js"}'
+```
+
 ### SEE ALSO
 
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
