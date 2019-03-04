@@ -215,23 +215,11 @@ h1 {
 
 /* Form controls */
 .controls {
-  display: -webkit-flex;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-flex-wrap: nowrap;
-  -ms-flex-wrap: nowrap;
-  flex-wrap: nowrap;
-  -webkit-align-items: stretch;
-  -ms-flex-align: stretch;
-  align-items: stretch;
-  -webkit-justify-content: space-around;
-  -ms-flex-pack: center;
-  justify-content: space-around;
+  margin: 0 -4px;
 }
-.controls .btn {
-  -webkit-flex: 0 0 48.5%;
-  -ms-flex: 0 0 48.5%;
-  flex: 0 0 48.5%;
+.controls .c-btn {
+  margin-bottom: 4px;
+  min-width: calc(50% - .5rem);
 }
 
 /* Toggle More */

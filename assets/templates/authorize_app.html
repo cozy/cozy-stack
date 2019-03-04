@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
     <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css"}}">
+    {{.CozyUI}}
     {{.ThemeCSS}}
     <link rel="apple-touch-icon" sizes="180x180" href="{{asset .Domain "/apple-touch-icon.png" .ContextName}}">
     <link rel="icon" type="image/png" href="{{asset .Domain "/favicon-32x32.png" .ContextName}}" sizes="32x32">
@@ -48,9 +49,9 @@
               </p>
             </div>
             <footer>
-              <div class="controls">
-                <button type="cancel" class="btn btn-secondary">{{t "Authorize Cancel"}}</button>
-                <button type="submit" class="btn btn-primary">{{t "Authorize Submit"}}</button>
+              <div class="controls u-flex u-flex-wrap-reverse">
+                <button type="cancel" class="u-flex-shrink-1 u-flex-grow-1 c-btn c-btn--secondary"><span><span>{{t "Authorize Cancel"}}</span></span></button>
+                <button type="submit" class="u-flex-shrink-1 u-flex-grow-1 c-btn"><span><span>{{t "Authorize Submit"}}</span></span></button>
               </div>
             </footer>
           </form>
