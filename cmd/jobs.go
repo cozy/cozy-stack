@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -23,12 +24,16 @@ var jobsCmdGroup = &cobra.Command{
 var jobsRunCmd = &cobra.Command{
 	Use:     "run <worker>",
 	Aliases: []string{"launch", "push"},
+	Example: `$ cozy-stack jobs run service --domain example.mycozy.cloud --json '{"slug": "banks", "name": "onOperationOrBillCreate", "file": "onOperationOrBillCreate.js"}'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			return cmd.Help()
 		}
 		if flagDomain == "" {
 			return errAppsMissingDomain
+		}
+		if flagJobJSONArg == "" {
+			return errors.New("The JSON argument is missing")
 		}
 		c := newClient(flagDomain, "io.cozy.jobs", "io.cozy.jobs.logs")
 		o := &client.JobOptions{
