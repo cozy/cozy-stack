@@ -699,28 +699,23 @@ func authorizeForm(c echo.Context) error {
 		}
 	}
 
-	redirectURL, err := url.Parse(params.redirectURI)
-	if err != nil {
-		return err
-	}
-	isDeeplink := strings.Contains(redirectURL.Scheme, "cozy")
-
+	hasFallback := c.QueryParam("fallback_uri") != ""
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
-		"CozyUI":             middlewares.CozyUI(instance),
-		"ThemeCSS":           middlewares.ThemeCSS(instance),
-		"Domain":             instance.ContextualDomain(),
-		"ContextName":        instance.ContextName,
-		"ClientDomain":       clientDomain,
-		"Locale":             instance.Locale,
-		"Client":             params.client,
-		"State":              params.state,
-		"RedirectURI":        params.redirectURI,
-		"Scope":              params.scope,
-		"Permissions":        permissions,
-		"ReadOnly":           readOnly,
-		"CSRF":               c.Get("csrf"),
-		"RedirectIsDeeplink": isDeeplink,
-		"Webapp":             params.webapp,
+		"CozyUI":       middlewares.CozyUI(instance),
+		"ThemeCSS":     middlewares.ThemeCSS(instance),
+		"Domain":       instance.ContextualDomain(),
+		"ContextName":  instance.ContextName,
+		"ClientDomain": clientDomain,
+		"Locale":       instance.Locale,
+		"Client":       params.client,
+		"State":        params.state,
+		"RedirectURI":  params.redirectURI,
+		"Scope":        params.scope,
+		"Permissions":  permissions,
+		"ReadOnly":     readOnly,
+		"CSRF":         c.Get("csrf"),
+		"HasFallback":  hasFallback,
+		"Webapp":       params.webapp,
 	})
 }
 
