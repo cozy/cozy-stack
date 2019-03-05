@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -128,7 +129,7 @@ git checkout master`
 }
 
 var db prefixer.Prefixer
-var fs apps.Copier
+var fs appfs.Copier
 var baseFS afero.Fs
 
 func TestMain(m *testing.M) {
@@ -184,7 +185,7 @@ func TestMain(m *testing.M) {
 	defer osFS.RemoveAll(tmpDir)
 
 	baseFS = afero.NewBasePathFs(osFS, tmpDir)
-	fs = apps.NewAferoCopier(baseFS)
+	fs = appfs.NewAferoCopier(baseFS)
 
 	go serveGitRep()
 

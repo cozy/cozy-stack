@@ -429,10 +429,10 @@ func TestIconForApp(t *testing.T) {
 
 func TestUninstallAppWithLinkedClient(t *testing.T) {
 	// Install drive app
-	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp),
+	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
 		&apps.InstallerOptions{
 			Operation:  apps.Install,
-			Type:       apps.Webapp,
+			Type:       consts.WebappType,
 			Slug:       "drive",
 			SourceURL:  "registry://drive",
 			Registries: testInstance.Registries(),
@@ -471,10 +471,10 @@ func TestUninstallAppWithLinkedClient(t *testing.T) {
 	assert.Contains(t, string(body), "linked OAuth client exists")
 
 	// Cleaning
-	uninstaller, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp),
+	uninstaller, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
 		&apps.InstallerOptions{
 			Operation:  apps.Delete,
-			Type:       apps.Webapp,
+			Type:       consts.WebappType,
 			Slug:       "drive",
 			SourceURL:  "registry://drive",
 			Registries: testInstance.Registries(),
@@ -488,10 +488,10 @@ func TestUninstallAppWithLinkedClient(t *testing.T) {
 
 func TestUninstallAppWithoutLinkedClient(t *testing.T) {
 	// Install drive app
-	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp),
+	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
 		&apps.InstallerOptions{
 			Operation:  apps.Install,
-			Type:       apps.Webapp,
+			Type:       consts.WebappType,
 			Slug:       "drive",
 			SourceURL:  "registry://drive",
 			Registries: testInstance.Registries(),

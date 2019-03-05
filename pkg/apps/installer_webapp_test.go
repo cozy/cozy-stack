@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +16,7 @@ func TestWebappInstallBadSlug(t *testing.T) {
 	manName = apps.WebappManifestName
 	_, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		SourceURL: "git://foo.bar",
 	})
 	if assert.Error(t, err) {
@@ -24,7 +25,7 @@ func TestWebappInstallBadSlug(t *testing.T) {
 
 	_, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "coucou/",
 		SourceURL: "git://foo.bar",
 	})
@@ -38,7 +39,7 @@ func TestWebappInstallBadAppsSource(t *testing.T) {
 	manName = apps.WebappManifestName
 	_, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "app3",
 		SourceURL: "foo://bar.baz",
 	})
@@ -48,7 +49,7 @@ func TestWebappInstallBadAppsSource(t *testing.T) {
 
 	_, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "app4",
 		SourceURL: "git://bar  .baz",
 	})
@@ -58,7 +59,7 @@ func TestWebappInstallBadAppsSource(t *testing.T) {
 
 	_, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "app5",
 		SourceURL: "",
 	})
@@ -75,7 +76,7 @@ func TestWebappInstallSuccessful(t *testing.T) {
 
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "local-cozy-mini",
 		SourceURL: "git://localhost/",
 	})
@@ -122,7 +123,7 @@ func TestWebappInstallSuccessful(t *testing.T) {
 
 	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "local-cozy-mini",
 		SourceURL: "git://localhost/",
 	})
@@ -135,7 +136,7 @@ func TestWebappUpgradeNotExist(t *testing.T) {
 	manName = apps.WebappManifestName
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Update,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "cozy-app-not-exist",
 	})
 	assert.Nil(t, inst)
@@ -143,7 +144,7 @@ func TestWebappUpgradeNotExist(t *testing.T) {
 
 	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Delete,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "cozy-app-not-exist",
 	})
 	assert.Nil(t, inst)
@@ -171,7 +172,7 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "cozy-app-b",
 		SourceURL: "git://localhost/",
 	})
@@ -204,7 +205,7 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 
 	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Update,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "cozy-app-b",
 	})
 	if !assert.NoError(t, err) {
@@ -259,7 +260,7 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/#branch",
 	})
@@ -311,7 +312,7 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 
 	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Update,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "local-cozy-mini-branch",
 	})
 	if !assert.NoError(t, err) {
@@ -361,7 +362,7 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 
 	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Update,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/",
 	})
@@ -391,7 +392,7 @@ func TestWebappInstallFromGithub(t *testing.T) {
 	manName = apps.WebappManifestName
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "github-cozy-mini",
 		SourceURL: "git://github.com/nono/cozy-mini.git",
 	})
@@ -432,7 +433,7 @@ func TestWebappInstallFromGitlab(t *testing.T) {
 	manName = apps.WebappManifestName
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "gitlab-cozy-mini",
 		SourceURL: "git://framagit.org/nono/cozy-mini.git",
 	})
@@ -473,7 +474,7 @@ func TestWebappInstallFromHTTP(t *testing.T) {
 	manName = apps.WebappManifestName
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "http-cozy-drive",
 		SourceURL: "https://github.com/cozy/cozy-drive/archive/71e5cde66f754f986afc7111962ed2dd361bd5e4.tar.gz",
 	})
@@ -514,7 +515,7 @@ func TestWebappUninstall(t *testing.T) {
 	manName = apps.WebappManifestName
 	inst1, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete",
 		SourceURL: "git://localhost/",
 	})
@@ -534,7 +535,7 @@ func TestWebappUninstall(t *testing.T) {
 	}
 	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Delete,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete",
 	})
 	if !assert.NoError(t, err) {
@@ -546,7 +547,7 @@ func TestWebappUninstall(t *testing.T) {
 	}
 	inst3, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Delete,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete",
 	})
 	assert.Nil(t, inst3)
@@ -559,7 +560,7 @@ func TestWebappUninstallErrored(t *testing.T) {
 
 	inst1, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete-errored",
 		SourceURL: "git://localhost/",
 	})
@@ -580,7 +581,7 @@ func TestWebappUninstallErrored(t *testing.T) {
 
 	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Update,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete-errored",
 		SourceURL: "git://foobar.does.not.exist/",
 	})
@@ -601,7 +602,7 @@ func TestWebappUninstallErrored(t *testing.T) {
 
 	inst3, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Delete,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete-errored",
 	})
 	if !assert.NoError(t, err) {
@@ -614,7 +615,7 @@ func TestWebappUninstallErrored(t *testing.T) {
 
 	inst4, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Delete,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete-errored",
 	})
 	assert.Nil(t, inst4)
@@ -627,7 +628,7 @@ func TestWebappInstallBadType(t *testing.T) {
 
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Webapp,
+		Type:      consts.WebappType,
 		Slug:      "cozy-bad-type",
 		SourceURL: "git://localhost/",
 	})

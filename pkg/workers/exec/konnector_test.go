@@ -60,10 +60,10 @@ func TestUnknownApp(t *testing.T) {
 func TestBadFileExec(t *testing.T) {
 	folderToSave := "7890"
 
-	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
+	installer, err := apps.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
 		&apps.InstallerOptions{
 			Operation: apps.Install,
-			Type:      apps.Konnector,
+			Type:      consts.KonnectorType,
 			Slug:      "my-konnector-1",
 			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
 		},
@@ -120,10 +120,10 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		return
 	}
 
-	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
+	installer, err := apps.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
 		&apps.InstallerOptions{
 			Operation: apps.Install,
-			Type:      apps.Konnector,
+			Type:      consts.KonnectorType,
 			Slug:      "my-konnector-1",
 			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
 		},
@@ -231,10 +231,10 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 		}
 	}()
 
-	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
+	installer, err := apps.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
 		&apps.InstallerOptions{
 			Operation: apps.Install,
-			Type:      apps.Konnector,
+			Type:      consts.KonnectorType,
 			Slug:      "my-konnector-1",
 			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
 		},
