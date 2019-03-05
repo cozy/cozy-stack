@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
@@ -37,18 +36,13 @@ func ExportWorker(c *jobs.WorkerContext) error {
 		return err
 	}
 
-	i, err := lifecycle.GetInstance(c.Domain())
+	exportDoc, err := Export(c.Instance, opts, SystemArchiver())
 	if err != nil {
 		return err
 	}
 
-	exportDoc, err := Export(i, opts, SystemArchiver())
-	if err != nil {
-		return err
-	}
-
-	mac := base64.URLEncoding.EncodeToString(exportDoc.GenerateAuthMessage(i))
-	link := i.SubDomain(consts.SettingsSlug)
+	mac := base64.URLEncoding.EncodeToString(exportDoc.GenerateAuthMessage(c.Instance))
+	link := c.Instance.SubDomain(consts.SettingsSlug)
 	link.Fragment = fmt.Sprintf("/exports/%s", mac)
 	mail := mails.Options{
 		Mode:           mails.ModeNoReply,
@@ -61,7 +55,7 @@ func ExportWorker(c *jobs.WorkerContext) error {
 		return err
 	}
 
-	_, err = jobs.System().PushJob(i, &jobs.JobRequest{
+	_, err = jobs.System().PushJob(c.Instance, &jobs.JobRequest{
 		WorkerType: "sendmail",
 		Message:    msg,
 	})

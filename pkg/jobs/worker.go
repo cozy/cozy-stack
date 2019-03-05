@@ -12,8 +12,10 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metrics"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -79,11 +81,12 @@ type (
 	// execution and contains specific values from the job.
 	WorkerContext struct {
 		context.Context
-		job     *Job
-		log     *logrus.Entry
-		id      string
-		cookie  interface{}
-		noRetry bool
+		Instance *instance.Instance
+		job      *Job
+		log      *logrus.Entry
+		id       string
+		cookie   interface{}
+		noRetry  bool
 	}
 )
 
@@ -103,7 +106,7 @@ func (w *WorkerConfig) Clone() *WorkerConfig {
 }
 
 // NewWorkerContext returns a context.Context usable by a worker.
-func NewWorkerContext(workerID string, job *Job) *WorkerContext {
+func NewWorkerContext(workerID string, job *Job, inst *instance.Instance) *WorkerContext {
 	ctx := context.Background()
 	id := fmt.Sprintf("%s/%s", workerID, job.ID())
 	log := logger.WithDomain(job.Domain).
@@ -121,10 +124,11 @@ func NewWorkerContext(workerID string, job *Job) *WorkerContext {
 	}
 
 	return &WorkerContext{
-		Context: ctx,
-		job:     job,
-		log:     log,
-		id:      id,
+		Context:  ctx,
+		Instance: inst,
+		job:      job,
+		log:      log,
+		id:       id,
 	}
 }
 
@@ -155,11 +159,12 @@ func (c *WorkerContext) NoRetry() bool {
 
 func (c *WorkerContext) clone() *WorkerContext {
 	return &WorkerContext{
-		Context: c.Context,
-		job:     c.job,
-		log:     c.log,
-		id:      c.id,
-		cookie:  c.cookie,
+		Context:  c.Context,
+		Instance: c.Instance,
+		job:      c.job,
+		log:      c.log,
+		id:       c.id,
+		cookie:   c.cookie,
 	}
 }
 
@@ -184,11 +189,6 @@ func (c *WorkerContext) UnmarshalEvent(v interface{}) error {
 		return errors.New("jobs: does not have an event associated")
 	}
 	return c.job.Event.Unmarshal(v)
-}
-
-// Domain returns the domain associated with the worker context.
-func (c *WorkerContext) Domain() string {
-	return c.job.Domain
 }
 
 // TriggerID returns the possible trigger identifier responsible for launching
@@ -259,7 +259,16 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			joblog.Errorf("%s: missing domain from job request", workerID)
 			continue
 		}
-		parentCtx := NewWorkerContext(workerID, job)
+		var inst *instance.Instance
+		if domain != prefixer.GlobalPrefixer.DomainName() {
+			var err error
+			inst, err = instance.GetFromCouch(job.Domain)
+			if err != nil {
+				joblog.Errorf("Instance not found for %s: %s", job.Domain, err)
+				continue
+			}
+		}
+		parentCtx := NewWorkerContext(workerID, job, inst)
 		if err := job.AckConsumed(); err != nil {
 			parentCtx.Logger().Errorf("error acking consume job: %s",
 				err.Error())

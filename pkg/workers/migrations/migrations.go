@@ -43,8 +43,6 @@ type message struct {
 }
 
 func worker(ctx *jobs.WorkerContext) error {
-	domain := ctx.Domain()
-
 	var msg message
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -52,7 +50,7 @@ func worker(ctx *jobs.WorkerContext) error {
 
 	switch msg.Type {
 	case swiftV1ToV2:
-		return migrateSwiftV1ToV2(domain)
+		return migrateSwiftV1ToV2(ctx.Instance.Domain)
 	default:
 		return fmt.Errorf("unknown migration type %q", msg.Type)
 	}
@@ -62,7 +60,6 @@ func commit(ctx *jobs.WorkerContext, err error) error {
 	if err != nil {
 		return nil
 	}
-	domain := ctx.Domain()
 
 	var msg message
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
@@ -71,7 +68,7 @@ func commit(ctx *jobs.WorkerContext, err error) error {
 
 	switch msg.Type {
 	case swiftV1ToV2:
-		return commitSwiftV1ToV2(domain, msg.Cluster)
+		return commitSwiftV1ToV2(ctx.Instance.Domain, msg.Cluster)
 	default:
 		return fmt.Errorf("unknown migration type %q", msg.Type)
 	}

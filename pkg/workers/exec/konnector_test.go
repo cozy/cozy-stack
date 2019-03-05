@@ -36,7 +36,8 @@ func TestUnknownDomain(t *testing.T) {
 		Message:    msg,
 		WorkerType: "konnector",
 	})
-	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
+	ctx := jobs.NewWorkerContext("id", j, nil).
+		WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "Instance not found", err.Error())
@@ -51,7 +52,8 @@ func TestUnknownApp(t *testing.T) {
 		Message:    msg,
 		WorkerType: "konnector",
 	})
-	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
+	ctx := jobs.NewWorkerContext("id", j, inst).
+		WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "Application is not installed", err.Error())
@@ -88,7 +90,8 @@ func TestBadFileExec(t *testing.T) {
 	})
 
 	config.GetConfig().Konnectors.Cmd = ""
-	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
+	ctx := jobs.NewWorkerContext("id", j, inst).
+		WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "fork/exec : no such file or directory", err.Error())
@@ -189,7 +192,8 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 	})
 
 	config.GetConfig().Konnectors.Cmd = tmpScript
-	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
+	ctx := jobs.NewWorkerContext("id", j, inst).
+		WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.NoError(t, err)
 
@@ -282,7 +286,8 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 	})
 
 	config.GetConfig().Konnectors.Cmd = tmpScript
-	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
+	ctx := jobs.NewWorkerContext("id", j, inst).
+		WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.NoError(t, err)
 

@@ -374,7 +374,7 @@ func TestSendMailNoReply(t *testing.T) {
 		Message:    msg,
 		WorkerType: "sendmail",
 	})
-	err := SendMail(jobs.NewWorkerContext("123", j))
+	err := SendMail(jobs.NewWorkerContext("123", j, inst))
 	if assert.Error(t, err) {
 		assert.Equal(t, "yes", err.Error())
 	}
@@ -407,7 +407,7 @@ func TestSendMailFrom(t *testing.T) {
 		Message:    msg,
 		WorkerType: "sendmail",
 	})
-	err := SendMail(jobs.NewWorkerContext("123", j))
+	err := SendMail(jobs.NewWorkerContext("123", j, inst))
 	if assert.Error(t, err) {
 		assert.Equal(t, "yes", err.Error())
 	}
