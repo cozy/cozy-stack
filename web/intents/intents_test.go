@@ -137,7 +137,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	appToken = ins.BuildAppToken(app, "")
+	appToken = ins.BuildAppToken(app.Slug(), "")
 	files := &apps.WebappManifest{
 		DocID:          consts.Apps + "/files",
 		DocSlug:        "files",
@@ -158,7 +158,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	filesToken = ins.BuildAppToken(files, "")
+	filesToken = ins.BuildAppToken(files.Slug(), "")
 
 	ts = setup.GetTestServer("/intents", Routes)
 	os.Exit(setup.Run())

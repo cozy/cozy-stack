@@ -213,7 +213,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, app
 
 	var token string
 	if isLoggedIn {
-		token = i.BuildAppToken(app, session.ID())
+		token = i.BuildAppToken(app.Slug(), session.ID())
 	} else {
 		token = c.QueryParam("sharecode")
 	}

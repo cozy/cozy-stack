@@ -456,7 +456,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 
 	// Directly pass the job message as fields parameters
 	fieldsJSON := w.msg.ToJSON()
-	token := i.BuildKonnectorToken(w.man)
+	token := i.BuildKonnectorToken(w.man.Slug())
 
 	cmd = config.GetConfig().Konnectors.Cmd
 	env = []string{

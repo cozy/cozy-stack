@@ -1084,7 +1084,7 @@ func generateAppToken(inst *instance.Instance, slug string) string {
 	if err != nil {
 		return ""
 	}
-	return inst.BuildAppToken(manifest, "")
+	return inst.BuildAppToken(manifest.Slug(), "")
 }
 
 func noRedirect(*http.Request, []*http.Request) error {

@@ -39,7 +39,7 @@ func TestBuildAppToken(t *testing.T) {
 		SessionSecret: crypto.GenerateRandomBytes(64),
 	}
 
-	tokenString := inst.BuildAppToken(manifest, "sessionid")
+	tokenString := inst.BuildAppToken(manifest.Slug(), "sessionid")
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		_, ok := token.Method.(*jwt.SigningMethodHMAC)
 		assert.True(t, ok, "The signing method should be HMAC")

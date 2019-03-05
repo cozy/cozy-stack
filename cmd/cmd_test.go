@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/web"
@@ -64,8 +65,8 @@ func TestMain(m *testing.M) {
 	u, _ := url.Parse(ts.URL)
 	domain := strings.Replace(u.Host, "127.0.0.1", "localhost", -1)
 
-	instance.Destroy(domain)
-	testInstance, err = instance.Create(&instance.Options{
+	lifecycle.Destroy(domain)
+	testInstance, err = lifecycle.Create(&lifecycle.Options{
 		Domain: domain,
 		Locale: "en",
 	})
@@ -86,7 +87,7 @@ func TestMain(m *testing.M) {
 	}
 
 	res := m.Run()
-	instance.Destroy("test-files")
+	lifecycle.Destroy("test-files")
 	os.RemoveAll(tempdir)
 	ts.Close()
 

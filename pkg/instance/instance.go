@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -630,11 +629,10 @@ func (i *Instance) MakeJWT(audience, subject, scope, sessionID string, issuedAt 
 
 // BuildAppToken is used to build a token to identify the app for requests made
 // to the stack
-func (i *Instance) BuildAppToken(m apps.Manifest, sessionID string) string {
+func (i *Instance) BuildAppToken(slug, sessionID string) string {
 	scope := "" // apps tokens don't have a scope
-	subject := m.Slug()
 	now := time.Now()
-	token, err := i.MakeJWT(permissions.AppAudience, subject, scope, sessionID, now)
+	token, err := i.MakeJWT(permissions.AppAudience, slug, scope, sessionID, now)
 	if err != nil {
 		return ""
 	}
@@ -643,10 +641,9 @@ func (i *Instance) BuildAppToken(m apps.Manifest, sessionID string) string {
 
 // BuildKonnectorToken is used to build a token to identify the konnector for
 // requests made to the stack
-func (i *Instance) BuildKonnectorToken(m apps.Manifest) string {
+func (i *Instance) BuildKonnectorToken(slug string) string {
 	scope := "" // apps tokens don't have a scope
-	subject := m.Slug()
-	token, err := i.MakeJWT(permissions.KonnectorAudience, subject, scope, "", time.Now())
+	token, err := i.MakeJWT(permissions.KonnectorAudience, slug, scope, "", time.Now())
 	if err != nil {
 		return ""
 	}
