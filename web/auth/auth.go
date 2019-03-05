@@ -756,9 +756,9 @@ func authorize(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		installer, err := apps.NewInstaller(instance, instance.AppsCopier(apps.Webapp), &apps.InstallerOptions{
+		installer, err := apps.NewInstaller(instance, instance.AppsCopier(consts.WebappType), &apps.InstallerOptions{
 			Operation:  apps.Install,
-			Type:       apps.Webapp,
+			Type:       consts.WebappType,
 			SourceURL:  softwareID,
 			Slug:       manifest.Slug(),
 			Registries: instance.Registries(),

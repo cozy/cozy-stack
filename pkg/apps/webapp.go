@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
@@ -204,7 +205,7 @@ func (m *WebappManifest) SetAvailableVersion(version string) { m.DocAvailableVer
 func (m *WebappManifest) SetChecksum(shasum string) { m.DocChecksum = shasum }
 
 // AppType is part of the Manifest interface
-func (m *WebappManifest) AppType() AppType { return Webapp }
+func (m *WebappManifest) AppType() consts.AppType { return consts.WebappType }
 
 // Terms is part of the Manifest interface
 func (m *WebappManifest) Terms() Terms { return m.DocTerms }
@@ -467,7 +468,7 @@ func GetWebappBySlug(db prefixer.Prefixer, slug string) (*WebappManifest, error)
 // GetWebappBySlugAndUpdate fetch the WebappManifest and perform an update of
 // the application if necessary and if the application was installed from the
 // registry.
-func GetWebappBySlugAndUpdate(db prefixer.Prefixer, slug string, copier Copier, registries []*url.URL) (*WebappManifest, error) {
+func GetWebappBySlugAndUpdate(db prefixer.Prefixer, slug string, copier appfs.Copier, registries []*url.URL) (*WebappManifest, error) {
 	man, err := GetWebappBySlug(db, slug)
 	if err != nil {
 		return nil, err

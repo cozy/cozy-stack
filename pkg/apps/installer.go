@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -38,7 +39,7 @@ const (
 type Installer struct {
 	fetcher  Fetcher
 	op       Operation
-	fs       Copier
+	fs       appfs.Copier
 	db       prefixer.Prefixer
 	endState State
 
@@ -56,7 +57,7 @@ type Installer struct {
 // InstallerOptions provides the slug name of the application along with the
 // source URL.
 type InstallerOptions struct {
-	Type             AppType
+	Type             consts.AppType
 	Operation        Operation
 	Manifest         Manifest
 	Slug             string
@@ -79,11 +80,11 @@ type Fetcher interface {
 	FetchManifest(src *url.URL) (io.ReadCloser, error)
 	// Fetch should download the application and install it in the given
 	// directory.
-	Fetch(src *url.URL, fs Copier, man Manifest) error
+	Fetch(src *url.URL, fs appfs.Copier, man Manifest) error
 }
 
 // NewInstaller creates a new Installer
-func NewInstaller(db prefixer.Prefixer, fs Copier, opts *InstallerOptions) (*Installer, error) {
+func NewInstaller(db prefixer.Prefixer, fs appfs.Copier, opts *InstallerOptions) (*Installer, error) {
 	man, err := initManifest(db, opts)
 	if err != nil {
 		return nil, err
@@ -137,9 +138,9 @@ func NewInstaller(db prefixer.Prefixer, fs Copier, opts *InstallerOptions) (*Ins
 
 	var manFilename string
 	switch man.AppType() {
-	case Webapp:
+	case consts.WebappType:
 		manFilename = WebappManifestName
-	case Konnector:
+	case consts.KonnectorType:
 		manFilename = KonnectorManifestName
 	}
 
@@ -195,12 +196,12 @@ func initManifest(db prefixer.Prefixer, opts *InstallerOptions) (man Manifest, e
 			return nil, err
 		}
 		switch opts.Type {
-		case Webapp:
+		case consts.WebappType:
 			man = &WebappManifest{
 				DocID:   consts.Apps + "/" + slug,
 				DocSlug: slug,
 			}
-		case Konnector:
+		case consts.KonnectorType:
 			man = &KonnManifest{
 				DocID:   consts.Konnectors + "/" + slug,
 				DocSlug: slug,
@@ -426,7 +427,7 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 	newManifest.SetState(state)
 
 	shouldOverrideParameters := (i.overridenParameters != nil &&
-		i.man.AppType() == Konnector &&
+		i.man.AppType() == consts.KonnectorType &&
 		i.src.Scheme != "registry")
 	if shouldOverrideParameters {
 		if m, ok := newManifest.(*KonnManifest); ok {
@@ -440,13 +441,13 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 		AppType string `json:"type"`
 	}{}
 
-	var newManifestAppType AppType
+	var newManifestAppType consts.AppType
 	if err = json.Unmarshal(buf.Bytes(), &newAppType); err == nil {
 		if newAppType.AppType == "konnector" {
-			newManifestAppType = Konnector
+			newManifestAppType = consts.KonnectorType
 		}
 		if newAppType.AppType == "webapp" {
-			newManifestAppType = Webapp
+			newManifestAppType = consts.WebappType
 		}
 	}
 
@@ -474,7 +475,7 @@ func (i *Installer) Poll() (Manifest, bool, error) {
 }
 
 // DoLazyUpdate tries to update an application before using it
-func DoLazyUpdate(db prefixer.Prefixer, man Manifest, copier Copier, registries []*url.URL) Manifest {
+func DoLazyUpdate(db prefixer.Prefixer, man Manifest, copier appfs.Copier, registries []*url.URL) Manifest {
 	src, err := url.Parse(man.Source())
 	if err != nil || src.Scheme != "registry" {
 		return man
@@ -521,7 +522,7 @@ func isMoreRecent(a, b string) bool {
 }
 
 func isPlatformApp(man Manifest) bool {
-	if man.AppType() != Webapp {
+	if man.AppType() != consts.WebappType {
 		return false
 	}
 	return utils.IsInArray(man.Slug(), []string{

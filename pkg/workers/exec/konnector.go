@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -130,7 +131,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	w.msg = &msg
 
 	w.man, err = apps.GetKonnectorBySlugAndUpdate(i, slug,
-		i.AppsCopier(apps.Konnector), i.Registries())
+		i.AppsCopier(consts.KonnectorType), i.Registries())
 	if err == apps.ErrNotFound {
 		return "", jobs.ErrBadTrigger{Err: err}
 	} else if err != nil {
@@ -352,7 +353,7 @@ func (w *konnectorWorker) ensurePermissions(inst *instance.Instance) error {
 	return couchdb.UpdateDoc(inst, perms)
 }
 
-func copyFiles(workFS afero.Fs, fileServer apps.FileServer, slug, version, shasum string) error {
+func copyFiles(workFS afero.Fs, fileServer appfs.FileServer, slug, version, shasum string) error {
 	files, err := fileServer.FilesList(slug, version, shasum)
 	if err != nil {
 		return err

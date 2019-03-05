@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/sirupsen/logrus"
 )
@@ -38,7 +39,7 @@ func (f *fileFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	return r, nil
 }
 
-func (f *fileFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
+func (f *fileFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) (err error) {
 	version := man.Version() + "-" + utils.RandomString(10)
 	man.SetVersion(version)
 	exists, err := fs.Start(man.Slug(), man.Version(), "")
@@ -55,7 +56,7 @@ func (f *fileFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	return copyRec(src.Path, "/", fs)
 }
 
-func copyRec(root, path string, fs Copier) error {
+func copyRec(root, path string, fs appfs.Copier) error {
 	files, err := ioutil.ReadDir(filepath.Join(root, path))
 	if err != nil {
 		return err
@@ -77,11 +78,8 @@ func copyRec(root, path string, fs Copier) error {
 			return err
 		}
 		defer f.Close()
-		err = fs.Copy(&fileInfo{
-			name: relpath,
-			size: file.Size(),
-			mode: file.Mode(),
-		}, f)
+		info := appfs.NewFileInfo(relpath, file.Size(), file.Mode())
+		err = fs.Copy(info, f)
 		if err != nil {
 			return err
 		}

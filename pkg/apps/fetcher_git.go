@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/cozy/afero"
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	git "github.com/cozy/go-git"
 	gitPlumbing "github.com/cozy/go-git/plumbing"
 	gitObject "github.com/cozy/go-git/plumbing/object"
@@ -141,7 +142,7 @@ func (g *gitFetcher) fetchManifestFromGitArchive(src *url.URL) (io.ReadCloser, e
 	return nil, ErrManifestNotReachable
 }
 
-func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
+func (g *gitFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) (err error) {
 	defer func() {
 		if err != nil {
 			g.log.Errorf("Error while fetching or copying repository %s: %s",
@@ -179,7 +180,7 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	return g.fetchWithGoGit(gitDir, src, fs, man)
 }
 
-func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, fs Copier, man Manifest) (err error) {
+func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, fs appfs.Copier, man Manifest) (err error) {
 	var branch string
 	src, branch = getRemoteURL(src)
 	srcStr := src.String()
@@ -259,15 +260,12 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 		if err != nil {
 			return err
 		}
-		return fs.Copy(&fileInfo{
-			name: path,
-			size: info.Size(),
-			mode: info.Mode(),
-		}, src)
+		fileinfo := appfs.NewFileInfo(path, info.Size(), info.Mode())
+		return fs.Copy(fileinfo, src)
 	})
 }
 
-func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs Copier, man Manifest) (err error) {
+func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs appfs.Copier, man Manifest) (err error) {
 	var branch string
 	src, branch = getRemoteURL(src)
 
@@ -348,11 +346,8 @@ func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs Copier, man 
 			return err
 		}
 		defer r.Close()
-		return fs.Copy(&fileInfo{
-			name: f.Name,
-			size: f.Size,
-			mode: os.FileMode(f.Mode),
-		}, r)
+		fileinfo := appfs.NewFileInfo(f.Name, f.Size, os.FileMode(f.Mode))
+		return fs.Copy(fileinfo, r)
 	})
 }
 

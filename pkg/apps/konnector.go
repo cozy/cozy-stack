@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -157,7 +158,7 @@ func (m *KonnManifest) SetAvailableVersion(version string) { m.DocAvailableVersi
 func (m *KonnManifest) SetChecksum(shasum string) { m.DocChecksum = shasum }
 
 // AppType is part of the Manifest interface
-func (m *KonnManifest) AppType() AppType { return Konnector }
+func (m *KonnManifest) AppType() consts.AppType { return consts.KonnectorType }
 
 // Terms is part of the Manifest interface
 func (m *KonnManifest) Terms() Terms { return m.DocTerms }
@@ -260,7 +261,7 @@ func GetKonnectorBySlug(db prefixer.Prefixer, slug string) (*KonnManifest, error
 // GetKonnectorBySlugAndUpdate fetch the KonnManifest and perform an update of
 // the konnector if necessary and if the konnector was installed from the
 // registry.
-func GetKonnectorBySlugAndUpdate(db prefixer.Prefixer, slug string, copier Copier, registries []*url.URL) (*KonnManifest, error) {
+func GetKonnectorBySlugAndUpdate(db prefixer.Prefixer, slug string, copier appfs.Copier, registries []*url.URL) (*KonnManifest, error) {
 	man, err := GetKonnectorBySlug(db, slug)
 	if err != nil {
 		return nil, err

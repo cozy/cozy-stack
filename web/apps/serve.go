@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -60,7 +61,7 @@ func Serve(c echo.Context) error {
 
 	route, file := app.FindRoute(path.Clean(c.Request().URL.Path))
 	if file == "" || file == route.Index {
-		app = apps.DoLazyUpdate(i, app, i.AppsCopier(apps.Webapp), i.Registries()).(*apps.WebappManifest)
+		app = apps.DoLazyUpdate(i, app, i.AppsCopier(consts.WebappType), i.Registries()).(*apps.WebappManifest)
 	}
 
 	switch app.State() {
@@ -107,7 +108,7 @@ func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
 // application that is not installed on the user's instance. However this
 // procedure should not be used for standard applications, use the Serve method
 // for that.
-func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app *apps.WebappManifest) error {
+func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, app *apps.WebappManifest) error {
 	slug := app.Slug()
 	route, file := app.FindRoute(path.Clean(c.Request().URL.Path))
 	if route.NotFound() {

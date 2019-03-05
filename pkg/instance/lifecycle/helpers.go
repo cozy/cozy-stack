@@ -24,9 +24,9 @@ func update(inst *instance.Instance) error {
 
 func installApp(inst *instance.Instance, slug string) error {
 	source := "registry://" + slug + "/stable"
-	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Webapp), &apps.InstallerOptions{
+	installer, err := apps.NewInstaller(inst, inst.AppsCopier(consts.WebappType), &apps.InstallerOptions{
 		Operation:  apps.Install,
-		Type:       apps.Webapp,
+		Type:       consts.WebappType,
 		SourceURL:  source,
 		Slug:       slug,
 		Registries: inst.Registries(),

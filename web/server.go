@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -121,7 +122,7 @@ func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 		}
 		webapp := app.(*apps.WebappManifest)
 		i := middlewares.GetInstance(c)
-		f := apps.NewAferoFileServer(fs, func(_, _, _, file string) string {
+		f := appfs.NewAferoFileServer(fs, func(_, _, _, file string) string {
 			return path.Join("/", file)
 		})
 		// Save permissions in couchdb before loading an index page

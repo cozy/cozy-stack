@@ -449,10 +449,10 @@ var linkedAppFixer = &cobra.Command{
 					client.SoftwareID = value
 
 					// Install app
-					installer, err := apps.NewInstaller(i, i.AppsCopier(apps.Webapp),
+					installer, err := apps.NewInstaller(i, i.AppsCopier(consts.WebappType),
 						&apps.InstallerOptions{
 							Operation:  apps.Install,
-							Type:       apps.Webapp,
+							Type:       consts.WebappType,
 							Slug:       slug,
 							SourceURL:  value,
 							Registries: i.Registries(),
