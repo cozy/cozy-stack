@@ -197,6 +197,7 @@ func (j *Job) Ack() error {
 	j.Logger().Debugf("ack %s ", j.ID())
 	j.FinishedAt = time.Now()
 	j.State = Done
+	j.Event = nil
 	return j.Update()
 }
 
@@ -207,6 +208,7 @@ func (j *Job) Nack(err error) error {
 	j.FinishedAt = time.Now()
 	j.State = Errored
 	j.Error = err.Error()
+	j.Event = nil
 	return j.Update()
 }
 
