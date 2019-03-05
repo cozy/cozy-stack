@@ -92,7 +92,7 @@
       </section>
     </main>
     <script src="{{asset .Domain "/scripts/cancel-button.js"}}"></script>
-    {{if .RedirectIsDeeplink}}
+    {{if .HasFallback}}
       <script src="{{asset .Domain "/scripts/check-deeplink.js"}}"></script>
     {{end}}
   </body>
