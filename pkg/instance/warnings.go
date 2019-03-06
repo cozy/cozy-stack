@@ -9,6 +9,21 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
+// BlockingReason structs holds a reason why an instance had been blocked
+type BlockingReason struct {
+	Code    string
+	Message string
+}
+
+var (
+	// BlockedLoginFailed is used when a security issue has been detected on the instance
+	BlockedLoginFailed = BlockingReason{Code: "LOGIN_FAILED", Message: "Instance Blocked Login"}
+	// BlockedPaymentFailed is used when a payment is missing for the instance
+	BlockedPaymentFailed = BlockingReason{Code: "PAYMENT_FAILED", Message: "Instance Blocked Payment"}
+	// BlockedUnknown is used when an instance is blocked but the reason is unknown
+	BlockedUnknown = BlockingReason{Code: "UNKNOWN", Message: "Instance Blocked Unknown"}
+)
+
 // Warnings returns a list of possible warnings associated with the instance.
 func (i *Instance) Warnings() (warnings []*jsonapi.Error) {
 	notSigned, deadline := i.CheckTOSNotSignedAndDeadline()

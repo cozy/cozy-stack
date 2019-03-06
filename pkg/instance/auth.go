@@ -14,6 +14,14 @@ import (
 	"golang.org/x/crypto/hkdf"
 )
 
+/* #nosec */
+const (
+	RegisterTokenLen      = 16
+	PasswordResetTokenLen = 16
+	SessionSecretLen      = 64
+	OauthSecretLen        = 128
+)
+
 var twoFactorTOTPOptions = totp.ValidateOpts{
 	Period:    30, // 30s
 	Skew:      10, // 30s +- 10*30s = [-5min; 5,5min]

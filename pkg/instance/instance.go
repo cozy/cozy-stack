@@ -25,29 +25,6 @@ import (
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
-/* #nosec */
-const (
-	RegisterTokenLen      = 16
-	PasswordResetTokenLen = 16
-	SessionSecretLen      = 64
-	OauthSecretLen        = 128
-)
-
-// BlockingReason structs holds a reason why an instance had been blocked
-type BlockingReason struct {
-	Code    string
-	Message string
-}
-
-var (
-	// BlockedLoginFailed is used when a security issue has been detected on the instance
-	BlockedLoginFailed = BlockingReason{Code: "LOGIN_FAILED", Message: "Instance Blocked Login"}
-	// BlockedPaymentFailed is used when a payment is missing for the instance
-	BlockedPaymentFailed = BlockingReason{Code: "PAYMENT_FAILED", Message: "Instance Blocked Payment"}
-	// BlockedUnknown is used when an instance is blocked but the reason is unknown
-	BlockedUnknown = BlockingReason{Code: "UNKNOWN", Message: "Instance Blocked Unknown"}
-)
-
 // An Instance has the informations relatives to the logical cozy instance,
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
@@ -71,7 +48,8 @@ type Instance struct {
 	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"`   // The total size in bytes allowed to the user
 	IndexViewsVersion  int   `json:"indexes_version"`
 
-	// Swift cluster number, indexed from 1. If not zero, it indicates we're using swift layout 2, see pkg/vfs/swift.
+	// Swift cluster number, indexed from 1. If not zero, it indicates we're
+	// using swift layout 2, see pkg/vfs/swift.
 	SwiftCluster int `json:"swift_cluster,omitempty"`
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
