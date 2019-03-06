@@ -66,6 +66,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 
 	// Clear the existing triggers before testing with our triggers
 	ts, err := sch.GetAllTriggers(testInstance)
+	assert.NoError(t, err)
 	for _, trigger := range ts {
 		err = sch.DeleteTrigger(testInstance, trigger.ID())
 		assert.NoError(t, err)

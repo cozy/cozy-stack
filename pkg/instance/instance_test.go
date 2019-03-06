@@ -1,4 +1,4 @@
-package instance
+package instance_test
 
 import (
 	"os"
@@ -8,12 +8,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 func TestSubdomain(t *testing.T) {
-	inst := &Instance{
+	inst := &instance.Instance{
 		Domain: "foo.example.com",
 	}
 	cfg := config.GetConfig()
@@ -34,7 +35,7 @@ func TestBuildAppToken(t *testing.T) {
 		DocID:   consts.Apps + "/my-app",
 		DocSlug: "my-app",
 	}
-	inst := &Instance{
+	inst := &instance.Instance{
 		Domain:        "test-ctx-token.example.com",
 		SessionSecret: crypto.GenerateRandomBytes(64),
 	}
