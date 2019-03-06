@@ -1124,6 +1124,7 @@ func passphraseForm(c echo.Context) error {
 		})
 	}
 
+	matomo := config.GetConfig().Matomo
 	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
 		"CozyUI":        middlewares.CozyUI(inst),
 		"ThemeCSS":      middlewares.ThemeCSS(inst),
@@ -1131,6 +1132,9 @@ func passphraseForm(c echo.Context) error {
 		"ContextName":   inst.ContextName,
 		"Locale":        inst.Locale,
 		"RegisterToken": registerToken,
+		"MatomoURL":     matomo.URL,
+		"MatomoSiteID":  matomo.SiteID,
+		"MatomoAppID":   matomo.OnboardingAppID,
 	})
 }
 
