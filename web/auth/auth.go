@@ -1125,6 +1125,9 @@ func passphraseForm(c echo.Context) error {
 	}
 
 	matomo := config.GetConfig().Matomo
+	if matomo.URL != "" {
+		middlewares.AppendCSPRule(c, "img", matomo.URL)
+	}
 	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
 		"CozyUI":        middlewares.CozyUI(inst),
 		"ThemeCSS":      middlewares.ThemeCSS(inst),
