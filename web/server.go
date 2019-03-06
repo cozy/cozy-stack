@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/i18n"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	webapps "github.com/cozy/cozy-stack/web/apps"
@@ -90,10 +91,10 @@ func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 			return nil, fmt.Errorf("Directory %s does not exist", dir)
 		}
 		if err = checkExists(path.Join(dir, apps.WebappManifestName)); err != nil {
-			return nil, err
+			logger.WithNamespace("dev").Warnf("The app manifest is missing: %s", err)
 		}
 		if err = checkExists(path.Join(dir, "index.html")); err != nil {
-			return nil, err
+			logger.WithNamespace("dev").Warnf("The index.html is missing: %s", err)
 		}
 	}
 	return listenAndServe(func(c echo.Context) error {
