@@ -73,7 +73,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 
 	locale := opts.Locale
 	if locale == "" {
-		locale = instance.DefaultLocale
+		locale = consts.DefaultLocale
 	}
 
 	settings := buildSettings(opts)

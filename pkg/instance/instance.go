@@ -33,9 +33,6 @@ const (
 	OauthSecretLen        = 128
 )
 
-// DefaultLocale is the default locale when creating an instance
-const DefaultLocale = "en"
-
 // BlockingReason structs holds a reason why an instance had been blocked
 type BlockingReason struct {
 	Code    string

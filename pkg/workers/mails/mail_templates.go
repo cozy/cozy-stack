@@ -7,6 +7,7 @@ import (
 	"sync"
 	"text/template"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/hermes"
 )
@@ -29,8 +30,8 @@ func getHermes(locale string) hermes.Hermes {
 	hermesesMu.Lock()
 	defer hermesesMu.Unlock()
 	if hermeses == nil {
-		hermeses = make(map[string]hermes.Hermes, len(i18n.SupportedLocales))
-		for _, locale := range i18n.SupportedLocales {
+		hermeses = make(map[string]hermes.Hermes, len(consts.SupportedLocales))
+		for _, locale := range consts.SupportedLocales {
 			hermeses[locale] = hermes.Hermes{
 				Theme:         new(MailTheme),
 				TextDirection: hermes.TDLeftToRight,
@@ -47,7 +48,7 @@ func getHermes(locale string) hermes.Hermes {
 	}
 	h, ok := hermeses[locale]
 	if !ok {
-		h = hermeses[i18n.DefaultLocale]
+		h = hermeses[consts.DefaultLocale]
 	}
 	return h
 }

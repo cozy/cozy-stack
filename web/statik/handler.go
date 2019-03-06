@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -265,7 +266,7 @@ func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *fs.Asset,
 func GetLanguageFromHeader(header http.Header) (lang string) {
 	// TODO: improve language detection with a package like
 	// "golang.org/x/text/language"
-	lang = i18n.DefaultLocale
+	lang = consts.DefaultLocale
 	acceptHeader := header.Get("Accept-Language")
 	if acceptHeader == "" {
 		return
@@ -282,7 +283,7 @@ func GetLanguageFromHeader(header http.Header) (lang string) {
 		if i := strings.IndexByte(tag, '-'); i >= 0 {
 			tag = tag[:i]
 		}
-		if utils.IsInArray(tag, i18n.SupportedLocales) {
+		if utils.IsInArray(tag, consts.SupportedLocales) {
 			lang = tag
 			return
 		}

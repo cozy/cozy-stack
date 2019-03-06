@@ -4,15 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	gotext "gopkg.in/leonelquinteros/gotext.v1"
 )
-
-// DefaultLocale is the default locale tag, used for fallback.
-const DefaultLocale = "en"
-
-// SupportedLocales is the list of supported locales tags.
-var SupportedLocales = []string{"en", "fr"}
 
 var translations = make(map[string]*gotext.Po)
 
@@ -38,13 +33,14 @@ func Translate(key, locale string, vars ...interface{}) string {
 			return translated
 		}
 	}
-	if po, ok := translations[DefaultLocale]; ok {
+	if po, ok := translations[consts.DefaultLocale]; ok {
 		translated := po.Get(key, vars...)
 		if translated != key && translated != "" {
 			return translated
 		}
 	}
-	logger.WithNamespace("i18n").Infof("Translation not found for key %q on locale %q", key, locale)
+	logger.WithNamespace("i18n").
+		Infof("Translation not found for key %q on locale %q", key, locale)
 	if strings.HasPrefix(key, " Permissions ") {
 		key = strings.Replace(key, "Permissions ", "", 1)
 	}
