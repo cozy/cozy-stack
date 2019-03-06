@@ -267,6 +267,11 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 				joblog.Errorf("Instance not found for %s: %s", job.Domain, err)
 				continue
 			}
+			// Do not execute jobs for instances with blocking not signed TOS
+			notSigned, deadline := inst.CheckTOSNotSignedAndDeadline()
+			if notSigned && deadline == instance.TOSBlocked {
+				continue
+			}
 		}
 		parentCtx := NewWorkerContext(workerID, job, inst)
 		if err := job.AckConsumed(); err != nil {
