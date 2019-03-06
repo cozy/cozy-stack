@@ -114,6 +114,13 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	sch.StartScheduler(bro)
 	time.Sleep(50 * time.Millisecond)
 
+	// Clear the existing triggers before testing with our triggers
+	ts, err := sch.GetAllTriggers(testInstance)
+	for _, trigger := range ts {
+		err = sch.DeleteTrigger(testInstance, trigger.ID())
+		assert.NoError(t, err)
+	}
+
 	tat, err := jobs.NewTrigger(testInstance, at, msg1)
 	assert.NoError(t, err)
 	err = sch.AddTrigger(tat)
@@ -126,9 +133,9 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	assert.NoError(t, err)
 	inID := tin.Infos().TID
 
-	ts, err := sch.GetAllTriggers(testInstance)
+	ts, err = sch.GetAllTriggers(testInstance)
 	assert.NoError(t, err)
-	assert.Len(t, ts, 3) // 1 @event for thumbnails + 1 @at + 1 @in
+	assert.Len(t, ts, 2)
 
 	for _, trigger := range ts {
 		switch trigger.Infos().TID {
@@ -487,7 +494,7 @@ func TestMain(m *testing.M) {
 	}
 
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "test_redis_scheduler")
+	setup := testutils.NewSetup(m, "test_jobs")
 	testInstance = setup.GetTestInstance()
 
 	setup.AddCleanup(func() error {

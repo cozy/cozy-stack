@@ -1,4 +1,4 @@
-package jobs
+package jobs_test
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/go-redis/redis"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,9 +22,7 @@ func randomMicro(min, max int) time.Duration {
 }
 
 func TestRedisJobs(t *testing.T) {
-	config.UseTestFile()
-
-	redisBRPopTimeout = 1 * time.Second
+	// redisBRPopTimeout = 1 * time.Second
 	opts1, _ := redis.ParseURL(redisURL1)
 	opts2, _ := redis.ParseURL(redisURL2)
 	client1 := redis.NewClient(opts1)
@@ -36,11 +34,11 @@ func TestRedisJobs(t *testing.T) {
 	var w sync.WaitGroup
 	w.Add(2*n + 1)
 
-	var workersTestList = WorkersList{
+	var workersTestList = jobs.WorkersList{
 		{
 			WorkerType:  "test",
 			Concurrency: 4,
-			WorkerFunc: func(ctx *WorkerContext) error {
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
 				var msg string
 				err := ctx.UnmarshalMessage(&msg)
 				if !assert.NoError(t, err) {
@@ -64,16 +62,16 @@ func TestRedisJobs(t *testing.T) {
 		},
 	}
 
-	broker1 := NewRedisBroker(client1)
+	broker1 := jobs.NewRedisBroker(client1)
 	err := broker1.StartWorkers(workersTestList)
 	assert.NoError(t, err)
 
-	broker2 := NewRedisBroker(client2)
+	broker2 := jobs.NewRedisBroker(client2)
 	err = broker2.StartWorkers(workersTestList)
 	assert.NoError(t, err)
 
-	msg, _ := NewMessage("z-0")
-	_, err = broker1.PushJob(localDB, &JobRequest{
+	msg, _ := jobs.NewMessage("z-0")
+	_, err = broker1.PushJob(testInstance, &jobs.JobRequest{
 		WorkerType: "test",
 		Message:    msg,
 	})
@@ -81,8 +79,8 @@ func TestRedisJobs(t *testing.T) {
 
 	go func() {
 		for i := 0; i < n; i++ {
-			msg, _ := NewMessage("a-" + strconv.Itoa(i+1))
-			_, err = broker1.PushJob(localDB, &JobRequest{
+			msg, _ := jobs.NewMessage("a-" + strconv.Itoa(i+1))
+			_, err = broker1.PushJob(testInstance, &jobs.JobRequest{
 				WorkerType: "test",
 				Message:    msg,
 			})
@@ -93,8 +91,8 @@ func TestRedisJobs(t *testing.T) {
 
 	go func() {
 		for i := 0; i < n; i++ {
-			msg, _ := NewMessage("b-" + strconv.Itoa(i+1))
-			_, err = broker2.PushJob(localDB, &JobRequest{
+			msg, _ := jobs.NewMessage("b-" + strconv.Itoa(i+1))
+			_, err = broker2.PushJob(testInstance, &jobs.JobRequest{
 				WorkerType: "test",
 				Message:    msg,
 				Manual:     true,
