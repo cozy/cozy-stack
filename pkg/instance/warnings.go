@@ -9,6 +9,21 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
+// BlockingReason structs holds a reason why an instance had been blocked
+type BlockingReason struct {
+	Code    string
+	Message string
+}
+
+var (
+	// BlockedLoginFailed is used when a security issue has been detected on the instance
+	BlockedLoginFailed = BlockingReason{Code: "LOGIN_FAILED", Message: "Instance Blocked Login"}
+	// BlockedPaymentFailed is used when a payment is missing for the instance
+	BlockedPaymentFailed = BlockingReason{Code: "PAYMENT_FAILED", Message: "Instance Blocked Payment"}
+	// BlockedUnknown is used when an instance is blocked but the reason is unknown
+	BlockedUnknown = BlockingReason{Code: "UNKNOWN", Message: "Instance Blocked Unknown"}
+)
+
 // Warnings returns a list of possible warnings associated with the instance.
 func (i *Instance) Warnings() (warnings []*jsonapi.Error) {
 	notSigned, deadline := i.CheckTOSNotSignedAndDeadline()
@@ -59,7 +74,7 @@ func (i *Instance) CheckTOSNotSignedAndDeadline(args ...string) (notSigned bool,
 	if len(args) > 0 {
 		tosLatest = args[0]
 	}
-	latest, latestDate, ok := parseTOSVersion(tosLatest)
+	latest, latestDate, ok := ParseTOSVersion(tosLatest)
 	if !ok || latestDate.IsZero() {
 		return
 	}
@@ -75,7 +90,7 @@ func (i *Instance) CheckTOSNotSignedAndDeadline(args ...string) (notSigned bool,
 			}
 		}
 	}()
-	signed, _, ok := parseTOSVersion(i.TOSSigned)
+	signed, _, ok := ParseTOSVersion(i.TOSSigned)
 	if !ok {
 		notSigned = true
 	} else {
@@ -84,10 +99,10 @@ func (i *Instance) CheckTOSNotSignedAndDeadline(args ...string) (notSigned bool,
 	return
 }
 
-// parseTOSVersion returns the "major" and the date encoded in a version string
+// ParseTOSVersion returns the "major" and the date encoded in a version string
 // with the following format:
 //    parseTOSVersion(A.B.C-YYYYMMDD) -> (A, YYYY, true)
-func parseTOSVersion(v string) (major int, date time.Time, ok bool) {
+func ParseTOSVersion(v string) (major int, date time.Time, ok bool) {
 	if v == "" {
 		return
 	}

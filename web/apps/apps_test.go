@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 
@@ -306,7 +307,7 @@ func TestFaviconWithContext(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Test the theme
-	instance.Patch(testInstance, &instance.Options{
+	lifecycle.Patch(testInstance, &lifecycle.Options{
 		ContextName: context,
 	})
 	assert.NoError(t, err)
@@ -428,10 +429,10 @@ func TestIconForApp(t *testing.T) {
 
 func TestUninstallAppWithLinkedClient(t *testing.T) {
 	// Install drive app
-	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp),
+	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
 		&apps.InstallerOptions{
 			Operation:  apps.Install,
-			Type:       apps.Webapp,
+			Type:       consts.WebappType,
 			Slug:       "drive",
 			SourceURL:  "registry://drive",
 			Registries: testInstance.Registries(),
@@ -470,10 +471,10 @@ func TestUninstallAppWithLinkedClient(t *testing.T) {
 	assert.Contains(t, string(body), "linked OAuth client exists")
 
 	// Cleaning
-	uninstaller, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp),
+	uninstaller, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
 		&apps.InstallerOptions{
 			Operation:  apps.Delete,
-			Type:       apps.Webapp,
+			Type:       consts.WebappType,
 			Slug:       "drive",
 			SourceURL:  "registry://drive",
 			Registries: testInstance.Registries(),
@@ -487,10 +488,10 @@ func TestUninstallAppWithLinkedClient(t *testing.T) {
 
 func TestUninstallAppWithoutLinkedClient(t *testing.T) {
 	// Install drive app
-	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(apps.Webapp),
+	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
 		&apps.InstallerOptions{
 			Operation:  apps.Install,
-			Type:       apps.Webapp,
+			Type:       consts.WebappType,
 			Slug:       "drive",
 			SourceURL:  "registry://drive",
 			Registries: testInstance.Registries(),
@@ -546,7 +547,7 @@ func TestMain(m *testing.M) {
 	cfg.Subdomains = config.NestedSubdomains
 	defer func() { cfg.Subdomains = was }()
 
-	testInstance = setup.GetTestInstance(&instance.Options{Domain: domain})
+	testInstance = setup.GetTestInstance(&lifecycle.Options{Domain: domain})
 	pass := "aephe2Ei"
 	hash, _ := crypto.GenerateFromPassphrase([]byte(pass))
 	testInstance.PassphraseHash = hash

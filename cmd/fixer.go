@@ -21,7 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/auth"
@@ -432,7 +432,7 @@ var linkedAppFixer = &cobra.Command{
 			}
 		}
 		domain := args[0]
-		i, err := instance.Get(domain)
+		i, err := lifecycle.GetInstance(domain)
 		if err != nil {
 			return err
 		}
@@ -449,10 +449,10 @@ var linkedAppFixer = &cobra.Command{
 					client.SoftwareID = value
 
 					// Install app
-					installer, err := apps.NewInstaller(i, i.AppsCopier(apps.Webapp),
+					installer, err := apps.NewInstaller(i, i.AppsCopier(consts.WebappType),
 						&apps.InstallerOptions{
 							Operation:  apps.Install,
-							Type:       apps.Webapp,
+							Type:       consts.WebappType,
 							Slug:       slug,
 							SourceURL:  value,
 							Registries: i.Registries(),

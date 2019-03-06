@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,7 +40,7 @@ func TestKonnectorInstallSuccessful(t *testing.T) {
 
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "local-konnector",
 		SourceURL: "git://localhost/",
 	})
@@ -86,7 +87,7 @@ func TestKonnectorInstallSuccessful(t *testing.T) {
 
 	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "local-konnector",
 		SourceURL: "git://localhost/",
 	})
@@ -99,7 +100,7 @@ func TestKonnectorUpgradeNotExist(t *testing.T) {
 	manName = apps.KonnectorManifestName
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Update,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-not-exist",
 	})
 	assert.Nil(t, inst)
@@ -107,7 +108,7 @@ func TestKonnectorUpgradeNotExist(t *testing.T) {
 
 	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Delete,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-not-exist",
 	})
 	assert.Nil(t, inst)
@@ -122,7 +123,7 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-b",
 		SourceURL: "git://localhost/",
 	})
@@ -155,7 +156,7 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 
 	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Update,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-b",
 	})
 	if !assert.NoError(t, err) {
@@ -205,7 +206,7 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "local-konnector-branch",
 		SourceURL: "git://localhost/#branch",
 	})
@@ -254,7 +255,7 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 
 	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Update,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "local-konnector-branch",
 	})
 	if !assert.NoError(t, err) {
@@ -303,7 +304,7 @@ func TestKonnectorUninstall(t *testing.T) {
 	manName = apps.KonnectorManifestName
 	inst1, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "konnector-delete",
 		SourceURL: "git://localhost/",
 	})
@@ -323,7 +324,7 @@ func TestKonnectorUninstall(t *testing.T) {
 	}
 	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Delete,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "konnector-delete",
 	})
 	if !assert.NoError(t, err) {
@@ -335,7 +336,7 @@ func TestKonnectorUninstall(t *testing.T) {
 	}
 	inst3, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Delete,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "konnector-delete",
 	})
 	assert.Nil(t, inst3)
@@ -348,7 +349,7 @@ func TestKonnectorInstallBadType(t *testing.T) {
 
 	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
 		Operation: apps.Install,
-		Type:      apps.Konnector,
+		Type:      consts.KonnectorType,
 		Slug:      "cozy-bad-type",
 		SourceURL: "git://localhost/",
 	})

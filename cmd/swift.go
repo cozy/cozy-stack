@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/swift"
 	"github.com/spf13/cobra"
 )
@@ -100,7 +101,7 @@ var swiftGetCmd = &cobra.Command{
 		if len(args) < 2 {
 			return cmd.Usage()
 		}
-		i, err := instance.Get(args[0])
+		i, err := lifecycle.GetInstance(args[0])
 		if err != nil {
 			return err
 		}
@@ -127,7 +128,7 @@ expected on the standard input.`,
 		if len(args) < 2 {
 			return cmd.Usage()
 		}
-		i, err := instance.Get(args[0])
+		i, err := lifecycle.GetInstance(args[0])
 		if err != nil {
 			return err
 		}
@@ -152,7 +153,7 @@ var swiftDeleteCmd = &cobra.Command{
 		if len(args) < 2 {
 			return cmd.Usage()
 		}
-		i, err := instance.Get(args[0])
+		i, err := lifecycle.GetInstance(args[0])
 		if err != nil {
 			return err
 		}
@@ -168,7 +169,7 @@ var swiftLsCmd = &cobra.Command{
 		if len(args) < 1 {
 			return cmd.Usage()
 		}
-		i, err := instance.Get(args[0])
+		i, err := lifecycle.GetInstance(args[0])
 		if err != nil {
 			return err
 		}

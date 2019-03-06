@@ -14,10 +14,12 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -79,7 +81,7 @@ func beforeHookKonnector(job *jobs.Job) (bool, error) {
 	var msg KonnectorMessage
 
 	if err := json.Unmarshal(job.Message, &msg); err == nil {
-		inst, err := instance.Get(job.DomainName())
+		inst, err := lifecycle.GetInstance(job.DomainName())
 		if err != nil {
 			return false, err
 		}
@@ -129,7 +131,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	w.msg = &msg
 
 	w.man, err = apps.GetKonnectorBySlugAndUpdate(i, slug,
-		i.AppsCopier(apps.Konnector), i.Registries())
+		i.AppsCopier(consts.KonnectorType), i.Registries())
 	if err == apps.ErrNotFound {
 		return "", jobs.ErrBadTrigger{Err: err}
 	} else if err != nil {
@@ -351,7 +353,7 @@ func (w *konnectorWorker) ensurePermissions(inst *instance.Instance) error {
 	return couchdb.UpdateDoc(inst, perms)
 }
 
-func copyFiles(workFS afero.Fs, fileServer apps.FileServer, slug, version, shasum string) error {
+func copyFiles(workFS afero.Fs, fileServer appfs.FileServer, slug, version, shasum string) error {
 	files, err := fileServer.FilesList(slug, version, shasum)
 	if err != nil {
 		return err
@@ -454,7 +456,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 
 	// Directly pass the job message as fields parameters
 	fieldsJSON := w.msg.ToJSON()
-	token := i.BuildKonnectorToken(w.man)
+	token := i.BuildKonnectorToken(w.man.Slug())
 
 	cmd = config.GetConfig().Konnectors.Cmd
 	env = []string{

@@ -59,21 +59,19 @@ type execWorker interface {
 
 func worker(ctx *jobs.WorkerContext) (err error) {
 	worker := ctx.Cookie().(execWorker)
-	domain := ctx.Domain()
 
-	inst, err := instance.Get(domain)
-	if err != nil {
-		return err
+	if ctx.Instance == nil {
+		return instance.ErrNotFound
 	}
 
-	workDir, err := worker.PrepareWorkDir(ctx, inst)
+	workDir, err := worker.PrepareWorkDir(ctx, ctx.Instance)
 	if err != nil {
 		worker.Logger(ctx).Errorf("PrepareWorkDir: %s", err)
 		return err
 	}
 	defer os.RemoveAll(workDir)
 
-	cmdStr, env, err := worker.PrepareCmdEnv(ctx, inst)
+	cmdStr, env, err := worker.PrepareCmdEnv(ctx, ctx.Instance)
 	if err != nil {
 		worker.Logger(ctx).Errorf("PrepareCmdEnv: %s", err)
 		return err
@@ -123,7 +121,7 @@ func worker(ctx *jobs.WorkerContext) (err error) {
 	waitDone := make(chan error)
 	go func() {
 		for scanOut.Scan() {
-			if errOut := worker.ScanOutput(ctx, inst, scanOut.Bytes()); errOut != nil {
+			if errOut := worker.ScanOutput(ctx, ctx.Instance, scanOut.Bytes()); errOut != nil {
 				log.Error(errOut)
 			}
 		}
@@ -142,7 +140,7 @@ func worker(ctx *jobs.WorkerContext) (err error) {
 		<-waitDone
 	}
 
-	return worker.Error(inst, err)
+	return worker.Error(ctx.Instance, err)
 }
 
 func commit(ctx *jobs.WorkerContext, errjob error) error {

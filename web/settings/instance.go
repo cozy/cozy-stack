@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -85,7 +86,7 @@ func updateInstance(c echo.Context) error {
 		delete(doc.M, "context")
 	}
 
-	if err := instance.Patch(inst, &instance.Options{SettingsObj: doc}); err != nil {
+	if err := lifecycle.Patch(inst, &lifecycle.Options{SettingsObj: doc}); err != nil {
 		return err
 	}
 
@@ -113,7 +114,7 @@ func updateInstanceTOS(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
-	if err := inst.ManagerSignTOS(c.Request()); err != nil {
+	if err := lifecycle.ManagerSignTOS(inst, c.Request()); err != nil {
 		return err
 	}
 
@@ -147,7 +148,7 @@ func updateInstanceAuthMode(c echo.Context) error {
 	case instance.Basic:
 	case instance.TwoFactorMail:
 		if args.TwoFactorActivationCode == "" {
-			if err = inst.SendMailConfirmationCode(); err != nil {
+			if err = lifecycle.SendMailConfirmationCode(inst); err != nil {
 				return err
 			}
 			return c.NoContent(http.StatusNoContent)
@@ -157,7 +158,7 @@ func updateInstanceAuthMode(c echo.Context) error {
 		}
 	}
 
-	err = instance.Patch(inst, &instance.Options{AuthMode: args.AuthMode})
+	err = lifecycle.Patch(inst, &lifecycle.Options{AuthMode: args.AuthMode})
 	if err != nil {
 		return err
 	}

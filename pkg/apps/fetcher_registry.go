@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/sirupsen/logrus"
@@ -48,7 +49,7 @@ func (f *registryFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	return ioutil.NopCloser(bytes.NewBuffer(version.Manifest)), nil
 }
 
-func (f *registryFetcher) Fetch(src *url.URL, fs Copier, man Manifest) error {
+func (f *registryFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) error {
 	v := f.version
 	shasum, err := hex.DecodeString(v.Sha256)
 	if err != nil {

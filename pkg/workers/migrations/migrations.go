@@ -10,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
@@ -43,8 +43,6 @@ type message struct {
 }
 
 func worker(ctx *jobs.WorkerContext) error {
-	domain := ctx.Domain()
-
 	var msg message
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -52,7 +50,7 @@ func worker(ctx *jobs.WorkerContext) error {
 
 	switch msg.Type {
 	case swiftV1ToV2:
-		return migrateSwiftV1ToV2(domain)
+		return migrateSwiftV1ToV2(ctx.Instance.Domain)
 	default:
 		return fmt.Errorf("unknown migration type %q", msg.Type)
 	}
@@ -62,7 +60,6 @@ func commit(ctx *jobs.WorkerContext, err error) error {
 	if err != nil {
 		return nil
 	}
-	domain := ctx.Domain()
 
 	var msg message
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
@@ -71,7 +68,7 @@ func commit(ctx *jobs.WorkerContext, err error) error {
 
 	switch msg.Type {
 	case swiftV1ToV2:
-		return commitSwiftV1ToV2(domain, msg.Cluster)
+		return commitSwiftV1ToV2(ctx.Instance.Domain, msg.Cluster)
 	default:
 		return fmt.Errorf("unknown migration type %q", msg.Type)
 	}
@@ -85,7 +82,7 @@ type object struct {
 
 func migrateSwiftV1ToV2(domain string) error {
 	c := config.GetSwiftConnection()
-	inst, err := instance.Get(domain)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
@@ -138,7 +135,7 @@ func migrateSwiftV1ToV2(domain string) error {
 }
 
 func commitSwiftV1ToV2(domain string, swiftCluster int) error {
-	inst, err := instance.Get(domain)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
@@ -152,7 +149,7 @@ func commitSwiftV1ToV2(domain string, swiftCluster int) error {
 		return err
 	}
 
-	return instance.Patch(inst, &instance.Options{SwiftCluster: swiftCluster})
+	return lifecycle.Patch(inst, &lifecycle.Options{SwiftCluster: swiftCluster})
 }
 
 func readObjects(c *swift.Connection, objc chan object,

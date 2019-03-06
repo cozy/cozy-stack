@@ -86,7 +86,7 @@ func GetForOauth(instance *instance.Instance, claims *permissions.Claims, c inte
 
 	if err == nil && linkedAppScope != nil {
 		// Translate to a real scope
-		at := apps.NewAppType(linkedAppScope.Doctype)
+		at := consts.NewAppType(linkedAppScope.Doctype)
 		manifest, err := apps.GetBySlug(instance, linkedAppScope.Slug, at)
 		if err != nil {
 			return nil, err
@@ -283,7 +283,7 @@ func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Matcher) error {
 // AllowInstallApp checks that the current context is tied to the store app,
 // which is the only app authorized to install or update other apps.
 // It also allow the cozy-stack apps commands to work (CLI).
-func AllowInstallApp(c echo.Context, appType apps.AppType, sourceURL string, v permissions.Verb) error {
+func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v permissions.Verb) error {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
@@ -291,9 +291,9 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, sourceURL string, v p
 
 	var docType string
 	switch appType {
-	case apps.Konnector:
+	case consts.KonnectorType:
 		docType = consts.Konnectors
-	case apps.Webapp:
+	case consts.WebappType:
 		docType = consts.Apps
 	}
 

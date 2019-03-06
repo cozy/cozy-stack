@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -39,7 +41,7 @@ func LoadSupportedLocales() error {
 	// but use assets from the disk is assets option is filled in config
 	assetsPath := config.GetConfig().Assets
 	if assetsPath != "" {
-		for _, locale := range i18n.SupportedLocales {
+		for _, locale := range consts.SupportedLocales {
 			pofile := path.Join(assetsPath, "locales", locale+".po")
 			po, err := ioutil.ReadFile(pofile)
 			if err != nil {
@@ -50,7 +52,7 @@ func LoadSupportedLocales() error {
 		return nil
 	}
 
-	for _, locale := range i18n.SupportedLocales {
+	for _, locale := range consts.SupportedLocales {
 		f, err := statikFS.Open("/locales/" + locale + ".po")
 		if err != nil {
 			return fmt.Errorf("Can't load the po file for %s", locale)
@@ -121,7 +123,7 @@ func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 		}
 		webapp := app.(*apps.WebappManifest)
 		i := middlewares.GetInstance(c)
-		f := apps.NewAferoFileServer(fs, func(_, _, _, file string) string {
+		f := appfs.NewAferoFileServer(fs, func(_, _, _, file string) string {
 			return path.Join("/", file)
 		})
 		// Save permissions in couchdb before loading an index page

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/move"
 	workers "github.com/cozy/cozy-stack/pkg/workers/mails"
@@ -15,7 +15,7 @@ import (
 
 func exporter(c echo.Context) error {
 	domain := c.Param("domain")
-	instance, err := instance.Get(domain)
+	instance, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func exporter(c echo.Context) error {
 
 func importer(c echo.Context) error {
 	domain := c.Param("domain")
-	instance, err := instance.Get(domain)
+	instance, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}

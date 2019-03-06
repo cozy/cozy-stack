@@ -69,20 +69,16 @@ func Worker(ctx *jobs.WorkerContext) error {
 
 	log := ctx.Logger()
 	log.WithField("nspace", "thumbnail").Debugf("%s %s", img.Verb, img.Doc.ID())
-	i, err := instance.Get(ctx.Domain())
-	if err != nil {
-		return err
-	}
 	switch img.Verb {
 	case "CREATED":
-		return generateThumbnails(ctx, i, &img.Doc)
+		return generateThumbnails(ctx, &img.Doc)
 	case "UPDATED":
-		if err = removeThumbnails(i, &img.Doc); err != nil {
+		if err := removeThumbnails(ctx.Instance, &img.Doc); err != nil {
 			log.WithField("nspace", "thumbnail").Debugf("failed to remove thumbnails for %s: %s", img.Doc.ID(), err)
 		}
-		return generateThumbnails(ctx, i, &img.Doc)
+		return generateThumbnails(ctx, &img.Doc)
 	case "DELETED":
-		return removeThumbnails(i, &img.Doc)
+		return removeThumbnails(ctx.Instance, &img.Doc)
 	}
 	return fmt.Errorf("Unknown type %s for image event", img.Verb)
 }
@@ -108,16 +104,12 @@ type thumbnailMsg struct {
 // WorkerCheck is a worker function that checks all the images to generate
 // missing thumbnails.
 func WorkerCheck(ctx *jobs.WorkerContext) error {
-	i, err := instance.Get(ctx.Domain())
-	if err != nil {
-		return err
-	}
 	var msg thumbnailMsg
-	if err = ctx.UnmarshalMessage(&msg); err != nil {
+	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	fs := i.VFS()
-	fsThumb := i.ThumbsFS()
+	fs := ctx.Instance.VFS()
+	fsThumb := ctx.Instance.ThumbsFS()
 	var errm error
 	vfs.Walk(fs, "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
 		if err != nil {
@@ -139,7 +131,7 @@ func WorkerCheck(ctx *jobs.WorkerContext) error {
 			}
 		}
 		if !allExists {
-			if err = generateThumbnails(ctx, i, img); err != nil {
+			if err = generateThumbnails(ctx, img); err != nil {
 				errm = multierror.Append(errm, err)
 			}
 		}
@@ -185,7 +177,7 @@ func calculateMetadata(fs vfs.VFS, img *vfs.FileDoc) (*vfs.Metadata, error) {
 	return &meta, nil
 }
 
-func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.FileDoc) error {
+func generateThumbnails(ctx *jobs.WorkerContext, img *vfs.FileDoc) error {
 	// Do not try to generate thumbnails for images that weight more than 100MB
 	// (or 5MB for PSDs)
 	var limit int64 = 100 * 1024 * 1024
@@ -196,9 +188,9 @@ func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.
 		return nil
 	}
 
-	fs := i.ThumbsFS()
+	fs := ctx.Instance.ThumbsFS()
 	var in io.Reader
-	in, err := i.VFS().OpenFile(img)
+	in, err := ctx.Instance.VFS().OpenFile(img)
 	if err != nil {
 		return err
 	}

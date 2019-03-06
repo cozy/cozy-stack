@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	perms "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/auth"
@@ -20,7 +21,7 @@ import (
 )
 
 func registerPassphrase(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
 
 	accept := c.Request().Header.Get("Accept")
 	acceptHTML := strings.Contains(accept, echo.MIMETextHTML)
@@ -39,7 +40,7 @@ func registerPassphrase(c echo.Context) error {
 	}
 
 	passphrase := []byte(args.Passphrase)
-	if err = instance.RegisterPassphrase(passphrase, registerToken); err != nil {
+	if err = lifecycle.RegisterPassphrase(inst, passphrase, registerToken); err != nil {
 		return jsonapi.BadRequest(err)
 	}
 
@@ -48,8 +49,8 @@ func registerPassphrase(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := sessions.StoreNewLoginEntry(instance, sessionID, "", c.Request(), false); err != nil {
-		instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+	if err := sessions.StoreNewLoginEntry(inst, sessionID, "", c.Request(), false); err != nil {
+		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 
 	if acceptHTML {
@@ -89,7 +90,7 @@ func updatePassphrase(c echo.Context) error {
 		}
 
 		if p.Type == perms.TypeCLI { // We limit the authorization only to CLI
-			err := inst.ForceUpdatePassphrase([]byte(args.Passphrase))
+			err := lifecycle.ForceUpdatePassphrase(inst, []byte(args.Passphrase))
 			if err != nil {
 				return err
 			}
@@ -105,9 +106,9 @@ func updatePassphrase(c echo.Context) error {
 	currentPassphrase := []byte(args.Current)
 
 	if inst.HasAuthMode(instance.TwoFactorMail) && len(args.TwoFactorToken) == 0 {
-		if inst.CheckPassphrase(currentPassphrase) == nil {
+		if lifecycle.CheckPassphrase(inst, currentPassphrase) == nil {
 			var twoFactorToken []byte
-			twoFactorToken, err = inst.SendTwoFactorPasscode()
+			twoFactorToken, err = lifecycle.SendTwoFactorPasscode(inst)
 			if err != nil {
 				return err
 			}
@@ -118,7 +119,7 @@ func updatePassphrase(c echo.Context) error {
 		return instance.ErrInvalidPassphrase
 	}
 
-	err = inst.UpdatePassphrase(newPassphrase, currentPassphrase,
+	err = lifecycle.UpdatePassphrase(inst, newPassphrase, currentPassphrase,
 		args.TwoFactorPasscode, args.TwoFactorToken)
 	if err != nil {
 		return jsonapi.BadRequest(err)

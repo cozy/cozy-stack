@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/registry"
@@ -288,7 +289,7 @@ func login(c echo.Context) error {
 			}
 		}
 	} else if passphraseRequest {
-		if inst.CheckPassphrase(passphrase) == nil {
+		if lifecycle.CheckPassphrase(inst, passphrase) == nil {
 			// In case the second factor authentication mode is "mail", we also
 			// check that the mail has been confirmed. If not, 2FA is not actived.
 			if inst.HasAuthMode(instance.TwoFactorMail) {
@@ -304,7 +305,7 @@ func login(c echo.Context) error {
 				}
 
 				if len(twoFactorTrustedDeviceToken) == 0 {
-					twoFactorToken, err = inst.SendTwoFactorPasscode()
+					twoFactorToken, err = lifecycle.SendTwoFactorPasscode(inst)
 					if err != nil {
 						return err
 					}
@@ -750,9 +751,9 @@ func authorize(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		installer, err := apps.NewInstaller(instance, instance.AppsCopier(apps.Webapp), &apps.InstallerOptions{
+		installer, err := apps.NewInstaller(instance, instance.AppsCopier(consts.WebappType), &apps.InstallerOptions{
 			Operation:  apps.Install,
-			Type:       apps.Webapp,
+			Type:       consts.WebappType,
 			SourceURL:  softwareID,
 			Slug:       manifest.Slug(),
 			Registries: instance.Registries(),
@@ -1135,9 +1136,7 @@ func passphraseForm(c echo.Context) error {
 
 func passphraseReset(c echo.Context) error {
 	i := middlewares.GetInstance(c)
-	// TODO: check user informations to allow the reset of the passphrase since
-	// this route is of course not protected by authentication/permission check.
-	if err := i.RequestPassphraseReset(); err != nil && err != instance.ErrResetAlreadyRequested {
+	if err := lifecycle.RequestPassphraseReset(i); err != nil && err != instance.ErrResetAlreadyRequested {
 		return err
 	}
 	// Disconnect the user if it is logged in. The idea is that if the user
@@ -1171,7 +1170,7 @@ func passphraseRenewForm(c echo.Context) error {
 	if err != nil || len(token) == 0 {
 		return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 	}
-	if err = inst.CheckPassphraseRenewToken(token); err != nil {
+	if err = lifecycle.CheckPassphraseRenewToken(inst, token); err != nil {
 		if err == instance.ErrMissingToken {
 			return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 		}
@@ -1200,7 +1199,7 @@ func passphraseRenew(c echo.Context) error {
 	if err != nil {
 		return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 	}
-	if err := inst.PassphraseRenew(pass, token); err != nil {
+	if err := lifecycle.PassphraseRenew(inst, pass, token); err != nil {
 		if err == instance.ErrMissingToken {
 			return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 		}

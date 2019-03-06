@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
@@ -953,7 +954,7 @@ func TestMain(m *testing.M) {
 
 	// Prepare Alice's instance
 	setup := testutils.NewSetup(m, "sharing_test_alice")
-	aliceInstance = setup.GetTestInstance(&instance.Options{
+	aliceInstance = setup.GetTestInstance(&lifecycle.Options{
 		Email:      "alice@example.net",
 		PublicName: "Alice",
 	})
@@ -973,7 +974,7 @@ func TestMain(m *testing.M) {
 
 	// Prepare Bob's instance
 	bobSetup := testutils.NewSetup(m, "sharing_test_bob")
-	bobInstance = bobSetup.GetTestInstance(&instance.Options{
+	bobInstance = bobSetup.GetTestInstance(&lifecycle.Options{
 		Email:      "bob@example.net",
 		PublicName: "Bob",
 		Passphrase: "MyPassphrase",
@@ -1083,7 +1084,7 @@ func generateAppToken(inst *instance.Instance, slug string) string {
 	if err != nil {
 		return ""
 	}
-	return inst.BuildAppToken(manifest, "")
+	return inst.BuildAppToken(manifest.Slug(), "")
 }
 
 func noRedirect(*http.Request, []*http.Request) error {

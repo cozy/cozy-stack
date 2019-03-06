@@ -1,4 +1,4 @@
-package apps
+package appfs
 
 import (
 	"compress/gzip"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cozy/afero"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/swift"
@@ -40,7 +41,7 @@ type aferoCopier struct {
 }
 
 // NewSwiftCopier defines a Copier storing data into a swift container.
-func NewSwiftCopier(conn *swift.Connection, appsType AppType) Copier {
+func NewSwiftCopier(conn *swift.Connection, appsType consts.AppType) Copier {
 	return &swiftCopier{
 		c:         conn,
 		container: containerName(appsType),
@@ -215,16 +216,24 @@ func (f *aferoCopier) Abort() error {
 	return f.fs.RemoveAll(f.tmpDir)
 }
 
+// NewFileInfo returns an os.FileInfo
+func NewFileInfo(name string, size int64, mode os.FileMode) os.FileInfo {
+	return &fileInfo{
+		name: name,
+		size: size,
+		mode: mode,
+	}
+}
+
 type fileInfo struct {
 	name string
 	size int64
 	mode os.FileMode
-	time time.Time
 }
 
 func (f *fileInfo) Name() string       { return f.name }
 func (f *fileInfo) Size() int64        { return f.size }
 func (f *fileInfo) Mode() os.FileMode  { return f.mode }
-func (f *fileInfo) ModTime() time.Time { return f.time }
+func (f *fileInfo) ModTime() time.Time { return time.Now() }
 func (f *fileInfo) IsDir() bool        { return false }
 func (f *fileInfo) Sys() interface{}   { return nil }

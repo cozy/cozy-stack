@@ -1,4 +1,4 @@
-package apps
+package appfs
 
 import (
 	"bytes"
@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/cozy/afero"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	web_utils "github.com/cozy/cozy-stack/web/utils"
 	"github.com/cozy/swift"
 )
@@ -72,7 +73,7 @@ func (g gzipReadCloser) Close() error {
 
 // NewSwiftFileServer returns provides the apps.FileServer implementation
 // using the swift backend as file server.
-func NewSwiftFileServer(conn *swift.Connection, appsType AppType) FileServer {
+func NewSwiftFileServer(conn *swift.Connection, appsType consts.AppType) FileServer {
 	return &swiftServer{
 		c:         conn,
 		container: containerName(appsType),
@@ -303,11 +304,11 @@ func acceptGzipEncoding(req *http.Request) bool {
 	return strings.Contains(req.Header.Get("Accept-Encoding"), "gzip")
 }
 
-func containerName(appsType AppType) string {
+func containerName(appsType consts.AppType) string {
 	switch appsType {
-	case Webapp:
+	case consts.WebappType:
 		return "apps-web"
-	case Konnector:
+	case consts.KonnectorType:
 		return "apps-konnectors"
 	}
 	panic("Unknown AppType")

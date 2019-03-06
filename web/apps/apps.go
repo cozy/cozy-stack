@@ -12,6 +12,7 @@ import (
 	"path"
 	"strconv"
 
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -76,7 +77,7 @@ func (man *apiApp) Included() []jsonapi.Object {
 // apiApp is a jsonapi.Object
 var _ jsonapi.Object = (*apiApp)(nil)
 
-func getHandler(appType apps.AppType) echo.HandlerFunc {
+func getHandler(appType consts.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
@@ -96,7 +97,7 @@ func getHandler(appType apps.AppType) echo.HandlerFunc {
 
 // installHandler handles all POST /:slug request and tries to install
 // or update the application with the given Source.
-func installHandler(installerType apps.AppType) echo.HandlerFunc {
+func installHandler(installerType consts.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
@@ -151,7 +152,7 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 
 // updateHandler handles all POST /:slug request and tries to install
 // or update the application with the given Source.
-func updateHandler(installerType apps.AppType) echo.HandlerFunc {
+func updateHandler(installerType consts.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
@@ -208,7 +209,7 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 
 // deleteHandler handles all DELETE /:slug used to delete an application with
 // the specified slug.
-func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
+func deleteHandler(installerType consts.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
@@ -220,7 +221,7 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 		// Check if there is a mobile client attached to this app
 		oauthClient, err := oauth.FindClientBySoftwareID(instance, "registry://"+slug)
 
-		if installerType == apps.Webapp && err == nil && oauthClient != nil {
+		if installerType == consts.WebappType && err == nil && oauthClient != nil {
 			return wrapAppsError(apps.ErrLinkedAppExists)
 		}
 
@@ -329,7 +330,7 @@ func listKonnectorsHandler(c echo.Context) error {
 }
 
 // iconHandler gives the icon of an application
-func iconHandler(appType apps.AppType) echo.HandlerFunc {
+func iconHandler(appType consts.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
@@ -349,13 +350,13 @@ func iconHandler(appType apps.AppType) echo.HandlerFunc {
 			c.Response().Header().Set("Cache-Control", "max-age=31536000, immutable")
 		}
 
-		var fs apps.FileServer
+		var fs appfs.FileServer
 		var filepath string
 		switch appType {
-		case apps.Webapp:
+		case consts.WebappType:
 			filepath = path.Join("/", app.(*apps.WebappManifest).Icon)
 			fs = instance.AppsFileServer()
-		case apps.Konnector:
+		case consts.KonnectorType:
 			filepath = path.Join("/", app.(*apps.KonnManifest).Icon)
 			fs = instance.KonnectorsFileServer()
 		}
@@ -372,23 +373,23 @@ func iconHandler(appType apps.AppType) echo.HandlerFunc {
 // WebappsRoutes sets the routing for the web apps service
 func WebappsRoutes(router *echo.Group) {
 	router.GET("/", listWebappsHandler)
-	router.GET("/:slug", getHandler(apps.Webapp))
-	router.POST("/:slug", installHandler(apps.Webapp))
-	router.PUT("/:slug", updateHandler(apps.Webapp))
-	router.DELETE("/:slug", deleteHandler(apps.Webapp))
-	router.GET("/:slug/icon", iconHandler(apps.Webapp))
-	router.GET("/:slug/icon/:version", iconHandler(apps.Webapp))
+	router.GET("/:slug", getHandler(consts.WebappType))
+	router.POST("/:slug", installHandler(consts.WebappType))
+	router.PUT("/:slug", updateHandler(consts.WebappType))
+	router.DELETE("/:slug", deleteHandler(consts.WebappType))
+	router.GET("/:slug/icon", iconHandler(consts.WebappType))
+	router.GET("/:slug/icon/:version", iconHandler(consts.WebappType))
 }
 
 // KonnectorRoutes sets the routing for the konnectors service
 func KonnectorRoutes(router *echo.Group) {
 	router.GET("/", listKonnectorsHandler)
-	router.GET("/:slug", getHandler(apps.Konnector))
-	router.POST("/:slug", installHandler(apps.Konnector))
-	router.PUT("/:slug", updateHandler(apps.Konnector))
-	router.DELETE("/:slug", deleteHandler(apps.Konnector))
-	router.GET("/:slug/icon", iconHandler(apps.Konnector))
-	router.GET("/:slug/icon/:version", iconHandler(apps.Konnector))
+	router.GET("/:slug", getHandler(consts.KonnectorType))
+	router.POST("/:slug", installHandler(consts.KonnectorType))
+	router.PUT("/:slug", updateHandler(consts.KonnectorType))
+	router.DELETE("/:slug", deleteHandler(consts.KonnectorType))
+	router.GET("/:slug/icon", iconHandler(consts.KonnectorType))
+	router.GET("/:slug/icon/:version", iconHandler(consts.KonnectorType))
 }
 
 func wrapAppsError(err error) error {

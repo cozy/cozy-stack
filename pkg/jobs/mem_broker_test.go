@@ -1,4 +1,4 @@
-package jobs
+package jobs_test
 
 import (
 	"encoding/json"
@@ -8,27 +8,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/stretchr/testify/assert"
 )
 
-var localDB = prefixer.NewPrefixer("cozy.local", "cozy.local")
-
 func TestProperSerial(t *testing.T) {
-	job := NewJob(prefixer.NewPrefixer("cozy.tools:8080", "cozy.tools:8080"),
-		&JobRequest{
+	job := jobs.NewJob(prefixer.NewPrefixer("cozy.tools:8080", "cozy.tools:8080"),
+		&jobs.JobRequest{
 			WorkerType: "",
 		})
 	assert.NoError(t, job.Create())
 	assert.NoError(t, job.AckConsumed())
-	job2, err := Get(job, job.ID())
+	job2, err := jobs.Get(job, job.ID())
 	assert.NoError(t, err)
-	assert.Equal(t, State(Running), job2.State)
+	assert.Equal(t, jobs.State(jobs.Running), job2.State)
 }
 
 func TestMessageMarshalling(t *testing.T) {
 	data := []byte(`{"Data": "InZhbHVlIgo=", "Type": "json"}`)
-	var m Message
+	var m jobs.Message
 	assert.NoError(t, json.Unmarshal(data, &m))
 	var s string
 	assert.NoError(t, m.Unmarshal(&s))
@@ -45,14 +44,14 @@ func TestMessageMarshalling(t *testing.T) {
 		"message": {"Data": "InZhbHVlIgo=", "Type": "json"}
 }`)
 
-	var j Job
+	var j jobs.Job
 	assert.NoError(t, json.Unmarshal(data, &j))
 	assert.Equal(t, "cozy.local", j.Domain)
 	assert.Equal(t, "foo", j.WorkerType)
 	assert.EqualValues(t, []byte(`"value"`), j.Message)
 
 	var err error
-	var j2 Job
+	var j2 jobs.Job
 	data, err = json.Marshal(j)
 	assert.NoError(t, err)
 	assert.NoError(t, json.Unmarshal(data, &j2))
@@ -69,11 +68,11 @@ func TestInMemoryJobs(t *testing.T) {
 
 	var w sync.WaitGroup
 
-	var workersTestList = WorkersList{
+	var workersTestList = jobs.WorkersList{
 		{
 			WorkerType:  "test",
 			Concurrency: 4,
-			WorkerFunc: func(ctx *WorkerContext) error {
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
 				var msg string
 				err := ctx.UnmarshalMessage(&msg)
 				if !assert.NoError(t, err) {
@@ -94,8 +93,8 @@ func TestInMemoryJobs(t *testing.T) {
 		},
 	}
 
-	broker1 := NewMemBroker()
-	broker2 := NewMemBroker()
+	broker1 := jobs.NewMemBroker()
+	broker2 := jobs.NewMemBroker()
 	broker1.StartWorkers(workersTestList)
 	broker2.StartWorkers(workersTestList)
 	w.Add(2)
@@ -103,8 +102,8 @@ func TestInMemoryJobs(t *testing.T) {
 	go func() {
 		for i := 0; i < n; i++ {
 			w.Add(1)
-			msg, _ := NewMessage("a-" + strconv.Itoa(i+1))
-			_, err := broker1.PushJob(localDB, &JobRequest{
+			msg, _ := jobs.NewMessage("a-" + strconv.Itoa(i+1))
+			_, err := broker1.PushJob(testInstance, &jobs.JobRequest{
 				WorkerType: "test",
 				Message:    msg,
 			})
@@ -117,8 +116,8 @@ func TestInMemoryJobs(t *testing.T) {
 	go func() {
 		for i := 0; i < n; i++ {
 			w.Add(1)
-			msg, _ := NewMessage("b-" + strconv.Itoa(i+1))
-			_, err := broker2.PushJob(localDB, &JobRequest{
+			msg, _ := jobs.NewMessage("b-" + strconv.Itoa(i+1))
+			_, err := broker2.PushJob(testInstance, &jobs.JobRequest{
 				WorkerType: "test",
 				Message:    msg,
 			})
@@ -132,29 +131,29 @@ func TestInMemoryJobs(t *testing.T) {
 }
 
 func TestUnknownWorkerError(t *testing.T) {
-	broker := NewMemBroker()
-	broker.StartWorkers(WorkersList{})
-	_, err := broker.PushJob(localDB, &JobRequest{
+	broker := jobs.NewMemBroker()
+	broker.StartWorkers(jobs.WorkersList{})
+	_, err := broker.PushJob(testInstance, &jobs.JobRequest{
 		WorkerType: "nope",
 		Message:    nil,
 	})
 	assert.Error(t, err)
-	assert.Equal(t, ErrUnknownWorker, err)
+	assert.Equal(t, jobs.ErrUnknownWorker, err)
 }
 
 func TestUnknownMessageType(t *testing.T) {
 	var w sync.WaitGroup
 
-	broker := NewMemBroker()
-	broker.StartWorkers(WorkersList{
+	broker := jobs.NewMemBroker()
+	broker.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:  "test",
 			Concurrency: 4,
-			WorkerFunc: func(ctx *WorkerContext) error {
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
 				var msg string
 				err := ctx.UnmarshalMessage(&msg)
 				assert.Error(t, err)
-				assert.Equal(t, ErrMessageNil, err)
+				assert.Equal(t, jobs.ErrMessageNil, err)
 				w.Done()
 				return nil
 			},
@@ -162,7 +161,7 @@ func TestUnknownMessageType(t *testing.T) {
 	})
 
 	w.Add(1)
-	_, err := broker.PushJob(localDB, &JobRequest{
+	_, err := broker.PushJob(testInstance, &jobs.JobRequest{
 		WorkerType: "test",
 		Message:    nil,
 	})
@@ -174,14 +173,14 @@ func TestUnknownMessageType(t *testing.T) {
 func TestTimeout(t *testing.T) {
 	var w sync.WaitGroup
 
-	broker := NewMemBroker()
-	broker.StartWorkers(WorkersList{
+	broker := jobs.NewMemBroker()
+	broker.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "timeout",
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx *WorkerContext) error {
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
 				<-ctx.Done()
 				w.Done()
 				return ctx.Err()
@@ -190,7 +189,7 @@ func TestTimeout(t *testing.T) {
 	})
 
 	w.Add(1)
-	_, err := broker.PushJob(localDB, &JobRequest{
+	_, err := broker.PushJob(testInstance, &jobs.JobRequest{
 		WorkerType: "timeout",
 		Message:    nil,
 	})
@@ -205,15 +204,15 @@ func TestRetry(t *testing.T) {
 	maxExecCount := 4
 
 	var count int
-	broker := NewMemBroker()
-	broker.StartWorkers(WorkersList{
+	broker := jobs.NewMemBroker()
+	broker.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "test",
 			Concurrency:  1,
 			MaxExecCount: maxExecCount,
 			Timeout:      1 * time.Millisecond,
 			RetryDelay:   1 * time.Millisecond,
-			WorkerFunc: func(ctx *WorkerContext) error {
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
 				<-ctx.Done()
 				w.Done()
 				count++
@@ -226,7 +225,7 @@ func TestRetry(t *testing.T) {
 	})
 
 	w.Add(maxExecCount)
-	_, err := broker.PushJob(localDB, &JobRequest{
+	_, err := broker.PushJob(testInstance, &jobs.JobRequest{
 		WorkerType: "test",
 		Message:    nil,
 	})
@@ -240,14 +239,14 @@ func TestPanicRetried(t *testing.T) {
 
 	maxExecCount := 4
 
-	broker := NewMemBroker()
-	broker.StartWorkers(WorkersList{
+	broker := jobs.NewMemBroker()
+	broker.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "panic",
 			Concurrency:  1,
 			MaxExecCount: maxExecCount,
 			RetryDelay:   1 * time.Millisecond,
-			WorkerFunc: func(ctx *WorkerContext) error {
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
 				w.Done()
 				panic("oops")
 			},
@@ -255,7 +254,7 @@ func TestPanicRetried(t *testing.T) {
 	})
 
 	w.Add(maxExecCount)
-	_, err := broker.PushJob(localDB, &JobRequest{
+	_, err := broker.PushJob(testInstance, &jobs.JobRequest{
 		WorkerType: "panic",
 		Message:    nil,
 	})
@@ -267,17 +266,17 @@ func TestPanicRetried(t *testing.T) {
 func TestPanic(t *testing.T) {
 	var w sync.WaitGroup
 
-	even, _ := NewMessage(0)
-	odd, _ := NewMessage(1)
+	even, _ := jobs.NewMessage(0)
+	odd, _ := jobs.NewMessage(1)
 
-	broker := NewMemBroker()
-	broker.StartWorkers(WorkersList{
+	broker := jobs.NewMemBroker()
+	broker.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "panic2",
 			Concurrency:  1,
 			MaxExecCount: 1,
 			RetryDelay:   1 * time.Millisecond,
-			WorkerFunc: func(ctx *WorkerContext) error {
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
 				var i int
 				if err := ctx.UnmarshalMessage(&i); err != nil {
 					return err
@@ -292,13 +291,13 @@ func TestPanic(t *testing.T) {
 	})
 	w.Add(2)
 	var err error
-	_, err = broker.PushJob(localDB, &JobRequest{WorkerType: "panic2", Message: odd})
+	_, err = broker.PushJob(testInstance, &jobs.JobRequest{WorkerType: "panic2", Message: odd})
 	assert.NoError(t, err)
-	_, err = broker.PushJob(localDB, &JobRequest{WorkerType: "panic2", Message: even})
+	_, err = broker.PushJob(testInstance, &jobs.JobRequest{WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
-	_, err = broker.PushJob(localDB, &JobRequest{WorkerType: "panic2", Message: odd})
+	_, err = broker.PushJob(testInstance, &jobs.JobRequest{WorkerType: "panic2", Message: odd})
 	assert.NoError(t, err)
-	_, err = broker.PushJob(localDB, &JobRequest{WorkerType: "panic2", Message: even})
+	_, err = broker.PushJob(testInstance, &jobs.JobRequest{WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
 	w.Wait()
 }

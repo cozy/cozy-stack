@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
@@ -62,7 +63,7 @@ func TestThemeWithContext(t *testing.T) {
 	err = fs.RegisterCustomExternals(cacheStorage, assetsOptions, 1)
 	assert.NoError(t, err)
 	// Test the theme
-	instance.Patch(testInstance, &instance.Options{
+	lifecycle.Patch(testInstance, &lifecycle.Options{
 		ContextName: context,
 	})
 	assert.NoError(t, err)
@@ -89,7 +90,7 @@ func TestMain(m *testing.M) {
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "middlewares_test")
 
-	testInstance = setup.GetTestInstance(&instance.Options{
+	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Domain:     "middlewares.cozy.test",
 		Passphrase: "MyPassphrase",
 	})

@@ -1,4 +1,4 @@
-package jobs
+package jobs_test
 
 import (
 	"context"
@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/stretchr/testify/assert"
 )
 
-func makeMessage(t *testing.T, msg string) Message {
-	out, err := NewMessage(msg)
+func makeMessage(t *testing.T, msg string) jobs.Message {
+	out, err := jobs.NewMessage(msg)
 	assert.NoError(t, err)
 	return out
 }
@@ -22,14 +22,14 @@ func TestTriggerEvent(t *testing.T) {
 	var wg sync.WaitGroup
 	var called = make(map[string]bool)
 
-	bro := NewMemBroker()
-	bro.StartWorkers(WorkersList{
+	bro := jobs.NewMemBroker()
+	bro.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "worker_event",
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx *WorkerContext) error {
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
 				defer wg.Done()
 				var msg string
 				if err := ctx.UnmarshalMessage(&msg); err != nil {
@@ -45,7 +45,7 @@ func TestTriggerEvent(t *testing.T) {
 					assert.NoError(t, err)
 					return nil
 				}
-				assert.Equal(t, "cozy.local.triggerevent", evt.Domain)
+				assert.Equal(t, testInstance.Domain, evt.Domain)
 				assert.Equal(t, "CREATED", evt.Verb)
 				assert.Equal(t, "test-id", evt.Doc.ID())
 				called[msg] = true
@@ -54,10 +54,8 @@ func TestTriggerEvent(t *testing.T) {
 		},
 	})
 
-	db := prefixer.NewPrefixer("cozy.local.triggerevent", "cozy.local.triggerevent")
-
-	var triggers []Trigger
-	triggersInfos := []TriggerInfos{
+	var triggers []jobs.Trigger
+	triggersInfos := []jobs.TriggerInfos{
 		{
 			Type:       "@event",
 			Arguments:  "io.cozy.testeventobject:DELETED",
@@ -90,11 +88,11 @@ func TestTriggerEvent(t *testing.T) {
 		},
 	}
 
-	sch := newMemScheduler()
+	sch := jobs.NewMemScheduler()
 	sch.StartScheduler(bro)
 
 	for _, infos := range triggersInfos {
-		trigger, err := NewTrigger(db, infos, infos.Message)
+		trigger, err := jobs.NewTrigger(testInstance, infos, infos.Message)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -116,7 +114,7 @@ func TestTriggerEvent(t *testing.T) {
 				"test": "value",
 			},
 		}
-		realtime.GetHub().Publish(db, realtime.EventCreate, &doc, nil)
+		realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
 	})
 
 	wg.Wait()
@@ -128,7 +126,7 @@ func TestTriggerEvent(t *testing.T) {
 	assert.False(t, called["message-correct-verb-bad-value"])
 
 	for _, trigger := range triggers {
-		err := sch.DeleteTrigger(db, trigger.ID())
+		err := sch.DeleteTrigger(testInstance, trigger.ID())
 		assert.NoError(t, err)
 	}
 

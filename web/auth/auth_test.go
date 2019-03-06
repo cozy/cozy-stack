@@ -26,6 +26,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
@@ -1322,7 +1323,7 @@ func TestLogoutSuccess(t *testing.T) {
 		DocID:   consts.Apps + "/home",
 		DocSlug: "home",
 	}
-	token := testInstance.BuildAppToken(&a, getSessionID(jar.Cookies(nil)))
+	token := testInstance.BuildAppToken(a.Slug(), getSessionID(jar.Cookies(nil)))
 	permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
 	req.Host = domain
@@ -1384,7 +1385,7 @@ func TestLogoutOthers(t *testing.T) {
 		DocID:   consts.Apps + "/home",
 		DocSlug: "home",
 	}
-	token := testInstance.BuildAppToken(&a, getSessionID(cookies1))
+	token := testInstance.BuildAppToken(a.Slug(), getSessionID(cookies1))
 	permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
 
 	reqLogout1, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)
@@ -1492,8 +1493,8 @@ func TestPassphraseRenewFormWithToken(t *testing.T) {
 
 func TestPassphraseRenew(t *testing.T) {
 	d := "test.cozycloud.cc.web_reset_form"
-	instance.Destroy(d)
-	in1, err := instance.Create(&instance.Options{
+	lifecycle.Destroy(d)
+	in1, err := lifecycle.Create(&lifecycle.Options{
 		Domain: d,
 		Locale: "en",
 		Email:  "alice@example.com",
@@ -1502,9 +1503,9 @@ func TestPassphraseRenew(t *testing.T) {
 		return
 	}
 	defer func() {
-		instance.Destroy(d)
+		lifecycle.Destroy(d)
 	}()
-	err = in1.RegisterPassphrase([]byte("MyPass"), in1.RegisterToken)
+	err = lifecycle.RegisterPassphrase(in1, []byte("MyPass"), in1.RegisterToken)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -1525,7 +1526,7 @@ func TestPassphraseRenew(t *testing.T) {
 	}
 	defer res2.Body.Close()
 	assert.Equal(t, "200 OK", res2.Status)
-	in2, err := instance.Get(d)
+	in2, err := instance.GetFromCouch(d)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -1640,8 +1641,8 @@ func TestSecretExchangeNoPayload(t *testing.T) {
 func TestPassphraseOnboarding(t *testing.T) {
 	// Here we create a new instance without passphrase
 	d := "test.cozycloud.cc.web_passphrase"
-	instance.Destroy(d)
-	inst, err := instance.Create(&instance.Options{
+	lifecycle.Destroy(d)
+	inst, err := lifecycle.Create(&lifecycle.Options{
 		Domain: d,
 		Locale: "en",
 		Email:  "alice@example.com",
@@ -1661,7 +1662,7 @@ func TestPassphraseOnboarding(t *testing.T) {
 
 	// Adding a passphrase and check if we are redirected to home
 	pass := []byte("passphrase")
-	err = inst.RegisterPassphrase(pass, inst.RegisterToken)
+	err = lifecycle.RegisterPassphrase(inst, pass, inst.RegisterToken)
 	assert.NoError(t, err)
 
 	inst.OnboardingFinished = true
@@ -1690,8 +1691,8 @@ func TestPassphraseOnboardingFinished(t *testing.T) {
 func TestPassphraseOnboardingBadRegisterToken(t *testing.T) {
 	// Should render need_onboarding
 	d := "test.cozycloud.cc.web_passphrase_bad_token"
-	instance.Destroy(d)
-	inst, err := instance.Create(&instance.Options{
+	lifecycle.Destroy(d)
+	inst, err := lifecycle.Create(&lifecycle.Options{
 		Domain: d,
 		Locale: "en",
 		Email:  "alice@example.com",
@@ -1726,7 +1727,7 @@ func TestMain(m *testing.M) {
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "auth_test")
 
-	testInstance = setup.GetTestInstance(&instance.Options{
+	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Domain:     domain,
 		Passphrase: "MyPassphrase",
 	})

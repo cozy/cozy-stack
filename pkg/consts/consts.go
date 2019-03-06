@@ -127,3 +127,9 @@ var KnownFlatDomains = []string{
 	"cozy.rocks",
 	"mycozy.cloud",
 }
+
+// DefaultLocale is the default locale when creating an instance and for i18n.
+const DefaultLocale = "en"
+
+// SupportedLocales is the list of supported locales tags.
+var SupportedLocales = []string{"en", "fr"}

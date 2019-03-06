@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/sirupsen/logrus"
@@ -43,7 +44,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 	name := opts.Name
 
 	man, err := apps.GetWebappBySlugAndUpdate(i, slug,
-		i.AppsCopier(apps.Webapp), i.Registries())
+		i.AppsCopier(consts.WebappType), i.Registries())
 	if err != nil {
 		if err == apps.ErrNotFound {
 			err = jobs.ErrBadTrigger{Err: err}
@@ -116,7 +117,7 @@ func (w *serviceWorker) Slug() string {
 }
 
 func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
-	token := i.BuildAppToken(w.man, "")
+	token := i.BuildAppToken(w.man.Slug(), "")
 	cmd = config.GetConfig().Konnectors.Cmd
 	env = []string{
 		"COZY_URL=" + i.PageURL("/", nil),

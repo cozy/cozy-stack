@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/notification"
 	"github.com/cozy/cozy-stack/pkg/oauth"
@@ -39,7 +40,7 @@ var (
 
 func init() {
 	vfs.RegisterDiskQuotaAlertCallback(func(domain string, exceeded bool) {
-		i, err := instance.Get(domain)
+		i, err := lifecycle.GetInstance(domain)
 		if err != nil {
 			return
 		}
@@ -60,7 +61,7 @@ func init() {
 }
 
 func pushStack(domain string, category string, n *notification.Notification) error {
-	inst, err := instance.Get(domain)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}

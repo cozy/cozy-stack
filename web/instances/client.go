@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/echo"
@@ -16,14 +16,14 @@ func createToken(c echo.Context) error {
 	audience := c.QueryParam("Audience")
 	scope := c.QueryParam("Scope")
 	subject := c.QueryParam("Subject")
-	in, err := instance.Get(domain)
+	in, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		// With a cluster of couchdb, we can have a race condition where we
 		// query an index before it has been updated for an instance that has
 		// just been created.
 		// Cf https://issues.apache.org/jira/browse/COUCHDB-3336
 		time.Sleep(1 * time.Second)
-		in, err = instance.Get(domain)
+		in, err = lifecycle.GetInstance(domain)
 		if err != nil {
 			return wrapError(err)
 		}
@@ -62,7 +62,7 @@ func createToken(c echo.Context) error {
 }
 
 func registerClient(c echo.Context) error {
-	in, err := instance.Get(c.QueryParam("Domain"))
+	in, err := lifecycle.GetInstance(c.QueryParam("Domain"))
 	if err != nil {
 		return wrapError(err)
 	}
@@ -91,7 +91,7 @@ func findClientBySoftwareID(c echo.Context) error {
 	domain := c.QueryParam("domain")
 	softwareID := c.QueryParam("software_id")
 
-	inst, err := instance.Get(domain)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}

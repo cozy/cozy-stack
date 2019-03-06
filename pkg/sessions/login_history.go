@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/mssola/user_agent"
 	maxminddb "github.com/oschwald/maxminddb-golang"
@@ -195,7 +196,7 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry, clientRegistrati
 	}
 
 	// TODO: use notifications
-	return i.SendMail(&instance.Mail{
+	return lifecycle.SendMail(i, &lifecycle.Mail{
 		TemplateName:   templateName,
 		TemplateValues: templateValues,
 	})

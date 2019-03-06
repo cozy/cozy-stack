@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/sirupsen/logrus"
@@ -111,11 +110,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	inst, err := instance.Get(ctx.Domain())
-	if err != nil {
-		return err
-	}
-	cs, err := oauth.GetNotifiables(inst)
+	cs, err := oauth.GetNotifiables(ctx.Instance)
 	if err != nil {
 		return err
 	}

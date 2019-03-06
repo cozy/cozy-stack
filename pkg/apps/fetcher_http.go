@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/sirupsen/logrus"
 )
@@ -94,7 +95,7 @@ func (f *httpFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 	}
 }
 
-func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
+func (f *httpFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) (err error) {
 	var shasum []byte
 	if frag := src.Fragment; frag != "" {
 		shasum, _ = hex.DecodeString(frag)
@@ -102,7 +103,7 @@ func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	return fetchHTTP(src, shasum, fs, man, f.prefix)
 }
 
-func fetchHTTP(src *url.URL, shasum []byte, fs Copier, man Manifest, prefix string) (err error) {
+func fetchHTTP(src *url.URL, shasum []byte, fs appfs.Copier, man Manifest, prefix string) (err error) {
 	exists, err := fs.Start(man.Slug(), man.Version(), man.Checksum())
 	if err != nil || exists {
 		return err
@@ -169,11 +170,8 @@ func fetchHTTP(src *url.URL, shasum []byte, fs Copier, man Manifest, prefix stri
 		if len(prefix) > 0 && strings.HasPrefix(path.Join("/", name), path.Join("/", prefix)) {
 			name = name[len(prefix):]
 		}
-		err = fs.Copy(&fileInfo{
-			name: name,
-			size: hdr.Size,
-			mode: os.FileMode(hdr.Mode),
-		}, tarReader)
+		fileinfo := appfs.NewFileInfo(name, hdr.Size, os.FileMode(hdr.Mode))
+		err = fs.Copy(fileinfo, tarReader)
 		if err != nil {
 			return err
 		}

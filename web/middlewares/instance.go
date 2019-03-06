@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/echo"
@@ -16,7 +17,7 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 		if c.Get("instance") != nil {
 			return next(c)
 		}
-		i, err := instance.Get(c.Request().Host)
+		i, err := lifecycle.GetInstance(c.Request().Host)
 		if err != nil {
 			var errHTTP *echo.HTTPError
 			switch err {

@@ -12,8 +12,10 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metrics"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -79,11 +81,12 @@ type (
 	// execution and contains specific values from the job.
 	WorkerContext struct {
 		context.Context
-		job     *Job
-		log     *logrus.Entry
-		id      string
-		cookie  interface{}
-		noRetry bool
+		Instance *instance.Instance
+		job      *Job
+		log      *logrus.Entry
+		id       string
+		cookie   interface{}
+		noRetry  bool
 	}
 )
 
@@ -103,7 +106,7 @@ func (w *WorkerConfig) Clone() *WorkerConfig {
 }
 
 // NewWorkerContext returns a context.Context usable by a worker.
-func NewWorkerContext(workerID string, job *Job) *WorkerContext {
+func NewWorkerContext(workerID string, job *Job, inst *instance.Instance) *WorkerContext {
 	ctx := context.Background()
 	id := fmt.Sprintf("%s/%s", workerID, job.ID())
 	log := logger.WithDomain(job.Domain).
@@ -121,10 +124,11 @@ func NewWorkerContext(workerID string, job *Job) *WorkerContext {
 	}
 
 	return &WorkerContext{
-		Context: ctx,
-		job:     job,
-		log:     log,
-		id:      id,
+		Context:  ctx,
+		Instance: inst,
+		job:      job,
+		log:      log,
+		id:       id,
 	}
 }
 
@@ -155,11 +159,12 @@ func (c *WorkerContext) NoRetry() bool {
 
 func (c *WorkerContext) clone() *WorkerContext {
 	return &WorkerContext{
-		Context: c.Context,
-		job:     c.job,
-		log:     c.log,
-		id:      c.id,
-		cookie:  c.cookie,
+		Context:  c.Context,
+		Instance: c.Instance,
+		job:      c.job,
+		log:      c.log,
+		id:       c.id,
+		cookie:   c.cookie,
 	}
 }
 
@@ -184,11 +189,6 @@ func (c *WorkerContext) UnmarshalEvent(v interface{}) error {
 		return errors.New("jobs: does not have an event associated")
 	}
 	return c.job.Event.Unmarshal(v)
-}
-
-// Domain returns the domain associated with the worker context.
-func (c *WorkerContext) Domain() string {
-	return c.job.Domain
 }
 
 // TriggerID returns the possible trigger identifier responsible for launching
@@ -259,7 +259,21 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			joblog.Errorf("%s: missing domain from job request", workerID)
 			continue
 		}
-		parentCtx := NewWorkerContext(workerID, job)
+		var inst *instance.Instance
+		if domain != prefixer.GlobalPrefixer.DomainName() {
+			var err error
+			inst, err = instance.GetFromCouch(job.Domain)
+			if err != nil {
+				joblog.Errorf("Instance not found for %s: %s", job.Domain, err)
+				continue
+			}
+			// Do not execute jobs for instances with blocking not signed TOS
+			notSigned, deadline := inst.CheckTOSNotSignedAndDeadline()
+			if notSigned && deadline == instance.TOSBlocked {
+				continue
+			}
+		}
+		parentCtx := NewWorkerContext(workerID, job, inst)
 		if err := job.AckConsumed(); err != nil {
 			parentCtx.Logger().Errorf("error acking consume job: %s",
 				err.Error())
@@ -288,14 +302,12 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 		}
 
 		// Distinguish classic job execution and konnector/account deletion
-
 		msg := struct {
 			Account        string `json:"account"`
 			AccountRev     string `json:"account_rev"`
 			Konnector      string `json:"konnector"`
 			AccountDeleted bool   `json:"account_deleted"`
 		}{}
-
 		err := json.Unmarshal(job.Message, &msg)
 
 		if err == nil && w.Type == "konnector" && msg.AccountDeleted {
@@ -311,44 +323,14 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 
 		// Delete the trigger associated with the job (if any) when we receive a
 		// ErrBadTrigger.
-		//
-		// XXX: better retro-action between broker and scheduler to avoid going
-		// through the global job-system.
 		if job.TriggerID != "" && globalJobSystem != nil {
 			if _, ok := errRun.(ErrBadTrigger); ok {
-				onBadTriggerError(job)
+				globalJobSystem.DeleteTrigger(job, job.TriggerID)
 			}
 		}
 	}
 	joblog.Debugf("%s: worker shut down", workerID)
 	closed <- struct{}{}
-}
-
-// onBadTriggerError is the handler executed when we receive a specific
-// ErrBadTrigger error message:
-//   - delete the associated trigger
-//   - delete the account document associated with this trigger if any (not activated)
-func onBadTriggerError(job *Job) {
-	// XXX: the account deletion is not activated for now
-	// t, err := globalJobSystem.GetTrigger(job, job.TriggerID)
-	// if err != nil {
-	// 	return
-	// }
-
-	globalJobSystem.DeleteTrigger(job, job.TriggerID)
-
-	// if job.WorkerType != "konnector" {
-	// 	return
-	// }
-	// var msg struct {
-	// 	Account string `json:"account"`
-	// }
-	// if err = t.Infos().Message.Unmarshal(&msg); err == nil && msg.Account != "" {
-	// 	doc := couchdb.JSONDoc{Type: consts.Accounts}
-	// 	if err = couchdb.GetDoc(job, consts.Accounts, msg.Account, &doc); err == nil {
-	// 		couchdb.DeleteDoc(job, &doc)
-	// 	}
-	// }
 }
 
 func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {

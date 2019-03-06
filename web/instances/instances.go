@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
@@ -53,7 +54,7 @@ func (i *apiInstance) Included() []jsonapi.Object {
 
 func createHandler(c echo.Context) error {
 	var err error
-	opts := &instance.Options{
+	opts := &lifecycle.Options{
 		Domain:      c.QueryParam("Domain"),
 		Locale:      c.QueryParam("Locale"),
 		UUID:        c.QueryParam("UUID"),
@@ -91,7 +92,7 @@ func createHandler(c echo.Context) error {
 			return wrapError(err)
 		}
 	}
-	in, err := instance.Create(opts)
+	in, err := lifecycle.Create(opts)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -103,7 +104,7 @@ func createHandler(c echo.Context) error {
 
 func showHandler(c echo.Context) error {
 	domain := c.Param("domain")
-	i, err := instance.Get(domain)
+	i, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -112,7 +113,7 @@ func showHandler(c echo.Context) error {
 
 func modifyHandler(c echo.Context) error {
 	domain := c.Param("domain")
-	opts := &instance.Options{
+	opts := &lifecycle.Options{
 		Domain:      domain,
 		Locale:      c.QueryParam("Locale"),
 		UUID:        c.QueryParam("UUID"),
@@ -150,11 +151,11 @@ func modifyHandler(c echo.Context) error {
 	if blocked, err := strconv.ParseBool(c.QueryParam("Blocked")); err == nil {
 		opts.Blocked = &blocked
 	}
-	i, err := instance.Get(domain)
+	i, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return wrapError(err)
 	}
-	if err = instance.Patch(i, opts); err != nil {
+	if err = lifecycle.Patch(i, opts); err != nil {
 		return wrapError(err)
 	}
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
@@ -182,7 +183,7 @@ func listHandler(c echo.Context) error {
 
 func deleteHandler(c echo.Context) error {
 	domain := c.Param("domain")
-	err := instance.Destroy(domain)
+	err := lifecycle.Destroy(domain)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -191,7 +192,7 @@ func deleteHandler(c echo.Context) error {
 
 func fsckHandler(c echo.Context) (err error) {
 	domain := c.Param("domain")
-	i, err := instance.Get(domain)
+	i, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -290,7 +291,7 @@ func cleanOrphanAccounts(c echo.Context) error {
 	results := make([]*result, 0)
 	domain := c.Param("domain")
 
-	db, err := instance.Get(domain)
+	db, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
@@ -435,7 +436,7 @@ func updatesHandler(c echo.Context) error {
 
 func setAuthMode(c echo.Context) error {
 	domain := c.Param("domain")
-	inst, err := instance.Get(domain)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
@@ -472,7 +473,7 @@ type diskUsageResult struct {
 
 func diskUsage(c echo.Context) error {
 	domain := c.Param("domain")
-	instance, err := instance.Get(domain)
+	instance, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
@@ -491,7 +492,7 @@ func diskUsage(c echo.Context) error {
 func showPrefix(c echo.Context) error {
 	domain := c.Param("domain")
 
-	instance, err := instance.Get(domain)
+	instance, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
@@ -502,7 +503,7 @@ func showPrefix(c echo.Context) error {
 func getSwiftBucketName(c echo.Context) error {
 	domain := c.Param("domain")
 
-	instance, err := instance.Get(domain)
+	instance, err := lifecycle.GetInstance(domain)
 
 	if err != nil {
 		return err

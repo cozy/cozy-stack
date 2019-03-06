@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -668,7 +669,7 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "settings_test")
-	testInstance = setup.GetTestInstance(&instance.Options{
+	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Locale:   "en",
 		Timezone: "Europe/Berlin",
 		Email:    "alice@example.com",

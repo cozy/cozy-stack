@@ -1,98 +1,28 @@
 package instance
 
 import (
-	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"path"
-	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/i18n"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
-)
-
-/* #nosec */
-const (
-	RegisterTokenLen      = 16
-	PasswordResetTokenLen = 16
-	SessionSecretLen      = 64
-	OauthSecretLen        = 128
-)
-
-// DefaultLocale is the default locale when creating an instance
-const DefaultLocale = "en"
-
-const illegalChars = " /,;&?#@|='\"\t\r\n\x00"
-const illegalFirstChars = "0123456789."
-
-var (
-	// ErrNotFound is used when the seeked instance was not found
-	ErrNotFound = errors.New("Instance not found")
-	// ErrExists is used the instance already exists
-	ErrExists = errors.New("Instance already exists")
-	// ErrIllegalDomain is used when the domain named contains illegal characters
-	ErrIllegalDomain = errors.New("Domain name contains illegal characters")
-	// ErrMissingToken is returned by RegisterPassphrase if token is empty
-	ErrMissingToken = errors.New("Empty register token")
-	// ErrInvalidToken is returned by RegisterPassphrase if token is invalid
-	ErrInvalidToken = errors.New("Invalid register token")
-	// ErrMissingPassphrase is returned when the new passphrase is missing
-	ErrMissingPassphrase = errors.New("Missing new passphrase")
-	// ErrInvalidPassphrase is returned when the passphrase is invalid
-	ErrInvalidPassphrase = errors.New("Invalid passphrase")
-	// ErrInvalidTwoFactor is returned when the two-factor authentication
-	// verification is invalid.
-	ErrInvalidTwoFactor = errors.New("Invalid two-factor parameters")
-	// ErrContextNotFound is returned when the instance has no context
-	ErrContextNotFound = errors.New("Context not found")
-	// ErrResetAlreadyRequested is returned when a passphrase reset token is already set and valid
-	ErrResetAlreadyRequested = errors.New("The passphrase reset has already been requested")
-	// ErrUnknownAuthMode is returned when an unknown authentication mode is
-	// used.
-	ErrUnknownAuthMode = errors.New("Unknown authentication mode")
-	// ErrBadTOSVersion is returned when a malformed TOS version is provided.
-	ErrBadTOSVersion = errors.New("Bad format for TOS version")
-)
-
-// BlockingReason structs holds a reason why an instance had been blocked
-type BlockingReason struct {
-	Code    string
-	Message string
-}
-
-var (
-	// BlockedLoginFailed is used when a security issue has been detected on the instance
-	BlockedLoginFailed = BlockingReason{Code: "LOGIN_FAILED", Message: "Instance Blocked Login"}
-	// BlockedPaymentFailed is used when a payment is missing for the instance
-	BlockedPaymentFailed = BlockingReason{Code: "PAYMENT_FAILED", Message: "Instance Blocked Payment"}
-	// BlockedUnknown is used when an instance is blocked but the reason is unknown
-	BlockedUnknown = BlockingReason{Code: "UNKNOWN", Message: "Instance Blocked Unknown"}
 )
 
 // An Instance has the informations relatives to the logical cozy instance,
@@ -118,7 +48,8 @@ type Instance struct {
 	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"`   // The total size in bytes allowed to the user
 	IndexViewsVersion  int   `json:"indexes_version"`
 
-	// Swift cluster number, indexed from 1. If not zero, it indicates we're using swift layout 2, see pkg/vfs/swift.
+	// Swift cluster number, indexed from 1. If not zero, it indicates we're
+	// using swift layout 2, see pkg/vfs/swift.
 	SwiftCluster int `json:"swift_cluster,omitempty"`
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
@@ -142,33 +73,6 @@ type Instance struct {
 
 	vfs              vfs.VFS
 	contextualDomain string
-}
-
-// Options holds the parameters to create a new instance.
-type Options struct {
-	Domain         string
-	DomainAliases  []string
-	Locale         string
-	UUID           string
-	TOSSigned      string
-	TOSLatest      string
-	Timezone       string
-	ContextName    string
-	Email          string
-	PublicName     string
-	Settings       string
-	SettingsObj    *couchdb.JSONDoc
-	AuthMode       string
-	Passphrase     string
-	SwiftCluster   int
-	DiskQuota      int64
-	Apps           []string
-	AutoUpdate     *bool
-	Debug          *bool
-	Blocked        *bool
-	BlockingReason string
-
-	OnboardingFinished *bool
 }
 
 // DocType implements couchdb.Doc
@@ -246,7 +150,8 @@ func (i *Instance) VFS() vfs.VFS {
 	return i.vfs
 }
 
-func (i *Instance) makeVFS() error {
+// MakeVFS is used to initialize the VFS linked to this instance
+func (i *Instance) MakeVFS() error {
 	if i.vfs != nil {
 		return nil
 	}
@@ -272,25 +177,25 @@ func (i *Instance) makeVFS() error {
 
 // AppsCopier returns the application copier associated with the specified
 // application type
-func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
+func (i *Instance) AppsCopier(appsType consts.AppType) appfs.Copier {
 	fsURL := config.FsURL()
 	switch fsURL.Scheme {
 	case config.SchemeFile:
 		var baseDirName string
 		switch appsType {
-		case apps.Webapp:
+		case consts.WebappType:
 			baseDirName = vfs.WebappsDirName
-		case apps.Konnector:
+		case consts.KonnectorType:
 			baseDirName = vfs.KonnectorsDirName
 		}
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
 			path.Join(fsURL.Path, i.DirName(), baseDirName))
-		return apps.NewAferoCopier(baseFS)
+		return appfs.NewAferoCopier(baseFS)
 	case config.SchemeMem:
 		baseFS := vfsafero.GetMemFS("apps")
-		return apps.NewAferoCopier(baseFS)
+		return appfs.NewAferoCopier(baseFS)
 	case config.SchemeSwift, config.SchemeSwiftSecure:
-		return apps.NewSwiftCopier(config.GetSwiftConnection(), appsType)
+		return appfs.NewSwiftCopier(config.GetSwiftConnection(), appsType)
 	default:
 		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
 	}
@@ -298,18 +203,18 @@ func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
 
 // AppsFileServer returns the web-application file server associated to this
 // instance.
-func (i *Instance) AppsFileServer() apps.FileServer {
+func (i *Instance) AppsFileServer() appfs.FileServer {
 	fsURL := config.FsURL()
 	switch fsURL.Scheme {
 	case config.SchemeFile:
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
 			path.Join(fsURL.Path, i.DirName(), vfs.WebappsDirName))
-		return apps.NewAferoFileServer(baseFS, nil)
+		return appfs.NewAferoFileServer(baseFS, nil)
 	case config.SchemeMem:
 		baseFS := vfsafero.GetMemFS("apps")
-		return apps.NewAferoFileServer(baseFS, nil)
+		return appfs.NewAferoFileServer(baseFS, nil)
 	case config.SchemeSwift, config.SchemeSwiftSecure:
-		return apps.NewSwiftFileServer(config.GetSwiftConnection(), apps.Webapp)
+		return appfs.NewSwiftFileServer(config.GetSwiftConnection(), consts.WebappType)
 	default:
 		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
 	}
@@ -317,18 +222,18 @@ func (i *Instance) AppsFileServer() apps.FileServer {
 
 // KonnectorsFileServer returns the web-application file server associated to this
 // instance.
-func (i *Instance) KonnectorsFileServer() apps.FileServer {
+func (i *Instance) KonnectorsFileServer() appfs.FileServer {
 	fsURL := config.FsURL()
 	switch fsURL.Scheme {
 	case config.SchemeFile:
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
 			path.Join(fsURL.Path, i.DirName(), vfs.KonnectorsDirName))
-		return apps.NewAferoFileServer(baseFS, nil)
+		return appfs.NewAferoFileServer(baseFS, nil)
 	case config.SchemeMem:
 		baseFS := vfsafero.GetMemFS("apps")
-		return apps.NewAferoFileServer(baseFS, nil)
+		return appfs.NewAferoFileServer(baseFS, nil)
 	case config.SchemeSwift, config.SchemeSwiftSecure:
-		return apps.NewSwiftFileServer(config.GetSwiftConnection(), apps.Konnector)
+		return appfs.NewSwiftFileServer(config.GetSwiftConnection(), consts.KonnectorType)
 	default:
 		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
 	}
@@ -389,7 +294,8 @@ func (i *Instance) SettingsPublicName() (string, error) {
 	return email, nil
 }
 
-func (i *Instance) getFromContexts(contexts map[string]interface{}) (interface{}, bool) {
+// GetFromContexts returns the parameters specific to the instance context
+func (i *Instance) GetFromContexts(contexts map[string]interface{}) (interface{}, bool) {
 	if contexts == nil {
 		return nil, false
 	}
@@ -413,7 +319,7 @@ func (i *Instance) getFromContexts(contexts map[string]interface{}) (interface{}
 // this instance
 func (i *Instance) SettingsContext() (map[string]interface{}, error) {
 	contexts := config.GetConfig().Contexts
-	context, ok := i.getFromContexts(contexts)
+	context, ok := i.GetFromContexts(contexts)
 	if !ok {
 		return nil, ErrContextNotFound
 	}
@@ -575,578 +481,8 @@ func (i *Instance) OnboardedRedirection() *url.URL {
 	return i.redirection("onboarded_redirection", consts.HomeSlug)
 }
 
-func (i *Instance) installApp(slug string) error {
-	source := "registry://" + slug + "/stable"
-	inst, err := apps.NewInstaller(i, i.AppsCopier(apps.Webapp), &apps.InstallerOptions{
-		Operation:  apps.Install,
-		Type:       apps.Webapp,
-		SourceURL:  source,
-		Slug:       slug,
-		Registries: i.Registries(),
-	})
-	if err != nil {
-		return err
-	}
-	_, err = inst.RunSync()
-	return err
-}
-
-func (i *Instance) update() error {
-	if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
-		i.Logger().Errorf("Could not update: %s", err.Error())
-		return err
-	}
-	return nil
-}
-
-func (i *Instance) defineViewsAndIndex() error {
-	if err := couchdb.DefineIndexes(i, consts.Indexes); err != nil {
-		return err
-	}
-	if err := couchdb.DefineViews(i, consts.Views); err != nil {
-		return err
-	}
-	i.IndexViewsVersion = consts.IndexViewsVersion
-	return nil
-}
-
-func (i *Instance) createDefaultFilesTree() error {
-	var errf error
-
-	createDir := func(dir *vfs.DirDoc, err error) (*vfs.DirDoc, error) {
-		if err != nil {
-			errf = multierror.Append(errf, err)
-			return nil, err
-		}
-		err = i.VFS().CreateDir(dir)
-		if err != nil && !os.IsExist(err) {
-			errf = multierror.Append(errf, err)
-			return nil, err
-		}
-		return dir, nil
-	}
-
-	name := i.Translate("Tree Administrative")
-	createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)) // #nosec
-
-	name = i.Translate("Tree Photos")
-	photos, err := createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
-	if err == nil {
-		name = i.Translate("Tree Uploaded from Cozy Photos")
-		createDir(vfs.NewDirDoc(i.VFS(), name, photos.ID(), nil)) // #nosec
-		name = i.Translate("Tree Backed up from my mobile")
-		createDir(vfs.NewDirDoc(i.VFS(), name, photos.ID(), nil)) // #nosec
-	}
-
-	return errf
-}
-
-// Create builds an instance and initializes it
-func Create(opts *Options) (*Instance, error) {
-	domain, err := validateDomain(opts.Domain)
-	if err != nil {
-		return nil, err
-	}
-	var i *Instance
-	err = hooks.Execute("add-instance", []string{domain}, func() error {
-		var err2 error
-		i, err2 = CreateWithoutHooks(opts)
-		return err2
-	})
-	return i, err
-}
-
-// CreateWithoutHooks builds an instance and initializes it. The difference
-// with Create is that script hooks are not executed for this function.
-func CreateWithoutHooks(opts *Options) (*Instance, error) {
-	domain, err := validateDomain(opts.Domain)
-	if err != nil {
-		return nil, err
-	}
-	if _, err = getFromCouch(domain); err != ErrNotFound {
-		if err == nil {
-			err = ErrExists
-		}
-		return nil, err
-	}
-
-	locale := opts.Locale
-	if locale == "" {
-		locale = DefaultLocale
-	}
-
-	settings := buildSettings(opts)
-	prefix := sha256.Sum256([]byte(domain))
-	i := new(Instance)
-	i.Domain = domain
-	i.DomainAliases, err = checkAliases(i, opts.DomainAliases)
-	if err != nil {
-		return nil, err
-	}
-	i.Prefix = "cozy" + hex.EncodeToString(prefix[:16])
-	i.Locale = locale
-	i.UUID = opts.UUID
-	i.TOSSigned = opts.TOSSigned
-	i.TOSLatest = opts.TOSLatest
-	i.ContextName = opts.ContextName
-	i.BytesDiskQuota = opts.DiskQuota
-	i.IndexViewsVersion = consts.IndexViewsVersion
-	i.RegisterToken = crypto.GenerateRandomBytes(RegisterTokenLen)
-	i.SessionSecret = crypto.GenerateRandomBytes(SessionSecretLen)
-	i.OAuthSecret = crypto.GenerateRandomBytes(OauthSecretLen)
-	i.CLISecret = crypto.GenerateRandomBytes(OauthSecretLen)
-
-	// If not cluster number is given, we rely on cluster one.
-	if opts.SwiftCluster == 0 {
-		i.SwiftCluster = 1
-	} else {
-		i.SwiftCluster = opts.SwiftCluster
-	}
-
-	if opts.AuthMode != "" {
-		var authMode AuthMode
-		if authMode, err = StringToAuthMode(opts.AuthMode); err == nil {
-			i.AuthMode = authMode
-		}
-	}
-
-	if opts.Passphrase != "" {
-		if err = i.registerPassphrase([]byte(opts.Passphrase), i.RegisterToken); err != nil {
-			return nil, err
-		}
-		// set the onboarding finished when specifying a passphrase. we totally
-		// skip the onboarding in that case.
-		i.OnboardingFinished = true
-	}
-
-	if onboardingFinished := opts.OnboardingFinished; onboardingFinished != nil {
-		i.OnboardingFinished = *onboardingFinished
-	}
-
-	if autoUpdate := opts.AutoUpdate; autoUpdate != nil {
-		i.NoAutoUpdate = !(*opts.AutoUpdate)
-	}
-
-	if err := couchdb.CreateDoc(couchdb.GlobalDB, i); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.Files); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.Apps); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.Konnectors); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.OAuthClients); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.Settings); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.Permissions); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.Sharings); err != nil {
-		return nil, err
-	}
-	if err := i.makeVFS(); err != nil {
-		return nil, err
-	}
-	if err := i.VFS().InitFs(); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateNamedDoc(i, settings); err != nil {
-		return nil, err
-	}
-	if err := i.defineViewsAndIndex(); err != nil {
-		return nil, err
-	}
-	if err := i.createDefaultFilesTree(); err != nil {
-		return nil, err
-	}
-	sched := jobs.System()
-	for _, trigger := range Triggers(i) {
-		t, err := jobs.NewTrigger(i, trigger, nil)
-		if err != nil {
-			return nil, err
-		}
-		if err = sched.AddTrigger(t); err != nil {
-			return nil, err
-		}
-	}
-	for _, app := range opts.Apps {
-		if err := i.installApp(app); err != nil {
-			i.Logger().Errorf("Failed to install %s: %s", app, err)
-		}
-	}
-	return i, nil
-}
-
-// Get retrieves the instance for a request by its host.
-func Get(domain string) (*Instance, error) {
-	var err error
-	domain, err = validateDomain(domain)
-	if err != nil {
-		return nil, err
-	}
-	i, err := getFromCouch(domain)
-	if err != nil {
-		return nil, err
-	}
-
-	// This retry-loop handles the probability to hit an Update conflict from
-	// this version update, since the instance document may be updated different
-	// processes at the same time.
-	for {
-		if i == nil {
-			i, err = getFromCouch(domain)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if i.IndexViewsVersion == consts.IndexViewsVersion {
-			break
-		}
-
-		i.Logger().Debugf("Indexes outdated: wanted %d; got %d", consts.IndexViewsVersion, i.IndexViewsVersion)
-		if err = i.defineViewsAndIndex(); err != nil {
-			i.Logger().Errorf("Could not re-define indexes and views: %s", err.Error())
-			return nil, err
-		}
-
-		// Copy over the instance object some data that we used to store on the
-		// settings document.
-		if i.TOSSigned == "" || i.UUID == "" || i.ContextName == "" {
-			var settings *couchdb.JSONDoc
-			settings, err = i.SettingsDocument()
-			if err != nil {
-				return nil, err
-			}
-			i.UUID, _ = settings.M["uuid"].(string)
-			i.TOSSigned, _ = settings.M["tos"].(string)
-			i.ContextName, _ = settings.M["context"].(string)
-			// TOS version number were YYYYMMDD dates, before we used a semver-like
-			// version scheme. We consider them to be the versions 1.0.0.
-			if len(i.TOSSigned) == 8 {
-				i.TOSSigned = "1.0.0-" + i.TOSSigned
-			}
-		}
-
-		err = i.update()
-		if err == nil {
-			break
-		}
-
-		if !couchdb.IsConflictError(err) {
-			return nil, err
-		}
-
-		i = nil
-	}
-
-	if err = i.makeVFS(); err != nil {
-		return nil, err
-	}
-	return i, nil
-}
-
-func buildSettings(opts *Options) *couchdb.JSONDoc {
-	var settings *couchdb.JSONDoc
-	if opts.SettingsObj != nil {
-		settings = opts.SettingsObj
-	} else {
-		settings = &couchdb.JSONDoc{M: make(map[string]interface{})}
-	}
-
-	settings.Type = consts.Settings
-	settings.SetID(consts.InstanceSettingsID)
-
-	for _, s := range strings.Split(opts.Settings, ",") {
-		if parts := strings.SplitN(s, ":", 2); len(parts) == 2 {
-			settings.M[parts[0]] = parts[1]
-		}
-	}
-
-	// Handling global/instance settings
-	if contextName, ok := settings.M["context"].(string); ok {
-		opts.ContextName = contextName
-		delete(settings.M, "context")
-	}
-	if locale, ok := settings.M["locale"].(string); ok {
-		opts.Locale = locale
-		delete(settings.M, "locale")
-	}
-	if onboardingFinished, ok := settings.M["onboarding_finished"].(bool); ok {
-		opts.OnboardingFinished = &onboardingFinished
-		delete(settings.M, "onboarding_finished")
-	}
-	if uuid, ok := settings.M["uuid"].(string); ok {
-		opts.UUID = uuid
-		delete(settings.M, "uuid")
-	}
-	if tos, ok := settings.M["tos"].(string); ok {
-		opts.TOSSigned = tos
-		delete(settings.M, "tos")
-	}
-	if tos, ok := settings.M["tos_latest"].(string); ok {
-		opts.TOSLatest = tos
-		delete(settings.M, "tos_latest")
-	}
-	if autoUpdate, ok := settings.M["auto_update"].(string); ok {
-		if b, err := strconv.ParseBool(autoUpdate); err == nil {
-			opts.AutoUpdate = &b
-		}
-		delete(settings.M, "auto_update")
-	}
-	if authMode, ok := settings.M["auth_mode"].(string); ok {
-		opts.AuthMode = authMode
-		delete(settings.M, "auth_mode")
-	}
-
-	// Handling instance settings document
-	if tz := opts.Timezone; tz != "" {
-		settings.M["tz"] = tz
-	}
-	if email := opts.Email; email != "" {
-		settings.M["email"] = email
-	}
-	if name := opts.PublicName; name != "" {
-		settings.M["public_name"] = name
-	}
-
-	if len(opts.TOSSigned) == 8 {
-		opts.TOSSigned = "1.0.0-" + opts.TOSSigned
-	}
-
-	return settings
-}
-
-// Patch updates the given instance with the specified options if necessary. It
-// can also update the settings document if provided in the options.
-func Patch(i *Instance, opts *Options) error {
-	opts.Domain = i.Domain
-	settings := buildSettings(opts)
-
-	clouderyChanges := make(map[string]interface{})
-
-	for {
-		var err error
-		if i == nil {
-			i, err = Get(opts.Domain)
-			if err != nil {
-				return err
-			}
-		}
-
-		needUpdate := false
-		if opts.Locale != "" && opts.Locale != i.Locale {
-			i.Locale = opts.Locale
-			clouderyChanges["locale"] = i.Locale
-			needUpdate = true
-		}
-
-		if opts.Blocked != nil && *opts.Blocked != i.Blocked {
-			i.Blocked = *opts.Blocked
-			needUpdate = true
-		}
-
-		if opts.BlockingReason != "" && opts.BlockingReason != i.BlockingReason {
-			i.BlockingReason = opts.BlockingReason
-			needUpdate = true
-		}
-
-		if aliases := opts.DomainAliases; aliases != nil {
-			i.DomainAliases, err = checkAliases(i, aliases)
-			if err != nil {
-				return err
-			}
-			needUpdate = true
-		}
-
-		if opts.UUID != "" && opts.UUID != i.UUID {
-			i.UUID = opts.UUID
-			needUpdate = true
-		}
-
-		if opts.ContextName != "" && opts.ContextName != i.ContextName {
-			i.ContextName = opts.ContextName
-			needUpdate = true
-		}
-
-		if opts.AuthMode != "" {
-			var authMode AuthMode
-			authMode, err = StringToAuthMode(opts.AuthMode)
-			if err != nil {
-				return err
-			}
-			if i.AuthMode != authMode {
-				i.AuthMode = authMode
-				needUpdate = true
-			}
-		}
-
-		if opts.SwiftCluster > 0 && opts.SwiftCluster != i.SwiftCluster {
-			i.SwiftCluster = opts.SwiftCluster
-			needUpdate = true
-		}
-
-		if opts.DiskQuota > 0 && opts.DiskQuota != i.BytesDiskQuota {
-			i.BytesDiskQuota = opts.DiskQuota
-			needUpdate = true
-		} else if opts.DiskQuota == -1 {
-			i.BytesDiskQuota = 0
-			needUpdate = true
-		}
-
-		if opts.AutoUpdate != nil && !(*opts.AutoUpdate) != i.NoAutoUpdate {
-			i.NoAutoUpdate = !(*opts.AutoUpdate)
-			needUpdate = true
-		}
-
-		if opts.OnboardingFinished != nil && *opts.OnboardingFinished != i.OnboardingFinished {
-			i.OnboardingFinished = *opts.OnboardingFinished
-			needUpdate = true
-		}
-
-		if opts.TOSLatest != "" {
-			if _, date, ok := parseTOSVersion(opts.TOSLatest); !ok || date.IsZero() {
-				return ErrBadTOSVersion
-			}
-			if i.TOSLatest != opts.TOSLatest {
-				if i.CheckTOSNotSigned(opts.TOSLatest) {
-					i.TOSLatest = opts.TOSLatest
-					needUpdate = true
-				}
-			}
-		}
-
-		if opts.TOSSigned != "" {
-			if _, _, ok := parseTOSVersion(opts.TOSSigned); !ok {
-				return ErrBadTOSVersion
-			}
-			if i.TOSSigned != opts.TOSSigned {
-				i.TOSSigned = opts.TOSSigned
-				if !i.CheckTOSNotSigned() {
-					i.TOSLatest = ""
-				}
-				needUpdate = true
-			}
-		}
-
-		if !needUpdate {
-			break
-		}
-
-		err = i.update()
-		if couchdb.IsConflictError(err) {
-			i = nil
-			continue
-		}
-		if err != nil {
-			return err
-		}
-		break
-	}
-
-	// Update the settings doc
-	if ok, err := i.needsSettingsUpdate(settings.M); settings.Rev() != "" && err == nil && ok {
-		if err := couchdb.UpdateDoc(i, settings); err != nil {
-			return err
-		}
-
-		if err == nil {
-			clouderyUpdateKeys := []string{"email", "public_name"}
-
-			for _, key := range clouderyUpdateKeys {
-				if v, ok := settings.M[key]; ok {
-					clouderyChanges[key] = v
-				}
-			}
-		}
-	}
-
-	if debug := opts.Debug; debug != nil {
-		var err error
-		if *debug {
-			err = logger.AddDebugDomain(i.Domain)
-		} else {
-			err = logger.RemoveDebugDomain(i.Domain)
-		}
-		if err != nil {
-			return err
-		}
-	}
-
-	i.managerUpdateSettings(clouderyChanges)
-
-	return nil
-}
-
-// needsSettingsUpdate compares the old instance io.cozy.settings with the new
-// bunch of settings and tells if it needs an update
-func (i *Instance) needsSettingsUpdate(newSettings map[string]interface{}) (bool, error) {
-	oldSettings, err := i.SettingsDocument()
-
-	if err != nil {
-		return false, err
-	}
-
-	if oldSettings.M == nil {
-		return true, nil
-	}
-
-	for k, newValue := range newSettings {
-		if k == "_id" || k == "_rev" {
-			continue
-		}
-		// Check if we have the key in old settings and the value is different,
-		// or if we don't have the key at all
-		if oldValue, ok := oldSettings.M[k]; !ok || !reflect.DeepEqual(oldValue, newValue) {
-			return true, nil
-		}
-	}
-
-	// Handles if a key was removed in the new settings but exists in the old
-	// settings, and therefore needs an update
-	for oldKey := range oldSettings.M {
-		if _, ok := newSettings[oldKey]; !ok {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-func checkAliases(i *Instance, aliases []string) ([]string, error) {
-	if aliases == nil {
-		return nil, nil
-	}
-	aliases = utils.UniqueStrings(aliases)
-	for _, alias := range aliases {
-		alias = strings.TrimSpace(alias)
-		if alias == "" {
-			continue
-		}
-		if alias == i.Domain {
-			return nil, ErrExists
-		}
-		i2, err := getFromCouch(alias)
-		if err != ErrNotFound {
-			if err != nil {
-				return nil, err
-			}
-			if i2.ID() != i.ID() {
-				return nil, ErrExists
-			}
-		}
-	}
-	return aliases, nil
-}
-
-func getFromCouch(domain string) (*Instance, error) {
+// GetFromCouch finds an instance in CouchDB from its domain
+func GetFromCouch(domain string) (*Instance, error) {
 	var res couchdb.ViewResponse
 	err := couchdb.ExecView(couchdb.GlobalDB, consts.DomainAndAliasesView, &couchdb.ViewRequest{
 		Key:         domain,
@@ -1167,7 +503,7 @@ func getFromCouch(domain string) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err = inst.makeVFS(); err != nil {
+	if err = inst.MakeVFS(); err != nil {
 		return nil, err
 	}
 	return inst, nil
@@ -1200,307 +536,6 @@ func ForeachInstances(fn func(*Instance) error) error {
 		}
 		return fn(doc)
 	})
-}
-
-// Destroy is used to remove the instance. All the data linked to this
-// instance will be permanently deleted.
-func Destroy(domain string) error {
-	domain, err := validateDomain(domain)
-	if err != nil {
-		return err
-	}
-	return hooks.Execute("remove-instance", []string{domain}, func() error {
-		return DestroyWithoutHooks(domain)
-	})
-}
-
-// DestroyWithoutHooks is used to remove the instance. The difference with
-// Destroy is that scripts hooks are not executed for this function.
-func DestroyWithoutHooks(domain string) error {
-	var err error
-	domain, err = validateDomain(domain)
-	if err != nil {
-		return err
-	}
-	i, err := getFromCouch(domain)
-	if err != nil {
-		return err
-	}
-
-	// Deleting accounts manually to invoke the "account deletion hook" which may
-	// launch a worker in order to clean the account.
-	deleteAccounts(i)
-
-	// Reload the instance, it can have been updated in CouchDB if the instance
-	// had at least one account and was not up-to-date for its indexes/views.
-	i, err = getFromCouch(domain)
-	if err != nil {
-		return err
-	}
-
-	sched := jobs.System()
-	triggers, err := sched.GetAllTriggers(i)
-	if err == nil {
-		for _, t := range triggers {
-			if err = sched.DeleteTrigger(i, t.Infos().TID); err != nil {
-				logger.WithDomain(domain).Error(
-					"Failed to remove trigger: ", err)
-			}
-		}
-	}
-
-	if err = couchdb.DeleteAllDBs(i); err != nil {
-		i.Logger().Errorf("Could not delete all CouchDB databases: %s", err.Error())
-		return err
-	}
-
-	if err = i.VFS().Delete(); err != nil {
-		i.Logger().Errorf("Could not delete VFS: %s", err.Error())
-		return err
-	}
-
-	return couchdb.DeleteDoc(couchdb.GlobalDB, i)
-}
-
-func deleteAccounts(i *Instance) {
-	var accounts []*couchdb.JSONDoc
-	if err := couchdb.GetAllDocs(i, consts.Accounts, nil, &accounts); err != nil || len(accounts) == 0 {
-		return
-	}
-
-	ds := realtime.GetHub().Subscriber(i)
-	defer ds.Close()
-
-	accountsCount := 0
-	for _, account := range accounts {
-		account.Type = consts.Accounts
-		if err := couchdb.DeleteDoc(i, account); err == nil {
-			accountsCount++
-		}
-	}
-	if accountsCount == 0 {
-		return
-	}
-
-	if err := ds.Subscribe(consts.Jobs); err != nil {
-		return
-	}
-
-	timeout := time.After(1 * time.Minute)
-	for {
-		select {
-		case e := <-ds.Channel:
-			j, ok := e.Doc.(*couchdb.JSONDoc)
-			if ok {
-				deleted, _ := j.M["account_deleted"].(bool)
-				stateStr, _ := j.M["state"].(string)
-				state := jobs.State(stateStr)
-				if deleted && (state == jobs.Done || state == jobs.Errored) {
-					accountsCount--
-					if accountsCount == 0 {
-						return
-					}
-				}
-			}
-		case <-timeout:
-			return
-		}
-	}
-}
-
-func (i *Instance) registerPassphrase(pass, tok []byte) error {
-	if len(pass) == 0 {
-		return ErrMissingPassphrase
-	}
-	if len(i.RegisterToken) == 0 {
-		return ErrMissingToken
-	}
-	if subtle.ConstantTimeCompare(i.RegisterToken, tok) != 1 {
-		return ErrInvalidToken
-	}
-	hash, err := crypto.GenerateFromPassphrase(pass)
-	if err != nil {
-		return err
-	}
-	i.RegisterToken = nil
-	i.setPassphraseAndSecret(hash)
-	return nil
-}
-
-// RegisterPassphrase replace the instance registerToken by a passphrase
-func (i *Instance) RegisterPassphrase(pass, tok []byte) error {
-	if err := i.registerPassphrase(pass, tok); err != nil {
-		return err
-	}
-	return i.update()
-}
-
-// RequestPassphraseReset generates a new registration token for the user to
-// renew its password.
-func (i *Instance) RequestPassphraseReset() error {
-	// If a registration token is set, we do not generate another token than the
-	// registration one, and bail.
-	if i.RegisterToken != nil {
-		i.Logger().Info("Passphrase reset ignored: not registered")
-		return nil
-	}
-	// If a passphrase reset token is set and valid, we do not generate new one,
-	// and bail.
-	if i.PassphraseResetToken != nil && i.PassphraseResetTime != nil &&
-		time.Now().UTC().Before(*i.PassphraseResetTime) {
-		i.Logger().Infof("Passphrase reset ignored: already sent at %s",
-			i.PassphraseResetTime.String())
-		return ErrResetAlreadyRequested
-	}
-	resetTime := time.Now().UTC().Add(config.PasswordResetInterval())
-	i.PassphraseResetToken = crypto.GenerateRandomBytes(PasswordResetTokenLen)
-	i.PassphraseResetTime = &resetTime
-	if err := i.update(); err != nil {
-		return err
-	}
-	// Send a mail containing the reset url for the user to actually reset its
-	// passphrase.
-	resetURL := i.PageURL("/auth/passphrase_renew", url.Values{
-		"token": {hex.EncodeToString(i.PassphraseResetToken)},
-	})
-	return i.SendMail(&Mail{
-		TemplateName: "passphrase_reset",
-		TemplateValues: map[string]interface{}{
-			"BaseURL":             i.PageURL("/", nil),
-			"PassphraseResetLink": resetURL,
-		},
-	})
-}
-
-// Mail contains the informations to send a mail for the instance owner.
-type Mail struct {
-	TemplateName   string
-	TemplateValues map[string]interface{}
-}
-
-// SendMail send a mail to the instance owner.
-func (i *Instance) SendMail(m *Mail) error {
-	msg, err := jobs.NewMessage(map[string]interface{}{
-		"mode":            "noreply",
-		"template_name":   m.TemplateName,
-		"template_values": m.TemplateValues,
-	})
-	if err != nil {
-		return err
-	}
-	_, err = jobs.System().PushJob(i, &jobs.JobRequest{
-		WorkerType: "sendmail",
-		Message:    msg,
-	})
-	return err
-}
-
-// CheckPassphraseRenewToken checks whether the given token is good to use for
-// resetting the passphrase.
-func (i *Instance) CheckPassphraseRenewToken(tok []byte) error {
-	if i.PassphraseResetToken == nil {
-		return ErrMissingToken
-	}
-	if i.PassphraseResetTime != nil && !time.Now().UTC().Before(*i.PassphraseResetTime) {
-		return ErrMissingToken
-	}
-	if subtle.ConstantTimeCompare(i.PassphraseResetToken, tok) != 1 {
-		return ErrInvalidToken
-	}
-	return nil
-}
-
-// PassphraseRenew changes the passphrase to the specified one if the given
-// token matches the `PassphraseResetToken` field.
-func (i *Instance) PassphraseRenew(pass, tok []byte) error {
-	err := i.CheckPassphraseRenewToken(tok)
-	if err != nil {
-		return err
-	}
-	hash, err := crypto.GenerateFromPassphrase(pass)
-	if err != nil {
-		return err
-	}
-	i.PassphraseResetToken = nil
-	i.PassphraseResetTime = nil
-	i.setPassphraseAndSecret(hash)
-	return i.update()
-}
-
-// UpdatePassphrase replace the passphrase
-func (i *Instance) UpdatePassphrase(pass, current []byte, twoFactorPasscode string, twoFactorToken []byte) error {
-	if len(pass) == 0 {
-		return ErrMissingPassphrase
-	}
-	// With two factor authentication, we do not check the validity of the
-	// current passphrase, but the validity of the pair passcode/token which has
-	// been exchanged against the current passphrase.
-	if i.HasAuthMode(TwoFactorMail) {
-		if !i.ValidateTwoFactorPasscode(twoFactorToken, twoFactorPasscode) {
-			return ErrInvalidTwoFactor
-		}
-	} else {
-		// the needUpdate flag is not checked against since the passphrase will be
-		// regenerated with updated parameters just after, if the passphrase match.
-		_, err := crypto.CompareHashAndPassphrase(i.PassphraseHash, current)
-		if err != nil {
-			return ErrInvalidPassphrase
-		}
-	}
-	hash, err := crypto.GenerateFromPassphrase(pass)
-	if err != nil {
-		return err
-	}
-	i.setPassphraseAndSecret(hash)
-	return i.update()
-}
-
-// ForceUpdatePassphrase replace the passphrase without checking the current one
-func (i *Instance) ForceUpdatePassphrase(newPassword []byte) error {
-	if len(newPassword) == 0 {
-		return ErrMissingPassphrase
-	}
-
-	hash, err := crypto.GenerateFromPassphrase(newPassword)
-	if err != nil {
-		return err
-	}
-	i.setPassphraseAndSecret(hash)
-	return i.update()
-}
-
-func (i *Instance) setPassphraseAndSecret(hash []byte) {
-	i.PassphraseHash = hash
-	i.SessionSecret = crypto.GenerateRandomBytes(SessionSecretLen)
-}
-
-// CheckPassphrase confirm an instance passport
-func (i *Instance) CheckPassphrase(pass []byte) error {
-	if len(pass) == 0 {
-		return ErrMissingPassphrase
-	}
-
-	needUpdate, err := crypto.CompareHashAndPassphrase(i.PassphraseHash, pass)
-	if err != nil {
-		return err
-	}
-
-	if !needUpdate {
-		return nil
-	}
-
-	newHash, err := crypto.GenerateFromPassphrase(pass)
-	if err != nil {
-		return err
-	}
-
-	i.PassphraseHash = newHash
-	err = i.update()
-	if err != nil {
-		i.Logger().Error("Failed to update hash in db", err)
-	}
-
-	return nil
 }
 
 // PickKey choose which of the Instance keys to use depending on token audience
@@ -1539,11 +574,10 @@ func (i *Instance) MakeJWT(audience, subject, scope, sessionID string, issuedAt 
 
 // BuildAppToken is used to build a token to identify the app for requests made
 // to the stack
-func (i *Instance) BuildAppToken(m apps.Manifest, sessionID string) string {
+func (i *Instance) BuildAppToken(slug, sessionID string) string {
 	scope := "" // apps tokens don't have a scope
-	subject := m.Slug()
 	now := time.Now()
-	token, err := i.MakeJWT(permissions.AppAudience, subject, scope, sessionID, now)
+	token, err := i.MakeJWT(permissions.AppAudience, slug, scope, sessionID, now)
 	if err != nil {
 		return ""
 	}
@@ -1552,10 +586,9 @@ func (i *Instance) BuildAppToken(m apps.Manifest, sessionID string) string {
 
 // BuildKonnectorToken is used to build a token to identify the konnector for
 // requests made to the stack
-func (i *Instance) BuildKonnectorToken(m apps.Manifest) string {
+func (i *Instance) BuildKonnectorToken(slug string) string {
 	scope := "" // apps tokens don't have a scope
-	subject := m.Slug()
-	token, err := i.MakeJWT(permissions.KonnectorAudience, subject, scope, "", time.Now())
+	token, err := i.MakeJWT(permissions.KonnectorAudience, slug, scope, "", time.Now())
 	if err != nil {
 		return ""
 	}
@@ -1568,48 +601,6 @@ func (i *Instance) CreateShareCode(subject string) (string, error) {
 	scope := ""
 	sessionID := ""
 	return i.MakeJWT(permissions.ShareAudience, subject, scope, sessionID, time.Now())
-}
-
-// Block function blocks an instance with an optional reason parameter
-func (i *Instance) Block(reason ...string) error {
-	var r string
-
-	if len(reason) == 1 {
-		r = reason[0]
-	} else {
-		r = BlockedUnknown.Code
-	}
-	blocked := true
-
-	err := Patch(i, &Options{
-		Blocked:        &blocked,
-		BlockingReason: r,
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func validateDomain(domain string) (string, error) {
-	domain = strings.TrimSpace(domain)
-	if domain == "" || domain == ".." || domain == "." {
-		return "", ErrIllegalDomain
-	}
-	if strings.ContainsAny(domain, illegalChars) {
-		return "", ErrIllegalDomain
-	}
-	if strings.ContainsAny(domain[:1], illegalFirstChars) {
-		return "", ErrIllegalDomain
-	}
-	domain = strings.ToLower(domain)
-	if config.GetConfig().Subdomains == config.FlatSubdomains {
-		parts := strings.SplitN(domain, ".", 2)
-		if strings.Contains(parts[0], "-") {
-			return "", ErrIllegalDomain
-		}
-	}
-	return domain, nil
 }
 
 // ensure Instance implements couchdb.Doc

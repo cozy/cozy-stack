@@ -81,19 +81,14 @@ func SendMail(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	domain := ctx.Domain()
-	i, err := instance.Get(domain)
-	if err != nil {
-		return err
-	}
 	from := config.GetConfig().NoReplyAddr
 	name := config.GetConfig().NoReplyName
 	if from == "" {
-		from = "noreply@" + utils.StripPort(domain)
+		from = "noreply@" + utils.StripPort(ctx.Instance.Domain)
 	}
 	switch opts.Mode {
 	case ModeNoReply:
-		toAddr, err := addressFromInstance(i)
+		toAddr, err := addressFromInstance(ctx.Instance)
 		if err != nil {
 			return err
 		}
@@ -101,7 +96,7 @@ func SendMail(ctx *jobs.WorkerContext) error {
 		opts.From = &Address{Name: name, Email: from}
 		opts.RecipientName = toAddr.Name
 	case ModeFrom:
-		sender, err := addressFromInstance(i)
+		sender, err := addressFromInstance(ctx.Instance)
 		if err != nil {
 			return err
 		}
@@ -112,9 +107,9 @@ func SendMail(ctx *jobs.WorkerContext) error {
 		return fmt.Errorf("Mail sent with unknown mode %s", opts.Mode)
 	}
 	if opts.TemplateName != "" && opts.Locale == "" {
-		opts.Locale = i.Locale
+		opts.Locale = ctx.Instance.Locale
 	}
-	return sendMail(ctx, &opts, i.Domain)
+	return sendMail(ctx, &opts, ctx.Instance.Domain)
 }
 
 func addressFromInstance(i *instance.Instance) (*Address, error) {

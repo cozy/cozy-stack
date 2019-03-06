@@ -14,6 +14,14 @@ import (
 	"golang.org/x/crypto/hkdf"
 )
 
+/* #nosec */
+const (
+	RegisterTokenLen      = 16
+	PasswordResetTokenLen = 16
+	SessionSecretLen      = 64
+	OauthSecretLen        = 128
+)
+
 var twoFactorTOTPOptions = totp.ValidateOpts{
 	Period:    30, // 30s
 	Skew:      10, // 30s +- 10*30s = [-5min; 5,5min]
@@ -120,23 +128,6 @@ func (i *Instance) ValidateTwoFactorPasscode(token []byte, passcode string) bool
 	return ok && err == nil
 }
 
-// SendTwoFactorPasscode sends by mail the two factor secret to the owner of
-// the instance. It returns the generated token.
-func (i *Instance) SendTwoFactorPasscode() ([]byte, error) {
-	token, passcode, err := i.GenerateTwoFactorSecrets()
-	if err != nil {
-		return nil, err
-	}
-	err = i.SendMail(&Mail{
-		TemplateName:   "two_factor",
-		TemplateValues: map[string]interface{}{"TwoFactorPasscode": passcode},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return token, nil
-}
-
 // GenerateTwoFactorTrustedDeviceSecret generates a token that can be kept by the
 // user on-demand to avoid having two-factor authentication on a specific
 // machine.
@@ -172,19 +163,6 @@ func (i *Instance) GenerateMailConfirmationCode() (string, error) {
 	}
 	return totp.GenerateCodeCustom(base32.StdEncoding.EncodeToString(key),
 		time.Now().UTC(), twoFactorTOTPOptions)
-}
-
-// SendMailConfirmationCode send a code to validate the email of the instance
-// in order to activate 2FA.
-func (i *Instance) SendMailConfirmationCode() error {
-	passcode, err := i.GenerateMailConfirmationCode()
-	if err != nil {
-		return err
-	}
-	return i.SendMail(&Mail{
-		TemplateName:   "two_factor_mail_confirmation",
-		TemplateValues: map[string]interface{}{"TwoFactorActivationPasscode": passcode},
-	})
 }
 
 // ValidateMailConfirmationCode returns true if the given passcode is valid.

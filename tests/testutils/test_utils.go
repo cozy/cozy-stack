@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/stack"
@@ -100,7 +101,7 @@ func (c *TestSetup) GetTmpDirectory() string {
 
 // GetTestInstance creates an instance with a random host
 // The instance will be removed on container cleanup
-func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instance {
+func (c *TestSetup) GetTestInstance(opts ...*lifecycle.Options) *instance.Instance {
 	if c.inst != nil {
 		return c.inst
 	}
@@ -113,23 +114,23 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 		stackStarted = true
 	}
 	if len(opts) == 0 {
-		opts = []*instance.Options{{}}
+		opts = []*lifecycle.Options{{}}
 	}
 	if opts[0].Domain == "" {
 		opts[0].Domain = c.host
 	} else {
 		c.host = opts[0].Domain
 	}
-	err = instance.Destroy(c.host)
+	err = lifecycle.Destroy(c.host)
 	if err != nil && err != instance.ErrNotFound {
 		c.CleanupAndDie("Error while destroying instance", err)
 	}
-	i, err := instance.Create(opts[0])
+	i, err := lifecycle.Create(opts[0])
 
 	if err != nil {
 		c.CleanupAndDie("Cannot create test instance", err)
 	}
-	c.AddCleanup(func() error { err := instance.Destroy(i.Domain); return err })
+	c.AddCleanup(func() error { err := lifecycle.Destroy(i.Domain); return err })
 	c.inst = i
 	return i
 }

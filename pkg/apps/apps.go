@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -38,41 +39,6 @@ const (
 	Errored = "errored"
 )
 
-// AppType is an enum to represent the type of application: webapp clientside
-// or konnector serverside.
-type AppType int
-
-const (
-	// Webapp is the clientside application type
-	Webapp AppType = iota + 1
-	// Konnector is the serverside application type
-	Konnector
-)
-
-// String returns the human-readable doctype from the AppType
-func (at AppType) String() string {
-	switch at {
-	case Webapp:
-		return "io.cozy.apps"
-	case Konnector:
-		return "io.cozy.konnectors"
-	default:
-		return "unknown"
-	}
-}
-
-// NewAppType creates a new AppType from a string
-func NewAppType(doctype string) AppType {
-	switch doctype {
-	case "io.cozy.konnectors":
-		return Konnector
-	case "io.cozy.apps":
-		return Webapp
-	default:
-		return 0
-	}
-}
-
 // KonnectorArchiveName is the name of the archive created to store the
 // konnectors sources.
 const KonnectorArchiveName = "app.tar"
@@ -93,7 +59,7 @@ type Manifest interface {
 	Update(db prefixer.Prefixer) error
 	Delete(db prefixer.Prefixer) error
 
-	AppType() AppType
+	AppType() consts.AppType
 	Permissions() permissions.Set
 	Source() string
 	Version() string
@@ -115,13 +81,13 @@ type Manifest interface {
 }
 
 // GetBySlug returns an app manifest identified by its slug
-func GetBySlug(db prefixer.Prefixer, slug string, appType AppType) (Manifest, error) {
+func GetBySlug(db prefixer.Prefixer, slug string, appType consts.AppType) (Manifest, error) {
 	var man Manifest
 	var err error
 	switch appType {
-	case Webapp:
+	case consts.WebappType:
 		man, err = GetWebappBySlug(db, slug)
-	case Konnector:
+	case consts.KonnectorType:
 		man, err = GetKonnectorBySlug(db, slug)
 	}
 	if err != nil {

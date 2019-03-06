@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -209,7 +209,7 @@ func sweepRegistrations() (waitDuration time.Duration, err error) {
 
 func sendRegistrationNotification(entry *registrationEntry, registrationNotification bool) error {
 	var login LoginEntry
-	i, err := instance.Get(entry.Domain)
+	i, err := lifecycle.GetInstance(entry.Domain)
 	if err != nil {
 		return err
 	}

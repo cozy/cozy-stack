@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
@@ -221,7 +222,7 @@ func TestMain(m *testing.M) {
 
 	setup = testutils.NewSetup(m, "oauth-konnectors")
 	ts = setup.GetTestServer("/accounts", Routes)
-	testInstance = setup.GetTestInstance(&instance.Options{
+	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Domain: strings.Replace(ts.URL, "http://127.0.0.1", "cozy.tools", 1),
 	})
 	couchdb.ResetDB(couchdb.GlobalSecretsDB, consts.AccountTypes)
