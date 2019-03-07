@@ -204,13 +204,13 @@ msgid "Authorize Give App permission desc"
 msgstr "In order to improve the value of your Cozy (%s), the application %s requires access to the following data:"
 
 msgid "Authorize Submit"
-msgstr "Authorize access"
+msgstr "Authorize"
 
 msgid "Authorize Submit Sharing"
 msgstr "Confirm"
 
 msgid "Authorize Cancel"
-msgstr "Deny access"
+msgstr "Deny"
 
 msgid "Authorize Linked Title"
 msgstr "Permissions request"
@@ -222,7 +222,7 @@ msgid "Authorize Linked YourCozy"
 msgstr "It requests access to your Cozy:"
 
 msgid "Authorize Linked Help"
-msgstr "By accepting, it will give it permissions to:"
+msgstr "By authorizing, the application will be able to acces to these data in your Cozy:"
 
 msgid "Error Title"
 msgstr "Sorry, an error occurred."
@@ -388,6 +388,9 @@ msgstr "Scheduling jobs"
 
 msgid "Permissions io.cozy.permissions"
 msgstr "Delegating permissions"
+
+msgid "Permissions io.cozy.oauth.clients"
+msgstr "Connected devices"
 
 msgid "Permissions fr.maif.maifuser.contrat"
 msgstr "Contract (Maif)"

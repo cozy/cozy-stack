@@ -219,7 +219,7 @@ h1 {
 }
 .controls .c-btn {
   margin-bottom: 4px;
-  min-width: calc(50% - .5rem);
+  min-width: calc(50% - 0.5rem);
 }
 
 /* Toggle More */
@@ -325,6 +325,9 @@ li[class^='io.cozy.triggers']:before {
 li[class^='io.cozy.permissions']:before {
   background-image: url('../images/icon-permissions.svg');
 }
+li[class^='io.cozy.oauth.clients']:before {
+  background-image: url('../images/icon-device.svg');
+}
 li[class^='org.fing.mesinfos.client']:before,
 li[class^='fr.maif.maifuser.societaire']:before {
   background-image: url('../images/icon-profile.svg');
@@ -368,5 +371,8 @@ li[class^='fr.maif.maifuser.sinistre']:before {
   }
   h1 {
     font-size: 1.5rem;
+  }
+  .hide-on-mobile {
+    display: none;
   }
 }
