@@ -36,17 +36,17 @@ func TestRuleToJSON(t *testing.T) {
 func TestSetToJSON(t *testing.T) {
 	s := Set{
 		Rule{
-			Title:       "contacts",
-			Description: "Required for autocompletion on @name",
-			Type:        "io.cozy.contacts",
-			Verbs:       Verbs(GET),
-		},
-		Rule{
 			Title:       "images",
 			Description: "Required for the background",
 			Type:        "io.cozy.files",
 			Verbs:       Verbs(GET),
 			Values:      []string{"io.cozy.files.music-dir"},
+		},
+		Rule{
+			Title:       "contacts",
+			Description: "Required for autocompletion on @name",
+			Type:        "io.cozy.contacts",
+			Verbs:       Verbs(GET),
 		},
 		Rule{
 			Title:       "mail",
@@ -60,16 +60,16 @@ func TestSetToJSON(t *testing.T) {
 	b, err := json.Marshal(s)
 	assert.NoError(t, err)
 	assertEqualJSON(t, b, `{
-    "contacts": {
-      "type": "io.cozy.contacts",
-      "description": "Required for autocompletion on @name",
-      "verbs": ["GET"]
-    },
     "images": {
       "type": "io.cozy.files",
       "description": "Required for the background",
       "verbs": ["GET"],
       "values": ["io.cozy.files.music-dir"]
+    },
+    "contacts": {
+      "type": "io.cozy.contacts",
+      "description": "Required for autocompletion on @name",
+      "verbs": ["GET"]
     },
     "mail": {
       "type": "io.cozy.jobs",
@@ -78,21 +78,20 @@ func TestSetToJSON(t *testing.T) {
       "values": ["sendmail"]
     }
   }`)
-
 }
 
 func TestJSON2Set(t *testing.T) {
 	jsonSet := []byte(`{
-    "contacts": {
-      "type": "io.cozy.contacts",
-      "description": "Required for autocompletion on @name",
-      "verbs": ["GET","PUT"]
-    },
     "images": {
       "type": "io.cozy.files",
       "description": "Required for the background",
       "verbs": ["ALL"],
       "values": ["io.cozy.files.music-dir"]
+    },
+    "contacts": {
+      "type": "io.cozy.contacts",
+      "description": "Required for autocompletion on @name",
+      "verbs": ["GET","PUT"]
     },
     "mail": {
       "type": "io.cozy.jobs",
@@ -105,9 +104,42 @@ func TestJSON2Set(t *testing.T) {
 	err := json.Unmarshal(jsonSet, &s)
 	assert.NoError(t, err)
 	assert.Len(t, s, 3)
-	assert.Contains(t, []string{"contacts", "images", "mail"}, s[0].Title)
-	assert.Contains(t, []string{"contacts", "images", "mail"}, s[1].Title)
-	assert.Contains(t, []string{"contacts", "images", "mail"}, s[2].Title)
+	assert.Equal(t, "images", s[0].Title)
+	assert.Equal(t, "contacts", s[1].Title)
+	assert.Equal(t, "mail", s[2].Title)
+}
+
+func TestHasSameRules(t *testing.T) {
+	s := Set{
+		Rule{
+			Title:       "images",
+			Description: "Required for the background",
+			Type:        "io.cozy.files",
+			Verbs:       Verbs(GET),
+			Values:      []string{"io.cozy.files.music-dir"},
+		},
+		Rule{
+			Title:       "contacts",
+			Description: "Required for autocompletion on @name",
+			Type:        "io.cozy.contacts",
+			Verbs:       Verbs(GET),
+		},
+		Rule{
+			Title:       "mail",
+			Description: "Required to send a congratulations email to your friends",
+			Type:        "io.cozy.jobs",
+			Selector:    "worker",
+			Values:      []string{"sendmail"},
+		},
+	}
+
+	b, err := json.Marshal(s)
+	assert.NoError(t, err)
+	var other Set
+	err = json.Unmarshal(b, &other)
+	assert.NoError(t, err)
+	assert.Len(t, other, 3)
+	assert.True(t, s.HasSameRules(other))
 }
 
 func TestBadJSONSet(t *testing.T) {

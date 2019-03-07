@@ -1,7 +1,9 @@
 package permissions
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -9,28 +11,6 @@ import (
 
 // Set is a Set of rule
 type Set []Rule
-
-// MarshalJSON implements json.Marshaller on Set
-// see docs/permission for structure
-func (ps Set) MarshalJSON() ([]byte, error) {
-
-	m := make(map[string]*json.RawMessage)
-
-	for i, r := range ps {
-		b, err := json.Marshal(r)
-		if err != nil {
-			return nil, err
-		}
-		rm := json.RawMessage(b)
-		key := r.Title
-		if key == "" {
-			key = "rule" + strconv.Itoa(i)
-		}
-		m[key] = &rm
-	}
-
-	return json.Marshal(m)
-}
 
 // MarshalScopeString transforms a Set into a string for Oauth Scope
 // (a space separated concatenation of its rules)
@@ -47,26 +27,6 @@ func (ps Set) MarshalScopeString() (string, error) {
 		out += " " + s
 	}
 	return out[1:], nil
-}
-
-// UnmarshalJSON parses a json formated permission set
-func (ps *Set) UnmarshalJSON(j []byte) error {
-	*ps = make(Set, 0)
-	var m map[string]*json.RawMessage
-	err := json.Unmarshal(j, &m)
-	if err != nil {
-		return err
-	}
-	for title, rulejson := range m {
-		var r Rule
-		err := json.Unmarshal(*rulejson, &r)
-		if err != nil {
-			return err
-		}
-		r.Title = title
-		*ps = append(*ps, r)
-	}
-	return nil
 }
 
 // UnmarshalScopeString parse a Scope string into a permission Set
@@ -87,6 +47,92 @@ func UnmarshalScopeString(in string) (Set, error) {
 	}
 
 	return out, nil
+}
+
+// MarshalJSON implements json.Marshaller on Set. Note that the JSON
+// representation is a key-value object, but the golang Set is an ordered
+// slice. In theory, JSON objects have no order on their keys, but here, we try
+// to keep the same order on decoding/encoding.
+// See docs/permissions.md for more details on the structure.
+func (ps Set) MarshalJSON() ([]byte, error) {
+	if len(ps) == 0 {
+		return []byte("{}"), nil
+	}
+	buf := make([]byte, 0, 4096)
+
+	for i, r := range ps {
+		title := r.Title
+		if title == "" {
+			title = "rule" + strconv.Itoa(i)
+		}
+		key, err := json.Marshal(title)
+		if err != nil {
+			return nil, err
+		}
+		val, err := json.Marshal(r)
+		if err != nil {
+			return nil, err
+		}
+		buf = append(buf, ',')
+		buf = append(buf, key...)
+		buf = append(buf, ':')
+		buf = append(buf, val...)
+	}
+
+	buf[0] = '{'
+	buf = append(buf, '}')
+	return buf, nil
+}
+
+// UnmarshalJSON parses a json formated permission set
+func (ps *Set) UnmarshalJSON(j []byte) error {
+	var raws map[string]json.RawMessage
+	err := json.Unmarshal(j, &raws)
+	if err != nil {
+		return err
+	}
+	titles, err := extractJSONKeys(j)
+	if err != nil {
+		return err
+	}
+
+	*ps = make(Set, 0)
+	for _, title := range titles {
+		raw := raws[title]
+		var r Rule
+		err := json.Unmarshal(raw, &r)
+		if err != nil {
+			return err
+		}
+		r.Title = title
+		*ps = append(*ps, r)
+	}
+	return nil
+}
+
+func extractJSONKeys(j []byte) ([]string, error) {
+	var keys []string
+	dec := json.NewDecoder(bytes.NewReader(j))
+	depth := 0
+	for {
+		t, err := dec.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if t == json.Delim('{') {
+			depth++
+		} else if t == json.Delim('}') {
+			depth--
+		} else if depth == 1 {
+			if k, ok := t.(string); ok {
+				keys = append(keys, k)
+			}
+		}
+	}
+	return keys, nil
 }
 
 // Some returns true if the predicate return true for any of the rule.
