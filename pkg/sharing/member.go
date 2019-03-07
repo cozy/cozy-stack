@@ -366,14 +366,7 @@ func PersistInstanceURL(inst *instance.Instance, email, cozyURL string) {
 	if err != nil {
 		return
 	}
-	for _, cozy := range contact.Cozy {
-		if cozy.URL == cozyURL {
-			return
-		}
-	}
-	cozy := contacts.Cozy{URL: cozyURL}
-	contact.Cozy = append([]contacts.Cozy{cozy}, contact.Cozy...)
-	if err := couchdb.UpdateDoc(inst, contact); err != nil {
+	if err := contact.AddCozyURL(inst, cozyURL); err != nil {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Error on saving contact: %s", err)
 	}

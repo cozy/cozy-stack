@@ -32,75 +32,70 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db prefixer.Pref
 		return err
 	}
 
+	contact := contacts.New()
 	fullname := "John Doe"
-	contactname := contacts.Name{
-		GivenName:  "John",
-		FamilyName: "Doe",
+	contactname := map[string]interface{}{
+		"givenName":  "John",
+		"familyName": "Doe",
 	}
-
 	name := vcard.Name()
 	if name != nil {
-		contactname = contacts.Name{
-			FamilyName:     name.FamilyName,
-			GivenName:      name.GivenName,
-			AdditionalName: name.AdditionalName,
-			NamePrefix:     name.HonorificPrefix,
-			NameSuffix:     name.HonorificSuffix,
+		contactname = map[string]interface{}{
+			"familyName":     name.FamilyName,
+			"givenName":      name.GivenName,
+			"additionalName": name.AdditionalName,
+			"namePrefix":     name.HonorificPrefix,
+			"nameSuffix":     name.HonorificSuffix,
 		}
 		fullname = name.Value
 	}
 	if names := vcard.FormattedNames(); len(names) > 0 {
 		fullname = names[0].Value
 	}
+	contact.M["fullname"] = fullname
+	contact.M["name"] = contactname
 
-	var bday string
 	if field := vcard.Get("BDAY"); field != nil {
-		bday = field.Value
+		contact.M["birthday"] = field.Value
 	}
 
-	var note string
 	if field := vcard.Get("NOTE"); field != nil {
-		note = field.Value
+		contact.M["note"] = field.Value
 	}
 
-	var contactemail []contacts.Email
+	var emails []map[string]interface{}
 	for _, mail := range vcard.Values("EMAIL") {
-		ce := contacts.Email{
-			Address: mail,
-		}
-		contactemail = append(contactemail, ce)
+		email := map[string]interface{}{"address": mail}
+		emails = append(emails, email)
+	}
+	if len(emails) > 0 {
+		contact.M["email"] = emails
 	}
 
-	var contactphone []contacts.Phone
-	for _, phone := range vcard.Values("TEL") {
-		cp := contacts.Phone{
-			Number: phone,
-		}
-		contactphone = append(contactphone, cp)
+	var phones []map[string]interface{}
+	for _, tel := range vcard.Values("TEL") {
+		phone := map[string]interface{}{"number": tel}
+		phones = append(phones, phone)
+	}
+	if len(phones) > 0 {
+		contact.M["phone"] = phones
 	}
 
-	var contactaddress []contacts.Address
+	var addresses []map[string]interface{}
 	for _, address := range vcard.Addresses() {
-		ca := contacts.Address{
-			Street:           address.StreetAddress,
-			Pobox:            address.PostOfficeBox,
-			City:             address.Locality,
-			Region:           address.Region,
-			Postcode:         address.PostalCode,
-			Country:          address.Country,
-			FormattedAddress: address.Value,
+		a := map[string]interface{}{
+			"street":           address.StreetAddress,
+			"pobox":            address.PostOfficeBox,
+			"city":             address.Locality,
+			"region":           address.Region,
+			"postcode":         address.PostalCode,
+			"country":          address.Country,
+			"formattedAddress": address.Value,
 		}
-		contactaddress = append(contactaddress, ca)
+		addresses = append(addresses, a)
 	}
-
-	contact := &contacts.Contact{
-		FullName: fullname,
-		Name:     contactname,
-		Birthday: bday,
-		Note:     note,
-		Address:  contactaddress,
-		Email:    contactemail,
-		Phone:    contactphone,
+	if len(addresses) > 0 {
+		contact.M["address"] = addresses
 	}
 
 	return couchdb.CreateDoc(db, contact)
