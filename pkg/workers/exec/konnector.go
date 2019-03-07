@@ -115,6 +115,10 @@ func beforeHookKonnector(job *jobs.Job) (bool, error) {
 }
 
 func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (string, error) {
+	// Reset the errors from previous runs on retries
+	w.err = nil
+	w.lastErr = nil
+
 	var err error
 	var data json.RawMessage
 	var msg KonnectorMessage
@@ -478,10 +482,6 @@ func (w *konnectorWorker) Logger(ctx *jobs.WorkerContext) *logrus.Entry {
 }
 
 func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error {
-	// Reset the errors from previous runs on retries
-	w.err = nil
-	w.lastErr = nil
-
 	var msg struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
