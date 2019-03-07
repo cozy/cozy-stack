@@ -1004,12 +1004,10 @@ func TestMain(m *testing.M) {
 }
 
 func createContact(inst *instance.Instance, name, email string) *contacts.Contact {
-	c := &contacts.Contact{
-		FullName: name,
-		Email: []contacts.Email{
-			{Address: email},
-		},
-	}
+	mail := map[string]interface{}{"address": email}
+	c := contacts.New()
+	c.M["fullname"] = name
+	c.M["email"] = []interface{}{mail}
 	err := couchdb.CreateDoc(inst, c)
 	if err != nil {
 		return nil
@@ -1024,9 +1022,11 @@ func createSharing(t *testing.T, inst *instance.Instance, values []string) *shar
 		Values:  values,
 		Add:     sharing.ActionRuleSync,
 	}
+	mail, err := bobContact.ToMailAddress()
+	assert.NoError(t, err)
 	m := sharing.Member{
-		Name:     bobContact.FullName,
-		Email:    bobContact.Email[0].Address,
+		Name:     bobContact.Get("fullname").(string),
+		Email:    mail.Email,
 		Instance: tsB.URL,
 	}
 	s := &sharing.Sharing{
@@ -1034,7 +1034,7 @@ func createSharing(t *testing.T, inst *instance.Instance, values []string) *shar
 		Rules: []sharing.Rule{r},
 	}
 	s.Credentials = append(s.Credentials, sharing.Credentials{})
-	err := s.BeOwner(aliceInstance, "")
+	err = s.BeOwner(aliceInstance, "")
 	assert.NoError(t, err)
 	s.Members = append(s.Members, m)
 

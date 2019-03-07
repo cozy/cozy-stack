@@ -9,113 +9,49 @@ import (
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
-// Name is a struct describing a name of a contact
-type Name struct {
-	FamilyName     string `json:"familyName,omitempty"`
-	GivenName      string `json:"givenName,omitempty"`
-	AdditionalName string `json:"additionalName,omitempty"`
-	NamePrefix     string `json:"namePrefix,omitempty"`
-	NameSuffix     string `json:"nameSuffix,omitempty"`
-}
-
-// Email is a struct describing an email of a contact
-type Email struct {
-	Address string `json:"address"`
-	Type    string `json:"type,omitempty"`
-	Label   string `json:"label,omitempty"`
-	Primary bool   `json:"primary,omitempty"`
-}
-
-// Address is a struct describing an address of a contact
-type Address struct {
-	Street           string `json:"street,omitempty"`
-	Pobox            string `json:"pobox,omitempty"`
-	City             string `json:"city,omitempty"`
-	Region           string `json:"region,omitempty"`
-	Postcode         string `json:"postcode,omitempty"`
-	Country          string `json:"country,omitempty"`
-	Type             string `json:"type,omitempty"`
-	Primary          bool   `json:"primary,omitempty"`
-	Label            string `json:"label,omitempty"`
-	FormattedAddress string `json:"formattedAddress,omitempty"`
-}
-
-// Phone is a struct describing a phone of a contact
-type Phone struct {
-	Number  string `json:"number"`
-	Type    string `json:"type,omitempty"`
-	Label   string `json:"label,omitempty"`
-	Primary bool   `json:"primary,omitempty"`
-}
-
-// Cozy is a struct describing a cozy instance of a contact
-type Cozy struct {
-	URL     string `json:"url"`
-	Label   string `json:"label,omitempty"`
-	Primary bool   `json:"primary,omitempty"`
-}
-
-// Contact is a struct containing all the informations about a contact
+// Contact is a struct containing all the informations about a contact.
+// We are using maps/slices/interfaces instead of structs, as it is a doctype
+// that can also be used in front applications and they can add new fields. It
+// would be complicated to maintain a up-to-date mapping, and failing to do so
+// means that we can lose some data on JSON round-trip.
 type Contact struct {
-	DocID  string `json:"_id,omitempty"`
-	DocRev string `json:"_rev,omitempty"`
-
-	FullName string    `json:"fullname,omitempty"`
-	Name     Name      `json:"name,omitempty"`
-	Birthday string    `json:"birthday,omitempty"`
-	Note     string    `json:"note,omitempty"`
-	Email    []Email   `json:"email,omitempty"`
-	Address  []Address `json:"address,omitempty"`
-	Phone    []Phone   `json:"phone,omitempty"`
-	Cozy     []Cozy    `json:"cozy,omitempty"`
+	couchdb.JSONDoc
 }
 
-// ID returns the contact qualified identifier
-func (c *Contact) ID() string { return c.DocID }
-
-// Rev returns the contact revision
-func (c *Contact) Rev() string { return c.DocRev }
+// New returns a new blank contact.
+func New() *Contact {
+	return &Contact{
+		JSONDoc: couchdb.JSONDoc{
+			M: make(map[string]interface{}),
+		},
+	}
+}
 
 // DocType returns the contact document type
 func (c *Contact) DocType() string { return consts.Contacts }
 
-// Clone implements couchdb.Doc
-func (c *Contact) Clone() couchdb.Doc {
-	cloned := *c
-	cloned.FullName = c.FullName
-	cloned.Name = c.Name
-
-	cloned.Email = make([]Email, len(c.Email))
-	copy(cloned.Email, c.Email)
-
-	cloned.Address = make([]Address, len(c.Address))
-	copy(cloned.Address, c.Address)
-
-	cloned.Phone = make([]Phone, len(c.Phone))
-	copy(cloned.Phone, c.Phone)
-
-	cloned.Cozy = make([]Cozy, len(c.Cozy))
-	copy(cloned.Cozy, c.Cozy)
-
-	return &cloned
-}
-
-// SetID changes the contact qualified identifier
-func (c *Contact) SetID(id string) { c.DocID = id }
-
-// SetRev changes the contact revision
-func (c *Contact) SetRev(rev string) { c.DocRev = rev }
-
 // ToMailAddress returns a struct that can be used by cozy-stack to send an
 // email to this contact
 func (c *Contact) ToMailAddress() (*mails.Address, error) {
-	if len(c.Email) == 0 {
+	emails, ok := c.Get("email").([]interface{})
+	if !ok || len(emails) == 0 {
 		return nil, ErrNoMailAddress
 	}
-	mail := c.Email[0].Address
-	for _, email := range c.Email {
-		if email.Primary {
-			mail = email.Address
+	var mail string
+	for i := range emails {
+		email, ok := emails[i].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		address, ok := email["address"].(string)
+		if !ok {
+			continue
+		}
+		if primary, ok := email["primary"].(bool); ok && primary {
+			mail = address
+		}
+		if mail == "" {
+			mail = address
 		}
 	}
 	name := c.PrimaryName()
@@ -127,27 +63,73 @@ func (c *Contact) ToMailAddress() (*mails.Address, error) {
 
 // PrimaryName returns the name of the contact
 func (c *Contact) PrimaryName() string {
-	if c.FullName != "" {
-		return c.FullName
+	if fullname, ok := c.Get("fullname").(string); ok && fullname != "" {
+		return fullname
 	}
-	if c.Name.GivenName != "" || c.Name.FamilyName != "" {
-		return c.Name.GivenName + " " + c.Name.FamilyName
+	name, ok := c.Get("name").(map[string]interface{})
+	if !ok {
+		return ""
 	}
-	return ""
+	var primary string
+	if given, ok := name["givenName"].(string); ok && given != "" {
+		primary = given
+	}
+	if family, ok := name["familyName"].(string); ok && family != "" {
+		if primary != "" {
+			primary += ""
+		}
+		primary += family
+	}
+	return primary
 }
 
 // PrimaryCozyURL returns the URL of the primary cozy,
 // or a blank string if the contact has no known cozy.
 func (c *Contact) PrimaryCozyURL() string {
-	if len(c.Cozy) == 0 {
+	cozys, ok := c.Get("cozy").([]interface{})
+	if !ok || len(cozys) == 0 {
 		return ""
 	}
-	for _, cozy := range c.Cozy {
-		if cozy.Primary {
-			return cozy.URL
+	var url string
+	for i := range cozys {
+		cozy, ok := cozys[i].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		u, ok := cozy["url"].(string)
+		if !ok {
+			continue
+		}
+		if primary, ok := cozy["primary"].(bool); ok && primary {
+			url = u
+		}
+		if url == "" {
+			url = u
 		}
 	}
-	return c.Cozy[0].URL
+	return url
+}
+
+// AddCozyURL adds a cozy URL to this contact (unless the contact has already
+// this cozy URL) and saves the contact.
+func (c *Contact) AddCozyURL(db prefixer.Prefixer, cozyURL string) error {
+	cozys, ok := c.Get("cozy").([]interface{})
+	if !ok {
+		cozys = []interface{}{}
+	}
+	for i := range cozys {
+		cozy, ok := cozys[i].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		u, ok := cozy["url"].(string)
+		if ok && cozyURL == u {
+			return nil
+		}
+	}
+	cozy := map[string]interface{}{"url": cozyURL}
+	c.M["cozy"] = append([]interface{}{cozy}, cozys...)
+	return couchdb.UpdateDoc(db, c)
 }
 
 // Find returns the contact stored in database from a given ID
@@ -175,3 +157,5 @@ func FindByEmail(db couchdb.Database, email string) (*Contact, error) {
 	err = json.Unmarshal(res.Rows[0].Doc, &doc)
 	return doc, err
 }
+
+var _ couchdb.Doc = &Contact{}

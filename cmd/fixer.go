@@ -347,8 +347,19 @@ var contactEmailsFixer = &cobra.Command{
 				}
 
 				changed := false
-				for _, email := range contact.Email {
-					address := email.Address
+				emails, ok := contact.Get("emails").([]interface{})
+				if !ok {
+					continue
+				}
+				for i := range emails {
+					email, ok := emails[i].(map[string]interface{})
+					if !ok {
+						continue
+					}
+					address, ok := email["address"].(string)
+					if !ok {
+						continue
+					}
 					_, err := mail.ParseAddress(address)
 					if err != nil {
 						old := address
@@ -374,7 +385,7 @@ var contactEmailsFixer = &cobra.Command{
 						if err == nil {
 							fmt.Printf("    Email fixed: \"%s\" → \"%s\"\n", old, address)
 							changed = true
-							email.Address = address
+							email["address"] = address
 						} else {
 							fmt.Printf("    Invalid email: \"%s\" → \"%s\"\n", old, address)
 						}
@@ -382,6 +393,7 @@ var contactEmailsFixer = &cobra.Command{
 				}
 
 				if changed {
+					contact.M["email"] = emails
 					json, err := json.Marshal(contact)
 					if err != nil {
 						return err
