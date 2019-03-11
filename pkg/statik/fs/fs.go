@@ -155,7 +155,6 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 	name := normalizeAssetName(opt.Name)
 	if currentAsset, ok := Get(name, opt.Context); ok {
 		if currentAsset.Shasum == opt.Shasum {
-			cache.RefreshTTL(name, cacheTTL)
 			return nil
 		}
 	}
@@ -236,6 +235,8 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 
 	if storeInCache {
 		cache.Set(key, unzippedData, cacheTTL)
+	} else {
+		cache.RefreshTTL(key, cacheTTL)
 	}
 
 	asset := newAsset(opt, zippedDataBuf.Bytes(), unzippedData)
