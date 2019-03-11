@@ -36,8 +36,7 @@ func Serve(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	slug := c.Get("slug").(string)
 
-	if (!i.OnboardingFinished && slug != consts.OnboardingSlug) ||
-		(i.OnboardingFinished && slug == consts.OnboardingSlug) {
+	if !i.OnboardingFinished {
 		return c.Redirect(http.StatusFound, i.PageURL("/", nil))
 	}
 
@@ -54,6 +53,10 @@ func Serve(c echo.Context) error {
 	if err != nil {
 		// Used for the "collect" => "home" renaming
 		if err == apps.ErrNotFound && slug == "collect" {
+			return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
+		}
+		// Used for the deprecated "onboarding" app
+		if err == apps.ErrNotFound && slug == "onboarding" {
 			return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
 		}
 		return err
@@ -118,23 +121,11 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, app
 		file = route.Index
 	}
 
-	var needAuth bool
-	if len(i.RegisterToken) > 0 && file == route.Index {
-		if slug != consts.OnboardingSlug || !middlewares.CheckRegisterToken(c, i) {
-			return c.Redirect(http.StatusFound, i.PageURL("/", nil))
-		}
-		needAuth = false
-	} else if slug == consts.OnboardingSlug && file == route.Index {
-		needAuth = true
-	} else {
-		needAuth = !route.Public
-	}
-
 	session, isLoggedIn := middlewares.GetSession(c)
 	filepath := path.Join("/", route.Folder, file)
 	isRobotsTxt := filepath == "/robots.txt"
 
-	if needAuth && !isLoggedIn && !isRobotsTxt {
+	if !route.Public && !isLoggedIn && !isRobotsTxt {
 		if file != route.Index {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
 		}
