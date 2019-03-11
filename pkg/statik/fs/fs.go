@@ -120,7 +120,7 @@ func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) e
 				logger.WithNamespace("statik").
 					Errorf("Could not load asset from %q, retrying in %s", opt.URL, sleepDuration)
 				time.Sleep(sleepDuration)
-				sleepDuration *= 2
+				sleepDuration *= 4
 			}
 
 			doneCh <- err
@@ -143,7 +143,8 @@ func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) e
 
 func registerCustomExternal(cache Cache, opt AssetOption) error {
 	if opt.Context == "" {
-		logger.WithNamespace("custom assets").Warningf("Could not load asset %s with empty context\n", opt.URL)
+		logger.WithNamespace("custom assets").
+			Warningf("Could not load asset %s with empty context", opt.URL)
 		return nil
 	}
 

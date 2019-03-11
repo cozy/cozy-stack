@@ -115,15 +115,19 @@ security features. Please do not use this binary as your production server.
 	if err != nil {
 		return
 	}
-	cacheStorage := config.GetConfig().CacheStorage
-	if err = fs.RegisterCustomExternals(cacheStorage, assetsList, 6 /*= retry count */); err != nil {
-		return
-	}
-	assetsPollingDisabled := config.GetConfig().AssetsPollingDisabled
-	if !assetsPollingDisabled {
-		pollingInterval := config.GetConfig().AssetsPollingInterval
-		go dynamic.PollAssetsList(cacheStorage, pollingInterval)
-	}
+	// Load the dynamic assets in background
+	go func() {
+		cacheStorage := config.GetConfig().CacheStorage
+		if err = fs.RegisterCustomExternals(cacheStorage, assetsList, 6 /*= retry count */); err != nil {
+			logger.WithNamespace("custom assets").
+				Warningf("Error on loading the custom assets: %s", err)
+		}
+		assetsPollingDisabled := config.GetConfig().AssetsPollingDisabled
+		if !assetsPollingDisabled {
+			pollingInterval := config.GetConfig().AssetsPollingInterval
+			dynamic.PollAssetsList(cacheStorage, pollingInterval)
+		}
+	}()
 
 	sessionSweeper := sessions.SweepLoginRegistrations()
 
