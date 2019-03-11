@@ -82,6 +82,9 @@ func (f *Asset) GzipReader() *bytes.Reader {
 	return bytes.NewReader(f.zippedData)
 }
 
+// cacheTTL is time to live for the assets cache.
+var cacheTTL = 30 * 24 * time.Hour
+
 // Register registers zip contents data, later used to
 // initialize the statik file system.
 func Register(zipData string) {
@@ -96,6 +99,7 @@ func Register(zipData string) {
 type Cache interface {
 	Get(key string) (io.Reader, bool)
 	Set(key string, data []byte, expiration time.Duration)
+	RefreshTTL(key string, expiration time.Duration)
 }
 
 func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) error {
@@ -151,6 +155,7 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 	name := normalizeAssetName(opt.Name)
 	if currentAsset, ok := Get(name, opt.Context); ok {
 		if currentAsset.Shasum == opt.Shasum {
+			cache.RefreshTTL(name, cacheTTL)
 			return nil
 		}
 	}
@@ -230,8 +235,7 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 	}
 
 	if storeInCache {
-		expiration := 30 * 24 * time.Hour
-		cache.Set(key, unzippedData, expiration)
+		cache.Set(key, unzippedData, cacheTTL)
 	}
 
 	asset := newAsset(opt, zippedDataBuf.Bytes(), unzippedData)
