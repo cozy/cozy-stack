@@ -90,3 +90,15 @@ func (c Cache) SetCompressed(key string, data []byte, expiration time.Duration) 
 	gw.Close()
 	c.Set(key, dataCompressed.Bytes(), expiration)
 }
+
+// RefreshTTL can be used to update the TTL of an existing entry in the cache.
+func (c Cache) RefreshTTL(key string, expiration time.Duration) {
+	if c.client == nil {
+		if entry, ok := c.m[key]; ok {
+			entry.expiredAt = time.Now().Add(expiration)
+			c.m[key] = entry
+		}
+	} else {
+		c.client.Expire(key, expiration)
+	}
+}
