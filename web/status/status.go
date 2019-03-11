@@ -12,7 +12,7 @@ import (
 
 // Status responds with the status of the service
 func Status(c echo.Context) error {
-	u := config.CouchURL()
+	u := *config.CouchURL()
 	u.Path = "/_up"
 	checker := checkup.HTTPChecker{
 		Name:     "CouchDB",
