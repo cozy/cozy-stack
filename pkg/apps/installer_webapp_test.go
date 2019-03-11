@@ -428,47 +428,6 @@ func TestWebappInstallFromGithub(t *testing.T) {
 	}
 }
 
-func TestWebappInstallFromGitlab(t *testing.T) {
-	manGen = manifestWebapp
-	manName = apps.WebappManifestName
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
-		Type:      consts.WebappType,
-		Slug:      "gitlab-cozy-mini",
-		SourceURL: "git://framagit.org/nono/cozy-mini.git",
-	})
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	go inst.Run()
-
-	var state apps.State
-	for {
-		man, done, err := inst.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
-		if state == "" {
-			if !assert.EqualValues(t, apps.Installing, man.State()) {
-				return
-			}
-		} else if state == apps.Installing {
-			if !assert.EqualValues(t, apps.Ready, man.State()) {
-				return
-			}
-			if !assert.True(t, done) {
-				return
-			}
-			break
-		} else {
-			t.Fatalf("invalid state")
-			return
-		}
-		state = man.State()
-	}
-}
-
 func TestWebappInstallFromHTTP(t *testing.T) {
 	manGen = manifestWebapp
 	manName = apps.WebappManifestName
