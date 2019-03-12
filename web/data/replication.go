@@ -93,6 +93,9 @@ func bulkDocs(c echo.Context) error {
 	}
 
 	instance := middlewares.GetInstance(c)
+	if err := couchdb.EnsureDBExist(instance, doctype); err != nil {
+		return err
+	}
 	p, req, err := couchdb.ProxyBulkDocs(instance, doctype, c.Request())
 	if err != nil {
 		var code int
