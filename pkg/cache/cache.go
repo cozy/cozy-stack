@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -19,7 +20,7 @@ type cacheEntry struct {
 // GetCompressed/SetCompressed
 type Cache struct {
 	client redis.UniversalClient
-	m      map[string]cacheEntry
+	m      *sync.Map
 }
 
 // New returns a new Cache from a potentially nil redis client.
@@ -27,15 +28,16 @@ func New(client redis.UniversalClient) Cache {
 	if client != nil {
 		return Cache{client, nil}
 	}
-	m := make(map[string]cacheEntry)
-	return Cache{nil, m}
+	m := sync.Map{}
+	return Cache{nil, &m}
 }
 
 // Get fetch the cached asset at the given key, and returns true only if the
 // asset was found.
 func (c Cache) Get(key string) (io.Reader, bool) {
 	if c.client == nil {
-		if entry, ok := c.m[key]; ok {
+		if value, ok := c.m.Load(key); ok {
+			entry := value.(cacheEntry)
 			if time.Now().Before(entry.expiredAt) {
 				return bytes.NewReader(entry.payload), true
 			}
@@ -53,7 +55,7 @@ func (c Cache) Get(key string) (io.Reader, bool) {
 // Clear removes a key from the cache
 func (c Cache) Clear(key string) {
 	if c.client == nil {
-		delete(c.m, key)
+		c.m.Delete(key)
 	} else {
 		c.client.Del(key)
 	}
@@ -62,10 +64,10 @@ func (c Cache) Clear(key string) {
 // Set stores an asset to the given key.
 func (c Cache) Set(key string, data []byte, expiration time.Duration) {
 	if c.client == nil {
-		c.m[key] = cacheEntry{
+		c.m.Store(key, cacheEntry{
 			payload:   data,
 			expiredAt: time.Now().Add(expiration),
-		}
+		})
 	} else {
 		c.client.Set(key, data, expiration)
 	}
@@ -94,9 +96,10 @@ func (c Cache) SetCompressed(key string, data []byte, expiration time.Duration) 
 // RefreshTTL can be used to update the TTL of an existing entry in the cache.
 func (c Cache) RefreshTTL(key string, expiration time.Duration) {
 	if c.client == nil {
-		if entry, ok := c.m[key]; ok {
+		if value, ok := c.m.Load(key); ok {
+			entry := value.(cacheEntry)
 			entry.expiredAt = time.Now().Add(expiration)
-			c.m[key] = entry
+			c.m.Store(key, entry)
 		}
 	} else {
 		c.client.Expire(key, expiration)
