@@ -8,25 +8,20 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"path"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
-	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	webapps "github.com/cozy/cozy-stack/web/apps"
-	"github.com/cozy/cozy-stack/web/middlewares"
 
 	"github.com/cozy/echo"
 	"github.com/cozy/echo/middleware"
 
-	"github.com/cozy/afero"
 	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 )
 
@@ -67,12 +62,6 @@ func LoadSupportedLocales() error {
 	return nil
 }
 
-// ListenAndServe creates and setups all the necessary http endpoints and start
-// them.
-func ListenAndServe() (*Servers, error) {
-	return listenAndServe(webapps.Serve)
-}
-
 // ListenAndServeWithAppDir creates and setup all the necessary http endpoints
 // and serve the specified application on a app subdomain.
 //
@@ -97,46 +86,9 @@ func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 			logger.WithNamespace("dev").Warnf("The index.html is missing: %s", err)
 		}
 	}
-	return listenAndServe(func(c echo.Context) error {
-		slug := c.Get("slug").(string)
-		dir, ok := appsdir[slug]
-		if !ok {
-			return webapps.Serve(c)
-		}
-		method := c.Request().Method
-		if method != "GET" && method != "HEAD" {
-			return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
-		}
-		fs := afero.NewBasePathFs(afero.NewOsFs(), dir)
-		manFile, err := fs.Open(apps.WebappManifestName)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("Could not find the %s file in your application directory %s",
-					apps.WebappManifestName, dir)
-			}
-			return err
-		}
-		var app apps.Manifest = &apps.WebappManifest{}
-		app, err = app.ReadManifest(manFile, slug, "file://localhost"+dir)
-		if err != nil {
-			return fmt.Errorf("Could not parse the %s file: %s",
-				apps.WebappManifestName, err.Error())
-		}
-		webapp := app.(*apps.WebappManifest)
-		i := middlewares.GetInstance(c)
-		f := appfs.NewAferoFileServer(fs, func(_, _, _, file string) string {
-			return path.Join("/", file)
-		})
-		// Save permissions in couchdb before loading an index page
-		if _, file := webapp.FindRoute(path.Clean(c.Request().URL.Path)); file == "" {
-			if webapp.Permissions() != nil {
-				if err := permissions.ForceWebapp(i, webapp.Slug(), webapp.Permissions()); err != nil {
-					return err
-				}
-			}
-		}
-		return webapps.ServeAppFile(c, i, f, webapp)
-	})
+
+	apps.SetupAppsDir(appsdir)
+	return ListenAndServe()
 }
 
 func checkExists(filepath string) error {
@@ -151,12 +103,14 @@ func checkExists(filepath string) error {
 	return nil
 }
 
-func listenAndServe(appsHandler echo.HandlerFunc) (*Servers, error) {
+// ListenAndServe creates and setups all the necessary http endpoints and start
+// them.
+func ListenAndServe() (*Servers, error) {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
 
-	major, err := CreateSubdomainProxy(e, appsHandler)
+	major, err := CreateSubdomainProxy(e, webapps.Serve)
 	if err != nil {
 		return nil, err
 	}

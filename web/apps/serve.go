@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/intents"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	statikfs "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -63,6 +64,23 @@ func Serve(c echo.Context) error {
 	}
 
 	route, file := app.FindRoute(path.Clean(c.Request().URL.Path))
+
+	if app.FromAppsDir {
+		// Save permissions in couchdb before loading an index page
+		if file == "" && app.Permissions() != nil {
+			err := permissions.ForceWebapp(i, app.Slug(), app.Permissions())
+			if err != nil {
+				return err
+			}
+		}
+
+		fs := apps.FSForAppDir(slug)
+		f := appfs.NewAferoFileServer(fs, func(_, _, _, file string) string {
+			return path.Join("/", file)
+		})
+		return ServeAppFile(c, i, f, app)
+	}
+
 	if file == "" || file == route.Index {
 		app = apps.DoLazyUpdate(i, app, i.AppsCopier(consts.WebappType), i.Registries()).(*apps.WebappManifest)
 	}
