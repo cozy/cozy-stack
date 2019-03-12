@@ -31,7 +31,7 @@ Jobs can be launched by five different types of triggers:
 - `@in` to schedule a one-time job executed after a specific amount of time
 - `@every` to schedule periodic jobs executed at a given fix interval
 - `@cron` to schedule recurring jobs scheduled at specific times
-- `@event` to launch a job after a change on some documents in the cozy.
+- `@event` to launch a job after a change on documents in the cozy.
 
 These five triggers have specific syntaxes to describe when jobs should be
 scheduled. See below for more informations.
