@@ -267,10 +267,14 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 				joblog.Errorf("Instance not found for %s: %s", job.Domain, err)
 				continue
 			}
-			// Do not execute jobs for instances with blocking not signed TOS
-			notSigned, deadline := inst.CheckTOSNotSignedAndDeadline()
-			if notSigned && deadline == instance.TOSBlocked {
-				continue
+			// Do not execute jobs for instances with blocking not signed TOS,
+			// except for mails because the user may needs a mail to login and
+			// accept the new TOS (2FA, password reset, etc.)
+			if w.Type != "sendmail" {
+				notSigned, deadline := inst.CheckTOSNotSignedAndDeadline()
+				if notSigned && deadline == instance.TOSBlocked {
+					continue
+				}
 			}
 		}
 		parentCtx := NewWorkerContext(workerID, job, inst)
