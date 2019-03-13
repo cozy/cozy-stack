@@ -151,7 +151,7 @@ do_check_couchdb() {
 
 	echo "ok"
 
-	for dbname in "_users" "_replicator" "_global_changes"; do
+	for dbname in "_users" "_replicator"; do
 		curl -s -XPUT "${COUCHDB_URL}/${dbname}" > /dev/null
 	done
 }
