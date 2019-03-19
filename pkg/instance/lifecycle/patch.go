@@ -151,14 +151,10 @@ func Patch(i *instance.Instance, opts *Options) error {
 		if err := couchdb.UpdateDoc(i, settings); err != nil {
 			return err
 		}
-
-		if err == nil {
-			clouderyUpdateKeys := []string{"email", "public_name"}
-
-			for _, key := range clouderyUpdateKeys {
-				if v, ok := settings.M[key]; ok {
-					clouderyChanges[key] = v
-				}
+		clouderyUpdateKeys := []string{"email", "public_name"}
+		for _, key := range clouderyUpdateKeys {
+			if v, ok := settings.M[key]; ok {
+				clouderyChanges[key] = v
 			}
 		}
 	}
