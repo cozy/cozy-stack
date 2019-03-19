@@ -793,7 +793,7 @@ func safeRenameFile(fs afero.Fs, oldpath, newpath string) error {
 	if err == nil {
 		return os.ErrExist
 	}
-	if err != nil && !os.IsNotExist(err) {
+	if !os.IsNotExist(err) {
 		return err
 	}
 
@@ -816,7 +816,7 @@ func safeRenameDir(afs *aferoVFS, oldpath, newpath string) error {
 	if err == nil {
 		return os.ErrExist
 	}
-	if err != nil && !os.IsNotExist(err) {
+	if !os.IsNotExist(err) {
 		return err
 	}
 
