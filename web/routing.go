@@ -48,6 +48,12 @@ const (
 	cspImgSrcWhitelist = "https://piwik.cozycloud.cc https://matomo.cozycloud.cc " +
 		"https://*.tile.openstreetmap.org https://*.tile.osm.org " +
 		"https://*.tiles.mapbox.com https://api.mapbox.com"
+
+	// cspFrameSrcWhiteList is a whitelist of custom protocols that are allowed
+	// in the CSP. We are using iframes on these custom protocols to open
+	// deeplinks to them and have a fallback if the mobile apps are not
+	// available.
+	cspFrameSrcWhiteList = "cozydrive: cozybanks:"
 )
 
 var hstsMaxAge = 365 * 24 * time.Hour // 1 year
@@ -80,6 +86,7 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPConnectSrcWhitelist: config.GetConfig().CSPWhitelist["connect"] + " " + cspScriptSrcWhitelist,
 			CSPStyleSrcWhitelist:   config.GetConfig().CSPWhitelist["style"],
 			CSPFontSrcWhitelist:    config.GetConfig().CSPWhitelist["font"],
+			CSPFrameSrcWhitelist:   config.GetConfig().CSPWhitelist["frame"] + " " + cspFrameSrcWhiteList,
 		})
 		mws = append([]echo.MiddlewareFunc{secure}, mws...)
 	}
