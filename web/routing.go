@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/move"
 	"github.com/cozy/cozy-stack/web/notifications"
+	"github.com/cozy/cozy-stack/web/oidc"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/public"
 	"github.com/cozy/cozy-stack/web/realtime"
@@ -176,9 +177,10 @@ func SetupRoutes(router *echo.Echo) error {
 		compat.Routes(router.Group("/compat", mwsNotBlocked...))
 
 		// Careful, the normal middlewares NeedInstance and LoadSession are not
-		// applied to this group in web/routing since they should not be used for
-		// oauth redirection.
+		// applied to these groups since they should not be used for oauth
+		// redirection.
 		accounts.Routes(router.Group("/accounts"))
+		oidc.Routes(router.Group("/oidc"))
 	}
 
 	// other non-authentified routes
