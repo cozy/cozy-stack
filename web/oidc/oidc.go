@@ -15,6 +15,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
@@ -38,8 +40,29 @@ func Start(c echo.Context) error {
 // Redirect is the route after the Identity Provider has redirected the user to
 // the stack. The redirection is made to a generic domain, like
 // oauthcallback.cozy.tools and the association with an instance is made via a
-// call to the UserInfo endpoint.
+// call to the UserInfo endpoint. It redirects to the cozy instance to login
+// the user.
 func Redirect(c echo.Context) error {
+	code := c.QueryParam("code")
+	stateID := c.QueryParam("state")
+	state := getStorage().Find(stateID)
+	if state == nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
+	}
+	inst, err := lifecycle.GetInstance(state.Instance)
+	if err != nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
+	}
+
+	redirect := inst.PageURL("/oidc/login", url.Values{
+		"code":  {code},
+		"state": {stateID},
+	})
+	return c.Redirect(http.StatusSeeOther, redirect)
+}
+
+// Login checks that the OpenID Connect has been sucessful and logs in the user.
+func Login(c echo.Context) error {
 	code := c.QueryParam("code")
 	stateID := c.QueryParam("state")
 	state := getStorage().Find(stateID)
@@ -70,8 +93,16 @@ func Redirect(c echo.Context) error {
 		return renderError(c, inst, http.StatusBadRequest, "Sorry, the cozy was not found.")
 	}
 
-	// TODO log the user before the redirection
+	c.Set("instance", inst)
+	sessionID, err := auth.SetCookieForNewSession(c, false)
+	if err != nil {
+		return err
+	}
+	if err = sessions.StoreNewLoginEntry(inst, sessionID, "", c.Request(), true); err != nil {
+		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+	}
 	redirect := inst.DefaultRedirection()
+	redirect = auth.AddCodeToRedirect(redirect, inst.Domain, sessionID)
 	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 
@@ -232,7 +263,6 @@ func getDomainFromUserInfo(conf *Config, token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf("out = %#v\n", out)
 	if domain, ok := out[conf.UserInfoField].(string); ok {
 		return domain, nil
 	}
@@ -240,6 +270,9 @@ func getDomainFromUserInfo(conf *Config, token string) (string, error) {
 }
 
 func renderError(c echo.Context, inst *instance.Instance, code int, msg string) error {
+	if inst == nil {
+		inst = &instance.Instance{}
+	}
 	return c.Render(code, "error.html", echo.Map{
 		"CozyUI":      middlewares.CozyUI(inst),
 		"ThemeCSS":    middlewares.ThemeCSS(inst),
@@ -255,4 +288,5 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 func Routes(router *echo.Group) {
 	router.GET("/start", Start, middlewares.NeedInstance)
 	router.GET("/redirect", Redirect)
+	router.GET("/login", Login, middlewares.NeedInstance)
 }

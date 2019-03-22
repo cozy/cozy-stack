@@ -49,8 +49,8 @@ func (store memStateStorage) Find(id string) *stateHolder {
 	if !ok {
 		return nil
 	}
-	delete(store, id)
 	if state.expiresAt < time.Now().UTC().Unix() {
+		delete(store, id)
 		return nil
 	}
 	return state

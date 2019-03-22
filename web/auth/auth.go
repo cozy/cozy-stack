@@ -62,7 +62,7 @@ func Home(c echo.Context) error {
 
 	if session, ok := middlewares.GetSession(c); ok {
 		redirect := instance.DefaultRedirection()
-		redirect = addCodeToRedirect(redirect, instance.ContextualDomain(), session.ID())
+		redirect = AddCodeToRedirect(redirect, instance.ContextualDomain(), session.ID())
 		cookie, err := session.ToCookie()
 		if err != nil {
 			return err
@@ -90,13 +90,14 @@ func Home(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", params))
 }
 
+// AddCodeToRedirect adds a code to a redirect URL to transfer the session.
 // With the nested subdomains structure, the cookie set on the main domain can
 // also be used to authentify the user on the apps subdomain. But with the flat
 // subdomains structure, a new cookie is needed. To transfer the session, we
 // add a code parameter to the redirect URL that can be exchanged to the
 // cookie. The code can be used only once, is valid only one minute, and is
 // specific to the app (it can't be used by another app).
-func addCodeToRedirect(redirect *url.URL, domain, sessionID string) *url.URL {
+func AddCodeToRedirect(redirect *url.URL, domain, sessionID string) *url.URL {
 	// TODO add rate-limiting on the number of session codes generated
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		redirect = utils.CloneURL(redirect)
@@ -216,7 +217,7 @@ func loginForm(c echo.Context) error {
 
 	session, ok := middlewares.GetSession(c)
 	if ok {
-		redirect = addCodeToRedirect(redirect, instance.ContextualDomain(), session.ID())
+		redirect = AddCodeToRedirect(redirect, instance.ContextualDomain(), session.ID())
 		cookie, err := session.ToCookie()
 		if err != nil {
 			return err
@@ -237,7 +238,7 @@ func loginForm(c echo.Context) error {
 			if err = sessions.StoreNewLoginEntry(instance, sessionID, "", c.Request(), true); err != nil {
 				instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 			}
-			redirect = addCodeToRedirect(redirect, instance.ContextualDomain(), sessionID)
+			redirect = AddCodeToRedirect(redirect, instance.ContextualDomain(), sessionID)
 			return c.Redirect(http.StatusSeeOther, redirect.String())
 		}
 	}
@@ -373,7 +374,7 @@ func login(c echo.Context) error {
 	}
 
 	// logged-in
-	redirect = addCodeToRedirect(redirect, inst.ContextualDomain(), sessionID)
+	redirect = AddCodeToRedirect(redirect, inst.ContextualDomain(), sessionID)
 	if wantsJSON {
 		result := echo.Map{"redirect": redirect.String()}
 		if len(twoFactorGeneratedTrustedDeviceToken) > 0 {
