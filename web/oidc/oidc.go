@@ -110,14 +110,17 @@ func makeStartURL(inst *instance.Instance, conf *Config) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	state, nonce := "foo", "bar" // TODO
+	state := newStateHolder(inst.Domain)
+	if err = getStorage().Add(state); err != nil {
+		return "", err
+	}
 	vv := u.Query()
 	vv.Add("response_type", "code")
 	vv.Add("scope", conf.Scope)
 	vv.Add("client_id", conf.ClientID)
 	vv.Add("redirect_uri", conf.RedirectURI)
-	vv.Add("state", state)
-	vv.Add("nonce", nonce)
+	vv.Add("state", state.id)
+	vv.Add("nonce", state.Nonce)
 	u.RawQuery = vv.Encode()
 	return u.String(), nil
 }
