@@ -1,12 +1,20 @@
 package oidc
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
@@ -32,6 +40,34 @@ func Start(c echo.Context) error {
 // oauthcallback.cozy.tools and the association with an instance is made via a
 // call to the UserInfo endpoint.
 func Redirect(c echo.Context) error {
+	code := c.QueryParam("code")
+	stateID := c.QueryParam("state")
+	state := getStorage().Find(stateID)
+	if state == nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
+	}
+	inst, err := lifecycle.GetInstance(state.Instance)
+	if err != nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
+	}
+	conf, err := getConfig(inst.ContextName)
+	if err != nil {
+		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
+	}
+	token, err := getToken(conf, code)
+	if err != nil {
+		logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
+		return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
+	}
+	domain, err := getDomainFromUserInfo(conf, token)
+	if err != nil {
+		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
+		return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
+	}
+	if domain != inst.Domain {
+		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
+		return renderError(c, inst, http.StatusBadRequest, "Sorry, the cozy was not found.")
+	}
 	return nil
 }
 
@@ -123,6 +159,63 @@ func makeStartURL(inst *instance.Instance, conf *Config) (string, error) {
 	vv.Add("nonce", state.Nonce)
 	u.RawQuery = vv.Encode()
 	return u.String(), nil
+}
+
+var oidcClient = &http.Client{
+	Timeout: 15 * time.Second,
+}
+
+func getToken(conf *Config, code string) (string, error) {
+	data := url.Values{
+		"grant_type":   []string{"authorization_code"},
+		"code":         []string{code},
+		"redirect_uri": []string{conf.RedirectURI},
+	}
+	body := strings.NewReader(data.Encode())
+	req, err := http.NewRequest("POST", conf.TokenURL, body)
+	if err != nil {
+		return "", err
+	}
+	auth := []byte(conf.ClientID + ":" + conf.ClientSecret)
+	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(auth))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Accept", "application/json")
+
+	res, err := oidcClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return "", fmt.Errorf("OIDC service responded with %d", res.StatusCode)
+	}
+	resBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var out struct {
+		AccessToken string `json:"access_token"`
+	}
+	err = json.Unmarshal(resBody, &out)
+	if err != nil {
+		return "", err
+	}
+	return out.AccessToken, nil
+}
+
+func getDomainFromUserInfo(conf *Config, token string) (string, error) {
+	return "", errors.New("Not implemented")
+}
+
+func renderError(c echo.Context, inst *instance.Instance, code int, msg string) error {
+	return c.Render(code, "error.html", echo.Map{
+		"CozyUI":      middlewares.CozyUI(inst),
+		"ThemeCSS":    middlewares.ThemeCSS(inst),
+		"Domain":      inst.ContextualDomain(),
+		"ContextName": inst.ContextName,
+		"Error":       msg,
+	})
 }
 
 // Routes setup routing for OpenID Connect routes.
