@@ -54,6 +54,7 @@ func Redirect(c echo.Context) error {
 	if err != nil {
 		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
 	}
+
 	token, err := getToken(conf, code)
 	if err != nil {
 		logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
@@ -68,7 +69,10 @@ func Redirect(c echo.Context) error {
 		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
 		return renderError(c, inst, http.StatusBadRequest, "Sorry, the cozy was not found.")
 	}
-	return nil
+
+	// TODO log the user before the redirection
+	redirect := inst.DefaultRedirection()
+	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 
 // Config is the config to log in a user with an OpenID Connect identity
@@ -205,7 +209,34 @@ func getToken(conf *Config, code string) (string, error) {
 }
 
 func getDomainFromUserInfo(conf *Config, token string) (string, error) {
-	return "", errors.New("Not implemented")
+	req, err := http.NewRequest("GET", conf.UserInfoURL, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := oidcClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return "", fmt.Errorf("OIDC service responded with %d", res.StatusCode)
+	}
+	resBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var out map[string]interface{}
+	err = json.Unmarshal(resBody, &out)
+	if err != nil {
+		return "", err
+	}
+	fmt.Printf("out = %#v\n", out)
+	if domain, ok := out[conf.UserInfoField].(string); ok {
+		return domain, nil
+	}
+	return "", errors.New("No domain was found")
 }
 
 func renderError(c echo.Context, inst *instance.Instance, code int, msg string) error {
