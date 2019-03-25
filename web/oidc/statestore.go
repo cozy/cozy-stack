@@ -1,4 +1,4 @@
-package accounts
+package oidc
 
 import (
 	"encoding/hex"
@@ -15,34 +15,42 @@ import (
 const stateTTL = 15 * time.Minute
 
 type stateHolder struct {
-	InstanceDomain string
-	AccountType    string
-	ClientState    string
-	Nonce          string
-	ExpiresAt      int64
+	id        string
+	expiresAt int64
+	Instance  string
+	Nonce     string
+}
+
+func newStateHolder(domain string) *stateHolder {
+	id := hex.EncodeToString(crypto.GenerateRandomBytes(16))
+	nonce := hex.EncodeToString(crypto.GenerateRandomBytes(16))
+	return &stateHolder{
+		id:       id,
+		Instance: domain,
+		Nonce:    nonce,
+	}
 }
 
 type stateStorage interface {
-	Add(*stateHolder) (string, error)
-	Find(ref string) *stateHolder
+	Add(*stateHolder) error
+	Find(id string) *stateHolder
 }
 
 type memStateStorage map[string]*stateHolder
 
-func (store memStateStorage) Add(state *stateHolder) (string, error) {
-	state.ExpiresAt = time.Now().UTC().Add(stateTTL).Unix()
-	ref := hex.EncodeToString(crypto.GenerateRandomBytes(16))
-	store[ref] = state
-	return ref, nil
+func (store memStateStorage) Add(state *stateHolder) error {
+	state.expiresAt = time.Now().UTC().Add(stateTTL).Unix()
+	store[state.id] = state
+	return nil
 }
 
-func (store memStateStorage) Find(ref string) *stateHolder {
-	state, ok := store[ref]
+func (store memStateStorage) Find(id string) *stateHolder {
+	state, ok := store[id]
 	if !ok {
 		return nil
 	}
-	if state.ExpiresAt < time.Now().UTC().Unix() {
-		delete(store, ref)
+	if state.expiresAt < time.Now().UTC().Unix() {
+		delete(store, id)
 		return nil
 	}
 	return state
@@ -57,25 +65,24 @@ type redisStateStorage struct {
 	cl subRedisInterface
 }
 
-func (store *redisStateStorage) Add(s *stateHolder) (string, error) {
-	ref := hex.EncodeToString(crypto.GenerateRandomBytes(16))
-	bb, err := json.Marshal(s)
+func (store *redisStateStorage) Add(s *stateHolder) error {
+	serialized, err := json.Marshal(s)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return ref, store.cl.Set(ref, bb, stateTTL).Err()
+	return store.cl.Set(s.id, serialized, stateTTL).Err()
 }
 
-func (store *redisStateStorage) Find(ref string) *stateHolder {
-	bb, err := store.cl.Get(ref).Bytes()
+func (store *redisStateStorage) Find(id string) *stateHolder {
+	serialized, err := store.cl.Get(id).Bytes()
 	if err != nil {
 		return nil
 	}
 	var s stateHolder
-	err = json.Unmarshal(bb, &s)
+	err = json.Unmarshal(serialized, &s)
 	if err != nil {
 		logger.WithNamespace("redis-state").Errorf(
-			"bad state in redis %s", string(bb))
+			"Bad state in redis %s", string(serialized))
 		return nil
 	}
 	return &s

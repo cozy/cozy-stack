@@ -130,12 +130,12 @@ type Config struct {
 	Notifications Notifications
 	Logger        logger.Options
 
-	Lock                        RedisConfig
-	SessionStorage              RedisConfig
-	DownloadStorage             RedisConfig
-	KonnectorsOauthStateStorage RedisConfig
-	RateLimitingStorage         RedisConfig
-	Realtime                    RedisConfig
+	Lock                RedisConfig
+	SessionStorage      RedisConfig
+	DownloadStorage     RedisConfig
+	OauthStateStorage   RedisConfig
+	RateLimitingStorage RedisConfig
+	Realtime            RedisConfig
 
 	CacheStorage cache.Cache
 
@@ -537,7 +537,7 @@ func UseViper(v *viper.Viper) error {
 	if err != nil {
 		return err
 	}
-	konnectorsOauthStateRedis, err := GetRedisConfig(v, redisOptions, "konnectors", "oauthstate")
+	oauthStateRedis, err := GetRedisConfig(v, redisOptions, "konnectors", "oauthstate")
 	if err != nil {
 		return err
 	}
@@ -668,13 +668,13 @@ func UseViper(v *viper.Viper) error {
 			IOSKeyID:               v.GetString("notifications.ios_key_id"),
 			IOSTeamID:              v.GetString("notifications.ios_team_id"),
 		},
-		Lock:                        lockRedis,
-		SessionStorage:              sessionsRedis,
-		DownloadStorage:             downloadRedis,
-		RateLimitingStorage:         rateLimitingRedis,
-		KonnectorsOauthStateStorage: konnectorsOauthStateRedis,
-		Realtime:                    realtimeRedis,
-		CacheStorage:                cache.New(cacheRedis.Client()),
+		Lock:                lockRedis,
+		SessionStorage:      sessionsRedis,
+		DownloadStorage:     downloadRedis,
+		RateLimitingStorage: rateLimitingRedis,
+		OauthStateStorage:   oauthStateRedis,
+		Realtime:            realtimeRedis,
+		CacheStorage:        cache.New(cacheRedis.Client()),
 		Logger: logger.Options{
 			Level:  v.GetString("log.level"),
 			Syslog: v.GetBool("log.syslog"),
