@@ -76,6 +76,11 @@ If you want to learn OAuth 2 in details, I recommend the
 
 ## The cozy stack as an authorization server
 
+In general, the cozy stack manages the authentication itself. This is what is
+described below. In some special cases, an integration with other softwares can
+be mandatory: this is possible to configure via
+[delegated authentication](./delegated-auth.md).
+
 ### GET /auth/login
 
 Display a form with a password field to let the user authenticates herself to
