@@ -168,7 +168,11 @@ func validCSPList(sources, defaults []CSPSource, whitelist string) ([]CSPSource,
 			continue
 		}
 		if !config.IsDevRelease() {
-			u.Scheme = "https"
+			if u.Scheme == "ws" || u.Scheme == "wss" {
+				u.Scheme = "wss"
+			} else {
+				u.Scheme = "https"
+			}
 		}
 		if u.Path == "" {
 			u.Path = "/"
