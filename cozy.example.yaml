@@ -222,7 +222,8 @@ redis:
 
 # Registries used for applications and konnectors
 registries:
-  - https://apps-registry.cozycloud.cc/
+  default:
+    - https://apps-registry.cozycloud.cc/
 
 # [internal usage] Cloudery configuration
 clouderies:
