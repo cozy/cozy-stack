@@ -168,16 +168,20 @@ func validCSPList(sources, defaults []CSPSource, whitelist string) ([]CSPSource,
 			continue
 		}
 		if !config.IsDevRelease() {
-			if u.Scheme == "ws" || u.Scheme == "wss" {
+			if u.Scheme == "ws" {
 				u.Scheme = "wss"
-			} else {
+			} else if u.Scheme == "http" {
 				u.Scheme = "https"
 			}
 		}
 		if u.Path == "" {
 			u.Path = "/"
 		}
-		whitelistFilter = append(whitelistFilter, u.String())
+		// For custom links like cozydrive:, we want to allow the whole protocol
+		if !strings.HasPrefix(u.Scheme, "cozy") {
+			s = u.String()
+		}
+		whitelistFilter = append(whitelistFilter, s)
 	}
 
 	if len(whitelistFilter) > 0 {
