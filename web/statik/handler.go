@@ -141,9 +141,28 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		lang := GetLanguageFromHeader(c.Request().Header)
 		funcMap = template.FuncMap{"t": i18n.Translator(lang)}
 	}
-	t, err := r.t.Clone()
-	if err != nil {
-		return err
+	var t *template.Template
+	var err error
+	if m, ok := data.(echo.Map); ok {
+		if context, ok := m["ContextName"].(string); ok {
+			if f, err := fs.Open("/templates/"+name, context); err == nil {
+				b, err := ioutil.ReadAll(f)
+				if err != nil {
+					return err
+				}
+				tmpl := template.New(name).Funcs(middlewares.FuncsMap)
+				if _, err = tmpl.Parse(string(b)); err != nil {
+					return err
+				}
+				t = tmpl
+			}
+		}
+	}
+	if t == nil {
+		t, err = r.t.Clone()
+		if err != nil {
+			return err
+		}
 	}
 	return t.Funcs(funcMap).ExecuteTemplate(w, name, data)
 }
