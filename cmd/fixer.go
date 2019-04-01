@@ -2,12 +2,14 @@ package cmd
 
 // #nosec
 import (
+	"bufio"
 	"bytes"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/mail"
 	"net/url"
 	"os"
@@ -31,6 +33,7 @@ import (
 
 var dryRunFlag bool
 var withMetadataFlag bool
+var noDryRunFlag bool
 
 var softwareIDs = map[string]string{
 	"io.cozy.drive.mobile": "registry://drive",
@@ -489,10 +492,95 @@ var linkedAppFixer = &cobra.Command{
 	},
 }
 
+var contentMismatch64Kfixer = &cobra.Command{
+	Use:   "content-mismatch <domain>",
+	Short: "Fix the content mismatch differences for 64K issue",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		corruptedSuffix := "-corrupted"
+
+		if !noDryRunFlag {
+			fmt.Println("This is a dry-run, no file will be altered")
+		}
+
+		c := newAdminClient()
+		res, err := c.Req(&request.Options{
+			Method: "GET",
+			Path:   "/instances/" + url.PathEscape(domain) + "/fsck",
+		})
+		if err != nil {
+			return err
+		}
+
+		inst, err := lifecycle.GetInstance(domain)
+		if err != nil {
+			return fmt.Errorf("Cannot find instance %s", domain)
+		}
+
+		var content map[string]interface{}
+		scanner := bufio.NewScanner(res.Body)
+
+		for scanner.Scan() {
+			err = json.NewDecoder(bytes.NewReader(scanner.Bytes())).Decode(&content)
+			if err != nil {
+				return err
+			}
+
+			// Filtering the 64kb mismatch issue
+			if content["type"] != "content_mismatch" {
+				continue
+			}
+			cm := content["content_mismatch"].(map[string]interface{})
+			sizeIndex := cm["size_index"].(float64)
+			sizeFile := cm["size_file"].(float64)
+
+			// SizeFile should be 64k shorter than SizeIndex
+			size := int64(64 * 1024)
+			if math.Abs(sizeIndex-sizeFile) != float64(size) {
+				continue
+			}
+
+			// Removes/update
+			fileDoc := content["file_doc"].(map[string]interface{})
+
+			doc := &vfs.FileDoc{}
+			couchdb.GetDoc(inst, consts.Files, fileDoc["_id"].(string), doc)
+
+			// Checks if the file is trashed
+			if fileDoc["restore_path"] != nil {
+				// This is a trashed file, just delete it
+				instanceVFS := inst.VFS()
+				fmt.Printf("Removing file %s from instance %s\n", fileDoc["path"].(string), domain)
+				if noDryRunFlag {
+					return instanceVFS.DestroyFile(doc)
+				}
+				return nil
+			}
+
+			// Fixing :
+			// - Appending a corrupted suffix to the file
+			// - Force the file index size to the real file size
+			doc.DocName = doc.DocName + corruptedSuffix
+			doc.ByteSize = int64(cm["size_file"].(float64))
+
+			fmt.Printf("Updating index document for file %s\n", fileDoc["path"].(string))
+			if noDryRunFlag {
+				return couchdb.UpdateDoc(inst, doc)
+			}
+		}
+
+		return nil
+	},
+}
+
 func init() {
 
 	thumbnailsFixer.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run")
 	thumbnailsFixer.Flags().BoolVar(&withMetadataFlag, "with-metadata", false, "Recalculate images metadata")
+	contentMismatch64Kfixer.Flags().BoolVar(&noDryRunFlag, "no-dry-run", false, "Do not dry run")
 
 	fixerCmdGroup.AddCommand(albumsCreatedAtFixerCmd)
 	fixerCmdGroup.AddCommand(jobsFixer)
@@ -503,6 +591,7 @@ func init() {
 	fixerCmdGroup.AddCommand(thumbnailsFixer)
 	fixerCmdGroup.AddCommand(contactEmailsFixer)
 	fixerCmdGroup.AddCommand(linkedAppFixer)
+	fixerCmdGroup.AddCommand(contentMismatch64Kfixer)
 
 	RootCmd.AddCommand(fixerCmdGroup)
 }
