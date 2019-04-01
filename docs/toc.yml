@@ -22,7 +22,6 @@
   - " /apps - Konnectors": ./konnectors.md
   - "/data - Data System": ./data-system.md
   - " /data - Mango": ./mango.md
-  - " /data - Replication": ./replication.md
   - " /data - CouchDB Quirks": ./couchdb-quirks.md
   - " /data - PouchDB Quirks": ./pouchdb-quirks.md
   - "/files - Virtual File System": ./files.md

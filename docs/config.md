@@ -234,7 +234,7 @@ config file.
 
 The visual appearance of a cozy instance can be customized via some assets
 (CSS, JS, images). These assets can be inserted from the command-line with the
-[`cozy-stack config insert-asset`](../cli/cozy-stack_config_insert-asset.md)
+[`cozy-stack config insert-asset`](./cli/cozy-stack_config_insert-asset.md)
 command.
 
 Here are a small list of assets that you may want to customize:

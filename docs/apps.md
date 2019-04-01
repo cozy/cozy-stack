@@ -183,7 +183,7 @@ The `registry` scheme expect the following elements:
 -   scheme: `registry`
 -   host: the name of the application
 -   path: `/:channel` the channel of the application (see the
-    [registry](docs/registry.md) doc)
+    [registry](./registry.md) doc)
 
 Examples: `registry://drive/stable`, `registry://drive/beta`, and
 `registry://drive/dev`.
