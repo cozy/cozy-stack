@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"net/mail"
 	"net/url"
 	"os"
@@ -533,13 +532,17 @@ var contentMismatch64Kfixer = &cobra.Command{
 			if content["type"] != "content_mismatch" {
 				continue
 			}
-			cm := content["content_mismatch"].(map[string]interface{})
-			sizeIndex := cm["size_index"].(float64)
-			sizeFile := cm["size_file"].(float64)
+
+			contentMismatch := struct {
+				SizeIndex int64 `json:"size_index"`
+				SizeFile  int64 `json:"size_file"`
+			}{}
+			marshaled, _ := json.Marshal(content["content_mismatch"])
+			json.Unmarshal(marshaled, &contentMismatch)
 
 			// SizeFile should be 64k shorter than SizeIndex
 			size := int64(64 * 1024)
-			if math.Abs(sizeIndex-sizeFile) != float64(size) {
+			if (contentMismatch.SizeIndex - contentMismatch.SizeFile) != size {
 				continue
 			}
 
@@ -548,27 +551,37 @@ var contentMismatch64Kfixer = &cobra.Command{
 
 			doc := &vfs.FileDoc{}
 			couchdb.GetDoc(inst, consts.Files, fileDoc["_id"].(string), doc)
+			instanceVFS := inst.VFS()
 
 			// Checks if the file is trashed
 			if fileDoc["restore_path"] != nil {
 				// This is a trashed file, just delete it
-				instanceVFS := inst.VFS()
 				fmt.Printf("Removing file %s from instance %s\n", fileDoc["path"].(string), domain)
 				if noDryRunFlag {
-					return instanceVFS.DestroyFile(doc)
+					err := instanceVFS.DestroyFile(doc)
+					if err != nil {
+						fmt.Printf("Error while removing file %s: %s", fileDoc["path"].(string), err)
+					}
 				}
-				return nil
+				continue
 			}
 
 			// Fixing :
 			// - Appending a corrupted suffix to the file
 			// - Force the file index size to the real file size
-			doc.DocName = doc.DocName + corruptedSuffix
-			doc.ByteSize = int64(cm["size_file"].(float64))
+			newFileDoc := doc.Clone().(*vfs.FileDoc)
+
+			newFileDoc.DocName = doc.DocName + corruptedSuffix
+			newFileDoc.ByteSize = contentMismatch.SizeFile
 
 			fmt.Printf("Updating index document for file %s\n", fileDoc["path"].(string))
 			if noDryRunFlag {
-				return couchdb.UpdateDoc(inst, doc)
+				// Let the UpdateFileDoc handles the file doc update. For swift
+				// layout V1, the file should also be renamed
+				err := instanceVFS.UpdateFileDoc(doc, newFileDoc)
+				if err != nil {
+					fmt.Printf("Error while updating document %s: %s\n", doc.DocID, err)
+				}
 			}
 		}
 
