@@ -209,6 +209,7 @@ QUIT
 		"X-Cozy":       "cozy.example.com",
 	}
 
+	oldMailTemplater := mailTemplater
 	mailTemplater = &MailTemplater{[]*MailTemplate{
 		{
 			Name:    "test",
@@ -224,6 +225,9 @@ QUIT
 			},
 		},
 	}}
+	defer func() {
+		mailTemplater = oldMailTemplater
+	}()
 
 	data := struct {
 		Title string
@@ -359,6 +363,9 @@ func TestSendMailNoReply(t *testing.T) {
 		assert.Equal(t, inst.Domain, domain)
 		return errors.New("yes")
 	}
+	defer func() {
+		sendMail = doSendMail
+	}()
 	msg, _ := jobs.NewMessage(Options{
 		Mode:    "noreply",
 		Subject: "Up?",
@@ -391,6 +398,9 @@ func TestSendMailFrom(t *testing.T) {
 		assert.Equal(t, inst.Domain, domain)
 		return errors.New("yes")
 	}
+	defer func() {
+		sendMail = doSendMail
+	}()
 	msg, _ := jobs.NewMessage(Options{
 		Mode:    "from",
 		Subject: "Up?",

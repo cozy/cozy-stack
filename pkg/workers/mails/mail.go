@@ -21,6 +21,7 @@ func init() {
 		Concurrency: runtime.NumCPU(),
 		WorkerFunc:  SendMail,
 	})
+	initMailTemplates()
 }
 
 const (
@@ -157,7 +158,7 @@ func doSendMail(ctx context.Context, opts *Options, domain string) error {
 	var parts []*Part
 	var err error
 	if opts.TemplateName != "" {
-		opts.Subject, parts, err = mailTemplater.Execute(opts.TemplateName, opts.Locale, opts.RecipientName, opts.TemplateValues)
+		opts.Subject, parts, err = RenderMail(opts.TemplateName, opts.Locale, opts.RecipientName, opts.TemplateValues)
 		if err != nil {
 			return err
 		}
