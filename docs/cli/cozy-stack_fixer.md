@@ -31,6 +31,7 @@ cozy-stack fixer <command> [flags]
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack fixer albums-created-at](cozy-stack_fixer_albums-created-at.md)	 - Add a created_at field for albums where it's missing
 * [cozy-stack fixer contact-emails](cozy-stack_fixer_contact-emails.md)	 - Detect and try to fix invalid emails on contacts
+* [cozy-stack fixer content-mismatch](cozy-stack_fixer_content-mismatch.md)	 - Fix the content mismatch differences for 64K issue
 * [cozy-stack fixer jobs](cozy-stack_fixer_jobs.md)	 - Take a look at the consistency of the jobs
 * [cozy-stack fixer link-app](cozy-stack_fixer_link-app.md)	 - Link an old OAuth client to a webapp
 * [cozy-stack fixer md5](cozy-stack_fixer_md5.md)	 - Fix missing md5 from contents in the vfs
