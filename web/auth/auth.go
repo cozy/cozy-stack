@@ -701,11 +701,16 @@ func authorizeForm(c echo.Context) error {
 		}
 	}
 
+	email, err := instance.SettingsEMail()
+	if err != nil {
+		email = instance.ContextualDomain()
+	}
 	hasFallback := c.QueryParam("fallback_uri") != ""
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
 		"CozyUI":       middlewares.CozyUI(instance),
 		"ThemeCSS":     middlewares.ThemeCSS(instance),
 		"Domain":       instance.ContextualDomain(),
+		"Email":        email,
 		"ContextName":  instance.ContextName,
 		"ClientDomain": clientDomain,
 		"Locale":       instance.Locale,

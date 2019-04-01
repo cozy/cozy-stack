@@ -252,6 +252,9 @@ h1 {
 }
 
 /* Permissions */
+.c-chip img {
+  max-height: 2rem;
+}
 .lightbox {
   padding: 1rem;
   border: 1px solid var(--silver);
