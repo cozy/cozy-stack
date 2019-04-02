@@ -305,7 +305,7 @@ func (i *Installer) install() error {
 // permissions
 func (i *Installer) checkSkipPermissions() (bool, error) {
 	domain := i.Domain()
-	if i.Domain() == prefixer.UnknownDomainName {
+	if domain == prefixer.UnknownDomainName {
 		return false, nil
 	}
 

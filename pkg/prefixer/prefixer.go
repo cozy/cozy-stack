@@ -12,6 +12,8 @@ type prefixer struct {
 	prefix string
 }
 
+// UnknownDomainName represents the human-readable string of an empty domain
+// name of a prefixer struct
 const UnknownDomainName string = "<unknown>"
 
 func (p *prefixer) DBPrefix() string { return p.prefix }
