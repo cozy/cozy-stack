@@ -366,15 +366,16 @@ func (i *Installer) update() error {
 		samePermissions := newPermissions != nil && oldPermissions != nil &&
 			newPermissions.HasSameRules(oldPermissions)
 
-		// Check if we are going to skip the permissions
-		skip, err := i.checkSkipPermissions()
-		if err != nil {
-			return err
-		}
-
-		if !samePermissions && (!i.permissionsAcked && !skip) {
-			makeUpdate = false
-			availableVersion = newManifest.Version()
+		if !samePermissions && !i.permissionsAcked {
+			// Check if we are going to skip the permissions
+			skip, err := i.checkSkipPermissions()
+			if err != nil {
+				return err
+			}
+			if !skip {
+				makeUpdate = false
+				availableVersion = newManifest.Version()
+			}
 		}
 	}
 
