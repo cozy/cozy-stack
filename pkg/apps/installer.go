@@ -304,7 +304,12 @@ func (i *Installer) install() error {
 // checkSkipPermissions checks if the instance contexts is configured to skip
 // permissions
 func (i *Installer) checkSkipPermissions() (bool, error) {
-	inst, err := instance.GetFromCouch(i.Domain())
+	domain := i.Domain()
+	if i.Domain() == prefixer.UnknownDomainName {
+		return false, nil
+	}
+
+	inst, err := instance.GetFromCouch(domain)
 	if err != nil {
 		return false, err
 	}

@@ -12,11 +12,13 @@ type prefixer struct {
 	prefix string
 }
 
+const UnknownDomainName string = "<unknown>"
+
 func (p *prefixer) DBPrefix() string { return p.prefix }
 
 func (p *prefixer) DomainName() string {
 	if p.domain == "" {
-		return "<unknown>"
+		return UnknownDomainName
 	}
 	return p.domain
 }
