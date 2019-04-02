@@ -2,11 +2,13 @@ package mails
 
 import (
 	"bytes"
+	"io"
 	"os"
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/workers/exec"
 )
@@ -14,7 +16,7 @@ import (
 func execMjml(ctx *jobs.WorkerContext, template []byte) ([]byte, error) {
 	log := ctx.Logger()
 
-	workDir, err := prepareWorkDir(template)
+	workDir, err := prepareWorkDir()
 	if err != nil {
 		log.Errorf("PrepareWorkDir: %s", err)
 		return nil, err
@@ -24,12 +26,15 @@ func execMjml(ctx *jobs.WorkerContext, template []byte) ([]byte, error) {
 	cmd := exec.CreateCmd(cmdStr, workDir)
 	cmd.Env = env
 
+	// Send the template on cozy-mjml stdin
+	cmd.Stdin = bytes.NewReader(template)
+
 	// Log out all things printed in stderr
 	var stderrBuf bytes.Buffer
 	cmd.Stderr = utils.LimitWriterDiscard(&stderrBuf, 256*1024)
 
-	if err = cmd.Wait(); err != nil {
-		log.Errorf("Exec mjml: %s", err)
+	if err = cmd.Run(); err != nil {
+		log.Errorf("Run: %s", err)
 		return nil, err
 	}
 	if stderrBuf.Len() > 0 {
@@ -44,7 +49,7 @@ func execMjml(ctx *jobs.WorkerContext, template []byte) ([]byte, error) {
 	return out, nil
 }
 
-func prepareWorkDir(template []byte) (string, error) {
+func prepareWorkDir() (string, error) {
 	osFS := afero.NewOsFs()
 	workDir, err := afero.TempDir(osFS, "", "mjml")
 	if err != nil {
@@ -55,7 +60,11 @@ func prepareWorkDir(template []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	dst.Write(template)
+	f, err := fs.Open("/js/cozy-mjml.js")
+	if err != nil {
+		return "", err
+	}
+	io.Copy(dst, f)
 	if err = dst.Close(); err != nil {
 		return "", err
 	}

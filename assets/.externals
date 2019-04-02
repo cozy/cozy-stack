@@ -33,3 +33,7 @@ sha256  6effa2d88c77d7a4bed165a20ccfa7f47791faaf94d9a700b45fa16721171a48
 name    ./js/piwik.js
 url     https://matomo.cozycloud.cc/piwik.js
 sha256  e3c39364dd866add4ea7fdf25aecc692c8d738387f3bab1720012919aab3c835
+
+name    ./js/cozy-mjml.js
+url     https://unpkg.com/cozy-mjml@0.7.0/dist/main.js
+sha256  3cace16e9d51e70c0fdb93b343cc34a62df2d685fa2932342df0751c81c8d93c
