@@ -44,7 +44,7 @@ This makes cozy-stack simple and safer while allowing behaviour modification for
 several install types by picking the correct `onboarding` application / branch.
 
 This makes it easier to add more onboarding steps and have them run on
-already-installed cozy : On next login after onboarding application update, it
+already-installed cozy: On next login after onboarding application update, it
 will ask the user.
 
 ## Redirections

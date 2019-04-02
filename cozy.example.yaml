@@ -296,3 +296,6 @@ contexts:
     # konnectors slugs to exclude from cozy-collect
     exclude_konnectors:
         - a_konnector_slug
+    # If enabled, this option will skip permissions verification during
+    # webapp/konnectors installs & updates processes
+    permissions_skip_verification: false

@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/hooks"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -300,6 +301,31 @@ func (i *Installer) install() error {
 	})
 }
 
+// checkSkipPermissions checks if the instance contexts is configured to skip
+// permissions
+func (i *Installer) checkSkipPermissions() (bool, error) {
+	domain := i.Domain()
+	if domain == prefixer.UnknownDomainName {
+		return false, nil
+	}
+
+	inst, err := instance.GetFromCouch(domain)
+	if err != nil {
+		return false, err
+	}
+	ctxSettings, err := inst.SettingsContext()
+	if err != nil {
+		return false, err
+	}
+
+	sp, ok := ctxSettings["permissions_skip_verification"]
+	if !ok {
+		return false, nil
+	}
+
+	return sp.(bool), nil
+}
+
 // update will perform the update of an already installed application. It
 // returns the freshly fetched manifest from the source along with a possible
 // error in case the update went wrong.
@@ -339,9 +365,17 @@ func (i *Installer) update() error {
 		newPermissions := newManifest.Permissions()
 		samePermissions := newPermissions != nil && oldPermissions != nil &&
 			newPermissions.HasSameRules(oldPermissions)
+
 		if !samePermissions && !i.permissionsAcked {
-			makeUpdate = false
-			availableVersion = newManifest.Version()
+			// Check if we are going to skip the permissions
+			skip, err := i.checkSkipPermissions()
+			if err != nil {
+				return err
+			}
+			if !skip {
+				makeUpdate = false
+				availableVersion = newManifest.Version()
+			}
 		}
 	}
 

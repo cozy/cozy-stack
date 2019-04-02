@@ -9,7 +9,9 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -197,6 +199,123 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.KonnectorManifestName+".gz"), []byte("2.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
+}
+
+func manifestKonnector1() string {
+	return `{
+  "description": "A mini konnector to test cozy-stack-v2",
+  "type": "node",
+  "developer": {
+    "name": "Bruno",
+    "url": "cozy.io"
+  },
+  "license": "MIT",
+  "name": "mini-app",
+  "permissions": {
+	"bills": {
+		"type": "io.cozy.bills"
+	}
+  },
+  "slug": "mini",
+  "type": "konnector",
+  "version": "1.0.0"
+}`
+}
+
+func manifestKonnector2() string {
+	return `{
+  "description": "A mini konnector to test cozy-stack-v2",
+  "type": "node",
+  "developer": {
+    "name": "Bruno",
+    "url": "cozy.io"
+  },
+  "license": "MIT",
+  "name": "mini-app",
+  "permissions": {
+	"bills": {
+		"type": "io.cozy.bills"
+	},
+	"files": {
+	  "type": "io.cozy.files"
+	}
+  },
+  "slug": "mini",
+  "type": "konnector",
+  "version": "2.0.0"
+}`
+}
+func TestKonnectorUpdateSkipPerms(t *testing.T) {
+	// Generating test instance
+	finished := true
+	conf := config.GetConfig()
+	conf.Contexts = map[string]interface{}{
+		"foocontext": map[string]interface{}{},
+	}
+
+	instance, err := lifecycle.Create(&lifecycle.Options{
+		Domain:             "test-skip-perms",
+		ContextName:        "foocontext",
+		OnboardingFinished: &finished,
+	})
+
+	defer lifecycle.Destroy("test-skip-perms")
+
+	assert.NoError(t, err)
+
+	manGen = manifestKonnector1
+	manName = apps.KonnectorManifestName
+
+	inst, err := apps.NewInstaller(instance, fs, &apps.InstallerOptions{
+		Operation: apps.Install,
+		Type:      consts.KonnectorType,
+		Slug:      "cozy-konnector-test-skip",
+		SourceURL: "git://localhost/",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	var man apps.Manifest
+
+	man, err = inst.RunSync()
+	konnManifest := man.(*apps.KonnManifest)
+	assert.NoError(t, err)
+	assert.Empty(t, konnManifest.AvailableVersion())
+	assert.Contains(t, konnManifest.Version(), "1.0.0")
+
+	// Will now update. New perms will be added, preventing an upgrade
+	manGen = manifestKonnector2
+
+	inst, err = apps.NewInstaller(instance, fs, &apps.InstallerOptions{
+		Operation: apps.Update,
+		Type:      consts.KonnectorType,
+		Slug:      "cozy-konnector-test-skip",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	man, err = inst.RunSync()
+	konnManifest = man.(*apps.KonnManifest)
+	assert.NoError(t, err)
+	assert.Contains(t, konnManifest.AvailableVersion(), "2.0.0")
+	assert.Contains(t, konnManifest.Version(), "1.0.0") // Assert we stayed on our version
+
+	// Change configuration to tell we skip the verifications
+	conf.Contexts = map[string]interface{}{
+		"foocontext": map[string]interface{}{
+			"permissions_skip_verification": true,
+		},
+	}
+
+	man2, err := inst.RunSync()
+	konnManifest = man2.(*apps.KonnManifest)
+	assert.NoError(t, err)
+	// Assert we upgraded version, and the perms have changed
+	assert.False(t, man.Permissions().HasSameRules(man2.Permissions()))
+	assert.Empty(t, konnManifest.AvailableVersion())
+	assert.Contains(t, konnManifest.Version(), "2.0.0")
 }
 
 func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
