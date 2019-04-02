@@ -144,37 +144,44 @@ Content-Type: application/vnd.api+json
 #### Advanced usage
 
 Two optional query parameters are available for a konnector update:
-- `PermissionsAcked`: (defaults to `true`)
-  - Tells that the user accepted the permissions/ToS. It is useful if there are
+-   `PermissionsAcked`: (defaults to `true`)
+    -    Tells that the user accepted the permissions/ToS. It is useful if there are
     newer permissions or Terms Of Service and you want to be sure they were read
     or accepted. If set to `false`, the update will be blocked and the user will
-    be told that a new konnector version is available
+    be told that a new konnector version is available.\
+          > Note: `PermissionsAcked` can be skipped. \
+          If an instance is in a `context` configured with the parameter
+          `permissions_skip_verification` sets to `true`, permissions
+          verification will be ignored.
 
-- `Source` (defaults to source url installation):
-  - Use a different source to update this konnector (e.g. to install a `beta` or
+-    `Source` (defaults to source url installation):
+       - Use a different source to update this konnector (e.g. to install a `beta` or
     `dev` konnector version)
 
 ##### Examples:
 
 - You have a trainline konnector on a `stable` channel, and you want to update
   it to a particular `beta` version:
-  ```http
-  PUT /konnectors/trainline?Source=https://<konnectors-repository>/trainline/1.0.0-beta HTTP/1.1
-  Accept: application/vnd.api+json
-  ```
+
+```http
+PUT /konnectors/trainline?Source=https://<konnectors-repository>/trainline/1.0.0-beta HTTP/1.1
+Accept: application/vnd.api+json
+```
 
 - You want to attempt the trainline konnector update, but prevent it if new
   permissions were added
-  ```http
-  PUT /konnectors/trainline?PermissionsAcked=false HTTP/1.1
-  Accept: application/vnd.api+json
-  ```
+
+```http
+PUT /konnectors/trainline?PermissionsAcked=false HTTP/1.1
+Accept: application/vnd.api+json
+```
 
 You can combine these parameters to use a precise konnector version and stay on
 another channel (when permissions are different):
-- Install a version (e.g. `1.0.0`).
-- Ask an update to `stable` channel with `PermissionsAcked` to `false`
-- `Source` will be `stable`, and your version remains `1.0.0`
+
+  - Install a version (e.g. `1.0.0`).
+  - Ask an update to `stable` channel with `PermissionsAcked` to `false`
+  - `Source` will be `stable`, and your version remains `1.0.0`
 
 ## List installed konnectors
 
