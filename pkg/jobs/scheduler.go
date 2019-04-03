@@ -225,6 +225,7 @@ func GetTriggerState(db prefixer.Prefixer, triggerID string) (*TriggerState, err
 	for i := len(js) - 1; i >= 0; i-- {
 		j := js[i]
 		startedAt := &j.StartedAt
+		state.Status = j.State
 		switch j.State {
 		case Errored:
 			state.LastFailure = startedAt
@@ -243,7 +244,6 @@ func GetTriggerState(db prefixer.Prefixer, triggerID string) (*TriggerState, err
 		}
 		state.LastExecution = startedAt
 		state.LastExecutedJobID = j.ID()
-		state.Status = j.State
 	}
 
 	return &state, nil
