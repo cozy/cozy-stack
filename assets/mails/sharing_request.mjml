@@ -1,0 +1,18 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	{{t "Mail Sharing Request Subject"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Sharing Request Intro"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Sharing Request Button instruction"}}
+</mj-text>
+<mj-button href="{{.SharingLink}}" align="left" mj-class="primary-button content-xlarge">
+	{{t "Mail Sharing Request Button text"}}
+</mj-button>
+<mj-text mj-class="content-small">
+	{{t "Mail Trouble Text"}}<br/>
+	{{.SharingLink}}
+</mj-text>
+{{end}}

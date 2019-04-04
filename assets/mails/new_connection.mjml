@@ -1,0 +1,27 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	{{t "Mail New Connection Subject"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail New Connection Intro"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+{{t "Mail New Connection Place"}}: {{.City}}, {{.Country}}
+{{t "Mail New Connection IP"}}: {{.IP}}
+{{t "Mail New Connection Browser"}}: {{.Browser}}
+{{t "Mail New Connection OS"}}: {{.OS}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail New Connection Change Passphrase instruction"}}
+</mj-text>
+<mj-button href="{{.ChangePassphraseLink}}" align="left" mj-class="primary-button content-xlarge">
+	{{t "Mail New Connection Change Passphrase text"}}
+</mj-button>
+<mj-text mj-class="content-medium">
+	{{t "Mail New Connection Outro"}}
+</mj-text>
+<mj-text mj-class="content-small">
+	{{t "Mail Trouble Text"}}<br/>
+	{{.ChangePassphraseLink}}
+</mj-text>
+{{end}}
