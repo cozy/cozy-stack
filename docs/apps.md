@@ -134,7 +134,7 @@ During the service execution, the stack will give some environment variables to 
 
 ```bash
 - "COZY_URL" # Cozy URL
-- "COZY_CREDENTIALS" # Cozy credentials
+- "COZY_CREDENTIALS" # The cozy app related token
 - "COZY_LANGUAGE" # Lang used for the service (ex: node)
 - "COZY_LOCALE" # Locale of the Cozy
 - "COZY_TIME_LIMIT" # Maximum execution time. After this, the job will be killed
