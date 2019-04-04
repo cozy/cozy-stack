@@ -10,15 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
-// MailTemplateValues is a struct with the recipient's name, the sharer's
-// public name, the description of the sharing, and the link to the sharing.
-type MailTemplateValues struct {
-	RecipientName    string
-	SharerPublicName string
-	Description      string
-	SharingLink      string
-}
-
 // SendMails sends invitation mails to the recipients that were in the
 // mail-not-sent status (owner only)
 func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) error {
@@ -105,11 +96,11 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 		Email: m.Email,
 		Name:  m.PrimaryName(),
 	}
-	mailValues := &MailTemplateValues{
-		RecipientName:    addr.Name,
-		SharerPublicName: sharer,
-		Description:      description,
-		SharingLink:      link,
+	mailValues := map[string]interface{}{
+		"RecipientName":    addr.Name,
+		"SharerPublicName": sharer,
+		"Description":      description,
+		"SharingLink":      link,
 	}
 	msg, err := jobs.NewMessage(mails.Options{
 		Mode:           "from",

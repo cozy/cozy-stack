@@ -33,16 +33,12 @@ func execMjml(ctx *jobs.WorkerContext, template []byte) ([]byte, error) {
 	var stderrBuf bytes.Buffer
 	cmd.Stderr = utils.LimitWriterDiscard(&stderrBuf, 256*1024)
 
-	if err = cmd.Run(); err != nil {
-		log.Errorf("Run: %s", err)
-		return nil, err
-	}
+	out, err := cmd.Output()
 	if stderrBuf.Len() > 0 {
 		log.Error("Stderr: ", stderrBuf.String())
 	}
-	out, err := cmd.Output()
 	if err != nil {
-		log.Errorf("Output: %s", err)
+		log.Errorf("Run: %s", err)
 		return nil, err
 	}
 

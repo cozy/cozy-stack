@@ -54941,6 +54941,35 @@ iTBDlFCrzHdEdUOVYoFb3s37ST2zEWSzysHNXFPVHton0LdCY05fU/EPWRFteioU
 DCPv3wTe++4ZNq8/1p6/nem+P7LxrwAAAP//WAQrA8MmAAA=
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
+Name: /mails/layout.mjml
+Size: 452
+
+H4sIAAAAAAAC/3SRz07EIBDGz+1TEDzXboz/Dm1PHn2IpTCsXYEhUxq3Nry7gbau
+JnqbD37fzPDR2LM1XVk09ly9gVBdWeRagRaTCWPX1D9VWWS9kQnsUc2sF/L9RDg5
+VUk0SC2/0Q/6UT/xvV9yADGDUhho+bLcvuYyRs7sLPFzbnmgCXj3PQBoN3+Q8B7o
+zzFac9YjKaCKhBqmseXP/sKZF0oN7tTyQ94h9xlBhgHd9e7u3l/YgSVDhjIl0UzW
+rbpYlgDWGxGAHSW6AC4cY1zZ+jec9TYib15fV99fohHDfzEMbgzCyfX4Ba0YXIxb
+Hqtvjz9l3pWpTH9XfgUAAP//ouJF+MQBAAA=
+-----END COZY ASSET-----
+-----BEGIN COZY ASSET-----
+Name: /mails/passphrase_reset.mjml
+Size: 644
+
+H4sIAAAAAAAC/6zQwU7DMAyA4TN9Civ3shdYd+CGBALBXiBt3S3FcSbHkYaivDti
+3WBIPVDBue7nP865x8ExgukCK7KaUqq1H2vFo4If645sjI1Rp4Rwnqk99i55s6lu
+clYwj9YRvGBEhWcb42EvNiK8pnbEbgJXZ3EzZy9S71kl/LN5l1QDg+Ookjp1gWcW
+tNPQXnBoTM633/+fvAfHb6UYsOR23BjCQc1Vz0Gct/J+US55R7Kyw9/lfaZ8dU3O
+35/+lBadM3pL9JPcSkgtIWynvHUrq9P3+QNd78kZuS+l+ggAAP//6Aaf64QCAAA=
+-----END COZY ASSET-----
+-----BEGIN COZY ASSET-----
+Name: /mails/passphrase_reset.text
+Size: 187
+
+H4sIAAAAAAAC/6quLlFQ8k3MzFEISi1OLVEISCwuLsgoSixOVQguTcpKTS5Rqq3l
+4sKjzDOvpCifkCKn0pKS/DyFzLzikqLS5JLM/DyQjupqPYQasB6fzLxsAkb5l0Lt
+AwQAAP//kCQFzLsAAAA=
+-----END COZY ASSET-----
+-----BEGIN COZY ASSET-----
 Name: /placeholders/thumbnail-large.png
 Size: 21971
 
