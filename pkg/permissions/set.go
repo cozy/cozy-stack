@@ -237,8 +237,9 @@ func Diff(set1, set2 Set) (Set, error) {
 					Values: []string{},
 				}
 
-				// Handle verbs Here we are going to find verbs in set2 that are
-				// not present in set1, meaning they were added
+				// Handle verbs. Here we are going to find verbs in set2 that
+				// are not present in set1, meaning they were added later by an
+				// external human action
 				for verb2, content2 := range rule2.Verbs {
 					if !rule1.Verbs.Contains(verb2) {
 						newRule.Verbs[verb2] = content2

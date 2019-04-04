@@ -348,6 +348,30 @@ func createAppSet(db prefixer.Prefixer, typ, docType, slug string, set Set) (*Pe
 	return doc, nil
 }
 
+// MergeExtraPermissions merges rules from "extraPermissions" set by adding them
+// in the "perms" one
+func MergeExtraPermissions(perms, extraPermissions Set) (Set, error) {
+	var err error
+	var mergedRule *Rule
+	var permissions Set
+
+	for _, rule := range perms {
+		for _, newRule := range extraPermissions {
+			if rule.Type == newRule.Type {
+				mergedRule, err = rule.Merge(newRule)
+				if err != nil {
+					return nil, err
+				}
+				permissions = append(permissions, *mergedRule)
+				continue
+			}
+			permissions = append(permissions, rule)
+		}
+	}
+
+	return permissions, nil
+}
+
 // UpdateWebappSet creates a Permission doc for an app
 func UpdateWebappSet(db prefixer.Prefixer, slug string, set Set) (*Permission, error) {
 	doc, err := GetForWebapp(db, slug)
