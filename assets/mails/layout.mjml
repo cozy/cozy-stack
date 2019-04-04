@@ -1,0 +1,17 @@
+<mjml>
+	<mj-head>
+		<mj-defaults></mj-defaults>
+	</mj-head>
+	<mj-body background-color="#f5f6f7">
+		<mj-header locale="{{.Locale}}" mycozy="true"></mj-header>
+		<mj-wrapper background-color="#fff" border-radius="8px" padding="0">
+			<mj-section padding="24px 0 8px">
+				<mj-column>
+					{{template `content`}}
+				</mj-column>
+			</mj-section>
+		</mj-wrapper>
+		<mj-footer locale="{{.Locale}}" instance="{{.Domain}}"></mj-footer>
+	</mj-body>
+</mjml>
+

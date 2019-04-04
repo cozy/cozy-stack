@@ -1,16 +1,24 @@
 package mails
 
-import "errors"
+import (
+	"bytes"
+	"fmt"
+	"html/template"
+	"io/ioutil"
+
+	"github.com/cozy/cozy-stack/pkg/i18n"
+	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/statik/fs"
+)
 
 // MailTemplate is a struct to define a mail template with HTML and text parts.
 type MailTemplate struct {
-	Name       string
-	NoGreeting bool
-	Subject    string
-	Intro      string
-	Outro      string
-	Actions    []MailAction
-	Entries    []MailEntry
+	Name    string
+	Subject string
+	Intro   string
+	Outro   string
+	Actions []MailAction
+	Entries []MailEntry
 }
 
 // MailAction describes an action button in a mail template.
@@ -27,7 +35,7 @@ type MailEntry struct {
 }
 
 func initMailTemplates() {
-	mailTemplater = &MailTemplater{[]*MailTemplate{
+	mailTemplater = MailTemplater{
 		{
 			Name:    "passphrase_reset",
 			Subject: "Mail Reset Passphrase Subject",
@@ -132,25 +140,92 @@ func initMailTemplates() {
 				},
 			},
 		},
-	}}
+	}
 }
 
 // RenderMail returns a rendered mail for the given template name with the
 // specified locale, recipient name and template data values.
-func RenderMail(name, locale, recipientName string, templateValues interface{}) (string, []*Part, error) {
-	return mailTemplater.Execute(name, locale, recipientName, templateValues)
+func RenderMail(ctx *jobs.WorkerContext, name, locale, recipientName string, templateValues map[string]interface{}) (string, []*Part, error) {
+	return mailTemplater.Execute(ctx, name, locale, recipientName, templateValues)
 }
 
-// MailTemplater contains HTML and text templates to be used with the
-// TemplateName field of the MailOptions.
-type MailTemplater struct {
-	tmpls []*MailTemplate
-}
+// MailTemplater is the list of templates for emails.
+type MailTemplater []*MailTemplate // TODO use a map name -> subject
 
 // Execute will execute the HTML and text templates for the template with the
 // specified name. It returns the mail parts that should be added to the sent
 // mail.
-func (m *MailTemplater) Execute(name, locale string, recipientName string, data interface{}) (subject string, parts []*Part, err error) {
-	err = errors.New("Not implemented")
-	return
+func (m MailTemplater) Execute(ctx *jobs.WorkerContext, name, locale string, recipientName string, data map[string]interface{}) (string, []*Part, error) {
+	var tpl *MailTemplate
+	for _, t := range m {
+		if name == t.Name {
+			tpl = t
+			break
+		}
+	}
+	if tpl == nil {
+		err := fmt.Errorf("Could not find email named %q", name)
+		return "", nil, err
+	}
+
+	subject := i18n.Translate(tpl.Subject, locale)
+	funcMap := template.FuncMap{"t": i18n.Translator(locale)}
+	data["Locale"] = locale
+
+	text := new(bytes.Buffer)
+	f, err := fs.Open("/mails/" + tpl.Name + ".text") // TODO dynamic assets
+	if err != nil {
+		return "", nil, err
+	}
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", nil, err
+	}
+	t, err := template.New("text").Funcs(funcMap).Parse(string(b))
+	if err != nil {
+		return "", nil, err
+	}
+	if err := t.Execute(text, data); err != nil {
+		return "", nil, err
+	}
+
+	// TODO ignore errors on html
+	buf := new(bytes.Buffer)
+	f, err = fs.Open("/mails/" + tpl.Name + ".mjml") // TODO dynamic assets
+	if err != nil {
+		return "", nil, err
+	}
+	b, err = ioutil.ReadAll(f)
+	if err != nil {
+		return "", nil, err
+	}
+	t, err = template.New("content").Funcs(funcMap).Parse(string(b))
+	if err != nil {
+		return "", nil, err
+	}
+	f, err = fs.Open("/mails/layout.mjml") // TODO dynamic assets
+	if err != nil {
+		return "", nil, err
+	}
+	b, err = ioutil.ReadAll(f)
+	if err != nil {
+		return "", nil, err
+	}
+	t, err = t.New("layout").Funcs(funcMap).Parse(string(b))
+	if err != nil {
+		return "", nil, err
+	}
+	if err := t.Execute(buf, data); err != nil {
+		return "", nil, err
+	}
+	html, err := execMjml(ctx, buf.Bytes())
+	if err != nil {
+		return "", nil, err
+	}
+
+	parts := []*Part{
+		{Body: string(html), Type: "text/html"},
+		{Body: text.String(), Type: "text/plain"},
+	}
+	return subject, parts, nil
 }

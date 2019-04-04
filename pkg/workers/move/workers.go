@@ -45,9 +45,11 @@ func ExportWorker(c *jobs.WorkerContext) error {
 	link := c.Instance.SubDomain(consts.SettingsSlug)
 	link.Fragment = fmt.Sprintf("/exports/%s", mac)
 	mail := mails.Options{
-		Mode:           mails.ModeNoReply,
-		TemplateName:   "archiver",
-		TemplateValues: map[string]string{"ArchiveLink": link.String()},
+		Mode:         mails.ModeNoReply,
+		TemplateName: "archiver",
+		TemplateValues: map[string]interface{}{
+			"ArchiveLink": link.String(),
+		},
 	}
 
 	msg, err := jobs.NewMessage(&mail)

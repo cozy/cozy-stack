@@ -26,9 +26,11 @@ func exporter(c echo.Context) error {
 
 	link := fmt.Sprintf("http://%s%s%s", domain, c.Path(), filename)
 	msg, err := jobs.NewMessage(workers.Options{
-		Mode:           workers.ModeNoReply,
-		TemplateName:   "archiver",
-		TemplateValues: map[string]string{"ArchiveLink": link},
+		Mode:         workers.ModeNoReply,
+		TemplateName: "archiver",
+		TemplateValues: map[string]interface{}{
+			"ArchiveLink": link,
+		},
 	})
 	if err != nil {
 		return err
