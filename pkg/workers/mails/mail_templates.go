@@ -169,63 +169,84 @@ func (m MailTemplater) Execute(ctx *jobs.WorkerContext, name, locale string, rec
 	}
 
 	subject := i18n.Translate(tpl.Subject, locale)
-	funcMap := template.FuncMap{"t": i18n.Translator(locale)}
+	context := ctx.Instance.ContextName
 	data["Locale"] = locale
 
-	text := new(bytes.Buffer)
-	f, err := fs.Open("/mails/" + tpl.Name + ".text") // TODO dynamic assets
+	text, err := buildText(tpl, context, locale, data)
 	if err != nil {
 		return "", nil, err
 	}
-	b, err := ioutil.ReadAll(f)
-	if err != nil {
-		return "", nil, err
-	}
-	t, err := template.New("text").Funcs(funcMap).Parse(string(b))
-	if err != nil {
-		return "", nil, err
-	}
-	if err := t.Execute(text, data); err != nil {
-		return "", nil, err
+	parts := []*Part{
+		{Body: text, Type: "text/plain"},
 	}
 
-	// TODO ignore errors on html
+	// If we can generate the HTML, we should still send the mail with the text
+	// part.
+	if html, err := buildHTML(tpl, ctx, context, locale, data); err == nil {
+		parts = append(parts, &Part{Body: html, Type: "text/html"})
+	} else {
+		ctx.Logger().Errorf("Cannot generate HTML mail: %s", err)
+	}
+	return subject, parts, nil
+}
+
+func buildText(tpl *MailTemplate, context, locale string, data map[string]interface{}) (string, error) {
 	buf := new(bytes.Buffer)
-	f, err = fs.Open("/mails/" + tpl.Name + ".mjml") // TODO dynamic assets
+	b, err := loadTemplate("/mails/"+tpl.Name+".text", context)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
-	b, err = ioutil.ReadAll(f)
+	funcMap := template.FuncMap{"t": i18n.Translator(locale)}
+	t, err := template.New("text").Funcs(funcMap).Parse(string(b))
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
-	t, err = template.New("content").Funcs(funcMap).Parse(string(b))
-	if err != nil {
-		return "", nil, err
+	if err := t.Execute(buf, data); err != nil {
+		return "", err
 	}
-	f, err = fs.Open("/mails/layout.mjml") // TODO dynamic assets
+	return buf.String(), nil
+}
+
+func buildHTML(tpl *MailTemplate, ctx *jobs.WorkerContext, context, locale string, data map[string]interface{}) (string, error) {
+	buf := new(bytes.Buffer)
+	b, err := loadTemplate("/mails/"+tpl.Name+".mjml", context)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
-	b, err = ioutil.ReadAll(f)
+	funcMap := template.FuncMap{"t": i18n.Translator(locale)}
+	t, err := template.New("content").Funcs(funcMap).Parse(string(b))
 	if err != nil {
-		return "", nil, err
+		return "", err
+	}
+	b, err = loadTemplate("/mails/layout.mjml", context)
+	if err != nil {
+		return "", err
 	}
 	t, err = t.New("layout").Funcs(funcMap).Parse(string(b))
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 	if err := t.Execute(buf, data); err != nil {
-		return "", nil, err
+		return "", err
 	}
 	html, err := execMjml(ctx, buf.Bytes())
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
+	return string(html), nil
+}
 
-	parts := []*Part{
-		{Body: string(html), Type: "text/html"},
-		{Body: text.String(), Type: "text/plain"},
+func loadTemplate(name, context string) ([]byte, error) {
+	var f *bytes.Reader
+	if context != "" {
+		f, _ = fs.Open(name, context)
 	}
-	return subject, parts, nil
+	if f == nil {
+		var err error
+		f, err = fs.Open(name) // Default context
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ioutil.ReadAll(f)
 }
