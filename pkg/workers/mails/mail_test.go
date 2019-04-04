@@ -3,7 +3,6 @@ package mails
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"errors"
 	"net"
 	"net/textproto"
@@ -77,7 +76,9 @@ QUIT
 			},
 			Locale: "en",
 		}
-		return sendMail(context.Background(), msg, "cozy.example.com")
+		j := &jobs.Job{JobID: "1", Domain: "cozy.example.com"}
+		ctx := jobs.NewWorkerContext("0", j, nil)
+		return sendMail(ctx, msg, "cozy.example.com")
 	})
 }
 
@@ -142,7 +143,9 @@ QUIT
 			},
 			Locale: "en",
 		}
-		return sendMail(context.Background(), msg, "cozy.example.com")
+		j := &jobs.Job{JobID: "1", Domain: "cozy.example.com"}
+		ctx := jobs.NewWorkerContext("0", j, nil)
+		return sendMail(ctx, msg, "cozy.example.com")
 	})
 }
 
@@ -152,7 +155,9 @@ func TestMailMissingSubject(t *testing.T) {
 		To:     []*Address{{Email: "you@you"}},
 		Locale: "en",
 	}
-	err := sendMail(context.Background(), msg, "cozy.example.com")
+	j := &jobs.Job{JobID: "1", Domain: "cozy.example.com"}
+	ctx := jobs.NewWorkerContext("0", j, nil)
+	err := sendMail(ctx, msg, "cozy.example.com")
 	if assert.Error(t, err) {
 		assert.Equal(t, "Missing mail subject", err.Error())
 	}
@@ -171,91 +176,12 @@ func TestMailBadBodyType(t *testing.T) {
 		},
 		Locale: "en",
 	}
-	err := sendMail(context.Background(), msg, "cozy.example.com")
+	j := &jobs.Job{JobID: "1", Domain: "cozy.example.com"}
+	ctx := jobs.NewWorkerContext("0", j, nil)
+	err := sendMail(ctx, msg, "cozy.example.com")
 	if assert.Error(t, err) {
 		assert.Equal(t, "Unknown body content-type text/qsdqsd", err.Error())
 	}
-}
-
-func TestMailMultiParts(t *testing.T) {
-	clientStrings := []string{`EHLO localhost
-HELO localhost
-MAIL FROM:<me@me>
-RCPT TO:<you1@you>
-DATA
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/html; charset=UTF-8`,
-		`Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain; charset=UTF-8
-Mail Greeting,
-intro1
-intro2 My page
-instructions https://foobar.baz
-outro1
-outro2 My page
-Mail Signature,
-Mail Cozy Team - https://cozy.io
-.
-QUIT
-`}
-
-	expectedHeaders := map[string]string{
-		"From":         "me@me",
-		"To":           "you1@you",
-		"Subject":      "Up?",
-		"Date":         "Mon, 01 Jan 0001 00:00:00 +0000",
-		"Content-Type": "multipart/alternative;",
-		"Mime-Version": "1.0",
-		"X-Cozy":       "cozy.example.com",
-	}
-
-	oldMailTemplater := mailTemplater
-	mailTemplater = &MailTemplater{[]*MailTemplate{
-		{
-			Name:    "test",
-			Subject: "Up?",
-			Intro:   "intro1\nintro2 {{.Title}}",
-			Outro:   "outro1\noutro2 {{.Title}}",
-			Actions: []MailAction{
-				{
-					Instructions: "instructions",
-					Text:         "button",
-					Link:         "{{.Link}}",
-				},
-			},
-		},
-	}}
-	defer func() {
-		mailTemplater = oldMailTemplater
-	}()
-
-	data := struct {
-		Title string
-		Link  string
-	}{
-		Title: "My page",
-		Link:  "https://foobar.baz",
-	}
-
-	mailServer(t, serverString, clientStrings, expectedHeaders, func(host string, port int) error {
-		msg := &Options{
-			From: &Address{Email: "me@me"},
-			To: []*Address{
-				{Email: "you1@you"},
-			},
-			Date:    &time.Time{},
-			Subject: "Up?",
-			Dialer: &gomail.DialerOptions{
-				Host:       host,
-				Port:       port,
-				DisableTLS: true,
-			},
-			TemplateName:   "test",
-			TemplateValues: data,
-			Locale:         "en",
-		}
-		return sendMail(context.Background(), msg, "cozy.example.com")
-	})
 }
 
 func mailServer(t *testing.T, serverString string, clientStrings []string, expectedHeader map[string]string, send func(string, int) error) {
@@ -354,7 +280,7 @@ func mailServer(t *testing.T, serverString string, clientStrings []string, expec
 }
 
 func TestSendMailNoReply(t *testing.T) {
-	sendMail = func(ctx context.Context, opts *Options, domain string) error {
+	sendMail = func(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 		assert.NotNil(t, opts.From)
 		assert.NotNil(t, opts.To)
 		assert.Len(t, opts.To, 1)
@@ -388,7 +314,7 @@ func TestSendMailNoReply(t *testing.T) {
 }
 
 func TestSendMailFrom(t *testing.T) {
-	sendMail = func(ctx context.Context, opts *Options, domain string) error {
+	sendMail = func(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 		assert.NotNil(t, opts.From)
 		assert.NotNil(t, opts.To)
 		assert.Len(t, opts.To, 1)
