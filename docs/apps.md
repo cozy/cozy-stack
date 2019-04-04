@@ -129,6 +129,18 @@ The `trigger` field should follow the available triggers described in the
 [jobs documentation](./jobs.md). The `file` field should specify the service
 code run and the `type` field describe the code type (only `"node"` for now).
 
+### Available fields to the service
+During the service execution, the stack will give some environment variables to the service if you need to use them.
+
+```bash
+- "COZY_URL" # Cozy URL
+- "COZY_CREDENTIALS" # The cozy app related token
+- "COZY_LANGUAGE" # Lang used for the service (ex: node)
+- "COZY_LOCALE" # Locale of the Cozy
+- "COZY_TIME_LIMIT" # Maximum execution time. After this, the job will be killed
+- "COZY_JOB_ID" # Job ID
+- "COZY_COUCH_DOC" # The CouchDB document which triggers the service
+```
 ### Notifications
 
 For more informations on how te declare notifications in the manifest, see the
