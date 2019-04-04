@@ -16,6 +16,11 @@ useful for debugging for example.
 The `thumbnail` worker is used internally by the stack to generate thumbnails
 from the image files of a cozy instance.
 
+## service worker
+
+The `service` worker is used to process background jobs, generally to compute
+non-realtime user data.
+
 ## push worker
 
 The `push` worker can be used to send push-notifications to a user's device. The
