@@ -1,0 +1,9 @@
+{{t "Notifications Disk Quota Subject"}}
+
+{{t "Notifications Disk Quota Intro"}}
+
+{{t "Notifications Disk Quota offers instruction"}}
+{{.OffersLink}}
+
+{{t "Notifications Disk Quota free instructions"}}
+{{.CozyDriveLink}}

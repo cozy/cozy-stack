@@ -1,0 +1,6 @@
+{{t "Mail Archive Subject"}}
+
+{{t "Mail Archive Intro"}}
+
+{{t "Mail Archive Button instruction"}}
+{{.ArchiveLink}}

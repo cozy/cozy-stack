@@ -1,0 +1,6 @@
+{{t "Mail Sharing Request Subject"}}
+
+{{t "Mail Sharing Request Intro"}}
+
+{{t "Mail Sharing Request Button instruction"}}
+{{.SharingLink}}

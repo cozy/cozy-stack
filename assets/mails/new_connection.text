@@ -1,0 +1,13 @@
+{{t "Mail New Connection Subject"}}
+
+{{t "Mail New Connection Intro"}}
+
+{{t "Mail New Connection Place"}}: {{.City}}, {{.Country}}
+{{t "Mail New Connection IP"}}: {{.IP}}
+{{t "Mail New Connection Browser"}}: {{.Browser}}
+{{t "Mail New Connection OS"}}: {{.OS}}
+
+{{t "Mail New Connection Change Passphrase instruction"}}
+{{.ChangePassphraseLink}}
+
+{{t "Mail New Connection Outro"}}

@@ -1,0 +1,11 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	{{t "Mail Two Factor Mail Confirmation Subject"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Two Factor Mail Confirmation Intro"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Two Factor Mail Confirmation Outro"}}
+</mj-text>
+{{end}}

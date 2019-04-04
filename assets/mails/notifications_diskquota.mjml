@@ -1,0 +1,28 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	{{t "Notifications Disk Quota Subject"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Notifications Disk Quota Intro"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Notifications Disk Quota offers instruction"}}
+</mj-text>
+<mj-button href="{{.OffersLink}}" align="left" mj-class="primary-button content-xlarge">
+	{{t "Notifications Disk Quota offers text"}}
+</mj-button>
+<mj-text mj-class="content-small">
+	{{t "Mail Trouble Text"}}<br/>
+	{{.OffersLink}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Notifications Disk Quota free instructions"}}
+</mj-text>
+<mj-button href="{{.CozyDriveLink}}" align="left" mj-class="primary-button content-xlarge">
+	{{t "Notifications Disk Quota free text"}}
+</mj-button>
+<mj-text mj-class="content-small">
+	{{t "Mail Trouble Text"}}<br/>
+	{{.CozyDriveLink}}
+</mj-text>
+{{end}}
