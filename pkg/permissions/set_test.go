@@ -55,7 +55,7 @@ func TestDiffNotSameSets(t *testing.T) {
 
 	expectedSet := Set{
 		Rule{
-			Title:  "",
+			Title:  "rule1",
 			Verbs:  Verbs(POST), // Only the POST has been added
 			Type:   "io.cozy.files",
 			Values: []string{}, // No addition has been made
@@ -102,13 +102,13 @@ func TestDiffMultipleRules(t *testing.T) {
 
 	expectedSet := Set{
 		Rule{
-			Title:  "",
+			Title:  "rule1",
 			Verbs:  Verbs(POST), // Only the POST has been added
 			Type:   "io.cozy.files",
 			Values: []string{}, // No addition has been made
 		},
 		Rule{
-			Title:  "",
+			Title:  "rule2",
 			Verbs:  Verbs(GET, POST), // GET & POST has been added
 			Type:   "io.cozy.foobar",
 			Values: []string{"io.cozy.files.foobar-dir"}, // A new folder was added
