@@ -121,12 +121,13 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Insta
 		Doc interface{} `json:"doc"`
 	}
 	var doc serviceEvent
-	if err := ctx.UnmarshalEvent(&doc); err != nil {
-		return "", nil, err
-	}
-	marshaled, err := json.Marshal(doc.Doc)
-	if err != nil {
-		return "", nil, err
+	var marshaled = []byte{}
+
+	if err := ctx.UnmarshalEvent(&doc); err == nil {
+		marshaled, err = json.Marshal(doc.Doc)
+		if err != nil {
+			return "", nil, err
+		}
 	}
 
 	token := i.BuildAppToken(w.man.Slug(), "")
