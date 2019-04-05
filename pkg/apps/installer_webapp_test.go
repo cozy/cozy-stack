@@ -205,6 +205,7 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 
 	// Altering permissions by adding a value and a verb
 	newPerms, err := permissions.UnmarshalScopeString("io.cozy.files:GET,POST:foobar,foobar2")
+	assert.NoError(t, err)
 	_, err = permissions.UpdateWebappSet(instance, "mini-test-perms", newPerms)
 	assert.NoError(t, err)
 
@@ -220,6 +221,7 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 		Slug:      "mini-test-perms",
 		SourceURL: "git://localhost/",
 	})
+	assert.NoError(t, err)
 
 	man, err = inst2.RunSync()
 	assert.NoError(t, err)
