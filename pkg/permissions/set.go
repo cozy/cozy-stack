@@ -232,6 +232,7 @@ func Diff(set1, set2 Set) (Set, error) {
 		for _, rule2 := range set2 {
 			if rule1.Title == rule2.Title { // Same rule, we are going to compute differences
 				newRule := Rule{
+					Title:  rule1.Title,
 					Type:   rule1.Type,
 					Verbs:  map[Verb]struct{}{},
 					Values: []string{},

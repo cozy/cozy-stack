@@ -357,7 +357,7 @@ func MergeExtraPermissions(perms, extraPermissions Set) (Set, error) {
 
 	for _, rule := range perms {
 		for _, newRule := range extraPermissions {
-			if rule.Type == newRule.Type {
+			if rule.Title == newRule.Title {
 				mergedRule, err = rule.Merge(newRule)
 				if err != nil {
 					return nil, err
