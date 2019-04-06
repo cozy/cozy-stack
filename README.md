@@ -16,12 +16,28 @@ easily, providing you with a new experience. You can install Cozy on your own
 hardware where no one profiles you.
 
 
-## And what about this repository?
+## What is the Cozy-Stack
 
-This repository contains the new version of Cozy Cloud which aims to be
-simpler for hosting thousands of instances. It should also bring for the
-self-hosted the possibility to host several instances on the same server, and
-improve many things, starting with security and reliability.
+It is the core server of the Cozy platform. It consists of a single process, *the Cozy stack*. 
+
+[Full Cozy-Stack documentation here](https://docs.cozy.io/en/cozy-stack/README/).
+
+The Cozy-Stack is in charge of serving the Web applications users have installed from the application store.
+
+It provides its services through a REST API that allows to:
+
+ - create, update, delete documents inside the database;
+ - authenticate users and client applications;
+ - send emails;
+ - launch jobs on the server. Connectors that import data from remote websites are some sort of jobs. Jobs can be one time tasks (sending a message) or periodic tasks. Some jobs, like the connectors, that require executing third party code on the server side, are sandboxed (we use `nsjail` for now).
+ - …
+
+The Cozy-Stack also allows to access the database replication API, allowing to sync documents between the server and local databases, for example in mobile clients.
+
+Two authentication methods are available:
+
+ - Web applications running on the server get a session token when the user log in;
+ - OAuth2 for other applications.
 
 Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new)
 for questions and suggestions.
