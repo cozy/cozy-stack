@@ -1,4 +1,6 @@
-# Cozy-Stack documentation - Table of contents
+---
+title: Cozy-Stack documentation - Table of contents
+---
 
 ## How-to guides
 
