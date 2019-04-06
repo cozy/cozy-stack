@@ -1,4 +1,4 @@
-# Table of contents
+# Cozy-Stack documentation - Table of contents
 
 ## How-to guides
 
