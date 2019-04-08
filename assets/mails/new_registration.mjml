@@ -1,5 +1,6 @@
 {{define "content"}}
 <mj-text mj-class="title content-medium">
+  <img src="https://downcloud.cozycloud.cc/upload/icon-devices.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
 	{{t "Mail New Registration Subject"}}
 </mj-text>
 <mj-text mj-class="content-medium">
@@ -11,7 +12,7 @@
 <mj-button href="{{.DevicesLink}}" align="left" mj-class="primary-button content-xlarge">
 	{{t "Mail New Registration Devices text"}}
 </mj-button>
-<mj-text mj-class="content-small">
+<mj-text mj-class="content-medium">
 	{{t "Mail Trouble Text"}}<br/>
 	{{.DevicesLink}}
 </mj-text>

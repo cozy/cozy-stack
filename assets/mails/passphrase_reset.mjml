@@ -1,5 +1,6 @@
 {{define "content"}}
 <mj-text mj-class="title content-medium">
+  <img src="https://downcloud.cozycloud.cc/upload/icon-key.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
 	{{t "Mail Reset Passphrase Subject"}}
 </mj-text>
 <mj-text mj-class="content-medium">
@@ -8,13 +9,13 @@
 <mj-text mj-class="content-medium">
 	{{t "Mail Reset Passphrase Button instruction"}}
 </mj-text>
-<mj-button href="{{.PassphraseResetLink}}" align="left" mj-class="primary-button content-xlarge">
+<mj-button href="{{.PassphraseResetLink}}" align="left" mj-class="primary-button content-medium">
 	{{t "Mail Reset Passphrase Button text"}}
 </mj-button>
-<mj-text mj-class="content-medium">
+<mj-text mj-class="content-large">
 	{{t "Mail Reset Passphrase Outro"}}
 </mj-text>
-<mj-text mj-class="content-small">
+<mj-text mj-class="content-medium">
 	{{t "Mail Trouble Text"}}<br/>
 	{{.PassphraseResetLink}}
 </mj-text>

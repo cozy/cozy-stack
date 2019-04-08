@@ -8,20 +8,20 @@
 <mj-text mj-class="content-medium">
 	{{t "Notifications Disk Quota offers instruction"}}
 </mj-text>
-<mj-button href="{{.OffersLink}}" align="left" mj-class="primary-button content-xlarge">
+<mj-button href="{{.OffersLink}}" align="left" mj-class="primary-button content-large">
 	{{t "Notifications Disk Quota offers text"}}
 </mj-button>
-<mj-text mj-class="content-small">
+<mj-text mj-class="content-xlarge">
 	{{t "Mail Trouble Text"}}<br/>
 	{{.OffersLink}}
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{t "Notifications Disk Quota free instructions"}}
 </mj-text>
-<mj-button href="{{.CozyDriveLink}}" align="left" mj-class="primary-button content-xlarge">
+<mj-button href="{{.CozyDriveLink}}" align="left" mj-class="primary-button content-large">
 	{{t "Notifications Disk Quota free text"}}
 </mj-button>
-<mj-text mj-class="content-small">
+<mj-text mj-class="content-medium">
 	{{t "Mail Trouble Text"}}<br/>
 	{{.CozyDriveLink}}
 </mj-text>
