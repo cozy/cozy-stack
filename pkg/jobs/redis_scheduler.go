@@ -391,10 +391,14 @@ func (s *redisScheduler) CleanRedis() error {
 func (s *redisScheduler) RebuildRedis(db prefixer.Prefixer) error {
 	triggers, err := s.GetAllTriggers(db)
 	if err != nil {
+		joblog.Errorf("Error when rebuilding redis for domain %q: %s",
+			db.DomainName(), err)
 		return err
 	}
 	for _, t := range triggers {
 		if err = s.addToRedis(t, time.Now()); err != nil {
+			joblog.Errorf("Error when rebuilding redis for domain %q: %s (%v)",
+				db.DomainName(), err, t)
 			return err
 		}
 	}
