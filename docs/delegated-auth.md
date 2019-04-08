@@ -24,7 +24,7 @@ will be logged in, and redirected to its default application.
 
 ## Open ID Connect
 
-For OpenID Connect, there is a more configuration parameters:
+For OpenID Connect, there are more configuration parameters:
 
 ```yaml
 authentication:
@@ -100,4 +100,41 @@ Host: example.mycozy.cloud
 HTTP/1.1 303 See Other
 Set-Cookie: ...
 Location: https://example-home.mycozy.cloud/
+```
+
+### POST /oidc/access_token
+
+This additional route can be used by an OAuth client when delegated
+authentication via OpenID Connect is enabled. It allows the client to obtain an
+`access_token` for requesting the cozy-stack in exchange of a token valid on the
+OpenID Connect Identity Provider.
+
+```http
+POST /oidc/access_token HTTP/1.1
+Host: example.mycozy.cloud
+Accept: application/json
+Content-Type: application/json
+```
+
+```json
+{
+  "client_id": "55eda056e85468fdfe2c8440d4009cbe",
+  "client_secret": "DttCGIUOTniVNkivR_CsZ_xRoME9gghN",
+  "scope": "io.cozy.files io.cozy.photos.albums",
+  "oidc_token": "769fa760-59de-11e9-a167-9bab3784e3e7"
+}
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "access_token": "ooch1Yei",
+  "token_type": "bearer",
+  "refresh_token": "ui0Ohch8",
+  "scope": "io.cozy.files io.cozy.photos.albums"
+}
 ```
