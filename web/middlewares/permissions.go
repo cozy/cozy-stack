@@ -28,6 +28,10 @@ const contextPermissionDoc = "permissions_doc"
 // have the right permissions.
 var ErrForbidden = echo.NewHTTPError(http.StatusForbidden)
 
+// ErrMissingSource is used to send a bad request when the SourceURL is missing
+// from the request
+var ErrMissingSource = echo.NewHTTPError(http.StatusBadRequest, "No Source in request")
+
 var errNoToken = echo.NewHTTPError(http.StatusUnauthorized, "No token in request")
 
 // CheckRegisterToken returns true if the registerToken is set and match the
@@ -306,6 +310,9 @@ func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v
 	case permissions.TypeWebapp, permissions.TypeKonnector:
 		if pdoc.SourceID != consts.Apps+"/"+consts.StoreSlug {
 			return ErrForbidden
+		}
+		if sourceURL == "" {
+			return ErrMissingSource
 		}
 		// The store can only install apps and konnectors from the registry
 		if !strings.HasPrefix(sourceURL, "registry://") {
