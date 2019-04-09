@@ -54790,15 +54790,17 @@ Hqtvjz9l3pWpTH9XfgUAAP//ouJF+MQBAAA=
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/new_connection.mjml
-Size: 895
+Size: 1020
 
-H4sIAAAAAAAC/6ySwWrCQBCGz/Uphj3Xei/qoZ6Etgb0BTZx1LWbWZmdRWWZdy9G
-03pQQdtbwvz/l4+f5DzHhSMEUwUSJDGqnX697gruBOp1t/I2xoERJx7hlOnWOHep
-NsPOU84C5sM6D5+4hVEgwkpcIJimco3VEdc78YaXyHcwxyQcHiBeBRbeVmhUXyHn
-l5GTvepz8xgSCe9Vr1fHRdsbF7dybxy2EbkNn15vNSbTNjyZ/ud6o5WlJUJhY9ys
-2EYER1E4NdcLq5ZJJBCsGBcDcxil6f/W3x19qRqw3i1pYDwuxJyZbdjVlvctphXd
-ectLvFP0IPVjeAT+dY1JeuxfOiPOOKTSI8yOdv2Se839ylLnX8oZaa7a+Q4AAP//
-0amVBH8DAAA=
+H4sIAAAAAAAC/6xSwY7TMBA9068YzYETacSFQ7fpgZ4qAa3U/QHHmSYuzjiyx3RD
+5H9HmzZQie1KlL2NNe89v/c0w1DRwTABasdCLJjSbNkeM6EngfaYaatCKFCMWIIL
+JmupMrHF1QxgadoagtcFNiJdWOR55U6srYvVXLuf/WXSeeysU1VutOOstq6kecc1
+wslU0hT48RNCQ6Zu5DwH6S0V+IO8GK1spqypeRFi+YD56j2XoXuYvRsGAfyqjIVv
+dIK1YyYtxjHsY3kkfc6SX8KsXor1V6DbmhsW7+5QvCm4s0oTprSAYZivjfQpfRhH
+F1l8n9Jt6mY38Ta713CfvTsF8hP48nyNsd1P4O3+LdtbN4prgp0KoWu8CgSGg/g4
+bl9otYwijqHxdCjwuZSR/4f+xfD3lBDGuyjQ0kHwylnnTat8P8lMRp+s8jX9o9Fn
+U78dngX/t41tvO+WrhQfvYulJXg8u1uWPh/3N5q6/mkYiKuUZr8CAAD//zd+iIb8
+AwAA
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/new_connection.text
@@ -54831,14 +54833,16 @@ o/bPjwAAAA==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/notifications_diskquota.mjml
-Size: 900
+Size: 1027
 
-H4sIAAAAAAAC/7SQT27yMBBH1x+nGHmfjwsQNmVTqX9UlQs4yZhOcOxqPK6glu9e
-kUAVEEIg0bUzL+/3UmrQkENQtXeCTlTOk1nXFoIbga4taqtDKJWQWIT9N0WHDcVO
-zSf/UhJQL17IUK2FvAuwoLCGt+hFw3usWqwH5nQPnZ/D3wp+dML+/lhvDHIAckE4
-1rvnM/+oooh38MFoSpXS/9f+6IncOmcF2tLKlcqiETUy+WTqNG8Pxwcxq3mFV3vt
-HH6FBtLF2Ztj/LMmC0v2sbIIy4E1q3javx/NuHNWw4jjqOGKqg/+e7tg+sI/Ddub
-3Zr1ZPblrCc7xrNTQtfkPPkJAAD//0+gDZqEAwAA
+H4sIAAAAAAAC/7SQza7aMBCF181TjLzoLkTddHEvYdO7qdQfVeUFHGeSDDh2ZI+B
+YOXdKxKogCJKJbobaTzH5/tiLLEigyCUNYyGxTAk83aVMu4Y2lWqtPQ+F0ysEY5v
+0hZLCq1YJABzamvwTuWiYe78S5aVdmuUtqGcKbvvj5PKQqetLDNS1qTSqYY2OOtM
+LWBLJTe5+PBRQINUNzzNnnuNudigY1JSp1JTbV58KF5FtnhvCt+9Ju9iZBDfLFNF
+SjJZ4+GN/Bp+BMsSfoZihWpCyo5Mi1t0f3D9JfizYWefH2urCp0HMp5dUIf1jT+K
+wGwNNA6rXMQ4+z4efSGzHgYBo6VcaKxYnDXpHLXS9afjUzEtXY0P9zp0+F1oSrqL
+vbuM/ypJw9LZUGiE5ZQ1L1w27i8wnqy1cojnUv0DVj/Zff/maIP/VezY7F+1XmHf
+13rFcY4dI5pyGJJfAQAA//8pR7R1AwQAAA==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/notifications_diskquota.text
