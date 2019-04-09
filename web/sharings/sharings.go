@@ -518,6 +518,7 @@ func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL stri
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state, sharecode string, m *sharing.Member) error {
 	publicName, _ := inst.PublicName()
 	return c.Render(code, "sharing_discovery.html", echo.Map{
+		"Title":         inst.TemplateTitle(),
 		"ThemeCSS":      middlewares.ThemeCSS(inst),
 		"Domain":        inst.ContextualDomain(),
 		"ContextName":   inst.ContextName,
