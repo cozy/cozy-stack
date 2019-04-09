@@ -68,13 +68,27 @@ func createDefaultFilesTree(inst *instance.Instance) error {
 	name := inst.Translate("Tree Administrative")
 	createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)) // #nosec
 
-	name = inst.Translate("Tree Photos")
-	photos, err := createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
-	if err == nil {
-		name = inst.Translate("Tree Uploaded from Cozy Photos")
-		createDir(vfs.NewDirDoc(inst.VFS(), name, photos.ID(), nil)) // #nosec
-		name = inst.Translate("Tree Backed up from my mobile")
-		createDir(vfs.NewDirDoc(inst.VFS(), name, photos.ID(), nil)) // #nosec
+	// Check if we create the "Photos" folder and its subfolders. By default, we
+	// are creating it, but some contexts may not want to create them.
+	ctxSettings, err := inst.SettingsContext()
+	if err != nil && err != instance.ErrContextNotFound {
+		return err
+	}
+
+	createPhotosFolder := true
+	if photosFolderParam, ok := ctxSettings["init_photos_folder"]; ok {
+		createPhotosFolder = photosFolderParam.(bool)
+	}
+
+	if createPhotosFolder {
+		name = inst.Translate("Tree Photos")
+		photos, err := createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
+		if err == nil {
+			name = inst.Translate("Tree Uploaded from Cozy Photos")
+			createDir(vfs.NewDirDoc(inst.VFS(), name, photos.ID(), nil)) // #nosec
+			name = inst.Translate("Tree Backed up from my mobile")
+			createDir(vfs.NewDirDoc(inst.VFS(), name, photos.ID(), nil)) // #nosec
+		}
 	}
 
 	return errf
