@@ -25,6 +25,10 @@ import (
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
+// DefaultTemplateTitle represents the default template title. It could be
+// overrided by configuring it in the instance context parameters
+const DefaultTemplateTitle = "Cozy"
+
 // An Instance has the informations relatives to the logical cozy instance,
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
@@ -601,6 +605,19 @@ func (i *Instance) CreateShareCode(subject string) (string, error) {
 	scope := ""
 	sessionID := ""
 	return i.MakeJWT(permissions.ShareAudience, subject, scope, sessionID, time.Now())
+}
+
+// TemplateTitle returns the specific-context instance template title (if there
+// is one). Otherwise, returns the default one
+func (i *Instance) TemplateTitle() string {
+	ctxSettings, err := i.SettingsContext()
+	if err != nil {
+		return DefaultTemplateTitle
+	}
+	if title, ok := ctxSettings["templates_title"]; ok {
+		return title.(string)
+	}
+	return DefaultTemplateTitle
 }
 
 // ensure Instance implements couchdb.Doc

@@ -163,6 +163,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	}
 
 	return c.Render(code, "login.html", echo.Map{
+		"TemplateTitle":    i.TemplateTitle(),
 		"CozyUI":           middlewares.CozyUI(i),
 		"ThemeCSS":         middlewares.ThemeCSS(i),
 		"Domain":           i.ContextualDomain(),
@@ -707,6 +708,7 @@ func authorizeForm(c echo.Context) error {
 	}
 	hasFallback := c.QueryParam("fallback_uri") != ""
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
+		"Title":        instance.TemplateTitle(),
 		"CozyUI":       middlewares.CozyUI(instance),
 		"ThemeCSS":     middlewares.ThemeCSS(instance),
 		"Domain":       instance.ContextualDomain(),
@@ -848,6 +850,7 @@ func authorizeSharingForm(c echo.Context) error {
 	}
 
 	return c.Render(http.StatusOK, "authorize_sharing.html", echo.Map{
+		"Title":        instance.TemplateTitle(),
 		"CozyUI":       middlewares.CozyUI(instance),
 		"ThemeCSS":     middlewares.ThemeCSS(instance),
 		"Domain":       instance.ContextualDomain(),
@@ -911,6 +914,7 @@ func authorizeAppForm(c echo.Context) error {
 
 	permissions := app.Permissions()
 	return c.Render(http.StatusOK, "authorize_app.html", echo.Map{
+		"Title":       instance.TemplateTitle(),
 		"ThemeCSS":    middlewares.ThemeCSS(instance),
 		"Domain":      instance.ContextualDomain(),
 		"ContextName": instance.ContextName,
@@ -1105,6 +1109,7 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 func passphraseResetForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
+		"Title":       instance.TemplateTitle(),
 		"ThemeCSS":    middlewares.ThemeCSS(instance),
 		"Domain":      instance.ContextualDomain(),
 		"ContextName": instance.ContextName,
@@ -1123,6 +1128,7 @@ func passphraseForm(c echo.Context) error {
 
 	if registerToken == "" || !middlewares.CheckRegisterToken(c, inst) {
 		return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
+			"Title":       inst.TemplateTitle(),
 			"ThemeCSS":    middlewares.ThemeCSS(inst),
 			"Domain":      inst.ContextualDomain(),
 			"ContextName": inst.ContextName,
@@ -1136,6 +1142,7 @@ func passphraseForm(c echo.Context) error {
 	}
 	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
 		"CozyUI":        middlewares.CozyUI(inst),
+		"Title":         inst.TemplateTitle(),
 		"ThemeCSS":      middlewares.ThemeCSS(inst),
 		"Domain":        inst.ContextualDomain(),
 		"ContextName":   inst.ContextName,
@@ -1161,6 +1168,7 @@ func passphraseReset(c echo.Context) error {
 		c.SetCookie(session.Delete(i))
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
+		"Title":       i.TemplateTitle(),
 		"ThemeCSS":    middlewares.ThemeCSS(i),
 		"Domain":      i.ContextualDomain(),
 		"ContextName": i.ContextName,
@@ -1192,6 +1200,7 @@ func passphraseRenewForm(c echo.Context) error {
 		})
 	}
 	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
+		"Title":                inst.TemplateTitle(),
 		"ThemeCSS":             middlewares.ThemeCSS(inst),
 		"Domain":               inst.ContextualDomain(),
 		"ContextName":          inst.ContextName,
