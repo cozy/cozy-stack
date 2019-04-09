@@ -299,3 +299,6 @@ contexts:
     # If enabled, this option will skip permissions verification during
     # webapp/konnectors installs & updates processes
     permissions_skip_verification: false
+    # Tells if the photo folder should be created or not during the instance
+    # creation
+    init_photos_folder: true
