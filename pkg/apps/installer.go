@@ -402,14 +402,11 @@ func (i *Installer) update() error {
 			// Check if perms were added on the old manifest
 			if i.man.AppType() == consts.WebappType {
 				alteredPerms, err = permissions.GetForWebapp(inst, i.man.Slug())
-				if err != nil {
-					return err
-				}
 			} else if i.man.AppType() == consts.KonnectorType {
 				alteredPerms, err = permissions.GetForKonnector(inst, i.man.Slug())
-				if err != nil {
-					return err
-				}
+			}
+			if err != nil {
+				return err
 			}
 			// The "extraPerms" set represents the post-install alterations of
 			// the permissions between the oldManifest and the current
