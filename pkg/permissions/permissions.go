@@ -353,6 +353,21 @@ func createAppSet(db prefixer.Prefixer, typ, docType, slug string, set Set) (*Pe
 func MergeExtraPermissions(perms, extraPermissions Set) (Set, error) {
 	var permissions Set
 
+	// Appending the extraPermissions which are not in the target permissions
+	for _, ep := range extraPermissions {
+		found := false
+		for _, p := range perms {
+			if ep.Title == p.Title {
+				found = true
+				break
+			}
+		}
+		if !found {
+			permissions = append(permissions, ep)
+		}
+	}
+
+	// Merging the rules already existing
 	for _, rule := range perms {
 		for _, newRule := range extraPermissions {
 			if rule.Title == newRule.Title {

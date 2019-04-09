@@ -217,8 +217,7 @@ func (ps Set) HasSameRules(other Set) bool {
 // permissions and now.
 //
 // TODO: We are ignoring removed values/verbs between rule 1 and rule 2.
-// - At the moment, it onlys show the added values & verbs
-// - It does not handle new rules added
+// - At the moment, it onlys show the added values, verbs and rules
 func Diff(set1, set2 Set) (Set, error) {
 	// If sets are the same, do not compute
 	if set1.HasSameRules(set2) {
@@ -226,6 +225,23 @@ func Diff(set1, set2 Set) (Set, error) {
 	}
 
 	newSet := Set{}
+
+	// Appending not existing rules
+	for _, r2 := range set2 {
+		found := false
+
+		for _, r := range set1 {
+			if r.Title == r2.Title {
+				// Rule exist
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			newSet = append(newSet, r2)
+		}
+	}
 
 	// Compare each key
 	for _, rule1 := range set1 {

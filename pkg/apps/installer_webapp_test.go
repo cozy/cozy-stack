@@ -206,6 +206,15 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 	// Altering permissions by adding a value and a verb
 	newPerms, err := permissions.UnmarshalScopeString("io.cozy.files:GET,POST:foobar,foobar2")
 	assert.NoError(t, err)
+
+	customRule := permissions.Rule{
+		Title:  "myCustomRule",
+		Verbs:  permissions.Verbs(permissions.PUT),
+		Type:   "io.cozy.custom",
+		Values: []string{"myCustomValue"},
+	}
+	newPerms = append(newPerms, customRule)
+
 	_, err = permissions.UpdateWebappSet(instance, "mini-test-perms", newPerms)
 	assert.NoError(t, err)
 
@@ -232,7 +241,6 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 	// Assert the rules were kept
 	assert.False(t, p2.Permissions.HasSameRules(man.Permissions()))
 	assert.True(t, p1.Permissions.HasSameRules(p2.Permissions))
-
 }
 
 func TestWebappUpgradeNotExist(t *testing.T) {
