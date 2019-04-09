@@ -1,5 +1,6 @@
 {{define "content"}}
 <mj-text mj-class="title content-medium">
+  <img src="https://downcloud.cozycloud.cc/upload/icon-archive.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
 	{{t "Notifications Disk Quota Subject"}}
 </mj-text>
 <mj-text mj-class="content-medium">
