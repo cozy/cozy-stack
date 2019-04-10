@@ -1110,6 +1110,7 @@ func passphraseResetForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
 		"Title":       instance.TemplateTitle(),
+		"CozyUI":      middlewares.CozyUI(instance),
 		"ThemeCSS":    middlewares.ThemeCSS(instance),
 		"Domain":      instance.ContextualDomain(),
 		"ContextName": instance.ContextName,
@@ -1201,6 +1202,7 @@ func passphraseRenewForm(c echo.Context) error {
 	}
 	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
 		"Title":                inst.TemplateTitle(),
+		"CozyUI":               middlewares.CozyUI(inst),
 		"ThemeCSS":             middlewares.ThemeCSS(inst),
 		"Domain":               inst.ContextualDomain(),
 		"ContextName":          inst.ContextName,
