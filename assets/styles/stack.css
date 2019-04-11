@@ -127,7 +127,10 @@ header a {
   height: 3rem;
   background: url('../images/cozy-bubble.svg') center center no-repeat;
 }
-header a.shield:after {
+header .shield {
+  position: relative;
+}
+header .shield:after {
   content: '';
   position: absolute;
   bottom: -15%;

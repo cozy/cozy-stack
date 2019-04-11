@@ -2,7 +2,7 @@
 <html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>{{.Title}}</title>
+    <title>Cozy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
     <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css"}}">
@@ -15,8 +15,12 @@
   <body>
     <main role="application">
       <section class="popup">
-        <header>
-          <a href="https://cozy.io" target="_blank" title="Cozy Website" class="shield"></a>
+        <header class="u-ta-center">
+          <span class="shield">
+            <span class="c-avatar c-avatar--large">
+              <img class="c-avatar-image" src="/public/avatar" alt="" />
+            </span>
+          </span>
         </header>
         <div class="container">
           <form method="POST" action="/auth/authorize/sharing" class="login auth">
@@ -53,8 +57,8 @@
               </ul>
             </div>
             <footer>
-              <div class="controls u-flex u-flex-wrap-reverse">
-                <button type="submit" class="u-flex-shrink-1 u-flex-grow-1 c-btn"><span><span>{{- t "Authorize Submit Sharing" -}}</span></span></button>
+              <div class="controls">
+                <button type="submit" class="c-btn c-btn--full wizard-button"><span><span>{{- t "Authorize Submit Sharing" -}}</span></span></button>
               </div>
             </footer>
           </form>
