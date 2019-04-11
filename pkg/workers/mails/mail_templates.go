@@ -130,24 +130,19 @@ func buildText(name, context, locale string, data map[string]interface{}) (strin
 
 func buildHTML(name string, layout string, ctx *jobs.WorkerContext, context, locale string, data map[string]interface{}) (string, error) {
 	buf := new(bytes.Buffer)
+
+	funcMap := template.FuncMap{"t": i18n.Translator(locale)}
+
+	// Local content
 	b, err := loadTemplate("/mails/"+name+".mjml", context)
 	if err != nil {
 		return "", err
 	}
-	funcMap := template.FuncMap{"t": i18n.Translator(locale)}
-
-	// First templating for translations
-	t, err := template.New("i18n").Funcs(funcMap).Parse(string(b))
-	i18nBuf := new(bytes.Buffer)
-	err = t.Execute(i18nBuf, data)
+	t, err := template.New("content").Funcs(funcMap).Parse(string(b))
 	if err != nil {
 		return "", err
 	}
-
-	t, err = template.New("content").Funcs(funcMap).Parse(i18nBuf.String())
-	if err != nil {
-		return "", err
-	}
+	// Global content
 	b, err = loadTemplate("/mails/"+layout+".mjml", context)
 	if err != nil {
 		return "", err
@@ -156,9 +151,23 @@ func buildHTML(name string, layout string, ctx *jobs.WorkerContext, context, loc
 	if err != nil {
 		return "", err
 	}
+
+	// Computing the i18n
+	tmpBuf := new(bytes.Buffer)
+	err = t.Execute(tmpBuf, data)
+	if err != nil {
+		return "", err
+	}
+	t, err = template.New("total").Parse(tmpBuf.String())
+	if err != nil {
+		return "", err
+	}
+
+	// Eventually execute the HTML mail
 	if err := t.Execute(buf, data); err != nil {
 		return "", err
 	}
+
 	html, err := execMjml(ctx, buf.Bytes())
 	if err != nil {
 		return "", err
