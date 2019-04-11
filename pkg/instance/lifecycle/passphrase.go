@@ -67,11 +67,16 @@ func RequestPassphraseReset(inst *instance.Instance) error {
 	resetURL := inst.PageURL("/auth/passphrase_renew", url.Values{
 		"token": {hex.EncodeToString(inst.PassphraseResetToken)},
 	})
+	publicName, err := inst.PublicName()
+	if err != nil {
+		return err
+	}
 	return SendMail(inst, &Mail{
 		TemplateName: "passphrase_reset",
 		TemplateValues: map[string]interface{}{
 			"BaseURL":             inst.PageURL("/", nil),
 			"PassphraseResetLink": resetURL,
+			"PublicName":          publicName,
 		},
 	})
 }
