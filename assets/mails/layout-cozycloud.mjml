@@ -14,4 +14,3 @@
 		<mj-footer locale="{{.Locale}}"></mj-footer>
 	</mj-body>
 </mjml>
-

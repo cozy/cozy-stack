@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
+	texttemplate "text/template"
 
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/jobs"
@@ -95,8 +96,16 @@ func buildText(name, context, locale string, data map[string]interface{}) (strin
 	if err != nil {
 		return "", err
 	}
-	funcMap := template.FuncMap{"t": i18n.Translator(locale)}
-	t, err := template.New("text").Funcs(funcMap).Parse(string(b))
+	funcMap := texttemplate.FuncMap{"t": i18n.Translator(locale)}
+	// First templating for translations
+	t, err := texttemplate.New("i18n").Funcs(funcMap).Parse(string(b))
+	i18nBuf := new(bytes.Buffer)
+	err = t.Execute(i18nBuf, data)
+	if err != nil {
+		return "", err
+	}
+
+	t, err = texttemplate.New("text").Funcs(funcMap).Parse(i18nBuf.String())
 	if err != nil {
 		return "", err
 	}
@@ -113,7 +122,16 @@ func buildHTML(name string, layout string, ctx *jobs.WorkerContext, context, loc
 		return "", err
 	}
 	funcMap := template.FuncMap{"t": i18n.Translator(locale)}
-	t, err := template.New("content").Funcs(funcMap).Parse(string(b))
+
+	// First templating for translations
+	t, err := template.New("i18n").Funcs(funcMap).Parse(string(b))
+	i18nBuf := new(bytes.Buffer)
+	err = t.Execute(i18nBuf, data)
+	if err != nil {
+		return "", err
+	}
+
+	t, err = template.New("content").Funcs(funcMap).Parse(i18nBuf.String())
 	if err != nil {
 		return "", err
 	}
