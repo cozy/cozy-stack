@@ -21,8 +21,10 @@
 <mj-text mj-class="content-medium">
 	{{t "Mail New Connection Outro"}}
 </mj-text>
-<mj-text mj-class="content-medium">
-	{{t "Mail Trouble Text"}}<br/>
-	{{.ChangePassphraseLink}}
+<mj-text mj-class="content-small">
+	{{t "Mail Trouble Text"}}
+</mj-text>
+<mj-text align="left" font-size="12px" mj-class="content-medium highlight">
+  {{.ChangePassphraseLink}}
 </mj-text>
 {{end}}

@@ -5,7 +5,8 @@
 	{{t "Mail Archive Subject"}}
 </mj-text>
 <mj-text mj-class="content-medium">
-	{{t "Mail Archive Intro"}}
+	{{t "Mail Archive Intro 1"}}<br />
+  {{t "Mail Archive Intro 2"}}
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{t "Mail Archive Button instruction"}}
@@ -13,8 +14,10 @@
 <mj-button href="{{.ArchiveLink}}" align="left" mj-class="primary-button content-xlarge">
 	{{t "Mail Archive Button text"}}
 </mj-button>
-<mj-text mj-class="content-medium">
-	{{t "Mail Trouble Text"}}<br/>
-	{{.ArchiveLink}}
+<mj-text mj-class="content-small">
+	{{t "Mail Trouble Text"}}
+</mj-text>
+<mj-text align="left" font-size="12px" mj-class="content-medium highlight">
+  {{.ArchiveLink}}
 </mj-text>
 {{end}}

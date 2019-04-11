@@ -22,8 +22,10 @@
 <mj-button href="{{.CozyDriveLink}}" align="left" mj-class="primary-button content-large">
 	{{t "Notifications Disk Quota free text"}}
 </mj-button>
-<mj-text mj-class="content-medium">
-	{{t "Mail Trouble Text"}}<br/>
-	{{.CozyDriveLink}}
+<mj-text mj-class="content-small">
+	{{t "Mail Trouble Text"}}
+</mj-text>
+<mj-text align="left" font-size="12px" mj-class="content-medium highlight">
+  {{.CozyDriveLink}}
 </mj-text>
 {{end}}

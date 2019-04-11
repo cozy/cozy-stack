@@ -4,7 +4,8 @@
 	{{t "Mail Reset Passphrase Subject"}}
 </mj-text>
 <mj-text mj-class="content-medium">
-	{{t "Mail Reset Passphrase Intro"}}
+	{{t "Mail Reset Passphrase Intro 1"}}<br />
+  {{t "Mail Reset Passphrase Intro 2"}}
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{t "Mail Reset Passphrase Button instruction"}}
@@ -15,8 +16,10 @@
 <mj-text mj-class="content-large">
 	{{t "Mail Reset Passphrase Outro"}}
 </mj-text>
-<mj-text mj-class="content-medium">
-	{{t "Mail Trouble Text"}}<br/>
+<mj-text mj-class="content-small">
+	{{t "Mail Trouble Text"}}
+</mj-text>
+<mj-text align="left" font-size="12px" mj-class="content-medium highlight">
 	{{.PassphraseResetLink}}
 </mj-text>
 {{end}}
