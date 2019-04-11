@@ -133,37 +133,61 @@ func buildHTML(name string, layout string, ctx *jobs.WorkerContext, context, loc
 
 	funcMap := template.FuncMap{"t": i18n.Translator(locale)}
 
-	// Local content
+	// The following HTML building will be done in several steps. We'll first
+	// translate the email content before applying the variables. The same
+	// pattern will be done for the layout section.
+	// The template package does not seem to be recursive for the underlyings
+	// evaluations.
+
 	b, err := loadTemplate("/mails/"+name+".mjml", context)
 	if err != nil {
 		return "", err
 	}
-	t, err := template.New("content").Funcs(funcMap).Parse(string(b))
+
+	// Content translated, but no variables evaluated
+	content := new(bytes.Buffer)
+	t1, err := template.New("content").Funcs(funcMap).Parse(string(b))
 	if err != nil {
 		return "", err
 	}
+	err = t1.Execute(content, data)
+	if err != nil {
+		return "", err
+	}
+
+	// Content translated with variables evaluated
+	t2, _ := template.New("content").Parse(content.String())
+	content.Reset()
+	err = t2.Execute(content, data)
+	if err != nil {
+		return "", err
+	}
+
+	tmpTemplate, err := template.New("content").Parse(content.String())
+
 	// Global content
+	// Content translated & evaluated
+	// Layout translated
+	tmpBuf := new(bytes.Buffer)
 	b, err = loadTemplate("/mails/"+layout+".mjml", context)
 	if err != nil {
 		return "", err
 	}
-	t, err = t.New("layout").Funcs(funcMap).Parse(string(b))
+	tmpTemplate, err = tmpTemplate.New("layout").Funcs(funcMap).Parse(string(b))
+	if err != nil {
+		return "", err
+	}
+	err = tmpTemplate.Execute(tmpBuf, data)
 	if err != nil {
 		return "", err
 	}
 
-	// Computing the i18n
-	tmpBuf := new(bytes.Buffer)
-	err = t.Execute(tmpBuf, data)
-	if err != nil {
-		return "", err
-	}
-	t, err = template.New("total").Parse(tmpBuf.String())
+	// Eventually execute the HTML mail by evaluating the layout variables
+	t, err := template.New("htmlMail").Parse(tmpBuf.String())
 	if err != nil {
 		return "", err
 	}
 
-	// Eventually execute the HTML mail
 	if err := t.Execute(buf, data); err != nil {
 		return "", err
 	}
