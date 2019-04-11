@@ -32,6 +32,9 @@ const (
 	ModeFrom = "from"
 )
 
+// DefaultLayout defines the default MJML layout to use
+const DefaultLayout = "layout"
+
 // var for testability
 var mailTemplater MailTemplater
 var sendMail = doSendMail
@@ -65,6 +68,7 @@ type Options struct {
 	TemplateValues map[string]interface{} `json:"template_values,omitempty"`
 	Attachments    []*Attachment          `json:"attachments,omitempty"`
 	Locale         string                 `json:"locale,omitempty"`
+	Layout         string                 `json:"layout,omitempty"`
 }
 
 // Part represent a part of the content of the mail. It has a type
@@ -154,10 +158,16 @@ func doSendMail(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 		toAddresses[i] = mail.FormatAddress(to.Email, to.Name)
 	}
 
+	// Defining the master layout which will wrap the content
+	layout := opts.Layout
+	if layout == "" {
+		layout = DefaultLayout
+	}
+
 	var parts []*Part
 	var err error
 	if opts.TemplateName != "" {
-		opts.Subject, parts, err = RenderMail(ctx, opts.TemplateName, opts.Locale, opts.RecipientName, opts.TemplateValues)
+		opts.Subject, parts, err = RenderMail(ctx, opts.TemplateName, layout, opts.Locale, opts.RecipientName, opts.TemplateValues)
 		if err != nil {
 			return err
 		}

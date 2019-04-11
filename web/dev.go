@@ -29,11 +29,16 @@ func devMailsHandler(c echo.Context) error {
 		recipientName = "Jean Dupont"
 	}
 
+	layout := c.QueryParam("layout")
+	if layout == "" {
+		layout = "layout"
+	}
+
 	data := devData(c)
 	j := &jobs.Job{JobID: "1", Domain: data["Domain"].(string)}
 	inst := middlewares.GetInstance(c)
 	ctx := jobs.NewWorkerContext("0", j, inst)
-	_, parts, err := mails.RenderMail(ctx, name, locale, recipientName, data)
+	_, parts, err := mails.RenderMail(ctx, name, layout, locale, recipientName, data)
 	if err != nil {
 		return err
 	}
