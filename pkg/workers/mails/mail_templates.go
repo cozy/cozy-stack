@@ -69,6 +69,19 @@ func (m MailTemplater) Execute(ctx *jobs.WorkerContext, name, layout, locale str
 	}
 
 	subject := i18n.Translate(subjectKey, locale)
+
+	// The subject may contains variables, we are going to ensure it is
+	// well-formatted by executing a template on it
+	buf := new(bytes.Buffer)
+	t, err := template.New("subject").Parse(subject)
+	if err != nil {
+		return "", nil, err
+	}
+	if err := t.Execute(buf, data); err != nil {
+		return "", nil, err
+	}
+	subject = buf.String()
+
 	context := ctx.Instance.ContextName
 	data["Locale"] = locale
 
