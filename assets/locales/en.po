@@ -555,12 +555,6 @@ msgstr "Someone"
 msgid "Sharing Empty description"
 msgstr "Surprise!"
 
-msgid "Sharing Hello recipient email"
-msgstr "Happy to see you %s!"
-
-msgid "Sharing Discovery URL help"
-msgstr "Please enter your Cozy URL to receive the sharing from %s"
-
 msgid "Sharing Discovery URL field"
 msgstr "URL"
 
@@ -587,15 +581,6 @@ msgstr "Forgotten the URL? Don't panic."
 
 msgid "Sharing Forgotten URL email"
 msgstr "Search your email inbox for \"Cozy\"."
-
-msgid "Sharing Feeling lost"
-msgstr "Feeling a bit lost?"
-
-msgid "Sharing Online help URL"
-msgstr "http://cozy-cloud-help.helpscoutdocs.com/article/113-a-is-for-cozy-address"
-
-msgid "Sharing Online help"
-msgstr "Try out online help."
 
 msgid "Notifications Disk Quota Subject"
 msgstr "You have currently reached 90% of your Cozy space."
