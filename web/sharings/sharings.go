@@ -519,6 +519,7 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 	publicName, _ := inst.PublicName()
 	return c.Render(code, "sharing_discovery.html", echo.Map{
 		"Title":         inst.TemplateTitle(),
+		"CozyUI":        middlewares.CozyUI(inst),
 		"ThemeCSS":      middlewares.ThemeCSS(inst),
 		"Domain":        inst.ContextualDomain(),
 		"ContextName":   inst.ContextName,
