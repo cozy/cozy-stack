@@ -61,11 +61,15 @@ function checkBrowser() {
     (~ua.indexOf("safari") && !~ua.indexOf("chrome")) ||
     Object.prototype.toString.call(window.HTMLElement).indexOf("Constructor") >
       0;
+  const isIOS =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isIOS122 = isIOS && (ua.includes("os 12_2") || ua.includes("os 12_3"));
   return {
     isOpera,
     isFirefox: typeof InstallTrigger !== "undefined",
     isSafari,
-    isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
+    isIOS,
+    isIOS122,
     isChrome: !!window.chrome && !isOpera
   };
 }
@@ -77,9 +81,9 @@ function check(uri, failCb) {
   } else {
     const browser = checkBrowser();
 
-    if (browser.isChrome || browser.isIOS) {
+    if (browser.isChrome || (browser.isIOS && !browser.isIOS122)) {
       openUriWithTimeoutHack(uri, failCb);
-    } else if (browser.isSafari || browser.isFirefox) {
+    } else if ((browser.isSafari && !browser.isIOS122) || browser.isFirefox) {
       openUriWithHiddenFrame(uri, failCb);
     } else {
       failCb();
