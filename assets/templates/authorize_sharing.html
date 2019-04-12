@@ -2,10 +2,9 @@
 <html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>Cozy</title>
+    <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
-    <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css"}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css" .ContextName}}">
     {{.CozyUI}}
     {{.ThemeCSS}}
     <link rel="apple-touch-icon" sizes="180x180" href="{{asset .Domain "/apple-touch-icon.png" .ContextName}}">
