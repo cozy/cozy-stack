@@ -1,6 +1,7 @@
 package permissions
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -132,4 +133,29 @@ func (r Rule) TranslationKey() string {
 		// TODO a specific folder (io.cozy.files)
 	}
 	return "Permissions " + r.Type
+}
+
+// Merge merges the rule2 in rule1
+// Rule1 name & description are kept
+func (r Rule) Merge(r2 Rule) (*Rule, error) {
+	if r.Type != r2.Type {
+		return nil, fmt.Errorf("Cannot merge these rules, type is different")
+	}
+
+	newRule := &r
+
+	// Verbs
+	for verb, content := range r2.Verbs {
+		if !newRule.Verbs.Contains(verb) {
+			newRule.Verbs[verb] = content
+		}
+	}
+
+	for _, value := range r2.Values {
+		if !newRule.ValuesContain(value) {
+			newRule.Values = append(newRule.Values, value)
+		}
+	}
+
+	return newRule, nil
 }

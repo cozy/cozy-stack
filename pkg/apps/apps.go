@@ -56,7 +56,7 @@ type Manifest interface {
 	ReadManifest(i io.Reader, slug, sourceURL string) (Manifest, error)
 
 	Create(db prefixer.Prefixer) error
-	Update(db prefixer.Prefixer) error
+	Update(db prefixer.Prefixer, extraPerms permissions.Set) error
 	Delete(db prefixer.Prefixer) error
 
 	AppType() consts.AppType

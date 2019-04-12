@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/registry"
@@ -390,8 +391,32 @@ func (i *Installer) update() error {
 		availableVersion = newManifest.Version()
 	}
 
+	extraPerms := permissions.Set{}
 	if makeUpdate {
 		i.man = newManifest
+
+		var alteredPerms *permissions.Permission
+
+		inst, err := instance.GetFromCouch(i.Domain())
+		if err == nil {
+			// Check if perms were added on the old manifest
+			if i.man.AppType() == consts.WebappType {
+				alteredPerms, err = permissions.GetForWebapp(inst, i.man.Slug())
+			} else if i.man.AppType() == consts.KonnectorType {
+				alteredPerms, err = permissions.GetForKonnector(inst, i.man.Slug())
+			}
+			if err != nil {
+				return err
+			}
+			// The "extraPerms" set represents the post-install alterations of
+			// the permissions between the oldManifest and the current
+			// permissions
+			extraPerms, err = permissions.Diff(oldManifest.Permissions(), alteredPerms.Permissions)
+			if err != nil {
+				return err
+			}
+		}
+
 		i.sendRealtimeEvent()
 		i.notifyChannel()
 		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
@@ -408,7 +433,7 @@ func (i *Installer) update() error {
 		i.notifyChannel()
 	}
 
-	return i.man.Update(i.db)
+	return i.man.Update(i.db, extraPerms)
 }
 
 func (i *Installer) notifyChannel() {

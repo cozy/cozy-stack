@@ -937,7 +937,7 @@ func authorizeApp(c echo.Context) error {
 	}
 
 	app.SetState(apps.Ready)
-	err = app.Update(instance)
+	err = app.Update(instance, nil)
 	if err != nil {
 		msg := instance.Translate("Could not activate application: %s", err.Error())
 		return renderError(c, http.StatusUnauthorized, msg)

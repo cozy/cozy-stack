@@ -298,7 +298,7 @@ func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 }
 
 // Update is part of the Manifest interface
-func (m *WebappManifest) Update(db prefixer.Prefixer) error {
+func (m *WebappManifest) Update(db prefixer.Prefixer, extraPerms permissions.Set) error {
 	if err := diffServices(db, m.Slug(), m.oldServices, m.Services); err != nil {
 		return err
 	}
@@ -306,7 +306,19 @@ func (m *WebappManifest) Update(db prefixer.Prefixer) error {
 	if err := couchdb.UpdateDoc(db, m); err != nil {
 		return err
 	}
-	_, err := permissions.UpdateWebappSet(db, m.Slug(), m.Permissions())
+
+	var err error
+	perms := m.Permissions()
+
+	// Merging the potential extra permissions
+	if extraPerms != nil {
+		perms, err = permissions.MergeExtraPermissions(perms, extraPerms)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = permissions.UpdateWebappSet(db, m.Slug(), perms)
 	return err
 }
 
