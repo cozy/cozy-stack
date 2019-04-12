@@ -108,6 +108,7 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 		TemplateName:   "sharing_request",
 		TemplateValues: mailValues,
 		RecipientName:  addr.Name,
+		Layout:         "layout-cozycloud",
 	})
 	if err != nil {
 		return err
