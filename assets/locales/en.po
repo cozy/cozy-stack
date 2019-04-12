@@ -105,11 +105,15 @@ msgstr "Your Cozy has not been yet activated. Check your email and click on the 
 msgid "Onboarding Not activated Contact us"
 msgstr "Are you lost ? Feel free to contact us at"
 
+msgid "Passphrase reset Title"
+msgstr "Forgotten password"
+
 msgid "Passphrase reset Help"
-msgstr "Are you sure you want to reset your password?"
+msgstr ""
+"By clicking this button, you will be sent a link by email to choose a new password."
 
 msgid "Passphrase reset Submit"
-msgstr "Reset password"
+msgstr "Next"
 
 msgid "Passphrase is reset Title"
 msgstr "Check your emails !"
@@ -131,14 +135,17 @@ msgstr ""
 msgid "Passphrase is reset Login Button"
 msgstr "Return to the login page"
 
+msgid "Passphrase renew Title"
+msgstr "Choose a new password"
+
 msgid "Passphrase renew Help"
-msgstr "Enter a new password"
+msgstr "Use at least eight characters with letters, digits and symbols."
 
 msgid "Passphrase renew Field"
 msgstr "password"
 
 msgid "Passphrase renew Submit"
-msgstr "Renew password"
+msgstr "Save"
 
 msgid "Login Forgot password"
 msgstr "I forgot my password"

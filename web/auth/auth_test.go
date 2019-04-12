@@ -1428,7 +1428,7 @@ func TestPassphraseResetLoggedIn(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "200 OK", res.Status)
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), `Are you sure`)
+	assert.Contains(t, string(body), `you will be sent a link by email to choose a new pass`)
 	assert.Contains(t, string(body), `<input type="hidden" name="csrf_token"`)
 }
 

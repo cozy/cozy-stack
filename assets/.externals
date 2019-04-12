@@ -19,8 +19,8 @@ url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.14.2/dist/cozy-
 sha256  290d9610010534cdc8454424825b29913303579b6ab63181100f84713439c0a5
 
 name    ./css/cozy-ui.min.css
-url     https://unpkg.com/cozy-ui@19.6.0/dist/cozy-ui.min.css
-sha256  a3d7f4b5a805e19fb3488719b654e6b4760a829bc09f0025ac3f4a2eaa3e5828
+url     https://unpkg.com/cozy-ui@19.22.0/dist/cozy-ui.min.css
+sha256  2fe34fe5d0dc7e2657829c22af38590048c099c77ef6af390c73f0ec4d31b329
 
 name    ./js/cozy-bar.min.js
 url     https://unpkg.com/cozy-bar@6.21.6/dist/cozy-bar.min.js
