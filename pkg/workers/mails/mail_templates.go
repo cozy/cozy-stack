@@ -112,6 +112,9 @@ func buildText(name, context, locale string, data map[string]interface{}) (strin
 	funcMap := texttemplate.FuncMap{"t": i18n.Translator(locale)}
 	// First templating for translations
 	t, err := texttemplate.New("i18n").Funcs(funcMap).Parse(string(b))
+	if err != nil {
+		return "", err
+	}
 	i18nBuf := new(bytes.Buffer)
 	err = t.Execute(i18nBuf, data)
 	if err != nil {
@@ -164,6 +167,9 @@ func buildHTML(name string, layout string, ctx *jobs.WorkerContext, context, loc
 	}
 
 	tmpTemplate, err := template.New("content").Parse(content.String())
+	if err != nil {
+		return "", err
+	}
 
 	// Global content
 	// Content translated & evaluated
