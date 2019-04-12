@@ -286,8 +286,7 @@ func TestDiscovery(t *testing.T) {
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), "Happy to see you Bob!")
-	assert.Contains(t, string(body), "Please enter your Cozy URL to receive the sharing from Alice")
+	assert.Contains(t, string(body), "Connect to your Cozy")
 	assert.Contains(t, string(body), `<input id="url" name="url"`)
 	assert.Contains(t, string(body), `<input type="hidden" name="state" value="`+state)
 

@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
     {{.CozyUI}}
     {{.ThemeCSS}}
     <link rel="apple-touch-icon" sizes="180x180" href="{{asset .Domain "/apple-touch-icon.png" .ContextName}}">
@@ -23,8 +22,8 @@
             <input type="hidden" name="sharecode" value="{{.ShareCode}}" />
             <h1 class="wizard-title u-mb-half u-mb-0-s u-mt-1-s">{{t "Sharing Connect to Cozy"}}</h1>
             <div class="o-field">
-              <label  class="c-label" for="URL"> {{t "Sharing Discovery URL field"}}</label>
-              <input class="wizard-input c-input-text" id="url" name="url" placeholder="{{t "Sharing Discovery URL placeholder"}}" type="text" autofocus="true" value="{{.RecipientCozy}}" />
+              <label class="c-label" for="URL"> {{t "Sharing Discovery URL field"}}</label>
+              <input id="url" name="url" class="wizard-input c-input-text" placeholder="{{t "Sharing Discovery URL placeholder"}}" type="text" autofocus="true" value="{{.RecipientCozy}}" />
             </div>
           </div>
           <footer class="wizard-footer">
