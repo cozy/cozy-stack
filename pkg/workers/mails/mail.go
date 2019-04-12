@@ -166,6 +166,12 @@ func doSendMail(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 
 	var parts []*Part
 	var err error
+
+	// Force the domain if it does not exist
+	if _, ok := opts.TemplateValues["Domain"]; !ok {
+		opts.TemplateValues["Domain"] = ctx.Instance.Domain
+	}
+
 	if opts.TemplateName != "" {
 		opts.Subject, parts, err = RenderMail(ctx, opts.TemplateName, layout, opts.Locale, opts.RecipientName, opts.TemplateValues)
 		if err != nil {
