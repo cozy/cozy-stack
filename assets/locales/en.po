@@ -432,7 +432,7 @@ msgid "Mail Cozy Team"
 msgstr "The Cozy Cloud Team"
 
 msgid "Mail Reset Passphrase Subject"
-msgstr "Reset your Cozy password"
+msgstr "Reset your password"
 
 msgid "Mail Reset Passphrase Intro 1"
 msgstr "Hello {{.PublicName}},"
