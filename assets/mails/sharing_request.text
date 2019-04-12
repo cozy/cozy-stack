@@ -2,6 +2,6 @@
 
 {{t "Mail Sharing Request Intro"}}
 
-{{t "Mail Sharing Request Button Description 1"}} {{.Description}} {{t "Mail Sharing Request Description 2"}}
+{{t "Mail Sharing Request Description 1"}} {{.Description}} {{t "Mail Sharing Request Description 2"}}
 
 {{.SharingLink}}
