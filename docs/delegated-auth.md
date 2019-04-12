@@ -37,7 +37,9 @@ authentication:
       authorize_url: https://identity-prodiver/path/to/authorize
       token_url: https://identity-prodiver/path/to/token
       userinfo_url: https://identity-prodiver/path/to/userinfo
-      userinfo_instance_field: cozy
+      userinfo_instance_field: cozy_number
+      userinfo_instance_prefix: name
+      userinfo_instance_suffix: .mycozy.cloud
 ```
 
 Let's see what it means:
@@ -62,7 +64,7 @@ redirect him/her to the identity provider with the rights parameter.
 
 ```http
 GET /oidc/start HTTP/1.1
-Host: example.mycozy.cloud
+Host: name00001.mycozy.cloud
 ```
 
 ```http
@@ -84,7 +86,7 @@ Host: oauthcallback.mycozy.cloud
 
 ```http
 HTTP/1.1 303 See Other
-Location: https://example.mycozy.cloud/oidc/login?state=9f6873dfce7d&code=ccd0032a
+Location: https://name00001.mycozy.cloud/oidc/login?state=9f6873dfce7d&code=ccd0032a
 ```
 
 ### GET /oidc/login
@@ -93,13 +95,13 @@ On this route, the stack can create the session for the user, with the cookies.
 
 ```http
 GET /oidc/login?state=9f6873dfce7d&code=ccd0032a HTTP/1.1
-Host: example.mycozy.cloud
+Host: name00001.mycozy.cloud
 ```
 
 ```http
 HTTP/1.1 303 See Other
 Set-Cookie: ...
-Location: https://example-home.mycozy.cloud/
+Location: https://name00001-home.mycozy.cloud/
 ```
 
 ### POST /oidc/access_token
@@ -111,7 +113,7 @@ OpenID Connect Identity Provider.
 
 ```http
 POST /oidc/access_token HTTP/1.1
-Host: example.mycozy.cloud
+Host: name00001.mycozy.cloud
 Accept: application/json
 Content-Type: application/json
 ```

@@ -26,13 +26,11 @@ func Start(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, err := getConfig(inst.ContextName)
 	if err != nil {
-		redirect := inst.DefaultRedirection()
-		return c.Redirect(http.StatusSeeOther, redirect.String())
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
 	u, err := makeStartURL(inst, conf)
 	if err != nil {
-		redirect := inst.DefaultRedirection()
-		return c.Redirect(http.StatusSeeOther, redirect.String())
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
 	return c.Redirect(http.StatusSeeOther, u)
 }
@@ -109,14 +107,16 @@ func Login(c echo.Context) error {
 // Config is the config to log in a user with an OpenID Connect identity
 // provider.
 type Config struct {
-	ClientID      string
-	ClientSecret  string
-	Scope         string
-	RedirectURI   string
-	AuthorizeURL  string
-	TokenURL      string
-	UserInfoURL   string
-	UserInfoField string
+	ClientID       string
+	ClientSecret   string
+	Scope          string
+	RedirectURI    string
+	AuthorizeURL   string
+	TokenURL       string
+	UserInfoURL    string
+	UserInfoField  string
+	UserInfoPrefix string
+	UserInfoSuffix string
 }
 
 func getConfig(context string) (*Config, error) {
@@ -130,6 +130,7 @@ func getConfig(context string) (*Config, error) {
 		return nil, errors.New("No OIDC is configured for this context")
 	}
 
+	/* Mandatory fields */
 	clientID, ok := oidc["client_id"].(string)
 	if !ok {
 		return nil, errors.New("The client_id is missing for this context")
@@ -163,15 +164,21 @@ func getConfig(context string) (*Config, error) {
 		return nil, errors.New("The userinfo_instance_field is missing for this context")
 	}
 
+	/* Optional fields */
+	userInfoPrefix, _ := oidc["userinfo_instance_prefix"].(string)
+	userInfoSuffix, _ := oidc["userinfo_instance_suffix"].(string)
+
 	config := &Config{
-		ClientID:      clientID,
-		ClientSecret:  clientSecret,
-		Scope:         scope,
-		RedirectURI:   redirectURI,
-		AuthorizeURL:  authorizeURL,
-		TokenURL:      tokenURL,
-		UserInfoURL:   userInfoURL,
-		UserInfoField: userInfoField,
+		ClientID:       clientID,
+		ClientSecret:   clientSecret,
+		Scope:          scope,
+		RedirectURI:    redirectURI,
+		AuthorizeURL:   authorizeURL,
+		TokenURL:       tokenURL,
+		UserInfoURL:    userInfoURL,
+		UserInfoField:  userInfoField,
+		UserInfoPrefix: userInfoPrefix,
+		UserInfoSuffix: userInfoSuffix,
 	}
 	return config, nil
 }
@@ -264,7 +271,9 @@ func getDomainFromUserInfo(conf *Config, token string) (string, error) {
 		return "", err
 	}
 	if domain, ok := out[conf.UserInfoField].(string); ok {
-		return domain, nil
+		domain = strings.Replace(domain, "-", "", -1) // We don't want - in cozy instance
+		domain = strings.ToLower(domain)              // The domain is case insensitive
+		return conf.UserInfoPrefix + domain + conf.UserInfoSuffix, nil
 	}
 	return "", errors.New("No domain was found")
 }
