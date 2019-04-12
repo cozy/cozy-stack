@@ -439,7 +439,7 @@ msgid "Mail Cozy Team"
 msgstr "The Cozy Cloud Team"
 
 msgid "Mail Reset Passphrase Subject"
-msgstr "Reset your Cozy password"
+msgstr "Reset your password"
 
 msgid "Mail Reset Passphrase Intro"
 msgstr "Forgot your password? No worries, let's get you a new one!"
