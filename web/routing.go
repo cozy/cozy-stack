@@ -53,7 +53,7 @@ const (
 	// in the CSP. We are using iframes on these custom protocols to open
 	// deeplinks to them and have a fallback if the mobile apps are not
 	// available.
-	cspFrameSrcWhiteList = "cozydrive: cozybanks:"
+	cspFrameSrcWhiteList = "cozydrive: cozybanks: cozybanksorange: cozybanksmaif:"
 )
 
 var hstsMaxAge = 365 * 24 * time.Hour // 1 year
