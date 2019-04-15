@@ -15,6 +15,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -292,6 +294,99 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 	})
 }
 
+func accessToken(c echo.Context) error {
+	var reqBody struct {
+		Scope     string `json:"scope,omitempty"`
+		OIDCToken string `json:"oidc_token"`
+	}
+	err := c.Bind(&reqBody)
+	if err != nil {
+		return err
+	}
+	inst := middlewares.GetInstance(c)
+
+	conf, err := getConfig(inst.ContextName)
+	if err != nil {
+		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
+	}
+
+	// Check the token from the remote URL.
+	domain, err := getDomainFromUserInfo(conf, reqBody.OIDCToken)
+	if err != nil {
+		return err
+	}
+	if domain != inst.Domain {
+		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
+		return renderError(c, inst, http.StatusBadRequest, "Sorry, the cozy was not found.")
+	}
+
+	// Find or create the client
+	newClient := &oauth.Client{
+		ClientName:   "OIDC Client",
+		SoftwareID:   "oidc_client",
+		RedirectURIs: []string{inst.DefaultRedirection().String()},
+	}
+
+	client, err := oauth.FindClientBySoftwareID(inst, "oidc_client")
+	if err != nil {
+		errc := newClient.Create(inst)
+		if errc != nil {
+			return err
+		}
+		client, err = oauth.FindClientBySoftwareID(inst, "oidc_client")
+	}
+
+	// Set the scope
+	scope := reqBody.Scope
+	isLinkedApp := auth.IsLinkedApp(client.SoftwareID)
+
+	if scope == "" && !isLinkedApp {
+		return renderError(c, inst, http.StatusBadRequest, "Sorry, the scope is invalid")
+	}
+
+	if isLinkedApp {
+		// Get the scope from the app
+		slug := auth.GetLinkedAppSlug(client.SoftwareID)
+		_, err := auth.GetLinkedApp(inst, slug)
+		if err != nil {
+			return err
+		}
+		scope = auth.BuildLinkedAppScope(slug)
+	}
+
+	// Generate its access/refresh tokens
+	accessToken, err := client.CreateJWT(inst, permissions.AccessTokenAudience, scope)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate access token",
+		})
+	}
+	refreshToken, err := client.CreateJWT(inst, permissions.RefreshTokenAudience, scope)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate refresh token",
+		})
+	}
+
+	// Build the returned data
+	type accessTokenReponse struct {
+		Type     string `json:"token_type"`
+		Scope    string `json:"scope"`
+		Access   string `json:"access_token"`
+		Refresh  string `json:"refresh_token,omitempty"`
+		Instance string `json:"instance"`
+	}
+	out := accessTokenReponse{
+		Type:     "bearer",
+		Scope:    scope,
+		Access:   accessToken,
+		Refresh:  refreshToken,
+		Instance: domain,
+	}
+
+	return c.JSON(http.StatusOK, out)
+}
+
 // Routes setup routing for OpenID Connect routes.
 // Careful, the normal middlewares NeedInstance and LoadSession are not applied
 // to this group in web/routing
@@ -299,4 +394,5 @@ func Routes(router *echo.Group) {
 	router.GET("/start", Start, middlewares.NeedInstance)
 	router.GET("/redirect", Redirect)
 	router.GET("/login", Login, middlewares.NeedInstance)
+	router.POST("/access_token", accessToken, middlewares.NeedInstance)
 }
