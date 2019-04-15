@@ -1170,6 +1170,7 @@ func passphraseReset(c echo.Context) error {
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
 		"Title":       i.TemplateTitle(),
+		"CozyUI":      middlewares.CozyUI(i),
 		"ThemeCSS":    middlewares.ThemeCSS(i),
 		"Domain":      i.ContextualDomain(),
 		"ContextName": i.ContextName,
