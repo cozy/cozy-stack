@@ -8,6 +8,8 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -129,6 +131,116 @@ func TestWebappInstallSuccessful(t *testing.T) {
 	})
 	assert.Nil(t, inst2)
 	assert.Equal(t, apps.ErrAlreadyExists, err)
+}
+
+func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
+	manifest1 := func() string {
+		return ` {
+"description": "A mini app to test cozy-stack-v2",
+"developer": {
+	"name": "Cozy",
+	"url": "cozy.io"
+},
+"license": "MIT",
+"name": "mini-app",
+"permissions": {
+  "rule0": {
+	"type": "io.cozy.files",
+	"verbs": ["GET"],
+	"values": ["foobar"]
+  }
+},
+"slug": "mini-test-perms",
+"type": "webapp",
+"version": "1.0.0"
+}`
+	}
+
+	manifest2 := func() string {
+		return ` {
+"description": "A mini app to test cozy-stack-v2",
+"developer": {
+	"name": "Cozy",
+	"url": "cozy.io"
+},
+"license": "MIT",
+"name": "mini-app",
+"permissions": {
+	"rule0": {
+		"type": "io.cozy.files",
+		"verbs": ["GET"],
+		"values": ["foobar"]
+	}
+},
+"slug": "mini-test-perms",
+"type": "webapp",
+"version": "2.0.0"
+}`
+	}
+	manGen = manifest1
+	manName = apps.WebappManifestName
+	finished := true
+
+	instance, err := lifecycle.Create(&lifecycle.Options{
+		Domain:             "test-keep-perms",
+		OnboardingFinished: &finished,
+	})
+	assert.NoError(t, err)
+
+	defer lifecycle.Destroy("test-keep-perms")
+
+	inst, err := apps.NewInstaller(instance, fs, &apps.InstallerOptions{
+		Operation: apps.Install,
+		Type:      consts.WebappType,
+		Slug:      "mini-test-perms",
+		SourceURL: "git://localhost/",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	man, err := inst.RunSync()
+	assert.NoError(t, err)
+	assert.Contains(t, man.Version(), "1.0.0")
+
+	// Altering permissions by adding a value and a verb
+	newPerms, err := permissions.UnmarshalScopeString("io.cozy.files:GET,POST:foobar,foobar2")
+	assert.NoError(t, err)
+
+	customRule := permissions.Rule{
+		Title:  "myCustomRule",
+		Verbs:  permissions.Verbs(permissions.PUT),
+		Type:   "io.cozy.custom",
+		Values: []string{"myCustomValue"},
+	}
+	newPerms = append(newPerms, customRule)
+
+	_, err = permissions.UpdateWebappSet(instance, "mini-test-perms", newPerms)
+	assert.NoError(t, err)
+
+	p1, err := permissions.GetForWebapp(instance, "mini-test-perms")
+	assert.NoError(t, err)
+	assert.False(t, p1.Permissions.HasSameRules(man.Permissions()))
+
+	// Update the app
+	manGen = manifest2
+	inst2, err := apps.NewInstaller(instance, fs, &apps.InstallerOptions{
+		Operation: apps.Update,
+		Type:      consts.WebappType,
+		Slug:      "mini-test-perms",
+		SourceURL: "git://localhost/",
+	})
+	assert.NoError(t, err)
+
+	man, err = inst2.RunSync()
+	assert.NoError(t, err)
+
+	p2, err := permissions.GetForWebapp(instance, "mini-test-perms")
+	assert.NoError(t, err)
+	assert.Contains(t, man.Version(), "2.0.0")
+	// Assert the rules were kept
+	assert.False(t, p2.Permissions.HasSameRules(man.Permissions()))
+	assert.True(t, p1.Permissions.HasSameRules(p2.Permissions))
 }
 
 func TestWebappUpgradeNotExist(t *testing.T) {
