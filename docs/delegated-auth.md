@@ -24,7 +24,7 @@ will be logged in, and redirected to its default application.
 
 ## Open ID Connect
 
-For OpenID Connect, there is a more configuration parameters:
+For OpenID Connect, there are more configuration parameters:
 
 ```yaml
 authentication:
@@ -37,7 +37,10 @@ authentication:
       authorize_url: https://identity-prodiver/path/to/authorize
       token_url: https://identity-prodiver/path/to/token
       userinfo_url: https://identity-prodiver/path/to/userinfo
-      userinfo_instance_field: cozy
+      userinfo_instance_field: cozy_number
+      userinfo_instance_prefix: name
+      userinfo_instance_suffix: .mycozy.cloud
+      allow_oauth_token: false
 ```
 
 Let's see what it means:
@@ -62,7 +65,7 @@ redirect him/her to the identity provider with the rights parameter.
 
 ```http
 GET /oidc/start HTTP/1.1
-Host: example.mycozy.cloud
+Host: name00001.mycozy.cloud
 ```
 
 ```http
@@ -84,7 +87,7 @@ Host: oauthcallback.mycozy.cloud
 
 ```http
 HTTP/1.1 303 See Other
-Location: https://example.mycozy.cloud/oidc/login?state=9f6873dfce7d&code=ccd0032a
+Location: https://name00001.mycozy.cloud/oidc/login?state=9f6873dfce7d&code=ccd0032a
 ```
 
 ### GET /oidc/login
@@ -92,12 +95,52 @@ Location: https://example.mycozy.cloud/oidc/login?state=9f6873dfce7d&code=ccd003
 On this route, the stack can create the session for the user, with the cookies.
 
 ```http
-GET /oidc/login?state=9f6873dfce7d&code=ccd0032a HTTP/1.1
-Host: example.mycozy.cloud
+GET /oidc/login?code=ccd0032a HTTP/1.1
+Host: name00001.mycozy.cloud
 ```
 
 ```http
 HTTP/1.1 303 See Other
 Set-Cookie: ...
-Location: https://example-home.mycozy.cloud/
+Location: https://name00001-home.mycozy.cloud/
+```
+
+If the `allow_oauth_token` option is enabled, it's possible to use an
+access_token instead of code on this URL.
+
+### POST /oidc/access_token
+
+This additional route can be used by an OAuth client when delegated
+authentication via OpenID Connect is enabled. It allows the client to obtain an
+`access_token` for requesting the cozy-stack in exchange of a token valid on the
+OpenID Connect Identity Provider.
+
+```http
+POST /oidc/access_token HTTP/1.1
+Host: name00001.mycozy.cloud
+Accept: application/json
+Content-Type: application/json
+```
+
+```json
+{
+  "client_id": "55eda056e85468fdfe2c8440d4009cbe",
+  "client_secret": "DttCGIUOTniVNkivR_CsZ_xRoME9gghN",
+  "scope": "io.cozy.files io.cozy.photos.albums",
+  "oidc_token": "769fa760-59de-11e9-a167-9bab3784e3e7"
+}
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "access_token": "ooch1Yei",
+  "token_type": "bearer",
+  "refresh_token": "ui0Ohch8",
+  "scope": "io.cozy.files io.cozy.photos.albums"
+}
 ```

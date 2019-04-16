@@ -964,7 +964,7 @@ func getApp(c echo.Context, instance *instance.Instance, slug string) (apps.Mani
 	return app, true, nil
 }
 
-type accessTokenReponse struct {
+type AccessTokenReponse struct {
 	Type    string `json:"token_type"`
 	Scope   string `json:"scope"`
 	Access  string `json:"access_token"`
@@ -1008,7 +1008,7 @@ func accessToken(c echo.Context) error {
 			"error": "invalid client_secret",
 		})
 	}
-	out := accessTokenReponse{
+	out := AccessTokenReponse{
 		Type: "bearer",
 	}
 

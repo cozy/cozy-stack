@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -12,9 +13,12 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -26,13 +30,11 @@ func Start(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, err := getConfig(inst.ContextName)
 	if err != nil {
-		redirect := inst.DefaultRedirection()
-		return c.Redirect(http.StatusSeeOther, redirect.String())
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
 	u, err := makeStartURL(inst, conf)
 	if err != nil {
-		redirect := inst.DefaultRedirection()
-		return c.Redirect(http.StatusSeeOther, redirect.String())
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
 	return c.Redirect(http.StatusSeeOther, u)
 }
@@ -63,26 +65,25 @@ func Redirect(c echo.Context) error {
 
 // Login checks that the OpenID Connect has been sucessful and logs in the user.
 func Login(c echo.Context) error {
-	code := c.QueryParam("code")
-	stateID := c.QueryParam("state")
-	state := getStorage().Find(stateID)
-	if state == nil {
-		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
-	}
-	inst, err := lifecycle.GetInstance(state.Instance)
-	if err != nil {
-		return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
-	}
+	inst := middlewares.GetInstance(c)
 	conf, err := getConfig(inst.ContextName)
 	if err != nil {
 		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
 	}
 
-	token, err := getToken(conf, code)
-	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
-		return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
+	var token string
+	if conf.AllowOAuthToken {
+		token = c.QueryParam("access_token")
 	}
+	if token == "" {
+		code := c.QueryParam("code")
+		token, err = getToken(conf, code)
+		if err != nil {
+			logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
+			return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
+		}
+	}
+
 	domain, err := getDomainFromUserInfo(conf, token)
 	if err != nil {
 		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
@@ -93,7 +94,6 @@ func Login(c echo.Context) error {
 		return renderError(c, inst, http.StatusBadRequest, "Sorry, the cozy was not found.")
 	}
 
-	c.Set("instance", inst)
 	sessionID, err := auth.SetCookieForNewSession(c, false)
 	if err != nil {
 		return err
@@ -106,17 +106,108 @@ func Login(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 
+// AccessToken delivers an access_token and a refresh_token if the client gives
+// a valid token for OIDC.
+func AccessToken(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	conf, err := getConfig(inst.ContextName)
+	if err != nil || !conf.AllowOAuthToken {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "this endpoint is not enabled",
+		})
+	}
+
+	var reqBody struct {
+		ClientID     string `json:"client_id"`
+		ClientSecret string `json:"client_secret"`
+		Scope        string `json:"scope"`
+		OIDCToken    string `json:"oidc_token"`
+	}
+	if err = c.Bind(&reqBody); err != nil {
+		return err
+	}
+
+	// Check the token from the remote URL.
+	domain, err := getDomainFromUserInfo(conf, reqBody.OIDCToken)
+	if err != nil {
+		logger.WithNamespace("oidc").Errorf("Error from the Identity Provider: %s", err)
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the Identity Provider didn't respond",
+		})
+	}
+	if domain != inst.Domain {
+		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the oidc_token is invalid",
+		})
+	}
+
+	// Load the OAuth client
+	client, err := oauth.FindClient(inst, reqBody.ClientID)
+	if err != nil {
+		if couchErr, isCouchErr := couchdb.IsCouchError(err); isCouchErr && couchErr.StatusCode >= 500 {
+			return err
+		}
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the client must be registered",
+		})
+	}
+	if subtle.ConstantTimeCompare([]byte(reqBody.ClientSecret), []byte(client.ClientSecret)) == 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid client_secret",
+		})
+	}
+
+	// Prepare the scope
+	out := auth.AccessTokenReponse{
+		Type:  "bearer",
+		Scope: reqBody.Scope,
+	}
+	if auth.IsLinkedApp(client.SoftwareID) {
+		slug := auth.GetLinkedAppSlug(client.SoftwareID)
+		if err := auth.CheckLinkedAppInstalled(inst, slug); err != nil {
+			return err
+		}
+		out.Scope = auth.BuildLinkedAppScope(slug)
+	}
+	if out.Scope == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid scope",
+		})
+	}
+
+	// Generate the access/refresh tokens
+	accessToken, err := client.CreateJWT(inst, permissions.AccessTokenAudience, out.Scope)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate access token",
+		})
+	}
+	out.Access = accessToken
+	refreshToken, err := client.CreateJWT(inst, permissions.RefreshTokenAudience, out.Scope)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate refresh token",
+		})
+	}
+	out.Refresh = refreshToken
+	return c.JSON(http.StatusOK, out)
+}
+
 // Config is the config to log in a user with an OpenID Connect identity
 // provider.
 type Config struct {
-	ClientID      string
-	ClientSecret  string
-	Scope         string
-	RedirectURI   string
-	AuthorizeURL  string
-	TokenURL      string
-	UserInfoURL   string
-	UserInfoField string
+	AllowOAuthToken bool
+	ClientID        string
+	ClientSecret    string
+	Scope           string
+	RedirectURI     string
+	AuthorizeURL    string
+	TokenURL        string
+	UserInfoURL     string
+	UserInfoField   string
+	UserInfoPrefix  string
+	UserInfoSuffix  string
 }
 
 func getConfig(context string) (*Config, error) {
@@ -130,6 +221,7 @@ func getConfig(context string) (*Config, error) {
 		return nil, errors.New("No OIDC is configured for this context")
 	}
 
+	/* Mandatory fields */
 	clientID, ok := oidc["client_id"].(string)
 	if !ok {
 		return nil, errors.New("The client_id is missing for this context")
@@ -163,15 +255,23 @@ func getConfig(context string) (*Config, error) {
 		return nil, errors.New("The userinfo_instance_field is missing for this context")
 	}
 
+	/* Optional fields */
+	allowOAuthToken, _ := oidc["allow_oauth_token"].(bool)
+	userInfoPrefix, _ := oidc["userinfo_instance_prefix"].(string)
+	userInfoSuffix, _ := oidc["userinfo_instance_suffix"].(string)
+
 	config := &Config{
-		ClientID:      clientID,
-		ClientSecret:  clientSecret,
-		Scope:         scope,
-		RedirectURI:   redirectURI,
-		AuthorizeURL:  authorizeURL,
-		TokenURL:      tokenURL,
-		UserInfoURL:   userInfoURL,
-		UserInfoField: userInfoField,
+		AllowOAuthToken: allowOAuthToken,
+		ClientID:        clientID,
+		ClientSecret:    clientSecret,
+		Scope:           scope,
+		RedirectURI:     redirectURI,
+		AuthorizeURL:    authorizeURL,
+		TokenURL:        tokenURL,
+		UserInfoURL:     userInfoURL,
+		UserInfoField:   userInfoField,
+		UserInfoPrefix:  userInfoPrefix,
+		UserInfoSuffix:  userInfoSuffix,
 	}
 	return config, nil
 }
@@ -264,7 +364,9 @@ func getDomainFromUserInfo(conf *Config, token string) (string, error) {
 		return "", err
 	}
 	if domain, ok := out[conf.UserInfoField].(string); ok {
-		return domain, nil
+		domain = strings.Replace(domain, "-", "", -1) // We don't want - in cozy instance
+		domain = strings.ToLower(domain)              // The domain is case insensitive
+		return conf.UserInfoPrefix + domain + conf.UserInfoSuffix, nil
 	}
 	return "", errors.New("No domain was found")
 }
@@ -289,4 +391,5 @@ func Routes(router *echo.Group) {
 	router.GET("/start", Start, middlewares.NeedInstance)
 	router.GET("/redirect", Redirect)
 	router.GET("/login", Login, middlewares.NeedInstance)
+	router.POST("/access_token", AccessToken, middlewares.NeedInstance)
 }
