@@ -331,6 +331,19 @@ func (i *Instance) SettingsContext() (map[string]interface{}, error) {
 	return settings, nil
 }
 
+// TemplateTitle returns the specific-context instance template title (if there
+// is one). Otherwise, returns the default one
+func (i *Instance) TemplateTitle() string {
+	ctxSettings, err := i.SettingsContext()
+	if err != nil {
+		return DefaultTemplateTitle
+	}
+	if title, ok := ctxSettings["templates_title"].(string); ok {
+		return title
+	}
+	return DefaultTemplateTitle
+}
+
 // Registries returns the list of registries associated with the instance.
 func (i *Instance) Registries() []*url.URL {
 	contexts := config.GetConfig().Registries
@@ -346,6 +359,24 @@ func (i *Instance) Registries() []*url.URL {
 		}
 	}
 	return context
+}
+
+// IsPasswordAuthenticationEnabled returns false only if the instance is in a
+// context where the config says that the stack shouldn't allow to authenticate
+// with the password.
+func (i *Instance) IsPasswordAuthenticationEnabled() bool {
+	if i.ContextName == "" {
+		return true
+	}
+	auth, ok := config.GetConfig().Authentication[i.ContextName].(map[string]interface{})
+	if !ok {
+		return true
+	}
+	disabled, ok := auth["disable_password_authentication"].(bool)
+	if !ok {
+		return true
+	}
+	return !disabled
 }
 
 // DiskQuota returns the number of bytes allowed on the disk to the user.
@@ -605,19 +636,6 @@ func (i *Instance) CreateShareCode(subject string) (string, error) {
 	scope := ""
 	sessionID := ""
 	return i.MakeJWT(permissions.ShareAudience, subject, scope, sessionID, time.Now())
-}
-
-// TemplateTitle returns the specific-context instance template title (if there
-// is one). Otherwise, returns the default one
-func (i *Instance) TemplateTitle() string {
-	ctxSettings, err := i.SettingsContext()
-	if err != nil {
-		return DefaultTemplateTitle
-	}
-	if title, ok := ctxSettings["templates_title"]; ok {
-		return title.(string)
-	}
-	return DefaultTemplateTitle
 }
 
 // ensure Instance implements couchdb.Doc
