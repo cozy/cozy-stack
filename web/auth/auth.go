@@ -127,6 +127,10 @@ func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error)
 }
 
 func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors string, redirect *url.URL) error {
+	if !i.IsPasswordAuthenticationEnabled() {
+		return c.Redirect(http.StatusSeeOther, i.PageURL("/oidc/start", nil))
+	}
+
 	var title, help string
 
 	publicName, err := i.PublicName()
@@ -964,6 +968,8 @@ func getApp(c echo.Context, instance *instance.Instance, slug string) (apps.Mani
 	return app, true, nil
 }
 
+// AccessTokenReponse is the stuct used for serializing to JSON the response
+// for an access token.
 type AccessTokenReponse struct {
 	Type    string `json:"token_type"`
 	Scope   string `json:"scope"`
@@ -1108,6 +1114,9 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 
 func passphraseResetForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	if !instance.IsPasswordAuthenticationEnabled() {
+		return c.Redirect(http.StatusSeeOther, instance.PageURL("/oidc/start", nil))
+	}
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
 		"Title":       instance.TemplateTitle(),
 		"CozyUI":      middlewares.CozyUI(instance),

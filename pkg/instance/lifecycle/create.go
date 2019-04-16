@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
 // Options holds the parameters to create a new instance.
@@ -109,6 +110,14 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		if authMode, err = instance.StringToAuthMode(opts.AuthMode); err == nil {
 			i.AuthMode = authMode
 		}
+	}
+
+	// If the authentication is disabled, we force a random password. It won't
+	// be known by the user and cannot be used to authenticate. It will only be
+	// used if the configuration is changed later: the user will be able to
+	// reset the passphrase.
+	if !i.IsPasswordAuthenticationEnabled() {
+		opts.Passphrase = utils.RandomString(instance.RegisterTokenLen)
 	}
 
 	if opts.Passphrase != "" {
