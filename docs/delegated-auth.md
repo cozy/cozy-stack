@@ -40,6 +40,7 @@ authentication:
       userinfo_instance_field: cozy_number
       userinfo_instance_prefix: name
       userinfo_instance_suffix: .mycozy.cloud
+      allow_oauth_token: false
 ```
 
 Let's see what it means:
@@ -94,7 +95,7 @@ Location: https://name00001.mycozy.cloud/oidc/login?state=9f6873dfce7d&code=ccd0
 On this route, the stack can create the session for the user, with the cookies.
 
 ```http
-GET /oidc/login?state=9f6873dfce7d&code=ccd0032a HTTP/1.1
+GET /oidc/login?code=ccd0032a HTTP/1.1
 Host: name00001.mycozy.cloud
 ```
 
@@ -103,6 +104,9 @@ HTTP/1.1 303 See Other
 Set-Cookie: ...
 Location: https://name00001-home.mycozy.cloud/
 ```
+
+If the `allow_oauth_token` option is enabled, it's possible to use an
+access_token instead of code on this URL.
 
 ### POST /oidc/access_token
 

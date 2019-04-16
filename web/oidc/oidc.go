@@ -61,26 +61,25 @@ func Redirect(c echo.Context) error {
 
 // Login checks that the OpenID Connect has been sucessful and logs in the user.
 func Login(c echo.Context) error {
-	code := c.QueryParam("code")
-	stateID := c.QueryParam("state")
-	state := getStorage().Find(stateID)
-	if state == nil {
-		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
-	}
-	inst, err := lifecycle.GetInstance(state.Instance)
-	if err != nil {
-		return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
-	}
+	inst := middlewares.GetInstance(c)
 	conf, err := getConfig(inst.ContextName)
 	if err != nil {
 		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
 	}
 
-	token, err := getToken(conf, code)
-	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
-		return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
+	var token string
+	if conf.AllowOAuthToken {
+		token = c.QueryParam("access_token")
 	}
+	if token == "" {
+		code := c.QueryParam("code")
+		token, err = getToken(conf, code)
+		if err != nil {
+			logger.WithNamespace("oidc").Errorf("Error on getToken: %s", err)
+			return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
+		}
+	}
+
 	domain, err := getDomainFromUserInfo(conf, token)
 	if err != nil {
 		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
@@ -91,7 +90,6 @@ func Login(c echo.Context) error {
 		return renderError(c, inst, http.StatusBadRequest, "Sorry, the cozy was not found.")
 	}
 
-	c.Set("instance", inst)
 	sessionID, err := auth.SetCookieForNewSession(c, false)
 	if err != nil {
 		return err
@@ -107,16 +105,17 @@ func Login(c echo.Context) error {
 // Config is the config to log in a user with an OpenID Connect identity
 // provider.
 type Config struct {
-	ClientID       string
-	ClientSecret   string
-	Scope          string
-	RedirectURI    string
-	AuthorizeURL   string
-	TokenURL       string
-	UserInfoURL    string
-	UserInfoField  string
-	UserInfoPrefix string
-	UserInfoSuffix string
+	AllowOAuthToken bool
+	ClientID        string
+	ClientSecret    string
+	Scope           string
+	RedirectURI     string
+	AuthorizeURL    string
+	TokenURL        string
+	UserInfoURL     string
+	UserInfoField   string
+	UserInfoPrefix  string
+	UserInfoSuffix  string
 }
 
 func getConfig(context string) (*Config, error) {
@@ -165,20 +164,22 @@ func getConfig(context string) (*Config, error) {
 	}
 
 	/* Optional fields */
+	allowOAuthToken, _ := oidc["allow_oauth_token"].(bool)
 	userInfoPrefix, _ := oidc["userinfo_instance_prefix"].(string)
 	userInfoSuffix, _ := oidc["userinfo_instance_suffix"].(string)
 
 	config := &Config{
-		ClientID:       clientID,
-		ClientSecret:   clientSecret,
-		Scope:          scope,
-		RedirectURI:    redirectURI,
-		AuthorizeURL:   authorizeURL,
-		TokenURL:       tokenURL,
-		UserInfoURL:    userInfoURL,
-		UserInfoField:  userInfoField,
-		UserInfoPrefix: userInfoPrefix,
-		UserInfoSuffix: userInfoSuffix,
+		AllowOAuthToken: allowOAuthToken,
+		ClientID:        clientID,
+		ClientSecret:    clientSecret,
+		Scope:           scope,
+		RedirectURI:     redirectURI,
+		AuthorizeURL:    authorizeURL,
+		TokenURL:        tokenURL,
+		UserInfoURL:     userInfoURL,
+		UserInfoField:   userInfoField,
+		UserInfoPrefix:  userInfoPrefix,
+		UserInfoSuffix:  userInfoSuffix,
 	}
 	return config, nil
 }
