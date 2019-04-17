@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/registry"
@@ -390,6 +391,35 @@ func (i *Installer) update() error {
 		availableVersion = newManifest.Version()
 	}
 
+	extraPerms := permissions.Set{}
+	var alteredPerms *permissions.Permission
+	// The "extraPerms" set represents the post-install alterations of the
+	// permissions between the oldManifest and the current permissions.
+	//
+	// Even if makeUpdate is false, we are going to update the manifest document
+	// to set an AvailableVersion. In this case, the current webapp/konnector
+	// perms will be reapplied and custom ones will be lost if we don't rewrite
+	// them.
+	inst, err := instance.GetFromCouch(i.Domain())
+	if err == nil {
+		// Check if perms were added on the old manifest
+		if i.man.AppType() == consts.WebappType {
+			alteredPerms, err = permissions.GetForWebapp(inst, i.man.Slug())
+		} else if i.man.AppType() == consts.KonnectorType {
+			alteredPerms, err = permissions.GetForKonnector(inst, i.man.Slug())
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	if alteredPerms != nil {
+		extraPerms, err = permissions.Diff(oldManifest.Permissions(), alteredPerms.Permissions)
+		if err != nil {
+			return err
+		}
+	}
+
 	if makeUpdate {
 		i.man = newManifest
 		i.sendRealtimeEvent()
@@ -408,7 +438,7 @@ func (i *Installer) update() error {
 		i.notifyChannel()
 	}
 
-	return i.man.Update(i.db)
+	return i.man.Update(i.db, extraPerms)
 }
 
 func (i *Installer) notifyChannel() {

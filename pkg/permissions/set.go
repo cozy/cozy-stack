@@ -211,3 +211,68 @@ func (ps Set) HasSameRules(other Set) bool {
 
 	return true
 }
+
+// Diff returns a the differences between two sets.
+// Useful to see what rules had been added between a original manifest
+// permissions and now.
+//
+// TODO: We are ignoring removed values/verbs between rule 1 and rule 2.
+// - At the moment, it onlys show the added values, verbs and rules
+func Diff(set1, set2 Set) (Set, error) {
+	// If sets are the same, do not compute
+	if set1.HasSameRules(set2) {
+		return set1, nil
+	}
+
+	newSet := Set{}
+
+	// Appending not existing rules
+	for _, r2 := range set2 {
+		found := false
+
+		for _, r := range set1 {
+			if r.Title == r2.Title {
+				// Rule exist
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			newSet = append(newSet, r2)
+		}
+	}
+
+	// Compare each key
+	for _, rule1 := range set1 {
+		for _, rule2 := range set2 {
+			if rule1.Title == rule2.Title { // Same rule, we are going to compute differences
+				newRule := Rule{
+					Title:  rule1.Title,
+					Type:   rule1.Type,
+					Verbs:  map[Verb]struct{}{},
+					Values: []string{},
+				}
+
+				// Handle verbs. Here we are going to find verbs in set2 that
+				// are not present in set1, meaning they were added later by an
+				// external human action
+				for verb2, content2 := range rule2.Verbs {
+					if !rule1.Verbs.Contains(verb2) {
+						newRule.Verbs[verb2] = content2
+					}
+				}
+
+				// Handle values
+				for _, value2 := range rule2.Values {
+					if ok := rule1.ValuesContain(value2); !ok {
+						newRule.Values = append(newRule.Values, value2)
+					}
+				}
+
+				newSet = append(newSet, newRule)
+			}
+		}
+	}
+	return newSet, nil
+}

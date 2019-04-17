@@ -222,13 +222,23 @@ func (m *KonnManifest) Create(db prefixer.Prefixer) error {
 }
 
 // Update is part of the Manifest interface
-func (m *KonnManifest) Update(db prefixer.Prefixer) error {
+func (m *KonnManifest) Update(db prefixer.Prefixer, extraPerms permissions.Set) error {
 	m.UpdatedAt = time.Now()
 	err := couchdb.UpdateDoc(db, m)
 	if err != nil {
 		return err
 	}
-	_, err = permissions.UpdateKonnectorSet(db, m.Slug(), m.Permissions())
+
+	perms := m.Permissions()
+
+	// Merging the potential extra permissions
+	if len(extraPerms) > 0 {
+		perms, err = permissions.MergeExtraPermissions(perms, extraPerms)
+		if err != nil {
+			return err
+		}
+	}
+	_, err = permissions.UpdateKonnectorSet(db, m.Slug(), perms)
 	return err
 }
 
