@@ -1,7 +1,7 @@
-package dispers.actors
+package actors
 
-import "github.com/cozy/cozy-stack/pkg/ml"
-import "github.com/cozy/cozy-stack/pkg/crypto" // to communicate
+//import "github.com/cozy/cozy-stack/pkg/ml"
+//import "github.com/cozy/cozy-stack/pkg/crypto" // to communicate
 
 type DataAggregator struct {
   // New parameters - returned to Stack / MDA
@@ -11,17 +11,15 @@ type DataAggregator struct {
 }
 
 // New returns a new blank DataAggregator.
-func New() *DataAggregator {
+func NewDA() *DataAggregator {
 	return &DataAggregator{
-
-		},
 	}
 }
 
 func (da *DataAggregator) aggregate() string{
-
+	return ""
 }
 
 func (da *DataAggregator) getParameters() string{
-
+	return ""
 }

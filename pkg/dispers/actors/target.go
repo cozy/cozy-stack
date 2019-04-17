@@ -1,17 +1,16 @@
-package dispers.actors
+package actors
 
-import "github.com/cozy/cozy-stack/pkg/crypto" // to communicate
+//import "github.com/cozy/cozy-stack/pkg/crypto" // to communicate
 
 type Target struct {
 	// Requête locale
 }
 
 // New returns a new blank target.
-func New() *Target {
+func NewTarget() *Target {
 	return &Target{
 
-		},
-	}
+		}
 }
 
 func (da *DataAggregator) getData(){
