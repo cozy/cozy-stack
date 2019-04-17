@@ -12,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	"github.com/cozy/cozy-stack/web/middlewares"
 
 	"github.com/cozy/echo"
 	"github.com/sirupsen/logrus"
@@ -49,7 +48,7 @@ func ErrorHandler(err error, c echo.Context) {
 
 	if config.IsDevRelease() {
 		var log *logrus.Entry
-		inst, ok := middlewares.GetInstanceSafe(c)
+		inst, ok := getInstanceSafe(c)
 		if ok {
 			log = inst.Logger().WithField("nspace", "http")
 		} else {
@@ -83,7 +82,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	req := c.Request()
 
 	var log *logrus.Entry
-	inst, ok := middlewares.GetInstanceSafe(c)
+	inst, ok := getInstanceSafe(c)
 	if ok {
 		log = inst.Logger().WithField("nspace", "http")
 	} else {
@@ -136,7 +135,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	} else if acceptHTML {
 		var domain string
 		var context string
-		i, ok := middlewares.GetInstanceSafe(c)
+		i, ok := getInstanceSafe(c)
 		if ok {
 			domain = i.ContextualDomain()
 			context = i.ContextName
@@ -163,4 +162,13 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	if err != nil && log != nil {
 		log.Errorf("%s %s %s", req.Method, req.URL.Path, err)
 	}
+}
+
+func getInstanceSafe(c echo.Context) (*instance.Instance, bool) {
+	i := c.Get("instance")
+	if i == nil {
+		return nil, false
+	}
+	inst, ok := i.(*instance.Instance)
+	return inst, ok
 }
