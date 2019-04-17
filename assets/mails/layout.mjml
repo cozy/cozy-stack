@@ -7,7 +7,7 @@
 		<mj-wrapper background-color="#fff" border-radius="8px" padding="0">
 			<mj-section padding="24px 0 8px">
 				<mj-column>
-					{{template `content`}}
+					{{template `content` .}}
 				</mj-column>
 			</mj-section>
 		</mj-wrapper>
