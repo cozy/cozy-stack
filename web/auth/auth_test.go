@@ -34,6 +34,7 @@ import (
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
@@ -1745,6 +1746,7 @@ func TestMain(m *testing.M) {
 		}
 		return handler
 	})
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	os.Exit(setup.Run())
 }

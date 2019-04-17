@@ -17,6 +17,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -161,6 +163,7 @@ func TestMain(m *testing.M) {
 	filesToken = ins.BuildAppToken(files.Slug(), "")
 
 	ts = setup.GetTestServer("/intents", Routes)
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	os.Exit(setup.Run())
 
 }

@@ -20,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/echo"
 )
 
@@ -190,7 +189,6 @@ func (c *TestSetup) GetTestServerMultipleRoutes(mpr map[string]func(*echo.Group)
 	for _, mw := range mws {
 		handler = mw(handler)
 	}
-	handler.HTTPErrorHandler = errors.ErrorHandler
 	handler.Renderer = &stupidRenderer{}
 	ts := httptest.NewServer(handler)
 	c.AddCleanup(func() error { ts.Close(); return nil })

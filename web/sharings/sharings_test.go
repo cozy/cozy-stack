@@ -27,6 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webperms "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/sharings"
@@ -1039,6 +1040,7 @@ func TestMain(m *testing.M) {
 		"/permissions": webperms.Routes,
 	})
 	tsA.Config.Handler.(*echo.Echo).Renderer = render
+	tsA.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	// Prepare Bob's browser
 	jar := setup.GetCookieJar()
@@ -1062,6 +1064,7 @@ func TestMain(m *testing.M) {
 		"/sharings": sharings.Routes,
 	})
 	tsB.Config.Handler.(*echo.Echo).Renderer = render
+	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	// Prepare another instance for the replicator tests
 	replSetup := testutils.NewSetup(m, "sharing_test_replicator")
