@@ -1,0 +1,5 @@
+{{t "Mail Archive Intro 1" .PublicName}}
+{{t "Mail Archive Intro 2"}}
+
+{{t "Mail Archive Button instruction"}}
+{{.ArchiveLink}}

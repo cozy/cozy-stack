@@ -1,7 +1,6 @@
 package mails
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -21,6 +20,7 @@ func init() {
 		Concurrency: runtime.NumCPU(),
 		WorkerFunc:  SendMail,
 	})
+	initMailTemplates()
 }
 
 const (
@@ -32,8 +32,11 @@ const (
 	ModeFrom = "from"
 )
 
+// DefaultLayout defines the default MJML layout to use
+const DefaultLayout = "layout"
+
 // var for testability
-var mailTemplater *MailTemplater
+var mailTemplater MailTemplater
 var sendMail = doSendMail
 
 // Address contains the name and mail of a mail recipient.
@@ -52,19 +55,20 @@ type Attachment struct {
 // content: body and body content-type. It is used as the input of the
 // "sendmail" worker.
 type Options struct {
-	Mode           string                `json:"mode"`
-	Subject        string                `json:"subject"`
-	From           *Address              `json:"from,omitempty"`
-	To             []*Address            `json:"to,omitempty"`
-	ReplyTo        *Address              `json:"reply_to,omitempty"`
-	Dialer         *gomail.DialerOptions `json:"dialer,omitempty"`
-	Date           *time.Time            `json:"date,omitempty"`
-	Parts          []*Part               `json:"parts,omitempty"`
-	RecipientName  string                `json:"recipient_name,omitempty"`
-	TemplateName   string                `json:"template_name,omitempty"`
-	TemplateValues interface{}           `json:"template_values,omitempty"`
-	Attachments    []*Attachment         `json:"attachments,omitempty"`
-	Locale         string                `json:"locale,omitempty"`
+	Mode           string                 `json:"mode"`
+	Subject        string                 `json:"subject"`
+	From           *Address               `json:"from,omitempty"`
+	To             []*Address             `json:"to,omitempty"`
+	ReplyTo        *Address               `json:"reply_to,omitempty"`
+	Dialer         *gomail.DialerOptions  `json:"dialer,omitempty"`
+	Date           *time.Time             `json:"date,omitempty"`
+	Parts          []*Part                `json:"parts,omitempty"`
+	RecipientName  string                 `json:"recipient_name,omitempty"`
+	TemplateName   string                 `json:"template_name,omitempty"`
+	TemplateValues map[string]interface{} `json:"template_values,omitempty"`
+	Attachments    []*Attachment          `json:"attachments,omitempty"`
+	Locale         string                 `json:"locale,omitempty"`
+	Layout         string                 `json:"layout,omitempty"`
 }
 
 // Part represent a part of the content of the mail. It has a type
@@ -128,7 +132,7 @@ func addressFromInstance(i *instance.Instance) (*Address, error) {
 	}, nil
 }
 
-func doSendMail(ctx context.Context, opts *Options, domain string) error {
+func doSendMail(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 	if opts.TemplateName == "" && opts.Subject == "" {
 		return errors.New("Missing mail subject")
 	}
@@ -156,8 +160,14 @@ func doSendMail(ctx context.Context, opts *Options, domain string) error {
 
 	var parts []*Part
 	var err error
+
 	if opts.TemplateName != "" {
-		opts.Subject, parts, err = mailTemplater.Execute(opts.TemplateName, opts.Locale, opts.RecipientName, opts.TemplateValues)
+		// Defining the master layout which will wrap the content
+		layout := opts.Layout
+		if layout == "" {
+			layout = DefaultLayout
+		}
+		opts.Subject, parts, err = RenderMail(ctx, opts.TemplateName, layout, opts.Locale, opts.RecipientName, opts.TemplateValues)
 		if err != nil {
 			return err
 		}

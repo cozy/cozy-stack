@@ -199,7 +199,7 @@ func SetupRoutes(router *echo.Echo) error {
 
 	// dev routes
 	if config.IsDevRelease() {
-		router.GET("/dev/mails/:name", devMailsHandler)
+		router.GET("/dev/mails/:name", devMailsHandler, middlewares.NeedInstance)
 		router.GET("/dev/templates/:name", devTemplatesHandler)
 	}
 

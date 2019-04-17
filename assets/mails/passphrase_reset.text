@@ -1,0 +1,7 @@
+{{t "Mail Reset Passphrase Intro 1" .PublicName}}
+{{t "Mail Reset Passphrase Intro 2"}}
+
+{{t "Mail Reset Passphrase Button instruction"}}
+{{.PassphraseResetLink}}
+
+{{t "Mail Reset Passphrase Outro"}}

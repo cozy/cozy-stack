@@ -430,7 +430,7 @@ msgid "Mail Greeting"
 msgstr "Hello"
 
 msgid "Mail Trouble Text"
-msgstr "If you’re having trouble with the button '{ACTION}', copy and paste the URL below into your web browser."
+msgstr "If the button doesn't display correctly, copy and paste the URL below into your web browser."
 
 msgid "Mail Signature"
 msgstr "Yours truly"
@@ -439,10 +439,13 @@ msgid "Mail Cozy Team"
 msgstr "The Cozy Cloud Team"
 
 msgid "Mail Reset Passphrase Subject"
-msgstr "Reset your Cozy password"
+msgstr "Reset your password"
 
-msgid "Mail Reset Passphrase Intro"
-msgstr "Forgot your password? No worries, let's get you a new one!"
+msgid "Mail Reset Passphrase Intro 1"
+msgstr "Hello %s,"
+
+msgid "Mail Reset Passphrase Intro 2"
+msgstr "You asked to change your password (if you didn't, contact us by replying directly to this email)"
 
 msgid "Mail Reset Passphrase Button instruction"
 msgstr "Click on the this button to safely change it."
@@ -452,14 +455,16 @@ msgstr "Reset my password"
 
 msgid "Mail Reset Passphrase Outro"
 msgstr ""
-"You never asked for a new password? In this case you can forget this email.\n"
 "Just so you know, you have 15 minutes to choose a new password, then this email will self-destruct."
 
 msgid "Mail Archive Subject"
-msgstr "Archive of your Cozy data"
+msgstr "Download your Cozy data"
 
-msgid "Mail Archive Intro"
-msgstr "You can now download the archive with all your Cozy data."
+msgid "Mail Archive Intro 1"
+msgstr "Hello %s,"
+
+msgid "Mail Archive Intro 2"
+msgstr "You asked to get a copy of the whole data Cozy has about you."
 
 msgid "Mail Archive Button instruction"
 msgstr "You can download it by clicking on the following link."
@@ -471,7 +476,7 @@ msgid "Mail Two Factor Subject"
 msgstr "Verify your connection to Cozy"
 
 msgid "Mail Two Factor Intro"
-msgstr "Two-factor authentication is enabled for your Cozy. Enter the following code to verify your identity : {{.TwoFactorPasscode}}."
+msgstr "Two-factor authentication is enabled for your Cozy. Enter the following code to verify your identity: %s."
 
 msgid "Mail Two Factor Outro"
 msgstr "Not sure what to do? Get some help from contact@cozycloud.cc"
@@ -480,7 +485,7 @@ msgid "Mail Two Factor Mail Confirmation Subject"
 msgstr "You want to enable two-factor authentication on your Cozy"
 
 msgid "Mail Two Factor Mail Confirmation Intro"
-msgstr "Here is the code to enable two-factor authentication on your Cozy: {{.TwoFactorActivationPasscode}}"
+msgstr "Here is the code to enable two-factor authentication on your Cozy: %s"
 
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr "If you have not made this change, please contact us at contact@cozycloud.cc"
@@ -535,13 +540,16 @@ msgid "Mail New Registration Revoke text"
 msgstr "Revoke this device"
 
 msgid "Mail Sharing Request Subject"
-msgstr "New sharing request for your Cozy"
+msgstr "New sharing request from %s"
 
 msgid "Mail Sharing Request Intro"
-msgstr "{{.SharerPublicName}} wants to share a document with you!"
+msgstr "Hello %s,"
 
-msgid "Mail Sharing Request Button instruction"
-msgstr "The given description is: {{.Description}}."
+msgid "Mail Sharing Request Description 1"
+msgstr "%s wants to share"
+
+msgid "Mail Sharing Request Description 2"
+msgstr "with you!"
 
 msgid "Mail Sharing Request Button text"
 msgstr "Accept this sharing"

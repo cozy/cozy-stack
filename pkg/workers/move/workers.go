@@ -44,10 +44,17 @@ func ExportWorker(c *jobs.WorkerContext) error {
 	mac := base64.URLEncoding.EncodeToString(exportDoc.GenerateAuthMessage(c.Instance))
 	link := c.Instance.SubDomain(consts.SettingsSlug)
 	link.Fragment = fmt.Sprintf("/exports/%s", mac)
+	publicName, err := c.Instance.PublicName()
+	if err != nil {
+		return err
+	}
 	mail := mails.Options{
-		Mode:           mails.ModeNoReply,
-		TemplateName:   "archiver",
-		TemplateValues: map[string]string{"ArchiveLink": link.String()},
+		Mode:         mails.ModeNoReply,
+		TemplateName: "archiver",
+		TemplateValues: map[string]interface{}{
+			"ArchiveLink": link.String(),
+			"PublicName":  publicName,
+		},
 	}
 
 	msg, err := jobs.NewMessage(&mail)

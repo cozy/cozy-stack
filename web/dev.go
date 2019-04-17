@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
@@ -28,7 +29,16 @@ func devMailsHandler(c echo.Context) error {
 		recipientName = "Jean Dupont"
 	}
 
-	_, parts, err := mails.RenderMail(name, locale, recipientName, devData(c))
+	layout := c.QueryParam("layout")
+	if layout == "" {
+		layout = "layout"
+	}
+
+	data := devData(c)
+	j := &jobs.Job{JobID: "1", Domain: data["Domain"].(string)}
+	inst := middlewares.GetInstance(c)
+	ctx := jobs.NewWorkerContext("0", j, inst)
+	_, parts, err := mails.RenderMail(ctx, name, layout, locale, recipientName, data)
 	if err != nil {
 		return err
 	}
@@ -82,6 +92,7 @@ func devData(c echo.Context) echo.Map {
 		data["CozyUI"] = middlewares.CozyUI(i)
 		data["ThemeCSS"] = middlewares.ThemeCSS(i)
 		data["Favicon"] = middlewares.Favicon(i)
+		data["InstanceURL"] = i.PageURL("/", nil)
 	}
 	return data
 }

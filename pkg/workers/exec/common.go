@@ -78,7 +78,7 @@ func worker(ctx *jobs.WorkerContext) (err error) {
 	}
 
 	var stderrBuf bytes.Buffer
-	cmd := createCmd(cmdStr, workDir) // #nosec
+	cmd := CreateCmd(cmdStr, workDir) // #nosec
 	cmd.Env = env
 
 	// set stderr writable with a bytes.Buffer limited total size of 256Ko
@@ -136,7 +136,7 @@ func worker(ctx *jobs.WorkerContext) (err error) {
 	case err = <-waitDone:
 	case <-ctx.Done():
 		err = ctx.Err()
-		killCmd(cmd)
+		KillCmd(cmd)
 		<-waitDone
 	}
 
