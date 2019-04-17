@@ -161,11 +161,6 @@ func doSendMail(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 	var parts []*Part
 	var err error
 
-	// Force the domain if it does not exist
-	if _, ok := opts.TemplateValues["Domain"]; !ok && ctx.Instance != nil {
-		opts.TemplateValues["Domain"] = ctx.Instance.Domain
-	}
-
 	if opts.TemplateName != "" {
 		// Defining the master layout which will wrap the content
 		layout := opts.Layout

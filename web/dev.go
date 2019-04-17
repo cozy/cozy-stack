@@ -92,6 +92,7 @@ func devData(c echo.Context) echo.Map {
 		data["CozyUI"] = middlewares.CozyUI(i)
 		data["ThemeCSS"] = middlewares.ThemeCSS(i)
 		data["Favicon"] = middlewares.Favicon(i)
+		data["InstanceURL"] = i.PageURL("/", nil)
 	}
 	return data
 }

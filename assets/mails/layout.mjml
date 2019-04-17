@@ -11,7 +11,7 @@
 				</mj-column>
 			</mj-section>
 		</mj-wrapper>
-		<mj-footer locale="{{.Locale}}" instance="{{.Domain}}"></mj-footer>
+		<mj-footer locale="{{.Locale}}" instance="{{.InstanceURL}}"></mj-footer>
 	</mj-body>
 </mjml>
 

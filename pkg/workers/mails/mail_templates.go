@@ -47,6 +47,9 @@ func (m MailTemplater) Execute(ctx *jobs.WorkerContext, name, layout, locale str
 	subject := i18n.Translate(subjectKey, locale)
 	context := ctx.Instance.ContextName
 	data["Locale"] = locale
+	if ctx.Instance != nil {
+		data["InstanceURL"] = ctx.Instance.PageURL("/", nil)
+	}
 
 	text, err := buildText(name, context, locale, data)
 	if err != nil {
