@@ -1,12 +1,12 @@
 {{define "content"}}
 <mj-image mj-class="content-large" inner-padding="0" width="148px" height="141px" src="https://downcloud.cozycloud.cc/upload/demenager_mail.png"></mj-image>
 <mj-text mj-class="title content-medium">
-  <img src="https://downcloud.cozycloud.cc/upload/icon-download.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	<img src="https://downcloud.cozycloud.cc/upload/icon-download.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
 	{{t "Mail Archive Subject"}}
 </mj-text>
 <mj-text mj-class="content-medium">
-	{{t "Mail Archive Intro 1"}}<br />
-  {{t "Mail Archive Intro 2"}}
+	{{t "Mail Archive Intro 1" .PublicName}}<br />
+	{{t "Mail Archive Intro 2"}}
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{t "Mail Archive Button instruction"}}
@@ -18,6 +18,6 @@
 	{{t "Mail Trouble Text"}}
 </mj-text>
 <mj-text align="left" font-size="12px" mj-class="content-medium highlight">
-  {{.ArchiveLink}}
+	{{.ArchiveLink}}
 </mj-text>
 {{end}}

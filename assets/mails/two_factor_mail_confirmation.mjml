@@ -1,10 +1,10 @@
 {{define "content"}}
 <mj-text mj-class="title content-medium">
-  <img src="https://downcloud.cozycloud.cc/upload/icon-key.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	<img src="https://downcloud.cozycloud.cc/upload/icon-key.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
 	{{t "Mail Two Factor Mail Confirmation Subject"}}
 </mj-text>
 <mj-text mj-class="content-medium">
-	{{t "Mail Two Factor Mail Confirmation Intro"}}
+	{{t "Mail Two Factor Mail Confirmation Intro" .TwoFactorActivationPasscode}}
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{t "Mail Two Factor Mail Confirmation Outro"}}
