@@ -11,29 +11,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 )
 
-// MailTemplate is a struct to define a mail template with HTML and text parts.
-type MailTemplate struct {
-	Name    string
-	Subject string
-	Intro   string
-	Outro   string
-	Actions []MailAction
-	Entries []MailEntry
-}
-
-// MailAction describes an action button in a mail template.
-type MailAction struct {
-	Instructions string
-	Text         string
-	Link         string
-}
-
-// MailEntry describes an row entry in a mail template.
-type MailEntry struct {
-	Key string
-	Val string
-}
-
 func initMailTemplates() {
 	mailTemplater = MailTemplater{
 		"passphrase_reset":             "Mail Reset Passphrase Subject",

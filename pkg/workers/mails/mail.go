@@ -158,12 +158,6 @@ func doSendMail(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 		toAddresses[i] = mail.FormatAddress(to.Email, to.Name)
 	}
 
-	// Defining the master layout which will wrap the content
-	layout := opts.Layout
-	if layout == "" {
-		layout = DefaultLayout
-	}
-
 	var parts []*Part
 	var err error
 
@@ -173,6 +167,11 @@ func doSendMail(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 	}
 
 	if opts.TemplateName != "" {
+		// Defining the master layout which will wrap the content
+		layout := opts.Layout
+		if layout == "" {
+			layout = DefaultLayout
+		}
 		opts.Subject, parts, err = RenderMail(ctx, opts.TemplateName, layout, opts.Locale, opts.RecipientName, opts.TemplateValues)
 		if err != nil {
 			return err
