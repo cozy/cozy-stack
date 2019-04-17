@@ -1,5 +1,3 @@
-{{t "Mail Archive Subject"}}
-
 {{t "Mail Archive Intro 1" .PublicName}}
 {{t "Mail Archive Intro 2"}}
 

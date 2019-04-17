@@ -1,5 +1,3 @@
-{{t "Mail Sharing Request Subject" .SharerPublicName}}
-
 {{t "Mail Sharing Request Intro" .RecipientName}}
 
 {{t "Mail Sharing Request Description 1" .SharerPublicName}} {{.Description}} {{t "Mail Sharing Request Description 2"}}

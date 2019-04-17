@@ -1,5 +1,3 @@
-{{t "Mail Reset Passphrase Subject"}}
-
 {{t "Mail Reset Passphrase Intro 1" .PublicName}}
 {{t "Mail Reset Passphrase Intro 2"}}
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
+	text "text/template"
 
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/jobs"
@@ -62,12 +63,12 @@ func (m MailTemplater) Execute(ctx *jobs.WorkerContext, name, layout, locale str
 		data["InstanceURL"] = ctx.Instance.PageURL("/", nil)
 	}
 
-	text, err := buildText(name, context, locale, data)
+	txt, err := buildText(name, context, locale, data)
 	if err != nil {
 		return "", nil, err
 	}
 	parts := []*Part{
-		{Body: text, Type: "text/plain"},
+		{Body: txt, Type: "text/plain"},
 	}
 
 	// If we can generate the HTML, we should still send the mail with the text
@@ -86,8 +87,8 @@ func buildText(name, context, locale string, data map[string]interface{}) (strin
 	if err != nil {
 		return "", err
 	}
-	funcMap := template.FuncMap{"t": i18n.Translator(locale)}
-	t, err := template.New("text").Funcs(funcMap).Parse(string(b))
+	funcMap := text.FuncMap{"t": i18n.Translator(locale)}
+	t, err := text.New("text").Funcs(funcMap).Parse(string(b))
 	if err != nil {
 		return "", err
 	}

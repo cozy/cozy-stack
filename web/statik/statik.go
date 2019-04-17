@@ -54955,11 +54955,11 @@ qt1wQqPjeRtzo65Dtn2/+BMAAP//OcMCrZwDAAA=
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/archiver.text
-Size: 158
+Size: 128
 
-H4sIAAAAAAAC/6quLlFQ8k3MzFFwLErOyCxLVQguTcpKTS5Rqq3l4sKU9cwrKcpX
-MFRS0AsoTcrJTPZLzE2trcWp0AiHMU6lJSX5eQqZecUlRaXJJZn5eUpgU/SgCnwy
-87Jra7kAAQAA//9wTBD5ngAAAA==
+H4sIAAAAAAAC/6quLlFQ8k3MzFFwLErOyCxLVfDMKynKVzBUUtALKE3KyUz2S8xN
+ra3lwqXQSKm2lguLrFNpSUl+nkJmXnFJUWlySWZ+nhLYFD2oAp/MvOzaWi5AAAAA
+//9FKG+SgAAAAA==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/layout-cozycloud.mjml
@@ -54999,12 +54999,12 @@ r/F04oXqz0/se6QqpcmvAAAA//+gnlxJUAQAAA==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/new_connection.text
-Size: 381
+Size: 344
 
-H4sIAAAAAAAC/3zQQarDIBAG4H1OMbh+5ABv2awCbSPkBDYMjW0Yi46EIHP3Qhrp
-qrNT/P7fYUphMBfnF7jiCl0gwol9IBjz7YETG5Gm+Yl64hh0Yhc3oRH5h1LazvMm
-8rcfQyaOm4jSbmuut5o7xbAmjBUfVy0xjBUPozp9Nzu6I1iX0muOLiF4Shzz/mr2
-L9qP+ZKzp6daOuRja+8AAAD//wtKmPB9AQAA
+H4sIAAAAAAAC/3zQwQqDMAwG4LtPEXoePsCO8yRss+ATFAmzTNKRRkRK3n3QWXay
+t5Z8fxKSkoB5OL/AEzfoAhFO4gNBT8LBqDbNKbGLm9CoXiGltvOyq17yM6wkvKue
+R3tbcr2tuRuHLSIXfHxriWEseBir23ezoxeCdTF+ZnYRwVMUXnPV5BHtz/zJ3dO7
+2nRYj6t9AwAA//83MYu3WAEAAA==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/new_registration.mjml
@@ -55021,11 +55021,10 @@ e+9iZVDs71F/tPdgULsRRFcsYfW+P8M/uxUtNa0Zn8108bGX+0MpodXDkP0MAAD/
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/new_registration.text
-Size: 143
+Size: 104
 
-H4sIAAAAAAAC/6quLlFQ8k3MzFHwSy1XCEpNzywuKUosyczPUwguTcpKTS5Rqq3l
-4sKjzDOvpCifkCKX1LLM5NRihcy84pKi0mSQGEhLdbUeVMYnMy+7tpYLEAAA//9v
-o/bPjwAAAA==
+H4sIAAAAAAAC/6quLlFQ8k3MzFHwSy1XCEpNzywuKUosyczPU/DMKynKV6qt5eLC
+o8gltSwzObVYITOvuKSoNBkkBtJSXa0HlfHJzMuureUCBAAA//+cVJ33aAAAAA==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/notifications_diskquota.mjml
@@ -55043,11 +55042,11 @@ J2R9UwQAAA==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/notifications_diskquota.text
-Size: 221
+Size: 179
 
-H4sIAAAAAAAC/6quLlFQ8ssvyUzLTE4syczPK1ZwySzOVggszS9JVAguTcpKTS5R
-qq3l4sKv0jOvpCifCHX5aWmpRcUKmXnFJUWlySBpkKbqaj1/sIRPZl42YUPSilJT
-kY0ohprhnF9V6VKUWZYKNQYQAAD//y86/pXdAAAA
+H4sIAAAAAAAC/6quLlFQ8ssvyUzLTE4syczPK1ZwySzOVggszS9JVPDMKynKV6qt
+5eLCry4/LS21qFghM6+4pKg0GSQN0lRdrecPlvDJzMsmbEhaUWoqshHFUDOc86sq
+XYoyy1KhxgACAAD//7VKIK+zAAAA
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/passphrase_reset.mjml
@@ -55064,11 +55063,11 @@ A/710WDgfjD7rzwrnm78WDBncl0pi+8BAAD//3tWc7WKAwAA
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/passphrase_reset.text
-Size: 239
+Size: 200
 
-H4sIAAAAAAAC/6quLlFQ8k3MzFEISi1OLVEISCwuLsgoSixOVQguTcpKTS5Rqq3l
-4sKjzDOvpChfwVBJQS+gNCknM9kvMTe1tpawDiNCBjuVlpTk5ylk5hWXFJUml2Tm
-5ymBzdVDqAHr8cnMyyZglH9pSVE+SDcgAAD//yBNH5nvAAAA
+H4sIAAAAAAAC/6quLlFQ8k3MzFEISi1OLVEISCwuLsgoSixOVfDMKynKVzBUUtAL
+KE3KyUz2S8xNra3lIqjDSKm2lgufMqfSkpL8PIXMvOKSotLkksz8PCWwuXoINWA9
+Ppl52QSM8i8tKcoH6QYEAAD//8VWcdnIAAAA
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/sharing_request.mjml
@@ -55086,11 +55085,11 @@ rnJlZQMAAA==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/sharing_request.text
-Size: 246
+Size: 190
 
-H4sIAAAAAAAC/6quLlFQ8k3MzFEIzkgsysxLVwhKLSxNLS5RCC5NykpNLlFS0APJ
-pBYFlCblZCb7Jeam1tZyceHW55lXUpSvpKAXlJqcWZCZmldCWItLanFyUWZBSWZ+
-noIhVgsVqqv1kFSBBYgxzUgJYrMeVJFPZl52bS0XIAAA///6QbfW9gAAAA==
+H4sIAAAAAAAC/6quLlFQ8k3MzFEIzkgsysxLVwhKLSxNLS5R8MwrKcpXUtALSk3O
+LMhMzSvxS8xNra3l4sKtxSW1OLkos6AkMz9PwVBJQQ8kn1oUUJqUk5kM0a1QXa2H
+pAosQIxpRkoQm/Wginwy87Jra7kAAQAA//8mVYTgvgAAAA==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/two_factor.mjml
@@ -55105,10 +55104,10 @@ p5wBAAA=
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/two_factor.text
-Size: 113
+Size: 80
 
-H4sIAAAAAAAC/6quLlFQ8k3MzFEIKc9XcEtMLskvUgguTcpKTS5Rqq3l4sKqwDOv
-pChfSUEvpDwfIhKQWFycnJ+SilOHfylIR20tFyAAAP//jtYdSnEAAAA=
+H4sIAAAAAAAC/6quLlFQ8k3MzFEIKc9XcEtMLskvUvDMKynKV1LQCynPh4gEJBYX
+J+enpNbWcnFh1eFfCtJRW8sFCAAA//+zAPgVUAAAAA==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/two_factor_mail_confirmation.mjml
@@ -55123,11 +55122,11 @@ ue9UDtw13ljFvfT7I+FVq5i9tj8Zfnf7JeFBrFNwy92g184tGp8uv2efEmqgv4M/
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/two_factor_mail_confirmation.text
-Size: 177
+Size: 126
 
-H4sIAAAAAAAC/6quLlFQ8k3MzFEIKc9XcEtMLskvUgDznfPz0jKLchNLMvPzFIJL
-k7JSk0uUamu5uIjU4plXUpSvpKAXUp4PUeOYXJJZBpYLSCwuTs5PSSXBNP9SkGm1
-tVyAAAAA//+w8n74sQAAAA==
+H4sIAAAAAAAC/6quLlFQ8k3MzFEIKc9XcEtMLskvUgDznfPz0jKLchNLMvPzFDzz
+SorylRT0QsrzIWock0syy8ByAYnFxcn5Kam1tVxcRJrmXwoyrbaWCxAAAP//m2sT
+b34AAAA=
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /placeholders/thumbnail-large.png

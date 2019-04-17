@@ -1,5 +1,3 @@
-{{t "Mail New Connection Subject"}}
-
 {{t "Mail New Connection Intro"}}
 
 {{t "Mail New Connection Place"}}: {{.City}}, {{.Country}}
