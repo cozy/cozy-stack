@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/echo"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -185,6 +186,26 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 		if err != nil {
 			return nil, err
 		}
+
+		// A share token is only valid if the user has not been revoked
+		if pdoc.Type == permissions.TypeSharePreview {
+			sharingID := strings.Split(pdoc.SourceID, "/")
+			sharingDoc, err := sharing.FindSharing(instance, sharingID[1])
+			if err != nil {
+				return nil, err
+			}
+
+			member, err := sharingDoc.FindMemberBySharecode(instance, token)
+			if err != nil {
+				return nil, err
+			}
+
+			if member.Status == sharing.MemberStatusRevoked {
+				return nil, permissions.ErrInvalidToken
+
+			}
+		}
+
 		return pdoc, nil
 
 	default:

@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 
@@ -678,6 +679,7 @@ func TestMain(m *testing.M) {
 	_, token = setup.GetTestClient(scope)
 
 	ts = setup.GetTestServer("/settings", Routes)
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	tsB = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/auth": func(g *echo.Group) {
 			g.Use(fakeAuthentication)
@@ -688,6 +690,7 @@ func TestMain(m *testing.M) {
 			Routes(g)
 		},
 	})
+	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	os.Exit(setup.Run())
 }

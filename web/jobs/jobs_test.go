@@ -17,6 +17,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -402,5 +404,6 @@ func TestMain(m *testing.M) {
 		"", time.Now())
 
 	ts = setup.GetTestServer("/jobs", Routes)
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	os.Exit(setup.Run())
 }

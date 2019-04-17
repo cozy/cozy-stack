@@ -27,7 +27,9 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	webperms "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/echo"
@@ -626,6 +628,77 @@ func TestAddRecipient(t *testing.T) {
 	assertSharingByAliceToBobDaveAndCharlie(t, members)
 }
 
+func TestRevokedSharingWithPreview(t *testing.T) {
+
+	sharecode := strings.Split(discoveryLink, "=")[1]
+
+	// Assert the link is available (equivalent to doc perms created)
+	req2, err := http.NewRequest(http.MethodGet, tsA.URL+"/permissions/self", nil)
+	req2.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+sharecode)
+	assert.NoError(t, err)
+	res2, err := http.DefaultClient.Do(req2)
+	content, _ := ioutil.ReadAll(res2.Body)
+	assert.NoError(t, err)
+	defer res2.Body.Close()
+	assert.Equal(t, http.StatusOK, res2.StatusCode)
+
+	// Adding a new member to the sharing
+	newMemberMail := "foo@bar.com"
+	data := map[string]interface{}{}
+	err = json.Unmarshal(content, &data)
+	assert.NoError(t, err)
+	d := data["data"].(map[string]interface{})
+	a := d["attributes"].(map[string]interface{})
+	sourceID := a["source_id"].(string)
+	sharingID := strings.Split(sourceID, "/")[1]
+	sharingDoc, err := sharing.FindSharing(aliceInstance, sharingID)
+	assert.NoError(t, err)
+
+	sharingDoc.AddDelegatedContact(aliceInstance, newMemberMail, true)
+	perms, err := permissions.GetForSharePreview(aliceInstance, sharingID)
+	assert.NoError(t, err)
+	fooShareCode, err := aliceInstance.CreateShareCode(newMemberMail)
+	assert.NoError(t, err)
+
+	// Adding its sharecode
+	codes := perms.Codes
+	codes[newMemberMail] = fooShareCode
+	perms.PatchCodes(codes)
+	couchdb.UpdateDoc(aliceInstance, perms)
+	couchdb.UpdateDoc(aliceInstance, sharingDoc)
+
+	// Assert he has access to the sharing preview
+	req2, err = http.NewRequest(http.MethodGet, tsA.URL+"/permissions/self", nil)
+	req2.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+fooShareCode)
+	assert.NoError(t, err)
+	res2, err = http.DefaultClient.Do(req2)
+	assert.NoError(t, err)
+	defer res2.Body.Close()
+	assert.Equal(t, http.StatusOK, res2.StatusCode)
+
+	// Now, revoking the fresh user from the sharing
+	member, err := sharingDoc.FindMemberBySharecode(aliceInstance, fooShareCode)
+	assert.NoError(t, err)
+	err = sharingDoc.RevokeMember(aliceInstance, member, &sharing.Credentials{})
+	assert.NoError(t, err)
+	assert.Equal(t, "revoked", member.Status)
+
+	// Try to get permissions/self, we should get a 400
+	req2, err = http.NewRequest(http.MethodGet, tsA.URL+"/permissions/self", nil)
+	req2.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+fooShareCode)
+	assert.NoError(t, err)
+	res2, err = http.DefaultClient.Do(req2)
+	assert.NoError(t, err)
+	badRequestContent, err := ioutil.ReadAll(res2.Body)
+	assert.NoError(t, err)
+	defer res2.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
+	assert.Contains(t, string(badRequestContent), "Invalid JWT")
+}
+
 func TestCheckPermissions(t *testing.T) {
 	v := echo.Map{
 		"data": echo.Map{
@@ -961,8 +1034,12 @@ func TestMain(m *testing.M) {
 	bobContact = createContact(aliceInstance, "Bob", "bob@example.net")
 	charlieContact = createContact(aliceInstance, "Charlie", "charlie@example.net")
 	daveContact = createContact(aliceInstance, "Dave", "dave@example.net")
-	tsA = setup.GetTestServer("/sharings", sharings.Routes)
+	tsA = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/sharings":    sharings.Routes,
+		"/permissions": webperms.Routes,
+	})
 	tsA.Config.Handler.(*echo.Echo).Renderer = render
+	tsA.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	// Prepare Bob's browser
 	jar := setup.GetCookieJar()
@@ -986,6 +1063,7 @@ func TestMain(m *testing.M) {
 		"/sharings": sharings.Routes,
 	})
 	tsB.Config.Handler.(*echo.Echo).Renderer = render
+	tsB.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
 	// Prepare another instance for the replicator tests
 	replSetup := testutils.NewSetup(m, "sharing_test_replicator")
