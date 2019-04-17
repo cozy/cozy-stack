@@ -13,14 +13,14 @@ import (
 
 func initMailTemplates() {
 	mailTemplater = MailTemplater{
-		"passphrase_reset":             "Mail Reset Passphrase Subject",
-		"archiver":                     "Mail Archive Subject",
-		"two_factor":                   "Mail Two Factor Subject",
-		"two_factor_mail_confirmation": "Mail Two Factor Mail Confirmation Subject",
-		"new_connection":               "Mail New Connection Subject",
-		"new_registration":             "Mail New Registration Subject",
-		"sharing_request":              "Mail Sharing Request Subject",
-		"notifications_diskquota":      "Notifications Disk Quota Subject",
+		"passphrase_reset":             subjectEntry{"Mail Reset Passphrase Subject", nil},
+		"archiver":                     subjectEntry{"Mail Archive Subject", nil},
+		"two_factor":                   subjectEntry{"Mail Two Factor Subject", nil},
+		"two_factor_mail_confirmation": subjectEntry{"Mail Two Factor Mail Confirmation Subject", nil},
+		"new_connection":               subjectEntry{"Mail New Connection Subject", nil},
+		"new_registration":             subjectEntry{"Mail New Registration Subject", nil},
+		"sharing_request":              subjectEntry{"Mail Sharing Request Subject", []string{"SharerPublicName"}},
+		"notifications_diskquota":      subjectEntry{"Notifications Disk Quota Subject", nil},
 	}
 }
 
@@ -31,20 +31,31 @@ func RenderMail(ctx *jobs.WorkerContext, name, layout, locale, recipientName str
 }
 
 // MailTemplater is the list of templates for emails.
-// template name -> subject i18n key
-type MailTemplater map[string]string
+type MailTemplater map[string]subjectEntry
+
+// subjectEntry is a i18n key for the subject message, and some optional
+// variable names.
+type subjectEntry struct {
+	Key       string
+	Variables []string
+}
 
 // Execute will execute the HTML and text templates for the template with the
 // specified name. It returns the mail parts that should be added to the sent
 // mail.
 func (m MailTemplater) Execute(ctx *jobs.WorkerContext, name, layout, locale string, recipientName string, data map[string]interface{}) (string, []*Part, error) {
-	subjectKey, ok := m[name]
+	entry, ok := m[name]
 	if !ok {
 		err := fmt.Errorf("Could not find email named %q", name)
 		return "", nil, err
 	}
 
-	subject := i18n.Translate(subjectKey, locale)
+	var vars []interface{}
+	for _, name := range entry.Variables {
+		vars = append(vars, data[name])
+	}
+
+	subject := i18n.Translate(entry.Key, locale, vars...)
 	context := ctx.Instance.ContextName
 	data["Locale"] = locale
 	if ctx.Instance != nil {

@@ -1,4 +1,4 @@
-{{t "Mail Sharing Request Subject"}}
+{{t "Mail Sharing Request Subject" .SharerPublicName}}
 
 {{t "Mail Sharing Request Intro"}}
 
