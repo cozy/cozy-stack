@@ -232,7 +232,7 @@ func (m *KonnManifest) Update(db prefixer.Prefixer, extraPerms permissions.Set) 
 	perms := m.Permissions()
 
 	// Merging the potential extra permissions
-	if extraPerms != nil {
+	if len(extraPerms) > 0 {
 		perms, err = permissions.MergeExtraPermissions(perms, extraPerms)
 		if err != nil {
 			return err
