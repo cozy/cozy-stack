@@ -392,31 +392,36 @@ func (i *Installer) update() error {
 	}
 
 	extraPerms := permissions.Set{}
+	var alteredPerms *permissions.Permission
+	// The "extraPerms" set represents the post-install alterations of the
+	// permissions between the oldManifest and the current permissions.
+	//
+	// Even if makeUpdate is false, we are going to update the manifest document
+	// to set an AvailableVersion. In this case, the current webapp/konnector
+	// perms will be reapplied and custom ones will be lost if we don't rewrite
+	// them.
+	inst, err := instance.GetFromCouch(i.Domain())
+	if err == nil {
+		// Check if perms were added on the old manifest
+		if i.man.AppType() == consts.WebappType {
+			alteredPerms, err = permissions.GetForWebapp(inst, i.man.Slug())
+		} else if i.man.AppType() == consts.KonnectorType {
+			alteredPerms, err = permissions.GetForKonnector(inst, i.man.Slug())
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	if alteredPerms != nil {
+		extraPerms, err = permissions.Diff(oldManifest.Permissions(), alteredPerms.Permissions)
+		if err != nil {
+			return err
+		}
+	}
+
 	if makeUpdate {
 		i.man = newManifest
-
-		var alteredPerms *permissions.Permission
-
-		inst, err := instance.GetFromCouch(i.Domain())
-		if err == nil {
-			// Check if perms were added on the old manifest
-			if i.man.AppType() == consts.WebappType {
-				alteredPerms, err = permissions.GetForWebapp(inst, i.man.Slug())
-			} else if i.man.AppType() == consts.KonnectorType {
-				alteredPerms, err = permissions.GetForKonnector(inst, i.man.Slug())
-			}
-			if err != nil {
-				return err
-			}
-			// The "extraPerms" set represents the post-install alterations of
-			// the permissions between the oldManifest and the current
-			// permissions
-			extraPerms, err = permissions.Diff(oldManifest.Permissions(), alteredPerms.Permissions)
-			if err != nil {
-				return err
-			}
-		}
-
 		i.sendRealtimeEvent()
 		i.notifyChannel()
 		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
