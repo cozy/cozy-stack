@@ -388,7 +388,7 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 // Careful, the normal middlewares NeedInstance and LoadSession are not applied
 // to this group in web/routing
 func Routes(router *echo.Group) {
-	router.GET("/start", Start, middlewares.NeedInstance)
+	router.GET("/start", Start, middlewares.NeedInstance, middlewares.CheckOnboardingNotFinished)
 	router.GET("/redirect", Redirect)
 	router.GET("/login", Login, middlewares.NeedInstance)
 	router.POST("/access_token", AccessToken, middlewares.NeedInstance)
