@@ -69,7 +69,7 @@ var Indexes = []*mango.Index{
 	// Used to lookup a queued and running jobs
 	mango.IndexOnFields(Jobs, "by-worker-and-state", []string{"worker", "state"}),
 	mango.IndexOnFields(Jobs, "by-trigger-id", []string{"trigger_id", "queued_at"}),
-	mango.IndexOnFields(Jobs, "by-queued_at", []string{"queued_at"}),
+	mango.IndexOnFields(Jobs, "by-queued-at", []string{"queued_at"}),
 
 	// Used to lookup oauth clients by name
 	mango.IndexOnFields(OAuthClients, "by-client-name", []string{"client_name"}),
