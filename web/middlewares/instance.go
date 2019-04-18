@@ -93,6 +93,24 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+// CheckOnboardingNotFinished checks if there is the instance needs to complete
+// its onboarding
+func CheckOnboardingNotFinished(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		i := GetInstance(c)
+		if !i.OnboardingFinished {
+			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
+				"Title":       i.TemplateTitle(),
+				"ThemeCSS":    ThemeCSS(i),
+				"Domain":      i.ContextualDomain(),
+				"ContextName": i.ContextName,
+				"Locale":      i.Locale,
+			})
+		}
+		return next(c)
+	}
+}
+
 // CheckTOSDeadlineExpired checks if there is not signed ToS and the deadline is
 // exceeded
 func CheckTOSDeadlineExpired(next echo.HandlerFunc) echo.HandlerFunc {
