@@ -259,6 +259,12 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 		case *CronTrigger:
 			job := t.Infos().JobRequest()
 			if _, err = s.broker.PushJob(t, job); err != nil {
+				// Remove the cron trigger from redis if it is invalid, as it
+				// may block other cron triggers
+				if err == ErrUnknownWorker {
+					s.client.ZRem(SchedKey, results[0])
+					continue
+				}
 				return err
 			}
 			score, err := strconv.ParseInt(results[1].(string), 10, 64)
