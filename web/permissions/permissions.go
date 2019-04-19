@@ -84,25 +84,22 @@ func createPermission(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	names := strings.Split(c.QueryParam("codes"), ",")
 	ttl := c.QueryParam("ttl")
+
 	parent, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
+	}
 
 	sourceID := parent.SourceID
-
 	// Check if the permission is linked to an OAuth Client
 	if parent.Client != nil {
 		oauthClient := parent.Client.(*oauth.Client)
-
 		if auth.IsLinkedApp(oauthClient.SoftwareID) {
 			slug := auth.GetLinkedAppSlug(oauthClient.SoftwareID)
-
 			// Changing the sourceID from the OAuth clientID to the classic
 			// io.cozy.apps/slug one
 			sourceID = consts.Apps + "/" + slug
 		}
-	}
-
-	if err != nil {
-		return err
 	}
 
 	var subdoc permissions.Permission
