@@ -121,16 +121,30 @@ func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent)
 		return false, nil // TODO rules for documents with a selector
 	}
 
-	// Optim: if dir_id and referenced_by have not changed, the file/folder
-	// can't have been removed from the sharing. Same if it has no old doc.
+	// Optim: if dir_id and referenced_by have not changed, the file can't have
+	// been removed from the sharing. Same if it has no old doc.
 	if evt.OldDoc == nil {
 		return false, nil
 	}
-	if evt.OldDoc.Get("dir_id") == evt.Doc.Get("dir_id") {
-		olds := extractReferencedBy(evt.OldDoc)
-		news := extractReferencedBy(&evt.Doc)
-		if vfs.SameReferences(olds, news) {
-			return false, nil
+	if evt.Doc.Get("type") == consts.FileType {
+		if evt.OldDoc.Get("dir_id") == evt.Doc.Get("dir_id") {
+			olds := extractReferencedBy(evt.OldDoc)
+			news := extractReferencedBy(&evt.Doc)
+			if vfs.SameReferences(olds, news) {
+				return false, nil
+			}
+		}
+	} else {
+		// For a directory, we have to check the path, as it can be a subfolder
+		// of a folder moved from inside the sharing to outside, and we will
+		// have an event for that (path is updated by the VFS, and we will have
+		// an event for that (path is updated by the VFS).
+		if evt.OldDoc.Get("path") == evt.Doc.Get("path") {
+			olds := extractReferencedBy(evt.OldDoc)
+			news := extractReferencedBy(&evt.Doc)
+			if vfs.SameReferences(olds, news) {
+				return false, nil
+			}
 		}
 	}
 
@@ -198,6 +212,51 @@ func isTheSharingDirectory(inst *instance.Instance, msg TrackMessage, evt TrackE
 	return false, nil
 }
 
+// updateRemovedForFiles updates the removed flag for files inside a directory
+// that was moved.
+func updateRemovedForFiles(inst *instance.Instance, sharingID, dirID string, rule int, removed bool) error {
+	dir := &vfs.DirDoc{DocID: dirID}
+	cursor := couchdb.NewSkipCursor(100, 0)
+	for cursor.HasMore() {
+		children, err := inst.VFS().DirBatch(dir, cursor)
+		if err != nil {
+			return err
+		}
+		for _, child := range children {
+			_, file := child.Refine()
+			if file == nil {
+				continue
+			}
+			sid := consts.Files + "/" + file.ID()
+			var ref SharedRef
+			if err := couchdb.GetDoc(inst, consts.Shared, sid, &ref); err != nil {
+				if !couchdb.IsNotFoundError(err) {
+					return err
+				}
+				ref.SID = sid
+				ref.Infos = make(map[string]SharedInfo)
+			}
+			ref.Infos[sharingID] = SharedInfo{
+				Rule:    rule,
+				Removed: removed,
+				Binary:  !removed,
+			}
+			rev := file.Rev()
+			if ref.Rev() == "" {
+				ref.Revisions = &RevsTree{Rev: rev}
+				err = couchdb.CreateNamedDoc(inst, &ref)
+			} else {
+				ref.Revisions.Add(rev)
+				err = couchdb.UpdateDoc(inst, &ref)
+			}
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // UpdateShared updates the io.cozy.shared database when a document is
 // created/update/removed
 func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) error {
@@ -226,11 +285,14 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 			Rule: msg.RuleIndex,
 		}
 	}
-	if evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.FileType {
-		ref.Infos[msg.SharingID] = SharedInfo{
-			Rule:   ref.Infos[msg.SharingID].Rule,
-			Binary: true,
-		}
+
+	// If a document was in a sharing, was removed of the sharing, and comes
+	// back inside it, we need to clear the Removed flag.
+	wasRemoved := ref.Infos[msg.SharingID].Removed
+	ref.Infos[msg.SharingID] = SharedInfo{
+		Rule:    ref.Infos[msg.SharingID].Rule,
+		Binary:  evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.FileType,
+		Removed: false,
 	}
 
 	if evt.Verb == "DELETED" || isTrashed(evt.Doc) {
@@ -259,6 +321,18 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 				Rule:    ref.Infos[msg.SharingID].Rule,
 				Removed: true,
 				Binary:  false,
+			}
+		}
+		// For a directory, we have to update the Removed flag for the files
+		// inside it, as we won't have any events for them.
+		if removed != wasRemoved &&
+			evt.Doc.Type == consts.Files &&
+			evt.Doc.Get("type") == consts.DirType {
+			ruleIdx := ref.Infos[msg.SharingID].Rule
+			err = updateRemovedForFiles(inst, msg.SharingID, evt.Doc.ID(), ruleIdx, removed)
+			if err != nil {
+				inst.Logger().WithField("nspace", "sharing").
+					Warnf("Error on updateRemovedForFiles for %v: %s\n", evt, err)
 			}
 		}
 	}

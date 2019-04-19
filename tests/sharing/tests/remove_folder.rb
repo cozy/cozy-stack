@@ -24,11 +24,13 @@ describe "A shared folder" do
     f1 = CozyFile.create inst, opts
     opts = CozyFile.options_from_fixture(file_path, dir_id: folder.couch_id)
     f2 = CozyFile.create inst, opts
+    opts = CozyFile.options_from_fixture(file_path, dir_id: child2.couch_id)
+    f3 = CozyFile.create inst, opts
 
     # Create the sharing
     contact = Contact.create inst, given_name: recipient_name
     sharing = Sharing.new
-    sharing.rules << Rule.push(folder)
+    sharing.rules << Rule.sync(folder)
     sharing.members << inst << contact
     inst.register sharing
 
@@ -49,6 +51,9 @@ describe "A shared folder" do
 
     f2_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{f2.name}"
     f2_recipient_id = CozyFile.get_id_from_path inst_recipient, f2_path
+
+    f3_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}/#{f3.name}"
+    f3_recipient_id = CozyFile.get_id_from_path inst_recipient, f3_path
 
     # Remove a single file
     f2.remove inst
@@ -76,5 +81,13 @@ describe "A shared folder" do
 
     f1_recipient = CozyFile.find inst_recipient, f1_recipient_id
     assert_equal true, f1_recipient.trashed
+
+    # Check that when a folder is moved out of a sharing, the retroaction
+    # doesn't trash the files inside it
+    sleep 7
+    f3_recipient = CozyFile.find inst_recipient, f3_recipient_id
+    assert_equal true, f3_recipient.trashed
+    f3_sharer = CozyFile.find inst, f3.couch_id
+    assert_equal false, f3_sharer.trashed
   end
 end
