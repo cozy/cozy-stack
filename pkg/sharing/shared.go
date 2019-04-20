@@ -246,7 +246,6 @@ func updateRemovedForFiles(inst *instance.Instance, sharingID, dirID string, rul
 				ref.Revisions = &RevsTree{Rev: rev}
 				err = couchdb.CreateNamedDoc(inst, &ref)
 			} else {
-				ref.Revisions.Add(rev)
 				err = couchdb.UpdateDoc(inst, &ref)
 			}
 			if err != nil {
