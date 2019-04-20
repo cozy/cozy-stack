@@ -287,6 +287,8 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 
 	// If a document was in a sharing, was removed of the sharing, and comes
 	// back inside it, we need to clear the Removed flag.
+	needToUpdateFiles := false
+	removed := false
 	wasRemoved := ref.Infos[msg.SharingID].Removed
 	ref.Infos[msg.SharingID] = SharedInfo{
 		Rule:    ref.Infos[msg.SharingID].Rule,
@@ -308,7 +310,8 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		if skip, err := isTheSharingDirectory(inst, msg, evt); err != nil || skip {
 			return err
 		}
-		removed, err := isNoLongerShared(inst, msg, evt)
+		var err error
+		removed, err = isNoLongerShared(inst, msg, evt)
 		if err != nil {
 			return err
 		}
@@ -322,17 +325,8 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 				Binary:  false,
 			}
 		}
-		// For a directory, we have to update the Removed flag for the files
-		// inside it, as we won't have any events for them.
-		if removed != wasRemoved &&
-			evt.Doc.Type == consts.Files &&
-			evt.Doc.Get("type") == consts.DirType {
-			ruleIdx := ref.Infos[msg.SharingID].Rule
-			err = updateRemovedForFiles(inst, msg.SharingID, evt.Doc.ID(), ruleIdx, removed)
-			if err != nil {
-				inst.Logger().WithField("nspace", "sharing").
-					Warnf("Error on updateRemovedForFiles for %v: %s\n", evt, err)
-			}
+		if evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.DirType {
+			needToUpdateFiles = removed != wasRemoved
 		}
 	}
 
@@ -348,7 +342,22 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		oldrev := evt.OldDoc.Rev()
 		ref.Revisions.InsertAfter(rev, oldrev)
 	}
-	return couchdb.UpdateDoc(inst, &ref)
+	if err := couchdb.UpdateDoc(inst, &ref); err != nil {
+		return err
+	}
+
+	// For a directory, we have to update the Removed flag for the files inside
+	// it, as we won't have any events for them.
+	if needToUpdateFiles {
+		ruleIdx := ref.Infos[msg.SharingID].Rule
+		err := updateRemovedForFiles(inst, msg.SharingID, evt.Doc.ID(), ruleIdx, removed)
+		if err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Warnf("Error on updateRemovedForFiles for %v: %s\n", evt, err)
+		}
+	}
+
+	return nil
 }
 
 // UpdateFileShared creates or updates the io.cozy.shared for a file with
