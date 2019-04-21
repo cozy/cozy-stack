@@ -23,7 +23,7 @@ describe "A photo" do
     # Create the folder with a photo
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
-    file_name = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    file_name = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file_name, dir_id: folder.couch_id)
     file = CozyFile.create inst, opts
 
@@ -77,7 +77,7 @@ describe "A photo" do
     assert file_has_album_reference(file_recipient, album_recipient.couch_id)
 
     # Create a picture
-    file_name = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    file_name = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
     opts = CozyFile.options_from_fixture file_name
     file = CozyFile.create inst, opts
 

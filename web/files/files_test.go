@@ -397,7 +397,7 @@ func TestUploadAtRootSuccess(t *testing.T) {
 }
 
 func TestUploadImage(t *testing.T) {
-	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__©M4Dz.jpg")
+	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
 	assert.NoError(t, err)
 	defer f.Close()
 	m := `{"gps":{"city":"Paris","country":"France"}}`

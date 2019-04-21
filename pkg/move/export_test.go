@@ -54,11 +54,11 @@ func TestTardir(t *testing.T) {
 		Type: testJsondoc.DocType(),
 	}
 
-	fd, err = os.Open("../../tests/fixtures/wet-cozy_20160910__©M4Dz.jpg")
+	fd, err = os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
 	assert.NoError(t, err)
 	defer fd.Close()
 
-	image, err := vfs.NewFileDoc("wet-cozy_20160910__©M4Dz.jpg", consts.RootDirID, -1, nil, "application/image", "application", time.Now(), false, false, nil)
+	image, err := vfs.NewFileDoc("wet-cozy_20160910__M4Dz.jpg", consts.RootDirID, -1, nil, "application/image", "application", time.Now(), false, false, nil)
 	assert.NoError(t, err)
 	photo, err := fs.CreateFile(image, nil)
 	assert.NoError(t, err)
@@ -132,7 +132,7 @@ func TestImport(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, int64(2814), logo.Size())
 
-	photo, err := fs.FileByPath("/destination/wet-cozy_20160910__©M4Dz.jpg")
+	photo, err := fs.FileByPath("/destination/wet-cozy_20160910__M4Dz.jpg")
 	assert.NoError(t, err)
 	assert.NotNil(t, photo.ReferencedBy)
 

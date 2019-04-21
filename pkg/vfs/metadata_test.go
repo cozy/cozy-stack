@@ -35,7 +35,7 @@ func TestExifMetadataExtractor(t *testing.T) {
 	doc := &FileDoc{Mime: "image/jpeg"}
 	extractor := NewMetaExtractor(doc)
 	assert.NotNil(t, extractor)
-	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__©M4Dz.jpg")
+	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
 	assert.NoError(t, err)
 	defer f.Close()
 	_, err = io.Copy(*extractor, f)
