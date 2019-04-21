@@ -51,7 +51,7 @@ describe "A folder" do
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
     child1 = Folder.create inst, dir_id: folder.couch_id
-    file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    file = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
     file = CozyFile.create inst, opts
     zip  = "../fixtures/logos.zip"
@@ -199,7 +199,7 @@ describe "A folder" do
     assert !Helpers.file_exists_in_fs(path)
 
     # Create the sharing of a file
-    file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    file = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file, dir_id: Folder::ROOT_DIR)
     file = CozyFile.create inst, opts
     sharing = Sharing.new

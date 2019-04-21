@@ -28,7 +28,7 @@ class Bootstrap
     owner = Instance.create name: "Alice"
     object = Folder.create owner
     dir = Folder.create owner, dir_id: object.couch_id
-    f = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    f = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
     opts = CozyFile.options_from_fixture(f, dir_id: object.couch_id)
     file = CozyFile.create owner, opts
     object.children << dir << file
@@ -42,7 +42,7 @@ class Bootstrap
     owner = Instance.create name: "Alice"
     object = Folder.create owner
     dir = Folder.create owner, dir_id: object.couch_id
-    f = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    f = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
     opts = CozyFile.options_from_fixture(f, dir_id: object.couch_id)
     file = CozyFile.create owner, opts
     object.children << dir << file

@@ -22,7 +22,7 @@ describe "A folder" do
     # Share a folder with bob and charlie, in the same sharing
     folder = Folder.create inst_alice
     folder.couch_id.wont_be_empty
-    file_path = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    file_path = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file_path, dir_id: folder.couch_id)
     CozyFile.create inst_alice, opts
 

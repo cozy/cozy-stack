@@ -92,7 +92,7 @@ describe "A sharing" do
     # Create the folder
     folder = Folder.create inst_alice
     folder.couch_id.wont_be_empty
-    file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    file = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
     file = CozyFile.create inst_alice, opts
 
@@ -159,7 +159,7 @@ describe "A sharing" do
 
     # Create a new sharing with a new folder
     folder = Folder.create inst_alice
-    file = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    file = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file, dir_id: folder.couch_id)
     file = CozyFile.create inst_alice, opts
     sharing = Sharing.new

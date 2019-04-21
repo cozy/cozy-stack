@@ -26,7 +26,7 @@ describe "A folder" do
     # Create the folder with a file
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
-    file_path = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    file_path = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file_path, dir_id: folder.couch_id)
     file = CozyFile.create inst, opts
 
@@ -75,7 +75,7 @@ describe "A folder" do
     # Create a "one-shot" sharing
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
-    file_path = "../fixtures/wet-cozy_20160910__©M4Dz.jpg"
+    file_path = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
     opts = CozyFile.options_from_fixture(file_path, dir_id: folder.couch_id)
     CozyFile.create inst, opts
     oneshot = Sharing.new
