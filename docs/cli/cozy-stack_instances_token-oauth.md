@@ -10,6 +10,12 @@ Generate a new OAuth access token
 cozy-stack instances token-oauth <domain> <clientid> <scopes> [flags]
 ```
 
+### Examples
+
+```
+$ cozy-stack instances token-oauth cozy.tools:8080 727e677187a51d14ccd59cc0bd000a1d io.cozy.files io.cozy.jobs:POST:sendmail:worker
+```
+
 ### Options
 
 ```

@@ -669,11 +669,15 @@ var cliTokenInstanceCmd = &cobra.Command{
 }
 
 var oauthTokenInstanceCmd = &cobra.Command{
-	Use:   "token-oauth <domain> <clientid> <scopes>",
-	Short: "Generate a new OAuth access token",
+	Use:     "token-oauth <domain> <clientid> <scopes>",
+	Short:   "Generate a new OAuth access token",
+	Example: "$ cozy-stack instances token-oauth cozy.tools:8080 727e677187a51d14ccd59cc0bd000a1d io.cozy.files io.cozy.jobs:POST:sendmail:worker",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 3 {
 			return cmd.Usage()
+		}
+		if strings.Contains(args[2], ",") {
+			fmt.Fprintf(os.Stderr, "Warning: the delimiter for the scopes is a space!\n")
 		}
 		c := newAdminClient()
 		token, err := c.GetToken(&client.TokenOptions{
@@ -692,11 +696,15 @@ var oauthTokenInstanceCmd = &cobra.Command{
 }
 
 var oauthRefreshTokenInstanceCmd = &cobra.Command{
-	Use:   "refresh-token-oauth <domain> <clientid> <scopes>",
-	Short: "Generate a new OAuth refresh token",
+	Use:     "refresh-token-oauth <domain> <clientid> <scopes>",
+	Short:   "Generate a new OAuth refresh token",
+	Example: "$ cozy-stack instances refresh-token-oauth cozy.tools:8080 727e677187a51d14ccd59cc0bd000a1d io.cozy.files io.cozy.jobs:POST:sendmail:worker",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 3 {
 			return cmd.Usage()
+		}
+		if strings.Contains(args[2], ",") {
+			fmt.Fprintf(os.Stderr, "Warning: the delimiter for the scopes is a space!\n")
 		}
 		c := newAdminClient()
 		token, err := c.GetToken(&client.TokenOptions{
