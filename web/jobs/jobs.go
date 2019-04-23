@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -466,6 +467,94 @@ func cleanJobs(c echo.Context) error {
 	return c.JSON(200, map[string]int{"deleted": len(ups)})
 }
 
+func purgeJobs(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, webpermissions.DELETE, consts.Jobs); err != nil {
+		return err
+	}
+
+	workersParam := c.QueryParam("workers")
+	monthsParam := c.QueryParam("months")
+
+	var months int = 2
+	var err error
+	if monthsParam != "" {
+		months, err = strconv.Atoi(monthsParam)
+		if err != nil {
+			return err
+		}
+	}
+	workers := jobs.GetWorkersNamesList()
+	if workersParam != "" {
+		workers = strings.Split(workersParam, ",")
+	}
+
+	// Step 1: We want to get all the jobs prior to the date parameter.
+	// Jobs returned are the ones we want to remove
+	d := time.Now().AddDate(0, -months, 0)
+	jobsBeforeDate, err := jobs.GetJobsBeforeDate(instance, d)
+	if err != nil && err != jobs.ErrNotFoundJob {
+		return err
+	}
+	// Step 2: We also want to keep a minimum number of jobs for each state.
+	// Jobs returned will be kept.
+	limits := map[jobs.State]int{
+		jobs.Queued:  0, // "0" is equivalent of the default limit
+		jobs.Running: 0,
+		jobs.Done:    0,
+		jobs.Errored: 0,
+	}
+
+	var lastsJobs []*jobs.Job
+	for _, w := range workers {
+		jobs, err := jobs.GetLastsJobs(instance, w, limits)
+		if err != nil {
+			return err
+		}
+		lastsJobs = append(lastsJobs, jobs...)
+	}
+
+	// Step 3: cleaning.
+	// - Removing jobs from the ids if they exists.
+	// - Skipping worker types
+	var finalJobs []*jobs.Job
+
+	for _, job := range jobsBeforeDate {
+		found := false
+		validWorker := false
+
+		for _, wt := range workers {
+			if job.WorkerType == wt {
+				validWorker = true
+				break
+			}
+		}
+		// Iterating only if the job has not already been excluded by its
+		// worker type
+		if validWorker {
+			for _, j := range lastsJobs {
+				if j.ID() == job.ID() {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				finalJobs = append(finalJobs, job)
+			}
+		}
+	}
+
+	// No dry run, removing the jobs
+	for _, j := range finalJobs {
+		err := couchdb.DeleteDoc(instance, j)
+		if err != nil {
+			return err
+		}
+	}
+	return c.JSON(200, map[string]int{"deleted": len(finalJobs)})
+}
+
 // Routes sets the routing for the jobs service
 func Routes(router *echo.Group) {
 	router.GET("/queue/:worker-type", getQueue)
@@ -480,6 +569,7 @@ func Routes(router *echo.Group) {
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 
 	router.POST("/clean", cleanJobs)
+	router.DELETE("/purge", purgeJobs)
 	router.GET("/:job-id", getJob)
 }
 
