@@ -313,6 +313,32 @@ func GetQueuedJobs(db prefixer.Prefixer, workerType string) ([]*Job, error) {
 	return results, nil
 }
 
+// GetJobsBeforeDate returns alls jobs queued before the specified date
+func GetJobsBeforeDate(db prefixer.Prefixer, date time.Time) ([]*Job, error) {
+	var res couchdb.ViewResponse
+	var jobs []*Job
+
+	err := couchdb.ExecView(db, consts.JobByQueuedAt, &couchdb.ViewRequest{
+		IncludeDocs: true,
+		EndKey:      date.Format(time.RFC3339Nano),
+	}, &res)
+	if err != nil {
+		return nil, err
+	}
+	if len(res.Rows) == 0 {
+		return nil, ErrNotFoundJob
+	}
+
+	// Returning docs
+	doc := &Job{}
+	for _, row := range res.Rows {
+		if err = json.Unmarshal(row.Doc, &doc); err == nil {
+			jobs = append(jobs, doc)
+		}
+	}
+	return jobs, err
+}
+
 // GetLastsJobs returns the N lasts job of each state for an instance/worker
 // type pair
 func GetLastsJobs(db prefixer.Prefixer, workerType string, limits map[State]int) ([]*Job, error) {
