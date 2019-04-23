@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	perm "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -212,6 +214,14 @@ func changesFeed(c echo.Context) error {
 
 	if err = middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
+	}
+
+	// Use the VFS lock for the files to avoid sending the changed feed while
+	// the VFS is moving a directory.
+	if doctype == consts.Files {
+		mu := lock.ReadWrite(instance, "vfs")
+		mu.Lock()
+		defer mu.Unlock()
 	}
 
 	results, err := couchdb.GetChanges(instance, &couchdb.ChangesRequest{
