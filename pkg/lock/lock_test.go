@@ -87,6 +87,9 @@ func HammerMutex(m ErrorLocker, loops int, cdone chan bool) {
 var n = 1000
 
 func TestMemLock(t *testing.T) {
+	if testing.Short() {
+		n = 5
+	}
 	backconf := config.GetConfig().Lock
 	var err error
 	config.GetConfig().Lock, err = config.NewRedisConfig("")
@@ -110,6 +113,9 @@ func TestMemLock(t *testing.T) {
 }
 
 func TestRedisLock(t *testing.T) {
+	if testing.Short() {
+		n = 5
+	}
 	backconf := config.GetConfig().Lock
 	var err error
 	config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
@@ -132,8 +138,5 @@ func TestRedisLock(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	if testing.Short() {
-		n = 5
-	}
 	os.Exit(m.Run())
 }
