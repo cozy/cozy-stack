@@ -37,7 +37,7 @@ executable bit (`chmod +x cozy-stack`) and put it in your `$PATH`.
 
 #### Using `go`
 
-[Install go](https://golang.org/doc/install), version >= 1.9. With `go`
+[Install go](https://golang.org/doc/install), version >= 1.11. With `go`
 installed and configured, you can run the following command:
 
 ```

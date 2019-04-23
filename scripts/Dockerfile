@@ -4,7 +4,7 @@
 
 
 # Multi-stage image: this step builds cozy-stack
-FROM golang:1.11 as build
+FROM golang:1.12 as build
 WORKDIR /go/src/github.com/cozy/cozy-stack
 
 # MailHog
