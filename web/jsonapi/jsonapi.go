@@ -169,14 +169,14 @@ func Bind(body io.Reader, attrs interface{}) (*ObjectMarshalling, error) {
 	if err := decoder.Decode(&doc); err != nil {
 		return nil, err
 	}
-	if doc.Data == nil {
+	if doc == nil || doc.Data == nil {
 		return nil, BadJSON()
 	}
 	var obj *ObjectMarshalling
 	if err := json.Unmarshal(*doc.Data, &obj); err != nil {
 		return nil, err
 	}
-	if obj.Attributes != nil && attrs != nil {
+	if obj != nil && obj.Attributes != nil && attrs != nil {
 		if err := json.Unmarshal(*obj.Attributes, &attrs); err != nil {
 			return nil, err
 		}
