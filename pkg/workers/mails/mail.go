@@ -90,6 +90,14 @@ func SendMail(ctx *jobs.WorkerContext) error {
 	if from == "" {
 		from = "noreply@" + utils.StripPort(ctx.Instance.Domain)
 	}
+	if ctxSettings, err := ctx.Instance.SettingsContext(); err == nil {
+		if addr, ok := ctxSettings["noreply_address"].(string); ok && addr != "" {
+			from = addr
+		}
+		if nname, ok := ctxSettings["noreply_name"].(string); ok && nname != "" {
+			name = nname
+		}
+	}
 	switch opts.Mode {
 	case ModeNoReply:
 		toAddr, err := addressFromInstance(ctx.Instance)
