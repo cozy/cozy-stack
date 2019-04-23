@@ -1,6 +1,7 @@
 class Folder
   ROOT_DIR = "io.cozy.files.root-dir".freeze
   TRASH_DIR = "io.cozy.files.trash-dir".freeze
+  TRASH_PATH = "/.cozy_trash/".freeze
   NO_LONGER_SHARED_DIR = "io.cozy.files.no-longer-shared-dir".freeze
 
   include Model::Files
@@ -101,5 +102,9 @@ class Folder
     j = JSON.parse(res.body)["data"]
     @couch_id = j["id"]
     @couch_rev = j["rev"]
+  end
+
+  def trashed
+    @path.start_with? TRASH_PATH
   end
 end

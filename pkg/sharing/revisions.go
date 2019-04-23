@@ -82,6 +82,11 @@ func (rt *RevsTree) Find(rev string) *RevsTree {
 func (rt *RevsTree) Add(rev string) *RevsTree {
 	// TODO check generations (conflicts)
 	if len(rt.Branches) > 0 {
+		// XXX This condition shouldn't be true, but it can help to limit
+		// damage in case bugs happen.
+		if rt.Branches[0].Rev == rev {
+			return &rt.Branches[0]
+		}
 		return rt.Branches[0].Add(rev)
 	}
 	rt.Branches = []RevsTree{
