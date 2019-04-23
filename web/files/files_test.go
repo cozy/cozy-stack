@@ -313,9 +313,6 @@ func TestCreateDirWithParentSuccess(t *testing.T) {
 func TestCreateDirWithIllegalCharacter(t *testing.T) {
 	res1, _ := createDir(t, "/files/?Name=coucou/les/copains!&Type=directory")
 	assert.Equal(t, 422, res1.StatusCode)
-
-	res2, _ := createDir(t, "/files/?Name=j'ai\x00untrou!&Type=directory")
-	assert.Equal(t, 422, res2.StatusCode)
 }
 
 func TestCreateDirConcurrently(t *testing.T) {
