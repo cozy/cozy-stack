@@ -72,22 +72,20 @@ describe "A shared folder" do
 
     child2_recipient = Folder.find inst_recipient, child2_recipient_id
     child3_recipient = Folder.find inst_recipient, child3_recipient_id
-    assert_equal "/.cozy_trash/#{child2_recipient.name}", child2_recipient.path
-    assert_equal "/.cozy_trash/#{child2_recipient.name}/#{child3_recipient.name}", child3_recipient.path
+    assert child2_recipient.trashed
+    assert child3_recipient.trashed
     assert_equal "/#{Helpers::SHARED_WITH_ME}/#{folder.name}", child2_recipient.restore_path
-    assert_equal "#{Folder::TRASH_DIR}", child2_recipient.dir_id
-    assert_equal "#{child2_recipient_id}", child3_recipient.dir_id
-    assert(child2.name != child2_recipient.name)
+    refute_equal child2.name, child2_recipient.name
 
     f1_recipient = CozyFile.find inst_recipient, f1_recipient_id
-    assert_equal true, f1_recipient.trashed
+    assert f1_recipient.trashed
 
     # Check that when a folder is moved out of a sharing, the retroaction
     # doesn't trash the files inside it
     sleep 7
     f3_recipient = CozyFile.find inst_recipient, f3_recipient_id
-    assert_equal true, f3_recipient.trashed
+    assert f3_recipient.trashed
     f3_sharer = CozyFile.find inst, f3.couch_id
-    assert_equal false, f3_sharer.trashed
+    refute f3_sharer.trashed
   end
 end
