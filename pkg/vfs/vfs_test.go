@@ -729,7 +729,7 @@ func TestCreateFileTooBig(t *testing.T) {
 
 	diskUsage2, err := fs.DiskUsage()
 	assert.NoError(t, err)
-	assert.Equal(t, int64(diskUsage1+diskQuota/2), diskUsage2)
+	assert.Equal(t, diskUsage1+diskQuota/2, diskUsage2)
 
 	doc4, err := vfs.NewFileDoc(
 		"too-big2",
