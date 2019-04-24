@@ -1,6 +1,5 @@
 package vfsafero
 
-// #nosec
 import (
 	"bytes"
 	"crypto/md5"
@@ -252,7 +251,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 
-	hash := md5.New() // #nosec
+	hash := md5.New()
 	extractor := vfs.NewMetaExtractor(newdoc)
 
 	return &aferoFileCreation{
@@ -831,7 +830,7 @@ func extractContentTypeAndMD5(filename string) (contentType string, md5sum []byt
 	defer f.Close()
 	var r io.Reader
 	contentType, r = filetype.FromReader(f)
-	h := md5.New() // #nosec
+	h := md5.New()
 	if _, err = io.Copy(h, r); err != nil {
 		return
 	}

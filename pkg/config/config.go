@@ -91,7 +91,7 @@ const (
 
 // defaultAdminSecretFileName is the default name of the file containing the
 // administration hashed passphrase.
-const defaultAdminSecretFileName = "cozy-admin-passphrase" // #nosec
+const defaultAdminSecretFileName = "cozy-admin-passphrase"
 
 var config *Config
 var vault *Vault

@@ -29,7 +29,7 @@ const (
 )
 
 // ClientSecretLen is the number of random bytes used for generating the client secret
-const ClientSecretLen = 24 // #nosec
+const ClientSecretLen = 24
 
 // ScopeLogin is the special scope used by the manager or any other client
 // for login/authentication purposes.

@@ -41,7 +41,7 @@ func CozyUI(i *instance.Instance) template.HTML {
 	if err != nil {
 		panic(err)
 	}
-	return template.HTML(buf.String()) // #nosec
+	return template.HTML(buf.String())
 }
 
 // ThemeCSS returns an HTML template for inserting the HTML tag for the custom
@@ -55,7 +55,7 @@ func ThemeCSS(i *instance.Instance) template.HTML {
 	if err != nil {
 		panic(err)
 	}
-	return template.HTML(buf.String()) // #nosec
+	return template.HTML(buf.String())
 }
 
 func Favicon(i *instance.Instance) template.HTML {
@@ -67,5 +67,5 @@ func Favicon(i *instance.Instance) template.HTML {
 	if err != nil {
 		panic(err)
 	}
-	return template.HTML(buf.String()) // #nosec
+	return template.HTML(buf.String())
 }

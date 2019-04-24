@@ -15,7 +15,7 @@ import (
 )
 
 // TokenFileFmt is the filename in which are stored OAuth client data and token.
-const TokenFileFmt = ".cozy-oauth-%s" // #nosec
+const TokenFileFmt = ".cozy-oauth-%s"
 
 // Storage is an interface to specify how to store and load authentication
 // states.

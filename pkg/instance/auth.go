@@ -14,7 +14,6 @@ import (
 	"golang.org/x/crypto/hkdf"
 )
 
-/* #nosec */
 const (
 	RegisterTokenLen      = 16
 	PasswordResetTokenLen = 16

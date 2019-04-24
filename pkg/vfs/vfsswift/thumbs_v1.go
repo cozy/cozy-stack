@@ -67,7 +67,7 @@ func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request, img
 	}
 	defer f.Close()
 
-	lastModified, _ := time.Parse(http.TimeFormat, o["Last-Modified"]) // #nosec
+	lastModified, _ := time.Parse(http.TimeFormat, o["Last-Modified"])
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
 
 	http.ServeContent(w, req, name, lastModified, f)

@@ -1,6 +1,5 @@
 package cmd
 
-// #nosec
 import (
 	"bufio"
 	"bytes"
@@ -136,7 +135,7 @@ var md5FixerCmd = &cobra.Command{
 				return nil
 			}
 			defer r.Close()
-			h := md5.New() // #nosec
+			h := md5.New()
 			_, err = io.Copy(h, r)
 			if err != nil {
 				fmt.Printf("failed to download: %s", err.Error())

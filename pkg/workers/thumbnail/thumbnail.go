@@ -200,7 +200,7 @@ func generateThumbnails(ctx *jobs.WorkerContext, img *vfs.FileDoc) error {
 		var tempDir string
 		tempDir, err = ioutil.TempDir("", "magick")
 		if err == nil {
-			defer os.RemoveAll(tempDir) // #nosec
+			defer os.RemoveAll(tempDir)
 			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
 			env = []string{envTempDir}
 		}
@@ -277,7 +277,7 @@ func generateThumb(ctx *jobs.WorkerContext, in io.Reader, out io.Writer, fileID 
 		"jpg:-", // Send the output on stdout, in JPEG format
 	}
 	var stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, convertCmd, args...) // #nosec
+	cmd := exec.CommandContext(ctx, convertCmd, args...)
 	cmd.Env = env
 	cmd.Stdin = in
 	cmd.Stdout = out

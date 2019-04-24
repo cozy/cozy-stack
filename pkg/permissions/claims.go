@@ -6,7 +6,6 @@ import (
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
-// #nosec
 const (
 	AppAudience               = "app"          // used by client-side apps
 	KonnectorAudience         = "konn"         // used by konnectors
