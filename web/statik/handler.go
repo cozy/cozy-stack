@@ -18,7 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	web_utils "github.com/cozy/cozy-stack/web/utils"
+	web_utils "github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/echo"
 )
 

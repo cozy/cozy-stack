@@ -17,7 +17,7 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	web_utils "github.com/cozy/cozy-stack/web/utils"
+	web_utils "github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/swift"
 )
 
