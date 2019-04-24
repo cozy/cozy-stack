@@ -22,7 +22,7 @@ func TestProperSerial(t *testing.T) {
 	assert.NoError(t, job.AckConsumed())
 	job2, err := jobs.Get(job, job.ID())
 	assert.NoError(t, err)
-	assert.Equal(t, jobs.State(jobs.Running), job2.State)
+	assert.Equal(t, jobs.Running, job2.State)
 }
 
 func TestMessageMarshalling(t *testing.T) {

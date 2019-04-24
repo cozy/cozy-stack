@@ -348,7 +348,7 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 		c := newAdminClient()
 		_, err = c.ModifyInstance(&client.InstanceOptions{
 			Domain:    domain,
-			DiskQuota: int64(diskQuota),
+			DiskQuota: diskQuota,
 		})
 		return err
 	},
