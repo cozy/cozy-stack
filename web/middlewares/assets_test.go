@@ -63,7 +63,7 @@ func TestThemeWithContext(t *testing.T) {
 	err = fs.RegisterCustomExternals(cacheStorage, assetsOptions, 1)
 	assert.NoError(t, err)
 	// Test the theme
-	lifecycle.Patch(testInstance, &lifecycle.Options{
+	_ = lifecycle.Patch(testInstance, &lifecycle.Options{
 		ContextName: context,
 	})
 	assert.NoError(t, err)

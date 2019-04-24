@@ -29,7 +29,9 @@ type UploadMsg struct {
 // Upload starts uploading files for this sharing
 func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 	mu := lock.ReadWrite(inst, "sharings/"+s.SID+"/upload")
-	mu.Lock()
+	if err := mu.Lock(); err != nil {
+		return err
+	}
 	defer mu.Unlock()
 
 	var errm error
@@ -74,7 +76,9 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 // InitialUpload uploads files to just a member, for the first time
 func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
 	mu := lock.ReadWrite(inst, "sharings/"+s.SID+"/upload")
-	mu.Lock()
+	if err := mu.Lock(); err != nil {
+		return err
+	}
 	defer mu.Unlock()
 
 	for i := 0; i < BatchSize; i++ {
@@ -332,7 +336,9 @@ func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRe
 func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
 	inst.Logger().WithField("nspace", "upload").Debugf("SyncFile %#v", target)
 	mu := lock.ReadWrite(inst, "shared")
-	mu.Lock()
+	if err := mu.Lock(); err != nil {
+		return nil, err
+	}
 	defer mu.Unlock()
 
 	if len(target.MD5Sum) == 0 {
@@ -461,7 +467,9 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 		return ErrMissingFileMetadata
 	}
 	mu := lock.ReadWrite(inst, "shared")
-	mu.Lock()
+	if err = mu.Lock(); err != nil {
+		return err
+	}
 	defer mu.Unlock()
 
 	current, err := inst.VFS().FileByID(target.DocID)
@@ -628,7 +636,10 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, olddoc, rule)
 	copySafeFieldsToFile(target.FileDoc, newdoc)
 	newdoc.DocName = target.DocName
-	s.prepareFileWithAncestors(inst, newdoc, target.DirID)
+	err = s.prepareFileWithAncestors(inst, newdoc, target.DirID)
+	if err != nil {
+		return err
+	}
 	newdoc.ResetFullpath()
 	newdoc.ByteSize = target.ByteSize
 	newdoc.MD5Sum = target.MD5Sum

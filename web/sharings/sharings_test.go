@@ -665,8 +665,8 @@ func TestRevokedSharingWithPreview(t *testing.T) {
 	codes := perms.Codes
 	codes[newMemberMail] = fooShareCode
 	perms.PatchCodes(codes)
-	couchdb.UpdateDoc(aliceInstance, perms)
-	couchdb.UpdateDoc(aliceInstance, sharingDoc)
+	assert.NoError(t, couchdb.UpdateDoc(aliceInstance, perms))
+	assert.NoError(t, couchdb.UpdateDoc(aliceInstance, sharingDoc))
 
 	// Assert he has access to the sharing preview
 	req2, err = http.NewRequest(http.MethodGet, tsA.URL+"/permissions/self", nil)
@@ -1019,7 +1019,7 @@ func TestRevocationFromRecipient(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
-	web.LoadSupportedLocales()
+	_ = web.LoadSupportedLocales()
 	testutils.NeedCouchdb()
 	render, _ := statik.NewDirRenderer("../../assets")
 	middlewares.BuildTemplates()

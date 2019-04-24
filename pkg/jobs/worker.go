@@ -329,7 +329,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 		// ErrBadTrigger.
 		if job.TriggerID != "" && globalJobSystem != nil {
 			if _, ok := errRun.(ErrBadTrigger); ok {
-				globalJobSystem.DeleteTrigger(job, job.TriggerID)
+				_ = globalJobSystem.DeleteTrigger(job, job.TriggerID)
 			}
 		}
 	}

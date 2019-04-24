@@ -47,7 +47,7 @@ func TestTrashIsSkipped(t *testing.T) {
 
 	ids := []string{}
 
-	getJSON(t, "/files/io.cozy.files.root-dir?"+opts.Encode(), &result)
+	assert.NoError(t, getJSON(t, "/files/io.cozy.files.root-dir?"+opts.Encode(), &result))
 	assert.Len(t, result.Data.Relationships.Contents.Data, 5)
 	assert.Len(t, result.Included, 5)
 
@@ -64,7 +64,7 @@ func TestTrashIsSkipped(t *testing.T) {
 	next := result.Links.Next
 	assert.NotEmpty(t, next)
 
-	getJSON(t, next, &result)
+	assert.NoError(t, getJSON(t, next, &result))
 	assert.Len(t, result.Data.Relationships.Contents.Data, 5)
 	assert.Len(t, result.Included, 5)
 
@@ -82,7 +82,7 @@ func TestTrashIsSkipped(t *testing.T) {
 	assert.NotEmpty(t, next)
 
 	opts.Add("page[skip]", "10")
-	getJSON(t, "/files/io.cozy.files.root-dir?"+opts.Encode(), &result)
+	assert.NoError(t, getJSON(t, "/files/io.cozy.files.root-dir?"+opts.Encode(), &result))
 	assert.Len(t, result.Data.Relationships.Contents.Data, 5)
 	assert.Len(t, result.Included, 5)
 
@@ -105,7 +105,7 @@ func TestZeroCountIsPresent(t *testing.T) {
 	assert.True(t, ok)
 
 	var result map[string]interface{}
-	getJSON(t, "/files/"+parentID, &result)
+	assert.NoError(t, getJSON(t, "/files/"+parentID, &result))
 
 	data := result["data"].(map[string]interface{})
 	rels := data["relationships"].(map[string]interface{})
@@ -150,7 +150,7 @@ func TestListDirPaginated(t *testing.T) {
 		}
 		Included []interface{}
 	}
-	getJSON(t, "/files/"+parentID+"?"+opts.Encode(), &result)
+	assert.NoError(t, getJSON(t, "/files/"+parentID+"?"+opts.Encode(), &result))
 
 	assert.Len(t, result.Data.Relationships.Contents.Data, 7)
 	assert.Len(t, result.Included, 7)
@@ -171,7 +171,7 @@ func TestListDirPaginated(t *testing.T) {
 		}
 		Data []interface{}
 	}
-	getJSON(t, next, &result2)
+	assert.NoError(t, getJSON(t, next, &result2))
 	assert.Len(t, result2.Data, 7)
 	assert.Equal(t, result2.Meta.Count, 15)
 
@@ -188,7 +188,7 @@ func TestListDirPaginated(t *testing.T) {
 		}
 		Data []interface{}
 	}
-	getJSON(t, next, &result3)
+	assert.NoError(t, getJSON(t, next, &result3))
 	assert.Len(t, result3.Data, 1)
 	assert.Equal(t, result3.Meta.Count, 15)
 
@@ -234,7 +234,7 @@ func TestListDirPaginatedSkip(t *testing.T) {
 		}
 		Included []interface{}
 	}
-	getJSON(t, "/files/"+parentID+"?"+opts.Encode(), &result)
+	assert.NoError(t, getJSON(t, "/files/"+parentID+"?"+opts.Encode(), &result))
 
 	assert.Len(t, result.Data.Relationships.Contents.Data, 7)
 	assert.Len(t, result.Included, 7)
@@ -250,7 +250,7 @@ func TestListDirPaginatedSkip(t *testing.T) {
 		}
 		Data []interface{}
 	}
-	getJSON(t, next, &result2)
+	assert.NoError(t, getJSON(t, next, &result2))
 	assert.Len(t, result2.Data, 7)
 	assert.Equal(t, result2.Meta.Count, 15)
 
@@ -267,7 +267,7 @@ func TestListDirPaginatedSkip(t *testing.T) {
 		}
 		Data []interface{}
 	}
-	getJSON(t, next, &result3)
+	assert.NoError(t, getJSON(t, next, &result3))
 	assert.Len(t, result3.Data, 1)
 	assert.Equal(t, result3.Meta.Count, 15)
 

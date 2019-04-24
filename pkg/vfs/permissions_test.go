@@ -43,9 +43,10 @@ func TestPermissions(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	vfs.ModifyDirMetadata(fs, B, &vfs.DocPatch{
+	_, err = vfs.ModifyDirMetadata(fs, B, &vfs.DocPatch{
 		Tags: &[]string{"testtagparent"},
 	})
+	assert.NoError(t, err)
 
 	B2, err := fs.DirByPath("/O/B2")
 	if !assert.NoError(t, err) {
@@ -56,9 +57,10 @@ func TestPermissions(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	vfs.ModifyFileMetadata(fs, f, &vfs.DocPatch{
+	_, err = vfs.ModifyFileMetadata(fs, f, &vfs.DocPatch{
 		Tags: &[]string{"testtag"},
 	})
+	assert.NoError(t, err)
 	// reload
 	f, err = fs.FileByPath("/O/B/b1.txt")
 	if !assert.NoError(t, err) {

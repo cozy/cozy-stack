@@ -126,8 +126,8 @@ func TestCreateDoc(t *testing.T) {
 func TestGetAllDocs(t *testing.T) {
 	doc1 := &testDoc{Test: "all_1"}
 	doc2 := &testDoc{Test: "all_2"}
-	CreateDoc(TestPrefix, doc1)
-	CreateDoc(TestPrefix, doc2)
+	assert.NoError(t, CreateDoc(TestPrefix, doc1))
+	assert.NoError(t, CreateDoc(TestPrefix, doc2))
 
 	var results []*testDoc
 	err := GetAllDocs(TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)
@@ -141,8 +141,8 @@ func TestGetAllDocs(t *testing.T) {
 func TestBulkUpdateDocs(t *testing.T) {
 	doc1 := &testDoc{Test: "before_1"}
 	doc2 := &testDoc{Test: "before_2"}
-	CreateDoc(TestPrefix, doc1)
-	CreateDoc(TestPrefix, doc2)
+	assert.NoError(t, CreateDoc(TestPrefix, doc1))
+	assert.NoError(t, CreateDoc(TestPrefix, doc2))
 
 	var results []*testDoc
 	err := GetAllDocs(TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)
@@ -247,9 +247,9 @@ func TestChangesSuccess(t *testing.T) {
 	doc1 := makeTestDoc()
 	doc2 := makeTestDoc()
 	doc3 := makeTestDoc()
-	CreateDoc(TestPrefix, doc1)
-	CreateDoc(TestPrefix, doc2)
-	CreateDoc(TestPrefix, doc3)
+	assert.NoError(t, CreateDoc(TestPrefix, doc1))
+	assert.NoError(t, CreateDoc(TestPrefix, doc2))
+	assert.NoError(t, CreateDoc(TestPrefix, doc3))
 
 	request = &ChangesRequest{
 		DocType: TestDoctype,
@@ -273,7 +273,7 @@ func TestChangesSuccess(t *testing.T) {
 	seqnoAfterCreates = response.LastSeq
 
 	doc4 := makeTestDoc()
-	CreateDoc(TestPrefix, doc4)
+	assert.NoError(t, CreateDoc(TestPrefix, doc4))
 
 	request = &ChangesRequest{
 		DocType: TestDoctype,
@@ -285,7 +285,7 @@ func TestChangesSuccess(t *testing.T) {
 }
 
 func TestEnsureDBExist(t *testing.T) {
-	defer DeleteDB(TestPrefix, "io.cozy.tests.db1")
+	defer func() { _ = DeleteDB(TestPrefix, "io.cozy.tests.db1") }()
 	_, err := DBStatus(TestPrefix, "io.cozy.tests.db1")
 	assert.True(t, IsNoDatabaseError(err))
 	assert.NoError(t, EnsureDBExist(TestPrefix, "io.cozy.tests.db1"))
@@ -311,7 +311,7 @@ func TestMain(m *testing.M) {
 
 	receivedEvents = make(map[string]struct{})
 	eventChan := realtime.GetHub().Subscriber(TestPrefix)
-	eventChan.Subscribe(TestDoctype)
+	_ = eventChan.Subscribe(TestDoctype)
 	go func() {
 		for ev := range eventChan.Channel {
 			receivedEventsMutex.Lock()
@@ -323,8 +323,7 @@ func TestMain(m *testing.M) {
 	res := m.Run()
 
 	eventChan.Close()
-
-	DeleteDB(TestPrefix, TestDoctype)
+	_ = DeleteDB(TestPrefix, TestDoctype)
 
 	os.Exit(res)
 }

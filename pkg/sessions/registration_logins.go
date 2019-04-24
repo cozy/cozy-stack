@@ -138,7 +138,7 @@ func RemoveLoginRegistration(domain, clientID string) error {
 		registrationsMapLock.Unlock()
 	}
 	if entryPtr != nil {
-		sendRegistrationNotification(entryPtr, true)
+		_ = sendRegistrationNotification(entryPtr, true)
 	}
 	return nil
 }
@@ -226,6 +226,6 @@ func sendRegistrationNotification(entry *registrationEntry, registrationNotifica
 
 func sendExpiredRegistrationNotifications(entries []registrationEntry) {
 	for _, entry := range entries {
-		sendRegistrationNotification(&entry, false)
+		_ = sendRegistrationNotification(&entry, false)
 	}
 }

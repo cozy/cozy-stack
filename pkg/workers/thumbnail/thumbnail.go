@@ -111,7 +111,7 @@ func WorkerCheck(ctx *jobs.WorkerContext) error {
 	fs := ctx.Instance.VFS()
 	fsThumb := ctx.Instance.ThumbsFS()
 	var errm error
-	vfs.Walk(fs, "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
+	_ = vfs.Walk(fs, "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
 		if err != nil {
 			return err
 		}
@@ -232,9 +232,9 @@ func recGenerateThub(ctx *jobs.WorkerContext, in io.Reader, fs vfs.Thumbser, img
 	}
 	defer func() {
 		if err != nil {
-			th.Abort()
+			_ = th.Abort()
 		} else {
-			th.Commit()
+			_ = th.Commit()
 		}
 	}()
 	var buffer *bytes.Buffer

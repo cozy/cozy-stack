@@ -71,7 +71,7 @@ func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface
 
 func getDocForTest() couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{Type: Type, M: map[string]interface{}{"test": "value"}}
-	couchdb.CreateDoc(testInstance, &doc)
+	_ = couchdb.CreateDoc(testInstance, &doc)
 	return doc
 }
 
@@ -86,8 +86,8 @@ func TestMain(m *testing.M) {
 	_, token = setup.GetTestClient(scope)
 	ts = setup.GetTestServer("/data", Routes)
 
-	couchdb.ResetDB(testInstance, Type)
-	couchdb.CreateNamedDoc(testInstance, &couchdb.JSONDoc{
+	_ = couchdb.ResetDB(testInstance, Type)
+	_ = couchdb.CreateNamedDoc(testInstance, &couchdb.JSONDoc{
 		Type: Type,
 		M: map[string]interface{}{
 			"_id":  ID,
@@ -110,8 +110,7 @@ func TestSuccessGet(t *testing.T) {
 }
 
 func TestGetWithSlash(t *testing.T) {
-
-	couchdb.CreateNamedDoc(testInstance, &couchdb.JSONDoc{
+	_ = couchdb.CreateNamedDoc(testInstance, &couchdb.JSONDoc{
 		Type: Type, M: map[string]interface{}{
 			"_id":  "with/slash",
 			"test": "valueslash",
@@ -128,8 +127,7 @@ func TestGetWithSlash(t *testing.T) {
 }
 
 func TestWrongDoctype(t *testing.T) {
-
-	couchdb.DeleteDB(testInstance, "io.cozy.nottype")
+	_ = couchdb.DeleteDB(testInstance, "io.cozy.nottype")
 
 	req, _ := http.NewRequest("GET", ts.URL+"/data/io.cozy.nottype/"+ID, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
@@ -498,8 +496,7 @@ func TestReDefineIndex(t *testing.T) {
 }
 
 func TestDefineIndexUnexistingDoctype(t *testing.T) {
-
-	couchdb.DeleteDB(testInstance, "io.cozy.nottype")
+	_ = couchdb.DeleteDB(testInstance, "io.cozy.nottype")
 
 	var def = M{"index": M{"fields": S{"foo"}}}
 	var url = ts.URL + "/data/io.cozy.nottype/_index"
@@ -518,8 +515,7 @@ func TestDefineIndexUnexistingDoctype(t *testing.T) {
 }
 
 func TestFindDocuments(t *testing.T) {
-
-	couchdb.ResetDB(testInstance, Type)
+	_ = couchdb.ResetDB(testInstance, Type)
 
 	_ = getDocForTest()
 	_ = getDocForTest()
@@ -550,8 +546,7 @@ func TestFindDocuments(t *testing.T) {
 }
 
 func TestFindDocumentsPaginated(t *testing.T) {
-
-	couchdb.ResetDB(testInstance, Type)
+	_ = couchdb.ResetDB(testInstance, Type)
 
 	for i := 1; i <= 150; i++ {
 		_ = getDocForTest()
@@ -729,9 +724,9 @@ func TestAccountsEncryptDecrypt(t *testing.T) {
 	var m1 map[string]interface{} // original
 	var m2 map[string]interface{} // encrypted
 	var m3 map[string]interface{} // decrypted
-	json.Unmarshal(v, &m1)
-	json.Unmarshal(v, &m2)
-	json.Unmarshal(v, &m3)
+	assert.NoError(t, json.Unmarshal(v, &m1))
+	assert.NoError(t, json.Unmarshal(v, &m2))
+	assert.NoError(t, json.Unmarshal(v, &m3))
 
 	encrypted = encryptMap(m2)
 	assert.True(t, encrypted)

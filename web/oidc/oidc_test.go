@@ -58,7 +58,7 @@ func TestStartWithOnboardingFinished(t *testing.T) {
 	}
 
 	onboardingFinished := true
-	lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
+	_ = lifecycle.Patch(testInstance, &lifecycle.Options{OnboardingFinished: &onboardingFinished})
 
 	// Should return a 303 redirect
 	req, err := http.NewRequest(http.MethodGet, ts.URL+"/oidc/start", nil)

@@ -311,12 +311,18 @@ func (s *redisScheduler) addToRedis(t Trigger, prev time.Time) error {
 		return errors.New("Not implemented yet")
 	}
 	pipe := s.client.Pipeline()
-	pipe.ZAdd(TriggersKey, redis.Z{
+	err := pipe.ZAdd(TriggersKey, redis.Z{
 		Score:  float64(timestamp.UTC().Unix()),
 		Member: redisKey(t),
 	}).Err()
-	pipe.ZRem(SchedKey, redisKey(t))
-	_, err := pipe.Exec()
+	if err != nil {
+		return err
+	}
+	err = pipe.ZRem(SchedKey, redisKey(t)).Err()
+	if err != nil {
+		return err
+	}
+	_, err = pipe.Exec()
 	return err
 }
 

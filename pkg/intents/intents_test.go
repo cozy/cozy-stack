@@ -124,7 +124,7 @@ func TestMain(m *testing.M) {
 
 	res := m.Run()
 
-	couchdb.DeleteDB(ins, consts.Apps)
+	_ = couchdb.DeleteDB(ins, consts.Apps)
 
 	os.Exit(res)
 }

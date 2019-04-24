@@ -77,7 +77,9 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 	}()
 
 	mu := lock.ReadWrite(inst, "sharings/"+s.SID)
-	mu.Lock()
+	if err := mu.Lock(); err != nil {
+		return
+	}
 	defer mu.Unlock()
 
 	if err := couchdb.EnsureDBExist(inst, consts.Shared); err != nil {
@@ -201,7 +203,9 @@ func (s *Sharing) InitialCopy(inst *instance.Instance, rule Rule, r int) error {
 	}
 
 	mu := lock.ReadWrite(inst, "shared")
-	mu.Lock()
+	if err := mu.Lock(); err != nil {
+		return err
+	}
 	defer mu.Unlock()
 
 	docs, err := findDocsToCopy(inst, rule)

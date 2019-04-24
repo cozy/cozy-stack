@@ -136,7 +136,7 @@ func worker(ctx *jobs.WorkerContext) (err error) {
 	case err = <-waitDone:
 	case <-ctx.Done():
 		err = ctx.Err()
-		KillCmd(cmd)
+		_ = KillCmd(cmd)
 		<-waitDone
 	}
 

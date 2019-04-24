@@ -65,7 +65,7 @@ func TestMain(m *testing.M) {
 	u, _ := url.Parse(ts.URL)
 	domain := strings.Replace(u.Host, "127.0.0.1", "localhost", -1)
 
-	lifecycle.Destroy(domain)
+	_ = lifecycle.Destroy(domain)
 	testInstance, err = lifecycle.Create(&lifecycle.Options{
 		Domain: domain,
 		Locale: "en",
@@ -87,7 +87,7 @@ func TestMain(m *testing.M) {
 	}
 
 	res := m.Run()
-	lifecycle.Destroy("test-files")
+	_ = lifecycle.Destroy("test-files")
 	os.RemoveAll(tempdir)
 	ts.Close()
 

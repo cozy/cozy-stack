@@ -57,8 +57,8 @@ func createFile(dir, filename, content string) error {
 		return err
 	}
 	defer file.Close()
-	file.Write([]byte(content))
-	return nil
+	_, err = file.Write([]byte(content))
+	return err
 }
 
 func installMiniApp() error {
@@ -307,9 +307,9 @@ func TestFaviconWithContext(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Test the theme
-	lifecycle.Patch(testInstance, &lifecycle.Options{
+	assert.NoError(t, lifecycle.Patch(testInstance, &lifecycle.Options{
 		ContextName: context,
-	})
+	}))
 	assert.NoError(t, err)
 
 	config.GetConfig().Subdomains = config.FlatSubdomains
@@ -481,7 +481,8 @@ func TestUninstallAppWithLinkedClient(t *testing.T) {
 		},
 	)
 	assert.NoError(t, err)
-	uninstaller.RunSync()
+	_, err = uninstaller.RunSync()
+	assert.NoError(t, err)
 	errc := oauthClient.Delete(testInstance)
 	assert.Nil(t, errc)
 }
@@ -553,7 +554,7 @@ func TestMain(m *testing.M) {
 	testInstance.PassphraseHash = hash
 	testInstance.RegisterToken = nil
 	testInstance.OnboardingFinished = true
-	couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
+	_ = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
 
 	err := installMiniApp()
 	if err != nil {
@@ -581,7 +582,7 @@ func TestMain(m *testing.M) {
 	// Login
 	req, _ := http.NewRequest("POST", ts.URL+"/login", bytes.NewBufferString("passphrase="+pass))
 	req.Host = testInstance.Domain
-	client.Do(req)
+	_, _ = client.Do(req)
 
 	_, token = setup.GetTestClient(consts.Apps + " io.cozy.registry.webapps " + consts.Versions)
 

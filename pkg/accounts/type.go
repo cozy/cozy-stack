@@ -253,7 +253,7 @@ func (at *AccountType) RequestAccessToken(i *instance.Instance, accessCode, stat
 
 	// decode same resBody into a map for non-standard fields
 	var extras map[string]interface{}
-	json.Unmarshal(resBody, &extras)
+	_ = json.Unmarshal(resBody, &extras)
 	delete(extras, "access_token")
 	delete(extras, "refresh_token")
 	delete(extras, "token_type")

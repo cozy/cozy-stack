@@ -125,7 +125,7 @@ func init() {
 	usageFunc := RootCmd.UsageFunc()
 
 	RootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
-		usageFunc(cmd)
+		_ = usageFunc(cmd)
 		return ErrUsage
 	})
 

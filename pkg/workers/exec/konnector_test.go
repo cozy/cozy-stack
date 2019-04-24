@@ -111,7 +111,7 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 `
 	osFs := afero.NewOsFs()
 	tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
-	defer osFs.RemoveAll(tmpScript)
+	defer func() { _ = osFs.RemoveAll(tmpScript) }()
 
 	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
 	if !assert.NoError(t, err) {
@@ -146,7 +146,7 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 
 	go func() {
 		evCh := realtime.GetHub().Subscriber(inst)
-		evCh.Subscribe(consts.JobEvents)
+		assert.NoError(t, evCh.Subscribe(consts.JobEvents))
 		wg.Done()
 		ch := evCh.Channel
 		ev1 := <-ch
@@ -208,7 +208,7 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 `
 	osFs := afero.NewOsFs()
 	tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
-	defer osFs.RemoveAll(tmpScript)
+	defer func() { _ = osFs.RemoveAll(tmpScript) }()
 
 	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
 	if !assert.NoError(t, err) {
@@ -231,7 +231,7 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 		// Clean the account types
 		ats, _ := accounts.FindAccountTypesBySlug("my-konnector-1")
 		for _, at = range ats {
-			couchdb.DeleteDoc(couchdb.GlobalSecretsDB, at)
+			_ = couchdb.DeleteDoc(couchdb.GlobalSecretsDB, at)
 		}
 	}()
 
@@ -258,7 +258,7 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 
 	go func() {
 		evCh := realtime.GetHub().Subscriber(inst)
-		evCh.Subscribe(consts.JobEvents)
+		assert.NoError(t, evCh.Subscribe(consts.JobEvents))
 		wg.Done()
 		ch := evCh.Channel
 		ev1 := <-ch

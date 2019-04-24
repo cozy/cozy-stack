@@ -161,7 +161,7 @@ func (afs *aferoVFS) CreateDir(doc *vfs.DirDoc) error {
 		err = afs.Indexer.CreateNamedDirDoc(doc)
 	}
 	if err != nil {
-		afs.fs.Remove(doc.Fullpath) // #nosec
+		_ = afs.fs.Remove(doc.Fullpath)
 	}
 	return err
 }
@@ -699,12 +699,12 @@ func (f *aferoFileCreation) Close() (err error) {
 			}
 		} else if err != nil {
 			// remove the temporary file if an error occurred
-			f.afs.fs.Remove(f.tmppath) // #nosec
+			_ = f.afs.fs.Remove(f.tmppath)
 			// If an error has occurred that is not due to the index update, we should
 			// delete the file from the index.
 			if f.olddoc == nil {
 				if _, isCouchErr := couchdb.IsCouchError(err); !isCouchErr {
-					f.afs.Indexer.DeleteFileDoc(f.newdoc) // #nosec
+					_ = f.afs.Indexer.DeleteFileDoc(f.newdoc)
 				}
 			}
 		}

@@ -260,7 +260,9 @@ func updateRemovedForFiles(inst *instance.Instance, sharingID, dirID string, rul
 // created/update/removed
 func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) error {
 	mu := lock.ReadWrite(inst, "shared")
-	mu.Lock()
+	if err := mu.Lock(); err != nil {
+		return err
+	}
 	defer mu.Unlock()
 
 	evt.Doc.Type = msg.DocType

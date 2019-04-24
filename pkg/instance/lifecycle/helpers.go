@@ -66,7 +66,7 @@ func createDefaultFilesTree(inst *instance.Instance) error {
 	}
 
 	name := inst.Translate("Tree Administrative")
-	createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)) // #nosec
+	_, _ = createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
 
 	// Check if we create the "Photos" folder and its subfolders. By default, we
 	// are creating it, but some contexts may not want to create them.
@@ -85,9 +85,9 @@ func createDefaultFilesTree(inst *instance.Instance) error {
 		photos, err := createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
 		if err == nil {
 			name = inst.Translate("Tree Uploaded from Cozy Photos")
-			createDir(vfs.NewDirDoc(inst.VFS(), name, photos.ID(), nil)) // #nosec
+			_, _ = createDir(vfs.NewDirDoc(inst.VFS(), name, photos.ID(), nil))
 			name = inst.Translate("Tree Backed up from my mobile")
-			createDir(vfs.NewDirDoc(inst.VFS(), name, photos.ID(), nil)) // #nosec
+			_, _ = createDir(vfs.NewDirDoc(inst.VFS(), name, photos.ID(), nil))
 		}
 	}
 

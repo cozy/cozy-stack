@@ -14,7 +14,7 @@ import (
 func TestUseViper(t *testing.T) {
 	cfg := viper.New()
 	cfg.Set("couchdb.url", "http://db:1234")
-	UseViper(cfg)
+	assert.NoError(t, UseViper(cfg))
 	assert.Equal(t, "http://db:1234/", CouchURL().String())
 }
 

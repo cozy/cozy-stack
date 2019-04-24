@@ -249,6 +249,6 @@ func pushToAPNS(ctx *jobs.WorkerContext, c *oauth.Client, msg *Message) error {
 
 func hashSource(source string) []byte {
 	h := md5.New()
-	h.Write([]byte(source))
+	_, _ = h.Write([]byte(source))
 	return h.Sum(nil)
 }

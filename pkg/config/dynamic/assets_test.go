@@ -25,8 +25,8 @@ func TestRemoveCustomAsset(t *testing.T) {
 		Name:    "/foo.js",
 		Context: "bar",
 	}
-	RemoveAsset(asset.Context, asset.Name)
-	UpdateAssetsList()
+	_ = RemoveAsset(asset.Context, asset.Name)
+	_ = UpdateAssetsList()
 
 	assetsList, err := GetAssetsList()
 	assert.NoError(t, err)
@@ -40,7 +40,8 @@ func TestRemoveCustomAsset(t *testing.T) {
 
 	err = fs.RegisterCustomExternals(cache, assets, 1)
 	assert.NoError(t, err)
-	UpdateAssetsList()
+	err = UpdateAssetsList()
+	assert.NoError(t, err)
 	newAssetsList, err := GetAssetsList()
 	assert.NoError(t, err)
 	assert.Equal(t, len(newAssetsList), len(assetsList)+1)

@@ -48,7 +48,7 @@ func (f *fileFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) (err er
 	}
 	defer func() {
 		if err != nil {
-			fs.Abort()
+			_ = fs.Abort()
 		} else {
 			err = fs.Commit()
 		}

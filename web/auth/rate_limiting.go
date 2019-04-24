@@ -165,7 +165,7 @@ func TwoFactorRateExceeded(i *instance.Instance) error {
 	}
 	// Reset the key and send a new passcode to the user
 	counter := GetCounter()
-	counter.Reset("two-factor:" + i.Domain)
+	_ = counter.Reset("two-factor:" + i.Domain)
 
 	_, err := lifecycle.SendTwoFactorPasscode(i)
 	return err

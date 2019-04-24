@@ -1081,7 +1081,7 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
-	sessions.RemoveLoginRegistration(instance.ContextualDomain(), clientID)
+	_ = sessions.RemoveLoginRegistration(instance.ContextualDomain(), clientID)
 	return c.JSON(http.StatusOK, out)
 }
 

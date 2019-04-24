@@ -64,10 +64,10 @@ func ErrorHandler(err error, c echo.Context) {
 
 	if je != nil {
 		if req.Method == http.MethodHead {
-			c.NoContent(je.Status)
+			_ = c.NoContent(je.Status)
 			return
 		}
-		jsonapi.DataError(c, je)
+		_ = jsonapi.DataError(c, je)
 		return
 	}
 

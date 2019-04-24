@@ -216,10 +216,10 @@ func mailServer(t *testing.T, serverString string, clientStrings []string, expec
 		readdata := false
 		readhead := false
 		for i := 0; i < len(data) && data[i] != ""; i++ {
-			tc.PrintfLine(data[i])
+			_ = tc.PrintfLine(data[i])
 			for len(data[i]) >= 4 && data[i][3] == '-' {
 				i++
-				tc.PrintfLine(data[i])
+				_ = tc.PrintfLine(data[i])
 			}
 			if data[i] == "221 Goodbye" {
 				return
@@ -236,7 +236,7 @@ func mailServer(t *testing.T, serverString string, clientStrings []string, expec
 					// skip multipart --boundaries
 					if readhead &&
 						(len(msg) <= 1 || msg[0] != '-' || msg[1] != '-') {
-						bcmdbuf.Write([]byte(msg + "\r\n"))
+						_, _ = bcmdbuf.Write([]byte(msg + "\r\n"))
 					} else {
 						parts := strings.SplitN(msg, ": ", 2)
 						if len(parts) == 2 {
@@ -250,7 +250,7 @@ func mailServer(t *testing.T, serverString string, clientStrings []string, expec
 					if msg == "DATA" {
 						readdata = true
 					}
-					bcmdbuf.Write([]byte(msg + "\r\n"))
+					_, _ = bcmdbuf.Write([]byte(msg + "\r\n"))
 					read = true
 				}
 				if err != nil {

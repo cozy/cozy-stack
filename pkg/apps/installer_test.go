@@ -152,7 +152,7 @@ func TestMain(m *testing.M) {
 	}
 
 	ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, manGen())
+		_, _ = io.WriteString(w, manGen())
 	}))
 
 	db = prefixer.NewPrefixer("", "apps-test")
@@ -182,7 +182,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	defer osFS.RemoveAll(tmpDir)
+	defer func() { _ = osFS.RemoveAll(tmpDir) }()
 
 	baseFS = afero.NewBasePathFs(osFS, tmpDir)
 	fs = appfs.NewAferoCopier(baseFS)
@@ -211,13 +211,13 @@ func TestMain(m *testing.M) {
 
 	res := m.Run()
 
-	couchdb.DeleteDB(db, consts.Apps)
-	couchdb.DeleteDB(db, consts.Konnectors)
-	couchdb.DeleteDB(db, consts.Files)
-	couchdb.DeleteDB(db, consts.Permissions)
+	_ = couchdb.DeleteDB(db, consts.Apps)
+	_ = couchdb.DeleteDB(db, consts.Konnectors)
+	_ = couchdb.DeleteDB(db, consts.Files)
+	_ = couchdb.DeleteDB(db, consts.Permissions)
 	ts.Close()
 
-	localGitCmd.Process.Signal(os.Interrupt)
+	_ = localGitCmd.Process.Signal(os.Interrupt)
 
 	os.Exit(res)
 }

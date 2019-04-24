@@ -70,7 +70,7 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	var wAt sync.WaitGroup
 	var wIn sync.WaitGroup
 	bro := jobs.NewMemBroker()
-	bro.StartWorkers(jobs.WorkersList{
+	assert.NoError(t, bro.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "worker",
 			Concurrency:  1,
@@ -90,7 +90,7 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 				return nil
 			},
 		},
-	})
+	}))
 
 	msg1, _ := jobs.NewMessage("@at")
 	msg2, _ := jobs.NewMessage("@in")
@@ -110,8 +110,8 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	}
 
 	sch := jobs.System().(jobs.Scheduler)
-	sch.ShutdownScheduler(context.Background())
-	sch.StartScheduler(bro)
+	assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+	assert.NoError(t, sch.StartScheduler(bro))
 	time.Sleep(50 * time.Millisecond)
 
 	// Clear the existing triggers before testing with our triggers
@@ -191,10 +191,10 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 
 	bro := &mockBroker{}
 	sch := jobs.System().(jobs.Scheduler)
-	sch.ShutdownScheduler(context.Background())
-	sch.StartScheduler(bro)
-	sch.ShutdownScheduler(context.Background())
-	defer sch.StartScheduler(bro)
+	assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+	assert.NoError(t, sch.StartScheduler(bro))
+	assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+	defer func() { _ = sch.StartScheduler(bro) }()
 
 	msg, _ := jobs.NewMessage("@cron")
 
@@ -225,10 +225,10 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 
 	bro := &mockBroker{}
 	sch := jobs.System().(jobs.Scheduler)
-	sch.ShutdownScheduler(context.Background())
-	sch.StartScheduler(bro)
-	sch.ShutdownScheduler(context.Background())
-	defer sch.StartScheduler(bro)
+	assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+	assert.NoError(t, sch.StartScheduler(bro))
+	assert.NoError(t, sch.ShutdownScheduler(context.Background()))
+	defer func() { _ = sch.StartScheduler(bro) }()
 
 	now := time.Now()
 	msg, _ := jobs.NewMessage("@at")
@@ -274,9 +274,9 @@ func TestRedisTriggerEvent(t *testing.T) {
 
 	bro := &mockBroker{}
 	sch := jobs.System().(jobs.Scheduler)
-	sch.ShutdownScheduler(context.Background())
+	assert.NoError(t, sch.ShutdownScheduler(context.Background()))
 	time.Sleep(1 * time.Second)
-	sch.StartScheduler(bro)
+	assert.NoError(t, sch.StartScheduler(bro))
 
 	evTrigger := jobs.TriggerInfos{
 		Type:       "@event",
@@ -286,7 +286,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 
 	tri, err := jobs.NewTrigger(testInstance, evTrigger, nil)
 	assert.NoError(t, err)
-	sch.AddTrigger(tri)
+	assert.NoError(t, sch.AddTrigger(tri))
 
 	realtime.GetHub().Publish(testInstance, realtime.EventCreate,
 		&testDoc{id: "foo", doctype: "io.cozy.event-test"}, nil)
@@ -341,9 +341,9 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 
 	bro := &mockBroker{}
 	sch := jobs.System().(jobs.Scheduler)
-	sch.ShutdownScheduler(context.Background())
+	assert.NoError(t, sch.ShutdownScheduler(context.Background()))
 	time.Sleep(1 * time.Second)
-	sch.StartScheduler(bro)
+	assert.NoError(t, sch.StartScheduler(bro))
 
 	dir := &vfs.DirDoc{
 		Type:      "directory",
@@ -363,7 +363,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	}
 	tri, err := jobs.NewTrigger(testInstance, evTrigger, nil)
 	assert.NoError(t, err)
-	sch.AddTrigger(tri)
+	assert.NoError(t, sch.AddTrigger(tri))
 
 	time.Sleep(1 * time.Second)
 	count, _ := bro.WorkerQueueLen("incr")
@@ -447,9 +447,9 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 
 	bro := &mockBroker{}
 	sch := jobs.System().(jobs.Scheduler)
-	sch.ShutdownScheduler(context.Background())
+	assert.NoError(t, sch.ShutdownScheduler(context.Background()))
 	time.Sleep(1 * time.Second)
-	sch.StartScheduler(bro)
+	assert.NoError(t, sch.StartScheduler(bro))
 
 	evTrigger := jobs.TriggerInfos{
 		Type:       "@event",
@@ -459,7 +459,7 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 	}
 	tri, err := jobs.NewTrigger(testInstance, evTrigger, nil)
 	assert.NoError(t, err)
-	sch.AddTrigger(tri)
+	assert.NoError(t, sch.AddTrigger(tri))
 
 	doc := testDoc{
 		id:      "foo",

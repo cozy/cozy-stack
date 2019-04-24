@@ -400,7 +400,7 @@ func TestWalk(t *testing.T) {
 	}
 
 	walked := H{}
-	vfs.Walk(fs, "/walk", func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+	err = vfs.Walk(fs, "/walk", func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 		if !assert.NoError(t, err) {
 			return err
 		}
@@ -416,6 +416,7 @@ func TestWalk(t *testing.T) {
 		walked[name] = nil
 		return nil
 	})
+	assert.NoError(t, err)
 
 	expectedWalk := H{
 		"/walk":                nil,
@@ -835,8 +836,8 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 	}
 
 	return aferoFs, func() {
-		os.RemoveAll(tempdir)
-		couchdb.DeleteDB(db, consts.Files)
+		_ = os.RemoveAll(tempdir)
+		_ = couchdb.DeleteDB(db, consts.Files)
 	}, nil
 }
 
@@ -891,7 +892,7 @@ func makeSwiftFS(layoutV2 bool) (vfs.VFS, func(), error) {
 	}
 
 	return swiftFs, func() {
-		couchdb.DeleteDB(db, consts.Files)
+		_ = couchdb.DeleteDB(db, consts.Files)
 		if swiftSrv != nil {
 			swiftSrv.Close()
 		}

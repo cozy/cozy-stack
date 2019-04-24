@@ -25,8 +25,7 @@ func TestReplicationFromcozy(t *testing.T) {
 	source = strings.Replace(source, "http://", "http://user:"+token+"@", 1)
 
 	req, _ := http.NewRequest("DELETE", target, nil)
-	doRequest(req, nil)
-	// err is expected
+	_, _, _ = doRequest(req, nil)
 
 	req, _ = http.NewRequest("PUT", target, nil)
 	_, _, err := doRequest(req, nil)

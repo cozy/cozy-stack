@@ -41,8 +41,8 @@ func createASharedRef(t *testing.T, id string) {
 
 func TestSequenceNumber(t *testing.T) {
 	// Start with an empty io.cozy.shared database
-	couchdb.DeleteDB(inst, consts.Shared)
-	couchdb.CreateDB(inst, consts.Shared)
+	_ = couchdb.DeleteDB(inst, consts.Shared)
+	_ = couchdb.CreateDB(inst, consts.Shared)
 
 	s := &Sharing{SID: uuidv4(), Members: []Member{
 		{Status: MemberStatusOwner, Name: "Alice"},
@@ -123,8 +123,8 @@ func assertNbSharedRef(t *testing.T, expected int) {
 
 func TestInitialCopy(t *testing.T) {
 	// Start with an empty io.cozy.shared database
-	couchdb.DeleteDB(inst, consts.Shared)
-	couchdb.CreateDB(inst, consts.Shared)
+	_ = couchdb.DeleteDB(inst, consts.Shared)
+	_ = couchdb.CreateDB(inst, consts.Shared)
 
 	// Create some documents that are not shared
 	for i := 0; i < 10; i++ {
@@ -143,7 +143,7 @@ func TestInitialCopy(t *testing.T) {
 		Values:  []string{settingsDocID},
 		Local:   true,
 	})
-	s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1)
+	assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 	nbShared := 0
 	assertNbSharedRef(t, nbShared)
 
@@ -155,7 +155,7 @@ func TestInitialCopy(t *testing.T) {
 		DocType: testDoctype,
 		Values:  []string{oneID},
 	})
-	s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1)
+	assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 	nbShared++
 	assertNbSharedRef(t, nbShared)
 	oneRef := getSharedRef(t, testDoctype, oneID)
@@ -176,7 +176,7 @@ func TestInitialCopy(t *testing.T) {
 		Selector: "foo",
 		Values:   []string{"bar"},
 	})
-	s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1)
+	assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 	nbShared += len(twoIDs)
 	assertNbSharedRef(t, nbShared)
 	for _, id := range twoIDs {
@@ -201,7 +201,7 @@ func TestInitialCopy(t *testing.T) {
 		Selector: "foo",
 		Values:   []string{"qux", "quux", "quuux"},
 	})
-	s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1)
+	assert.NoError(t, s.InitialCopy(inst, s.Rules[len(s.Rules)-1], len(s.Rules)-1))
 	nbShared += len(threeIDs)
 	assertNbSharedRef(t, nbShared)
 	for _, id := range threeIDs {
@@ -213,7 +213,7 @@ func TestInitialCopy(t *testing.T) {
 
 	// Another member accepts the sharing
 	for r, rule := range s.Rules {
-		s.InitialCopy(inst, rule, r)
+		assert.NoError(t, s.InitialCopy(inst, rule, r))
 	}
 	assertNbSharedRef(t, nbShared)
 
@@ -230,7 +230,7 @@ func TestInitialCopy(t *testing.T) {
 
 	// A third member accepts the sharing
 	for r, rule := range s.Rules {
-		s.InitialCopy(inst, rule, r)
+		assert.NoError(t, s.InitialCopy(inst, rule, r))
 	}
 	nbShared++
 	assertNbSharedRef(t, nbShared)
@@ -253,7 +253,7 @@ func TestInitialCopy(t *testing.T) {
 		Selector: "foo",
 		Values:   []string{"qux", "quux", "quuux"},
 	})
-	s2.InitialCopy(inst, s2.Rules[len(s2.Rules)-1], len(s2.Rules)-1)
+	assert.NoError(t, s2.InitialCopy(inst, s2.Rules[len(s2.Rules)-1], len(s2.Rules)-1))
 	assertNbSharedRef(t, nbShared)
 	for _, id := range threeIDs {
 		threeRef := getSharedRef(t, testDoctype, id)
@@ -294,8 +294,8 @@ func appendRevisionToSharedRef(t *testing.T, ref *SharedRef, revision string) {
 
 func TestCallChangesFeed(t *testing.T) {
 	// Start with an empty io.cozy.shared database
-	couchdb.DeleteDB(inst, consts.Shared)
-	couchdb.CreateDB(inst, consts.Shared)
+	_ = couchdb.DeleteDB(inst, consts.Shared)
+	_ = couchdb.CreateDB(inst, consts.Shared)
 
 	foobars := "io.cozy.tests.foobars"
 	id1 := uuidv4()
@@ -355,7 +355,7 @@ func stripGenerations(revs ...string) []interface{} {
 
 func TestGetMissingDocs(t *testing.T) {
 	hellos := "io.cozy.tests.hellos"
-	couchdb.CreateDB(inst, hellos)
+	_ = couchdb.CreateDB(inst, hellos)
 
 	id1 := uuidv4()
 	doc1 := createDoc(t, hellos, id1, map[string]interface{}{"hello": id1})
@@ -454,9 +454,9 @@ func assertNoDoc(t *testing.T, doctype, id string) {
 
 func TestApplyBulkDocs(t *testing.T) {
 	// Start with an empty io.cozy.shared database
-	couchdb.DeleteDB(inst, consts.Shared)
-	couchdb.CreateDB(inst, consts.Shared)
-	couchdb.CreateDB(inst, foos)
+	_ = couchdb.DeleteDB(inst, consts.Shared)
+	_ = couchdb.CreateDB(inst, consts.Shared)
+	_ = couchdb.CreateDB(inst, foos)
 
 	s := Sharing{
 		SID: uuidv4(),

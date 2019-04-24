@@ -80,7 +80,7 @@ func PollAssetsList(cacheStorage fs.Cache, pollingInterval time.Duration) {
 		time.Sleep(pollingInterval)
 		assetsList, err := GetAssetsList()
 		if err == nil {
-			fs.RegisterCustomExternals(cacheStorage, assetsList, 6 /*= retry count */)
+			_ = fs.RegisterCustomExternals(cacheStorage, assetsList, 6 /*= retry count */)
 		}
 	}
 }

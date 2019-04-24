@@ -77,7 +77,7 @@ func TestAddCustomAssetEmptyContext(t *testing.T) {
 		Shasum: hex.EncodeToString(sum),
 	}
 
-	registerCustomExternal(cache, a)
+	assert.NoError(t, registerCustomExternal(cache, a))
 	asset, ok := globalAssets.Load(marshalContextKey("bar", "/foo.js"))
 	assert.False(t, ok)
 	assert.Nil(t, asset)

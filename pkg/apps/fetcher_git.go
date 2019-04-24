@@ -155,7 +155,7 @@ func (g *gitFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) (err err
 	if err != nil {
 		return err
 	}
-	defer osFs.RemoveAll(gitDir)
+	defer func() { _ = osFs.RemoveAll(gitDir) }()
 
 	gitFs := afero.NewBasePathFs(osFs, gitDir)
 	// XXX Gitlab doesn't support the git protocol
@@ -222,7 +222,7 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 	}
 	defer func() {
 		if err != nil {
-			fs.Abort()
+			_ = fs.Abort()
 		} else {
 			err = fs.Commit()
 		}
@@ -323,7 +323,7 @@ func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs appfs.Copier
 	}
 	defer func() {
 		if err != nil {
-			fs.Abort()
+			_ = fs.Abort()
 		} else {
 			err = fs.Commit()
 		}

@@ -110,7 +110,7 @@ func fetchHTTP(src *url.URL, shasum []byte, fs appfs.Copier, man Manifest, prefi
 	}
 	defer func() {
 		if err != nil {
-			fs.Abort()
+			_ = fs.Abort()
 		} else {
 			err = fs.Commit()
 		}

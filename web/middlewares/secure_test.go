@@ -18,7 +18,7 @@ func TestSecureMiddlewareHSTS(t *testing.T) {
 	h := Secure(&SecureConfig{
 		HSTSMaxAge: 3600 * time.Second,
 	})(echo.NotFoundHandler)
-	h(c)
+	_ = h(c)
 	assert.Equal(t, "max-age=3600; includeSubDomains", rec.Header().Get(echo.HeaderStrictTransportSecurity))
 }
 
@@ -32,7 +32,7 @@ func TestSecureMiddlewareCSP(t *testing.T) {
 		CSPFrameSrc:   nil,
 		CSPScriptSrc:  nil,
 	})(echo.NotFoundHandler)
-	h1(c1)
+	_ = h1(c1)
 
 	e2 := echo.New()
 	req2, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
@@ -43,7 +43,7 @@ func TestSecureMiddlewareCSP(t *testing.T) {
 		CSPFrameSrc:   []CSPSource{CSPSrcAny},
 		CSPScriptSrc:  []CSPSource{CSPSrcSelf},
 	})(echo.NotFoundHandler)
-	h2(c2)
+	_ = h2(c2)
 
 	e3 := echo.New()
 	req3, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
@@ -54,7 +54,7 @@ func TestSecureMiddlewareCSP(t *testing.T) {
 		CSPFrameSrc:   []CSPSource{CSPSrcAny},
 		CSPScriptSrc:  []CSPSource{CSPSrcSiblings},
 	})(echo.NotFoundHandler)
-	h3(c3)
+	_ = h3(c3)
 
 	assert.Equal(t, "", rec1.Header().Get(echo.HeaderContentSecurityPolicy))
 	assert.Equal(t, "script-src 'self';frame-src *;", rec2.Header().Get(echo.HeaderContentSecurityPolicy))

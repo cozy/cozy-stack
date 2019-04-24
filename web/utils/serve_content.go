@@ -21,7 +21,7 @@ func ServeContent(w http.ResponseWriter, r *http.Request, contentType string, si
 	}
 	w.WriteHeader(http.StatusOK)
 	if r.Method != "HEAD" {
-		io.Copy(w, content)
+		_, _ = io.Copy(w, content)
 	}
 }
 

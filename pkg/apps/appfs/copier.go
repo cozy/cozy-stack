@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/filetype"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/swift"
 )
@@ -129,7 +130,12 @@ func (f *swiftCopier) Commit() (err error) {
 	if err != nil {
 		return err
 	}
-	defer f.c.BulkDelete(f.container, objectNames)
+	defer func() {
+		_, errc := f.c.BulkDelete(f.container, objectNames)
+		if errc != nil {
+			logger.WithNamespace("appfs").Errorf("Cannot BulkDelete after commit: %s", errc)
+		}
+	}()
 	// We check if the appObj has not been created concurrently by another
 	// copier.
 	_, _, err = f.c.Object(f.container, f.appObj)

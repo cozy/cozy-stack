@@ -410,7 +410,7 @@ func TestCheckTOSNotSigned(t *testing.T) {
 }
 
 func TestInstanceDestroy(t *testing.T) {
-	lifecycle.Destroy("test.cozycloud.cc")
+	_ = lifecycle.Destroy("test.cozycloud.cc")
 
 	_, err := lifecycle.Create(&lifecycle.Options{
 		Domain: "test.cozycloud.cc",
@@ -450,13 +450,13 @@ func TestMain(m *testing.M) {
 }
 
 func cleanInstance() {
-	lifecycle.Destroy("test.cozycloud.cc")
-	lifecycle.Destroy("test2.cozycloud.cc")
-	lifecycle.Destroy("test3.cozycloud.cc")
-	lifecycle.Destroy("test.cozycloud.cc.pass_reset")
-	lifecycle.Destroy("test.cozycloud.cc.pass_renew")
-	lifecycle.Destroy("test.cozycloud.cc.duplicate")
-	lifecycle.Destroy("tos.test.cozycloud.cc")
+	_ = lifecycle.Destroy("test.cozycloud.cc")
+	_ = lifecycle.Destroy("test2.cozycloud.cc")
+	_ = lifecycle.Destroy("test3.cozycloud.cc")
+	_ = lifecycle.Destroy("test.cozycloud.cc.pass_reset")
+	_ = lifecycle.Destroy("test.cozycloud.cc.pass_renew")
+	_ = lifecycle.Destroy("test.cozycloud.cc.duplicate")
+	_ = lifecycle.Destroy("tos.test.cozycloud.cc")
 }
 
 func getDB(t *testing.T, domain string) couchdb.Database {

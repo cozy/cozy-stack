@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/hashicorp/go-multierror"
 )
 
 // ZipMime is the content-type for zip archives
@@ -119,9 +120,10 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 		return err
 	}
 
+	var errm error
 	for _, entry := range entries {
 		base := filepath.Dir(entry.root)
-		walk(fs, entry.root, entry.Dir, entry.File, func(name string, dir *DirDoc, file *FileDoc, err error) error {
+		err = walk(fs, entry.root, entry.Dir, entry.File, func(name string, dir *DirDoc, file *FileDoc, err error) error {
 			if err != nil {
 				return err
 			}
@@ -150,9 +152,12 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 			_, err = io.Copy(ze, f)
 			return err
 		}, 0)
+		if err != nil {
+			errm = multierror.Append(errm, err)
+		}
 	}
 
-	return nil
+	return errm
 }
 
 // ID makes Archive a jsonapi.Object

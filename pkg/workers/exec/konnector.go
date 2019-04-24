@@ -70,7 +70,7 @@ func (m *KonnectorMessage) ToJSON() string {
 func (m *KonnectorMessage) updateFolderToSave(dir string) {
 	m.FolderToSave = dir
 	var d map[string]interface{}
-	json.Unmarshal(m.data, &d)
+	_ = json.Unmarshal(m.data, &d)
 	d["folder_to_save"] = dir
 	m.data, _ = json.Marshal(d)
 }
@@ -236,13 +236,13 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *inst
 					if innerDir, errp := fs.DirByPath(innerDirPath); errp == nil {
 						if isEmpty, _ := innerDir.IsEmpty(fs); isEmpty {
 							w.Logger(ctx).Warnf("Deleting empty directory for konnector: %q:%q", innerDir.ID(), normalizedFolderPath)
-							fs.DeleteDirDoc(innerDir)
+							_ = fs.DeleteDirDoc(innerDir)
 						}
 					}
 				}
 				if isEmpty, _ := dir.IsEmpty(fs); isEmpty {
 					w.Logger(ctx).Warnf("Deleting empty directory for konnector: %q:%q", dir.ID(), normalizedFolderPath)
-					fs.DeleteDirDoc(dir)
+					_ = fs.DeleteDirDoc(dir)
 				}
 			}
 		}
@@ -258,7 +258,7 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *inst
 						Type: consts.Konnectors,
 						ID:   consts.Konnectors + "/" + w.slug,
 					})
-					couchdb.UpdateDoc(inst, dir)
+					_ = couchdb.UpdateDoc(inst, dir)
 				}
 				return nil
 			}
@@ -323,7 +323,7 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *inst
 			Type: consts.Konnectors,
 			ID:   consts.Konnectors + "/" + w.slug,
 		})
-		couchdb.UpdateDoc(inst, dir)
+		_ = couchdb.UpdateDoc(inst, dir)
 	}
 	return nil
 }
@@ -442,7 +442,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 			parameters = map[string]interface{}{"secret": secret}
 		} else {
 			var params map[string]interface{}
-			json.Unmarshal(*w.man.Parameters, &params)
+			_ = json.Unmarshal(*w.man.Parameters, &params)
 			params["secret"] = secret
 			parameters = params
 		}

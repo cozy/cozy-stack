@@ -167,7 +167,7 @@ func DecodeAuthMessage(c MACConfig, key, enc, additionalData []byte) ([]byte, er
 // createMAC creates a MAC with HMAC-SHA256
 func createMAC(key, value []byte) []byte {
 	mac := hmac.New(sha256.New, key)
-	mac.Write(value)
+	_, _ = mac.Write(value)
 	return mac.Sum(nil)
 }
 

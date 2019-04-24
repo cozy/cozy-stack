@@ -49,7 +49,11 @@ func (s *FileStorage) Load(domain string) (client *Client, token *AccessToken, e
 	if err = l.TryLock(); err != nil {
 		return nil, nil, err
 	}
-	defer l.Unlock()
+	defer func() {
+		if err := l.Unlock(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error on unlock: %s", err)
+		}
+	}()
 	f, err := os.Open(filename)
 	if err != nil {
 		if os.IsNotExist(err) || err == io.EOF {
@@ -79,7 +83,11 @@ func (s *FileStorage) Save(domain string, client *Client, token *AccessToken) er
 	if err = l.TryLock(); err != nil {
 		return err
 	}
-	defer l.Unlock()
+	defer func() {
+		if err := l.Unlock(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error on unlock: %s", err)
+		}
+	}()
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
 	if err != nil {
 		return err
