@@ -79,8 +79,8 @@ func TestEncryptDecrytUTF8Credentials(t *testing.T) {
 	}
 
 	for i := 0; i < 1024; i++ {
-		login := string(utils.RandomString(rng.Intn(256)))
-		password := string(utils.RandomString(rng.Intn(256)))
+		login := utils.RandomString(rng.Intn(256))
+		password := utils.RandomString(rng.Intn(256))
 
 		encryptedCreds, err := EncryptCredentials(login, password)
 		if !assert.NoError(t, err) {

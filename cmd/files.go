@@ -501,9 +501,9 @@ func init() {
 	filesCmdGroup.PersistentFlags().StringVar(&flagFilesDomain, "domain", domain, "specify the domain name of the instance")
 
 	importFilesCmd.Flags().StringVar(&flagImportFrom, "from", "", "directory to import from in cozy")
-	importFilesCmd.MarkFlagRequired("from")
+	_ = importFilesCmd.MarkFlagRequired("from")
 	importFilesCmd.Flags().StringVar(&flagImportTo, "to", "/", "directory to import to in cozy")
-	importFilesCmd.MarkFlagRequired("to")
+	_ = importFilesCmd.MarkFlagRequired("to")
 	importFilesCmd.Flags().BoolVar(&flagImportDryRun, "dry-run", false, "do not actually import the files")
 	importFilesCmd.Flags().StringVar(&flagImportMatch, "match", "", "pattern that the imported files must match")
 

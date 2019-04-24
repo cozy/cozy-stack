@@ -275,7 +275,7 @@ func deleteAssets(c echo.Context) error {
 
 	err := dynamic.RemoveAsset(context, name)
 	if err != nil {
-		wrapError(err)
+		return wrapError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
 }
@@ -457,7 +457,9 @@ func setAuthMode(c echo.Context) error {
 
 	if !inst.HasAuthMode(authMode) {
 		inst.AuthMode = authMode
-		couchdb.UpdateDoc(couchdb.GlobalDB, inst)
+		if err = couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+			return err
+		}
 	} else {
 		alreadyAuthMode := fmt.Sprintf("Instance has already %s auth mode", authModeString)
 		return c.JSON(http.StatusOK, alreadyAuthMode)

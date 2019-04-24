@@ -9,15 +9,15 @@ language: go
 
 matrix:
   include:
-    - go: "1.11"
+    - go: "1.12"
       env: COMMAND=scripts/lint.sh
     - go: "1.12"
       env: COMMAND=scripts/unit-test.sh
     - go: "1.11"
       env: COMMAND=scripts/unit-test.sh
-    - go: "1.11"
+    - go: "1.12"
       env: COMMAND=scripts/sharing-test.sh
-    - go: "1.11"
+    - go: "1.12"
       env: COMMAND=scripts/clone-test.sh
 
 before_install:

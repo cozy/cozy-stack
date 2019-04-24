@@ -99,7 +99,7 @@ func printOSDetails(w io.Writer) {
 // printCmdOut prints the output of running the given command.
 // It ignores failures; 'go bug' is best effort.
 func printCmdOut(w io.Writer, prefix, path string, args ...string) {
-	cmd := exec.Command(path, args...) // #nosec
+	cmd := exec.Command(path, args...)
 	out, err := cmd.Output()
 	if err != nil {
 		return

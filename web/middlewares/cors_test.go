@@ -16,7 +16,7 @@ func TestCORSMiddleware(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := CORS(CORSOptions{})(echo.NotFoundHandler)
-	h(c)
+	_ = h(c)
 	assert.Equal(t, "fakecozy.local", rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
 }
 
@@ -28,6 +28,6 @@ func TestCORSMiddlewareNotAuth(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.SetPath(req.URL.Path)
 	h := CORS(CORSOptions{BlackList: []string{"/auth/"}})(echo.NotFoundHandler)
-	h(c)
+	_ = h(c)
 	assert.Equal(t, "", rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
 }

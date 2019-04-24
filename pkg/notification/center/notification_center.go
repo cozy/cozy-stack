@@ -56,7 +56,7 @@ func init() {
 				"CozyDriveLink": cozyDriveLink.String(),
 			},
 		}
-		pushStack(domain, NotificationDiskQuota, n)
+		_ = pushStack(domain, NotificationDiskQuota, n)
 	})
 }
 

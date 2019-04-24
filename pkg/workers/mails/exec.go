@@ -60,7 +60,7 @@ func prepareWorkDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	io.Copy(dst, f)
+	_, _ = io.Copy(dst, f)
 	if err = dst.Close(); err != nil {
 		return "", err
 	}

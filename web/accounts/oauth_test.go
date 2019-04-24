@@ -45,7 +45,9 @@ func TestAccessCodeOauthFlow(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &serviceType)
+	defer func() {
+		_ = couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &serviceType)
+	}()
 
 	u := ts.URL + "/accounts/test-service/start?scope=the+world&state=somesecretstate"
 
@@ -100,7 +102,9 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &serviceType)
+	defer func() {
+		_ = couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &serviceType)
+	}()
 
 	u := ts.URL + "/accounts/test-service2/start?scope=the+world"
 
@@ -158,7 +162,9 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &serviceType)
+	defer func() {
+		_ = couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &serviceType)
+	}()
 
 	startURL, err := url.Parse(ts.URL + "/accounts/test-service3/start?scope=the+world")
 	if !assert.NoError(t, err) {
@@ -225,7 +231,7 @@ func TestMain(m *testing.M) {
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Domain: strings.Replace(ts.URL, "http://127.0.0.1", "cozy.tools", 1),
 	})
-	couchdb.ResetDB(couchdb.GlobalSecretsDB, consts.AccountTypes)
+	_ = couchdb.ResetDB(couchdb.GlobalSecretsDB, consts.AccountTypes)
 	setup.AddCleanup(func() error {
 		return couchdb.DeleteDB(couchdb.GlobalSecretsDB, consts.AccountTypes)
 	})

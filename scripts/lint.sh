@@ -13,4 +13,4 @@ if git grep -l \
 fi
 
 go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
-golangci-lint run -D errcheck -E gofmt
+golangci-lint run -E gofmt -E unconvert -E misspell

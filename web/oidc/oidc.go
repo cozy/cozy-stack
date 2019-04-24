@@ -63,7 +63,7 @@ func Redirect(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
-// Login checks that the OpenID Connect has been sucessful and logs in the user.
+// Login checks that the OpenID Connect has been successful and logs in the user.
 func Login(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, err := getConfig(inst.ContextName)

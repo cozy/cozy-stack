@@ -133,8 +133,8 @@ func TestCreateShareSetByMobileRevokeByLinkedApp(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	uninstaller.RunSync()
-
+	_, err = uninstaller.RunSync()
+	assert.NoError(t, err)
 }
 
 func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
@@ -219,7 +219,8 @@ func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	uninstaller.RunSync()
+	_, err = uninstaller.RunSync()
+	assert.NoError(t, err)
 }
 
 func TestGetPermissions(t *testing.T) {
@@ -606,7 +607,8 @@ func TestGetTokenFromShortCode(t *testing.T) {
 }
 
 func TestGetBadShortCode(t *testing.T) {
-	createTestSubPermissions(token, "alice")
+	_, _, err := createTestSubPermissions(token, "alice")
+	assert.NoError(t, err)
 	shortcode := "coincoin"
 
 	token, err := permissions.GetTokenFromShortcode(testInstance, shortcode)
@@ -616,32 +618,29 @@ func TestGetBadShortCode(t *testing.T) {
 }
 
 func TestGetMultipleShortCode(t *testing.T) {
-
 	id, _, _ := createTestSubPermissions(token, "alice")
 	id2, _, _ := createTestSubPermissions(token, "alice")
 	perm, _ := permissions.GetByID(testInstance, id)
 	perm2, _ := permissions.GetByID(testInstance, id2)
 
 	perm2.ShortCodes["alice"] = perm.ShortCodes["alice"]
-	couchdb.UpdateDoc(testInstance, perm2)
+	assert.NoError(t, couchdb.UpdateDoc(testInstance, perm2))
 
 	_, err := permissions.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
 
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "several permission docs for shortcode")
-
 }
 
 func TestCannotFindToken(t *testing.T) {
 	id, _, _ := createTestSubPermissions(token, "alice")
 	perm, _ := permissions.GetByID(testInstance, id)
 	perm.Codes = map[string]string{}
-	couchdb.UpdateDoc(testInstance, perm)
+	assert.NoError(t, couchdb.UpdateDoc(testInstance, perm))
 
 	_, err := permissions.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "Cannot find token for shortcode")
-
 }
 
 func TestGetForOauth(t *testing.T) {
@@ -712,8 +711,8 @@ func TestListPermission(t *testing.T) {
 		}}
 
 	codes := map[string]string{"bob": "secret"}
-	permissions.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, p1, nil)
-	permissions.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, p2, nil)
+	_, _ = permissions.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, p1, nil)
+	_, _ = permissions.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, p2, nil)
 
 	reqbody := strings.NewReader(`{
 "data": [

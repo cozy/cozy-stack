@@ -273,9 +273,9 @@ func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *fs.Asset,
 
 	if r.Method == http.MethodGet {
 		if acceptsGZIP {
-			io.Copy(w, f.GzipReader())
+			_, _ = io.Copy(w, f.GzipReader())
 		} else {
-			io.Copy(w, f.Reader())
+			_, _ = io.Copy(w, f.Reader())
 		}
 	}
 }

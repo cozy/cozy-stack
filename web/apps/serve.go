@@ -334,7 +334,7 @@ func cozyclientjs(i *instance.Instance) template.HTML {
 	if err != nil {
 		panic(err)
 	}
-	return template.HTML(buf.String()) // #nosec
+	return template.HTML(buf.String())
 }
 
 func cozybar(i *instance.Instance, loggedIn bool) template.HTML {
@@ -348,5 +348,5 @@ func cozybar(i *instance.Instance, loggedIn bool) template.HTML {
 	if err != nil {
 		panic(err)
 	}
-	return template.HTML(buf.String()) // #nosec
+	return template.HTML(buf.String())
 }

@@ -112,7 +112,7 @@ func (g *gitFetcher) fetchManifestFromGitArchive(src *url.URL) (io.ReadCloser, e
 		"archive",
 		"--remote", src.String(),
 		fmt.Sprintf("refs/heads/%s", branch),
-		g.manFilename) // #nosec
+		g.manFilename)
 	g.log.Infof("Fetching manifest %s", strings.Join(cmd.Args, " "))
 	stdout, err := cmd.Output()
 	if err != nil {
@@ -155,7 +155,7 @@ func (g *gitFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) (err err
 	if err != nil {
 		return err
 	}
-	defer osFs.RemoveAll(gitDir)
+	defer func() { _ = osFs.RemoveAll(gitDir) }()
 
 	gitFs := afero.NewBasePathFs(osFs, gitDir)
 	// XXX Gitlab doesn't support the git protocol
@@ -193,7 +193,7 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 	// tree.
 	cmd := exec.CommandContext(ctx, "git",
 		"ls-remote", "--quiet",
-		srcStr, fmt.Sprintf("refs/heads/%s", branch)) // #nosec
+		srcStr, fmt.Sprintf("refs/heads/%s", branch))
 	lsRemote, err := cmd.Output()
 	if err != nil {
 		if err != exec.ErrNotFound {
@@ -222,7 +222,7 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 	}
 	defer func() {
 		if err != nil {
-			fs.Abort()
+			_ = fs.Abort()
 		} else {
 			err = fs.Commit()
 		}
@@ -234,7 +234,7 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 		"--depth", "1",
 		"--single-branch",
 		"--branch", branch,
-		"--", srcStr, gitDir) // #nosec
+		"--", srcStr, gitDir)
 
 	g.log.Infof("Clone with git: %s", strings.Join(cmd.Args, " "))
 	stdoutStderr, err := cmd.CombinedOutput()
@@ -323,7 +323,7 @@ func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs appfs.Copier
 	}
 	defer func() {
 		if err != nil {
-			fs.Abort()
+			_ = fs.Abort()
 		} else {
 			err = fs.Commit()
 		}

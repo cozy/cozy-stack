@@ -22,7 +22,7 @@ func TestProperSerial(t *testing.T) {
 	assert.NoError(t, job.AckConsumed())
 	job2, err := jobs.Get(job, job.ID())
 	assert.NoError(t, err)
-	assert.Equal(t, jobs.State(jobs.Running), job2.State)
+	assert.Equal(t, jobs.Running, job2.State)
 }
 
 func TestMessageMarshalling(t *testing.T) {
@@ -95,8 +95,8 @@ func TestInMemoryJobs(t *testing.T) {
 
 	broker1 := jobs.NewMemBroker()
 	broker2 := jobs.NewMemBroker()
-	broker1.StartWorkers(workersTestList)
-	broker2.StartWorkers(workersTestList)
+	assert.NoError(t, broker1.StartWorkers(workersTestList))
+	assert.NoError(t, broker2.StartWorkers(workersTestList))
 	w.Add(2)
 
 	go func() {
@@ -132,7 +132,7 @@ func TestInMemoryJobs(t *testing.T) {
 
 func TestUnknownWorkerError(t *testing.T) {
 	broker := jobs.NewMemBroker()
-	broker.StartWorkers(jobs.WorkersList{})
+	assert.NoError(t, broker.StartWorkers(jobs.WorkersList{}))
 	_, err := broker.PushJob(testInstance, &jobs.JobRequest{
 		WorkerType: "nope",
 		Message:    nil,
@@ -145,7 +145,7 @@ func TestUnknownMessageType(t *testing.T) {
 	var w sync.WaitGroup
 
 	broker := jobs.NewMemBroker()
-	broker.StartWorkers(jobs.WorkersList{
+	assert.NoError(t, broker.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:  "test",
 			Concurrency: 4,
@@ -158,7 +158,7 @@ func TestUnknownMessageType(t *testing.T) {
 				return nil
 			},
 		},
-	})
+	}))
 
 	w.Add(1)
 	_, err := broker.PushJob(testInstance, &jobs.JobRequest{
@@ -174,7 +174,7 @@ func TestTimeout(t *testing.T) {
 	var w sync.WaitGroup
 
 	broker := jobs.NewMemBroker()
-	broker.StartWorkers(jobs.WorkersList{
+	assert.NoError(t, broker.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "timeout",
 			Concurrency:  1,
@@ -186,7 +186,7 @@ func TestTimeout(t *testing.T) {
 				return ctx.Err()
 			},
 		},
-	})
+	}))
 
 	w.Add(1)
 	_, err := broker.PushJob(testInstance, &jobs.JobRequest{
@@ -205,7 +205,7 @@ func TestRetry(t *testing.T) {
 
 	var count int
 	broker := jobs.NewMemBroker()
-	broker.StartWorkers(jobs.WorkersList{
+	assert.NoError(t, broker.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "test",
 			Concurrency:  1,
@@ -222,7 +222,7 @@ func TestRetry(t *testing.T) {
 				return nil
 			},
 		},
-	})
+	}))
 
 	w.Add(maxExecCount)
 	_, err := broker.PushJob(testInstance, &jobs.JobRequest{
@@ -240,7 +240,7 @@ func TestPanicRetried(t *testing.T) {
 	maxExecCount := 4
 
 	broker := jobs.NewMemBroker()
-	broker.StartWorkers(jobs.WorkersList{
+	assert.NoError(t, broker.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "panic",
 			Concurrency:  1,
@@ -251,7 +251,7 @@ func TestPanicRetried(t *testing.T) {
 				panic("oops")
 			},
 		},
-	})
+	}))
 
 	w.Add(maxExecCount)
 	_, err := broker.PushJob(testInstance, &jobs.JobRequest{
@@ -270,7 +270,7 @@ func TestPanic(t *testing.T) {
 	odd, _ := jobs.NewMessage(1)
 
 	broker := jobs.NewMemBroker()
-	broker.StartWorkers(jobs.WorkersList{
+	assert.NoError(t, broker.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "panic2",
 			Concurrency:  1,
@@ -288,7 +288,7 @@ func TestPanic(t *testing.T) {
 				return nil
 			},
 		},
-	})
+	}))
 	w.Add(2)
 	var err error
 	_, err = broker.PushJob(testInstance, &jobs.JobRequest{WorkerType: "panic2", Message: odd})

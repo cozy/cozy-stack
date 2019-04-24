@@ -220,7 +220,9 @@ func changesFeed(c echo.Context) error {
 	// the VFS is moving a directory.
 	if doctype == consts.Files {
 		mu := lock.ReadWrite(instance, "vfs")
-		mu.Lock()
+		if err := mu.Lock(); err != nil {
+			return err
+		}
 		defer mu.Unlock()
 	}
 

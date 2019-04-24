@@ -34,7 +34,7 @@ func BuildCode(sessionID, app string) *Code {
 		SessionID: sessionID,
 		AppHost:   app,
 	}
-	getStorage().Add(code)
+	_ = getStorage().Add(code)
 	return code
 }
 

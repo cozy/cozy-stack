@@ -187,7 +187,7 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	defer lifecycle.Destroy("test-keep-perms")
+	defer func() { _ = lifecycle.Destroy("test-keep-perms") }()
 
 	inst, err := apps.NewInstaller(instance, fs, &apps.InstallerOptions{
 		Operation: apps.Install,

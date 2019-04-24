@@ -39,7 +39,6 @@ var ErrPatchCodeOrSet = echo.NewHTTPError(http.StatusBadRequest,
 const ContextPermissionSet = "permissions_set"
 
 // ContextClaims is the key used in echo context to store claims
-// #nosec
 const ContextClaims = "token_claims"
 
 // APIPermission is the struct that will be used to serialized a permission to

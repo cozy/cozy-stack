@@ -41,7 +41,8 @@ func TestClientWithOAuth(t *testing.T) {
 				Path:   "/auth/register",
 			}, req.URL)
 			var v auth.Client
-			json.NewDecoder(req.Body).Decode(&v)
+			err := json.NewDecoder(req.Body).Decode(&v)
+			assert.NoError(t, err)
 			assert.EqualValues(t, v, auth.Client{
 				RedirectURIs: []string{"http://redirectto/"},
 				ClientName:   "name",
@@ -86,7 +87,8 @@ func TestClientWithoutOAuth(t *testing.T) {
 				RawQuery: "q=value",
 			}, req.URL)
 			var v testjson
-			json.NewDecoder(req.Body).Decode(&v)
+			err := json.NewDecoder(req.Body).Decode(&v)
+			assert.NoError(t, err)
 			assert.Equal(t, v.Key, "Value")
 		}),
 	}

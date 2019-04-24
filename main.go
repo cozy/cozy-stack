@@ -32,7 +32,7 @@ import (
 func main() {
 	if err := cmd.RootCmd.Execute(); err != nil {
 		if err != cmd.ErrUsage {
-			fmt.Fprintf(os.Stderr, "Error: %s\n", err.Error()) // #nosec
+			fmt.Fprintf(os.Stderr, "Error: %s\n", err.Error())
 			os.Exit(1)
 		}
 	}

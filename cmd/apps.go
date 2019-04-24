@@ -570,14 +570,17 @@ var appsVersionsCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		instances, err := instance.List()
 		if err != nil {
-			return nil
+			return err
 		}
 		counter := make(map[string]map[string]int)
 
 		for _, instance := range instances {
 			var apps []*apps.WebappManifest
 			req := &couchdb.AllDocsRequest{Limit: 100}
-			couchdb.GetAllDocs(instance, consts.Apps, req, &apps)
+			err := couchdb.GetAllDocs(instance, consts.Apps, req, &apps)
+			if err != nil {
+				return err
+			}
 
 			for _, app := range apps {
 				if _, ok := counter[app.Slug()]; !ok {

@@ -425,7 +425,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 			notRemovedDocs = append(notRemovedDocs, e)
 		}
 		if len(notRemovedDocs) > 0 {
-			archiver.RemoveArchives(notRemovedDocs)
+			_ = archiver.RemoveArchives(notRemovedDocs)
 		}
 	}
 

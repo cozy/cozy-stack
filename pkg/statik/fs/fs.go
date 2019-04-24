@@ -47,6 +47,7 @@ var globalAssets sync.Map // {context:path -> *Asset}
 
 const sumLen = 10
 
+// AssetOption is used to insert a dynamic asset.
 type AssetOption struct {
 	Name     string `json:"name"`
 	Context  string `json:"context"`
@@ -68,16 +69,22 @@ type Asset struct {
 	unzippedSize string
 }
 
+// Size returns the size in bytes of the asset (no compression).
 func (f *Asset) Size() string {
 	return f.unzippedSize
 }
+
+// Reader returns a bytes.Reader for the asset content (no compression).
 func (f *Asset) Reader() *bytes.Reader {
 	return bytes.NewReader(f.unzippedData)
 }
 
+// GzipSize returns the size of the gzipped version of the asset.
 func (f *Asset) GzipSize() string {
 	return f.zippedSize
 }
+
+// GzipReader returns a bytes.Reader for the gzipped content of the asset.
 func (f *Asset) GzipReader() *bytes.Reader {
 	return bytes.NewReader(f.zippedData)
 }
@@ -96,12 +103,15 @@ func Register(zipData string) {
 	}
 }
 
+// Cache is an interface for caching the assets in memory.
 type Cache interface {
 	Get(key string) (io.Reader, bool)
 	Set(key string, data []byte, expiration time.Duration)
 	RefreshTTL(key string, expiration time.Duration)
 }
 
+// RegisterCustomExternals ensures that the assets are in the cache, and load
+// them from their source if they are not yet available.
 func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) error {
 	if len(opts) == 0 {
 		return nil
@@ -325,6 +335,7 @@ func storeAsset(asset *Asset) {
 	globalAssets.Store(contextKey, asset)
 }
 
+// DeleteAsset removes a dynamic asset.
 func DeleteAsset(asset *Asset) {
 	context := asset.Context
 	if context == "" {
@@ -334,6 +345,8 @@ func DeleteAsset(asset *Asset) {
 	globalAssets.Delete(contextKey)
 }
 
+// Get returns a dynamic asset for the given context, or the default context if
+// no context is given.
 func Get(name string, context ...string) (*Asset, bool) {
 	var ctx string
 	if len(context) > 0 && context[0] != "" {
@@ -348,6 +361,8 @@ func Get(name string, context ...string) (*Asset, bool) {
 	return asset.(*Asset), true
 }
 
+// Open returns a bytes.Reader for an asset in the given context, or the
+// default context if no context is given.
 func Open(name string, context ...string) (*bytes.Reader, error) {
 	f, ok := Get(name, context...)
 	if ok {
@@ -356,6 +371,7 @@ func Open(name string, context ...string) (*bytes.Reader, error) {
 	return nil, os.ErrNotExist
 }
 
+// Foreach iterates on the dynamic assets.
 func Foreach(predicate func(name, context string, f *Asset)) {
 	globalAssets.Range(func(contextKey interface{}, v interface{}) bool {
 		context, name, _ := unMarshalContextKey(contextKey.(string))

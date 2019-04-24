@@ -118,7 +118,7 @@ func (e *ImageExtractor) Close() error {
 
 // Abort is called when the extractor can be discarded
 func (e *ImageExtractor) Abort(err error) {
-	e.w.CloseWithError(err)
+	_ = e.w.CloseWithError(err)
 	<-e.ch
 }
 
@@ -178,7 +178,7 @@ func (e *ExifExtractor) Start() {
 // Write is called to push some bytes to the extractor
 func (e *ExifExtractor) Write(p []byte) (n int, err error) {
 	if e.im != nil {
-		e.im.Write(p)
+		_, _ = e.im.Write(p)
 	}
 	return e.w.Write(p)
 }
@@ -196,7 +196,7 @@ func (e *ExifExtractor) Abort(err error) {
 	if e.im != nil {
 		e.im.Abort(err)
 	}
-	e.w.CloseWithError(err)
+	_ = e.w.CloseWithError(err)
 	<-e.ch
 }
 
@@ -303,7 +303,7 @@ func (e *AudioExtractor) Close() error {
 
 // Abort is called when the extractor can be discarded
 func (e *AudioExtractor) Abort(err error) {
-	e.w.CloseWithError(err)
+	_ = e.w.CloseWithError(err)
 	<-e.ch
 }
 

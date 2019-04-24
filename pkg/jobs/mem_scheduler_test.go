@@ -37,7 +37,7 @@ func TestTriggersBadArguments(t *testing.T) {
 func TestMemSchedulerWithDebounce(t *testing.T) {
 	called := 0
 	bro := jobs.NewMemBroker()
-	bro.StartWorkers(jobs.WorkersList{
+	assert.NoError(t, bro.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "worker",
 			Concurrency:  1,
@@ -48,7 +48,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 				return nil
 			},
 		},
-	})
+	}))
 
 	msg, _ := jobs.NewMessage("@event")
 	ti := jobs.TriggerInfos{
@@ -62,7 +62,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	var triggers []jobs.Trigger
 	triggersInfos := []jobs.TriggerInfos{ti}
 	sch := jobs.NewMemScheduler()
-	sch.StartScheduler(bro)
+	assert.NoError(t, sch.StartScheduler(bro))
 
 	// Clear the existing triggers before testing with our triggers
 	ts, err := sch.GetAllTriggers(testInstance)

@@ -23,7 +23,7 @@ func TestTriggerEvent(t *testing.T) {
 	var called = make(map[string]bool)
 
 	bro := jobs.NewMemBroker()
-	bro.StartWorkers(jobs.WorkersList{
+	assert.NoError(t, bro.StartWorkers(jobs.WorkersList{
 		{
 			WorkerType:   "worker_event",
 			Concurrency:  1,
@@ -52,7 +52,7 @@ func TestTriggerEvent(t *testing.T) {
 				return nil
 			},
 		},
-	})
+	}))
 
 	var triggers []jobs.Trigger
 	triggersInfos := []jobs.TriggerInfos{
@@ -89,7 +89,7 @@ func TestTriggerEvent(t *testing.T) {
 	}
 
 	sch := jobs.NewMemScheduler()
-	sch.StartScheduler(bro)
+	assert.NoError(t, sch.StartScheduler(bro))
 
 	for _, infos := range triggersInfos {
 		trigger, err := jobs.NewTrigger(testInstance, infos, infos.Message)

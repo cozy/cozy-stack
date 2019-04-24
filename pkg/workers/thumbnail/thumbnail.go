@@ -111,7 +111,7 @@ func WorkerCheck(ctx *jobs.WorkerContext) error {
 	fs := ctx.Instance.VFS()
 	fsThumb := ctx.Instance.ThumbsFS()
 	var errm error
-	vfs.Walk(fs, "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
+	_ = vfs.Walk(fs, "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
 		if err != nil {
 			return err
 		}
@@ -200,7 +200,7 @@ func generateThumbnails(ctx *jobs.WorkerContext, img *vfs.FileDoc) error {
 		var tempDir string
 		tempDir, err = ioutil.TempDir("", "magick")
 		if err == nil {
-			defer os.RemoveAll(tempDir) // #nosec
+			defer os.RemoveAll(tempDir)
 			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
 			env = []string{envTempDir}
 		}
@@ -232,9 +232,9 @@ func recGenerateThub(ctx *jobs.WorkerContext, in io.Reader, fs vfs.Thumbser, img
 	}
 	defer func() {
 		if err != nil {
-			th.Abort()
+			_ = th.Abort()
 		} else {
-			th.Commit()
+			_ = th.Commit()
 		}
 	}()
 	var buffer *bytes.Buffer
@@ -277,7 +277,7 @@ func generateThumb(ctx *jobs.WorkerContext, in io.Reader, out io.Writer, fileID 
 		"jpg:-", // Send the output on stdout, in JPEG format
 	}
 	var stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, convertCmd, args...) // #nosec
+	cmd := exec.CommandContext(ctx, convertCmd, args...)
 	cmd.Env = env
 	cmd.Stdin = in
 	cmd.Stdout = out

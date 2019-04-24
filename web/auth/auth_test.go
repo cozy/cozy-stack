@@ -79,7 +79,7 @@ func getSessionID(cookies []*http.Cookie) string {
 func TestInstanceBlocked(t *testing.T) {
 	// Block the instance
 	testInstance.Blocked = true
-	couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
+	_ = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
 
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
 	req.Host = testInstance.Domain
@@ -100,7 +100,7 @@ func TestInstanceBlocked(t *testing.T) {
 
 	// Unblock the instance
 	testInstance.Blocked = false
-	couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
+	_ = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
 }
 
 func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
@@ -989,7 +989,8 @@ func TestAuthorizeSuccess(t *testing.T) {
 	if assert.Equal(t, "302 Found", res.Status) {
 		var results []oauth.AccessCode
 		req := &couchdb.AllDocsRequest{}
-		couchdb.GetAllDocs(testInstance, consts.OAuthAccessCodes, req, &results)
+		err = couchdb.GetAllDocs(testInstance, consts.OAuthAccessCodes, req, &results)
+		assert.NoError(t, err)
 		if assert.Len(t, results, 1) {
 			code = results[0].Code
 			expected := fmt.Sprintf("https://example.org/oauth/callback?access_code=%s&code=%s&state=123456#", code, code)
@@ -1107,7 +1108,8 @@ func TestInstallAppWithLinkedApp(t *testing.T) {
 
 	var results []oauth.AccessCode
 	reqDocs := &couchdb.AllDocsRequest{}
-	couchdb.GetAllDocs(testInstance, consts.OAuthAccessCodes, reqDocs, &results)
+	err = couchdb.GetAllDocs(testInstance, consts.OAuthAccessCodes, reqDocs, &results)
+	assert.NoError(t, err)
 	for _, result := range results {
 		if result.ClientID == linkedClientID {
 			linkedCode = result.Code
@@ -1325,14 +1327,16 @@ func TestLogoutSuccess(t *testing.T) {
 		DocSlug: "home",
 	}
 	token := testInstance.BuildAppToken(a.Slug(), getSessionID(jar.Cookies(nil)))
-	permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
+	_, err := permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
+	assert.NoError(t, err)
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
 	req.Host = domain
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	permissions.DestroyWebapp(testInstance, "home")
+	err = permissions.DestroyWebapp(testInstance, "home")
+	assert.NoError(t, err)
 
 	assert.Equal(t, "204 No Content", res.Status)
 	cookies := jar.Cookies(nil)
@@ -1387,7 +1391,8 @@ func TestLogoutOthers(t *testing.T) {
 		DocSlug: "home",
 	}
 	token := testInstance.BuildAppToken(a.Slug(), getSessionID(cookies1))
-	permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
+	_, err = permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
+	assert.NoError(t, err)
 
 	reqLogout1, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)
 	reqLogout1.Host = domain
@@ -1416,7 +1421,8 @@ func TestLogoutOthers(t *testing.T) {
 	defer resLogout3.Body.Close()
 	assert.Equal(t, 204, resLogout3.StatusCode)
 
-	permissions.DestroyWebapp(testInstance, "home")
+	err = permissions.DestroyWebapp(testInstance, "home")
+	assert.NoError(t, err)
 }
 
 func TestPassphraseResetLoggedIn(t *testing.T) {
@@ -1494,7 +1500,7 @@ func TestPassphraseRenewFormWithToken(t *testing.T) {
 
 func TestPassphraseRenew(t *testing.T) {
 	d := "test.cozycloud.cc.web_reset_form"
-	lifecycle.Destroy(d)
+	_ = lifecycle.Destroy(d)
 	in1, err := lifecycle.Create(&lifecycle.Options{
 		Domain: d,
 		Locale: "en",
@@ -1504,7 +1510,7 @@ func TestPassphraseRenew(t *testing.T) {
 		return
 	}
 	defer func() {
-		lifecycle.Destroy(d)
+		_ = lifecycle.Destroy(d)
 	}()
 	err = lifecycle.RegisterPassphrase(in1, []byte("MyPass"), in1.RegisterToken)
 	if !assert.NoError(t, err) {
@@ -1642,7 +1648,7 @@ func TestSecretExchangeNoPayload(t *testing.T) {
 func TestPassphraseOnboarding(t *testing.T) {
 	// Here we create a new instance without passphrase
 	d := "test.cozycloud.cc.web_passphrase"
-	lifecycle.Destroy(d)
+	_ = lifecycle.Destroy(d)
 	inst, err := lifecycle.Create(&lifecycle.Options{
 		Domain: d,
 		Locale: "en",
@@ -1692,7 +1698,7 @@ func TestPassphraseOnboardingFinished(t *testing.T) {
 func TestPassphraseOnboardingBadRegisterToken(t *testing.T) {
 	// Should render need_onboarding
 	d := "test.cozycloud.cc.web_passphrase_bad_token"
-	lifecycle.Destroy(d)
+	_ = lifecycle.Destroy(d)
 	inst, err := lifecycle.Create(&lifecycle.Options{
 		Domain: d,
 		Locale: "en",
@@ -1724,7 +1730,7 @@ func TestMain(m *testing.M) {
 	confAuth["jwt_secret"] = base64.StdEncoding.EncodeToString(JWTSecret)
 	conf.Authentication[config.DefaultInstanceContext] = confAuth
 
-	web.LoadSupportedLocales()
+	_ = web.LoadSupportedLocales()
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "auth_test")
 

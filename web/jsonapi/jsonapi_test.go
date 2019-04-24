@@ -130,7 +130,7 @@ func TestData(t *testing.T) {
 	assert.Equal(t, "application/vnd.api+json", res.Header.Get("Content-Type"))
 	defer res.Body.Close()
 	var body map[string]interface{}
-	json.NewDecoder(res.Body).Decode(&body)
+	assert.NoError(t, json.NewDecoder(res.Body).Decode(&body))
 
 	assert.Contains(t, body, "data")
 	data := body["data"].(map[string]interface{})
@@ -153,7 +153,7 @@ func TestPagination(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	var c string
-	json.NewDecoder(res.Body).Decode(&c)
+	assert.NoError(t, json.NewDecoder(res.Body).Decode(&c))
 	assert.Equal(t, "key 13 %!s(<nil>) ", c)
 }
 
@@ -162,7 +162,7 @@ func TestPaginationCustomLimit(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	var c string
-	json.NewDecoder(res.Body).Decode(&c)
+	assert.NoError(t, json.NewDecoder(res.Body).Decode(&c))
 	assert.Equal(t, "key 7 %!s(<nil>) ", c)
 }
 
@@ -178,7 +178,7 @@ func TestPaginationWithCursor(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	var c string
-	json.NewDecoder(res.Body).Decode(&c)
+	assert.NoError(t, json.NewDecoder(res.Body).Decode(&c))
 	assert.Equal(t, "key 13 [a b] c", c)
 
 }

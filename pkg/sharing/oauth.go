@@ -124,7 +124,7 @@ func (s *Sharing) countFiles(inst *instance.Instance) int {
 		}
 		if rule.Selector == "" || rule.Selector == "id" {
 			for _, fileID := range rule.Values {
-				vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+				_ = vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 					if err != nil {
 						return err
 					}

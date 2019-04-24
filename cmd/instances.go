@@ -348,7 +348,7 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 		c := newAdminClient()
 		_, err = c.ModifyInstance(&client.InstanceOptions{
 			Domain:    domain,
-			DiskQuota: int64(diskQuota),
+			DiskQuota: diskQuota,
 		})
 		return err
 	},
@@ -1063,7 +1063,7 @@ func init() {
 	importCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	importCmd.Flags().StringVar(&flagDirectory, "directory", "", "Put the imported files inside this directory")
 	importCmd.Flags().BoolVar(&flagIncreaseQuota, "increase-quota", false, "Increase the disk quota if needed for importing all the files")
-	exportCmd.MarkFlagRequired("domain")
-	importCmd.MarkFlagRequired("domain")
+	_ = exportCmd.MarkFlagRequired("domain")
+	_ = importCmd.MarkFlagRequired("domain")
 	RootCmd.AddCommand(instanceCmdGroup)
 }

@@ -259,7 +259,7 @@ func TestKonnectorUpdateSkipPerms(t *testing.T) {
 		OnboardingFinished: &finished,
 	})
 
-	defer lifecycle.Destroy("test-skip-perms")
+	defer func() { _ = lifecycle.Destroy("test-skip-perms") }()
 
 	assert.NoError(t, err)
 

@@ -1,6 +1,5 @@
 package cmd
 
-// #nosec
 import (
 	"bufio"
 	"bytes"
@@ -136,7 +135,7 @@ var md5FixerCmd = &cobra.Command{
 				return nil
 			}
 			defer r.Close()
-			h := md5.New() // #nosec
+			h := md5.New()
 			_, err = io.Copy(h, r)
 			if err != nil {
 				fmt.Printf("failed to download: %s", err.Error())
@@ -538,7 +537,10 @@ var contentMismatch64Kfixer = &cobra.Command{
 				SizeFile  int64 `json:"size_file"`
 			}{}
 			marshaled, _ := json.Marshal(content["content_mismatch"])
-			json.Unmarshal(marshaled, &contentMismatch)
+			err = json.Unmarshal(marshaled, &contentMismatch)
+			if err != nil {
+				return err
+			}
 
 			// SizeFile should be 64k shorter than SizeIndex
 			size := int64(64 * 1024)
@@ -550,7 +552,10 @@ var contentMismatch64Kfixer = &cobra.Command{
 			fileDoc := content["file_doc"].(map[string]interface{})
 
 			doc := &vfs.FileDoc{}
-			couchdb.GetDoc(inst, consts.Files, fileDoc["_id"].(string), doc)
+			err = couchdb.GetDoc(inst, consts.Files, fileDoc["_id"].(string), doc)
+			if err != nil {
+				return err
+			}
 			instanceVFS := inst.VFS()
 
 			// Checks if the file is trashed

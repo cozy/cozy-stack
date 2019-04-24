@@ -68,7 +68,7 @@ func (t *EventTrigger) Schedule() <-chan *JobRequest {
 	go func() {
 		sub := realtime.GetHub().Subscriber(t)
 		for _, m := range t.mask {
-			sub.Subscribe(m.Type)
+			_ = sub.Subscribe(m.Type)
 		}
 		defer func() {
 			sub.Close()

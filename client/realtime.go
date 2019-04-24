@@ -128,21 +128,20 @@ func (r *RealtimeChannel) Channel() <-chan *RealtimeServerMessage {
 	return r.ch
 }
 
-func (r *RealtimeChannel) pump() (err error) {
-	defer func() {
-		if err != nil && err != io.EOF && atomic.LoadUint32(&r.closed) == 0 {
-			r.ch <- &RealtimeServerMessage{
-				Event:   "error",
-				Payload: RealtimeServerPayload{Title: err.Error()},
-			}
-		}
-	}()
+func (r *RealtimeChannel) pump() {
+	var err error
 	for {
 		var msg RealtimeServerMessage
 		if err = r.socket.ReadJSON(&msg); err != nil {
-			return
+			break
 		}
 		r.ch <- &msg
+	}
+	if err != io.EOF && atomic.LoadUint32(&r.closed) == 0 {
+		r.ch <- &RealtimeServerMessage{
+			Event:   "error",
+			Payload: RealtimeServerPayload{Title: err.Error()},
+		}
 	}
 }
 

@@ -1,6 +1,5 @@
 package vfsafero
 
-// #nosec
 import (
 	"bytes"
 	"crypto/md5"
@@ -161,7 +160,7 @@ func (afs *aferoVFS) CreateDir(doc *vfs.DirDoc) error {
 		err = afs.Indexer.CreateNamedDirDoc(doc)
 	}
 	if err != nil {
-		afs.fs.Remove(doc.Fullpath) // #nosec
+		_ = afs.fs.Remove(doc.Fullpath)
 	}
 	return err
 }
@@ -252,7 +251,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 
-	hash := md5.New() // #nosec
+	hash := md5.New()
 	extractor := vfs.NewMetaExtractor(newdoc)
 
 	return &aferoFileCreation{
@@ -699,12 +698,12 @@ func (f *aferoFileCreation) Close() (err error) {
 			}
 		} else if err != nil {
 			// remove the temporary file if an error occurred
-			f.afs.fs.Remove(f.tmppath) // #nosec
+			_ = f.afs.fs.Remove(f.tmppath)
 			// If an error has occurred that is not due to the index update, we should
 			// delete the file from the index.
 			if f.olddoc == nil {
 				if _, isCouchErr := couchdb.IsCouchError(err); !isCouchErr {
-					f.afs.Indexer.DeleteFileDoc(f.newdoc) // #nosec
+					_ = f.afs.Indexer.DeleteFileDoc(f.newdoc)
 				}
 			}
 		}
@@ -831,7 +830,7 @@ func extractContentTypeAndMD5(filename string) (contentType string, md5sum []byt
 	defer f.Close()
 	var r io.Reader
 	contentType, r = filetype.FromReader(f)
-	h := md5.New() // #nosec
+	h := md5.New()
 	if _, err = io.Copy(h, r); err != nil {
 		return
 	}

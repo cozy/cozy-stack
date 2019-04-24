@@ -37,7 +37,9 @@ type ReplicateMsg struct {
 // Replicate starts a replicator on this sharing.
 func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 	mu := lock.ReadWrite(inst, "sharings/"+s.SID)
-	mu.Lock()
+	if err := mu.Lock(); err != nil {
+		return err
+	}
 	defer mu.Unlock()
 
 	pending := false
