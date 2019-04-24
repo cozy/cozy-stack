@@ -458,13 +458,13 @@ msgstr ""
 "Just so you know, you have 15 minutes to choose a new password, then this email will self-destruct."
 
 msgid "Mail Archive Subject"
-msgstr "Download your Cozy data"
+msgstr "Download your data"
 
 msgid "Mail Archive Intro 1"
 msgstr "Hello %s,"
 
 msgid "Mail Archive Intro 2"
-msgstr "You asked to get a copy of the whole data Cozy has about you."
+msgstr "You asked to get a copy of the whole data we have about you."
 
 msgid "Mail Archive Button instruction"
 msgstr "You can download it by clicking on the following link."
@@ -485,7 +485,7 @@ msgid "Mail Two Factor Mail Confirmation Subject"
 msgstr "You want to enable two-factor authentication on your Cozy"
 
 msgid "Mail Two Factor Mail Confirmation Intro"
-msgstr "Here is the code to enable two-factor authentication on your Cozy: %s"
+msgstr "Here is the code to enable two-factor authentication: %s"
 
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr "If you have not made this change, please contact us at contact@cozycloud.cc"
@@ -512,7 +512,7 @@ msgstr "Operating System"
 
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
-"That was you ? Great ! We are reassured. Sorry for the inconvenience. If not, change your password now.\n"
+"That was you ? Great ! We are reassured. Sorry for the inconvenience."
 "If not, change your password now by clicking on the following button:"
 
 msgid "Mail New Connection Change Passphrase text"
@@ -591,13 +591,13 @@ msgid "Sharing Forgotten URL email"
 msgstr "Search your email inbox for \"Cozy\"."
 
 msgid "Notifications Disk Quota Subject"
-msgstr "You have currently reached 90% of your Cozy space."
+msgstr "You have currently reached 90% of your space."
 
 msgid "Notifications Disk Quota Intro"
 msgstr "You have two options to get more space."
 
 msgid "Notifications Disk Quota offers instruction"
-msgstr "Option 1: Upgrade your account\n"
+msgstr "Option 1:"
 "Upgrade your Cozy by choosing new offer to get lots more space"
 
 msgid "Notifications Disk Quota offers text"
