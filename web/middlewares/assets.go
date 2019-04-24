@@ -32,6 +32,7 @@ func BuildTemplates() {
 		`))
 }
 
+// CozyUI returns an HTML template to insert the Cozy-UI assets.
 func CozyUI(i *instance.Instance) template.HTML {
 	buf := new(bytes.Buffer)
 	err := cozyUITemplate.Execute(buf, echo.Map{
@@ -58,6 +59,7 @@ func ThemeCSS(i *instance.Instance) template.HTML {
 	return template.HTML(buf.String())
 }
 
+// Favicon returns a helper to insert the favicons in an HTML template.
 func Favicon(i *instance.Instance) template.HTML {
 	buf := new(bytes.Buffer)
 	err := faviconTemplate.Execute(buf, echo.Map{

@@ -14,6 +14,7 @@ import (
 	"golang.org/x/crypto/hkdf"
 )
 
+// This is the lengths of our tokens (in bytes).
 const (
 	RegisterTokenLen      = 16
 	PasswordResetTokenLen = 16

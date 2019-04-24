@@ -6,6 +6,7 @@ import (
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
+// This is the list of possible audience values for JWT.
 const (
 	AppAudience               = "app"          // used by client-side apps
 	KonnectorAudience         = "konn"         // used by konnectors

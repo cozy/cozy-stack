@@ -21,10 +21,16 @@ type AssetsList struct {
 	AssetsList []fs.AssetOption `json:"assets_list"`
 }
 
-func (a *AssetsList) ID() string      { return assetsListID }
-func (a *AssetsList) Rev() string     { return a.AssetsRev }
+// ID implements the couchdb.Doc interface
+func (a *AssetsList) ID() string { return assetsListID }
+
+// Rev implements the couchdb.Doc interface
+func (a *AssetsList) Rev() string { return a.AssetsRev }
+
+// DocType implements the couchdb.Doc interface
 func (a *AssetsList) DocType() string { return consts.Configs }
 
+// Clone implements the couchdb.Doc interface
 func (a *AssetsList) Clone() couchdb.Doc {
 	clone := *a
 	clone.AssetsList = make([]fs.AssetOption, len(a.AssetsList))
@@ -32,7 +38,10 @@ func (a *AssetsList) Clone() couchdb.Doc {
 	return &clone
 }
 
-func (a *AssetsList) SetID(id string)   { a.AssetsID = id }
+// SetID implements the couchdb.Doc interface
+func (a *AssetsList) SetID(id string) { a.AssetsID = id }
+
+// SetRev implements the couchdb.Doc interface
 func (a *AssetsList) SetRev(rev string) { a.AssetsRev = rev }
 
 var _ couchdb.Doc = &AssetsList{}
