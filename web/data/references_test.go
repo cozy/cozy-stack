@@ -8,7 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/stretchr/testify/assert"
 )
 

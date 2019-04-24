@@ -18,7 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 )
 
 const (

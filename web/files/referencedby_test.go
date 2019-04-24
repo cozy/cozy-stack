@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 )
