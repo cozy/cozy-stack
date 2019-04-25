@@ -315,7 +315,6 @@ func GetQueuedJobs(db prefixer.Prefixer, workerType string) ([]*Job, error) {
 
 // GetJobsBeforeDate returns alls jobs queued before the specified date
 func GetJobsBeforeDate(db prefixer.Prefixer, date time.Time) ([]*Job, error) {
-	var res couchdb.ViewResponse
 	var jobs []*Job
 
 	req := &couchdb.FindRequest{
@@ -328,13 +327,6 @@ func GetJobsBeforeDate(db prefixer.Prefixer, date time.Time) ([]*Job, error) {
 		return nil, err
 	}
 
-	// Returning docs
-	for _, row := range res.Rows {
-		doc := &Job{}
-		if err = json.Unmarshal(row.Doc, &doc); err == nil {
-			jobs = append(jobs, doc)
-		}
-	}
 	return jobs, err
 }
 

@@ -483,10 +483,13 @@ func purgeJobs(c echo.Context) error {
 	durationParam := c.QueryParam("duration")
 
 	conf := config.GetConfig().Jobs
-	duration := conf.DefaultDurationToKeep
+	dur, err = bigduration.ParseDuration(conf.DefaultDurationToKeep)
+	if err != nil {
+		return err
+	}
 
 	if durationParam != "" {
-		dur, err = bigduration.ParseDuration(duration)
+		dur, err = bigduration.ParseDuration(durationParam)
 		if err != nil {
 			return err
 		}
