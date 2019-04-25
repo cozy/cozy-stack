@@ -343,17 +343,12 @@ func GetJobsBeforeDate(db prefixer.Prefixer, date time.Time) ([]*Job, error) {
 
 // GetLastsJobs returns the N lasts job of each state for an instance/worker
 // type pair
-func GetLastsJobs(db prefixer.Prefixer, workerType string, limits map[State]int) ([]*Job, error) {
+func GetLastsJobs(db prefixer.Prefixer, workerType string) ([]*Job, error) {
 	var result []*Job
-	var limit int
-	var ok bool
 
 	for _, state := range []State{Queued, Running, Done, Errored} {
 		jobs := []*Job{}
-		limit, ok = limits[state]
-		if !ok || limit == 0 || limit > defaultMaxLimits[state] {
-			limit = defaultMaxLimits[state]
-		}
+		limit := defaultMaxLimits[state]
 
 		req := &couchdb.FindRequest{
 			Selector: mango.And(

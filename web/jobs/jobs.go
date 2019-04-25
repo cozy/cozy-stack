@@ -505,16 +505,9 @@ func purgeJobs(c echo.Context) error {
 	}
 	// Step 2: We also want to keep a minimum number of jobs for each state.
 	// Jobs returned will be kept.
-	limits := map[jobs.State]int{
-		jobs.Queued:  0, // "0" is equivalent of the default limit
-		jobs.Running: 0,
-		jobs.Done:    0,
-		jobs.Errored: 0,
-	}
-
 	var lastsJobs []*jobs.Job
 	for _, w := range workers {
-		jobs, err := jobs.GetLastsJobs(instance, w, limits)
+		jobs, err := jobs.GetLastsJobs(instance, w)
 		if err != nil {
 			return err
 		}

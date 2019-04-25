@@ -63,21 +63,7 @@ func TestGetJobsBeforeDate(t *testing.T) {
 }
 
 func TestGetLastsJobs(t *testing.T) {
-	limits := map[jobs.State]int{
-		jobs.Queued:  1,
-		jobs.Running: 1,
-		jobs.Done:    1,
-		jobs.Errored: 1,
-	}
-
-	// The Queued limit is set to "1"
-	j, err := jobs.GetLastsJobs(testInstance, "thumbnail", limits)
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(j))
-
-	// Set no limits
-	limits[jobs.Queued] = 0
-	j, err = jobs.GetLastsJobs(testInstance, "thumbnail", limits)
+	j, err := jobs.GetLastsJobs(testInstance, "thumbnail")
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(j))
 
@@ -93,7 +79,7 @@ func TestGetLastsJobs(t *testing.T) {
 	}
 	err = myJob.Create()
 	assert.NoError(t, err)
-	j, err = jobs.GetLastsJobs(testInstance, "thumbnail", limits)
+	j, err = jobs.GetLastsJobs(testInstance, "thumbnail")
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(j))
 
@@ -109,15 +95,15 @@ func TestGetLastsJobs(t *testing.T) {
 	}
 	err = myJob.Create()
 	assert.NoError(t, err)
-	j, err = jobs.GetLastsJobs(testInstance, "thumbnail", limits)
+	j, err = jobs.GetLastsJobs(testInstance, "thumbnail")
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(j))
-	j, err = jobs.GetLastsJobs(testInstance, "konnector", limits)
+	j, err = jobs.GetLastsJobs(testInstance, "konnector")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(j))
 
 	// No jobs
-	j, err = jobs.GetLastsJobs(testInstance, "foobar", limits)
+	j, err = jobs.GetLastsJobs(testInstance, "foobar")
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(j))
 
@@ -137,12 +123,11 @@ func TestGetLastsJobs(t *testing.T) {
 	err = myJob.Create()
 	assert.NoError(t, err)
 
-	limits[jobs.Queued] = 1
-	j, err = jobs.GetLastsJobs(testInstance, "thumbnail", limits)
+	j, err = jobs.GetLastsJobs(testInstance, "thumbnail")
 	assert.NoError(t, err)
 
-	// One running, one errored, one queued
-	assert.Equal(t, 3, len(j))
+	// One running, one errored, three queued
+	assert.Equal(t, 5, len(j))
 	assert.Equal(t, futureDate.String(), j[len(j)-1].QueuedAt.String())
 	assert.Equal(t, jobs.Errored, j[len(j)-1].State)
 
