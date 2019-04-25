@@ -26,6 +26,15 @@ const (
 	Errored State = "errored"
 )
 
+// defaultMaxLimits defines the maximum limit of how much jobs will be returned
+// for each job state
+var defaultMaxLimits map[State]int = map[State]int{
+	Queued:  50,
+	Running: 50,
+	Done:    50,
+	Errored: 50,
+}
+
 const (
 	// WorkerType is the key in JSON for the type of worker
 	WorkerType = "worker"
@@ -302,6 +311,52 @@ func GetQueuedJobs(db prefixer.Prefixer, workerType string) ([]*Job, error) {
 		return nil, err
 	}
 	return results, nil
+}
+
+// GetJobsBeforeDate returns alls jobs queued before the specified date
+func GetJobsBeforeDate(db prefixer.Prefixer, date time.Time) ([]*Job, error) {
+	var jobs []*Job
+
+	req := &couchdb.FindRequest{
+		UseIndex: "by-queued-at",
+		Selector: mango.Lt("queued_at", date.Format(time.RFC3339Nano)),
+	}
+
+	err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
+	if err != nil {
+		return nil, err
+	}
+
+	return jobs, err
+}
+
+// GetLastsJobs returns the N lasts job of each state for an instance/worker
+// type pair
+func GetLastsJobs(db prefixer.Prefixer, workerType string) ([]*Job, error) {
+	var result []*Job
+
+	for _, state := range []State{Queued, Running, Done, Errored} {
+		jobs := []*Job{}
+		limit := defaultMaxLimits[state]
+
+		req := &couchdb.FindRequest{
+			Selector: mango.And(
+				mango.Equal("worker", workerType),
+				mango.Equal("state", state),
+			),
+			Sort: mango.SortBy{
+				{Field: "queued_at", Direction: mango.Desc},
+			},
+			Limit: limit,
+		}
+		err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, jobs...)
+	}
+
+	return result, nil
 }
 
 // NewMessage returns a json encoded data

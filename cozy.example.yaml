@@ -144,6 +144,9 @@ jobs:
     # push:     false
     # sendmail: false
 
+  # Sets the default duration of jobs database documents to keep
+  defaultDurationToKeep: "2W" # Keep 2 weeks
+
 # konnectors execution parameters for executing external processes.
 konnectors:
   cmd: ./scripts/konnector-node-run.sh # run connectors with node

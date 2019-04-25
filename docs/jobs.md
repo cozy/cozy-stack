@@ -664,6 +664,37 @@ Accept: application/vnd.api+json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.triggers` for the verb `POST`.
 
+### DELETE /jobs/purge
+
+This endpoint allows to purge old jobs of an instance.
+Some parameters can be given to this route:
+
+* `duration` is the duration of jobs to keep. This is a human-readable string
+  (integer+suffix).
+  For example:
+  - "3W" will keep jobs up to 3 weeks
+  - "2M" will keep jobs up to 2 months
+* `workers` is a comma-separated list of workers to apply the purge job.
+
+#### Request
+
+```http
+DELETE /jobs/purge HTTP/1.1
+Accept: application/json
+```
+
+#### Response
+
+```json
+{
+  "deleted": 42
+}
+```
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.jobs` for the verb `DELETE`.
+
 ### DELETE /jobs/triggers/:trigger-id
 
 Delete a trigger given its ID.

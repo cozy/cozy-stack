@@ -59,6 +59,17 @@ func GetWorkersList() ([]*WorkerConfig, error) {
 	return workers, nil
 }
 
+// GetWorkersNamesList returns the names of the configured workers
+func GetWorkersNamesList() []string {
+	workers, _ := GetWorkersList()
+	workerNames := make([]string, len(workers))
+
+	for i, w := range workers {
+		workerNames[i] = w.WorkerType
+	}
+	return workerNames
+}
+
 func applyWorkerConfig(w *WorkerConfig, c config.Worker) *WorkerConfig {
 	w = w.Clone()
 	if c.Concurrency != nil {
