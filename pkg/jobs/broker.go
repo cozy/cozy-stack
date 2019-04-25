@@ -318,10 +318,12 @@ func GetJobsBeforeDate(db prefixer.Prefixer, date time.Time) ([]*Job, error) {
 	var res couchdb.ViewResponse
 	var jobs []*Job
 
-	err := couchdb.ExecView(db, consts.JobByQueuedAt, &couchdb.ViewRequest{
-		IncludeDocs: true,
-		EndKey:      date.Format(time.RFC3339Nano),
-	}, &res)
+	req := &couchdb.FindRequest{
+		UseIndex: "by-queued-at",
+		Selector: mango.Lt("queued_at", date.Format(time.RFC3339Nano)),
+	}
+
+	err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
 	if err != nil {
 		return nil, err
 	}

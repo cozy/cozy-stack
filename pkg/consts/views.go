@@ -254,18 +254,6 @@ function(doc) {
 `,
 }
 
-// JobByQueuedAt is used to find jobs by their queued datetime. Worker type and
-// state filters also can be used for granular selection
-var JobByQueuedAt = &couchdb.View{
-	Name:    "jobs-by-queued-at",
-	Doctype: Jobs,
-	Map: `
-function (doc) {
-	emit(doc.queued_at, doc._id);
-}
-`,
-}
-
 // Views is the list of all views that are created by the stack.
 var Views = []*couchdb.View{
 	DiskUsageView,
@@ -279,7 +267,6 @@ var Views = []*couchdb.View{
 	SharedDocsBySharingID,
 	SharingsByDocTypeView,
 	ContactByEmail,
-	JobByQueuedAt,
 }
 
 // ViewsByDoctype returns the list of views for a specified doc type.
