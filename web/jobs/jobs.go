@@ -545,14 +545,17 @@ func purgeJobs(c echo.Context) error {
 		}
 	}
 
-	// No dry run, removing the jobs
-	for _, j := range finalJobs {
-		err := couchdb.DeleteDoc(instance, j)
-		if err != nil {
-			return err
-		}
+	// Bulk-deleting the jobs
+	jobsToDelete := make([]couchdb.Doc, len(finalJobs))
+	for i, j := range finalJobs {
+		jobsToDelete[i] = j
 	}
-	return c.JSON(200, map[string]int{"deleted": len(finalJobs)})
+	err = couchdb.BulkDeleteDocs(instance, consts.Jobs, jobsToDelete)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, map[string]int{"deleted": len(jobsToDelete)})
 }
 
 // Routes sets the routing for the jobs service
