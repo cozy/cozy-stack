@@ -473,7 +473,7 @@ msgid "Mail Archive Button text"
 msgstr "Download your data"
 
 msgid "Mail Two Factor Subject"
-msgstr "Verify your connection to Cozy"
+msgstr "Verify your connection to your %s"
 
 msgid "Mail Two Factor Intro"
 msgstr "Two-factor authentication is enabled for your Cozy. Enter the following code to verify your identity: %s."
@@ -482,7 +482,7 @@ msgid "Mail Two Factor Outro"
 msgstr "Not sure what to do? Get some help from contact@cozycloud.cc"
 
 msgid "Mail Two Factor Mail Confirmation Subject"
-msgstr "You want to enable two-factor authentication on your Cozy"
+msgstr "You want to enable two-factor authentication on your %s"
 
 msgid "Mail Two Factor Mail Confirmation Intro"
 msgstr "Here is the code to enable two-factor authentication: %s"
@@ -491,7 +491,7 @@ msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr "If you have not made this change, please contact us at contact@cozycloud.cc"
 
 msgid "Mail New Connection Subject"
-msgstr "We just detected a connection to your Cozy"
+msgstr "We just detected a connection to your %s"
 
 msgid "Mail New Connection Intro"
 msgstr ""
@@ -522,7 +522,7 @@ msgid "Mail New Connection Outro"
 msgstr "Why this e-mail? The safety of your Cozy is our priority and we take care to warn you of any unusual connection."
 
 msgid "Mail New Registration Subject"
-msgstr "A new device connected to your Cozy"
+msgstr "A new device connected to your %s"
 
 msgid "Mail New Registration Intro"
 msgstr "Congrats, the registration of a new device to your Cozy has been successful."

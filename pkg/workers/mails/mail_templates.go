@@ -16,10 +16,10 @@ func initMailTemplates() {
 	mailTemplater = MailTemplater{
 		"passphrase_reset":             subjectEntry{"Mail Reset Passphrase Subject", nil},
 		"archiver":                     subjectEntry{"Mail Archive Subject", nil},
-		"two_factor":                   subjectEntry{"Mail Two Factor Subject", nil},
-		"two_factor_mail_confirmation": subjectEntry{"Mail Two Factor Mail Confirmation Subject", nil},
-		"new_connection":               subjectEntry{"Mail New Connection Subject", nil},
-		"new_registration":             subjectEntry{"Mail New Registration Subject", nil},
+		"two_factor":                   subjectEntry{"Mail Two Factor Subject", []string{"template_title"}},
+		"two_factor_mail_confirmation": subjectEntry{"Mail Two Factor Mail Confirmation Subject", []string{"template_title"}},
+		"new_connection":               subjectEntry{"Mail New Connection Subject", []string{"template_title"}},
+		"new_registration":             subjectEntry{"Mail New Registration Subject", []string{"cozy"}},
 		"sharing_request":              subjectEntry{"Mail Sharing Request Subject", []string{"SharerPublicName"}},
 		"notifications_diskquota":      subjectEntry{"Notifications Disk Quota Subject", nil},
 	}
@@ -53,7 +53,11 @@ func (m MailTemplater) Execute(ctx *jobs.WorkerContext, name, layout, locale str
 
 	var vars []interface{}
 	for _, name := range entry.Variables {
-		vars = append(vars, data[name])
+		if name == "template_title" {
+			vars = append(vars, ctx.Instance.TemplateTitle())
+		} else {
+			vars = append(vars, data[name])
+		}
 	}
 
 	subject := i18n.Translate(entry.Key, locale, vars...)
