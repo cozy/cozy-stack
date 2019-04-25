@@ -168,6 +168,9 @@ mail:
   # skip the certificate validation (may be useful on localhost)
   skip_certificate_validation: false
 
+# Sets the default duration of jobs database documents to keep
+defaultDurationToKeep: "2W" # Keep 2 weeks
+
 # directory with the hooks scripts - flags: --hooks
 hooks: ./scripts/hooks
 

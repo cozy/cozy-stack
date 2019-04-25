@@ -7,7 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/justincampbell/bigduration"
+
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -468,18 +471,22 @@ func cleanJobs(c echo.Context) error {
 }
 
 func purgeJobs(c echo.Context) error {
+	var dur time.Duration
+	var err error
+
 	instance := middlewares.GetInstance(c)
 	if err := middlewares.AllowWholeType(c, webpermissions.DELETE, consts.Jobs); err != nil {
 		return err
 	}
 
 	workersParam := c.QueryParam("workers")
-	monthsParam := c.QueryParam("months")
+	durationParam := c.QueryParam("duration")
 
-	var months int = 2
-	var err error
-	if monthsParam != "" {
-		months, err = strconv.Atoi(monthsParam)
+	conf := config.GetConfig().Jobs
+	duration := conf.DefaultDurationToKeep
+
+	if durationParam != "" {
+		dur, err = bigduration.ParseDuration(duration)
 		if err != nil {
 			return err
 		}
@@ -491,7 +498,7 @@ func purgeJobs(c echo.Context) error {
 
 	// Step 1: We want to get all the jobs prior to the date parameter.
 	// Jobs returned are the ones we want to remove
-	d := time.Now().AddDate(0, -months, 0)
+	d := time.Now().Add(-dur)
 	jobsBeforeDate, err := jobs.GetJobsBeforeDate(instance, d)
 	if err != nil && err != jobs.ErrNotFoundJob {
 		return err

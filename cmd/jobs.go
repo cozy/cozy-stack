@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -24,7 +23,7 @@ var flagJobJSONArg string
 var flagJobPrintLogs bool
 var flagJobPrintLogsVerbose bool
 var flagJobWorkers []string
-var flagJobsPurgeMonth int
+var flagJobsPurgeDuration string
 
 var jobsCmdGroup = &cobra.Command{
 	Use:   "jobs <command>",
@@ -80,6 +79,7 @@ var jobsRunCmd = &cobra.Command{
 
 var jobsPurgeCmd = &cobra.Command{
 	Use:     "purge-old-jobs <domain>",
+	Short:   `Purge old jobs from an instance`,
 	Example: `$ cozy-stack jobs purge-old-jobs example.mycozy.cloud`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
@@ -96,11 +96,11 @@ var jobsPurgeCmd = &cobra.Command{
 			workers = flagJobWorkers
 		}
 
-		months := strconv.Itoa(flagJobsPurgeMonth)
+		duration := flagJobsPurgeDuration
 
 		q := url.Values{
-			"months":  {months},
-			"workers": {strings.Join(workers, ",")},
+			"duration": {duration},
+			"workers":  {strings.Join(workers, ",")},
 		}
 		c := newClient(i.Domain, "io.cozy.jobs:DELETE")
 
@@ -136,7 +136,7 @@ func init() {
 	jobsRunCmd.Flags().BoolVar(&flagJobPrintLogsVerbose, "logs-verbose", false, "verbose logging (with --logs flag)")
 
 	jobsPurgeCmd.Flags().StringSliceVar(&flagJobWorkers, "workers", nil, "worker types to iterate over (all workers by default)")
-	jobsPurgeCmd.Flags().IntVar(&flagJobsPurgeMonth, "months", 2, "number of months to look for")
+	jobsPurgeCmd.Flags().StringVar(&flagJobsPurgeDuration, "duration", "", "duration to look for (ie. 3D, 2M)")
 
 	jobsCmdGroup.AddCommand(jobsRunCmd)
 	jobsCmdGroup.AddCommand(jobsPurgeCmd)

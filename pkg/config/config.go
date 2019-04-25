@@ -193,7 +193,8 @@ type Jobs struct {
 	Workers               []Worker
 	ImageMagickConvertCmd string
 	// XXX for retro-compatibility
-	NbWorkers int
+	NbWorkers             int
+	DefaultDurationToKeep string
 }
 
 // Konnectors contains the configuration values for the konnectors
@@ -404,6 +405,7 @@ func Setup(cfgFile string) (err error) {
 func applyDefaults(v *viper.Viper) {
 	v.SetDefault("password_reset_interval", defaultPasswordResetInterval)
 	v.SetDefault("jobs.imagemagick_convert_cmd", "convert")
+	v.SetDefault("jobs.defaultDurationToKeep", "2W")
 	v.SetDefault("assets_polling_disabled", false)
 	v.SetDefault("assets_polling_interval", 2*time.Minute)
 }
