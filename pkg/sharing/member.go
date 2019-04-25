@@ -41,7 +41,7 @@ type Member struct {
 	Status     string `json:"status"`
 	Name       string `json:"name,omitempty"`
 	PublicName string `json:"public_name,omitempty"`
-	Email      string `json:"email"`
+	Email      string `json:"email,omitempty"`
 	Instance   string `json:"instance,omitempty"`
 	ReadOnly   bool   `json:"read_only,omitempty"`
 }
@@ -103,15 +103,23 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 	if err != nil {
 		return err
 	}
+	var name, email string
+	cozyURL := c.PrimaryCozyURL()
 	addr, err := c.ToMailAddress()
-	if err != nil {
-		return err
+	if err == nil {
+		name = addr.Name
+		email = addr.Email
+	} else {
+		if cozyURL == "" {
+			return err
+		}
+		name = c.PrimaryName()
 	}
 	m := Member{
 		Status:   MemberStatusMailNotSent,
-		Name:     addr.Name,
-		Email:    addr.Email,
-		Instance: c.PrimaryCozyURL(),
+		Name:     name,
+		Email:    email,
+		Instance: cozyURL,
 		ReadOnly: readOnly,
 	}
 	idx := -1
@@ -119,7 +127,13 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 		if i == 0 {
 			continue // Skip the owner
 		}
-		if m.Email == member.Email && member.Status != MemberStatusReady {
+		var found bool
+		if m.Email == "" {
+			found = m.Instance == member.Instance
+		} else {
+			found = m.Email == member.Email
+		}
+		if found && member.Status != MemberStatusReady {
 			idx = i
 			s.Members[i].Status = m.Status
 			s.Members[i].Name = m.Name
@@ -343,7 +357,7 @@ func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) er
 		if i >= len(s.Members) {
 			s.Members = append(s.Members, Member{})
 		}
-		if m.Email != s.Members[i].Email {
+		if m.Email != s.Members[i].Email && m.Email != "" {
 			if contact, err := contacts.FindByEmail(inst, m.Email); err == nil {
 				s.Members[i].Name = contact.PrimaryName()
 			}
@@ -399,15 +413,20 @@ func (s *Sharing) FindMemberBySharecode(db prefixer.Prefixer, sharecode string) 
 	if err != nil {
 		return nil, err
 	}
-	var email string
+	var emailOrInstance string
 	for e, code := range perms.Codes {
 		if code == sharecode {
-			email = e
+			emailOrInstance = e
 			break
 		}
 	}
 	for i, m := range s.Members {
-		if m.Email == email {
+		if m.Email == emailOrInstance {
+			return &s.Members[i], nil
+		}
+	}
+	for i, m := range s.Members {
+		if m.Instance == emailOrInstance {
 			return &s.Members[i], nil
 		}
 	}

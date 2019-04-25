@@ -173,22 +173,25 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 			continue
 		}
 		var err error
-
 		var previousVal string
 		var okShare bool
+		key := m.Email
+		if key == "" {
+			key = m.Instance
+		}
 
 		// Checks that we don't already have a sharing code
 		if doc != nil {
-			previousVal, okShare = doc.Codes[m.Email]
+			previousVal, okShare = doc.Codes[key]
 		}
 
 		if !okShare {
-			codes[m.Email], err = inst.CreateShareCode(m.Email)
+			codes[key], err = inst.CreateShareCode(key)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			codes[m.Email] = previousVal
+			codes[key] = previousVal
 		}
 
 	}
@@ -254,8 +257,10 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 	s.Credentials = make([]Credentials, 1)
 
 	for i, m := range s.Members {
-		if contact, err := contacts.FindByEmail(inst, m.Email); err == nil {
-			s.Members[i].Name = contact.PrimaryName()
+		if m.Email != "" {
+			if contact, err := contacts.FindByEmail(inst, m.Email); err == nil {
+				s.Members[i].Name = contact.PrimaryName()
+			}
 		}
 	}
 
