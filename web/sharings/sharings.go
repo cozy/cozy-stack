@@ -194,6 +194,23 @@ func AnswerSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, ac, nil)
 }
 
+// Invite is used on a recipient to send them a mail inviation when the sharer
+// only knows their instance, and not their email address.
+func Invite(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	var body sharing.InviteMsg
+	if err := json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
+		return wrapErrors(err)
+	}
+	if body.Sharer == "" || body.Description == "" || body.Link == "" {
+		return wrapErrors(sharing.ErrMailNotSent)
+	}
+	if err := sharing.SendInviteMail(inst, &body); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func addRecipientsToSharing(inst *instance.Instance, s *sharing.Sharing, rel *jsonapi.Relationship, readOnly bool) error {
 	var err error
 	if data, ok := rel.Data.([]interface{}); ok {
@@ -659,6 +676,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
+	router.POST("/invite", Invite)
 
 	// Managing recipients
 	router.POST("/:sharing-id/recipients", AddRecipients)

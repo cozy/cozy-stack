@@ -115,7 +115,41 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 	}
 	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
 		WorkerType: "sendmail",
-		Options:    nil,
+		Message:    msg,
+	})
+	return err
+}
+
+// InviteMsg is the struct for calling the invite route
+type InviteMsg struct {
+	Sharer      string `json:"sharer_public_name"`
+	Description string `json:"description"`
+	Link        string `json:"sharing_link"`
+}
+
+// SendInviteMail will send an invitation email to the owner of this cozy.
+func SendInviteMail(inst *instance.Instance, invite *InviteMsg) error {
+	name, _ := inst.PublicName()
+	if name == "" {
+		name = inst.Translate("Sharing Empty name")
+	}
+	mailValues := map[string]interface{}{
+		"RecipientName":    name,
+		"SharerPublicName": invite.Sharer,
+		"Description":      invite.Description,
+		"SharingLink":      invite.Link,
+	}
+	msg, err := jobs.NewMessage(mails.Options{
+		Mode:           "noreply",
+		TemplateName:   "sharing_request",
+		TemplateValues: mailValues,
+		Layout:         "layout-cozycloud",
+	})
+	if err != nil {
+		return err
+	}
+	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
+		WorkerType: "sendmail",
 		Message:    msg,
 	})
 	return err
