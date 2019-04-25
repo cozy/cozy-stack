@@ -505,13 +505,15 @@ func purgeJobs(c echo.Context) error {
 	}
 	// Step 2: We also want to keep a minimum number of jobs for each state.
 	// Jobs returned will be kept.
-	var lastsJobs []*jobs.Job
+	lastsJobs := map[string]struct{}{}
 	for _, w := range workers {
 		jobs, err := jobs.GetLastsJobs(instance, w)
 		if err != nil {
 			return err
 		}
-		lastsJobs = append(lastsJobs, jobs...)
+		for _, j := range jobs {
+			lastsJobs[j.ID()] = struct{}{}
+		}
 	}
 
 	// Step 3: cleaning.
@@ -520,7 +522,6 @@ func purgeJobs(c echo.Context) error {
 	var finalJobs []*jobs.Job
 
 	for _, job := range jobsBeforeDate {
-		found := false
 		validWorker := false
 
 		for _, wt := range workers {
@@ -529,17 +530,11 @@ func purgeJobs(c echo.Context) error {
 				break
 			}
 		}
-		// Iterating only if the job has not already been excluded by its
-		// worker type
+		// Check the job is not existing in the lasts jobs
 		if validWorker {
-			for _, j := range lastsJobs {
-				if j.ID() == job.ID() {
-					found = true
-					break
-				}
-			}
+			_, ok := lastsJobs[job.ID()]
 
-			if !found {
+			if !ok {
 				finalJobs = append(finalJobs, job)
 			}
 		}

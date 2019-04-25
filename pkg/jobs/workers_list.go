@@ -62,12 +62,12 @@ func GetWorkersList() ([]*WorkerConfig, error) {
 // GetWorkersNamesList returns the names of the configured workers
 func GetWorkersNamesList() []string {
 	workers, _ := GetWorkersList()
-	defaultWorkers := make([]string, len(workers))
+	workerNames := make([]string, len(workers))
 
-	for _, w := range workers {
-		defaultWorkers = append(defaultWorkers, w.WorkerType)
+	for i, w := range workers {
+		workerNames[i] = w.WorkerType
 	}
-	return defaultWorkers
+	return workerNames
 }
 
 func applyWorkerConfig(w *WorkerConfig, c config.Worker) *WorkerConfig {

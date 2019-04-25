@@ -327,13 +327,10 @@ func GetJobsBeforeDate(db prefixer.Prefixer, date time.Time) ([]*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(res.Rows) == 0 {
-		return nil, ErrNotFoundJob
-	}
 
 	// Returning docs
-	doc := &Job{}
 	for _, row := range res.Rows {
+		doc := &Job{}
 		if err = json.Unmarshal(row.Doc, &doc); err == nil {
 			jobs = append(jobs, doc)
 		}
