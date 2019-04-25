@@ -756,6 +756,12 @@ func authorize(c echo.Context) error {
 		return renderError(c, http.StatusBadRequest, "Error Invalid redirect_uri")
 	}
 
+	q := u.Query()
+	q.Set("state", params.state)
+	if params.client.OnboardingSecret != "" {
+		q.Set("cozy_url", instance.Domain)
+	}
+
 	// Install the application in case of mobile client
 	softwareID := params.client.SoftwareID
 	if IsLinkedApp(softwareID) {
@@ -763,11 +769,12 @@ func authorize(c echo.Context) error {
 		if err != nil {
 			return err
 		}
+		slug := manifest.Slug()
 		installer, err := apps.NewInstaller(instance, instance.AppsCopier(consts.WebappType), &apps.InstallerOptions{
 			Operation:  apps.Install,
 			Type:       consts.WebappType,
 			SourceURL:  softwareID,
-			Slug:       manifest.Slug(),
+			Slug:       slug,
 			Registries: instance.Registries(),
 		})
 		if err != apps.ErrAlreadyExists {
@@ -776,23 +783,19 @@ func authorize(c echo.Context) error {
 			}
 			go installer.Run()
 		}
-		params.scope = BuildLinkedAppScope(manifest.Slug())
+		params.scope = BuildLinkedAppScope(slug)
+		q.Set("fallback", instance.PageURL(slug, nil))
 	}
 
 	access, err := oauth.CreateAccessCode(params.instance, params.clientID, params.scope)
 	if err != nil {
 		return err
 	}
-
-	q := u.Query()
 	// We should be sending "code" only, but for compatibility reason, we keep
 	// the access_code parameter that we used to send in our first impl.
 	q.Set("access_code", access.Code)
 	q.Set("code", access.Code)
-	q.Set("state", params.state)
-	if params.client.OnboardingSecret != "" {
-		q.Set("cozy_url", instance.Domain)
-	}
+
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
 	location := u.String() + "#"
@@ -801,7 +804,6 @@ func authorize(c echo.Context) error {
 	if wantsJSON {
 		return c.JSON(http.StatusOK, echo.Map{"deeplink": location})
 	}
-
 	return c.Redirect(http.StatusFound, location)
 }
 
