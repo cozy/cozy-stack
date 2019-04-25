@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/echo"
 
 	"github.com/golang/gddo/httputil"

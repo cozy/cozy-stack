@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 )
 
 // BlockingReason structs holds a reason why an instance had been blocked
