@@ -784,7 +784,9 @@ func authorize(c echo.Context) error {
 			go installer.Run()
 		}
 		params.scope = BuildLinkedAppScope(slug)
-		q.Set("fallback", instance.PageURL(slug, nil))
+		if u.Scheme == "http" || u.Scheme == "https" {
+			q.Set("fallback", instance.PageURL(slug, nil))
+		}
 	}
 
 	access, err := oauth.CreateAccessCode(params.instance, params.clientID, params.scope)
