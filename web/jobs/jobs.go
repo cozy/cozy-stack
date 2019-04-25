@@ -471,9 +471,6 @@ func cleanJobs(c echo.Context) error {
 }
 
 func purgeJobs(c echo.Context) error {
-	var dur time.Duration
-	var err error
-
 	instance := middlewares.GetInstance(c)
 	if err := middlewares.AllowWholeType(c, webpermissions.DELETE, consts.Jobs); err != nil {
 		return err
@@ -483,7 +480,7 @@ func purgeJobs(c echo.Context) error {
 	durationParam := c.QueryParam("duration")
 
 	conf := config.GetConfig().Jobs
-	dur, err = bigduration.ParseDuration(conf.DefaultDurationToKeep)
+	dur, err := bigduration.ParseDuration(conf.DefaultDurationToKeep)
 	if err != nil {
 		return err
 	}
