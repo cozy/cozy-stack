@@ -785,7 +785,7 @@ func authorize(c echo.Context) error {
 		}
 		params.scope = BuildLinkedAppScope(slug)
 		if u.Scheme == "http" || u.Scheme == "https" {
-			q.Set("fallback", instance.PageURL(slug, nil))
+			q.Set("fallback", instance.SubDomain(slug).String())
 		}
 	}
 
