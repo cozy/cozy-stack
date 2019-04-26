@@ -12,14 +12,16 @@ import (
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 )
 
+const templateTitleVar = "template_title"
+
 func initMailTemplates() {
 	mailTemplater = MailTemplater{
 		"passphrase_reset":             subjectEntry{"Mail Reset Passphrase Subject", nil},
 		"archiver":                     subjectEntry{"Mail Archive Subject", nil},
-		"two_factor":                   subjectEntry{"Mail Two Factor Subject", []string{"template_title"}},
-		"two_factor_mail_confirmation": subjectEntry{"Mail Two Factor Mail Confirmation Subject", []string{"template_title"}},
-		"new_connection":               subjectEntry{"Mail New Connection Subject", []string{"template_title"}},
-		"new_registration":             subjectEntry{"Mail New Registration Subject", []string{"cozy"}},
+		"two_factor":                   subjectEntry{"Mail Two Factor Subject", []string{templateTitleVar}},
+		"two_factor_mail_confirmation": subjectEntry{"Mail Two Factor Mail Confirmation Subject", []string{templateTitleVar}},
+		"new_connection":               subjectEntry{"Mail New Connection Subject", []string{templateTitleVar}},
+		"new_registration":             subjectEntry{"Mail New Registration Subject", []string{templateTitleVar}},
 		"sharing_request":              subjectEntry{"Mail Sharing Request Subject", []string{"SharerPublicName"}},
 		"notifications_diskquota":      subjectEntry{"Notifications Disk Quota Subject", nil},
 	}
@@ -53,7 +55,7 @@ func (m MailTemplater) Execute(ctx *jobs.WorkerContext, name, layout, locale str
 
 	var vars []interface{}
 	for _, name := range entry.Variables {
-		if name == "template_title" {
+		if name == templateTitleVar {
 			vars = append(vars, ctx.Instance.TemplateTitle())
 		} else {
 			vars = append(vars, data[name])
