@@ -376,6 +376,7 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 		inst = &instance.Instance{}
 	}
 	return c.Render(code, "error.html", echo.Map{
+		"Title":       inst.TemplateTitle(),
 		"CozyUI":      middlewares.CozyUI(inst),
 		"ThemeCSS":    middlewares.ThemeCSS(inst),
 		"Domain":      inst.ContextualDomain(),
