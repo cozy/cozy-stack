@@ -505,6 +505,7 @@ func RevokeRecipientBySelf(c echo.Context) error {
 
 func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL string) error {
 	return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+		"Title":       inst.TemplateTitle(),
 		"ThemeCSS":    middlewares.ThemeCSS(inst),
 		"CozyUI":      middlewares.CozyUI(inst),
 		"Domain":      inst.ContextualDomain(),
@@ -546,6 +547,7 @@ func GetDiscovery(c echo.Context) error {
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Title":       inst.TemplateTitle(),
 			"ThemeCSS":    middlewares.ThemeCSS(inst),
 			"CozyUI":      middlewares.CozyUI(inst),
 			"Domain":      inst.ContextualDomain(),
@@ -563,6 +565,7 @@ func GetDiscovery(c echo.Context) error {
 		}
 		if err != nil || m.Status == sharing.MemberStatusRevoked {
 			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Title":       inst.TemplateTitle(),
 				"ThemeCSS":    middlewares.ThemeCSS(inst),
 				"CozyUI":      middlewares.CozyUI(inst),
 				"Domain":      inst.ContextualDomain(),

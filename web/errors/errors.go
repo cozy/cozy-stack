@@ -134,12 +134,12 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	} else if acceptJSON {
 		err = c.JSON(status, echo.Map{"error": he.Message})
 	} else if acceptHTML {
-		var domain string
-		var context string
 		i, ok := middlewares.GetInstanceSafe(c)
-		if ok {
-			domain = i.ContextualDomain()
-			context = i.ContextName
+		if !ok {
+			i = &instance.Instance{
+				Domain:      req.Host,
+				ContextName: config.DefaultInstanceContext,
+			}
 		}
 
 		var actionTitle, actionURL string
@@ -149,12 +149,15 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		}
 
 		err = c.Render(status, "error.html", echo.Map{
-			"Domain":      domain,
+			"Title":       instance.DefaultTemplateTitle,
+			"CozyUI":      middlewares.CozyUI(i),
+			"ThemeCSS":    middlewares.ThemeCSS(i),
+			"Domain":      i.ContextualDomain(),
+			"ContextName": i.ContextName,
 			"ErrorTitle":  title,
 			"Error":       value,
 			"ActionTitle": actionTitle,
 			"ActionURL":   actionURL,
-			"ContextName": context,
 		})
 	} else {
 		err = c.String(status, fmt.Sprintf("%v", he.Message))
