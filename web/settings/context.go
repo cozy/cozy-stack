@@ -76,9 +76,15 @@ func finishOnboarding(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		appSlug := strings.TrimLeft(r.Scheme, "cozy")
-		fallbackURI := i.SubDomain(appSlug).String()
-
+		// If the redirectURI scheme is not starting with cozy<app>://, it means
+		// that we probably are on a recent mobile, handling universal/android
+		// links. We won't provide a fallbackURI because the redirectURI should
+		// be enough to handle the redirection on the mobile-side
+		var fallbackURI string
+		if strings.HasPrefix(r.Scheme, "cozy") {
+			appSlug := strings.TrimLeft(r.Scheme, "cozy")
+			fallbackURI = i.SubDomain(appSlug).String()
+		}
 		// Redirection
 		queryParams := url.Values{
 			"client_id":     {client.CouchID},
