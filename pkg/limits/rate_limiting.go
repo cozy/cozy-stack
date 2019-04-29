@@ -10,6 +10,46 @@ import (
 	"github.com/go-redis/redis"
 )
 
+// CounterType os an enum for the type of counters used by rate-limiting.
+type CounterType int
+
+const (
+	// AuthType is used for counting the number of login attempts
+	AuthType CounterType = iota
+	// TwoFactorGenerationType is used for counting the number of times a 2FA
+	// is generated
+	TwoFactorGenerationType
+	// TwoFactorType is used for counting the number of 2FA attempts
+	TwoFactorType
+)
+
+type counterConfig struct {
+	Prefix string
+	Limit  int64
+	Period time.Duration
+}
+
+var configs = []counterConfig{
+	// AuthType
+	counterConfig{
+		Prefix: "auth",
+		Limit:  1000,
+		Period: 1 * time.Hour,
+	},
+	// TwoFactorGenerationType
+	counterConfig{
+		Prefix: "two-factor-generation",
+		Limit:  20,
+		Period: 1 * time.Hour,
+	},
+	// TwoFactorType
+	counterConfig{
+		Prefix: "two-factor",
+		Limit:  10,
+		Period: 5 * time.Minute,
+	},
+}
+
 // Counter is an interface for counting number of attempts that can be used to
 // rate limit the number of logins and 2FA tries, and thus block bruteforce
 // attacks.
@@ -111,42 +151,22 @@ func (r *redisCounter) Reset(key string) error {
 
 // CheckRateLimit returns an error if the counter for the given type and
 // instance has reached the limit.
-func CheckRateLimit(inst *instance.Instance, passwordType string) error {
-	const MaxAuthTries = 1000
-	const MaxAuthGenerations = 20
-	const Max2FATries = 10
-
-	var key string
-	var limit int64
-	var timeLimit time.Duration
-	switch passwordType {
-	case "auth":
-		key = "auth:" + inst.Domain
-		limit = MaxAuthTries
-		timeLimit = 3600 * time.Second // 1 hour
-	case "two-factor-generation":
-		key = "two-factor-generation:" + inst.Domain
-		limit = MaxAuthGenerations
-		timeLimit = 3600 * time.Second // 1 hour
-	case "two-factor":
-		key = "two-factor:" + inst.Domain
-		limit = Max2FATries
-		timeLimit = 300 * time.Second // 5 minutes
-	}
-
-	counter := getCounter()
-	val, err := counter.Increment(key, timeLimit)
+func CheckRateLimit(inst *instance.Instance, ct CounterType) error {
+	cfg := configs[ct]
+	key := cfg.Prefix + ":" + inst.Domain
+	val, err := getCounter().Increment(key, cfg.Period)
 	if err != nil {
 		return err
 	}
-	if val <= limit {
-		return nil
+	if val > cfg.Limit {
+		return errors.New("Rate limit exceeded")
 	}
-	return errors.New("Rate limit exceeded")
+	return nil
 }
 
 // ResetCounter sets again to zero the counter for the given type and instance.
-func ResetCounter(inst *instance.Instance, passwordType string) {
-	counter := getCounter()
-	_ = counter.Reset(passwordType + ":" + inst.Domain)
+func ResetCounter(inst *instance.Instance, ct CounterType) {
+	cfg := configs[ct]
+	key := cfg.Prefix + ":" + inst.Domain
+	_ = getCounter().Reset(key + ":" + inst.Domain)
 }

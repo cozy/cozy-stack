@@ -14,15 +14,15 @@ var testInstance = &instance.Instance{Domain: "cozy.example.net"}
 
 func TestLoginRateNotExceededMem(t *testing.T) {
 	globalCounter = NewMemCounter()
-	assert.NoError(t, CheckRateLimit(testInstance, "auth"))
+	assert.NoError(t, CheckRateLimit(testInstance, AuthType))
 }
 
 func TestLoginRateExceededMem(t *testing.T) {
 	globalCounter = NewMemCounter()
 	for i := 1; i <= 1000; i++ {
-		assert.NoError(t, CheckRateLimit(testInstance, "auth"))
+		assert.NoError(t, CheckRateLimit(testInstance, AuthType))
 	}
-	err := CheckRateLimit(testInstance, "auth")
+	err := CheckRateLimit(testInstance, AuthType)
 	assert.Error(t, err)
 }
 
@@ -31,7 +31,7 @@ func TestLoginRateNotExceededRedis(t *testing.T) {
 	client := redis.NewClient(opts)
 	client.Del("auth:" + testInstance.Domain)
 	globalCounter = NewRedisCounter(client)
-	assert.NoError(t, CheckRateLimit(testInstance, "auth"))
+	assert.NoError(t, CheckRateLimit(testInstance, AuthType))
 }
 
 func TestLoginRateExceededRedis(t *testing.T) {
@@ -40,22 +40,22 @@ func TestLoginRateExceededRedis(t *testing.T) {
 	globalCounter = NewRedisCounter(client)
 	client.Del("auth:" + testInstance.Domain)
 	for i := 1; i <= 1000; i++ {
-		assert.NoError(t, CheckRateLimit(testInstance, "auth"))
+		assert.NoError(t, CheckRateLimit(testInstance, AuthType))
 	}
-	assert.Error(t, CheckRateLimit(testInstance, "auth"))
+	assert.Error(t, CheckRateLimit(testInstance, AuthType))
 }
 
 func Test2FAGenerationNotExceededMem(t *testing.T) {
 	globalCounter = NewMemCounter()
-	assert.NoError(t, CheckRateLimit(testInstance, "two-factor-generation"))
+	assert.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
 }
 
 func Test2FAGenerationExceededMem(t *testing.T) {
 	globalCounter = NewMemCounter()
 	for i := 1; i <= 20; i++ {
-		assert.NoError(t, CheckRateLimit(testInstance, "two-factor-generation"))
+		assert.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
 	}
-	err := CheckRateLimit(testInstance, "two-factor-generation")
+	err := CheckRateLimit(testInstance, TwoFactorGenerationType)
 	assert.Error(t, err)
 }
 
@@ -64,7 +64,7 @@ func Test2FAGenerationNotExceededRedis(t *testing.T) {
 	client := redis.NewClient(opts)
 	client.Del("two-factor-generation:" + testInstance.Domain)
 	globalCounter = NewRedisCounter(client)
-	assert.NoError(t, CheckRateLimit(testInstance, "two-factor-generation"))
+	assert.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
 }
 
 func Test2FAGenerationExceededRedis(t *testing.T) {
@@ -73,22 +73,22 @@ func Test2FAGenerationExceededRedis(t *testing.T) {
 	globalCounter = NewRedisCounter(client)
 	client.Del("two-factor-generation:" + testInstance.Domain)
 	for i := 1; i <= 20; i++ {
-		assert.NoError(t, CheckRateLimit(testInstance, "two-factor-generation"))
+		assert.NoError(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
 	}
-	assert.Error(t, CheckRateLimit(testInstance, "two-factor-generation"))
+	assert.Error(t, CheckRateLimit(testInstance, TwoFactorGenerationType))
 }
 
 func Test2FARateExceededNotExceededMem(t *testing.T) {
 	globalCounter = NewMemCounter()
-	assert.NoError(t, CheckRateLimit(testInstance, "two-factor"))
+	assert.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
 }
 
 func Test2FARateExceededMem(t *testing.T) {
 	globalCounter = NewMemCounter()
 	for i := 1; i <= 10; i++ {
-		assert.NoError(t, CheckRateLimit(testInstance, "two-factor"))
+		assert.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
 	}
-	err := CheckRateLimit(testInstance, "two-factor")
+	err := CheckRateLimit(testInstance, TwoFactorType)
 	assert.Error(t, err)
 }
 
@@ -97,7 +97,7 @@ func Test2FANotExceededRedis(t *testing.T) {
 	client := redis.NewClient(opts)
 	client.Del("two-factor:" + testInstance.Domain)
 	globalCounter = NewRedisCounter(client)
-	assert.NoError(t, CheckRateLimit(testInstance, "two-factor"))
+	assert.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
 }
 
 func Test2FAExceededRedis(t *testing.T) {
@@ -106,7 +106,7 @@ func Test2FAExceededRedis(t *testing.T) {
 	globalCounter = NewRedisCounter(client)
 	client.Del("two-factor:" + testInstance.Domain)
 	for i := 1; i <= 10; i++ {
-		assert.NoError(t, CheckRateLimit(testInstance, "two-factor"))
+		assert.NoError(t, CheckRateLimit(testInstance, TwoFactorType))
 	}
-	assert.Error(t, CheckRateLimit(testInstance, "two-factor"))
+	assert.Error(t, CheckRateLimit(testInstance, TwoFactorType))
 }

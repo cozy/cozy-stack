@@ -275,7 +275,7 @@ func login(c echo.Context) error {
 		}
 		// Handle 2FA failed
 		if !successfulAuthentication {
-			errCheckRateLimit = limits.CheckRateLimit(inst, "two-factor")
+			errCheckRateLimit = limits.CheckRateLimit(inst, limits.TwoFactorType)
 			if errCheckRateLimit != nil {
 				if err = TwoFactorRateExceeded(inst); err != nil {
 					inst.Logger().WithField("nspace", "auth").Warning(err)
@@ -315,7 +315,7 @@ func login(c echo.Context) error {
 				successfulAuthentication = true
 			}
 		} else { // Bad login passphrase
-			if err := limits.CheckRateLimit(inst, "auth"); err != nil {
+			if err := limits.CheckRateLimit(inst, limits.AuthType); err != nil {
 				if err = LoginRateExceeded(inst); err != nil {
 					inst.Logger().WithField("nspace", "auth").Warning(err)
 				}
