@@ -42,12 +42,13 @@ const iocozytests = "io.cozy.tests"
 var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
-var bobContact, charlieContact, daveContact *contacts.Contact
+var bobContact, charlieContact, daveContact, edwardContact *contacts.Contact
 var sharingID, state, aliceAccessToken string
 
 // Things that live on Bob's Cozy
 var tsB *httptest.Server
 var bobInstance *instance.Instance
+var bobAppToken string
 
 // Bob's browser
 var bobUA *http.Client
@@ -144,7 +145,8 @@ func TestCreateSharingSuccess(t *testing.T) {
 		"data": echo.Map{
 			"type": consts.Sharings,
 			"attributes": echo.Map{
-				"description": "this is a test",
+				"description":  "this is a test",
+				"open_sharing": true,
 				"rules": []interface{}{
 					echo.Map{
 						"title":   "test one",
@@ -437,9 +439,66 @@ func TestAuthorizeSharing(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
 	location := res.Header.Get("Location")
-	assert.Contains(t, location, "home."+bobInstance.Domain)
+	assert.Contains(t, location, "testapp."+bobInstance.Domain)
 
 	assertCredentialsHasBeenExchanged(t)
+}
+
+func assertSharingByAliceToBobDaveAndEdward(t *testing.T, members []interface{}) {
+	assert.Len(t, members, 4)
+	owner := members[0].(map[string]interface{})
+	assert.Equal(t, owner["status"], "owner")
+	assert.Equal(t, owner["public_name"], "Alice")
+	assert.Equal(t, owner["email"], "alice@example.net")
+	bob := members[1].(map[string]interface{})
+	assert.Equal(t, bob["status"], "ready")
+	assert.Equal(t, bob["email"], "bob@example.net")
+	dave := members[2].(map[string]interface{})
+	assert.Equal(t, dave["status"], "pending")
+	assert.Equal(t, dave["email"], "dave@example.net")
+	assert.Equal(t, dave["read_only"], true)
+	edward := members[3].(map[string]interface{})
+	assert.Equal(t, edward["status"], "pending")
+	assert.Equal(t, edward["name"], "Edward")
+	assert.Equal(t, edward["instance"], "https://edward.example.net/")
+}
+
+func TestDelegateAddRecipientByCozyURL(t *testing.T) {
+	assert.NotEmpty(t, bobAppToken)
+	assert.NotNil(t, edwardContact)
+
+	v := echo.Map{
+		"data": echo.Map{
+			"type": consts.Sharings,
+			"relationships": echo.Map{
+				"recipients": echo.Map{
+					"data": []interface{}{
+						echo.Map{
+							"id":      edwardContact.ID(),
+							"doctype": edwardContact.DocType(),
+						},
+					},
+				},
+			},
+		},
+	}
+	body, _ := json.Marshal(v)
+	r := bytes.NewReader(body)
+	req, err := http.NewRequest(http.MethodPost, tsB.URL+"/sharings/"+sharingID+"/recipients", r)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+bobAppToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	defer res.Body.Close()
+
+	var result map[string]interface{}
+	assert.NoError(t, json.NewDecoder(res.Body).Decode(&result))
+	data := result["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	members := attrs["members"].([]interface{})
+	assertSharingByAliceToBobDaveAndEdward(t, members)
 }
 
 func assertSharingWithPreviewIsCorrect(t *testing.T, body io.Reader) {
@@ -1054,6 +1113,8 @@ func TestMain(m *testing.M) {
 		PublicName: "Bob",
 		Passphrase: "MyPassphrase",
 	})
+	bobAppToken = generateAppToken(bobInstance, "testapp")
+	edwardContact = createContactWithCozyURL(bobInstance, "Edward", "https://edward.example.net/")
 	tsB = bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/auth": func(g *echo.Group) {
 			g.Use(middlewares.LoadSession)
@@ -1084,6 +1145,18 @@ func createContact(inst *instance.Instance, name, email string) *contacts.Contac
 	c := contacts.New()
 	c.M["fullname"] = name
 	c.M["email"] = []interface{}{mail}
+	err := couchdb.CreateDoc(inst, c)
+	if err != nil {
+		return nil
+	}
+	return c
+}
+
+func createContactWithCozyURL(inst *instance.Instance, name, instanceURL string) *contacts.Contact {
+	cozy := map[string]interface{}{"url": instanceURL}
+	c := contacts.New()
+	c.M["fullname"] = name
+	c.M["cozy"] = []interface{}{cozy}
 	err := couchdb.CreateDoc(inst, c)
 	if err != nil {
 		return nil

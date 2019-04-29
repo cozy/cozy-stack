@@ -212,15 +212,23 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 		if err != nil {
 			return err
 		}
+		var name, email string
+		cozyURL := c.PrimaryCozyURL()
 		addr, err := c.ToMailAddress()
-		if err != nil {
-			return err
+		if err == nil {
+			name = addr.Name
+			email = addr.Email
+		} else {
+			if cozyURL == "" {
+				return err
+			}
+			name = c.PrimaryName()
 		}
 		m := Member{
 			Status:   MemberStatusMailNotSent,
-			Name:     addr.Name,
-			Email:    addr.Email,
-			Instance: c.PrimaryCozyURL(),
+			Name:     name,
+			Email:    email,
+			Instance: cozyURL,
 			ReadOnly: ro,
 		}
 		api.members = append(api.members, m)
