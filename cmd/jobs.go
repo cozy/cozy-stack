@@ -85,6 +85,15 @@ var jobsPurgeCmd = &cobra.Command{
 		if len(args) != 1 {
 			return cmd.Help()
 		}
+		if err := config.Setup(cfgFile); err != nil {
+			return err
+		}
+		if config.FsURL().Scheme == config.SchemeSwift ||
+			config.FsURL().Scheme == config.SchemeSwiftSecure {
+			if err := config.InitSwiftConnection(config.GetConfig().Fs); err != nil {
+				return err
+			}
+		}
 
 		i, err := instance.GetFromCouch(args[0])
 		if err != nil {

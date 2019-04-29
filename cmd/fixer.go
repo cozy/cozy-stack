@@ -497,6 +497,15 @@ var contentMismatch64Kfixer = &cobra.Command{
 		if len(args) == 0 {
 			return cmd.Usage()
 		}
+		if err := config.Setup(cfgFile); err != nil {
+			return err
+		}
+		if config.FsURL().Scheme == config.SchemeSwift ||
+			config.FsURL().Scheme == config.SchemeSwiftSecure {
+			if err := config.InitSwiftConnection(config.GetConfig().Fs); err != nil {
+				return err
+			}
+		}
 		domain := args[0]
 		corruptedSuffix := "-corrupted"
 
