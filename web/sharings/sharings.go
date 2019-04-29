@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -197,6 +198,9 @@ func AnswerSharing(c echo.Context) error {
 // only knows their instance, and not their email address.
 func Invite(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	if err := limits.CheckRateLimit(inst, limits.SharingInviteType); err != nil {
+		return wrapErrors(sharing.ErrMailNotSent)
+	}
 	var body sharing.InviteMsg
 	if err := json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
 		return wrapErrors(err)

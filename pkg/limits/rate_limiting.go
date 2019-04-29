@@ -14,16 +14,19 @@ import (
 type CounterType int
 
 const (
-	// AuthType is used for counting the number of login attempts
+	// AuthType is used for counting the number of login attempts.
 	AuthType CounterType = iota
 	// TwoFactorGenerationType is used for counting the number of times a 2FA
-	// is generated
+	// is generated.
 	TwoFactorGenerationType
-	// TwoFactorType is used for counting the number of 2FA attempts
+	// TwoFactorType is used for counting the number of 2FA attempts.
 	TwoFactorType
-	// OAuthClientType is used for counting the number of OAuth clients
+	// OAuthClientType is used for counting the number of OAuth clients.
 	// creations/updates.
 	OAuthClientType
+	// SharingInviteType is used for counting the number of sharing invitations
+	// sent to a given instance.
+	SharingInviteType
 )
 
 type counterConfig struct {
@@ -54,6 +57,12 @@ var configs = []counterConfig{
 	// OAuthClientType
 	counterConfig{
 		Prefix: "oauth-client",
+		Limit:  10,
+		Period: 1 * time.Hour,
+	},
+	// SharingInviteType
+	counterConfig{
+		Prefix: "sharing-invite",
 		Limit:  10,
 		Period: 1 * time.Hour,
 	},
