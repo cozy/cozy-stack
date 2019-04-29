@@ -271,12 +271,19 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 			if i == 0 {
 				continue // skip the owner
 			}
-			if m.Email == member.Email && member.Status != MemberStatusReady {
+			var same bool
+			if m.Email == "" {
+				same = m.Instance == member.Instance
+			} else {
+				same = m.Email == member.Email
+			}
+			if same && member.Status != MemberStatusReady {
 				found = true
 				s.Members[i].Status = m.Status
 				s.Members[i].Name = m.Name
 				s.Members[i].Instance = m.Instance
 				s.Members[i].ReadOnly = m.ReadOnly
+				break
 			}
 		}
 		if !found {
@@ -291,10 +298,11 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 
 // AddDelegatedContact adds a contact on the owner cozy, but for a contact from
 // a recipient (open_sharing: true only)
-func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email string, readOnly bool) string {
+func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email, instanceURL string, readOnly bool) string {
 	m := Member{
 		Status:   MemberStatusPendingInvitation,
 		Email:    email,
+		Instance: instanceURL,
 		ReadOnly: readOnly,
 	}
 	s.Members = append(s.Members, m)

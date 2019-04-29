@@ -59,7 +59,11 @@ func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) er
 func (s *Sharing) SendMailsToMembers(inst *instance.Instance, members []Member, states map[string]string) error {
 	sharer, desc := s.getSharerAndDescription(inst)
 	for _, m := range members {
-		link := m.MailLink(inst, s, states[m.Email], nil)
+		key := m.Email
+		if key == "" {
+			key = m.Instance
+		}
+		link := m.MailLink(inst, s, states[key], nil)
 		if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
 			inst.Logger().WithField("nspace", "sharing").
 				Errorf("Can't send email for %#v: %s", m.Email, err)
@@ -69,7 +73,13 @@ func (s *Sharing) SendMailsToMembers(inst *instance.Instance, members []Member, 
 			if i == 0 {
 				continue // skip the owner
 			}
-			if m.Email == member.Email && member.Status == MemberStatusMailNotSent {
+			var found bool
+			if m.Email == "" {
+				found = m.Instance == member.Instance
+			} else {
+				found = m.Email == member.Email
+			}
+			if found && member.Status == MemberStatusMailNotSent {
 				s.Members[i].Status = MemberStatusPendingInvitation
 				break
 			}

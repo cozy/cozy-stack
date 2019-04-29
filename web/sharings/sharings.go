@@ -281,9 +281,14 @@ func AddRecipientsDelegated(c echo.Context) error {
 			for _, ref := range data {
 				contact, _ := ref.(map[string]interface{})
 				email, _ := contact["email"].(string)
+				cozy, _ := contact["instance"].(string)
 				ro, _ := contact["read_only"].(bool)
-				state := s.AddDelegatedContact(inst, email, ro)
-				states[email] = state
+				state := s.AddDelegatedContact(inst, email, cozy, ro)
+				if email == "" {
+					states[cozy] = state
+				} else {
+					states[email] = state
+				}
 			}
 			if err := couchdb.UpdateDoc(inst, s); err != nil {
 				return wrapErrors(err)

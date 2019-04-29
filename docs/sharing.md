@@ -764,7 +764,9 @@ Content-Type: application/vnd.api+json
 ### POST /sharings/:sharing-id/recipients/delegated
 
 This is an internal route for the stack. It is called by the recipient cozy on
-the owner cozy to add recipients to the sharing (`open_sharing: true` only).
+the owner cozy to add recipients to the sharing (`open_sharing: true` only). It
+should send an `email` address, but if the email address is not known, an
+`instance` URL can also be used.
 
 #### Request
 

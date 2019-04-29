@@ -629,7 +629,6 @@ func TestAddRecipient(t *testing.T) {
 }
 
 func TestRevokedSharingWithPreview(t *testing.T) {
-
 	sharecode := strings.Split(discoveryLink, "=")[1]
 
 	// Assert the link is available (equivalent to doc perms created)
@@ -655,7 +654,7 @@ func TestRevokedSharingWithPreview(t *testing.T) {
 	sharingDoc, err := sharing.FindSharing(aliceInstance, sharingID)
 	assert.NoError(t, err)
 
-	sharingDoc.AddDelegatedContact(aliceInstance, newMemberMail, true)
+	sharingDoc.AddDelegatedContact(aliceInstance, newMemberMail, "", true)
 	perms, err := permissions.GetForSharePreview(aliceInstance, sharingID)
 	assert.NoError(t, err)
 	fooShareCode, err := aliceInstance.CreateShareCode(newMemberMail)
