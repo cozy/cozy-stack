@@ -45,11 +45,11 @@ var fixerCmdGroup = &cobra.Command{
 		if err := config.Setup(cfgFile); err != nil {
 			return err
 		}
-		if config.FsURL().Scheme != config.SchemeSwift &&
-			config.FsURL().Scheme != config.SchemeSwiftSecure {
-			return fmt.Errorf("swift: the configured filesystem does not rely on OpenStack Swift")
+		if config.FsURL().Scheme == config.SchemeSwift ||
+			config.FsURL().Scheme == config.SchemeSwiftSecure {
+			return config.InitSwiftConnection(config.GetConfig().Fs)
 		}
-		return config.InitSwiftConnection(config.GetConfig().Fs)
+		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
