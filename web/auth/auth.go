@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -274,7 +275,7 @@ func login(c echo.Context) error {
 		}
 		// Handle 2FA failed
 		if !successfulAuthentication {
-			errCheckRateLimit = CheckRateLimit(inst, "two-factor")
+			errCheckRateLimit = limits.CheckRateLimit(inst, "two-factor")
 			if errCheckRateLimit != nil {
 				if err = TwoFactorRateExceeded(inst); err != nil {
 					inst.Logger().WithField("nspace", "auth").Warning(err)
@@ -314,7 +315,7 @@ func login(c echo.Context) error {
 				successfulAuthentication = true
 			}
 		} else { // Bad login passphrase
-			if err := CheckRateLimit(inst, "auth"); err != nil {
+			if err := limits.CheckRateLimit(inst, "auth"); err != nil {
 				if err = LoginRateExceeded(inst); err != nil {
 					inst.Logger().WithField("nspace", "auth").Warning(err)
 				}
