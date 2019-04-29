@@ -1,18 +1,12 @@
 package dispers
 
-type Dispers struct {
-  algoDispers string
-  algoML string
-  message string
+//import "github.com/cozy/cozy-stack/pkg/crypto" // to communicate
+
+// supportedData specifies datsets on which you can train
+var SupportedData = []string{
+	"iris", "bank.label",
 }
 
-const Message string = "Coucou, je suis dispers"
-
-func NewDispers() Dispers {
-  d:= Dispers{algoDispers: "simple", algoML: "naivebayes"}
-  return d
-}
-
-func (d *Dispers) SayHello() string {
-   return "Hello World ! I'm the querier. I'm going to launch a ML training"
+func DataSayHello() string {
+	 return "Hello World ! I'm the Server DATA. I am going to pick up data and preprocess it !"
 }

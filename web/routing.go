@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/compat"
 	"github.com/cozy/cozy-stack/web/data"
+	"github.com/cozy/cozy-stack/web/dispers"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/instances"
@@ -167,6 +168,7 @@ func SetupRoutes(router *echo.Echo) error {
 		mws := append(mwsNotBlocked, middlewares.CheckInstanceBlocked, middlewares.CheckTOSDeadlineExpired)
 		registry.Routes(router.Group("/registry", mws...))
 		data.Routes(router.Group("/data", mws...))
+		dispers.Routes(router.Group("/dispers", mws...))
 		files.Routes(router.Group("/files", mws...))
 		intents.Routes(router.Group("/intents", mws...))
 		jobs.Routes(router.Group("/jobs", mws...))
