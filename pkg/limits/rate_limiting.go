@@ -21,6 +21,9 @@ const (
 	TwoFactorGenerationType
 	// TwoFactorType is used for counting the number of 2FA attempts
 	TwoFactorType
+	// OAuthClientType is used for counting the number of OAuth clients
+	// creations/updates.
+	OAuthClientType
 )
 
 type counterConfig struct {
@@ -47,6 +50,12 @@ var configs = []counterConfig{
 		Prefix: "two-factor",
 		Limit:  10,
 		Period: 5 * time.Minute,
+	},
+	// OAuthClientType
+	counterConfig{
+		Prefix: "oauth-client",
+		Limit:  10,
+		Period: 1 * time.Hour,
 	},
 }
 

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -12,12 +13,14 @@ import (
 )
 
 func registerClient(c echo.Context) error {
-	// TODO add rate-limiting to prevent DOS attacks
+	instance := middlewares.GetInstance(c)
+	if err := limits.CheckRateLimit(instance, limits.OAuthClientType); err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "Not found")
+	}
 	client := new(oauth.Client)
 	if err := json.NewDecoder(c.Request().Body).Decode(client); err != nil {
 		return err
 	}
-	instance := middlewares.GetInstance(c)
 	// We do not allow the creation of clients allowed to have an empty scope
 	// ("login" scope), except via the CLI.
 	if client.AllowLoginScope {
@@ -43,13 +46,15 @@ func readClient(c echo.Context) error {
 }
 
 func updateClient(c echo.Context) error {
-	// TODO add rate-limiting to prevent DOS attacks
+	instance := middlewares.GetInstance(c)
+	if err := limits.CheckRateLimit(instance, limits.OAuthClientType); err != nil {
+		return echo.NewHTTPError(http.StatusNotFound, "Not found")
+	}
 	client := new(oauth.Client)
 	if err := json.NewDecoder(c.Request().Body).Decode(client); err != nil {
 		return err
 	}
 	oldClient := c.Get("client").(*oauth.Client)
-	instance := middlewares.GetInstance(c)
 	if err := client.Update(instance, oldClient); err != nil {
 		return c.JSON(err.Code, err)
 	}
