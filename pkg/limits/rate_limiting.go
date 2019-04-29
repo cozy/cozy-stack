@@ -37,31 +37,31 @@ type counterConfig struct {
 
 var configs = []counterConfig{
 	// AuthType
-	counterConfig{
+	{
 		Prefix: "auth",
 		Limit:  1000,
 		Period: 1 * time.Hour,
 	},
 	// TwoFactorGenerationType
-	counterConfig{
+	{
 		Prefix: "two-factor-generation",
 		Limit:  20,
 		Period: 1 * time.Hour,
 	},
 	// TwoFactorType
-	counterConfig{
+	{
 		Prefix: "two-factor",
 		Limit:  10,
 		Period: 5 * time.Minute,
 	},
 	// OAuthClientType
-	counterConfig{
+	{
 		Prefix: "oauth-client",
-		Limit:  10,
+		Limit:  20,
 		Period: 1 * time.Hour,
 	},
 	// SharingInviteType
-	counterConfig{
+	{
 		Prefix: "sharing-invite",
 		Limit:  10,
 		Period: 1 * time.Hour,
