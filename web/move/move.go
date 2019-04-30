@@ -43,6 +43,9 @@ func exportDataHandler(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, u)
 	}
 
+	from := inst.SubDomain(consts.SettingsSlug).String()
+	middlewares.AppendCSPRule(c, "frame-ancestors", from)
+
 	exportMAC, err := base64.URLEncoding.DecodeString(c.Param("export-mac"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
