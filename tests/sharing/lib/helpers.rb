@@ -1,5 +1,5 @@
 module Helpers
-  SHARED_WITH_ME = "Partagés avec moi".freeze
+  SHARED_WITH_ME = "Partages reçus".freeze
 
   @current_dir = File.expand_path "../../tmp", __FILE__
 

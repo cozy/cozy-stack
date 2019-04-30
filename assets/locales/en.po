@@ -16,7 +16,7 @@ msgid "Tree Backed up from my mobile"
 msgstr "Backed up from my mobile"
 
 msgid "Tree Shared with me"
-msgstr "Shared with me"
+msgstr "Inbox of sharings"
 
 msgid "Tree No longer shared"
 msgstr "No longer shared"
