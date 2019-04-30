@@ -41,6 +41,16 @@ var softwareIDs = map[string]string{
 var fixerCmdGroup = &cobra.Command{
 	Use:   "fixer <command>",
 	Short: "A set of tools to fix issues or migrate content for retro-compatibility.",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if err := config.Setup(cfgFile); err != nil {
+			return err
+		}
+		if config.FsURL().Scheme == config.SchemeSwift ||
+			config.FsURL().Scheme == config.SchemeSwiftSecure {
+			return config.InitSwiftConnection(config.GetConfig().Fs)
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
 	},
@@ -435,15 +445,7 @@ var linkedAppFixer = &cobra.Command{
 		if len(args) != 1 {
 			return cmd.Usage()
 		}
-		if err := config.Setup(cfgFile); err != nil {
-			return err
-		}
-		if config.FsURL().Scheme == config.SchemeSwift ||
-			config.FsURL().Scheme == config.SchemeSwiftSecure {
-			if err := config.InitSwiftConnection(config.GetConfig().Fs); err != nil {
-				return err
-			}
-		}
+
 		domain := args[0]
 		i, err := lifecycle.GetInstance(domain)
 		if err != nil {
@@ -497,6 +499,7 @@ var contentMismatch64Kfixer = &cobra.Command{
 		if len(args) == 0 {
 			return cmd.Usage()
 		}
+
 		domain := args[0]
 		corruptedSuffix := "-corrupted"
 
