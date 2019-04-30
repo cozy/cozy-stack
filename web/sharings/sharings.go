@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -12,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -194,6 +194,26 @@ func AnswerSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, ac, nil)
 }
 
+// Invite is used on a recipient to send them a mail inviation when the sharer
+// only knows their instance, and not their email address.
+func Invite(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := limits.CheckRateLimit(inst, limits.SharingInviteType); err != nil {
+		return wrapErrors(sharing.ErrMailNotSent)
+	}
+	var body sharing.InviteMsg
+	if err := json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
+		return wrapErrors(err)
+	}
+	if body.Sharer == "" || body.Description == "" || body.Link == "" {
+		return wrapErrors(sharing.ErrMailNotSent)
+	}
+	if err := sharing.SendInviteMail(inst, &body); err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func addRecipientsToSharing(inst *instance.Instance, s *sharing.Sharing, rel *jsonapi.Relationship, readOnly bool) error {
 	var err error
 	if data, ok := rel.Data.([]interface{}); ok {
@@ -264,9 +284,14 @@ func AddRecipientsDelegated(c echo.Context) error {
 			for _, ref := range data {
 				contact, _ := ref.(map[string]interface{})
 				email, _ := contact["email"].(string)
+				cozy, _ := contact["instance"].(string)
 				ro, _ := contact["read_only"].(bool)
-				state := s.AddDelegatedContact(inst, email, ro)
-				states[email] = state
+				state := s.AddDelegatedContact(inst, email, cozy, ro)
+				if email == "" {
+					states[cozy] = state
+				} else {
+					states[email] = state
+				}
 			}
 			if err := couchdb.UpdateDoc(inst, s); err != nil {
 				return wrapErrors(err)
@@ -293,211 +318,6 @@ func PutRecipients(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	if err = s.UpdateRecipients(inst, body.Members); err != nil {
-		return wrapErrors(err)
-	}
-	return c.NoContent(http.StatusNoContent)
-}
-
-// AddReadOnly is used to downgrade a read-write member to read-only
-func AddReadOnly(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	sharingID := c.Param("sharing-id")
-	s, err := sharing.FindSharing(inst, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	_, err = checkCreatePermissions(c, s)
-	if err != nil {
-		// It can be a delegated call from a member on an open sharing to the owner
-		if err = hasSharingWritePermissions(c); err != nil {
-			return err
-		}
-	}
-	index, err := strconv.Atoi(c.Param("index"))
-	if err != nil {
-		return jsonapi.InvalidParameter("index", err)
-	}
-	if index == 0 || index >= len(s.Members) {
-		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
-	}
-	if s.Owner {
-		if err = s.AddReadOnlyFlag(inst, index); err != nil {
-			return wrapErrors(err)
-		}
-		go s.NotifyRecipients(inst, nil)
-	} else {
-		if err = s.DelegateAddReadOnlyFlag(inst, index); err != nil {
-			return wrapErrors(err)
-		}
-	}
-	return c.NoContent(http.StatusNoContent)
-}
-
-// DowngradeToReadOnly is used to receive the credentials for pushing last changes
-// on an instance of a recipient before going to read-only mode
-func DowngradeToReadOnly(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	sharingID := c.Param("sharing-id")
-	s, err := sharing.FindSharing(inst, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	var creds sharing.APICredentials
-	if _, err = jsonapi.Bind(c.Request().Body, &creds); err != nil {
-		return jsonapi.BadJSON()
-	}
-	if err = s.DowngradeToReadOnly(inst, &creds); err != nil {
-		return wrapErrors(err)
-	}
-	return c.NoContent(http.StatusNoContent)
-}
-
-// RemoveReadOnly is used to give read-write to a member that had the read-only flag
-func RemoveReadOnly(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	sharingID := c.Param("sharing-id")
-	s, err := sharing.FindSharing(inst, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	_, err = checkCreatePermissions(c, s)
-	if err != nil {
-		// It can be a delegated call from a member on an open sharing to the owner
-		if err = hasSharingWritePermissions(c); err != nil {
-			return err
-		}
-	}
-	index, err := strconv.Atoi(c.Param("index"))
-	if err != nil {
-		return jsonapi.InvalidParameter("index", err)
-	}
-	if index == 0 || index >= len(s.Members) {
-		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
-	}
-	if s.Owner {
-		if err = s.RemoveReadOnlyFlag(inst, index); err != nil {
-			return wrapErrors(err)
-		}
-		go s.NotifyRecipients(inst, nil)
-	} else {
-		if err = s.DelegateRemoveReadOnlyFlag(inst, index); err != nil {
-			return wrapErrors(err)
-		}
-	}
-	return c.NoContent(http.StatusNoContent)
-}
-
-// UpgradeToReadWrite is used to receive the credentials for pushing updates on
-// an instance of a recipient that was in read-only mode
-func UpgradeToReadWrite(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	sharingID := c.Param("sharing-id")
-	s, err := sharing.FindSharing(inst, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	var creds sharing.APICredentials
-	if _, err = jsonapi.Bind(c.Request().Body, &creds); err != nil {
-		return jsonapi.BadJSON()
-	}
-	if err = s.UpgradeToReadWrite(inst, &creds); err != nil {
-		return wrapErrors(err)
-	}
-	return c.NoContent(http.StatusNoContent)
-}
-
-// RevokeSharing is used to revoke a sharing by the sharer, for all recipients
-func RevokeSharing(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	sharingID := c.Param("sharing-id")
-	s, err := sharing.FindSharing(inst, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	_, err = checkCreatePermissions(c, s)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusForbidden)
-	}
-	if err = s.Revoke(inst); err != nil {
-		return wrapErrors(err)
-	}
-	return c.NoContent(http.StatusNoContent)
-}
-
-// RevokeRecipient is used by the owner to revoke a recipient
-func RevokeRecipient(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	sharingID := c.Param("sharing-id")
-	s, err := sharing.FindSharing(inst, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	_, err = checkCreatePermissions(c, s)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusForbidden)
-	}
-	index, err := strconv.Atoi(c.Param("index"))
-	if err != nil {
-		return jsonapi.InvalidParameter("index", err)
-	}
-	if index == 0 || index >= len(s.Members) {
-		return jsonapi.InvalidParameter("index", errors.New("Invalid index"))
-	}
-	if err = s.RevokeRecipient(inst, index); err != nil {
-		return wrapErrors(err)
-	}
-	go s.NotifyRecipients(inst, nil)
-	return c.NoContent(http.StatusNoContent)
-}
-
-// RevocationRecipientNotif is used to inform a recipient that the sharing is revoked
-func RevocationRecipientNotif(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	sharingID := c.Param("sharing-id")
-	s, err := sharing.FindSharing(inst, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	if err = s.RevokeByNotification(inst); err != nil {
-		return wrapErrors(err)
-	}
-	return c.NoContent(http.StatusNoContent)
-}
-
-// RevocationOwnerNotif is used to inform the owner that a recipient has revoked
-// himself/herself from the sharing
-func RevocationOwnerNotif(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	sharingID := c.Param("sharing-id")
-	s, err := sharing.FindSharing(inst, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	member, err := requestMember(c, s)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	if err = s.RevokeRecipientByNotification(inst, member); err != nil {
-		return wrapErrors(err)
-	}
-	go s.NotifyRecipients(inst, nil)
-	return c.NoContent(http.StatusNoContent)
-}
-
-// RevokeRecipientBySelf is used by a recipient to revoke himself/herself
-// from the sharing
-func RevokeRecipientBySelf(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	sharingID := c.Param("sharing-id")
-	s, err := sharing.FindSharing(inst, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	_, err = checkCreatePermissions(c, s)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusForbidden)
-	}
-	if err = s.RevokeRecipientBySelf(inst); err != nil {
 		return wrapErrors(err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -659,6 +479,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
+	router.POST("/invite", Invite)
 
 	// Managing recipients
 	router.POST("/:sharing-id/recipients", AddRecipients)

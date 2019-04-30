@@ -21,7 +21,8 @@ describe "A folder" do
     # Create the instance
     inst = Instance.create name: "Alice"
     inst_recipient = Instance.create name: recipient_name
-    contact = Contact.create inst, given_name: recipient_name
+    cozy = [{ url: inst_recipient.url, primary: true }]
+    contact = Contact.create inst, given_name: recipient_name, emails: [], cozy: cozy
 
     # Create the folder with a file
     folder = Folder.create inst

@@ -14,9 +14,9 @@ class Contact
     @fullname = opts[:fullname] || "#{first} #{last}"
 
     email = opts[:email] || Faker::Internet.email([first, last, @fullname].sample)
-    @emails = [{ address: email }]
+    @emails = opts[:emails] || [{ address: email }]
 
-    @addresses = [{
+    @addresses = opts[:addresses] || [{
       street: opts[:street] || Faker::Address.street_name,
       city: opts[:city] || Faker::Address.city,
       post_code: opts[:post_code] || Faker::Address.postcode
@@ -38,7 +38,10 @@ class Contact
     contact = Contact.new(
       name: j["name"],
       fullname: j["fullname"],
-      cozy: j["cozy"]
+      email: j["email"],
+      cozy: j["cozy"],
+      addresses: j["address"],
+      phone: j["phone"]
     )
     contact.couch_id = j["_id"]
     contact.couch_rev = j["_rev"]
@@ -54,6 +57,7 @@ class Contact
       name: @name,
       fullname: @fullname,
       email: @emails,
+      cozy: @cozy,
       address: @addresses,
       phone: @phones
     }
