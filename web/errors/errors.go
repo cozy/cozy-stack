@@ -142,10 +142,10 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			}
 		}
 
-		var actionTitle, actionURL string
+		var buttonTitle, buttonURL string
 		if ok && err == apps.ErrNotFound {
-			actionURL = i.DefaultRedirection().String()
-			actionTitle = "Error Application not found Action"
+			buttonURL = i.DefaultRedirection().String()
+			buttonTitle = "Error Application not found Action"
 		}
 
 		err = c.Render(status, "error.html", echo.Map{
@@ -156,8 +156,8 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			"ContextName": i.ContextName,
 			"ErrorTitle":  title,
 			"Error":       value,
-			"ActionTitle": actionTitle,
-			"ActionURL":   actionURL,
+			"Button":      buttonTitle,
+			"ButtonLink":  buttonURL,
 		})
 	} else {
 		err = c.String(status, fmt.Sprintf("%v", he.Message))
