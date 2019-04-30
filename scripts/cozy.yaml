@@ -1,0 +1,54 @@
+# cozy.yaml for production Docker
+
+host: 0.0.0.0
+port: 8080
+
+subdomains: {{.Env.COZY_SUBDOMAINS}}
+
+admin:
+  host: 0.0.0.0
+  port: 6060
+
+mail:
+  noreply_address: noreply@{{.Env.DOMAIN}}
+  noreply_name: Cozy at {{.Env.DOMAIN}}
+  host: {{.Env.MAIL_HOST}}
+  port: {{.Env.MAIL_PORT}}
+  username: {{.Env.MAIL_USERNAME}}
+  password: {{.Env.MAIL_PASSWORD}}
+  disable_tls: {{.Env.MAIL_DISABLE_TLS}}
+  skip_certificate_validation: {{.Env.MAIL_SKIP_CERTIFICATE_VALIDATION}}
+
+fs:
+  url: file://localhost/var/lib/cozy/data
+
+couchdb:
+  url: {{.Env.COUCHDB_PROTOCOL}}://{{.Env.COUCHDB_USER}}:{{.Env.COUCHDB_PASSWORD}}@{{.Env.COUCHDB_HOST}}:{{.Env.COUCHDB_PORT}}/
+
+redis:
+  addrs: {{.Env.REDIS_ADDRS}}
+  # password:
+  databases:
+    jobs: 0
+    cache: 1
+    lock: 2
+    sessions: 3
+    downloads: 4
+    konnectors: 5
+    realtime: 6
+    log: 7
+    rate_limiting: 8
+
+konnectors:
+  cmd: /usr/local/bin/konnector-node-run.sh
+
+password_reset_interval: {{.Env.COZY_PASSWORD_RESET_INTERVAL}}
+
+registries:
+  default:
+  - https://apps-registry.cozycloud.cc/
+  - https://apps-registry.cozycloud.cc/banks
+
+log:
+  level: info
+  syslog: false

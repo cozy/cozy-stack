@@ -74,10 +74,12 @@ RUN set -eux; apt-get update \
 
 COPY --from=build \
   /go/src/github.com/cozy/cozy-stack/cozy-stack \
-  /go/src/github.com/cozy/cozy-stack/scripts/docker-entrypoint.sh \
   /go/src/github.com/cozy/cozy-stack/scripts/cozy-app-dev.sh \
   /go/src/github.com/cozy/cozy-stack/MailHog \
   /usr/bin/
+COPY --from=build \
+  /go/src/github.com/cozy/cozy-stack/scripts/docker-entrypoint-development.sh \
+  /usr/bin/docker-entrypoint.sh
 
 EXPOSE 8080 6060 8025 5984
 ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]

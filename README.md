@@ -1,4 +1,4 @@
-Cozy Cloud 
+Cozy Cloud
 ==========
 
 [![GoDoc](https://godoc.org/github.com/cozy/cozy-stack?status.svg)](https://godoc.org/github.com/cozy/cozy-stack)
@@ -18,7 +18,7 @@ hardware where no one profiles you.
 
 ## What is the Cozy-Stack
 
-It is the core server of the Cozy platform. It consists of a single process, *the Cozy stack*. 
+It is the core server of the Cozy platform. It consists of a single process, *the Cozy stack*.
 
 [Full Cozy-Stack documentation here](https://docs.cozy.io/en/cozy-stack/README/).
 
@@ -45,8 +45,8 @@ for questions and suggestions.
 
 ## Installing a `cozy-stack`
 
-You can follow the [Install guide](docs/INSTALL.md) and the [configuration
-documentation](docs/config.md).
+Directly on your server or using Docker, for development or production, it's described in the [Install guide](https://github.com/cozy/cozy-stack/blob/master/docs/INSTALL.md) and the [configuration
+documentation](https://github.com/cozy/cozy-stack/blob/master/docs/config.md).
 
 
 ## How to contribute?

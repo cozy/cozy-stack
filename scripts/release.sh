@@ -5,7 +5,7 @@ RELEASE="$(git describe --tags)"
 
 go get -u -v ./... || true # Always fail if you are in a tag…
 
-docker build -t "cozy/cozy-app-dev:${RELEASE}" -f scripts/Dockerfile .
+docker build -t "cozy/cozy-app-dev:${RELEASE}" -f scripts/Dockerfile.development .
 docker push "cozy/cozy-app-dev:${RELEASE}"
 docker tag "cozy/cozy-app-dev:${RELEASE}" "cozy/cozy-app-dev:latest"
 docker push "cozy/cozy-app-dev:latest"

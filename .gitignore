@@ -17,3 +17,6 @@
 *.log
 *.enc
 *.dec
+
+scripts/.env
+scripts/volumes

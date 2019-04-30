@@ -1,44 +1,40 @@
-# How to install Cozy-stack?
+# How to install Cozy-Stack?
 
 ## Dependencies
 
--   A reverse-proxy (nginx, caddy, haproxy, etc.)
+-   A reverse-proxy (Nginx, Caddy, HAProxy, etc.)
 -   A SMTP server
 -   CouchDB 2
--   Git
 -   Image Magick
-
-To install CouchDB 2 through Docker, take a look at our
-[Docker specific documentation](docker.md).
 
 **Note:** to generate thumbnails for heic/heif images, the version 7.0.7-22+ of
 Image Magick is required.
 
-## Install for self-hosting
+## Install using Docker
 
-We have started to write documentation on how to install cozy on your own
-server. We have [a guide for
-debian](https://docs.cozy.io/en/tutorials/selfhost-debian/). Don't hesitate to
-report issues with it. It will help us improve it.
+See the [Docker dedicated documentation](https://github.com/cozy/cozy-stack/blob/master/docs/docker.md)
 
-## Install for development / local tests
+## Install using Debian package
 
-### Install the binary
+See the [Debian self-hosting guide](https://docs.cozy.io/en/tutorials/selfhost-debian/)
 
-You can either download the binary or compile it.
+## Install the binary
 
-#### Download an official release
+The cozy-stack code is written in Go and released as a single binary. You can compile it yourself or download it
 
-You can download a `cozy-stack` binary from our official releases:
-https://github.com/cozy/cozy-stack/releases. It is a just a single executable
-file (choose the one for your platform). Rename it to cozy-stack, give it the
-executable bit (`chmod +x cozy-stack`) and put it in your `$PATH`.
-`cozy-stack version` should show you the version if every thing is right.
+### Download an official release
 
-#### Using `go`
+Here are the official releases: https://github.com/cozy/cozy-stack/releases.
 
-[Install go](https://golang.org/doc/install), version >= 1.11. With `go`
-installed and configured, you can run the following command:
+- Download the right one for your platform
+- Rename it to cozy-stack
+- Make it executable (`chmod +x cozy-stack`)
+- Add it to your PATH (`mv cozy-stack /usr/local/bin`)
+- The command `cozy-stack version` should show you the downloaded version number
+
+### Compile from sources
+
+Install git. [Install go](https://golang.org/doc/install), version >= 1.11. Then you can run the following command:
 
 ```
 go get -u github.com/cozy/cozy-stack
@@ -54,10 +50,10 @@ you can execute the binary without entering its full path.
 export PATH="$(go env GOPATH)/bin:$PATH"
 ```
 
-### Add an instance for testing
+### After installing the binary
 
-You can configure your `cozy-stack` using a configuration file or different
-comand line arguments. Assuming CouchDB is installed and running on default port
+You can configure your `cozy-stack` using [a configuration file](https://github.com/cozy/cozy-stack/blob/master/cozy.example.yaml) or different
+command line arguments. Assuming CouchDB is installed and running on default port
 `5984`, you can start the server:
 
 ```bash

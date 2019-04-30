@@ -1,0 +1,40 @@
+version: "3"
+
+services:
+
+  # Database
+  couchdb:
+    image: couchdb:2.3
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./volumes/couchdb:/opt/couchdb/data
+
+  # Cache
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    volumes:
+      - ./volumes/redis/data:/data
+
+  # Cozy Stack
+  stack:
+    image: cozy/cozy-stack
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./volumes/stack/data:/var/lib/cozy/data
+      - ./volumes/stack/cozy.yml.local:/etc/cozy/cozy.yaml.local
+
+  # Reverse Proxy
+  caddy:
+    image: abiosoft/caddy:no-stats
+    restart: unless-stopped
+    volumes:
+      - ./volumes/caddy/etc:/etc/caddy
+      - ./volumes/caddy/certificates:/root/.caddy
+      - ./Caddyfile:/etc/Caddyfile
+    ports:
+      - 80:80
+      - 443:443
+    command: -log=stdout -agree=true -email=$ACME_EMAIL -conf=/etc/Caddyfile -root=/dev/null

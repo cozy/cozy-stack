@@ -1,0 +1,14 @@
+* {
+
+  # Proxy everything to the cozy-stack
+  proxy / http://stack:8080 {
+    transparent
+    try_duration 10s
+  }
+
+  # On demand TLS
+  tls {
+    max_certs 100
+  }
+
+}
