@@ -174,7 +174,7 @@ func TestJSONSetVerbParsing(t *testing.T) {
     "contacts": {
       "type": "io.cozy.contacts",
       "description": "Required for autocompletion on @name",
-      "verbs": ["ALL"]
+      "verbs": ["ALL", "GET"]
     }
   }`)
 	err = json.Unmarshal(jsonSet, &s)

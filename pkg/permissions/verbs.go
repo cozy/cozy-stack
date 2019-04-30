@@ -95,9 +95,11 @@ func (vs *VerbSet) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	// empty set and ["ALL"] set = ALL
-	if len(s) == 0 || (len(s) == 1 && s[0] == allVerbs) {
-		return nil
+	// empty set means ALL
+	for _, v := range s {
+		if v == "ALL" {
+			return nil
+		}
 	}
 	for _, v := range s {
 		switch v {
