@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
 	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
@@ -425,6 +426,10 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*js
 // id aiming at getting file metadata from its id.
 func ReadMetadataFromIDHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	perm, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
+	}
 
 	fileID := c.Param("file-id")
 
@@ -435,6 +440,14 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 
 	if err := checkPerm(c, permissions.GET, dir, file); err != nil {
 		return err
+	}
+
+	// Limiting the number of public share link consultations
+	if perm.Type == pkgperm.TypeShareByLink {
+		err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
+		if err != nil {
+			return err
+		}
 	}
 
 	if dir != nil {
