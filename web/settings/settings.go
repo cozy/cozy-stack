@@ -53,6 +53,7 @@ func getSessions(c echo.Context) error {
 func warnings(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
+	// Any request with a token can ask for the context (no permissions are required)
 	if _, err := middlewares.GetPermission(c); err != nil {
 		return err
 	}
