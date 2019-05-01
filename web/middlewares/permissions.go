@@ -374,7 +374,7 @@ func GetSourceID(c echo.Context) (slug string, err error) {
 	return pdoc.SourceID, nil
 }
 
-// AllowLogout checks if the current permission allows loging out.
+// AllowLogout checks if the current permission allows logging out.
 // all apps can trigger a logout.
 func AllowLogout(c echo.Context) bool {
 	pdoc, err := GetPermission(c)
