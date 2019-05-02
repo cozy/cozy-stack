@@ -13,10 +13,13 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -32,6 +35,8 @@ var testInstance *instance.Instance
 var token string
 var clientID string
 var imgID string
+var fileID string
+var publicToken string
 
 func readFile(fs vfs.VFS, name string) ([]byte, error) {
 	doc, err := fs.FileByPath(name)
@@ -1721,6 +1726,65 @@ func TestThumbnail(t *testing.T) {
 	res4, _ := download(t, small, "")
 	assert.Equal(t, 200, res4.StatusCode)
 	assert.True(t, strings.HasPrefix(res4.Header.Get("Content-Type"), "image/jpeg"))
+}
+
+func TestGetFileByPublicLink(t *testing.T) {
+	var err error
+	body := "foo"
+	res1, filedata := upload(t, "/files/?Type=file&Name=publicfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	var ok bool
+	filedata, ok = filedata["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	fileID, ok = filedata["id"].(string)
+	assert.True(t, ok)
+
+	// Generating a new token
+	publicToken, err = testInstance.MakeJWT(permissions.ShareAudience, "email", "io.cozy.files", "", time.Now())
+	assert.NoError(t, err)
+
+	expires := time.Now().Add(2 * time.Minute)
+	rules := permissions.Set{
+		permissions.Rule{
+			Type:   "io.cozy.files",
+			Verbs:  permissions.Verbs(permissions.GET),
+			Values: []string{fileID},
+		},
+	}
+	_, err = permissions.CreateShareSet(testInstance, &permissions.Permission{Type: "app", Permissions: rules}, "", map[string]string{"email": publicToken}, nil, rules, &expires)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest("GET", ts.URL+"/files/"+fileID, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+publicToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+}
+
+func TestGetFileByPublicLinkRateExceeded(t *testing.T) {
+	var err error
+	// Blocking the file by accessing it a lot of times
+	for i := 0; i < 1999; i++ {
+		err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
+		assert.NoError(t, err)
+	}
+
+	err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Rate limit exceeded")
+	req, err := http.NewRequest("GET", ts.URL+"/files/"+fileID, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+publicToken)
+
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 500, res.StatusCode)
+	resbody, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(resbody), "Rate limit exceeded")
 }
 
 func TestMain(m *testing.M) {
