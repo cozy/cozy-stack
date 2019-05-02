@@ -75,6 +75,20 @@ func (m *KonnectorMessage) updateFolderToSave(dir string) {
 	m.data, _ = json.Marshal(d)
 }
 
+func jobHookErrorCheckerKonnector(err error) bool {
+	// If there was no previous error, we are fine to go on
+	if err == nil {
+		return true
+	}
+
+	lastError := err.Error()
+	if strings.HasPrefix(lastError, konnErrorLoginFailed) ||
+		strings.HasPrefix(lastError, konnErrorUserActionNeeded) {
+		return false
+	}
+	return true
+}
+
 // beforeHookKonnector skips jobs from trigger that are failing on certain
 // errors.
 func beforeHookKonnector(job *jobs.Job) (bool, error) {
