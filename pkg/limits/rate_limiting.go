@@ -72,7 +72,7 @@ var configs = []counterConfig{
 	// SharingPublicLink
 	{
 		Prefix: "sharing-public-link",
-		Limit:  200,
+		Limit:  2000,
 		Period: 1 * time.Hour,
 	},
 }
