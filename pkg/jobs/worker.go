@@ -404,7 +404,7 @@ func (t *task) run() (err error) {
 
 		// The optional ErrorHook function allows to prevent retries depending
 		// on the previous error
-		if retry == true && t.conf.ErrorHook != nil {
+		if retry && t.conf.ErrorHook != nil {
 			retry = t.conf.ErrorHook(err)
 		}
 		if !retry {
