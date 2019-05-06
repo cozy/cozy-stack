@@ -50,6 +50,11 @@ type (
 	// beforehand.
 	WorkerBeforeHook func(job *Job) (bool, error)
 
+	// JobErrorCheckerHook is an optional method called at the beginning of the
+	// job execution to prevent a retry according to the previous error
+	// (specifically useful in the retries loop)
+	JobErrorCheckerHook func(err error) bool
+
 	// WorkerConfig is the configuration parameter of a worker defined by the job
 	// system. It contains parameters of the worker along with the worker main
 	// function that perform the work against a job's message.
@@ -60,6 +65,7 @@ type (
 		WorkerCommit WorkerCommit
 		WorkerType   string
 		BeforeHook   WorkerBeforeHook
+		ErrorHook    JobErrorCheckerHook
 		Concurrency  int
 		MaxExecCount int
 		AdminOnly    bool
@@ -395,6 +401,12 @@ func (t *task) run() (err error) {
 	}()
 	for {
 		retry, delay, timeout := t.nextDelay(err)
+
+		// The optional ErrorHook function allows to prevent retries depending
+		// on the previous error
+		if retry && t.conf.ErrorHook != nil {
+			retry = t.conf.ErrorHook(err)
+		}
 		if !retry {
 			break
 		}
