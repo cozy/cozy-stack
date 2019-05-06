@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/cozy/checkup"
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/config/dynamic"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
@@ -33,7 +34,7 @@ func (g gopAgent) Shutdown(ctx context.Context) error {
 
 // Start is used to initialize all the
 func Start() (processes utils.Shutdowner, err error) {
-	if config.IsDevRelease() {
+	if build.IsDevRelease() {
 		fmt.Print(`                           !! DEVELOPMENT RELEASE !!
 You are running a development release which may deactivate some very important
 security features. Please do not use this binary as your production server.

@@ -494,7 +494,7 @@ func splitArgs(command string) []string {
 
 func init() {
 	domain := os.Getenv("COZY_DOMAIN")
-	if domain == "" && config.IsDevRelease() {
+	if domain == "" && build.IsDevRelease() {
 		domain = defaultDevDomain
 	}
 

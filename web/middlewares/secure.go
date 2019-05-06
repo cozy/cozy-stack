@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/echo"
 )
 
@@ -107,7 +107,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			isSecure := !config.IsDevRelease()
+			isSecure := !build.IsDevRelease()
 			h := c.Response().Header()
 			if isSecure && hstsHeader != "" {
 				h.Set(echo.HeaderStrictTransportSecurity, hstsHeader)
@@ -167,7 +167,7 @@ func validCSPList(sources, defaults []CSPSource, whitelist string) ([]CSPSource,
 		if err != nil {
 			continue
 		}
-		if !config.IsDevRelease() {
+		if !build.IsDevRelease() {
 			if u.Scheme == "ws" {
 				u.Scheme = "wss"
 			} else if u.Scheme == "http" {

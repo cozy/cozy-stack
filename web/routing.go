@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/metrics"
@@ -198,7 +199,7 @@ func SetupRoutes(router *echo.Echo) error {
 	}
 
 	// dev routes
-	if config.IsDevRelease() {
+	if build.IsDevRelease() {
 		router.GET("/dev/mails/:name", devMailsHandler, middlewares.NeedInstance)
 		router.GET("/dev/templates/:name", devTemplatesHandler)
 	}
@@ -224,7 +225,7 @@ func timersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 // SetupAdminRoutes sets the routing for the administration HTTP endpoints
 func SetupAdminRoutes(router *echo.Echo) error {
 	var mws []echo.MiddlewareFunc
-	if config.IsDevRelease() {
+	if build.IsDevRelease() {
 		mws = append(mws, middleware.LoggerWithConfig(middleware.LoggerConfig{
 			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
 		}))
@@ -280,7 +281,7 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 
 // setupRecover sets a recovering strategy of panics happening in handlers
 func setupRecover(router *echo.Echo) {
-	if !config.IsDevRelease() {
+	if !build.IsDevRelease() {
 		recoverMiddleware := middlewares.RecoverWithConfig(middlewares.RecoverConfig{
 			StackSize: 10 << 10, // 10KB
 		})

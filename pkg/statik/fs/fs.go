@@ -33,7 +33,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	multierror "github.com/hashicorp/go-multierror"

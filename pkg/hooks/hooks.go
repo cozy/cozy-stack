@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 

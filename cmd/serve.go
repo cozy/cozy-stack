@@ -12,7 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web"
@@ -55,7 +56,7 @@ example), you can use the --appdir flag like this:
 		}
 
 		if flagDevMode {
-			config.BuildMode = config.ModeDev
+			build.BuildMode = build.ModeDev
 		}
 
 		var apps map[string]string
@@ -74,7 +75,7 @@ example), you can use the --appdir flag like this:
 			}
 		}
 
-		if !config.IsDevRelease() {
+		if !build.IsDevRelease() {
 			adminSecretFile := config.GetConfig().AdminSecretFileName
 			if _, err := config.FindConfigFile(adminSecretFile); err != nil {
 				return err

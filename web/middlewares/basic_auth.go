@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/echo"

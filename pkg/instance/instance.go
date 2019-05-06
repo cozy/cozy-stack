@@ -10,7 +10,8 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/apps/appfs"
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -395,7 +396,7 @@ func (i *Instance) WithContextualDomain(domain string) *Instance {
 // Scheme returns the scheme used for URLs. It is https by default and http
 // for development instances.
 func (i *Instance) Scheme() string {
-	if config.IsDevRelease() {
+	if build.IsDevRelease() {
 		return "http"
 	}
 	return "https"

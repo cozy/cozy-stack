@@ -9,7 +9,7 @@ import (
 	"runtime"
 
 	"github.com/cozy/cozy-stack/cmd/browser"
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -59,8 +59,8 @@ The report includes useful system information.
 		b.Append("%s", bugHeader)
 		b.Append("#### System details\n")
 		b.Append("```")
-		b.Append("cozy-stack %s", config.Version)
-		b.Append("build in mode %s - %s\n", config.BuildMode, config.BuildTime)
+		b.Append("cozy-stack %s", build.Version)
+		b.Append("build in mode %s - %s\n", build.BuildMode, build.BuildTime)
 		b.Append("go version %s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH)
 		printOSDetails(&b.buf)
 		b.Append("```")

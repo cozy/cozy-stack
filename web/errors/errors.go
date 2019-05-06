@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -47,7 +48,7 @@ func ErrorHandler(err error, c echo.Context) {
 		}
 	}
 
-	if config.IsDevRelease() {
+	if build.IsDevRelease() {
 		var log *logrus.Entry
 		inst, ok := middlewares.GetInstanceSafe(c)
 		if ok {

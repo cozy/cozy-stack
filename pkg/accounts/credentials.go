@@ -9,7 +9,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"golang.org/x/crypto/nacl/box"
 )

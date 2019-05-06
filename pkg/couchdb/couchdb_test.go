@@ -11,7 +11,7 @@ import (
 	"unsafe"
 
 	"github.com/cozy/checkup"
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/stretchr/testify/assert"

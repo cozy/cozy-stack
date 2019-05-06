@@ -3,7 +3,7 @@ package jobs
 import (
 	"fmt"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 

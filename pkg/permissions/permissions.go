@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -265,7 +265,7 @@ func GetForShareCode(db prefixer.Prefixer, tokenCode string) (*Permission, error
 	// Check for sharing made by a webapp/konnector that the app is still
 	// present (but not for OAuth). It is not checked in development release,
 	// since the --appdir does not create the expected document.
-	if !config.IsDevRelease() {
+	if !build.IsDevRelease() {
 		parts := strings.SplitN(perm.SourceID, "/", 2)
 		if len(parts) == 2 {
 			var doc couchdb.JSONDoc

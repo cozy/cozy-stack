@@ -12,7 +12,8 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 
@@ -134,7 +135,7 @@ var jobsPurgeCmd = &cobra.Command{
 
 func init() {
 	domain := os.Getenv("COZY_DOMAIN")
-	if domain == "" && config.IsDevRelease() {
+	if domain == "" && build.IsDevRelease() {
 		domain = defaultDevDomain
 	}
 
