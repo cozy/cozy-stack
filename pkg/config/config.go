@@ -17,10 +17,10 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/cozy/cozy-stack/client/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
 	"github.com/go-redis/redis"
