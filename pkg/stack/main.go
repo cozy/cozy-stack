@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/dynamic"
-	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/sessions"
@@ -82,7 +82,7 @@ security features. Please do not use this binary as your production server.
 	if err != nil {
 		return
 	}
-	if err = consts.InitGlobalDB(); err != nil {
+	if err = couchdb.InitGlobalDB(); err != nil {
 		return
 	}
 

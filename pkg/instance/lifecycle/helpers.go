@@ -39,13 +39,13 @@ func installApp(inst *instance.Instance, slug string) error {
 }
 
 func defineViewsAndIndex(inst *instance.Instance) error {
-	if err := couchdb.DefineIndexes(inst, consts.Indexes); err != nil {
+	if err := couchdb.DefineIndexes(inst, couchdb.Indexes); err != nil {
 		return err
 	}
-	if err := couchdb.DefineViews(inst, consts.Views); err != nil {
+	if err := couchdb.DefineViews(inst, couchdb.Views); err != nil {
 		return err
 	}
-	inst.IndexViewsVersion = consts.IndexViewsVersion
+	inst.IndexViewsVersion = couchdb.IndexViewsVersion
 	return nil
 }
 

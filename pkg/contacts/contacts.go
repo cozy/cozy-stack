@@ -142,7 +142,7 @@ func Find(db prefixer.Prefixer, contactID string) (*Contact, error) {
 // FindByEmail returns the contact with the given email address, when possible
 func FindByEmail(db couchdb.Database, email string) (*Contact, error) {
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, consts.ContactByEmail, &couchdb.ViewRequest{
+	err := couchdb.ExecView(db, couchdb.ContactByEmail, &couchdb.ViewRequest{
 		Key:         email,
 		IncludeDocs: true,
 		Limit:       1,

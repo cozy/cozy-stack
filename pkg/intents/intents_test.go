@@ -117,7 +117,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	if err := couchdb.DefineIndexes(ins, consts.IndexesByDoctype(consts.Apps)); err != nil {
+	if err := couchdb.DefineIndexes(ins, couchdb.IndexesByDoctype(consts.Apps)); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

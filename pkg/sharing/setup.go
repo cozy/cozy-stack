@@ -264,7 +264,7 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 					Reduce:      false,
 				}
 				var res couchdb.ViewResponse
-				err := couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res)
+				err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, req, &res)
 				if err != nil {
 					return nil, err
 				}

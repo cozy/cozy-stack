@@ -92,7 +92,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	i.TOSLatest = opts.TOSLatest
 	i.ContextName = opts.ContextName
 	i.BytesDiskQuota = opts.DiskQuota
-	i.IndexViewsVersion = consts.IndexViewsVersion
+	i.IndexViewsVersion = couchdb.IndexViewsVersion
 	i.RegisterToken = crypto.GenerateRandomBytes(instance.RegisterTokenLen)
 	i.SessionSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
 	i.OAuthSecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)

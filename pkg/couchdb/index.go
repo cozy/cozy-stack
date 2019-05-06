@@ -1,7 +1,7 @@
-package consts
+package couchdb
 
 import (
-	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 )
 
@@ -9,84 +9,37 @@ import (
 // This number should be incremented when this file changes.
 const IndexViewsVersion int = 21
 
-// globalIndexes is the index list required on the global databases to run
-// properly.
-var globalIndexes = []*mango.Index{
-	mango.IndexOnFields(Exports, "by-domain", []string{"domain", "created_at"}),
-}
-
-// secretIndexes is the index list required on the secret databases to run
-// properly
-var secretIndexes = []*mango.Index{
-	mango.IndexOnFields(AccountTypes, "by-slug", []string{"slug"}),
-}
-
-// DomainAndAliasesView defines a view to fetch instances by domain and domain
-// aliases.
-var DomainAndAliasesView = &couchdb.View{
-	Name:    "domain-and-aliases",
-	Doctype: Instances,
-	Map: `
-function(doc) {
-  emit(doc.domain);
-  if (isArray(doc.domain_aliases)) {
-    for (var i = 0; i < doc.domain_aliases.length; i++) {
-      emit(doc.domain_aliases[i]);
-    }
-  }
-}
-`,
-}
-
-// globalViews is the list of all views that are created by the stack on the
-// global databases.
-var globalViews = []*couchdb.View{
-	DomainAndAliasesView,
-}
-
-// InitGlobalDB defines views and indexes on the global databases. It is called
-// on every startup of the stack.
-func InitGlobalDB() error {
-	if err := couchdb.DefineIndexes(couchdb.GlobalSecretsDB, secretIndexes); err != nil {
-		return err
-	}
-	if err := couchdb.DefineIndexes(couchdb.GlobalDB, globalIndexes); err != nil {
-		return err
-	}
-	return couchdb.DefineViews(couchdb.GlobalDB, globalViews)
-}
-
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
 	// Permissions
-	mango.IndexOnFields(Permissions, "by-source-and-type", []string{"source_id", "type"}),
+	mango.IndexOnFields(consts.Permissions, "by-source-and-type", []string{"source_id", "type"}),
 
 	// Used to lookup over the children of a directory
-	mango.IndexOnFields(Files, "dir-children", []string{"dir_id", "_id"}),
+	mango.IndexOnFields(consts.Files, "dir-children", []string{"dir_id", "_id"}),
 	// Used to lookup a directory given its path
-	mango.IndexOnFields(Files, "dir-by-path", []string{"path"}),
+	mango.IndexOnFields(consts.Files, "dir-by-path", []string{"path"}),
 
 	// Used to lookup a queued and running jobs
-	mango.IndexOnFields(Jobs, "by-worker-and-state", []string{"worker", "state"}),
-	mango.IndexOnFields(Jobs, "by-trigger-id", []string{"trigger_id", "queued_at"}),
-	mango.IndexOnFields(Jobs, "by-queued-at", []string{"queued_at"}),
+	mango.IndexOnFields(consts.Jobs, "by-worker-and-state", []string{"worker", "state"}),
+	mango.IndexOnFields(consts.Jobs, "by-trigger-id", []string{"trigger_id", "queued_at"}),
+	mango.IndexOnFields(consts.Jobs, "by-queued-at", []string{"queued_at"}),
 
 	// Used to lookup oauth clients by name
-	mango.IndexOnFields(OAuthClients, "by-client-name", []string{"client_name"}),
-	mango.IndexOnFields(OAuthClients, "by-notification-platform", []string{"notification_platform"}),
+	mango.IndexOnFields(consts.OAuthClients, "by-client-name", []string{"client_name"}),
+	mango.IndexOnFields(consts.OAuthClients, "by-notification-platform", []string{"notification_platform"}),
 
 	// Used to lookup login history by OS, browser, and IP
-	mango.IndexOnFields(SessionsLogins, "by-os-browser-ip", []string{"os", "browser", "ip"}),
+	mango.IndexOnFields(consts.SessionsLogins, "by-os-browser-ip", []string{"os", "browser", "ip"}),
 
 	// Used to lookup notifications by their source, ordered by their creation
 	// date
-	mango.IndexOnFields(Notifications, "by-source-id", []string{"source_id", "created_at"}),
+	mango.IndexOnFields(consts.Notifications, "by-source-id", []string{"source_id", "created_at"}),
 }
 
 // DiskUsageView is the view used for computing the disk usage
-var DiskUsageView = &couchdb.View{
+var DiskUsageView = &View{
 	Name:    "disk-usage",
-	Doctype: Files,
+	Doctype: consts.Files,
 	Map: `
 function(doc) {
   if (doc.type === 'file') {
@@ -99,9 +52,9 @@ function(doc) {
 
 // FilesReferencedByView is the view used for fetching files referenced by a
 // given document
-var FilesReferencedByView = &couchdb.View{
+var FilesReferencedByView = &View{
 	Name:    "referenced-by",
-	Doctype: Files,
+	Doctype: consts.Files,
 	Reduce:  "_count",
 	Map: `
 function(doc) {
@@ -115,9 +68,9 @@ function(doc) {
 
 // ReferencedBySortedByDatetimeView is the view used for fetching files referenced by a
 // given document, sorted by the datetime
-var ReferencedBySortedByDatetimeView = &couchdb.View{
+var ReferencedBySortedByDatetimeView = &View{
 	Name:    "referenced-by-sorted-by-datetime",
-	Doctype: Files,
+	Doctype: consts.Files,
 	Reduce:  "_count",
 	Map: `
 function(doc) {
@@ -132,9 +85,9 @@ function(doc) {
 
 // FilesByParentView is the view used for fetching files referenced by a
 // given document
-var FilesByParentView = &couchdb.View{
+var FilesByParentView = &View{
 	Name:    "by-parent-type-name",
-	Doctype: Files,
+	Doctype: consts.Files,
 	Map: `
 function(doc) {
   emit([doc.dir_id, doc.type, doc.name])
@@ -144,9 +97,9 @@ function(doc) {
 
 // PermissionsShareByCView is the view for fetching the permissions associated
 // to a document via a token code.
-var PermissionsShareByCView = &couchdb.View{
+var PermissionsShareByCView = &View{
 	Name:    "byToken",
-	Doctype: Permissions,
+	Doctype: consts.Permissions,
 	Map: `
 function(doc) {
   if (doc.type && doc.type.slice(0, 5) === "share" && doc.codes) {
@@ -159,9 +112,9 @@ function(doc) {
 
 // PermissionsShareByShortcodeView is the view for fetching the permissions associated
 // to a document via a token code.
-var PermissionsShareByShortcodeView = &couchdb.View{
+var PermissionsShareByShortcodeView = &View{
 	Name:    "by-short-code",
-	Doctype: Permissions,
+	Doctype: consts.Permissions,
 	Map: `
 function(doc) {
 	if(doc.shortcodes) {
@@ -174,9 +127,9 @@ function(doc) {
 
 // PermissionsShareByDocView is the view for fetching a list of permissions
 // associated to a list of IDs.
-var PermissionsShareByDocView = &couchdb.View{
+var PermissionsShareByDocView = &View{
 	Name:    "byDoc",
-	Doctype: Permissions,
+	Doctype: consts.Permissions,
 	Map: `
 function(doc) {
   if (doc.type === "share" && doc.permissions) {
@@ -193,9 +146,9 @@ function(doc) {
 
 // PermissionsByDoctype returns a list of permissions that have at least one
 // rule for the given doctype.
-var PermissionsByDoctype = &couchdb.View{
+var PermissionsByDoctype = &View{
 	Name:    "permissions-by-doctype",
-	Doctype: Permissions,
+	Doctype: consts.Permissions,
 	Map: `
 function(doc) {
   if (doc.permissions) {
@@ -209,9 +162,9 @@ function(doc) {
 
 // SharedDocsBySharingID is the view for fetching a list of shared doctype/id
 // associated with a sharingid
-var SharedDocsBySharingID = &couchdb.View{
+var SharedDocsBySharingID = &View{
 	Name:    "shared-docs-by-sharingid",
-	Doctype: Shared,
+	Doctype: consts.Shared,
 	Map: `
 function(doc) {
   if (doc.infos) {
@@ -224,9 +177,9 @@ function(doc) {
 
 // SharingsByDocTypeView is the view for fetching a list of sharings
 // associated with a doctype
-var SharingsByDocTypeView = &couchdb.View{
+var SharingsByDocTypeView = &View{
 	Name:    "sharings-by-doctype",
-	Doctype: Sharings,
+	Doctype: consts.Sharings,
 	Map: `
 function(doc) {
 	if (isArray(doc.rules)) {
@@ -240,9 +193,9 @@ function(doc) {
 }
 
 // ContactByEmail is used to find a contact by its email address
-var ContactByEmail = &couchdb.View{
+var ContactByEmail = &View{
 	Name:    "contacts-by-email",
-	Doctype: Contacts,
+	Doctype: consts.Contacts,
 	Map: `
 function(doc) {
 	if (isArray(doc.email)) {
@@ -255,7 +208,7 @@ function(doc) {
 }
 
 // Views is the list of all views that are created by the stack.
-var Views = []*couchdb.View{
+var Views = []*View{
 	DiskUsageView,
 	FilesReferencedByView,
 	ReferencedBySortedByDatetimeView,
@@ -270,8 +223,8 @@ var Views = []*couchdb.View{
 }
 
 // ViewsByDoctype returns the list of views for a specified doc type.
-func ViewsByDoctype(doctype string) []*couchdb.View {
-	var views []*couchdb.View
+func ViewsByDoctype(doctype string) []*View {
+	var views []*View
 	for _, view := range Views {
 		if view.Doctype == doctype {
 			views = append(views, view)
@@ -289,4 +242,51 @@ func IndexesByDoctype(doctype string) []*mango.Index {
 		}
 	}
 	return indexes
+}
+
+// globalIndexes is the index list required on the global databases to run
+// properly.
+var globalIndexes = []*mango.Index{
+	mango.IndexOnFields(consts.Exports, "by-domain", []string{"domain", "created_at"}),
+}
+
+// secretIndexes is the index list required on the secret databases to run
+// properly
+var secretIndexes = []*mango.Index{
+	mango.IndexOnFields(consts.AccountTypes, "by-slug", []string{"slug"}),
+}
+
+// DomainAndAliasesView defines a view to fetch instances by domain and domain
+// aliases.
+var DomainAndAliasesView = &View{
+	Name:    "domain-and-aliases",
+	Doctype: consts.Instances,
+	Map: `
+function(doc) {
+  emit(doc.domain);
+  if (isArray(doc.domain_aliases)) {
+    for (var i = 0; i < doc.domain_aliases.length; i++) {
+      emit(doc.domain_aliases[i]);
+    }
+  }
+}
+`,
+}
+
+// globalViews is the list of all views that are created by the stack on the
+// global databases.
+var globalViews = []*View{
+	DomainAndAliasesView,
+}
+
+// InitGlobalDB defines views and indexes on the global databases. It is called
+// on every startup of the stack.
+func InitGlobalDB() error {
+	if err := DefineIndexes(GlobalSecretsDB, secretIndexes); err != nil {
+		return err
+	}
+	if err := DefineIndexes(GlobalDB, globalIndexes); err != nil {
+		return err
+	}
+	return DefineViews(GlobalDB, globalViews)
 }

@@ -290,7 +290,7 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *inst
 		IncludeDocs: true,
 	}
 	var res couchdb.ViewResponse
-	if err := couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res); err == nil {
+	if err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, req, &res); err == nil {
 		count := 0
 		dirID := ""
 		for _, row := range res.Rows {

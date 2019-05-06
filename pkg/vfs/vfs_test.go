@@ -821,12 +821,12 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 		return nil, nil, err
 	}
 
-	err = couchdb.DefineIndexes(db, consts.IndexesByDoctype(consts.Files))
+	err = couchdb.DefineIndexes(db, couchdb.IndexesByDoctype(consts.Files))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if err = couchdb.DefineViews(db, consts.ViewsByDoctype(consts.Files)); err != nil {
+	if err = couchdb.DefineViews(db, couchdb.ViewsByDoctype(consts.Files)); err != nil {
 		return nil, nil, err
 	}
 
@@ -877,12 +877,12 @@ func makeSwiftFS(layoutV2 bool) (vfs.VFS, func(), error) {
 		return nil, nil, err
 	}
 
-	err = couchdb.DefineIndexes(db, consts.IndexesByDoctype(consts.Files))
+	err = couchdb.DefineIndexes(db, couchdb.IndexesByDoctype(consts.Files))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if err = couchdb.DefineViews(db, consts.ViewsByDoctype(consts.Files)); err != nil {
+	if err = couchdb.DefineViews(db, couchdb.ViewsByDoctype(consts.Files)); err != nil {
 		return nil, nil, err
 	}
 

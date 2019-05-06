@@ -570,7 +570,7 @@ func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
 		IncludeDocs: true,
 	}
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(inst, consts.SharedDocsBySharingID, req, &res)
+	err := couchdb.ExecView(inst, couchdb.SharedDocsBySharingID, req, &res)
 	if err == nil {
 		for _, row := range res.Rows {
 			var doc SharedRef

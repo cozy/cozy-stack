@@ -1,7 +1,6 @@
 package lifecycle
 
 import (
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 )
@@ -29,11 +28,11 @@ func GetInstance(domain string) (*instance.Instance, error) {
 			}
 		}
 
-		if i.IndexViewsVersion == consts.IndexViewsVersion {
+		if i.IndexViewsVersion == couchdb.IndexViewsVersion {
 			break
 		}
 
-		i.Logger().Debugf("Indexes outdated: wanted %d; got %d", consts.IndexViewsVersion, i.IndexViewsVersion)
+		i.Logger().Debugf("Indexes outdated: wanted %d; got %d", couchdb.IndexViewsVersion, i.IndexViewsVersion)
 		if err = defineViewsAndIndex(i); err != nil {
 			i.Logger().Errorf("Could not re-define indexes and views: %s", err.Error())
 			return nil, err

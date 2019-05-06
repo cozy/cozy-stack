@@ -206,7 +206,7 @@ func copyFileDataObject(c *swift.Connection, db prefixer.Prefixer,
 		return nil
 	}
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, consts.FilesByParentView, &couchdb.ViewRequest{
+	err := couchdb.ExecView(db, couchdb.FilesByParentView, &couchdb.ViewRequest{
 		Key:         []string{dirID, consts.FileType, name},
 		IncludeDocs: false,
 	}, &res)

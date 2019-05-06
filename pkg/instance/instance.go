@@ -519,7 +519,7 @@ func (i *Instance) OnboardedRedirection() *url.URL {
 // GetFromCouch finds an instance in CouchDB from its domain
 func GetFromCouch(domain string) (*Instance, error) {
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(couchdb.GlobalDB, consts.DomainAndAliasesView, &couchdb.ViewRequest{
+	err := couchdb.ExecView(couchdb.GlobalDB, couchdb.DomainAndAliasesView, &couchdb.ViewRequest{
 		Key:         domain,
 		IncludeDocs: true,
 		Limit:       1,

@@ -382,7 +382,7 @@ func RemoveSharedRefs(inst *instance.Instance, sharingID string) error {
 		IncludeDocs: true,
 	}
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(inst, consts.SharedDocsBySharingID, req, &res)
+	err := couchdb.ExecView(inst, couchdb.SharedDocsBySharingID, req, &res)
 	if err != nil {
 		return err
 	}
@@ -420,7 +420,7 @@ func GetSharedDocsBySharingIDs(inst *instance.Instance, sharingIDs []string) (ma
 	}
 	var res couchdb.ViewResponse
 
-	err := couchdb.ExecView(inst, consts.SharedDocsBySharingID, req, &res)
+	err := couchdb.ExecView(inst, couchdb.SharedDocsBySharingID, req, &res)
 	if err != nil {
 		return nil, err
 	}

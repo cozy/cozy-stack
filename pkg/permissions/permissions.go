@@ -236,7 +236,7 @@ func getFromSource(db prefixer.Prefixer, permType, docType, slug string) (*Permi
 // GetForShareCode retrieves the Permission doc for a given sharing code
 func GetForShareCode(db prefixer.Prefixer, tokenCode string) (*Permission, error) {
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, consts.PermissionsShareByCView, &couchdb.ViewRequest{
+	err := couchdb.ExecView(db, couchdb.PermissionsShareByCView, &couchdb.ViewRequest{
 		Key:         tokenCode,
 		IncludeDocs: true,
 	}, &res)
@@ -285,7 +285,7 @@ func GetForShareCode(db prefixer.Prefixer, tokenCode string) (*Permission, error
 func GetTokenFromShortcode(db prefixer.Prefixer, shortcode string) (string, error) {
 	var res couchdb.ViewResponse
 
-	err := couchdb.ExecView(db, consts.PermissionsShareByShortcodeView, &couchdb.ViewRequest{
+	err := couchdb.ExecView(db, couchdb.PermissionsShareByShortcodeView, &couchdb.ViewRequest{
 		Key:         shortcode,
 		IncludeDocs: true,
 	}, &res)
@@ -533,7 +533,7 @@ func GetPermissionsForIDs(db prefixer.Prefixer, doctype string, ids []string) (m
 		keys[i] = []string{doctype, "_id", id}
 	}
 
-	err := couchdb.ExecView(db, consts.PermissionsShareByDocView, &couchdb.ViewRequest{
+	err := couchdb.ExecView(db, couchdb.PermissionsShareByDocView, &couchdb.ViewRequest{
 		Keys: keys,
 	}, &res)
 	if err != nil {
@@ -563,7 +563,7 @@ func GetPermissionsByDoctype(db prefixer.Prefixer, permType, doctype string, cur
 	cursor.ApplyTo(req)
 
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, consts.PermissionsByDoctype, req, &res)
+	err := couchdb.ExecView(db, couchdb.PermissionsByDoctype, req, &res)
 	if err != nil {
 		return nil, err
 	}
