@@ -229,7 +229,7 @@ func (c *Client) DestroyInstance(domain string) error {
 	return err
 }
 
-// GetToken is used to generate a toke with the specified options.
+// GetToken is used to generate a token with the specified options.
 func (c *Client) GetToken(opts *TokenOptions) (string, error) {
 	q := url.Values{
 		"Domain":   {opts.Domain},

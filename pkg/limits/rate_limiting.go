@@ -27,6 +27,9 @@ const (
 	// SharingInviteType is used for counting the number of sharing invitations
 	// sent to a given instance.
 	SharingInviteType
+	// SharingPublicLinkType is used for counting the number of public sharing
+	// link consultations
+	SharingPublicLinkType
 )
 
 type counterConfig struct {
@@ -64,6 +67,12 @@ var configs = []counterConfig{
 	{
 		Prefix: "sharing-invite",
 		Limit:  10,
+		Period: 1 * time.Hour,
+	},
+	// SharingPublicLink
+	{
+		Prefix: "sharing-public-link",
+		Limit:  2000,
 		Period: 1 * time.Hour,
 	},
 }
@@ -170,8 +179,13 @@ func (r *redisCounter) Reset(key string) error {
 // CheckRateLimit returns an error if the counter for the given type and
 // instance has reached the limit.
 func CheckRateLimit(inst *instance.Instance, ct CounterType) error {
+	return CheckRateLimitKey(inst.Domain, ct)
+}
+
+// CheckRateLimitKey allows to check the rate-limit for a key
+func CheckRateLimitKey(customKey string, ct CounterType) error {
 	cfg := configs[ct]
-	key := cfg.Prefix + ":" + inst.Domain
+	key := cfg.Prefix + ":" + customKey
 	val, err := getCounter().Increment(key, cfg.Period)
 	if err != nil {
 		return err
