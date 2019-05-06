@@ -45,8 +45,8 @@ for questions and suggestions.
 
 ## Installing a `cozy-stack`
 
-Directly on your server or using Docker, for development or production, it's described in the [Install guide](https://github.com/cozy/cozy-stack/blob/master/docs/INSTALL.md) and the [configuration
-documentation](https://github.com/cozy/cozy-stack/blob/master/docs/config.md).
+Directly on your server or using Docker, for development or production, it's described in the [Install guide](https://docs.cozy.io/en/cozy-stack/INSTALL/) and the [configuration
+documentation](https://docs.cozy.io/en/cozy-stack/config).
 
 
 ## How to contribute?

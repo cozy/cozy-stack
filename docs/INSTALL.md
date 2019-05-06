@@ -6,13 +6,14 @@
 -   A SMTP server
 -   CouchDB 2
 -   Image Magick
+-   Git
 
 **Note:** to generate thumbnails for heic/heif images, the version 7.0.7-22+ of
 Image Magick is required.
 
 ## Install using Docker
 
-See the [Docker dedicated documentation](https://github.com/cozy/cozy-stack/blob/master/docs/docker.md)
+See the [Docker dedicated documentation](docs/docker.md)
 
 ## Install using Debian package
 

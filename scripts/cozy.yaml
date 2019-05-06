@@ -42,12 +42,10 @@ redis:
 konnectors:
   cmd: /usr/local/bin/konnector-node-run.sh
 
-password_reset_interval: {{.Env.COZY_PASSWORD_RESET_INTERVAL}}
-
 registries:
   default:
-  - https://apps-registry.cozycloud.cc/
   - https://apps-registry.cozycloud.cc/banks
+  - https://apps-registry.cozycloud.cc/
 
 log:
   level: info

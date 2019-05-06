@@ -18,5 +18,5 @@
 *.enc
 *.dec
 
-scripts/.env
-scripts/volumes
+/scripts/.env
+/scripts/volumes

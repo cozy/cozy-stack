@@ -10,13 +10,6 @@ services:
     volumes:
       - ./volumes/couchdb:/opt/couchdb/data
 
-  # Cache
-  redis:
-    image: redis:alpine
-    restart: unless-stopped
-    volumes:
-      - ./volumes/redis/data:/data
-
   # Cozy Stack
   stack:
     image: cozy/cozy-stack
