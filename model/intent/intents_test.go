@@ -1,4 +1,4 @@
-package intents
+package intent
 
 import (
 	"fmt"

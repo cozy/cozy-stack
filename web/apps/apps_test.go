@@ -23,13 +23,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 
+	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -214,7 +214,7 @@ func TestCozyBar(t *testing.T) {
 }
 
 func TestServeWithAnIntents(t *testing.T) {
-	intent := &intents.Intent{
+	intent := &intent.Intent{
 		Action: "PICK",
 		Type:   "io.cozy.foos",
 		Client: "io.cozy.apps/test-app",

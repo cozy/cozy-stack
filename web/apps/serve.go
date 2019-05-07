@@ -11,13 +11,13 @@ import (
 	"path"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	statikfs "github.com/cozy/cozy-stack/pkg/statik/fs"
@@ -100,7 +100,7 @@ func Serve(c echo.Context) error {
 // handleIntent will allow iframes from another app if the current app is
 // opened as an intent
 func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
-	intent := &intents.Intent{}
+	intent := &intent.Intent{}
 	if err := couchdb.GetDoc(i, consts.Intents, intentID, intent); err != nil {
 		return
 	}
