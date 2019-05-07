@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/model/session"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/config/dynamic"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 
@@ -130,7 +130,7 @@ security features. Please do not use this binary as your production server.
 		}
 	}()
 
-	sessionSweeper := sessions.SweepLoginRegistrations()
+	sessionSweeper := session.SweepLoginRegistrations()
 
 	// Global shutdowner that composes all the running processes of the stack
 	processes = utils.NewGroupShutdown(

@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/session"
 	app "github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -29,7 +30,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -252,10 +252,10 @@ func TestLoginWithGoodPassphrase(t *testing.T) {
 		assert.Len(t, cookies, 2)
 		assert.Equal(t, cookies[0].Name, "_csrf")
 		assert.Equal(t, cookies[0].Value, token)
-		assert.Equal(t, cookies[1].Name, sessions.SessionCookieName)
+		assert.Equal(t, cookies[1].Name, session.SessionCookieName)
 		assert.NotEmpty(t, cookies[1].Value)
 
-		var results []*sessions.LoginEntry
+		var results []*session.LoginEntry
 		err = couchdb.GetAllDocs(
 			testInstance,
 			consts.SessionsLogins,
@@ -294,7 +294,7 @@ func TestLoginWithRedirect(t *testing.T) {
 }
 
 func TestDelegatedJWTLoginWithRedirect(t *testing.T) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, sessions.ExternalClaims{
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, session.ExternalClaims{
 		StandardClaims: jwt.StandardClaims{
 			Subject:   "sruti",
 			IssuedAt:  time.Now().Unix(),

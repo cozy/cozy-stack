@@ -6,17 +6,17 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
 type apiSession struct {
-	s *sessions.Session
+	s *session.Session
 }
 
 func (s *apiSession) ID() string                             { return s.s.ID() }
@@ -37,7 +37,7 @@ func getSessions(c echo.Context) error {
 		return err
 	}
 
-	sessions, err := sessions.GetAll(inst)
+	sessions, err := session.GetAll(inst)
 	if err != nil {
 		return err
 	}

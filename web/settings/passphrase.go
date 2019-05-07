@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	perms "github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -49,7 +49,7 @@ func registerPassphrase(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := sessions.StoreNewLoginEntry(inst, sessionID, "", c.Request(), false); err != nil {
+	if err := session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), false); err != nil {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 

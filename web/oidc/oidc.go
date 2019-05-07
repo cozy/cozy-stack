@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -19,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -98,7 +98,7 @@ func Login(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err = sessions.StoreNewLoginEntry(inst, sessionID, "", c.Request(), true); err != nil {
+	if err = session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), true); err != nil {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 	redirect := inst.DefaultRedirection()

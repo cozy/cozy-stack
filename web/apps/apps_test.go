@@ -24,13 +24,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 
 	"github.com/cozy/cozy-stack/model/intent"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
@@ -256,8 +256,8 @@ func TestServeAppsWithACode(t *testing.T) {
 	assert.NotEmpty(t, location.Query().Get("redirect"))
 
 	longRunSession := true
-	session, _ := sessions.New(testInstance, longRunSession)
-	code := sessions.BuildCode(session.ID(), appHost)
+	sess, _ := session.New(testInstance, longRunSession)
+	code := session.BuildCode(sess.ID(), appHost)
 
 	req, _ = http.NewRequest("GET", ts.URL+"/foo?code="+code.Value, nil)
 	req.Host = appHost
@@ -272,7 +272,7 @@ func TestServeAppsWithACode(t *testing.T) {
 	assert.Empty(t, location.Query().Get("code"))
 	cookies := res.Cookies()
 	assert.Len(t, cookies, 1)
-	assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
+	assert.Equal(t, cookies[0].Name, session.SessionCookieName)
 	assert.NotEmpty(t, cookies[0].Value)
 
 	req, _ = http.NewRequest("GET", ts.URL+"/foo", nil)
@@ -320,8 +320,8 @@ func TestFaviconWithContext(t *testing.T) {
 	c := &http.Client{Jar: ja, CheckRedirect: noRedirect}
 
 	longRunSession := true
-	session, _ := sessions.New(testInstance, longRunSession)
-	code := sessions.BuildCode(session.ID(), appHost)
+	sess, _ := session.New(testInstance, longRunSession)
+	code := session.BuildCode(sess.ID(), appHost)
 
 	req, _ := http.NewRequest("GET", ts.URL+"/foo?code="+code.Value, nil)
 	req.Host = appHost
@@ -330,7 +330,7 @@ func TestFaviconWithContext(t *testing.T) {
 	assert.Equal(t, 302, res.StatusCode)
 	cookies := res.Cookies()
 	assert.Len(t, cookies, 1)
-	assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
+	assert.Equal(t, cookies[0].Name, session.SessionCookieName)
 	assert.NotEmpty(t, cookies[0].Value)
 
 	req, _ = http.NewRequest("GET", ts.URL+"/foo", nil)
@@ -564,8 +564,8 @@ func TestMain(m *testing.M) {
 	ts = setup.GetTestServer("/apps", webApps.WebappsRoutes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
 			longRunSession := true
-			session, _ := sessions.New(testInstance, longRunSession)
-			cookie, _ := session.ToCookie()
+			sess, _ := session.New(testInstance, longRunSession)
+			cookie, _ := sess.ToCookie()
 			c.SetCookie(cookie)
 			return c.HTML(http.StatusOK, "OK")
 		})

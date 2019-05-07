@@ -1,7 +1,7 @@
 package middlewares
 
 import (
-	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/echo"
 )
 
@@ -13,9 +13,9 @@ func LoadSession(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i, ok := GetInstanceSafe(c)
 		if ok {
-			session, err := sessions.FromCookie(c, i)
+			sess, err := session.FromCookie(c, i)
 			if err == nil {
-				c.Set(sessionKey, session)
+				c.Set(sessionKey, sess)
 			}
 		}
 		return next(c)
@@ -29,9 +29,9 @@ func LoadAppSession(next echo.HandlerFunc) echo.HandlerFunc {
 		i, ok := GetInstanceSafe(c)
 		if ok {
 			slug := c.Get("slug").(string)
-			session, err := sessions.FromAppCookie(c, i, slug)
+			sess, err := session.FromAppCookie(c, i, slug)
 			if err == nil {
-				c.Set(sessionKey, session)
+				c.Set(sessionKey, sess)
 			}
 		}
 		return next(c)
@@ -45,10 +45,10 @@ func IsLoggedIn(c echo.Context) bool {
 }
 
 // GetSession returns the sessions associated with the given context.
-func GetSession(c echo.Context) (session *sessions.Session, ok bool) {
+func GetSession(c echo.Context) (sess *session.Session, ok bool) {
 	v := c.Get(sessionKey)
 	if v != nil {
-		session, ok = v.(*sessions.Session)
+		sess, ok = v.(*session.Session)
 	}
-	return session, ok
+	return sess, ok
 }

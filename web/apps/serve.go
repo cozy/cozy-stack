@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/intent"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -19,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	statikfs "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -261,10 +261,10 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug st
 	u := *(c.Request().URL)
 	u.Scheme = i.Scheme()
 	u.Host = c.Request().Host
-	if code := sessions.FindCode(value, u.Host); code != nil {
-		session, err := sessions.Get(i, code.SessionID)
+	if code := session.FindCode(value, u.Host); code != nil {
+		sess, err := session.Get(i, code.SessionID)
 		if err == nil {
-			cookie, err := session.ToAppCookie(u.Host, slug)
+			cookie, err := sess.ToAppCookie(u.Host, slug)
 			if err == nil {
 				c.SetCookie(cookie)
 			}
@@ -278,7 +278,7 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug st
 
 func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
 	c.SetCookie(&http.Cookie{
-		Name:   sessions.SessionCookieName,
+		Name:   session.SessionCookieName,
 		Value:  "",
 		MaxAge: -1,
 		Path:   "/",
