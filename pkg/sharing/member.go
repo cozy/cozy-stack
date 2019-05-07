@@ -528,8 +528,8 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 	s.Credentials[index-1].InboundClientID = cli.ClientID
 	ac.Credentials.Client = ConvertOAuthClient(cli)
 	scope := consts.Sharings + ":ALL:" + s.SID
-	issuedAt := time.Now().Add(1*time.Hour - permissions.AccessTokenValidityDuration)
-	access, err := inst.MakeJWT(permissions.AccessTokenAudience, cli.ClientID, scope, "", issuedAt)
+	issuedAt := time.Now().Add(1*time.Hour - consts.AccessTokenValidityDuration)
+	access, err := inst.MakeJWT(consts.AccessTokenAudience, cli.ClientID, scope, "", issuedAt)
 	if err != nil {
 		return err
 	}

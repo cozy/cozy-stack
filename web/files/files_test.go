@@ -1742,7 +1742,7 @@ func TestGetFileByPublicLink(t *testing.T) {
 	assert.True(t, ok)
 
 	// Generating a new token
-	publicToken, err = testInstance.MakeJWT(permissions.ShareAudience, "email", "io.cozy.files", "", time.Now())
+	publicToken, err = testInstance.MakeJWT(consts.ShareAudience, "email", "io.cozy.files", "", time.Now())
 	assert.NoError(t, err)
 
 	expires := time.Now().Add(2 * time.Minute)

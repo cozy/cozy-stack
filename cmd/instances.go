@@ -658,7 +658,7 @@ var cliTokenInstanceCmd = &cobra.Command{
 		token, err := c.GetToken(&client.TokenOptions{
 			Domain:   args[0],
 			Scope:    args[1:],
-			Audience: "cli",
+			Audience: consts.CLIAudience,
 		})
 		if err != nil {
 			return err
@@ -683,7 +683,7 @@ var oauthTokenInstanceCmd = &cobra.Command{
 		token, err := c.GetToken(&client.TokenOptions{
 			Domain:   args[0],
 			Subject:  args[1],
-			Audience: "access-token",
+			Audience: consts.AccessTokenAudience,
 			Scope:    args[2:],
 			Expire:   &flagExpire,
 		})
@@ -710,7 +710,7 @@ var oauthRefreshTokenInstanceCmd = &cobra.Command{
 		token, err := c.GetToken(&client.TokenOptions{
 			Domain:   args[0],
 			Subject:  args[1],
-			Audience: "refresh-token",
+			Audience: consts.RefreshTokenAudience,
 			Scope:    args[2:],
 		})
 		if err != nil {

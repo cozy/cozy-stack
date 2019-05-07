@@ -10,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
@@ -57,7 +57,7 @@ func newClientSafe(domain string, scopes ...string) (*client.Client, error) {
 	token, err := c.GetToken(&client.TokenOptions{
 		Domain:   domain,
 		Subject:  "CLI",
-		Audience: permissions.CLIAudience,
+		Audience: consts.CLIAudience,
 		Scope:    scopes,
 	})
 	if err != nil {

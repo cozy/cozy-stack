@@ -152,7 +152,7 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	}
 
 	switch claims.Audience {
-	case permissions.AccessTokenAudience:
+	case consts.AccessTokenAudience:
 		// An OAuth2 token is only valid if the client has not been revoked
 		c, err := oauth.FindClient(instance, claims.Subject)
 		if err != nil {
@@ -163,25 +163,25 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 		}
 		return GetForOauth(instance, &claims, c)
 
-	case permissions.CLIAudience:
+	case consts.CLIAudience:
 		// do not check client existence
 		return permissions.GetForCLI(&claims)
 
-	case permissions.AppAudience:
+	case consts.AppAudience:
 		pdoc, err := permissions.GetForWebapp(instance, claims.Subject)
 		if err != nil {
 			return nil, err
 		}
 		return pdoc, nil
 
-	case permissions.KonnectorAudience:
+	case consts.KonnectorAudience:
 		pdoc, err := permissions.GetForKonnector(instance, claims.Subject)
 		if err != nil {
 			return nil, err
 		}
 		return pdoc, nil
 
-	case permissions.ShareAudience:
+	case consts.ShareAudience:
 		pdoc, err := permissions.GetForShareCode(instance, token)
 		if err != nil {
 			return nil, err

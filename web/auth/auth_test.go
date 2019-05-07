@@ -1271,7 +1271,7 @@ func TestRefreshTokenInvalidToken(t *testing.T) {
 func TestRefreshTokenInvalidSigningMethod(t *testing.T) {
 	claims := permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Audience: "refresh",
+			Audience: consts.RefreshTokenAudience,
 			Issuer:   domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  clientID,

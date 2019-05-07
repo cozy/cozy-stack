@@ -577,14 +577,11 @@ func ForeachInstances(fn func(*Instance) error) error {
 // PickKey choose which of the Instance keys to use depending on token audience
 func (i *Instance) PickKey(audience string) ([]byte, error) {
 	switch audience {
-	case permissions.AppAudience,
-		permissions.KonnectorAudience:
+	case consts.AppAudience, consts.KonnectorAudience:
 		return i.SessionSecret, nil
-	case permissions.RefreshTokenAudience,
-		permissions.AccessTokenAudience,
-		permissions.ShareAudience:
+	case consts.RefreshTokenAudience, consts.AccessTokenAudience, consts.ShareAudience:
 		return i.OAuthSecret, nil
-	case permissions.CLIAudience:
+	case consts.CLIAudience:
 		return i.CLISecret, nil
 	}
 	return nil, permissions.ErrInvalidAudience
@@ -613,7 +610,7 @@ func (i *Instance) MakeJWT(audience, subject, scope, sessionID string, issuedAt 
 func (i *Instance) BuildAppToken(slug, sessionID string) string {
 	scope := "" // apps tokens don't have a scope
 	now := time.Now()
-	token, err := i.MakeJWT(permissions.AppAudience, slug, scope, sessionID, now)
+	token, err := i.MakeJWT(consts.AppAudience, slug, scope, sessionID, now)
 	if err != nil {
 		return ""
 	}
@@ -624,7 +621,7 @@ func (i *Instance) BuildAppToken(slug, sessionID string) string {
 // requests made to the stack
 func (i *Instance) BuildKonnectorToken(slug string) string {
 	scope := "" // apps tokens don't have a scope
-	token, err := i.MakeJWT(permissions.KonnectorAudience, slug, scope, "", time.Now())
+	token, err := i.MakeJWT(consts.KonnectorAudience, slug, scope, "", time.Now())
 	if err != nil {
 		return ""
 	}
@@ -636,7 +633,7 @@ func (i *Instance) BuildKonnectorToken(slug string) string {
 func (i *Instance) CreateShareCode(subject string) (string, error) {
 	scope := ""
 	sessionID := ""
-	return i.MakeJWT(permissions.ShareAudience, subject, scope, sessionID, time.Now())
+	return i.MakeJWT(consts.ShareAudience, subject, scope, sessionID, time.Now())
 }
 
 // ensure Instance implements couchdb.Doc

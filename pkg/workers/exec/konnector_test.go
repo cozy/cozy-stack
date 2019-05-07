@@ -175,7 +175,7 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 			return inst.PickKey(t.Claims.(*permissions.Claims).Audience)
 		}, &claims)
 		assert.NoError(t, err)
-		assert.Equal(t, permissions.KonnectorAudience, claims.Audience)
+		assert.Equal(t, consts.KonnectorAudience, claims.Audience)
 		wg.Done()
 	}()
 

@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -43,7 +43,7 @@ func TestParseJWT(t *testing.T) {
 	tokenString, err := c.CreateJWT(testInstance, "refresh", "foo:read")
 	assert.NoError(t, err)
 
-	claims, ok := c.ValidToken(testInstance, permissions.RefreshTokenAudience, tokenString)
+	claims, ok := c.ValidToken(testInstance, consts.RefreshTokenAudience, tokenString)
 	assert.True(t, ok, "The token must be valid")
 	assert.Equal(t, "refresh", claims.Audience)
 	assert.Equal(t, testInstance.Domain, claims.Issuer)
@@ -54,7 +54,7 @@ func TestParseJWT(t *testing.T) {
 func TestParseJWTInvalidAudience(t *testing.T) {
 	tokenString, err := c.CreateJWT(testInstance, "access", "foo:read")
 	assert.NoError(t, err)
-	_, ok := c.ValidToken(testInstance, permissions.RefreshTokenAudience, tokenString)
+	_, ok := c.ValidToken(testInstance, consts.RefreshTokenAudience, tokenString)
 	assert.False(t, ok, "The token should be invalid")
 }
 
@@ -137,7 +137,7 @@ func TestParseJWTInvalidIssuer(t *testing.T) {
 	}
 	tokenString, err := c.CreateJWT(other, "refresh", "foo:read")
 	assert.NoError(t, err)
-	_, ok := c.ValidToken(testInstance, permissions.RefreshTokenAudience, tokenString)
+	_, ok := c.ValidToken(testInstance, consts.RefreshTokenAudience, tokenString)
 	assert.False(t, ok, "The token should be invalid")
 }
 
@@ -147,7 +147,7 @@ func TestParseJWTInvalidSubject(t *testing.T) {
 	}
 	tokenString, err := other.CreateJWT(testInstance, "refresh", "foo:read")
 	assert.NoError(t, err)
-	_, ok := c.ValidToken(testInstance, permissions.RefreshTokenAudience, tokenString)
+	_, ok := c.ValidToken(testInstance, consts.RefreshTokenAudience, tokenString)
 	assert.False(t, ok, "The token should be invalid")
 }
 

@@ -273,11 +273,11 @@ func ConvertOAuthClient(c *oauth.Client) *auth.Client {
 func CreateAccessToken(inst *instance.Instance, cli *oauth.Client, sharingID string, verb permissions.VerbSet) (*auth.AccessToken, error) {
 	scope := consts.Sharings + ":" + verb.String() + ":" + sharingID
 	cli.CouchID = cli.ClientID // XXX CouchID is required by CreateJWT
-	refresh, err := cli.CreateJWT(inst, permissions.RefreshTokenAudience, scope)
+	refresh, err := cli.CreateJWT(inst, consts.RefreshTokenAudience, scope)
 	if err != nil {
 		return nil, err
 	}
-	access, err := cli.CreateJWT(inst, permissions.AccessTokenAudience, scope)
+	access, err := cli.CreateJWT(inst, consts.AccessTokenAudience, scope)
 	if err != nil {
 		return nil, err
 	}

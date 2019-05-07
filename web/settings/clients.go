@@ -101,7 +101,7 @@ func synchronized(c echo.Context) error {
 	if claims.Expired() {
 		return perms.ErrExpiredToken
 	}
-	if claims.Audience != perms.AccessTokenAudience {
+	if claims.Audience != consts.AccessTokenAudience {
 		return perms.ErrInvalidToken
 	}
 

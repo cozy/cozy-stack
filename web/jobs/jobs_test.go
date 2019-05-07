@@ -15,7 +15,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/echo"
@@ -75,7 +74,7 @@ func TestCreateJobNotExist(t *testing.T) {
 		},
 	})
 	req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/none", bytes.NewReader(body))
-	tokenNone, _ := testInstance.MakeJWT(permissions.CLIAudience, "CLI",
+	tokenNone, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI",
 		consts.Jobs+":ALL:none:worker",
 		"", time.Now())
 	req.Header.Add("Authorization", "Bearer "+tokenNone)
@@ -275,7 +274,7 @@ func TestGetAllJobs(t *testing.T) {
 
 	req1, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers", nil)
 	assert.NoError(t, err)
-	tokenTriggers, _ := testInstance.MakeJWT(permissions.CLIAudience, "CLI", consts.Triggers, "", time.Now())
+	tokenTriggers, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", consts.Triggers, "", time.Now())
 	req1.Header.Add("Authorization", "Bearer "+tokenTriggers)
 	res1, err := http.DefaultClient.Do(req1)
 	if !assert.NoError(t, err) {
@@ -400,7 +399,7 @@ func TestMain(m *testing.M) {
 		consts.Jobs + ":ALL:print:worker",
 		consts.Triggers + ":ALL:print:worker",
 	}, " ")
-	token, _ = testInstance.MakeJWT(permissions.CLIAudience, "CLI", scope,
+	token, _ = testInstance.MakeJWT(consts.CLIAudience, "CLI", scope,
 		"", time.Now())
 
 	ts = setup.GetTestServer("/jobs", Routes)

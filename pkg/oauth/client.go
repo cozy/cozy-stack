@@ -366,7 +366,7 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	}
 
 	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{
-		Audience: permissions.RegistrationTokenAudience,
+		Audience: consts.RegistrationTokenAudience,
 		Issuer:   i.Domain,
 		IssuedAt: time.Now().Unix(),
 		Subject:  c.CouchID,

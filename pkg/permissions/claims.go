@@ -3,29 +3,8 @@ package permissions
 import (
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
-)
-
-// This is the list of possible audience values for JWT.
-const (
-	AppAudience               = "app"          // used by client-side apps
-	KonnectorAudience         = "konn"         // used by konnectors
-	CLIAudience               = "cli"          // used by command line interface
-	ShareAudience             = "share"        // used for share by links code
-	RegistrationTokenAudience = "registration" // OAuth registration tokens
-	AccessTokenAudience       = "access"       // OAuth access tokens
-	RefreshTokenAudience      = "refresh"      // OAuth refresh tokens
-)
-
-// TokenValidityDuration is the duration where a token is valid in seconds (1 week)
-var (
-	DefaultValidityDuration = 24 * time.Hour
-
-	AppTokenValidityDuration       = 24 * time.Hour
-	KonnectorTokenValidityDuration = 30 * time.Minute
-	CLITokenValidityDuration       = 30 * time.Minute
-
-	AccessTokenValidityDuration = 7 * 24 * time.Hour
 )
 
 // Claims is used for JWT used in OAuth2 flow and applications token
@@ -45,31 +24,31 @@ func (claims *Claims) IssuedAtUTC() time.Time {
 func (claims *Claims) Expired() bool {
 	var validityDuration time.Duration
 	switch claims.Audience {
-	case AppAudience:
+	case consts.AppAudience:
 		if claims.SessionID == "" {
 			// an app token with no session association is used for services which
 			// should have tokens that have the same properties as the konnector's
 			// tokens
-			validityDuration = KonnectorTokenValidityDuration
+			validityDuration = consts.KonnectorTokenValidityDuration
 		} else {
-			validityDuration = AppTokenValidityDuration
+			validityDuration = consts.AppTokenValidityDuration
 		}
 
-	case KonnectorAudience:
-		validityDuration = KonnectorTokenValidityDuration
+	case consts.KonnectorAudience:
+		validityDuration = consts.KonnectorTokenValidityDuration
 
-	case CLIAudience:
-		validityDuration = CLITokenValidityDuration
+	case consts.CLIAudience:
+		validityDuration = consts.CLITokenValidityDuration
 
-	case AccessTokenAudience:
-		validityDuration = AccessTokenValidityDuration
+	case consts.AccessTokenAudience:
+		validityDuration = consts.AccessTokenValidityDuration
 
 	// Share, RefreshToken and RegistrationToken never expire
-	case ShareAudience, RegistrationTokenAudience, RefreshTokenAudience:
+	case consts.ShareAudience, consts.RegistrationTokenAudience, consts.RefreshTokenAudience:
 		return false
 
 	default:
-		validityDuration = DefaultValidityDuration
+		validityDuration = consts.DefaultValidityDuration
 	}
 	validUntil := claims.IssuedAtUTC().Add(validityDuration)
 	return validUntil.Before(time.Now().UTC())

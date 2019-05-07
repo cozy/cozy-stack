@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/echo"
@@ -75,7 +74,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	token, err := testInstance.MakeJWT(permissions.CLIAudience, "CLI", consts.Files, "", time.Now())
+	token, err := testInstance.MakeJWT(consts.CLIAudience, "CLI", consts.Files, "", time.Now())
 	if err != nil {
 		fmt.Println("Could not get test instance token.", err)
 		os.Exit(1)

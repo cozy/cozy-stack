@@ -518,7 +518,7 @@ func accessToken(c echo.Context) error {
 			})
 		}
 		out.Scope = accessCode.Scope
-		out.Refresh, err = client.CreateJWT(instance, permissions.RefreshTokenAudience, out.Scope)
+		out.Refresh, err = client.CreateJWT(instance, consts.RefreshTokenAudience, out.Scope)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, echo.Map{
 				"error": "Can't generate refresh token",
@@ -532,7 +532,7 @@ func accessToken(c echo.Context) error {
 		}
 
 	case "refresh_token":
-		claims, ok := client.ValidToken(instance, permissions.RefreshTokenAudience, c.FormValue("refresh_token"))
+		claims, ok := client.ValidToken(instance, consts.RefreshTokenAudience, c.FormValue("refresh_token"))
 		if !ok {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid refresh token",
@@ -552,7 +552,7 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
-	out.Access, err = client.CreateJWT(instance, permissions.AccessTokenAudience, out.Scope)
+	out.Access, err = client.CreateJWT(instance, consts.AccessTokenAudience, out.Scope)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate access token",

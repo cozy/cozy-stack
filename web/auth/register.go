@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -86,7 +87,7 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 			})
 		}
 		token := header[len("Bearer "):]
-		_, ok := client.ValidToken(instance, permissions.RegistrationTokenAudience, token)
+		_, ok := client.ValidToken(instance, consts.RegistrationTokenAudience, token)
 		if !ok {
 			return c.JSON(http.StatusUnauthorized, echo.Map{
 				"error": "invalid_token",

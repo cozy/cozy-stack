@@ -74,7 +74,7 @@ func TestCreateShareSetByMobileRevokeByLinkedApp(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Generate a token for the client
-	tok, err := testInstance.MakeJWT(permissions.AccessTokenAudience,
+	tok, err := testInstance.MakeJWT(consts.AccessTokenAudience,
 		oauthLinkedClient.ClientID, "@io.cozy.apps/drive", "", time.Now())
 	assert.NoError(t, err)
 
@@ -105,7 +105,7 @@ func TestCreateShareSetByMobileRevokeByLinkedApp(t *testing.T) {
 	assert.NotEqual(t, perm.Data.Attributes.SourceID, oauthLinkedClient.ClientID)
 
 	// Create a webapp token
-	webAppToken, err := testInstance.MakeJWT(permissions.AppAudience, "drive", "", "", time.Now())
+	webAppToken, err := testInstance.MakeJWT(consts.AppAudience, "drive", "", "", time.Now())
 	assert.NoError(t, err)
 
 	// Login to webapp and try to delete the shared link
@@ -139,7 +139,7 @@ func TestCreateShareSetByMobileRevokeByLinkedApp(t *testing.T) {
 
 func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
 	// Create a webapp token
-	webAppToken, err := testInstance.MakeJWT(permissions.AppAudience, "drive", "", "", time.Now())
+	webAppToken, err := testInstance.MakeJWT(consts.AppAudience, "drive", "", "", time.Now())
 	assert.NoError(t, err)
 
 	// Install the app
@@ -187,7 +187,7 @@ func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
 	oauthLinkedClient.Create(testInstance)
 
 	// // Generate a token for the client
-	tok, err := testInstance.MakeJWT(permissions.AccessTokenAudience,
+	tok, err := testInstance.MakeJWT(consts.AccessTokenAudience,
 		oauthLinkedClient.ClientID, "@io.cozy.apps/drive", "", time.Now())
 	assert.NoError(t, err)
 
@@ -259,7 +259,7 @@ func TestGetPermissions(t *testing.T) {
 }
 
 func TestGetPermissionsForRevokedClient(t *testing.T) {
-	tok, err := testInstance.MakeJWT(permissions.AccessTokenAudience,
+	tok, err := testInstance.MakeJWT(consts.AccessTokenAudience,
 		"revoked-client",
 		"io.cozy.contacts io.cozy.files:GET",
 		"", time.Now())
@@ -276,7 +276,7 @@ func TestGetPermissionsForRevokedClient(t *testing.T) {
 
 func TestGetPermissionsForExpiredToken(t *testing.T) {
 	pastTimestamp := time.Now().Add(-30 * 24 * time.Hour) // in seconds
-	tok, err := testInstance.MakeJWT(permissions.AccessTokenAudience,
+	tok, err := testInstance.MakeJWT(consts.AccessTokenAudience,
 		clientID, "io.cozy.contacts io.cozy.files:GET", "", pastTimestamp)
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
@@ -671,7 +671,7 @@ func TestGetForOauth(t *testing.T) {
 
 	parent, err := middlewares.GetForOauth(testInstance, &permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AccessTokenAudience,
+			Audience: consts.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  clientID,
@@ -690,7 +690,7 @@ func TestListPermission(t *testing.T) {
 
 	parent, _ := middlewares.GetForOauth(testInstance, &permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AccessTokenAudience,
+			Audience: consts.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  clientID,
