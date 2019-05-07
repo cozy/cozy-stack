@@ -12,9 +12,9 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/notification/center"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/notification/center"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/sirupsen/logrus"
 
