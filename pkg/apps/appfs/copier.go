@@ -114,7 +114,8 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 
 func (f *swiftCopier) Abort() error {
 	objectNames, err := f.c.ObjectNamesAll(f.container, &swift.ObjectsOpts{
-		Prefix: f.tmpObj,
+		Prefix:  f.tmpObj,
+		Headers: swift.Headers{"X-Newest": "true"},
 	})
 	if err != nil {
 		return err
