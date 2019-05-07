@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
 )
 
 type (
@@ -140,7 +140,7 @@ func defaultClient(c *Client) *Client {
 		c.SoftwareID = "github.com/cozy/cozy-stack"
 	}
 	if c.SoftwareVersion == "" {
-		c.SoftwareVersion = config.Version
+		c.SoftwareVersion = build.Version
 	}
 	if c.ClientName == "" {
 		c.ClientName = "Cozy Go client"

@@ -59,7 +59,7 @@ func (c *couchdbIndexer) InitIndex() error {
 
 func (c *couchdbIndexer) DiskUsage() (int64, error) {
 	var doc couchdb.ViewResponse
-	err := couchdb.ExecView(c.db, consts.DiskUsageView, &couchdb.ViewRequest{
+	err := couchdb.ExecView(c.db, couchdb.DiskUsageView, &couchdb.ViewRequest{
 		Reduce: true,
 	}, &doc)
 	if err != nil {
@@ -303,7 +303,7 @@ func (c *couchdbIndexer) FileByPath(name string) (*FileDoc, error) {
 
 	// consts.FilesByParentView keys are [parentID, type, name]
 	var res couchdb.ViewResponse
-	err = couchdb.ExecView(c.db, consts.FilesByParentView, &couchdb.ViewRequest{
+	err = couchdb.ExecView(c.db, couchdb.FilesByParentView, &couchdb.ViewRequest{
 		Key:         []string{parent.DocID, consts.FileType, path.Base(name)},
 		IncludeDocs: true,
 	}, &res)
@@ -380,7 +380,7 @@ func (c *couchdbIndexer) DirBatch(doc *DirDoc, cursor couchdb.Cursor) ([]DirOrFi
 	}
 	var res couchdb.ViewResponse
 	cursor.ApplyTo(&req)
-	err := couchdb.ExecView(c.db, consts.FilesByParentView, &req, &res)
+	err := couchdb.ExecView(c.db, couchdb.FilesByParentView, &req, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -407,7 +407,7 @@ func (c *couchdbIndexer) DirLength(doc *DirDoc) (int, error) {
 		GroupLevel: 1,
 	}
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(c.db, consts.FilesByParentView, &req, &res)
+	err := couchdb.ExecView(c.db, couchdb.FilesByParentView, &req, &res)
 	if err != nil {
 		return 0, err
 	}
@@ -428,7 +428,7 @@ func (c *couchdbIndexer) DirChildExists(dirID, name string) (bool, error) {
 	var res couchdb.ViewResponse
 
 	// consts.FilesByParentView keys are [parentID, type, name]
-	err := couchdb.ExecView(c.db, consts.FilesByParentView, &couchdb.ViewRequest{
+	err := couchdb.ExecView(c.db, couchdb.FilesByParentView, &couchdb.ViewRequest{
 		Keys: []interface{}{
 			[]string{dirID, consts.FileType, name},
 			[]string{dirID, consts.DirType, name},

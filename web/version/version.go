@@ -5,16 +5,16 @@ import (
 	"net/http"
 	"runtime"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/echo"
 )
 
 // Version responds with the git commit used at the build
 func Version(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
-		"version":         config.Version,
-		"build_mode":      config.BuildMode,
-		"build_time":      config.BuildTime,
+		"version":         build.Version,
+		"build_mode":      build.BuildMode,
+		"build_time":      build.BuildTime,
 		"runtime_version": runtime.Version(),
 	})
 }

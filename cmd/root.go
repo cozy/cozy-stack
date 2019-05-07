@@ -8,9 +8,10 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/client/tlsclient"
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -93,7 +94,7 @@ func newClient(domain string, scopes ...string) *client.Client {
 
 func newAdminClient() *client.Client {
 	pass := []byte(os.Getenv("COZY_ADMIN_PASSWORD"))
-	if !config.IsDevRelease() {
+	if !build.IsDevRelease() {
 		if len(pass) == 0 {
 			var err error
 			fmt.Printf("Password:")

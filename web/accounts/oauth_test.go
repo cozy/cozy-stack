@@ -11,7 +11,8 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -223,7 +224,7 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	config.BuildMode = config.ModeDev
+	build.BuildMode = build.ModeDev
 	testutils.NeedCouchdb()
 
 	setup = testutils.NewSetup(m, "oauth-konnectors")

@@ -138,7 +138,7 @@ func (s *Sharing) countFiles(inst *instance.Instance) int {
 			var resCount couchdb.ViewResponse
 			for _, val := range rule.Values {
 				reqCount := &couchdb.ViewRequest{Key: val, Reduce: true}
-				err := couchdb.ExecView(inst, consts.FilesReferencedByView, reqCount, &resCount)
+				err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, reqCount, &resCount)
 				if err == nil && len(resCount.Rows) > 0 {
 					count += int(resCount.Rows[0].Value.(float64))
 				}

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/cache"
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/go-redis/redis"
 	"github.com/stretchr/testify/assert"

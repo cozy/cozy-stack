@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/checkup"
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/echo"
 )
 

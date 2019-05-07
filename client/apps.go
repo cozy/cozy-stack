@@ -12,7 +12,6 @@ import (
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
 // AppManifest holds the JSON-API representation of an application.
@@ -47,12 +46,18 @@ type AppManifest struct {
 		OAuth        *json.RawMessage `json:"oauth,omitempty"`
 		TimeInterval *json.RawMessage `json:"time_interval,omitempty"`
 
-		Slug             string           `json:"slug"`
-		State            string           `json:"state"`
-		Source           string           `json:"source"`
-		Version          string           `json:"version"`
-		Permissions      *permissions.Set `json:"permissions"`
-		AvailableVersion string           `json:"available_version,omitempty"`
+		Slug        string `json:"slug"`
+		State       string `json:"state"`
+		Source      string `json:"source"`
+		Version     string `json:"version"`
+		Permissions *[]struct {
+			Type        string              `json:"type"`
+			Description string              `json:"description,omitempty"`
+			Verbs       map[string]struct{} `json:"verbs,omitempty"`
+			Selector    string              `json:"selector,omitempty"`
+			Values      []string            `json:"values,omitempty"`
+		} `json:"permissions"`
+		AvailableVersion string `json:"available_version,omitempty"`
 
 		Parameters json.RawMessage `json:"parameters,omitempty"`
 

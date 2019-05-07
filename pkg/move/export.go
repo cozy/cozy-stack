@@ -121,7 +121,7 @@ func albums(tw *tar.Writer, instance *instance.Instance) error {
 		Reduce:      false,
 	}
 	res := &couchdb.ViewResponse{}
-	if err := couchdb.ExecView(instance, consts.FilesReferencedByView, req, res); err != nil {
+	if err := couchdb.ExecView(instance, couchdb.FilesReferencedByView, req, res); err != nil {
 		return err
 	}
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -236,7 +236,7 @@ func getFromSource(db prefixer.Prefixer, permType, docType, slug string) (*Permi
 // GetForShareCode retrieves the Permission doc for a given sharing code
 func GetForShareCode(db prefixer.Prefixer, tokenCode string) (*Permission, error) {
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, consts.PermissionsShareByCView, &couchdb.ViewRequest{
+	err := couchdb.ExecView(db, couchdb.PermissionsShareByCView, &couchdb.ViewRequest{
 		Key:         tokenCode,
 		IncludeDocs: true,
 	}, &res)
@@ -265,7 +265,7 @@ func GetForShareCode(db prefixer.Prefixer, tokenCode string) (*Permission, error
 	// Check for sharing made by a webapp/konnector that the app is still
 	// present (but not for OAuth). It is not checked in development release,
 	// since the --appdir does not create the expected document.
-	if !config.IsDevRelease() {
+	if !build.IsDevRelease() {
 		parts := strings.SplitN(perm.SourceID, "/", 2)
 		if len(parts) == 2 {
 			var doc couchdb.JSONDoc
@@ -285,7 +285,7 @@ func GetForShareCode(db prefixer.Prefixer, tokenCode string) (*Permission, error
 func GetTokenFromShortcode(db prefixer.Prefixer, shortcode string) (string, error) {
 	var res couchdb.ViewResponse
 
-	err := couchdb.ExecView(db, consts.PermissionsShareByShortcodeView, &couchdb.ViewRequest{
+	err := couchdb.ExecView(db, couchdb.PermissionsShareByShortcodeView, &couchdb.ViewRequest{
 		Key:         shortcode,
 		IncludeDocs: true,
 	}, &res)
@@ -533,7 +533,7 @@ func GetPermissionsForIDs(db prefixer.Prefixer, doctype string, ids []string) (m
 		keys[i] = []string{doctype, "_id", id}
 	}
 
-	err := couchdb.ExecView(db, consts.PermissionsShareByDocView, &couchdb.ViewRequest{
+	err := couchdb.ExecView(db, couchdb.PermissionsShareByDocView, &couchdb.ViewRequest{
 		Keys: keys,
 	}, &res)
 	if err != nil {
@@ -563,7 +563,7 @@ func GetPermissionsByDoctype(db prefixer.Prefixer, permType, doctype string, cur
 	cursor.ApplyTo(req)
 
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, consts.PermissionsByDoctype, req, &res)
+	err := couchdb.ExecView(db, couchdb.PermissionsByDoctype, req, &res)
 	if err != nil {
 		return nil, err
 	}

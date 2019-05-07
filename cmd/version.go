@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -12,7 +12,7 @@ var versionCmd = &cobra.Command{
 	Short: "Print the version number",
 	Long:  `Print the current version number of the binary`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println(config.Version)
+		fmt.Println(build.Version)
 		return nil
 	},
 }

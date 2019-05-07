@@ -16,7 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -361,7 +362,7 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 		return ErrInvalidRequest
 	}
 
-	req.Header.Set("User-Agent", "cozy-stack "+config.Version+" ("+runtime.Version()+")")
+	req.Header.Set("User-Agent", "cozy-stack "+build.Version+" ("+runtime.Version()+")")
 	for k, v := range remote.Headers {
 		req.Header.Set(k, v)
 	}
@@ -428,7 +429,7 @@ func ProxyRemoteAsset(name string, w http.ResponseWriter) error {
 		return err
 	}
 	req.Header.Set("User-Agent",
-		"cozy-stack "+config.Version+" ("+runtime.Version()+")")
+		"cozy-stack "+build.Version+" ("+runtime.Version()+")")
 
 	res, err := assetsClient.Do(req)
 	if err != nil {

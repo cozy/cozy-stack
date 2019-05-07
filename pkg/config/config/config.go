@@ -17,36 +17,19 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/cozy/cozy-stack/client/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/cache"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
 	"github.com/go-redis/redis"
 	"github.com/spf13/viper"
 )
 
-const (
-	// ModeDev is the development release value
-	ModeDev = "development"
-	// ModeProd is the production release value
-	ModeProd = "production"
-)
-
 // DefaultInstanceContext is the default context name for an instance
 const DefaultInstanceContext = "default"
-
-var (
-	// Version of the release (see scripts/build.sh script)
-	Version string
-	// BuildTime is ISO-8601 UTC string representation of the time of
-	// the build
-	BuildTime string
-	// BuildMode is the build mode of the release. Should be either
-	// production or development.
-	BuildMode = ModeDev
-)
 
 // Filename is the default configuration filename that cozy
 // search for
@@ -315,12 +298,6 @@ func CouchURL() *url.URL {
 // Client returns the redis.Client for a RedisConfig
 func (rc *RedisConfig) Client() redis.UniversalClient {
 	return rc.cli
-}
-
-// IsDevRelease returns whether or not the binary is a development
-// release
-func IsDevRelease() bool {
-	return BuildMode == ModeDev
 }
 
 // GetConfig returns the configured instance of Config
@@ -701,7 +678,7 @@ func UseViper(v *viper.Viper) error {
 		AssetsPollingInterval: v.GetDuration("assets_polling_interval"),
 	}
 
-	if IsDevRelease() && v.GetBool("disable_csp") {
+	if build.IsDevRelease() && v.GetBool("disable_csp") {
 		config.CSPDisabled = true
 	}
 
@@ -814,7 +791,7 @@ func createTestViper() *viper.Viper {
 // from a cozy.test.* file. If it can not find this file in your
 // $HOME/.cozy directory it will use the default one.
 func UseTestFile() {
-	BuildMode = ModeProd
+	build.BuildMode = build.ModeProd
 	v := createTestViper()
 
 	if err := v.ReadInConfig(); err != nil {

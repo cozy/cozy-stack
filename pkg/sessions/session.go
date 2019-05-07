@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -204,7 +205,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 		MaxAge:   maxAge,
 		Path:     "/",
 		Domain:   utils.StripPort("." + s.Instance.ContextualDomain()),
-		Secure:   !config.IsDevRelease(),
+		Secure:   !build.IsDevRelease(),
 		HttpOnly: true,
 	}, nil
 }
@@ -222,7 +223,7 @@ func (s *Session) ToAppCookie(domain, slug string) (*http.Cookie, error) {
 		MaxAge:   0, // "session cookie", expiring when the browser is closed
 		Path:     "/",
 		Domain:   utils.StripPort(domain),
-		Secure:   !config.IsDevRelease(),
+		Secure:   !build.IsDevRelease(),
 		HttpOnly: true,
 	}, nil
 }

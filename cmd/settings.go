@@ -118,7 +118,7 @@ func updateSettings(c *client.Client, obj map[string]interface{}, args string) (
 
 func init() {
 	domain := os.Getenv("COZY_DOMAIN")
-	if domain == "" && config.IsDevRelease() {
+	if domain == "" && build.IsDevRelease() {
 		domain = defaultDevDomain
 	}
 

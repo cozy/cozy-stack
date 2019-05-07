@@ -502,7 +502,7 @@ func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string]*
 		IncludeDocs: true,
 	}
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(inst, consts.SharingsByDocTypeView, req, &res)
+	err := couchdb.ExecView(inst, couchdb.SharingsByDocTypeView, req, &res)
 	if err != nil {
 		return nil, err
 	}

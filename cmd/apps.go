@@ -10,7 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/apps"
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -620,7 +620,7 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 
 func init() {
 	domain := os.Getenv("COZY_DOMAIN")
-	if domain == "" && config.IsDevRelease() {
+	if domain == "" && build.IsDevRelease() {
 		domain = defaultDevDomain
 	}
 

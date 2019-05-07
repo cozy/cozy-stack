@@ -93,7 +93,7 @@ func TestSharingDir(t *testing.T) {
 		IncludeDocs: true,
 	}
 	var res couchdb.ViewResponse
-	err = couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res)
+	err = couchdb.ExecView(inst, couchdb.FilesReferencedByView, req, &res)
 	assert.NoError(t, err)
 	assert.Len(t, res.Rows, 0)
 }

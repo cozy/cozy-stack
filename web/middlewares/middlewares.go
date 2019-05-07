@@ -3,7 +3,7 @@ package middlewares
 import (
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/echo"
 )
 

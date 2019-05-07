@@ -7,7 +7,7 @@ import (
 
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 )

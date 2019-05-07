@@ -266,7 +266,7 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		IncludeDocs: true,
 	}
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(inst, consts.FilesReferencedByView, req, &res)
+	err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, req, &res)
 	if err != nil {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Sharing dir not found: %v (%s)", err, s.SID)

@@ -61,7 +61,7 @@ func ListReferencesHandler(c echo.Context) error {
 	reqCount := &couchdb.ViewRequest{Key: key, Reduce: true}
 
 	var resCount couchdb.ViewResponse
-	err = couchdb.ExecView(instance, consts.FilesReferencedByView, reqCount, &resCount)
+	err = couchdb.ExecView(instance, couchdb.FilesReferencedByView, reqCount, &resCount)
 	if err != nil {
 		return err
 	}
@@ -81,9 +81,9 @@ func ListReferencesHandler(c echo.Context) error {
 	var view *couchdb.View
 	switch sort {
 	case "", "id", "-id":
-		view = consts.FilesReferencedByView
+		view = couchdb.FilesReferencedByView
 	case "datetime", "-datetime":
-		view = consts.ReferencedBySortedByDatetimeView
+		view = couchdb.ReferencedBySortedByDatetimeView
 	default:
 		return jsonapi.BadRequest(errors.New("Invalid sort parameter"))
 	}

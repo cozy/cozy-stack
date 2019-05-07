@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/stretchr/testify/assert"

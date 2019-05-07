@@ -7,7 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/limits"
@@ -490,7 +491,7 @@ func Routes(router *echo.Group) {
 		TokenLookup:    "form:csrf_token",
 		CookieMaxAge:   3600, // 1 hour
 		CookieHTTPOnly: true,
-		CookieSecure:   !config.IsDevRelease(),
+		CookieSecure:   !build.IsDevRelease(),
 	})
 
 	// Login/logout

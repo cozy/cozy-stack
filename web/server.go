@@ -12,7 +12,8 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
-	"github.com/cozy/cozy-stack/pkg/config"
+	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -118,7 +119,7 @@ func ListenAndServe() (*Servers, error) {
 		return nil, err
 	}
 
-	if config.IsDevRelease() {
+	if build.IsDevRelease() {
 		major.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
 		}))

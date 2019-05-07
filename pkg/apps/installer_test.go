@@ -16,7 +16,7 @@ import (
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/apps/appfs"
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
@@ -197,13 +197,13 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndexes(db, consts.IndexesByDoctype(consts.Files))
+	err = couchdb.DefineIndexes(db, couchdb.IndexesByDoctype(consts.Files))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndexes(db, consts.IndexesByDoctype(consts.Permissions))
+	err = couchdb.DefineIndexes(db, couchdb.IndexesByDoctype(consts.Permissions))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

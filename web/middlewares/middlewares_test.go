@@ -3,7 +3,7 @@ package middlewares_test
 import (
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/stretchr/testify/assert"
 )
