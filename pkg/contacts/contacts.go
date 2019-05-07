@@ -76,7 +76,7 @@ func (c *Contact) PrimaryName() string {
 	}
 	if family, ok := name["familyName"].(string); ok && family != "" {
 		if primary != "" {
-			primary += ""
+			primary += " "
 		}
 		primary += family
 	}
