@@ -50,12 +50,12 @@ type AppManifest struct {
 		State       string `json:"state"`
 		Source      string `json:"source"`
 		Version     string `json:"version"`
-		Permissions *[]struct {
-			Type        string              `json:"type"`
-			Description string              `json:"description,omitempty"`
-			Verbs       map[string]struct{} `json:"verbs,omitempty"`
-			Selector    string              `json:"selector,omitempty"`
-			Values      []string            `json:"values,omitempty"`
+		Permissions *map[string]struct {
+			Type        string   `json:"type"`
+			Description string   `json:"description,omitempty"`
+			Verbs       []string `json:"verbs,omitempty"`
+			Selector    string   `json:"selector,omitempty"`
+			Values      []string `json:"values,omitempty"`
 		} `json:"permissions"`
 		AvailableVersion string `json:"available_version,omitempty"`
 
