@@ -13,11 +13,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -42,7 +42,7 @@ const iocozytests = "io.cozy.tests"
 var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
-var bobContact, charlieContact, daveContact, edwardContact *contacts.Contact
+var bobContact, charlieContact, daveContact, edwardContact *contact.Contact
 var sharingID, state, aliceAccessToken string
 
 // Things that live on Bob's Cozy
@@ -1140,9 +1140,9 @@ func TestMain(m *testing.M) {
 	os.Exit(setup.Run())
 }
 
-func createContact(inst *instance.Instance, name, email string) *contacts.Contact {
+func createContact(inst *instance.Instance, name, email string) *contact.Contact {
 	mail := map[string]interface{}{"address": email}
-	c := contacts.New()
+	c := contact.New()
 	c.M["fullname"] = name
 	c.M["email"] = []interface{}{mail}
 	err := couchdb.CreateDoc(inst, c)
@@ -1152,9 +1152,9 @@ func createContact(inst *instance.Instance, name, email string) *contacts.Contac
 	return c
 }
 
-func createContactWithCozyURL(inst *instance.Instance, name, instanceURL string) *contacts.Contact {
+func createContactWithCozyURL(inst *instance.Instance, name, instanceURL string) *contact.Contact {
 	cozy := map[string]interface{}{"url": instanceURL}
-	c := contacts.New()
+	c := contact.New()
 	c.M["fullname"] = name
 	c.M["cozy"] = []interface{}{cozy}
 	err := couchdb.CreateDoc(inst, c)

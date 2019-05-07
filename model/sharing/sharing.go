@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
@@ -258,8 +258,8 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 
 	for i, m := range s.Members {
 		if m.Email != "" {
-			if contact, err := contacts.FindByEmail(inst, m.Email); err == nil {
-				s.Members[i].Name = contact.PrimaryName()
+			if c, err := contact.FindByEmail(inst, m.Email); err == nil {
+				s.Members[i].Name = c.PrimaryName()
 			}
 		}
 	}

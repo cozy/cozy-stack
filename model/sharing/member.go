@@ -11,8 +11,8 @@ import (
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -99,7 +99,7 @@ func (s *Sharing) AddContacts(inst *instance.Instance, contactIDs map[string]boo
 
 // AddContact adds the contact with the given identifier
 func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly bool) error {
-	c, err := contacts.Find(inst, contactID)
+	c, err := contact.Find(inst, contactID)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 	api := &APIDelegateAddContacts{}
 	api.sid = s.SID
 	for id, ro := range contactIDs {
-		c, err := contacts.Find(inst, id)
+		c, err := contact.Find(inst, id)
 		if err != nil {
 			return err
 		}
@@ -374,8 +374,8 @@ func (s *Sharing) UpdateRecipients(inst *instance.Instance, members []Member) er
 			s.Members = append(s.Members, Member{})
 		}
 		if m.Email != s.Members[i].Email && m.Email != "" {
-			if contact, err := contacts.FindByEmail(inst, m.Email); err == nil {
-				s.Members[i].Name = contact.PrimaryName()
+			if c, err := contact.FindByEmail(inst, m.Email); err == nil {
+				s.Members[i].Name = c.PrimaryName()
 			}
 		}
 		s.Members[i].Email = m.Email
@@ -392,11 +392,11 @@ func PersistInstanceURL(inst *instance.Instance, email, cozyURL string) {
 	if email == "" || cozyURL == "" {
 		return
 	}
-	contact, err := contacts.FindByEmail(inst, email)
+	c, err := contact.FindByEmail(inst, email)
 	if err != nil {
 		return
 	}
-	if err := contact.AddCozyURL(inst, cozyURL); err != nil {
+	if err := c.AddCozyURL(inst, cozyURL); err != nil {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Error on saving contact: %s", err)
 	}

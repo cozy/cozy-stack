@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -580,7 +580,7 @@ func checkGetPermissions(c echo.Context, s *sharing.Sharing) error {
 // wrapErrors returns a formatted error
 func wrapErrors(err error) error {
 	switch err {
-	case contacts.ErrNoMailAddress:
+	case contact.ErrNoMailAddress:
 		return jsonapi.InvalidAttribute("recipients", err)
 	case sharing.ErrNoRecipients, sharing.ErrNoRules:
 		return jsonapi.BadRequest(err)

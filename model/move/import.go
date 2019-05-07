@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
@@ -32,7 +32,7 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db prefixer.Pref
 		return err
 	}
 
-	contact := contacts.New()
+	c := contact.New()
 	fullname := "John Doe"
 	contactname := map[string]interface{}{
 		"givenName":  "John",
@@ -52,15 +52,15 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db prefixer.Pref
 	if names := vcard.FormattedNames(); len(names) > 0 {
 		fullname = names[0].Value
 	}
-	contact.M["fullname"] = fullname
-	contact.M["name"] = contactname
+	c.M["fullname"] = fullname
+	c.M["name"] = contactname
 
 	if field := vcard.Get("BDAY"); field != nil {
-		contact.M["birthday"] = field.Value
+		c.M["birthday"] = field.Value
 	}
 
 	if field := vcard.Get("NOTE"); field != nil {
-		contact.M["note"] = field.Value
+		c.M["note"] = field.Value
 	}
 
 	var emails []map[string]interface{}
@@ -69,7 +69,7 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db prefixer.Pref
 		emails = append(emails, email)
 	}
 	if len(emails) > 0 {
-		contact.M["email"] = emails
+		c.M["email"] = emails
 	}
 
 	var phones []map[string]interface{}
@@ -78,7 +78,7 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db prefixer.Pref
 		phones = append(phones, phone)
 	}
 	if len(phones) > 0 {
-		contact.M["phone"] = phones
+		c.M["phone"] = phones
 	}
 
 	var addresses []map[string]interface{}
@@ -95,10 +95,10 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db prefixer.Pref
 		addresses = append(addresses, a)
 	}
 	if len(addresses) > 0 {
-		contact.M["address"] = addresses
+		c.M["address"] = addresses
 	}
 
-	return couchdb.CreateDoc(db, contact)
+	return couchdb.CreateDoc(db, c)
 }
 
 func createAlbums(i *instance.Instance, tr *tar.Reader, albums *AlbumReferences) error {
