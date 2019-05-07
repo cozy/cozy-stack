@@ -107,7 +107,7 @@ func extractInfos(pkgs []string) []info {
 					switch named {
 					case "time.Time", "time.Duration":
 						// These structs are known to be safe
-					case "apps.SubDomainer":
+					case "app.SubDomainer":
 						// This struct is just an interface used for JSON-API links
 					default:
 						panic(fmt.Errorf("Unknown named type: %s", named))

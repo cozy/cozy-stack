@@ -4,7 +4,7 @@
 go test \
 	-coverprofile=tests/coverage.txt \
 	-covermode=count \
-	-coverpkg=./pkg/...,./web/... \
+	-coverpkg=./pkg/...,./web/...,./worker/... \
 	-vet=off \
 	-timeout 2m \
 	./... \

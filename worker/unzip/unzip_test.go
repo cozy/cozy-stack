@@ -23,7 +23,7 @@ func TestUnzip(t *testing.T) {
 	_, err = vfs.Mkdir(fs, "/destination/foo", nil)
 	assert.NoError(t, err)
 
-	fd, err := os.Open("../../../tests/fixtures/logos.zip")
+	fd, err := os.Open("../../tests/fixtures/logos.zip")
 	assert.NoError(t, err)
 	defer fd.Close()
 	zip, err := vfs.NewFileDoc("logos.zip", consts.RootDirID, -1, nil, "application/zip", "application", time.Now(), false, false, nil)
