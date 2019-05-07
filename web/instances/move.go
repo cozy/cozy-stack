@@ -8,8 +8,8 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/move"
-	workers "github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/echo"
 )
 
@@ -25,8 +25,8 @@ func exporter(c echo.Context) error {
 	}
 
 	link := fmt.Sprintf("http://%s%s%s", domain, c.Path(), filename)
-	msg, err := jobs.NewMessage(workers.Options{
-		Mode:         workers.ModeNoReply,
+	msg, err := jobs.NewMessage(mail.Options{
+		Mode:         mail.ModeNoReply,
 		TemplateName: "archiver",
 		TemplateValues: map[string]interface{}{
 			"ArchiveLink": link,

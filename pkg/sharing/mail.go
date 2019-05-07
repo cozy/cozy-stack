@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/workers/mails"
+	"github.com/cozy/cozy-stack/pkg/mail"
 )
 
 // SendMails sends invitation mails to the recipients that were in the
@@ -119,7 +119,7 @@ func (m *Member) MailLink(inst *instance.Instance, s *Sharing, state string, cod
 
 // SendMail sends an invitation mail to a recipient
 func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, description, link string) error {
-	addr := &mails.Address{
+	addr := &mail.Address{
 		Email: m.Email,
 		Name:  m.PrimaryName(),
 	}
@@ -129,13 +129,13 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 		"Description":      description,
 		"SharingLink":      link,
 	}
-	msg, err := jobs.NewMessage(mails.Options{
+	msg, err := jobs.NewMessage(mail.Options{
 		Mode:           "from",
-		To:             []*mails.Address{addr},
+		To:             []*mail.Address{addr},
 		TemplateName:   "sharing_request",
 		TemplateValues: mailValues,
 		RecipientName:  addr.Name,
-		Layout:         "layout-cozycloud",
+		Layout:         mail.CozyCloudLayout,
 	})
 	if err != nil {
 		return err
@@ -192,11 +192,11 @@ func SendInviteMail(inst *instance.Instance, invite *InviteMsg) error {
 		"Description":      invite.Description,
 		"SharingLink":      invite.Link,
 	}
-	msg, err := jobs.NewMessage(mails.Options{
+	msg, err := jobs.NewMessage(mail.Options{
 		Mode:           "noreply",
 		TemplateName:   "sharing_request",
 		TemplateValues: mailValues,
-		Layout:         "layout-cozycloud",
+		Layout:         mail.CozyCloudLayout,
 	})
 	if err != nil {
 		return err

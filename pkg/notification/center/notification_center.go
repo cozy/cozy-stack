@@ -11,11 +11,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/notification"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/pkg/workers/mails"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -244,28 +244,28 @@ func sendPush(inst *instance.Instance, p *notification.Properties, n *notificati
 }
 
 func sendMail(inst *instance.Instance, p *notification.Properties, n *notification.Notification) error {
-	mail := mails.Options{Mode: mails.ModeNoReply}
+	email := mail.Options{Mode: mail.ModeNoReply}
 
 	// Notifications from the stack have their own mail templates defined
 	if p != nil && p.MailTemplate != "" {
-		mail.TemplateName = p.MailTemplate
-		mail.TemplateValues = n.Data
+		email.TemplateName = p.MailTemplate
+		email.TemplateValues = n.Data
 	} else if n.ContentHTML != "" {
-		mail.Subject = n.Title
-		mail.Parts = make([]*mails.Part, 0, 2)
+		email.Subject = n.Title
+		email.Parts = make([]*mail.Part, 0, 2)
 		if n.Content != "" {
-			mail.Parts = append(mail.Parts,
-				&mails.Part{Body: n.Content, Type: "text/plain"})
+			email.Parts = append(email.Parts,
+				&mail.Part{Body: n.Content, Type: "text/plain"})
 		}
 		if n.ContentHTML != "" {
-			mail.Parts = append(mail.Parts,
-				&mails.Part{Body: n.ContentHTML, Type: "text/html"})
+			email.Parts = append(email.Parts,
+				&mail.Part{Body: n.ContentHTML, Type: "text/html"})
 		}
 	} else {
 		return nil
 	}
 
-	msg, err := jobs.NewMessage(&mail)
+	msg, err := jobs.NewMessage(&email)
 	if err != nil {
 		return err
 	}

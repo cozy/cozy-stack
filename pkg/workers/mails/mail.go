@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
 )
@@ -23,64 +24,13 @@ func init() {
 	initMailTemplates()
 }
 
-const (
-	// ModeNoReply is the no-reply mode of a mail, to send mail "to" the
-	// user's mail, as a noreply@
-	ModeNoReply = "noreply"
-	// ModeFrom is the "from" mode of a mail, to send mail "from" the user's
-	// mail.
-	ModeFrom = "from"
-)
-
-// DefaultLayout defines the default MJML layout to use
-const DefaultLayout = "layout"
-
 // var for testability
 var mailTemplater MailTemplater
 var sendMail = doSendMail
 
-// Address contains the name and mail of a mail recipient.
-type Address struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
-
-// Attachment is for attaching a file to the mail
-type Attachment struct {
-	Filename string `json:"filename"`
-	Content  string `json:"content"`
-}
-
-// Options should be used as the options of a mail with manually defined
-// content: body and body content-type. It is used as the input of the
-// "sendmail" worker.
-type Options struct {
-	Mode           string                 `json:"mode"`
-	Subject        string                 `json:"subject"`
-	From           *Address               `json:"from,omitempty"`
-	To             []*Address             `json:"to,omitempty"`
-	ReplyTo        *Address               `json:"reply_to,omitempty"`
-	Dialer         *gomail.DialerOptions  `json:"dialer,omitempty"`
-	Date           *time.Time             `json:"date,omitempty"`
-	Parts          []*Part                `json:"parts,omitempty"`
-	RecipientName  string                 `json:"recipient_name,omitempty"`
-	TemplateName   string                 `json:"template_name,omitempty"`
-	TemplateValues map[string]interface{} `json:"template_values,omitempty"`
-	Attachments    []*Attachment          `json:"attachments,omitempty"`
-	Locale         string                 `json:"locale,omitempty"`
-	Layout         string                 `json:"layout,omitempty"`
-}
-
-// Part represent a part of the content of the mail. It has a type
-// specifying the content type of the part, and a body.
-type Part struct {
-	Type string `json:"type"`
-	Body string `json:"body"`
-}
-
 // SendMail is the sendmail worker function.
 func SendMail(ctx *jobs.WorkerContext) error {
-	opts := Options{}
+	opts := mail.Options{}
 	err := ctx.UnmarshalMessage(&opts)
 	if err != nil {
 		return err
@@ -99,22 +49,22 @@ func SendMail(ctx *jobs.WorkerContext) error {
 		}
 	}
 	switch opts.Mode {
-	case ModeNoReply:
+	case mail.ModeNoReply:
 		toAddr, err := addressFromInstance(ctx.Instance)
 		if err != nil {
 			return err
 		}
-		opts.To = []*Address{toAddr}
-		opts.From = &Address{Name: name, Email: from}
+		opts.To = []*mail.Address{toAddr}
+		opts.From = &mail.Address{Name: name, Email: from}
 		opts.RecipientName = toAddr.Name
-	case ModeFrom:
+	case mail.ModeFrom:
 		sender, err := addressFromInstance(ctx.Instance)
 		if err != nil {
 			return err
 		}
 		name = sender.Name
 		opts.ReplyTo = sender
-		opts.From = &Address{Name: name, Email: from}
+		opts.From = &mail.Address{Name: name, Email: from}
 	default:
 		return fmt.Errorf("Mail sent with unknown mode %s", opts.Mode)
 	}
@@ -124,7 +74,7 @@ func SendMail(ctx *jobs.WorkerContext) error {
 	return sendMail(ctx, &opts, ctx.Instance.Domain)
 }
 
-func addressFromInstance(i *instance.Instance) (*Address, error) {
+func addressFromInstance(i *instance.Instance) (*mail.Address, error) {
 	doc, err := i.SettingsDocument()
 	if err != nil {
 		return nil, err
@@ -134,13 +84,13 @@ func addressFromInstance(i *instance.Instance) (*Address, error) {
 		return nil, fmt.Errorf("Domain %s has no email in its settings", i.Domain)
 	}
 	publicName, _ := doc.M["public_name"].(string)
-	return &Address{
+	return &mail.Address{
 		Name:  publicName,
 		Email: email,
 	}, nil
 }
 
-func doSendMail(ctx *jobs.WorkerContext, opts *Options, domain string) error {
+func doSendMail(ctx *jobs.WorkerContext, opts *mail.Options, domain string) error {
 	if opts.TemplateName == "" && opts.Subject == "" {
 		return errors.New("Missing mail subject")
 	}
@@ -150,7 +100,7 @@ func doSendMail(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 	if opts.From == nil {
 		return errors.New("Missing mail sender")
 	}
-	mail := gomail.NewMessage()
+	email := gomail.NewMessage()
 	dialerOptions := opts.Dialer
 	if dialerOptions == nil {
 		dialerOptions = config.GetConfig().Mail
@@ -163,17 +113,17 @@ func doSendMail(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 	}
 	toAddresses := make([]string, len(opts.To))
 	for i, to := range opts.To {
-		toAddresses[i] = mail.FormatAddress(to.Email, to.Name)
+		toAddresses[i] = email.FormatAddress(to.Email, to.Name)
 	}
 
-	var parts []*Part
+	var parts []*mail.Part
 	var err error
 
 	if opts.TemplateName != "" {
 		// Defining the master layout which will wrap the content
 		layout := opts.Layout
 		if layout == "" {
-			layout = DefaultLayout
+			layout = mail.DefaultLayout
 		}
 		opts.Subject, parts, err = RenderMail(ctx, opts.TemplateName, layout, opts.Locale, opts.RecipientName, opts.TemplateValues)
 		if err != nil {
@@ -184,27 +134,27 @@ func doSendMail(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 	}
 
 	headers := map[string][]string{
-		"From":    {mail.FormatAddress(opts.From.Email, opts.From.Name)},
+		"From":    {email.FormatAddress(opts.From.Email, opts.From.Name)},
 		"To":      toAddresses,
 		"Subject": {opts.Subject},
 		"X-Cozy":  {domain},
 	}
 	if opts.ReplyTo != nil {
 		headers["Reply-To"] = []string{
-			mail.FormatAddress(opts.ReplyTo.Email, opts.ReplyTo.Name),
+			email.FormatAddress(opts.ReplyTo.Email, opts.ReplyTo.Name),
 		}
 	}
-	mail.SetHeaders(headers)
-	mail.SetDateHeader("Date", date)
+	email.SetHeaders(headers)
+	email.SetDateHeader("Date", date)
 
 	for _, part := range parts {
-		if err = addPart(mail, part); err != nil {
+		if err = addPart(email, part); err != nil {
 			return err
 		}
 	}
 
 	for _, attachment := range opts.Attachments {
-		mail.Attach(attachment.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
+		email.Attach(attachment.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
 			_, err := w.Write([]byte(attachment.Content))
 			return err
 		}))
@@ -214,10 +164,10 @@ func doSendMail(ctx *jobs.WorkerContext, opts *Options, domain string) error {
 	if deadline, ok := ctx.Deadline(); ok {
 		dialer.SetDeadline(deadline)
 	}
-	return dialer.DialAndSend(mail)
+	return dialer.DialAndSend(email)
 }
 
-func addPart(mail *gomail.Message, part *Part) error {
+func addPart(mail *gomail.Message, part *mail.Part) error {
 	contentType := part.Type
 	if contentType != "text/plain" && contentType != "text/html" {
 		return fmt.Errorf("Unknown body content-type %s", contentType)

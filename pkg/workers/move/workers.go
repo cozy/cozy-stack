@@ -7,7 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/workers/mails"
+	"github.com/cozy/cozy-stack/pkg/mail"
 )
 
 func init() {
@@ -48,8 +48,8 @@ func ExportWorker(c *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	mail := mails.Options{
-		Mode:         mails.ModeNoReply,
+	mail := mail.Options{
+		Mode:         mail.ModeNoReply,
 		TemplateName: "archiver",
 		TemplateValues: map[string]interface{}{
 			"ArchiveLink": link.String(),

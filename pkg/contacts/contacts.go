@@ -5,8 +5,8 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
 // Contact is a struct containing all the informations about a contact.
@@ -32,33 +32,33 @@ func (c *Contact) DocType() string { return consts.Contacts }
 
 // ToMailAddress returns a struct that can be used by cozy-stack to send an
 // email to this contact
-func (c *Contact) ToMailAddress() (*mails.Address, error) {
+func (c *Contact) ToMailAddress() (*mail.Address, error) {
 	emails, ok := c.Get("email").([]interface{})
 	if !ok || len(emails) == 0 {
 		return nil, ErrNoMailAddress
 	}
-	var mail string
+	var email string
 	for i := range emails {
-		email, ok := emails[i].(map[string]interface{})
+		obj, ok := emails[i].(map[string]interface{})
 		if !ok {
 			continue
 		}
-		address, ok := email["address"].(string)
+		address, ok := obj["address"].(string)
 		if !ok {
 			continue
 		}
-		if primary, ok := email["primary"].(bool); ok && primary {
-			mail = address
+		if primary, ok := obj["primary"].(bool); ok && primary {
+			email = address
 		}
-		if mail == "" {
-			mail = address
+		if email == "" {
+			email = address
 		}
 	}
 	name := c.PrimaryName()
 	if name == "" {
-		name = mail
+		name = email
 	}
-	return &mails.Address{Name: name, Email: mail}, nil
+	return &mail.Address{Name: name, Email: email}, nil
 }
 
 // PrimaryName returns the name of the contact

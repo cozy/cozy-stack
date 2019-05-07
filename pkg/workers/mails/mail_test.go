@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/gomail"
 	"github.com/stretchr/testify/assert"
@@ -56,9 +57,9 @@ QUIT
 	}
 
 	mailServer(t, serverString, clientStrings, expectedHeaders, func(host string, port int) error {
-		msg := &Options{
-			From: &Address{Email: "me@me"},
-			To: []*Address{
+		msg := &mail.Options{
+			From: &mail.Address{Email: "me@me"},
+			To: []*mail.Address{
 				{Email: "you1@you"},
 			},
 			Date:    &time.Time{},
@@ -68,7 +69,7 @@ QUIT
 				Port:       port,
 				DisableTLS: true,
 			},
-			Parts: []*Part{
+			Parts: []*mail.Part{
 				{
 					Body: "Hey !!!",
 					Type: "text/plain",
@@ -126,9 +127,9 @@ QUIT
 `
 
 	mailServer(t, serverString, clientStrings, expectedHeaders, func(host string, port int) error {
-		msg := &Options{
-			From: &Address{Email: "me@me"},
-			To: []*Address{
+		msg := &mail.Options{
+			From: &mail.Address{Email: "me@me"},
+			To: []*mail.Address{
 				{Email: "you1@you"},
 			},
 			Date:    &time.Time{},
@@ -138,7 +139,7 @@ QUIT
 				Port:       port,
 				DisableTLS: true,
 			},
-			Parts: []*Part{
+			Parts: []*mail.Part{
 				{Body: mailBody, Type: "text/html"},
 			},
 			Locale: "en",
@@ -150,9 +151,9 @@ QUIT
 }
 
 func TestMailMissingSubject(t *testing.T) {
-	msg := &Options{
-		From:   &Address{Email: "me@me"},
-		To:     []*Address{{Email: "you@you"}},
+	msg := &mail.Options{
+		From:   &mail.Address{Email: "me@me"},
+		To:     []*mail.Address{{Email: "you@you"}},
 		Locale: "en",
 	}
 	j := &jobs.Job{JobID: "1", Domain: "cozy.example.com"}
@@ -164,11 +165,11 @@ func TestMailMissingSubject(t *testing.T) {
 }
 
 func TestMailBadBodyType(t *testing.T) {
-	msg := &Options{
-		From:    &Address{Email: "me@me"},
-		To:      []*Address{{Email: "you@you"}},
+	msg := &mail.Options{
+		From:    &mail.Address{Email: "me@me"},
+		To:      []*mail.Address{{Email: "you@you"}},
 		Subject: "Up?",
-		Parts: []*Part{
+		Parts: []*mail.Part{
 			{
 				Type: "text/qsdqsd",
 				Body: "foo",
@@ -280,7 +281,7 @@ func mailServer(t *testing.T, serverString string, clientStrings []string, expec
 }
 
 func TestSendMailNoReply(t *testing.T) {
-	sendMail = func(ctx *jobs.WorkerContext, opts *Options, domain string) error {
+	sendMail = func(ctx *jobs.WorkerContext, opts *mail.Options, domain string) error {
 		assert.NotNil(t, opts.From)
 		assert.NotNil(t, opts.To)
 		assert.Len(t, opts.To, 1)
@@ -292,10 +293,10 @@ func TestSendMailNoReply(t *testing.T) {
 	defer func() {
 		sendMail = doSendMail
 	}()
-	msg, _ := jobs.NewMessage(Options{
+	msg, _ := jobs.NewMessage(mail.Options{
 		Mode:    "noreply",
 		Subject: "Up?",
-		Parts: []*Part{
+		Parts: []*mail.Part{
 			{
 				Type: "text/plain",
 				Body: "foo",
@@ -314,7 +315,7 @@ func TestSendMailNoReply(t *testing.T) {
 }
 
 func TestSendMailFrom(t *testing.T) {
-	sendMail = func(ctx *jobs.WorkerContext, opts *Options, domain string) error {
+	sendMail = func(ctx *jobs.WorkerContext, opts *mail.Options, domain string) error {
 		assert.NotNil(t, opts.From)
 		assert.NotNil(t, opts.To)
 		assert.Len(t, opts.To, 1)
@@ -327,11 +328,11 @@ func TestSendMailFrom(t *testing.T) {
 	defer func() {
 		sendMail = doSendMail
 	}()
-	msg, _ := jobs.NewMessage(Options{
+	msg, _ := jobs.NewMessage(mail.Options{
 		Mode:    "from",
 		Subject: "Up?",
-		To:      []*Address{{Email: "you@you"}},
-		Parts: []*Part{
+		To:      []*mail.Address{{Email: "you@you"}},
+		Parts: []*mail.Part{
 			{
 				Type: "text/plain",
 				Body: "foo",
