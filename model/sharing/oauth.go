@@ -10,11 +10,11 @@ import (
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
@@ -249,8 +249,8 @@ func DeleteOAuthClient(inst *instance.Instance, m *Member, cred *Credentials) er
 	return nil
 }
 
-// ConvertOAuthClient converts an OAuth client from one type (pkg/oauth.Client)
-// to another (client/auth.Client)
+// ConvertOAuthClient converts an OAuth client from one type
+// (model/oauth.Client) to another (client/auth.Client)
 func ConvertOAuthClient(c *oauth.Client) *auth.Client {
 	return &auth.Client{
 		ClientID:          c.ClientID,
