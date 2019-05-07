@@ -16,7 +16,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
-	"github.com/cozy/cozy-stack/pkg/workers/push"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -223,7 +222,7 @@ func findLastNotification(inst *instance.Instance, source string) (*notification
 }
 
 func sendPush(inst *instance.Instance, p *notification.Properties, n *notification.Notification) error {
-	push := push.Message{
+	push := PushMessage{
 		NotificationID: n.ID(),
 		Source:         n.Source(),
 		Title:          n.Title,

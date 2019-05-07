@@ -14,6 +14,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/notification/center"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/sirupsen/logrus"
 
@@ -39,19 +40,6 @@ func init() {
 		WorkerInit:   Init,
 		WorkerFunc:   Worker,
 	})
-}
-
-// Message contains a push notification request.
-type Message struct {
-	NotificationID string `json:"notification_id"`
-	Source         string `json:"source"`
-	Title          string `json:"title,omitempty"`
-	Message        string `json:"message,omitempty"`
-	Priority       string `json:"priority,omitempty"`
-	Sound          string `json:"sound,omitempty"`
-	Collapsible    bool   `json:"collapsible,omitempty"`
-
-	Data map[string]interface{} `json:"data,omitempty"`
 }
 
 // Init initializes the necessary global clients
@@ -106,7 +94,7 @@ func Init() (err error) {
 
 // Worker is the worker that just logs its message (useful for debugging)
 func Worker(ctx *jobs.WorkerContext) error {
-	var msg Message
+	var msg center.PushMessage
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
@@ -130,7 +118,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 	return nil
 }
 
-func push(ctx *jobs.WorkerContext, c *oauth.Client, msg *Message) error {
+func push(ctx *jobs.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
 	switch c.NotificationPlatform {
 	case oauth.PlatformFirebase, "android", "ios":
 		return pushToFirebase(ctx, c, msg)
@@ -143,7 +131,7 @@ func push(ctx *jobs.WorkerContext, c *oauth.Client, msg *Message) error {
 
 // Firebase Cloud Messaging HTTP Protocol
 // https://firebase.google.com/docs/cloud-messaging/http-server-ref
-func pushToFirebase(ctx *jobs.WorkerContext, c *oauth.Client, msg *Message) error {
+func pushToFirebase(ctx *jobs.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
 	if fcmClient == nil {
 		ctx.Logger().Warn("Could not send android notification: not configured")
 		return nil
@@ -208,7 +196,7 @@ func pushToFirebase(ctx *jobs.WorkerContext, c *oauth.Client, msg *Message) erro
 	return nil
 }
 
-func pushToAPNS(ctx *jobs.WorkerContext, c *oauth.Client, msg *Message) error {
+func pushToAPNS(ctx *jobs.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
 	if iosClient == nil {
 		ctx.Logger().Warn("Could not send iOS notification: not configured")
 		return nil

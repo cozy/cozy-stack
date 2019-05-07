@@ -46,7 +46,7 @@ var (
 // Since we cannot really distinguish between them other than trusting the
 // user, we send a notification to the user by following this process:
 //   - if we identify a login for a device registration — by looking at the
-//     redirection address — we push an entry onto the queu
+//     redirection address — we push an entry onto the queue
 //   - if we do not receive the activation of the device by the user in 5
 //     minutes, we send a notification for a "normal" login
 //   - otherwise we send a notification for the activation of a new device.
