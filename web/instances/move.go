@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/mail"
-	"github.com/cozy/cozy-stack/pkg/move"
 	"github.com/cozy/echo"
 )
 
