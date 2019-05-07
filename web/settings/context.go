@@ -82,7 +82,7 @@ func finishOnboarding(c echo.Context) error {
 		// be enough to handle the redirection on the mobile-side
 		var fallbackURI string
 		if strings.HasPrefix(r.Scheme, "cozy") {
-			appSlug := strings.TrimLeft(r.Scheme, "cozy")
+			appSlug := strings.TrimPrefix(client.SoftwareID, "registry://")
 			fallbackURI = i.SubDomain(appSlug).String()
 		}
 		// Redirection
