@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/accounts"
+	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -159,12 +159,12 @@ func encryptMap(m map[string]interface{}) (encrypted bool) {
 		switch k {
 		case "password":
 			password, _ := v.(string)
-			cloned["credentials_encrypted"], err = accounts.EncryptCredentials(login, password)
+			cloned["credentials_encrypted"], err = account.EncryptCredentials(login, password)
 			if err == nil {
 				encrypted = true
 			}
 		case "secret", "dob", "code", "answer", "access_token", "refresh_token", "appSecret", "session":
-			cloned[k+"_encrypted"], err = accounts.EncryptCredentialsData(v)
+			cloned[k+"_encrypted"], err = account.EncryptCredentialsData(v)
 			if err == nil {
 				encrypted = true
 			}
@@ -210,9 +210,9 @@ func decryptMap(m map[string]interface{}) (decrypted bool) {
 		}
 		var err error
 		if k == "credentials" {
-			cloned["login"], cloned["password"], err = accounts.DecryptCredentials(str)
+			cloned["login"], cloned["password"], err = account.DecryptCredentials(str)
 		} else {
-			cloned[k], err = accounts.DecryptCredentialsData(str)
+			cloned[k], err = account.DecryptCredentialsData(str)
 		}
 		if !decrypted {
 			decrypted = err == nil

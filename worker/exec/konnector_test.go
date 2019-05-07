@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/accounts"
+	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -220,7 +220,7 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 		return
 	}
 
-	at := &accounts.AccountType{
+	at := &account.AccountType{
 		GrantMode: "secret",
 		Slug:      "my-konnector-1",
 		Secret:    "s3cr3t",
@@ -229,7 +229,7 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 	assert.NoError(t, err)
 	defer func() {
 		// Clean the account types
-		ats, _ := accounts.FindAccountTypesBySlug("my-konnector-1")
+		ats, _ := account.FindAccountTypesBySlug("my-konnector-1")
 		for _, at = range ats {
 			_ = couchdb.DeleteDoc(couchdb.GlobalSecretsDB, at)
 		}

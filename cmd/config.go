@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/pkg/accounts"
+	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
@@ -189,7 +189,7 @@ $ bmFjbNFjY+XZkS26YtVPUIKKm/JdnAGwG30n6A4ypS1p1dHev8hOtaRbW+lGneoO7PS9JCW8U5GSXh
 		if err != nil {
 			return err
 		}
-		dataEncrypted, err := accounts.EncryptBufferWithKey(encKeyStruct, []byte(args[1]))
+		dataEncrypted, err := account.EncryptBufferWithKey(encKeyStruct, []byte(args[1]))
 		if err != nil {
 			return err
 		}
@@ -217,7 +217,7 @@ var decryptCredentialsDataCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		decrypted, err := accounts.DecryptBufferWithKey(decKeyStruct, dataEncrypted)
+		decrypted, err := account.DecryptBufferWithKey(decKeyStruct, dataEncrypted)
 		if err != nil {
 			return err
 		}
@@ -242,7 +242,7 @@ var encryptCredentialsCmd = &cobra.Command{
 			return err
 		}
 
-		encryptedCreds, err := accounts.EncryptCredentialsWithKey(credsEncryptor, args[1], args[2])
+		encryptedCreds, err := account.EncryptCredentialsWithKey(credsEncryptor, args[1], args[2])
 		if err != nil {
 			return err
 		}
@@ -270,7 +270,7 @@ var decryptCredentialsCmd = &cobra.Command{
 			return fmt.Errorf("Cipher text is not properly base64 encoded: %s", err)
 		}
 
-		login, password, err := accounts.DecryptCredentialsWithKey(credsDecryptor, credentialsEncrypted)
+		login, password, err := account.DecryptCredentialsWithKey(credsDecryptor, credentialsEncrypted)
 		if err != nil {
 			return fmt.Errorf("Could not decrypt cipher text: %s", err)
 		}

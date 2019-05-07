@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/accounts"
+	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/apps/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -157,10 +157,10 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	}
 
 	// Check that the associated account is present.
-	var account *accounts.Account
+	var acc *account.Account
 	if msg.Account != "" && !msg.AccountDeleted {
-		account = &accounts.Account{}
-		err = couchdb.GetDoc(i, consts.Accounts, msg.Account, account)
+		acc = &account.Account{}
+		err = couchdb.GetDoc(i, consts.Accounts, msg.Account, acc)
 		if couchdb.IsNotFoundError(err) {
 			return "", jobs.ErrBadTrigger{Err: err}
 		}
@@ -196,7 +196,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	}
 
 	// Create the folder in which the konnector has the right to write.
-	if err = w.ensureFolderToSave(ctx, i, account); err != nil {
+	if err = w.ensureFolderToSave(ctx, i, acc); err != nil {
 		return "", err
 	}
 
@@ -225,27 +225,27 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 
 // ensureFolderToSave tries hard to give a folder to the konnector where it can
 // write its files if it needs to do so.
-func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *instance.Instance, account *accounts.Account) error {
+func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *instance.Instance, acc *account.Account) error {
 	fs := inst.VFS()
 	msg := w.msg
 
 	var normalizedFolderPath string
-	if account != nil {
+	if acc != nil {
 		admin := inst.Translate("Tree Administrative")
 		r := strings.NewReplacer("&", "_", "/", "_", "\\", "_", "#", "_",
 			",", "_", "+", "_", "(", "_", ")", "_", "$", "_", "@", "_", "~",
 			"_", "%", "_", ".", "_", "'", "_", "\"", "_", ":", "_", "*", "_",
 			"?", "_", "<", "_", ">", "_", "{", "_", "}", "_")
-		accountName := r.Replace(account.Name)
+		accountName := r.Replace(acc.Name)
 		normalizedFolderPath = fmt.Sprintf("/%s/%s/%s", admin, strings.Title(w.slug), accountName)
 
 		// This is code to handle legacy: if the konnector does not actually require
 		// a directory (for instance because it does not upload files), but a folder
 		// has been created in the past by the stack which is still empty, then we
 		// delete it.
-		if msg.FolderToSave == "" && account.FolderPath == "" && (account.Basic == nil || account.Basic.FolderPath == "") {
+		if msg.FolderToSave == "" && acc.FolderPath == "" && (acc.Basic == nil || acc.Basic.FolderPath == "") {
 			if dir, errp := fs.DirByPath(normalizedFolderPath); errp == nil {
-				if account.Name == "" {
+				if acc.Name == "" {
 					innerDirPath := path.Join(normalizedFolderPath, strings.Title(w.slug))
 					if innerDir, errp := fs.DirByPath(innerDirPath); errp == nil {
 						if isEmpty, _ := innerDir.IsEmpty(fs); isEmpty {
@@ -309,17 +309,17 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *inst
 	}
 
 	// 3 Check if a folder should be created
-	if account == nil {
+	if acc == nil {
 		return nil
 	}
-	if msg.FolderToSave == "" && account.FolderPath == "" && (account.Basic == nil || account.Basic.FolderPath == "") {
+	if msg.FolderToSave == "" && acc.FolderPath == "" && (acc.Basic == nil || acc.Basic.FolderPath == "") {
 		return nil
 	}
 
 	// 4. Recreate the folder
-	folderPath := account.FolderPath
-	if folderPath == "" && account.Basic != nil {
-		folderPath = account.Basic.FolderPath
+	folderPath := acc.FolderPath
+	if folderPath == "" && acc.Basic != nil {
+		folderPath = acc.Basic.FolderPath
 	}
 	if folderPath == "" {
 		folderPath = normalizedFolderPath
@@ -449,7 +449,7 @@ func (w *konnectorWorker) Slug() string {
 func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
 	var parameters interface{} = w.man.Parameters
 
-	accountTypes, err := accounts.FindAccountTypesBySlug(w.slug)
+	accountTypes, err := account.FindAccountTypesBySlug(w.slug)
 	if err == nil && len(accountTypes) == 1 && accountTypes[0].GrantMode == "secret" {
 		secret := accountTypes[0].Secret
 		if w.man.Parameters == nil {

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/accounts"
+	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/config/dynamic"
@@ -296,7 +296,7 @@ func cleanOrphanAccounts(c echo.Context) error {
 		return err
 	}
 
-	var as []*accounts.Account
+	var as []*account.Account
 	err = couchdb.GetAllDocs(db, consts.Accounts, nil, &as)
 	if couchdb.IsNoDatabaseError(err) {
 		return c.JSON(http.StatusOK, results)
@@ -339,15 +339,15 @@ func cleanOrphanAccounts(c echo.Context) error {
 	}
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for _, account := range as {
-		_, ok := triggersAccounts[account.ID()]
+	for _, acc := range as {
+		_, ok := triggersAccounts[acc.ID()]
 		if ok {
 			continue
 		}
 
 		var konnectorFound bool
 		for _, k := range konnectors {
-			if k.Slug() == account.AccountType {
+			if k.Slug() == acc.AccountType {
 				konnectorFound = true
 				break
 			}
@@ -362,8 +362,8 @@ func cleanOrphanAccounts(c echo.Context) error {
 			Konnector    string `json:"konnector"`
 			FolderToSave string `json:"folder_to_save"`
 		}{
-			Account:   account.ID(),
-			Konnector: account.AccountType,
+			Account:   acc.ID(),
+			Konnector: acc.AccountType,
 		}
 
 		var args string
