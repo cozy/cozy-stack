@@ -4,8 +4,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/sharing"
 )
 
 func init() {
