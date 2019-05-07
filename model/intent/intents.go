@@ -3,7 +3,7 @@ package intent
 import (
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -77,7 +77,7 @@ func (in *Intent) GenerateHref(instance *instance.Instance, slug, target string)
 // FillServices looks at all the application that can answer this intent
 // and save them in the services field
 func (in *Intent) FillServices(instance *instance.Instance) error {
-	res, err := apps.ListWebapps(instance)
+	res, err := app.ListWebapps(instance)
 	if err != nil {
 		return err
 	}

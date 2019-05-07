@@ -4,9 +4,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/oauth"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -95,7 +95,7 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 		n.Originator = "oauth"
 	case permissions.TypeWebapp:
 		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")
-		m, err := apps.GetWebappBySlug(inst, slug)
+		m, err := app.GetWebappBySlug(inst, slug)
 		if err != nil || m.Notifications == nil {
 			return err
 		}
@@ -108,7 +108,7 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 		n.Originator = "app"
 	case permissions.TypeKonnector:
 		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")
-		m, err := apps.GetKonnectorBySlug(inst, slug)
+		m, err := app.GetKonnectorBySlug(inst, slug)
 		if err != nil || m.Notifications == nil {
 			return err
 		}

@@ -9,7 +9,7 @@ import (
 	"path"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -27,7 +27,7 @@ type ServiceOptions struct {
 }
 
 type serviceWorker struct {
-	man  *apps.WebappManifest
+	man  *app.WebappManifest
 	slug string
 }
 
@@ -43,10 +43,10 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 	slug := opts.Slug
 	name := opts.Name
 
-	man, err := apps.GetWebappBySlugAndUpdate(i, slug,
+	man, err := app.GetWebappBySlugAndUpdate(i, slug,
 		i.AppsCopier(consts.WebappType), i.Registries())
 	if err != nil {
-		if err == apps.ErrNotFound {
+		if err == app.ErrNotFound {
 			err = jobs.ErrBadTrigger{Err: err}
 		}
 		return
@@ -54,12 +54,12 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 
 	w.slug = slug
 
-	if man.State() != apps.Ready {
+	if man.State() != app.Ready {
 		err = errors.New("Application is not ready")
 		return
 	}
 
-	var service *apps.Service
+	var service *app.Service
 	var ok bool
 	if name != "" {
 		service, ok = man.Services[name]

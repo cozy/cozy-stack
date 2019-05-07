@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/oauth"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -62,8 +62,8 @@ func TestCreateShareSetByMobileRevokeByLinkedApp(t *testing.T) {
 	oauthLinkedClient.Create(testInstance)
 
 	// Install the app
-	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &apps.InstallerOptions{
-		Operation:  apps.Install,
+	installer, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+		Operation:  app.Install,
 		Type:       consts.WebappType,
 		SourceURL:  "registry://drive",
 		Slug:       "drive",
@@ -122,9 +122,9 @@ func TestCreateShareSetByMobileRevokeByLinkedApp(t *testing.T) {
 	assert.NoError(t, err)
 	oauthLinkedClient.Delete(testInstance)
 
-	uninstaller, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
-		&apps.InstallerOptions{
-			Operation:  apps.Delete,
+	uninstaller, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
+		&app.InstallerOptions{
+			Operation:  app.Delete,
 			Type:       consts.WebappType,
 			Slug:       "drive",
 			SourceURL:  "registry://drive",
@@ -143,8 +143,8 @@ func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Install the app
-	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &apps.InstallerOptions{
-		Operation:  apps.Install,
+	installer, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+		Operation:  app.Install,
 		Type:       consts.WebappType,
 		SourceURL:  "registry://drive",
 		Slug:       "drive",
@@ -208,9 +208,9 @@ func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
 	assert.NoError(t, err)
 	oauthLinkedClient.Delete(testInstance)
 
-	uninstaller, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
-		&apps.InstallerOptions{
-			Operation:  apps.Delete,
+	uninstaller, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
+		&app.InstallerOptions{
+			Operation:  app.Delete,
 			Type:       consts.WebappType,
 			Slug:       "drive",
 			SourceURL:  "registry://drive",
@@ -645,8 +645,8 @@ func TestCannotFindToken(t *testing.T) {
 
 func TestGetForOauth(t *testing.T) {
 	// Install app
-	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &apps.InstallerOptions{
-		Operation:  apps.Install,
+	installer, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+		Operation:  app.Install,
 		Type:       consts.WebappType,
 		SourceURL:  "registry://settings",
 		Slug:       "settings",
@@ -656,7 +656,7 @@ func TestGetForOauth(t *testing.T) {
 	installer.Run()
 
 	// Get app manifest
-	manifest, err := apps.GetBySlug(testInstance, "settings", consts.WebappType)
+	manifest, err := app.GetBySlug(testInstance, "settings", consts.WebappType)
 	assert.NoError(t, err)
 
 	// Create OAuth client

@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -31,7 +31,7 @@ func TestSubdomain(t *testing.T) {
 }
 
 func TestBuildAppToken(t *testing.T) {
-	manifest := &apps.WebappManifest{
+	manifest := &app.WebappManifest{
 		DocID:   consts.Apps + "/my-app",
 		DocSlug: "my-app",
 	}

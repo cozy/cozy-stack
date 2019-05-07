@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/account"
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/config/dynamic"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -314,7 +314,7 @@ func cleanOrphanAccounts(c echo.Context) error {
 		return err
 	}
 
-	konnectors, err := apps.ListKonnectors(db)
+	konnectors, err := app.ListKonnectors(db)
 	if couchdb.IsNoDatabaseError(err) {
 		return c.JSON(http.StatusOK, results)
 	}

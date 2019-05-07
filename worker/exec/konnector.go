@@ -13,8 +13,8 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/appfs"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -36,7 +36,7 @@ const (
 type konnectorWorker struct {
 	slug string
 	msg  *KonnectorMessage
-	man  *apps.KonnManifest
+	man  *app.KonnManifest
 
 	err     error
 	lastErr error
@@ -148,9 +148,9 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	w.slug = slug
 	w.msg = &msg
 
-	w.man, err = apps.GetKonnectorBySlugAndUpdate(i, slug,
+	w.man, err = app.GetKonnectorBySlugAndUpdate(i, slug,
 		i.AppsCopier(consts.KonnectorType), i.Registries())
-	if err == apps.ErrNotFound {
+	if err == app.ErrNotFound {
 		return "", jobs.ErrBadTrigger{Err: err}
 	} else if err != nil {
 		return "", err
@@ -169,7 +169,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	// TODO: disallow konnectors on state Installed to be run when we define our
 	// workflow to accept permissions changes on konnectors.
 	man := w.man
-	if s := man.State(); s != apps.Ready && s != apps.Installed {
+	if s := man.State(); s != app.Ready && s != app.Installed {
 		return "", errors.New("Konnector is not ready")
 	}
 
@@ -182,7 +182,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fileServer := i.KonnectorsFileServer()
-	tarFile, err := fileServer.Open(slug, man.Version(), man.Checksum(), apps.KonnectorArchiveName)
+	tarFile, err := fileServer.Open(slug, man.Version(), man.Checksum(), app.KonnectorArchiveName)
 	if err == nil {
 		err = extractTar(workFS, tarFile)
 		if errc := tarFile.Close(); err == nil {

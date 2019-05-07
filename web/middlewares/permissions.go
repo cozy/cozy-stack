@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/sharing"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -92,7 +92,7 @@ func GetForOauth(instance *instance.Instance, claims *permissions.Claims, c inte
 	if err == nil && linkedAppScope != nil {
 		// Translate to a real scope
 		at := consts.NewAppType(linkedAppScope.Doctype)
-		manifest, err := apps.GetBySlug(instance, linkedAppScope.Slug, at)
+		manifest, err := app.GetBySlug(instance, linkedAppScope.Slug, at)
 		if err != nil {
 			return nil, err
 		}

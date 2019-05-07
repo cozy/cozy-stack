@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -50,7 +50,7 @@ func (u *updateError) toFields() logrus.Fields {
 	return fields
 }
 
-func updateErrorFromInstaller(inst *apps.Installer, step string, reason error) *updateError {
+func updateErrorFromInstaller(inst *app.Installer, step string, reason error) *updateError {
 	return &updateError{
 		domain: inst.Domain(),
 		slug:   inst.Slug(),
@@ -99,7 +99,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 // parameters can be used optionnaly to filter (whitelist) the applications'
 // slug to update.
 func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
-	insc := make(chan *apps.Installer)
+	insc := make(chan *app.Installer)
 	errc := make(chan *updateError)
 
 	totalInstances, err := couchdb.CountAllDocs(couchdb.GlobalDB, consts.Instances)
@@ -182,7 +182,7 @@ func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
 // UpdateInstance starts the auto-update process on the given instance. The
 // slugs parameters can be used to filter (whitelist) the applications' slug
 func UpdateInstance(ctx *jobs.WorkerContext, inst *instance.Instance, opts *Options) error {
-	insc := make(chan *apps.Installer)
+	insc := make(chan *app.Installer)
 	errc := make(chan *updateError)
 
 	if opts.DomainsWithContext != "" &&
@@ -231,7 +231,7 @@ func UpdateInstance(ctx *jobs.WorkerContext, inst *instance.Instance, opts *Opti
 	return nil
 }
 
-func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan *updateError, opts *Options) {
+func installerPush(inst *instance.Instance, insc chan *app.Installer, errc chan *updateError, opts *Options) {
 	registries := inst.Registries()
 
 	var g sync.WaitGroup
@@ -239,7 +239,7 @@ func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan
 
 	go func() {
 		defer g.Done()
-		webapps, err := apps.ListWebapps(inst)
+		webapps, err := app.ListWebapps(inst)
 		if err != nil {
 			errc <- &updateError{
 				domain: inst.Domain,
@@ -248,18 +248,18 @@ func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan
 			}
 			return
 		}
-		for _, app := range webapps {
-			if filterSlug(app.Slug(), opts.Slugs) {
+		for _, webapp := range webapps {
+			if filterSlug(webapp.Slug(), opts.Slugs) {
 				continue
 			}
-			if opts.OnlyRegistry && strings.HasPrefix(app.Source(), "registry://") {
+			if opts.OnlyRegistry && strings.HasPrefix(webapp.Source(), "registry://") {
 				continue
 			}
-			installer, err := createInstaller(inst, registries, app, opts)
+			installer, err := createInstaller(inst, registries, webapp, opts)
 			if err != nil {
 				errc <- &updateError{
 					domain: inst.Domain,
-					slug:   app.Slug(),
+					slug:   webapp.Slug(),
 					step:   "CreateInstaller",
 					reason: err,
 				}
@@ -271,7 +271,7 @@ func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan
 
 	go func() {
 		defer g.Done()
-		konnectors, err := apps.ListKonnectors(inst)
+		konnectors, err := app.ListKonnectors(inst)
 		if err != nil {
 			errc <- &updateError{
 				domain: inst.Domain,
@@ -280,18 +280,18 @@ func installerPush(inst *instance.Instance, insc chan *apps.Installer, errc chan
 			}
 			return
 		}
-		for _, app := range konnectors {
-			if filterSlug(app.Slug(), opts.Slugs) {
+		for _, konn := range konnectors {
+			if filterSlug(konn.Slug(), opts.Slugs) {
 				continue
 			}
-			if opts.OnlyRegistry && strings.HasPrefix(app.Source(), "registry://") {
+			if opts.OnlyRegistry && strings.HasPrefix(konn.Source(), "registry://") {
 				continue
 			}
-			installer, err := createInstaller(inst, registries, app, opts)
+			installer, err := createInstaller(inst, registries, konn, opts)
 			if err != nil {
 				errc <- &updateError{
 					domain: inst.Domain,
-					slug:   app.Slug(),
+					slug:   konn.Slug(),
 					step:   "CreateInstaller",
 					reason: err,
 				}
@@ -316,7 +316,7 @@ func filterSlug(slug string, slugs []string) bool {
 	return true
 }
 
-func createInstaller(inst *instance.Instance, registries []*url.URL, man apps.Manifest, opts *Options) (*apps.Installer, error) {
+func createInstaller(inst *instance.Instance, registries []*url.URL, man app.Manifest, opts *Options) (*app.Installer, error) {
 	var sourceURL string
 	if opts.ForceRegistry {
 		originalSourceURL, err := url.Parse(man.Source())
@@ -335,9 +335,9 @@ func createInstaller(inst *instance.Instance, registries []*url.URL, man apps.Ma
 			}
 		}
 	}
-	return apps.NewInstaller(inst, inst.AppsCopier(man.AppType()),
-		&apps.InstallerOptions{
-			Operation:        apps.Update,
+	return app.NewInstaller(inst, inst.AppsCopier(man.AppType()),
+		&app.InstallerOptions{
+			Operation:        app.Update,
 			Manifest:         man,
 			Registries:       registries,
 			SourceURL:        sourceURL,

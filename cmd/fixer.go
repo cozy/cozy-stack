@@ -16,9 +16,9 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/oauth"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -464,16 +464,16 @@ var linkedAppFixer = &cobra.Command{
 					client.SoftwareID = value
 
 					// Install app
-					installer, err := apps.NewInstaller(i, i.AppsCopier(consts.WebappType),
-						&apps.InstallerOptions{
-							Operation:  apps.Install,
+					installer, err := app.NewInstaller(i, i.AppsCopier(consts.WebappType),
+						&app.InstallerOptions{
+							Operation:  app.Install,
 							Type:       consts.WebappType,
 							Slug:       slug,
 							SourceURL:  value,
 							Registries: i.Registries(),
 						})
 
-					if err != apps.ErrAlreadyExists {
+					if err != app.ErrAlreadyExists {
 						if err != nil {
 							return err
 						}

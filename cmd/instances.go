@@ -19,7 +19,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -913,7 +913,7 @@ var instanceAppVersionCmd = &cobra.Command{
 		version := args[1]
 
 		var instancesAppVersion []string
-		var doc apps.WebappManifest
+		var doc app.WebappManifest
 
 		for _, instance := range instances {
 			err := couchdb.GetDoc(instance, consts.Apps, consts.Apps+"/"+appSlug, &doc)

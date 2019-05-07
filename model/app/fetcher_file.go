@@ -1,4 +1,4 @@
-package apps
+package app
 
 import (
 	"io"

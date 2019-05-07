@@ -1,4 +1,4 @@
-package apps_test
+package app_test
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
@@ -36,12 +36,12 @@ func compressedFileContainsBytes(fs afero.Fs, filename string, content []byte) (
 
 func TestKonnectorInstallSuccessful(t *testing.T) {
 	manGen = manifestKonnector
-	manName = apps.KonnectorManifestName
+	manName = app.KonnectorManifestName
 
 	doUpgrade(1)
 
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.KonnectorType,
 		Slug:      "local-konnector",
 		SourceURL: "git://localhost/",
@@ -52,8 +52,8 @@ func TestKonnectorInstallSuccessful(t *testing.T) {
 
 	go inst.Run()
 
-	var state apps.State
-	var man apps.Manifest
+	var state app.State
+	var man app.Manifest
 	for {
 		var done bool
 		var err2 error
@@ -62,11 +62,11 @@ func TestKonnectorInstallSuccessful(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, apps.Installing, man.State()) {
+			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
 			}
-		} else if state == apps.Installing {
-			if !assert.EqualValues(t, apps.Ready, man.State()) {
+		} else if state == app.Installing {
+			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -80,51 +80,51 @@ func TestKonnectorInstallSuccessful(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), apps.KonnectorManifestName+".gz"))
+	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.KonnectorManifestName+".gz"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.KonnectorManifestName+".gz"), []byte("1.0.0"))
+	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), app.KonnectorManifestName+".gz"), []byte("1.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 
-	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst2, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.KonnectorType,
 		Slug:      "local-konnector",
 		SourceURL: "git://localhost/",
 	})
 	assert.Nil(t, inst2)
-	assert.Equal(t, apps.ErrAlreadyExists, err)
+	assert.Equal(t, app.ErrAlreadyExists, err)
 }
 
 func TestKonnectorUpgradeNotExist(t *testing.T) {
 	manGen = manifestKonnector
-	manName = apps.KonnectorManifestName
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Update,
+	manName = app.KonnectorManifestName
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Update,
 		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-not-exist",
 	})
 	assert.Nil(t, inst)
-	assert.Equal(t, apps.ErrNotFound, err)
+	assert.Equal(t, app.ErrNotFound, err)
 
-	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Delete,
+	inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Delete,
 		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-not-exist",
 	})
 	assert.Nil(t, inst)
-	assert.Equal(t, apps.ErrNotFound, err)
+	assert.Equal(t, app.ErrNotFound, err)
 }
 
 func TestKonnectorInstallWithUpgrade(t *testing.T) {
 	manGen = manifestKonnector
-	manName = apps.KonnectorManifestName
+	manName = app.KonnectorManifestName
 
 	doUpgrade(1)
 
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-b",
 		SourceURL: "git://localhost/",
@@ -135,7 +135,7 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 
 	go inst.Run()
 
-	var man apps.Manifest
+	var man app.Manifest
 	for {
 		var done bool
 		man, done, err = inst.Poll()
@@ -147,17 +147,17 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 		}
 	}
 
-	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), apps.KonnectorManifestName+".gz"))
+	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.KonnectorManifestName+".gz"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.KonnectorManifestName+".gz"), []byte("1.0.0"))
+	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), app.KonnectorManifestName+".gz"), []byte("1.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 
 	doUpgrade(2)
 
-	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Update,
+	inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Update,
 		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-b",
 	})
@@ -167,7 +167,7 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 
 	go inst.Run()
 
-	var state apps.State
+	var state app.State
 	for {
 		var done bool
 		man, done, err = inst.Poll()
@@ -175,11 +175,11 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, apps.Upgrading, man.State()) {
+			if !assert.EqualValues(t, app.Upgrading, man.State()) {
 				return
 			}
-		} else if state == apps.Upgrading {
-			if !assert.EqualValues(t, apps.Ready, man.State()) {
+		} else if state == app.Upgrading {
+			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -193,10 +193,10 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), apps.KonnectorManifestName+".gz"))
+	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.KonnectorManifestName+".gz"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.KonnectorManifestName+".gz"), []byte("2.0.0"))
+	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), app.KonnectorManifestName+".gz"), []byte("2.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 }
@@ -264,10 +264,10 @@ func TestKonnectorUpdateSkipPerms(t *testing.T) {
 	assert.NoError(t, err)
 
 	manGen = manifestKonnector1
-	manName = apps.KonnectorManifestName
+	manName = app.KonnectorManifestName
 
-	inst, err := apps.NewInstaller(instance, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst, err := app.NewInstaller(instance, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-test-skip",
 		SourceURL: "git://localhost/",
@@ -276,10 +276,10 @@ func TestKonnectorUpdateSkipPerms(t *testing.T) {
 		return
 	}
 
-	var man apps.Manifest
+	var man app.Manifest
 
 	man, err = inst.RunSync()
-	konnManifest := man.(*apps.KonnManifest)
+	konnManifest := man.(*app.KonnManifest)
 	assert.NoError(t, err)
 	assert.Empty(t, konnManifest.AvailableVersion())
 	assert.Contains(t, konnManifest.Version(), "1.0.0")
@@ -287,8 +287,8 @@ func TestKonnectorUpdateSkipPerms(t *testing.T) {
 	// Will now update. New perms will be added, preventing an upgrade
 	manGen = manifestKonnector2
 
-	inst, err = apps.NewInstaller(instance, fs, &apps.InstallerOptions{
-		Operation: apps.Update,
+	inst, err = app.NewInstaller(instance, fs, &app.InstallerOptions{
+		Operation: app.Update,
 		Type:      consts.KonnectorType,
 		Slug:      "cozy-konnector-test-skip",
 	})
@@ -297,7 +297,7 @@ func TestKonnectorUpdateSkipPerms(t *testing.T) {
 	}
 
 	man, err = inst.RunSync()
-	konnManifest = man.(*apps.KonnManifest)
+	konnManifest = man.(*app.KonnManifest)
 	assert.NoError(t, err)
 	assert.Contains(t, konnManifest.AvailableVersion(), "2.0.0")
 	assert.Contains(t, konnManifest.Version(), "1.0.0") // Assert we stayed on our version
@@ -310,7 +310,7 @@ func TestKonnectorUpdateSkipPerms(t *testing.T) {
 	}
 
 	man2, err := inst.RunSync()
-	konnManifest = man2.(*apps.KonnManifest)
+	konnManifest = man2.(*app.KonnManifest)
 	assert.NoError(t, err)
 	// Assert we upgraded version, and the perms have changed
 	assert.False(t, man.Permissions().HasSameRules(man2.Permissions()))
@@ -320,11 +320,11 @@ func TestKonnectorUpdateSkipPerms(t *testing.T) {
 
 func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 	manGen = manifestKonnector
-	manName = apps.KonnectorManifestName
+	manName = app.KonnectorManifestName
 	doUpgrade(3)
 
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.KonnectorType,
 		Slug:      "local-konnector-branch",
 		SourceURL: "git://localhost/#branch",
@@ -335,8 +335,8 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 
 	go inst.Run()
 
-	var state apps.State
-	var man apps.Manifest
+	var state app.State
+	var man app.Manifest
 	for {
 		var done bool
 		var err2 error
@@ -345,11 +345,11 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, apps.Installing, man.State()) {
+			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
 			}
-		} else if state == apps.Installing {
-			if !assert.EqualValues(t, apps.Ready, man.State()) {
+		} else if state == app.Installing {
+			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -363,17 +363,17 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), apps.KonnectorManifestName+".gz"))
+	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.KonnectorManifestName+".gz"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.KonnectorManifestName+".gz"), []byte("3.0.0"))
+	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), app.KonnectorManifestName+".gz"), []byte("3.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 
 	doUpgrade(4)
 
-	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Update,
+	inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Update,
 		Type:      consts.KonnectorType,
 		Slug:      "local-konnector-branch",
 	})
@@ -392,11 +392,11 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, apps.Upgrading, man.State()) {
+			if !assert.EqualValues(t, app.Upgrading, man.State()) {
 				return
 			}
-		} else if state == apps.Upgrading {
-			if !assert.EqualValues(t, apps.Ready, man.State()) {
+		} else if state == app.Upgrading {
+			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -410,19 +410,19 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), apps.KonnectorManifestName+".gz"))
+	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.KonnectorManifestName+".gz"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.KonnectorManifestName+".gz"), []byte("4.0.0"))
+	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), app.KonnectorManifestName+".gz"), []byte("4.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 }
 
 func TestKonnectorUninstall(t *testing.T) {
 	manGen = manifestKonnector
-	manName = apps.KonnectorManifestName
-	inst1, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	manName = app.KonnectorManifestName
+	inst1, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.KonnectorType,
 		Slug:      "konnector-delete",
 		SourceURL: "git://localhost/",
@@ -441,8 +441,8 @@ func TestKonnectorUninstall(t *testing.T) {
 			break
 		}
 	}
-	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Delete,
+	inst2, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Delete,
 		Type:      consts.KonnectorType,
 		Slug:      "konnector-delete",
 	})
@@ -453,21 +453,21 @@ func TestKonnectorUninstall(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	inst3, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Delete,
+	inst3, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Delete,
 		Type:      consts.KonnectorType,
 		Slug:      "konnector-delete",
 	})
 	assert.Nil(t, inst3)
-	assert.Equal(t, apps.ErrNotFound, err)
+	assert.Equal(t, app.ErrNotFound, err)
 }
 
 func TestKonnectorInstallBadType(t *testing.T) {
 	manGen = manifestWebapp
-	manName = apps.WebappManifestName
+	manName = app.WebappManifestName
 
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.KonnectorType,
 		Slug:      "cozy-bad-type",
 		SourceURL: "git://localhost/",

@@ -1,4 +1,4 @@
-package apps_test
+package app_test
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -15,42 +15,42 @@ import (
 
 func TestWebappInstallBadSlug(t *testing.T) {
 	manGen = manifestWebapp
-	manName = apps.WebappManifestName
-	_, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	manName = app.WebappManifestName
+	_, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		SourceURL: "git://foo.bar",
 	})
 	if assert.Error(t, err) {
-		assert.Equal(t, apps.ErrInvalidSlugName, err)
+		assert.Equal(t, app.ErrInvalidSlugName, err)
 	}
 
-	_, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	_, err = app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "coucou/",
 		SourceURL: "git://foo.bar",
 	})
 	if assert.Error(t, err) {
-		assert.Equal(t, apps.ErrInvalidSlugName, err)
+		assert.Equal(t, app.ErrInvalidSlugName, err)
 	}
 }
 
 func TestWebappInstallBadAppsSource(t *testing.T) {
 	manGen = manifestWebapp
-	manName = apps.WebappManifestName
-	_, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	manName = app.WebappManifestName
+	_, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "app3",
 		SourceURL: "foo://bar.baz",
 	})
 	if assert.Error(t, err) {
-		assert.Equal(t, apps.ErrNotSupportedSource, err)
+		assert.Equal(t, app.ErrNotSupportedSource, err)
 	}
 
-	_, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	_, err = app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "app4",
 		SourceURL: "git://bar  .baz",
@@ -59,25 +59,25 @@ func TestWebappInstallBadAppsSource(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid character")
 	}
 
-	_, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	_, err = app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "app5",
 		SourceURL: "",
 	})
 	if assert.Error(t, err) {
-		assert.Equal(t, apps.ErrMissingSource, err)
+		assert.Equal(t, app.ErrMissingSource, err)
 	}
 }
 
 func TestWebappInstallSuccessful(t *testing.T) {
 	manGen = manifestWebapp
-	manName = apps.WebappManifestName
+	manName = app.WebappManifestName
 
 	doUpgrade(1)
 
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "local-cozy-mini",
 		SourceURL: "git://localhost/",
@@ -88,8 +88,8 @@ func TestWebappInstallSuccessful(t *testing.T) {
 
 	go inst.Run()
 
-	var state apps.State
-	var man apps.Manifest
+	var state app.State
+	var man app.Manifest
 	for {
 		var done bool
 		var err2 error
@@ -98,11 +98,11 @@ func TestWebappInstallSuccessful(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, apps.Installing, man.State()) {
+			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
 			}
-		} else if state == apps.Installing {
-			if !assert.EqualValues(t, apps.Ready, man.State()) {
+		} else if state == app.Installing {
+			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -116,21 +116,21 @@ func TestWebappInstallSuccessful(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"))
+	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"), []byte("1.0.0"))
+	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"), []byte("1.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 
-	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst2, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "local-cozy-mini",
 		SourceURL: "git://localhost/",
 	})
 	assert.Nil(t, inst2)
-	assert.Equal(t, apps.ErrAlreadyExists, err)
+	assert.Equal(t, app.ErrAlreadyExists, err)
 }
 
 func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
@@ -178,7 +178,7 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 }`
 	}
 	manGen = manifest1
-	manName = apps.WebappManifestName
+	manName = app.WebappManifestName
 	finished := true
 
 	instance, err := lifecycle.Create(&lifecycle.Options{
@@ -189,8 +189,8 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 
 	defer func() { _ = lifecycle.Destroy("test-keep-perms") }()
 
-	inst, err := apps.NewInstaller(instance, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst, err := app.NewInstaller(instance, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "mini-test-perms",
 		SourceURL: "git://localhost/",
@@ -224,8 +224,8 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 
 	// Update the app
 	manGen = manifest2
-	inst2, err := apps.NewInstaller(instance, fs, &apps.InstallerOptions{
-		Operation: apps.Update,
+	inst2, err := app.NewInstaller(instance, fs, &app.InstallerOptions{
+		Operation: app.Update,
 		Type:      consts.WebappType,
 		Slug:      "mini-test-perms",
 		SourceURL: "git://localhost/",
@@ -245,27 +245,27 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 
 func TestWebappUpgradeNotExist(t *testing.T) {
 	manGen = manifestWebapp
-	manName = apps.WebappManifestName
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Update,
+	manName = app.WebappManifestName
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Update,
 		Type:      consts.WebappType,
 		Slug:      "cozy-app-not-exist",
 	})
 	assert.Nil(t, inst)
-	assert.Equal(t, apps.ErrNotFound, err)
+	assert.Equal(t, app.ErrNotFound, err)
 
-	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Delete,
+	inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Delete,
 		Type:      consts.WebappType,
 		Slug:      "cozy-app-not-exist",
 	})
 	assert.Nil(t, inst)
-	assert.Equal(t, apps.ErrNotFound, err)
+	assert.Equal(t, app.ErrNotFound, err)
 }
 
 func TestWebappInstallWithUpgrade(t *testing.T) {
 	manGen = manifestWebapp
-	manName = apps.WebappManifestName
+	manName = app.WebappManifestName
 
 	defer func() {
 		localServices = ""
@@ -282,8 +282,8 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 
 	doUpgrade(1)
 
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "cozy-app-b",
 		SourceURL: "git://localhost/",
@@ -295,15 +295,15 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	man, err := inst.RunSync()
 	assert.NoError(t, err)
 
-	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"))
+	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"), []byte("1.0.0"))
+	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"), []byte("1.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 	version1 := man.Version()
 
-	manWebapp := man.(*apps.WebappManifest)
+	manWebapp := man.(*app.WebappManifest)
 	if assert.NotNil(t, manWebapp.Services["service1"]) {
 		service1 := manWebapp.Services["service1"]
 		assert.Equal(t, "/services/service1.js", service1.File)
@@ -315,8 +315,8 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	doUpgrade(2)
 	localServices = ""
 
-	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Update,
+	inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Update,
 		Type:      consts.WebappType,
 		Slug:      "cozy-app-b",
 	})
@@ -326,7 +326,7 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 
 	go inst.Run()
 
-	var state apps.State
+	var state app.State
 	for {
 		var done bool
 		man, done, err = inst.Poll()
@@ -334,11 +334,11 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, apps.Upgrading, man.State()) {
+			if !assert.EqualValues(t, app.Upgrading, man.State()) {
 				return
 			}
-		} else if state == apps.Upgrading {
-			if !assert.EqualValues(t, apps.Ready, man.State()) {
+		} else if state == app.Upgrading {
+			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -355,23 +355,23 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 
 	fmt.Println("versions:", version1, version2)
 
-	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"))
+	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"), []byte("2.0.0"))
+	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"), []byte("2.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
-	manWebapp = man.(*apps.WebappManifest)
+	manWebapp = man.(*app.WebappManifest)
 	assert.Nil(t, manWebapp.Services["service1"])
 }
 
 func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 	manGen = manifestWebapp
-	manName = apps.WebappManifestName
+	manName = app.WebappManifestName
 	doUpgrade(3)
 
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/#branch",
@@ -382,8 +382,8 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 
 	go inst.Run()
 
-	var state apps.State
-	var man apps.Manifest
+	var state app.State
+	var man app.Manifest
 	for {
 		var done bool
 		var err2 error
@@ -392,11 +392,11 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, apps.Installing, man.State()) {
+			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
 			}
-		} else if state == apps.Installing {
-			if !assert.EqualValues(t, apps.Ready, man.State()) {
+		} else if state == app.Installing {
+			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -410,10 +410,10 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"))
+	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"), []byte("3.0.0"))
+	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"), []byte("3.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), "branch.gz"))
@@ -422,8 +422,8 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 
 	doUpgrade(4)
 
-	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Update,
+	inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Update,
 		Type:      consts.WebappType,
 		Slug:      "local-cozy-mini-branch",
 	})
@@ -442,11 +442,11 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, apps.Upgrading, man.State()) {
+			if !assert.EqualValues(t, app.Upgrading, man.State()) {
 				return
 			}
-		} else if state == apps.Upgrading {
-			if !assert.EqualValues(t, apps.Ready, man.State()) {
+		} else if state == app.Upgrading {
+			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -460,10 +460,10 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"))
+	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"), []byte("4.0.0"))
+	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"), []byte("4.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), "branch.gz"))
@@ -472,8 +472,8 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 
 	doUpgrade(5)
 
-	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Update,
+	inst, err = app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Update,
 		Type:      consts.WebappType,
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/",
@@ -488,10 +488,10 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 	}
 	assert.Equal(t, "git://localhost/", man.Source())
 
-	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"))
+	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), apps.WebappManifestName+".gz"), []byte("5.0.0"))
+	ok, err = compressedFileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), app.WebappManifestName+".gz"), []byte("5.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), "branch.gz"))
@@ -501,9 +501,9 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 
 func TestWebappInstallFromGithub(t *testing.T) {
 	manGen = manifestWebapp
-	manName = apps.WebappManifestName
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	manName = app.WebappManifestName
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "github-cozy-mini",
 		SourceURL: "git://github.com/nono/cozy-mini.git",
@@ -514,18 +514,18 @@ func TestWebappInstallFromGithub(t *testing.T) {
 
 	go inst.Run()
 
-	var state apps.State
+	var state app.State
 	for {
 		man, done, err := inst.Poll()
 		if !assert.NoError(t, err) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, apps.Installing, man.State()) {
+			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
 			}
-		} else if state == apps.Installing {
-			if !assert.EqualValues(t, apps.Ready, man.State()) {
+		} else if state == app.Installing {
+			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -542,9 +542,9 @@ func TestWebappInstallFromGithub(t *testing.T) {
 
 func TestWebappInstallFromHTTP(t *testing.T) {
 	manGen = manifestWebapp
-	manName = apps.WebappManifestName
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	manName = app.WebappManifestName
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "http-cozy-drive",
 		SourceURL: "https://github.com/cozy/cozy-drive/archive/71e5cde66f754f986afc7111962ed2dd361bd5e4.tar.gz",
@@ -555,18 +555,18 @@ func TestWebappInstallFromHTTP(t *testing.T) {
 
 	go inst.Run()
 
-	var state apps.State
+	var state app.State
 	for {
 		man, done, err := inst.Poll()
 		if !assert.NoError(t, err) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, apps.Installing, man.State()) {
+			if !assert.EqualValues(t, app.Installing, man.State()) {
 				return
 			}
-		} else if state == apps.Installing {
-			if !assert.EqualValues(t, apps.Ready, man.State()) {
+		} else if state == app.Installing {
+			if !assert.EqualValues(t, app.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -583,9 +583,9 @@ func TestWebappInstallFromHTTP(t *testing.T) {
 
 func TestWebappUninstall(t *testing.T) {
 	manGen = manifestWebapp
-	manName = apps.WebappManifestName
-	inst1, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	manName = app.WebappManifestName
+	inst1, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete",
 		SourceURL: "git://localhost/",
@@ -604,8 +604,8 @@ func TestWebappUninstall(t *testing.T) {
 			break
 		}
 	}
-	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Delete,
+	inst2, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Delete,
 		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete",
 	})
@@ -616,21 +616,21 @@ func TestWebappUninstall(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	inst3, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Delete,
+	inst3, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Delete,
 		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete",
 	})
 	assert.Nil(t, inst3)
-	assert.Equal(t, apps.ErrNotFound, err)
+	assert.Equal(t, app.ErrNotFound, err)
 }
 
 func TestWebappUninstallErrored(t *testing.T) {
 	manGen = manifestWebapp
-	manName = apps.WebappManifestName
+	manName = app.WebappManifestName
 
-	inst1, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst1, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete-errored",
 		SourceURL: "git://localhost/",
@@ -650,8 +650,8 @@ func TestWebappUninstallErrored(t *testing.T) {
 		}
 	}
 
-	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Update,
+	inst2, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Update,
 		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete-errored",
 		SourceURL: "git://foobar.does.not.exist/",
@@ -671,8 +671,8 @@ func TestWebappUninstallErrored(t *testing.T) {
 		return
 	}
 
-	inst3, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Delete,
+	inst3, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Delete,
 		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete-errored",
 	})
@@ -684,21 +684,21 @@ func TestWebappUninstallErrored(t *testing.T) {
 		return
 	}
 
-	inst4, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Delete,
+	inst4, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Delete,
 		Type:      consts.WebappType,
 		Slug:      "github-cozy-delete-errored",
 	})
 	assert.Nil(t, inst4)
-	assert.Equal(t, apps.ErrNotFound, err)
+	assert.Equal(t, app.ErrNotFound, err)
 }
 
 func TestWebappInstallBadType(t *testing.T) {
 	manGen = manifestKonnector
-	manName = apps.KonnectorManifestName
+	manName = app.KonnectorManifestName
 
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
+	inst, err := app.NewInstaller(db, fs, &app.InstallerOptions{
+		Operation: app.Install,
 		Type:      consts.WebappType,
 		Slug:      "cozy-bad-type",
 		SourceURL: "git://localhost/",

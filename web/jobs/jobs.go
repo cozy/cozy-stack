@@ -9,7 +9,7 @@ import (
 
 	"github.com/justincampbell/bigduration"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -284,8 +284,8 @@ func extractKonnectorPermissions(c echo.Context, i *instance.Instance, t jobs.Tr
 	if err = t.Infos().Message.Unmarshal(&msg); err != nil {
 		return
 	}
-	var man *apps.KonnManifest
-	if man, err = apps.GetKonnectorBySlug(i, msg.Konnector); err != nil {
+	var man *app.KonnManifest
+	if man, err = app.GetKonnectorBySlug(i, msg.Konnector); err != nil {
 		return
 	}
 	reqRules := reqDoc.Permissions

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/notification/center"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -58,7 +58,7 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case center.ErrUnauthorized:
 		return jsonapi.Forbidden(err)
-	case apps.ErrNotFound:
+	case app.ErrNotFound:
 		return jsonapi.NotFound(err)
 	}
 	return err

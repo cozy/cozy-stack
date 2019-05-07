@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -24,8 +24,8 @@ func update(inst *instance.Instance) error {
 
 func installApp(inst *instance.Instance, slug string) error {
 	source := "registry://" + slug + "/stable"
-	installer, err := apps.NewInstaller(inst, inst.AppsCopier(consts.WebappType), &apps.InstallerOptions{
-		Operation:  apps.Install,
+	installer, err := app.NewInstaller(inst, inst.AppsCopier(consts.WebappType), &app.InstallerOptions{
+		Operation:  app.Install,
 		Type:       consts.WebappType,
 		SourceURL:  source,
 		Slug:       slug,

@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -124,27 +124,27 @@ func TestMain(m *testing.M) {
 	})
 	_, token = setup.GetTestClient(consts.Settings)
 
-	app := &apps.WebappManifest{
+	webapp := &app.WebappManifest{
 		DocID:          consts.Apps + "/app",
 		DocSlug:        "app",
 		DocPermissions: permissions.Set{},
 	}
-	err := couchdb.CreateNamedDoc(ins, app)
+	err := couchdb.CreateNamedDoc(ins, webapp)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	appPerms, err = permissions.CreateWebappSet(ins, app.Slug(), app.Permissions())
+	appPerms, err = permissions.CreateWebappSet(ins, webapp.Slug(), webapp.Permissions())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	appToken = ins.BuildAppToken(app.Slug(), "")
-	files := &apps.WebappManifest{
+	appToken = ins.BuildAppToken(webapp.Slug(), "")
+	files := &app.WebappManifest{
 		DocID:          consts.Apps + "/files",
 		DocSlug:        "files",
 		DocPermissions: permissions.Set{},
-		Intents: []apps.Intent{
+		Intents: []app.Intent{
 			{
 				Action: "PICK",
 				Types:  []string{"io.cozy.files", "image/gif"},

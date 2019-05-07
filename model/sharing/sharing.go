@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -523,14 +523,14 @@ func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string]*
 	return sharings, nil
 }
 
-func findIntentForRedirect(inst *instance.Instance, app *apps.WebappManifest, doctype string) (*apps.Intent, string) {
+func findIntentForRedirect(inst *instance.Instance, webapp *app.WebappManifest, doctype string) (*app.Intent, string) {
 	action := "SHARING"
-	if app != nil {
-		if intent := app.FindIntent(action, doctype); intent != nil {
-			return intent, app.Slug()
+	if webapp != nil {
+		if intent := webapp.FindIntent(action, doctype); intent != nil {
+			return intent, webapp.Slug()
 		}
 	}
-	var mans []apps.WebappManifest
+	var mans []app.WebappManifest
 	err := couchdb.GetAllDocs(inst, consts.Apps, &couchdb.AllDocsRequest{}, &mans)
 	if err != nil {
 		return nil, ""
@@ -547,9 +547,9 @@ func findIntentForRedirect(inst *instance.Instance, app *apps.WebappManifest, do
 // has authorized a sharing.
 func (s *Sharing) RedirectAfterAuthorizeURL(inst *instance.Instance) *url.URL {
 	doctype := s.Rules[0].DocType
-	app, _ := apps.GetWebappBySlug(inst, s.AppSlug)
+	webapp, _ := app.GetWebappBySlug(inst, s.AppSlug)
 
-	if intent, slug := findIntentForRedirect(inst, app, doctype); intent != nil {
+	if intent, slug := findIntentForRedirect(inst, webapp, doctype); intent != nil {
 		u := inst.SubDomain(slug)
 		parts := strings.SplitN(intent.Href, "#", 2)
 		if len(parts[0]) > 0 {
@@ -562,10 +562,10 @@ func (s *Sharing) RedirectAfterAuthorizeURL(inst *instance.Instance) *url.URL {
 		return u
 	}
 
-	if app == nil {
+	if webapp == nil {
 		return inst.DefaultRedirection()
 	}
-	return inst.SubDomain(app.Slug())
+	return inst.SubDomain(webapp.Slug())
 }
 
 // EndInitial is used to finish the initial sync phase of a sharing

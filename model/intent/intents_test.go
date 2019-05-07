@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -26,10 +26,10 @@ func TestGenerateHref(t *testing.T) {
 }
 
 func TestFillServices(t *testing.T) {
-	files := &apps.WebappManifest{
+	files := &app.WebappManifest{
 		DocID:   consts.Apps + "/files",
 		DocSlug: "files",
-		Intents: []apps.Intent{
+		Intents: []app.Intent{
 			{
 				Action: "PICK",
 				Types:  []string{"io.cozy.files", "image/gif"},
@@ -39,10 +39,10 @@ func TestFillServices(t *testing.T) {
 	}
 	err := couchdb.CreateNamedDoc(ins, files)
 	assert.NoError(t, err)
-	photos := &apps.WebappManifest{
+	photos := &app.WebappManifest{
 		DocID:   consts.Apps + "/photos",
 		DocSlug: "photos",
-		Intents: []apps.Intent{
+		Intents: []app.Intent{
 			{
 				Action: "PICK",
 				Types:  []string{"image/*"},

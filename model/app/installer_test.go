@@ -1,4 +1,4 @@
-package apps_test
+package app_test
 
 import (
 	"fmt"
@@ -14,9 +14,9 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/appfs"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -85,8 +85,8 @@ func serveGitRep() {
 	}
 	localGitDir = dir
 	args := `
-echo '` + manifestWebapp() + `' > ` + apps.WebappManifestName + ` && \
-echo '` + manifestKonnector() + `' > ` + apps.KonnectorManifestName + ` && \
+echo '` + manifestWebapp() + `' > ` + app.WebappManifestName + ` && \
+echo '` + manifestKonnector() + `' > ` + app.KonnectorManifestName + ` && \
 git init . && \
 git add . && \
 git commit -m 'Initial commit' && \
@@ -113,8 +113,8 @@ git checkout -`
 func doUpgrade(major int) {
 	localVersion = fmt.Sprintf("%d.0.0", major)
 	args := `
-echo '` + manifestWebapp() + `' > ` + apps.WebappManifestName + ` && \
-echo '` + manifestKonnector() + `' > ` + apps.KonnectorManifestName + ` && \
+echo '` + manifestWebapp() + `' > ` + app.WebappManifestName + ` && \
+echo '` + manifestKonnector() + `' > ` + app.KonnectorManifestName + ` && \
 git commit -am "Upgrade commit" && \
 git checkout branch && \
 git rebase master && \
@@ -147,7 +147,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	apps.ManifestClient = &http.Client{
+	app.ManifestClient = &http.Client{
 		Transport: &transport{},
 	}
 
@@ -155,7 +155,7 @@ func TestMain(m *testing.M) {
 		_, _ = io.WriteString(w, manGen())
 	}))
 
-	db = prefixer.NewPrefixer("", "apps-test")
+	db = prefixer.NewPrefixer("", "app-test")
 
 	err = couchdb.ResetDB(db, consts.Apps)
 	if err != nil {

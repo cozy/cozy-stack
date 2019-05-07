@@ -9,7 +9,7 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/account"
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -62,9 +62,9 @@ func TestUnknownApp(t *testing.T) {
 func TestBadFileExec(t *testing.T) {
 	folderToSave := "7890"
 
-	installer, err := apps.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
-		&apps.InstallerOptions{
-			Operation: apps.Install,
+	installer, err := app.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
+		&app.InstallerOptions{
+			Operation: app.Install,
 			Type:      consts.KonnectorType,
 			Slug:      "my-konnector-1",
 			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
@@ -123,15 +123,15 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		return
 	}
 
-	installer, err := apps.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
-		&apps.InstallerOptions{
-			Operation: apps.Install,
+	installer, err := app.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
+		&app.InstallerOptions{
+			Operation: app.Install,
 			Type:      consts.KonnectorType,
 			Slug:      "my-konnector-1",
 			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
 		},
 	)
-	if err != apps.ErrAlreadyExists {
+	if err != app.ErrAlreadyExists {
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -235,15 +235,15 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 		}
 	}()
 
-	installer, err := apps.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
-		&apps.InstallerOptions{
-			Operation: apps.Install,
+	installer, err := app.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
+		&app.InstallerOptions{
+			Operation: app.Install,
 			Type:      consts.KonnectorType,
 			Slug:      "my-konnector-1",
 			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
 		},
 	)
-	if err != apps.ErrAlreadyExists {
+	if err != app.ErrAlreadyExists {
 		if !assert.NoError(t, err) {
 			return
 		}

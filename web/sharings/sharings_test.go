@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/sharing"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -1224,7 +1224,7 @@ func generateAppToken(inst *instance.Instance, slug string) string {
 	if err != nil {
 		return ""
 	}
-	manifest := &apps.WebappManifest{
+	manifest := &app.WebappManifest{
 		DocID:          consts.Apps + "/" + slug,
 		DocSlug:        slug,
 		DocPermissions: rules,
