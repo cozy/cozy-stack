@@ -24,16 +24,16 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 
 	// import workers
-	"github.com/cozy/cozy-stack/pkg/workers/exec"
-	_ "github.com/cozy/cozy-stack/pkg/workers/log"
-	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
-	_ "github.com/cozy/cozy-stack/pkg/workers/migrations"
-	_ "github.com/cozy/cozy-stack/pkg/workers/move"
-	_ "github.com/cozy/cozy-stack/pkg/workers/push"
-	_ "github.com/cozy/cozy-stack/pkg/workers/share"
-	_ "github.com/cozy/cozy-stack/pkg/workers/thumbnail"
-	_ "github.com/cozy/cozy-stack/pkg/workers/unzip"
-	_ "github.com/cozy/cozy-stack/pkg/workers/updates"
+	"github.com/cozy/cozy-stack/worker/exec"
+	_ "github.com/cozy/cozy-stack/worker/log"
+	_ "github.com/cozy/cozy-stack/worker/mails"
+	_ "github.com/cozy/cozy-stack/worker/migrations"
+	_ "github.com/cozy/cozy-stack/worker/move"
+	_ "github.com/cozy/cozy-stack/worker/push"
+	_ "github.com/cozy/cozy-stack/worker/share"
+	_ "github.com/cozy/cozy-stack/worker/thumbnail"
+	_ "github.com/cozy/cozy-stack/worker/unzip"
+	_ "github.com/cozy/cozy-stack/worker/updates"
 )
 
 type (

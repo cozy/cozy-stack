@@ -18,7 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/stretchr/testify/assert"
 
-	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
+	_ "github.com/cozy/cozy-stack/worker/mails"
 )
 
 func TestGetInstanceNoDB(t *testing.T) {

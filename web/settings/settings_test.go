@@ -23,7 +23,7 @@ import (
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 
-	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
+	_ "github.com/cozy/cozy-stack/worker/mails"
 )
 
 var ts *httptest.Server

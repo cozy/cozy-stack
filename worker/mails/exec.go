@@ -10,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/cozy-stack/pkg/workers/exec"
+	"github.com/cozy/cozy-stack/worker/exec"
 )
 
 func execMjml(ctx *jobs.WorkerContext, template []byte) ([]byte, error) {

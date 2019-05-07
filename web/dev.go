@@ -8,9 +8,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/mail"
-	"github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
+	"github.com/cozy/cozy-stack/worker/mails"
 	"github.com/cozy/echo"
 )
 

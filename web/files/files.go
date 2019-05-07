@@ -29,9 +29,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/pkg/workers/thumbnail"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
+	"github.com/cozy/cozy-stack/worker/thumbnail"
 	"github.com/cozy/echo"
 )
 

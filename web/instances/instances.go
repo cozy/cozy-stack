@@ -25,7 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/pkg/workers/updates"
+	"github.com/cozy/cozy-stack/worker/updates"
 	"github.com/cozy/echo"
 )
 
