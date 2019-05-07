@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/apps/appfs"
+	"github.com/cozy/cozy-stack/pkg/appfs"
 	git "github.com/cozy/go-git"
 	gitPlumbing "github.com/cozy/go-git/plumbing"
 	gitObject "github.com/cozy/go-git/plumbing/object"

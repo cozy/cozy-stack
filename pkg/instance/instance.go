@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/apps/appfs"
+	"github.com/cozy/cozy-stack/pkg/appfs"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"

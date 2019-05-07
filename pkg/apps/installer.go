@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	"github.com/cozy/cozy-stack/pkg/apps/appfs"
+	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/instance"
