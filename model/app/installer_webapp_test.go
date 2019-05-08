@@ -7,8 +7,8 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/stretchr/testify/assert"
 )
