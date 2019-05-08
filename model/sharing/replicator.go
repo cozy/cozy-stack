@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	multierror "github.com/hashicorp/go-multierror"
 )

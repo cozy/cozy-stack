@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )

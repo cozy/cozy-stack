@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/cozy/afero"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
 )

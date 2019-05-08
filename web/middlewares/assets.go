@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"html/template"
 
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/echo"
 )
 

@@ -6,7 +6,7 @@ import (
 
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/model/instance"
 
 	"github.com/stretchr/testify/assert"
 )

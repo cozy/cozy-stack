@@ -1,8 +1,8 @@
 package lifecycle
 
 import (
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
 // GetInstance retrieves the instance for a request by its host.

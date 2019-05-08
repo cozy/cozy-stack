@@ -6,10 +6,10 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
 func registerPassphrase(inst *instance.Instance, pass, tok []byte) error {

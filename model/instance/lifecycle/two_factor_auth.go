@@ -1,6 +1,6 @@
 package lifecycle
 
-import "github.com/cozy/cozy-stack/pkg/instance"
+import "github.com/cozy/cozy-stack/model/instance"
 
 // SendTwoFactorPasscode sends by mail the two factor secret to the owner of
 // the instance. It returns the generated token.

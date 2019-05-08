@@ -7,9 +7,9 @@ import (
 
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
 // ExternalClaims is the format for JWT for authentication from external sources

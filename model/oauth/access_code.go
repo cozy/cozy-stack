@@ -1,10 +1,10 @@
 package oauth
 
 import (
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
 // AccessCode is struct used during the OAuth2 flow. It has to be persisted in
