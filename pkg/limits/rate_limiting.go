@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/go-redis/redis"
 )
 
@@ -178,8 +178,8 @@ func (r *redisCounter) Reset(key string) error {
 
 // CheckRateLimit returns an error if the counter for the given type and
 // instance has reached the limit.
-func CheckRateLimit(inst *instance.Instance, ct CounterType) error {
-	return CheckRateLimitKey(inst.Domain, ct)
+func CheckRateLimit(p prefixer.Prefixer, ct CounterType) error {
+	return CheckRateLimitKey(p.DomainName(), ct)
 }
 
 // CheckRateLimitKey allows to check the rate-limit for a key
@@ -197,8 +197,8 @@ func CheckRateLimitKey(customKey string, ct CounterType) error {
 }
 
 // ResetCounter sets again to zero the counter for the given type and instance.
-func ResetCounter(inst *instance.Instance, ct CounterType) {
+func ResetCounter(p prefixer.Prefixer, ct CounterType) {
 	cfg := configs[ct]
-	key := cfg.Prefix + ":" + inst.Domain
-	_ = getCounter().Reset(key + ":" + inst.Domain)
+	key := cfg.Prefix + ":" + p.DomainName()
+	_ = getCounter().Reset(key)
 }
