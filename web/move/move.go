@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -67,12 +67,12 @@ func createExport(c echo.Context) error {
 		return err
 	}
 
-	msg, err := jobs.NewMessage(exportOptions)
+	msg, err := job.NewMessage(exportOptions)
 	if err != nil {
 		return err
 	}
 
-	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
+	_, err = job.System().PushJob(inst, &job.JobRequest{
 		WorkerType: "export",
 		Message:    msg,
 	})

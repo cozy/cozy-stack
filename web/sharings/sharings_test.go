@@ -16,13 +16,13 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
@@ -105,7 +105,7 @@ func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
 }
 
 func assertInvitationMailWasSent(t *testing.T) string {
-	var jobs []jobs.Job
+	var jobs []job.Job
 	couchReq := &couchdb.FindRequest{
 		UseIndex: "by-worker-and-state",
 		Selector: mango.And(

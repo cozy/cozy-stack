@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 )
@@ -176,9 +176,9 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	if err := createDefaultFilesTree(i); err != nil {
 		return nil, err
 	}
-	sched := jobs.System()
+	sched := job.System()
 	for _, trigger := range Triggers(i) {
-		t, err := jobs.NewTrigger(i, trigger, nil)
+		t, err := job.NewTrigger(i, trigger, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -266,9 +266,9 @@ func buildSettings(opts *Options) *couchdb.JSONDoc {
 }
 
 // Triggers returns the list of the triggers to add when an instance is created
-func Triggers(db prefixer.Prefixer) []jobs.TriggerInfos {
+func Triggers(db prefixer.Prefixer) []job.TriggerInfos {
 	// Create/update/remove thumbnails when an image is created/updated/removed
-	return []jobs.TriggerInfos{
+	return []job.TriggerInfos{
 		{
 			Domain:     db.DomainName(),
 			Prefix:     db.DBPrefix(),

@@ -1,4 +1,4 @@
-package jobs_test
+package job_test
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	jobs "github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/stretchr/testify/assert"
 )

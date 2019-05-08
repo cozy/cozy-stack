@@ -4,11 +4,11 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/model/job"
 )
 
 func init() {
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "log",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
@@ -18,7 +18,7 @@ func init() {
 }
 
 // Worker is the worker that just logs its message (useful for debugging)
-func Worker(ctx *jobs.WorkerContext) error {
+func Worker(ctx *job.WorkerContext) error {
 	var msg string
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err

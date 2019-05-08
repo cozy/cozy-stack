@@ -6,13 +6,13 @@ import (
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -232,11 +232,11 @@ func sendPush(inst *instance.Instance, p *notification.Properties, n *notificati
 		Data:           n.Data,
 		Collapsible:    p.Collapsible,
 	}
-	msg, err := jobs.NewMessage(&push)
+	msg, err := job.NewMessage(&push)
 	if err != nil {
 		return err
 	}
-	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
+	_, err = job.System().PushJob(inst, &job.JobRequest{
 		WorkerType: "push",
 		Message:    msg,
 	})
@@ -265,11 +265,11 @@ func sendMail(inst *instance.Instance, p *notification.Properties, n *notificati
 		return nil
 	}
 
-	msg, err := jobs.NewMessage(&email)
+	msg, err := job.NewMessage(&email)
 	if err != nil {
 		return err
 	}
-	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
+	_, err = job.System().PushJob(inst, &job.JobRequest{
 		WorkerType: "sendmail",
 		Message:    msg,
 	})

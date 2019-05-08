@@ -9,10 +9,10 @@ import (
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/sirupsen/logrus"
 )
@@ -21,7 +21,7 @@ const numUpdaters = 4
 const numUpdatersSingleInstance = 4
 
 func init() {
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "updates",
 		Concurrency:  1,
 		MaxExecCount: 1,
@@ -77,7 +77,7 @@ type Options struct {
 }
 
 // Worker is the worker method to launch the updates.
-func Worker(ctx *jobs.WorkerContext) error {
+func Worker(ctx *job.WorkerContext) error {
 	var opts Options
 	if err := ctx.UnmarshalMessage(&opts); err != nil {
 		return err
@@ -98,7 +98,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 // UpdateAll starts the auto-updates process for all instances. The slugs
 // parameters can be used optionnaly to filter (whitelist) the applications'
 // slug to update.
-func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
+func UpdateAll(ctx *job.WorkerContext, opts *Options) error {
 	insc := make(chan *app.Installer)
 	errc := make(chan *updateError)
 
@@ -181,7 +181,7 @@ func UpdateAll(ctx *jobs.WorkerContext, opts *Options) error {
 
 // UpdateInstance starts the auto-update process on the given instance. The
 // slugs parameters can be used to filter (whitelist) the applications' slug
-func UpdateInstance(ctx *jobs.WorkerContext, inst *instance.Instance, opts *Options) error {
+func UpdateInstance(ctx *job.WorkerContext, inst *instance.Instance, opts *Options) error {
 	insc := make(chan *app.Installer)
 	errc := make(chan *updateError)
 

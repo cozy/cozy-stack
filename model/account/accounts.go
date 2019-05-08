@@ -4,9 +4,9 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
@@ -82,7 +82,7 @@ func (ac *Account) Match(field, expected string) bool {
 func init() {
 	couchdb.AddHook(consts.Accounts, couchdb.EventDelete,
 		func(db prefixer.Prefixer, doc couchdb.Doc, old couchdb.Doc) error {
-			jobsSystem := jobs.System()
+			jobsSystem := job.System()
 
 			trigs, err := jobsSystem.GetAllTriggers(db)
 			if err != nil {
@@ -146,7 +146,7 @@ func init() {
 					WithField("konnector", konnector).
 					Info("Pushing job for konnector on_delete")
 
-				msg, err := jobs.NewMessage(struct {
+				msg, err := job.NewMessage(struct {
 					Account        string `json:"account"`
 					AccountRev     string `json:"account_rev"`
 					Konnector      string `json:"konnector"`
@@ -160,7 +160,7 @@ func init() {
 				if err != nil {
 					return err
 				}
-				if _, err = jobsSystem.PushJob(db, &jobs.JobRequest{
+				if _, err = jobsSystem.PushJob(db, &job.JobRequest{
 					WorkerType: "konnector",
 					Message:    msg,
 					Manual:     true, // Select high-priority for these jobs

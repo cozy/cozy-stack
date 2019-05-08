@@ -7,16 +7,16 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
 )
 
 func init() {
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:  "sendmail",
 		Concurrency: runtime.NumCPU(),
 		WorkerFunc:  SendMail,
@@ -29,7 +29,7 @@ var mailTemplater MailTemplater
 var sendMail = doSendMail
 
 // SendMail is the sendmail worker function.
-func SendMail(ctx *jobs.WorkerContext) error {
+func SendMail(ctx *job.WorkerContext) error {
 	opts := mail.Options{}
 	err := ctx.UnmarshalMessage(&opts)
 	if err != nil {
@@ -90,7 +90,7 @@ func addressFromInstance(i *instance.Instance) (*mail.Address, error) {
 	}, nil
 }
 
-func doSendMail(ctx *jobs.WorkerContext, opts *mail.Options, domain string) error {
+func doSendMail(ctx *job.WorkerContext, opts *mail.Options, domain string) error {
 	if opts.TemplateName == "" && opts.Subject == "" {
 		return errors.New("Missing mail subject")
 	}

@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/gomail"
@@ -77,8 +77,8 @@ QUIT
 			},
 			Locale: "en",
 		}
-		j := &jobs.Job{JobID: "1", Domain: "cozy.example.com"}
-		ctx := jobs.NewWorkerContext("0", j, nil)
+		j := &job.Job{JobID: "1", Domain: "cozy.example.com"}
+		ctx := job.NewWorkerContext("0", j, nil)
 		return sendMail(ctx, msg, "cozy.example.com")
 	})
 }
@@ -144,8 +144,8 @@ QUIT
 			},
 			Locale: "en",
 		}
-		j := &jobs.Job{JobID: "1", Domain: "cozy.example.com"}
-		ctx := jobs.NewWorkerContext("0", j, nil)
+		j := &job.Job{JobID: "1", Domain: "cozy.example.com"}
+		ctx := job.NewWorkerContext("0", j, nil)
 		return sendMail(ctx, msg, "cozy.example.com")
 	})
 }
@@ -156,8 +156,8 @@ func TestMailMissingSubject(t *testing.T) {
 		To:     []*mail.Address{{Email: "you@you"}},
 		Locale: "en",
 	}
-	j := &jobs.Job{JobID: "1", Domain: "cozy.example.com"}
-	ctx := jobs.NewWorkerContext("0", j, nil)
+	j := &job.Job{JobID: "1", Domain: "cozy.example.com"}
+	ctx := job.NewWorkerContext("0", j, nil)
 	err := sendMail(ctx, msg, "cozy.example.com")
 	if assert.Error(t, err) {
 		assert.Equal(t, "Missing mail subject", err.Error())
@@ -177,8 +177,8 @@ func TestMailBadBodyType(t *testing.T) {
 		},
 		Locale: "en",
 	}
-	j := &jobs.Job{JobID: "1", Domain: "cozy.example.com"}
-	ctx := jobs.NewWorkerContext("0", j, nil)
+	j := &job.Job{JobID: "1", Domain: "cozy.example.com"}
+	ctx := job.NewWorkerContext("0", j, nil)
 	err := sendMail(ctx, msg, "cozy.example.com")
 	if assert.Error(t, err) {
 		assert.Equal(t, "Unknown body content-type text/qsdqsd", err.Error())
@@ -281,7 +281,7 @@ func mailServer(t *testing.T, serverString string, clientStrings []string, expec
 }
 
 func TestSendMailNoReply(t *testing.T) {
-	sendMail = func(ctx *jobs.WorkerContext, opts *mail.Options, domain string) error {
+	sendMail = func(ctx *job.WorkerContext, opts *mail.Options, domain string) error {
 		assert.NotNil(t, opts.From)
 		assert.NotNil(t, opts.To)
 		assert.Len(t, opts.To, 1)
@@ -293,7 +293,7 @@ func TestSendMailNoReply(t *testing.T) {
 	defer func() {
 		sendMail = doSendMail
 	}()
-	msg, _ := jobs.NewMessage(mail.Options{
+	msg, _ := job.NewMessage(mail.Options{
 		Mode:    "noreply",
 		Subject: "Up?",
 		Parts: []*mail.Part{
@@ -304,18 +304,18 @@ func TestSendMailNoReply(t *testing.T) {
 		},
 		Locale: "en",
 	})
-	j := jobs.NewJob(inst, &jobs.JobRequest{
+	j := job.NewJob(inst, &job.JobRequest{
 		Message:    msg,
 		WorkerType: "sendmail",
 	})
-	err := SendMail(jobs.NewWorkerContext("123", j, inst))
+	err := SendMail(job.NewWorkerContext("123", j, inst))
 	if assert.Error(t, err) {
 		assert.Equal(t, "yes", err.Error())
 	}
 }
 
 func TestSendMailFrom(t *testing.T) {
-	sendMail = func(ctx *jobs.WorkerContext, opts *mail.Options, domain string) error {
+	sendMail = func(ctx *job.WorkerContext, opts *mail.Options, domain string) error {
 		assert.NotNil(t, opts.From)
 		assert.NotNil(t, opts.To)
 		assert.Len(t, opts.To, 1)
@@ -328,7 +328,7 @@ func TestSendMailFrom(t *testing.T) {
 	defer func() {
 		sendMail = doSendMail
 	}()
-	msg, _ := jobs.NewMessage(mail.Options{
+	msg, _ := job.NewMessage(mail.Options{
 		Mode:    "from",
 		Subject: "Up?",
 		To:      []*mail.Address{{Email: "you@you"}},
@@ -340,11 +340,11 @@ func TestSendMailFrom(t *testing.T) {
 		},
 		Locale: "en",
 	})
-	j := jobs.NewJob(inst, &jobs.JobRequest{
+	j := job.NewJob(inst, &job.JobRequest{
 		Message:    msg,
 		WorkerType: "sendmail",
 	})
-	err := SendMail(jobs.NewWorkerContext("123", j, inst))
+	err := SendMail(job.NewWorkerContext("123", j, inst))
 	if assert.Error(t, err) {
 		assert.Equal(t, "yes", err.Error())
 	}

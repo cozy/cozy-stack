@@ -6,11 +6,11 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
@@ -137,7 +137,7 @@ func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
 	if s.Triggers.TrackID != "" {
 		return nil
 	}
-	sched := jobs.System()
+	sched := job.System()
 	for i, rule := range s.Rules {
 		args := rule.TriggerArgs()
 		if args == "" {
@@ -148,7 +148,7 @@ func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
 			RuleIndex: i,
 			DocType:   rule.DocType,
 		}
-		t, err := jobs.NewTrigger(inst, jobs.TriggerInfos{
+		t, err := job.NewTrigger(inst, job.TriggerInfos{
 			Type:       "@event",
 			WorkerType: "share-track",
 			Arguments:  args,
@@ -176,7 +176,7 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 		Errors:    0,
 	}
 	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
-	t, err := jobs.NewTrigger(inst, jobs.TriggerInfos{
+	t, err := job.NewTrigger(inst, job.TriggerInfos{
 		Domain:     inst.ContextualDomain(),
 		Type:       "@event",
 		WorkerType: "share-replicate",
@@ -187,7 +187,7 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 	if err != nil {
 		return err
 	}
-	sched := jobs.System()
+	sched := job.System()
 	if err = sched.AddTrigger(t); err != nil {
 		return err
 	}
@@ -353,7 +353,7 @@ func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
 		Errors:    0,
 	}
 	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
-	t, err := jobs.NewTrigger(inst, jobs.TriggerInfos{
+	t, err := job.NewTrigger(inst, job.TriggerInfos{
 		Domain:     inst.ContextualDomain(),
 		Type:       "@event",
 		WorkerType: "share-upload",
@@ -364,7 +364,7 @@ func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
 	if err != nil {
 		return err
 	}
-	sched := jobs.System()
+	sched := job.System()
 	if err = sched.AddTrigger(t); err != nil {
 		return err
 	}

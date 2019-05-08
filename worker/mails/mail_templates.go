@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	text "text/template"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/i18n"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 )
@@ -30,7 +30,7 @@ func initMailTemplates() {
 
 // RenderMail returns a rendered mail for the given template name with the
 // specified locale, recipient name and template data values.
-func RenderMail(ctx *jobs.WorkerContext, name, layout, locale, recipientName string, templateValues map[string]interface{}) (string, []*mail.Part, error) {
+func RenderMail(ctx *job.WorkerContext, name, layout, locale, recipientName string, templateValues map[string]interface{}) (string, []*mail.Part, error) {
 	return mailTemplater.Execute(ctx, name, layout, locale, recipientName, templateValues)
 }
 
@@ -47,7 +47,7 @@ type subjectEntry struct {
 // Execute will execute the HTML and text templates for the template with the
 // specified name. It returns the mail parts that should be added to the sent
 // mail.
-func (m MailTemplater) Execute(ctx *jobs.WorkerContext, name, layout, locale string, recipientName string, data map[string]interface{}) (string, []*mail.Part, error) {
+func (m MailTemplater) Execute(ctx *job.WorkerContext, name, layout, locale string, recipientName string, data map[string]interface{}) (string, []*mail.Part, error) {
 	entry, ok := m[name]
 	if !ok {
 		err := fmt.Errorf("Could not find email named %q", name)
@@ -105,7 +105,7 @@ func buildText(name, context, locale string, data map[string]interface{}) (strin
 	return buf.String(), nil
 }
 
-func buildHTML(name string, layout string, ctx *jobs.WorkerContext, context, locale string, data map[string]interface{}) (string, error) {
+func buildHTML(name string, layout string, ctx *job.WorkerContext, context, locale string, data map[string]interface{}) (string, error) {
 	buf := new(bytes.Buffer)
 	b, err := loadTemplate("/mails/"+name+".mjml", context)
 	if err != nil {

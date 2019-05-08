@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/mail"
 )
 
 func init() {
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "export",
 		Concurrency:  4,
 		MaxExecCount: 1,
@@ -30,7 +30,7 @@ type ExportOptions struct {
 
 // ExportWorker is the worker responsible for creating an export of the
 // instance.
-func ExportWorker(c *jobs.WorkerContext) error {
+func ExportWorker(c *job.WorkerContext) error {
 	var opts ExportOptions
 	if err := c.UnmarshalMessage(&opts); err != nil {
 		return err
@@ -57,12 +57,12 @@ func ExportWorker(c *jobs.WorkerContext) error {
 		},
 	}
 
-	msg, err := jobs.NewMessage(&mail)
+	msg, err := job.NewMessage(&mail)
 	if err != nil {
 		return err
 	}
 
-	_, err = jobs.System().PushJob(c.Instance, &jobs.JobRequest{
+	_, err = job.System().PushJob(c.Instance, &job.JobRequest{
 		WorkerType: "sendmail",
 		Message:    msg,
 	})

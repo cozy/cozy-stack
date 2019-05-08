@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/cozy/afero"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
@@ -375,9 +375,9 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 		created = append(created, newService)
 	}
 
-	sched := jobs.System()
+	sched := job.System()
 	for _, service := range deleted {
-		if err := sched.DeleteTrigger(db, service.TriggerID); err != nil && err != jobs.ErrNotFoundTrigger {
+		if err := sched.DeleteTrigger(db, service.TriggerID); err != nil && err != job.ErrNotFoundTrigger {
 			return err
 		}
 	}
@@ -396,7 +396,7 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 			"slug": slug,
 			"name": service.name,
 		}
-		trigger, err := jobs.NewTrigger(db, jobs.TriggerInfos{
+		trigger, err := job.NewTrigger(db, job.TriggerInfos{
 			Type:       triggerType,
 			WorkerType: "service",
 			Debounce:   service.Debounce,

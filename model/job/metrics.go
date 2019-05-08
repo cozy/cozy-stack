@@ -1,4 +1,4 @@
-package jobs
+package job
 
 import "github.com/prometheus/client_golang/prometheus"
 

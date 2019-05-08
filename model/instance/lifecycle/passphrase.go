@@ -6,10 +6,10 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 )
 
 func registerPassphrase(inst *instance.Instance, pass, tok []byte) error {
@@ -89,7 +89,7 @@ type Mail struct {
 
 // SendMail send a mail to the instance owner.
 func SendMail(inst *instance.Instance, m *Mail) error {
-	msg, err := jobs.NewMessage(map[string]interface{}{
+	msg, err := job.NewMessage(map[string]interface{}{
 		"mode":            "noreply",
 		"template_name":   m.TemplateName,
 		"template_values": m.TemplateValues,
@@ -97,7 +97,7 @@ func SendMail(inst *instance.Instance, m *Mail) error {
 	if err != nil {
 		return err
 	}
-	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
+	_, err = job.System().PushJob(inst, &job.JobRequest{
 		WorkerType: "sendmail",
 		Message:    msg,
 	})

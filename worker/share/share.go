@@ -4,12 +4,12 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/sharing"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 )
 
 func init() {
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "share-track",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
@@ -17,7 +17,7 @@ func init() {
 		WorkerFunc:   WorkerTrack,
 	})
 
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:  "share-replicate",
 		Concurrency: runtime.NumCPU(),
 		// XXX the worker is not idempotent: if it fails, it adds a new job to
@@ -28,7 +28,7 @@ func init() {
 		WorkerFunc:   WorkerReplicate,
 	})
 
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:  "share-upload",
 		Concurrency: runtime.NumCPU(),
 		// XXX the worker is not idempotent: if it fails, it adds a new job to
@@ -42,7 +42,7 @@ func init() {
 
 // WorkerTrack is used to update the io.cozy.shared database when a document
 // that matches a sharing rule is created/updated/remove
-func WorkerTrack(ctx *jobs.WorkerContext) error {
+func WorkerTrack(ctx *job.WorkerContext) error {
 	var msg sharing.TrackMessage
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -58,7 +58,7 @@ func WorkerTrack(ctx *jobs.WorkerContext) error {
 
 // WorkerReplicate is used for the replication of documents to the other
 // members of a sharing.
-func WorkerReplicate(ctx *jobs.WorkerContext) error {
+func WorkerReplicate(ctx *job.WorkerContext) error {
 	var msg sharing.ReplicateMsg
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -76,7 +76,7 @@ func WorkerReplicate(ctx *jobs.WorkerContext) error {
 }
 
 // WorkerUpload is used to upload files for a sharing
-func WorkerUpload(ctx *jobs.WorkerContext) error {
+func WorkerUpload(ctx *job.WorkerContext) error {
 	var msg sharing.UploadMsg
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err

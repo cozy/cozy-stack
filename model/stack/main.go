@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/session"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/config/dynamic"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -92,23 +92,23 @@ security features. Please do not use this binary as your production server.
 		return
 	}
 
-	workersList, err := jobs.GetWorkersList()
+	workersList, err := job.GetWorkersList()
 	if err != nil {
 		return
 	}
 
-	var broker jobs.Broker
-	var schder jobs.Scheduler
+	var broker job.Broker
+	var schder job.Scheduler
 	jobsConfig := config.GetConfig().Jobs
 	if cli := jobsConfig.Client(); cli != nil {
-		broker = jobs.NewRedisBroker(cli)
-		schder = jobs.NewRedisScheduler(cli)
+		broker = job.NewRedisBroker(cli)
+		schder = job.NewRedisScheduler(cli)
 	} else {
-		broker = jobs.NewMemBroker()
-		schder = jobs.NewMemScheduler()
+		broker = job.NewMemBroker()
+		schder = job.NewMemScheduler()
 	}
 
-	if err = jobs.SystemStart(broker, schder, workersList); err != nil {
+	if err = job.SystemStart(broker, schder, workersList); err != nil {
 		return
 	}
 
@@ -134,7 +134,7 @@ security features. Please do not use this binary as your production server.
 
 	// Global shutdowner that composes all the running processes of the stack
 	processes = utils.NewGroupShutdown(
-		jobs.System(),
+		job.System(),
 		sessionSweeper,
 		gopAgent{},
 	)

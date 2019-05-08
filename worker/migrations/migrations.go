@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	"github.com/cozy/swift"
@@ -26,7 +26,7 @@ const versionSuffix = "-version"
 const dirContentType = "directory"
 
 func init() {
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "migrations",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
@@ -42,7 +42,7 @@ type message struct {
 	Cluster int    `json:"cluster"`
 }
 
-func worker(ctx *jobs.WorkerContext) error {
+func worker(ctx *job.WorkerContext) error {
 	var msg message
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -56,7 +56,7 @@ func worker(ctx *jobs.WorkerContext) error {
 	}
 }
 
-func commit(ctx *jobs.WorkerContext, err error) error {
+func commit(ctx *job.WorkerContext, err error) error {
 	if err != nil {
 		return nil
 	}

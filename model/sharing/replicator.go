@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -73,7 +73,7 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 func (s *Sharing) pushJob(inst *instance.Instance, worker string) {
 	inst.Logger().WithField("nspace", "replicator").
 		Debugf("Push a new job for worker %s for sharing %s", worker, s.SID)
-	msg, err := jobs.NewMessage(&ReplicateMsg{
+	msg, err := job.NewMessage(&ReplicateMsg{
 		SharingID: s.SID,
 		Errors:    0,
 	})
@@ -82,7 +82,7 @@ func (s *Sharing) pushJob(inst *instance.Instance, worker string) {
 			Warnf("Error on push job to %s: %s", worker, err)
 		return
 	}
-	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
+	_, err = job.System().PushJob(inst, &job.JobRequest{
 		WorkerType: worker,
 		Message:    msg,
 	})
@@ -103,7 +103,7 @@ func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int
 		inst.Logger().WithField("nspace", "replicator").Warnf("Max retries reached")
 		return
 	}
-	msg, err := jobs.NewMessage(&ReplicateMsg{
+	msg, err := job.NewMessage(&ReplicateMsg{
 		SharingID: s.SID,
 		Errors:    errors,
 	})
@@ -112,7 +112,7 @@ func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int
 			Warnf("Error on retry to %s: %s", worker, err)
 		return
 	}
-	t, err := jobs.NewTrigger(inst, jobs.TriggerInfos{
+	t, err := job.NewTrigger(inst, job.TriggerInfos{
 		Type:       "@in",
 		WorkerType: worker,
 		Arguments:  backoff.String(),
@@ -122,7 +122,7 @@ func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int
 			Warnf("Error on retry to %s: %s", worker, err)
 		return
 	}
-	if err = jobs.System().AddTrigger(t); err != nil {
+	if err = job.System().AddTrigger(t); err != nil {
 		inst.Logger().WithField("nspace", "replicator").
 			Warnf("Error on retry to %s: %s", worker, err)
 	}

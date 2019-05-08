@@ -1,10 +1,10 @@
-package jobs_test
+package job_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/jobs"
+	jobs "github.com/cozy/cozy-stack/model/job"
 	"github.com/stretchr/testify/assert"
 )
 

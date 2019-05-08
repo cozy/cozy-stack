@@ -10,12 +10,12 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -27,16 +27,16 @@ import (
 var inst *instance.Instance
 
 func TestUnknownDomain(t *testing.T) {
-	msg, err := jobs.NewMessage(map[string]interface{}{
+	msg, err := job.NewMessage(map[string]interface{}{
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
 	db := prefixer.NewPrefixer("instance.does.not.exist", "instance.does.not.exist")
-	j := jobs.NewJob(db, &jobs.JobRequest{
+	j := job.NewJob(db, &job.JobRequest{
 		Message:    msg,
 		WorkerType: "konnector",
 	})
-	ctx := jobs.NewWorkerContext("id", j, nil).
+	ctx := job.NewWorkerContext("id", j, nil).
 		WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.Error(t, err)
@@ -44,15 +44,15 @@ func TestUnknownDomain(t *testing.T) {
 }
 
 func TestUnknownApp(t *testing.T) {
-	msg, err := jobs.NewMessage(map[string]interface{}{
+	msg, err := job.NewMessage(map[string]interface{}{
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	j := jobs.NewJob(inst, &jobs.JobRequest{
+	j := job.NewJob(inst, &job.JobRequest{
 		Message:    msg,
 		WorkerType: "konnector",
 	})
-	ctx := jobs.NewWorkerContext("id", j, inst).
+	ctx := job.NewWorkerContext("id", j, inst).
 		WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.Error(t, err)
@@ -78,19 +78,19 @@ func TestBadFileExec(t *testing.T) {
 		return
 	}
 
-	msg, err := jobs.NewMessage(map[string]interface{}{
+	msg, err := job.NewMessage(map[string]interface{}{
 		"konnector":      "my-konnector-1",
 		"folder_to_save": folderToSave,
 	})
 	assert.NoError(t, err)
 
-	j := jobs.NewJob(inst, &jobs.JobRequest{
+	j := job.NewJob(inst, &job.JobRequest{
 		Message:    msg,
 		WorkerType: "konnector",
 	})
 
 	config.GetConfig().Konnectors.Cmd = ""
-	ctx := jobs.NewWorkerContext("id", j, inst).
+	ctx := job.NewWorkerContext("id", j, inst).
 		WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.Error(t, err)
@@ -181,18 +181,18 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 
 	wg.Wait()
 	wg.Add(1)
-	msg, err := jobs.NewMessage(map[string]interface{}{
+	msg, err := job.NewMessage(map[string]interface{}{
 		"konnector": "my-konnector-1",
 	})
 	assert.NoError(t, err)
 
-	j := jobs.NewJob(inst, &jobs.JobRequest{
+	j := job.NewJob(inst, &job.JobRequest{
 		Message:    msg,
 		WorkerType: "konnector",
 	})
 
 	config.GetConfig().Konnectors.Cmd = tmpScript
-	ctx := jobs.NewWorkerContext("id", j, inst).
+	ctx := job.NewWorkerContext("id", j, inst).
 		WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.NoError(t, err)
@@ -275,18 +275,18 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 
 	wg.Wait()
 	wg.Add(1)
-	msg, err := jobs.NewMessage(map[string]interface{}{
+	msg, err := job.NewMessage(map[string]interface{}{
 		"konnector": "my-konnector-1",
 	})
 	assert.NoError(t, err)
 
-	j := jobs.NewJob(inst, &jobs.JobRequest{
+	j := job.NewJob(inst, &job.JobRequest{
 		Message:    msg,
 		WorkerType: "konnector",
 	})
 
 	config.GetConfig().Konnectors.Cmd = tmpScript
-	ctx := jobs.NewWorkerContext("id", j, inst).
+	ctx := job.NewWorkerContext("id", j, inst).
 		WithCookie(&konnectorWorker{})
 	err = worker(ctx)
 	assert.NoError(t, err)

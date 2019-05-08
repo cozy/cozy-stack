@@ -10,10 +10,10 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,7 +31,7 @@ type serviceWorker struct {
 	slug string
 }
 
-func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir string, err error) {
+func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (workDir string, err error) {
 	opts := &ServiceOptions{}
 	if err = ctx.UnmarshalMessage(&opts); err != nil {
 		return
@@ -47,7 +47,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 		i.AppsCopier(consts.WebappType), i.Registries())
 	if err != nil {
 		if err == app.ErrNotFound {
-			err = jobs.ErrBadTrigger{Err: err}
+			err = job.ErrBadTrigger{Err: err}
 		}
 		return
 	}
@@ -72,12 +72,12 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 		}
 	}
 	if !ok {
-		err = jobs.ErrBadTrigger{Err: fmt.Errorf("Service %q was not found", name)}
+		err = job.ErrBadTrigger{Err: fmt.Errorf("Service %q was not found", name)}
 		return
 	}
 	if triggerID, ok := ctx.TriggerID(); ok && service.TriggerID != "" {
 		if triggerID != service.TriggerID {
-			err = jobs.ErrBadTrigger{Err: fmt.Errorf("Trigger %q is orphan", triggerID)}
+			err = job.ErrBadTrigger{Err: fmt.Errorf("Trigger %q is orphan", triggerID)}
 			return
 		}
 	}
@@ -116,7 +116,7 @@ func (w *serviceWorker) Slug() string {
 	return w.slug
 }
 
-func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
+func (w *serviceWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
 	type serviceEvent struct {
 		Doc interface{} `json:"doc"`
 	}
@@ -144,11 +144,11 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Insta
 	return
 }
 
-func (w *serviceWorker) Logger(ctx *jobs.WorkerContext) *logrus.Entry {
+func (w *serviceWorker) Logger(ctx *job.WorkerContext) *logrus.Entry {
 	return ctx.Logger().WithField("slug", w.Slug())
 }
 
-func (w *serviceWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error {
+func (w *serviceWorker) ScanOutput(ctx *job.WorkerContext, i *instance.Instance, line []byte) error {
 	var msg struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
@@ -174,7 +174,7 @@ func (w *serviceWorker) Error(i *instance.Instance, err error) error {
 	return err
 }
 
-func (w *serviceWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
+func (w *serviceWorker) Commit(ctx *job.WorkerContext, errjob error) error {
 	log := w.Logger(ctx)
 	if errjob == nil {
 		log.Info("Service success")

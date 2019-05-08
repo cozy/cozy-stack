@@ -8,9 +8,9 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/mail"
 )
 
@@ -129,7 +129,7 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 		"Description":      description,
 		"SharingLink":      link,
 	}
-	msg, err := jobs.NewMessage(mail.Options{
+	msg, err := job.NewMessage(mail.Options{
 		Mode:           "from",
 		To:             []*mail.Address{addr},
 		TemplateName:   "sharing_request",
@@ -140,7 +140,7 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 	if err != nil {
 		return err
 	}
-	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
+	_, err = job.System().PushJob(inst, &job.JobRequest{
 		WorkerType: "sendmail",
 		Message:    msg,
 	})
@@ -192,7 +192,7 @@ func SendInviteMail(inst *instance.Instance, invite *InviteMsg) error {
 		"Description":      invite.Description,
 		"SharingLink":      invite.Link,
 	}
-	msg, err := jobs.NewMessage(mail.Options{
+	msg, err := job.NewMessage(mail.Options{
 		Mode:           "noreply",
 		TemplateName:   "sharing_request",
 		TemplateValues: mailValues,
@@ -201,7 +201,7 @@ func SendInviteMail(inst *instance.Instance, invite *InviteMsg) error {
 	if err != nil {
 		return err
 	}
-	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
+	_, err = job.System().PushJob(inst, &job.JobRequest{
 		WorkerType: "sendmail",
 		Message:    msg,
 	})

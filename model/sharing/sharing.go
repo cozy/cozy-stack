@@ -8,10 +8,10 @@ import (
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -392,7 +392,7 @@ func (s *Sharing) RemoveTriggers(inst *instance.Instance) error {
 
 func removeSharingTrigger(inst *instance.Instance, triggerID string) error {
 	if triggerID != "" {
-		sched := jobs.System()
+		sched := job.System()
 		if err := sched.DeleteTrigger(inst, triggerID); err != nil {
 			return err
 		}

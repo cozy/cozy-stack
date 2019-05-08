@@ -12,10 +12,10 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification/center"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/sirupsen/logrus"
 
 	fcm "github.com/appleboy/go-fcm"
@@ -32,7 +32,7 @@ var (
 )
 
 func init() {
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "push",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
@@ -93,7 +93,7 @@ func Init() (err error) {
 }
 
 // Worker is the worker that just logs its message (useful for debugging)
-func Worker(ctx *jobs.WorkerContext) error {
+func Worker(ctx *job.WorkerContext) error {
 	var msg center.PushMessage
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -118,7 +118,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 	return nil
 }
 
-func push(ctx *jobs.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
+func push(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
 	switch c.NotificationPlatform {
 	case oauth.PlatformFirebase, "android", "ios":
 		return pushToFirebase(ctx, c, msg)
@@ -131,7 +131,7 @@ func push(ctx *jobs.WorkerContext, c *oauth.Client, msg *center.PushMessage) err
 
 // Firebase Cloud Messaging HTTP Protocol
 // https://firebase.google.com/docs/cloud-messaging/http-server-ref
-func pushToFirebase(ctx *jobs.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
+func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
 	if fcmClient == nil {
 		ctx.Logger().Warn("Could not send android notification: not configured")
 		return nil
@@ -196,7 +196,7 @@ func pushToFirebase(ctx *jobs.WorkerContext, c *oauth.Client, msg *center.PushMe
 	return nil
 }
 
-func pushToAPNS(ctx *jobs.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
+func pushToAPNS(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
 	if iosClient == nil {
 		ctx.Logger().Warn("Could not send iOS notification: not configured")
 		return nil

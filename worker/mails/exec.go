@@ -6,14 +6,14 @@ import (
 	"os"
 
 	"github.com/cozy/afero"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/worker/exec"
 )
 
-func execMjml(ctx *jobs.WorkerContext, template []byte) ([]byte, error) {
+func execMjml(ctx *job.WorkerContext, template []byte) ([]byte, error) {
 	log := ctx.Logger()
 
 	workDir, err := prepareWorkDir()
@@ -67,7 +67,7 @@ func prepareWorkDir() (string, error) {
 	return workDir, err
 }
 
-func prepareCmdEnv(ctx *jobs.WorkerContext) (string, []string) {
+func prepareCmdEnv(ctx *job.WorkerContext) (string, []string) {
 	cmd := config.GetConfig().Konnectors.Cmd
 	env := []string{
 		"COZY_URL=" + ctx.Instance.PageURL("/", nil),

@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
@@ -36,9 +36,9 @@ func devMailsHandler(c echo.Context) error {
 	}
 
 	data := devData(c)
-	j := &jobs.Job{JobID: "1", Domain: data["Domain"].(string)}
+	j := &job.Job{JobID: "1", Domain: data["Domain"].(string)}
 	inst := middlewares.GetInstance(c)
-	ctx := jobs.NewWorkerContext("0", j, inst)
+	ctx := job.NewWorkerContext("0", j, inst)
 	_, parts, err := mails.RenderMail(ctx, name, layout, locale, recipientName, data)
 	if err != nil {
 		return err

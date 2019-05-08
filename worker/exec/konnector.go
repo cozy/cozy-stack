@@ -15,12 +15,12 @@ import (
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/registry"
@@ -91,35 +91,35 @@ func jobHookErrorCheckerKonnector(err error) bool {
 
 // beforeHookKonnector skips jobs from trigger that are failing on certain
 // errors.
-func beforeHookKonnector(job *jobs.Job) (bool, error) {
+func beforeHookKonnector(j *job.Job) (bool, error) {
 	var msg KonnectorMessage
 
-	if err := json.Unmarshal(job.Message, &msg); err == nil {
-		inst, err := lifecycle.GetInstance(job.DomainName())
+	if err := json.Unmarshal(j.Message, &msg); err == nil {
+		inst, err := lifecycle.GetInstance(j.DomainName())
 		if err != nil {
 			return false, err
 		}
 		app, err := registry.GetApplication(msg.Konnector, inst.Registries())
 		if err != nil {
-			job.Logger().Warnf("konnector %q could not get application to fetch maintenance status", msg.Konnector)
+			j.Logger().Warnf("konnector %q could not get application to fetch maintenance status", msg.Konnector)
 		} else if app.MaintenanceActivated {
-			if job.Manual && !app.MaintenanceOptions.FlagDisallowManualExec {
+			if j.Manual && !app.MaintenanceOptions.FlagDisallowManualExec {
 				return true, nil
 			}
-			job.Logger().Infof("konnector %q has not been triggered because of its maintenance status", msg.Konnector)
+			j.Logger().Infof("konnector %q has not been triggered because of its maintenance status", msg.Konnector)
 			return false, nil
 		}
 	}
 
-	if job.Manual || job.TriggerID == "" {
+	if j.Manual || j.TriggerID == "" {
 		return true, nil
 	}
 
-	state, err := jobs.GetTriggerState(job, job.TriggerID)
+	state, err := job.GetTriggerState(j, j.TriggerID)
 	if err != nil {
 		return false, err
 	}
-	if state.Status == jobs.Errored {
+	if state.Status == job.Errored {
 		if strings.HasPrefix(state.LastError, konnErrorLoginFailed) ||
 			strings.HasPrefix(state.LastError, konnErrorUserActionNeeded) {
 			return false, nil
@@ -128,7 +128,7 @@ func beforeHookKonnector(job *jobs.Job) (bool, error) {
 	return true, nil
 }
 
-func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (string, error) {
+func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (string, error) {
 	// Reset the errors from previous runs on retries
 	w.err = nil
 	w.lastErr = nil
@@ -151,7 +151,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	w.man, err = app.GetKonnectorBySlugAndUpdate(i, slug,
 		i.AppsCopier(consts.KonnectorType), i.Registries())
 	if err == app.ErrNotFound {
-		return "", jobs.ErrBadTrigger{Err: err}
+		return "", job.ErrBadTrigger{Err: err}
 	} else if err != nil {
 		return "", err
 	}
@@ -162,7 +162,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 		acc = &account.Account{}
 		err = couchdb.GetDoc(i, consts.Accounts, msg.Account, acc)
 		if couchdb.IsNotFoundError(err) {
-			return "", jobs.ErrBadTrigger{Err: err}
+			return "", job.ErrBadTrigger{Err: err}
 		}
 	}
 
@@ -215,7 +215,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 		fileExecPath := path.Join("/", path.Clean(w.man.OnDeleteAccount))
 		fileExecPath = fileExecPath[1:]
 		if fileExecPath == "" {
-			return "", jobs.ErrAbort
+			return "", job.ErrAbort
 		}
 		workDir = path.Join(workDir, fileExecPath)
 	}
@@ -225,7 +225,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 
 // ensureFolderToSave tries hard to give a folder to the konnector where it can
 // write its files if it needs to do so.
-func (w *konnectorWorker) ensureFolderToSave(ctx *jobs.WorkerContext, inst *instance.Instance, acc *account.Account) error {
+func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *instance.Instance, acc *account.Account) error {
 	fs := inst.VFS()
 	msg := w.msg
 
@@ -446,7 +446,7 @@ func (w *konnectorWorker) Slug() string {
 	return w.slug
 }
 
-func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
+func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
 	var parameters interface{} = w.man.Parameters
 
 	accountTypes, err := account.FindAccountTypesBySlug(w.slug)
@@ -491,11 +491,11 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 	return
 }
 
-func (w *konnectorWorker) Logger(ctx *jobs.WorkerContext) *logrus.Entry {
+func (w *konnectorWorker) Logger(ctx *job.WorkerContext) *logrus.Entry {
 	return ctx.Logger().WithField("slug", w.slug)
 }
 
-func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error {
+func (w *konnectorWorker) ScanOutput(ctx *job.WorkerContext, i *instance.Instance, line []byte) error {
 	var msg struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
@@ -545,7 +545,7 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 	return err
 }
 
-func (w *konnectorWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
+func (w *konnectorWorker) Commit(ctx *job.WorkerContext, errjob error) error {
 	log := w.Logger(ctx)
 	if w.msg != nil {
 		log = log.WithField("account_id", w.msg.Account)

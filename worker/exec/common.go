@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
@@ -21,9 +21,9 @@ import (
 var defaultTimeout = 300 * time.Second
 
 func init() {
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType: "konnector",
-		WorkerStart: func(ctx *jobs.WorkerContext) (*jobs.WorkerContext, error) {
+		WorkerStart: func(ctx *job.WorkerContext) (*job.WorkerContext, error) {
 			return ctx.WithCookie(&konnectorWorker{}), nil
 		},
 		BeforeHook:   beforeHookKonnector,
@@ -35,9 +35,9 @@ func init() {
 		Timeout:      defaultTimeout,
 	})
 
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType: "service",
-		WorkerStart: func(ctx *jobs.WorkerContext) (*jobs.WorkerContext, error) {
+		WorkerStart: func(ctx *job.WorkerContext) (*job.WorkerContext, error) {
 			return ctx.WithCookie(&serviceWorker{}), nil
 		},
 		WorkerFunc:   worker,
@@ -50,15 +50,15 @@ func init() {
 
 type execWorker interface {
 	Slug() string
-	PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir string, err error)
-	PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error)
-	ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error
+	PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (workDir string, err error)
+	PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instance) (cmd string, env []string, err error)
+	ScanOutput(ctx *job.WorkerContext, i *instance.Instance, line []byte) error
 	Error(i *instance.Instance, err error) error
-	Logger(ctx *jobs.WorkerContext) *logrus.Entry
-	Commit(ctx *jobs.WorkerContext, errjob error) error
+	Logger(ctx *job.WorkerContext) *logrus.Entry
+	Commit(ctx *job.WorkerContext, errjob error) error
 }
 
-func worker(ctx *jobs.WorkerContext) (err error) {
+func worker(ctx *job.WorkerContext) (err error) {
 	worker := ctx.Cookie().(execWorker)
 
 	if ctx.Instance == nil {
@@ -144,11 +144,11 @@ func worker(ctx *jobs.WorkerContext) (err error) {
 	return worker.Error(ctx.Instance, err)
 }
 
-func commit(ctx *jobs.WorkerContext, errjob error) error {
+func commit(ctx *job.WorkerContext, errjob error) error {
 	return ctx.Cookie().(execWorker).Commit(ctx, errjob)
 }
 
-func ctxToTimeLimit(ctx *jobs.WorkerContext) string {
+func ctxToTimeLimit(ctx *job.WorkerContext) string {
 	var limit float64
 	if deadline, ok := ctx.Deadline(); ok {
 		limit = time.Until(deadline).Seconds()

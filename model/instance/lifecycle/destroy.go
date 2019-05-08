@@ -3,11 +3,11 @@ package lifecycle
 import (
 	"time"
 
+	job "github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
@@ -48,7 +48,7 @@ func DestroyWithoutHooks(domain string) error {
 		return err
 	}
 
-	sched := jobs.System()
+	sched := job.System()
 	triggers, err := sched.GetAllTriggers(inst)
 	if err == nil {
 		for _, t := range triggers {
@@ -104,8 +104,8 @@ func deleteAccounts(inst *instance.Instance) {
 			if ok {
 				deleted, _ := j.M["account_deleted"].(bool)
 				stateStr, _ := j.M["state"].(string)
-				state := jobs.State(stateStr)
-				if deleted && (state == jobs.Done || state == jobs.Errored) {
+				state := job.State(stateStr)
+				if deleted && (state == job.Done || state == job.Errored) {
 					accountsCount--
 					if accountsCount == 0 {
 						return

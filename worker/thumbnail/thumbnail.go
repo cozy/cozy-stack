@@ -10,9 +10,9 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -37,7 +37,7 @@ var FormatsNames = []string{
 }
 
 func init() {
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "thumbnail",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
@@ -45,7 +45,7 @@ func init() {
 		WorkerFunc:   Worker,
 	})
 
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "thumbnailck",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
@@ -55,7 +55,7 @@ func init() {
 }
 
 // Worker is a worker that creates thumbnails for photos and images.
-func Worker(ctx *jobs.WorkerContext) error {
+func Worker(ctx *job.WorkerContext) error {
 	var img imageEvent
 	if err := ctx.UnmarshalEvent(&img); err != nil {
 		return err
@@ -103,7 +103,7 @@ type thumbnailMsg struct {
 
 // WorkerCheck is a worker function that checks all the images to generate
 // missing thumbnails.
-func WorkerCheck(ctx *jobs.WorkerContext) error {
+func WorkerCheck(ctx *job.WorkerContext) error {
 	var msg thumbnailMsg
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
@@ -177,7 +177,7 @@ func calculateMetadata(fs vfs.VFS, img *vfs.FileDoc) (*vfs.Metadata, error) {
 	return &meta, nil
 }
 
-func generateThumbnails(ctx *jobs.WorkerContext, img *vfs.FileDoc) error {
+func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
 	// Do not try to generate thumbnails for images that weight more than 100MB
 	// (or 5MB for PSDs)
 	var limit int64 = 100 * 1024 * 1024
@@ -218,7 +218,7 @@ func generateThumbnails(ctx *jobs.WorkerContext, img *vfs.FileDoc) error {
 	return err
 }
 
-func recGenerateThub(ctx *jobs.WorkerContext, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string, env []string, noOuput bool) (r io.Reader, err error) {
+func recGenerateThub(ctx *job.WorkerContext, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string, env []string, noOuput bool) (r io.Reader, err error) {
 	defer func() {
 		if inCloser, ok := in.(io.Closer); ok {
 			if errc := inCloser.Close(); errc != nil && err == nil {
@@ -259,7 +259,7 @@ func recGenerateThub(ctx *jobs.WorkerContext, in io.Reader, fs vfs.Thumbser, img
 // We are using some complicated ImageMagick options to optimize the speed and
 // quality of the generated thumbnails.
 // See https://www.smashingmagazine.com/2015/06/efficient-image-resizing-with-imagemagick/
-func generateThumb(ctx *jobs.WorkerContext, in io.Reader, out io.Writer, fileID string, format string, env []string) error {
+func generateThumb(ctx *job.WorkerContext, in io.Reader, out io.Writer, fileID string, format string, env []string) error {
 	convertCmd := config.GetConfig().Jobs.ImageMagickConvertCmd
 	if convertCmd == "" {
 		convertCmd = "convert"

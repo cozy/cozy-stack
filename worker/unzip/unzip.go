@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
@@ -20,7 +20,7 @@ type zipMessage struct {
 }
 
 func init() {
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "unzip",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
@@ -30,7 +30,7 @@ func init() {
 }
 
 // Worker is a worker that unzip a file.
-func Worker(ctx *jobs.WorkerContext) error {
+func Worker(ctx *job.WorkerContext) error {
 	msg := &zipMessage{}
 	if err := ctx.UnmarshalMessage(msg); err != nil {
 		return err
