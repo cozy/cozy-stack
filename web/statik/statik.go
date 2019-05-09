@@ -54935,17 +54935,17 @@ AAA=
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/archiver.mjml
-Size: 924
+Size: 906
 
-H4sIAAAAAAAC/6ySQWvbQBCFz/GvWObQm6w6lFASy9DeCm0pNPey2h1L4+7OitVs
-YkfovxdZVpCb1FDITYtm3vveY7rO4pYYFZjAgizQ94u132XkdYXK7zLjdNsW0+/M
-6VghKGLGmDXaWuKqgPegHslKXcDqw8dmD6pGqmoZnqvh2UZTQC3StLd5bsMjGxeS
-XZrwdDh9mTw1LmibW/TIusL4y2tyy4Yr2KzziWhzhBPcy4xNSByqidCjpeRhs7ha
-k6/+x5pM4GwYGV5H5+dUN7NIN6BaOTgs4AGjkNEu044qvm1TeQf55h2XbXO3uOo6
-UfBNk1OfoqnpAdXPVO7QjB3npxyvJnqZ5aXYF5YY1ArU8kcqHZnv2mPfr8uo8gvz
-129j/jmJBFbErcRkhAK/oluOQ3XEbQFdtzwtfyX+3fegjqUV4HArMLNvInkdD9P2
-RLMfL+8SzeD8jDGuXwzYeu3cueJ9DKl0qO7nUn81dca9DYMQPWEBq+vh1P/Vo6qp
-qt1wQqPjeRtzo65Dtn2/+BMAAP//OcMCrZwDAAA=
+H4sIAAAAAAAC/6ySQWvbQBCFz/GvWObQmywcSiiJZWhvhbYUmntZrcbSuLO7Ync2
+sSP034ssK8iNayj0pkUz73vvMV1X4ZYcKjDeCTqBvl+s7S4jq2tUdpcZ1jEW0++M
+dagR1DNV0hSwev+h3YNqkOpGhudqeMZgCmhE2nif55V/doZ9qpbGvxxOXyZPLXtd
+5RVadLrG8NNq4mXratis84m/OVoR3MvMiZAwqsmPxYqShc3iZk22/hc0Ge+yYWR4
+Hcmvqe5mke5ARTkwFvCEQchozjRT7e5jKh8g37xzZWwfFjddJwq+amL1MZiGnlD9
+SOUOzdhofspxMdHbLG/FPjsJXq1ALb+nksl80xb7fl0GlV+Zv/0/8E9JxDtFLkpI
+Rsi7C7rlONQE3BbQdcvT8hdyv/oe1LG0Ahi3AjN8G8jqcJi2Jzf78c6uuRnIrzbG
+9asBo9XM54qPwaeSUT3Opf5o6sz31g9C9IIFrG6HU/9bj6qhuuHhhEbieRtzUNeh
+q/p+8TsAAP//DK22kIoDAAA=
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /mails/archiver.text
