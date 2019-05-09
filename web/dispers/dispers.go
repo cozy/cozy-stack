@@ -146,6 +146,30 @@ func getQueriesAndTokens(c echo.Context) error {
 	})
 }
 
+func launchAggr(c echo.Context) error {
+
+	var inputDA dispers.InputDA
+
+	if err := json.NewDecoder(c.Request().Body).Decode(&inputDA); err != nil {
+		return c.JSON(http.StatusOK, echo.Map{"outcome": "error",
+																					"message": err})
+	}
+
+	myDA := dispers.NewDataAggregation(inputDA)
+
+	return c.JSON(http.StatusCreated, echo.Map{
+		"ok":   true,
+		"id": 	myDA.DocID,
+		"metadata" : "blablabla",
+	})
+}
+
+func getStateAggr(c echo.Context) error {
+	// TODO : Prévoir sûrement un token pour mettre des droits d'accès
+	id := c.Param("id")
+	return c.JSON(http.StatusOK, dispers.GetStateOrGetResult(id))
+}
+
 // Routes sets the routing for the dispers service
 func Routes(router *echo.Group) {
 	// API's Index
@@ -169,8 +193,8 @@ func Routes(router *echo.Group) {
 
 	router.POST("/target/gettokens", getQueriesAndTokens)
 
-	//router.GET("/dataaggregator/aggregate/:id", getStateAggr)
-	//router.POST("/dataaggregator/aggregate", launchAggr)
+	router.GET("/dataaggregator/aggregate/:id", getStateAggr)
+	router.POST("/dataaggregator/aggregate", launchAggr)
 
 
 }

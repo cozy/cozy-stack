@@ -182,10 +182,12 @@ func GetTrainingState(id string) echo.Map {
   fetched := &queryDoc{}
   err := couchdb.GetDoc(prefixer.ConductorPrefixer, "io.cozy.ml", id, fetched)
   if err != nil {
-      return echo.Map{"training" : fetched.MyTraining,
-                      "metadata" : fetched.MyMetada}
+    return echo.Map{"outcome": "error",
+                  "message": err }
   }
-  return nil
+  return echo.Map{"outcome": "ok",
+                  "training" : fetched.MyTraining,
+                  "metadata" : fetched.MyMetada}
 }
 
 func (c *conductor) DecrypteConcept() utils.Metadata { return nil }
