@@ -1,5 +1,5 @@
 {{define "content"}}
-<mj-image mj-class="content-large" inner-padding="0" width="148px" height="141px" src="https://downcloud.cozycloud.cc/upload/demenager_mail.png"></mj-image>
+<mj-image mj-class="content-large" width="148px" height="141px" src="https://downcloud.cozycloud.cc/upload/demenager_mail.png"></mj-image>
 <mj-text mj-class="title content-medium">
 	<img src="https://downcloud.cozycloud.cc/upload/icon-download.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
 	{{t "Mail Archive Subject"}}
