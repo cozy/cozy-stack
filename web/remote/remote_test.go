@@ -7,10 +7,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 )

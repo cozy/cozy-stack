@@ -7,27 +7,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 	"github.com/justincampbell/bigduration"
-)
-
-// exports all constants from pkg/permissions to avoid double imports
-var (
-	ALL    = permissions.ALL
-	GET    = permissions.GET
-	PUT    = permissions.PUT
-	POST   = permissions.POST
-	PATCH  = permissions.PATCH
-	DELETE = permissions.DELETE
 )
 
 // ErrPatchCodeOrSet is returned when an attempt is made to patch both
@@ -44,7 +34,7 @@ const ContextClaims = "token_claims"
 // APIPermission is the struct that will be used to serialized a permission to
 // JSON-API
 type APIPermission struct {
-	*permissions.Permission
+	*permission.Permission
 }
 
 // MarshalJSON implements jsonapi.Doc
@@ -68,7 +58,7 @@ func (p *APIPermission) Links() *jsonapi.LinksList {
 	return links
 }
 
-type getPermsFunc func(db prefixer.Prefixer, id string) (*permissions.Permission, error)
+type getPermsFunc func(db prefixer.Prefixer, id string) (*permission.Permission, error)
 
 func displayPermissions(c echo.Context) error {
 	doc, err := middlewares.GetPermission(c)
@@ -101,7 +91,7 @@ func createPermission(c echo.Context) error {
 		}
 	}
 
-	var subdoc permissions.Permission
+	var subdoc permission.Permission
 	if _, err = jsonapi.Bind(c.Request().Body, &subdoc); err != nil {
 		return err
 	}
@@ -136,7 +126,7 @@ func createPermission(c echo.Context) error {
 		}
 	}
 
-	pdoc, err := permissions.CreateShareSet(instance, parent, sourceID, codes, shortcodes, subdoc.Permissions, expiresAt)
+	pdoc, err := permission.CreateShareSet(instance, parent, sourceID, codes, shortcodes, subdoc.Permissions, expiresAt)
 	if err != nil {
 		return err
 	}
@@ -171,7 +161,7 @@ func listPermissionsByDoctype(c echo.Context, route, permType string) error {
 		return err
 	}
 
-	perms, err := permissions.GetPermissionsByDoctype(ins, permType, doctype, cursor)
+	perms, err := permission.GetPermissionsByDoctype(ins, permType, doctype, cursor)
 	if err != nil {
 		return err
 	}
@@ -195,13 +185,13 @@ func listPermissionsByDoctype(c echo.Context, route, permType string) error {
 }
 
 func listByLinkPermissionsByDoctype(c echo.Context) error {
-	return listPermissionsByDoctype(c, "shared-by-link", permissions.TypeShareByLink)
+	return listPermissionsByDoctype(c, "shared-by-link", permission.TypeShareByLink)
 }
 
 type refAndVerb struct {
-	ID      string               `json:"id"`
-	DocType string               `json:"type"`
-	Verbs   *permissions.VerbSet `json:"verbs"`
+	ID      string              `json:"id"`
+	DocType string              `json:"type"`
+	Verbs   *permission.VerbSet `json:"verbs"`
 }
 
 func listPermissions(c echo.Context) error {
@@ -222,7 +212,7 @@ func listPermissions(c echo.Context) error {
 
 	var out []refAndVerb
 	for doctype, idSlice := range ids {
-		result, err2 := permissions.GetPermissionsForIDs(instance, doctype, idSlice)
+		result, err2 := permission.GetPermissionsForIDs(instance, doctype, idSlice)
 		if err2 != nil {
 			return err2
 		}
@@ -252,7 +242,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 			return err
 		}
 
-		var patch permissions.Permission
+		var patch permission.Permission
 		if _, err = jsonapi.Bind(c.Request().Body, &patch); err != nil {
 			return err
 		}
@@ -271,7 +261,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 
 		if patchCodes {
 			if !current.ParentOf(toPatch) {
-				return permissions.ErrNotParent
+				return permission.ErrNotParent
 			}
 			toPatch.PatchCodes(patch.Codes)
 		}
@@ -283,7 +273,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 				} else if current.Permissions.RuleInSubset(r) {
 					toPatch.AddRules(r)
 				} else {
-					return permissions.ErrNotSubset
+					return permission.ErrNotSubset
 				}
 			}
 		}
@@ -304,7 +294,7 @@ func revokePermission(c echo.Context) error {
 		return err
 	}
 
-	toRevoke, err := permissions.GetByID(instance, c.Param("permdocid"))
+	toRevoke, err := permission.GetByID(instance, c.Param("permdocid"))
 	if err != nil {
 		return err
 	}
@@ -324,7 +314,7 @@ func revokePermission(c echo.Context) error {
 	}
 
 	if !current.ParentOf(toRevoke) {
-		return permissions.ErrNotParent
+		return permission.ErrNotParent
 	}
 
 	err = toRevoke.Revoke(instance)
@@ -341,11 +331,11 @@ func Routes(router *echo.Group) {
 	router.POST("", createPermission)
 	router.GET("/self", displayPermissions)
 	router.POST("/exists", listPermissions)
-	router.PATCH("/:permdocid", patchPermission(permissions.GetByID, "permdocid"))
+	router.PATCH("/:permdocid", patchPermission(permission.GetByID, "permdocid"))
 	router.DELETE("/:permdocid", revokePermission)
 
-	router.PATCH("/apps/:slug", patchPermission(permissions.GetForWebapp, "slug"))
-	router.PATCH("/konnectors/:slug", patchPermission(permissions.GetForKonnector, "slug"))
+	router.PATCH("/apps/:slug", patchPermission(permission.GetForWebapp, "slug"))
+	router.PATCH("/konnectors/:slug", patchPermission(permission.GetForKonnector, "slug"))
 
 	router.GET("/doctype/:doctype/shared-by-link", listByLinkPermissionsByDoctype)
 

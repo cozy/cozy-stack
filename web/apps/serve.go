@@ -11,15 +11,15 @@ import (
 	"path"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
-	"github.com/cozy/cozy-stack/pkg/apps/appfs"
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/intent"
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/intents"
-	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	statikfs "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -50,48 +50,48 @@ func Serve(c echo.Context) error {
 		}
 	}
 
-	app, err := apps.GetWebappBySlug(i, slug)
+	webapp, err := app.GetWebappBySlug(i, slug)
 	if err != nil {
 		// Used for the "collect" => "home" renaming
-		if err == apps.ErrNotFound && slug == "collect" {
+		if err == app.ErrNotFound && slug == "collect" {
 			return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
 		}
 		// Used for the deprecated "onboarding" app
-		if err == apps.ErrNotFound && slug == "onboarding" {
+		if err == app.ErrNotFound && slug == "onboarding" {
 			return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
 		}
 		return err
 	}
 
-	route, file := app.FindRoute(path.Clean(c.Request().URL.Path))
+	route, file := webapp.FindRoute(path.Clean(c.Request().URL.Path))
 
-	if app.FromAppsDir {
+	if webapp.FromAppsDir {
 		// Save permissions in couchdb before loading an index page
-		if file == "" && app.Permissions() != nil {
-			err := permissions.ForceWebapp(i, app.Slug(), app.Permissions())
+		if file == "" && webapp.Permissions() != nil {
+			err := permission.ForceWebapp(i, webapp.Slug(), webapp.Permissions())
 			if err != nil {
 				return err
 			}
 		}
 
-		fs := apps.FSForAppDir(slug)
+		fs := app.FSForAppDir(slug)
 		f := appfs.NewAferoFileServer(fs, func(_, _, _, file string) string {
 			return path.Join("/", file)
 		})
-		return ServeAppFile(c, i, f, app)
+		return ServeAppFile(c, i, f, webapp)
 	}
 
 	if file == "" || file == route.Index {
-		app = apps.DoLazyUpdate(i, app, i.AppsCopier(consts.WebappType), i.Registries()).(*apps.WebappManifest)
+		webapp = app.DoLazyUpdate(i, webapp, i.AppsCopier(consts.WebappType), i.Registries()).(*app.WebappManifest)
 	}
 
-	switch app.State() {
-	case apps.Installed:
+	switch webapp.State() {
+	case app.Installed:
 		return c.Redirect(http.StatusFound, i.PageURL("/auth/authorize/app", url.Values{
 			"slug": {slug},
 		}))
-	case apps.Ready:
-		return ServeAppFile(c, i, i.AppsFileServer(), app)
+	case app.Ready:
+		return ServeAppFile(c, i, i.AppsFileServer(), webapp)
 	default:
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
@@ -100,7 +100,7 @@ func Serve(c echo.Context) error {
 // handleIntent will allow iframes from another app if the current app is
 // opened as an intent
 func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
-	intent := &intents.Intent{}
+	intent := &intent.Intent{}
 	if err := couchdb.GetDoc(i, consts.Intents, intentID, intent); err != nil {
 		return
 	}
@@ -122,16 +122,16 @@ func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
 }
 
 // ServeAppFile will serve the requested file using the specified application
-// manifest and apps.FileServer context.
+// manifest and appfs.FileServer context.
 //
 // It can be used to serve file application in another context than the VFS,
 // for instance for tests or development purposes where we want to serve an
 // application that is not installed on the user's instance. However this
 // procedure should not be used for standard applications, use the Serve method
 // for that.
-func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, app *apps.WebappManifest) error {
-	slug := app.Slug()
-	route, file := app.FindRoute(path.Clean(c.Request().URL.Path))
+func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, webapp *app.WebappManifest) error {
+	slug := webapp.Slug()
+	route, file := webapp.FindRoute(path.Clean(c.Request().URL.Path))
 	if route.NotFound() {
 		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 	}
@@ -161,8 +161,8 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, app
 		return c.Redirect(http.StatusFound, i.PageURL("/auth/login", params))
 	}
 
-	version := app.Version()
-	shasum := app.Checksum()
+	version := webapp.Version()
+	shasum := webapp.Checksum()
 
 	if file != route.Index {
 		// If file is not the index, it is considered an asset of the application
@@ -222,7 +222,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, app
 
 	var token string
 	if isLoggedIn {
-		token = i.BuildAppToken(app.Slug(), session.ID())
+		token = i.BuildAppToken(webapp.Slug(), session.ID())
 	} else {
 		token = c.QueryParam("sharecode")
 	}
@@ -244,11 +244,11 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, app
 		"Domain":        i.ContextualDomain(),
 		"ContextName":   i.ContextName,
 		"Locale":        i.Locale,
-		"AppSlug":       app.Slug(),
-		"AppName":       app.NameLocalized(i.Locale),
-		"AppEditor":     app.Editor,
-		"AppNamePrefix": app.NamePrefix,
-		"IconPath":      app.Icon,
+		"AppSlug":       webapp.Slug(),
+		"AppName":       webapp.NameLocalized(i.Locale),
+		"AppEditor":     webapp.Editor,
+		"AppNamePrefix": webapp.NamePrefix,
+		"IconPath":      webapp.Icon,
 		"CozyBar":       cozybar(i, isLoggedIn),
 		"CozyClientJS":  cozyclientjs(i),
 		"ThemeCSS":      middlewares.ThemeCSS(i),
@@ -261,10 +261,10 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug st
 	u := *(c.Request().URL)
 	u.Scheme = i.Scheme()
 	u.Host = c.Request().Host
-	if code := sessions.FindCode(value, u.Host); code != nil {
-		session, err := sessions.Get(i, code.SessionID)
+	if code := session.FindCode(value, u.Host); code != nil {
+		sess, err := session.Get(i, code.SessionID)
 		if err == nil {
-			cookie, err := session.ToAppCookie(u.Host, slug)
+			cookie, err := sess.ToAppCookie(u.Host, slug)
 			if err == nil {
 				c.SetCookie(cookie)
 			}
@@ -278,7 +278,7 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug st
 
 func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
 	c.SetCookie(&http.Cookie{
-		Name:   sessions.SessionCookieName,
+		Name:   session.SessionCookieName,
 		Value:  "",
 		MaxAge: -1,
 		Path:   "/",

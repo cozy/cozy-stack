@@ -15,19 +15,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/limits"
-	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 
-	_ "github.com/cozy/cozy-stack/pkg/workers/thumbnail"
+	_ "github.com/cozy/cozy-stack/worker/thumbnail"
 )
 
 var ts *httptest.Server
@@ -1742,18 +1742,18 @@ func TestGetFileByPublicLink(t *testing.T) {
 	assert.True(t, ok)
 
 	// Generating a new token
-	publicToken, err = testInstance.MakeJWT(permissions.ShareAudience, "email", "io.cozy.files", "", time.Now())
+	publicToken, err = testInstance.MakeJWT(consts.ShareAudience, "email", "io.cozy.files", "", time.Now())
 	assert.NoError(t, err)
 
 	expires := time.Now().Add(2 * time.Minute)
-	rules := permissions.Set{
-		permissions.Rule{
+	rules := permission.Set{
+		permission.Rule{
 			Type:   "io.cozy.files",
-			Verbs:  permissions.Verbs(permissions.GET),
+			Verbs:  permission.Verbs(permission.GET),
 			Values: []string{fileID},
 		},
 	}
-	_, err = permissions.CreateShareSet(testInstance, &permissions.Permission{Type: "app", Permissions: rules}, "", map[string]string{"email": publicToken}, nil, rules, &expires)
+	_, err = permission.CreateShareSet(testInstance, &permission.Permission{Type: "app", Permissions: rules}, "", map[string]string{"email": publicToken}, nil, rules, &expires)
 	assert.NoError(t, err)
 
 	req, err := http.NewRequest("GET", ts.URL+"/files/"+fileID, nil)

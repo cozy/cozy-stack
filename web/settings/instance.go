@@ -6,14 +6,13 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -53,7 +52,7 @@ func getInstance(c echo.Context) error {
 	doc.M["uuid"] = inst.UUID
 	doc.M["context"] = inst.ContextName
 
-	if err = middlewares.Allow(c, permissions.GET, doc); err != nil {
+	if err = middlewares.Allow(c, permission.GET, doc); err != nil {
 		return err
 	}
 
@@ -73,12 +72,12 @@ func updateInstance(c echo.Context) error {
 	doc.SetID(consts.InstanceSettingsID)
 	doc.SetRev(obj.Meta.Rev)
 
-	if err = middlewares.Allow(c, webpermissions.PUT, doc); err != nil {
+	if err = middlewares.Allow(c, permission.PUT, doc); err != nil {
 		return err
 	}
 
 	pdoc, err := middlewares.GetPermission(c)
-	if err != nil || pdoc.Type != permissions.TypeCLI {
+	if err != nil || pdoc.Type != permission.TypeCLI {
 		delete(doc.M, "auth_mode")
 		delete(doc.M, "tos")
 		delete(doc.M, "tos_latest")
@@ -110,7 +109,7 @@ func updateInstanceTOS(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if pdoc.Type != permissions.TypeOauth && pdoc.Type != permissions.TypeCLI {
+	if pdoc.Type != permission.TypeOauth && pdoc.Type != permission.TypeCLI {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
@@ -124,7 +123,7 @@ func updateInstanceTOS(c echo.Context) error {
 func updateInstanceAuthMode(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	if err := middlewares.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.PUT, consts.Settings); err != nil {
 		return err
 	}
 

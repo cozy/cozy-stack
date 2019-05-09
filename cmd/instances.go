@@ -19,10 +19,10 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )
@@ -658,7 +658,7 @@ var cliTokenInstanceCmd = &cobra.Command{
 		token, err := c.GetToken(&client.TokenOptions{
 			Domain:   args[0],
 			Scope:    args[1:],
-			Audience: "cli",
+			Audience: consts.CLIAudience,
 		})
 		if err != nil {
 			return err
@@ -683,7 +683,7 @@ var oauthTokenInstanceCmd = &cobra.Command{
 		token, err := c.GetToken(&client.TokenOptions{
 			Domain:   args[0],
 			Subject:  args[1],
-			Audience: "access-token",
+			Audience: consts.AccessTokenAudience,
 			Scope:    args[2:],
 			Expire:   &flagExpire,
 		})
@@ -710,7 +710,7 @@ var oauthRefreshTokenInstanceCmd = &cobra.Command{
 		token, err := c.GetToken(&client.TokenOptions{
 			Domain:   args[0],
 			Subject:  args[1],
-			Audience: "refresh-token",
+			Audience: consts.RefreshTokenAudience,
 			Scope:    args[2:],
 		})
 		if err != nil {
@@ -913,7 +913,7 @@ var instanceAppVersionCmd = &cobra.Command{
 		version := args[1]
 
 		var instancesAppVersion []string
-		var doc apps.WebappManifest
+		var doc app.WebappManifest
 
 		for _, instance := range instances {
 			err := couchdb.GetDoc(instance, consts.Apps, consts.Apps+"/"+appSlug, &doc)

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/gorilla/websocket"

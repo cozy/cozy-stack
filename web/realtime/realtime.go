@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -131,7 +131,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 	defer close(errc)
 
 	var err error
-	var pdoc *permissions.Permission
+	var pdoc *permission.Permission
 
 	if withAuthentication {
 		var auth map[string]string
@@ -174,7 +174,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 		// XXX: no permissions are required for io.cozy.sharings.initial-sync
 		if withAuthentication &&
 			cmd.Payload.Type != consts.SharingsInitialSync &&
-			!pdoc.Permissions.AllowWholeType(permissions.GET, cmd.Payload.Type) {
+			!pdoc.Permissions.AllowWholeType(permission.GET, cmd.Payload.Type) {
 			sendErr(ctx, errc, forbidden(cmd))
 			continue
 		}

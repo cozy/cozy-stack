@@ -13,23 +13,23 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/contact"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
-	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	webperms "github.com/cozy/cozy-stack/web/permissions"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/echo"
@@ -42,7 +42,7 @@ const iocozytests = "io.cozy.tests"
 var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
-var bobContact, charlieContact, daveContact, edwardContact *contacts.Contact
+var bobContact, charlieContact, daveContact, edwardContact *contact.Contact
 var sharingID, state, aliceAccessToken string
 
 // Things that live on Bob's Cozy
@@ -105,7 +105,7 @@ func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
 }
 
 func assertInvitationMailWasSent(t *testing.T) string {
-	var jobs []jobs.Job
+	var jobs []job.Job
 	couchReq := &couchdb.FindRequest{
 		UseIndex: "by-worker-and-state",
 		Selector: mango.And(
@@ -714,7 +714,7 @@ func TestRevokedSharingWithPreview(t *testing.T) {
 	assert.NoError(t, err)
 
 	sharingDoc.AddDelegatedContact(aliceInstance, newMemberMail, "", true)
-	perms, err := permissions.GetForSharePreview(aliceInstance, sharingID)
+	perms, err := permission.GetForSharePreview(aliceInstance, sharingID)
 	assert.NoError(t, err)
 	fooShareCode, err := aliceInstance.CreateShareCode(newMemberMail)
 	assert.NoError(t, err)
@@ -881,7 +881,7 @@ func TestRevokeSharing(t *testing.T) {
 	cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[1])
 	assert.NoError(t, err)
 	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
-	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID, permissions.ALL)
+	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID, permission.ALL)
 	assert.NoError(t, err)
 	s.Credentials[0].AccessToken = token
 	s.Members[1].Status = sharing.MemberStatusReady
@@ -963,7 +963,7 @@ func TestRevokeRecipient(t *testing.T) {
 	cli, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[1])
 	assert.NoError(t, err)
 	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
-	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID, permissions.ALL)
+	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID, permission.ALL)
 	assert.NoError(t, err)
 	s.Credentials[0].AccessToken = token
 	s.Members[1].Status = sharing.MemberStatusReady
@@ -976,7 +976,7 @@ func TestRevokeRecipient(t *testing.T) {
 	})
 	clientC, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[2])
 	assert.NoError(t, err)
-	tokenC, err := sharing.CreateAccessToken(aliceInstance, clientC, s.SID, permissions.ALL)
+	tokenC, err := sharing.CreateAccessToken(aliceInstance, clientC, s.SID, permission.ALL)
 	assert.NoError(t, err)
 	s.Credentials = append(s.Credentials, sharing.Credentials{
 		Client:      sharing.ConvertOAuthClient(clientC),
@@ -1026,7 +1026,7 @@ func TestRevocationFromRecipient(t *testing.T) {
 	assert.NoError(t, err)
 	s.Credentials[0].InboundClientID = cli.ClientID
 	s.Credentials[0].Client = sharing.ConvertOAuthClient(cli)
-	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID, permissions.ALL)
+	token, err := sharing.CreateAccessToken(aliceInstance, cli, s.SID, permission.ALL)
 	assert.NoError(t, err)
 	s.Credentials[0].AccessToken = token
 	s.Members[1].Status = sharing.MemberStatusReady
@@ -1039,7 +1039,7 @@ func TestRevocationFromRecipient(t *testing.T) {
 	})
 	clientC, err := sharing.CreateOAuthClient(aliceInstance, &s.Members[2])
 	assert.NoError(t, err)
-	tokenC, err := sharing.CreateAccessToken(aliceInstance, clientC, s.SID, permissions.ALL)
+	tokenC, err := sharing.CreateAccessToken(aliceInstance, clientC, s.SID, permission.ALL)
 	assert.NoError(t, err)
 	s.Credentials = append(s.Credentials, sharing.Credentials{
 		Client:          sharing.ConvertOAuthClient(clientC),
@@ -1094,7 +1094,7 @@ func TestMain(m *testing.M) {
 	daveContact = createContact(aliceInstance, "Dave", "dave@example.net")
 	tsA = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/sharings":    sharings.Routes,
-		"/permissions": webperms.Routes,
+		"/permissions": permissions.Routes,
 	})
 	tsA.Config.Handler.(*echo.Echo).Renderer = render
 	tsA.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
@@ -1140,9 +1140,9 @@ func TestMain(m *testing.M) {
 	os.Exit(setup.Run())
 }
 
-func createContact(inst *instance.Instance, name, email string) *contacts.Contact {
+func createContact(inst *instance.Instance, name, email string) *contact.Contact {
 	mail := map[string]interface{}{"address": email}
-	c := contacts.New()
+	c := contact.New()
 	c.M["fullname"] = name
 	c.M["email"] = []interface{}{mail}
 	err := couchdb.CreateDoc(inst, c)
@@ -1152,9 +1152,9 @@ func createContact(inst *instance.Instance, name, email string) *contacts.Contac
 	return c
 }
 
-func createContactWithCozyURL(inst *instance.Instance, name, instanceURL string) *contacts.Contact {
+func createContactWithCozyURL(inst *instance.Instance, name, instanceURL string) *contact.Contact {
 	cozy := map[string]interface{}{"url": instanceURL}
-	c := contacts.New()
+	c := contact.New()
 	c.M["fullname"] = name
 	c.M["cozy"] = []interface{}{cozy}
 	err := couchdb.CreateDoc(inst, c)
@@ -1209,22 +1209,22 @@ func createSharedDoc(inst *instance.Instance, id, sharingID string) (*sharing.Sh
 }
 
 func generateAppToken(inst *instance.Instance, slug string) string {
-	rules := permissions.Set{
-		permissions.Rule{
+	rules := permission.Set{
+		permission.Rule{
 			Type:  iocozytests,
-			Verbs: permissions.ALL,
+			Verbs: permission.ALL,
 		},
 	}
-	permReq := permissions.Permission{
+	permReq := permission.Permission{
 		Permissions: rules,
-		Type:        permissions.TypeWebapp,
+		Type:        permission.TypeWebapp,
 		SourceID:    consts.Apps + "/" + slug,
 	}
 	err := couchdb.CreateDoc(inst, &permReq)
 	if err != nil {
 		return ""
 	}
-	manifest := &apps.WebappManifest{
+	manifest := &app.WebappManifest{
 		DocID:          consts.Apps + "/" + slug,
 		DocSlug:        slug,
 		DocPermissions: rules,

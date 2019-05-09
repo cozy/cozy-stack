@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/session"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/limits"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -92,7 +92,7 @@ func AddCodeToRedirect(redirect *url.URL, domain, sessionID string) *url.URL {
 		redirect = utils.CloneURL(redirect)
 		if redirect.Host != domain {
 			q := redirect.Query()
-			q.Set("code", sessions.BuildCode(sessionID, redirect.Host).Value)
+			q.Set("code", session.BuildCode(sessionID, redirect.Host).Value)
 			redirect.RawQuery = q.Encode()
 			return redirect
 		}
@@ -103,7 +103,7 @@ func AddCodeToRedirect(redirect *url.URL, domain, sessionID string) *url.URL {
 // SetCookieForNewSession creates a new session and sets the cookie on echo context
 func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error) {
 	instance := middlewares.GetInstance(c)
-	session, err := sessions.New(instance, longRunSession)
+	session, err := session.New(instance, longRunSession)
 	if err != nil {
 		return "", err
 	}
@@ -209,10 +209,10 @@ func loginForm(c echo.Context) error {
 		return err
 	}
 
-	session, ok := middlewares.GetSession(c)
+	sess, ok := middlewares.GetSession(c)
 	if ok {
-		redirect = AddCodeToRedirect(redirect, instance.ContextualDomain(), session.ID())
-		cookie, err := session.ToCookie()
+		redirect = AddCodeToRedirect(redirect, instance.ContextualDomain(), sess.ID())
+		cookie, err := sess.ToCookie()
 		if err != nil {
 			return err
 		}
@@ -221,7 +221,7 @@ func loginForm(c echo.Context) error {
 	}
 	// Delegated JWT
 	if token := c.QueryParam("jwt"); token != "" {
-		err := sessions.CheckDelegatedJWT(instance, token)
+		err := session.CheckDelegatedJWT(instance, token)
 		if err != nil {
 			instance.Logger().Warningf("Delegated token check failed: %s", err)
 		} else {
@@ -229,7 +229,7 @@ func loginForm(c echo.Context) error {
 			if err != nil {
 				return err
 			}
-			if err = sessions.StoreNewLoginEntry(instance, sessionID, "", c.Request(), true); err != nil {
+			if err = session.StoreNewLoginEntry(instance, sessionID, "", c.Request(), true); err != nil {
 				instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 			}
 			redirect = AddCodeToRedirect(redirect, instance.ContextualDomain(), sessionID)
@@ -263,9 +263,9 @@ func login(c echo.Context) error {
 	passphraseRequest := len(passphrase) > 0
 
 	var sessionID string
-	session, ok := middlewares.GetSession(c)
+	sess, ok := middlewares.GetSession(c)
 	if ok { // The user was already logged-in
-		sessionID = session.ID()
+		sessionID = sess.ID()
 	} else if twoFactorRequest {
 		successfulAuthentication = inst.ValidateTwoFactorPasscode(
 			twoFactorToken, twoFactorPasscode)
@@ -341,7 +341,7 @@ func login(c echo.Context) error {
 			}
 		}
 
-		if err = sessions.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), true); err != nil {
+		if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), true); err != nil {
 			inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 		}
 	}
@@ -414,13 +414,13 @@ func logoutOthers(c echo.Context) error {
 		})
 	}
 
-	session, ok := middlewares.GetSession(c)
+	sess, ok := middlewares.GetSession(c)
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "Could not retrieve session",
 		})
 	}
-	if err := sessions.DeleteOthers(instance, session.ID()); err != nil {
+	if err := session.DeleteOthers(instance, sess.ID()); err != nil {
 		return err
 	}
 

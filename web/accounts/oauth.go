@@ -6,18 +6,18 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/cozy/cozy-stack/pkg/accounts"
+	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
 
 type apiAccount struct {
-	*accounts.Account
+	*account.Account
 }
 
 func (a *apiAccount) MarshalJSON() ([]byte, error)           { return json.Marshal(a.Account) }
@@ -34,7 +34,7 @@ func start(c echo.Context) error {
 	clientState := c.QueryParam("state")
 	nonce := c.QueryParam("nonce")
 	accountTypeID := c.Param("accountType")
-	accountType, err := accounts.TypeInfo(accountTypeID)
+	accountType, err := account.TypeInfo(accountTypeID)
 	if err != nil {
 		return err
 	}
@@ -57,11 +57,11 @@ func start(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, url)
 }
 
-func redirectToApp(c echo.Context, account *accounts.Account, clientState string) error {
+func redirectToApp(c echo.Context, acc *account.Account, clientState string) error {
 	instance := middlewares.GetInstance(c)
 	u := instance.SubDomain(consts.HomeSlug)
 	vv := &url.Values{}
-	vv.Add("account", account.ID())
+	vv.Add("account", acc.ID())
 	if clientState != "" {
 		vv.Add("state", clientState)
 	}
@@ -79,14 +79,14 @@ func redirect(c echo.Context) error {
 	accessCode := c.QueryParam("code")
 	accessToken := c.QueryParam("access_token")
 	accountTypeID := c.Param("accountType")
-	accountType, err := accounts.TypeInfo(accountTypeID)
+	accountType, err := account.TypeInfo(accountTypeID)
 	if err != nil {
 		return err
 	}
 
 	i, _ := lifecycle.GetInstance(c.Request().Host)
 	clientState := ""
-	var account *accounts.Account
+	var acc *account.Account
 
 	if accessToken != "" {
 		if i == nil {
@@ -94,9 +94,9 @@ func redirect(c echo.Context) error {
 				"using ?access_token with instance-less redirect")
 		}
 
-		account = &accounts.Account{
+		acc = &account.Account{
 			AccountType: accountTypeID,
-			Oauth: &accounts.OauthInfo{
+			Oauth: &account.OauthInfo{
 				AccessToken: accessToken,
 			},
 		}
@@ -118,16 +118,16 @@ func redirect(c echo.Context) error {
 		if accountType.TokenEndpoint == "" {
 			params := c.QueryParams()
 			params.Del("state")
-			account = &accounts.Account{
+			acc = &account.Account{
 				AccountType: accountTypeID,
-				Oauth: &accounts.OauthInfo{
+				Oauth: &account.OauthInfo{
 					ClientID:     accountType.ClientID,
 					ClientSecret: accountType.ClientSecret,
 					Query:        &params,
 				},
 			}
 		} else {
-			account, err = accountType.RequestAccessToken(i, accessCode, stateCode, state.Nonce)
+			acc, err = accountType.RequestAccessToken(i, accessCode, stateCode, state.Nonce)
 			if err != nil {
 				return err
 			}
@@ -135,13 +135,13 @@ func redirect(c echo.Context) error {
 		}
 	}
 
-	err = couchdb.CreateDoc(i, account)
+	err = couchdb.CreateDoc(i, acc)
 	if err != nil {
 		return err
 	}
 
 	c.Set("instance", i.WithContextualDomain(c.Request().Host))
-	return redirectToApp(c, account, clientState)
+	return redirectToApp(c, acc, clientState)
 }
 
 // refresh is an internal route used by konnectors to refresh accounts
@@ -150,31 +150,31 @@ func refresh(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	accountid := c.Param("accountid")
 
-	var account accounts.Account
-	if err := couchdb.GetDoc(instance, consts.Accounts, accountid, &account); err != nil {
+	var acc account.Account
+	if err := couchdb.GetDoc(instance, consts.Accounts, accountid, &acc); err != nil {
 		return err
 	}
 
-	if err := middlewares.Allow(c, permissions.GET, &account); err != nil {
+	if err := middlewares.Allow(c, permission.GET, &acc); err != nil {
 		return err
 	}
 
-	accountType, err := accounts.TypeInfo(account.AccountType)
+	accountType, err := account.TypeInfo(acc.AccountType)
 	if err != nil {
 		return err
 	}
 
-	err = accountType.RefreshAccount(account)
+	err = accountType.RefreshAccount(acc)
 	if err != nil {
 		return err
 	}
 
-	err = couchdb.UpdateDoc(instance, &account)
+	err = couchdb.UpdateDoc(instance, &acc)
 	if err != nil {
 		return err
 	}
 
-	return jsonapi.Data(c, http.StatusOK, &apiAccount{&account}, nil)
+	return jsonapi.Data(c, http.StatusOK, &apiAccount{&acc}, nil)
 
 }
 

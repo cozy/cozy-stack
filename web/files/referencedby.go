@@ -3,9 +3,9 @@ package files
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
@@ -23,7 +23,7 @@ func AddReferencedHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permissions.PATCH, dir, file)
+	err = checkPerm(c, permission.PATCH, dir, file)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func RemoveReferencedHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permissions.DELETE, nil, file)
+	err = checkPerm(c, permission.DELETE, nil, file)
 	if err != nil {
 		return err
 	}

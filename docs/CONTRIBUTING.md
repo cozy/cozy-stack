@@ -116,6 +116,28 @@ address, apply your changes in a separate commit and push that to your branch.
 Post a comment in the pull request afterwards; GitHub does not send out
 notifications when you add commits.
 
+## Code organization
+
+The codebase of cozy-stack contains several packages, and it is quite easy to
+have circular import issues in go. To limit the risk, we have split the
+packages in several directories with some rules for the imports. In short,
+a package in this list should import other packages that are on the same line
+or below:
+
+- `main` and `cmd` are the top level packages
+- `web` is where we have the routers and handlers for web requests
+- `worker` is where we define the workers for our job system
+- `model` is for high-level internal packages (in general one package is used
+  for one doctype)
+- `client` is a small number of packages used for writing clients for the stack
+- `pkg` is the low-level packages (most of those packages are just a couple of
+  structs and functions).
+
+Note that `tests/testutils` can be used safely in `web` and `worker` packages.
+In `model`, it can be used but it is recommended to use a fake package for the
+tests if it is the case. For example, `model/oauth/client_test.go` is declared
+as `package oauth_test`.
+
 ## External assets
 
 The cozy-stack serve some assets for the client application. In particular,

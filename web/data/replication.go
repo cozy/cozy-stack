@@ -4,13 +4,12 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/lock"
-	perm "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -26,7 +25,7 @@ func getDesignDoc(c echo.Context) error {
 	docid := c.Param("designdocid")
 	doctype := c.Get("doctype").(string)
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 
@@ -43,11 +42,11 @@ func getLocalDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 
-	if err := perm.CheckReadable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -58,11 +57,11 @@ func setLocalDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 
-	if err := perm.CheckReadable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -72,11 +71,11 @@ func setLocalDoc(c echo.Context) error {
 func bulkGet(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 
-	if err := perm.CheckReadable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -86,11 +85,11 @@ func bulkGet(c echo.Context) error {
 func bulkDocs(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := middlewares.AllowWholeType(c, permissions.POST, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.POST, doctype); err != nil {
 		return err
 	}
 
-	if err := perm.CheckWritable(doctype); err != nil {
+	if err := permission.CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -118,11 +117,11 @@ func bulkDocs(c echo.Context) error {
 func createDB(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := middlewares.AllowWholeType(c, permissions.POST, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.POST, doctype); err != nil {
 		return err
 	}
 
-	if err := perm.CheckWritable(doctype); err != nil {
+	if err := permission.CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -132,11 +131,11 @@ func createDB(c echo.Context) error {
 func fullCommit(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 
-	if err := perm.CheckWritable(doctype); err != nil {
+	if err := permission.CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -146,11 +145,11 @@ func fullCommit(c echo.Context) error {
 func revsDiff(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 
-	if err := perm.CheckReadable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -208,11 +207,11 @@ func changesFeed(c echo.Context) error {
 
 	includeDocs := paramIsTrue(c, "include_docs")
 
-	if err = perm.CheckReadable(doctype); err != nil {
+	if err = permission.CheckReadable(doctype); err != nil {
 		return err
 	}
 
-	if err = middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err = middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 
@@ -247,11 +246,11 @@ func dbStatus(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 
-	if err := perm.CheckReadable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
 

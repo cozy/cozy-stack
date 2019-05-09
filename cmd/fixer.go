@@ -16,14 +16,14 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/contact"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/auth"
 
 	"github.com/spf13/cobra"
@@ -338,7 +338,7 @@ var contactEmailsFixer = &cobra.Command{
 
 			var contacts struct {
 				Rows []struct {
-					Contact contacts.Contact `json:"doc"`
+					Contact contact.Contact `json:"doc"`
 				} `json:"rows"`
 			}
 			buf, err := ioutil.ReadAll(res.Body)
@@ -351,14 +351,14 @@ var contactEmailsFixer = &cobra.Command{
 			}
 
 			for _, r := range contacts.Rows {
-				contact := r.Contact
-				id := contact.ID()
+				co := r.Contact
+				id := co.ID()
 				if strings.HasPrefix(id, "_design") {
 					continue
 				}
 
 				changed := false
-				emails, ok := contact.Get("emails").([]interface{})
+				emails, ok := co.Get("emails").([]interface{})
 				if !ok {
 					continue
 				}
@@ -404,8 +404,8 @@ var contactEmailsFixer = &cobra.Command{
 				}
 
 				if changed {
-					contact.M["email"] = emails
-					json, err := json.Marshal(contact)
+					co.M["email"] = emails
+					json, err := json.Marshal(co)
 					if err != nil {
 						return err
 					}
@@ -464,16 +464,16 @@ var linkedAppFixer = &cobra.Command{
 					client.SoftwareID = value
 
 					// Install app
-					installer, err := apps.NewInstaller(i, i.AppsCopier(consts.WebappType),
-						&apps.InstallerOptions{
-							Operation:  apps.Install,
+					installer, err := app.NewInstaller(i, i.AppsCopier(consts.WebappType),
+						&app.InstallerOptions{
+							Operation:  app.Install,
 							Type:       consts.WebappType,
 							Slug:       slug,
 							SourceURL:  value,
 							Registries: i.Registries(),
 						})
 
-					if err != apps.ErrAlreadyExists {
+					if err != app.ErrAlreadyExists {
 						if err != nil {
 							return err
 						}

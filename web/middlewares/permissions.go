@@ -8,15 +8,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/sharing"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/sharing"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/echo"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -85,27 +85,27 @@ func parseLinkedAppScope(scope string) (*linkedAppScope, error) {
 }
 
 // GetForOauth create a non-persisted permissions doc from a oauth token scopes
-func GetForOauth(instance *instance.Instance, claims *permissions.Claims, c interface{}) (*permissions.Permission, error) {
-	var set permissions.Set
+func GetForOauth(instance *instance.Instance, claims *permission.Claims, c interface{}) (*permission.Permission, error) {
+	var set permission.Set
 	linkedAppScope, err := parseLinkedAppScope(claims.Scope)
 
 	if err == nil && linkedAppScope != nil {
 		// Translate to a real scope
 		at := consts.NewAppType(linkedAppScope.Doctype)
-		manifest, err := apps.GetBySlug(instance, linkedAppScope.Slug, at)
+		manifest, err := app.GetBySlug(instance, linkedAppScope.Slug, at)
 		if err != nil {
 			return nil, err
 		}
 		set = manifest.Permissions()
 	} else {
-		set, err = permissions.UnmarshalScopeString(claims.Scope)
+		set, err = permission.UnmarshalScopeString(claims.Scope)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	pdoc := &permissions.Permission{
-		Type:        permissions.TypeOauth,
+	pdoc := &permission.Permission{
+		Type:        permission.TypeOauth,
 		Permissions: set,
 		SourceID:    claims.Subject,
 		Client:      c,
@@ -114,32 +114,32 @@ func GetForOauth(instance *instance.Instance, claims *permissions.Claims, c inte
 }
 
 // ParseJWT parses a JSON Web Token, and returns the associated permissions.
-func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permissions.Permission, error) {
-	var claims permissions.Claims
+func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permission.Permission, error) {
+	var claims permission.Claims
 	var err error
 
 	if isShortCode, _ := regexp.MatchString("^(\\w|\\d){12}$", token); isShortCode { // token is a shortcode
-		token, err = permissions.GetTokenFromShortcode(instance, token)
+		token, err = permission.GetTokenFromShortcode(instance, token)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	err = crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
-		return instance.PickKey(token.Claims.(*permissions.Claims).Audience)
+		return instance.PickKey(token.Claims.(*permission.Claims).Audience)
 	}, &claims)
 
 	if err != nil {
-		return nil, permissions.ErrInvalidToken
+		return nil, permission.ErrInvalidToken
 	}
 
 	// check if the claim is valid
 	if claims.Issuer != instance.Domain {
-		return nil, permissions.ErrInvalidToken
+		return nil, permission.ErrInvalidToken
 	}
 
 	if claims.Expired() {
-		return nil, permissions.ErrExpiredToken
+		return nil, permission.ErrExpiredToken
 	}
 
 	// If claims contains a SessionID, we check that we are actually authorized
@@ -147,48 +147,48 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	if claims.SessionID != "" {
 		s, ok := GetSession(c)
 		if !ok || s.ID() != claims.SessionID {
-			return nil, permissions.ErrInvalidToken
+			return nil, permission.ErrInvalidToken
 		}
 	}
 
 	switch claims.Audience {
-	case permissions.AccessTokenAudience:
+	case consts.AccessTokenAudience:
 		// An OAuth2 token is only valid if the client has not been revoked
 		c, err := oauth.FindClient(instance, claims.Subject)
 		if err != nil {
 			if couchdb.IsInternalServerError(err) {
 				return nil, err
 			}
-			return nil, permissions.ErrInvalidToken
+			return nil, permission.ErrInvalidToken
 		}
 		return GetForOauth(instance, &claims, c)
 
-	case permissions.CLIAudience:
+	case consts.CLIAudience:
 		// do not check client existence
-		return permissions.GetForCLI(&claims)
+		return permission.GetForCLI(&claims)
 
-	case permissions.AppAudience:
-		pdoc, err := permissions.GetForWebapp(instance, claims.Subject)
+	case consts.AppAudience:
+		pdoc, err := permission.GetForWebapp(instance, claims.Subject)
 		if err != nil {
 			return nil, err
 		}
 		return pdoc, nil
 
-	case permissions.KonnectorAudience:
-		pdoc, err := permissions.GetForKonnector(instance, claims.Subject)
+	case consts.KonnectorAudience:
+		pdoc, err := permission.GetForKonnector(instance, claims.Subject)
 		if err != nil {
 			return nil, err
 		}
 		return pdoc, nil
 
-	case permissions.ShareAudience:
-		pdoc, err := permissions.GetForShareCode(instance, token)
+	case consts.ShareAudience:
+		pdoc, err := permission.GetForShareCode(instance, token)
 		if err != nil {
 			return nil, err
 		}
 
 		// A share token is only valid if the user has not been revoked
-		if pdoc.Type == permissions.TypeSharePreview {
+		if pdoc.Type == permission.TypeSharePreview {
 			sharingID := strings.Split(pdoc.SourceID, "/")
 			sharingDoc, err := sharing.FindSharing(instance, sharingID[1])
 			if err != nil {
@@ -201,7 +201,7 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 			}
 
 			if member.Status == sharing.MemberStatusRevoked {
-				return nil, permissions.ErrInvalidToken
+				return nil, permission.ErrInvalidToken
 
 			}
 		}
@@ -214,17 +214,17 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 }
 
 // GetPermission extracts the permission from the echo context and checks their validity
-func GetPermission(c echo.Context) (*permissions.Permission, error) {
+func GetPermission(c echo.Context) (*permission.Permission, error) {
 	var err error
 
-	pdoc, ok := c.Get(contextPermissionDoc).(*permissions.Permission)
+	pdoc, ok := c.Get(contextPermissionDoc).(*permission.Permission)
 	if ok && pdoc != nil {
 		return pdoc, nil
 	}
 
 	inst := GetInstance(c)
 	if CheckRegisterToken(c, inst) {
-		return permissions.GetForRegisterToken(), nil
+		return permission.GetForRegisterToken(), nil
 	}
 
 	tok := GetRequestToken(c)
@@ -243,7 +243,7 @@ func GetPermission(c echo.Context) (*permissions.Permission, error) {
 
 // AllowWholeType validates that the context permission set can use a verb on
 // the whold doctype
-func AllowWholeType(c echo.Context, v permissions.Verb, doctype string) error {
+func AllowWholeType(c echo.Context, v permission.Verb, doctype string) error {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
@@ -255,7 +255,7 @@ func AllowWholeType(c echo.Context, v permissions.Verb, doctype string) error {
 }
 
 // Allow validates the validable object against the context permission set
-func Allow(c echo.Context, v permissions.Verb, o permissions.Matcher) error {
+func Allow(c echo.Context, v permission.Verb, o permission.Matcher) error {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
@@ -268,7 +268,7 @@ func Allow(c echo.Context, v permissions.Verb, o permissions.Matcher) error {
 
 // AllowOnFields validates the validable object againt the context permission
 // set and ensure the selector validates the given fields.
-func AllowOnFields(c echo.Context, v permissions.Verb, o permissions.Matcher, fields ...string) error {
+func AllowOnFields(c echo.Context, v permission.Verb, o permission.Matcher, fields ...string) error {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
@@ -280,7 +280,7 @@ func AllowOnFields(c echo.Context, v permissions.Verb, o permissions.Matcher, fi
 }
 
 // AllowTypeAndID validates a type & ID against the context permission set
-func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) error {
+func AllowTypeAndID(c echo.Context, v permission.Verb, doctype, id string) error {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
@@ -292,7 +292,7 @@ func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) erro
 }
 
 // AllowVFS validates a vfs.Matcher against the context permission set
-func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Matcher) error {
+func AllowVFS(c echo.Context, v permission.Verb, o vfs.Matcher) error {
 	instance := GetInstance(c)
 	pdoc, err := GetPermission(c)
 	if err != nil {
@@ -308,7 +308,7 @@ func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Matcher) error {
 // AllowInstallApp checks that the current context is tied to the store app,
 // which is the only app authorized to install or update other apps.
 // It also allow the cozy-stack apps commands to work (CLI).
-func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v permissions.Verb) error {
+func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v permission.Verb) error {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
@@ -326,9 +326,9 @@ func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v
 		return fmt.Errorf("unknown application type %s", string(appType))
 	}
 	switch pdoc.Type {
-	case permissions.TypeCLI:
+	case permission.TypeCLI:
 		// OK
-	case permissions.TypeWebapp, permissions.TypeKonnector:
+	case permission.TypeWebapp, permission.TypeKonnector:
 		if pdoc.SourceID != consts.Apps+"/"+consts.StoreSlug {
 			return ErrForbidden
 		}
@@ -350,12 +350,12 @@ func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v
 
 // AllowForApp checks that the permissions is valid and comes from an
 // application. If valid, the application's slug is returned.
-func AllowForApp(c echo.Context, v permissions.Verb, o permissions.Matcher) (slug string, err error) {
+func AllowForApp(c echo.Context, v permission.Verb, o permission.Matcher) (slug string, err error) {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return "", err
 	}
-	if pdoc.Type != permissions.TypeWebapp && pdoc.Type != permissions.TypeKonnector {
+	if pdoc.Type != permission.TypeWebapp && pdoc.Type != permission.TypeKonnector {
 		return "", ErrForbidden
 	}
 	if !pdoc.Permissions.Allow(v, o) {
@@ -381,5 +381,5 @@ func AllowLogout(c echo.Context) bool {
 	if err != nil {
 		return false
 	}
-	return pdoc.Type == permissions.TypeWebapp
+	return pdoc.Type == permission.TypeWebapp
 }

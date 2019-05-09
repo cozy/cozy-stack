@@ -10,13 +10,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/accounts"
+	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
@@ -33,9 +33,9 @@ func TestAccessCodeOauthFlow(t *testing.T) {
 	service := makeTestACService(redirectURI)
 	defer service.Close()
 
-	serviceType := accounts.AccountType{
+	serviceType := account.AccountType{
 		DocID:                 "test-service",
-		GrantMode:             accounts.AuthorizationCode,
+		GrantMode:             account.AuthorizationCode,
 		ClientID:              "the-client-id",
 		ClientSecret:          "the-client-secret",
 		AuthEndpoint:          service.URL + "/oauth2/v2/auth",
@@ -94,9 +94,9 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 	service := makeTestRedirectURLService(redirectURI)
 	defer service.Close()
 
-	serviceType := accounts.AccountType{
+	serviceType := account.AccountType{
 		DocID:        "test-service2",
-		GrantMode:    accounts.ImplicitGrantRedirectURL,
+		GrantMode:    account.ImplicitGrantRedirectURL,
 		AuthEndpoint: service.URL + "/oauth2/v2/auth",
 	}
 	err := couchdb.CreateNamedDoc(couchdb.GlobalSecretsDB, &serviceType)
@@ -150,9 +150,9 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 	service := makeTestACService(redirectURI)
 	defer service.Close()
 
-	serviceType := accounts.AccountType{
+	serviceType := account.AccountType{
 		DocID:                 "test-service3",
-		GrantMode:             accounts.AuthorizationCode,
+		GrantMode:             account.AuthorizationCode,
 		ClientID:              "the-client-id",
 		ClientSecret:          "the-client-secret",
 		AuthEndpoint:          service.URL + "/oauth2/v2/auth",

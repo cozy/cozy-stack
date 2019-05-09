@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/stack"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/spf13/cobra"

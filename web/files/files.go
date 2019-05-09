@@ -18,20 +18,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
 	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/pkg/workers/thumbnail"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
+	"github.com/cozy/cozy-stack/worker/thumbnail"
 	"github.com/cozy/echo"
 )
 
@@ -192,13 +191,13 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permissions.PUT, nil, olddoc)
+	err = checkPerm(c, permission.PUT, nil, olddoc)
 	if err != nil {
 		return
 	}
 
 	newdoc.SetID(olddoc.ID()) // The ID can be useful to check permissions
-	err = checkPerm(c, permissions.PUT, nil, newdoc)
+	err = checkPerm(c, permission.PUT, nil, newdoc)
 	if err != nil {
 		return
 	}
@@ -347,7 +346,7 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 		return err
 	}
 
-	if err = checkPerm(c, permissions.PATCH, dir, file); err != nil {
+	if err = checkPerm(c, permission.PATCH, dir, file); err != nil {
 		return err
 	}
 
@@ -390,7 +389,7 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*js
 			errors = append(errors, jsonapiError)
 			continue
 		}
-		if err = checkPerm(c, permissions.PATCH, dir, file); err != nil {
+		if err = checkPerm(c, permission.PATCH, dir, file); err != nil {
 			return
 		}
 		var errp error
@@ -438,12 +437,12 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	if err := checkPerm(c, permissions.GET, dir, file); err != nil {
+	if err := checkPerm(c, permission.GET, dir, file); err != nil {
 		return err
 	}
 
 	// Limiting the number of public share link consultations
-	if perm.Type == pkgperm.TypeShareByLink {
+	if perm.Type == permission.TypeShareByLink {
 		err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
 		if err != nil {
 			return err
@@ -486,7 +485,7 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	if err := checkPerm(c, permissions.GET, dir, file); err != nil {
+	if err := checkPerm(c, permission.GET, dir, file); err != nil {
 		return err
 	}
 
@@ -507,7 +506,7 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permissions.GET, nil, doc)
+	err = checkPerm(c, permission.GET, nil, doc)
 	if err != nil {
 		return err
 	}
@@ -535,9 +534,9 @@ func HeadDirOrFile(c echo.Context) error {
 	}
 
 	if dir != nil {
-		err = checkPerm(c, permissions.GET, dir, nil)
+		err = checkPerm(c, permission.GET, dir, nil)
 	} else {
-		err = checkPerm(c, permissions.GET, nil, file)
+		err = checkPerm(c, permission.GET, nil, file)
 	}
 	if err != nil {
 		return err
@@ -607,7 +606,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	}
 
 	if checkPermission {
-		err = middlewares.Allow(c, permissions.GET, doc)
+		err = middlewares.Allow(c, permission.GET, doc)
 		if err != nil {
 			return err
 		}
@@ -661,7 +660,7 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 	}
 
 	for _, e := range entries {
-		err = checkPerm(c, permissions.GET, e.Dir, e.File)
+		err = checkPerm(c, permission.GET, e.Dir, e.File)
 		if err != nil {
 			return err
 		}
@@ -767,7 +766,7 @@ func TrashHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permissions.PUT, dir, file)
+	err = checkPerm(c, permission.PUT, dir, file)
 	if err != nil {
 		return err
 	}
@@ -808,7 +807,7 @@ func ReadTrashFilesHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permissions.GET, trash, nil)
+	err = checkPerm(c, permission.GET, trash, nil)
 	if err != nil {
 		return err
 	}
@@ -828,7 +827,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permissions.PUT, dir, file)
+	err = checkPerm(c, permission.PUT, dir, file)
 	if err != nil {
 		return err
 	}
@@ -857,7 +856,7 @@ func ClearTrashHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permissions.DELETE, trash, nil)
+	err = checkPerm(c, permission.DELETE, trash, nil)
 	if err != nil {
 		return err
 	}
@@ -881,7 +880,7 @@ func DestroyFileHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permissions.DELETE, dir, file)
+	err = checkPerm(c, permission.DELETE, dir, file)
 	if err != nil {
 		return err
 	}
@@ -919,7 +918,7 @@ func FindFilesMango(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Files); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
 		return err
 	}
 
@@ -972,7 +971,7 @@ func fsckHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	cacheStorage := config.GetConfig().CacheStorage
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Files); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
 		return err
 	}
 
@@ -1186,7 +1185,7 @@ func checkIfMatch(rev, wantedRev string) error {
 	return nil
 }
 
-func checkPerm(c echo.Context, v pkgperm.Verb, d *vfs.DirDoc, f *vfs.FileDoc) error {
+func checkPerm(c echo.Context, v permission.Verb, d *vfs.DirDoc, f *vfs.FileDoc) error {
 	if d != nil {
 		return middlewares.AllowVFS(c, v, d)
 	}

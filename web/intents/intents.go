@@ -6,18 +6,18 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/intent"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
 
 type apiIntent struct {
-	doc *intents.Intent
+	doc *intent.Intent
 	ins *instance.Instance
 }
 
@@ -34,7 +34,7 @@ func (i *apiIntent) Links() *jsonapi.LinksList {
 	if len(parts) < 2 {
 		return nil
 	}
-	perms, err := permissions.GetForWebapp(i.ins, parts[1])
+	perms, err := permission.GetForWebapp(i.ins, parts[1])
 	if err != nil {
 		return nil
 	}
@@ -67,7 +67,7 @@ func createIntent(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	instance := middlewares.GetInstance(c)
-	intent := &intents.Intent{}
+	intent := &intent.Intent{}
 	if _, err = jsonapi.Bind(c.Request().Body, intent); err != nil {
 		return jsonapi.BadRequest(err)
 	}
@@ -96,7 +96,7 @@ func createIntent(c echo.Context) error {
 
 func getIntent(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	intent := &intents.Intent{}
+	intent := &intent.Intent{}
 	id := c.Param("id")
 	pdoc, err := middlewares.GetPermission(c)
 	if err != nil {

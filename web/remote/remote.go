@@ -1,16 +1,16 @@
 package remote
 
 import (
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/remote"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/remote"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
 func remoteGet(c echo.Context) error {
 	doctype := c.Param("doctype")
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return wrapRemoteErr(err)
 	}
 	instance := middlewares.GetInstance(c)
@@ -30,7 +30,7 @@ func remoteGet(c echo.Context) error {
 
 func remotePost(c echo.Context) error {
 	doctype := c.Param("doctype")
-	if err := middlewares.AllowWholeType(c, permissions.POST, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.POST, doctype); err != nil {
 		return wrapRemoteErr(err)
 	}
 	instance := middlewares.GetInstance(c)

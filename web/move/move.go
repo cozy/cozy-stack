@@ -5,19 +5,19 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/workers/move"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
+	"github.com/cozy/cozy-stack/worker/move"
 	"github.com/cozy/echo"
 )
 
 func exportHandler(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Exports); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Exports); err != nil {
 		return err
 	}
 
@@ -58,7 +58,7 @@ func exportDataHandler(c echo.Context) error {
 func createExport(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	if err := middlewares.AllowWholeType(c, permissions.POST, consts.Exports); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Exports); err != nil {
 		return err
 	}
 
@@ -67,12 +67,12 @@ func createExport(c echo.Context) error {
 		return err
 	}
 
-	msg, err := jobs.NewMessage(exportOptions)
+	msg, err := job.NewMessage(exportOptions)
 	if err != nil {
 		return err
 	}
 
-	_, err = jobs.System().PushJob(inst, &jobs.JobRequest{
+	_, err = job.System().PushJob(inst, &job.JobRequest{
 		WorkerType: "export",
 		Message:    msg,
 	})

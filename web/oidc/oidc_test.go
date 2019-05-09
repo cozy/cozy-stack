@@ -8,10 +8,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"

@@ -12,10 +12,10 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 
 	"github.com/spf13/cobra"
 )
@@ -101,7 +101,7 @@ var jobsPurgeCmd = &cobra.Command{
 			return err
 		}
 
-		workers := jobs.GetWorkersNamesList()
+		workers := job.GetWorkersNamesList()
 		if flagJobWorkers != nil {
 			workers = flagJobWorkers
 		}

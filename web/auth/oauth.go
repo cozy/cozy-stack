@@ -10,16 +10,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/registry"
-	"github.com/cozy/cozy-stack/pkg/sessions"
-	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
@@ -63,7 +63,7 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	}
 
 	if IsLinkedApp(params.client.SoftwareID) {
-		var webappManifest apps.WebappManifest
+		var webappManifest app.WebappManifest
 		appSlug := GetLinkedAppSlug(params.client.SoftwareID)
 		webapp, err := registry.GetLatestVersion(appSlug, "stable", params.instance.Registries())
 
@@ -147,7 +147,7 @@ func authorizeForm(c echo.Context) error {
 		return c.Redirect(http.StatusFound, u.String()+"#")
 	}
 
-	permissions, err := permissions.UnmarshalScopeString(params.scope)
+	permissions, err := permission.UnmarshalScopeString(params.scope)
 	if err != nil {
 		return renderError(c, http.StatusBadRequest, "Error Invalid scope")
 	}
@@ -244,14 +244,14 @@ func authorize(c echo.Context) error {
 			return err
 		}
 		slug := manifest.Slug()
-		installer, err := apps.NewInstaller(instance, instance.AppsCopier(consts.WebappType), &apps.InstallerOptions{
-			Operation:  apps.Install,
+		installer, err := app.NewInstaller(instance, instance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+			Operation:  app.Install,
 			Type:       consts.WebappType,
 			SourceURL:  softwareID,
 			Slug:       slug,
 			Registries: instance.Registries(),
 		})
-		if err != apps.ErrAlreadyExists {
+		if err != app.ErrAlreadyExists {
 			if err != nil {
 				return err
 			}
@@ -413,24 +413,24 @@ func authorizeApp(c echo.Context) error {
 		return renderError(c, http.StatusUnauthorized, "Error Must be authenticated")
 	}
 
-	app, ok, err := getApp(c, instance, c.FormValue("slug"))
+	a, ok, err := getApp(c, instance, c.FormValue("slug"))
 	if !ok || err != nil {
 		return err
 	}
 
-	app.SetState(apps.Ready)
-	err = app.Update(instance, nil)
+	a.SetState(app.Ready)
+	err = a.Update(instance, nil)
 	if err != nil {
 		msg := instance.Translate("Could not activate application: %s", err.Error())
 		return renderError(c, http.StatusUnauthorized, msg)
 	}
 
-	u := instance.SubDomain(app.Slug())
+	u := instance.SubDomain(a.Slug())
 	return c.Redirect(http.StatusFound, u.String()+"#")
 }
 
-func getApp(c echo.Context, instance *instance.Instance, slug string) (apps.Manifest, bool, error) {
-	app, err := apps.GetWebappBySlug(instance, slug)
+func getApp(c echo.Context, instance *instance.Instance, slug string) (app.Manifest, bool, error) {
+	a, err := app.GetWebappBySlug(instance, slug)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
 			return nil, false, renderError(c, http.StatusNotFound,
@@ -439,11 +439,11 @@ func getApp(c echo.Context, instance *instance.Instance, slug string) (apps.Mani
 		return nil, false, renderError(c, http.StatusInternalServerError,
 			instance.Translate("Could not fetch application: %s", err.Error()))
 	}
-	if app.State() != apps.Installed {
+	if a.State() != app.Installed {
 		return nil, false, renderError(c, http.StatusExpectationFailed,
 			`Application should have state "installed"`)
 	}
-	return app, true, nil
+	return a, true, nil
 }
 
 // AccessTokenReponse is the stuct used for serializing to JSON the response
@@ -518,7 +518,7 @@ func accessToken(c echo.Context) error {
 			})
 		}
 		out.Scope = accessCode.Scope
-		out.Refresh, err = client.CreateJWT(instance, permissions.RefreshTokenAudience, out.Scope)
+		out.Refresh, err = client.CreateJWT(instance, consts.RefreshTokenAudience, out.Scope)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, echo.Map{
 				"error": "Can't generate refresh token",
@@ -532,7 +532,7 @@ func accessToken(c echo.Context) error {
 		}
 
 	case "refresh_token":
-		claims, ok := client.ValidToken(instance, permissions.RefreshTokenAudience, c.FormValue("refresh_token"))
+		claims, ok := client.ValidToken(instance, consts.RefreshTokenAudience, c.FormValue("refresh_token"))
 		if !ok {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid refresh token",
@@ -552,14 +552,14 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
-	out.Access, err = client.CreateJWT(instance, permissions.AccessTokenAudience, out.Scope)
+	out.Access, err = client.CreateJWT(instance, consts.AccessTokenAudience, out.Scope)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate access token",
 		})
 	}
 
-	_ = sessions.RemoveLoginRegistration(instance.ContextualDomain(), clientID)
+	_ = session.RemoveLoginRegistration(instance.ContextualDomain(), clientID)
 	return c.JSON(http.StatusOK, out)
 }
 
@@ -600,7 +600,7 @@ func CheckLinkedAppInstalled(instance *instance.Instance, slug string) error {
 	i := 0
 	for {
 		i++
-		_, err := apps.GetWebappBySlug(instance, slug)
+		_, err := app.GetWebappBySlug(instance, slug)
 		if err == nil {
 			return nil
 		}
@@ -622,8 +622,8 @@ func BuildLinkedAppScope(slug string) string {
 }
 
 // GetLinkedApp fetches the app manifest on the registry
-func GetLinkedApp(instance *instance.Instance, softwareID string) (*apps.WebappManifest, error) {
-	var webappManifest apps.WebappManifest
+func GetLinkedApp(instance *instance.Instance, softwareID string) (*app.WebappManifest, error) {
+	var webappManifest app.WebappManifest
 	appSlug := GetLinkedAppSlug(softwareID)
 	webapp, err := registry.GetLatestVersion(appSlug, "stable", instance.Registries())
 	if err != nil {

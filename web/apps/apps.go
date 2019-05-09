@@ -12,15 +12,14 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/cozy/cozy-stack/pkg/apps/appfs"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-
-	"github.com/cozy/cozy-stack/pkg/apps"
+	apps "github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -85,7 +84,7 @@ func getHandler(appType consts.AppType) echo.HandlerFunc {
 		if err != nil {
 			return wrapAppsError(err)
 		}
-		if err := middlewares.Allow(c, permissions.GET, man); err != nil {
+		if err := middlewares.Allow(c, permission.GET, man); err != nil {
 			return err
 		}
 		if webapp, ok := man.(*apps.WebappManifest); ok {
@@ -102,7 +101,7 @@ func installHandler(installerType consts.AppType) echo.HandlerFunc {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
 		source := c.QueryParam("Source")
-		if err := middlewares.AllowInstallApp(c, installerType, source, permissions.POST); err != nil {
+		if err := middlewares.AllowInstallApp(c, installerType, source, permission.POST); err != nil {
 			return err
 		}
 
@@ -157,7 +156,7 @@ func updateHandler(installerType consts.AppType) echo.HandlerFunc {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
 		source := c.QueryParam("Source")
-		if err := middlewares.AllowInstallApp(c, installerType, source, permissions.POST); err != nil {
+		if err := middlewares.AllowInstallApp(c, installerType, source, permission.POST); err != nil {
 			return err
 		}
 
@@ -214,7 +213,7 @@ func deleteHandler(installerType consts.AppType) echo.HandlerFunc {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
 		source := "registry://" + slug
-		if err := middlewares.AllowInstallApp(c, installerType, source, permissions.DELETE); err != nil {
+		if err := middlewares.AllowInstallApp(c, installerType, source, permission.DELETE); err != nil {
 			return err
 		}
 
@@ -296,7 +295,7 @@ func writeStream(w http.ResponseWriter, event string, b string) {
 // installed applications.
 func listWebappsHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Apps); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Apps); err != nil {
 		return err
 	}
 	docs, err := apps.ListWebapps(instance)
@@ -315,7 +314,7 @@ func listWebappsHandler(c echo.Context) error {
 // installed applications.
 func listKonnectorsHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Konnectors); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Konnectors); err != nil {
 		return err
 	}
 	docs, err := apps.ListKonnectors(instance)
@@ -340,7 +339,7 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 			return err
 		}
 
-		if !middlewares.IsLoggedIn(c) && middlewares.Allow(c, permissions.GET, app) != nil {
+		if !middlewares.IsLoggedIn(c) && middlewares.Allow(c, permission.GET, app) != nil {
 			return echo.NewHTTPError(http.StatusUnauthorized, "Not logged in")
 		}
 

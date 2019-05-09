@@ -11,21 +11,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/accounts"
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/config/dynamic"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/pkg/workers/updates"
+	"github.com/cozy/cozy-stack/worker/updates"
 	"github.com/cozy/echo"
 )
 
@@ -235,11 +235,11 @@ func rebuildRedis(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
-	if err = jobs.System().CleanRedis(); err != nil {
+	if err = job.System().CleanRedis(); err != nil {
 		return wrapError(err)
 	}
 	for _, i := range instances {
-		err = jobs.System().RebuildRedis(i)
+		err = job.System().RebuildRedis(i)
 		if err != nil {
 			return wrapError(err)
 		}
@@ -282,9 +282,9 @@ func deleteAssets(c echo.Context) error {
 
 func cleanOrphanAccounts(c echo.Context) error {
 	type result struct {
-		Result  string             `json:"result"`
-		Error   string             `json:"error,omitempty"`
-		Trigger *jobs.TriggerInfos `json:"trigger,omitempty"`
+		Result  string            `json:"result"`
+		Error   string            `json:"error,omitempty"`
+		Trigger *job.TriggerInfos `json:"trigger,omitempty"`
 	}
 
 	dryRun, _ := strconv.ParseBool(c.QueryParam("DryRun"))
@@ -296,7 +296,7 @@ func cleanOrphanAccounts(c echo.Context) error {
 		return err
 	}
 
-	var as []*accounts.Account
+	var as []*account.Account
 	err = couchdb.GetAllDocs(db, consts.Accounts, nil, &as)
 	if couchdb.IsNoDatabaseError(err) {
 		return c.JSON(http.StatusOK, results)
@@ -305,7 +305,7 @@ func cleanOrphanAccounts(c echo.Context) error {
 		return err
 	}
 
-	sched := jobs.System()
+	sched := job.System()
 	ts, err := sched.GetAllTriggers(db)
 	if couchdb.IsNoDatabaseError(err) {
 		return c.JSON(http.StatusOK, results)
@@ -314,7 +314,7 @@ func cleanOrphanAccounts(c echo.Context) error {
 		return err
 	}
 
-	konnectors, err := apps.ListKonnectors(db)
+	konnectors, err := app.ListKonnectors(db)
 	if couchdb.IsNoDatabaseError(err) {
 		return c.JSON(http.StatusOK, results)
 	}
@@ -339,15 +339,15 @@ func cleanOrphanAccounts(c echo.Context) error {
 	}
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for _, account := range as {
-		_, ok := triggersAccounts[account.ID()]
+	for _, acc := range as {
+		_, ok := triggersAccounts[acc.ID()]
 		if ok {
 			continue
 		}
 
 		var konnectorFound bool
 		for _, k := range konnectors {
-			if k.Slug() == account.AccountType {
+			if k.Slug() == acc.AccountType {
 				konnectorFound = true
 				break
 			}
@@ -362,8 +362,8 @@ func cleanOrphanAccounts(c echo.Context) error {
 			Konnector    string `json:"konnector"`
 			FolderToSave string `json:"folder_to_save"`
 		}{
-			Account:   account.ID(),
-			Konnector: account.AccountType,
+			Account:   acc.ID(),
+			Konnector: acc.AccountType,
 		}
 
 		var args string
@@ -375,13 +375,13 @@ func cleanOrphanAccounts(c echo.Context) error {
 		}
 
 		var r result
-		infos := jobs.TriggerInfos{
+		infos := job.TriggerInfos{
 			WorkerType: "konnector",
 			Type:       "@cron",
 			Arguments:  args,
 		}
 		r.Trigger = &infos
-		t, err := jobs.NewTrigger(db, infos, msg)
+		t, err := job.NewTrigger(db, infos, msg)
 		if err != nil {
 			r.Result = "failed"
 			r.Error = err.Error()
@@ -410,7 +410,7 @@ func updatesHandler(c echo.Context) error {
 	domainsWithContext := c.QueryParam("DomainsWithContext")
 	forceRegistry, _ := strconv.ParseBool(c.QueryParam("ForceRegistry"))
 	onlyRegistry, _ := strconv.ParseBool(c.QueryParam("OnlyRegistry"))
-	msg, err := jobs.NewMessage(&updates.Options{
+	msg, err := job.NewMessage(&updates.Options{
 		Slugs:              slugs,
 		Force:              true,
 		ForceRegistry:      forceRegistry,
@@ -422,7 +422,7 @@ func updatesHandler(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	job, err := jobs.System().PushJob(prefixer.GlobalPrefixer, &jobs.JobRequest{
+	j, err := job.System().PushJob(prefixer.GlobalPrefixer, &job.JobRequest{
 		WorkerType:  "updates",
 		Message:     msg,
 		Admin:       true,
@@ -431,7 +431,7 @@ func updatesHandler(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
-	return c.JSON(http.StatusOK, job)
+	return c.JSON(http.StatusOK, j)
 }
 
 func setAuthMode(c echo.Context) error {

@@ -6,17 +6,17 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
 type apiSession struct {
-	s *sessions.Session
+	s *session.Session
 }
 
 func (s *apiSession) ID() string                             { return s.s.ID() }
@@ -33,11 +33,11 @@ func (s *apiSession) MarshalJSON() ([]byte, error)           { return json.Marsh
 func getSessions(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Sessions); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Sessions); err != nil {
 		return err
 	}
 
-	sessions, err := sessions.GetAll(inst)
+	sessions, err := session.GetAll(inst)
 	if err != nil {
 		return err
 	}

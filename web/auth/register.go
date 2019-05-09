@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/limits"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
@@ -28,7 +29,7 @@ func registerClient(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		if perm.Type != permissions.TypeCLI {
+		if perm.Type != permission.TypeCLI {
 			return echo.NewHTTPError(http.StatusUnauthorized,
 				"Not authorized to create client with given parameters")
 		}
@@ -86,7 +87,7 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 			})
 		}
 		token := header[len("Bearer "):]
-		_, ok := client.ValidToken(instance, permissions.RegistrationTokenAudience, token)
+		_, ok := client.ValidToken(instance, consts.RegistrationTokenAudience, token)
 		if !ok {
 			return c.JSON(http.StatusUnauthorized, echo.Map{
 				"error": "invalid_token",

@@ -6,15 +6,15 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/contact"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/sharing"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
-	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/sharing"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
@@ -523,15 +523,15 @@ func checkCreatePermissions(c echo.Context, s *sharing.Sharing) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	if requestPerm.Type != permissions.TypeWebapp &&
-		requestPerm.Type != permissions.TypeOauth {
-		return "", permissions.ErrInvalidAudience
+	if requestPerm.Type != permission.TypeWebapp &&
+		requestPerm.Type != permission.TypeOauth {
+		return "", permission.ErrInvalidAudience
 	}
 	for _, r := range s.Rules {
-		pr := permissions.Rule{
+		pr := permission.Rule{
 			Title:    r.Title,
 			Type:     r.DocType,
-			Verbs:    permissions.ALL,
+			Verbs:    permission.ALL,
 			Selector: r.Selector,
 			Values:   r.Values,
 		}
@@ -539,7 +539,7 @@ func checkCreatePermissions(c echo.Context, s *sharing.Sharing) (string, error) 
 			return "", echo.NewHTTPError(http.StatusForbidden)
 		}
 	}
-	if requestPerm.Type == permissions.TypeOauth {
+	if requestPerm.Type == permission.TypeOauth {
 		return "", nil
 	}
 	return extractSlugFromSourceID(requestPerm.SourceID)
@@ -553,20 +553,20 @@ func checkGetPermissions(c echo.Context, s *sharing.Sharing) error {
 		return err
 	}
 
-	if requestPerm.Type == permissions.TypeSharePreview &&
+	if requestPerm.Type == permission.TypeSharePreview &&
 		requestPerm.SourceID == consts.Sharings+"/"+s.SID {
 		return nil
 	}
-	if requestPerm.Type != permissions.TypeWebapp &&
-		requestPerm.Type != permissions.TypeOauth {
-		return permissions.ErrInvalidAudience
+	if requestPerm.Type != permission.TypeWebapp &&
+		requestPerm.Type != permission.TypeOauth {
+		return permission.ErrInvalidAudience
 	}
 
 	for _, r := range s.Rules {
-		pr := permissions.Rule{
+		pr := permission.Rule{
 			Title:    r.Title,
 			Type:     r.DocType,
-			Verbs:    permissions.Verbs(permissions.GET),
+			Verbs:    permission.Verbs(permission.GET),
 			Selector: r.Selector,
 			Values:   r.Values,
 		}
@@ -580,7 +580,7 @@ func checkGetPermissions(c echo.Context, s *sharing.Sharing) error {
 // wrapErrors returns a formatted error
 func wrapErrors(err error) error {
 	switch err {
-	case contacts.ErrNoMailAddress:
+	case contact.ErrNoMailAddress:
 		return jsonapi.InvalidAttribute("recipients", err)
 	case sharing.ErrNoRecipients, sharing.ErrNoRules:
 		return jsonapi.BadRequest(err)

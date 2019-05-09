@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/echo"
 )
 
@@ -29,22 +29,22 @@ func createToken(c echo.Context) error {
 		}
 	}
 	issuedAt := time.Now()
-	validity := permissions.DefaultValidityDuration
+	validity := consts.DefaultValidityDuration
 	switch audience {
-	case "app":
-		audience = permissions.AppAudience
-		validity = permissions.AppTokenValidityDuration
-	case "konn", "konnector":
-		audience = permissions.KonnectorAudience
-		validity = permissions.KonnectorTokenValidityDuration
-	case "access-token":
-		audience = permissions.AccessTokenAudience
-		validity = permissions.AccessTokenValidityDuration
-	case "refresh-token":
-		audience = permissions.RefreshTokenAudience
-	case "cli":
-		audience = permissions.CLIAudience
-		validity = permissions.CLITokenValidityDuration
+	case consts.AppAudience, "webapp":
+		audience = consts.AppAudience
+		validity = consts.AppTokenValidityDuration
+	case consts.KonnectorAudience, "konnector":
+		audience = consts.KonnectorAudience
+		validity = consts.KonnectorTokenValidityDuration
+	case consts.AccessTokenAudience, "access-token":
+		audience = consts.AccessTokenAudience
+		validity = consts.AccessTokenValidityDuration
+	case consts.RefreshTokenAudience, "refresh-token":
+		audience = consts.RefreshTokenAudience
+	case consts.CLIAudience:
+		audience = consts.CLIAudience
+		validity = consts.CLITokenValidityDuration
 	default:
 		return echo.NewHTTPError(http.StatusBadRequest, "Unknown audience %s", audience)
 	}

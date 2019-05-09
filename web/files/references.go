@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -46,8 +46,8 @@ func ListReferencesHandler(c echo.Context) error {
 	include := c.QueryParam("include")
 	includeDocs := include == "files"
 
-	if err := middlewares.AllowTypeAndID(c, permissions.GET, doctype, id); err != nil {
-		if middlewares.AllowWholeType(c, permissions.GET, consts.Files) != nil {
+	if err := middlewares.AllowTypeAndID(c, permission.GET, doctype, id); err != nil {
+		if middlewares.AllowWholeType(c, permission.GET, consts.Files) != nil {
 			return err
 		}
 	}
@@ -156,8 +156,8 @@ func AddReferencesHandler(c echo.Context) error {
 		ID:   id,
 	}
 
-	if err := middlewares.AllowTypeAndID(c, permissions.PUT, doctype, id); err != nil {
-		if middlewares.AllowWholeType(c, permissions.PATCH, consts.Files) != nil {
+	if err := middlewares.AllowTypeAndID(c, permission.PUT, doctype, id); err != nil {
+		if middlewares.AllowWholeType(c, permission.PATCH, consts.Files) != nil {
 			return err
 		}
 	}
@@ -200,8 +200,8 @@ func RemoveReferencesHandler(c echo.Context) error {
 		ID:   id,
 	}
 
-	if err := middlewares.AllowTypeAndID(c, permissions.DELETE, doctype, id); err != nil {
-		if middlewares.AllowWholeType(c, permissions.PATCH, consts.Files) != nil {
+	if err := middlewares.AllowTypeAndID(c, permission.DELETE, doctype, id); err != nil {
+		if middlewares.AllowWholeType(c, permission.PATCH, consts.Files) != nil {
 			return err
 		}
 	}

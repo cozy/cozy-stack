@@ -3,10 +3,10 @@ package middlewares
 import (
 	"net/http"
 
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -43,7 +43,7 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
 		pdoc, err := GetPermission(c)
-		if err == nil && pdoc.Type == permissions.TypeCLI {
+		if err == nil && pdoc.Type == permission.TypeCLI {
 			return next(c)
 		}
 		if i.CheckInstanceBlocked() {
@@ -117,7 +117,7 @@ func CheckTOSDeadlineExpired(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)
 		pdoc, err := GetPermission(c)
-		if err == nil && pdoc.Type == permissions.TypeCLI {
+		if err == nil && pdoc.Type == permission.TypeCLI {
 			return next(c)
 		}
 

@@ -9,11 +9,11 @@ import (
 	"text/tabwriter"
 
 	"github.com/cozy/cozy-stack/client"
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/spf13/cobra"
 )
 
@@ -575,7 +575,7 @@ var appsVersionsCmd = &cobra.Command{
 		counter := make(map[string]map[string]int)
 
 		for _, instance := range instances {
-			var apps []*apps.WebappManifest
+			var apps []*app.WebappManifest
 			req := &couchdb.AllDocsRequest{Limit: 100}
 			err := couchdb.GetAllDocs(instance, consts.Apps, req, &apps)
 			if err != nil {

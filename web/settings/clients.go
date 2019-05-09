@@ -6,14 +6,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	perms "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -44,7 +43,7 @@ func (c *apiOauthClient) Included() []jsonapi.Object {
 func listClients(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, consts.OAuthClients); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.OAuthClients); err != nil {
 		return err
 	}
 
@@ -63,7 +62,7 @@ func listClients(c echo.Context) error {
 func revokeClient(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	if err := middlewares.AllowWholeType(c, permissions.DELETE, consts.OAuthClients); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.OAuthClients); err != nil {
 		return err
 	}
 
@@ -83,31 +82,31 @@ func synchronized(c echo.Context) error {
 
 	tok := middlewares.GetRequestToken(c)
 	if tok == "" {
-		return perms.ErrInvalidToken
+		return permission.ErrInvalidToken
 	}
 
-	var claims perms.Claims
+	var claims permission.Claims
 	err := crypto.ParseJWT(tok, func(token *jwt.Token) (interface{}, error) {
-		return instance.PickKey(token.Claims.(*perms.Claims).Audience)
+		return instance.PickKey(token.Claims.(*permission.Claims).Audience)
 	}, &claims)
 	if err != nil {
-		return perms.ErrInvalidToken
+		return permission.ErrInvalidToken
 	}
 
 	// check if the claim is valid
 	if claims.Issuer != instance.Domain {
-		return perms.ErrInvalidToken
+		return permission.ErrInvalidToken
 	}
 	if claims.Expired() {
-		return perms.ErrExpiredToken
+		return permission.ErrExpiredToken
 	}
-	if claims.Audience != perms.AccessTokenAudience {
-		return perms.ErrInvalidToken
+	if claims.Audience != consts.AccessTokenAudience {
+		return permission.ErrInvalidToken
 	}
 
 	client, err := oauth.FindClient(instance, claims.Subject)
 	if err != nil {
-		return perms.ErrInvalidToken
+		return permission.ErrInvalidToken
 	}
 
 	client.SynchronizedAt = time.Now()

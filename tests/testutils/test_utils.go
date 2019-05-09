@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/stack"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/echo"
 )
@@ -143,7 +143,7 @@ func (c *TestSetup) GetTestClient(scopes string) (*oauth.Client, string) {
 		SoftwareID:   "github.com/cozy/cozy-stack/testing/" + c.name,
 	}
 	client.Create(inst)
-	token, err := c.inst.MakeJWT(permissions.AccessTokenAudience,
+	token, err := c.inst.MakeJWT(consts.AccessTokenAudience,
 		client.ClientID, scopes, "", time.Now())
 
 	if err != nil {

@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -109,11 +109,11 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		status = http.StatusNotFound
 		title = "Error Instance not found Title"
 		value = "Error Instance not found Message"
-	case apps.ErrNotFound:
+	case app.ErrNotFound:
 		status = http.StatusNotFound
 		title = "Error Application not found Title"
 		value = "Error Application not found Message"
-	case apps.ErrInvalidSlugName:
+	case app.ErrInvalidSlugName:
 		status = http.StatusBadRequest
 	}
 
@@ -144,7 +144,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		}
 
 		var buttonTitle, buttonURL string
-		if ok && err == apps.ErrNotFound {
+		if ok && err == app.ErrNotFound {
 			buttonURL = i.DefaultRedirection().String()
 			buttonTitle = "Error Application not found Action"
 		}

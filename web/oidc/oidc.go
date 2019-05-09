@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -98,7 +98,7 @@ func Login(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err = sessions.StoreNewLoginEntry(inst, sessionID, "", c.Request(), true); err != nil {
+	if err = session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), true); err != nil {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 	redirect := inst.DefaultRedirection()
@@ -177,14 +177,14 @@ func AccessToken(c echo.Context) error {
 	}
 
 	// Generate the access/refresh tokens
-	accessToken, err := client.CreateJWT(inst, permissions.AccessTokenAudience, out.Scope)
+	accessToken, err := client.CreateJWT(inst, consts.AccessTokenAudience, out.Scope)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate access token",
 		})
 	}
 	out.Access = accessToken
-	refreshToken, err := client.CreateJWT(inst, permissions.RefreshTokenAudience, out.Scope)
+	refreshToken, err := client.CreateJWT(inst, consts.RefreshTokenAudience, out.Scope)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate refresh token",

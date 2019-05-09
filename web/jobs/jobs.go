@@ -9,60 +9,59 @@ import (
 
 	"github.com/justincampbell/bigduration"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 	multierror "github.com/hashicorp/go-multierror"
 
 	// import workers
-	"github.com/cozy/cozy-stack/pkg/workers/exec"
-	_ "github.com/cozy/cozy-stack/pkg/workers/log"
-	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
-	_ "github.com/cozy/cozy-stack/pkg/workers/migrations"
-	_ "github.com/cozy/cozy-stack/pkg/workers/move"
-	_ "github.com/cozy/cozy-stack/pkg/workers/push"
-	_ "github.com/cozy/cozy-stack/pkg/workers/share"
-	_ "github.com/cozy/cozy-stack/pkg/workers/thumbnail"
-	_ "github.com/cozy/cozy-stack/pkg/workers/unzip"
-	_ "github.com/cozy/cozy-stack/pkg/workers/updates"
+	"github.com/cozy/cozy-stack/worker/exec"
+	_ "github.com/cozy/cozy-stack/worker/log"
+	_ "github.com/cozy/cozy-stack/worker/mails"
+	_ "github.com/cozy/cozy-stack/worker/migrations"
+	_ "github.com/cozy/cozy-stack/worker/move"
+	_ "github.com/cozy/cozy-stack/worker/push"
+	_ "github.com/cozy/cozy-stack/worker/share"
+	_ "github.com/cozy/cozy-stack/worker/thumbnail"
+	_ "github.com/cozy/cozy-stack/worker/unzip"
+	_ "github.com/cozy/cozy-stack/worker/updates"
 )
 
 type (
 	apiJob struct {
-		j *jobs.Job
+		j *job.Job
 	}
 	apiJobRequest struct {
-		Arguments   json.RawMessage  `json:"arguments"`
-		ForwardLogs bool             `json:"forward_logs"`
-		Options     *jobs.JobOptions `json:"options"`
+		Arguments   json.RawMessage `json:"arguments"`
+		ForwardLogs bool            `json:"forward_logs"`
+		Options     *job.JobOptions `json:"options"`
 	}
 	apiQueue struct {
 		workerType string
 	}
 	apiTrigger struct {
-		t *jobs.TriggerInfos
+		t *job.TriggerInfos
 	}
 	apiTriggerState struct {
-		t *jobs.TriggerInfos
-		s *jobs.TriggerState
+		t *job.TriggerInfos
+		s *job.TriggerState
 	}
 	apiTriggerRequest struct {
-		Type            string           `json:"type"`
-		Arguments       string           `json:"arguments"`
-		WorkerType      string           `json:"worker"`
-		Message         json.RawMessage  `json:"message"`
-		WorkerArguments json.RawMessage  `json:"worker_arguments"`
-		Debounce        string           `json:"debounce"`
-		Options         *jobs.JobOptions `json:"options"`
+		Type            string          `json:"type"`
+		Arguments       string          `json:"arguments"`
+		WorkerType      string          `json:"worker"`
+		Message         json.RawMessage `json:"message"`
+		WorkerArguments json.RawMessage `json:"worker_arguments"`
+		Debounce        string          `json:"debounce"`
+		Options         *job.JobOptions `json:"options"`
 	}
 )
 
@@ -127,14 +126,14 @@ func getQueue(c echo.Context) error {
 
 	o := apiQueue{workerType: workerType}
 	// TODO: uncomment to restric jobs permissions.
-	// if err := middlewares.AllowOnFields(c, webpermissions.GET, o, "worker"); err != nil {
+	// if err := middlewares.AllowOnFields(c, permission.GET, o, "worker"); err != nil {
 	// 	return err
 	// }
-	if err := middlewares.Allow(c, webpermissions.GET, o); err != nil {
+	if err := middlewares.Allow(c, permission.GET, o); err != nil {
 		return err
 	}
 
-	js, err := jobs.GetQueuedJobs(instance, workerType)
+	js, err := job.GetQueuedJobs(instance, workerType)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -155,18 +154,18 @@ func pushJob(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 
-	jr := &jobs.JobRequest{
+	jr := &job.JobRequest{
 		WorkerType:  c.Param("worker-type"),
 		Options:     req.Options,
 		ForwardLogs: req.ForwardLogs,
-		Message:     jobs.Message(req.Arguments),
+		Message:     job.Message(req.Arguments),
 	}
 
 	// TODO: uncomment to restric jobs permissions.
-	// if err := middlewares.AllowOnFields(c, webpermissions.POST, jr, "worker"); err != nil {
+	// if err := middlewares.AllowOnFields(c, permission.POST, jr, "worker"); err != nil {
 	// 	return err
 	// }
-	if err := middlewares.Allow(c, webpermissions.POST, jr); err != nil {
+	if err := middlewares.Allow(c, permission.POST, jr); err != nil {
 		return err
 	}
 
@@ -174,21 +173,21 @@ func pushJob(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if jr.ForwardLogs && permd.Type != permissions.TypeCLI {
+	if jr.ForwardLogs && permd.Type != permission.TypeCLI {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
-	job, err := jobs.System().PushJob(instance, jr)
+	j, err := job.System().PushJob(instance, jr)
 	if err != nil {
 		return wrapJobsError(err)
 	}
 
-	return jsonapi.Data(c, http.StatusAccepted, apiJob{job}, nil)
+	return jsonapi.Data(c, http.StatusAccepted, apiJob{j}, nil)
 }
 
 func newTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := jobs.System()
+	sched := job.System()
 	req := apiTriggerRequest{}
 	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
 		return wrapJobsError(err)
@@ -204,7 +203,7 @@ func newTrigger(c echo.Context) error {
 	if req.Message == nil || len(req.Message) == 0 {
 		msg = req.WorkerArguments
 	}
-	t, err := jobs.NewTrigger(instance, jobs.TriggerInfos{
+	t, err := job.NewTrigger(instance, job.TriggerInfos{
 		Type:       req.Type,
 		WorkerType: req.WorkerType,
 		Domain:     instance.Domain,
@@ -216,10 +215,10 @@ func newTrigger(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 	// TODO: uncomment to restric jobs permissions.
-	// if err = middlewares.AllowOnFields(c, webpermissions.POST, t, "worker"); err != nil {
+	// if err = middlewares.AllowOnFields(c, permission.POST, t, "worker"); err != nil {
 	// 	return err
 	// }
-	if err = middlewares.Allow(c, webpermissions.POST, t); err != nil {
+	if err = middlewares.Allow(c, permission.POST, t); err != nil {
 		return err
 	}
 
@@ -231,16 +230,16 @@ func newTrigger(c echo.Context) error {
 
 func getTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := jobs.System()
+	sched := job.System()
 	t, err := sched.GetTrigger(instance, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err = middlewares.Allow(c, webpermissions.GET, t); err != nil {
+	if err = middlewares.Allow(c, permission.GET, t); err != nil {
 		return err
 	}
 	tInfos := t.Infos()
-	tInfos.CurrentState, err = jobs.GetTriggerState(t, t.ID())
+	tInfos.CurrentState, err = job.GetTriggerState(t, t.ID())
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -249,13 +248,13 @@ func getTrigger(c echo.Context) error {
 
 func getTriggerState(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := jobs.System()
+	sched := job.System()
 	t, err := sched.GetTrigger(instance, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
 
-	if err = middlewares.Allow(c, webpermissions.GET, t); err != nil {
+	if err = middlewares.Allow(c, permission.GET, t); err != nil {
 		// For konnector trigger, we have a specific logic to check for
 		// permissions: if the application permissions and the konnector
 		// permissions intersect on one or more doctypes, we give the right to the
@@ -265,14 +264,14 @@ func getTriggerState(c echo.Context) error {
 		}
 	}
 
-	state, err := jobs.GetTriggerState(t, t.ID())
+	state, err := job.GetTriggerState(t, t.ID())
 	if err != nil {
 		return wrapJobsError(err)
 	}
 	return jsonapi.Data(c, http.StatusOK, apiTriggerState{t: t.Infos(), s: state}, nil)
 }
 
-func extractKonnectorPermissions(c echo.Context, i *instance.Instance, t jobs.Trigger) (ok bool) {
+func extractKonnectorPermissions(c echo.Context, i *instance.Instance, t job.Trigger) (ok bool) {
 	if t.Infos().WorkerType != "konnector" {
 		return
 	}
@@ -284,8 +283,8 @@ func extractKonnectorPermissions(c echo.Context, i *instance.Instance, t jobs.Tr
 	if err = t.Infos().Message.Unmarshal(&msg); err != nil {
 		return
 	}
-	var man *apps.KonnManifest
-	if man, err = apps.GetKonnectorBySlug(i, msg.Konnector); err != nil {
+	var man *app.KonnManifest
+	if man, err = app.GetKonnectorBySlug(i, msg.Konnector); err != nil {
 		return
 	}
 	reqRules := reqDoc.Permissions
@@ -293,7 +292,7 @@ func extractKonnectorPermissions(c echo.Context, i *instance.Instance, t jobs.Tr
 	return intersectPermissions(reqRules, appRules)
 }
 
-func intersectPermissions(rules1, rules2 permissions.Set) bool {
+func intersectPermissions(rules1, rules2 permission.Set) bool {
 	doctypeBlacklist := []string{consts.Settings}
 	// This rule intersection only cross permissions on whole doctypes (no
 	// values).
@@ -326,16 +325,16 @@ func getTriggerJobs(c echo.Context) error {
 		}
 	}
 
-	sched := jobs.System()
+	sched := job.System()
 	t, err := sched.GetTrigger(instance, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err = middlewares.Allow(c, webpermissions.GET, t); err != nil {
+	if err = middlewares.Allow(c, permission.GET, t); err != nil {
 		return err
 	}
 
-	js, err := jobs.GetJobs(t, t.ID(), limit)
+	js, err := job.GetJobs(t, t.ID(), limit)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -350,16 +349,16 @@ func getTriggerJobs(c echo.Context) error {
 
 func launchTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	t, err := jobs.System().GetTrigger(instance, c.Param("trigger-id"))
+	t, err := job.System().GetTrigger(instance, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err = middlewares.Allow(c, webpermissions.POST, t); err != nil {
+	if err = middlewares.Allow(c, permission.POST, t); err != nil {
 		return err
 	}
 	req := t.Infos().JobRequest()
 	req.Manual = true
-	j, err := jobs.System().PushJob(instance, req)
+	j, err := job.System().PushJob(instance, req)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -368,12 +367,12 @@ func launchTrigger(c echo.Context) error {
 
 func deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := jobs.System()
+	sched := job.System()
 	t, err := sched.GetTrigger(instance, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err := middlewares.Allow(c, webpermissions.DELETE, t); err != nil {
+	if err := middlewares.Allow(c, permission.DELETE, t); err != nil {
 		// See getTriggerState: we have a specific permissions rule to allow an
 		// application to read or delete a trigger
 		if ok := extractKonnectorPermissions(c, instance, t); !ok {
@@ -390,17 +389,17 @@ func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerType := c.QueryParam("Worker")
 
-	if err := middlewares.AllowWholeType(c, webpermissions.GET, consts.Triggers); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Triggers); err != nil {
 		if workerType == "" {
 			return err
 		}
-		o := &jobs.TriggerInfos{WorkerType: workerType}
-		if err := middlewares.AllowOnFields(c, webpermissions.GET, o, "worker"); err != nil {
+		o := &job.TriggerInfos{WorkerType: workerType}
+		if err := middlewares.AllowOnFields(c, permission.GET, o, "worker"); err != nil {
 			return err
 		}
 	}
 
-	sched := jobs.System()
+	sched := job.System()
 	ts, err := sched.GetAllTriggers(instance)
 	if err != nil {
 		return wrapJobsError(err)
@@ -411,7 +410,7 @@ func getAllTriggers(c echo.Context) error {
 	for _, t := range ts {
 		tInfos := t.Infos()
 		if workerType == "" || tInfos.WorkerType == workerType {
-			tInfos.CurrentState, err = jobs.GetTriggerState(t, t.ID())
+			tInfos.CurrentState, err = job.GetTriggerState(t, t.ID())
 			if err != nil {
 				return wrapJobsError(err)
 			}
@@ -424,31 +423,31 @@ func getAllTriggers(c echo.Context) error {
 
 func getJob(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	job, err := jobs.Get(instance, c.Param("job-id"))
+	j, err := job.Get(instance, c.Param("job-id"))
 	if err != nil {
 		return err
 	}
-	if err := middlewares.Allow(c, webpermissions.GET, job); err != nil {
+	if err := middlewares.Allow(c, permission.GET, j); err != nil {
 		return err
 	}
-	return jsonapi.Data(c, http.StatusOK, apiJob{job}, nil)
+	return jsonapi.Data(c, http.StatusOK, apiJob{j}, nil)
 }
 
 func cleanJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if err := middlewares.AllowWholeType(c, webpermissions.POST, consts.Jobs); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Jobs); err != nil {
 		return err
 	}
-	var ups []*jobs.Job
+	var ups []*job.Job
 	now := time.Now()
 	err := couchdb.ForeachDocs(instance, consts.Jobs, func(_ string, data json.RawMessage) error {
-		var job *jobs.Job
-		if err := json.Unmarshal(data, &job); err != nil {
+		var j *job.Job
+		if err := json.Unmarshal(data, &j); err != nil {
 			return err
 		}
-		if job.State == jobs.Running || job.State == jobs.Queued {
-			if job.StartedAt.Add(1 * time.Hour).Before(now) {
-				ups = append(ups, job)
+		if j.State == job.Running || j.State == job.Queued {
+			if j.StartedAt.Add(1 * time.Hour).Before(now) {
+				ups = append(ups, j)
 			}
 		}
 		return nil
@@ -458,7 +457,7 @@ func cleanJobs(c echo.Context) error {
 	}
 	var errf error
 	for _, j := range ups {
-		j.State = jobs.Done
+		j.State = job.Done
 		err := couchdb.UpdateDoc(instance, j)
 		if err != nil {
 			errf = multierror.Append(errf, err)
@@ -472,7 +471,7 @@ func cleanJobs(c echo.Context) error {
 
 func purgeJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if err := middlewares.AllowWholeType(c, webpermissions.DELETE, consts.Jobs); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.Jobs); err != nil {
 		return err
 	}
 
@@ -491,7 +490,7 @@ func purgeJobs(c echo.Context) error {
 			return err
 		}
 	}
-	workers := jobs.GetWorkersNamesList()
+	workers := job.GetWorkersNamesList()
 	if workersParam != "" {
 		workers = strings.Split(workersParam, ",")
 	}
@@ -499,15 +498,15 @@ func purgeJobs(c echo.Context) error {
 	// Step 1: We want to get all the jobs prior to the date parameter.
 	// Jobs returned are the ones we want to remove
 	d := time.Now().Add(-dur)
-	jobsBeforeDate, err := jobs.GetJobsBeforeDate(instance, d)
-	if err != nil && err != jobs.ErrNotFoundJob {
+	jobsBeforeDate, err := job.GetJobsBeforeDate(instance, d)
+	if err != nil && err != job.ErrNotFoundJob {
 		return err
 	}
 	// Step 2: We also want to keep a minimum number of jobs for each state.
 	// Jobs returned will be kept.
 	lastsJobs := map[string]struct{}{}
 	for _, w := range workers {
-		jobs, err := jobs.GetLastsJobs(instance, w)
+		jobs, err := job.GetLastsJobs(instance, w)
 		if err != nil {
 			return err
 		}
@@ -519,23 +518,23 @@ func purgeJobs(c echo.Context) error {
 	// Step 3: cleaning.
 	// - Removing jobs from the ids if they exists.
 	// - Skipping worker types
-	var finalJobs []*jobs.Job
+	var finalJobs []*job.Job
 
-	for _, job := range jobsBeforeDate {
+	for _, j := range jobsBeforeDate {
 		validWorker := false
 
 		for _, wt := range workers {
-			if job.WorkerType == wt {
+			if j.WorkerType == wt {
 				validWorker = true
 				break
 			}
 		}
 		// Check the job is not existing in the lasts jobs
 		if validWorker {
-			_, ok := lastsJobs[job.ID()]
+			_, ok := lastsJobs[j.ID()]
 
 			if !ok {
-				finalJobs = append(finalJobs, job)
+				finalJobs = append(finalJobs, j)
 			}
 		}
 	}
@@ -573,11 +572,11 @@ func Routes(router *echo.Group) {
 
 func wrapJobsError(err error) error {
 	switch err {
-	case jobs.ErrNotFoundTrigger,
-		jobs.ErrNotFoundJob,
-		jobs.ErrUnknownWorker:
+	case job.ErrNotFoundTrigger,
+		job.ErrNotFoundJob,
+		job.ErrUnknownWorker:
 		return jsonapi.NotFound(err)
-	case jobs.ErrUnknownTrigger:
+	case job.ErrUnknownTrigger:
 		return jsonapi.InvalidAttribute("Type", err)
 	}
 	return err

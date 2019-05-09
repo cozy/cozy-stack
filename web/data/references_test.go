@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/stretchr/testify/assert"
 )
 

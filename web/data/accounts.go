@@ -5,14 +5,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/accounts"
+	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	perms "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -41,7 +40,7 @@ func getAccount(c echo.Context) error {
 	}
 	out.Type = doctype
 
-	if err = middlewares.Allow(c, permissions.GET, &out); err != nil {
+	if err = middlewares.Allow(c, permission.GET, &out); err != nil {
 		return err
 	}
 
@@ -55,7 +54,7 @@ func getAccount(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if perm.Type == perms.TypeKonnector {
+	if perm.Type == permission.TypeKonnector {
 		decryptAccount(out)
 	}
 
@@ -86,7 +85,7 @@ func updateAccount(c echo.Context) error {
 		return createNamedDoc(c, doc)
 	}
 
-	errWhole := middlewares.AllowWholeType(c, permissions.PUT, doc.DocType())
+	errWhole := middlewares.AllowWholeType(c, permission.PUT, doc.DocType())
 	if errWhole != nil {
 		// we cant apply to whole type, let's fetch old doc and see if it applies there
 		var old couchdb.JSONDoc
@@ -96,13 +95,13 @@ func updateAccount(c echo.Context) error {
 		}
 		old.Type = doc.DocType()
 		// check if permissions set allows manipulating old doc
-		errOld := middlewares.Allow(c, permissions.PUT, &old)
+		errOld := middlewares.Allow(c, permission.PUT, &old)
 		if errOld != nil {
 			return errOld
 		}
 
 		// also check if permissions set allows manipulating new doc
-		errNew := middlewares.Allow(c, permissions.PUT, &doc)
+		errNew := middlewares.Allow(c, permission.PUT, &doc)
 		if errNew != nil {
 			return errNew
 		}
@@ -119,7 +118,7 @@ func updateAccount(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if perm.Type == perms.TypeKonnector {
+	if perm.Type == permission.TypeKonnector {
 		decryptAccount(doc)
 	}
 
@@ -159,12 +158,12 @@ func encryptMap(m map[string]interface{}) (encrypted bool) {
 		switch k {
 		case "password":
 			password, _ := v.(string)
-			cloned["credentials_encrypted"], err = accounts.EncryptCredentials(login, password)
+			cloned["credentials_encrypted"], err = account.EncryptCredentials(login, password)
 			if err == nil {
 				encrypted = true
 			}
 		case "secret", "dob", "code", "answer", "access_token", "refresh_token", "appSecret", "session":
-			cloned[k+"_encrypted"], err = accounts.EncryptCredentialsData(v)
+			cloned[k+"_encrypted"], err = account.EncryptCredentialsData(v)
 			if err == nil {
 				encrypted = true
 			}
@@ -210,9 +209,9 @@ func decryptMap(m map[string]interface{}) (decrypted bool) {
 		}
 		var err error
 		if k == "credentials" {
-			cloned["login"], cloned["password"], err = accounts.DecryptCredentials(str)
+			cloned["login"], cloned["password"], err = account.DecryptCredentials(str)
 		} else {
-			cloned[k], err = accounts.DecryptCredentialsData(str)
+			cloned[k], err = account.DecryptCredentialsData(str)
 		}
 		if !decrypted {
 			decrypted = err == nil
@@ -236,7 +235,7 @@ func createAccount(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
-	if err := middlewares.Allow(c, permissions.POST, &doc); err != nil {
+	if err := middlewares.Allow(c, permission.POST, &doc); err != nil {
 		return err
 	}
 

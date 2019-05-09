@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ func TestCreateDirNoToken(t *testing.T) {
 }
 
 func TestCreateDirBadType(t *testing.T) {
-	badtok, _ := testInstance.MakeJWT(permissions.AccessTokenAudience, clientID, "io.cozy.events", "", time.Now())
+	badtok, _ := testInstance.MakeJWT(consts.AccessTokenAudience, clientID, "io.cozy.events", "", time.Now())
 	res, err := request("POST", "/files/?Name=icantcreateyou&Type=directory", badtok, strings.NewReader(""))
 	assert.NoError(t, err)
 	assert.Equal(t, 403, res.StatusCode)
@@ -30,7 +30,7 @@ func TestCreateDirLimitedScope(t *testing.T) {
 	res, data := createDir(t, "/files/?Name=permissionholder&Type=directory")
 	assert.Equal(t, 201, res.StatusCode)
 	id := data["data"].(map[string]interface{})["id"].(string)
-	badtok, _ := testInstance.MakeJWT(permissions.AccessTokenAudience, clientID, "io.cozy.files:ALL:"+id, "", time.Now())
+	badtok, _ := testInstance.MakeJWT(consts.AccessTokenAudience, clientID, "io.cozy.files:ALL:"+id, "", time.Now())
 
 	// not in authorized dir
 	res, err := request("POST", "/files/?Name=icantcreateyou&Type=directory", badtok, strings.NewReader(""))
@@ -44,7 +44,7 @@ func TestCreateDirLimitedScope(t *testing.T) {
 }
 
 func TestCreateDirBadVerb(t *testing.T) {
-	badtok, _ := testInstance.MakeJWT(permissions.AccessTokenAudience, clientID, "io.cozy.files:GET", "", time.Now())
+	badtok, _ := testInstance.MakeJWT(consts.AccessTokenAudience, clientID, "io.cozy.files:GET", "", time.Now())
 	res, err := request("POST", "/files/?Name=icantcreateyou&Type=directory", badtok, strings.NewReader(""))
 	assert.NoError(t, err)
 	assert.Equal(t, 403, res.StatusCode)

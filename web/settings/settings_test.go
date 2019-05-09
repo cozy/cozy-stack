@@ -11,19 +11,19 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/instance/lifecycle"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 
-	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
+	_ "github.com/cozy/cozy-stack/worker/mails"
 )
 
 var ts *httptest.Server
@@ -196,7 +196,7 @@ func TestRegisterPassphraseCorrectToken(t *testing.T) {
 	assert.Equal(t, "204 No Content", res.Status)
 	cookies := res.Cookies()
 	assert.Len(t, cookies, 1)
-	assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
+	assert.Equal(t, cookies[0].Name, session.SessionCookieName)
 	assert.NotEmpty(t, cookies[0].Value)
 }
 
@@ -228,7 +228,7 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 	assert.Equal(t, "204 No Content", res.Status)
 	cookies := res.Cookies()
 	assert.Len(t, cookies, 1)
-	assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
+	assert.Equal(t, cookies[0].Name, session.SessionCookieName)
 	assert.NotEmpty(t, cookies[0].Value)
 }
 
@@ -700,8 +700,8 @@ func TestMain(m *testing.M) {
 func fakeAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := c.Get("instance").(*instance.Instance)
-		session, _ := sessions.New(instance, true)
-		c.Set("session", session)
+		sess, _ := session.New(instance, true)
+		c.Set("session", sess)
 		return next(c)
 	}
 }

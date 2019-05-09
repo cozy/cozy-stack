@@ -3,8 +3,8 @@ package registry
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -24,13 +24,13 @@ func proxyReq(auth authType, clientPermanentCache bool, proxyCacheControl regist
 		switch auth {
 		case authed:
 			if !middlewares.IsLoggedIn(c) {
-				if err := middlewares.AllowWholeType(c, permissions.GET, consts.Apps); err != nil {
+				if err := middlewares.AllowWholeType(c, permission.GET, consts.Apps); err != nil {
 					return echo.NewHTTPError(http.StatusForbidden)
 				}
 			}
 		case perms:
 			pdoc, err := middlewares.GetPermission(c)
-			if err != nil || pdoc.Type != permissions.TypeWebapp {
+			if err != nil || pdoc.Type != permission.TypeWebapp {
 				return echo.NewHTTPError(http.StatusForbidden)
 			}
 		default:
@@ -53,7 +53,7 @@ func proxyReq(auth authType, clientPermanentCache bool, proxyCacheControl regist
 func proxyListReq(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	pdoc, err := middlewares.GetPermission(c)
-	if err != nil || pdoc.Type != permissions.TypeWebapp {
+	if err != nil || pdoc.Type != permission.TypeWebapp {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	req := c.Request()

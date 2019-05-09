@@ -11,11 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/echo"
@@ -75,7 +74,7 @@ func TestCreateJobNotExist(t *testing.T) {
 		},
 	})
 	req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/none", bytes.NewReader(body))
-	tokenNone, _ := testInstance.MakeJWT(permissions.CLIAudience, "CLI",
+	tokenNone, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI",
 		consts.Jobs+":ALL:none:worker",
 		"", time.Now())
 	req.Header.Add("Authorization", "Bearer "+tokenNone)
@@ -111,9 +110,9 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 
 	var v struct {
 		Data struct {
-			ID         string             `json:"id"`
-			Type       string             `json:"type"`
-			Attributes *jobs.TriggerInfos `json:"attributes"`
+			ID         string            `json:"id"`
+			Type       string            `json:"type"`
+			Attributes *job.TriggerInfos `json:"attributes"`
 		}
 	}
 	err = json.NewDecoder(res1.Body).Decode(&v)
@@ -199,9 +198,9 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 
 	var v struct {
 		Data struct {
-			ID         string             `json:"id"`
-			Type       string             `json:"type"`
-			Attributes *jobs.TriggerInfos `json:"attributes"`
+			ID         string            `json:"id"`
+			Type       string            `json:"type"`
+			Attributes *job.TriggerInfos `json:"attributes"`
 		}
 	}
 	err = json.NewDecoder(res1.Body).Decode(&v)
@@ -267,15 +266,15 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 func TestGetAllJobs(t *testing.T) {
 	var v struct {
 		Data []struct {
-			ID         string             `json:"id"`
-			Type       string             `json:"type"`
-			Attributes *jobs.TriggerInfos `json:"attributes"`
+			ID         string            `json:"id"`
+			Type       string            `json:"type"`
+			Attributes *job.TriggerInfos `json:"attributes"`
 		}
 	}
 
 	req1, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers", nil)
 	assert.NoError(t, err)
-	tokenTriggers, _ := testInstance.MakeJWT(permissions.CLIAudience, "CLI", consts.Triggers, "", time.Now())
+	tokenTriggers, _ := testInstance.MakeJWT(consts.CLIAudience, "CLI", consts.Triggers, "", time.Now())
 	req1.Header.Add("Authorization", "Bearer "+tokenTriggers)
 	res1, err := http.DefaultClient.Do(req1)
 	if !assert.NoError(t, err) {
@@ -381,10 +380,10 @@ func TestMain(m *testing.M) {
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "jobs_test")
 
-	jobs.AddWorker(&jobs.WorkerConfig{
+	job.AddWorker(&job.WorkerConfig{
 		WorkerType:  "print",
 		Concurrency: 4,
-		WorkerFunc: func(ctx *jobs.WorkerContext) error {
+		WorkerFunc: func(ctx *job.WorkerContext) error {
 			var msg string
 			if err := ctx.UnmarshalMessage(&msg); err != nil {
 				return err
@@ -400,7 +399,7 @@ func TestMain(m *testing.M) {
 		consts.Jobs + ":ALL:print:worker",
 		consts.Triggers + ":ALL:print:worker",
 	}, " ")
-	token, _ = testInstance.MakeJWT(permissions.CLIAudience, "CLI", scope,
+	token, _ = testInstance.MakeJWT(consts.CLIAudience, "CLI", scope,
 		"", time.Now())
 
 	ts = setup.GetTestServer("/jobs", Routes)

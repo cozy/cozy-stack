@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 )
