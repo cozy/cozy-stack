@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/go-redis/redis"
@@ -140,7 +140,7 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 		for triggerID, arguments := range m {
 			found := false
 			for _, args := range strings.Split(arguments, " ") {
-				rule, err := permissions.UnmarshalRuleString(args)
+				rule, err := permission.UnmarshalRuleString(args)
 				if err != nil {
 					s.log.Warnf("Coud not unmarshal rule %s: %s",
 						key, err.Error())

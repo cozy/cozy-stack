@@ -1,4 +1,4 @@
-package permissions
+package permission
 
 // Matcher is an interface for a object than can be matched by a Set
 type Matcher interface {

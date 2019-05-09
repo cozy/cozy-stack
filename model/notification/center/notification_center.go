@@ -10,12 +10,12 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/mail"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -76,14 +76,14 @@ func pushStack(domain string, category string, n *notification.Notification) err
 // Push creates and send a new notification in database. This method verifies
 // the permissions associated with this creation in order to check that it is
 // granted to create a notification and to extract its source.
-func Push(inst *instance.Instance, perm *permissions.Permission, n *notification.Notification) error {
+func Push(inst *instance.Instance, perm *permission.Permission, n *notification.Notification) error {
 	if n.Title == "" {
 		return ErrBadNotification
 	}
 
 	var p notification.Properties
 	switch perm.Type {
-	case permissions.TypeOauth:
+	case permission.TypeOauth:
 		c, ok := perm.Client.(*oauth.Client)
 		if !ok || c.Notifications == nil {
 			return ErrUnauthorized
@@ -93,7 +93,7 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 			return ErrUnauthorized
 		}
 		n.Originator = "oauth"
-	case permissions.TypeWebapp:
+	case permission.TypeWebapp:
 		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")
 		m, err := app.GetWebappBySlug(inst, slug)
 		if err != nil || m.Notifications == nil {
@@ -106,7 +106,7 @@ func Push(inst *instance.Instance, perm *permissions.Permission, n *notification
 		}
 		n.Slug = m.Slug()
 		n.Originator = "app"
-	case permissions.TypeKonnector:
+	case permission.TypeKonnector:
 		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")
 		m, err := app.GetKonnectorBySlug(inst, slug)
 		if err != nil || m.Notifications == nil {

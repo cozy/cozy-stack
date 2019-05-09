@@ -12,10 +12,10 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/echo"
@@ -28,7 +28,7 @@ var token string
 var appToken string
 var filesToken string
 var intentID string
-var appPerms *permissions.Permission
+var appPerms *permission.Permission
 
 func checkIntentResult(t *testing.T, res *http.Response, fromWeb bool) {
 	assert.Equal(t, 200, res.StatusCode)
@@ -127,14 +127,14 @@ func TestMain(m *testing.M) {
 	webapp := &app.WebappManifest{
 		DocID:          consts.Apps + "/app",
 		DocSlug:        "app",
-		DocPermissions: permissions.Set{},
+		DocPermissions: permission.Set{},
 	}
 	err := couchdb.CreateNamedDoc(ins, webapp)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	appPerms, err = permissions.CreateWebappSet(ins, webapp.Slug(), webapp.Permissions())
+	appPerms, err = permission.CreateWebappSet(ins, webapp.Slug(), webapp.Permissions())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -143,7 +143,7 @@ func TestMain(m *testing.M) {
 	files := &app.WebappManifest{
 		DocID:          consts.Apps + "/files",
 		DocSlug:        "files",
-		DocPermissions: permissions.Set{},
+		DocPermissions: permission.Set{},
 		Intents: []app.Intent{
 			{
 				Action: "PICK",
@@ -156,7 +156,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	if _, err := permissions.CreateWebappSet(ins, files.Slug(), files.Permissions()); err != nil {
+	if _, err := permission.CreateWebappSet(ins, files.Slug(), files.Permissions()); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

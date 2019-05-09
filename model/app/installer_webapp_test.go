@@ -8,8 +8,8 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -204,21 +204,21 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 	assert.Contains(t, man.Version(), "1.0.0")
 
 	// Altering permissions by adding a value and a verb
-	newPerms, err := permissions.UnmarshalScopeString("io.cozy.files:GET,POST:foobar,foobar2")
+	newPerms, err := permission.UnmarshalScopeString("io.cozy.files:GET,POST:foobar,foobar2")
 	assert.NoError(t, err)
 
-	customRule := permissions.Rule{
+	customRule := permission.Rule{
 		Title:  "myCustomRule",
-		Verbs:  permissions.Verbs(permissions.PUT),
+		Verbs:  permission.Verbs(permission.PUT),
 		Type:   "io.cozy.custom",
 		Values: []string{"myCustomValue"},
 	}
 	newPerms = append(newPerms, customRule)
 
-	_, err = permissions.UpdateWebappSet(instance, "mini-test-perms", newPerms)
+	_, err = permission.UpdateWebappSet(instance, "mini-test-perms", newPerms)
 	assert.NoError(t, err)
 
-	p1, err := permissions.GetForWebapp(instance, "mini-test-perms")
+	p1, err := permission.GetForWebapp(instance, "mini-test-perms")
 	assert.NoError(t, err)
 	assert.False(t, p1.Permissions.HasSameRules(man.Permissions()))
 
@@ -235,7 +235,7 @@ func TestWebappInstallSuccessfulWithExtraPerms(t *testing.T) {
 	man, err = inst2.RunSync()
 	assert.NoError(t, err)
 
-	p2, err := permissions.GetForWebapp(instance, "mini-test-perms")
+	p2, err := permission.GetForWebapp(instance, "mini-test-perms")
 	assert.NoError(t, err)
 	assert.Contains(t, man.Version(), "2.0.0")
 	// Assert the rules were kept

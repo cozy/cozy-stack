@@ -14,12 +14,12 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -91,9 +91,9 @@ func TestCreateShareSetByMobileRevokeByLinkedApp(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 
 	type minPerms struct {
-		Type       string                 `json:"type"`
-		ID         string                 `json:"id"`
-		Attributes permissions.Permission `json:"attributes"`
+		Type       string                `json:"type"`
+		ID         string                `json:"id"`
+		Attributes permission.Permission `json:"attributes"`
 	}
 
 	var perm struct {
@@ -167,9 +167,9 @@ func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 
 	type minPerms struct {
-		Type       string                 `json:"type"`
-		ID         string                 `json:"id"`
-		Attributes permissions.Permission `json:"attributes"`
+		Type       string                `json:"type"`
+		ID         string                `json:"id"`
+		Attributes permission.Permission `json:"attributes"`
 	}
 
 	var perm struct {
@@ -576,7 +576,7 @@ func doRequest(method, url, tok, body string) (map[string]interface{}, error) {
 
 func TestGetPermissionsWithShortCode(t *testing.T) {
 	id, _, _ := createTestSubPermissions(token, "daniel")
-	perm, _ := permissions.GetByID(testInstance, id)
+	perm, _ := permission.GetByID(testInstance, id)
 
 	assert.NotNil(t, perm.ShortCodes)
 
@@ -588,7 +588,7 @@ func TestGetPermissionsWithShortCode(t *testing.T) {
 
 func TestGetPermissionsWithBadShortCode(t *testing.T) {
 	id, _, _ := createTestSubPermissions(token, "alice")
-	perm, _ := permissions.GetByID(testInstance, id)
+	perm, _ := permission.GetByID(testInstance, id)
 
 	assert.NotNil(t, perm.ShortCodes)
 
@@ -600,9 +600,9 @@ func TestGetPermissionsWithBadShortCode(t *testing.T) {
 
 func TestGetTokenFromShortCode(t *testing.T) {
 	id, _, _ := createTestSubPermissions(token, "alice")
-	perm, _ := permissions.GetByID(testInstance, id)
+	perm, _ := permission.GetByID(testInstance, id)
 
-	token, _ := permissions.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
+	token, _ := permission.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
 	assert.Equal(t, perm.Codes["alice"], token)
 }
 
@@ -611,7 +611,7 @@ func TestGetBadShortCode(t *testing.T) {
 	assert.NoError(t, err)
 	shortcode := "coincoin"
 
-	token, err := permissions.GetTokenFromShortcode(testInstance, shortcode)
+	token, err := permission.GetTokenFromShortcode(testInstance, shortcode)
 	assert.Empty(t, token)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "no permission doc for shortcode")
@@ -620,13 +620,13 @@ func TestGetBadShortCode(t *testing.T) {
 func TestGetMultipleShortCode(t *testing.T) {
 	id, _, _ := createTestSubPermissions(token, "alice")
 	id2, _, _ := createTestSubPermissions(token, "alice")
-	perm, _ := permissions.GetByID(testInstance, id)
-	perm2, _ := permissions.GetByID(testInstance, id2)
+	perm, _ := permission.GetByID(testInstance, id)
+	perm2, _ := permission.GetByID(testInstance, id2)
 
 	perm2.ShortCodes["alice"] = perm.ShortCodes["alice"]
 	assert.NoError(t, couchdb.UpdateDoc(testInstance, perm2))
 
-	_, err := permissions.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
+	_, err := permission.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
 
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "several permission docs for shortcode")
@@ -634,11 +634,11 @@ func TestGetMultipleShortCode(t *testing.T) {
 
 func TestCannotFindToken(t *testing.T) {
 	id, _, _ := createTestSubPermissions(token, "alice")
-	perm, _ := permissions.GetByID(testInstance, id)
+	perm, _ := permission.GetByID(testInstance, id)
 	perm.Codes = map[string]string{}
 	assert.NoError(t, couchdb.UpdateDoc(testInstance, perm))
 
-	_, err := permissions.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
+	_, err := permission.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "Cannot find token for shortcode")
 }
@@ -669,7 +669,7 @@ func TestGetForOauth(t *testing.T) {
 	oauthClient.SoftwareID = "registry://settings"
 	oauthClient.Create(testInstance)
 
-	parent, err := middlewares.GetForOauth(testInstance, &permissions.Claims{
+	parent, err := middlewares.GetForOauth(testInstance, &permission.Claims{
 		StandardClaims: jwt.StandardClaims{
 			Audience: consts.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
@@ -688,7 +688,7 @@ func TestListPermission(t *testing.T) {
 	ev2, _ := createTestEvent(testInstance)
 	ev3, _ := createTestEvent(testInstance)
 
-	parent, _ := middlewares.GetForOauth(testInstance, &permissions.Claims{
+	parent, _ := middlewares.GetForOauth(testInstance, &permission.Claims{
 		StandardClaims: jwt.StandardClaims{
 			Audience: consts.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
@@ -697,22 +697,22 @@ func TestListPermission(t *testing.T) {
 		},
 		Scope: "io.cozy.events",
 	}, clientVal)
-	p1 := permissions.Set{
-		permissions.Rule{
+	p1 := permission.Set{
+		permission.Rule{
 			Type:   "io.cozy.events",
-			Verbs:  permissions.Verbs(permissions.DELETE, permissions.PATCH),
+			Verbs:  permission.Verbs(permission.DELETE, permission.PATCH),
 			Values: []string{ev1.ID()},
 		}}
-	p2 := permissions.Set{
-		permissions.Rule{
+	p2 := permission.Set{
+		permission.Rule{
 			Type:   "io.cozy.events",
-			Verbs:  permissions.Verbs(permissions.GET),
+			Verbs:  permission.Verbs(permission.GET),
 			Values: []string{ev2.ID()},
 		}}
 
 	codes := map[string]string{"bob": "secret"}
-	_, _ = permissions.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, p1, nil)
-	_, _ = permissions.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, p2, nil)
+	_, _ = permission.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, p1, nil)
+	_, _ = permission.CreateShareSet(testInstance, parent, parent.SourceID, codes, nil, p2, nil)
 
 	reqbody := strings.NewReader(`{
 "data": [

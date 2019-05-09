@@ -8,10 +8,10 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/intent"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
@@ -34,7 +34,7 @@ func (i *apiIntent) Links() *jsonapi.LinksList {
 	if len(parts) < 2 {
 		return nil
 	}
-	perms, err := permissions.GetForWebapp(i.ins, parts[1])
+	perms, err := permission.GetForWebapp(i.ins, parts[1])
 	if err != nil {
 		return nil
 	}

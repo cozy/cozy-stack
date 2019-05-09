@@ -12,11 +12,11 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
 // CreateSharingRequest sends information about the sharing to the recipient's cozy
@@ -270,7 +270,7 @@ func ConvertOAuthClient(c *oauth.Client) *auth.Client {
 
 // CreateAccessToken creates an access token for the given OAuth client,
 // with a scope on this sharing.
-func CreateAccessToken(inst *instance.Instance, cli *oauth.Client, sharingID string, verb permissions.VerbSet) (*auth.AccessToken, error) {
+func CreateAccessToken(inst *instance.Instance, cli *oauth.Client, sharingID string, verb permission.VerbSet) (*auth.AccessToken, error) {
 	scope := consts.Sharings + ":" + verb.String() + ":" + sharingID
 	cli.CouchID = cli.ClientID // XXX CouchID is required by CreateJWT
 	refresh, err := cli.CreateJWT(inst, consts.RefreshTokenAudience, scope)
@@ -303,7 +303,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	if err != nil {
 		return err
 	}
-	token, err := CreateAccessToken(inst, cli, s.SID, permissions.ALL)
+	token, err := CreateAccessToken(inst, cli, s.SID, permission.ALL)
 	if err != nil {
 		return err
 	}
@@ -394,13 +394,13 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 			}
 			s.Credentials[i].InboundClientID = cli.ClientID
 			ac.Credentials.Client = ConvertOAuthClient(cli)
-			var verb permissions.VerbSet
+			var verb permission.VerbSet
 			// In case of read-only, the recipient only needs read access on the
 			// sharing, e.g. to notify the sharer of a revocation
 			if s.ReadOnlyRules() || s.Members[i+1].ReadOnly {
-				verb = permissions.Verbs(permissions.GET)
+				verb = permission.Verbs(permission.GET)
 			} else {
-				verb = permissions.ALL
+				verb = permission.ALL
 			}
 			token, err := CreateAccessToken(inst, cli, s.SID, verb)
 			if err != nil {

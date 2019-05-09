@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/sirupsen/logrus"
@@ -162,7 +162,7 @@ func (j *Job) SetID(id string) { j.JobID = id }
 // SetRev implements the couchdb.Doc interface
 func (j *Job) SetRev(rev string) { j.JobRev = rev }
 
-// Match implements the permissions.Matcher interface
+// Match implements the permission.Matcher interface
 func (j *Job) Match(key, value string) bool {
 	switch key {
 	case WorkerType:
@@ -171,13 +171,13 @@ func (j *Job) Match(key, value string) bool {
 	return false
 }
 
-// ID implements the permissions.Matcher interface
+// ID implements the permission.Matcher interface
 func (jr *JobRequest) ID() string { return "" }
 
-// DocType implements the permissions.Matcher interface
+// DocType implements the permission.Matcher interface
 func (jr *JobRequest) DocType() string { return consts.Jobs }
 
-// Match implements the permissions.Matcher interface
+// Match implements the permission.Matcher interface
 func (jr *JobRequest) Match(key, value string) bool {
 	switch key {
 	case WorkerType:
@@ -402,6 +402,6 @@ func (e Event) Unmarshal(evt interface{}) error {
 }
 
 var (
-	_ permissions.Matcher = (*JobRequest)(nil)
-	_ permissions.Matcher = (*Job)(nil)
+	_ permission.Matcher = (*JobRequest)(nil)
+	_ permission.Matcher = (*Job)(nil)
 )

@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
@@ -16,7 +16,7 @@ type (
 	// Trigger interface is used to represent a trigger.
 	Trigger interface {
 		prefixer.Prefixer
-		permissions.Matcher
+		permission.Matcher
 		Type() string
 		Infos() *TriggerInfos
 		// Schedule should return a channel on which the trigger can send job
@@ -177,7 +177,7 @@ func (t *TriggerInfos) SetID(id string) { t.TID = id }
 // SetRev implements the couchdb.Doc interface
 func (t *TriggerInfos) SetRev(rev string) { t.TRev = rev }
 
-// Match implements the permissions.Matcher interface
+// Match implements the permission.Matcher interface
 func (t *TriggerInfos) Match(key, value string) bool {
 	switch key {
 	case "worker":

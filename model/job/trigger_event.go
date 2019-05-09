@@ -4,11 +4,11 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
@@ -16,16 +16,16 @@ import (
 type EventTrigger struct {
 	*TriggerInfos
 	unscheduled chan struct{}
-	mask        []permissions.Rule
+	mask        []permission.Rule
 }
 
 // NewEventTrigger returns a new instance of EventTrigger given the specified
 // options.
 func NewEventTrigger(infos *TriggerInfos) (*EventTrigger, error) {
 	args := strings.Split(infos.Arguments, " ")
-	rules := make([]permissions.Rule, len(args))
+	rules := make([]permission.Rule, len(args))
 	for i, arg := range args {
-		rule, err := permissions.UnmarshalRuleString(arg)
+		rule, err := permission.UnmarshalRuleString(arg)
 		if err != nil {
 			return nil, err
 		}
@@ -43,17 +43,17 @@ func (t *EventTrigger) Type() string {
 	return t.TriggerInfos.Type
 }
 
-// DocType implements the permissions.Matcher interface
+// DocType implements the permission.Matcher interface
 func (t *EventTrigger) DocType() string {
 	return consts.Triggers
 }
 
-// ID implements the permissions.Matcher interface
+// ID implements the permission.Matcher interface
 func (t *EventTrigger) ID() string {
 	return t.TriggerInfos.TID
 }
 
-// Match implements the permissions.Matcher interface
+// Match implements the permission.Matcher interface
 func (t *EventTrigger) Match(key, value string) bool {
 	switch key {
 	case WorkerType:
@@ -107,12 +107,12 @@ func (t *EventTrigger) Infos() *TriggerInfos {
 	return t.TriggerInfos
 }
 
-func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
+func eventMatchPermission(e *realtime.Event, rule *permission.Rule) bool {
 	if e.Doc.DocType() != rule.Type {
 		return false
 	}
 
-	if !rule.Verbs.Contains(permissions.Verb(e.Verb)) {
+	if !rule.Verbs.Contains(permission.Verb(e.Verb)) {
 		return false
 	}
 
@@ -148,13 +148,13 @@ func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
 		return false
 	}
 
-	if v, ok := e.Doc.(permissions.Matcher); ok {
+	if v, ok := e.Doc.(permission.Matcher); ok {
 		if rule.ValuesMatch(v) {
 			return true
 		}
 		// Particular case where the new doc is not valid but the old one was.
 		if e.OldDoc != nil {
-			if vOld, okOld := e.OldDoc.(permissions.Matcher); okOld {
+			if vOld, okOld := e.OldDoc.(permission.Matcher); okOld {
 				return rule.ValuesMatch(vOld)
 			}
 		}

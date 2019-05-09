@@ -4,13 +4,13 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
-// Matcher extends on permissions.Matcher with hierarchy functions
+// Matcher extends on permission.Matcher with hierarchy functions
 type Matcher interface {
-	permissions.Matcher
+	permission.Matcher
 	parentID() string
 	Path(fs FilePather) (string, error)
 	Parent(fs VFS) (*DirDoc, error)
@@ -21,9 +21,9 @@ var _ Matcher = (*FileDoc)(nil)
 var _ Matcher = (*DirDoc)(nil)
 
 // Allows check if a permSet allows verb on given file
-func Allows(fs VFS, pset permissions.Set, v permissions.Verb, fd Matcher) error {
+func Allows(fs VFS, pset permission.Set, v permission.Verb, fd Matcher) error {
 	allowedIDs := []string{}
-	otherRules := []permissions.Rule{}
+	otherRules := []permission.Rule{}
 
 	// First pass, we iterate over the rules, check if we have an easy match
 	// keep a short list of useful rules and allowed IDs.
@@ -132,7 +132,7 @@ func contains(haystack []string, needle string) bool {
 func (f *FileDoc) parentID() string { return f.DirID }
 func (d *DirDoc) parentID() string  { return d.DirID }
 
-// Match implements permissions.Matcher on FileDoc
+// Match implements permission.Matcher on FileDoc
 func (f *FileDoc) Match(field, expected string) bool {
 	switch field {
 	case "type":
@@ -148,7 +148,7 @@ func (f *FileDoc) Match(field, expected string) bool {
 	case "referenced_by":
 		if f != nil {
 			for _, ref := range f.ReferencedBy {
-				parts := strings.Split(expected, permissions.RefSep)
+				parts := strings.Split(expected, permission.RefSep)
 				if len(parts) == 2 {
 					if ref.Type == parts[0] && ref.ID == parts[1] {
 						return true
@@ -166,7 +166,7 @@ func (f *FileDoc) Match(field, expected string) bool {
 	}
 }
 
-// Match implements permissions.Matcher on DirDOc
+// Match implements permission.Matcher on DirDOc
 func (d *DirDoc) Match(field, expected string) bool {
 	switch field {
 	case "type":

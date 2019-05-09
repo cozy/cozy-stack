@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -56,11 +56,11 @@ type Manifest interface {
 	ReadManifest(i io.Reader, slug, sourceURL string) (Manifest, error)
 
 	Create(db prefixer.Prefixer) error
-	Update(db prefixer.Prefixer, extraPerms permissions.Set) error
+	Update(db prefixer.Prefixer, extraPerms permission.Set) error
 	Delete(db prefixer.Prefixer) error
 
 	AppType() consts.AppType
-	Permissions() permissions.Set
+	Permissions() permission.Set
 	Source() string
 	Version() string
 	AvailableVersion() string

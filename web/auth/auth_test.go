@@ -24,12 +24,12 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -1269,7 +1269,7 @@ func TestRefreshTokenInvalidToken(t *testing.T) {
 }
 
 func TestRefreshTokenInvalidSigningMethod(t *testing.T) {
-	claims := permissions.Claims{
+	claims := permission.Claims{
 		StandardClaims: jwt.StandardClaims{
 			Audience: consts.RefreshTokenAudience,
 			Issuer:   domain,
@@ -1327,7 +1327,7 @@ func TestLogoutSuccess(t *testing.T) {
 		DocSlug: "home",
 	}
 	token := testInstance.BuildAppToken(a.Slug(), getSessionID(jar.Cookies(nil)))
-	_, err := permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
+	_, err := permission.CreateWebappSet(testInstance, a.Slug(), permission.Set{})
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
 	req.Host = domain
@@ -1335,7 +1335,7 @@ func TestLogoutSuccess(t *testing.T) {
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	err = permissions.DestroyWebapp(testInstance, "home")
+	err = permission.DestroyWebapp(testInstance, "home")
 	assert.NoError(t, err)
 
 	assert.Equal(t, "204 No Content", res.Status)
@@ -1391,7 +1391,7 @@ func TestLogoutOthers(t *testing.T) {
 		DocSlug: "home",
 	}
 	token := testInstance.BuildAppToken(a.Slug(), getSessionID(cookies1))
-	_, err = permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
+	_, err = permission.CreateWebappSet(testInstance, a.Slug(), permission.Set{})
 	assert.NoError(t, err)
 
 	reqLogout1, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)
@@ -1421,7 +1421,7 @@ func TestLogoutOthers(t *testing.T) {
 	defer resLogout3.Body.Close()
 	assert.Equal(t, 204, resLogout3.StatusCode)
 
-	err = permissions.DestroyWebapp(testInstance, "home")
+	err = permission.DestroyWebapp(testInstance, "home")
 	assert.NoError(t, err)
 }
 
@@ -1835,7 +1835,7 @@ func getTestURL() (string, error) {
 }
 
 func assertValidToken(t *testing.T, token, audience, subject, scope string) {
-	claims := permissions.Claims{}
+	claims := permission.Claims{}
 	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
 		return testInstance.OAuthSecret, nil
 	}, &claims)

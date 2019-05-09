@@ -15,7 +15,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "%s ./pkg/foo > tests/clone/generated/foo_test.go\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "%s ./model/foo > tests/clone/generated/foo_test.go\n", os.Args[0])
 		os.Exit(1)
 	}
 	infos := extractInfos(os.Args[1:])
@@ -147,10 +147,13 @@ import (
 	"testing"
 `)
 	for _, info := range infos {
-		fmt.Printf("\t\"%s\"\n", info.PkgPath)
+		if info.PkgPath == "github.com/cozy/cozy-stack/model/vfs" {
+			fmt.Printf("\t\"github.com/cozy/cozy-stack/pkg/couchdb\"\n")
+		}
 		if info.PkgPath == "github.com/cozy/cozy-stack/pkg/config/dynamic" {
 			fmt.Printf("\t\"github.com/cozy/cozy-stack/pkg/statik/fs\"\n")
 		}
+		fmt.Printf("\t\"%s\"\n", info.PkgPath)
 	}
 	fmt.Printf(")\n\n")
 

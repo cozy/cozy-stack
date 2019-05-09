@@ -3,10 +3,10 @@ package sharing
 import (
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
 const (
@@ -78,7 +78,7 @@ func (s *Sharing) ValidateRules() error {
 					}
 				}
 			}
-		} else if permissions.CheckWritable(rule.DocType) != nil {
+		} else if permission.CheckWritable(rule.DocType) != nil {
 			return ErrInvalidRule
 		}
 		if rule.Add == "" {

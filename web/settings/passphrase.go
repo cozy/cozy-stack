@@ -10,13 +10,12 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	perms "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -66,7 +65,7 @@ func updatePassphrase(c echo.Context) error {
 	// Even if the current passphrase is needed for this request to work, we
 	// enforce a valid permission to avoid having an unauthorized enpoint that
 	// can be bruteforced.
-	if err := middlewares.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.PUT, consts.Settings); err != nil {
 		return err
 	}
 
@@ -89,7 +88,7 @@ func updatePassphrase(c echo.Context) error {
 			return err
 		}
 
-		if p.Type == perms.TypeCLI { // We limit the authorization only to CLI
+		if p.Type == permission.TypeCLI { // We limit the authorization only to CLI
 			err := lifecycle.ForceUpdatePassphrase(inst, []byte(args.Passphrase))
 			if err != nil {
 				return err

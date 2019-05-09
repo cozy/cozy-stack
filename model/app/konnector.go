@@ -6,10 +6,10 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -55,14 +55,14 @@ type KonnManifest struct {
 	// when an account associated with the konnector is deleted.
 	OnDeleteAccount string `json:"on_delete_account,omitempty"`
 
-	DocSlug             string          `json:"slug"`
-	DocState            State           `json:"state"`
-	DocSource           string          `json:"source"`
-	DocVersion          string          `json:"version"`
-	DocChecksum         string          `json:"checksum"`
-	DocPermissions      permissions.Set `json:"permissions"`
-	DocAvailableVersion string          `json:"available_version,omitempty"`
-	DocTerms            Terms           `json:"terms,omitempty"`
+	DocSlug             string         `json:"slug"`
+	DocState            State          `json:"state"`
+	DocSource           string         `json:"source"`
+	DocVersion          string         `json:"version"`
+	DocChecksum         string         `json:"checksum"`
+	DocPermissions      permission.Set `json:"permissions"`
+	DocAvailableVersion string         `json:"available_version,omitempty"`
+	DocTerms            Terms          `json:"terms,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -84,7 +84,7 @@ func (m *KonnManifest) DocType() string { return consts.Konnectors }
 func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned := *m
 
-	cloned.DocPermissions = make(permissions.Set, len(m.DocPermissions))
+	cloned.DocPermissions = make(permission.Set, len(m.DocPermissions))
 	copy(cloned.DocPermissions, m.DocPermissions)
 
 	cloned.Locales = cloneRawMessage(m.Locales)
@@ -164,7 +164,7 @@ func (m *KonnManifest) AppType() consts.AppType { return consts.KonnectorType }
 func (m *KonnManifest) Terms() Terms { return m.DocTerms }
 
 // Permissions is part of the Manifest interface
-func (m *KonnManifest) Permissions() permissions.Set {
+func (m *KonnManifest) Permissions() permission.Set {
 	return m.DocPermissions
 }
 
@@ -217,12 +217,12 @@ func (m *KonnManifest) Create(db prefixer.Prefixer) error {
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
-	_, err := permissions.CreateKonnectorSet(db, m.Slug(), m.Permissions())
+	_, err := permission.CreateKonnectorSet(db, m.Slug(), m.Permissions())
 	return err
 }
 
 // Update is part of the Manifest interface
-func (m *KonnManifest) Update(db prefixer.Prefixer, extraPerms permissions.Set) error {
+func (m *KonnManifest) Update(db prefixer.Prefixer, extraPerms permission.Set) error {
 	m.UpdatedAt = time.Now()
 	err := couchdb.UpdateDoc(db, m)
 	if err != nil {
@@ -233,18 +233,18 @@ func (m *KonnManifest) Update(db prefixer.Prefixer, extraPerms permissions.Set) 
 
 	// Merging the potential extra permissions
 	if len(extraPerms) > 0 {
-		perms, err = permissions.MergeExtraPermissions(perms, extraPerms)
+		perms, err = permission.MergeExtraPermissions(perms, extraPerms)
 		if err != nil {
 			return err
 		}
 	}
-	_, err = permissions.UpdateKonnectorSet(db, m.Slug(), perms)
+	_, err = permission.UpdateKonnectorSet(db, m.Slug(), perms)
 	return err
 }
 
 // Delete is part of the Manifest interface
 func (m *KonnManifest) Delete(db prefixer.Prefixer) error {
-	err := permissions.DestroyKonnector(db, m.Slug())
+	err := permission.DestroyKonnector(db, m.Slug())
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
 	}

@@ -12,11 +12,11 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -170,9 +170,9 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		cozyURL := "COZY_URL=" + inst.PageURL("/", nil) + " "
 		assert.True(t, strings.HasPrefix(msg1, cozyURL))
 		token := msg1[len(cozyURL):]
-		var claims permissions.Claims
+		var claims permission.Claims
 		err = crypto.ParseJWT(token, func(t *jwt.Token) (interface{}, error) {
-			return inst.PickKey(t.Claims.(*permissions.Claims).Audience)
+			return inst.PickKey(t.Claims.(*permission.Claims).Audience)
 		}, &claims)
 		assert.NoError(t, err)
 		assert.Equal(t, consts.KonnectorAudience, claims.Audience)

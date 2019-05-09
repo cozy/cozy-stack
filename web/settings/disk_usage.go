@@ -5,11 +5,11 @@ package settings
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -39,7 +39,7 @@ func diskUsage(c echo.Context) error {
 
 	// Check permissions, but also allow every request from the logged-in user
 	// as this route is used by the cozy-bar from all the client-side apps
-	if err := middlewares.Allow(c, permissions.GET, &result); err != nil {
+	if err := middlewares.Allow(c, permission.GET, &result); err != nil {
 		if !middlewares.IsLoggedIn(c) {
 			return err
 		}

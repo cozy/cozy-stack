@@ -3,10 +3,10 @@ package vfs_test
 import (
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,158 +69,158 @@ func TestPermissions(t *testing.T) {
 	// hack to have a Class attribute
 	f.Class = "superfile"
 
-	psetWholeType := permissions.Set{
-		permissions.Rule{
+	psetWholeType := permission.Set{
+		permission.Rule{
 			Type:  consts.Files,
-			Verbs: permissions.ALL,
+			Verbs: permission.ALL,
 		},
 	}
-	assert.NoError(t, vfs.Allows(fs, psetWholeType, permissions.GET, f))
+	assert.NoError(t, vfs.Allows(fs, psetWholeType, permission.GET, f))
 
-	psetSelfID := permissions.Set{
-		permissions.Rule{
+	psetSelfID := permission.Set{
+		permission.Rule{
 			Type:   consts.Files,
-			Verbs:  permissions.ALL,
+			Verbs:  permission.ALL,
 			Values: []string{f.ID()},
 		},
 	}
-	assert.NoError(t, vfs.Allows(fs, psetSelfID, permissions.GET, f))
+	assert.NoError(t, vfs.Allows(fs, psetSelfID, permission.GET, f))
 
-	psetSelfAttributes := permissions.Set{
-		permissions.Rule{
+	psetSelfAttributes := permission.Set{
+		permission.Rule{
 			Type:     consts.Files,
-			Verbs:    permissions.ALL,
+			Verbs:    permission.ALL,
 			Selector: "class",
 			Values:   []string{"superfile"},
 		},
 	}
-	assert.NoError(t, vfs.Allows(fs, psetSelfAttributes, permissions.GET, f))
+	assert.NoError(t, vfs.Allows(fs, psetSelfAttributes, permission.GET, f))
 
-	psetOnlyFiles := permissions.Set{
-		permissions.Rule{
+	psetOnlyFiles := permission.Set{
+		permission.Rule{
 			Type:     consts.Files,
-			Verbs:    permissions.ALL,
+			Verbs:    permission.ALL,
 			Selector: "type",
 			Values:   []string{"file"},
 		},
 	}
-	assert.NoError(t, vfs.Allows(fs, psetOnlyFiles, permissions.GET, f))
+	assert.NoError(t, vfs.Allows(fs, psetOnlyFiles, permission.GET, f))
 
-	psetOnlyDirs := permissions.Set{
-		permissions.Rule{
+	psetOnlyDirs := permission.Set{
+		permission.Rule{
 			Type:     consts.Files,
-			Verbs:    permissions.ALL,
+			Verbs:    permission.ALL,
 			Selector: "type",
 			Values:   []string{"directory"},
 		},
 	}
-	assert.NoError(t, vfs.Allows(fs, psetOnlyDirs, permissions.GET, B))
+	assert.NoError(t, vfs.Allows(fs, psetOnlyDirs, permission.GET, B))
 
-	psetMime := permissions.Set{
-		permissions.Rule{
+	psetMime := permission.Set{
+		permission.Rule{
 			Type:     consts.Files,
-			Verbs:    permissions.ALL,
+			Verbs:    permission.ALL,
 			Selector: "mime",
 			Values:   []string{"text/plain"},
 		},
 	}
 	f.Mime = "text/plain"
-	assert.NoError(t, vfs.Allows(fs, psetMime, permissions.GET, f))
+	assert.NoError(t, vfs.Allows(fs, psetMime, permission.GET, f))
 
-	psetReferences := permissions.Set{
-		permissions.Rule{
+	psetReferences := permission.Set{
+		permission.Rule{
 			Type:     consts.Files,
-			Verbs:    permissions.ALL,
+			Verbs:    permission.ALL,
 			Selector: "referenced_by",
 			Values:   []string{"somealbumid"},
 		},
 	}
 	f.ReferencedBy = []couchdb.DocReference{{Type: "io.cozy.albums", ID: "somealbumid"}}
-	assert.NoError(t, vfs.Allows(fs, psetReferences, permissions.GET, f))
+	assert.NoError(t, vfs.Allows(fs, psetReferences, permission.GET, f))
 
-	psetBadReferences := permissions.Set{
-		permissions.Rule{
+	psetBadReferences := permission.Set{
+		permission.Rule{
 			Type:     consts.Files,
-			Verbs:    permissions.ALL,
+			Verbs:    permission.ALL,
 			Selector: "referenced_by",
 			Values:   []string{"anotheralbumid"},
 		},
 	}
-	assert.Error(t, vfs.Allows(fs, psetBadReferences, permissions.GET, f))
+	assert.Error(t, vfs.Allows(fs, psetBadReferences, permission.GET, f))
 
-	psetName := permissions.Set{
-		permissions.Rule{
+	psetName := permission.Set{
+		permission.Rule{
 			Type:     consts.Files,
-			Verbs:    permissions.ALL,
+			Verbs:    permission.ALL,
 			Selector: "name",
 			Values:   []string{"b1.txt"},
 		},
 	}
-	assert.NoError(t, vfs.Allows(fs, psetName, permissions.GET, f))
+	assert.NoError(t, vfs.Allows(fs, psetName, permission.GET, f))
 
-	psetSelfTag := permissions.Set{
-		permissions.Rule{
+	psetSelfTag := permission.Set{
+		permission.Rule{
 			Type:     consts.Files,
-			Verbs:    permissions.ALL,
+			Verbs:    permission.ALL,
 			Selector: "tags",
 			Values:   []string{"testtag"},
 		},
 	}
-	assert.NoError(t, vfs.Allows(fs, psetSelfTag, permissions.GET, f))
+	assert.NoError(t, vfs.Allows(fs, psetSelfTag, permission.GET, f))
 
-	psetParentID := permissions.Set{
-		permissions.Rule{
+	psetParentID := permission.Set{
+		permission.Rule{
 			Type:   consts.Files,
-			Verbs:  permissions.ALL,
+			Verbs:  permission.ALL,
 			Values: []string{O.ID()},
 		},
 	}
-	assert.NoError(t, vfs.Allows(fs, psetParentID, permissions.GET, f))
+	assert.NoError(t, vfs.Allows(fs, psetParentID, permission.GET, f))
 
-	psetSelfParentTag := permissions.Set{
-		permissions.Rule{
+	psetSelfParentTag := permission.Set{
+		permission.Rule{
 			Type:     consts.Files,
-			Verbs:    permissions.ALL,
+			Verbs:    permission.ALL,
 			Selector: "tags",
 			Values:   []string{"testtagparent"},
 		},
 	}
-	assert.NoError(t, vfs.Allows(fs, psetSelfParentTag, permissions.GET, f))
+	assert.NoError(t, vfs.Allows(fs, psetSelfParentTag, permission.GET, f))
 
-	psetWrongType := permissions.Set{
-		permissions.Rule{
+	psetWrongType := permission.Set{
+		permission.Rule{
 			Type:   "io.cozy.not-files",
-			Verbs:  permissions.ALL,
+			Verbs:  permission.ALL,
 			Values: []string{A.ID()},
 		},
 	}
-	assert.Error(t, vfs.Allows(fs, psetWrongType, permissions.GET, f))
+	assert.Error(t, vfs.Allows(fs, psetWrongType, permission.GET, f))
 
-	psetWrongVerb := permissions.Set{
-		permissions.Rule{
+	psetWrongVerb := permission.Set{
+		permission.Rule{
 			Type:   consts.Files,
-			Verbs:  permissions.Verbs(permissions.POST),
+			Verbs:  permission.Verbs(permission.POST),
 			Values: []string{A.ID()},
 		},
 	}
-	assert.Error(t, vfs.Allows(fs, psetWrongVerb, permissions.GET, f))
+	assert.Error(t, vfs.Allows(fs, psetWrongVerb, permission.GET, f))
 
-	psetUncleID := permissions.Set{
-		permissions.Rule{
+	psetUncleID := permission.Set{
+		permission.Rule{
 			Type:   consts.Files,
-			Verbs:  permissions.ALL,
+			Verbs:  permission.ALL,
 			Values: []string{B.ID()},
 		},
 	}
-	assert.Error(t, vfs.Allows(fs, psetUncleID, permissions.GET, B2))
+	assert.Error(t, vfs.Allows(fs, psetUncleID, permission.GET, B2))
 
-	psetUnclePrefixID := permissions.Set{
-		permissions.Rule{
+	psetUnclePrefixID := permission.Set{
+		permission.Rule{
 			Type:   consts.Files,
-			Verbs:  permissions.ALL,
+			Verbs:  permission.ALL,
 			Values: []string{A.ID()},
 		},
 	}
-	assert.Error(t, vfs.Allows(fs, psetUnclePrefixID, permissions.GET, f))
+	assert.Error(t, vfs.Allows(fs, psetUnclePrefixID, permission.GET, f))
 
 }

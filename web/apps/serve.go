@@ -14,12 +14,12 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/intent"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	statikfs "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -68,7 +68,7 @@ func Serve(c echo.Context) error {
 	if webapp.FromAppsDir {
 		// Save permissions in couchdb before loading an index page
 		if file == "" && webapp.Permissions() != nil {
-			err := permissions.ForceWebapp(i, webapp.Slug(), webapp.Permissions())
+			err := permission.ForceWebapp(i, webapp.Slug(), webapp.Permissions())
 			if err != nil {
 				return err
 			}

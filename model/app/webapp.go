@@ -13,10 +13,10 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -89,14 +89,14 @@ type WebappManifest struct {
 	Tags        *json.RawMessage `json:"tags,omitempty"`
 	Partnership *json.RawMessage `json:"partnership,omitempty"`
 
-	DocSlug             string          `json:"slug"`
-	DocState            State           `json:"state"`
-	DocSource           string          `json:"source"`
-	DocChecksum         string          `json:"checksum"`
-	DocVersion          string          `json:"version"`
-	DocPermissions      permissions.Set `json:"permissions"`
-	DocAvailableVersion string          `json:"available_version,omitempty"`
-	DocTerms            Terms           `json:"terms,omitempty"`
+	DocSlug             string         `json:"slug"`
+	DocState            State          `json:"state"`
+	DocSource           string         `json:"source"`
+	DocChecksum         string         `json:"checksum"`
+	DocVersion          string         `json:"version"`
+	DocPermissions      permission.Set `json:"permissions"`
+	DocAvailableVersion string         `json:"available_version,omitempty"`
+	DocTerms            Terms          `json:"terms,omitempty"`
 
 	Intents       []Intent      `json:"intents"`
 	Routes        Routes        `json:"routes"`
@@ -160,7 +160,7 @@ func (m *WebappManifest) Clone() couchdb.Doc {
 	cloned.Intents = make([]Intent, len(m.Intents))
 	copy(cloned.Intents, m.Intents)
 
-	cloned.DocPermissions = make(permissions.Set, len(m.DocPermissions))
+	cloned.DocPermissions = make(permission.Set, len(m.DocPermissions))
 	copy(cloned.DocPermissions, m.DocPermissions)
 
 	return &cloned
@@ -215,7 +215,7 @@ func (m *WebappManifest) AppType() consts.AppType { return consts.WebappType }
 func (m *WebappManifest) Terms() Terms { return m.DocTerms }
 
 // Permissions is part of the Manifest interface
-func (m *WebappManifest) Permissions() permissions.Set {
+func (m *WebappManifest) Permissions() permission.Set {
 	return m.DocPermissions
 }
 
@@ -293,12 +293,12 @@ func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
-	_, err := permissions.CreateWebappSet(db, m.Slug(), m.Permissions())
+	_, err := permission.CreateWebappSet(db, m.Slug(), m.Permissions())
 	return err
 }
 
 // Update is part of the Manifest interface
-func (m *WebappManifest) Update(db prefixer.Prefixer, extraPerms permissions.Set) error {
+func (m *WebappManifest) Update(db prefixer.Prefixer, extraPerms permission.Set) error {
 	if err := diffServices(db, m.Slug(), m.oldServices, m.Services); err != nil {
 		return err
 	}
@@ -312,13 +312,13 @@ func (m *WebappManifest) Update(db prefixer.Prefixer, extraPerms permissions.Set
 
 	// Merging the potential extra permissions
 	if len(extraPerms) > 0 {
-		perms, err = permissions.MergeExtraPermissions(perms, extraPerms)
+		perms, err = permission.MergeExtraPermissions(perms, extraPerms)
 		if err != nil {
 			return err
 		}
 	}
 
-	_, err = permissions.UpdateWebappSet(db, m.Slug(), perms)
+	_, err = permission.UpdateWebappSet(db, m.Slug(), perms)
 	return err
 }
 
@@ -328,7 +328,7 @@ func (m *WebappManifest) Delete(db prefixer.Prefixer) error {
 	if err != nil {
 		return err
 	}
-	err = permissions.DestroyWebapp(db, m.Slug())
+	err = permission.DestroyWebapp(db, m.Slug())
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
 	}

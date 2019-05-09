@@ -7,13 +7,12 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	perm "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -52,7 +51,7 @@ func fixErrorNoDatabaseIsWrongDoctype(err error) error {
 func allDoctypes(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, consts.Doctypes); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Doctypes); err != nil {
 		return err
 	}
 
@@ -62,7 +61,7 @@ func allDoctypes(c echo.Context) error {
 	}
 	var doctypes []string
 	for _, typ := range types {
-		if perm.CheckReadable(typ) == nil {
+		if permission.CheckReadable(typ) == nil {
 			doctypes = append(doctypes, typ)
 		}
 	}
@@ -80,7 +79,7 @@ func getDoc(c echo.Context) error {
 		return getAccount(c)
 	}
 
-	if err := perm.CheckReadable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -100,7 +99,7 @@ func getDoc(c echo.Context) error {
 
 	out.Type = doctype
 
-	if err := middlewares.Allow(c, permissions.GET, &out); err != nil {
+	if err := middlewares.Allow(c, permission.GET, &out); err != nil {
 		return err
 	}
 
@@ -122,11 +121,11 @@ func createDoc(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
-	if err := perm.CheckWritable(doctype); err != nil {
+	if err := permission.CheckWritable(doctype); err != nil {
 		return err
 	}
 
-	if err := middlewares.Allow(c, permissions.POST, &doc); err != nil {
+	if err := middlewares.Allow(c, permission.POST, &doc); err != nil {
 		return err
 	}
 
@@ -146,7 +145,7 @@ func createDoc(c echo.Context) error {
 func createNamedDoc(c echo.Context, doc couchdb.JSONDoc) error {
 	instance := middlewares.GetInstance(c)
 
-	err := middlewares.Allow(c, permissions.POST, &doc)
+	err := middlewares.Allow(c, permission.POST, &doc)
 	if err != nil {
 		return err
 	}
@@ -183,7 +182,7 @@ func UpdateDoc(c echo.Context) error {
 
 	doc.Type = doctype
 
-	if err := perm.CheckWritable(doc.Type); err != nil {
+	if err := permission.CheckWritable(doc.Type); err != nil {
 		return err
 	}
 
@@ -201,7 +200,7 @@ func UpdateDoc(c echo.Context) error {
 		return createNamedDoc(c, doc)
 	}
 
-	errWhole := middlewares.AllowWholeType(c, permissions.PUT, doc.DocType())
+	errWhole := middlewares.AllowWholeType(c, permission.PUT, doc.DocType())
 	if errWhole != nil {
 
 		// we cant apply to whole type, let's fetch old doc and see if it applies there
@@ -212,13 +211,13 @@ func UpdateDoc(c echo.Context) error {
 		}
 		old.Type = doc.DocType()
 		// check if permissions set allows manipulating old doc
-		errOld := middlewares.Allow(c, permissions.PUT, &old)
+		errOld := middlewares.Allow(c, permission.PUT, &old)
 		if errOld != nil {
 			return errOld
 		}
 
 		// also check if permissions set allows manipulating new doc
-		errNew := middlewares.Allow(c, permissions.PUT, &doc)
+		errNew := middlewares.Allow(c, permission.PUT, &doc)
 		if errNew != nil {
 			return errNew
 		}
@@ -258,7 +257,7 @@ func DeleteDoc(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "delete without revision")
 	}
 
-	if err := perm.CheckWritable(doctype); err != nil {
+	if err := permission.CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -270,7 +269,7 @@ func DeleteDoc(c echo.Context) error {
 	doc.Type = doctype
 	doc.SetRev(rev)
 
-	err = middlewares.Allow(c, permissions.DELETE, &doc)
+	err = middlewares.Allow(c, permission.DELETE, &doc)
 	if err != nil {
 		return err
 	}
@@ -298,11 +297,11 @@ func defineIndex(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
-	if err := perm.CheckReadable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 
@@ -328,11 +327,11 @@ func findDocuments(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
-	if err := perm.CheckReadable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
 
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 
@@ -365,10 +364,10 @@ func findDocuments(c echo.Context) error {
 
 func allDocs(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
-	if err := perm.CheckReadable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 	return proxy(c, "_all_docs")
@@ -377,10 +376,10 @@ func allDocs(c echo.Context) error {
 func normalDocs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
-	if err := perm.CheckReadable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
-	if err := middlewares.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
 	skip, err := strconv.ParseInt(c.QueryParam("skip"), 10, 64)

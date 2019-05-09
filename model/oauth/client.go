@@ -8,15 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/registry"
-
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/notification"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/registry"
 
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -462,7 +461,7 @@ func (c *Client) AcceptRedirectURI(u string) bool {
 
 // CreateJWT returns a new JSON Web Token for the given instance and audience
 func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string, error) {
-	token, err := crypto.NewJWT(i.OAuthSecret, permissions.Claims{
+	token, err := crypto.NewJWT(i.OAuthSecret, permission.Claims{
 		StandardClaims: jwt.StandardClaims{
 			Audience: audience,
 			Issuer:   i.Domain,
@@ -481,8 +480,8 @@ func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string
 // ValidToken checks that the JWT is valid and returns the associate claims
 // It is expected to be used for registration token and refresh token, and
 // it doesn't check when they were issued as they don't expire.
-func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permissions.Claims, bool) {
-	claims := permissions.Claims{}
+func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permission.Claims, bool) {
+	claims := permission.Claims{}
 	if token == "" {
 		return claims, false
 	}

@@ -13,11 +13,11 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -425,7 +425,7 @@ func (s *Sharing) FindMemberBySharecode(db prefixer.Prefixer, sharecode string) 
 	if !s.Owner {
 		return nil, ErrInvalidSharing
 	}
-	perms, err := permissions.GetForSharePreview(db, s.SID)
+	perms, err := permission.GetForSharePreview(db, s.SID)
 	if err != nil {
 		return nil, err
 	}
@@ -674,7 +674,7 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 	}
 	s.Credentials[index-1].InboundClientID = cli.ClientID
 	ac.Credentials.Client = ConvertOAuthClient(cli)
-	token, err := CreateAccessToken(inst, cli, s.SID, permissions.ALL)
+	token, err := CreateAccessToken(inst, cli, s.SID, permission.ALL)
 	if err != nil {
 		return err
 	}

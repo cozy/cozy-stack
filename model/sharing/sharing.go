@@ -10,9 +10,9 @@ import (
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	multierror "github.com/hashicorp/go-multierror"
@@ -164,7 +164,7 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 // CreatePreviewPermissions creates the permissions doc for previewing this sharing,
 // or updates it with the new codes if the document already exists
 func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]string, error) {
-	doc, _ := permissions.GetForSharePreview(inst, s.SID)
+	doc, _ := permission.GetForSharePreview(inst, s.SID)
 
 	codes := make(map[string]string, len(s.Members)-1)
 
@@ -196,10 +196,10 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 
 	}
 
-	set := make(permissions.Set, len(s.Rules))
-	getVerb := permissions.VerbSplit("GET")
+	set := make(permission.Set, len(s.Rules))
+	getVerb := permission.VerbSplit("GET")
 	for i, rule := range s.Rules {
-		set[i] = permissions.Rule{
+		set[i] = permission.Rule{
 			Type:     rule.DocType,
 			Title:    rule.Title,
 			Verbs:    getVerb,
@@ -214,7 +214,7 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 			return nil, err
 		}
 	} else {
-		_, err := permissions.CreateSharePreviewSet(inst, s.SID, codes, set)
+		_, err := permission.CreateSharePreviewSet(inst, s.SID, codes, set)
 		if err != nil {
 			return nil, err
 		}
@@ -316,7 +316,7 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 // RevokePreviewPermissions ensure that the permissions for the preview page
 // are no longer valid.
 func (s *Sharing) RevokePreviewPermissions(inst *instance.Instance) error {
-	perms, err := permissions.GetForSharePreview(inst, s.SID)
+	perms, err := permission.GetForSharePreview(inst, s.SID)
 	if err != nil {
 		return err
 	}

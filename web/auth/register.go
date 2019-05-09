@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/limits"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
@@ -29,7 +29,7 @@ func registerClient(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		if perm.Type != permissions.TypeCLI {
+		if perm.Type != permission.TypeCLI {
 			return echo.NewHTTPError(http.StatusUnauthorized,
 				"Not authorized to create client with given parameters")
 		}

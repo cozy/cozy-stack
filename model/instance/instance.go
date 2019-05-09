@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/afero"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/model/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/model/vfs/vfsswift"
@@ -21,7 +21,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/permissions"
+
+	"github.com/cozy/afero"
 	"github.com/sirupsen/logrus"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -584,7 +585,7 @@ func (i *Instance) PickKey(audience string) ([]byte, error) {
 	case consts.CLIAudience:
 		return i.CLISecret, nil
 	}
-	return nil, permissions.ErrInvalidAudience
+	return nil, permission.ErrInvalidAudience
 }
 
 // MakeJWT is a shortcut to create a JWT
@@ -593,7 +594,7 @@ func (i *Instance) MakeJWT(audience, subject, scope, sessionID string, issuedAt 
 	if err != nil {
 		return "", err
 	}
-	return crypto.NewJWT(secret, permissions.Claims{
+	return crypto.NewJWT(secret, permission.Claims{
 		StandardClaims: jwt.StandardClaims{
 			Audience: audience,
 			Issuer:   i.Domain,

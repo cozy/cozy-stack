@@ -13,12 +13,12 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -147,7 +147,7 @@ func authorizeForm(c echo.Context) error {
 		return c.Redirect(http.StatusFound, u.String()+"#")
 	}
 
-	permissions, err := permissions.UnmarshalScopeString(params.scope)
+	permissions, err := permission.UnmarshalScopeString(params.scope)
 	if err != nil {
 		return renderError(c, http.StatusBadRequest, "Error Invalid scope")
 	}

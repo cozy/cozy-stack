@@ -12,14 +12,13 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 	multierror "github.com/hashicorp/go-multierror"
 
@@ -127,10 +126,10 @@ func getQueue(c echo.Context) error {
 
 	o := apiQueue{workerType: workerType}
 	// TODO: uncomment to restric jobs permissions.
-	// if err := middlewares.AllowOnFields(c, webpermissions.GET, o, "worker"); err != nil {
+	// if err := middlewares.AllowOnFields(c, permission.GET, o, "worker"); err != nil {
 	// 	return err
 	// }
-	if err := middlewares.Allow(c, webpermissions.GET, o); err != nil {
+	if err := middlewares.Allow(c, permission.GET, o); err != nil {
 		return err
 	}
 
@@ -163,10 +162,10 @@ func pushJob(c echo.Context) error {
 	}
 
 	// TODO: uncomment to restric jobs permissions.
-	// if err := middlewares.AllowOnFields(c, webpermissions.POST, jr, "worker"); err != nil {
+	// if err := middlewares.AllowOnFields(c, permission.POST, jr, "worker"); err != nil {
 	// 	return err
 	// }
-	if err := middlewares.Allow(c, webpermissions.POST, jr); err != nil {
+	if err := middlewares.Allow(c, permission.POST, jr); err != nil {
 		return err
 	}
 
@@ -174,7 +173,7 @@ func pushJob(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if jr.ForwardLogs && permd.Type != permissions.TypeCLI {
+	if jr.ForwardLogs && permd.Type != permission.TypeCLI {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
@@ -216,10 +215,10 @@ func newTrigger(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 	// TODO: uncomment to restric jobs permissions.
-	// if err = middlewares.AllowOnFields(c, webpermissions.POST, t, "worker"); err != nil {
+	// if err = middlewares.AllowOnFields(c, permission.POST, t, "worker"); err != nil {
 	// 	return err
 	// }
-	if err = middlewares.Allow(c, webpermissions.POST, t); err != nil {
+	if err = middlewares.Allow(c, permission.POST, t); err != nil {
 		return err
 	}
 
@@ -236,7 +235,7 @@ func getTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err = middlewares.Allow(c, webpermissions.GET, t); err != nil {
+	if err = middlewares.Allow(c, permission.GET, t); err != nil {
 		return err
 	}
 	tInfos := t.Infos()
@@ -255,7 +254,7 @@ func getTriggerState(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 
-	if err = middlewares.Allow(c, webpermissions.GET, t); err != nil {
+	if err = middlewares.Allow(c, permission.GET, t); err != nil {
 		// For konnector trigger, we have a specific logic to check for
 		// permissions: if the application permissions and the konnector
 		// permissions intersect on one or more doctypes, we give the right to the
@@ -293,7 +292,7 @@ func extractKonnectorPermissions(c echo.Context, i *instance.Instance, t job.Tri
 	return intersectPermissions(reqRules, appRules)
 }
 
-func intersectPermissions(rules1, rules2 permissions.Set) bool {
+func intersectPermissions(rules1, rules2 permission.Set) bool {
 	doctypeBlacklist := []string{consts.Settings}
 	// This rule intersection only cross permissions on whole doctypes (no
 	// values).
@@ -331,7 +330,7 @@ func getTriggerJobs(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err = middlewares.Allow(c, webpermissions.GET, t); err != nil {
+	if err = middlewares.Allow(c, permission.GET, t); err != nil {
 		return err
 	}
 
@@ -354,7 +353,7 @@ func launchTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err = middlewares.Allow(c, webpermissions.POST, t); err != nil {
+	if err = middlewares.Allow(c, permission.POST, t); err != nil {
 		return err
 	}
 	req := t.Infos().JobRequest()
@@ -373,7 +372,7 @@ func deleteTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err := middlewares.Allow(c, webpermissions.DELETE, t); err != nil {
+	if err := middlewares.Allow(c, permission.DELETE, t); err != nil {
 		// See getTriggerState: we have a specific permissions rule to allow an
 		// application to read or delete a trigger
 		if ok := extractKonnectorPermissions(c, instance, t); !ok {
@@ -390,12 +389,12 @@ func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerType := c.QueryParam("Worker")
 
-	if err := middlewares.AllowWholeType(c, webpermissions.GET, consts.Triggers); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Triggers); err != nil {
 		if workerType == "" {
 			return err
 		}
 		o := &job.TriggerInfos{WorkerType: workerType}
-		if err := middlewares.AllowOnFields(c, webpermissions.GET, o, "worker"); err != nil {
+		if err := middlewares.AllowOnFields(c, permission.GET, o, "worker"); err != nil {
 			return err
 		}
 	}
@@ -428,7 +427,7 @@ func getJob(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := middlewares.Allow(c, webpermissions.GET, j); err != nil {
+	if err := middlewares.Allow(c, permission.GET, j); err != nil {
 		return err
 	}
 	return jsonapi.Data(c, http.StatusOK, apiJob{j}, nil)
@@ -436,7 +435,7 @@ func getJob(c echo.Context) error {
 
 func cleanJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if err := middlewares.AllowWholeType(c, webpermissions.POST, consts.Jobs); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Jobs); err != nil {
 		return err
 	}
 	var ups []*job.Job
@@ -472,7 +471,7 @@ func cleanJobs(c echo.Context) error {
 
 func purgeJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if err := middlewares.AllowWholeType(c, webpermissions.DELETE, consts.Jobs); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.Jobs); err != nil {
 		return err
 	}
 

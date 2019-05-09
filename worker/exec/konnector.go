@@ -17,12 +17,12 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/sirupsen/logrus"
@@ -346,7 +346,7 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 // files in the folder referenced by the konnector, and adds the permission if
 // needed.
 func (w *konnectorWorker) ensurePermissions(inst *instance.Instance) error {
-	perms, err := permissions.GetForKonnector(inst, w.slug)
+	perms, err := permission.GetForKonnector(inst, w.slug)
 	if err != nil {
 		return err
 	}
@@ -360,7 +360,7 @@ func (w *konnectorWorker) ensurePermissions(inst *instance.Instance) error {
 			}
 		}
 	}
-	rule := permissions.Rule{
+	rule := permission.Rule{
 		Type:        consts.Files,
 		Title:       "referenced folders",
 		Description: "folders referenced by the konnector",
