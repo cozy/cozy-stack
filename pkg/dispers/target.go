@@ -1,4 +1,4 @@
-package dispers
+package enclave
 
 type InputT struct {
   Localquery        string    `json:"localquery,omitempty"`

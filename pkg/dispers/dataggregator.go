@@ -1,23 +1,23 @@
-package dispers
+package enclave
 
 import (
 
   	"github.com/cozy/echo"
-  	"github.com/cozy/cozy-stack/pkg/dispers/utils"
+  	"github.com/cozy/cozy-stack/pkg/dispers/dispers"
     "github.com/cozy/cozy-stack/pkg/couchdb"
     "github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 type dataAggregation struct {
-    Input       utils.Describer
-    Output      utils.Describer
+    Input       dispers.Describer
+    Output      dispers.Describer
     Data        string
     DocID       string // Doc where will be saved the process
 }
 
 type InputDA struct {
-    Input_type utils.Describer        `json:"type,omitempty"`
-    Input_data string           `json:"data,omitempty"`
+    Input_type dispers.Describer    `json:"type,omitempty"`
+    Input_data string             `json:"data,omitempty"`
 }
 
 // This Doctype will be used to save the aggregation process in memory
@@ -70,7 +70,7 @@ func NewDataAggregation(inputDA InputDA) *dataAggregation {
 
 	return &dataAggregation{
     Input: inputDA.Input_type,
-    Output: utils.NewDescriber("", "", "", []int64{0}, []string{""}),
+    Output: dispers.NewDescriber("", "", "", []int64{0}, []string{""}),
     Data: inputDA.Input_data,
     DocID: doc.ID(),
     }

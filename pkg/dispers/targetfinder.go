@@ -1,5 +1,4 @@
-package dispers
-
+package enclave
 
 type Adresses struct {
   ListOfAdresses []string `json:"adresses,omitempty"`

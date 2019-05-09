@@ -1,6 +1,9 @@
-package utils
+package dispers
 
-// This script is defining metadata's interface. It will be use to define metadata for each api/treatment
+/*
+This script is defining metadata's interface. It will be use to define metadata for each api/treatment.
+Metadata are written on the confuctor's database. The querier can read those metadata to know his training's state
+*/
 type Metadata interface {
     Name()        string
     Date()        string
