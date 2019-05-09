@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
 // TrackMessage is used for jobs on the share-track worker.

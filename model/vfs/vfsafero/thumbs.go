@@ -7,7 +7,7 @@ import (
 	"path"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/cozy/cozy-stack/model/vfs"
 	multierror "github.com/hashicorp/go-multierror"
 )
 

@@ -49,7 +49,7 @@ type FileDoc struct {
 	fullpath string
 
 	// NOTE: Do not forget to propagate changes made to this structure to the
-	// structure DirOrFileDoc in pkg/vfs/vfs.go.
+	// structure DirOrFileDoc in model/vfs/vfs.go.
 }
 
 // ID returns the file qualified identifier

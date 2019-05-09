@@ -16,15 +16,15 @@ import (
 	"time"
 
 	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/model/vfs/vfsafero"
+	"github.com/cozy/cozy-stack/model/vfs/vfsswift"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
-	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	"github.com/ncw/swift/swifttest"
 	"github.com/stretchr/testify/assert"
 )

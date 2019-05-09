@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/swift"
 )
 

@@ -7,28 +7,23 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 )
 
-const swiftV1ContainerPrefix = "cozy-"
-const swiftV1DataContainerPrefix = "data-"
-
-const versionSuffix = "-version"
-const maxFileSize = 5 << (3 * 10) // 5 GiB
-const dirContentType = "directory"
-
-type swiftVFS struct {
+type swiftVFSV2 struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 	c             *swift.Connection
@@ -41,46 +36,73 @@ type swiftVFS struct {
 	log           *logrus.Entry
 }
 
-// New returns a vfs.VFS instance associated with the specified indexer and the
-// swift storage url.
-func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
-	return &swiftVFS{
+const (
+	swiftV2ContainerPrefixCozy = "cozy-v2-"
+	swiftV2ContainerPrefixData = "data-v2-"
+)
+
+// NewV2 returns a vfs.VFS instance associated with the specified indexer and
+// the swift storage url.
+//
+// This version implements a simpler layout where swift does not contain any
+// hierarchy: meaning no index informations. This help with index incoherency
+// and as many performance improvements regarding moving / renaming folders.
+func NewV2(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
+	return &swiftVFSV2{
 		Indexer:         index,
 		DiskThresholder: disk,
 
 		c:             config.GetSwiftConnection(),
 		domain:        db.DomainName(),
 		prefix:        db.DBPrefix(),
-		container:     swiftV1ContainerPrefix + db.DBPrefix(),
-		version:       swiftV1ContainerPrefix + db.DBPrefix() + versionSuffix,
-		dataContainer: swiftV1DataContainerPrefix + db.DBPrefix(),
+		container:     swiftV2ContainerPrefixCozy + db.DBPrefix(),
+		version:       swiftV2ContainerPrefixCozy + db.DBPrefix() + versionSuffix,
+		dataContainer: swiftV2ContainerPrefixData + db.DBPrefix(),
 		mu:            mu,
 		log:           logger.WithDomain(db.DomainName()).WithField("nspace", "vfsswift"),
 	}, nil
 }
 
-func (sfs *swiftVFS) DBPrefix() string {
+// MakeObjectName build the swift object name for a given file document. It
+// creates a virtual subfolder by splitting the document ID, which should be 32
+// bytes long, on the 27nth byte. This avoid having a flat hierarchy in swift with no bound
+func MakeObjectName(docID string) string {
+	if len(docID) != 32 {
+		return docID
+	}
+	return docID[:22] + "/" + docID[22:27] + "/" + docID[27:]
+}
+
+func makeDocID(objName string) string {
+	if len(objName) != 34 {
+		return objName
+	}
+	return objName[:22] + objName[23:28] + objName[29:]
+}
+
+func (sfs *swiftVFSV2) DBPrefix() string {
 	return sfs.prefix
 }
 
-func (sfs *swiftVFS) DomainName() string {
+func (sfs *swiftVFSV2) DomainName() string {
 	return sfs.domain
 }
 
-func (sfs *swiftVFS) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
-	return &swiftVFS{
+func (sfs *swiftVFSV2) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
+	return &swiftVFSV2{
 		Indexer:         index,
 		DiskThresholder: sfs.DiskThresholder,
 		c:               sfs.c,
 		domain:          sfs.domain,
 		container:       sfs.container,
 		version:         sfs.version,
+		dataContainer:   sfs.dataContainer,
 		mu:              sfs.mu,
 		log:             sfs.log,
 	}
 }
 
-func (sfs *swiftVFS) ContainersNames() map[string]string {
+func (sfs *swiftVFSV2) ContainersNames() map[string]string {
 	m := map[string]string{
 		"container":      sfs.container,
 		"version":        sfs.version,
@@ -89,7 +111,7 @@ func (sfs *swiftVFS) ContainersNames() map[string]string {
 	return m
 }
 
-func (sfs *swiftVFS) InitFs() error {
+func (sfs *swiftVFSV2) InitFs() error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
@@ -109,11 +131,16 @@ func (sfs *swiftVFS) InitFs() error {
 			return err
 		}
 	}
+	if err := sfs.c.ContainerCreate(sfs.dataContainer, nil); err != nil {
+		sfs.log.Errorf("Could not create container %s: %s",
+			sfs.dataContainer, err.Error())
+		return err
+	}
 	sfs.log.Infof("Created container %s", sfs.container)
 	return nil
 }
 
-func (sfs *swiftVFS) Delete() error {
+func (sfs *swiftVFSV2) Delete() error {
 	containerMeta := swift.Metadata{"to-be-deleted": "1"}.ContainerHeaders()
 	sfs.log.Infof("Marking containers %q, %q and %q as to-be-deleted",
 		sfs.container, sfs.version, sfs.dataContainer)
@@ -149,7 +176,7 @@ func (sfs *swiftVFS) Delete() error {
 	return errm
 }
 
-func (sfs *swiftVFS) deleteContainer(container string) error {
+func (sfs *swiftVFSV2) deleteContainer(container string) error {
 	_, _, err := sfs.c.Container(container)
 	if err == swift.ContainerNotFound {
 		return nil
@@ -175,7 +202,7 @@ func (sfs *swiftVFS) deleteContainer(container string) error {
 	return sfs.c.ContainerDelete(container)
 }
 
-func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
+func (sfs *swiftVFSV2) CreateDir(doc *vfs.DirDoc) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
@@ -187,27 +214,13 @@ func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
 	if exists {
 		return os.ErrExist
 	}
-	objName := doc.DirID + "/" + doc.DocName
-	f, err := sfs.c.ObjectCreate(sfs.container,
-		objName,
-		true,
-		"",
-		dirContentType,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-	if err = f.Close(); err != nil {
-		return err
-	}
 	if doc.ID() == "" {
 		return sfs.Indexer.CreateDirDoc(doc)
 	}
 	return sfs.Indexer.CreateNamedDirDoc(doc)
 }
 
-func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
+func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return nil, lockerr
 	}
@@ -283,7 +296,12 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		}
 	}
 
-	objName := newdoc.DirID + "/" + newdoc.DocName
+	objName := MakeObjectName(newdoc.DocID)
+	objMeta := swift.Metadata{
+		"creation-name": newdoc.Name(),
+		"created-at":    newdoc.CreatedAt.Format(time.RFC3339),
+		"exec":          strconv.FormatBool(newdoc.Executable),
+	}
 	hash := hex.EncodeToString(newdoc.MD5Sum)
 	f, err := sfs.c.ObjectCreate(
 		sfs.container,
@@ -291,12 +309,12 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		true,
 		hash,
 		newdoc.Mime,
-		nil,
+		objMeta.ObjectHeaders(),
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &swiftFileCreation{
+	return &swiftFileCreationV2{
 		f:       f,
 		fs:      sfs,
 		w:       0,
@@ -310,100 +328,87 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	}, nil
 }
 
-func (sfs *swiftVFS) DestroyDirContent(doc *vfs.DirDoc) error {
+func (sfs *swiftVFSV2) DestroyDirContent(doc *vfs.DirDoc) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
 	diskUsage, _ := sfs.Indexer.DiskUsage()
-	destroyed, err := sfs.destroyDirContent(doc)
-	if err == nil {
-		vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
+	destroyed, ids, err := sfs.Indexer.DeleteDirDocAndContent(doc, true)
+	if err != nil {
+		return err
+	}
+	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
+	objNames := make([]string, len(ids))
+	for i, id := range ids {
+		objNames[i] = MakeObjectName(id)
+	}
+	_, err = sfs.c.BulkDelete(sfs.container, objNames)
+	if err == swift.Forbidden {
+		sfs.log.Infof("DestroyDirContent failed on BulkDelete: %s", err)
+		err = nil
+		for _, objName := range objNames {
+			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil {
+				sfs.log.Infof("DestroyDirContent failed on ObjectDelete: %s", err)
+				err = errd
+			}
+		}
 	}
 	return err
 }
 
-func (sfs *swiftVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
+func (sfs *swiftVFSV2) DestroyDirAndContent(doc *vfs.DirDoc) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
 	diskUsage, _ := sfs.Indexer.DiskUsage()
-	destroyed, err := sfs.destroyDirAndContent(doc)
-	if err == nil {
-		vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
+	destroyed, ids, err := sfs.Indexer.DeleteDirDocAndContent(doc, false)
+	if err != nil {
+		return err
+	}
+	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
+	objNames := make([]string, len(ids))
+	for i, id := range ids {
+		objNames[i] = MakeObjectName(id)
+	}
+	_, err = sfs.c.BulkDelete(sfs.container, objNames)
+	if err == swift.Forbidden {
+		sfs.log.Infof("DestroyDirAndContent failed on BulkDelete: %s", err)
+		err = nil
+		for _, objName := range objNames {
+			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil {
+				sfs.log.Infof("DestroyDirAndContent failed on ObjectDelete: %s", err)
+				err = errd
+			}
+		}
 	}
 	return err
 }
 
-func (sfs *swiftVFS) DestroyFile(doc *vfs.FileDoc) error {
+func (sfs *swiftVFSV2) DestroyFile(doc *vfs.FileDoc) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
 	diskUsage, _ := sfs.Indexer.DiskUsage()
-	err := sfs.destroyFile(doc)
+	objName := MakeObjectName(doc.DocID)
+	err := sfs.Indexer.DeleteFileDoc(doc)
+	if err == nil {
+		err = sfs.destroyFileVersions(objName)
+		if err != nil {
+			sfs.log.Errorf("Could not delete version of %s: %s",
+				objName, err.Error())
+		}
+		err = sfs.c.ObjectDelete(sfs.container, objName)
+	}
 	if err == nil {
 		vfs.DiskQuotaAfterDestroy(sfs, diskUsage, doc.ByteSize)
 	}
 	return err
 }
 
-func (sfs *swiftVFS) destroyDirContent(doc *vfs.DirDoc) (int64, error) {
-	iter := sfs.DirIterator(doc, nil)
-	var n int64
-	var errm error
-	for {
-		d, f, erri := iter.Next()
-		if erri == vfs.ErrIteratorDone {
-			return n, errm
-		}
-		if erri != nil {
-			return n, erri
-		}
-		var errd error
-		var destroyed int64
-		if d != nil {
-			destroyed, errd = sfs.destroyDirAndContent(d)
-		} else {
-			destroyed, errd = f.ByteSize, sfs.destroyFile(f)
-		}
-		if errd != nil {
-			errm = multierror.Append(errm, errd)
-		} else {
-			n += destroyed
-		}
-	}
-}
-
-func (sfs *swiftVFS) destroyDirAndContent(doc *vfs.DirDoc) (int64, error) {
-	n, err := sfs.destroyDirContent(doc)
-	if err != nil {
-		return 0, err
-	}
-	err = sfs.c.ObjectDelete(sfs.container, doc.DirID+"/"+doc.DocName)
-	if err != nil && err != swift.ObjectNotFound {
-		return 0, err
-	}
-	err = sfs.Indexer.DeleteDirDoc(doc)
-	return n, err
-}
-
-func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
-	objName := doc.DirID + "/" + doc.DocName
-	err := sfs.destroyFileVersions(objName)
-	if err != nil {
-		sfs.log.Errorf("Could not delete version of %s: %s",
-			objName, err.Error())
-	}
-	err = sfs.c.ObjectDelete(sfs.container, objName)
-	if err != nil && err != swift.ObjectNotFound {
-		return err
-	}
-	return sfs.Indexer.DeleteFileDoc(doc)
-}
-
-func (sfs *swiftVFS) destroyFileVersions(objName string) error {
+func (sfs *swiftVFSV2) destroyFileVersions(objName string) error {
 	versionObjNames, err := sfs.c.VersionObjectList(sfs.version, objName)
 	// could happened if the versionning could not be enabled, in which case we
 	// do not propagate the error.
@@ -420,33 +425,32 @@ func (sfs *swiftVFS) destroyFileVersions(objName string) error {
 	return nil
 }
 
-func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
+func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	if lockerr := sfs.mu.RLock(); lockerr != nil {
 		return nil, lockerr
 	}
 	defer sfs.mu.RUnlock()
-	f, _, err := sfs.c.ObjectOpen(sfs.container, doc.DirID+"/"+doc.DocName, false, nil)
+	objName := MakeObjectName(doc.DocID)
+	f, _, err := sfs.c.ObjectOpen(sfs.container, objName, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
 	}
 	if err != nil {
 		return nil, err
 	}
-	return &swiftFileOpen{f, nil}, nil
+	return &swiftFileOpenV2{f, nil}, nil
 }
 
-func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
+func (sfs *swiftVFSV2) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err = sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsDir {
-			entries[f.DirID+"/"+f.DocName] = f
+			entries[f.DocID] = f
 		}
 	})
 	if err != nil {
 		return
 	}
-
-	var orphansObjs []swift.Object
 
 	err = sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
 		var objs []swift.Object
@@ -455,9 +459,14 @@ func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 			return nil, err
 		}
 		for _, obj := range objs {
-			f, ok := entries[obj.Name]
+			docID := makeDocID(obj.Name)
+			f, ok := entries[docID]
 			if !ok {
-				orphansObjs = append(orphansObjs, obj)
+				accumulate(&vfs.FsckLog{
+					Type:    vfs.IndexMissing,
+					IsFile:  true,
+					FileDoc: objectToFileDocV2(sfs.container, obj),
+				})
 			} else {
 				var md5sum []byte
 				md5sum, err = hex.DecodeString(obj.Hash)
@@ -477,12 +486,17 @@ func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 						},
 					})
 				}
-				delete(entries, obj.Name)
+				delete(entries, docID)
 			}
 		}
 		return objs, err
 	})
+	if err != nil {
+		return
+	}
 
+	// entries should contain only data that does not contain an associated
+	// index.
 	for _, f := range entries {
 		accumulate(&vfs.FsckLog{
 			Type:    vfs.FileMissing,
@@ -491,62 +505,16 @@ func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 		})
 	}
 
-	for _, obj := range orphansObjs {
-		if obj.ContentType == dirContentType {
-			accumulate(&vfs.FsckLog{
-				Type:   vfs.IndexMissing,
-				IsFile: false,
-				DirDoc: objectToFileDocV1(sfs.container, obj),
-			})
-		} else {
-			accumulate(&vfs.FsckLog{
-				Type:    vfs.IndexMissing,
-				IsFile:  true,
-				FileDoc: objectToFileDocV1(sfs.container, obj),
-			})
-		}
-	}
-
 	return
 }
 
-func objectToFileDocV1(container string, object swift.Object) *vfs.TreeFile {
-	var dirID, name string
-	if dirIDAndName := strings.SplitN(object.Name, "/", 2); len(dirIDAndName) == 2 {
-		dirID = dirIDAndName[0]
-		name = dirIDAndName[0]
-	}
-	docType := consts.FileType
-	if object.ContentType == dirContentType {
-		docType = consts.DirType
-	}
-	md5sum, _ := hex.DecodeString(object.Hash)
-	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
-	return &vfs.TreeFile{
-		DirOrFileDoc: vfs.DirOrFileDoc{
-			DirDoc: &vfs.DirDoc{
-				Type:      docType,
-				DocID:     makeDocID(object.Name),
-				DocName:   name,
-				DirID:     dirID,
-				CreatedAt: object.LastModified,
-				UpdatedAt: object.LastModified,
-				Fullpath:  path.Join(vfs.OrphansDirName, name),
-			},
-			ByteSize:   object.Bytes,
-			Mime:       mime,
-			Class:      class,
-			Executable: false,
-			MD5Sum:     md5sum,
-		},
-	}
-}
-
-// UpdateFileDoc overrides the indexer's one since the swift fs indexes files
-// using their DirID + Name value to preserve atomicity of the hierarchy.
+// UpdateFileDoc calls the indexer UpdateFileDoc function and adds a few checks
+// before actually calling this method:
+//   - locks the filesystem for writing
+//   - checks in case we have a move operation that the new path is available
 //
 // @override Indexer.UpdateFileDoc
-func (sfs *swiftVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
+func (sfs *swiftVFSV2) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
@@ -558,25 +526,18 @@ func (sfs *swiftVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 		}
 		if exists {
 			return os.ErrExist
-		}
-		err = sfs.c.ObjectMove(
-			sfs.container, olddoc.DirID+"/"+olddoc.DocName,
-			sfs.container, newdoc.DirID+"/"+newdoc.DocName,
-		)
-		if err != nil {
-			sfs.log.Errorf("Could not move file %s/%s: %s",
-				sfs.container, olddoc.DirID+"/"+olddoc.DocName, err.Error())
-			return err
 		}
 	}
 	return sfs.Indexer.UpdateFileDoc(olddoc, newdoc)
 }
 
-// UpdateDirDoc overrides the indexer's one since the swift fs indexes files
-// using their DirID + Name value to preserve atomicity of the hierarchy.
+// UdpdateDirDoc calls the indexer UdpdateDirDoc function and adds a few checks
+// before actually calling this method:
+//   - locks the filesystem for writing
+//   - checks in case we have a move operation that the new path is available
 //
 // @override Indexer.UpdateDirDoc
-func (sfs *swiftVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
+func (sfs *swiftVFSV2) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
@@ -589,20 +550,11 @@ func (sfs *swiftVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
 		if exists {
 			return os.ErrExist
 		}
-		err = sfs.c.ObjectMove(
-			sfs.container, olddoc.DirID+"/"+olddoc.DocName,
-			sfs.container, newdoc.DirID+"/"+newdoc.DocName,
-		)
-		if err != nil {
-			sfs.log.Errorf("Could not move dir %s/%s: %s",
-				sfs.container, olddoc.DirID+"/"+olddoc.DocName, err.Error())
-			return err
-		}
 	}
 	return sfs.Indexer.UpdateDirDoc(olddoc, newdoc)
 }
 
-func (sfs *swiftVFS) DirByID(fileID string) (*vfs.DirDoc, error) {
+func (sfs *swiftVFSV2) DirByID(fileID string) (*vfs.DirDoc, error) {
 	if lockerr := sfs.mu.RLock(); lockerr != nil {
 		return nil, lockerr
 	}
@@ -610,7 +562,7 @@ func (sfs *swiftVFS) DirByID(fileID string) (*vfs.DirDoc, error) {
 	return sfs.Indexer.DirByID(fileID)
 }
 
-func (sfs *swiftVFS) DirByPath(name string) (*vfs.DirDoc, error) {
+func (sfs *swiftVFSV2) DirByPath(name string) (*vfs.DirDoc, error) {
 	if lockerr := sfs.mu.RLock(); lockerr != nil {
 		return nil, lockerr
 	}
@@ -618,7 +570,7 @@ func (sfs *swiftVFS) DirByPath(name string) (*vfs.DirDoc, error) {
 	return sfs.Indexer.DirByPath(name)
 }
 
-func (sfs *swiftVFS) FileByID(fileID string) (*vfs.FileDoc, error) {
+func (sfs *swiftVFSV2) FileByID(fileID string) (*vfs.FileDoc, error) {
 	if lockerr := sfs.mu.RLock(); lockerr != nil {
 		return nil, lockerr
 	}
@@ -626,7 +578,7 @@ func (sfs *swiftVFS) FileByID(fileID string) (*vfs.FileDoc, error) {
 	return sfs.Indexer.FileByID(fileID)
 }
 
-func (sfs *swiftVFS) FileByPath(name string) (*vfs.FileDoc, error) {
+func (sfs *swiftVFSV2) FileByPath(name string) (*vfs.FileDoc, error) {
 	if lockerr := sfs.mu.RLock(); lockerr != nil {
 		return nil, lockerr
 	}
@@ -634,7 +586,7 @@ func (sfs *swiftVFS) FileByPath(name string) (*vfs.FileDoc, error) {
 	return sfs.Indexer.FileByPath(name)
 }
 
-func (sfs *swiftVFS) FilePath(doc *vfs.FileDoc) (string, error) {
+func (sfs *swiftVFSV2) FilePath(doc *vfs.FileDoc) (string, error) {
 	if lockerr := sfs.mu.RLock(); lockerr != nil {
 		return "", lockerr
 	}
@@ -642,7 +594,7 @@ func (sfs *swiftVFS) FilePath(doc *vfs.FileDoc) (string, error) {
 	return sfs.Indexer.FilePath(doc)
 }
 
-func (sfs *swiftVFS) DirOrFileByID(fileID string) (*vfs.DirDoc, *vfs.FileDoc, error) {
+func (sfs *swiftVFSV2) DirOrFileByID(fileID string) (*vfs.DirDoc, *vfs.FileDoc, error) {
 	if lockerr := sfs.mu.RLock(); lockerr != nil {
 		return nil, nil, lockerr
 	}
@@ -650,7 +602,7 @@ func (sfs *swiftVFS) DirOrFileByID(fileID string) (*vfs.DirDoc, *vfs.FileDoc, er
 	return sfs.Indexer.DirOrFileByID(fileID)
 }
 
-func (sfs *swiftVFS) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, error) {
+func (sfs *swiftVFSV2) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, error) {
 	if lockerr := sfs.mu.RLock(); lockerr != nil {
 		return nil, nil, lockerr
 	}
@@ -658,11 +610,11 @@ func (sfs *swiftVFS) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, er
 	return sfs.Indexer.DirOrFileByPath(name)
 }
 
-type swiftFileCreation struct {
+type swiftFileCreationV2 struct {
 	f       *swift.ObjectCreateFile
 	w       int64
 	size    int64
-	fs      *swiftVFS
+	fs      *swiftVFSV2
 	name    string
 	err     error
 	meta    *vfs.MetaExtractor
@@ -672,19 +624,19 @@ type swiftFileCreation struct {
 	capsize int64
 }
 
-func (f *swiftFileCreation) Read(p []byte) (int, error) {
+func (f *swiftFileCreationV2) Read(p []byte) (int, error) {
 	return 0, os.ErrInvalid
 }
 
-func (f *swiftFileCreation) ReadAt(p []byte, off int64) (int, error) {
+func (f *swiftFileCreationV2) ReadAt(p []byte, off int64) (int, error) {
 	return 0, os.ErrInvalid
 }
 
-func (f *swiftFileCreation) Seek(offset int64, whence int) (int64, error) {
+func (f *swiftFileCreationV2) Seek(offset int64, whence int) (int64, error) {
 	return 0, os.ErrInvalid
 }
 
-func (f *swiftFileCreation) Write(p []byte) (int, error) {
+func (f *swiftFileCreationV2) Write(p []byte) (int, error) {
 	if f.meta != nil {
 		if _, err := (*f.meta).Write(p); err != nil && err != io.ErrClosedPipe {
 			(*f.meta).Abort(err)
@@ -712,7 +664,7 @@ func (f *swiftFileCreation) Write(p []byte) (int, error) {
 	return n, nil
 }
 
-func (f *swiftFileCreation) Close() (err error) {
+func (f *swiftFileCreationV2) Close() (err error) {
 	defer func() {
 		if err == nil {
 			if f.capsize > 0 && f.size >= f.capsize {
@@ -821,16 +773,17 @@ func (f *swiftFileCreation) Close() (err error) {
 	return
 }
 
-type swiftFileOpen struct {
+type swiftFileOpenV2 struct {
 	f  *swift.ObjectOpenFile
 	br *bytes.Reader
 }
 
-func (f *swiftFileOpen) Read(p []byte) (int, error) {
+func (f *swiftFileOpenV2) Read(p []byte) (int, error) {
 	return f.f.Read(p)
 }
 
-func (f *swiftFileOpen) ReadAt(p []byte, off int64) (int, error) {
+func (f *swiftFileOpenV2) ReadAt(p []byte, off int64) (int, error) {
+	// TODO find something smarter than keeping the whole file in memory
 	if f.br == nil {
 		buf, err := ioutil.ReadAll(f.f)
 		if err != nil {
@@ -841,25 +794,48 @@ func (f *swiftFileOpen) ReadAt(p []byte, off int64) (int, error) {
 	return f.br.ReadAt(p, off)
 }
 
-func (f *swiftFileOpen) Seek(offset int64, whence int) (int64, error) {
+func (f *swiftFileOpenV2) Seek(offset int64, whence int) (int64, error) {
 	n, err := f.f.Seek(offset, whence)
 	if err != nil {
-		l := logger.WithNamespace("vfsswift-v1")
-		l.Warnf("Can't seek: %s", err)
+		logger.WithNamespace("vfsswift-v2").Warnf("Can't seek: %s", err)
 	}
 	return n, err
 }
 
-func (f *swiftFileOpen) Write(p []byte) (int, error) {
+func (f *swiftFileOpenV2) Write(p []byte) (int, error) {
 	return 0, os.ErrInvalid
 }
 
-func (f *swiftFileOpen) Close() error {
+func (f *swiftFileOpenV2) Close() error {
 	return f.f.Close()
 }
 
+func objectToFileDocV2(container string, object swift.Object) *vfs.TreeFile {
+	md5sum, _ := hex.DecodeString(object.Hash)
+	name := "unknown"
+	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
+	return &vfs.TreeFile{
+		DirOrFileDoc: vfs.DirOrFileDoc{
+			DirDoc: &vfs.DirDoc{
+				Type:      consts.FileType,
+				DocID:     makeDocID(object.Name),
+				DocName:   name,
+				DirID:     "",
+				CreatedAt: object.LastModified,
+				UpdatedAt: object.LastModified,
+				Fullpath:  path.Join(vfs.OrphansDirName, name),
+			},
+			ByteSize:   object.Bytes,
+			Mime:       mime,
+			Class:      class,
+			Executable: false,
+			MD5Sum:     md5sum,
+		},
+	}
+}
+
 var (
-	_ vfs.VFS  = &swiftVFS{}
-	_ vfs.File = &swiftFileCreation{}
-	_ vfs.File = &swiftFileOpen{}
+	_ vfs.VFS  = &swiftVFSV2{}
+	_ vfs.File = &swiftFileCreationV2{}
+	_ vfs.File = &swiftFileOpenV2{}
 )

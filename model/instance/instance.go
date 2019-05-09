@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/cozy/afero"
+	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/model/vfs/vfsafero"
+	"github.com/cozy/cozy-stack/model/vfs/vfsswift"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -19,9 +22,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
-	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	"github.com/sirupsen/logrus"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -54,7 +54,7 @@ type Instance struct {
 	IndexViewsVersion  int   `json:"indexes_version"`
 
 	// Swift cluster number, indexed from 1. If not zero, it indicates we're
-	// using swift layout 2, see pkg/vfs/swift.
+	// using swift layout 2, see model/vfs/swift.
 	SwiftCluster int `json:"swift_cluster,omitempty"`
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
