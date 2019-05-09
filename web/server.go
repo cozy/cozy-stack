@@ -18,7 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/cozy-stack/web/apps"
+	//"github.com/cozy/cozy-stack/web/apps"
 
 	"github.com/cozy/echo"
 	"github.com/cozy/echo/middleware"
@@ -111,7 +111,7 @@ func ListenAndServe() (*Servers, error) {
 	e.HideBanner = true
 	e.HidePort = true
 
-	major, err := CreateSubdomainProxy(e, apps.Serve)
+	major, err := SetupMajorRoutes(e /*, apps.Serve*/)
 	if err != nil {
 		return nil, err
 	}

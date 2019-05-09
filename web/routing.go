@@ -3,41 +3,42 @@
 package web
 
 import (
-	"strconv"
+	//"strconv"
 	"time"
 
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	//"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	//"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/metrics"
-	"github.com/cozy/cozy-stack/web/accounts"
+	//"github.com/cozy/cozy-stack/web/accounts"
 	"github.com/cozy/cozy-stack/web/apps"
-	"github.com/cozy/cozy-stack/web/auth"
-	"github.com/cozy/cozy-stack/web/compat"
-	"github.com/cozy/cozy-stack/web/data"
+	//"github.com/cozy/cozy-stack/web/auth"
+	//"github.com/cozy/cozy-stack/web/compat"
+	//"github.com/cozy/cozy-stack/web/data"
+	"github.com/cozy/cozy-stack/web/dispers"
 	"github.com/cozy/cozy-stack/web/errors"
-	"github.com/cozy/cozy-stack/web/files"
+	//"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/instances"
-	"github.com/cozy/cozy-stack/web/intents"
-	"github.com/cozy/cozy-stack/web/jobs"
+	//"github.com/cozy/cozy-stack/web/intents"
+	//"github.com/cozy/cozy-stack/web/jobs"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/move"
-	"github.com/cozy/cozy-stack/web/notifications"
-	"github.com/cozy/cozy-stack/web/oidc"
-	"github.com/cozy/cozy-stack/web/permissions"
-	"github.com/cozy/cozy-stack/web/public"
+	//"github.com/cozy/cozy-stack/web/move"
+	//"github.com/cozy/cozy-stack/web/notifications"
+	//"github.com/cozy/cozy-stack/web/oidc"
+	//"github.com/cozy/cozy-stack/web/permissions"
+	//"github.com/cozy/cozy-stack/web/public"
 	"github.com/cozy/cozy-stack/web/realtime"
-	"github.com/cozy/cozy-stack/web/registry"
-	"github.com/cozy/cozy-stack/web/remote"
-	"github.com/cozy/cozy-stack/web/settings"
-	"github.com/cozy/cozy-stack/web/sharings"
+	//"github.com/cozy/cozy-stack/web/registry"
+	//"github.com/cozy/cozy-stack/web/remote"
+	//"github.com/cozy/cozy-stack/web/settings"
+	//"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
-	"github.com/cozy/cozy-stack/web/status"
+	//"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
 	"github.com/cozy/echo"
 	"github.com/cozy/echo/middleware"
-	"github.com/prometheus/client_golang/prometheus"
+	//"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -59,6 +60,7 @@ const (
 
 var hstsMaxAge = 365 * 24 * time.Hour // 1 year
 
+/*
 // SetupAppsHandler adds all the necessary middlewares for the application
 // handler.
 func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
@@ -94,6 +96,7 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 
 	return middlewares.Compose(appsHandler, mws...)
 }
+*/
 
 // SetupAssets add assets routing and handling to the given router. It also
 // adds a Renderer to render templates.
@@ -123,6 +126,7 @@ func SetupAssets(router *echo.Echo, assetsPath string) (err error) {
 	return nil
 }
 
+/*
 // SetupRoutes sets the routing for HTTP endpoints
 func SetupRoutes(router *echo.Echo) error {
 	router.Use(timersMiddleware)
@@ -208,7 +212,9 @@ func SetupRoutes(router *echo.Echo) error {
 	router.HTTPErrorHandler = errors.ErrorHandler
 	return nil
 }
+*/
 
+/*
 func timersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
@@ -221,6 +227,7 @@ func timersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		return next(c)
 	}
 }
+*/
 
 // SetupAdminRoutes sets the routing for the administration HTTP endpoints
 func SetupAdminRoutes(router *echo.Echo) error {
@@ -244,24 +251,28 @@ func SetupAdminRoutes(router *echo.Echo) error {
 	return nil
 }
 
-// CreateSubdomainProxy returns a new web server that will handle that apps
+// SetupMajorRoutes (previous CreateSubdomainProxy) returns a new web server that will handle that apps
 // proxy routing if the host of the request match an application, and route to
 // the given router otherwise.
-func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*echo.Echo, error) {
+func SetupMajorRoutes(router *echo.Echo /*, appsHandler echo.HandlerFunc*/) (*echo.Echo, error) {
 	if err := SetupAssets(router, config.GetConfig().Assets); err != nil {
 		return nil, err
 	}
 
+	/*
 	if err := SetupRoutes(router); err != nil {
 		return nil, err
 	}
+	*/
 
-	appsHandler = SetupAppsHandler(appsHandler)
+	//appsHandler = SetupAppsHandler(appsHandler)
 
 	main := echo.New()
 	main.HideBanner = true
 	main.HidePort = true
 	main.Renderer = router.Renderer
+
+	/*
 	main.Any("/*", func(c echo.Context) error {
 		if parent, slug, _ := middlewares.SplitHost(c.Request().Host); slug != "" {
 			if i, err := lifecycle.GetInstance(parent); err == nil {
@@ -274,6 +285,10 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 		router.ServeHTTP(c.Response(), c.Request())
 		return nil
 	})
+	*/
+
+	dispers.Routes(main.Group("/dispers"))
+	setupRecover(router)
 
 	main.HTTPErrorHandler = errors.HTMLErrorHandler
 	return main, nil
