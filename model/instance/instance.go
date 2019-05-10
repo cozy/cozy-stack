@@ -142,6 +142,13 @@ func (i *Instance) DomainName() string {
 	return i.Domain
 }
 
+// SlugAndDomain returns the splitted slug and domain of the instance
+// Ex: foobar.mycozy.cloud => ["foobar", "mycozy.cloud"]
+func (i *Instance) SlugAndDomain() (string, string) {
+	splitted := strings.SplitN(i.Domain, ".", 2)
+	return splitted[0], splitted[1]
+}
+
 // Logger returns the logger associated with the instance
 func (i *Instance) Logger() *logrus.Entry {
 	return logger.WithDomain(i.Domain)

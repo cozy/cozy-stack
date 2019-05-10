@@ -184,25 +184,30 @@ func authorizeForm(c echo.Context) error {
 	if err != nil {
 		email = instance.ContextualDomain()
 	}
+
+	slugname, instanceDomain := instance.SlugAndDomain()
+
 	hasFallback := c.QueryParam("fallback_uri") != ""
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
-		"Title":        instance.TemplateTitle(),
-		"CozyUI":       middlewares.CozyUI(instance),
-		"ThemeCSS":     middlewares.ThemeCSS(instance),
-		"Domain":       instance.ContextualDomain(),
-		"Email":        email,
-		"ContextName":  instance.ContextName,
-		"ClientDomain": clientDomain,
-		"Locale":       instance.Locale,
-		"Client":       params.client,
-		"State":        params.state,
-		"RedirectURI":  params.redirectURI,
-		"Scope":        params.scope,
-		"Permissions":  permissions,
-		"ReadOnly":     readOnly,
-		"CSRF":         c.Get("csrf"),
-		"HasFallback":  hasFallback,
-		"Webapp":       params.webapp,
+		"Title":            instance.TemplateTitle(),
+		"CozyUI":           middlewares.CozyUI(instance),
+		"ThemeCSS":         middlewares.ThemeCSS(instance),
+		"Domain":           instance.ContextualDomain(),
+		"InstanceSlugName": slugname,
+		"InstanceDomain":   instanceDomain,
+		"Email":            email,
+		"ContextName":      instance.ContextName,
+		"ClientDomain":     clientDomain,
+		"Locale":           instance.Locale,
+		"Client":           params.client,
+		"State":            params.state,
+		"RedirectURI":      params.redirectURI,
+		"Scope":            params.scope,
+		"Permissions":      permissions,
+		"ReadOnly":         readOnly,
+		"CSRF":             c.Get("csrf"),
+		"HasFallback":      hasFallback,
+		"Webapp":           params.webapp,
 	})
 }
 
