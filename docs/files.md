@@ -357,7 +357,7 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "meta": {
-      "rev": "1-0e6d5b72"
+      "rev": "4-1482b88a"
     },
     "attributes": {
       "type": "file",
@@ -410,6 +410,18 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
             "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
           }
         ]
+      },
+      "versions": {
+        "data": [
+          {
+            "type": "io.cozy.files.versions",
+            "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/2-fa3a3bec"
+          },
+          {
+            "type": "io.cozy.files.versions",
+            "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72"
+          }
+        ]
       }
     },
     "links": {
@@ -418,7 +430,23 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
       "medium": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/medium",
       "large": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/large"
     }
-  }
+  },
+  "included": [
+    {
+      "type": "io.cozy.files.versions",
+      "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/2-fa3a3bec",
+      "md5sum": "a2lth5syMW+4r7jwNhdk3A==",
+      "size": 123456,
+      "tags": []
+    },
+    {
+      "type": "io.cozy.files.versions",
+      "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72",
+      "md5sum": "FBA89XXOZKFhdv37iILb2Q==",
+      "size": 159753,
+      "tags": []
+    }
+  ]
 }
 ```
 
@@ -508,6 +536,19 @@ By default the `content-disposition` will be `inline`, but it will be
 
 ```http
 GET /files/download?Path=/Documents/hello.txt&Dl=1 HTTP/1.1
+```
+
+### GET /files/download/:file-id/:version-id
+
+Download an old version of the file content
+
+By default the `content-disposition` will be `inline`, but it will be
+`attachment` if the query string contains the parameter `Dl=1`
+
+#### Request
+
+```http
+GET /files/download/9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72 HTTP/1.1
 ```
 
 ### GET /files/:file-id/thumbnails/:secret/:format
@@ -794,6 +835,31 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     },
     "links": {
       "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
+    }
+  }
+}
+```
+
+### PATCH /files/:file-id/:version-id
+
+This endpoint can be used to edit the tags of a previous version of the file.
+
+#### Request
+
+```http
+PATCH /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72 HTTP/1.1
+Accept: application/vnd.api+json
+Content-Type: application/vnd.api+json
+```
+
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files.versions",
+    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72",
+    "attributes": {
+      "tags": ["poem"]
     }
   }
 }
