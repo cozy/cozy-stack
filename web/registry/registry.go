@@ -23,7 +23,7 @@ func proxyReq(auth authType, clientPermanentCache bool, proxyCacheControl regist
 		i := middlewares.GetInstance(c)
 		switch auth {
 		case authed:
-			if !middlewares.IsLoggedIn(c) {
+			if !middlewares.IsLoggedIn(c) || !middlewares.HasWebAppToken(c) {
 				if err := middlewares.AllowWholeType(c, permission.GET, consts.Apps); err != nil {
 					return echo.NewHTTPError(http.StatusForbidden)
 				}
@@ -52,8 +52,7 @@ func proxyReq(auth authType, clientPermanentCache bool, proxyCacheControl regist
 
 func proxyListReq(c echo.Context) error {
 	i := middlewares.GetInstance(c)
-	pdoc, err := middlewares.GetPermission(c)
-	if err != nil || pdoc.Type != permission.TypeWebapp {
+	if !middlewares.HasWebAppToken(c) {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	req := c.Request()

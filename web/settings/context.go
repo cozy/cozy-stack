@@ -111,6 +111,7 @@ func context(c echo.Context) error {
 	}
 
 	doc := &apiContext{ctx}
+	// Any request with a token can ask for the context (no permissions are required)
 	if _, err = middlewares.GetPermission(c); err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}

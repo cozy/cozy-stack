@@ -377,6 +377,11 @@ func GetSourceID(c echo.Context) (slug string, err error) {
 // AllowLogout checks if the current permission allows logging out.
 // all apps can trigger a logout.
 func AllowLogout(c echo.Context) bool {
+	return HasWebAppToken(c)
+}
+
+// HasWebAppToken returns true if the request comes from a web app (with a token).
+func HasWebAppToken(c echo.Context) bool {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return false
