@@ -109,7 +109,7 @@ type WebappManifest struct {
 	FromAppsDir bool        `json:"-"` // Used in development
 	Instance    SubDomainer `json:"-"` // Used for JSON-API links
 
-	oldServices Services // Used to diff against when updating the app
+	OldServices Services // Used to diff against when updating the app
 
 	Err string `json:"error,omitempty"`
 	err error
@@ -269,7 +269,7 @@ func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Mani
 	newManifest.Instance = m.Instance
 	newManifest.DocSlug = slug
 	newManifest.DocSource = sourceURL
-	newManifest.oldServices = m.Services
+	newManifest.OldServices = m.Services
 	if newManifest.Routes == nil {
 		newManifest.Routes = make(Routes)
 		newManifest.Routes["/"] = Route{
@@ -299,7 +299,7 @@ func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 
 // Update is part of the Manifest interface
 func (m *WebappManifest) Update(db prefixer.Prefixer, extraPerms permission.Set) error {
-	if err := diffServices(db, m.Slug(), m.oldServices, m.Services); err != nil {
+	if err := diffServices(db, m.Slug(), m.OldServices, m.Services); err != nil {
 		return err
 	}
 	m.UpdatedAt = time.Now()
