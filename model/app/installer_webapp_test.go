@@ -9,7 +9,9 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -579,6 +581,121 @@ func TestWebappInstallFromHTTP(t *testing.T) {
 		}
 		state = man.State()
 	}
+}
+
+func TestWebappUpdateWithService(t *testing.T) {
+	manifest1 := func() string {
+		return ` {
+"description": "A mini app to test cozy-stack-v2",
+"developer": {
+	"name": "Cozy",
+	"url": "cozy.io"
+},
+"license": "MIT",
+"name": "mini-app",
+"permissions": {
+  "rule0": {
+	"type": "io.cozy.files",
+	"verbs": ["GET"],
+	"values": ["foobar"]
+  }
+},
+"services": {
+	"onOperationOrBillCreate": {
+		"type": "node",
+		"file": "onOperationOrBillCreate.js",
+		"trigger": "@event io.cozy.bank.operations:CREATED io.cozy.bills:CREATED",
+		"debounce": "3m"
+	  }
+},
+"slug": "mini-test-service",
+"type": "webapp",
+"version": "1.0.0"
+}`
+	}
+
+	manifest2 := func() string {
+		return ` {
+"description": "A mini app to test cozy-stack-v2",
+"developer": {
+	"name": "Cozy",
+	"url": "cozy.io"
+},
+"license": "MIT",
+"name": "mini-app",
+"permissions": {
+	"rule0": {
+		"type": "io.cozy.files",
+		"verbs": ["GET", "POST"],
+		"values": ["foobar"]
+	}
+},
+"services": {
+	"onOperationOrBillCreate": {
+		"type": "node",
+		"file": "onOperationOrBillCreate.js",
+		"trigger": "@event io.cozy.bank.operations:CREATED io.cozy.bills:CREATED",
+		"debounce": "3m"
+	  }
+},
+"slug": "mini-test-service",
+"type": "webapp",
+"version": "2.0.0"
+}`
+	}
+	conf := config.GetConfig()
+	conf.Contexts = map[string]interface{}{
+		"default": map[string]interface{}{},
+	}
+
+	manGen = manifest1
+	manName = app.WebappManifestName
+	finished := true
+
+	instance, err := lifecycle.Create(&lifecycle.Options{
+		Domain:             "test-update-with-service",
+		OnboardingFinished: &finished,
+	})
+	assert.NoError(t, err)
+
+	defer func() { _ = lifecycle.Destroy("test-update-with-service") }()
+
+	inst, err := app.NewInstaller(instance, fs, &app.InstallerOptions{
+		Operation: app.Install,
+		Type:      consts.WebappType,
+		Slug:      "mini-test-service",
+		SourceURL: "git://localhost/",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	man, err := inst.RunSync()
+	assert.NoError(t, err)
+	assert.Contains(t, man.Version(), "1.0.0")
+
+	t1, err := couchdb.CountAllDocs(instance, consts.Triggers)
+	assert.NoError(t, err)
+
+	// Update the app, but with new perms. The app should stay on the same
+	// version
+	manGen = manifest2
+	inst2, err := app.NewInstaller(instance, fs, &app.InstallerOptions{
+		Operation: app.Update,
+		Type:      consts.WebappType,
+		Slug:      "mini-test-service",
+		SourceURL: "git://localhost/",
+	})
+	assert.NoError(t, err)
+
+	man, err = inst2.RunSync()
+	assert.NoError(t, err)
+	t2, err := couchdb.CountAllDocs(instance, consts.Triggers)
+	assert.NoError(t, err)
+
+	assert.Contains(t, man.Version(), "1.0.0")
+
+	assert.Equal(t, t1, t2)
 }
 
 func TestWebappUninstall(t *testing.T) {
