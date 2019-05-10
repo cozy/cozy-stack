@@ -502,6 +502,7 @@ func purgeJobs(c echo.Context) error {
 	if err != nil && err != job.ErrNotFoundJob {
 		return err
 	}
+
 	// Step 2: We also want to keep a minimum number of jobs for each state.
 	// Jobs returned will be kept.
 	lastsJobs := map[string]struct{}{}

@@ -315,19 +315,33 @@ func GetQueuedJobs(db prefixer.Prefixer, workerType string) ([]*Job, error) {
 
 // GetJobsBeforeDate returns alls jobs queued before the specified date
 func GetJobsBeforeDate(db prefixer.Prefixer, date time.Time) ([]*Job, error) {
+	var cursor int
 	var jobs []*Job
 
-	req := &couchdb.FindRequest{
-		UseIndex: "by-queued-at",
-		Selector: mango.Lt("queued_at", date.Format(time.RFC3339Nano)),
+	finalJobs := []*Job{}
+
+	for cursor != -1 {
+		jobs = []*Job{}
+		req := &couchdb.FindRequest{
+			UseIndex: "by-queued-at",
+			Selector: mango.Lt("queued_at", date.Format(time.RFC3339Nano)),
+			Limit:    1000,
+			Skip:     cursor,
+		}
+		err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
+		if err != nil {
+			return nil, err
+		}
+		finalJobs = append(finalJobs, jobs...)
+
+		if len(jobs) == 0 {
+			cursor = -1
+		} else {
+			cursor = len(finalJobs)
+		}
 	}
 
-	err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
-	if err != nil {
-		return nil, err
-	}
-
-	return jobs, err
+	return finalJobs, nil
 }
 
 // GetLastsJobs returns the N lasts job of each state for an instance/worker

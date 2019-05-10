@@ -540,6 +540,7 @@ func UseViper(v *viper.Viper) error {
 	jobs := Jobs{
 		RedisConfig:           jobsRedis,
 		ImageMagickConvertCmd: v.GetString("jobs.imagemagick_convert_cmd"),
+		DefaultDurationToKeep: v.GetString("jobs.defaultDurationToKeep"),
 	}
 	{
 		isWhiteList := v.GetBool("jobs.whitelist")
