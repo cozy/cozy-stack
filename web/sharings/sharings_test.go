@@ -458,7 +458,6 @@ func assertSharingByAliceToBobDaveAndEdward(t *testing.T, members []interface{})
 	assert.Equal(t, dave["email"], "dave@example.net")
 	assert.Equal(t, dave["read_only"], true)
 	edward := members[3].(map[string]interface{})
-	assert.Equal(t, edward["status"], "pending")
 	assert.Equal(t, edward["name"], "Edward")
 	assert.Equal(t, edward["instance"], "https://edward.example.net/")
 }
