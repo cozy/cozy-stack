@@ -109,7 +109,7 @@ type WebappManifest struct {
 	FromAppsDir bool        `json:"-"` // Used in development
 	Instance    SubDomainer `json:"-"` // Used for JSON-API links
 
-	OldServices Services // Used to diff against when updating the app
+	OldServices Services `json:"-"` // Used to diff against when updating the app
 
 	Err string `json:"error,omitempty"`
 	err error
