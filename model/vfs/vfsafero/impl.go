@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/lock"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 
 	"github.com/cozy/afero"
@@ -205,11 +204,6 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, vfs.ErrParentInTrash
 	}
 
-	tmppath := newpath
-	if olddoc != nil {
-		tmppath = fmt.Sprintf("/.%s_%s", olddoc.ID(), olddoc.Rev())
-	}
-
 	if olddoc != nil {
 		newdoc.SetID(olddoc.ID())
 		newdoc.SetRev(olddoc.Rev())
@@ -230,26 +224,13 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		if exists {
 			return nil, os.ErrExist
 		}
-
-		// When added to the index, the document is first considered hidden. This
-		// flag will only be removed at the end of the upload when all its metadata
-		// are known. See the Close() method.
-		newdoc.Trashed = true
-
-		if newdoc.ID() == "" {
-			err = afs.Indexer.CreateFileDoc(newdoc)
-		} else {
-			err = afs.Indexer.CreateNamedFileDoc(newdoc)
-		}
-		if err != nil {
-			return nil, err
-		}
 	}
 
-	f, err := safeCreateFile(tmppath, newdoc.Mode(), afs.fs)
+	f, err := afero.TempFile(afs.fs, "/", newdoc.DocName)
 	if err != nil {
 		return nil, err
 	}
+	tmppath := path.Join("/", f.Name())
 
 	hash := md5.New()
 	extractor := vfs.NewMetaExtractor(newdoc)
@@ -686,17 +667,7 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 func (f *aferoFileCreation) Close() (err error) {
 	var newpath string
 	defer func() {
-		if err == nil {
-			if f.olddoc != nil {
-				// move the temporary file to its final location
-				if errf := f.afs.fs.Rename(f.tmppath, newpath); errf != nil {
-					logger.WithNamespace("vfsafero").Warnf("Error on close file: %s", errf)
-				}
-			}
-			if f.capsize > 0 && f.size >= f.capsize {
-				vfs.PushDiskQuotaAlert(f.afs, true)
-			}
-		} else if err != nil {
+		if err != nil {
 			// remove the temporary file if an error occurred
 			_ = f.afs.fs.Remove(f.tmppath)
 			// If an error has occurred that is not due to the index update, we should
@@ -719,9 +690,6 @@ func (f *aferoFileCreation) Close() (err error) {
 	}
 
 	newdoc, olddoc, written := f.newdoc, f.olddoc, f.w
-	if olddoc == nil {
-		olddoc = newdoc.Clone().(*vfs.FileDoc)
-	}
 
 	if f.meta != nil {
 		if errc := (*f.meta).Close(); errc == nil {
@@ -753,7 +721,7 @@ func (f *aferoFileCreation) Close() (err error) {
 	// The document is already added to the index when closing the file creation
 	// handler. When updating the content of the document with the final
 	// informations (size, md5, ...) we can reuse the same document as olddoc.
-	if f.olddoc == nil || !f.olddoc.Trashed {
+	if olddoc == nil || !olddoc.Trashed {
 		newdoc.Trashed = false
 	}
 	lockerr := f.afs.mu.Lock()
@@ -770,14 +738,27 @@ func (f *aferoFileCreation) Close() (err error) {
 		return vfs.ErrParentInTrash
 	}
 
-	return f.afs.Indexer.UpdateFileDoc(olddoc, newdoc)
-}
+	if olddoc != nil {
+		err = f.afs.Indexer.UpdateFileDoc(olddoc, newdoc)
+	} else if newdoc.ID() == "" {
+		err = f.afs.Indexer.CreateFileDoc(newdoc)
+	} else {
+		err = f.afs.Indexer.CreateNamedFileDoc(newdoc)
+	}
+	if err != nil {
+		return err
+	}
 
-func safeCreateFile(name string, mode os.FileMode, fs afero.Fs) (afero.File, error) {
-	// write only (O_WRONLY), try to create the file and check that it
-	// does not already exist (O_CREATE|O_EXCL).
-	flag := os.O_WRONLY | os.O_CREATE | os.O_EXCL
-	return fs.OpenFile(name, flag, mode)
+	// move the temporary file to its final location
+	if err = f.afs.fs.Rename(f.tmppath, newpath); err != nil {
+		return err
+	}
+
+	if f.capsize > 0 && f.size >= f.capsize {
+		vfs.PushDiskQuotaAlert(f.afs, true)
+	}
+
+	return nil
 }
 
 func safeRenameFile(fs afero.Fs, oldpath, newpath string) error {
