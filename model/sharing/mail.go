@@ -58,16 +58,30 @@ func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) er
 // contacts to invite them
 func (s *Sharing) SendMailsToMembers(inst *instance.Instance, members []Member, states map[string]string) error {
 	sharer, desc := s.getSharerAndDescription(inst)
+	invite := &InviteMsg{
+		Sharer:      sharer,
+		Description: desc,
+	}
+
 	for _, m := range members {
 		key := m.Email
 		if key == "" {
 			key = m.Instance
 		}
 		link := m.MailLink(inst, s, states[key], nil)
-		if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
-			inst.Logger().WithField("nspace", "sharing").
-				Errorf("Can't send email for %#v: %s", m.Email, err)
-			return ErrMailNotSent
+		if m.Email == "" {
+			invite.Link = link
+			if err := m.CallInvite(inst, invite); err != nil {
+				inst.Logger().WithField("nspace", "sharing").
+					Errorf("Can't call invite for %#v: %s", m.Instance, err)
+				continue
+			}
+		} else {
+			if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
+				inst.Logger().WithField("nspace", "sharing").
+					Errorf("Can't send email for %#v: %s", m.Email, err)
+				return ErrMailNotSent
+			}
 		}
 		for i, member := range s.Members {
 			if i == 0 {
