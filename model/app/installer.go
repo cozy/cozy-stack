@@ -431,7 +431,7 @@ func (i *Installer) update() error {
 		i.man.SetState(i.endState)
 	} else {
 		if i.man.AppType() == consts.WebappType {
-			i.man.(*WebappManifest).OldServices = i.man.(*WebappManifest).Services
+			i.man.(*WebappManifest).oldServices = i.man.(*WebappManifest).Services
 		}
 		i.man.SetSource(i.src)
 		if availableVersion != "" {
