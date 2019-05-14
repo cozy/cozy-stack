@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/metadata"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -126,7 +127,23 @@ func createPermission(c echo.Context) error {
 		}
 	}
 
-	pdoc, err := permission.CreateShareSet(instance, parent, sourceID, codes, shortcodes, subdoc.Permissions, expiresAt)
+	// Handles the metadata part
+	md := metadata.New()
+	md.CreatedByApp = sourceID
+	md.DocTypeVersion = permission.DoctypeVersion
+	err = md.UpdatedByApp(sourceID, "") // We do not have a version here
+	if err != nil {
+		return err
+	}
+
+	// Adding metadata if it does not exist
+	if subdoc.Metadata == nil {
+		subdoc.Metadata = md
+	} else { // Otherwise, ensure we have all the needed fields
+		subdoc.Metadata.EnsureCreatedFields(md)
+	}
+
+	pdoc, err := permission.CreateShareSet(instance, parent, sourceID, codes, shortcodes, subdoc, expiresAt)
 	if err != nil {
 		return err
 	}
@@ -276,6 +293,17 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 					return permission.ErrNotSubset
 				}
 			}
+		}
+
+		// Handle metadata
+		// If the metadata has been given in the body request, just apply it to
+		// the patch
+		if patch.Metadata != nil {
+			toPatch.Metadata = patch.Metadata
+		} else if toPatch.Metadata != nil { // No metadata given in the request, but it does exist in the database: update it
+			updatedMD := toPatch.Metadata.Clone()
+			updatedMD.Update()
+			toPatch.Metadata = &updatedMD
 		}
 
 		if err = couchdb.UpdateDoc(instance, toPatch); err != nil {
