@@ -1753,7 +1753,10 @@ func TestGetFileByPublicLink(t *testing.T) {
 			Values: []string{fileID},
 		},
 	}
-	_, err = permission.CreateShareSet(testInstance, &permission.Permission{Type: "app", Permissions: rules}, "", map[string]string{"email": publicToken}, nil, rules, &expires)
+	perms := permission.Permission{
+		Permissions: rules,
+	}
+	_, err = permission.CreateShareSet(testInstance, &permission.Permission{Type: "app", Permissions: rules}, "", map[string]string{"email": publicToken}, nil, perms, &expires)
 	assert.NoError(t, err)
 
 	req, err := http.NewRequest("GET", ts.URL+"/files/"+fileID, nil)
