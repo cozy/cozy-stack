@@ -427,7 +427,8 @@ func updateAppSet(db prefixer.Prefixer, doc *Permission, typ, docType, slug stri
 }
 
 // CreateShareSet creates a Permission doc for sharing by link
-func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, codes, shortcodes map[string]string, set Set, expiresAt *time.Time) (*Permission, error) {
+func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, codes, shortcodes map[string]string, subdoc Permission, expiresAt *time.Time) (*Permission, error) {
+	set := subdoc.Permissions
 	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
 		return nil, ErrOnlyAppCanCreateSubSet
 	}
@@ -454,6 +455,7 @@ func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, c
 		Codes:       codes,
 		ShortCodes:  shortcodes,
 		ExpiresAt:   expiresAt,
+		Metadata:    subdoc.Metadata,
 	}
 
 	err := couchdb.CreateDoc(db, doc)
@@ -465,12 +467,13 @@ func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, c
 }
 
 // CreateSharePreviewSet creates a Permission doc for previewing a sharing
-func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes map[string]string, set Set) (*Permission, error) {
+func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes map[string]string, set Set, metadata *metadata.CozyMetaData) (*Permission, error) {
 	doc := &Permission{
 		Type:        TypeSharePreview,
 		Permissions: set,
 		Codes:       codes,
 		SourceID:    consts.Sharings + "/" + sharingID,
+		Metadata:    metadata,
 	}
 	err := couchdb.CreateDoc(db, doc)
 	if err != nil {
