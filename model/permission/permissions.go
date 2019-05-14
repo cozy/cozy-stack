@@ -6,12 +6,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/metadata"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
+
+// DocTypeVersion represents the doctype version. Each time this document
+// structure is modified, update this value
+const DoctypeVersion = 1
 
 // Permission is a storable object containing a set of rules and
 // several codes
@@ -25,7 +30,8 @@ type Permission struct {
 	Codes       map[string]string `json:"codes,omitempty"`
 	ShortCodes  map[string]string `json:"shortcodes,omitempty"`
 
-	Client interface{} `json:"-"` // Contains the *oauth.Client client pointer for Oauth permission type
+	Client   interface{}            `json:"-"` // Contains the *oauth.Client client pointer for Oauth permission type
+	Metadata *metadata.CozyMetaData `json:"cozyMetadata,omitempty"`
 }
 
 const (
@@ -67,6 +73,10 @@ func (p *Permission) Clone() couchdb.Doc {
 	cloned := *p
 	cloned.Codes = make(map[string]string)
 	cloned.ShortCodes = make(map[string]string)
+	if p.Metadata != nil {
+		md := p.Metadata.Clone()
+		cloned.Metadata = &md
+	}
 	for k, v := range p.Codes {
 		cloned.Codes[k] = v
 	}
