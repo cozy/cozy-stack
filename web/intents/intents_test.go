@@ -135,7 +135,8 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	appPerms, err = permission.CreateWebappSet(ins, webapp.Slug(), webapp.Permissions(), metadata.New())
+	md, _ := metadata.NewWithApp(webapp.Slug(), "")
+	appPerms, err = permission.CreateWebappSet(ins, webapp.Slug(), webapp.Permissions(), md)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -157,7 +158,8 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	if _, err := permission.CreateWebappSet(ins, files.Slug(), files.Permissions(), metadata.New()); err != nil {
+	md, _ = metadata.NewWithApp(webapp.Slug(), "")
+	if _, err := permission.CreateWebappSet(ins, files.Slug(), files.Permissions(), md); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

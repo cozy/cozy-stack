@@ -13,6 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/metadata"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -798,6 +799,135 @@ func TestListPermission(t *testing.T) {
 	assert.Len(t, resBody3.Data, 1)
 	assert.NotEmpty(t, resBody3.Links.Next)
 
+}
+
+func TestCreatePermissionWithoutMetadata(t *testing.T) {
+	// Install the app
+	installer, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+		Operation:  app.Install,
+		Type:       consts.WebappType,
+		SourceURL:  "registry://drive",
+		Slug:       "drive",
+		Registries: testInstance.Registries(),
+	})
+	assert.NoError(t, err)
+	_, err = installer.RunSync()
+	assert.NoError(t, err)
+
+	bodyReq := fmt.Sprintf(`{"data": {"type": "io.cozy.permissions","attributes": {"permissions": {"files": {"type": "io.cozy.files","verbs": ["GET"]}}}}}`)
+	tok, err := testInstance.MakeJWT(permission.TypeWebapp,
+		"drive", "io.cozy.files", "", time.Now())
+	assert.NoError(t, err)
+
+	// Request to create a permission
+	req, err := http.NewRequest("POST", ts.URL+"/permissions", strings.NewReader(bodyReq))
+	assert.NoError(t, err)
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+tok)
+
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+
+	type metaStruct struct {
+		Meta metadata.CozyMetaData `json:"cozyMetadata"`
+	}
+	type attrStruct struct {
+		Attributes metaStruct `json:"attributes"`
+	}
+	type resStruct struct {
+		Data attrStruct `json:"data"`
+	}
+
+	r := resStruct{}
+	err = json.NewDecoder(res.Body).Decode(&r)
+	assert.NoError(t, err)
+
+	// Assert a cozyMetadata has been added
+	meta := r.Data.Attributes.Meta
+	assert.Equal(t, "drive", meta.CreatedByApp)
+	assert.Equal(t, 1, len(meta.UpdatedByApps))
+	assert.Equal(t, "1", meta.DocTypeVersion)
+	assert.Equal(t, 1, meta.MetadataVersion)
+	assert.True(t, time.Since(meta.CreatedAt) < 5*time.Second)
+
+	// Clean
+	uninstaller, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
+		&app.InstallerOptions{
+			Operation:  app.Delete,
+			Type:       consts.WebappType,
+			Slug:       "drive",
+			SourceURL:  "registry://drive",
+			Registries: testInstance.Registries(),
+		},
+	)
+	assert.NoError(t, err)
+
+	_, err = uninstaller.RunSync()
+	assert.NoError(t, err)
+}
+
+func TestCreatePermissionWithMetadata(t *testing.T) {
+	// Install the app
+	installer, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+		Operation:  app.Install,
+		Type:       consts.WebappType,
+		SourceURL:  "registry://drive",
+		Slug:       "drive",
+		Registries: testInstance.Registries(),
+	})
+	assert.NoError(t, err)
+	_, err = installer.RunSync()
+	assert.NoError(t, err)
+
+	bodyReq := fmt.Sprintf(`{"data":{"type":"io.cozy.permissions","attributes":{"permissions":{"files":{"type":"io.cozy.files","verbs":["GET"]}},"cozyMetadata":{"createdByApp":"foobar"}}}}`)
+	tok, err := testInstance.MakeJWT(permission.TypeWebapp,
+		"drive", "io.cozy.files", "", time.Now())
+	assert.NoError(t, err)
+
+	// Request to create a permission
+	req, err := http.NewRequest("POST", ts.URL+"/permissions", strings.NewReader(bodyReq))
+	assert.NoError(t, err)
+	req.Host = testInstance.Domain
+	req.Header.Add("Authorization", "Bearer "+tok)
+
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+
+	type metaStruct struct {
+		Meta metadata.CozyMetaData `json:"cozyMetadata"`
+	}
+	type attrStruct struct {
+		Attributes metaStruct `json:"attributes"`
+	}
+	type resStruct struct {
+		Data attrStruct `json:"data"`
+	}
+
+	r := resStruct{}
+	err = json.NewDecoder(res.Body).Decode(&r)
+	assert.NoError(t, err)
+
+	// Assert a cozyMetadata has been added
+	meta := r.Data.Attributes.Meta
+	assert.Equal(t, "foobar", meta.CreatedByApp)
+	assert.Equal(t, 1, len(meta.UpdatedByApps))
+	assert.Equal(t, "1", meta.DocTypeVersion)
+	assert.Equal(t, 1, meta.MetadataVersion)
+
+	// Clean
+	uninstaller, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
+		&app.InstallerOptions{
+			Operation:  app.Delete,
+			Type:       consts.WebappType,
+			Slug:       "drive",
+			SourceURL:  "registry://drive",
+			Registries: testInstance.Registries(),
+		},
+	)
+	assert.NoError(t, err)
+
+	_, err = uninstaller.RunSync()
+	assert.NoError(t, err)
 }
 
 func createTestEvent(i *instance.Instance) (*couchdb.JSONDoc, error) {

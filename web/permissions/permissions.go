@@ -80,12 +80,13 @@ func createPermission(c echo.Context) error {
 		return err
 	}
 
+	var slug string
 	sourceID := parent.SourceID
 	// Check if the permission is linked to an OAuth Client
 	if parent.Client != nil {
 		oauthClient := parent.Client.(*oauth.Client)
 		if auth.IsLinkedApp(oauthClient.SoftwareID) {
-			slug := auth.GetLinkedAppSlug(oauthClient.SoftwareID)
+			slug = auth.GetLinkedAppSlug(oauthClient.SoftwareID)
 			// Changing the sourceID from the OAuth clientID to the classic
 			// io.cozy.apps/slug one
 			sourceID = consts.Apps + "/" + slug
@@ -127,14 +128,21 @@ func createPermission(c echo.Context) error {
 		}
 	}
 
+	// Getting the slug from the token if it has not been retrieved before
+	// with the linkedapp
+	if slug == "" {
+		slug, err = middlewares.GetTokenSub(c)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Handles the metadata part
-	md := metadata.New()
-	md.CreatedByApp = sourceID
-	md.DocTypeVersion = permission.DocTypeVersion
-	err = md.UpdatedByApp(sourceID, "") // We do not have a version here
+	md, err := metadata.NewWithApp(slug, "")
 	if err != nil {
 		return err
 	}
+	md.DocTypeVersion = permission.DocTypeVersion
 
 	// Adding metadata if it does not exist
 	if subdoc.Metadata == nil {
@@ -307,7 +315,10 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 				return err
 			}
 			updatedMD.ChangeUpdatedAt()
-			updatedMD.UpdatedByApp(sub, "")
+			err = updatedMD.UpdatedByApp(sub, "")
+			if err != nil {
+				return err
+			}
 			toPatch.Metadata = &updatedMD
 		}
 
