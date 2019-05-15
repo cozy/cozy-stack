@@ -36,6 +36,9 @@ const (
 	// OrphansDirName is the path of the directory used to store data-files added
 	// in the index from a filesystem-check (fsck)
 	OrphansDirName = "/.cozy_orphans"
+	// VersionsDirName is the path of the directory where old versions of files
+	// are persisted.
+	VersionsDirName = "/.cozy_versions"
 )
 
 const (
@@ -173,6 +176,8 @@ type Indexer interface {
 	DirLength(*DirDoc) (int, error)
 	DirChildExists(dirID, filename string) (bool, error)
 	BatchDelete([]couchdb.Doc) error
+
+	CreateVersion(*Version) error
 
 	BuildTree(each ...func(*TreeFile)) (tree *Tree, err error)
 	CheckIndexIntegrity(func(*FsckLog)) error

@@ -665,7 +665,6 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 }
 
 func (f *aferoFileCreation) Close() (err error) {
-	var newpath string
 	defer func() {
 		if err != nil {
 			// remove the temporary file if an error occurred
@@ -730,6 +729,7 @@ func (f *aferoFileCreation) Close() (err error) {
 	}
 	defer f.afs.mu.Unlock()
 
+	var newpath string
 	newpath, err = f.afs.Indexer.FilePath(newdoc)
 	if err != nil {
 		return err
@@ -738,7 +738,9 @@ func (f *aferoFileCreation) Close() (err error) {
 		return vfs.ErrParentInTrash
 	}
 
+	var v *vfs.Version
 	if olddoc != nil {
+		v = vfs.NewVersion(olddoc)
 		err = f.afs.Indexer.UpdateFileDoc(olddoc, newdoc)
 	} else if newdoc.ID() == "" {
 		err = f.afs.Indexer.CreateFileDoc(newdoc)
@@ -749,9 +751,29 @@ func (f *aferoFileCreation) Close() (err error) {
 		return err
 	}
 
+	if v != nil {
+		vPath := pathForVersion(v)
+		if err = f.afs.fs.Rename(newpath, vPath); err != nil {
+			// If we can't move the content, we just don't create the version,
+			// but still let the upload for the new content finishes.
+			v = nil
+		}
+	}
+
 	// move the temporary file to its final location
 	if err = f.afs.fs.Rename(f.tmppath, newpath); err != nil {
+		if v != nil {
+			vPath := pathForVersion(v)
+			_ = f.afs.fs.Rename(vPath, newpath)
+		}
 		return err
+	}
+
+	if v != nil {
+		if errv := f.afs.Indexer.CreateVersion(v); errv != nil {
+			vPath := pathForVersion(v)
+			_ = f.afs.fs.Remove(vPath)
+		}
 	}
 
 	if f.capsize > 0 && f.size >= f.capsize {
@@ -817,6 +839,11 @@ func extractContentTypeAndMD5(filename string) (contentType string, md5sum []byt
 	}
 	md5sum = h.Sum(nil)
 	return
+}
+
+func pathForVersion(v *vfs.Version) string {
+	// Avoid too many files in the same directory by using some sub-directories
+	return path.Join(vfs.VersionsDirName, v.DocID[:4], v.DocID[4:])
 }
 
 var (

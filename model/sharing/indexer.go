@@ -316,6 +316,10 @@ func (s *sharingIndexer) DirChildExists(dirID, name string) (bool, error) {
 	return s.indexer.DirChildExists(dirID, name)
 }
 
+func (s *sharingIndexer) CreateVersion(v *vfs.Version) error {
+	return s.indexer.CreateVersion(v)
+}
+
 func (s *sharingIndexer) BuildTree(each ...func(*vfs.TreeFile)) (t *vfs.Tree, err error) {
 	return nil, ErrInternalServerError
 }
