@@ -51,13 +51,22 @@ func New() *CozyMetaData {
 }
 
 // NewWithApp initializes a CozyMetaData with a slug and a version
-func NewWithApp(slug, version string) *CozyMetaData {
+// Version is optional
+func NewWithApp(slug, version string) (*CozyMetaData, error) {
+	if slug == "" {
+		return nil, ErrSlugEmpty
+	}
 	md := New()
 	md.CreatedByApp = slug
 	if version != "" {
 		md.CreatedByAppVersion = version
 	}
-	return md
+
+	err := md.UpdatedByApp(slug, version)
+	if err != nil {
+		return nil, err
+	}
+	return md, nil
 }
 
 // Clone clones a CozyMetaData struct

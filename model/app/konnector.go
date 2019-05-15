@@ -219,10 +219,13 @@ func (m *KonnManifest) Create(db prefixer.Prefixer) error {
 		return err
 	}
 	// Add metadata
-	md := metadata.NewWithApp(m.DocSlug, m.Version())
+	md, err := metadata.NewWithApp(m.DocSlug, m.Version())
+	if err != nil {
+		return err
+	}
 	md.DocTypeVersion = permission.DocTypeVersion
 
-	_, err := permission.CreateKonnectorSet(db, m.Slug(), m.Permissions(), md)
+	_, err = permission.CreateKonnectorSet(db, m.Slug(), m.Permissions(), md)
 	return err
 }
 
