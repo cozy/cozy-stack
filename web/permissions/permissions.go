@@ -302,7 +302,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 			toPatch.Metadata = patch.Metadata
 		} else if toPatch.Metadata != nil { // No metadata given in the request, but it does exist in the database: update it
 			updatedMD := toPatch.Metadata.Clone()
-			updatedMD.Update()
+			updatedMD.ChangeUpdatedAt()
 			toPatch.Metadata = &updatedMD
 		}
 

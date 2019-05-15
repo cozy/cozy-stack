@@ -406,7 +406,7 @@ func UpdateWebappSet(db prefixer.Prefixer, slug string, set Set) (*Permission, e
 	if err != nil {
 		return nil, err
 	}
-	doc.Metadata.Update()
+	doc.Metadata.ChangeUpdatedAt()
 	return updateAppSet(db, doc, TypeWebapp, consts.Apps, slug, set)
 }
 
@@ -416,7 +416,7 @@ func UpdateKonnectorSet(db prefixer.Prefixer, slug string, set Set) (*Permission
 	if err != nil {
 		return nil, err
 	}
-	doc.Metadata.Update()
+	doc.Metadata.ChangeUpdatedAt()
 	return updateAppSet(db, doc, TypeKonnector, consts.Konnectors, slug, set)
 }
 

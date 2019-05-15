@@ -128,8 +128,8 @@ func (cm *CozyMetaData) EnsureCreatedFields(defaultMetadata *CozyMetaData) {
 	}
 }
 
-// Update updates the UpdatedAt timestamp
-func (cm *CozyMetaData) Update() {
+// ChangeUpdatedAt updates the UpdatedAt timestamp
+func (cm *CozyMetaData) ChangeUpdatedAt() {
 	now := time.Now()
 	cm.UpdatedAt = &now
 }
