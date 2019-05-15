@@ -34,13 +34,13 @@ type CozyMetaData struct {
 	// Last modification date of the cozy document
 	UpdatedAt *time.Time `json:"updatedAt"`
 	// List of objects representing the applications which modified the cozy document
-	UpdatedByApps []*UpdatedByAppEntry `json:"updatedByApps"`
+	UpdatedByApps []*UpdatedByAppEntry `json:"updatedByApps,omitempty"`
 	// Identifier of the account in io.cozy.accounts (for konnectors)
 	SourceAccount string `json:"sourceAccount,omitempty"`
 	// Import date (if any)
-	ImportedAt *time.Time `json:"importedAt"`
+	ImportedAt *time.Time `json:"importedAt,omitempty"`
 	// Import source (if any)
-	ImportedFrom string `json:"importedFrom"`
+	ImportedFrom string `json:"importedFrom,omitempty"`
 	// List of app identifier which use the doctype
 	UsedByApps []string `json:"usedByApps"`
 }
@@ -55,6 +55,34 @@ func New() *CozyMetaData {
 	}
 }
 
+// NewWithApp initializes a CozyMetaData with a slug and a version
+func NewWithApp(slug, version string) *CozyMetaData {
+	md := New()
+	md.CreatedByApp = slug
+	md.UsedByApps = []string{slug}
+	if version != "" {
+		md.CreatedByAppVersion = version
+	}
+	return md
+}
+
+// AddUsedByApp adds a app to the lsit of apps using the doctype
+// Returns false if it has not been added, true otherwise
+func (cm *CozyMetaData) AddUsedByApp(slug string) bool {
+	if cm.UsedByApps == nil {
+		cm.UsedByApps = []string{}
+	}
+
+	for _, app := range cm.UsedByApps {
+		if app == slug {
+			return false
+		}
+	}
+	cm.UsedByApps = append(cm.UsedByApps, slug)
+	return true
+}
+
+// Clone clones a CozyMetaData struct
 func (cm *CozyMetaData) Clone() CozyMetaData {
 	cloned := *cm
 	if cm.UpdatedAt != nil {
