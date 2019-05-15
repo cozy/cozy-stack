@@ -6,12 +6,17 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/metadata"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
+
+// KonnectorDocTypeVersion represents the webapp doctype version. Each time this
+// document structure is modified, update this value
+const KonnectorDocTypeVersion = 1
 
 // KonnManifest contains all the informations associated with an installed
 // konnector.
@@ -217,7 +222,11 @@ func (m *KonnManifest) Create(db prefixer.Prefixer) error {
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
-	_, err := permission.CreateKonnectorSet(db, m.Slug(), m.Permissions())
+	// Add metadata
+	md := metadata.NewWithApp(m.DocID, m.Version())
+	md.DocTypeVersion = KonnectorDocTypeVersion
+
+	_, err := permission.CreateKonnectorSet(db, m.Slug(), m.Permissions(), md)
 	return err
 }
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/metadata"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/appfs"
@@ -19,6 +20,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
+
+// WebAppDocTypeVersion represents the webapp doctype version. Each time this
+// document structure is modified, update this value
+const WebAppDocTypeVersion = 1
 
 // Route is a struct to serve a folder inside an app
 type Route struct {
@@ -293,7 +298,12 @@ func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
-	_, err := permission.CreateWebappSet(db, m.Slug(), m.Permissions())
+
+	// Add metadata
+	md := metadata.NewWithApp(m.DocID, m.Version())
+	md.DocTypeVersion = WebAppDocTypeVersion
+
+	_, err := permission.CreateWebappSet(db, m.Slug(), m.Permissions(), md)
 	return err
 }
 

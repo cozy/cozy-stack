@@ -328,28 +328,29 @@ func GetTokenFromShortcode(db prefixer.Prefixer, shortcode string) (string, erro
 }
 
 // CreateWebappSet creates a Permission doc for an app
-func CreateWebappSet(db prefixer.Prefixer, slug string, set Set) (*Permission, error) {
+func CreateWebappSet(db prefixer.Prefixer, slug string, set Set, md *metadata.CozyMetaData) (*Permission, error) {
 	existing, _ := GetForWebapp(db, slug)
 	if existing != nil {
 		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
 	}
-	return createAppSet(db, TypeWebapp, consts.Apps, slug, set)
+	return createAppSet(db, TypeWebapp, consts.Apps, slug, set, md)
 }
 
 // CreateKonnectorSet creates a Permission doc for a konnector
-func CreateKonnectorSet(db prefixer.Prefixer, slug string, set Set) (*Permission, error) {
+func CreateKonnectorSet(db prefixer.Prefixer, slug string, set Set, md *metadata.CozyMetaData) (*Permission, error) {
 	existing, _ := GetForKonnector(db, slug)
 	if existing != nil {
 		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
 	}
-	return createAppSet(db, TypeKonnector, consts.Konnectors, slug, set)
+	return createAppSet(db, TypeKonnector, consts.Konnectors, slug, set, md)
 }
 
-func createAppSet(db prefixer.Prefixer, typ, docType, slug string, set Set) (*Permission, error) {
+func createAppSet(db prefixer.Prefixer, typ, docType, slug string, set Set, md *metadata.CozyMetaData) (*Permission, error) {
 	doc := &Permission{
 		Type:        typ,
 		SourceID:    docType + "/" + slug,
 		Permissions: set,
+		Metadata:    md,
 	}
 	err := couchdb.CreateDoc(db, doc)
 	if err != nil {
@@ -405,6 +406,7 @@ func UpdateWebappSet(db prefixer.Prefixer, slug string, set Set) (*Permission, e
 	if err != nil {
 		return nil, err
 	}
+	doc.Metadata.Update()
 	return updateAppSet(db, doc, TypeWebapp, consts.Apps, slug, set)
 }
 
@@ -414,6 +416,7 @@ func UpdateKonnectorSet(db prefixer.Prefixer, slug string, set Set) (*Permission
 	if err != nil {
 		return nil, err
 	}
+	doc.Metadata.Update()
 	return updateAppSet(db, doc, TypeKonnector, consts.Konnectors, slug, set)
 }
 
