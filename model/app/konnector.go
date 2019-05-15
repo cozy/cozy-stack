@@ -14,10 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
-// KonnectorDocTypeVersion represents the webapp doctype version. Each time this
-// document structure is modified, update this value
-const KonnectorDocTypeVersion = 1
-
 // KonnManifest contains all the informations associated with an installed
 // konnector.
 type KonnManifest struct {
@@ -223,8 +219,8 @@ func (m *KonnManifest) Create(db prefixer.Prefixer) error {
 		return err
 	}
 	// Add metadata
-	md := metadata.NewWithApp(m.DocID, m.Version())
-	md.DocTypeVersion = KonnectorDocTypeVersion
+	md := metadata.NewWithApp(m.DocSlug, m.Version())
+	md.DocTypeVersion = permission.DocTypeVersion
 
 	_, err := permission.CreateKonnectorSet(db, m.Slug(), m.Permissions(), md)
 	return err

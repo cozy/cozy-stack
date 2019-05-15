@@ -21,10 +21,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
-// WebAppDocTypeVersion represents the webapp doctype version. Each time this
-// document structure is modified, update this value
-const WebAppDocTypeVersion = 1
-
 // Route is a struct to serve a folder inside an app
 type Route struct {
 	Folder string `json:"folder"`
@@ -300,8 +296,8 @@ func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 	}
 
 	// Add metadata
-	md := metadata.NewWithApp(m.DocID, m.Version())
-	md.DocTypeVersion = WebAppDocTypeVersion
+	md := metadata.NewWithApp(m.DocSlug, m.Version())
+	md.DocTypeVersion = permission.DocTypeVersion
 
 	_, err := permission.CreateWebappSet(db, m.Slug(), m.Permissions(), md)
 	return err
