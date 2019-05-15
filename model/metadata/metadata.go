@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// MetadataVersion represents the CozyMetadata version used.
 const MetadataVersion = 1
 
 // ErrSlugEmpty is returned when an UpdatedByApp entry is created with and empty
@@ -22,7 +23,7 @@ type UpdatedByAppEntry struct {
 // CozyMetaData holds all the metadata of a document
 type CozyMetaData struct {
 	// Name or identifier for the version of the schema used by this document
-	DocTypeVersion int `json:"doctypeVersion"`
+	DocTypeVersion string `json:"doctypeVersion"`
 	// Version of the cozyMetadata
 	MetadataVersion int `json:"metadataVersion"`
 	// Creation date of the cozy document

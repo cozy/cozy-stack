@@ -130,7 +130,7 @@ func createPermission(c echo.Context) error {
 	// Handles the metadata part
 	md := metadata.New()
 	md.CreatedByApp = sourceID
-	md.DocTypeVersion = permission.DoctypeVersion
+	md.DocTypeVersion = permission.DocTypeVersion
 	err = md.UpdatedByApp(sourceID, "") // We do not have a version here
 	if err != nil {
 		return err

@@ -16,7 +16,7 @@ import (
 
 // DocTypeVersion represents the doctype version. Each time this document
 // structure is modified, update this value
-const DoctypeVersion = 1
+const DocTypeVersion = "1"
 
 // Permission is a storable object containing a set of rules and
 // several codes
