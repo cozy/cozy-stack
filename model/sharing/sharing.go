@@ -211,7 +211,10 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 
 	if doc != nil {
 		if doc.Metadata != nil {
-			doc.Metadata.UpdatedByApp(s.AppSlug, "")
+			err := doc.Metadata.UpdatedByApp(s.AppSlug, "")
+			if err != nil {
+				return nil, err
+			}
 		}
 		doc.Codes = codes
 		if err := couchdb.UpdateDoc(inst, doc); err != nil {
