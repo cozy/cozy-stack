@@ -15,6 +15,7 @@ import (
   	"net/http"
     "bytes"
     "fmt"
+    "path/filepath"
 
   	"github.com/cozy/echo"
     "github.com/cozy/cozy-stack/pkg/couchdb"
@@ -311,9 +312,20 @@ func (c *conductor) GetTokens() dispers.Metadata {
 }
 
 // Works with stacks
-func (c *conductor) GetData() dispers.Metadata {
+func (c *conductor) GetData() (string, dispers.Metadata) {
 
-  return dispers.NewMetadata("nom de la metadata", "description", "aujourd'hui à telle heure", true)
+  s := ""
+  fmt.Println("")
+  fmt.Println("Import Dummy Dataset..")
+  absPath, _ := filepath.Abs("../cozy-stack/pkg/dispers/dispers/dummy_dataset.json")
+  buf, err := ioutil.ReadFile(absPath)
+  if err == nil {
+    s = string(buf)
+  } else {
+    fmt.Println(err)
+  }
+
+  return s, dispers.NewMetadata("nom de la metadata", "description", "aujourd'hui à telle heure", true)
 
 }
 
@@ -357,7 +369,9 @@ func (c *conductor) Lead() error {
   }
 
   if (tempMetadata.Outcome()){
-    tempMetadata = c.GetData()
+    data := ""
+    data, tempMetadata = c.GetData()
+    strings.ToLower(data) // juste pour éviter l'erreur du "data is not used"
     c.UpdateDoc("meta-task-4-slack", tempMetadata)
   }
 
