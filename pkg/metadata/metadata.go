@@ -52,7 +52,7 @@ func New() *CozyMetaData {
 
 // NewWithApp initializes a CozyMetaData with a slug and a version
 // Version is optional
-func NewWithApp(slug, version string) (*CozyMetaData, error) {
+func NewWithApp(slug, version, doctypeVersion string) (*CozyMetaData, error) {
 	if slug == "" {
 		return nil, ErrSlugEmpty
 	}
@@ -61,6 +61,7 @@ func NewWithApp(slug, version string) (*CozyMetaData, error) {
 	if version != "" {
 		md.CreatedByAppVersion = version
 	}
+	md.DocTypeVersion = doctypeVersion
 
 	err := md.UpdatedByApp(slug, version)
 	if err != nil {

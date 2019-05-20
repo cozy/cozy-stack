@@ -219,7 +219,7 @@ func (m *KonnManifest) Create(db prefixer.Prefixer) error {
 		return err
 	}
 	// Add metadata
-	md, err := metadata.NewWithApp(m.DocSlug, m.Version())
+	md, err := metadata.NewWithApp(m.DocSlug, m.Version(), permission.DocTypeVersion)
 	if err != nil {
 		return err
 	}
