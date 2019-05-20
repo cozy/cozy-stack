@@ -129,6 +129,8 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 		return instance.PickKey(token.Claims.(*permission.Claims).Audience)
 	}, &claims)
 
+	c.Set("claims", claims)
+
 	if err != nil {
 		return nil, permission.ErrInvalidToken
 	}
@@ -387,19 +389,4 @@ func HasWebAppToken(c echo.Context) bool {
 		return false
 	}
 	return pdoc.Type == permission.TypeWebapp
-}
-
-// GetTokenSub returns the subject of a token from the context
-func GetTokenSub(c echo.Context) (string, error) {
-	var claims permission.Claims
-	inst := GetInstance(c)
-	header := c.Request().Header.Get(echo.HeaderAuthorization)
-	token := header[len("Bearer "):]
-	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
-		return inst.PickKey(token.Claims.(*permission.Claims).Audience)
-	}, &claims)
-	if err != nil {
-		return "", err
-	}
-	return claims.Subject, nil
 }

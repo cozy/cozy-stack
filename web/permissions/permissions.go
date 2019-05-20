@@ -131,10 +131,8 @@ func createPermission(c echo.Context) error {
 	// Getting the slug from the token if it has not been retrieved before
 	// with the linkedapp
 	if slug == "" {
-		slug, err = middlewares.GetTokenSub(c)
-		if err != nil {
-			return err
-		}
+		claims := c.Get("claims").(permission.Claims)
+		slug = claims.Subject
 	}
 
 	// Handles the metadata part
@@ -309,11 +307,9 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 			toPatch.Metadata = patch.Metadata
 		} else if toPatch.Metadata != nil { // No metadata given in the request, but it does exist in the database: update it
 			updatedMD := toPatch.Metadata.Clone()
-			sub, err := middlewares.GetTokenSub(c)
-			if err != nil {
-				return err
-			}
-			err = updatedMD.UpdatedByApp(sub, "")
+			// Using the token Subject for update
+			claims := c.Get("claims").(permission.Claims)
+			err = updatedMD.UpdatedByApp(claims.Subject, "")
 			if err != nil {
 				return err
 			}
