@@ -1,30 +1,18 @@
 package enclave
 
-type InputT struct {
-  Localquery        string    `json:"localquery,omitempty"`
-  ListsOfAdresses   []string  `json:"adresses,omitempty"`
-}
+import "github.com/cozy/cozy-stack/pkg/dispers/dispers"
 
-type Query struct {
-  Query string `json:"query,omitempty"`
-  OAuth string `json:"oauth,omitempty"`
-}
-
-type OutputT struct {
-  Queries []Query `json:"queries,omitempty"`
-}
-
-func GetTokens(in InputT) OutputT {
-  return OutputT{
-    Queries : []Query{
-      Query{
-        Query : "Abc",
-        OAuth : "Oauth1",
-      },
-      Query{
-        Query : "fheu",
-        OAuth : "Oauth2",
-      },
-    },
-  }
+func GetTokens(in dispers.InputT) dispers.OutputT {
+	return dispers.OutputT{
+		Queries: []dispers.Query{
+			dispers.Query{
+				Query: "Abc",
+				OAuth: "Oauth1",
+			},
+			dispers.Query{
+				Query: "fheu",
+				OAuth: "Oauth2",
+			},
+		},
+	}
 }
