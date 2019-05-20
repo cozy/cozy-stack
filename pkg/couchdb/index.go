@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 21
+const IndexViewsVersion int = 22
 
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
@@ -18,6 +18,9 @@ var Indexes = []*mango.Index{
 	mango.IndexOnFields(consts.Files, "dir-children", []string{"dir_id", "_id"}),
 	// Used to lookup a directory given its path
 	mango.IndexOnFields(consts.Files, "dir-by-path", []string{"path"}),
+
+	// Used to lookup the versions of a given file, sorted by updated_at
+	mango.IndexOnFields(consts.FilesVersions, "by-file-id", []string{"file_id"}),
 
 	// Used to lookup a queued and running jobs
 	mango.IndexOnFields(consts.Jobs, "by-worker-and-state", []string{"worker", "state"}),

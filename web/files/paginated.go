@@ -26,6 +26,7 @@ type dir struct {
 type file struct {
 	doc      *vfs.FileDoc
 	instance *instance.Instance
+	versions []*vfs.Version
 }
 
 type apiArchive struct {
@@ -201,12 +202,18 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 
 // newFile creates an instance of file struct from a vfs.FileDoc document.
 func newFile(doc *vfs.FileDoc, i *instance.Instance) *file {
-	return &file{doc, i}
+	return &file{doc, i, nil}
 }
 
-func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, links *jsonapi.LinksList) error {
+func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withVersions bool, links *jsonapi.LinksList) error {
 	instance := middlewares.GetInstance(c)
-	return jsonapi.Data(c, statusCode, newFile(doc, instance), links)
+	f := newFile(doc, instance)
+	if withVersions {
+		if versions, err := vfs.VersionsFor(instance, doc.ID()); err == nil {
+			f.versions = versions
+		}
+	}
+	return jsonapi.Data(c, statusCode, f, links)
 }
 
 var (
@@ -254,7 +261,7 @@ func (f *file) SetRev(rev string)  { f.doc.SetRev(rev) }
 func (f *file) DocType() string    { return f.doc.DocType() }
 func (f *file) Clone() couchdb.Doc { cloned := *f; return &cloned }
 func (f *file) Relationships() jsonapi.RelationshipMap {
-	return jsonapi.RelationshipMap{
+	rels := jsonapi.RelationshipMap{
 		"parent": jsonapi.Relationship{
 			Links: &jsonapi.LinksList{
 				Related: "/files/" + f.doc.DirID,
@@ -271,8 +278,27 @@ func (f *file) Relationships() jsonapi.RelationshipMap {
 			Data: f.doc.ReferencedBy,
 		},
 	}
+	if len(f.versions) > 0 {
+		data := make([]couchdb.DocReference, len(f.versions))
+		for i, version := range f.versions {
+			data[i] = couchdb.DocReference{
+				ID:   version.DocID,
+				Type: consts.FilesVersions,
+			}
+		}
+		rels["old_versions"] = jsonapi.Relationship{
+			Data: data,
+		}
+	}
+	return rels
 }
-func (f *file) Included() []jsonapi.Object { return []jsonapi.Object{} }
+func (f *file) Included() []jsonapi.Object {
+	var included []jsonapi.Object
+	for _, version := range f.versions {
+		included = append(included, version)
+	}
+	return included
+}
 func (f *file) MarshalJSON() ([]byte, error) {
 	ref := f.doc.ReferencedBy
 	f.doc.ReferencedBy = nil

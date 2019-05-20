@@ -1035,6 +1035,54 @@ func TestGetDirMetadataFromID(t *testing.T) {
 	assert.Equal(t, 200, res3.StatusCode)
 }
 
+func TestVersions(t *testing.T) {
+	res1, body1 := upload(t, "/files/?Type=file&Name=versioned", "text/plain", "one", "")
+	assert.Equal(t, 201, res1.StatusCode)
+	data1 := body1["data"].(map[string]interface{})
+	attr1 := data1["attributes"].(map[string]interface{})
+	sum1 := attr1["md5sum"]
+	fileID := data1["id"].(string)
+	res2, body2 := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
+	assert.Equal(t, 200, res2.StatusCode)
+	data2 := body2["data"].(map[string]interface{})
+	attr2 := data2["attributes"].(map[string]interface{})
+	sum2 := attr2["md5sum"]
+	res3, body3 := uploadMod(t, "/files/"+fileID, "text/plain", "three", "")
+	assert.Equal(t, 200, res3.StatusCode)
+	data3 := body3["data"].(map[string]interface{})
+	attr3 := data3["attributes"].(map[string]interface{})
+	sum3 := attr3["md5sum"]
+
+	res4, _ := httpGet(ts.URL + "/files/" + fileID)
+	assert.Equal(t, 200, res4.StatusCode)
+	var body map[string]interface{}
+	assert.NoError(t, json.NewDecoder(res4.Body).Decode(&body))
+	data := body["data"].(map[string]interface{})
+	attr := data["attributes"].(map[string]interface{})
+	assert.Equal(t, sum3, attr["md5sum"])
+
+	rels := data["relationships"].(map[string]interface{})
+	old := rels["old_versions"].(map[string]interface{})
+	refs := old["data"].([]interface{})
+	assert.Len(t, refs, 2)
+	first := refs[0].(map[string]interface{})
+	assert.Equal(t, consts.FilesVersions, first["type"])
+	oneID := first["id"]
+	second := refs[1].(map[string]interface{})
+	assert.Equal(t, consts.FilesVersions, second["type"])
+	twoID := second["id"]
+
+	included := body["included"].([]interface{})
+	vone := included[0].(map[string]interface{})
+	assert.Equal(t, oneID, vone["id"])
+	attrv1 := vone["attributes"].(map[string]interface{})
+	assert.Equal(t, sum1, attrv1["md5sum"])
+	vtwo := included[1].(map[string]interface{})
+	assert.Equal(t, twoID, vtwo["id"])
+	attrv2 := vtwo["attributes"].(map[string]interface{})
+	assert.Equal(t, sum2, attrv2["md5sum"])
+}
+
 func TestArchiveNoFiles(t *testing.T) {
 	body := bytes.NewBufferString(`{
 		"data": {

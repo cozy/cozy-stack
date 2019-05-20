@@ -411,7 +411,7 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
           }
         ]
       },
-      "versions": {
+      "old_versions": {
         "data": [
           {
             "type": "io.cozy.files.versions",
@@ -435,16 +435,26 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     {
       "type": "io.cozy.files.versions",
       "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/2-fa3a3bec",
-      "md5sum": "a2lth5syMW+4r7jwNhdk3A==",
-      "size": 123456,
-      "tags": []
+      "meta": {
+        "rev": "1-26a331"
+      },
+      "attributes": {
+        "md5sum": "a2lth5syMW+4r7jwNhdk3A==",
+        "size": 123456,
+        "tags": []
+      }
     },
     {
       "type": "io.cozy.files.versions",
       "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72",
-      "md5sum": "FBA89XXOZKFhdv37iILb2Q==",
-      "size": 159753,
-      "tags": []
+      "meta": {
+        "rev": "1-57b3e2"
+      },
+      "attributes": {
+        "md5sum": "FBA89XXOZKFhdv37iILb2Q==",
+        "size": 159753,
+        "tags": []
+      }
     }
   ]
 }

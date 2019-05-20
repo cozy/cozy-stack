@@ -753,6 +753,7 @@ func (f *aferoFileCreation) Close() (err error) {
 
 	if v != nil {
 		vPath := pathForVersion(v)
+		_ = f.afs.fs.MkdirAll(filepath.Dir(vPath), 0755)
 		if err = f.afs.fs.Rename(newpath, vPath); err != nil {
 			// If we can't move the content, we just don't create the version,
 			// but still let the upload for the new content finishes.

@@ -5,7 +5,9 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	uuid "github.com/satori/go.uuid"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
 // Version is used for storing the metadata about previous versions of file
@@ -46,17 +48,22 @@ func (v *Version) SetID(id string) { v.DocID = id }
 // SetRev changes the version revision
 func (v *Version) SetRev(rev string) { v.DocRev = rev }
 
+// Included is part of jsonapi.Object interface
+func (v *Version) Included() []jsonapi.Object { return nil }
+
+// Relationships is part of jsonapi.Object interface
+func (v *Version) Relationships() jsonapi.RelationshipMap { return nil }
+
+// Links is part of jsonapi.Object interface
+func (v *Version) Links() *jsonapi.LinksList { return nil }
+
 // NewVersion returns a version from a given FileDoc. It is often used just
 // before modifying the content of this file.
 // Note that the _id is precomputed as it can be useful to use it for a storage
 // location before the version is saved in CouchDB.
 func NewVersion(file *FileDoc) *Version {
-	id, err := uuid.NewV4()
-	if err != nil {
-		return nil
-	}
 	return &Version{
-		DocID:     id.String(),
+		DocID:     file.ID() + "/" + file.Rev(),
 		FileID:    file.ID(),
 		UpdatedAt: file.UpdatedAt,
 		ByteSize:  file.ByteSize,
@@ -65,4 +72,17 @@ func NewVersion(file *FileDoc) *Version {
 	}
 }
 
-var _ couchdb.Doc = &Version{}
+// VersionsFor returns the list of the versions for a given file identifier.
+func VersionsFor(db prefixer.Prefixer, fileID string) ([]*Version, error) {
+	var versions []*Version
+	req := &couchdb.FindRequest{
+		UseIndex: "by-file-id",
+		Selector: mango.Equal("file_id", fileID),
+	}
+	if err := couchdb.FindDocs(db, consts.FilesVersions, req, &versions); err != nil {
+		return nil, err
+	}
+	return versions, nil
+}
+
+var _ jsonapi.Object = &Version{}
