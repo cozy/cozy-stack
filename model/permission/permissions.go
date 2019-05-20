@@ -472,13 +472,13 @@ func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, c
 }
 
 // CreateSharePreviewSet creates a Permission doc for previewing a sharing
-func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes map[string]string, set Set, metadata *metadata.CozyMetaData) (*Permission, error) {
+func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes map[string]string, subdoc Permission) (*Permission, error) {
 	doc := &Permission{
 		Type:        TypeSharePreview,
-		Permissions: set,
+		Permissions: subdoc.Permissions,
 		Codes:       codes,
 		SourceID:    consts.Sharings + "/" + sharingID,
-		Metadata:    metadata,
+		Metadata:    subdoc.Metadata,
 	}
 	err := couchdb.CreateDoc(db, doc)
 	if err != nil {

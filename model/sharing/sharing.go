@@ -223,7 +223,11 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 	} else {
 		md := metadata.New()
 		md.CreatedByApp = s.AppSlug
-		_, err := permission.CreateSharePreviewSet(inst, s.SID, codes, set, md)
+		subdoc := permission.Permission{
+			Permissions: set,
+			Metadata:    md,
+		}
+		_, err := permission.CreateSharePreviewSet(inst, s.SID, codes, subdoc)
 		if err != nil {
 			return nil, err
 		}
