@@ -314,7 +314,6 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 			if err != nil {
 				return err
 			}
-			updatedMD.ChangeUpdatedAt()
 			err = updatedMD.UpdatedByApp(sub, "")
 			if err != nil {
 				return err

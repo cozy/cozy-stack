@@ -33,7 +33,7 @@ type CozyMetaData struct {
 	// Version identifier of the app
 	CreatedByAppVersion string `json:"createdByAppVersion,omitempty"`
 	// Last modification date of the cozy document
-	UpdatedAt *time.Time `json:"updatedAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 	// List of objects representing the applications which modified the cozy document
 	updatedByApps []*UpdatedByAppEntry
 	// Identifier of the account in io.cozy.accounts (for konnectors)
@@ -46,7 +46,7 @@ func New() *CozyMetaData {
 	return &CozyMetaData{
 		MetadataVersion: MetadataVersion,
 		CreatedAt:       now,
-		UpdatedAt:       &now,
+		UpdatedAt:       now,
 	}
 }
 
@@ -72,10 +72,6 @@ func NewWithApp(slug, version string) (*CozyMetaData, error) {
 // Clone clones a CozyMetaData struct
 func (cm *CozyMetaData) Clone() CozyMetaData {
 	cloned := *cm
-	if cm.UpdatedAt != nil {
-		tmp := *cm.UpdatedAt
-		cloned.UpdatedAt = &tmp
-	}
 	cloned.updatedByApps = make([]*UpdatedByAppEntry, len(cm.updatedByApps))
 	copy(cloned.updatedByApps, cm.updatedByApps)
 	return cloned
@@ -84,7 +80,7 @@ func (cm *CozyMetaData) Clone() CozyMetaData {
 // EnsureCreatedFields ensures that empty fields are filled, otherwise use
 // the default metadata values during the creation process
 func (cm *CozyMetaData) EnsureCreatedFields(defaultMetadata *CozyMetaData) {
-	if cm.UpdatedAt == nil {
+	if cm.UpdatedAt.IsZero() {
 		cm.UpdatedAt = defaultMetadata.UpdatedAt
 	}
 	if cm.CreatedByApp == "" {
@@ -103,8 +99,7 @@ func (cm *CozyMetaData) EnsureCreatedFields(defaultMetadata *CozyMetaData) {
 
 // ChangeUpdatedAt updates the UpdatedAt timestamp
 func (cm *CozyMetaData) ChangeUpdatedAt() {
-	now := time.Now()
-	cm.UpdatedAt = &now
+	cm.UpdatedAt = time.Now()
 }
 
 // UpdatedByApp updates an entry either by updating the struct if the
@@ -114,9 +109,9 @@ func (cm *CozyMetaData) UpdatedByApp(slug, version string) error {
 		return ErrSlugEmpty
 	}
 
-	date := time.Now()
-	cm.UpdatedAt = &date
-	updated := &UpdatedByAppEntry{Slug: slug, Date: date, Version: version}
+	now := time.Now()
+	cm.UpdatedAt = now
+	updated := &UpdatedByAppEntry{Slug: slug, Date: now, Version: version}
 	for idx, entry := range cm.updatedByApps {
 		if entry.Slug == slug {
 			cm.updatedByApps[idx] = updated
