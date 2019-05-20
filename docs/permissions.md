@@ -378,14 +378,7 @@ Accept: application/vnd.api+json
             "metadataVersion": 1,
             "createdAt": "2019-05-14T11:01:41.687737935+02:00",
             "createdByApp": "drive",
-            "updatedAt": "2019-05-14T12:00:37.372193145+02:00",
-            "updatedByApps": [
-                {
-                    "slug": "drive",
-                    "date": "2019-05-14T12:00:37.37219352+02:00",
-                    "version": "1.1.0"
-                }
-            ]
+            "updatedAt": "2019-05-14T12:00:37.372193145+02:00"
         }
     }
 }

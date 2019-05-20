@@ -845,7 +845,6 @@ func TestCreatePermissionWithoutMetadata(t *testing.T) {
 	// Assert a cozyMetadata has been added
 	meta := r.Data.Attributes.Meta
 	assert.Equal(t, "drive", meta.CreatedByApp)
-	assert.Equal(t, 1, len(meta.UpdatedByApps))
 	assert.Equal(t, "1", meta.DocTypeVersion)
 	assert.Equal(t, 1, meta.MetadataVersion)
 	assert.True(t, time.Since(meta.CreatedAt) < 5*time.Second)
@@ -910,7 +909,6 @@ func TestCreatePermissionWithMetadata(t *testing.T) {
 	// Assert a cozyMetadata has been added
 	meta := r.Data.Attributes.Meta
 	assert.Equal(t, "foobar", meta.CreatedByApp)
-	assert.Equal(t, 1, len(meta.UpdatedByApps))
 	assert.Equal(t, "1", meta.DocTypeVersion)
 	assert.Equal(t, 1, meta.MetadataVersion)
 

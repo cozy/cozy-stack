@@ -304,7 +304,7 @@ instance is in debug mode. It would be too verbose to do otherwise.
 
 ### Doctypes
 
-`io.cozy.konnectors` gives their desired data for an account
+`io.cozy.konnectors` gives their desiderata for an account
 
 ```json
 {
