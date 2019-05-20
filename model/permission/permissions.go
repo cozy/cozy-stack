@@ -333,6 +333,7 @@ func CreateWebappSet(db prefixer.Prefixer, slug string, set Set, md *metadata.Co
 	if existing != nil {
 		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
 	}
+	md.DocTypeVersion = DocTypeVersion
 	return createAppSet(db, TypeWebapp, consts.Apps, slug, set, md)
 }
 
@@ -342,6 +343,7 @@ func CreateKonnectorSet(db prefixer.Prefixer, slug string, set Set, md *metadata
 	if existing != nil {
 		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
 	}
+	md.DocTypeVersion = DocTypeVersion
 	return createAppSet(db, TypeKonnector, consts.Konnectors, slug, set, md)
 }
 

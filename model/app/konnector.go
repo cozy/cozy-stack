@@ -223,7 +223,6 @@ func (m *KonnManifest) Create(db prefixer.Prefixer) error {
 	if err != nil {
 		return err
 	}
-	md.DocTypeVersion = permission.DocTypeVersion
 
 	_, err = permission.CreateKonnectorSet(db, m.Slug(), m.Permissions(), md)
 	return err

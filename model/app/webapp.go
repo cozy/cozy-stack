@@ -300,7 +300,6 @@ func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 	if err != nil {
 		return err
 	}
-	md.DocTypeVersion = permission.DocTypeVersion
 
 	_, err = permission.CreateWebappSet(db, m.Slug(), m.Permissions(), md)
 	return err
