@@ -449,9 +449,9 @@ func (t *task) run() (err error) {
 		} else {
 			switch t.w.Type {
 			case "konnector":
-				slug = msg["konnector"].(string)
+				slug, _ = msg["konnector"].(string)
 			case "service":
-				slug = msg["slug"].(string)
+				slug, _ = msg["slug"].(string)
 			default:
 				slug = ""
 			}
