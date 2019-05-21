@@ -1,80 +1,191 @@
 package enclave
 
 import (
+	"errors"
+	"strings"
+
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/echo"
-	//"github.com/cozy/cozy-stack/pkg/crypto" utils -> fct to generate random bytes
 )
 
-type conceptDoc struct {
-	conceptID  string `json:"_id,omitempty"` // ID = hash(concept)
-	conceptRev string `json:"_rev,omitempty"`
-	salt       string `json:"salt,omitempty"`
+/*
+ConceptDoc is used to save a concept's salt into Concept Indexor's database
+*/
+type ConceptDoc struct {
+	ConceptID  string `json:"_id,omitempty"`
+	ConceptRev string `json:"_rev,omitempty"`
+	Concept    string `json:"concept,omitempty"`
+	Salt       string `json:"salt,omitempty"`
 }
 
-func (t *conceptDoc) ID() string {
-	return t.conceptID
+// ID is used to get ID
+func (t *ConceptDoc) ID() string {
+	return t.ConceptID
 }
 
-func (t *conceptDoc) Rev() string {
-	return t.conceptRev
+// Rev is used to get Rev
+func (t *ConceptDoc) Rev() string {
+	return t.ConceptRev
 }
 
-func (t *conceptDoc) DocType() string {
+// DocType is used to get DocType
+func (t *ConceptDoc) DocType() string {
 	return "io.cozy.hashconcept"
 }
 
-func (t *conceptDoc) Clone() couchdb.Doc {
+// Clone is used to create another ConceptDoc from this ConceptDoc
+func (t *ConceptDoc) Clone() couchdb.Doc {
 	cloned := *t
 	return &cloned
 }
 
-func (t *conceptDoc) SetID(id string) {
-	t.conceptID = id
+// SetID is used to set the Doc ID
+func (t *ConceptDoc) SetID(id string) {
+	t.ConceptID = id
 }
 
-func (t *conceptDoc) SetRev(rev string) {
-	t.conceptRev = rev
+// SetRev is used to set Rev
+func (t *ConceptDoc) SetRev(rev string) {
+	t.ConceptRev = rev
 }
 
-func hash(concept string, salt string) string {
-	return concept + "54g5fe45zgr1nefeyf4e5"
-}
+func addSalt(concept string) error {
 
-// Randomly generate a salt
-func generatesalt() string {
-	return "TODOTODO5d4g4r8g4r4gr"
-}
-
-func HashMeThat(concept string) echo.Map {
-
-	// TODO : Decrypte concept with private key
-	// TODO : get salt with hash(concept)
-	salt := "hey"
-
-	return echo.Map{
-		"ok":      true,
-		"concept": concept, // La valeur pourra être chiffrée
-		"hash":    hash(concept, salt),
-		"meta":    "TODO",
+	ConceptDoc := &ConceptDoc{
+		ConceptID:  "",
+		ConceptRev: "",
+		Concept:    concept,
+		Salt:       string(crypto.GenerateRandomBytes(5)),
 	}
+
+	return couchdb.CreateDoc(prefixer.ConceptIndexorPrefixer, ConceptDoc)
 }
 
-func AddConcept(concept string) echo.Map {
+func getSalt(concept string) (string, error) {
 
+	salt := ""
+	err := couchdb.DefineIndex(prefixer.ConceptIndexorPrefixer, mango.IndexOnFields("io.cozy.hashconcept", "concept-index", []string{"concept"}))
+	if err != nil {
+		return salt, err
+	}
+
+	var out []ConceptDoc
+	req := &couchdb.FindRequest{Selector: mango.Equal("concept", concept)}
+	err = couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept", req, out)
+	if err != nil {
+		return salt, err
+	}
+
+	if len(out) == 1 {
+		salt = out[0].Salt
+	} else if len(out) == 0 {
+		// TODO: Creation an error
+		return "", errors.New("Concept Indexor : no existing salt for this concept")
+	} else {
+		return "", errors.New("Concept Indexor : several salts for this concept")
+	}
+
+	return salt, err
+}
+
+// TODO: Implements bcrypt or argon instead of scrypt
+func hash(str string) (string, error) {
+
+	scrypt, err := crypto.GenerateFromPassphrase([]byte(str))
+	if err != nil {
+		return "", err
+	}
+
+	return string(scrypt), err
+}
+
+func isConceptExisting(concept string) (bool, error) {
+
+	var out []ConceptDoc
+	req := &couchdb.FindRequest{Selector: mango.Equal("concept", concept)}
+	err := couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept", req, out)
+	if err != nil {
+		return false, err
+	}
+
+	if len(out) > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+/*
+DeleteConcept is used to delete a salt in ConceptIndexor Database. It has to be
+used to update a salt.
+*/
+func DeleteConcept(encryptedConcept string) error {
+
+	// TODO: Decrypte concept with private key
+	concept := encryptedConcept
+
+	// TODO: Delete document in database
+	var out []ConceptDoc
+	req := &couchdb.FindRequest{Selector: mango.Equal("concept", concept)}
+	err := couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept", req, out)
+	if err != nil {
+		return err
+	}
+
+	if len(out) == 0 {
+		return errors.New("No concept to delete")
+	}
+
+	// Delete every doc that match concept
+	for _, element := range out {
+		err = couchdb.DeleteDoc(prefixer.ConceptIndexorPrefixer, &element)
+		if err != nil {
+			return err
+		}
+	}
+
+	return err
+}
+
+/*
+HashMeThat is used to get a concept's salt. If the salt is absent from CI database
+the function creates the salt and notify the user that the salt has just been created
+*/
+func HashMeThat(encryptedConcept string) (string, error) {
 	couchdb.EnsureDBExist(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept")
-	conceptDoc := &conceptDoc{
-		conceptID:  "",
-		conceptRev: "",
-		salt:       generatesalt(),
+
+	// TODO: Decrypte concept with private key
+	concept := encryptedConcept
+
+	isExisting, err := isConceptExisting(concept)
+	if err != nil {
+		return "", err
 	}
 
-	// TODO : Change to create doc with hash(concept) as doc ID
-	err := couchdb.CreateDoc(prefixer.ConceptIndexorPrefixer, conceptDoc)
-
-	return echo.Map{
-		"ok":      err == nil,
-		"message": err,
+	if isExisting {
+		// Write in Metadata that concept has been retrieved
+	} else {
+		err = addSalt(concept)
+		if err != nil {
+			return "", err
+		}
+		// Write in Metadata that concept has been created
 	}
+
+	// Get salt with hash(concept)
+	hashedConcept, err := hash(concept)
+	if err != nil {
+		return "", err
+	}
+	salt, err := getSalt(hashedConcept)
+	if err != nil {
+		return "", err
+	}
+
+	// Merge concept and salt, then hash
+	justHashed, err := hash(strings.Join([]string{concept, salt}, ""))
+
+	return justHashed, err
 }
