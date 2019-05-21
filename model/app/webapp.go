@@ -17,7 +17,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -295,13 +294,7 @@ func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 		return err
 	}
 
-	// Add metadata
-	md, err := metadata.NewWithApp(m.DocSlug, m.Version(), permission.DocTypeVersion)
-	if err != nil {
-		return err
-	}
-
-	_, err = permission.CreateWebappSet(db, m.Slug(), m.Permissions(), md)
+	_, err := permission.CreateWebappSet(db, m.Slug(), m.Permissions(), m.Version())
 	return err
 }
 

@@ -328,22 +328,30 @@ func GetTokenFromShortcode(db prefixer.Prefixer, shortcode string) (string, erro
 }
 
 // CreateWebappSet creates a Permission doc for an app
-func CreateWebappSet(db prefixer.Prefixer, slug string, set Set, md *metadata.CozyMetaData) (*Permission, error) {
+func CreateWebappSet(db prefixer.Prefixer, slug string, set Set, version string) (*Permission, error) {
 	existing, _ := GetForWebapp(db, slug)
 	if existing != nil {
 		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
 	}
-	md.DocTypeVersion = DocTypeVersion
+	// Add metadata
+	md, err := metadata.NewWithApp(slug, version, DocTypeVersion)
+	if err != nil {
+		return nil, err
+	}
 	return createAppSet(db, TypeWebapp, consts.Apps, slug, set, md)
 }
 
 // CreateKonnectorSet creates a Permission doc for a konnector
-func CreateKonnectorSet(db prefixer.Prefixer, slug string, set Set, md *metadata.CozyMetaData) (*Permission, error) {
+func CreateKonnectorSet(db prefixer.Prefixer, slug string, set Set, version string) (*Permission, error) {
 	existing, _ := GetForKonnector(db, slug)
 	if existing != nil {
 		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
 	}
-	md.DocTypeVersion = DocTypeVersion
+	// Add metadata
+	md, err := metadata.NewWithApp(slug, version, DocTypeVersion)
+	if err != nil {
+		return nil, err
+	}
 	return createAppSet(db, TypeKonnector, consts.Konnectors, slug, set, md)
 }
 
