@@ -40,3 +40,5 @@ var TargetPrefixer = NewPrefixer("", "target")
 var TargetFinderPrefixer = NewPrefixer("", "targetfinder")
 var DataAggregatorPrefixer = NewPrefixer("", "dataaggregator")
 var ConductorPrefixer = NewPrefixer("", "conductor")
+
+var TestConceptIndexorPrefixer = NewPrefixer("", "testconceptindexor")

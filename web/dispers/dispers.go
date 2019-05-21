@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/dispers"
+	"github.com/cozy/cozy-stack/pkg/dispers/dispers"
 	"github.com/cozy/echo"
 )
 
@@ -98,9 +99,9 @@ func createTraining(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, echo.Map{
 		"ok":   true,
-		"id":   cond.querydoc.ID(),
-		"rev":  cond.querydoc.Rev(),
-		"type": cond.querydoc.DocType(),
+		"id":   cond.Doc.ID(),
+		"rev":  cond.Doc.Rev(),
+		"type": cond.Doc.DocType(),
 	})
 }
 
@@ -114,14 +115,20 @@ CONCEPT INDEXOR'S ROUTES : those functions are used on route ./dispers/conceptin
 func hashConcept(c echo.Context) error {
 
 	concept := c.Param("concept")
-	return c.JSON(http.StatusCreated, enclave.HashMeThat(concept))
+	hash, err := enclave.HashMeThat(concept)
+	return c.JSON(http.StatusCreated, echo.Map{
+		"ok":   err == nil,
+		"hash": hash,
+	})
 }
 
+/*
 func addConcept(c echo.Context) error {
 
 	concept := c.Param("concept")
 	return c.JSON(http.StatusCreated, enclave.AddConcept(concept))
 }
+*/
 
 /*
 *
@@ -132,7 +139,7 @@ TARGET FINDER'S ROUTES : those functions are used on route ./dispers/targetfinde
 */
 func selectAdresses(c echo.Context) error {
 
-	var listsOfAdresses enclave.InputTF
+	var listsOfAdresses dispers.InputTF
 
 	if err := json.NewDecoder(c.Request().Body).Decode(&listsOfAdresses); err != nil {
 		return c.JSON(http.StatusOK, echo.Map{"outcome": "error",
@@ -157,7 +164,7 @@ Target'S ROUTES : those functions are used on route ./dispers/target/
 */
 func getQueriesAndTokens(c echo.Context) error {
 
-	var localQuery enclave.InputT
+	var localQuery dispers.InputT
 
 	if err := json.NewDecoder(c.Request().Body).Decode(&localQuery); err != nil {
 		return c.JSON(http.StatusOK, echo.Map{"outcome": "error",
@@ -193,7 +200,7 @@ DATA AGGREGATOR'S ROUTES : those functions are used on route ./dispers/dataaggre
 */
 func launchAggr(c echo.Context) error {
 
-	var inputDA enclave.InputDA
+	var inputDA dispers.InputDA
 
 	if err := json.NewDecoder(c.Request().Body).Decode(&inputDA); err != nil {
 		return c.JSON(http.StatusOK, echo.Map{"outcome": "error",
@@ -231,7 +238,7 @@ func Routes(router *echo.Group) {
 
 	//router.GET("/conceptindexor/_all_concepts", allConcepts)
 	router.POST("/conceptindexor/hash/concept=:concept", hashConcept)      // used to hash a concept
-	router.POST("/conceptindexor/addconcept/concept=:concept", addConcept) // used to add a concept to his list and generate SymCk
+	//router.POST("/conceptindexor/addconcept/concept=:concept", addConcept) // used to add a concept to his list and generate SymCk
 
 	//router.POST("/targetfinder/listofadresses", insertAdress)
 	//router.DELETE("/targetfinder/listofadresses", deleteAdress)
