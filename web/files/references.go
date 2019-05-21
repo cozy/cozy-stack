@@ -156,29 +156,36 @@ func AddReferencesHandler(c echo.Context) error {
 		ID:   id,
 	}
 
-	if err := middlewares.AllowTypeAndID(c, permission.PUT, doctype, id); err != nil {
+	if err = middlewares.AllowTypeAndID(c, permission.PUT, doctype, id); err != nil {
 		if middlewares.AllowWholeType(c, permission.PATCH, consts.Files) != nil {
 			return err
 		}
 	}
+	docs := make([]interface{}, len(references))
+	oldDocs := make([]interface{}, len(references))
 
-	for _, fRef := range references {
-		dir, file, err := instance.VFS().DirOrFileByID(fRef.ID)
-		if err != nil {
-			return WrapVfsError(err)
+	for i, fRef := range references {
+		dir, file, errd := instance.VFS().DirOrFileByID(fRef.ID)
+		if errd != nil {
+			return WrapVfsError(errd)
 		}
 		if file == nil {
+			oldDir := dir.Clone()
 			dir.AddReferencedBy(docRef)
-			err = couchdb.UpdateDoc(instance, dir)
+			docs[i] = dir
+			oldDocs[i] = oldDir
 		} else {
+			oldFile := file.Clone()
 			file.AddReferencedBy(docRef)
-			err = couchdb.UpdateDoc(instance, file)
-		}
-		if err != nil {
-			return WrapVfsError(err)
+			docs[i] = file
+			oldDocs[i] = oldFile
 		}
 	}
-
+	// Use bulk update for better performances
+	err = couchdb.BulkUpdateDocs(instance, consts.Files, docs, oldDocs)
+	if err != nil {
+		return WrapVfsError(err)
+	}
 	return c.NoContent(204)
 }
 
