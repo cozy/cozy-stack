@@ -561,7 +561,39 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 	if c.QueryParam("Dl") == "1" {
 		disposition = "attachment"
 	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
+	err = vfs.ServeFileContent(instance.VFS(), doc, nil, disposition, c.Request(), c.Response())
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	return nil
+}
+
+// ReadFileContentFromVersion handles the download of an old version of the
+// file content.
+func ReadFileContentFromVersion(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	doc, err := instance.VFS().FileByID(c.Param("file-id"))
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	err = checkPerm(c, permission.GET, nil, doc)
+	if err != nil {
+		return err
+	}
+
+	version, err := vfs.FindVersion(instance, doc.DocID+"/"+c.Param("version-id"))
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	disposition := "inline"
+	if c.QueryParam("Dl") == "1" {
+		disposition = "attachment"
+	}
+	err = vfs.ServeFileContent(instance.VFS(), doc, version, disposition, c.Request(), c.Response())
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -667,7 +699,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 			middlewares.AppendCSPRule(c, "frame-ancestors", "*")
 		}
 	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
+	err = vfs.ServeFileContent(instance.VFS(), doc, nil, disposition, c.Request(), c.Response())
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -1063,6 +1095,8 @@ func Routes(router *echo.Group) {
 	router.GET("/download", ReadFileContentFromPathHandler)
 	router.HEAD("/download/:file-id", ReadFileContentFromIDHandler)
 	router.GET("/download/:file-id", ReadFileContentFromIDHandler)
+	router.HEAD("/download/:file-id/:version-id", ReadFileContentFromVersion)
+	router.GET("/download/:file-id/:version-id", ReadFileContentFromVersion)
 
 	router.POST("/_find", FindFilesMango)
 

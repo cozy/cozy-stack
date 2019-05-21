@@ -72,6 +72,15 @@ func NewVersion(file *FileDoc) *Version {
 	}
 }
 
+// FindVersion returns the version for the given id
+func FindVersion(db prefixer.Prefixer, id string) (*Version, error) {
+	doc := &Version{}
+	if err := couchdb.GetDoc(db, consts.FilesVersions, id, doc); err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
 // VersionsFor returns the list of the versions for a given file identifier.
 func VersionsFor(db prefixer.Prefixer, fileID string) ([]*Version, error) {
 	var versions []*Version

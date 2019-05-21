@@ -441,6 +441,11 @@ func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &swiftFileOpenV2{f, nil}, nil
 }
 
+func (sfs *swiftVFSV2) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vfs.File, error) {
+	// The versioning is not implemented in Swift layout v2
+	return nil, os.ErrNotExist
+}
+
 func (sfs *swiftVFSV2) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err = sfs.BuildTree(func(f *vfs.TreeFile) {

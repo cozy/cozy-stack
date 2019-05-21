@@ -68,6 +68,9 @@ type Fs interface {
 	// OpenFile return a file handler for reading associated with the given file
 	// document. The file handler implements io.ReadCloser and io.Seeker.
 	OpenFile(doc *FileDoc) (File, error)
+	// OpenFileVersion returns a file handler for reading the content of an old
+	// version of the given file.
+	OpenFileVersion(doc *FileDoc, version *Version) (File, error)
 	// CreateDir is used to create a new directory from its document.
 	CreateDir(doc *DirDoc) error
 	// CreateFile creates a new file or update the content of an existing file.

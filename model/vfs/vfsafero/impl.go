@@ -329,6 +329,18 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &aferoFileOpen{f}, nil
 }
 
+func (afs *aferoVFS) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vfs.File, error) {
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
+	defer afs.mu.RUnlock()
+	f, err := afs.fs.Open(pathForVersion(version))
+	if err != nil {
+		return nil, err
+	}
+	return &aferoFileOpen{f}, nil
+}
+
 func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err = afs.BuildTree(func(f *vfs.TreeFile) {

@@ -1083,6 +1083,24 @@ func TestVersions(t *testing.T) {
 	assert.Equal(t, sum2, attrv2["md5sum"])
 }
 
+func TestDownloadVersion(t *testing.T) {
+	content := "one"
+	res1, body1 := upload(t, "/files/?Type=file&Name=downloadme-versioned", "text/plain", content, "")
+	assert.Equal(t, 201, res1.StatusCode)
+	data := body1["data"].(map[string]interface{})
+	fileID := data["id"].(string)
+	meta := data["meta"].(map[string]interface{})
+	firstRev := meta["rev"].(string)
+	res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
+	assert.Equal(t, 200, res2.StatusCode)
+	res3, resbody := download(t, "/files/download/"+fileID+"/"+firstRev, "")
+	assert.Equal(t, 200, res3.StatusCode)
+	assert.True(t, strings.HasPrefix(res3.Header.Get("Content-Disposition"), "inline"))
+	assert.True(t, strings.Contains(res3.Header.Get("Content-Disposition"), `filename="downloadme-versioned"`))
+	assert.True(t, strings.HasPrefix(res3.Header.Get("Content-Type"), "text/plain"))
+	assert.Equal(t, content, string(resbody))
+}
+
 func TestArchiveNoFiles(t *testing.T) {
 	body := bytes.NewBufferString(`{
 		"data": {

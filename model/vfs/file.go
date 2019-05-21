@@ -208,7 +208,7 @@ func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class strin
 // non-ranged requests
 //
 // The content disposition is inlined.
-func ServeFileContent(fs VFS, doc *FileDoc, disposition string, req *http.Request, w http.ResponseWriter) error {
+func ServeFileContent(fs VFS, doc *FileDoc, version *Version, disposition string, req *http.Request, w http.ResponseWriter) error {
 	header := w.Header()
 	header.Set("Content-Type", doc.Mime)
 	if disposition != "" {
@@ -220,7 +220,13 @@ func ServeFileContent(fs VFS, doc *FileDoc, disposition string, req *http.Reques
 		header.Set("Etag", fmt.Sprintf(`"%s"`, eTag))
 	}
 
-	content, err := fs.OpenFile(doc)
+	var content File
+	var err error
+	if version == nil {
+		content, err = fs.OpenFile(doc)
+	} else {
+		content, err = fs.OpenFileVersion(doc, version)
+	}
 	if err != nil {
 		return err
 	}
