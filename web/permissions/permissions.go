@@ -306,14 +306,12 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 		if patch.Metadata != nil {
 			toPatch.Metadata = patch.Metadata
 		} else if toPatch.Metadata != nil { // No metadata given in the request, but it does exist in the database: update it
-			updatedMD := toPatch.Metadata.Clone()
 			// Using the token Subject for update
 			claims := c.Get("claims").(permission.Claims)
-			err = updatedMD.UpdatedByApp(claims.Subject, "")
+			err = toPatch.Metadata.UpdatedByApp(claims.Subject, "")
 			if err != nil {
 				return err
 			}
-			toPatch.Metadata = &updatedMD
 		}
 
 		if err = couchdb.UpdateDoc(instance, toPatch); err != nil {
