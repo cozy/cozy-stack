@@ -332,7 +332,11 @@ func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v
 		// OK
 	case permission.TypeWebapp, permission.TypeKonnector:
 		if pdoc.SourceID != consts.Apps+"/"+consts.StoreSlug {
-			return ErrForbidden
+			inst := GetInstance(c)
+			ctxSettings, err := inst.SettingsContext()
+			if err != nil || ctxSettings["allow_install_via_a_permission"] != true {
+				return ErrForbidden
+			}
 		}
 		if sourceURL == "" {
 			return ErrMissingSource

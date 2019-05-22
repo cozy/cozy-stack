@@ -302,6 +302,10 @@ contexts:
     # If enabled, this option will skip permissions verification during
     # webapp/konnectors installs & updates processes
     permissions_skip_verification: false
+    # By default, only the store app can install and update applications. But,
+    # if this setting is enabled, it allows other applications with the right
+    # permission to install and update applications.
+    allow_install_via_a_permission: true
     # Tells if the photo folder should be created or not during the instance
     # creation
     init_photos_folder: true

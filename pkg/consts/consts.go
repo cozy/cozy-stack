@@ -7,10 +7,10 @@ const (
 	// HomeSlug is the slug of the default app, where the user is redirected
 	// after login.
 	HomeSlug = "home"
-	// SettingsSlug is the slog of the settings application.
+	// SettingsSlug is the slug of the settings application.
 	SettingsSlug = "settings"
-	// DriveSlug is the slug of the default app, files, where the user is
-	// redirected after login.
+	// DriveSlug is the slug of the drive app, where the user can be sent if
+	// the disk quota alert is raised.
 	DriveSlug = "drive"
 )
 
