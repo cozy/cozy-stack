@@ -351,9 +351,9 @@ application can send a "_pick a photo_" intent to the photos application with
 its permission id, and the photos app can then let the user choose a photo and
 give the contacts application the permissions to use it.
 
-It can also be used to add or remove codes.
+This route also accepts a [document metadata](https://github.com/cozy/cozy-doctypes/#document-metadata) to update document informations.
 
-#### Request to add / remove codes
+#### Request to add / remove codes with a document metadata
 
 ```http
 PATCH /permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6 HTTP/1.1
@@ -372,6 +372,11 @@ Accept: application/vnd.api+json
             "codes": {
                 "jane": "Yohyoo8BHahh1lie"
             }
+        },
+        "cozyMetadata": {
+            "doctypeVersion": 1,
+            "metadataVersion": 1,
+            "updatedAt": "2019-05-14T12:00:37.372193145+02:00"
         }
     }
 }

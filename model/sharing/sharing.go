@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	multierror "github.com/hashicorp/go-multierror"
@@ -209,12 +210,24 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 	}
 
 	if doc != nil {
+		if doc.Metadata != nil {
+			err := doc.Metadata.UpdatedByApp(s.AppSlug, "")
+			if err != nil {
+				return nil, err
+			}
+		}
 		doc.Codes = codes
 		if err := couchdb.UpdateDoc(inst, doc); err != nil {
 			return nil, err
 		}
 	} else {
-		_, err := permission.CreateSharePreviewSet(inst, s.SID, codes, set)
+		md := metadata.New()
+		md.CreatedByApp = s.AppSlug
+		subdoc := permission.Permission{
+			Permissions: set,
+			Metadata:    md,
+		}
+		_, err := permission.CreateSharePreviewSet(inst, s.SID, codes, subdoc)
 		if err != nil {
 			return nil, err
 		}

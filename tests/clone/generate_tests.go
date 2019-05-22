@@ -150,6 +150,9 @@ import (
 		if info.PkgPath == "github.com/cozy/cozy-stack/model/vfs" {
 			fmt.Printf("\t\"github.com/cozy/cozy-stack/pkg/couchdb\"\n")
 		}
+		if info.PkgPath == "github.com/cozy/cozy-stack/model/permission" {
+			fmt.Printf("\t\"github.com/cozy/cozy-stack/pkg/metadata\"\n")
+		}
 		if info.PkgPath == "github.com/cozy/cozy-stack/pkg/config/dynamic" {
 			fmt.Printf("\t\"github.com/cozy/cozy-stack/pkg/statik/fs\"\n")
 		}

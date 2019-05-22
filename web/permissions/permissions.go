@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -79,12 +80,13 @@ func createPermission(c echo.Context) error {
 		return err
 	}
 
+	var slug string
 	sourceID := parent.SourceID
 	// Check if the permission is linked to an OAuth Client
 	if parent.Client != nil {
 		oauthClient := parent.Client.(*oauth.Client)
 		if auth.IsLinkedApp(oauthClient.SoftwareID) {
-			slug := auth.GetLinkedAppSlug(oauthClient.SoftwareID)
+			slug = auth.GetLinkedAppSlug(oauthClient.SoftwareID)
 			// Changing the sourceID from the OAuth clientID to the classic
 			// io.cozy.apps/slug one
 			sourceID = consts.Apps + "/" + slug
@@ -126,7 +128,27 @@ func createPermission(c echo.Context) error {
 		}
 	}
 
-	pdoc, err := permission.CreateShareSet(instance, parent, sourceID, codes, shortcodes, subdoc.Permissions, expiresAt)
+	// Getting the slug from the token if it has not been retrieved before
+	// with the linkedapp
+	if slug == "" {
+		claims := c.Get("claims").(permission.Claims)
+		slug = claims.Subject
+	}
+
+	// Handles the metadata part
+	md, err := metadata.NewWithApp(slug, "", permission.DocTypeVersion)
+	if err != nil {
+		return err
+	}
+
+	// Adding metadata if it does not exist
+	if subdoc.Metadata == nil {
+		subdoc.Metadata = md
+	} else { // Otherwise, ensure we have all the needed fields
+		subdoc.Metadata.EnsureCreatedFields(md)
+	}
+
+	pdoc, err := permission.CreateShareSet(instance, parent, sourceID, codes, shortcodes, subdoc, expiresAt)
 	if err != nil {
 		return err
 	}
@@ -275,6 +297,21 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 				} else {
 					return permission.ErrNotSubset
 				}
+			}
+		}
+
+		// Handle metadata
+		// If the metadata has been given in the body request, just apply it to
+		// the patch
+		if patch.Metadata != nil {
+			toPatch.Metadata = patch.Metadata
+			patch.Metadata.EnsureCreatedFields(toPatch.Metadata)
+		} else if toPatch.Metadata != nil { // No metadata given in the request, but it does exist in the database: update it
+			// Using the token Subject for update
+			claims := c.Get("claims").(permission.Claims)
+			err = toPatch.Metadata.UpdatedByApp(claims.Subject, "")
+			if err != nil {
+				return err
 			}
 		}
 

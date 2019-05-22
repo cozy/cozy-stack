@@ -293,7 +293,8 @@ func (m *WebappManifest) Create(db prefixer.Prefixer) error {
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
-	_, err := permission.CreateWebappSet(db, m.Slug(), m.Permissions())
+
+	_, err := permission.CreateWebappSet(db, m.Slug(), m.Permissions(), m.Version())
 	return err
 }
 

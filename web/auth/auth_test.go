@@ -1327,7 +1327,7 @@ func TestLogoutSuccess(t *testing.T) {
 		DocSlug: "home",
 	}
 	token := testInstance.BuildAppToken(a.Slug(), getSessionID(jar.Cookies(nil)))
-	_, err := permission.CreateWebappSet(testInstance, a.Slug(), permission.Set{})
+	_, err := permission.CreateWebappSet(testInstance, a.Slug(), permission.Set{}, "1.0.0")
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
 	req.Host = domain
@@ -1391,7 +1391,7 @@ func TestLogoutOthers(t *testing.T) {
 		DocSlug: "home",
 	}
 	token := testInstance.BuildAppToken(a.Slug(), getSessionID(cookies1))
-	_, err = permission.CreateWebappSet(testInstance, a.Slug(), permission.Set{})
+	_, err = permission.CreateWebappSet(testInstance, a.Slug(), permission.Set{}, "1.0.0")
 	assert.NoError(t, err)
 
 	reqLogout1, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)

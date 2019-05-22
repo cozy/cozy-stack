@@ -10,8 +10,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
+
+// DocTypeVersion represents the doctype version. Each time this document
+// structure is modified, update this value
+const DocTypeVersion = "1"
 
 // Permission is a storable object containing a set of rules and
 // several codes
@@ -25,7 +30,8 @@ type Permission struct {
 	Codes       map[string]string `json:"codes,omitempty"`
 	ShortCodes  map[string]string `json:"shortcodes,omitempty"`
 
-	Client interface{} `json:"-"` // Contains the *oauth.Client client pointer for Oauth permission type
+	Client   interface{}            `json:"-"` // Contains the *oauth.Client client pointer for Oauth permission type
+	Metadata *metadata.CozyMetaData `json:"cozyMetadata,omitempty"`
 }
 
 const (
@@ -67,6 +73,10 @@ func (p *Permission) Clone() couchdb.Doc {
 	cloned := *p
 	cloned.Codes = make(map[string]string)
 	cloned.ShortCodes = make(map[string]string)
+	if p.Metadata != nil {
+		md := p.Metadata.Clone()
+		cloned.Metadata = &md
+	}
 	for k, v := range p.Codes {
 		cloned.Codes[k] = v
 	}
@@ -318,28 +328,39 @@ func GetTokenFromShortcode(db prefixer.Prefixer, shortcode string) (string, erro
 }
 
 // CreateWebappSet creates a Permission doc for an app
-func CreateWebappSet(db prefixer.Prefixer, slug string, set Set) (*Permission, error) {
+func CreateWebappSet(db prefixer.Prefixer, slug string, set Set, version string) (*Permission, error) {
 	existing, _ := GetForWebapp(db, slug)
 	if existing != nil {
 		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
 	}
-	return createAppSet(db, TypeWebapp, consts.Apps, slug, set)
+	// Add metadata
+	md, err := metadata.NewWithApp(slug, version, DocTypeVersion)
+	if err != nil {
+		return nil, err
+	}
+	return createAppSet(db, TypeWebapp, consts.Apps, slug, set, md)
 }
 
 // CreateKonnectorSet creates a Permission doc for a konnector
-func CreateKonnectorSet(db prefixer.Prefixer, slug string, set Set) (*Permission, error) {
+func CreateKonnectorSet(db prefixer.Prefixer, slug string, set Set, version string) (*Permission, error) {
 	existing, _ := GetForKonnector(db, slug)
 	if existing != nil {
 		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
 	}
-	return createAppSet(db, TypeKonnector, consts.Konnectors, slug, set)
+	// Add metadata
+	md, err := metadata.NewWithApp(slug, version, DocTypeVersion)
+	if err != nil {
+		return nil, err
+	}
+	return createAppSet(db, TypeKonnector, consts.Konnectors, slug, set, md)
 }
 
-func createAppSet(db prefixer.Prefixer, typ, docType, slug string, set Set) (*Permission, error) {
+func createAppSet(db prefixer.Prefixer, typ, docType, slug string, set Set, md *metadata.CozyMetaData) (*Permission, error) {
 	doc := &Permission{
 		Type:        typ,
 		SourceID:    docType + "/" + slug,
 		Permissions: set,
+		Metadata:    md,
 	}
 	err := couchdb.CreateDoc(db, doc)
 	if err != nil {
@@ -395,6 +416,7 @@ func UpdateWebappSet(db prefixer.Prefixer, slug string, set Set) (*Permission, e
 	if err != nil {
 		return nil, err
 	}
+	doc.Metadata.ChangeUpdatedAt()
 	return updateAppSet(db, doc, TypeWebapp, consts.Apps, slug, set)
 }
 
@@ -404,6 +426,7 @@ func UpdateKonnectorSet(db prefixer.Prefixer, slug string, set Set) (*Permission
 	if err != nil {
 		return nil, err
 	}
+	doc.Metadata.ChangeUpdatedAt()
 	return updateAppSet(db, doc, TypeKonnector, consts.Konnectors, slug, set)
 }
 
@@ -417,7 +440,8 @@ func updateAppSet(db prefixer.Prefixer, doc *Permission, typ, docType, slug stri
 }
 
 // CreateShareSet creates a Permission doc for sharing by link
-func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, codes, shortcodes map[string]string, set Set, expiresAt *time.Time) (*Permission, error) {
+func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, codes, shortcodes map[string]string, subdoc Permission, expiresAt *time.Time) (*Permission, error) {
+	set := subdoc.Permissions
 	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
 		return nil, ErrOnlyAppCanCreateSubSet
 	}
@@ -444,6 +468,7 @@ func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, c
 		Codes:       codes,
 		ShortCodes:  shortcodes,
 		ExpiresAt:   expiresAt,
+		Metadata:    subdoc.Metadata,
 	}
 
 	err := couchdb.CreateDoc(db, doc)
@@ -455,12 +480,13 @@ func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, c
 }
 
 // CreateSharePreviewSet creates a Permission doc for previewing a sharing
-func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes map[string]string, set Set) (*Permission, error) {
+func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes map[string]string, subdoc Permission) (*Permission, error) {
 	doc := &Permission{
 		Type:        TypeSharePreview,
-		Permissions: set,
+		Permissions: subdoc.Permissions,
 		Codes:       codes,
 		SourceID:    consts.Sharings + "/" + sharingID,
+		Metadata:    subdoc.Metadata,
 	}
 	err := couchdb.CreateDoc(db, doc)
 	if err != nil {

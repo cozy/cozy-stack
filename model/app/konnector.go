@@ -217,7 +217,8 @@ func (m *KonnManifest) Create(db prefixer.Prefixer) error {
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
-	_, err := permission.CreateKonnectorSet(db, m.Slug(), m.Permissions())
+
+	_, err := permission.CreateKonnectorSet(db, m.Slug(), m.Permissions(), m.Version())
 	return err
 }
 

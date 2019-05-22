@@ -129,6 +129,8 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 		return instance.PickKey(token.Claims.(*permission.Claims).Audience)
 	}, &claims)
 
+	c.Set("claims", claims)
+
 	if err != nil {
 		return nil, permission.ErrInvalidToken
 	}
