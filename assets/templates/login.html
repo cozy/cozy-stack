@@ -62,7 +62,7 @@
             <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
             {{if not .TwoFactorForm}}
             <div class="o-field password-form u-m-0">
-              <label for="password" aria-describedby="login-password-tip" class="c-label">{{t "Login Password field"}}</label>
+              <label for="password" class="c-label">{{t "Login Password field"}}</label>
               <button id="password-visibility-button" class="wizard-showbutton c-btn c-btn--secondary"
                 type="button"
                 name="password-visibility"
@@ -95,7 +95,7 @@
             <input id="two-factor-token" type="hidden" name="two-factor-token" value="{{.TwoFactorToken}}" />
             <div class="o-field u-m-0 two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">
               <label for="two-factor-passcode" class="c-label" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
-              <input id="two-factor-passcode" class="wizard-input c-input-text" name="two-factor-passcode" type="text" pattern="[0-9]*" inputmode="numeric" maxlength="6" autofocus autocomplete="current-password" />
+              <input id="two-factor-passcode" class="wizard-input c-input-text" name="two-factor-passcode" type="text" pattern="[0-9]*" inputmode="numeric" maxlength="6" {{if .TwoFactorForm}}autofocus {{end}}autocomplete="current-password" />
             </div>
             {{if not .OAuth}}
             <p class="wizard-notice two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">
