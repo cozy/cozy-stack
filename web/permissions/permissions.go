@@ -305,6 +305,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 		// the patch
 		if patch.Metadata != nil {
 			toPatch.Metadata = patch.Metadata
+			patch.Metadata.EnsureCreatedFields(toPatch.Metadata)
 		} else if toPatch.Metadata != nil { // No metadata given in the request, but it does exist in the database: update it
 			// Using the token Subject for update
 			claims := c.Get("claims").(permission.Claims)
