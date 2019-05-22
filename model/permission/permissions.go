@@ -416,7 +416,6 @@ func UpdateWebappSet(db prefixer.Prefixer, slug string, set Set) (*Permission, e
 	if err != nil {
 		return nil, err
 	}
-	doc.Metadata.ChangeUpdatedAt()
 	return updateAppSet(db, doc, TypeWebapp, consts.Apps, slug, set)
 }
 
@@ -426,12 +425,16 @@ func UpdateKonnectorSet(db prefixer.Prefixer, slug string, set Set) (*Permission
 	if err != nil {
 		return nil, err
 	}
-	doc.Metadata.ChangeUpdatedAt()
 	return updateAppSet(db, doc, TypeKonnector, consts.Konnectors, slug, set)
 }
 
 func updateAppSet(db prefixer.Prefixer, doc *Permission, typ, docType, slug string, set Set) (*Permission, error) {
 	doc.Permissions = set
+	if doc.Metadata == nil {
+		doc.Metadata, _ = metadata.NewWithApp(slug, "", DocTypeVersion)
+	} else {
+		doc.Metadata.ChangeUpdatedAt()
+	}
 	err := couchdb.UpdateDoc(db, doc)
 	if err != nil {
 		return nil, err
