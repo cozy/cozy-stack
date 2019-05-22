@@ -69,11 +69,22 @@ func (c *couchdbIndexer) DiskUsage() (int64, error) {
 		return 0, nil
 	}
 	// Reduce of _count should give us a number value
-	f64, ok := doc.Rows[0].Value.(float64)
+	used, ok := doc.Rows[0].Value.(float64)
 	if !ok {
 		return 0, ErrWrongCouchdbState
 	}
-	return int64(f64), nil
+
+	// Count also the disk used by the old versions
+	err = couchdb.ExecView(c.db, couchdb.OldVersionsDiskUsageView, &couchdb.ViewRequest{
+		Reduce: true,
+	}, &doc)
+	if err == nil && len(doc.Rows) > 0 {
+		if more, ok := doc.Rows[0].Value.(float64); ok {
+			used += more
+		}
+	}
+
+	return int64(used), nil
 }
 
 func (c *couchdbIndexer) prepareFileDoc(doc *FileDoc) error {

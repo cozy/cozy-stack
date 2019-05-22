@@ -39,7 +39,7 @@ var Indexes = []*mango.Index{
 	mango.IndexOnFields(consts.Notifications, "by-source-id", []string{"source_id", "created_at"}),
 }
 
-// DiskUsageView is the view used for computing the disk usage
+// DiskUsageView is the view used for computing the disk usage for files
 var DiskUsageView = &View{
 	Name:    "disk-usage",
 	Doctype: consts.Files,
@@ -48,6 +48,19 @@ function(doc) {
   if (doc.type === 'file') {
     emit(doc._id, +doc.size);
   }
+}
+`,
+	Reduce: "_sum",
+}
+
+// OldVersionsDiskUsageView is the view used for computing the disk usage for
+// the old versions of file contents.
+var OldVersionsDiskUsageView = &View{
+	Name:    "old-versions-disk-usage",
+	Doctype: consts.FilesVersions,
+	Map: `
+function(doc) {
+  emit(doc._id, +doc.size);
 }
 `,
 	Reduce: "_sum",
