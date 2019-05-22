@@ -376,8 +376,6 @@ Accept: application/vnd.api+json
         "cozyMetadata": {
             "doctypeVersion": 1,
             "metadataVersion": 1,
-            "createdAt": "2019-05-14T11:01:41.687737935+02:00",
-            "createdByApp": "drive",
             "updatedAt": "2019-05-14T12:00:37.372193145+02:00"
         }
     }
