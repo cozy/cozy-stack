@@ -62,8 +62,8 @@ func (t *ConceptDoc) SetRev(rev string) {
 	t.ConceptRev = rev
 }
 
-// AddSalt does not check is one salt is already existing
-func AddSalt(hashedConcept string) error {
+// addSalt does not check is one salt is already existing
+func addSalt(hashedConcept string) error {
 
 	ConceptDoc := &ConceptDoc{
 		ConceptID:  "",
@@ -75,17 +75,17 @@ func AddSalt(hashedConcept string) error {
 	return couchdb.CreateDoc(prefixer.ConceptIndexorPrefixer, ConceptDoc)
 }
 
-func GetSalt(hashedConcept string) (string, error) {
+func getSalt(hashedConcept string) (string, error) {
 
 	salt := ""
-	err := couchdb.DefineIndex(prefixer.ConceptIndexorPrefixer, mango.IndexOnFields("io.cozy.Hashconcept", "concept-index", []string{"concept"}))
+	err := couchdb.DefineIndex(prefixer.ConceptIndexorPrefixer, mango.IndexOnFields("io.cozy.hashconcept", "concept-index", []string{"concept"}))
 	if err != nil {
 		return salt, err
 	}
 
 	var out []ConceptDoc
 	req := &couchdb.FindRequest{Selector: mango.Equal("concept", hashedConcept)}
-	err = couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.Hashconcept", req, &out)
+	err = couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept", req, &out)
 	if err != nil {
 		return salt, err
 	}
@@ -103,7 +103,7 @@ func GetSalt(hashedConcept string) (string, error) {
 }
 
 // TODO: Implements bcrypt or argon instead of scrypt
-func Hash(str string, saltIn string) (string, error) {
+func hash(str string, saltIn string) (string, error) {
 
 	salt := saltIn
 	if saltIn == "" {
@@ -119,16 +119,16 @@ func Hash(str string, saltIn string) (string, error) {
 	return string(other), err
 }
 
-func IsConceptExisting(hashedConcept string) (bool, error) {
+func isConceptExisting(hashedConcept string) (bool, error) {
 
-	err := couchdb.DefineIndex(prefixer.ConceptIndexorPrefixer, mango.IndexOnFields("io.cozy.Hashconcept", "concept-index", []string{"concept"}))
+	err := couchdb.DefineIndex(prefixer.ConceptIndexorPrefixer, mango.IndexOnFields("io.cozy.hashconcept", "concept-index", []string{"concept"}))
 	if err != nil {
 		return false, err
 	}
 
 	var out []ConceptDoc
 	req := &couchdb.FindRequest{Selector: mango.Equal("concept", hashedConcept)}
-	err = couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.Hashconcept", req, &out)
+	err = couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept", req, &out)
 	if err != nil {
 		return false, err
 	}
@@ -140,11 +140,11 @@ func IsConceptExisting(hashedConcept string) (bool, error) {
 	return false, nil
 }
 
-func DeleteSalt(hashedConcept string) error {
+func deleteSalt(hashedConcept string) error {
 	// Delete document in database
 	var out []ConceptDoc
 	req := &couchdb.FindRequest{Selector: mango.Equal("concept", hashedConcept)}
-	err := couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.Hashconcept", req, &out)
+	err := couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept", req, &out)
 	if err != nil {
 		return err
 	}
@@ -173,12 +173,12 @@ func DeleteConcept(encryptedConcept string) error {
 	// TODO: Decrypte concept with private key
 	concept := encryptedConcept
 
-	hashedConcept, err := Hash(concept, "")
+	hashedConcept, err := hash(concept, "")
 	if err != nil {
 		return err
 	}
 
-	DeleteSalt(hashedConcept)
+	deleteSalt(hashedConcept)
 
 	return err
 }
@@ -188,18 +188,18 @@ HashMeThat is used to get a concept's salt. If the salt is absent from CI databa
 the function creates the salt and notify the user that the salt has just been created
 */
 func HashMeThat(encryptedConcept string) (string, error) {
-	couchdb.EnsureDBExist(prefixer.ConceptIndexorPrefixer, "io.cozy.Hashconcept")
+	couchdb.EnsureDBExist(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept")
 
 	// TODO: Decrypte concept with private key
 	concept := encryptedConcept
 
-	// Get salt with Hash(concept)
-	hashedConcept, err := Hash(concept, "")
+	// Get salt with hash(concept)
+	hashedConcept, err := hash(concept, "")
 	if err != nil {
 		return "", err
 	}
 
-	isExisting, err := IsConceptExisting(hashedConcept)
+	isExisting, err := isConceptExisting(hashedConcept)
 	if err != nil {
 		return "", err
 	}
@@ -207,20 +207,20 @@ func HashMeThat(encryptedConcept string) (string, error) {
 	if isExisting {
 		// Write in Metadata that concept has been retrieved
 	} else {
-		err = AddSalt(hashedConcept)
+		err = addSalt(hashedConcept)
 		if err != nil {
 			return "", err
 		}
 		// Write in Metadata that concept has been created
 	}
 
-	salt, err := GetSalt(hashedConcept)
+	salt, err := getSalt(hashedConcept)
 	if err != nil {
 		return "", err
 	}
 
-	// Merge concept and salt, then Hash
-	justHashed, err := Hash(concept, salt)
+	// Merge concept and salt, then hash
+	justhashed, err := hash(concept, salt)
 
-	return justHashed, err
+	return justhashed, err
 }
