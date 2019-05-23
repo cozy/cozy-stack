@@ -1,4 +1,3 @@
-// Package data provide simple CRUD operation on couchdb doc
 package dispers
 
 import (
@@ -153,21 +152,21 @@ TARGET FINDER'S ROUTES : those functions are used on route ./dispers/targetfinde
 *
 *
 */
-func selectAdresses(c echo.Context) error {
+func selectAddresses(c echo.Context) error {
 
-	var listsOfAdresses dispers.InputTF
+	var listsOfAddresses dispers.InputTF
 
-	if err := json.NewDecoder(c.Request().Body).Decode(&listsOfAdresses); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(&listsOfAddresses); err != nil {
 		return c.JSON(http.StatusOK, echo.Map{"outcome": "error",
 			"message": err})
 	}
 
-	finallist := enclave.SelectAdresses(listsOfAdresses)
+	finallist := enclave.SelectAddresses(listsOfAddresses)
 
 	return c.JSON(http.StatusCreated, echo.Map{
-		"ok":       true,
-		"adresses": finallist,
-		"metadata": "blablabla",
+		"ok":        true,
+		"Addresses": finallist,
+		"metadata":  "blablabla",
 	})
 }
 
@@ -243,7 +242,7 @@ func Routes(router *echo.Group) {
 	// API's Index
 	router.GET("/", index)
 	router.GET("/:actor", indexBis)
-	router.GET("/:actor/public_key", getPublicKey)
+	router.GET("/:actor/publickey", getPublicKey)
 
 	// Subscriptions
 	router.GET("/conductor/training/:idtrain", showTraining) // Used by the user to know the training's state
@@ -252,16 +251,16 @@ func Routes(router *echo.Group) {
 	//router.POST("/conductor/subscribe/id=:domain", subscribe)
 	//router.DELETE("/conductor/subscribe/id=:domain", unsubscribe)
 
-	router.GET("/conceptindexor/_all_concepts", allConcepts)
-	router.POST("/conceptindexor/hash/concept=:concept", hashConcept)     // used to hash a concept
+	router.GET("/conceptindexor/allconcepts", allConcepts)
+	router.POST("/conceptindexor/hash/concept=:concept", hashConcept)     // used to hash a concept (and save the salt)
 	router.DELETE("/conceptindexor/hash/concept=:concept", deleteConcept) // used to delete a salt in the database
 
-	//router.POST("/targetfinder/listofadresses", insertAdress)
-	//router.DELETE("/targetfinder/listofadresses", deleteAdress)
-	router.POST("/targetfinder/adresses", selectAdresses)
+	//router.POST("/targetfinder/listofAddresses", insertAddress)
+	//router.DELETE("/targetfinder/listofAddresses", deleteAddress)
+	router.POST("/targetfinder/addresses", selectAddresses)
 
 	router.POST("/target/gettokens", getQueriesAndTokens)
-	router.GET("/target/_all_data", allData)
+	router.GET("/target/alldata", allData)
 
 	router.GET("/dataaggregator/aggregate/:id", getStateAggr)
 	router.POST("/dataaggregator/aggregate", launchAggr)
