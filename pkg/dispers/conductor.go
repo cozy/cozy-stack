@@ -324,68 +324,92 @@ func NewConductor(domain, prefix string, mytraining Training) (*Conductor, error
 	return retour, nil
 }
 
-// Works with CI's API
-func (c *Conductor) DecrypteConcept() dispers.Metadata {
-	return dispers.NewMetadata("nom de la metadata", "description", "aujourd'hui à telle heure", true)
+// DecrypteConcept returns a list of hashed concepts from a list of encrypted concepts
+func (c *Conductor) DecrypteConcept(encryptedConcepts []string) ([]string, []dispers.Metadata, error) {
 
+	hashedConcepts := make([]string, len(encryptedConcepts))
+	for index, element := range encryptedConcepts {
+		testCI := Actor{
+			host: "localhost:8080",
+			api:  "conceptindexor",
+		}
+		err := testCI.makeRequestPost(strings.Join([]string{"hash/concept=", element}, ""), "")
+		if err != nil {
+			// TODO: Inject error in Metadata
+			return []string{}, []dispers.Metadata{}, err
+		}
+		// TODO: Unmarshal testCI.out
+		hashedConcepts[index] = "2" // TODO: replace "2" by testCI.out.hash
+	}
+
+	return hashedConcepts, []dispers.Metadata{}, nil
 }
 
 // Works with TF's API
-func (c *Conductor) GetTargets() dispers.Metadata {
-	return dispers.NewMetadata("nom de la metadata", "description", "aujourd'hui à telle heure", true)
+func (c *Conductor) GetTargets() []dispers.Metadata {
+	return []dispers.Metadata{}
 }
 
 // Works with T's API
-func (c *Conductor) GetTokens() dispers.Metadata {
-	return dispers.NewMetadata("nom de la metadata", "description", "aujourd'hui à telle heure", true)
+func (c *Conductor) GetTokens() []dispers.Metadata {
+	return []dispers.Metadata{}
 }
 
 // Works with stacks
-func (c *Conductor) GetData() (string, dispers.Metadata) {
+func (c *Conductor) GetData() (string, []dispers.Metadata) {
 	s := ""
-	return s, dispers.NewMetadata("nom de la metadata", "description", "aujourd'hui à telle heure", true)
+	return s, []dispers.Metadata{}
 }
 
 // Works with DA's API
-func (c *Conductor) Aggregate() dispers.Metadata {
-	return dispers.NewMetadata("nom de la metadata", "description", "aujourd'hui à telle heure", true)
+func (c *Conductor) Aggregate() []dispers.Metadata {
+	return []dispers.Metadata{}
 }
 
 // This method is used to add a metadata to the Query Doc so that the querier is able to know the state of his training
-func (c *Conductor) UpdateDoc(key string, metadata dispers.Metadata) error { return nil }
+func (c *Conductor) UpdateDoc(key string, metadatas []dispers.Metadata) error { return nil }
 
 // This method is the most general. This is the only one used in CMD and Web's files. It will use the 5 previous methods to work
 func (c *Conductor) Lead() error {
 
-	tempMetadata := dispers.NewMetadata("nom de la metadata", "description", "aujourd'hui à telle heure", true)
+	tempMetadata := []dispers.Metadata{}
 	c.UpdateDoc("meta-task-0-init", tempMetadata)
 
-	if tempMetadata.Outcome() {
-		tempMetadata = c.DecrypteConcept()
-		c.UpdateDoc("meta-task-1-ci", tempMetadata)
+	encryptedConcepts := []string{}
+
+	_, tempMetadata, err := c.DecrypteConcept(encryptedConcepts)
+	c.UpdateDoc("meta-task-1-ci", tempMetadata)
+	if err != nil {
+		return err
 	}
 
-	if tempMetadata.Outcome() {
-		tempMetadata = c.GetTargets()
-		c.UpdateDoc("meta-task-2-tf", tempMetadata)
+	tempMetadata = c.GetTargets()
+	c.UpdateDoc("meta-task-2-tf", tempMetadata)
+	if err != nil {
+		return err
 	}
 
-	if tempMetadata.Outcome() {
-		tempMetadata = c.GetTokens()
-		c.UpdateDoc("meta-task-3-t", tempMetadata)
+	tempMetadata = c.GetTokens()
+	c.UpdateDoc("meta-task-3-t", tempMetadata)
+	if err != nil {
+		return err
 	}
 
-	if tempMetadata.Outcome() {
-		data := ""
-		data, tempMetadata = c.GetData()
-		strings.ToLower(data) // juste pour éviter l'erreur du "data is not used"
-		c.UpdateDoc("meta-task-4-slack", tempMetadata)
+	data := ""
+	data, tempMetadata = c.GetData()
+	strings.ToLower(data) // juste pour éviter l'erreur du "data is not used"
+	c.UpdateDoc("meta-task-4-slack", tempMetadata)
+	if err != nil {
+		return err
 	}
 
-	if tempMetadata.Outcome() {
-		tempMetadata = c.Aggregate()
-		c.UpdateDoc("meta-task-5-da", tempMetadata)
+	tempMetadata = c.Aggregate()
+	c.UpdateDoc("meta-task-5-da", tempMetadata)
+	if err != nil {
+		return err
 	}
+
+	// TODO: Send the result to the Querier's stack on a dedicated routes
 
 	return nil
 }
