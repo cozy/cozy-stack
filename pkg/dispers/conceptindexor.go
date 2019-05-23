@@ -21,6 +21,8 @@ const defaultDkLen = 32
 // salt length
 var defaultSalt = "CozyCloud"
 
+var prefixerCI = prefixer.ConceptIndexorPrefixer
+
 /*
 ConceptDoc is used to save a concept's salt into Concept Indexor's database
 */
@@ -72,20 +74,20 @@ func addSalt(hashedConcept string) error {
 		Salt:       string(crypto.GenerateRandomBytes(5)),
 	}
 
-	return couchdb.CreateDoc(prefixer.ConceptIndexorPrefixer, ConceptDoc)
+	return couchdb.CreateDoc(prefixerCI, ConceptDoc)
 }
 
 func getSalt(hashedConcept string) (string, error) {
 
 	salt := ""
-	err := couchdb.DefineIndex(prefixer.ConceptIndexorPrefixer, mango.IndexOnFields("io.cozy.hashconcept", "concept-index", []string{"concept"}))
+	err := couchdb.DefineIndex(prefixerCI, mango.IndexOnFields("io.cozy.hashconcept", "concept-index", []string{"concept"}))
 	if err != nil {
 		return salt, err
 	}
 
 	var out []ConceptDoc
 	req := &couchdb.FindRequest{Selector: mango.Equal("concept", hashedConcept)}
-	err = couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept", req, &out)
+	err = couchdb.FindDocs(prefixerCI, "io.cozy.hashconcept", req, &out)
 	if err != nil {
 		return salt, err
 	}
@@ -121,14 +123,14 @@ func hash(str string, saltIn string) (string, error) {
 
 func isConceptExisting(hashedConcept string) (bool, error) {
 
-	err := couchdb.DefineIndex(prefixer.ConceptIndexorPrefixer, mango.IndexOnFields("io.cozy.hashconcept", "concept-index", []string{"concept"}))
+	err := couchdb.DefineIndex(prefixerCI, mango.IndexOnFields("io.cozy.hashconcept", "concept-index", []string{"concept"}))
 	if err != nil {
 		return false, err
 	}
 
 	var out []ConceptDoc
 	req := &couchdb.FindRequest{Selector: mango.Equal("concept", hashedConcept)}
-	err = couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept", req, &out)
+	err = couchdb.FindDocs(prefixerCI, "io.cozy.hashconcept", req, &out)
 	if err != nil {
 		return false, err
 	}
@@ -144,7 +146,7 @@ func deleteSalt(hashedConcept string) error {
 	// Delete document in database
 	var out []ConceptDoc
 	req := &couchdb.FindRequest{Selector: mango.Equal("concept", hashedConcept)}
-	err := couchdb.FindDocs(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept", req, &out)
+	err := couchdb.FindDocs(prefixerCI, "io.cozy.hashconcept", req, &out)
 	if err != nil {
 		return err
 	}
@@ -155,7 +157,7 @@ func deleteSalt(hashedConcept string) error {
 
 	// Delete every doc that match concept
 	for _, element := range out {
-		err = couchdb.DeleteDoc(prefixer.ConceptIndexorPrefixer, &element)
+		err = couchdb.DeleteDoc(prefixerCI, &element)
 		if err != nil {
 			return err
 		}
@@ -188,7 +190,7 @@ HashMeThat is used to get a concept's salt. If the salt is absent from CI databa
 the function creates the salt and notify the user that the salt has just been created
 */
 func HashMeThat(encryptedConcept string) (string, error) {
-	couchdb.EnsureDBExist(prefixer.ConceptIndexorPrefixer, "io.cozy.hashconcept")
+	couchdb.EnsureDBExist(prefixerCI, "io.cozy.hashconcept")
 
 	// TODO: Decrypte concept with private key
 	concept := encryptedConcept

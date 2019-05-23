@@ -65,27 +65,27 @@ func TestConceptIndexor(t *testing.T) {
 
 }
 
-func TestaddSalt(t *testing.T) {
+func TestAddSalt(t *testing.T) {
 	conceptTestRandom := string(crypto.GenerateRandomBytes(50))
 	errAdd := addSalt(conceptTestRandom)
 	assert.NoError(t, errAdd)
 }
 
-func TestdeleteSalt(t *testing.T) {
+func TestDeleteSalt(t *testing.T) {
 	conceptTestRandom := string(crypto.GenerateRandomBytes(50))
 	addSalt(conceptTestRandom)
 	err := deleteSalt(conceptTestRandom)
 	assert.NoError(t, err)
 }
 
-func TestgetSalt(t *testing.T) {
+func TestGetSalt(t *testing.T) {
 	conceptTestRandom := string(crypto.GenerateRandomBytes(50))
 	_ = addSalt(conceptTestRandom)
 	_, err := getSalt(conceptTestRandom)
 	assert.NoError(t, err)
 }
 
-func Testhash(t *testing.T) {
+func TestHash(t *testing.T) {
 	conceptTestRandom := string(crypto.GenerateRandomBytes(10))
 	res, err := hash(conceptTestRandom, "")
 	assert.NoError(t, err)
@@ -101,7 +101,7 @@ func TestHashMeThat(t *testing.T) {
 	assert.Equal(t, res, res2)
 }
 
-func TesthashIsNotDeterministic(t *testing.T) {
+func TestHashIsNotDeterministic(t *testing.T) {
 	conceptTestRandom := string(crypto.GenerateRandomBytes(10))
 	hash1, _ := HashMeThat(conceptTestRandom)
 	DeleteConcept(conceptTestRandom)

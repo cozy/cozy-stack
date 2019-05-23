@@ -7,7 +7,6 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/stretchr/testify/assert"
 )
@@ -89,9 +88,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	couchdb.EnsureDBExist(prefixer.TestConceptIndexorPrefixer, "io.cozy.hashconcept")
-	couchdb.DeleteDB(prefixer.TestConceptIndexorPrefixer, "io.cozy.hashconcept")
-	couchdb.EnsureDBExist(prefixer.TestConceptIndexorPrefixer, "io.cozy.hashconcept")
+	prefixerCI = prefixer.TestConceptIndexorPrefixer
 
 	res := m.Run()
 	os.Exit(res)
