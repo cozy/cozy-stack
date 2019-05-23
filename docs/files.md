@@ -850,6 +850,17 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 }
 ```
 
+### POST /files/revert/:file-id/:version-id
+
+This endpoint can be used to revert to an old version of the content for a
+file.
+
+#### Request
+
+```http
+POST /files/revert/9152d568-7e7c-11e6-a377-37cbfb190b4b/2-fa3a3bec HTTP/1.1
+```
+
 ### PATCH /files/:file-id/:version-id
 
 This endpoint can be used to edit the tags of a previous version of the file.

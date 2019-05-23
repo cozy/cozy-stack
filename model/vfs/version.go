@@ -72,6 +72,15 @@ func NewVersion(file *FileDoc) *Version {
 	}
 }
 
+// SetMetaFromVersion takes the metadata from the version and copies them to
+// the file document.
+func SetMetaFromVersion(file *FileDoc, version *Version) {
+	file.UpdatedAt = version.UpdatedAt
+	file.ByteSize = version.ByteSize
+	file.MD5Sum = version.MD5Sum
+	file.Tags = version.Tags
+}
+
 // FindVersion returns the version for the given id
 func FindVersion(db prefixer.Prefixer, id string) (*Version, error) {
 	doc := &Version{}

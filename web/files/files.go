@@ -601,6 +601,31 @@ func ReadFileContentFromVersion(c echo.Context) error {
 	return nil
 }
 
+// RevertFileVersion restores an old version of the file content.
+func RevertFileVersion(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	doc, err := inst.VFS().FileByID(c.Param("file-id"))
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	if err = checkPerm(c, permission.POST, nil, doc); err != nil {
+		return err
+	}
+
+	version, err := vfs.FindVersion(inst, doc.DocID+"/"+c.Param("version-id"))
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	if err = inst.VFS().RevertFileVersion(doc, version); err != nil {
+		return WrapVfsError(err)
+	}
+
+	return fileData(c, http.StatusOK, doc, true, nil)
+}
+
 // HeadDirOrFile handles HEAD requests on directory or file to check their
 // existence
 func HeadDirOrFile(c echo.Context) error {
@@ -1095,8 +1120,10 @@ func Routes(router *echo.Group) {
 	router.GET("/download", ReadFileContentFromPathHandler)
 	router.HEAD("/download/:file-id", ReadFileContentFromIDHandler)
 	router.GET("/download/:file-id", ReadFileContentFromIDHandler)
+
 	router.HEAD("/download/:file-id/:version-id", ReadFileContentFromVersion)
 	router.GET("/download/:file-id/:version-id", ReadFileContentFromVersion)
+	router.POST("/revert/:file-id/:version-id", RevertFileVersion)
 
 	router.POST("/_find", FindFilesMango)
 

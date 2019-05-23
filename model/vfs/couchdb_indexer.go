@@ -510,6 +510,10 @@ func (c *couchdbIndexer) CreateVersion(v *Version) error {
 	return couchdb.CreateNamedDocWithDB(c.db, v)
 }
 
+func (c *couchdbIndexer) DeleteVersion(v *Version) error {
+	return couchdb.DeleteDoc(c.db, v)
+}
+
 func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) (err error) {
 	tree, err := c.BuildTree()
 	if err != nil {

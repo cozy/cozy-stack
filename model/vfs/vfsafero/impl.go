@@ -341,6 +341,47 @@ func (afs *aferoVFS) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vf
 	return &aferoFileOpen{f}, nil
 }
 
+func (afs *aferoVFS) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version) error {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer afs.mu.Unlock()
+
+	mainpath, err := afs.Indexer.FilePath(doc)
+	if err != nil {
+		return err
+	}
+
+	save := vfs.NewVersion(doc)
+	savepath := pathForVersion(save)
+	frompath := pathForVersion(version)
+
+	if err = afs.fs.Rename(mainpath, savepath); err != nil {
+		return err
+	}
+
+	if err = afs.fs.Rename(frompath, mainpath); err != nil {
+		_ = afs.fs.Rename(savepath, mainpath)
+		return err
+	}
+
+	newdoc := doc.Clone().(*vfs.FileDoc)
+	vfs.SetMetaFromVersion(newdoc, version)
+	if err = afs.Indexer.UpdateFileDoc(doc, newdoc); err != nil {
+		_ = afs.fs.Rename(mainpath, frompath)
+		_ = afs.fs.Rename(savepath, mainpath)
+		return err
+	}
+
+	_ = afs.Indexer.DeleteVersion(version)
+
+	if err = afs.Indexer.CreateVersion(save); err != nil {
+		_ = afs.fs.Remove(savepath)
+	}
+
+	return nil
+}
+
 func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err = afs.BuildTree(func(f *vfs.TreeFile) {

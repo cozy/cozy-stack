@@ -1091,13 +1091,51 @@ func TestDownloadVersion(t *testing.T) {
 	fileID := data["id"].(string)
 	meta := data["meta"].(map[string]interface{})
 	firstRev := meta["rev"].(string)
+
 	res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
 	assert.Equal(t, 200, res2.StatusCode)
+
 	res3, resbody := download(t, "/files/download/"+fileID+"/"+firstRev, "")
 	assert.Equal(t, 200, res3.StatusCode)
 	assert.True(t, strings.HasPrefix(res3.Header.Get("Content-Disposition"), "inline"))
 	assert.True(t, strings.Contains(res3.Header.Get("Content-Disposition"), `filename="downloadme-versioned"`))
 	assert.True(t, strings.HasPrefix(res3.Header.Get("Content-Type"), "text/plain"))
+	assert.Equal(t, content, string(resbody))
+}
+
+func TestRevertVersion(t *testing.T) {
+	content := "one"
+	res1, body1 := upload(t, "/files/?Type=file&Name=downloadme-reverted", "text/plain", content, "")
+	assert.Equal(t, 201, res1.StatusCode)
+	data := body1["data"].(map[string]interface{})
+	fileID := data["id"].(string)
+
+	res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
+	assert.Equal(t, 200, res2.StatusCode)
+
+	res3, _ := httpGet(ts.URL + "/files/" + fileID)
+	assert.Equal(t, 200, res3.StatusCode)
+	var body map[string]interface{}
+	assert.NoError(t, json.NewDecoder(res3.Body).Decode(&body))
+	data = body["data"].(map[string]interface{})
+	rels := data["relationships"].(map[string]interface{})
+	old := rels["old_versions"].(map[string]interface{})
+	refs := old["data"].([]interface{})
+	assert.Len(t, refs, 1)
+	version := refs[0].(map[string]interface{})
+	versionID := version["id"].(string)
+
+	req4, _ := http.NewRequest("POST", ts.URL+"/files/revert/"+versionID, strings.NewReader(""))
+	req4.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res4, err := http.DefaultClient.Do(req4)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res4.StatusCode)
+
+	res5, resbody := download(t, "/files/download/"+fileID, "")
+	assert.Equal(t, 200, res5.StatusCode)
+	assert.True(t, strings.HasPrefix(res5.Header.Get("Content-Disposition"), "inline"))
+	assert.True(t, strings.Contains(res5.Header.Get("Content-Disposition"), `filename="downloadme-reverted"`))
+	assert.True(t, strings.HasPrefix(res5.Header.Get("Content-Type"), "text/plain"))
 	assert.Equal(t, content, string(resbody))
 }
 

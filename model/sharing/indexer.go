@@ -136,7 +136,7 @@ func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
 		return s.indexer.CreateNamedFileDoc(doc)
 	}
 
-	// If the VFS creates the file by omiting the fake first revision with
+	// If the VFS creates the file by omitting the fake first revision with
 	// trashed=true, it is easy: we can insert the doc as is, and trigger the
 	// realtime event.
 	if !doc.Trashed {
@@ -341,6 +341,10 @@ func (s *sharingIndexer) DirChildExists(dirID, name string) (bool, error) {
 
 func (s *sharingIndexer) CreateVersion(v *vfs.Version) error {
 	return s.indexer.CreateVersion(v)
+}
+
+func (s *sharingIndexer) DeleteVersion(v *vfs.Version) error {
+	return s.indexer.DeleteVersion(v)
 }
 
 func (s *sharingIndexer) BuildTree(each ...func(*vfs.TreeFile)) (t *vfs.Tree, err error) {

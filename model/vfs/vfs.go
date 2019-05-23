@@ -88,6 +88,10 @@ type Fs interface {
 	DestroyDirAndContent(doc *DirDoc) error
 	// DestroyFile  destroys a file from the trash.
 	DestroyFile(doc *FileDoc) error
+	// RevertFileVersion restores the content of a file from an old version.
+	// The current version of the content is not lost, but saved as another
+	// version.
+	RevertFileVersion(doc *FileDoc, version *Version) error
 
 	// Fsck return the list of inconsistencies in the VFS
 	Fsck(func(log *FsckLog)) (err error)
@@ -180,7 +184,10 @@ type Indexer interface {
 	DirChildExists(dirID, filename string) (bool, error)
 	BatchDelete([]couchdb.Doc) error
 
+	// CreateVersion adds a version to the CouchDB index.
 	CreateVersion(*Version) error
+	// DeleteVersion removes a version from the CouchDB index.
+	DeleteVersion(*Version) error
 
 	BuildTree(each ...func(*TreeFile)) (tree *Tree, err error)
 	CheckIndexIntegrity(func(*FsckLog)) error
