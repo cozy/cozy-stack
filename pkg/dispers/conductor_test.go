@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,13 +20,22 @@ func TestDecrypteConcept(t *testing.T) {
 		host: "localhost:8080",
 		api:  "conceptindexor",
 	}
-	testCI.makeRequestPost("hash/concept=majeur", "")
+
+	// Test the consistency
+	err := testCI.makeRequestPost("hash/concept=majeur", "")
 	req1 := testCI.outstr
 	testCI.makeRequestPost("hash/concept=majeur", "")
 	req2 := testCI.outstr
+	assert.NoError(t, err)
 	assert.Equal(t, req1, req2)
-	//testCI.makeRequestDelete("hash/concept=majeur", "")
-	//req2 := testCI.outstr
+
+	// Test that delete route works and that hash is not deterministic
+	err = testCI.makeRequestDelete("hash/concept=majeur")
+	assert.NoError(t, err)
+	err = testCI.makeRequestPost("hash/concept=majeur", "")
+	assert.NoError(t, err)
+	req2 = testCI.outstr
+	assert.NotEqual(t, req1, req2)
 }
 
 /*
@@ -87,6 +97,10 @@ func TestMain(m *testing.M) {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
+
+	couchdb.EnsureDBExist(prefixer.TestConceptIndexorPrefixer, "io.cozy.hashconcept")
+	couchdb.DeleteDB(prefixer.TestConceptIndexorPrefixer, "io.cozy.hashconcept")
+	couchdb.EnsureDBExist(prefixer.TestConceptIndexorPrefixer, "io.cozy.hashconcept")
 
 	prefixerCI = prefixer.TestConceptIndexorPrefixer
 
