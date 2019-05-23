@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/echo"
 )
@@ -31,14 +32,19 @@ var (
 	ErrInvalidID = errors.New("Session cookie has wrong ID")
 )
 
+// DocTypeVersion represents the doctype version. Each time this document
+// structure is modified, update this value
+const DocTypeVersion = "1"
+
 // A Session is an instance opened in a browser
 type Session struct {
-	Instance  *instance.Instance `json:"-"`
-	DocID     string             `json:"_id,omitempty"`
-	DocRev    string             `json:"_rev,omitempty"`
-	CreatedAt time.Time          `json:"created_at"`
-	LastSeen  time.Time          `json:"last_seen"`
-	LongRun   bool               `json:"long_run"`
+	Instance  *instance.Instance     `json:"-"`
+	DocID     string                 `json:"_id,omitempty"`
+	DocRev    string                 `json:"_rev,omitempty"`
+	CreatedAt time.Time              `json:"created_at"`
+	LastSeen  time.Time              `json:"last_seen"`
+	LongRun   bool                   `json:"long_run"`
+	Metadata  *metadata.CozyMetaData `json:"cozyMetadata,omitempty"`
 }
 
 // DocType implements couchdb.Doc
@@ -63,6 +69,10 @@ func (s *Session) Clone() couchdb.Doc {
 		tmp := *s.Instance
 		cloned.Instance = &tmp
 	}
+	if cloned.Metadata != nil {
+		tmp := *s.Metadata
+		cloned.Metadata = &tmp
+	}
 	return &cloned
 }
 
@@ -76,12 +86,15 @@ func (s *Session) OlderThan(t time.Duration) bool {
 
 // New creates a session in couchdb for the given instance
 func New(i *instance.Instance, longRun bool) (*Session, error) {
+	md := metadata.New()
+	md.DocTypeVersion = DocTypeVersion
 	now := time.Now()
 	s := &Session{
 		Instance:  i,
 		LastSeen:  now,
 		CreatedAt: now,
 		LongRun:   longRun,
+		Metadata:  md,
 	}
 	if err := couchdb.CreateDoc(i, s); err != nil {
 		return nil, err
