@@ -236,6 +236,9 @@ application has been installed or failed.
 | --------- | ----------------------------------------------------------- |
 | Source    | URL from where the app can be downloaded (only for install) |
 
+The Source parameter is optional: by default, the stable channel of the
+registry will be used.
+
 #### Request
 
 ```http

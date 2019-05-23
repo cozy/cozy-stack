@@ -338,9 +338,6 @@ func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v
 				return ErrForbidden
 			}
 		}
-		if sourceURL == "" {
-			return ErrMissingSource
-		}
 		// The store can only install apps and konnectors from the registry
 		if !strings.HasPrefix(sourceURL, "registry://") {
 			return ErrForbidden
