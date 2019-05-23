@@ -1,36 +1,41 @@
 package dispers
 
-/*
-This script is defining metadata's interface. It will be use to define metadata for each api/treatment.
-Metadata are written on the confuctor's database. The querier can read those metadata to know his training's state
-*/
-type Metadata interface {
-    Name()        string
-    Date()        string
-    Outcome()     bool
-    Description() string
+import (
+	"time"
+)
+
+// Metadata are written on the confuctor's database. The querier can read those Metadata to know his training's state
+type Metadata struct {
+	Start       time.Time
+	Time        string   `json:"date,omitempty"`
+	Host        string   `json:"host,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Outcome     bool     `json:"outcome,omitempty"`
+	Error       string   `json:"error,omitempty"`
+	Name        string   `json:"name,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Duration    string   `json:"duration,omitempty"`
 }
 
-type metadata struct {
-    date        string   `json:"date,omitempty"`
-    description string   `json:"description,omitempty"`
-    name        string   `json:"name,omitempty"`
-    outcome     bool     `json:"outcome,omitempty"`
-}
-
-func NewMetadata(name string, description string, date string, outcome bool) Metadata {
-	return &metadata{
-		date: date,
-    description: description,
-    outcome: outcome,
-    name: name,
+// NewMetadata returns a new Metadata object
+func NewMetadata(host string, name string, description string, tags []string) *Metadata {
+	now := time.Now()
+	return &Metadata{
+		Time:        now.String(),
+		Start:       now,
+		Description: description,
+		Name:        name,
+		Tags:        tags,
 	}
 }
 
-func (m *metadata) Date() string { return m.date }
-
-func (m *metadata) Description() string { return m.description }
-
-func (m *metadata) Outcome() bool { return m.outcome }
-
-func (m *metadata) Name() string { return m.name }
+// Close finish writting Metadata
+func (m *Metadata) Close(err error) error {
+	now := time.Now()
+	m.Duration = (now.Sub(m.Start)).String()
+	m.Outcome = (err == nil)
+	if err != nil {
+		m.Error = err.Error()
+	}
+	return nil
+}

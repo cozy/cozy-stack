@@ -301,7 +301,7 @@ This object use the major part of what have been created before in this script
 func NewConductor(domain, prefix string, mytraining Training) (*Conductor, error) {
 
 	mytraining.State = "Training"
-	querydoc := newQueryDoc(mytraining, dispers.NewMetadata("creation", "creation du training", "aujourd'hui", true))
+	querydoc := newQueryDoc(mytraining, dispers.NewMetadata("creation", "creation du training", true))
 
 	if err := couchdb.CreateDoc(prefixer.ConductorPrefixer, querydoc); err != nil {
 		return &Conductor{}, err
