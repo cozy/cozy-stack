@@ -167,6 +167,30 @@ func deleteSalt(hashedConcept string) error {
 }
 
 /*
+GetAllConcepts return the list of every concept which has salt saved in CI database
+*/
+func GetAllConcepts() ([]string, error) {
+
+	var out []ConceptDoc
+	req := &couchdb.FindRequest{Selector: mango.Not(mango.Equal("concept", ""))}
+	err := couchdb.FindDocs(prefixerCI, "io.cozy.hashconcept", req, &out)
+	if err != nil {
+		return []string{}, err
+	}
+
+	if len(out) == 0 {
+		return []string{}, errors.New("No concept in database")
+	}
+
+	listOfConcepts := make([]string, len(out))
+	for index, element := range out {
+		listOfConcepts[index] = element.Concept
+	}
+
+	return listOfConcepts, nil
+}
+
+/*
 DeleteConcept is used to delete a salt in ConceptIndexor Database. It has to be
 used to update a salt.
 */

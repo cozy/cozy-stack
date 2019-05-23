@@ -112,6 +112,15 @@ CONCEPT INDEXOR'S ROUTES : those functions are used on route ./dispers/conceptin
 *
 *
 */
+
+func allConcepts(c echo.Context) error {
+	list, err := enclave.GetAllConcepts()
+	return c.JSON(http.StatusCreated, echo.Map{
+		"ok":       err == nil,
+		"concepts": list,
+	})
+}
+
 func hashConcept(c echo.Context) error {
 	concept := c.Param("concept")
 	hash, err := enclave.HashMeThat(concept)
@@ -243,7 +252,7 @@ func Routes(router *echo.Group) {
 	//router.POST("/conductor/subscribe/id=:domain", subscribe)
 	//router.DELETE("/conductor/subscribe/id=:domain", unsubscribe)
 
-	//router.GET("/conceptindexor/_all_concepts", allConcepts)
+	router.GET("/conceptindexor/_all_concepts", allConcepts)
 	router.POST("/conceptindexor/hash/concept=:concept", hashConcept)     // used to hash a concept
 	router.DELETE("/conceptindexor/hash/concept=:concept", deleteConcept) // used to delete a salt in the database
 
