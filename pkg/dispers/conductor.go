@@ -151,7 +151,42 @@ func (a *Actor) makeRequestPost(job string, data string) error {
 
 // makeRequestPatch
 
-// makeRequestDelete
+func (a *Actor) makeRequestDelete(job string) error {
+	// Create client
+	client := &http.Client{}
+
+	// Create url
+	url := ""
+	if job == "" {
+		url = strings.Join([]string{"http:/", a.host, "dispers", a.api}, "/")
+	} else {
+		url = strings.Join([]string{"http:/", a.host, "dispers", a.api, job}, "/")
+	}
+
+	// Create request
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+
+	// Fetch Request
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Read Response Body
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	a.outstr = string(respBody)
+	json.NewDecoder(bytes.NewReader(respBody)).Decode(&a.out)
+	return nil
+
+}
 
 /*
 The script is going to retrieve informations in the querier's db and follows
