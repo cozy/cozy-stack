@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
@@ -135,6 +136,28 @@ func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
 		return s.indexer.CreateNamedFileDoc(doc)
 	}
 
+	// If the VFS creates the file by omiting the fake first revision with
+	// trashed=true, it is easy: we can insert the doc as is, and trigger the
+	// realtime event.
+	if !doc.Trashed {
+		// Ensure that fullpath is filled because it's used in realtime/@events
+		if _, err := doc.Path(s); err != nil {
+			logger.WithNamespace("sharing-indexer").
+				Errorf("Cannot compute fullpath for %#v: %s", doc, err)
+			return err
+		}
+		if err := s.bulkForceUpdateDoc(doc); err != nil {
+			return err
+		}
+		couchdb.RTEvent(s.db, realtime.EventCreate, doc, nil)
+		return nil
+	}
+
+	// But if the VFS create a first fake revision, it will also creates
+	// another revision after that to clear the trashed attribute when the
+	// upload will complete. It means using 2 revision numbers. So, we have to
+	// stash the target revision during the first write to keep it for the
+	// second write.
 	if len(s.bulkRevs.Revisions.IDs) == 1 {
 		s.CreateBogusPrevRev()
 	}

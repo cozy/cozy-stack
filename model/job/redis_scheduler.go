@@ -146,7 +146,7 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 						key, err.Error())
 					continue
 				}
-				if eventMatchPermission(event, &rule) {
+				if eventMatchRule(event, &rule) {
 					found = true
 					break
 				}

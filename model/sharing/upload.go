@@ -459,7 +459,7 @@ func (s *Sharing) updateFileMetadata(inst *instance.Instance, target *FileDocWit
 func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.ReadCloser) error {
 	defer body.Close()
 	target, err := getStore().Get(inst, key)
-	inst.Logger().WithField("nspace", "upload").Debugf("HandleFileUpload %#v", target)
+	inst.Logger().WithField("nspace", "upload").Debugf("HandleFileUpload %#v %#v", target.FileDoc, target.Revisions)
 	if err != nil {
 		return err
 	}
