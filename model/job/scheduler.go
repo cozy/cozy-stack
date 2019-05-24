@@ -160,6 +160,10 @@ func (t *TriggerInfos) Clone() couchdb.Doc {
 		tmp := *t.CurrentState
 		cloned.CurrentState = &tmp
 	}
+	if t.Metadata != nil {
+		tmp := *t.Metadata
+		cloned.Metadata = &tmp
+	}
 	return &cloned
 }
 
