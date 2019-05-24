@@ -115,7 +115,7 @@ func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int
 	}
 	// Adding metadata
 	md := metadata.New()
-	md.DocTypeVersion = job.DocTypeVersion
+	md.DocTypeVersion = job.DocTypeVersionTrigger
 	t, err := job.NewTrigger(inst, job.TriggerInfos{
 		Type:       "@in",
 		WorkerType: worker,

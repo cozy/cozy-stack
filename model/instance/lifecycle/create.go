@@ -270,7 +270,7 @@ func buildSettings(opts *Options) *couchdb.JSONDoc {
 func Triggers(db prefixer.Prefixer) []job.TriggerInfos {
 	// Init metadata
 	md := metadata.New()
-	md.DocTypeVersion = job.DocTypeVersion
+	md.DocTypeVersion = job.DocTypeVersionTrigger
 
 	// Create/update/remove thumbnails when an image is created/updated/removed
 	return []job.TriggerInfos{

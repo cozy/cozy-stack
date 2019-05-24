@@ -151,7 +151,7 @@ func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
 		}
 		// Adding metadata
 		md := metadata.New()
-		md.DocTypeVersion = job.DocTypeVersion
+		md.DocTypeVersion = job.DocTypeVersionTrigger
 		t, err := job.NewTrigger(inst, job.TriggerInfos{
 			Type:       "@event",
 			WorkerType: "share-track",
@@ -182,7 +182,7 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 	}
 	// Adding metadata
 	md := metadata.New()
-	md.DocTypeVersion = job.DocTypeVersion
+	md.DocTypeVersion = job.DocTypeVersionTrigger
 	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
 	t, err := job.NewTrigger(inst, job.TriggerInfos{
 		Domain:     inst.ContextualDomain(),
@@ -363,7 +363,7 @@ func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
 	}
 	// Adding metadata
 	md := metadata.New()
-	md.DocTypeVersion = job.DocTypeVersion
+	md.DocTypeVersion = job.DocTypeVersionTrigger
 	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
 	t, err := job.NewTrigger(inst, job.TriggerInfos{
 		Domain:     inst.ContextualDomain(),

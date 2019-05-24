@@ -13,9 +13,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
-// DocTypeVersion represents the doctype version. Each time this document
+// DocTypeVersionTrigger represents the doctype version. Each time this document
 // structure is modified, update this value
-const DocTypeVersion = "1"
+const DocTypeVersionTrigger = "1"
 
 type (
 	// Trigger interface is used to represent a trigger.
@@ -108,7 +108,7 @@ func NewTrigger(db prefixer.Prefixer, infos TriggerInfos, data interface{}) (Tri
 
 	// Adding metadata
 	md := metadata.New()
-	md.DocTypeVersion = DocTypeVersion
+	md.DocTypeVersion = DocTypeVersionTrigger
 	if infos.Metadata == nil {
 		infos.Metadata = md
 	} else {

@@ -375,7 +375,7 @@ func cleanOrphanAccounts(c echo.Context) error {
 			args = fmt.Sprintf("0 %d %d * * %d", m, h, d)
 		}
 
-		md, err := metadata.NewWithApp(acc.AccountType, "", job.DocTypeVersion)
+		md, err := metadata.NewWithApp(acc.AccountType, "", job.DocTypeVersionTrigger)
 		if err != nil {
 			return err
 		}

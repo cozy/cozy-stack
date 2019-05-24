@@ -400,7 +400,7 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 			"name": service.name,
 		}
 		// Add metadata
-		md, err := metadata.NewWithApp(slug, "", job.DocTypeVersion)
+		md, err := metadata.NewWithApp(slug, "", job.DocTypeVersionTrigger)
 		if err != nil {
 			return err
 		}
