@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/metadata"
+
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
@@ -397,11 +399,17 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 			"slug": slug,
 			"name": service.name,
 		}
+		// Add metadata
+		md, err := metadata.NewWithApp(slug, "", job.DocTypeVersion)
+		if err != nil {
+			return err
+		}
 		trigger, err := job.NewTrigger(db, job.TriggerInfos{
 			Type:       triggerType,
 			WorkerType: "service",
 			Debounce:   service.Debounce,
 			Arguments:  triggerArgs,
+			Metadata:   md,
 		}, msg)
 		if err != nil {
 			return err
