@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/metadata"
-
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
@@ -19,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
