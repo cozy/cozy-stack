@@ -123,6 +123,9 @@ func allConcepts(c echo.Context) error {
 func hashConcept(c echo.Context) error {
 	concept := c.Param("concept")
 	hash, err := enclave.HashMeThat(concept)
+
+	// TODO: Force use of OutputCI
+
 	return c.JSON(http.StatusCreated, echo.Map{
 		"ok":   err == nil,
 		"hash": hash,

@@ -99,7 +99,7 @@ type Actor struct {
 	host    string
 	api     string
 	outstr  string
-	out     map[string]interface{}
+	out     []byte
 	outmeta string
 }
 
@@ -128,8 +128,8 @@ func (a *Actor) makeRequestGet(job string) (dispers.Metadata, error) {
 	}
 
 	a.outstr = string(body)
+	a.out = body
 	meta.Close(a.outstr, err)
-	json.NewDecoder(bytes.NewReader(body)).Decode(&a.out)
 	return meta, nil
 
 }
@@ -153,8 +153,8 @@ func (a *Actor) makeRequestPost(job string, data string) (dispers.Metadata, erro
 	}
 
 	a.outstr = string(body)
+	a.out = body
 	meta.Close(a.outstr, err)
-	json.NewDecoder(bytes.NewReader(body)).Decode(&a.out)
 	return meta, nil
 
 }
@@ -198,10 +198,9 @@ func (a *Actor) makeRequestDelete(job string) (dispers.Metadata, error) {
 	}
 
 	a.outstr = string(respBody)
+	a.out = respBody
 	meta.Close(a.outstr, err)
-	json.NewDecoder(bytes.NewReader(respBody)).Decode(&a.out)
 	return meta, nil
-
 }
 
 /*
@@ -366,8 +365,10 @@ func (c *Conductor) DecrypteConcept(encryptedConcepts []string) ([]string, []dis
 			meta.Close("", err)
 			return []string{}, []dispers.Metadata{metaReq, meta}, err
 		}
-		// TODO: Unmarshal testCI.out
-		hashedConcepts[index] = "2" // TODO: replace "2" by testCI.out.hash
+
+		var outputci dispers.OutputCI
+		json.Unmarshal(c.conceptindexors[0].out, &outputci)
+		hashedConcepts[index] = outputci.Hash
 	}
 
 	meta.Close(strings.Join(hashedConcepts, " - "), nil)
