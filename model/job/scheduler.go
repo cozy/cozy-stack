@@ -8,9 +8,14 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
+
+// DocTypeVersion represents the doctype version. Each time this document
+// structure is modified, update this value
+const DocTypeVersion = "1"
 
 type (
 	// Trigger interface is used to represent a trigger.
@@ -43,17 +48,18 @@ type (
 
 	// TriggerInfos is a struct containing all the options of a trigger.
 	TriggerInfos struct {
-		TID          string        `json:"_id,omitempty"`
-		TRev         string        `json:"_rev,omitempty"`
-		Domain       string        `json:"domain"`
-		Prefix       string        `json:"prefix,omitempty"`
-		Type         string        `json:"type"`
-		WorkerType   string        `json:"worker"`
-		Arguments    string        `json:"arguments"`
-		Debounce     string        `json:"debounce"`
-		Options      *JobOptions   `json:"options"`
-		Message      Message       `json:"message"`
-		CurrentState *TriggerState `json:"current_state,omitempty"`
+		TID          string                 `json:"_id,omitempty"`
+		TRev         string                 `json:"_rev,omitempty"`
+		Domain       string                 `json:"domain"`
+		Prefix       string                 `json:"prefix,omitempty"`
+		Type         string                 `json:"type"`
+		WorkerType   string                 `json:"worker"`
+		Arguments    string                 `json:"arguments"`
+		Debounce     string                 `json:"debounce"`
+		Options      *JobOptions            `json:"options"`
+		Message      Message                `json:"message"`
+		CurrentState *TriggerState          `json:"current_state,omitempty"`
+		Metadata     *metadata.CozyMetaData `json:"cozyMetadata,omitempty"`
 	}
 
 	// TriggerState represent the current state of the trigger
@@ -99,6 +105,16 @@ func NewTrigger(db prefixer.Prefixer, infos TriggerInfos, data interface{}) (Tri
 	infos.Message = msg
 	infos.Prefix = db.DBPrefix()
 	infos.Domain = db.DomainName()
+
+	// Adding metadata
+	md := metadata.New()
+	md.DocTypeVersion = DocTypeVersion
+	if infos.Metadata == nil {
+		infos.Metadata = md
+	} else {
+		infos.Metadata.EnsureCreatedFields(md)
+	}
+
 	return fromTriggerInfos(&infos)
 }
 
