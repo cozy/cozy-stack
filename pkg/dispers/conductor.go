@@ -103,7 +103,7 @@ type Actor struct {
 	outmeta string
 }
 
-func (a *Actor) makeRequestGet(job string) error {
+func (a *Actor) makeRequestGet(job string) (dispers.Metadata, error) {
 
 	url := ""
 
@@ -113,45 +113,55 @@ func (a *Actor) makeRequestGet(job string) error {
 		url = strings.Join([]string{"http:/", a.host, "dispers", a.api, job}, "/")
 	}
 
+	meta := dispers.NewMetadata(a.host, "HTTP Get", url, []string{"HTTP", "CI"})
+
 	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		meta.Close("", err)
+		return meta, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		meta.Close("", err)
+		return meta, err
 	}
 
 	a.outstr = string(body)
+	meta.Close(a.outstr, err)
 	json.NewDecoder(bytes.NewReader(body)).Decode(&a.out)
-	return nil
+	return meta, nil
 
 }
 
-func (a *Actor) makeRequestPost(job string, data string) error {
+func (a *Actor) makeRequestPost(job string, data string) (dispers.Metadata, error) {
 
 	url := strings.Join([]string{"http://", a.host, "/dispers/", a.api, "/", job}, "")
 
+	meta := dispers.NewMetadata(a.host, "HTTP Post", url, []string{"HTTP", "CI"})
+
 	resp, err := http.Post(url, "application/json", bytes.NewBufferString(data))
 	if err != nil {
-		return err
+		meta.Close("", err)
+		return meta, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		meta.Close("", err)
+		return meta, err
 	}
 
 	a.outstr = string(body)
+	meta.Close(a.outstr, err)
 	json.NewDecoder(bytes.NewReader(body)).Decode(&a.out)
-	return nil
+	return meta, nil
 
 }
 
 // makeRequestPatch
 
-func (a *Actor) makeRequestDelete(job string) error {
+func (a *Actor) makeRequestDelete(job string) (dispers.Metadata, error) {
 	// Create client
 	client := &http.Client{}
 
@@ -163,28 +173,34 @@ func (a *Actor) makeRequestDelete(job string) error {
 		url = strings.Join([]string{"http:/", a.host, "dispers", a.api, job}, "/")
 	}
 
+	meta := dispers.NewMetadata(a.host, "HTTP Post", url, []string{"HTTP", "CI"})
+
 	// Create request
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
-		return err
+		meta.Close("", err)
+		return meta, err
 	}
 
 	// Fetch Request
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		meta.Close("", err)
+		return meta, err
 	}
 	defer resp.Body.Close()
 
 	// Read Response Body
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		meta.Close("", err)
+		return meta, err
 	}
 
 	a.outstr = string(respBody)
+	meta.Close(a.outstr, err)
 	json.NewDecoder(bytes.NewReader(respBody)).Decode(&a.out)
-	return nil
+	return meta, nil
 
 }
 
@@ -213,10 +229,10 @@ Every training has metadata saved in the Conductor's database. Thanks to that,
 the querier can retrieve the learning's state.
 */
 type queryDoc struct {
-	QueryID    string           `json:"_id,omitempty"`
-	QueryRev   string           `json:"_rev,omitempty"`
-	MyTraining Training         `json:"training,omitempty"`
-	MyMetada   dispers.Metadata `json:"metadata,omitempty"` // A changer pour différencier chaque acteur
+	QueryID    string             `json:"_id,omitempty"`
+	QueryRev   string             `json:"_rev,omitempty"`
+	MyTraining Training           `json:"training,omitempty"`
+	MyMetada   []dispers.Metadata `json:"metadata,omitempty"` // A changer pour différencier chaque acteur
 }
 
 func (t *queryDoc) ID() string {
@@ -247,12 +263,14 @@ func (t *queryDoc) SetRev(rev string) {
 /*
 NewQueryDoc is used to initiate a QueryDoc
 */
-func newQueryDoc(MyTraining Training, MyMetada dispers.Metadata) *queryDoc {
+func newQueryDoc(MyTraining Training) *queryDoc {
+
+	// TODO: Créer un métadata pour indiquer la création du training
+
 	return &queryDoc{
 		QueryID:    "",
 		QueryRev:   "",
 		MyTraining: MyTraining,
-		MyMetada:   MyMetada,
 	}
 }
 
@@ -300,8 +318,14 @@ This object use the major part of what have been created before in this script
 */
 func NewConductor(domain, prefix string, mytraining Training) (*Conductor, error) {
 
+	// TODO: Initiate cleanly actors from a list of hosts
+	firstCI := Actor{
+		host: "localhost:8080",
+		api:  "conceptindexor",
+	}
+
 	mytraining.State = "Training"
-	querydoc := newQueryDoc(mytraining, dispers.NewMetadata("creation", "creation du training", true))
+	querydoc := newQueryDoc(mytraining)
 
 	if err := couchdb.CreateDoc(prefixer.ConductorPrefixer, querydoc); err != nil {
 		return &Conductor{}, err
@@ -319,6 +343,7 @@ func NewConductor(domain, prefix string, mytraining Training) (*Conductor, error
 			QueryID:  docID,
 			QueryRev: docRev,
 		},
+		conceptindexors: []Actor{firstCI},
 	}
 
 	return retour, nil
@@ -327,22 +352,22 @@ func NewConductor(domain, prefix string, mytraining Training) (*Conductor, error
 // DecrypteConcept returns a list of hashed concepts from a list of encrypted concepts
 func (c *Conductor) DecrypteConcept(encryptedConcepts []string) ([]string, []dispers.Metadata, error) {
 
+	// TODO: Find a way to retrieve Conductor's host
+	meta := dispers.NewMetadata("this.host", "Decrypt Concept", strings.Join(encryptedConcepts, " - "), []string{"Conductor", "CI"})
+
 	hashedConcepts := make([]string, len(encryptedConcepts))
 	for index, element := range encryptedConcepts {
-		testCI := Actor{
-			host: "localhost:8080",
-			api:  "conceptindexor",
-		}
-		err := testCI.makeRequestPost(strings.Join([]string{"hash/concept=", element}, ""), "")
+		metaReq, err := c.conceptindexors[0].makeRequestPost(strings.Join([]string{"hash/concept=", element}, ""), "")
 		if err != nil {
-			// TODO: Inject error in Metadata
-			return []string{}, []dispers.Metadata{}, err
+			meta.Close("", err)
+			return []string{}, []dispers.Metadata{metaReq, meta}, err
 		}
 		// TODO: Unmarshal testCI.out
 		hashedConcepts[index] = "2" // TODO: replace "2" by testCI.out.hash
 	}
 
-	return hashedConcepts, []dispers.Metadata{}, nil
+	meta.Close(strings.Join(hashedConcepts, " - "), nil)
+	return hashedConcepts, []dispers.Metadata{meta}, nil // TODO: Find a way to gather every metadata (list of Pointers ?)
 }
 
 // Works with TF's API

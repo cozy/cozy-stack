@@ -22,7 +22,7 @@ func TestDecrypteConcept(t *testing.T) {
 	}
 
 	// Test the consistency
-	err := testCI.makeRequestPost("hash/concept=majeur", "")
+	_, err := testCI.makeRequestPost("hash/concept=majeur", "")
 	req1 := testCI.outstr
 	testCI.makeRequestPost("hash/concept=majeur", "")
 	req2 := testCI.outstr
@@ -30,9 +30,9 @@ func TestDecrypteConcept(t *testing.T) {
 	assert.Equal(t, req1, req2)
 
 	// Test that delete route works and that hash is not deterministic
-	err = testCI.makeRequestDelete("hash/concept=majeur")
+	_, err = testCI.makeRequestDelete("hash/concept=majeur")
 	assert.NoError(t, err)
-	err = testCI.makeRequestPost("hash/concept=majeur", "")
+	_, err = testCI.makeRequestPost("hash/concept=majeur", "")
 	assert.NoError(t, err)
 	req2 = testCI.outstr
 	assert.NotEqual(t, req1, req2)

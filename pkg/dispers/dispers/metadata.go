@@ -14,13 +14,14 @@ type Metadata struct {
 	Error       string   `json:"error,omitempty"`
 	Name        string   `json:"name,omitempty"`
 	Description string   `json:"description,omitempty"`
+	Output      string   `json:"output,omitempty"`
 	Duration    string   `json:"duration,omitempty"`
 }
 
 // NewMetadata returns a new Metadata object
-func NewMetadata(host string, name string, description string, tags []string) *Metadata {
+func NewMetadata(host string, name string, description string, tags []string) Metadata {
 	now := time.Now()
-	return &Metadata{
+	return Metadata{
 		Time:        now.String(),
 		Start:       now,
 		Description: description,
@@ -30,10 +31,11 @@ func NewMetadata(host string, name string, description string, tags []string) *M
 }
 
 // Close finish writting Metadata
-func (m *Metadata) Close(err error) error {
+func (m *Metadata) Close(msg string, err error) error {
 	now := time.Now()
 	m.Duration = (now.Sub(m.Start)).String()
 	m.Outcome = (err == nil)
+	m.Output = msg
 	if err != nil {
 		m.Error = err.Error()
 	}
