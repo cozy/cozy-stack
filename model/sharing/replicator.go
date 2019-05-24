@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -112,10 +113,14 @@ func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int
 			Warnf("Error on retry to %s: %s", worker, err)
 		return
 	}
+	// Adding metadata
+	md := metadata.New()
+	md.DocTypeVersion = job.DocTypeVersion
 	t, err := job.NewTrigger(inst, job.TriggerInfos{
 		Type:       "@in",
 		WorkerType: worker,
 		Arguments:  backoff.String(),
+		Metadata:   md,
 	}, msg)
 	if err != nil {
 		inst.Logger().WithField("nspace", "replicator").
