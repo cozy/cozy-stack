@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -55,13 +56,14 @@ type (
 		s *job.TriggerState
 	}
 	apiTriggerRequest struct {
-		Type            string          `json:"type"`
-		Arguments       string          `json:"arguments"`
-		WorkerType      string          `json:"worker"`
-		Message         json.RawMessage `json:"message"`
-		WorkerArguments json.RawMessage `json:"worker_arguments"`
-		Debounce        string          `json:"debounce"`
-		Options         *job.JobOptions `json:"options"`
+		Type            string                 `json:"type"`
+		Arguments       string                 `json:"arguments"`
+		WorkerType      string                 `json:"worker"`
+		Message         json.RawMessage        `json:"message"`
+		WorkerArguments json.RawMessage        `json:"worker_arguments"`
+		Debounce        string                 `json:"debounce"`
+		Options         *job.JobOptions        `json:"options"`
+		Metadata        *metadata.CozyMetaData `json:"cozyMetadata"`
 	}
 )
 
@@ -199,6 +201,14 @@ func newTrigger(c echo.Context) error {
 		}
 	}
 
+	// Handle metadata
+	md := metadata.New()
+	if req.Metadata == nil {
+		req.Metadata = md
+	} else {
+		req.Metadata.EnsureCreatedFields(md)
+	}
+
 	msg := req.Message
 	if req.Message == nil || len(req.Message) == 0 {
 		msg = req.WorkerArguments
@@ -210,6 +220,7 @@ func newTrigger(c echo.Context) error {
 		Arguments:  req.Arguments,
 		Debounce:   req.Debounce,
 		Options:    req.Options,
+		Metadata:   req.Metadata,
 	}, msg)
 	if err != nil {
 		return wrapJobsError(err)
