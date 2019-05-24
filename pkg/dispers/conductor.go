@@ -274,6 +274,8 @@ func newQueryDoc(MyTraining Training) *queryDoc {
 	}
 }
 
+// GetTrainingState can be called by the querier to have some information about
+// the process. GetTrainingState send information from the Conductor's database
 func GetTrainingState(id string) echo.Map {
 	couchdb.EnsureDBExist(prefixer.ConductorPrefixer, "io.cozy.ml")
 	fetched := &queryDoc{}
@@ -299,9 +301,10 @@ type aggregationLayer struct {
 }
 */
 
+// Conductor collects every actors playing a part to the query
 type Conductor struct {
-	Doc                queryDoc // Doc in the querier's database where are saved parameters, metadata and results
-	mPrefixer          prefixer.Prefixer
+	Doc                queryDoc          // Doc in the querier's database where are saved parameters, metadata and results
+	mPrefixer          prefixer.Prefixer // Querier prefixer
 	targetfinders      []Actor
 	conceptindexors    []Actor
 	datas              []Actor
@@ -355,6 +358,7 @@ func (c *Conductor) DecrypteConcept(encryptedConcepts []string) ([]string, []dis
 	// TODO: Find a way to retrieve Conductor's host
 	meta := dispers.NewMetadata("this.host", "Decrypt Concept", strings.Join(encryptedConcepts, " - "), []string{"Conductor", "CI"})
 
+	// Call API-CI for each concept
 	hashedConcepts := make([]string, len(encryptedConcepts))
 	for index, element := range encryptedConcepts {
 		metaReq, err := c.conceptindexors[0].makeRequestPost(strings.Join([]string{"hash/concept=", element}, ""), "")
@@ -370,31 +374,31 @@ func (c *Conductor) DecrypteConcept(encryptedConcepts []string) ([]string, []dis
 	return hashedConcepts, []dispers.Metadata{meta}, nil // TODO: Find a way to gather every metadata (list of Pointers ?)
 }
 
-// Works with TF's API
-func (c *Conductor) GetTargets() []dispers.Metadata {
-	return []dispers.Metadata{}
+// GetTargets works with TF's API
+func (c *Conductor) GetTargets(encryptedLists []string) (string, []dispers.Metadata) {
+	return "", []dispers.Metadata{}
 }
 
-// Works with T's API
+// GetTokens works with T's API
 func (c *Conductor) GetTokens() []dispers.Metadata {
 	return []dispers.Metadata{}
 }
 
-// Works with stacks
+// GetData works with stacks
 func (c *Conductor) GetData() (string, []dispers.Metadata) {
 	s := ""
 	return s, []dispers.Metadata{}
 }
 
-// Works with DA's API
+// Aggregate works with DA's API
 func (c *Conductor) Aggregate() []dispers.Metadata {
 	return []dispers.Metadata{}
 }
 
-// This method is used to add a metadata to the Query Doc so that the querier is able to know the state of his training
+// UpdateDoc is used to add a metadata to the Query Doc so that the querier is able to know the state of his training
 func (c *Conductor) UpdateDoc(key string, metadatas []dispers.Metadata) error { return nil }
 
-// This method is the most general. This is the only one used in CMD and Web's files. It will use the 5 previous methods to work
+// Lead is the most general method. This is the only one used in CMD and Web's files. It will use the 5 previous methods to work
 func (c *Conductor) Lead() error {
 
 	tempMetadata := []dispers.Metadata{}
@@ -408,7 +412,10 @@ func (c *Conductor) Lead() error {
 		return err
 	}
 
-	tempMetadata = c.GetTargets()
+	// TODO: Retrieve encrypted Lists from hashed concepts
+	encryptedLists := []string{}
+
+	_, tempMetadata = c.GetTargets(encryptedLists)
 	c.UpdateDoc("meta-task-2-tf", tempMetadata)
 	if err != nil {
 		return err
@@ -428,6 +435,7 @@ func (c *Conductor) Lead() error {
 		return err
 	}
 
+	// TODO: Deal with Async Method
 	tempMetadata = c.Aggregate()
 	c.UpdateDoc("meta-task-5-da", tempMetadata)
 	if err != nil {
