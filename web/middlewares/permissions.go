@@ -343,7 +343,7 @@ func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v
 			return ErrForbidden
 		}
 	case permission.TypeOauth:
-		// If the context allow the app install from a permission, this
+		// If the context allows to install an app via a permission, this
 		// permission can also be used by mobile apps to install apps from the
 		// registry.
 		inst := GetInstance(c)
