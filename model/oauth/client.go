@@ -369,11 +369,12 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	c.ResponseTypes = []string{"code"}
 
 	// Adding Metadata
-	appSlug := c.SoftwareID
+	md := metadata.New()
 	if strings.HasPrefix(c.SoftwareID, "registry://") {
-		appSlug = strings.TrimPrefix(c.SoftwareID, "registry://")
+		md.CreatedByApp = strings.TrimPrefix(c.SoftwareID, "registry://")
 	}
-	md, _ := metadata.NewWithApp(appSlug, c.SoftwareVersion, DocTypeVersion)
+	md.CreatedByAppVersion = c.SoftwareVersion
+	md.DocTypeVersion = DocTypeVersion
 	c.Metadata = md
 
 	if err = couchdb.CreateDoc(i, c); err != nil {
@@ -451,8 +452,8 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 		appSlug = strings.TrimPrefix(c.SoftwareID, "registry://")
 	}
 
-	md, _ := metadata.NewWithApp(appSlug, c.SoftwareVersion, DocTypeVersion)
 	if old.Metadata == nil {
+		md, _ := metadata.NewWithApp(appSlug, c.SoftwareVersion, DocTypeVersion)
 		c.Metadata = md
 	} else {
 		c.Metadata = old.Metadata
