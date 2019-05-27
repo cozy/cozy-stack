@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -113,7 +114,7 @@ func (a *Actor) makeRequestGet(job string) (dispers.Metadata, error) {
 		url = strings.Join([]string{"http:/", a.host, "dispers", a.role, job}, "/")
 	}
 
-	meta := dispers.NewMetadata(a.host, "HTTP Get", url, []string{"HTTP", "CI"})
+	meta := dispers.NewMetadata("HTTP Get", url, []string{"HTTP", "CI"})
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -138,7 +139,7 @@ func (a *Actor) makeRequestPost(job string, data string) (dispers.Metadata, erro
 
 	url := strings.Join([]string{"http://", a.host, "/dispers/", a.role, "/", job}, "")
 
-	meta := dispers.NewMetadata(a.host, "HTTP Post", url, []string{"HTTP", "CI"})
+	meta := dispers.NewMetadata("HTTP Post", url, []string{"HTTP", "CI"})
 
 	resp, err := http.Post(url, "application/json", bytes.NewBufferString(data))
 	if err != nil {
@@ -173,7 +174,7 @@ func (a *Actor) makeRequestDelete(job string) (dispers.Metadata, error) {
 		url = strings.Join([]string{"http:/", a.host, "dispers", a.role, job}, "/")
 	}
 
-	meta := dispers.NewMetadata(a.host, "HTTP Post", url, []string{"HTTP", "CI"})
+	meta := dispers.NewMetadata("HTTP Post", url, []string{"HTTP", "CI"})
 
 	// Create request
 	req, err := http.NewRequest("DELETE", url, nil)
@@ -211,26 +212,18 @@ manipulating.
 */
 
 /*
-Training structure pack every information for one training
-*/
-type Training struct {
-	AlgoML        string   `json:"algo,omitempty"`              // model trained
-	Dataset       string   `json:"dataset,omitempty"`           // dataset used
-	DispersAlgo   string   `json:"dispersalgo,omitempty"`       // typo from dispers-ml
-	FormulaTarget string   `json:"formulatarget,omitempty"`     // var from dataset to predict
-	FormulaPreds  []string `json:"formulapredictors,omitempty"` // predictors from dataset
-	State         string   `json:"state,omitempty"`
-	// parameters
-}
-
-/*
 Every training has metadata saved in the Conductor's database. Thanks to that,
 the querier can retrieve the learning's state.
 */
 type queryDoc struct {
-	QueryID    string   `json:"_id,omitempty"`
-	QueryRev   string   `json:"_rev,omitempty"`
-	MyTraining Training `json:"training,omitempty"`
+	QueryID                    string           `json:"_id,omitempty"`
+	QueryRev                   string           `json:"_rev,omitempty"`
+	Metadata                   dispers.Metadata `json:"metadata,omitempty"`
+	EncryptedLocalQuery        []byte           `json:"localquery,omitempty"`
+	EncryptedAggregateFunction []byte           `json:"aggrfunc,omitempty"`
+	EncryptedConcepts          []byte           `json:"concepts,omitempty"`
+	EncryptedTargetProfile     []byte           `json:"targetprofile,omitempty"`
+	Results                    []byte           `json:"results,omitempty"`
 }
 
 func (t *queryDoc) ID() string {
@@ -269,10 +262,15 @@ func GetTrainingState(id string) echo.Map {
 			"message": err}
 	}
 
-	// TODO: Get metadata from Conductor/io.cozy.metadata
+	metas, err := dispers.RetrieveMetadata(id)
+	if err != nil {
+		return echo.Map{"outcome": "error",
+			"message": err}
+	}
 
 	return echo.Map{"outcome": "ok",
-		"training": fetched.MyTraining,
+		"training": fetched.Results,
+		"metadata": metas,
 	}
 }
 
@@ -290,15 +288,18 @@ type aggregationLayer struct {
 
 // Conductor collects every actors playing a part to the query
 type Conductor struct {
-	Doc                queryDoc          // Doc in the querier's database where are saved parameters, metadata and results
-	mPrefixer          prefixer.Prefixer // Querier prefixer
-	targetfinders      []Actor
-	conceptindexors    []Actor
-	datas              []Actor
-	dataaggregators    []Actor
-	maindataaggregator []Actor
-	MyTraining         Training
-	/*stackAggr           []aggregationLayer*/
+	Doc                queryDoc
+	State              string
+	Targetfinders      []Actor
+	Conceptindexors    []Actor
+	Datas              []Actor
+	Dataaggregators    []Actor
+	Maindataaggregator []Actor
+	/*StackAggr           []aggregationLayer*/
+	LocalQuery        []byte
+	AggregateFunction []byte
+	Concepts          [][]byte
+	TargetProfile     []byte
 }
 
 /*
@@ -306,7 +307,7 @@ NewConductor returns a Conductor object with the specified values.
 This object will be created directly in the cmd shell / web role
 This object use the major part of what have been created before in this script
 */
-func NewConductor(domain, prefix string, mytraining Training) (*Conductor, error) {
+func NewConductor(domain, prefix string, encLocalQuery []byte, encAggregateFunction []byte, encConcepts [][]byte, encTargetProfile []byte) (*Conductor, error) {
 
 	// TODO: Initiate cleanly actors from a list of hosts
 	firstCI := Actor{
@@ -314,11 +315,9 @@ func NewConductor(domain, prefix string, mytraining Training) (*Conductor, error
 		role: "conceptindexor",
 	}
 
-	mytraining.State = "Training"
 	querydoc := queryDoc{
-		QueryID:    "",
-		QueryRev:   "",
-		MyTraining: mytraining,
+		QueryID:  "",
+		QueryRev: "",
 	}
 
 	if err := couchdb.CreateDoc(prefixer.ConductorPrefixer, &querydoc); err != nil {
@@ -337,22 +336,30 @@ func NewConductor(domain, prefix string, mytraining Training) (*Conductor, error
 			QueryID:  docID,
 			QueryRev: docRev,
 		},
-		conceptindexors: []Actor{firstCI},
+		Conceptindexors:   []Actor{firstCI},
+		State:             "Training",
+		LocalQuery:        encLocalQuery,
+		AggregateFunction: encAggregateFunction,
+		Concepts:          encConcepts,
+		TargetProfile:     encTargetProfile,
 	}
 
 	return retour, nil
 }
 
-// DecrypteConcept returns a list of hashed concepts from a list of encrypted concepts
-func (c *Conductor) DecrypteConcept(encryptedConcepts []string) ([]string, error) {
+func getListOfInstances(element string) ([]byte, error) {
+	return []byte(""), nil
+}
 
-	// TODO: Find a way to retrieve Conductor's host
-	meta := dispers.NewMetadata("this.host", "Decrypt Concept", strings.Join(encryptedConcepts, " - "), []string{"Conductor", "CI"})
+// DecrypteConcept returns a list of hashed concepts from a list of encrypted concepts
+func (c *Conductor) DecrypteConcept(encryptedConcepts [][]byte) ([]string, error) {
+
+	meta := dispers.NewMetadata("Decrypt Concept", strconv.Itoa(len(encryptedConcepts)), []string{"Conductor", "CI"})
 
 	// Call role-CI for each concept
 	hashedConcepts := make([]string, len(encryptedConcepts))
 	for index, element := range encryptedConcepts {
-		metaReq, err := c.conceptindexors[0].makeRequestPost(strings.Join([]string{"hash/concept=", element}, ""), "")
+		metaReq, err := c.Conceptindexors[0].makeRequestPost(strings.Join([]string{"hash/concept=", string(element)}, ""), "")
 		if err != nil {
 			meta.Close("", err)
 			meta.Push(c.Doc.QueryID)
@@ -361,7 +368,7 @@ func (c *Conductor) DecrypteConcept(encryptedConcepts []string) ([]string, error
 
 		metaReq.Push(c.Doc.QueryID)
 		var outputci dispers.OutputCI
-		json.Unmarshal(c.conceptindexors[0].out, &outputci)
+		json.Unmarshal(c.Conceptindexors[0].out, &outputci)
 		hashedConcepts[index] = outputci.Hash
 	}
 
@@ -371,12 +378,12 @@ func (c *Conductor) DecrypteConcept(encryptedConcepts []string) ([]string, error
 }
 
 // GetTargets works with TF's role
-func (c *Conductor) GetTargets(encryptedLists []string) (string, []dispers.Metadata) {
-	return "", []dispers.Metadata{}
+func (c *Conductor) GetTargets(encryptedLists [][]byte) ([]byte, error) {
+	return []byte(""), nil
 }
 
 // GetTokens works with T's role
-func (c *Conductor) GetTokens() []dispers.Metadata {
+func (c *Conductor) GetTokens(finalListe []byte) []dispers.Metadata {
 	return []dispers.Metadata{}
 }
 
@@ -397,22 +404,26 @@ func (c *Conductor) UpdateDoc(key string, metadatas []dispers.Metadata) error { 
 // Lead is the most general method. This is the only one used in CMD and Web's files. It will use the 5 previous methods to work
 func (c *Conductor) Lead() error {
 
-	encryptedConcepts := []string{}
-
-	_, err := c.DecrypteConcept(encryptedConcepts)
+	hashedConcepts, err := c.DecrypteConcept(c.Concepts)
 	if err != nil {
 		return err
 	}
 
-	// TODO: Retrieve encrypted Lists from hashed concepts
-	encryptedLists := []string{}
+	// Retrieve associated list for each concept
+	encryptedLists := make([][]byte, len(hashedConcepts))
+	for index, element := range hashedConcepts {
+		encryptedLists[index], err = getListOfInstances(element)
+		if err != nil {
+			return err
+		}
+	}
 
-	_, _ = c.GetTargets(encryptedLists)
+	finalList, err := c.GetTargets(encryptedLists)
 	if err != nil {
 		return err
 	}
 
-	_ = c.GetTokens()
+	_ = c.GetTokens(finalList)
 	if err != nil {
 		return err
 	}
