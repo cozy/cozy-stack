@@ -141,15 +141,15 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	for _, trigger := range ts {
 		switch trigger.Infos().TID {
 		case atID:
-			assert.True(t, tat.Infos().Metadata.CreatedAt.Equal(trigger.Infos().Metadata.CreatedAt))
-			assert.True(t, tat.Infos().Metadata.UpdatedAt.Equal(trigger.Infos().Metadata.UpdatedAt))
+			assert.Equal(t, tat.Infos().Metadata.CreatedAt, trigger.Infos().Metadata.CreatedAt)
+			assert.Equal(t, tat.Infos().Metadata.UpdatedAt, trigger.Infos().Metadata.UpdatedAt)
 
 			tat.Infos().Metadata = nil
 			trigger.Infos().Metadata = nil
 			assert.Equal(t, tat.Infos(), trigger.Infos())
 		case inID:
-			assert.True(t, tin.Infos().Metadata.CreatedAt.Equal(trigger.Infos().Metadata.CreatedAt))
-			assert.True(t, tin.Infos().Metadata.UpdatedAt.Equal(trigger.Infos().Metadata.UpdatedAt))
+			assert.Equal(t, tin.Infos().Metadata.CreatedAt, trigger.Infos().Metadata.CreatedAt)
+			assert.Equal(t, tin.Infos().Metadata.UpdatedAt, trigger.Infos().Metadata.UpdatedAt)
 
 			tin.Infos().Metadata = nil
 			trigger.Infos().Metadata = nil
