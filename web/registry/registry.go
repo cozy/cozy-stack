@@ -52,7 +52,11 @@ func proxyReq(auth authType, clientPermanentCache bool, proxyCacheControl regist
 
 func proxyListReq(c echo.Context) error {
 	i := middlewares.GetInstance(c)
-	if !middlewares.HasWebAppToken(c) {
+	pdoc, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	if pdoc.Type != permission.TypeWebapp && pdoc.Type != permission.TypeOauth {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	req := c.Request()
