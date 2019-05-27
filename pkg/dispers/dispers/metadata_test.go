@@ -14,21 +14,21 @@ import (
 func TestMetadata(t *testing.T) {
 
 	// Let's Create A Metadata
-	meta := NewMetadata("localhost", "test metadata 1", "Cozy-DISPERS", []string{"HTTP", "CI", "Cozy"})
+	meta := NewMetadata("test metadata 1", "Cozy-DISPERS", []string{"HTTP", "CI", "Cozy"})
 	err := meta.Close("We close this metadata", nil)
 	assert.NoError(t, err)
 	err = meta.Push("idOfThisTraining")
 	assert.NoError(t, err)
 
 	// Let's Create A Metadata Of Another Training
-	meta2 := NewMetadata("localhost", "thisIsNotAMetadata", "just a little message for nothing", []string{"paul", "françois"})
+	meta2 := NewMetadata("thisIsNotAMetadata", "just a little message for nothing", []string{"paul", "françois"})
 	err2 := meta2.Close("We close this metaata", nil)
 	assert.NoError(t, err2)
 	err2 = meta2.Push("AnotherTest")
 	assert.NoError(t, err2)
 
 	// Let's Create A Second Metadata For The First Training
-	meta3 := NewMetadata("localhost", "Hope It Will Not Crash", "Cozy-DISPERS", []string{"HTTP"})
+	meta3 := NewMetadata("Hope It Will Not Crash", "Cozy-DISPERS", []string{"HTTP"})
 	err2d2 := meta3.Close("This is another metadata for this training", nil)
 	assert.NoError(t, err2d2)
 	err2d2 = meta3.Push("idOfThisTraining")
