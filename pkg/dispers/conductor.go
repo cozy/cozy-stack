@@ -3,7 +3,7 @@ In this file, we lead a DISPERS-ML learning. We're going to choose the Actors in
 the process and talk with them. We're probabliy going to interact with several
 stacks and several servers. This script is also going to keep the querier (front
 -end) acknowledge of the process by updating repeatedly the doc in his Couchdb.
-A Conductor is instanciated when a user call the associated route of this API.
+A Conductor is instanciated when a user call the associated route of this role.
 */
 
 package enclave
@@ -97,7 +97,7 @@ and to communicate with it.
 */
 type Actor struct {
 	host    string
-	api     string
+	role    string
 	outstr  string
 	out     []byte
 	outmeta string
@@ -108,9 +108,9 @@ func (a *Actor) makeRequestGet(job string) (dispers.Metadata, error) {
 	url := ""
 
 	if job == "" {
-		url = strings.Join([]string{"http:/", a.host, "dispers", a.api}, "/")
+		url = strings.Join([]string{"http:/", a.host, "dispers", a.role}, "/")
 	} else {
-		url = strings.Join([]string{"http:/", a.host, "dispers", a.api, job}, "/")
+		url = strings.Join([]string{"http:/", a.host, "dispers", a.role, job}, "/")
 	}
 
 	meta := dispers.NewMetadata(a.host, "HTTP Get", url, []string{"HTTP", "CI"})
@@ -136,7 +136,7 @@ func (a *Actor) makeRequestGet(job string) (dispers.Metadata, error) {
 
 func (a *Actor) makeRequestPost(job string, data string) (dispers.Metadata, error) {
 
-	url := strings.Join([]string{"http://", a.host, "/dispers/", a.api, "/", job}, "")
+	url := strings.Join([]string{"http://", a.host, "/dispers/", a.role, "/", job}, "")
 
 	meta := dispers.NewMetadata(a.host, "HTTP Post", url, []string{"HTTP", "CI"})
 
@@ -168,9 +168,9 @@ func (a *Actor) makeRequestDelete(job string) (dispers.Metadata, error) {
 	// Create url
 	url := ""
 	if job == "" {
-		url = strings.Join([]string{"http:/", a.host, "dispers", a.api}, "/")
+		url = strings.Join([]string{"http:/", a.host, "dispers", a.role}, "/")
 	} else {
-		url = strings.Join([]string{"http:/", a.host, "dispers", a.api, job}, "/")
+		url = strings.Join([]string{"http:/", a.host, "dispers", a.role, job}, "/")
 	}
 
 	meta := dispers.NewMetadata(a.host, "HTTP Post", url, []string{"HTTP", "CI"})
@@ -205,7 +205,7 @@ func (a *Actor) makeRequestDelete(job string) (dispers.Metadata, error) {
 
 /*
 The script is going to retrieve informations in the querier's db and follows
-this informations to the different api. The most part of this informations is
+this informations to the different role. The most part of this informations is
 encrypted, the Conductor is not supposed to deduced anything from all what he is
 manipulating.
 */
@@ -303,7 +303,7 @@ type Conductor struct {
 
 /*
 NewConductor returns a Conductor object with the specified values.
-This object will be created directly in the cmd shell / web api
+This object will be created directly in the cmd shell / web role
 This object use the major part of what have been created before in this script
 */
 func NewConductor(domain, prefix string, mytraining Training) (*Conductor, error) {
@@ -311,7 +311,7 @@ func NewConductor(domain, prefix string, mytraining Training) (*Conductor, error
 	// TODO: Initiate cleanly actors from a list of hosts
 	firstCI := Actor{
 		host: "localhost:8080",
-		api:  "conceptindexor",
+		role: "conceptindexor",
 	}
 
 	mytraining.State = "Training"
@@ -349,7 +349,7 @@ func (c *Conductor) DecrypteConcept(encryptedConcepts []string) ([]string, error
 	// TODO: Find a way to retrieve Conductor's host
 	meta := dispers.NewMetadata("this.host", "Decrypt Concept", strings.Join(encryptedConcepts, " - "), []string{"Conductor", "CI"})
 
-	// Call API-CI for each concept
+	// Call role-CI for each concept
 	hashedConcepts := make([]string, len(encryptedConcepts))
 	for index, element := range encryptedConcepts {
 		metaReq, err := c.conceptindexors[0].makeRequestPost(strings.Join([]string{"hash/concept=", element}, ""), "")
@@ -370,12 +370,12 @@ func (c *Conductor) DecrypteConcept(encryptedConcepts []string) ([]string, error
 	return hashedConcepts, nil
 }
 
-// GetTargets works with TF's API
+// GetTargets works with TF's role
 func (c *Conductor) GetTargets(encryptedLists []string) (string, []dispers.Metadata) {
 	return "", []dispers.Metadata{}
 }
 
-// GetTokens works with T's API
+// GetTokens works with T's role
 func (c *Conductor) GetTokens() []dispers.Metadata {
 	return []dispers.Metadata{}
 }
@@ -386,7 +386,7 @@ func (c *Conductor) GetData() (string, error) {
 	return s, nil
 }
 
-// Aggregate works with DA's API
+// Aggregate works with DA's role
 func (c *Conductor) Aggregate() error {
 	return nil
 }

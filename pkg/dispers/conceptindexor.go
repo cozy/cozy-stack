@@ -19,7 +19,7 @@ const defaultP = 1
 const defaultDkLen = 32
 
 // salt length
-var defaultSalt = "CozyCloud"
+var defaultSalt = "CozyCloud" // TODO: Dangereux le sel fixe
 
 var prefixerCI = prefixer.ConceptIndexorPrefixer
 
@@ -220,6 +220,7 @@ func HashMeThat(encryptedConcept string) (string, error) {
 	concept := encryptedConcept
 
 	// Get salt with hash(concept)
+	// TODO: Create a salt from concept
 	hashedConcept, err := hash(concept, "")
 	if err != nil {
 		return "", err
