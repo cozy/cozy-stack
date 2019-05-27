@@ -7,16 +7,14 @@ import "errors"
 Queries' Input & Output
 *
 */
-type Query struct {
-	Query string `json:"query,omitempty"`
-	OAuth string `json:"oauth,omitempty"`
-}
 
 /*
 *
 Concept Indexors' Input & Output
 *
 */
+
+// OutputCI contains a boolean and the result
 type OutputCI struct {
 	Outcome string `json:"ok,omitempty"`
 	Hash    string `json:"hash,omitempty"`
@@ -27,14 +25,19 @@ type OutputCI struct {
 Target Finders' Input & Output
 *
 */
+
+// Operation interface allows the possibility to compute targer profile in a
+// recursive way
 type Operation interface {
 	Compute(list map[string][]string) ([]string, error)
 }
 
+// Single is a leaf in target profile tree
 type Single struct {
 	Value string `json:"value,omitempty"`
 }
 
+// Compute return the list of encrypted addresses
 func (s *Single) Compute(list map[string][]string) ([]string, error) {
 	val, ok := list[s.Value]
 	if !ok {
@@ -58,11 +61,13 @@ func union(a, b []string) []string {
 	return a
 }
 
+// Union struct compute union between to Operation
 type Union struct {
 	ValueA Operation `json:"value_a,omitempty"`
 	ValueB Operation `json:"value_b,omitempty"`
 }
 
+// Compute returns the union's result
 func (u *Union) Compute(list map[string][]string) ([]string, error) {
 	a, err := u.ValueA.Compute(list)
 	if err != nil {
@@ -90,11 +95,13 @@ func intersection(a, b []string) (c []string) {
 	return
 }
 
+// Intersection computes the intersection between two lists of addresses
 type Intersection struct {
 	ValueA Operation `json:"value_a,omitempty"`
 	ValueB Operation `json:"value_b,omitempty"`
 }
 
+// Compute returns a list of adresses
 func (i *Intersection) Compute(list map[string][]string) ([]string, error) {
 	a, err := i.ValueA.Compute(list)
 	if err != nil {
@@ -107,12 +114,11 @@ func (i *Intersection) Compute(list map[string][]string) ([]string, error) {
 	return intersection(a, b), nil
 }
 
+// InputTF contains a map that associate every concept to a list of Addresses
+// and a operation to compute to retrive the final list
 type InputTF struct {
 	ListsOfAddresses map[string][]string `json:"concepts,omitempty"`
 	TargetProfile    Operation           `json:"operation,omitempty"`
-}
-
-type OutputTF struct {
 }
 
 /*
@@ -123,6 +129,11 @@ Targets' Input & Output
 type InputT struct {
 	Localquery       string   `json:"localquery,omitempty"`
 	ListsOfAddresses []string `json:"Addresses,omitempty"`
+}
+
+type Query struct {
+	Query string `json:"query,omitempty"`
+	OAuth string `json:"oauth,omitempty"`
 }
 
 type OutputT struct {
