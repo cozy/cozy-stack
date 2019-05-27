@@ -9,12 +9,12 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/stretchr/testify/assert"
 )
 
 /*
 General tests on DISPERS role. HTTP requests are sent and answers are analysed.
 */
+/*
 func TestDecrypteConcept(t *testing.T) {
 	testCI := Actor{
 		host: "localhost:8080",
@@ -37,7 +37,7 @@ func TestDecrypteConcept(t *testing.T) {
 	req2 = testCI.outstr
 	assert.NotEqual(t, req1, req2)
 }
-
+*/
 /*
 func TestGetTargets(t *testing.T) {
 	testTF := Actor{

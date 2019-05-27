@@ -4,6 +4,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/dispers/dispers"
 )
 
-func SelectAddresses(in dispers.InputTF) []string {
-	return []string{"45rbgbee6", "4ffef", "7e8f7r5r", "frt47rr7c8", "7c846cf7es", "fs85fe7z8s"}
+func SelectAddresses(in dispers.InputTF) ([]string, error) {
+
+	finalList, err := in.TargetProfile.Compute(in.ListsOfAddresses)
+	// TODO: Encrypt final list
+	return finalList, err
 }
