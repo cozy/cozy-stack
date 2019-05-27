@@ -13,12 +13,12 @@ import (
 )
 
 /*
-General tests on DISPERS API. HTTP requests are sent and answers are analysed.
+General tests on DISPERS role. HTTP requests are sent and answers are analysed.
 */
 func TestDecrypteConcept(t *testing.T) {
 	testCI := Actor{
 		host: "localhost:8080",
-		api:  "conceptindexor",
+		role: "conceptindexor",
 	}
 
 	// Test the consistency
@@ -42,7 +42,7 @@ func TestDecrypteConcept(t *testing.T) {
 func TestGetTargets(t *testing.T) {
 	testTF := Actor{
 		host: "localhost:8080",
-		api:  "targetfinder",
+		role:  "targetfinder",
 	}
 	testTF.makeRequestPost("adresses", "{ \"concepts\" : [ { \"adresses\" : [\"avr\", \"mai\"] } , {\"adresses\" : [\"hey\", \"oh\"] }, { \"adresses\" : [\"bla\", \"bla\"] } ] }")
 	assert.Equal(t, "foo", testTF.outstr)
@@ -51,7 +51,7 @@ func TestGetTargets(t *testing.T) {
 func TestGetTokens(t *testing.T) {
 	testT := Actor{
 		host: "localhost:8080",
-		api:  "target",
+		role:  "target",
 	}
 	testT.makeRequestPost("gettokens", "{ \"localquery\" : \"blafjiejfi\", \"adresses\" : [ \"abc\", \"iji\", \"jio\" ] }")
 	assert.Equal(t, "foo", testT.outstr)
@@ -75,7 +75,7 @@ func TestAggregate(t *testing.T) {
 	// Launch Test On Aggregation
 	testDA := Actor{
 		host: "localhost:8080",
-		api:  "dataaggregator",
+		role:  "dataaggregator",
 	}
 	testDA.makeRequestPost("aggregate", strings.Join([]string{"{ \"type\" : { \"dataset\" : \"bank.lib\", \"preprocess\" : \"tf-idf\", \"standardization\" : \"None\", \"shape\" : [20000, 1], \"fakelabels\" : [ \"X1\", \"X2\" ] } , \"data\" : \"", s, "\" }"}, ""))
 	assert.Equal(t, "foo", testDA.outstr)

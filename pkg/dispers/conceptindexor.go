@@ -19,7 +19,7 @@ const defaultP = 1
 const defaultDkLen = 32
 
 // salt length
-var defaultSalt = "CozyCloud" // TODO: Dangereux le sel fixe
+var defaultSalt = "CozyCloud" // TODO: A const salt is dangerous
 
 var prefixerCI = prefixer.ConceptIndexorPrefixer
 
