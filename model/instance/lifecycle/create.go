@@ -12,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/hooks"
-	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 )
@@ -268,10 +267,6 @@ func buildSettings(opts *Options) *couchdb.JSONDoc {
 
 // Triggers returns the list of the triggers to add when an instance is created
 func Triggers(db prefixer.Prefixer) []job.TriggerInfos {
-	// Init metadata
-	md := metadata.New()
-	md.DocTypeVersion = job.DocTypeVersionTrigger
-
 	// Create/update/remove thumbnails when an image is created/updated/removed
 	return []job.TriggerInfos{
 		{
@@ -280,7 +275,6 @@ func Triggers(db prefixer.Prefixer) []job.TriggerInfos {
 			Type:       "@event",
 			WorkerType: "thumbnail",
 			Arguments:  "io.cozy.files:CREATED,UPDATED,DELETED:image:class",
-			Metadata:   md,
 		},
 	}
 }

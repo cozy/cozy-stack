@@ -13,7 +13,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/lock"
-	"github.com/cozy/cozy-stack/pkg/metadata"
 )
 
 // SetupReceiver is used on the receivers' cozy to make sure the cozy can
@@ -149,14 +148,10 @@ func (s *Sharing) AddTrackTriggers(inst *instance.Instance) error {
 			RuleIndex: i,
 			DocType:   rule.DocType,
 		}
-		// Adding metadata
-		md := metadata.New()
-		md.DocTypeVersion = job.DocTypeVersionTrigger
 		t, err := job.NewTrigger(inst, job.TriggerInfos{
 			Type:       "@event",
 			WorkerType: "share-track",
 			Arguments:  args,
-			Metadata:   md,
 		}, msg)
 		if err != nil {
 			return err
@@ -180,9 +175,6 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 		SharingID: s.SID,
 		Errors:    0,
 	}
-	// Adding metadata
-	md := metadata.New()
-	md.DocTypeVersion = job.DocTypeVersionTrigger
 	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
 	t, err := job.NewTrigger(inst, job.TriggerInfos{
 		Domain:     inst.ContextualDomain(),
@@ -190,7 +182,6 @@ func (s *Sharing) AddReplicateTrigger(inst *instance.Instance) error {
 		WorkerType: "share-replicate",
 		Arguments:  args,
 		Debounce:   "5s",
-		Metadata:   md,
 	}, msg)
 	inst.Logger().WithField("nspace", "sharing").Infof("Create trigger %#v", t)
 	if err != nil {
@@ -361,9 +352,6 @@ func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
 		SharingID: s.SID,
 		Errors:    0,
 	}
-	// Adding metadata
-	md := metadata.New()
-	md.DocTypeVersion = job.DocTypeVersionTrigger
 	args := consts.Shared + ":CREATED,UPDATED:" + s.SID + ":sharing"
 	t, err := job.NewTrigger(inst, job.TriggerInfos{
 		Domain:     inst.ContextualDomain(),
@@ -371,7 +359,6 @@ func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
 		WorkerType: "share-upload",
 		Arguments:  args,
 		Debounce:   "5s",
-		Metadata:   md,
 	}, msg)
 	inst.Logger().WithField("nspace", "sharing").Infof("Create trigger %#v", t)
 	if err != nil {
