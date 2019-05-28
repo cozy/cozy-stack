@@ -503,10 +503,7 @@ func purgeJobs(c echo.Context) error {
 	// Step 1: We want to get all the jobs prior to the date parameter.
 	// Jobs returned are the ones we want to remove
 	d := time.Now().Add(-dur)
-	jobsBeforeDate, err := job.GetJobsBeforeDate(allJobs, d)
-	if err != nil && err != job.ErrNotFoundJob {
-		return err
-	}
+	jobsBeforeDate := job.FilterJobsBeforeDate(allJobs, d)
 
 	// Step 2: We also want to keep a minimum number of jobs for each state.
 	// Jobs returned will be kept.

@@ -56,8 +56,7 @@ func TestGetJobsBeforeDate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(allJobs))
 
-	jobs, err := jobs.GetJobsBeforeDate(allJobs, time.Now())
-	assert.NoError(t, err)
+	jobs := jobs.FilterJobsBeforeDate(allJobs, time.Now())
 
 	// We should have only 2 jobs :
 	// The first has been queued in the past: OK

@@ -356,9 +356,8 @@ func GetAllJobs(db prefixer.Prefixer) ([]*Job, error) {
 	return finalJobs, nil
 }
 
-// GetJobsBeforeDate returns alls jobs queued before the specified date
-func GetJobsBeforeDate(jobs []*Job, date time.Time) ([]*Job, error) {
-	// Filtering jobs
+// FilterJobsBeforeDate returns alls jobs queued before the specified date
+func FilterJobsBeforeDate(jobs []*Job, date time.Time) []*Job {
 	b := jobs[:0]
 	for _, x := range jobs {
 		if x.QueuedAt.Before(date) {
@@ -366,7 +365,7 @@ func GetJobsBeforeDate(jobs []*Job, date time.Time) ([]*Job, error) {
 		}
 	}
 
-	return b, nil
+	return b
 }
 
 // FilterByWorkerAndState filters a job slice by its workerType and State
