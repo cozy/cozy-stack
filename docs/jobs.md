@@ -416,10 +416,6 @@ it won't create another job. It can be useful to combine it with the changes
 feed of couchdb with a last sequence number persisted by the worker, as it
 allows to have a nice diff between two executions of the worker.
 
-The `cozyMetadata` field is accepted if you want to add your own custom
-[metadata](https://github.com/cozy/cozy-doctypes/#document-metadata). In the
-other case, it will be automatically added.
-
 #### Request
 
 ```http
@@ -440,12 +436,6 @@ Accept: application/vnd.api+json
         "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
-      },
-      "cozyMetadata": {
-            "doctypeVersion": 1,
-            "metadataVersion": 1,
-            "createdByApp": "drive",
-            "updatedAt": "2019-05-14T12:00:37.372193145+02:00"
       }
     }
   }
