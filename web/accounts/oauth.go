@@ -131,8 +131,9 @@ func redirect(c echo.Context) error {
 			if err != nil {
 				return err
 			}
-			clientState = state.ClientState
 		}
+
+		clientState = state.ClientState
 	}
 
 	err = couchdb.CreateDoc(i, acc)
