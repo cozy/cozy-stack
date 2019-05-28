@@ -19,7 +19,7 @@ func LoginRateExceeded(i *instance.Instance) error {
 // TwoFactorRateExceeded regenerates a new 2FA passcode after too many failed
 // attempts to login
 func TwoFactorRateExceeded(i *instance.Instance) error {
-	if err := limits.CheckRateLimit(i, limits.TwoFactorGenerationType); err != nil {
+	if err := limits.CheckRateLimit(i, limits.TwoFactorGenerationType); err == limits.ErrRateLimitExceeded {
 		return TwoFactorGenerationExceeded(i)
 	}
 	// Reset the key and send a new passcode to the user
