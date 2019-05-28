@@ -35,7 +35,7 @@ type CozyMetaData struct {
 	// Last modification date of the cozy document
 	UpdatedAt time.Time `json:"updatedAt"`
 	// List of objects representing the applications which modified the cozy document
-	updatedByApps []*UpdatedByAppEntry
+	UpdatedByApps []*UpdatedByAppEntry `json:"updatedByApps"`
 	// Identifier of the account in io.cozy.accounts (for konnectors)
 	SourceAccount string `json:"sourceAccount,omitempty"`
 }
@@ -73,8 +73,8 @@ func NewWithApp(slug, version, doctypeVersion string) (*CozyMetaData, error) {
 // Clone clones a CozyMetaData struct
 func (cm *CozyMetaData) Clone() CozyMetaData {
 	cloned := *cm
-	cloned.updatedByApps = make([]*UpdatedByAppEntry, len(cm.updatedByApps))
-	copy(cloned.updatedByApps, cm.updatedByApps)
+	cloned.UpdatedByApps = make([]*UpdatedByAppEntry, len(cm.UpdatedByApps))
+	copy(cloned.UpdatedByApps, cm.UpdatedByApps)
 	return cloned
 }
 
@@ -93,8 +93,8 @@ func (cm *CozyMetaData) EnsureCreatedFields(defaultMetadata *CozyMetaData) {
 	if cm.MetadataVersion == 0 {
 		cm.MetadataVersion = defaultMetadata.MetadataVersion
 	}
-	if cm.updatedByApps == nil {
-		cm.updatedByApps = defaultMetadata.updatedByApps
+	if cm.UpdatedByApps == nil {
+		cm.UpdatedByApps = defaultMetadata.UpdatedByApps
 	}
 }
 
@@ -113,14 +113,14 @@ func (cm *CozyMetaData) UpdatedByApp(slug, version string) error {
 	now := time.Now()
 	cm.UpdatedAt = now
 	updated := &UpdatedByAppEntry{Slug: slug, Date: now, Version: version}
-	for i, entry := range cm.updatedByApps {
+	for i, entry := range cm.UpdatedByApps {
 		if entry.Slug == slug {
-			cm.updatedByApps[i] = updated
+			cm.UpdatedByApps[i] = updated
 			return nil
 		}
 	}
 
 	// The entry has not been found, adding it
-	cm.updatedByApps = append(cm.updatedByApps, updated)
+	cm.UpdatedByApps = append(cm.UpdatedByApps, updated)
 	return nil
 }
