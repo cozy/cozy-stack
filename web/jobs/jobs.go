@@ -203,9 +203,11 @@ func newTrigger(c echo.Context) error {
 
 	// Handle metadata
 	md := metadata.New()
-	claims := c.Get("claims").(permission.Claims)
-	if claims.Subject != "" {
-		md.CreatedByApp = claims.Subject
+	if claims := c.Get("claims"); claims != nil {
+		cl := claims.(permission.Claims)
+		if cl.Subject != "" {
+			md.CreatedByApp = cl.Subject
+		}
 	}
 	md.DocTypeVersion = job.DocTypeVersionTrigger
 
