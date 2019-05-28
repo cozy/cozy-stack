@@ -370,10 +370,6 @@ func FilterJobsBeforeDate(jobs []*Job, date time.Time) []*Job {
 
 // FilterByWorkerAndState filters a job slice by its workerType and State
 func FilterByWorkerAndState(jobs []*Job, workerType string, state State, limit int) []*Job {
-	// Step 1: Ordering
-	sort.Slice(jobs, func(i, j int) bool { return jobs[i].QueuedAt.Before(jobs[j].QueuedAt) })
-
-	// Step 2: Filtering
 	returned := []*Job{}
 	for _, j := range jobs {
 		if j.WorkerType == workerType && j.State == state {
@@ -391,6 +387,9 @@ func FilterByWorkerAndState(jobs []*Job, workerType string, state State, limit i
 // type pair
 func GetLastsJobs(jobs []*Job, workerType string) ([]*Job, error) {
 	var result []*Job
+
+	// Ordering by QueuedAt before filtering jobs
+	sort.Slice(jobs, func(i, j int) bool { return jobs[i].QueuedAt.Before(jobs[j].QueuedAt) })
 
 	for _, state := range []State{Queued, Running, Done, Errored} {
 		limit := defaultMaxLimits[state]
