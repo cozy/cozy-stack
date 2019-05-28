@@ -447,13 +447,14 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	}
 
 	// Updating metadata
-	appSlug := c.SoftwareID
+	md := metadata.New()
 	if strings.HasPrefix(c.SoftwareID, "registry://") {
-		appSlug = strings.TrimPrefix(c.SoftwareID, "registry://")
+		md.CreatedByApp = strings.TrimPrefix(c.SoftwareID, "registry://")
+		md.CreatedByAppVersion = c.SoftwareVersion
 	}
+	md.DocTypeVersion = DocTypeVersion
 
 	if old.Metadata == nil {
-		md, _ := metadata.NewWithApp(appSlug, c.SoftwareVersion, DocTypeVersion)
 		c.Metadata = md
 	} else {
 		c.Metadata = old.Metadata
