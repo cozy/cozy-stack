@@ -372,8 +372,8 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	md := metadata.New()
 	if strings.HasPrefix(c.SoftwareID, "registry://") {
 		md.CreatedByApp = strings.TrimPrefix(c.SoftwareID, "registry://")
+		md.CreatedByAppVersion = c.SoftwareVersion
 	}
-	md.CreatedByAppVersion = c.SoftwareVersion
 	md.DocTypeVersion = DocTypeVersion
 	c.Metadata = md
 
