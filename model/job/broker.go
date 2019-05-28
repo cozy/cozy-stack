@@ -327,10 +327,14 @@ func GetAllJobs(db prefixer.Prefixer) ([]*Job, error) {
 			Limit:    10001,
 			StartKey: startkey,
 		}
-		err := couchdb.GetAllDocs(db, consts.Jobs, req, &jobs)
 
+		err := couchdb.GetAllDocs(db, consts.Jobs, req, &jobs)
 		if err != nil {
 			return nil, err
+		}
+
+		if len(jobs) == 0 {
+			return finalJobs, nil
 		}
 
 		lastJob, jobs = jobs[len(jobs)-1], jobs[:len(jobs)-1]
