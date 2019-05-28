@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/registry"
 
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -26,6 +27,10 @@ const (
 	// PlatformAPNS platform using APNS/2
 	PlatformAPNS = "apns"
 )
+
+// DocTypeVersion represents the doctype version. Each time this document
+// structure is modified, update this value
+const DocTypeVersion = "1"
 
 // ClientSecretLen is the number of random bytes used for generating the client secret
 const ClientSecretLen = 24
@@ -76,6 +81,8 @@ type Client struct {
 	OnboardingApp         string `json:"onboarding_app,omitempty"`
 	OnboardingPermissions string `json:"onboarding_permissions,omitempty"`
 	OnboardingState       string `json:"onboarding_state,omitempty"`
+
+	Metadata *metadata.CozyMetaData `json:"cozyMetadata,omitempty"`
 }
 
 // ID returns the client qualified identifier
@@ -103,6 +110,10 @@ func (c *Client) Clone() couchdb.Doc {
 	for k, v := range c.Notifications {
 		props := (&v).Clone()
 		cloned.Notifications[k] = *props
+	}
+	if cloned.Metadata != nil {
+		tmp := c.Metadata.Clone()
+		cloned.Metadata = &tmp
 	}
 	return &cloned
 }
@@ -357,6 +368,15 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	c.GrantTypes = []string{"authorization_code", "refresh_token"}
 	c.ResponseTypes = []string{"code"}
 
+	// Adding Metadata
+	md := metadata.New()
+	if strings.HasPrefix(c.SoftwareID, "registry://") {
+		md.CreatedByApp = strings.TrimPrefix(c.SoftwareID, "registry://")
+		md.CreatedByAppVersion = c.SoftwareVersion
+	}
+	md.DocTypeVersion = DocTypeVersion
+	c.Metadata = md
+
 	if err = couchdb.CreateDoc(i, c); err != nil {
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
@@ -424,6 +444,21 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	}
 	if c.NotificationDeviceToken == "" {
 		c.NotificationDeviceToken = old.NotificationDeviceToken
+	}
+
+	// Updating metadata
+	md := metadata.New()
+	if strings.HasPrefix(c.SoftwareID, "registry://") {
+		md.CreatedByApp = strings.TrimPrefix(c.SoftwareID, "registry://")
+		md.CreatedByAppVersion = c.SoftwareVersion
+	}
+	md.DocTypeVersion = DocTypeVersion
+
+	if old.Metadata == nil {
+		c.Metadata = md
+	} else {
+		c.Metadata = old.Metadata
+		c.Metadata.ChangeUpdatedAt()
 	}
 
 	if err := couchdb.UpdateDoc(i, c); err != nil {
