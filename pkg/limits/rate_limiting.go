@@ -13,6 +13,8 @@ import (
 // CounterType os an enum for the type of counters used by rate-limiting.
 type CounterType int
 
+var ErrRateLimitExceeded = errors.New("Rate limit exceeded")
+
 const (
 	// AuthType is used for counting the number of login attempts.
 	AuthType CounterType = iota
@@ -191,7 +193,7 @@ func CheckRateLimitKey(customKey string, ct CounterType) error {
 		return err
 	}
 	if val > cfg.Limit {
-		return errors.New("Rate limit exceeded")
+		return ErrRateLimitExceeded
 	}
 	return nil
 }
