@@ -495,19 +495,21 @@ func purgeJobs(c echo.Context) error {
 		workers = strings.Split(workersParam, ",")
 	}
 
+	allJobs, err := job.GetAllJobs(instance)
+	if err != nil {
+		return err
+	}
+
 	// Step 1: We want to get all the jobs prior to the date parameter.
 	// Jobs returned are the ones we want to remove
 	d := time.Now().Add(-dur)
-	jobsBeforeDate, err := job.GetJobsBeforeDate(instance, d)
-	if err != nil && err != job.ErrNotFoundJob {
-		return err
-	}
+	jobsBeforeDate := job.FilterJobsBeforeDate(allJobs, d)
 
 	// Step 2: We also want to keep a minimum number of jobs for each state.
 	// Jobs returned will be kept.
 	lastsJobs := map[string]struct{}{}
 	for _, w := range workers {
-		jobs, err := job.GetLastsJobs(instance, w)
+		jobs, err := job.GetLastsJobs(allJobs, w)
 		if err != nil {
 			return err
 		}
@@ -545,9 +547,20 @@ func purgeJobs(c echo.Context) error {
 	for i, j := range finalJobs {
 		jobsToDelete[i] = j
 	}
-	err = couchdb.BulkDeleteDocs(instance, consts.Jobs, jobsToDelete)
-	if err != nil {
-		return err
+
+	chunkSize := 1000
+
+	for i := 0; i < len(jobsToDelete); i += chunkSize {
+		end := i + chunkSize
+
+		if end > len(jobsToDelete) {
+			end = len(jobsToDelete)
+		}
+
+		err = couchdb.BulkDeleteDocs(instance, consts.Jobs, jobsToDelete[i:end])
+		if err != nil {
+			return err
+		}
 	}
 
 	return c.JSON(http.StatusOK, map[string]int{"deleted": len(jobsToDelete)})

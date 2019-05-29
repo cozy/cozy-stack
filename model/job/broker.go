@@ -3,6 +3,7 @@ package job
 import (
 	"context"
 	"encoding/json"
+	"sort"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/permission"
@@ -313,61 +314,89 @@ func GetQueuedJobs(db prefixer.Prefixer, workerType string) ([]*Job, error) {
 	return results, nil
 }
 
-// GetJobsBeforeDate returns alls jobs queued before the specified date
-func GetJobsBeforeDate(db prefixer.Prefixer, date time.Time) ([]*Job, error) {
-	var cursor int
-	var jobs []*Job
+func GetAllJobs(db prefixer.Prefixer) ([]*Job, error) {
+	var startkey string
+	var lastJob *Job
 
 	finalJobs := []*Job{}
+	remainingJobs := true
 
-	for cursor != -1 {
-		jobs = []*Job{}
-		req := &couchdb.FindRequest{
-			UseIndex: "by-queued-at",
-			Selector: mango.Lt("queued_at", date.Format(time.RFC3339Nano)),
-			Limit:    1000,
-			Skip:     cursor,
+	for remainingJobs {
+		jobs := []*Job{}
+		req := &couchdb.AllDocsRequest{
+			Limit:    10001,
+			StartKey: startkey,
 		}
-		err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
+
+		err := couchdb.GetAllDocs(db, consts.Jobs, req, &jobs)
 		if err != nil {
 			return nil, err
 		}
-		finalJobs = append(finalJobs, jobs...)
 
 		if len(jobs) == 0 {
-			cursor = -1
-		} else {
-			cursor = len(finalJobs)
+			return finalJobs, nil
+		}
+
+		lastJob, jobs = jobs[len(jobs)-1], jobs[:len(jobs)-1]
+
+		// Startkey for the next request
+		startkey = lastJob.JobID
+
+		// Appending to the final jobs
+		finalJobs = append(finalJobs, jobs...)
+
+		// Only the startkey is present: we are in the last lap of the loop
+		// We have to append the startkey as the last element
+		if len(jobs) == 0 {
+			remainingJobs = false
+			finalJobs = append(finalJobs, lastJob)
 		}
 	}
 
 	return finalJobs, nil
 }
 
+// FilterJobsBeforeDate returns alls jobs queued before the specified date
+func FilterJobsBeforeDate(jobs []*Job, date time.Time) []*Job {
+	b := []*Job{}
+
+	for _, x := range jobs {
+		if x.QueuedAt.Before(date) {
+			b = append(b, x)
+		}
+	}
+
+	return b
+}
+
+// FilterByWorkerAndState filters a job slice by its workerType and State
+func FilterByWorkerAndState(jobs []*Job, workerType string, state State, limit int) []*Job {
+	returned := []*Job{}
+	for _, j := range jobs {
+		if j.WorkerType == workerType && j.State == state {
+			returned = append(returned, j)
+			if len(returned) == limit {
+				return returned
+			}
+		}
+	}
+
+	return returned
+}
+
 // GetLastsJobs returns the N lasts job of each state for an instance/worker
 // type pair
-func GetLastsJobs(db prefixer.Prefixer, workerType string) ([]*Job, error) {
+func GetLastsJobs(jobs []*Job, workerType string) ([]*Job, error) {
 	var result []*Job
 
+	// Ordering by QueuedAt before filtering jobs
+	sort.Slice(jobs, func(i, j int) bool { return jobs[i].QueuedAt.Before(jobs[j].QueuedAt) })
+
 	for _, state := range []State{Queued, Running, Done, Errored} {
-		jobs := []*Job{}
 		limit := defaultMaxLimits[state]
 
-		req := &couchdb.FindRequest{
-			Selector: mango.And(
-				mango.Equal("worker", workerType),
-				mango.Equal("state", state),
-			),
-			Sort: mango.SortBy{
-				{Field: "queued_at", Direction: mango.Desc},
-			},
-			Limit: limit,
-		}
-		err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, jobs...)
+		filtered := FilterByWorkerAndState(jobs, workerType, state, limit)
+		result = append(result, filtered...)
 	}
 
 	return result, nil

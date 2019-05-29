@@ -52,8 +52,11 @@ func TestGetJobsBeforeDate(t *testing.T) {
 	err = job3.Create()
 	assert.NoError(t, err)
 
-	jobs, err := jobs.GetJobsBeforeDate(testInstance, time.Now())
+	allJobs, err := jobs.GetAllJobs(testInstance)
 	assert.NoError(t, err)
+	assert.Equal(t, 3, len(allJobs))
+
+	jobs := jobs.FilterJobsBeforeDate(allJobs, time.Now())
 
 	// We should have only 2 jobs :
 	// The first has been queued in the past: OK
@@ -63,7 +66,9 @@ func TestGetJobsBeforeDate(t *testing.T) {
 }
 
 func TestGetLastsJobs(t *testing.T) {
-	j, err := jobs.GetLastsJobs(testInstance, "thumbnail")
+	allJobs, err := jobs.GetAllJobs(testInstance)
+	assert.NoError(t, err)
+	j, err := jobs.GetLastsJobs(allJobs, "thumbnail")
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(j))
 
@@ -79,7 +84,9 @@ func TestGetLastsJobs(t *testing.T) {
 	}
 	err = myJob.Create()
 	assert.NoError(t, err)
-	j, err = jobs.GetLastsJobs(testInstance, "thumbnail")
+	allJobs, err = jobs.GetAllJobs(testInstance)
+	assert.NoError(t, err)
+	j, err = jobs.GetLastsJobs(allJobs, "thumbnail")
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(j))
 
@@ -95,15 +102,21 @@ func TestGetLastsJobs(t *testing.T) {
 	}
 	err = myJob.Create()
 	assert.NoError(t, err)
-	j, err = jobs.GetLastsJobs(testInstance, "thumbnail")
+	allJobs, err = jobs.GetAllJobs(testInstance)
+	assert.NoError(t, err)
+	j, err = jobs.GetLastsJobs(allJobs, "thumbnail")
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(j))
-	j, err = jobs.GetLastsJobs(testInstance, "konnector")
+	allJobs, err = jobs.GetAllJobs(testInstance)
+	assert.NoError(t, err)
+	j, err = jobs.GetLastsJobs(allJobs, "konnector")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(j))
 
 	// No jobs
-	j, err = jobs.GetLastsJobs(testInstance, "foobar")
+	allJobs, err = jobs.GetAllJobs(testInstance)
+	assert.NoError(t, err)
+	j, err = jobs.GetLastsJobs(allJobs, "foobar")
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(j))
 
@@ -123,7 +136,9 @@ func TestGetLastsJobs(t *testing.T) {
 	err = myJob.Create()
 	assert.NoError(t, err)
 
-	j, err = jobs.GetLastsJobs(testInstance, "thumbnail")
+	allJobs, err = jobs.GetAllJobs(testInstance)
+	assert.NoError(t, err)
+	j, err = jobs.GetLastsJobs(allJobs, "thumbnail")
 	assert.NoError(t, err)
 
 	// One running, one errored, three queued
