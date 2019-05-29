@@ -358,7 +358,8 @@ func GetAllJobs(db prefixer.Prefixer) ([]*Job, error) {
 
 // FilterJobsBeforeDate returns alls jobs queued before the specified date
 func FilterJobsBeforeDate(jobs []*Job, date time.Time) []*Job {
-	b := jobs[:0]
+	b := []*Job{}
+
 	for _, x := range jobs {
 		if x.QueuedAt.Before(date) {
 			b = append(b, x)
