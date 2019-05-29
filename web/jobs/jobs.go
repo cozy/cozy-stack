@@ -56,14 +56,13 @@ type (
 		s *job.TriggerState
 	}
 	apiTriggerRequest struct {
-		Type            string                 `json:"type"`
-		Arguments       string                 `json:"arguments"`
-		WorkerType      string                 `json:"worker"`
-		Message         json.RawMessage        `json:"message"`
-		WorkerArguments json.RawMessage        `json:"worker_arguments"`
-		Debounce        string                 `json:"debounce"`
-		Options         *job.JobOptions        `json:"options"`
-		Metadata        *metadata.CozyMetaData `json:"cozyMetadata"`
+		Type            string          `json:"type"`
+		Arguments       string          `json:"arguments"`
+		WorkerType      string          `json:"worker"`
+		Message         json.RawMessage `json:"message"`
+		WorkerArguments json.RawMessage `json:"worker_arguments"`
+		Debounce        string          `json:"debounce"`
+		Options         *job.JobOptions `json:"options"`
 	}
 )
 
@@ -211,12 +210,6 @@ func newTrigger(c echo.Context) error {
 	}
 	md.DocTypeVersion = job.DocTypeVersionTrigger
 
-	if req.Metadata == nil {
-		req.Metadata = md
-	} else {
-		req.Metadata.EnsureCreatedFields(md)
-	}
-
 	msg := req.Message
 	if req.Message == nil || len(req.Message) == 0 {
 		msg = req.WorkerArguments
@@ -228,7 +221,7 @@ func newTrigger(c echo.Context) error {
 		Arguments:  req.Arguments,
 		Debounce:   req.Debounce,
 		Options:    req.Options,
-		Metadata:   req.Metadata,
+		Metadata:   md,
 	}, msg)
 	if err != nil {
 		return wrapJobsError(err)
