@@ -855,7 +855,7 @@ Content-Type: application/vnd.api+json
 
 ### POST /files/trash/:file-id
 
-Restore the file with the `file-id` identifiant.
+Restore the file with the `file-id` identifiant. If a file already exists at the previous path, a suffix will be added to avoid any conflict.
 
 The file's `trashed` attributes will be set to false.
 
