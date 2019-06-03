@@ -165,7 +165,7 @@ func (s *redisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 				var d time.Duration
 				if d, err = time.ParseDuration(et.Infos().Debounce); err == nil {
 					timestamp := time.Now().Add(d)
-					s.client.ZAddNX(TriggersKey, redis.Z{
+					s.client.ZAddNX(TriggersKey, &redis.Z{
 						Score:  float64(timestamp.UTC().Unix()),
 						Member: redisKey(t),
 					})
@@ -311,7 +311,7 @@ func (s *redisScheduler) addToRedis(t Trigger, prev time.Time) error {
 		return errors.New("Not implemented yet")
 	}
 	pipe := s.client.Pipeline()
-	err := pipe.ZAdd(TriggersKey, redis.Z{
+	err := pipe.ZAdd(TriggersKey, &redis.Z{
 		Score:  float64(timestamp.UTC().Unix()),
 		Member: redisKey(t),
 	}).Err()
