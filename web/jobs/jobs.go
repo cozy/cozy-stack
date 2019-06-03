@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -199,6 +200,16 @@ func newTrigger(c echo.Context) error {
 		}
 	}
 
+	// Handle metadata
+	md := metadata.New()
+	if claims := c.Get("claims"); claims != nil {
+		cl := claims.(permission.Claims)
+		if cl.Subject != "" {
+			md.CreatedByApp = cl.Subject
+		}
+	}
+	md.DocTypeVersion = job.DocTypeVersionTrigger
+
 	msg := req.Message
 	if req.Message == nil || len(req.Message) == 0 {
 		msg = req.WorkerArguments
@@ -210,6 +221,7 @@ func newTrigger(c echo.Context) error {
 		Arguments:  req.Arguments,
 		Debounce:   req.Debounce,
 		Options:    req.Options,
+		Metadata:   md,
 	}, msg)
 	if err != nil {
 		return wrapJobsError(err)

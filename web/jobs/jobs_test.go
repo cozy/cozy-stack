@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -263,6 +264,77 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, res5.StatusCode)
 }
 
+func TestAddTriggerWithMetadata(t *testing.T) {
+	at := time.Now().Add(1100 * time.Millisecond).Format(time.RFC3339)
+	body, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: map[string]interface{}{
+				"type":      "@at",
+				"arguments": at,
+				"worker":    "print",
+				"message":   "foo",
+			},
+		},
+	})
+
+	req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
+	assert.NoError(t, err)
+	req1.Header.Add("Authorization", "Bearer "+token)
+	res1, err := http.DefaultClient.Do(req1)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res1.Body.Close()
+	assert.Equal(t, http.StatusCreated, res1.StatusCode)
+
+	var v struct {
+		Data struct {
+			ID         string            `json:"id"`
+			Type       string            `json:"type"`
+			Attributes *job.TriggerInfos `json:"attributes"`
+		}
+	}
+
+	err = json.NewDecoder(res1.Body).Decode(&v)
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
+		return
+	}
+	triggerID := v.Data.ID
+	assert.Equal(t, consts.Triggers, v.Data.Type)
+	assert.Equal(t, "@at", v.Data.Attributes.Type)
+	assert.Equal(t, at, v.Data.Attributes.Arguments)
+	assert.Equal(t, "print", v.Data.Attributes.WorkerType)
+
+	assert.Equal(t, "1", v.Data.Attributes.Metadata.DocTypeVersion)
+	assert.Equal(t, 1, v.Data.Attributes.Metadata.MetadataVersion)
+	// "CLI" is the token subject
+	assert.Equal(t, "CLI", v.Data.Attributes.Metadata.CreatedByApp)
+	assert.NotZero(t, v.Data.Attributes.Metadata.CreatedAt)
+	assert.NotZero(t, v.Data.Attributes.Metadata.UpdatedAt)
+
+	req2, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
+	assert.NoError(t, err)
+	req2.Header.Add("Authorization", "Bearer "+token)
+	res2, err := http.DefaultClient.Do(req2)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, http.StatusOK, res2.StatusCode)
+
+	// Clean
+	req3, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
+	assert.NoError(t, err)
+	req3.Header.Add("Authorization", "Bearer "+token)
+	res3, err := http.DefaultClient.Do(req3)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, http.StatusNoContent, res3.StatusCode)
+}
+
 func TestGetAllJobs(t *testing.T) {
 	var v struct {
 		Data []struct {
@@ -402,7 +474,23 @@ func TestMain(m *testing.M) {
 	token, _ = testInstance.MakeJWT(consts.CLIAudience, "CLI", scope,
 		"", time.Now())
 
-	ts = setup.GetTestServer("/jobs", Routes)
+	ts = setup.GetTestServer("/jobs", Routes, func(r *echo.Echo) *echo.Echo {
+		r.Use(SetToken)
+		return r
+	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	os.Exit(setup.Run())
+}
+
+func SetToken(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		tok := middlewares.GetRequestToken(c)
+		// Forcing the token parsing to have the "claims" parameter in the
+		// context
+		_, err := middlewares.ParseJWT(c, testInstance, tok)
+		if err != nil {
+			return err
+		}
+		return next(c)
+	}
 }

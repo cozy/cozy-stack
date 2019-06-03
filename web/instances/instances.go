@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -374,11 +375,15 @@ func cleanOrphanAccounts(c echo.Context) error {
 			args = fmt.Sprintf("0 %d %d * * %d", m, h, d)
 		}
 
+		md := metadata.New()
+		md.DocTypeVersion = job.DocTypeVersionTrigger
+
 		var r result
 		infos := job.TriggerInfos{
 			WorkerType: "konnector",
 			Type:       "@cron",
 			Arguments:  args,
+			Metadata:   md,
 		}
 		r.Trigger = &infos
 		t, err := job.NewTrigger(db, infos, msg)

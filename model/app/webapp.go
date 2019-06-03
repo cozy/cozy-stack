@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -397,11 +398,17 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 			"slug": slug,
 			"name": service.name,
 		}
+		// Add metadata
+		md, err := metadata.NewWithApp(slug, "", job.DocTypeVersionTrigger)
+		if err != nil {
+			return err
+		}
 		trigger, err := job.NewTrigger(db, job.TriggerInfos{
 			Type:       triggerType,
 			WorkerType: "service",
 			Debounce:   service.Debounce,
 			Arguments:  triggerArgs,
+			Metadata:   md,
 		}, msg)
 		if err != nil {
 			return err
