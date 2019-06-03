@@ -257,7 +257,7 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 
 	ts := now.UTC().Unix()
 	key := testInstance.DBPrefix() + "/" + tat.ID()
-	err = client.ZAdd(jobs.SchedKey, redis.Z{
+	err = client.ZAdd(jobs.SchedKey, &redis.Z{
 		Score:  float64(ts + 1),
 		Member: key,
 	}).Err()
