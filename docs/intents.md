@@ -40,6 +40,7 @@ neither painful for the users nor the developers.
 -   **Client**: the client is the application that _starts_ an intent.
 -   **Service**: the service is the application that _handles_ an intent started
     by a client.
+-   **Available apps**: Uninstalled applications that _handles_ the intent.
 
 ## Proposal
 
@@ -227,6 +228,14 @@ The stack then stores the information for that intent:
 Finally, the service URL is suffixed with `?intent=` followed by the intent's
 id, and then sent to the client.
 
+### 4. Available apps
+
+In addition to the services that manage intents, a list of available (but not
+installed) applications of the instance that handles the intent is returned.
+This object list is called `availableApps` and contains:
+- The application `slug`
+- The application `name`
+
 #### Service choice
 
 If more than one service match the intent's criteria, the stack returns the list
@@ -250,11 +259,8 @@ aborted.
 #### No available service
 
 If no service is available to handle an intent, the stack returns an error to
-the client.
-
-At a later phase of this project, the stack may traverse the applications
-registered in a store to find suitable services, and prompt the user to install
-one.
+the client. However, some non-installed applications may handle the intent, and
+are listed in the `availableApps` field.
 
 ### 4. Handshake
 
@@ -369,6 +375,12 @@ Content-Type: application/vnd.api+json
                     "slug": "files",
                     "href": "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
                 }
+            ],
+            "availableApps": [
+                {
+                    "slug": "myapp",
+                    "name": "My App"
+                }
             ]
         },
         "links": {
@@ -416,6 +428,12 @@ Content-Type: application/vnd.api+json
                 {
                     "slug": "files",
                     "href": "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
+                }
+            ],
+            "availableApps": [
+                {
+                    "slug": "myapp",
+                    "name": "My App"
                 }
             ]
         },
