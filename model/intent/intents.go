@@ -184,7 +184,7 @@ func (in *Intent) FillAvailableWebapps(inst *instance.Instance) error {
 
 	registries := inst.Registries()
 	for _, webapp := range endSlugs {
-		go func(webapp string, instance *instance.Instance) {
+		go func(webapp string) {
 			webappMan := app.WebappManifest{}
 			v, err := registry.GetLatestVersion(webapp, "stable", registries)
 			if err != nil {
@@ -198,7 +198,7 @@ func (in *Intent) FillAvailableWebapps(inst *instance.Instance) error {
 			}
 
 			versionsChan <- webappMan
-		}(webapp, inst)
+		}(webapp)
 	}
 
 	for range endSlugs {
