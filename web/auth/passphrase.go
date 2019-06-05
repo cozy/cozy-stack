@@ -121,6 +121,7 @@ func passphraseRenewForm(c echo.Context) error {
 		"Locale":               inst.Locale,
 		"PassphraseResetToken": hex.EncodeToString(token),
 		"CSRF":                 c.Get("csrf"),
+		"Favicon":              middlewares.Favicon(inst),
 	})
 }
 
