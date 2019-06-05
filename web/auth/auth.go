@@ -171,6 +171,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"TwoFactorToken":   "",
 		"CSRF":             c.Get("csrf"),
 		"OAuth":            oauth,
+		"Favicon":          middlewares.Favicon(i),
 	})
 }
 
@@ -199,6 +200,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 		"TwoFactorToken":   string(twoFactorToken),
 		"CSRF":             c.Get("csrf"),
 		"OAuth":            oauth,
+		"Favicon":          middlewares.Favicon(i),
 	})
 }
 
