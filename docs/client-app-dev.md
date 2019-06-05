@@ -59,6 +59,23 @@ To download the latest version, you can run this command:
 docker pull cozy/cozy-app-dev
 ```
 
+If you work behind a corporate proxy, and Docker is configured to inject proxy
+configuration into the containers, you need to ensure that both `localhost` and
+`cozy.tools` are configured not to use the proxy. Following is the minimal
+`~/.docker/config.json` configuration that has been shown to work:
+
+```json
+{
+    "proxies": {
+        "default": {
+            "httpProxy": "MY_CORPORATE_PROXY",
+            "httpsProxy": "MY_CORPORATE_PROXY",
+            "noProxy": "localhost,cozy.tools"
+        }
+    }
+}
+```
+
 To run a ephemeral instance, on the `$HOME/myapp` directory, use the following
 command (warning: all the data stored by your application in couchdb and the VFS
 won't remain after):
