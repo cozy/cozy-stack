@@ -40,6 +40,7 @@ func renderError(c echo.Context, code int, msg string) error {
 		"Domain":      instance.ContextualDomain(),
 		"ContextName": instance.ContextName,
 		"Error":       msg,
+		"Favicon":     middlewares.Favicon(instance),
 	})
 }
 

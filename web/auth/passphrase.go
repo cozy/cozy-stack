@@ -86,6 +86,7 @@ func passphraseReset(c echo.Context) error {
 		"Error":       "Passphrase is reset Body",
 		"Button":      "Passphrase is reset Login Button",
 		"ButtonLink":  i.PageURL("/auth/login", nil),
+		"Favicon":     middlewares.Favicon(i),
 	})
 }
 

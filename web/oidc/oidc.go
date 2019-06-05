@@ -382,6 +382,7 @@ func renderError(c echo.Context, inst *instance.Instance, code int, msg string) 
 		"Domain":      inst.ContextualDomain(),
 		"ContextName": inst.ContextName,
 		"Error":       msg,
+		"Favicon":     middlewares.Favicon(inst),
 	})
 }
 

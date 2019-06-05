@@ -159,6 +159,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			"Error":       value,
 			"Button":      buttonTitle,
 			"ButtonLink":  buttonURL,
+			"Favicon":     middlewares.Favicon(i),
 		})
 	} else {
 		err = c.String(status, fmt.Sprintf("%v", he.Message))
