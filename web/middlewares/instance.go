@@ -57,6 +57,7 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 					"Locale":      i.Locale,
 					"ThemeCSS":    ThemeCSS(i),
 					"Reason":      i.Translate(instance.BlockedLoginFailed.Message),
+					"Favicon":     Favicon(i),
 				})
 			}
 
@@ -86,6 +87,7 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 					"Locale":      i.Locale,
 					"ThemeCSS":    ThemeCSS(i),
 					"Reason":      reason,
+					"Favicon":     Favicon(i),
 				})
 			}
 		}
