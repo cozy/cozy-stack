@@ -208,6 +208,7 @@ func authorizeForm(c echo.Context) error {
 		"CSRF":             c.Get("csrf"),
 		"HasFallback":      hasFallback,
 		"Webapp":           params.webapp,
+		"Favicon":          middlewares.Favicon(instance),
 	})
 }
 
