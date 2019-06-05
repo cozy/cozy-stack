@@ -61,6 +61,7 @@ func passphraseForm(c echo.Context) error {
 		"MatomoURL":     matomo.URL,
 		"MatomoSiteID":  matomo.SiteID,
 		"MatomoAppID":   matomo.OnboardingAppID,
+		"Favicon":       middlewares.Favicon(inst),
 	})
 }
 
