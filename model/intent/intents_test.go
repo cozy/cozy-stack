@@ -108,13 +108,13 @@ func TestFillServices(t *testing.T) {
 
 }
 
-func TestFindAvailableWebapps(t *testing.T) {
+func TestFillAvailableWebapps(t *testing.T) {
 	intent := &Intent{
 		IID:    "6b44d8d0-148b-11e7-a1cf-a38d75a77df6",
 		Action: "REDIRECT",
 		Type:   "io.cozy.accounts",
 	}
-	err := intent.FindAvailableWebapps(ins)
+	err := intent.FillAvailableWebapps(ins)
 	assert.NoError(t, err)
 
 	// Should have Home and Collect

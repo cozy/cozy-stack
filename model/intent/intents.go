@@ -151,9 +151,9 @@ func GetInstanceWebapps(inst *instance.Instance) ([]string, error) {
 	return apps, nil
 }
 
-// FindAvailableWebapps finds webapps which can answer to the intent from
+// FillAvailableWebapps finds webapps which can answer to the intent from
 // non-installed instance webapps
-func (in *Intent) FindAvailableWebapps(inst *instance.Instance) error {
+func (in *Intent) FillAvailableWebapps(inst *instance.Instance) error {
 	// Webapps to exclude
 	installedWebApps, err := app.ListWebapps(inst)
 	if err != nil {
