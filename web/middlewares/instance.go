@@ -107,6 +107,7 @@ func CheckOnboardingNotFinished(next echo.HandlerFunc) echo.HandlerFunc {
 				"Domain":      i.ContextualDomain(),
 				"ContextName": i.ContextName,
 				"Locale":      i.Locale,
+				"Favicon":     Favicon(i),
 			})
 		}
 		return next(c)
