@@ -348,6 +348,7 @@ func authorizeSharingForm(c echo.Context) error {
 		"State":        params.state,
 		"Sharing":      s,
 		"CSRF":         c.Get("csrf"),
+		"Favicon":      middlewares.Favicon(instance),
 	})
 }
 
