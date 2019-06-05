@@ -408,6 +408,7 @@ func authorizeAppForm(c echo.Context) error {
 		"Slug":        app.Slug(),
 		"Permissions": permissions,
 		"CSRF":        c.Get("csrf"),
+		"Favicon":     middlewares.Favicon(instance),
 	})
 }
 
