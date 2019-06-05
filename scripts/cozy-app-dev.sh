@@ -76,7 +76,7 @@ do_start() {
 
 	trap 'kill $(jobs -p)' SIGINT SIGTERM EXIT
 
-	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
+	check_not_running "localhost:${COZY_STACK_PORT}" "cozy-stack"
 	do_check_couchdb
 
 	if [ -n "${appdir}" ]; then
