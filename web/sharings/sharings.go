@@ -354,6 +354,7 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 		"State":         state,
 		"ShareCode":     sharecode,
 		"URLError":      code != http.StatusOK,
+		"Favicon":       middlewares.Favicon(inst),
 	})
 }
 
