@@ -87,6 +87,12 @@ func createIntent(c echo.Context) error {
 	if err = intent.FillServices(instance); err != nil {
 		return wrapIntentsError(err)
 	}
+	// Fill available webapps only if there are no services found
+	if len(intent.Services) == 0 {
+		if err = intent.FillAvailableWebapps(instance); err != nil {
+			return wrapIntentsError(err)
+		}
+	}
 	if err = intent.Save(instance); err != nil {
 		return wrapIntentsError(err)
 	}

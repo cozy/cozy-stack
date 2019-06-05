@@ -108,6 +108,27 @@ func TestFillServices(t *testing.T) {
 
 }
 
+func TestFillAvailableWebapps(t *testing.T) {
+	intent := &Intent{
+		IID:    "6b44d8d0-148b-11e7-a1cf-a38d75a77df6",
+		Action: "REDIRECT",
+		Type:   "io.cozy.accounts",
+	}
+	err := intent.FillAvailableWebapps(ins)
+	assert.NoError(t, err)
+
+	// Should have Home and Collect
+	assert.Equal(t, 2, len(intent.AvailableApps))
+
+	res := map[string]interface{}{}
+	for _, v := range intent.AvailableApps {
+		res[v.Slug] = struct{}{}
+	}
+
+	assert.Contains(t, res, "home")
+	assert.Contains(t, res, "collect")
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
