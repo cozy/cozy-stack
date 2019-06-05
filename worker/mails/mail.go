@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -113,7 +114,16 @@ func doSendMail(ctx *job.WorkerContext, opts *mail.Options, domain string) error
 	}
 	toAddresses := make([]string, len(opts.To))
 	for i, to := range opts.To {
-		toAddresses[i] = email.FormatAddress(to.Email, to.Name)
+		// See https://tools.ietf.org/html/rfc5322#section-3.4
+		// We want to use an email address in the "display-name <addr-spec>"
+		// format. If it is the case, the address is taken as is. Else, gomail
+		// is used to format it.
+		to.Email = strings.TrimSpace(to.Email)
+		if strings.HasSuffix(to.Email, ">") {
+			toAddresses[i] = to.Email
+		} else {
+			toAddresses[i] = email.FormatAddress(to.Email, to.Name)
+		}
 	}
 
 	var parts []*mail.Part
