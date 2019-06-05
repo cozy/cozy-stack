@@ -15,6 +15,7 @@ func Compat(c echo.Context) error {
 		"Domain":      instance.ContextualDomain(),
 		"ContextName": instance.ContextName,
 		"Locale":      instance.Locale,
+		"Favicon":     middlewares.Favicon(instance),
 	})
 }
 

@@ -23,6 +23,7 @@ func CheckIE(next echo.HandlerFunc) echo.HandlerFunc {
 				"Domain":      instance.ContextualDomain(),
 				"ContextName": instance.ContextName,
 				"Locale":      instance.Locale,
+				"Favicon":     Favicon(instance),
 			})
 		}
 
