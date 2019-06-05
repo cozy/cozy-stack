@@ -24,6 +24,7 @@ func passphraseResetForm(c echo.Context) error {
 		"ContextName": instance.ContextName,
 		"Locale":      instance.Locale,
 		"CSRF":        c.Get("csrf"),
+		"Favicon":     middlewares.Favicon(instance),
 	})
 }
 
