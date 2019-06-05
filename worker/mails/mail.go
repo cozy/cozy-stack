@@ -118,6 +118,7 @@ func doSendMail(ctx *job.WorkerContext, opts *mail.Options, domain string) error
 		// We want to use an email address in the "display-name <addr-spec>"
 		// format. If it is the case, the address is taken as is. Else, gomail
 		// is used to format it.
+		to.Email = strings.TrimSpace(to.Email)
 		if strings.HasSuffix(to.Email, ">") {
 			toAddresses[i] = to.Email
 		} else {
