@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -179,14 +178,15 @@ func (in *Intent) FillAvailableWebapps(inst *instance.Instance) error {
 		}
 	}
 
-	var lastsVersions sync.Map
+	lastVersions := map[string]app.WebappManifest{}
 	versionsChan := make(chan app.WebappManifest)
 	errorsChan := make(chan error)
 
+	registries := inst.Registries()
 	for _, webapp := range endSlugs {
 		go func(webapp string, instance *instance.Instance) {
 			webappMan := app.WebappManifest{}
-			v, err := registry.GetLatestVersion(webapp, "stable", inst.Registries())
+			v, err := registry.GetLatestVersion(webapp, "stable", registries)
 			if err != nil {
 				errorsChan <- fmt.Errorf("Could not get last version for %s: %s", webapp, err)
 				return
@@ -201,19 +201,18 @@ func (in *Intent) FillAvailableWebapps(inst *instance.Instance) error {
 		}(webapp, inst)
 	}
 
-	for i := 1; i <= len(endSlugs); i++ {
+	for range endSlugs {
 		select {
 		case err := <-errorsChan:
-			inst.Logger().Errorf("intent: %s", err)
+			inst.Logger().WithField("nspace", "intents").Error(err)
 		case version := <-versionsChan:
-			lastsVersions.Store(version.Slug(), version)
+			lastVersions[version.Slug()] = version
 		}
 	}
 	close(versionsChan)
 	close(errorsChan)
 
-	lastsVersions.Range(func(versionSlug, man interface{}) bool {
-		manif := man.(app.WebappManifest)
+	for _, manif := range lastVersions {
 		if intent := manif.FindIntent(in.Action, in.Type); intent != nil {
 			availableApp := AvailableApp{
 				Name: manif.Name,
@@ -221,8 +220,7 @@ func (in *Intent) FillAvailableWebapps(inst *instance.Instance) error {
 			}
 			in.AvailableApps = append(in.AvailableApps, availableApp)
 		}
-		return true
-	})
+	}
 
 	return nil
 }
