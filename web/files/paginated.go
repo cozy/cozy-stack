@@ -32,6 +32,11 @@ type apiArchive struct {
 	*vfs.Archive
 }
 
+type apiMetadata struct {
+	*vfs.Metadata
+	secret string
+}
+
 func newDir(doc *vfs.DirDoc) *dir {
 	return &dir{doc: doc}
 }
@@ -206,6 +211,7 @@ func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, links *jsonapi.L
 
 var (
 	_ jsonapi.Object = (*apiArchive)(nil)
+	_ jsonapi.Object = (*apiMetadata)(nil)
 	_ jsonapi.Object = (*dir)(nil)
 	_ jsonapi.Object = (*file)(nil)
 )
@@ -229,6 +235,17 @@ func (a *apiArchive) MarshalJSON() ([]byte, error)           { return json.Marsh
 func (a *apiArchive) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/files/archive/" + a.Secret}
 }
+
+func (m *apiMetadata) ID() string                             { return m.secret }
+func (m *apiMetadata) Rev() string                            { return "" }
+func (m *apiMetadata) SetID(id string)                        { m.secret = id }
+func (m *apiMetadata) SetRev(rev string)                      {}
+func (m *apiMetadata) DocType() string                        { return consts.FilesMetadata }
+func (m *apiMetadata) Clone() couchdb.Doc                     { cloned := *m; return &cloned }
+func (m *apiMetadata) Relationships() jsonapi.RelationshipMap { return nil }
+func (m *apiMetadata) Included() []jsonapi.Object             { return nil }
+func (m *apiMetadata) MarshalJSON() ([]byte, error)           { return json.Marshal(m.Metadata) }
+func (m *apiMetadata) Links() *jsonapi.LinksList              { return nil }
 
 func (f *file) ID() string         { return f.doc.ID() }
 func (f *file) Rev() string        { return f.doc.Rev() }

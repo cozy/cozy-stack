@@ -23,6 +23,8 @@ const (
 	Doctypes = "io.cozy.doctypes"
 	// Files doc type for type for files and directories
 	Files = "io.cozy.files"
+	// FilesMetadata doc type for metadata of files
+	FilesMetadata = "io.cozy.files.metadata"
 	// PhotosAlbums doc type for photos albums
 	PhotosAlbums = "io.cozy.photos.albums"
 	// Intents doc type for intents persisted in couchdb

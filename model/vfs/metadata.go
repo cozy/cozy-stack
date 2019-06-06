@@ -38,6 +38,17 @@ func NewMetadata() Metadata {
 	return m
 }
 
+// MergeMetadata takes a metadata map and merges it in the FileDoc
+func MergeMetadata(doc *FileDoc, meta Metadata) {
+	if doc.Metadata == nil {
+		doc.Metadata = meta
+	} else {
+		for k, v := range meta {
+			doc.Metadata[k] = v
+		}
+	}
+}
+
 // MetaExtractor is an interface for extracting metadata from a file
 type MetaExtractor interface {
 	io.WriteCloser
