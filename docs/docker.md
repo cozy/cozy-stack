@@ -71,7 +71,6 @@ Here's a more detailed approach. You still need your server accessing Internet, 
 
 Note: an alternative to a wildcard certificate can be [Caddy Server](https://caddyserver.com/) as a reverse proxy. It's able to generate on demand certificates via the ACME protocol and LetsEncrypt. Meaning the first time you open an url, something like https://YourFirstInstanceName-drive.cozy.your.domain, there'll be a few second lags for Caddy to grab the certificate, and you'll be good to go.
 
-
 ### Start a CouchDB
 
 You can run it any way you want, here the [official CouchDB installation documentation]. Since we're running Docker anyway, here's how to start it using the official container.

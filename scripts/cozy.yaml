@@ -25,20 +25,6 @@ fs:
 couchdb:
   url: {{.Env.COUCHDB_PROTOCOL}}://{{.Env.COUCHDB_USER}}:{{.Env.COUCHDB_PASSWORD}}@{{.Env.COUCHDB_HOST}}:{{.Env.COUCHDB_PORT}}/
 
-redis:
-  addrs: {{.Env.REDIS_ADDRS}}
-  # password:
-  databases:
-    jobs: 0
-    cache: 1
-    lock: 2
-    sessions: 3
-    downloads: 4
-    konnectors: 5
-    realtime: 6
-    log: 7
-    rate_limiting: 8
-
 konnectors:
   cmd: /usr/local/bin/konnector-node-run.sh
 
