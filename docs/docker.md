@@ -73,7 +73,7 @@ Note: an alternative to a wildcard certificate can be [Caddy Server](https://cad
 
 ### Start a CouchDB
 
-You can run it any way you want, here the [official CouchDB installation documentation]. Since we're running Docker anyway, here's how to start it using the official container.
+You can run it any way you want, here the [official CouchDB 2.3.1 installation documentation](https://docs.couchdb.org/en/2.3.1/install/unix.html). Since we're running Docker anyway, here's how to start it using the official container.
 
 ```bash
 docker run -d -e COUCHDB_USER=cozy -e COUCHDB_PASSWORD=cozy --name couch -v $(pwd)/volumes/couchdb:/opt/couchdb/data couchdb:2.3
