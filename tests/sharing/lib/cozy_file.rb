@@ -50,6 +50,17 @@ class CozyFile
     opts
   end
 
+  def self.metadata_options_for(inst, meta)
+    opts = {
+      authorization: "Bearer #{inst.token_for doctype}",
+      :"content-type" => "application/vnd.api+json"
+    }
+    body = JSON.generate data: { type: "io.cozy.files.metadata", attributes: meta }
+    res = inst.client["/files/upload/metadata"].post body, opts
+    id = JSON.parse(res.body)["data"]["id"]
+    { metadata_id: id }
+  end
+
   def initialize(opts = {})
     @name = opts[:name] || Faker::Internet.slug
     @dir_id = opts[:dir_id] || Folder::ROOT_DIR
@@ -79,12 +90,14 @@ class CozyFile
   def overwrite(inst, opts = {})
     @mime = opts[:mime] || @mime
     @content = opts[:content] || Faker::Friends.quote
-    opts = {
+    headers = {
       accept: "application/vnd.api+json",
       authorization: "Bearer #{inst.token_for doctype}",
       :"content-type" => mime
     }
-    res = inst.client["/files/#{@couch_id}"].put @content, opts
+    u = "/files/#{@couch_id}"
+    u = "#{u}?MetadataID=#{opts[:metadata_id]}" if opts[:metadata_id]
+    res = inst.client[u].put @content, headers
     j = JSON.parse(res.body)["data"]
     @couch_rev = j["meta"]["rev"]
     @md5sum = j["attributes"]["md5sum"]

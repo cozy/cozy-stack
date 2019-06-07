@@ -484,6 +484,7 @@ func buildReferencedBy(target, file *vfs.FileDoc, rule *Rule) []couchdb.DocRefer
 func copySafeFieldsToFile(target, file *vfs.FileDoc) {
 	file.Tags = make([]string, len(target.Tags))
 	copy(file.Tags, target.Tags)
+	file.Metadata = target.Metadata
 	file.CreatedAt = target.CreatedAt
 	file.UpdatedAt = target.UpdatedAt
 	file.Mime = target.Mime

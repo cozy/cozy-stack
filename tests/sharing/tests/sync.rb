@@ -127,7 +127,9 @@ describe "A folder" do
     child1.rename inst, Faker::Internet.slug
     child2 = Folder.create inst, dir_id: folder.couch_id
     child1.move_to inst, child2.couch_id
-    file.overwrite inst, mime: 'text/plain'
+    opts = CozyFile.metadata_options_for(inst, label: Faker::Simpsons.quote)
+    opts[:mime] = 'text/plain'
+    file.overwrite inst, opts
     file.rename inst, "#{Faker::Internet.slug}.txt"
     sleep 7
 
@@ -142,6 +144,7 @@ describe "A folder" do
     assert_equal file.name, file_recipient.name
     assert_equal file.md5sum, file_recipient.md5sum
     assert_equal file.couch_rev, file_recipient.couch_rev
+    assert_equal file.metadata, file_recipient.metadata
 
     # Check the sync (create + update) recipient -> sharer
     child1_recipient.rename inst_recipient, Faker::Internet.slug
