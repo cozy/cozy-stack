@@ -253,7 +253,8 @@ Upload a file
 | Name       | the file name                                      |
 | Tags       | an array of tags                                   |
 | Executable | `true` if the file is executable (UNIX permission) |
-| Metadata   | a JSON with metadata on this file (gps, persons)   |
+| Metadata   | a JSON with metadata on this file (_deprecated_)   |
+| MetadataID | the identifier of a metadata object                |
 
 #### HTTP headers
 
@@ -357,6 +358,54 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 **Note**: see [references of documents in VFS](references-docs-in-vfs.md) for
 more informations about the references field.
 
+### POST /files/upload/metadata
+
+Send a metadata object that can be associated to a file uploaded after that,
+via the `MetadataID` query parameter.
+
+#### Request
+
+```http
+POST /files/upload/metadata HTTP/1.1
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "data": {
+        "type": "io.cozy.files.metadata",
+        "attributes": {
+            "category": "report",
+            "subCategory": "theft",
+            "datetime": "2017-04-22T01:00:00-05:00",
+            "label": "foobar"
+        }
+    }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "data": {
+        "type": "io.cozy.files.metadata",
+        "id": "42E6BD48",
+        "attributes": {
+            "category": "report",
+            "subCategory": "theft",
+            "datetime": "2017-04-22T01:00:00-05:00",
+            "label": "foobar"
+        }
+    }
+}
+```
+
 ### GET /files/download/:file-id
 
 Download the file content.
@@ -402,6 +451,13 @@ Get a thumbnail of a file (for an image only). `:format` can be `small`
 ### PUT /files/:file-id
 
 Overwrite a file
+
+#### Query-String
+
+| Parameter  | Description                         |
+| ---------- | ------------------------------------|
+| Tags       | an array of tags                    |
+| MetadataID | the identifier of a metadata object |
 
 #### HTTP headers
 
@@ -686,7 +742,6 @@ the `files` array).
 
 ```http
 POST /files/archive HTTP/1.1
-Accept: application/zip
 Content-Type: application/vnd.api+json
 ```
 

@@ -25,7 +25,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
@@ -75,12 +74,10 @@ func CreationHandler(c echo.Context) error {
 }
 
 func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
-	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
-
 	dirID := c.Param("file-id")
 	name := c.QueryParam("Name")
 	var doc *vfs.FileDoc
-	doc, err = FileDocFromReq(c, name, dirID, tags)
+	doc, err = FileDocFromReq(c, name, dirID)
 	if err != nil {
 		return
 	}
@@ -175,12 +172,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 		return WrapVfsError(err)
 	}
 
-	newdoc, err = FileDocFromReq(
-		c,
-		olddoc.DocName,
-		olddoc.DirID,
-		olddoc.Tags,
-	)
+	newdoc, err = FileDocFromReq(c, olddoc.DocName, olddoc.DirID)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -220,6 +212,31 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 
 	_, err = io.Copy(file, c.Request().Body)
 	return
+}
+
+// UploadMetadataHandler accepts a metadata objet and persist it, so that it
+// can be used in a future file upload.
+func UploadMetadataHandler(c echo.Context) error {
+	if err := checkPerm(c, permission.POST, nil, &vfs.FileDoc{}); err != nil {
+		return err
+	}
+
+	meta := &vfs.Metadata{}
+	if _, err := jsonapi.Bind(c.Request().Body, meta); err != nil {
+		return err
+	}
+
+	instance := middlewares.GetInstance(c)
+	secret, err := vfs.GetStore().AddMetadata(instance, meta)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	m := apiMetadata{
+		Metadata: meta,
+		secret:   secret,
+	}
+	return jsonapi.Data(c, http.StatusCreated, &m, nil)
 }
 
 // ModifyMetadataByIDHandler handles PATCH requests on /files/:file-id
@@ -1029,6 +1046,7 @@ func Routes(router *echo.Group) {
 	router.POST("/", CreationHandler)
 	router.POST("/:file-id", CreationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
+	router.POST("/upload/metadata", UploadMetadataHandler)
 
 	router.GET("/:file-id/thumbnails/:secret/:format", ThumbnailHandler)
 
@@ -1098,7 +1116,7 @@ func wrapVfsError(err error) *jsonapi.Error {
 }
 
 // FileDocFromReq creates a FileDoc from an incoming request.
-func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.FileDoc, error) {
+func FileDocFromReq(c echo.Context, name, dirID string) (*vfs.FileDoc, error) {
 	header := c.Request().Header
 	size := c.Request().ContentLength
 
@@ -1141,6 +1159,7 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 		mime, class = vfs.ExtractMimeAndClass(contentType)
 	}
 
+	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
 	executable := c.QueryParam("Executable") == "true"
 	trashed := false
 	doc, err := vfs.NewFileDoc(
@@ -1155,12 +1174,29 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 		trashed,
 		tags,
 	)
-	if meta := c.QueryParam("Metadata"); err == nil && meta != "" {
+	if err != nil {
+		return nil, err
+	}
+
+	// This way to send metadata is deprecated, but is still here to ensure
+	// compatibility with existing clients.
+	if meta := c.QueryParam("Metadata"); meta != "" {
 		if err := json.Unmarshal([]byte(meta), &doc.Metadata); err != nil {
-			logger.WithNamespace("files").Debugf("Invalid Metadata at upload: %s", err)
+			return nil, err
 		}
 	}
-	return doc, err
+
+	if secret := c.QueryParam("MetadataID"); secret != "" {
+		instance := middlewares.GetInstance(c)
+		meta, err := vfs.GetStore().GetMetadata(instance, secret)
+		fmt.Printf("MetadataID = %s -> %v (%v)\n", secret, meta, err)
+		if err != nil {
+			return nil, err
+		}
+		doc.Metadata = *meta
+	}
+
+	return doc, nil
 }
 
 // CheckIfMatch checks if the revision provided matches the revision number

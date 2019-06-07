@@ -485,6 +485,54 @@ func TestUploadWithDate(t *testing.T) {
 	assert.Equal(t, createdAt, updatedAt)
 }
 
+func TestUploadWithMetadata(t *testing.T) {
+	buf := strings.NewReader(`{
+    "data": {
+        "type": "io.cozy.files.metadata",
+        "attributes": {
+            "category": "report",
+            "subCategory": "theft",
+            "datetime": "2017-04-22T01:00:00-05:00",
+            "label": "foobar"
+        }
+    }
+}`)
+	req, err := http.NewRequest("POST", ts.URL+"/files/upload/metadata", buf)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 201, res.StatusCode)
+	var obj map[string]interface{}
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+	data := obj["data"].(map[string]interface{})
+	assert.Equal(t, consts.FilesMetadata, data["type"])
+	secret := data["id"].(string)
+	attrs := data["attributes"].(map[string]interface{})
+	assert.Equal(t, "report", attrs["category"])
+	assert.Equal(t, "theft", attrs["subCategory"])
+	assert.Equal(t, "foobar", attrs["label"])
+	assert.Equal(t, "2017-04-22T01:00:00-05:00", attrs["datetime"])
+
+	u := "/files/?Type=file&Name=withmetadataid&MetadataID=" + secret
+	buf = strings.NewReader("foo")
+	req, err = http.NewRequest("POST", ts.URL+u, buf)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res, obj = doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res.StatusCode)
+	fmt.Printf("obj = %#v\n", obj)
+	data = obj["data"].(map[string]interface{})
+	attrs = data["attributes"].(map[string]interface{})
+	meta := attrs["metadata"].(map[string]interface{})
+	assert.Equal(t, "report", meta["category"])
+	assert.Equal(t, "theft", meta["subCategory"])
+	assert.Equal(t, "foobar", meta["label"])
+	assert.Equal(t, "2017-04-22T01:00:00-05:00", meta["datetime"])
+}
+
 func TestModifyMetadataFileMove(t *testing.T) {
 	body := "foo"
 	res1, data1 := upload(t, "/files/?Type=file&Name=filemoveme&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
