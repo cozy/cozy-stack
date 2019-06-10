@@ -112,6 +112,12 @@ security features. Please do not use this binary as your production server.
 		return
 	}
 
+	// Initialize the dynamic asset container for Swift
+	if err = dynamic.InitDynamicAssetContainer(); err != nil {
+		return
+
+	}
+
 	assetsList, err := dynamic.GetAssetsList()
 	if err != nil {
 		return

@@ -3,12 +3,16 @@ package dynamic
 import (
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
 )
 
 const assetsListID = "assets"
+
+// DynamicAssetsContainerName is the Swift container name for dynamic assets
+const DynamicAssetsContainerName = "__dyn-assets__"
 
 // AssetsList contains the list of assets options that are loaded at the
 // startup of the stack.
@@ -92,4 +96,16 @@ func PollAssetsList(cacheStorage fs.Cache, pollingInterval time.Duration) {
 			_ = fs.RegisterCustomExternals(cacheStorage, assetsList, 6 /*= retry count */)
 		}
 	}
+}
+
+// Initializes the Swift container for dynamic assets
+func InitDynamicAssetContainer() error {
+	if config.FsURL().Scheme == config.SchemeSwift ||
+		config.FsURL().Scheme == config.SchemeSwiftSecure {
+
+		swiftConn := config.GetSwiftConnection()
+		return swiftConn.ContainerCreate(DynamicAssetsContainerName, nil)
+	}
+
+	return nil
 }
