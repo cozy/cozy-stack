@@ -36,6 +36,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -46,6 +47,9 @@ var assetsClient = &http.Client{
 var globalAssets sync.Map // {context:path -> *Asset}
 
 const sumLen = 10
+
+// DynamicAssetsContainerName is the Swift container name for dynamic assets
+const DynamicAssetsContainerName = "__dyn-assets__"
 
 // AssetOption is used to insert a dynamic asset.
 type AssetOption struct {
@@ -250,7 +254,13 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 	}
 
 	asset := newAsset(opt, zippedDataBuf.Bytes(), unzippedData)
-	storeAsset(asset)
+
+	objectName := path.Join(asset.Context, asset.Name)
+	swiftConn := config.GetSwiftConnection()
+	f, _ := swiftConn.ObjectCreate(DynamicAssetsContainerName, objectName, true, "", "", nil)
+	defer f.Close()
+	f.Write(asset.unzippedData)
+
 	return nil
 }
 
@@ -294,23 +304,30 @@ func normalizeAssetName(name string) string {
 	return path.Join("/", name)
 }
 
+func NameWithSum(name, etag, sum string) string {
+
+	nameWithSum := name
+
+	nameBase := path.Base(name)
+	if off := strings.IndexByte(nameBase, '.'); off >= 0 {
+		nameDir := path.Dir(name)
+		nameWithSum = path.Join("/", nameDir, nameBase[:off]+"."+sum[:sumLen]+nameBase[off:])
+	}
+
+	return nameWithSum
+}
+
 func newAsset(opt AssetOption, zippedData, unzippedData []byte) *Asset {
 	mime := filetype.ByExtension(path.Ext(opt.Name))
 	if mime == "" {
 		mime = filetype.Match(unzippedData)
 	}
 
-	sumx := opt.Shasum
-	etag := fmt.Sprintf(`"%s"`, sumx[:sumLen])
-
 	opt.Name = normalizeAssetName(opt.Name)
 
-	nameWithSum := opt.Name
-	nameBase := path.Base(opt.Name)
-	if off := strings.IndexByte(nameBase, '.'); off >= 0 {
-		nameDir := path.Dir(opt.Name)
-		nameWithSum = path.Join("/", nameDir, nameBase[:off]+"."+sumx[:sumLen]+nameBase[off:])
-	}
+	sumx := opt.Shasum
+	etag := fmt.Sprintf(`"%s"`, sumx[:sumLen])
+	nameWithSum := NameWithSum(opt.Name, etag, sumx)
 
 	return &Asset{
 		AssetOption: opt,
@@ -326,6 +343,7 @@ func newAsset(opt AssetOption, zippedData, unzippedData []byte) *Asset {
 }
 
 // threadsafe
+// Used to store statik assets
 func storeAsset(asset *Asset) {
 	context := asset.Context
 	if context == "" {
@@ -354,11 +372,47 @@ func Get(name string, context ...string) (*Asset, bool) {
 	} else {
 		ctx = config.DefaultInstanceContext
 	}
-	asset, ok := globalAssets.Load(marshalContextKey(ctx, name))
-	if !ok {
+
+	// Dynamic assets are stored in Swift
+	assetContent := new(bytes.Buffer)
+	swiftConn := config.GetSwiftConnection()
+	objectName := path.Join(ctx, name)
+
+	_, err := swiftConn.ObjectGet(DynamicAssetsContainerName, objectName, assetContent, true, nil)
+	if err != nil && err != swift.ObjectNotFound {
 		return nil, false
 	}
-	return asset.(*Asset), true
+
+	// If asset was not found, try to retreive it from static assets
+	if err == swift.ObjectNotFound {
+		asset, ok := globalAssets.Load(marshalContextKey(ctx, name))
+		if !ok {
+			return nil, false
+		}
+		return asset.(*Asset), true
+	}
+
+	// Otherwise, re-constructing the asset struct from the Swift content
+	content := assetContent.Bytes()
+
+	h := sha256.New()
+	h.Write(content)
+	suma := h.Sum(nil)
+	sumx := hex.EncodeToString(suma)
+
+	zippedDataBuf := new(bytes.Buffer)
+	gw := gzip.NewWriter(zippedDataBuf)
+	gw.Write(content)
+	zippedContent := zippedDataBuf.Bytes()
+
+	asset := newAsset(AssetOption{
+		Shasum:  sumx,
+		Name:    name,
+		Context: ctx,
+	}, zippedContent, content)
+
+	return asset, true
+
 }
 
 // Open returns a bytes.Reader for an asset in the given context, or the

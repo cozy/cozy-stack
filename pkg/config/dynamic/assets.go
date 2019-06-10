@@ -11,9 +11,6 @@ import (
 
 const assetsListID = "assets"
 
-// DynamicAssetsContainerName is the Swift container name for dynamic assets
-const DynamicAssetsContainerName = "__dyn-assets__"
-
 // AssetsList contains the list of assets options that are loaded at the
 // startup of the stack.
 //
@@ -104,7 +101,7 @@ func InitDynamicAssetContainer() error {
 		config.FsURL().Scheme == config.SchemeSwiftSecure {
 
 		swiftConn := config.GetSwiftConnection()
-		return swiftConn.ContainerCreate(DynamicAssetsContainerName, nil)
+		return swiftConn.ContainerCreate(fs.DynamicAssetsContainerName, nil)
 	}
 
 	return nil
