@@ -251,9 +251,20 @@ func rebuildRedis(c echo.Context) error {
 // Renders the assets list loaded in memory and served by the cozy
 func assetsInfos(c echo.Context) error {
 	assetsMap := make(map[string][]*fs.Asset)
+	dynAssets, _ := dynamic.ListDynamicAssets()
+
+	// Statik assets
 	fs.Foreach(func(name, context string, f *fs.Asset) {
 		assetsMap[context] = append(assetsMap[context], f)
 	})
+
+	// Adding dynamic assets
+	for ctx, assets := range dynAssets {
+		for _, asset := range assets {
+			assetsMap[ctx] = append(assetsMap[ctx], asset)
+		}
+	}
+
 	return c.JSON(http.StatusOK, assetsMap)
 }
 

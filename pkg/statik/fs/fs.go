@@ -166,7 +166,7 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 		return nil
 	}
 
-	name := normalizeAssetName(opt.Name)
+	name := NormalizeAssetName(opt.Name)
 	if currentAsset, ok := Get(name, opt.Context); ok {
 		if currentAsset.Shasum == opt.Shasum {
 			return nil
@@ -300,12 +300,12 @@ func unzip(data []byte) (err error) {
 	return
 }
 
-func normalizeAssetName(name string) string {
+func NormalizeAssetName(name string) string {
 	return path.Join("/", name)
 }
 
-func NameWithSum(name, etag, sum string) string {
-
+// NameWithSum returns the filename with its shasum
+func NameWithSum(name, sum string) string {
 	nameWithSum := name
 
 	nameBase := path.Base(name)
@@ -323,11 +323,11 @@ func newAsset(opt AssetOption, zippedData, unzippedData []byte) *Asset {
 		mime = filetype.Match(unzippedData)
 	}
 
-	opt.Name = normalizeAssetName(opt.Name)
+	opt.Name = NormalizeAssetName(opt.Name)
 
 	sumx := opt.Shasum
 	etag := fmt.Sprintf(`"%s"`, sumx[:sumLen])
-	nameWithSum := NameWithSum(opt.Name, etag, sumx)
+	nameWithSum := NameWithSum(opt.Name, sumx)
 
 	return &Asset{
 		AssetOption: opt,
@@ -363,36 +363,19 @@ func DeleteAsset(asset *Asset) {
 	globalAssets.Delete(contextKey)
 }
 
-// Get returns an asset for the given context, or the default context if
-// no context is given.
-func Get(name string, context ...string) (*Asset, bool) {
-	var ctx string
-	if len(context) > 0 && context[0] != "" {
-		ctx = context[0]
-	} else {
-		ctx = config.DefaultInstanceContext
-	}
-
-	// Dynamic assets are stored in Swift
-	assetContent := new(bytes.Buffer)
+// GetDynamicAsset retrieves a raw asset from Swit and build a fs.Asset
+func GetDynamicAsset(context, name string) (*Asset, error) {
 	swiftConn := config.GetSwiftConnection()
-	objectName := path.Join(ctx, name)
+	objectName := path.Join(context, name)
+
+	assetContent := new(bytes.Buffer)
 
 	_, err := swiftConn.ObjectGet(DynamicAssetsContainerName, objectName, assetContent, true, nil)
-	if err != nil && err != swift.ObjectNotFound {
-		return nil, false
+	if err != nil && err == swift.ObjectNotFound {
+		return nil, err
 	}
 
-	// If asset was not found, try to retreive it from static assets
-	if err == swift.ObjectNotFound {
-		asset, ok := globalAssets.Load(marshalContextKey(ctx, name))
-		if !ok {
-			return nil, false
-		}
-		return asset.(*Asset), true
-	}
-
-	// Otherwise, re-constructing the asset struct from the Swift content
+	// Re-constructing the asset struct from the Swift content
 	content := assetContent.Bytes()
 
 	h := sha256.New()
@@ -408,8 +391,33 @@ func Get(name string, context ...string) (*Asset, bool) {
 	asset := newAsset(AssetOption{
 		Shasum:  sumx,
 		Name:    name,
-		Context: ctx,
+		Context: context,
 	}, zippedContent, content)
+
+	return asset, nil
+}
+
+// Get returns an asset for the given context, or the default context if
+// no context is given.
+func Get(name string, context ...string) (*Asset, bool) {
+	var ctx string
+	if len(context) > 0 && context[0] != "" {
+		ctx = context[0]
+	} else {
+		ctx = config.DefaultInstanceContext
+	}
+
+	// Dynamic assets are stored in Swift
+	asset, err := GetDynamicAsset(ctx, name)
+
+	// If asset was not found, try to retreive it from static assets
+	if err == swift.ObjectNotFound {
+		asset, ok := globalAssets.Load(marshalContextKey(ctx, name))
+		if !ok {
+			return nil, false
+		}
+		return asset.(*Asset), true
+	}
 
 	return asset, true
 
