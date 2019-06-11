@@ -738,6 +738,8 @@ sub-directories in the archive.
 It's possible to give a file by its id (in the `ids` array) or by its path (in
 the `files` array).
 
+The generated archive is temporary and is not persisted. 
+
 #### Request
 
 ```http
