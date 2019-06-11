@@ -1,7 +1,7 @@
 package dynamic
 
 import (
-	"time"
+	"path"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -59,50 +59,16 @@ func GetAssetsList() ([]fs.AssetOption, error) {
 	return doc.AssetsList, nil
 }
 
-// UpdateAssetsList updates the assets list document in CouchDB to reflect the
-// current list of assets.
-func UpdateAssetsList() error {
-	var doc AssetsList
-	fs.Foreach(func(name, context string, f *fs.Asset) {
-		if f.IsCustom {
-			doc.AssetsList = append(doc.AssetsList, f.AssetOption)
-		}
-	})
-	return couchdb.Upsert(couchdb.GlobalDB, &doc)
-}
-
-// RemoveAsset removes an asset from AssetList
+// RemoveAsset removes a dynamic asset from Swift
 func RemoveAsset(context, name string) error {
-	if asset, ok := fs.Get(name, context); ok && asset.IsCustom {
-		fs.DeleteAsset(asset)
-		return UpdateAssetsList()
-	}
-	return nil
-}
+	swiftConn := config.GetSwiftConnection()
+	objectName := path.Join(context, name)
 
-// PollAssetsList executes itself in its own goroutine to poll at regular
-// intervals the list of assets that should be delivered by the stack.
-func PollAssetsList(cacheStorage fs.Cache, pollingInterval time.Duration) {
-	if pollingInterval == 0 {
-		pollingInterval = 2 * time.Minute
-	}
-	for {
-		time.Sleep(pollingInterval)
-		assetsList, err := GetAssetsList()
-		if err == nil {
-			_ = fs.RegisterCustomExternals(cacheStorage, assetsList, 6 /*= retry count */)
-		}
-	}
+	return swiftConn.ObjectDelete(fs.DynamicAssetsContainerName, objectName)
 }
 
 // Initializes the Swift container for dynamic assets
 func InitDynamicAssetContainer() error {
-	if config.FsURL().Scheme == config.SchemeSwift ||
-		config.FsURL().Scheme == config.SchemeSwiftSecure {
-
-		swiftConn := config.GetSwiftConnection()
-		return swiftConn.ContainerCreate(fs.DynamicAssetsContainerName, nil)
-	}
-
-	return nil
+	swiftConn := config.GetSwiftConnection()
+	return swiftConn.ContainerCreate(fs.DynamicAssetsContainerName, nil)
 }

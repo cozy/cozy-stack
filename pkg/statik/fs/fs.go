@@ -363,7 +363,7 @@ func DeleteAsset(asset *Asset) {
 	globalAssets.Delete(contextKey)
 }
 
-// Get returns a dynamic asset for the given context, or the default context if
+// Get returns an asset for the given context, or the default context if
 // no context is given.
 func Get(name string, context ...string) (*Asset, bool) {
 	var ctx string

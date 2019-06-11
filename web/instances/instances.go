@@ -267,7 +267,7 @@ func addAssets(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
-	return dynamic.UpdateAssetsList()
+	return nil
 }
 
 func deleteAssets(c echo.Context) error {
