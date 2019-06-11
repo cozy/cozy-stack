@@ -2,6 +2,7 @@ package job_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -62,7 +63,11 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	var triggers []jobs.Trigger
 	triggersInfos := []jobs.TriggerInfos{ti}
 	sch := jobs.NewMemScheduler()
-	assert.NoError(t, sch.StartScheduler(bro))
+	if !assert.NoError(t, sch.StartScheduler(bro)) {
+		fmt.Printf("err = %v\n", sch.StartScheduler(bro))
+		fmt.Printf("err = %v\n", sch.StartScheduler(bro))
+		return
+	}
 
 	// Clear the existing triggers before testing with our triggers
 	ts, err := sch.GetAllTriggers(testInstance)
@@ -105,9 +110,10 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	time.Sleep(3000 * time.Millisecond)
 	assert.Equal(t, 3, called)
 
+	doc2 := doc.Clone().(couchdb.JSONDoc)
+	doc2.Type = "io.cozy.moredebounce"
 	realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
-	doc.Type = "io.cozy.moredebounce"
-	realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
+	realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc2, nil)
 	time.Sleep(3000 * time.Millisecond)
 	assert.Equal(t, 4, called)
 
