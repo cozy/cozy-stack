@@ -143,6 +143,7 @@ do_assets() {
 }
 
 do_debug_assets() {
+	tx --root "${WORK_DIR}" pull -a || echo "Do you have configured transifex?"
 	assets_dst="${WORK_DIR}/debug-assets"
 	rm -rf "${assets_dst}"
 	mkdir -p "${assets_dst}/css" "${assets_dst}/js"
