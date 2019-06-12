@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -511,6 +512,55 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 			dir.UpdatedAt = at
 		}
 	}
+
+	if meta, ok := target["cozyMetadata"].(map[string]interface{}); ok {
+		dir.CozyMetadata = &vfs.FilesCozyMetadata{}
+		if version, ok := meta["doctypeVersion"].(string); ok {
+			dir.CozyMetadata.DocTypeVersion = version
+		}
+		if version, ok := meta["metadataVersion"].(int); ok {
+			dir.CozyMetadata.MetadataVersion = version
+		}
+		if created, ok := meta["createdAt"].(string); ok {
+			if at, err := time.Parse(time.RFC3339Nano, created); err == nil {
+				dir.CozyMetadata.CreatedAt = at
+			}
+		}
+		if app, ok := meta["createdByApp"].(string); ok {
+			dir.CozyMetadata.CreatedByApp = app
+		}
+		if version, ok := meta["createdByAppVersion"].(string); ok {
+			dir.CozyMetadata.CreatedByAppVersion = version
+		}
+		if instance, ok := meta["createdOn"].(string); ok {
+			dir.CozyMetadata.CreatedOn = instance
+		}
+
+		if updated, ok := meta["updatedAt"].(string); ok {
+			if at, err := time.Parse(time.RFC3339Nano, updated); err == nil {
+				dir.CozyMetadata.UpdatedAt = at
+			}
+		}
+		if updates, ok := meta["updatedByApps"].([]map[string]interface{}); ok {
+			for _, update := range updates {
+				if slug, ok := update["slug"].(string); ok {
+					entry := &metadata.UpdatedByAppEntry{Slug: slug}
+					if date, ok := update["date"].(string); ok {
+						if at, err := time.Parse(time.RFC3339Nano, date); err == nil {
+							entry.Date = at
+						}
+					}
+					if version, ok := update["version"].(string); ok {
+						entry.Version = version
+					}
+					if instance, ok := update["instance"].(string); ok {
+						entry.Instance = instance
+					}
+					dir.CozyMetadata.UpdatedByApps = append(dir.CozyMetadata.UpdatedByApps, entry)
+				}
+			}
+		}
+	}
 }
 
 // resolveConflictSamePath is used when two files/folders are in conflict
@@ -893,6 +943,9 @@ func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
 	}
 	if dir.RestorePath != "" {
 		doc.M["restore_path"] = dir.RestorePath
+	}
+	if dir.CozyMetadata != nil {
+		doc.M["cozyMetadata"] = dir.CozyMetadata.ToJSONDoc()
 	}
 	return doc
 }

@@ -15,9 +15,10 @@ var ErrSlugEmpty = errors.New("Slug cannot be empty")
 // UpdatedByAppEntry represents a modification made by an application to the
 // document
 type UpdatedByAppEntry struct {
-	Slug    string    `json:"slug"`              // Slug of the app
-	Date    time.Time `json:"date"`              // Date of the update
-	Version string    `json:"version,omitempty"` // Version identifier of the app
+	Slug     string    `json:"slug"`               // Slug of the app
+	Date     time.Time `json:"date"`               // Date of the update
+	Version  string    `json:"version,omitempty"`  // Version identifier of the app
+	Instance string    `json:"instance,omitempty"` // URL of the instance
 }
 
 // CozyMetadata holds all the metadata of a document

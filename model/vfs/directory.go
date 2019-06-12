@@ -37,6 +37,8 @@ type DirDoc struct {
 	Fullpath string `json:"path,omitempty"`
 
 	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
+
+	CozyMetadata *FilesCozyMetadata `json:"cozyMetadata,omitempty"`
 }
 
 // ID returns the directory qualified identifier
@@ -55,6 +57,9 @@ func (d *DirDoc) Clone() couchdb.Doc {
 	copy(cloned.Tags, d.Tags)
 	cloned.ReferencedBy = make([]couchdb.DocReference, len(d.ReferencedBy))
 	copy(cloned.ReferencedBy, d.ReferencedBy)
+	if d.CozyMetadata != nil {
+		cloned.CozyMetadata = d.CozyMetadata.Clone()
+	}
 	return &cloned
 }
 
