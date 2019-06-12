@@ -60,4 +60,5 @@ assets directory while building the go code.
 It's possible to overload some assets on a context with the `cozy-stack config
 insert-asset` command. See [its
 manpage](https://docs.cozy.io/en/cozy-stack/cli/cozy-stack_config_insert-asset/)
+and [Customizing a context](https://docs.cozy.io/en/cozy-stack/config/#customizing-a-context)
 for more details.
