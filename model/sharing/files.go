@@ -483,14 +483,14 @@ func buildReferencedBy(target, file *vfs.FileDoc, rule *Rule) []couchdb.DocRefer
 }
 
 func copySafeFieldsToFile(target, file *vfs.FileDoc) {
-	file.Tags = make([]string, len(target.Tags))
-	copy(file.Tags, target.Tags)
+	file.Tags = target.Tags
 	file.Metadata = target.Metadata
 	file.CreatedAt = target.CreatedAt
 	file.UpdatedAt = target.UpdatedAt
 	file.Mime = target.Mime
 	file.Class = target.Class
 	file.Executable = target.Executable
+	file.CozyMetadata = target.CozyMetadata
 }
 
 func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
@@ -559,6 +559,14 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 					dir.CozyMetadata.UpdatedByApps = append(dir.CozyMetadata.UpdatedByApps, entry)
 				}
 			}
+		}
+
+		// No upload* for directories
+		if account, ok := meta["sourceAccount"].(string); ok {
+			dir.CozyMetadata.SourceAccount = account
+		}
+		if id, ok := meta["sourceAccountIdentifier"].(string); ok {
+			dir.CozyMetadata.SourceIdentifier = id
 		}
 	}
 }
@@ -978,6 +986,9 @@ func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
 	}
 	if len(file.Metadata) > 0 {
 		doc.M["metadata"] = file.Metadata
+	}
+	if file.CozyMetadata != nil {
+		doc.M["cozyMetadata"] = file.CozyMetadata.ToJSONDoc()
 	}
 	return doc
 }

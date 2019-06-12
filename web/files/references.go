@@ -169,14 +169,16 @@ func AddReferencesHandler(c echo.Context) error {
 		if errd != nil {
 			return WrapVfsError(errd)
 		}
-		if file == nil {
+		if dir != nil {
 			oldDir := dir.Clone()
 			dir.AddReferencedBy(docRef)
+			updateDirCozyMetadata(c, dir)
 			docs[i] = dir
 			oldDocs[i] = oldDir
 		} else {
 			oldFile := file.Clone()
 			file.AddReferencedBy(docRef)
+			updateFileCozyMetadata(c, file, false)
 			docs[i] = file
 			oldDocs[i] = oldFile
 		}
@@ -218,11 +220,13 @@ func RemoveReferencesHandler(c echo.Context) error {
 		if err != nil {
 			return WrapVfsError(err)
 		}
-		if file == nil {
+		if dir != nil {
 			dir.RemoveReferencedBy(docRef)
+			updateDirCozyMetadata(c, dir)
 			err = couchdb.UpdateDoc(instance, dir)
 		} else {
 			file.RemoveReferencedBy(docRef)
+			updateFileCozyMetadata(c, file, false)
 			err = couchdb.UpdateDoc(instance, file)
 		}
 		if err != nil {

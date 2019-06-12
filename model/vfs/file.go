@@ -40,9 +40,10 @@ type FileDoc struct {
 	Trashed    bool     `json:"trashed"`
 	Tags       []string `json:"tags"`
 
-	Metadata Metadata `json:"metadata,omitempty"`
-
+	Metadata     Metadata               `json:"metadata,omitempty"`
 	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
+
+	CozyMetadata *FilesCozyMetadata `json:"cozyMetadata,omitempty"`
 
 	// Cache of the fullpath of the file. Should not have to be invalidated
 	// since we use FileDoc as immutable data-structures.
@@ -73,6 +74,9 @@ func (f *FileDoc) Clone() couchdb.Doc {
 	cloned.Metadata = make(Metadata, len(f.Metadata))
 	for k, v := range f.Metadata {
 		cloned.Metadata[k] = v
+	}
+	if f.CozyMetadata != nil {
+		cloned.CozyMetadata = f.CozyMetadata.Clone()
 	}
 	return &cloned
 }
