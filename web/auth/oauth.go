@@ -62,9 +62,8 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		return true, renderError(c, http.StatusBadRequest, "Error Incorrect redirect_uri")
 	}
 
-	if IsLinkedApp(params.client.SoftwareID) {
+	if appSlug := oauth.GetLinkedAppSlug(params.client.SoftwareID); appSlug != "" {
 		var webappManifest app.WebappManifest
-		appSlug := GetLinkedAppSlug(params.client.SoftwareID)
 		webapp, err := registry.GetLatestVersion(appSlug, "stable", params.instance.Registries())
 
 		if err != nil {
@@ -244,7 +243,7 @@ func authorize(c echo.Context) error {
 
 	// Install the application in case of mobile client
 	softwareID := params.client.SoftwareID
-	if IsLinkedApp(softwareID) {
+	if oauth.IsLinkedApp(softwareID) {
 		manifest, err := GetLinkedApp(instance, softwareID)
 		if err != nil {
 			return err
@@ -263,7 +262,7 @@ func authorize(c echo.Context) error {
 			}
 			go installer.Run()
 		}
-		params.scope = BuildLinkedAppScope(slug)
+		params.scope = oauth.BuildLinkedAppScope(slug)
 		if u.Scheme == "http" || u.Scheme == "https" {
 			q.Set("fallback", instance.SubDomain(slug).String())
 		}
@@ -468,7 +467,6 @@ func accessToken(c echo.Context) error {
 	clientID := c.FormValue("client_id")
 	clientSecret := c.FormValue("client_secret")
 	instance := middlewares.GetInstance(c)
-	var slug string
 
 	if grant == "" {
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -504,8 +502,8 @@ func accessToken(c echo.Context) error {
 		Type: "bearer",
 	}
 
-	if IsLinkedApp(client.SoftwareID) {
-		slug = GetLinkedAppSlug(client.SoftwareID)
+	slug := oauth.GetLinkedAppSlug(client.SoftwareID)
+	if slug != "" {
 		if err := CheckLinkedAppInstalled(instance, slug); err != nil {
 			return err
 		}
@@ -549,7 +547,7 @@ func accessToken(c echo.Context) error {
 		// Code below is used to transform an old OAuth client token scope to
 		// the new linked-app scope
 		if slug != "" {
-			out.Scope = BuildLinkedAppScope(slug)
+			out.Scope = oauth.BuildLinkedAppScope(slug)
 		} else {
 			out.Scope = claims.Scope
 		}
@@ -619,20 +617,10 @@ func CheckLinkedAppInstalled(instance *instance.Instance, slug string) error {
 	}
 }
 
-// GetLinkedAppSlug returns a linked app slug from a softwareID
-func GetLinkedAppSlug(softwareID string) string {
-	return strings.TrimPrefix(softwareID, "registry://")
-}
-
-// BuildLinkedAppScope returns a formatted scope for a linked app
-func BuildLinkedAppScope(slug string) string {
-	return fmt.Sprintf("@%s/%s", consts.Apps, slug)
-}
-
 // GetLinkedApp fetches the app manifest on the registry
 func GetLinkedApp(instance *instance.Instance, softwareID string) (*app.WebappManifest, error) {
 	var webappManifest app.WebappManifest
-	appSlug := GetLinkedAppSlug(softwareID)
+	appSlug := oauth.GetLinkedAppSlug(softwareID)
 	webapp, err := registry.GetLatestVersion(appSlug, "stable", instance.Registries())
 	if err != nil {
 		return nil, err
@@ -642,9 +630,4 @@ func GetLinkedApp(instance *instance.Instance, softwareID string) (*app.WebappMa
 		return nil, err
 	}
 	return &webappManifest, nil
-}
-
-// IsLinkedApp checks if an OAuth client has a linked app
-func IsLinkedApp(softwareID string) bool {
-	return strings.HasPrefix(softwareID, "registry://")
 }

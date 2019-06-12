@@ -15,7 +15,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 	"github.com/justincampbell/bigduration"
@@ -85,8 +84,7 @@ func createPermission(c echo.Context) error {
 	// Check if the permission is linked to an OAuth Client
 	if parent.Client != nil {
 		oauthClient := parent.Client.(*oauth.Client)
-		if auth.IsLinkedApp(oauthClient.SoftwareID) {
-			slug = auth.GetLinkedAppSlug(oauthClient.SoftwareID)
+		if slug = oauth.GetLinkedAppSlug(oauthClient.SoftwareID); slug != "" {
 			// Changing the sourceID from the OAuth clientID to the classic
 			// io.cozy.apps/slug one
 			sourceID = consts.Apps + "/" + slug
@@ -340,13 +338,10 @@ func revokePermission(c echo.Context) error {
 	if current.Client != nil {
 		oauthClient := current.Client.(*oauth.Client)
 
-		if auth.IsLinkedApp(oauthClient.SoftwareID) {
-			slug := auth.GetLinkedAppSlug(oauthClient.SoftwareID)
-
+		if slug := oauth.GetLinkedAppSlug(oauthClient.SoftwareID); slug != "" {
 			// Changing the sourceID from the OAuth clientID to the classic
 			// io.cozy.apps/slug one
 			current.SourceID = consts.Apps + "/" + slug
-
 		}
 	}
 

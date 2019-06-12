@@ -163,12 +163,11 @@ func AccessToken(c echo.Context) error {
 		Type:  "bearer",
 		Scope: reqBody.Scope,
 	}
-	if auth.IsLinkedApp(client.SoftwareID) {
-		slug := auth.GetLinkedAppSlug(client.SoftwareID)
+	if slug := oauth.GetLinkedAppSlug(client.SoftwareID); slug != "" {
 		if err := auth.CheckLinkedAppInstalled(inst, slug); err != nil {
 			return err
 		}
-		out.Scope = auth.BuildLinkedAppScope(slug)
+		out.Scope = oauth.BuildLinkedAppScope(slug)
 	}
 	if out.Scope == "" {
 		return c.JSON(http.StatusBadRequest, echo.Map{
