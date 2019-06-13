@@ -93,9 +93,6 @@ func (f *Asset) GzipReader() *bytes.Reader {
 	return bytes.NewReader(f.zippedData)
 }
 
-// cacheTTL is time to live for the assets cache.
-var cacheTTL = 30 * 24 * time.Hour
-
 // Register registers zip contents data, later used to
 // initialize the statik file system.
 func Register(zipData string) {
@@ -107,16 +104,9 @@ func Register(zipData string) {
 	}
 }
 
-// Cache is an interface for caching the assets in memory.
-type Cache interface {
-	Get(key string) (io.Reader, bool)
-	Set(key string, data []byte, expiration time.Duration)
-	RefreshTTL(key string, expiration time.Duration)
-}
-
-// RegisterCustomExternals ensures that the assets are in the cache, and load
+// RegisterCustomExternals ensures that the assets are in the Swift, and load
 // them from their source if they are not yet available.
-func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) error {
+func RegisterCustomExternals(opts []AssetOption, maxTryCount int) error {
 	if len(opts) == 0 {
 		return nil
 	}
@@ -131,7 +121,7 @@ func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) e
 			opt := <-assetsCh
 
 			for tryCount := 0; tryCount < maxTryCount+1; tryCount++ {
-				err = registerCustomExternal(cache, opt)
+				err = registerCustomExternal(opt)
 				if err == nil {
 					break
 				}
@@ -159,64 +149,48 @@ func RegisterCustomExternals(cache Cache, opts []AssetOption, maxTryCount int) e
 	return errm
 }
 
-func registerCustomExternal(cache Cache, opt AssetOption) error {
+func registerCustomExternal(opt AssetOption) error {
 	if opt.Context == "" {
 		logger.WithNamespace("custom assets").
 			Warningf("Could not load asset %s with empty context", opt.URL)
 		return nil
 	}
 
-	name := NormalizeAssetName(opt.Name)
-	if currentAsset, ok := Get(name, opt.Context); ok {
-		if currentAsset.Shasum == opt.Shasum {
-			return nil
-		}
-	}
-
 	opt.IsCustom = true
 
 	assetURL := opt.URL
 
-	var key string
 	var body io.Reader
-	var ok, storeInCache bool
-	if opt.Shasum != "" {
-		key = fmt.Sprintf("assets:%s:%s:%s", opt.Context, name, opt.Shasum)
-		body, ok = cache.Get(key)
+
+	u, err := url.Parse(assetURL)
+	if err != nil {
+		return err
 	}
-	if !ok {
-		u, err := url.Parse(assetURL)
+
+	switch u.Scheme {
+	case "http", "https":
+		req, err := http.NewRequest(http.MethodGet, assetURL, nil)
 		if err != nil {
 			return err
 		}
-
-		switch u.Scheme {
-		case "http", "https":
-			req, err := http.NewRequest(http.MethodGet, assetURL, nil)
-			if err != nil {
-				return err
-			}
-			res, err := assetsClient.Do(req)
-			if err != nil {
-				return err
-			}
-			defer res.Body.Close()
-			if res.StatusCode != http.StatusOK {
-				return fmt.Errorf("could not load external asset on %s: status code %d", assetURL, res.StatusCode)
-			}
-			body = res.Body
-		case "file":
-			f, err := os.Open(u.Path)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-			body = f
-		default:
-			return fmt.Errorf("does not support externals assets with scheme %q", u.Scheme)
+		res, err := assetsClient.Do(req)
+		if err != nil {
+			return err
 		}
-
-		storeInCache = true
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			return fmt.Errorf("could not load external asset on %s: status code %d", assetURL, res.StatusCode)
+		}
+		body = res.Body
+	case "file":
+		f, err := os.Open(u.Path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		body = f
+	default:
+		return fmt.Errorf("does not support externals assets with scheme %q", u.Scheme)
 	}
 
 	h := sha256.New()
@@ -236,7 +210,6 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 
 	if opt.Shasum == "" {
 		opt.Shasum = hex.EncodeToString(sum)
-		key = fmt.Sprintf("assets:%s:%s:%s", opt.Context, name, opt.Shasum)
 		log := logger.WithNamespace("custom_external")
 		log.Warnf("shasum was not provided for file %s, inserting unsafe content %s: %s",
 			opt.Name, opt.URL, opt.Shasum)
@@ -247,19 +220,22 @@ func registerCustomExternal(cache Cache, opt AssetOption) error {
 			opt.Shasum, sum, assetURL)
 	}
 
-	if storeInCache {
-		cache.Set(key, unzippedData, cacheTTL)
-	} else {
-		cache.RefreshTTL(key, cacheTTL)
-	}
-
 	asset := newAsset(opt, zippedDataBuf.Bytes(), unzippedData)
 
 	objectName := path.Join(asset.Context, asset.Name)
 	swiftConn := config.GetSwiftConnection()
-	f, _ := swiftConn.ObjectCreate(DynamicAssetsContainerName, objectName, true, "", "", nil)
+
+	f, err := swiftConn.ObjectCreate(DynamicAssetsContainerName, objectName, true, "", "", nil)
+	if err != nil {
+		return err
+	}
 	defer f.Close()
-	f.Write(asset.unzippedData)
+
+	// Writing the asset content to Swift
+	_, err = f.Write(asset.unzippedData)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -389,9 +365,10 @@ func GetDynamicAsset(context, name string) (*Asset, error) {
 	zippedContent := zippedDataBuf.Bytes()
 
 	asset := newAsset(AssetOption{
-		Shasum:  sumx,
-		Name:    name,
-		Context: context,
+		Shasum:   sumx,
+		Name:     name,
+		Context:  context,
+		IsCustom: true,
 	}, zippedContent, content)
 
 	return asset, nil
@@ -401,6 +378,7 @@ func GetDynamicAsset(context, name string) (*Asset, error) {
 // no context is given.
 func Get(name string, context ...string) (*Asset, bool) {
 	var ctx string
+
 	if len(context) > 0 && context[0] != "" {
 		ctx = context[0]
 	} else {

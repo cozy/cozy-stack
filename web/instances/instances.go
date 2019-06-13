@@ -273,8 +273,7 @@ func addAssets(c echo.Context) error {
 	if err := json.NewDecoder(c.Request().Body).Decode(&unmarshaledAssets); err != nil {
 		return err
 	}
-	cacheStorage := config.GetConfig().CacheStorage
-	err := fs.RegisterCustomExternals(cacheStorage, unmarshaledAssets, 0 /* = retry count */)
+	err := fs.RegisterCustomExternals(unmarshaledAssets, 0 /* = retry count */)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
