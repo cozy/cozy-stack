@@ -229,6 +229,7 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 	var docs []couchdb.JSONDoc
 	if rule.Selector == "" || rule.Selector == "id" {
 		if rule.DocType == consts.Files {
+			instanceURL := inst.PageURL("/", nil)
 			for _, fileID := range rule.Values {
 				err := vfs.WalkByID(inst.VFS(), fileID, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 					if err != nil {
@@ -236,10 +237,10 @@ func findDocsToCopy(inst *instance.Instance, rule Rule) ([]couchdb.JSONDoc, erro
 					}
 					if dir != nil {
 						if dir.DocID != fileID {
-							docs = append(docs, dirToJSONDoc(dir))
+							docs = append(docs, dirToJSONDoc(dir, instanceURL))
 						}
 					} else if file != nil {
-						docs = append(docs, fileToJSONDoc(file))
+						docs = append(docs, fileToJSONDoc(file, instanceURL))
 					}
 					return nil
 				})

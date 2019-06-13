@@ -416,7 +416,7 @@ func (s *Sharing) GetFolder(inst *instance.Instance, m *Member, xoredID string) 
 	if err != nil {
 		return nil, err
 	}
-	doc := dirToJSONDoc(dir).M
+	doc := dirToJSONDoc(dir, inst.PageURL("/", nil)).M
 	s.TransformFileToSent(doc, creds.XorKey, info.Rule)
 	return doc, nil
 }
@@ -986,7 +986,7 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 	return inst.VFS().UpdateFileDoc(olddoc, file)
 }
 
-func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
+func dirToJSONDoc(dir *vfs.DirDoc, instanceURL string) couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		Type: consts.Files,
 		M: map[string]interface{}{
@@ -1007,13 +1007,17 @@ func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
 	if dir.RestorePath != "" {
 		doc.M["restore_path"] = dir.RestorePath
 	}
-	if dir.CozyMetadata != nil {
-		doc.M["cozyMetadata"] = dir.CozyMetadata.ToJSONDoc()
+	fcm := dir.CozyMetadata
+	if fcm == nil {
+		fcm = vfs.NewCozyMetadata(instanceURL)
+		fcm.CreatedAt = dir.CreatedAt
+		fcm.UpdatedAt = dir.UpdatedAt
 	}
+	doc.M["cozyMetadata"] = fcm.ToJSONDoc()
 	return doc
 }
 
-func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
+func fileToJSONDoc(file *vfs.FileDoc, instanceURL string) couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		Type: consts.Files,
 		M: map[string]interface{}{
@@ -1042,8 +1046,14 @@ func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
 	if len(file.Metadata) > 0 {
 		doc.M["metadata"] = file.Metadata
 	}
-	if file.CozyMetadata != nil {
-		doc.M["cozyMetadata"] = file.CozyMetadata.ToJSONDoc()
+	fcm := file.CozyMetadata
+	if fcm == nil {
+		fcm = vfs.NewCozyMetadata(instanceURL)
+		fcm.CreatedAt = file.CreatedAt
+		fcm.UpdatedAt = file.UpdatedAt
+		fcm.UploadedAt = file.CreatedAt
+		fcm.UploadedOn = instanceURL
 	}
+	doc.M["cozyMetadata"] = fcm.ToJSONDoc()
 	return doc
 }
