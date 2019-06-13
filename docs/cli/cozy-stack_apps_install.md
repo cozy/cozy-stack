@@ -14,7 +14,11 @@ cozy-stack apps install <slug> [sourceurl] [flags]
 ### Examples
 
 ```
+
 $ cozy-stack apps install --domain cozy.tools:8080 drive registry://drive/stable
+$ cozy-stack apps install banks 'git://github.com/cozy/cozy-banks.git#build'
+$ cozy-stack apps install myapp 'git+ssh://git@gitlab.example.net/team/myapp.git#build'
+
 ```
 
 ### Options

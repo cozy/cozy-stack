@@ -26,5 +26,6 @@ Launch and manage jobs and workers
 ### SEE ALSO
 
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
+* [cozy-stack jobs purge-old-jobs](cozy-stack_jobs_purge-old-jobs.md)	 - Purge old jobs from an instance
 * [cozy-stack jobs run](cozy-stack_jobs_run.md)	 - 
 

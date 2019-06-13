@@ -58,8 +58,12 @@ var installWebappCmd = &cobra.Command{
 	Use: "install <slug> [sourceurl]",
 	Short: `Install an application with the specified slug name
 from the given source URL.`,
-	Example: "$ cozy-stack apps install --domain cozy.tools:8080 drive registry://drive/stable",
-	Long:    "[Some schemes](https://docs.cozy.io/en/cozy-stack/apps/#sources) are allowed as `[sourceurl]`.",
+	Example: `
+$ cozy-stack apps install --domain cozy.tools:8080 drive registry://drive/stable
+$ cozy-stack apps install banks 'git://github.com/cozy/cozy-banks.git#build'
+$ cozy-stack apps install myapp 'git+ssh://git@gitlab.example.net/team/myapp.git#build'
+`,
+	Long: "[Some schemes](https://docs.cozy.io/en/cozy-stack/apps/#sources) are allowed as `[sourceurl]`.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return installApp(cmd, args, consts.Apps)
 	},
