@@ -1,5 +1,5 @@
 ---
-dist: trusty
+dist: xenial
 
 services:
   - docker
