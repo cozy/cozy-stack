@@ -10,6 +10,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/account"
@@ -272,6 +273,11 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 						Type: consts.Konnectors,
 						ID:   consts.Konnectors + "/" + w.slug,
 					})
+					if dir.CozyMetadata == nil {
+						dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+					} else {
+						dir.CozyMetadata.UpdatedAt = time.Now()
+					}
 					_ = couchdb.UpdateDoc(inst, dir)
 				}
 				return nil

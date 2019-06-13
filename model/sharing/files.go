@@ -170,10 +170,11 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	if dir == nil {
 		name := inst.Translate("Tree Shared with me")
 		dir, err = vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)
-		dir.DocID = consts.SharedWithMeDirID
 		if err != nil {
 			return nil, err
 		}
+		dir.DocID = consts.SharedWithMeDirID
+		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 		if err = fs.CreateDir(dir); err != nil {
 			return nil, err
 		}
@@ -181,6 +182,13 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	}
 
 	if dir.RestorePath != "" {
+		now := time.Now()
+		instanceURL := inst.PageURL("/", nil)
+		if dir.CozyMetadata == nil {
+			dir.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+		} else {
+			dir.CozyMetadata.UpdatedAt = now
+		}
 		_, err = vfs.RestoreDir(fs, dir)
 		if err != nil {
 			return nil, err
@@ -192,8 +200,18 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		for _, child := range children {
 			d, f := child.Refine()
 			if d != nil {
+				if d.CozyMetadata == nil {
+					d.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+				} else {
+					d.CozyMetadata.UpdatedAt = now
+				}
 				_, err = vfs.TrashDir(fs, d)
 			} else {
+				if f.CozyMetadata == nil {
+					f.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+				} else {
+					f.CozyMetadata.UpdatedAt = now
+				}
 				_, err = vfs.TrashFile(fs, f)
 			}
 			if err != nil {
@@ -223,6 +241,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) (*vfs
 		ID:   s.SID,
 		Type: consts.Sharings,
 	})
+	dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	if err = fs.CreateDir(dir); err != nil {
 		dir.DocName = conflictName(dir.DocName, "")
 		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
@@ -253,6 +272,11 @@ func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule)
 		ID:   s.SID,
 		Type: consts.Sharings,
 	})
+	if dir.CozyMetadata == nil {
+		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	} else {
+		dir.CozyMetadata.UpdatedAt = time.Now()
+	}
 	return fs.UpdateDirDoc(olddoc, dir)
 }
 
@@ -297,6 +321,7 @@ func (s *Sharing) RemoveSharingDir(inst *instance.Instance) error {
 		ID:   s.SID,
 		Type: consts.Sharings,
 	})
+	dir.CozyMetadata.UpdatedAt = time.Now()
 	return inst.VFS().UpdateDirDoc(olddoc, dir)
 }
 
@@ -317,10 +342,11 @@ func (s *Sharing) GetNoLongerSharedDir(inst *instance.Instance) (*vfs.DirDoc, er
 		}
 		name := inst.Translate("Tree No longer shared")
 		dir, err = vfs.NewDirDocWithParent(name, parent, nil)
-		dir.DocID = consts.NoLongerSharedDirID
 		if err != nil {
 			return nil, err
 		}
+		dir.DocID = consts.NoLongerSharedDirID
+		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 		if err = fs.CreateDir(dir); err != nil {
 			return nil, err
 		}
@@ -328,6 +354,14 @@ func (s *Sharing) GetNoLongerSharedDir(inst *instance.Instance) (*vfs.DirDoc, er
 	}
 
 	if dir.RestorePath != "" {
+		now := time.Now()
+		instanceURL := inst.PageURL("/", nil)
+		if dir.CozyMetadata == nil {
+			dir.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+		} else {
+			dir.CozyMetadata.UpdatedAt = now
+		}
+		dir.CozyMetadata.UpdatedAt = now
 		_, err = vfs.RestoreDir(fs, dir)
 		if err != nil {
 			return nil, err
@@ -339,8 +373,18 @@ func (s *Sharing) GetNoLongerSharedDir(inst *instance.Instance) (*vfs.DirDoc, er
 		for _, child := range children {
 			d, f := child.Refine()
 			if d != nil {
+				if d.CozyMetadata == nil {
+					d.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+				} else {
+					d.CozyMetadata.UpdatedAt = now
+				}
 				_, err = vfs.TrashDir(fs, d)
 			} else {
+				if f.CozyMetadata == nil {
+					f.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+				} else {
+					f.CozyMetadata.UpdatedAt = now
+				}
 				_, err = vfs.TrashFile(fs, f)
 			}
 			if err != nil {
@@ -700,6 +744,7 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 	}
 	doc.DirID = parent.DocID
 	doc.Fullpath = path.Join(parent.Fullpath, doc.DocName)
+	doc.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	doc.SetRev("")
 	err = fs.CreateDir(doc)
 	if err != nil {
@@ -889,6 +934,11 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 		// nothing to do if the directory is already in the trash
 		return nil
 	}
+	if dir.CozyMetadata == nil {
+		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	} else {
+		dir.CozyMetadata.UpdatedAt = time.Now()
+	}
 	if len(dir.ReferencedBy) == 0 {
 		_, err := vfs.TrashDir(inst.VFS(), dir)
 		return err
@@ -911,6 +961,11 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 	if file.Trashed {
 		// Nothing to do if the directory is already in the trash
 		return nil
+	}
+	if file.CozyMetadata == nil {
+		file.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	} else {
+		file.CozyMetadata.UpdatedAt = time.Now()
 	}
 	olddoc := file.Clone().(*vfs.FileDoc)
 	removeReferencesFromRule(file, rule)

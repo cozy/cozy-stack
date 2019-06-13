@@ -53,6 +53,7 @@ func createDefaultFilesTree(inst *instance.Instance) error {
 	var errf error
 
 	createDir := func(dir *vfs.DirDoc, err error) (*vfs.DirDoc, error) {
+		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 		if err != nil {
 			errf = multierror.Append(errf, err)
 			return nil, err
