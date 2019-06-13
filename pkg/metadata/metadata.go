@@ -36,7 +36,7 @@ type CozyMetadata struct {
 	// Last modification date of the cozy document
 	UpdatedAt time.Time `json:"updatedAt"`
 	// List of objects representing the applications which modified the cozy document
-	UpdatedByApps []*UpdatedByAppEntry `json:"updatedByApps"`
+	UpdatedByApps []*UpdatedByAppEntry `json:"updatedByApps,omitempty"`
 }
 
 // New initializes a new CozyMetadata structure

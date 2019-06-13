@@ -562,8 +562,8 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 		if version, ok := meta["doctypeVersion"].(string); ok {
 			dir.CozyMetadata.DocTypeVersion = version
 		}
-		if version, ok := meta["metadataVersion"].(int); ok {
-			dir.CozyMetadata.MetadataVersion = version
+		if version, ok := meta["metadataVersion"].(float64); ok {
+			dir.CozyMetadata.MetadataVersion = int(version)
 		}
 		if created, ok := meta["createdAt"].(string); ok {
 			if at, err := time.Parse(time.RFC3339Nano, created); err == nil {

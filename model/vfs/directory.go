@@ -228,6 +228,7 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 	newdoc.CreatedAt = cdate
 	newdoc.UpdatedAt = *patch.UpdatedAt
 	newdoc.ReferencedBy = olddoc.ReferencedBy
+	newdoc.CozyMetadata = olddoc.CozyMetadata
 
 	if err = fs.UpdateDirDoc(olddoc, newdoc); err != nil {
 		return nil, err
@@ -256,6 +257,7 @@ func TrashDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 		newdoc.RestorePath = restorePath
 		newdoc.DocName = name
 		newdoc.Fullpath = path.Join(TrashDirName, name)
+		newdoc.CozyMetadata = olddoc.CozyMetadata
 		return fs.UpdateDirDoc(olddoc, newdoc)
 	})
 	if err != nil {
@@ -285,6 +287,7 @@ func RestoreDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 		newdoc.RestorePath = ""
 		newdoc.DocName = name
 		newdoc.Fullpath = path.Join(restoreDir.Fullpath, name)
+		newdoc.CozyMetadata = olddoc.CozyMetadata
 		return fs.UpdateDirDoc(olddoc, newdoc)
 	})
 	if err != nil {

@@ -285,6 +285,7 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 	newdoc.UpdatedAt = *patch.UpdatedAt
 	newdoc.Metadata = olddoc.Metadata
 	newdoc.ReferencedBy = olddoc.ReferencedBy
+	newdoc.CozyMetadata = olddoc.CozyMetadata
 
 	if patch.MD5Sum != nil {
 		newdoc.MD5Sum = *patch.MD5Sum
@@ -318,6 +319,7 @@ func TrashFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 		newdoc.DocName = name
 		newdoc.Trashed = true
 		newdoc.fullpath = path.Join(TrashDirName, name)
+		newdoc.CozyMetadata = olddoc.CozyMetadata
 		return fs.UpdateFileDoc(olddoc, newdoc)
 	})
 
@@ -346,6 +348,7 @@ func RestoreFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 		newdoc.DocName = name
 		newdoc.Trashed = false
 		newdoc.fullpath = path.Join(restoreDir.Fullpath, name)
+		newdoc.CozyMetadata = olddoc.CozyMetadata
 		return fs.UpdateFileDoc(olddoc, newdoc)
 	})
 

@@ -197,6 +197,9 @@ func (s *sharingIndexer) bulkForceUpdateDoc(doc *vfs.FileDoc) error {
 	if doc.Metadata != nil {
 		docs[0]["metadata"] = doc.Metadata
 	}
+	if doc.CozyMetadata != nil {
+		docs[0]["cozyMetadata"] = doc.CozyMetadata
+	}
 	doc.SetRev(s.bulkRevs.Rev)
 	docs[0]["_rev"] = s.bulkRevs.Rev
 	docs[0]["_revisions"] = s.bulkRevs.Revisions
@@ -234,6 +237,9 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	}
 	if len(doc.ReferencedBy) > 0 {
 		docs[0][couchdb.SelectorReferencedBy] = doc.ReferencedBy
+	}
+	if doc.CozyMetadata != nil {
+		docs[0]["cozyMetadata"] = doc.CozyMetadata
 	}
 	doc.SetRev(s.bulkRevs.Rev)
 	docs[0]["_rev"] = s.bulkRevs.Rev

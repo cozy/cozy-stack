@@ -6,7 +6,7 @@ class Folder
 
   include Model::Files
 
-  attr_reader :name, :dir_id, :children, :path, :restore_path
+  attr_reader :name, :dir_id, :children, :path, :restore_path, :cozy_metadata
 
   def self.load_from_url(inst, path)
     opts = {
@@ -23,7 +23,8 @@ class Folder
       name: j["name"],
       dir_id: j["dir_id"],
       path: j["path"],
-      restore_path: j["restore_path"]
+      restore_path: j["restore_path"],
+      cozy_metadata: j["cozyMetadata"]
     )
     f.couch_id = id
     f.couch_rev = rev
@@ -52,7 +53,8 @@ class Folder
           name: child["name"],
           dir_id: child["dir_id"],
           path: child["path"],
-          restore_path: child["restore_path"]
+          restore_path: child["restore_path"],
+          cozy_metadata: child["cozyMetadata"]
         )
         dirs << f
       else
@@ -64,7 +66,8 @@ class Folder
           size: child["size"],
           executable: child["executable"],
           file_class: child["class"],
-          metadata: child["metadata"]
+          metadata: child["metadata"],
+          cozy_metadata: child["cozyMetadata"]
         )
         files << f
       end
@@ -90,6 +93,7 @@ class Folder
     @dir_id = opts[:dir_id] || ROOT_DIR
     @path = opts[:path] || "/#{@name}"
     @restore_path = opts[:restore_path]
+    @cozy_metadata = opts[:cozy_metadata]
     @children = []
   end
 
@@ -102,6 +106,7 @@ class Folder
     j = JSON.parse(res.body)["data"]
     @couch_id = j["id"]
     @couch_rev = j["rev"]
+    @cozy_metadata = j["attributes"]["cozyMetadata"]
   end
 
   def trashed
