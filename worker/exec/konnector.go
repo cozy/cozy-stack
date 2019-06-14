@@ -24,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/sirupsen/logrus"
@@ -273,11 +274,21 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 						Type: consts.Konnectors,
 						ID:   consts.Konnectors + "/" + w.slug,
 					})
+					now := time.Now()
 					if dir.CozyMetadata == nil {
 						dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+						now = dir.CozyMetadata.CreatedAt
 					} else {
-						dir.CozyMetadata.UpdatedAt = time.Now()
+						dir.CozyMetadata.UpdatedAt = now
 					}
+					if dir.CozyMetadata.CreatedByApp == "" {
+						dir.CozyMetadata.CreatedByApp = w.slug
+					}
+					dir.CozyMetadata.UpdatedByApp(&metadata.UpdatedByAppEntry{
+						Slug:     w.slug,
+						Date:     now,
+						Instance: inst.PageURL("/", nil),
+					})
 					_ = couchdb.UpdateDoc(inst, dir)
 				}
 				return nil
@@ -343,6 +354,15 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 			Type: consts.Konnectors,
 			ID:   consts.Konnectors + "/" + w.slug,
 		})
+		instanceURL := inst.PageURL("/", nil)
+		dir.CozyMetadata.CreatedOn = instanceURL
+		dir.CozyMetadata.CreatedByApp = w.slug
+		dir.CozyMetadata.UpdatedByApp(&metadata.UpdatedByAppEntry{
+			Slug:     w.slug,
+			Date:     dir.CozyMetadata.UpdatedAt,
+			Instance: instanceURL,
+		})
+		dir.CozyMetadata.SourceAccount = acc.ID()
 		_ = couchdb.UpdateDoc(inst, dir)
 	}
 	return nil
