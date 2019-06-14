@@ -284,7 +284,7 @@ func deleteAssets(c echo.Context) error {
 	context := c.Param("context")
 	name := c.Param("*")
 
-	err := dynamic.RemoveAsset(context, name)
+	err := dynamic.RemoveDynamicAsset(context, name)
 	if err != nil {
 		return wrapError(err)
 	}

@@ -36,8 +36,8 @@ func ListDynamicAssets() (map[string][]*fs.Asset, error) {
 	return objs, nil
 }
 
-// RemoveAsset removes a dynamic asset from Swift
-func RemoveAsset(context, name string) error {
+// RemoveDynamicAsset removes a dynamic asset from Swift
+func RemoveDynamicAsset(context, name string) error {
 	swiftConn := config.GetSwiftConnection()
 	objectName := path.Join(context, name)
 
