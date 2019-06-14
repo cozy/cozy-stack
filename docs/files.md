@@ -34,6 +34,7 @@ the directory is created at the root of the virtual file system.
 | Type      | `directory`        |
 | Name      | the directory name |
 | Tags      | an array of tags   |
+| CreatedAt | the creation date  |
 
 #### HTTP headers
 
@@ -247,14 +248,15 @@ Upload a file
 
 #### Query-String
 
-| Parameter  | Description                                        |
-| ---------- | -------------------------------------------------- |
-| Type       | `file`                                             |
-| Name       | the file name                                      |
-| Tags       | an array of tags                                   |
-| Executable | `true` if the file is executable (UNIX permission) |
-| Metadata   | a JSON with metadata on this file (_deprecated_)   |
-| MetadataID | the identifier of a metadata object                |
+| Parameter               | Description                                                    |
+| ----------------------- | -------------------------------------------------------------- |
+| Type                    | `file`                                                         |
+| Name                    | the file name                                                  |
+| Tags                    | an array of tags                                               |
+| Executable              | `true` if the file is executable (UNIX permission)             |
+| Metadata                | a JSON with metadata on this file (_deprecated_)               |
+| MetadataID              | the identifier of a metadata object                            |
+| CreatedAt               | the creation date of the file                                  |
 
 #### HTTP headers
 
@@ -268,7 +270,7 @@ Upload a file
 #### Request
 
 ```http
-POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=file&Name=hello.txt HTTP/1.1
+POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=file&Name=hello.txt&CreatedAt=2016-09-18T01:23:45Z HTTP/1.1
 Accept: application/vnd.api+json
 Content-Length: 12
 Content-MD5: hvsmnRkNLIX24EaM7KQqIA==
@@ -310,7 +312,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
             "name": "sunset.jpg",
             "trashed": false,
             "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
-            "created_at": "2016-09-19T12:38:04Z",
+            "created_at": "2016-09-18T01:23:45Z",
             "updated_at": "2016-09-19T12:38:04Z",
             "tags": [],
             "metadata": {

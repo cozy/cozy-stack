@@ -277,7 +277,7 @@ func TestCreateDirRootSuccess(t *testing.T) {
 }
 
 func TestCreateDirWithDateSuccess(t *testing.T) {
-	req, _ := http.NewRequest("POST", ts.URL+"/files/?Type=directory&Name=dir-with-date", strings.NewReader(""))
+	req, _ := http.NewRequest("POST", ts.URL+"/files/?Type=directory&Name=dir-with-date&CreatedAt=2016-09-18T10:24:53Z", strings.NewReader(""))
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	req.Header.Add("Date", "Mon, 19 Sep 2016 12:35:08 GMT")
 	res, err := http.DefaultClient.Do(req)
@@ -290,9 +290,9 @@ func TestCreateDirWithDateSuccess(t *testing.T) {
 	data := obj["data"].(map[string]interface{})
 	attrs := data["attributes"].(map[string]interface{})
 	createdAt := attrs["created_at"].(string)
-	assert.Equal(t, "2016-09-19T12:35:08Z", createdAt)
+	assert.Equal(t, "2016-09-18T10:24:53Z", createdAt)
 	updatedAt := attrs["updated_at"].(string)
-	assert.Equal(t, createdAt, updatedAt)
+	assert.Equal(t, "2016-09-19T12:35:08Z", updatedAt)
 	fcm := attrs["cozyMetadata"].(map[string]interface{})
 	assert.Equal(t, float64(1), fcm["metadataVersion"])
 	assert.Equal(t, "1", fcm["doctypeVersion"])
@@ -479,7 +479,7 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 
 func TestUploadWithDate(t *testing.T) {
 	buf := strings.NewReader("foo")
-	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=withcdate", buf)
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=withcdate&CreatedAt=2016-09-18T10:24:53Z", buf)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	assert.NoError(t, err)
 	req.Header.Add("Date", "Mon, 19 Sep 2016 12:38:04 GMT")
@@ -488,9 +488,9 @@ func TestUploadWithDate(t *testing.T) {
 	data := obj["data"].(map[string]interface{})
 	attrs := data["attributes"].(map[string]interface{})
 	createdAt := attrs["created_at"].(string)
-	assert.Equal(t, "2016-09-19T12:38:04Z", createdAt)
+	assert.Equal(t, "2016-09-18T10:24:53Z", createdAt)
 	updatedAt := attrs["updated_at"].(string)
-	assert.Equal(t, createdAt, updatedAt)
+	assert.Equal(t, "2016-09-19T12:38:04Z", updatedAt)
 }
 
 func TestUploadWithMetadata(t *testing.T) {

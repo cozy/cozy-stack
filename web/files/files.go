@@ -84,6 +84,11 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 		return
 	}
 
+	if created := c.QueryParam("CreatedAt"); created != "" {
+		if at, err2 := time.Parse(time.RFC3339, created); err2 == nil {
+			doc.CreatedAt = at
+		}
+	}
 	doc.CozyMetadata = cozyMetadataFromClaims(c, true)
 
 	err = checkPerm(c, "POST", nil, doc)
@@ -144,6 +149,11 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 		if t, err2 := time.Parse(time.RFC1123, date); err2 == nil {
 			doc.CreatedAt = t
 			doc.UpdatedAt = t
+		}
+	}
+	if created := c.QueryParam("CreatedAt"); created != "" {
+		if at, err2 := time.Parse(time.RFC3339, created); err2 == nil {
+			doc.CreatedAt = at
 		}
 	}
 
