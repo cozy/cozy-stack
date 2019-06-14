@@ -257,6 +257,8 @@ Upload a file
 | Metadata                | a JSON with metadata on this file (_deprecated_)               |
 | MetadataID              | the identifier of a metadata object                            |
 | CreatedAt               | the creation date of the file                                  |
+| SourceAccount           | the id of the source account used by a konnector               |
+| SourceAccountIdentifier | the unique identifier of the account targeted by the connector |
 
 #### HTTP headers
 

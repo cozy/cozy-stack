@@ -1373,5 +1373,18 @@ func cozyMetadataFromClaims(c echo.Context, setUploadFields bool) *vfs.FilesCozy
 		}
 	}
 
+	if account := c.QueryParam("SourceAccount"); account != "" {
+		fcm.SourceAccount = account
+		// To ease the transition to cozyMetadata for io.cozy.files, we fill
+		// the CreatedByApp for konnectors that updates a file: the stack can
+		// recognize that by the presence of the SourceAccount.
+		if fcm.CreatedByApp == "" && slug != "" {
+			fcm.CreatedByApp = slug
+		}
+	}
+	if id := c.QueryParam("SourceAccountIdentifier"); id != "" {
+		fcm.SourceIdentifier = id
+	}
+
 	return fcm
 }

@@ -541,6 +541,22 @@ func TestUploadWithMetadata(t *testing.T) {
 	assert.Equal(t, "2017-04-22T01:00:00-05:00", meta["datetime"])
 }
 
+func TestUploadWithSourceAccount(t *testing.T) {
+	buf := strings.NewReader("foo")
+	account := "0c5a0a1e-8eb1-11e9-93f3-934f3a2c181d"
+	identifier := "11f68e48"
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=with-sourceAccount&SourceAccount="+account+"&SourceAccountIdentifier="+identifier, buf)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res.StatusCode)
+	data := obj["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	fcm := attrs["cozyMetadata"].(map[string]interface{})
+	assert.Equal(t, account, fcm["sourceAccount"])
+	assert.Equal(t, identifier, fcm["sourceAccountIdentifier"])
+}
+
 func TestModifyMetadataFileMove(t *testing.T) {
 	body := "foo"
 	res1, data1 := upload(t, "/files/?Type=file&Name=filemoveme&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
