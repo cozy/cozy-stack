@@ -281,7 +281,19 @@ A file is a binary content with some metadata.
 
 ### POST /files/:dir-id
 
-Upload a file
+Upload a file in the directory identified by `:dir-id`.
+
+The `created_at` field will be the first valid value in this list:
+
+- the datetime extracted from the EXIF for a photo
+- the `CreatedAt` parameter from the query-string
+- the `Date` HTTP header
+- the current time from the server.
+
+The `updated_at` field will be the first value in this list:
+
+- the `Date` HTTP header
+- the current time from the server.
 
 #### Query-String
 
@@ -754,7 +766,7 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
             "size": 12,
             "executable": false,
             "class": "document",
-            "mime": "text/plain"
+            "mime": "text/plain",
             "cozyMetadata": {
                 "doctypeVersion": "1",
                 "metadataVersion": 1,
