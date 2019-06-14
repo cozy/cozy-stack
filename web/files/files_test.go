@@ -426,6 +426,7 @@ func TestUploadImage(t *testing.T) {
 	gps := meta["gps"].(map[string]interface{})
 	assert.Equal(t, "Paris", gps["city"])
 	assert.Equal(t, "France", gps["country"])
+	assert.Contains(t, attrs["created_at"], "2016-09-10T")
 }
 
 func TestUploadWithParentSuccess(t *testing.T) {
