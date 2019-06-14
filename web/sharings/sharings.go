@@ -334,6 +334,7 @@ func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL stri
 		"Error":       "Error Sharing already accepted",
 		"Button":      inst.Translate("Error Sharing already accepted Button", cozyURL),
 		"ButtonLink":  cozyURL,
+		"Favicon":     middlewares.Favicon(inst),
 	})
 }
 
@@ -353,6 +354,7 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 		"State":         state,
 		"ShareCode":     sharecode,
 		"URLError":      code != http.StatusOK,
+		"Favicon":       middlewares.Favicon(inst),
 	})
 }
 
@@ -373,6 +375,7 @@ func GetDiscovery(c echo.Context) error {
 			"Domain":      inst.ContextualDomain(),
 			"ContextName": inst.ContextName,
 			"Error":       "Error Invalid sharing",
+			"Favicon":     middlewares.Favicon(inst),
 		})
 	}
 
@@ -391,6 +394,7 @@ func GetDiscovery(c echo.Context) error {
 				"Domain":      inst.ContextualDomain(),
 				"ContextName": inst.ContextName,
 				"Error":       "Error Invalid sharing",
+				"Favicon":     middlewares.Favicon(inst),
 			})
 		}
 		if m.Status != sharing.MemberStatusMailNotSent &&

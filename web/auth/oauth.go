@@ -208,6 +208,7 @@ func authorizeForm(c echo.Context) error {
 		"CSRF":             c.Get("csrf"),
 		"HasFallback":      hasFallback,
 		"Webapp":           params.webapp,
+		"Favicon":          middlewares.Favicon(instance),
 	})
 }
 
@@ -348,6 +349,7 @@ func authorizeSharingForm(c echo.Context) error {
 		"State":        params.state,
 		"Sharing":      s,
 		"CSRF":         c.Get("csrf"),
+		"Favicon":      middlewares.Favicon(instance),
 	})
 }
 
@@ -408,6 +410,7 @@ func authorizeAppForm(c echo.Context) error {
 		"Slug":        app.Slug(),
 		"Permissions": permissions,
 		"CSRF":        c.Get("csrf"),
+		"Favicon":     middlewares.Favicon(instance),
 	})
 }
 

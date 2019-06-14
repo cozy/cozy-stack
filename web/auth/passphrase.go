@@ -24,6 +24,7 @@ func passphraseResetForm(c echo.Context) error {
 		"ContextName": instance.ContextName,
 		"Locale":      instance.Locale,
 		"CSRF":        c.Get("csrf"),
+		"Favicon":     middlewares.Favicon(instance),
 	})
 }
 
@@ -42,6 +43,7 @@ func passphraseForm(c echo.Context) error {
 			"Domain":      inst.ContextualDomain(),
 			"ContextName": inst.ContextName,
 			"Locale":      inst.Locale,
+			"Favicon":     middlewares.Favicon(inst),
 		})
 	}
 
@@ -60,6 +62,7 @@ func passphraseForm(c echo.Context) error {
 		"MatomoURL":     matomo.URL,
 		"MatomoSiteID":  matomo.SiteID,
 		"MatomoAppID":   matomo.OnboardingAppID,
+		"Favicon":       middlewares.Favicon(inst),
 	})
 }
 
@@ -86,6 +89,7 @@ func passphraseReset(c echo.Context) error {
 		"Error":       "Passphrase is reset Body",
 		"Button":      "Passphrase is reset Login Button",
 		"ButtonLink":  i.PageURL("/auth/login", nil),
+		"Favicon":     middlewares.Favicon(i),
 	})
 }
 
@@ -118,6 +122,7 @@ func passphraseRenewForm(c echo.Context) error {
 		"Locale":               inst.Locale,
 		"PassphraseResetToken": hex.EncodeToString(token),
 		"CSRF":                 c.Get("csrf"),
+		"Favicon":              middlewares.Favicon(inst),
 	})
 }
 

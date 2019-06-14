@@ -40,6 +40,7 @@ func renderError(c echo.Context, code int, msg string) error {
 		"Domain":      instance.ContextualDomain(),
 		"ContextName": instance.ContextName,
 		"Error":       msg,
+		"Favicon":     middlewares.Favicon(instance),
 	})
 }
 
@@ -67,6 +68,7 @@ func Home(c echo.Context) error {
 				"Domain":      instance.ContextualDomain(),
 				"ContextName": instance.ContextName,
 				"Locale":      instance.Locale,
+				"Favicon":     middlewares.Favicon(instance),
 			})
 		}
 		return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/passphrase", c.QueryParams()))
@@ -170,6 +172,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"TwoFactorToken":   "",
 		"CSRF":             c.Get("csrf"),
 		"OAuth":            oauth,
+		"Favicon":          middlewares.Favicon(i),
 	})
 }
 
@@ -198,6 +201,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 		"TwoFactorToken":   string(twoFactorToken),
 		"CSRF":             c.Get("csrf"),
 		"OAuth":            oauth,
+		"Favicon":          middlewares.Favicon(i),
 	})
 }
 
