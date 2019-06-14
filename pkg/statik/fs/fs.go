@@ -386,18 +386,20 @@ func Get(name string, context ...string) (*Asset, bool) {
 	}
 
 	// Dynamic assets are stored in Swift
-	asset, err := GetDynamicAsset(ctx, name)
-
-	// If asset was not found, try to retreive it from static assets
-	if err == swift.ObjectNotFound {
-		asset, ok := globalAssets.Load(marshalContextKey(ctx, name))
-		if !ok {
-			return nil, false
+	if config.FsURL().Scheme == config.SchemeSwift ||
+		config.FsURL().Scheme == config.SchemeSwiftSecure {
+		dynAsset, err := GetDynamicAsset(ctx, name)
+		if err == nil {
+			return dynAsset, true
 		}
-		return asset.(*Asset), true
 	}
 
-	return asset, true
+	// If asset was not found, try to retreive it from static assets
+	asset, ok := globalAssets.Load(marshalContextKey(ctx, name))
+	if !ok {
+		return nil, false
+	}
+	return asset.(*Asset), true
 
 }
 
