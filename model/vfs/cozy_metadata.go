@@ -24,7 +24,7 @@ type FilesCozyMetadata struct {
 	// Instance URL where the file has been created
 	CreatedOn string `json:"createdOn,omitempty"`
 	// Date of the last upload of a new content
-	UploadedAt time.Time `json:"uploadedAt"`
+	UploadedAt *time.Time `json:"uploadedAt,omitempty"`
 	// Information about the last time the content was uploaded
 	UploadedBy *UploadedByEntry `json:"uploadedBy,omitempty"`
 	// Instance URL where the content has been changed the last time
@@ -64,6 +64,10 @@ func (fcm *FilesCozyMetadata) Clone() *FilesCozyMetadata {
 			Version: fcm.UploadedBy.Version,
 			Client:  client,
 		}
+	}
+	if fcm.UploadedAt != nil {
+		at := *fcm.UploadedAt
+		cloned.UploadedAt = &at
 	}
 	return &cloned
 }
@@ -123,7 +127,9 @@ func (fcm *FilesCozyMetadata) ToJSONDoc() map[string]interface{} {
 		doc["uploadedByApp"] = entries
 	}
 
-	doc["uploadedAt"] = fcm.UploadedAt
+	if fcm.UploadedAt != nil {
+		doc["uploadedAt"] = *fcm.UploadedAt
+	}
 	if fcm.UploadedBy != nil {
 		uploaded := make(map[string]interface{})
 		if fcm.UploadedBy.Slug != "" {

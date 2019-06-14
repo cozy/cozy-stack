@@ -1295,7 +1295,8 @@ func updateFileCozyMetadata(c echo.Context, file *vfs.FileDoc, setUploadFields b
 		fcm.CreatedAt = file.CreatedAt
 		fcm.CreatedByApp = ""
 		fcm.CreatedByAppVersion = ""
-		fcm.UploadedAt = file.CreatedAt
+		uploadedAt := file.CreatedAt
+		fcm.UploadedAt = &uploadedAt
 		file.CozyMetadata = fcm
 	} else {
 		file.CozyMetadata.UpdatedAt = fcm.UpdatedAt
@@ -1350,7 +1351,8 @@ func cozyMetadataFromClaims(c echo.Context, setUploadFields bool) *vfs.FilesCozy
 	}
 
 	if setUploadFields {
-		fcm.UploadedAt = fcm.CreatedAt
+		uploadedAt := fcm.CreatedAt
+		fcm.UploadedAt = &uploadedAt
 		fcm.UploadedOn = fcm.CreatedOn
 		if slug != "" {
 			fcm.UploadedBy = &vfs.UploadedByEntry{

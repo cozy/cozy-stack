@@ -1051,7 +1051,8 @@ func fileToJSONDoc(file *vfs.FileDoc, instanceURL string) couchdb.JSONDoc {
 		fcm = vfs.NewCozyMetadata(instanceURL)
 		fcm.CreatedAt = file.CreatedAt
 		fcm.UpdatedAt = file.UpdatedAt
-		fcm.UploadedAt = file.CreatedAt
+		uploadedAt := file.CreatedAt
+		fcm.UploadedAt = &uploadedAt
 		fcm.UploadedOn = instanceURL
 	}
 	doc.M["cozyMetadata"] = fcm.ToJSONDoc()

@@ -181,7 +181,8 @@ func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc,
 	}
 
 	fileDoc.CozyMetadata = vfs.NewCozyMetadata("")
-	fileDoc.CozyMetadata.UploadedAt = fileDoc.CozyMetadata.CreatedAt
+	at := fileDoc.CozyMetadata.CreatedAt
+	fileDoc.CozyMetadata.UploadedAt = &at
 	file, err := fs.CreateFile(fileDoc, nil)
 	if err != nil {
 		ext := path.Ext(fileDoc.DocName)

@@ -293,6 +293,13 @@ func TestCreateDirWithDateSuccess(t *testing.T) {
 	assert.Equal(t, "2016-09-19T12:35:08Z", createdAt)
 	updatedAt := attrs["updated_at"].(string)
 	assert.Equal(t, createdAt, updatedAt)
+	fcm := attrs["cozyMetadata"].(map[string]interface{})
+	assert.Equal(t, float64(1), fcm["metadataVersion"])
+	assert.Equal(t, "1", fcm["doctypeVersion"])
+	assert.Contains(t, fcm["createdOn"], testInstance.Domain)
+	assert.NotEmpty(t, fcm["createdAt"])
+	assert.NotEmpty(t, fcm["updatedAt"])
+	assert.NotContains(t, fcm, "uploadedAt")
 }
 
 func TestCreateDirWithParentSuccess(t *testing.T) {
