@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,6 +19,9 @@ import (
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
+	"github.com/cozy/swift/swifttest"
+
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,13 +58,12 @@ func TestThemeWithContext(t *testing.T) {
 	_, err := os.OpenFile(filepath.Join(tmpdir, "custom_theme.css"), os.O_RDWR|os.O_CREATE, 0600)
 	assert.NoError(t, err)
 
-	cacheStorage := config.GetConfig().CacheStorage
 	assetsOptions := []fs.AssetOption{{
 		URL:     fmt.Sprintf("file://%s", filepath.Join(tmpdir, "custom_theme.css")),
 		Name:    "/styles/theme.css",
 		Context: context,
 	}}
-	err = fs.RegisterCustomExternals(cacheStorage, assetsOptions, 1)
+	err = fs.RegisterCustomExternals(assetsOptions, 1)
 	assert.NoError(t, err)
 	// Test the theme
 	_ = lifecycle.Patch(testInstance, &lifecycle.Options{
@@ -85,7 +88,25 @@ func fakeAPI(g *echo.Group) {
 }
 
 func TestMain(m *testing.M) {
+	swiftSrv, err := swifttest.NewSwiftServer("localhost")
+	if err != nil {
+		fmt.Printf("failed to create swift server %s", err)
+	}
+
+	viper.Set("swift.username", "swifttest")
+	viper.Set("swift.api_key", "swifttest")
+	viper.Set("swift.auth_url", swiftSrv.AuthURL)
+
+	err = config.InitSwiftConnection(config.Fs{
+		URL: &url.URL{
+			Scheme:   "swift",
+			Host:     "localhost",
+			RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
+		},
+	})
 	config.UseTestFile()
+	config.InitDefaultSwiftConnection()
+	config.GetSwiftConnection().ContainerCreate(fs.DynamicAssetsContainerName, nil)
 	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "middlewares_test")

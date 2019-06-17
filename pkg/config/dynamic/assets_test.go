@@ -2,33 +2,27 @@ package dynamic
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/cache"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/statik/fs"
-	"github.com/cozy/redis"
+	"github.com/cozy/swift/swifttest"
+
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
-const redisURL = "redis://localhost:6379/0"
-
 func TestRemoveCustomAsset(t *testing.T) {
-	opts, _ := redis.ParseURL(redisURL)
-	client := redis.NewClient(opts)
-	cache := cache.New(client)
-
 	// Cleaning if existing
 	asset := fs.AssetOption{
 		Name:    "/foo.js",
 		Context: "bar",
 	}
-	_ = RemoveAsset(asset.Context, asset.Name)
-	_ = UpdateAssetsList()
 
-	assetsList, err := GetAssetsList()
+	assetsList, err := ListDynamicAssets()
 	assert.NoError(t, err)
 
 	// Adding the asset
@@ -38,23 +32,41 @@ func TestRemoveCustomAsset(t *testing.T) {
 
 	assets := []fs.AssetOption{asset}
 
-	err = fs.RegisterCustomExternals(cache, assets, 1)
+	err = fs.RegisterCustomExternals(assets, 1)
 	assert.NoError(t, err)
-	err = UpdateAssetsList()
+
 	assert.NoError(t, err)
-	newAssetsList, err := GetAssetsList()
+	newAssetsList, err := ListDynamicAssets()
 	assert.NoError(t, err)
 	assert.Equal(t, len(newAssetsList), len(assetsList)+1)
 
 	// Removing
-	err = RemoveAsset(asset.Context, asset.Name)
+	err = RemoveDynamicAsset(asset.Context, asset.Name)
 	assert.NoError(t, err)
-	finalAssetsList, err := GetAssetsList()
+	finalAssetsList, err := ListDynamicAssets()
 	assert.NoError(t, err)
 	assert.Equal(t, len(finalAssetsList), len(assetsList))
 }
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	swiftSrv, err := swifttest.NewSwiftServer("localhost")
+	if err != nil {
+		fmt.Printf("failed to create swift server %s", err)
+	}
+
+	viper.Set("swift.username", "swifttest")
+	viper.Set("swift.api_key", "swifttest")
+	viper.Set("swift.auth_url", swiftSrv.AuthURL)
+
+	err = config.InitSwiftConnection(config.Fs{
+		URL: &url.URL{
+			Scheme:   "swift",
+			Host:     "localhost",
+			RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
+		},
+	})
+
+	err = config.GetSwiftConnection().ContainerCreate(fs.DynamicAssetsContainerName, nil)
 	os.Exit(m.Run())
 }
