@@ -251,22 +251,27 @@ func rebuildRedis(c echo.Context) error {
 // Renders the assets list loaded in memory and served by the cozy
 func assetsInfos(c echo.Context) error {
 	assetsMap := make(map[string][]*fs.Asset)
-	dynAssets, _ := dynamic.ListDynamicAssets()
 
 	// Statik assets
 	fs.Foreach(func(name, context string, f *fs.Asset) {
 		assetsMap[context] = append(assetsMap[context], f)
 	})
 
-	// Adding dynamic assets
-	for ctx, assets := range dynAssets {
-		assetsMap[ctx] = append(assetsMap[ctx], assets...)
+	// Adding dynamic assets if Swift is available
+	if config.FsURL().Scheme == config.SchemeSwift || config.FsURL().Scheme == config.SchemeSwiftSecure {
+		dynAssets, _ := dynamic.ListDynamicAssets()
+		for ctx, assets := range dynAssets {
+			assetsMap[ctx] = append(assetsMap[ctx], assets...)
+		}
 	}
 
 	return c.JSON(http.StatusOK, assetsMap)
 }
 
 func addAssets(c echo.Context) error {
+	if config.FsURL().Scheme != config.SchemeSwift && config.FsURL().Scheme != config.SchemeSwiftSecure {
+		return c.JSON(http.StatusServiceUnavailable, echo.Map{"error": "Dynamic assets are only available with Swift FS"})
+	}
 	var unmarshaledAssets []fs.AssetOption
 	if err := json.NewDecoder(c.Request().Body).Decode(&unmarshaledAssets); err != nil {
 		return err
@@ -279,6 +284,9 @@ func addAssets(c echo.Context) error {
 }
 
 func deleteAssets(c echo.Context) error {
+	if config.FsURL().Scheme != config.SchemeSwift && config.FsURL().Scheme != config.SchemeSwiftSecure {
+		return c.JSON(http.StatusServiceUnavailable, echo.Map{"error": "Dynamic assets are only available with Swift FS"})
+	}
 	context := c.Param("context")
 	name := c.Param("*")
 

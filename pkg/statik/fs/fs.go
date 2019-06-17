@@ -319,7 +319,7 @@ func newAsset(opt AssetOption, zippedData, unzippedData []byte) *Asset {
 }
 
 // threadsafe
-// Used to store statik assets
+// Used to store static assets
 func storeAsset(asset *Asset) {
 	context := asset.Context
 	if context == "" {
@@ -329,7 +329,7 @@ func storeAsset(asset *Asset) {
 	globalAssets.Store(contextKey, asset)
 }
 
-// DeleteAsset removes a dynamic asset.
+// DeleteAsset removes a static asset.
 func DeleteAsset(asset *Asset) {
 	context := asset.Context
 	if context == "" {
@@ -339,7 +339,7 @@ func DeleteAsset(asset *Asset) {
 	globalAssets.Delete(contextKey)
 }
 
-// GetDynamicAsset retrieves a raw asset from Swit and build a fs.Asset
+// GetDynamicAsset retrieves a raw asset from Swift and build a fs.Asset
 func GetDynamicAsset(context, name string) (*Asset, error) {
 	swiftConn := config.GetSwiftConnection()
 	objectName := path.Join(context, name)
@@ -419,7 +419,7 @@ func Open(name string, context ...string) (*bytes.Reader, error) {
 	return nil, os.ErrNotExist
 }
 
-// Foreach iterates on the dynamic assets.
+// Foreach iterates on the static assets.
 func Foreach(predicate func(name, context string, f *Asset)) {
 	globalAssets.Range(func(contextKey interface{}, v interface{}) bool {
 		context, name, _ := unMarshalContextKey(contextKey.(string))
