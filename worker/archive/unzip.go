@@ -1,11 +1,10 @@
-package unzip
+package archive
 
 import (
 	"archive/zip"
 	"fmt"
 	"io"
 	"path"
-	"runtime"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/job"
@@ -14,24 +13,14 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
-type zipMessage struct {
+type unzipMessage struct {
 	Zip         string `json:"zip"`
 	Destination string `json:"destination"`
 }
 
-func init() {
-	job.AddWorker(&job.WorkerConfig{
-		WorkerType:   "unzip",
-		Concurrency:  runtime.NumCPU(),
-		MaxExecCount: 2,
-		Timeout:      30 * time.Second,
-		WorkerFunc:   Worker,
-	})
-}
-
-// Worker is a worker that unzip a file.
-func Worker(ctx *job.WorkerContext) error {
-	msg := &zipMessage{}
+// WorkerUnzip is a worker that unzip a file.
+func WorkerUnzip(ctx *job.WorkerContext) error {
+	msg := &unzipMessage{}
 	if err := ctx.UnmarshalMessage(msg); err != nil {
 		return err
 	}
@@ -94,8 +83,8 @@ func unzip(fs vfs.VFS, zipID, destination string) error {
 
 		size := int64(f.UncompressedSize64)
 		mime, class := vfs.ExtractMimeAndClassFromFilename(f.Name)
-		now := time.Now()
-		doc, err := vfs.NewFileDoc(name, dir.ID(), size, nil, mime, class, now, false, false, nil)
+		mod := f.Modified
+		doc, err := vfs.NewFileDoc(name, dir.ID(), size, nil, mime, class, mod, false, false, nil)
 		if err != nil {
 			return err
 		}

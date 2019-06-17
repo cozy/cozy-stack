@@ -100,6 +100,51 @@ permission. It is done by adding this to the manifest:
 }
 ```
 
+## zip worker
+
+The `zip` worker does pretty much the opposite of the `unzip` worker: it
+creates a zip archive from files in the VFS. The options are:
+
+- `files`: a map with the the files to zip (their path in the zip as key, their
+  VFS identifier as value)
+- `dir_id`: the directory identifier where the zip archive will be put
+- `filename`: the name of the zip archive.
+
+### Example
+
+```json
+{
+    "files": {
+        "selection/one.pdf": "36abc4c0-90fe-11e9-b05b-1fa43ca781ef",
+        "selection/two.pdf": "36eb54c8-90fe-11e9-aeca-03ddc3acf91c",
+        "selection/three.pdf": "37284586-90fe-11e9-be6d-179f72076e43",
+        "selection/four.pdf": "37655462-90fe-11e9-9059-8739e3746720",
+        "selection/five.pdf": "379fedfc-90fe-11e9-849f-0bbe172eba5f"
+    },
+    "dir_id": "3657ce9c-90fe-11e9-b40b-33baf841bcb8",
+    "filename": "selection.zip"
+}
+```
+
+### Permissions
+
+To use this worker from a client-side application, you will need to ask the
+permission. It is done by adding this to the manifest:
+
+```json
+{
+    "permissions": {
+        "create-a-zip-archive": {
+            "description": "Required to create a zip archive inside the cozy",
+            "type": "io.cozy.jobs",
+            "verbs": ["POST"],
+            "selector": "worker",
+            "values": ["zip"]
+        }
+    }
+}
+```
+
 ## sendmail worker
 
 The `sendmail` worker can be used to send mail from the stack. It implies that
