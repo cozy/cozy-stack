@@ -177,7 +177,7 @@ func (r Rule) TriggerArgs() string {
 		verbs = append(verbs, "UPDATED")
 	}
 	if r.Remove == ActionRuleSync || r.Remove == ActionRulePush {
-		verbs = append(verbs, "UPDATED")
+		verbs = append(verbs, "DELETED")
 	}
 	if len(verbs) == 0 {
 		return ""
