@@ -15,13 +15,14 @@ var ErrSlugEmpty = errors.New("Slug cannot be empty")
 // UpdatedByAppEntry represents a modification made by an application to the
 // document
 type UpdatedByAppEntry struct {
-	Slug    string    `json:"slug"`              // Slug of the app
-	Date    time.Time `json:"date"`              // Date of the update
-	Version string    `json:"version,omitempty"` // Version identifier of the app
+	Slug     string    `json:"slug"`               // Slug of the app
+	Date     time.Time `json:"date"`               // Date of the update
+	Version  string    `json:"version,omitempty"`  // Version identifier of the app
+	Instance string    `json:"instance,omitempty"` // URL of the instance
 }
 
-// CozyMetaData holds all the metadata of a document
-type CozyMetaData struct {
+// CozyMetadata holds all the metadata of a document
+type CozyMetadata struct {
 	// Name or identifier for the version of the schema used by this document
 	DocTypeVersion string `json:"doctypeVersion"`
 	// Version of the cozyMetadata
@@ -35,24 +36,22 @@ type CozyMetaData struct {
 	// Last modification date of the cozy document
 	UpdatedAt time.Time `json:"updatedAt"`
 	// List of objects representing the applications which modified the cozy document
-	UpdatedByApps []*UpdatedByAppEntry `json:"updatedByApps"`
-	// Identifier of the account in io.cozy.accounts (for konnectors)
-	SourceAccount string `json:"sourceAccount,omitempty"`
+	UpdatedByApps []*UpdatedByAppEntry `json:"updatedByApps,omitempty"`
 }
 
-// New initializes a new CozyMetaData structure
-func New() *CozyMetaData {
+// New initializes a new CozyMetadata structure
+func New() *CozyMetadata {
 	now := time.Now()
-	return &CozyMetaData{
+	return &CozyMetadata{
 		MetadataVersion: MetadataVersion,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
 }
 
-// NewWithApp initializes a CozyMetaData with a slug and a version
+// NewWithApp initializes a CozyMetadata with a slug and a version
 // Version is optional
-func NewWithApp(slug, version, doctypeVersion string) (*CozyMetaData, error) {
+func NewWithApp(slug, version, doctypeVersion string) (*CozyMetadata, error) {
 	if slug == "" {
 		return nil, ErrSlugEmpty
 	}
@@ -70,17 +69,17 @@ func NewWithApp(slug, version, doctypeVersion string) (*CozyMetaData, error) {
 	return md, nil
 }
 
-// Clone clones a CozyMetaData struct
-func (cm *CozyMetaData) Clone() CozyMetaData {
+// Clone clones a CozyMetadata struct
+func (cm *CozyMetadata) Clone() *CozyMetadata {
 	cloned := *cm
 	cloned.UpdatedByApps = make([]*UpdatedByAppEntry, len(cm.UpdatedByApps))
 	copy(cloned.UpdatedByApps, cm.UpdatedByApps)
-	return cloned
+	return &cloned
 }
 
 // EnsureCreatedFields ensures that empty fields are filled, otherwise use
 // the default metadata values during the creation process
-func (cm *CozyMetaData) EnsureCreatedFields(defaultMetadata *CozyMetaData) {
+func (cm *CozyMetadata) EnsureCreatedFields(defaultMetadata *CozyMetadata) {
 	if cm.UpdatedAt.IsZero() {
 		cm.UpdatedAt = defaultMetadata.UpdatedAt
 	}
@@ -99,13 +98,13 @@ func (cm *CozyMetaData) EnsureCreatedFields(defaultMetadata *CozyMetaData) {
 }
 
 // ChangeUpdatedAt updates the UpdatedAt timestamp
-func (cm *CozyMetaData) ChangeUpdatedAt() {
+func (cm *CozyMetadata) ChangeUpdatedAt() {
 	cm.UpdatedAt = time.Now()
 }
 
 // UpdatedByApp updates an entry either by updating the struct if the
 // slug/version already exists or by appending a new entry to the list
-func (cm *CozyMetaData) UpdatedByApp(slug, version string) error {
+func (cm *CozyMetadata) UpdatedByApp(slug, version string) error {
 	if slug == "" {
 		return ErrSlugEmpty
 	}

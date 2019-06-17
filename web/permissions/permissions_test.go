@@ -829,7 +829,7 @@ func TestCreatePermissionWithoutMetadata(t *testing.T) {
 	assert.NoError(t, err)
 
 	type metaStruct struct {
-		Meta metadata.CozyMetaData `json:"cozyMetadata"`
+		Meta metadata.CozyMetadata `json:"cozyMetadata"`
 	}
 	type attrStruct struct {
 		Attributes metaStruct `json:"attributes"`
@@ -893,7 +893,7 @@ func TestCreatePermissionWithMetadata(t *testing.T) {
 	assert.NoError(t, err)
 
 	type metaStruct struct {
-		Meta metadata.CozyMetaData `json:"cozyMetadata"`
+		Meta metadata.CozyMetadata `json:"cozyMetadata"`
 	}
 	type attrStruct struct {
 		Attributes metaStruct `json:"attributes"`

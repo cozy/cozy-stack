@@ -40,9 +40,10 @@ type FileDoc struct {
 	Trashed    bool     `json:"trashed"`
 	Tags       []string `json:"tags"`
 
-	Metadata Metadata `json:"metadata,omitempty"`
-
+	Metadata     Metadata               `json:"metadata,omitempty"`
 	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
+
+	CozyMetadata *FilesCozyMetadata `json:"cozyMetadata,omitempty"`
 
 	// Cache of the fullpath of the file. Should not have to be invalidated
 	// since we use FileDoc as immutable data-structures.
@@ -73,6 +74,9 @@ func (f *FileDoc) Clone() couchdb.Doc {
 	cloned.Metadata = make(Metadata, len(f.Metadata))
 	for k, v := range f.Metadata {
 		cloned.Metadata[k] = v
+	}
+	if f.CozyMetadata != nil {
+		cloned.CozyMetadata = f.CozyMetadata.Clone()
 	}
 	return &cloned
 }
@@ -281,6 +285,7 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 	newdoc.UpdatedAt = *patch.UpdatedAt
 	newdoc.Metadata = olddoc.Metadata
 	newdoc.ReferencedBy = olddoc.ReferencedBy
+	newdoc.CozyMetadata = olddoc.CozyMetadata
 
 	if patch.MD5Sum != nil {
 		newdoc.MD5Sum = *patch.MD5Sum
@@ -314,6 +319,7 @@ func TrashFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 		newdoc.DocName = name
 		newdoc.Trashed = true
 		newdoc.fullpath = path.Join(TrashDirName, name)
+		newdoc.CozyMetadata = olddoc.CozyMetadata
 		return fs.UpdateFileDoc(olddoc, newdoc)
 	})
 
@@ -342,6 +348,7 @@ func RestoreFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 		newdoc.DocName = name
 		newdoc.Trashed = false
 		newdoc.fullpath = path.Join(restoreDir.Fullpath, name)
+		newdoc.CozyMetadata = olddoc.CozyMetadata
 		return fs.UpdateFileDoc(olddoc, newdoc)
 	})
 

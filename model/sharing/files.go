@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -169,10 +170,11 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	if dir == nil {
 		name := inst.Translate("Tree Shared with me")
 		dir, err = vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)
-		dir.DocID = consts.SharedWithMeDirID
 		if err != nil {
 			return nil, err
 		}
+		dir.DocID = consts.SharedWithMeDirID
+		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 		if err = fs.CreateDir(dir); err != nil {
 			return nil, err
 		}
@@ -180,6 +182,13 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	}
 
 	if dir.RestorePath != "" {
+		now := time.Now()
+		instanceURL := inst.PageURL("/", nil)
+		if dir.CozyMetadata == nil {
+			dir.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+		} else {
+			dir.CozyMetadata.UpdatedAt = now
+		}
 		_, err = vfs.RestoreDir(fs, dir)
 		if err != nil {
 			return nil, err
@@ -191,8 +200,18 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		for _, child := range children {
 			d, f := child.Refine()
 			if d != nil {
+				if d.CozyMetadata == nil {
+					d.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+				} else {
+					d.CozyMetadata.UpdatedAt = now
+				}
 				_, err = vfs.TrashDir(fs, d)
 			} else {
+				if f.CozyMetadata == nil {
+					f.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+				} else {
+					f.CozyMetadata.UpdatedAt = now
+				}
 				_, err = vfs.TrashFile(fs, f)
 			}
 			if err != nil {
@@ -222,6 +241,7 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) (*vfs
 		ID:   s.SID,
 		Type: consts.Sharings,
 	})
+	dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	if err = fs.CreateDir(dir); err != nil {
 		dir.DocName = conflictName(dir.DocName, "")
 		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
@@ -252,6 +272,11 @@ func (s *Sharing) AddReferenceForSharingDir(inst *instance.Instance, rule *Rule)
 		ID:   s.SID,
 		Type: consts.Sharings,
 	})
+	if dir.CozyMetadata == nil {
+		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	} else {
+		dir.CozyMetadata.UpdatedAt = time.Now()
+	}
 	return fs.UpdateDirDoc(olddoc, dir)
 }
 
@@ -296,6 +321,7 @@ func (s *Sharing) RemoveSharingDir(inst *instance.Instance) error {
 		ID:   s.SID,
 		Type: consts.Sharings,
 	})
+	dir.CozyMetadata.UpdatedAt = time.Now()
 	return inst.VFS().UpdateDirDoc(olddoc, dir)
 }
 
@@ -316,10 +342,11 @@ func (s *Sharing) GetNoLongerSharedDir(inst *instance.Instance) (*vfs.DirDoc, er
 		}
 		name := inst.Translate("Tree No longer shared")
 		dir, err = vfs.NewDirDocWithParent(name, parent, nil)
-		dir.DocID = consts.NoLongerSharedDirID
 		if err != nil {
 			return nil, err
 		}
+		dir.DocID = consts.NoLongerSharedDirID
+		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 		if err = fs.CreateDir(dir); err != nil {
 			return nil, err
 		}
@@ -327,6 +354,14 @@ func (s *Sharing) GetNoLongerSharedDir(inst *instance.Instance) (*vfs.DirDoc, er
 	}
 
 	if dir.RestorePath != "" {
+		now := time.Now()
+		instanceURL := inst.PageURL("/", nil)
+		if dir.CozyMetadata == nil {
+			dir.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+		} else {
+			dir.CozyMetadata.UpdatedAt = now
+		}
+		dir.CozyMetadata.UpdatedAt = now
 		_, err = vfs.RestoreDir(fs, dir)
 		if err != nil {
 			return nil, err
@@ -338,8 +373,18 @@ func (s *Sharing) GetNoLongerSharedDir(inst *instance.Instance) (*vfs.DirDoc, er
 		for _, child := range children {
 			d, f := child.Refine()
 			if d != nil {
+				if d.CozyMetadata == nil {
+					d.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+				} else {
+					d.CozyMetadata.UpdatedAt = now
+				}
 				_, err = vfs.TrashDir(fs, d)
 			} else {
+				if f.CozyMetadata == nil {
+					f.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+				} else {
+					f.CozyMetadata.UpdatedAt = now
+				}
 				_, err = vfs.TrashFile(fs, f)
 			}
 			if err != nil {
@@ -371,7 +416,7 @@ func (s *Sharing) GetFolder(inst *instance.Instance, m *Member, xoredID string) 
 	if err != nil {
 		return nil, err
 	}
-	doc := dirToJSONDoc(dir).M
+	doc := dirToJSONDoc(dir, inst.PageURL("/", nil)).M
 	s.TransformFileToSent(doc, creds.XorKey, info.Rule)
 	return doc, nil
 }
@@ -482,14 +527,14 @@ func buildReferencedBy(target, file *vfs.FileDoc, rule *Rule) []couchdb.DocRefer
 }
 
 func copySafeFieldsToFile(target, file *vfs.FileDoc) {
-	file.Tags = make([]string, len(target.Tags))
-	copy(file.Tags, target.Tags)
+	file.Tags = target.Tags
 	file.Metadata = target.Metadata
 	file.CreatedAt = target.CreatedAt
 	file.UpdatedAt = target.UpdatedAt
 	file.Mime = target.Mime
 	file.Class = target.Class
 	file.Executable = target.Executable
+	file.CozyMetadata = target.CozyMetadata
 }
 
 func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
@@ -509,6 +554,63 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 	if updated, ok := target["updated_at"].(string); ok {
 		if at, err := time.Parse(time.RFC3339Nano, updated); err == nil {
 			dir.UpdatedAt = at
+		}
+	}
+
+	if meta, ok := target["cozyMetadata"].(map[string]interface{}); ok {
+		dir.CozyMetadata = &vfs.FilesCozyMetadata{}
+		if version, ok := meta["doctypeVersion"].(string); ok {
+			dir.CozyMetadata.DocTypeVersion = version
+		}
+		if version, ok := meta["metadataVersion"].(float64); ok {
+			dir.CozyMetadata.MetadataVersion = int(version)
+		}
+		if created, ok := meta["createdAt"].(string); ok {
+			if at, err := time.Parse(time.RFC3339Nano, created); err == nil {
+				dir.CozyMetadata.CreatedAt = at
+			}
+		}
+		if app, ok := meta["createdByApp"].(string); ok {
+			dir.CozyMetadata.CreatedByApp = app
+		}
+		if version, ok := meta["createdByAppVersion"].(string); ok {
+			dir.CozyMetadata.CreatedByAppVersion = version
+		}
+		if instance, ok := meta["createdOn"].(string); ok {
+			dir.CozyMetadata.CreatedOn = instance
+		}
+
+		if updated, ok := meta["updatedAt"].(string); ok {
+			if at, err := time.Parse(time.RFC3339Nano, updated); err == nil {
+				dir.CozyMetadata.UpdatedAt = at
+			}
+		}
+		if updates, ok := meta["updatedByApps"].([]map[string]interface{}); ok {
+			for _, update := range updates {
+				if slug, ok := update["slug"].(string); ok {
+					entry := &metadata.UpdatedByAppEntry{Slug: slug}
+					if date, ok := update["date"].(string); ok {
+						if at, err := time.Parse(time.RFC3339Nano, date); err == nil {
+							entry.Date = at
+						}
+					}
+					if version, ok := update["version"].(string); ok {
+						entry.Version = version
+					}
+					if instance, ok := update["instance"].(string); ok {
+						entry.Instance = instance
+					}
+					dir.CozyMetadata.UpdatedByApps = append(dir.CozyMetadata.UpdatedByApps, entry)
+				}
+			}
+		}
+
+		// No upload* for directories
+		if account, ok := meta["sourceAccount"].(string); ok {
+			dir.CozyMetadata.SourceAccount = account
+		}
+		if id, ok := meta["sourceAccountIdentifier"].(string); ok {
+			dir.CozyMetadata.SourceIdentifier = id
 		}
 	}
 }
@@ -642,6 +744,7 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 	}
 	doc.DirID = parent.DocID
 	doc.Fullpath = path.Join(parent.Fullpath, doc.DocName)
+	doc.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	doc.SetRev("")
 	err = fs.CreateDir(doc)
 	if err != nil {
@@ -831,6 +934,11 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 		// nothing to do if the directory is already in the trash
 		return nil
 	}
+	if dir.CozyMetadata == nil {
+		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	} else {
+		dir.CozyMetadata.UpdatedAt = time.Now()
+	}
 	if len(dir.ReferencedBy) == 0 {
 		_, err := vfs.TrashDir(inst.VFS(), dir)
 		return err
@@ -854,6 +962,11 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 		// Nothing to do if the directory is already in the trash
 		return nil
 	}
+	if file.CozyMetadata == nil {
+		file.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	} else {
+		file.CozyMetadata.UpdatedAt = time.Now()
+	}
 	olddoc := file.Clone().(*vfs.FileDoc)
 	removeReferencesFromRule(file, rule)
 	if s.Owner && rule.Selector == couchdb.SelectorReferencedBy {
@@ -873,7 +986,7 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 	return inst.VFS().UpdateFileDoc(olddoc, file)
 }
 
-func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
+func dirToJSONDoc(dir *vfs.DirDoc, instanceURL string) couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		Type: consts.Files,
 		M: map[string]interface{}{
@@ -894,10 +1007,17 @@ func dirToJSONDoc(dir *vfs.DirDoc) couchdb.JSONDoc {
 	if dir.RestorePath != "" {
 		doc.M["restore_path"] = dir.RestorePath
 	}
+	fcm := dir.CozyMetadata
+	if fcm == nil {
+		fcm = vfs.NewCozyMetadata(instanceURL)
+		fcm.CreatedAt = dir.CreatedAt
+		fcm.UpdatedAt = dir.UpdatedAt
+	}
+	doc.M["cozyMetadata"] = fcm.ToJSONDoc()
 	return doc
 }
 
-func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
+func fileToJSONDoc(file *vfs.FileDoc, instanceURL string) couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{
 		Type: consts.Files,
 		M: map[string]interface{}{
@@ -926,5 +1046,15 @@ func fileToJSONDoc(file *vfs.FileDoc) couchdb.JSONDoc {
 	if len(file.Metadata) > 0 {
 		doc.M["metadata"] = file.Metadata
 	}
+	fcm := file.CozyMetadata
+	if fcm == nil {
+		fcm = vfs.NewCozyMetadata(instanceURL)
+		fcm.CreatedAt = file.CreatedAt
+		fcm.UpdatedAt = file.UpdatedAt
+		uploadedAt := file.CreatedAt
+		fcm.UploadedAt = &uploadedAt
+		fcm.UploadedOn = instanceURL
+	}
+	doc.M["cozyMetadata"] = fcm.ToJSONDoc()
 	return doc
 }

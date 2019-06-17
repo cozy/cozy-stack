@@ -99,6 +99,9 @@ func unzip(fs vfs.VFS, zipID, destination string) error {
 		if err != nil {
 			return err
 		}
+		doc.CozyMetadata = vfs.NewCozyMetadata("")
+		at := doc.CozyMetadata.CreatedAt
+		doc.CozyMetadata.UploadedAt = &at
 		file, err := fs.CreateFile(doc, nil)
 		if err != nil {
 			if couchdb.IsConflictError(err) {

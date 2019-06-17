@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -25,6 +26,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
@@ -81,6 +83,13 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 	if err != nil {
 		return
 	}
+
+	if created := c.QueryParam("CreatedAt"); created != "" {
+		if at, err2 := time.Parse(time.RFC3339, created); err2 == nil {
+			doc.CreatedAt = at
+		}
+	}
+	doc.CozyMetadata = cozyMetadataFromClaims(c, true)
 
 	err = checkPerm(c, "POST", nil, doc)
 	if err != nil {
@@ -142,6 +151,13 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 			doc.UpdatedAt = t
 		}
 	}
+	if created := c.QueryParam("CreatedAt"); created != "" {
+		if at, err2 := time.Parse(time.RFC3339, created); err2 == nil {
+			doc.CreatedAt = at
+		}
+	}
+
+	doc.CozyMetadata = cozyMetadataFromClaims(c, false)
 
 	err = checkPerm(c, "POST", doc, nil)
 	if err != nil {
@@ -182,6 +198,11 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 	if err = CheckIfMatch(c, olddoc.Rev()); err != nil {
 		return WrapVfsError(err)
 	}
+
+	if olddoc.CozyMetadata != nil {
+		newdoc.CozyMetadata = olddoc.CozyMetadata.Clone()
+	}
+	updateFileCozyMetadata(c, newdoc, true)
 
 	err = checkPerm(c, permission.PUT, nil, olddoc)
 	if err != nil {
@@ -375,14 +396,18 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 		}
 	} else if patch.Trash {
 		if dir != nil {
+			updateDirCozyMetadata(c, dir)
 			dir, err = vfs.TrashDir(fs, dir)
 		} else {
+			updateFileCozyMetadata(c, file, false)
 			file, err = vfs.TrashFile(fs, file)
 		}
 	} else {
 		if dir != nil {
+			updateDirCozyMetadata(c, dir)
 			dir, err = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
 		} else {
+			updateFileCozyMetadata(c, file, false)
 			file, err = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
 		}
 	}
@@ -418,13 +443,17 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*js
 			}
 		} else if patch.Trash {
 			if dir != nil {
+				updateDirCozyMetadata(c, dir)
 				_, errp = vfs.TrashDir(fs, dir)
 			} else if file != nil {
+				updateFileCozyMetadata(c, file, false)
 				_, errp = vfs.TrashFile(fs, file)
 			}
 		} else if dir != nil {
+			updateDirCozyMetadata(c, dir)
 			_, errp = vfs.ModifyDirMetadata(fs, dir, &patch.DocPatch)
 		} else if file != nil {
+			updateFileCozyMetadata(c, file, false)
 			_, errp = vfs.ModifyFileMetadata(fs, file, &patch.DocPatch)
 		}
 		if errp != nil {
@@ -800,6 +829,7 @@ func TrashHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
+		updateDirCozyMetadata(c, dir)
 		doc, errt := vfs.TrashDir(instance.VFS(), dir)
 		if errt != nil {
 			return WrapVfsError(errt)
@@ -807,6 +837,7 @@ func TrashHandler(c echo.Context) error {
 		return dirData(c, http.StatusOK, doc)
 	}
 
+	updateFileCozyMetadata(c, file, false)
 	doc, errt := vfs.TrashFile(instance.VFS(), file)
 	if errt != nil {
 		return WrapVfsError(errt)
@@ -850,6 +881,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
+		updateDirCozyMetadata(c, dir)
 		doc, errt := vfs.RestoreDir(instance.VFS(), dir)
 		if errt != nil {
 			return WrapVfsError(errt)
@@ -857,6 +889,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 		return dirData(c, http.StatusOK, doc)
 	}
 
+	updateFileCozyMetadata(c, file, false)
 	doc, errt := vfs.RestoreFile(instance.VFS(), file)
 	if errt != nil {
 		return WrapVfsError(errt)
@@ -1245,4 +1278,113 @@ func parseMD5Hash(md5B64 string) ([]byte, error) {
 	}
 
 	return md5Sum, nil
+}
+
+func instanceURL(c echo.Context) string {
+	return middlewares.GetInstance(c).PageURL("/", nil)
+}
+
+func updateDirCozyMetadata(c echo.Context, dir *vfs.DirDoc) {
+	fcm := cozyMetadataFromClaims(c, false)
+	if dir.CozyMetadata == nil {
+		fcm.CreatedAt = dir.CreatedAt
+		fcm.CreatedByApp = ""
+		fcm.CreatedByAppVersion = ""
+		dir.CozyMetadata = fcm
+	} else {
+		dir.CozyMetadata.UpdatedAt = fcm.UpdatedAt
+		if len(fcm.UpdatedByApps) > 0 {
+			dir.CozyMetadata.UpdatedByApp(fcm.UpdatedByApps[0])
+		}
+	}
+}
+
+func updateFileCozyMetadata(c echo.Context, file *vfs.FileDoc, setUploadFields bool) {
+	fcm := cozyMetadataFromClaims(c, setUploadFields)
+	if file.CozyMetadata == nil {
+		fcm.CreatedAt = file.CreatedAt
+		fcm.CreatedByApp = ""
+		fcm.CreatedByAppVersion = ""
+		uploadedAt := file.CreatedAt
+		fcm.UploadedAt = &uploadedAt
+		file.CozyMetadata = fcm
+	} else {
+		file.CozyMetadata.UpdatedAt = fcm.UpdatedAt
+		if len(fcm.UpdatedByApps) > 0 {
+			file.CozyMetadata.UpdatedByApp(fcm.UpdatedByApps[0])
+		}
+	}
+}
+
+func cozyMetadataFromClaims(c echo.Context, setUploadFields bool) *vfs.FilesCozyMetadata {
+	fcm := vfs.NewCozyMetadata(instanceURL(c))
+
+	var slug, version string
+	var client map[string]string
+	if claims := c.Get("claims"); claims != nil {
+		cl := claims.(permission.Claims)
+		switch cl.Audience {
+		case consts.AppAudience, consts.KonnectorAudience:
+			slug = cl.Subject
+		case consts.AccessTokenAudience:
+			if perms, err := middlewares.GetPermission(c); err == nil {
+				if cli, ok := perms.Client.(*oauth.Client); ok {
+					slug = oauth.GetLinkedAppSlug(cli.SoftwareID)
+					// Special case for cozy-desktop: it is an OAuth app not linked
+					// to a web app, so it has no slug, but we still want to keep
+					// in cozyMetadata its changes, so we use a fake slug.
+					if slug == "" && strings.Contains(cli.SoftwareID, "cozy-desktop") {
+						slug = "cozy-desktop"
+					}
+					version = cli.SoftwareVersion
+					client = map[string]string{
+						"id":   cli.ID(),
+						"kind": cli.ClientKind,
+						"name": cli.ClientName,
+					}
+				}
+			}
+		}
+	}
+
+	if slug != "" {
+		fcm.CreatedByApp = slug
+		fcm.CreatedByAppVersion = version
+		fcm.UpdatedByApps = []*metadata.UpdatedByAppEntry{
+			{
+				Slug:     slug,
+				Version:  version,
+				Date:     fcm.UpdatedAt,
+				Instance: fcm.CreatedOn,
+			},
+		}
+	}
+
+	if setUploadFields {
+		uploadedAt := fcm.CreatedAt
+		fcm.UploadedAt = &uploadedAt
+		fcm.UploadedOn = fcm.CreatedOn
+		if slug != "" {
+			fcm.UploadedBy = &vfs.UploadedByEntry{
+				Slug:    slug,
+				Version: version,
+				Client:  client,
+			}
+		}
+	}
+
+	if account := c.QueryParam("SourceAccount"); account != "" {
+		fcm.SourceAccount = account
+		// To ease the transition to cozyMetadata for io.cozy.files, we fill
+		// the CreatedByApp for konnectors that updates a file: the stack can
+		// recognize that by the presence of the SourceAccount.
+		if fcm.CreatedByApp == "" && slug != "" {
+			fcm.CreatedByApp = slug
+		}
+	}
+	if id := c.QueryParam("SourceAccountIdentifier"); id != "" {
+		fcm.SourceIdentifier = id
+	}
+
+	return fcm
 }

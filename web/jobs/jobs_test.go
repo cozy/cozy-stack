@@ -486,7 +486,8 @@ func SetToken(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		tok := middlewares.GetRequestToken(c)
 		// Forcing the token parsing to have the "claims" parameter in the
-		// context
+		// context (in production, it is done via
+		// middlewares.CheckInstanceBlocked)
 		_, err := middlewares.ParseJWT(c, testInstance, tok)
 		if err != nil {
 			return err

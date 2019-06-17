@@ -76,28 +76,40 @@ func (c *couchdbIndexer) DiskUsage() (int64, error) {
 	return int64(f64), nil
 }
 
-func (c *couchdbIndexer) CreateFileDoc(doc *FileDoc) error {
+func (c *couchdbIndexer) prepareFileDoc(doc *FileDoc) error {
 	// Ensure that fullpath is filled because it's used in realtime/@events
 	if _, err := doc.Path(c); err != nil {
+		return err
+	}
+	// If a valid datetime is extracted from the EXIF metadata, use it as the
+	// created_at of the file. By valid, we mean that we filter out photos
+	// taken on camera were the clock was never configured (e.g. 1970-01-01).
+	if date, ok := doc.Metadata["datetime"].(time.Time); ok && date.Year() > 1990 {
+		doc.CreatedAt = date
+	}
+	return nil
+}
+
+func (c *couchdbIndexer) CreateFileDoc(doc *FileDoc) error {
+	if err := c.prepareFileDoc(doc); err != nil {
 		return err
 	}
 	return couchdb.CreateDoc(c.db, doc)
 }
 
 func (c *couchdbIndexer) CreateNamedFileDoc(doc *FileDoc) error {
-	// Ensure that fullpath is filled because it's used in realtime/@events
-	if _, err := doc.Path(c); err != nil {
+	if err := c.prepareFileDoc(doc); err != nil {
 		return err
 	}
 	return couchdb.CreateNamedDoc(c.db, doc)
 }
 
 func (c *couchdbIndexer) UpdateFileDoc(olddoc, newdoc *FileDoc) error {
-	// Ensure that fullpath is filled because it's used in realtime/@events
-	if _, err := olddoc.Path(c); err != nil {
+	if err := c.prepareFileDoc(newdoc); err != nil {
 		return err
 	}
-	if _, err := newdoc.Path(c); err != nil {
+	// Ensure that fullpath is filled because it's used in realtime/@events
+	if _, err := olddoc.Path(c); err != nil {
 		return err
 	}
 	newdoc.SetID(olddoc.ID())

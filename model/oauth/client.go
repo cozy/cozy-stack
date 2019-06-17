@@ -82,7 +82,7 @@ type Client struct {
 	OnboardingPermissions string `json:"onboarding_permissions,omitempty"`
 	OnboardingState       string `json:"onboarding_state,omitempty"`
 
-	Metadata *metadata.CozyMetaData `json:"cozyMetadata,omitempty"`
+	Metadata *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 }
 
 // ID returns the client qualified identifier
@@ -112,8 +112,7 @@ func (c *Client) Clone() couchdb.Doc {
 		cloned.Notifications[k] = *props
 	}
 	if cloned.Metadata != nil {
-		tmp := c.Metadata.Clone()
-		cloned.Metadata = &tmp
+		cloned.Metadata = c.Metadata.Clone()
 	}
 	return &cloned
 }
@@ -550,6 +549,24 @@ func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permi
 		return claims, false
 	}
 	return claims, true
+}
+
+// IsLinkedApp checks if an OAuth client has a linked app
+func IsLinkedApp(softwareID string) bool {
+	return strings.HasPrefix(softwareID, "registry://")
+}
+
+// GetLinkedAppSlug returns a linked app slug from a softwareID
+func GetLinkedAppSlug(softwareID string) string {
+	if !IsLinkedApp(softwareID) {
+		return ""
+	}
+	return strings.TrimPrefix(softwareID, "registry://")
+}
+
+// BuildLinkedAppScope returns a formatted scope for a linked app
+func BuildLinkedAppScope(slug string) string {
+	return fmt.Sprintf("@%s/%s", consts.Apps, slug)
 }
 
 var (

@@ -59,7 +59,7 @@ type (
 		Options      *JobOptions            `json:"options"`
 		Message      Message                `json:"message"`
 		CurrentState *TriggerState          `json:"current_state,omitempty"`
-		Metadata     *metadata.CozyMetaData `json:"cozyMetadata,omitempty"`
+		Metadata     *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 	}
 
 	// TriggerState represent the current state of the trigger
@@ -161,8 +161,7 @@ func (t *TriggerInfos) Clone() couchdb.Doc {
 		cloned.CurrentState = &tmp
 	}
 	if t.Metadata != nil {
-		tmp := t.Metadata.Clone()
-		cloned.Metadata = &tmp
+		cloned.Metadata = t.Metadata.Clone()
 	}
 	return &cloned
 }

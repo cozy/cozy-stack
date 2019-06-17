@@ -24,7 +24,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/web/auth"
 
 	"github.com/spf13/cobra"
 )
@@ -458,7 +457,7 @@ var linkedAppFixer = &cobra.Command{
 		for _, client := range clients {
 			for key, value := range softwareIDs {
 				if client.SoftwareID == key {
-					slug := auth.GetLinkedAppSlug(value)
+					slug := oauth.GetLinkedAppSlug(value)
 
 					// Change softwareID
 					client.SoftwareID = value

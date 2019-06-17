@@ -277,7 +277,7 @@ func TestCreateDirRootSuccess(t *testing.T) {
 }
 
 func TestCreateDirWithDateSuccess(t *testing.T) {
-	req, _ := http.NewRequest("POST", ts.URL+"/files/?Type=directory&Name=dir-with-date", strings.NewReader(""))
+	req, _ := http.NewRequest("POST", ts.URL+"/files/?Type=directory&Name=dir-with-date&CreatedAt=2016-09-18T10:24:53Z", strings.NewReader(""))
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	req.Header.Add("Date", "Mon, 19 Sep 2016 12:35:08 GMT")
 	res, err := http.DefaultClient.Do(req)
@@ -290,9 +290,16 @@ func TestCreateDirWithDateSuccess(t *testing.T) {
 	data := obj["data"].(map[string]interface{})
 	attrs := data["attributes"].(map[string]interface{})
 	createdAt := attrs["created_at"].(string)
-	assert.Equal(t, "2016-09-19T12:35:08Z", createdAt)
+	assert.Equal(t, "2016-09-18T10:24:53Z", createdAt)
 	updatedAt := attrs["updated_at"].(string)
-	assert.Equal(t, createdAt, updatedAt)
+	assert.Equal(t, "2016-09-19T12:35:08Z", updatedAt)
+	fcm := attrs["cozyMetadata"].(map[string]interface{})
+	assert.Equal(t, float64(1), fcm["metadataVersion"])
+	assert.Equal(t, "1", fcm["doctypeVersion"])
+	assert.Contains(t, fcm["createdOn"], testInstance.Domain)
+	assert.NotEmpty(t, fcm["createdAt"])
+	assert.NotEmpty(t, fcm["updatedAt"])
+	assert.NotContains(t, fcm, "uploadedAt")
 }
 
 func TestCreateDirWithParentSuccess(t *testing.T) {
@@ -419,6 +426,7 @@ func TestUploadImage(t *testing.T) {
 	gps := meta["gps"].(map[string]interface{})
 	assert.Equal(t, "Paris", gps["city"])
 	assert.Equal(t, "France", gps["country"])
+	assert.Contains(t, attrs["created_at"], "2016-09-10T")
 }
 
 func TestUploadWithParentSuccess(t *testing.T) {
@@ -471,7 +479,7 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 
 func TestUploadWithDate(t *testing.T) {
 	buf := strings.NewReader("foo")
-	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=withcdate", buf)
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=withcdate&CreatedAt=2016-09-18T10:24:53Z", buf)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	assert.NoError(t, err)
 	req.Header.Add("Date", "Mon, 19 Sep 2016 12:38:04 GMT")
@@ -480,9 +488,9 @@ func TestUploadWithDate(t *testing.T) {
 	data := obj["data"].(map[string]interface{})
 	attrs := data["attributes"].(map[string]interface{})
 	createdAt := attrs["created_at"].(string)
-	assert.Equal(t, "2016-09-19T12:38:04Z", createdAt)
+	assert.Equal(t, "2016-09-18T10:24:53Z", createdAt)
 	updatedAt := attrs["updated_at"].(string)
-	assert.Equal(t, createdAt, updatedAt)
+	assert.Equal(t, "2016-09-19T12:38:04Z", updatedAt)
 }
 
 func TestUploadWithMetadata(t *testing.T) {
@@ -531,6 +539,22 @@ func TestUploadWithMetadata(t *testing.T) {
 	assert.Equal(t, "theft", meta["subCategory"])
 	assert.Equal(t, "foobar", meta["label"])
 	assert.Equal(t, "2017-04-22T01:00:00-05:00", meta["datetime"])
+}
+
+func TestUploadWithSourceAccount(t *testing.T) {
+	buf := strings.NewReader("foo")
+	account := "0c5a0a1e-8eb1-11e9-93f3-934f3a2c181d"
+	identifier := "11f68e48"
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=with-sourceAccount&SourceAccount="+account+"&SourceAccountIdentifier="+identifier, buf)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res.StatusCode)
+	data := obj["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	fcm := attrs["cozyMetadata"].(map[string]interface{})
+	assert.Equal(t, account, fcm["sourceAccount"])
+	assert.Equal(t, identifier, fcm["sourceAccountIdentifier"])
 }
 
 func TestModifyMetadataFileMove(t *testing.T) {

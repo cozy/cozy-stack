@@ -291,6 +291,9 @@ func generatorForType(typ types.Type) *generator {
 			// We consider that json.RawMessage and time.Time are not modifiable in our code
 			return nil
 		}
+		if named == "vfs.FilesCozyMetadata" {
+			return &filesCozyMetadataGenerator
+		}
 		if s, ok := t.Obj().Type().Underlying().(*types.Struct); ok {
 			return structGenerator(named, s)
 		}
@@ -349,6 +352,15 @@ var emptyInterfaceGenerator = generator{
 	Altered:  "2",
 	SubValue: "1",
 	Warning:  "interface{} can contain nested data!",
+}
+
+var filesCozyMetadataGenerator = generator{
+	Type:     "vfs.FilesCozyMetadata",
+	Key:      `"alice.cozy.tools"`,
+	Initial:  `vfs.FilesCozyMetadata{CreatedOn: "bob.cozy.tools"}`,
+	Altered:  `"charlie.cozy.tools"`,
+	SubValue: `"bob.cozy.tools"`,
+	SubKey:   `.CreatedOn`,
 }
 
 func structGenerator(name string, s *types.Struct) *generator {

@@ -25,7 +25,7 @@ import (
 	vcardParser "github.com/emersion/go-vcard"
 )
 
-func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db prefixer.Prefixer) error {
+func createContact(hdr *tar.Header, tr *tar.Reader, db prefixer.Prefixer) error {
 	decoder := vcardParser.NewDecoder(tr)
 	vcard, err := decoder.Decode()
 	if err != nil {
@@ -180,6 +180,9 @@ func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc,
 		return err
 	}
 
+	fileDoc.CozyMetadata = vfs.NewCozyMetadata("")
+	at := fileDoc.CozyMetadata.CreatedAt
+	fileDoc.CozyMetadata.UploadedAt = &at
 	file, err := fs.CreateFile(fileDoc, nil)
 	if err != nil {
 		ext := path.Ext(fileDoc.DocName)
@@ -268,7 +271,7 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 					logger.WithDomain(instance.Domain).Errorf("Can't import album %s: %s", hdr.Name, err)
 				}
 			} else if doctype == "contacts" {
-				if err = createContact(fs, hdr, tgz, instance); err != nil {
+				if err = createContact(hdr, tgz, instance); err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import contact %s: %s", hdr.Name, err)
 				}
 			} else if doctype == "files" {

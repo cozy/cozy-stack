@@ -387,6 +387,7 @@ func Mkdir(fs VFS, name string, tags []string) (*DirDoc, error) {
 		return nil, err
 	}
 
+	dir.CozyMetadata = NewCozyMetadata("")
 	if err = fs.CreateDir(dir); err != nil {
 		return nil, err
 	}
@@ -419,6 +420,7 @@ func MkdirAll(fs VFS, name string) (*DirDoc, error) {
 	for i := len(dirs) - 1; i >= 0; i-- {
 		parent, err = NewDirDocWithParent(dirs[i], parent, nil)
 		if err == nil {
+			parent.CozyMetadata = NewCozyMetadata("")
 			err = fs.CreateDir(parent)
 			// XXX MkdirAll has no lock, so we have to consider the risk of a race condition
 			if os.IsExist(err) {
@@ -431,42 +433,6 @@ func MkdirAll(fs VFS, name string) (*DirDoc, error) {
 	}
 
 	return parent, nil
-}
-
-// Rename will rename a file or directory from a specified path to
-// another.
-func Rename(fs VFS, oldpath, newpath string) error {
-	dir, file, err := fs.DirOrFileByPath(oldpath)
-	if err != nil {
-		return err
-	}
-
-	newname := path.Base(newpath)
-
-	var newdirID *string
-	if path.Dir(oldpath) != path.Dir(newpath) {
-		var parent *DirDoc
-		parent, err = fs.DirByPath(path.Dir(newpath))
-		if err != nil {
-			return err
-		}
-		newdirID = &parent.DirID
-	} else {
-		newdirID = nil
-	}
-
-	patch := &DocPatch{
-		Name:  &newname,
-		DirID: newdirID,
-	}
-
-	if dir != nil {
-		_, err = ModifyDirMetadata(fs, dir, patch)
-	} else {
-		_, err = ModifyFileMetadata(fs, file, patch)
-	}
-
-	return err
 }
 
 // Remove removes the specified named file or directory.

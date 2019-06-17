@@ -144,6 +144,11 @@ func WorkerCheck(ctx *job.WorkerContext) error {
 			if meta != nil {
 				newImg := img.Clone().(*vfs.FileDoc)
 				newImg.Metadata = *meta
+				if newImg.CozyMetadata == nil {
+					newImg.CozyMetadata = vfs.NewCozyMetadata(ctx.Instance.PageURL("/", nil))
+				} else {
+					newImg.CozyMetadata.UpdatedAt = time.Now()
+				}
 				if err = fs.UpdateFileDoc(img, newImg); err != nil {
 					errm = multierror.Append(errm, err)
 				}

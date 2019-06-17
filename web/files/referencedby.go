@@ -33,12 +33,14 @@ func AddReferencedHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	if dir == nil {
-		file.AddReferencedBy(references...)
-		err = couchdb.UpdateDoc(instance, file)
-	} else {
+	if dir != nil {
 		dir.AddReferencedBy(references...)
+		updateDirCozyMetadata(c, dir)
 		err = couchdb.UpdateDoc(instance, dir)
+	} else {
+		file.AddReferencedBy(references...)
+		updateFileCozyMetadata(c, file, false)
+		err = couchdb.UpdateDoc(instance, file)
 	}
 
 	if err != nil {
@@ -73,9 +75,11 @@ func RemoveReferencedHandler(c echo.Context) error {
 
 	if dir != nil {
 		dir.RemoveReferencedBy(references...)
+		updateDirCozyMetadata(c, dir)
 		err = couchdb.UpdateDoc(instance, dir)
 	} else {
 		file.RemoveReferencedBy(references...)
+		updateFileCozyMetadata(c, file, false)
 		err = couchdb.UpdateDoc(instance, file)
 	}
 

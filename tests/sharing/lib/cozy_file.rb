@@ -3,7 +3,7 @@ class CozyFile
   include Model::Files
 
   attr_reader :name, :dir_id, :mime, :trashed, :md5sum, :referenced_by,
-              :metadata, :size, :executable, :file_class
+              :metadata, :size, :executable, :file_class, :cozy_metadata
 
   def self.load_from_url(inst, path)
     opts = {
@@ -25,6 +25,7 @@ class CozyFile
       executable: j["executable"],
       file_class: j["class"],
       metadata: j["metadata"],
+      cozy_metadata: j["cozyMetadata"],
       referenced_by: referenced_by
     )
     f.couch_id = id
@@ -72,6 +73,7 @@ class CozyFile
     @size = opts[:size]
     @executable = opts[:executable]
     @file_class = opts[:file_class]
+    @cozy_metadata = opts[:cozy_metadata]
     @referenced_by = opts[:referenced_by]
   end
 
@@ -85,6 +87,7 @@ class CozyFile
     j = JSON.parse(res.body)["data"]
     @couch_id = j["id"]
     @couch_rev = j["meta"]["rev"]
+    @cozy_metadata = j["attributes"]["cozyMetadata"]
   end
 
   def overwrite(inst, opts = {})

@@ -31,7 +31,7 @@ type Permission struct {
 	ShortCodes  map[string]string `json:"shortcodes,omitempty"`
 
 	Client   interface{}            `json:"-"` // Contains the *oauth.Client client pointer for Oauth permission type
-	Metadata *metadata.CozyMetaData `json:"cozyMetadata,omitempty"`
+	Metadata *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 }
 
 const (
@@ -74,8 +74,7 @@ func (p *Permission) Clone() couchdb.Doc {
 	cloned.Codes = make(map[string]string)
 	cloned.ShortCodes = make(map[string]string)
 	if p.Metadata != nil {
-		md := p.Metadata.Clone()
-		cloned.Metadata = &md
+		cloned.Metadata = p.Metadata.Clone()
 	}
 	for k, v := range p.Codes {
 		cloned.Codes[k] = v
@@ -355,7 +354,7 @@ func CreateKonnectorSet(db prefixer.Prefixer, slug string, set Set, version stri
 	return createAppSet(db, TypeKonnector, consts.Konnectors, slug, set, md)
 }
 
-func createAppSet(db prefixer.Prefixer, typ, docType, slug string, set Set, md *metadata.CozyMetaData) (*Permission, error) {
+func createAppSet(db prefixer.Prefixer, typ, docType, slug string, set Set, md *metadata.CozyMetadata) (*Permission, error) {
 	doc := &Permission{
 		Type:        typ,
 		SourceID:    docType + "/" + slug,

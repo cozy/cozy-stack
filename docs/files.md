@@ -34,6 +34,7 @@ the directory is created at the root of the virtual file system.
 | Type      | `directory`        |
 | Name      | the directory name |
 | Tags      | an array of tags   |
+| CreatedAt | the creation date  |
 
 #### HTTP headers
 
@@ -64,7 +65,7 @@ Date: Mon, 19 Sep 2016 12:35:08 GMT
 ```http
 HTTP/1.1 201 Created
 Content-Type: application/vnd.api+json
-Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
+Location: https://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 ```
 
 ```json
@@ -81,7 +82,15 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
             "path": "/Documents/phone",
             "created_at": "2016-09-19T12:35:08Z",
             "updated_at": "2016-09-19T12:35:08Z",
-            "tags": ["bills"]
+            "tags": ["bills", "konnectors"],
+            "cozyMetadata": {
+                "doctypeVersion": "1",
+                "metadataVersion": 1,
+                "createdAt": "2016-09-20T18:32:48Z",
+                "createdByApp": "drive",
+                "createdOn": "https://cozy.example.com/",
+                "updatedAt": "2016-09-20T18:32:48Z"
+            }
         },
         "relationships": {
             "parent": {
@@ -140,7 +149,15 @@ Content-Type: application/vnd.api+json
             "path": "/Documents",
             "created_at": "2016-09-19T12:35:00Z",
             "updated_at": "2016-09-19T12:35:00Z",
-            "tags": []
+            "tags": [],
+            "cozyMetadata": {
+                "doctypeVersion": "1",
+                "metadataVersion": 1,
+                "createdAt": "2016-09-20T18:32:47Z",
+                "createdByApp": "drive",
+                "createdOn": "https://cozy.example.com/",
+                "updatedAt": "2016-09-20T18:32:47Z"
+            }
         },
         "relationships": {
             "contents": {
@@ -173,7 +190,15 @@ Content-Type: application/vnd.api+json
                 "path": "/Documents/phone",
                 "created_at": "2016-09-19T12:35:08Z",
                 "updated_at": "2016-09-19T12:35:08Z",
-                "tags": ["bills"]
+                "tags": ["bills", "konnectors"],
+                "cozyMetadata": {
+                    "doctypeVersion": "1",
+                    "metadataVersion": 1,
+                    "createdAt": "2016-09-20T18:32:47Z",
+                    "createdByApp": "drive",
+                    "createdOn": "https://cozy.example.com/",
+                    "updatedAt": "2016-09-20T18:32:47Z"
+                }
             },
             "relationships": {
                 "parent": {
@@ -207,7 +232,20 @@ Content-Type: application/vnd.api+json
                 "size": 12,
                 "executable": false,
                 "class": "document",
-                "mime": "text/plain"
+                "mime": "text/plain",
+                "cozyMetadata": {
+                    "doctypeVersion": "1",
+                    "metadataVersion": 1,
+                    "createdAt": "2016-09-20T18:32:49Z",
+                    "createdByApp": "drive",
+                    "createdOn": "https://cozy.example.com/",
+                    "updatedAt": "2016-09-20T18:32:49Z",
+                    "uploadedAt": "2016-09-20T18:32:49Z",
+                    "uploadedOn": "https://cozy.example.com/",
+                    "uploadedBy": {
+                        "slug": "drive"
+                    }
+                }
             },
             "relationships": {
                 "parent": {
@@ -243,18 +281,33 @@ A file is a binary content with some metadata.
 
 ### POST /files/:dir-id
 
-Upload a file
+Upload a file in the directory identified by `:dir-id`.
+
+The `created_at` field will be the first valid value in this list:
+
+- the datetime extracted from the EXIF for a photo
+- the `CreatedAt` parameter from the query-string
+- the `Date` HTTP header
+- the current time from the server.
+
+The `updated_at` field will be the first value in this list:
+
+- the `Date` HTTP header
+- the current time from the server.
 
 #### Query-String
 
-| Parameter  | Description                                        |
-| ---------- | -------------------------------------------------- |
-| Type       | `file`                                             |
-| Name       | the file name                                      |
-| Tags       | an array of tags                                   |
-| Executable | `true` if the file is executable (UNIX permission) |
-| Metadata   | a JSON with metadata on this file (_deprecated_)   |
-| MetadataID | the identifier of a metadata object                |
+| Parameter               | Description                                                    |
+| ----------------------- | -------------------------------------------------------------- |
+| Type                    | `file`                                                         |
+| Name                    | the file name                                                  |
+| Tags                    | an array of tags                                               |
+| Executable              | `true` if the file is executable (UNIX permission)             |
+| Metadata                | a JSON with metadata on this file (_deprecated_)               |
+| MetadataID              | the identifier of a metadata object                            |
+| CreatedAt               | the creation date of the file                                  |
+| SourceAccount           | the id of the source account used by a konnector               |
+| SourceAccountIdentifier | the unique identifier of the account targeted by the connector |
 
 #### HTTP headers
 
@@ -268,12 +321,13 @@ Upload a file
 #### Request
 
 ```http
-POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=file&Name=hello.txt HTTP/1.1
+POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=file&Name=hello.txt&CreatedAt=2016-09-18T01:23:45Z HTTP/1.1
 Accept: application/vnd.api+json
 Content-Length: 12
 Content-MD5: hvsmnRkNLIX24EaM7KQqIA==
 Content-Type: text/plain
 Date: Mon, 19 Sep 2016 12:38:04 GMT
+Host: cozy.example.com
 
 Hello world!
 ```
@@ -294,7 +348,7 @@ Hello world!
 ```http
 HTTP/1.1 201 Created
 Content-Type: application/vnd.api+json
-Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
+Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 ```
 
 ```json
@@ -310,7 +364,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
             "name": "sunset.jpg",
             "trashed": false,
             "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
-            "created_at": "2016-09-19T12:38:04Z",
+            "created_at": "2016-09-18T01:23:45Z",
             "updated_at": "2016-09-19T12:38:04Z",
             "tags": [],
             "metadata": {
@@ -321,7 +375,20 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
             "size": 12,
             "executable": false,
             "class": "image",
-            "mime": "image/jpg"
+            "mime": "image/jpg",
+            "cozyMetadata": {
+                "doctypeVersion": "1",
+                "metadataVersion": 1,
+                "createdAt": "2016-09-20T18:32:49Z",
+                "createdByApp": "drive",
+                "createdOn": "https://cozy.example.com/",
+                "updatedAt": "2016-09-20T18:32:49Z",
+                "uploadedAt": "2016-09-20T18:32:49Z",
+                "uploadedOn": "https://cozy.example.com/",
+                "uploadedBy": {
+                    "slug": "drive"
+                }
+            }
         },
         "relationships": {
             "parent": {
@@ -472,7 +539,6 @@ Accept: application/vnd.api+json
 Content-Length: 12
 Content-MD5: hvsmnRkNLIX24EaM7KQqIA==
 Content-Type: text/plain
-Date: Mon, 20 Sep 2016 16:43:12 GMT
 If-Match: 1-0e6d5b72
 
 HELLO WORLD!
@@ -511,7 +577,20 @@ Content-Type: application/vnd.api+json
             "size": 12,
             "executable": false,
             "class": "document",
-            "mime": "text/plain"
+            "mime": "text/plain",
+            "cozyMetadata": {
+                "doctypeVersion": "1",
+                "metadataVersion": 1,
+                "createdAt": "2016-09-20T18:32:49Z",
+                "createdByApp": "drive",
+                "createdOn": "https://cozy.example.com/",
+                "updatedAt": "2016-09-21T04:27:50Z",
+                "uploadedAt": "2016-09-21T04:27:50Z",
+                "uploadedOn": "https://cozy.example.com/",
+                "uploadedBy": {
+                    "slug": "drive"
+                }
+            }
         },
         "relationships": {
             "parent": {
@@ -552,7 +631,7 @@ GET /files/metadata?Path=/Documents/hello.txt HTTP/1.1
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/vnd.api+json
-Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
+Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 ```
 
 ```json
@@ -574,7 +653,20 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
             "size": 12,
             "executable": false,
             "class": "document",
-            "mime": "text/plain"
+            "mime": "text/plain",
+            "cozyMetadata": {
+                "doctypeVersion": "1",
+                "metadataVersion": 1,
+                "createdAt": "2016-09-20T18:32:49Z",
+                "createdByApp": "drive",
+                "createdOn": "https://cozy.example.com/",
+                "updatedAt": "2016-09-20T18:32:49Z",
+                "uploadedAt": "2016-09-20T18:32:49Z",
+                "uploadedOn": "https://cozy.example.com/",
+                "uploadedBy": {
+                    "slug": "drive"
+                }
+            }
         },
         "relationships": {
             "parent": {
@@ -652,7 +744,7 @@ Content-Type: application/vnd.api+json
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/vnd.api+json
-Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
+Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 ```
 
 ```json
@@ -674,7 +766,20 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
             "size": 12,
             "executable": false,
             "class": "document",
-            "mime": "text/plain"
+            "mime": "text/plain",
+            "cozyMetadata": {
+                "doctypeVersion": "1",
+                "metadataVersion": 1,
+                "createdAt": "2016-09-20T18:32:49Z",
+                "createdByApp": "drive",
+                "createdOn": "https://cozy.example.com/",
+                "updatedAt": "2016-09-22T13:32:51Z",
+                "uploadedAt": "2016-09-21T04:27:50Z",
+                "uploadedOn": "https://cozy.example.com/",
+                "uploadedBy": {
+                    "slug": "drive"
+                }
+            }
         },
         "relationships": {
             "parent": {
@@ -877,7 +982,20 @@ Content-Type: application/vnd.api+json
                 "size": 123,
                 "executable": false,
                 "class": "document",
-                "mime": "text/plain"
+                "mime": "text/plain",
+                "cozyMetadata": {
+                    "doctypeVersion": "1",
+                    "metadataVersion": 1,
+                    "createdAt": "2016-09-20T18:32:49Z",
+                    "createdByApp": "drive",
+                    "createdOn": "https://cozy.example.com/",
+                    "updatedAt": "2016-09-20T18:32:49Z",
+                    "uploadedAt": "2016-09-20T18:32:49Z",
+                    "uploadedOn": "https://cozy.example.com/",
+                    "uploadedBy": {
+                        "slug": "drive"
+                    }
+                }
             },
             "links": {
                 "self": "/files/trash/df24aac0-7f3d-11e6-81c0-d38812bfa0a8"
@@ -900,7 +1018,20 @@ Content-Type: application/vnd.api+json
                 "size": 456,
                 "executable": false,
                 "class": "document",
-                "mime": "text/plain"
+                "mime": "text/plain",
+                "cozyMetadata": {
+                    "doctypeVersion": "1",
+                    "metadataVersion": 1,
+                    "createdAt": "2016-09-20T18:32:49Z",
+                    "createdByApp": "drive",
+                    "createdOn": "https://cozy.example.com/",
+                    "updatedAt": "2016-09-20T18:32:49Z",
+                    "uploadedAt": "2016-09-20T18:32:49Z",
+                    "uploadedOn": "https://cozy.example.com/",
+                    "uploadedBy": {
+                        "slug": "drive"
+                    }
+                }
             },
             "links": {
                 "self": "/files/trash/4a4fc582-7f3e-11e6-b9ca-278406b6ddd4"

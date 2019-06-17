@@ -294,6 +294,92 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 	wg.Wait()
 }
 
+func TestCreateFolder(t *testing.T) {
+	script := `#!/bin/bash
+
+echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
+`
+	osFs := afero.NewOsFs()
+	tmpScript := fmt.Sprintf("/tmp/test-konn-%d.sh", os.Getpid())
+	defer func() { _ = osFs.RemoveAll(tmpScript) }()
+
+	err := afero.WriteFile(osFs, tmpScript, []byte(script), 0)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	err = osFs.Chmod(tmpScript, 0777)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	installer, err := app.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
+		&app.InstallerOptions{
+			Operation: app.Install,
+			Type:      consts.KonnectorType,
+			Slug:      "my-konnector-1",
+			SourceURL: "git://github.com/konnectors/cozy-konnector-trainline.git",
+		},
+	)
+	if err != app.ErrAlreadyExists {
+		if !assert.NoError(t, err) {
+			return
+		}
+		_, err = installer.RunSync()
+		if !assert.NoError(t, err) {
+			return
+		}
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		evCh := realtime.GetHub().Subscriber(inst)
+		assert.NoError(t, evCh.Subscribe(consts.JobEvents))
+		wg.Done()
+
+		ch := evCh.Channel
+		ev := <-ch
+		assert.NoError(t, evCh.Close())
+		assert.Equal(t, inst.Domain, ev.Domain)
+		wg.Done()
+	}()
+
+	wg.Wait()
+	wg.Add(1)
+	acc := &account.Account{FolderPath: "/Administrative/toto"}
+	assert.NoError(t, couchdb.CreateDoc(inst, acc))
+	defer func() { _ = couchdb.DeleteDoc(inst, acc) }()
+	msg, err := job.NewMessage(map[string]interface{}{
+		"konnector":      "my-konnector-1",
+		"folder_to_save": "id-of-a-deleted-folder",
+		"account":        acc.ID(),
+	})
+	assert.NoError(t, err)
+
+	j := job.NewJob(inst, &job.JobRequest{
+		Message:    msg,
+		WorkerType: "konnector",
+	})
+
+	config.GetConfig().Konnectors.Cmd = tmpScript
+	ctx := job.NewWorkerContext("id", j, inst).
+		WithCookie(&konnectorWorker{})
+	err = worker(ctx)
+	assert.NoError(t, err)
+
+	wg.Wait()
+	dir, err := inst.VFS().DirByPath("/Administrative/toto")
+	assert.NoError(t, err)
+	assert.Len(t, dir.ReferencedBy, 1)
+	assert.Equal(t, dir.ReferencedBy[0].ID, "io.cozy.konnectors/my-konnector-1")
+	assert.Equal(t, "my-konnector-1", dir.CozyMetadata.CreatedByApp)
+	assert.Contains(t, dir.CozyMetadata.CreatedOn, inst.Domain)
+	assert.Len(t, dir.CozyMetadata.UpdatedByApps, 1)
+	assert.Equal(t, dir.CozyMetadata.SourceAccount, acc.ID())
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	setup := testutils.NewSetup(m, "konnector_test")
