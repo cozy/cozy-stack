@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/cozy/redis"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )

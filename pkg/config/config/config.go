@@ -24,7 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
-	"github.com/go-redis/redis"
+	"github.com/cozy/redis"
 	"github.com/spf13/viper"
 )
 

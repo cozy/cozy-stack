@@ -15,7 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/go-redis/redis"
+	"github.com/cozy/redis"
 	"github.com/sirupsen/logrus"
 )
 

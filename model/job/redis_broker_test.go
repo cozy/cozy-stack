@@ -10,7 +10,7 @@ import (
 	"time"
 
 	jobs "github.com/cozy/cozy-stack/model/job"
-	"github.com/go-redis/redis"
+	"github.com/cozy/redis"
 	"github.com/stretchr/testify/assert"
 )
 

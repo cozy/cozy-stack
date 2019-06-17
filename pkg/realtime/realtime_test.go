@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis"
+	"github.com/cozy/redis"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -10,7 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis"
+	"github.com/cozy/redis"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
