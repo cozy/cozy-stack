@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis"
+	"github.com/cozy/redis"
 )
 
 // A UploadStore is essentially an object to store files metadata by key

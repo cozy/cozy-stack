@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"github.com/go-redis/redis"
+	"github.com/cozy/redis"
 	"github.com/sirupsen/logrus"
 )
 

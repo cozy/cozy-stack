@@ -17,7 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	"github.com/go-redis/redis"
+	"github.com/cozy/redis"
 	"github.com/stretchr/testify/assert"
 )
 

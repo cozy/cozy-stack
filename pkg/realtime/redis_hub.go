@@ -6,7 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	redis "github.com/go-redis/redis"
+	redis "github.com/cozy/redis"
 )
 
 const eventsRedisKey = "realtime:events"
