@@ -542,6 +542,10 @@ func TestMain(m *testing.M) {
 	viper.Set("swift.api_key", "swifttest")
 	viper.Set("swift.auth_url", swiftSrv.AuthURL)
 
+	config.UseTestFile()
+	config.GetConfig().Assets = "../../assets"
+	testutils.NeedCouchdb()
+	setup := testutils.NewSetup(m, "apps_test")
 	err = config.InitSwiftConnection(config.Fs{
 		URL: &url.URL{
 			Scheme:   "swift",
@@ -549,13 +553,13 @@ func TestMain(m *testing.M) {
 			RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
 		},
 	})
-
-	config.UseTestFile()
-	config.InitDefaultSwiftConnection()
-	config.GetSwiftConnection().ContainerCreate(fs.DynamicAssetsContainerName, nil)
-	config.GetConfig().Assets = "../../assets"
-	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "apps_test")
+	if err != nil {
+		setup.CleanupAndDie("Could not init swift connection.", err)
+	}
+	err = config.GetSwiftConnection().ContainerCreate(fs.DynamicAssetsContainerName, nil)
+	if err != nil {
+		setup.CleanupAndDie("Could not create dynamic container.", err)
+	}
 	tempdir := setup.GetTmpDirectory()
 
 	cfg := config.GetConfig()

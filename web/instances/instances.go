@@ -260,9 +260,7 @@ func assetsInfos(c echo.Context) error {
 
 	// Adding dynamic assets
 	for ctx, assets := range dynAssets {
-		for _, asset := range assets {
-			assetsMap[ctx] = append(assetsMap[ctx], asset)
-		}
+		assetsMap[ctx] = append(assetsMap[ctx], assets...)
 	}
 
 	return c.JSON(http.StatusOK, assetsMap)

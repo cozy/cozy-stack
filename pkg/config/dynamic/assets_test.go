@@ -66,7 +66,13 @@ func TestMain(m *testing.M) {
 			RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
 		},
 	})
+	if err != nil {
+		panic("Could not init swift connection")
+	}
 
 	err = config.GetSwiftConnection().ContainerCreate(fs.DynamicAssetsContainerName, nil)
+	if err != nil {
+		panic("Could not create dynamic container")
+	}
 	os.Exit(m.Run())
 }

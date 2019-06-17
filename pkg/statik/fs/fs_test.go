@@ -101,4 +101,8 @@ func TestMain(m *testing.M) {
 			RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
 		},
 	})
+
+	if err != nil {
+		panic("Could not init swift connection")
+	}
 }

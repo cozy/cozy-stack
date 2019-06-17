@@ -355,13 +355,19 @@ func GetDynamicAsset(context, name string) (*Asset, error) {
 	content := assetContent.Bytes()
 
 	h := sha256.New()
-	h.Write(content)
+	_, err = h.Write(content)
+	if err != nil {
+		return nil, err
+	}
 	suma := h.Sum(nil)
 	sumx := hex.EncodeToString(suma)
 
 	zippedDataBuf := new(bytes.Buffer)
 	gw := gzip.NewWriter(zippedDataBuf)
-	gw.Write(content)
+	_, err = gw.Write(content)
+	if err != nil {
+		return nil, err
+	}
 	zippedContent := zippedDataBuf.Bytes()
 
 	asset := newAsset(AssetOption{
@@ -394,7 +400,7 @@ func Get(name string, context ...string) (*Asset, bool) {
 		}
 	}
 
-	// If asset was not found, try to retreive it from static assets
+	// If asset was not found, try to retrieve it from static assets
 	asset, ok := globalAssets.Load(marshalContextKey(ctx, name))
 	if !ok {
 		return nil, false
