@@ -7,8 +7,8 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/job"
+	fs "github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/worker/exec"
 )

@@ -8,9 +8,9 @@ import (
 	text "text/template"
 
 	"github.com/cozy/cozy-stack/model/job"
+	fs "github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/mail"
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
 )
 
 const templateTitleVar = "template_title"

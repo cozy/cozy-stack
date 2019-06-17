@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
+	fs "github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/echo"

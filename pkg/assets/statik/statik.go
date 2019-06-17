@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package fs contains an HTTP file system that works with zip contents.
-package fs
+package statik
 
 import (
 	"bytes"

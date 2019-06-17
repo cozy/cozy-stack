@@ -4,8 +4,8 @@ import (
 	"path"
 	"strings"
 
+	fs "github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
 )
 
 // List dynamic assets
