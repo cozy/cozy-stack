@@ -544,9 +544,9 @@ var contentMismatch64Kfixer = &cobra.Command{
 				return err
 			}
 
-			// SizeFile should be 64k shorter than SizeIndex
+			// SizeFile should be a multiple of 64k shorter than SizeIndex
 			size := int64(64 * 1024)
-			if (contentMismatch.SizeIndex - contentMismatch.SizeFile) != size {
+			if (contentMismatch.SizeIndex-contentMismatch.SizeFile)%size != 0 {
 				continue
 			}
 
@@ -563,7 +563,8 @@ var contentMismatch64Kfixer = &cobra.Command{
 			// Checks if the file is trashed
 			if fileDoc["restore_path"] != nil {
 				// This is a trashed file, just delete it
-				fmt.Printf("Removing file %s from instance %s\n", fileDoc["path"].(string), domain)
+				fmt.Printf("Removing file %s from instance %s", fileDoc["path"].(string), domain)
+				fmt.Printf(" (Created at %s, UpdatedAt: %s\n", doc.CreatedAt.String(), doc.UpdatedAt.String())
 				if noDryRunFlag {
 					err := instanceVFS.DestroyFile(doc)
 					if err != nil {
@@ -581,7 +582,8 @@ var contentMismatch64Kfixer = &cobra.Command{
 			newFileDoc.DocName = doc.DocName + corruptedSuffix
 			newFileDoc.ByteSize = contentMismatch.SizeFile
 
-			fmt.Printf("Updating index document for file %s\n", fileDoc["path"].(string))
+			fmt.Printf("Updating index document for file %s", fileDoc["path"].(string))
+			fmt.Printf(" (Created at %s, UpdatedAt: %s\n", doc.CreatedAt.String(), doc.UpdatedAt.String())
 			if noDryRunFlag {
 				// Let the UpdateFileDoc handles the file doc update. For swift
 				// layout V1, the file should also be renamed
