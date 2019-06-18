@@ -153,7 +153,7 @@ func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
 		return nil
 	}
 
-	// But if the VFS create a first fake revision, it will also creates
+	// But if the VFS creates a first fake revision, it will also create
 	// another revision after that to clear the trashed attribute when the
 	// upload will complete. It means using 2 revision numbers. So, we have to
 	// stash the target revision during the first write to keep it for the

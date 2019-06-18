@@ -364,8 +364,8 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
       "name": "sunset.jpg",
       "trashed": false,
       "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
-      "created_at": "2016-09-18T01:23:45Z",
-      "updated_at": "2016-09-19T12:38:04Z",
+      "created_at": "2016-09-18T20:38:04Z",
+      "updated_at": "2016-09-21T12:38:04Z",
       "tags": [],
       "metadata": {
         "datetime": "2016-09-18T20:38:04Z",
@@ -382,7 +382,7 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
         "createdAt": "2016-09-20T18:32:49Z",
         "createdByApp": "drive",
         "createdOn": "https://cozy.example.com/",
-        "updatedAt": "2016-09-20T18:32:49Z",
+        "updatedAt": "2016-09-21T14:46:37Z",
         "uploadedAt": "2016-09-20T18:32:49Z",
         "uploadedOn": "https://cozy.example.com/",
         "uploadedBy": {

@@ -21,6 +21,7 @@ type Version struct {
 	ByteSize  int64     `json:"size,string"`
 	MD5Sum    []byte    `json:"md5sum"`
 	Tags      []string  `json:"tags"`
+	Metadata  Metadata  `json:"metadata,omitempty"`
 }
 
 // ID returns the version identifier
@@ -39,6 +40,10 @@ func (v *Version) Clone() couchdb.Doc {
 	copy(cloned.MD5Sum, v.MD5Sum)
 	cloned.Tags = make([]string, len(v.Tags))
 	copy(cloned.Tags, v.Tags)
+	cloned.Metadata = make(Metadata, len(f.Metadata))
+	for k, v := range f.Metadata {
+		cloned.Metadata[k] = v
+	}
 	return &cloned
 }
 
@@ -69,6 +74,7 @@ func NewVersion(file *FileDoc) *Version {
 		ByteSize:  file.ByteSize,
 		MD5Sum:    file.MD5Sum,
 		Tags:      file.Tags,
+		Metadata:  file.Metadata,
 	}
 }
 
@@ -79,6 +85,7 @@ func SetMetaFromVersion(file *FileDoc, version *Version) {
 	file.ByteSize = version.ByteSize
 	file.MD5Sum = version.MD5Sum
 	file.Tags = version.Tags
+	file.Metadata = version.Metadata
 }
 
 // FindVersion returns the version for the given id
