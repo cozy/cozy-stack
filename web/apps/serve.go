@@ -17,7 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/appfs"
-	statikfs "github.com/cozy/cozy-stack/pkg/assets/statik"
+	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -179,11 +179,11 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		err := fs.ServeFileContent(c.Response(), c.Request(), slug, version, shasum, filepath)
 		if os.IsNotExist(err) {
 			if isRobotsTxt {
-				if f, ok := statikfs.Get("/robots.txt", i.ContextName); ok {
+				if f, ok := assets.Get("/robots.txt", i.ContextName); ok {
 					_, err = io.Copy(c.Response(), f.Reader())
 					return err
 				}
-				if f, ok := statikfs.Get("/robots.txt", ""); ok {
+				if f, ok := assets.Get("/robots.txt", ""); ok {
 					_, err = io.Copy(c.Response(), f.Reader())
 					return err
 				}

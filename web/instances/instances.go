@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
+	"github.com/cozy/cozy-stack/pkg/assets/model"
 	fs "github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -250,16 +251,16 @@ func rebuildRedis(c echo.Context) error {
 
 // Renders the assets list loaded in memory and served by the cozy
 func assetsInfos(c echo.Context) error {
-	assetsMap := make(map[string][]*fs.Asset)
+	assetsMap := make(map[string][]*model.Asset)
 
 	// Statik assets
-	fs.Foreach(func(name, context string, f *fs.Asset) {
+	fs.Foreach(func(name, context string, f *model.Asset) {
 		assetsMap[context] = append(assetsMap[context], f)
 	})
 
 	// Adding dynamic assets if Swift is available
 	if config.FsURL().Scheme == config.SchemeSwift || config.FsURL().Scheme == config.SchemeSwiftSecure {
-		dynAssets, _ := dynamic.ListDynamicAssets()
+		dynAssets, _ := dynamic.ListAssets()
 		for ctx, assets := range dynAssets {
 			assetsMap[ctx] = append(assetsMap[ctx], assets...)
 		}
@@ -272,11 +273,11 @@ func addAssets(c echo.Context) error {
 	if config.FsURL().Scheme != config.SchemeSwift && config.FsURL().Scheme != config.SchemeSwiftSecure {
 		return c.JSON(http.StatusServiceUnavailable, echo.Map{"error": "Dynamic assets are only available with Swift FS"})
 	}
-	var unmarshaledAssets []fs.AssetOption
+	var unmarshaledAssets []model.AssetOption
 	if err := json.NewDecoder(c.Request().Body).Decode(&unmarshaledAssets); err != nil {
 		return err
 	}
-	err := fs.RegisterCustomExternals(unmarshaledAssets, 0 /* = retry count */)
+	err := dynamic.RegisterCustomExternals(unmarshaledAssets, 0 /* = retry count */)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
@@ -290,7 +291,7 @@ func deleteAssets(c echo.Context) error {
 	context := c.Param("context")
 	name := c.Param("*")
 
-	err := dynamic.RemoveDynamicAsset(context, name)
+	err := dynamic.RemoveAsset(context, name)
 	if err != nil {
 		return wrapError(err)
 	}

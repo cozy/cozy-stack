@@ -13,7 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	fs "github.com/cozy/cozy-stack/pkg/assets/statik"
+	"github.com/cozy/cozy-stack/pkg/assets"
+	modelAsset "github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -111,7 +112,7 @@ func NewRenderer() (AssetRenderer, error) {
 
 	for _, name := range templatesList {
 		tmpl := t.New(name).Funcs(middlewares.FuncsMap)
-		f, err := fs.Open("/templates/" + name)
+		f, err := assets.Open("/templates/" + name)
 		if err != nil {
 			return nil, fmt.Errorf("Can't load asset %q: %s", name, err)
 		}
@@ -145,7 +146,7 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	var err error
 	if m, ok := data.(echo.Map); ok {
 		if context, ok := m["ContextName"].(string); ok {
-			if f, err := fs.Open("/templates/"+name, context); err == nil {
+			if f, err := assets.Open("/templates/"+name, context); err == nil {
 				b, err := ioutil.ReadAll(f)
 				if err != nil {
 					return err
@@ -169,10 +170,10 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 // AssetPath return the fullpath with unique identifier for a given asset file.
 func AssetPath(domain, name string, context ...string) string {
-	f, ok := fs.Get(name, context...)
+	f, ok := assets.Get(name, context...)
 	if !ok && len(context) > 0 && context[0] != "" {
 		// fallback on default context if asset is not found in the given one.
-		f, ok = fs.Get(name)
+		f, ok = assets.Get(name)
 		if ok {
 			context = nil
 		}
@@ -235,7 +236,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		name = "/" + name
 	}
 
-	f, ok := fs.Get(name, context)
+	f, ok := assets.Get(name, context)
 	if !ok {
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
@@ -246,7 +247,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // ServeFile can be used to respond with an asset file to an HTTP request
-func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *fs.Asset, checkETag bool) {
+func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *modelAsset.Asset, checkETag bool) {
 	if checkETag && web_utils.CheckPreconditions(w, r, f.Etag) {
 		return
 	}
