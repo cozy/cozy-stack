@@ -53,6 +53,13 @@ notification:
 }
 ```
 
+For mobile application, there are two cases:
+
+- if the mobile application is linked to a web app, it will use the same
+  declaration of notifications from the manifest of the web app
+- else, the mobile app will need to declare its notifications when
+  [registering its OAuth client](https://docs.cozy.io/en/cozy-stack/auth/#post-authregister).
+
 ## Creating a notification
 
 ### POST /notifications

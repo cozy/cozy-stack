@@ -85,10 +85,18 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 	switch perm.Type {
 	case permission.TypeOauth:
 		c, ok := perm.Client.(*oauth.Client)
-		if !ok || c.Notifications == nil {
+		if !ok {
 			return ErrUnauthorized
 		}
-		p, ok = c.Notifications[n.Category]
+		if slug := oauth.GetLinkedAppSlug(c.SoftwareID); slug != "" {
+			m, err := app.GetWebappBySlug(inst, slug)
+			if err != nil || m.Notifications == nil {
+				return err
+			}
+			p, ok = m.Notifications[n.Category]
+		} else if c.Notifications != nil {
+			p, ok = c.Notifications[n.Category]
+		}
 		if !ok {
 			return ErrUnauthorized
 		}
