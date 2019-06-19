@@ -72,6 +72,11 @@ func List() (map[string][]*model.Asset, error) {
 	return assetsMap, nil
 }
 
+// Add adds dynamic assets
+func Add(unmarshaledAssets []model.AssetOption) error {
+	return dynamic.RegisterCustomExternals(unmarshaledAssets, 0)
+}
+
 // Open returns a bytes.Reader for an asset in the given context, or the
 // default context if no context is given.
 func Open(name string, context ...string) (*bytes.Reader, error) {

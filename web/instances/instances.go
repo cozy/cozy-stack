@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets"
-	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -260,14 +259,12 @@ func assetsInfos(c echo.Context) error {
 }
 
 func addAssets(c echo.Context) error {
-	if config.FsURL().Scheme != config.SchemeSwift && config.FsURL().Scheme != config.SchemeSwiftSecure {
-		return c.JSON(http.StatusServiceUnavailable, echo.Map{"error": "Dynamic assets are only available with Swift FS"})
-	}
 	var unmarshaledAssets []model.AssetOption
 	if err := json.NewDecoder(c.Request().Body).Decode(&unmarshaledAssets); err != nil {
 		return err
 	}
-	err := dynamic.RegisterCustomExternals(unmarshaledAssets, 0 /* = retry count */)
+
+	err := assets.Add(unmarshaledAssets)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
