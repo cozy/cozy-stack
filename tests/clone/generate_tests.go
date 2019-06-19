@@ -109,6 +109,8 @@ func extractInfos(pkgs []string) []info {
 						// These structs are known to be safe
 					case "app.SubDomainer":
 						// This struct is just an interface used for JSON-API links
+					case "vfs.FilesCozyMetadata":
+						// Hard to test (and not that much interesting)
 					default:
 						panic(fmt.Errorf("Unknown named type: %s", named))
 					}
