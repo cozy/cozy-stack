@@ -86,7 +86,7 @@ func migrateSwiftV1ToV2(domain string) error {
 	if err != nil {
 		return err
 	}
-	if inst.SwiftCluster > 0 {
+	if inst.SwiftLayout > 0 {
 		return nil
 	}
 
@@ -149,7 +149,7 @@ func commitSwiftV1ToV2(domain string, swiftCluster int) error {
 		return err
 	}
 
-	return lifecycle.Patch(inst, &lifecycle.Options{SwiftCluster: swiftCluster})
+	return lifecycle.Patch(inst, &lifecycle.Options{SwiftLayout: swiftCluster})
 }
 
 func readObjects(c *swift.Connection, objc chan object,

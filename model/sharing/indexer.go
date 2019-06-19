@@ -287,8 +287,8 @@ func (s *sharingIndexer) DeleteDirDoc(doc *vfs.DirDoc) error {
 	return ErrInternalServerError
 }
 
-func (s *sharingIndexer) DeleteDirDocAndContent(doc *vfs.DirDoc, onlyContent bool) (n int64, ids []string, err error) {
-	return 0, nil, ErrInternalServerError
+func (s *sharingIndexer) DeleteDirDocAndContent(doc *vfs.DirDoc, onlyContent bool) (files []*vfs.FileDoc, n int64, err error) {
+	return nil, 0, ErrInternalServerError
 }
 
 func (s *sharingIndexer) BatchDelete(docs []couchdb.Doc) error {

@@ -83,11 +83,6 @@ func Patch(i *instance.Instance, opts *Options) error {
 			}
 		}
 
-		if opts.SwiftCluster > 0 && opts.SwiftCluster != i.SwiftCluster {
-			i.SwiftCluster = opts.SwiftCluster
-			needUpdate = true
-		}
-
 		if opts.DiskQuota > 0 && opts.DiskQuota != i.BytesDiskQuota {
 			i.BytesDiskQuota = opts.DiskQuota
 			needUpdate = true

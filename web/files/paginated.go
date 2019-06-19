@@ -27,6 +27,8 @@ type file struct {
 	doc      *vfs.FileDoc
 	instance *instance.Instance
 	versions []*vfs.Version
+	// XXX Hide the internal_vfs_id
+	InternalID *interface{} `json:"internal_vfs_id,omitempty"`
 }
 
 type apiArchive struct {
@@ -202,7 +204,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 
 // newFile creates an instance of file struct from a vfs.FileDoc document.
 func newFile(doc *vfs.FileDoc, i *instance.Instance) *file {
-	return &file{doc, i, nil}
+	return &file{doc, i, nil, nil}
 }
 
 func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withVersions bool, links *jsonapi.LinksList) error {

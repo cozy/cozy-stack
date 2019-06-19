@@ -730,7 +730,7 @@ func writeInstanceDoc(in *instance.Instance, name string,
 	clone.SessionSecret = nil
 	clone.OAuthSecret = nil
 	clone.CLISecret = nil
-	clone.SwiftCluster = 0
+	clone.SwiftLayout = -1
 	return writeDoc("", name, clone, now, tw)
 }
 

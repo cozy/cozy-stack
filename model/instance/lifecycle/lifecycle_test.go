@@ -42,13 +42,13 @@ func TestCreateInstance(t *testing.T) {
 
 func TestCreateInstanceWithFewSettings(t *testing.T) {
 	inst, err := lifecycle.Create(&lifecycle.Options{
-		Domain:       "test2.cozycloud.cc",
-		Timezone:     "Europe/Berlin",
-		Email:        "alice@example.com",
-		PublicName:   "Alice",
-		Passphrase:   "password",
-		SwiftCluster: 2,
-		Settings:     "offer:freemium,context:my_context,auth_mode:two_factor_mail,uuid:XXX,locale:en,tos:20151111",
+		Domain:      "test2.cozycloud.cc",
+		Timezone:    "Europe/Berlin",
+		Email:       "alice@example.com",
+		PublicName:  "Alice",
+		Passphrase:  "password",
+		SwiftLayout: 1,
+		Settings:    "offer:freemium,context:my_context,auth_mode:two_factor_mail,uuid:XXX,locale:en,tos:20151111",
 	})
 
 	assert.NoError(t, err)
@@ -65,24 +65,24 @@ func TestCreateInstanceWithFewSettings(t *testing.T) {
 	assert.Equal(t, inst.TOSSigned, "1.0.0-20151111")
 	assert.Equal(t, inst.ContextName, "my_context")
 	assert.Equal(t, inst.AuthMode, instance.TwoFactorMail)
-	assert.Equal(t, inst.SwiftCluster, 2)
+	assert.Equal(t, inst.SwiftLayout, 1)
 }
 
 func TestCreateInstanceWithMoreSettings(t *testing.T) {
 	inst, err := lifecycle.Create(&lifecycle.Options{
-		Domain:       "test3.cozycloud.cc",
-		UUID:         "XXX",
-		Locale:       "en",
-		TOSSigned:    "20151111",
-		TOSLatest:    "1.0.0-20151111",
-		Timezone:     "Europe/Berlin",
-		ContextName:  "my_context",
-		Email:        "alice@example.com",
-		PublicName:   "Alice",
-		AuthMode:     "two_factor_mail",
-		Passphrase:   "password",
-		SwiftCluster: 2,
-		Settings:     "offer:freemium",
+		Domain:      "test3.cozycloud.cc",
+		UUID:        "XXX",
+		Locale:      "en",
+		TOSSigned:   "20151111",
+		TOSLatest:   "1.0.0-20151111",
+		Timezone:    "Europe/Berlin",
+		ContextName: "my_context",
+		Email:       "alice@example.com",
+		PublicName:  "Alice",
+		AuthMode:    "two_factor_mail",
+		Passphrase:  "password",
+		SwiftLayout: 2,
+		Settings:    "offer:freemium",
 	})
 
 	assert.NoError(t, err)
@@ -98,7 +98,7 @@ func TestCreateInstanceWithMoreSettings(t *testing.T) {
 	assert.Equal(t, inst.TOSSigned, "1.0.0-20151111")
 	assert.Equal(t, inst.ContextName, "my_context")
 	assert.Equal(t, inst.AuthMode, instance.TwoFactorMail)
-	assert.Equal(t, inst.SwiftCluster, 2)
+	assert.Equal(t, inst.SwiftLayout, 2)
 }
 
 func TestCreateInstanceBadDomain(t *testing.T) {

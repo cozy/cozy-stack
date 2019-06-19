@@ -45,6 +45,11 @@ type FileDoc struct {
 
 	CozyMetadata *FilesCozyMetadata `json:"cozyMetadata,omitempty"`
 
+	// InternalID is an identifier that can be used by the VFS, but must no be
+	// used by clients. For example, it can be used to know the location in
+	// Swift of a file.
+	InternalID string `json:"internal_vfs_id,omitempty"`
+
 	// Cache of the fullpath of the file. Should not have to be invalidated
 	// since we use FileDoc as immutable data-structures.
 	fullpath string

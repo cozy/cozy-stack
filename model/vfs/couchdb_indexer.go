@@ -183,10 +183,10 @@ func (c *couchdbIndexer) DeleteDirDoc(doc *DirDoc) error {
 	return couchdb.DeleteDoc(c.db, doc)
 }
 
-func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (n int64, ids []string, err error) {
-	var files []couchdb.Doc
+func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (files []*FileDoc, n int64, err error) {
+	var docs []couchdb.Doc
 	if !onlyContent {
-		files = append(files, doc)
+		docs = append(docs, doc)
 	}
 	err = walk(c, doc.Name(), doc, nil, func(name string, dir *DirDoc, file *FileDoc, err error) error {
 		if err != nil {
@@ -196,16 +196,16 @@ func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (
 			if dir.ID() == doc.ID() {
 				return nil
 			}
-			files = append(files, dir)
+			docs = append(docs, dir)
 		} else {
+			docs = append(docs, file)
 			files = append(files, file)
-			ids = append(ids, file.ID())
 			n += file.ByteSize
 		}
 		return err
 	}, 0)
 	if err == nil {
-		err = c.BatchDelete(files)
+		err = c.BatchDelete(docs)
 	}
 	return
 }

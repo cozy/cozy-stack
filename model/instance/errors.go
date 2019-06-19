@@ -29,4 +29,6 @@ var (
 	ErrUnknownAuthMode = errors.New("Unknown authentication mode")
 	// ErrBadTOSVersion is returned when a malformed TOS version is provided.
 	ErrBadTOSVersion = errors.New("Bad format for TOS version")
+	// ErrInvalidSwiftLayout is returned when the Swift layout is unknown.
+	ErrInvalidSwiftLayout = errors.New("Invalid Swift layout")
 )

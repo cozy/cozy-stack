@@ -717,7 +717,7 @@ func TestMain(m *testing.M) {
 	res1 := m.Run()
 	rollback()
 
-	fs, rollback, err = makeSwiftFS(true)
+	fs, rollback, err = makeSwiftFS(0)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -725,7 +725,7 @@ func TestMain(m *testing.M) {
 	res2 := m.Run()
 	rollback()
 
-	fs, rollback, err = makeSwiftFS(false)
+	fs, rollback, err = makeSwiftFS(1)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -733,7 +733,15 @@ func TestMain(m *testing.M) {
 	res3 := m.Run()
 	rollback()
 
-	os.Exit(res1 + res2 + res3)
+	fs, rollback, err = makeSwiftFS(2)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	res4 := m.Run()
+	rollback()
+
+	os.Exit(res1 + res2 + res3 + res4)
 }
 
 func makeAferoFS() (vfs.VFS, func(), error) {
@@ -775,7 +783,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 	}, nil
 }
 
-func makeSwiftFS(layoutV2 bool) (vfs.VFS, func(), error) {
+func makeSwiftFS(layout int) (vfs.VFS, func(), error) {
 	db := prefixer.NewPrefixer("io.cozy.vfs.test", "io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
@@ -795,12 +803,16 @@ func makeSwiftFS(layoutV2 bool) (vfs.VFS, func(), error) {
 	}
 
 	var swiftFs vfs.VFS
-	if layoutV2 {
-		swiftFs, err = vfsswift.NewV2(db,
-			index, &diskImpl{}, lock.ReadWrite(db, "vfs-swiftv2-test"))
-	} else {
+	switch layout {
+	case 0:
 		swiftFs, err = vfsswift.New(db,
 			index, &diskImpl{}, lock.ReadWrite(db, "vfs-swift-test"))
+	case 1:
+		swiftFs, err = vfsswift.NewV2(db,
+			index, &diskImpl{}, lock.ReadWrite(db, "vfs-swiftv2-test"))
+	case 2:
+		swiftFs, err = vfsswift.NewV3(db,
+			index, &diskImpl{}, lock.ReadWrite(db, "vfs-swiftv3-test"))
 	}
 	if err != nil {
 		return nil, nil, err

@@ -46,7 +46,7 @@ var flagDirectory string
 var flagIncreaseQuota bool
 var flagForceRegistry bool
 var flagOnlyRegistry bool
-var flagSwiftCluster int
+var flagSwiftLayout int
 var flagUUID string
 var flagTOSSigned string
 var flagTOS string
@@ -181,7 +181,7 @@ be used as the error message.
 			Email:         flagEmail,
 			PublicName:    flagPublicName,
 			Settings:      flagSettings,
-			SwiftCluster:  flagSwiftCluster,
+			SwiftLayout:   flagSwiftLayout,
 			DiskQuota:     diskQuota,
 			Apps:          flagApps,
 			Passphrase:    flagPassphrase,
@@ -253,7 +253,6 @@ settings for a specified domain.
 			Email:         flagEmail,
 			PublicName:    flagPublicName,
 			Settings:      flagSettings,
-			SwiftCluster:  flagSwiftCluster,
 			DiskQuota:     diskQuota,
 		}
 		if flag := cmd.Flag("blocked"); flag.Changed {
@@ -1021,7 +1020,7 @@ func init() {
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
 	addInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "The public name of the owner")
 	addInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "A list of settings (eg context:foo,offer:premium)")
-	addInstanceCmd.Flags().IntVar(&flagSwiftCluster, "swift-cluster", 0, "Specify a cluster number for swift")
+	addInstanceCmd.Flags().IntVar(&flagSwiftLayout, "swift-layout", -1, "Specify the layout to use for Swift (from 0 for layout V1 to 2 for layout V3, -1 means the default)")
 	addInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "The quota allowed to the instance's VFS")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance (deprecated)")
@@ -1036,7 +1035,6 @@ func init() {
 	modifyInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "New email")
 	modifyInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "New public name")
 	modifyInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "New list of settings (eg offer:premium)")
-	modifyInstanceCmd.Flags().IntVar(&flagSwiftCluster, "swift-cluster", 0, "New swift cluster")
 	modifyInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "Specify a new disk quota")
 	modifyInstanceCmd.Flags().BoolVar(&flagBlocked, "blocked", false, "Block the instance")
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")

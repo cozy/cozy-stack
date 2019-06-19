@@ -23,6 +23,14 @@ func NewThumbsFsV2(c *swift.Connection, db prefixer.Prefixer) vfs.Thumbser {
 	return &thumbsV2{c: c, container: swiftV2ContainerPrefixData + db.DBPrefix()}
 }
 
+// NewThumbsFsV3 creates a new thumb filesystem base on swift.
+//
+// This version stores the thumbnails in the same container as the main data
+// container.
+func NewThumbsFsV3(c *swift.Connection, db prefixer.Prefixer) vfs.Thumbser {
+	return &thumbsV2{c: c, container: swiftV3ContainerPrefix + db.DBPrefix()}
+}
+
 type thumbsV2 struct {
 	c         *swift.Connection
 	container string

@@ -14,7 +14,6 @@ import (
 	"sync"
 
 	"github.com/cozy/cozy-stack/model/vfs"
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/lock"
@@ -172,15 +171,14 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 
 	diskQuota := afs.DiskQuota()
 
-	var maxsize, newsize, capsize int64
+	var maxsize, newsize, oldsize, capsize int64
+	maxsize = -1 // no limit
 	newsize = newdoc.ByteSize
 	if diskQuota > 0 {
 		diskUsage, err := afs.DiskUsage()
 		if err != nil {
 			return nil, err
 		}
-
-		var oldsize int64
 		if olddoc != nil {
 			oldsize = olddoc.Size()
 		}
@@ -188,12 +186,15 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
 			return nil, vfs.ErrFileTooBig
 		}
-
 		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
 			capsize = quotaBytes - diskUsage
 		}
-	} else {
-		maxsize = -1 // no limit
+	}
+
+	if olddoc != nil {
+		newdoc.SetID(olddoc.ID())
+		newdoc.SetRev(olddoc.Rev())
+		newdoc.CreatedAt = olddoc.CreatedAt
 	}
 
 	newpath, err := afs.Indexer.FilePath(newdoc)
@@ -202,12 +203,6 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	}
 	if strings.HasPrefix(newpath, vfs.TrashDirName+"/") {
 		return nil, vfs.ErrParentInTrash
-	}
-
-	if olddoc != nil {
-		newdoc.SetID(olddoc.ID())
-		newdoc.SetRev(olddoc.Rev())
-		newdoc.CreatedAt = olddoc.CreatedAt
 	}
 
 	// Avoid storing negative size in the index.
@@ -236,19 +231,17 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	extractor := vfs.NewMetaExtractor(newdoc)
 
 	return &aferoFileCreation{
-		w:    0,
-		f:    f,
-		size: newsize,
-
 		afs:     afs,
+		f:       f,
 		newdoc:  newdoc,
 		olddoc:  olddoc,
 		tmppath: tmppath,
+		w:       0,
+		size:    newsize,
 		maxsize: maxsize,
 		capsize: capsize,
-
-		hash: hash,
-		meta: extractor,
+		hash:    hash,
+		meta:    extractor,
 	}, nil
 }
 
@@ -258,7 +251,7 @@ func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
 	}
 	defer afs.mu.Unlock()
 	diskUsage, _ := afs.DiskUsage()
-	destroyed, _, err := afs.Indexer.DeleteDirDocAndContent(doc, true)
+	_, destroyed, err := afs.Indexer.DeleteDirDocAndContent(doc, true)
 	if err != nil {
 		return err
 	}
@@ -287,7 +280,7 @@ func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
 	}
 	defer afs.mu.Unlock()
 	diskUsage, _ := afs.DiskUsage()
-	destroyed, _, err := afs.Indexer.DeleteDirDocAndContent(doc, false)
+	_, destroyed, err := afs.Indexer.DeleteDirDocAndContent(doc, false)
 	if err != nil {
 		return err
 	}
@@ -380,145 +373,6 @@ func (afs *aferoVFS) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version) e
 	}
 
 	return nil
-}
-
-func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
-	entries := make(map[string]*vfs.TreeFile, 1024)
-	_, err = afs.BuildTree(func(f *vfs.TreeFile) {
-		if !f.IsOrphan {
-			entries[f.Fullpath] = f
-		}
-	})
-	if err != nil {
-		return
-	}
-
-	err = afero.Walk(afs.fs, "/", func(fullpath string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if fullpath == vfs.WebappsDirName ||
-			fullpath == vfs.KonnectorsDirName ||
-			fullpath == vfs.ThumbsDirName {
-			return filepath.SkipDir
-		}
-
-		f, ok := entries[fullpath]
-		if !ok {
-			accumulate(&vfs.FsckLog{
-				Type:    vfs.IndexMissing,
-				IsFile:  true,
-				FileDoc: fileInfosToFileDoc(fullpath, info),
-			})
-		} else if f.IsDir != info.IsDir() {
-			if f.IsDir {
-				accumulate(&vfs.FsckLog{
-					Type:    vfs.TypeMismatch,
-					IsFile:  true,
-					FileDoc: f,
-					DirDoc:  fileInfosToDirDoc(fullpath, info),
-				})
-			} else {
-				accumulate(&vfs.FsckLog{
-					Type:    vfs.TypeMismatch,
-					IsFile:  false,
-					DirDoc:  f,
-					FileDoc: fileInfosToFileDoc(fullpath, info),
-				})
-			}
-		} else if !f.IsDir {
-			var fd afero.File
-			fd, err = afs.fs.Open(fullpath)
-			if err != nil {
-				return err
-			}
-			h := md5.New()
-			if _, err = io.Copy(h, fd); err != nil {
-				fd.Close()
-				return err
-			}
-			if err = fd.Close(); err != nil {
-				return err
-			}
-			md5sum := h.Sum(nil)
-			if !bytes.Equal(md5sum, f.MD5Sum) || f.ByteSize != info.Size() {
-				accumulate(&vfs.FsckLog{
-					Type:    vfs.ContentMismatch,
-					IsFile:  true,
-					FileDoc: f,
-					ContentMismatch: &vfs.FsckContentMismatch{
-						SizeFile:    info.Size(),
-						SizeIndex:   f.ByteSize,
-						MD5SumFile:  md5sum,
-						MD5SumIndex: f.MD5Sum,
-					},
-				})
-			}
-		}
-		delete(entries, fullpath)
-		return nil
-	})
-	if err != nil {
-		return
-	}
-
-	for _, f := range entries {
-		if f.IsDir {
-			accumulate(&vfs.FsckLog{
-				Type:   vfs.FileMissing,
-				IsFile: false,
-				DirDoc: f,
-			})
-		} else {
-			accumulate(&vfs.FsckLog{
-				Type:    vfs.FileMissing,
-				IsFile:  true,
-				FileDoc: f,
-			})
-		}
-	}
-
-	return
-}
-
-func fileInfosToDirDoc(fullpath string, fileinfo os.FileInfo) *vfs.TreeFile {
-	return &vfs.TreeFile{
-		DirOrFileDoc: vfs.DirOrFileDoc{
-			DirDoc: &vfs.DirDoc{
-				Type:      consts.DirType,
-				DocName:   fileinfo.Name(),
-				DirID:     "",
-				CreatedAt: fileinfo.ModTime(),
-				UpdatedAt: fileinfo.ModTime(),
-				Fullpath:  fullpath,
-			},
-		},
-	}
-}
-
-func fileInfosToFileDoc(fullpath string, fileinfo os.FileInfo) *vfs.TreeFile {
-	trashed := strings.HasPrefix(fullpath, vfs.TrashDirName)
-	contentType, md5sum, _ := extractContentTypeAndMD5(fullpath)
-	mime, class := vfs.ExtractMimeAndClass(contentType)
-	return &vfs.TreeFile{
-		DirOrFileDoc: vfs.DirOrFileDoc{
-			DirDoc: &vfs.DirDoc{
-				Type:      consts.FileType,
-				DocName:   fileinfo.Name(),
-				DirID:     "",
-				CreatedAt: fileinfo.ModTime(),
-				UpdatedAt: fileinfo.ModTime(),
-				Fullpath:  fullpath,
-			},
-			ByteSize:   fileinfo.Size(),
-			Mime:       mime,
-			Class:      class,
-			Executable: int(fileinfo.Mode()|0111) > 0,
-			MD5Sum:     md5sum,
-			Trashed:    trashed,
-		},
-	}
 }
 
 // UpdateFileDoc overrides the indexer's one since the afero.Fs is by essence
@@ -657,18 +511,18 @@ func (f *aferoFileOpen) Close() error {
 	return f.f.Close()
 }
 
-// aferoFileCreation represents a file open for writing. It is used to
-// create of file or to modify the content of a file.
+// aferoFileCreation represents a file open for writing. It is used to create a
+// file or to modify the content of a file.
 //
 // aferoFileCreation implements io.WriteCloser.
 type aferoFileCreation struct {
-	f       afero.File         // file handle
-	w       int64              // total size written
-	size    int64              // total file size, -1 if unknown
 	afs     *aferoVFS          // parent vfs
+	f       afero.File         // file handle
 	newdoc  *vfs.FileDoc       // new document
 	olddoc  *vfs.FileDoc       // old document
 	tmppath string             // temporary file path for uploading a new version of this file
+	w       int64              // total size written
+	size    int64              // total file size, -1 if unknown
 	maxsize int64              // maximum size allowed for the file
 	capsize int64              // size cap from which we send a notification to the user
 	hash    hash.Hash          // hash we build up along the file
@@ -689,6 +543,13 @@ func (f *aferoFileCreation) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (f *aferoFileCreation) Write(p []byte) (int, error) {
+	if f.meta != nil {
+		if _, err := (*f.meta).Write(p); err != nil && err != io.ErrClosedPipe {
+			(*f.meta).Abort(err)
+			f.meta = nil
+		}
+	}
+
 	n, err := f.f.Write(p)
 	if err != nil {
 		f.err = err
@@ -704,13 +565,6 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 	if f.size >= 0 && f.w > f.size {
 		f.err = vfs.ErrContentLengthMismatch
 		return n, f.err
-	}
-
-	if f.meta != nil {
-		if _, err = (*f.meta).Write(p); err != nil && err != io.ErrClosedPipe {
-			(*f.meta).Abort(err)
-			f.meta = nil
-		}
 	}
 
 	_, err = f.hash.Write(p)
@@ -770,9 +624,6 @@ func (f *aferoFileCreation) Close() (err error) {
 		return vfs.ErrContentLengthMismatch
 	}
 
-	// The document is already added to the index when closing the file creation
-	// handler. When updating the content of the document with the final
-	// informations (size, md5, ...) we can reuse the same document as olddoc.
 	if olddoc == nil || !olddoc.Trashed {
 		newdoc.Trashed = false
 	}

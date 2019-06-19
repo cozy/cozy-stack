@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -44,19 +45,19 @@ var lsLayoutsCmd = &cobra.Command{
 			Counter int      `json:"counter"`
 			Domains []string `json:"domains,omitempty"`
 		}
-		var layoutV1, layoutV2a, layoutV2b, layoutUnknown layout
+		var layoutV1, layoutV2a, layoutV2b, layoutUnknown, layoutV3 layout
 
 		instances, err := instance.List()
 		if err != nil {
 			return err
 		}
 		for _, inst := range instances {
-			if inst.SwiftCluster == 0 {
+			if inst.SwiftLayout == 0 {
 				layoutV1.Counter++
 				if flagShowDomains {
 					layoutV1.Domains = append(layoutV1.Domains, inst.Domain)
 				}
-			} else { // v2
+			} else if inst.SwiftLayout == 1 {
 				switch inst.DBPrefix() {
 				case inst.Domain:
 					layoutV2a.Counter++
@@ -74,6 +75,11 @@ var lsLayoutsCmd = &cobra.Command{
 						layoutUnknown.Domains = append(layoutUnknown.Domains, inst.Domain)
 					}
 				}
+			} else {
+				layoutV3.Counter++
+				if flagShowDomains {
+					layoutV3.Domains = append(layoutV3.Domains, inst.Domain)
+				}
 			}
 		}
 
@@ -82,7 +88,8 @@ var lsLayoutsCmd = &cobra.Command{
 		output["v2a"] = layoutV2a
 		output["v2b"] = layoutV2b
 		output["unknown"] = layoutUnknown
-		output["total"] = layoutV1.Counter + layoutV2a.Counter + layoutV2b.Counter + layoutUnknown.Counter
+		output["v3"] = layoutV3
+		output["total"] = layoutV1.Counter + layoutV2a.Counter + layoutV2b.Counter + layoutUnknown.Counter + layoutV3.Counter
 
 		json, err := json.MarshalIndent(output, "", "  ")
 
@@ -186,10 +193,16 @@ var swiftLsCmd = &cobra.Command{
 }
 
 func swiftContainer(i *instance.Instance) string {
-	if i.SwiftCluster > 0 {
+	switch i.SwiftLayout {
+	case 0:
+		return "cozy-" + i.DBPrefix()
+	case 1:
 		return "cozy-v2-" + i.DBPrefix()
+	case 2:
+		return "cozy-v3-" + i.DBPrefix()
+	default:
+		panic(errors.New("Unknown Swift layout"))
 	}
-	return "cozy-" + i.DBPrefix()
 }
 
 func init() {
