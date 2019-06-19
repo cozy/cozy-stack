@@ -33,7 +33,7 @@ func Get(name string, context ...string) (*model.Asset, bool) {
 	}
 
 	// If asset was not found, try to retrieve it from static assets
-	asset := statik.GetAsset(ctx, name)
+	asset := statik.GetAsset(name)
 	if asset == nil {
 		return nil, false
 	}
@@ -56,9 +56,10 @@ func Remove(name, context string) error {
 func List() (map[string][]*model.Asset, error) {
 	assetsMap := make(map[string][]*model.Asset)
 
+	defctx := config.DefaultInstanceContext
 	// Get statik assets
-	statik.Foreach(func(name, context string, f *model.Asset) {
-		assetsMap[context] = append(assetsMap[context], f)
+	statik.Foreach(func(name string, f *model.Asset) {
+		assetsMap[defctx] = append(assetsMap[defctx], f)
 	})
 
 	// Get dynamic assets

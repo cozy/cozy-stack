@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 	"sync"
 
 	"github.com/cozy/cozy-stack/pkg/assets/model"
@@ -82,51 +81,25 @@ func unzip(data []byte) (err error) {
 
 // StoreAsset stores in memory a static asset
 func StoreAsset(asset *model.Asset) {
-	context := asset.Context
-	if context == "" {
-		context = config.DefaultInstanceContext
-	}
-	contextKey := marshalContextKey(context, asset.Name)
-	globalAssets.Store(contextKey, asset)
+	globalAssets.Store(asset.Name, asset)
 }
 
 // UnstoreAsset removes a static asset from the memory list
 func UnstoreAsset(asset *model.Asset) {
-	context := asset.Context
-	if context == "" {
-		context = config.DefaultInstanceContext
-	}
-	contextKey := marshalContextKey(context, asset.Name)
-	globalAssets.Delete(contextKey)
+	globalAssets.Delete(asset.Name)
 }
 
-func GetAsset(context, name string) *model.Asset {
-	if context == "" {
-		context = config.DefaultInstanceContext
-	}
-	if v, ok := globalAssets.Load(marshalContextKey(context, name)); ok {
+func GetAsset(name string) *model.Asset {
+	if v, ok := globalAssets.Load(name); ok {
 		return v.(*model.Asset)
 	}
 	return nil
 }
 
 // Foreach iterates on the static assets.
-func Foreach(predicate func(name, context string, f *model.Asset)) {
-	globalAssets.Range(func(contextKey interface{}, v interface{}) bool {
-		context, name, _ := unMarshalContextKey(contextKey.(string))
-		predicate(name, context, v.(*model.Asset))
+func Foreach(predicate func(name string, f *model.Asset)) {
+	globalAssets.Range(func(key interface{}, v interface{}) bool {
+		predicate(key.(string), v.(*model.Asset))
 		return true
 	})
-}
-
-func marshalContextKey(context, name string) (marshaledKey string) {
-	return context + ":" + name
-}
-
-func unMarshalContextKey(contextKey string) (context string, name string, err error) {
-	unmarshaled := strings.SplitN(contextKey, ":", 2)
-	if len(unmarshaled) != 2 {
-		panic("statik/fs: the contextKey is malformed")
-	}
-	return unmarshaled[0], unmarshaled[1], nil
 }
