@@ -614,10 +614,10 @@ msgid "Terms of services have been updated"
 msgstr "To comply with the GDPR, Cozy Cloud has updated its Terms of Services that have taken effect on May 25, 2018"
 
 msgid "Compat Title"
-msgstr "Your web browser is no longer supported"
+msgstr "Your web browser is not up-to-date or no longer supported."
 
 msgid "Compat Subtitle"
-msgstr "Try one of these options to have better experience of your Cozy. We recommend Firefox!"
+msgstr "Update your browser or download one of these options to get a full experience of your Cozy. We recommend Firefox!"
 
 msgid "Compat Browser Chrome Link"
 msgstr "https://www.google.com/chrome/"
