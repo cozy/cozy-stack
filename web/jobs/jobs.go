@@ -24,6 +24,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 
 	// import workers
+	_ "github.com/cozy/cozy-stack/worker/archive"
 	"github.com/cozy/cozy-stack/worker/exec"
 	_ "github.com/cozy/cozy-stack/worker/log"
 	_ "github.com/cozy/cozy-stack/worker/mails"
@@ -32,7 +33,6 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/push"
 	_ "github.com/cozy/cozy-stack/worker/share"
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"
-	_ "github.com/cozy/cozy-stack/worker/unzip"
 	_ "github.com/cozy/cozy-stack/worker/updates"
 )
 
