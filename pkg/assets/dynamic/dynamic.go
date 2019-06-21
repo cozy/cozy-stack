@@ -27,7 +27,7 @@ func ListAssets() (map[string][]*model.Asset, error) {
 	return assetFS.List()
 }
 
-// GetAsset retrieves a raw asset from Swift and build a fs.Asset
+// GetAsset retrieves a raw asset from the dynamic FS and builds a fs.Asset
 func GetAsset(context, name string) (*model.Asset, error) {
 	// Re-constructing the asset struct from the dyn FS content
 	content, err := assetFS.Get(context, name)

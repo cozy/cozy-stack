@@ -50,13 +50,16 @@ func InitDynamicAssetFS() error {
 	scheme := config.FsURL().Scheme
 
 	switch scheme {
-	case config.SchemeFile:
+	case config.SchemeFile, config.SchemeMem:
 		assetFS, err = newOsFS()
 		if err != nil {
 			return err
 		}
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		assetFS, err = newSwiftFS()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -26,7 +26,9 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/vfs"
-	fs "github.com/cozy/cozy-stack/pkg/assets/statik"
+	"github.com/cozy/cozy-stack/pkg/assets"
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
+	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -290,21 +292,21 @@ func TestServeAppsWithACode(t *testing.T) {
 func TestFaviconWithContext(t *testing.T) {
 	context := "foo"
 
-	asset, ok := fs.Get("/favicon-32x32.png", context)
+	asset, ok := assets.Get("/favicon-32x32.png", context)
 	if ok {
-		fs.DeleteAsset(asset)
+		_ = assets.Remove(asset.Name, asset.Context)
 	}
 	// Create and insert an asset in foo context
 	tmpdir := os.TempDir()
 	_, err := os.OpenFile(filepath.Join(tmpdir, "custom_favicon.png"), os.O_RDWR|os.O_CREATE, 0600)
 	assert.NoError(t, err)
 
-	assetsOptions := []fs.AssetOption{{
+	assetsOptions := []model.AssetOption{{
 		URL:     fmt.Sprintf("file://%s", filepath.Join(tmpdir, "custom_favicon.png")),
 		Name:    "/favicon-32x32.png",
 		Context: context,
 	}}
-	err = fs.RegisterCustomExternals(assetsOptions, 1)
+	err = dynamic.RegisterCustomExternals(assetsOptions, 1)
 	assert.NoError(t, err)
 
 	// Test the theme
@@ -556,9 +558,13 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		setup.CleanupAndDie("Could not init swift connection.", err)
 	}
-	err = config.GetSwiftConnection().ContainerCreate(fs.DynamicAssetsContainerName, nil)
+	err = config.GetSwiftConnection().ContainerCreate(dynamic.DynamicAssetsContainerName, nil)
 	if err != nil {
 		setup.CleanupAndDie("Could not create dynamic container.", err)
+	}
+	err = dynamic.InitDynamicAssetFS()
+	if err != nil {
+		panic("Could not init dynamic FS")
 	}
 	tempdir := setup.GetTmpDirectory()
 

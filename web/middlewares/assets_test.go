@@ -12,7 +12,9 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
-	fs "github.com/cozy/cozy-stack/pkg/assets/statik"
+	"github.com/cozy/cozy-stack/pkg/assets"
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
+	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
@@ -49,21 +51,21 @@ func TestTheme(t *testing.T) {
 func TestThemeWithContext(t *testing.T) {
 	context := "foo"
 
-	asset, ok := fs.Get("/theme.css", context)
+	asset, ok := assets.Get("/theme.css", context)
 	if ok {
-		fs.DeleteAsset(asset)
+		_ = assets.Remove(asset.Name, asset.Context)
 	}
 	// Create and insert an asset in foo context
 	tmpdir := os.TempDir()
 	_, err := os.OpenFile(filepath.Join(tmpdir, "custom_theme.css"), os.O_RDWR|os.O_CREATE, 0600)
 	assert.NoError(t, err)
 
-	assetsOptions := []fs.AssetOption{{
+	assetsOptions := []model.AssetOption{{
 		URL:     fmt.Sprintf("file://%s", filepath.Join(tmpdir, "custom_theme.css")),
 		Name:    "/styles/theme.css",
 		Context: context,
 	}}
-	err = fs.RegisterCustomExternals(assetsOptions, 1)
+	err = assets.Add(assetsOptions)
 	assert.NoError(t, err)
 	// Test the theme
 	_ = lifecycle.Patch(testInstance, &lifecycle.Options{
@@ -111,11 +113,15 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		setup.CleanupAndDie("Could not init swift connection.", err)
 	}
-	err = config.GetSwiftConnection().ContainerCreate(fs.DynamicAssetsContainerName, nil)
+	err = config.GetSwiftConnection().ContainerCreate(dynamic.DynamicAssetsContainerName, nil)
 	if err != nil {
 		setup.CleanupAndDie("Could not create dynamic container.", err)
 	}
 
+	err = dynamic.InitDynamicAssetFS()
+	if err != nil {
+		panic("Could not init dynamic FS")
+	}
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Domain:     "middlewares.cozy.test",
 		Passphrase: "MyPassphrase",
