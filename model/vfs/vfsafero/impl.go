@@ -171,7 +171,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 
 	diskQuota := afs.DiskQuota()
 
-	var maxsize, newsize, oldsize, capsize int64
+	var maxsize, newsize, capsize int64
 	maxsize = -1 // no limit
 	newsize = newdoc.ByteSize
 	if diskQuota > 0 {
@@ -179,11 +179,8 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		if err != nil {
 			return nil, err
 		}
-		if olddoc != nil {
-			oldsize = olddoc.Size()
-		}
 		maxsize = diskQuota - diskUsage
-		if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
+		if newsize > maxsize {
 			return nil, vfs.ErrFileTooBig
 		}
 		if quotaBytes := int64(9.0 / 10.0 * float64(diskQuota)); diskUsage <= quotaBytes {
@@ -203,11 +200,6 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	}
 	if strings.HasPrefix(newpath, vfs.TrashDirName+"/") {
 		return nil, vfs.ErrParentInTrash
-	}
-
-	// Avoid storing negative size in the index.
-	if newdoc.ByteSize < 0 {
-		newdoc.ByteSize = 0
 	}
 
 	if olddoc == nil {
@@ -616,7 +608,7 @@ func (f *aferoFileCreation) Close() (err error) {
 		return vfs.ErrInvalidHash
 	}
 
-	if newdoc.ByteSize <= 0 {
+	if f.size < 0 {
 		newdoc.ByteSize = written
 	}
 
@@ -624,9 +616,6 @@ func (f *aferoFileCreation) Close() (err error) {
 		return vfs.ErrContentLengthMismatch
 	}
 
-	if olddoc == nil || !olddoc.Trashed {
-		newdoc.Trashed = false
-	}
 	lockerr := f.afs.mu.Lock()
 	if lockerr != nil {
 		return lockerr

@@ -179,16 +179,13 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 
 	diskQuota := sfs.DiskQuota()
 
-	var maxsize, newsize, oldsize, capsize int64
+	var maxsize, newsize, capsize int64
 	maxsize = maxFileSize
 	newsize = newdoc.ByteSize
 	if diskQuota > 0 {
 		diskUsage, err := sfs.DiskUsage()
 		if err != nil {
 			return nil, err
-		}
-		if olddoc != nil {
-			oldsize = olddoc.Size()
 		}
 		maxsize = diskQuota - diskUsage
 		if maxsize > maxFileSize {
@@ -198,7 +195,7 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 			capsize = quotaBytes - diskUsage
 		}
 	}
-	if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
+	if newsize > maxsize {
 		return nil, vfs.ErrFileTooBig
 	}
 
@@ -214,11 +211,6 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 	}
 	if strings.HasPrefix(newpath, vfs.TrashDirName+"/") {
 		return nil, vfs.ErrParentInTrash
-	}
-
-	// Avoid storing negative size in the index.
-	if newdoc.ByteSize < 0 {
-		newdoc.ByteSize = 0
 	}
 
 	if olddoc == nil {
@@ -287,6 +279,7 @@ func (sfs *swiftVFSV3) destroyDir(doc *vfs.DirDoc, onlyContent bool) error {
 			for _, v := range versions {
 				objNames = append(objNames, MakeObjectNameV3(file.DocID, v.DocID))
 				_ = sfs.Indexer.DeleteVersion(v) // TODO bulk?
+				destroyed += v.ByteSize
 			}
 		}
 	}
@@ -329,10 +322,12 @@ func (sfs *swiftVFSV3) DestroyFile(doc *vfs.FileDoc) error {
 	if err := sfs.Indexer.DeleteFileDoc(doc); err != nil {
 		return err
 	}
+	destroyed := doc.ByteSize
 	if versions, err := vfs.VersionsFor(sfs, doc.DocID); err == nil {
 		for _, v := range versions {
 			objNames = append(objNames, MakeObjectNameV3(doc.DocID, v.DocID))
 			_ = sfs.Indexer.DeleteVersion(v) // TODO bulk?
+			destroyed += v.ByteSize
 		}
 	}
 	_, err := sfs.c.BulkDelete(sfs.container, objNames)
@@ -346,7 +341,7 @@ func (sfs *swiftVFSV3) DestroyFile(doc *vfs.FileDoc) error {
 			}
 		}
 	}
-	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, doc.ByteSize)
+	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
 	return err
 }
 
@@ -574,9 +569,6 @@ func (f *swiftFileCreationV3) Close() (err error) {
 	}
 
 	newdoc, olddoc, written := f.newdoc, f.olddoc, f.w
-	if olddoc == nil {
-		olddoc = newdoc.Clone().(*vfs.FileDoc)
-	}
 
 	if f.meta != nil {
 		if errc := (*f.meta).Close(); errc == nil {
@@ -594,22 +586,24 @@ func (f *swiftFileCreationV3) Close() (err error) {
 		var headers swift.Headers
 		var md5sum []byte
 		headers, err = f.f.Headers()
-		if err == nil {
-			// Etags may be double-quoted
-			etag := headers["Etag"]
-			if l := len(etag); l >= 2 {
-				if etag[0] == '"' {
-					etag = etag[1:]
-				}
-				if etag[l-1] == '"' {
-					etag = etag[:l-1]
-				}
+		if err != nil {
+			return err
+		}
+		// Etags may be double-quoted
+		etag := headers["Etag"]
+		if l := len(etag); l >= 2 {
+			if etag[0] == '"' {
+				etag = etag[1:]
 			}
-			md5sum, err = hex.DecodeString(etag)
-			if err == nil {
-				newdoc.MD5Sum = md5sum
+			if etag[l-1] == '"' {
+				etag = etag[:l-1]
 			}
 		}
+		md5sum, err = hex.DecodeString(etag)
+		if err != nil {
+			return err
+		}
+		newdoc.MD5Sum = md5sum
 	}
 
 	if f.size < 0 {
@@ -620,9 +614,6 @@ func (f *swiftFileCreationV3) Close() (err error) {
 		return vfs.ErrContentLengthMismatch
 	}
 
-	if f.olddoc == nil || !f.olddoc.Trashed {
-		newdoc.Trashed = false
-	}
 	lockerr := f.fs.mu.Lock()
 	if lockerr != nil {
 		return lockerr
