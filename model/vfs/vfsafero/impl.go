@@ -243,7 +243,7 @@ func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
 	}
 	defer afs.mu.Unlock()
 	diskUsage, _ := afs.DiskUsage()
-	_, destroyed, err := afs.Indexer.DeleteDirDocAndContent(doc, true)
+	files, destroyed, err := afs.Indexer.DeleteDirDocAndContent(doc, true)
 	if err != nil {
 		return err
 	}
@@ -263,7 +263,14 @@ func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
 			return err
 		}
 	}
-	return nil
+	var allVersions []*vfs.Version
+	for _, file := range files {
+		_ = afs.fs.RemoveAll(pathForVersions(file.DocID))
+		if versions, err := vfs.VersionsFor(afs, file.DocID); err == nil {
+			allVersions = append(allVersions, versions...)
+		}
+	}
+	return afs.Indexer.BatchDeleteVersions(allVersions)
 }
 
 func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
@@ -272,12 +279,22 @@ func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
 	}
 	defer afs.mu.Unlock()
 	diskUsage, _ := afs.DiskUsage()
-	_, destroyed, err := afs.Indexer.DeleteDirDocAndContent(doc, false)
+	files, destroyed, err := afs.Indexer.DeleteDirDocAndContent(doc, false)
 	if err != nil {
 		return err
 	}
 	vfs.DiskQuotaAfterDestroy(afs, diskUsage, destroyed)
-	return afs.fs.RemoveAll(doc.Fullpath)
+	if err = afs.fs.RemoveAll(doc.Fullpath); err != nil {
+		return err
+	}
+	var allVersions []*vfs.Version
+	for _, file := range files {
+		_ = afs.fs.RemoveAll(pathForVersions(file.DocID))
+		if versions, err := vfs.VersionsFor(afs, file.DocID); err == nil {
+			allVersions = append(allVersions, versions...)
+		}
+	}
+	return afs.Indexer.BatchDeleteVersions(allVersions)
 }
 
 func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
@@ -295,7 +312,15 @@ func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	return afs.Indexer.DeleteFileDoc(doc)
+	if err = afs.Indexer.DeleteFileDoc(doc); err != nil {
+		return err
+	}
+	versions, err := vfs.VersionsFor(afs, doc.DocID)
+	if err != nil {
+		return err
+	}
+	_ = afs.fs.RemoveAll(pathForVersions(doc.DocID))
+	return afs.Indexer.BatchDeleteVersions(versions)
 }
 
 func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
@@ -736,8 +761,12 @@ func extractContentTypeAndMD5(filename string) (contentType string, md5sum []byt
 }
 
 func pathForVersion(v *vfs.Version) string {
+	return path.Join(pathForVersions(v.FileID), v.DocID)
+}
+
+func pathForVersions(fileID string) string {
 	// Avoid too many files in the same directory by using some sub-directories
-	return path.Join(vfs.VersionsDirName, v.DocID[:4], v.DocID[4:])
+	return path.Join(vfs.VersionsDirName, fileID[:4], fileID[4:])
 }
 
 var (

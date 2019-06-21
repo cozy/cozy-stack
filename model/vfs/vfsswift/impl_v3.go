@@ -634,10 +634,6 @@ func (f *swiftFileCreationV3) Close() (err error) {
 	}
 	defer f.fs.mu.Unlock()
 
-	if err = f.fs.Indexer.UpdateFileDoc(olddoc, newdoc); err != nil {
-		return err
-	}
-
 	var v *vfs.Version
 	if olddoc != nil {
 		v = vfs.NewVersion(olddoc)
