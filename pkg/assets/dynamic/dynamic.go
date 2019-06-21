@@ -11,11 +11,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/assets/model"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/hashicorp/go-multierror"
 )
@@ -26,30 +24,7 @@ var assetsClient = &http.Client{
 
 // List dynamic assets
 func ListAssets() (map[string][]*model.Asset, error) {
-	swiftConn := config.GetSwiftConnection()
-
-	objs := map[string][]*model.Asset{}
-
-	objNames, err := swiftConn.ObjectNamesAll(DynamicAssetsContainerName, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, obj := range objNames {
-		splitted := strings.SplitN(obj, "/", 2)
-		ctx := splitted[0]
-		assetName := model.NormalizeAssetName(splitted[1])
-
-		a, err := GetAsset(ctx, assetName)
-		if err != nil {
-			return nil, err
-		}
-
-		objs[ctx] = append(objs[ctx], a)
-
-	}
-
-	return objs, nil
+	return assetFS.List()
 }
 
 // GetAsset retrieves a raw asset from Swift and build a fs.Asset

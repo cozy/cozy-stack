@@ -3,10 +3,12 @@ package dynamic
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
@@ -26,7 +28,7 @@ type AssetFS interface {
 	Add(string, string, *model.Asset) error
 	Get(string, string) ([]byte, error)
 	Remove(string, string) error
-	List() []*model.Asset
+	List() (map[string][]*model.Asset, error)
 }
 
 type SwiftFS struct {
@@ -133,8 +135,35 @@ func (a *AferoFS) Remove(context, name string) error {
 	return a.fs.Remove(filePath)
 }
 
-func (a *AferoFS) List() []*model.Asset {
-	return nil
+func (a *AferoFS) List() (map[string][]*model.Asset, error) {
+	objs := map[string][]*model.Asset{}
+
+	// List contexts
+	entries, err := ioutil.ReadDir(a.folder.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, context := range entries {
+		ctxName := context.Name()
+		ctxPath := filepath.Join(a.folder.Path, ctxName)
+
+		err := filepath.Walk(a.folder.Path, func(path string, info os.FileInfo, err error) error {
+			if !info.IsDir() {
+				assetName := strings.Replace(path, ctxPath, "", 1)
+				asset, err := GetAsset(ctxName, assetName)
+				if err != nil {
+					return err
+				}
+				objs[ctxName] = append(objs[ctxName], asset)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return objs, nil
 }
 
 func (s *SwiftFS) Add(context, name string, asset *model.Asset) error {
@@ -169,6 +198,27 @@ func (s *SwiftFS) Remove(context, name string) error {
 	return s.swiftConn.ObjectDelete(DynamicAssetsContainerName, objectName)
 }
 
-func (s *SwiftFS) List() []*model.Asset {
-	return nil
+func (s *SwiftFS) List() (map[string][]*model.Asset, error) {
+	objs := map[string][]*model.Asset{}
+
+	objNames, err := s.swiftConn.ObjectNamesAll(DynamicAssetsContainerName, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, obj := range objNames {
+		splitted := strings.SplitN(obj, "/", 2)
+		ctx := splitted[0]
+		assetName := model.NormalizeAssetName(splitted[1])
+
+		a, err := GetAsset(ctx, assetName)
+		if err != nil {
+			return nil, err
+		}
+
+		objs[ctx] = append(objs[ctx], a)
+
+	}
+
+	return objs, nil
 }

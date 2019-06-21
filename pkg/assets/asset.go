@@ -54,6 +54,7 @@ func List() (map[string][]*model.Asset, error) {
 	assetsMap := make(map[string][]*model.Asset)
 
 	defctx := config.DefaultInstanceContext
+
 	// Get statik assets
 	statik.Foreach(func(name string, f *model.Asset) {
 		assetsMap[defctx] = append(assetsMap[defctx], f)
