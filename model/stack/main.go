@@ -111,14 +111,10 @@ security features. Please do not use this binary as your production server.
 		return
 	}
 
-	// Initialize the dynamic asset container for Swift
-	if config.FsURL().Scheme == config.SchemeSwift ||
-		config.FsURL().Scheme == config.SchemeSwiftSecure {
-		if err = dynamic.InitDynamicAssetContainer(); err != nil {
-			return
-		}
-	} else {
-		logrus.Warn("Swift is not configured on this stack, dynamic assets won't be available")
+	// Initialize the dynamic assets FS. Can be OsFs, MemFs or Swift
+	err = dynamic.InitDynamicAssetFS()
+	if err != nil {
+		return nil, err
 	}
 
 	sessionSweeper := session.SweepLoginRegistrations()

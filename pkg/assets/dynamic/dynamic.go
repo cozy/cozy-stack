@@ -18,12 +18,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/swift"
 	"github.com/hashicorp/go-multierror"
 )
-
-// DynamicAssetsContainerName is the Swift container name for dynamic assets
-const DynamicAssetsContainerName = "__dyn-assets__"
 
 var assetsClient = &http.Client{
 	Timeout: 30 * time.Second,
@@ -59,18 +55,11 @@ func ListAssets() (map[string][]*model.Asset, error) {
 
 // GetAsset retrieves a raw asset from Swift and build a fs.Asset
 func GetAsset(context, name string) (*model.Asset, error) {
-	swiftConn := config.GetSwiftConnection()
-	objectName := path.Join(context, name)
-
-	assetContent := new(bytes.Buffer)
-
-	_, err := swiftConn.ObjectGet(DynamicAssetsContainerName, objectName, assetContent, true, nil)
-	if err != nil && err == swift.ObjectNotFound {
+	// Re-constructing the asset struct from the dyn FS content
+	content, err := assetFS.Get(context, name)
+	if err != nil {
 		return nil, err
 	}
-
-	// Re-constructing the asset struct from the Swift content
-	content := assetContent.Bytes()
 
 	h := sha256.New()
 	_, err = h.Write(content)
@@ -104,12 +93,6 @@ func RemoveAsset(context, name string) error {
 	objectName := path.Join(context, name)
 
 	return swiftConn.ObjectDelete(DynamicAssetsContainerName, objectName)
-}
-
-// Initializes the Swift container for dynamic assets
-func InitDynamicAssetContainer() error {
-	swiftConn := config.GetSwiftConnection()
-	return swiftConn.ContainerCreate(DynamicAssetsContainerName, nil)
 }
 
 // RegisterCustomExternals ensures that the assets are in the Swift, and load
@@ -230,17 +213,7 @@ func registerCustomExternal(opt model.AssetOption) error {
 
 	asset := model.NewAsset(opt, zippedDataBuf.Bytes(), unzippedData)
 
-	objectName := path.Join(asset.Context, asset.Name)
-	swiftConn := config.GetSwiftConnection()
-
-	f, err := swiftConn.ObjectCreate(DynamicAssetsContainerName, objectName, true, "", "", nil)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	// Writing the asset content to Swift
-	_, err = f.Write(asset.GetUnzippedData())
+	err = assetFS.Add(asset.Context, asset.Name, asset)
 	if err != nil {
 		return err
 	}

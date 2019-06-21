@@ -23,13 +23,10 @@ func Get(name string, context ...string) (*model.Asset, bool) {
 		ctx = config.DefaultInstanceContext
 	}
 
-	// Dynamic assets are stored in Swift
-	if config.FsURL().Scheme == config.SchemeSwift ||
-		config.FsURL().Scheme == config.SchemeSwiftSecure {
-		dynAsset, err := dynamic.GetAsset(ctx, name)
-		if err == nil {
-			return dynAsset, true
-		}
+	// Check if a dynamic asset is existing
+	dynAsset, err := dynamic.GetAsset(ctx, name)
+	if err == nil {
+		return dynAsset, true
 	}
 
 	// If asset was not found, try to retrieve it from static assets
