@@ -347,6 +347,10 @@ func (s *sharingIndexer) DeleteVersion(v *vfs.Version) error {
 	return s.indexer.DeleteVersion(v)
 }
 
+func (s *sharingIndexer) BatchDeleteVersions(versions []*vfs.Version) error {
+	return s.indexer.BatchDeleteVersions(versions)
+}
+
 func (s *sharingIndexer) BuildTree(each ...func(*vfs.TreeFile)) (t *vfs.Tree, err error) {
 	return nil, ErrInternalServerError
 }

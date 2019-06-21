@@ -514,6 +514,14 @@ func (c *couchdbIndexer) DeleteVersion(v *Version) error {
 	return couchdb.DeleteDoc(c.db, v)
 }
 
+func (c *couchdbIndexer) BatchDeleteVersions(versions []*Version) error {
+	docs := make([]couchdb.Doc, len(versions))
+	for i, v := range versions {
+		docs[i] = v
+	}
+	return couchdb.BulkDeleteDocs(c.db, consts.FilesVersions, docs)
+}
+
 func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) (err error) {
 	tree, err := c.BuildTree()
 	if err != nil {

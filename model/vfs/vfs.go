@@ -188,6 +188,7 @@ type Indexer interface {
 	CreateVersion(*Version) error
 	// DeleteVersion removes a version from the CouchDB index.
 	DeleteVersion(*Version) error
+	BatchDeleteVersions([]*Version) error
 
 	BuildTree(each ...func(*TreeFile)) (tree *Tree, err error)
 	CheckIndexIntegrity(func(*FsckLog)) error
