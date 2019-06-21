@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -89,10 +88,7 @@ func GetAsset(context, name string) (*model.Asset, error) {
 
 // RemoveAsset removes a dynamic asset from Swift
 func RemoveAsset(context, name string) error {
-	swiftConn := config.GetSwiftConnection()
-	objectName := path.Join(context, name)
-
-	return swiftConn.ObjectDelete(DynamicAssetsContainerName, objectName)
+	return assetFS.Remove(context, name)
 }
 
 // RegisterCustomExternals ensures that the assets are in the Swift, and load

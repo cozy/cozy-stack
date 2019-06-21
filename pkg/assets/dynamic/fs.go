@@ -25,7 +25,7 @@ const DynamicAssetsFolderName = "dyn-assets"
 type AssetFS interface {
 	Add(string, string, *model.Asset) error
 	Get(string, string) ([]byte, error)
-	Remove(string, string)
+	Remove(string, string) error
 	List() []*model.Asset
 }
 
@@ -53,11 +53,6 @@ func InitDynamicAssetFS() error {
 		if err != nil {
 			return err
 		}
-	case config.SchemeMem:
-		assetFS, err = newMemFS()
-		if err != nil {
-			return err
-		}
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		assetFS, err = newSwiftFS()
 	}
@@ -79,10 +74,6 @@ func newOsFS() (*AferoFS, error) {
 		return nil, err
 	}
 	return aferoFS, nil
-}
-
-func newMemFS() (*AferoFS, error) {
-	return &AferoFS{fs: afero.NewMemMapFs()}, nil
 }
 
 func newSwiftFS() (*SwiftFS, error) {
@@ -137,8 +128,9 @@ func (a *AferoFS) Get(context, name string) ([]byte, error) {
 
 }
 
-func (a *AferoFS) Remove(context, name string) {
-
+func (a *AferoFS) Remove(context, name string) error {
+	filePath := a.GetAssetFolderName(context, name)
+	return a.fs.Remove(filePath)
 }
 
 func (a *AferoFS) List() []*model.Asset {
@@ -156,12 +148,7 @@ func (s *SwiftFS) Add(context, name string, asset *model.Asset) error {
 
 	// Writing the asset content to Swift
 	_, err = f.Write(asset.GetUnzippedData())
-	if err != nil {
-		return err
-
-	}
-
-	return nil
+	return err
 }
 
 func (s *SwiftFS) Get(context, name string) ([]byte, error) {
@@ -176,10 +163,10 @@ func (s *SwiftFS) Get(context, name string) ([]byte, error) {
 	return assetContent.Bytes(), nil
 }
 
-func (s *SwiftFS) Remove(context, name string) {
+func (s *SwiftFS) Remove(context, name string) error {
 	objectName := path.Join(context, name)
 
-	s.swiftConn.ObjectDelete(DynamicAssetsContainerName, objectName)
+	return s.swiftConn.ObjectDelete(DynamicAssetsContainerName, objectName)
 }
 
 func (s *SwiftFS) List() []*model.Asset {
