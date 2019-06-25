@@ -37,9 +37,7 @@ import (
 	"github.com/cozy/cozy-stack/web"
 	webApps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/echo"
-	"github.com/cozy/swift/swifttest"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -535,32 +533,13 @@ func TestUninstallAppWithoutLinkedClient(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	swiftSrv, err := swifttest.NewSwiftServer("localhost")
-	if err != nil {
-		fmt.Printf("failed to create swift server %s", err)
-	}
-
-	viper.Set("swift.username", "swifttest")
-	viper.Set("swift.api_key", "swifttest")
-	viper.Set("swift.auth_url", swiftSrv.AuthURL)
-
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "apps_test")
-	err = config.InitSwiftConnection(config.Fs{
-		URL: &url.URL{
-			Scheme:   "swift",
-			Host:     "localhost",
-			RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
-		},
-	})
+	err := setup.SetupSwiftTest()
 	if err != nil {
-		setup.CleanupAndDie("Could not init swift connection.", err)
-	}
-	err = config.GetSwiftConnection().ContainerCreate(dynamic.DynamicAssetsContainerName, nil)
-	if err != nil {
-		setup.CleanupAndDie("Could not create dynamic container.", err)
+		panic("Could not init Swift test")
 	}
 	err = dynamic.InitDynamicAssetFS()
 	if err != nil {

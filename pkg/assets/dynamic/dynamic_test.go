@@ -89,6 +89,10 @@ func TestRemoveCustomAsset(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+
+	// We cannot use setup.SetupSwiftTest() here because testutils relies on
+	// stack.Start(), resulting in a circular import
+	// dynamic => testutils => stack => dynamic
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
 	if err != nil {
 		fmt.Printf("failed to create swift server %s", err)
