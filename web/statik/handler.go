@@ -15,12 +15,16 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/assets"
 	modelAsset "github.com/cozy/cozy-stack/pkg/assets/model"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/i18n"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -171,15 +175,23 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 // AssetPath return the fullpath with unique identifier for a given asset file.
 func AssetPath(domain, name string, context ...string) string {
 	f, ok := assets.Get(name, context...)
-	if !ok && len(context) > 0 && context[0] != "" {
-		// fallback on default context if asset is not found in the given one.
-		f, ok = assets.Get(name)
-		if ok {
-			context = nil
+	if !ok {
+		ctx := config.DefaultInstanceContext
+		if len(context) > 0 && context[0] != "" {
+			ctx = context[0]
 		}
+		logger.WithNamespace("assets").WithFields(logrus.Fields{
+			"domain":  domain,
+			"name":    name,
+			"context": ctx,
+		}).Errorf("Cannot find asset")
 	}
+
 	if ok {
 		name = f.NameWithSum
+		if !f.IsCustom {
+			context = nil
+		}
 	}
 	return assetPath(domain, name, context...)
 }
