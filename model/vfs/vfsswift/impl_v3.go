@@ -392,7 +392,28 @@ func (sfs *swiftVFSV3) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (
 }
 
 func (sfs *swiftVFSV3) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version) error {
-	return os.ErrNotExist // TODO
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer sfs.mu.Unlock()
+
+	save := vfs.NewVersion(doc)
+	if err := sfs.Indexer.CreateVersion(save); err != nil {
+		return err
+	}
+
+	newdoc := doc.Clone().(*vfs.FileDoc)
+	if parts := strings.SplitN(version.DocID, "/", 2); len(parts) > 1 {
+		newdoc.InternalID = parts[1]
+	}
+	vfs.SetMetaFromVersion(newdoc, version)
+	if err := sfs.Indexer.UpdateFileDoc(doc, newdoc); err != nil {
+		_ = sfs.Indexer.DeleteVersion(save)
+		return err
+	}
+
+	return sfs.Indexer.DeleteVersion(version)
+
 }
 
 // UpdateFileDoc calls the indexer UpdateFileDoc function and adds a few checks

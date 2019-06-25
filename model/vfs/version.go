@@ -75,8 +75,12 @@ func NewVersion(file *FileDoc) *Version {
 		instanceURL = file.CozyMetadata.UploadedOn
 	}
 	fcm := NewCozyMetadata(instanceURL)
+	id := file.InternalID
+	if id == "" {
+		id = file.Rev()
+	}
 	v := &Version{
-		DocID:        file.ID() + "/" + file.Rev(),
+		DocID:        file.ID() + "/" + id,
 		FileID:       file.ID(),
 		UpdatedAt:    file.UpdatedAt,
 		ByteSize:     file.ByteSize,
