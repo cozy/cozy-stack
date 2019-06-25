@@ -275,6 +275,7 @@ type DirOrFileDoc struct {
 	Executable bool     `json:"executable,omitempty"`
 	Trashed    bool     `json:"trashed,omitempty"`
 	Metadata   Metadata `json:"metadata,omitempty"`
+	InternalID string   `json:"internal_vfs_id,omitempty"`
 }
 
 // Clone is part of the couchdb.Doc interface
@@ -307,6 +308,7 @@ func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {
 			Tags:         fd.Tags,
 			Metadata:     fd.Metadata,
 			ReferencedBy: fd.ReferencedBy,
+			InternalID:   fd.InternalID,
 		}
 	}
 	return nil, nil

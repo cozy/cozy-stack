@@ -347,6 +347,15 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 	return err
 }
 
+// UUID requests a Universally Unique Identifier (UUID) from CouchDB.
+func UUID(db Database) (string, error) {
+	var out UUIDResponse
+	if err := makeRequest(db, "", http.MethodGet, "_uuids", nil, &out); err != nil {
+		return "", err
+	}
+	return out.UUIDs[0], nil
+}
+
 // DBStatus responds with informations on the database: size, number of
 // documents, sequence numbers, etc.
 func DBStatus(db Database, doctype string) (*DBStatusResponse, error) {
@@ -936,6 +945,11 @@ type ViewResponse struct {
 	Total  int                `json:"total_rows"`
 	Offset int                `json:"offset,omitempty"`
 	Rows   []*ViewResponseRow `json:"rows"`
+}
+
+//UUIDResponse is the response from _uuids
+type UUIDResponse struct {
+	UUIDs []string `json:"uuids"`
 }
 
 // DBStatusResponse is the response from DBStatus

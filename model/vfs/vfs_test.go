@@ -547,7 +547,7 @@ func TestArchive(t *testing.T) {
 			},
 		},
 	}
-	_, err := createTree(tree, consts.RootDirID)
+	dirdoc, err := createTree(tree, consts.RootDirID)
 	assert.NoError(t, err)
 
 	foobar, err := fs.FileByPath("/archive/foobar.jpg")
@@ -588,6 +588,7 @@ func TestArchive(t *testing.T) {
 		"test/bar/baz/two.png": nil,
 		"test/bar/z.gif":       nil,
 	}, zipfiles)
+	assert.NoError(t, fs.DestroyDirAndContent(dirdoc))
 }
 
 func TestCreateFileTooBig(t *testing.T) {

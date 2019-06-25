@@ -297,6 +297,7 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 	newdoc.Metadata = olddoc.Metadata
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 	newdoc.CozyMetadata = olddoc.CozyMetadata
+	newdoc.InternalID = olddoc.InternalID
 
 	if patch.MD5Sum != nil {
 		newdoc.MD5Sum = *patch.MD5Sum

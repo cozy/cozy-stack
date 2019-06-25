@@ -293,6 +293,12 @@ func TestEnsureDBExist(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestUUID(t *testing.T) {
+	uuid, err := UUID(TestPrefix)
+	assert.NoError(t, err)
+	assert.Len(t, uuid, 32)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 

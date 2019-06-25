@@ -222,6 +222,9 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 		if exists {
 			return nil, os.ErrExist
 		}
+		if newdoc.DocID, err = couchdb.UUID(sfs); err != nil {
+			return nil, err
+		}
 	}
 
 	newdoc.InternalID = newInternalID()
@@ -282,7 +285,11 @@ func (sfs *swiftVFSV3) destroyDir(doc *vfs.DirDoc, onlyContent bool) error {
 	for _, file := range files {
 		if versions, err := vfs.VersionsFor(sfs, file.DocID); err == nil {
 			for _, v := range versions {
-				objNames = append(objNames, MakeObjectNameV3(file.DocID, v.DocID))
+				internalID := v.DocID
+				if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
+					internalID = parts[1]
+				}
+				objNames = append(objNames, MakeObjectNameV3(file.DocID, internalID))
 				destroyed += v.ByteSize
 			}
 			allVersions = append(allVersions, versions...)
@@ -293,7 +300,7 @@ func (sfs *swiftVFSV3) destroyDir(doc *vfs.DirDoc, onlyContent bool) error {
 	}
 	_, errb := sfs.c.BulkDelete(sfs.container, objNames)
 	if errb == swift.Forbidden {
-		sfs.log.Infof("%s failed on BulkDelete: %s", fn, err)
+		sfs.log.Infof("%s failed on BulkDelete: %s", fn, errb)
 		errb = nil
 		for _, objName := range objNames {
 			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil && errd != nil {
@@ -333,7 +340,11 @@ func (sfs *swiftVFSV3) DestroyFile(doc *vfs.FileDoc) error {
 	var err error
 	if versions, err := vfs.VersionsFor(sfs, doc.DocID); err == nil {
 		for _, v := range versions {
-			objNames = append(objNames, MakeObjectNameV3(doc.DocID, v.DocID))
+			internalID := v.DocID
+			if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
+				internalID = parts[1]
+			}
+			objNames = append(objNames, MakeObjectNameV3(doc.DocID, internalID))
 			destroyed += v.ByteSize
 		}
 		err = sfs.Indexer.BatchDeleteVersions(versions)
@@ -380,7 +391,11 @@ func (sfs *swiftVFSV3) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (
 		return nil, lockerr
 	}
 	defer sfs.mu.RUnlock()
-	objName := MakeObjectNameV3(doc.DocID, version.DocID)
+	internalID := version.DocID
+	if parts := strings.SplitN(version.DocID, "/", 2); len(parts) > 1 {
+		internalID = parts[1]
+	}
+	objName := MakeObjectNameV3(doc.DocID, internalID)
 	f, _, err := sfs.c.ObjectOpen(sfs.container, objName, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
@@ -670,7 +685,11 @@ func (f *swiftFileCreationV3) Close() (err error) {
 
 	if v != nil {
 		if errv := f.fs.Indexer.CreateVersion(v); errv != nil {
-			objName := MakeObjectNameV3(olddoc.DocID, v.DocID)
+			internalID := v.DocID
+			if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
+				internalID = parts[1]
+			}
+			objName := MakeObjectNameV3(olddoc.DocID, internalID)
 			_ = f.fs.c.ObjectDelete(f.fs.container, objName)
 		}
 	}
