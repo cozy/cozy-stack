@@ -20,10 +20,10 @@ type browser struct {
 var minEdgeVersion = 17
 
 var rules = []browser{
-	browser{
+	{
 		name: "Internet Explorer",
 	},
-	browser{
+	{
 		name:       "Edge",
 		minVersion: &minEdgeVersion,
 	},
