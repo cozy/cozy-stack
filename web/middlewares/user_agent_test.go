@@ -34,44 +34,44 @@ func TestUserAgent(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.Set("instance", ins)
 
-	h := CheckIE(echo.NotFoundHandler)
+	h := CheckUserAgent(echo.NotFoundHandler)
 	err := h(c)
 	assert.Error(t, err)
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko") // IE 11
-	h2 := CheckIE(echo.NotFoundHandler)
+	h2 := CheckUserAgent(echo.NotFoundHandler)
 	err2 := h2(c)
 	assert.NoError(t, err2, nil)
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/51.0.2704.79 Safari/537.36 Edge/16.14931") // Edge 16
-	h3 := CheckEdge(echo.NotFoundHandler)
+	h3 := CheckUserAgent(echo.NotFoundHandler)
 	err3 := h3(c)
 	assert.NoError(t, err3, nil)
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/51.0.2704.79 Safari/537.36 Edge/17.14931") // Edge 17
-	h4 := CheckEdge(echo.NotFoundHandler)
+	h4 := CheckUserAgent(echo.NotFoundHandler)
 	err4 := h4(c)
 	assert.Error(t, err4, nil)
 }
 
 func TestParseEdgeVersion(t *testing.T) {
 	version := "15.123456"
-	v, ok := parseEdgeVersion(version)
+	v, ok := getMajorVersion(version)
 	assert.Equal(t, 15, v)
 	assert.Equal(t, true, ok)
 
 	version = "75.123456.6789"
-	v, ok = parseEdgeVersion(version)
+	v, ok = getMajorVersion(version)
 	assert.Equal(t, 75, v)
 	assert.Equal(t, true, ok)
 
 	version = "12"
-	v, ok = parseEdgeVersion(version)
+	v, ok = getMajorVersion(version)
 	assert.Equal(t, 12, v)
 	assert.Equal(t, true, ok)
 
 	version = "foobar"
-	v, ok = parseEdgeVersion(version)
+	v, ok = getMajorVersion(version)
 	assert.Equal(t, -1, v)
 	assert.Equal(t, false, ok)
 }

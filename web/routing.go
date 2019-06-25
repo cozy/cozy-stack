@@ -64,16 +64,13 @@ var hstsMaxAge = 365 * 24 * time.Hour // 1 year
 func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	mws := []echo.MiddlewareFunc{
 		middlewares.LoadAppSession,
+		middlewares.CheckUserAgent,
 		middlewares.Accept(middlewares.AcceptOptions{
 			DefaultContentTypeOffer: echo.MIMETextHTML,
 		}),
 		middlewares.CheckInstanceBlocked,
 		middlewares.CheckTOSDeadlineExpired,
 	}
-
-	// Blocking user agents
-	userAgents := []echo.MiddlewareFunc{middlewares.CheckIE, middlewares.CheckEdge}
-	mws = append(mws, userAgents...)
 
 	if !config.GetConfig().CSPDisabled {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
@@ -153,11 +150,9 @@ func SetupRoutes(router *echo.Echo) error {
 			middlewares.Accept(middlewares.AcceptOptions{
 				DefaultContentTypeOffer: echo.MIMETextHTML,
 			}),
+			middlewares.CheckUserAgent,
 			middlewares.CheckInstanceBlocked,
 		}
-		// Blocking user agents
-		userAgents := []echo.MiddlewareFunc{middlewares.CheckIE, middlewares.CheckEdge}
-		mws = append(mws, userAgents...)
 
 		router.GET("/", auth.Home, mws...)
 		auth.Routes(router.Group("/auth", mws...))
