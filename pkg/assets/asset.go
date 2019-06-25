@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
 // Get looks for an asset. First tries to get a dynamic, then the statik
@@ -27,6 +28,9 @@ func Get(name string, context ...string) (*model.Asset, bool) {
 	dynAsset, err := dynamic.GetAsset(ctx, name)
 	if err == nil {
 		return dynAsset, true
+	}
+	if err != dynamic.ErrDynAssetNotFound {
+		logger.WithNamespace("asset").Errorf("Error while retreiving dynamic asset: %s", err)
 	}
 
 	// If asset was not found, try to retrieve it from static assets

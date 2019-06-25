@@ -105,14 +105,13 @@ func (a *AferoFS) Add(context, name string, asset *model.Asset) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
 	_, err = f.Write(asset.GetUnzippedData())
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return f.Close()
 }
 
 func (a *AferoFS) Get(context, name string) ([]byte, error) {
@@ -122,14 +121,14 @@ func (a *AferoFS) Get(context, name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+
 	buf := new(bytes.Buffer)
 
 	_, err = io.Copy(buf, f)
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	return buf.Bytes(), f.Close()
 
 }
 
@@ -176,11 +175,13 @@ func (s *SwiftFS) Add(context, name string, asset *model.Asset) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
 	// Writing the asset content to Swift
 	_, err = f.Write(asset.GetUnzippedData())
-	return err
+	if err != nil {
+		return err
+	}
+	return f.Close()
 }
 
 func (s *SwiftFS) Get(context, name string) ([]byte, error) {
@@ -188,7 +189,7 @@ func (s *SwiftFS) Get(context, name string) ([]byte, error) {
 	assetContent := new(bytes.Buffer)
 
 	_, err := s.swiftConn.ObjectGet(DynamicAssetsContainerName, objectName, assetContent, true, nil)
-	if err != nil && err == swift.ObjectNotFound {
+	if err != nil {
 		return nil, err
 	}
 

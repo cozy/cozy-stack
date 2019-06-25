@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,8 +16,11 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/swift"
 	"github.com/hashicorp/go-multierror"
 )
+
+var ErrDynAssetNotFound = errors.New("Dynamic asset was not found")
 
 var assetsClient = &http.Client{
 	Timeout: 30 * time.Second,
@@ -32,6 +36,9 @@ func GetAsset(context, name string) (*model.Asset, error) {
 	// Re-constructing the asset struct from the dyn FS content
 	content, err := assetFS.Get(context, name)
 	if err != nil {
+		if err == swift.ObjectNotFound || os.IsNotExist(err) {
+			return nil, ErrDynAssetNotFound
+		}
 		return nil, err
 	}
 
