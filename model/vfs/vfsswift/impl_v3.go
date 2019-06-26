@@ -75,6 +75,13 @@ func MakeObjectNameV3(docID, internalID string) string {
 	return docID[:22] + "/" + docID[22:27] + "/" + docID[27:] + "/" + internalID
 }
 
+func makeDocIDV3(objName string) (string, string) {
+	if len(objName) != 51 {
+		return objName, ""
+	}
+	return objName[:22] + objName[23:28] + objName[29:34], objName[35:]
+}
+
 func (sfs *swiftVFSV3) DBPrefix() string {
 	return sfs.prefix
 }
