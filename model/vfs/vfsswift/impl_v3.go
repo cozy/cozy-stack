@@ -124,33 +124,7 @@ func (sfs *swiftVFSV3) Delete() error {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.container, err)
 	}
-	return sfs.deleteContainer(sfs.container)
-}
-
-func (sfs *swiftVFSV3) deleteContainer(container string) error {
-	_, _, err := sfs.c.Container(container)
-	if err == swift.ContainerNotFound {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	objectNames, err := sfs.c.ObjectNamesAll(container, nil)
-	if err != nil {
-		return err
-	}
-	for len(objectNames) > 0 {
-		objectToDelete := objectNames
-		if len(objectToDelete) > 8000 {
-			objectToDelete = objectToDelete[:8000]
-		}
-		_, err = sfs.c.BulkDelete(container, objectToDelete)
-		if err != nil {
-			return err
-		}
-		objectNames = objectNames[len(objectToDelete):]
-	}
-	return sfs.c.ContainerDelete(container)
+	return deleteContainer(sfs.c, sfs.container)
 }
 
 func (sfs *swiftVFSV3) CreateDir(doc *vfs.DirDoc) error {

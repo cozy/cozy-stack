@@ -137,42 +137,16 @@ func (sfs *swiftVFS) Delete() error {
 			sfs.container, err)
 	}
 	var errm error
-	if err = sfs.deleteContainer(sfs.version); err != nil {
+	if err = deleteContainer(sfs.c, sfs.version); err != nil {
 		errm = multierror.Append(errm, err)
 	}
-	if err = sfs.deleteContainer(sfs.container); err != nil {
+	if err = deleteContainer(sfs.c, sfs.container); err != nil {
 		errm = multierror.Append(errm, err)
 	}
-	if err = sfs.deleteContainer(sfs.dataContainer); err != nil {
+	if err = deleteContainer(sfs.c, sfs.dataContainer); err != nil {
 		errm = multierror.Append(errm, err)
 	}
 	return errm
-}
-
-func (sfs *swiftVFS) deleteContainer(container string) error {
-	_, _, err := sfs.c.Container(container)
-	if err == swift.ContainerNotFound {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	objectNames, err := sfs.c.ObjectNamesAll(container, nil)
-	if err != nil {
-		return err
-	}
-	for len(objectNames) > 0 {
-		objectToDelete := objectNames
-		if len(objectToDelete) > 8000 {
-			objectToDelete = objectToDelete[:8000]
-		}
-		_, err = sfs.c.BulkDelete(container, objectToDelete)
-		if err != nil {
-			return err
-		}
-		objectNames = objectNames[len(objectToDelete):]
-	}
-	return sfs.c.ContainerDelete(container)
 }
 
 func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
