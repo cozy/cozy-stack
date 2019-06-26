@@ -314,6 +314,7 @@ func (sfs *swiftVFSV2) DestroyDirContent(doc *vfs.DirDoc) error {
 	objNames := make([]string, len(files))
 	for i, file := range files {
 		objNames[i] = MakeObjectName(file.DocID)
+		_ = sfs.destroyFileVersions(objNames[i])
 	}
 	_, err = sfs.c.BulkDelete(sfs.container, objNames)
 	if err == swift.Forbidden {
@@ -343,6 +344,7 @@ func (sfs *swiftVFSV2) DestroyDirAndContent(doc *vfs.DirDoc) error {
 	objNames := make([]string, len(files))
 	for i, file := range files {
 		objNames[i] = MakeObjectName(file.DocID)
+		_ = sfs.destroyFileVersions(objNames[i])
 	}
 	_, err = sfs.c.BulkDelete(sfs.container, objNames)
 	if err == swift.Forbidden {
