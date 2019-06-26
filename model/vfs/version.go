@@ -5,7 +5,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
@@ -16,13 +15,20 @@ import (
 type Version struct {
 	DocID        string            `json:"_id,omitempty"`
 	DocRev       string            `json:"_rev,omitempty"`
-	FileID       string            `json:"file_id"`
 	UpdatedAt    time.Time         `json:"updated_at"`
 	ByteSize     int64             `json:"size,string"`
 	MD5Sum       []byte            `json:"md5sum"`
 	Tags         []string          `json:"tags"`
 	Metadata     Metadata          `json:"metadata,omitempty"`
 	CozyMetadata FilesCozyMetadata `json:"cozyMetadata,omitempty"`
+	Rels         struct {
+		File struct {
+			Data struct {
+				ID   string `json:"_id"`
+				Type string `json:"_type"`
+			} `json:"data"`
+		} `json:"file"`
+	} `json:"relationships"`
 }
 
 // ID returns the version identifier
@@ -81,7 +87,6 @@ func NewVersion(file *FileDoc) *Version {
 	}
 	v := &Version{
 		DocID:        file.ID() + "/" + id,
-		FileID:       file.ID(),
 		UpdatedAt:    file.UpdatedAt,
 		ByteSize:     file.ByteSize,
 		MD5Sum:       file.MD5Sum,
@@ -89,6 +94,8 @@ func NewVersion(file *FileDoc) *Version {
 		Metadata:     file.Metadata,
 		CozyMetadata: *fcm,
 	}
+	v.Rels.File.Data.ID = file.ID()
+	v.Rels.File.Data.Type = consts.Files
 	v.CozyMetadata.UploadedOn = instanceURL
 	at := file.UpdatedAt
 	if file.CozyMetadata != nil && file.CozyMetadata.UploadedAt != nil {
@@ -135,11 +142,11 @@ func FindVersion(db prefixer.Prefixer, id string) (*Version, error) {
 // VersionsFor returns the list of the versions for a given file identifier.
 func VersionsFor(db prefixer.Prefixer, fileID string) ([]*Version, error) {
 	var versions []*Version
-	req := &couchdb.FindRequest{
-		UseIndex: "by-file-id",
-		Selector: mango.Equal("file_id", fileID),
+	req := &couchdb.AllDocsRequest{
+		StartKey: fileID + "/",
+		EndKey:   fileID + "0", // 0 is the next character after / in ascii
 	}
-	if err := couchdb.FindDocs(db, consts.FilesVersions, req, &versions); err != nil {
+	if err := couchdb.GetAllDocs(db, consts.FilesVersions, req, &versions); err != nil {
 		return nil, err
 	}
 	return versions, nil

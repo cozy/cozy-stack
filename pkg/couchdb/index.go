@@ -19,9 +19,6 @@ var Indexes = []*mango.Index{
 	// Used to lookup a directory given its path
 	mango.IndexOnFields(consts.Files, "dir-by-path", []string{"path"}),
 
-	// Used to lookup the versions of a given file, sorted by updated_at
-	mango.IndexOnFields(consts.FilesVersions, "by-file-id", []string{"file_id"}),
-
 	// Used to lookup a queued and running jobs
 	mango.IndexOnFields(consts.Jobs, "by-worker-and-state", []string{"worker", "state"}),
 	mango.IndexOnFields(consts.Jobs, "by-trigger-id", []string{"trigger_id", "queued_at"}),

@@ -761,7 +761,8 @@ func extractContentTypeAndMD5(filename string) (contentType string, md5sum []byt
 }
 
 func pathForVersion(v *vfs.Version) string {
-	return path.Join(pathForVersions(v.FileID), v.DocID)
+	fileID := strings.SplitN(v.DocID, "/", 2)[0]
+	return path.Join(pathForVersions(fileID), v.DocID)
 }
 
 func pathForVersions(fileID string) string {
