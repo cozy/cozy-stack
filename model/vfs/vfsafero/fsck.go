@@ -3,6 +3,7 @@ package vfsafero
 import (
 	"bytes"
 	"crypto/md5"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
@@ -19,6 +21,19 @@ func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 		if !f.IsOrphan {
 			entries[f.Fullpath] = f
 		}
+	})
+	if err != nil {
+		return
+	}
+
+	versions := make(map[string]*vfs.Version, 1024)
+	err = couchdb.ForeachDocs(afs, consts.FilesVersions, func(_ string, data json.RawMessage) error {
+		v := &vfs.Version{}
+		if erru := json.Unmarshal(data, v); erru != nil {
+			return erru
+		}
+		versions[pathForVersion(v)] = v
+		return nil
 	})
 	if err != nil {
 		return
@@ -33,6 +48,22 @@ func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 			fullpath == vfs.KonnectorsDirName ||
 			fullpath == vfs.ThumbsDirName {
 			return filepath.SkipDir
+		}
+
+		if strings.HasPrefix(fullpath, vfs.VersionsDirName) {
+			if info.IsDir() {
+				return nil
+			}
+			_, ok := versions[fullpath]
+			if !ok {
+				accumulate(&vfs.FsckLog{
+					Type:       vfs.IndexMissing,
+					IsVersion:  true,
+					VersionDoc: fileInfosToVersionDoc(fullpath, info),
+				})
+			}
+			delete(versions, fullpath)
+			return nil
 		}
 
 		f, ok := entries[fullpath]
@@ -110,6 +141,14 @@ func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 		}
 	}
 
+	for _, v := range versions {
+		accumulate(&vfs.FsckLog{
+			Type:       vfs.FSMissing,
+			IsVersion:  true,
+			VersionDoc: v,
+		})
+	}
+
 	return
 }
 
@@ -150,4 +189,22 @@ func fileInfosToFileDoc(fullpath string, fileinfo os.FileInfo) *vfs.TreeFile {
 			Trashed:    trashed,
 		},
 	}
+}
+
+func fileInfosToVersionDoc(fullpath string, fileinfo os.FileInfo) *vfs.Version {
+	_, md5sum, _ := extractContentTypeAndMD5(fullpath)
+	v := &vfs.Version{
+		UpdatedAt: fileinfo.ModTime(),
+		ByteSize:  fileinfo.Size(),
+		MD5Sum:    md5sum,
+	}
+	parts := strings.Split(fullpath, "/")
+	var fileID string
+	if len(parts) > 3 {
+		fileID = parts[len(parts)-3] + parts[len(parts)-2]
+	}
+	v.DocID = fileID + "/" + parts[len(parts)-1]
+	v.Rels.File.Data.ID = fileID
+	v.Rels.File.Data.Type = consts.Files
+	return v
 }
