@@ -522,10 +522,10 @@ func (c *couchdbIndexer) BatchDeleteVersions(versions []*Version) error {
 	return couchdb.BulkDeleteDocs(c.db, consts.FilesVersions, docs)
 }
 
-func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) (err error) {
+func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) error {
 	tree, err := c.BuildTree()
 	if err != nil {
-		return
+		return err
 	}
 
 	// cleanDirsMap browse the given root tree recursively into its children
@@ -563,7 +563,21 @@ func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) (err err
 		}
 	}
 
-	return
+	return couchdb.ForeachDocs(c.db, consts.FilesVersions, func(_ string, data json.RawMessage) error {
+		v := &Version{}
+		if erru := json.Unmarshal(data, v); erru != nil {
+			return erru
+		}
+		fileID := strings.SplitN(v.DocID, "/", 2)[0]
+		if _, ok := tree.Files[fileID]; !ok {
+			accumulate(&FsckLog{
+				Type:       FileMissing,
+				IsVersion:  true,
+				VersionDoc: v,
+			})
+		}
+		return nil
+	})
 }
 
 func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err error) {
@@ -571,6 +585,7 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 		Root:    nil,
 		Orphans: make(map[string][]*TreeFile, 32), // DirID -> *FileDoc
 		DirsMap: make(map[string]*TreeFile, 256),  // DocID -> *FileDoc
+		Files:   make(map[string]struct{}, 1024),  // DocID -> ∅
 	}
 
 	// NOTE: the each method is called with objects in no particular order. The
@@ -620,6 +635,8 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 				delete(t.Orphans, f.DocID)
 			}
 			t.DirsMap[f.DocID] = f
+		} else {
+			t.Files[f.DocID] = struct{}{}
 		}
 		return nil
 	})

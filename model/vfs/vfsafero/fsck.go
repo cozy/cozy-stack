@@ -97,13 +97,13 @@ func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 	for _, f := range entries {
 		if f.IsDir {
 			accumulate(&vfs.FsckLog{
-				Type:   vfs.FileMissing,
+				Type:   vfs.FSMissing,
 				IsFile: false,
 				DirDoc: f,
 			})
 		} else {
 			accumulate(&vfs.FsckLog{
-				Type:    vfs.FileMissing,
+				Type:    vfs.FSMissing,
 				IsFile:  true,
 				FileDoc: f,
 			})

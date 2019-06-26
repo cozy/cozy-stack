@@ -210,7 +210,7 @@ func fsckHandler(c echo.Context) (err error) {
 	for log := range logCh {
 		// XXX do not serialize to JSON the children, as it can take more than 64ko
 		// and scanner will ignore such lines
-		if !log.IsFile {
+		if !log.IsFile && !log.IsVersion {
 			log.DirDoc.DirsChildren = nil
 			log.DirDoc.FilesChildren = nil
 		}

@@ -68,7 +68,7 @@ func (sfs *swiftVFSV2) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
 	// index.
 	for _, f := range entries {
 		accumulate(&vfs.FsckLog{
-			Type:    vfs.FileMissing,
+			Type:    vfs.FSMissing,
 			IsFile:  true,
 			FileDoc: f,
 		})
