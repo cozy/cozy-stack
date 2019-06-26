@@ -126,6 +126,10 @@ func extractInfos(pkgs []string) []info {
 					}
 				case (*types.Basic):
 					// Basic types are immutables
+				case (*types.Struct):
+					if !allFieldsAreBasic(t) {
+						panic(fmt.Errorf("Struct with mutable fields are not supported: %#v", t))
+					}
 				default:
 					panic(fmt.Errorf("Unknown type: %#v", field.Type()))
 				}
@@ -433,7 +437,14 @@ func hasCloneMethod(obj types.Object) bool {
 
 func allFieldsAreBasic(s *types.Struct) bool {
 	for i := 0; i < s.NumFields(); i++ {
-		if _, ok := s.Field(i).Type().(*types.Basic); !ok {
+		switch t := s.Field(i).Type().(type) {
+		case (*types.Basic):
+			// OK
+		case (*types.Struct):
+			if !allFieldsAreBasic(t) {
+				return false
+			}
+		default:
 			return false
 		}
 	}

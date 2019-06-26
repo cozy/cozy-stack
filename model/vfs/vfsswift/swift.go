@@ -59,7 +59,7 @@ func deleteContainerFiles(c *swift.Connection, container string, objectNames []s
 	var errm error
 	for i := 0; i < nb; i++ {
 		if err := <-ch; err != nil {
-			multierror.Append(errm, err)
+			errm = multierror.Append(errm, err)
 		}
 	}
 	// Get back the tokens to ensure that each goroutine can finish.
