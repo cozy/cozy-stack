@@ -383,7 +383,7 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
         "createdByApp": "drive",
         "createdOn": "https://cozy.example.com/",
         "updatedAt": "2016-09-21T14:46:37Z",
-        "uploadedAt": "2016-09-20T18:32:49Z",
+        "uploadedAt": "2016-09-20T18:37:52Z",
         "uploadedOn": "https://cozy.example.com/",
         "uploadedBy": {
           "slug": "drive"
@@ -439,9 +439,24 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
         "rev": "1-26a331"
       },
       "attributes": {
+        "file_id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+        "updated_at": "2016-09-21T10:11:12Z",
         "md5sum": "a2lth5syMW+4r7jwNhdk3A==",
         "size": 123456,
-        "tags": []
+        "tags": [],
+        "cozyMetadata": {
+          "doctypeVersion": "1",
+          "metadataVersion": 1,
+          "createdAt": "2016-09-20T18:37:52Z",
+          "createdByApp": "drive",
+          "createdOn": "https://cozy.example.com/",
+          "updatedAt": "2016-09-20T18:37:52Z",
+          "uploadedAt": "2016-09-20T18:37:52Z",
+          "uploadedOn": "https://cozy.example.com/",
+          "uploadedBy": {
+            "slug": "drive"
+          }
+        }
       }
     },
     {
@@ -451,9 +466,24 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
         "rev": "1-57b3e2"
       },
       "attributes": {
+        "file_id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+        "updated_at": "2016-09-18T20:38:04Z",
         "md5sum": "FBA89XXOZKFhdv37iILb2Q==",
         "size": 159753,
-        "tags": []
+        "tags": [],
+        "cozyMetadata": {
+          "doctypeVersion": "1",
+          "metadataVersion": 1,
+          "createdAt": "2016-09-20T18:32:49Z",
+          "createdByApp": "drive",
+          "createdOn": "https://cozy.example.com/",
+          "updatedAt": "2016-09-20T18:32:49Z",
+          "uploadedAt": "2016-09-20T18:32:49Z",
+          "uploadedOn": "https://cozy.example.com/",
+          "uploadedBy": {
+            "slug": "drive"
+          }
+        }
       }
     }
   ]
