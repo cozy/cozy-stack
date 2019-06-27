@@ -3,7 +3,7 @@
 package statik
 
 import (
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
+	fs "github.com/cozy/cozy-stack/pkg/assets/statik"
 )
 
 func init() {

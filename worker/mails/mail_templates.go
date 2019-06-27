@@ -8,9 +8,9 @@ import (
 	text "text/template"
 
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/mail"
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
 )
 
 const templateTitleVar = "template_title"
@@ -137,11 +137,11 @@ func buildHTML(name string, layout string, ctx *job.WorkerContext, context, loca
 func loadTemplate(name, context string) ([]byte, error) {
 	var f *bytes.Reader
 	if context != "" {
-		f, _ = fs.Open(name, context)
+		f, _ = assets.Open(name, context)
 	}
 	if f == nil {
 		var err error
-		f, err = fs.Open(name) // Default context
+		f, err = assets.Open(name) // Default context
 		if err != nil {
 			return nil, err
 		}

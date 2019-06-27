@@ -26,15 +26,18 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/assets"
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
+	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	webApps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/echo"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -287,22 +290,21 @@ func TestServeAppsWithACode(t *testing.T) {
 func TestFaviconWithContext(t *testing.T) {
 	context := "foo"
 
-	asset, ok := fs.Get("/favicon-32x32.png", context)
+	asset, ok := assets.Get("/favicon-32x32.png", context)
 	if ok {
-		fs.DeleteAsset(asset)
+		_ = assets.Remove(asset.Name, asset.Context)
 	}
 	// Create and insert an asset in foo context
 	tmpdir := os.TempDir()
 	_, err := os.OpenFile(filepath.Join(tmpdir, "custom_favicon.png"), os.O_RDWR|os.O_CREATE, 0600)
 	assert.NoError(t, err)
 
-	cacheStorage := config.GetConfig().CacheStorage
-	assetsOptions := []fs.AssetOption{{
+	assetsOptions := []model.AssetOption{{
 		URL:     fmt.Sprintf("file://%s", filepath.Join(tmpdir, "custom_favicon.png")),
 		Name:    "/favicon-32x32.png",
 		Context: context,
 	}}
-	err = fs.RegisterCustomExternals(cacheStorage, assetsOptions, 1)
+	err = dynamic.RegisterCustomExternals(assetsOptions, 1)
 	assert.NoError(t, err)
 
 	// Test the theme
@@ -535,6 +537,14 @@ func TestMain(m *testing.M) {
 	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "apps_test")
+	err := setup.SetupSwiftTest()
+	if err != nil {
+		panic("Could not init Swift test")
+	}
+	err = dynamic.InitDynamicAssetFS()
+	if err != nil {
+		panic("Could not init dynamic FS")
+	}
 	tempdir := setup.GetTmpDirectory()
 
 	cfg := config.GetConfig()
@@ -555,7 +565,7 @@ func TestMain(m *testing.M) {
 	testInstance.OnboardingFinished = true
 	_ = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
 
-	err := installMiniApp()
+	err = installMiniApp()
 	if err != nil {
 		setup.CleanupAndDie("Could not install mini app.", err)
 	}

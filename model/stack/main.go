@@ -9,12 +9,11 @@ import (
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/config/dynamic"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 
 	"github.com/google/gops/agent"
@@ -112,23 +111,11 @@ security features. Please do not use this binary as your production server.
 		return
 	}
 
-	assetsList, err := dynamic.GetAssetsList()
+	// Initialize the dynamic assets FS. Can be OsFs, MemFs or Swift
+	err = dynamic.InitDynamicAssetFS()
 	if err != nil {
-		return
+		return nil, err
 	}
-	// Load the dynamic assets in background
-	go func() {
-		cacheStorage := config.GetConfig().CacheStorage
-		if err = fs.RegisterCustomExternals(cacheStorage, assetsList, 6 /*= retry count */); err != nil {
-			logger.WithNamespace("custom assets").
-				Warningf("Error on loading the custom assets: %s", err)
-		}
-		assetsPollingDisabled := config.GetConfig().AssetsPollingDisabled
-		if !assetsPollingDisabled {
-			pollingInterval := config.GetConfig().AssetsPollingInterval
-			dynamic.PollAssetsList(cacheStorage, pollingInterval)
-		}
-	}()
 
 	sessionSweeper := session.SweepLoginRegistrations()
 

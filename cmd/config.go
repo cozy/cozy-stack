@@ -13,10 +13,10 @@ import (
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/account"
+	modelAsset "github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
@@ -314,13 +314,13 @@ var insertAssetCmd = &cobra.Command{
 	Example: "$ cozy-stack config insert-asset --url file:///foo/bar/baz.js --name /foo/bar/baz.js --shasum 0763d6c2cebee0880eb3a9cc25d38cd23db39b5c3802f2dc379e408c877a2788 --context foocontext",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Check params
-		var customAssets []fs.AssetOption
+		var customAssets []modelAsset.AssetOption
 
 		if flagContext == "" {
 			return fmt.Errorf("You must provide a context")
 		}
 
-		assetOption := fs.AssetOption{
+		assetOption := modelAsset.AssetOption{
 			URL:     flagURL,
 			Name:    flagName,
 			Shasum:  flagShasum,

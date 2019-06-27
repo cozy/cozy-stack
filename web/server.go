@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/pkg/assets"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -22,8 +23,6 @@ import (
 
 	"github.com/cozy/echo"
 	"github.com/cozy/echo/middleware"
-
-	statikFS "github.com/cozy/cozy-stack/pkg/statik/fs"
 )
 
 // ReadHeaderTimeout is the amount of time allowed to read request headers for
@@ -50,7 +49,7 @@ func LoadSupportedLocales() error {
 	}
 
 	for _, locale := range consts.SupportedLocales {
-		f, err := statikFS.Open("/locales/" + locale + ".po")
+		f, err := assets.Open("/locales/" + locale + ".po")
 		if err != nil {
 			return fmt.Errorf("Can't load the po file for %s", locale)
 		}

@@ -11,13 +11,16 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/assets"
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
+	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,22 +48,21 @@ func TestTheme(t *testing.T) {
 func TestThemeWithContext(t *testing.T) {
 	context := "foo"
 
-	asset, ok := fs.Get("/theme.css", context)
+	asset, ok := assets.Get("/theme.css", context)
 	if ok {
-		fs.DeleteAsset(asset)
+		_ = assets.Remove(asset.Name, asset.Context)
 	}
 	// Create and insert an asset in foo context
 	tmpdir := os.TempDir()
 	_, err := os.OpenFile(filepath.Join(tmpdir, "custom_theme.css"), os.O_RDWR|os.O_CREATE, 0600)
 	assert.NoError(t, err)
 
-	cacheStorage := config.GetConfig().CacheStorage
-	assetsOptions := []fs.AssetOption{{
+	assetsOptions := []model.AssetOption{{
 		URL:     fmt.Sprintf("file://%s", filepath.Join(tmpdir, "custom_theme.css")),
 		Name:    "/styles/theme.css",
 		Context: context,
 	}}
-	err = fs.RegisterCustomExternals(cacheStorage, assetsOptions, 1)
+	err = assets.Add(assetsOptions)
 	assert.NoError(t, err)
 	// Test the theme
 	_ = lifecycle.Patch(testInstance, &lifecycle.Options{
@@ -90,6 +92,14 @@ func TestMain(m *testing.M) {
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "middlewares_test")
 
+	err := setup.SetupSwiftTest()
+	if err != nil {
+		panic("Could not init Swift test")
+	}
+	err = dynamic.InitDynamicAssetFS()
+	if err != nil {
+		panic("Could not init dynamic FS")
+	}
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Domain:     "middlewares.cozy.test",
 		Passphrase: "MyPassphrase",

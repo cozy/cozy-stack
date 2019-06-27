@@ -7,8 +7,8 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/worker/exec"
 )
@@ -56,7 +56,7 @@ func prepareWorkDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	f, err := fs.Open("/js/cozy-mjml.js")
+	f, err := assets.Open("/js/cozy-mjml.js")
 	if err != nil {
 		return "", err
 	}

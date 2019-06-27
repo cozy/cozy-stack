@@ -17,10 +17,13 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/stack"
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/echo"
+	"github.com/cozy/swift/swifttest"
+	"github.com/spf13/viper"
 )
 
 // This flag avoid starting the stack twice.
@@ -73,6 +76,38 @@ func (c *TestSetup) CleanupAndDie(msg ...interface{}) {
 // Cleanup cleanup the TestSetup
 func (c *TestSetup) Cleanup() {
 	c.cleanup()
+}
+
+func (c *TestSetup) SetupSwiftTest() error {
+	swiftSrv, err := swifttest.NewSwiftServer("localhost")
+	if err != nil {
+		fmt.Printf("failed to create swift server %s", err)
+	}
+
+	viper.Set("swift.username", "swifttest")
+	viper.Set("swift.api_key", "swifttest")
+	viper.Set("swift.auth_url", swiftSrv.AuthURL)
+
+	swiftURL := &url.URL{
+		Scheme:   "swift",
+		Host:     "localhost",
+		RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
+	}
+	err = config.InitSwiftConnection(config.Fs{
+		URL: swiftURL,
+	})
+	viper.Set("fs.url", swiftURL.String())
+
+	if err != nil {
+		c.CleanupAndDie("Could not init swift connection.", err)
+	}
+	err = config.GetSwiftConnection().ContainerCreate(dynamic.DynamicAssetsContainerName, nil)
+	if err != nil {
+		c.CleanupAndDie("Could not create dynamic container.", err)
+	}
+
+	return nil
+
 }
 
 // AddCleanup adds a function to be run when the test is finished.

@@ -17,14 +17,14 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/assets"
+	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/config/dynamic"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/cozy-stack/pkg/statik/fs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/worker/updates"
 	"github.com/cozy/echo"
@@ -250,31 +250,32 @@ func rebuildRedis(c echo.Context) error {
 
 // Renders the assets list loaded in memory and served by the cozy
 func assetsInfos(c echo.Context) error {
-	assetsMap := make(map[string][]*fs.Asset)
-	fs.Foreach(func(name, context string, f *fs.Asset) {
-		assetsMap[context] = append(assetsMap[context], f)
-	})
+	assetsMap, err := assets.List()
+	if err != nil {
+		return err
+	}
+
 	return c.JSON(http.StatusOK, assetsMap)
 }
 
 func addAssets(c echo.Context) error {
-	var unmarshaledAssets []fs.AssetOption
+	var unmarshaledAssets []model.AssetOption
 	if err := json.NewDecoder(c.Request().Body).Decode(&unmarshaledAssets); err != nil {
 		return err
 	}
-	cacheStorage := config.GetConfig().CacheStorage
-	err := fs.RegisterCustomExternals(cacheStorage, unmarshaledAssets, 0 /* = retry count */)
+
+	err := assets.Add(unmarshaledAssets)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
-	return dynamic.UpdateAssetsList()
+	return nil
 }
 
 func deleteAssets(c echo.Context) error {
 	context := c.Param("context")
 	name := c.Param("*")
 
-	err := dynamic.RemoveAsset(context, name)
+	err := assets.Remove(name, context)
 	if err != nil {
 		return wrapError(err)
 	}
