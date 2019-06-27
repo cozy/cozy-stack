@@ -39,11 +39,11 @@ const swiftV3ContainerPrefix = "cozy-v3-"
 //
 // This new V3 version uses only a single swift container per instance. We can
 // easily put the thumbnails in the same container that the data. And, for the
-// versioning, Swift Object Versioning is not what we want: it is as robust as
-// we expected (we had encoding issue with the V1 layout for file with `? ` in
-// the name), and it is poor in features (for example, we want to swap an old
-// version with the current version without having to download/upload contents,
-// and it is not supported).
+// versioning, Swift Object Versioning is not what we want: it is not as robust
+// as we expected (we had encoding issue with the V1 layout for file with `? `
+// in the name), and it is poor in features (for example, we want to swap an
+// old version with the current version without having to download/upload
+// contents, and it is not supported).
 func NewV3(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker) (vfs.VFS, error) {
 	return &swiftVFSV3{
 		Indexer:         index,
@@ -69,7 +69,7 @@ func newInternalID() string {
 // with no bound. And it appends the internalID at the end to regroup all the
 // versions of a file in the same virtual subfolder.
 func MakeObjectNameV3(docID, internalID string) string {
-	if len(docID) != 32 {
+	if len(docID) != 32 || len(internalID) != 16 {
 		return docID + "/" + internalID
 	}
 	return docID[:22] + "/" + docID[22:27] + "/" + docID[27:] + "/" + internalID
@@ -77,7 +77,11 @@ func MakeObjectNameV3(docID, internalID string) string {
 
 func makeDocIDV3(objName string) (string, string) {
 	if len(objName) != 51 {
-		return objName, ""
+		parts := strings.SplitN(objName, "/", 2)
+		if len(parts) < 2 {
+			return objName, ""
+		}
+		return parts[0], parts[1]
 	}
 	return objName[:22] + objName[23:28] + objName[29:34], objName[35:]
 }
