@@ -34,7 +34,7 @@ type Instance struct {
 		OnboardingFinished   bool      `json:"onboarding_finished"`
 		BytesDiskQuota       int64     `json:"disk_quota,string,omitempty"`
 		IndexViewsVersion    int       `json:"indexes_version"`
-		SwiftCluster         int       `json:"swift_cluster,omitempty"`
+		SwiftLayout          int       `json:"swift_cluster,omitempty"`
 		PassphraseResetToken []byte    `json:"passphrase_reset_token"`
 		PassphraseResetTime  time.Time `json:"passphrase_reset_time"`
 		RegisterToken        []byte    `json:"register_token,omitempty"`
@@ -54,7 +54,7 @@ type InstanceOptions struct {
 	Email              string
 	PublicName         string
 	Settings           string
-	SwiftCluster       int
+	SwiftLayout        int
 	DiskQuota          int64
 	Apps               []string
 	Passphrase         string
@@ -130,19 +130,19 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 		return nil, fmt.Errorf("Invalid domain: %s", opts.Domain)
 	}
 	q := url.Values{
-		"Domain":       {opts.Domain},
-		"Locale":       {opts.Locale},
-		"UUID":         {opts.UUID},
-		"TOSSigned":    {opts.TOSSigned},
-		"Timezone":     {opts.Timezone},
-		"ContextName":  {opts.ContextName},
-		"Email":        {opts.Email},
-		"PublicName":   {opts.PublicName},
-		"Settings":     {opts.Settings},
-		"SwiftCluster": {strconv.Itoa(opts.SwiftCluster)},
-		"DiskQuota":    {strconv.FormatInt(opts.DiskQuota, 10)},
-		"Apps":         {strings.Join(opts.Apps, ",")},
-		"Passphrase":   {opts.Passphrase},
+		"Domain":      {opts.Domain},
+		"Locale":      {opts.Locale},
+		"UUID":        {opts.UUID},
+		"TOSSigned":   {opts.TOSSigned},
+		"Timezone":    {opts.Timezone},
+		"ContextName": {opts.ContextName},
+		"Email":       {opts.Email},
+		"PublicName":  {opts.PublicName},
+		"Settings":    {opts.Settings},
+		"SwiftLayout": {strconv.Itoa(opts.SwiftLayout)},
+		"DiskQuota":   {strconv.FormatInt(opts.DiskQuota, 10)},
+		"Apps":        {strings.Join(opts.Apps, ",")},
+		"Passphrase":  {opts.Passphrase},
 	}
 	if opts.DomainAliases != nil {
 		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))
@@ -181,17 +181,16 @@ func (c *Client) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
 		return nil, fmt.Errorf("Invalid domain: %s", domain)
 	}
 	q := url.Values{
-		"Locale":       {opts.Locale},
-		"UUID":         {opts.UUID},
-		"TOSSigned":    {opts.TOSSigned},
-		"TOSLatest":    {opts.TOSLatest},
-		"Timezone":     {opts.Timezone},
-		"ContextName":  {opts.ContextName},
-		"Email":        {opts.Email},
-		"PublicName":   {opts.PublicName},
-		"Settings":     {opts.Settings},
-		"SwiftCluster": {strconv.Itoa(opts.SwiftCluster)},
-		"DiskQuota":    {strconv.FormatInt(opts.DiskQuota, 10)},
+		"Locale":      {opts.Locale},
+		"UUID":        {opts.UUID},
+		"TOSSigned":   {opts.TOSSigned},
+		"TOSLatest":   {opts.TOSLatest},
+		"Timezone":    {opts.Timezone},
+		"ContextName": {opts.ContextName},
+		"Email":       {opts.Email},
+		"PublicName":  {opts.PublicName},
+		"Settings":    {opts.Settings},
+		"DiskQuota":   {strconv.FormatInt(opts.DiskQuota, 10)},
 	}
 	if opts.DomainAliases != nil {
 		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))

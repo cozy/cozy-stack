@@ -37,7 +37,7 @@ $ cozy-stack instances add --passphrase cozy --apps drive,photos,settings cozy.t
       --passphrase string        Register the instance with this passphrase (useful for tests)
       --public-name string       The public name of the owner
       --settings string          A list of settings (eg context:foo,offer:premium)
-      --swift-cluster int        Specify a cluster number for swift
+      --swift-layout int         Specify the layout to use for Swift (from 0 for layout V1 to 2 for layout V3, -1 means the default) (default -1)
       --tos string               The TOS version signed
       --tz string                The timezone for the user
       --uuid string              The UUID of the instance

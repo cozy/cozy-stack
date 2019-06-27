@@ -69,11 +69,22 @@ func (c *couchdbIndexer) DiskUsage() (int64, error) {
 		return 0, nil
 	}
 	// Reduce of _count should give us a number value
-	f64, ok := doc.Rows[0].Value.(float64)
+	used, ok := doc.Rows[0].Value.(float64)
 	if !ok {
 		return 0, ErrWrongCouchdbState
 	}
-	return int64(f64), nil
+
+	// Count also the disk used by the old versions
+	err = couchdb.ExecView(c.db, couchdb.OldVersionsDiskUsageView, &couchdb.ViewRequest{
+		Reduce: true,
+	}, &doc)
+	if err == nil && len(doc.Rows) > 0 {
+		if more, ok := doc.Rows[0].Value.(float64); ok {
+			used += more
+		}
+	}
+
+	return int64(used), nil
 }
 
 func (c *couchdbIndexer) prepareFileDoc(doc *FileDoc) error {
@@ -172,10 +183,10 @@ func (c *couchdbIndexer) DeleteDirDoc(doc *DirDoc) error {
 	return couchdb.DeleteDoc(c.db, doc)
 }
 
-func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (n int64, ids []string, err error) {
-	var files []couchdb.Doc
+func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (files []*FileDoc, n int64, err error) {
+	var docs []couchdb.Doc
 	if !onlyContent {
-		files = append(files, doc)
+		docs = append(docs, doc)
 	}
 	err = walk(c, doc.Name(), doc, nil, func(name string, dir *DirDoc, file *FileDoc, err error) error {
 		if err != nil {
@@ -185,16 +196,16 @@ func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (
 			if dir.ID() == doc.ID() {
 				return nil
 			}
-			files = append(files, dir)
+			docs = append(docs, dir)
 		} else {
+			docs = append(docs, file)
 			files = append(files, file)
-			ids = append(ids, file.ID())
 			n += file.ByteSize
 		}
 		return err
 	}, 0)
 	if err == nil {
-		err = c.BatchDelete(files)
+		err = c.BatchDelete(docs)
 	}
 	return
 }
@@ -495,10 +506,26 @@ func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) 
 	return couchdb.BulkUpdateDocs(c.db, consts.Files, files, olddocs)
 }
 
-func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) (err error) {
+func (c *couchdbIndexer) CreateVersion(v *Version) error {
+	return couchdb.CreateNamedDocWithDB(c.db, v)
+}
+
+func (c *couchdbIndexer) DeleteVersion(v *Version) error {
+	return couchdb.DeleteDoc(c.db, v)
+}
+
+func (c *couchdbIndexer) BatchDeleteVersions(versions []*Version) error {
+	docs := make([]couchdb.Doc, len(versions))
+	for i, v := range versions {
+		docs[i] = v
+	}
+	return couchdb.BulkDeleteDocs(c.db, consts.FilesVersions, docs)
+}
+
+func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) error {
 	tree, err := c.BuildTree()
 	if err != nil {
-		return
+		return err
 	}
 
 	// cleanDirsMap browse the given root tree recursively into its children
@@ -536,7 +563,21 @@ func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) (err err
 		}
 	}
 
-	return
+	return couchdb.ForeachDocs(c.db, consts.FilesVersions, func(_ string, data json.RawMessage) error {
+		v := &Version{}
+		if erru := json.Unmarshal(data, v); erru != nil {
+			return erru
+		}
+		fileID := strings.SplitN(v.DocID, "/", 2)[0]
+		if _, ok := tree.Files[fileID]; !ok {
+			accumulate(&FsckLog{
+				Type:       FileMissing,
+				IsVersion:  true,
+				VersionDoc: v,
+			})
+		}
+		return nil
+	})
 }
 
 func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err error) {
@@ -544,6 +585,7 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 		Root:    nil,
 		Orphans: make(map[string][]*TreeFile, 32), // DirID -> *FileDoc
 		DirsMap: make(map[string]*TreeFile, 256),  // DocID -> *FileDoc
+		Files:   make(map[string]struct{}, 1024),  // DocID -> ∅
 	}
 
 	// NOTE: the each method is called with objects in no particular order. The
@@ -593,6 +635,8 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 				delete(t.Orphans, f.DocID)
 			}
 			t.DirsMap[f.DocID] = f
+		} else {
+			t.Files[f.DocID] = struct{}{}
 		}
 		return nil
 	})

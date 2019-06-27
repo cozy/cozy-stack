@@ -36,6 +36,9 @@ const (
 	// OrphansDirName is the path of the directory used to store data-files added
 	// in the index from a filesystem-check (fsck)
 	OrphansDirName = "/.cozy_orphans"
+	// VersionsDirName is the path of the directory where old versions of files
+	// are persisted.
+	VersionsDirName = "/.cozy_versions"
 )
 
 const (
@@ -65,6 +68,9 @@ type Fs interface {
 	// OpenFile return a file handler for reading associated with the given file
 	// document. The file handler implements io.ReadCloser and io.Seeker.
 	OpenFile(doc *FileDoc) (File, error)
+	// OpenFileVersion returns a file handler for reading the content of an old
+	// version of the given file.
+	OpenFileVersion(doc *FileDoc, version *Version) (File, error)
 	// CreateDir is used to create a new directory from its document.
 	CreateDir(doc *DirDoc) error
 	// CreateFile creates a new file or update the content of an existing file.
@@ -82,6 +88,10 @@ type Fs interface {
 	DestroyDirAndContent(doc *DirDoc) error
 	// DestroyFile  destroys a file from the trash.
 	DestroyFile(doc *FileDoc) error
+	// RevertFileVersion restores the content of a file from an old version.
+	// The current version of the content is not lost, but saved as another
+	// version.
+	RevertFileVersion(doc *FileDoc, version *Version) error
 
 	// Fsck return the list of inconsistencies in the VFS
 	Fsck(func(log *FsckLog)) (err error)
@@ -139,9 +149,9 @@ type Indexer interface {
 	// DeleteDirDoc removes from the index the specified directory document.
 	DeleteDirDoc(doc *DirDoc) error
 	// DeleteDirDocAndContent removes from the index the specified directory as
-	// well all its children. It returns the list of the children files ids that
+	// well all its children. It returns the list of the children files that
 	// were removed.
-	DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (int64, []string, error)
+	DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) ([]*FileDoc, int64, error)
 
 	// DirByID returns the directory document information associated with the
 	// specified identifier.
@@ -173,6 +183,12 @@ type Indexer interface {
 	DirLength(*DirDoc) (int, error)
 	DirChildExists(dirID, filename string) (bool, error)
 	BatchDelete([]couchdb.Doc) error
+
+	// CreateVersion adds a version to the CouchDB index.
+	CreateVersion(*Version) error
+	// DeleteVersion removes a version from the CouchDB index.
+	DeleteVersion(*Version) error
+	BatchDeleteVersions([]*Version) error
 
 	BuildTree(each ...func(*TreeFile)) (tree *Tree, err error)
 	CheckIndexIntegrity(func(*FsckLog)) error
@@ -259,6 +275,7 @@ type DirOrFileDoc struct {
 	Executable bool     `json:"executable,omitempty"`
 	Trashed    bool     `json:"trashed,omitempty"`
 	Metadata   Metadata `json:"metadata,omitempty"`
+	InternalID string   `json:"internal_vfs_id,omitempty"`
 }
 
 // Clone is part of the couchdb.Doc interface
@@ -291,6 +308,7 @@ func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {
 			Tags:         fd.Tags,
 			Metadata:     fd.Metadata,
 			ReferencedBy: fd.ReferencedBy,
+			InternalID:   fd.InternalID,
 		}
 	}
 	return nil, nil

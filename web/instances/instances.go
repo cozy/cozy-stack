@@ -81,8 +81,8 @@ func createHandler(c echo.Context) error {
 		}
 		opts.AutoUpdate = &b
 	}
-	if cluster := c.QueryParam("SwiftCluster"); cluster != "" {
-		opts.SwiftCluster, err = strconv.Atoi(cluster)
+	if layout := c.QueryParam("SwiftLayout"); layout != "" {
+		opts.SwiftLayout, err = strconv.Atoi(layout)
 		if err != nil {
 			return wrapError(err)
 		}
@@ -128,13 +128,6 @@ func modifyHandler(c echo.Context) error {
 	}
 	if domainAliases := c.QueryParam("DomainAliases"); domainAliases != "" {
 		opts.DomainAliases = strings.Split(domainAliases, ",")
-	}
-	if swiftCluster := c.QueryParam("SwiftCluster"); swiftCluster != "" {
-		i, err := strconv.ParseInt(swiftCluster, 10, 64)
-		if err != nil {
-			return wrapError(err)
-		}
-		opts.SwiftCluster = int(i)
 	}
 	if quota := c.QueryParam("DiskQuota"); quota != "" {
 		i, err := strconv.ParseInt(quota, 10, 64)
@@ -217,7 +210,7 @@ func fsckHandler(c echo.Context) (err error) {
 	for log := range logCh {
 		// XXX do not serialize to JSON the children, as it can take more than 64ko
 		// and scanner will ignore such lines
-		if !log.IsFile {
+		if !log.IsFile && !log.IsVersion {
 			log.DirDoc.DirsChildren = nil
 			log.DirDoc.FilesChildren = nil
 		}
@@ -512,20 +505,19 @@ func getSwiftBucketName(c echo.Context) error {
 	domain := c.Param("domain")
 
 	instance, err := lifecycle.GetInstance(domain)
-
 	if err != nil {
 		return err
 	}
+
+	var containerNames map[string]string
 	type swifter interface {
-		ContainersNames() map[string]string
+		ContainerNames() map[string]string
 	}
-
-	var containersNames map[string]string
 	if obj, ok := instance.VFS().(swifter); ok {
-		containersNames = obj.ContainersNames()
+		containerNames = obj.ContainerNames()
 	}
 
-	return c.JSON(http.StatusOK, containersNames)
+	return c.JSON(http.StatusOK, containerNames)
 }
 
 func lsContexts(c echo.Context) error {

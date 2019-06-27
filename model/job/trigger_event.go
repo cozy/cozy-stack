@@ -79,7 +79,7 @@ func (t *EventTrigger) Schedule() <-chan *JobRequest {
 			case e := <-sub.Channel:
 				found := false
 				for _, m := range t.mask {
-					if eventMatchPermission(e, &m) {
+					if eventMatchRule(e, &m) {
 						found = true
 						break
 					}
@@ -107,7 +107,7 @@ func (t *EventTrigger) Infos() *TriggerInfos {
 	return t.TriggerInfos
 }
 
-func eventMatchPermission(e *realtime.Event, rule *permission.Rule) bool {
+func eventMatchRule(e *realtime.Event, rule *permission.Rule) bool {
 	if e.Doc.DocType() != rule.Type {
 		return false
 	}
@@ -125,15 +125,17 @@ func eventMatchPermission(e *realtime.Event, rule *permission.Rule) bool {
 			return true
 		}
 		if e.Doc.DocType() == consts.Files {
-
 			for _, value := range rule.Values {
 				var dir vfs.DirDoc
 				if err := couchdb.GetDoc(e, consts.Files, value, &dir); err != nil {
-					logger.WithNamespace("event-trigger").Error(err)
-					return false
+					logger.WithNamespace("event-trigger").
+						Warnf("Cannot find io.cozy.files %s for trigger rule: %s", value, err)
+					continue
 				}
-				if dir.Type != consts.DirType { // The trigger was for a file, not a dir
-					return false
+				// The trigger value was for a file, not a dir, and it should
+				// match only on ID, not on path.
+				if dir.Type != consts.DirType {
+					continue
 				}
 				if testPath(&dir, e.Doc) {
 					return true
@@ -181,7 +183,7 @@ func testPath(dir *vfs.DirDoc, doc realtime.Doc) bool {
 	}
 	if f, ok := doc.(*vfs.FileDoc); ok {
 		if f.Trashed {
-			// XXX When a new file is uploaded, a document is created in
+			// XXX When a new file is uploaded, a document may be created in
 			// couchdb with trashed: true. We should ignore it.
 			if strings.HasPrefix(f.DocRev, "1-") {
 				return false

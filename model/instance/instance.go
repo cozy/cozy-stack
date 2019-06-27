@@ -54,9 +54,13 @@ type Instance struct {
 	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"`   // The total size in bytes allowed to the user
 	IndexViewsVersion  int   `json:"indexes_version"`
 
-	// Swift cluster number, indexed from 1. If not zero, it indicates we're
-	// using swift layout 2, see model/vfs/swift.
-	SwiftCluster int `json:"swift_cluster,omitempty"`
+	// Swift layout number:
+	// - 0 for layout v1
+	// - 1 for layout v2
+	// - 2 for layout v3
+	// It is called swift_cluster in CouchDB and indexed from 0 for legacy reasons.
+	// See model/vfs/vfsswift for more details.
+	SwiftLayout int `json:"swift_cluster,omitempty"`
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
@@ -177,10 +181,15 @@ func (i *Instance) MakeVFS() error {
 	case config.SchemeFile, config.SchemeMem:
 		i.vfs, err = vfsafero.New(i, index, disk, mutex, fsURL, i.DirName())
 	case config.SchemeSwift, config.SchemeSwiftSecure:
-		if i.SwiftCluster > 0 {
-			i.vfs, err = vfsswift.NewV2(i, index, disk, mutex)
-		} else {
+		switch i.SwiftLayout {
+		case 0:
 			i.vfs, err = vfsswift.New(i, index, disk, mutex)
+		case 1:
+			i.vfs, err = vfsswift.NewV2(i, index, disk, mutex)
+		case 2:
+			i.vfs, err = vfsswift.NewV3(i, index, disk, mutex)
+		default:
+			err = ErrInvalidSwiftLayout
 		}
 	default:
 		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
@@ -265,10 +274,16 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 		baseFS := vfsafero.GetMemFS(i.DomainName() + "-thumbs")
 		return vfsafero.NewThumbsFs(baseFS)
 	case config.SchemeSwift, config.SchemeSwiftSecure:
-		if i.SwiftCluster > 0 {
+		switch i.SwiftLayout {
+		case 0:
+			return vfsswift.NewThumbsFs(config.GetSwiftConnection(), i.Domain)
+		case 1:
 			return vfsswift.NewThumbsFsV2(config.GetSwiftConnection(), i)
+		case 2:
+			return vfsswift.NewThumbsFsV3(config.GetSwiftConnection(), i)
+		default:
+			panic(ErrInvalidSwiftLayout)
 		}
-		return vfsswift.NewThumbsFs(config.GetSwiftConnection(), i.Domain)
 	default:
 		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
 	}

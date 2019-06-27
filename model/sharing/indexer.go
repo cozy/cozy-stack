@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
@@ -135,6 +136,28 @@ func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
 		return s.indexer.CreateNamedFileDoc(doc)
 	}
 
+	// If the VFS creates the file by omitting the fake first revision with
+	// trashed=true, it is easy: we can insert the doc as is, and trigger the
+	// realtime event.
+	if !doc.Trashed {
+		// Ensure that fullpath is filled because it's used in realtime/@events
+		if _, err := doc.Path(s); err != nil {
+			logger.WithNamespace("sharing-indexer").
+				Errorf("Cannot compute fullpath for %#v: %s", doc, err)
+			return err
+		}
+		if err := s.bulkForceUpdateDoc(doc); err != nil {
+			return err
+		}
+		couchdb.RTEvent(s.db, realtime.EventCreate, doc, nil)
+		return nil
+	}
+
+	// But if the VFS creates a first fake revision, it will also create
+	// another revision after that to clear the trashed attribute when the
+	// upload will complete. It means using 2 revision numbers. So, we have to
+	// stash the target revision during the first write to keep it for the
+	// second write.
 	if len(s.bulkRevs.Revisions.IDs) == 1 {
 		s.CreateBogusPrevRev()
 	}
@@ -264,8 +287,8 @@ func (s *sharingIndexer) DeleteDirDoc(doc *vfs.DirDoc) error {
 	return ErrInternalServerError
 }
 
-func (s *sharingIndexer) DeleteDirDocAndContent(doc *vfs.DirDoc, onlyContent bool) (n int64, ids []string, err error) {
-	return 0, nil, ErrInternalServerError
+func (s *sharingIndexer) DeleteDirDocAndContent(doc *vfs.DirDoc, onlyContent bool) (files []*vfs.FileDoc, n int64, err error) {
+	return nil, 0, ErrInternalServerError
 }
 
 func (s *sharingIndexer) BatchDelete(docs []couchdb.Doc) error {
@@ -314,6 +337,18 @@ func (s *sharingIndexer) DirLength(doc *vfs.DirDoc) (int, error) {
 
 func (s *sharingIndexer) DirChildExists(dirID, name string) (bool, error) {
 	return s.indexer.DirChildExists(dirID, name)
+}
+
+func (s *sharingIndexer) CreateVersion(v *vfs.Version) error {
+	return s.indexer.CreateVersion(v)
+}
+
+func (s *sharingIndexer) DeleteVersion(v *vfs.Version) error {
+	return s.indexer.DeleteVersion(v)
+}
+
+func (s *sharingIndexer) BatchDeleteVersions(versions []*vfs.Version) error {
+	return s.indexer.BatchDeleteVersions(versions)
 }
 
 func (s *sharingIndexer) BuildTree(each ...func(*vfs.TreeFile)) (t *vfs.Tree, err error) {

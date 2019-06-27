@@ -901,7 +901,7 @@ func TestModifyContentConcurrently(t *testing.T) {
 	assert.True(t, len(successes) >= 1, "there is at least one success")
 
 	for i, s := range successes {
-		assert.True(t, strings.HasPrefix(s.rev, strconv.Itoa(i+3)+"-"))
+		assert.True(t, strings.HasPrefix(s.rev, strconv.Itoa(i+2)+"-"))
 	}
 
 	storage := testInstance.VFS()
@@ -1033,6 +1033,110 @@ func TestGetDirMetadataFromID(t *testing.T) {
 
 	res3, _ := httpGet(ts.URL + "/files/" + fileID)
 	assert.Equal(t, 200, res3.StatusCode)
+}
+
+func TestVersions(t *testing.T) {
+	res1, body1 := upload(t, "/files/?Type=file&Name=versioned", "text/plain", "one", "")
+	assert.Equal(t, 201, res1.StatusCode)
+	data1 := body1["data"].(map[string]interface{})
+	attr1 := data1["attributes"].(map[string]interface{})
+	sum1 := attr1["md5sum"]
+	fileID := data1["id"].(string)
+	res2, body2 := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
+	assert.Equal(t, 200, res2.StatusCode)
+	data2 := body2["data"].(map[string]interface{})
+	attr2 := data2["attributes"].(map[string]interface{})
+	sum2 := attr2["md5sum"]
+	res3, body3 := uploadMod(t, "/files/"+fileID, "text/plain", "three", "")
+	assert.Equal(t, 200, res3.StatusCode)
+	data3 := body3["data"].(map[string]interface{})
+	attr3 := data3["attributes"].(map[string]interface{})
+	sum3 := attr3["md5sum"]
+
+	res4, _ := httpGet(ts.URL + "/files/" + fileID)
+	assert.Equal(t, 200, res4.StatusCode)
+	var body map[string]interface{}
+	assert.NoError(t, json.NewDecoder(res4.Body).Decode(&body))
+	data := body["data"].(map[string]interface{})
+	attr := data["attributes"].(map[string]interface{})
+	assert.Equal(t, sum3, attr["md5sum"])
+
+	rels := data["relationships"].(map[string]interface{})
+	old := rels["old_versions"].(map[string]interface{})
+	refs := old["data"].([]interface{})
+	assert.Len(t, refs, 2)
+	first := refs[0].(map[string]interface{})
+	assert.Equal(t, consts.FilesVersions, first["type"])
+	oneID := first["id"]
+	second := refs[1].(map[string]interface{})
+	assert.Equal(t, consts.FilesVersions, second["type"])
+	twoID := second["id"]
+
+	included := body["included"].([]interface{})
+	vone := included[0].(map[string]interface{})
+	assert.Equal(t, oneID, vone["id"])
+	attrv1 := vone["attributes"].(map[string]interface{})
+	assert.Equal(t, sum1, attrv1["md5sum"])
+	vtwo := included[1].(map[string]interface{})
+	assert.Equal(t, twoID, vtwo["id"])
+	attrv2 := vtwo["attributes"].(map[string]interface{})
+	assert.Equal(t, sum2, attrv2["md5sum"])
+}
+
+func TestDownloadVersion(t *testing.T) {
+	content := "one"
+	res1, body1 := upload(t, "/files/?Type=file&Name=downloadme-versioned", "text/plain", content, "")
+	assert.Equal(t, 201, res1.StatusCode)
+	data := body1["data"].(map[string]interface{})
+	fileID := data["id"].(string)
+	meta := data["meta"].(map[string]interface{})
+	firstRev := meta["rev"].(string)
+
+	res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
+	assert.Equal(t, 200, res2.StatusCode)
+
+	res3, resbody := download(t, "/files/download/"+fileID+"/"+firstRev, "")
+	assert.Equal(t, 200, res3.StatusCode)
+	assert.True(t, strings.HasPrefix(res3.Header.Get("Content-Disposition"), "inline"))
+	assert.True(t, strings.Contains(res3.Header.Get("Content-Disposition"), `filename="downloadme-versioned"`))
+	assert.True(t, strings.HasPrefix(res3.Header.Get("Content-Type"), "text/plain"))
+	assert.Equal(t, content, string(resbody))
+}
+
+func TestRevertVersion(t *testing.T) {
+	content := "one"
+	res1, body1 := upload(t, "/files/?Type=file&Name=downloadme-reverted", "text/plain", content, "")
+	assert.Equal(t, 201, res1.StatusCode)
+	data := body1["data"].(map[string]interface{})
+	fileID := data["id"].(string)
+
+	res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
+	assert.Equal(t, 200, res2.StatusCode)
+
+	res3, _ := httpGet(ts.URL + "/files/" + fileID)
+	assert.Equal(t, 200, res3.StatusCode)
+	var body map[string]interface{}
+	assert.NoError(t, json.NewDecoder(res3.Body).Decode(&body))
+	data = body["data"].(map[string]interface{})
+	rels := data["relationships"].(map[string]interface{})
+	old := rels["old_versions"].(map[string]interface{})
+	refs := old["data"].([]interface{})
+	assert.Len(t, refs, 1)
+	version := refs[0].(map[string]interface{})
+	versionID := version["id"].(string)
+
+	req4, _ := http.NewRequest("POST", ts.URL+"/files/revert/"+versionID, strings.NewReader(""))
+	req4.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res4, err := http.DefaultClient.Do(req4)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res4.StatusCode)
+
+	res5, resbody := download(t, "/files/download/"+fileID, "")
+	assert.Equal(t, 200, res5.StatusCode)
+	assert.True(t, strings.HasPrefix(res5.Header.Get("Content-Disposition"), "inline"))
+	assert.True(t, strings.Contains(res5.Header.Get("Content-Disposition"), `filename="downloadme-reverted"`))
+	assert.True(t, strings.HasPrefix(res5.Header.Get("Content-Type"), "text/plain"))
+	assert.Equal(t, content, string(resbody))
 }
 
 func TestArchiveNoFiles(t *testing.T) {

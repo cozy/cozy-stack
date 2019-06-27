@@ -357,15 +357,15 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "meta": {
-      "rev": "1-0e6d5b72"
+      "rev": "4-1482b88a"
     },
     "attributes": {
       "type": "file",
       "name": "sunset.jpg",
       "trashed": false,
       "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
-      "created_at": "2016-09-18T01:23:45Z",
-      "updated_at": "2016-09-19T12:38:04Z",
+      "created_at": "2016-09-18T20:38:04Z",
+      "updated_at": "2016-09-21T12:38:04Z",
       "tags": [],
       "metadata": {
         "datetime": "2016-09-18T20:38:04Z",
@@ -382,8 +382,8 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
         "createdAt": "2016-09-20T18:32:49Z",
         "createdByApp": "drive",
         "createdOn": "https://cozy.example.com/",
-        "updatedAt": "2016-09-20T18:32:49Z",
-        "uploadedAt": "2016-09-20T18:32:49Z",
+        "updatedAt": "2016-09-21T14:46:37Z",
+        "uploadedAt": "2016-09-20T18:37:52Z",
         "uploadedOn": "https://cozy.example.com/",
         "uploadedBy": {
           "slug": "drive"
@@ -410,6 +410,18 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
             "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
           }
         ]
+      },
+      "old_versions": {
+        "data": [
+          {
+            "type": "io.cozy.files.versions",
+            "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/2-fa3a3bec"
+          },
+          {
+            "type": "io.cozy.files.versions",
+            "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72"
+          }
+        ]
       }
     },
     "links": {
@@ -418,7 +430,63 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
       "medium": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/medium",
       "large": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/large"
     }
-  }
+  },
+  "included": [
+    {
+      "type": "io.cozy.files.versions",
+      "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/2-fa3a3bec",
+      "meta": {
+        "rev": "1-26a331"
+      },
+      "attributes": {
+        "file_id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+        "updated_at": "2016-09-21T10:11:12Z",
+        "md5sum": "a2lth5syMW+4r7jwNhdk3A==",
+        "size": 123456,
+        "tags": [],
+        "cozyMetadata": {
+          "doctypeVersion": "1",
+          "metadataVersion": 1,
+          "createdAt": "2016-09-20T18:37:52Z",
+          "createdByApp": "drive",
+          "createdOn": "https://cozy.example.com/",
+          "updatedAt": "2016-09-20T18:37:52Z",
+          "uploadedAt": "2016-09-20T18:37:52Z",
+          "uploadedOn": "https://cozy.example.com/",
+          "uploadedBy": {
+            "slug": "drive"
+          }
+        }
+      }
+    },
+    {
+      "type": "io.cozy.files.versions",
+      "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72",
+      "meta": {
+        "rev": "1-57b3e2"
+      },
+      "attributes": {
+        "file_id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+        "updated_at": "2016-09-18T20:38:04Z",
+        "md5sum": "FBA89XXOZKFhdv37iILb2Q==",
+        "size": 159753,
+        "tags": [],
+        "cozyMetadata": {
+          "doctypeVersion": "1",
+          "metadataVersion": 1,
+          "createdAt": "2016-09-20T18:32:49Z",
+          "createdByApp": "drive",
+          "createdOn": "https://cozy.example.com/",
+          "updatedAt": "2016-09-20T18:32:49Z",
+          "uploadedAt": "2016-09-20T18:32:49Z",
+          "uploadedOn": "https://cozy.example.com/",
+          "uploadedBy": {
+            "slug": "drive"
+          }
+        }
+      }
+    }
+  ]
 }
 ```
 
@@ -508,6 +576,19 @@ By default the `content-disposition` will be `inline`, but it will be
 
 ```http
 GET /files/download?Path=/Documents/hello.txt&Dl=1 HTTP/1.1
+```
+
+### GET /files/download/:file-id/:version-id
+
+Download an old version of the file content
+
+By default the `content-disposition` will be `inline`, but it will be
+`attachment` if the query string contains the parameter `Dl=1`
+
+#### Request
+
+```http
+GET /files/download/9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72 HTTP/1.1
 ```
 
 ### GET /files/:file-id/thumbnails/:secret/:format
@@ -794,6 +875,42 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     },
     "links": {
       "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
+    }
+  }
+}
+```
+
+### POST /files/revert/:file-id/:version-id
+
+This endpoint can be used to revert to an old version of the content for a
+file.
+
+#### Request
+
+```http
+POST /files/revert/9152d568-7e7c-11e6-a377-37cbfb190b4b/2-fa3a3bec HTTP/1.1
+```
+
+### PATCH /files/:file-id/:version-id
+
+This endpoint can be used to edit the tags of a previous version of the file.
+
+#### Request
+
+```http
+PATCH /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72 HTTP/1.1
+Accept: application/vnd.api+json
+Content-Type: application/vnd.api+json
+```
+
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files.versions",
+    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72",
+    "attributes": {
+      "tags": ["poem"]
     }
   }
 }

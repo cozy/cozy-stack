@@ -32,7 +32,7 @@ type Options struct {
 	SettingsObj    *couchdb.JSONDoc
 	AuthMode       string
 	Passphrase     string
-	SwiftCluster   int
+	SwiftLayout    int
 	DiskQuota      int64
 	Apps           []string
 	AutoUpdate     *bool
@@ -98,11 +98,11 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	i.OAuthSecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
 	i.CLISecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
 
-	// If not cluster number is given, we rely on cluster one.
-	if opts.SwiftCluster == 0 {
-		i.SwiftCluster = 1
+	if 0 <= opts.SwiftLayout && opts.SwiftLayout <= 2 {
+		i.SwiftLayout = opts.SwiftLayout
 	} else {
-		i.SwiftCluster = opts.SwiftCluster
+		// By default, use the Swift layout v3, which has the number 2
+		i.SwiftLayout = 2
 	}
 
 	if opts.AuthMode != "" {

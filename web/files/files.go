@@ -228,7 +228,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 			err = WrapVfsError(err)
 			return
 		}
-		err = fileData(c, http.StatusOK, newdoc, nil)
+		err = fileData(c, http.StatusOK, newdoc, true, nil)
 	}()
 
 	_, err = io.Copy(file, c.Request().Body)
@@ -418,7 +418,7 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	if dir != nil {
 		return dirData(c, http.StatusOK, dir)
 	}
-	return fileData(c, http.StatusOK, file, nil)
+	return fileData(c, http.StatusOK, file, false, nil)
 }
 
 func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*jsonapi.Error, err error) {
@@ -498,7 +498,7 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 	if dir != nil {
 		return dirData(c, http.StatusOK, dir)
 	}
-	return fileData(c, http.StatusOK, file, nil)
+	return fileData(c, http.StatusOK, file, true, nil)
 }
 
 // GetChildrenHandler returns a list of children of a folder
@@ -538,7 +538,7 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 	if dir != nil {
 		return dirData(c, http.StatusOK, dir)
 	}
-	return fileData(c, http.StatusOK, file, nil)
+	return fileData(c, http.StatusOK, file, true, nil)
 }
 
 // ReadFileContentFromIDHandler handles all GET requests on /files/:file-id
@@ -561,12 +561,69 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 	if c.QueryParam("Dl") == "1" {
 		disposition = "attachment"
 	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
+	err = vfs.ServeFileContent(instance.VFS(), doc, nil, disposition, c.Request(), c.Response())
 	if err != nil {
 		return WrapVfsError(err)
 	}
 
 	return nil
+}
+
+// ReadFileContentFromVersion handles the download of an old version of the
+// file content.
+func ReadFileContentFromVersion(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	doc, err := instance.VFS().FileByID(c.Param("file-id"))
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	err = checkPerm(c, permission.GET, nil, doc)
+	if err != nil {
+		return err
+	}
+
+	version, err := vfs.FindVersion(instance, doc.DocID+"/"+c.Param("version-id"))
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	disposition := "inline"
+	if c.QueryParam("Dl") == "1" {
+		disposition = "attachment"
+	}
+	err = vfs.ServeFileContent(instance.VFS(), doc, version, disposition, c.Request(), c.Response())
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	return nil
+}
+
+// RevertFileVersion restores an old version of the file content.
+func RevertFileVersion(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	doc, err := inst.VFS().FileByID(c.Param("file-id"))
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	if err = checkPerm(c, permission.POST, nil, doc); err != nil {
+		return err
+	}
+
+	version, err := vfs.FindVersion(inst, doc.DocID+"/"+c.Param("version-id"))
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	if err = inst.VFS().RevertFileVersion(doc, version); err != nil {
+		return WrapVfsError(err)
+	}
+
+	return fileData(c, http.StatusOK, doc, true, nil)
 }
 
 // HeadDirOrFile handles HEAD requests on directory or file to check their
@@ -667,7 +724,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 			middlewares.AppendCSPRule(c, "frame-ancestors", "*")
 		}
 	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
+	err = vfs.ServeFileContent(instance.VFS(), doc, nil, disposition, c.Request(), c.Response())
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -767,7 +824,7 @@ func FileDownloadCreateHandler(c echo.Context) error {
 		Related: "/files/downloads/" + secret + "/" + doc.DocName,
 	}
 
-	return fileData(c, http.StatusOK, doc, links)
+	return fileData(c, http.StatusOK, doc, false, links)
 }
 
 // ArchiveDownloadHandler handles requests to /files/archive/:secret/whatever.zip
@@ -842,7 +899,7 @@ func TrashHandler(c echo.Context) error {
 	if errt != nil {
 		return WrapVfsError(errt)
 	}
-	return fileData(c, http.StatusOK, doc, nil)
+	return fileData(c, http.StatusOK, doc, false, nil)
 }
 
 // ReadTrashFilesHandler handle GET requests on /files/trash and return the
@@ -894,7 +951,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 	if errt != nil {
 		return WrapVfsError(errt)
 	}
-	return fileData(c, http.StatusOK, doc, nil)
+	return fileData(c, http.StatusOK, doc, false, nil)
 }
 
 // ClearTrashHandler handles DELETE request to clear the trash
@@ -1063,6 +1120,10 @@ func Routes(router *echo.Group) {
 	router.GET("/download", ReadFileContentFromPathHandler)
 	router.HEAD("/download/:file-id", ReadFileContentFromIDHandler)
 	router.GET("/download/:file-id", ReadFileContentFromIDHandler)
+
+	router.HEAD("/download/:file-id/:version-id", ReadFileContentFromVersion)
+	router.GET("/download/:file-id/:version-id", ReadFileContentFromVersion)
+	router.POST("/revert/:file-id/:version-id", RevertFileVersion)
 
 	router.POST("/_find", FindFilesMango)
 

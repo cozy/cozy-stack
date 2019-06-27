@@ -31,6 +31,7 @@ var blackList = map[string]bool{
 	consts.Apps:           readable,
 	consts.Konnectors:     readable,
 	consts.Files:          readable,
+	consts.FilesVersions:  readable,
 	consts.Notifications:  readable,
 	consts.RemoteRequests: readable,
 	consts.SessionsLogins: readable,

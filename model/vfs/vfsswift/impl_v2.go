@@ -6,14 +6,12 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -37,8 +35,8 @@ type swiftVFSV2 struct {
 }
 
 const (
-	swiftV2ContainerPrefixCozy = "cozy-v2-"
-	swiftV2ContainerPrefixData = "data-v2-"
+	swiftV2ContainerPrefixCozy = "cozy-v2-" // The main container
+	swiftV2ContainerPrefixData = "data-v2-" // For thumbnails
 )
 
 // NewV2 returns a vfs.VFS instance associated with the specified indexer and
@@ -102,7 +100,7 @@ func (sfs *swiftVFSV2) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
 	}
 }
 
-func (sfs *swiftVFSV2) ContainersNames() map[string]string {
+func (sfs *swiftVFSV2) ContainerNames() map[string]string {
 	m := map[string]string{
 		"container":      sfs.container,
 		"version":        sfs.version,
@@ -164,42 +162,16 @@ func (sfs *swiftVFSV2) Delete() error {
 			sfs.container, err)
 	}
 	var errm error
-	if err = sfs.deleteContainer(sfs.version); err != nil {
+	if err = deleteContainer(sfs.c, sfs.version); err != nil {
 		errm = multierror.Append(errm, err)
 	}
-	if err = sfs.deleteContainer(sfs.container); err != nil {
+	if err = deleteContainer(sfs.c, sfs.container); err != nil {
 		errm = multierror.Append(errm, err)
 	}
-	if err = sfs.deleteContainer(sfs.dataContainer); err != nil {
+	if err = deleteContainer(sfs.c, sfs.dataContainer); err != nil {
 		errm = multierror.Append(errm, err)
 	}
 	return errm
-}
-
-func (sfs *swiftVFSV2) deleteContainer(container string) error {
-	_, _, err := sfs.c.Container(container)
-	if err == swift.ContainerNotFound {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	objectNames, err := sfs.c.ObjectNamesAll(container, nil)
-	if err != nil {
-		return err
-	}
-	for len(objectNames) > 0 {
-		objectToDelete := objectNames
-		if len(objectToDelete) > 8000 {
-			objectToDelete = objectToDelete[:8000]
-		}
-		_, err = sfs.c.BulkDelete(container, objectToDelete)
-		if err != nil {
-			return err
-		}
-		objectNames = objectNames[len(objectToDelete):]
-	}
-	return sfs.c.ContainerDelete(container)
 }
 
 func (sfs *swiftVFSV2) CreateDir(doc *vfs.DirDoc) error {
@@ -334,22 +306,23 @@ func (sfs *swiftVFSV2) DestroyDirContent(doc *vfs.DirDoc) error {
 	}
 	defer sfs.mu.Unlock()
 	diskUsage, _ := sfs.Indexer.DiskUsage()
-	destroyed, ids, err := sfs.Indexer.DeleteDirDocAndContent(doc, true)
+	files, destroyed, err := sfs.Indexer.DeleteDirDocAndContent(doc, true)
 	if err != nil {
 		return err
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
-	objNames := make([]string, len(ids))
-	for i, id := range ids {
-		objNames[i] = MakeObjectName(id)
+	objNames := make([]string, len(files))
+	for i, file := range files {
+		objNames[i] = MakeObjectName(file.DocID)
+		_ = sfs.destroyFileVersions(objNames[i])
 	}
 	_, err = sfs.c.BulkDelete(sfs.container, objNames)
 	if err == swift.Forbidden {
 		sfs.log.Infof("DestroyDirContent failed on BulkDelete: %s", err)
 		err = nil
 		for _, objName := range objNames {
-			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil {
-				sfs.log.Infof("DestroyDirContent failed on ObjectDelete: %s", err)
+			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil && errd != nil {
+				sfs.log.Infof("DestroyDirContent failed on ObjectDelete: %s", errd)
 				err = errd
 			}
 		}
@@ -363,22 +336,23 @@ func (sfs *swiftVFSV2) DestroyDirAndContent(doc *vfs.DirDoc) error {
 	}
 	defer sfs.mu.Unlock()
 	diskUsage, _ := sfs.Indexer.DiskUsage()
-	destroyed, ids, err := sfs.Indexer.DeleteDirDocAndContent(doc, false)
+	files, destroyed, err := sfs.Indexer.DeleteDirDocAndContent(doc, false)
 	if err != nil {
 		return err
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
-	objNames := make([]string, len(ids))
-	for i, id := range ids {
-		objNames[i] = MakeObjectName(id)
+	objNames := make([]string, len(files))
+	for i, file := range files {
+		objNames[i] = MakeObjectName(file.DocID)
+		_ = sfs.destroyFileVersions(objNames[i])
 	}
 	_, err = sfs.c.BulkDelete(sfs.container, objNames)
 	if err == swift.Forbidden {
 		sfs.log.Infof("DestroyDirAndContent failed on BulkDelete: %s", err)
 		err = nil
 		for _, objName := range objNames {
-			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil {
-				sfs.log.Infof("DestroyDirAndContent failed on ObjectDelete: %s", err)
+			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil && errd != nil {
+				sfs.log.Infof("DestroyDirAndContent failed on ObjectDelete: %s", errd)
 				err = errd
 			}
 		}
@@ -441,71 +415,14 @@ func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &swiftFileOpenV2{f, nil}, nil
 }
 
-func (sfs *swiftVFSV2) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
-	entries := make(map[string]*vfs.TreeFile, 1024)
-	_, err = sfs.BuildTree(func(f *vfs.TreeFile) {
-		if !f.IsDir {
-			entries[f.DocID] = f
-		}
-	})
-	if err != nil {
-		return
-	}
+func (sfs *swiftVFSV2) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vfs.File, error) {
+	// The versioning is not implemented in Swift layout v2
+	return nil, os.ErrNotExist
+}
 
-	err = sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
-		var objs []swift.Object
-		objs, err = sfs.c.Objects(sfs.container, opts)
-		if err != nil {
-			return nil, err
-		}
-		for _, obj := range objs {
-			docID := makeDocID(obj.Name)
-			f, ok := entries[docID]
-			if !ok {
-				accumulate(&vfs.FsckLog{
-					Type:    vfs.IndexMissing,
-					IsFile:  true,
-					FileDoc: objectToFileDocV2(sfs.container, obj),
-				})
-			} else {
-				var md5sum []byte
-				md5sum, err = hex.DecodeString(obj.Hash)
-				if err != nil {
-					return nil, err
-				}
-				if !bytes.Equal(md5sum, f.MD5Sum) || f.ByteSize != obj.Bytes {
-					accumulate(&vfs.FsckLog{
-						Type:    vfs.ContentMismatch,
-						IsFile:  true,
-						FileDoc: f,
-						ContentMismatch: &vfs.FsckContentMismatch{
-							SizeFile:    obj.Bytes,
-							SizeIndex:   f.ByteSize,
-							MD5SumFile:  md5sum,
-							MD5SumIndex: f.MD5Sum,
-						},
-					})
-				}
-				delete(entries, docID)
-			}
-		}
-		return objs, err
-	})
-	if err != nil {
-		return
-	}
-
-	// entries should contain only data that does not contain an associated
-	// index.
-	for _, f := range entries {
-		accumulate(&vfs.FsckLog{
-			Type:    vfs.FileMissing,
-			IsFile:  true,
-			FileDoc: f,
-		})
-	}
-
-	return
+func (sfs *swiftVFSV2) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version) error {
+	// The versioning is not implemented in Swift layout v2
+	return os.ErrNotExist
 }
 
 // UpdateFileDoc calls the indexer UpdateFileDoc function and adds a few checks
@@ -808,30 +725,6 @@ func (f *swiftFileOpenV2) Write(p []byte) (int, error) {
 
 func (f *swiftFileOpenV2) Close() error {
 	return f.f.Close()
-}
-
-func objectToFileDocV2(container string, object swift.Object) *vfs.TreeFile {
-	md5sum, _ := hex.DecodeString(object.Hash)
-	name := "unknown"
-	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
-	return &vfs.TreeFile{
-		DirOrFileDoc: vfs.DirOrFileDoc{
-			DirDoc: &vfs.DirDoc{
-				Type:      consts.FileType,
-				DocID:     makeDocID(object.Name),
-				DocName:   name,
-				DirID:     "",
-				CreatedAt: object.LastModified,
-				UpdatedAt: object.LastModified,
-				Fullpath:  path.Join(vfs.OrphansDirName, name),
-			},
-			ByteSize:   object.Bytes,
-			Mime:       mime,
-			Class:      class,
-			Executable: false,
-			MD5Sum:     md5sum,
-		},
-	}
 }
 
 var (

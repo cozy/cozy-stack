@@ -16,8 +16,9 @@ const (
 	// IndexBadFullpath used when a directory does not have the correct path
 	// field given its position in the index.
 	IndexBadFullpath FsckLogType = "index_bad_fullpath"
-	// FileMissing used when a file data is missing from its index entry.
-	FileMissing FsckLogType = "file_missing"
+	// FSMissing used when a file data is missing on the filesystem from its
+	// index entry.
+	FSMissing FsckLogType = "filesystem_missing"
 	// IndexMissing is used when the index entry is missing from a file data.
 	IndexMissing FsckLogType = "index_missing"
 	// TypeMismatch is used when a document type does not match in the index and
@@ -26,6 +27,9 @@ const (
 	// ContentMismatch is used when a document content checksum does not match
 	// with the one in the underlying fs.
 	ContentMismatch FsckLogType = "content_mismatch"
+	// FileMissing is used when a version is present for a file that is not in
+	// the index.
+	FileMissing = "file_missing"
 )
 
 // FsckLog is a struct for an inconsistency in the VFS
@@ -33,7 +37,9 @@ type FsckLog struct {
 	Type             FsckLogType          `json:"type"`
 	FileDoc          *TreeFile            `json:"file_doc,omitempty"`
 	DirDoc           *TreeFile            `json:"dir_doc,omitempty"`
+	VersionDoc       *Version             `json:"version_doc,omitempty"`
 	IsFile           bool                 `json:"is_file"`
+	IsVersion        bool                 `json:"is_version"`
 	ContentMismatch  *FsckContentMismatch `json:"content_mismatch,omitempty"`
 	ExpectedFullpath string               `json:"expected_fullpath,omitempty"`
 }
@@ -50,7 +56,7 @@ func (f *FsckLog) String() string {
 		return "the directory's parent is missing from the index: orphan tree"
 	case IndexBadFullpath:
 		return "the directory does not have the correct path information given its position in the index"
-	case FileMissing:
+	case FSMissing:
 		if f.IsFile {
 			return "the file is present in the index but not on the filesystem"
 		}
@@ -64,6 +70,8 @@ func (f *FsckLog) String() string {
 		return "the document is present on the local filesystem but not in the index"
 	case ContentMismatch:
 		return "the document content does not match the store content checksum"
+	case FileMissing:
+		return "the document is a version whose file is not present in the index"
 	}
 	panic("bad FsckLog type")
 }
@@ -85,6 +93,7 @@ type Tree struct {
 	Root    *TreeFile
 	DirsMap map[string]*TreeFile
 	Orphans map[string][]*TreeFile
+	Files   map[string]struct{}
 }
 
 // TreeFile represent a subset of a file/directory structure that can be used

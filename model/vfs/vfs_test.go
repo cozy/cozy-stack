@@ -515,72 +515,6 @@ func TestIterator(t *testing.T) {
 	assert.EqualValues(t, children1, children2)
 }
 
-func TestFileCollision(t *testing.T) {
-	fileDoc1, err := vfs.NewFileDoc("collision", consts.RootDirID, 10, nil, "text", "text/plain", time.Now(), false, false, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	file1, err := fs.CreateFile(fileDoc1, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	_, err = file1.Write(crypto.GenerateRandomBytes(10))
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	fileDoc2, err := vfs.NewFileDoc("collision", consts.RootDirID, 10, nil, "text", "text/plain", time.Now(), false, false, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	file2, err := fs.CreateFile(fileDoc2, nil)
-	assert.Error(t, err)
-	assert.True(t, os.IsExist(err))
-	assert.Nil(t, file2)
-
-	fileDoc3, err := vfs.NewFileDoc("to-be-collision", consts.RootDirID, 10, nil, "text", "text/plain", time.Now(), false, false, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	file3, err := fs.CreateFile(fileDoc3, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	_, err = file3.Write(crypto.GenerateRandomBytes(10))
-	if !assert.NoError(t, err) {
-		return
-	}
-	if !assert.NoError(t, file3.Close()) {
-		return
-	}
-
-	fileDoc4, err := vfs.NewFileDoc("collision", consts.RootDirID, 10, nil, "text", "text/plain", time.Now(), false, false, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	file4, err := fs.CreateFile(fileDoc4, fileDoc3)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	_, err = file4.Write(crypto.GenerateRandomBytes(10))
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	err = file1.Close()
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	err = file4.Close()
-	if !assert.NoError(t, err) {
-		return
-	}
-}
-
 func TestContentDisposition(t *testing.T) {
 	foo := vfs.ContentDisposition("inline", "foo.jpg")
 	assert.Equal(t, `inline; filename="foo.jpg"`, foo)
@@ -613,7 +547,7 @@ func TestArchive(t *testing.T) {
 			},
 		},
 	}
-	_, err := createTree(tree, consts.RootDirID)
+	dirdoc, err := createTree(tree, consts.RootDirID)
 	assert.NoError(t, err)
 
 	foobar, err := fs.FileByPath("/archive/foobar.jpg")
@@ -654,6 +588,7 @@ func TestArchive(t *testing.T) {
 		"test/bar/baz/two.png": nil,
 		"test/bar/z.gif":       nil,
 	}, zipfiles)
+	assert.NoError(t, fs.DestroyDirAndContent(dirdoc))
 }
 
 func TestCreateFileTooBig(t *testing.T) {
@@ -783,7 +718,7 @@ func TestMain(m *testing.M) {
 	res1 := m.Run()
 	rollback()
 
-	fs, rollback, err = makeSwiftFS(true)
+	fs, rollback, err = makeSwiftFS(0)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -791,7 +726,7 @@ func TestMain(m *testing.M) {
 	res2 := m.Run()
 	rollback()
 
-	fs, rollback, err = makeSwiftFS(false)
+	fs, rollback, err = makeSwiftFS(1)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -799,7 +734,15 @@ func TestMain(m *testing.M) {
 	res3 := m.Run()
 	rollback()
 
-	os.Exit(res1 + res2 + res3)
+	fs, rollback, err = makeSwiftFS(2)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	res4 := m.Run()
+	rollback()
+
+	os.Exit(res1 + res2 + res3 + res4)
 }
 
 func makeAferoFS() (vfs.VFS, func(), error) {
@@ -841,7 +784,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 	}, nil
 }
 
-func makeSwiftFS(layoutV2 bool) (vfs.VFS, func(), error) {
+func makeSwiftFS(layout int) (vfs.VFS, func(), error) {
 	db := prefixer.NewPrefixer("io.cozy.vfs.test", "io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
@@ -861,12 +804,16 @@ func makeSwiftFS(layoutV2 bool) (vfs.VFS, func(), error) {
 	}
 
 	var swiftFs vfs.VFS
-	if layoutV2 {
-		swiftFs, err = vfsswift.NewV2(db,
-			index, &diskImpl{}, lock.ReadWrite(db, "vfs-swiftv2-test"))
-	} else {
+	switch layout {
+	case 0:
 		swiftFs, err = vfsswift.New(db,
 			index, &diskImpl{}, lock.ReadWrite(db, "vfs-swift-test"))
+	case 1:
+		swiftFs, err = vfsswift.NewV2(db,
+			index, &diskImpl{}, lock.ReadWrite(db, "vfs-swiftv2-test"))
+	case 2:
+		swiftFs, err = vfsswift.NewV3(db,
+			index, &diskImpl{}, lock.ReadWrite(db, "vfs-swiftv3-test"))
 	}
 	if err != nil {
 		return nil, nil, err
