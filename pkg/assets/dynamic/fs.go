@@ -145,12 +145,11 @@ func (a *AferoFS) List() (map[string][]*model.Asset, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	for _, context := range entries {
 		ctxName := context.Name()
 		ctxPath := filepath.Join(a.folder.Path, ctxName)
 
-		err := filepath.Walk(a.folder.Path, func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(ctxPath, func(path string, info os.FileInfo, err error) error {
 			if !info.IsDir() {
 				assetName := strings.Replace(path, ctxPath, "", 1)
 				asset, err := GetAsset(ctxName, assetName)
