@@ -56,6 +56,7 @@ func GetAsset(context, name string) (*model.Asset, error) {
 	if err != nil {
 		return nil, err
 	}
+	gw.Close()
 	zippedContent := zippedDataBuf.Bytes()
 
 	asset := model.NewAsset(model.AssetOption{
