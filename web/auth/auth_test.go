@@ -1720,6 +1720,31 @@ func TestPassphraseOnboardingBadRegisterToken(t *testing.T) {
 
 }
 
+func TestLoginOnboardingNotFinished(t *testing.T) {
+	// Should render need_onboarding
+	d := "test.cozycloud.cc.web_login_onboarding_not_finished"
+	_ = lifecycle.Destroy(d)
+	inst, err := lifecycle.Create(&lifecycle.Options{
+		Domain: d,
+		Locale: "en",
+		Email:  "alice@example.com",
+	})
+	assert.NoError(t, err)
+	assert.False(t, inst.OnboardingFinished)
+
+	// Should redirect to /auth/passphrase
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
+	req.Host = inst.Domain
+	res, err := client.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	content, _ := ioutil.ReadAll(res.Body)
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Contains(t, string(content), "Your Cozy has not been yet activated.")
+
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	conf := config.GetConfig()

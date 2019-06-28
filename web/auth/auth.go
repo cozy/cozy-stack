@@ -499,8 +499,8 @@ func Routes(router *echo.Group) {
 	})
 
 	// Login/logout
-	router.GET("/login", loginForm, noCSRF)
-	router.POST("/login", login, noCSRF)
+	router.GET("/login", loginForm, noCSRF, middlewares.CheckOnboardingNotFinished)
+	router.POST("/login", login, noCSRF, middlewares.CheckOnboardingNotFinished)
 	router.DELETE("/login/others", logoutOthers)
 	router.OPTIONS("/login/others", logoutPreflight)
 	router.DELETE("/login", logout)
