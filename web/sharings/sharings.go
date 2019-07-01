@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -544,6 +545,12 @@ func checkCreatePermissions(c echo.Context, s *sharing.Sharing) (string, error) 
 		}
 	}
 	if requestPerm.Type == permission.TypeOauth {
+		if requestPerm.Client != nil {
+			oauthClient := requestPerm.Client.(*oauth.Client)
+			if slug := oauth.GetLinkedAppSlug(oauthClient.SoftwareID); slug != "" {
+				return slug, nil
+			}
+		}
 		return "", nil
 	}
 	return extractSlugFromSourceID(requestPerm.SourceID)
