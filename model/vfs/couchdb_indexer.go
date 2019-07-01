@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -220,7 +221,12 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 	docs := make([]interface{}, 0, limit)
 	olddocs := make([]interface{}, 0, limit)
 
-	for {
+	logger.WithDomain(c.db.DomainName()).WithField("nspace", "vfs-indexer").
+		Infof("Move dir %s to %s", oldpath, newpath)
+
+	// We limit the stack to 1024 bulk updates to avoid infinite loops, as we
+	// had a case in the past.
+	for i := 0; i < 1024; i++ {
 		sel := mango.StartWith("path", oldpath+"/")
 		req := &couchdb.FindRequest{
 			UseIndex: "dir-by-path",
