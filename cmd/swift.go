@@ -52,12 +52,13 @@ var lsLayoutsCmd = &cobra.Command{
 			return err
 		}
 		for _, inst := range instances {
-			if inst.SwiftLayout == 0 {
+			switch inst.SwiftLayout {
+			case 0:
 				layoutV1.Counter++
 				if flagShowDomains {
 					layoutV1.Domains = append(layoutV1.Domains, inst.Domain)
 				}
-			} else if inst.SwiftLayout == 1 {
+			case 1:
 				switch inst.DBPrefix() {
 				case inst.Domain:
 					layoutV2a.Counter++
@@ -75,10 +76,15 @@ var lsLayoutsCmd = &cobra.Command{
 						layoutUnknown.Domains = append(layoutUnknown.Domains, inst.Domain)
 					}
 				}
-			} else {
+			case 2:
 				layoutV3.Counter++
 				if flagShowDomains {
 					layoutV3.Domains = append(layoutV3.Domains, inst.Domain)
+				}
+			default:
+				layoutUnknown.Counter++
+				if flagShowDomains {
+					layoutUnknown.Domains = append(layoutUnknown.Domains, inst.Domain)
 				}
 			}
 		}
