@@ -180,6 +180,9 @@ func NewDirDocWithPath(name, dirID, dirPath string, tags []string) (*DirDoc, err
 	}
 
 	createDate := time.Now()
+	if dirPath == "" || dirPath == "." {
+		dirPath = "/"
+	}
 	return &DirDoc{
 		Type:    consts.DirType,
 		DocName: name,
