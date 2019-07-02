@@ -223,6 +223,9 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 
 	logger.WithDomain(c.db.DomainName()).WithField("nspace", "vfs-indexer").
 		Infof("Move dir %s to %s", oldpath, newpath)
+	if oldpath+"/" == newpath {
+		return nil
+	}
 
 	// We limit the stack to 1024 bulk updates to avoid infinite loops, as we
 	// had a case in the past.
