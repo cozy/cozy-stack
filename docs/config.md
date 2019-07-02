@@ -245,3 +245,5 @@ Here are a small list of assets that you may want to customize:
   favicon
 - `/apple-touch-icon.png`: the same but for Apple
 - `/images/default-avatar.png`: the image to use as the default avatar.
+- `/images/icon-cozy-home.svg`: the home icon used and displayed by the cozy-bar.
+
