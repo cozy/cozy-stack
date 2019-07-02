@@ -152,6 +152,7 @@ Examples
 @event io.cozy.files:CREATED // a file was created
 @event io.cozy.files:DELETED:image/jpg:mime // an image was deleted
 @event io.cozy.bank.operations:CREATED io.cozy.bank.bills:CREATED // a bank operation or a bill
+@event io.cozy.bank.operations:CREATED,UPDATED // a bank operation created or updated
 ```
 
 ## Error Handling
