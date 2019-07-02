@@ -550,9 +550,34 @@ func DoLazyUpdate(db prefixer.Prefixer, man Manifest, copier appfs.Copier, regis
 	var v *registry.Version
 	channel, _ := getRegistryChannel(src)
 	v, errv := registry.GetLatestVersion(man.Slug(), channel, registries)
-	if errv != nil || v.Version == man.Version() {
+	if errv != nil {
 		return man
 	}
+	if v.Version == man.Version() {
+		// In some cases, if the source had been altered mutiples times, the app
+		// may currently be in a stale state.
+
+		// Example:
+		// - The version 1.0.0 of the "foobar" konnector is installed from
+		// "stable" channel
+		// - The use switches to "beta" channel, the version 1.0.1 is available,
+		// but with extra perms
+		// - The update is blocked because of these news perms, the
+		// "available_version" is set to 1.0.1, the user switches back to "stable"
+		// channel
+		// - We are now on a stale state, no new version is available, but an
+		// available_version is set
+
+		// We ensure that we are not in this stale state by removing the
+		// available version field from the manifest if the latest version is
+		// the same as the current version
+		if man.AvailableVersion() != "" {
+			man.SetAvailableVersion("")
+			_ = man.Update(db, nil)
+		}
+		return man
+	}
+
 	if man.AvailableVersion() != "" && v.Version == man.AvailableVersion() {
 		return man
 	}
