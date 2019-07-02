@@ -869,7 +869,7 @@ func TrashHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permission.PUT, dir, file)
+	err = checkPerm(c, permission.PATCH, dir, file)
 	if err != nil {
 		return err
 	}
@@ -932,7 +932,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	err = checkPerm(c, permission.PUT, dir, file)
+	err = checkPerm(c, permission.PATCH, dir, file)
 	if err != nil {
 		return err
 	}

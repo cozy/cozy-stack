@@ -268,7 +268,8 @@ Content-Type: application/vnd.api+json
 
 ### DELETE /files/:dir-id
 
-Put a directory and its subtree in the trash.
+Put a directory and its subtree in the trash. It requires the permissions on
+`io.cozy.files` for `PATCH`.
 
 #### HTTP headers
 
