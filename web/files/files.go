@@ -1283,7 +1283,6 @@ func FileDocFromReq(c echo.Context, name, dirID string) (*vfs.FileDoc, error) {
 	if secret := c.QueryParam("MetadataID"); secret != "" {
 		instance := middlewares.GetInstance(c)
 		meta, err := vfs.GetStore().GetMetadata(instance, secret)
-		fmt.Printf("MetadataID = %s -> %v (%v)\n", secret, meta, err)
 		if err != nil {
 			return nil, err
 		}
