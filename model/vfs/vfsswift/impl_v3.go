@@ -669,13 +669,22 @@ func (f *swiftFileCreationV3) Close() (err error) {
 	}
 
 	if v != nil {
-		if errv := f.fs.Indexer.CreateVersion(v); errv != nil {
+		cleanV, toClean, _ := vfs.FindVersionsToClean(f.fs, newdoc.DocID, v)
+		if !cleanV {
+			if errv := f.fs.Indexer.CreateVersion(v); errv != nil {
+				cleanV = true
+			}
+		}
+		if cleanV {
 			internalID := v.DocID
 			if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
 				internalID = parts[1]
 			}
-			objName := MakeObjectNameV3(olddoc.DocID, internalID)
+			objName := MakeObjectNameV3(newdoc.DocID, internalID)
 			_ = f.fs.c.ObjectDelete(f.fs.container, objName)
+		}
+		for _, old := range toClean {
+			cleanOldVersion(f.fs, newdoc.DocID, old)
 		}
 	}
 
@@ -684,6 +693,17 @@ func (f *swiftFileCreationV3) Close() (err error) {
 	}
 
 	return nil
+}
+
+func cleanOldVersion(sfs *swiftVFSV3, fileID string, v *vfs.Version) {
+	if err := sfs.Indexer.DeleteVersion(v); err == nil {
+		internalID := v.DocID
+		if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
+			internalID = parts[1]
+		}
+		objName := MakeObjectNameV3(fileID, internalID)
+		_ = sfs.c.ObjectDelete(sfs.container, objName)
+	}
 }
 
 type swiftFileOpenV3 struct {

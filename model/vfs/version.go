@@ -1,8 +1,10 @@
 package vfs
 
 import (
+	"sort"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -150,6 +152,67 @@ func VersionsFor(db prefixer.Prefixer, fileID string) ([]*Version, error) {
 		return nil, err
 	}
 	return versions, nil
+}
+
+// FindVersionsToClean returns a bool to say if the candidate version must be
+// cleaned, a list of old versions to clean, and an error. The rules to know
+// the versions to clean or keep are:
+// - the tagged versions are kept
+// - two versions must not be too close in time
+// - there is a maximal number of versions.
+func FindVersionsToClean(db prefixer.Prefixer, fileID string, candidate *Version) (bool, []*Version, error) {
+	olds, err := VersionsFor(db, fileID)
+	if err != nil {
+		return false, nil, err
+	}
+	cfg := config.GetConfig()
+	maxNumber := cfg.Fs.Versioning.MaxNumberToKeep
+	minDelay := cfg.Fs.Versioning.MinDelayBetweenTwoVersions
+	cleanCandidate, toClean := detectVersionsToClean(candidate, olds, maxNumber, minDelay)
+	return cleanCandidate, toClean, nil
+}
+
+func detectVersionsToClean(candidate *Version, olds []*Version, maxNumber int, minDelay time.Duration) (bool, []*Version) {
+	if len(olds) == 0 {
+		return false, nil
+	}
+
+	sort.Slice(olds, func(i, j int) bool {
+		return olds[i].CozyMetadata.CreatedAt.Before(olds[j].CozyMetadata.CreatedAt)
+	})
+
+	// We will keep the candidate version if it has no tags and is not too
+	// close to the previous version.
+	cleanCandidate := false
+	if candidate != nil && len(candidate.Tags) == 0 {
+		candidateTime := candidate.CozyMetadata.CreatedAt
+		previousTime := olds[len(olds)-1].CozyMetadata.CreatedAt
+		if previousTime.Add(minDelay).After(candidateTime) {
+			cleanCandidate = true
+		}
+	}
+
+	// Find the number of old versions to clean
+	nb := len(olds) + 1 - maxNumber // +1 is for the current version
+	if candidate != nil && !cleanCandidate {
+		nb++ // +1 for the candidate version (if it is kept)
+	}
+	if nb <= 0 {
+		return cleanCandidate, nil
+	}
+
+	var toClean []*Version
+	for _, v := range olds {
+		if len(v.Tags) > 0 {
+			continue
+		}
+		toClean = append(toClean, v)
+		nb--
+		if nb <= 0 {
+			break
+		}
+	}
+	return cleanCandidate, toClean
 }
 
 var _ jsonapi.Object = &Version{}

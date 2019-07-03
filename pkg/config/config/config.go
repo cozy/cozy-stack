@@ -155,9 +155,16 @@ func (v *Vault) CredentialsDecryptorKey() *keymgmt.NACLKey {
 
 // Fs contains the configuration values of the file-system
 type Fs struct {
-	Auth      *url.Userinfo
-	URL       *url.URL
-	Transport http.RoundTripper
+	Auth       *url.Userinfo
+	URL        *url.URL
+	Transport  http.RoundTripper
+	Versioning FsVersioning
+}
+
+// FsVersioning contains the configuration for the versioning of files
+type FsVersioning struct {
+	MaxNumberToKeep            int
+	MinDelayBetweenTwoVersions time.Duration
 }
 
 // CouchDB contains the configuration values of the database
@@ -385,6 +392,8 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("jobs.defaultDurationToKeep", "2W")
 	v.SetDefault("assets_polling_disabled", false)
 	v.SetDefault("assets_polling_interval", 2*time.Minute)
+	v.SetDefault("fs.versioning.max_number_of_versions_to_keep", 20)
+	v.SetDefault("fs.versioning.min_delay_between_two_versions", 15*time.Minute)
 }
 
 func envMap() map[string]string {
@@ -623,6 +632,10 @@ func UseViper(v *viper.Viper) error {
 		Fs: Fs{
 			URL:       fsURL,
 			Transport: fsClient.Transport,
+			Versioning: FsVersioning{
+				MaxNumberToKeep:            v.GetInt("fs.versioning.max_number_of_versions_to_keep"),
+				MinDelayBetweenTwoVersions: v.GetDuration("fs.versioning.min_delay_between_two_versions"),
+			},
 		},
 		CouchDB: CouchDB{
 			Auth:   couchAuth,
