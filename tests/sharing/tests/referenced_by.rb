@@ -10,12 +10,12 @@ def file_has_album_reference(file, album_id)
 end
 
 describe "A photo" do
-  Helpers.scenario "referenced_by"
-  Helpers.start_mailhog
-
-  recipient_name = "Bob"
-
   it "can be shared in a folder or an album" do
+    Helpers.scenario "referenced_by"
+    Helpers.start_mailhog
+
+    recipient_name = "Bob"
+
     # Create the instance
     inst = Instance.create name: "Alice"
     inst_recipient = Instance.create name: recipient_name

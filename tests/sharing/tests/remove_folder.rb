@@ -3,10 +3,10 @@ require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
 
 describe "A shared folder" do
-  Helpers.scenario "remove_folder"
-  Helpers.start_mailhog
-
   it "can be removed and end up in the trash" do
+    Helpers.scenario "remove_folder"
+    Helpers.start_mailhog
+
     recipient_name = "Bob"
 
     # Create the instance

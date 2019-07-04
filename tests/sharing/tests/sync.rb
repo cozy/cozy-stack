@@ -37,10 +37,10 @@ def xor_id(id, key)
 end
 
 describe "A folder" do
-  Helpers.scenario "sync_folder"
-  Helpers.start_mailhog
-
   it "can be shared to a recipient in sync mode" do
+    Helpers.scenario "sync_folder"
+    Helpers.start_mailhog
+
     recipient_name = "Bob"
 
     # Create the instances

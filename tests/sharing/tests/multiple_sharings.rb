@@ -3,10 +3,10 @@ require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
 
 describe "A folder" do
-  Helpers.scenario "multiple_sharings"
-  Helpers.start_mailhog
-
   it "can be shared to several recipients" do
+    Helpers.scenario "multiple_sharings"
+    Helpers.start_mailhog
+
     bob = "Bob"
     charlie = "Charlie"
 

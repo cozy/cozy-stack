@@ -629,7 +629,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	olddoc := newdoc.Clone().(*vfs.FileDoc)
 
 	infos, ok := ref.Infos[s.SID]
-	if !ok {
+	if !ok || infos.Removed {
 		return ErrSafety
 	}
 	rule := &s.Rules[infos.Rule]
