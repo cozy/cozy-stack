@@ -1036,17 +1036,26 @@ func TestGetDirMetadataFromID(t *testing.T) {
 }
 
 func TestVersions(t *testing.T) {
+	cfg := config.GetConfig()
+	oldDelay := cfg.Fs.Versioning.MinDelayBetweenTwoVersions
+	cfg.Fs.Versioning.MinDelayBetweenTwoVersions = 10 * time.Millisecond
+	defer func() {
+		cfg.Fs.Versioning.MinDelayBetweenTwoVersions = oldDelay
+	}()
+
 	res1, body1 := upload(t, "/files/?Type=file&Name=versioned", "text/plain", "one", "")
 	assert.Equal(t, 201, res1.StatusCode)
 	data1 := body1["data"].(map[string]interface{})
 	attr1 := data1["attributes"].(map[string]interface{})
 	sum1 := attr1["md5sum"]
 	fileID := data1["id"].(string)
+	time.Sleep(20 * time.Millisecond)
 	res2, body2 := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
 	assert.Equal(t, 200, res2.StatusCode)
 	data2 := body2["data"].(map[string]interface{})
 	attr2 := data2["attributes"].(map[string]interface{})
 	sum2 := attr2["md5sum"]
+	time.Sleep(20 * time.Millisecond)
 	res3, body3 := uploadMod(t, "/files/"+fileID, "text/plain", "three", "")
 	assert.Equal(t, 200, res3.StatusCode)
 	data3 := body3["data"].(map[string]interface{})

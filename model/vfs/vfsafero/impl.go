@@ -689,9 +689,18 @@ func (f *aferoFileCreation) Close() (err error) {
 	}
 
 	if v != nil {
-		if errv := f.afs.Indexer.CreateVersion(v); errv != nil {
+		cleanV, toClean, _ := vfs.FindVersionsToClean(f.afs, newdoc.DocID, v)
+		if !cleanV {
+			if errv := f.afs.Indexer.CreateVersion(v); errv != nil {
+				cleanV = true
+			}
+		}
+		if cleanV {
 			vPath := pathForVersion(v)
 			_ = f.afs.fs.Remove(vPath)
+		}
+		for _, old := range toClean {
+			cleanOldVersion(f.afs, old)
 		}
 	}
 
@@ -758,6 +767,13 @@ func extractContentTypeAndMD5(filename string) (contentType string, md5sum []byt
 	}
 	md5sum = h.Sum(nil)
 	return
+}
+
+func cleanOldVersion(afs *aferoVFS, v *vfs.Version) {
+	if err := afs.Indexer.DeleteVersion(v); err == nil {
+		vPath := pathForVersion(v)
+		_ = afs.fs.Remove(vPath)
+	}
 }
 
 func pathForVersion(v *vfs.Version) string {
