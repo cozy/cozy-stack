@@ -62,10 +62,10 @@ def assert_recipient_revoked(inst, sharing_id, index)
 end
 
 describe "A sharing" do
-  Helpers.scenario "revoke_sharing"
-  Helpers.start_mailhog
-
   it "can be revoked" do
+    Helpers.scenario "revoke_sharing"
+    Helpers.start_mailhog
+
     bob = "Bob"
     charlie = "Charlie"
     dave = "Dave"

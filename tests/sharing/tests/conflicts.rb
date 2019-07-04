@@ -27,10 +27,10 @@ def assert_conflict_children(inst_a, inst_b, parent_id_a, parent_id_b, filename)
 end
 
 describe "A sharing" do
-  Helpers.scenario "conflicts"
-  Helpers.start_mailhog
-
   it "can handle conflicts" do
+    Helpers.scenario "conflicts"
+    Helpers.start_mailhog
+
     recipient_name = "Bob"
 
     # Create the instance

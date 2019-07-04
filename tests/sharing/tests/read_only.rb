@@ -3,10 +3,10 @@ require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
 
 describe "A sharing" do
-  Helpers.scenario "revoke_sharing"
-  Helpers.start_mailhog
-
   it "can be revoked" do
+    Helpers.scenario "revoke_sharing"
+    Helpers.start_mailhog
+
     bob = "Bob"
     charlie = "Charlie"
 

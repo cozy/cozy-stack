@@ -12,10 +12,10 @@ def assert_same_thumbs(base_path_a, id_a, base_path_b, id_b)
 end
 
 describe "A folder" do
-  Helpers.scenario "push_folder"
-  Helpers.start_mailhog
-
   it "can be shared to a recipient in push mode" do
+    Helpers.scenario "push_folder"
+    Helpers.start_mailhog
+
     recipient_name = "Bob"
 
     # Create the instance
