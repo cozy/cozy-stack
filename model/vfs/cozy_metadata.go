@@ -80,15 +80,16 @@ func (fcm *FilesCozyMetadata) UpdatedByApp(entry *metadata.UpdatedByAppEntry) {
 		return
 	}
 
-	updated := fcm.UpdatedByApps
+	i := 0
 	for _, app := range fcm.UpdatedByApps {
 		if app.Slug == entry.Slug && app.Instance == entry.Instance {
 			continue
 		}
-		updated = append(updated, app)
+		fcm.UpdatedByApps[i] = app
+		i++
 	}
 
-	fcm.UpdatedByApps = append(updated, entry)
+	fcm.UpdatedByApps = append(fcm.UpdatedByApps[:i], entry)
 }
 
 // ToJSONDoc returns a map with the cozyMetadata to be used inside a JSONDoc
