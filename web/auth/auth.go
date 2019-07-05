@@ -125,7 +125,11 @@ func isDeviceTrusted(c echo.Context, inst *instance.Instance) (bool, error) {
 	}
 	longRunSession, _ := strconv.ParseBool(c.FormValue("long-run-session"))
 	trustedDeviceToken := []byte(c.FormValue("two-factor-trusted-device-token"))
+
 	trustedDeviceTokenValidated := inst.ValidateTwoFactorTrustedDeviceSecret(c.Request(), trustedDeviceToken)
+	if trustedDeviceTokenValidated {
+		return true, nil
+	}
 
 	if len(trustedDeviceToken) > 0 && !trustedDeviceTokenValidated {
 		// If the token is bad, maybe the password had been changed, and
@@ -148,7 +152,7 @@ func isDeviceTrusted(c echo.Context, inst *instance.Instance) (bool, error) {
 		}
 	}
 
-	return true, nil
+	return false, nil
 }
 
 func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors string, redirect *url.URL) error {
@@ -248,6 +252,35 @@ func loginForm(c echo.Context) error {
 	return renderLoginForm(c, instance, http.StatusOK, "", redirect)
 }
 
+// newSession generates a new session, and returns its ID
+func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, longRunSession bool) (string, error) {
+	var sessionID string
+	var err error
+
+	// Generate a session
+	if sessionID, err = SetCookieForNewSession(c, longRunSession); err != nil {
+		return "", err
+	}
+
+	var clientID string
+	if inst.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" {
+		// NOTE: the login scope is used by external clients for authentication.
+		// Typically, these clients are used for internal purposes, like
+		// authenticating to an external system via the cozy. For these clients
+		// we do not push a "client" notification, we only store a new login
+		// history.
+		if redirect.Query().Get("scope") != oauth.ScopeLogin {
+			clientID = redirect.Query().Get("client_id")
+		}
+	}
+
+	if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), true); err != nil {
+		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+	}
+
+	return sessionID, nil
+}
+
 func login(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	wantsJSON := c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON
@@ -267,10 +300,13 @@ func login(c echo.Context) error {
 	} else {
 		if lifecycle.CheckPassphrase(inst, passphrase) == nil {
 			// In case the second factor authentication mode is "mail", we also
-			// check that the mail has been confirmed. If not, 2FA is not activated.
+			// check that the mail has been confirmed. If not, 2FA is not
+			// activated.
+			// If device is trusted, skip the 2FA.
 			trustedDevice, _ := isDeviceTrusted(c, inst)
 			if inst.HasAuthMode(instance.TwoFactorMail) && !trustedDevice {
-				return c.Redirect(http.StatusSeeOther, "/auth/twofactor")
+				return twoFactorForm(c)
+				// return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", nil))
 			}
 		} else { // Bad login passphrase
 			errorMessage := inst.Translate(CredentialsErrorKey)
@@ -290,30 +326,12 @@ func login(c echo.Context) error {
 	}
 
 	// Successfull authentication
-	// User is now logged-in
-	if sessionID, err = SetCookieForNewSession(c, longRunSession); err != nil {
+	// User is now logged-in, generate a new sessions
+	sessionID, err = newSession(c, inst, redirect, longRunSession)
+	if err != nil {
 		return err
 	}
-
-	var clientID string
-	if inst.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" {
-		// NOTE: the login scope is used by external clients for authentication.
-		// Typically, these clients are used for internal purposes, like
-		// authenticating to an external system via the cozy. For these clients
-		// we do not push a "client" notification, we only store a new login
-		// history.
-		if redirect.Query().Get("scope") != oauth.ScopeLogin {
-			clientID = redirect.Query().Get("client_id")
-		}
-	}
-
-	if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), true); err != nil {
-		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
-	}
-
-	// logged-in
 	redirect = AddCodeToRedirect(redirect, inst.ContextualDomain(), sessionID)
-
 	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 

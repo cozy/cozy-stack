@@ -1,25 +1,27 @@
-/* global Headers, fetch */
-(function (window, document) {
+;(function(window, document) {
   if (!window.fetch || !window.Headers || !window.FormData) return
 
   const loginForm = document.getElementById('login-form')
   const resetForm = document.getElementById('renew-passphrase-form')
 
-
   const passphraseInput = document.getElementById('password')
   const submitButton = document.getElementById('login-submit')
 
   const twoFactorTrustedDeviceTokenKey = 'two-factor-trusted-device-token'
-  const twoFactorTrustedDomainInput = document.getElementById('two-factor-trusted-device-token')
+  const twoFactorTrustedDomainInput = document.getElementById(
+    'two-factor-trusted-device-token'
+  )
 
   let localStorage = null
   try {
     localStorage = window.localStorage
-  } catch(e) {}
-
+  } catch (e) {
+    // do nothing
+  }
 
   // Set the trusted device token from the localstorage in the form if it exists
-  const twoFactorTrustedDeviceToken = (localStorage && localStorage.getItem(twoFactorTrustedDeviceTokenKey)) || ''
+  const twoFactorTrustedDeviceToken =
+    (localStorage && localStorage.getItem(twoFactorTrustedDeviceTokenKey)) || ''
   twoFactorTrustedDomainInput.value = twoFactorTrustedDeviceToken
 
   // Used for passphrase reset

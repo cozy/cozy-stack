@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
-	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/limits"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -83,46 +82,24 @@ func twoFactor(c echo.Context) error {
 
 	correctPasscode := inst.ValidateTwoFactorPasscode(token, passcode)
 
-	if correctPasscode {
-		var sessionID string
-		// Generate a session
-		if sessionID, err = SetCookieForNewSession(c, longRunSession); err != nil {
-			return err
-		}
-
-		var clientID string
-		if inst.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" {
-			// NOTE: the login scope is used by external clients for authentication.
-			// Typically, these clients are used for internal purposes, like
-			// authenticating to an external system via the cozy. For these clients
-			// we do not push a "client" notification, we only store a new login
-			// history.
-			if redirect.Query().Get("scope") != oauth.ScopeLogin {
-				clientID = redirect.Query().Get("client_id")
+	// Handle 2FA failed
+	if !correctPasscode {
+		errorMessage := inst.Translate(TwoFactorErrorKey)
+		errCheckRateLimit := limits.CheckRateLimit(inst, limits.TwoFactorType)
+		if errCheckRateLimit == limits.ErrRateLimitExceeded {
+			if err := TwoFactorRateExceeded(inst); err != nil {
+				inst.Logger().WithField("nspace", "auth").Warning(err)
+				errorMessage = inst.Translate(TwoFactorExceededErrorKey)
 			}
 		}
-
-		if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), true); err != nil {
-			inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
-		}
-
-		// logged-in
-		redirect = AddCodeToRedirect(redirect, inst.ContextualDomain(), sessionID)
-
-		// Check if the user trusts its device
-		var generatedTrustedDeviceToken []byte
-		if generateTrustedDeviceToken {
-			generatedTrustedDeviceToken, _ = inst.GenerateTwoFactorTrustedDeviceSecret(c.Request())
-		}
+		// Renders either the passcode page or a JSON message
 		if wantsJSON {
-			result := echo.Map{"redirect": redirect.String()}
-			if len(generatedTrustedDeviceToken) > 0 {
-				result["two_factor_trusted_device_token"] = string(generatedTrustedDeviceToken)
-			}
-			return c.JSON(http.StatusOK, result)
+			return c.JSON(http.StatusUnauthorized, echo.Map{
+				"error": errorMessage,
+			})
 		}
+		return renderTwoFactorForm(c, inst, http.StatusUnauthorized, errorMessage, redirect, token, longRunSession)
 	}
-
 	// Handle 2FA failed
 	if !correctPasscode {
 		errorMessage := inst.Translate(TwoFactorErrorKey)
@@ -142,5 +119,22 @@ func twoFactor(c echo.Context) error {
 		return renderTwoFactorForm(c, inst, http.StatusUnauthorized, errorMessage, redirect, token, longRunSession)
 	}
 
+	// Generates a new session
+	sessionID, err := newSession(c, inst, redirect, longRunSession)
+
+	// Check if the user trusts its device
+	var generatedTrustedDeviceToken []byte
+	if generateTrustedDeviceToken {
+		generatedTrustedDeviceToken, _ = inst.GenerateTwoFactorTrustedDeviceSecret(c.Request())
+	}
+	if wantsJSON {
+		result := echo.Map{"redirect": redirect.String()}
+		if len(generatedTrustedDeviceToken) > 0 {
+			result["two_factor_trusted_device_token"] = string(generatedTrustedDeviceToken)
+		}
+		return c.JSON(http.StatusOK, result)
+	}
+
+	redirect = AddCodeToRedirect(redirect, inst.ContextualDomain(), sessionID)
 	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
