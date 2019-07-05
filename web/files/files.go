@@ -1091,7 +1091,7 @@ func fsckHandler(c echo.Context) error {
 	}
 
 	logs := make([]*vfs.FsckLog, 0)
-	err := instance.VFS().Fsck(func(log *vfs.FsckLog) {
+	err := instance.VFS().CheckFilesConsistency(func(log *vfs.FsckLog) {
 		switch log.Type {
 		case vfs.ContentMismatch:
 			logs = append(logs, log)

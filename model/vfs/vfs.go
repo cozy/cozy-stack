@@ -95,6 +95,7 @@ type Fs interface {
 
 	// Fsck return the list of inconsistencies in the VFS
 	Fsck(func(log *FsckLog)) (err error)
+	CheckFilesConsistency(func(*FsckLog)) error
 }
 
 // File is a reader, writer, seeker, closer iterface representing an opened
@@ -190,8 +191,9 @@ type Indexer interface {
 	DeleteVersion(*Version) error
 	BatchDeleteVersions([]*Version) error
 
-	BuildTree(each ...func(*TreeFile)) (tree *Tree, err error)
 	CheckIndexIntegrity(func(*FsckLog)) error
+	CheckTreeIntegrity(*Tree, func(*FsckLog)) error
+	BuildTree(each ...func(*TreeFile)) (tree *Tree, err error)
 }
 
 // DiskThresholder it an interface that can be implemeted to known how many space

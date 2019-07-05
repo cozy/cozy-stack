@@ -15,17 +15,36 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
-func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
+func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
-	_, err = afs.BuildTree(func(f *vfs.TreeFile) {
+	tree, err := afs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsOrphan {
 			entries[f.Fullpath] = f
 		}
 	})
 	if err != nil {
-		return
+		return err
 	}
+	if err = afs.CheckTreeIntegrity(tree, accumulate); err != nil {
+		return err
+	}
+	return afs.checkFiles(entries, accumulate)
+}
 
+func (afs *aferoVFS) CheckFilesConsistency(accumulate func(log *vfs.FsckLog)) error {
+	entries := make(map[string]*vfs.TreeFile, 1024)
+	_, err := afs.BuildTree(func(f *vfs.TreeFile) {
+		if !f.IsOrphan {
+			entries[f.Fullpath] = f
+		}
+	})
+	if err != nil {
+		return err
+	}
+	return afs.checkFiles(entries, accumulate)
+}
+
+func (afs *aferoVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate func(log *vfs.FsckLog)) (err error) {
 	versions := make(map[string]*vfs.Version, 1024)
 	err = couchdb.ForeachDocs(afs, consts.FilesVersions, func(_ string, data json.RawMessage) error {
 		v := &vfs.Version{}

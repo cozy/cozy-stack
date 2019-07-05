@@ -536,7 +536,10 @@ func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) error {
 	if err != nil {
 		return err
 	}
+	return c.CheckTreeIntegrity(tree, accumulate)
+}
 
+func (c *couchdbIndexer) CheckTreeIntegrity(tree *Tree, accumulate func(*FsckLog)) error {
 	// cleanDirsMap browse the given root tree recursively into its children
 	// directories, removing them from the dirsmap table along the way. In the
 	// end, only trees with cycles should stay in the dirsmap.
