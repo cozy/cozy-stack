@@ -3,7 +3,6 @@ package vfs
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -540,6 +539,15 @@ func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) error {
 }
 
 func (c *couchdbIndexer) CheckTreeIntegrity(tree *Tree, accumulate func(*FsckLog)) error {
+	if tree.Root == nil {
+		accumulate(&FsckLog{Type: IndexMissingRoot})
+		return nil
+	}
+
+	if _, ok := tree.DirsMap[consts.TrashDirID]; !ok {
+		accumulate(&FsckLog{Type: IndexMissingTrash})
+	}
+
 	// cleanDirsMap browse the given root tree recursively into its children
 	// directories, removing them from the dirsmap table along the way. In the
 	// end, only trees with cycles should stay in the dirsmap.
@@ -652,9 +660,6 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 		}
 		return nil
 	})
-	if t.Root == nil {
-		return nil, fmt.Errorf("could not find root file")
-	}
 	for _, bucket := range t.Orphans {
 		for _, child := range bucket {
 			child.IsOrphan = true
