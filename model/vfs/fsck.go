@@ -10,6 +10,8 @@ type FsckLogType string
 const (
 	// IndexMissingRoot is used when the index does not have a root object
 	IndexMissingRoot FsckLogType = "index_missing_root"
+	// IndexMissingTrash is used when the index does not have a trash folder
+	IndexMissingTrash FsckLogType = "index_missing_trash"
 	// IndexOrphanTree used when a part of the tree is detached from the main
 	// root of the index.
 	IndexOrphanTree FsckLogType = "index_orphan_tree"
@@ -29,7 +31,7 @@ const (
 	ContentMismatch FsckLogType = "content_mismatch"
 	// FileMissing is used when a version is present for a file that is not in
 	// the index.
-	FileMissing = "file_missing"
+	FileMissing FsckLogType = "file_missing"
 )
 
 // FsckLog is a struct for an inconsistency in the VFS
@@ -49,6 +51,8 @@ func (f *FsckLog) String() string {
 	switch f.Type {
 	case IndexMissingRoot:
 		return "the root directory is not present in the index"
+	case IndexMissingTrash:
+		return "the trash directory is not present in the index"
 	case IndexOrphanTree:
 		if f.IsFile {
 			return "the file's parent is missing from the index: orphan file"

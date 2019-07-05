@@ -12,17 +12,36 @@ import (
 	"github.com/cozy/swift"
 )
 
-func (sfs *swiftVFSV3) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
+func (sfs *swiftVFSV3) Fsck(accumulate func(log *vfs.FsckLog)) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
-	_, err = sfs.BuildTree(func(f *vfs.TreeFile) {
+	tree, err := sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsDir {
 			entries[f.DocID] = f
 		}
 	})
 	if err != nil {
-		return
+		return err
 	}
+	if err = sfs.CheckTreeIntegrity(tree, accumulate); err != nil {
+		return err
+	}
+	return sfs.checkFiles(entries, accumulate)
+}
 
+func (sfs *swiftVFSV3) CheckFilesConsistency(accumulate func(log *vfs.FsckLog)) error {
+	entries := make(map[string]*vfs.TreeFile, 1024)
+	_, err := sfs.BuildTree(func(f *vfs.TreeFile) {
+		if !f.IsDir {
+			entries[f.DirID+"/"+f.DocName] = f
+		}
+	})
+	if err != nil {
+		return err
+	}
+	return sfs.checkFiles(entries, accumulate)
+}
+
+func (sfs *swiftVFSV3) checkFiles(entries map[string]*vfs.TreeFile, accumulate func(log *vfs.FsckLog)) (err error) {
 	versions := make(map[string]*vfs.Version, 1024)
 	err = couchdb.ForeachDocs(sfs, consts.FilesVersions, func(_ string, data json.RawMessage) error {
 		v := &vfs.Version{}

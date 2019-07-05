@@ -192,12 +192,15 @@ func fsckHandler(c echo.Context) (err error) {
 	}
 
 	indexIntegrityCheck, _ := strconv.ParseBool(c.QueryParam("IndexIntegrity"))
+	filesConsistencyCheck, _ := strconv.ParseBool(c.QueryParam("FilesConsistency"))
 
 	logCh := make(chan *vfs.FsckLog)
 	go func() {
 		fs := i.VFS()
 		if indexIntegrityCheck {
 			err = fs.CheckIndexIntegrity(func(log *vfs.FsckLog) { logCh <- log })
+		} else if filesConsistencyCheck {
+			err = fs.CheckFilesConsistency(func(log *vfs.FsckLog) { logCh <- log })
 		} else {
 			err = fs.Fsck(func(log *vfs.FsckLog) { logCh <- log })
 		}
@@ -210,7 +213,7 @@ func fsckHandler(c echo.Context) (err error) {
 	for log := range logCh {
 		// XXX do not serialize to JSON the children, as it can take more than 64ko
 		// and scanner will ignore such lines
-		if !log.IsFile && !log.IsVersion {
+		if !log.IsFile && !log.IsVersion && log.DirDoc != nil {
 			log.DirDoc.DirsChildren = nil
 			log.DirDoc.FilesChildren = nil
 		}

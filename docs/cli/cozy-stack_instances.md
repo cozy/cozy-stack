@@ -45,7 +45,7 @@ cozy-stack instances <command> [flags]
 * [cozy-stack instances destroy](cozy-stack_instances_destroy.md)	 - Remove instance
 * [cozy-stack instances export](cozy-stack_instances_export.md)	 - Export an instance to a tarball
 * [cozy-stack instances find-oauth-client](cozy-stack_instances_find-oauth-client.md)	 - Find an OAuth client
-* [cozy-stack instances fsck](cozy-stack_instances_fsck.md)	 - Check and repair a vfs
+* [cozy-stack instances fsck](cozy-stack_instances_fsck.md)	 - Check a vfs
 * [cozy-stack instances import](cozy-stack_instances_import.md)	 - Import a tarball
 * [cozy-stack instances ls](cozy-stack_instances_ls.md)	 - List instances
 * [cozy-stack instances modify](cozy-stack_instances_modify.md)	 - Modify the instance properties

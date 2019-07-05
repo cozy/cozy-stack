@@ -10,16 +10,36 @@ import (
 	"github.com/cozy/swift"
 )
 
-func (sfs *swiftVFSV2) Fsck(accumulate func(log *vfs.FsckLog)) (err error) {
+func (sfs *swiftVFSV2) Fsck(accumulate func(log *vfs.FsckLog)) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
-	_, err = sfs.BuildTree(func(f *vfs.TreeFile) {
+	tree, err := sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsDir {
 			entries[f.DocID] = f
 		}
 	})
 	if err != nil {
-		return
+		return err
 	}
+	if err = sfs.CheckTreeIntegrity(tree, accumulate); err != nil {
+		return err
+	}
+	return sfs.checkFiles(entries, accumulate)
+}
+
+func (sfs *swiftVFSV2) CheckFilesConsistency(accumulate func(log *vfs.FsckLog)) error {
+	entries := make(map[string]*vfs.TreeFile, 1024)
+	_, err := sfs.BuildTree(func(f *vfs.TreeFile) {
+		if !f.IsDir {
+			entries[f.DirID+"/"+f.DocName] = f
+		}
+	})
+	if err != nil {
+		return err
+	}
+	return sfs.checkFiles(entries, accumulate)
+}
+
+func (sfs *swiftVFSV2) checkFiles(entries map[string]*vfs.TreeFile, accumulate func(log *vfs.FsckLog)) (err error) {
 
 	err = sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
 		var objs []swift.Object

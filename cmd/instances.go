@@ -56,6 +56,7 @@ var flagOnboardingFinished bool
 var flagExpire time.Duration
 var flagAllowLoginScope bool
 var flagFsckIndexIntegrity bool
+var flagFsckFilesConsistensy bool
 var flagAvailableFields bool
 var flagOnboardingSecret string
 var flagOnboardingApp string
@@ -580,11 +581,21 @@ Type again the domain to confirm: `, domain)
 
 var fsckInstanceCmd = &cobra.Command{
 	Use:   "fsck <domain>",
-	Short: "Check and repair a vfs",
+	Short: "Check a vfs",
 	Long: `
 The cozy-stack fsck command checks that the files in the VFS are not
 desynchronized, ie a file present in CouchDB but not swift/localfs, or present
 in swift/localfs but not couchdb.
+
+There are 2 steps:
+
+- index integrity checks that there are nothing wrong in the index (CouchDB),
+  like a file present in a directory that has been deleted
+- files consistency checks that the files are the same in the index (CouchDB)
+  and the storage (Swift or localfs).
+
+By default, both operations are done, but you can choose one or the other via
+the flags.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
@@ -592,12 +603,18 @@ in swift/localfs but not couchdb.
 		}
 		domain := args[0]
 
+		if flagFsckFilesConsistensy && flagFsckIndexIntegrity {
+			flagFsckIndexIntegrity = false
+			flagFsckFilesConsistensy = false
+		}
+
 		c := newAdminClient()
 		res, err := c.Req(&request.Options{
 			Method: "GET",
 			Path:   "/instances/" + url.PathEscape(domain) + "/fsck",
 			Queries: url.Values{
-				"IndexIntegrity": {strconv.FormatBool(flagFsckIndexIntegrity)},
+				"IndexIntegrity":   {strconv.FormatBool(flagFsckIndexIntegrity)},
+				"FilesConsistency": {strconv.FormatBool(flagFsckFilesConsistensy)},
 			},
 		})
 		if err != nil {
@@ -1040,6 +1057,7 @@ func init() {
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckIndexIntegrity, "index-integrity", false, "Check the index integrity only")
+	fsckInstanceCmd.Flags().BoolVar(&flagFsckFilesConsistensy, "files-consistency", false, "Check the files consistency only (between CouchDB and Swift)")
 	fsckInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagAllowLoginScope, "allow-login-scope", false, "Allow login scope")
