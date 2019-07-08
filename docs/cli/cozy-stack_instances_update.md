@@ -16,7 +16,7 @@ cozy-stack instances update [slugs...] [flags]
 ### Options
 
 ```
-      --all-domains           Work on all domains iterativelly
+      --all-domains           Work on all domains iteratively
       --context-name string   Work only on the instances with the given context name
       --domain string         Specify the domain name of the instance
       --force-registry        Force to update all applications sources from git to the registry

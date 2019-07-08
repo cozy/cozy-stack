@@ -629,7 +629,7 @@ func init() {
 	}
 
 	webappsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
-	webappsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
+	webappsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iteratively")
 
 	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "ask-permissions", false, "specify that the application should not be activated after installation")
 	updateWebappCmd.PersistentFlags().BoolVar(&flagSafeUpdate, "safe", false, "do not upgrade if there are blocking changes")
@@ -651,7 +651,7 @@ func init() {
 
 	konnectorsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
 	konnectorsCmdGroup.PersistentFlags().StringVar(&flagKonnectorsParameters, "parameters", "", "override the parameters of the installed konnector")
-	konnectorsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
+	konnectorsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iteratively")
 
 	konnectorsCmdGroup.AddCommand(lsKonnectorsCmd)
 	konnectorsCmdGroup.AddCommand(showKonnectorCmd)
