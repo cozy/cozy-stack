@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	modelAsset "github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -241,6 +242,9 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		name = nameWithContextSplit[1]
 	} else {
 		name = strings.TrimPrefix(r.URL.Path, assetsPrefix)
+		if inst, err := instance.GetFromCouch(r.Host); err == nil {
+			context = inst.ContextName
+		}
 	}
 
 	name, id = ExtractAssetID(name)
