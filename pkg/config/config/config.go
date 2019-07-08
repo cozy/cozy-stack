@@ -155,10 +155,11 @@ func (v *Vault) CredentialsDecryptorKey() *keymgmt.NACLKey {
 
 // Fs contains the configuration values of the file-system
 type Fs struct {
-	Auth       *url.Userinfo
-	URL        *url.URL
-	Transport  http.RoundTripper
-	Versioning FsVersioning
+	Auth          *url.Userinfo
+	URL           *url.URL
+	Transport     http.RoundTripper
+	DefaultLayout int
+	Versioning    FsVersioning
 }
 
 // FsVersioning contains the configuration for the versioning of files
@@ -607,6 +608,15 @@ func UseViper(v *viper.Viper) error {
 		}
 	}
 
+	// Use the layout v3 (value 2) for missing/invalid value
+	defaultLayout := 2
+	if v.Get("fs.default_layout") != "" {
+		layout := v.GetInt("fs.default_layout")
+		if 0 <= layout && layout <= 2 {
+			defaultLayout = layout
+		}
+	}
+
 	config = &Config{
 		Host: v.GetString("host"),
 		Port: v.GetInt("port"),
@@ -630,8 +640,9 @@ func UseViper(v *viper.Viper) error {
 		CredentialsDecryptorKey: v.GetString("vault.credentials_decryptor_key"),
 
 		Fs: Fs{
-			URL:       fsURL,
-			Transport: fsClient.Transport,
+			URL:           fsURL,
+			Transport:     fsClient.Transport,
+			DefaultLayout: defaultLayout,
 			Versioning: FsVersioning{
 				MaxNumberToKeep:            v.GetInt("fs.versioning.max_number_of_versions_to_keep"),
 				MinDelayBetweenTwoVersions: v.GetDuration("fs.versioning.min_delay_between_two_versions"),
