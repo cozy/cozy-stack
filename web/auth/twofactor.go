@@ -5,15 +5,19 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/cozy/cozy-stack/pkg/limits"
-
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 )
 
-func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsError string, redirect *url.URL, twoFactorToken []byte, longRunSession bool) error {
+const (
+	TrustedDeviceCheckBoxActivated   = true
+	TrustedDeviceCheckBoxDeActivated = false
+)
+
+func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsError string, redirect *url.URL, twoFactorToken []byte, longRunSession bool, trustedDeviceCheckBox bool) error {
 	title := i.Translate("Login Two factor title")
 
 	redirectQuery := redirect.Query()
@@ -24,25 +28,28 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsEr
 
 	oauth := i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
 	return c.Render(code, "twofactor.html", echo.Map{
-		"CozyUI":           middlewares.CozyUI(i),
-		"ThemeCSS":         middlewares.ThemeCSS(i),
-		"Domain":           i.ContextualDomain(),
-		"ContextName":      i.ContextName,
-		"Locale":           i.Locale,
-		"Title":            title,
-		"CredentialsError": credsError,
-		"Redirect":         redirect.String(),
-		"LongRunSession":   longRunSession,
-		"TwoFactorToken":   string(twoFactorToken),
-		"CSRF":             c.Get("csrf"),
-		"OAuth":            oauth,
-		"Favicon":          middlewares.Favicon(i),
+		"CozyUI":                middlewares.CozyUI(i),
+		"ThemeCSS":              middlewares.ThemeCSS(i),
+		"Domain":                i.ContextualDomain(),
+		"ContextName":           i.ContextName,
+		"Locale":                i.Locale,
+		"Title":                 title,
+		"CredentialsError":      credsError,
+		"Redirect":              redirect.String(),
+		"LongRunSession":        longRunSession,
+		"TwoFactorToken":        string(twoFactorToken),
+		"CSRF":                  c.Get("csrf"),
+		"OAuth":                 oauth,
+		"Favicon":               middlewares.Favicon(i),
+		"TrustedDeviceCheckBox": trustedDeviceCheckBox,
 	})
 }
 
 // twoFactorForm handles a GET request
 func twoFactorForm(c echo.Context) error {
 	var credsError string
+	trustedDeviceCheckBox := true
+
 	inst := middlewares.GetInstance(c)
 
 	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
@@ -62,7 +69,14 @@ func twoFactorForm(c echo.Context) error {
 		longRunSession = true
 	}
 
-	return renderTwoFactorForm(c, inst, http.StatusOK, credsError, redirect, twoFactorToken, longRunSession)
+	trustedDeviceCheckBoxParam := c.QueryParams().Get("trusted_device_checkbox")
+	if trustedDeviceCheckBoxParam != "" {
+		if b, err := strconv.ParseBool(trustedDeviceCheckBoxParam); err == nil {
+			trustedDeviceCheckBox = b
+		}
+	}
+
+	return renderTwoFactorForm(c, inst, http.StatusOK, credsError, redirect, twoFactorToken, longRunSession, trustedDeviceCheckBox)
 }
 
 // twoFactor handles a POST request
@@ -73,6 +87,14 @@ func twoFactor(c echo.Context) error {
 	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
 	if err != nil {
 		return err
+	}
+
+	trustedDeviceCheckBox := true
+	trustedDeviceCheckBoxParam := c.QueryParams().Get("trusted_device_checkbox")
+	if trustedDeviceCheckBoxParam != "" {
+		if b, err := strconv.ParseBool(trustedDeviceCheckBoxParam); err != nil {
+			trustedDeviceCheckBox = b
+		}
 	}
 
 	// Retreiving data from request
@@ -99,7 +121,7 @@ func twoFactor(c echo.Context) error {
 				"error": errorMessage,
 			})
 		}
-		return renderTwoFactorForm(c, inst, http.StatusUnauthorized, errorMessage, redirect, token, longRunSession)
+		return renderTwoFactorForm(c, inst, http.StatusUnauthorized, errorMessage, redirect, token, longRunSession, trustedDeviceCheckBox)
 	}
 	// Handle 2FA failed
 	if !correctPasscode {
@@ -117,7 +139,7 @@ func twoFactor(c echo.Context) error {
 				"error": errorMessage,
 			})
 		}
-		return renderTwoFactorForm(c, inst, http.StatusUnauthorized, errorMessage, redirect, token, longRunSession)
+		return renderTwoFactorForm(c, inst, http.StatusUnauthorized, errorMessage, redirect, token, longRunSession, trustedDeviceCheckBox)
 	}
 
 	// Generates a new session

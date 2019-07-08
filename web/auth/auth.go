@@ -149,7 +149,7 @@ func IsDeviceTrusted(c echo.Context, inst *instance.Instance) (bool, error) {
 					"two_factor_token": string(twoFactorToken),
 				})
 			}
-			return false, renderTwoFactorForm(c, inst, http.StatusOK, "", redirect, twoFactorToken, longRunSession)
+			return false, renderTwoFactorForm(c, inst, http.StatusOK, "", redirect, twoFactorToken, longRunSession, TrustedDeviceCheckBoxActivated)
 		}
 	}
 
