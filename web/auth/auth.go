@@ -117,7 +117,8 @@ func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error)
 	return session.ID(), nil
 }
 
-func isDeviceTrusted(c echo.Context, inst *instance.Instance) (bool, error) {
+// IsDeviceTrusted checks if a device of an instance is trusted
+func IsDeviceTrusted(c echo.Context, inst *instance.Instance) (bool, error) {
 	wantsJSON := c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON
 	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
 	if err != nil {
@@ -303,10 +304,15 @@ func login(c echo.Context) error {
 			// check that the mail has been confirmed. If not, 2FA is not
 			// activated.
 			// If device is trusted, skip the 2FA.
-			trustedDevice, _ := isDeviceTrusted(c, inst)
+			trustedDevice, _ := IsDeviceTrusted(c, inst)
 			if inst.HasAuthMode(instance.TwoFactorMail) && !trustedDevice {
-				return twoFactorForm(c)
-				// return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", nil))
+				twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+				if err != nil {
+					return err
+				}
+				v := url.Values{}
+				v.Add("two_factor_token", string(twoFactorToken))
+				return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
 			}
 		} else { // Bad login passphrase
 			errorMessage := inst.Translate(CredentialsErrorKey)

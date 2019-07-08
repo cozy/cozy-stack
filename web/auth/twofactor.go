@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/limits"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -51,10 +50,12 @@ func twoFactorForm(c echo.Context) error {
 		return err
 	}
 
-	twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
-	if err != nil {
-		return err
+	twoFactorTokenParam := c.QueryParams().Get("two_factor_token")
+	if twoFactorTokenParam == "" {
+		return c.JSON(http.StatusBadRequest, "Missing twoFactorToken")
 	}
+
+	twoFactorToken := []byte(twoFactorTokenParam)
 
 	longRunSession, err := strconv.ParseBool(c.FormValue("long-run-session"))
 	if err != nil {
