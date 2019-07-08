@@ -81,11 +81,17 @@ func (fcm *FilesCozyMetadata) UpdatedByApp(entry *metadata.UpdatedByAppEntry) {
 	}
 
 	i := 0
+	seen := make(map[string]struct{})
 	for _, app := range fcm.UpdatedByApps {
 		if app.Slug == entry.Slug && app.Instance == entry.Instance {
 			continue
 		}
+		key := app.Slug + "/" + app.Instance
+		if _, ok := seen[key]; ok {
+			continue
+		}
 		fcm.UpdatedByApps[i] = app
+		seen[key] = struct{}{}
 		i++
 	}
 
