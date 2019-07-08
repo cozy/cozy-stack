@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -101,8 +102,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	if 0 <= opts.SwiftLayout && opts.SwiftLayout <= 2 {
 		i.SwiftLayout = opts.SwiftLayout
 	} else {
-		// By default, use the Swift layout v3, which has the number 2
-		i.SwiftLayout = 2
+		i.SwiftLayout = config.GetConfig().Fs.DefaultLayout
 	}
 
 	if opts.AuthMode != "" {
