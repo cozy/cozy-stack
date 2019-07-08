@@ -45,7 +45,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsEr
 	})
 }
 
-// twoFactorForm handles a GET request
+// twoFactorForm handles the twoFactor from GET request
 func twoFactorForm(c echo.Context) error {
 	var credsError string
 	trustedDeviceCheckBox := true
@@ -79,7 +79,7 @@ func twoFactorForm(c echo.Context) error {
 	return renderTwoFactorForm(c, inst, http.StatusOK, credsError, redirect, twoFactorToken, longRunSession, trustedDeviceCheckBox)
 }
 
-// twoFactor handles a POST request
+// twoFactor handles a the twoFactor POST request
 func twoFactor(c echo.Context) error {
 	wantsJSON := c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON
 
@@ -123,28 +123,12 @@ func twoFactor(c echo.Context) error {
 		}
 		return renderTwoFactorForm(c, inst, http.StatusUnauthorized, errorMessage, redirect, token, longRunSession, trustedDeviceCheckBox)
 	}
-	// Handle 2FA failed
-	if !correctPasscode {
-		errorMessage := inst.Translate(TwoFactorErrorKey)
-		errCheckRateLimit := limits.CheckRateLimit(inst, limits.TwoFactorType)
-		if errCheckRateLimit == limits.ErrRateLimitExceeded {
-			if err := TwoFactorRateExceeded(inst); err != nil {
-				inst.Logger().WithField("nspace", "auth").Warning(err)
-				errorMessage = inst.Translate(TwoFactorExceededErrorKey)
-			}
-		}
-		// Renders either the passcode page or a JSON message
-		if wantsJSON {
-			return c.JSON(http.StatusUnauthorized, echo.Map{
-				"error": errorMessage,
-			})
-		}
-		return renderTwoFactorForm(c, inst, http.StatusUnauthorized, errorMessage, redirect, token, longRunSession, trustedDeviceCheckBox)
-	}
 
 	// Generates a new session
 	sessionID, err := newSession(c, inst, redirect, longRunSession)
-
+	if err != nil {
+		return err
+	}
 	// Check if the user trusts its device
 	var generatedTrustedDeviceToken []byte
 	if generateTrustedDeviceToken {

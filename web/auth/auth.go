@@ -331,11 +331,13 @@ func login(c echo.Context) error {
 		}
 	}
 
-	// Successfull authentication
+	// Successful authentication
 	// User is now logged-in, generate a new sessions
-	sessionID, err = newSession(c, inst, redirect, longRunSession)
-	if err != nil {
-		return err
+	if sessionID == "" {
+		sessionID, err = newSession(c, inst, redirect, longRunSession)
+		if err != nil {
+			return err
+		}
 	}
 	redirect = AddCodeToRedirect(redirect, inst.ContextualDomain(), sessionID)
 	return c.Redirect(http.StatusSeeOther, redirect.String())

@@ -24,7 +24,7 @@
     // do nothing
   }
 
-  const showError = function (error) {
+  const showError = function(error) {
     if (error) {
       error = '' + error
     } else {
@@ -55,13 +55,20 @@
     const headers = new Headers()
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
     headers.append('Accept', 'application/json')
+
     const reqBody =
-      'two-factor-passcode=' + encodeURIComponent(passcode) +
-      '&long-run-session=' + encodeURIComponent(longRunSession) +
-      '&two-factor-token=' + encodeURIComponent(token) +
-      '&two-factor-generate-trusted-device-token=' + encodeURIComponent(trustDevice) +
-      '&redirect=' + encodeURIComponent(redirect) +
-      '&csrf_token=' + encodeURIComponent(csrfTokenInput.value);
+      'two-factor-passcode=' +
+      encodeURIComponent(passcode) +
+      '&long-run-session=' +
+      encodeURIComponent(longRunSession) +
+      '&two-factor-token=' +
+      encodeURIComponent(token) +
+      '&two-factor-generate-trusted-device-token=' +
+      encodeURIComponent(trustDevice) +
+      '&redirect=' +
+      encodeURIComponent(redirect) +
+      '&csrf_token=' +
+      encodeURIComponent(csrfTokenInput.value)
     fetch('/auth/twofactor', {
       method: 'POST',
       headers: headers,
@@ -75,7 +82,10 @@
           .json()
           .then(function(body) {
             if (loginSuccess) {
-              if (localStorage && typeof body.two_factor_trusted_device_token == 'string') {
+              if (
+                localStorage &&
+                typeof body.two_factor_trusted_device_token == 'string'
+              ) {
                 localStorage.setItem(
                   twoFactorTrustedDeviceTokenKey,
                   body.two_factor_trusted_device_token
