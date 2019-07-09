@@ -312,6 +312,39 @@ func ModifyMetadataByPathHandler(c echo.Context) error {
 	return nil
 }
 
+// ModifyFileVersionMetadata handles PATCH requests on /files/:file-id/:version-id
+//
+// It can be used to modify tags on an old version of a file.
+func ModifyFileVersionMetadata(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fileID := c.Param("file-id")
+	_, file, err := inst.VFS().DirOrFileByID(fileID)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	if file == nil {
+		return WrapVfsError(vfs.ErrConflict)
+	}
+	if err = checkPerm(c, permission.PATCH, nil, file); err != nil {
+		return WrapVfsError(err)
+	}
+	docID := fileID + "/" + c.Param("version-id")
+	version, err := vfs.FindVersion(inst, docID)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	var patch vfs.DocPatch
+	if _, err = jsonapi.Bind(c.Request().Body, &patch); err != nil || patch.Tags == nil {
+		return jsonapi.BadJSON()
+	}
+	version.Tags = *patch.Tags
+	version.CozyMetadata.UpdatedAt = time.Now()
+	if err = couchdb.UpdateDoc(inst, version); err != nil {
+		return WrapVfsError(err)
+	}
+	return jsonapi.Data(c, http.StatusOK, version, nil)
+}
+
 func getPatch(c echo.Context, docID, docPath string) (*docPatch, error) {
 	var patch docPatch
 	obj, err := jsonapi.Bind(c.Request().Body, &patch)
@@ -1124,6 +1157,7 @@ func Routes(router *echo.Group) {
 	router.HEAD("/download/:file-id/:version-id", ReadFileContentFromVersion)
 	router.GET("/download/:file-id/:version-id", ReadFileContentFromVersion)
 	router.POST("/revert/:file-id/:version-id", RevertFileVersion)
+	router.PATCH("/:file-id/:version-id", ModifyFileVersionMetadata)
 
 	router.POST("/_find", FindFilesMango)
 
