@@ -485,7 +485,7 @@ msgid "Mail Two Factor Mail Confirmation Subject"
 msgstr "You want to enable two-factor authentication on your %s"
 
 msgid "Mail Two Factor Mail Confirmation Intro"
-msgstr "Here is the code to enable two-factor authentication: %s"
+msgstr "Here is the code to enable two-factor authentication:"
 
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr "If you have not made this change, please contact us at contact@cozycloud.cc"
