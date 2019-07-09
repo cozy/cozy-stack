@@ -33,6 +33,13 @@ func Get(name string, context ...string) (*model.Asset, bool) {
 		logger.WithNamespace("asset").Errorf("Error while retreiving dynamic asset: %s", err)
 	}
 
+	if ctx != config.DefaultInstanceContext {
+		dynAsset, err = dynamic.GetAsset(config.DefaultInstanceContext, name)
+		if err == nil {
+			return dynAsset, true
+		}
+	}
+
 	// If asset was not found, try to retrieve it from static assets
 	asset := statik.GetAsset(name)
 	if asset == nil {
@@ -44,8 +51,7 @@ func Get(name string, context ...string) (*model.Asset, bool) {
 // Remove removes an asset
 // Note: Only dynamic assets can be removed
 func Remove(name, context string) error {
-	// No context
-	if context == "" || context == config.DefaultInstanceContext {
+	if context == "" {
 		return fmt.Errorf("Cannot remove a statik asset. Please specify a context")
 	}
 
@@ -59,11 +65,6 @@ func List() (map[string][]*model.Asset, error) {
 
 	defctx := config.DefaultInstanceContext
 
-	// Get statik assets
-	statik.Foreach(func(name string, f *model.Asset) {
-		assetsMap[defctx] = append(assetsMap[defctx], f)
-	})
-
 	// Get dynamic assets
 	dynAssets, err := dynamic.ListAssets()
 	if err != nil {
@@ -72,6 +73,17 @@ func List() (map[string][]*model.Asset, error) {
 	for ctx, assets := range dynAssets {
 		assetsMap[ctx] = append(assetsMap[ctx], assets...)
 	}
+
+	// Get statik assets
+	statik.Foreach(func(name string, f *model.Asset) {
+		for _, asset := range assetsMap[defctx] {
+			if asset.Name == f.Name {
+				return
+			}
+		}
+		assetsMap[defctx] = append(assetsMap[defctx], f)
+	})
+
 	return assetsMap, nil
 }
 
