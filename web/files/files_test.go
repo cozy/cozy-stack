@@ -1092,6 +1092,41 @@ func TestVersions(t *testing.T) {
 	assert.Equal(t, sum2, attrv2["md5sum"])
 }
 
+func TestPatchVersion(t *testing.T) {
+	res1, body1 := upload(t, "/files/?Type=file&Name=patch-version", "text/plain", "one", "")
+	assert.Equal(t, 201, res1.StatusCode)
+	data1 := body1["data"].(map[string]interface{})
+	fileID := data1["id"].(string)
+	res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
+	assert.Equal(t, 200, res2.StatusCode)
+
+	res3, _ := httpGet(ts.URL + "/files/" + fileID)
+	assert.Equal(t, 200, res3.StatusCode)
+	var body3 map[string]interface{}
+	assert.NoError(t, json.NewDecoder(res3.Body).Decode(&body3))
+	data3 := body3["data"].(map[string]interface{})
+	rels := data3["relationships"].(map[string]interface{})
+	old := rels["old_versions"].(map[string]interface{})
+	refs := old["data"].([]interface{})
+	assert.Len(t, refs, 1)
+	ref := refs[0].(map[string]interface{})
+	assert.Equal(t, consts.FilesVersions, ref["type"])
+	versionID := ref["id"].(string)
+
+	attrs := map[string]interface{}{
+		"tags": []string{"qux"},
+	}
+	fmt.Printf("versionID = %q\n", versionID)
+	res4, body4 := patchFile(t, "/files/"+versionID, consts.FilesVersions, versionID, attrs, nil)
+	assert.Equal(t, 200, res4.StatusCode)
+	data4 := body4["data"].(map[string]interface{})
+	assert.Equal(t, versionID, data4["id"])
+	attrs4 := data4["attributes"].(map[string]interface{})
+	tags := attrs4["tags"].([]interface{})
+	assert.Len(t, tags, 1)
+	assert.Equal(t, "qux", tags[0])
+}
+
 func TestDownloadVersion(t *testing.T) {
 	content := "one"
 	res1, body1 := upload(t, "/files/?Type=file&Name=downloadme-versioned", "text/plain", content, "")
