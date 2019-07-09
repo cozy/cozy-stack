@@ -1997,7 +1997,7 @@ func TestGetFileByPublicLinkRateExceeded(t *testing.T) {
 
 	err = limits.CheckRateLimitKey(fileID, limits.SharingPublicLinkType)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Rate limit exceeded")
+	assert.Contains(t, err.Error(), "Rate limit reached")
 	req, err := http.NewRequest("GET", ts.URL+"/files/"+fileID, nil)
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+publicToken)

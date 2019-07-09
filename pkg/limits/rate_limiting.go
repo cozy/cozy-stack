@@ -14,6 +14,7 @@ import (
 type CounterType int
 
 var ErrRateLimitExceeded = errors.New("Rate limit exceeded")
+var ErrRateLimitReached = errors.New("Rate limit reached")
 
 const (
 	// AuthType is used for counting the number of login attempts.
@@ -192,6 +193,11 @@ func CheckRateLimitKey(customKey string, ct CounterType) error {
 	if err != nil {
 		return err
 	}
+	// The first time we reach the limit, we provide a specific error message.
+	// This allows to log a warning only once if needed.
+	if val == cfg.Limit+1 {
+		return ErrRateLimitReached
+	}
 	if val > cfg.Limit {
 		return ErrRateLimitExceeded
 	}
@@ -203,4 +209,10 @@ func ResetCounter(p prefixer.Prefixer, ct CounterType) {
 	cfg := configs[ct]
 	key := cfg.Prefix + ":" + p.DomainName()
 	_ = getCounter().Reset(key)
+}
+
+// IsLimitReachedOrExceeded return true if the limit has been reached or
+// exceeded, false otherwise.
+func IsLimitReachedOrExceeded(err error) bool {
+	return err == ErrRateLimitReached || err == ErrRateLimitExceeded
 }
