@@ -33,6 +33,9 @@ const (
 	// SharingPublicLinkType is used for counting the number of public sharing
 	// link consultations
 	SharingPublicLinkType
+	// JobThumbnailType is used for counting the number of thumbnail jobs
+	// executed by an instance
+	JobThumbnailType
 )
 
 type counterConfig struct {
@@ -76,6 +79,12 @@ var configs = []counterConfig{
 	{
 		Prefix: "sharing-public-link",
 		Limit:  2000,
+		Period: 1 * time.Hour,
+	},
+	// JobThumbnail
+	{
+		Prefix: "job-thumbnail",
+		Limit:  5000,
 		Period: 1 * time.Hour,
 	},
 }
@@ -215,4 +224,14 @@ func ResetCounter(p prefixer.Prefixer, ct CounterType) {
 // exceeded, false otherwise.
 func IsLimitReachedOrExceeded(err error) bool {
 	return err == ErrRateLimitReached || err == ErrRateLimitExceeded
+}
+
+// GetMaximumLimit returns the limit of a CounterType
+func GetMaximumLimit(ct CounterType) int64 {
+	return configs[ct].Limit
+}
+
+// SetMaximumLimit sets a new limit for a CounterType
+func SetMaximumLimit(ct CounterType, newLimit int64) {
+	configs[ct].Limit = newLimit
 }
