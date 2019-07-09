@@ -47,6 +47,9 @@ func deleteContainerFiles(c *swift.Connection, container string, objectNames []s
 	for i := 0; i < nb; i++ {
 		begin := i * maxNbFilesToDelete
 		end := (i + 1) * maxNbFilesToDelete
+		if end > len(objectNames) {
+			end = len(objectNames)
+		}
 		objectToDelete := objectNames[begin:end]
 		go func() {
 			k := <-tokens
