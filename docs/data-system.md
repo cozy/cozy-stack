@@ -502,6 +502,8 @@ Content-Type: application/json
 
 ## List the known doctypes
 
+A permission on `io.cozy.doctypes` for `GET` is needed to query this endoint.
+
 ### Request
 
 ```http
