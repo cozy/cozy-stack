@@ -20,9 +20,12 @@
   }
 
   // Set the trusted device token from the localstorage in the form if it exists
-  const twoFactorTrustedDeviceToken =
-    (localStorage && localStorage.getItem(twoFactorTrustedDeviceTokenKey)) || ''
-  twoFactorTrustedDomainInput.value = twoFactorTrustedDeviceToken
+  if (loginForm) {
+    const twoFactorTrustedDeviceToken =
+      (localStorage && localStorage.getItem(twoFactorTrustedDeviceTokenKey)) ||
+      ''
+    twoFactorTrustedDomainInput.value = twoFactorTrustedDeviceToken
+  }
 
   // Used for passphrase reset
   resetForm &&
