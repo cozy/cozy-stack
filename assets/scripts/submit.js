@@ -25,20 +25,25 @@
   twoFactorTrustedDomainInput.value = twoFactorTrustedDeviceToken
 
   // Used for passphrase reset
-  resetForm && resetForm.addEventListener('submit', function(event) {
-    event.preventDefault()
-    const label = window.password.getStrength(passphraseInput.value).label
-    if (label == 'weak') {
-      return false
-    } else {
-      resetForm.submit()
-    }
-  })
+  resetForm &&
+    resetForm.addEventListener('submit', function(event) {
+      event.preventDefault()
+      const label = window.password.getStrength(passphraseInput.value).label
+      if (label == 'weak') {
+        return false
+      } else {
+        resetForm.submit()
+      }
+    })
 
-  resetForm && passphraseInput.addEventListener('input', function(event) {
-    const label = window.password.getStrength(event.target.value).label
-    submitButton[label == 'weak' ? 'setAttribute' : 'removeAttribute']('disabled', '')
-  })
+  resetForm &&
+    passphraseInput.addEventListener('input', function(event) {
+      const label = window.password.getStrength(event.target.value).label
+      submitButton[label == 'weak' ? 'setAttribute' : 'removeAttribute'](
+        'disabled',
+        ''
+      )
+    })
 
   passphraseInput.focus()
   loginForm && submitButton.removeAttribute('disabled')

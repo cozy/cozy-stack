@@ -72,6 +72,10 @@ We are using [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) to
 format code, and [golangci-lint](https://github.com/golangci/golangci-lint) to
 detect code smells.
 
+We are using [eslint](https://eslint.org/) to lint JavaScript code. The linting
+rules are based on
+[cozy-app](https://github.com/cozy/cozy-libs/tree/master/packages/eslint-config-cozy-app)
+
 #### Step 4: Test
 
 Don't forget to add tests and be sure they are green:
