@@ -32,6 +32,10 @@ const (
 	TwoFactorExceededErrorKey = "Login Two factor attempts error"
 )
 
+func wantsJSON(c echo.Context) bool {
+	return c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON
+}
+
 func renderError(c echo.Context, code int, msg string) error {
 	instance := middlewares.GetInstance(c)
 	return c.Render(code, "error.html", echo.Map{
@@ -119,7 +123,6 @@ func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error)
 
 // IsDeviceTrusted checks if a device of an instance is trusted
 func IsDeviceTrusted(c echo.Context, inst *instance.Instance) (bool, error) {
-	wantsJSON := c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON
 	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
 	if err != nil {
 		return false, err
@@ -143,7 +146,7 @@ func IsDeviceTrusted(c echo.Context, inst *instance.Instance) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			if wantsJSON {
+			if wantsJSON(c) {
 				return false, c.JSON(http.StatusOK, echo.Map{
 					"redirect":         redirect.String(),
 					"two_factor_token": string(twoFactorToken),
