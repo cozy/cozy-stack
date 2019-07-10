@@ -49,7 +49,7 @@
               {{.CredentialsError}}
             </p>
             {{end}}
-            <div class="c-avatar u-mh-auto u-mt-1">
+            <div class="c-avatar u-mh-auto u-mv-0-m u-mv-1">
               <img class="c-avatar-image" src="/public/avatar" alt="" />
             </div>
             <h1 class="wizard-title two-factor-form">{{t "Login Two factor title"}}</h1>
@@ -73,7 +73,7 @@
               <input id="two-factor-trust-device" class="two-factor-trust-device-checkbox" name="two-factor-trust-device" type="hidden"/>
             {{end}}
           </div>
-          <footer class="wizard-footer u-pb-half">
+          <footer class="wizard-footer u-pb-half-m u-pb-2">
             <button id="login-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">
               <span class="two-factor-form">{{t "Login Confirm"}}</span>
             </button>

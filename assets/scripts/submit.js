@@ -52,12 +52,7 @@
   if (document.body.clientWidth > 1024) {
     const avatars = document.getElementsByClassName('c-avatar')
     for (const avatar of avatars) {
-      avatar.classList.add('c-avatar--xlarge', 'u-mv-1')
-    }
-    const footers = document.getElementsByClassName('wizard-footer')
-    for (const footer of footers) {
-      footer.classList.remove('u-pb-half')
-      footer.classList.add('u-pb-2')
+      avatar.classList.add('c-avatar--xlarge')
     }
   }
 })(window, document)
