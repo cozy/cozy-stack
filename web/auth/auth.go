@@ -121,42 +121,10 @@ func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error)
 	return session.ID(), nil
 }
 
-// IsDeviceTrusted checks if a device of an instance is trusted
-func IsDeviceTrusted(c echo.Context, inst *instance.Instance) (bool, error) {
-	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
-	if err != nil {
-		return false, err
-	}
-	longRunSession, _ := strconv.ParseBool(c.FormValue("long-run-session"))
+// isTrustedDevice checks if a device of an instance is trusted
+func isTrustedDevice(c echo.Context, inst *instance.Instance) bool {
 	trustedDeviceToken := []byte(c.FormValue("two-factor-trusted-device-token"))
-
-	trustedDeviceTokenValidated := inst.ValidateTwoFactorTrustedDeviceSecret(c.Request(), trustedDeviceToken)
-	if trustedDeviceTokenValidated {
-		return true, nil
-	}
-
-	if len(trustedDeviceToken) > 0 && !trustedDeviceTokenValidated {
-		// If the token is bad, maybe the password had been changed, and
-		// the token is now expired. We are going to empty it and ask a
-		// regeneration
-		trustedDeviceToken = []byte{}
-
-		if len(trustedDeviceToken) == 0 {
-			twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
-			if err != nil {
-				return false, err
-			}
-			if wantsJSON(c) {
-				return false, c.JSON(http.StatusOK, echo.Map{
-					"redirect":         redirect.String(),
-					"two_factor_token": string(twoFactorToken),
-				})
-			}
-			return false, renderTwoFactorForm(c, inst, http.StatusOK, "", redirect, twoFactorToken, longRunSession, TrustedDeviceCheckBoxActivated)
-		}
-	}
-
-	return false, nil
+	return inst.ValidateTwoFactorTrustedDeviceSecret(c.Request(), trustedDeviceToken)
 }
 
 func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors string, redirect *url.URL) error {
@@ -307,8 +275,7 @@ func login(c echo.Context) error {
 			// check that the mail has been confirmed. If not, 2FA is not
 			// activated.
 			// If device is trusted, skip the 2FA.
-			trustedDevice, _ := IsDeviceTrusted(c, inst)
-			if inst.HasAuthMode(instance.TwoFactorMail) && !trustedDevice {
+			if inst.HasAuthMode(instance.TwoFactorMail) && !isTrustedDevice(c, inst) {
 				twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
 				if err != nil {
 					return err
