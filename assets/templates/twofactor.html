@@ -72,6 +72,7 @@
             {{else}}
               <input id="two-factor-trust-device" class="two-factor-trust-device-checkbox" name="two-factor-trust-device" type="hidden"/>
             {{end}}
+            <input id="long-run-session" name="long-run-session" type="hidden" value="{{.LongRunSession}}" />
           </div>
           <footer class="wizard-footer u-pb-half-m u-pb-2">
             <button id="login-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">

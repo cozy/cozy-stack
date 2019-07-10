@@ -53,13 +53,10 @@
               <img class="c-avatar-image" src="/public/avatar" alt="" />
             </div>
             <h1 class="wizard-title password-form">{{.Title}}</h1>
-            <h1 class="wizard-title two-factor-form {{if not .TwoFactorForm}} u-hide{{end}}">{{t "Login Two factor title"}}</h1>
             <h2 class="password-form wizard-subtitle u-coolGrey">{{.Domain}}</h2>
-            <p class="two-factor-form wizard-header-help {{if not .TwoFactorForm}} u-hide{{end}}" id="login-two-factor-passcode-tip">{{t "Login Two factor help"}}</p>
             <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
             <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
             <input id="two-factor-trusted-device-token" type="hidden" name="two-factor-trusted-device-token" value="" />
-            {{if not .TwoFactorForm}}
             <div class="o-field password-form u-m-0">
               <label for="password" class="c-label">{{t "Login Password field"}}</label>
               <button id="password-visibility-button" class="wizard-showbutton c-btn c-btn--secondary"
@@ -88,18 +85,10 @@
             {{else}}
             <input id="long-run-session" name="long-run-session" type="hidden" value="{{.LongRunSession}}" />
             {{end}}
-            {{else}}
-            <input id="long-run-session" name="long-run-session" type="hidden" value="{{.LongRunSession}}" />
-            {{end}}
-            <div class="o-field u-m-0 two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">
-              <label for="two-factor-passcode" class="c-label" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
-              <input id="two-factor-passcode" class="wizard-input c-input-text" name="two-factor-passcode" type="text" pattern="[0-9]*" inputmode="numeric" maxlength="6" {{if .TwoFactorForm}}autofocus {{end}}autocomplete="current-password" />
-            </div>
           </div>
           <footer class="wizard-footer u-pb-half-m u-pb-2">
             <button id="login-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">
               <span class="password-form">{{t "Login Submit"}}</span>
-              <span class="two-factor-form{{if not .TwoFactorForm}} u-hide{{end}}">{{t "Login Confirm"}}</span>
             </button>
           </footer>
         </form>

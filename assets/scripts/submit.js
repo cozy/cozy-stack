@@ -12,6 +12,9 @@
     'two-factor-trusted-device-token'
   )
 
+  const longRunSessionCheckbox = document.getElementById('long-run-session')
+  longRunSessionCheckbox.value = longRunSessionCheckbox.checked ? '1' : '0'
+
   let localStorage = null
   try {
     localStorage = window.localStorage

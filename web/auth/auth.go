@@ -178,8 +178,6 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"PasswordHelp":     help,
 		"CredentialsError": credsErrors,
 		"Redirect":         redirectStr,
-		"TwoFactorForm":    false,
-		"TwoFactorToken":   "",
 		"CSRF":             c.Get("csrf"),
 		"OAuth":            oauth,
 		"Favicon":          middlewares.Favicon(i),
@@ -282,6 +280,7 @@ func login(c echo.Context) error {
 				}
 				v := url.Values{}
 				v.Add("two_factor_token", string(twoFactorToken))
+				v.Add("long_run_session", strconv.FormatBool(longRunSession))
 				return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
 			}
 		} else { // Bad login passphrase

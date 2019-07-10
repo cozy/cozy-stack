@@ -100,7 +100,14 @@ func twoFactor(c echo.Context) error {
 	token := []byte(c.FormValue("two-factor-token"))
 	passcode := c.FormValue("two-factor-passcode")
 	generateTrustedDeviceToken, _ := strconv.ParseBool(c.FormValue("two-factor-generate-trusted-device-token"))
-	longRunSession, _ := strconv.ParseBool(c.FormValue("long-run-session"))
+
+	longRunSession := false
+	if longRunParam := c.QueryParam("long-run-session"); longRunParam != "" {
+		longRunSession, err = strconv.ParseBool(longRunParam)
+		if err != nil {
+			return err
+		}
+	}
 
 	// Handle 2FA failed
 	correctPasscode := inst.ValidateTwoFactorPasscode(token, passcode)
