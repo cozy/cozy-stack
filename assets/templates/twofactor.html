@@ -62,7 +62,7 @@
               <label for="two-factor-passcode" class="c-label" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
               <input id="two-factor-passcode" class="wizard-input c-input-text" name="two-factor-passcode" type="text" pattern="[0-9]*" inputmode="numeric" maxlength="6" {{if .TwoFactorForm}}autofocus {{end}}autocomplete="current-password" />
             </div>
-            {{if and (not .OAuth) .TrustedDeviceCheckBox}}
+            {{if .TrustedDeviceCheckBox}}
               <p class="wizard-notice two-factor-form">
                 <label class="c-input-checkbox u-m-0">
                   <input id="two-factor-trust-device" name="two-factor-trust-device" type="checkbox" />

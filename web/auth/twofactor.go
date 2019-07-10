@@ -27,6 +27,8 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsEr
 	}
 
 	oauth := i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
+	trustedCheckbox := !oauth && trustedDeviceCheckBox
+
 	return c.Render(code, "twofactor.html", echo.Map{
 		"CozyUI":                middlewares.CozyUI(i),
 		"ThemeCSS":              middlewares.ThemeCSS(i),
@@ -39,9 +41,8 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsEr
 		"LongRunSession":        longRunSession,
 		"TwoFactorToken":        string(twoFactorToken),
 		"CSRF":                  c.Get("csrf"),
-		"OAuth":                 oauth,
 		"Favicon":               middlewares.Favicon(i),
-		"TrustedDeviceCheckBox": trustedDeviceCheckBox,
+		"TrustedDeviceCheckBox": trustedCheckbox,
 	})
 }
 
