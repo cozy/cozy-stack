@@ -253,7 +253,6 @@ func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, long
 
 func login(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	wantsJSON := c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON
 
 	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
 	if err != nil {
@@ -281,6 +280,13 @@ func login(c echo.Context) error {
 				v := url.Values{}
 				v.Add("two_factor_token", string(twoFactorToken))
 				v.Add("long_run_session", strconv.FormatBool(longRunSession))
+
+				if wantsJSON(c) {
+					return c.JSON(http.StatusOK, echo.Map{
+						"redirect":         inst.PageURL("/auth/twofactor", v),
+						"two_factor_token": string(twoFactorToken),
+					})
+				}
 				return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
 			}
 		} else { // Bad login passphrase
@@ -291,7 +297,7 @@ func login(c echo.Context) error {
 					inst.Logger().WithField("nspace", "auth").Warning(err)
 				}
 			}
-			if wantsJSON {
+			if wantsJSON(c) {
 				return c.JSON(http.StatusUnauthorized, echo.Map{
 					"error": errorMessage,
 				})
@@ -309,6 +315,12 @@ func login(c echo.Context) error {
 		}
 	}
 	redirect = AddCodeToRedirect(redirect, inst.ContextualDomain(), sessionID)
+	if wantsJSON(c) {
+		return c.JSON(http.StatusOK, echo.Map{
+			"redirect": redirect.String(),
+		})
+	}
+
 	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 
