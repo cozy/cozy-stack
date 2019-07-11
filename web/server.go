@@ -77,13 +77,14 @@ func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 			return nil, err
 		}
 		if !exists {
-			return nil, fmt.Errorf("Directory %s does not exist", dir)
-		}
-		if err = checkExists(path.Join(dir, app.WebappManifestName)); err != nil {
-			logger.WithNamespace("dev").Warnf("The app manifest is missing: %s", err)
-		}
-		if err = checkExists(path.Join(dir, "index.html")); err != nil {
-			logger.WithNamespace("dev").Warnf("The index.html is missing: %s", err)
+			logger.WithNamespace("dev").Warnf("Directory %s does not exist", dir)
+		} else {
+			if err = checkExists(path.Join(dir, app.WebappManifestName)); err != nil {
+				logger.WithNamespace("dev").Warnf("The app manifest is missing: %s", err)
+			}
+			if err = checkExists(path.Join(dir, "index.html")); err != nil {
+				logger.WithNamespace("dev").Warnf("The index.html is missing: %s", err)
+			}
 		}
 	}
 
