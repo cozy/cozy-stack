@@ -36,6 +36,13 @@ const (
 	// JobThumbnailType is used for counting the number of thumbnail jobs
 	// executed by an instance
 	JobThumbnailType
+	// JobShareTrackType is used for counting the number of updates of the
+	// io.cozy.shared database
+	JobShareTrackType
+	// JobShareReplicateType is used for counting the number of replications
+	JobShareReplicateType
+	// JobShareUploadType is used for counting the file uploads
+	JobShareUploadType
 )
 
 type counterConfig struct {
@@ -84,6 +91,24 @@ var configs = []counterConfig{
 	// JobThumbnail
 	{
 		Prefix: "job-thumbnail",
+		Limit:  5000,
+		Period: 1 * time.Hour,
+	},
+	// ShareTrack
+	{
+		Prefix: "job-share-track",
+		Limit:  5000,
+		Period: 1 * time.Hour,
+	},
+	// ShareReplicate
+	{
+		Prefix: "job-share-replicate",
+		Limit:  5000,
+		Period: 1 * time.Hour,
+	},
+	// ShareUpload
+	{
+		Prefix: "job-share-upload",
 		Limit:  5000,
 		Period: 1 * time.Hour,
 	},
