@@ -144,6 +144,9 @@ func init() {
 	flags.String("fs-url", defaultFsURL.String(), "filesystem url")
 	checkNoErr(viper.BindPFlag("fs.url", flags.Lookup("fs-url")))
 
+	flags.Int("fs-default-layout", -1, "Default layout for Swift (2 for layout v3)")
+	checkNoErr(viper.BindPFlag("fs.default_layout", flags.Lookup("fs-default-layout")))
+
 	flags.String("couchdb-url", "http://localhost:5984/", "CouchDB URL")
 	checkNoErr(viper.BindPFlag("couchdb.url", flags.Lookup("couchdb-url")))
 

@@ -282,13 +282,21 @@ optionaly the old version of this document.
 The message is composed of a sharing ID and a count of the number of errors
 (i.e. the number of times this job was retried).
 
+## migrations
+
+The `migrations` worker can be used to migrate a cozy instance that has its
+files in swift from a V1 or V2 layout to a V3 layout. Currently, it has a
+single option, `type`, with a single supported value, `to-swift-v3`.
+
+### Example
+
+It can be launched from command-line with:
+
+```sh
+$ cozy-stack jobs run migrations --domain example.mycozy.cloud --json '{"type": "to-swift-v3"}'
+```
+
 ## Deprecated workers
-
-### migrations
-
-The `migrations` worker was used for migrating cozy instance that had their
-files in swift from a V1 layout to a V2 layout. The code is probably not in
-a good shape, and it would be safer to rework it before using it.
 
 ### updates
 

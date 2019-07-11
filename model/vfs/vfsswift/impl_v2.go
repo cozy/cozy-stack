@@ -162,13 +162,13 @@ func (sfs *swiftVFSV2) Delete() error {
 			sfs.container, err)
 	}
 	var errm error
-	if err = deleteContainer(sfs.c, sfs.version); err != nil {
+	if err = DeleteContainer(sfs.c, sfs.version); err != nil {
 		errm = multierror.Append(errm, err)
 	}
-	if err = deleteContainer(sfs.c, sfs.container); err != nil {
+	if err = DeleteContainer(sfs.c, sfs.container); err != nil {
 		errm = multierror.Append(errm, err)
 	}
-	if err = deleteContainer(sfs.c, sfs.dataContainer); err != nil {
+	if err = DeleteContainer(sfs.c, sfs.dataContainer); err != nil {
 		errm = multierror.Append(errm, err)
 	}
 	return errm

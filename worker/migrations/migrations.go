@@ -2,28 +2,34 @@ package migrations
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"runtime"
-	"strings"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/model/vfs/vfsswift"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
-const swiftV1ContainerPrefixCozy = "cozy-"
-const swiftV1ContainerPrefixData = "data-"
-const swiftV2ContainerPrefixCozy = "cozy-v2-"
-const swiftV2ContainerPrefixData = "data-v2"
-const versionSuffix = "-version"
-const dirContentType = "directory"
+const (
+	swiftV1ToV2 = "swift-v1-to-v2"
+	toSwiftV3   = "to-swift-v3"
+
+	swiftV1ContainerPrefixCozy = "cozy-"
+	swiftV1ContainerPrefixData = "data-"
+	swiftV2ContainerPrefixCozy = "cozy-v2-"
+	swiftV2ContainerPrefixData = "data-v2-"
+	swiftV3ContainerPrefix     = "cozy-v3-"
+)
+
+// maxSimultaneousCalls is the maximal number of simultaneous calls to Swift
+// made by a single migration.
+const maxSimultaneousCalls = 8
 
 func init() {
 	job.AddWorker(&job.WorkerConfig{
@@ -35,11 +41,8 @@ func init() {
 	})
 }
 
-const swiftV1ToV2 = "swift-v1-to-v2"
-
 type message struct {
-	Type    string `json:"type"`
-	Cluster int    `json:"cluster"`
+	Type string `json:"type"`
 }
 
 func worker(ctx *job.WorkerContext) error {
@@ -49,228 +52,184 @@ func worker(ctx *job.WorkerContext) error {
 	}
 
 	switch msg.Type {
+	case toSwiftV3:
+		return migrateToSwiftV3(ctx.Instance.Domain)
 	case swiftV1ToV2:
-		return migrateSwiftV1ToV2(ctx.Instance.Domain)
+		return fmt.Errorf("this migration type is no longer supported")
 	default:
 		return fmt.Errorf("unknown migration type %q", msg.Type)
 	}
 }
 
 func commit(ctx *job.WorkerContext, err error) error {
-	if err != nil {
-		return nil
-	}
-
-	var msg message
-	if err := ctx.UnmarshalMessage(&msg); err != nil {
-		return err
-	}
-
-	switch msg.Type {
-	case swiftV1ToV2:
-		return commitSwiftV1ToV2(ctx.Instance.Domain, msg.Cluster)
-	default:
-		return fmt.Errorf("unknown migration type %q", msg.Type)
-	}
-}
-
-type object struct {
-	obj          swift.Object
-	containerSrc string
-	containerDst string
-}
-
-func migrateSwiftV1ToV2(domain string) error {
-	c := config.GetSwiftConnection()
-	inst, err := lifecycle.GetInstance(domain)
-	if err != nil {
-		return err
-	}
-	if inst.SwiftLayout > 0 {
-		return nil
-	}
-
-	containerV1 := swiftV1ContainerPrefixCozy + domain
-	containerV2 := swiftV2ContainerPrefixCozy + domain
-
-	// container containing thumbnails
-	containerV1Data := swiftV1ContainerPrefixData + domain
-	containerV2Data := swiftV2ContainerPrefixData + domain
-
-	err = c.VersionContainerCreate(containerV2, containerV2+versionSuffix)
-	if err != nil {
-		return err
-	}
-
-	objc := make(chan object)
-	errc := make(chan error)
-
-	go func() {
-		errc <- readObjects(c, objc, containerV1, containerV2)
-		errc <- readObjects(c, objc, containerV1Data, containerV2Data)
-		close(objc)
-	}()
-
-	const N = 4
-
-	for i := 0; i < N; i++ {
-		go copyObjects(c, inst, objc, errc)
-	}
-
-	var errm error
-	done := N
-	for {
-		err := <-errc
-		if err != nil {
-			errm = multierror.Append(errm, err)
-		} else {
-			done--
-		}
-		if done == 0 {
-			break
-		}
-	}
-
-	return errm
-}
-
-func commitSwiftV1ToV2(domain string, swiftCluster int) error {
-	inst, err := lifecycle.GetInstance(domain)
-	if err != nil {
-		return err
-	}
-
-	c := config.GetSwiftConnection()
-
-	containerName := swiftV1ContainerPrefixCozy + domain
-	containerMeta := &swift.Metadata{"cozy-v1-migrated": "1"}
-	err = c.ContainerUpdate(containerName, containerMeta.ContainerHeaders())
-	if err != nil {
-		return err
-	}
-
-	return lifecycle.Patch(inst, &lifecycle.Options{SwiftLayout: swiftCluster})
-}
-
-func readObjects(c *swift.Connection, objc chan object,
-	containerSrc, containerDst string) error {
-	return c.ObjectsWalk(containerSrc, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
-		objs, err := c.Objects(containerSrc, opts)
-		if err != nil {
-			return nil, err
-		}
-		for _, obj := range objs {
-			objc <- object{
-				obj:          obj,
-				containerSrc: containerSrc,
-				containerDst: containerDst,
-			}
-		}
-		return objs, err
-	})
-}
-
-func copyObjects(c *swift.Connection, db prefixer.Prefixer,
-	objc chan object,
-	errc chan error) {
-
-	copyBuffer := make([]byte, 128*1024)
-
-	for obj := range objc {
-		var err error
-		containerSrc := obj.containerSrc
-		containerDst := obj.containerDst
-		switch {
-		case strings.HasPrefix(containerSrc, swiftV1ContainerPrefixCozy):
-			err = copyFileDataObject(c, db, containerSrc, containerDst, obj.obj, copyBuffer)
-		case strings.HasPrefix(containerSrc, swiftV1ContainerPrefixData):
-			err = copyThumbnailDataObject(c, db, containerSrc, containerDst, obj.obj, copyBuffer)
-		}
-		if err != nil {
-			errc <- err
-		}
-	}
-
-	errc <- nil
-}
-
-func copyFileDataObject(c *swift.Connection, db prefixer.Prefixer,
-	containerSrc, containerDst string,
-	objSrc swift.Object,
-	copyBuffer []byte) error {
-	if objSrc.ContentType == dirContentType {
-		return nil
-	}
-	dirID, name, ok := splitV2ObjectName(objSrc.Name)
-	if !ok {
-		return nil
-	}
-	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, couchdb.FilesByParentView, &couchdb.ViewRequest{
-		Key:         []string{dirID, consts.FileType, name},
-		IncludeDocs: false,
-	}, &res)
-	if err != nil {
-		return err
-	}
-	if len(res.Rows) == 0 {
-		return os.ErrNotExist
-	}
-	objNameDst := vfsswift.MakeObjectName(res.Rows[0].ID)
-	return copyObject(c, db, containerSrc, containerDst, objSrc, objNameDst, copyBuffer)
-}
-
-func copyThumbnailDataObject(c *swift.Connection, db prefixer.Prefixer,
-	containerSrc, containerDst string,
-	objSrc swift.Object,
-	copyBuffer []byte) error {
-
-	split := strings.SplitN(strings.TrimPrefix(objSrc.Name, "thumbs/"), "-", 2)
-	if len(split) != 2 {
-		return nil
-	}
-	objNameDst := "thumbs/" + vfsswift.MakeObjectName(split[0]) + "-" + split[1]
-	return copyObject(c, db, containerSrc, containerDst, objSrc, objNameDst, copyBuffer)
-}
-
-func copyObject(c *swift.Connection, db prefixer.Prefixer,
-	containerSrc, containerDst string,
-	objSrc swift.Object, objNameDst string,
-	copyBuffer []byte) (err error) {
-	infosDst, _, err := c.Object(containerDst, objNameDst)
-	if err == nil && infosDst.Hash == objSrc.Hash {
-		return nil
-	}
-	if err != swift.ObjectNotFound {
-		return err
-	}
-
-	src, h, err := c.ObjectOpen(containerSrc, objSrc.Name, false, nil)
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-
-	dst, err := c.ObjectCreate(containerDst, objNameDst, true, objSrc.Hash, objSrc.ContentType, h)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if errc := dst.Close(); errc != nil && err == nil {
-			err = errc
-		}
-	}()
-
-	_, err = io.CopyBuffer(dst, src, copyBuffer)
 	return err
 }
 
-func splitV2ObjectName(objName string) (dirID string, name string, ok bool) {
-	split := strings.SplitN(objName, "/", 2)
-	if len(split) != 2 {
-		return
+func migrateToSwiftV3(domain string) error {
+	c := config.GetSwiftConnection()
+	inst, err := instance.GetFromCouch(domain)
+	if err != nil {
+		return err
 	}
-	dirID, name = split[0], split[1]
-	ok = true
-	return
+
+	var srcContainer string
+	switch inst.SwiftLayout {
+	case 0: // layout v1
+		srcContainer = swiftV1ContainerPrefixCozy + domain
+	case 1: // layout v2
+		srcContainer = swiftV2ContainerPrefixCozy + inst.DBPrefix()
+	case 2: // layout v3
+		return nil // Nothing to do!
+	default:
+		return instance.ErrInvalidSwiftLayout
+	}
+
+	mutex := lock.ReadWrite(inst, "vfs")
+	if err = mutex.Lock(); err != nil {
+		return err
+	}
+	defer mutex.Unlock()
+
+	dstContainer := swiftV3ContainerPrefix + inst.DBPrefix()
+	if err = c.ContainerCreate(dstContainer, nil); err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = vfsswift.DeleteContainer(c, dstContainer)
+		}
+	}()
+
+	if err = copyTheFilesToSwiftV3(inst, c, srcContainer, dstContainer); err != nil {
+		return err
+	}
+
+	vfs := inst.VFS()
+	meta := &swift.Metadata{"cozy-migrated-from-v1": "1"}
+	_ = c.ContainerUpdate(srcContainer, meta.ContainerHeaders())
+	if err = lifecycle.Patch(inst, &lifecycle.Options{SwiftLayout: 2}); err != nil {
+		return err
+	}
+	_ = vfs.Delete()
+	return nil
+}
+
+func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, src, dst string) error {
+	nb := 0
+	ch := make(chan error)
+
+	var thumbsContainer string
+	switch inst.SwiftLayout {
+	case 0: // layout v1
+		thumbsContainer = swiftV1ContainerPrefixData + inst.Domain
+	case 1: // layout v2
+		thumbsContainer = swiftV2ContainerPrefixData + inst.DBPrefix()
+	default:
+		return instance.ErrInvalidSwiftLayout
+	}
+
+	// Use a system of tokens to limit the number of simultaneous calls to
+	// Swift: only a goroutine that has a token can make a call.
+	tokens := make(chan int, maxSimultaneousCalls)
+	for k := 0; k < maxSimultaneousCalls; k++ {
+		tokens <- k
+	}
+
+	fs := inst.VFS()
+	errm := vfs.Walk(fs, "/", func(fullpath string, d *vfs.DirDoc, f *vfs.FileDoc, err error) error {
+		if err != nil {
+			return err
+		}
+		if f == nil {
+			return nil
+		}
+
+		srcName := getSrcName(inst, f, fullpath)
+		dstName := getDstName(inst, f)
+		if srcName == "" || dstName == "" {
+			return fmt.Errorf("Unexpected copy: %q -> %q", srcName, dstName)
+		}
+
+		nb++
+		go func() {
+			k := <-tokens
+			_, err := c.ObjectCopy(src, srcName, dst, dstName, nil)
+			ch <- err
+			tokens <- k
+		}()
+
+		// Copy the thumbnails
+		if f.Class == "image" {
+			srcSmall, srcMedium, srcLarge := getThumbsSrcNames(inst, f)
+			dstSmall, dstMedium, dstLarge := getThumbsDstNames(inst, f)
+			nb += 3
+			go func() {
+				k := <-tokens
+				_, err := c.ObjectCopy(thumbsContainer, srcSmall, dst, dstSmall, nil)
+				ch <- err
+				_, err = c.ObjectCopy(thumbsContainer, srcMedium, dst, dstMedium, nil)
+				ch <- err
+				_, err = c.ObjectCopy(thumbsContainer, srcLarge, dst, dstLarge, nil)
+				ch <- err
+				tokens <- k
+			}()
+		}
+		return nil
+	})
+
+	for i := 0; i < nb; i++ {
+		if err := <-ch; err != nil {
+			errm = multierror.Append(errm, err)
+		}
+	}
+	// Get back the tokens to ensure that each goroutine can finish.
+	for k := 0; k < maxSimultaneousCalls; k++ {
+		<-tokens
+	}
+	return errm
+}
+
+func getSrcName(inst *instance.Instance, f *vfs.FileDoc, fullpath string) string {
+	srcName := ""
+	switch inst.SwiftLayout {
+	case 0: // layout v1
+		srcName = fullpath
+	case 1: // layout v2
+		srcName = vfsswift.MakeObjectName(f.DocID)
+	}
+	return srcName
+}
+
+func getDstName(inst *instance.Instance, f *vfs.FileDoc) string {
+	if f.InternalID == "" {
+		f.InternalID = vfsswift.NewInternalID()
+		if err := couchdb.UpdateDoc(inst, f); err != nil {
+			return ""
+		}
+	}
+	return vfsswift.MakeObjectNameV3(f.DocID, f.InternalID)
+}
+
+func getThumbsSrcNames(inst *instance.Instance, f *vfs.FileDoc) (string, string, string) {
+	var small, medium, large string
+	switch inst.SwiftLayout {
+	case 0: // layout v1
+		small = fmt.Sprintf("thumbs/%s-small", f.DocID)
+		medium = fmt.Sprintf("thumbs/%s-medium", f.DocID)
+		large = fmt.Sprintf("thumbs/%s-large", f.DocID)
+	case 1: // layout v2
+		obj := vfsswift.MakeObjectName(f.DocID)
+		small = fmt.Sprintf("thumbs/%s-small", obj)
+		medium = fmt.Sprintf("thumbs/%s-medium", obj)
+		large = fmt.Sprintf("thumbs/%s-large", obj)
+	}
+	return small, medium, large
+}
+
+func getThumbsDstNames(inst *instance.Instance, f *vfs.FileDoc) (string, string, string) {
+	obj := vfsswift.MakeObjectName(f.DocID)
+	small := fmt.Sprintf("thumbs/%s-small", obj)
+	medium := fmt.Sprintf("thumbs/%s-medium", obj)
+	large := fmt.Sprintf("thumbs/%s-large", obj)
+	return small, medium, large
 }

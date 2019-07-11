@@ -110,15 +110,16 @@ jobs:
   #
   #   - "export":          exporting data from a cozy instance
   #   - "konnector":       launching konnectors
+  #   - "migrations":      transforming a VFS with Swift to layout v3
   #   - "push":            sending push notifications
   #   - "sendmail":        sending mails
   #   - "service":         launching services
-  #   - "thumbnail":       creatings and deleting thumbnails for images
   #   - "share-replicate": for cozy to cozy sharing
   #   - "share-track":     idem
   #   - "share-upload":    idem
+  #   - "thumbnail":       creatings and deleting thumbnails for images
   #   - "unzip":           unzipping tarball
-  #   - "updates":         run updates for installed applications
+  #   - "updates":         run updates for installed applications (deprecated)
   #   - "zip":             creating a zip tarball
   #
   # When no configuration is given for a worker, a default configuration is
