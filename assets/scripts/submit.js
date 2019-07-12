@@ -13,7 +13,6 @@
   )
 
   const longRunSessionCheckbox = document.getElementById('long-run-session')
-  longRunSessionCheckbox.value = longRunSessionCheckbox.checked ? '1' : '0'
 
   let localStorage = null
   try {
@@ -27,6 +26,7 @@
     (localStorage && localStorage.getItem(twoFactorTrustedDeviceTokenKey)) || ''
 
   if (loginForm) {
+    longRunSessionCheckbox.value = longRunSessionCheckbox.checked ? '1' : '0'
     twoFactorTrustedDomainInput.value = twoFactorTrustedDeviceToken
   }
 
