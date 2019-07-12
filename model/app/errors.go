@@ -10,6 +10,7 @@ var (
 	ErrAlreadyExists = errors.New("Application with same slug already exists")
 	// ErrNotFound is used when no application with specified slug name is
 	// installed.
+	// Used by Cloudery, don't modify it
 	ErrNotFound = errors.New("Application is not installed")
 	// ErrNotSupportedSource is used when the source transport or
 	// protocol is not supported
