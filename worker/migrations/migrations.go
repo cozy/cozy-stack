@@ -5,11 +5,11 @@ import (
 	"runtime"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/model/vfs/vfsswift"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/swift"
@@ -84,6 +84,12 @@ func migrateToSwiftV3(domain string) error {
 		return instance.ErrInvalidSwiftLayout
 	}
 
+	vfs := inst.VFS()
+	root, err := vfs.DirByID(consts.RootDirID)
+	if err != nil {
+		return err
+	}
+
 	mutex := lock.ReadWrite(inst, "vfs")
 	if err = mutex.Lock(); err != nil {
 		return err
@@ -100,21 +106,24 @@ func migrateToSwiftV3(domain string) error {
 		}
 	}()
 
-	if err = copyTheFilesToSwiftV3(inst, c, srcContainer, dstContainer); err != nil {
+	if err = copyTheFilesToSwiftV3(inst, c, root, srcContainer, dstContainer); err != nil {
 		return err
 	}
 
-	vfs := inst.VFS()
 	meta := &swift.Metadata{"cozy-migrated-from-v1": "1"}
 	_ = c.ContainerUpdate(srcContainer, meta.ContainerHeaders())
-	if err = lifecycle.Patch(inst, &lifecycle.Options{SwiftLayout: 2}); err != nil {
+	if in, err := instance.GetFromCouch(domain); err == nil {
+		inst = in
+	}
+	inst.SwiftLayout = 2
+	if err = couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
 		return err
 	}
 	_ = vfs.Delete()
 	return nil
 }
 
-func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, src, dst string) error {
+func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *vfs.DirDoc, src, dst string) error {
 	nb := 0
 	ch := make(chan error)
 
@@ -136,7 +145,7 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, src, ds
 	}
 
 	fs := inst.VFS()
-	errm := vfs.Walk(fs, "/", func(fullpath string, d *vfs.DirDoc, f *vfs.FileDoc, err error) error {
+	errm := vfs.WalkAlreadyLocked(fs, root, func(fullpath string, d *vfs.DirDoc, f *vfs.FileDoc, err error) error {
 		if err != nil {
 			return err
 		}
