@@ -24,7 +24,7 @@ before_install:
   - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.3
   - curl -sL https://deb.nodesource.com/setup_8.x | sudo bash -
   - sudo apt install nodejs
-  - sudo npm install -g eslint@5.16.0 eslint-plugin-prettier eslint-config-cozy-app
+  - sudo npm install -g eslint@5.16.0 prettier eslint-plugin-prettier eslint-config-cozy-app
 
 before_script:
   - curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
