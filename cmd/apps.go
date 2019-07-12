@@ -292,7 +292,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 				Deactivated: flagAppsDeactivated,
 			})
 			if err != nil {
-				if err.Error() == "Application with same slug already exists" {
+				if err.Error() == app.ErrAlreadyExists.Error() {
 					return nil
 				}
 				return err
@@ -349,7 +349,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 				SourceURL: src,
 			}, flagSafeUpdate)
 			if err != nil {
-				if err.Error() == "Application is not installed" {
+				if err.Error() == app.ErrNotFound.Error() {
 					return nil
 				}
 				return err
