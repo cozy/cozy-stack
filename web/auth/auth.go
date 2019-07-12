@@ -472,6 +472,6 @@ func Routes(router *echo.Group) {
 	router.POST("/secret_exchange", secretExchange)
 
 	// 2FA
-	router.GET("/twofactor", twoFactorForm, noCSRF)
-	router.POST("/twofactor", twoFactor, noCSRF)
+	router.GET("/twofactor", twoFactorForm)
+	router.POST("/twofactor", twoFactor)
 }
