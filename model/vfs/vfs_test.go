@@ -30,6 +30,7 @@ import (
 )
 
 var fs vfs.VFS
+var mutex lock.ErrorRWLocker
 var diskQuota int64
 
 type diskImpl struct{}
@@ -433,6 +434,52 @@ func TestWalk(t *testing.T) {
 	assert.Equal(t, expectedWalk, walked)
 }
 
+func TestWalkAlreadyLocked(t *testing.T) {
+	walktree := H{
+		"walk2/": H{
+			"dirchild1/": H{
+				"food/": H{},
+				"bard/": H{},
+			},
+			"dirchild2/": H{
+				"foof": nil,
+				"barf": nil,
+			},
+			"dirchild3/": H{},
+			"filechild1": nil,
+		},
+	}
+
+	_, err := createTree(walktree, consts.RootDirID)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	done := make(chan bool)
+
+	go func() {
+		dir, err := fs.DirByPath("/walk2")
+		assert.NoError(t, err)
+
+		assert.NoError(t, mutex.Lock())
+		defer mutex.Unlock()
+
+		err = vfs.WalkAlreadyLocked(fs, dir, func(_ string, _ *vfs.DirDoc, _ *vfs.FileDoc, err error) error {
+			assert.NoError(t, err)
+			return err
+		})
+		assert.NoError(t, err)
+		done <- true
+	}()
+
+	select {
+	case <-done:
+		return
+	case <-time.After(3 * time.Second):
+		panic(errors.New("deadline: WalkAlreadyLocked is probably trying to acquire the VFS lock"))
+	}
+}
+
 func TestIterator(t *testing.T) {
 	iterTree := H{
 		"iter/": H{
@@ -753,7 +800,8 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 
 	db := prefixer.NewPrefixer("io.cozy.vfs.test", "io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
-	aferoFs, err := vfsafero.New(db, index, &diskImpl{}, lock.ReadWrite(db, "vfs-afero-test"),
+	mutex = lock.ReadWrite(db, "vfs-afero-test")
+	aferoFs, err := vfsafero.New(db, index, &diskImpl{}, mutex,
 		&url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, "io.cozy.vfs.test")
 	if err != nil {
 		return nil, nil, err
@@ -806,14 +854,14 @@ func makeSwiftFS(layout int) (vfs.VFS, func(), error) {
 	var swiftFs vfs.VFS
 	switch layout {
 	case 0:
-		swiftFs, err = vfsswift.New(db,
-			index, &diskImpl{}, lock.ReadWrite(db, "vfs-swift-test"))
+		mutex = lock.ReadWrite(db, "vfs-swift-test")
+		swiftFs, err = vfsswift.New(db, index, &diskImpl{}, mutex)
 	case 1:
-		swiftFs, err = vfsswift.NewV2(db,
-			index, &diskImpl{}, lock.ReadWrite(db, "vfs-swiftv2-test"))
+		mutex = lock.ReadWrite(db, "vfs-swiftv2-test")
+		swiftFs, err = vfsswift.NewV2(db, index, &diskImpl{}, mutex)
 	case 2:
-		swiftFs, err = vfsswift.NewV3(db,
-			index, &diskImpl{}, lock.ReadWrite(db, "vfs-swiftv3-test"))
+		mutex = lock.ReadWrite(db, "vfs-swiftv3-test")
+		swiftFs, err = vfsswift.NewV3(db, index, &diskImpl{}, mutex)
 	}
 	if err != nil {
 		return nil, nil, err

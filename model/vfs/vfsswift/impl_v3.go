@@ -58,8 +58,8 @@ func NewV3(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu
 	}, nil
 }
 
-// newInternalID returns a random string that can be used as an internal_vfs_id.
-func newInternalID() string {
+// NewInternalID returns a random string that can be used as an internal_vfs_id.
+func NewInternalID() string {
 	return utils.RandomString(16)
 }
 
@@ -135,7 +135,7 @@ func (sfs *swiftVFSV3) Delete() error {
 		sfs.log.Errorf("Could not mark container %q as to-be-deleted: %s",
 			sfs.container, err)
 	}
-	return deleteContainer(sfs.c, sfs.container)
+	return DeleteContainer(sfs.c, sfs.container)
 }
 
 func (sfs *swiftVFSV3) CreateDir(doc *vfs.DirDoc) error {
@@ -212,7 +212,7 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 		}
 	}
 
-	newdoc.InternalID = newInternalID()
+	newdoc.InternalID = NewInternalID()
 	objName := MakeObjectNameV3(newdoc.DocID, newdoc.InternalID)
 	objMeta := swift.Metadata{
 		"creation-name": newdoc.Name(),

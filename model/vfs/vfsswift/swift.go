@@ -13,7 +13,9 @@ const maxNbFilesToDelete = 8000
 // delete files in the same container.
 const maxSimultaneousCalls = 8
 
-func deleteContainer(c *swift.Connection, container string) error {
+// DeleteContainer removes all the files inside the given container, and then
+// deletes it.
+func DeleteContainer(c *swift.Connection, container string) error {
 	_, _, err := c.Container(container)
 	if err == swift.ContainerNotFound {
 		return nil

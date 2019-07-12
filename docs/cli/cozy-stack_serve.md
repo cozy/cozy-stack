@@ -46,6 +46,7 @@ example), you can use the --appdir flag like this:
       --disable-csp                      Disable the Content Security Policy (only available for development)
       --doctypes string                  path to the directory with the doctypes (for developing/testing a remote doctype)
       --downloads-url string             URL for the download secret storage, redis or in-memory
+      --fs-default-layout int            Default layout for Swift (2 for layout v3) (default -1)
       --fs-url string                    filesystem url (default "file:///storage")
       --geodb string                     define the location of the database for IP -> City lookups (default ".")
   -h, --help                             help for serve

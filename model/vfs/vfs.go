@@ -544,6 +544,12 @@ func WalkByID(fs Indexer, fileID string, walkFn WalkFn) error {
 	return walk(fs, root, dir, file, walkFn, 0)
 }
 
+// WalkAlreadyLocked walks the file tree rooted on the given directory. It is
+// the responsibility of the caller to ensure the VFS is already locked (read).
+func WalkAlreadyLocked(fs Indexer, dir *DirDoc, walkFn WalkFn) error {
+	return walk(fs, dir.Fullpath, dir, nil, walkFn, 0)
+}
+
 func walk(fs Indexer, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn, count int) error {
 	if count >= maxWalkRecursive {
 		return ErrWalkOverflow
