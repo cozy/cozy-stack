@@ -17,4 +17,4 @@ go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
 golangci-lint run -E gofmt -E unconvert -E misspell
 
 npm install eslint@5.16.0 prettier eslint-plugin-prettier eslint-config-cozy-app
-eslint "assets/scripts/**"
+./node_modules/.bin/eslint "assets/scripts/**"
