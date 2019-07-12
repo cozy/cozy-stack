@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"path"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -62,6 +63,9 @@ func (sfs *swiftVFSV3) checkFiles(entries map[string]*vfs.TreeFile, accumulate f
 			return nil, err
 		}
 		for _, obj := range objs {
+			if strings.HasPrefix(obj.Name, "thumbs/") {
+				continue
+			}
 			docID, internalID := makeDocIDV3(obj.Name)
 			if v, ok := versions[docID+"/"+internalID]; ok {
 				var md5sum []byte
