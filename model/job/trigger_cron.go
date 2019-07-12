@@ -15,9 +15,11 @@ type CronTrigger struct {
 	done  chan struct{}
 }
 
+var parser = cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+
 // NewCronTrigger returns a new instance of CronTrigger given the specified options.
 func NewCronTrigger(infos *TriggerInfos) (*CronTrigger, error) {
-	schedule, err := cron.Parse(infos.Arguments)
+	schedule, err := parser.Parse(infos.Arguments)
 	if err != nil {
 		return nil, ErrMalformedTrigger
 	}
@@ -31,7 +33,7 @@ func NewCronTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 // NewEveryTrigger returns an new instance of CronTrigger given the specified
 // options as @every.
 func NewEveryTrigger(infos *TriggerInfos) (*CronTrigger, error) {
-	schedule, err := cron.Parse("@every " + infos.Arguments)
+	schedule, err := parser.Parse("@every " + infos.Arguments)
 	if err != nil {
 		return nil, ErrMalformedTrigger
 	}
