@@ -23,6 +23,8 @@ func GetCounterTypeFromWorkerType(workerType string) (limits.CounterType, error)
 		return limits.JobZipType, nil
 	case "sendmail":
 		return limits.JobSendMailType, nil
+	case "service":
+		return limits.JobServiceType, nil
 	default:
 		return -1, errors.New("CounterType was not found")
 	}

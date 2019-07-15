@@ -49,6 +49,9 @@ const (
 	JobZipType
 	// JobSendMailType is used for mail sending
 	JobSendMailType
+	// JobServiceType is used for generic services
+	// Ex: categorization or matching for banking
+	JobServiceType
 )
 
 type counterConfig struct {
@@ -133,6 +136,12 @@ var configs = []counterConfig{
 	// JobSendMail
 	{
 		Prefix: "sendmail",
+		Limit:  500,
+		Period: 1 * time.Hour,
+	},
+	// JobService
+	{
+		Prefix: "service",
 		Limit:  500,
 		Period: 1 * time.Hour,
 	},
