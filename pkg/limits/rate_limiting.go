@@ -52,6 +52,8 @@ const (
 	// JobServiceType is used for generic services
 	// Ex: categorization or matching for banking
 	JobServiceType
+	// JobNotificationType is used for mobile notifications pushing
+	JobNotificationType
 )
 
 type counterConfig struct {
@@ -143,6 +145,12 @@ var configs = []counterConfig{
 	{
 		Prefix: "service",
 		Limit:  500,
+		Period: 1 * time.Hour,
+	},
+	// JobNotification
+	{
+		Prefix: "push",
+		Limit:  1000,
 		Period: 1 * time.Hour,
 	},
 }
