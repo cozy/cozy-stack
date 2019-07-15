@@ -47,6 +47,8 @@ const (
 	JobKonnectorType
 	// JobZipType is used for cozies exports
 	JobZipType
+	// JobSendMailType is used for mail sending
+	JobSendMailType
 )
 
 type counterConfig struct {
@@ -126,6 +128,12 @@ var configs = []counterConfig{
 	{
 		Prefix: "zip",
 		Limit:  1000,
+		Period: 1 * time.Hour,
+	},
+	// JobSendMail
+	{
+		Prefix: "sendmail",
+		Limit:  500,
 		Period: 1 * time.Hour,
 	},
 }
