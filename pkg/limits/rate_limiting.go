@@ -43,6 +43,8 @@ const (
 	JobShareReplicateType
 	// JobShareUploadType is used for counting the file uploads
 	JobShareUploadType
+	// JobKonnectorType is used for counting the number of konnector executions
+	JobKonnectorType
 )
 
 type counterConfig struct {
@@ -94,22 +96,28 @@ var configs = []counterConfig{
 		Limit:  5000,
 		Period: 1 * time.Hour,
 	},
-	// ShareTrack
+	// JobShareTrack
 	{
 		Prefix: "job-share-track",
 		Limit:  5000,
 		Period: 1 * time.Hour,
 	},
-	// ShareReplicate
+	// JobShareReplicate
 	{
 		Prefix: "job-share-replicate",
 		Limit:  5000,
 		Period: 1 * time.Hour,
 	},
-	// ShareUpload
+	// JobShareUpload
 	{
 		Prefix: "job-share-upload",
 		Limit:  5000,
+		Period: 1 * time.Hour,
+	},
+	// JobKonnector
+	{
+		Prefix: "konnector",
+		Limit:  1000,
 		Period: 1 * time.Hour,
 	},
 }
