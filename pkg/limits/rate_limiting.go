@@ -127,31 +127,31 @@ var configs = []counterConfig{
 	},
 	// JobKonnector
 	{
-		Prefix: "konnector",
+		Prefix: "job-konnector",
 		Limit:  1000,
 		Period: 1 * time.Hour,
 	},
 	// JobZip
 	{
-		Prefix: "zip",
+		Prefix: "job-zip",
 		Limit:  1000,
 		Period: 1 * time.Hour,
 	},
 	// JobSendMail
 	{
-		Prefix: "sendmail",
+		Prefix: "job-sendmail",
 		Limit:  500,
 		Period: 1 * time.Hour,
 	},
 	// JobService
 	{
-		Prefix: "service",
+		Prefix: "job-service",
 		Limit:  500,
 		Period: 1 * time.Hour,
 	},
 	// JobNotification
 	{
-		Prefix: "push",
+		Prefix: "job-push",
 		Limit:  1000,
 		Period: 1 * time.Hour,
 	},
