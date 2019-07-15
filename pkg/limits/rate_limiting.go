@@ -45,6 +45,8 @@ const (
 	JobShareUploadType
 	// JobKonnectorType is used for counting the number of konnector executions
 	JobKonnectorType
+	// JobZipType is used for cozies exports
+	JobZipType
 )
 
 type counterConfig struct {
@@ -117,6 +119,12 @@ var configs = []counterConfig{
 	// JobKonnector
 	{
 		Prefix: "konnector",
+		Limit:  1000,
+		Period: 1 * time.Hour,
+	},
+	// JobZip
+	{
+		Prefix: "zip",
 		Limit:  1000,
 		Period: 1 * time.Hour,
 	},

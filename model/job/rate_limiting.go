@@ -19,6 +19,8 @@ func GetCounterTypeFromWorkerType(workerType string) (limits.CounterType, error)
 		return limits.JobShareUploadType, nil
 	case "konnector":
 		return limits.JobKonnectorType, nil
+	case "zip":
+		return limits.JobZipType, nil
 	default:
 		return -1, errors.New("CounterType was not found")
 	}
