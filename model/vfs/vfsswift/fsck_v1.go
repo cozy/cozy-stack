@@ -15,7 +15,7 @@ func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	tree, err := sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsOrphan {
-			entries[f.Fullpath] = f
+			entries[f.DirID+"/"+f.DocName] = f
 		}
 	})
 	if err != nil {
@@ -31,7 +31,7 @@ func (sfs *swiftVFS) CheckFilesConsistency(accumulate func(log *vfs.FsckLog)) er
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err := sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsOrphan {
-			entries[f.Fullpath] = f
+			entries[f.DirID+"/"+f.DocName] = f
 		}
 	})
 	if err != nil {
