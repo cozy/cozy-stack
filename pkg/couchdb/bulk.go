@@ -110,8 +110,14 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 // ForeachDocs traverse all the documents from the given database with the
 // specified doctype and calls a function for each document.
 func ForeachDocs(db Database, doctype string, fn func(id string, doc json.RawMessage) error) error {
+	return ForeachDocsWithCustomPagination(db, doctype, 100, fn)
+}
+
+// ForeachDocsWithCustomPagination traverse all the documents from the given
+// database, and calls a function for each document. The documents are fetched
+// from CouchDB with a pagination with a custom number of items per page.
+func ForeachDocsWithCustomPagination(db Database, doctype string, limit int, fn func(id string, doc json.RawMessage) error) error {
 	var startKey string
-	limit := 100
 	for {
 		skip := 0
 		if startKey != "" {
