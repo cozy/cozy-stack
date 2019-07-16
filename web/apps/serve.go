@@ -87,9 +87,14 @@ func Serve(c echo.Context) error {
 
 	switch webapp.State() {
 	case app.Installed:
-		return c.Redirect(http.StatusFound, i.PageURL("/auth/authorize/app", url.Values{
-			"slug": {slug},
-		}))
+		// This legacy "installed" state is not used anymore with the addition
+		// of the registry. Change the webapp state to "ready" and serve the app
+		// file.
+		webapp.SetState(app.Ready)
+		if err := webapp.Update(i, nil); err != nil {
+			return err
+		}
+		fallthrough
 	case app.Ready:
 		return ServeAppFile(c, i, i.AppsFileServer(), webapp)
 	default:

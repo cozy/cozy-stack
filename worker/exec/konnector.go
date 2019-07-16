@@ -168,10 +168,13 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 		}
 	}
 
-	// TODO: disallow konnectors on state Installed to be run when we define our
-	// workflow to accept permissions changes on konnectors.
 	man := w.man
-	if s := man.State(); s != app.Ready && s != app.Installed {
+	// Upgrade "installed" to "ready"
+	if err := app.UpgradeInstalledState(i, man); err != nil {
+		return "", err
+	}
+
+	if man.State() != app.Ready {
 		return "", errors.New("Konnector is not ready")
 	}
 

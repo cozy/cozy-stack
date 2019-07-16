@@ -54,6 +54,11 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 
 	w.slug = slug
 
+	// Upgrade "installed" to "ready"
+	if err := app.UpgradeInstalledState(i, man); err != nil {
+		return "", err
+	}
+
 	if man.State() != app.Ready {
 		err = errors.New("Application is not ready")
 		return
