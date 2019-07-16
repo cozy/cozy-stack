@@ -196,6 +196,7 @@ func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error)
 		err := limits.CheckRateLimit(db, ct)
 		if err == limits.ErrRateLimitReached {
 			joblog.WithFields(logrus.Fields{
+				"namespace":   "mem-broker",
 				"worker_type": req.WorkerType,
 				"instance":    db.DomainName(),
 			}).Warn(err)

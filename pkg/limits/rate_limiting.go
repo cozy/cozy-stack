@@ -16,8 +16,6 @@ type CounterType int
 var ErrRateLimitExceeded = errors.New("Rate limit exceeded")
 var ErrRateLimitReached = errors.New("Rate limit reached")
 
-var mutex = &sync.Mutex{}
-
 const (
 	// AuthType is used for counting the number of login attempts.
 	AuthType CounterType = iota
@@ -301,7 +299,5 @@ func GetMaximumLimit(ct CounterType) int64 {
 
 // SetMaximumLimit sets a new limit for a CounterType
 func SetMaximumLimit(ct CounterType, newLimit int64) {
-	mutex.Lock()
 	configs[ct].Limit = newLimit
-	mutex.Unlock()
 }
