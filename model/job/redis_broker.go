@@ -201,7 +201,6 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 		err := limits.CheckRateLimit(db, ct)
 		if err == limits.ErrRateLimitReached {
 			joblog.WithFields(logrus.Fields{
-				"namespace":   "redis-broker",
 				"worker_type": req.WorkerType,
 				"instance":    db.DomainName(),
 			}).Warn(err)
