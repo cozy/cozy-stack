@@ -65,9 +65,12 @@ func twoFactorForm(c echo.Context) error {
 
 	twoFactorToken := []byte(twoFactorTokenParam)
 
-	longRunSession, err := strconv.ParseBool(c.FormValue("long-run-session"))
-	if err != nil {
-		longRunSession = true
+	longRunSession := false
+	if longRunParam := c.QueryParam("long-run-session"); longRunParam != "" {
+		longRunSession, err = strconv.ParseBool(longRunParam)
+		if err != nil {
+			return err
+		}
 	}
 
 	trustedDeviceCheckBoxParam := c.QueryParams().Get("trusted_device_checkbox")
@@ -88,7 +91,7 @@ func twoFactor(c echo.Context) error {
 		return err
 	}
 
-	trustedDeviceCheckBox := true
+	trustedDeviceCheckBox := false
 	trustedDeviceCheckBoxParam := c.QueryParams().Get("trusted_device_checkbox")
 	if trustedDeviceCheckBoxParam != "" {
 		if b, err := strconv.ParseBool(trustedDeviceCheckBoxParam); err != nil {
@@ -102,7 +105,7 @@ func twoFactor(c echo.Context) error {
 	generateTrustedDeviceToken, _ := strconv.ParseBool(c.FormValue("two-factor-generate-trusted-device-token"))
 
 	longRunSession := false
-	if longRunParam := c.QueryParam("long-run-session"); longRunParam != "" {
+	if longRunParam := c.FormValue("long-run-session"); longRunParam != "" {
 		longRunSession, err = strconv.ParseBool(longRunParam)
 		if err != nil {
 			return err

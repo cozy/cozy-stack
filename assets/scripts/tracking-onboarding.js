@@ -7,7 +7,7 @@
     tracker.setCustomDimension(data.matomoAppId, 'Onboarding')
     tracker.setCustomUrl('/password')
     tracker.trackPageView()
-  } catch {
+  } catch (e) {
     // Do nothing
   }
 })(window, document)
