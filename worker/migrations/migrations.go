@@ -36,7 +36,7 @@ func init() {
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "migrations",
 		Concurrency:  runtime.NumCPU(),
-		MaxExecCount: 2,
+		MaxExecCount: 1,
 		WorkerFunc:   worker,
 		WorkerCommit: commit,
 	})
@@ -52,6 +52,9 @@ func worker(ctx *job.WorkerContext) error {
 		return err
 	}
 
+	logger.WithDomain(ctx.Instance.Domain).WithField("nspace", "migration").
+		Infof("Start the migration %s", msg.Type)
+
 	switch msg.Type {
 	case toSwiftV3:
 		return migrateToSwiftV3(ctx.Instance.Domain)
@@ -63,6 +66,12 @@ func worker(ctx *job.WorkerContext) error {
 }
 
 func commit(ctx *job.WorkerContext, err error) error {
+	log := logger.WithDomain(ctx.Instance.Domain).WithField("nspace", "migration")
+	if err == nil {
+		log.Infof("Migration success")
+	} else {
+		log.Warningf("Migration error: %s", err)
+	}
 	return err
 }
 
