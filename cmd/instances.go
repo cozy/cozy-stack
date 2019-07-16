@@ -389,13 +389,8 @@ by this server.
 `,
 	Example: "$ cozy-stack instances ls",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
-		list, err := c.ListInstances()
-		if err != nil {
-			return err
-		}
 		if flagAvailableFields {
-			instance := list[0]
+			instance := &client.Instance{}
 			val := reflect.ValueOf(instance.Attrs)
 			t := val.Type()
 			for i := 0; i < t.NumField(); i++ {
@@ -406,6 +401,11 @@ by this server.
 			}
 			fmt.Println("db_prefix")
 			return nil
+		}
+		c := newAdminClient()
+		list, err := c.ListInstances()
+		if err != nil {
+			return err
 		}
 		if flagJSON {
 			if len(flagListFields) > 0 {
