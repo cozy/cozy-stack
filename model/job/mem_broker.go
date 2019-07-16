@@ -8,8 +8,10 @@ import (
 	"sync/atomic"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/sirupsen/logrus"
 )
 
 type (
@@ -186,6 +188,22 @@ func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error)
 	}
 	if worker.Conf.AdminOnly && !req.Admin {
 		return nil, ErrUnknownWorker
+	}
+
+	// Check for limits
+	ct, err := GetCounterTypeFromWorkerType(req.WorkerType)
+	if err == nil {
+		err := limits.CheckRateLimit(db, ct)
+		if err == limits.ErrRateLimitReached {
+			joblog.WithFields(logrus.Fields{
+				"worker_type": req.WorkerType,
+				"instance":    db.DomainName(),
+			}).Warn(err)
+			return nil, err
+		}
+		if limits.IsLimitReachedOrExceeded(err) {
+			return nil, nil
+		}
 	}
 
 	job := NewJob(db, req)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	jobs "github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/stretchr/testify/assert"
 )
@@ -300,4 +301,56 @@ func TestPanic(t *testing.T) {
 	_, err = broker.PushJob(testInstance, &jobs.JobRequest{WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
 	w.Wait()
+}
+
+func TestMemAddJobRateLimitExceeded(t *testing.T) {
+	var workersTestList = jobs.WorkersList{
+		{
+			WorkerType:  "thumbnail",
+			Concurrency: 4,
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				return nil
+			},
+		},
+	}
+	broker := jobs.NewMemBroker()
+	err := broker.StartWorkers(workersTestList)
+	assert.NoError(t, err)
+
+	msg, _ := jobs.NewMessage("z-0")
+	j, err := broker.PushJob(testInstance, &jobs.JobRequest{
+		WorkerType: "thumbnail",
+		Message:    msg,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, j)
+
+	ct := limits.JobThumbnailType
+	limits.SetMaximumLimit(ct, 10)
+	maxLimit := limits.GetMaximumLimit(ct)
+	// Blocking the job push
+	for i := int64(0); i < maxLimit-1; i++ {
+		j, err := broker.PushJob(testInstance, &jobs.JobRequest{
+			WorkerType: "thumbnail",
+			Message:    msg,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, j)
+	}
+
+	j, err = broker.PushJob(testInstance, &jobs.JobRequest{
+		WorkerType: "thumbnail",
+		Message:    msg,
+	})
+	assert.Error(t, err)
+	assert.Nil(t, j)
+	assert.Contains(t, err.Error(), "limit reached")
+
+	j, err = broker.PushJob(testInstance, &jobs.JobRequest{
+		WorkerType: "thumbnail",
+		Message:    msg,
+	})
+	assert.Nil(t, err)
+	assert.Nil(t, j)
 }

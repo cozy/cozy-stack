@@ -199,7 +199,8 @@ func AnswerSharing(c echo.Context) error {
 // only knows their instance, and not their email address.
 func Invite(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	if err := limits.CheckRateLimit(inst, limits.SharingInviteType); err == limits.ErrRateLimitExceeded {
+	err := limits.CheckRateLimit(inst, limits.SharingInviteType)
+	if limits.IsLimitReachedOrExceeded(err) {
 		return wrapErrors(sharing.ErrMailNotSent)
 	}
 	var body sharing.InviteMsg

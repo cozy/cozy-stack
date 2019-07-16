@@ -10,6 +10,7 @@ import (
 	"time"
 
 	jobs "github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/redis"
 	"github.com/stretchr/testify/assert"
 )
@@ -109,4 +110,61 @@ func TestRedisJobs(t *testing.T) {
 	err = broker2.ShutdownWorkers(context.Background())
 	assert.NoError(t, err)
 	time.Sleep(1 * time.Second)
+}
+
+func TestRedisAddJobRateLimitExceeded(t *testing.T) {
+	opts1, _ := redis.ParseURL(redisURL1)
+	client1 := redis.NewClient(opts1)
+	var workersTestList = jobs.WorkersList{
+		{
+			WorkerType:  "thumbnail",
+			Concurrency: 4,
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
+				return nil
+			},
+		},
+	}
+	ct := limits.JobThumbnailType
+	limits.ResetCounter(testInstance, ct)
+
+	broker := jobs.NewRedisBroker(client1)
+	err := broker.StartWorkers(workersTestList)
+	assert.NoError(t, err)
+
+	msg, _ := jobs.NewMessage("z-0")
+	j, err := broker.PushJob(testInstance, &jobs.JobRequest{
+		WorkerType: "thumbnail",
+		Message:    msg,
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, j)
+
+	limits.SetMaximumLimit(ct, 10)
+	maxLimit := limits.GetMaximumLimit(ct)
+
+	// Blocking the job push
+	for i := int64(0); i < maxLimit-1; i++ {
+		j, err := broker.PushJob(testInstance, &jobs.JobRequest{
+			WorkerType: "thumbnail",
+			Message:    msg,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, j)
+	}
+
+	j, err = broker.PushJob(testInstance, &jobs.JobRequest{
+		WorkerType: "thumbnail",
+		Message:    msg,
+	})
+	assert.Error(t, err)
+	assert.Nil(t, j)
+	assert.Contains(t, err.Error(), "limit reached")
+
+	j, err = broker.PushJob(testInstance, &jobs.JobRequest{
+		WorkerType: "thumbnail",
+		Message:    msg,
+	})
+	assert.Nil(t, err)
+	assert.Nil(t, j)
 }

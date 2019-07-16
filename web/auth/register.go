@@ -15,7 +15,8 @@ import (
 
 func registerClient(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if err := limits.CheckRateLimit(instance, limits.OAuthClientType); err == limits.ErrRateLimitExceeded {
+	err := limits.CheckRateLimit(instance, limits.OAuthClientType)
+	if limits.IsLimitReachedOrExceeded(err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}
 	client := new(oauth.Client)
@@ -48,7 +49,8 @@ func readClient(c echo.Context) error {
 
 func updateClient(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if err := limits.CheckRateLimit(instance, limits.OAuthClientType); err == limits.ErrRateLimitExceeded {
+	err := limits.CheckRateLimit(instance, limits.OAuthClientType)
+	if limits.IsLimitReachedOrExceeded(err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}
 	client := new(oauth.Client)

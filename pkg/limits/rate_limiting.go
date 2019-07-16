@@ -14,6 +14,7 @@ import (
 type CounterType int
 
 var ErrRateLimitExceeded = errors.New("Rate limit exceeded")
+var ErrRateLimitReached = errors.New("Rate limit reached")
 
 const (
 	// AuthType is used for counting the number of login attempts.
@@ -32,6 +33,27 @@ const (
 	// SharingPublicLinkType is used for counting the number of public sharing
 	// link consultations
 	SharingPublicLinkType
+	// JobThumbnailType is used for counting the number of thumbnail jobs
+	// executed by an instance
+	JobThumbnailType
+	// JobShareTrackType is used for counting the number of updates of the
+	// io.cozy.shared database
+	JobShareTrackType
+	// JobShareReplicateType is used for counting the number of replications
+	JobShareReplicateType
+	// JobShareUploadType is used for counting the file uploads
+	JobShareUploadType
+	// JobKonnectorType is used for counting the number of konnector executions
+	JobKonnectorType
+	// JobZipType is used for cozies exports
+	JobZipType
+	// JobSendMailType is used for mail sending
+	JobSendMailType
+	// JobServiceType is used for generic services
+	// Ex: categorization or matching for banking
+	JobServiceType
+	// JobNotificationType is used for mobile notifications pushing
+	JobNotificationType
 )
 
 type counterConfig struct {
@@ -75,6 +97,60 @@ var configs = []counterConfig{
 	{
 		Prefix: "sharing-public-link",
 		Limit:  2000,
+		Period: 1 * time.Hour,
+	},
+	// JobThumbnail
+	{
+		Prefix: "job-thumbnail",
+		Limit:  5000,
+		Period: 1 * time.Hour,
+	},
+	// JobShareTrack
+	{
+		Prefix: "job-share-track",
+		Limit:  5000,
+		Period: 1 * time.Hour,
+	},
+	// JobShareReplicate
+	{
+		Prefix: "job-share-replicate",
+		Limit:  500,
+		Period: 1 * time.Hour,
+	},
+	// JobShareUpload
+	{
+		Prefix: "job-share-upload",
+		Limit:  500,
+		Period: 1 * time.Hour,
+	},
+	// JobKonnector
+	{
+		Prefix: "job-konnector",
+		Limit:  100,
+		Period: 1 * time.Hour,
+	},
+	// JobZip
+	{
+		Prefix: "job-zip",
+		Limit:  100,
+		Period: 1 * time.Hour,
+	},
+	// JobSendMail
+	{
+		Prefix: "job-sendmail",
+		Limit:  30,
+		Period: 1 * time.Hour,
+	},
+	// JobService
+	{
+		Prefix: "job-service",
+		Limit:  100,
+		Period: 1 * time.Hour,
+	},
+	// JobNotification
+	{
+		Prefix: "job-push",
+		Limit:  30,
 		Period: 1 * time.Hour,
 	},
 }
@@ -192,6 +268,11 @@ func CheckRateLimitKey(customKey string, ct CounterType) error {
 	if err != nil {
 		return err
 	}
+	// The first time we reach the limit, we provide a specific error message.
+	// This allows to log a warning only once if needed.
+	if val == cfg.Limit+1 {
+		return ErrRateLimitReached
+	}
 	if val > cfg.Limit {
 		return ErrRateLimitExceeded
 	}
@@ -203,4 +284,20 @@ func ResetCounter(p prefixer.Prefixer, ct CounterType) {
 	cfg := configs[ct]
 	key := cfg.Prefix + ":" + p.DomainName()
 	_ = getCounter().Reset(key)
+}
+
+// IsLimitReachedOrExceeded return true if the limit has been reached or
+// exceeded, false otherwise.
+func IsLimitReachedOrExceeded(err error) bool {
+	return err == ErrRateLimitReached || err == ErrRateLimitExceeded
+}
+
+// GetMaximumLimit returns the limit of a CounterType
+func GetMaximumLimit(ct CounterType) int64 {
+	return configs[ct].Limit
+}
+
+// SetMaximumLimit sets a new limit for a CounterType
+func SetMaximumLimit(ct CounterType, newLimit int64) {
+	configs[ct].Limit = newLimit
 }
