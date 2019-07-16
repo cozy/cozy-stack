@@ -114,43 +114,43 @@ var configs = []counterConfig{
 	// JobShareReplicate
 	{
 		Prefix: "job-share-replicate",
-		Limit:  5000,
+		Limit:  500,
 		Period: 1 * time.Hour,
 	},
 	// JobShareUpload
 	{
 		Prefix: "job-share-upload",
-		Limit:  5000,
+		Limit:  500,
 		Period: 1 * time.Hour,
 	},
 	// JobKonnector
 	{
 		Prefix: "job-konnector",
-		Limit:  1000,
+		Limit:  100,
 		Period: 1 * time.Hour,
 	},
 	// JobZip
 	{
 		Prefix: "job-zip",
-		Limit:  1000,
+		Limit:  100,
 		Period: 1 * time.Hour,
 	},
 	// JobSendMail
 	{
 		Prefix: "job-sendmail",
-		Limit:  500,
+		Limit:  30,
 		Period: 1 * time.Hour,
 	},
 	// JobService
 	{
 		Prefix: "job-service",
-		Limit:  500,
+		Limit:  100,
 		Period: 1 * time.Hour,
 	},
 	// JobNotification
 	{
 		Prefix: "job-push",
-		Limit:  1000,
+		Limit:  30,
 		Period: 1 * time.Hour,
 	},
 }
