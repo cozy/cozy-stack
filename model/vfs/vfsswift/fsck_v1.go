@@ -14,7 +14,7 @@ import (
 func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	tree, err := sfs.BuildTree(func(f *vfs.TreeFile) {
-		if !f.IsOrphan {
+		if !f.IsOrphan && f.DocID != consts.RootDirID && f.DocID != consts.TrashDirID {
 			entries[f.DirID+"/"+f.DocName] = f
 		}
 	})
@@ -30,7 +30,7 @@ func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) error {
 func (sfs *swiftVFS) CheckFilesConsistency(accumulate func(log *vfs.FsckLog)) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err := sfs.BuildTree(func(f *vfs.TreeFile) {
-		if !f.IsOrphan {
+		if !f.IsOrphan && f.DocID != consts.RootDirID && f.DocID != consts.TrashDirID {
 			entries[f.DirID+"/"+f.DocName] = f
 		}
 	})
@@ -88,18 +88,26 @@ func (sfs *swiftVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 						},
 					})
 				}
-				delete(entries, obj.Name)
 			}
+			delete(entries, obj.Name)
 		}
 		return objs, err
 	})
 
 	for _, f := range entries {
-		accumulate(&vfs.FsckLog{
-			Type:    vfs.FSMissing,
-			IsFile:  true,
-			FileDoc: f,
-		})
+		if f.IsDir {
+			accumulate(&vfs.FsckLog{
+				Type:   vfs.FSMissing,
+				IsFile: false,
+				DirDoc: f,
+			})
+		} else {
+			accumulate(&vfs.FsckLog{
+				Type:    vfs.FSMissing,
+				IsFile:  true,
+				FileDoc: f,
+			})
+		}
 	}
 
 	for _, obj := range orphansObjs {
