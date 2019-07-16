@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -126,6 +127,8 @@ func migrateToSwiftV3(domain string) error {
 func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *vfs.DirDoc, src, dst string) error {
 	nb := 0
 	ch := make(chan error)
+	log := logger.WithDomain(inst.Domain).
+		WithField("nspace", "migration")
 
 	var thumbsContainer string
 	switch inst.SwiftLayout {
@@ -175,11 +178,23 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 			go func() {
 				k := <-tokens
 				_, err := c.ObjectCopy(thumbsContainer, srcSmall, dst, dstSmall, nil)
-				ch <- err
+				if err != nil {
+					log.Infof("Cannot copy thumbnail small from %s %s to %s %s",
+						thumbsContainer, srcSmall, dst, dstSmall)
+				}
+				ch <- nil
 				_, err = c.ObjectCopy(thumbsContainer, srcMedium, dst, dstMedium, nil)
-				ch <- err
+				if err != nil {
+					log.Infof("Cannot copy thumbnail medium from %s %s to %s %s",
+						thumbsContainer, srcMedium, dst, dstMedium)
+				}
+				ch <- nil
 				_, err = c.ObjectCopy(thumbsContainer, srcLarge, dst, dstLarge, nil)
-				ch <- err
+				if err != nil {
+					log.Infof("Cannot copy thumbnail large from %s %s to %s %s",
+						thumbsContainer, srcLarge, dst, dstLarge)
+				}
+				ch <- nil
 				tokens <- k
 			}()
 		}
