@@ -400,7 +400,9 @@ by this server.
 			t := val.Type()
 			for i := 0; i < t.NumField(); i++ {
 				param := t.Field(i).Tag.Get("json")
-				fmt.Println(strings.TrimSuffix(param, ",omitempty"))
+				param = strings.TrimSuffix(param, ",omitempty")
+				param = strings.TrimSuffix(param, ",string")
+				fmt.Println(param)
 			}
 			fmt.Println("db_prefix")
 			return nil
