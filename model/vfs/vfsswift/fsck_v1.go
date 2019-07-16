@@ -14,8 +14,8 @@ import (
 func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	tree, err := sfs.BuildTree(func(f *vfs.TreeFile) {
-		if !f.IsDir {
-			entries[f.DirID+"/"+f.DocName] = f
+		if !f.IsOrphan {
+			entries[f.Fullpath] = f
 		}
 	})
 	if err != nil {
@@ -30,8 +30,8 @@ func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) error {
 func (sfs *swiftVFS) CheckFilesConsistency(accumulate func(log *vfs.FsckLog)) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err := sfs.BuildTree(func(f *vfs.TreeFile) {
-		if !f.IsDir {
-			entries[f.DirID+"/"+f.DocName] = f
+		if !f.IsOrphan {
+			entries[f.Fullpath] = f
 		}
 	})
 	if err != nil {
@@ -53,7 +53,23 @@ func (sfs *swiftVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 			f, ok := entries[obj.Name]
 			if !ok {
 				orphansObjs = append(orphansObjs, obj)
-			} else {
+			} else if f.IsDir != (obj.ContentType == dirContentType) {
+				if f.IsDir {
+					accumulate(&vfs.FsckLog{
+						Type:    vfs.TypeMismatch,
+						IsFile:  true,
+						FileDoc: f,
+						DirDoc:  objectToFileDocV1(sfs.container, obj),
+					})
+				} else {
+					accumulate(&vfs.FsckLog{
+						Type:    vfs.TypeMismatch,
+						IsFile:  false,
+						DirDoc:  f,
+						FileDoc: objectToFileDocV1(sfs.container, obj),
+					})
+				}
+			} else if !f.IsDir {
 				var md5sum []byte
 				md5sum, err = hex.DecodeString(obj.Hash)
 				if err != nil {
