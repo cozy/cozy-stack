@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/echo"
@@ -15,12 +16,13 @@ import (
 func Status(c echo.Context) error {
 	cache := "healthy"
 	couch := "healthy"
-	cfg := config.GetConfig()
+	fs := "healthy"
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 
 	go func() {
+		cfg := config.GetConfig()
 		if err := cfg.CacheStorage.CheckStatus(); err != nil {
 			cache = err.Error()
 		}
@@ -34,10 +36,17 @@ func Status(c echo.Context) error {
 		wg.Done()
 	}()
 
+	go func() {
+		if err := dynamic.CheckStatus(); err != nil {
+			fs = err.Error()
+		}
+		wg.Done()
+	}()
+
 	wg.Wait()
 	code := http.StatusOK
 	status := "OK"
-	if cache != "healthy" || couch != "healthy" {
+	if cache != "healthy" || couch != "healthy" || fs != "healthy" {
 		code = http.StatusBadGateway
 		status = "KO"
 	}
@@ -45,6 +54,7 @@ func Status(c echo.Context) error {
 	return c.JSON(code, echo.Map{
 		"cache":   cache,
 		"couchdb": couch,
+		"fs":      fs,
 		"status":  status,
 		"message": status, // Legacy, kept for compatibility
 	})
