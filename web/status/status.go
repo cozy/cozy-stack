@@ -4,25 +4,46 @@ package status
 
 import (
 	"net/http"
+	"sync"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/echo"
 )
 
 // Status responds with the status of the service
 func Status(c echo.Context) error {
-	status := "OK"
+	cache := "healthy"
 	couch := "healthy"
-	if err := couchdb.CheckStatus(); err != nil {
+	cfg := config.GetConfig()
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		if err := cfg.CacheStorage.CheckStatus(); err != nil {
+			cache = err.Error()
+		}
+		wg.Done()
+	}()
+
+	go func() {
+		if err := couchdb.CheckStatus(); err != nil {
+			couch = err.Error()
+		}
+		wg.Done()
+	}()
+
+	wg.Wait()
+	code := http.StatusOK
+	status := "OK"
+	if cache != "healthy" || couch != "healthy" {
+		code = http.StatusBadGateway
 		status = "KO"
-		couch = err.Error()
 	}
 
-	code := http.StatusOK
-	if status != "OK" {
-		code = http.StatusBadGateway
-	}
 	return c.JSON(code, echo.Map{
+		"cache":   cache,
 		"couchdb": couch,
 		"status":  status,
 		"message": status, // Legacy, kept for compatibility
