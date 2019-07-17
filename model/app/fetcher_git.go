@@ -19,15 +19,9 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/appfs"
-	git "github.com/cozy/go-git"
-	gitPlumbing "github.com/cozy/go-git/plumbing"
-	gitObject "github.com/cozy/go-git/plumbing/object"
-	gitStorage "github.com/cozy/go-git/storage/filesystem"
 	"github.com/sirupsen/logrus"
-	gitOsFS "gopkg.in/src-d/go-billy.v2/osfs"
 )
 
-var errCloneTimeout = errors.New("git: repository cloning timed out")
 var cloneTimeout = 30 * time.Second
 
 const (
@@ -172,12 +166,7 @@ func (g *gitFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) (err err
 		return err
 	}
 
-	err = g.fetchWithGit(gitFs, gitDir, src, fs, man)
-	if err != exec.ErrNotFound {
-		return err
-	}
-
-	return g.fetchWithGoGit(gitDir, src, fs, man)
+	return g.fetchWithGit(gitFs, gitDir, src, fs, man)
 }
 
 func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, fs appfs.Copier, man Manifest) (err error) {
@@ -262,92 +251,6 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 		}
 		fileinfo := appfs.NewFileInfo(path, info.Size(), info.Mode())
 		return fs.Copy(fileinfo, src)
-	})
-}
-
-func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs appfs.Copier, man Manifest) (err error) {
-	var branch string
-	src, branch = getRemoteURL(src)
-
-	storage, err := gitStorage.NewStorage(gitOsFS.New(gitDir))
-	if err != nil {
-		return err
-	}
-
-	errch := make(chan error)
-	repch := make(chan *git.Repository)
-
-	srcStr := src.String()
-	g.log.Infof("Clone with go-git %s %s in %s", srcStr, branch, gitDir)
-	go func() {
-		repc, errc := git.Clone(storage, nil, &git.CloneOptions{
-			URL:           srcStr,
-			Depth:         1,
-			SingleBranch:  true,
-			ReferenceName: gitPlumbing.ReferenceName(branch),
-		})
-		if errc != nil {
-			errch <- errc
-		} else {
-			repch <- repc
-		}
-	}()
-
-	var rep *git.Repository
-	select {
-	case rep = <-repch:
-	case err = <-errch:
-		g.log.Errorf("Clone error of %s: %s", srcStr, err.Error())
-		return err
-	case <-time.After(cloneTimeout):
-		g.log.Errorf("Clone timeout of %s", srcStr)
-		return errCloneTimeout
-	}
-
-	ref, err := rep.Head()
-	if err != nil {
-		return err
-	}
-
-	slug := man.Slug()
-	version := man.Version() + "-" + ref.Hash().String()
-
-	// The git fetcher needs to update the actual version of the application to
-	// reflect the git version of the repository.
-	man.SetVersion(version)
-
-	// If the application folder already exists, we can bail early.
-	exists, err := fs.Start(slug, version, "")
-	if err != nil || exists {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			_ = fs.Abort()
-		} else {
-			err = fs.Commit()
-		}
-	}()
-
-	commit, err := rep.CommitObject(ref.Hash())
-	if err != nil {
-		return err
-	}
-
-	files, err := commit.Files()
-	if err != nil {
-		return err
-	}
-
-	return files.ForEach(func(f *gitObject.File) error {
-		var r io.ReadCloser
-		r, err = f.Reader()
-		if err != nil {
-			return err
-		}
-		defer r.Close()
-		fileinfo := appfs.NewFileInfo(f.Name, f.Size, os.FileMode(f.Mode))
-		return fs.Copy(fileinfo, r)
 	})
 }
 
