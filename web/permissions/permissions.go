@@ -16,8 +16,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
 	"github.com/justincampbell/bigduration"
+	"github.com/labstack/echo/v4"
 )
 
 // ErrPatchCodeOrSet is returned when an attempt is made to patch both

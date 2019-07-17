@@ -7,7 +7,7 @@ import (
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 type (

@@ -10,19 +10,18 @@ language: go
 matrix:
   include:
     - go: "1.12"
-      env: COMMAND=scripts/lint.sh
+      env: GO111MODULE=on COMMAND=scripts/lint.sh
     - go: "1.12"
-      env: COMMAND=scripts/unit-test.sh
-    - go: "1.11"
-      env: COMMAND=scripts/unit-test.sh
+      env: GO111MODULE=on COMMAND=scripts/unit-test.sh
     - go: "1.12"
-      env: COMMAND=scripts/sharing-test.sh
+      env: GO111MODULE=on COMMAND=scripts/sharing-test.sh
     - go: "1.12"
-      env: COMMAND=scripts/clone-test.sh
+      env: GO111MODULE=on COMMAND=scripts/clone-test.sh
 
-before_install:
+install:
   - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.3
   - nvm use 8.12.0
+  - go install
 
 before_script:
   - curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}

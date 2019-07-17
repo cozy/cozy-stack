@@ -20,8 +20,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/labstack/echo/v4"
 
 	// import workers
 	_ "github.com/cozy/cozy-stack/worker/archive"

@@ -16,8 +16,8 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/swift"
 	"github.com/hashicorp/go-multierror"
+	"github.com/ncw/swift"
 )
 
 var ErrDynAssetNotFound = errors.New("Dynamic asset was not found")

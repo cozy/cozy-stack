@@ -14,8 +14,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/ncw/swift"
 )
 
 const (

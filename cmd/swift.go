@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/swift"
+	"github.com/ncw/swift"
 	"github.com/spf13/cobra"
 )
 

@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/redis"
+	"github.com/go-redis/redis"
 )
 
 const stateTTL = 15 * time.Minute

@@ -17,7 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/swift"
+	"github.com/ncw/swift"
 	"github.com/sirupsen/logrus"
 )
 

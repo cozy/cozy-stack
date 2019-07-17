@@ -6,7 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // InfoByDocTypeData returns the sharings info as data array in the JSON-API format

@@ -2,6 +2,7 @@
 /.cozy
 /assets/locales/*.po
 !/assets/locales/en.po
+/bin
 /cozy-stack*
 /scripts/cozy-stack*
 /debian

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/redis"
+	"github.com/go-redis/redis"
 	"github.com/stretchr/testify/assert"
 )
 

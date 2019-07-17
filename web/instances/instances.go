@@ -27,7 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/worker/updates"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 type apiInstance struct {

@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/worker/move"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 func exportHandler(c echo.Context) error {

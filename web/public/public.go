@@ -10,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // Avatar returns the default avatar currently.

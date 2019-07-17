@@ -32,7 +32,7 @@ import (
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/worker/thumbnail"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 type docPatch struct {

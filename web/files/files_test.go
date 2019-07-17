@@ -24,7 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"
@@ -1204,7 +1204,8 @@ func TestArchiveNoFiles(t *testing.T) {
 	assert.Equal(t, 400, res.StatusCode)
 	msg, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
-	assert.Equal(t, `"Can't create an archive with no files"`, string(msg))
+	actual := strings.TrimSpace(string(msg))
+	assert.Equal(t, `"Can't create an archive with no files"`, actual)
 }
 
 func TestArchiveDirectDownload(t *testing.T) {

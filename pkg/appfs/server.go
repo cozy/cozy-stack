@@ -15,10 +15,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/swift"
+	"github.com/ncw/swift"
+	"github.com/spf13/afero"
 )
 
 // FileServer interface defines a way to access and serve the application's

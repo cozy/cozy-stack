@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cozy/swift"
+	"github.com/ncw/swift"
 )
 
 var swiftConn *swift.Connection

@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -28,6 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 )
 
 const (

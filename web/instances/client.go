@@ -8,7 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 func createToken(c echo.Context) error {

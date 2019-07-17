@@ -6,7 +6,7 @@ import (
 	"runtime"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // Version responds with the git commit used at the build

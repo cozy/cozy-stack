@@ -24,7 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // Serve is an handler for serving files from the VFS for a client-side app

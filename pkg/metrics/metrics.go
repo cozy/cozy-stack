@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )

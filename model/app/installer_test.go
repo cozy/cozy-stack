@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/appfs"
@@ -20,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/spf13/afero"
 )
 
 var localGitCmd *exec.Cmd

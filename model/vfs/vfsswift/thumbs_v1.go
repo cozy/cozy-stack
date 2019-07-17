@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/vfs"
-	"github.com/cozy/swift"
+	"github.com/ncw/swift"
 )
 
 // NewThumbsFs creates a new thumb filesystem base on swift.

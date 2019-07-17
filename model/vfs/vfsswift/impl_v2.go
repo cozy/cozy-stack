@@ -16,8 +16,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/ncw/swift"
 	"github.com/sirupsen/logrus"
 )
 

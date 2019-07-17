@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/redis"
+	"github.com/go-redis/redis"
 )
 
 // Store is essentially a place to store transient objects between two HTTP

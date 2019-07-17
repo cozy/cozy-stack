@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 )
 
 var cloneTimeout = 30 * time.Second

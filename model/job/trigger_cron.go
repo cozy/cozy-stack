@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cron"
+	"github.com/robfig/cron/v3"
 )
 
 // CronTrigger implements the @cron trigger type. It schedules recurring jobs with

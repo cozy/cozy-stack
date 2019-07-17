@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/ncw/swift"
+	"github.com/spf13/afero"
 )
 
 var (
