@@ -77,9 +77,9 @@ func copyRec(root, path string, fs appfs.Copier) error {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
 		info := appfs.NewFileInfo(relpath, file.Size(), file.Mode())
 		err = fs.Copy(info, f)
+		f.Close()
 		if err != nil {
 			return err
 		}
