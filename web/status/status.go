@@ -5,33 +5,27 @@ package status
 import (
 	"net/http"
 
-	"github.com/cozy/checkup"
-	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/echo"
 )
 
 // Status responds with the status of the service
 func Status(c echo.Context) error {
-	u := *config.CouchURL()
-	u.Path = "/_up"
-	checker := checkup.HTTPChecker{
-		Name:     "CouchDB",
-		Client:   config.GetConfig().CouchDB.Client,
-		URL:      u.String(),
-		Attempts: 3,
+	status := "OK"
+	couch := "healthy"
+	if err := couchdb.CheckStatus(); err != nil {
+		status = "KO"
+		couch = err.Error()
 	}
 
-	var message string
-	couchdb, err := checker.Check()
-	if err != nil || couchdb.Status() != checkup.Healthy {
-		message = "KO"
-	} else {
-		message = "OK"
+	code := http.StatusOK
+	if status != "OK" {
+		code = http.StatusBadGateway
 	}
-
-	return c.JSON(http.StatusOK, echo.Map{
-		"message": message,
-		"couchdb": couchdb.Status(),
+	return c.JSON(code, echo.Map{
+		"couchdb": couch,
+		"status":  status,
+		"message": status, // Legacy, kept for compatibility
 	})
 }
 
