@@ -29,6 +29,7 @@ type AssetFS interface {
 	Get(string, string) ([]byte, error)
 	Remove(string, string) error
 	List() (map[string][]*model.Asset, error)
+	CheckStatus() error
 }
 
 type SwiftFS struct {
@@ -137,6 +138,11 @@ func (a *AferoFS) Remove(context, name string) error {
 	return a.fs.Remove(filePath)
 }
 
+func (a *AferoFS) CheckStatus() error {
+	_, err := a.fs.Stat("/")
+	return err
+}
+
 func (a *AferoFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
@@ -224,4 +230,9 @@ func (s *SwiftFS) List() (map[string][]*model.Asset, error) {
 	}
 
 	return objs, nil
+}
+
+func (s *SwiftFS) CheckStatus() error {
+	_, err := s.swiftConn.QueryInfo()
+	return err
 }

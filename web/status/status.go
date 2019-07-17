@@ -4,34 +4,59 @@ package status
 
 import (
 	"net/http"
+	"sync"
 
-	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/echo"
 )
 
 // Status responds with the status of the service
 func Status(c echo.Context) error {
-	u := *config.CouchURL()
-	u.Path = "/_up"
-	checker := checkup.HTTPChecker{
-		Name:     "CouchDB",
-		Client:   config.GetConfig().CouchDB.Client,
-		URL:      u.String(),
-		Attempts: 3,
+	cache := "healthy"
+	couch := "healthy"
+	fs := "healthy"
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	go func() {
+		cfg := config.GetConfig()
+		if err := cfg.CacheStorage.CheckStatus(); err != nil {
+			cache = err.Error()
+		}
+		wg.Done()
+	}()
+
+	go func() {
+		if err := couchdb.CheckStatus(); err != nil {
+			couch = err.Error()
+		}
+		wg.Done()
+	}()
+
+	go func() {
+		if err := dynamic.CheckStatus(); err != nil {
+			fs = err.Error()
+		}
+		wg.Done()
+	}()
+
+	wg.Wait()
+	code := http.StatusOK
+	status := "OK"
+	if cache != "healthy" || couch != "healthy" || fs != "healthy" {
+		code = http.StatusBadGateway
+		status = "KO"
 	}
 
-	var message string
-	couchdb, err := checker.Check()
-	if err != nil || couchdb.Status() != checkup.Healthy {
-		message = "KO"
-	} else {
-		message = "OK"
-	}
-
-	return c.JSON(http.StatusOK, echo.Map{
-		"message": message,
-		"couchdb": couchdb.Status(),
+	return c.JSON(code, echo.Map{
+		"cache":   cache,
+		"couchdb": couch,
+		"fs":      fs,
+		"status":  status,
+		"message": status, // Legacy, kept for compatibility
 	})
 }
 

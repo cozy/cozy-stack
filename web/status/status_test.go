@@ -1,6 +1,7 @@
 package status
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +22,14 @@ func testRequest(t *testing.T, url string) {
 	body, ioerr := ioutil.ReadAll(res.Body)
 	assert.NoError(t, ioerr)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
-	assert.Equal(t, "{\"couchdb\":\"healthy\",\"message\":\"OK\"}", string(body), "res body should match")
+	var data map[string]string
+	err = json.Unmarshal(body, &data)
+	assert.NoError(t, err)
+	assert.Equal(t, "healthy", data["cache"])
+	assert.Equal(t, "healthy", data["couchdb"])
+	assert.Equal(t, "healthy", data["fs"])
+	assert.Equal(t, "OK", data["status"])
+	assert.Equal(t, "OK", data["message"])
 }
 
 func TestRoutes(t *testing.T) {

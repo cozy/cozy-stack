@@ -26,6 +26,15 @@ var assetsClient = &http.Client{
 	Timeout: 30 * time.Second,
 }
 
+// CheckStatus checks that the FS for dynamic asset is available, or returns an
+// error if it is not the case.
+func CheckStatus() error {
+	if assetFS == nil {
+		return nil
+	}
+	return assetFS.CheckStatus()
+}
+
 // List dynamic assets
 func ListAssets() (map[string][]*model.Asset, error) {
 	return assetFS.List()

@@ -6,21 +6,17 @@ import (
 	"os"
 	"time"
 
-	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 
 	"github.com/google/gops/agent"
 	"github.com/sirupsen/logrus"
 )
-
-var log = logger.WithNamespace("stack")
 
 type gopAgent struct{}
 
@@ -56,24 +52,11 @@ security features. Please do not use this binary as your production server.
 	attempts := 8
 	attemptsSpacing := 1 * time.Second
 	for i := 0; i < attempts; i++ {
-		var db checkup.Result
-		db, err = checkup.HTTPChecker{
-			URL:         u.String(),
-			Client:      config.GetConfig().CouchDB.Client,
-			MustContain: `"version":"2`,
-		}.Check()
-		if err != nil {
-			err = fmt.Errorf("Could not reach Couchdb 2.0 database: %s", err.Error())
-		} else if db.Status() == checkup.Down {
-			err = fmt.Errorf("Could not reach Couchdb 2.0 database: %s", db.String())
-		} else if db.Status() != checkup.Healthy {
-			log.Warnf("CouchDB does not seem to be in a healthy state, " +
-				"the cozy-stack will be starting anyway")
-			break
-		}
+		err = couchdb.CheckStatus()
 		if err == nil {
 			break
 		}
+		err = fmt.Errorf("Could not reach Couchdb 2 database: %s", err.Error())
 		if i < attempts-1 {
 			logrus.Warnf("%s, retrying in %v", err, attemptsSpacing)
 			time.Sleep(attemptsSpacing)

@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -20,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/echo"
 	"github.com/cozy/swift/swifttest"
@@ -37,8 +37,7 @@ func Fatal(msg ...interface{}) {
 
 // NeedCouchdb kill the process if there is no couchdb running
 func NeedCouchdb() {
-	db, err := checkup.HTTPChecker{URL: config.CouchURL().String()}.Check()
-	if err != nil || db.Status() != checkup.Healthy {
+	if err := couchdb.CheckStatus(); err != nil {
 		Fatal("This test need couchdb to run.")
 	}
 }

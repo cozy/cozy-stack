@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -19,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
@@ -30,13 +30,12 @@ var testClient *client.Client
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
-	db, err := checkup.HTTPChecker{URL: config.CouchURL().String()}.Check()
-	if err != nil || db.Status() != checkup.Healthy {
+	if err := couchdb.CheckStatus(); err != nil {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
 
-	_, err = stack.Start()
+	_, err := stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

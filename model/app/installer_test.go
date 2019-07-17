@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/cozy/afero"
-	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/appfs"
@@ -135,13 +134,12 @@ var baseFS afero.Fs
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
-	check, err := checkup.HTTPChecker{URL: config.CouchURL().String()}.Check()
-	if err != nil || check.Status() != checkup.Healthy {
+	if err := couchdb.CheckStatus(); err != nil {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
 
-	_, err = stack.Start()
+	_, err := stack.Start()
 	if err != nil {
 		fmt.Println("Error while starting job system", err)
 		os.Exit(1)
