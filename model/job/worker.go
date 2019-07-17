@@ -274,9 +274,12 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 				continue
 			}
 			// Do not execute jobs for instances with blocking not signed TOS,
-			// except for mails because the user may needs a mail to login and
-			// accept the new TOS (2FA, password reset, etc.)
-			if w.Type != "sendmail" {
+			// except for:
+			// - mails because the user may needs a mail to login and accept
+			//   the new TOS (2FA, password reset, etc.)
+			// - migrations because the old version may be no longer supported
+			//   when the user will sign the TOS
+			if w.Type != "sendmail" && w.Type != "migrations" {
 				notSigned, deadline := inst.CheckTOSNotSignedAndDeadline()
 				if notSigned && deadline == instance.TOSBlocked {
 					continue

@@ -3,6 +3,7 @@ package migrations
 import (
 	"fmt"
 	"runtime"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
@@ -39,6 +40,7 @@ func init() {
 		MaxExecCount: 1,
 		WorkerFunc:   worker,
 		WorkerCommit: commit,
+		Timeout:      1 * time.Hour,
 	})
 }
 
@@ -82,12 +84,14 @@ func migrateToSwiftV3(domain string) error {
 		return err
 	}
 
-	var srcContainer string
+	var srcContainer, migratedFrom string
 	switch inst.SwiftLayout {
 	case 0: // layout v1
 		srcContainer = swiftV1ContainerPrefixCozy + domain
+		migratedFrom = "v1"
 	case 1: // layout v2
 		srcContainer = swiftV2ContainerPrefixCozy + inst.DBPrefix()
+		migratedFrom = "v2"
 	case 2: // layout v3
 		return nil // Nothing to do!
 	default:
@@ -120,7 +124,7 @@ func migrateToSwiftV3(domain string) error {
 		return err
 	}
 
-	meta := &swift.Metadata{"cozy-migrated-from-v1": "1"}
+	meta := &swift.Metadata{"cozy-migrated-from": migratedFrom}
 	_ = c.ContainerUpdate(srcContainer, meta.ContainerHeaders())
 	if in, err := instance.GetFromCouch(domain); err == nil {
 		inst = in
@@ -175,6 +179,10 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 		go func() {
 			k := <-tokens
 			_, err := c.ObjectCopy(src, srcName, dst, dstName, nil)
+			if err != nil {
+				log.Warningf("Cannot copy file from %s %s to %s %s: %s",
+					src, srcName, dst, dstName, err)
+			}
 			ch <- err
 			tokens <- k
 		}()
