@@ -161,7 +161,7 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 	}
 
 	fs := inst.VFS()
-	errm := vfs.WalkAlreadyLocked(fs, root, func(fullpath string, d *vfs.DirDoc, f *vfs.FileDoc, err error) error {
+	errm := vfs.WalkAlreadyLocked(fs, root, func(_ string, d *vfs.DirDoc, f *vfs.FileDoc, err error) error {
 		if err != nil {
 			return err
 		}
@@ -169,7 +169,7 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 			return nil
 		}
 
-		srcName := getSrcName(inst, f, fullpath)
+		srcName := getSrcName(inst, f)
 		dstName := getDstName(inst, f)
 		if srcName == "" || dstName == "" {
 			return fmt.Errorf("Unexpected copy: %q -> %q", srcName, dstName)
@@ -230,11 +230,11 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 	return errm
 }
 
-func getSrcName(inst *instance.Instance, f *vfs.FileDoc, fullpath string) string {
+func getSrcName(inst *instance.Instance, f *vfs.FileDoc) string {
 	srcName := ""
 	switch inst.SwiftLayout {
 	case 0: // layout v1
-		srcName = fullpath
+		srcName = f.DirID + "/" + f.DocName
 	case 1: // layout v2
 		srcName = vfsswift.MakeObjectName(f.DocID)
 	}
