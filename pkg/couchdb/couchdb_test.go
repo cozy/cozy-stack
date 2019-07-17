@@ -10,7 +10,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -302,14 +301,12 @@ func TestUUID(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
-	// First we make sure couchdb is started
-	db, err := checkup.HTTPChecker{URL: config.CouchURL().String()}.Check()
-	if err != nil || db.Status() != checkup.Healthy {
+	if err := CheckStatus(); err != nil {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
 
-	err = ResetDB(TestPrefix, TestDoctype)
+	err := ResetDB(TestPrefix, TestDoctype)
 	if err != nil {
 		fmt.Printf("Cant reset db (%s, %s) %s\n", TestPrefix, TestDoctype, err.Error())
 		os.Exit(1)

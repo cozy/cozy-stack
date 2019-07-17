@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/model/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/model/vfs/vfsswift"
@@ -750,8 +749,8 @@ func TestCreateFileTooBig(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
-	check, err := checkup.HTTPChecker{URL: config.CouchURL().String()}.Check()
-	if err != nil || check.Status() != checkup.Healthy {
+	err := couchdb.CheckStatus()
+	if err != nil {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
