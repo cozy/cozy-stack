@@ -3,9 +3,9 @@
 # It should not be used for hosting your cozy cloud in production.
 
 
-# Multi-stage image: this step builds cozy-stack
+# Multi-stage image: this step builds cozy-stack (and mailhog)
 FROM golang:1.12 as build
-WORKDIR /go/src/github.com/cozy/cozy-stack
+WORKDIR /app
 
 # MailHog
 ENV MAILHOG_SRC_URL=https://github.com/mailhog/MailHog/releases/download/v1.0.0/MailHog_linux_amd64 \
@@ -14,9 +14,15 @@ RUN set -eu; curl -fsSL "$MAILHOG_SRC_URL" -o MailHog \
   && echo "$MAILHOG_SRC_SHA256  MailHog" | sha256sum -c - \
   && chmod +x MailHog
 
+# Use docker layer caching to avoid redownloading go modules if the code has
+# changed but not the dependencies.
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+
 # Build cozy-stack
 COPY . .
-RUN go get -d -v ./... && ./scripts/build.sh dev
+RUN ./scripts/build.sh dev
 
 
 # Multi-stage image: the main image
@@ -73,10 +79,10 @@ RUN set -eux; apt-get update \
 
 
 COPY --from=build \
-  /go/src/github.com/cozy/cozy-stack/cozy-stack \
-  /go/src/github.com/cozy/cozy-stack/scripts/docker-entrypoint.sh \
-  /go/src/github.com/cozy/cozy-stack/scripts/cozy-app-dev.sh \
-  /go/src/github.com/cozy/cozy-stack/MailHog \
+  /app/cozy-stack \
+  /app/scripts/docker-entrypoint.sh \
+  /app/scripts/cozy-app-dev.sh \
+  /app/MailHog \
   /usr/bin/
 
 EXPOSE 8080 6060 8025 5984

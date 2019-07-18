@@ -33,7 +33,8 @@ adapt to your own system.
 ```bash
 # From your cozy-stack developement folder
 docker run -it --rm --name cozy-stack \
-    -v $(pwd):/go/src/github.com/cozy/cozy-stack \
+    --workdir /app \
+    -v $(pwd):/app \
     -v $(pwd):/go/bin \
     golang:1.12 \
     go get -v github.com/cozy/cozy-stack
