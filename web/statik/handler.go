@@ -31,7 +31,6 @@ import (
 var (
 	templatesList = []string{
 		"authorize.html",
-		"authorize_app.html",
 		"authorize_sharing.html",
 		"compat.html",
 		"error.html",
