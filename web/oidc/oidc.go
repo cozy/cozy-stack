@@ -94,6 +94,19 @@ func Login(c echo.Context) error {
 		return renderError(c, inst, http.StatusBadRequest, "Sorry, the cozy was not found.")
 	}
 
+	if inst.HasAuthMode(instance.TwoFactorMail) {
+		twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+		if err != nil {
+			return err
+		}
+		v := url.Values{}
+		v.Add("two_factor_token", string(twoFactorToken))
+		v.Add("trusted_device_checkbox", "false")
+		// We can not cleanly check the trusted_device option for external
+		// login. Therefore, we do not provide the checkbox
+		return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
+	}
+
 	sessionID, err := auth.SetCookieForNewSession(c, false)
 	if err != nil {
 		return err

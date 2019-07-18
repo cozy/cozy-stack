@@ -1,11 +1,11 @@
-(function (window) {
+;(function(window) {
   // Return given password srength as an object {percentage, label}
-  function getStrength (password) {
+  function getStrength(password) {
     if (!password && password !== '') {
       throw new Error('password parameter is missing')
     }
     if (!password.length) {
-      return {percentage: 0, label: 'weak'}
+      return { percentage: 0, label: 'weak' }
     }
 
     const charsets = [
@@ -19,13 +19,13 @@
       { regexp: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/g, size: 30 }
     ]
 
-    const possibleChars = charsets.reduce(function (possibleChars, charset) {
+    const possibleChars = charsets.reduce(function(possibleChars, charset) {
       if (charset.regexp.test(password)) possibleChars += charset.size
       return possibleChars
     }, 0)
 
     const passwordStrength =
-    (Math.log(Math.pow(possibleChars, password.length)) / (Math.log(2)))
+      Math.log(Math.pow(possibleChars, password.length)) / Math.log(2)
 
     // levels
     const _at33percent = 50
@@ -37,20 +37,23 @@
 
     // between 0% and 33%
     if (passwordStrength <= _at33percent) {
-      strengthPercentage = passwordStrength * 33 / _at33percent
+      strengthPercentage = (passwordStrength * 33) / _at33percent
       strengthLabel = 'weak'
-    } else if (passwordStrength > _at33percent && passwordStrength <= _at66percent) {
+    } else if (
+      passwordStrength > _at33percent &&
+      passwordStrength <= _at66percent
+    ) {
       // between 33% and 66%
-      strengthPercentage = passwordStrength * 66 / _at66percent
+      strengthPercentage = (passwordStrength * 66) / _at66percent
       strengthLabel = 'moderate'
     } else {
       // passwordStrength > 192
-      strengthPercentage = passwordStrength * 100 / _at100percent
+      strengthPercentage = (passwordStrength * 100) / _at100percent
       if (strengthPercentage > 100) strengthPercentage = 100
       strengthLabel = 'strong'
     }
 
-    return {percentage: strengthPercentage, label: strengthLabel}
+    return { percentage: strengthPercentage, label: strengthLabel }
   }
 
   window.password = {

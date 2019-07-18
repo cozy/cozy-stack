@@ -42,7 +42,7 @@
     </svg>
     <div role="application">
       <main class="wizard">
-        <form id="login-form" method="POST" action="/auth/login" class="wizard-wrapper">
+        <form id="login-form" method="POST" action="/auth/twofactor" class="wizard-wrapper">
           <div role="region" class="wizard-main" id="login-field">
             {{if .CredentialsError}}
             <p class="wizard-errors u-error">
@@ -52,49 +52,36 @@
             <div class="c-avatar u-mh-auto u-mv-0-m u-mv-1">
               <img class="c-avatar-image" src="/public/avatar" alt="" />
             </div>
-            <h1 class="wizard-title password-form">{{.Title}}</h1>
+            <h1 class="wizard-title two-factor-form">{{t "Login Two factor title"}}</h1>
             <h2 class="password-form wizard-subtitle u-coolGrey">{{.Domain}}</h2>
+            <p class="two-factor-form wizard-header-help" id="login-two-factor-passcode-tip">{{t "Login Two factor help"}}</p>
             <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
             <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
-            <input id="two-factor-trusted-device-token" type="hidden" name="two-factor-trusted-device-token" value="" />
-            <div class="o-field password-form u-m-0">
-              <label for="password" class="c-label">{{t "Login Password field"}}</label>
-              <button id="password-visibility-button" class="wizard-showbutton c-btn c-btn--secondary"
-                type="button"
-                name="password-visibility"
-                data-show="{{t "Login Password show"}}"
-                data-hide="{{t "Login Password hide"}}"
-                title="{{t "Login Password show"}}">
-                <span>
-                  <svg width="16" height="16" aria-hidden="true" focusable="false">
-                    <use class="u-hide" id="display-icon" xlink:href="#display"></use>
-                    <use id="hide-icon" xlink:href="#hide"></use>
-                  </svg>
-                </span>
-              </button>
-              <input id="password" class="wizard-input c-input-text" name="passphrase" type="password" autofocus autocomplete="current-password" />
+            <input id="two-factor-token" type="hidden" name="two-factor-token" value="{{.TwoFactorToken}}" />
+            <div class="o-field u-m-0 two-factor-form">
+              <label for="two-factor-passcode" class="c-label" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
+              <input id="two-factor-passcode" class="wizard-input c-input-text" name="two-factor-passcode" type="text" pattern="[0-9]*" inputmode="numeric" maxlength="6" {{if .TwoFactorForm}}autofocus {{end}}autocomplete="current-password" />
             </div>
-            <p class="password-form wizard-notice wizard-notice--lost"><a href="/auth/passphrase_reset">{{t "Login Forgot password"}}</a></p>
-            {{if not .OAuth}}
-            <p class="wizard-notice password-form">
-              <label class="c-input-checkbox u-m-0">
-                <input id="long-run-session" name="long-run-session" type="checkbox" checked />
-                <span>{{t "Login Long Session"}}</span>
-              </label>
-            </p>
+            {{if .TrustedDeviceCheckBox}}
+              <p class="wizard-notice two-factor-form">
+                <label class="c-input-checkbox u-m-0">
+                  <input id="two-factor-trust-device" name="two-factor-trust-device" type="checkbox" />
+                  <span>{{t "Login Two factor device trust field"}}</span>
+                </label>
+              </p>
             {{else}}
-            <input id="long-run-session" name="long-run-session" type="hidden" value="{{.LongRunSession}}" />
+              <input id="two-factor-trust-device" class="two-factor-trust-device-checkbox" name="two-factor-trust-device" type="hidden"/>
             {{end}}
+            <input id="long-run-session" name="long-run-session" type="hidden" value="{{.LongRunSession}}" />
           </div>
           <footer class="wizard-footer u-pb-half-m u-pb-2">
             <button id="login-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">
-              <span class="password-form">{{t "Login Submit"}}</span>
+              <span class="two-factor-form">{{t "Login Confirm"}}</span>
             </button>
           </footer>
         </form>
       </main>
     </div>
-    <script src="{{asset .Domain "/scripts/password-visibility.js"}}"></script>
-    <script src="{{asset .Domain "/scripts/submit.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/twofactor_submit.js"}}"></script>
   </body>
 </html>

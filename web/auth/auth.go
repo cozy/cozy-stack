@@ -32,6 +32,10 @@ const (
 	TwoFactorExceededErrorKey = "Login Two factor attempts error"
 )
 
+func wantsJSON(c echo.Context) bool {
+	return c.Request().Header.Get(echo.HeaderAccept) == echo.MIMEApplicationJSON
+}
+
 func renderError(c echo.Context, code int, msg string) error {
 	instance := middlewares.GetInstance(c)
 	return c.Render(code, "error.html", echo.Map{
@@ -117,6 +121,12 @@ func SetCookieForNewSession(c echo.Context, longRunSession bool) (string, error)
 	return session.ID(), nil
 }
 
+// isTrustedDevice checks if a device of an instance is trusted
+func isTrustedDevice(c echo.Context, inst *instance.Instance) bool {
+	trustedDeviceToken := []byte(c.FormValue("two-factor-trusted-device-token"))
+	return inst.ValidateTwoFactorTrustedDeviceSecret(c.Request(), trustedDeviceToken)
+}
+
 func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors string, redirect *url.URL) error {
 	if !i.IsPasswordAuthenticationEnabled() {
 		return c.Redirect(http.StatusSeeOther, i.PageURL("/oidc/start", nil))
@@ -168,37 +178,6 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"PasswordHelp":     help,
 		"CredentialsError": credsErrors,
 		"Redirect":         redirectStr,
-		"TwoFactorForm":    false,
-		"TwoFactorToken":   "",
-		"CSRF":             c.Get("csrf"),
-		"OAuth":            oauth,
-		"Favicon":          middlewares.Favicon(i),
-	})
-}
-
-func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirect *url.URL, twoFactorToken []byte, longRunSession bool) error {
-	title := i.Translate("Login Two factor title")
-
-	redirectQuery := redirect.Query()
-	var clientScope string
-	if clientScopes := redirectQuery["scope"]; len(clientScopes) > 0 {
-		clientScope = clientScopes[0]
-	}
-
-	oauth := i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
-	return c.Render(code, "login.html", echo.Map{
-		"CozyUI":           middlewares.CozyUI(i),
-		"ThemeCSS":         middlewares.ThemeCSS(i),
-		"Domain":           i.ContextualDomain(),
-		"ContextName":      i.ContextName,
-		"Locale":           i.Locale,
-		"Title":            title,
-		"PasswordHelp":     "",
-		"CredentialsError": nil,
-		"Redirect":         redirect.String(),
-		"LongRunSession":   longRunSession,
-		"TwoFactorForm":    true,
-		"TwoFactorToken":   string(twoFactorToken),
 		"CSRF":             c.Get("csrf"),
 		"OAuth":            oauth,
 		"Favicon":          middlewares.Favicon(i),
@@ -243,143 +222,103 @@ func loginForm(c echo.Context) error {
 	return renderLoginForm(c, instance, http.StatusOK, "", redirect)
 }
 
+// newSession generates a new session, and returns its ID
+func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, longRunSession bool) (string, error) {
+	var sessionID string
+	var err error
+
+	// Generate a session
+	if sessionID, err = SetCookieForNewSession(c, longRunSession); err != nil {
+		return "", err
+	}
+
+	var clientID string
+	if inst.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" {
+		// NOTE: the login scope is used by external clients for authentication.
+		// Typically, these clients are used for internal purposes, like
+		// authenticating to an external system via the cozy. For these clients
+		// we do not push a "client" notification, we only store a new login
+		// history.
+		if redirect.Query().Get("scope") != oauth.ScopeLogin {
+			clientID = redirect.Query().Get("client_id")
+		}
+	}
+
+	if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), true); err != nil {
+		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+	}
+
+	return sessionID, nil
+}
+
 func login(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
 
 	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
 	if err != nil {
 		return err
 	}
 
-	successfulAuthentication := false
-	twoFactorToken := []byte(c.FormValue("two-factor-token"))
-	twoFactorPasscode := c.FormValue("two-factor-passcode")
-	twoFactorTrustedDeviceToken := []byte(c.FormValue("two-factor-trusted-device-token"))
-	twoFactorGenerateTrustedDeviceToken, _ := strconv.ParseBool(c.FormValue("two-factor-generate-trusted-device-token"))
 	passphrase := []byte(c.FormValue("passphrase"))
 	longRunSession, _ := strconv.ParseBool(c.FormValue("long-run-session"))
-
-	var twoFactorGeneratedTrustedDeviceToken []byte
-	var errCheckRateLimit error
-
-	twoFactorRequest := len(twoFactorToken) > 0 && twoFactorPasscode != ""
-	passphraseRequest := len(passphrase) > 0
 
 	var sessionID string
 	sess, ok := middlewares.GetSession(c)
 	if ok { // The user was already logged-in
 		sessionID = sess.ID()
-	} else if twoFactorRequest {
-		successfulAuthentication = inst.ValidateTwoFactorPasscode(
-			twoFactorToken, twoFactorPasscode)
-
-		if successfulAuthentication && twoFactorGenerateTrustedDeviceToken {
-			twoFactorGeneratedTrustedDeviceToken, _ =
-				inst.GenerateTwoFactorTrustedDeviceSecret(c.Request())
-		}
-		// Handle 2FA failed
-		if !successfulAuthentication {
-			errCheckRateLimit = limits.CheckRateLimit(inst, limits.TwoFactorType)
-			if limits.IsLimitReachedOrExceeded(errCheckRateLimit) {
-				if err = TwoFactorRateExceeded(inst); err != nil {
-					inst.Logger().WithField("nspace", "auth").Warning(err)
-				}
-			}
-		}
-	} else if passphraseRequest {
+	} else {
 		if lifecycle.CheckPassphrase(inst, passphrase) == nil {
 			// In case the second factor authentication mode is "mail", we also
-			// check that the mail has been confirmed. If not, 2FA is not actived.
-			if inst.HasAuthMode(instance.TwoFactorMail) {
-
-				successfulAuthentication = inst.ValidateTwoFactorTrustedDeviceSecret(
-					c.Request(), twoFactorTrustedDeviceToken)
-
-				if len(twoFactorTrustedDeviceToken) > 0 && !successfulAuthentication {
-					// If the token is bad, maybe the password had been changed, and
-					// the token is now expired. We are going to empty it and ask a
-					// regeneration
-					twoFactorTrustedDeviceToken = []byte{}
+			// check that the mail has been confirmed. If not, 2FA is not
+			// activated.
+			// If device is trusted, skip the 2FA.
+			if inst.HasAuthMode(instance.TwoFactorMail) && !isTrustedDevice(c, inst) {
+				twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+				if err != nil {
+					return err
 				}
+				v := url.Values{}
+				v.Add("two_factor_token", string(twoFactorToken))
+				v.Add("long_run_session", strconv.FormatBool(longRunSession))
 
-				if len(twoFactorTrustedDeviceToken) == 0 {
-					twoFactorToken, err = lifecycle.SendTwoFactorPasscode(inst)
-					if err != nil {
-						return err
-					}
-					if wantsJSON {
-						return c.JSON(http.StatusOK, echo.Map{
-							"redirect":         redirect.String(),
-							"two_factor_token": string(twoFactorToken),
-						})
-					}
-					return renderTwoFactorForm(c, inst, http.StatusOK, redirect, twoFactorToken, longRunSession)
+				if wantsJSON(c) {
+					return c.JSON(http.StatusOK, echo.Map{
+						"redirect":         inst.PageURL("/auth/twofactor", v),
+						"two_factor_token": string(twoFactorToken),
+					})
 				}
-			} else {
-				successfulAuthentication = true
+				return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
 			}
 		} else { // Bad login passphrase
+			errorMessage := inst.Translate(CredentialsErrorKey)
 			err := limits.CheckRateLimit(inst, limits.AuthType)
 			if limits.IsLimitReachedOrExceeded(err) {
 				if err = LoginRateExceeded(inst); err != nil {
 					inst.Logger().WithField("nspace", "auth").Warning(err)
 				}
 			}
+			if wantsJSON(c) {
+				return c.JSON(http.StatusUnauthorized, echo.Map{
+					"error": errorMessage,
+				})
+			}
+			return renderLoginForm(c, inst, http.StatusUnauthorized, errorMessage, redirect)
 		}
 	}
 
-	if successfulAuthentication {
-		if sessionID, err = SetCookieForNewSession(c, longRunSession); err != nil {
+	// Successful authentication
+	// User is now logged-in, generate a new sessions
+	if sessionID == "" {
+		sessionID, err = newSession(c, inst, redirect, longRunSession)
+		if err != nil {
 			return err
 		}
-
-		var clientID string
-		if inst.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" {
-			// NOTE: the login scope is used by external clients for authentication.
-			// Typically, these clients are used for internal purposes, like
-			// authenticating to an external system via the cozy. For these clients
-			// we do not push a "client" notification, we only store a new login
-			// history.
-			if redirect.Query().Get("scope") != oauth.ScopeLogin {
-				clientID = redirect.Query().Get("client_id")
-			}
-		}
-
-		if err = session.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), true); err != nil {
-			inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
-		}
 	}
-
-	// not logged-in
-	if sessionID == "" {
-		var errorMessage string
-		if twoFactorRequest {
-			if errCheckRateLimit != nil {
-				errorMessage = inst.Translate(TwoFactorExceededErrorKey)
-			} else {
-				errorMessage = inst.Translate(TwoFactorErrorKey)
-			}
-		} else {
-			errorMessage = inst.Translate(CredentialsErrorKey)
-		}
-		if wantsJSON {
-			return c.JSON(http.StatusUnauthorized, echo.Map{
-				"error": errorMessage,
-			})
-		}
-		return renderLoginForm(c, inst, http.StatusUnauthorized,
-			errorMessage, redirect)
-	}
-
-	// logged-in
 	redirect = AddCodeToRedirect(redirect, inst.ContextualDomain(), sessionID)
-	if wantsJSON {
-		result := echo.Map{"redirect": redirect.String()}
-		if len(twoFactorGeneratedTrustedDeviceToken) > 0 {
-			result["two_factor_trusted_device_token"] = string(twoFactorGeneratedTrustedDeviceToken)
-		}
-		return c.JSON(http.StatusOK, result)
+	if wantsJSON(c) {
+		return c.JSON(http.StatusOK, echo.Map{
+			"redirect": redirect.String(),
+		})
 	}
 
 	return c.Redirect(http.StatusSeeOther, redirect.String())
@@ -531,4 +470,8 @@ func Routes(router *echo.Group) {
 
 	router.POST("/access_token", accessToken)
 	router.POST("/secret_exchange", secretExchange)
+
+	// 2FA
+	router.GET("/twofactor", twoFactorForm)
+	router.POST("/twofactor", twoFactor)
 }
