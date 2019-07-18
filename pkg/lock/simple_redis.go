@@ -9,7 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/redis"
+	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 )
 

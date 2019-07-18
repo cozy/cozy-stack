@@ -6,7 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/redis"
+	"github.com/go-redis/redis"
 )
 
 type codeStorage interface {

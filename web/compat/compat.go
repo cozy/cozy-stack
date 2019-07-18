@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // Compat display a page with web browsers compatibility informations

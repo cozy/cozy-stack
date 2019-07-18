@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
 )
 

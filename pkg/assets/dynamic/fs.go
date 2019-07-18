@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/swift"
+	"github.com/ncw/swift"
+	"github.com/spf13/afero"
 )
 
 var assetFS AssetFS

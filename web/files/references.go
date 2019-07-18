@@ -14,7 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 const (

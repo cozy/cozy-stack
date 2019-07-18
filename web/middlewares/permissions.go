@@ -17,7 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 

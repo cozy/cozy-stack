@@ -22,8 +22,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/echo"
 	"github.com/cozy/httpcache"
+	"github.com/labstack/echo/v4"
 )
 
 var (

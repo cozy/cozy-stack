@@ -8,7 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // AddReadOnly is used to downgrade a read-write member to read-only

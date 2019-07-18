@@ -25,7 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 const (

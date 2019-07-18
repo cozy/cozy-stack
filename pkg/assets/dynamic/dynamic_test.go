@@ -13,7 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/swift/swifttest"
+	"github.com/ncw/swift/swifttest"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

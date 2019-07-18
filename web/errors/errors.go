@@ -15,7 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
 
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 )
 
@@ -95,12 +95,12 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	var he *echo.HTTPError
 	if he, ok = err.(*echo.HTTPError); ok {
 		status = he.Code
-		if he.Inner != nil {
-			err = he.Inner
+		if he.Internal != nil {
+			err = he.Internal
 		}
 	} else {
 		he = echo.NewHTTPError(status, err)
-		he.Inner = err
+		he.Internal = err
 	}
 
 	var title, value string

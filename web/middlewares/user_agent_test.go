@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
 

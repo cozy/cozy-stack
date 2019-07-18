@@ -36,7 +36,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	webApps "github.com/cozy/cozy-stack/web/apps"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 
 	"github.com/stretchr/testify/assert"
 )

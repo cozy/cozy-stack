@@ -22,8 +22,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 
-	"github.com/cozy/afero"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 

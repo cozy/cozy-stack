@@ -6,7 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	gotext "gopkg.in/leonelquinteros/gotext.v1"
+	"github.com/leonelquinteros/gotext"
 )
 
 var translations = make(map[string]*gotext.Po)

@@ -8,7 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // RevokeSharing is used to revoke a sharing by the sharer, for all recipients

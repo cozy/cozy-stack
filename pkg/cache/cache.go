@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cozy/redis"
+	"github.com/go-redis/redis"
 )
 
 type cacheEntry struct {

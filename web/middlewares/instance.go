@@ -7,7 +7,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // NeedInstance is an echo middleware which will display an error
@@ -28,7 +28,7 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 			default:
 				errHTTP = echo.NewHTTPError(http.StatusInternalServerError, err)
 			}
-			errHTTP.Inner = err
+			errHTTP.Internal = err
 			return errHTTP
 		}
 		c.Set("instance", i.WithContextualDomain(c.Request().Host))

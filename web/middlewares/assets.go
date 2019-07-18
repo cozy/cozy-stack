@@ -5,7 +5,7 @@ import (
 	"html/template"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // FuncsMap is a the helper functions used in templates.

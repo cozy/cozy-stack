@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // CacheMode is an enum to define a cache-control mode

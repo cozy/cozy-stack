@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // MaxAgeCORS is used to cache the CORS header for 12 hours

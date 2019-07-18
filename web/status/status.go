@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // Status responds with the status of the service

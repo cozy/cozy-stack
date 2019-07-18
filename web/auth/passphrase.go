@@ -8,7 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 func passphraseResetForm(c echo.Context) error {

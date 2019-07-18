@@ -1,8 +1,8 @@
 package vfsswift
 
 import (
-	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/ncw/swift"
 )
 
 // maxNbFilesToDelete is the maximal number of files that we will try to delete

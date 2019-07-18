@@ -21,8 +21,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/echo"
-	"github.com/cozy/swift/swifttest"
+	"github.com/labstack/echo/v4"
+	"github.com/ncw/swift/swifttest"
 	"github.com/spf13/viper"
 )
 

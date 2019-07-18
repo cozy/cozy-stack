@@ -5,13 +5,13 @@ import (
 	"path"
 	"testing"
 
-	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -35,8 +35,8 @@ import (
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
-	"github.com/cozy/echo"
-	"github.com/cozy/echo/middleware"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

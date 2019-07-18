@@ -24,7 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )

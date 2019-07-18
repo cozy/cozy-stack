@@ -10,7 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/cozy/swift"
+	"github.com/ncw/swift"
 )
 
 var unixEpochZero = time.Time{}

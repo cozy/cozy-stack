@@ -7,7 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/swift"
+	"github.com/ncw/swift"
 )
 
 func (sfs *swiftVFSV2) Fsck(accumulate func(log *vfs.FsckLog)) error {

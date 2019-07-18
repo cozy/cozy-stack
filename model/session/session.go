@@ -13,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // SessionCookieName is name of the cookie created by cozy

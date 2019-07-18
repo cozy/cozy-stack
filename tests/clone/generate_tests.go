@@ -13,6 +13,9 @@ import (
 	"golang.org/x/tools/go/loader"
 )
 
+// FIXME This script uses golang.org/x/tools/go/loader, which has been
+// deprecated in favor of golang.org/x/tools/go/packages. In particular, it
+// doesn't support go modules.
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "%s ./model/foo > tests/clone/generated/foo_test.go\n", os.Args[0])

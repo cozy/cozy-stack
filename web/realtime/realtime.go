@@ -14,8 +14,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
 	"github.com/gorilla/websocket"
+	"github.com/labstack/echo/v4"
 )
 
 const (
