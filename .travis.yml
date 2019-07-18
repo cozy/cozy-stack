@@ -15,8 +15,6 @@ matrix:
       env: GO111MODULE=on COMMAND=scripts/unit-test.sh
     - go: "1.12"
       env: GO111MODULE=on COMMAND=scripts/sharing-test.sh
-    - go: "1.12"
-      env: GO111MODULE=on COMMAND=scripts/clone-test.sh
 
 install:
   - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.3
