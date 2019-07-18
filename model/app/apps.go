@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -103,4 +104,14 @@ func routeMatches(path, ctx []string) bool {
 		}
 	}
 	return true
+}
+
+// UpgradeInstalledState is used to force the legacy "installed" state to
+// "ready" for a webapp or a konnector manifest
+func UpgradeInstalledState(inst *instance.Instance, man Manifest) error {
+	if man.State() == Installed {
+		man.SetState(Ready)
+		return man.Update(inst, nil)
+	}
+	return nil
 }
