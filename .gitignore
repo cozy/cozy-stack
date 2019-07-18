@@ -4,16 +4,18 @@
 !/assets/locales/en.po
 /bin
 /cozy-stack*
-/scripts/cozy-stack*
 /debian
 /debug-assets
+/node_modules
+/package-lock.json
+/pkg/workers/exec/konnector_test*.local
+/scripts/cozy-stack*
 /storage
 /tests/clone/generated
 /tests/coverage.txt
 /tests/pouchdb-integration/node_modules
 /tests/pouchdb-integration/replication-target
 /tests/sharing/tmp
-/pkg/workers/exec/konnector_test*.local
 
 *.log
 *.enc
