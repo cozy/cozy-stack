@@ -1,0 +1,6 @@
+{
+  "extends": ["config:base"],
+  "schedule": "before 6am on Monday",
+  "timezone": "Europe/Paris",
+  "postUpdateOptions": ["gomodTidy"]
+}
