@@ -327,20 +327,9 @@ func listWebappsHandler(c echo.Context) error {
 	}
 
 	// Generating links list for the next apps
-	nextURL := &url.URL{}
-
+	links := &jsonapi.LinksList{}
 	if next != "" { // Do not generate the next URL if there is no next apps
-		nextURL, _ = url.Parse(c.Scheme() + "://" + c.Request().Host + c.Path())
-		values := nextURL.Query()
-		values.Set("start_key", next)
-		if limit != 0 {
-			values.Set("limit", strconv.Itoa(limit))
-		}
-		nextURL.RawQuery = values.Encode()
-	}
-
-	links := &jsonapi.LinksList{
-		Next: nextURL.String(),
+		links.Next = generateNextURL(c, limit, next)
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, objs, links)
@@ -377,23 +366,26 @@ func listKonnectorsHandler(c echo.Context) error {
 	}
 
 	// Generating links list for the next konnectors
-	nextURL := &url.URL{}
-
+	links := &jsonapi.LinksList{}
 	if next != "" { // Do not generate the next URL if there is no next konnectors
-		nextURL, _ = url.Parse(c.Scheme() + "://" + c.Request().Host + c.Path())
-		values := nextURL.Query()
-		values.Set("start_key", next)
-		if limit != 0 {
-			values.Set("limit", strconv.Itoa(limit))
-		}
-		nextURL.RawQuery = values.Encode()
-	}
-
-	links := &jsonapi.LinksList{
-		Next: nextURL.String(),
+		links.Next = generateNextURL(c, limit, next)
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, objs, links)
+}
+
+func generateNextURL(c echo.Context, limit int, nextID string) string {
+	nextURL := &url.URL{
+		Scheme: c.Scheme(),
+		Host:   c.Request().Host,
+		Path:   c.Path(),
+	}
+	values := nextURL.Query()
+	values.Set("start_key", nextID)
+	values.Set("limit", strconv.Itoa(limit))
+	nextURL.RawQuery = values.Encode()
+
+	return nextURL.String()
 }
 
 // iconHandler gives the icon of an application
