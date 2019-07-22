@@ -301,7 +301,22 @@ func listWebappsHandler(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Apps); err != nil {
 		return err
 	}
-	docs, err := apps.ListWebapps(instance)
+
+	// Adding the startKey if it is given in the request
+	var startKey string
+	if sk := c.QueryParam("start_key"); sk != "" {
+		startKey = sk
+	}
+
+	// Same for the limit
+	var limit int
+	if l := c.QueryParam("limit"); l != "" {
+		if converted, err := strconv.Atoi(l); err == nil {
+			limit = converted
+		}
+	}
+
+	docs, next, err := apps.ListWebappsWithPagination(instance, limit, startKey)
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -310,7 +325,25 @@ func listWebappsHandler(c echo.Context) error {
 		d.Instance = instance
 		objs[i] = &apiApp{d}
 	}
-	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+
+	// Generating links list for the next apps
+	nextURL := &url.URL{}
+
+	if next != "" { // Do not generate the next URL if there is no next apps
+		nextURL, _ = url.Parse(c.Scheme() + "://" + c.Request().Host + c.Path())
+		values := nextURL.Query()
+		values.Set("start_key", next)
+		if limit != 0 {
+			values.Set("limit", strconv.Itoa(limit))
+		}
+		nextURL.RawQuery = values.Encode()
+	}
+
+	links := &jsonapi.LinksList{
+		Next: nextURL.String(),
+	}
+
+	return jsonapi.DataList(c, http.StatusOK, objs, links)
 }
 
 // listKonnectorsHandler handles all GET / requests which can be used to list

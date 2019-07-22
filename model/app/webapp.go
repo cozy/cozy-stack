@@ -21,6 +21,9 @@ import (
 	"github.com/spf13/afero"
 )
 
+// defaultAppListLimit is the default limit for returned documents
+const defaultAppListLimit = 100
+
 // Route is a struct to serve a folder inside an app
 type Route struct {
 	Folder string `json:"folder"`
@@ -551,7 +554,6 @@ func GetWebappBySlugAndUpdate(db prefixer.Prefixer, slug string, copier appfs.Co
 
 // ListWebapps returns the list of installed web applications.
 //
-// TODO: pagination
 func ListWebapps(db prefixer.Prefixer) ([]*WebappManifest, error) {
 	var docs []*WebappManifest
 	req := &couchdb.AllDocsRequest{Limit: 100}
@@ -565,6 +567,45 @@ func ListWebapps(db prefixer.Prefixer) ([]*WebappManifest, error) {
 		}
 	}
 	return docs, nil
+}
+
+// ListWebappsWithPagination returns the list of installed web applications with
+// a pagination
+func ListWebappsWithPagination(db prefixer.Prefixer, limit int, startKey string) ([]*WebappManifest, string, error) {
+	var docs []*WebappManifest
+
+	if limit == 0 {
+		limit = defaultAppListLimit
+	}
+
+	req := &couchdb.AllDocsRequest{
+		Limit:    limit + 1, // Also get the following document for the next key
+		StartKey: startKey,
+	}
+	err := couchdb.GetAllDocs(db, consts.Apps, req, &docs)
+	if err != nil {
+		return nil, "", err
+	}
+
+	nextID := ""
+	if len(docs) > 0 && len(docs) == limit+1 { // There is still documents to fetch
+		nextDoc := docs[len(docs)-1]
+		nextID = nextDoc.ID()
+		docs = docs[:len(docs)-1]
+		return docs, nextID, nil
+	}
+
+	// If we get here, either :
+	// - There are no more docs in couchDB
+	// - There are no docs at all
+	// We can load extra apps and append them safely to the list
+	for slug := range appsdir {
+		if man, err := loadManifestFromDir(slug); err == nil {
+			docs = append(docs, man)
+		}
+	}
+
+	return docs, nextID, nil
 }
 
 func cloneRawMessage(m *json.RawMessage) *json.RawMessage {
