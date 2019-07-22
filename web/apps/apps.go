@@ -353,7 +353,21 @@ func listKonnectorsHandler(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Konnectors); err != nil {
 		return err
 	}
-	docs, err := apps.ListKonnectors(instance)
+
+	// Adding the startKey if it is given in the request
+	var startKey string
+	if sk := c.QueryParam("start_key"); sk != "" {
+		startKey = sk
+	}
+
+	// Same for the limit
+	var limit int
+	if l := c.QueryParam("limit"); l != "" {
+		if converted, err := strconv.Atoi(l); err == nil {
+			limit = converted
+		}
+	}
+	docs, next, err := apps.ListKonnectorsWithPagination(instance, limit, startKey)
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -361,7 +375,25 @@ func listKonnectorsHandler(c echo.Context) error {
 	for i, d := range docs {
 		objs[i] = &apiApp{d}
 	}
-	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+
+	// Generating links list for the next konnectors
+	nextURL := &url.URL{}
+
+	if next != "" { // Do not generate the next URL if there is no next konnectors
+		nextURL, _ = url.Parse(c.Scheme() + "://" + c.Request().Host + c.Path())
+		values := nextURL.Query()
+		values.Set("start_key", next)
+		if limit != 0 {
+			values.Set("limit", strconv.Itoa(limit))
+		}
+		nextURL.RawQuery = values.Encode()
+	}
+
+	links := &jsonapi.LinksList{
+		Next: nextURL.String(),
+	}
+
+	return jsonapi.DataList(c, http.StatusOK, objs, links)
 }
 
 // iconHandler gives the icon of an application
