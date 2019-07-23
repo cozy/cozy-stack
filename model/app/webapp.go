@@ -552,23 +552,6 @@ func GetWebappBySlugAndUpdate(db prefixer.Prefixer, slug string, copier appfs.Co
 	return DoLazyUpdate(db, man, copier, registries).(*WebappManifest), nil
 }
 
-// ListWebapps returns the list of installed web applications.
-//
-func ListWebapps(db prefixer.Prefixer) ([]*WebappManifest, error) {
-	var docs []*WebappManifest
-	req := &couchdb.AllDocsRequest{Limit: 100}
-	err := couchdb.GetAllDocs(db, consts.Apps, req, &docs)
-	if err != nil {
-		return nil, err
-	}
-	for slug := range appsdir {
-		if man, err := loadManifestFromDir(slug); err == nil {
-			docs = append(docs, man)
-		}
-	}
-	return docs, nil
-}
-
 // ListWebappsWithPagination returns the list of installed web applications with
 // a pagination
 func ListWebappsWithPagination(db prefixer.Prefixer, limit int, startKey string) ([]*WebappManifest, string, error) {

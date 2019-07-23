@@ -312,7 +312,7 @@ func cleanOrphanAccounts(c echo.Context) error {
 		return err
 	}
 
-	konnectors, err := app.ListKonnectors(db)
+	konnectors, _, err := app.ListKonnectorsWithPagination(db, 0, "")
 	if couchdb.IsNoDatabaseError(err) {
 		return c.JSON(http.StatusOK, results)
 	}

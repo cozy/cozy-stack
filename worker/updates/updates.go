@@ -239,7 +239,7 @@ func installerPush(inst *instance.Instance, insc chan *app.Installer, errc chan 
 
 	go func() {
 		defer g.Done()
-		webapps, err := app.ListWebapps(inst)
+		webapps, _, err := app.ListWebappsWithPagination(inst, 0, "")
 		if err != nil {
 			errc <- &updateError{
 				domain: inst.Domain,
@@ -271,7 +271,7 @@ func installerPush(inst *instance.Instance, insc chan *app.Installer, errc chan 
 
 	go func() {
 		defer g.Done()
-		konnectors, err := app.ListKonnectors(inst)
+		konnectors, _, err := app.ListKonnectorsWithPagination(inst, 0, "")
 		if err != nil {
 			errc <- &updateError{
 				domain: inst.Domain,
