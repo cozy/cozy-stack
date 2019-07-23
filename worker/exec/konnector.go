@@ -358,7 +358,11 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 			ID:   consts.Konnectors + "/" + w.slug,
 		})
 		instanceURL := inst.PageURL("/", nil)
-		dir.CozyMetadata.CreatedOn = instanceURL
+		if dir.CozyMetadata == nil {
+			dir.CozyMetadata = vfs.NewCozyMetadata(instanceURL)
+		} else {
+			dir.CozyMetadata.CreatedOn = instanceURL
+		}
 		dir.CozyMetadata.CreatedByApp = w.slug
 		dir.CozyMetadata.UpdatedByApp(&metadata.UpdatedByAppEntry{
 			Slug:     w.slug,
