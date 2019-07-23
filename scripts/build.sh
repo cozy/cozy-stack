@@ -95,8 +95,7 @@ do_build() {
 	go build -ldflags "\
 		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
-		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}
-		" \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}" \
 		-o "${BINARY}"
 	popd > /dev/null
 	echo "ok"
