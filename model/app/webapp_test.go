@@ -19,7 +19,9 @@ func TestListWebappsWithPagination(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	defer lifecycle.Destroy(testInstance.Domain)
+	defer func() {
+		_ = lifecycle.Destroy(testInstance.Domain)
+	}()
 
 	// Install the apps
 	for _, a := range []string{"drive", "home", "settings"} {

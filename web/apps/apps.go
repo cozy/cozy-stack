@@ -328,7 +328,7 @@ func listWebappsHandler(c echo.Context) error {
 
 	// Generating links list for the next apps
 	links := &jsonapi.LinksList{}
-	if next != "" { // Do not generate the next URL if there is no next apps
+	if next != "" { // Do not generate the next URL if there are no next apps
 		links.Next = generateNextURL(c, limit, next)
 	}
 
@@ -367,7 +367,7 @@ func listKonnectorsHandler(c echo.Context) error {
 
 	// Generating links list for the next konnectors
 	links := &jsonapi.LinksList{}
-	if next != "" { // Do not generate the next URL if there is no next konnectors
+	if next != "" { // Do not generate the next URL if there are no next konnectors
 		links.Next = generateNextURL(c, limit, next)
 	}
 

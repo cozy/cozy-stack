@@ -588,7 +588,7 @@ func ListWebappsWithPagination(db prefixer.Prefixer, limit int, startKey string)
 	}
 
 	nextID := ""
-	if len(docs) > 0 && len(docs) == limit+1 { // There is still documents to fetch
+	if len(docs) > 0 && len(docs) == limit+1 { // There are still documents to fetch
 		nextDoc := docs[len(docs)-1]
 		nextID = nextDoc.ID()
 		docs = docs[:len(docs)-1]
