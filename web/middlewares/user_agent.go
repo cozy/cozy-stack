@@ -19,6 +19,9 @@ type browser struct {
 // needs URLSearchParams.
 var minEdgeVersion = 17
 
+// We don't support Firefox before version 52
+var minFirefoxVersion = 52
+
 var rules = []browser{
 	{
 		name: "Internet Explorer",
@@ -26,6 +29,10 @@ var rules = []browser{
 	{
 		name:       "Edge",
 		minVersion: &minEdgeVersion,
+	},
+	{
+		name:       "Firefox",
+		minVersion: &minFirefoxVersion,
 	},
 }
 
