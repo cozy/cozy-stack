@@ -202,7 +202,7 @@ download_debug_asset() {
 }
 
 do_clean() {
-	find "${WORK_DIR}" -name "cozy-stack-*" -print -delete
+	find . -name "cozy-stack-*" -print -delete
 }
 
 check_env() {
