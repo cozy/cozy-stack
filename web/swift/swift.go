@@ -1,10 +1,14 @@
 package swift
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/labstack/echo/v4"
 )
@@ -75,9 +79,43 @@ func ListLayouts(c echo.Context) error {
 	return c.JSON(http.StatusOK, output)
 }
 
+// GetObject retrieves a Swift object from an instance
+func GetObject(c echo.Context) error {
+	type reqStruct struct {
+		Instance   string `json:"instance"`
+		ObjectName string `json:"object_name"`
+	}
+
+	type resStruct struct {
+		Content string `json:"content"`
+	}
+
+	var req reqStruct
+
+	err := json.NewDecoder(c.Request().Body).Decode(&req)
+	if err != nil {
+		return err
+	}
+
+	i, err := lifecycle.GetInstance(req.Instance)
+	if err != nil {
+		return err
+	}
+
+	buf := new(bytes.Buffer)
+	sc := config.GetSwiftConnection()
+	_, err = sc.ObjectGet(swiftContainer(i), req.ObjectName, buf, false, nil)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, resStruct{Content: buf.String()})
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	router.GET("/list-layouts", ListLayouts, checkSwift)
+	router.POST("/get", GetObject, checkSwift)
 }
 
 // checkSwift middleware ensures that the VFS relies on Swift
@@ -88,5 +126,19 @@ func checkSwift(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, "the configured filesystem does not rely on OpenStack Swift")
 		}
 		return next(c)
+	}
+}
+
+// swiftContainer returns the container name for an instance
+func swiftContainer(i *instance.Instance) string {
+	switch i.SwiftLayout {
+	case 0:
+		return "cozy-" + i.DBPrefix()
+	case 1:
+		return "cozy-v2-" + i.DBPrefix()
+	case 2:
+		return "cozy-v3-" + i.DBPrefix()
+	default:
+		panic(errors.New("Unknown Swift layout"))
 	}
 }

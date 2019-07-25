@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -78,21 +79,46 @@ var swiftGetCmd = &cobra.Command{
 		if len(args) < 2 {
 			return cmd.Usage()
 		}
-		i, err := lifecycle.GetInstance(args[0])
+		type reqStruct struct {
+			Instance   string `json:"instance"`
+			ObjectName string `json:"object_name"`
+		}
+
+		reqBody := reqStruct{
+			Instance:   args[0],
+			ObjectName: args[1],
+		}
+
+		body, err := json.Marshal(&reqBody)
 		if err != nil {
 			return err
 		}
-		sc := config.GetSwiftConnection()
-		objectName := args[1]
-		f, _, err := sc.ObjectOpen(swiftContainer(i), objectName, false, nil)
+
+		c := newAdminClient()
+		res, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   "/swift/get",
+			Body:   bytes.NewReader(body),
+		})
 		if err != nil {
 			return err
 		}
-		_, err = io.Copy(os.Stdout, f)
+		defer res.Body.Close()
+
+		// Get the object
+		type resStruct struct {
+			Content string `json:"content"`
+		}
+		var out resStruct
+		err = json.NewDecoder(res.Body).Decode(&out)
 		if err != nil {
 			return err
 		}
-		return f.Close()
+
+		fmt.Println(out.Content)
+
+		return err
+
 	},
 }
 

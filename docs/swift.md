@@ -77,3 +77,33 @@ Accept: application/vnd.api+json
   }
 }
 ```
+
+### POST /swift/get
+
+Retrieves a Swift object
+
+Parameters:
+- `instance`: the domain name of the instance
+- `object_name`: the name of the object
+
+#### Request
+
+```http
+POST /swift/get HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "instance": "alice.cozy.tools",
+  "object_name": "67a88b22520680b1fae840/9a8a0/18d02/iYbkfuCDEMaVoIXg"
+}
+```
+
+#### Response
+
+```json
+{
+ "content": "foobar"
+}
+```
