@@ -233,6 +233,6 @@ func (s *SwiftFS) List() (map[string][]*model.Asset, error) {
 }
 
 func (s *SwiftFS) CheckStatus() error {
-	_, err := s.swiftConn.QueryInfo()
+	_, _, err := s.swiftConn.Container(DynamicAssetsContainerName)
 	return err
 }
