@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -112,10 +113,48 @@ func GetObject(c echo.Context) error {
 	return c.JSON(http.StatusOK, resStruct{Content: buf.String()})
 }
 
+// PutObject puts an object into Swift
+func PutObject(c echo.Context) error {
+	type reqStruct struct {
+		Instance    string `json:"instance"`
+		ObjectName  string `json:"object_name"`
+		Content     string `json:"content"`
+		ContentType string `json:"content_type"`
+	}
+
+	var req reqStruct
+	err := json.NewDecoder(c.Request().Body).Decode(&req)
+	if err != nil {
+		return err
+	}
+
+	i, err := lifecycle.GetInstance(req.Instance)
+	if err != nil {
+		return err
+	}
+
+	sc := config.GetSwiftConnection()
+	f, err := sc.ObjectCreate(swiftContainer(i), req.ObjectName, true, "", req.ContentType, nil)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	r := bytes.NewReader([]byte(req.Content))
+	_, err = io.Copy(f, r)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, nil)
+
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	router.GET("/list-layouts", ListLayouts, checkSwift)
 	router.POST("/get", GetObject, checkSwift)
+	router.POST("/put", PutObject, checkSwift)
 }
 
 // checkSwift middleware ensures that the VFS relies on Swift

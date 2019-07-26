@@ -131,21 +131,43 @@ expected on the standard input.`,
 		if len(args) < 2 {
 			return cmd.Usage()
 		}
-		i, err := lifecycle.GetInstance(args[0])
+
+		type reqStruct struct {
+			Instance    string `json:"instance"`
+			ObjectName  string `json:"object_name"`
+			Content     string `json:"content"`
+			ContentType string `json:"content_type"`
+		}
+
+		c := newAdminClient()
+		var buf = new(bytes.Buffer)
+
+		_, err := io.Copy(buf, os.Stdin)
 		if err != nil {
 			return err
 		}
-		sc := config.GetSwiftConnection()
-		objectName := args[1]
-		f, err := sc.ObjectCreate(swiftContainer(i), objectName, true, "", flagSwiftObjectContentType, nil)
+
+		body, err := json.Marshal(reqStruct{
+			Instance:    args[0],
+			ObjectName:  args[1],
+			Content:     buf.String(),
+			ContentType: flagSwiftObjectContentType,
+		})
 		if err != nil {
 			return err
 		}
-		_, err = io.Copy(f, os.Stdin)
+
+		_, err = c.Req(&request.Options{
+			Method: "POST",
+			Path:   "/swift/put",
+			Body:   bytes.NewReader(body),
+		})
 		if err != nil {
-			return nil
+			return err
 		}
-		return f.Close()
+
+		fmt.Println("Object has been added to swift")
+		return nil
 	},
 }
 
