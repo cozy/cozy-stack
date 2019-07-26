@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -84,35 +85,33 @@ func ListLayouts(c echo.Context) error {
 
 // GetObject retrieves a Swift object from an instance
 func GetObject(c echo.Context) error {
-	type reqStruct struct {
-		Instance   string `json:"instance"`
-		ObjectName string `json:"object_name"`
-	}
-
-	type resStruct struct {
-		Content string `json:"content"`
-	}
-
-	var req reqStruct
-
-	err := json.NewDecoder(c.Request().Body).Decode(&req)
+	domain := c.Param("domain")
+	object := c.Param("object")
+	unescaped, err := url.PathUnescape(object)
 	if err != nil {
 		return err
 	}
 
-	i, err := lifecycle.GetInstance(req.Instance)
+	i, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println("test", unescaped)
 	buf := new(bytes.Buffer)
 	sc := config.GetSwiftConnection()
-	_, err = sc.ObjectGet(swiftContainer(i), req.ObjectName, buf, false, nil)
+	_, err = sc.ObjectGet(swiftContainer(i), unescaped, buf, false, nil)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, resStruct{Content: buf.String()})
+	out := struct {
+		Content string `json:"content"`
+	}{
+		buf.String(),
+	}
+
+	return c.JSON(http.StatusOK, out)
 }
 
 // PutObject puts an object into Swift
@@ -208,7 +207,7 @@ func ListObjects(c echo.Context) error {
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	router.GET("/list-layouts", ListLayouts, checkSwift)
-	router.POST("/get", GetObject, checkSwift)
+	router.GET("/get/:domain/:object", GetObject, checkSwift)
 	router.POST("/put", PutObject, checkSwift)
 	router.DELETE("/:domain/:object", DeleteObject, checkSwift)
 	router.GET("/ls/:domain", ListObjects, checkSwift)

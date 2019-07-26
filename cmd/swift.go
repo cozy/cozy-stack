@@ -63,26 +63,12 @@ var swiftGetCmd = &cobra.Command{
 		if len(args) < 2 {
 			return cmd.Usage()
 		}
-		type reqStruct struct {
-			Instance   string `json:"instance"`
-			ObjectName string `json:"object_name"`
-		}
-
-		reqBody := reqStruct{
-			Instance:   args[0],
-			ObjectName: args[1],
-		}
-
-		body, err := json.Marshal(&reqBody)
-		if err != nil {
-			return err
-		}
 
 		c := newAdminClient()
+		path := fmt.Sprintf("/swift/get/%s/%s", args[0], url.PathEscape(args[1]))
 		res, err := c.Req(&request.Options{
-			Method: "POST",
-			Path:   "/swift/get",
-			Body:   bytes.NewReader(body),
+			Method: "GET",
+			Path:   path,
 		})
 		if err != nil {
 			return err
@@ -90,10 +76,9 @@ var swiftGetCmd = &cobra.Command{
 		defer res.Body.Close()
 
 		// Get the object
-		type resStruct struct {
+		out := struct {
 			Content string `json:"content"`
-		}
-		var out resStruct
+		}{}
 		err = json.NewDecoder(res.Body).Decode(&out)
 		if err != nil {
 			return err
