@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -150,11 +151,34 @@ func PutObject(c echo.Context) error {
 
 }
 
+// DeleteObject removes an object from Swift
+func DeleteObject(c echo.Context) error {
+	domain := c.Param("domain")
+	objectName := c.Param("object")
+	unescaped, err := url.PathUnescape(objectName)
+	if err != nil {
+		return err
+	}
+
+	i, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+
+	sc := config.GetSwiftConnection()
+	err = sc.ObjectDelete(swiftContainer(i), unescaped)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, nil)
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	router.GET("/list-layouts", ListLayouts, checkSwift)
 	router.POST("/get", GetObject, checkSwift)
 	router.POST("/put", PutObject, checkSwift)
+	router.DELETE("/:domain/:object", DeleteObject, checkSwift)
 }
 
 // checkSwift middleware ensures that the VFS relies on Swift

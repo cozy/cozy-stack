@@ -178,13 +178,15 @@ var swiftDeleteCmd = &cobra.Command{
 		if len(args) < 2 {
 			return cmd.Usage()
 		}
-		i, err := lifecycle.GetInstance(args[0])
-		if err != nil {
-			return err
-		}
-		sc := config.GetSwiftConnection()
-		objectName := args[1]
-		return sc.ObjectDelete(swiftContainer(i), objectName)
+
+		c := newAdminClient()
+		path := fmt.Sprintf("/swift/%s/%s", args[0], url.PathEscape(args[1]))
+		_, err := c.Req(&request.Options{
+			Method: "DELETE",
+			Path:   path,
+		})
+
+		return err
 	},
 }
 

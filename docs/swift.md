@@ -133,3 +133,14 @@ Accept: application/vnd.api+json
   "content-type": "text/plain"
 }
 ```
+
+### DELETE /swift/:domain/:object
+
+Removes an object from Swift
+
+#### Request
+
+```http
+POST /swift/alice.cozy.tools/67a88b22520680b1fae840%2F9a8a0%2F18d02%2FiYbkfuCDEMaVoIXg HTTP/1.1
+Accept: application/vnd.api+json
+```
