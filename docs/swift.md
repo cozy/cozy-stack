@@ -144,3 +144,28 @@ Removes an object from Swift
 POST /swift/alice.cozy.tools/67a88b22520680b1fae840%2F9a8a0%2F18d02%2FiYbkfuCDEMaVoIXg HTTP/1.1
 Accept: application/vnd.api+json
 ```
+
+### GET /swift/ls/:domain
+
+List Swift objects of an instance
+
+#### Request
+
+```http
+POST /swift/ls/alice.cozy.tools HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```json
+{
+  "objects_names": [
+    "67a88b22520680b1fae840/9a8a0/17264/AxfGhAiWVRhPufKK",
+    "67a88b22520680b1fae840/9a8a0/18d02/iYbkfuCDEMaVoIXg",
+    "thumbs/67a88b22520680b1fae840/9a8a0/17264-large",
+    "thumbs/67a88b22520680b1fae840/9a8a0/17264-medium",
+    "thumbs/67a88b22520680b1fae840/9a8a0/17264-small"
+  ]
+}
+```

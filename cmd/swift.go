@@ -3,19 +3,13 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
-	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/ncw/swift"
 	"github.com/spf13/cobra"
 )
 
@@ -25,16 +19,6 @@ var flagShowDomains bool
 var swiftCmdGroup = &cobra.Command{
 	Use:   "swift <command>",
 	Short: "Interact directly with OpenStack Swift object storage",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := config.Setup(cfgFile); err != nil {
-			return err
-		}
-		if config.FsURL().Scheme != config.SchemeSwift &&
-			config.FsURL().Scheme != config.SchemeSwiftSecure {
-			return fmt.Errorf("swift: the configured filesystem does not rely on OpenStack Swift")
-		}
-		return config.InitSwiftConnection(config.GetConfig().Fs)
-	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
 	},
@@ -196,33 +180,33 @@ var swiftLsCmd = &cobra.Command{
 		if len(args) < 1 {
 			return cmd.Usage()
 		}
-		i, err := lifecycle.GetInstance(args[0])
+
+		type resStruct struct {
+			ObjectNameList []string `json:"objects_names"`
+		}
+
+		c := newAdminClient()
+		path := fmt.Sprintf("/swift/ls/%s", url.PathEscape(args[0]))
+		res, err := c.Req(&request.Options{
+			Method: "GET",
+			Path:   path,
+		})
 		if err != nil {
 			return err
 		}
-		sc := config.GetSwiftConnection()
-		container := swiftContainer(i)
-		return sc.ObjectsWalk(container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
-			names, err := sc.ObjectNames(container, opts)
-			if err == nil {
-				fmt.Println(strings.Join(names, "\n"))
-			}
-			return names, err
-		})
-	},
-}
 
-func swiftContainer(i *instance.Instance) string {
-	switch i.SwiftLayout {
-	case 0:
-		return "cozy-" + i.DBPrefix()
-	case 1:
-		return "cozy-v2-" + i.DBPrefix()
-	case 2:
-		return "cozy-v3-" + i.DBPrefix()
-	default:
-		panic(errors.New("Unknown Swift layout"))
-	}
+		names := resStruct{}
+		err = json.NewDecoder(res.Body).Decode(&names)
+		if err != nil {
+			return err
+		}
+
+		for _, name := range names.ObjectNameList {
+			fmt.Println(name)
+		}
+
+		return nil
+	},
 }
 
 func init() {

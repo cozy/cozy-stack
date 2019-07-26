@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/labstack/echo/v4"
+	"github.com/ncw/swift"
 )
 
 func ListLayouts(c echo.Context) error {
@@ -173,12 +174,44 @@ func DeleteObject(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
+// ListObjects list objects of an instance
+func ListObjects(c echo.Context) error {
+	domain := c.Param("domain")
+	i, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return err
+	}
+	sc := config.GetSwiftConnection()
+	container := swiftContainer(i)
+
+	outNames := []string{}
+
+	err = sc.ObjectsWalk(container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
+		names, err := sc.ObjectNames(container, opts)
+		if err == nil {
+			outNames = append(outNames, names...)
+		}
+		return names, err
+	})
+	if err != nil {
+		return err
+	}
+
+	out := struct {
+		ObjectNameList []string `json:"objects_names"`
+	}{
+		outNames,
+	}
+	return c.JSON(http.StatusOK, out)
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	router.GET("/list-layouts", ListLayouts, checkSwift)
 	router.POST("/get", GetObject, checkSwift)
 	router.POST("/put", PutObject, checkSwift)
 	router.DELETE("/:domain/:object", DeleteObject, checkSwift)
+	router.GET("/ls/:domain", ListObjects, checkSwift)
 }
 
 // checkSwift middleware ensures that the VFS relies on Swift
