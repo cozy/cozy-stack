@@ -92,7 +92,7 @@ func (in *Intent) GenerateHref(instance *instance.Instance, slug, target string)
 // FillServices looks at all the application that can answer this intent
 // and save them in the services field
 func (in *Intent) FillServices(instance *instance.Instance) error {
-	res, err := app.ListWebapps(instance)
+	res, _, err := app.ListWebappsWithPagination(instance, 0, "")
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func GetInstanceWebapps(inst *instance.Instance) ([]string, error) {
 // non-installed instance webapps
 func (in *Intent) FillAvailableWebapps(inst *instance.Instance) error {
 	// Webapps to exclude
-	installedWebApps, err := app.ListWebapps(inst)
+	installedWebApps, _, err := app.ListWebappsWithPagination(inst, 0, "")
 	if err != nil {
 		return err
 	}

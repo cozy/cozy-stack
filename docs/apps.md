@@ -426,7 +426,62 @@ Content-Type: application/vnd.api+json
       "icon": "/apps/calendar/icon",
       "related": "https://calendar.alice.example.com/"
     }
-  }]
+  }],
+  "links": {},
+  "meta": {
+    "count": 1
+  }
+}
+```
+
+This endpoint is paginated, default limit is currently `100`.
+Two flags are available to retreieve the other apps if there are more than `100`
+apps installed:
+- `limit`
+- `start_key`: The first following doc ID of the next apps
+
+The `links` object contains a `ǹext` generated-link for the next docs.
+
+#### Request
+
+```http
+GET /apps/?limit=50 HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [{
+    "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+    "type": "io.cozy.apps",
+    "meta": {
+      "rev": "2-bbfb0fc32dfcdb5333b28934f195b96a"
+    },
+    "attributes": {
+      "name": "calendar",
+      "state": "ready",
+      "slug": "calendar",
+      ...
+    },
+    "links": {
+      "self": "/apps/calendar",
+      "icon": "/apps/calendar/icon",
+      "related": "https://calendar.alice.example.com/"
+    }
+  }, {...}],
+  "links": {
+    "next": "http://alice.example.com/apps/?limit=50&start_key=io.cozy.apps%2Fhome"
+  },
+  "meta": {
+    "count": 50
+  }
 }
 ```
 

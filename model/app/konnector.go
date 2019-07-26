@@ -280,21 +280,32 @@ func GetKonnectorBySlugAndUpdate(db prefixer.Prefixer, slug string, copier appfs
 	return DoLazyUpdate(db, man, copier, registries).(*KonnManifest), nil
 }
 
-// ListKonnectors returns the list of installed konnectors applications.
-//
-// TODO: pagination
-func ListKonnectors(db prefixer.Prefixer) ([]Manifest, error) {
+// ListKonnectorsWithPagination returns the list of installed konnectors with a
+// pagination
+func ListKonnectorsWithPagination(db prefixer.Prefixer, limit int, startKey string) ([]*KonnManifest, string, error) {
 	var docs []*KonnManifest
-	req := &couchdb.AllDocsRequest{Limit: 100}
+
+	if limit == 0 {
+		limit = defaultAppListLimit
+	}
+
+	req := &couchdb.AllDocsRequest{
+		Limit:    limit + 1, // Also get the following document for the next key
+		StartKey: startKey,
+	}
 	err := couchdb.GetAllDocs(db, consts.Konnectors, req, &docs)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	mans := make([]Manifest, len(docs))
-	for i, m := range docs {
-		mans[i] = m
+
+	nextID := ""
+	if len(docs) > 0 && len(docs) == limit+1 { // There are still documents to fetch
+		nextDoc := docs[len(docs)-1]
+		nextID = nextDoc.ID()
+		docs = docs[:len(docs)-1]
 	}
-	return mans, nil
+
+	return docs, nextID, nil
 }
 
 var _ Manifest = &KonnManifest{}

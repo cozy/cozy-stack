@@ -218,7 +218,60 @@ Content-Type: application/vnd.api+json
     "links": {
       "self": "/konnectors/bank101"
     }
-  }]
+  }],
+  "links": {},
+  "meta": {
+    "count": 1
+  }
+}
+```
+
+This endpoint is paginated, default limit is currently `100`.
+Two flags are available to retreieve the other konnectors if there are more than
+`100` konnectors installed:
+- `limit`
+- `start_key`: The first following doc ID of the next konnectors
+
+The `links` object contains a `ǹext` generated-link for the next docs.
+
+#### Request
+
+```http
+GET /konnectors/?limit=50 HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [{
+    "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+    "type": "io.cozy.konnectors",
+    "meta": {
+      "rev": "1-7a1f918147df94580c92b47275e4604a"
+    },
+    "attributes": {
+      "name": "bank101",
+      "state": "installing",
+      "slug": "bank101",
+      ...
+    },
+    "links": {
+      "self": "/konnectors/bank101"
+    }
+  }, {...}],
+  "links": {
+    "next": "http://alice.example.com/konnectors/?limit=50&start_key=io.cozy.konnectors%2Ffookonnector"
+  },
+  "meta": {
+    "count": 50
+  }
 }
 ```
 
@@ -228,7 +281,7 @@ Content-Type: application/vnd.api+json
 
 ## Uninstall a konnector
 
-### DELETE /apps/:slug
+### DELETE /konnectors/:slug
 
 #### Request
 

@@ -301,7 +301,19 @@ func listWebappsHandler(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Apps); err != nil {
 		return err
 	}
-	docs, err := apps.ListWebapps(instance)
+
+	// Adding the startKey if it is given in the request
+	startKey := c.QueryParam("start_key")
+
+	// Same for the limit
+	var limit int
+	if l := c.QueryParam("limit"); l != "" {
+		if converted, err := strconv.Atoi(l); err == nil {
+			limit = converted
+		}
+	}
+
+	docs, next, err := apps.ListWebappsWithPagination(instance, limit, startKey)
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -310,7 +322,11 @@ func listWebappsHandler(c echo.Context) error {
 		d.Instance = instance
 		objs[i] = &apiApp{d}
 	}
-	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+
+	// Generating links list for the next apps
+	links := generateLinksList(c, next, limit, next)
+
+	return jsonapi.DataList(c, http.StatusOK, objs, links)
 }
 
 // listKonnectorsHandler handles all GET / requests which can be used to list
@@ -320,7 +336,21 @@ func listKonnectorsHandler(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Konnectors); err != nil {
 		return err
 	}
-	docs, err := apps.ListKonnectors(instance)
+
+	// Adding the startKey if it is given in the request
+	var startKey string
+	if sk := c.QueryParam("start_key"); sk != "" {
+		startKey = sk
+	}
+
+	// Same for the limit
+	var limit int
+	if l := c.QueryParam("limit"); l != "" {
+		if converted, err := strconv.Atoi(l); err == nil {
+			limit = converted
+		}
+	}
+	docs, next, err := apps.ListKonnectorsWithPagination(instance, limit, startKey)
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -328,7 +358,29 @@ func listKonnectorsHandler(c echo.Context) error {
 	for i, d := range docs {
 		objs[i] = &apiApp{d}
 	}
-	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+
+	// Generating links list for the next konnectors
+	links := generateLinksList(c, next, limit, next)
+
+	return jsonapi.DataList(c, http.StatusOK, objs, links)
+}
+
+func generateLinksList(c echo.Context, next string, limit int, nextID string) *jsonapi.LinksList {
+	links := &jsonapi.LinksList{}
+	if next != "" { // Do not generate the next URL if there are no next konnectors
+		nextURL := &url.URL{
+			Scheme: c.Scheme(),
+			Host:   c.Request().Host,
+			Path:   c.Path(),
+		}
+		values := nextURL.Query()
+		values.Set("start_key", nextID)
+		values.Set("limit", strconv.Itoa(limit))
+		nextURL.RawQuery = values.Encode()
+
+		links.Next = nextURL.String()
+	}
+	return links
 }
 
 // iconHandler gives the icon of an application
