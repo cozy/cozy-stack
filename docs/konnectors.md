@@ -294,3 +294,13 @@ DELETE /konnectors/bank101 HTTP/1.1
 ```http
 HTTP/1.1 204 No Content
 ```
+
+Or, if the konnector has still some accounts configured:
+
+```http
+HTTP/1.1 202 Accepted
+```
+
+In this case, the stack will accept the uninstall request, then it will clean
+the accounts (locally and remotely), and only after that, the konnector will be
+removed.
