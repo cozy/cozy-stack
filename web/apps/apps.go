@@ -5,20 +5,28 @@ package apps
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"runtime"
 	"strconv"
+	"time"
 
+	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/app"
 	apps "github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -221,10 +229,27 @@ func deleteHandler(installerType consts.AppType) echo.HandlerFunc {
 		}
 
 		// Check if there is a mobile client attached to this app
-		oauthClient, err := oauth.FindClientBySoftwareID(instance, "registry://"+slug)
+		if installerType == consts.WebappType {
+			oauthClient, err := oauth.FindClientBySoftwareID(instance, "registry://"+slug)
+			if err == nil && oauthClient != nil {
+				return wrapAppsError(apps.ErrLinkedAppExists)
+			}
+		}
 
-		if installerType == consts.WebappType && err == nil && oauthClient != nil {
-			return wrapAppsError(apps.ErrLinkedAppExists)
+		// Delete accounts locally and remotely for banking konnectors
+		if installerType == consts.KonnectorType {
+			toDelete, err := findAccountsToDelete(instance, slug)
+			if err != nil {
+				return wrapAppsError(err)
+			}
+			if len(toDelete) > 0 {
+				man, err := app.GetKonnectorBySlug(instance, slug)
+				if err != nil {
+					return wrapAppsError(err)
+				}
+				deleteKonnectorWithAccounts(instance, slug, toDelete)
+				return jsonapi.Data(c, http.StatusAccepted, &apiApp{man}, nil)
+			}
 		}
 
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
@@ -243,6 +268,131 @@ func deleteHandler(installerType consts.AppType) echo.HandlerFunc {
 			return wrapAppsError(err)
 		}
 		return jsonapi.Data(c, http.StatusOK, &apiApp{man}, nil)
+	}
+}
+
+type deletionEntry struct {
+	account *account.Account
+	trigger job.Trigger
+}
+
+func findAccountsToDelete(instance *instance.Instance, slug string) ([]deletionEntry, error) {
+	jobsSystem := job.System()
+	triggers, err := jobsSystem.GetAllTriggers(instance)
+	if err != nil {
+		return nil, err
+	}
+
+	var toDelete []deletionEntry
+	for _, t := range triggers {
+		if t.Infos().WorkerType != "konnector" {
+			continue
+		}
+
+		var msg struct {
+			Account string `json:"account"`
+			Slug    string `json:"konnector"`
+		}
+		err := t.Infos().Message.Unmarshal(&msg)
+		if err == nil && msg.Slug == slug && msg.Account != "" {
+			acc := &account.Account{}
+			if err := couchdb.GetDoc(instance, consts.Accounts, msg.Account, acc); err == nil {
+				entry := deletionEntry{acc, t}
+				toDelete = append(toDelete, entry)
+			}
+		}
+	}
+	return toDelete, nil
+}
+
+func deleteKonnectorWithAccounts(instance *instance.Instance, slug string, toDelete []deletionEntry) {
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				switch r := r.(type) {
+				case error:
+					err = r
+				default:
+					err = fmt.Errorf("%v", r)
+				}
+				stack := make([]byte, 4<<10) // 4 KB
+				length := runtime.Stack(stack, false)
+				log := instance.Logger().WithField("panic", true).WithField("nspace", "konnectors")
+				log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
+			}
+		}()
+
+		log := instance.Logger().WithField("nspace", "konnectors")
+		jobsSystem := job.System()
+		for _, entry := range toDelete {
+			acc := entry.account
+			acc.ManualCleaning = true
+			if err := couchdb.DeleteDoc(instance, acc); err != nil {
+				log.Errorf("Cannot delete account: %v", err)
+				return
+			}
+			j, err := account.PushAccountDeletedJob(jobsSystem, instance, acc.ID(), acc.Rev(), slug)
+			if err != nil {
+				log.Errorf("Cannot push a job for account deletion: %v", err)
+				return
+			}
+			err = waitJob(instance, j)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			err = jobsSystem.DeleteTrigger(instance, entry.trigger.ID())
+			if err != nil {
+				log.Errorf("Cannot delete the trigger: %v", err)
+			}
+		}
+		inst, err := apps.NewInstaller(instance, instance.AppsCopier(consts.KonnectorType),
+			&apps.InstallerOptions{
+				Operation:  apps.Delete,
+				Type:       consts.KonnectorType,
+				Slug:       slug,
+				Registries: instance.Registries(),
+			},
+		)
+		if err != nil {
+			log.Errorf("Cannot uninstall the konnector: %v", err)
+			return
+		}
+		_, err = inst.RunSync()
+		if err != nil {
+			log.Errorf("Cannot uninstall the konnector: %v", err)
+		}
+	}()
+}
+
+func waitJob(inst *instance.Instance, j *job.Job) error {
+	sub := realtime.GetHub().Subscriber(inst)
+	defer sub.Close()
+	if err := sub.Watch(j.DocType(), j.ID()); err != nil {
+		return err
+	}
+	timeout := time.After(10 * time.Minute)
+	for {
+		select {
+		case e := <-sub.Channel:
+			state := job.Queued
+			if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
+				stateStr, _ := doc.M["state"].(string)
+				state = job.State(stateStr)
+			} else if doc, ok := e.Doc.(*job.Job); ok {
+				state = doc.State
+			}
+			switch state {
+			case job.Done:
+				return nil
+			case job.Errored:
+				return errors.New("The konnector failed on account deletion")
+			}
+		case <-timeout:
+			// Timeout
+			return nil
+		}
 	}
 }
 

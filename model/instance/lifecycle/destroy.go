@@ -100,16 +100,19 @@ func deleteAccounts(inst *instance.Instance) {
 	for {
 		select {
 		case e := <-ds.Channel:
-			j, ok := e.Doc.(*couchdb.JSONDoc)
-			if ok {
-				deleted, _ := j.M["account_deleted"].(bool)
-				stateStr, _ := j.M["state"].(string)
-				state := job.State(stateStr)
-				if deleted && (state == job.Done || state == job.Errored) {
-					accountsCount--
-					if accountsCount == 0 {
-						return
-					}
+			state := job.Queued
+			deleted := true
+			if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
+				deleted, _ = doc.M["account_deleted"].(bool)
+				stateStr, _ := doc.M["state"].(string)
+				state = job.State(stateStr)
+			} else if doc, ok := e.Doc.(*job.Job); ok {
+				state = doc.State
+			}
+			if deleted && (state == job.Done || state == job.Errored) {
+				accountsCount--
+				if accountsCount == 0 {
+					return
 				}
 			}
 		case <-timeout:
