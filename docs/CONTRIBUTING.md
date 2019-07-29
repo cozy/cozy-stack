@@ -46,6 +46,8 @@ there.
 
 Fork the project on GitHub and check out your copy locally:
 
+⚠️ Be sure to clone outside the `$GOPATH` otherwise gomodules will not work.
+
 ```
 $ git clone https://github.com/cozy/cozy-stack.git
 $ cd cozy-stack
@@ -153,10 +155,9 @@ There are some useful commands to know in order to develop with the go code of
 cozy-stack:
 
 ```bash
-go get -u github.com/cozy/cozy-stack
-cd $(go env GOPATH)/src/github.com/cozy/cozy-stack
-
-go get -t -u ./...      # To install or update the go dependencies
+cd cozy-stack
+go build                # Build the stack, also takes care of updating dependencies through gomodules
+go install              # Installs the `cozy-stack` binary
 go test -v ./...        # To launch the tests
 go run main.go serve    # To start the API server
 godoc -http=:6060       # To start the documentation server
