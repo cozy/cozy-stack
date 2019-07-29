@@ -18,7 +18,7 @@ require (
 	github.com/google/go-querystring v1.0.0
 	github.com/google/gops v0.3.6
 	github.com/gorilla/websocket v1.4.0
-	github.com/h2non/filetype v1.0.8
+	github.com/h2non/filetype v1.0.9
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c
 	github.com/justincampbell/bigduration v0.0.0-20160531141349-e45bf03c0666
