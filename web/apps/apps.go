@@ -5,7 +5,6 @@ package apps
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -13,7 +12,6 @@ import (
 	"path"
 	"runtime"
 	"strconv"
-	"time"
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
@@ -26,7 +24,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -337,7 +334,7 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, slug string, toDel
 				log.Errorf("Cannot push a job for account deletion: %v", err)
 				return
 			}
-			err = waitJob(instance, j)
+			err = j.WaitUntilDone(instance)
 			if err != nil {
 				log.Error(err)
 				return
@@ -364,36 +361,6 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, slug string, toDel
 			log.Errorf("Cannot uninstall the konnector: %v", err)
 		}
 	}()
-}
-
-func waitJob(inst *instance.Instance, j *job.Job) error {
-	sub := realtime.GetHub().Subscriber(inst)
-	defer sub.Close()
-	if err := sub.Watch(j.DocType(), j.ID()); err != nil {
-		return err
-	}
-	timeout := time.After(10 * time.Minute)
-	for {
-		select {
-		case e := <-sub.Channel:
-			state := job.Queued
-			if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
-				stateStr, _ := doc.M["state"].(string)
-				state = job.State(stateStr)
-			} else if doc, ok := e.Doc.(*job.Job); ok {
-				state = doc.State
-			}
-			switch state {
-			case job.Done:
-				return nil
-			case job.Errored:
-				return errors.New("The konnector failed on account deletion")
-			}
-		case <-timeout:
-			// Timeout
-			return nil
-		}
-	}
 }
 
 func pollInstaller(c echo.Context, instance *instance.Instance, isEventStream bool, w http.ResponseWriter, slug string, inst *apps.Installer) error {
