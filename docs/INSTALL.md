@@ -41,14 +41,13 @@ executable bit (`chmod +x cozy-stack`) and put it in your `$PATH`.
 installed and configured, you can run the following command:
 
 ```
-go get -u github.com/cozy/cozy-stack
+go get github.com/cozy/cozy-stack
 ```
 
-This will fetch the sources in `$GOPATH/src/github.com/cozy/cozy-stack` and
-build a binary in `$GOPATH/bin/cozy-stack`.
+This will fetch the sources and build a binary in `$GOPATH/bin/cozy-stack`.
 
-Don't forget to add your `$GOPATH` to your `$PATH` in your `*rc` file so that
-you can execute the binary without entering its full path.
+Don't forget to add your `$GOPATH/bin` to your `$PATH` in your `*rc` file so
+that you can execute the binary without entering its full path.
 
 ```
 export PATH="$(go env GOPATH)/bin:$PATH"

@@ -5,7 +5,7 @@
 ```sh
 apt install ruby ruby-dev
 gem install bundle
-cd $(go env GOPATH)/src/github.com/cozy/cozy-stack
+cd cozy-stack
 go install
 cd tests/sharing
 bundle install
@@ -59,5 +59,5 @@ The log files for the stack are kept inside the `tmp/` directory. You can use
 installed with:
 
 ```sh
-lnav -i $(go env GOPATH)/src/github.com/cozy/cozy-stack/scripts/lnav_cozy_log.json
+lnav -i cozy-stack/scripts/lnav_cozy_log.json
 ```

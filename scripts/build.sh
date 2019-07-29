@@ -72,7 +72,7 @@ do_install() {
 	check_env
 	do_prepare_ldflags
 
-	printf "installing cozy-stack in %s... " "$(go env GOPATH)"
+	printf "installing cozy-stack in %s... " "$(go env GOPATH)/bin"
 	go install -ldflags "\
 		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \

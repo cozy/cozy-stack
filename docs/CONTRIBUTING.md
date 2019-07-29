@@ -46,7 +46,8 @@ there.
 
 Fork the project on GitHub and check out your copy locally:
 
-⚠️ Be sure to clone outside the `$GOPATH` otherwise gomodules will not work.
+⚠️ Be sure to clone outside the `$GOPATH` otherwise gomodules will not work (or
+use the `GO111MODULE=on` env variable to force the usage of go modules).
 
 ```
 $ git clone https://github.com/cozy/cozy-stack.git
