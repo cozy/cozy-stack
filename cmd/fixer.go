@@ -1,23 +1,22 @@
 package cmd
 
 import (
-	"bufio"
-	"bytes"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/url"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
-	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/model/vfs"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 
@@ -31,16 +30,6 @@ var noDryRunFlag bool
 var fixerCmdGroup = &cobra.Command{
 	Use:   "fixer <command>",
 	Short: "A set of tools to fix issues or migrate content for retro-compatibility.",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := config.Setup(cfgFile); err != nil {
-			return err
-		}
-		if config.FsURL().Scheme == config.SchemeSwift ||
-			config.FsURL().Scheme == config.SchemeSwiftSecure {
-			return config.InitSwiftConnection(config.GetConfig().Fs)
-		}
-		return nil
-	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
 	},
@@ -202,102 +191,25 @@ var contentMismatch64Kfixer = &cobra.Command{
 		}
 
 		domain := args[0]
-		corruptedSuffix := "-corrupted"
-
-		if !noDryRunFlag {
-			fmt.Println("This is a dry-run, no file will be altered")
+		q := url.Values{
+			"dry_run": {strconv.FormatBool(!noDryRunFlag)},
 		}
 
 		c := newAdminClient()
 		res, err := c.Req(&request.Options{
-			Method: "GET",
-			Path:   "/instances/" + url.PathEscape(domain) + "/fsck",
+			Method:  "GET",
+			Path:    "/instances/" + url.PathEscape(domain) + "/content-mismatch-fixer",
+			Queries: q,
 		})
 		if err != nil {
 			return err
 		}
 
-		inst, err := lifecycle.GetInstance(domain)
+		out, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			return fmt.Errorf("Cannot find instance %s", domain)
+			return err
 		}
-
-		var content map[string]interface{}
-		scanner := bufio.NewScanner(res.Body)
-
-		for scanner.Scan() {
-			err = json.NewDecoder(bytes.NewReader(scanner.Bytes())).Decode(&content)
-			if err != nil {
-				return err
-			}
-
-			// Filtering the 64kb mismatch issue
-			if content["type"] != "content_mismatch" {
-				continue
-			}
-
-			contentMismatch := struct {
-				SizeIndex int64 `json:"size_index"`
-				SizeFile  int64 `json:"size_file"`
-			}{}
-			marshaled, _ := json.Marshal(content["content_mismatch"])
-			err = json.Unmarshal(marshaled, &contentMismatch)
-			if err != nil {
-				return err
-			}
-
-			// SizeFile should be a multiple of 64k shorter than SizeIndex
-			size := int64(64 * 1024)
-
-			isSmallFile := contentMismatch.SizeIndex <= size && contentMismatch.SizeFile == 0
-			isMultiple64 := (contentMismatch.SizeIndex-contentMismatch.SizeFile)%size == 0
-			if !isMultiple64 && !isSmallFile {
-				continue
-			}
-
-			// Removes/update
-			fileDoc := content["file_doc"].(map[string]interface{})
-
-			doc := &vfs.FileDoc{}
-			err = couchdb.GetDoc(inst, consts.Files, fileDoc["_id"].(string), doc)
-			if err != nil {
-				return err
-			}
-			instanceVFS := inst.VFS()
-
-			// Checks if the file is trashed
-			if fileDoc["restore_path"] != nil {
-				// This is a trashed file, just delete it
-				fmt.Printf("Removing file %s from instance %s", fileDoc["path"].(string), domain)
-				fmt.Printf(" (Created at %s, UpdatedAt: %s)\n", doc.CreatedAt.String(), doc.UpdatedAt.String())
-				if noDryRunFlag {
-					err := instanceVFS.DestroyFile(doc)
-					if err != nil {
-						fmt.Printf("Error while removing file %s: %s", fileDoc["path"].(string), err)
-					}
-				}
-				continue
-			}
-
-			// Fixing :
-			// - Appending a corrupted suffix to the file
-			// - Force the file index size to the real file size
-			newFileDoc := doc.Clone().(*vfs.FileDoc)
-
-			newFileDoc.DocName = doc.DocName + corruptedSuffix
-			newFileDoc.ByteSize = contentMismatch.SizeFile
-
-			fmt.Printf("%s: Updating index document for file %s", domain, fileDoc["path"].(string))
-			fmt.Printf(" (Created at %s, UpdatedAt: %s)\n", doc.CreatedAt.String(), doc.UpdatedAt.String())
-			if noDryRunFlag {
-				// Let the UpdateFileDoc handles the file doc update. For swift
-				// layout V1, the file should also be renamed
-				err := instanceVFS.UpdateFileDoc(doc, newFileDoc)
-				if err != nil {
-					fmt.Printf("Error while updating document %s: %s\n", doc.DocID, err)
-				}
-			}
-		}
+		fmt.Println(string(out))
 
 		return nil
 	},

@@ -114,3 +114,42 @@ Accept: application/vnd.api+json
     ]
 }
 ```
+
+### GET /instances/:domain/content-mismatch-fixer
+
+Fixes the 64k (or multiple) content mismatch files of an instance
+
+#### Request
+
+```http
+GET /instances/:domain/content-mismatch-fixer?dry_run=true HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+The `dry_run` (default to `true`) query parameter tells if the request is a
+dry-run or not.
+
+#### Response
+
+```json
+{
+  "dry_run": true,
+  "updated": [
+    {
+      "filepath": "/file64.txt",
+      "id": "3c79846513e81aee78ab30849d006550",
+      "created_at": "2019-07-30 15:05:27.268876334 +0200 CEST",
+      "updated_at": "2019-07-30 15:05:27.268876334 +0200 CEST"
+    }
+  ],
+  "removed": [
+    {
+      "filepath": "/.cozy_trash/file64.txt-corrupted",
+      "id": "3c79846513e81aee78ab30849d001f98",
+      "created_at": "2019-07-30 10:18:28.826400117 +0200 CEST",
+      "updated_at": "2019-07-30 14:32:29.862882247 +0200 CEST"
+    }
+  ],
+  "domain": "alice.cozy.tools"
+}
+```
