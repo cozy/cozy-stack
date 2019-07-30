@@ -98,6 +98,7 @@ func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.Re
 			// expect no error.
 			if reqValue.NewEdits != nil && !*reqValue.NewEdits {
 				for _, doc := range reqValue.Docs {
+					doc.Type = doctype
 					rev := doc.Rev()
 					var event string
 					if strings.HasPrefix(rev, "1-") {
