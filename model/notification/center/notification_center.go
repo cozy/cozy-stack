@@ -195,7 +195,11 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 		switch channel {
 		case "mobile":
 			if p != nil {
+				inst.Logger().WithField("nspace", "notifications").
+					Infof("Sending push", p, n.State)
 				if err := sendPush(inst, p, n); err != nil {
+					inst.Logger().WithField("nspace", "notifications").
+						Errorf("Error while sending push", p, n.State)
 					errm = multierror.Append(errm, err)
 				}
 			}
