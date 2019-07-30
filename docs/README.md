@@ -51,7 +51,6 @@ designing new services.
     -   [Konnectors](konnectors.md)
 -   `/data` - [Data System](data-system.md)
     -   [Mango](mango.md)
-    -   [Replication](replication.md)
     -   [CouchDB Quirks](couchdb-quirks.md) &
         [PouchDB Quirks](pouchdb-quirks.md)
 -   `/files` - [Virtual File System](files.md)
