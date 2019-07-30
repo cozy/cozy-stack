@@ -16,10 +16,13 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -601,6 +604,113 @@ var contentMismatch64Kfixer = &cobra.Command{
 	},
 }
 
+var orphanAccountFixer = &cobra.Command{
+	Use:   "orphan-account <domain>",
+	Short: "Rebuild scheduling data strucutures in redis",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return cmd.Usage()
+		}
+
+		domain := args[0]
+		inst, err := lifecycle.GetInstance(domain)
+		if err != nil {
+			return err
+		}
+
+		var accounts []*account.Account
+		err = couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts)
+		if err != nil || len(accounts) == 0 {
+			return err
+		}
+
+		var konnectors []*app.KonnManifest
+		err = couchdb.GetAllDocs(inst, consts.Konnectors, nil, &konnectors)
+		if err != nil {
+			return err
+		}
+
+		var slugsToDelete []string
+		for _, acc := range accounts {
+			if acc.AccountType == "" {
+				continue // Skip the design docs
+			}
+			found := false
+			for _, konn := range konnectors {
+				if konn.Slug() == acc.AccountType {
+					found = true
+					break
+				}
+			}
+			if !found {
+				for _, slug := range slugsToDelete {
+					if slug == acc.AccountType {
+						found = true
+						break
+					}
+				}
+				if !found {
+					slugsToDelete = append(slugsToDelete, acc.AccountType)
+				}
+			}
+		}
+		if len(slugsToDelete) == 0 {
+			return nil
+		}
+
+		if _, err = stack.Start(); err != nil {
+			return err
+		}
+		jobsSystem := job.System()
+		log := inst.Logger().WithField("nspace", "fixer")
+		copier := inst.AppsCopier(consts.KonnectorType)
+
+		for _, slug := range slugsToDelete {
+			opts := &app.InstallerOptions{
+				Operation:  app.Install,
+				Type:       consts.KonnectorType,
+				SourceURL:  "registry://" + slug,
+				Slug:       slug,
+				Registries: inst.Registries(),
+			}
+			ins, err := app.NewInstaller(inst, copier, opts)
+			if err != nil {
+				return err
+			}
+			if _, err = ins.RunSync(); err != nil {
+				return err
+			}
+
+			for _, acc := range accounts {
+				if acc.AccountType != slug {
+					continue
+				}
+				acc.ManualCleaning = true
+				if err := couchdb.DeleteDoc(inst, acc); err != nil {
+					log.Errorf("Cannot delete account: %v", err)
+				}
+				j, err := account.PushAccountDeletedJob(jobsSystem, inst, acc.ID(), acc.Rev(), slug)
+				if err != nil {
+					log.Errorf("Cannot push a job for account deletion: %v", err)
+				}
+				if err = j.WaitUntilDone(inst); err != nil {
+					log.Error(err)
+				}
+			}
+			opts.Operation = app.Delete
+			ins, err = app.NewInstaller(inst, copier, opts)
+			if err != nil {
+				return err
+			}
+			if _, err = ins.RunSync(); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	},
+}
+
 func init() {
 
 	thumbnailsFixer.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run")
@@ -617,6 +727,7 @@ func init() {
 	fixerCmdGroup.AddCommand(contactEmailsFixer)
 	fixerCmdGroup.AddCommand(linkedAppFixer)
 	fixerCmdGroup.AddCommand(contentMismatch64Kfixer)
+	fixerCmdGroup.AddCommand(orphanAccountFixer)
 
 	RootCmd.AddCommand(fixerCmdGroup)
 }

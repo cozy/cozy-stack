@@ -299,6 +299,12 @@ or returns with a non-zero status code.
 **Note:** debug and info level are not transmitted to syslog, except if the
 instance is in debug mode. It would be too verbose to do otherwise.
 
+### Account deleted
+
+When an account is deleted, or a konnector is going to be uninstalled, the
+konnector is executed with the `account_deleted` field to true, so it can clean
+the account remotely.
+
 
 ## OAuth (and service secrets)
 

@@ -3,9 +3,11 @@ package job
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sort"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -230,6 +232,37 @@ func (j *Job) Update() error {
 // Create creates the job in couchdb
 func (j *Job) Create() error {
 	return couchdb.CreateDoc(j, j)
+}
+
+// WaitUntilDone will wait until the job is done. It will return an error if
+// the job has failed. And there is a timeout (10 minutes).
+func (j *Job) WaitUntilDone(inst *instance.Instance) error {
+	sub := realtime.GetHub().Subscriber(inst)
+	defer sub.Close()
+	if err := sub.Watch(j.DocType(), j.ID()); err != nil {
+		return err
+	}
+	timeout := time.After(10 * time.Minute)
+	for {
+		select {
+		case e := <-sub.Channel:
+			state := Queued
+			if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
+				stateStr, _ := doc.M["state"].(string)
+				state = State(stateStr)
+			} else if doc, ok := e.Doc.(*Job); ok {
+				state = doc.State
+			}
+			switch state {
+			case Done:
+				return nil
+			case Errored:
+				return errors.New("The konnector failed on account deletion")
+			}
+		case <-timeout:
+			return nil
+		}
+	}
 }
 
 // UnmarshalJSON implements json.Unmarshaler on Message. It should be retro-
