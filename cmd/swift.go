@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"strconv"
@@ -65,28 +66,26 @@ var swiftGetCmd = &cobra.Command{
 		}
 
 		c := newAdminClient()
-		path := fmt.Sprintf("/swift/get/%s/%s", args[0], url.PathEscape(args[1]))
+		path := fmt.Sprintf("/swift/vfs/%s", url.PathEscape(args[1]))
 		res, err := c.Req(&request.Options{
 			Method: "GET",
 			Path:   path,
+			Domain: args[0],
 		})
 		if err != nil {
 			return err
 		}
 		defer res.Body.Close()
 
-		// Get the object
-		out := struct {
-			Content string `json:"content"`
-		}{}
-		err = json.NewDecoder(res.Body).Decode(&out)
+		// Read the body and print it
+		out, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}
 
-		fmt.Println(out.Content)
+		fmt.Println(string(out))
 
-		return err
+		return nil
 
 	},
 }

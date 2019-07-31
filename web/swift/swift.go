@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift"
 )
@@ -84,14 +85,9 @@ func ListLayouts(c echo.Context) error {
 
 // GetObject retrieves a Swift object from an instance
 func GetObject(c echo.Context) error {
-	domain := c.Param("domain")
+	i := c.Get("instance").(*instance.Instance)
 	object := c.Param("object")
 	unescaped, err := url.PathUnescape(object)
-	if err != nil {
-		return err
-	}
-
-	i, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
@@ -103,13 +99,7 @@ func GetObject(c echo.Context) error {
 		return err
 	}
 
-	out := struct {
-		Content string `json:"content"`
-	}{
-		buf.String(),
-	}
-
-	return c.JSON(http.StatusOK, out)
+	return c.JSON(http.StatusOK, buf.String())
 }
 
 // PutObject puts an object into Swift
@@ -205,7 +195,7 @@ func ListObjects(c echo.Context) error {
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	router.GET("/layouts", ListLayouts, checkSwift)
-	router.GET("/get/:domain/:object", GetObject, checkSwift)
+	router.GET("/vfs/:object", GetObject, checkSwift, middlewares.NeedInstance)
 	router.POST("/put", PutObject, checkSwift)
 	router.DELETE("/:domain/:object", DeleteObject, checkSwift)
 	router.GET("/ls/:domain", ListObjects, checkSwift)

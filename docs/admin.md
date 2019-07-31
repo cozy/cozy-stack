@@ -158,23 +158,21 @@ Accept: application/vnd.api+json
 }
 ```
 
-### GET /swift/get/:domain/:object
+### GET /swift/vfs/:object
 
 Retrieves a Swift object
 
 #### Request
 
 ```http
-GET /swift/get/alice.cozy.tools/67a88b22520680b1fae840%2F9a8a0%2F18d02%2FiYbkfuCDEMaVoIXg HTTP/1.1
-Accept: application/vnd.api+json
+GET /swift/vfs/67a88b22520680b1fae840%2F9a8a0%2F18d02%2FiYbkfuCDEMaVoIXg HTTP/1.1
+Host: alice.cozy.tools
 ```
 
 #### Response
 
-```json
-{
- "content": "foobar"
-}
+```text
+"foobar"
 ```
 
 ### POST /swift/put

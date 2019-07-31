@@ -123,7 +123,9 @@ func (c *Client) Req(opts *request.Options) (*http.Response, error) {
 		return nil, err
 	}
 	opts.Addr = c.Addr
-	opts.Domain = c.Domain
+	if opts.Domain == "" {
+		opts.Domain = c.Domain
+	}
 	opts.Scheme = c.Scheme
 	opts.Client = c.Client
 	opts.UserAgent = c.UserAgent
