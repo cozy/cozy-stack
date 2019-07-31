@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
-	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 
 	"github.com/spf13/cobra"
@@ -134,12 +132,7 @@ var jobsPurgeCmd = &cobra.Command{
 }
 
 func init() {
-	domain := os.Getenv("COZY_DOMAIN")
-	if domain == "" && build.IsDevRelease() {
-		domain = defaultDevDomain
-	}
-
-	jobsCmdGroup.PersistentFlags().StringVar(&flagDomain, "domain", domain, "specify the domain name of the instance")
+	jobsCmdGroup.PersistentFlags().StringVar(&flagDomain, "domain", cozyDomain(), "specify the domain name of the instance")
 
 	jobsRunCmd.Flags().StringVar(&flagJobJSONArg, "json", "", "specify the job arguments as raw JSON")
 	jobsRunCmd.Flags().BoolVar(&flagJobPrintLogs, "logs", false, "print jobs log in stdout")

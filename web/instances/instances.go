@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -135,6 +136,8 @@ func modifyHandler(c echo.Context) error {
 	if onboardingFinished, err := strconv.ParseBool(c.QueryParam("OnboardingFinished")); err == nil {
 		opts.OnboardingFinished = &onboardingFinished
 	}
+	// Deprecated: the Debug parameter should no longer be used, but is kept
+	// for compatibility.
 	if debug, err := strconv.ParseBool(c.QueryParam("Debug")); err == nil {
 		opts.Debug = &debug
 	}
@@ -175,6 +178,32 @@ func deleteHandler(c echo.Context) error {
 	domain := c.Param("domain")
 	err := lifecycle.Destroy(domain)
 	if err != nil {
+		return wrapError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func getDebug(c echo.Context) error {
+	domain := c.Param("domain")
+	log := logger.WithDomain(domain)
+	if !logger.IsDebug(log) {
+		return jsonapi.NotFound(errors.New("Debug is disabled on this domain"))
+	}
+	res := map[string]bool{domain: true}
+	return c.JSON(http.StatusOK, res)
+}
+
+func enableDebug(c echo.Context) error {
+	domain := c.Param("domain")
+	if err := logger.AddDebugDomain(domain); err != nil {
+		return wrapError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func disableDebug(c echo.Context) error {
+	domain := c.Param("domain")
+	if err := logger.RemoveDebugDomain(domain); err != nil {
 		return wrapError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -500,6 +529,9 @@ func Routes(router *echo.Group) {
 	router.DELETE("/:domain", deleteHandler)
 
 	// Advanced features for instances
+	router.GET("/:domain/debug", getDebug)
+	router.POST("/:domain/debug", enableDebug)
+	router.DELETE("/:domain/debug", disableDebug)
 	router.GET("/:domain/fsck", fsckHandler)
 	router.POST("/updates", updatesHandler)
 	router.POST("/token", createToken)

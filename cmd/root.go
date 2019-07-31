@@ -23,6 +23,8 @@ const DefaultStorageDir = "storage"
 
 const defaultDevDomain = "cozy.tools:8080"
 
+var flagDomain string
+
 var cfgFile string
 
 // ErrUsage is returned by the cmd.Usage() method
@@ -124,7 +126,6 @@ func newAdminClient() *client.Client {
 
 func init() {
 	usageFunc := RootCmd.UsageFunc()
-
 	RootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
 		_ = usageFunc(cmd)
 		return ErrUsage
@@ -172,4 +173,16 @@ func errFatalf(format string, vals ...interface{}) {
 		panic(err)
 	}
 	os.Exit(1)
+}
+
+func deprecatedDomainArg() {
+	errPrintfln("Please use --domain, the positional argument for domain has been deprecated")
+}
+
+func cozyDomain() string {
+	domain := os.Getenv("COZY_DOMAIN")
+	if domain == "" && build.IsDevRelease() {
+		domain = defaultDevDomain
+	}
+	return domain
 }

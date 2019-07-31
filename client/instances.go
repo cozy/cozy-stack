@@ -228,6 +228,53 @@ func (c *Client) DestroyInstance(domain string) error {
 	return err
 }
 
+// GetDebug is used to known if an instance has its logger in debug mode.
+func (c *Client) GetDebug(domain string) (bool, error) {
+	if !validDomain(domain) {
+		return false, fmt.Errorf("Invalid domain: %s", domain)
+	}
+	_, err := c.Req(&request.Options{
+		Method:     "GET",
+		Path:       "/instances/" + domain + "/debug",
+		NoResponse: true,
+	})
+	if err != nil {
+		if e, ok := err.(*request.Error); ok {
+			if e.Title == http.StatusText(http.StatusNotFound) {
+				return false, nil
+			}
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// EnableDebug sets the logger of an instance in debug mode.
+func (c *Client) EnableDebug(domain string) error {
+	if !validDomain(domain) {
+		return fmt.Errorf("Invalid domain: %s", domain)
+	}
+	_, err := c.Req(&request.Options{
+		Method:     "POST",
+		Path:       "/instances/" + domain + "/debug",
+		NoResponse: true,
+	})
+	return err
+}
+
+// DisableDebug disables the debug mode for the logger of an instance.
+func (c *Client) DisableDebug(domain string) error {
+	if !validDomain(domain) {
+		return fmt.Errorf("Invalid domain: %s", domain)
+	}
+	_, err := c.Req(&request.Options{
+		Method:     "DELETE",
+		Path:       "/instances/" + domain + "/debug",
+		NoResponse: true,
+	})
+	return err
+}
+
 // GetToken is used to generate a token with the specified options.
 func (c *Client) GetToken(opts *TokenOptions) (string, error) {
 	q := url.Values{
