@@ -11,8 +11,9 @@ title: Cozy-Stack documentation - Table of contents
 -   [Managing Instances](instance.md)
 -   [Security](security.md)
 -   [Manpages of the command-line tool](cli/cozy-stack.md)
+-   [Using the admin API](admin.md)
 
-### For developpers
+### For developers
 
 -   [Develop a client-side app](client-app-dev.md)
 -   [Running and building Docker images](docker.md)

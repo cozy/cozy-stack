@@ -1,8 +1,87 @@
-# Swift
+# Admin
 
-## Swift API
+## Introduction
 
-This API provides several features to interact with the Swift VFS.
+An admin API is avaible on the stack. It offers several endpoints to interact
+with your cozy-stack installation (E.g. interacting with instances, generating tokens, ...).
+
+:warning: Use the admin API only if you know what you are doing. The admin API
+is not authenticated, you **must** protect these endpoints.
+
+The default port for the admin endpoints is `6060`. If you want to customize the parameters, please see the [config file documentation page](config.md).
+
+
+## Instance
+
+### GET /instances/with-app-version/:slug/:version
+
+Returns all the instances using slug/version pair
+
+#### Request
+
+```http
+GET /instances/with-app-version/drive/1.0.0 HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```json
+{
+    "instances": [
+        "alice.cozy.tools",
+        "bob.cozy.tools",
+        "zoe.cozy.tools"
+    ]
+}
+```
+
+### POST /instances/:domain/fixers/content-mismatch
+
+Fixes the 64k (or multiple) content mismatch files of an instance
+
+#### Request
+
+```http
+POST /instances/:domain/fixers/content-mismatch HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "dry_run": true
+}
+```
+
+The `dry_run` (default to `true`) body parameter tells if the request is a
+dry-run or not.
+
+#### Response
+
+```json
+{
+  "dry_run": true,
+  "updated": [
+    {
+      "filepath": "/file64.txt",
+      "id": "3c79846513e81aee78ab30849d006550",
+      "created_at": "2019-07-30 15:05:27.268876334 +0200 CEST",
+      "updated_at": "2019-07-30 15:05:27.268876334 +0200 CEST"
+    }
+  ],
+  "removed": [
+    {
+      "filepath": "/.cozy_trash/file64.txt-corrupted",
+      "id": "3c79846513e81aee78ab30849d001f98",
+      "created_at": "2019-07-30 10:18:28.826400117 +0200 CEST",
+      "updated_at": "2019-07-30 14:32:29.862882247 +0200 CEST"
+    }
+  ],
+  "domain": "alice.cozy.tools"
+}
+```
+
+## Swift
 
 ### GET /swift/layouts
 
