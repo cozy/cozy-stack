@@ -50,7 +50,7 @@ func contentMismatchFixer(c echo.Context) error {
 		DryRun: true,
 	}
 
-	// Try to get the dru_run param from the body. If there is no body, ignore
+	// Try to get the dry_run param from the body. If there is no body, ignore
 	// it
 	_ = json.NewDecoder(c.Request().Body).Decode(&body)
 

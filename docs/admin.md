@@ -2,11 +2,12 @@
 
 ## Introduction
 
-An admin API is avaible on the stack. It offers several endpoints to interact
+An admin API is available on the stack. It offers several endpoints to interact
 with your cozy-stack installation (E.g. interacting with instances, generating tokens, ...).
 
 :warning: Use the admin API only if you know what you are doing. The admin API
-is not authenticated, you **must** protect these endpoints.
+provides a basic authentication, you **must** protect these endpoints as they
+are very powerful.
 
 The default port for the admin endpoints is `6060`. If you want to customize the parameters, please see the [config file documentation page](config.md).
 

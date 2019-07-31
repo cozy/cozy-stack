@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -97,7 +96,6 @@ func GetObject(c echo.Context) error {
 		return err
 	}
 
-	fmt.Println("test", unescaped)
 	buf := new(bytes.Buffer)
 	sc := config.GetSwiftConnection()
 	_, err = sc.ObjectGet(swiftContainer(i), unescaped, buf, false, nil)
