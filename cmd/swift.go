@@ -34,7 +34,7 @@ var lsLayoutsCmd = &cobra.Command{
 		values.Add("show_domains", strconv.FormatBool(flagShowDomains))
 		res, err := c.Req(&request.Options{
 			Method:  "GET",
-			Path:    "/swift/list-layouts",
+			Path:    "/swift/layouts",
 			Queries: values,
 		})
 		if err != nil {

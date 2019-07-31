@@ -584,6 +584,6 @@ func Routes(router *echo.Group) {
 	router.POST("/assets", addAssets)
 	router.DELETE("/assets/:context/*", deleteAssets)
 	router.GET("/contexts", lsContexts)
-	router.GET("/show-app-version/:slug/:version", appVersion)
+	router.GET("/with-app-version/:slug/:version", appVersion)
 	router.POST("/:domain/fixers/content-mismatch", contentMismatchFixer)
 }

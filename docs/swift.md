@@ -4,14 +4,14 @@
 
 This API provides several features to interact with the Swift VFS.
 
-### GET /swift/list-layouts
+### GET /swift/layouts
 
 Count swift layouts by type
 
 #### Request
 
 ```http
-GET /swift/list-layouts HTTP/1.1
+GET /swift/layouts HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -44,7 +44,7 @@ The `show_domains=true` query parameter provides the domain names if needed
 #### Request
 
 ```http
-GET /swift/list-layouts?show_domains=true HTTP/1.1
+GET /swift/layouts?show_domains=true HTTP/1.1
 Accept: application/vnd.api+json
 ```
 

@@ -949,7 +949,7 @@ var instanceAppVersionCmd = &cobra.Command{
 		}
 
 		c := newAdminClient()
-		path := fmt.Sprintf("/instances/show-app-version/%s/%s", args[0], args[1])
+		path := fmt.Sprintf("/instances/with-app-version/%s/%s", args[0], args[1])
 		res, err := c.Req(&request.Options{
 			Method: "GET",
 			Path:   path,

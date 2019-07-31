@@ -206,7 +206,7 @@ func ListObjects(c echo.Context) error {
 
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
-	router.GET("/list-layouts", ListLayouts, checkSwift)
+	router.GET("/layouts", ListLayouts, checkSwift)
 	router.GET("/get/:domain/:object", GetObject, checkSwift)
 	router.POST("/put", PutObject, checkSwift)
 	router.DELETE("/:domain/:object", DeleteObject, checkSwift)

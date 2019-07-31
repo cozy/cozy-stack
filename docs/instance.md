@@ -92,14 +92,14 @@ If you want to edit an instance, see [`instances modify manpage`](cli/cozy-stack
 
 Several admin endpoints are available. This list may not be exhaustive.
 
-### GET /instances/:app-slug/:version
+### GET /instances/with-app-version/:slug/:version
 
 Returns all the instances using slug/version pair
 
 #### Request
 
 ```http
-GET /instances/drive/1.0.0 HTTP/1.1
+GET /instances/with-app-version/drive/1.0.0 HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
