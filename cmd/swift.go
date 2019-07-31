@@ -158,10 +158,11 @@ var swiftLsCmd = &cobra.Command{
 		}
 
 		c := newAdminClient()
-		path := fmt.Sprintf("/swift/ls/%s", url.PathEscape(args[0]))
+		path := fmt.Sprintf("/swift/vfs")
 		res, err := c.Req(&request.Options{
 			Method: "GET",
 			Path:   path,
+			Domain: args[0],
 		})
 		if err != nil {
 			return err

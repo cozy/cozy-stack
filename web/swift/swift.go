@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -147,17 +146,13 @@ func DeleteObject(c echo.Context) error {
 
 // ListObjects list objects of an instance
 func ListObjects(c echo.Context) error {
-	domain := c.Param("domain")
-	i, err := lifecycle.GetInstance(domain)
-	if err != nil {
-		return err
-	}
+	i := middlewares.GetInstance(c)
 	sc := config.GetSwiftConnection()
 	container := swiftContainer(i)
 
 	outNames := []string{}
 
-	err = sc.ObjectsWalk(container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
+	err := sc.ObjectsWalk(container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
 		names, err := sc.ObjectNames(container, opts)
 		if err == nil {
 			outNames = append(outNames, names...)
@@ -182,7 +177,7 @@ func Routes(router *echo.Group) {
 	router.GET("/vfs/:object", GetObject, checkSwift, middlewares.NeedInstance)
 	router.PUT("/vfs/:object", PutObject, checkSwift, middlewares.NeedInstance)
 	router.DELETE("/vfs/:object", DeleteObject, checkSwift, middlewares.NeedInstance)
-	router.GET("/ls/:domain", ListObjects, checkSwift)
+	router.GET("/vfs", ListObjects, checkSwift, middlewares.NeedInstance)
 }
 
 // checkSwift middleware ensures that the VFS relies on Swift

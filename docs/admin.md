@@ -206,15 +206,16 @@ Accept: application/vnd.api+json
 Host: alice.cozy.tools
 ```
 
-### GET /swift/ls/:domain
+### GET /swift/vfs
 
 List Swift objects of an instance
 
 #### Request
 
 ```http
-POST /swift/ls/alice.cozy.tools HTTP/1.1
+GET /swift/vfs HTTP/1.1
 Accept: application/vnd.api+json
+Host: alice.cozy.tools
 ```
 
 #### Response
