@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client"
@@ -335,15 +334,23 @@ var contentMismatch64Kfixer = &cobra.Command{
 		}
 
 		domain := args[0]
-		q := url.Values{
-			"dry_run": {strconv.FormatBool(!noDryRunFlag)},
+
+		buf := new(bytes.Buffer)
+		body := struct {
+			DryRun bool `json:"dry_run"`
+		}{
+			DryRun: !noDryRunFlag,
+		}
+
+		if err := json.NewEncoder(buf).Encode(body); err != nil {
+			return err
 		}
 
 		c := newAdminClient()
 		res, err := c.Req(&request.Options{
-			Method:  "GET",
-			Path:    "/instances/" + url.PathEscape(domain) + "/content-mismatch-fixer",
-			Queries: q,
+			Method: "POST",
+			Path:   "/instances/" + url.PathEscape(domain) + "/fixers/content-mismatch",
+			Body:   bytes.NewReader(buf.Bytes()),
 		})
 		if err != nil {
 			return err

@@ -115,18 +115,24 @@ Accept: application/vnd.api+json
 }
 ```
 
-### GET /instances/:domain/content-mismatch-fixer
+### POST /instances/:domain/fixers/content-mismatch
 
 Fixes the 64k (or multiple) content mismatch files of an instance
 
 #### Request
 
 ```http
-GET /instances/:domain/content-mismatch-fixer?dry_run=true HTTP/1.1
+POST /instances/:domain/fixers/content-mismatch HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
-The `dry_run` (default to `true`) query parameter tells if the request is a
+```json
+{
+  "dry_run": true
+}
+```
+
+The `dry_run` (default to `true`) body parameter tells if the request is a
 dry-run or not.
 
 #### Response

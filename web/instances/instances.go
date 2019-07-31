@@ -543,12 +543,15 @@ func contentMismatchFixer(c echo.Context) error {
 		return fmt.Errorf("Cannot find instance %s", domain)
 	}
 
-	dryRun := true
-	if dryParam := c.QueryParam("dry_run"); dryParam != "" {
-		if dry, err := strconv.ParseBool(dryParam); err == nil {
-			dryRun = dry
-		}
+	body := struct {
+		DryRun bool `json:"dry_run"`
+	}{
+		DryRun: true,
 	}
+
+	// Try to get the dru_run param from the body. If there is no body, ignore
+	// it
+	_ = json.NewDecoder(c.Request().Body).Decode(&body)
 
 	// Directly requesting the /fsck endpoint by forging a custom echo.Context
 	w := httptest.NewRecorder()
@@ -582,7 +585,7 @@ func contentMismatchFixer(c echo.Context) error {
 		Domain  string     `json:"domain"`
 	}{
 		Domain:  domain,
-		DryRun:  dryRun,
+		DryRun:  body.DryRun,
 		Removed: []resEntry{},
 		Updated: []resEntry{},
 	}
@@ -637,7 +640,7 @@ func contentMismatchFixer(c echo.Context) error {
 				CreatedAt: doc.CreatedAt.String(),
 				UpdatedAt: doc.UpdatedAt.String(),
 			})
-			if !dryRun {
+			if !body.DryRun {
 				err := instanceVFS.DestroyFile(doc)
 				if err != nil {
 					return err
@@ -660,7 +663,7 @@ func contentMismatchFixer(c echo.Context) error {
 			CreatedAt: doc.CreatedAt.String(),
 			UpdatedAt: doc.UpdatedAt.String(),
 		})
-		if !dryRun {
+		if !body.DryRun {
 			// Let the UpdateFileDoc handles the file doc update. For swift
 			// layout V1, the file should also be renamed
 			err := instanceVFS.UpdateFileDoc(doc, newFileDoc)
@@ -728,5 +731,5 @@ func Routes(router *echo.Group) {
 	router.DELETE("/assets/:context/*", deleteAssets)
 	router.GET("/contexts", lsContexts)
 	router.GET("/show-app-version/:slug/:version", appVersion)
-	router.GET("/:domain/content-mismatch-fixer", contentMismatchFixer)
+	router.POST("/:domain/fixers/content-mismatch", contentMismatchFixer)
 }
