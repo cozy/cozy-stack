@@ -176,7 +176,7 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 		},
 	}
 
-	ctx.Logger().Infof("Built notification for FCM", notification)
+	ctx.Logger().Infof("Built notification for FCM: %#v", notification)
 	if msg.Collapsible {
 		notification.CollapseKey = hex.EncodeToString(hashedSource)
 	}
@@ -184,10 +184,10 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 		notification.Data[k] = v
 	}
 
-	ctx.Logger().Infof("FCM send", notification)
+	ctx.Logger().Infof("FCM send: %#v", notification)
 	res, err := fcmClient.Send(notification)
 	if err != nil {
-		ctx.Logger().Warnf("Error during fcm send", err)
+		ctx.Logger().Warnf("Error during fcm send: %s", err)
 		return err
 	}
 	if res.Failure == 0 {
