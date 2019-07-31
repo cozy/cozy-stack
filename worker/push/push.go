@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/notification/center"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/sirupsen/logrus"
 
 	fcm "github.com/appleboy/go-fcm"
@@ -48,6 +49,7 @@ func Init() (err error) {
 
 	if conf.AndroidAPIKey != "" {
 		fcmClient, err = fcm.NewClient(conf.AndroidAPIKey)
+		logger.WithNamespace("push").Infof("Initialized FCM client with Android API Key")
 		if err != nil {
 			return
 		}
@@ -173,6 +175,8 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 			"body":  msg.Message,
 		},
 	}
+
+	ctx.Logger().Infof("Built notification for FCM: %#v", notification)
 	if msg.Collapsible {
 		notification.CollapseKey = hex.EncodeToString(hashedSource)
 	}
@@ -180,8 +184,10 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 		notification.Data[k] = v
 	}
 
+	ctx.Logger().Infof("FCM send: %#v", notification)
 	res, err := fcmClient.Send(notification)
 	if err != nil {
+		ctx.Logger().Warnf("Error during fcm send: %s", err)
 		return err
 	}
 	if res.Failure == 0 {
