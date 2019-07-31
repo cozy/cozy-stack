@@ -130,14 +130,9 @@ func PutObject(c echo.Context) error {
 
 // DeleteObject removes an object from Swift
 func DeleteObject(c echo.Context) error {
-	domain := c.Param("domain")
+	i := middlewares.GetInstance(c)
 	objectName := c.Param("object")
 	unescaped, err := url.PathUnescape(objectName)
-	if err != nil {
-		return err
-	}
-
-	i, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
@@ -186,7 +181,7 @@ func Routes(router *echo.Group) {
 	router.GET("/layouts", ListLayouts, checkSwift)
 	router.GET("/vfs/:object", GetObject, checkSwift, middlewares.NeedInstance)
 	router.PUT("/vfs/:object", PutObject, checkSwift, middlewares.NeedInstance)
-	router.DELETE("/:domain/:object", DeleteObject, checkSwift)
+	router.DELETE("/vfs/:object", DeleteObject, checkSwift, middlewares.NeedInstance)
 	router.GET("/ls/:domain", ListObjects, checkSwift)
 }
 

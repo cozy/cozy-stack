@@ -135,10 +135,11 @@ var swiftDeleteCmd = &cobra.Command{
 		}
 
 		c := newAdminClient()
-		path := fmt.Sprintf("/swift/%s/%s", args[0], url.PathEscape(args[1]))
+		path := fmt.Sprintf("/swift/vfs/%s", url.PathEscape(args[1]))
 		_, err := c.Req(&request.Options{
 			Method: "DELETE",
 			Path:   path,
+			Domain: args[0],
 		})
 
 		return err
