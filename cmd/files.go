@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/client"
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
@@ -39,7 +38,6 @@ const filesExecUsage = `Available commands:
 	Don't forget to put quotes around the command!
 `
 
-var flagFilesDomain string
 var flagImportFrom string
 var flagImportTo string
 var flagImportDryRun bool
@@ -70,11 +68,11 @@ var execFilesCmd = &cobra.Command{
 		if len(args) != 1 {
 			return cmd.Usage()
 		}
-		if flagFilesDomain == "" {
+		if flagDomain == "" {
 			errPrintfln("%s", errFilesMissingDomain)
 			return cmd.Usage()
 		}
-		c := newClient(flagFilesDomain, consts.Files)
+		c := newClient(flagDomain, consts.Files)
 		command := args[0]
 		err := execCommand(c, command, os.Stdout)
 		if err == errFilesExec {
@@ -88,7 +86,7 @@ var importFilesCmd = &cobra.Command{
 	Use:   "import [--domain domain] [--match pattern] --from <name> --to <name>",
 	Short: "Import the specified file or directory into cozy",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if flagFilesDomain == "" {
+		if flagDomain == "" {
 			errPrintfln("%s", errFilesMissingDomain)
 			return cmd.Usage()
 		}
@@ -105,7 +103,7 @@ var importFilesCmd = &cobra.Command{
 			}
 		}
 
-		c := newClient(flagFilesDomain, consts.Files)
+		c := newClient(flagDomain, consts.Files)
 		return importFiles(c, flagImportFrom, flagImportTo, match)
 	},
 }
@@ -114,12 +112,12 @@ var usageFilesCmd = &cobra.Command{
 	Use:   "usage [--domain domain]",
 	Short: "Show the usage and quota for the files of this instance",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if flagFilesDomain == "" {
+		if flagDomain == "" {
 			errPrintfln("%s", errFilesMissingDomain)
 			return cmd.Usage()
 		}
 		c := newAdminClient()
-		info, err := c.DiskUsage(flagFilesDomain)
+		info, err := c.DiskUsage(flagDomain)
 		if err != nil {
 			return err
 		}
@@ -493,12 +491,7 @@ func splitArgs(command string) []string {
 }
 
 func init() {
-	domain := os.Getenv("COZY_DOMAIN")
-	if domain == "" && build.IsDevRelease() {
-		domain = defaultDevDomain
-	}
-
-	filesCmdGroup.PersistentFlags().StringVar(&flagFilesDomain, "domain", domain, "specify the domain name of the instance")
+	filesCmdGroup.PersistentFlags().StringVar(&flagDomain, "domain", cozyDomain(), "specify the domain name of the instance")
 
 	importFilesCmd.Flags().StringVar(&flagImportFrom, "from", "", "directory to import from in cozy")
 	_ = importFilesCmd.MarkFlagRequired("from")

@@ -5,20 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/spf13/cobra"
 )
 
 var errSettingsMissingDomain = errors.New("Missing --domain flag")
-
-var flagSettingsDomain string
 
 var settingsCmd = &cobra.Command{
 	Use:   "settings [settings]",
@@ -32,11 +28,11 @@ If you give a blank value, the setting will be removed.
 `,
 	Example: "$ cozy-stack settings --domain cozy.tools:8080 context:beta,public_name:John,to_remove:",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if flagSettingsDomain == "" {
+		if flagDomain == "" {
 			errPrintfln("%s", errSettingsMissingDomain)
 			return cmd.Usage()
 		}
-		c := newClient(flagSettingsDomain, consts.Settings)
+		c := newClient(flagDomain, consts.Settings)
 		res, err := c.Req(&request.Options{
 			Method: "GET",
 			Path:   "/settings/instance",
@@ -117,11 +113,6 @@ func updateSettings(c *client.Client, obj map[string]interface{}, args string) (
 }
 
 func init() {
-	domain := os.Getenv("COZY_DOMAIN")
-	if domain == "" && build.IsDevRelease() {
-		domain = defaultDevDomain
-	}
-
-	settingsCmd.PersistentFlags().StringVar(&flagSettingsDomain, "domain", domain, "specify the domain name of the instance")
+	settingsCmd.PersistentFlags().StringVar(&flagDomain, "domain", cozyDomain(), "specify the domain name of the instance")
 	RootCmd.AddCommand(settingsCmd)
 }

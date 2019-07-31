@@ -2,7 +2,9 @@ package logger
 
 import (
 	"io/ioutil"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
@@ -11,11 +13,11 @@ import (
 const (
 	debugRedisAddChannel = "add:log-debug"
 	debugRedisRmvChannel = "rmv:log-debug"
+	debugRedisPrefix     = "debug:"
 )
 
 var opts Options
-
-var loggers = make(map[string]*logrus.Logger)
+var loggers = make(map[string]domainEntry)
 var loggersMu sync.RWMutex
 
 // Options contains the configuration values of the logger system
@@ -23,6 +25,18 @@ type Options struct {
 	Syslog bool
 	Level  string
 	Redis  redis.UniversalClient
+}
+
+type domainEntry struct {
+	log       *logrus.Logger
+	expiredAt *time.Time
+}
+
+func (entry *domainEntry) Expired() bool {
+	if entry.expiredAt == nil {
+		return false
+	}
+	return entry.expiredAt.Before(time.Now())
 }
 
 // Init initializes the logger module with the specified options.
@@ -46,6 +60,7 @@ func Init(opt Options) error {
 	}
 	if cli := opt.Redis; cli != nil {
 		go subscribeLoggersDebug(cli)
+		go loadDebug(cli)
 	}
 	opts = opt
 	return nil
@@ -66,18 +81,18 @@ func Clone(in *logrus.Logger) *logrus.Logger {
 }
 
 // AddDebugDomain adds the specified domain to the debug list.
-func AddDebugDomain(domain string) error {
+func AddDebugDomain(domain string, ttl time.Duration) error {
 	if cli := opts.Redis; cli != nil {
-		return publishLoggersDebug(cli, debugRedisAddChannel, domain)
+		return publishDebug(cli, debugRedisAddChannel, domain, ttl)
 	}
-	addDebugDomain(domain)
+	addDebugDomain(domain, ttl)
 	return nil
 }
 
 // RemoveDebugDomain removes the specified domain from the debug list.
 func RemoveDebugDomain(domain string) error {
 	if cli := opts.Redis; cli != nil {
-		return publishLoggersDebug(cli, debugRedisRmvChannel, domain)
+		return publishDebug(cli, debugRedisRmvChannel, domain, 0)
 	}
 	removeDebugDomain(domain)
 	return nil
@@ -91,14 +106,18 @@ func WithNamespace(nspace string) *logrus.Entry {
 // WithDomain returns a logger with the specified domain field.
 func WithDomain(domain string) *logrus.Entry {
 	loggersMu.RLock()
-	defer loggersMu.RUnlock()
-	if logger, ok := loggers[domain]; ok {
-		return logger.WithField("domain", domain)
+	entry, ok := loggers[domain]
+	loggersMu.RUnlock()
+	if ok {
+		if !entry.Expired() {
+			return entry.log.WithField("domain", domain)
+		}
+		removeDebugDomain(domain)
 	}
 	return logrus.WithField("domain", domain)
 }
 
-func addDebugDomain(domain string) {
+func addDebugDomain(domain string, ttl time.Duration) {
 	loggersMu.Lock()
 	defer loggersMu.Unlock()
 	_, ok := loggers[domain]
@@ -114,7 +133,8 @@ func addDebugDomain(domain string) {
 			logger.Out = ioutil.Discard
 		}
 	}
-	loggers[domain] = logger
+	expiredAt := time.Now().Add(ttl)
+	loggers[domain] = domainEntry{logger, &expiredAt}
 }
 
 func removeDebugDomain(domain string) {
@@ -126,19 +146,48 @@ func removeDebugDomain(domain string) {
 func subscribeLoggersDebug(cli redis.UniversalClient) {
 	sub := cli.Subscribe(debugRedisAddChannel, debugRedisRmvChannel)
 	for msg := range sub.Channel() {
-		domain := msg.Payload
+		parts := strings.Split(msg.Payload, "/")
+		domain := parts[0]
 		switch msg.Channel {
 		case debugRedisAddChannel:
-			addDebugDomain(domain)
+			var ttl time.Duration
+			if len(parts) >= 2 {
+				ttl, _ = time.ParseDuration(parts[1])
+			}
+			addDebugDomain(domain, ttl)
 		case debugRedisRmvChannel:
 			removeDebugDomain(domain)
 		}
 	}
 }
 
-func publishLoggersDebug(cli redis.UniversalClient, channel, domain string) error {
-	cmd := cli.Publish(channel, domain)
-	return cmd.Err()
+func loadDebug(cli redis.UniversalClient) {
+	keys, err := cli.Keys(debugRedisPrefix + "*").Result()
+	if err != nil {
+		return
+	}
+	for _, key := range keys {
+		ttl, err := cli.TTL(key).Result()
+		if err != nil {
+			continue
+		}
+		domain := strings.TrimPrefix(key, debugRedisPrefix)
+		addDebugDomain(domain, ttl)
+	}
+}
+
+func publishDebug(cli redis.UniversalClient, channel, domain string, ttl time.Duration) error {
+	err := cli.Publish(channel, domain+"/"+ttl.String()).Err()
+	if err != nil {
+		return err
+	}
+	key := debugRedisPrefix + domain
+	if channel == debugRedisAddChannel {
+		err = cli.Set(key, 0, ttl).Err()
+	} else {
+		err = cli.Del(key).Err()
+	}
+	return err
 }
 
 // IsDebug returns whether or not the debug mode is activated.

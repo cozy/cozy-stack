@@ -27,7 +27,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var flagDomain string
 var flagDomainAliases []string
 var flagListFields []string
 var flagLocale string
@@ -53,6 +52,7 @@ var flagTOS string
 var flagTOSLatest string
 var flagContextName string
 var flagOnboardingFinished bool
+var flagTTL time.Duration
 var flagExpire time.Duration
 var flagAllowLoginScope bool
 var flagFsckIndexIntegrity bool
@@ -355,27 +355,54 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 }
 
 var debugInstanceCmd = &cobra.Command{
-	Use:   "debug <domain> <true/false>",
+	Use:   "debug <true/false>",
 	Short: "Activate or deactivate debugging of the instance",
 	Long: `
 cozy-stack instances debug allows to activate or deactivate the debugging of a
 specific domain.
 `,
-	Example: "$ cozy-stack instances debug cozy.tools:8080 true",
+	Example: "$ cozy-stack instances debug --domain cozy.tools:8080 true",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 2 {
+		action := "enable"
+		domain := flagDomain
+		switch len(args) {
+		case 0:
+			action = "get"
+		case 1:
+			if strings.ToLower(args[0]) == "false" {
+				action = "disable"
+			}
+		case 2:
+			deprecatedDomainArg()
+			domain = args[0]
+			if strings.ToLower(args[1]) == "false" {
+				action = "disable"
+			}
+		default:
+			action = ""
+		}
+		if action == "" || domain == "" {
 			return cmd.Usage()
 		}
-		domain := args[0]
-		debug, err := strconv.ParseBool(args[1])
-		if err != nil {
-			return err
-		}
+
 		c := newAdminClient()
-		_, err = c.ModifyInstance(&client.InstanceOptions{
-			Domain: domain,
-			Debug:  &debug,
-		})
+		var err error
+		var debug bool
+		switch action {
+		case "get":
+			debug, err = c.GetDebug(domain)
+		case "enable":
+			err = c.EnableDebug(domain, flagTTL)
+			debug = true
+		case "disable":
+			err = c.DisableDebug(domain)
+			debug = false
+		}
+		if debug {
+			fmt.Printf("Debug is enabled on %s\n", domain)
+		} else {
+			fmt.Printf("Debug is disabled on %s\n", domain)
+		}
 		return err
 	},
 }
@@ -1058,6 +1085,8 @@ func init() {
 	modifyInstanceCmd.Flags().BoolVar(&flagBlocked, "blocked", false, "Block the instance")
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
+	debugInstanceCmd.Flags().StringVar(&flagDomain, "domain", cozyDomain(), "Specify the domain name of the instance")
+	debugInstanceCmd.Flags().DurationVar(&flagTTL, "ttl", 24*time.Hour, "Specify how long the debug mode will last")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckIndexIntegrity, "index-integrity", false, "Check the index integrity only")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckFilesConsistensy, "files-consistency", false, "Check the files consistency only (between CouchDB and Swift)")
 	fsckInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")

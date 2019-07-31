@@ -11,7 +11,6 @@ import (
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
-	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/spf13/cobra"
@@ -19,7 +18,6 @@ import (
 
 var errAppsMissingDomain = errors.New("Missing --domain flag, or COZY_DOMAIN env variable")
 
-var flagAppsDomain string
 var flagAllDomains bool
 var flagAppsDeactivated bool
 var flagSafeUpdate bool
@@ -192,7 +190,7 @@ var runKonnectorsCmd = &cobra.Command{
 	Short: "Run a konnector.",
 	Long:  "Run a konnector named with specified slug using the specified options.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if flagAppsDomain == "" {
+		if flagDomain == "" {
 			errPrintfln("%s", errAppsMissingDomain)
 			return cmd.Usage()
 		}
@@ -201,7 +199,7 @@ var runKonnectorsCmd = &cobra.Command{
 		}
 
 		slug := args[0]
-		c := newClient(flagAppsDomain,
+		c := newClient(flagDomain,
 			consts.Jobs+":POST:konnector:worker",
 			consts.Triggers,
 			consts.Files,
@@ -301,7 +299,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 			return nil
 		})
 	}
-	if flagAppsDomain == "" {
+	if flagDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Usage()
 	}
@@ -312,7 +310,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 		overridenParameters = &tmp
 	}
 
-	c := newClient(flagAppsDomain, appType)
+	c := newClient(flagDomain, appType)
 	app, err := c.InstallApp(&client.AppOptions{
 		AppType:     appType,
 		Slug:        slug,
@@ -358,7 +356,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 			return nil
 		})
 	}
-	if flagAppsDomain == "" {
+	if flagDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Usage()
 	}
@@ -369,7 +367,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 		overridenParameters = &tmp
 	}
 
-	c := newClient(flagAppsDomain, appType)
+	c := newClient(flagDomain, appType)
 	app, err := c.UpdateApp(&client.AppOptions{
 		AppType:   appType,
 		Slug:      args[0],
@@ -392,11 +390,11 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 	if len(args) != 1 {
 		return cmd.Usage()
 	}
-	if flagAppsDomain == "" {
+	if flagDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Usage()
 	}
-	c := newClient(flagAppsDomain, appType)
+	c := newClient(flagDomain, appType)
 	app, err := c.UninstallApp(&client.AppOptions{
 		AppType: appType,
 		Slug:    args[0],
@@ -413,14 +411,14 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 }
 
 func showApp(cmd *cobra.Command, args []string, appType string) error {
-	if flagAppsDomain == "" {
+	if flagDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Usage()
 	}
 	if len(args) < 1 {
 		return cmd.Usage()
 	}
-	c := newClient(flagAppsDomain, appType)
+	c := newClient(flagDomain, appType)
 	app, err := c.GetApp(&client.AppOptions{
 		Slug:    args[0],
 		AppType: appType,
@@ -437,14 +435,14 @@ func showApp(cmd *cobra.Command, args []string, appType string) error {
 }
 
 func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error {
-	if flagAppsDomain == "" {
+	if flagDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Usage()
 	}
 	if len(args) < 1 {
 		return cmd.Usage()
 	}
-	c := newClient(flagAppsDomain, appType, consts.Triggers)
+	c := newClient(flagDomain, appType, consts.Triggers)
 	app, err := c.GetApp(&client.AppOptions{
 		Slug:    args[0],
 		AppType: appType,
@@ -485,11 +483,11 @@ var listTriggerCmd = &cobra.Command{
 	Short:   `List triggers`,
 	Example: "$ cozy-stack triggers ls --domain cozy.tools:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if flagAppsDomain == "" {
+		if flagDomain == "" {
 			errPrintfln("%s", errAppsMissingDomain)
 			return cmd.Usage()
 		}
-		c := newClient(flagAppsDomain, consts.Triggers)
+		c := newClient(flagDomain, consts.Triggers)
 		list, err := c.ListTriggers()
 		if err != nil {
 			return err
@@ -521,13 +519,13 @@ func launchTrigger(cmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
 		return cmd.Usage()
 	}
-	if flagAppsDomain == "" {
+	if flagDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Usage()
 	}
 
 	// Creates client
-	c := newClient(flagAppsDomain, consts.Triggers)
+	c := newClient(flagDomain, consts.Triggers)
 
 	// Creates job
 	j, err := c.TriggerLaunch(args[0])
@@ -545,11 +543,11 @@ func launchTrigger(cmd *cobra.Command, args []string) error {
 }
 
 func lsApps(cmd *cobra.Command, args []string, appType string) error {
-	if flagAppsDomain == "" {
+	if flagDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Usage()
 	}
-	c := newClient(flagAppsDomain, appType)
+	c := newClient(flagDomain, appType)
 	// TODO(pagination)
 	apps, err := c.ListApps(appType)
 	if err != nil {
@@ -623,12 +621,7 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 }
 
 func init() {
-	domain := os.Getenv("COZY_DOMAIN")
-	if domain == "" && build.IsDevRelease() {
-		domain = defaultDevDomain
-	}
-
-	webappsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
+	webappsCmdGroup.PersistentFlags().StringVar(&flagDomain, "domain", cozyDomain(), "specify the domain name of the instance")
 	webappsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iteratively")
 
 	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "ask-permissions", false, "specify that the application should not be activated after installation")
@@ -637,7 +630,7 @@ func init() {
 
 	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccountID, "account-id", "", "specify the account ID to use for running the konnector")
 
-	triggersCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
+	triggersCmdGroup.PersistentFlags().StringVar(&flagDomain, "domain", cozyDomain(), "specify the domain name of the instance")
 	triggersCmdGroup.AddCommand(launchTriggerCmd)
 	triggersCmdGroup.AddCommand(listTriggerCmd)
 	triggersCmdGroup.AddCommand(showWebappTriggersCmd)
@@ -649,7 +642,7 @@ func init() {
 	webappsCmdGroup.AddCommand(uninstallWebappCmd)
 	webappsCmdGroup.AddCommand(appsVersionsCmd)
 
-	konnectorsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
+	konnectorsCmdGroup.PersistentFlags().StringVar(&flagDomain, "domain", cozyDomain(), "specify the domain name of the instance")
 	konnectorsCmdGroup.PersistentFlags().StringVar(&flagKonnectorsParameters, "parameters", "", "override the parameters of the installed konnector")
 	konnectorsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iteratively")
 

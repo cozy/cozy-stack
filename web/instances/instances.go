@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -17,12 +16,10 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
-	"github.com/cozy/cozy-stack/pkg/assets"
-	"github.com/cozy/cozy-stack/pkg/assets/model"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -139,6 +136,8 @@ func modifyHandler(c echo.Context) error {
 	if onboardingFinished, err := strconv.ParseBool(c.QueryParam("OnboardingFinished")); err == nil {
 		opts.OnboardingFinished = &onboardingFinished
 	}
+	// Deprecated: the Debug parameter should no longer be used, but is kept
+	// for compatibility.
 	if debug, err := strconv.ParseBool(c.QueryParam("Debug")); err == nil {
 		opts.Debug = &debug
 	}
@@ -179,6 +178,36 @@ func deleteHandler(c echo.Context) error {
 	domain := c.Param("domain")
 	err := lifecycle.Destroy(domain)
 	if err != nil {
+		return wrapError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func getDebug(c echo.Context) error {
+	domain := c.Param("domain")
+	log := logger.WithDomain(domain)
+	if !logger.IsDebug(log) {
+		return jsonapi.NotFound(errors.New("Debug is disabled on this domain"))
+	}
+	res := map[string]bool{domain: true}
+	return c.JSON(http.StatusOK, res)
+}
+
+func enableDebug(c echo.Context) error {
+	domain := c.Param("domain")
+	ttl, err := time.ParseDuration(c.QueryParam("TTL"))
+	if err != nil {
+		ttl = 24 * time.Hour
+	}
+	if err := logger.AddDebugDomain(domain, ttl); err != nil {
+		return wrapError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func disableDebug(c echo.Context) error {
+	domain := c.Param("domain")
+	if err := logger.RemoveDebugDomain(domain); err != nil {
 		return wrapError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -225,57 +254,6 @@ func fsckHandler(c echo.Context) (err error) {
 		}
 	}
 	return err
-}
-
-func rebuildRedis(c echo.Context) error {
-	instances, err := instance.List()
-	if err != nil {
-		return wrapError(err)
-	}
-	if err = job.System().CleanRedis(); err != nil {
-		return wrapError(err)
-	}
-	for _, i := range instances {
-		err = job.System().RebuildRedis(i)
-		if err != nil {
-			return wrapError(err)
-		}
-	}
-	return c.NoContent(http.StatusNoContent)
-}
-
-// Renders the assets list loaded in memory and served by the cozy
-func assetsInfos(c echo.Context) error {
-	assetsMap, err := assets.List()
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, assetsMap)
-}
-
-func addAssets(c echo.Context) error {
-	var unmarshaledAssets []model.AssetOption
-	if err := json.NewDecoder(c.Request().Body).Decode(&unmarshaledAssets); err != nil {
-		return err
-	}
-
-	err := assets.Add(unmarshaledAssets)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
-	}
-	return nil
-}
-
-func deleteAssets(c echo.Context) error {
-	context := c.Param("context")
-	name := c.Param("*")
-
-	err := assets.Remove(name, context)
-	if err != nil {
-		return wrapError(err)
-	}
-	return c.NoContent(http.StatusNoContent)
 }
 
 func cleanOrphanAccounts(c echo.Context) error {
@@ -523,56 +501,6 @@ func getSwiftBucketName(c echo.Context) error {
 	return c.JSON(http.StatusOK, containerNames)
 }
 
-func lsContexts(c echo.Context) error {
-	type contextAPI struct {
-		Context          string   `json:"context"`
-		Registries       []string `json:"registries"`
-		ClouderyEndpoint string   `json:"cloudery_endpoint"`
-	}
-
-	contexts := config.GetConfig().Contexts
-	clouderies := config.GetConfig().Clouderies
-	registries := config.GetConfig().Registries
-
-	result := []contextAPI{}
-	for contextName := range contexts {
-		var clouderyEndpoint string
-		var registriesList []string
-
-		// Clouderies
-		var cloudery interface{}
-
-		cloudery, ok := clouderies[contextName]
-
-		if !ok {
-			cloudery = clouderies["default"]
-		}
-
-		if cloudery != nil {
-			api := cloudery.(map[string]interface{})["api"]
-			clouderyEndpoint = api.(map[string]interface{})["url"].(string)
-		}
-
-		// Registries
-		var registryURLs []*url.URL
-
-		// registriesURLs contains context-specific urls and default ones
-		if registryURLs, ok = registries[contextName]; !ok {
-			registryURLs = registries["default"]
-		}
-		for _, url := range registryURLs {
-			registriesList = append(registriesList, url.String())
-		}
-
-		result = append(result, contextAPI{
-			Context:          contextName,
-			Registries:       registriesList,
-			ClouderyEndpoint: clouderyEndpoint,
-		})
-	}
-	return c.JSON(http.StatusOK, result)
-}
-
 func wrapError(err error) error {
 	switch err {
 	case instance.ErrNotFound:
@@ -597,11 +525,17 @@ func wrapError(err error) error {
 
 // Routes sets the routing for the instances service
 func Routes(router *echo.Group) {
+	// CRUD for instances
 	router.GET("", listHandler)
 	router.POST("", createHandler)
 	router.GET("/:domain", showHandler)
 	router.PATCH("/:domain", modifyHandler)
 	router.DELETE("/:domain", deleteHandler)
+
+	// Advanced features for instances
+	router.GET("/:domain/debug", getDebug)
+	router.POST("/:domain/debug", enableDebug)
+	router.DELETE("/:domain/debug", disableDebug)
 	router.GET("/:domain/fsck", fsckHandler)
 	router.POST("/updates", updatesHandler)
 	router.POST("/token", createToken)
@@ -610,13 +544,15 @@ func Routes(router *echo.Group) {
 	router.POST("/:domain/export", exporter)
 	router.POST("/:domain/import", importer)
 	router.POST("/:domain/orphan_accounts", cleanOrphanAccounts)
-	router.POST("/redis", rebuildRedis)
-	router.GET("/assets", assetsInfos)
-	router.POST("/assets", addAssets)
-	router.DELETE("/assets/:context/*", deleteAssets)
 	router.GET("/:domain/disk-usage", diskUsage)
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
 	router.POST("/:domain/auth-mode", setAuthMode)
+
+	// Config
+	router.POST("/redis", rebuildRedis)
+	router.GET("/assets", assetsInfos)
+	router.POST("/assets", addAssets)
+	router.DELETE("/assets/:context/*", deleteAssets)
 	router.GET("/contexts", lsContexts)
 }
