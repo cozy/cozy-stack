@@ -250,7 +250,7 @@ func (c *Client) GetDebug(domain string) (bool, error) {
 }
 
 // EnableDebug sets the logger of an instance in debug mode.
-func (c *Client) EnableDebug(domain string) error {
+func (c *Client) EnableDebug(domain string, ttl time.Duration) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
@@ -258,6 +258,9 @@ func (c *Client) EnableDebug(domain string) error {
 		Method:     "POST",
 		Path:       "/instances/" + domain + "/debug",
 		NoResponse: true,
+		Queries: url.Values{
+			"TTL": {ttl.String()},
+		},
 	})
 	return err
 }

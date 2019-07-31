@@ -157,7 +157,7 @@ func Patch(i *instance.Instance, opts *Options) error {
 	if debug := opts.Debug; debug != nil {
 		var err error
 		if *debug {
-			err = logger.AddDebugDomain(i.Domain)
+			err = logger.AddDebugDomain(i.Domain, 24*time.Hour)
 		} else {
 			err = logger.RemoveDebugDomain(i.Domain)
 		}

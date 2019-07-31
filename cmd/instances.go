@@ -52,6 +52,7 @@ var flagTOS string
 var flagTOSLatest string
 var flagContextName string
 var flagOnboardingFinished bool
+var flagTTL time.Duration
 var flagExpire time.Duration
 var flagAllowLoginScope bool
 var flagFsckIndexIntegrity bool
@@ -391,7 +392,7 @@ specific domain.
 		case "get":
 			debug, err = c.GetDebug(domain)
 		case "enable":
-			err = c.EnableDebug(domain)
+			err = c.EnableDebug(domain, flagTTL)
 			debug = true
 		case "disable":
 			err = c.DisableDebug(domain)
@@ -1084,7 +1085,8 @@ func init() {
 	modifyInstanceCmd.Flags().BoolVar(&flagBlocked, "blocked", false, "Block the instance")
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
-	debugInstanceCmd.Flags().StringVar(&flagDomain, "domain", cozyDomain(), "specify the domain name of the instance")
+	debugInstanceCmd.Flags().StringVar(&flagDomain, "domain", cozyDomain(), "Specify the domain name of the instance")
+	debugInstanceCmd.Flags().DurationVar(&flagTTL, "ttl", 24*time.Hour, "Specify how long the debug mode will last")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckIndexIntegrity, "index-integrity", false, "Check the index integrity only")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckFilesConsistensy, "files-consistency", false, "Check the files consistency only (between CouchDB and Swift)")
 	fsckInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")

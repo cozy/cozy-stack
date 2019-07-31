@@ -13,9 +13,9 @@ func TestDebugDomain(t *testing.T) {
 	err := Init(Options{Level: "info"})
 	assert.NoError(t, err)
 
-	err = AddDebugDomain("foo.bar")
+	err = AddDebugDomain("foo.bar", 24*time.Hour)
 	assert.NoError(t, err)
-	err = AddDebugDomain("foo.bar")
+	err = AddDebugDomain("foo.bar", 24*time.Hour)
 	assert.NoError(t, err)
 
 	log := WithDomain("foo.bar")
@@ -38,9 +38,9 @@ func TestDebugDomainWithRedis(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	err = AddDebugDomain("foo.bar.redis")
+	err = AddDebugDomain("foo.bar.redis", 24*time.Hour)
 	assert.NoError(t, err)
-	err = AddDebugDomain("foo.bar.redis")
+	err = AddDebugDomain("foo.bar.redis", 24*time.Hour)
 	assert.NoError(t, err)
 
 	time.Sleep(1 * time.Second)

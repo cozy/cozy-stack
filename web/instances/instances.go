@@ -195,7 +195,11 @@ func getDebug(c echo.Context) error {
 
 func enableDebug(c echo.Context) error {
 	domain := c.Param("domain")
-	if err := logger.AddDebugDomain(domain); err != nil {
+	ttl, err := time.ParseDuration(c.QueryParam("TTL"))
+	if err != nil {
+		ttl = 24 * time.Hour
+	}
+	if err := logger.AddDebugDomain(domain, ttl); err != nil {
 		return wrapError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
