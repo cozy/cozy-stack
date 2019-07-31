@@ -310,6 +310,7 @@ func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {
 			Tags:         fd.Tags,
 			Metadata:     fd.Metadata,
 			ReferencedBy: fd.ReferencedBy,
+			CozyMetadata: fd.CozyMetadata,
 			InternalID:   fd.InternalID,
 		}
 	}
