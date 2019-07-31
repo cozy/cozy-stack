@@ -175,30 +175,23 @@ Host: alice.cozy.tools
 "foobar"
 ```
 
-### POST /swift/put
+### PUT /swift/vfs/:object
 
 Put an object in Swift
 
-Parameters:
-- `instance`
-- `object_name`
-- `content`
-- `content_type`
 
 #### Request
 
 ```http
-POST /swift/put HTTP/1.1
+PUT /swift/vfs/67a88b22520680b1fae840%2F9a8a0%2F18d02%2FiYbkfuCDEMaVoIXg HTTP/1.1
 Accept: application/vnd.api+json
+Host: alice.cozy.tools
+Content-Type: text/plain
 ```
 
-```json
-{
-  "instance": "alice.cozy.tools",
-  "object_name": "67a88b22520680b1fae840/9a8a0/18d02/iYbkfuCDEMaVoIXg",
-  "content": "this is my content",
-  "content-type": "text/plain"
-}
+Body:
+```text
+ "this is my content"
 ```
 
 ### DELETE /swift/:domain/:object

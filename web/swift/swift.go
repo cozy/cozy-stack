@@ -2,7 +2,6 @@ package swift
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -85,7 +84,7 @@ func ListLayouts(c echo.Context) error {
 
 // GetObject retrieves a Swift object from an instance
 func GetObject(c echo.Context) error {
-	i := c.Get("instance").(*instance.Instance)
+	i := middlewares.GetInstance(c)
 	object := c.Param("object")
 	unescaped, err := url.PathUnescape(object)
 	if err != nil {
@@ -104,33 +103,23 @@ func GetObject(c echo.Context) error {
 
 // PutObject puts an object into Swift
 func PutObject(c echo.Context) error {
-	type reqStruct struct {
-		Instance    string `json:"instance"`
-		ObjectName  string `json:"object_name"`
-		Content     string `json:"content"`
-		ContentType string `json:"content_type"`
-	}
+	i := middlewares.GetInstance(c)
 
-	var req reqStruct
-	err := json.NewDecoder(c.Request().Body).Decode(&req)
-	if err != nil {
-		return err
-	}
-
-	i, err := lifecycle.GetInstance(req.Instance)
+	contentType := c.Request().Header.Get("Content-Type")
+	objectName := c.Param("object")
+	unescaped, err := url.PathUnescape(objectName)
 	if err != nil {
 		return err
 	}
 
 	sc := config.GetSwiftConnection()
-	f, err := sc.ObjectCreate(swiftContainer(i), req.ObjectName, true, "", req.ContentType, nil)
+	f, err := sc.ObjectCreate(swiftContainer(i), unescaped, true, "", contentType, nil)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	r := bytes.NewReader([]byte(req.Content))
-	_, err = io.Copy(f, r)
+	_, err = io.Copy(f, c.Request().Body)
 	if err != nil {
 		return err
 	}
@@ -196,7 +185,7 @@ func ListObjects(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("/layouts", ListLayouts, checkSwift)
 	router.GET("/vfs/:object", GetObject, checkSwift, middlewares.NeedInstance)
-	router.POST("/put", PutObject, checkSwift)
+	router.PUT("/vfs/:object", PutObject, checkSwift, middlewares.NeedInstance)
 	router.DELETE("/:domain/:object", DeleteObject, checkSwift)
 	router.GET("/ls/:domain", ListObjects, checkSwift)
 }

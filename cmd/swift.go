@@ -100,13 +100,6 @@ expected on the standard input.`,
 			return cmd.Usage()
 		}
 
-		type reqStruct struct {
-			Instance    string `json:"instance"`
-			ObjectName  string `json:"object_name"`
-			Content     string `json:"content"`
-			ContentType string `json:"content_type"`
-		}
-
 		c := newAdminClient()
 		var buf = new(bytes.Buffer)
 
@@ -115,20 +108,14 @@ expected on the standard input.`,
 			return err
 		}
 
-		body, err := json.Marshal(reqStruct{
-			Instance:    args[0],
-			ObjectName:  args[1],
-			Content:     buf.String(),
-			ContentType: flagSwiftObjectContentType,
-		})
-		if err != nil {
-			return err
-		}
-
 		_, err = c.Req(&request.Options{
-			Method: "POST",
-			Path:   "/swift/put",
-			Body:   bytes.NewReader(body),
+			Method: "PUT",
+			Path:   fmt.Sprintf("/swift/vfs/%s", url.PathEscape(args[1])),
+			Body:   bytes.NewReader(buf.Bytes()),
+			Domain: args[0],
+			Headers: map[string]string{
+				"Content-Type": flagSwiftObjectContentType,
+			},
 		})
 		if err != nil {
 			return err
