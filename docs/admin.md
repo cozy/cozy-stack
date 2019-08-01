@@ -82,6 +82,17 @@ dry-run or not.
 }
 ```
 
+### POST /instances/:domain/fixers/orphan-account
+
+Delete the accounts which are not linked to a konnector
+
+#### Request
+
+```http
+POST /instances/:domain/fixers/orphan-account HTTP/1.1
+Accept: application/vnd.api+json
+```
+
 ## Swift
 
 ### GET /swift/layouts
