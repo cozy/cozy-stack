@@ -719,7 +719,7 @@ permissions to delete the trigger, even without permissions on the
 
 ### GET /jobs/triggers
 
-Get the list of triggers. This route only accept `Worker` query parameters and returns the trigger but also in `attributes` its `current_state` (the same `current_state` returned by [GET /jobs/triggers/:trigger-id](jobs/#get-jobstriggerstrigger-id)). Be warned that `/data/io.cozy.triggers/_find` do not return this `current_state` attribute and you'll need to query `/jobs/triggers/:trigger-id` to have it.
+Get the list of triggers. This route only accept `Worker` query parameters and returns the trigger but also in `attributes` its `current_state` (the same `current_state` returned by [GET /jobs/triggers/:trigger-id](jobs/#get-jobstriggerstrigger-id)). Be warned that `/data/io.cozy.triggers/_find` does not return this `current_state` attribute and you'll need to query `/jobs/triggers/:trigger-id` to have it.
 
 Query parameters:
 
