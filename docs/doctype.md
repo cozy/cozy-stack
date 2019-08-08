@@ -24,6 +24,11 @@ to help other developers to reuse the same doctypes. If you think that your
 doctype may be useful to others, you can make a pull request on the
 https://github.com/cozy/cozy-doctypes repository.
 
+⚠️ Do not forget to put a link to this new doc into:
+
+- the `toc.yml` file so that it appears in the navigation menus.
+- the `Readme.md` file so that it appears the index page.
+
 **Note:** it's the **docs** directory that you should update. The other
 directories are used by [remote doctypes](./remote.md).
 
