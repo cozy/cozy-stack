@@ -11,7 +11,7 @@ require (
 	github.com/dhowden/tag v0.0.0-20190519100835-db0c67e351b1
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emersion/go-vcard v0.0.0-20190105225839-8856043f13c5
-	github.com/go-redis/redis v6.15.2+incompatible
+	github.com/go-redis/redis v6.15.4+incompatible
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang/gddo v0.0.0-20190419222130-af0f2af80721
 	github.com/golang/protobuf v1.3.2 // indirect
@@ -30,8 +30,6 @@ require (
 	github.com/mssola/user_agent v0.5.0
 	github.com/ncw/swift v1.0.49
 	github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443
-	github.com/onsi/ginkgo v1.8.0 // indirect
-	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/oschwald/maxminddb-golang v1.3.1
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
