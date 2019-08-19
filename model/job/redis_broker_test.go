@@ -11,7 +11,7 @@ import (
 
 	jobs "github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/limits"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
 	"github.com/stretchr/testify/assert"
 )
 
