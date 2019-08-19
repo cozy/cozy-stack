@@ -383,6 +383,7 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 		ctype != "text/xml" &&
 		ctype != "text/plain" &&
 		ctype != "application/xml" &&
+		ctype != "application/vnd.api+json" &&
 		ctype != "application/sparql-results+json" {
 		class := strings.SplitN(ctype, "/", 2)[0]
 		if class != "image" && class != "audio" && class != "video" {
