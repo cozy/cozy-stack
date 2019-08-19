@@ -20,14 +20,18 @@ func RevsDiff(c echo.Context) error {
 		inst.Logger().WithField("nspace", "replicator").Infof("Sharing was not found: %s", err)
 		return wrapErrors(err)
 	}
-	var changed sharing.Changed
-	if err = c.Bind(&changed); err != nil {
+	var changes map[string]interface{}
+	if err = c.Bind(&changes); err != nil {
 		inst.Logger().WithField("nspace", "replicator").Infof("Changes cannot be bound: %s", err)
 		return wrapErrors(err)
 	}
-	if changed == nil {
+	if len(changes) == 0 {
 		inst.Logger().WithField("nspace", "replicator").Infof("No changes")
 		return echo.NewHTTPError(http.StatusBadRequest)
+	}
+	changed := make(sharing.Changed, len(changes))
+	for k, v := range changes {
+		changed[k] = v.([]string) // FIXME
 	}
 	missings, err := s.ComputeRevsDiff(inst, changed)
 	if err != nil {
