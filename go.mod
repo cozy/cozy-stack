@@ -14,7 +14,6 @@ require (
 	github.com/go-redis/redis v6.15.2+incompatible
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang/gddo v0.0.0-20190818233415-287de01127ef
-	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/google/go-querystring v1.0.0
 	github.com/google/gops v0.3.6
 	github.com/gorilla/websocket v1.4.0
@@ -36,9 +35,7 @@ require (
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/pquerna/otp v1.2.0
-	github.com/prometheus/client_golang v1.0.0
-	github.com/prometheus/common v0.6.0 // indirect
-	github.com/prometheus/procfs v0.0.3 // indirect
+	github.com/prometheus/client_golang v1.1.0
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/sideshow/apns2 v0.18.0
 	github.com/sirupsen/logrus v1.4.2
