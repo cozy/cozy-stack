@@ -719,7 +719,7 @@ permissions to delete the trigger, even without permissions on the
 
 ### GET /jobs/triggers
 
-Get the list of triggers.
+Get the list of triggers. This route only accept `Worker` query parameters and returns the trigger but also in `attributes` its `current_state` (the same `current_state` returned by [GET /jobs/triggers/:trigger-id](jobs/#get-jobstriggerstrigger-id)). Be warned that `/data/io.cozy.triggers/_find` does not return this `current_state` attribute and you'll need to query `/jobs/triggers/:trigger-id` to have it.
 
 Query parameters:
 
@@ -740,7 +740,28 @@ Accept: application/vnd.api+json
     {
       "type": "io.cozy.triggers",
       "id": "123123",
-      "attributes": {},
+      "arguments": "0 40 0 * * *",
+      "current_state": {
+        "last_error": "LOGIN_FAILED",
+        "last_executed_job_id": "abc",
+        "last_execution": "2019-01-07T08:23:22.069902888Z",
+        "last_failed_job_id": "abcd",
+        "last_failure": "2019-01-07T08:23:22.069902888Z",
+        "last_manual_execution": "2019-01-07T08:23:22.069902888Z",
+        "last_manual_job_id": "azer",
+        "status": "errored",
+        "trigger_id": "123123"
+      },
+      "debounce": "",
+      "domain": "xxx.mycozy.cloud",
+      "message": {
+        "konnector": "slug", 
+        "account": "XXX"
+      },
+      "options": null,
+      "type": "@cron",
+      "worker": "konnector",
+      "id": "123123",
       "links": {
         "self": "/jobs/triggers/123123"
       }
