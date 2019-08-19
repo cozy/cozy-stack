@@ -13,7 +13,7 @@ require (
 	github.com/emersion/go-vcard v0.0.0-20190105225839-8856043f13c5
 	github.com/go-redis/redis v6.15.2+incompatible
 	github.com/gofrs/uuid v3.2.0+incompatible
-	github.com/golang/gddo v0.0.0-20190419222130-af0f2af80721
+	github.com/golang/gddo v0.0.0-20190818233415-287de01127ef
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/google/go-querystring v1.0.0
 	github.com/google/gops v0.3.6
