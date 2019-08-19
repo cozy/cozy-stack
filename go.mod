@@ -40,7 +40,7 @@ require (
 	github.com/prometheus/common v0.6.0 // indirect
 	github.com/prometheus/procfs v0.0.3 // indirect
 	github.com/robfig/cron/v3 v3.0.0
-	github.com/sideshow/apns2 v0.17.0
+	github.com/sideshow/apns2 v0.18.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/afero v1.2.2
 	github.com/spf13/cobra v0.0.5
