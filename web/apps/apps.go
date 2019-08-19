@@ -325,11 +325,12 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, slug string, toDel
 		for _, entry := range toDelete {
 			acc := entry.account
 			acc.ManualCleaning = true
+			oldRev := acc.Rev() // The deletion job needs the rev just before the deletion
 			if err := couchdb.DeleteDoc(instance, acc); err != nil {
 				log.Errorf("Cannot delete account: %v", err)
 				return
 			}
-			j, err := account.PushAccountDeletedJob(jobsSystem, instance, acc.ID(), acc.Rev(), slug)
+			j, err := account.PushAccountDeletedJob(jobsSystem, instance, acc.ID(), oldRev, slug)
 			if err != nil {
 				log.Errorf("Cannot push a job for account deletion: %v", err)
 				return
