@@ -686,10 +686,11 @@ var orphanAccountFixer = &cobra.Command{
 					continue
 				}
 				acc.ManualCleaning = true
+				oldRev := acc.Rev() // The deletion job needs the rev just before the deletion
 				if err := couchdb.DeleteDoc(inst, acc); err != nil {
 					log.Errorf("Cannot delete account: %v", err)
 				}
-				j, err := account.PushAccountDeletedJob(jobsSystem, inst, acc.ID(), acc.Rev(), slug)
+				j, err := account.PushAccountDeletedJob(jobsSystem, inst, acc.ID(), oldRev, slug)
 				if err != nil {
 					log.Errorf("Cannot push a job for account deletion: %v", err)
 				}
