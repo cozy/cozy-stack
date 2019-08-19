@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 )
