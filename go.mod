@@ -51,7 +51,7 @@ require (
 	golang.org/x/image v0.0.0-20190804224331-cff245a6509b
 	golang.org/x/net v0.0.0-20190728225233-ca1201d0de80 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/sys v0.0.0-20190728225543-fc99dfbffb4e // indirect
+	golang.org/x/sys v0.0.0-20190813073005-fde4db37ae7a // indirect
 	golang.org/x/tools v0.0.0-20190729094141-ff9f1409240a
 	google.golang.org/appengine v1.6.1 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
