@@ -40,8 +40,8 @@ differentiate the version channel:
 
 ## Version order
 
-TLDR: 1.0.0-dev._ < 1.0.0 and 1.0.0-beta._ < 1.0.0, make sure you upgrade your
-app version after publishing stable.
+TLDR: `1.0.0-dev._ < 1.0.0` and `1.0.0-beta._ < 1.0.0`, make sure you upgrade
+your app version after publishing stable.
 
 The order used to determine the latest version of a channel is the following:
 
@@ -354,12 +354,13 @@ Sorting is allowed on the following fields:
 | limit                | the maximum number of applications to show               |
 | filter[]             | a filter to apply on fields of the application           |
 | sort                 | name of the field on which to apply the sort of the list |
-| versionsChannel      | the channel from which we select the latest version      |
+| versionsChannel      | the channels from which we list the version numbers      |
+| latestChannelVersion | the channel from which we select the latest version      |
 
 #### Request
 
 ```http
-GET /registry?filter[category]=main&limit=20&sort=slug&latest&latestVersionChannel=beta HTTP/1.1
+GET /registry?filter[category]=main&limit=20&sort=slug&versionsChannel=dev&latestChannelVersion=beta HTTP/1.1
 ```
 
 #### Response
@@ -384,8 +385,8 @@ Content-Type: application/json
             "latest_version": {
                 "slug": "drive",
                 "type": "webapp",
-                "version": "3.1.1",
-                "url": "http://.../3.1.1",
+                "version": "3.1.1-beta.1",
+                "url": "http://.../3.1.1-beta.1",
                 "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
                 "size": "1000",
                 "created_at": "2017-07-05T07:54:40.982Z",
