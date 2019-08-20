@@ -7,14 +7,17 @@ services:
 
 language: go
 
+env:
+  - GO111MODULE="on" GOPROXY="https://proxy.golang.org"
+
 matrix:
   include:
     - go: "1.12"
-      env: GO111MODULE=on COMMAND=scripts/lint.sh
+      script: bash scripts/lint.sh
     - go: "1.12"
-      env: GO111MODULE=on COMMAND=scripts/unit-test.sh
+      script: bash scripts/unit-test.sh
     - go: "1.12"
-      env: GO111MODULE=on COMMAND=scripts/sharing-test.sh
+      script: bash scripts/sharing-test.sh
 
 install:
   - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.3
@@ -23,9 +26,6 @@ install:
 
 before_script:
   - curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
-
-script:
-  - bash $COMMAND
 
 after_failure:
   - docker ps -a
