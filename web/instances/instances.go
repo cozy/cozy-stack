@@ -4,24 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
-	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/worker/updates"
@@ -184,36 +178,6 @@ func deleteHandler(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func getDebug(c echo.Context) error {
-	domain := c.Param("domain")
-	log := logger.WithDomain(domain)
-	if !logger.IsDebug(log) {
-		return jsonapi.NotFound(errors.New("Debug is disabled on this domain"))
-	}
-	res := map[string]bool{domain: true}
-	return c.JSON(http.StatusOK, res)
-}
-
-func enableDebug(c echo.Context) error {
-	domain := c.Param("domain")
-	ttl, err := time.ParseDuration(c.QueryParam("TTL"))
-	if err != nil {
-		ttl = 24 * time.Hour
-	}
-	if err := logger.AddDebugDomain(domain, ttl); err != nil {
-		return wrapError(err)
-	}
-	return c.NoContent(http.StatusNoContent)
-}
-
-func disableDebug(c echo.Context) error {
-	domain := c.Param("domain")
-	if err := logger.RemoveDebugDomain(domain); err != nil {
-		return wrapError(err)
-	}
-	return c.NoContent(http.StatusNoContent)
-}
-
 func fsckHandler(c echo.Context) (err error) {
 	domain := c.Param("domain")
 	i, err := lifecycle.GetInstance(domain)
@@ -255,134 +219,6 @@ func fsckHandler(c echo.Context) (err error) {
 		}
 	}
 	return err
-}
-
-func cleanOrphanAccounts(c echo.Context) error {
-	type result struct {
-		Result  string            `json:"result"`
-		Error   string            `json:"error,omitempty"`
-		Trigger *job.TriggerInfos `json:"trigger,omitempty"`
-	}
-
-	dryRun, _ := strconv.ParseBool(c.QueryParam("DryRun"))
-	results := make([]*result, 0)
-	domain := c.Param("domain")
-
-	db, err := lifecycle.GetInstance(domain)
-	if err != nil {
-		return err
-	}
-
-	var as []*account.Account
-	err = couchdb.GetAllDocs(db, consts.Accounts, nil, &as)
-	if couchdb.IsNoDatabaseError(err) {
-		return c.JSON(http.StatusOK, results)
-	}
-	if err != nil {
-		return err
-	}
-
-	sched := job.System()
-	ts, err := sched.GetAllTriggers(db)
-	if couchdb.IsNoDatabaseError(err) {
-		return c.JSON(http.StatusOK, results)
-	}
-	if err != nil {
-		return err
-	}
-
-	konnectors, _, err := app.ListKonnectorsWithPagination(db, 0, "")
-	if couchdb.IsNoDatabaseError(err) {
-		return c.JSON(http.StatusOK, results)
-	}
-	if err != nil {
-		return err
-	}
-
-	triggersAccounts := make(map[string]struct{})
-
-	for _, trigger := range ts {
-		if trigger.Infos().WorkerType == "konnector" {
-			var v struct {
-				Account string `json:"account"`
-			}
-			if err = json.Unmarshal(trigger.Infos().Message, &v); err != nil {
-				continue
-			}
-			if v.Account != "" {
-				triggersAccounts[v.Account] = struct{}{}
-			}
-		}
-	}
-
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for _, acc := range as {
-		_, ok := triggersAccounts[acc.ID()]
-		if ok {
-			continue
-		}
-
-		var konnectorFound bool
-		for _, k := range konnectors {
-			if k.Slug() == acc.AccountType {
-				konnectorFound = true
-				break
-			}
-		}
-
-		if !konnectorFound {
-			continue
-		}
-
-		msg := struct {
-			Account      string `json:"account"`
-			Konnector    string `json:"konnector"`
-			FolderToSave string `json:"folder_to_save"`
-		}{
-			Account:   acc.ID(),
-			Konnector: acc.AccountType,
-		}
-
-		var args string
-		{
-			d := rng.Intn(7)
-			h := rng.Intn(6) // during the night, between 0 and 5
-			m := rng.Intn(60)
-			args = fmt.Sprintf("0 %d %d * * %d", m, h, d)
-		}
-
-		md := metadata.New()
-		md.DocTypeVersion = job.DocTypeVersionTrigger
-
-		var r result
-		infos := job.TriggerInfos{
-			WorkerType: "konnector",
-			Type:       "@cron",
-			Arguments:  args,
-			Metadata:   md,
-		}
-		r.Trigger = &infos
-		t, err := job.NewTrigger(db, infos, msg)
-		if err != nil {
-			r.Result = "failed"
-			r.Error = err.Error()
-			continue
-		}
-		if !dryRun {
-			err = sched.AddTrigger(t)
-		} else {
-			err = nil
-		}
-		if err != nil {
-			r.Result = "failed"
-			r.Error = err.Error()
-		} else {
-			r.Result = "created"
-		}
-		results = append(results, &r)
-	}
-
-	return c.JSON(http.StatusOK, results)
 }
 
 func updatesHandler(c echo.Context) error {
@@ -531,105 +367,6 @@ func appVersion(c echo.Context) error {
 	return c.JSON(http.StatusOK, i)
 }
 
-func orphanAccountFixer(c echo.Context) error {
-	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
-	if err != nil {
-		return err
-	}
-
-	var accounts []*account.Account
-	err = couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts)
-	if err != nil || len(accounts) == 0 {
-		return err
-	}
-
-	var konnectors []*app.KonnManifest
-	err = couchdb.GetAllDocs(inst, consts.Konnectors, nil, &konnectors)
-	if err != nil {
-		return err
-	}
-
-	var slugsToDelete []string
-	for _, acc := range accounts {
-		if acc.AccountType == "" {
-			continue // Skip the design docs
-		}
-		found := false
-		for _, konn := range konnectors {
-			if konn.Slug() == acc.AccountType {
-				found = true
-				break
-			}
-		}
-		if !found {
-			for _, slug := range slugsToDelete {
-				if slug == acc.AccountType {
-					found = true
-					break
-				}
-			}
-			if !found {
-				slugsToDelete = append(slugsToDelete, acc.AccountType)
-			}
-		}
-	}
-	if len(slugsToDelete) == 0 {
-		return nil
-	}
-
-	if _, err = stack.Start(); err != nil {
-		return err
-	}
-	jobsSystem := job.System()
-	log := inst.Logger().WithField("nspace", "fixer")
-	copier := inst.AppsCopier(consts.KonnectorType)
-
-	for _, slug := range slugsToDelete {
-		opts := &app.InstallerOptions{
-			Operation:  app.Install,
-			Type:       consts.KonnectorType,
-			SourceURL:  "registry://" + slug,
-			Slug:       slug,
-			Registries: inst.Registries(),
-		}
-		ins, err := app.NewInstaller(inst, copier, opts)
-		if err != nil {
-			return err
-		}
-		if _, err = ins.RunSync(); err != nil {
-			return err
-		}
-
-		for _, acc := range accounts {
-			if acc.AccountType != slug {
-				continue
-			}
-			acc.ManualCleaning = true
-			if err := couchdb.DeleteDoc(inst, acc); err != nil {
-				log.Errorf("Cannot delete account: %v", err)
-			}
-			j, err := account.PushAccountDeletedJob(jobsSystem, inst, acc.ID(), acc.Rev(), slug)
-			if err != nil {
-				log.Errorf("Cannot push a job for account deletion: %v", err)
-			}
-			if err = j.WaitUntilDone(inst); err != nil {
-				log.Error(err)
-			}
-		}
-		opts.Operation = app.Delete
-		ins, err = app.NewInstaller(inst, copier, opts)
-		if err != nil {
-			return err
-		}
-		if _, err = ins.RunSync(); err != nil {
-			return err
-		}
-	}
-
-	return c.JSON(http.StatusNoContent, nil)
-}
-
 func wrapError(err error) error {
 	switch err {
 	case instance.ErrNotFound:
@@ -661,10 +398,12 @@ func Routes(router *echo.Group) {
 	router.PATCH("/:domain", modifyHandler)
 	router.DELETE("/:domain", deleteHandler)
 
-	// Advanced features for instances
+	// Debug mode
 	router.GET("/:domain/debug", getDebug)
 	router.POST("/:domain/debug", enableDebug)
 	router.DELETE("/:domain/debug", disableDebug)
+
+	// Advanced features for instances
 	router.GET("/:domain/fsck", fsckHandler)
 	router.POST("/updates", updatesHandler)
 	router.POST("/token", createToken)
@@ -672,7 +411,6 @@ func Routes(router *echo.Group) {
 	router.POST("/oauth_client", registerClient)
 	router.POST("/:domain/export", exporter)
 	router.POST("/:domain/import", importer)
-	router.POST("/:domain/orphan_accounts", cleanOrphanAccounts)
 	router.GET("/:domain/disk-usage", diskUsage)
 	router.GET("/:domain/prefix", showPrefix)
 	router.GET("/:domain/swift-prefix", getSwiftBucketName)
@@ -685,6 +423,8 @@ func Routes(router *echo.Group) {
 	router.DELETE("/assets/:context/*", deleteAssets)
 	router.GET("/contexts", lsContexts)
 	router.GET("/with-app-version/:slug/:version", appVersion)
+
+	// Fixers
 	router.POST("/:domain/fixers/content-mismatch", contentMismatchFixer)
 	router.POST("/:domain/fixers/orphan-account", orphanAccountFixer)
 }
