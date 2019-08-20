@@ -19,8 +19,6 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/model/app"
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	humanize "github.com/dustin/go-humanize"
@@ -950,30 +948,30 @@ var instanceAppVersionCmd = &cobra.Command{
 			return cmd.Usage()
 		}
 
-		instances, err := instance.List()
+		c := newAdminClient()
+		path := fmt.Sprintf("/instances/with-app-version/%s/%s", args[0], args[1])
+		res, err := c.Req(&request.Options{
+			Method: "GET",
+			Path:   path,
+		})
+
 		if err != nil {
-			return nil
-		}
-		appSlug := args[0]
-		version := args[1]
-
-		var instancesAppVersion []string
-		var doc app.WebappManifest
-
-		for _, instance := range instances {
-			err := couchdb.GetDoc(instance, consts.Apps, consts.Apps+"/"+appSlug, &doc)
-			if err == nil {
-				if doc.Version() == version {
-					instancesAppVersion = append(instancesAppVersion, instance.Domain)
-				}
-			}
+			return err
 		}
 
-		if len(instancesAppVersion) == 0 {
-			return fmt.Errorf("No instances have application \"%s\" in version \"%s\"", appSlug, version)
+		out := struct {
+			Instances []string `json:"instances"`
+		}{}
+
+		err = json.NewDecoder(res.Body).Decode(&out)
+		if err != nil {
+			return err
+		}
+		if len(out.Instances) == 0 {
+			return fmt.Errorf("No instances have application \"%s\" in version \"%s\"", args[0], args[1])
 		}
 
-		json, err := json.MarshalIndent(instancesAppVersion, "", "  ")
+		json, err := json.MarshalIndent(out.Instances, "", "  ")
 		if err != nil {
 			return err
 		}

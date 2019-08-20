@@ -34,6 +34,7 @@ import (
 	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/cozy-stack/web/status"
+	"github.com/cozy/cozy-stack/web/swift"
 	"github.com/cozy/cozy-stack/web/version"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -239,6 +240,7 @@ func SetupAdminRoutes(router *echo.Echo) error {
 	version.Routes(router.Group("/version", mws...))
 	metrics.Routes(router.Group("/metrics", mws...))
 	realtime.Routes(router.Group("/realtime", mws...))
+	swift.Routes(router.Group("/swift", mws...))
 
 	setupRecover(router)
 

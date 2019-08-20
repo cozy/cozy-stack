@@ -33,21 +33,6 @@ var configCmdGroup = &cobra.Command{
 	Long:  `cozy-stack config allows to print and generate some parts of the configuration`,
 }
 
-var configPrintCmd = &cobra.Command{
-	Use:   "print",
-	Short: "Display the configuration",
-	Long:  `Read the environment variables, the config file and the given parameters to display the configuration.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := json.MarshalIndent(config.GetConfig(), "", "  ")
-		if err != nil {
-			return err
-		}
-
-		fmt.Println(string(cfg))
-		return nil
-	},
-}
-
 var adminPasswdCmd = &cobra.Command{
 	Use:     "passwd <filepath>",
 	Aliases: []string{"password", "passphrase", "pass"},
@@ -444,7 +429,6 @@ var listContextsCmd = &cobra.Command{
 }
 
 func init() {
-	configCmdGroup.AddCommand(configPrintCmd)
 	configCmdGroup.AddCommand(adminPasswdCmd)
 	configCmdGroup.AddCommand(genKeysCmd)
 	configCmdGroup.AddCommand(encryptCredentialsDataCmd)

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/md5"
 	"encoding/json"
@@ -16,17 +15,9 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/model/account"
-	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
-	"github.com/cozy/cozy-stack/model/job"
-	"github.com/cozy/cozy-stack/model/oauth"
-	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/model/vfs"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 
 	"github.com/spf13/cobra"
 )
@@ -35,89 +26,11 @@ var dryRunFlag bool
 var withMetadataFlag bool
 var noDryRunFlag bool
 
-var softwareIDs = map[string]string{
-	"io.cozy.drive.mobile": "registry://drive",
-	"io.cozy.banks.mobile": "registry://banks",
-}
-
 var fixerCmdGroup = &cobra.Command{
 	Use:   "fixer <command>",
 	Short: "A set of tools to fix issues or migrate content for retro-compatibility.",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := config.Setup(cfgFile); err != nil {
-			return err
-		}
-		if config.FsURL().Scheme == config.SchemeSwift ||
-			config.FsURL().Scheme == config.SchemeSwiftSecure {
-			return config.InitSwiftConnection(config.GetConfig().Fs)
-		}
-		return nil
-	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
-	},
-}
-
-var albumsCreatedAtFixerCmd = &cobra.Command{
-	Use:   "albums-created-at <domain>",
-	Short: "Add a created_at field for albums where it's missing",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			return cmd.Usage()
-		}
-		c := newClient(args[0], consts.PhotosAlbums)
-		res, err := c.Req(&request.Options{
-			Method: "GET",
-			Path:   "/data/" + consts.PhotosAlbums + "/_all_docs",
-			Queries: url.Values{
-				"limit":        {"1000"},
-				"include_docs": {"true"},
-			},
-		})
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
-		var result map[string]interface{}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		if err != nil {
-			return err
-		}
-		rows, ok := result["rows"].([]interface{})
-		if !ok {
-			return nil // no albums
-		}
-
-		count := 0
-		for _, r := range rows {
-			row := r.(map[string]interface{})
-			id := row["id"].(string)
-			if strings.HasPrefix(id, "_design") {
-				continue
-			}
-			album := row["doc"].(map[string]interface{})
-			if _, ok := album["created_at"]; ok {
-				continue
-			}
-			count++
-			album["created_at"] = "2017-06-01T02:03:04.000Z"
-			buf, err := json.Marshal(album)
-			if err != nil {
-				return err
-			}
-			body := bytes.NewReader(buf)
-			_, err = c.Req(&request.Options{
-				Method: "PUT",
-				Path:   "/data/" + consts.PhotosAlbums + "/" + id,
-				Body:   body,
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		fmt.Printf("Added created_at for %d albums on %s\n", count, args[0])
-		return nil
 	},
 }
 
@@ -226,40 +139,6 @@ var jobsFixer = &cobra.Command{
 		}
 
 		fmt.Printf("Cleaned %d jobs on %s\n", result.Deleted, args[0])
-		return nil
-	},
-}
-
-var onboardingsFixer = &cobra.Command{
-	Use:   "onboardings",
-	Short: "Add the onboarding_finished flag to user that have registered their passphrase",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
-		list, err := c.ListInstances()
-		if err != nil {
-			return err
-		}
-		var hasErrored bool
-		t := true
-		for _, i := range list {
-			if len(i.Attrs.RegisterToken) > 0 || i.Attrs.OnboardingFinished {
-				continue
-			}
-			fmt.Printf("Setting onboarding finished flag on '%s'...", i.Attrs.Domain)
-			_, err = c.ModifyInstance(&client.InstanceOptions{
-				Domain:             i.Attrs.Domain,
-				OnboardingFinished: &t,
-			})
-			if err != nil {
-				fmt.Printf("failed: %s\n", err)
-				hasErrored = true
-			} else {
-				fmt.Printf("ok\n")
-			}
-		}
-		if hasErrored {
-			os.Exit(1)
-		}
 		return nil
 	},
 }
@@ -440,60 +319,6 @@ var contactEmailsFixer = &cobra.Command{
 	},
 }
 
-var linkedAppFixer = &cobra.Command{
-	Use:   "link-app <domain>",
-	Short: "Link an old OAuth client to a webapp",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return cmd.Usage()
-		}
-
-		domain := args[0]
-		i, err := lifecycle.GetInstance(domain)
-		if err != nil {
-			return err
-		}
-		clients, err := oauth.GetAll(i, true)
-		if err != nil {
-			return err
-		}
-		for _, client := range clients {
-			for key, value := range softwareIDs {
-				if client.SoftwareID == key {
-					slug := oauth.GetLinkedAppSlug(value)
-
-					// Change softwareID
-					client.SoftwareID = value
-
-					// Install app
-					installer, err := app.NewInstaller(i, i.AppsCopier(consts.WebappType),
-						&app.InstallerOptions{
-							Operation:  app.Install,
-							Type:       consts.WebappType,
-							Slug:       slug,
-							SourceURL:  value,
-							Registries: i.Registries(),
-						})
-
-					if err != app.ErrAlreadyExists {
-						if err != nil {
-							return err
-						}
-						installer.Run()
-					}
-
-					err = couchdb.UpdateDoc(i, client)
-					if err != nil {
-						return err
-					}
-					break
-				}
-			}
-		}
-		return nil
-	},
-}
-
 var contentMismatch64Kfixer = &cobra.Command{
 	Use:   "content-mismatch <domain>",
 	Short: "Fix the content mismatch differences for 64K issue",
@@ -503,102 +328,33 @@ var contentMismatch64Kfixer = &cobra.Command{
 		}
 
 		domain := args[0]
-		corruptedSuffix := "-corrupted"
 
-		if !noDryRunFlag {
-			fmt.Println("This is a dry-run, no file will be altered")
+		buf := new(bytes.Buffer)
+		body := struct {
+			DryRun bool `json:"dry_run"`
+		}{
+			DryRun: !noDryRunFlag,
+		}
+
+		if err := json.NewEncoder(buf).Encode(body); err != nil {
+			return err
 		}
 
 		c := newAdminClient()
 		res, err := c.Req(&request.Options{
-			Method: "GET",
-			Path:   "/instances/" + url.PathEscape(domain) + "/fsck",
+			Method: "POST",
+			Path:   "/instances/" + url.PathEscape(domain) + "/fixers/content-mismatch",
+			Body:   bytes.NewReader(buf.Bytes()),
 		})
 		if err != nil {
 			return err
 		}
 
-		inst, err := lifecycle.GetInstance(domain)
+		out, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			return fmt.Errorf("Cannot find instance %s", domain)
+			return err
 		}
-
-		var content map[string]interface{}
-		scanner := bufio.NewScanner(res.Body)
-
-		for scanner.Scan() {
-			err = json.NewDecoder(bytes.NewReader(scanner.Bytes())).Decode(&content)
-			if err != nil {
-				return err
-			}
-
-			// Filtering the 64kb mismatch issue
-			if content["type"] != "content_mismatch" {
-				continue
-			}
-
-			contentMismatch := struct {
-				SizeIndex int64 `json:"size_index"`
-				SizeFile  int64 `json:"size_file"`
-			}{}
-			marshaled, _ := json.Marshal(content["content_mismatch"])
-			err = json.Unmarshal(marshaled, &contentMismatch)
-			if err != nil {
-				return err
-			}
-
-			// SizeFile should be a multiple of 64k shorter than SizeIndex
-			size := int64(64 * 1024)
-
-			isSmallFile := contentMismatch.SizeIndex <= size && contentMismatch.SizeFile == 0
-			isMultiple64 := (contentMismatch.SizeIndex-contentMismatch.SizeFile)%size == 0
-			if !isMultiple64 && !isSmallFile {
-				continue
-			}
-
-			// Removes/update
-			fileDoc := content["file_doc"].(map[string]interface{})
-
-			doc := &vfs.FileDoc{}
-			err = couchdb.GetDoc(inst, consts.Files, fileDoc["_id"].(string), doc)
-			if err != nil {
-				return err
-			}
-			instanceVFS := inst.VFS()
-
-			// Checks if the file is trashed
-			if fileDoc["restore_path"] != nil {
-				// This is a trashed file, just delete it
-				fmt.Printf("Removing file %s from instance %s", fileDoc["path"].(string), domain)
-				fmt.Printf(" (Created at %s, UpdatedAt: %s)\n", doc.CreatedAt.String(), doc.UpdatedAt.String())
-				if noDryRunFlag {
-					err := instanceVFS.DestroyFile(doc)
-					if err != nil {
-						fmt.Printf("Error while removing file %s: %s", fileDoc["path"].(string), err)
-					}
-				}
-				continue
-			}
-
-			// Fixing :
-			// - Appending a corrupted suffix to the file
-			// - Force the file index size to the real file size
-			newFileDoc := doc.Clone().(*vfs.FileDoc)
-
-			newFileDoc.DocName = doc.DocName + corruptedSuffix
-			newFileDoc.ByteSize = contentMismatch.SizeFile
-
-			fmt.Printf("%s: Updating index document for file %s", domain, fileDoc["path"].(string))
-			fmt.Printf(" (Created at %s, UpdatedAt: %s)\n", doc.CreatedAt.String(), doc.UpdatedAt.String())
-			if noDryRunFlag {
-				// Let the UpdateFileDoc handles the file doc update. For swift
-				// layout V1, the file should also be renamed
-				err := instanceVFS.UpdateFileDoc(doc, newFileDoc)
-				if err != nil {
-					fmt.Printf("Error while updating document %s: %s\n", doc.DocID, err)
-				}
-			}
-		}
+		fmt.Println(string(out))
 
 		return nil
 	},
@@ -606,106 +362,22 @@ var contentMismatch64Kfixer = &cobra.Command{
 
 var orphanAccountFixer = &cobra.Command{
 	Use:   "orphan-account <domain>",
-	Short: "Rebuild scheduling data strucutures in redis",
+	Short: "Rebuild scheduling data structures in redis",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return cmd.Usage()
 		}
 
 		domain := args[0]
-		inst, err := lifecycle.GetInstance(domain)
+
+		c := newAdminClient()
+		path := fmt.Sprintf("/instances/%s/fixers/orphan-account", domain)
+		_, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   path,
+		})
 		if err != nil {
 			return err
-		}
-
-		var accounts []*account.Account
-		err = couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts)
-		if err != nil || len(accounts) == 0 {
-			return err
-		}
-
-		var konnectors []*app.KonnManifest
-		err = couchdb.GetAllDocs(inst, consts.Konnectors, nil, &konnectors)
-		if err != nil {
-			return err
-		}
-
-		var slugsToDelete []string
-		for _, acc := range accounts {
-			if acc.AccountType == "" {
-				continue // Skip the design docs
-			}
-			found := false
-			for _, konn := range konnectors {
-				if konn.Slug() == acc.AccountType {
-					found = true
-					break
-				}
-			}
-			if !found {
-				for _, slug := range slugsToDelete {
-					if slug == acc.AccountType {
-						found = true
-						break
-					}
-				}
-				if !found {
-					slugsToDelete = append(slugsToDelete, acc.AccountType)
-				}
-			}
-		}
-		if len(slugsToDelete) == 0 {
-			return nil
-		}
-
-		if _, err = stack.Start(); err != nil {
-			return err
-		}
-		jobsSystem := job.System()
-		log := inst.Logger().WithField("nspace", "fixer")
-		copier := inst.AppsCopier(consts.KonnectorType)
-
-		for _, slug := range slugsToDelete {
-			opts := &app.InstallerOptions{
-				Operation:  app.Install,
-				Type:       consts.KonnectorType,
-				SourceURL:  "registry://" + slug,
-				Slug:       slug,
-				Registries: inst.Registries(),
-			}
-			ins, err := app.NewInstaller(inst, copier, opts)
-			if err != nil {
-				return err
-			}
-			if _, err = ins.RunSync(); err != nil {
-				return err
-			}
-
-			for _, acc := range accounts {
-				if acc.AccountType != slug {
-					continue
-				}
-				acc.ManualCleaning = true
-				oldRev := acc.Rev() // The deletion job needs the rev just before the deletion
-				if err := couchdb.DeleteDoc(inst, acc); err != nil {
-					log.Errorf("Cannot delete account: %v", err)
-				}
-				j, err := account.PushAccountDeletedJob(jobsSystem, inst, acc.ID(), oldRev, slug)
-				if err != nil {
-					log.Errorf("Cannot push a job for account deletion: %v", err)
-				}
-				if err = j.WaitUntilDone(inst); err != nil {
-					log.Error(err)
-				}
-			}
-			opts.Operation = app.Delete
-			ins, err = app.NewInstaller(inst, copier, opts)
-			if err != nil {
-				return err
-			}
-			if _, err = ins.RunSync(); err != nil {
-				return err
-			}
 		}
 
 		return nil
@@ -718,15 +390,12 @@ func init() {
 	thumbnailsFixer.Flags().BoolVar(&withMetadataFlag, "with-metadata", false, "Recalculate images metadata")
 	contentMismatch64Kfixer.Flags().BoolVar(&noDryRunFlag, "no-dry-run", false, "Do not dry run")
 
-	fixerCmdGroup.AddCommand(albumsCreatedAtFixerCmd)
 	fixerCmdGroup.AddCommand(jobsFixer)
 	fixerCmdGroup.AddCommand(md5FixerCmd)
 	fixerCmdGroup.AddCommand(mimeFixerCmd)
-	fixerCmdGroup.AddCommand(onboardingsFixer)
 	fixerCmdGroup.AddCommand(redisFixer)
 	fixerCmdGroup.AddCommand(thumbnailsFixer)
 	fixerCmdGroup.AddCommand(contactEmailsFixer)
-	fixerCmdGroup.AddCommand(linkedAppFixer)
 	fixerCmdGroup.AddCommand(contentMismatch64Kfixer)
 	fixerCmdGroup.AddCommand(orphanAccountFixer)
 

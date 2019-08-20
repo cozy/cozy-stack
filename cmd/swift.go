@@ -1,17 +1,16 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"net/url"
 	"os"
-	"strings"
+	"strconv"
 
-	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
-	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/ncw/swift"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/spf13/cobra"
 )
 
@@ -21,16 +20,6 @@ var flagShowDomains bool
 var swiftCmdGroup = &cobra.Command{
 	Use:   "swift <command>",
 	Short: "Interact directly with OpenStack Swift object storage",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := config.Setup(cfgFile); err != nil {
-			return err
-		}
-		if config.FsURL().Scheme != config.SchemeSwift &&
-			config.FsURL().Scheme != config.SchemeSwiftSecure {
-			return fmt.Errorf("swift: the configured filesystem does not rely on OpenStack Swift")
-		}
-		return config.InitSwiftConnection(config.GetConfig().Fs)
-	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
 	},
@@ -38,66 +27,27 @@ var swiftCmdGroup = &cobra.Command{
 
 var lsLayoutsCmd = &cobra.Command{
 	Use:     "ls-layouts",
-	Short:   `Count layouts by types (v1, v2a, v2b)`,
+	Short:   `Count layouts by types (v1, v2a, v2b, v3)`,
 	Example: "$ cozy-stack swift ls-layouts",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		type layout struct {
-			Counter int      `json:"counter"`
-			Domains []string `json:"domains,omitempty"`
-		}
-		var layoutV1, layoutV2a, layoutV2b, layoutUnknown, layoutV3 layout
-
-		instances, err := instance.List()
+		c := newAdminClient()
+		values := url.Values{}
+		values.Add("show_domains", strconv.FormatBool(flagShowDomains))
+		res, err := c.Req(&request.Options{
+			Method:  "GET",
+			Path:    "/swift/layouts",
+			Queries: values,
+		})
 		if err != nil {
 			return err
 		}
-		for _, inst := range instances {
-			switch inst.SwiftLayout {
-			case 0:
-				layoutV1.Counter++
-				if flagShowDomains {
-					layoutV1.Domains = append(layoutV1.Domains, inst.Domain)
-				}
-			case 1:
-				switch inst.DBPrefix() {
-				case inst.Domain:
-					layoutV2a.Counter++
-					if flagShowDomains {
-						layoutV2a.Domains = append(layoutV2a.Domains, inst.Domain)
-					}
-				case inst.Prefix:
-					layoutV2b.Counter++
-					if flagShowDomains {
-						layoutV2b.Domains = append(layoutV2b.Domains, inst.Domain)
-					}
-				default:
-					layoutUnknown.Counter++
-					if flagShowDomains {
-						layoutUnknown.Domains = append(layoutUnknown.Domains, inst.Domain)
-					}
-				}
-			case 2:
-				layoutV3.Counter++
-				if flagShowDomains {
-					layoutV3.Domains = append(layoutV3.Domains, inst.Domain)
-				}
-			default:
-				layoutUnknown.Counter++
-				if flagShowDomains {
-					layoutUnknown.Domains = append(layoutUnknown.Domains, inst.Domain)
-				}
-			}
+		defer res.Body.Close()
+
+		var buf interface{}
+		if err := json.NewDecoder(res.Body).Decode(&buf); err != nil {
+			return err
 		}
-
-		output := make(map[string]interface{})
-		output["v1"] = layoutV1
-		output["v2a"] = layoutV2a
-		output["v2b"] = layoutV2b
-		output["unknown"] = layoutUnknown
-		output["v3"] = layoutV3
-		output["total"] = layoutV1.Counter + layoutV2a.Counter + layoutV2b.Counter + layoutUnknown.Counter + layoutV3.Counter
-
-		json, err := json.MarshalIndent(output, "", "  ")
+		json, err := json.MarshalIndent(buf, "", "  ")
 
 		if err != nil {
 			return err
@@ -114,21 +64,29 @@ var swiftGetCmd = &cobra.Command{
 		if len(args) < 2 {
 			return cmd.Usage()
 		}
-		i, err := lifecycle.GetInstance(args[0])
+
+		c := newAdminClient()
+		path := fmt.Sprintf("/swift/vfs/%s", url.PathEscape(args[1]))
+		res, err := c.Req(&request.Options{
+			Method: "GET",
+			Path:   path,
+			Domain: args[0],
+		})
 		if err != nil {
 			return err
 		}
-		sc := config.GetSwiftConnection()
-		objectName := args[1]
-		f, _, err := sc.ObjectOpen(swiftContainer(i), objectName, false, nil)
+		defer res.Body.Close()
+
+		// Read the body and print it
+		out, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}
-		_, err = io.Copy(os.Stdout, f)
-		if err != nil {
-			return err
-		}
-		return f.Close()
+
+		fmt.Println(string(out))
+
+		return nil
+
 	},
 }
 
@@ -141,21 +99,30 @@ expected on the standard input.`,
 		if len(args) < 2 {
 			return cmd.Usage()
 		}
-		i, err := lifecycle.GetInstance(args[0])
+
+		c := newAdminClient()
+		var buf = new(bytes.Buffer)
+
+		_, err := io.Copy(buf, os.Stdin)
 		if err != nil {
 			return err
 		}
-		sc := config.GetSwiftConnection()
-		objectName := args[1]
-		f, err := sc.ObjectCreate(swiftContainer(i), objectName, true, "", flagSwiftObjectContentType, nil)
+
+		_, err = c.Req(&request.Options{
+			Method: "PUT",
+			Path:   fmt.Sprintf("/swift/vfs/%s", url.PathEscape(args[1])),
+			Body:   bytes.NewReader(buf.Bytes()),
+			Domain: args[0],
+			Headers: map[string]string{
+				"Content-Type": flagSwiftObjectContentType,
+			},
+		})
 		if err != nil {
 			return err
 		}
-		_, err = io.Copy(f, os.Stdin)
-		if err != nil {
-			return nil
-		}
-		return f.Close()
+
+		fmt.Println("Object has been added to swift")
+		return nil
 	},
 }
 
@@ -166,13 +133,16 @@ var swiftDeleteCmd = &cobra.Command{
 		if len(args) < 2 {
 			return cmd.Usage()
 		}
-		i, err := lifecycle.GetInstance(args[0])
-		if err != nil {
-			return err
-		}
-		sc := config.GetSwiftConnection()
-		objectName := args[1]
-		return sc.ObjectDelete(swiftContainer(i), objectName)
+
+		c := newAdminClient()
+		path := fmt.Sprintf("/swift/vfs/%s", url.PathEscape(args[1]))
+		_, err := c.Req(&request.Options{
+			Method: "DELETE",
+			Path:   path,
+			Domain: args[0],
+		})
+
+		return err
 	},
 }
 
@@ -182,33 +152,34 @@ var swiftLsCmd = &cobra.Command{
 		if len(args) < 1 {
 			return cmd.Usage()
 		}
-		i, err := lifecycle.GetInstance(args[0])
+
+		type resStruct struct {
+			ObjectNameList []string `json:"objects_names"`
+		}
+
+		c := newAdminClient()
+		path := fmt.Sprintf("/swift/vfs")
+		res, err := c.Req(&request.Options{
+			Method: "GET",
+			Path:   path,
+			Domain: args[0],
+		})
 		if err != nil {
 			return err
 		}
-		sc := config.GetSwiftConnection()
-		container := swiftContainer(i)
-		return sc.ObjectsWalk(container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
-			names, err := sc.ObjectNames(container, opts)
-			if err == nil {
-				fmt.Println(strings.Join(names, "\n"))
-			}
-			return names, err
-		})
-	},
-}
 
-func swiftContainer(i *instance.Instance) string {
-	switch i.SwiftLayout {
-	case 0:
-		return "cozy-" + i.DBPrefix()
-	case 1:
-		return "cozy-v2-" + i.DBPrefix()
-	case 2:
-		return "cozy-v3-" + i.DBPrefix()
-	default:
-		panic(errors.New("Unknown Swift layout"))
-	}
+		names := resStruct{}
+		err = json.NewDecoder(res.Body).Decode(&names)
+		if err != nil {
+			return err
+		}
+
+		for _, name := range names.ObjectNameList {
+			fmt.Println(name)
+		}
+
+		return nil
+	},
 }
 
 func init() {

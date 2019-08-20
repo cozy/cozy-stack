@@ -84,6 +84,6 @@ Several pre-included reasons are included, but you can define your owns if neede
 - `"PAYMENT_FAILED"`: The instance waits for a payment to be done
 - `"UNKNOWN"`: The instance was blocked for an unknown reason
 
-## Modifying 
+## Modifying
 
 If you want to edit an instance, see [`instances modify manpage`](cli/cozy-stack_instances_modify.md).
