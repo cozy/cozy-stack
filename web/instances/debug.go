@@ -12,11 +12,11 @@ import (
 
 func getDebug(c echo.Context) error {
 	domain := c.Param("domain")
-	log := logger.WithDomain(domain)
-	if !logger.IsDebug(log) {
+	until := logger.DebugExpiration(domain)
+	if until == nil {
 		return jsonapi.NotFound(errors.New("Debug is disabled on this domain"))
 	}
-	res := map[string]bool{domain: true}
+	res := map[string]interface{}{domain: true, "until": until}
 	return c.JSON(http.StatusOK, res)
 }
 
