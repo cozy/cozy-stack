@@ -11,9 +11,6 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/job"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 
 	"github.com/spf13/cobra"
 )
@@ -84,33 +81,18 @@ var jobsPurgeCmd = &cobra.Command{
 		if len(args) != 1 {
 			return cmd.Help()
 		}
-		if err := config.Setup(cfgFile); err != nil {
-			return err
-		}
-		if config.FsURL().Scheme == config.SchemeSwift ||
-			config.FsURL().Scheme == config.SchemeSwiftSecure {
-			if err := config.InitSwiftConnection(config.GetConfig().Fs); err != nil {
-				return err
-			}
-		}
 
-		i, err := instance.GetFromCouch(args[0])
-		if err != nil {
-			return err
-		}
-
-		workers := job.GetWorkersNamesList()
+		var workers string
 		if flagJobWorkers != nil {
-			workers = flagJobWorkers
+			workers = strings.Join(flagJobWorkers, ",")
 		}
-
 		duration := flagJobsPurgeDuration
 
 		q := url.Values{
 			"duration": {duration},
-			"workers":  {strings.Join(workers, ",")},
+			"workers":  {workers},
 		}
-		c := newClient(i.Domain, "io.cozy.jobs:DELETE")
+		c := newClient(args[0], "io.cozy.jobs:DELETE")
 
 		res, err := c.Req(&request.Options{
 			Method:  "DELETE",
