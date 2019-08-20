@@ -10,9 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/model/app"
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/spf13/cobra"
 )
 
@@ -238,9 +236,7 @@ var runKonnectorsCmd = &cobra.Command{
 		var trigger *localTrigger
 		if len(triggers) > 1 || flagKonnectorAccountID != "" {
 			if flagKonnectorAccountID == "" {
-				// TODO: better multi-account support
-				return errors.New("Found multiple konnectors with different accounts:" +
-					"use the --account-id flag (support for better multi-accounts support in the CLI is still a work in progress)")
+				return errors.New("Found multiple konnectors with different accounts: use the --account-id flag")
 			}
 			for _, t := range triggers {
 				if t.accountID == flagKonnectorAccountID {
@@ -311,7 +307,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 	}
 
 	c := newClient(flagDomain, appType)
-	app, err := c.InstallApp(&client.AppOptions{
+	manifest, err := c.InstallApp(&client.AppOptions{
 		AppType:     appType,
 		Slug:        slug,
 		SourceURL:   source,
@@ -322,7 +318,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 	if err != nil {
 		return err
 	}
-	json, err := json.MarshalIndent(app.Attrs, "", "  ")
+	json, err := json.MarshalIndent(manifest.Attrs, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -368,7 +364,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 	}
 
 	c := newClient(flagDomain, appType)
-	app, err := c.UpdateApp(&client.AppOptions{
+	manifest, err := c.UpdateApp(&client.AppOptions{
 		AppType:   appType,
 		Slug:      args[0],
 		SourceURL: src,
@@ -378,7 +374,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 	if err != nil {
 		return err
 	}
-	json, err := json.MarshalIndent(app.Attrs, "", "  ")
+	json, err := json.MarshalIndent(manifest.Attrs, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -395,14 +391,14 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 		return cmd.Usage()
 	}
 	c := newClient(flagDomain, appType)
-	app, err := c.UninstallApp(&client.AppOptions{
+	manifest, err := c.UninstallApp(&client.AppOptions{
 		AppType: appType,
 		Slug:    args[0],
 	})
 	if err != nil {
 		return err
 	}
-	json, err := json.MarshalIndent(app.Attrs, "", "  ")
+	json, err := json.MarshalIndent(manifest.Attrs, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -419,14 +415,14 @@ func showApp(cmd *cobra.Command, args []string, appType string) error {
 		return cmd.Usage()
 	}
 	c := newClient(flagDomain, appType)
-	app, err := c.GetApp(&client.AppOptions{
+	manifest, err := c.GetApp(&client.AppOptions{
 		Slug:    args[0],
 		AppType: appType,
 	})
 	if err != nil {
 		return err
 	}
-	json, err := json.MarshalIndent(app.Attrs, "", "  ")
+	json, err := json.MarshalIndent(manifest.Attrs, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -443,7 +439,7 @@ func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error
 		return cmd.Usage()
 	}
 	c := newClient(flagDomain, appType, consts.Triggers)
-	app, err := c.GetApp(&client.AppOptions{
+	manifest, err := c.GetApp(&client.AppOptions{
 		Slug:    args[0],
 		AppType: appType,
 	})
@@ -453,11 +449,11 @@ func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error
 	}
 
 	var triggerIDs []string
-	if app.Attrs.Services == nil {
+	if manifest.Attrs.Services == nil {
 		fmt.Printf("No triggers\n")
 		return nil
 	}
-	for _, service := range *app.Attrs.Services {
+	for _, service := range *manifest.Attrs.Services {
 		triggerIDs = append(triggerIDs, service.TriggerID)
 	}
 	var triggers []*client.Trigger
@@ -548,56 +544,20 @@ func lsApps(cmd *cobra.Command, args []string, appType string) error {
 		return cmd.Usage()
 	}
 	c := newClient(flagDomain, appType)
-	// TODO(pagination)
-	apps, err := c.ListApps(appType)
+	manifests, err := c.ListApps(appType)
 	if err != nil {
 		return err
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	for _, app := range apps {
+	for _, m := range manifests {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-			app.Attrs.Slug,
-			app.Attrs.Source,
-			app.Attrs.Version,
-			app.Attrs.State,
+			m.Attrs.Slug,
+			m.Attrs.Source,
+			m.Attrs.Version,
+			m.Attrs.State,
 		)
 	}
 	return w.Flush()
-}
-
-var appsVersionsCmd = &cobra.Command{
-	Use:     "versions",
-	Short:   `Show apps versions of all instances`,
-	Example: "$ cozy-stack apps versions",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		instances, err := instance.List()
-		if err != nil {
-			return err
-		}
-		counter := make(map[string]map[string]int)
-
-		for _, instance := range instances {
-			var apps []*app.WebappManifest
-			req := &couchdb.AllDocsRequest{Limit: 100}
-			err := couchdb.GetAllDocs(instance, consts.Apps, req, &apps)
-			if err != nil {
-				return err
-			}
-
-			for _, app := range apps {
-				if _, ok := counter[app.Slug()]; !ok {
-					counter[app.Slug()] = map[string]int{app.Version(): 0}
-				}
-				counter[app.Slug()][app.Version()]++
-			}
-		}
-		json, err := json.MarshalIndent(counter, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(json))
-		return nil
-	},
 }
 
 func foreachDomains(predicate func(*client.Instance) error) error {
@@ -640,7 +600,6 @@ func init() {
 	webappsCmdGroup.AddCommand(installWebappCmd)
 	webappsCmdGroup.AddCommand(updateWebappCmd)
 	webappsCmdGroup.AddCommand(uninstallWebappCmd)
-	webappsCmdGroup.AddCommand(appsVersionsCmd)
 
 	konnectorsCmdGroup.PersistentFlags().StringVar(&flagDomain, "domain", cozyDomain(), "specify the domain name of the instance")
 	konnectorsCmdGroup.PersistentFlags().StringVar(&flagKonnectorsParameters, "parameters", "", "override the parameters of the installed konnector")
