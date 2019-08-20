@@ -88,11 +88,7 @@ describe "A folder" do
 
       ws.on :message do |event|
         msg = JSON.parse(event.data)
-        if msg["event"] == "DELETED"
-          ws.close
-        else
-          assert_equal 1, msg.dig("payload", "doc", "count")
-        end
+        ws.close if msg["event"] == "DELETED"
       end
 
       ws.on :close do

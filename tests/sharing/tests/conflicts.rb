@@ -125,6 +125,13 @@ describe "A sharing" do
     db = File.join Helpers.current_dir, inst_recipient.domain,
                    Helpers::SHARED_WITH_ME, folder.name
     diff = Helpers.fsdiff da, db
+    if diff.any?
+      ap '<<<'
+      ap da
+      ap '---'
+      ap db
+      ap '>>>'
+    end
     diff.must_be_empty
 
     # Generate conflicts with no reconciliation
