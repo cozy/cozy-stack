@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	stdlog "log"
 	"net"
 	"net/http"
 	"net/url"
@@ -24,7 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/tlsclient"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
 	"github.com/spf13/viper"
 )
 
@@ -408,9 +409,6 @@ func envMap() map[string]string {
 
 // UseViper sets the configured instance of Config
 func UseViper(v *viper.Viper) error {
-	// deactivate redis lib logging
-	redis.SetLogger(nil)
-
 	fsURL, err := url.Parse(v.GetString("fs.url"))
 	if err != nil {
 		return err
@@ -707,7 +705,14 @@ func UseViper(v *viper.Viper) error {
 		config.CSPDisabled = true
 	}
 
-	return logger.Init(config.Logger)
+	if err = logger.Init(config.Logger); err != nil {
+		return err
+	}
+
+	w := logger.WithNamespace("go-redis").Writer()
+	redis.SetLogger(stdlog.New(w, "", 0))
+	return nil
+
 }
 
 // MakeVault initializes the global vault.

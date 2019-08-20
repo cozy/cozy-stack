@@ -363,6 +363,9 @@ msgstr "Contacts"
 msgid "Permissions io.cozy.files"
 msgstr "Files"
 
+msgid "Permissions io.cozy.identities"
+msgstr "Identities"
+
 msgid "Permissions io.cozy.konnectors"
 msgstr "Connectors for importing data"
 

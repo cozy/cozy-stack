@@ -330,7 +330,7 @@ map = function(doc) {
     if (doc.type === "folder") emit(doc.path);
 };
 query = {
-    starkey: parent_folder_path + "/",
+    startkey: parent_folder_path + "/",
     endkey: parent_folder_path + "/\uFFFF"
 };
 ```

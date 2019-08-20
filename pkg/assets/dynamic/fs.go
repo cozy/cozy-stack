@@ -76,7 +76,7 @@ func newOsFS() (*AferoFS, error) {
 	}
 
 	aferoFS := &AferoFS{fs: afero.NewOsFs(), folder: folder}
-	if err := aferoFS.fs.Mkdir(aferoFS.folder.Path, 0755); err != nil && !os.IsExist(err) {
+	if err := aferoFS.fs.MkdirAll(aferoFS.folder.Path, 0755); err != nil && !os.IsExist(err) {
 		return nil, err
 	}
 	return aferoFS, nil

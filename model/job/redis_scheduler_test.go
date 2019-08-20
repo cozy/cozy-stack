@@ -17,7 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -257,7 +257,7 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 
 	ts := now.UTC().Unix()
 	key := testInstance.DBPrefix() + "/" + tat.ID()
-	err = client.ZAdd(jobs.SchedKey, redis.Z{
+	err = client.ZAdd(jobs.SchedKey, &redis.Z{
 		Score:  float64(ts + 1),
 		Member: key,
 	}).Err()
