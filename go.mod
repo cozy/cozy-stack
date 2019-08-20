@@ -13,7 +13,7 @@ require (
 	github.com/emersion/go-vcard v0.0.0-20190105225839-8856043f13c5
 	github.com/go-redis/redis/v7 v7.0.0-beta.3
 	github.com/gofrs/uuid v3.2.0+incompatible
-	github.com/golang/gddo v0.0.0-20190818233415-287de01127ef
+	github.com/golang/gddo v0.0.0-20190815223733-287de01127ef
 	github.com/google/go-querystring v1.0.0
 	github.com/google/gops v0.3.6
 	github.com/gorilla/websocket v1.4.0
@@ -26,6 +26,8 @@ require (
 	github.com/leonelquinteros/gotext v1.4.0
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/mssola/user_agent v0.5.0
 	github.com/ncw/swift v1.0.49
 	github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443
@@ -42,12 +44,10 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
-	golang.org/x/image v0.0.0-20190804224331-cff245a6509b
-	golang.org/x/net v0.0.0-20190819082215-74dc4d7220e7 // indirect
-	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/sys v0.0.0-20190813073005-fde4db37ae7a // indirect
-	golang.org/x/tools v0.0.0-20190819081747-6889da9d5479
+	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
+	golang.org/x/image v0.0.0-20190802002840-cff245a6509b
+	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
+	golang.org/x/tools v0.0.0-20190608022120-eacb66d2a7c3
 	google.golang.org/appengine v1.6.1 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/dgrijalva/jwt-go.v3 v3.2.0
