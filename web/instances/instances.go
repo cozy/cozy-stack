@@ -15,7 +15,6 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
-	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -531,105 +530,6 @@ func appVersion(c echo.Context) error {
 	return c.JSON(http.StatusOK, i)
 }
 
-func orphanAccountFixer(c echo.Context) error {
-	domain := c.Param("domain")
-	inst, err := lifecycle.GetInstance(domain)
-	if err != nil {
-		return err
-	}
-
-	var accounts []*account.Account
-	err = couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts)
-	if err != nil || len(accounts) == 0 {
-		return err
-	}
-
-	var konnectors []*app.KonnManifest
-	err = couchdb.GetAllDocs(inst, consts.Konnectors, nil, &konnectors)
-	if err != nil {
-		return err
-	}
-
-	var slugsToDelete []string
-	for _, acc := range accounts {
-		if acc.AccountType == "" {
-			continue // Skip the design docs
-		}
-		found := false
-		for _, konn := range konnectors {
-			if konn.Slug() == acc.AccountType {
-				found = true
-				break
-			}
-		}
-		if !found {
-			for _, slug := range slugsToDelete {
-				if slug == acc.AccountType {
-					found = true
-					break
-				}
-			}
-			if !found {
-				slugsToDelete = append(slugsToDelete, acc.AccountType)
-			}
-		}
-	}
-	if len(slugsToDelete) == 0 {
-		return nil
-	}
-
-	if _, err = stack.Start(); err != nil {
-		return err
-	}
-	jobsSystem := job.System()
-	log := inst.Logger().WithField("nspace", "fixer")
-	copier := inst.AppsCopier(consts.KonnectorType)
-
-	for _, slug := range slugsToDelete {
-		opts := &app.InstallerOptions{
-			Operation:  app.Install,
-			Type:       consts.KonnectorType,
-			SourceURL:  "registry://" + slug,
-			Slug:       slug,
-			Registries: inst.Registries(),
-		}
-		ins, err := app.NewInstaller(inst, copier, opts)
-		if err != nil {
-			return err
-		}
-		if _, err = ins.RunSync(); err != nil {
-			return err
-		}
-
-		for _, acc := range accounts {
-			if acc.AccountType != slug {
-				continue
-			}
-			acc.ManualCleaning = true
-			if err := couchdb.DeleteDoc(inst, acc); err != nil {
-				log.Errorf("Cannot delete account: %v", err)
-			}
-			j, err := account.PushAccountDeletedJob(jobsSystem, inst, acc.ID(), acc.Rev(), slug)
-			if err != nil {
-				log.Errorf("Cannot push a job for account deletion: %v", err)
-			}
-			if err = j.WaitUntilDone(inst); err != nil {
-				log.Error(err)
-			}
-		}
-		opts.Operation = app.Delete
-		ins, err = app.NewInstaller(inst, copier, opts)
-		if err != nil {
-			return err
-		}
-		if _, err = ins.RunSync(); err != nil {
-			return err
-		}
-	}
-
-	return c.JSON(http.StatusNoContent, nil)
-}
-
 func wrapError(err error) error {
 	switch err {
 	case instance.ErrNotFound:
@@ -685,6 +585,8 @@ func Routes(router *echo.Group) {
 	router.DELETE("/assets/:context/*", deleteAssets)
 	router.GET("/contexts", lsContexts)
 	router.GET("/with-app-version/:slug/:version", appVersion)
+
+	// Fixers
 	router.POST("/:domain/fixers/content-mismatch", contentMismatchFixer)
 	router.POST("/:domain/fixers/orphan-account", orphanAccountFixer)
 }
