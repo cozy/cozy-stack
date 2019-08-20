@@ -190,6 +190,19 @@ func publishDebug(cli redis.UniversalClient, channel, domain string, ttl time.Du
 	return err
 }
 
+// DebugExpiration returns the expiration date for the debug mode for the
+// instance logger of the given domain (or nil if the debug mode is not
+// activated).
+func DebugExpiration(domain string) *time.Time {
+	loggersMu.RLock()
+	entry, ok := loggers[domain]
+	loggersMu.RUnlock()
+	if !ok {
+		return nil
+	}
+	return entry.expiredAt
+}
+
 // IsDebug returns whether or not the debug mode is activated.
 func IsDebug(logger *logrus.Entry) bool {
 	return logger.Logger.Level == logrus.DebugLevel
