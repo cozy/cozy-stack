@@ -7,7 +7,7 @@
 	{{t "Mail Two Factor Mail Confirmation Intro"}}
 </mj-text>
 <mj-text mj-class="title-h2 content-medium" align="center">
-  {{.TwoFactorActivationPasscode}}
+	{{.TwoFactorActivationPasscode}}
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{t "Mail Two Factor Mail Confirmation Outro"}}
