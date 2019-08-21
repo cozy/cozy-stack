@@ -102,7 +102,7 @@ describe "A sharing" do
       file1_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
     end
 
-    sleep 20
+    sleep 22
     # Check the files and diretories are even
     file1 = CozyFile.find inst, file1.couch_id
     file2 = CozyFile.find inst, file2.couch_id
@@ -127,9 +127,9 @@ describe "A sharing" do
     diff = Helpers.fsdiff da, db
     if diff.any?
       ap '<<<'
-      ap da
+      ap `LANG=C ls -alR '#{da}'`.lines.map(&:chomp)
       ap '---'
-      ap db
+      ap `LANG=C ls -alR '#{db}'`.lines.map(&:chomp)
       ap '>>>'
     end
     diff.must_be_empty
@@ -158,7 +158,7 @@ describe "A sharing" do
       file1_recipient.overwrite inst_recipient
     end
 
-    sleep 20
+    sleep 22
     # Check the conflicted files
     _, files = Folder.children inst, parent_file.path
     conflict_file = files.find { |c| c.name.include? "conflict" }
