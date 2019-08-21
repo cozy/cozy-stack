@@ -1,0 +1,695 @@
+# Translators:
+# Bruno Michel, 2019
+# Heimen Stoffels <vistausss@outlook.com>, 2019
+# 
+msgid ""
+msgstr ""
+"Last-Translator: Heimen Stoffels <vistausss@outlook.com>, 2019\n"
+"Language-Team: Dutch (Netherlands) (https://www.transifex.com/cozy/teams/39753/nl_NL/)\n"
+"Language: nl_NL\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Tree Administrative"
+msgstr "Administratief"
+
+msgid "Tree Photos"
+msgstr "Foto's"
+
+msgid "Tree Uploaded from Cozy Photos"
+msgstr "Geüpload via Cozy Photos"
+
+msgid "Tree Backed up from my mobile"
+msgstr "Geback-upt via mijn mobiele telefoon"
+
+msgid "Tree Shared with me"
+msgstr "Gedeeld met mij"
+
+msgid "Tree No longer shared"
+msgstr "Niet langer gedeeld"
+
+msgid "Login Credentials error"
+msgstr "Het ingevoerde wachtwoord is onjuist; probeer het opnieuw."
+
+msgid "URL Discovery error"
+msgstr "De ingevoerde Cozy-url is onjuist; probeer het opnieuw."
+
+msgid "Login Welcome"
+msgstr "Welkom!"
+
+msgid "Login Welcome name"
+msgstr "%s"
+
+msgid "Login Password help"
+msgstr "Voer je wachtwoord in om toegang te krijgen tot je Cozy"
+
+msgid "Login Password field"
+msgstr "Wachtwoord"
+
+msgid "Login Password show"
+msgstr "Wachtwoord tonen"
+
+msgid "Login Password hide"
+msgstr "Wachtwoord verbergen"
+
+msgid "Login Long Session"
+msgstr "Onthoud mij"
+
+msgid "Login Submit"
+msgstr "Inloggen"
+
+msgid "Login Confirm"
+msgstr "Inloggen"
+
+msgid "Login Connect after reset requested title"
+msgstr "Controleer je Postvak IN!"
+
+msgid "Login Connect after reset requested help"
+msgstr ""
+"We hebben je een speciale e-mail-link gestuurd. Klik daar op om je "
+"wachtwoord opnieuw in te stellen. Waarschuwing: deze e-mail kan terechtkomen"
+" in je ongewenste berichten-map; controleer die dus ook!"
+
+msgid "Login Reconnect title"
+msgstr "Wachtwoord bevestigen"
+
+msgid "Login Reconnect help"
+msgstr ""
+"Hallo! Zodra je je wachtwoord bevestigd hebt, wordt je doorgestuurd naar het"
+" machtigingsoverzicht waar je al dan niet de mobiele app kunt machtigen."
+
+msgid "Login Connect from sharing title"
+msgstr "Hallo, %s!"
+
+msgid "Login Connect from sharing help"
+msgstr "Voer je wachtwoord in"
+
+msgid "Login Two factor title"
+msgstr "Voer je code in"
+
+msgid "Login Two factor error"
+msgstr "De ingevoerde toegangscode is onjuist. Probeer het opnieuw."
+
+msgid "Login Two factor attempts error"
+msgstr ""
+"Je hebt te vaak een onjuiste toegangscode ingevoerd. Er is een nieuwe "
+"verstuurd naar je e-mailadres."
+
+msgid "Login Two factor field"
+msgstr "Code (6 getallen)"
+
+msgid "Login Two factor help"
+msgstr "Er is een code verstuurd naar je e-mailadres"
+
+msgid "Login Two factor device trust field"
+msgstr "Dit apparaat vertrouwen"
+
+msgid "Login Two factor device trust help"
+msgstr ""
+"Als je dit aanvinkt, dan vraagt dit apparaat niet meer om authenticatie in "
+"twee stappen uit te voeren."
+
+msgid "Onboarding Not activated Title"
+msgstr "Je moet je Cozy activeren"
+
+msgid "Onboarding Not activated Check mails"
+msgstr ""
+"Je Cozy is nog niet geactiveerd. Controleer je Postvak IN en klik op de "
+"activatielink om door te gaan met het instellen van je Cozy."
+
+msgid "Onboarding Not activated Contact us"
+msgstr "Ben je het spoor bijster? Neem dan contact met ons op via"
+
+msgid "Passphrase reset Title"
+msgstr "Wachtwoord vergeten"
+
+msgid "Passphrase reset Help"
+msgstr ""
+"Klik op deze knop om een e-mail te krijgen met een link voor het instellen "
+"van een nieuw wachtwoord."
+
+msgid "Passphrase reset Submit"
+msgstr "Volgende"
+
+msgid "Passphrase is reset Title"
+msgstr "Controleer je Postvak IN!"
+
+msgid "Passphrase Onboarding Title"
+msgstr "Kies je wachtwoord"
+
+msgid "Passphrase Onboarding Help"
+msgstr ""
+"Gebruik minimaal acht tekens, bestaande uit letters, cijfers en symbolen."
+
+msgid "Passphrase Onboarding Submit"
+msgstr "Afronden"
+
+msgid "Passphrase is reset Body"
+msgstr ""
+"We hebben je een (hele) speciale link gestuurd via e-mail. Klik daarop om je wachtwoord opnieuw in te stellen.\n"
+"Waarschuwing: deze e-mail kan terechtkomen in je ongewenste berichten-map of in één van de andere speciale mappen. Controleer die dus ook!"
+
+msgid "Passphrase is reset Login Button"
+msgstr "Terug naar de inlogpagina"
+
+msgid "Passphrase renew Title"
+msgstr "Kies een nieuw wachtwoord"
+
+msgid "Passphrase renew Help"
+msgstr ""
+"Gebruik minimaal acht tekens, bestaande uit letters, cijfers en symbolen."
+
+msgid "Passphrase renew Field"
+msgstr "wachtwoord"
+
+msgid "Passphrase renew Submit"
+msgstr "Opslaan"
+
+msgid "Login Forgot password"
+msgstr "Ik ben mijn wachtwoord vergeten"
+
+msgid "Authorize Title"
+msgstr "Machtig %s om toegang te krijgen tot je profiel"
+
+msgid "Authorize Sharing Title"
+msgstr "Nieuw deelverzoek van %s"
+
+msgid "Authorize Client presentation"
+msgstr "wil gemachtigd worden om toegang te krijgen tot je Cozy"
+
+msgid "Authorize Sharing Request"
+msgstr "%s wil de volgende gegevens met je delen:"
+
+msgid "Authorize Sharing Permission start"
+msgstr "Je kunt het"
+
+msgid "Authorize Sharing Permission readonly"
+msgstr "bekijken"
+
+msgid "Authorize Sharing Permission readwrite"
+msgstr "bekijken en aanpassen"
+
+msgid "Authorize Sharing Permission end"
+msgstr "door het deelverzoek te bevestigen."
+
+msgid "Authorize Sharing Sync"
+msgstr "Aanpassingen zijn direct zichtbaar in beide Cozies:"
+
+msgid "Authorize Sharing Self"
+msgstr "Jouw Cozy: %s"
+
+msgid "Authorize Sharing Client"
+msgstr "De Cozy van je contactpersoon: %s"
+
+msgid "Authorize Policy sentence"
+msgstr ""
+"Je kunt het gebruiksbeleid lezen om te weten te komen wat er met je gegevens"
+" gebeurt, en wel"
+
+msgid "Authorize Policy link"
+msgstr "hier"
+
+msgid "Authorize Give permission start"
+msgstr "Door te machtigen,"
+
+msgid "Authorize Give permission keyword"
+msgstr "Machtigen"
+
+msgid "Authorize Give permission end"
+msgstr ""
+", ga je akkoord met het feit dat de app toegang heeft tot je gegevens, in "
+"overeenstemming met de algemene voorwaarden en het privacybeleid."
+
+msgid "Authorize Submit"
+msgstr "Machtigen"
+
+msgid "Authorize Submit Sharing"
+msgstr "Bevestigen"
+
+msgid "Authorize Cancel"
+msgstr "Weigeren"
+
+msgid "Authorize Linked Title"
+msgstr "Machtigingsverzoek"
+
+msgid "Authorize Linked Webapp"
+msgstr "Een app zegt te zijn:"
+
+msgid "Authorize Linked YourCozy"
+msgstr "De app vereist toegang tot je Cozy:"
+
+msgid "Authorize Linked Help"
+msgstr ""
+"Door te machtigen krijgt de app toegang tot de volgende gegevens op je Cozy:"
+
+msgid "Error Title"
+msgstr "Sorry, er is een fout opgetreden."
+
+msgid "Error Internal Server Error Title"
+msgstr "Oeps..."
+
+msgid "Error Internal Server Error Message"
+msgstr ""
+"Het lijkt erop dat je Cozy zich onderwater bevindt. Ons team werkt keihard "
+"om hem te reanimeren."
+
+msgid "Error Instance not found Title"
+msgstr "Het adres van deze Cozy bestaat niet"
+
+msgid "Error Instance not found Message"
+msgstr ""
+"Je hebt waarschijnlijk een verkeerd adres ingetoetst. Controleer het adres "
+"van je Cozy, dat na het creëren per e-mail aan je verstuurd is."
+
+msgid "Error Application not found Title"
+msgstr "App is nog niet beschikbaar"
+
+msgid "Error Application not found Message"
+msgstr "Sorry, deze app is nog niet beschikbaar op je Cozy."
+
+msgid "Error Application not found Action"
+msgstr "Ga naar je startpagina"
+
+msgid "Error Contact us"
+msgstr "Problemen? Vragen? Neem contact met ons op:"
+
+msgid "Error Contact instance blocked"
+msgstr "Neem contact met ons op via"
+
+msgid "Error Message instance blocked"
+msgstr "Je Cozy is geblokkeerd"
+
+msgid "Instance Blocked Login"
+msgstr "De Cozy is geblokkeerd wegens teveel inlogpogingen"
+
+msgid "Instance Blocked Payment"
+msgstr "De Cozy vereist een betaling"
+
+msgid "Instance Blocked Unknown"
+msgstr "De Cozy is om onbekende reden geblokkeerd"
+
+msgid "Error No state parameter"
+msgstr "De state-parameter is vereist"
+
+msgid "Error No client_id parameter"
+msgstr "De client_id-parameter is vereist"
+
+msgid "Error No redirect_uri parameter"
+msgstr "De redirect_uri-parameter is vereist"
+
+msgid "Error No scope parameter"
+msgstr "De scope-parameter is vereist"
+
+msgid "Error No registered client"
+msgstr "De client moet geregistreerd zijn"
+
+msgid "Error No sharing_id parameter"
+msgstr "De sharing_id-parameter is vereist"
+
+msgid "Error Incorrect redirect_uri"
+msgstr "De redirect_uri-parameter komt niet overeen met de geregistreerden"
+
+msgid "Error Invalid redirect_uri"
+msgstr "De redirect_uri-parameter is ongeldig"
+
+msgid "Error Invalid response type"
+msgstr "Ongeldig antwoord"
+
+msgid "Error Invalid scope"
+msgstr "Ongeldig bereik"
+
+msgid "Error Must be authenticated"
+msgstr "Je moet geauthenticeerd zijn"
+
+msgid "Error Invalid reset token"
+msgstr ""
+"De link om je wachtwoord opnieuw in te stellen is afgebroken of verlopen"
+
+msgid "Error Reset already requested"
+msgstr ""
+"Er is al een verzoek ingediend om je wachtwoord opnieuw in te stellen. "
+"Controleer je Postvak IN en de ongewenste e-mail-map!"
+
+msgid "Error Invalid mail token"
+msgstr "De link om je e-mailadres te bevestigen is afgebroken of verlopen"
+
+msgid "Error Invalid sharing"
+msgstr ""
+"Het lijkt erop dat het gedeelde bestand niet gevonden kan worden of is "
+"ingetrokken"
+
+msgid "Error Sharing already accepted Title"
+msgstr "Je hebt dit deelverzoek al goedgekeurd"
+
+msgid "Error Sharing already accepted"
+msgstr "Je kunt het gedeelde bestand terugvinden op je Cozy."
+
+msgid "Error Sharing already accepted Button"
+msgstr "Ga naar mijn Cozy: %s"
+
+msgid "Two Factor Activation"
+msgstr "Authenticatie in twee stappen is ingeschakeld"
+
+msgid "Confirmation User Content"
+msgstr ""
+"Je e-mailadres is bevestigd. We hebben authenticatie in twee stappen "
+"ingeschakeld."
+
+msgid "Permissions Read only"
+msgstr ", alleen om te lezen"
+
+msgid "Permissions disk usage"
+msgstr "De gebruikte schijfruimte"
+
+msgid "Permissions worker konnectors"
+msgstr "Bezig met uitvoeren van connector om gegevens te importeren..."
+
+msgid "Permissions worker log"
+msgstr "Bezig met opslaan van een bericht in de logbestanden..."
+
+msgid "Permissions worker sendmail"
+msgstr "Bezig met versturen van een e-mail..."
+
+msgid "Permissions io.cozy.accounts"
+msgstr "Accounts"
+
+msgid "Permissions io.cozy.apps"
+msgstr "Lijst met geïnstalleerde apps"
+
+msgid "Permissions io.cozy.bank.accounts"
+msgstr "Bankrekeningen"
+
+msgid "Permissions io.cozy.bank.groups"
+msgstr "Bankgroepen"
+
+msgid "Permissions io.cozy.bank.operations"
+msgstr "Banktransacties"
+
+msgid "Permissions io.cozy.bank.settings"
+msgstr "App-instellingen"
+
+msgid "Permissions io.cozy.bills"
+msgstr "Rekeningen"
+
+msgid "Permissions io.cozy.contacts"
+msgstr "Contactpersonen"
+
+msgid "Permissions io.cozy.files"
+msgstr "Bestanden"
+
+msgid "Permissions io.cozy.identities"
+msgstr "Identiteiten"
+
+msgid "Permissions io.cozy.konnectors"
+msgstr "Connectors voor het importeren van gegevens"
+
+msgid "Permissions io.cozy.notifications"
+msgstr "App-meldingsvoorkeuren"
+
+msgid "Permissions io.cozy.photos.albums"
+msgstr "Foto-albums"
+
+msgid "Permissions io.cozy.settings"
+msgstr "Instellingen"
+
+msgid "Permissions io.cozy.jobs"
+msgstr "Taken"
+
+msgid "Permissions io.cozy.triggers"
+msgstr "Taken inplannen"
+
+msgid "Permissions io.cozy.permissions"
+msgstr "Overdragen van machtigingen"
+
+msgid "Permissions io.cozy.oauth.clients"
+msgstr "Gekoppelde apparaten"
+
+msgid "Permissions fr.maif.maifuser.contrat"
+msgstr "Contract (Maif)"
+
+msgid "Permissions fr.maif.maifuser.home"
+msgstr "Thuis (Maif)"
+
+msgid "Permissions fr.maif.maifuser.foyer"
+msgstr "Familie (Maif)"
+
+msgid "Permissions fr.maif.maifuser.paymentterms"
+msgstr "Betalingsvoorwaarden (Maif)"
+
+msgid "Permissions fr.maif.maifuser.sinistre"
+msgstr "Schade (Maif)"
+
+msgid "Permissions fr.maif.maifuser.societaire"
+msgstr "Maatschappelijk (Maif)"
+
+msgid "Permissions org.fing.mesinfos.insuranceclaim"
+msgstr "Verzekeringsclaims (Maif)"
+
+msgid "Permissions cc.cozycloud.autocategorization"
+msgstr "Categoriseringsmodel-verrijkingsbestand"
+
+msgid "Permissions cc.cozycloud.sentry"
+msgstr "App-logbestanden"
+
+msgid "Mail Greeting"
+msgstr "Hallo"
+
+msgid "Mail Trouble Text"
+msgstr ""
+"Als je problemen ondervindt met de knop, kopieer dan onderstaande url en "
+"plak hem in je webbrowser."
+
+msgid "Mail Signature"
+msgstr "Met vriendelijke groet,"
+
+msgid "Mail Cozy Team"
+msgstr "Het Cozy Cloud-team"
+
+msgid "Mail Reset Passphrase Subject"
+msgstr "Mijn wachtwoord opnieuw instellen"
+
+msgid "Mail Reset Passphrase Intro 1"
+msgstr "Hallo %s,"
+
+msgid "Mail Reset Passphrase Intro 2"
+msgstr ""
+"Je hebt een wachtwoordwijziging aangevraagd. Als dat niet zo is, beantwoord "
+"dan deze e-mail en laat het ons weten."
+
+msgid "Mail Reset Passphrase Button instruction"
+msgstr "Klik op deze knop op je wachtwoord veilig te wijzigen."
+
+msgid "Mail Reset Passphrase Button text"
+msgstr "Mijn wachtwoord opnieuw instellen"
+
+msgid "Mail Reset Passphrase Outro"
+msgstr ""
+"Let op: je hebt 15 minuten om een nieuw wachtwoord te kiezen, daarna zal "
+"deze e-mail zichzelf vernietigen."
+
+msgid "Mail Archive Subject"
+msgstr "Je gegevens downloaden"
+
+msgid "Mail Archive Intro 1"
+msgstr "Hallo %s,"
+
+msgid "Mail Archive Intro 2"
+msgstr ""
+"Je hebt een kopie aangevraagd van de gegevens die Cozy over je heeft "
+"verzameld."
+
+msgid "Mail Archive Button instruction"
+msgstr "Je kunt het downloaden door te klikken op de volgende link:"
+
+msgid "Mail Archive Button text"
+msgstr "Je gegevens downloaden"
+
+msgid "Mail Two Factor Subject"
+msgstr "Bevestig de koppeling met je %s"
+
+msgid "Mail Two Factor Intro"
+msgstr ""
+"Authenticatie in twee stappen is ingeschakeld op je Cozy. Voer de volgende "
+"code in om je identiteit te bevestigen:"
+
+msgid "Mail Two Factor Outro"
+msgstr ""
+"Weet je niet wat je moet doen? Verkrijg dan hulp van ons team via "
+"contact@cozycloud.cc"
+
+msgid "Mail Two Factor Mail Confirmation Subject"
+msgstr "Je wilt authenticatie in twee stappen inschakelen op je %s"
+
+msgid "Mail Two Factor Mail Confirmation Intro"
+msgstr ""
+"Dit is de code die je moet gebruiken voor het activeren van authenticatie in"
+" twee stappen:"
+
+msgid "Mail Two Factor Mail Confirmation Outro"
+msgstr ""
+"Als je deze wijziging niet hebt aangebracht, neem dan contact met ons op: "
+"contact@cozycloud.cc"
+
+msgid "Mail New Connection Subject"
+msgstr "We hebben een koppeling gedetecteerd met je %s"
+
+msgid "Mail New Connection Intro"
+msgstr ""
+"We hebben een verbinding met je Cozy gedetecteerd.\n"
+"Hier zijn de verbindingsgegevens:"
+
+msgid "Mail New Connection Place"
+msgstr "Locatie"
+
+msgid "Mail New Connection IP"
+msgstr "IP-adres"
+
+msgid "Mail New Connection Browser"
+msgstr "Webbrowser"
+
+msgid "Mail New Connection OS"
+msgstr "Besturingssysteem"
+
+msgid "Mail New Connection Change Passphrase instruction"
+msgstr ""
+"Was je dit zelf? Mooi zo; we zijn gerustgesteld. Excuses voor het ongemak. "
+"Als je dit niet zelf was, wijzig dan nu je wachtwoord door te klikken op de "
+"volgende knop:"
+
+msgid "Mail New Connection Change Passphrase text"
+msgstr "Mijn wachtwoord wijzigen"
+
+msgid "Mail New Connection Outro"
+msgstr ""
+"Waarom deze e-mail? De veiligheid van je Cozy heeft onze hoogste prioriteit "
+"en we nemen graag de tijd om je te waarschuwen over ongebruikelijke "
+"verbindingen."
+
+msgid "Mail New Registration Subject"
+msgstr "Nieuw apparaat gekoppeld aan je %s"
+
+msgid "Mail New Registration Intro"
+msgstr "Gefeliciteerd! Je hebt een nieuw apparaat geregistreerd op je Cozy!"
+
+msgid "Mail New Registration Devices instruction"
+msgstr "Je kunt je apparaten direct beheren vanuit je Cozy:"
+
+msgid "Mail New Registration Devices text"
+msgstr "Mijn apparaten beheren"
+
+msgid "Mail New Registration Revoke instruction"
+msgstr ""
+"Als jij dit niet gedaan hebt, dan kun je de machtiging van het nieuwe "
+"apparaat intrekken."
+
+msgid "Mail New Registration Revoke text"
+msgstr "Machtiging intrekken"
+
+msgid "Mail Sharing Request Subject"
+msgstr "Nieuw deelverzoek van %s"
+
+msgid "Mail Sharing Request Intro"
+msgstr "Hallo %s,"
+
+msgid "Mail Sharing Request Description 1"
+msgstr "%s wil"
+
+msgid "Mail Sharing Request Description 2"
+msgstr "met je delen!"
+
+msgid "Mail Sharing Request Button text"
+msgstr "Verzoek goedkeuren"
+
+msgid "Sharing Connect to Cozy"
+msgstr "Verbinden met je Cozy"
+
+msgid "Sharing Empty name"
+msgstr "Iemand"
+
+msgid "Sharing Empty description"
+msgstr "Verassing!"
+
+msgid "Sharing Discovery URL field"
+msgstr "URL"
+
+msgid "Sharing Discovery URL placeholder"
+msgstr "https://jecozyadres.cozy"
+
+msgid "Sharing URL Discovery error"
+msgstr "De ingevoerde Cozy-url is onjuist. Probeer het opnieuw."
+
+msgid "Sharing Discovery Submit"
+msgstr "Versturen"
+
+msgid "Sharing No Cozy"
+msgstr "Heb je nog geen Cozy?"
+
+msgid "Sharing Discover Cozy URL"
+msgstr "https://cozy.io/en/try-it/?from=sharing"
+
+msgid "Sharing Discover Cozy"
+msgstr "Ontdek Cozy nu!"
+
+msgid "Sharing Forgotten URL"
+msgstr "Ben je de url vergeten? Maak je geen zorgen."
+
+msgid "Sharing Forgotten URL email"
+msgstr "Zoek naar \"Cozy\" in je Postvak IN."
+
+msgid "Notifications Disk Quota Subject"
+msgstr "Je hebt momenteel 90% van je beschikbare opslagruimte verbruikt."
+
+msgid "Notifications Disk Quota Intro"
+msgstr "Je kunt twee dingen doen om meer ruimte te verkrijgen."
+
+msgid "Notifications Disk Quota offers instruction"
+msgstr "Optie 1: upgrade je Cozy naar een hoger abonnement met meer ruimte."
+
+msgid "Notifications Disk Quota offers text"
+msgstr "Nu upgraden"
+
+msgid "Notifications Disk Quota free instructions"
+msgstr ""
+"Optie 2: maak ruimte vrij.\n"
+"Bespaar ruimte door onnodige bestanden te verwijderen."
+
+msgid "Notifications Disk Quota free text"
+msgstr "Opslagruimte vrijmaken"
+
+msgid "Terms of services have been updated"
+msgstr ""
+"Om te voldoen aan de GDPR heeft Cozy Cloud zijn algemene voorwaarden "
+"bijgewerkt. De nieuwe voorwaarden zijn ingegaan op 25 mei 2018."
+
+msgid "Compat Title"
+msgstr "Je webbrowser is verouderd of wordt niet langer ondersteund."
+
+msgid "Compat Subtitle"
+msgstr ""
+"Werk je browser bij of probeer één van deze aanbevelingen voor een betere "
+"Cozy-ervaring. Wij bevelen Firefox aan!"
+
+msgid "Compat Browser Chrome Link"
+msgstr "https://www.google.com/chrome/"
+
+msgid "Compat Browser Firefox Link"
+msgstr "https://www.mozilla.org/nl-NL/firefox/new/"
+
+msgid "Compat Browser Edge Link"
+msgstr "https://www.microsoft.com/nl-NL/windows/microsoft-edge"
+
+msgid "Compat Tip 1"
+msgstr ""
+"Door je browser bij te werken, surf je veiliger op het internet dankzij "
+"verbeterde beveiliging."
+
+msgid "Compat Tip 2"
+msgstr "Je webbrowser wordt sneller en je Cozy-ervaring wordt beter."
+
+msgid "Compat Help"
+msgstr "Meer hulp nodig?"
+
+msgid "Compat Guide"
+msgstr "Lees onze zelfstudie voor ondersteuning."
+
+msgid "Compat Guide Link"
+msgstr "https://help.cozy.io/article/274-ie-11-not-supported"

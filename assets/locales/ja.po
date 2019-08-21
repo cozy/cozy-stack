@@ -1,0 +1,642 @@
+# Translators:
+# Bruno Michel, 2019
+# Naofumi <naofum@gmail.com>, 2019
+# 
+msgid ""
+msgstr ""
+"Last-Translator: Naofumi <naofum@gmail.com>, 2019\n"
+"Language-Team: Japanese (https://www.transifex.com/cozy/teams/39753/ja/)\n"
+"Language: ja\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Tree Administrative"
+msgstr "管理"
+
+msgid "Tree Photos"
+msgstr "写真"
+
+msgid "Tree Uploaded from Cozy Photos"
+msgstr "Cozy フォトからアップロードしました"
+
+msgid "Tree Backed up from my mobile"
+msgstr "自分のモバイルからバックアップしました"
+
+msgid "Tree Shared with me"
+msgstr "私と共有"
+
+msgid "Tree No longer shared"
+msgstr "もう共有されていません"
+
+msgid "Login Credentials error"
+msgstr "入力した資格情報が間違っています。もう一度やり直してください。"
+
+msgid "URL Discovery error"
+msgstr "入力した Cozy URL が間違っています。もう一度やり直してください"
+
+msgid "Login Welcome"
+msgstr "ようこそ!"
+
+msgid "Login Welcome name"
+msgstr "%s"
+
+msgid "Login Password help"
+msgstr "Cozy にアクセスするにはパスワードを入力してください"
+
+msgid "Login Password field"
+msgstr "パスワード"
+
+msgid "Login Password show"
+msgstr "パスワードを表示"
+
+msgid "Login Password hide"
+msgstr "パスワードを非表示"
+
+msgid "Login Long Session"
+msgstr "記憶する"
+
+msgid "Login Submit"
+msgstr "ログイン"
+
+msgid "Login Confirm"
+msgstr "サインイン"
+
+msgid "Login Connect after reset requested title"
+msgstr "メールをご確認ください!"
+
+msgid "Login Connect after reset requested help"
+msgstr ""
+"あなたに特別なメールのリンクを送りました。 このリンクをクリックすると、パスワードがリセットされます。 警告: "
+"このメールはあなたの迷惑メールフォルダに届く可能性があります。 すべてのフォルダを確認してください。"
+
+msgid "Login Reconnect title"
+msgstr "パスワードを確認してください"
+
+msgid "Login Reconnect help"
+msgstr ""
+"こんにちは! パスワードを確認したら、許可ボードにアクセスしてモバイルアプリへのアクセスを許可するかどうかを決めてください。 それはあなた次第です!"
+
+msgid "Login Connect from sharing title"
+msgstr "%s さん、こんにちは!"
+
+msgid "Login Connect from sharing help"
+msgstr "パスワードを入力してください"
+
+msgid "Login Two factor title"
+msgstr "コードを入力してください"
+
+msgid "Login Two factor error"
+msgstr "入力したパスコードが間違っています。もう一度やり直してください。"
+
+msgid "Login Two factor attempts error"
+msgstr "パスコードの入力間違いが多すぎます。 新しいメールを送信しました。メールを確認してください。"
+
+msgid "Login Two factor field"
+msgstr "コード (6 桁の数字)"
+
+msgid "Login Two factor help"
+msgstr "コードをメールボックスに送信しました"
+
+msgid "Login Two factor device trust field"
+msgstr "このデバイスを信頼する"
+
+msgid "Login Two factor device trust help"
+msgstr "このオプションをオンにすると、今後このデバイスは二要素認証が求められません"
+
+msgid "Onboarding Not activated Title"
+msgstr "Cozy をアクティベートする必要があります"
+
+msgid "Onboarding Not activated Check mails"
+msgstr ""
+"お使いの Cozy はまだアクティベーションされていません。 メールをチェックしてアクティベーションリンクをクリックすると、Cozy "
+"のインストールに進みます。"
+
+msgid "Onboarding Not activated Contact us"
+msgstr "なくしましたか? お気軽にお問い合わせください"
+
+msgid "Passphrase reset Title"
+msgstr "パスワードを忘れた"
+
+msgid "Passphrase reset Help"
+msgstr "このボタンをクリックすると、新しいパスワードを選択するためのリンクがメールで送信されます。"
+
+msgid "Passphrase reset Submit"
+msgstr "次へ"
+
+msgid "Passphrase is reset Title"
+msgstr "メールをご確認ください!"
+
+msgid "Passphrase Onboarding Title"
+msgstr "パスワードを選択してください"
+
+msgid "Passphrase Onboarding Help"
+msgstr "8 文字以上の英字、数字、記号で入力してください。"
+
+msgid "Passphrase Onboarding Submit"
+msgstr "完了"
+
+msgid "Passphrase is reset Body"
+msgstr ""
+"あなたに (とても) 特別なリンクをメールで送りました。 このリンクをクリックすると、パスワードがリセットされます。\n"
+"お気を付けください。このメールはあなたの迷惑メール、通知、ソーシャルフォルダーに届く可能性があります。 これらのフォルダーを確認してください。"
+
+msgid "Passphrase is reset Login Button"
+msgstr "ログインページに戻る"
+
+msgid "Passphrase renew Title"
+msgstr "新しいパスワードを選択"
+
+msgid "Passphrase renew Help"
+msgstr "8 文字以上の英字、数字、記号で入力してください。"
+
+msgid "Passphrase renew Field"
+msgstr "パスワード"
+
+msgid "Passphrase renew Submit"
+msgstr "保存"
+
+msgid "Login Forgot password"
+msgstr "パスワードを忘れた"
+
+msgid "Authorize Title"
+msgstr "%s のあなたのプロフィールへのアクセスを承認"
+
+msgid "Authorize Sharing Title"
+msgstr "%s から新しい共有"
+
+msgid "Authorize Client presentation"
+msgstr "Cozy にアクセスする権限が必要です"
+
+msgid "Authorize Sharing Request"
+msgstr "%s さんは次のデータをあなたと共有したいといっています:"
+
+msgid "Authorize Sharing Permission start"
+msgstr "あなたは"
+
+msgid "Authorize Sharing Permission readonly"
+msgstr "表示できます"
+
+msgid "Authorize Sharing Permission readwrite"
+msgstr "表示と変更できます"
+
+msgid "Authorize Sharing Permission end"
+msgstr "共有を確認すると。"
+
+msgid "Authorize Sharing Sync"
+msgstr "変更はすぐに両方の Cozy で利用可能になります:"
+
+msgid "Authorize Sharing Self"
+msgstr "あなたの Cozy: %s"
+
+msgid "Authorize Sharing Client"
+msgstr "あなたの連絡先の Cozy: %s"
+
+msgid "Authorize Policy sentence"
+msgstr "データの使用方法に関するポリシーを読むことができます"
+
+msgid "Authorize Policy link"
+msgstr "ここ"
+
+msgid "Authorize Give permission start"
+msgstr "選出して "
+
+msgid "Authorize Give permission keyword"
+msgstr "承認"
+
+msgid "Authorize Give permission end"
+msgstr "、アプリケーションがあなたのデータにアクセスすること、利用規約およびプライバシーポリシーに従うことを承諾します。"
+
+msgid "Authorize Submit"
+msgstr "承認"
+
+msgid "Authorize Submit Sharing"
+msgstr "確認"
+
+msgid "Authorize Cancel"
+msgstr "拒否"
+
+msgid "Authorize Linked Title"
+msgstr "アクセス許可リクエスト"
+
+msgid "Authorize Linked Webapp"
+msgstr "アプリケーションの申請は:"
+
+msgid "Authorize Linked YourCozy"
+msgstr "あなたの Cozy にアクセスをリクエストします:"
+
+msgid "Authorize Linked Help"
+msgstr "承認すると、アプリケーションは Cozy のこれらのデータにアクセスできるようになります:"
+
+msgid "Error Title"
+msgstr "申し訳ありません。エラーが発生しました。"
+
+msgid "Error Internal Server Error Title"
+msgstr "おっと…"
+
+msgid "Error Internal Server Error Message"
+msgstr "お使いの Cozy は沈んでいるようです。 私たちのチームは、元に戻す努力をしています。"
+
+msgid "Error Instance not found Title"
+msgstr "この Cozy のアドレスは存在しません"
+
+msgid "Error Instance not found Message"
+msgstr "入力ミスで誤ったアドレス形式を入力した可能性があります。 作成中にメールで送信したあなたの Cozy のアドレスを確認してください。"
+
+msgid "Error Application not found Title"
+msgstr "アプリケーションはまだ利用できません"
+
+msgid "Error Application not found Message"
+msgstr "申し訳ありません。このアプリケーションはまだお使いの Cozy で利用できません。"
+
+msgid "Error Application not found Action"
+msgstr "ホームに移動"
+
+msgid "Error Contact us"
+msgstr "問題、質問? お問い合わせは"
+
+msgid "Error Contact instance blocked"
+msgstr "私たちにご連絡ください"
+
+msgid "Error Message instance blocked"
+msgstr "お使いの Cozy はブロックされました"
+
+msgid "Instance Blocked Login"
+msgstr "ログインに失敗した回数が多すぎるため Cozy はブロックされました"
+
+msgid "Instance Blocked Payment"
+msgstr "Cozy は支払いが必要です"
+
+msgid "Instance Blocked Unknown"
+msgstr "不明な理由で Cozy がブロックされます"
+
+msgid "Error No state parameter"
+msgstr "state パラメータは必須です"
+
+msgid "Error No client_id parameter"
+msgstr "client_id パラメータは必須です"
+
+msgid "Error No redirect_uri parameter"
+msgstr "redirect_uri パラメータは必須です"
+
+msgid "Error No scope parameter"
+msgstr "scope パラメータは必須です"
+
+msgid "Error No registered client"
+msgstr "クライアントを登録する必要があります"
+
+msgid "Error No sharing_id parameter"
+msgstr "sharing_id パラメータは必須です"
+
+msgid "Error Incorrect redirect_uri"
+msgstr "redirect_uri パラメータが登録されているパラメータと一致しません"
+
+msgid "Error Invalid redirect_uri"
+msgstr "redirect_uri パラメータが正しくありません"
+
+msgid "Error Invalid response type"
+msgstr "レスポンスタイプが正しくありません"
+
+msgid "Error Invalid scope"
+msgstr "無効なスコープ"
+
+msgid "Error Must be authenticated"
+msgstr "認証されている必要があります"
+
+msgid "Error Invalid reset token"
+msgstr "パスワードをリセットするリンクは破棄されたか、期限切れです"
+
+msgid "Error Reset already requested"
+msgstr "パスワードのリセットは既に要求されています。 メールの受信トレイと迷惑メールフォルダを確認してください!"
+
+msgid "Error Invalid mail token"
+msgstr "メールを確認するリンクは破棄されたか、期限切れです"
+
+msgid "Error Invalid sharing"
+msgstr "共有が見つからないか、取り消されたようです"
+
+msgid "Error Sharing already accepted Title"
+msgstr "この共有はすでに承認されています"
+
+msgid "Error Sharing already accepted"
+msgstr "お使いの Cozy でこの共有が見つかるはずです。"
+
+msgid "Error Sharing already accepted Button"
+msgstr "自分の Cozy に移動: %s"
+
+msgid "Two Factor Activation"
+msgstr "二要素認証が有効になりました"
+
+msgid "Confirmation User Content"
+msgstr "あなたのメールアドレスが確認されました。 私たちはあなたの Cozy の二要素認証を有効にしました。"
+
+msgid "Permissions Read only"
+msgstr "、読み取り専用"
+
+msgid "Permissions disk usage"
+msgstr "使用ディスク容量"
+
+msgid "Permissions worker konnectors"
+msgstr "データをインポートするコネクターを実行中"
+
+msgid "Permissions worker log"
+msgstr "システムログにメッセージを格納中"
+
+msgid "Permissions worker sendmail"
+msgstr "メールの送信中"
+
+msgid "Permissions io.cozy.accounts"
+msgstr "アカウント"
+
+msgid "Permissions io.cozy.apps"
+msgstr "インストールされたアプリケーションのリスト"
+
+msgid "Permissions io.cozy.bank.accounts"
+msgstr "銀行口座"
+
+msgid "Permissions io.cozy.bank.groups"
+msgstr "銀行グループ"
+
+msgid "Permissions io.cozy.bank.operations"
+msgstr "銀行取引"
+
+msgid "Permissions io.cozy.bank.settings"
+msgstr "アプリケーション設定"
+
+msgid "Permissions io.cozy.bills"
+msgstr "請求書"
+
+msgid "Permissions io.cozy.contacts"
+msgstr "連絡先"
+
+msgid "Permissions io.cozy.files"
+msgstr "ファイル"
+
+msgid "Permissions io.cozy.identities"
+msgstr "ID"
+
+msgid "Permissions io.cozy.konnectors"
+msgstr "データをインポートするコネクター"
+
+msgid "Permissions io.cozy.notifications"
+msgstr "アプリケーション通知設定"
+
+msgid "Permissions io.cozy.photos.albums"
+msgstr "フォトアルバム"
+
+msgid "Permissions io.cozy.settings"
+msgstr "設定"
+
+msgid "Permissions io.cozy.jobs"
+msgstr "ジョブ"
+
+msgid "Permissions io.cozy.triggers"
+msgstr "ジョブのスケジュール中"
+
+msgid "Permissions io.cozy.permissions"
+msgstr "権限の委任"
+
+msgid "Permissions io.cozy.oauth.clients"
+msgstr "接続されたデバイス"
+
+msgid "Permissions fr.maif.maifuser.contrat"
+msgstr "契約 (Maif)"
+
+msgid "Permissions fr.maif.maifuser.home"
+msgstr "ホーム (Maif)"
+
+msgid "Permissions fr.maif.maifuser.foyer"
+msgstr "ファミリー (Maif)"
+
+msgid "Permissions fr.maif.maifuser.paymentterms"
+msgstr "支払い条件 (Maif)"
+
+msgid "Permissions fr.maif.maifuser.sinistre"
+msgstr "損害 (Maif)"
+
+msgid "Permissions fr.maif.maifuser.societaire"
+msgstr "社会的 (Maif)"
+
+msgid "Permissions org.fing.mesinfos.insuranceclaim"
+msgstr "保険金請求 (Maif)"
+
+msgid "Permissions cc.cozycloud.autocategorization"
+msgstr "分類モデル拡張ファイル"
+
+msgid "Permissions cc.cozycloud.sentry"
+msgstr "アプリケーションモデル"
+
+msgid "Mail Greeting"
+msgstr "こんにちは"
+
+msgid "Mail Trouble Text"
+msgstr "ボタンが正しく表示されない場合は、下の URL をコピーしてウェブブラウザーに貼り付けてください。"
+
+msgid "Mail Signature"
+msgstr "敬具"
+
+msgid "Mail Cozy Team"
+msgstr "Cozy クラウドチーム"
+
+msgid "Mail Reset Passphrase Subject"
+msgstr "お使いのパスワードをリセット"
+
+msgid "Mail Reset Passphrase Intro 1"
+msgstr "%s さん、こんにちは。"
+
+msgid "Mail Reset Passphrase Intro 2"
+msgstr "あなたからパスワードを変更するように依頼されました (そうでない場合は、このメールに直接返信してご連絡ください)"
+
+msgid "Mail Reset Passphrase Button instruction"
+msgstr "このボタンをクリックすると、安全に変更できます。"
+
+msgid "Mail Reset Passphrase Button text"
+msgstr "パスワードをリセット"
+
+msgid "Mail Reset Passphrase Outro"
+msgstr "ご注意ください。新しいパスワードを選ぶ時間は 15 分あります。その後、このメールは破棄されます。"
+
+msgid "Mail Archive Subject"
+msgstr "データをダウンロード"
+
+msgid "Mail Archive Intro 1"
+msgstr "%s さん、こんにちは。"
+
+msgid "Mail Archive Intro 2"
+msgstr "あなたに関する全データのコピーを入手するように依頼しました。"
+
+msgid "Mail Archive Button instruction"
+msgstr "次のリンクをクリックするとダウンロードできます。"
+
+msgid "Mail Archive Button text"
+msgstr "データをダウンロード"
+
+msgid "Mail Two Factor Subject"
+msgstr "%s への接続を検証"
+
+msgid "Mail Two Factor Intro"
+msgstr "Cozy の二要素認証が有効になっています。 IDを確認するために次のコードを入力してください:"
+
+msgid "Mail Two Factor Outro"
+msgstr "何をすべきか分かりませんか? contact@cozycloud.cc からヘルプを受けてください"
+
+msgid "Mail Two Factor Mail Confirmation Subject"
+msgstr "%s の二要素認証を有効にします"
+
+msgid "Mail Two Factor Mail Confirmation Intro"
+msgstr "これが二要素認証を有効にするコードです:"
+
+msgid "Mail Two Factor Mail Confirmation Outro"
+msgstr "あなたがこの変更を行っていない場合、contact@cozycloud.cc にご連絡ください"
+
+msgid "Mail New Connection Subject"
+msgstr "%s への接続を検出しました"
+
+msgid "Mail New Connection Intro"
+msgstr ""
+"お使いの Cozy への接続を検出しました。\n"
+"これが、この接続の詳細です:"
+
+msgid "Mail New Connection Place"
+msgstr "場所"
+
+msgid "Mail New Connection IP"
+msgstr "IP アドレス"
+
+msgid "Mail New Connection Browser"
+msgstr "ブラウザー"
+
+msgid "Mail New Connection OS"
+msgstr "オペレーティングシステム"
+
+msgid "Mail New Connection Change Passphrase instruction"
+msgstr ""
+"あなたが行いましたか? すばらしいです! 安心しました。 ご不便おかけしてすみません。 "
+"そうでない場合は、次のボタンをクリックして今すぐパスワードを変更してください:"
+
+msgid "Mail New Connection Change Passphrase text"
+msgstr "パスワードを変更する"
+
+msgid "Mail New Connection Outro"
+msgstr "このメールが届いた理由は? お使いの Cozy の安全は私たちの最優先事項であり、私たちは異常な接続を気を付けるようにしています。"
+
+msgid "Mail New Registration Subject"
+msgstr " %s に新しいデバイスが接続されました"
+
+msgid "Mail New Registration Intro"
+msgstr "おめでとうございます。お使いの Cozy への新しいデバイスの登録は成功しました。"
+
+msgid "Mail New Registration Devices instruction"
+msgstr "お使いの Cozy から直接デバイスを管理することができます:"
+
+msgid "Mail New Registration Devices text"
+msgstr "デバイスの管理"
+
+msgid "Mail New Registration Revoke instruction"
+msgstr "この追加を行っていない場合は、新しいデバイスを取り消すことができます"
+
+msgid "Mail New Registration Revoke text"
+msgstr "このデバイスを取り消す"
+
+msgid "Mail Sharing Request Subject"
+msgstr "%s から新しい共有要求"
+
+msgid "Mail Sharing Request Intro"
+msgstr "%s さん、こんにちは。"
+
+msgid "Mail Sharing Request Description 1"
+msgstr "%s さんが共有を希望しています"
+
+msgid "Mail Sharing Request Description 2"
+msgstr "あなたと!"
+
+msgid "Mail Sharing Request Button text"
+msgstr "この共有を承認"
+
+msgid "Sharing Connect to Cozy"
+msgstr "あなたの Cozy に接続"
+
+msgid "Sharing Empty name"
+msgstr "誰か"
+
+msgid "Sharing Empty description"
+msgstr "サプライズ!"
+
+msgid "Sharing Discovery URL field"
+msgstr "URL"
+
+msgid "Sharing Discovery URL placeholder"
+msgstr "https://yourcozyaddress.cozy"
+
+msgid "Sharing URL Discovery error"
+msgstr "入力した Cozy URL が間違っています。もう一度やり直してください"
+
+msgid "Sharing Discovery Submit"
+msgstr "送信"
+
+msgid "Sharing No Cozy"
+msgstr "まだ Cozy をお持ちではありませんか?"
+
+msgid "Sharing Discover Cozy URL"
+msgstr "https://cozy.io/en/try-it/?from=sharing"
+
+msgid "Sharing Discover Cozy"
+msgstr "今すぐ Cozy を見つけてください!"
+
+msgid "Sharing Forgotten URL"
+msgstr "URL をお忘れですか? 慌てないでください"
+
+msgid "Sharing Forgotten URL email"
+msgstr "メールの受信トレイで \"Cozy\" を検索してください。"
+
+msgid "Notifications Disk Quota Subject"
+msgstr "現在、容量が 90％ に達しています。"
+
+msgid "Notifications Disk Quota Intro"
+msgstr "容量を増やすには2つの方法があります。"
+
+msgid "Notifications Disk Quota offers instruction"
+msgstr "オプション 1: 新しい提案を選択して、Cozy をアップグレードし、さらに多くの容量を入手してください"
+
+msgid "Notifications Disk Quota offers text"
+msgstr "今すぐアップグレード"
+
+msgid "Notifications Disk Quota free instructions"
+msgstr ""
+"オプション 2: 容量を空ける\n"
+"不要なファイルを削除して容量を節約します"
+
+msgid "Notifications Disk Quota free text"
+msgstr "記憶容量を解放する"
+
+msgid "Terms of services have been updated"
+msgstr "GDPR を遵守するため、Cozy Cloud は2018年5月25日に施行された利用規約を更新しました"
+
+msgid "Compat Title"
+msgstr "お使いの Web ブラウザーは最新ではないか、サポートされていません。"
+
+msgid "Compat Subtitle"
+msgstr ""
+"ブラウザーを更新するか、これらの選択肢からダウンロードして、Cozy を最大限に活用してください。 私たちは Firefox をお勧めします!"
+
+msgid "Compat Browser Chrome Link"
+msgstr "https://www.google.com/chrome/"
+
+msgid "Compat Browser Firefox Link"
+msgstr "https://www.mozilla.org/ja/firefox/new/"
+
+msgid "Compat Browser Edge Link"
+msgstr "https://www.microsoft.com/ja-jp/windows/microsoft-edge"
+
+msgid "Compat Tip 1"
+msgstr "Web ブラウザーをアップグレードすると、さらに安全なブラウジングが可能になります。"
+
+msgid "Compat Tip 2"
+msgstr "お使いのウェブブラウザーがさらに速くなり、Cozy の体験が改善されます。"
+
+msgid "Compat Help"
+msgstr "もっと助けが必要ですか?"
+
+msgid "Compat Guide"
+msgstr "サポートガイドをご覧ください。"
+
+msgid "Compat Guide Link"
+msgstr "https://help.cozy.io/article/274-ie-11-not-supported"

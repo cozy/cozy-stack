@@ -1,0 +1,712 @@
+# Translators:
+# Pierre Vandekerckhove <pierre4vdk@gmail.com>, 2018
+# Yannick Lohse <yannick.lohse@cozycloud.cc>, 2018
+# Cyrille Perois <cyrille@cozycloud.cc>, 2018
+# Pierre Guillemot <pierrot@cozycloud.cc>, 2018
+# Maxime M <maxime@cozycloud.cc>, 2019
+# JC Pagnon <gooz@cozycloud.cc>, 2019
+# Nicolas Vinot <aeris@imirhil.fr>, 2019
+# Bruno Michel, 2019
+# 
+msgid ""
+msgstr ""
+"Last-Translator: Bruno Michel, 2019\n"
+"Language-Team: French (https://www.transifex.com/cozy/teams/39753/fr/)\n"
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Tree Administrative"
+msgstr "Administratif"
+
+msgid "Tree Photos"
+msgstr "Photos"
+
+msgid "Tree Uploaded from Cozy Photos"
+msgstr "Transférées depuis Cozy Photos"
+
+msgid "Tree Backed up from my mobile"
+msgstr "Sauvegardées depuis mon mobile"
+
+msgid "Tree Shared with me"
+msgstr "Partages reçus"
+
+msgid "Tree No longer shared"
+msgstr "Retirés des partages"
+
+msgid "Login Credentials error"
+msgstr ""
+"Les identifiants que vous avez saisis sont incorrects, veuillez ré-essayer."
+
+msgid "URL Discovery error"
+msgstr ""
+"L'adresse du Cozy que vous avez saisie est incorrecte, veuillez ré-essayer."
+
+msgid "Login Welcome"
+msgstr "Bienvenue !"
+
+msgid "Login Welcome name"
+msgstr "%s"
+
+msgid "Login Password help"
+msgstr "Saisissez votre mot de passe pour accéder à votre Cozy"
+
+msgid "Login Password field"
+msgstr "Mot de passe"
+
+msgid "Login Password show"
+msgstr "Afficher le mot de passe"
+
+msgid "Login Password hide"
+msgstr "Cacher le mot de passe"
+
+msgid "Login Long Session"
+msgstr "Se souvenir de moi"
+
+msgid "Login Submit"
+msgstr "Se connecter"
+
+msgid "Login Confirm"
+msgstr "Confirmer"
+
+msgid "Login Connect after reset requested title"
+msgstr "Consultez vos e-mails !"
+
+msgid "Login Connect after reset requested help"
+msgstr ""
+"Nous vous avons envoyé par e-mail un lien (très) spécial. Cliquez sur ce "
+"lien pour réinitialiser votre mot de passe. Nous préférons vous prévenir : "
+"cet e-mail peut s’avérer un brin joueur et se faufiler dans les dossier "
+"Spam, Notifications ou Réseaux Sociaux. N’hésitez donc pas à jeter un oeil à"
+" tous vos dossiers pour le retrouver."
+
+msgid "Login Reconnect title"
+msgstr "Confirmez votre mot de passe"
+
+msgid "Login Reconnect help"
+msgstr ""
+"Bonjour ! Après avoir confirmé votre mot de passe, vous pourrez donner accès"
+" à l'application mobile aux données que vous souhaitez partager. C'est vous "
+"qui décidez."
+
+msgid "Login Connect from sharing title"
+msgstr "Bonjour %s !"
+
+msgid "Login Connect from sharing help"
+msgstr "Saisissez maintenant votre mot de passe"
+
+msgid "Login Two factor title"
+msgstr "Saisir votre code"
+
+msgid "Login Two factor error"
+msgstr "Le code que vous avez entré n'est pas correct, merci de réessayer."
+
+msgid "Login Two factor attempts error"
+msgstr ""
+"Vous avez entré trop de mauvais mots de passe. Un nouveau vous a été envoyé,"
+" regardez vos emails."
+
+msgid "Login Two factor field"
+msgstr "Code (6 chiffres)"
+
+msgid "Login Two factor help"
+msgstr "Un code vous a été envoyé par email"
+
+msgid "Login Two factor device trust field"
+msgstr "Faire confiance à cet appareil"
+
+msgid "Login Two factor device trust help"
+msgstr ""
+"En cochant cette case, les futures connexions depuis votre appareil courant "
+"ne nécessiteront pas de double authentification"
+
+msgid "Onboarding Not activated Title"
+msgstr "Vous y êtes presque !"
+
+msgid "Onboarding Not activated Check mails"
+msgstr ""
+"Super ! Maintenant cliquez sur le lien d'activation envoyé par e-mail pour "
+"terminer l'installation de votre Cozy."
+
+msgid "Onboarding Not activated Contact us"
+msgstr "Vous êtes perdu.e ? N'hésitez pas à nous contacter à"
+
+msgid "Passphrase reset Title"
+msgstr "Mot de passe oublié"
+
+msgid "Passphrase reset Help"
+msgstr ""
+"En cliquant sur le bouton ci-dessous, un lien vous sera envoyé par email "
+"pour choisir un nouveau mot de passe."
+
+msgid "Passphrase reset Submit"
+msgstr "Continuer"
+
+msgid "Passphrase is reset Title"
+msgstr "Vérifiez votre boite mail !"
+
+msgid "Passphrase Onboarding Title"
+msgstr "Choisissez votre mot de passe"
+
+msgid "Passphrase Onboarding Help"
+msgstr ""
+"Utilisez au moins huit caractères avec des lettres, des chiffres et des "
+"symboles."
+
+msgid "Passphrase Onboarding Submit"
+msgstr "Terminer"
+
+msgid "Passphrase is reset Body"
+msgstr ""
+"Nous vous avons envoyé par e-mail un lien (très) spécial. Cliquez sur ce lien pour réinitialiser votre mot de passe.\n"
+"Nous préférons vous prévenir : cet e-mail peut s'avérer un brin joueur et se faufiler dans les dossiers Spam, Notifications ou Réseaux Sociaux. N'hésitez donc pas à jeter un œil à tous vos dossiers pour le retrouver."
+
+msgid "Passphrase is reset Login Button"
+msgstr "Aller à la page de connexion"
+
+msgid "Passphrase renew Title"
+msgstr "Choisir un nouveau mot de passe"
+
+msgid "Passphrase renew Help"
+msgstr ""
+"Utiliser au moins huit caractères avec des lettres, des chiffres et des "
+"symboles."
+
+msgid "Passphrase renew Field"
+msgstr "mot de passe"
+
+msgid "Passphrase renew Submit"
+msgstr "Enregistrer"
+
+msgid "Login Forgot password"
+msgstr "J'ai oublié mon mot de passe"
+
+msgid "Authorize Title"
+msgstr "Autoriser %s à accéder à votre profil ?"
+
+msgid "Authorize Sharing Title"
+msgstr "Accepter le partage de %s ?"
+
+msgid "Authorize Client presentation"
+msgstr "voudrait accéder aux données suivantes du cozy "
+
+msgid "Authorize Sharing Request"
+msgstr "%s a partagé les données suivantes avec vous :"
+
+msgid "Authorize Sharing Permission start"
+msgstr "Vous pourrez"
+
+msgid "Authorize Sharing Permission readonly"
+msgstr "les consulter"
+
+msgid "Authorize Sharing Permission readwrite"
+msgstr "les consulter et les modifier"
+
+msgid "Authorize Sharing Permission end"
+msgstr "en les ajoutant à votre Cozy."
+
+msgid "Authorize Sharing Sync"
+msgstr ""
+"Pour rappel, les modifications seront automatiquement visibles dans vos deux"
+" Cozy :"
+
+msgid "Authorize Sharing Self"
+msgstr "votre Cozy : %s"
+
+msgid "Authorize Sharing Client"
+msgstr "le Cozy de votre contact : %s"
+
+msgid "Authorize Policy sentence"
+msgstr ""
+"Vous pouvez lire la politique d'utilisation des données à cette adresse "
+
+msgid "Authorize Policy link"
+msgstr "ici"
+
+msgid "Authorize Give permission start"
+msgstr "En cliquant sur "
+
+msgid "Authorize Give permission keyword"
+msgstr "Autoriser"
+
+msgid "Authorize Give permission end"
+msgstr ""
+", vous autorisez l'application à accéder à vos données, selon ses conditions"
+" de service et sa politique de confidentialité."
+
+msgid "Authorize Submit"
+msgstr "Autoriser"
+
+msgid "Authorize Submit Sharing"
+msgstr "Confirmer le partage"
+
+msgid "Authorize Cancel"
+msgstr "Refuser"
+
+msgid "Authorize Linked Title"
+msgstr "Demande de permissions"
+
+msgid "Authorize Linked Webapp"
+msgstr "Une application déclare être :"
+
+msgid "Authorize Linked YourCozy"
+msgstr "Elle demande l'accès à votre Cozy :"
+
+msgid "Authorize Linked Help"
+msgstr ""
+"En l'autorisant, l'application pourra accéder aux données suivantes de votre"
+" Cozy :"
+
+msgid "Error Title"
+msgstr "Désolé, une erreur est survenue."
+
+msgid "Error Internal Server Error Title"
+msgstr "Oops…"
+
+msgid "Error Internal Server Error Message"
+msgstr ""
+"Il semblerait que Cozy soit sous l'eau à force de sauvegarder, synchroniser et croiser vos données. Notre équipe se charge de lui redonner ses super pouvoirs.\n"
+"En attendant et surtout pour l'encourager, vous pouvez toujours lui envoyer vos demandes à claude@cozycloud.cc. "
+
+msgid "Error Instance not found Title"
+msgstr "L'adresse de ce Cozy n'existe pas."
+
+msgid "Error Instance not found Message"
+msgstr ""
+"Nous n'avons trouvé aucun Cozy à cette adresse. Il s'agit peut-être d'une "
+"erreur de frappe. Pour le savoir, vérifiez l'adresse de votre Cozy dans "
+"l'e-mail que nous vous avons envoyé au moment de sa création."
+
+msgid "Error Application not found Title"
+msgstr "Application pas encore disponible"
+
+msgid "Error Application not found Message"
+msgstr ""
+"Nous sommes désolés. Cette application n'est pas encore disponible dans "
+"votre Cozy."
+
+msgid "Error Application not found Action"
+msgstr "Retourner à votre accueil"
+
+msgid "Error Contact us"
+msgstr "Un problème, une suggestion ? Contactez-nous à"
+
+msgid "Error Contact instance blocked"
+msgstr "Merci de nous contacter à l'adresse"
+
+msgid "Error Message instance blocked"
+msgstr "Votre Cozy a été bloqué"
+
+msgid "Instance Blocked Login"
+msgstr "Le Cozy a été bloqué à cause de trop nombreux essais de connexion"
+
+msgid "Instance Blocked Payment"
+msgstr "Le Cozy nécessite un paiement"
+
+msgid "Instance Blocked Unknown"
+msgstr "Le Cozy a été bloqué pour une raison inconnue"
+
+msgid "Error No state parameter"
+msgstr "Le paramètre state est obligatoire"
+
+msgid "Error No client_id parameter"
+msgstr "Le paramètre client_id est obligatoire"
+
+msgid "Error No redirect_uri parameter"
+msgstr "Le paramètre redirect_uri est obligatoire"
+
+msgid "Error No scope parameter"
+msgstr "Le paramètre scope est obligatoire"
+
+msgid "Error No registered client"
+msgstr "Le client doit être enregistré"
+
+msgid "Error No sharing_id parameter"
+msgstr "Le paramètre sharing_id est obligatoire"
+
+msgid "Error Incorrect redirect_uri"
+msgstr "Le paramètre redirect_uri ne correspond pas à ceux enregistrés"
+
+msgid "Error Invalid redirect_uri"
+msgstr "Le paramètre redirect_uri est invalide"
+
+msgid "Error Invalid response type"
+msgstr "Le type de réponse est invalide"
+
+msgid "Error Invalid scope"
+msgstr "Le paramètre scope est invalide"
+
+msgid "Error Must be authenticated"
+msgstr "Vous devez être connecté"
+
+msgid "Error Invalid reset token"
+msgstr "Le lien de réinitialisation du mot de passe est tronqué ou a expiré"
+
+msgid "Error Reset already requested"
+msgstr ""
+"La réinitialisation du mot de passe a déjà été demandée. Pensez à vérifier "
+"votre boite d'emails, et notamment le dossier spam !"
+
+msgid "Error Invalid mail token"
+msgstr ""
+"Le lien permettant de confirmer votre adresse e-mail est tronqué ou a "
+"expiré."
+
+msgid "Error Invalid sharing"
+msgstr ""
+"Il semblerait que le partage n'ait pu être trouvé ou qu'il ait été révoqué"
+
+msgid "Error Sharing already accepted Title"
+msgstr "Vous avez déjà accepté ce partage"
+
+msgid "Error Sharing already accepted"
+msgstr "Vous pourrez retrouver ce partage sur votre Cozy."
+
+msgid "Error Sharing already accepted Button"
+msgstr "Aller sur mon Cozy : %s"
+
+msgid "Two Factor Activation"
+msgstr "L'authentification en deux étapes est activée"
+
+msgid "Confirmation User Content"
+msgstr ""
+"Votre adresse e-mail est maintenant confirmée. La double-authentification a "
+"bien été activée avec succès sur votre Cozy."
+
+msgid "Permissions Read only"
+msgstr ", en lecture seule "
+
+msgid "Permissions disk usage"
+msgstr "Quantité d'espace disque utilisé"
+
+msgid "Permissions worker konnectors"
+msgstr "Exécution d'un connecteur pour importer des données"
+
+msgid "Permissions worker log"
+msgstr "Stockage d'un message dans les journaux système"
+
+msgid "Permissions worker sendmail"
+msgstr "Envoi d'un email"
+
+msgid "Permissions io.cozy.accounts"
+msgstr "Comptes"
+
+msgid "Permissions io.cozy.apps"
+msgstr "Liste des applications installées"
+
+msgid "Permissions io.cozy.bank.accounts"
+msgstr "Comptes bancaires"
+
+msgid "Permissions io.cozy.bank.groups"
+msgstr "Groupes de comptes bancaires"
+
+msgid "Permissions io.cozy.bank.operations"
+msgstr "Transactions bancaires"
+
+msgid "Permissions io.cozy.bank.settings"
+msgstr "Paramètres de l'application"
+
+msgid "Permissions io.cozy.bills"
+msgstr "Factures"
+
+msgid "Permissions io.cozy.contacts"
+msgstr "Contacts"
+
+msgid "Permissions io.cozy.files"
+msgstr "Fichiers"
+
+msgid "Permissions io.cozy.identities"
+msgstr "Identités"
+
+msgid "Permissions io.cozy.konnectors"
+msgstr "Connecteurs pour importer des données"
+
+msgid "Permissions io.cozy.notifications"
+msgstr "Préférences de notifications de l'application"
+
+msgid "Permissions io.cozy.photos.albums"
+msgstr "Albums photos"
+
+msgid "Permissions io.cozy.settings"
+msgstr "Paramètres"
+
+msgid "Permissions io.cozy.jobs"
+msgstr "Tâches à exécuter"
+
+msgid "Permissions io.cozy.triggers"
+msgstr "Planification de tâches à exécuter dans le futur"
+
+msgid "Permissions io.cozy.permissions"
+msgstr "Délégation de permissions"
+
+msgid "Permissions io.cozy.oauth.clients"
+msgstr "Appareils connectés"
+
+msgid "Permissions fr.maif.maifuser.contrat"
+msgstr "Contrat (Maif)"
+
+msgid "Permissions fr.maif.maifuser.home"
+msgstr "Maison (Maif)"
+
+msgid "Permissions fr.maif.maifuser.foyer"
+msgstr "Foyer (Maif)"
+
+msgid "Permissions fr.maif.maifuser.paymentterms"
+msgstr "Paiement (Maif)"
+
+msgid "Permissions fr.maif.maifuser.sinistre"
+msgstr "Sinistre (Maif)"
+
+msgid "Permissions fr.maif.maifuser.societaire"
+msgstr "Sociétaire (Maif)"
+
+msgid "Permissions org.fing.mesinfos.insuranceclaim"
+msgstr "Déclarations d'assurance (Maif)"
+
+msgid "Permissions cc.cozycloud.autocategorization"
+msgstr "Fichier d'enrichissement du modèle de catégorisation"
+
+msgid "Permissions cc.cozycloud.sentry"
+msgstr "Journaux de l'application"
+
+msgid "Mail Greeting"
+msgstr "Bonjour"
+
+msgid "Mail Trouble Text"
+msgstr "Si le bouton ne s’affiche pas, copiez/collez l’adresse suivante :"
+
+msgid "Mail Signature"
+msgstr "Merci de votre confiance"
+
+msgid "Mail Cozy Team"
+msgstr "L'équipe de Cozy Cloud"
+
+msgid "Mail Reset Passphrase Subject"
+msgstr "Ré-initialisation du mot de passe"
+
+msgid "Mail Reset Passphrase Intro 1"
+msgstr "Bonjour %s,"
+
+msgid "Mail Reset Passphrase Intro 2"
+msgstr ""
+"Vous avez demandé à changer votre mot de passe (si ce n'est pas vous, "
+"contactez-nous en réponse à ce mail)."
+
+msgid "Mail Reset Passphrase Button instruction"
+msgstr "Cliquez sur ce bouton pour le changer en toute sécurité."
+
+msgid "Mail Reset Passphrase Button text"
+msgstr "Je réinitialise mon mot de passe"
+
+msgid "Mail Reset Passphrase Outro"
+msgstr ""
+"Vous disposez de 15 minutes pour choisir votre nouveau mot de passe, passé "
+"ce délai, vous devrez réitérer votre demande."
+
+msgid "Mail Archive Subject"
+msgstr "Téléchargement de vos données"
+
+msgid "Mail Archive Intro 1"
+msgstr "Bonjour %s,"
+
+msgid "Mail Archive Intro 2"
+msgstr ""
+"Vous avez demandé à recevoir une copie de la totalité des données que nous "
+"détenons sur vous."
+
+msgid "Mail Archive Button instruction"
+msgstr "Vous pouvez la télécharger en cliquant sur ce lien."
+
+msgid "Mail Archive Button text"
+msgstr "Télécharger vos données"
+
+msgid "Mail Two Factor Subject"
+msgstr "Vérifier votre connexion à votre %s"
+
+msgid "Mail Two Factor Intro"
+msgstr ""
+"L'authentification en deux étapes est activée sur votre Cozy. Voici votre "
+"code d'activation de la double authentification :"
+
+msgid "Mail Two Factor Outro"
+msgstr "Besoin d'aide ? Ecrivez à l'adresse contact@cozycloud.cc"
+
+msgid "Mail Two Factor Mail Confirmation Subject"
+msgstr "Vous souhaitez activer la validation en deux étapes sur votre %s"
+
+msgid "Mail Two Factor Mail Confirmation Intro"
+msgstr ""
+"Voici le code à utiliser pour activer l'authentification en deux étapes :"
+
+msgid "Mail Two Factor Mail Confirmation Outro"
+msgstr ""
+"Si vous n'êtes pas à l'origine de cette modification, vous pouvez nous "
+"contacter à l'adresse contact@cozycloud.cc."
+
+msgid "Mail New Connection Subject"
+msgstr "Nous venons de détecter une connexion à votre %s"
+
+msgid "Mail New Connection Intro"
+msgstr ""
+"Nous venons de détecter une connexion à votre Cozy.\n"
+"Voici les détails de cette connexion :"
+
+msgid "Mail New Connection Place"
+msgstr "Lieu"
+
+msgid "Mail New Connection IP"
+msgstr "Adresse IP"
+
+msgid "Mail New Connection Browser"
+msgstr "Navigateur"
+
+msgid "Mail New Connection OS"
+msgstr "Système d'exploitation"
+
+msgid "Mail New Connection Change Passphrase instruction"
+msgstr ""
+"Vous confirmez que c'était bien vous? Super ! Nous voilà rassurés. Nous sommes désolés de vous avoir dérangé pour rien mais mieux vaut prévenir que guérir.\n"
+"Dans le cas contraire, modifiez dès maintenant votre mot de passe en cliquant sur ce bouton :"
+
+msgid "Mail New Connection Change Passphrase text"
+msgstr "Changer mon mot de passe"
+
+msgid "Mail New Connection Outro"
+msgstr ""
+"Pourquoi cet e-mail? La sécurité de votre Cozy est notre priorité et nous "
+"veillons à vous prévenir de la moindre connexion inhabituelle."
+
+msgid "Mail New Registration Subject"
+msgstr "Un nouvel appareil connecté à votre %s"
+
+msgid "Mail New Registration Intro"
+msgstr "Félicitations, vous avez connecté un nouvel appareil à votre Cozy."
+
+msgid "Mail New Registration Devices instruction"
+msgstr "Vous pouvez gérer vos différents appareils depuis votre Cozy :"
+
+msgid "Mail New Registration Devices text"
+msgstr "Gérer mes appareils"
+
+msgid "Mail New Registration Revoke instruction"
+msgstr ""
+"Si vous n'êtes pas à l'origine de cet ajout, vous pouvez révoquer cet "
+"appareil :"
+
+msgid "Mail New Registration Revoke text"
+msgstr "Révoquer cet appareil"
+
+msgid "Mail Sharing Request Subject"
+msgstr "Nouveau partage de %s"
+
+msgid "Mail Sharing Request Intro"
+msgstr "Bonjour %s,"
+
+msgid "Mail Sharing Request Description 1"
+msgstr "%s voudrait partager"
+
+msgid "Mail Sharing Request Description 2"
+msgstr "avec vous !"
+
+msgid "Mail Sharing Request Button text"
+msgstr "Accepter ce partage"
+
+msgid "Sharing Connect to Cozy"
+msgstr "Se connecter à votre Cozy"
+
+msgid "Sharing Empty name"
+msgstr "Quelqu'un"
+
+msgid "Sharing Empty description"
+msgstr "Surprise !"
+
+msgid "Sharing Discovery URL field"
+msgstr "URL"
+
+msgid "Sharing Discovery URL placeholder"
+msgstr "https://adressedevotrecozy.cozy"
+
+msgid "Sharing URL Discovery error"
+msgstr ""
+"L'adresse du Cozy que vous avez saisie est incorrecte, veuillez ré-essayer."
+
+msgid "Sharing Discovery Submit"
+msgstr "Envoyer"
+
+msgid "Sharing No Cozy"
+msgstr "Pas encore de Cozy ?"
+
+msgid "Sharing Discover Cozy URL"
+msgstr "https://cozy.io/fr/try-it/?from=sharing"
+
+msgid "Sharing Discover Cozy"
+msgstr "Découvrez Cozy maintenant !"
+
+msgid "Sharing Forgotten URL"
+msgstr "URL oubliée ? Pas de souci."
+
+msgid "Sharing Forgotten URL email"
+msgstr "Vérifiez votre boite e-mail en recherchant \"Cozy\"."
+
+msgid "Notifications Disk Quota Subject"
+msgstr "Vous avez atteint 90% de votre espace de stockage."
+
+msgid "Notifications Disk Quota Intro"
+msgstr "Vous avez deux choix pour gagner de l'espace de stockage."
+
+msgid "Notifications Disk Quota offers instruction"
+msgstr "Option 1 : Obtenez plus d’espace en souscrivant à une de nos offres"
+
+msgid "Notifications Disk Quota offers text"
+msgstr "Ajouter de l'espace"
+
+msgid "Notifications Disk Quota free instructions"
+msgstr ""
+"Option 2 : Libérer de l'espace\n"
+"Libérez de l'espace dans votre Cozy en supprimant des fichiers ou en vidant votre corbeille"
+
+msgid "Notifications Disk Quota free text"
+msgstr "Libérer de l'espace"
+
+msgid "Terms of services have been updated"
+msgstr ""
+"Dans le cadre du RGPD, Cozy Cloud met à jour ses Conditions Générales "
+"d'Utilisation qui ont pris effet le 25 Mai 2018"
+
+msgid "Compat Title"
+msgstr ""
+"Votre navigateur n'est plus compatible ou est dans une version trop "
+"ancienne."
+
+msgid "Compat Subtitle"
+msgstr ""
+"Assurez-vous de disposer de la version la plus récente ou télécharger l'une "
+"de ses options pour profiter pleinement de votre Cozy. Nous recommandons "
+"Firefox !"
+
+msgid "Compat Browser Chrome Link"
+msgstr "https://www.google.com/chrome/"
+
+msgid "Compat Browser Firefox Link"
+msgstr "https://www.mozilla.org/fr/firefox/new/"
+
+msgid "Compat Browser Edge Link"
+msgstr "https://www.microsoft.com/fr-fr/windows/microsoft-edge"
+
+msgid "Compat Tip 1"
+msgstr ""
+"Un navigateur à jour est comme un vaccin : votre Cozy sera encore plus "
+"sécurisé sur Internet avec les dernières mises à jour."
+
+msgid "Compat Tip 2"
+msgstr "Vous naviguerez plus vite et profiterez pleinement de votre Cozy."
+
+msgid "Compat Help"
+msgstr " Vous voulez en savoir plus ?"
+
+msgid "Compat Guide"
+msgstr "Consulter l'aide."
+
+msgid "Compat Guide Link"
+msgstr ""
+"https://support.cozy.io/article/273-cozy-nest-pas-compatible-avec-internet-"
+"explorer-11"
