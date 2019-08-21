@@ -180,9 +180,7 @@ The Cozy Stack is translated on a platform called
 you to learn how to make your first steps here. If you have any question, don't
 hesitate to ask us!
 
-The translations are imported from transifex with `tx pull -a` in the
-`assets/locales` directory, and packed in the go code with
-`scripts/build.sh assets`.
+The translations are kept synchronized with transifex via their github integration.
 
 ## Community
 

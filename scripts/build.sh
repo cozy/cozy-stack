@@ -132,7 +132,6 @@ do_prepare_ldflags() {
 }
 
 do_assets() {
-	tx --root "${WORK_DIR}" pull -a || echo "Do you have configured transifex?"
 	printf "executing go generate...\n"
 	go get github.com/cozy/cozy-stack/pkg/statik
 	pushd "${WORK_DIR}" > /dev/null
@@ -142,7 +141,6 @@ do_assets() {
 }
 
 do_debug_assets() {
-	tx --root "${WORK_DIR}" pull -a || echo "Do you have configured transifex?"
 	assets_dst="${WORK_DIR}/debug-assets"
 	rm -rf "${assets_dst}"
 	mkdir -p "${assets_dst}/css" "${assets_dst}/js"

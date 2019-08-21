@@ -51,9 +51,7 @@ by the maintainers of cozy-stack, so you should not have to worry about that
 ## Locales
 
 The locales are managed on transifex. The `.po` files are put in `assets/locales`.
-The source (english) is kept in the git repository, and is used to push the new
-translations to transifex. The other locales are pulled from transifex to the
-assets directory while building the go code.
+The master branch is synchronized with transifex via their github integration.
 
 ## Contexts
 
