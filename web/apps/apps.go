@@ -244,7 +244,7 @@ func deleteHandler(installerType consts.AppType) echo.HandlerFunc {
 				if err != nil {
 					return wrapAppsError(err)
 				}
-				deleteKonnectorWithAccounts(instance, slug, toDelete)
+				deleteKonnectorWithAccounts(instance, man, toDelete)
 				return jsonapi.Data(c, http.StatusAccepted, &apiApp{man}, nil)
 			}
 		}
@@ -302,7 +302,7 @@ func findAccountsToDelete(instance *instance.Instance, slug string) ([]deletionE
 	return toDelete, nil
 }
 
-func deleteKonnectorWithAccounts(instance *instance.Instance, slug string, toDelete []deletionEntry) {
+func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManifest, toDelete []deletionEntry) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -320,6 +320,7 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, slug string, toDel
 			}
 		}()
 
+		slug := man.Slug()
 		log := instance.Logger().WithField("nspace", "konnectors")
 		jobsSystem := job.System()
 		for _, entry := range toDelete {
@@ -330,17 +331,22 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, slug string, toDel
 				log.Errorf("Cannot delete account: %v", err)
 				return
 			}
-			j, err := account.PushAccountDeletedJob(jobsSystem, instance, acc.ID(), oldRev, slug)
-			if err != nil {
-				log.Errorf("Cannot push a job for account deletion: %v", err)
-				return
+			// If the konnector has a field "on_delete_account", we need to execute a job
+			// for this konnector to clean the account on the remote API, and
+			// wait for this job to be done before uninstalling the konnector.
+			if man.OnDeleteAccount != "" {
+				j, err := account.PushAccountDeletedJob(jobsSystem, instance, acc.ID(), oldRev, slug)
+				if err != nil {
+					log.Errorf("Cannot push a job for account deletion: %v", err)
+					return
+				}
+				err = j.WaitUntilDone(instance)
+				if err != nil {
+					log.Error(err)
+					return
+				}
 			}
-			err = j.WaitUntilDone(instance)
-			if err != nil {
-				log.Error(err)
-				return
-			}
-			err = jobsSystem.DeleteTrigger(instance, entry.trigger.ID())
+			err := jobsSystem.DeleteTrigger(instance, entry.trigger.ID())
 			if err != nil {
 				log.Errorf("Cannot delete the trigger: %v", err)
 			}
