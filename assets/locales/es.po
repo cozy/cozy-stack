@@ -495,7 +495,7 @@ msgid "Mail Archive Intro 2"
 msgstr "Usted pidió una copia de todos los datos que Cozy tiene sobre usted."
 
 msgid "Mail Archive Button instruction"
-msgstr "Usted puede descargar haciendo ckic en el sigiente enlace."
+msgstr "Usted puede descargar haciendo clic en el siguiente enlace."
 
 msgid "Mail Archive Button text"
 msgstr "Descargar sus datos de Cozy"
