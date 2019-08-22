@@ -10,7 +10,7 @@ _via_ our [job system](jobs.md) and the [konnector worker](workers.md).
 
 ## The manifest
 
-An exhaustive manifest specification is available in the [Cozy Apps Registry documentation](https://docs.cozy.io/en/cozy-apps-registry/README/#properties-meaning-reference)
+An exhaustive manifest specification is available in the [Cozy Apps Registry documentation](https://docs.cozy.io/en/cozy-apps-registry/#properties-meaning-reference)
 
 ### POST /konnectors/:slug
 

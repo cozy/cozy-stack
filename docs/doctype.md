@@ -19,7 +19,7 @@ synchronize the `io.cozy.accounts`.
 
 ## Add documentation about your doctype
 
-The doctypes are documented on https://docs.cozy.io/en/cozy-doctypes/docs/README/
+The doctypes are documented on https://docs.cozy.io/en/cozy-doctypes/docs/
 to help other developers to reuse the same doctypes. If you think that your
 doctype may be useful to others, you can make a pull request on the
 https://github.com/cozy/cozy-doctypes repository.

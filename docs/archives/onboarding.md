@@ -1,4 +1,4 @@
-[Table of contents](README.md#table-of-contents)
+[Table of contents](../README.md#table-of-contents)
 
 This document was written in november and december 2016.
 

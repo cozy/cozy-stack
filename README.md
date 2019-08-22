@@ -20,7 +20,7 @@ hardware where no one profiles you.
 
 It is the core server of the Cozy platform. It consists of a single process, *the Cozy stack*. 
 
-[Full Cozy-Stack documentation here](https://docs.cozy.io/en/cozy-stack/README/).
+[Full Cozy-Stack documentation here](https://docs.cozy.io/en/cozy-stack/).
 
 The Cozy-Stack is in charge of serving the Web applications users have installed from the application store.
 
