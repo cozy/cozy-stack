@@ -1,10 +1,10 @@
 # Translators:
-# hernando franco <hfrancod@lautaro.fr>, 2019
 # Bruno Michel, 2019
+# hernando franco <hfrancod@lautaro.fr>, 2019
 # 
 msgid ""
 msgstr ""
-"Last-Translator: Bruno Michel, 2019\n"
+"Last-Translator: hernando franco <hfrancod@lautaro.fr>, 2019\n"
 "Language-Team: Spanish (https://www.transifex.com/cozy/teams/39753/es/)\n"
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -396,7 +396,7 @@ msgid "Permissions io.cozy.files"
 msgstr "Archivos"
 
 msgid "Permissions io.cozy.identities"
-msgstr ""
+msgstr "Identidades"
 
 msgid "Permissions io.cozy.konnectors"
 msgstr "Conectores para importar datos"
@@ -467,7 +467,7 @@ msgid "Mail Reset Passphrase Subject"
 msgstr "Reiniciar su contraseña"
 
 msgid "Mail Reset Passphrase Intro 1"
-msgstr "Hola %s."
+msgstr "Hola %s,"
 
 msgid "Mail Reset Passphrase Intro 2"
 msgstr ""
@@ -498,7 +498,7 @@ msgid "Mail Archive Button instruction"
 msgstr "Usted puede descargar haciendo ckic en el sigiente enlace."
 
 msgid "Mail Archive Button text"
-msgstr "Descargar sus datos"
+msgstr "Descargar sus datos de Cozy"
 
 msgid "Mail Two Factor Subject"
 msgstr "Verificar su conexión a %s"
