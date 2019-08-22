@@ -21,6 +21,10 @@ import (
 
 // CreateSharingRequest sends information about the sharing to the recipient's cozy
 func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Credentials, u *url.URL) error {
+	if len(c.XorKey) == 0 {
+		return ErrInvalidSharing
+	}
+
 	rules := make([]Rule, 0, len(s.Rules))
 	for _, rule := range s.Rules {
 		if rule.Local {
@@ -152,6 +156,12 @@ func (s *Sharing) countFiles(inst *instance.Instance) int {
 func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, cozyURL string) error {
 	if !s.Owner {
 		return ErrInvalidSharing
+	}
+	if m.Status == MemberStatusReady {
+		return ErrAlreadyAccepted
+	}
+	if m.Status == MemberStatusOwner || m.Status == MemberStatusRevoked {
+		return ErrMemberNotFound
 	}
 
 	cozyURL = strings.TrimSpace(cozyURL)
