@@ -1,5 +1,5 @@
 ;(function(window) {
-  // Return given password srength as an object {percentage, label}
+  // Return given password strength as an object {percentage, label}
   function getStrength(password) {
     if (!password && password !== '') {
       throw new Error('password parameter is missing')
@@ -56,7 +56,53 @@
     return { percentage: strengthPercentage, label: strengthLabel }
   }
 
+  function fromUtf8ToBuffer(str) {
+    const strUtf8 = unescape(encodeURIComponent(str))
+    const arr = new Uint8Array(strUtf8.length)
+    for (let i = 0; i < strUtf8.length; i++) {
+      arr[i] = strUtf8.charCodeAt(i)
+    }
+    return arr.buffer
+  }
+
+  // Return a promise that resolves to the hash of the master password.
+  // TODO use cozy-auth.js from https://github.com/cozy/cozy-keys-lib/tree/init
+  // to support Edge
+  function hash(password, salt, iterations) {
+    const subtle = window.crypto.subtle
+    const passwordBuf = fromUtf8ToBuffer(password)
+    const saltBuf = fromUtf8ToBuffer(salt)
+    const first = {
+      name: 'PBKDF2',
+      salt: saltBuf,
+      iterations: iterations,
+      hash: { name: 'SHA-256' }
+    }
+    const second = {
+      name: 'PBKDF2',
+      salt: passwordBuf,
+      iterations: 1,
+      hash: { name: 'SHA-256' }
+    }
+    return subtle
+      .importKey('raw', passwordBuf, { name: 'PBKDF2' }, false, ['deriveBits'])
+      .then(material => subtle.deriveBits(first, material, 256))
+      .then(key =>
+        subtle.importKey('raw', key, { name: 'PBKDF2' }, false, ['deriveBits'])
+      )
+      .then(material => subtle.deriveBits(second, material, 256))
+      .then(hashed => {
+        let binary = ''
+        const bytes = new Uint8Array(hashed)
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i])
+        }
+        return window.btoa(binary)
+      })
+  }
+
   window.password = {
-    getStrength: getStrength
+    getStrength: getStrength,
+    hash: hash
   }
 })(window)
