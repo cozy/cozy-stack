@@ -87,7 +87,7 @@ Note: only `kdf: 0` is currently supported. It means PBKDF2 with SHA256.
 
 ### POST /settings/passphrase (form)
 
-The user can send its new hashed passphrase to finish the onboarding.
+The user can send its new hashed passphrase (base64 encoded) to finish the onboarding.
 
 #### Request
 

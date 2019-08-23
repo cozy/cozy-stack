@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -18,5 +19,9 @@ const hashedPassLen = 32
 // HashPassWithPBKDF2 will hash a password with the PBKDF2 algorithm and same
 // parameters as it's done in client side.
 func HashPassWithPBKDF2(password, salt []byte, iter int) []byte {
-	return pbkdf2.Key(password, salt, iter, hashedPassLen, sha256.New)
+	key := pbkdf2.Key(password, salt, iter, hashedPassLen, sha256.New)
+	hashed := pbkdf2.Key(key, password, 1, hashedPassLen, sha256.New)
+	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(hashed)))
+	base64.StdEncoding.Encode(encoded, hashed)
+	return encoded
 }

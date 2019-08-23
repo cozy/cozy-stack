@@ -1,4 +1,5 @@
 require 'awesome_print'
+require 'base64'
 require 'date'
 require 'digest'
 require 'faker'
