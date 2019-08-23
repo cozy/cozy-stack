@@ -823,11 +823,17 @@ as an example.
 
 ## Security considerations
 
-The password will be stored in a secure fashion, with a password hashing
-function. The hashing function and its parameter will be stored with the hash,
-in order to make it possible to change the algorithm and/or the parameters later
-if we had any suspicion that it became too weak. The initial algorithm is
-[scrypt](https://godoc.org/golang.org/x/crypto/scrypt).
+The master password, the password known by the user, is derived on the clients
+to give two keys. The first key is used to login on the stack, the second key
+is used to do client-side encryption. The derivation for the login password is
+currently done with the PBKDF2 algorithm (with SHA256), but we have anticipated
+the possibility of changing to another algorithm if desirable.
+
+The derived password is stored on the server in a secure fashion, with a
+password hashing function. The hashing function and its parameter are stored
+with the hash, in order to make it possible to change the algorithm and/or the
+parameters later if we had any suspicion that it became too weak. The initial
+algorithm is [scrypt](https://godoc.org/golang.org/x/crypto/scrypt).
 
 The access code is valid only once, and will expire after 5 minutes
 
