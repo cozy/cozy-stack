@@ -412,6 +412,14 @@ func (i *Instance) IsPasswordAuthenticationEnabled() bool {
 	return !disabled
 }
 
+// PassphraseSalt computes the salt for the client-side hashing of the master
+// password. The rule for computing the salt is to create a fake email address
+// "me@<domain>".
+func (i *Instance) PassphraseSalt() []byte {
+	domain := strings.Split(i.Domain, ":")[0] // Skip the optional port
+	return []byte("me@" + domain)
+}
+
 // DiskQuota returns the number of bytes allowed on the disk to the user.
 func (i *Instance) DiskQuota() int64 {
 	return i.BytesDiskQuota

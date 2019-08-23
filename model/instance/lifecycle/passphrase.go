@@ -4,7 +4,6 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -25,7 +24,7 @@ func registerPassphrase(inst *instance.Instance, pass, tok []byte, kdfIterations
 	}
 	if kdfIterations == 0 {
 		kdfIterations = crypto.DefaultPBKDF2Iterations
-		salt := []byte("me@" + strings.Split(inst.Domain, ":")[0]) // Skip the optional port
+		salt := inst.PassphraseSalt()
 		pass = crypto.HashPassWithPBKDF2(pass, salt, kdfIterations)
 	}
 	hash, err := crypto.GenerateFromPassphrase(pass)
@@ -134,7 +133,7 @@ func PassphraseRenew(inst *instance.Instance, pass, tok []byte, kdfIterations in
 	}
 	if kdfIterations == 0 {
 		kdfIterations = crypto.DefaultPBKDF2Iterations
-		salt := []byte("me@" + strings.Split(inst.Domain, ":")[0]) // Skip the optional port
+		salt := inst.PassphraseSalt()
 		pass = crypto.HashPassWithPBKDF2(pass, salt, kdfIterations)
 	}
 	hash, err := crypto.GenerateFromPassphrase(pass)
@@ -182,7 +181,7 @@ func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte) error {
 	}
 
 	kdfIterations := crypto.DefaultPBKDF2Iterations
-	salt := []byte("me@" + strings.Split(inst.Domain, ":")[0]) // Skip the optional port
+	salt := inst.PassphraseSalt()
 	pass := crypto.HashPassWithPBKDF2(newPassword, salt, kdfIterations)
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
