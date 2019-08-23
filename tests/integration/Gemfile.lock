@@ -27,6 +27,7 @@ GEM
     mimemagic (0.3.2)
     minitest (5.11.3)
     netrc (0.11.0)
+    pbkdf2-ruby (0.2.1)
     pry (0.11.3)
       coderay (~> 1.1.0)
       method_source (~> 0.9.0)
@@ -56,10 +57,11 @@ DEPENDENCIES
   faye-websocket
   mimemagic
   minitest
+  pbkdf2-ruby
   pry
   pry-rescue
   pry-stack_explorer
   rest-client
 
 BUNDLED WITH
-   1.15.1
+   1.16.4

@@ -5,6 +5,7 @@ require 'faker'
 require 'fileutils'
 require 'mimemagic'
 require 'json'
+require 'pbkdf2'
 require 'pry'
 require 'rest-client'
 
