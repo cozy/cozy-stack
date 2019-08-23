@@ -41,9 +41,53 @@ Content-type: application/vnd.api+json
 
 ## Passphrase
 
+The master password, known by the cozy owner, is used for two things: to allow
+the user to login and to do encryption on the client side. To do so, two keys
+are derivated from the master password, one for each usage. In this section, we
+are talking about the derivated key used for login on a cozy instance.
+
+### GET /settings/passphrase
+
+The server will send the parameters for hashing the master password on the
+client side to derive a key used for login.
+
+Note: a permission on `GET io.cozy.settings` is required for this endpoint.
+
+#### Request
+
+```http
+GET /settings/passphrase HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+Authorization: Bearer ...
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-type: application/vnd.api+json
+```
+
+```json
+{
+    "data": {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.passphrase",
+        "attributes": {
+            "salt": "me@alice.example.com",
+            "kdf": 0,
+            "iterations": 10000
+        }
+    }
+}
+```
+
+Note: only `kdf: 0` is currently supported. It means PBKDF2 with SHA256.
+
 ### POST /settings/passphrase (form)
 
-The user can send its new passphrase to finish the onboarding.
+The user can send its new hashed passphrase to finish the onboarding.
 
 #### Request
 
@@ -52,7 +96,7 @@ POST /settings/passphrase HTTP/1.1
 Host: alice.example.com
 Content-Type: application/x-www-form-urlencoded
 
-passphrase=ThisIsTheNewShinnyPassphraseChoosedByAlice&register_token=37cddf40d7724988860fa0e03efd30fe
+passphrase=4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791&iterations=10000&register_token=37cddf40d7724988860fa0e03efd30fe
 ```
 
 #### Response
@@ -79,7 +123,8 @@ Content-Type: application/json
 ```json
 {
     "register_token": "37cddf40d7724988860fa0e03efd30fe",
-    "passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice"
+    "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
+    "iterations": 10000
 }
 ```
 
@@ -108,8 +153,9 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 
 ```json
 {
-    "current_passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice",
-    "new_passphrase": "AliceHasChangedHerPassphraseAndThisIsTheNewPassphrase"
+    "current_passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
+    "new_passphrase": "2e7e1e04300356adc8fabf5d304b58c564399746cc7a21464fd6593edd925720",
+    "iterations": 10000
 }
 ```
 
@@ -136,7 +182,7 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 
 ```json
 {
-    "current_passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice"
+    "current_passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791"
 }
 ```
 
@@ -169,7 +215,8 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 
 ```json
 {
-    "new_passphrase": "AliceHasChangedHerPassphraseAndThisIsTheNewPassphrase",
+    "new_passphrase": "2e7e1e04300356adc8fabf5d304b58c564399746cc7a21464fd6593edd925720",
+    "iterations": 10000,
     "two_factor_token": "YxOSUjxd0SNmuwEEDRHXfw==",
     "two_factor_passcode": "4947178"
 }

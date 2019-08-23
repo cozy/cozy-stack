@@ -41,6 +41,9 @@ const (
 	DiskUsageID = "io.cozy.settings.disk-usage"
 	// InstanceSettingsID is the id of settings document for the instance
 	InstanceSettingsID = "io.cozy.settings.instance"
+	// PassphraseParametersID is the id of settings document for the passphrase
+	// parameters used to hash the master password on client side.
+	PassphraseParametersID = "io.cozy.settings.passphrase"
 )
 
 // MaxItemsPerPageForMango is the maximal value accepted for the limit

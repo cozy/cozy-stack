@@ -13,11 +13,43 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
+
+type apiPassphraseParameters struct {
+	Salt       string `json:"string"`
+	Kdf        int    `json:"kdf"`
+	Iterations int    `json:"iterations"`
+}
+
+func (p *apiPassphraseParameters) ID() string                             { return consts.PassphraseParametersID }
+func (p *apiPassphraseParameters) Rev() string                            { return "" }
+func (p *apiPassphraseParameters) DocType() string                        { return consts.Settings }
+func (p *apiPassphraseParameters) Clone() couchdb.Doc                     { return p }
+func (p *apiPassphraseParameters) SetID(_ string)                         {}
+func (p *apiPassphraseParameters) SetRev(_ string)                        {}
+func (p *apiPassphraseParameters) Relationships() jsonapi.RelationshipMap { return nil }
+func (p *apiPassphraseParameters) Included() []jsonapi.Object             { return nil }
+func (p *apiPassphraseParameters) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/settings/passphrase"}
+}
+
+func getPassphraseParameters(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Settings); err != nil {
+		return err
+	}
+	inst := middlewares.GetInstance(c)
+	params := apiPassphraseParameters{
+		Salt:       inst.PassphraseSalt(),
+		Kdf:        inst.Kdf,
+		Iterations: inst.KdfIterations,
+	}
+	return jsonapi.Data(c, http.StatusOK, &params, nil)
+}
 
 func registerPassphrase(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -73,7 +105,7 @@ func updatePassphrase(c echo.Context) error {
 	args := struct {
 		Current           string `json:"current_passphrase"`
 		Passphrase        string `json:"new_passphrase"`
-		Iterations        int    `json:"iterations" form:"iterations"`
+		Iterations        int    `json:"iterations"`
 		TwoFactorPasscode string `json:"two_factor_passcode"`
 		TwoFactorToken    []byte `json:"two_factor_token"`
 		Force             bool   `json:"force,omitempty"`

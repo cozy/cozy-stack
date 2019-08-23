@@ -79,6 +79,7 @@ func warnings(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("/disk-usage", diskUsage)
 
+	router.GET("/passphrase", getPassphraseParameters)
 	router.POST("/passphrase", registerPassphrase)
 	router.PUT("/passphrase", updatePassphrase)
 

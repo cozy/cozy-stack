@@ -58,6 +58,7 @@ type InstanceOptions struct {
 	DiskQuota          int64
 	Apps               []string
 	Passphrase         string
+	KdfIterations      int64
 	Debug              *bool
 	Blocked            *bool
 	OnboardingFinished *bool
@@ -130,19 +131,20 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 		return nil, fmt.Errorf("Invalid domain: %s", opts.Domain)
 	}
 	q := url.Values{
-		"Domain":      {opts.Domain},
-		"Locale":      {opts.Locale},
-		"UUID":        {opts.UUID},
-		"TOSSigned":   {opts.TOSSigned},
-		"Timezone":    {opts.Timezone},
-		"ContextName": {opts.ContextName},
-		"Email":       {opts.Email},
-		"PublicName":  {opts.PublicName},
-		"Settings":    {opts.Settings},
-		"SwiftLayout": {strconv.Itoa(opts.SwiftLayout)},
-		"DiskQuota":   {strconv.FormatInt(opts.DiskQuota, 10)},
-		"Apps":        {strings.Join(opts.Apps, ",")},
-		"Passphrase":  {opts.Passphrase},
+		"Domain":        {opts.Domain},
+		"Locale":        {opts.Locale},
+		"UUID":          {opts.UUID},
+		"TOSSigned":     {opts.TOSSigned},
+		"Timezone":      {opts.Timezone},
+		"ContextName":   {opts.ContextName},
+		"Email":         {opts.Email},
+		"PublicName":    {opts.PublicName},
+		"Settings":      {opts.Settings},
+		"SwiftLayout":   {strconv.Itoa(opts.SwiftLayout)},
+		"DiskQuota":     {strconv.FormatInt(opts.DiskQuota, 10)},
+		"Apps":          {strings.Join(opts.Apps, ",")},
+		"Passphrase":    {opts.Passphrase},
+		"KdfIterations": {strconv.Itoa(opts.KdfIterations)},
 	}
 	if opts.DomainAliases != nil {
 		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))
