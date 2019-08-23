@@ -28,6 +28,7 @@ func registerPassphrase(c echo.Context) error {
 	args := struct {
 		Register   string `json:"register_token" form:"register_token"`
 		Passphrase string `json:"passphrase" form:"passphrase"`
+		Iterations int    `json:"iterations" form:"iterations"`
 	}{}
 	if err := c.Bind(&args); err != nil {
 		return err
@@ -39,7 +40,7 @@ func registerPassphrase(c echo.Context) error {
 	}
 
 	passphrase := []byte(args.Passphrase)
-	if err = lifecycle.RegisterPassphrase(inst, passphrase, registerToken); err != nil {
+	if err = lifecycle.RegisterPassphrase(inst, passphrase, registerToken, args.Iterations); err != nil {
 		return jsonapi.BadRequest(err)
 	}
 
@@ -72,6 +73,7 @@ func updatePassphrase(c echo.Context) error {
 	args := struct {
 		Current           string `json:"current_passphrase"`
 		Passphrase        string `json:"new_passphrase"`
+		Iterations        int    `json:"iterations" form:"iterations"`
 		TwoFactorPasscode string `json:"two_factor_passcode"`
 		TwoFactorToken    []byte `json:"two_factor_token"`
 		Force             bool   `json:"force,omitempty"`
@@ -119,7 +121,7 @@ func updatePassphrase(c echo.Context) error {
 	}
 
 	err = lifecycle.UpdatePassphrase(inst, newPassphrase, currentPassphrase,
-		args.TwoFactorPasscode, args.TwoFactorToken)
+		args.TwoFactorPasscode, args.TwoFactorToken, args.Iterations)
 	if err != nil {
 		return jsonapi.BadRequest(err)
 	}

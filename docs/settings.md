@@ -43,7 +43,7 @@ Content-type: application/vnd.api+json
 
 ### POST /settings/passphrase (form)
 
-The suer can send its new passphrase to finish the onboarding.
+The user can send its new passphrase to finish the onboarding.
 
 #### Request
 

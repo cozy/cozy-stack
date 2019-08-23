@@ -724,6 +724,7 @@ func writeInstanceDoc(in *instance.Instance, name string,
 	now time.Time, tw *tar.Writer) (int64, error) {
 	clone := in.Clone().(*instance.Instance)
 	clone.PassphraseHash = nil
+	clone.PassphraseKdfIterations = 0
 	clone.PassphraseResetToken = nil
 	clone.PassphraseResetTime = nil
 	clone.RegisterToken = nil

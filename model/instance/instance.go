@@ -31,6 +31,10 @@ import (
 // overrided by configuring it in the instance context parameters
 const DefaultTemplateTitle = "Cozy"
 
+// PBKDF2_SHA256 is the value of kdf for using PBKDF2 with SHA256 to hash the
+// password on client side.
+const PBKDF2_SHA256 = 0
+
 // An Instance has the informations relatives to the logical cozy instance,
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
@@ -62,11 +66,16 @@ type Instance struct {
 	// See model/vfs/vfsswift for more details.
 	SwiftLayout int `json:"swift_cluster,omitempty"`
 
-	// PassphraseHash is a hash of the user's passphrase. For more informations,
-	// see crypto.GenerateFromPassphrase.
-	PassphraseHash       []byte     `json:"passphrase_hash,omitempty"`
-	PassphraseResetToken []byte     `json:"passphrase_reset_token,omitempty"`
-	PassphraseResetTime  *time.Time `json:"passphrase_reset_time,omitempty"`
+	// PassphraseHash is a hash of a hash of the user's passphrase: the
+	// passphrase is first hashed in client-side to avoid sending it to the
+	// server as it also used for encryption on client-side, and after that,
+	// hashed on the server to ensure robustness. For more informations on the
+	// server-side hashing, see crypto.GenerateFromPassphrase.
+	PassphraseHash          []byte     `json:"passphrase_hash,omitempty"`
+	PassphraseKdf           int        `json:"passphrase_kdf,omitempty"`
+	PassphraseKdfIterations int        `json:"passphrase_kdf_iterations,omitempty"`
+	PassphraseResetToken    []byte     `json:"passphrase_reset_token,omitempty"`
+	PassphraseResetTime     *time.Time `json:"passphrase_reset_time,omitempty"`
 
 	// Secure assets
 

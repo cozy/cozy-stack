@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/hex"
 	"net/http"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -133,11 +134,12 @@ func passphraseRenew(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 	pass := []byte(c.FormValue("passphrase"))
+	iterations, _ := strconv.Atoi(c.FormValue("iterations"))
 	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
 	if err != nil {
 		return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 	}
-	if err := lifecycle.PassphraseRenew(inst, pass, token); err != nil {
+	if err := lifecycle.PassphraseRenew(inst, pass, token, iterations); err != nil {
 		if err == instance.ErrMissingToken {
 			return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 		}

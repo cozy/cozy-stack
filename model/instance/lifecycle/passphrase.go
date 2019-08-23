@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -12,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 )
 
-func registerPassphrase(inst *instance.Instance, pass, tok []byte) error {
+func registerPassphrase(inst *instance.Instance, pass, tok []byte, kdfIterations int) error {
 	if len(pass) == 0 {
 		return instance.ErrMissingPassphrase
 	}
@@ -22,18 +23,23 @@ func registerPassphrase(inst *instance.Instance, pass, tok []byte) error {
 	if subtle.ConstantTimeCompare(inst.RegisterToken, tok) != 1 {
 		return instance.ErrInvalidToken
 	}
+	if kdfIterations == 0 {
+		kdfIterations = crypto.DefaultPBKDF2Iterations
+		salt := []byte("me@" + strings.Split(inst.Domain, ":")[0]) // Skip the optional port
+		pass = crypto.HashPassWithPBKDF2(pass, salt, kdfIterations)
+	}
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
 		return err
 	}
 	inst.RegisterToken = nil
-	setPassphraseAndSecret(inst, hash)
+	setPassphraseKdfAndSecret(inst, hash, kdfIterations)
 	return nil
 }
 
 // RegisterPassphrase replace the instance registerToken by a passphrase
-func RegisterPassphrase(inst *instance.Instance, pass, tok []byte) error {
-	if err := registerPassphrase(inst, pass, tok); err != nil {
+func RegisterPassphrase(inst *instance.Instance, pass, tok []byte, kdfIterations int) error {
+	if err := registerPassphrase(inst, pass, tok, kdfIterations); err != nil {
 		return err
 	}
 	return update(inst)
@@ -121,10 +127,15 @@ func CheckPassphraseRenewToken(inst *instance.Instance, tok []byte) error {
 
 // PassphraseRenew changes the passphrase to the specified one if the given
 // token matches the `PassphraseResetToken` field.
-func PassphraseRenew(inst *instance.Instance, pass, tok []byte) error {
+func PassphraseRenew(inst *instance.Instance, pass, tok []byte, kdfIterations int) error {
 	err := CheckPassphraseRenewToken(inst, tok)
 	if err != nil {
 		return err
+	}
+	if kdfIterations == 0 {
+		kdfIterations = crypto.DefaultPBKDF2Iterations
+		salt := []byte("me@" + strings.Split(inst.Domain, ":")[0]) // Skip the optional port
+		pass = crypto.HashPassWithPBKDF2(pass, salt, kdfIterations)
 	}
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
@@ -132,12 +143,12 @@ func PassphraseRenew(inst *instance.Instance, pass, tok []byte) error {
 	}
 	inst.PassphraseResetToken = nil
 	inst.PassphraseResetTime = nil
-	setPassphraseAndSecret(inst, hash)
+	setPassphraseKdfAndSecret(inst, hash, kdfIterations)
 	return update(inst)
 }
 
 // UpdatePassphrase replace the passphrase
-func UpdatePassphrase(inst *instance.Instance, pass, current []byte, twoFactorPasscode string, twoFactorToken []byte) error {
+func UpdatePassphrase(inst *instance.Instance, pass, current []byte, twoFactorPasscode string, twoFactorToken []byte, kdfIterations int) error {
 	if len(pass) == 0 {
 		return instance.ErrMissingPassphrase
 	}
@@ -160,7 +171,7 @@ func UpdatePassphrase(inst *instance.Instance, pass, current []byte, twoFactorPa
 	if err != nil {
 		return err
 	}
-	setPassphraseAndSecret(inst, hash)
+	setPassphraseKdfAndSecret(inst, hash, kdfIterations)
 	return update(inst)
 }
 
@@ -170,16 +181,21 @@ func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte) error {
 		return instance.ErrMissingPassphrase
 	}
 
-	hash, err := crypto.GenerateFromPassphrase(newPassword)
+	kdfIterations := crypto.DefaultPBKDF2Iterations
+	salt := []byte("me@" + strings.Split(inst.Domain, ":")[0]) // Skip the optional port
+	pass := crypto.HashPassWithPBKDF2(newPassword, salt, kdfIterations)
+	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
 		return err
 	}
-	setPassphraseAndSecret(inst, hash)
+	setPassphraseKdfAndSecret(inst, hash, kdfIterations)
 	return update(inst)
 }
 
-func setPassphraseAndSecret(inst *instance.Instance, hash []byte) {
+func setPassphraseKdfAndSecret(inst *instance.Instance, hash []byte, kdfIterations int) {
 	inst.PassphraseHash = hash
+	inst.PassphraseKdf = instance.PBKDF2_SHA256
+	inst.PassphraseKdfIterations = kdfIterations
 	inst.SessionSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
 }
 

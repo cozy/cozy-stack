@@ -66,8 +66,7 @@ func createHandler(c echo.Context) error {
 		opts.DomainAliases = strings.Split(domainAliases, ",")
 	}
 	if autoUpdate := c.QueryParam("AutoUpdate"); autoUpdate != "" {
-		var b bool
-		b, err = strconv.ParseBool(autoUpdate)
+		b, err := strconv.ParseBool(autoUpdate)
 		if err != nil {
 			return wrapError(err)
 		}
@@ -84,6 +83,17 @@ func createHandler(c echo.Context) error {
 		if err != nil {
 			return wrapError(err)
 		}
+	}
+	if iterations := c.QueryParam("KdfIterations"); iterations != "" {
+		iter, err := strconv.ParseInt(iterations, 10, 64)
+		if err != nil {
+			return wrapError(err)
+		}
+		if iter < 5000 && iter != 0 {
+			err := errors.New("The KdfIterations number is too low")
+			return jsonapi.InvalidParameter("KdfIterations", err)
+		}
+		opts.KdfIterations = int(iter)
 	}
 	in, err := lifecycle.Create(opts)
 	if err != nil {
