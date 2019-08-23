@@ -1512,7 +1512,7 @@ func TestPassphraseRenew(t *testing.T) {
 	defer func() {
 		_ = lifecycle.Destroy(d)
 	}()
-	err = lifecycle.RegisterPassphrase(in1, []byte("MyPass"), in1.RegisterToken)
+	err = lifecycle.RegisterPassphrase(in1, []byte("MyPass"), in1.RegisterToken, 5000)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -1669,7 +1669,7 @@ func TestPassphraseOnboarding(t *testing.T) {
 
 	// Adding a passphrase and check if we are redirected to home
 	pass := []byte("passphrase")
-	err = lifecycle.RegisterPassphrase(inst, pass, inst.RegisterToken)
+	err = lifecycle.RegisterPassphrase(inst, pass, inst.RegisterToken, 5000)
 	assert.NoError(t, err)
 
 	inst.OnboardingFinished = true
@@ -1760,8 +1760,9 @@ func TestMain(m *testing.M) {
 	setup := testutils.NewSetup(m, "auth_test")
 
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
-		Domain:     domain,
-		Passphrase: "MyPassphrase",
+		Domain:        domain,
+		Passphrase:    "MyPassphrase",
+		KdfIterations: 5000,
 	})
 
 	jar = setup.GetCookieJar()

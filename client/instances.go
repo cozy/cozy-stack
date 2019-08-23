@@ -58,7 +58,7 @@ type InstanceOptions struct {
 	DiskQuota          int64
 	Apps               []string
 	Passphrase         string
-	KdfIterations      int64
+	KdfIterations      int
 	Debug              *bool
 	Blocked            *bool
 	OnboardingFinished *bool

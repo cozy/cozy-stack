@@ -561,6 +561,7 @@ func TestMain(m *testing.M) {
 	pass := "aephe2Ei"
 	hash, _ := crypto.GenerateFromPassphrase([]byte(pass))
 	testInstance.PassphraseHash = hash
+	testInstance.PassphraseKdfIterations = 5000
 	testInstance.RegisterToken = nil
 	testInstance.OnboardingFinished = true
 	_ = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)

@@ -181,19 +181,19 @@ func TestRegisterPassphrase(t *testing.T) {
 	empty := []byte("")
 	badtoken := []byte("not-token")
 
-	err = lifecycle.RegisterPassphrase(i, pass, empty)
+	err = lifecycle.RegisterPassphrase(i, pass, empty, 5000)
 	assert.Error(t, err, "RegisterPassphrase requires token")
 
-	err = lifecycle.RegisterPassphrase(i, pass, badtoken)
+	err = lifecycle.RegisterPassphrase(i, pass, badtoken, 5000)
 	assert.Error(t, err, "RegisterPassphrase requires proper token")
 
-	err = lifecycle.RegisterPassphrase(i, pass, rtoken)
+	err = lifecycle.RegisterPassphrase(i, pass, rtoken, 5000)
 	assert.NoError(t, err)
 
 	assert.Empty(t, i.RegisterToken, "RegisterToken has not been removed")
 	assert.NotEmpty(t, i.PassphraseHash, "PassphraseHash has not been saved")
 
-	err = lifecycle.RegisterPassphrase(i, pass, rtoken)
+	err = lifecycle.RegisterPassphrase(i, pass, rtoken, 5000)
 	assert.Error(t, err, "RegisterPassphrase works only once")
 }
 
@@ -217,18 +217,20 @@ func TestUpdatePassphrase(t *testing.T) {
 	badPass := []byte("not-passphrase")
 	empty := []byte("")
 
-	err = lifecycle.UpdatePassphrase(i, newPass, empty, "", nil)
+	err = lifecycle.UpdatePassphrase(i, newPass, empty, "", nil, 5000)
 	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
 
-	err = lifecycle.UpdatePassphrase(i, newPass, badPass, "", nil)
+	err = lifecycle.UpdatePassphrase(i, newPass, badPass, "", nil, 5000)
 	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
 
-	err = lifecycle.UpdatePassphrase(i, newPass, currentPass, "", nil)
+	err = lifecycle.UpdatePassphrase(i, newPass, currentPass, "", nil, 5000)
 	assert.NoError(t, err)
 
 	assert.NotEmpty(t, i.PassphraseHash, "PassphraseHash has not been saved")
 	assert.NotEqual(t, oldHash, i.PassphraseHash)
 	assert.NotEqual(t, oldSecret, i.SessionSecret)
+	assert.Equal(t, 5000, i.PassphraseKdfIterations)
+	assert.Equal(t, 0, i.PassphraseKdf)
 }
 
 func TestRequestPassphraseReset(t *testing.T) {
@@ -248,7 +250,7 @@ func TestRequestPassphraseReset(t *testing.T) {
 	if !assert.Nil(t, in.PassphraseResetToken) {
 		return
 	}
-	err = lifecycle.RegisterPassphrase(in, []byte("MyPassphrase"), in.RegisterToken)
+	err = lifecycle.RegisterPassphrase(in, []byte("MyPassphrase"), in.RegisterToken, 5000)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -276,12 +278,12 @@ func TestPassphraseRenew(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	err = lifecycle.RegisterPassphrase(in, []byte("MyPassphrase"), in.RegisterToken)
+	err = lifecycle.RegisterPassphrase(in, []byte("MyPassphrase"), in.RegisterToken, 5000)
 	if !assert.NoError(t, err) {
 		return
 	}
 	passHash := in.PassphraseHash
-	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), nil)
+	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), nil, 5000)
 	if !assert.Error(t, err) {
 		return
 	}
@@ -289,11 +291,11 @@ func TestPassphraseRenew(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), []byte("token"))
+	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), []byte("token"), 5000)
 	if !assert.Error(t, err) {
 		return
 	}
-	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), in.PassphraseResetToken)
+	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), in.PassphraseResetToken, 5000)
 	if !assert.NoError(t, err) {
 		return
 	}

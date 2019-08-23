@@ -4,6 +4,7 @@ package settings
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -21,7 +22,7 @@ import (
 )
 
 type apiPassphraseParameters struct {
-	Salt       string `json:"string"`
+	Salt       string `json:"salt"`
 	Kdf        int    `json:"kdf"`
 	Iterations int    `json:"iterations"`
 }
@@ -44,9 +45,9 @@ func getPassphraseParameters(c echo.Context) error {
 	}
 	inst := middlewares.GetInstance(c)
 	params := apiPassphraseParameters{
-		Salt:       inst.PassphraseSalt(),
-		Kdf:        inst.Kdf,
-		Iterations: inst.KdfIterations,
+		Salt:       string(inst.PassphraseSalt()),
+		Kdf:        inst.PassphraseKdf,
+		Iterations: inst.PassphraseKdfIterations,
 	}
 	return jsonapi.Data(c, http.StatusOK, &params, nil)
 }
@@ -74,6 +75,11 @@ func registerPassphrase(c echo.Context) error {
 	passphrase := []byte(args.Passphrase)
 	if err = lifecycle.RegisterPassphrase(inst, passphrase, registerToken, args.Iterations); err != nil {
 		return jsonapi.BadRequest(err)
+	}
+
+	if args.Iterations < 5000 && args.Iterations != 0 {
+		err := errors.New("The KdfIterations number is too low")
+		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
 
 	longRunSession := true
@@ -150,6 +156,11 @@ func updatePassphrase(c echo.Context) error {
 			})
 		}
 		return instance.ErrInvalidPassphrase
+	}
+
+	if args.Iterations < 5000 && args.Iterations != 0 {
+		err := errors.New("The KdfIterations number is too low")
+		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
 
 	err = lifecycle.UpdatePassphrase(inst, newPassphrase, currentPassphrase,

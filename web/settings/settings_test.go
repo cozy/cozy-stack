@@ -168,6 +168,7 @@ func TestDiskUsage(t *testing.T) {
 func TestRegisterPassphraseWrongToken(t *testing.T) {
 	args, _ := json.Marshal(&echo.Map{
 		"passphrase":     "MyFirstPassphrase",
+		"iterations":     5000,
 		"register_token": "BADBEEF",
 	})
 	res1, err := http.Post(ts.URL+"/settings/passphrase", "application/json", bytes.NewReader(args))
@@ -177,6 +178,7 @@ func TestRegisterPassphraseWrongToken(t *testing.T) {
 
 	args, _ = json.Marshal(&echo.Map{
 		"passphrase":     "MyFirstPassphrase",
+		"iterations":     5000,
 		"register_token": "XYZ",
 	})
 	res2, err := http.Post(ts.URL+"/settings/passphrase", "application/json", bytes.NewReader(args))
@@ -188,6 +190,7 @@ func TestRegisterPassphraseWrongToken(t *testing.T) {
 func TestRegisterPassphraseCorrectToken(t *testing.T) {
 	args, _ := json.Marshal(&echo.Map{
 		"passphrase":     "MyFirstPassphrase",
+		"iterations":     5000,
 		"register_token": hex.EncodeToString(testInstance.RegisterToken),
 	})
 	res, err := http.Post(ts.URL+"/settings/passphrase", "application/json", bytes.NewReader(args))
@@ -204,6 +207,7 @@ func TestUpdatePassphraseWithWrongPassphrase(t *testing.T) {
 	args, _ := json.Marshal(&echo.Map{
 		"new_passphrase":     "MyPassphrase",
 		"current_passphrase": "BADBEEF",
+		"iterations":         5000,
 	})
 	req, _ := http.NewRequest("PUT", ts.URL+"/settings/passphrase", bytes.NewReader(args))
 	req.Header.Add("Content-Type", "application/json")
@@ -218,6 +222,7 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 	args, _ := json.Marshal(&echo.Map{
 		"new_passphrase":     "MyPassphrase",
 		"current_passphrase": "MyFirstPassphrase",
+		"iterations":         5000,
 	})
 	req, _ := http.NewRequest("PUT", ts.URL+"/settings/passphrase", bytes.NewReader(args))
 	req.Header.Add("Content-Type", "application/json")
@@ -230,6 +235,28 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 	assert.Len(t, cookies, 1)
 	assert.Equal(t, cookies[0].Name, session.SessionCookieName)
 	assert.NotEmpty(t, cookies[0].Value)
+}
+
+func TestGetPassphraseParameters(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/settings/passphrase", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 200, res.StatusCode)
+
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data, ok := result["data"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "io.cozy.settings", data["type"])
+	assert.Equal(t, "io.cozy.settings.passphrase", data["id"])
+	attrs, ok := data["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "me@"+testInstance.Domain, attrs["salt"])
+	assert.Equal(t, float64(0), attrs["kdf"])
+	assert.Equal(t, float64(5000), attrs["iterations"])
 }
 
 func TestGetInstance(t *testing.T) {
