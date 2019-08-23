@@ -129,6 +129,16 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 
 // FromCookie retrieves the session from a echo.Context cookies.
 func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
+	// If KdfIterations is zero, it means that the instance still has a
+	// passphrase that has not hashed on the client side. In that case, we
+	// ignore the session to force the user to login again and migrate its
+	// passphrase to be hashed on the client. It is simpler/safer and, in
+	// particular, it avoids that he/she can try to changed its pass in
+	// settings (which would fail).
+	if i.PassphraseKdfIterations == 0 && i.IsPasswordAuthenticationEnabled() {
+		return nil, ErrNoCookie
+	}
+
 	cookie, err := c.Cookie(SessionCookieName)
 	if err != nil || cookie.Value == "" {
 		return nil, ErrNoCookie
@@ -145,6 +155,16 @@ func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
 
 // FromAppCookie retrives the session from an application submain cookie.
 func FromAppCookie(c echo.Context, i *instance.Instance, slug string) (*Session, error) {
+	// If KdfIterations is zero, it means that the instance still has a
+	// passphrase that has not hashed on the client side. In that case, we
+	// ignore the session to force the user to login again and migrate its
+	// passphrase to be hashed on the client. It is simpler/safer and, in
+	// particular, it avoids that he/she can try to changed its pass in
+	// settings (which would fail).
+	if i.PassphraseKdfIterations == 0 && i.IsPasswordAuthenticationEnabled() {
+		return nil, ErrNoCookie
+	}
+
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		cookie, err := c.Cookie(SessionCookieName)
 		if err != nil || cookie.Value == "" {
