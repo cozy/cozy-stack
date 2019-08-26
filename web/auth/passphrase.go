@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -59,6 +60,8 @@ func passphraseForm(c echo.Context) error {
 		"Domain":        inst.ContextualDomain(),
 		"ContextName":   inst.ContextName,
 		"Locale":        inst.Locale,
+		"Iterations":    crypto.DefaultPBKDF2Iterations,
+		"Salt":          string(inst.PassphraseSalt()),
 		"RegisterToken": registerToken,
 		"MatomoURL":     matomo.URL,
 		"MatomoSiteID":  matomo.SiteID,
