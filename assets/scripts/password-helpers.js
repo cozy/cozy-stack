@@ -1,4 +1,4 @@
-;(function(window) {
+;(function(w) {
   // Return given password strength as an object {percentage, label}
   function getStrength(password) {
     if (!password && password !== '') {
@@ -69,7 +69,7 @@
   // TODO use cozy-auth.js from https://github.com/cozy/cozy-keys-lib/tree/init
   // to support Edge
   function hash(password, salt, iterations) {
-    const subtle = window.crypto.subtle
+    const subtle = w.crypto.subtle
     const passwordBuf = fromUtf8ToBuffer(password)
     const saltBuf = fromUtf8ToBuffer(salt)
     const first = {
@@ -97,11 +97,11 @@
         for (let i = 0; i < bytes.byteLength; i++) {
           binary += String.fromCharCode(bytes[i])
         }
-        return window.btoa(binary)
+        return w.btoa(binary)
       })
   }
 
-  window.password = {
+  w.password = {
     getStrength: getStrength,
     hash: hash
   }

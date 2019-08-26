@@ -4,6 +4,7 @@
   var passwordVisibilityButton = d.getElementById('password-visibility-button')
   var passwordIconDisplay = d.getElementById('display-icon')
   var passwordIconHide = d.getElementById('hide-icon')
+
   passwordVisibilityButton.addEventListener('click', function(event) {
     event.preventDefault()
     passwordVisibility = !passwordVisibility

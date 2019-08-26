@@ -174,6 +174,8 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"Domain":           i.ContextualDomain(),
 		"ContextName":      i.ContextName,
 		"Locale":           i.Locale,
+		"Iterations":       i.PassphraseKdfIterations,
+		"Salt":             string(i.PassphraseSalt()),
 		"Title":            title,
 		"PasswordHelp":     help,
 		"CredentialsError": credsErrors,
