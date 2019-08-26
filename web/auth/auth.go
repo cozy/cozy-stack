@@ -13,6 +13,8 @@ import (
 	"github.com/cozy/cozy-stack/model/session"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -268,47 +270,61 @@ func login(c echo.Context) error {
 	sess, ok := middlewares.GetSession(c)
 	if ok { // The user was already logged-in
 		sessionID = sess.ID()
-	} else {
-		if lifecycle.CheckPassphrase(inst, passphrase) == nil {
-			// In case the second factor authentication mode is "mail", we also
-			// check that the mail has been confirmed. If not, 2FA is not
-			// activated.
-			// If device is trusted, skip the 2FA.
-			if inst.HasAuthMode(instance.TwoFactorMail) && !isTrustedDevice(c, inst) {
-				twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
-				if err != nil {
-					return err
+	} else if lifecycle.CheckPassphrase(inst, passphrase) == nil {
+		// If the passphrase was not yet hashed on the client side, migrate it
+		if inst.PassphraseKdfIterations == 0 {
+			iterations := crypto.DefaultPBKDF2Iterations
+			salt := inst.PassphraseSalt()
+			pass := crypto.HashPassWithPBKDF2(passphrase, salt, iterations)
+			hash, err := crypto.GenerateFromPassphrase(pass)
+			if err == nil {
+				inst.PassphraseHash = hash
+				inst.PassphraseKdfIterations = iterations
+				inst.PassphraseKdf = instance.PBKDF2_SHA256
+				if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+					inst.Logger().Errorf("Could not update: %s", err.Error())
 				}
-				v := url.Values{}
-				v.Add("two_factor_token", string(twoFactorToken))
-				v.Add("long_run_session", strconv.FormatBool(longRunSession))
-				if loc := c.FormValue("redirect"); loc != "" {
-					v.Add("redirect", loc)
-				}
+			}
+		}
 
-				if wantsJSON(c) {
-					return c.JSON(http.StatusOK, echo.Map{
-						"redirect":         inst.PageURL("/auth/twofactor", v),
-						"two_factor_token": string(twoFactorToken),
-					})
-				}
-				return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
+		// In case the second factor authentication mode is "mail", we also
+		// check that the mail has been confirmed. If not, 2FA is not
+		// activated.
+		// If device is trusted, skip the 2FA.
+		if inst.HasAuthMode(instance.TwoFactorMail) && !isTrustedDevice(c, inst) {
+			twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+			if err != nil {
+				return err
 			}
-		} else { // Bad login passphrase
-			errorMessage := inst.Translate(CredentialsErrorKey)
-			err := limits.CheckRateLimit(inst, limits.AuthType)
-			if limits.IsLimitReachedOrExceeded(err) {
-				if err = LoginRateExceeded(inst); err != nil {
-					inst.Logger().WithField("nspace", "auth").Warning(err)
-				}
+			v := url.Values{}
+			v.Add("two_factor_token", string(twoFactorToken))
+			v.Add("long_run_session", strconv.FormatBool(longRunSession))
+			if loc := c.FormValue("redirect"); loc != "" {
+				v.Add("redirect", loc)
 			}
+
 			if wantsJSON(c) {
-				return c.JSON(http.StatusUnauthorized, echo.Map{
-					"error": errorMessage,
+				return c.JSON(http.StatusOK, echo.Map{
+					"redirect":         inst.PageURL("/auth/twofactor", v),
+					"two_factor_token": string(twoFactorToken),
 				})
 			}
-			return renderLoginForm(c, inst, http.StatusUnauthorized, errorMessage, redirect)
+			return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
 		}
+	} else { // Bad login passphrase
+		errorMessage := inst.Translate(CredentialsErrorKey)
+		err := limits.CheckRateLimit(inst, limits.AuthType)
+		if limits.IsLimitReachedOrExceeded(err) {
+			if err = LoginRateExceeded(inst); err != nil {
+				inst.Logger().WithField("nspace", "auth").Warning(err)
+			}
+		}
+		if wantsJSON(c) {
+			return c.JSON(http.StatusUnauthorized, echo.Map{
+				"error": errorMessage,
+			})
+		}
+		return renderLoginForm(c, inst, http.StatusUnauthorized, errorMessage, redirect)
 	}
 
 	// Successful authentication
