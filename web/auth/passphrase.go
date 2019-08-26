@@ -124,6 +124,8 @@ func passphraseRenewForm(c echo.Context) error {
 		"Domain":               inst.ContextualDomain(),
 		"ContextName":          inst.ContextName,
 		"Locale":               inst.Locale,
+		"Iterations":           crypto.DefaultPBKDF2Iterations,
+		"Salt":                 string(inst.PassphraseSalt()),
 		"PassphraseResetToken": hex.EncodeToString(token),
 		"CSRF":                 c.Get("csrf"),
 		"Favicon":              middlewares.Favicon(inst),
