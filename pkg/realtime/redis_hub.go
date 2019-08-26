@@ -25,14 +25,21 @@ func newRedisHub(c redis.UniversalClient) *redisHub {
 	return hub
 }
 
-type jsonDoc struct {
+// JSONDoc is a map representing a simple json object that implements
+// the couchdb.Doc interface.
+//
+// Note: we can't use the couchdb.JSONDoc as the couchdb package imports the
+// realtime package, and it would create an import loop. And we cannot move the
+// JSONDoc from couchdb here, as some of its methods use other functions from
+// the couchdb package.
+type JSONDoc struct {
 	M    map[string]interface{}
 	Type string
 }
 
-func (j jsonDoc) ID() string      { id, _ := j.M["_id"].(string); return id }
-func (j jsonDoc) DocType() string { return j.Type }
-func (j *jsonDoc) MarshalJSON() ([]byte, error) {
+func (j JSONDoc) ID() string      { id, _ := j.M["_id"].(string); return id }
+func (j JSONDoc) DocType() string { return j.Type }
+func (j *JSONDoc) MarshalJSON() ([]byte, error) {
 	m := map[string]interface{}{"_type": j.Type}
 	if j.M != nil {
 		for k, v := range j.M {
@@ -42,21 +49,21 @@ func (j *jsonDoc) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func toJSONDoc(d map[string]interface{}) *jsonDoc {
+func toJSONDoc(d map[string]interface{}) *JSONDoc {
 	if d == nil {
 		return nil
 	}
 	doctype, _ := d["_type"].(string)
 	delete(d, "_type")
-	return &jsonDoc{d, doctype}
+	return &JSONDoc{d, doctype}
 }
 
 type jsonEvent struct {
 	Domain string
 	Prefix string
 	Verb   string
-	Doc    *jsonDoc
-	Old    *jsonDoc
+	Doc    *JSONDoc
+	Old    *JSONDoc
 }
 
 func (j *jsonEvent) UnmarshalJSON(buf []byte) error {
