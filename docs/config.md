@@ -5,7 +5,7 @@
 ## Main Configuration file
 
 You can configure your `cozy-stack` using a configuration file. This file should
-be named `cozy.yaml` or `cozy.json` depending on the format of your chosing, and
+be named `cozy.yaml`, `cozy.yml`, or `cozy.json` depending on the format of your chosing, and
 should be present in one of these directories (ordered by priority):
 
 -   `./.cozy`
