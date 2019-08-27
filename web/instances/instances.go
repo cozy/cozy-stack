@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -85,15 +86,19 @@ func createHandler(c echo.Context) error {
 		}
 	}
 	if iterations := c.QueryParam("KdfIterations"); iterations != "" {
-		iter, err := strconv.ParseInt(iterations, 10, 64)
+		iter, err := strconv.Atoi(iterations)
 		if err != nil {
 			return wrapError(err)
 		}
-		if iter < 5000 && iter != 0 {
+		if iter < crypto.MinPBKDF2Iterations && iter != 0 {
 			err := errors.New("The KdfIterations number is too low")
 			return jsonapi.InvalidParameter("KdfIterations", err)
 		}
-		opts.KdfIterations = int(iter)
+		if iter > crypto.MaxPBKDF2Iterations {
+			err := errors.New("The KdfIterations number is too high")
+			return jsonapi.InvalidParameter("KdfIterations", err)
+		}
+		opts.KdfIterations = iter
 	}
 	in, err := lifecycle.Create(opts)
 	if err != nil {

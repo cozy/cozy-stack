@@ -23,9 +23,7 @@ func registerPassphrase(inst *instance.Instance, pass, tok []byte, kdfIterations
 		return instance.ErrInvalidToken
 	}
 	if kdfIterations == 0 {
-		kdfIterations = crypto.DefaultPBKDF2Iterations
-		salt := inst.PassphraseSalt()
-		pass = crypto.HashPassWithPBKDF2(pass, salt, kdfIterations)
+		pass, kdfIterations = emulateClientSideHashing(inst, pass)
 	}
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
@@ -132,9 +130,7 @@ func PassphraseRenew(inst *instance.Instance, pass, tok []byte, kdfIterations in
 		return err
 	}
 	if kdfIterations == 0 {
-		kdfIterations = crypto.DefaultPBKDF2Iterations
-		salt := inst.PassphraseSalt()
-		pass = crypto.HashPassWithPBKDF2(pass, salt, kdfIterations)
+		pass, kdfIterations = emulateClientSideHashing(inst, pass)
 	}
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
@@ -180,15 +176,20 @@ func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte) error {
 		return instance.ErrMissingPassphrase
 	}
 
-	kdfIterations := crypto.DefaultPBKDF2Iterations
-	salt := inst.PassphraseSalt()
-	pass := crypto.HashPassWithPBKDF2(newPassword, salt, kdfIterations)
+	pass, kdfIterations := emulateClientSideHashing(inst, newPassword)
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
 		return err
 	}
 	setPassphraseKdfAndSecret(inst, hash, kdfIterations)
 	return update(inst)
+}
+
+func emulateClientSideHashing(inst *instance.Instance, password []byte) ([]byte, int) {
+	kdfIterations := crypto.DefaultPBKDF2Iterations
+	salt := inst.PassphraseSalt()
+	pass := crypto.HashPassWithPBKDF2(password, salt, kdfIterations)
+	return pass, kdfIterations
 }
 
 func setPassphraseKdfAndSecret(inst *instance.Instance, hash []byte, kdfIterations int) {

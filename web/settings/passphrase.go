@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -77,8 +78,12 @@ func registerPassphrase(c echo.Context) error {
 		return jsonapi.BadRequest(err)
 	}
 
-	if args.Iterations < 5000 && args.Iterations != 0 {
+	if args.Iterations < crypto.MinPBKDF2Iterations && args.Iterations != 0 {
 		err := errors.New("The KdfIterations number is too low")
+		return jsonapi.InvalidParameter("KdfIterations", err)
+	}
+	if args.Iterations > crypto.MaxPBKDF2Iterations {
+		err := errors.New("The KdfIterations number is too high")
 		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
 
@@ -158,8 +163,12 @@ func updatePassphrase(c echo.Context) error {
 		return instance.ErrInvalidPassphrase
 	}
 
-	if args.Iterations < 5000 && args.Iterations != 0 {
+	if args.Iterations < crypto.MinPBKDF2Iterations && args.Iterations != 0 {
 		err := errors.New("The KdfIterations number is too low")
+		return jsonapi.InvalidParameter("KdfIterations", err)
+	}
+	if args.Iterations > crypto.MaxPBKDF2Iterations {
+		err := errors.New("The KdfIterations number is too high")
 		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
 
