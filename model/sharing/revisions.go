@@ -21,6 +21,10 @@ const (
 	WonConflict
 )
 
+// MaxDepth is the maximum number of revisions in a chain that we keep for a
+// document.
+const MaxDepth = 100
+
 // RevsStruct is a struct for revisions in bulk methods of CouchDB
 type RevsStruct struct {
 	Start int      `json:"start"`
@@ -65,17 +69,19 @@ func (rt *RevsTree) Generation() int {
 	return max
 }
 
-// Find returns the sub-tree for the given revision, or nil if not found.
-func (rt *RevsTree) Find(rev string) *RevsTree {
+// Find returns the sub-tree for the given revision, or nil if not found. It
+// also gives the depth of the sub-tree (how many nodes are traversed from the
+// root of RevsTree to reach this sub-tree).
+func (rt *RevsTree) Find(rev string) (*RevsTree, int) {
 	if rt.Rev == rev {
-		return rt
+		return rt, 1
 	}
 	for i := range rt.Branches {
-		if sub := rt.Branches[i].Find(rev); sub != nil {
-			return sub
+		if sub, depth := rt.Branches[i].Find(rev); sub != nil {
+			return sub, depth + 1
 		}
 	}
-	return nil
+	return nil, 0
 }
 
 // Add inserts the given revision in the main branch
@@ -98,15 +104,36 @@ func (rt *RevsTree) Add(rev string) *RevsTree {
 // InsertAfter inserts the given revision in the tree as a child of the second
 // revision.
 func (rt *RevsTree) InsertAfter(rev, parent string) {
-	subtree := rt.Find(parent)
+	subtree, depth := rt.Find(parent)
 	if subtree == nil {
 		// XXX This condition shouldn't be true, but it can help to limit
 		// damage in case bugs happen.
-		if rt.Find(rev) != nil {
+		if sub, _ := rt.Find(rev); sub != nil {
 			return
 		}
 		subtree = rt.Add(parent)
 	}
+
+	current := rt
+	for depth >= MaxDepth {
+		if len(current.Branches) == 0 {
+			break
+		} else if len(current.Branches) == 1 {
+			next := current.Branches[0]
+			current.Rev = next.Rev
+			current.Branches = next.Branches
+			depth--
+		} else {
+			for i := range current.Branches {
+				b := &current.Branches[i]
+				if sub, _ := b.Find(parent); sub != nil {
+					current = b
+					break
+				}
+			}
+		}
+	}
+
 	for _, b := range subtree.Branches {
 		if b.Rev == rev {
 			return
@@ -120,11 +147,12 @@ func (rt *RevsTree) InsertAfter(rev, parent string) {
 // parent of the second revision, which is itself the parent of the third
 // revision, etc. The first revisions of the chain are very probably already in
 // the tree, the last one is certainly not.
+// TODO ensure the MaxDepth limit is respected
 func (rt *RevsTree) InsertChain(chain []string) {
 	if len(chain) == 0 {
 		return
 	}
-	subtree := rt.Find(chain[0])
+	subtree, _ := rt.Find(chain[0])
 	if subtree == nil {
 		subtree = rt.Add(chain[0])
 	}

@@ -468,7 +468,7 @@ func (s *Sharing) ComputeRevsDiff(inst *instance.Instance, changed Changed) (*Mi
 		}
 		notFounds := changed[result.SID][:0]
 		for _, r := range changed[result.SID] {
-			if result.Revisions.Find(r) == nil {
+			if sub, _ := result.Revisions.Find(r); sub == nil {
 				notFounds = append(notFounds, r)
 			}
 		}
@@ -712,7 +712,7 @@ func (s *Sharing) filterDocsToUpdate(inst *instance.Instance, doctype string, do
 			infos, ok := refs[i].Infos[s.SID]
 			if ok && !infos.Removed {
 				rev := doc["_rev"].(string)
-				if refs[i].Revisions.Find(rev) == nil {
+				if sub, _ := refs[i].Revisions.Find(rev); sub == nil {
 					revs := revsMapToStruct(doc["_revisions"])
 					if revs != nil && len(revs.IDs) > 0 {
 						chain := revsStructToChain(*revs)

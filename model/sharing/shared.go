@@ -278,7 +278,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 
 	rev := evt.Doc.Rev()
 	if _, ok := ref.Infos[msg.SharingID]; ok {
-		if ref.Revisions.Find(rev) != nil {
+		if sub, _ := ref.Revisions.Find(rev); sub != nil {
 			return nil
 		}
 	} else {
