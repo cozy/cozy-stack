@@ -326,8 +326,8 @@ func (s *Sharing) buildReferences(inst *instance.Instance, rule Rule, r int, doc
 				Infos:     map[string]SharedInfo{s.SID: info},
 			}
 		} else {
-			found := srefs[i].Revisions.Find(rev) != nil
-			if found {
+			sub, _ := srefs[i].Revisions.Find(rev)
+			if sub != nil {
 				if _, ok := srefs[i].Infos[s.SID]; ok {
 					continue
 				}

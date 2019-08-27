@@ -25,11 +25,20 @@ func TestRevsTreeFind(t *testing.T) {
 	three := RevsTree{Rev: "3-ccc"}
 	twoB.Branches = []RevsTree{three}
 	tree.Branches = []RevsTree{twoA, twoB}
-	assert.Equal(t, tree, tree.Find("1-aaa"))
-	assert.Equal(t, &twoA, tree.Find("2-baa"))
-	assert.Equal(t, &twoB, tree.Find("2-bbb"))
-	assert.Equal(t, &three, tree.Find("3-ccc"))
-	assert.Equal(t, (*RevsTree)(nil), tree.Find("4-ddd"))
+	actual, depth := tree.Find("1-aaa")
+	assert.Equal(t, tree, actual)
+	assert.Equal(t, 1, depth)
+	actual, depth = tree.Find("2-baa")
+	assert.Equal(t, &twoA, actual)
+	assert.Equal(t, 2, depth)
+	actual, depth = tree.Find("2-bbb")
+	assert.Equal(t, &twoB, actual)
+	assert.Equal(t, 2, depth)
+	actual, depth = tree.Find("3-ccc")
+	assert.Equal(t, &three, actual)
+	assert.Equal(t, 3, depth)
+	actual, _ = tree.Find("4-ddd")
+	assert.Equal(t, (*RevsTree)(nil), actual)
 }
 
 func TestRevsTreeAdd(t *testing.T) {
@@ -101,6 +110,18 @@ func TestRevsTreeInsertAfter(t *testing.T) {
 	sub = sub.Branches[0]
 	assert.Equal(t, sub.Rev, "4-ddd")
 	assert.Len(t, sub.Branches, 0)
+}
+
+func TestRevsTreeInsertAfterMaxDepth(t *testing.T) {
+	tree := &RevsTree{Rev: "1-aaa"}
+	parent := tree.Rev
+	for i := 2; i < 2*MaxDepth; i++ {
+		next := fmt.Sprintf("%d-bbb", i)
+		tree.InsertAfter(next, parent)
+		parent = next
+	}
+	_, depth := tree.Find(parent)
+	assert.Equal(t, depth, MaxDepth)
 }
 
 func TestRevsTreeInsertChain(t *testing.T) {

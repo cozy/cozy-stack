@@ -365,7 +365,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 	if _, ok := ref.Infos[s.SID]; !ok {
 		return nil, ErrSafety
 	}
-	if ref.Revisions.Find(target.DocRev) != nil {
+	if sub, _ := ref.Revisions.Find(target.DocRev); sub != nil {
 		// It's just the echo, there is nothing to do
 		return nil, nil
 	}
