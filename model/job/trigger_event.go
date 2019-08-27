@@ -128,7 +128,8 @@ func eventMatchRule(e *realtime.Event, rule *permission.Rule) bool {
 			for _, value := range rule.Values {
 				var dir vfs.DirDoc
 				if err := couchdb.GetDoc(e, consts.Files, value, &dir); err != nil {
-					logger.WithNamespace("event-trigger").
+					logger.WithDomain(e.Domain).
+						WithField("nspace", "event-trigger").
 						Warnf("Cannot find io.cozy.files %s for trigger rule: %s", value, err)
 					continue
 				}
