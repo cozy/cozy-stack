@@ -280,6 +280,9 @@ func login(c echo.Context) error {
 				v := url.Values{}
 				v.Add("two_factor_token", string(twoFactorToken))
 				v.Add("long_run_session", strconv.FormatBool(longRunSession))
+				if loc := c.FormValue("redirect"); loc != "" {
+					v.Add("redirect", loc)
+				}
 
 				if wantsJSON(c) {
 					return c.JSON(http.StatusOK, echo.Map{
