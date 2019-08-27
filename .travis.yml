@@ -12,12 +12,15 @@ env:
 
 matrix:
   include:
-    - go: "1.12"
+    - name: "Lint"
+      go: "1.12"
       script: bash scripts/lint.sh
-    - go: "1.12"
+    - name: "Unit tests"
+      go: "1.12"
       script: bash scripts/unit-test.sh
-    - go: "1.12"
-      script: bash scripts/sharing-test.sh
+    - name: "Integration tests"
+      go: "1.12"
+      script: bash scripts/integration-test.sh
 
 install:
   - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.3

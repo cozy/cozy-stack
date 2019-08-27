@@ -1,4 +1,4 @@
-# Tools for testing sharings
+# Tools for integration tests
 
 ## Install
 
@@ -7,7 +7,7 @@ apt install ruby ruby-dev
 gem install bundle
 cd cozy-stack
 go install
-cd tests/sharing
+cd tests/integration
 bundle install
 ```
 
