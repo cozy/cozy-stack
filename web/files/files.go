@@ -89,7 +89,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 			doc.CreatedAt = at
 		}
 	}
-	doc.CozyMetadata = cozyMetadataFromClaims(c, true)
+	doc.CozyMetadata, _ = cozyMetadataFromClaims(c, true)
 
 	err = checkPerm(c, "POST", nil, doc)
 	if err != nil {
@@ -157,7 +157,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 		}
 	}
 
-	doc.CozyMetadata = cozyMetadataFromClaims(c, false)
+	doc.CozyMetadata, _ = cozyMetadataFromClaims(c, false)
 
 	err = checkPerm(c, "POST", doc, nil)
 	if err != nil {
@@ -1379,7 +1379,7 @@ func instanceURL(c echo.Context) string {
 }
 
 func updateDirCozyMetadata(c echo.Context, dir *vfs.DirDoc) {
-	fcm := cozyMetadataFromClaims(c, false)
+	fcm, _ := cozyMetadataFromClaims(c, false)
 	if dir.CozyMetadata == nil {
 		fcm.CreatedAt = dir.CreatedAt
 		fcm.CreatedByApp = ""
@@ -1394,7 +1394,8 @@ func updateDirCozyMetadata(c echo.Context, dir *vfs.DirDoc) {
 }
 
 func updateFileCozyMetadata(c echo.Context, file *vfs.FileDoc, setUploadFields bool) {
-	fcm := cozyMetadataFromClaims(c, setUploadFields)
+	var oldSourceAccount, oldSourceIdentifier string
+	fcm, slug := cozyMetadataFromClaims(c, setUploadFields)
 	if file.CozyMetadata == nil {
 		fcm.CreatedAt = file.CreatedAt
 		fcm.CreatedByApp = ""
@@ -1403,14 +1404,31 @@ func updateFileCozyMetadata(c echo.Context, file *vfs.FileDoc, setUploadFields b
 		fcm.UploadedAt = &uploadedAt
 		file.CozyMetadata = fcm
 	} else {
+		oldSourceAccount = file.CozyMetadata.SourceAccount
+		oldSourceIdentifier = file.CozyMetadata.SourceIdentifier
 		file.CozyMetadata.UpdatedAt = fcm.UpdatedAt
 		if len(fcm.UpdatedByApps) > 0 {
 			file.CozyMetadata.UpdatedByApp(fcm.UpdatedByApps[0])
 		}
 	}
+
+	if setUploadFields {
+		if oldSourceAccount == "" && fcm.SourceAccount != "" {
+			file.CozyMetadata.SourceAccount = fcm.SourceAccount
+			// To ease the transition to cozyMetadata for io.cozy.files, we fill
+			// the CreatedByApp for konnectors that updates a file: the stack can
+			// recognize that by the presence of the SourceAccount.
+			if file.CozyMetadata.CreatedByApp == "" && slug != "" {
+				file.CozyMetadata.CreatedByApp = slug
+			}
+		}
+		if oldSourceIdentifier == "" && fcm.SourceIdentifier != "" {
+			file.CozyMetadata.SourceIdentifier = fcm.SourceIdentifier
+		}
+	}
 }
 
-func cozyMetadataFromClaims(c echo.Context, setUploadFields bool) *vfs.FilesCozyMetadata {
+func cozyMetadataFromClaims(c echo.Context, setUploadFields bool) (*vfs.FilesCozyMetadata, string) {
 	fcm := vfs.NewCozyMetadata(instanceURL(c))
 
 	var slug, version string
@@ -1469,16 +1487,10 @@ func cozyMetadataFromClaims(c echo.Context, setUploadFields bool) *vfs.FilesCozy
 
 	if account := c.QueryParam("SourceAccount"); account != "" {
 		fcm.SourceAccount = account
-		// To ease the transition to cozyMetadata for io.cozy.files, we fill
-		// the CreatedByApp for konnectors that updates a file: the stack can
-		// recognize that by the presence of the SourceAccount.
-		if fcm.CreatedByApp == "" && slug != "" {
-			fcm.CreatedByApp = slug
-		}
 	}
 	if id := c.QueryParam("SourceAccountIdentifier"); id != "" {
 		fcm.SourceIdentifier = id
 	}
 
-	return fcm
+	return fcm, slug
 }

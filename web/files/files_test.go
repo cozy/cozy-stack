@@ -847,6 +847,29 @@ func TestModifyContentSuccess(t *testing.T) {
 	assert.Equal(t, "2006-01-02T15:04:05Z", attrs3["updated_at"])
 }
 
+func TestModifyContentWithSourceAccount(t *testing.T) {
+	buf := strings.NewReader("foo")
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=old-file-to-migrate", buf)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res.StatusCode)
+	data := obj["data"].(map[string]interface{})
+	fileID, ok := data["id"].(string)
+	assert.True(t, ok)
+
+	account := "0c5a0a1e-8eb1-11e9-93f3-934f3a2c181d"
+	identifier := "11f68e48"
+	newcontent := "updated by a konnector to add the sourceAccount"
+	res2, obj2 := uploadMod(t, "/files/"+fileID+"?SourceAccount="+account+"&SourceAccountIdentifier="+identifier, "text/plain", newcontent, "")
+	assert.Equal(t, 200, res2.StatusCode)
+	data2 := obj2["data"].(map[string]interface{})
+	attrs2 := data2["attributes"].(map[string]interface{})
+	fcm := attrs2["cozyMetadata"].(map[string]interface{})
+	assert.Equal(t, account, fcm["sourceAccount"])
+	assert.Equal(t, identifier, fcm["sourceAccountIdentifier"])
+}
+
 func TestModifyContentConcurrently(t *testing.T) {
 	type result struct {
 		rev string
