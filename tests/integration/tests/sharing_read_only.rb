@@ -2,8 +2,8 @@ require_relative '../boot'
 require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
 
-describe "A sharing" do
-  it "can be revoked" do
+describe "A folder" do
+  it "can be shared in read-only mode" do
     Helpers.scenario "revoke_sharing"
     Helpers.start_mailhog
 
