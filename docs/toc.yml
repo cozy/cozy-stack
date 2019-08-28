@@ -20,6 +20,7 @@
   - "/apps - Applications Management": ./apps.md
   - " /apps - Apps registry": ./registry.md
   - " /apps - Konnectors": ./konnectors.md
+  - "/bitwarden - Bitwarden": ./bitwarden.md
   - "/data - Data System": ./data-system.md
   - " /data - Mango": ./mango.md
   - " /data - CouchDB Quirks": ./couchdb-quirks.md
