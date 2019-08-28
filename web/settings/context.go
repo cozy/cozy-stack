@@ -23,6 +23,7 @@ type apiContext struct {
 func (c *apiContext) ID() string                             { return consts.ContextSettingsID }
 func (c *apiContext) Rev() string                            { return "" }
 func (c *apiContext) DocType() string                        { return consts.Settings }
+func (c *apiContext) Fetch(field string) []string            { return nil }
 func (c *apiContext) Clone() couchdb.Doc                     { return c }
 func (c *apiContext) SetID(id string)                        {}
 func (c *apiContext) SetRev(rev string)                      {}
@@ -33,9 +34,6 @@ func (c *apiContext) Links() *jsonapi.LinksList {
 }
 func (c *apiContext) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.doc)
-}
-func (c *apiContext) Match(field, expected string) bool {
-	return false
 }
 
 func onboarded(c echo.Context) error {

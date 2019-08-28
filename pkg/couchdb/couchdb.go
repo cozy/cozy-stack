@@ -194,7 +194,7 @@ func (j JSONDoc) Get(key string) interface{} {
 	return j.M[key]
 }
 
-// Match implements permissions.Matcher on JSONDoc.
+// Fetch implements permission.Fetcher on JSONDoc.
 //
 // The `referenced_by` selector is a special case: the `values` field of such
 // rule has the format "doctype/id" and it cannot directly be compared to the
@@ -203,32 +203,24 @@ func (j JSONDoc) Get(key string) interface{} {
 //     {"type": "doctype1", "id": "id1"},
 //     {"type": "doctype2", "id": "id2"},
 // ]
-func (j JSONDoc) Match(field, value string) bool {
+func (j JSONDoc) Fetch(field string) []string {
 	if field == SelectorReferencedBy {
 		rawReferences := j.Get(field)
 		references, ok := rawReferences.([]interface{})
 		if !ok {
-			return false
+			return nil
 		}
 
-		values := strings.Split(value, "/")
-		if len(values) != 2 {
-			return false
-		}
-		valueType, valueID := values[0], values[1]
-
-		for _, ref := range references {
-			reference := ref.(map[string]interface{})
-			if valueType == reference["type"].(string) &&
-				valueID == reference["id"].(string) {
-				return true
+		var values []string
+		for _, reference := range references {
+			if ref, ok := reference.(map[string]interface{}); ok {
+				values = append(values, fmt.Sprintf("%s/%s", ref["type"], ref["id"]))
 			}
 		}
-
-		return false
+		return values
 	}
 
-	return fmt.Sprintf("%v", j.Get(field)) == value
+	return []string{fmt.Sprintf("%v", j.Get(field))}
 }
 
 func unescapeCouchdbName(name string) string {

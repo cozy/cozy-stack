@@ -1,13 +1,13 @@
 package permission
 
-// Matcher is an interface for a object than can be matched by a Set
-type Matcher interface {
+// Fetcher is an interface for an object to see if it matches a rule.
+type Fetcher interface {
 	ID() string
 	DocType() string
-	Match(field, expected string) bool
+	Fetch(field string) []string
 }
 
-func matchValues(r Rule, o Matcher) bool {
+func matchValues(r Rule, o Fetcher) bool {
 	// empty r.Values = any value
 	if len(r.Values) == 0 {
 		return true
@@ -18,7 +18,7 @@ func matchValues(r Rule, o Matcher) bool {
 	return r.ValuesMatch(o)
 }
 
-func matchOnFields(r Rule, o Matcher, fields ...string) bool {
+func matchOnFields(r Rule, o Fetcher, fields ...string) bool {
 	// in this case, if r.Values is empty the selector is considered too wide and
 	// is forbidden
 	if len(r.Values) == 0 || r.Selector == "" {
@@ -65,7 +65,7 @@ func (s Set) AllowID(v Verb, doctype, id string) bool {
 }
 
 // Allow returns true if the set allows to apply verb to given doc
-func (s Set) Allow(v Verb, o Matcher) bool {
+func (s Set) Allow(v Verb, o Fetcher) bool {
 	return s.Some(func(r Rule) bool {
 		return matchVerbAndType(r, v, o.DocType()) && matchValues(r, o)
 	})
@@ -73,7 +73,7 @@ func (s Set) Allow(v Verb, o Matcher) bool {
 
 // AllowOnFields returns true if the set allows to apply verb to given doc on
 // the specified fields.
-func (s Set) AllowOnFields(v Verb, o Matcher, fields ...string) bool {
+func (s Set) AllowOnFields(v Verb, o Fetcher, fields ...string) bool {
 	return s.Some(func(r Rule) bool {
 		return matchVerbAndType(r, v, o.DocType()) && matchOnFields(r, o, fields...)
 	})

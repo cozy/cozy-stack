@@ -53,7 +53,7 @@ type SubDomainer interface {
 // that can represent either a webapp or konnector manifest
 type Manifest interface {
 	couchdb.Doc
-	Match(field, expected string) bool
+	Fetch(field string) []string
 	ReadManifest(i io.Reader, slug, sourceURL string) (Manifest, error)
 
 	Create(db prefixer.Prefixer) error

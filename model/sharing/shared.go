@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -83,14 +84,17 @@ func (s *SharedRef) Clone() couchdb.Doc {
 	return &cloned
 }
 
-// Match implements the permissions.Matcher interface
-func (s *SharedRef) Match(key, value string) bool {
-	switch key {
+// Fetch implements the permission.Fetcher interface
+func (s *SharedRef) Fetch(field string) []string {
+	switch field {
 	case "sharing":
-		_, ok := s.Infos[value]
-		return ok
+		var keys []string
+		for key := range s.Infos {
+			keys = append(keys, key)
+		}
+		return keys
 	}
-	return false
+	return nil
 }
 
 // FindReferences returns the io.cozy.shared references to the given identifiers
@@ -456,3 +460,4 @@ func extractDocReferenceFromID(id string) *couchdb.DocReference {
 }
 
 var _ couchdb.Doc = &SharedRef{}
+var _ permission.Fetcher = &SharedRef{}

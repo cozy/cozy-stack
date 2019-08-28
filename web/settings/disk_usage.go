@@ -31,7 +31,7 @@ func (j *apiDiskUsage) Links() *jsonapi.LinksList {
 }
 
 // Settings objects permissions are only on ID
-func (j *apiDiskUsage) Match(k, f string) bool { return false }
+func (j *apiDiskUsage) Fetch(field string) []string { return nil }
 
 func diskUsage(c echo.Context) error {
 	instance := middlewares.GetInstance(c)

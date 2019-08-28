@@ -92,10 +92,20 @@ func (r Rule) SomeValue(predicate func(v string) bool) bool {
 	return false
 }
 
+func contains(haystack []string, needle string) bool {
+	for _, v := range haystack {
+		if needle == v {
+			return true
+		}
+	}
+	return false
+}
+
 // ValuesMatch returns true if any value statisfy the predicate
-func (r Rule) ValuesMatch(o Matcher) bool {
+func (r Rule) ValuesMatch(o Fetcher) bool {
+	candidates := o.Fetch(r.Selector)
 	for _, v := range r.Values {
-		if o.Match(r.Selector, v) {
+		if contains(candidates, v) {
 			return true
 		}
 	}
