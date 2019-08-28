@@ -135,17 +135,23 @@ Examples:
 ### `@event` syntax
 
 The `@event` syntax allows to trigger a job when something occurs in the stack.
-It follows the same syntax than permissions scope string:
+It follows the same syntax than [permissions
+scope](https://docs.cozy.io/en/cozy-stack/permissions/#what-is-a-permission)
+string:
 
 `type[:verb][:values][:selector]`
 
 Unlike for permissions string, the verb should be one of `CREATED`, `DELETED`,
-`UPDATED`.
+`UPDATED`. It is possible to put several verbs, separated by a comma.
+
+There is also a special value `!=`. It means that a job will be trigger only if
+the value for the given selector has changed (ie the value before the update and
+the value after that are different).
 
 The job worker will receive a compound message including original trigger_infos
 messages and the event which has triggered it.
 
-Examples
+Examples:
 
 ```
 @event io.cozy.files // anything happens on files
@@ -153,6 +159,7 @@ Examples
 @event io.cozy.files:DELETED:image/jpg:mime // an image was deleted
 @event io.cozy.bank.operations:CREATED io.cozy.bank.bills:CREATED // a bank operation or a bill
 @event io.cozy.bank.operations:CREATED,UPDATED // a bank operation created or updated
+@event io.cozy.bank.operations:UPDATED:!=:category // a change of category for a bank operation
 ```
 
 ## Error Handling

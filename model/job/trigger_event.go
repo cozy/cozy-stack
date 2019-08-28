@@ -2,6 +2,7 @@ package job
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/permission"
@@ -132,14 +133,32 @@ func eventMatchRule(e *realtime.Event, rule *permission.Rule) bool {
 		return false
 	}
 
-	if v, ok := e.Doc.(permission.Fetcher); ok {
-		if rule.ValuesMatch(v) {
-			return true
+	if len(rule.Values) == 1 && rule.Values[0] == "!=" {
+		// Selector for a changed value
+		if e.Verb != realtime.EventUpdate {
+			return true // We consider that the value has changed on create and delete
 		}
-		// Particular case where the new doc is not valid but the old one was.
-		if e.OldDoc != nil {
-			if vOld, okOld := e.OldDoc.(permission.Fetcher); okOld {
-				return rule.ValuesMatch(vOld)
+		if e.OldDoc == nil {
+			return false
+		}
+		if doc, ok := e.Doc.(permission.Fetcher); ok {
+			value := doc.Fetch(rule.Selector)
+			if old, ok := e.OldDoc.(permission.Fetcher); ok {
+				was := old.Fetch(rule.Selector)
+				return !reflect.DeepEqual(value, was)
+			}
+		}
+	} else {
+		// Selector with normal values
+		if v, ok := e.Doc.(permission.Fetcher); ok {
+			if rule.ValuesMatch(v) {
+				return true
+			}
+			// Particular case where the new doc is not valid but the old one was.
+			if e.OldDoc != nil {
+				if vOld, okOld := e.OldDoc.(permission.Fetcher); okOld {
+					return rule.ValuesMatch(vOld)
+				}
 			}
 		}
 	}
