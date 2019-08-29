@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sort"
 	"time"
 
@@ -238,18 +237,15 @@ func (j *Job) Create() error {
 // WaitUntilDone will wait until the job is done. It will return an error if
 // the job has failed. And there is a timeout (10 minutes).
 func (j *Job) WaitUntilDone(inst *instance.Instance) error {
-	fmt.Printf("WaitUntilDone %#v\n", j)
 	sub := realtime.GetHub().Subscriber(inst)
 	defer sub.Close()
 	if err := sub.Watch(j.DocType(), j.ID()); err != nil {
-		fmt.Printf("WaitUntilDone err: %s\n", err)
 		return err
 	}
 	timeout := time.After(10 * time.Minute)
 	for {
 		select {
 		case e := <-sub.Channel:
-			fmt.Printf("WaitUntilDone event: %#v\n", e)
 			state := Queued
 			if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
 				stateStr, _ := doc.M["state"].(string)
