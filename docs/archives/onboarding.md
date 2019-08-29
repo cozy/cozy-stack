@@ -14,7 +14,7 @@ Compatibility with the current developments on cozy onboarding is a goal :
 
 Creating an instance is done through CLI or through the (future) partner farm
 manager system. Some **settings** can be pre-defined on instance creation.
-([doc](instance.md#creation)).
+([doc](../instance.md#creation)).
 
 The CLI also allows to specify which source to use for `onboarding` and `home`
 applications. The defaults will be hosted on `github.com/cozy`.
@@ -32,7 +32,7 @@ The `onboarding` application SHOULD therefore provide the following features
 
 -   When started with a `registerToken`, allow the user to create a passphrase
 -   When started with a `contextToken`
-    ([see auth doc](auth.md#how-to-get-a-token)) use it to retrieve instance
+    ([see auth doc](../auth.md#how-to-get-a-token)) use it to retrieve instance
     document.
     -   If the instance document is complete **according to the `onboarding`
         app**, redirect to `home` application.
@@ -63,7 +63,7 @@ complete and reredirect to home.
 
 ## Routes
 
-See [settings](settings.md).
+See [settings](../settings.md).
 
 ## Flow Example
 
@@ -99,7 +99,7 @@ The instance is created
     redirect her back to the `onboarding` app.
 -   Afterward, the `onboarding` app receive its token normally through the
     `data-cozy-token` body attribute, as described in
-    [auth documentation](./auth.md). and can do whatever it needs to do :
+    [auth documentation](../auth.md). and can do whatever it needs to do :
     -   read from the instance document to prefill/bypass form fields
     -   add more informations to the instance document.
     -   create `io.cozy.accounts` documents for external accounts.

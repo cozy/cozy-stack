@@ -29,8 +29,8 @@ of the stack.
 ### Values and Example
 
 To see the detail of the available parameters available, you can see an example
-of configuration in the [cozy.example.yaml](../cozy.example.yaml) file at the
-root of this repository.
+of configuration in the [cozy.example.yaml](https://github.com/cozy/cozy-stack/blob/master/cozy.example.yaml)
+file at the root of this repository.
 
 This file contains all the parameters and fields that can be used to configure
 the stack with some example values.

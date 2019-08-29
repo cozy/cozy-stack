@@ -18,7 +18,7 @@ to port it to Cozy v3. There will be 2 parts:
 -   My Accounts, a client-side app, that will offer the possibility for the user
     to configure her accounts, and choose when to start the import of data (see
     [the architecture doc](https://github.com/cozy-labs/konnectors/blob/development/docs/client-side-architecture.md)).
--   Konnectors, a worker for the [job service](jobs.md), with the code to import
+-   Konnectors, a worker for the [job service](../jobs.md), with the code to import
     data from the web sites.
 
 ## Security
@@ -81,7 +81,7 @@ access on a server.
 #### Permissions
 
 We can forbid the konnectors to speak directly with couchdb, and pass by the
-stack for that. And use the [permissions](permissions.md) to restrict what each
+stack for that. And use the [permissions](../permissions.md) to restrict what each
 konnectors can do with the cozy-stack.
 
 #### ignore-scripts for npm/yarn

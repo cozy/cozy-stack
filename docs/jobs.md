@@ -268,7 +268,7 @@ Enqueue programmatically a new job.
 This route requires a specific permission on the worker-type. A global
 permission on the global `io.cozy.jobs` doctype is not allowed.
 
-Each [worker](./worker.md) accepts different arguments. For konnectors, the
+Each [worker](./workers.md) accepts different arguments. For konnectors, the
 arguments will be given in the `COZY_FIELDS` env variable.
 
 #### Request
