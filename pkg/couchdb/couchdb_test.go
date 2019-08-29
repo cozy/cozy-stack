@@ -335,6 +335,43 @@ func TestUpdateJSONDoc(t *testing.T) {
 	assert.NotNil(t, evt.OldDoc)
 	assert.Equal(t, "1", evt.OldDoc.(*JSONDoc).M["test"])
 	assert.Equal(t, "2", evt.Doc.(*JSONDoc).M["test"])
+
+	// Remove the test field
+	noTest := &JSONDoc{
+		Type: TestDoctype,
+		M: map[string]interface{}{
+			"_id":  updated.ID(),
+			"_rev": updated.Rev(),
+			"foo":  "bar",
+		},
+	}
+	err = UpdateDoc(TestPrefix, noTest)
+	assert.NoError(t, err)
+	assert.NotEqual(t, updated.Rev(), noTest.Rev())
+	assert.Empty(t, noTest.M["test"])
+	evt = assertGotEvent(t, realtime.EventUpdate, doc.ID())
+	assert.NotNil(t, evt.OldDoc)
+	assert.Equal(t, "2", evt.OldDoc.(*JSONDoc).M["test"])
+	assert.Empty(t, evt.Doc.(*JSONDoc).M["test"])
+
+	// Add the test field
+	withTest := &JSONDoc{
+		Type: TestDoctype,
+		M: map[string]interface{}{
+			"_id":  noTest.ID(),
+			"_rev": noTest.Rev(),
+			"foo":  "baz",
+			"test": "3",
+		},
+	}
+	err = UpdateDoc(TestPrefix, withTest)
+	assert.NoError(t, err)
+	assert.NotEqual(t, noTest.Rev(), withTest.Rev())
+	assert.Equal(t, "3", withTest.M["test"])
+	evt = assertGotEvent(t, realtime.EventUpdate, doc.ID())
+	assert.NotNil(t, evt.OldDoc)
+	assert.Empty(t, evt.OldDoc.(*JSONDoc).M["test"])
+	assert.Equal(t, "3", evt.Doc.(*JSONDoc).M["test"])
 }
 
 func TestMain(m *testing.M) {

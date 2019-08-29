@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 
@@ -507,6 +508,19 @@ func DeleteDoc(db Database, doc Doc) error {
 	return nil
 }
 
+// NewEmptyObjectOfSameType takes an object and returns a new object of the
+// same type. For example, if NewEmptyObjectOfSameType is called with a pointer
+// to a JSONDoc, it will return a pointer to an empty JSONDoc (and not a nil
+// pointer).
+func NewEmptyObjectOfSameType(obj interface{}) interface{} {
+	typ := reflect.TypeOf(obj)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+	value := reflect.New(typ)
+	return value.Interface()
+}
+
 // UpdateDoc update a document. The document ID and Rev should be filled.
 // The doc SetRev function will be called with the new rev.
 func UpdateDoc(db Database, doc Doc) error {
@@ -522,7 +536,7 @@ func UpdateDoc(db Database, doc Doc) error {
 	url := url.PathEscape(id)
 	// The old doc is requested to be emitted thought RTEvent.
 	// This is useful to keep track of the modifications for the triggers.
-	oldDoc := doc.Clone()
+	oldDoc := NewEmptyObjectOfSameType(doc).(Doc)
 	err = makeRequest(db, doctype, http.MethodGet, url, nil, oldDoc)
 	if err != nil {
 		return err
