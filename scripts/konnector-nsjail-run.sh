@@ -126,7 +126,6 @@ nsjail \
   --rlimit_nofile 128 \
   --rlimit_nproc 512 \
   --time_limit "${COZY_TIME_LIMIT}" \
-  --disable_proc \
   --disable_clone_newnet \
   --iface_no_lo \
   --seccomp_string "${seccomp_string}" \
@@ -157,7 +156,6 @@ nsjail \
 #   --rlimit_nofile 128 \
 #   --rlimit_nproc 512 \
 #   --time_limit "${COZY_TIME_LIMIT}" \
-#   --disable_proc \
 #   --disable_clone_newnet \
 #   --iface_no_lo \
 #   --seccomp_string "${seccomp_string}" \
