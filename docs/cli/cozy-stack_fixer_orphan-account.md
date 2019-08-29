@@ -1,10 +1,10 @@
 ## cozy-stack fixer orphan-account
 
-Rebuild scheduling data strucutures in redis
+Rebuild scheduling data structures in redis
 
 ### Synopsis
 
-Rebuild scheduling data strucutures in redis
+Rebuild scheduling data structures in redis
 
 ```
 cozy-stack fixer orphan-account <domain> [flags]
