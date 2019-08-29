@@ -2,6 +2,7 @@ package permission
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -126,6 +127,13 @@ func (r Rule) ValuesContain(values ...string) bool {
 		}
 	}
 	return true
+}
+
+// ValuesChanged returns true if the value for the given selector has changed
+func (r Rule) ValuesChanged(old, current Fetcher) bool {
+	value := current.Fetch(r.Selector)
+	was := old.Fetch(r.Selector)
+	return !reflect.DeepEqual(value, was)
 }
 
 // TranslationKey returns a string that can be used as a key for translating a

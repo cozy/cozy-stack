@@ -2,7 +2,6 @@ package job
 
 import (
 	"errors"
-	"reflect"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/permission"
@@ -142,10 +141,8 @@ func eventMatchRule(e *realtime.Event, rule *permission.Rule) bool {
 			return false
 		}
 		if doc, ok := e.Doc.(permission.Fetcher); ok {
-			value := doc.Fetch(rule.Selector)
 			if old, ok := e.OldDoc.(permission.Fetcher); ok {
-				was := old.Fetch(rule.Selector)
-				return !reflect.DeepEqual(value, was)
+				return rule.ValuesChanged(old, doc)
 			}
 		}
 	} else {
