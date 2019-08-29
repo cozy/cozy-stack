@@ -598,7 +598,7 @@ func (s *Sharing) countReceivedFiles(inst *instance.Instance) {
 			"count": count,
 		},
 	}
-	realtime.GetHub().Publish(inst, realtime.EventUpdate, doc, nil)
+	realtime.GetHub().Publish(inst, realtime.EventUpdate, &doc, nil)
 }
 
 // UploadExistingFile is used to receive new content for an existing file.

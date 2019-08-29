@@ -45,7 +45,7 @@ func getAccount(c echo.Context) error {
 	}
 
 	if encryptAccount(out) {
-		if err = couchdb.UpdateDoc(instance, out); err != nil {
+		if err = couchdb.UpdateDoc(instance, &out); err != nil {
 			return err
 		}
 	}
@@ -109,7 +109,7 @@ func updateAccount(c echo.Context) error {
 
 	encryptAccount(doc)
 
-	errUpdate := couchdb.UpdateDoc(instance, doc)
+	errUpdate := couchdb.UpdateDoc(instance, &doc)
 	if errUpdate != nil {
 		return fixErrorNoDatabaseIsWrongDoctype(errUpdate)
 	}
@@ -241,7 +241,7 @@ func createAccount(c echo.Context) error {
 
 	encryptAccount(doc)
 
-	if err := couchdb.CreateDoc(instance, doc); err != nil {
+	if err := couchdb.CreateDoc(instance, &doc); err != nil {
 		return err
 	}
 

@@ -129,7 +129,7 @@ func createDoc(c echo.Context) error {
 		return err
 	}
 
-	if err := couchdb.CreateDoc(instance, doc); err != nil {
+	if err := couchdb.CreateDoc(instance, &doc); err != nil {
 		return err
 	}
 
@@ -150,7 +150,7 @@ func createNamedDoc(c echo.Context, doc couchdb.JSONDoc) error {
 		return err
 	}
 
-	err = couchdb.CreateNamedDocWithDB(instance, doc)
+	err = couchdb.CreateNamedDocWithDB(instance, &doc)
 	if err != nil {
 		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
@@ -223,7 +223,7 @@ func UpdateDoc(c echo.Context) error {
 		}
 	}
 
-	errUpdate := couchdb.UpdateDoc(instance, doc)
+	errUpdate := couchdb.UpdateDoc(instance, &doc)
 	if errUpdate != nil {
 		return fixErrorNoDatabaseIsWrongDoctype(errUpdate)
 	}

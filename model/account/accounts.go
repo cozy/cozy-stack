@@ -158,8 +158,6 @@ func init() {
 				manualCleaning = v.ManualCleaning
 			case *couchdb.JSONDoc:
 				manualCleaning, _ = v.M["manual_cleaning"].(bool)
-			case couchdb.JSONDoc:
-				manualCleaning, _ = v.M["manual_cleaning"].(bool)
 			}
 			if manualCleaning {
 				return nil
@@ -195,8 +193,6 @@ func init() {
 			case *Account:
 				konnector = v.AccountType
 			case *couchdb.JSONDoc:
-				konnector, _ = v.M["account_type"].(string)
-			case couchdb.JSONDoc:
 				konnector, _ = v.M["account_type"].(string)
 			}
 			if konnector == "" {

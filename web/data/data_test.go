@@ -69,10 +69,10 @@ func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface
 
 }
 
-func getDocForTest() couchdb.JSONDoc {
+func getDocForTest() *couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{Type: Type, M: map[string]interface{}{"test": "value"}}
 	_ = couchdb.CreateDoc(testInstance, &doc)
-	return doc
+	return &doc
 }
 
 func TestMain(m *testing.M) {
