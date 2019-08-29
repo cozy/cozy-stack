@@ -362,7 +362,16 @@ var contentMismatch64Kfixer = &cobra.Command{
 
 var orphanAccountFixer = &cobra.Command{
 	Use:   "orphan-account <domain>",
-	Short: "Rebuild scheduling data structures in redis",
+	Short: "Remove the orphan accounts",
+	Long: `
+This fixer detects the accounts that are linked to a konnector that has been
+uninstalled, and then removed them.
+
+For banking accounts, the konnector must run to also clean the account
+remotely. To do so, the konnector is installed, the account is deleted,
+the stack runs the konnector with the AccountDeleted flag, and when it's
+done, the konnector is uninstalled again.
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return cmd.Usage()
