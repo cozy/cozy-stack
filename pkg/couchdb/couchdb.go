@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 
@@ -86,7 +87,7 @@ type JSONDoc struct {
 
 // ID returns the identifier field of the document
 //   "io.cozy.event/123abc123" == doc.ID()
-func (j JSONDoc) ID() string {
+func (j *JSONDoc) ID() string {
 	id, ok := j.M["_id"].(string)
 	if ok {
 		return id
@@ -96,7 +97,7 @@ func (j JSONDoc) ID() string {
 
 // Rev returns the revision field of the document
 //   "3-1234def1234" == doc.Rev()
-func (j JSONDoc) Rev() string {
+func (j *JSONDoc) Rev() string {
 	rev, ok := j.M["_rev"].(string)
 	if ok {
 		return rev
@@ -106,12 +107,12 @@ func (j JSONDoc) Rev() string {
 
 // DocType returns the document type of the document
 //   "io.cozy.event" == doc.Doctype()
-func (j JSONDoc) DocType() string {
+func (j *JSONDoc) DocType() string {
 	return j.Type
 }
 
 // SetID is used to set the identifier of the document
-func (j JSONDoc) SetID(id string) {
+func (j *JSONDoc) SetID(id string) {
 	if id == "" {
 		delete(j.M, "_id")
 	} else {
@@ -120,7 +121,7 @@ func (j JSONDoc) SetID(id string) {
 }
 
 // SetRev is used to set the revision of the document
-func (j JSONDoc) SetRev(rev string) {
+func (j *JSONDoc) SetRev(rev string) {
 	if rev == "" {
 		delete(j.M, "_rev")
 	} else {
@@ -129,10 +130,10 @@ func (j JSONDoc) SetRev(rev string) {
 }
 
 // Clone is used to create a copy of the document
-func (j JSONDoc) Clone() Doc {
+func (j *JSONDoc) Clone() Doc {
 	cloned := JSONDoc{Type: j.Type}
 	cloned.M = deepClone(j.M)
-	return cloned
+	return &cloned
 }
 
 func deepClone(m map[string]interface{}) map[string]interface{} {
@@ -164,7 +165,7 @@ func deepCloneSlice(s []interface{}) []interface{} {
 }
 
 // MarshalJSON implements json.Marshaller by proxying to internal map
-func (j JSONDoc) MarshalJSON() ([]byte, error) {
+func (j *JSONDoc) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j.M)
 }
 
@@ -190,11 +191,11 @@ func (j *JSONDoc) ToMapWithType() map[string]interface{} {
 }
 
 // Get returns the value of one of the db fields
-func (j JSONDoc) Get(key string) interface{} {
+func (j *JSONDoc) Get(key string) interface{} {
 	return j.M[key]
 }
 
-// Match implements permissions.Matcher on JSONDoc.
+// Fetch implements permission.Fetcher on JSONDoc.
 //
 // The `referenced_by` selector is a special case: the `values` field of such
 // rule has the format "doctype/id" and it cannot directly be compared to the
@@ -203,32 +204,24 @@ func (j JSONDoc) Get(key string) interface{} {
 //     {"type": "doctype1", "id": "id1"},
 //     {"type": "doctype2", "id": "id2"},
 // ]
-func (j JSONDoc) Match(field, value string) bool {
+func (j *JSONDoc) Fetch(field string) []string {
 	if field == SelectorReferencedBy {
 		rawReferences := j.Get(field)
 		references, ok := rawReferences.([]interface{})
 		if !ok {
-			return false
+			return nil
 		}
 
-		values := strings.Split(value, "/")
-		if len(values) != 2 {
-			return false
-		}
-		valueType, valueID := values[0], values[1]
-
-		for _, ref := range references {
-			reference := ref.(map[string]interface{})
-			if valueType == reference["type"].(string) &&
-				valueID == reference["id"].(string) {
-				return true
+		var values []string
+		for _, reference := range references {
+			if ref, ok := reference.(map[string]interface{}); ok {
+				values = append(values, fmt.Sprintf("%s/%s", ref["type"], ref["id"]))
 			}
 		}
-
-		return false
+		return values
 	}
 
-	return fmt.Sprintf("%v", j.Get(field)) == value
+	return []string{fmt.Sprintf("%v", j.Get(field))}
 }
 
 func unescapeCouchdbName(name string) string {
@@ -515,6 +508,19 @@ func DeleteDoc(db Database, doc Doc) error {
 	return nil
 }
 
+// NewEmptyObjectOfSameType takes an object and returns a new object of the
+// same type. For example, if NewEmptyObjectOfSameType is called with a pointer
+// to a JSONDoc, it will return a pointer to an empty JSONDoc (and not a nil
+// pointer).
+func NewEmptyObjectOfSameType(obj interface{}) interface{} {
+	typ := reflect.TypeOf(obj)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+	value := reflect.New(typ)
+	return value.Interface()
+}
+
 // UpdateDoc update a document. The document ID and Rev should be filled.
 // The doc SetRev function will be called with the new rev.
 func UpdateDoc(db Database, doc Doc) error {
@@ -530,7 +536,7 @@ func UpdateDoc(db Database, doc Doc) error {
 	url := url.PathEscape(id)
 	// The old doc is requested to be emitted thought RTEvent.
 	// This is useful to keep track of the modifications for the triggers.
-	oldDoc := doc.Clone()
+	oldDoc := NewEmptyObjectOfSameType(doc).(Doc)
 	err = makeRequest(db, doctype, http.MethodGet, url, nil, oldDoc)
 	if err != nil {
 		return err

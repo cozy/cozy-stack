@@ -165,28 +165,28 @@ func (j *Job) SetID(id string) { j.JobID = id }
 // SetRev implements the couchdb.Doc interface
 func (j *Job) SetRev(rev string) { j.JobRev = rev }
 
-// Match implements the permission.Matcher interface
-func (j *Job) Match(key, value string) bool {
-	switch key {
+// Fetch implements the permission.Fetcher interface
+func (j *Job) Fetch(field string) []string {
+	switch field {
 	case WorkerType:
-		return j.WorkerType == value
+		return []string{j.WorkerType}
 	}
-	return false
+	return nil
 }
 
-// ID implements the permission.Matcher interface
+// ID implements the permission.Getter interface
 func (jr *JobRequest) ID() string { return "" }
 
-// DocType implements the permission.Matcher interface
+// DocType implements the permission.Getter interface
 func (jr *JobRequest) DocType() string { return consts.Jobs }
 
-// Match implements the permission.Matcher interface
-func (jr *JobRequest) Match(key, value string) bool {
-	switch key {
+// Fetch implements the permission.Fetcher interface
+func (jr *JobRequest) Fetch(field string) []string {
+	switch field {
 	case WorkerType:
-		return jr.WorkerType == value
+		return []string{jr.WorkerType}
 	}
-	return false
+	return nil
 }
 
 // Logger returns a logger associated with the job domain
@@ -481,6 +481,6 @@ func (e Event) Unmarshal(evt interface{}) error {
 }
 
 var (
-	_ permission.Matcher = (*JobRequest)(nil)
-	_ permission.Matcher = (*Job)(nil)
+	_ permission.Fetcher = (*JobRequest)(nil)
+	_ permission.Fetcher = (*Job)(nil)
 )

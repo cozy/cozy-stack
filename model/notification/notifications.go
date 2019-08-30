@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -88,8 +89,8 @@ func (n *Notification) SetID(id string) { n.NID = id }
 // SetRev is used to implement the couchdb.Doc interface
 func (n *Notification) SetRev(rev string) { n.NRev = rev }
 
-// Match implements permissions.Matcher
-func (n *Notification) Match(k, f string) bool { return false }
+// Fetch implements permissions.Fetcher
+func (n *Notification) Fetch(field string) []string { return nil }
 
 // Source returns the complete normalized source value. This should be recorded
 // in the `source_id` field.
@@ -100,3 +101,6 @@ func (n *Notification) Source() string {
 		n.Category,
 		n.CategoryID)
 }
+
+var _ couchdb.Doc = &Notification{}
+var _ permission.Fetcher = &Notification{}

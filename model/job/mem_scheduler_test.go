@@ -93,7 +93,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, ts, len(triggers))
 
-	doc := couchdb.JSONDoc{
+	doc := &couchdb.JSONDoc{
 		Type: "io.cozy.testdebounce",
 		M: map[string]interface{}{
 			"_id":  "test-id",
@@ -104,16 +104,16 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 
 	for i := 0; i < 24; i++ {
 		time.Sleep(200 * time.Millisecond)
-		realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
+		realtime.GetHub().Publish(testInstance, realtime.EventCreate, doc, nil)
 	}
 
 	time.Sleep(3000 * time.Millisecond)
 	assert.Equal(t, 3, called)
 
-	doc2 := doc.Clone().(couchdb.JSONDoc)
+	doc2 := doc.Clone().(*couchdb.JSONDoc)
 	doc2.Type = "io.cozy.moredebounce"
-	realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
-	realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc2, nil)
+	realtime.GetHub().Publish(testInstance, realtime.EventCreate, doc, nil)
+	realtime.GetHub().Publish(testInstance, realtime.EventCreate, doc2, nil)
 	time.Sleep(3000 * time.Millisecond)
 	assert.Equal(t, 4, called)
 

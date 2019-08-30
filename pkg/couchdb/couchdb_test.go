@@ -26,7 +26,7 @@ const TestDoctype = "io.cozy.testobject"
 
 var TestPrefix = newDatabase("couchdb-tests")
 var receivedEventsMutex sync.Mutex
-var receivedEvents map[string]struct{}
+var receivedEvents map[string]*realtime.Event
 
 type testDoc struct {
 	TestID  string `json:"_id,omitempty"`
@@ -98,7 +98,10 @@ func TestCreateDoc(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, revBackup, updated.Rev())
 	assert.Equal(t, "changedvalue", updated.Test)
-	assertGotEvent(t, realtime.EventUpdate, doc.ID())
+	evt := assertGotEvent(t, realtime.EventUpdate, doc.ID())
+	assert.NotNil(t, evt.OldDoc)
+	assert.Equal(t, "somevalue", evt.OldDoc.(*testDoc).Test)
+	assert.Equal(t, "changedvalue", evt.Doc.(*testDoc).Test)
 
 	// Refetch it and see if its match
 	fetched2 := &testDoc{}
@@ -298,6 +301,79 @@ func TestUUID(t *testing.T) {
 	assert.Len(t, uuid, 32)
 }
 
+func TestUpdateJSONDoc(t *testing.T) {
+	var err error
+
+	doc := &JSONDoc{
+		Type: TestDoctype,
+		M: map[string]interface{}{
+			"test": "1",
+		},
+	}
+	assert.Empty(t, doc.Rev(), doc.ID())
+
+	// Create the document
+	err = CreateDoc(TestPrefix, doc)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, doc.Rev(), doc.ID())
+	assertGotEvent(t, realtime.EventCreate, doc.ID())
+
+	// Update it
+	updated := &JSONDoc{
+		Type: TestDoctype,
+		M: map[string]interface{}{
+			"_id":  doc.ID(),
+			"_rev": doc.Rev(),
+			"test": "2",
+		},
+	}
+	err = UpdateDoc(TestPrefix, updated)
+	assert.NoError(t, err)
+	assert.NotEqual(t, doc.Rev(), updated.Rev())
+	assert.Equal(t, "2", updated.M["test"])
+	evt := assertGotEvent(t, realtime.EventUpdate, doc.ID())
+	assert.NotNil(t, evt.OldDoc)
+	assert.Equal(t, "1", evt.OldDoc.(*JSONDoc).M["test"])
+	assert.Equal(t, "2", evt.Doc.(*JSONDoc).M["test"])
+
+	// Remove the test field
+	noTest := &JSONDoc{
+		Type: TestDoctype,
+		M: map[string]interface{}{
+			"_id":  updated.ID(),
+			"_rev": updated.Rev(),
+			"foo":  "bar",
+		},
+	}
+	err = UpdateDoc(TestPrefix, noTest)
+	assert.NoError(t, err)
+	assert.NotEqual(t, updated.Rev(), noTest.Rev())
+	assert.Empty(t, noTest.M["test"])
+	evt = assertGotEvent(t, realtime.EventUpdate, doc.ID())
+	assert.NotNil(t, evt.OldDoc)
+	assert.Equal(t, "2", evt.OldDoc.(*JSONDoc).M["test"])
+	assert.Empty(t, evt.Doc.(*JSONDoc).M["test"])
+
+	// Add the test field
+	withTest := &JSONDoc{
+		Type: TestDoctype,
+		M: map[string]interface{}{
+			"_id":  noTest.ID(),
+			"_rev": noTest.Rev(),
+			"foo":  "baz",
+			"test": "3",
+		},
+	}
+	err = UpdateDoc(TestPrefix, withTest)
+	assert.NoError(t, err)
+	assert.NotEqual(t, noTest.Rev(), withTest.Rev())
+	assert.Equal(t, "3", withTest.M["test"])
+	evt = assertGotEvent(t, realtime.EventUpdate, doc.ID())
+	assert.NotNil(t, evt.OldDoc)
+	assert.Empty(t, evt.OldDoc.(*JSONDoc).M["test"])
+	assert.Equal(t, "3", evt.Doc.(*JSONDoc).M["test"])
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
@@ -312,13 +388,13 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	receivedEvents = make(map[string]struct{})
+	receivedEvents = make(map[string]*realtime.Event)
 	eventChan := realtime.GetHub().Subscriber(TestPrefix)
 	_ = eventChan.Subscribe(TestDoctype)
 	go func() {
 		for ev := range eventChan.Channel {
 			receivedEventsMutex.Lock()
-			receivedEvents[ev.Verb+ev.Doc.ID()] = struct{}{}
+			receivedEvents[ev.Verb+ev.Doc.ID()] = ev
 			receivedEventsMutex.Unlock()
 		}
 	}()
@@ -354,7 +430,7 @@ func TestJSONDocClone(t *testing.T) {
 		Type: "toto",
 		M:    m,
 	}
-	j2 := j1.Clone().(JSONDoc)
+	j2 := j1.Clone().(*JSONDoc)
 
 	assert.Equal(t, j1.Type, j2.Type)
 	assert.True(t, reflect.DeepEqual(j1.M, j2.M))
@@ -404,14 +480,15 @@ func TestLocalDocuments(t *testing.T) {
 	assert.True(t, IsNotFoundError(err))
 }
 
-func assertGotEvent(t *testing.T, eventType, id string) bool {
+func assertGotEvent(t *testing.T, eventType, id string) *realtime.Event {
+	var event *realtime.Event
 	receivedEventsMutex.Lock()
 	_, ok := receivedEvents[eventType+id]
 	if !ok {
 		receivedEventsMutex.Unlock()
 		time.Sleep(time.Millisecond)
 		receivedEventsMutex.Lock()
-		_, ok = receivedEvents[eventType+id]
+		event, ok = receivedEvents[eventType+id]
 	}
 
 	if ok {
@@ -419,5 +496,6 @@ func assertGotEvent(t *testing.T, eventType, id string) bool {
 	}
 	receivedEventsMutex.Unlock()
 
-	return assert.True(t, ok, "Expected event %s:%s", eventType, id)
+	assert.True(t, ok, "Expected event %s:%s", eventType, id)
+	return event
 }

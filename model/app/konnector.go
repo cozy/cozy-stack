@@ -178,15 +178,15 @@ func (m *KonnManifest) SetError(err error) {
 // Error is part of the Manifest interface
 func (m *KonnManifest) Error() error { return m.err }
 
-// Match is part of the Manifest interface
-func (m *KonnManifest) Match(field, value string) bool {
+// Fetch is part of the Manifest interface
+func (m *KonnManifest) Fetch(field string) []string {
 	switch field {
 	case "slug":
-		return m.DocSlug == value
+		return []string{m.DocSlug}
 	case "state":
-		return m.DocState == State(value)
+		return []string{string(m.DocState)}
 	}
-	return false
+	return nil
 }
 
 // ReadManifest is part of the Manifest interface

@@ -2,26 +2,27 @@ package vfs
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 )
 
-// Matcher extends on permission.Matcher with hierarchy functions
-type Matcher interface {
-	permission.Matcher
+// Fetcher extends on permission.Fetcher with hierarchy functions
+type Fetcher interface {
+	permission.Fetcher
 	parentID() string
 	Path(fs FilePather) (string, error)
 	Parent(fs VFS) (*DirDoc, error)
 }
 
-// FileDoc & DirDoc are vfs.Matcher
-var _ Matcher = (*FileDoc)(nil)
-var _ Matcher = (*DirDoc)(nil)
+// FileDoc & DirDoc are vfs.Fetcher
+var _ Fetcher = (*FileDoc)(nil)
+var _ Fetcher = (*DirDoc)(nil)
 
 // Allows check if a permSet allows verb on given file
-func Allows(fs VFS, pset permission.Set, v permission.Verb, fd Matcher) error {
+func Allows(fs VFS, pset permission.Set, v permission.Verb, fd Fetcher) error {
 	allowedIDs := []string{}
 	otherRules := []permission.Rule{}
 
@@ -48,7 +49,15 @@ func Allows(fs VFS, pset permission.Set, v permission.Verb, fd Matcher) error {
 		}
 
 		// permission by attributes values (tags, mime ...) on self
-		var valid = func(value string) bool { return fd.Match(r.Selector, value) }
+		var valid = func(value string) bool {
+			candidates := fd.Fetch(r.Selector)
+			for _, candidate := range candidates {
+				if value == candidate {
+					return true
+				}
+			}
+			return false
+		}
 		if r.SomeValue(valid) {
 			return nil
 		}
@@ -120,69 +129,52 @@ func pathFromID(fs VFS, id string) (string, error) {
 	return dir.Path(fs)
 }
 
-func contains(haystack []string, needle string) bool {
-	for _, v := range haystack {
-		if needle == v {
-			return true
-		}
-	}
-	return false
-}
-
 func (f *FileDoc) parentID() string { return f.DirID }
 func (d *DirDoc) parentID() string  { return d.DirID }
 
-// Match implements permission.Matcher on FileDoc
-func (f *FileDoc) Match(field, expected string) bool {
+// Fetch implements permission.Fetch on FileDoc
+func (f *FileDoc) Fetch(field string) []string {
 	switch field {
 	case "type":
-		return f.Type == expected
+		return []string{f.Type}
 	case "name":
-		return f.DocName == expected
+		return []string{f.DocName}
 	case "mime":
-		return f.Mime == expected
+		return []string{f.Mime}
 	case "class":
-		return f.Class == expected
+		return []string{f.Class}
 	case "tags":
-		return contains(f.Tags, expected)
+		return f.Tags
 	case "referenced_by":
 		if f != nil {
+			var values []string
 			for _, ref := range f.ReferencedBy {
-				parts := strings.Split(expected, permission.RefSep)
-				if len(parts) == 2 {
-					if ref.Type == parts[0] && ref.ID == parts[1] {
-						return true
-					}
-				} else {
-					if ref.ID == expected {
-						return true
-					}
-				}
+				// 2 formats are possible:
+				// - only the identifier
+				// - doctype/docid
+				values = append(values, ref.ID, fmt.Sprintf("%s/%s", ref.Type, ref.ID))
 			}
+			return values
 		}
-		return false
-	default:
-		return false
 	}
+	return nil
 }
 
-// Match implements permission.Matcher on DirDOc
-func (d *DirDoc) Match(field, expected string) bool {
+// Fetch implements permission.Fetcher on DirDOc
+func (d *DirDoc) Fetch(field string) []string {
 	switch field {
 	case "type":
-		return d.Type == expected
+		return []string{d.Type}
 	case "name":
-		return d.DocName == expected
+		return []string{d.DocName}
 	case "tags":
-		return contains(d.Tags, expected)
+		return d.Tags
 	case "referenced_by":
+		var values []string
 		for _, ref := range d.ReferencedBy {
-			if ref.ID == expected {
-				return true
-			}
+			values = append(values, ref.ID)
 		}
-		return false
-	default:
-		return false
+		return values
 	}
+	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -82,9 +83,13 @@ func (ac *Account) Clone() couchdb.Doc {
 	return &cloned
 }
 
-// Match implements permissions.Matcher
-func (ac *Account) Match(field, expected string) bool {
-	return field == "account_type" && expected == ac.AccountType
+// Fetch implements permission.Fetcher
+func (ac *Account) Fetch(field string) []string {
+	switch field {
+	case "account_type":
+		return []string{ac.AccountType}
+	}
+	return nil
 }
 
 // GetTriggers returns the list of triggers associated with the given
@@ -153,8 +158,6 @@ func init() {
 				manualCleaning = v.ManualCleaning
 			case *couchdb.JSONDoc:
 				manualCleaning, _ = v.M["manual_cleaning"].(bool)
-			case couchdb.JSONDoc:
-				manualCleaning, _ = v.M["manual_cleaning"].(bool)
 			}
 			if manualCleaning {
 				return nil
@@ -191,8 +194,6 @@ func init() {
 				konnector = v.AccountType
 			case *couchdb.JSONDoc:
 				konnector, _ = v.M["account_type"].(string)
-			case couchdb.JSONDoc:
-				konnector, _ = v.M["account_type"].(string)
 			}
 			if konnector == "" {
 				logger.WithDomain(db.DomainName()).
@@ -205,3 +206,5 @@ func init() {
 			return err
 		})
 }
+
+var _ permission.Fetcher = &Account{}

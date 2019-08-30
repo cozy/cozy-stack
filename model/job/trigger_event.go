@@ -43,25 +43,6 @@ func (t *EventTrigger) Type() string {
 	return t.TriggerInfos.Type
 }
 
-// DocType implements the permission.Matcher interface
-func (t *EventTrigger) DocType() string {
-	return consts.Triggers
-}
-
-// ID implements the permission.Matcher interface
-func (t *EventTrigger) ID() string {
-	return t.TriggerInfos.TID
-}
-
-// Match implements the permission.Matcher interface
-func (t *EventTrigger) Match(key, value string) bool {
-	switch key {
-	case WorkerType:
-		return t.TriggerInfos.WorkerType == value
-	}
-	return false
-}
-
 // Schedule implements the Schedule method of the Trigger interface.
 func (t *EventTrigger) Schedule() <-chan *JobRequest {
 	ch := make(chan *JobRequest)
@@ -151,14 +132,30 @@ func eventMatchRule(e *realtime.Event, rule *permission.Rule) bool {
 		return false
 	}
 
-	if v, ok := e.Doc.(permission.Matcher); ok {
-		if rule.ValuesMatch(v) {
-			return true
+	if len(rule.Values) == 1 && rule.Values[0] == "!=" {
+		// Selector for a changed value
+		if e.Verb != realtime.EventUpdate {
+			return true // We consider that the value has changed on create and delete
 		}
-		// Particular case where the new doc is not valid but the old one was.
-		if e.OldDoc != nil {
-			if vOld, okOld := e.OldDoc.(permission.Matcher); okOld {
-				return rule.ValuesMatch(vOld)
+		if e.OldDoc == nil {
+			return false
+		}
+		if doc, ok := e.Doc.(permission.Fetcher); ok {
+			if old, ok := e.OldDoc.(permission.Fetcher); ok {
+				return rule.ValuesChanged(old, doc)
+			}
+		}
+	} else {
+		// Selector with normal values
+		if v, ok := e.Doc.(permission.Fetcher); ok {
+			if rule.ValuesMatch(v) {
+				return true
+			}
+			// Particular case where the new doc is not valid but the old one was.
+			if e.OldDoc != nil {
+				if vOld, okOld := e.OldDoc.(permission.Fetcher); okOld {
+					return rule.ValuesMatch(vOld)
+				}
 			}
 		}
 	}
@@ -201,3 +198,5 @@ func testPath(dir *vfs.DirDoc, doc realtime.Doc) bool {
 	}
 	return false
 }
+
+var _ Trigger = &EventTrigger{}

@@ -594,7 +594,7 @@ func (s *Sharing) EndInitial(inst *instance.Instance) error {
 		Type: consts.SharingsInitialSync,
 		M:    map[string]interface{}{"_id": s.SID},
 	}
-	realtime.GetHub().Publish(inst, realtime.EventDelete, doc, nil)
+	realtime.GetHub().Publish(inst, realtime.EventDelete, &doc, nil)
 	return nil
 }
 

@@ -2,8 +2,6 @@ package job
 
 import (
 	"time"
-
-	"github.com/cozy/cozy-stack/pkg/consts"
 )
 
 // maxPastTriggerTime is the maximum duration in the past for which the at
@@ -50,25 +48,6 @@ func NewInTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 // Type implements the Type method of the Trigger interface.
 func (a *AtTrigger) Type() string {
 	return a.TriggerInfos.Type
-}
-
-// DocType implements the permissions.Matcher interface
-func (a *AtTrigger) DocType() string {
-	return consts.Triggers
-}
-
-// ID implements the permissions.Matcher interface
-func (a *AtTrigger) ID() string {
-	return a.TriggerInfos.TID
-}
-
-// Match implements the permissions.Matcher interface
-func (a *AtTrigger) Match(key, value string) bool {
-	switch key {
-	case WorkerType:
-		return a.TriggerInfos.WorkerType == value
-	}
-	return false
 }
 
 // Schedule implements the Schedule method of the Trigger interface.

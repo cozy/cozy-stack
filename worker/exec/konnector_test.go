@@ -153,8 +153,8 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		ev2 := <-ch
 		err = evCh.Close()
 		assert.NoError(t, err)
-		doc1 := ev1.Doc.(couchdb.JSONDoc)
-		doc2 := ev2.Doc.(couchdb.JSONDoc)
+		doc1 := ev1.Doc.(*couchdb.JSONDoc)
+		doc2 := ev2.Doc.(*couchdb.JSONDoc)
 
 		assert.Equal(t, inst.Domain, ev1.Domain)
 		assert.Equal(t, inst.Domain, ev2.Domain)
@@ -264,7 +264,7 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 		ev1 := <-ch
 		err = evCh.Close()
 		assert.NoError(t, err)
-		doc1 := ev1.Doc.(couchdb.JSONDoc)
+		doc1 := ev1.Doc.(*couchdb.JSONDoc)
 
 		assert.Equal(t, inst.Domain, ev1.Domain)
 		assert.Equal(t, "params", doc1.M["type"])

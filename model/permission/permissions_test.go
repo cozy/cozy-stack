@@ -353,9 +353,11 @@ type validable struct {
 	values  map[string]string
 }
 
-func (t *validable) ID() string             { return t.id }
-func (t *validable) DocType() string        { return t.doctype }
-func (t *validable) Match(f, e string) bool { return t.values[f] == e }
+func (t *validable) ID() string      { return t.id }
+func (t *validable) DocType() string { return t.doctype }
+func (t *validable) Fetch(field string) []string {
+	return []string{t.values[field]}
+}
 
 type validableFile struct {
 	path string
@@ -363,6 +365,15 @@ type validableFile struct {
 
 func (t *validableFile) ID() string      { return t.path }
 func (t *validableFile) DocType() string { return "io.cozy.files" }
-func (t *validableFile) Match(f, e string) bool {
-	return f == "path" && strings.HasPrefix(t.path, e)
+func (t *validableFile) Fetch(field string) []string {
+	if field != "path" {
+		return nil
+	}
+	var prefixes []string
+	parts := strings.Split(t.path, "/")
+	for i := 1; i < len(parts); i++ {
+		prefix := strings.Join(parts[:i], "/") + "/"
+		prefixes = append(prefixes, prefix)
+	}
+	return prefixes
 }

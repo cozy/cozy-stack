@@ -83,12 +83,12 @@ func (j apiJob) MarshalJSON() ([]byte, error) {
 
 func (q apiQueue) ID() string      { return q.workerType }
 func (q apiQueue) DocType() string { return consts.Jobs }
-func (q apiQueue) Match(key, value string) bool {
-	switch key {
+func (q apiQueue) Fetch(field string) []string {
+	switch field {
 	case "worker":
-		return q.workerType == value
+		return []string{q.workerType}
 	}
-	return false
+	return nil
 }
 
 func (t apiTrigger) ID() string                             { return t.t.TID }

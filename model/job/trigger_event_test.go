@@ -21,6 +21,7 @@ func makeMessage(t *testing.T, msg string) jobs.Message {
 func TestTriggerEvent(t *testing.T) {
 	var wg sync.WaitGroup
 	var called = make(map[string]bool)
+	verb := "CREATED"
 
 	bro := jobs.NewMemBroker()
 	assert.NoError(t, bro.StartWorkers(jobs.WorkersList{
@@ -46,7 +47,7 @@ func TestTriggerEvent(t *testing.T) {
 					return nil
 				}
 				assert.Equal(t, testInstance.Domain, evt.Domain)
-				assert.Equal(t, "CREATED", evt.Verb)
+				assert.Equal(t, verb, evt.Verb)
 				assert.Equal(t, "test-id", evt.Doc.ID())
 				called[msg] = true
 				return nil
@@ -79,6 +80,12 @@ func TestTriggerEvent(t *testing.T) {
 			Arguments:  "io.cozy.testeventobject:CREATED:notvalue:test",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-correct-verb-bad-value"),
+		},
+		{
+			Type:       "@event",
+			Arguments:  "io.cozy.testeventobject:UPDATED:!=:test",
+			WorkerType: "worker_event",
+			Message:    makeMessage(t, "message-change"),
 		},
 		{
 			Type:       "@event",
@@ -119,11 +126,81 @@ func TestTriggerEvent(t *testing.T) {
 
 	wg.Wait()
 
-	assert.True(t, called["message-wholetype"])
 	assert.True(t, called["message-correct-verb"])
 	assert.True(t, called["message-correct-verb-correct-value"])
+	assert.True(t, called["message-wholetype"])
 	assert.False(t, called["message-bad-verb"])
 	assert.False(t, called["message-correct-verb-bad-value"])
+	assert.False(t, called["message-change"])
+
+	delete(called, "message-correct-verb")
+	delete(called, "message-correct-verb-correct-value")
+	delete(called, "message-wholetype")
+
+	wg.Add(1)
+	verb = "UPDATED"
+
+	time.AfterFunc(1*time.Millisecond, func() {
+		doc := couchdb.JSONDoc{
+			Type: "io.cozy.testeventobject",
+			M: map[string]interface{}{
+				"_id":  "test-id",
+				"_rev": "2-xxcdxx",
+				"test": "value",
+			},
+		}
+		olddoc := couchdb.JSONDoc{
+			Type: "io.cozy.testeventobject",
+			M: map[string]interface{}{
+				"_id":  "test-id",
+				"_rev": "1-xxabxx",
+				"test": "value",
+			},
+		}
+		realtime.GetHub().Publish(testInstance, realtime.EventUpdate, &doc, &olddoc)
+	})
+
+	wg.Wait()
+
+	assert.True(t, called["message-wholetype"])
+	assert.False(t, called["message-correct-verb"])
+	assert.False(t, called["message-correct-verb-correct-value"])
+	assert.False(t, called["message-bad-verb"])
+	assert.False(t, called["message-correct-verb-bad-value"])
+	assert.False(t, called["message-change"])
+
+	delete(called, "message-wholetype")
+
+	wg.Add(2)
+
+	time.AfterFunc(1*time.Millisecond, func() {
+		doc := couchdb.JSONDoc{
+			Type: "io.cozy.testeventobject",
+			M: map[string]interface{}{
+				"_id":  "test-id",
+				"_rev": "3-xxefxx",
+				"test": "changed",
+			},
+		}
+		olddoc := couchdb.JSONDoc{
+			Type: "io.cozy.testeventobject",
+			M: map[string]interface{}{
+				"_id":  "test-id",
+				"_rev": "2-xxcdxx",
+				"test": "value",
+			},
+		}
+		realtime.GetHub().Publish(testInstance, realtime.EventUpdate, &doc, &olddoc)
+	})
+
+	wg.Wait()
+
+	assert.False(t, called["message-correct-verb"])
+	assert.False(t, called["message-correct-verb-correct-value"])
+	assert.False(t, called["message-bad-verb"])
+	assert.False(t, called["message-correct-verb-bad-value"])
+	assert.True(t, called["message-change"])
+	assert.True(t, called["message-wholetype"])
 
 	for _, trigger := range triggers {
 		err := sch.DeleteTrigger(testInstance, trigger.ID())

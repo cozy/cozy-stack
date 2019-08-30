@@ -3,7 +3,6 @@ package job
 import (
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/robfig/cron/v3"
 )
 
@@ -47,25 +46,6 @@ func NewEveryTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 // Type implements the Type method of the Trigger interface.
 func (c *CronTrigger) Type() string {
 	return c.TriggerInfos.Type
-}
-
-// DocType implements the permissions.Matcher interface
-func (c *CronTrigger) DocType() string {
-	return consts.Triggers
-}
-
-// ID implements the permissions.Matcher interface
-func (c *CronTrigger) ID() string {
-	return c.TriggerInfos.TID
-}
-
-// Match implements the permissions.Matcher interface
-func (c *CronTrigger) Match(key, value string) bool {
-	switch key {
-	case WorkerType:
-		return c.TriggerInfos.WorkerType == value
-	}
-	return false
 }
 
 // NextExecution returns the next time when a job should be fired for this trigger

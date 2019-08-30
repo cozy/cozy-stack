@@ -233,15 +233,15 @@ func (m *WebappManifest) SetError(err error) {
 // Error is part of the Manifest interface
 func (m *WebappManifest) Error() error { return m.err }
 
-// Match is part of the Manifest interface
-func (m *WebappManifest) Match(field, value string) bool {
+// Fetch is part of the Manifest interface
+func (m *WebappManifest) Fetch(field string) []string {
 	switch field {
 	case "slug":
-		return m.DocSlug == value
+		return []string{m.DocSlug}
 	case "state":
-		return m.DocState == State(value)
+		return []string{string(m.DocState)}
 	}
-	return false
+	return nil
 }
 
 // NameLocalized returns the name of the app in the given locale
