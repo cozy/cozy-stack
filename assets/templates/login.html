@@ -42,7 +42,7 @@
     </svg>
     <div role="application">
       <main class="wizard">
-        <form id="login-form" method="POST" action="/auth/login" class="wizard-wrapper" data-iterations={{.Iterations}} data-salt="{{.Salt}}">
+        <form id="login-form" method="POST" action="/auth/login" class="wizard-wrapper" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
           <div role="region" class="wizard-main" id="login-field">
             {{if .CredentialsError}}
             <p class="wizard-errors u-error">

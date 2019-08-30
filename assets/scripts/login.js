@@ -66,7 +66,7 @@
       .then(pass => {
         const reqBody =
           'passphrase=' +
-          encodeURIComponent(pass) +
+          encodeURIComponent(pass.hashed) +
           '&two-factor-trusted-device-token=' +
           encodeURIComponent(twoFactorTrustedDeviceToken) +
           '&long-run-session=' +

@@ -84,12 +84,16 @@
       iterations: 1,
       hash: { name: 'SHA-256' }
     }
+    let masterKey
     return subtle
       .importKey('raw', passwordBuf, { name: 'PBKDF2' }, false, ['deriveBits'])
       .then(material => subtle.deriveBits(first, material, 256))
-      .then(key =>
-        subtle.importKey('raw', key, { name: 'PBKDF2' }, false, ['deriveBits'])
-      )
+      .then(key => {
+        masterKey = key
+        return subtle.importKey('raw', key, { name: 'PBKDF2' }, false, [
+          'deriveBits'
+        ])
+      })
       .then(material => subtle.deriveBits(second, material, 256))
       .then(hashed => {
         let binary = ''
@@ -97,12 +101,48 @@
         for (let i = 0; i < bytes.byteLength; i++) {
           binary += String.fromCharCode(bytes[i])
         }
-        return w.btoa(binary)
+        return { hashed: w.btoa(binary), masterKey: masterKey }
+      })
+  }
+
+  function randomBytes(length) {
+    const arr = new Uint8Array(length)
+    w.crypto.getRandomValues(arr)
+    return arr.buffer
+  }
+
+  function fromBufferToB64(buffer) {
+    let binary = ''
+    const bytes = new Uint8Array(buffer)
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i])
+    }
+    return w.btoa(binary)
+  }
+
+  // Returns a promise that resolves to a new encryption key, encrypted with
+  // the masterKey and ready to be sent to the server on onboarding.
+  // TODO add this to cozy-auth.js and use it
+  function makeEncKey(masterKey) {
+    const subtle = w.crypto.subtle
+    const encKey = randomBytes(64)
+    const iv = randomBytes(16)
+    return subtle
+      .importKey('raw', masterKey, { name: 'AES-CBC' }, false, ['encrypt'])
+      .then(impKey =>
+        subtle.encrypt({ name: 'AES-CBC', iv: iv }, impKey, encKey)
+      )
+      .then(encrypted => {
+        const iv64 = fromBufferToB64(iv)
+        const data = fromBufferToB64(encrypted)
+        // 0 means AES-256-CBC
+        return `0.${data}|${iv64}`
       })
   }
 
   w.password = {
     getStrength: getStrength,
-    hash: hash
+    hash: hash,
+    makeEncKey: makeEncKey
   }
 })(window)

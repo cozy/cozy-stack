@@ -43,8 +43,9 @@
           <h1 class="wizard-title u-mb-half u-mb-0-s u-mt-1-s">{{t "Passphrase renew Title"}}</h1>
           <div role="region" class="wizard-main">
             <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
-            <input type="hidden" id="renew-password-iterations" name="iterations" value={{.Iterations}}>
-            <input id="passphrase-reset-token" type="hidden" name="passphrase_reset_token" value="{{.PassphraseResetToken}}" />
+            <input type="hidden" id="renew-password-iterations" name="iterations" value="{{.Iterations}}" />
+            <input type="hidden" id="renew-password-key" name="key" value="" />
+            <input type="hidden" id="passphrase-reset-token" name="passphrase_reset_token" value="{{.PassphraseResetToken}}" />
             <p class="wizard-notice u-coolGrey u-mt-1" id="login-password-tip">{{t "Passphrase renew Help"}}</p>
             <div class="o-field password-form u-m-0">
               <label for="password" aria-describedby="login-password-tip" class="c-label">{{t "Passphrase renew Field"}}</label>
