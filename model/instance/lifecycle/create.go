@@ -33,6 +33,7 @@ type Options struct {
 	SettingsObj    *couchdb.JSONDoc
 	AuthMode       string
 	Passphrase     string
+	Key            string
 	KdfIterations  int
 	SwiftLayout    int
 	DiskQuota      int64
@@ -123,7 +124,12 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	}
 
 	if opts.Passphrase != "" {
-		if err = registerPassphrase(i, []byte(opts.Passphrase), i.RegisterToken, opts.KdfIterations); err != nil {
+		err = registerPassphrase(i, i.RegisterToken, PassParameters{
+			Pass:       []byte(opts.Passphrase),
+			Iterations: opts.KdfIterations,
+			Key:        opts.Key,
+		})
+		if err != nil {
 			return nil, err
 		}
 		// set the onboarding finished when specifying a passphrase. we totally

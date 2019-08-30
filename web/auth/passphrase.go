@@ -139,12 +139,18 @@ func passphraseRenew(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 	pass := []byte(c.FormValue("passphrase"))
+	key := c.FormValue("key")
 	iterations, _ := strconv.Atoi(c.FormValue("iterations"))
 	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
 	if err != nil {
 		return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 	}
-	if err := lifecycle.PassphraseRenew(inst, pass, token, iterations); err != nil {
+	err = lifecycle.PassphraseRenew(inst, token, lifecycle.PassParameters{
+		Pass:       pass,
+		Iterations: iterations,
+		Key:        key,
+	})
+	if err != nil {
 		if err == instance.ErrMissingToken {
 			return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 		}

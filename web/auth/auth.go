@@ -275,14 +275,16 @@ func login(c echo.Context) error {
 		if inst.PassphraseKdfIterations == 0 {
 			iterations := crypto.DefaultPBKDF2Iterations
 			salt := inst.PassphraseSalt()
-			pass := crypto.HashPassWithPBKDF2(passphrase, salt, iterations)
+			pass, masterKey := crypto.HashPassWithPBKDF2(passphrase, salt, iterations)
 			hash, err := crypto.GenerateFromPassphrase(pass)
 			if err == nil {
 				inst.PassphraseHash = hash
 				inst.PassphraseKdfIterations = iterations
 				inst.PassphraseKdf = instance.PBKDF2_SHA256
-				if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
-					inst.Logger().Errorf("Could not update: %s", err.Error())
+				if err := lifecycle.CreatePassphraseKey(inst, masterKey); err == nil {
+					if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+						inst.Logger().Errorf("Could not update: %s", err.Error())
+					}
 				}
 			}
 		}

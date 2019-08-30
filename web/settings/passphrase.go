@@ -62,6 +62,7 @@ func registerPassphrase(c echo.Context) error {
 	args := struct {
 		Register   string `json:"register_token" form:"register_token"`
 		Passphrase string `json:"passphrase" form:"passphrase"`
+		Key        string `json:"key" form:"key"`
 		Iterations int    `json:"iterations" form:"iterations"`
 	}{}
 	if err := c.Bind(&args); err != nil {
@@ -73,11 +74,6 @@ func registerPassphrase(c echo.Context) error {
 		return jsonapi.Errorf(http.StatusBadRequest, "%s", err)
 	}
 
-	passphrase := []byte(args.Passphrase)
-	if err = lifecycle.RegisterPassphrase(inst, passphrase, registerToken, args.Iterations); err != nil {
-		return jsonapi.BadRequest(err)
-	}
-
 	if args.Iterations < crypto.MinPBKDF2Iterations && args.Iterations != 0 {
 		err := errors.New("The KdfIterations number is too low")
 		return jsonapi.InvalidParameter("KdfIterations", err)
@@ -85,6 +81,16 @@ func registerPassphrase(c echo.Context) error {
 	if args.Iterations > crypto.MaxPBKDF2Iterations {
 		err := errors.New("The KdfIterations number is too high")
 		return jsonapi.InvalidParameter("KdfIterations", err)
+	}
+
+	passphrase := []byte(args.Passphrase)
+	err = lifecycle.RegisterPassphrase(inst, registerToken, lifecycle.PassParameters{
+		Pass:       passphrase,
+		Iterations: args.Iterations,
+		Key:        args.Key,
+	})
+	if err != nil {
+		return jsonapi.BadRequest(err)
 	}
 
 	longRunSession := true

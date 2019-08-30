@@ -181,19 +181,35 @@ func TestRegisterPassphrase(t *testing.T) {
 	empty := []byte("")
 	badtoken := []byte("not-token")
 
-	err = lifecycle.RegisterPassphrase(i, pass, empty, 5000)
+	err = lifecycle.RegisterPassphrase(i, empty, lifecycle.PassParameters{
+		Pass:       pass,
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	assert.Error(t, err, "RegisterPassphrase requires token")
 
-	err = lifecycle.RegisterPassphrase(i, pass, badtoken, 5000)
+	err = lifecycle.RegisterPassphrase(i, badtoken, lifecycle.PassParameters{
+		Pass:       pass,
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	assert.Error(t, err, "RegisterPassphrase requires proper token")
 
-	err = lifecycle.RegisterPassphrase(i, pass, rtoken, 5000)
+	err = lifecycle.RegisterPassphrase(i, rtoken, lifecycle.PassParameters{
+		Pass:       pass,
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	assert.NoError(t, err)
 
 	assert.Empty(t, i.RegisterToken, "RegisterToken has not been removed")
 	assert.NotEmpty(t, i.PassphraseHash, "PassphraseHash has not been saved")
 
-	err = lifecycle.RegisterPassphrase(i, pass, rtoken, 5000)
+	err = lifecycle.RegisterPassphrase(i, rtoken, lifecycle.PassParameters{
+		Pass:       pass,
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	assert.Error(t, err, "RegisterPassphrase works only once")
 }
 
@@ -250,7 +266,11 @@ func TestRequestPassphraseReset(t *testing.T) {
 	if !assert.Nil(t, in.PassphraseResetToken) {
 		return
 	}
-	err = lifecycle.RegisterPassphrase(in, []byte("MyPassphrase"), in.RegisterToken, 5000)
+	err = lifecycle.RegisterPassphrase(in, in.RegisterToken, lifecycle.PassParameters{
+		Pass:       []byte("MyPassphrase"),
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -278,12 +298,20 @@ func TestPassphraseRenew(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	err = lifecycle.RegisterPassphrase(in, []byte("MyPassphrase"), in.RegisterToken, 5000)
+	err = lifecycle.RegisterPassphrase(in, in.RegisterToken, lifecycle.PassParameters{
+		Pass:       []byte("MyPassphrase"),
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	if !assert.NoError(t, err) {
 		return
 	}
 	passHash := in.PassphraseHash
-	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), nil, 5000)
+	err = lifecycle.PassphraseRenew(in, nil, lifecycle.PassParameters{
+		Pass:       []byte("NewPass"),
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	if !assert.Error(t, err) {
 		return
 	}
@@ -291,11 +319,19 @@ func TestPassphraseRenew(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), []byte("token"), 5000)
+	err = lifecycle.PassphraseRenew(in, []byte("token"), lifecycle.PassParameters{
+		Pass:       []byte("NewPass"),
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	if !assert.Error(t, err) {
 		return
 	}
-	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), in.PassphraseResetToken, 5000)
+	err = lifecycle.PassphraseRenew(in, in.PassphraseResetToken, lifecycle.PassParameters{
+		Pass:       []byte("NewPass"),
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	if !assert.NoError(t, err) {
 		return
 	}
