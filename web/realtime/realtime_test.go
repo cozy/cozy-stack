@@ -99,24 +99,32 @@ func TestWSNoPermissionsForADoctype(t *testing.T) {
 func TestWSSuccess(t *testing.T) {
 	u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
 	c, _, err := websocket.DefaultDialer.Dial(u, nil)
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer c.Close()
 
 	auth := fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, token)
 	err = c.WriteMessage(websocket.TextMessage, []byte(auth))
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	msg := `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.foos" }}`
 	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	msg = `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.bars", "id": "bar-one" }}`
 	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	h := realtime.GetHub()
 	var res map[string]interface{}
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(30 * time.Millisecond)
 
 	h.Publish(inst, realtime.EventUpdate, &testDoc{
 		doctype: "io.cozy.foos",
