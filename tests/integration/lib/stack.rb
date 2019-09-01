@@ -32,6 +32,9 @@ class Stack
            "--email", inst.email, "--settings", "context:test",
            "--admin-port", @admin.to_s, "--locale", "fr"]
     puts cmd.join(" ").green
+    return if system(*cmd)
+    # Try again if the cozy-stack serve was too slow to listen
+    sleep 3
     system(*cmd)
   end
 
