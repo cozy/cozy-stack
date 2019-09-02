@@ -11,7 +11,7 @@ require (
 	github.com/dhowden/tag v0.0.0-20190519100835-db0c67e351b1
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emersion/go-vcard v0.0.0-20190105225839-8856043f13c5
-	github.com/go-redis/redis/v7 v7.0.0-beta.3
+	github.com/go-redis/redis/v7 v7.0.0-beta.4
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang/gddo v0.0.0-20190815223733-287de01127ef
 	github.com/google/go-querystring v1.0.0
@@ -26,8 +26,6 @@ require (
 	github.com/leonelquinteros/gotext v1.4.0
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/mssola/user_agent v0.5.0
 	github.com/ncw/swift v1.0.49
 	github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443
