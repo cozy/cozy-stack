@@ -2,12 +2,12 @@
 package bitwarden
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -32,7 +32,7 @@ func GetToken(c echo.Context) error {
 	case "password":
 		return getInitialCredentials(c)
 	case "refresh_token":
-		return errors.New("Not yet implemented")
+		return refreshToken(c)
 	case "":
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "the grant_type parameter is mandatory",
@@ -77,6 +77,7 @@ func getInitialCredentials(c echo.Context) error {
 	if err := client.Create(inst); err != nil {
 		return c.JSON(err.Code, err)
 	}
+	client.CouchID = client.ClientID
 	// TODO send an email?
 
 	// Create the credentials
@@ -90,6 +91,49 @@ func getInitialCredentials(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate refresh token",
+		})
+	}
+	key := inst.PassphraseKey
+
+	// Send the response
+	out := AccessTokenReponse{
+		Type:      "Bearer",
+		ExpiresIn: int(consts.AccessTokenValidityDuration.Seconds()),
+		Access:    access,
+		Refresh:   refresh,
+		Key:       key,
+	}
+	return c.JSON(http.StatusOK, out)
+}
+
+func refreshToken(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	refresh := c.FormValue("refresh_token")
+
+	// Check the refresh token
+	claims, ok := oauth.ValidToken(inst, consts.RefreshTokenAudience, refresh)
+	if !ok || claims.Scope != oauth.BitwardenScope {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid refresh token",
+		})
+	}
+
+	// Find the OAuth client
+	client, err := oauth.FindClient(inst, claims.Subject)
+	if err != nil {
+		if couchErr, isCouchErr := couchdb.IsCouchError(err); isCouchErr && couchErr.StatusCode >= 500 {
+			return err
+		}
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the client must be registered",
+		})
+	}
+
+	// Create the credentials
+	access, err := client.CreateBitwardenJWT(inst)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate access token",
 		})
 	}
 	key := inst.PassphraseKey

@@ -55,7 +55,7 @@ Content-Type: application/json
 
 ### POST /bitwarden/identity/connect/token
 
-#### Request
+#### Request (initial connection)
 
 ```http
 POST /bitwarden/identity/connect/token HTTP/1.1
@@ -73,6 +73,20 @@ deviceType=3&
 deviceIdentifier=aac2e34a-44db-42ab-a733-5322dd582c3d&
 deviceName=firefox&
 devicePushToken=
+```
+
+#### Request (refresh token)
+
+```http
+POST /bitwarden/identity/connect/token HTTP/1.1
+Host: alice.example.com
+Content-Type: application/x-www-form-urlencoded
+```
+
+```
+grant_type=refresh_token&
+client_id=browser&
+refresh_token=28fb1911ef6db24025ce1bae5aa940e117eb09dfe609b425b69bff73d73c03bf
 ```
 
 #### Response

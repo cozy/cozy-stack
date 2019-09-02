@@ -511,10 +511,10 @@ func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string
 	return token, err
 }
 
-// ValidToken checks that the JWT is valid and returns the associate claims
-// It is expected to be used for registration token and refresh token, and
-// it doesn't check when they were issued as they don't expire.
-func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permission.Claims, bool) {
+// ValidToken checks that the JWT is valid and returns the associate claims.
+// You should use client.ValidToken if you know the client, as it also checks
+// that the claims are associated to this client.
+func ValidToken(i *instance.Instance, audience, token string) (permission.Claims, bool) {
 	claims := permission.Claims{}
 	if token == "" {
 		return claims, false
@@ -542,6 +542,17 @@ func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permi
 		i.Logger().WithField("nspace", "oauth").
 			Errorf("Expected %s issuer for %s token, but was: %s", audience, i.Domain, claims.Issuer)
 		return claims, false
+	}
+	return claims, true
+}
+
+// ValidToken checks that the JWT is valid and returns the associate claims.
+// It is expected to be used for registration token and refresh token, and
+// it doesn't check when they were issued as they don't expire.
+func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permission.Claims, bool) {
+	claims, valid := ValidToken(i, audience, token)
+	if !valid {
+		return claims, valid
 	}
 	if claims.Subject != c.CouchID {
 		i.Logger().WithField("nspace", "oauth").
