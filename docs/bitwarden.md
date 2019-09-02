@@ -10,8 +10,13 @@ server](https://github.com/jcs/rubywarden) did some reverse engineering and
 wrote a short [API
 documentation](https://github.com/jcs/rubywarden/blob/master/API.md).
 
+## Setup
+
 The signup is disabled, there is one account per Cozy instance, with the email
-`me@<domain>`.
+`me@<domain>`. When the user chooses his/her password (onboarding), an encryption key
+is also generated to keep safe the secrets in the bitwarden vault.
+
+![Setting a new passphrase](diagrams/bitwarden-cheatsheet.png)
 
 ## Routes
 

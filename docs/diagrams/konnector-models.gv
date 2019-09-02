@@ -1,6 +1,6 @@
 digraph konnectors {
 	graph [rankdir="LR", splines=true];
-	node [fontname="roboto", color="#2E3440", fontcolor="#2E3440", fillcolor="#E5E9F0:#ECEFF4", style="filled", gradientangle=90];
+	node [fontname="lato", color="#2E3440", fontcolor="#2E3440", fillcolor="#E5E9F0:#ECEFF4", style="filled", gradientangle=90];
 	edge [color="#2E3440"];
 
 	trigger [label="Trigger |<id> _id: [id] | worker: konnector | type: @cron | arguments: 0 31 0 * * 1 | { message | {<f_id> folder_to_save: [id] |<a_id> account: [id] |<k_slug> konnector: [slug] }}", shape="record"];

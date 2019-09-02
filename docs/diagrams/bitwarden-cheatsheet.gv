@@ -1,0 +1,60 @@
+digraph bitwarden {
+	graph [splines=true];
+	node [shape="box", fontname="lato", fontsize=11, margin=0.12, color="#297EF2", fontcolor="#32363F"];
+	edge [color="#32363F"];
+	ranksep=0.45; nodesep=0.6;
+
+	subgraph source {
+		rank=same; margin=24;
+
+		user [label="User", color="#7F6BEE"];
+		random [label="Random", color="#7F6BEE"];
+	}
+
+	subgraph cluster_client {
+		label="Client"; labeljust="l"; fontname="lato"; fontsize=12; margin=24;
+
+		symKey [label="{symmetric key| enc key (32 bits) | mac key (32 bits)}", shape="record"];
+		iv [label="iv (16 bits)"];
+		makeKey [label="{Encrypt|<key> Key: master key |<payload> Payload: symmetric key |<iv> IV: iv}", shape="record", color="#40DE8E", fillcolor="#F2FAF5", style="filled"];
+		protectedKey [label="protected key\n(key)"]
+
+		masterPassword [label="master password"];
+		email [label="email\n(me@<domain>)"];
+		kdfOne [label="{PBKDF2 - SHA256 | Iterations: 100_000 |<payload> Payload: master password |<salt> Salt: email}", shape="record", color="#40DE8E", fillcolor="#F2FAF5", style="filled"];
+		masterKey [label="master key\n(internal key)"];
+		kdfTwo [label="{PBKDF2 - SHA256 | Iterations: 1 |<payload> Payload: master key |<salt> Salt: master password | Iterations: 1}", shape="record", color="#40DE8E", fillcolor="#F2FAF5", style="filled"];
+		hashedPasswordC [label="hashed password\n(derivated passphrase)"];
+	}
+
+	subgraph cluster_server {
+		label="Server"; labeljust="l"; fontname="lato"; fontsize=12; margin=24;
+
+		keyS [label="key"];
+		hashedPasswordS [label="hashed password"];
+		scrypt [label="Scrypt", color="#40DE8E", fillcolor="#F2FAF5", style="filled"];
+		hashPass [label="passphrase hash"];
+		db [label="Database", shape="cylinder", color="#7F6BEE", margin=0.2];
+	}
+
+	random -> iv;
+	random -> symKey;
+	user -> masterPassword;
+	user -> email;
+
+	masterKey -> makeKey:key;
+	symKey -> makeKey:payload;
+	iv -> makeKey:iv;
+	makeKey -> protectedKey;
+
+	masterPassword -> kdfOne:payload;
+	email -> kdfOne:salt;
+	kdfOne -> masterKey;
+
+	masterKey -> kdfTwo:payload;
+	masterPassword -> kdfTwo:salt;
+	kdfTwo -> hashedPasswordC;
+
+	hashedPasswordC -> hashedPasswordS -> scrypt -> hashPass -> db;
+	protectedKey -> keyS -> db;
+}
