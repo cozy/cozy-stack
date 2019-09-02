@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/gofrs/uuid"
 )
 
 // PassParameters are the parameters for setting a new passphrase
@@ -222,6 +223,9 @@ func setPassphraseKdfAndSecret(inst *instance.Instance, hash []byte, kdfIteratio
 	inst.PassphraseKdf = instance.PBKDF2_SHA256
 	inst.PassphraseKdfIterations = kdfIterations
 	inst.SessionSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
+	if inst.PassphraseStamp == "" {
+		inst.PassphraseStamp = NewSecurityStamp()
+	}
 }
 
 // CreatePassphraseKey creates an encryption key for Bitwarden, and keeps an
@@ -272,4 +276,10 @@ func CheckPassphrase(inst *instance.Instance, pass []byte) error {
 		inst.Logger().Error("Failed to update hash in db", err)
 	}
 	return nil
+}
+
+// NewSecurityStamp returns a new UUID that can be used as a security stamp.
+func NewSecurityStamp() string {
+	id, _ := uuid.NewV4()
+	return id.String()
 }

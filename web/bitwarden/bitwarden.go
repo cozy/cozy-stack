@@ -2,6 +2,7 @@
 package bitwarden
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -20,6 +21,32 @@ func Prelogin(c echo.Context) error {
 		"Kdf":           inst.PassphraseKdf,
 		"KdfIterations": inst.PassphraseKdfIterations,
 	})
+}
+
+// ChangeSecurityStamp is used by the client to change the security stamp,
+// which will deconnect all the clients.
+func ChangeSecurityStamp(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	var data struct {
+		Hashed string `json:"masterPasswordHash"`
+	}
+	if err := json.NewDecoder(c.Request().Body).Decode(&data); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "Missing masterPasswordHash",
+		})
+	}
+
+	if err := lifecycle.CheckPassphrase(inst, []byte(data.Hashed)); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "Invalid masterPasswordHash",
+		})
+	}
+
+	inst.PassphraseStamp = lifecycle.NewSecurityStamp()
+	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 // GetToken is used by the clients to get an access token. There are two
@@ -81,13 +108,13 @@ func getInitialCredentials(c echo.Context) error {
 	// TODO send an email?
 
 	// Create the credentials
-	access, err := client.CreateBitwardenJWT(inst)
+	access, err := client.CreateBitwardenAccessJWT(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate access token",
 		})
 	}
-	refresh, err := client.CreateJWT(inst, consts.RefreshTokenAudience, oauth.BitwardenScope)
+	refresh, err := client.CreateBitwardenRefreshJWT(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate refresh token",
@@ -111,7 +138,7 @@ func refreshToken(c echo.Context) error {
 	refresh := c.FormValue("refresh_token")
 
 	// Check the refresh token
-	claims, ok := oauth.ValidToken(inst, consts.RefreshTokenAudience, refresh)
+	claims, ok := oauth.ValidTokenWithSStamp(inst, consts.RefreshTokenAudience, refresh)
 	if !ok || claims.Scope != oauth.BitwardenScope {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid refresh token",
@@ -130,7 +157,7 @@ func refreshToken(c echo.Context) error {
 	}
 
 	// Create the credentials
-	access, err := client.CreateBitwardenJWT(inst)
+	access, err := client.CreateBitwardenAccessJWT(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate access token",
@@ -153,6 +180,7 @@ func refreshToken(c echo.Context) error {
 func Routes(router *echo.Group) {
 	api := router.Group("/api")
 	api.POST("/accounts/prelogin", Prelogin)
+	api.POST("/accounts/security-stamp", ChangeSecurityStamp)
 
 	identity := router.Group("/identity")
 	identity.POST("/connect/token", GetToken)

@@ -22,6 +22,7 @@ import (
 
 var ts *httptest.Server
 var inst *instance.Instance
+var token string
 
 func TestPrelogin(t *testing.T) {
 	body := `{ "email": "me@cozy.example.net" }`
@@ -58,9 +59,25 @@ func TestConnect(t *testing.T) {
 	expiresIn := consts.AccessTokenValidityDuration.Seconds()
 	assert.Equal(t, "Bearer", result["token_type"])
 	assert.Equal(t, expiresIn, result["expires_in"])
-	assert.NotEmpty(t, result["access_token"])
+	if assert.NotEmpty(t, result["access_token"]) {
+		token = result["access_token"].(string)
+	}
 	assert.NotEmpty(t, result["refresh_token"])
 	assert.NotEmpty(t, result["Key"])
+}
+
+func TestChangeSecurityHash(t *testing.T) {
+	email := inst.PassphraseSalt()
+	iter := crypto.DefaultPBKDF2Iterations
+	pass, _ := crypto.HashPassWithPBKDF2([]byte("cozy"), email, iter)
+	body, _ := json.Marshal(map[string]string{
+		"masterPasswordHash": string(pass),
+	})
+	buf := bytes.NewBuffer(body)
+	res, err := http.Post(ts.URL+"/bitwarden/api/accounts/security-stamp", "application/json", buf)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
+	// TODO check that token is no longer valid
 }
 
 func TestMain(m *testing.M) {

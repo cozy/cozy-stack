@@ -12,6 +12,7 @@ type Claims struct {
 	jwt.StandardClaims
 	Scope     string `json:"scope,omitempty"`
 	SessionID string `json:"session_id,omitempty"`
+	SStamp    string `json:"stamp,omitempty"`
 }
 
 // IssuedAtUTC returns a time.Time struct of the IssuedAt field in UTC

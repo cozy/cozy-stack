@@ -105,3 +105,29 @@ Content-Type: application/json
   "Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ="
 }
 ```
+
+### POST /bitwarden/api/accounts/security-stamp
+
+It allows to set a new security stamp, which has the effect to disconnect all
+the clients. It can be used, for example, if the encryption key is changed to
+avoid the clients to corrupt the vault with ciphers encrypted with the old key.
+
+#### Request
+
+```http
+POST /bitwarden/api/accounts/security-stamp HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "masterPasswordHash": "r5CFRR+n9NQI8a525FY+0BPR0HGOjVJX0cR1KEMnIOo="
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```

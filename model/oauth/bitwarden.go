@@ -62,10 +62,10 @@ type bitwardenClaims struct {
 	Premium  bool   `json:"premium"`
 }
 
-// CreateBitwardenJWT returns a new JSON Web Token that can be used with
+// CreateBitwardenAccessJWT returns a new JSON Web Token that can be used with
 // Bitwarden apps. It is an access token, with some additional custom fields.
 // See https://github.com/bitwarden/jslib/blob/67b2b5318556f2d21bf4f2d117af8228b9f9549c/src/services/token.service.ts
-func (c *Client) CreateBitwardenJWT(i *instance.Instance) (string, error) {
+func (c *Client) CreateBitwardenAccessJWT(i *instance.Instance) (string, error) {
 	now := crypto.Timestamp()
 	name, err := i.SettingsPublicName()
 	if err != nil {
@@ -81,7 +81,8 @@ func (c *Client) CreateBitwardenJWT(i *instance.Instance) (string, error) {
 				ExpiresAt: now + int64(consts.AccessTokenValidityDuration.Seconds()),
 				Subject:   c.CouchID,
 			},
-			Scope: BitwardenScope,
+			SStamp: i.PassphraseStamp,
+			Scope:  BitwardenScope,
 		},
 		Name:     name,
 		Email:    string(i.PassphraseSalt()),
@@ -91,6 +92,26 @@ func (c *Client) CreateBitwardenJWT(i *instance.Instance) (string, error) {
 	if err != nil {
 		i.Logger().WithField("nspace", "oauth").
 			Errorf("Failed to create the bitwarden access token: %s", err)
+	}
+	return token, err
+}
+
+// CreateBitwardenRefreshJWT returns a new JSON Web Token that can be used with
+// Bitwarden apps. It is a refresh token, with an additional security stamp.
+func (c *Client) CreateBitwardenRefreshJWT(i *instance.Instance) (string, error) {
+	token, err := crypto.NewJWT(i.OAuthSecret, permission.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: consts.RefreshTokenAudience,
+			Issuer:   i.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  c.CouchID,
+		},
+		SStamp: i.PassphraseStamp,
+		Scope:  BitwardenScope,
+	})
+	if err != nil {
+		i.Logger().WithField("nspace", "oauth").
+			Errorf("Failed to create the bitwarden refresh token: %s", err)
 	}
 	return token, err
 }
