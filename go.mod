@@ -26,12 +26,10 @@ require (
 	github.com/leonelquinteros/gotext v1.4.0
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/mssola/user_agent v0.5.0
 	github.com/ncw/swift v1.0.49
 	github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443
-	github.com/oschwald/maxminddb-golang v1.3.1
+	github.com/oschwald/maxminddb-golang v1.4.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/pquerna/otp v1.2.0
