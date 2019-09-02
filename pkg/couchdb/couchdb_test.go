@@ -332,6 +332,7 @@ func TestUpdateJSONDoc(t *testing.T) {
 	assert.NotEqual(t, doc.Rev(), updated.Rev())
 	assert.Equal(t, "2", updated.M["test"])
 	evt := assertGotEvent(t, realtime.EventUpdate, doc.ID())
+	assert.NotNil(t, evt)
 	assert.NotNil(t, evt.OldDoc)
 	assert.Equal(t, "1", evt.OldDoc.(*JSONDoc).M["test"])
 	assert.Equal(t, "2", evt.Doc.(*JSONDoc).M["test"])
@@ -350,6 +351,7 @@ func TestUpdateJSONDoc(t *testing.T) {
 	assert.NotEqual(t, updated.Rev(), noTest.Rev())
 	assert.Empty(t, noTest.M["test"])
 	evt = assertGotEvent(t, realtime.EventUpdate, doc.ID())
+	assert.NotNil(t, evt)
 	assert.NotNil(t, evt.OldDoc)
 	assert.Equal(t, "2", evt.OldDoc.(*JSONDoc).M["test"])
 	assert.Empty(t, evt.Doc.(*JSONDoc).M["test"])
@@ -369,6 +371,7 @@ func TestUpdateJSONDoc(t *testing.T) {
 	assert.NotEqual(t, noTest.Rev(), withTest.Rev())
 	assert.Equal(t, "3", withTest.M["test"])
 	evt = assertGotEvent(t, realtime.EventUpdate, doc.ID())
+	assert.NotNil(t, evt)
 	assert.NotNil(t, evt.OldDoc)
 	assert.Empty(t, evt.OldDoc.(*JSONDoc).M["test"])
 	assert.Equal(t, "3", evt.Doc.(*JSONDoc).M["test"])
@@ -484,7 +487,10 @@ func assertGotEvent(t *testing.T, eventType, id string) *realtime.Event {
 	var event *realtime.Event
 	receivedEventsMutex.Lock()
 	_, ok := receivedEvents[eventType+id]
-	if !ok {
+	for i := 0; i < 100; i++ {
+		if ok {
+			break
+		}
 		receivedEventsMutex.Unlock()
 		time.Sleep(time.Millisecond)
 		receivedEventsMutex.Lock()
