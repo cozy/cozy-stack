@@ -52,3 +52,42 @@ Content-Type: application/json
   "KdfIterations": 10000,
 }
 ```
+
+### POST /bitwarden/identity/connect/token
+
+#### Request
+
+```http
+POST /bitwarden/identity/connect/token HTTP/1.1
+Host: alice.example.com
+Content-Type: application/x-www-form-urlencoded
+```
+
+```
+grant_type=password&
+username=me@alice.example.com&
+password=r5CFRR+n9NQI8a525FY+0BPR0HGOjVJX0cR1KEMnIOo=&
+scope=api offline_access&
+client_id=browser&
+deviceType=3&
+deviceIdentifier=aac2e34a-44db-42ab-a733-5322dd582c3d&
+deviceName=firefox&
+devicePushToken=
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IkJDMz[...](JWT string)",
+  "expires_in": 3600,
+  "token_type": "Bearer",
+  "refresh_token": "28fb1911ef6db24025ce1bae5aa940e117eb09dfe609b425b69bff73d73c03bf",
+  "Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ="
+}
+```
