@@ -226,10 +226,19 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 		return nil
 	}
 
-	// We limit the stack to 1024 bulk updates to avoid infinite loops, as we
+	// We limit the stack to 128 bulk updates to avoid infinite loops, as we
 	// had a case in the past.
-	for i := 0; i < 1024; i++ {
-		sel := mango.StartWith("path", oldpath+"/")
+	start := oldpath + "/"
+	for i := 0; i < 128; i++ {
+		// The simple selector mango.StartWith can have some issues when
+		// renaming a folder to the same name, but with a different unicode
+		// normalization (like NFC to NFD). In that case, CouchDB would always
+		// return the same documents with this selector, as it does the
+		// comparison on a normalized string.
+		sel := mango.And(
+			mango.Gt("path", start),
+			mango.Lt("path", oldpath+"0"), // 0 is the next ascii character after /
+		)
 		req := &couchdb.FindRequest{
 			UseIndex: "dir-by-path",
 			Selector: sel,
@@ -243,6 +252,7 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 		if len(children) == 0 {
 			break
 		}
+		start = children[len(children)-1].Fullpath
 		for _, child := range children {
 			cloned := child.Clone()
 			olddocs = append(olddocs, cloned)
