@@ -23,6 +23,7 @@ import (
 var ts *httptest.Server
 var inst *instance.Instance
 var token string
+var folderID string
 
 func TestPrelogin(t *testing.T) {
 	body := `{ "email": "me@cozy.example.net" }`
@@ -79,8 +80,9 @@ func TestCreateFolder(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=", result["Name"])
 	assert.Equal(t, "folder", result["Object"])
-	assert.NotEmpty(t, result["Id"])
 	assert.NotEmpty(t, result["RevisionDate"])
+	assert.NotEmpty(t, result["Id"])
+	folderID = result["Id"]
 }
 
 func TestGetFolders(t *testing.T) {
@@ -98,8 +100,23 @@ func TestGetFolders(t *testing.T) {
 	item := data[0].(map[string]interface{})
 	assert.Equal(t, "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=", item["Name"])
 	assert.Equal(t, "folder", item["Object"])
-	assert.NotEmpty(t, item["Id"])
+	assert.Equal(t, folderID, item["Id"])
 	assert.NotEmpty(t, item["RevisionDate"])
+}
+
+func TestGetFolder(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/folders/"+folderID, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=", result["Name"])
+	assert.Equal(t, "folder", result["Object"])
+	assert.Equal(t, folderID, result["Id"])
+	assert.NotEmpty(t, result["RevisionDate"])
 }
 
 func TestChangeSecurityHash(t *testing.T) {

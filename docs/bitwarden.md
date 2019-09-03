@@ -199,3 +199,27 @@ Content-Type: application/json
 	"Object": "folder"
 }
 ```
+
+### GET /bitwarden/api/folders/:id
+
+#### Request
+
+```http
+GET /bitwarden/api/folders/14220912-d002-471d-a364-a82a010cb8f2 HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+	"Id": "14220912-d002-471d-a364-a82a010cb8f2",
+	"Name": "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=",
+	"RevisionDate": "2017-11-13T16:18:23.3078169Z",
+	"Object": "folder"
+}
+```

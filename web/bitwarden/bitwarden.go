@@ -190,4 +190,5 @@ func Routes(router *echo.Group) {
 	folders := api.Group("/folders")
 	folders.GET("", ListFolders)
 	folders.POST("", CreateFolder)
+	folders.GET("/:id", GetFolder)
 }

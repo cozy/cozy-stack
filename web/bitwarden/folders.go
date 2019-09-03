@@ -108,3 +108,30 @@ func CreateFolder(c echo.Context) error {
 	res := newFolderResponse(folder)
 	return c.JSON(http.StatusOK, res)
 }
+
+// GetFolder returns information about a single folder.
+func GetFolder(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenFolders); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	folder := &bitwarden.Folder{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenFolders, id, folder); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	res := newFolderResponse(folder)
+	return c.JSON(http.StatusOK, res)
+}
