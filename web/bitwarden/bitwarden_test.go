@@ -66,6 +66,23 @@ func TestConnect(t *testing.T) {
 	assert.NotEmpty(t, result["Key"])
 }
 
+func TestCreateFolder(t *testing.T) {
+	body := `{ "name": "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=" }`
+	req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/folders", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]string
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=", result["Name"])
+	assert.Equal(t, "folder", result["Object"])
+	assert.NotEmpty(t, result["Id"])
+	assert.NotEmpty(t, result["RevisionDate"])
+}
+
 func TestChangeSecurityHash(t *testing.T) {
 	email := inst.PassphraseSalt()
 	iter := crypto.DefaultPBKDF2Iterations

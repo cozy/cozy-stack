@@ -18,7 +18,7 @@ is also generated to keep safe the secrets in the bitwarden vault.
 
 ![Setting a new passphrase](diagrams/bitwarden-cheatsheet.png)
 
-## Routes
+## Routes for accounts and connect
 
 ### POST /bitwarden/api/accounts/prelogin
 
@@ -130,4 +130,41 @@ Content-Type: application/json
 
 ```http
 HTTP/1.1 204 No Content
+```
+
+## Routes for folders
+
+### POST /bitwarden/api/folders
+
+It adds a new folder on the server. The name is encrypted on client-side.
+
+#### Request
+
+
+```http
+POST /bitwarden/api/folders HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o="
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+	"Id": "14220912-d002-471d-a364-a82a010cb8f2",
+	"Name": "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=",
+	"RevisionDate": "2017-11-13T16:18:23.3078169Z",
+	"Object": "folder"
+}
 ```

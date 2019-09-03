@@ -1,9 +1,10 @@
-package oauth
+package bitwarden
 
 import (
 	"strconv"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -12,7 +13,7 @@ import (
 
 // BitwardenScope is the OAuth scope, and it is hard-coded with the doctypes
 // needed by the Bitwarden apps.
-const BitwardenScope = "com.bitwarden.ciphers"
+const BitwardenScope = consts.BitwardenCiphers + " " + consts.BitwardenFolders
 
 // ParseBitwardenDeviceType takes a deviceType (Bitwarden) and transforms it
 // into a client_kind and a software_id (Cozy).
@@ -62,10 +63,10 @@ type bitwardenClaims struct {
 	Premium  bool   `json:"premium"`
 }
 
-// CreateBitwardenAccessJWT returns a new JSON Web Token that can be used with
-// Bitwarden apps. It is an access token, with some additional custom fields.
+// CreateAccessJWT returns a new JSON Web Token that can be used with Bitwarden
+// apps. It is an access token, with some additional custom fields.
 // See https://github.com/bitwarden/jslib/blob/67b2b5318556f2d21bf4f2d117af8228b9f9549c/src/services/token.service.ts
-func (c *Client) CreateBitwardenAccessJWT(i *instance.Instance) (string, error) {
+func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 	now := crypto.Timestamp()
 	name, err := i.SettingsPublicName()
 	if err != nil {
@@ -96,9 +97,9 @@ func (c *Client) CreateBitwardenAccessJWT(i *instance.Instance) (string, error) 
 	return token, err
 }
 
-// CreateBitwardenRefreshJWT returns a new JSON Web Token that can be used with
+// CreateRefreshJWT returns a new JSON Web Token that can be used with
 // Bitwarden apps. It is a refresh token, with an additional security stamp.
-func (c *Client) CreateBitwardenRefreshJWT(i *instance.Instance) (string, error) {
+func CreateRefreshJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.Claims{
 		StandardClaims: jwt.StandardClaims{
 			Audience: consts.RefreshTokenAudience,

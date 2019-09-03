@@ -70,4 +70,8 @@ const (
 	Accounts = "io.cozy.accounts"
 	// AccountTypes doc type for account types
 	AccountTypes = "io.cozy.account_types"
+	// BitwardenCiphers doc type for Bitwarden ciphers
+	BitwardenCiphers = "com.bitwarden.ciphers"
+	// BitwardenFolders doc type for Bitwarden ciphers
+	BitwardenFolders = "com.bitwarden.folders"
 )

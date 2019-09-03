@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -94,7 +95,7 @@ func getInitialCredentials(c echo.Context) error {
 	// TODO manage 2FA
 
 	// Register the client
-	kind, softwareID := oauth.ParseBitwardenDeviceType(c.FormValue("deviceType"))
+	kind, softwareID := bitwarden.ParseBitwardenDeviceType(c.FormValue("deviceType"))
 	client := &oauth.Client{
 		RedirectURIs: []string{"https://cozy.io/"},
 		ClientName:   "Bitwarden " + c.FormValue("deviceName"),
@@ -108,13 +109,13 @@ func getInitialCredentials(c echo.Context) error {
 	// TODO send an email?
 
 	// Create the credentials
-	access, err := client.CreateBitwardenAccessJWT(inst)
+	access, err := bitwarden.CreateAccessJWT(inst, client)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate access token",
 		})
 	}
-	refresh, err := client.CreateBitwardenRefreshJWT(inst)
+	refresh, err := bitwarden.CreateRefreshJWT(inst, client)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate refresh token",
@@ -139,7 +140,7 @@ func refreshToken(c echo.Context) error {
 
 	// Check the refresh token
 	claims, ok := oauth.ValidTokenWithSStamp(inst, consts.RefreshTokenAudience, refresh)
-	if !ok || claims.Scope != oauth.BitwardenScope {
+	if !ok || claims.Scope != bitwarden.BitwardenScope {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid refresh token",
 		})
@@ -157,7 +158,7 @@ func refreshToken(c echo.Context) error {
 	}
 
 	// Create the credentials
-	access, err := client.CreateBitwardenAccessJWT(inst)
+	access, err := bitwarden.CreateAccessJWT(inst, client)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate access token",
@@ -178,10 +179,14 @@ func refreshToken(c echo.Context) error {
 
 // Routes sets the routing for the Bitwarden-like API
 func Routes(router *echo.Group) {
-	api := router.Group("/api")
-	api.POST("/accounts/prelogin", Prelogin)
-	api.POST("/accounts/security-stamp", ChangeSecurityStamp)
-
 	identity := router.Group("/identity")
 	identity.POST("/connect/token", GetToken)
+
+	api := router.Group("/api")
+	accounts := api.Group("/accounts")
+	accounts.POST("/prelogin", Prelogin)
+	accounts.POST("/security-stamp", ChangeSecurityStamp)
+
+	folders := api.Group("/folders")
+	folders.POST("", CreateFolder)
 }
