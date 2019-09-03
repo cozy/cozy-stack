@@ -83,6 +83,25 @@ func TestCreateFolder(t *testing.T) {
 	assert.NotEmpty(t, result["RevisionDate"])
 }
 
+func TestGetFolders(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/folders", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, "list", result["Object"])
+	data := result["Data"].([]interface{})
+	assert.Len(t, data, 1)
+	item := data[0].(map[string]interface{})
+	assert.Equal(t, "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o=", item["Name"])
+	assert.Equal(t, "folder", item["Object"])
+	assert.NotEmpty(t, item["Id"])
+	assert.NotEmpty(t, item["RevisionDate"])
+}
+
 func TestChangeSecurityHash(t *testing.T) {
 	email := inst.PassphraseSalt()
 	iter := crypto.DefaultPBKDF2Iterations

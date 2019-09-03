@@ -188,5 +188,6 @@ func Routes(router *echo.Group) {
 	accounts.POST("/security-stamp", ChangeSecurityStamp)
 
 	folders := api.Group("/folders")
+	folders.GET("", ListFolders)
 	folders.POST("", CreateFolder)
 }

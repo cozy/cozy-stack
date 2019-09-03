@@ -47,6 +47,36 @@ func newFolderResponse(f *bitwarden.Folder) *folderResponse {
 	return &r
 }
 
+type foldersList struct {
+	Data   []*folderResponse `json:"Data"`
+	Object string            `json:"Object"`
+}
+
+// ListFolders is the route for listing the Bitwarden folders.
+// No pagination yet.
+func ListFolders(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenFolders); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var folders []*bitwarden.Folder
+	req := &couchdb.AllDocsRequest{}
+	if err := couchdb.GetAllDocs(inst, consts.BitwardenFolders, req, &folders); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	res := &foldersList{Object: "list"}
+	for _, f := range folders {
+		res.Data = append(res.Data, newFolderResponse(f))
+	}
+	return c.JSON(http.StatusOK, res)
+}
+
 // CreateFolder is the route to add a folder via the Bitwarden API.
 func CreateFolder(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
