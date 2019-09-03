@@ -153,6 +153,12 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 		}
 	}
 
+	// If claims contains a security stamp, we check that the stamp is still
+	// the same.
+	if claims.SStamp != "" && claims.SStamp != instance.PassphraseStamp {
+		return nil, permission.ErrInvalidToken
+	}
+
 	switch claims.Audience {
 	case consts.AccessTokenAudience:
 		// An OAuth2 token is only valid if the client has not been revoked

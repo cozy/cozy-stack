@@ -113,7 +113,13 @@ func TestChangeSecurityHash(t *testing.T) {
 	res, err := http.Post(ts.URL+"/bitwarden/api/accounts/security-stamp", "application/json", buf)
 	assert.NoError(t, err)
 	assert.Equal(t, 204, res.StatusCode)
-	// TODO check that token is no longer valid
+
+	// Check that token is no longer valid
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/folders", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
 }
 
 func TestMain(m *testing.M) {
