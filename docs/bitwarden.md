@@ -258,3 +258,20 @@ Content-Type: application/json
 }
 ```
 
+### DELETE /bitwarden/api/folders/:id
+
+This route is used to delete a folder. It can also be called via
+`POST /bitwarden/api/folders/:id/delete` (I think it is used by the web vault).
+
+#### Request
+
+```http
+DELETE /bitwarden/api/folders/14220912-d002-471d-a364-a82a010cb8f2 HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```

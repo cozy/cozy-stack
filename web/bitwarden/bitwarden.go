@@ -193,4 +193,6 @@ func Routes(router *echo.Group) {
 	folders.GET("/:id", GetFolder)
 	folders.POST("/:id", RenameFolder)
 	folders.PUT("/:id", RenameFolder)
+	folders.DELETE("/:id", DeleteFolder)
+	folders.POST("/:id/delete", DeleteFolder)
 }

@@ -136,6 +136,14 @@ func TestRenameFolder(t *testing.T) {
 	assert.Equal(t, folderID, result["Id"])
 }
 
+func TestDeleteFolder(t *testing.T) {
+	req, _ := http.NewRequest("DELETE", ts.URL+"/bitwarden/api/folders/"+folderID, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
+}
+
 func TestChangeSecurityHash(t *testing.T) {
 	email := inst.PassphraseSalt()
 	iter := crypto.DefaultPBKDF2Iterations
