@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
@@ -80,10 +81,26 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 		err = job.ErrBadTrigger{Err: fmt.Errorf("Service %q was not found", name)}
 		return
 	}
+	// Check if the trigger is orphan
 	if triggerID, ok := ctx.TriggerID(); ok && service.TriggerID != "" {
 		if triggerID != service.TriggerID {
-			err = job.ErrBadTrigger{Err: fmt.Errorf("Trigger %q is orphan", triggerID)}
-			return
+			// Check if this is another trigger for the same declared service
+			var tInfos job.TriggerInfos
+			err = couchdb.GetDoc(i, consts.Triggers, triggerID, &tInfos)
+			if err != nil {
+				err = job.ErrBadTrigger{Err: fmt.Errorf("Trigger %q not found", triggerID)}
+				return
+			}
+			var msg ServiceOptions
+			err = json.Unmarshal(tInfos.Message, &msg)
+			if err != nil {
+				err = job.ErrBadTrigger{Err: fmt.Errorf("Trigger %q has bad message structure", triggerID)}
+				return
+			}
+			if msg.Name != name {
+				err = job.ErrBadTrigger{Err: fmt.Errorf("Trigger %q is orphan", triggerID)}
+				return
+			}
 		}
 	}
 
