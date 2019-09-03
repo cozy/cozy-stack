@@ -71,4 +71,8 @@ class Instance
     @stack.install_app self, "home"
     Accept.new(sharing, sharer).on self
   end
+
+  def fsck
+    @stack.fsck self
+  end
 end

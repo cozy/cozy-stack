@@ -69,4 +69,10 @@ class Stack
     puts cmd.join(" ").green
     `#{cmd.join(" ")}`.chomp
   end
+
+  def fsck(inst)
+    cmd = ["cozy-stack", "instances", "fsck", inst.domain, "--admin-port", @admin]
+    puts cmd.join(" ").green
+    `#{cmd.join(" ")}`.chomp
+  end
 end
