@@ -135,3 +135,49 @@ func GetFolder(c echo.Context) error {
 	res := newFolderResponse(folder)
 	return c.JSON(http.StatusOK, res)
 }
+
+// RenameFolder is the route for changing the (encrypted) name of a folder.
+func RenameFolder(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenFolders); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	folder := &bitwarden.Folder{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenFolders, id, folder); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	var req folderRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+	if req.Name == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "missing name",
+		})
+	}
+
+	folder.Name = req.Name
+	if err := couchdb.UpdateDoc(inst, folder); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	res := newFolderResponse(folder)
+	return c.JSON(http.StatusOK, res)
+}

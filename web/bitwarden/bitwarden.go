@@ -191,4 +191,6 @@ func Routes(router *echo.Group) {
 	folders.GET("", ListFolders)
 	folders.POST("", CreateFolder)
 	folders.GET("/:id", GetFolder)
+	folders.POST("/:id", RenameFolder)
+	folders.PUT("/:id", RenameFolder)
 }

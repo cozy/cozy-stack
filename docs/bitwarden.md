@@ -171,7 +171,6 @@ It adds a new folder on the server. The name is encrypted on client-side.
 
 #### Request
 
-
 ```http
 POST /bitwarden/api/folders HTTP/1.1
 Host: alice.example.com
@@ -223,3 +222,39 @@ Content-Type: application/json
 	"Object": "folder"
 }
 ```
+
+### PUT /bitwarden/api/folders/:id
+
+This route is used to rename a folder. It can also be called via
+`POST /bitwarden/api/folders/:id` (I think it is used by the web vault).
+
+#### Request
+
+```http
+PUT /bitwarden/api/folders/14220912-d002-471d-a364-a82a010cb8f2 HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io="
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+	"Id": "14220912-d002-471d-a364-a82a010cb8f2",
+	"Name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+	"RevisionDate": "2017-11-13T16:18:23.3078169Z",
+	"Object": "folder"
+}
+```
+
