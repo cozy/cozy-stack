@@ -6,10 +6,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metadata"
 )
 
-// DocTypeVersion represents the doctype version. Each time this document
-// structure is modified, update this value
-const DocTypeVersion = "1"
-
 // Folder is a space to organize ciphers. Its name is encrypted on client-side.
 type Folder struct {
 	CouchID  string                 `json:"_id,omitempty"`

@@ -187,6 +187,9 @@ func Routes(router *echo.Group) {
 	accounts.POST("/prelogin", Prelogin)
 	accounts.POST("/security-stamp", ChangeSecurityStamp)
 
+	ciphers := api.Group("/ciphers")
+	ciphers.POST("", CreateCipher)
+
 	folders := api.Group("/folders")
 	folders.GET("", ListFolders)
 	folders.POST("", CreateFolder)

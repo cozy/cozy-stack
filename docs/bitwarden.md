@@ -132,6 +132,74 @@ Content-Type: application/json
 HTTP/1.1 204 No Content
 ```
 
+## Routes for ciphers
+
+### POST /bitwarden/api/ciphers
+
+When a new item (login, secure note, etc.) is created on a device, it is sent
+to the server with its fields encrypted via this route.
+
+#### Request
+
+```http
+POST /bitwarden/api/ciphers HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+	"type": 1,
+	"favorite": false,
+	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+	"notes": null,
+	"folderId": null,
+	"organizationId": null,
+	"login": {
+		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+		"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+		"totp": null
+	}
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+	"Object": "cipher",
+	"Id": "4c2869dd-0e1c-499f-b116-a824016df251",
+	"Type": 1,
+	"Favorite": false,
+	"Name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+	"Notes": null,
+	"FolderId": null,
+	"OrganizationId": null,
+	"Login": {
+		"Uris": [
+			{
+				"Uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+				"Match": null,
+			},
+		],
+	},
+	"Username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+	"Password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+	"Totp": null,
+	"Fields": null,
+	"Attachments": null,
+	"RevisionDate": "2017-11-07T22:12:22.235914Z",
+	"Edit": true,
+	"OrganizationUseTotp": false
+}
+```
+
 ## Routes for folders
 
 ### GET /bitwarden/api/folders
