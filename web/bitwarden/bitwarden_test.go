@@ -88,7 +88,7 @@ func TestCreateFolder(t *testing.T) {
 	folderID = result["Id"]
 }
 
-func TestGetFolders(t *testing.T) {
+func TestListFolders(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/folders", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
@@ -192,6 +192,22 @@ func TestCreateLogin(t *testing.T) {
 	assert.NoError(t, err)
 	assertCipherResponse(t, result)
 	cipherID = result["Id"].(string)
+}
+
+func TestListCiphers(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/ciphers", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, "list", result["Object"])
+	data := result["Data"].([]interface{})
+	assert.Len(t, data, 1)
+	item := data[0].(map[string]interface{})
+	assertCipherResponse(t, item)
 }
 
 func TestGetCipher(t *testing.T) {

@@ -134,6 +134,57 @@ HTTP/1.1 204 No Content
 
 ## Routes for ciphers
 
+### GET /bitwarden/api/ciphers
+
+It retrieves the list of ciphers.
+
+#### Request
+
+```http
+GET /bitwarden/api/ciphers HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "Data": [
+    {
+      "Object": "cipher",
+      "Id": "4c2869dd-0e1c-499f-b116-a824016df251",
+      "Type": 1,
+      "Favorite": false,
+      "Name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+      "Notes": null,
+      "FolderId": null,
+      "OrganizationId": null,
+      "Login": {
+        "Uris": [
+          {
+            "Uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+            "Match": null,
+          },
+        ],
+      },
+      "Username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+      "Password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+      "Totp": null,
+      "Fields": null,
+      "Attachments": null,
+      "RevisionDate": "2017-11-07T22:12:22.235914Z",
+      "Edit": true,
+      "OrganizationUseTotp": false
+    }
+  ],
+  "Object": "list"
+}
+```
+
 ### POST /bitwarden/api/ciphers
 
 When a new item (login, secure note, etc.) is created on a device, it is sent
@@ -263,7 +314,7 @@ HTTP/1.1 204 No Content
 
 ### GET /bitwarden/api/folders
 
-It retrieves the list of folders
+It retrieves the list of folders.
 
 #### Request
 

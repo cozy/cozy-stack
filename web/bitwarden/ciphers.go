@@ -158,6 +158,36 @@ func newCipherResponse(c *bitwarden.Cipher) *cipherResponse {
 	return &r
 }
 
+type ciphersList struct {
+	Data   []*cipherResponse `json:"Data"`
+	Object string            `json:"Object"`
+}
+
+// ListCiphers is the route for listing the Bitwarden ciphers.
+// No pagination yet.
+func ListCiphers(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenCiphers); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var ciphers []*bitwarden.Cipher
+	req := &couchdb.AllDocsRequest{}
+	if err := couchdb.GetAllDocs(inst, consts.BitwardenCiphers, req, &ciphers); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	res := &ciphersList{Object: "list"}
+	for _, f := range ciphers {
+		res.Data = append(res.Data, newCipherResponse(f))
+	}
+	return c.JSON(http.StatusOK, res)
+}
+
 // CreateCipher is the handler for creating a cipher: login, secure note, etc.
 func CreateCipher(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
