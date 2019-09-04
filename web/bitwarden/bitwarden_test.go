@@ -23,7 +23,7 @@ import (
 var ts *httptest.Server
 var inst *instance.Instance
 var token string
-var folderID string
+var folderID, cipherID string
 
 func TestPrelogin(t *testing.T) {
 	body := `{ "email": "me@cozy.example.net" }`
@@ -190,7 +190,23 @@ func TestCreateLogin(t *testing.T) {
 	var result map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
+	assertCipherResponse(t, result)
+	cipherID = result["Id"].(string)
+}
 
+func TestGetCipher(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/ciphers/"+cipherID, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assertCipherResponse(t, result)
+}
+
+func assertCipherResponse(t *testing.T, result map[string]interface{}) {
 	assert.Equal(t, "cipher", result["Object"])
 	assert.NotEmpty(t, result["Id"])
 	assert.Equal(t, float64(1), result["Type"])

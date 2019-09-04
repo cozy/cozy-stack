@@ -189,6 +189,7 @@ func Routes(router *echo.Group) {
 
 	ciphers := api.Group("/ciphers")
 	ciphers.POST("", CreateCipher)
+	ciphers.GET("/:id", GetCipher)
 	ciphers.DELETE("/:id", DeleteCipher)
 
 	folders := api.Group("/folders")
