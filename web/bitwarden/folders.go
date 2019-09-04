@@ -211,6 +211,26 @@ func DeleteFolder(c echo.Context) error {
 		})
 	}
 
+	// Move the ciphers that are in this folder to outside of it
+	ciphers, err := bitwarden.FindCiphersInFolder(inst, id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+	docs := make([]interface{}, len(ciphers))
+	olds := make([]interface{}, len(ciphers))
+	for i, doc := range ciphers {
+		olds[i] = doc.Clone()
+		doc.FolderID = ""
+		docs[i] = ciphers[i]
+	}
+	if err := couchdb.BulkUpdateDocs(inst, consts.BitwardenCiphers, docs, olds); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
 	if err := couchdb.DeleteDoc(inst, folder); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err,

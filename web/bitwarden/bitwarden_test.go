@@ -158,7 +158,53 @@ func TestDeleteFolder(t *testing.T) {
 	assert.NoError(t, err)
 	id := result["Id"]
 
+	body = `
+{
+	"type": 1,
+	"favorite": false,
+	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+	"notes": null,
+	"folderId": "` + id + `",
+	"organizationId": null,
+	"login": {
+		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+		"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+		"totp": null
+	}
+}`
+	req, _ = http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result2 map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result2)
+	assert.NoError(t, err)
+	cID := result2["Id"].(string)
+
 	req, _ = http.NewRequest("DELETE", ts.URL+"/bitwarden/api/folders/"+id, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
+
+	// Check that the cipher in this folder has been moved out
+	req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/api/ciphers/"+cID, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result3 map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result3)
+	assert.NoError(t, err)
+	assert.Equal(t, "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=", result3["Name"])
+	fID, ok := result3["FolderId"]
+	assert.True(t, ok)
+	assert.Empty(t, fID)
+
+	req, _ = http.NewRequest("DELETE", ts.URL+"/bitwarden/api/ciphers/"+cID, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
@@ -231,9 +277,9 @@ func assertCipherResponse(t *testing.T, result map[string]interface{}) {
 	notes, ok := result["Notes"]
 	assert.True(t, ok)
 	assert.Empty(t, notes)
-	folderID, ok := result["FolderId"]
+	fID, ok := result["FolderId"]
 	assert.True(t, ok)
-	assert.Empty(t, folderID)
+	assert.Empty(t, fID)
 	orgID, ok := result["OrganizationId"]
 	assert.True(t, ok)
 	assert.Empty(t, orgID)

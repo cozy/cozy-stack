@@ -1,8 +1,10 @@
 package bitwarden
 
 import (
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 )
 
@@ -77,5 +79,19 @@ func (c *Cipher) SetID(id string) { c.CouchID = id }
 
 // SetRev changes the cipher revision
 func (c *Cipher) SetRev(rev string) { c.CouchRev = rev }
+
+// FindCiphersInFolder finds the ciphers in the given folder.
+func FindCiphersInFolder(inst *instance.Instance, folderID string) ([]*Cipher, error) {
+	var ciphers []*Cipher
+	req := &couchdb.FindRequest{
+		UseIndex: "by-folder-id",
+		Selector: mango.Equal("folder_id", folderID),
+	}
+	err := couchdb.FindDocs(inst, consts.BitwardenCiphers, req, &ciphers)
+	if err != nil {
+		return nil, err
+	}
+	return ciphers, nil
+}
 
 var _ couchdb.Doc = &Cipher{}
