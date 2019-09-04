@@ -36,7 +36,7 @@ docker run -it --rm --name cozy-stack \
     --workdir /app \
     -v $(pwd):/app \
     -v $(pwd):/go/bin \
-    golang:1.12 \
+    golang:1.13 \
     go get -v github.com/cozy/cozy-stack
 ```
 
@@ -48,10 +48,10 @@ See `scripts/release.sh` for details.
 
 ## Docker run and url name
 
-A precision for the app name :
+A precision for the app name:
 
+```bash
 docker run --rm -it -p 8080:8080 -v "$(pwd)/build":/data/cozy-app/***my-app*** cozy/cozy-app-dev
+```
 
-***my-app*** will be the first part of : ***my-app***.cozy.tools:8080
-
-
+***my-app*** will be the first part of: ***my-app***.cozy.tools:8080

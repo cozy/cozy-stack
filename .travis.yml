@@ -13,13 +13,16 @@ env:
 matrix:
   include:
     - name: "Lint"
-      go: "1.12"
+      go: "1.13"
       script: bash scripts/lint.sh
-    - name: "Unit tests"
+    - name: "Unit tests (go 1.13)"
+      go: "1.13"
+      script: bash scripts/unit-test.sh
+    - name: "Unit tests (go 1.12)"
       go: "1.12"
       script: bash scripts/unit-test.sh
     - name: "Integration tests"
-      go: "1.12"
+      go: "1.13"
       script: bash scripts/integration-test.sh
 
 install:
