@@ -199,3 +199,34 @@ func CreateCipher(c echo.Context) error {
 	res := newCipherResponse(cipher)
 	return c.JSON(http.StatusOK, res)
 }
+
+// DeleteCipher is the handler for the route to delete a folder.
+func DeleteCipher(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.BitwardenCiphers); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	cipher := &bitwarden.Cipher{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenCiphers, id, cipher); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	if err := couchdb.DeleteDoc(inst, cipher); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+	return c.NoContent(http.StatusNoContent)
+}

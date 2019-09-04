@@ -200,6 +200,21 @@ Content-Type: application/json
 }
 ```
 
+### DELETE /bitwarden/api/ciphers/:id
+
+#### Request
+
+```http
+DELETE /bitwarden/api/ciphers/4c2869dd-0e1c-499f-b116-a824016df251 HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Routes for folders
 
 ### GET /bitwarden/api/folders
