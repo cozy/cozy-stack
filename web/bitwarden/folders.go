@@ -172,13 +172,16 @@ func RenameFolder(c echo.Context) error {
 	}
 
 	folder.Name = req.Name
+	if folder.Metadata == nil {
+		md := metadata.New()
+		md.DocTypeVersion = bitwarden.DocTypeVersion
+		folder.Metadata = md
+	}
+	folder.Metadata.ChangeUpdatedAt()
 	if err := couchdb.UpdateDoc(inst, folder); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err,
 		})
-	}
-	if folder.Metadata != nil {
-		folder.Metadata.ChangeUpdatedAt()
 	}
 
 	res := newFolderResponse(folder)

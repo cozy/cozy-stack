@@ -253,6 +253,57 @@ func assertCipherResponse(t *testing.T, result map[string]interface{}) {
 	fields, ok := result["Fields"]
 	assert.True(t, ok)
 	assert.Empty(t, fields)
+	attachments, ok := result["Attachments"]
+	assert.True(t, ok)
+	assert.Empty(t, attachments)
+	assert.NotEmpty(t, result["RevisionDate"])
+	assert.Equal(t, true, result["Edit"])
+	assert.Equal(t, false, result["OrganizationUseTotp"])
+}
+
+func TestUpdateCipher(t *testing.T) {
+	body := `
+{
+	"type": 2,
+	"favorite": true,
+	"name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
+	"folderId": "` + folderID + `",
+	"organizationId": null,
+	"notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
+	"secureNote": {
+		"type": 0
+	}
+}`
+	req, _ := http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/"+cipherID, bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "cipher", result["Object"])
+	assert.Equal(t, cipherID, result["Id"])
+	assert.Equal(t, float64(2), result["Type"])
+	assert.Equal(t, true, result["Favorite"])
+	assert.Equal(t, "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=", result["Name"])
+	assert.Equal(t, folderID, result["FolderId"])
+	assert.Equal(t, "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=", result["Notes"])
+	secure := result["SecureNote"].(map[string]interface{})
+	assert.Equal(t, float64(0), secure["Type"])
+	orgID, ok := result["OrganizationId"]
+	assert.True(t, ok)
+	assert.Empty(t, orgID)
+	_, ok = result["Login"]
+	assert.False(t, ok)
+	fields, ok := result["Fields"]
+	assert.True(t, ok)
+	assert.Empty(t, fields)
+	attachments, ok := result["Attachments"]
+	assert.True(t, ok)
+	assert.Empty(t, attachments)
 	assert.NotEmpty(t, result["RevisionDate"])
 	assert.Equal(t, true, result["Edit"])
 	assert.Equal(t, false, result["OrganizationUseTotp"])

@@ -160,9 +160,9 @@ Content-Type: application/json
       "Type": 1,
       "Favorite": false,
       "Name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-      "Notes": null,
       "FolderId": null,
       "OrganizationId": null,
+      "Notes": null,
       "Login": {
         "Uris": [
           {
@@ -203,9 +203,9 @@ Content-Type: application/json
 	"type": 1,
 	"favorite": false,
 	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-	"notes": null,
 	"folderId": null,
 	"organizationId": null,
+	"notes": null,
 	"login": {
 		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
 		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
@@ -229,9 +229,9 @@ Content-Type: application/json
 	"Type": 1,
 	"Favorite": false,
 	"Name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-	"Notes": null,
 	"FolderId": null,
 	"OrganizationId": null,
+	"Notes": null,
 	"Login": {
 		"Uris": [
 			{
@@ -273,9 +273,9 @@ Content-Type: application/json
 	"Type": 1,
 	"Favorite": false,
 	"Name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
-	"Notes": null,
 	"FolderId": null,
 	"OrganizationId": null,
+	"Notes": null,
 	"Login": {
 		"Uris": [
 			{
@@ -295,7 +295,65 @@ Content-Type: application/json
 }
 ```
 
+### PUT /bitwarden/api/ciphers/:id
+
+This route is used to change a cipher. It can also be called via
+`POST /bitwarden/api/ciphers/:id` (I think it is used by the web vault).
+
+#### Request
+
+```http
+PUT /bitwarden/api/ciphers/4c2869dd-0e1c-499f-b116-a824016df251 HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+	"type": 2,
+	"favorite": true,
+	"name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
+	"folderId": "14220912-d002-471d-a364-a82a010cb8f2",
+	"organizationId": null,
+	"notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
+	"secureNote": {
+		"type": 0
+	}
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+	"Object": "cipher",
+	"Id": "4c2869dd-0e1c-499f-b116-a824016df251",
+	"Type": 2,
+	"Favorite": true,
+	"Name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
+	"FolderId": "14220912-d002-471d-a364-a82a010cb8f2",
+	"OrganizationId": null,
+	"Notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
+  "SecureNote": {
+    "Type": 0
+  },
+	"Fields": null,
+	"Attachments": null,
+	"RevisionDate": "2017-11-07T22:12:22.235914Z",
+	"Edit": true,
+	"OrganizationUseTotp": false
+}
+```
+
 ### DELETE /bitwarden/api/ciphers/:id
+
+This route is used to delete a cipher. It can also be called via
+`POST /bitwarden/api/ciphers/:id/delete` (I think it is used by the web vault).
 
 #### Request
 

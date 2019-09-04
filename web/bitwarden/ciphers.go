@@ -39,6 +39,7 @@ func (r *cipherRequest) toCipher() (*bitwarden.Cipher, error) {
 
 	c := bitwarden.Cipher{
 		Type:     r.Type,
+		Favorite: r.Favorite,
 		Name:     r.Name,
 		Notes:    r.Notes,
 		FolderID: r.FolderID,
@@ -248,6 +249,67 @@ func GetCipher(c echo.Context) error {
 
 	cipher := &bitwarden.Cipher{}
 	if err := couchdb.GetDoc(inst, consts.BitwardenCiphers, id, cipher); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	res := newCipherResponse(cipher)
+	return c.JSON(http.StatusOK, res)
+}
+
+// UpdateCipher is the route for changing a cipher.
+func UpdateCipher(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.PUT, consts.BitwardenCiphers); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	old := &bitwarden.Cipher{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenCiphers, id, old); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	var req cipherRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+	cipher, err := req.toCipher()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": err,
+		})
+	}
+
+	if cipher.FolderID != "" && cipher.FolderID != old.FolderID {
+		folder := &bitwarden.Folder{}
+		if err := couchdb.GetDoc(inst, consts.BitwardenFolders, cipher.FolderID, folder); err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "folder not found",
+			})
+		}
+	}
+
+	if old.Metadata != nil {
+		cipher.Metadata = old.Metadata.Clone()
+	}
+	cipher.Metadata.ChangeUpdatedAt()
+	cipher.SetID(old.ID())
+	cipher.SetRev(old.Rev())
+	if err := couchdb.UpdateDocWithOld(inst, cipher, old); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err,
 		})
