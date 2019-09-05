@@ -329,8 +329,8 @@ func (i *Instance) SettingsPublicName() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	email, _ := settings.M["public_name"].(string)
-	return email, nil
+	name, _ := settings.M["public_name"].(string)
+	return name, nil
 }
 
 // GetFromContexts returns the parameters specific to the instance context

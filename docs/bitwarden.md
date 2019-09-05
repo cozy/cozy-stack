@@ -132,6 +132,88 @@ Content-Type: application/json
 HTTP/1.1 204 No Content
 ```
 
+## Route for sync
+
+### GET /bitwarden/api/sync
+
+The main action of the client is a one-way sync, which just fetches all objects
+from the server and updates its local database.
+
+#### Request
+
+```http
+GET /bitwarden/api/sync HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+	"Profile": {
+		"Id": "0fbfc68d-ba11-416a-ac8a-a82600f0e601",
+		"Name": "Alice",
+		"Email": "me@alice.example.com",
+		"EmailVerified": false,
+		"Premium": false,
+		"MasterPasswordHint": null,
+		"Culture": "en-US",
+		"TwoFactorEnabled": false,
+		"Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+		"PrivateKey": null,
+		"SecurityStamp": "5d203c3f-bc89-499e-85c4-4431248e1196",
+		"Organizations": [],
+		"Object": "profile"
+	},
+	"Folders": [
+		{
+			"Id": "14220912-d002-471d-a364-a82a010cb8f2",
+			"Name": "2.tqb+y2z4ChCYHj4romVwGQ==|E8+D7aR5CNnd+jF7fdb9ow==|wELCxyy341G2F+w8bTb87PAUi6sdXeIFTFb4N8tk3E0=",
+			"RevisionDate": "2017-11-13T16:20:56.5633333",
+			"Object": "folder"
+		}
+	],
+	"Ciphers": [
+		{
+			"FolderId": null,
+			"Favorite": false,
+			"Edit": true,
+			"Id": "0f01a66f-7802-42bc-9647-a82600f11e10",
+			"OrganizationId": null,
+			"Type":1,
+			"Login":{
+				"Uris": [
+					{
+						"Uri": "2.6DmdNKlm3a+9k/5DFg+pTg==|7q1Arwz/ZfKEx+fksV3yo0HMQdypHJvyiix6hzgF3gY=|7lSXqjfq5rD3/3ofNZVpgv1ags696B2XXJryiGjDZvk=",
+						"Match": null,
+					},
+				],
+				"Username": "2.4Dwitdv4Br85MABzhMJ4hg==|0BJtHtXbfZWwQXbFcBn0aA==|LM4VC+qNpezmub1f4l1TMLDb9g/Q+sIis2vDbU32ZGA=",
+				"Password":"2.OOlWRBGib6G8WRvBOziKzQ==|Had/obAdd2/6y4qzM1Kc/A==|LtHXwZc5PkiReFhkzvEHIL01NrsWGvintQbmqwxoXSI=",
+				"Totp":null,
+			},
+			"Name": "2.zAgCKbTvGowtaRn1er5WGA==|oVaVLIjfBQoRr5EvHTwfhQ==|lHSTUO5Rgfkjl3J/zGJVRfL8Ab5XrepmyMv9iZL5JBE=",
+			"Notes": "2.NLkXMHtgR8u9azASR4XPOQ==|6/9QPcnoeQJDKBZTjcBAjVYJ7U/ArTch0hUSHZns6v8=|p55cl9FQK/Hef+7yzM7Cfe0w07q5hZI9tTbxupZepyM=",
+			"Fields": null,
+			"Attachments": null,
+			"OrganizationUseTotp": false,
+			"RevisionDate": "2017-11-09T14:37:52.9033333",
+			"Object":"cipher"
+		}
+	],
+	"Domains": {
+		"EquivalentDomains": null,
+		"GlobalEquivalentDomains": null,
+		"Object": "domains"
+	},
+	"Object": "sync"
+}
+```
+
 ## Routes for ciphers
 
 ### GET /bitwarden/api/ciphers

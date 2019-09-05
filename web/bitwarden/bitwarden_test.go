@@ -329,7 +329,10 @@ func TestUpdateCipher(t *testing.T) {
 	var result map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
+	assertUpdatedCipherResponse(t, result)
+}
 
+func assertUpdatedCipherResponse(t *testing.T, result map[string]interface{}) {
 	assert.Equal(t, "cipher", result["Object"])
 	assert.Equal(t, cipherID, result["Id"])
 	assert.Equal(t, float64(2), result["Type"])
@@ -389,6 +392,54 @@ func TestDeleteCipher(t *testing.T) {
 	assert.Equal(t, 204, res.StatusCode)
 }
 
+func TestSync(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/api/sync", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, "sync", result["Object"])
+
+	profile := result["Profile"].(map[string]interface{})
+	assert.NotEmpty(t, profile["Id"])
+	assert.Equal(t, "Pierre", profile["Name"])
+	assert.Equal(t, "me@cozy.example.net", profile["Email"])
+	assert.Equal(t, false, profile["EmailVerified"])
+	assert.Equal(t, false, profile["Premium"])
+	assert.Equal(t, nil, profile["MasterPasswordHint"])
+	assert.Equal(t, "en", profile["Culture"])
+	assert.Equal(t, false, profile["TwoFactorEnabled"])
+	assert.NotEmpty(t, profile["Key"])
+	assert.Equal(t, nil, profile["PrivateKey"])
+	assert.NotEmpty(t, profile["SecurityStamp"])
+	assert.Equal(t, "profile", profile["Object"])
+
+	ciphers := result["Ciphers"].([]interface{})
+	assert.Len(t, ciphers, 1)
+	c := ciphers[0].(map[string]interface{})
+	assertUpdatedCipherResponse(t, c)
+
+	folders := result["Folders"].([]interface{})
+	assert.Len(t, folders, 1)
+	f := folders[0].(map[string]interface{})
+	assert.Equal(t, "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=", f["Name"])
+	assert.Equal(t, "folder", f["Object"])
+	assert.NotEmpty(t, f["RevisionDate"])
+	assert.Equal(t, folderID, f["Id"])
+
+	domains := result["Domains"].(map[string]interface{})
+	ed, ok := domains["EquivalentDomains"]
+	assert.True(t, ok)
+	assert.Empty(t, ed)
+	ged, ok := domains["GlobalEquivalentDomains"]
+	assert.True(t, ok)
+	assert.Empty(t, ged)
+	assert.Equal(t, "domains", domains["Object"])
+}
+
 func TestChangeSecurityHash(t *testing.T) {
 	email := inst.PassphraseSalt()
 	iter := crypto.DefaultPBKDF2Iterations
@@ -416,6 +467,7 @@ func TestMain(m *testing.M) {
 	inst = setup.GetTestInstance(&lifecycle.Options{
 		Domain:     "cozy.example.net",
 		Passphrase: "cozy",
+		PublicName: "Pierre",
 	})
 
 	ts = setup.GetTestServer("/bitwarden", Routes)

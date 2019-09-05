@@ -183,6 +183,8 @@ func Routes(router *echo.Group) {
 	identity.POST("/connect/token", GetToken)
 
 	api := router.Group("/api")
+	api.GET("/sync", Sync)
+
 	accounts := api.Group("/accounts")
 	accounts.POST("/prelogin", Prelogin)
 	accounts.POST("/security-stamp", ChangeSecurityStamp)
