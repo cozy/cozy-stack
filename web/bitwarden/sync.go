@@ -118,9 +118,13 @@ func Sync(c echo.Context) error {
 	var folders []*bitwarden.Folder
 	req = &couchdb.AllDocsRequest{}
 	if err := couchdb.GetAllDocs(inst, consts.BitwardenFolders, req, &folders); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
-		})
+		if couchdb.IsNoDatabaseError(err) {
+			_ = couchdb.CreateDB(inst, consts.BitwardenFolders)
+		} else {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": err,
+			})
+		}
 	}
 
 	res := newSyncResponse(profile, ciphers, folders)

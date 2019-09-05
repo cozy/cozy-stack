@@ -3,11 +3,14 @@ package bitwarden
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -48,6 +51,29 @@ func ChangeSecurityStamp(c echo.Context) error {
 		return err
 	}
 	return c.NoContent(http.StatusNoContent)
+}
+
+// GetRevisionDate returns the date of the last synchronization (as a number of
+// milliseconds).
+func GetRevisionDate(c echo.Context) error {
+	pdoc, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	if pdoc.Type != permission.TypeOauth || pdoc.Client == nil {
+		return permission.ErrInvalidAudience
+	}
+	client := pdoc.Client.(*oauth.Client)
+	at, ok := client.SynchronizedAt.(time.Time)
+	if !ok {
+		if client.Metadata != nil {
+			at = client.Metadata.CreatedAt
+		} else {
+			at = time.Now()
+		}
+	}
+	milliseconds := fmt.Sprintf("%d", at.Nanosecond()/1000000)
+	return c.Blob(http.StatusOK, "text/plain", []byte(milliseconds))
 }
 
 // GetToken is used by the clients to get an access token. There are two
@@ -188,6 +214,7 @@ func Routes(router *echo.Group) {
 	accounts := api.Group("/accounts")
 	accounts.POST("/prelogin", Prelogin)
 	accounts.POST("/security-stamp", ChangeSecurityStamp)
+	accounts.GET("/revision-date", GetRevisionDate)
 
 	ciphers := api.Group("/ciphers")
 	ciphers.GET("", ListCiphers)
