@@ -551,7 +551,6 @@ func ValidTokenWithSStamp(i *instance.Instance, audience, token string) (permiss
 	if !valid {
 		return claims, valid
 	}
-	fmt.Printf("claims = %#v\n", claims)
 	if claims.SStamp != i.PassphraseStamp {
 		i.Logger().WithField("nspace", "oauth").
 			Errorf("Expected %s security stamp for %s token, but was: %s",

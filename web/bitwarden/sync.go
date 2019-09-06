@@ -21,7 +21,7 @@ type profileResponse struct {
 	Hint          interface{}   `json:"MasterPasswordHint"`
 	Culture       string        `json:"Culture"`
 	TwoFactor     bool          `json:"TwoFactorEnabled"`
-	Key           string        `json:"Key`
+	Key           string        `json:"Key"`
 	PrivateKey    interface{}   `json:"PrivateKey"`
 	SStamp        string        `json:"SecurityStamp"`
 	Organizations []interface{} `json:"Organizations"`

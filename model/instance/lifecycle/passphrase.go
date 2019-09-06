@@ -1,10 +1,7 @@
 package lifecycle
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/subtle"
-	"encoding/base64"
 	"encoding/hex"
 	"net/url"
 	"time"
@@ -235,19 +232,11 @@ func setPassphraseKdfAndSecret(inst *instance.Instance, hash []byte, kdfIteratio
 func CreatePassphraseKey(inst *instance.Instance, masterKey []byte) error {
 	pt := crypto.GenerateRandomBytes(64)
 	iv := crypto.GenerateRandomBytes(16)
-
-	block, err := aes.NewCipher(masterKey)
+	generated, err := crypto.EncryptWithAES256CBC(masterKey, pt, iv)
 	if err != nil {
 		return err
 	}
-	dst := make([]byte, len(pt))
-	mode := cipher.NewCBCEncrypter(block, iv)
-	mode.CryptBlocks(dst, pt)
-	iv64 := base64.StdEncoding.EncodeToString(iv)
-	dst64 := base64.StdEncoding.EncodeToString(dst)
-
-	// 0 means AES-256-CBC
-	inst.PassphraseKey = "0." + iv64 + "|" + dst64
+	inst.PassphraseKey = generated
 	return nil
 }
 

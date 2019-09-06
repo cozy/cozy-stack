@@ -136,7 +136,7 @@
         const iv64 = fromBufferToB64(iv)
         const data = fromBufferToB64(encrypted)
         // 0 means AES-256-CBC
-        return `0.${data}|${iv64}`
+        return `0.${iv64}|${data}`
       })
   }
 
