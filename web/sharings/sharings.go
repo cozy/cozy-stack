@@ -570,7 +570,8 @@ func checkGetPermissions(c echo.Context, s *sharing.Sharing) error {
 		return nil
 	}
 	if requestPerm.Type != permission.TypeWebapp &&
-		requestPerm.Type != permission.TypeOauth {
+		requestPerm.Type != permission.TypeOauth &&
+		requestPerm.Type != permission.TypeCLI {
 		return permission.ErrInvalidAudience
 	}
 
