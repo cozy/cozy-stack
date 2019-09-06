@@ -30,6 +30,7 @@ type ServiceOptions struct {
 type serviceWorker struct {
 	man  *app.WebappManifest
 	slug string
+	name string
 }
 
 func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (workDir string, err error) {
@@ -54,6 +55,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 	}
 
 	w.slug = slug
+	w.name = name
 
 	// Upgrade "installed" to "ready"
 	if err := app.UpgradeInstalledState(i, man); err != nil {
@@ -167,7 +169,11 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instan
 }
 
 func (w *serviceWorker) Logger(ctx *job.WorkerContext) *logrus.Entry {
-	return ctx.Logger().WithField("slug", w.Slug())
+	log := ctx.Logger().WithField("slug", w.Slug())
+	if w.name != "" {
+		log = log.WithField("name", w.name)
+	}
+	return log
 }
 
 func (w *serviceWorker) ScanOutput(ctx *job.WorkerContext, i *instance.Instance, line []byte) error {
