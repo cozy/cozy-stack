@@ -27,6 +27,21 @@ func Prelogin(c echo.Context) error {
 	})
 }
 
+// GetProfile is the handler for the route to get profile information.
+func GetProfile(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenProfiles); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+	profile, err := newProfileResponse(inst)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, profile)
+}
+
 // ChangeSecurityStamp is used by the client to change the security stamp,
 // which will deconnect all the clients.
 func ChangeSecurityStamp(c echo.Context) error {
@@ -213,6 +228,7 @@ func Routes(router *echo.Group) {
 
 	accounts := api.Group("/accounts")
 	accounts.POST("/prelogin", Prelogin)
+	accounts.GET("/profile", GetProfile)
 	accounts.POST("/security-stamp", ChangeSecurityStamp)
 	accounts.GET("/revision-date", GetRevisionDate)
 

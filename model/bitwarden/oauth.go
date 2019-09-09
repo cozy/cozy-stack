@@ -13,7 +13,7 @@ import (
 
 // BitwardenScope is the OAuth scope, and it is hard-coded with the doctypes
 // needed by the Bitwarden apps.
-const BitwardenScope = consts.BitwardenCiphers + " " + consts.BitwardenFolders
+const BitwardenScope = consts.BitwardenProfiles + " " + consts.BitwardenCiphers + " " + consts.BitwardenFolders
 
 // ParseBitwardenDeviceType takes a deviceType (Bitwarden) and transforms it
 // into a client_kind and a software_id (Cozy).
