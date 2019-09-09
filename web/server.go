@@ -49,7 +49,7 @@ func LoadSupportedLocales() error {
 	}
 
 	for _, locale := range consts.SupportedLocales {
-		f, err := assets.Open("/locales/" + locale + ".po")
+		f, err := assets.Open("/locales/"+locale+".po", config.DefaultInstanceContext)
 		if err != nil {
 			return fmt.Errorf("Can't load the po file for %s", locale)
 		}

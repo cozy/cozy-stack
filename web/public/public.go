@@ -18,10 +18,7 @@ func Avatar(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	f, ok := assets.Get("/images/default-avatar.png", inst.ContextName)
 	if !ok {
-		f, ok = assets.Get("/images/default-avatar.png", "")
-		if !ok {
-			return echo.NewHTTPError(http.StatusNotFound, "Page not found")
-		}
+		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 	}
 	handler := statik.NewHandler()
 	handler.ServeFile(c.Response(), c.Request(), f, true)

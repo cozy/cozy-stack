@@ -93,7 +93,7 @@ func RegisterCustomExternals(opts []model.AssetOption, maxTryCount int) error {
 	assetsCh := make(chan model.AssetOption)
 	doneCh := make(chan error)
 
-	for i := 0; i < len(opts); i++ {
+	for range opts {
 		go func() {
 			var err error
 			sleepDuration := 500 * time.Millisecond

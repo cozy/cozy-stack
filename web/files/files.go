@@ -21,7 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
-	"github.com/cozy/cozy-stack/pkg/assets"
+	"github.com/cozy/cozy-stack/pkg/assets/statik"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -720,8 +720,8 @@ func serveThumbnailPlaceholder(res http.ResponseWriter, req *http.Request, doc *
 	if !utils.IsInArray(format, thumbnail.FormatsNames) {
 		return echo.NewHTTPError(http.StatusNotFound, "Format does not exist")
 	}
-	f, ok := assets.Get("/placeholders/thumbnail-"+format+".png", "")
-	if !ok {
+	f := statik.GetAsset("/placeholders/thumbnail-" + format + ".png")
+	if f == nil {
 		return os.ErrNotExist
 	}
 	etag := f.Etag

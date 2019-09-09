@@ -2,8 +2,10 @@ package assets
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
@@ -12,20 +14,17 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
-// Get looks for an asset. First tries to get a dynamic, then the statik
-// Get returns an asset for the given context, or the default context if
-// no context is given.
-func Get(name string, context ...string) (*model.Asset, bool) {
-	var ctx string
-
-	if len(context) > 0 && context[0] != "" {
-		ctx = context[0]
-	} else {
-		ctx = config.DefaultInstanceContext
+// Get looks for an asset. It tries in this order:
+// 1. A dynamic asset for the given context
+// 2. A dynamic asset for the default context
+// 3. A static asset.
+func Get(name, context string) (*model.Asset, bool) {
+	if context == "" {
+		context = config.DefaultInstanceContext
 	}
 
 	// Check if a dynamic asset is existing
-	dynAsset, err := dynamic.GetAsset(ctx, name)
+	dynAsset, err := dynamic.GetAsset(context, name)
 	if err == nil {
 		return dynAsset, true
 	}
@@ -33,7 +32,7 @@ func Get(name string, context ...string) (*model.Asset, bool) {
 		logger.WithNamespace("asset").Errorf("Error while retreiving dynamic asset: %s", err)
 	}
 
-	if ctx != config.DefaultInstanceContext {
+	if context != config.DefaultInstanceContext {
 		dynAsset, err = dynamic.GetAsset(config.DefaultInstanceContext, name)
 		if err == nil {
 			return dynAsset, true
@@ -48,14 +47,53 @@ func Get(name string, context ...string) (*model.Asset, bool) {
 	return asset, true
 }
 
+// Head does the same job as Get, but the returned model.Asset can have no body
+// data. It allows to use a cache for it.
+func Head(name, context string) (*model.Asset, bool) {
+	if context == "" {
+		context = config.DefaultInstanceContext
+	}
+	key := fmt.Sprintf("dyn-assets:%s/%s", context, name)
+	cache := config.GetConfig().CacheStorage
+	if r, ok := cache.Get(key); ok {
+		asset := &model.Asset{}
+		if err := json.NewDecoder(r).Decode(asset); err == nil {
+			return asset, true
+		}
+	}
+	asset, ok := Get(name, context)
+	if !ok {
+		return nil, false
+	}
+	if data, err := json.Marshal(asset); err == nil {
+		cache.Set(key, data, 24*time.Hour)
+	}
+	return asset, true
+}
+
+// Add adds dynamic assets
+func Add(options []model.AssetOption) error {
+	err := dynamic.RegisterCustomExternals(options, 0)
+	if err == nil {
+		cache := config.GetConfig().CacheStorage
+		for _, opt := range options {
+			key := fmt.Sprintf("dyn-assets:%s/%s", opt.Context, opt.Name)
+			cache.Clear(key)
+		}
+	}
+	return err
+}
+
 // Remove removes an asset
 // Note: Only dynamic assets can be removed
 func Remove(name, context string) error {
-	if context == "" {
-		return fmt.Errorf("Cannot remove a statik asset. Please specify a context")
+	err := dynamic.RemoveAsset(context, name)
+	if err == nil {
+		key := fmt.Sprintf("dyn-assets:%s/%s", context, name)
+		cache := config.GetConfig().CacheStorage
+		cache.Clear(key)
 	}
-
-	return dynamic.RemoveAsset(context, name)
+	return err
 }
 
 // List returns a map containing all the existing assets (statik & dynamic)
@@ -87,15 +125,10 @@ func List() (map[string][]*model.Asset, error) {
 	return assetsMap, nil
 }
 
-// Add adds dynamic assets
-func Add(unmarshaledAssets []model.AssetOption) error {
-	return dynamic.RegisterCustomExternals(unmarshaledAssets, 0)
-}
-
 // Open returns a bytes.Reader for an asset in the given context, or the
 // default context if no context is given.
-func Open(name string, context ...string) (*bytes.Reader, error) {
-	f, ok := Get(name, context...)
+func Open(name string, context string) (*bytes.Reader, error) {
+	f, ok := Get(name, context)
 	if ok {
 		return f.Reader(), nil
 	}
