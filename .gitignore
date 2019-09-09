@@ -1,17 +1,18 @@
-/.assets
-/.cozy
-/bin
+/.assets/
+/.cozy/
+/bin/
 /cozy-stack*
-/debian
-/debug-assets
-/node_modules
+/debian/
+/debug-assets/
+/node_modules/
 /package-lock.json
 /pkg/workers/exec/konnector_test*.local
 /scripts/cozy-stack*
-/storage
-/tests/clone/generated
+/storage/
+/tests/clone/generated/
 /tests/coverage.txt
-/tests/integration/tmp
+/tests/integration/tmp/
+/tests/sharing/
 
 *.log
 *.enc
