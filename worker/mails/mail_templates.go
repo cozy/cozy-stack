@@ -135,16 +135,9 @@ func buildHTML(name string, layout string, ctx *job.WorkerContext, context, loca
 }
 
 func loadTemplate(name, context string) ([]byte, error) {
-	var f *bytes.Reader
-	if context != "" {
-		f, _ = assets.Open(name, context)
-	}
-	if f == nil {
-		var err error
-		f, err = assets.Open(name) // Default context
-		if err != nil {
-			return nil, err
-		}
+	f, err := assets.Open(name, context)
+	if err != nil {
+		return nil, err
 	}
 	return ioutil.ReadAll(f)
 }

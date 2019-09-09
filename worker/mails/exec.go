@@ -56,7 +56,7 @@ func prepareWorkDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	f, err := assets.Open("/js/cozy-mjml.js")
+	f, err := assets.Open("/js/cozy-mjml.js", config.DefaultInstanceContext)
 	if err != nil {
 		return "", err
 	}

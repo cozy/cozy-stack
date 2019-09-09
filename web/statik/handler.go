@@ -116,7 +116,7 @@ func NewRenderer() (AssetRenderer, error) {
 
 	for _, name := range templatesList {
 		tmpl := t.New(name).Funcs(middlewares.FuncsMap)
-		f, err := assets.Open("/templates/" + name)
+		f, err := assets.Open("/templates/"+name, config.DefaultInstanceContext)
 		if err != nil {
 			return nil, fmt.Errorf("Can't load asset %q: %s", name, err)
 		}
@@ -174,12 +174,12 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 // AssetPath return the fullpath with unique identifier for a given asset file.
 func AssetPath(domain, name string, context ...string) string {
-	f, ok := assets.Get(name, context...)
+	ctx := config.DefaultInstanceContext
+	if len(context) > 0 && context[0] != "" {
+		ctx = context[0]
+	}
+	f, ok := assets.Head(name, ctx)
 	if !ok {
-		ctx := config.DefaultInstanceContext
-		if len(context) > 0 && context[0] != "" {
-			ctx = context[0]
-		}
 		logger.WithNamespace("assets").WithFields(logrus.Fields{
 			"domain":  domain,
 			"name":    name,
