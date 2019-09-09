@@ -129,22 +129,12 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 
 // FromCookie retrieves the session from a echo.Context cookies.
 func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
-	// If KdfIterations is zero, it means that the instance still has a
-	// passphrase that has not hashed on the client side. In that case, we
-	// ignore the session to force the user to login again and migrate its
-	// passphrase to be hashed on the client. It is simpler/safer and, in
-	// particular, it avoids that he/she can try to changed its pass in
-	// settings (which would fail).
-	if i.PassphraseKdfIterations == 0 && i.IsPasswordAuthenticationEnabled() {
-		return nil, ErrNoCookie
-	}
-
 	cookie, err := c.Cookie(SessionCookieName)
 	if err != nil || cookie.Value == "" {
 		return nil, ErrNoCookie
 	}
 
-	sessionID, err := crypto.DecodeAuthMessage(cookieSessionMACConfig, i.SessionSecret,
+	sessionID, err := crypto.DecodeAuthMessage(cookieSessionMACConfig, i.SessionSecret(),
 		[]byte(cookie.Value), nil)
 	if err != nil {
 		return nil, err
@@ -155,23 +145,13 @@ func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
 
 // FromAppCookie retrives the session from an application submain cookie.
 func FromAppCookie(c echo.Context, i *instance.Instance, slug string) (*Session, error) {
-	// If KdfIterations is zero, it means that the instance still has a
-	// passphrase that has not hashed on the client side. In that case, we
-	// ignore the session to force the user to login again and migrate its
-	// passphrase to be hashed on the client. It is simpler/safer and, in
-	// particular, it avoids that he/she can try to changed its pass in
-	// settings (which would fail).
-	if i.PassphraseKdfIterations == 0 && i.IsPasswordAuthenticationEnabled() {
-		return nil, ErrNoCookie
-	}
-
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		cookie, err := c.Cookie(SessionCookieName)
 		if err != nil || cookie.Value == "" {
 			return nil, ErrNoCookie
 		}
 
-		sessionID, err := crypto.DecodeAuthMessage(cookieAppMACConfig, i.SessionSecret,
+		sessionID, err := crypto.DecodeAuthMessage(cookieAppMACConfig, i.SessionSecret(),
 			[]byte(cookie.Value), []byte(slug))
 		if err != nil {
 			return nil, err
@@ -209,7 +189,7 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 
 // ToCookie returns an http.Cookie for this Session
 func (s *Session) ToCookie() (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieSessionMACConfig, s.Instance.SessionSecret, []byte(s.ID()), nil)
+	encoded, err := crypto.EncodeAuthMessage(cookieSessionMACConfig, s.Instance.SessionSecret(), []byte(s.ID()), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +212,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 
 // ToAppCookie returns an http.Cookie for this Session on an app subdomain
 func (s *Session) ToAppCookie(domain, slug string) (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieAppMACConfig, s.Instance.SessionSecret, []byte(s.ID()), []byte(slug))
+	encoded, err := crypto.EncodeAuthMessage(cookieAppMACConfig, s.Instance.SessionSecret(), []byte(s.ID()), []byte(slug))
 	if err != nil {
 		return nil, err
 	}

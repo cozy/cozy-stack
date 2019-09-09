@@ -71,15 +71,9 @@ type Instance struct {
 	// server as it also used for encryption on client-side, and after that,
 	// hashed on the server to ensure robustness. For more informations on the
 	// server-side hashing, see crypto.GenerateFromPassphrase.
-	PassphraseHash          []byte     `json:"passphrase_hash,omitempty"`
-	PassphraseKdf           int        `json:"passphrase_kdf,omitempty"`
-	PassphraseKdfIterations int        `json:"passphrase_kdf_iterations,omitempty"`
-	PassphraseStamp         string     `json:"passphrase_stamp,omitempty"`
-	PassphraseKey           string     `json:"passphrase_key,omitempty"`
-	PublicKey               string     `json:"public_key,omitempty"`
-	PrivateKey              string     `json:"private_key,omitempty"`
-	PassphraseResetToken    []byte     `json:"passphrase_reset_token,omitempty"`
-	PassphraseResetTime     *time.Time `json:"passphrase_reset_time,omitempty"`
+	PassphraseHash       []byte     `json:"passphrase_hash,omitempty"`
+	PassphraseResetToken []byte     `json:"passphrase_reset_token,omitempty"`
+	PassphraseResetTime  *time.Time `json:"passphrase_reset_time,omitempty"`
 
 	// Secure assets
 
@@ -87,8 +81,8 @@ type Instance struct {
 	// waiting for registration. The registerToken secret is only shared (in
 	// clear) with the instance's user.
 	RegisterToken []byte `json:"register_token,omitempty"`
-	// SessionSecret is used to authenticate session cookies
-	SessionSecret []byte `json:"session_secret,omitempty"`
+	// SessSecret is used to authenticate session cookies
+	SessSecret []byte `json:"session_secret,omitempty"`
 	// OAuthSecret is used to authenticate OAuth2 token
 	OAuthSecret []byte `json:"oauth_secret,omitempty"`
 	// CLISecret is used to authenticate request from the CLI
@@ -134,8 +128,8 @@ func (i *Instance) Clone() couchdb.Doc {
 	cloned.RegisterToken = make([]byte, len(i.RegisterToken))
 	copy(cloned.RegisterToken, i.RegisterToken)
 
-	cloned.SessionSecret = make([]byte, len(i.SessionSecret))
-	copy(cloned.SessionSecret, i.SessionSecret)
+	cloned.SessSecret = make([]byte, len(i.SessSecret))
+	copy(cloned.SessSecret, i.SessSecret)
 
 	cloned.OAuthSecret = make([]byte, len(i.OAuthSecret))
 	copy(cloned.OAuthSecret, i.OAuthSecret)
@@ -157,6 +151,20 @@ func (i *Instance) DBPrefix() string {
 // DomainName returns the main domain name of the instance.
 func (i *Instance) DomainName() string {
 	return i.Domain
+}
+
+// SessionSecret returns the session secret.
+func (i *Instance) SessionSecret() []byte {
+	// The prefix is here to invalidate all the sessions that were created on
+	// an instance where the password was not hashed on client-side. It force
+	// the user to log in again and migrate its passphrase to be hashed on the
+	// client. It is simpler/safer and, in particular, it avoids that he/she
+	// can try to changed its pass in settings (which would fail).
+	secret := make([]byte, 2+len(i.SessSecret))
+	secret[0] = '2'
+	secret[1] = ':'
+	copy(secret[2:], i.SessSecret)
+	return secret
 }
 
 // SlugAndDomain returns the splitted slug and domain of the instance
@@ -622,7 +630,7 @@ func ForeachInstances(fn func(*Instance) error) error {
 func (i *Instance) PickKey(audience string) ([]byte, error) {
 	switch audience {
 	case consts.AppAudience, consts.KonnectorAudience:
-		return i.SessionSecret, nil
+		return i.SessionSecret(), nil
 	case consts.RefreshTokenAudience, consts.AccessTokenAudience, consts.ShareAudience:
 		return i.OAuthSecret, nil
 	case consts.CLIAudience:

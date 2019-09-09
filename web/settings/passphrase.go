@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -45,10 +46,14 @@ func getPassphraseParameters(c echo.Context) error {
 		return err
 	}
 	inst := middlewares.GetInstance(c)
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
 	params := apiPassphraseParameters{
 		Salt:       string(inst.PassphraseSalt()),
-		Kdf:        inst.PassphraseKdf,
-		Iterations: inst.PassphraseKdfIterations,
+		Kdf:        settings.PassphraseKdf,
+		Iterations: settings.PassphraseKdfIterations,
 	}
 	return jsonapi.Data(c, http.StatusOK, &params, nil)
 }

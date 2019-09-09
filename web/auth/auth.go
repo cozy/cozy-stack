@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -169,6 +170,11 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		help = i.Translate("Login Password help")
 	}
 
+	iterations := 0
+	if settings, err := settings.Get(i); err == nil {
+		iterations = settings.PassphraseKdfIterations
+	}
+
 	return c.Render(code, "login.html", echo.Map{
 		"TemplateTitle":    i.TemplateTitle(),
 		"CozyUI":           middlewares.CozyUI(i),
@@ -176,7 +182,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"Domain":           i.ContextualDomain(),
 		"ContextName":      i.ContextName,
 		"Locale":           i.Locale,
-		"Iterations":       i.PassphraseKdfIterations,
+		"Iterations":       iterations,
 		"Salt":             string(i.PassphraseSalt()),
 		"Title":            title,
 		"PasswordHelp":     help,
@@ -255,6 +261,30 @@ func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, long
 	return sessionID, nil
 }
 
+func migrateToHashedPassphrase(inst *instance.Instance, settings *settings.Settings, passphrase []byte) {
+	iterations := crypto.DefaultPBKDF2Iterations
+	salt := inst.PassphraseSalt()
+	pass, masterKey := crypto.HashPassWithPBKDF2(passphrase, salt, iterations)
+	hash, err := crypto.GenerateFromPassphrase(pass)
+	if err != nil {
+		inst.Logger().Errorf("Could not hash the passphrase: %s", err.Error())
+		return
+	}
+	inst.PassphraseHash = hash
+	settings.PassphraseKdfIterations = iterations
+	settings.PassphraseKdf = instance.PBKDF2_SHA256
+	if err := lifecycle.CreatePassphraseKey(settings, masterKey); err != nil {
+		inst.Logger().Errorf("Could not create passphrase key: %s", err.Error())
+		return
+	}
+	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+		inst.Logger().Errorf("Could not update: %s", err.Error())
+	}
+	if err := settings.Save(inst); err != nil {
+		inst.Logger().Errorf("Could not update: %s", err.Error())
+	}
+}
+
 func login(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
@@ -271,22 +301,10 @@ func login(c echo.Context) error {
 	if ok { // The user was already logged-in
 		sessionID = sess.ID()
 	} else if lifecycle.CheckPassphrase(inst, passphrase) == nil {
+		settings, err := settings.Get(inst)
 		// If the passphrase was not yet hashed on the client side, migrate it
-		if inst.PassphraseKdfIterations == 0 {
-			iterations := crypto.DefaultPBKDF2Iterations
-			salt := inst.PassphraseSalt()
-			pass, masterKey := crypto.HashPassWithPBKDF2(passphrase, salt, iterations)
-			hash, err := crypto.GenerateFromPassphrase(pass)
-			if err == nil {
-				inst.PassphraseHash = hash
-				inst.PassphraseKdfIterations = iterations
-				inst.PassphraseKdf = instance.PBKDF2_SHA256
-				if err := lifecycle.CreatePassphraseKey(inst, masterKey); err == nil {
-					if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
-						inst.Logger().Errorf("Could not update: %s", err.Error())
-					}
-				}
-			}
+		if err == nil && settings.PassphraseKdfIterations == 0 {
+			migrateToHashedPassphrase(inst, settings, passphrase)
 		}
 
 		// In case the second factor authentication mode is "mail", we also

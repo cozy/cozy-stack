@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -30,11 +31,15 @@ func registerPassphrase(inst *instance.Instance, tok []byte, params PassParamete
 	if subtle.ConstantTimeCompare(inst.RegisterToken, tok) != 1 {
 		return instance.ErrInvalidToken
 	}
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return nil
+	}
 	if params.Iterations == 0 {
 		pass, masterKey, iterations := emulateClientSideHashing(inst, params.Pass)
 		params.Pass, params.Iterations = pass, iterations
 		if params.Key == "" {
-			if err := CreatePassphraseKey(inst, masterKey); err != nil {
+			if err := CreatePassphraseKey(settings, masterKey); err != nil {
 				return err
 			}
 		}
@@ -44,8 +49,8 @@ func registerPassphrase(inst *instance.Instance, tok []byte, params PassParamete
 		return err
 	}
 	inst.RegisterToken = nil
-	setPassphraseKdfAndSecret(inst, hash, params.Iterations)
-	return nil
+	setPassphraseKdfAndSecret(inst, settings, hash, params.Iterations)
+	return settings.Save(inst)
 }
 
 // RegisterPassphrase replace the instance registerToken by a passphrase
@@ -143,11 +148,15 @@ func PassphraseRenew(inst *instance.Instance, tok []byte, params PassParameters)
 	if err != nil {
 		return err
 	}
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return nil
+	}
 	if params.Iterations == 0 {
 		pass, masterKey, iterations := emulateClientSideHashing(inst, params.Pass)
 		params.Pass, params.Iterations = pass, iterations
 		if params.Key == "" {
-			if err := CreatePassphraseKey(inst, masterKey); err != nil {
+			if err := CreatePassphraseKey(settings, masterKey); err != nil {
 				return err
 			}
 		}
@@ -158,7 +167,10 @@ func PassphraseRenew(inst *instance.Instance, tok []byte, params PassParameters)
 	}
 	inst.PassphraseResetToken = nil
 	inst.PassphraseResetTime = nil
-	setPassphraseKdfAndSecret(inst, hash, params.Iterations)
+	setPassphraseKdfAndSecret(inst, settings, hash, params.Iterations)
+	if err := settings.Save(inst); err != nil {
+		return err
+	}
 	return update(inst)
 }
 
@@ -186,7 +198,14 @@ func UpdatePassphrase(inst *instance.Instance, pass, current []byte, twoFactorPa
 	if err != nil {
 		return err
 	}
-	setPassphraseKdfAndSecret(inst, hash, kdfIterations)
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return nil
+	}
+	setPassphraseKdfAndSecret(inst, settings, hash, kdfIterations)
+	if err := settings.Save(inst); err != nil {
+		return err
+	}
 	return update(inst)
 }
 
@@ -197,14 +216,21 @@ func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte) error {
 	}
 
 	pass, masterKey, kdfIterations := emulateClientSideHashing(inst, newPassword)
-	if err := CreatePassphraseKey(inst, masterKey); err != nil {
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return nil
+	}
+	if err := CreatePassphraseKey(settings, masterKey); err != nil {
 		return err
 	}
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
 		return err
 	}
-	setPassphraseKdfAndSecret(inst, hash, kdfIterations)
+	setPassphraseKdfAndSecret(inst, settings, hash, kdfIterations)
+	if err := settings.Save(inst); err != nil {
+		return err
+	}
 	return update(inst)
 }
 
@@ -215,13 +241,13 @@ func emulateClientSideHashing(inst *instance.Instance, password []byte) ([]byte,
 	return hashed, masterKey, kdfIterations
 }
 
-func setPassphraseKdfAndSecret(inst *instance.Instance, hash []byte, kdfIterations int) {
+func setPassphraseKdfAndSecret(inst *instance.Instance, settings *settings.Settings, hash []byte, kdfIterations int) {
 	inst.PassphraseHash = hash
-	inst.PassphraseKdf = instance.PBKDF2_SHA256
-	inst.PassphraseKdfIterations = kdfIterations
-	inst.SessionSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
-	if inst.PassphraseStamp == "" {
-		inst.PassphraseStamp = NewSecurityStamp()
+	settings.PassphraseKdf = instance.PBKDF2_SHA256
+	settings.PassphraseKdfIterations = kdfIterations
+	inst.SessSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
+	if settings.SecurityStamp == "" {
+		settings.SecurityStamp = NewSecurityStamp()
 	}
 }
 
@@ -229,14 +255,14 @@ func setPassphraseKdfAndSecret(inst *instance.Instance, hash []byte, kdfIteratio
 // encrypted version of it in the instance (the key is the master key, derived
 // from the master password).
 // See https://github.com/jcs/rubywarden/blob/master/API.md
-func CreatePassphraseKey(inst *instance.Instance, masterKey []byte) error {
+func CreatePassphraseKey(settings *settings.Settings, masterKey []byte) error {
 	pt := crypto.GenerateRandomBytes(64)
 	iv := crypto.GenerateRandomBytes(16)
 	generated, err := crypto.EncryptWithAES256CBC(masterKey, pt, iv)
 	if err != nil {
 		return err
 	}
-	inst.PassphraseKey = generated
+	settings.Key = generated
 	return nil
 }
 

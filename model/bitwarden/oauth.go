@@ -3,6 +3,7 @@ package bitwarden
 import (
 	"strconv"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -72,6 +73,10 @@ func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 	if err != nil {
 		name = "Anonymous"
 	}
+	var stamp string
+	if settings, err := settings.Get(i); err == nil {
+		stamp = settings.SecurityStamp
+	}
 	token, err := crypto.NewJWT(i.OAuthSecret, bitwardenClaims{
 		Claims: permission.Claims{
 			StandardClaims: jwt.StandardClaims{
@@ -82,7 +87,7 @@ func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 				ExpiresAt: now + int64(consts.AccessTokenValidityDuration.Seconds()),
 				Subject:   c.CouchID,
 			},
-			SStamp: i.PassphraseStamp,
+			SStamp: stamp,
 			Scope:  BitwardenScope,
 		},
 		Name:     name,
@@ -100,6 +105,10 @@ func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 // CreateRefreshJWT returns a new JSON Web Token that can be used with
 // Bitwarden apps. It is a refresh token, with an additional security stamp.
 func CreateRefreshJWT(i *instance.Instance, c *oauth.Client) (string, error) {
+	var stamp string
+	if settings, err := settings.Get(i); err != nil {
+		stamp = settings.SecurityStamp
+	}
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.Claims{
 		StandardClaims: jwt.StandardClaims{
 			Audience: consts.RefreshTokenAudience,
@@ -107,7 +116,7 @@ func CreateRefreshJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 			IssuedAt: crypto.Timestamp(),
 			Subject:  c.CouchID,
 		},
-		SStamp: i.PassphraseStamp,
+		SStamp: stamp,
 		Scope:  BitwardenScope,
 	})
 	if err != nil {

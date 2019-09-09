@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -155,8 +156,11 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 
 	// If claims contains a security stamp, we check that the stamp is still
 	// the same.
-	if claims.SStamp != "" && claims.SStamp != instance.PassphraseStamp {
-		return nil, permission.ErrInvalidToken
+	if claims.SStamp != "" {
+		settings, err := settings.Get(instance)
+		if err != nil || claims.SStamp != settings.SecurityStamp {
+			return nil, permission.ErrInvalidToken
+		}
 	}
 
 	switch claims.Audience {

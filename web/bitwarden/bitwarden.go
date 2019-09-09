@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -21,9 +22,13 @@ import (
 // hashing the master password.
 func Prelogin(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
 	return c.JSON(http.StatusOK, echo.Map{
-		"Kdf":           inst.PassphraseKdf,
-		"KdfIterations": inst.PassphraseKdfIterations,
+		"Kdf":           settings.PassphraseKdf,
+		"KdfIterations": settings.PassphraseKdfIterations,
 	})
 }
 
@@ -35,7 +40,11 @@ func GetProfile(c echo.Context) error {
 			"error": "invalid token",
 		})
 	}
-	profile, err := newProfileResponse(inst)
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
+	profile, err := newProfileResponse(inst, settings)
 	if err != nil {
 		return err
 	}
@@ -60,12 +69,16 @@ func SetKeyPair(c echo.Context) error {
 			"error": "Missing masterPasswordHash",
 		})
 	}
-	inst.PrivateKey = data.Private
-	inst.PublicKey = data.Public
-	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+	settings, err := settings.Get(inst)
+	if err != nil {
 		return err
 	}
-	profile, err := newProfileResponse(inst)
+	settings.PrivateKey = data.Private
+	settings.PublicKey = data.Public
+	if err := settings.Save(inst); err != nil {
+		return err
+	}
+	profile, err := newProfileResponse(inst, settings)
 	if err != nil {
 		return err
 	}
@@ -91,8 +104,12 @@ func ChangeSecurityStamp(c echo.Context) error {
 		})
 	}
 
-	inst.PassphraseStamp = lifecycle.NewSecurityStamp()
-	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
+	settings.SecurityStamp = lifecycle.NewSecurityStamp()
+	if err := settings.Save(inst); err != nil {
 		return err
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -192,7 +209,11 @@ func getInitialCredentials(c echo.Context) error {
 			"error": "Can't generate refresh token",
 		})
 	}
-	key := inst.PassphraseKey
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
+	key := settings.Key
 
 	// Send the response
 	out := AccessTokenReponse{
@@ -235,7 +256,11 @@ func refreshToken(c echo.Context) error {
 			"error": "Can't generate access token",
 		})
 	}
-	key := inst.PassphraseKey
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
+	key := settings.Key
 
 	// Send the response
 	out := AccessTokenReponse{

@@ -106,7 +106,7 @@ func createHandler(c echo.Context) error {
 		return wrapError(err)
 	}
 	in.OAuthSecret = nil
-	in.SessionSecret = nil
+	in.SessSecret = nil
 	in.PassphraseHash = nil
 	return jsonapi.Data(c, http.StatusCreated, &apiInstance{in}, nil)
 }
@@ -177,7 +177,7 @@ func listHandler(c echo.Context) error {
 	objs := make([]jsonapi.Object, len(is))
 	for i, in := range is {
 		in.OAuthSecret = nil
-		in.SessionSecret = nil
+		in.SessSecret = nil
 		in.PassphraseHash = nil
 		objs[i] = &apiInstance{in}
 	}

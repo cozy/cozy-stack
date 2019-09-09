@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/stack"
@@ -173,8 +174,8 @@ func TestRegisterPassphrase(t *testing.T) {
 	assert.Len(t, i.RegisterToken, instance.RegisterTokenLen)
 	assert.NotEmpty(t, i.OAuthSecret)
 	assert.Len(t, i.OAuthSecret, instance.OauthSecretLen)
-	assert.NotEmpty(t, i.SessionSecret)
-	assert.Len(t, i.SessionSecret, instance.SessionSecretLen)
+	assert.NotEmpty(t, i.SessSecret)
+	assert.Len(t, i.SessSecret, instance.SessionSecretLen)
 
 	rtoken := i.RegisterToken
 	pass := []byte("passphrase")
@@ -222,11 +223,11 @@ func TestUpdatePassphrase(t *testing.T) {
 	assert.Empty(t, i.RegisterToken)
 	assert.NotEmpty(t, i.OAuthSecret)
 	assert.Len(t, i.OAuthSecret, instance.OauthSecretLen)
-	assert.NotEmpty(t, i.SessionSecret)
-	assert.Len(t, i.SessionSecret, instance.SessionSecretLen)
+	assert.NotEmpty(t, i.SessSecret)
+	assert.Len(t, i.SessSecret, instance.SessionSecretLen)
 
 	oldHash := i.PassphraseHash
-	oldSecret := i.SessionSecret
+	oldSecret := i.SessSecret
 
 	currentPass := []byte("passphrase")
 	newPass := []byte("new-passphrase")
@@ -244,9 +245,12 @@ func TestUpdatePassphrase(t *testing.T) {
 
 	assert.NotEmpty(t, i.PassphraseHash, "PassphraseHash has not been saved")
 	assert.NotEqual(t, oldHash, i.PassphraseHash)
-	assert.NotEqual(t, oldSecret, i.SessionSecret)
-	assert.Equal(t, 5000, i.PassphraseKdfIterations)
-	assert.Equal(t, 0, i.PassphraseKdf)
+	assert.NotEqual(t, oldSecret, i.SessSecret)
+
+	settings, err := settings.Get(i)
+	assert.NoError(t, err)
+	assert.Equal(t, 5000, settings.PassphraseKdfIterations)
+	assert.Equal(t, 0, settings.PassphraseKdf)
 }
 
 func TestRequestPassphraseReset(t *testing.T) {

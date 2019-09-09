@@ -134,7 +134,7 @@ var _ jsonapi.Object = &ExportDoc{}
 // GenerateAuthMessage generates a MAC authentificating the access to the
 // export data.
 func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
-	mac, err := crypto.EncodeAuthMessage(archiveMACConfig, i.SessionSecret, []byte(e.ID()), nil)
+	mac, err := crypto.EncodeAuthMessage(archiveMACConfig, i.SessionSecret(), []byte(e.ID()), nil)
 	if err != nil {
 		panic(fmt.Errorf("could not generate archive auth message: %s", err))
 	}
@@ -144,7 +144,7 @@ func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
 // verifyAuthMessage verifies the given MAC to authenticate and grant the
 // access to the export data.
 func verifyAuthMessage(i *instance.Instance, mac []byte) (string, bool) {
-	exportID, err := crypto.DecodeAuthMessage(archiveMACConfig, i.SessionSecret, mac, nil)
+	exportID, err := crypto.DecodeAuthMessage(archiveMACConfig, i.SessionSecret(), mac, nil)
 	return string(exportID), err == nil
 }
 
@@ -724,11 +724,10 @@ func writeInstanceDoc(in *instance.Instance, name string,
 	now time.Time, tw *tar.Writer) (int64, error) {
 	clone := in.Clone().(*instance.Instance)
 	clone.PassphraseHash = nil
-	clone.PassphraseKdfIterations = 0
 	clone.PassphraseResetToken = nil
 	clone.PassphraseResetTime = nil
 	clone.RegisterToken = nil
-	clone.SessionSecret = nil
+	clone.SessSecret = nil
 	clone.OAuthSecret = nil
 	clone.CLISecret = nil
 	clone.SwiftLayout = -1

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -28,28 +29,28 @@ type profileResponse struct {
 	Object        string        `json:"Object"`
 }
 
-func newProfileResponse(inst *instance.Instance) (*profileResponse, error) {
-	settings, err := inst.SettingsDocument()
+func newProfileResponse(inst *instance.Instance, settings *settings.Settings) (*profileResponse, error) {
+	doc, err := inst.SettingsDocument()
 	if err != nil {
 		return nil, err
 	}
-	name, _ := settings.M["public_name"].(string)
+	name, _ := doc.M["public_name"].(string)
 	salt := inst.PassphraseSalt()
 	p := &profileResponse{
-		ID:            settings.ID(),
+		ID:            inst.ID(),
 		Name:          name,
 		Email:         string(salt),
 		EmailVerified: false,
 		Hint:          nil,
 		Culture:       inst.Locale,
 		TwoFactor:     false,
-		Key:           inst.PassphraseKey,
-		SStamp:        inst.PassphraseStamp,
+		Key:           settings.Key,
+		SStamp:        settings.SecurityStamp,
 		Organizations: nil,
 		Object:        "profile",
 	}
-	if inst.PrivateKey != "" {
-		p.PrivateKey = inst.PrivateKey
+	if settings.PrivateKey != "" {
+		p.PrivateKey = settings.PrivateKey
 	}
 	return p, nil
 }
@@ -101,8 +102,12 @@ func Sync(c echo.Context) error {
 			"error": "invalid token",
 		})
 	}
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
 
-	profile, err := newProfileResponse(inst)
+	profile, err := newProfileResponse(inst, settings)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err,

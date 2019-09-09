@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -551,10 +552,16 @@ func ValidTokenWithSStamp(i *instance.Instance, audience, token string) (permiss
 	if !valid {
 		return claims, valid
 	}
-	if claims.SStamp != i.PassphraseStamp {
+	settings, err := settings.Get(i)
+	if err != nil {
+		i.Logger().WithField("nspace", "oauth").
+			Errorf("Error while getting bitwarden settings: %s", err)
+		return claims, false
+	}
+	if claims.SStamp != settings.SecurityStamp {
 		i.Logger().WithField("nspace", "oauth").
 			Errorf("Expected %s security stamp for %s token, but was: %s",
-				i.PassphraseStamp, claims.Subject, claims.SStamp)
+				settings.SecurityStamp, claims.Subject, claims.SStamp)
 		return claims, false
 	}
 	return claims, true

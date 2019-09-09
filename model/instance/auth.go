@@ -93,12 +93,12 @@ func (i *Instance) GenerateTwoFactorSecrets() (token []byte, passcode string, er
 	// we check the first step of the 2FA ("the passphrase step"). This salt is
 	// given to the user and signed in the "two-factor-token" MAC.
 	salt := crypto.GenerateRandomBytes(sha256.Size)
-	token, err = crypto.EncodeAuthMessage(totpMACConfig, i.SessionSecret, salt, nil)
+	token, err = crypto.EncodeAuthMessage(totpMACConfig, i.SessionSecret(), salt, nil)
 	if err != nil {
 		return
 	}
 
-	h := hkdf.New(sha256.New, i.SessionSecret, salt, nil)
+	h := hkdf.New(sha256.New, i.SessionSecret(), salt, nil)
 	key := make([]byte, 32)
 	_, err = io.ReadFull(h, key)
 	if err != nil {
@@ -112,12 +112,12 @@ func (i *Instance) GenerateTwoFactorSecrets() (token []byte, passcode string, er
 // ValidateTwoFactorPasscode validates the given (token, passcode) pair for two
 // factor authentication.
 func (i *Instance) ValidateTwoFactorPasscode(token []byte, passcode string) bool {
-	salt, err := crypto.DecodeAuthMessage(totpMACConfig, i.SessionSecret, token, nil)
+	salt, err := crypto.DecodeAuthMessage(totpMACConfig, i.SessionSecret(), token, nil)
 	if err != nil {
 		return false
 	}
 
-	h := hkdf.New(sha256.New, i.SessionSecret, salt, nil)
+	h := hkdf.New(sha256.New, i.SessionSecret(), salt, nil)
 	key := make([]byte, 32)
 	_, err = io.ReadFull(h, key)
 	if err != nil {
@@ -135,7 +135,7 @@ func (i *Instance) GenerateTwoFactorTrustedDeviceSecret(req *http.Request) ([]by
 	ua := user_agent.New(req.UserAgent())
 	browser, _ := ua.Browser()
 	additionalData := []byte(i.Domain + ua.OS() + browser)
-	return crypto.EncodeAuthMessage(trustedDeviceMACConfig, i.SessionSecret, nil, additionalData)
+	return crypto.EncodeAuthMessage(trustedDeviceMACConfig, i.SessionSecret(), nil, additionalData)
 }
 
 // ValidateTwoFactorTrustedDeviceSecret validates the given token used to check
@@ -144,7 +144,7 @@ func (i *Instance) ValidateTwoFactorTrustedDeviceSecret(req *http.Request, token
 	ua := user_agent.New(req.UserAgent())
 	browser, _ := ua.Browser()
 	additionalData := []byte(i.Domain + ua.OS() + browser)
-	_, err := crypto.DecodeAuthMessage(trustedDeviceMACConfig, i.SessionSecret, token, additionalData)
+	_, err := crypto.DecodeAuthMessage(trustedDeviceMACConfig, i.SessionSecret(), token, additionalData)
 	return err == nil
 }
 
@@ -155,7 +155,7 @@ func (i *Instance) GenerateMailConfirmationCode() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	h := hkdf.New(sha256.New, i.SessionSecret, nil, []byte(email))
+	h := hkdf.New(sha256.New, i.SessionSecret(), nil, []byte(email))
 	key := make([]byte, 32)
 	_, err = io.ReadFull(h, key)
 	if err != nil {
@@ -171,7 +171,7 @@ func (i *Instance) ValidateMailConfirmationCode(passcode string) bool {
 	if err != nil {
 		return false
 	}
-	h := hkdf.New(sha256.New, i.SessionSecret, nil, []byte(email))
+	h := hkdf.New(sha256.New, i.SessionSecret(), nil, []byte(email))
 	key := make([]byte, 32)
 	_, err = io.ReadFull(h, key)
 	if err != nil {

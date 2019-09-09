@@ -97,7 +97,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	i.BytesDiskQuota = opts.DiskQuota
 	i.IndexViewsVersion = couchdb.IndexViewsVersion
 	i.RegisterToken = crypto.GenerateRandomBytes(instance.RegisterTokenLen)
-	i.SessionSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
+	i.SessSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
 	i.OAuthSecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
 	i.CLISecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
 
@@ -160,9 +160,6 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	if err := couchdb.CreateDB(i, consts.OAuthClients); err != nil {
 		return nil, err
 	}
-	if err := couchdb.CreateDB(i, consts.Settings); err != nil {
-		return nil, err
-	}
 	if err := couchdb.CreateDB(i, consts.Permissions); err != nil {
 		return nil, err
 	}
@@ -175,7 +172,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	if err := i.VFS().InitFs(); err != nil {
 		return nil, err
 	}
-	if err := couchdb.CreateNamedDoc(i, settings); err != nil {
+	if err := couchdb.CreateNamedDocWithDB(i, settings); err != nil {
 		return nil, err
 	}
 	if err := defineViewsAndIndex(i); err != nil {
