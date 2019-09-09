@@ -180,7 +180,7 @@ So, the `index.html` should probably looks like:
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#ffffff">
     <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials">
-    <link rel="stylesheet" src="my-app.css">
+    <link rel="stylesheet" href="my-app.css">
     {{.ThemeCSS}}
     {{.CozyClientJS}}
     {{.CozyBar}}
