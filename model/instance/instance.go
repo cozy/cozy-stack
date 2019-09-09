@@ -76,6 +76,8 @@ type Instance struct {
 	PassphraseKdfIterations int        `json:"passphrase_kdf_iterations,omitempty"`
 	PassphraseStamp         string     `json:"passphrase_stamp,omitempty"`
 	PassphraseKey           string     `json:"passphrase_key,omitempty"`
+	PublicKey               string     `json:"public_key,omitempty"`
+	PrivateKey              string     `json:"private_key,omitempty"`
 	PassphraseResetToken    []byte     `json:"passphrase_reset_token,omitempty"`
 	PassphraseResetTime     *time.Time `json:"passphrase_reset_time,omitempty"`
 

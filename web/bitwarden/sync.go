@@ -44,10 +44,12 @@ func newProfileResponse(inst *instance.Instance) (*profileResponse, error) {
 		Culture:       inst.Locale,
 		TwoFactor:     false,
 		Key:           inst.PassphraseKey,
-		PrivateKey:    nil,
 		SStamp:        inst.PassphraseStamp,
 		Organizations: nil,
 		Object:        "profile",
+	}
+	if inst.PrivateKey != "" {
+		p.PrivateKey = inst.PrivateKey
 	}
 	return p, nil
 }

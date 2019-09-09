@@ -42,6 +42,36 @@ func GetProfile(c echo.Context) error {
 	return c.JSON(http.StatusOK, profile)
 }
 
+// SetKeyPair is the handler for setting the key pair: public and private keys.
+func SetKeyPair(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenProfiles); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var data struct {
+		Private string `json:"encryptedPrivateKey"`
+		Public  string `json:"publicKey"`
+	}
+	if err := json.NewDecoder(c.Request().Body).Decode(&data); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "Missing masterPasswordHash",
+		})
+	}
+	inst.PrivateKey = data.Private
+	inst.PublicKey = data.Public
+	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+		return err
+	}
+	profile, err := newProfileResponse(inst)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, profile)
+}
+
 // ChangeSecurityStamp is used by the client to change the security stamp,
 // which will deconnect all the clients.
 func ChangeSecurityStamp(c echo.Context) error {
@@ -229,6 +259,7 @@ func Routes(router *echo.Group) {
 	accounts := api.Group("/accounts")
 	accounts.POST("/prelogin", Prelogin)
 	accounts.GET("/profile", GetProfile)
+	accounts.POST("/keys", SetKeyPair)
 	accounts.POST("/security-stamp", ChangeSecurityStamp)
 	accounts.GET("/revision-date", GetRevisionDate)
 

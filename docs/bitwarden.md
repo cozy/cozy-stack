@@ -140,6 +140,51 @@ Content-Type: application/json
 }
 ```
 
+### POST /bitwarden/api/accounts/keys
+
+This route is used to save a key pair (public and private keys), to be used
+with organizations.
+
+#### Request
+
+```http
+POST /bitwarden/api/accounts/keys HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "encryptedPrivateKey": "2.wZuKkufLV31Cpw1v1TQUDA==|u6bUNTaaGxu...y7s=",
+  "publicKey": "MIIBIjANBgkqhkiG9w...AQAB"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "Id": "0fbfc68d-ba11-416a-ac8a-a82600f0e601",
+  "Name": "Alice",
+  "Email": "me@alice.example.com",
+  "EmailVerified": false,
+  "Premium": false,
+  "MasterPasswordHint": null,
+  "Culture": "en-US",
+  "TwoFactorEnabled": false,
+  "Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+  "PrivateKey": "2.wZuKkufLV31Cpw1v1TQUDA==|u6bUNTaaGxu...y7s=",
+  "SecurityStamp": "5d203c3f-bc89-499e-85c4-4431248e1196",
+  "Organizations": [],
+  "Object": "profile"
+}
+```
+
 ### POST /bitwarden/api/accounts/security-stamp
 
 It allows to set a new security stamp, which has the effect to disconnect all
