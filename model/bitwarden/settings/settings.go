@@ -17,6 +17,7 @@ type Settings struct {
 	Key                     string `json:"key,omitempty"`
 	PublicKey               string `json:"public_key,omitempty"`
 	PrivateKey              string `json:"private_key,omitempty"`
+	PassphraseHint          string `json:"passphrase_hint,omitempty"`
 }
 
 // ID returns the settings qualified identifier

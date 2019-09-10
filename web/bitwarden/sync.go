@@ -52,6 +52,9 @@ func newProfileResponse(inst *instance.Instance, settings *settings.Settings) (*
 	if settings.PrivateKey != "" {
 		p.PrivateKey = settings.PrivateKey
 	}
+	if settings.PassphraseHint != "" {
+		p.Hint = settings.PassphraseHint
+	}
 	return p, nil
 }
 

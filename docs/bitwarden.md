@@ -140,6 +140,51 @@ Content-Type: application/json
 }
 ```
 
+### PUT /bitwarden/api/accounts/profile
+
+This route allows to change the profile (currently, only the hint for the
+master password). It can also be called with a `POST` (I think it is used by
+the web vault).
+
+#### Request
+
+```http
+PUT /bitwarden/api/accounts/profile HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "masterPasswordHint": "blah blah blah"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "Id": "0fbfc68d-ba11-416a-ac8a-a82600f0e601",
+  "Name": "Alice",
+  "Email": "me@alice.example.com",
+  "EmailVerified": false,
+  "Premium": false,
+  "MasterPasswordHint": "blah blah blah",
+  "Culture": "en-US",
+  "TwoFactorEnabled": false,
+  "Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+  "PrivateKey": null,
+  "SecurityStamp": "5d203c3f-bc89-499e-85c4-4431248e1196",
+  "Organizations": [],
+  "Object": "profile"
+}
+```
+
 ### POST /bitwarden/api/accounts/keys
 
 This route is used to save a key pair (public and private keys), to be used
