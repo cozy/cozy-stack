@@ -249,6 +249,11 @@ func GetCipher(c echo.Context) error {
 
 	cipher := &bitwarden.Cipher{}
 	if err := couchdb.GetDoc(inst, consts.BitwardenCiphers, id, cipher); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err,
 		})
@@ -276,6 +281,11 @@ func UpdateCipher(c echo.Context) error {
 
 	old := &bitwarden.Cipher{}
 	if err := couchdb.GetDoc(inst, consts.BitwardenCiphers, id, old); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err,
 		})
@@ -337,6 +347,11 @@ func DeleteCipher(c echo.Context) error {
 
 	cipher := &bitwarden.Cipher{}
 	if err := couchdb.GetDoc(inst, consts.BitwardenCiphers, id, cipher); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err,
 		})

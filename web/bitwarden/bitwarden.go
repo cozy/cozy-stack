@@ -55,7 +55,7 @@ func GetProfile(c echo.Context) error {
 // only the hint for the master password can be changed.
 func UpdateProfile(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenProfiles); err != nil {
+	if err := middlewares.AllowWholeType(c, permission.PUT, consts.BitwardenProfiles); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "invalid token",
 		})
@@ -66,7 +66,7 @@ func UpdateProfile(c echo.Context) error {
 	}
 	if err := json.NewDecoder(c.Request().Body).Decode(&data); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "Missing masterPasswordHash",
+			"error": "invalid JSON payload",
 		})
 	}
 	settings, err := settings.Get(inst)
@@ -99,7 +99,7 @@ func SetKeyPair(c echo.Context) error {
 	}
 	if err := json.NewDecoder(c.Request().Body).Decode(&data); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "Missing masterPasswordHash",
+			"error": "invalid JSON payload",
 		})
 	}
 	settings, err := settings.Get(inst)
@@ -127,13 +127,13 @@ func ChangeSecurityStamp(c echo.Context) error {
 	}
 	if err := json.NewDecoder(c.Request().Body).Decode(&data); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "Missing masterPasswordHash",
+			"error": "invalid JSON payload",
 		})
 	}
 
 	if err := lifecycle.CheckPassphrase(inst, []byte(data.Hashed)); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "Invalid masterPasswordHash",
+			"error": "invalid masterPasswordHash",
 		})
 	}
 

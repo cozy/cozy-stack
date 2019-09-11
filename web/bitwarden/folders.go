@@ -127,6 +127,11 @@ func GetFolder(c echo.Context) error {
 
 	folder := &bitwarden.Folder{}
 	if err := couchdb.GetDoc(inst, consts.BitwardenFolders, id, folder); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err,
 		})
@@ -154,6 +159,11 @@ func RenameFolder(c echo.Context) error {
 
 	folder := &bitwarden.Folder{}
 	if err := couchdb.GetDoc(inst, consts.BitwardenFolders, id, folder); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err,
 		})
@@ -206,6 +216,11 @@ func DeleteFolder(c echo.Context) error {
 
 	folder := &bitwarden.Folder{}
 	if err := couchdb.GetDoc(inst, consts.BitwardenFolders, id, folder); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err,
 		})
