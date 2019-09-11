@@ -1,13 +1,14 @@
 # Translators:
-# Mario Angermann, 2017
-# Adrian Nöthlich <admin.noethlich@hgw-iserv.de>, 2018
-# Bruno Michel, 2018
-# Nils Jakobi <jakobi.nils@gmail.com>, 2018
-# Nos_ <n.schwirz@freenet.de>, 2018
+# Nos_ <n.schwirz@freenet.de>, 2019
+# Mario Angermann, 2019
+# Adrian Nöthlich <admin.noethlich@hgw-iserv.de>, 2019
+# Nils Jakobi <jakobi.nils@gmail.com>, 2019
+# Bruno Michel, 2019
+# James IndeedNot <indeednotjames@mailbox.org>, 2019
 # 
 msgid ""
 msgstr ""
-"Last-Translator: Nos_ <n.schwirz@freenet.de>, 2018\n"
+"Last-Translator: James IndeedNot <indeednotjames@mailbox.org>, 2019\n"
 "Language-Team: German (https://www.transifex.com/cozy/teams/39753/de/)\n"
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -25,7 +26,7 @@ msgid "Tree Backed up from my mobile"
 msgstr "Gesichert von meinem Handy"
 
 msgid "Tree Shared with me"
-msgstr ""
+msgstr "Posteingang der Freigaben"
 
 msgid "Tree No longer shared"
 msgstr "Nicht mehr geteilt"
@@ -41,7 +42,7 @@ msgid "Login Welcome"
 msgstr "Willkommen!"
 
 msgid "Login Welcome name"
-msgstr ""
+msgstr "%s"
 
 msgid "Login Password help"
 msgstr "Gib dein Passwort ein, um auf dein Cozy zuzugreifen"
@@ -53,7 +54,7 @@ msgid "Login Password show"
 msgstr "Zeige Passwort"
 
 msgid "Login Password hide"
-msgstr ""
+msgstr "Verstecke Passwort"
 
 msgid "Login Long Session"
 msgstr ""
@@ -64,7 +65,7 @@ msgid "Login Submit"
 msgstr "Anmelden"
 
 msgid "Login Confirm"
-msgstr ""
+msgstr "Anmelden"
 
 msgid "Login Connect after reset requested title"
 msgstr "Überprüfe deine E-Mails!"
@@ -91,22 +92,24 @@ msgid "Login Connect from sharing help"
 msgstr "Gib nun dein Passwort ein"
 
 msgid "Login Two factor title"
-msgstr ""
+msgstr "Gib deinen Code ein"
 
 msgid "Login Two factor error"
 msgstr "Der eingegebene zweite Faktor ist falsch, bitte versuche es erneut."
 
 msgid "Login Two factor attempts error"
 msgstr ""
+"Du hast zu viele falsche PINs eingegeben. Eine neue wurde dir per E-Mail "
+"zugeschickt."
 
 msgid "Login Two factor field"
-msgstr ""
+msgstr "Code (6 Ziffern)"
 
 msgid "Login Two factor help"
-msgstr ""
+msgstr "Eine PIN wurde an deine E-Mail-Adresse gesendet"
 
 msgid "Login Two factor device trust field"
-msgstr ""
+msgstr "Vertraue diesem Gerät"
 
 msgid "Login Two factor device trust help"
 msgstr ""
@@ -125,25 +128,28 @@ msgid "Onboarding Not activated Contact us"
 msgstr "Du hast Probleme? Fühl dich frei uns zu kontaktieren"
 
 msgid "Passphrase reset Title"
-msgstr ""
+msgstr "Passwort vergessen"
 
 msgid "Passphrase reset Help"
 msgstr ""
+"Durch klicken der Schaltfläche bekommst du einen Link per E-Mail, um ein "
+"neues Passwort festzulegen."
 
 msgid "Passphrase reset Submit"
-msgstr ""
+msgstr "Weiter"
 
 msgid "Passphrase is reset Title"
 msgstr "Überprüfe deine E-Mails!"
 
 msgid "Passphrase Onboarding Title"
-msgstr ""
+msgstr "Wähle dein Passwort"
 
 msgid "Passphrase Onboarding Help"
 msgstr ""
+"Nutze mindestens acht Zeichen mit Buchstaben, Ziffern und Sonderzeichen."
 
 msgid "Passphrase Onboarding Submit"
-msgstr ""
+msgstr "Abschließen"
 
 msgid "Passphrase is reset Body"
 msgstr ""
@@ -154,19 +160,20 @@ msgid "Passphrase is reset Login Button"
 msgstr "Zurück zur Login Seite"
 
 msgid "Passphrase renew Title"
-msgstr ""
+msgstr "Wähle ein neues Passwort"
 
 msgid "Passphrase renew Help"
 msgstr ""
+"Nutze mindestens acht Zeichen mit Buchstaben, Ziffern und Sonderzeichen."
 
 msgid "Passphrase renew Field"
 msgstr "Passwort"
 
 msgid "Passphrase renew Submit"
-msgstr ""
+msgstr "Speichern"
 
 msgid "Login Forgot password"
-msgstr ""
+msgstr "Ich habe mein Passwort vergessen"
 
 msgid "Authorize Title"
 msgstr "Erlaube %s auf dein Profil zuzugreifen"
@@ -220,25 +227,27 @@ msgstr ""
 "erhält."
 
 msgid "Authorize Submit"
-msgstr ""
+msgstr "Zugriff"
 
 msgid "Authorize Submit Sharing"
 msgstr "Bestätigen"
 
 msgid "Authorize Cancel"
-msgstr ""
+msgstr "Ablehnen"
 
 msgid "Authorize Linked Title"
-msgstr ""
+msgstr "Berechtigungsabfrage"
 
 msgid "Authorize Linked Webapp"
-msgstr ""
+msgstr "Eine Anwendung behauptet Folgendes zu sein:"
 
 msgid "Authorize Linked YourCozy"
-msgstr ""
+msgstr "Es bittet um Zugriff auf dein Cozy:"
 
 msgid "Authorize Linked Help"
 msgstr ""
+"Durch die Authentifizierung bekommt die Anwendung Zugriff diese Daten in "
+"deinem Cozy:"
 
 msgid "Error Title"
 msgstr "Entschuldigung, ein Fehler ist aufgetreten."
@@ -261,31 +270,31 @@ msgstr ""
 " Erstellung geschickt wurde."
 
 msgid "Error Application not found Title"
-msgstr ""
+msgstr "Anwendung noch nicht verfügbar"
 
 msgid "Error Application not found Message"
 msgstr "Leider ist diese Anwendung noch nicht in deinem Cozy verfügbar."
 
 msgid "Error Application not found Action"
-msgstr ""
+msgstr "Gehe zu dir nach Hause"
 
 msgid "Error Contact us"
 msgstr "Ein Problem, eine Frage? Kontaktiere uns über"
 
 msgid "Error Contact instance blocked"
-msgstr ""
+msgstr "Bitte kontaktiere uns per"
 
 msgid "Error Message instance blocked"
-msgstr ""
+msgstr "Dein Cozy wurde blockiert"
 
 msgid "Instance Blocked Login"
-msgstr ""
+msgstr "Der Cozy wurde wegen zu vieler Anmeldeversuche blockiert"
 
 msgid "Instance Blocked Payment"
-msgstr ""
+msgstr "Die Cozy benötigt eine Zahlung"
 
 msgid "Instance Blocked Unknown"
-msgstr ""
+msgstr "Der Cozy wurde wegen eines unbekannten Grundes blockiert."
 
 msgid "Error No state parameter"
 msgstr "Der “state” Parameter ist zwingend erforderlich"
@@ -397,7 +406,7 @@ msgid "Permissions io.cozy.files"
 msgstr "Dateien"
 
 msgid "Permissions io.cozy.identities"
-msgstr ""
+msgstr "Identitäten"
 
 msgid "Permissions io.cozy.konnectors"
 msgstr "Connectors zum Importieren von Daten"
@@ -421,7 +430,7 @@ msgid "Permissions io.cozy.permissions"
 msgstr "Berechtigungen delegieren"
 
 msgid "Permissions io.cozy.oauth.clients"
-msgstr ""
+msgstr "Verbundene Geräte"
 
 msgid "Permissions fr.maif.maifuser.contrat"
 msgstr "Vertrag (Maif)"
@@ -455,6 +464,8 @@ msgstr "Hallo"
 
 msgid "Mail Trouble Text"
 msgstr ""
+"Falls der Knopf fehlerhaft dargestellt wird, kopiere den Link unten in "
+"deinen Webbrowser."
 
 msgid "Mail Signature"
 msgstr "Vertrauensvolle Grüße"
@@ -463,13 +474,15 @@ msgid "Mail Cozy Team"
 msgstr "Dein Cozy Cloud Team"
 
 msgid "Mail Reset Passphrase Subject"
-msgstr ""
+msgstr "Setze dein Passwort zurück"
 
 msgid "Mail Reset Passphrase Intro 1"
-msgstr ""
+msgstr "Hallo %s,"
 
 msgid "Mail Reset Passphrase Intro 2"
 msgstr ""
+"Du hast uns gebeten, dein Passwort zu ändern (Falls nicht, kontaktiere uns, "
+"indem du direkt auf diese E-Mail antwortest)"
 
 msgid "Mail Reset Passphrase Button instruction"
 msgstr "Klick diesen Knopf um es sicher zu ändern."
@@ -479,15 +492,17 @@ msgstr "Mein Passwort zurücksetzen"
 
 msgid "Mail Reset Passphrase Outro"
 msgstr ""
+"Nur damit du Bescheid weißt:\n"
+"Du hast 15 Minuten, um ein neues Passwort zu setzen, bevor sich diese E-Mail selbst zerstört."
 
 msgid "Mail Archive Subject"
-msgstr ""
+msgstr "Deine Daten herunterladen"
 
 msgid "Mail Archive Intro 1"
-msgstr ""
+msgstr "Hallo %s,"
 
 msgid "Mail Archive Intro 2"
-msgstr ""
+msgstr "Du hast eine Kopie aller Daten die wir über dich haben angefragt."
 
 msgid "Mail Archive Button instruction"
 msgstr "Du kannst es durch einen Klick auf den folgenden Link herunterladen."
@@ -496,19 +511,21 @@ msgid "Mail Archive Button text"
 msgstr "Deine Daten herunterladen"
 
 msgid "Mail Two Factor Subject"
-msgstr ""
+msgstr "Überprüfe deine Anmeldung an deinem %s"
 
 msgid "Mail Two Factor Intro"
 msgstr ""
+"Zwei-Faktor-Authentifizierung ist für dein Cozy aktiviert. Gib den folgenden"
+" Code ein, um deine Identität zu bestätigen:"
 
 msgid "Mail Two Factor Outro"
 msgstr "Nicht sicher was zu tun ist? Erhalte Hilfe von contact@cozycloud.cc"
 
 msgid "Mail Two Factor Mail Confirmation Subject"
-msgstr ""
+msgstr "Du möchtest die Zwei-Faktor-Authentifizierung für dein %s aktivieren"
 
 msgid "Mail Two Factor Mail Confirmation Intro"
-msgstr ""
+msgstr "Hier ist der Code um den zweiten Faktor zu aktivieren:"
 
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr ""
@@ -516,7 +533,7 @@ msgstr ""
 "contact@cozycloud.cc"
 
 msgid "Mail New Connection Subject"
-msgstr ""
+msgstr "Wir haben gerade eben eine neue Verbindung zu deinem %s festgestellt"
 
 msgid "Mail New Connection Intro"
 msgstr ""
@@ -537,6 +554,9 @@ msgstr "Betriebssystem"
 
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
+"Das warst du? Klasse! Dann sind wir beruhigt. Entschuldige die "
+"Unannehmlichkeit. Wenn nicht, ändere sofort dein Passwort über den folgenden"
+" Knopf:"
 
 msgid "Mail New Connection Change Passphrase text"
 msgstr "Mein Passwort ändern"
@@ -547,7 +567,7 @@ msgstr ""
 "warnen dich vor jeder unüblichen Verbindung."
 
 msgid "Mail New Registration Subject"
-msgstr ""
+msgstr "Ein neues Gerät hat sich mit deinem %s verbunden"
 
 msgid "Mail New Registration Intro"
 msgstr ""
@@ -569,16 +589,16 @@ msgid "Mail New Registration Revoke text"
 msgstr "Dieses Gerät wiederrufen"
 
 msgid "Mail Sharing Request Subject"
-msgstr ""
+msgstr "Neue Freigabeanfrage von %s"
 
 msgid "Mail Sharing Request Intro"
-msgstr ""
+msgstr "Hallo %s,"
 
 msgid "Mail Sharing Request Description 1"
-msgstr ""
+msgstr "%smöchte mit dir"
 
 msgid "Mail Sharing Request Description 2"
-msgstr ""
+msgstr "teilen!"
 
 msgid "Mail Sharing Request Button text"
 msgstr "Freigabe akzeptieren"
@@ -596,7 +616,7 @@ msgid "Sharing Discovery URL field"
 msgstr "URL"
 
 msgid "Sharing Discovery URL placeholder"
-msgstr "https://yourcozyaddress.cozy"
+msgstr "https://deinecozyadresse.cozy"
 
 msgid "Sharing URL Discovery error"
 msgstr ""
@@ -621,13 +641,15 @@ msgid "Sharing Forgotten URL email"
 msgstr "Durchsuche dein E-Mail Postfach nach \"Cozy\"."
 
 msgid "Notifications Disk Quota Subject"
-msgstr ""
+msgstr "Du hast mitterweile 90% deines Speicherplatzes gefüllt. "
 
 msgid "Notifications Disk Quota Intro"
-msgstr ""
+msgstr "Du hast zwei Möglichkeiten, um mehr Speicherplatz zu bekommen."
 
 msgid "Notifications Disk Quota offers instruction"
 msgstr ""
+"Option 1: Vergrößere dein Cozy durch ein neues Angebot, um viel mehr "
+"Speicherplatz zu erhalten"
 
 msgid "Notifications Disk Quota offers text"
 msgstr "Jetzt aufrüsten"
@@ -638,7 +660,7 @@ msgstr ""
 "Spare Speicherplatz durch löschen nicht benötigter Dateien"
 
 msgid "Notifications Disk Quota free text"
-msgstr ""
+msgstr "Speicherplatz freiräumen"
 
 msgid "Terms of services have been updated"
 msgstr ""
@@ -646,31 +668,37 @@ msgstr ""
 "Mai 2018 aktualisiert"
 
 msgid "Compat Title"
-msgstr ""
+msgstr "Dein Webbrowser ist nicht aktuell oder nicht mehr unterstützt."
 
 msgid "Compat Subtitle"
 msgstr ""
+"Aktualisiere deinen Webbrowser oder lade dir eine dieser Möglichkeiten "
+"runter, um die beste Erfahrung deines Cozy zu haben. Wir empfehlen Firefox!"
 
 msgid "Compat Browser Chrome Link"
-msgstr ""
+msgstr "https://www.google.com/chrome/"
 
 msgid "Compat Browser Firefox Link"
-msgstr ""
+msgstr "https://www.mozilla.org/de/firefox/new/"
 
 msgid "Compat Browser Edge Link"
-msgstr ""
+msgstr "https://www.microsoft.com/de-de/windows/microsoft-edge"
 
 msgid "Compat Tip 1"
 msgstr ""
+"Ein Aktualisieren des Webbrowsers ermöglicht ein geschütztes Surfen mit mehr"
+" Sicherheit."
 
 msgid "Compat Tip 2"
 msgstr ""
+"Dein Webbrowser wird schneller und die Erfahrung mit deinem Cozy besser "
+"sein."
 
 msgid "Compat Help"
-msgstr ""
+msgstr "Du benötigst mehr Hilfe?"
 
 msgid "Compat Guide"
-msgstr ""
+msgstr "Besuche unser Support-Handbuch."
 
 msgid "Compat Guide Link"
-msgstr ""
+msgstr "https://help.cozy.io/article/274-ie-11-not-supported"
