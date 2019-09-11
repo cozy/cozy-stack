@@ -16,7 +16,12 @@ The signup is disabled, there is one account per Cozy instance, with the email
 `me@<domain>`. When the user chooses his/her password (onboarding), an encryption key
 is also generated to keep safe the secrets in the bitwarden vault.
 
-![Setting a new passphrase](diagrams/bitwarden-cheatsheet.png)
+![Setting a new passphrase](diagrams/bitwarden-onboarding.png)
+
+A cozy organization is also created: it will be used to share some passwords
+with the stack, to be used for the konnectors.
+
+![Creating the organization key](diagrams/bitwarden-organization.png)
 
 ## Routes for accounts and connect
 
