@@ -16,6 +16,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// https://github.com/bitwarden/jslib/blob/master/src/models/request/cipherRequest.ts
 type cipherRequest struct {
 	Type           bitwarden.CipherType `json:"type"`
 	Favorite       bool                 `json:"favorite"`
@@ -72,6 +73,7 @@ type loginResponse struct {
 	URIs []uriResponse `json:"Uris"`
 }
 
+// https://github.com/bitwarden/jslib/blob/master/src/models/response/cipherResponse.ts
 type cipherResponse struct {
 	Object         string                 `json:"Object"`
 	ID             string                 `json:"Id"`

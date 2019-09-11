@@ -14,6 +14,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// https://github.com/bitwarden/jslib/blob/master/src/models/request/folderRequest.ts
 type folderRequest struct {
 	Name string `json:"name"`
 }
@@ -28,6 +29,7 @@ func (r *folderRequest) toFolder() *bitwarden.Folder {
 	return &f
 }
 
+// https://github.com/bitwarden/jslib/blob/master/src/models/response/folderResponse.ts
 type folderResponse struct {
 	ID     string    `json:"Id"`
 	Name   string    `json:"Name"`

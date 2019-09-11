@@ -13,20 +13,21 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// https://github.com/bitwarden/jslib/blob/master/src/models/response/profileResponse.ts
 type profileResponse struct {
-	ID            string        `json:"Id"`
-	Name          string        `json:"Name"`
-	Email         string        `json:"Email"`
-	EmailVerified bool          `json:"EmailVerified"`
-	Premium       bool          `json:"Premium"`
-	Hint          interface{}   `json:"MasterPasswordHint"`
-	Culture       string        `json:"Culture"`
-	TwoFactor     bool          `json:"TwoFactorEnabled"`
-	Key           string        `json:"Key"`
-	PrivateKey    interface{}   `json:"PrivateKey"`
-	SStamp        string        `json:"SecurityStamp"`
-	Organizations []interface{} `json:"Organizations"`
-	Object        string        `json:"Object"`
+	ID            string                  `json:"Id"`
+	Name          string                  `json:"Name"`
+	Email         string                  `json:"Email"`
+	EmailVerified bool                    `json:"EmailVerified"`
+	Premium       bool                    `json:"Premium"`
+	Hint          interface{}             `json:"MasterPasswordHint"`
+	Culture       string                  `json:"Culture"`
+	TwoFactor     bool                    `json:"TwoFactorEnabled"`
+	Key           string                  `json:"Key"`
+	PrivateKey    interface{}             `json:"PrivateKey"`
+	SStamp        string                  `json:"SecurityStamp"`
+	Organizations []*organizationResponse `json:"Organizations"`
+	Object        string                  `json:"Object"`
 }
 
 func newProfileResponse(inst *instance.Instance, settings *settings.Settings) (*profileResponse, error) {
@@ -36,17 +37,22 @@ func newProfileResponse(inst *instance.Instance, settings *settings.Settings) (*
 	}
 	name, _ := doc.M["public_name"].(string)
 	salt := inst.PassphraseSalt()
+	var organizations []*organizationResponse
+	if orga, err := getCozyOrganizationResponse(inst, settings); err == nil {
+		organizations = append(organizations, orga)
+	}
 	p := &profileResponse{
 		ID:            inst.ID(),
 		Name:          name,
 		Email:         string(salt),
 		EmailVerified: false,
+		Premium:       true,
 		Hint:          nil,
 		Culture:       inst.Locale,
 		TwoFactor:     false,
 		Key:           settings.Key,
 		SStamp:        settings.SecurityStamp,
-		Organizations: nil,
+		Organizations: organizations,
 		Object:        "profile",
 	}
 	if settings.PrivateKey != "" {
@@ -58,18 +64,21 @@ func newProfileResponse(inst *instance.Instance, settings *settings.Settings) (*
 	return p, nil
 }
 
+// https://github.com/bitwarden/jslib/blob/master/src/models/response/domainsResponse.ts
 type domainsResponse struct {
 	EquivalentDomains       interface{} `json:"EquivalentDomains"`
 	GlobalEquivalentDomains interface{} `json:"GlobalEquivalentDomains"`
 	Object                  string      `json:"Object"`
 }
 
+// https://github.com/bitwarden/jslib/blob/master/src/models/response/syncResponse.ts
 type syncResponse struct {
-	Profile *profileResponse  `json:"Profile"`
-	Folders []*folderResponse `json:"Folders"`
-	Ciphers []*cipherResponse `json:"Ciphers"`
-	Domains *domainsResponse  `json:"Domains"`
-	Object  string            `json:"Object"`
+	Profile     *profileResponse      `json:"Profile"`
+	Folders     []*folderResponse     `json:"Folders"`
+	Ciphers     []*cipherResponse     `json:"Ciphers"`
+	Collections []*collectionResponse `json:"Collections"`
+	Domains     *domainsResponse      `json:"Domains"`
+	Object      string                `json:"Object"`
 }
 
 func newSyncResponse(profile *profileResponse, ciphers []*bitwarden.Cipher, folders []*bitwarden.Folder) *syncResponse {
@@ -86,12 +95,16 @@ func newSyncResponse(profile *profileResponse, ciphers []*bitwarden.Cipher, fold
 		GlobalEquivalentDomains: nil,
 		Object:                  "domains",
 	}
+	collections := []*collectionResponse{
+		getCozyCollectionResponse(),
+	}
 	return &syncResponse{
-		Profile: profile,
-		Folders: foldersResponse,
-		Ciphers: ciphersResponse,
-		Domains: domains,
-		Object:  "sync",
+		Profile:     profile,
+		Folders:     foldersResponse,
+		Ciphers:     ciphersResponse,
+		Collections: collections,
+		Domains:     domains,
+		Object:      "sync",
 	}
 }
 
