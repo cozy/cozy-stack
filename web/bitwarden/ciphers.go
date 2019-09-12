@@ -31,8 +31,8 @@ type cipherRequest struct {
 }
 
 func (r *cipherRequest) toCipher() (*bitwarden.Cipher, error) {
-	if r.OrganizationID != "" {
-		return nil, errors.New("organizationId is not yet supported")
+	if r.OrganizationID != "" && r.OrganizationID != cozyOrganizationID {
+		return nil, errors.New("generic organizationId is not supported")
 	}
 	if r.Name == "" {
 		return nil, errors.New("name is mandatory")
@@ -365,4 +365,84 @@ func DeleteCipher(c echo.Context) error {
 		})
 	}
 	return c.NoContent(http.StatusNoContent)
+}
+
+type shareCipherRequest struct {
+	cipherRequest
+	CollectionIDs []string `json:"collectionIds"`
+}
+
+// ShareCipher is used to share a cipher with an organization.
+func ShareCipher(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.PUT, consts.BitwardenCiphers); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	old := &bitwarden.Cipher{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenCiphers, id, old); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	var req shareCipherRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+	cipher, err := req.toCipher()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": err,
+		})
+	}
+	if req.OrganizationID == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "organizationId not provided",
+		})
+	}
+	if len(req.CollectionIDs) != 1 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "generic collectionIds is not supported",
+		})
+	}
+	for _, id := range req.CollectionIDs {
+		if id != cozyCollectionID {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "generic collectionIds is not supported",
+			})
+		}
+		cipher.SharedWithCozy = true
+	}
+
+	if old.Metadata != nil {
+		cipher.Metadata = old.Metadata.Clone()
+	}
+	cipher.Metadata.ChangeUpdatedAt()
+	cipher.SetID(old.ID())
+	cipher.SetRev(old.Rev())
+	if err := couchdb.UpdateDocWithOld(inst, cipher, old); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	res := newCipherResponse(cipher)
+	return c.JSON(http.StatusOK, res)
 }

@@ -76,4 +76,7 @@ const (
 	BitwardenCiphers = "com.bitwarden.ciphers"
 	// BitwardenFolders doc type for Bitwarden folders
 	BitwardenFolders = "com.bitwarden.folders"
+	// BitwardenOrganizations doc type for Bitwarden organizations (and
+	// collections inside them)
+	BitwardenOrganizations = "com.bitwarden.organizations"
 )

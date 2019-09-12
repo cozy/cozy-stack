@@ -39,16 +39,17 @@ type MapData map[string]interface{}
 // Cipher is an encrypted item that can be a login, a secure note, a card or an
 // identity.
 type Cipher struct {
-	CouchID  string                 `json:"_id,omitempty"`
-	CouchRev string                 `json:"_rev,omitempty"`
-	Type     CipherType             `json:"type"`
-	Favorite bool                   `json:"favorite,omitempty"`
-	Name     string                 `json:"name"`
-	Notes    string                 `json:"notes,omitempty"`
-	FolderID string                 `json:"folder_id,omitempty"`
-	Login    *LoginData             `json:"login,omitempty"`
-	Data     *MapData               `json:"data,omitempty"`
-	Metadata *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
+	CouchID        string                 `json:"_id,omitempty"`
+	CouchRev       string                 `json:"_rev,omitempty"`
+	Type           CipherType             `json:"type"`
+	SharedWithCozy bool                   `json:"shared_with_cozy"`
+	Favorite       bool                   `json:"favorite,omitempty"`
+	Name           string                 `json:"name"`
+	Notes          string                 `json:"notes,omitempty"`
+	FolderID       string                 `json:"folder_id,omitempty"`
+	Login          *LoginData             `json:"login,omitempty"`
+	Data           *MapData               `json:"data,omitempty"`
+	Metadata       *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 }
 
 // ID returns the cipher qualified identifier

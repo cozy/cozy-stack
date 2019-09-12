@@ -331,6 +331,8 @@ func Routes(router *echo.Group) {
 	ciphers.PUT("/:id", UpdateCipher)
 	ciphers.DELETE("/:id", DeleteCipher)
 	ciphers.POST("/:id/delete", DeleteCipher)
+	ciphers.POST("/:id/share", ShareCipher)
+	ciphers.PUT("/:id/share", ShareCipher)
 
 	folders := api.Group("/folders")
 	folders.GET("", ListFolders)

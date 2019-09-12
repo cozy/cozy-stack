@@ -59,8 +59,12 @@ func EncryptWithAES256HMAC(encKey, macKey, payload, iv []byte) (string, error) {
 	dst64 := base64.StdEncoding.EncodeToString(dst)
 
 	hash := hmac.New(sha256.New, macKey)
-	hash.Write(iv)
-	hash.Write(dst)
+	if _, err := hash.Write(iv); err != nil {
+		return "", err
+	}
+	if _, err := hash.Write(dst); err != nil {
+		return "", err
+	}
 	h64 := base64.StdEncoding.EncodeToString(hash.Sum(nil))
 
 	// 2 means AesCbc256_HmacSha256_B64

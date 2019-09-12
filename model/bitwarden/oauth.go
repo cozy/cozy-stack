@@ -2,6 +2,7 @@ package bitwarden
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -14,7 +15,12 @@ import (
 
 // BitwardenScope is the OAuth scope, and it is hard-coded with the doctypes
 // needed by the Bitwarden apps.
-const BitwardenScope = consts.BitwardenProfiles + " " + consts.BitwardenCiphers + " " + consts.BitwardenFolders
+var BitwardenScope = strings.Join([]string{
+	consts.BitwardenProfiles,
+	consts.BitwardenCiphers,
+	consts.BitwardenFolders,
+	consts.BitwardenOrganizations,
+}, " ")
 
 // ParseBitwardenDeviceType takes a deviceType (Bitwarden) and transforms it
 // into a client_kind and a software_id (Cozy).
