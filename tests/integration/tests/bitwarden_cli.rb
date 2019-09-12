@@ -14,14 +14,23 @@ describe "The bitwarden API of the stack" do
     assert_equal bw.sync, "Syncing complete."
 
     assert_empty bw.items
-    assert_empty bw.organizations
-    assert_empty bw.collections
-
     # bw CLI has by default a "No Folder" folder
     folders = bw.folders
     assert_equal folders.length, 1
     assert_equal folders[0][:name], "No Folder"
     assert_nil folders[0][:id]
+
+    # The stack has automatically created a cozy organization...
+    orgs = bw.organizations
+    assert_equal orgs.length, 1
+    assert_equal orgs[0][:name], "Cozy"
+
+    # ...with a connectors collection
+    colls = bw.collections
+    assert_equal colls.length, 1
+    # TODO why the name is missing?
+    ap colls
+    # assert_equal colls[0][:name], "Cozy Connectors"
 
     # %w[item item.field item.login item.login.uri item.card item.identity item.securenote collection item-collections].each do |object|
     #   ap object

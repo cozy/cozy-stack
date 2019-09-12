@@ -408,7 +408,7 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, "Pierre", profile["Name"])
 	assert.Equal(t, "me@cozy.example.net", profile["Email"])
 	assert.Equal(t, false, profile["EmailVerified"])
-	assert.Equal(t, false, profile["Premium"])
+	assert.Equal(t, true, profile["Premium"])
 	assert.Equal(t, nil, profile["MasterPasswordHint"])
 	assert.Equal(t, "en", profile["Culture"])
 	assert.Equal(t, false, profile["TwoFactorEnabled"])

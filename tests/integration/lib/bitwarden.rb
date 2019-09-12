@@ -1,32 +1,44 @@
 class Bitwarden
+  @number = 0
+
+  def self.next_number
+    @number += 1
+  end
+
   def initialize(inst)
     @inst = inst
+    @dir = File.join Helpers.current_dir, "bw_#{Bitwarden.next_number}"
+  end
+
+  def exec(cmd, session = true)
+    cmd = "#{cmd} --session '#{@session}'" if session
+    `BITWARDENCLI_APPDATA_DIR='#{@dir}' bw #{cmd}`.chomp
   end
 
   def login
-    `bw config server http://#{@inst.domain}/bitwarden`
+    `mkdir -p #{@dir}`
+    exec "config server http://#{@inst.domain}/bitwarden", false
     # If we were logged in from a previous run, we need to logout before trying
     # to log in, or we won't get a session key.
     logout
     domain = @inst.domain.split(':')[0]
-    @session = `bw login --raw me@#{domain} #{@inst.passphrase}`.chomp
+    @session = exec "login --raw me@#{domain} #{@inst.passphrase}", false
   end
 
   def logout
-    `bw logout`.chomp
+    exec "logout", false
   end
 
   def sync
-    `bw sync --force --session '#{@session}'`.chomp
+    exec "sync --force"
   end
 
   def json_exec(cmd)
-    out = `#{cmd} --session '#{@session}'`.chomp
-    JSON.parse out, symbolize_names: true
+    JSON.parse exec(cmd), symbolize_names: true
   end
 
   def get(object, id)
-    json_exec "bw get #{object} #{id}"
+    json_exec "get #{object} #{id}"
   end
 
   def template(id)
@@ -34,7 +46,7 @@ class Bitwarden
   end
 
   def list(object)
-    json_exec "bw list #{object}"
+    json_exec "list #{object}"
   end
 
   def items
@@ -53,28 +65,22 @@ class Bitwarden
     list :collections
   end
 
-  def encode(data)
-    result = nil
-    Open3.popen3("bw encode") do |stdin, stdout, _, wait|
-      stdin << data.to_json
-      stdin.close
-      result = stdout.read.chomp
-      code = wait.value
-      raise "Status code #{code} for bw encode" unless code == 0
+  def capture(cmd, data)
+    env = { 'BITWARDENCLI_APPDATA_DIR' => @dir }
+    out, err, status = Open3.capture3(env, "bw #{cmd}", stdin_data: data)
+    unless status.success?
+      puts "Stderr: #{err}"
+      raise "Status code #{code} for bw #{cmd}"
     end
-    result
+    out
+  end
+
+  def encode(data)
+    capture "encode", data.to_json
   end
 
   def create(object, data)
-    result = nil
-    Open3.popen3("bw create #{object} --session '#{@session}'") do |stdin, stdout, _, wait|
-      stdin << encode(data)
-      stdin.close
-      result = stdout.read.chomp
-      code = wait.value
-      raise "Status code #{code} for bw encode" unless code == 0
-    end
-    result
+    capture "create #{object} --session '#{@session}'", encode(data)
   end
 
   def create_folder(name)

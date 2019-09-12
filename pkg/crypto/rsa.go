@@ -16,7 +16,7 @@ func EncryptWithRSA(key string, payload []byte) (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	pubKey, err := x509.ParsePKIXPublicKey([]byte(src))
+	pubKey, err := x509.ParsePKIXPublicKey(src)
 	if err != nil {
 		return "", err
 	}
