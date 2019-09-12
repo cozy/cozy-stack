@@ -135,6 +135,7 @@ nsjail \
   -E "COZY_PARAMETERS=${COZY_PARAMETERS}" \
   -E "COZY_CREDENTIALS=${COZY_CREDENTIALS}" \
   -E "COZY_LOCALE=${COZY_LOCALE}" \
+  -E "COZY_JOB_ID=${COZY_JOB_ID}" \
   -E "COZY_JOB_MANUAL_EXECUTION=${COZY_JOB_MANUAL_EXECUTION}" \
   -R "${rundir}:/usr/src/konnector/" \
   -R /lib \
