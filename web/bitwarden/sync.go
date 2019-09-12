@@ -95,8 +95,9 @@ func newSyncResponse(profile *profileResponse, ciphers []*bitwarden.Cipher, fold
 		GlobalEquivalentDomains: nil,
 		Object:                  "domains",
 	}
-	collections := []*collectionResponse{
-		getCozyCollectionResponse(),
+	var collections []*collectionResponse
+	if coll, err := getCozyCollectionResponse(); err == nil {
+		collections = append(collections, coll)
 	}
 	return &syncResponse{
 		Profile:     profile,

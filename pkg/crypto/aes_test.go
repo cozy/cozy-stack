@@ -16,17 +16,17 @@ func makeBuf(l int) []byte {
 
 func TestEncryptWithAES256CBC(t *testing.T) {
 	key := makeBuf(32)
-	payload := makeBuf(64)
+	payload := makeBuf(60)
 	iv := makeBuf(16)
 	str, err := EncryptWithAES256CBC(key, payload, iv)
 	assert.NoError(t, err)
-	expected := "0.eHh4eHh4eHh4eHh4eHh4eA==|xYfs1rg9exsctltfkrSi7gROm5RjRhnF71zYvz3zHeIn6UIIoZP3Whbh6CSbbdfd0sY8kA2qs2Fziv+9bk4tATrLaSs3RqDUcdnZvFl2l7E="
+	expected := "0.eHh4eHh4eHh4eHh4eHh4eA==|xYfs1rg9exsctltfkrSi7gROm5RjRhnF71zYvz3zHeIn6UIIoZP3Whbh6CSbbdfdhLJTQ2SxHylBF2L/nziH5Q=="
 	assert.Equal(t, expected, str)
 	// In ruby:
 	// require 'base64'
 	// require 'openssl'
 	// key = 'x' * 32
-	// pt = 'x' * 64
+	// pt = 'x' * 60
 	// iv = 'x' * 16
 	// cipher = OpenSSL::Cipher.new "AES-256-CBC"
 	// cipher.encrypt

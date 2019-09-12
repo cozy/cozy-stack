@@ -28,9 +28,8 @@ describe "The bitwarden API of the stack" do
     # ...with a connectors collection
     colls = bw.collections
     assert_equal colls.length, 1
-    # TODO why the name is missing?
     ap colls
-    # assert_equal colls[0][:name], "Cozy Connectors"
+    assert_equal colls[0][:name], "Cozy Connectors"
 
     # %w[item item.field item.login item.login.uri item.card item.identity item.securenote collection item-collections].each do |object|
     #   ap object

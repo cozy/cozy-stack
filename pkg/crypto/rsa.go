@@ -33,7 +33,7 @@ func EncryptWithRSA(key string, payload []byte) (string, error) {
 	}
 	dst64 := base64.StdEncoding.EncodeToString(dst)
 
-	// 4 means RSA-2048-OAEP-SHA1
+	// 4 means Rsa2048_OaepSha1_B64
 	cipherString := "4." + dst64
 	return cipherString, nil
 }

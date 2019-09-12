@@ -13,7 +13,7 @@ const (
 	cozyOrganizationID   = "38ac39d0-d48d-11e9-91bf-f37e45d48c79"
 	cozyOrganizationName = "Cozy"
 	cozyCollectionID     = "385aaa2a-d48d-11e9-bb5f-6b31dfebcb4d"
-	cozyCollectionName   = "Connectors Cozy"
+	cozyCollectionName   = "Cozy Connectors"
 )
 
 // https://github.com/bitwarden/jslib/blob/master/src/models/response/profileOrganizationResponse.ts
@@ -93,11 +93,18 @@ type collectionResponse struct {
 	Object         string `json:"Object"`
 }
 
-func getCozyCollectionResponse() *collectionResponse {
+func getCozyCollectionResponse() (*collectionResponse, error) {
+	orgKey := getOrgKey()
+	iv := crypto.GenerateRandomBytes(16)
+	payload := []byte(cozyCollectionName)
+	name, err := crypto.EncryptWithAES256HMAC(orgKey[:32], orgKey[32:], payload, iv)
+	if err != nil {
+		return nil, err
+	}
 	return &collectionResponse{
 		ID:             cozyCollectionID,
 		OrganizationID: cozyOrganizationID,
-		Name:           cozyCollectionName,
+		Name:           name,
 		Object:         "collection",
-	}
+	}, nil
 }
