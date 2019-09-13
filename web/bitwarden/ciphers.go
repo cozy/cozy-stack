@@ -100,7 +100,11 @@ type cipherResponse struct {
 func titleizeKeys(data bitwarden.MapData) map[string]interface{} {
 	res := make(map[string]interface{})
 	for k, v := range data {
-		res[strings.Title(k)] = v
+		key := strings.Title(k)
+		if k == "ssn" {
+			key = "SSN"
+		}
+		res[key] = v
 	}
 	return res
 }

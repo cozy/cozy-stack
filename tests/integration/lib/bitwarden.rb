@@ -1,4 +1,11 @@
 class Bitwarden
+  module Types
+    LOGIN = 1
+    SECURENOTE = 2
+    CARD = 3
+    IDENTITY = 4
+  end
+
   @number = 0
 
   def self.next_number
@@ -12,15 +19,15 @@ class Bitwarden
 
   def exec(cmd, session = true)
     cmd = "#{cmd} --session '#{@session}'" if session
-    `BITWARDENCLI_APPDATA_DIR='#{@dir}' bw #{cmd}`.chomp
+    result = `BITWARDENCLI_APPDATA_DIR='#{@dir}' bw #{cmd}`.chomp
+    code = $?
+    ap "Status code #{code} for bw #{cmd}" unless code.success?
+    result
   end
 
   def login
     `mkdir -p #{@dir}`
     exec "config server http://#{@inst.domain}/bitwarden", false
-    # If we were logged in from a previous run, we need to logout before trying
-    # to log in, or we won't get a session key.
-    logout
     domain = @inst.domain.split(':')[0]
     @session = exec "login --raw me@#{domain} #{@inst.passphrase}", false
   end
@@ -85,5 +92,9 @@ class Bitwarden
 
   def create_folder(name)
     create :folder, name: name
+  end
+
+  def create_item(data)
+    create :item, data
   end
 end
