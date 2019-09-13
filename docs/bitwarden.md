@@ -295,7 +295,28 @@ Content-Type: application/json
 		"Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
 		"PrivateKey": null,
 		"SecurityStamp": "5d203c3f-bc89-499e-85c4-4431248e1196",
-		"Organizations": [],
+		"Organizations": [{
+      "Id": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
+      "Name": "Cozy",
+      "Key": "4.HUzVDQVAFc4JOpW3/j/QwZeET0mXOiDW5s/HdpxLZ2GFnGcxOm1FE4XD2p7XTSwORXO/Lo8y0A87UhXKEXzfHZmpJR04pbpUPr4NJbjRKv/cSkNFlvm0rIUw/m0Jkft/gew9v3QfkVSGdSZk5XIimwkTQ5WM+WCStxbQJIKAH+AoEA5q6t9mpNNlTAQvMgqs8u7CJwSjeZ7qbabfEUVX1HIPgxC3BtVUkySRSws/gUNeMwY23kAJJQYT+uuMooZUr7umU6YkEHG2RQZwCCjVHX4czxZRWsVo/xQOYoNr7DjgCf92D7OrJlFmDtQjzSy2BjotN6vn+1SwtHbeDILWaQ==",
+      "BillingEmail": "me@cozy.tools",
+      "Plan": "TeamsAnnually",
+      "PlanType": 5,
+      "Seats": 2,
+      "MaxCollections": 1,
+      "MaxStorageGb": 1,
+      "SelfHost": true,
+      "Use2fa": true,
+      "UseDirectory": false,
+      "UseEvents": false,
+      "UseGroups": false,
+      "UseTotp": true,
+      "UsersGetPremium": true,
+      "Enabled": true,
+      "Status": 2,
+      "Type": 2,
+      "Object": "profileOrganization"
+    }],
 		"Object": "profile"
 	},
 	"Folders": [
@@ -334,6 +355,12 @@ Content-Type: application/json
 			"Object":"cipher"
 		}
 	],
+  "Collections": [{
+    "Id": "385aaa2a-d48d-11e9-bb5f-6b31dfebcb4d",
+    "OrganizationId": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
+    "Name": "2.PowfE263ZLz7+Jqrpuezqw==|OzuXDsJnQdfa/eMKxsms6Q==|RpEB7qqs26X9dqa+KaxSE5+52TFVs4dAdfU7DCu3QXM=",
+    "Object": "collection"
+  }],
 	"Domains": {
 		"EquivalentDomains": null,
 		"GlobalEquivalentDomains": null,
@@ -550,6 +577,62 @@ Content-Type: application/json
 	"FolderId": "14220912-d002-471d-a364-a82a010cb8f2",
 	"OrganizationId": null,
 	"Notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
+  "SecureNote": {
+    "Type": 0
+  },
+	"Fields": null,
+	"Attachments": null,
+	"RevisionDate": "2017-11-07T22:12:22.235914Z",
+	"Edit": true,
+	"OrganizationUseTotp": false
+}
+```
+
+### POST /bitwarden/api/ciphers/:id/share
+
+This route is used to share a cipher with an organization. The fields must be
+encrypted with the organization key.
+
+#### Request
+
+```http
+POST /bitwarden/api/ciphers/4c2869dd-0e1c-499f-b116-a824016df251/share HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "cipher": {
+    "type": 2,
+    "favorite": true,
+    "name": "2.d00W2bB8LhE86LybnoPnEQ==|QqJqmzMMv2Cdm9wieUH66Q==|TV++tKNF0+4/axjAeRXMxAkTdRBuIsXnCuhOKE0ESh0=",
+    "organizationId": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
+    "notes": "2.9m3XIbiJLk86thmF3UsO/A==|YC7plTgNQuMCkzYZC3iRjQ==|o8wZNQ3czr9sdeGXjOCalQwgPWsqOHZVnA2utZ+o/l4=",
+    "secureNote": {
+      "type": 0
+    }
+  },
+  "collectionIds": ["385aaa2a-d48d-11e9-bb5f-6b31dfebcb4d"]
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+	"Object": "cipher",
+	"Id": "4c2869dd-0e1c-499f-b116-a824016df251",
+	"Type": 2,
+	"Favorite": true,
+  "Name": "2.d00W2bB8LhE86LybnoPnEQ==|QqJqmzMMv2Cdm9wieUH66Q==|TV++tKNF0+4/axjAeRXMxAkTdRBuIsXnCuhOKE0ESh0=",
+  "OrganizationId": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
+  "Notes": "2.9m3XIbiJLk86thmF3UsO/A==|YC7plTgNQuMCkzYZC3iRjQ==|o8wZNQ3czr9sdeGXjOCalQwgPWsqOHZVnA2utZ+o/l4=",
   "SecureNote": {
     "Type": 0
   },
