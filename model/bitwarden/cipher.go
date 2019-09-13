@@ -41,6 +41,14 @@ type LoginData struct {
 	TOTP     string     `json:"totp,omitempty"`
 }
 
+// Field is used to store some additional fields.
+type Field struct {
+	// See https://github.com/bitwarden/jslib/blob/master/src/enums/fieldType.ts
+	Type  int    `json:"type"`
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 // MapData is used for the data of secure note, card, and identity.
 type MapData map[string]interface{}
 
@@ -57,6 +65,7 @@ type Cipher struct {
 	FolderID       string                 `json:"folder_id,omitempty"`
 	Login          *LoginData             `json:"login,omitempty"`
 	Data           *MapData               `json:"data,omitempty"`
+	Fields         []Field                `json:"fields"`
 	Metadata       *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 }
 
@@ -83,6 +92,8 @@ func (c *Cipher) Clone() couchdb.Doc {
 			TOTP:     c.Login.TOTP,
 		}
 	}
+	cloned.Fields = make([]Field, len(c.Fields))
+	copy(cloned.Fields, c.Fields)
 	return &cloned
 }
 

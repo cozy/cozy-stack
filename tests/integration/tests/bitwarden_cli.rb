@@ -91,7 +91,11 @@ describe "The bitwarden API of the stack" do
         uris: [
           { uri: Faker::Internet.url, match: nil }
         ]
-      }
+      },
+      fields: [
+        { type: 0, name: Faker::Internet.slug, value: Faker::Internet.password },
+        { type: 1, name: Faker::Internet.slug, value: Faker::Internet.password }
+      ]
     }
     bw.create_item login
 

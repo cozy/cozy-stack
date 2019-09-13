@@ -30,6 +30,7 @@ type cipherRequest struct {
 	FolderID       string               `json:"folderId"`
 	OrganizationID string               `json:"organizationId"`
 	Login          loginRequest         `json:"login"`
+	Fields         []bitwarden.Field    `json:"fields"`
 	SecureNote     bitwarden.MapData    `json:"securenote"`
 	Card           bitwarden.MapData    `json:"card"`
 	Identity       bitwarden.MapData    `json:"identity"`
@@ -49,6 +50,7 @@ func (r *cipherRequest) toCipher() (*bitwarden.Cipher, error) {
 		Name:     r.Name,
 		Notes:    r.Notes,
 		FolderID: r.FolderID,
+		Fields:   r.Fields,
 	}
 	switch c.Type {
 	case bitwarden.LoginType:
@@ -89,6 +91,12 @@ type loginResponse struct {
 	TOTP     *string       `json:"Totp"`
 }
 
+type fieldResponse struct {
+	Type  int    `json:"Type"`
+	Name  string `json:"Name"`
+	Value string `json:"Value"`
+}
+
 // https://github.com/bitwarden/jslib/blob/master/src/models/response/cipherResponse.ts
 type cipherResponse struct {
 	Object         string                 `json:"Object"`
@@ -100,7 +108,7 @@ type cipherResponse struct {
 	FolderID       *string                `json:"FolderId"`
 	OrganizationID *string                `json:"OrganizationId"`
 	CollectionIDs  []string               `json:"CollectionIds"`
-	Fields         *string                `json:"Fields"`
+	Fields         interface{}            `json:"Fields"`
 	Attachments    *string                `json:"Attachments"`
 	Login          *loginResponse         `json:"Login,omitempty"`
 	SecureNote     map[string]interface{} `json:"SecureNote,omitempty"`
@@ -146,6 +154,18 @@ func newCipherResponse(c *bitwarden.Cipher) *cipherResponse {
 		org := cozyOrganizationID
 		r.OrganizationID = &org
 		r.CollectionIDs = append(r.CollectionIDs, cozyCollectionID)
+	}
+
+	if len(c.Fields) > 0 {
+		fields := make([]fieldResponse, len(c.Fields))
+		for i, f := range c.Fields {
+			fields[i] = fieldResponse{
+				Type:  f.Type,
+				Name:  f.Name,
+				Value: f.Value,
+			}
+		}
+		r.Fields = fields
 	}
 
 	switch c.Type {
