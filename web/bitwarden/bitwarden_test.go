@@ -224,6 +224,7 @@ func TestCreateLogin(t *testing.T) {
 		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
 		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
 		"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+		"passwordRevisionDate": "2019-09-13T12:26:42+02:00",
 		"totp": null
 	}
 }`
@@ -291,9 +292,10 @@ func assertCipherResponse(t *testing.T, result map[string]interface{}) {
 	match, ok := uri["Match"]
 	assert.True(t, ok)
 	assert.Empty(t, match)
-	assert.Equal(t, "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=", result["Username"])
-	assert.Equal(t, "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=", result["Password"])
-	totp, ok := result["Totp"]
+	assert.Equal(t, "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=", login["Username"])
+	assert.Equal(t, "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=", login["Password"])
+	assert.Equal(t, "2019-09-13T12:26:42+02:00", login["PasswordRevisionDate"])
+	totp, ok := login["Totp"]
 	assert.True(t, ok)
 	assert.Empty(t, totp)
 	fields, ok := result["Fields"]

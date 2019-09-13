@@ -39,6 +39,7 @@ describe "The bitwarden API of the stack" do
     refute_nil colls[0][:id]
     coll_id = colls[0][:id]
 
+    # Creates
     name = Faker::Internet.slug
     bw.create_folder name
     folders = bw.folders
@@ -77,11 +78,61 @@ describe "The bitwarden API of the stack" do
     }
     bw.create_item identity
 
+    login = {
+      type: Bitwarden::Types::LOGIN,
+      favorite: true,
+      name: "My login",
+      notes: nil,
+      login: {
+        username: Faker::Internet.email,
+        password: Faker::Internet.password,
+        passwordRevisionDate: nil,
+        totp: Faker::Internet.password,
+        uris: [
+          { uri: Faker::Internet.url, match: nil }
+        ]
+      }
+    }
+    bw.create_item login
+
     bw2.sync
     items = bw2.items
-    assert_equal items.length, 3
-    [card, note, identity].each do |expected|
+    assert_equal items.length, 4
+    [card, note, identity, login].each do |expected|
       item = items.find { |i| i[:type] == expected[:type] }
+      refute_nil item.delete(:id)
+      refute_nil item.delete(:revisionDate)
+      assert_nil item.delete(:folderId) unless expected.key? :folderId
+      assert_nil item.delete(:organizationId)
+      assert_equal item.delete(:object), "item"
+      assert_equal item, expected
+    end
+
+    # Updates
+    name = Faker::DrWho.catch_phrase
+    bw.edit_folder folder_id, name
+
+    item = bw2.items.find { |i| i[:type] == login[:type] }
+    login[:login][:uris].push(uri: Faker::Internet.url, match: 3)
+    login[:login][:password] = Faker::Internet.password
+    bw.edit_item item[:id], login
+
+    note = bw2.items.find { |i| i[:type] == note[:type] }
+    bw.delete_item note[:id]
+
+    bw2.sync
+    folders = bw2.folders
+    assert_equal folders.length, 2
+    assert_equal folders[0][:name], name
+    assert_equal folders[0][:id], folder_id
+    assert_equal folders[1][:name], "No Folder"
+    assert_nil folders[1][:id]
+
+    items = bw2.items
+    assert_equal items.length, 3
+    [card, identity, login].each do |expected|
+      item = items.find { |i| i[:type] == expected[:type] }
+      item[:login][:passwordRevisionDate] = nil if item[:type] == Bitwarden::Types::LOGIN
       refute_nil item.delete(:id)
       refute_nil item.delete(:revisionDate)
       assert_nil item.delete(:folderId) unless expected.key? :folderId

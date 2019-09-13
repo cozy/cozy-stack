@@ -25,12 +25,20 @@ const (
 	IdentityType   = 4
 )
 
+// LoginURI is a field for an URI.
+// See https://github.com/bitwarden/jslib/blob/master/src/models/api/loginUriApi.ts
+type LoginURI struct {
+	URI   string      `json:"uri"`
+	Match interface{} `json:"match,omitempty"`
+}
+
 // LoginData is the encrypted data for a cipher with the login type.
 type LoginData struct {
-	URI      string `json:"uri,omitempty"`
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
-	TOTP     string `json:"totp,omitempty"`
+	URIs     []LoginURI `json:"uris,omitempty"`
+	Username string     `json:"username,omitempty"`
+	Password string     `json:"password,omitempty"`
+	RevDate  string     `json:"passwordRevisionDate,omitempty"`
+	TOTP     string     `json:"totp,omitempty"`
 }
 
 // MapData is used for the data of secure note, card, and identity.
@@ -65,10 +73,13 @@ func (c *Cipher) DocType() string { return consts.BitwardenCiphers }
 func (c *Cipher) Clone() couchdb.Doc {
 	cloned := *c
 	if c.Login != nil {
+		uris := make([]LoginURI, len(c.Login.URIs))
+		copy(uris, c.Login.URIs)
 		cloned.Login = &LoginData{
-			URI:      c.Login.URI,
+			URIs:     uris,
 			Username: c.Login.Username,
 			Password: c.Login.Password,
+			RevDate:  c.Login.RevDate,
 			TOTP:     c.Login.TOTP,
 		}
 	}

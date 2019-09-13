@@ -16,6 +16,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type loginRequest struct {
+	URI string `json:"uri"` // For compatibility with some clients
+	*bitwarden.LoginData
+}
+
 // https://github.com/bitwarden/jslib/blob/master/src/models/request/cipherRequest.ts
 type cipherRequest struct {
 	Type           bitwarden.CipherType `json:"type"`
@@ -24,7 +29,7 @@ type cipherRequest struct {
 	Notes          string               `json:"notes"`
 	FolderID       string               `json:"folderId"`
 	OrganizationID string               `json:"organizationId"`
-	Login          bitwarden.LoginData  `json:"login"`
+	Login          loginRequest         `json:"login"`
 	SecureNote     bitwarden.MapData    `json:"securenote"`
 	Card           bitwarden.MapData    `json:"card"`
 	Identity       bitwarden.MapData    `json:"identity"`
@@ -47,7 +52,14 @@ func (r *cipherRequest) toCipher() (*bitwarden.Cipher, error) {
 	}
 	switch c.Type {
 	case bitwarden.LoginType:
-		c.Login = &r.Login
+		if r.Login.LoginData == nil {
+			r.Login.LoginData = &bitwarden.LoginData{}
+		}
+		if r.Login.URI != "" {
+			u := bitwarden.LoginURI{URI: r.Login.URI, Match: nil}
+			r.Login.URIs = append(r.Login.URIs, u)
+		}
+		c.Login = r.Login.LoginData
 	case bitwarden.SecureNoteType:
 		c.Data = &r.SecureNote
 	case bitwarden.CardType:
@@ -70,7 +82,11 @@ type uriResponse struct {
 }
 
 type loginResponse struct {
-	URIs []uriResponse `json:"Uris"`
+	URIs     []uriResponse `json:"Uris"`
+	Username *string       `json:"Username"`
+	Password *string       `json:"Password"`
+	RevDate  *string       `json:"PasswordRevisionDate"`
+	TOTP     *string       `json:"Totp"`
 }
 
 // https://github.com/bitwarden/jslib/blob/master/src/models/response/cipherResponse.ts
@@ -86,9 +102,6 @@ type cipherResponse struct {
 	Fields         *string                `json:"Fields"`
 	Attachments    *string                `json:"Attachments"`
 	Login          *loginResponse         `json:"Login,omitempty"`
-	Username       *string                `json:"Username"`
-	Password       *string                `json:"Password"`
-	TOTP           *string                `json:"Totp"`
 	SecureNote     map[string]interface{} `json:"SecureNote,omitempty"`
 	Card           map[string]interface{} `json:"Card,omitempty"`
 	Identity       map[string]interface{} `json:"Identity,omitempty"`
@@ -132,20 +145,24 @@ func newCipherResponse(c *bitwarden.Cipher) *cipherResponse {
 	switch c.Type {
 	case bitwarden.LoginType:
 		if c.Login != nil {
-			if c.Login.URI != "" {
-				uri := uriResponse{URI: c.Login.URI, Match: nil}
-				r.Login = &loginResponse{
-					URIs: []uriResponse{uri},
+			r.Login = &loginResponse{}
+			if len(c.Login.URIs) > 0 {
+				r.Login.URIs = make([]uriResponse, len(c.Login.URIs))
+				for i, u := range c.Login.URIs {
+					r.Login.URIs[i] = uriResponse{URI: u.URI, Match: u.Match}
 				}
 			}
 			if c.Login.Username != "" {
-				r.Username = &c.Login.Username
+				r.Login.Username = &c.Login.Username
 			}
 			if c.Login.Password != "" {
-				r.Password = &c.Login.Password
+				r.Login.Password = &c.Login.Password
+			}
+			if c.Login.RevDate != "" {
+				r.Login.RevDate = &c.Login.RevDate
 			}
 			if c.Login.TOTP != "" {
-				r.TOTP = &c.Login.TOTP
+				r.Login.TOTP = &c.Login.TOTP
 			}
 		}
 	case bitwarden.SecureNoteType:

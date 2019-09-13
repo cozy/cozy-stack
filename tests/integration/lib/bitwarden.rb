@@ -76,8 +76,8 @@ class Bitwarden
     env = { 'BITWARDENCLI_APPDATA_DIR' => @dir }
     out, err, status = Open3.capture3(env, "bw #{cmd}", stdin_data: data)
     unless status.success?
-      puts "Stderr: #{err}"
-      raise "Status code #{code} for bw #{cmd}"
+      ap "Status code #{status} for bw #{cmd}"
+      ap "Stderr: #{err}"
     end
     out
   end
@@ -96,5 +96,29 @@ class Bitwarden
 
   def create_item(data)
     create :item, data
+  end
+
+  def edit(object, id, data)
+    capture "edit #{object} #{id} --session '#{@session}'", encode(data)
+  end
+
+  def edit_folder(id, name)
+    edit :folder, id, name: name
+  end
+
+  def edit_item(id, data)
+    edit :item, id, data
+  end
+
+  def delete(object, id)
+    exec "delete #{object} #{id}"
+  end
+
+  def delete_folder(id)
+    delete :folder, id
+  end
+
+  def delete_item(id)
+    delete :item, id
   end
 end
