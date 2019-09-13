@@ -99,6 +99,7 @@ type cipherResponse struct {
 	Notes          *string                `json:"Notes"`
 	FolderID       *string                `json:"FolderId"`
 	OrganizationID *string                `json:"OrganizationId"`
+	CollectionIDs  []string               `json:"CollectionIds"`
 	Fields         *string                `json:"Fields"`
 	Attachments    *string                `json:"Attachments"`
 	Login          *loginResponse         `json:"Login,omitempty"`
@@ -140,6 +141,11 @@ func newCipherResponse(c *bitwarden.Cipher) *cipherResponse {
 	}
 	if c.Metadata != nil {
 		r.Date = c.Metadata.UpdatedAt.UTC()
+	}
+	if c.SharedWithCozy {
+		org := cozyOrganizationID
+		r.OrganizationID = &org
+		r.CollectionIDs = append(r.CollectionIDs, cozyCollectionID)
 	}
 
 	switch c.Type {
@@ -385,12 +391,12 @@ func DeleteCipher(c echo.Context) error {
 			"error": err,
 		})
 	}
-	return c.NoContent(http.StatusNoContent)
+	return c.NoContent(http.StatusOK)
 }
 
 type shareCipherRequest struct {
-	cipherRequest
-	CollectionIDs []string `json:"collectionIds"`
+	Cipher        cipherRequest `json:"Cipher"`
+	CollectionIDs []string      `json:"collectionIds"`
 }
 
 // ShareCipher is used to share a cipher with an organization.
@@ -427,13 +433,14 @@ func ShareCipher(c echo.Context) error {
 			"error": "invalid JSON",
 		})
 	}
-	cipher, err := req.toCipher()
+	cipher, err := req.Cipher.toCipher()
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": err,
 		})
 	}
-	if req.OrganizationID == "" {
+	if req.Cipher.OrganizationID == "" {
+		inst.Logger().WithField("nspace", "bitwarden").Infof("Bad organization: %v", req)
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "organizationId not provided",
 		})

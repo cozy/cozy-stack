@@ -104,6 +104,7 @@ describe "The bitwarden API of the stack" do
       refute_nil item.delete(:revisionDate)
       assert_nil item.delete(:folderId) unless expected.key? :folderId
       assert_nil item.delete(:organizationId)
+      assert_nil item.delete(:collectionIds)
       assert_equal item.delete(:object), "item"
       assert_equal item, expected
     end
@@ -112,13 +113,17 @@ describe "The bitwarden API of the stack" do
     name = Faker::DrWho.catch_phrase
     bw.edit_folder folder_id, name
 
-    item = bw2.items.find { |i| i[:type] == login[:type] }
+    items = bw.items
+    item = items.find { |i| i[:type] == login[:type] }
     login[:login][:uris].push(uri: Faker::Internet.url, match: 3)
     login[:login][:password] = Faker::Internet.password
     bw.edit_item item[:id], login
 
-    note = bw2.items.find { |i| i[:type] == note[:type] }
+    note = items.find { |i| i[:type] == note[:type] }
     bw.delete_item note[:id]
+
+    item = items.find { |i| i[:type] == identity[:type] }
+    bw.share item[:id], org_id, coll_id
 
     bw2.sync
     folders = bw2.folders
@@ -130,6 +135,9 @@ describe "The bitwarden API of the stack" do
 
     items = bw2.items
     assert_equal items.length, 3
+    item = items.find { |i| i[:type] == Bitwarden::Types::IDENTITY }
+    assert_equal item.delete(:organizationId), org_id
+    assert_equal item.delete(:collectionIds), [coll_id]
     [card, identity, login].each do |expected|
       item = items.find { |i| i[:type] == expected[:type] }
       item[:login][:passwordRevisionDate] = nil if item[:type] == Bitwarden::Types::LOGIN
@@ -137,9 +145,11 @@ describe "The bitwarden API of the stack" do
       refute_nil item.delete(:revisionDate)
       assert_nil item.delete(:folderId) unless expected.key? :folderId
       assert_nil item.delete(:organizationId)
+      assert_nil item.delete(:collectionIds)
       assert_equal item.delete(:object), "item"
       assert_equal item, expected
     end
+
 
     assert_equal bw.sync, "Syncing complete."
     assert_equal bw.logout, "You have logged out."

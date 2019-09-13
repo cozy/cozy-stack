@@ -72,7 +72,8 @@ class Bitwarden
     list :collections
   end
 
-  def capture(cmd, data)
+  def capture(cmd, data, session = true)
+    cmd = "#{cmd} --session '#{@session}'" if session
     env = { 'BITWARDENCLI_APPDATA_DIR' => @dir }
     out, err, status = Open3.capture3(env, "bw #{cmd}", stdin_data: data)
     unless status.success?
@@ -83,11 +84,11 @@ class Bitwarden
   end
 
   def encode(data)
-    capture "encode", data.to_json
+    capture "encode", data.to_json, false
   end
 
   def create(object, data)
-    capture "create #{object} --session '#{@session}'", encode(data)
+    capture "create #{object}", encode(data)
   end
 
   def create_folder(name)
@@ -99,7 +100,7 @@ class Bitwarden
   end
 
   def edit(object, id, data)
-    capture "edit #{object} #{id} --session '#{@session}'", encode(data)
+    capture "edit #{object} #{id}", encode(data)
   end
 
   def edit_folder(id, name)
@@ -120,5 +121,9 @@ class Bitwarden
 
   def delete_item(id)
     delete :item, id
+  end
+
+  def share(item_id, org_id, coll_id)
+    capture "share #{item_id} #{org_id}", encode([coll_id])
   end
 end

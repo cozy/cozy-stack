@@ -208,7 +208,7 @@ func TestDeleteFolder(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 204, res.StatusCode)
+	assert.Equal(t, 200, res.StatusCode)
 }
 
 func TestCreateLogin(t *testing.T) {
@@ -391,7 +391,7 @@ func TestDeleteCipher(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 204, res.StatusCode)
+	assert.Equal(t, 200, res.StatusCode)
 }
 
 func TestSync(t *testing.T) {
