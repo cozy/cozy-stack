@@ -27,7 +27,7 @@ type KonnManifest struct {
 	Type        string           `json:"type,omitempty"`
 	License     string           `json:"license,omitempty"`
 	Language    string           `json:"language,omitempty"`
-	VendorLink  string           `json:"vendor_link"`
+	VendorLink  *json.RawMessage `json:"vendor_link"`
 	Locales     *json.RawMessage `json:"locales,omitempty"`
 	Langs       *json.RawMessage `json:"langs,omitempty"`
 	Platforms   *json.RawMessage `json:"platforms,omitempty"`

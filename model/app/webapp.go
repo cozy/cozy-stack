@@ -83,7 +83,7 @@ type WebappManifest struct {
 	License     string           `json:"license,omitempty"`
 	Language    string           `json:"language,omitempty"`
 	Category    string           `json:"category,omitempty"`
-	VendorLink  string           `json:"vendor_link"`
+	VendorLink  *json.RawMessage `json:"vendor_link"`
 	Locales     *json.RawMessage `json:"locales,omitempty"`
 	Langs       *json.RawMessage `json:"langs,omitempty"`
 	Platforms   *json.RawMessage `json:"platforms,omitempty"`

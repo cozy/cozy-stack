@@ -28,7 +28,7 @@ type AppManifest struct {
 		License     string           `json:"license,omitempty"`
 		Language    string           `json:"language,omitempty"`
 		Category    string           `json:"category,omitempty"`
-		VendorLink  string           `json:"vendor_link"`
+		VendorLink  interface{}      `json:"vendor_link"` // can be a string or []string
 		Locales     *json.RawMessage `json:"locales,omitempty"`
 		Langs       *json.RawMessage `json:"langs,omitempty"`
 		Platforms   *json.RawMessage `json:"platforms,omitempty"`
