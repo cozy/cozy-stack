@@ -291,6 +291,75 @@ func CreateCipher(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+// CreateSharedCipher is the handler for creating a shared cipher.
+func CreateSharedCipher(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenCiphers); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var req struct {
+		Cipher        cipherRequest `json:"cipher"`
+		CollectionIDs []string      `json:"collectionIds"`
+	}
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+
+	cipher, err := req.Cipher.toCipher()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": err,
+		})
+	}
+
+	if cipher.FolderID != "" {
+		folder := &bitwarden.Folder{}
+		if err := couchdb.GetDoc(inst, consts.BitwardenFolders, cipher.FolderID, folder); err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "folder not found",
+			})
+		}
+	}
+
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+	if len(req.CollectionIDs) != 1 {
+		inst.Logger().WithField("nspace", "bitwarden").
+			Infof("Bad collection: %v", req.CollectionIDs)
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "generic collectionIds is not supported",
+		})
+	}
+	for _, id := range req.CollectionIDs {
+		if id != settings.CollectionID {
+			inst.Logger().WithField("nspace", "bitwarden").
+				Infof("Bad collection: %s vs %s", id, settings.CollectionID)
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "generic collectionIds is not supported",
+			})
+		}
+		cipher.SharedWithCozy = true
+	}
+
+	if err := couchdb.CreateDoc(inst, cipher); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	res := newCipherResponse(cipher, settings)
+	return c.JSON(http.StatusOK, res)
+}
+
 // GetCipher returns information about a single cipher.
 func GetCipher(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
