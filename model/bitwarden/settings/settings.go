@@ -1,8 +1,10 @@
 package settings
 
 import (
+	"encoding/base64"
 	"errors"
 
+	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -24,7 +26,7 @@ type Settings struct {
 	Key                     string                 `json:"key,omitempty"`
 	PublicKey               string                 `json:"public_key,omitempty"`
 	PrivateKey              string                 `json:"private_key,omitempty"`
-	OrganizationKey         []byte                 `json:"organization_key,omitempty"`
+	EncryptedOrgKey         string                 `json:"encrypted_organization_key,omitempty"`
 	OrganizationID          string                 `json:"organization_id,omitempty"`
 	CollectionID            string                 `json:"collection_id,omitempty"`
 	Metadata                *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
@@ -42,8 +44,6 @@ func (s *Settings) DocType() string { return consts.Settings }
 // Clone implements couchdb.Doc
 func (s *Settings) Clone() couchdb.Doc {
 	cloned := *s
-	cloned.OrganizationKey = make([]byte, len(s.OrganizationKey))
-	copy(cloned.OrganizationKey, s.OrganizationKey)
 	if s.Metadata != nil {
 		cloned.Metadata = s.Metadata.Clone()
 	}
@@ -74,12 +74,17 @@ func (s *Settings) Save(inst *instance.Instance) error {
 // SetKeyPair is used to save the key pair of the user, that will be used to
 // share passwords with the cozy organization.
 func (s *Settings) SetKeyPair(inst *instance.Instance, pub, priv string) error {
+	var err error
 	s.PublicKey = pub
 	s.PrivateKey = priv
-	if len(s.OrganizationKey) != 64 {
-		s.OrganizationKey = crypto.GenerateRandomBytes(64)
+	if len(s.EncryptedOrgKey) == 0 {
+		orgKey := crypto.GenerateRandomBytes(64)
+		b64 := base64.StdEncoding.EncodeToString(orgKey)
+		s.EncryptedOrgKey, err = account.EncryptCredentialsData(b64)
+		if err != nil {
+			return err
+		}
 	}
-	var err error
 	if s.OrganizationID == "" {
 		s.OrganizationID, err = couchdb.UUID(inst)
 		if err != nil {
@@ -93,6 +98,22 @@ func (s *Settings) SetKeyPair(inst *instance.Instance, pub, priv string) error {
 		}
 	}
 	return couchdb.UpdateDoc(inst, s)
+}
+
+// OrganizationKey returns the organization key (in clear, not encrypted).
+func (s *Settings) OrganizationKey() ([]byte, error) {
+	if len(s.EncryptedOrgKey) == 0 {
+		return nil, errors.New("No organization key")
+	}
+	decrypted, err := account.DecryptCredentialsData(s.EncryptedOrgKey)
+	if err != nil {
+		return nil, err
+	}
+	b64, ok := decrypted.(string)
+	if !ok {
+		return nil, errors.New("Invalid key")
+	}
+	return base64.StdEncoding.DecodeString(b64)
 }
 
 // Get returns the settings document for bitwarden.

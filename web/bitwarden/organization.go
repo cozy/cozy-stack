@@ -37,7 +37,13 @@ func getCozyOrganizationResponse(inst *instance.Instance, settings *settings.Set
 	if settings == nil || settings.PublicKey == "" {
 		return nil, errors.New("No public key")
 	}
-	key, err := crypto.EncryptWithRSA(settings.PublicKey, settings.OrganizationKey)
+	orgKey, err := settings.OrganizationKey()
+	if err != nil {
+		inst.Logger().WithField("nspace", "bitwarden").
+			Infof("Cannot read the organization key: %s", err)
+		return nil, err
+	}
+	key, err := crypto.EncryptWithRSA(settings.PublicKey, orgKey)
 	if err != nil {
 		inst.Logger().WithField("nspace", "bitwarden").
 			Infof("Cannot encrypt with RSA: %s", err)
@@ -78,8 +84,8 @@ type collectionResponse struct {
 }
 
 func getCozyCollectionResponse(settings *settings.Settings) (*collectionResponse, error) {
-	orgKey := settings.OrganizationKey
-	if len(orgKey) != 64 {
+	orgKey, err := settings.OrganizationKey()
+	if err != nil || len(orgKey) != 64 {
 		return nil, errors.New("Missing organization key")
 	}
 	iv := crypto.GenerateRandomBytes(16)

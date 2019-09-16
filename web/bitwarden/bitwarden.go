@@ -107,6 +107,8 @@ func SetKeyPair(c echo.Context) error {
 		return err
 	}
 	if err := settings.SetKeyPair(inst, data.Public, data.Private); err != nil {
+		inst.Logger().WithField("nspace", "bitwarden").
+			Infof("Cannot set key pair: %s", err)
 		return err
 	}
 	profile, err := newProfileResponse(inst, settings)
@@ -320,11 +322,17 @@ func GetCozy(c echo.Context) error {
 			"error": err,
 		})
 	}
+	orgKey, err := settings.OrganizationKey()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
 
 	res := map[string]interface{}{
 		"organizationId":  settings.OrganizationID,
 		"collectionId":    settings.CollectionID,
-		"organizationKey": settings.OrganizationKey,
+		"organizationKey": orgKey,
 	}
 	return c.JSON(http.StatusOK, res)
 }

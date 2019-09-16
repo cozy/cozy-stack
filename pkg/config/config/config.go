@@ -762,6 +762,10 @@ func MakeVault(c *Config) error {
 		}
 	}
 
+	if credsEncryptor == nil && credsDecryptor == nil {
+		return nil
+	}
+
 	vault = &Vault{
 		credsEncryptor: credsEncryptor,
 		credsDecryptor: credsDecryptor,
