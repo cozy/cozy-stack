@@ -94,6 +94,9 @@ func (c *Cipher) Clone() couchdb.Doc {
 	}
 	cloned.Fields = make([]Field, len(c.Fields))
 	copy(cloned.Fields, c.Fields)
+	if c.Metadata != nil {
+		cloned.Metadata = c.Metadata.Clone()
+	}
 	return &cloned
 }
 

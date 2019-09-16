@@ -7,21 +7,27 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 )
+
+// DocTypeVersion represents the doctype version. Each time this document
+// structure is modified, update this value
+const DocTypeVersion = "1"
 
 // Settings is the struct that holds the birwarden settings
 type Settings struct {
-	CouchRev                string `json:"_rev,omitempty"`
-	PassphraseKdf           int    `json:"passphrase_kdf,omitempty"`
-	PassphraseKdfIterations int    `json:"passphrase_kdf_iterations,omitempty"`
-	PassphraseHint          string `json:"passphrase_hint,omitempty"`
-	SecurityStamp           string `json:"security_stamp,omitempty"`
-	Key                     string `json:"key,omitempty"`
-	PublicKey               string `json:"public_key,omitempty"`
-	PrivateKey              string `json:"private_key,omitempty"`
-	OrganizationKey         []byte `json:"organization_key,omitempty"`
-	OrganizationID          string `json:"organization_id,omitempty"`
-	CollectionID            string `json:"collection_id,omitempty"`
+	CouchRev                string                 `json:"_rev,omitempty"`
+	PassphraseKdf           int                    `json:"passphrase_kdf,omitempty"`
+	PassphraseKdfIterations int                    `json:"passphrase_kdf_iterations,omitempty"`
+	PassphraseHint          string                 `json:"passphrase_hint,omitempty"`
+	SecurityStamp           string                 `json:"security_stamp,omitempty"`
+	Key                     string                 `json:"key,omitempty"`
+	PublicKey               string                 `json:"public_key,omitempty"`
+	PrivateKey              string                 `json:"private_key,omitempty"`
+	OrganizationKey         []byte                 `json:"organization_key,omitempty"`
+	OrganizationID          string                 `json:"organization_id,omitempty"`
+	CollectionID            string                 `json:"collection_id,omitempty"`
+	Metadata                *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 }
 
 // ID returns the settings qualified identifier
@@ -36,6 +42,11 @@ func (s *Settings) DocType() string { return consts.Settings }
 // Clone implements couchdb.Doc
 func (s *Settings) Clone() couchdb.Doc {
 	cloned := *s
+	cloned.OrganizationKey = make([]byte, len(s.OrganizationKey))
+	copy(cloned.OrganizationKey, s.OrganizationKey)
+	if s.Metadata != nil {
+		cloned.Metadata = s.Metadata.Clone()
+	}
 	return &cloned
 }
 
@@ -47,6 +58,13 @@ func (s *Settings) SetRev(rev string) { s.CouchRev = rev }
 
 // Save persists the settings document for bitwarden in CouchDB.
 func (s *Settings) Save(inst *instance.Instance) error {
+	if s.Metadata == nil {
+		md := metadata.New()
+		md.DocTypeVersion = DocTypeVersion
+		s.Metadata = md
+	} else {
+		s.Metadata.ChangeUpdatedAt()
+	}
 	if s.CouchRev == "" {
 		return couchdb.CreateNamedDocWithDB(inst, s)
 	}

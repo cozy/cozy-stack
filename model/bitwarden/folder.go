@@ -26,7 +26,7 @@ func (f *Folder) DocType() string { return consts.BitwardenFolders }
 // Clone implements couchdb.Doc
 func (f *Folder) Clone() couchdb.Doc {
 	cloned := *f
-	if cloned.Metadata != nil {
+	if f.Metadata != nil {
 		cloned.Metadata = f.Metadata.Clone()
 	}
 	return &cloned
