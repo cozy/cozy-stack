@@ -304,6 +304,31 @@ func refreshToken(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
+// GetCozy returns the information about the cozy organization, including the
+// organization key.
+func GetCozy(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenOrganizations); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err,
+		})
+	}
+
+	res := map[string]interface{}{
+		"organizationId":  settings.OrganizationID,
+		"collectionId":    settings.CollectionID,
+		"organizationKey": settings.OrganizationKey,
+	}
+	return c.JSON(http.StatusOK, res)
+}
+
 // Routes sets the routing for the Bitwarden-like API
 func Routes(router *echo.Group) {
 	identity := router.Group("/identity")
@@ -340,4 +365,7 @@ func Routes(router *echo.Group) {
 	folders.PUT("/:id", RenameFolder)
 	folders.DELETE("/:id", DeleteFolder)
 	folders.POST("/:id/delete", DeleteFolder)
+
+	orgs := router.Group("/organizations")
+	orgs.GET("/cozy", GetCozy)
 }

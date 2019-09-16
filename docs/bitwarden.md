@@ -23,6 +23,9 @@ with the stack, to be used for the konnectors.
 
 ![Creating the organization key](diagrams/bitwarden-organization.png)
 
+The bitwarden clients can connect to the cozy-stack APIs by setting their URL
+to `https://<instance>/bitwarden`.
+
 ## Routes for accounts and connect
 
 ### POST /bitwarden/api/accounts/prelogin
@@ -804,4 +807,35 @@ Host: alice.example.com
 
 ```http
 HTTP/1.1 204 No Content
+```
+
+## Cozy Organization
+
+### GET /bitwarden/organizations/cozy
+
+This route can be used to get information about the Cozy Organization. It
+requires a permission on the whole `com.bitwarden.organizations` doctype to
+access it. In particular, it gives the key to encrypt/decrypt the ciphers in
+this organization (encoded in base64).
+
+#### Request
+
+```http
+GET /bitwarden/organizations/cozy HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "organizationId": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
+  "collectionId": "385aaa2a-d48d-11e9-bb5f-6b31dfebcb4d",
+  "organizationKey": "oWeRYokoCMFsAja6lrp3RQ1PYOrex4tgAMECP4nX+a4IXdijbejQscvWqy9bMgLsX0HRc2igqBRMWdsPuFK0PQ=="
+}
 ```
