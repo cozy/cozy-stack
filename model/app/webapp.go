@@ -152,6 +152,7 @@ func (m *WebappManifest) Clone() couchdb.Doc {
 		cloned.Notifications[k] = *props
 	}
 
+	cloned.VendorLink = cloneRawMessage(m.VendorLink)
 	cloned.Locales = cloneRawMessage(m.Locales)
 	cloned.Langs = cloneRawMessage(m.Langs)
 	cloned.Platforms = cloneRawMessage(m.Platforms)

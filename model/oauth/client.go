@@ -111,7 +111,7 @@ func (c *Client) Clone() couchdb.Doc {
 		props := (&v).Clone()
 		cloned.Notifications[k] = *props
 	}
-	if cloned.Metadata != nil {
+	if c.Metadata != nil {
 		cloned.Metadata = c.Metadata.Clone()
 	}
 	return &cloned
