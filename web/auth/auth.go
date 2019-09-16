@@ -273,6 +273,7 @@ func migrateToHashedPassphrase(inst *instance.Instance, settings *settings.Setti
 	inst.PassphraseHash = hash
 	settings.PassphraseKdfIterations = iterations
 	settings.PassphraseKdf = instance.PBKDF2_SHA256
+	settings.SecurityStamp = lifecycle.NewSecurityStamp()
 	if err := lifecycle.CreatePassphraseKey(settings, masterKey); err != nil {
 		inst.Logger().Errorf("Could not create passphrase key: %s", err.Error())
 		return
