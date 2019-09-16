@@ -66,9 +66,9 @@ func newProfileResponse(inst *instance.Instance, settings *settings.Settings) (*
 
 // https://github.com/bitwarden/jslib/blob/master/src/models/response/domainsResponse.ts
 type domainsResponse struct {
-	EquivalentDomains       interface{} `json:"EquivalentDomains"`
-	GlobalEquivalentDomains interface{} `json:"GlobalEquivalentDomains"`
-	Object                  string      `json:"Object"`
+	EquivalentDomains       []interface{} `json:"EquivalentDomains"`
+	GlobalEquivalentDomains []interface{} `json:"GlobalEquivalentDomains"`
+	Object                  string        `json:"Object"`
 }
 
 // https://github.com/bitwarden/jslib/blob/master/src/models/response/syncResponse.ts
@@ -95,8 +95,8 @@ func newSyncResponse(settings *settings.Settings,
 		ciphersResponse[i] = newCipherResponse(c, settings)
 	}
 	domains := &domainsResponse{
-		EquivalentDomains:       nil,
-		GlobalEquivalentDomains: nil,
+		EquivalentDomains:       []interface{}{},
+		GlobalEquivalentDomains: []interface{}{},
 		Object:                  "domains",
 	}
 	var collections []*collectionResponse
