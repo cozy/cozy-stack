@@ -443,7 +443,7 @@ func PostDiscovery(c echo.Context) error {
 		email = member.Email
 		if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
 			if c.Request().Header.Get("Accept") == "application/json" {
-				return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
+				return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 			}
 			if err == sharing.ErrAlreadyAccepted {
 				return renderAlreadyAccepted(c, inst, cozyURL)
@@ -460,7 +460,7 @@ func PostDiscovery(c echo.Context) error {
 		if err != nil {
 			if err == sharing.ErrInvalidURL {
 				if c.Request().Header.Get("Accept") == "application/json" {
-					return c.JSON(http.StatusBadRequest, echo.Map{"error": err})
+					return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 				}
 				return renderDiscoveryForm(c, inst, http.StatusBadRequest, sharingID, state, sharecode, &sharing.Member{})
 			}
