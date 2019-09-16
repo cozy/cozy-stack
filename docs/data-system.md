@@ -11,7 +11,7 @@ Cozy-stack introduce this notion through a special `_type` field.
 This type name cannot contain `/`, and it should be unique among all developers,
 it is recommended to use the Java naming convention with a domain you own.
 
-All CozyCloud types will be prefixed by io.cozy and be pluralized. Example :
+All CozyCloud types will be prefixed by io.cozy and be pluralized. Example:
 `/data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee` Where, `io.cozy.` is
 the developer specific prefix, `events` the actual type, and
 `6494e0ac-dfcb-11e5-88c1-472e84a9cbee` the document's unique id .
@@ -69,7 +69,7 @@ Content-Type: application/json
 }
 ```
 
-### possible errors :
+### Possible errors
 
 -   401 unauthorized (no authentication has been provided)
 -   403 forbidden (the authentication does not provide permissions for this
@@ -143,7 +143,7 @@ Etag: "3-6494e0ac6494e0ac"
 }
 ```
 
-### possible errors :
+### possible errors
 
 -   401 unauthorized (no authentication has been provided)
 -   403 forbidden (the authentication does not provide permissions for this
@@ -202,7 +202,7 @@ Content-Type: application/json
 }
 ```
 
-### possible errors :
+### possible errors
 
 -   400 bad request
 -   401 unauthorized (no authentication has been provided)
@@ -265,7 +265,7 @@ Content-Type: application/json
 }
 ```
 
-### Possible errors :
+### Possible errors
 
 -   400 bad request
 -   401 unauthorized (no authentication has been provided)
@@ -335,7 +335,7 @@ Content-Type: application/json
 }
 ```
 
-### Possible errors :
+### Possible errors
 
 -   400 bad request
 -   401 unauthorized (no authentication has been provided)
@@ -382,7 +382,7 @@ Content-Type: application/json
 }
 ```
 
-### Possible errors :
+### Possible errors
 
 -   400 bad request
 -   401 unauthorized (no authentication has been provided)
