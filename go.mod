@@ -45,7 +45,7 @@ require (
 	golang.org/x/crypto v0.0.0-20190907121410-71b5226ff739
 	golang.org/x/image v0.0.0-20190902063713-cb417be4ba39
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/tools v0.0.0-20190909030654-5b82db07426d
+	golang.org/x/tools v0.0.0-20190916034716-92af9d69eff2
 	google.golang.org/appengine v1.6.2 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/dgrijalva/jwt-go.v3 v3.2.0
