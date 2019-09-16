@@ -224,14 +224,14 @@ func ListCiphers(c echo.Context) error {
 	req := &couchdb.AllDocsRequest{}
 	if err := couchdb.GetAllDocs(inst, consts.BitwardenCiphers, req, &ciphers); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
 	settings, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -261,7 +261,7 @@ func CreateCipher(c echo.Context) error {
 	cipher, err := req.toCipher()
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -276,14 +276,14 @@ func CreateCipher(c echo.Context) error {
 
 	if err := couchdb.CreateDoc(inst, cipher); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
 	settings, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -313,7 +313,7 @@ func CreateSharedCipher(c echo.Context) error {
 	cipher, err := req.Cipher.toCipher()
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -329,7 +329,7 @@ func CreateSharedCipher(c echo.Context) error {
 	settings, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 	if len(req.CollectionIDs) != 1 {
@@ -352,7 +352,7 @@ func CreateSharedCipher(c echo.Context) error {
 
 	if err := couchdb.CreateDoc(inst, cipher); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -384,14 +384,14 @@ func GetCipher(c echo.Context) error {
 			})
 		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
 	settings, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -423,7 +423,7 @@ func UpdateCipher(c echo.Context) error {
 			})
 		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -436,7 +436,7 @@ func UpdateCipher(c echo.Context) error {
 	cipher, err := req.toCipher()
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -457,14 +457,14 @@ func UpdateCipher(c echo.Context) error {
 	cipher.SetRev(old.Rev())
 	if err := couchdb.UpdateDocWithOld(inst, cipher, old); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
 	settings, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -496,13 +496,13 @@ func DeleteCipher(c echo.Context) error {
 			})
 		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
 	if err := couchdb.DeleteDoc(inst, cipher); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 	return c.NoContent(http.StatusOK)
@@ -537,7 +537,7 @@ func ShareCipher(c echo.Context) error {
 			})
 		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -554,7 +554,7 @@ func ShareCipher(c echo.Context) error {
 		inst.Logger().WithField("nspace", "bitwarden").
 			Infof("Bad cipher: %v", err)
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 	if req.Cipher.OrganizationID == "" {
@@ -567,7 +567,7 @@ func ShareCipher(c echo.Context) error {
 	settings, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 	if len(req.CollectionIDs) != 1 {
@@ -596,7 +596,7 @@ func ShareCipher(c echo.Context) error {
 	cipher.SetRev(old.Rev())
 	if err := couchdb.UpdateDocWithOld(inst, cipher, old); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 

@@ -68,7 +68,7 @@ func ListFolders(c echo.Context) error {
 	req := &couchdb.AllDocsRequest{}
 	if err := couchdb.GetAllDocs(inst, consts.BitwardenFolders, req, &folders); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -103,7 +103,7 @@ func CreateFolder(c echo.Context) error {
 	folder := req.toFolder()
 	if err := couchdb.CreateDoc(inst, folder); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -135,7 +135,7 @@ func GetFolder(c echo.Context) error {
 			})
 		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -167,7 +167,7 @@ func RenameFolder(c echo.Context) error {
 			})
 		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -192,7 +192,7 @@ func RenameFolder(c echo.Context) error {
 	folder.Metadata.ChangeUpdatedAt()
 	if err := couchdb.UpdateDoc(inst, folder); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -224,7 +224,7 @@ func DeleteFolder(c echo.Context) error {
 			})
 		}
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -232,7 +232,7 @@ func DeleteFolder(c echo.Context) error {
 	ciphers, err := bitwarden.FindCiphersInFolder(inst, id)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 	docs := make([]interface{}, len(ciphers))
@@ -244,13 +244,13 @@ func DeleteFolder(c echo.Context) error {
 	}
 	if err := couchdb.BulkUpdateDocs(inst, consts.BitwardenCiphers, docs, olds); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
 	if err := couchdb.DeleteDoc(inst, folder); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 	return c.NoContent(http.StatusNoContent)

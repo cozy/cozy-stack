@@ -131,7 +131,7 @@ func Sync(c echo.Context) error {
 	profile, err := newProfileResponse(inst, settings)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -139,7 +139,7 @@ func Sync(c echo.Context) error {
 	req := &couchdb.AllDocsRequest{}
 	if err := couchdb.GetAllDocs(inst, consts.BitwardenCiphers, req, &ciphers); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -150,7 +150,7 @@ func Sync(c echo.Context) error {
 			_ = couchdb.CreateDB(inst, consts.BitwardenFolders)
 		} else {
 			return c.JSON(http.StatusInternalServerError, echo.Map{
-				"error": err,
+				"error": err.Error(),
 			})
 		}
 	}

@@ -319,13 +319,13 @@ func GetCozy(c echo.Context) error {
 	settings, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 	orgKey, err := settings.OrganizationKey()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err,
+			"error": err.Error(),
 		})
 	}
 
@@ -357,7 +357,7 @@ func Routes(router *echo.Group) {
 	ciphers := api.Group("/ciphers")
 	ciphers.GET("", ListCiphers)
 	ciphers.POST("", CreateCipher)
-	ciphers.POST("/create", CreateCipher)
+	ciphers.POST("/create", CreateSharedCipher)
 	ciphers.GET("/:id", GetCipher)
 	ciphers.POST("/:id", UpdateCipher)
 	ciphers.PUT("/:id", UpdateCipher)

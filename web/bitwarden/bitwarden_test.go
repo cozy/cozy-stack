@@ -212,6 +212,24 @@ func TestDeleteFolder(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 }
 
+func TestCreateNoType(t *testing.T) {
+	body := `
+{
+	"name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
+	"organizationId": null
+}`
+	req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, result["error"])
+}
+
 func TestCreateLogin(t *testing.T) {
 	body := `
 {
