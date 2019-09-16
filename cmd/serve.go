@@ -220,5 +220,11 @@ func init() {
 	flags.String("csp-whitelist", "", "Whitelisted domains for the default allowed origins of the Content Secury Policy")
 	checkNoErr(viper.BindPFlag("csp_whitelist", flags.Lookup("csp-whitelist")))
 
+	flags.String("vault-decryptor-key", "", "the path to the key used to decrypt credentials")
+	checkNoErr(viper.BindPFlag("vault.credentials_decryptor_key", flags.Lookup("vault-decryptor-key")))
+
+	flags.String("vault-encryptor-key", "", "the path to the key used to encrypt credentials")
+	checkNoErr(viper.BindPFlag("vault.credentials_encryptor_key", flags.Lookup("vault-encryptor-key")))
+
 	RootCmd.AddCommand(serveCmd)
 }
