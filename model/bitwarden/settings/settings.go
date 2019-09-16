@@ -6,6 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 )
 
 // Settings is the struct that holds the birwarden settings
@@ -13,11 +14,14 @@ type Settings struct {
 	CouchRev                string `json:"_rev,omitempty"`
 	PassphraseKdf           int    `json:"passphrase_kdf,omitempty"`
 	PassphraseKdfIterations int    `json:"passphrase_kdf_iterations,omitempty"`
+	PassphraseHint          string `json:"passphrase_hint,omitempty"`
 	SecurityStamp           string `json:"security_stamp,omitempty"`
 	Key                     string `json:"key,omitempty"`
 	PublicKey               string `json:"public_key,omitempty"`
 	PrivateKey              string `json:"private_key,omitempty"`
-	PassphraseHint          string `json:"passphrase_hint,omitempty"`
+	OrganizationKey         []byte `json:"organization_key,omitempty"`
+	OrganizationID          string `json:"organization_id,omitempty"`
+	CollectionID            string `json:"collection_id,omitempty"`
 }
 
 // ID returns the settings qualified identifier
@@ -45,6 +49,30 @@ func (s *Settings) SetRev(rev string) { s.CouchRev = rev }
 func (s *Settings) Save(inst *instance.Instance) error {
 	if s.CouchRev == "" {
 		return couchdb.CreateNamedDocWithDB(inst, s)
+	}
+	return couchdb.UpdateDoc(inst, s)
+}
+
+// SetKeyPair is used to save the key pair of the user, that will be used to
+// share passwords with the cozy organization.
+func (s *Settings) SetKeyPair(inst *instance.Instance, pub, priv string) error {
+	s.PublicKey = pub
+	s.PrivateKey = priv
+	if len(s.OrganizationKey) != 64 {
+		s.OrganizationKey = crypto.GenerateRandomBytes(64)
+	}
+	var err error
+	if s.OrganizationID == "" {
+		s.OrganizationID, err = couchdb.UUID(inst)
+		if err != nil {
+			return err
+		}
+	}
+	if s.CollectionID == "" {
+		s.CollectionID, err = couchdb.UUID(inst)
+		if err != nil {
+			return err
+		}
 	}
 	return couchdb.UpdateDoc(inst, s)
 }

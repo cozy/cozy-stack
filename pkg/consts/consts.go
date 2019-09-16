@@ -48,6 +48,15 @@ const (
 	PassphraseParametersID = "io.cozy.settings.passphrase"
 )
 
+const (
+	// BitwardenCozyOrganizationName is the name of the organization used to
+	// share passwords between Cozy and Bitwarden clients.
+	BitwardenCozyOrganizationName = "Cozy"
+	// BitwardenCozyCollectionName is the name of the collection used to
+	// share passwords between Cozy and Bitwarden clients.
+	BitwardenCozyCollectionName = "Cozy Connectors"
+)
+
 // MaxItemsPerPageForMango is the maximal value accepted for the limit
 // parameter used for mango pagination
 const MaxItemsPerPageForMango = 1000

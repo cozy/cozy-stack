@@ -106,9 +106,7 @@ func SetKeyPair(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	settings.PrivateKey = data.Private
-	settings.PublicKey = data.Public
-	if err := settings.Save(inst); err != nil {
+	if err := settings.SetKeyPair(inst, data.Public, data.Private); err != nil {
 		return err
 	}
 	profile, err := newProfileResponse(inst, settings)

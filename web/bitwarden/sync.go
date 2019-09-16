@@ -81,14 +81,18 @@ type syncResponse struct {
 	Object      string                `json:"Object"`
 }
 
-func newSyncResponse(profile *profileResponse, ciphers []*bitwarden.Cipher, folders []*bitwarden.Folder) *syncResponse {
+func newSyncResponse(settings *settings.Settings,
+	profile *profileResponse,
+	ciphers []*bitwarden.Cipher,
+	folders []*bitwarden.Folder,
+) *syncResponse {
 	foldersResponse := make([]*folderResponse, len(folders))
 	for i, f := range folders {
 		foldersResponse[i] = newFolderResponse(f)
 	}
 	ciphersResponse := make([]*cipherResponse, len(ciphers))
 	for i, c := range ciphers {
-		ciphersResponse[i] = newCipherResponse(c)
+		ciphersResponse[i] = newCipherResponse(c, settings)
 	}
 	domains := &domainsResponse{
 		EquivalentDomains:       nil,
@@ -96,7 +100,7 @@ func newSyncResponse(profile *profileResponse, ciphers []*bitwarden.Cipher, fold
 		Object:                  "domains",
 	}
 	var collections []*collectionResponse
-	if coll, err := getCozyCollectionResponse(); err == nil {
+	if coll, err := getCozyCollectionResponse(settings); err == nil {
 		collections = append(collections, coll)
 	}
 	return &syncResponse{
@@ -151,6 +155,6 @@ func Sync(c echo.Context) error {
 		}
 	}
 
-	res := newSyncResponse(profile, ciphers, folders)
+	res := newSyncResponse(settings, profile, ciphers, folders)
 	return c.JSON(http.StatusOK, res)
 }

@@ -5,15 +5,8 @@ import (
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-)
-
-const (
-	// https://xkcd.com/221/
-	cozyOrganizationID   = "38ac39d0-d48d-11e9-91bf-f37e45d48c79"
-	cozyOrganizationName = "Cozy"
-	cozyCollectionID     = "385aaa2a-d48d-11e9-bb5f-6b31dfebcb4d"
-	cozyCollectionName   = "Cozy Connectors"
 )
 
 // https://github.com/bitwarden/jslib/blob/master/src/models/response/profileOrganizationResponse.ts
@@ -40,20 +33,11 @@ type organizationResponse struct {
 	Object         string `json:"Object"`
 }
 
-func getOrgKey() []byte {
-	key := make([]byte, 64)
-	for i := range key {
-		key[i] = 'x'
-	}
-	return key
-}
-
 func getCozyOrganizationResponse(inst *instance.Instance, settings *settings.Settings) (*organizationResponse, error) {
 	if settings == nil || settings.PublicKey == "" {
 		return nil, errors.New("No public key")
 	}
-	orgKey := getOrgKey()
-	key, err := crypto.EncryptWithRSA(settings.PublicKey, orgKey)
+	key, err := crypto.EncryptWithRSA(settings.PublicKey, settings.OrganizationKey)
 	if err != nil {
 		inst.Logger().WithField("nspace", "bitwarden").
 			Infof("Cannot encrypt with RSA: %s", err)
@@ -62,8 +46,8 @@ func getCozyOrganizationResponse(inst *instance.Instance, settings *settings.Set
 
 	email := inst.PassphraseSalt()
 	return &organizationResponse{
-		ID:             cozyOrganizationID,
-		Name:           cozyOrganizationName,
+		ID:             settings.OrganizationID,
+		Name:           consts.BitwardenCozyOrganizationName,
 		Key:            key,
 		Email:          string(email),
 		Plan:           "TeamsAnnually",
@@ -93,17 +77,20 @@ type collectionResponse struct {
 	Object         string `json:"Object"`
 }
 
-func getCozyCollectionResponse() (*collectionResponse, error) {
-	orgKey := getOrgKey()
+func getCozyCollectionResponse(settings *settings.Settings) (*collectionResponse, error) {
+	orgKey := settings.OrganizationKey
+	if len(orgKey) != 64 {
+		return nil, errors.New("Missing organization key")
+	}
 	iv := crypto.GenerateRandomBytes(16)
-	payload := []byte(cozyCollectionName)
+	payload := []byte(consts.BitwardenCozyCollectionName)
 	name, err := crypto.EncryptWithAES256HMAC(orgKey[:32], orgKey[32:], payload, iv)
 	if err != nil {
 		return nil, err
 	}
 	return &collectionResponse{
-		ID:             cozyCollectionID,
-		OrganizationID: cozyOrganizationID,
+		ID:             settings.CollectionID,
+		OrganizationID: settings.OrganizationID,
 		Name:           name,
 		Object:         "collection",
 	}, nil
