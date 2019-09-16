@@ -357,6 +357,7 @@ func Routes(router *echo.Group) {
 	ciphers := api.Group("/ciphers")
 	ciphers.GET("", ListCiphers)
 	ciphers.POST("", CreateCipher)
+	ciphers.POST("/create", CreateCipher)
 	ciphers.GET("/:id", GetCipher)
 	ciphers.POST("/:id", UpdateCipher)
 	ciphers.PUT("/:id", UpdateCipher)
