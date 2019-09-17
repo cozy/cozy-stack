@@ -158,7 +158,7 @@ jobs:
 konnectors:
   cmd: ./scripts/konnector-node-run.sh # run connectors with node
   # cmd: ./scripts/konnector-rkt-run.sh # run connectors with rkt
-  # cmd: ./scripts/konnector-nsjail-run.sh # run connectors with nsjail
+  # cmd: ./scripts/konnector-nsjail-node8-run.sh # run connectors with nsjail
 
 # mail service parameters for sending email via SMTP
 mail:
