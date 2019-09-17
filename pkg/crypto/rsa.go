@@ -9,6 +9,27 @@ import (
 	"errors"
 )
 
+// GenerateRSAKeyPair generates a key pair that can be used for RSA. The
+// private key is exported as PKCS#8, and the public key is exported as PKIX,
+// and then encoded in base64.
+func GenerateRSAKeyPair() (string, []byte, error) {
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", nil, err
+	}
+	privExported, err := x509.MarshalPKCS8PrivateKey(privKey)
+	if err != nil {
+		return "", nil, err
+	}
+
+	pubKey, err := x509.MarshalPKIXPublicKey(privKey.Public())
+	if err != nil {
+		return "", nil, err
+	}
+	pub64 := base64.StdEncoding.EncodeToString(pubKey)
+	return pub64, privExported, nil
+}
+
 // EncryptWithRSA uses RSA-2048-OAEP-SHA1 to encrypt the payload, and returns a
 // bitwarden cipher string.
 func EncryptWithRSA(key string, payload []byte) (string, error) {

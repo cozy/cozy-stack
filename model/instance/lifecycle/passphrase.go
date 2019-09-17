@@ -237,11 +237,19 @@ func setDefaultParameters(inst *instance.Instance, params *PassParameters) error
 	pass, masterKey, iterations := emulateClientSideHashing(inst, params.Pass)
 	params.Pass, params.Iterations = pass, iterations
 	if params.Key == "" {
-		key, err := CreatePassphraseKey(masterKey)
+		key, encKey, err := CreatePassphraseKey(masterKey)
 		if err != nil {
 			return err
 		}
 		params.Key = key
+		if params.PublicKey == "" && params.PrivateKey == "" {
+			pubKey, privKey, err := CreateKeyPair(encKey)
+			if err != nil {
+				return err
+			}
+			params.PublicKey = pubKey
+			params.PrivateKey = privKey
+		}
 	}
 	return nil
 }
@@ -270,14 +278,35 @@ func setPassphraseKdfAndSecret(inst *instance.Instance, settings *settings.Setti
 	}
 }
 
-// CreatePassphraseKey creates an encryption key for Bitwarden, and keeps an
-// encrypted version of it in the instance (the key is the master key, derived
-// from the master password).
+// CreatePassphraseKey creates an encryption key for Bitwarden. It returns in
+// the first position the key encrypted with the masterKey, and in clear in
+// second position.
 // See https://github.com/jcs/rubywarden/blob/master/API.md
-func CreatePassphraseKey(masterKey []byte) (string, error) {
+func CreatePassphraseKey(masterKey []byte) (string, []byte, error) {
 	pt := crypto.GenerateRandomBytes(64)
 	iv := crypto.GenerateRandomBytes(16)
-	return crypto.EncryptWithAES256CBC(masterKey, pt, iv)
+	encrypted, err := crypto.EncryptWithAES256CBC(masterKey, pt, iv)
+	if err != nil {
+		return "", nil, err
+	}
+	return encrypted, pt, nil
+}
+
+// CreateKeyPair creates a key pair for sharing ciphers with a bitwarden
+// organization. It returns in first position the public key, and in second
+// position the private key. The public key is encoded in base64. The private
+// key is encrypted, and in in the cipherString format.
+func CreateKeyPair(symKey []byte) (string, string, error) {
+	iv := crypto.GenerateRandomBytes(16)
+	pubKey, privKey, err := crypto.GenerateRSAKeyPair()
+	if err != nil {
+		return "", "", err
+	}
+	encrypted, err := crypto.EncryptWithAES256HMAC(symKey[:32], symKey[32:], privKey, iv)
+	if err != nil {
+		return "", "", err
+	}
+	return pubKey, encrypted, nil
 }
 
 // CheckPassphrase confirm an instance passport

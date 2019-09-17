@@ -274,12 +274,19 @@ func migrateToHashedPassphrase(inst *instance.Instance, settings *settings.Setti
 	settings.PassphraseKdfIterations = iterations
 	settings.PassphraseKdf = instance.PBKDF2_SHA256
 	settings.SecurityStamp = lifecycle.NewSecurityStamp()
-	key, err := lifecycle.CreatePassphraseKey(masterKey)
+	key, encKey, err := lifecycle.CreatePassphraseKey(masterKey)
 	if err != nil {
 		inst.Logger().Errorf("Could not create passphrase key: %s", err.Error())
 		return
 	}
 	settings.Key = key
+	pubKey, privKey, err := lifecycle.CreateKeyPair(encKey)
+	if err != nil {
+		inst.Logger().Errorf("Could not create key pair: %s", err.Error())
+		return
+	}
+	settings.PublicKey = pubKey
+	settings.PrivateKey = privKey
 	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
 		inst.Logger().Errorf("Could not update: %s", err.Error())
 	}

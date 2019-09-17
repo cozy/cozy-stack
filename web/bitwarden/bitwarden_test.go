@@ -434,7 +434,7 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, "en", profile["Culture"])
 	assert.Equal(t, false, profile["TwoFactorEnabled"])
 	assert.NotEmpty(t, profile["Key"])
-	assert.Equal(t, nil, profile["PrivateKey"])
+	assert.NotEmpty(t, profile["PrivateKey"])
 	assert.NotEmpty(t, profile["SecurityStamp"])
 	assert.Equal(t, "profile", profile["Object"])
 
