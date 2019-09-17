@@ -234,13 +234,17 @@ func TestUpdatePassphrase(t *testing.T) {
 	badPass := []byte("not-passphrase")
 	empty := []byte("")
 
-	err = lifecycle.UpdatePassphrase(i, newPass, empty, "", nil, 5000)
+	params := lifecycle.PassParameters{
+		Pass:       newPass,
+		Iterations: 5000,
+	}
+	err = lifecycle.UpdatePassphrase(i, empty, "", nil, params)
 	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
 
-	err = lifecycle.UpdatePassphrase(i, newPass, badPass, "", nil, 5000)
+	err = lifecycle.UpdatePassphrase(i, badPass, "", nil, params)
 	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
 
-	err = lifecycle.UpdatePassphrase(i, newPass, currentPass, "", nil, 5000)
+	err = lifecycle.UpdatePassphrase(i, currentPass, "", nil, params)
 	assert.NoError(t, err)
 
 	assert.NotEmpty(t, i.PassphraseHash, "PassphraseHash has not been saved")

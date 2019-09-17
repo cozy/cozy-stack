@@ -169,6 +169,8 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
     "current_passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
     "new_passphrase": "2e7e1e04300356adc8fabf5d304b58c564399746cc7a21464fd6593edd925720",
     "key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+    "public_key": "MIIBIjANBgkqhkiG9w...AQAB",
+    "private_key": "2.wZuKkufLV31Cpw1v1TQUDA==|u6bUNTaaGxu...y7s=",
     "iterations": 10000
 }
 ```
@@ -231,6 +233,8 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 {
     "new_passphrase": "2e7e1e04300356adc8fabf5d304b58c564399746cc7a21464fd6593edd925720",
     "key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+    "public_key": "MIIBIjANBgkqhkiG9w...AQAB",
+    "private_key": "2.wZuKkufLV31Cpw1v1TQUDA==|u6bUNTaaGxu...y7s=",
     "iterations": 10000,
     "two_factor_token": "YxOSUjxd0SNmuwEEDRHXfw==",
     "two_factor_passcode": "4947178"

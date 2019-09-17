@@ -51,7 +51,7 @@ func registerPassphrase(inst *instance.Instance, tok []byte, params PassParamete
 		return err
 	}
 	inst.RegisterToken = nil
-	setPassphraseKdfAndSecret(inst, settings, hash, params.Iterations, params.PublicKey, params.PrivateKey)
+	setPassphraseKdfAndSecret(inst, settings, hash, params)
 	return settings.Save(inst)
 }
 
@@ -169,7 +169,7 @@ func PassphraseRenew(inst *instance.Instance, tok []byte, params PassParameters)
 	}
 	inst.PassphraseResetToken = nil
 	inst.PassphraseResetTime = nil
-	setPassphraseKdfAndSecret(inst, settings, hash, params.Iterations, "", "")
+	setPassphraseKdfAndSecret(inst, settings, hash, params)
 	if err := settings.Save(inst); err != nil {
 		return err
 	}
@@ -177,8 +177,14 @@ func PassphraseRenew(inst *instance.Instance, tok []byte, params PassParameters)
 }
 
 // UpdatePassphrase replace the passphrase
-func UpdatePassphrase(inst *instance.Instance, pass, current []byte, twoFactorPasscode string, twoFactorToken []byte, kdfIterations int) error {
-	if len(pass) == 0 {
+func UpdatePassphrase(
+	inst *instance.Instance,
+	current []byte,
+	twoFactorPasscode string,
+	twoFactorToken []byte,
+	params PassParameters,
+) error {
+	if len(params.Pass) == 0 {
 		return instance.ErrMissingPassphrase
 	}
 	// With two factor authentication, we do not check the validity of the
@@ -196,7 +202,7 @@ func UpdatePassphrase(inst *instance.Instance, pass, current []byte, twoFactorPa
 			return instance.ErrInvalidPassphrase
 		}
 	}
-	hash, err := crypto.GenerateFromPassphrase(pass)
+	hash, err := crypto.GenerateFromPassphrase(params.Pass)
 	if err != nil {
 		return err
 	}
@@ -204,7 +210,7 @@ func UpdatePassphrase(inst *instance.Instance, pass, current []byte, twoFactorPa
 	if err != nil {
 		return nil
 	}
-	setPassphraseKdfAndSecret(inst, settings, hash, kdfIterations, "", "")
+	setPassphraseKdfAndSecret(inst, settings, hash, params)
 	if err := settings.Save(inst); err != nil {
 		return err
 	}
@@ -229,7 +235,9 @@ func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte) error {
 	if err != nil {
 		return err
 	}
-	setPassphraseKdfAndSecret(inst, settings, hash, kdfIterations, "", "")
+	setPassphraseKdfAndSecret(inst, settings, hash, PassParameters{
+		Iterations: kdfIterations,
+	})
 	if err := settings.Save(inst); err != nil {
 		return err
 	}
@@ -243,24 +251,20 @@ func emulateClientSideHashing(inst *instance.Instance, password []byte) ([]byte,
 	return hashed, masterKey, kdfIterations
 }
 
-func setPassphraseKdfAndSecret(
-	inst *instance.Instance,
-	settings *settings.Settings,
-	hash []byte,
-	kdfIterations int,
-	publicKey string,
-	privateKey string,
-) {
+func setPassphraseKdfAndSecret(inst *instance.Instance, settings *settings.Settings, hash []byte, params PassParameters) {
 	inst.PassphraseHash = hash
 	settings.PassphraseKdf = instance.PBKDF2_SHA256
-	settings.PassphraseKdfIterations = kdfIterations
+	settings.PassphraseKdfIterations = params.Iterations
 	inst.SessSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
 	if settings.SecurityStamp == "" {
 		settings.SecurityStamp = NewSecurityStamp()
 	}
-	if publicKey != "" && privateKey != "" {
-		settings.PublicKey = publicKey
-		settings.PrivateKey = privateKey
+	if params.Key != "" {
+		settings.Key = params.Key
+	}
+	if params.PublicKey != "" && params.PrivateKey != "" {
+		settings.PublicKey = params.PublicKey
+		settings.PrivateKey = params.PrivateKey
 	}
 }
 

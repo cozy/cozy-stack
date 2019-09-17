@@ -135,6 +135,9 @@ func updatePassphrase(c echo.Context) error {
 		TwoFactorPasscode string `json:"two_factor_passcode"`
 		TwoFactorToken    []byte `json:"two_factor_token"`
 		Force             bool   `json:"force,omitempty"`
+		Key               string `json:"key"`
+		PublicKey         string `json:"public_key"`
+		PrivateKey        string `json:"private_key"`
 	}{}
 	err := c.Bind(&args)
 	if err != nil {
@@ -187,8 +190,15 @@ func updatePassphrase(c echo.Context) error {
 		return jsonapi.InvalidParameter("KdfIterations", err)
 	}
 
-	err = lifecycle.UpdatePassphrase(inst, newPassphrase, currentPassphrase,
-		args.TwoFactorPasscode, args.TwoFactorToken, args.Iterations)
+	err = lifecycle.UpdatePassphrase(inst, currentPassphrase,
+		args.TwoFactorPasscode, args.TwoFactorToken,
+		lifecycle.PassParameters{
+			Pass:       newPassphrase,
+			Iterations: args.Iterations,
+			Key:        args.Key,
+			PublicKey:  args.PublicKey,
+			PrivateKey: args.PrivateKey,
+		})
 	if err != nil {
 		return jsonapi.BadRequest(err)
 	}
