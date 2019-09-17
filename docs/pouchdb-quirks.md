@@ -14,7 +14,7 @@ First, you can add a plugin called `pouchdb-debug` and enable extra logs with
 queries you run in the console and it's very helpful to understand what's going
 on under the hood.
 
-You will realize that Pouchdb operates in 2 phases : one part of your query may
+You will realize that Pouchdb operates in 2 phases: one part of your query may
 be done using indexes, and the other may be done in memory. Long story short:
 anything done in memory has significant performance impacts, especially as the
 number of items gets larger. A more detailed guide can be found

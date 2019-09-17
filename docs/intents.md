@@ -124,9 +124,9 @@ the _client_.
 
 To start an intent, it must specify the following information:
 
--   `action` : an action verb, which will be matched against the actions
+-   `action`: an action verb, which will be matched against the actions
     declared in services manifest files.
--   `type` : a **single** data type, which will be matched against the types
+-   `type`: a **single** data type, which will be matched against the types
     declared in services manifest files.
 
 There are also two optional fields that can be defined at the start of the
@@ -139,7 +139,7 @@ intent:
     represented as a base-64 encoded [Data URL](http://dataurl.net/#about) and
     must be named `content`. This convention is also recomended when dealing
     with other intent `type`s. See the examples below for an example of this.
--   `permissions` : When `type` is a Cozy Document Type and the client expects
+-   `permissions`: When `type` is a Cozy Document Type and the client expects
     to receive one or more documents as part of the reply from the service, the
     `permissions` field allows the client to request permissions for these
     documents. `permissions` is a list of HTTP Verbs. Refer

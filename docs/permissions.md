@@ -617,4 +617,4 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-Permissions required : GET on the whole doctype
+Permissions required: GET on the whole doctype

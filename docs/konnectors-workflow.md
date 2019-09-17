@@ -257,7 +257,7 @@ The cozy-stack prepares the execution of the konnector by doing these steps:
 
 ### Execute the konnector
 
-Start the konnector through nsjail, passing as ENV variables :
+Start the konnector through nsjail, passing as ENV variables:
 
     - `COZY_URL`:          the starting instance URL
     - `COZY_CREDENTIALS`:  security token to communicate with Cozy
@@ -572,7 +572,7 @@ Authorization: Bearer ACCESS_TOKEN
 
 When using the server-flow, we also get a refresh_token. It is used to get a new
 access_token when it expires. However, if konnectors are responsible for
-refreshing token there is a race condition risk :
+refreshing token there is a race condition risk:
 
 ```
 (konnector A) GET  https://api.service.com/resource TOKEN1     -> expired

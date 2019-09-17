@@ -65,7 +65,7 @@ Some event will trigger the activation of a job (ie. When a photo has been
 uploaded, generate thumbnails and extract EXIF metadatas). This should be done
 as soon as possible after the events
 
-### Sharing ?
+### Sharing?
 
 While not absolutely necessary, having cozy A notify cozy B when a shared
 document is changed allows for both better user experience (faster propagation)

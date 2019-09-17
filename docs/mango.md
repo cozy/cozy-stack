@@ -59,7 +59,7 @@ Content-Type: application/json
 }
 ```
 
-### possible errors :
+### Possible errors
 
 -   401 unauthorized (no authentication has been provided)
 -   403 forbidden (the authentication does not provide permissions for this
@@ -168,7 +168,7 @@ To paginate, the client should keep track of the value of the last index field.
 
 Index on io.cozy.events with fields `["calendar", "date"]`
 
-Try to get all events for a month :
+Try to get all events for a month:
 
 ```json
 selector: {
@@ -187,6 +187,6 @@ results and use it as next request `$gte`
 ```json
 selector: {
   "calendar": "my-calendar",
-  "date": { "$gte" :"20161023", "$lt": "20161030" }
+  "date": { "$gte": "20161023", "$lt": "20161030" }
 }
 ```
