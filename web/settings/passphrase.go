@@ -68,6 +68,8 @@ func registerPassphrase(c echo.Context) error {
 		Register   string `json:"register_token" form:"register_token"`
 		Passphrase string `json:"passphrase" form:"passphrase"`
 		Key        string `json:"key" form:"key"`
+		PublicKey  string `json:"public_key" form:"public_key"`
+		PrivateKey string `json:"private_key" form:"private_key"`
 		Iterations int    `json:"iterations" form:"iterations"`
 	}{}
 	if err := c.Bind(&args); err != nil {
@@ -93,6 +95,8 @@ func registerPassphrase(c echo.Context) error {
 		Pass:       passphrase,
 		Iterations: args.Iterations,
 		Key:        args.Key,
+		PublicKey:  args.PublicKey,
+		PrivateKey: args.PrivateKey,
 	})
 	if err != nil {
 		return jsonapi.BadRequest(err)

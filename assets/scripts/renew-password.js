@@ -23,7 +23,7 @@
           return w.password.makeEncKey(pass.masterKey)
         })
         .then(key => {
-          keyInput.value = key
+          keyInput.value = key.cipherString
           form.submit()
         })
     }

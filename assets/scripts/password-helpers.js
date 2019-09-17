@@ -135,14 +135,75 @@
       .then(encrypted => {
         const iv64 = fromBufferToB64(iv)
         const data = fromBufferToB64(encrypted)
-        // 0 means AES-256-CBC
-        return `0.${iv64}|${data}`
+        return {
+          // 0 means AesCbc256_B64
+          cipherString: `0.${iv64}|${data}`,
+          key: encKey
+        }
+      })
+  }
+
+  // Returns a promise that resolves to a new key pair, with the private key
+  // encrypted with the encryption key, and the public key encoded in base64.
+  function makeKeyPair(symKey) {
+    const subtle = w.crypto.subtle
+    const encKey = symKey.slice(0, 32)
+    const macKey = symKey.slice(32, 64)
+    const iv = randomBytes(16)
+    const rsaParams = {
+      name: 'RSA-OAEP',
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([0x01, 0x00, 0x01]), // 65537
+      hash: { name: 'SHA-1' }
+    }
+    const hmacParams = { name: 'HMAC', hash: 'SHA-256' }
+    let keyPair, publicKey, privateKey, encryptedKey
+    return subtle
+      .generateKey(rsaParams, true, ['encrypt', 'decrypt'])
+      .then(pair => {
+        keyPair = pair
+        return subtle.exportKey('spki', keyPair.publicKey)
+      })
+      .then(pubKey => {
+        publicKey = pubKey
+        return subtle.exportKey('pkcs8', keyPair.privateKey)
+      })
+      .then(privKey => {
+        privateKey = privKey
+        return subtle.importKey('raw', encKey, { name: 'AES-CBC' }, false, [
+          'encrypt'
+        ])
+      })
+      .then(impKey =>
+        subtle.encrypt({ name: 'AES-CBC', iv: iv }, impKey, privateKey)
+      )
+      .then(encrypted => {
+        encryptedKey = encrypted
+        return subtle.importKey('raw', macKey, hmacParams, false, ['sign'])
+      })
+      .then(impKey => {
+        const macData = new Uint8Array(iv.byteLength + encryptedKey.byteLength)
+        macData.set(new Uint8Array(iv), 0)
+        macData.set(new Uint8Array(encryptedKey), iv.byteLength)
+        return subtle.sign(hmacParams, impKey, macData)
+      })
+      .then(mac => {
+        const public64 = fromBufferToB64(publicKey)
+        const iv64 = fromBufferToB64(iv)
+        const priv = fromBufferToB64(encryptedKey)
+        const mac64 = fromBufferToB64(mac)
+        return {
+          publicKey: public64,
+          // 2 means AesCbc256_HmacSha256_B64
+          privateKey: `2.${iv64}|${priv}|${mac64}`
+        }
       })
   }
 
   w.password = {
     getStrength: getStrength,
     hash: hash,
-    makeEncKey: makeEncKey
+    makeEncKey: makeEncKey,
+    makeKeyPair: makeKeyPair
   }
 })(window)

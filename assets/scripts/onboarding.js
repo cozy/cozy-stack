@@ -7,6 +7,8 @@
   const submitButton = d.getElementById('onboarding-password-submit')
   const iterationsInput = d.getElementById('onboarding-password-iterations')
   const keyInput = d.getElementById('onboarding-password-key')
+  const publicKeyInput = d.getElementById('onboarding-password-public-key')
+  const privateKeyInput = d.getElementById('onboarding-password-private-key')
 
   form.addEventListener('submit', function(event) {
     const salt = form.dataset.salt
@@ -23,7 +25,12 @@
           return w.password.makeEncKey(pass.masterKey)
         })
         .then(key => {
-          keyInput.value = key
+          keyInput.value = key.cipherString
+          return w.password.makeKeyPair(key.key)
+        })
+        .then(pair => {
+          publicKeyInput.value = pair.publicKey
+          privateKeyInput.value = pair.privateKey
           form.submit()
         })
     }

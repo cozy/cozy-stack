@@ -19,6 +19,8 @@ type PassParameters struct {
 	Pass       []byte // Pass is the password hashed on client side, but not yet on server.
 	Iterations int    // Iterations is the number of iterations applied by PBKDF2 on client side.
 	Key        string // Key is the encryption key (encrypted, and in CipherString format).
+	PublicKey  string // PublicKey is part of the key pair for bitwarden (encoded in base64).
+	PrivateKey string // PrivateKey is the other part (encrypted, in CipherString format).
 }
 
 func registerPassphrase(inst *instance.Instance, tok []byte, params PassParameters) error {
@@ -49,7 +51,7 @@ func registerPassphrase(inst *instance.Instance, tok []byte, params PassParamete
 		return err
 	}
 	inst.RegisterToken = nil
-	setPassphraseKdfAndSecret(inst, settings, hash, params.Iterations)
+	setPassphraseKdfAndSecret(inst, settings, hash, params.Iterations, params.PublicKey, params.PrivateKey)
 	return settings.Save(inst)
 }
 
@@ -167,7 +169,7 @@ func PassphraseRenew(inst *instance.Instance, tok []byte, params PassParameters)
 	}
 	inst.PassphraseResetToken = nil
 	inst.PassphraseResetTime = nil
-	setPassphraseKdfAndSecret(inst, settings, hash, params.Iterations)
+	setPassphraseKdfAndSecret(inst, settings, hash, params.Iterations, "", "")
 	if err := settings.Save(inst); err != nil {
 		return err
 	}
@@ -202,7 +204,7 @@ func UpdatePassphrase(inst *instance.Instance, pass, current []byte, twoFactorPa
 	if err != nil {
 		return nil
 	}
-	setPassphraseKdfAndSecret(inst, settings, hash, kdfIterations)
+	setPassphraseKdfAndSecret(inst, settings, hash, kdfIterations, "", "")
 	if err := settings.Save(inst); err != nil {
 		return err
 	}
@@ -227,7 +229,7 @@ func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte) error {
 	if err != nil {
 		return err
 	}
-	setPassphraseKdfAndSecret(inst, settings, hash, kdfIterations)
+	setPassphraseKdfAndSecret(inst, settings, hash, kdfIterations, "", "")
 	if err := settings.Save(inst); err != nil {
 		return err
 	}
@@ -241,13 +243,24 @@ func emulateClientSideHashing(inst *instance.Instance, password []byte) ([]byte,
 	return hashed, masterKey, kdfIterations
 }
 
-func setPassphraseKdfAndSecret(inst *instance.Instance, settings *settings.Settings, hash []byte, kdfIterations int) {
+func setPassphraseKdfAndSecret(
+	inst *instance.Instance,
+	settings *settings.Settings,
+	hash []byte,
+	kdfIterations int,
+	publicKey string,
+	privateKey string,
+) {
 	inst.PassphraseHash = hash
 	settings.PassphraseKdf = instance.PBKDF2_SHA256
 	settings.PassphraseKdfIterations = kdfIterations
 	inst.SessSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
 	if settings.SecurityStamp == "" {
 		settings.SecurityStamp = NewSecurityStamp()
+	}
+	if publicKey != "" && privateKey != "" {
+		settings.PublicKey = publicKey
+		settings.PrivateKey = privateKey
 	}
 }
 

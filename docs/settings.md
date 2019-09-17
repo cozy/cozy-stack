@@ -87,7 +87,12 @@ Note: only `kdf: 0` is currently supported. It means PBKDF2 with SHA256.
 
 ### POST /settings/passphrase (form)
 
-The user can send its new hashed passphrase (base64 encoded) to finish the onboarding.
+The user can send its new hashed passphrase (base64 encoded) to finish the
+onboarding. The registration token can only be used once.
+
+The `key` is the encryption key for bitwarden, encrypted with the master key.
+The `public_key` and `private_key` are the key pair for sharing data with a
+bitwarden organization, and they are optional.
 
 #### Request
 
@@ -99,6 +104,8 @@ Content-Type: application/x-www-form-urlencoded
 register_token=37cddf40d7724988860fa0e03efd30fe&
 passphrase=4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791&
 key=0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=&
+public_key=MIIBIjANBgkqhkiG9w...AQAB&
+private_key=2.wZuKkufLV31Cpw1v1TQUDA==|u6bUNTaaGxu...y7s=&
 iterations=10000
 ```
 
@@ -113,7 +120,7 @@ Location: https://alice-home.example.com/
 ### POST /settings/passphrase (json)
 
 The onboarding application can send a request to this endpoint to register the
-passphrase of the user. The registration token can only be used once.
+passphrase of the user.
 
 #### Request
 
@@ -128,6 +135,8 @@ Content-Type: application/json
     "register_token": "37cddf40d7724988860fa0e03efd30fe",
     "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
     "key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+    "public_key": "MIIBIjANBgkqhkiG9w...AQAB",
+    "private_key": "2.wZuKkufLV31Cpw1v1TQUDA==|u6bUNTaaGxu...y7s=",
     "iterations": 10000
 }
 ```
