@@ -908,3 +908,17 @@ Content-Type: application/json
   "organizationKey": "oWeRYokoCMFsAja6lrp3RQ1PYOrex4tgAMECP4nX+a4IXdijbejQscvWqy9bMgLsX0HRc2igqBRMWdsPuFK0PQ=="
 }
 ```
+
+## Icons
+
+### GET /bitwarden/icons/:domain/icon.png
+
+This route returns an icon for the given domain, that can be used by the
+bitwarden clients. No authorization token is required.
+
+#### Request
+
+```http
+GET /bitwarden/icons/cozy.io/icon.png HTTP/1.1
+Host: alice.example.com
+```

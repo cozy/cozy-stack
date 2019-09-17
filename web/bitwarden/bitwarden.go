@@ -377,4 +377,10 @@ func Routes(router *echo.Group) {
 
 	orgs := router.Group("/organizations")
 	orgs.GET("/cozy", GetCozy)
+
+	icons := router.Group("/icons")
+	cacheControl := middlewares.CacheControl(middlewares.CacheOptions{
+		MaxAge: 24 * time.Hour,
+	})
+	icons.GET("/:domain/icon.png", GetIcon, cacheControl)
 }
