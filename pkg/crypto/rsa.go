@@ -35,7 +35,7 @@ func GenerateRSAKeyPair() (string, []byte, error) {
 func EncryptWithRSA(key string, payload []byte) (string, error) {
 	src, err := base64.StdEncoding.DecodeString(key)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	pubKey, err := x509.ParsePKIXPublicKey(src)
 	if err != nil {

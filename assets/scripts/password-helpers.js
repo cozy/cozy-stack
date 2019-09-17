@@ -157,19 +157,17 @@
       hash: { name: 'SHA-1' }
     }
     const hmacParams = { name: 'HMAC', hash: 'SHA-256' }
-    let keyPair, publicKey, privateKey, encryptedKey
+    let publicKey, privateKey, encryptedKey
     return subtle
       .generateKey(rsaParams, true, ['encrypt', 'decrypt'])
       .then(pair => {
-        keyPair = pair
-        return subtle.exportKey('spki', keyPair.publicKey)
+        const publicPromise = subtle.exportKey('spki', pair.publicKey)
+        const privatePromise = subtle.exportKey('pkcs8', pair.privateKey)
+        return [publicPromise, privatePromise]
       })
-      .then(pubKey => {
-        publicKey = pubKey
-        return subtle.exportKey('pkcs8', keyPair.privateKey)
-      })
-      .then(privKey => {
-        privateKey = privKey
+      .then(keys => {
+        publicKey = keys[0]
+        privateKey = keys[1]
         return subtle.importKey('raw', encKey, { name: 'AES-CBC' }, false, [
           'encrypt'
         ])

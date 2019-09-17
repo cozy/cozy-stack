@@ -509,7 +509,7 @@ func DeleteCipher(c echo.Context) error {
 }
 
 type shareCipherRequest struct {
-	Cipher        cipherRequest `json:"Cipher"`
+	Cipher        cipherRequest `json:"cipher"`
 	CollectionIDs []string      `json:"collectionIds"`
 }
 
