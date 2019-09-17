@@ -492,6 +492,75 @@ Content-Type: application/json
 }
 ```
 
+### POST /bitwarden/api/ciphers/create
+
+This route also allows to create a cipher, but this time, it is for a cipher
+shared with an organization.
+
+#### Request
+
+```http
+POST /bitwarden/api/ciphers/create HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "cipher": {
+    "type": 1,
+    "favorite": false,
+    "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+    "folderId": null,
+    "organizationId": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
+    "notes": null,
+    "login": {
+      "uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+      "username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+      "password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+      "totp": null
+    }
+  },
+  "collectionIds": ["385aaa2a-d48d-11e9-bb5f-6b31dfebcb4d"]
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+	"Object": "cipher",
+	"Id": "4c2869dd-0e1c-499f-b116-a824016df251",
+	"Type": 1,
+	"Favorite": false,
+	"Name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+	"FolderId": null,
+	"OrganizationId": "38ac39d0-d48d-11e9-91bf-f37e45d48c79",
+	"Notes": null,
+	"Login": {
+		"Uris": [
+			{
+				"Uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+				"Match": null,
+			},
+		],
+	},
+	"Username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+	"Password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+	"Totp": null,
+	"Fields": null,
+	"Attachments": null,
+	"RevisionDate": "2017-11-07T22:12:22.235914Z",
+	"Edit": true,
+	"OrganizationUseTotp": false
+}
+```
+
 ### GET /bitwarden/api/ciphers/:id
 
 #### Request
