@@ -38,12 +38,8 @@ func registerPassphrase(inst *instance.Instance, tok []byte, params PassParamete
 		return nil
 	}
 	if params.Iterations == 0 {
-		pass, masterKey, iterations := emulateClientSideHashing(inst, params.Pass)
-		params.Pass, params.Iterations = pass, iterations
-		if params.Key == "" {
-			if err := CreatePassphraseKey(settings, masterKey); err != nil {
-				return err
-			}
+		if err := setDefaultParameters(inst, &params); err != nil {
+			return err
 		}
 	}
 	hash, err := crypto.GenerateFromPassphrase(params.Pass)
@@ -155,12 +151,8 @@ func PassphraseRenew(inst *instance.Instance, tok []byte, params PassParameters)
 		return nil
 	}
 	if params.Iterations == 0 {
-		pass, masterKey, iterations := emulateClientSideHashing(inst, params.Pass)
-		params.Pass, params.Iterations = pass, iterations
-		if params.Key == "" {
-			if err := CreatePassphraseKey(settings, masterKey); err != nil {
-				return err
-			}
+		if err := setDefaultParameters(inst, &params); err != nil {
+			return err
 		}
 	}
 	hash, err := crypto.GenerateFromPassphrase(params.Pass)
@@ -222,26 +214,36 @@ func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte) error {
 	if len(newPassword) == 0 {
 		return instance.ErrMissingPassphrase
 	}
-
-	pass, masterKey, kdfIterations := emulateClientSideHashing(inst, newPassword)
+	params := PassParameters{Pass: newPassword}
+	if err := setDefaultParameters(inst, &params); err != nil {
+		return err
+	}
 	settings, err := settings.Get(inst)
 	if err != nil {
 		return nil
 	}
-	if err := CreatePassphraseKey(settings, masterKey); err != nil {
-		return err
-	}
-	hash, err := crypto.GenerateFromPassphrase(pass)
+	hash, err := crypto.GenerateFromPassphrase(params.Pass)
 	if err != nil {
 		return err
 	}
-	setPassphraseKdfAndSecret(inst, settings, hash, PassParameters{
-		Iterations: kdfIterations,
-	})
+	setPassphraseKdfAndSecret(inst, settings, hash, params)
 	if err := settings.Save(inst); err != nil {
 		return err
 	}
 	return update(inst)
+}
+
+func setDefaultParameters(inst *instance.Instance, params *PassParameters) error {
+	pass, masterKey, iterations := emulateClientSideHashing(inst, params.Pass)
+	params.Pass, params.Iterations = pass, iterations
+	if params.Key == "" {
+		key, err := CreatePassphraseKey(masterKey)
+		if err != nil {
+			return err
+		}
+		params.Key = key
+	}
+	return nil
 }
 
 func emulateClientSideHashing(inst *instance.Instance, password []byte) ([]byte, []byte, int) {
@@ -272,15 +274,10 @@ func setPassphraseKdfAndSecret(inst *instance.Instance, settings *settings.Setti
 // encrypted version of it in the instance (the key is the master key, derived
 // from the master password).
 // See https://github.com/jcs/rubywarden/blob/master/API.md
-func CreatePassphraseKey(settings *settings.Settings, masterKey []byte) error {
+func CreatePassphraseKey(masterKey []byte) (string, error) {
 	pt := crypto.GenerateRandomBytes(64)
 	iv := crypto.GenerateRandomBytes(16)
-	generated, err := crypto.EncryptWithAES256CBC(masterKey, pt, iv)
-	if err != nil {
-		return err
-	}
-	settings.Key = generated
-	return nil
+	return crypto.EncryptWithAES256CBC(masterKey, pt, iv)
 }
 
 // CheckPassphrase confirm an instance passport

@@ -7,6 +7,8 @@
   const submitButton = d.getElementById('renew-password-submit')
   const iterationsInput = d.getElementById('renew-password-iterations')
   const keyInput = d.getElementById('renew-password-key')
+  const publicKeyInput = d.getElementById('renew-password-public-key')
+  const privateKeyInput = d.getElementById('renew-password-private-key')
 
   form.addEventListener('submit', function(event) {
     const salt = form.dataset.salt
@@ -24,6 +26,11 @@
         })
         .then(key => {
           keyInput.value = key.cipherString
+          return w.password.makeKeyPair(key.key)
+        })
+        .then(pair => {
+          publicKeyInput.value = pair.publicKey
+          privateKeyInput.value = pair.privateKey
           form.submit()
         })
     }

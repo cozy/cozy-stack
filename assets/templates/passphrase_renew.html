@@ -45,6 +45,8 @@
             <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
             <input type="hidden" id="renew-password-iterations" name="iterations" value="{{.Iterations}}" />
             <input type="hidden" id="renew-password-key" name="key" value="" />
+            <input type="hidden" id="renew-password-public-key" name="public_key" value="" />
+            <input type="hidden" id="renew-password-private-key" name="private_key" value="" />
             <input type="hidden" id="passphrase-reset-token" name="passphrase_reset_token" value="{{.PassphraseResetToken}}" />
             <p class="wizard-notice u-coolGrey u-mt-1" id="login-password-tip">{{t "Passphrase renew Help"}}</p>
             <div class="o-field password-form u-m-0">

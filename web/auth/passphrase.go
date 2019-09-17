@@ -139,7 +139,6 @@ func passphraseRenew(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 	pass := []byte(c.FormValue("passphrase"))
-	key := c.FormValue("key")
 	iterations, _ := strconv.Atoi(c.FormValue("iterations"))
 	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
 	if err != nil {
@@ -148,7 +147,9 @@ func passphraseRenew(c echo.Context) error {
 	err = lifecycle.PassphraseRenew(inst, token, lifecycle.PassParameters{
 		Pass:       pass,
 		Iterations: iterations,
-		Key:        key,
+		Key:        c.FormValue("key"),
+		PublicKey:  c.FormValue("public_key"),
+		PrivateKey: c.FormValue("private_key"),
 	})
 	if err != nil {
 		if err == instance.ErrMissingToken {
