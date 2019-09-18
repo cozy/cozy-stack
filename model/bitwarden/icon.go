@@ -3,6 +3,7 @@ package bitwarden
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"golang.org/x/net/html"
 )
 
 const cacheTTL = 7 * 24 * time.Hour // 1 week
@@ -44,7 +46,7 @@ func GetIcon(domain string) (*Icon, error) {
 		return icon, nil
 	}
 
-	icon, err := downloadFavicon(domain)
+	icon, err := fetchIcon(domain)
 	if err != nil {
 		cache.Set(key, nil, cacheTTL)
 	} else {
@@ -71,6 +73,96 @@ func validateDomain(domain string) error {
 	}
 
 	return nil
+}
+
+func fetchIcon(domain string) (*Icon, error) {
+	if html, err := getPage(domain); err == nil {
+		candidates := getCandidateIcons(domain, html)
+		html.Close()
+		for _, candidate := range candidates {
+			if icon, err := downloadIcon(candidate); err == nil {
+				return icon, nil
+			}
+		}
+	}
+	return downloadFavicon(domain)
+}
+
+func getPage(domain string) (io.ReadCloser, error) {
+	req, err := http.NewRequest(http.MethodGet, "https://"+domain, nil)
+	if err != nil {
+		return nil, err
+	}
+	res, err := iconClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode != http.StatusOK {
+		res.Body.Close()
+		return nil, errors.New("Not status OK")
+	}
+	ct := strings.ToLower(res.Header.Get("Content-Type"))
+	if !strings.Contains(ct, "text/html") {
+		res.Body.Close()
+		return nil, errors.New("Not html")
+	}
+	return res.Body, nil
+}
+
+func getCandidateIcons(domain string, r io.Reader) []string {
+	tokenizer := html.NewTokenizer(r)
+	var candidates []string
+
+	// Consider only the first 1000 tokens, as the candidates icons must be in
+	// the <head>, and it avoid reading the whole html page.
+	for i := 0; i < 1000; i++ {
+		switch tokenizer.Next() {
+		case html.ErrorToken:
+			// End of the document, we're done
+			break
+		case html.StartTagToken, html.SelfClosingTagToken:
+			t := tokenizer.Token()
+			if !isLinkIcon(t) {
+				continue
+			}
+			if u := getHref(domain, t); u != "" {
+				candidates = append(candidates, u)
+			}
+		}
+	}
+
+	return candidates
+}
+
+func isLinkIcon(t html.Token) bool {
+	if strings.ToLower(t.Data) != "link" {
+		return false
+	}
+	for _, attr := range t.Attr {
+		if strings.ToLower(attr.Key) == "rel" {
+			vals := strings.Split(strings.ToLower(attr.Val), " ")
+			for _, val := range vals {
+				if val == "icon" || val == "apple-touch-icon" {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func getHref(domain string, t html.Token) string {
+	href := ""
+	for _, attr := range t.Attr {
+		if strings.ToLower(attr.Key) == "href" {
+			href = attr.Val
+			break
+		}
+	}
+	if strings.Contains(href, "://") {
+		return href
+	}
+	return "https://" + domain + "/" + strings.TrimPrefix(href, "/")
 }
 
 func downloadFavicon(domain string) (*Icon, error) {

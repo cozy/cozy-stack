@@ -1,6 +1,7 @@
 package bitwarden
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,8 +21,47 @@ func TestValidateDomain(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestGetPage(t *testing.T) {
+	page, err := getPage("github.com")
+	assert.NoError(t, err)
+	page.Close()
+}
+
+func TestCandidateIcons(t *testing.T) {
+	html := `<html><head><title>Foo</title></head><body><h1>Foo</h1></body></html>`
+	candidates := getCandidateIcons("example.com", strings.NewReader(html))
+	assert.Len(t, candidates, 0)
+
+	html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Accueil - LinuxFr.org</title>
+<style type="text/css">header#branding h1 { background-image: url(/images/logos/linuxfr2_gouttes.png) }</style>
+<link rel="stylesheet" href="/assets/application-e25e004c56c9986c6dc2b7d54b8640425a021edaa68e2948eff1c8dbc668caa0.css" />
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.png" />
+<link rel="alternate" type="application/atom+xml" title="Flux Atom des dépêches" href="/news.atom" />
+</head>
+<body class="logged admin" id="home-index">
+...
+</body>
+</html>
+`
+	candidates = getCandidateIcons("linuxfr.org", strings.NewReader(html))
+	assert.Len(t, candidates, 1)
+	assert.Equal(t, candidates[0], "https://linuxfr.org/favicon.png")
+}
+
 func TestDownloadIcon(t *testing.T) {
 	icon, err := downloadFavicon("github.com")
 	assert.NoError(t, err)
 	assert.Equal(t, icon.Mime, "image/x-icon")
+
+	icon, err = downloadIcon("https://github.githubassets.com/favicon.ico")
+	assert.NoError(t, err)
+	assert.Equal(t, icon.Mime, "image/vnd.microsoft.icon")
+
+	icon, err = fetchIcon("github.com")
+	assert.NoError(t, err)
+	assert.Equal(t, icon.Mime, "image/vnd.microsoft.icon")
 }
