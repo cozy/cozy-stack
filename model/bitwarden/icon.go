@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -111,7 +112,7 @@ func getPage(domain string) (io.ReadCloser, error) {
 
 func getCandidateIcons(domain string, r io.Reader) []string {
 	tokenizer := html.NewTokenizer(r)
-	var candidates []string
+	candidates := make(map[string]int)
 
 	// Consider only the first 1000 tokens, as the candidates icons must be in
 	// the <head>, and it avoid reading the whole html page.
@@ -122,47 +123,93 @@ func getCandidateIcons(domain string, r io.Reader) []string {
 			break
 		case html.StartTagToken, html.SelfClosingTagToken:
 			t := tokenizer.Token()
-			if !isLinkIcon(t) {
-				continue
-			}
-			if u := getHref(domain, t); u != "" {
-				candidates = append(candidates, u)
+			if u, p := getLinkIcon(domain, t); p >= 0 {
+				candidates[u] = p
 			}
 		}
 	}
 
-	return candidates
+	sorted := make([]string, 0, len(candidates))
+	for k := range candidates {
+		sorted = append(sorted, k)
+	}
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return candidates[sorted[i]] > candidates[sorted[j]]
+	})
+	return sorted
 }
 
-func isLinkIcon(t html.Token) bool {
+// getLinkIcon returns the href and the priority for the link.
+// -1 means that it is not a suitable icon link.
+// Higher priority is better.
+func getLinkIcon(domain string, t html.Token) (string, int) {
 	if strings.ToLower(t.Data) != "link" {
-		return false
+		return "", -1
 	}
+
+	isIcon := false
+	href := ""
+	priority := 100
 	for _, attr := range t.Attr {
-		if strings.ToLower(attr.Key) == "rel" {
+		switch strings.ToLower(attr.Key) {
+		case "rel":
 			vals := strings.Split(strings.ToLower(attr.Val), " ")
 			for _, val := range vals {
 				if val == "icon" || val == "apple-touch-icon" {
-					return true
+					isIcon = true
+					if val == "icon" {
+						priority += 10
+					}
 				}
+			}
+
+		case "href":
+			href = attr.Val
+			if strings.HasSuffix(href, ".png") {
+				priority += 2
+			}
+
+		case "sizes":
+			w, h := parseSizes(attr.Val)
+			if w != h {
+				priority -= 100
+			} else if w == 32 {
+				priority += 400
+			} else if w == 64 {
+				priority += 300
+			} else if w >= 24 && w <= 128 {
+				priority += 200
+			} else if w == 16 {
+				priority += 100
 			}
 		}
 	}
-	return false
+
+	if !isIcon || href == "" {
+		return "", -1
+	}
+	if !strings.Contains(href, "://") {
+		href = strings.TrimPrefix(href, "./")
+		href = strings.TrimPrefix(href, "/")
+		href = "https://" + domain + "/" + href
+	}
+	return href, priority
 }
 
-func getHref(domain string, t html.Token) string {
-	href := ""
-	for _, attr := range t.Attr {
-		if strings.ToLower(attr.Key) == "href" {
-			href = attr.Val
-			break
-		}
+func parseSizes(val string) (int, int) {
+	parts := strings.Split(val, "x")
+	if len(parts) != 2 {
+		return 0, 0
 	}
-	if strings.Contains(href, "://") {
-		return href
+	w, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0
 	}
-	return "https://" + domain + "/" + strings.TrimPrefix(href, "/")
+	h, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0
+	}
+	return w, h
 }
 
 func downloadFavicon(domain string) (*Icon, error) {

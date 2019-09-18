@@ -50,6 +50,38 @@ func TestCandidateIcons(t *testing.T) {
 	candidates = getCandidateIcons("linuxfr.org", strings.NewReader(html))
 	assert.Len(t, candidates, 1)
 	assert.Equal(t, candidates[0], "https://linuxfr.org/favicon.png")
+
+	html = `<!DOCTYPE html>
+	<html>
+	<head>
+	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+	<link rel="icon" type="image/png" href="./favicon-32x32.png" sizes="32x32">
+	<link rel="icon" type="image/png" href="./favicon-16x16.png" sizes="16x16">
+	</head>
+	<body>
+	...
+	</body>
+	</html>`
+	candidates = getCandidateIcons("example.com", strings.NewReader(html))
+	assert.Len(t, candidates, 3)
+	assert.Equal(t, candidates[0], "https://example.com/favicon-32x32.png")
+	assert.Equal(t, candidates[1], "https://example.com/favicon-16x16.png")
+	assert.Equal(t, candidates[2], "https://example.com/apple-touch-icon.png")
+
+	html = `<!DOCTYPE html>
+<html>
+<head>
+<link rel="apple-touch-icon" href="https://static.example.org/apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="./images/favicon.png">
+</head>
+<body>
+...
+</body>
+</html>`
+	candidates = getCandidateIcons("example.com", strings.NewReader(html))
+	assert.Len(t, candidates, 2)
+	assert.Equal(t, candidates[0], "https://example.com/images/favicon.png")
+	assert.Equal(t, candidates[1], "https://static.example.org/apple-touch-icon.png")
 }
 
 func TestDownloadIcon(t *testing.T) {
