@@ -55,9 +55,9 @@ func Head(name, context string) (*model.Asset, bool) {
 	}
 	key := fmt.Sprintf("dyn-assets:%s/%s", context, name)
 	cache := config.GetConfig().CacheStorage
-	if r, ok := cache.Get(key); ok {
+	if data, ok := cache.Get(key); ok {
 		asset := &model.Asset{}
-		if err := json.NewDecoder(r).Decode(asset); err == nil {
+		if err := json.Unmarshal(data, asset); err == nil {
 			return asset, true
 		}
 	}

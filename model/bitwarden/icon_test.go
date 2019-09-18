@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestValidateIcon(t *testing.T) {
+func TestValidateDomain(t *testing.T) {
 	err := validateDomain("")
 	assert.Equal(t, err.Error(), "Unauthorized domain")
 
