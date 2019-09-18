@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -158,6 +159,10 @@ func passphraseRenew(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid_token",
 		})
+	}
+	if err := bitwarden.DeleteUnrecoverableCiphers(inst); err != nil {
+		inst.Logger().WithField("nspace", "bitwarden").
+			Warnf("Error on ciphers deletion after password reset: %s", err)
 	}
 	return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/login", nil))
 }

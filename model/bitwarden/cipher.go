@@ -1,6 +1,8 @@
 package bitwarden
 
 import (
+	"encoding/json"
+
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -118,6 +120,30 @@ func FindCiphersInFolder(inst *instance.Instance, folderID string) ([]*Cipher, e
 		return nil, err
 	}
 	return ciphers, nil
+}
+
+// DeleteUnrecoverableCiphers will delete all the ciphers that are not shared
+// with the cozy organization. It should be called when the master password is
+// lost, as there are no ways to recover those encrypted ciphers.
+func DeleteUnrecoverableCiphers(inst *instance.Instance) error {
+	var ciphers []couchdb.Doc
+	err := couchdb.ForeachDocs(inst, consts.BitwardenCiphers, func(_ string, data json.RawMessage) error {
+		var c Cipher
+		if err := json.Unmarshal(data, &c); err != nil {
+			return err
+		}
+		if !c.SharedWithCozy {
+			ciphers = append(ciphers, &c)
+		}
+		return nil
+	})
+	if err != nil {
+		if couchdb.IsNoDatabaseError(err) {
+			return nil
+		}
+		return err
+	}
+	return couchdb.BulkDeleteDocs(inst, consts.BitwardenCiphers, ciphers)
 }
 
 var _ couchdb.Doc = &Cipher{}
