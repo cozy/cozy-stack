@@ -16,6 +16,10 @@ useful for debugging for example.
 The `thumbnail` worker is used internally by the stack to generate thumbnails
 from the image files of a cozy instance.
 
+## konnector worker
+
+The `konnector` worker is used to run installed [konnectors](https://github.com/konnectors/). See [the konnectors specs](https://docs.cozy.io/en/cozy-stack/konnectors-workflow/#konnector-worker-specs) for details. 
+
 ## service worker
 
 The `service` worker is used to process background jobs, generally to compute
