@@ -76,9 +76,18 @@ func (s *Settings) Save(inst *instance.Instance) error {
 // SetKeyPair is used to save the key pair of the user, that will be used to
 // share passwords with the cozy organization.
 func (s *Settings) SetKeyPair(inst *instance.Instance, pub, priv string) error {
-	var err error
 	s.PublicKey = pub
 	s.PrivateKey = priv
+	if err := s.EnsureCozyOrganization(inst); err != nil {
+		return err
+	}
+	return couchdb.UpdateDoc(inst, s)
+}
+
+// EnsureCozyOrganization make sure that the settings for the Cozy organization
+// are set.
+func (s *Settings) EnsureCozyOrganization(inst *instance.Instance) error {
+	var err error
 	if len(s.EncryptedOrgKey) == 0 {
 		orgKey := crypto.GenerateRandomBytes(64)
 		b64 := base64.StdEncoding.EncodeToString(orgKey)
@@ -99,7 +108,7 @@ func (s *Settings) SetKeyPair(inst *instance.Instance, pub, priv string) error {
 			return err
 		}
 	}
-	return couchdb.UpdateDoc(inst, s)
+	return nil
 }
 
 // OrganizationKey returns the organization key (in clear, not encrypted).

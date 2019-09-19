@@ -273,8 +273,7 @@ func setPassphraseKdfAndSecret(inst *instance.Instance, settings *settings.Setti
 		settings.Key = params.Key
 	}
 	if params.PublicKey != "" && params.PrivateKey != "" {
-		settings.PublicKey = params.PublicKey
-		settings.PrivateKey = params.PrivateKey
+		settings.SetKeyPair(inst, params.PublicKey, params.PrivateKey)
 	}
 }
 
