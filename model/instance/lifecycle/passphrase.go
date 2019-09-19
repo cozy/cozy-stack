@@ -161,6 +161,7 @@ func PassphraseRenew(inst *instance.Instance, tok []byte, params PassParameters)
 	}
 	inst.PassphraseResetToken = nil
 	inst.PassphraseResetTime = nil
+	settings.SecurityStamp = NewSecurityStamp()
 	setPassphraseKdfAndSecret(inst, settings, hash, params)
 	if err := settings.Save(inst); err != nil {
 		return err
@@ -226,6 +227,7 @@ func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte) error {
 	if err != nil {
 		return err
 	}
+	settings.SecurityStamp = NewSecurityStamp()
 	setPassphraseKdfAndSecret(inst, settings, hash, params)
 	if err := settings.Save(inst); err != nil {
 		return err
@@ -266,9 +268,6 @@ func setPassphraseKdfAndSecret(inst *instance.Instance, settings *settings.Setti
 	settings.PassphraseKdf = instance.PBKDF2_SHA256
 	settings.PassphraseKdfIterations = params.Iterations
 	inst.SessSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
-	if settings.SecurityStamp == "" {
-		settings.SecurityStamp = NewSecurityStamp()
-	}
 	if params.Key != "" {
 		settings.Key = params.Key
 	}
