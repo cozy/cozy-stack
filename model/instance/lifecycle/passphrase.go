@@ -47,6 +47,7 @@ func registerPassphrase(inst *instance.Instance, tok []byte, params PassParamete
 		return err
 	}
 	inst.RegisterToken = nil
+	settings.SecurityStamp = NewSecurityStamp()
 	setPassphraseKdfAndSecret(inst, settings, hash, params)
 	return settings.Save(inst)
 }
