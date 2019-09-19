@@ -64,13 +64,6 @@ func newProfileResponse(inst *instance.Instance, settings *settings.Settings) (*
 	return p, nil
 }
 
-// https://github.com/bitwarden/jslib/blob/master/src/models/response/domainsResponse.ts
-type domainsResponse struct {
-	EquivalentDomains       []interface{} `json:"EquivalentDomains"`
-	GlobalEquivalentDomains []interface{} `json:"GlobalEquivalentDomains"`
-	Object                  string        `json:"Object"`
-}
-
 // https://github.com/bitwarden/jslib/blob/master/src/models/response/syncResponse.ts
 type syncResponse struct {
 	Profile     *profileResponse      `json:"Profile"`
@@ -153,11 +146,7 @@ func Sync(c echo.Context) error {
 
 	var domains *domainsResponse
 	if c.QueryParam("excludeDomains") == "" {
-		domains = &domainsResponse{
-			EquivalentDomains:       []interface{}{},
-			GlobalEquivalentDomains: []interface{}{},
-			Object:                  "domains",
-		}
+		domains = newDomainsResponse(settings)
 	}
 
 	res := newSyncResponse(settings, profile, ciphers, folders, domains)

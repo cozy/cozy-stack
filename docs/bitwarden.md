@@ -264,6 +264,32 @@ Content-Type: application/json
 HTTP/1.1 204 No Content
 ```
 
+### GET /bitwarden/api/settings/domains
+
+#### Request
+
+```http
+GET /bitwarden/api/settings/domains HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "EquivalentDomains": [
+    ["stackoverflow.com", "serverfault.com", "superuser.com"]
+  ],
+  "GlobalEquivalentDomains": [42, 69],
+  "Object": "domains"
+}
+```
+
 ## Route for sync
 
 ### GET /bitwarden/api/sync

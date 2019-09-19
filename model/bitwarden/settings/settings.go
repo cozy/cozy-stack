@@ -29,6 +29,8 @@ type Settings struct {
 	EncryptedOrgKey         string                 `json:"encrypted_organization_key,omitempty"`
 	OrganizationID          string                 `json:"organization_id,omitempty"`
 	CollectionID            string                 `json:"collection_id,omitempty"`
+	EquivalentDomains       [][]string             `json:"equivalent_domains,omitempty"`
+	GlobalEquivalentDomains []int                  `json:"global_equivalent_domains,omitempty"`
 	Metadata                *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 }
 

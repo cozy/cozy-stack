@@ -354,6 +354,9 @@ func Routes(router *echo.Group) {
 	accounts.POST("/security-stamp", ChangeSecurityStamp)
 	accounts.GET("/revision-date", GetRevisionDate)
 
+	settings := api.Group("/settings")
+	settings.GET("/domains", GetDomains)
+
 	ciphers := api.Group("/ciphers")
 	ciphers.GET("", ListCiphers)
 	ciphers.POST("", CreateCipher)
