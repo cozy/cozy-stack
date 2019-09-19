@@ -85,6 +85,7 @@ func newSyncResponse(settings *settings.Settings,
 	profile *profileResponse,
 	ciphers []*bitwarden.Cipher,
 	folders []*bitwarden.Folder,
+	domains *domainsResponse,
 ) *syncResponse {
 	foldersResponse := make([]*folderResponse, len(folders))
 	for i, f := range folders {
@@ -93,11 +94,6 @@ func newSyncResponse(settings *settings.Settings,
 	ciphersResponse := make([]*cipherResponse, len(ciphers))
 	for i, c := range ciphers {
 		ciphersResponse[i] = newCipherResponse(c, settings)
-	}
-	domains := &domainsResponse{
-		EquivalentDomains:       []interface{}{},
-		GlobalEquivalentDomains: []interface{}{},
-		Object:                  "domains",
 	}
 	var collections []*collectionResponse
 	if coll, err := getCozyCollectionResponse(settings); err == nil {
@@ -155,6 +151,15 @@ func Sync(c echo.Context) error {
 		}
 	}
 
-	res := newSyncResponse(settings, profile, ciphers, folders)
+	var domains *domainsResponse
+	if c.QueryParam("excludeDomains") == "" {
+		domains = &domainsResponse{
+			EquivalentDomains:       []interface{}{},
+			GlobalEquivalentDomains: []interface{}{},
+			Object:                  "domains",
+		}
+	}
+
+	res := newSyncResponse(settings, profile, ciphers, folders, domains)
 	return c.JSON(http.StatusOK, res)
 }
