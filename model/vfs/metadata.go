@@ -2,11 +2,14 @@ package vfs
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"image"
 	"io"
 	"io/ioutil"
 	"math"
+	"strings"
+	"sync"
 	"time"
 
 	// Packages image/... are not used explicitly in the code below,
@@ -18,7 +21,9 @@ import (
 	// Same for image/webp
 	_ "golang.org/x/image/webp"
 
+	"github.com/bradfitz/latlong"
 	"github.com/cozy/goexif2/exif"
+	"github.com/cozy/goexif2/tiff"
 	"github.com/dhowden/tag"
 )
 
@@ -222,8 +227,10 @@ func (e *ExifExtractor) Result() Metadata {
 	x := <-e.ch
 	switch x := x.(type) {
 	case *exif.Exif:
+		localTZ := false
 		if dt, err := x.DateTime(); err == nil {
 			m["datetime"] = dt
+			localTZ = dt.Location() == time.Local
 		}
 		if flash, err := x.Flash(); err == nil {
 			m["flash"] = flash
@@ -233,6 +240,13 @@ func (e *ExifExtractor) Result() Metadata {
 				m["gps"] = map[string]float64{
 					"lat":  lat,
 					"long": long,
+				}
+				if localTZ {
+					if loc := lookupLocation(latlong.LookupZoneName(lat, long)); loc != nil {
+						if t, err := exifDateTimeInLocation(x, loc); err == nil {
+							m["datetime"] = t
+						}
+					}
 				}
 			}
 		}
@@ -257,6 +271,57 @@ func (e *ExifExtractor) Result() Metadata {
 		}
 	}
 	return m
+}
+
+// Code taken from perkeep
+// https://github.com/perkeep/perkeep/blob/7f17c0483f2e86575ed87aac35fb75154b16b7f4/pkg/schema/schema.go#L1043-L1094
+
+// This is basically a copy of the exif.Exif.DateTime() method, except:
+//   * it takes a *time.Location to assume
+//   * the caller already assumes there's no timezone offset or GPS time
+//     in the EXIF, so any of that code can be ignored.
+func exifDateTimeInLocation(x *exif.Exif, loc *time.Location) (time.Time, error) {
+	tag, err := x.Get(exif.DateTimeOriginal)
+	if err != nil {
+		tag, err = x.Get(exif.DateTime)
+		if err != nil {
+			return time.Time{}, err
+		}
+	}
+	if tag.Format() != tiff.StringVal {
+		return time.Time{}, errors.New("DateTime[Original] not in string format")
+	}
+	const exifTimeLayout = "2006:01:02 15:04:05"
+	dateStr := strings.TrimRight(string(tag.Val), "\x00")
+	return time.ParseInLocation(exifTimeLayout, dateStr, loc)
+}
+
+var zoneCache struct {
+	sync.RWMutex
+	m map[string]*time.Location
+}
+
+func lookupLocation(zone string) *time.Location {
+	if zone == "" {
+		return nil
+	}
+	zoneCache.RLock()
+	l, ok := zoneCache.m[zone]
+	zoneCache.RUnlock()
+	if ok {
+		return l
+	}
+	loc, err := time.LoadLocation(zone)
+	zoneCache.Lock()
+	if zoneCache.m == nil {
+		zoneCache.m = make(map[string]*time.Location)
+	}
+	zoneCache.m[zone] = loc // even if nil
+	zoneCache.Unlock()
+	if err != nil {
+		return nil
+	}
+	return loc
 }
 
 // AudioExtractor is used to extract album/artist/etc. from audio
