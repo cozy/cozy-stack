@@ -97,6 +97,9 @@ func (c *couchdbIndexer) prepareFileDoc(doc *FileDoc) error {
 	// taken on camera were the clock was never configured (e.g. 1970-01-01).
 	if date, ok := doc.Metadata["datetime"].(time.Time); ok && date.Year() > 1990 {
 		doc.CreatedAt = date
+		if doc.UpdatedAt.Before(date) {
+			doc.UpdatedAt = date
+		}
 	}
 	return nil
 }
