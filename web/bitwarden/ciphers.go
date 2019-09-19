@@ -301,8 +301,8 @@ func CreateSharedCipher(c echo.Context) error {
 	}
 
 	var req struct {
-		Cipher        cipherRequest `json:"cipher"`
-		CollectionIDs []string      `json:"collectionIds"`
+		cipherRequest
+		CollectionIDs []string `json:"collectionIds"`
 	}
 	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -310,7 +310,7 @@ func CreateSharedCipher(c echo.Context) error {
 		})
 	}
 
-	cipher, err := req.Cipher.toCipher()
+	cipher, err := req.toCipher()
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": err.Error(),
@@ -447,6 +447,12 @@ func UpdateCipher(c echo.Context) error {
 				"error": "folder not found",
 			})
 		}
+	}
+
+	// XXX On an update, the client send the OrganizationId but not the
+	// collectionIds.
+	if req.OrganizationID != "" && old.SharedWithCozy {
+		cipher.SharedWithCozy = true
 	}
 
 	if old.Metadata != nil {

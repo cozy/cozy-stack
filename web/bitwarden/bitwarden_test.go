@@ -24,7 +24,7 @@ import (
 var ts *httptest.Server
 var inst *instance.Instance
 var token string
-var folderID, cipherID string
+var orgaID, collID, folderID, cipherID string
 
 func TestPrelogin(t *testing.T) {
 	body := `{ "email": "me@cozy.example.net" }`
@@ -66,6 +66,31 @@ func TestConnect(t *testing.T) {
 	}
 	assert.NotEmpty(t, result["refresh_token"])
 	assert.NotEmpty(t, result["Key"])
+}
+
+func TestGetCozyOrg(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/organizations/cozy", nil)
+	req.Header.Add("Authorization", "Bearer invalid-token")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
+
+	req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/organizations/cozy", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]string
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	orgaID = result["organizationId"]
+	assert.NotEmpty(t, orgaID)
+	collID = result["collectionId"]
+	assert.NotEmpty(t, collID)
+	orgKey := result["organizationKey"]
+	assert.NotEmpty(t, orgKey)
+	_, err = base64.StdEncoding.DecodeString(orgKey)
+	assert.NoError(t, err)
 }
 
 func TestCreateFolder(t *testing.T) {
@@ -257,6 +282,9 @@ func TestCreateLogin(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
 	assertCipherResponse(t, result)
+	orgID, ok := result["OrganizationId"]
+	assert.True(t, ok)
+	assert.Empty(t, orgID)
 	cipherID = result["Id"].(string)
 }
 
@@ -274,6 +302,9 @@ func TestListCiphers(t *testing.T) {
 	assert.Len(t, data, 1)
 	item := data[0].(map[string]interface{})
 	assertCipherResponse(t, item)
+	orgID, ok := item["OrganizationId"]
+	assert.True(t, ok)
+	assert.Empty(t, orgID)
 }
 
 func TestGetCipher(t *testing.T) {
@@ -286,6 +317,9 @@ func TestGetCipher(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
 	assertCipherResponse(t, result)
+	orgID, ok := result["OrganizationId"]
+	assert.True(t, ok)
+	assert.Empty(t, orgID)
 }
 
 func assertCipherResponse(t *testing.T, result map[string]interface{}) {
@@ -300,9 +334,6 @@ func assertCipherResponse(t *testing.T, result map[string]interface{}) {
 	fID, ok := result["FolderId"]
 	assert.True(t, ok)
 	assert.Empty(t, fID)
-	orgID, ok := result["OrganizationId"]
-	assert.True(t, ok)
-	assert.Empty(t, orgID)
 	login := result["Login"].(map[string]interface{})
 	uris := login["Uris"].([]interface{})
 	assert.Len(t, uris, 1)
@@ -351,6 +382,9 @@ func TestUpdateCipher(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
 	assertUpdatedCipherResponse(t, result)
+	orgID, ok := result["OrganizationId"]
+	assert.True(t, ok)
+	assert.Empty(t, orgID)
 }
 
 func assertUpdatedCipherResponse(t *testing.T, result map[string]interface{}) {
@@ -363,10 +397,7 @@ func assertUpdatedCipherResponse(t *testing.T, result map[string]interface{}) {
 	assert.Equal(t, "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=", result["Notes"])
 	secure := result["SecureNote"].(map[string]interface{})
 	assert.Equal(t, float64(0), secure["Type"])
-	orgID, ok := result["OrganizationId"]
-	assert.True(t, ok)
-	assert.Empty(t, orgID)
-	_, ok = result["Login"]
+	_, ok := result["Login"]
 	assert.False(t, ok)
 	fields, ok := result["Fields"]
 	assert.True(t, ok)
@@ -461,6 +492,66 @@ func TestSync(t *testing.T) {
 	assert.Equal(t, "domains", domains["Object"])
 }
 
+func TestSharedCipher(t *testing.T) {
+	body := `
+{
+	"type": 1,
+	"favorite": false,
+	"name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+	"notes": null,
+	"folderId": null,
+	"organizationId": "` + orgaID + `",
+	"login": {
+		"uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+		"username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+		"password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+		"passwordRevisionDate": "2019-09-13T12:26:42+02:00",
+		"totp": null
+	},
+	"collectionIds": ["` + collID + `"]
+}`
+	req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/ciphers/create", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assertCipherResponse(t, result)
+	orgID, ok := result["OrganizationId"]
+	assert.True(t, ok)
+	assert.Equal(t, orgID, orgaID)
+	cipherID = result["Id"].(string)
+
+	body = `
+{
+	"type": 2,
+	"favorite": true,
+	"name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
+	"folderId": "` + folderID + `",
+	"organizationId": "` + orgaID + `",
+	"notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
+	"secureNote": {
+		"type": 0
+	}
+}`
+	req, _ = http.NewRequest("PUT", ts.URL+"/bitwarden/api/ciphers/"+cipherID, bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result2 map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result2)
+	assert.NoError(t, err)
+	assertUpdatedCipherResponse(t, result2)
+	orgID, ok = result2["OrganizationId"]
+	assert.True(t, ok)
+	assert.Equal(t, orgID, orgaID)
+}
+
 func TestSetKeyPair(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{
 		"encryptedPrivateKey": "2.demXNYbv8o47sG+fhYYvhg==|jXpxet7AApeIzrC3Yr752LwmjBdCZn6HJl6SjEOVP3rrOpGu5qV2rN0dBH5yXXWHusfxM7IvXkdC/fzBUAmFFOU5ubTp9kHFBqIn51tiJG6BRs5aTm7kF6TYSHVDIP5kUdX4O7DcmD23dqtq/8211DSAFR/DK1QDm5Da77Clh7NHxQE9Z9RTW1PBGV56DfzrY3N06H6vI+V6fTZ6HJRD2pdPczR2ZNC0ziQP7qCUYNlSjEv70O4VoYMSUsdb4UUE1YetcSdZ+dIAy+V2KHfoHmTFYI4DtMCW6WpDzp0ufPvszFjt1EwaMr78hujMrQr1gFWxgN8kOLJyYCrd1F5aIxWXHghBH/t+QU31gyQOxCdj18f10ssfuY/y7vocSJQ9pTRRPNh4beGAijV1AETaXWLK1L6oMnkbdhr9ZA2I6cZaHNCaHIynHQH7NUqKKQUJL/FyZ8rBv4YNnxCMRi9p88IoTb0oPsUCoNCaIZ2cvzXz+0VpU6zxj4ke7H6Bu7H46MSB1P+YHzGLtFNzZJVsUBEkz7dotUDeTeqlYKnq7oldWJ4HlqODevzCev+FRnYgrYpoXmYC/dxa1R5IlKCu6rEmP05A7Nw4h9cymnTwRMEoZRSppJ2O5FlSx/Go9Jz12g2Tfiaf+RvO7nkIb2qKiz7Jo2aJgakL5lMOlEdBA2+dsYSyX4Tvu8Ua4p0GcYaGOgSjXH27lQ73ZpHSicf4Q1kAooVl+6zTOPAqgMXOnyyVSRqBPse28HuDwGtmD8BAeVDIfkMW+a+PlWa+yoEWKfDHRduoxNod7Pc9xlNFt6eOeGoBQTEIiF7ccBDtNiSU1yfvqBZEgI8QF0QiGUo9eP7+59so5eu9/DuzjdqFMmGPtG3zHifMxuMzO5+E9UxTyHuCwvxuH93F4vmPC8zzXXn8/ErhEeqmYl1lxZbfJDm1qcjTkJibNKJ9+CXUeP0hq8yi07SEN1xJSZpupf90EUjrdFd3impz3gZKummEjTvzr3J1JX4gC/wD0mGkROHQwb0jCTDJNC18cX4usPYtNr3FxLZmxCGgPmZhkzFjF0qppN1aXTxQskdorEejQUwLL5EnWJySd9/W2P6PmjkJTAwKYUNHsmVUAfbMA7y7QBIjVFFWS4xYy0GJcc8NaLKkFMkGv/oluw552prWAJZ4aM2asoNgyv/JARrAF+JbOPSpax+CtUMO+LCFlBITHopbkHz0TwI1UMj/vIOh9wxDiMqe3YBiviymudX+B7awCaUPTLubWW1jwC4kBnXmRGAKyyIvzgOvwkdcKfQRxoTxq7JFTL/hWk7x4HlQqviSWGY166CLIp6SydCT+cqHMf3MHhe8AQZVC+nIDVNQZWfpFbOFb3nNDwlT+laWrtsiuX7hHiL0VLaCU4xzup5m4zvi59/Qxj0+d8n6M/3GP3/Tvp/bKY9m7CHoeimtGF9Ai2QFJFMOEQw3S1SUBL62ZsezKgBap6y1RqmMzdz/h3f5mhHxRMoQ0kgzZwMNWJvi2acGoIttcmBU7Cn6fqxYNi11dg17M7cFJAQCMicvd4pEwl8IBrm7uFrzbLvuLeolyiDx8GX3jfIo//Ceqa6P/RIqN8jKzH3nTSePuVqkXYiIdxhlAeF//EYW0CwOjd3GEoc=|aUt6NKqrLW4HeprkbwjuBzSQbR84imTujhUPxK17eX4=",
@@ -475,33 +566,10 @@ func TestSetKeyPair(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 }
 
-func TestGetCozyOrg(t *testing.T) {
-	req, _ := http.NewRequest("GET", ts.URL+"/bitwarden/organizations/cozy", nil)
-	req.Header.Add("Authorization", "Bearer invalid-token")
-	res, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 401, res.StatusCode)
-
-	req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/organizations/cozy", nil)
-	req.Header.Add("Authorization", "Bearer "+token)
-	res, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, res.StatusCode)
-	var result map[string]string
-	err = json.NewDecoder(res.Body).Decode(&result)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, result["organizationId"])
-	assert.NotEmpty(t, result["collectionId"])
-	orgKey := result["organizationKey"]
-	assert.NotEmpty(t, orgKey)
-	_, err = base64.StdEncoding.DecodeString(orgKey)
-	assert.NoError(t, err)
-}
-
 func TestSettingsDomains(t *testing.T) {
 	body, _ := json.Marshal(map[string]interface{}{
 		"equivalentDomains": [][]string{
-			[]string{"stackoverflow.com", "serverfault.com", "superuser.com"},
+			{"stackoverflow.com", "serverfault.com", "superuser.com"},
 		},
 		"globalEquivalentDomains": []int{42, 69},
 	})
