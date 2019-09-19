@@ -356,6 +356,8 @@ func Routes(router *echo.Group) {
 
 	settings := api.Group("/settings")
 	settings.GET("/domains", GetDomains)
+	settings.PUT("/domains", UpdateDomains)
+	settings.POST("/domains", UpdateDomains)
 
 	ciphers := api.Group("/ciphers")
 	ciphers.GET("", ListCiphers)

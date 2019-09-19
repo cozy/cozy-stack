@@ -264,6 +264,44 @@ Content-Type: application/json
 HTTP/1.1 204 No Content
 ```
 
+### PUT /bitwarden/api/settings/domains
+
+This route is also available via a `POST`, for compatibility with the web vault.
+
+#### Request
+
+```http
+PUT /bitwarden/api/settings/domains HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "equivalentDomains": [
+    ["stackoverflow.com", "serverfault.com", "superuser.com"]
+  ],
+  "globalEquivalentDomains": [42, 69],
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "EquivalentDomains": [
+    ["stackoverflow.com", "serverfault.com", "superuser.com"]
+  ],
+  "GlobalEquivalentDomains": [42, 69],
+  "Object": "domains"
+}
+```
+
 ### GET /bitwarden/api/settings/domains
 
 #### Request
