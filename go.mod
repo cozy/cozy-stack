@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/appleboy/go-fcm v0.1.4
 	github.com/bradfitz/latlong v0.0.0-20170410180902-f3db6d0dff40
-	github.com/cozy/goexif2 v0.0.0-20180125141006-830968571cff
+	github.com/cozy/goexif2 v0.0.0-20190919162732-41879c76f051
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20180914105234-d3dc4988de66
 	github.com/dhowden/tag v0.0.0-20190519100835-db0c67e351b1
@@ -14,6 +14,7 @@ require (
 	github.com/emersion/go-vcard v0.0.0-20190105225839-8856043f13c5
 	github.com/go-redis/redis/v7 v7.0.0-beta.4
 	github.com/gofrs/uuid v3.2.0+incompatible
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/gddo v0.0.0-20190904175337-72a348e765d2
 	github.com/google/go-querystring v1.0.0
 	github.com/google/gops v0.3.6
@@ -21,12 +22,15 @@ require (
 	github.com/h2non/filetype v1.0.10
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
+	github.com/jonas-p/go-shp v0.1.1 // indirect
 	github.com/justincampbell/bigduration v0.0.0-20160531141349-e45bf03c0666
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.6
 	github.com/leonelquinteros/gotext v1.4.0
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/mssola/user_agent v0.5.0
 	github.com/ncw/swift v1.0.49
 	github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443
