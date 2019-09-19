@@ -136,8 +136,6 @@ func updatePassphrase(c echo.Context) error {
 		TwoFactorToken    []byte `json:"two_factor_token"`
 		Force             bool   `json:"force,omitempty"`
 		Key               string `json:"key"`
-		PublicKey         string `json:"public_key"`
-		PrivateKey        string `json:"private_key"`
 	}{}
 	err := c.Bind(&args)
 	if err != nil {
@@ -196,8 +194,6 @@ func updatePassphrase(c echo.Context) error {
 			Pass:       newPassphrase,
 			Iterations: args.Iterations,
 			Key:        args.Key,
-			PublicKey:  args.PublicKey,
-			PrivateKey: args.PrivateKey,
 		})
 	if err != nil {
 		return jsonapi.BadRequest(err)
