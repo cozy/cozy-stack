@@ -498,6 +498,50 @@ func TestGetCozyOrg(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestSettingsDomains(t *testing.T) {
+	body, _ := json.Marshal(map[string]interface{}{
+		"equivalentDomains": [][]string{
+			[]string{"stackoverflow.com", "serverfault.com", "superuser.com"},
+		},
+		"globalEquivalentDomains": []int{42, 69},
+	})
+	buf := bytes.NewBuffer(body)
+	req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/settings/domains", buf)
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assertDomainsReponse(t, res)
+
+	req, _ = http.NewRequest("GET", ts.URL+"/bitwarden/api/settings/domains", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assertDomainsReponse(t, res)
+}
+
+func assertDomainsReponse(t *testing.T, res *http.Response) {
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err := json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assert.Equal(t, result["Object"], "domains")
+	equivalent, ok := result["EquivalentDomains"].([]interface{})
+	assert.True(t, ok)
+	assert.Len(t, equivalent, 1)
+	domains, ok := equivalent[0].([]interface{})
+	assert.True(t, ok)
+	assert.Len(t, domains, 3)
+	assert.Equal(t, domains[0], "stackoverflow.com")
+	assert.Equal(t, domains[1], "serverfault.com")
+	assert.Equal(t, domains[2], "superuser.com")
+	global, ok := result["GlobalEquivalentDomains"].([]interface{})
+	assert.True(t, ok)
+	assert.Len(t, global, 2)
+	assert.Equal(t, global[0], float64(42))
+	assert.Equal(t, global[1], float64(69))
+}
+
 func TestChangeSecurityHash(t *testing.T) {
 	email := inst.PassphraseSalt()
 	iter := crypto.DefaultPBKDF2Iterations
