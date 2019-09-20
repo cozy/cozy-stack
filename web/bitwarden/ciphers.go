@@ -301,8 +301,8 @@ func CreateSharedCipher(c echo.Context) error {
 	}
 
 	var req struct {
-		cipherRequest
-		CollectionIDs []string `json:"collectionIds"`
+		Cipher        cipherRequest `json:"cipher"`
+		CollectionIDs []string      `json:"collectionIds"`
 	}
 	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -310,7 +310,7 @@ func CreateSharedCipher(c echo.Context) error {
 		})
 	}
 
-	cipher, err := req.toCipher()
+	cipher, err := req.Cipher.toCipher()
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": err.Error(),
