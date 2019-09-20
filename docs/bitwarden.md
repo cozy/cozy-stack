@@ -297,7 +297,12 @@ Content-Type: application/json
   "EquivalentDomains": [
     ["stackoverflow.com", "serverfault.com", "superuser.com"]
   ],
-  "GlobalEquivalentDomains": [42, 69],
+  "GlobalEquivalentDomains": [
+    { Type: 2, Domains: ["ameritrade.com", "tdameritrade.com"], Excluded: false },
+    { Type: 3, Domains: ["bankofamerica.com", "bofa.com", "mbna.com", "usecfo.com"], Excluded: false },
+    { Type: 42, Domains: ["playstation.com", "sonyentertainmentnetwork.com"], Excluded: true },
+    { Type: 69, Domains: ["morganstanley.com", "morganstanleyclientserv.com"], Excluded: true }
+  ],
   "Object": "domains"
 }
 ```
@@ -323,7 +328,12 @@ Content-Type: application/json
   "EquivalentDomains": [
     ["stackoverflow.com", "serverfault.com", "superuser.com"]
   ],
-  "GlobalEquivalentDomains": [42, 69],
+  "GlobalEquivalentDomains": [
+    { Type: 2, Domains: ["ameritrade.com", "tdameritrade.com"], Excluded: false },
+    { Type: 3, Domains: ["bankofamerica.com", "bofa.com", "mbna.com", "usecfo.com"], Excluded: false },
+    { Type: 42, Domains: ["playstation.com", "sonyentertainmentnetwork.com"], Excluded: true },
+    { Type: 69, Domains: ["morganstanley.com", "morganstanleyclientserv.com"], Excluded: true }
+  ],
   "Object": "domains"
 }
 ```

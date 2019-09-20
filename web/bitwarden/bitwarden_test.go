@@ -10,6 +10,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -488,7 +489,7 @@ func TestSync(t *testing.T) {
 	assert.Empty(t, ed)
 	ged, ok := domains["GlobalEquivalentDomains"]
 	assert.True(t, ok)
-	assert.Empty(t, ged)
+	assert.NotEmpty(t, ged)
 	assert.Equal(t, "domains", domains["Object"])
 }
 
@@ -607,9 +608,14 @@ func assertDomainsReponse(t *testing.T, res *http.Response) {
 	assert.Equal(t, domains[2], "superuser.com")
 	global, ok := result["GlobalEquivalentDomains"].([]interface{})
 	assert.True(t, ok)
-	assert.Len(t, global, 2)
-	assert.Equal(t, global[0], float64(42))
-	assert.Equal(t, global[1], float64(69))
+	assert.Len(t, global, len(bitwarden.GlobalDomains))
+	for i := range global {
+		item := global[i].(map[string]interface{})
+		k := int(item["Type"].(float64))
+		excluded := (k == 42) || (k == 69)
+		assert.Equal(t, item["Excluded"], excluded)
+		assert.True(t, len(item["Domains"].([]interface{})) > 0)
+	}
 }
 
 func TestChangeSecurityHash(t *testing.T) {

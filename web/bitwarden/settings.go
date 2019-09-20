@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -11,17 +12,39 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// https://github.com/bitwarden/jslib/blob/master/src/models/response/globalDomainResponse.ts
+type globalDomainsReponse struct {
+	Typ      int      `json:"Type"`
+	Domains  []string `json:"Domains"`
+	Excluded bool     `json:"Excluded"`
+}
+
 // https://github.com/bitwarden/jslib/blob/master/src/models/response/domainsResponse.ts
 type domainsResponse struct {
-	EquivalentDomains       [][]string `json:"EquivalentDomains"`
-	GlobalEquivalentDomains []int      `json:"GlobalEquivalentDomains"`
-	Object                  string     `json:"Object"`
+	EquivalentDomains       [][]string             `json:"EquivalentDomains"`
+	GlobalEquivalentDomains []globalDomainsReponse `json:"GlobalEquivalentDomains"`
+	Object                  string                 `json:"Object"`
 }
 
 func newDomainsResponse(settings *settings.Settings) *domainsResponse {
+	globals := make([]globalDomainsReponse, 0, len(bitwarden.GlobalDomains))
+	for k, v := range bitwarden.GlobalDomains {
+		excluded := false
+		for _, domain := range settings.GlobalEquivalentDomains {
+			if bitwarden.GlobalEquivalentDomainsType(domain) == k {
+				excluded = true
+				break
+			}
+		}
+		globals = append(globals, globalDomainsReponse{
+			Typ:      int(k),
+			Domains:  v,
+			Excluded: excluded,
+		})
+	}
 	return &domainsResponse{
 		EquivalentDomains:       settings.EquivalentDomains,
-		GlobalEquivalentDomains: settings.GlobalEquivalentDomains,
+		GlobalEquivalentDomains: globals,
 		Object:                  "domains",
 	}
 }
