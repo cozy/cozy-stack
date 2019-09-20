@@ -407,6 +407,14 @@ func envMap() map[string]string {
 	return env
 }
 
+// math.Max() is a float64 function, so we define int function here
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // UseViper sets the configured instance of Config
 func UseViper(v *viper.Viper) error {
 	fsURL, err := url.Parse(v.GetString("fs.url"))
@@ -480,6 +488,18 @@ func UseViper(v *viper.Viper) error {
 
 	var redisOptions *redis.UniversalOptions
 	if v.GetString("redis.addrs") != "" {
+		// Default go-redis pool size is 10 * runtime.NumCPU() which is
+		// too short on a single-cpu server, we consume at leat 19 connections,
+		// so we enforce a minimum of 25, keeping the default 10 * runtime*NumCPU()
+		// if larger
+		redisPoolSize := v.GetInt("redis.pool_size")
+		if redisPoolSize < 25 {
+			if redisPoolSize != 0 {
+				log.Warningf("Redis pool size set smaller than 25. Using default value.")
+			}
+			redisPoolSize = max(25, 10*runtime.NumCPU())
+		}
+
 		redisOptions = &redis.UniversalOptions{
 			// Either a single address or a seed list of host:port addresses
 			// of cluster/sentinel nodes.
@@ -497,7 +517,7 @@ func UseViper(v *viper.Viper) error {
 			DialTimeout:        v.GetDuration("redis.dial_timeout"),
 			ReadTimeout:        v.GetDuration("redis.read_timeout"),
 			WriteTimeout:       v.GetDuration("redis.write_timeout"),
-			PoolSize:           v.GetInt("redis.pool_size"),
+			PoolSize:           redisPoolSize,
 			PoolTimeout:        v.GetDuration("redis.pool_timeout"),
 			IdleTimeout:        v.GetDuration("redis.idle_timeout"),
 			IdleCheckFrequency: v.GetDuration("redis.idle_check_frequency"),

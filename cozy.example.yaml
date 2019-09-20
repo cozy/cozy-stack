@@ -222,7 +222,7 @@ redis:
   # dial_timeout: 5s
   # read_timeout: 3s
   # write_timeout: 3s
-  # pool_size: 10 * runtime.NumCPU()
+  # pool_size: max(25, 10 * runtime.NumCPU())  # pool_size cannot be below 25
   # pool_timeout: 3s
   # idle_timeout: 5m
   # idle_check_frequency: 1m
