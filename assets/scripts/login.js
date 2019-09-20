@@ -59,14 +59,16 @@
     const salt = loginForm.dataset.salt
     const iterations = parseInt(loginForm.dataset.iterations, 10)
     if (iterations > 0) {
-      passPromise = w.password.hash(passphrase, salt, iterations)
+      passPromise = w.password
+        .hash(passphrase, salt, iterations)
+        .then(({ hashed }) => hashed)
     }
 
     passPromise
       .then(pass => {
         const reqBody =
           'passphrase=' +
-          encodeURIComponent(pass.hashed) +
+          encodeURIComponent(pass) +
           '&two-factor-trusted-device-token=' +
           encodeURIComponent(twoFactorTrustedDeviceToken) +
           '&long-run-session=' +
