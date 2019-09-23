@@ -56,22 +56,45 @@
     return { percentage: strengthPercentage, label: strengthLabel }
   }
 
-  function fromUtf8ToBuffer(str) {
+  function fromUtf8ToArray(str) {
     const strUtf8 = unescape(encodeURIComponent(str))
     const arr = new Uint8Array(strUtf8.length)
     for (let i = 0; i < strUtf8.length; i++) {
       arr[i] = strUtf8.charCodeAt(i)
     }
-    return arr.buffer
+    return arr
   }
 
   // Return a promise that resolves to the hash of the master password.
-  // TODO use cozy-auth.js from https://github.com/cozy/cozy-keys-lib/tree/init
-  // to support Edge
-  function hash(password, salt, iterations) {
+  // This implementation uses the asmcrypto.js lib (for Edge support).
+  function jsHash(password, salt, iterations) {
+    // 256 bits of sha-256 can be saved in a Uint8Array of length 32
+    const length = 32
+    const pbkdf2 = w.asmCrypto.Pbkdf2HmacSha256
+    const passwordArr = fromUtf8ToArray(password)
+    const saltArr = fromUtf8ToArray(salt)
+    const master = pbkdf2(passwordArr, saltArr, iterations, length)
+    const hashed = pbkdf2(master, passwordArr, 1, length)
+    let binary = ''
+    for (let i = 0; i < hashed.byteLength; i++) {
+      binary += String.fromCharCode(hashed[i])
+    }
+    let masterKey = ''
+    for (let i = 0; i < master.byteLength; i++) {
+      masterKey += String.fromCharCode(master[i])
+    }
+    return Promise.resolve({
+      hashed: w.btoa(binary),
+      masterKey: w.btoa(masterKey)
+    })
+  }
+
+  // Return a promise that resolves to the hash of the master password.
+  // This implementation uses the native crypto.subtle from the browser.
+  function nativeHash(password, salt, iterations) {
     const subtle = w.crypto.subtle
-    const passwordBuf = fromUtf8ToBuffer(password)
-    const saltBuf = fromUtf8ToBuffer(salt)
+    const passwordBuf = fromUtf8ToArray(password).buffer
+    const saltBuf = fromUtf8ToArray(salt).buffer
     const first = {
       name: 'PBKDF2',
       salt: saltBuf,
@@ -122,7 +145,6 @@
 
   // Returns a promise that resolves to a new encryption key, encrypted with
   // the masterKey and ready to be sent to the server on onboarding.
-  // TODO add this to cozy-auth.js and use it
   function makeEncKey(masterKey) {
     const subtle = w.crypto.subtle
     const encKey = randomBytes(64)
@@ -197,6 +219,8 @@
         }
       })
   }
+
+  const hash = w.asmCrypto ? jsHash : nativeHash
 
   w.password = {
     getStrength: getStrength,

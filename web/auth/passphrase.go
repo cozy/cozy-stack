@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
+	"github.com/mssola/user_agent"
 )
 
 func passphraseResetForm(c echo.Context) error {
@@ -50,10 +51,13 @@ func passphraseForm(c echo.Context) error {
 		})
 	}
 
+	ua := user_agent.New(c.Request().UserAgent())
+	browser, _ := ua.Browser()
 	matomo := config.GetConfig().Matomo
 	if matomo.URL != "" {
 		middlewares.AppendCSPRule(c, "img", matomo.URL)
 	}
+
 	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
 		"CozyUI":        middlewares.CozyUI(inst),
 		"Title":         inst.TemplateTitle(),
@@ -64,10 +68,11 @@ func passphraseForm(c echo.Context) error {
 		"Iterations":    crypto.DefaultPBKDF2Iterations,
 		"Salt":          string(inst.PassphraseSalt()),
 		"RegisterToken": registerToken,
+		"Favicon":       middlewares.Favicon(inst),
+		"Edge":          browser == "Edge",
 		"MatomoURL":     matomo.URL,
 		"MatomoSiteID":  matomo.SiteID,
 		"MatomoAppID":   matomo.OnboardingAppID,
-		"Favicon":       middlewares.Favicon(inst),
 	})
 }
 
@@ -104,6 +109,7 @@ func passphraseRenewForm(c echo.Context) error {
 		redirect := inst.DefaultRedirection().String()
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
+
 	// Check that the token is actually defined and well encoded. The actual
 	// token value checking is also done on the passphraseRenew handler.
 	token, err := hex.DecodeString(c.QueryParam("token"))
@@ -118,6 +124,10 @@ func passphraseRenewForm(c echo.Context) error {
 			"error": "invalid_token",
 		})
 	}
+
+	ua := user_agent.New(c.Request().UserAgent())
+	browser, _ := ua.Browser()
+
 	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
 		"Title":                inst.TemplateTitle(),
 		"CozyUI":               middlewares.CozyUI(inst),
@@ -130,6 +140,7 @@ func passphraseRenewForm(c echo.Context) error {
 		"PassphraseResetToken": hex.EncodeToString(token),
 		"CSRF":                 c.Get("csrf"),
 		"Favicon":              middlewares.Favicon(inst),
+		"Edge":                 browser == "Edge",
 	})
 }
 

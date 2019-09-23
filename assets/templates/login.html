@@ -94,6 +94,7 @@
         </form>
       </main>
     </div>
+    {{if .Edge}}<script src="{{asset .Domain "/js/asmcrypto.js"}}"></script>{{end}}
     <script src="{{asset .Domain "/scripts/password-helpers.js"}}"></script>
     <script src="{{asset .Domain "/scripts/password-visibility.js"}}"></script>
     <script src="{{asset .Domain "/scripts/login.js"}}"></script>
