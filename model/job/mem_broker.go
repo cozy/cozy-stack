@@ -202,7 +202,7 @@ func (b *memBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, error)
 			return nil, err
 		}
 		if limits.IsLimitReachedOrExceeded(err) {
-			return nil, nil
+			return nil, err
 		}
 	}
 

@@ -207,7 +207,7 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 			return nil, err
 		}
 		if limits.IsLimitReachedOrExceeded(err) {
-			return nil, nil
+			return nil, err
 		}
 	}
 

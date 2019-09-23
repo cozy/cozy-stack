@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -604,6 +605,9 @@ func wrapJobsError(err error) error {
 		return jsonapi.NotFound(err)
 	case job.ErrUnknownTrigger:
 		return jsonapi.InvalidAttribute("Type", err)
+	case limits.ErrRateLimitReached,
+		limits.ErrRateLimitExceeded:
+		return jsonapi.BadRequest(err)
 	}
 	return err
 }
