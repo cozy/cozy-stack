@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
+	_ "github.com/cozy/cozy-stack/worker/mails"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )

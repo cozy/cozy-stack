@@ -5,14 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -214,7 +217,12 @@ func getInitialCredentials(c echo.Context) error {
 			"error": "invalid password",
 		})
 	}
-	// TODO manage 2FA
+
+	if inst.HasAuthMode(instance.TwoFactorMail) {
+		if !checkTwoFactor(c, inst) {
+			return nil
+		}
+	}
 
 	// Register the client
 	kind, softwareID := bitwarden.ParseBitwardenDeviceType(c.FormValue("deviceType"))
@@ -262,6 +270,52 @@ func getInitialCredentials(c echo.Context) error {
 		Key:       key,
 	}
 	return c.JSON(http.StatusOK, out)
+}
+
+// checkTwoFactor returns true if the request has a valid 2FA code.
+func checkTwoFactor(c echo.Context, inst *instance.Instance) bool {
+	cache := config.GetConfig().CacheStorage
+	key := "bw-2fa:" + inst.Domain
+
+	if passcode := c.FormValue("twoFactorToken"); passcode != "" {
+		if token, ok := cache.Get(key); ok {
+			if inst.ValidateTwoFactorPasscode(token, passcode) {
+				return true
+			}
+		}
+	}
+
+	email, err := inst.SettingsEMail()
+	if err != nil {
+		_ = c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+		return false
+	}
+	var obscured string
+	if parts := strings.SplitN(email, "@", 2); len(parts) == 2 {
+		s := strings.Map(func(_ rune) rune { return '*' }, parts[0])
+		obscured = s + "@" + parts[1]
+	}
+
+	token, err := lifecycle.SendTwoFactorPasscode(inst)
+	if err != nil {
+		_ = c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+		return false
+	}
+	cache.Set(key, token, 5*time.Minute)
+
+	_ = c.JSON(http.StatusBadRequest, echo.Map{
+		"error":             "invalid_grant",
+		"error_description": "Two factor required.",
+		// 1 means email
+		// https://github.com/bitwarden/jslib/blob/master/src/enums/twoFactorProviderType.ts
+		"TwoFactorProviders":  []int{1},
+		"TwoFactorProviders2": map[string]string{"1": obscured},
+	})
+	return false
 }
 
 func refreshToken(c echo.Context) error {

@@ -218,7 +218,7 @@ func sendRegistrationNotification(entry *registrationEntry, registrationNotifica
 		clientID = entry.ClientID
 	}
 	if clientID != "" {
-		SendNewRegistrationNotification(i, clientID)
+		return SendNewRegistrationNotification(i, clientID)
 	}
 
 	var login LoginEntry

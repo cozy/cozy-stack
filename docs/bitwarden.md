@@ -83,6 +83,10 @@ deviceName=firefox&
 devicePushToken=
 ```
 
+If authentication with two factors is enabled on the instance, this request
+will fail with a 400 status, but it will send an email with the code. The
+request can be retried with an additional paramter: `twoFactorToken`.
+
 #### Request (refresh token)
 
 ```http
