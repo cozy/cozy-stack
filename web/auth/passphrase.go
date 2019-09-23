@@ -53,6 +53,11 @@ func passphraseForm(c echo.Context) error {
 
 	ua := user_agent.New(c.Request().UserAgent())
 	browser, _ := ua.Browser()
+	edge := browser == "Edge"
+	iterations := crypto.DefaultPBKDF2Iterations
+	if edge {
+		iterations = crypto.EdgePBKDF2Iterations
+	}
 	matomo := config.GetConfig().Matomo
 	if matomo.URL != "" {
 		middlewares.AppendCSPRule(c, "img", matomo.URL)
@@ -65,11 +70,11 @@ func passphraseForm(c echo.Context) error {
 		"Domain":        inst.ContextualDomain(),
 		"ContextName":   inst.ContextName,
 		"Locale":        inst.Locale,
-		"Iterations":    crypto.DefaultPBKDF2Iterations,
+		"Iterations":    iterations,
 		"Salt":          string(inst.PassphraseSalt()),
 		"RegisterToken": registerToken,
 		"Favicon":       middlewares.Favicon(inst),
-		"Edge":          browser == "Edge",
+		"Edge":          edge,
 		"MatomoURL":     matomo.URL,
 		"MatomoSiteID":  matomo.SiteID,
 		"MatomoAppID":   matomo.OnboardingAppID,
@@ -127,6 +132,11 @@ func passphraseRenewForm(c echo.Context) error {
 
 	ua := user_agent.New(c.Request().UserAgent())
 	browser, _ := ua.Browser()
+	edge := browser == "Edge"
+	iterations := crypto.DefaultPBKDF2Iterations
+	if edge {
+		iterations = crypto.EdgePBKDF2Iterations
+	}
 
 	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
 		"Title":                inst.TemplateTitle(),
@@ -135,12 +145,12 @@ func passphraseRenewForm(c echo.Context) error {
 		"Domain":               inst.ContextualDomain(),
 		"ContextName":          inst.ContextName,
 		"Locale":               inst.Locale,
-		"Iterations":           crypto.DefaultPBKDF2Iterations,
+		"Iterations":           iterations,
 		"Salt":                 string(inst.PassphraseSalt()),
 		"PassphraseResetToken": hex.EncodeToString(token),
 		"CSRF":                 c.Get("csrf"),
 		"Favicon":              middlewares.Favicon(inst),
-		"Edge":                 browser == "Edge",
+		"Edge":                 edge,
 	})
 }
 

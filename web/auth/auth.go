@@ -265,8 +265,7 @@ func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, long
 	return sessionID, nil
 }
 
-func migrateToHashedPassphrase(inst *instance.Instance, settings *settings.Settings, passphrase []byte) {
-	iterations := crypto.DefaultPBKDF2Iterations
+func migrateToHashedPassphrase(inst *instance.Instance, settings *settings.Settings, passphrase []byte, iterations int) {
 	salt := inst.PassphraseSalt()
 	pass, masterKey := crypto.HashPassWithPBKDF2(passphrase, salt, iterations)
 	hash, err := crypto.GenerateFromPassphrase(pass)
@@ -315,10 +314,16 @@ func login(c echo.Context) error {
 	if ok { // The user was already logged-in
 		sessionID = sess.ID()
 	} else if lifecycle.CheckPassphrase(inst, passphrase) == nil {
+		ua := user_agent.New(c.Request().UserAgent())
+		browser, _ := ua.Browser()
+		iterations := crypto.DefaultPBKDF2Iterations
+		if browser == "Edge" {
+			iterations = crypto.EdgePBKDF2Iterations
+		}
 		settings, err := settings.Get(inst)
 		// If the passphrase was not yet hashed on the client side, migrate it
 		if err == nil && settings.PassphraseKdfIterations == 0 {
-			migrateToHashedPassphrase(inst, settings, passphrase)
+			migrateToHashedPassphrase(inst, settings, passphrase, iterations)
 		}
 
 		// In case the second factor authentication mode is "mail", we also

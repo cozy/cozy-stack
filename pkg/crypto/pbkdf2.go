@@ -9,9 +9,14 @@ import (
 
 // DefaultPBKDF2Iterations is the number of iterations used to hash the
 // passphrase on the client-side with the PBKDF2 algorithm.
-// TODO 100K is recommended, but it is currently only 10K as 100K may be too
-// much in Edge. We should test that!
-const DefaultPBKDF2Iterations = 10000
+const DefaultPBKDF2Iterations = 100000
+
+// EdgePBKDF2Iterations is the number of iterations used to hash the passphrase
+// on the client-side with the PBKDF2 algorithm when the browser is Edge. As
+// Edge doesn't support PBKDF2 in its window.crypto, we have to rely on a
+// slower JS alternative, and to reduce the number of PBKDF2 iterations to
+// avoid freezing the browser.
+const EdgePBKDF2Iterations = 10000
 
 // MinPBKDF2Iterations is the recommended minimum number of iterations for
 // hashing with PBKDF2.
