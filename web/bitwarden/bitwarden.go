@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -227,7 +228,11 @@ func getInitialCredentials(c echo.Context) error {
 		return c.JSON(err.Code, err)
 	}
 	client.CouchID = client.ClientID
-	// TODO send an email?
+	if err := session.SendNewRegistrationNotification(inst, client.ClientID); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
 
 	// Create the credentials
 	access, err := bitwarden.CreateAccessJWT(inst, client)
