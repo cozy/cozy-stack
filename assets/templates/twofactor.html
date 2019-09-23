@@ -56,7 +56,6 @@
             <h2 class="password-form wizard-subtitle u-coolGrey">{{.Domain}}</h2>
             <p class="two-factor-form wizard-header-help" id="login-two-factor-passcode-tip">{{t "Login Two factor help"}}</p>
             <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
-            <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
             <input id="two-factor-token" type="hidden" name="two-factor-token" value="{{.TwoFactorToken}}" />
             <div class="o-field u-m-0 two-factor-form">
               <label for="two-factor-passcode" class="c-label" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>

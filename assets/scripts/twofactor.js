@@ -12,7 +12,6 @@
     'two-factor-trust-device'
   )
   const longRunSessionCheckbox = d.getElementById('long-run-session')
-  const csrfTokenInput = d.getElementById('csrf_token')
 
   let errorPanel = loginForm && loginForm.querySelector('.wizard-errors')
 
@@ -66,9 +65,7 @@
       '&two-factor-generate-trusted-device-token=' +
       encodeURIComponent(trustDevice) +
       '&redirect=' +
-      encodeURIComponent(redirect) +
-      '&csrf_token=' +
-      encodeURIComponent(csrfTokenInput.value)
+      encodeURIComponent(redirect)
     fetch('/auth/twofactor', {
       method: 'POST',
       headers: headers,

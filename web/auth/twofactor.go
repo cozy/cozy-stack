@@ -12,11 +12,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-const (
-	TrustedDeviceCheckBoxActivated   = true
-	TrustedDeviceCheckBoxDeActivated = false
-)
-
 func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsError string, redirect *url.URL, twoFactorToken []byte, longRunSession bool, trustedDeviceCheckBox bool) error {
 	title := i.Translate("Login Two factor title")
 
@@ -40,7 +35,6 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsEr
 		"Redirect":              redirect.String(),
 		"LongRunSession":        longRunSession,
 		"TwoFactorToken":        string(twoFactorToken),
-		"CSRF":                  c.Get("csrf"),
 		"Favicon":               middlewares.Favicon(i),
 		"TrustedDeviceCheckBox": trustedCheckbox,
 	})

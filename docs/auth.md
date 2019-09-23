@@ -142,16 +142,18 @@ case, a `200 OK` response is sent along with a token value in the response
 
 Along with this token, on 2FA passcode is sent to the user via another transport
 (email for instance, depending on the user's preferences). Another request
-should be sent to the same endpoint with a valid pair `(token, passcode)`,
+should be sent to `/auth/twofactor` with a valid pair `(token, passcode)`,
 ensuring that the user correctly entered its passphrase _and_ received a fresh
 passcode by another mean.
 
+### POST /auth/twofactor
+
 ```http
-POST /auth/login HTTP/1.1
+POST /auth/twofactor HTTP/1.1
 Host: cozy.example.org
 Content-Type: application/x-www-form-urlencoded
 
-two-factor-token=123123123123&passcode=678678&redirect=https%3A%2F%2Fcontacts.cozy.example.org
+two-factor-token=123123123123&two-factor-passcode=678678&redirect=https%3A%2F%2Fcontacts.cozy.example.org
 ```
 
 ```http
