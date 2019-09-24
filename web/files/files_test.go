@@ -531,7 +531,6 @@ func TestUploadWithMetadata(t *testing.T) {
 	assert.NoError(t, err)
 	res, obj = doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res.StatusCode)
-	fmt.Printf("obj = %#v\n", obj)
 	data = obj["data"].(map[string]interface{})
 	attrs = data["attributes"].(map[string]interface{})
 	meta := attrs["metadata"].(map[string]interface{})
@@ -683,8 +682,6 @@ func TestModifyMetadataDirMoveWithRel(t *testing.T) {
 	dir2ID, _ := extractDirData(t, data2)
 	child1ID, _ := extractDirData(t, datachild1)
 	child2ID, _ := extractDirData(t, datachild2)
-
-	fmt.Println(child1ID, child2ID)
 
 	parent := &jsonData{
 		ID:   dir2ID,
@@ -1139,7 +1136,6 @@ func TestPatchVersion(t *testing.T) {
 	attrs := map[string]interface{}{
 		"tags": []string{"qux"},
 	}
-	fmt.Printf("versionID = %q\n", versionID)
 	res4, body4 := patchFile(t, "/files/"+versionID, consts.FilesVersions, versionID, attrs, nil)
 	assert.Equal(t, 200, res4.StatusCode)
 	data4 := body4["data"].(map[string]interface{})

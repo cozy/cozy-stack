@@ -2,7 +2,6 @@ package job_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -64,8 +63,6 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	triggersInfos := []jobs.TriggerInfos{ti}
 	sch := jobs.NewMemScheduler()
 	if !assert.NoError(t, sch.StartScheduler(bro)) {
-		fmt.Printf("err = %v\n", sch.StartScheduler(bro))
-		fmt.Printf("err = %v\n", sch.StartScheduler(bro))
 		return
 	}
 

@@ -165,6 +165,6 @@ func TestRedisAddJobRateLimitExceeded(t *testing.T) {
 		WorkerType: "thumbnail",
 		Message:    msg,
 	})
-	assert.Nil(t, err)
+	assert.Error(t, err)
 	assert.Nil(t, j)
 }
