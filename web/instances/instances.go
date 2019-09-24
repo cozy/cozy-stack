@@ -205,11 +205,17 @@ func fsckHandler(c echo.Context) (err error) {
 	w.WriteHeader(200)
 	encoder := json.NewEncoder(w)
 	for log := range logCh {
+		// XXX do not serialize to JSON the cozyMetadata, as they can also take
+		// more than 64ko.
+		if log.IsFile {
+			log.FileDoc.Metadata = nil
+		}
 		// XXX do not serialize to JSON the children, as it can take more than 64ko
-		// and scanner will ignore such lines
+		// and scanner will ignore such lines.
 		if !log.IsFile && !log.IsVersion && log.DirDoc != nil {
 			log.DirDoc.DirsChildren = nil
 			log.DirDoc.FilesChildren = nil
+			log.DirDoc.Metadata = nil
 		}
 		if errenc := encoder.Encode(log); errenc != nil {
 			return errenc
