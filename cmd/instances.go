@@ -648,11 +648,19 @@ the flags.
 			return err
 		}
 
+		hasLogs := false
 		scanner := bufio.NewScanner(res.Body)
 		for scanner.Scan() {
+			hasLogs = true
 			fmt.Println(string(scanner.Bytes()))
 		}
-		return scanner.Err()
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+		if hasLogs {
+			os.Exit(1)
+		}
+		return nil
 	},
 }
 
