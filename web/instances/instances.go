@@ -211,7 +211,8 @@ func fsckHandler(c echo.Context) (err error) {
 			log.FileDoc.DirsChildren = nil  // It can be filled on type mismatch
 			log.FileDoc.FilesChildren = nil // Idem
 			log.FileDoc.Metadata = nil
-		} else if log.DirDoc != nil {
+		}
+		if log.DirDoc != nil {
 			log.DirDoc.DirsChildren = nil
 			log.DirDoc.FilesChildren = nil
 			log.DirDoc.Metadata = nil

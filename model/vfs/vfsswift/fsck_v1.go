@@ -58,8 +58,8 @@ func (sfs *swiftVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 					accumulate(&vfs.FsckLog{
 						Type:    vfs.TypeMismatch,
 						IsFile:  true,
-						FileDoc: f,
-						DirDoc:  objectToFileDocV1(sfs.container, obj),
+						FileDoc: objectToFileDocV1(sfs.container, obj),
+						DirDoc:  f,
 					})
 				} else {
 					accumulate(&vfs.FsckLog{
