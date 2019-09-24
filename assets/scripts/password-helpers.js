@@ -185,7 +185,7 @@
       .then(pair => {
         const publicPromise = subtle.exportKey('spki', pair.publicKey)
         const privatePromise = subtle.exportKey('pkcs8', pair.privateKey)
-        return [publicPromise, privatePromise]
+        return Promise.all([publicPromise, privatePromise])
       })
       .then(keys => {
         publicKey = keys[0]

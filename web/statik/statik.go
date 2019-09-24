@@ -56354,7 +56354,7 @@ cQGJxAUAAA==
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /scripts/password-helpers.js
-Size: 7435
+Size: 7448
 
 H4sIAAAAAAAC/7xZ61fbyBX/nr/ipk1iaRGybIObdWK2wNKTnuyeckLSDyU0GUvX
 9gS9zszYDsv6f++Zh6TRwwa2Pf0CSHPv774fI94481UaCpqlzsaF+2cA/T58QLFi
@@ -56395,12 +56395,12 @@ Mk8ls8rQnNE1EWjGTL/fSHhF06wJmfGKdzWLaahQ9b1QXUFmhOP4qJXl7/HuklDm
 SRat4hXXjWwCw+DodXGkHXTxXd+UJ80ueR18DwYeBN+DQP0c3LieDMH4+Hj0l93L
 z6Br81omJKxULsjf/XoqS0mDNDcn2ZO1hqq6TCa8r3W9vdvUAlP1yUU2itJjHgi2
 qvUCTy4bnW1B5mJXvWqtzFVEBtM0i+9lW+L5LVXrG2V+aUOzmo1F+3Dy25C/LoFK
-D7Tq/LqmkteAvulem27xjtfNK1XVix2/Dm6qs1J6cTi4eezmp6vjgeZsb39FbB5c
-/f43nbvt2Ud1bzsNYVo9PtYtuht4VnFYo4rTRdp70OxWbiYk/FlPiUY107W10MBB
-TXnrxLW2fIXkcxROC8tVn9cfQWqLcaXvO2XVHSVNd2ynFHEycnZeA8Ld1do5YXeW
-5qMnssycfRO5Azsh3cokJNw7v0tlJ6VJXn28D1vjvfo01pj0VcZP4OvQmvPyQP5W
-Wm6/7pns1Xes+lc5+Ml8NoSJ9c1Ccmz88h96xdyy/nE4sR+0ZXowyJ/6uVpHJ9bf
-1ZkZ4hP7Qam7dZ0NTaNs4z77TwAAAP//czS6rgsdAAA=
+D7TqvLgWkTh2rmvqeQ0xu3aoW7zjdVtLvfWWx6+Dm+qsVKU4HNw8dg3UpfJAp7ZX
+wSJQD+6B/5s23nbzo1q5nZMwrR4f6xbdGjyrUqy5xeki7T1oditRExL+rEdGo7Tp
+2tpu4KCmvHXiWiu/QvI5CqeF5apv7Y8gtcW40vedsuqOkqY7tlOKOBk5O+8E4e7S
+7Ry3O+v00eNZZs6+8dyBnZBuZRIS7h3mpbKT0iSvPuuHrVlffSdrjP0q4yfwdWgN
+fXkgfystt1/3jPnqo1b9Ex38ZL4hwsT6gCE5Nn75371iiFn/RZzYD9oyPSXkT/1c
+7aYT6+/qzEz0if2g1N26zoamUbZxn/0nAAD//2Nmdc8YHQAA
 -----END COZY ASSET-----
 -----BEGIN COZY ASSET-----
 Name: /scripts/password-strength.js

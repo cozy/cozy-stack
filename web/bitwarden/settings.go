@@ -14,7 +14,7 @@ import (
 
 // https://github.com/bitwarden/jslib/blob/master/src/models/response/globalDomainResponse.ts
 type globalDomainsReponse struct {
-	Typ      int      `json:"Type"`
+	Type     int      `json:"Type"`
 	Domains  []string `json:"Domains"`
 	Excluded bool     `json:"Excluded"`
 }
@@ -37,7 +37,7 @@ func newDomainsResponse(settings *settings.Settings) *domainsResponse {
 			}
 		}
 		globals = append(globals, globalDomainsReponse{
-			Typ:      int(k),
+			Type:     int(k),
 			Domains:  v,
 			Excluded: excluded,
 		})
