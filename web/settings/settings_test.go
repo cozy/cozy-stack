@@ -340,7 +340,6 @@ func TestUpdatePassphraseWithTwoFactorAuth(t *testing.T) {
 	body := `{
 		"auth_mode": "two_factor_mail"
 	}`
-	body = fmt.Sprintf(body, instanceRev)
 	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance/auth_mode", bytes.NewBufferString(body))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")

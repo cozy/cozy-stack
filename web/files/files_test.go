@@ -680,8 +680,8 @@ func TestModifyMetadataDirMoveWithRel(t *testing.T) {
 	assert.Equal(t, 201, res2.StatusCode)
 
 	dir2ID, _ := extractDirData(t, data2)
-	child1ID, _ := extractDirData(t, datachild1)
-	child2ID, _ := extractDirData(t, datachild2)
+	extractDirData(t, datachild1)
+	extractDirData(t, datachild2)
 
 	parent := &jsonData{
 		ID:   dir2ID,
