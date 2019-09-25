@@ -446,6 +446,10 @@ func Routes(router *echo.Group) {
 	folders.DELETE("/:id", DeleteFolder)
 	folders.POST("/:id/delete", DeleteFolder)
 
+	hub := router.Group("/notifications/hub")
+	hub.GET("", WebsocketHub)
+	hub.POST("/negotiate", NegotiateHub)
+
 	orgs := router.Group("/organizations")
 	orgs.GET("/cozy", GetCozy)
 
