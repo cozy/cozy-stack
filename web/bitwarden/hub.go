@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
+	"github.com/ugorji/go/codec"
 )
 
 type transport struct {
@@ -71,6 +72,7 @@ func WebsocketHub(c echo.Context) error {
 			"error": "invalid token",
 		})
 	}
+	userID := pdoc.SourceID
 
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
@@ -86,23 +88,41 @@ func WebsocketHub(c echo.Context) error {
 		return ws.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
+	responses := make(chan []byte)
 	ds := realtime.GetHub().Subscriber(inst)
 	defer ds.Close()
-	go readPump(ws, ds)
+	go readPump(ws, ds, responses)
 
+	handle := new(codec.MsgpackHandle)
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
 
 	for {
 		select {
+		case r := <-responses:
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return err
+			}
+			if err := ws.WriteMessage(websocket.BinaryMessage, r); err != nil {
+				logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+					Infof("Write error: %s", err)
+				return nil
+			}
 		case e := <-ds.Channel:
 			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 				return err
 			}
-			res := map[string]interface{}{
-				"ID": e.Doc.ID(),
+			notif := buildNotification(e, userID)
+			if notif == nil {
+				continue
 			}
-			if err := ws.WriteJSON(res); err != nil {
+			serialized, err := serializeNotification(handle, *notif)
+			if err != nil {
+				logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+					Infof("Serialize error: %s", err)
+				continue
+			}
+			if err := ws.WriteMessage(websocket.BinaryMessage, serialized); err != nil {
 				return nil
 			}
 		case <-ticker.C:
@@ -118,7 +138,7 @@ func WebsocketHub(c echo.Context) error {
 
 var initialResponse = []byte{0x7b, 0x7d, 0x1e} // {}<RS>
 
-func readPump(ws *websocket.Conn, ds *realtime.DynamicSubscriber) {
+func readPump(ws *websocket.Conn, ds *realtime.DynamicSubscriber, responses chan []byte) {
 	var msg struct {
 		Protocol string `json:"protocol"`
 		Version  int    `json:"version"`
@@ -135,15 +155,21 @@ func readPump(ws *websocket.Conn, ds *realtime.DynamicSubscriber) {
 			Infof("Unexpected message: %v", msg)
 		return
 	}
-	if err := ws.WriteMessage(websocket.BinaryMessage, initialResponse); err != nil {
+	if err := ds.Subscribe(consts.BitwardenFolders); err != nil {
 		logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
-			Infof("Write error: %s", err)
+			Infof("Subscribe error: %s", err)
 		return
 	}
+	if err := ds.Subscribe(consts.BitwardenCiphers); err != nil {
+		logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+			Infof("Subscribe error: %s", err)
+		return
+	}
+	responses <- initialResponse
 
 	// Just send back the pings from the client
 	for {
-		msgType, p, err := ws.ReadMessage()
+		_, msg, err := ws.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
 				logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
@@ -151,12 +177,66 @@ func readPump(ws *websocket.Conn, ds *realtime.DynamicSubscriber) {
 			}
 			return
 		}
-		if err := ws.WriteMessage(msgType, p); err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
-				logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
-					Infof("Write error: %s", err)
-				return
-			}
-		}
+		responses <- msg
 	}
+}
+
+type notificationResponse struct {
+	ContextID string `codec:"ContextId"`
+	Type      int
+	Payload   map[string]interface{}
+}
+
+type notification []interface{}
+
+func buildNotification(e *realtime.Event, userID string) *notification {
+	doctype := e.Doc.DocType()
+	if e.Verb != realtime.EventDelete || doctype != consts.BitwardenFolders {
+		return nil
+	}
+	payload := map[string]interface{}{
+		"Id":           e.Doc.ID(),
+		"UserId":       userID,
+		"RevisionDate": time.Now().String(),
+	}
+	t := 3 // TODO https://github.com/bitwarden/jslib/blob/master/src/enums/notificationType.ts
+	arg := notificationResponse{
+		ContextID: "app_id",
+		Type:      t,
+		Payload:   payload,
+	}
+	msg := notification{
+		1,                           // MessageType.Invocation
+		[]interface{}{},             // Headers
+		nil,                         // InvocationId
+		"ReceiveMessage",            // Target
+		[]notificationResponse{arg}, // Arguments
+	}
+	return &msg
+}
+
+func serializeNotification(handle *codec.MsgpackHandle, notif notification) ([]byte, error) {
+	// First serialize the notification to msgpack
+	packed := make([]byte, 0, 256)
+	encoder := codec.NewEncoderBytes(&packed, handle)
+	if err := encoder.Encode(notif); err != nil {
+		return nil, err
+	}
+
+	// Then, put it in a BinaryMessageFormat
+	// https://github.com/aspnet/AspNetCore/blob/master/src/SignalR/clients/ts/signalr-protocol-msgpack/src/BinaryMessageFormat.ts
+	size := uint(len(packed))
+	lenBuf := make([]byte, 0, 8)
+	for size > 0 {
+		sizePart := size & 0x7f
+		size >>= 7
+		if size > 0 {
+			sizePart |= 0x80
+		}
+		lenBuf = append(lenBuf, byte(sizePart))
+	}
+	buf := make([]byte, len(lenBuf)+len(packed))
+	copy(buf[:len(lenBuf)], lenBuf)
+	copy(buf[len(lenBuf):], packed)
+	return buf, nil
 }
