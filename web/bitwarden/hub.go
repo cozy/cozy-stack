@@ -21,7 +21,7 @@ type transport struct {
 	Formats   []string `json:"transferFormats"`
 }
 
-// NegotiateHub is the handler for negociating between the server and the
+// NegotiateHub is the handler for negotiating between the server and the
 // client which transport to use for bitwarden notifications. Currently,
 // only websocket is supported.
 func NegotiateHub(c echo.Context) error {
@@ -94,6 +94,7 @@ func WebsocketHub(c echo.Context) error {
 	go readPump(ws, ds, responses)
 
 	handle := new(codec.MsgpackHandle)
+	handle.WriteExt = true
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
 
@@ -197,7 +198,7 @@ func buildNotification(e *realtime.Event, userID string) *notification {
 	payload := map[string]interface{}{
 		"Id":           e.Doc.ID(),
 		"UserId":       userID,
-		"RevisionDate": time.Now().String(),
+		"RevisionDate": time.Now(),
 	}
 	t := 3 // TODO https://github.com/bitwarden/jslib/blob/master/src/enums/notificationType.ts
 	arg := notificationResponse{
