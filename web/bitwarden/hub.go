@@ -204,16 +204,16 @@ type notification []interface{}
 const (
 	hubCipherUpdate = 0
 	hubCipherCreate = 1
-	hubLoginDelete  = 2
+	// hubLoginDelete  = 2
 	hubFolderDelete = 3
-	hubCiphers      = 4
-	hubVault        = 5
-	hubOrgKeys      = 6
+	// hubCiphers      = 4
+	// hubVault        = 5
+	// hubOrgKeys      = 6
 	hubFolderCreate = 7
 	hubFolderUpdate = 8
 	hubCipherDelete = 9
-	hubSettings     = 10
-	hubLogOut       = 11
+	// hubSettings     = 10
+	// hubLogOut       = 11
 )
 
 func buildNotification(e *realtime.Event, userID string, settings *settings.Settings) *notification {
