@@ -285,6 +285,13 @@ func checkTwoFactor(c echo.Context, inst *instance.Instance) bool {
 		}
 	}
 
+	// Allow the settings webapp get a bitwarden token without the 2FA. It's OK
+	// from a security point of view as we still have 2 factors: the password
+	// and a valid session cookie.
+	if _, ok := middlewares.GetSession(c); ok {
+		return true
+	}
+
 	email, err := inst.SettingsEMail()
 	if err != nil {
 		_ = c.JSON(http.StatusInternalServerError, echo.Map{
