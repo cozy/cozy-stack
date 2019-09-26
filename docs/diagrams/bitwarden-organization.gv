@@ -1,0 +1,66 @@
+digraph organization {
+	graph [splines=true];
+	node [shape="box", fontname="lato", fontsize=11, margin=0.12, color="#297EF2", fontcolor="#32363F"];
+	edge [color="#32363F"];
+	ranksep=0.7; nodesep=1;
+
+	subgraph source {
+		rank=same; margin=24;
+
+		cfg [label="Config", color="#7F6BEE", shape="oval"];
+		random [label="Random", color="#7F6BEE", shape="oval"];
+	}
+
+	subgraph cluster_server {
+		label="Cozy-stack"; labeljust="l"; fontname="lato"; fontsize=12; margin=24;
+
+		encKey [label="encryptor key"];
+		orgKeyS [label="organization key"];
+		pubKey [label="public key"];
+		encrypt [label="{Encrypt|<algo> Algo: RSA|<key> Key: public key|<payload> Payload: organization key}", shape="record", color="#40DE8E", fillcolor="#F2FAF5", style="filled"];
+		encOrgKeyS [label="encrypted org key"];
+		nacl [label="{Encrypt|<algo> Algo: NaCL box|<key> Key: encryptor key}", shape="record", color="#40DE8E", fillcolor="#F2FAF5", style="filled"];
+		encCozyKey [label="encrypted cozy key"];
+		db [label="Database", shape="cylinder", color="#7F6BEE", margin=0.2];
+		cipherS [label="cipher"];
+	}
+
+	subgraph cluster_client {
+		label="Client bitwarden"; labeljust="r"; fontname="lato"; fontsize=12; margin=24;
+
+		keyPair [label="{key pair (user)|<pub> public key|<priv> private key}", shape="record"];
+		encOrgKeyC [label="encrypted org key"];
+		decrypt [label="{Decrypt|<algo> Algo: RSA|<key> Key: private key|<payload> Payload: encrypted key}", shape="record", color="#40DE8E", fillcolor="#F2FAF5", style="filled"];
+		orgKeyC [label="organization key"];
+
+		item [label="item (clear)"];
+		aes [label="{Encrypt|<algo> Algo: AES|<key> Key: organization key|<payload> Payload: item}", shape="record", color="#40DE8E", fillcolor="#F2FAF5", style="filled"];
+		cipherC [label="cipher"];
+	}
+
+	cfg -> encKey;
+	random -> orgKeyS;
+	random -> keyPair;
+
+	pubKey -> encrypt:key;
+	orgKeyS -> encrypt:payload;
+	encrypt -> encOrgKeyS;
+
+	encKey -> nacl:key;
+	orgKeyS -> nacl [dir="both"];
+	nacl -> encCozyKey [dir="both"];
+	encCozyKey -> db [dir="both"];
+
+	keyPair:pub -> pubKey;
+	encOrgKeyS -> encOrgKeyC;
+
+	keyPair:priv -> decrypt:key;
+	decrypt:payload -> encOrgKeyC [dir="back"];
+	orgKeyC -> decrypt [dir="back"];
+
+	orgKeyC -> aes:key;
+	item -> aes:payload;
+	aes -> cipherC;
+
+	cipherC -> cipherS -> db;
+}

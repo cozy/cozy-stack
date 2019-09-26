@@ -1108,9 +1108,10 @@ func TestMain(m *testing.M) {
 	// Prepare Bob's instance
 	bobSetup := testutils.NewSetup(m, "sharing_test_bob")
 	bobInstance = bobSetup.GetTestInstance(&lifecycle.Options{
-		Email:      "bob@example.net",
-		PublicName: "Bob",
-		Passphrase: "MyPassphrase",
+		Email:         "bob@example.net",
+		PublicName:    "Bob",
+		Passphrase:    "MyPassphrase",
+		KdfIterations: 5000,
 	})
 	bobAppToken = generateAppToken(bobInstance, "testapp")
 	edwardContact = createContactWithCozyURL(bobInstance, "Edward", "https://edward.example.net/")

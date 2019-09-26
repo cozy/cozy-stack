@@ -35,12 +35,26 @@ const (
 )
 
 const (
+	// BitwardenSettingsID is the id of the settings document for bitwarden
+	BitwardenSettingsID = "io.cozy.settings.bitwarden"
 	// ContextSettingsID is the id of the settings JSON-API response for the context
 	ContextSettingsID = "io.cozy.settings.context"
 	// DiskUsageID is the id of the settings JSON-API response for disk-usage
 	DiskUsageID = "io.cozy.settings.disk-usage"
 	// InstanceSettingsID is the id of settings document for the instance
 	InstanceSettingsID = "io.cozy.settings.instance"
+	// PassphraseParametersID is the id of settings document for the passphrase
+	// parameters used to hash the master password on client side.
+	PassphraseParametersID = "io.cozy.settings.passphrase"
+)
+
+const (
+	// BitwardenCozyOrganizationName is the name of the organization used to
+	// share passwords between Cozy and Bitwarden clients.
+	BitwardenCozyOrganizationName = "Cozy"
+	// BitwardenCozyCollectionName is the name of the collection used to
+	// share passwords between Cozy and Bitwarden clients.
+	BitwardenCozyCollectionName = "Cozy Connectors"
 )
 
 // MaxItemsPerPageForMango is the maximal value accepted for the limit

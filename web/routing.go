@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/web/accounts"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/bitwarden"
 	"github.com/cozy/cozy-stack/web/compat"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -180,6 +181,7 @@ func SetupRoutes(router *echo.Echo) error {
 		realtime.Routes(router.Group("/realtime", mws...))
 		remote.Routes(router.Group("/remote", mws...))
 		sharings.Routes(router.Group("/sharings", mws...))
+		bitwarden.Routes(router.Group("/bitwarden", mws...))
 
 		// The settings routes needs not to be blocked
 		apps.WebappsRoutes(router.Group("/apps", mwsNotBlocked...))

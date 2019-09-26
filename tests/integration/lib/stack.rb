@@ -18,10 +18,15 @@ class Stack
   end
 
   def start
+    vault = File.join Helpers.current_dir, "vault"
+    FileUtils.mkdir_p vault
+    system("cozy-stack config gen-keys '#{vault}/key'")
     cmd = ["cozy-stack", "serve", "--log-level", "debug",
            "--mail-disable-tls", "--mail-port", "1025",
            "--port", @port, "--admin-port", @admin,
-           "--fs-url", "file://#{Helpers.current_dir}/"]
+           "--fs-url", "file://#{Helpers.current_dir}/",
+           "--vault-encryptor-key", "#{vault}/key.enc",
+           "--vault-decryptor-key", "#{vault}/key.dec"]
     Helpers.spawn cmd.join(" "), log: "stack-#{@port}.log"
     sleep 1
   end

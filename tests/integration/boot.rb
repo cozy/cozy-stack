@@ -1,10 +1,13 @@
 require 'awesome_print'
+require 'base64'
 require 'date'
 require 'digest'
 require 'faker'
 require 'fileutils'
 require 'mimemagic'
 require 'json'
+require 'open3'
+require 'pbkdf2'
 require 'pry'
 require 'rest-client'
 

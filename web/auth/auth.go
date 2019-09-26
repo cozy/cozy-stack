@@ -7,17 +7,21 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/session"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/mssola/user_agent"
 )
 
 const (
@@ -167,6 +171,13 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		help = i.Translate("Login Password help")
 	}
 
+	iterations := 0
+	if settings, err := settings.Get(i); err == nil {
+		iterations = settings.PassphraseKdfIterations
+	}
+	ua := user_agent.New(c.Request().UserAgent())
+	browser, _ := ua.Browser()
+
 	return c.Render(code, "login.html", echo.Map{
 		"TemplateTitle":    i.TemplateTitle(),
 		"CozyUI":           middlewares.CozyUI(i),
@@ -174,6 +185,8 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"Domain":           i.ContextualDomain(),
 		"ContextName":      i.ContextName,
 		"Locale":           i.Locale,
+		"Iterations":       iterations,
+		"Salt":             string(i.PassphraseSalt()),
 		"Title":            title,
 		"PasswordHelp":     help,
 		"CredentialsError": credsErrors,
@@ -181,6 +194,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"CSRF":             c.Get("csrf"),
 		"OAuth":            oauth,
 		"Favicon":          middlewares.Favicon(i),
+		"Edge":             browser == "Edge",
 	})
 }
 
@@ -251,6 +265,39 @@ func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, long
 	return sessionID, nil
 }
 
+func migrateToHashedPassphrase(inst *instance.Instance, settings *settings.Settings, passphrase []byte, iterations int) {
+	salt := inst.PassphraseSalt()
+	pass, masterKey := crypto.HashPassWithPBKDF2(passphrase, salt, iterations)
+	hash, err := crypto.GenerateFromPassphrase(pass)
+	if err != nil {
+		inst.Logger().Errorf("Could not hash the passphrase: %s", err.Error())
+		return
+	}
+	inst.PassphraseHash = hash
+	settings.PassphraseKdfIterations = iterations
+	settings.PassphraseKdf = instance.PBKDF2_SHA256
+	settings.SecurityStamp = lifecycle.NewSecurityStamp()
+	key, encKey, err := lifecycle.CreatePassphraseKey(masterKey)
+	if err != nil {
+		inst.Logger().Errorf("Could not create passphrase key: %s", err.Error())
+		return
+	}
+	settings.Key = key
+	pubKey, privKey, err := lifecycle.CreateKeyPair(encKey)
+	if err != nil {
+		inst.Logger().Errorf("Could not create key pair: %s", err.Error())
+		return
+	}
+	settings.PublicKey = pubKey
+	settings.PrivateKey = privKey
+	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
+		inst.Logger().Errorf("Could not update: %s", err.Error())
+	}
+	if err := settings.Save(inst); err != nil {
+		inst.Logger().Errorf("Could not update: %s", err.Error())
+	}
+}
+
 func login(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
@@ -266,47 +313,57 @@ func login(c echo.Context) error {
 	sess, ok := middlewares.GetSession(c)
 	if ok { // The user was already logged-in
 		sessionID = sess.ID()
-	} else {
-		if lifecycle.CheckPassphrase(inst, passphrase) == nil {
-			// In case the second factor authentication mode is "mail", we also
-			// check that the mail has been confirmed. If not, 2FA is not
-			// activated.
-			// If device is trusted, skip the 2FA.
-			if inst.HasAuthMode(instance.TwoFactorMail) && !isTrustedDevice(c, inst) {
-				twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
-				if err != nil {
-					return err
-				}
-				v := url.Values{}
-				v.Add("two_factor_token", string(twoFactorToken))
-				v.Add("long_run_session", strconv.FormatBool(longRunSession))
-				if loc := c.FormValue("redirect"); loc != "" {
-					v.Add("redirect", loc)
-				}
+	} else if lifecycle.CheckPassphrase(inst, passphrase) == nil {
+		ua := user_agent.New(c.Request().UserAgent())
+		browser, _ := ua.Browser()
+		iterations := crypto.DefaultPBKDF2Iterations
+		if browser == "Edge" {
+			iterations = crypto.EdgePBKDF2Iterations
+		}
+		settings, err := settings.Get(inst)
+		// If the passphrase was not yet hashed on the client side, migrate it
+		if err == nil && settings.PassphraseKdfIterations == 0 {
+			migrateToHashedPassphrase(inst, settings, passphrase, iterations)
+		}
 
-				if wantsJSON(c) {
-					return c.JSON(http.StatusOK, echo.Map{
-						"redirect":         inst.PageURL("/auth/twofactor", v),
-						"two_factor_token": string(twoFactorToken),
-					})
-				}
-				return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
+		// In case the second factor authentication mode is "mail", we also
+		// check that the mail has been confirmed. If not, 2FA is not
+		// activated.
+		// If device is trusted, skip the 2FA.
+		if inst.HasAuthMode(instance.TwoFactorMail) && !isTrustedDevice(c, inst) {
+			twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+			if err != nil {
+				return err
 			}
-		} else { // Bad login passphrase
-			errorMessage := inst.Translate(CredentialsErrorKey)
-			err := limits.CheckRateLimit(inst, limits.AuthType)
-			if limits.IsLimitReachedOrExceeded(err) {
-				if err = LoginRateExceeded(inst); err != nil {
-					inst.Logger().WithField("nspace", "auth").Warning(err)
-				}
+			v := url.Values{}
+			v.Add("two_factor_token", string(twoFactorToken))
+			v.Add("long_run_session", strconv.FormatBool(longRunSession))
+			if loc := c.FormValue("redirect"); loc != "" {
+				v.Add("redirect", loc)
 			}
+
 			if wantsJSON(c) {
-				return c.JSON(http.StatusUnauthorized, echo.Map{
-					"error": errorMessage,
+				return c.JSON(http.StatusOK, echo.Map{
+					"redirect":         inst.PageURL("/auth/twofactor", v),
+					"two_factor_token": string(twoFactorToken),
 				})
 			}
-			return renderLoginForm(c, inst, http.StatusUnauthorized, errorMessage, redirect)
+			return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
 		}
+	} else { // Bad login passphrase
+		errorMessage := inst.Translate(CredentialsErrorKey)
+		err := limits.CheckRateLimit(inst, limits.AuthType)
+		if limits.IsLimitReachedOrExceeded(err) {
+			if err = LoginRateExceeded(inst); err != nil {
+				inst.Logger().WithField("nspace", "auth").Warning(err)
+			}
+		}
+		if wantsJSON(c) {
+			return c.JSON(http.StatusUnauthorized, echo.Map{
+				"error": errorMessage,
+			})
+		}
+		return renderLoginForm(c, inst, http.StatusUnauthorized, errorMessage, redirect)
 	}
 
 	// Successful authentication

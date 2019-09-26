@@ -142,16 +142,18 @@ case, a `200 OK` response is sent along with a token value in the response
 
 Along with this token, on 2FA passcode is sent to the user via another transport
 (email for instance, depending on the user's preferences). Another request
-should be sent to the same endpoint with a valid pair `(token, passcode)`,
+should be sent to `/auth/twofactor` with a valid pair `(token, passcode)`,
 ensuring that the user correctly entered its passphrase _and_ received a fresh
 passcode by another mean.
 
+### POST /auth/twofactor
+
 ```http
-POST /auth/login HTTP/1.1
+POST /auth/twofactor HTTP/1.1
 Host: cozy.example.org
 Content-Type: application/x-www-form-urlencoded
 
-two-factor-token=123123123123&passcode=678678&redirect=https%3A%2F%2Fcontacts.cozy.example.org
+two-factor-token=123123123123&two-factor-passcode=678678&redirect=https%3A%2F%2Fcontacts.cozy.example.org
 ```
 
 ```http
@@ -823,11 +825,17 @@ as an example.
 
 ## Security considerations
 
-The password will be stored in a secure fashion, with a password hashing
-function. The hashing function and its parameter will be stored with the hash,
-in order to make it possible to change the algorithm and/or the parameters later
-if we had any suspicion that it became too weak. The initial algorithm is
-[scrypt](https://godoc.org/golang.org/x/crypto/scrypt).
+The master password, the password known by the user, is derived on the clients
+to give two keys. The first key is used to login on the stack, the second key
+is used to do client-side encryption. The derivation for the login password is
+currently done with the PBKDF2 algorithm (with SHA256), but we have anticipated
+the possibility of changing to another algorithm if desirable.
+
+The derived password is stored on the server in a secure fashion, with a
+password hashing function. The hashing function and its parameter are stored
+with the hash, in order to make it possible to change the algorithm and/or the
+parameters later if we had any suspicion that it became too weak. The initial
+algorithm is [scrypt](https://godoc.org/golang.org/x/crypto/scrypt).
 
 The access code is valid only once, and will expire after 5 minutes
 

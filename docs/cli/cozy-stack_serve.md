@@ -69,6 +69,8 @@ example), you can use the --appdir flag like this:
       --realtime-url string              URL for realtime in the browser via webocket, redis or in-memory
       --sessions-url string              URL for the sessions storage, redis or in-memory
       --subdomains string                how to structure the subdomains for apps (can be nested or flat) (default "nested")
+      --vault-decryptor-key string       the path to the key used to decrypt credentials
+      --vault-encryptor-key string       the path to the key used to encrypt credentials
 ```
 
 ### Options inherited from parent commands

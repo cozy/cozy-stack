@@ -49,6 +49,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
 	golang.org/x/image v0.0.0-20190910094157-69e4b8554b2a
+	golang.org/x/net v0.0.0-20190916140828-c8589233b77d
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/tools v0.0.0-20190920225731-5eefd052ad72
 	google.golang.org/appengine v1.6.3 // indirect

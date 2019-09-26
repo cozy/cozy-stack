@@ -208,20 +208,25 @@ func sweepRegistrations() (waitDuration time.Duration, err error) {
 }
 
 func sendRegistrationNotification(entry *registrationEntry, registrationNotification bool) error {
-	var login LoginEntry
 	i, err := lifecycle.GetInstance(entry.Domain)
 	if err != nil {
 		return err
 	}
-	err = couchdb.GetDoc(i, consts.SessionsLogins, entry.LoginEntryID, &login)
-	if err != nil {
-		return err
-	}
+
 	var clientID string
 	if registrationNotification {
 		clientID = entry.ClientID
 	}
-	return sendLoginNotification(i, &login, clientID)
+	if clientID != "" {
+		return SendNewRegistrationNotification(i, clientID)
+	}
+
+	var login LoginEntry
+	err = couchdb.GetDoc(i, consts.SessionsLogins, entry.LoginEntryID, &login)
+	if err != nil {
+		return err
+	}
+	return sendLoginNotification(i, &login)
 }
 
 func sendExpiredRegistrationNotifications(entries []registrationEntry) {

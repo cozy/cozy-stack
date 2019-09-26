@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	stdlog "log"
@@ -762,6 +763,27 @@ func MakeVault(c *Config) error {
 		}
 	}
 
+	if credsEncryptor == nil && credsDecryptor == nil {
+		// XXX For build instance, it is practical to not have to manually
+		// setup credentials for the vault. In that case, if the user does not
+		// want to use its correctly setup credentials, we are generating some
+		// credentials for them. As the credentials should remain the same
+		// between several executions of the stack, we are using some
+		// credentials generated with a seed defined at build time. It is
+		// obviously not a good idea from a security point of view, and it
+		// should not be used to store sensible data. But for development, it
+		// should be enough.
+		if !build.IsDevRelease() {
+			return nil
+		}
+		var err error
+		r := utils.NewSeededRand(42)
+		credsEncryptor, credsDecryptor, err = keymgmt.GenerateKeyPair(r)
+		if err != nil {
+			return err
+		}
+	}
+
 	vault = &Vault{
 		credsEncryptor: credsEncryptor,
 		credsDecryptor: credsDecryptor,
@@ -856,7 +878,7 @@ func UseTestFile() {
 		panic(fmt.Errorf("fatal error test config file: %s", err))
 	}
 
-	credsEncryptor, credsDecryptor, err := keymgmt.GenerateKeyPair()
+	credsEncryptor, credsDecryptor, err := keymgmt.GenerateKeyPair(rand.Reader)
 	if err != nil {
 		panic(fmt.Errorf("fatal error test config: could not generate key: %s", err))
 	}

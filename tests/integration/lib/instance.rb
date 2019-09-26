@@ -72,7 +72,27 @@ class Instance
     Accept.new(sharing, sharer).on self
   end
 
+
   def fsck
     @stack.fsck self
+  end
+
+  # See https://github.com/jcs/rubywarden/blob/master/API.md#example
+  def hashed_passphrase
+    key = PBKDF2.new do |p|
+      p.password = passphrase
+      p.salt = "me@" + domain.split(':').first
+      p.iterations = 100_000 # See pkg/crypto/pbkdf2.go
+      p.hash_function = OpenSSL::Digest::SHA256
+      p.key_length = 256 / 8
+    end.bin_string
+    hashed = PBKDF2.new do |p|
+      p.password = key
+      p.salt = passphrase
+      p.iterations = 1
+      p.hash_function = OpenSSL::Digest::SHA256
+      p.key_length = 256 / 8
+    end.bin_string
+    Base64.strict_encode64 hashed
   end
 end

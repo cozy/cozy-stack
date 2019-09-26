@@ -31,7 +31,7 @@ class Accept
     client = RestClient::Resource.new @inst.url
     res = client["/auth/login"].get
     csrf_token = res.cookies["_csrf"]
-    body = { csrf_token: csrf_token, passphrase: @inst.passphrase }
+    body = { csrf_token: csrf_token, passphrase: @inst.hashed_passphrase }
     params = { cookies: res.cookies, accept: :json }
     res2 = client["/auth/login"].post body, params
     res2.cookies["cozysessid"]

@@ -32,7 +32,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	webApps "github.com/cozy/cozy-stack/web/apps"
@@ -557,10 +556,9 @@ func TestMain(m *testing.M) {
 	cfg.Subdomains = config.NestedSubdomains
 	defer func() { cfg.Subdomains = was }()
 
-	testInstance = setup.GetTestInstance(&lifecycle.Options{Domain: domain})
 	pass := "aephe2Ei"
-	hash, _ := crypto.GenerateFromPassphrase([]byte(pass))
-	testInstance.PassphraseHash = hash
+	testInstance = setup.GetTestInstance(&lifecycle.Options{Domain: domain})
+	_ = lifecycle.ForceUpdatePassphrase(testInstance, []byte(pass))
 	testInstance.RegisterToken = nil
 	testInstance.OnboardingFinished = true
 	_ = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)

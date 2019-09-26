@@ -1237,6 +1237,8 @@ function _cozy-stack_serve {
     '--realtime-url[URL for realtime in the browser via webocket, redis or in-memory]:' \
     '--sessions-url[URL for the sessions storage, redis or in-memory]:' \
     '--subdomains[how to structure the subdomains for apps (can be nested or flat)]:' \
+    '--vault-decryptor-key[the path to the key used to decrypt credentials]:' \
+    '--vault-encryptor-key[the path to the key used to encrypt credentials]:' \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
     '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \

@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -60,14 +61,14 @@ func createHandler(c echo.Context) error {
 		Settings:    c.QueryParam("Settings"),
 		AuthMode:    c.QueryParam("AuthMode"),
 		Passphrase:  c.QueryParam("Passphrase"),
+		Key:         c.QueryParam("Key"),
 		Apps:        utils.SplitTrimString(c.QueryParam("Apps"), ","),
 	}
 	if domainAliases := c.QueryParam("DomainAliases"); domainAliases != "" {
 		opts.DomainAliases = strings.Split(domainAliases, ",")
 	}
 	if autoUpdate := c.QueryParam("AutoUpdate"); autoUpdate != "" {
-		var b bool
-		b, err = strconv.ParseBool(autoUpdate)
+		b, err := strconv.ParseBool(autoUpdate)
 		if err != nil {
 			return wrapError(err)
 		}
@@ -85,12 +86,27 @@ func createHandler(c echo.Context) error {
 			return wrapError(err)
 		}
 	}
+	if iterations := c.QueryParam("KdfIterations"); iterations != "" {
+		iter, err := strconv.Atoi(iterations)
+		if err != nil {
+			return wrapError(err)
+		}
+		if iter < crypto.MinPBKDF2Iterations && iter != 0 {
+			err := errors.New("The KdfIterations number is too low")
+			return jsonapi.InvalidParameter("KdfIterations", err)
+		}
+		if iter > crypto.MaxPBKDF2Iterations {
+			err := errors.New("The KdfIterations number is too high")
+			return jsonapi.InvalidParameter("KdfIterations", err)
+		}
+		opts.KdfIterations = iter
+	}
 	in, err := lifecycle.Create(opts)
 	if err != nil {
 		return wrapError(err)
 	}
 	in.OAuthSecret = nil
-	in.SessionSecret = nil
+	in.SessSecret = nil
 	in.PassphraseHash = nil
 	return jsonapi.Data(c, http.StatusCreated, &apiInstance{in}, nil)
 }
@@ -161,7 +177,7 @@ func listHandler(c echo.Context) error {
 	objs := make([]jsonapi.Object, len(is))
 	for i, in := range is {
 		in.OAuthSecret = nil
-		in.SessionSecret = nil
+		in.SessSecret = nil
 		in.PassphraseHash = nil
 		objs[i] = &apiInstance{in}
 	}

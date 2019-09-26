@@ -31,6 +31,10 @@ import (
 // overrided by configuring it in the instance context parameters
 const DefaultTemplateTitle = "Cozy"
 
+// PBKDF2_SHA256 is the value of kdf for using PBKDF2 with SHA256 to hash the
+// password on client side.
+const PBKDF2_SHA256 = 0
+
 // An Instance has the informations relatives to the logical cozy instance,
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
@@ -62,8 +66,11 @@ type Instance struct {
 	// See model/vfs/vfsswift for more details.
 	SwiftLayout int `json:"swift_cluster,omitempty"`
 
-	// PassphraseHash is a hash of the user's passphrase. For more informations,
-	// see crypto.GenerateFromPassphrase.
+	// PassphraseHash is a hash of a hash of the user's passphrase: the
+	// passphrase is first hashed in client-side to avoid sending it to the
+	// server as it also used for encryption on client-side, and after that,
+	// hashed on the server to ensure robustness. For more informations on the
+	// server-side hashing, see crypto.GenerateFromPassphrase.
 	PassphraseHash       []byte     `json:"passphrase_hash,omitempty"`
 	PassphraseResetToken []byte     `json:"passphrase_reset_token,omitempty"`
 	PassphraseResetTime  *time.Time `json:"passphrase_reset_time,omitempty"`
@@ -74,8 +81,8 @@ type Instance struct {
 	// waiting for registration. The registerToken secret is only shared (in
 	// clear) with the instance's user.
 	RegisterToken []byte `json:"register_token,omitempty"`
-	// SessionSecret is used to authenticate session cookies
-	SessionSecret []byte `json:"session_secret,omitempty"`
+	// SessSecret is used to authenticate session cookies
+	SessSecret []byte `json:"session_secret,omitempty"`
 	// OAuthSecret is used to authenticate OAuth2 token
 	OAuthSecret []byte `json:"oauth_secret,omitempty"`
 	// CLISecret is used to authenticate request from the CLI
@@ -121,8 +128,8 @@ func (i *Instance) Clone() couchdb.Doc {
 	cloned.RegisterToken = make([]byte, len(i.RegisterToken))
 	copy(cloned.RegisterToken, i.RegisterToken)
 
-	cloned.SessionSecret = make([]byte, len(i.SessionSecret))
-	copy(cloned.SessionSecret, i.SessionSecret)
+	cloned.SessSecret = make([]byte, len(i.SessSecret))
+	copy(cloned.SessSecret, i.SessSecret)
 
 	cloned.OAuthSecret = make([]byte, len(i.OAuthSecret))
 	copy(cloned.OAuthSecret, i.OAuthSecret)
@@ -144,6 +151,20 @@ func (i *Instance) DBPrefix() string {
 // DomainName returns the main domain name of the instance.
 func (i *Instance) DomainName() string {
 	return i.Domain
+}
+
+// SessionSecret returns the session secret.
+func (i *Instance) SessionSecret() []byte {
+	// The prefix is here to invalidate all the sessions that were created on
+	// an instance where the password was not hashed on client-side. It force
+	// the user to log in again and migrate its passphrase to be hashed on the
+	// client. It is simpler/safer and, in particular, it avoids that he/she
+	// can try to changed its pass in settings (which would fail).
+	secret := make([]byte, 2+len(i.SessSecret))
+	secret[0] = '2'
+	secret[1] = ':'
+	copy(secret[2:], i.SessSecret)
+	return secret
 }
 
 // SlugAndDomain returns the splitted slug and domain of the instance
@@ -318,8 +339,8 @@ func (i *Instance) SettingsPublicName() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	email, _ := settings.M["public_name"].(string)
-	return email, nil
+	name, _ := settings.M["public_name"].(string)
+	return name, nil
 }
 
 // GetFromContexts returns the parameters specific to the instance context
@@ -401,6 +422,14 @@ func (i *Instance) IsPasswordAuthenticationEnabled() bool {
 		return true
 	}
 	return !disabled
+}
+
+// PassphraseSalt computes the salt for the client-side hashing of the master
+// password. The rule for computing the salt is to create a fake email address
+// "me@<domain>".
+func (i *Instance) PassphraseSalt() []byte {
+	domain := strings.Split(i.Domain, ":")[0] // Skip the optional port
+	return []byte("me@" + domain)
 }
 
 // DiskQuota returns the number of bytes allowed on the disk to the user.
@@ -601,7 +630,7 @@ func ForeachInstances(fn func(*Instance) error) error {
 func (i *Instance) PickKey(audience string) ([]byte, error) {
 	switch audience {
 	case consts.AppAudience, consts.KonnectorAudience:
-		return i.SessionSecret, nil
+		return i.SessionSecret(), nil
 	case consts.RefreshTokenAudience, consts.AccessTokenAudience, consts.ShareAudience:
 		return i.OAuthSecret, nil
 	case consts.CLIAudience:

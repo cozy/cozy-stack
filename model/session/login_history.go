@@ -134,7 +134,7 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 			i.Logger().Errorf("Could not push login in registration queue: %s", err)
 		}
 	} else if notifEnabled {
-		if err := sendLoginNotification(i, l, ""); err != nil {
+		if err := sendLoginNotification(i, l); err != nil {
 			i.Logger().Errorf("Could not send login notification: %s", err)
 		}
 	}
@@ -142,62 +142,57 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 	return nil
 }
 
-func sendLoginNotification(i *instance.Instance, l *LoginEntry, clientRegistrationID string) error {
-	var sendNotification bool
-
-	if clientRegistrationID != "" {
-		sendNotification = true
-	} else {
-		var results []*LoginEntry
-		r := &couchdb.FindRequest{
-			UseIndex: "by-os-browser-ip",
-			Selector: mango.And(
-				mango.Equal("os", l.OS),
-				mango.Equal("browser", l.Browser),
-				mango.Equal("ip", l.IP),
-			),
-			Limit: 1,
-		}
-		err := couchdb.FindDocs(i, consts.SessionsLogins, r, &results)
-		sendNotification = err != nil || len(results) == 0
+func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
+	var results []*LoginEntry
+	r := &couchdb.FindRequest{
+		UseIndex: "by-os-browser-ip",
+		Selector: mango.And(
+			mango.Equal("os", l.OS),
+			mango.Equal("browser", l.Browser),
+			mango.Equal("ip", l.IP),
+		),
+		Limit: 1,
 	}
-
+	err := couchdb.FindDocs(i, consts.SessionsLogins, r, &results)
+	sendNotification := err != nil || len(results) == 0
 	if !sendNotification {
 		return nil
 	}
 
-	var templateName string
-	var templateValues map[string]interface{}
-	if clientRegistrationID != "" {
-		devicesLink := i.SubDomain(consts.SettingsSlug)
-		devicesLink.Fragment = "/connectedDevices"
-
-		revokeLink := i.SubDomain(consts.SettingsSlug)
-		revokeLink.Fragment = "/connectedDevices/" + url.PathEscape(clientRegistrationID)
-
-		templateName = "new_registration"
-		templateValues = map[string]interface{}{
-			"DevicesLink": devicesLink.String(),
-			"RevokeLink":  revokeLink.String(),
-		}
-	} else {
-		changePassphraseURL := i.SubDomain(consts.SettingsSlug)
-		// TODO: changePassphraseURL.Fragment = "/profile/changePassphrase"
-		changePassphraseURL.Fragment = "/profile"
-		templateName = "new_connection"
-		templateValues = map[string]interface{}{
-			"City":                 l.City,
-			"Country":              l.Country,
-			"IP":                   l.IP,
-			"Browser":              l.Browser,
-			"OS":                   l.OS,
-			"ChangePassphraseLink": changePassphraseURL.String(),
-		}
+	changePassphraseURL := i.SubDomain(consts.SettingsSlug)
+	// TODO: changePassphraseURL.Fragment = "/profile/changePassphrase"
+	changePassphraseURL.Fragment = "/profile"
+	templateValues := map[string]interface{}{
+		"City":                 l.City,
+		"Country":              l.Country,
+		"IP":                   l.IP,
+		"Browser":              l.Browser,
+		"OS":                   l.OS,
+		"ChangePassphraseLink": changePassphraseURL.String(),
 	}
 
 	// TODO: use notifications
 	return lifecycle.SendMail(i, &lifecycle.Mail{
-		TemplateName:   templateName,
+		TemplateName:   "new_connection",
+		TemplateValues: templateValues,
+	})
+}
+
+// SendNewRegistrationNotification is used to send a notification to the user
+// when a new OAuth client is registred.
+func SendNewRegistrationNotification(i *instance.Instance, clientRegistrationID string) error {
+	devicesLink := i.SubDomain(consts.SettingsSlug)
+	devicesLink.Fragment = "/connectedDevices"
+	revokeLink := i.SubDomain(consts.SettingsSlug)
+	revokeLink.Fragment = "/connectedDevices/" + url.PathEscape(clientRegistrationID)
+	templateValues := map[string]interface{}{
+		"DevicesLink": devicesLink.String(),
+		"RevokeLink":  revokeLink.String(),
+	}
+
+	// TODO: use notifications
+	return lifecycle.SendMail(i, &lifecycle.Mail{
+		TemplateName:   "new_registration",
 		TemplateValues: templateValues,
 	})
 }

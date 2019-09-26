@@ -42,19 +42,19 @@ func (c Cache) CheckStatus() error {
 
 // Get fetch the cached asset at the given key, and returns true only if the
 // asset was found.
-func (c Cache) Get(key string) (io.Reader, bool) {
+func (c Cache) Get(key string) ([]byte, bool) {
 	if c.client == nil {
 		if value, ok := c.m.Load(key); ok {
 			entry := value.(cacheEntry)
 			if time.Now().Before(entry.expiredAt) {
-				return bytes.NewReader(entry.payload), true
+				return entry.payload, true
 			}
 			c.Clear(key)
 		}
 	} else {
 		cmd := c.client.Get(key)
 		if b, err := cmd.Bytes(); err == nil {
-			return bytes.NewReader(b), true
+			return b, true
 		}
 	}
 	return nil, false
@@ -85,7 +85,7 @@ func (c Cache) Set(key string, data []byte, expiration time.Duration) {
 // uncompressed.
 func (c Cache) GetCompressed(key string) (io.Reader, bool) {
 	if r, ok := c.Get(key); ok {
-		if gr, err := gzip.NewReader(r); err == nil {
+		if gr, err := gzip.NewReader(bytes.NewReader(r)); err == nil {
 			return gr, true
 		}
 	}

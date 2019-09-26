@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -511,10 +512,7 @@ func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string
 	return token, err
 }
 
-// ValidToken checks that the JWT is valid and returns the associate claims
-// It is expected to be used for registration token and refresh token, and
-// it doesn't check when they were issued as they don't expire.
-func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permission.Claims, bool) {
+func validToken(i *instance.Instance, audience, token string) (permission.Claims, bool) {
 	claims := permission.Claims{}
 	if token == "" {
 		return claims, false
@@ -542,6 +540,40 @@ func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permi
 		i.Logger().WithField("nspace", "oauth").
 			Errorf("Expected %s issuer for %s token, but was: %s", audience, i.Domain, claims.Issuer)
 		return claims, false
+	}
+	return claims, true
+}
+
+// ValidTokenWithSStamp checks that the JWT is valid and returns the associate
+// claims. You should use client.ValidToken if you know the client, as it also
+// checks that the claims are associated to this client.
+func ValidTokenWithSStamp(i *instance.Instance, audience, token string) (permission.Claims, bool) {
+	claims, valid := validToken(i, audience, token)
+	if !valid {
+		return claims, valid
+	}
+	settings, err := settings.Get(i)
+	if err != nil {
+		i.Logger().WithField("nspace", "oauth").
+			Errorf("Error while getting bitwarden settings: %s", err)
+		return claims, false
+	}
+	if claims.SStamp != settings.SecurityStamp {
+		i.Logger().WithField("nspace", "oauth").
+			Errorf("Expected %s security stamp for %s token, but was: %s",
+				settings.SecurityStamp, claims.Subject, claims.SStamp)
+		return claims, false
+	}
+	return claims, true
+}
+
+// ValidToken checks that the JWT is valid and returns the associate claims.
+// It is expected to be used for registration token and refresh token, and
+// it doesn't check when they were issued as they don't expire.
+func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permission.Claims, bool) {
+	claims, valid := validToken(i, audience, token)
+	if !valid {
+		return claims, valid
 	}
 	if claims.Subject != c.CouchID {
 		i.Logger().WithField("nspace", "oauth").

@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 
 	"golang.org/x/crypto/nacl/box"
 )
@@ -36,12 +37,12 @@ func (n *NACLKey) PrivateKey() *[32]byte {
 
 // GenerateKeyPair returns a couple keypairs that can be used for asymmetric
 // encryption/decryption using nacl crypto box API.
-func GenerateKeyPair() (encryptorKey *NACLKey, decryptorKey *NACLKey, err error) {
-	senderPublicKey, senderPrivateKey, err := box.GenerateKey(rand.Reader)
+func GenerateKeyPair(r io.Reader) (encryptorKey *NACLKey, decryptorKey *NACLKey, err error) {
+	senderPublicKey, senderPrivateKey, err := box.GenerateKey(r)
 	if err != nil {
 		return
 	}
-	receiverPublicKey, receiverPrivateKey, err := box.GenerateKey(rand.Reader)
+	receiverPublicKey, receiverPrivateKey, err := box.GenerateKey(r)
 	if err != nil {
 		return
 	}
@@ -59,7 +60,7 @@ func GenerateKeyPair() (encryptorKey *NACLKey, decryptorKey *NACLKey, err error)
 // GenerateEncodedNACLKeyPair returns to byte slice containing the encoded
 // values of the couple of keypairs freshly generated.
 func GenerateEncodedNACLKeyPair() (marshaledEncryptorKey []byte, marshaledDecryptorKey []byte, err error) {
-	encryptorKey, decryptorKey, err := GenerateKeyPair()
+	encryptorKey, decryptorKey, err := GenerateKeyPair(rand.Reader)
 	if err != nil {
 		return
 	}

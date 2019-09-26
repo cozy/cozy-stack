@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/stack"
@@ -173,27 +174,43 @@ func TestRegisterPassphrase(t *testing.T) {
 	assert.Len(t, i.RegisterToken, instance.RegisterTokenLen)
 	assert.NotEmpty(t, i.OAuthSecret)
 	assert.Len(t, i.OAuthSecret, instance.OauthSecretLen)
-	assert.NotEmpty(t, i.SessionSecret)
-	assert.Len(t, i.SessionSecret, instance.SessionSecretLen)
+	assert.NotEmpty(t, i.SessSecret)
+	assert.Len(t, i.SessSecret, instance.SessionSecretLen)
 
 	rtoken := i.RegisterToken
 	pass := []byte("passphrase")
 	empty := []byte("")
 	badtoken := []byte("not-token")
 
-	err = lifecycle.RegisterPassphrase(i, pass, empty)
+	err = lifecycle.RegisterPassphrase(i, empty, lifecycle.PassParameters{
+		Pass:       pass,
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	assert.Error(t, err, "RegisterPassphrase requires token")
 
-	err = lifecycle.RegisterPassphrase(i, pass, badtoken)
+	err = lifecycle.RegisterPassphrase(i, badtoken, lifecycle.PassParameters{
+		Pass:       pass,
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	assert.Error(t, err, "RegisterPassphrase requires proper token")
 
-	err = lifecycle.RegisterPassphrase(i, pass, rtoken)
+	err = lifecycle.RegisterPassphrase(i, rtoken, lifecycle.PassParameters{
+		Pass:       pass,
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	assert.NoError(t, err)
 
 	assert.Empty(t, i.RegisterToken, "RegisterToken has not been removed")
 	assert.NotEmpty(t, i.PassphraseHash, "PassphraseHash has not been saved")
 
-	err = lifecycle.RegisterPassphrase(i, pass, rtoken)
+	err = lifecycle.RegisterPassphrase(i, rtoken, lifecycle.PassParameters{
+		Pass:       pass,
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	assert.Error(t, err, "RegisterPassphrase works only once")
 }
 
@@ -206,29 +223,38 @@ func TestUpdatePassphrase(t *testing.T) {
 	assert.Empty(t, i.RegisterToken)
 	assert.NotEmpty(t, i.OAuthSecret)
 	assert.Len(t, i.OAuthSecret, instance.OauthSecretLen)
-	assert.NotEmpty(t, i.SessionSecret)
-	assert.Len(t, i.SessionSecret, instance.SessionSecretLen)
+	assert.NotEmpty(t, i.SessSecret)
+	assert.Len(t, i.SessSecret, instance.SessionSecretLen)
 
 	oldHash := i.PassphraseHash
-	oldSecret := i.SessionSecret
+	oldSecret := i.SessSecret
 
 	currentPass := []byte("passphrase")
 	newPass := []byte("new-passphrase")
 	badPass := []byte("not-passphrase")
 	empty := []byte("")
 
-	err = lifecycle.UpdatePassphrase(i, newPass, empty, "", nil)
+	params := lifecycle.PassParameters{
+		Pass:       newPass,
+		Iterations: 5000,
+	}
+	err = lifecycle.UpdatePassphrase(i, empty, "", nil, params)
 	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
 
-	err = lifecycle.UpdatePassphrase(i, newPass, badPass, "", nil)
+	err = lifecycle.UpdatePassphrase(i, badPass, "", nil, params)
 	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
 
-	err = lifecycle.UpdatePassphrase(i, newPass, currentPass, "", nil)
+	err = lifecycle.UpdatePassphrase(i, currentPass, "", nil, params)
 	assert.NoError(t, err)
 
 	assert.NotEmpty(t, i.PassphraseHash, "PassphraseHash has not been saved")
 	assert.NotEqual(t, oldHash, i.PassphraseHash)
-	assert.NotEqual(t, oldSecret, i.SessionSecret)
+	assert.NotEqual(t, oldSecret, i.SessSecret)
+
+	settings, err := settings.Get(i)
+	assert.NoError(t, err)
+	assert.Equal(t, 5000, settings.PassphraseKdfIterations)
+	assert.Equal(t, 0, settings.PassphraseKdf)
 }
 
 func TestRequestPassphraseReset(t *testing.T) {
@@ -248,7 +274,11 @@ func TestRequestPassphraseReset(t *testing.T) {
 	if !assert.Nil(t, in.PassphraseResetToken) {
 		return
 	}
-	err = lifecycle.RegisterPassphrase(in, []byte("MyPassphrase"), in.RegisterToken)
+	err = lifecycle.RegisterPassphrase(in, in.RegisterToken, lifecycle.PassParameters{
+		Pass:       []byte("MyPassphrase"),
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -276,12 +306,20 @@ func TestPassphraseRenew(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	err = lifecycle.RegisterPassphrase(in, []byte("MyPassphrase"), in.RegisterToken)
+	err = lifecycle.RegisterPassphrase(in, in.RegisterToken, lifecycle.PassParameters{
+		Pass:       []byte("MyPassphrase"),
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	if !assert.NoError(t, err) {
 		return
 	}
 	passHash := in.PassphraseHash
-	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), nil)
+	err = lifecycle.PassphraseRenew(in, nil, lifecycle.PassParameters{
+		Pass:       []byte("NewPass"),
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	if !assert.Error(t, err) {
 		return
 	}
@@ -289,11 +327,19 @@ func TestPassphraseRenew(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), []byte("token"))
+	err = lifecycle.PassphraseRenew(in, []byte("token"), lifecycle.PassParameters{
+		Pass:       []byte("NewPass"),
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	if !assert.Error(t, err) {
 		return
 	}
-	err = lifecycle.PassphraseRenew(in, []byte("NewPass"), in.PassphraseResetToken)
+	err = lifecycle.PassphraseRenew(in, in.PassphraseResetToken, lifecycle.PassParameters{
+		Pass:       []byte("NewPass"),
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	if !assert.NoError(t, err) {
 		return
 	}

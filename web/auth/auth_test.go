@@ -1512,7 +1512,11 @@ func TestPassphraseRenew(t *testing.T) {
 	defer func() {
 		_ = lifecycle.Destroy(d)
 	}()
-	err = lifecycle.RegisterPassphrase(in1, []byte("MyPass"), in1.RegisterToken)
+	err = lifecycle.RegisterPassphrase(in1, in1.RegisterToken, lifecycle.PassParameters{
+		Pass:       []byte("MyPass"),
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -1669,7 +1673,11 @@ func TestPassphraseOnboarding(t *testing.T) {
 
 	// Adding a passphrase and check if we are redirected to home
 	pass := []byte("passphrase")
-	err = lifecycle.RegisterPassphrase(inst, pass, inst.RegisterToken)
+	err = lifecycle.RegisterPassphrase(inst, inst.RegisterToken, lifecycle.PassParameters{
+		Pass:       pass,
+		Iterations: 5000,
+		Key:        "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
+	})
 	assert.NoError(t, err)
 
 	inst.OnboardingFinished = true
@@ -1760,8 +1768,9 @@ func TestMain(m *testing.M) {
 	setup := testutils.NewSetup(m, "auth_test")
 
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
-		Domain:     domain,
-		Passphrase: "MyPassphrase",
+		Domain:        domain,
+		Passphrase:    "MyPassphrase",
+		KdfIterations: 5000,
 	})
 
 	jar = setup.GetCookieJar()

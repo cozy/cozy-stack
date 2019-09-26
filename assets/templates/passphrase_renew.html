@@ -39,11 +39,15 @@
     </svg>
     <div role="application">
       <main class="wizard">
-        <form id="renew-passphrase-form" method="POST" action="/auth/passphrase_renew" class="wizard-wrapper">
+        <form id="renew-passphrase-form" method="POST" action="/auth/passphrase_renew" class="wizard-wrapper" data-salt="{{.Salt}}">
           <h1 class="wizard-title u-mb-half u-mb-0-s u-mt-1-s">{{t "Passphrase renew Title"}}</h1>
           <div role="region" class="wizard-main">
             <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
-            <input id="passphrase-reset-token" type="hidden" name="passphrase_reset_token" value="{{.PassphraseResetToken}}" />
+            <input type="hidden" id="renew-password-iterations" name="iterations" value="{{.Iterations}}" />
+            <input type="hidden" id="renew-password-key" name="key" value="" />
+            <input type="hidden" id="renew-password-public-key" name="public_key" value="" />
+            <input type="hidden" id="renew-password-private-key" name="private_key" value="" />
+            <input type="hidden" id="passphrase-reset-token" name="passphrase_reset_token" value="{{.PassphraseResetToken}}" />
             <p class="wizard-notice u-coolGrey u-mt-1" id="login-password-tip">{{t "Passphrase renew Help"}}</p>
             <div class="o-field password-form u-m-0">
               <label for="password" aria-describedby="login-password-tip" class="c-label">{{t "Passphrase renew Field"}}</label>
@@ -65,16 +69,17 @@
             </div>
           </div>
           <footer class="wizard-footer u-pb-half">
-            <button id="login-submit" form="renew-passphrase-form" type="submit" class="c-btn c-btn--full wizard-button" disabled>
+            <button id="renew-password-submit" form="renew-passphrase-form" type="submit" class="c-btn c-btn--full wizard-button" disabled>
               <span>{{t "Passphrase renew Submit"}}</span>
             </button>
           </footer>
         </form>
       </main>
     </div>
-    <script src="{{asset .Domain "/scripts/password-helper.js"}}"></script>
+    {{if .Edge}}<script src="{{asset .Domain "/js/asmcrypto.js"}}"></script>{{end}}
+    <script src="{{asset .Domain "/scripts/password-helpers.js"}}"></script>
     <script src="{{asset .Domain "/scripts/password-visibility.js"}}"></script>
-    <script src="{{asset .Domain "/scripts/submit.js"}}"></script>
-    <script src="{{asset .Domain "/scripts/passwd-strength-indicator.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/password-strength.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/renew-password.js"}}"></script>
   </body>
 </html>

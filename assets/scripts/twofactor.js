@@ -1,25 +1,24 @@
 /* global Headers, fetch */
-;(function(window, document) {
-  if (!window.fetch || !window.Headers || !window.FormData) return
+;(function(w, d) {
+  if (!w.fetch || !w.Headers) return
 
-  const loginForm = document.getElementById('login-form')
-  const loginField = document.getElementById('login-field')
-  const redirectInput = document.getElementById('redirect')
-  const submitButton = document.getElementById('login-submit')
-  const twoFactorPasscodeInput = document.getElementById('two-factor-passcode')
-  const twoFactorTokenInput = document.getElementById('two-factor-token')
-  const twoFactorTrustDeviceCheckbox = document.getElementById(
+  const loginForm = d.getElementById('login-form')
+  const loginField = d.getElementById('login-field')
+  const redirectInput = d.getElementById('redirect')
+  const submitButton = d.getElementById('login-submit')
+  const twoFactorPasscodeInput = d.getElementById('two-factor-passcode')
+  const twoFactorTokenInput = d.getElementById('two-factor-token')
+  const twoFactorTrustDeviceCheckbox = d.getElementById(
     'two-factor-trust-device'
   )
-  const longRunSessionCheckbox = document.getElementById('long-run-session')
-  const csrfTokenInput = document.getElementById('csrf_token')
+  const longRunSessionCheckbox = d.getElementById('long-run-session')
 
   let errorPanel = loginForm && loginForm.querySelector('.wizard-errors')
 
   const twoFactorTrustedDeviceTokenKey = 'two-factor-trusted-device-token'
   let localStorage = null
   try {
-    localStorage = window.localStorage
+    localStorage = w.localStorage
   } catch (e) {
     // do nothing
   }
@@ -32,7 +31,7 @@
     }
 
     if (!errorPanel) {
-      errorPanel = document.createElement('p')
+      errorPanel = d.createElement('p')
       errorPanel.classList.add('wizard-errors', 'u-error')
       loginField.insertBefore(errorPanel, loginField.firstChild)
     }
@@ -50,7 +49,7 @@
     const passcode = twoFactorPasscodeInput.value
     const token = twoFactorTokenInput.value
     const trustDevice = twoFactorTrustDeviceCheckbox.checked ? '1' : '0'
-    const redirect = redirectInput.value + window.location.hash
+    const redirect = redirectInput.value + w.location.hash
 
     const headers = new Headers()
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
@@ -66,9 +65,7 @@
       '&two-factor-generate-trusted-device-token=' +
       encodeURIComponent(trustDevice) +
       '&redirect=' +
-      encodeURIComponent(redirect) +
-      '&csrf_token=' +
-      encodeURIComponent(csrfTokenInput.value)
+      encodeURIComponent(redirect)
     fetch('/auth/twofactor', {
       method: 'POST',
       headers: headers,
@@ -92,7 +89,7 @@
                 )
               }
               if (body.redirect) {
-                window.location = body.redirect
+                w.location = body.redirect
               }
             } else {
               showError(body.error)
@@ -106,8 +103,8 @@
   }
 
   // Responsive design
-  if (document.body.clientWidth > 1024) {
-    const avatars = document.getElementsByClassName('c-avatar')
+  if (d.body.clientWidth > 1024) {
+    const avatars = d.getElementsByClassName('c-avatar')
     for (const avatar of avatars) {
       avatar.classList.add('c-avatar--xlarge')
     }

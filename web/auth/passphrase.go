@@ -3,12 +3,16 @@ package auth
 import (
 	"encoding/hex"
 	"net/http"
+	"strconv"
 
+	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
+	"github.com/mssola/user_agent"
 )
 
 func passphraseResetForm(c echo.Context) error {
@@ -47,10 +51,18 @@ func passphraseForm(c echo.Context) error {
 		})
 	}
 
+	ua := user_agent.New(c.Request().UserAgent())
+	browser, _ := ua.Browser()
+	edge := browser == "Edge"
+	iterations := crypto.DefaultPBKDF2Iterations
+	if edge {
+		iterations = crypto.EdgePBKDF2Iterations
+	}
 	matomo := config.GetConfig().Matomo
 	if matomo.URL != "" {
 		middlewares.AppendCSPRule(c, "img", matomo.URL)
 	}
+
 	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
 		"CozyUI":        middlewares.CozyUI(inst),
 		"Title":         inst.TemplateTitle(),
@@ -58,11 +70,14 @@ func passphraseForm(c echo.Context) error {
 		"Domain":        inst.ContextualDomain(),
 		"ContextName":   inst.ContextName,
 		"Locale":        inst.Locale,
+		"Iterations":    iterations,
+		"Salt":          string(inst.PassphraseSalt()),
 		"RegisterToken": registerToken,
+		"Favicon":       middlewares.Favicon(inst),
+		"Edge":          edge,
 		"MatomoURL":     matomo.URL,
 		"MatomoSiteID":  matomo.SiteID,
 		"MatomoAppID":   matomo.OnboardingAppID,
-		"Favicon":       middlewares.Favicon(inst),
 	})
 }
 
@@ -99,6 +114,7 @@ func passphraseRenewForm(c echo.Context) error {
 		redirect := inst.DefaultRedirection().String()
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
+
 	// Check that the token is actually defined and well encoded. The actual
 	// token value checking is also done on the passphraseRenew handler.
 	token, err := hex.DecodeString(c.QueryParam("token"))
@@ -113,6 +129,15 @@ func passphraseRenewForm(c echo.Context) error {
 			"error": "invalid_token",
 		})
 	}
+
+	ua := user_agent.New(c.Request().UserAgent())
+	browser, _ := ua.Browser()
+	edge := browser == "Edge"
+	iterations := crypto.DefaultPBKDF2Iterations
+	if edge {
+		iterations = crypto.EdgePBKDF2Iterations
+	}
+
 	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
 		"Title":                inst.TemplateTitle(),
 		"CozyUI":               middlewares.CozyUI(inst),
@@ -120,9 +145,12 @@ func passphraseRenewForm(c echo.Context) error {
 		"Domain":               inst.ContextualDomain(),
 		"ContextName":          inst.ContextName,
 		"Locale":               inst.Locale,
+		"Iterations":           iterations,
+		"Salt":                 string(inst.PassphraseSalt()),
 		"PassphraseResetToken": hex.EncodeToString(token),
 		"CSRF":                 c.Get("csrf"),
 		"Favicon":              middlewares.Favicon(inst),
+		"Edge":                 edge,
 	})
 }
 
@@ -133,17 +161,29 @@ func passphraseRenew(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 	pass := []byte(c.FormValue("passphrase"))
+	iterations, _ := strconv.Atoi(c.FormValue("iterations"))
 	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
 	if err != nil {
 		return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 	}
-	if err := lifecycle.PassphraseRenew(inst, pass, token); err != nil {
+	err = lifecycle.PassphraseRenew(inst, token, lifecycle.PassParameters{
+		Pass:       pass,
+		Iterations: iterations,
+		Key:        c.FormValue("key"),
+		PublicKey:  c.FormValue("public_key"),
+		PrivateKey: c.FormValue("private_key"),
+	})
+	if err != nil {
 		if err == instance.ErrMissingToken {
 			return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid_token",
 		})
+	}
+	if err := bitwarden.DeleteUnrecoverableCiphers(inst); err != nil {
+		inst.Logger().WithField("nspace", "bitwarden").
+			Warnf("Error on ciphers deletion after password reset: %s", err)
 	}
 	return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/login", nil))
 }

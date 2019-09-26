@@ -134,7 +134,7 @@ func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
 		return nil, ErrNoCookie
 	}
 
-	sessionID, err := crypto.DecodeAuthMessage(cookieSessionMACConfig, i.SessionSecret,
+	sessionID, err := crypto.DecodeAuthMessage(cookieSessionMACConfig, i.SessionSecret(),
 		[]byte(cookie.Value), nil)
 	if err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func FromAppCookie(c echo.Context, i *instance.Instance, slug string) (*Session,
 			return nil, ErrNoCookie
 		}
 
-		sessionID, err := crypto.DecodeAuthMessage(cookieAppMACConfig, i.SessionSecret,
+		sessionID, err := crypto.DecodeAuthMessage(cookieAppMACConfig, i.SessionSecret(),
 			[]byte(cookie.Value), []byte(slug))
 		if err != nil {
 			return nil, err
@@ -189,7 +189,7 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 
 // ToCookie returns an http.Cookie for this Session
 func (s *Session) ToCookie() (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieSessionMACConfig, s.Instance.SessionSecret, []byte(s.ID()), nil)
+	encoded, err := crypto.EncodeAuthMessage(cookieSessionMACConfig, s.Instance.SessionSecret(), []byte(s.ID()), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 
 // ToAppCookie returns an http.Cookie for this Session on an app subdomain
 func (s *Session) ToAppCookie(domain, slug string) (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieAppMACConfig, s.Instance.SessionSecret, []byte(s.ID()), []byte(slug))
+	encoded, err := crypto.EncodeAuthMessage(cookieAppMACConfig, s.Instance.SessionSecret(), []byte(s.ID()), []byte(slug))
 	if err != nil {
 		return nil, err
 	}
