@@ -5,8 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -74,6 +77,13 @@ func WebsocketHub(c echo.Context) error {
 	}
 	userID := pdoc.SourceID
 
+	settings, err := settings.Get(inst)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		return err
@@ -113,7 +123,7 @@ func WebsocketHub(c echo.Context) error {
 			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 				return err
 			}
-			notif := buildNotification(e, userID)
+			notif := buildNotification(e, userID, settings)
 			if notif == nil {
 				continue
 			}
@@ -190,17 +200,55 @@ type notificationResponse struct {
 
 type notification []interface{}
 
-func buildNotification(e *realtime.Event, userID string) *notification {
-	doctype := e.Doc.DocType()
-	if e.Verb != realtime.EventDelete || doctype != consts.BitwardenFolders {
+// https://github.com/bitwarden/jslib/blob/master/src/enums/notificationType.ts
+const (
+	hubCipherUpdate = 0
+	hubCipherCreate = 1
+	hubLoginDelete  = 2
+	hubFolderDelete = 3
+	hubCiphers      = 4
+	hubVault        = 5
+	hubOrgKeys      = 6
+	hubFolderCreate = 7
+	hubFolderUpdate = 8
+	hubCipherDelete = 9
+	hubSettings     = 10
+	hubLogOut       = 11
+)
+
+func buildNotification(e *realtime.Event, userID string, settings *settings.Settings) *notification {
+	if e == nil || e.Doc == nil {
 		return nil
 	}
-	payload := map[string]interface{}{
-		"Id":           e.Doc.ID(),
-		"UserId":       userID,
-		"RevisionDate": time.Now(),
+
+	doctype := e.Doc.DocType()
+	t := -1
+	var payload map[string]interface{}
+	if doctype == consts.BitwardenFolders {
+		payload = buildFolderPayload(e, userID)
+		switch e.Verb {
+		case realtime.EventCreate:
+			t = hubFolderCreate
+		case realtime.EventUpdate:
+			t = hubFolderUpdate
+		case realtime.EventDelete:
+			t = hubFolderDelete
+		}
+	} else if doctype == consts.BitwardenCiphers {
+		payload = buildCipherPayload(e, userID, settings)
+		switch e.Verb {
+		case realtime.EventCreate:
+			t = hubCipherCreate
+		case realtime.EventUpdate:
+			t = hubCipherUpdate
+		case realtime.EventDelete:
+			t = hubCipherDelete
+		}
 	}
-	t := 3 // TODO https://github.com/bitwarden/jslib/blob/master/src/enums/notificationType.ts
+	if t < 0 {
+		return nil
+	}
+
 	arg := notificationResponse{
 		ContextID: "app_id",
 		Type:      t,
@@ -214,6 +262,75 @@ func buildNotification(e *realtime.Event, userID string) *notification {
 		[]notificationResponse{arg}, // Arguments
 	}
 	return &msg
+}
+
+func buildFolderPayload(e *realtime.Event, userID string) map[string]interface{} {
+	var updatedAt interface{}
+	var date string
+	if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
+		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
+		date, _ = meta["updatedAt"].(string)
+	} else if doc, ok := e.Doc.(*realtime.JSONDoc); ok {
+		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
+		date, _ = meta["updatedAt"].(string)
+	} else if doc, ok := e.Doc.(*bitwarden.Folder); ok {
+		if doc.Metadata != nil {
+			updatedAt = doc.Metadata.UpdatedAt
+		}
+	}
+	if date != "" {
+		if t, err := time.Parse(time.RFC3339, date); err == nil {
+			updatedAt = t
+		}
+	}
+	if updatedAt == nil {
+		updatedAt = time.Now()
+	}
+	return map[string]interface{}{
+		"Id":           e.Doc.ID(),
+		"UserId":       userID,
+		"RevisionDate": updatedAt,
+	}
+}
+
+func buildCipherPayload(e *realtime.Event, userID string, settings *settings.Settings) map[string]interface{} {
+	var sharedWithCozy bool
+	var updatedAt interface{}
+	var date string
+	if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
+		sharedWithCozy, _ = doc.M["sharedWithCozy"].(bool)
+		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
+		date, _ = meta["updatedAt"].(string)
+	} else if doc, ok := e.Doc.(*realtime.JSONDoc); ok {
+		sharedWithCozy, _ = doc.M["sharedWithCozy"].(bool)
+		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
+		date, _ = meta["updatedAt"].(string)
+	} else if doc, ok := e.Doc.(*bitwarden.Cipher); ok {
+		sharedWithCozy = doc.SharedWithCozy
+		if doc.Metadata != nil {
+			updatedAt = doc.Metadata.UpdatedAt
+		}
+	}
+	if date != "" {
+		if t, err := time.Parse(time.RFC3339, date); err == nil {
+			updatedAt = t
+		}
+	}
+	if updatedAt == nil {
+		updatedAt = time.Now()
+	}
+	var orgID, collIDs interface{}
+	if sharedWithCozy {
+		orgID = settings.OrganizationID
+		collIDs = []string{settings.CollectionID}
+	}
+	return map[string]interface{}{
+		"Id":             e.Doc.ID(),
+		"UserId":         userID,
+		"OrganizationId": orgID,
+		"CollectionIds":  collIDs,
+		"RevisionDate":   updatedAt,
+	}
 }
 
 func serializeNotification(handle *codec.MsgpackHandle, notif notification) ([]byte, error) {

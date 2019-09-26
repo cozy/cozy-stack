@@ -248,6 +248,12 @@ func DeleteFolder(c echo.Context) error {
 		})
 	}
 
+	if folder.Metadata == nil {
+		md := metadata.New()
+		md.DocTypeVersion = bitwarden.DocTypeVersion
+		folder.Metadata = md
+	}
+	folder.Metadata.ChangeUpdatedAt()
 	if err := couchdb.DeleteDoc(inst, folder); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
