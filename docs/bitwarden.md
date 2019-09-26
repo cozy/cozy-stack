@@ -1000,3 +1000,45 @@ bitwarden clients. No authorization token is required.
 GET /bitwarden/icons/cozy.io/icon.png HTTP/1.1
 Host: alice.example.com
 ```
+
+## Hub
+
+The hub is a way to get notifications in real-time about cipher and folder
+changes.
+
+### POST /bitwarden/notifications/hub/negotiate
+
+Before connecting to the hub, the client make a request to this endpoint to
+know what are the transports and formats supported by the server.
+
+#### Request
+
+```http
+POST /bitwarden/notifications/hub/negotiate HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "connectionId": "NzhhYjU4NjgtZTA1NC0xMWU5LWIzNzAtM2I1YzM3YWQyOTc1Cg",
+  "availableTransports": [
+    { "Transport": "WebSockets", "Formats": ["Binary"] }
+  ]
+}
+```
+
+### GET /bitwarden/notifications/hub
+
+This endpoint is used for WebSockets to get the notifications in real-time. The
+client must do 3 things, in this order:
+
+1. Make the HTTP request, with the token in the query string (`access_token`)
+2. Upgrade the connection to WebSockets
+3. Send JSON payload with `{"protocol": "messagepack", "version": 1}`.
