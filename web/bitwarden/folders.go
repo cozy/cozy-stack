@@ -253,5 +253,5 @@ func DeleteFolder(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
-	return c.NoContent(http.StatusNoContent)
+	return c.NoContent(http.StatusOK)
 }
