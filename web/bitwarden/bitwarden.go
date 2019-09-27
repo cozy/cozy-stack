@@ -44,11 +44,11 @@ func GetProfile(c echo.Context) error {
 			"error": "invalid token",
 		})
 	}
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
-	profile, err := newProfileResponse(inst, settings)
+	profile, err := newProfileResponse(inst, setting)
 	if err != nil {
 		return err
 	}
@@ -73,15 +73,15 @@ func UpdateProfile(c echo.Context) error {
 			"error": "invalid JSON payload",
 		})
 	}
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
-	settings.PassphraseHint = data.Hint
-	if err := settings.Save(inst); err != nil {
+	setting.PassphraseHint = data.Hint
+	if err := setting.Save(inst); err != nil {
 		return err
 	}
-	profile, err := newProfileResponse(inst, settings)
+	profile, err := newProfileResponse(inst, setting)
 	if err != nil {
 		return err
 	}
@@ -106,16 +106,16 @@ func SetKeyPair(c echo.Context) error {
 			"error": "invalid JSON payload",
 		})
 	}
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
-	if err := settings.SetKeyPair(inst, data.Public, data.Private); err != nil {
+	if err := setting.SetKeyPair(inst, data.Public, data.Private); err != nil {
 		inst.Logger().WithField("nspace", "bitwarden").
 			Infof("Cannot set key pair: %s", err)
 		return err
 	}
-	profile, err := newProfileResponse(inst, settings)
+	profile, err := newProfileResponse(inst, setting)
 	if err != nil {
 		return err
 	}
@@ -141,12 +141,12 @@ func ChangeSecurityStamp(c echo.Context) error {
 		})
 	}
 
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
-	settings.SecurityStamp = lifecycle.NewSecurityStamp()
-	if err := settings.Save(inst); err != nil {
+	setting.SecurityStamp = lifecycle.NewSecurityStamp()
+	if err := setting.Save(inst); err != nil {
 		return err
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -155,23 +155,19 @@ func ChangeSecurityStamp(c echo.Context) error {
 // GetRevisionDate returns the date of the last synchronization (as a number of
 // milliseconds).
 func GetRevisionDate(c echo.Context) error {
-	pdoc, err := middlewares.GetPermission(c)
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.BitwardenProfiles); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
-	if pdoc.Type != permission.TypeOauth || pdoc.Client == nil {
-		return permission.ErrInvalidAudience
-	}
-	client := pdoc.Client.(*oauth.Client)
-	at, ok := client.SynchronizedAt.(time.Time)
-	if !ok {
-		if client.Metadata != nil {
-			at = client.Metadata.CreatedAt
-		} else {
-			at = time.Now()
-		}
-	}
-	milliseconds := fmt.Sprintf("%d", at.Nanosecond()/1000000)
+
+	at := setting.Metadata.UpdatedAt
+	milliseconds := fmt.Sprintf("%d", at.UnixNano()/1000000)
 	return c.Blob(http.StatusOK, "text/plain", []byte(milliseconds))
 }
 
@@ -255,11 +251,11 @@ func getInitialCredentials(c echo.Context) error {
 			"error": "Can't generate refresh token",
 		})
 	}
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
-	key := settings.Key
+	key := setting.Key
 
 	// Send the response
 	out := AccessTokenReponse{
@@ -355,11 +351,11 @@ func refreshToken(c echo.Context) error {
 			"error": "Can't generate access token",
 		})
 	}
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
-	key := settings.Key
+	key := setting.Key
 
 	// Send the response
 	out := AccessTokenReponse{
@@ -382,13 +378,13 @@ func GetCozy(c echo.Context) error {
 		})
 	}
 
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
 	}
-	orgKey, err := settings.OrganizationKey()
+	orgKey, err := setting.OrganizationKey()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
@@ -396,8 +392,8 @@ func GetCozy(c echo.Context) error {
 	}
 
 	res := map[string]interface{}{
-		"organizationId":  settings.OrganizationID,
-		"collectionId":    settings.CollectionID,
+		"organizationId":  setting.OrganizationID,
+		"collectionId":    setting.CollectionID,
 		"organizationKey": orgKey,
 	}
 	return c.JSON(http.StatusOK, res)

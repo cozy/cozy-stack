@@ -96,7 +96,7 @@ var upgrader = websocket.Upgrader{
 }
 
 func upgradeWebsocket(c echo.Context, inst *instance.Instance, userID string) (*wsNotifier, error) {
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func upgradeWebsocket(c echo.Context, inst *instance.Instance, userID string) (*
 	ds := realtime.GetHub().Subscriber(inst)
 	notifier := wsNotifier{
 		UserID:    userID,
-		Settings:  settings,
+		Settings:  setting,
 		WS:        ws,
 		DS:        ds,
 		Responses: responses,
@@ -248,7 +248,7 @@ const (
 	// hubLogOut       = 11
 )
 
-func buildNotification(e *realtime.Event, userID string, settings *settings.Settings) *notification {
+func buildNotification(e *realtime.Event, userID string, setting *settings.Settings) *notification {
 	if e == nil || e.Doc == nil {
 		return nil
 	}
@@ -267,7 +267,7 @@ func buildNotification(e *realtime.Event, userID string, settings *settings.Sett
 			t = hubFolderDelete
 		}
 	} else if doctype == consts.BitwardenCiphers {
-		payload = buildCipherPayload(e, userID, settings)
+		payload = buildCipherPayload(e, userID, setting)
 		switch e.Verb {
 		case realtime.EventCreate:
 			t = hubCipherCreate
@@ -325,7 +325,7 @@ func buildFolderPayload(e *realtime.Event, userID string) map[string]interface{}
 	}
 }
 
-func buildCipherPayload(e *realtime.Event, userID string, settings *settings.Settings) map[string]interface{} {
+func buildCipherPayload(e *realtime.Event, userID string, setting *settings.Settings) map[string]interface{} {
 	var sharedWithCozy bool
 	var updatedAt interface{}
 	var date string
@@ -353,8 +353,8 @@ func buildCipherPayload(e *realtime.Event, userID string, settings *settings.Set
 	}
 	var orgID, collIDs interface{}
 	if sharedWithCozy {
-		orgID = settings.OrganizationID
-		collIDs = []string{settings.CollectionID}
+		orgID = setting.OrganizationID
+		collIDs = []string{setting.CollectionID}
 	}
 	return map[string]interface{}{
 		"Id":             e.Doc.ID(),

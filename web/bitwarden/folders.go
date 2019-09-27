@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -107,6 +108,7 @@ func CreateFolder(c echo.Context) error {
 		})
 	}
 
+	settings.UpdateRevisionDate(inst, nil)
 	res := newFolderResponse(folder)
 	return c.JSON(http.StatusOK, res)
 }
@@ -196,6 +198,7 @@ func RenameFolder(c echo.Context) error {
 		})
 	}
 
+	settings.UpdateRevisionDate(inst, nil)
 	res := newFolderResponse(folder)
 	return c.JSON(http.StatusOK, res)
 }
@@ -259,5 +262,7 @@ func DeleteFolder(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
+
+	settings.UpdateRevisionDate(inst, nil)
 	return c.NoContent(http.StatusOK)
 }

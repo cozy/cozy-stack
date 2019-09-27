@@ -129,7 +129,7 @@ func titleizeKeys(data bitwarden.MapData) map[string]interface{} {
 	return res
 }
 
-func newCipherResponse(c *bitwarden.Cipher, settings *settings.Settings) *cipherResponse {
+func newCipherResponse(c *bitwarden.Cipher, setting *settings.Settings) *cipherResponse {
 	r := cipherResponse{
 		Object:   "cipher",
 		ID:       c.CouchID,
@@ -149,8 +149,8 @@ func newCipherResponse(c *bitwarden.Cipher, settings *settings.Settings) *cipher
 		r.Date = c.Metadata.UpdatedAt.UTC()
 	}
 	if c.SharedWithCozy {
-		r.OrganizationID = &settings.OrganizationID
-		r.CollectionIDs = append(r.CollectionIDs, settings.CollectionID)
+		r.OrganizationID = &setting.OrganizationID
+		r.CollectionIDs = append(r.CollectionIDs, setting.CollectionID)
 	}
 
 	if len(c.Fields) > 0 {
@@ -228,7 +228,7 @@ func ListCiphers(c echo.Context) error {
 		})
 	}
 
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
@@ -237,7 +237,7 @@ func ListCiphers(c echo.Context) error {
 
 	res := &ciphersList{Object: "list"}
 	for _, f := range ciphers {
-		res.Data = append(res.Data, newCipherResponse(f, settings))
+		res.Data = append(res.Data, newCipherResponse(f, setting))
 	}
 	return c.JSON(http.StatusOK, res)
 }
@@ -280,14 +280,15 @@ func CreateCipher(c echo.Context) error {
 		})
 	}
 
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
 	}
 
-	res := newCipherResponse(cipher, settings)
+	settings.UpdateRevisionDate(inst, setting)
+	res := newCipherResponse(cipher, setting)
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -326,7 +327,7 @@ func CreateSharedCipher(c echo.Context) error {
 		}
 	}
 
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
@@ -340,9 +341,9 @@ func CreateSharedCipher(c echo.Context) error {
 		})
 	}
 	for _, id := range req.CollectionIDs {
-		if id != settings.CollectionID {
+		if id != setting.CollectionID {
 			inst.Logger().WithField("nspace", "bitwarden").
-				Infof("Bad collection: %s vs %s", id, settings.CollectionID)
+				Infof("Bad collection: %s vs %s", id, setting.CollectionID)
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "generic collectionIds is not supported",
 			})
@@ -356,7 +357,8 @@ func CreateSharedCipher(c echo.Context) error {
 		})
 	}
 
-	res := newCipherResponse(cipher, settings)
+	settings.UpdateRevisionDate(inst, setting)
+	res := newCipherResponse(cipher, setting)
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -388,14 +390,14 @@ func GetCipher(c echo.Context) error {
 		})
 	}
 
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
 	}
 
-	res := newCipherResponse(cipher, settings)
+	res := newCipherResponse(cipher, setting)
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -467,14 +469,15 @@ func UpdateCipher(c echo.Context) error {
 		})
 	}
 
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
 	}
 
-	res := newCipherResponse(cipher, settings)
+	settings.UpdateRevisionDate(inst, setting)
+	res := newCipherResponse(cipher, setting)
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -511,6 +514,8 @@ func DeleteCipher(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
+
+	settings.UpdateRevisionDate(inst, nil)
 	return c.NoContent(http.StatusOK)
 }
 
@@ -570,12 +575,14 @@ func ShareCipher(c echo.Context) error {
 			"error": "organizationId not provided",
 		})
 	}
-	settings, err := settings.Get(inst)
+
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
 	}
+
 	if len(req.CollectionIDs) != 1 {
 		inst.Logger().WithField("nspace", "bitwarden").
 			Infof("Bad collection: %v", req.CollectionIDs)
@@ -584,9 +591,9 @@ func ShareCipher(c echo.Context) error {
 		})
 	}
 	for _, id := range req.CollectionIDs {
-		if id != settings.CollectionID {
+		if id != setting.CollectionID {
 			inst.Logger().WithField("nspace", "bitwarden").
-				Infof("Bad collection: %s vs %s", id, settings.CollectionID)
+				Infof("Bad collection: %s vs %s", id, setting.CollectionID)
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "generic collectionIds is not supported",
 			})
@@ -606,6 +613,7 @@ func ShareCipher(c echo.Context) error {
 		})
 	}
 
-	res := newCipherResponse(cipher, settings)
+	settings.UpdateRevisionDate(inst, setting)
+	res := newCipherResponse(cipher, setting)
 	return c.JSON(http.StatusOK, res)
 }

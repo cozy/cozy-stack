@@ -37,7 +37,7 @@ class Bitwarden
   end
 
   def sync
-    exec "sync --force"
+    exec "sync"
   end
 
   def json_exec(cmd)

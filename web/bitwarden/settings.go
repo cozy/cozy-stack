@@ -26,11 +26,11 @@ type domainsResponse struct {
 	Object                  string                 `json:"Object"`
 }
 
-func newDomainsResponse(settings *settings.Settings) *domainsResponse {
+func newDomainsResponse(setting *settings.Settings) *domainsResponse {
 	globals := make([]globalDomainsReponse, 0, len(bitwarden.GlobalDomains))
 	for k, v := range bitwarden.GlobalDomains {
 		excluded := false
-		for _, domain := range settings.GlobalEquivalentDomains {
+		for _, domain := range setting.GlobalEquivalentDomains {
 			if bitwarden.GlobalEquivalentDomainsType(domain) == k {
 				excluded = true
 				break
@@ -43,7 +43,7 @@ func newDomainsResponse(settings *settings.Settings) *domainsResponse {
 		})
 	}
 	return &domainsResponse{
-		EquivalentDomains:       settings.EquivalentDomains,
+		EquivalentDomains:       setting.EquivalentDomains,
 		GlobalEquivalentDomains: globals,
 		Object:                  "domains",
 	}
@@ -57,12 +57,12 @@ func GetDomains(c echo.Context) error {
 			"error": "invalid token",
 		})
 	}
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
 
-	domains := newDomainsResponse(settings)
+	domains := newDomainsResponse(setting)
 	return c.JSON(http.StatusOK, domains)
 }
 
@@ -85,19 +85,19 @@ func UpdateDomains(c echo.Context) error {
 		})
 	}
 
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
 
-	settings.EquivalentDomains = req.Equivalent
-	settings.GlobalEquivalentDomains = req.Global
-	if err := settings.Save(inst); err != nil {
+	setting.EquivalentDomains = req.Equivalent
+	setting.GlobalEquivalentDomains = req.Global
+	if err := setting.Save(inst); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
 		})
 	}
 
-	domains := newDomainsResponse(settings)
+	domains := newDomainsResponse(setting)
 	return c.JSON(http.StatusOK, domains)
 }
