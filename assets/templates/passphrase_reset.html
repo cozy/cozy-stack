@@ -26,6 +26,7 @@
             <h1 class="wizard-title u-mb-half u-mb-0-s u-mt-1-s">{{t "Passphrase reset Title"}}</h1>
             <div role="region">
               <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+              <input type="hidden" name="redirect" value="{{.Redirect}}" />
               <p class="wizard-notice u-mb-2 u-mt-1-half-s" id="login-password-tip">{{t "Passphrase reset Help"}}</p>
             </div>
             <footer claas="wizard-footer u-pb-half">

@@ -74,7 +74,11 @@
               </button>
               <input id="password" class="wizard-input c-input-text" name="passphrase" type="password" autofocus autocomplete="current-password" />
             </div>
-            <p class="password-form wizard-notice wizard-notice--lost"><a href="/auth/passphrase_reset">{{t "Login Forgot password"}}</a></p>
+            <p class="password-form wizard-notice wizard-notice--lost">
+              <a href="/auth/passphrase_reset{{if .Redirect}}?redirect={{.Redirect}}{{end}}">
+                {{t "Login Forgot password"}}
+              </a>
+            </p>
             {{if not .OAuth}}
             <p class="wizard-notice password-form">
               <label class="c-input-checkbox u-m-0">
