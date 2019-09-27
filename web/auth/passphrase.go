@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/hex"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
@@ -28,6 +29,7 @@ func passphraseResetForm(c echo.Context) error {
 		"Locale":      instance.Locale,
 		"CSRF":        c.Get("csrf"),
 		"Favicon":     middlewares.Favicon(instance),
+		"Redirect":    c.QueryParam("redirect"),
 	})
 }
 
@@ -91,6 +93,10 @@ func passphraseReset(c echo.Context) error {
 	if ok {
 		c.SetCookie(session.Delete(i))
 	}
+	var u url.Values
+	if redirect := c.FormValue("redirect"); redirect != "" {
+		u = url.Values{"redirect": {redirect}}
+	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
 		"Title":       i.TemplateTitle(),
 		"CozyUI":      middlewares.CozyUI(i),
@@ -100,7 +106,7 @@ func passphraseReset(c echo.Context) error {
 		"ErrorTitle":  "Passphrase is reset Title",
 		"Error":       "Passphrase is reset Body",
 		"Button":      "Passphrase is reset Login Button",
-		"ButtonLink":  i.PageURL("/auth/login", nil),
+		"ButtonLink":  i.PageURL("/auth/login", u),
 		"Favicon":     middlewares.Favicon(i),
 	})
 }

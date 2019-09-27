@@ -136,30 +136,34 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		return c.Redirect(http.StatusSeeOther, i.PageURL("/oidc/start", nil))
 	}
 
-	var title, help string
-
 	publicName, err := i.PublicName()
 	if err != nil {
 		publicName = ""
 	}
 
-	redirectStr := redirect.String()
-	redirectQuery := redirect.Query()
-
-	var clientScope string
-	if clientScopes := redirectQuery["scope"]; len(clientScopes) > 0 {
-		clientScope = clientScopes[0]
+	var redirectStr string
+	var hasOAuth, hasSharing bool
+	if redirect != nil {
+		redirectStr = redirect.String()
+		redirectQuery := redirect.Query()
+		var clientScope string
+		if clientScopes := redirectQuery["scope"]; len(clientScopes) > 0 {
+			clientScope = clientScopes[0]
+		}
+		if i.HasDomain(redirect.Host) {
+			hasOAuth = redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
+			hasSharing = redirect.Path == "/auth/authorize/sharing"
+		}
 	}
 
-	oauth := i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize" && clientScope != oauth.ScopeLogin
-
+	var title, help string
 	if c.QueryParam("msg") == "passphrase-reset-requested" {
 		title = i.Translate("Login Connect after reset requested title")
 		help = i.Translate("Login Connect after reset requested help")
 	} else if strings.Contains(redirectStr, "reconnect") {
 		title = i.Translate("Login Reconnect title")
 		help = i.Translate("Login Reconnect help")
-	} else if i.HasDomain(redirect.Host) && redirect.Path == "/auth/authorize/sharing" {
+	} else if hasSharing {
 		title = i.Translate("Login Connect from sharing title", publicName)
 		help = i.Translate("Login Connect from sharing help")
 	} else {
@@ -190,7 +194,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"CredentialsError": credsErrors,
 		"Redirect":         redirectStr,
 		"CSRF":             c.Get("csrf"),
-		"OAuth":            oauth,
+		"OAuth":            hasOAuth,
 		"Favicon":          middlewares.Favicon(i),
 		"CryptoPolyfill":   middlewares.CryptoPolyfill(c),
 	})
@@ -199,13 +203,16 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 func loginForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	redirect, err := checkRedirectParam(c, instance.DefaultRedirection())
+	redirect, err := checkRedirectParam(c, nil)
 	if err != nil {
 		return err
 	}
 
 	sess, ok := middlewares.GetSession(c)
 	if ok {
+		if redirect == nil {
+			redirect = instance.DefaultRedirection()
+		}
 		redirect = AddCodeToRedirect(redirect, instance.ContextualDomain(), sess.ID())
 		cookie, err := sess.ToCookie()
 		if err != nil {
@@ -226,6 +233,9 @@ func loginForm(c echo.Context) error {
 			}
 			if err = session.StoreNewLoginEntry(instance, sessionID, "", c.Request(), true); err != nil {
 				instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
+			}
+			if redirect == nil {
+				redirect = instance.DefaultRedirection()
 			}
 			redirect = AddCodeToRedirect(redirect, instance.ContextualDomain(), sessionID)
 			return c.Redirect(http.StatusSeeOther, redirect.String())
@@ -453,6 +463,9 @@ func logoutPreflight(c echo.Context) error {
 func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, error) {
 	redirect := c.FormValue("redirect")
 	if redirect == "" {
+		if defaultRedirect == nil {
+			return defaultRedirect, nil
+		}
 		redirect = defaultRedirect.String()
 	}
 
