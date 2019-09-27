@@ -268,6 +268,27 @@ Content-Type: application/json
 HTTP/1.1 204 No Content
 ```
 
+### GET /bitwarden/api/accounts/revision-date
+
+It returns the date of the last change on the server, as a number of
+milliseconds since epoch (sic). It is used by the clients to know if they have
+to do a sync or if they are already up-to-date.
+
+#### Request
+
+```http
+GET /bitwarden/api/accounts/revision-date HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+
+1569571388892
+```
+
 ### PUT /bitwarden/api/settings/domains
 
 This route is also available via a `POST`, for compatibility with the web vault.
