@@ -30,7 +30,7 @@ type profileResponse struct {
 	Object        string                  `json:"Object"`
 }
 
-func newProfileResponse(inst *instance.Instance, settings *settings.Settings) (*profileResponse, error) {
+func newProfileResponse(inst *instance.Instance, setting *settings.Settings) (*profileResponse, error) {
 	doc, err := inst.SettingsDocument()
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func newProfileResponse(inst *instance.Instance, settings *settings.Settings) (*
 	name, _ := doc.M["public_name"].(string)
 	salt := inst.PassphraseSalt()
 	var organizations []*organizationResponse
-	if orga, err := getCozyOrganizationResponse(inst, settings); err == nil {
+	if orga, err := getCozyOrganizationResponse(inst, setting); err == nil {
 		organizations = append(organizations, orga)
 	}
 	p := &profileResponse{
@@ -50,16 +50,16 @@ func newProfileResponse(inst *instance.Instance, settings *settings.Settings) (*
 		Hint:          nil,
 		Culture:       inst.Locale,
 		TwoFactor:     false,
-		Key:           settings.Key,
-		SStamp:        settings.SecurityStamp,
+		Key:           setting.Key,
+		SStamp:        setting.SecurityStamp,
 		Organizations: organizations,
 		Object:        "profile",
 	}
-	if settings.PrivateKey != "" {
-		p.PrivateKey = settings.PrivateKey
+	if setting.PrivateKey != "" {
+		p.PrivateKey = setting.PrivateKey
 	}
-	if settings.PassphraseHint != "" {
-		p.Hint = settings.PassphraseHint
+	if setting.PassphraseHint != "" {
+		p.Hint = setting.PassphraseHint
 	}
 	return p, nil
 }
@@ -74,7 +74,7 @@ type syncResponse struct {
 	Object      string                `json:"Object"`
 }
 
-func newSyncResponse(settings *settings.Settings,
+func newSyncResponse(setting *settings.Settings,
 	profile *profileResponse,
 	ciphers []*bitwarden.Cipher,
 	folders []*bitwarden.Folder,
@@ -86,10 +86,10 @@ func newSyncResponse(settings *settings.Settings,
 	}
 	ciphersResponse := make([]*cipherResponse, len(ciphers))
 	for i, c := range ciphers {
-		ciphersResponse[i] = newCipherResponse(c, settings)
+		ciphersResponse[i] = newCipherResponse(c, setting)
 	}
 	var collections []*collectionResponse
-	if coll, err := getCozyCollectionResponse(settings); err == nil {
+	if coll, err := getCozyCollectionResponse(setting); err == nil {
 		collections = append(collections, coll)
 	}
 	return &syncResponse{
@@ -112,12 +112,12 @@ func Sync(c echo.Context) error {
 			"error": "invalid token",
 		})
 	}
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
 
-	profile, err := newProfileResponse(inst, settings)
+	profile, err := newProfileResponse(inst, setting)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": err.Error(),
@@ -146,9 +146,9 @@ func Sync(c echo.Context) error {
 
 	var domains *domainsResponse
 	if c.QueryParam("excludeDomains") == "" {
-		domains = newDomainsResponse(settings)
+		domains = newDomainsResponse(setting)
 	}
 
-	res := newSyncResponse(settings, profile, ciphers, folders, domains)
+	res := newSyncResponse(setting, profile, ciphers, folders, domains)
 	return c.JSON(http.StatusOK, res)
 }

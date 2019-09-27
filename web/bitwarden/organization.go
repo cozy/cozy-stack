@@ -33,17 +33,17 @@ type organizationResponse struct {
 	Object         string `json:"Object"`
 }
 
-func getCozyOrganizationResponse(inst *instance.Instance, settings *settings.Settings) (*organizationResponse, error) {
-	if settings == nil || settings.PublicKey == "" {
+func getCozyOrganizationResponse(inst *instance.Instance, setting *settings.Settings) (*organizationResponse, error) {
+	if setting == nil || setting.PublicKey == "" {
 		return nil, errors.New("No public key")
 	}
-	orgKey, err := settings.OrganizationKey()
+	orgKey, err := setting.OrganizationKey()
 	if err != nil {
 		inst.Logger().WithField("nspace", "bitwarden").
 			Infof("Cannot read the organization key: %s", err)
 		return nil, err
 	}
-	key, err := crypto.EncryptWithRSA(settings.PublicKey, orgKey)
+	key, err := crypto.EncryptWithRSA(setting.PublicKey, orgKey)
 	if err != nil {
 		inst.Logger().WithField("nspace", "bitwarden").
 			Infof("Cannot encrypt with RSA: %s", err)
@@ -52,7 +52,7 @@ func getCozyOrganizationResponse(inst *instance.Instance, settings *settings.Set
 
 	email := inst.PassphraseSalt()
 	return &organizationResponse{
-		ID:             settings.OrganizationID,
+		ID:             setting.OrganizationID,
 		Name:           consts.BitwardenCozyOrganizationName,
 		Key:            key,
 		Email:          string(email),
@@ -83,8 +83,8 @@ type collectionResponse struct {
 	Object         string `json:"Object"`
 }
 
-func getCozyCollectionResponse(settings *settings.Settings) (*collectionResponse, error) {
-	orgKey, err := settings.OrganizationKey()
+func getCozyCollectionResponse(setting *settings.Settings) (*collectionResponse, error) {
+	orgKey, err := setting.OrganizationKey()
 	if err != nil || len(orgKey) != 64 {
 		return nil, errors.New("Missing organization key")
 	}
@@ -95,8 +95,8 @@ func getCozyCollectionResponse(settings *settings.Settings) (*collectionResponse
 		return nil, err
 	}
 	return &collectionResponse{
-		ID:             settings.CollectionID,
-		OrganizationID: settings.OrganizationID,
+		ID:             setting.CollectionID,
+		OrganizationID: setting.OrganizationID,
 		Name:           name,
 		Object:         "collection",
 	}, nil
