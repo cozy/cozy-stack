@@ -12,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
-	"github.com/mssola/user_agent"
 )
 
 func passphraseResetForm(c echo.Context) error {
@@ -51,11 +50,9 @@ func passphraseForm(c echo.Context) error {
 		})
 	}
 
-	ua := user_agent.New(c.Request().UserAgent())
-	browser, _ := ua.Browser()
-	edge := browser == "Edge"
+	cryptoPolyfill := middlewares.CryptoPolyfill(c)
 	iterations := crypto.DefaultPBKDF2Iterations
-	if edge {
+	if cryptoPolyfill {
 		iterations = crypto.EdgePBKDF2Iterations
 	}
 	matomo := config.GetConfig().Matomo
@@ -64,20 +61,20 @@ func passphraseForm(c echo.Context) error {
 	}
 
 	return c.Render(http.StatusOK, "passphrase_onboarding.html", echo.Map{
-		"CozyUI":        middlewares.CozyUI(inst),
-		"Title":         inst.TemplateTitle(),
-		"ThemeCSS":      middlewares.ThemeCSS(inst),
-		"Domain":        inst.ContextualDomain(),
-		"ContextName":   inst.ContextName,
-		"Locale":        inst.Locale,
-		"Iterations":    iterations,
-		"Salt":          string(inst.PassphraseSalt()),
-		"RegisterToken": registerToken,
-		"Favicon":       middlewares.Favicon(inst),
-		"Edge":          edge,
-		"MatomoURL":     matomo.URL,
-		"MatomoSiteID":  matomo.SiteID,
-		"MatomoAppID":   matomo.OnboardingAppID,
+		"CozyUI":         middlewares.CozyUI(inst),
+		"Title":          inst.TemplateTitle(),
+		"ThemeCSS":       middlewares.ThemeCSS(inst),
+		"Domain":         inst.ContextualDomain(),
+		"ContextName":    inst.ContextName,
+		"Locale":         inst.Locale,
+		"Iterations":     iterations,
+		"Salt":           string(inst.PassphraseSalt()),
+		"RegisterToken":  registerToken,
+		"Favicon":        middlewares.Favicon(inst),
+		"CryptoPolyfill": cryptoPolyfill,
+		"MatomoURL":      matomo.URL,
+		"MatomoSiteID":   matomo.SiteID,
+		"MatomoAppID":    matomo.OnboardingAppID,
 	})
 }
 
@@ -130,11 +127,9 @@ func passphraseRenewForm(c echo.Context) error {
 		})
 	}
 
-	ua := user_agent.New(c.Request().UserAgent())
-	browser, _ := ua.Browser()
-	edge := browser == "Edge"
+	cryptoPolyfill := middlewares.CryptoPolyfill(c)
 	iterations := crypto.DefaultPBKDF2Iterations
-	if edge {
+	if cryptoPolyfill {
 		iterations = crypto.EdgePBKDF2Iterations
 	}
 
@@ -150,7 +145,7 @@ func passphraseRenewForm(c echo.Context) error {
 		"PassphraseResetToken": hex.EncodeToString(token),
 		"CSRF":                 c.Get("csrf"),
 		"Favicon":              middlewares.Favicon(inst),
-		"Edge":                 edge,
+		"CryptoPolyfill":       cryptoPolyfill,
 	})
 }
 

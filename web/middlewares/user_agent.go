@@ -5,11 +5,23 @@ import (
 	"strconv"
 	"strings"
 
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
 )
 
-// browser
+// Some constants for the browser names
+const (
+	InternetExplorer = "Internet Explorer"
+	Edge             = "Edge"
+	Firefox          = "Firefox"
+	Chrome           = "Chrome"
+	Chromium         = "Chromium"
+	Opera            = "Opera"
+	Safari           = "Safari"
+)
+
+// browser is a struct with a name and a minimal version
 type browser struct {
 	name       string
 	minVersion *int
@@ -24,18 +36,20 @@ var minFirefoxVersion = 52
 
 var rules = []browser{
 	{
-		name: "Internet Explorer",
+		name: InternetExplorer,
 	},
 	{
-		name:       "Edge",
+		name:       Edge,
 		minVersion: &minEdgeVersion,
 	},
 	{
-		name:       "Firefox",
+		name:       Firefox,
 		minVersion: &minFirefoxVersion,
 	},
 }
 
+// CheckUserAgent is a middleware that shows an HTML page of error when a
+// browser that is not supported try to load a webapp.
 func CheckUserAgent(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ua := user_agent.New(c.Request().UserAgent())
@@ -75,4 +89,21 @@ func getMajorVersion(rawVersion string) (int, bool) {
 		return -1, false
 	}
 	return v, true
+}
+
+// CryptoPolyfill returns true if the browser can't use its window.crypto API
+// to hash the password with PBKDF2. It is the case for Edge, but also for
+// Chrome in development mode, because this API is only available in secure
+// more (HTTPS).
+func CryptoPolyfill(c echo.Context) bool {
+	ua := user_agent.New(c.Request().UserAgent())
+	browser, _ := ua.Browser()
+	if browser == Edge {
+		return true
+	}
+	if build.IsDevRelease() {
+		// XXX electron is seen as Safari
+		return browser == Chrome || browser == Chromium || browser == Opera || browser == Safari
+	}
+	return false
 }

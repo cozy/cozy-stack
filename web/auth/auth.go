@@ -175,8 +175,6 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	if settings, err := settings.Get(i); err == nil {
 		iterations = settings.PassphraseKdfIterations
 	}
-	ua := user_agent.New(c.Request().UserAgent())
-	browser, _ := ua.Browser()
 
 	return c.Render(code, "login.html", echo.Map{
 		"TemplateTitle":    i.TemplateTitle(),
@@ -194,7 +192,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"CSRF":             c.Get("csrf"),
 		"OAuth":            oauth,
 		"Favicon":          middlewares.Favicon(i),
-		"Edge":             browser == "Edge",
+		"CryptoPolyfill":   middlewares.CryptoPolyfill(c),
 	})
 }
 
