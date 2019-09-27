@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -46,6 +47,36 @@ func NegotiateHub(c echo.Context) error {
 	})
 }
 
+// WebsocketHub is the websocket handler for the hub to send notifications in
+// real-time for bitwarden stuff.
+func WebsocketHub(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	token := c.QueryParam("access_token")
+	pdoc, err := middlewares.ParseJWT(c, inst, token)
+	if err != nil || !pdoc.Permissions.AllowWholeType(permission.GET, consts.BitwardenCiphers) {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	notifier, err := upgradeWebsocket(c, inst, pdoc.SourceID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	go readPump(notifier)
+	return writePump(notifier)
+}
+
+type wsNotifier struct {
+	UserID    string
+	Settings  *settings.Settings
+	WS        *websocket.Conn
+	DS        *realtime.DynamicSubscriber
+	Responses chan []byte
+}
+
 const (
 	// Time allowed to write a message to the peer
 	writeWait = 10 * time.Second
@@ -64,35 +95,21 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-// WebsocketHub is the websocket handler for the hub to send notifications in
-// real-time for bitwarden stuff.
-func WebsocketHub(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	token := c.QueryParam("access_token")
-	pdoc, err := middlewares.ParseJWT(c, inst, token)
-	if err != nil || !pdoc.Permissions.AllowWholeType(permission.GET, consts.BitwardenCiphers) {
-		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "invalid token",
-		})
-	}
-	userID := pdoc.SourceID
-
+func upgradeWebsocket(c echo.Context, inst *instance.Instance, userID string) (*wsNotifier, error) {
 	settings, err := settings.Get(inst)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err.Error(),
-		})
+		return nil, err
 	}
 
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer ws.Close()
 
 	ws.SetReadLimit(maxMessageSize)
 	if err = ws.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-		return nil
+		ws.Close()
+		return nil, err
 	}
 	ws.SetPongHandler(func(string) error {
 		return ws.SetReadDeadline(time.Now().Add(pongWait))
@@ -100,56 +117,21 @@ func WebsocketHub(c echo.Context) error {
 
 	responses := make(chan []byte)
 	ds := realtime.GetHub().Subscriber(inst)
-	defer ds.Close()
-	go readPump(ws, ds, responses)
-
-	handle := new(codec.MsgpackHandle)
-	handle.WriteExt = true
-	ticker := time.NewTicker(pingPeriod)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case r := <-responses:
-			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				return err
-			}
-			if err := ws.WriteMessage(websocket.BinaryMessage, r); err != nil {
-				logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
-					Infof("Write error: %s", err)
-				return nil
-			}
-		case e := <-ds.Channel:
-			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				return err
-			}
-			notif := buildNotification(e, userID, settings)
-			if notif == nil {
-				continue
-			}
-			serialized, err := serializeNotification(handle, *notif)
-			if err != nil {
-				logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
-					Infof("Serialize error: %s", err)
-				continue
-			}
-			if err := ws.WriteMessage(websocket.BinaryMessage, serialized); err != nil {
-				return nil
-			}
-		case <-ticker.C:
-			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				return err
-			}
-			if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-				return nil
-			}
-		}
+	notifier := wsNotifier{
+		UserID:    userID,
+		Settings:  settings,
+		WS:        ws,
+		DS:        ds,
+		Responses: responses,
 	}
+	return &notifier, nil
 }
 
 var initialResponse = []byte{0x7b, 0x7d, 0x1e} // {}<RS>
 
-func readPump(ws *websocket.Conn, ds *realtime.DynamicSubscriber, responses chan []byte) {
+func readPump(notifier *wsNotifier) {
+	ws := notifier.WS
+	ds := notifier.DS
 	var msg struct {
 		Protocol string `json:"protocol"`
 		Version  int    `json:"version"`
@@ -176,7 +158,7 @@ func readPump(ws *websocket.Conn, ds *realtime.DynamicSubscriber, responses chan
 			Infof("Subscribe error: %s", err)
 		return
 	}
-	responses <- initialResponse
+	notifier.Responses <- initialResponse
 
 	// Just send back the pings from the client
 	for {
@@ -188,7 +170,57 @@ func readPump(ws *websocket.Conn, ds *realtime.DynamicSubscriber, responses chan
 			}
 			return
 		}
-		responses <- msg
+		notifier.Responses <- msg
+	}
+}
+
+func writePump(notifier *wsNotifier) error {
+	ws := notifier.WS
+	defer ws.Close()
+	ds := notifier.DS
+	defer ds.Close()
+
+	handle := new(codec.MsgpackHandle)
+	handle.WriteExt = true
+	ticker := time.NewTicker(pingPeriod)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case r := <-notifier.Responses:
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return err
+			}
+			if err := ws.WriteMessage(websocket.BinaryMessage, r); err != nil {
+				logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+					Infof("Write error: %s", err)
+				return nil
+			}
+		case e := <-ds.Channel:
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return err
+			}
+			notif := buildNotification(e, notifier.UserID, notifier.Settings)
+			if notif == nil {
+				continue
+			}
+			serialized, err := serializeNotification(handle, *notif)
+			if err != nil {
+				logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+					Infof("Serialize error: %s", err)
+				continue
+			}
+			if err := ws.WriteMessage(websocket.BinaryMessage, serialized); err != nil {
+				return nil
+			}
+		case <-ticker.C:
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return err
+			}
+			if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				return nil
+			}
+		}
 	}
 }
 
