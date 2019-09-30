@@ -50,7 +50,7 @@ require (
 	golang.org/x/image v0.0.0-20190910094157-69e4b8554b2a
 	golang.org/x/net v0.0.0-20190926025831-c00fd9afed17
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/tools v0.0.0-20190920225731-5eefd052ad72
+	golang.org/x/tools v0.0.0-20190929041059-e7abfedfabcf
 	google.golang.org/appengine v1.6.4 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/dgrijalva/jwt-go.v3 v3.2.0
