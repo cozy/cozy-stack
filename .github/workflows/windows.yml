@@ -1,9 +1,8 @@
 name: Build on windows
-on: [push,pull_request]
-# on:
-#   schedule:
-#     - cron:  '8 8 * * 2'
-# https://crontab.guru/#8_8_*_*_2
+on:
+  schedule:
+    - cron:  '8 8 * * 3'
+    # https://crontab.guru/#8_8_*_*_3
 jobs:
   build:
     runs-on: windows-latest
