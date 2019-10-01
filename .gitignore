@@ -6,11 +6,8 @@
 /debug-assets
 /node_modules
 /package-lock.json
-/pkg/workers/exec/konnector_test*.local
 /scripts/cozy-stack*
 /storage
-/tests/clone/generated
-/tests/coverage.txt
 /tests/integration/tmp
 
 *.log
