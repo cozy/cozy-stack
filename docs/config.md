@@ -15,6 +15,11 @@ should be present in one of these directories (ordered by priority):
 The path of the configuration file can also be define from an absolute path
 given by the `--config` (or `-c`) flag of the [cozy-stack command](./cli/cozy-stack_serve.md).
 
+Note that is is possible to have an additional configuration file, with the
+`.local` suffix. For example, it can be used to have `/etc/cozy/cozy.yml`
+managed by a package manager, and `/etc/cozy/cozy.yml.local` for things that a
+user can customize.
+
 ### Templating and Environment Variables
 
 It is possible to pass environnment variable to this configuration using the
