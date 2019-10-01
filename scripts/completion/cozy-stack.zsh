@@ -17,6 +17,7 @@ function _cozy-stack {
   cmnds)
     commands=(
       "apps:Interact with the applications"
+      "assets:Show and manage dynamic assets"
       "bug:start a bug report"
       "completion:Output shell completion code for the specified shell"
       "config:Show and manage configuration elements"
@@ -41,6 +42,9 @@ function _cozy-stack {
   case "$words[1]" in
   apps)
     _cozy-stack_apps
+    ;;
+  assets)
+    _cozy-stack_assets
     ;;
   bug)
     _cozy-stack_bug
@@ -194,6 +198,74 @@ function _cozy-stack_apps_update {
     '--all-domains[work on all domains iteratively]' \
     '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
     '--domain[specify the domain name of the instance]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+
+function _cozy-stack_assets {
+  local -a commands
+
+  _arguments -C \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:' \
+    "1: :->cmnds" \
+    "*::arg:->args"
+
+  case $state in
+  cmnds)
+    commands=(
+      "add:Insert an asset"
+      "ls:List assets"
+      "rm:Removes an asset"
+    )
+    _describe "command" commands
+    ;;
+  esac
+
+  case "$words[1]" in
+  add)
+    _cozy-stack_assets_add
+    ;;
+  ls)
+    _cozy-stack_assets_ls
+    ;;
+  rm)
+    _cozy-stack_assets_rm
+    ;;
+  esac
+}
+
+function _cozy-stack_assets_add {
+  _arguments \
+    '--context[The context of the asset]:' \
+    '--name[The name of the asset]:' \
+    '--shasum[The shasum of the asset]:' \
+    '--url[The URL of the asset]:' \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+function _cozy-stack_assets_ls {
+  _arguments \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+function _cozy-stack_assets_rm {
+  _arguments \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
     '--host[server host]:' \
     '(-p --port)'{-p,--port}'[server port]:'
 }

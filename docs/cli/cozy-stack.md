@@ -27,6 +27,7 @@ cozy-stack <command> [flags]
 ### SEE ALSO
 
 * [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the applications
+* [cozy-stack assets](cozy-stack_assets.md)	 - Show and manage dynamic assets
 * [cozy-stack bug](cozy-stack_bug.md)	 - start a bug report
 * [cozy-stack completion](cozy-stack_completion.md)	 - Output shell completion code for the specified shell
 * [cozy-stack config](cozy-stack_config.md)	 - Show and manage configuration elements
