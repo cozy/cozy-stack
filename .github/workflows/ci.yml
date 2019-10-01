@@ -1,0 +1,30 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      couchdb:
+        image: apache/couchdb:2.3
+        ports:
+          - 5984/tcp
+      redis:
+        image: redis
+        ports:
+          - 6379/tcp
+    strategy:
+      matrix:
+        go-version: [1.12.x, 1.13.x]
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Install
+        run: |
+          curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
+          go install
+      - name: Test
+        run: go test -timeout 2m ./...

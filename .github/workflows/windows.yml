@@ -1,15 +1,14 @@
 name: Build on windows
 on:
   schedule:
-    - cron:  '8 8 * * 3'
-    # https://crontab.guru/#8_8_*_*_3
+    - cron: '8 8 * * 3'  # https://crontab.guru/#8_8_*_*_3
 jobs:
   build:
     runs-on: windows-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v1
-      with:
-        fetch-depth: 1
-    - name: Build
-      run: go run . --help
+      - name: Checkout code
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - name: Build
+        run: go run . --help
