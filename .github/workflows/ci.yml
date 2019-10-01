@@ -1,5 +1,11 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -7,11 +13,11 @@ jobs:
       couchdb:
         image: apache/couchdb:2.3
         ports:
-          - 5984/tcp
+          - 5984:5984
       redis:
         image: redis
         ports:
-          - 6379/tcp
+          - 6379:6379
     strategy:
       matrix:
         go-version: [1.12.x, 1.13.x]
@@ -24,7 +30,13 @@ jobs:
         uses: actions/checkout@v1
       - name: Install
         run: |
+          git config --global user.email "github@spam.cozycloud.cc"
+          git config --global user.name "github actions"
           curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
+          echo ::add-path::$(go env GOPATH)/bin
           go install
-      - name: Test
+      - name: Lint
+        if: matrix.go-version == '1.13.x'
+        run: ./scripts/lint.sh
+      - name: Unit tests
         run: go test -timeout 2m ./...

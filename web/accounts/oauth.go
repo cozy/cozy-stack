@@ -176,7 +176,6 @@ func refresh(c echo.Context) error {
 	}
 
 	return jsonapi.Data(c, http.StatusOK, &apiAccount{&acc}, nil)
-
 }
 
 // Routes setups routing for cozy-as-oauth-client routes

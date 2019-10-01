@@ -24,7 +24,6 @@ func maybeSet(u url.Values, k string, v interface{}) error {
 // Values transforms a ViewRequest into a query string suitable for couchdb
 // ie, where non-scalar fields have been JSON+URL encoded.
 func (vr *ViewRequest) Values() (url.Values, error) {
-
 	var v url.Values
 
 	v, err := query.Values(vr)
@@ -53,7 +52,6 @@ func (vr *ViewRequest) Values() (url.Values, error) {
 // Values transforms a AllDocsRequest into a query string suitable for couchdb
 // ie, where non-scalar fields have been JSON+URL encoded.
 func (adr *AllDocsRequest) Values() (url.Values, error) {
-
 	var v url.Values
 
 	v, err := query.Values(adr)

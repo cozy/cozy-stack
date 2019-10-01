@@ -7,7 +7,6 @@ import (
 )
 
 func TestStartKeyCursor(t *testing.T) {
-
 	req1 := &ViewRequest{
 		Key: []string{"A", "B"},
 	}
@@ -35,5 +34,4 @@ func TestStartKeyCursor(t *testing.T) {
 	assert.Len(t, res.Rows, 3)
 	assert.Equal(t, []string{"A", "B"}, c2.(*StartKeyCursor).NextKey)
 	assert.Equal(t, "resultD", c2.(*StartKeyCursor).NextDocID)
-
 }

@@ -19,7 +19,6 @@ func getJSON(t *testing.T, url string, out interface{}) error {
 
 	assert.Equal(t, 200, res.StatusCode)
 	return json.NewDecoder(res.Body).Decode(&out)
-
 }
 
 func TestTrashIsSkipped(t *testing.T) {
@@ -117,7 +116,6 @@ func TestZeroCountIsPresent(t *testing.T) {
 }
 
 func TestListDirPaginated(t *testing.T) {
-
 	_, dirdata := createDir(t, "/files/?Type=directory&Name=paginationcontainer")
 
 	dirdata, ok := dirdata["data"].(map[string]interface{})
@@ -196,11 +194,9 @@ func TestListDirPaginated(t *testing.T) {
 		result3.Data[0].(map[string]interface{})["id"])
 
 	trash(t, "/files/"+parentID)
-
 }
 
 func TestListDirPaginatedSkip(t *testing.T) {
-
 	_, dirdata := createDir(t, "/files/?Type=directory&Name=paginationcontainerskip")
 
 	dirdata, ok := dirdata["data"].(map[string]interface{})
@@ -275,5 +271,4 @@ func TestListDirPaginatedSkip(t *testing.T) {
 		result3.Data[0].(map[string]interface{})["id"])
 
 	trash(t, "/files/"+parentID)
-
 }

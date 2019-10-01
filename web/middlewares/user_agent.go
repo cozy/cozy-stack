@@ -57,7 +57,6 @@ func CheckUserAgent(next echo.HandlerFunc) echo.HandlerFunc {
 		acceptHeader := c.Request().Header.Get(echo.HeaderAccept)
 
 		if strings.Contains(acceptHeader, echo.MIMETextHTML) {
-
 			for _, rule := range rules {
 				if browser == rule.name {
 					version, ok := getMajorVersion(rawVersion)

@@ -733,7 +733,6 @@ func UseViper(v *viper.Viper) error {
 	w := logger.WithNamespace("go-redis").Writer()
 	redis.SetLogger(stdlog.New(w, "", 0))
 	return nil
-
 }
 
 // MakeVault initializes the global vault.

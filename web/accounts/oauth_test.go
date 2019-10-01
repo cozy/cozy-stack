@@ -27,7 +27,6 @@ var testInstance *instance.Instance
 var setup *testutils.TestSetup
 
 func TestAccessCodeOauthFlow(t *testing.T) {
-
 	redirectURI := ts.URL + "/accounts/test-service/redirect"
 
 	service := makeTestACService(redirectURI)
@@ -260,7 +259,6 @@ func makeTestRedirectURLService(redirectURI string) *httptest.Server {
 		opts := &url.Values{}
 		opts.Add("access_token", "the-access-token2")
 		return c.String(200, c.QueryParam("redirect_url")+"?"+opts.Encode())
-
 	})
 	return httptest.NewServer(serviceHandler)
 }
@@ -280,7 +278,6 @@ func makeTestACService(redirectURI string) *httptest.Server {
 		opts.Add("code", "myaccesscode")
 		opts.Add("state", c.QueryParam("state"))
 		return c.String(200, c.QueryParam("redirect_uri")+"?"+opts.Encode())
-
 	})
 	serviceHandler.POST("/oauth2/v4/token", func(c echo.Context) error {
 		ok := c.FormValue("code") == "myaccesscode" &&

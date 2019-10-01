@@ -222,5 +222,4 @@ func TestPermissions(t *testing.T) {
 		},
 	}
 	assert.Error(t, vfs.Allows(fs, psetUnclePrefixID, permission.GET, f))
-
 }

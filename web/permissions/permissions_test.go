@@ -489,7 +489,6 @@ func TestPatchChangesCodes(t *testing.T) {
 	newcodes := attrs["codes"].(map[string]interface{})
 	assert.NotEmpty(t, newcodes["john"])
 	assert.Nil(t, newcodes["jane"])
-
 }
 
 func TestRevoke(t *testing.T) {
@@ -507,7 +506,6 @@ func TestRevoke(t *testing.T) {
 	out, err := doRequest("DELETE", ts.URL+"/permissions/"+id, token, "")
 	assert.NoError(t, err)
 	assert.Nil(t, out)
-
 }
 
 func createTestSubPermissions(tok string, codes string) (string, map[string]interface{}, error) {
@@ -684,7 +682,6 @@ func TestGetForOauth(t *testing.T) {
 }
 
 func TestListPermission(t *testing.T) {
-
 	ev1, _ := createTestEvent(testInstance)
 	ev2, _ := createTestEvent(testInstance)
 	ev3, _ := createTestEvent(testInstance)
@@ -798,7 +795,6 @@ func TestListPermission(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, resBody3.Data, 1)
 	assert.NotEmpty(t, resBody3.Links.Next)
-
 }
 
 func TestCreatePermissionWithoutMetadata(t *testing.T) {

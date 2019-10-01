@@ -413,7 +413,6 @@ func (sfs *swiftVFSV3) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version)
 	}
 
 	return sfs.Indexer.DeleteVersion(version)
-
 }
 
 // UpdateFileDoc calls the indexer UpdateFileDoc function and adds a few checks

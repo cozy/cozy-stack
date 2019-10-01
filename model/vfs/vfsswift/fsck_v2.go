@@ -40,7 +40,6 @@ func (sfs *swiftVFSV2) CheckFilesConsistency(accumulate func(log *vfs.FsckLog)) 
 }
 
 func (sfs *swiftVFSV2) checkFiles(entries map[string]*vfs.TreeFile, accumulate func(log *vfs.FsckLog)) (err error) {
-
 	err = sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
 		var objs []swift.Object
 		objs, err = sfs.c.Objects(sfs.container, opts)

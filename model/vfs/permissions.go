@@ -85,7 +85,6 @@ func Allows(fs VFS, pset permission.Set, v permission.Verb, fd Fetcher) error {
 				return nil
 			}
 		}
-
 	}
 
 	// We have some rules on attributes, let's iterate over the current object

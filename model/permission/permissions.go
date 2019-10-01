@@ -137,7 +137,6 @@ func (p *Permission) PatchCodes(codes map[string]string) {
 					updatedShortcodes[shortcodeName] = v
 				}
 			}
-
 		}
 		p.ShortCodes = updatedShortcodes
 	}

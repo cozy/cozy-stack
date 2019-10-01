@@ -228,7 +228,6 @@ func BindRelations(req *http.Request) ([]couchdb.DocReference, error) {
 // the url.Values contains only keys page[limit] & page[cursor]
 // if the cursor is Done, the values will be empty.
 func PaginationCursorToParams(cursor couchdb.Cursor) (url.Values, error) {
-
 	v := url.Values{}
 
 	if !cursor.HasMore() {

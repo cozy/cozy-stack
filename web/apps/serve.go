@@ -323,7 +323,6 @@ func BuildTemplates() {
 {{end}}
 <script src="{{asset .Domain "/js/cozy-bar.min.js" .ContextName}}"></script>`,
 	))
-
 }
 
 func cozyclientjs(i *instance.Instance) template.HTML {

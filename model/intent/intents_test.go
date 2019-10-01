@@ -105,7 +105,6 @@ func TestFillServices(t *testing.T) {
 	err = intent.FillServices(ins)
 	assert.NoError(t, err)
 	assert.Len(t, intent.Services, 0)
-
 }
 
 func TestFillAvailableWebapps(t *testing.T) {

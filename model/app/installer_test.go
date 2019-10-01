@@ -94,9 +94,10 @@ echo 'branch' > branch && \
 git add . && \
 git commit -m 'Create a branch' && \
 git checkout -`
-	cmd := exec.Command("sh", "-c", args)
+	cmd := exec.Command("bash", "-c", args)
 	cmd.Dir = localGitDir
-	if err := cmd.Run(); err != nil {
+	if out, err := cmd.CombinedOutput(); err != nil {
+		fmt.Println(string(out))
 		panic(err)
 	}
 
@@ -118,7 +119,7 @@ git commit -am "Upgrade commit" && \
 git checkout branch && \
 git rebase master && \
 git checkout master`
-	cmd := exec.Command("sh", "-c", args)
+	cmd := exec.Command("bash", "-c", args)
 	cmd.Dir = localGitDir
 	if out, err := cmd.Output(); err != nil {
 		fmt.Println(string(out), err)

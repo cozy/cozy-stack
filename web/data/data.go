@@ -202,7 +202,6 @@ func UpdateDoc(c echo.Context) error {
 
 	errWhole := middlewares.AllowWholeType(c, permission.PUT, doc.DocType())
 	if errWhole != nil {
-
 		// we cant apply to whole type, let's fetch old doc and see if it applies there
 		var old couchdb.JSONDoc
 		errFetch := couchdb.GetDoc(instance, doc.DocType(), doc.ID(), &old)

@@ -66,7 +66,6 @@ func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface
 		return
 	}
 	return nil, res, err
-
 }
 
 func getDocForTest() *couchdb.JSONDoc {
@@ -140,7 +139,6 @@ func TestWrongDoctype(t *testing.T) {
 	if assert.Contains(t, out, "reason") {
 		assert.Equal(t, "wrong_doctype", out["reason"], "should give a reason")
 	}
-
 }
 
 func TestUnderscoreName(t *testing.T) {
@@ -160,7 +158,6 @@ func TestGetDesign(t *testing.T) {
 }
 
 func TestVFSDoctype(t *testing.T) {
-
 	var in = jsonReader(&map[string]interface{}{
 		"wrong-vfs": "structure",
 	})
@@ -260,7 +257,6 @@ func TestWrongCreateWithID(t *testing.T) {
 }
 
 func TestSuccessUpdate(t *testing.T) {
-
 	// Get revision
 	doc := getDocForTest()
 	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
@@ -333,7 +329,6 @@ func TestCreateDocWithAFixedID(t *testing.T) {
 	assert.Equal(t, out.Type, out.Data.Type, "in doc type is correct")
 	assert.Equal(t, out.Rev, out.Data.Rev(), "in doc rev is correct")
 	assert.Equal(t, "anewvalue", out.Data.Get("somefield"), "content has changed")
-
 }
 
 func TestNoRevInDocUpdate(t *testing.T) {
@@ -614,7 +609,6 @@ func TestFindDocumentsWithoutIndex(t *testing.T) {
 }
 
 func TestGetChanges(t *testing.T) {
-
 	assert.NoError(t, couchdb.ResetDB(testInstance, Type))
 
 	url := ts.URL + "/data/" + Type + "/_changes?style=all_docs"

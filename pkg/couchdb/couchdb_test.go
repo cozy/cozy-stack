@@ -178,7 +178,6 @@ func TestDefineIndex(t *testing.T) {
 }
 
 func TestQuery(t *testing.T) {
-
 	// create a few docs for testing
 	doc1 := testDoc{FieldA: "value1", FieldB: 100}
 	doc2 := testDoc{FieldA: "value2", FieldB: 1000}
@@ -231,7 +230,6 @@ func TestQuery(t *testing.T) {
 		assert.Equal(t, doc1.ID(), out2[0].ID())
 		assert.Equal(t, doc5.ID(), out2[1].ID())
 	}
-
 }
 
 func TestChangesSuccess(t *testing.T) {

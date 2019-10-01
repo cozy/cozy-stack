@@ -186,7 +186,6 @@ func export(tw *tar.Writer, instance *instance.Instance) error {
 			if err := writeFile(tw, file, name, fs); err != nil {
 				return err
 			}
-
 		}
 
 		return nil

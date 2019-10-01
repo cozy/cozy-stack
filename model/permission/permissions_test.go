@@ -19,7 +19,6 @@ func TestVerbToString(t *testing.T) {
 
 	vs4 := VerbSplit("ALL")
 	assert.Equal(t, "ALL", vs4.String())
-
 }
 
 func TestRuleToJSON(t *testing.T) {
@@ -211,7 +210,6 @@ func TestSetToString(t *testing.T) {
 }
 
 func TestStringToSet(t *testing.T) {
-
 	_, err := UnmarshalRuleString("")
 	assert.Error(t, err)
 
@@ -237,7 +235,6 @@ func TestStringToSet(t *testing.T) {
 	assert.Equal(t, "mygreatcalendar", rule.Values[0])
 	assert.Equal(t, "othercalendar", rule.Values[1])
 	assert.Equal(t, "calendar-id", rule.Selector)
-
 }
 
 func TestAllowType(t *testing.T) {
@@ -298,7 +295,6 @@ func TestAllowID(t *testing.T) {
 }
 
 func TestAllowCustomType(t *testing.T) {
-
 	s := Set{Rule{Type: "io.cozy.files", Selector: "path", Values: []string{"/testp/"}}}
 
 	y := &validableFile{"/testp/test"}

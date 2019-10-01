@@ -37,5 +37,4 @@ func TestSplitChannelVersionRegistryFetcher(t *testing.T) {
 	assert.NoError(t, err5)
 	assert.EqualValues(t, c5, "stable")
 	assert.EqualValues(t, v5, "")
-
 }
