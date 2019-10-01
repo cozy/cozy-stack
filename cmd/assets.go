@@ -30,9 +30,6 @@ var addAssetCmd = &cobra.Command{
 }
 
 func addAsset(cmd *cobra.Command, args []string) error {
-	// Check params
-	var customAssets []modelAsset.AssetOption
-
 	if flagContext == "" {
 		return fmt.Errorf("You must provide a context")
 	}
@@ -44,8 +41,7 @@ func addAsset(cmd *cobra.Command, args []string) error {
 		Context: flagContext,
 	}
 
-	customAssets = append(customAssets, assetOption)
-
+	customAssets := []modelAsset.AssetOption{assetOption}
 	marshaledAssets, err := json.Marshal(customAssets)
 	if err != nil {
 		return err
@@ -115,7 +111,6 @@ func lsAssets(cmd *cobra.Command, args []string) error {
 	defer res.Body.Close()
 
 	var v interface{}
-
 	err = json.NewDecoder(res.Body).Decode(&v)
 	if err != nil {
 		return err
