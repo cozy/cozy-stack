@@ -7,7 +7,7 @@ Output shell completion code for the specified shell
 
 Output shell completion code for the specified shell (bash or zsh).
 The shell code must be evalutated to provide interactive
-completion of kubectl commands.  This can be done by sourcing it from
+completion of cozy-stack commands.  This can be done by sourcing it from
 the .bash_profile.
 
 Note: this requires the bash-completion framework, which is not installed
