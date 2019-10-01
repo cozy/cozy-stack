@@ -1,0 +1,16 @@
+name: Build on windows
+on: [push,pull_request]
+# on:
+#   schedule:
+#     - cron:  '8 8 * * 2'
+# https://crontab.guru/#8_8_*_*_2
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - name: Build
+      run: go run . --help
