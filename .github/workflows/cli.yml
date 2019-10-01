@@ -1,0 +1,29 @@
+name: Build docs and shell completions
+on:
+  push:
+    paths:
+      - 'cmd/*.go'
+  pull_request:
+    paths:
+      - 'cmd/*.go'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Install
+        run: |
+          git config --global user.email "github@spam.cozycloud.cc"
+          git config --global user.name "github actions"
+          echo ::add-path::$(go env GOPATH)/bin
+          go install
+      - name: Build
+        run: |
+          rm -rf docs/cli/*
+          cozy-stack doc markdown docs/cli
+          cozy-stack completion bash > scripts/completion/cozy-stack.bash
+          cozy-stack completion zsh > scripts/completion/cozy-stack.zsh
+          git add docs/cli scripts/completion && git commit -m 'Update CLI docs' && git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
