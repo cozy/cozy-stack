@@ -165,5 +165,4 @@ func TestMain(m *testing.M) {
 	ts = setup.GetTestServer("/intents", Routes)
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	os.Exit(setup.Run())
-
 }

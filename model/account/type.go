@@ -118,7 +118,6 @@ func (at *AccountType) RedirectURI(i *instance.Instance) string {
 // MakeOauthStartURL returns the url at which direct the user to start
 // the oauth flow
 func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, state string) (string, error) {
-
 	u, err := url.Parse(at.AuthEndpoint)
 	if err != nil {
 		return "", err
@@ -155,7 +154,6 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, sta
 
 	u.RawQuery = vv.Encode()
 	return u.String(), nil
-
 }
 
 // RequestAccessToken asks the service an access token
@@ -269,7 +267,6 @@ func (at *AccountType) RequestAccessToken(i *instance.Instance, accessCode, stat
 // RefreshAccount requires a new AccessToken using the RefreshToken
 // as specified in https://tools.ietf.org/html/rfc6749#section-6
 func (at *AccountType) RefreshAccount(a Account) error {
-
 	if a.Oauth == nil {
 		return ErrUnrefreshable
 	}

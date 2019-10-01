@@ -194,7 +194,6 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 		} else {
 			codes[key] = previousVal
 		}
-
 	}
 
 	set := make(permission.Set, len(s.Rules))

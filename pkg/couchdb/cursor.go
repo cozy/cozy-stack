@@ -106,7 +106,6 @@ func (c *StartKeyCursor) ApplyTo(req *ViewRequest) {
 	if c.Limit != 0 {
 		req.Limit = c.Limit + 1
 	}
-
 }
 
 // UpdateFrom change the cursor status depending on information from

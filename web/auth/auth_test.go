@@ -1725,7 +1725,6 @@ func TestPassphraseOnboardingBadRegisterToken(t *testing.T) {
 	content, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Contains(t, string(content), "Your Cozy has not been yet activated.")
-
 }
 
 func TestLoginOnboardingNotFinished(t *testing.T) {
@@ -1750,7 +1749,6 @@ func TestLoginOnboardingNotFinished(t *testing.T) {
 	content, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Contains(t, string(content), "Your Cozy has not been yet activated.")
-
 }
 
 func TestMain(m *testing.M) {

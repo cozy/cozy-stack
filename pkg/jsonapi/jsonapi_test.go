@@ -180,7 +180,6 @@ func TestPaginationWithCursor(t *testing.T) {
 	var c string
 	assert.NoError(t, json.NewDecoder(res.Body).Decode(&c))
 	assert.Equal(t, "key 13 [a b] c", c)
-
 }
 
 func TestMain(m *testing.M) {
@@ -205,7 +204,6 @@ func TestMain(m *testing.M) {
 		}
 
 		return fmt.Errorf("Wrong cursor type")
-
 	})
 
 	ts = httptest.NewServer(router)

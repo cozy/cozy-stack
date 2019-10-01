@@ -214,7 +214,6 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 
 			if member.Status == sharing.MemberStatusRevoked {
 				return nil, permission.ErrInvalidToken
-
 			}
 		}
 

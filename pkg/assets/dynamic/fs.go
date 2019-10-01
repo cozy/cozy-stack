@@ -130,7 +130,6 @@ func (a *AferoFS) Get(context, name string) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), f.Close()
-
 }
 
 func (a *AferoFS) Remove(context, name string) error {
@@ -226,7 +225,6 @@ func (s *SwiftFS) List() (map[string][]*model.Asset, error) {
 		}
 
 		objs[ctx] = append(objs[ctx], a)
-
 	}
 
 	return objs, nil

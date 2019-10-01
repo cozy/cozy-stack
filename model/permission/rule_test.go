@@ -27,8 +27,8 @@ func TestMergeRulesIdentical(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, &rule2, newRule)
 }
-func TestMergeRules(t *testing.T) {
 
+func TestMergeRules(t *testing.T) {
 	rule1 := Rule{
 		Title:       "myrule1",
 		Type:        "io.cozy.files",

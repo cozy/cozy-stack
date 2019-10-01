@@ -85,7 +85,6 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 			Slug: webappManifest.Slug(),
 			Name: webappManifest.Name,
 		}
-
 	}
 
 	if params.scope == "" {

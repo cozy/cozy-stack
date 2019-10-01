@@ -1263,7 +1263,6 @@ func TestArchiveDirectDownload(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Equal(t, "application/zip", res.Header.Get("Content-Type"))
-
 }
 
 func TestArchiveCreateAndDownload(t *testing.T) {

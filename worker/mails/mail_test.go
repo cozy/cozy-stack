@@ -203,7 +203,6 @@ func mailServer(t *testing.T, serverString string, clientStrings []string, expec
 	// prevent data race on bcmdbuf
 	var done = make(chan struct{})
 	go func(data []string) {
-
 		defer close(done)
 
 		conn, err := l.Accept()

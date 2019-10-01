@@ -124,7 +124,6 @@ func PutObject(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, nil)
-
 }
 
 // DeleteObject removes an object from Swift

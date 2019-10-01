@@ -93,7 +93,6 @@ func finishOnboarding(c echo.Context) error {
 			"scope":         {client.OnboardingPermissions},
 		}
 		redirect = i.PageURL("/auth/authorize", queryParams)
-
 	}
 	return c.Redirect(http.StatusSeeOther, redirect)
 }

@@ -106,7 +106,6 @@ func (c *TestSetup) SetupSwiftTest() error {
 	}
 
 	return nil
-
 }
 
 // AddCleanup adds a function to be run when the test is finished.
