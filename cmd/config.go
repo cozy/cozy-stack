@@ -13,7 +13,6 @@ import (
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/account"
-	modelAsset "github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/keymgmt"
@@ -21,11 +20,6 @@ import (
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 )
-
-var flagURL string
-var flagName string
-var flagShasum string
-var flagContext string
 
 var configCmdGroup = &cobra.Command{
 	Use:   "config <command>",
@@ -298,64 +292,19 @@ var insertAssetCmd = &cobra.Command{
 	Long:    "Inserts a custom asset in a specific context",
 	Example: "$ cozy-stack config insert-asset --url file:///foo/bar/baz.js --name /foo/bar/baz.js --shasum 0763d6c2cebee0880eb3a9cc25d38cd23db39b5c3802f2dc379e408c877a2788 --context foocontext",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Check params
-		var customAssets []modelAsset.AssetOption
-
-		if flagContext == "" {
-			return fmt.Errorf("You must provide a context")
-		}
-
-		assetOption := modelAsset.AssetOption{
-			URL:     flagURL,
-			Name:    flagName,
-			Shasum:  flagShasum,
-			Context: flagContext,
-		}
-
-		customAssets = append(customAssets, assetOption)
-
-		marshaledAssets, err := json.Marshal(customAssets)
-		if err != nil {
-			return err
-		}
-
-		c := newAdminClient()
-		req := &request.Options{
-			Method: "POST",
-			Path:   "instances/assets",
-			Body:   bytes.NewReader(marshaledAssets),
-		}
-		res, err := c.Req(req)
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
-		return nil
+		errPrintfln("Please use cozy-stack assets add, this command has been deprecated")
+		return addAsset(cmd, args)
 	},
 }
 
-var rmAssetCmd = &cobra.Command{
+var removeAssetCmd = &cobra.Command{
 	Use:     "rm-asset [context] [name]",
 	Short:   "Removes an asset",
 	Long:    "Removes a custom asset in a specific context",
 	Example: "$ cozy-stack config rm-asset foobar /foo/bar/baz.js",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Check params
-		if len(args) != 2 {
-			return cmd.Usage()
-		}
-
-		c := newAdminClient()
-		req := &request.Options{
-			Method: "DELETE",
-			Path:   fmt.Sprintf("instances/assets/%s/%s", args[0], args[1]),
-		}
-		res, err := c.Req(req)
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
-		return nil
+		errPrintfln("Please use cozy-stack assets rm, this command has been deprecated")
+		return rmAsset(cmd, args)
 	},
 }
 
@@ -365,32 +314,8 @@ var listAssetCmd = &cobra.Command{
 	Long:    "List assets currently served by the stack",
 	Example: "$ cozy-stack config ls-assets",
 	RunE: func(cmd *cobra.Command, args []string) error {
-
-		c := newAdminClient()
-		req := &request.Options{
-			Method: "GET",
-			Path:   "instances/assets",
-		}
-		res, err := c.Req(req)
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
-
-		var v interface{}
-
-		err = json.NewDecoder(res.Body).Decode(&v)
-		if err != nil {
-			return err
-		}
-
-		json, err := json.MarshalIndent(v, "", "  ")
-		if err != nil {
-			return err
-		}
-
-		fmt.Println(string(json))
-		return nil
+		errPrintfln("Please use cozy-stack assets ls, this command has been deprecated")
+		return lsAssets(cmd, args)
 	},
 }
 
@@ -437,7 +362,7 @@ func init() {
 	configCmdGroup.AddCommand(decryptCredentialsCmd)
 	configCmdGroup.AddCommand(insertAssetCmd)
 	configCmdGroup.AddCommand(listAssetCmd)
-	configCmdGroup.AddCommand(rmAssetCmd)
+	configCmdGroup.AddCommand(removeAssetCmd)
 	configCmdGroup.AddCommand(listContextsCmd)
 	RootCmd.AddCommand(configCmdGroup)
 	insertAssetCmd.Flags().StringVar(&flagURL, "url", "", "The URL of the asset")
