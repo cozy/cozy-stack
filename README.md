@@ -1,8 +1,8 @@
-Cozy Cloud 
+Cozy Cloud
 ==========
 
 [![GoDoc](https://godoc.org/github.com/cozy/cozy-stack?status.svg)](https://godoc.org/github.com/cozy/cozy-stack)
-[![Build Status](https://travis-ci.org/cozy/cozy-stack.svg?branch=master)](https://travis-ci.org/cozy/cozy-stack)
+[![Build Status](https://github.com/cozy/cozy-stack/workflows/CI/badge.svg)](https://github.com/cozy/cozy-stack/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cozy/cozy-stack)](https://goreportcard.com/report/github.com/cozy/cozy-stack)
 
 
