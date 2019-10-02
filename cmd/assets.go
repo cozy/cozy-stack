@@ -66,7 +66,7 @@ var rmAssetCmd = &cobra.Command{
 	Aliases: []string{"remove"},
 	Short:   "Removes an asset",
 	Long:    "Removes a custom asset in a specific context",
-	Example: "$ cozy-stack config rm-asset foobar /foo/bar/baz.js",
+	Example: "$ cozy-stack assets rm foobar /foo/bar/baz.js",
 	RunE:    rmAsset,
 }
 
@@ -94,7 +94,7 @@ var lsAssetsCmd = &cobra.Command{
 	Aliases: []string{"list"},
 	Short:   "List assets",
 	Long:    "List assets currently served by the stack",
-	Example: "$ cozy-stack config ls-assets",
+	Example: "$ cozy-stack assets ls",
 	RunE:    lsAssets,
 }
 
