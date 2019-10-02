@@ -13,7 +13,7 @@ cozy-stack assets rm [context] [name] [flags]
 ### Examples
 
 ```
-$ cozy-stack config rm-asset foobar /foo/bar/baz.js
+$ cozy-stack assets rm foobar /foo/bar/baz.js
 ```
 
 ### Options

@@ -218,7 +218,7 @@ function _cozy-stack_assets {
   case $state in
   cmnds)
     commands=(
-      "add:Insert an asset"
+      "add:Insert a dynamic asset"
       "ls:List assets"
       "rm:Removes an asset"
     )

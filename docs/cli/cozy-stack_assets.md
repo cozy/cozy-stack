@@ -25,7 +25,7 @@ cozy-stack assets can be used to list, insert or remove dynamic assets
 ### SEE ALSO
 
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
-* [cozy-stack assets add](cozy-stack_assets_add.md)	 - Insert an asset
+* [cozy-stack assets add](cozy-stack_assets_add.md)	 - Insert a dynamic asset
 * [cozy-stack assets ls](cozy-stack_assets_ls.md)	 - List assets
 * [cozy-stack assets rm](cozy-stack_assets_rm.md)	 - Removes an asset
 

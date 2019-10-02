@@ -1,10 +1,16 @@
 ## cozy-stack assets add
 
-Insert an asset
+Insert a dynamic asset
 
 ### Synopsis
 
-Insert an asset
+Insert an asset that will be available on https://<instance>/assets/<name>
+
+For example, if a dynamic asset with the name '/foo/bar/baz' is added for a
+context foocontext, and an instance example.mycozy.cloud is in the foocontext
+context, then this asset can be requested on
+https://example.mycozy.cloud/assets/foo/bar/baz.js (and not on
+'example-app.mycozy.cloud').
 
 ```
 cozy-stack assets add --url <url> --name <name> --shasum <shasum> --context <context> [flags]

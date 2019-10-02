@@ -13,7 +13,7 @@ cozy-stack assets ls [flags]
 ### Examples
 
 ```
-$ cozy-stack config ls-assets
+$ cozy-stack assets ls
 ```
 
 ### Options
