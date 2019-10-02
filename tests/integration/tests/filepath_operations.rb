@@ -3,8 +3,8 @@ require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
 
 describe "The VFS" do
-  it "is able to deal with special cases on filepath encoding" do
-    Helpers.scenario "filepath_encoding"
+  it "is able to deal with special cases on filepaths (encoding, case sensitivity)" do
+    Helpers.scenario "filepath_operations"
     Helpers.start_mailhog
 
     # Create the instance
@@ -12,7 +12,7 @@ describe "The VFS" do
 
     # Create a folder
     dirname = "this"
-    folder = Folder.create inst
+    folder = Folder.create inst, name: dirname
     folder.couch_id.wont_be_empty
     sub = Folder.create inst, dir_id: folder.couch_id
     3.times do
@@ -24,10 +24,19 @@ describe "The VFS" do
       Folder.create inst, name: "foo-#{i}", dir_id: sub.couch_id
     end
 
+    # Create a folder with the same name, but not the same case
+    other = Folder.create inst, name: dirname.upcase
+    other.couch_id.wont_be_empty
+    4.times do
+      CozyFile.create inst, dir_id: other.couch_id
+    end
+    other.remove inst
+    assert_equal inst.fsck, ""
+
     # Trying stupids tricks
     before = File.join Helpers.current_dir, inst.domain
     # Renaming to the same name
-    folder.rename inst, dirname rescue nil
+    folder.rename inst, "that" rescue nil
     # Moving inside its-self
     folder.move_to inst, folder.couch_id rescue nil
     # Moving inside a sub-directory
