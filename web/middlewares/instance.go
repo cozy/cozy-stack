@@ -21,10 +21,9 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 		if err != nil {
 			var errHTTP *echo.HTTPError
 			switch err {
-			case instance.ErrNotFound:
+			case instance.ErrNotFound, instance.ErrIllegalDomain:
+				err = instance.ErrNotFound
 				errHTTP = echo.NewHTTPError(http.StatusNotFound, err)
-			case instance.ErrIllegalDomain:
-				errHTTP = echo.NewHTTPError(http.StatusBadRequest, err)
 			default:
 				errHTTP = echo.NewHTTPError(http.StatusInternalServerError, err)
 			}
