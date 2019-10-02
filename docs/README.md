@@ -18,7 +18,7 @@ title: Cozy-Stack documentation - Table of contents
 -   [Develop a client-side app](client-app-dev.md)
 -   [Running and building Docker images](docker.md)
 -   [Adding a new doctype](doctype.md)
--   [Working the stack assets](assets.md)
+-   [Working with the stack assets](assets.md)
 -   [Build a release](release.md)
 -   [The contributing guide](CONTRIBUTING.md)
 

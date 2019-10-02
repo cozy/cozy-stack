@@ -24,7 +24,14 @@ var assetsCmdGroup = &cobra.Command{
 var addAssetCmd = &cobra.Command{
 	Use:     "add --url <url> --name <name> --shasum <shasum> --context <context>",
 	Aliases: []string{"insert"},
-	Short:   "Insert an asset",
+	Short:   "Insert a dynamic asset",
+	Long: `Insert an asset that will be available on https://<instance>/assets/<name>
+
+For example, if a dynamic asset with the name '/foo/bar/baz' is added for a
+context foocontext, and an instance example.mycozy.cloud is in the foocontext
+context, then this asset can be requested on
+https://example.mycozy.cloud/assets/foo/bar/baz.js (and not on
+'example-app.mycozy.cloud').`,
 	Example: "$ cozy-stack assets add --url file:///foo/bar/baz.js --name /foo/bar/baz.js --shasum 0763d6c2cebee0880eb3a9cc25d38cd23db39b5c3802f2dc379e408c877a2788 --context foocontext",
 	RunE:    addAsset,
 }
