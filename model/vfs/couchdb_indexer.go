@@ -232,6 +232,7 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 	// We limit the stack to 128 bulk updates to avoid infinite loops, as we
 	// had a case in the past.
 	start := oldpath + "/"
+	stop := oldpath + "0" // 0 is the next ascii character after /
 	for i := 0; i < 128; i++ {
 		// The simple selector mango.StartWith can have some issues when
 		// renaming a folder to the same name, but with a different unicode
@@ -240,7 +241,7 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 		// comparison on a normalized string.
 		sel := mango.And(
 			mango.Gt("path", start),
-			mango.Lt("path", oldpath+"0"), // 0 is the next ascii character after /
+			mango.Lt("path", stop),
 		)
 		req := &couchdb.FindRequest{
 			UseIndex: "dir-by-path",
@@ -257,6 +258,14 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 		}
 		start = children[len(children)-1].Fullpath
 		for _, child := range children {
+			// XXX We can have documents that are not a child of the moved dir
+			// because of the comparison of strings used by CouchDB:
+			// /Photos/ < /PHOTOS/AAA < /Photos/bbb < /Photos0
+			// So, we need to skip the documents that are not really the children.
+			// Cf http://docs.couchdb.org/en/stable/ddocs/views/collation.html#collation-specification
+			if !strings.HasPrefix(child.Fullpath, oldpath) {
+				continue
+			}
 			cloned := child.Clone()
 			olddocs = append(olddocs, cloned)
 			child.Fullpath = path.Join(newpath, child.Fullpath[len(oldpath)+1:])
