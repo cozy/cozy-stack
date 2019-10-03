@@ -34,6 +34,16 @@ reasons. In general, you can follow these two rules of thumb:
    omit the `sort` operator on the query (except if you want the `descending`
    order).
 
+### Comparison of strings
+
+Comparison of strings is done using ICU which implements the Unicode Collation
+Algorithm, giving a dictionary sorting of keys. This can give surprising
+results if you were expecting ASCII ordering. Note that:
+
+- All symbols sort before numbers and letters (even the “high” symbols like tilde, `0x7e`)
+- Differing sequences of letters are compared without regard to case, so `a < aa` but also `A < aa` and `a < AA`
+- Identical sequences of letters are compared with regard to case, with lowercase before uppercase, so `a < A`.
+
 ## Old revisions
 
 CouchDB keeps for each document a list of its revision (or more exactly a tree
