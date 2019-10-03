@@ -77,6 +77,13 @@ class Folder
     [dirs, files]
   end
 
+  def self.clear_trash(inst)
+    opts = {
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    inst.client["/files/trash"].delete opts
+  end
+
   def restore_from_trash(inst)
     opts = {
       authorization: "Bearer #{inst.token_for doctype}"
