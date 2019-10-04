@@ -3,6 +3,7 @@ package vfsswift
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -284,7 +285,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	}, nil
 }
 
-func (sfs *swiftVFS) DestroyDirContent(doc *vfs.DirDoc) error {
+func (sfs *swiftVFS) DestroyDirContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
@@ -297,7 +298,7 @@ func (sfs *swiftVFS) DestroyDirContent(doc *vfs.DirDoc) error {
 	return err
 }
 
-func (sfs *swiftVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
+func (sfs *swiftVFS) DestroyDirAndContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
@@ -392,6 +393,10 @@ func (sfs *swiftVFS) destroyFileVersions(objName string) error {
 		return err
 	}
 	return nil
+}
+
+func (sfs *swiftVFS) EnsureErased(journal vfs.TrashJournal) error {
+	return errors.New("EnsureErased is not available for Swift layout v1")
 }
 
 func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {

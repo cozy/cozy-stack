@@ -18,7 +18,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -424,7 +426,8 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 
 	if patch.Delete {
 		if dir != nil {
-			err = fs.DestroyDirAndContent(dir)
+			inst := middlewares.GetInstance(c)
+			err = fs.DestroyDirAndContent(dir, pushTrashJob(inst))
 		} else {
 			err = fs.DestroyFile(file)
 		}
@@ -471,7 +474,8 @@ func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*js
 		var errp error
 		if patch.Delete {
 			if dir != nil {
-				errp = fs.DestroyDirAndContent(dir)
+				inst := middlewares.GetInstance(c)
+				errp = fs.DestroyDirAndContent(dir, pushTrashJob(inst))
 			} else if file != nil {
 				errp = fs.DestroyFile(file)
 			}
@@ -1002,7 +1006,7 @@ func ClearTrashHandler(c echo.Context) error {
 		return err
 	}
 
-	err = instance.VFS().DestroyDirContent(trash)
+	err = instance.VFS().DestroyDirContent(trash, pushTrashJob(instance))
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -1012,11 +1016,11 @@ func ClearTrashHandler(c echo.Context) error {
 
 // DestroyFileHandler handles DELETE request to clear one element from the trash
 func DestroyFileHandler(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
 
 	fileID := c.Param("file-id")
 
-	dir, file, err := instance.VFS().DirOrFileByID(fileID)
+	dir, file, err := inst.VFS().DirOrFileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -1038,9 +1042,9 @@ func DestroyFileHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
-		err = instance.VFS().DestroyDirAndContent(dir)
+		err = inst.VFS().DestroyDirAndContent(dir, pushTrashJob(inst))
 	} else {
-		err = instance.VFS().DestroyFile(file)
+		err = inst.VFS().DestroyFile(file)
 	}
 	if err != nil {
 		return WrapVfsError(err)
@@ -1372,6 +1376,20 @@ func parseMD5Hash(md5B64 string) ([]byte, error) {
 	}
 
 	return md5Sum, nil
+}
+
+func pushTrashJob(inst *instance.Instance) func(vfs.TrashJournal) error {
+	return func(journal vfs.TrashJournal) error {
+		msg, err := job.NewMessage(journal)
+		if err != nil {
+			return err
+		}
+		_, err = job.System().PushJob(inst, &job.JobRequest{
+			WorkerType: "trash-files",
+			Message:    msg,
+		})
+		return err
+	}
 }
 
 func instanceURL(c echo.Context) string {

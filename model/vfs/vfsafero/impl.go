@@ -3,6 +3,7 @@ package vfsafero
 import (
 	"bytes"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -237,7 +238,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	}, nil
 }
 
-func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
+func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
 	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
@@ -273,7 +274,7 @@ func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
 	return afs.Indexer.BatchDeleteVersions(allVersions)
 }
 
-func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
+func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
 	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
@@ -337,6 +338,10 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 	return &aferoFileOpen{f}, nil
+}
+
+func (afs *aferoVFS) EnsureErased(journal vfs.TrashJournal) error {
+	return errors.New("EnsureErased is only for Swift")
 }
 
 func (afs *aferoVFS) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vfs.File, error) {

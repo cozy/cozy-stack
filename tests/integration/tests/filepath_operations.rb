@@ -57,5 +57,10 @@ describe "The VFS" do
       folder.rename inst, nfc
       assert_equal inst.fsck, ""
     end
+
+    folder.remove inst
+    Folder.clear_trash inst
+    sleep 5
+    assert_equal inst.fsck, ""
   end
 end
