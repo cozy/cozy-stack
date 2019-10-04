@@ -135,6 +135,9 @@ var baseFS afero.Fs
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
+	go serveGitRep()
+	time.Sleep(300 * time.Millisecond)
+
 	if err := couchdb.CheckStatus(); err != nil {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
@@ -185,10 +188,6 @@ func TestMain(m *testing.M) {
 
 	baseFS = afero.NewBasePathFs(osFS, tmpDir)
 	fs = appfs.NewAferoCopier(baseFS)
-
-	go serveGitRep()
-
-	time.Sleep(100 * time.Millisecond)
 
 	err = couchdb.ResetDB(db, consts.Permissions)
 	if err != nil {
