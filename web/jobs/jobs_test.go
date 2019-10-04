@@ -68,6 +68,22 @@ func TestCreateJob(t *testing.T) {
 	assert.Equal(t, 202, res.StatusCode)
 }
 
+func TestCreateJobForReservedWorker(t *testing.T) {
+	body, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: &jobRequest{Arguments: "foobar"},
+		},
+	})
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/trash-files", bytes.NewReader(body))
+	req.Header.Add("Authorization", "Bearer "+token)
+	assert.NoError(t, err)
+	res, err := http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, 403, res.StatusCode)
+}
+
 func TestCreateJobNotExist(t *testing.T) {
 	body, _ := json.Marshal(&jsonapiReq{
 		Data: &jsonapiData{

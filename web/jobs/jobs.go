@@ -171,6 +171,9 @@ func pushJob(c echo.Context) error {
 	if err := middlewares.Allow(c, permission.POST, jr); err != nil {
 		return err
 	}
+	if isReservedWorker(jr.WorkerType) {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
 
 	permd, err := middlewares.GetPermission(c)
 	if err != nil {
@@ -234,6 +237,9 @@ func newTrigger(c echo.Context) error {
 	// }
 	if err = middlewares.Allow(c, permission.POST, t); err != nil {
 		return err
+	}
+	if isReservedWorker(req.WorkerType) {
+		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
 	if err = sched.AddTrigger(t); err != nil {
@@ -611,4 +617,16 @@ func wrapJobsError(err error) error {
 		return jsonapi.BadRequest(err)
 	}
 	return err
+}
+
+// isReservedWorker returns true if the worker should only by used by the
+// stack, and the clients must not push jobs for it.
+func isReservedWorker(worker string) bool {
+	switch worker {
+	case "migrations", "thumbnail", "trash-files", "updates",
+		"share-track", "share-replicate", "share-upload", "":
+		return true
+	default:
+		return false
+	}
 }

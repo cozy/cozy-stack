@@ -269,6 +269,13 @@ permission. It is done by adding this to the manifest:
 }
 ```
 
+## trash-files worker
+
+This worker is used only by the stack: when the user asks to clean the trash,
+the stack will delete the files from CouchDB and put a job for this worker. The
+deletion of files in Swift is slow, and can be done via this worker
+asynchronously.
+
 ## share workers
 
 The stack have 3 workers to power the sharings (internal usage only):
