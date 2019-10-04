@@ -25,7 +25,7 @@ func TestListWebappsWithPagination(t *testing.T) {
 
 	// Install the apps
 	for _, a := range []string{"drive", "home", "settings"} {
-		installer, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+		installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
 			Operation:  app.Install,
 			Type:       consts.WebappType,
 			SourceURL:  fmt.Sprintf("registry://%s", a),

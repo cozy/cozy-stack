@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -707,7 +708,7 @@ func ThumbnailHandler(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
 
-	fs := instance.ThumbsFS()
+	fs := lifecycle.ThumbsFS(instance)
 	format := c.Param("format")
 	err = fs.ServeThumbContent(c.Response(), c.Request(), doc, format)
 	if err != nil {

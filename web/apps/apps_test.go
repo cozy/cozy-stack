@@ -429,7 +429,7 @@ func TestIconForApp(t *testing.T) {
 
 func TestUninstallAppWithLinkedClient(t *testing.T) {
 	// Install drive app
-	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
+	installer, err := apps.NewInstaller(testInstance, apps.Copier(consts.WebappType, testInstance),
 		&apps.InstallerOptions{
 			Operation:  apps.Install,
 			Type:       consts.WebappType,
@@ -471,7 +471,7 @@ func TestUninstallAppWithLinkedClient(t *testing.T) {
 	assert.Contains(t, string(body), "linked OAuth client exists")
 
 	// Cleaning
-	uninstaller, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
+	uninstaller, err := apps.NewInstaller(testInstance, apps.Copier(consts.WebappType, testInstance),
 		&apps.InstallerOptions{
 			Operation:  apps.Delete,
 			Type:       consts.WebappType,
@@ -489,7 +489,7 @@ func TestUninstallAppWithLinkedClient(t *testing.T) {
 
 func TestUninstallAppWithoutLinkedClient(t *testing.T) {
 	// Install drive app
-	installer, err := apps.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
+	installer, err := apps.NewInstaller(testInstance, apps.Copier(consts.WebappType, testInstance),
 		&apps.InstallerOptions{
 			Operation:  apps.Install,
 			Type:       consts.WebappType,

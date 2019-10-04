@@ -1,15 +1,22 @@
 package app
 
 import (
+	"fmt"
 	"io"
 	"net/url"
+	"path"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/model/vfs/vfsafero"
+	"github.com/cozy/cozy-stack/pkg/appfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/spf13/afero"
 )
 
 const (
@@ -114,4 +121,68 @@ func UpgradeInstalledState(inst *instance.Instance, man Manifest) error {
 		return man.Update(inst, nil)
 	}
 	return nil
+}
+
+// Copier returns the application copier associated with the specified
+// application type
+func Copier(appsType consts.AppType, inst *instance.Instance) appfs.Copier {
+	fsURL := config.FsURL()
+	switch fsURL.Scheme {
+	case config.SchemeFile:
+		var baseDirName string
+		switch appsType {
+		case consts.WebappType:
+			baseDirName = vfs.WebappsDirName
+		case consts.KonnectorType:
+			baseDirName = vfs.KonnectorsDirName
+		}
+		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, inst.DirName(), baseDirName))
+		return appfs.NewAferoCopier(baseFS)
+	case config.SchemeMem:
+		baseFS := vfsafero.GetMemFS("apps")
+		return appfs.NewAferoCopier(baseFS)
+	case config.SchemeSwift, config.SchemeSwiftSecure:
+		return appfs.NewSwiftCopier(config.GetSwiftConnection(), appsType)
+	default:
+		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
+	}
+}
+
+// AppsFileServer returns the web-application file server associated to this
+// instance.
+func AppsFileServer(i *instance.Instance) appfs.FileServer {
+	fsURL := config.FsURL()
+	switch fsURL.Scheme {
+	case config.SchemeFile:
+		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, i.DirName(), vfs.WebappsDirName))
+		return appfs.NewAferoFileServer(baseFS, nil)
+	case config.SchemeMem:
+		baseFS := vfsafero.GetMemFS("apps")
+		return appfs.NewAferoFileServer(baseFS, nil)
+	case config.SchemeSwift, config.SchemeSwiftSecure:
+		return appfs.NewSwiftFileServer(config.GetSwiftConnection(), consts.WebappType)
+	default:
+		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
+	}
+}
+
+// KonnectorsFileServer returns the web-application file server associated to this
+// instance.
+func KonnectorsFileServer(i *instance.Instance) appfs.FileServer {
+	fsURL := config.FsURL()
+	switch fsURL.Scheme {
+	case config.SchemeFile:
+		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, i.DirName(), vfs.KonnectorsDirName))
+		return appfs.NewAferoFileServer(baseFS, nil)
+	case config.SchemeMem:
+		baseFS := vfsafero.GetMemFS("apps")
+		return appfs.NewAferoFileServer(baseFS, nil)
+	case config.SchemeSwift, config.SchemeSwiftSecure:
+		return appfs.NewSwiftFileServer(config.GetSwiftConnection(), consts.KonnectorType)
+	default:
+		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
+	}
 }

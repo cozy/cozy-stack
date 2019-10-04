@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"path"
 	"strings"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/model/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/model/vfs/vfsswift"
-	"github.com/cozy/cozy-stack/pkg/appfs"
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -23,7 +21,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
@@ -216,98 +213,6 @@ func (i *Instance) MakeVFS() error {
 		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
 	}
 	return err
-}
-
-// AppsCopier returns the application copier associated with the specified
-// application type
-func (i *Instance) AppsCopier(appsType consts.AppType) appfs.Copier {
-	fsURL := config.FsURL()
-	switch fsURL.Scheme {
-	case config.SchemeFile:
-		var baseDirName string
-		switch appsType {
-		case consts.WebappType:
-			baseDirName = vfs.WebappsDirName
-		case consts.KonnectorType:
-			baseDirName = vfs.KonnectorsDirName
-		}
-		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.DirName(), baseDirName))
-		return appfs.NewAferoCopier(baseFS)
-	case config.SchemeMem:
-		baseFS := vfsafero.GetMemFS("apps")
-		return appfs.NewAferoCopier(baseFS)
-	case config.SchemeSwift, config.SchemeSwiftSecure:
-		return appfs.NewSwiftCopier(config.GetSwiftConnection(), appsType)
-	default:
-		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
-	}
-}
-
-// AppsFileServer returns the web-application file server associated to this
-// instance.
-func (i *Instance) AppsFileServer() appfs.FileServer {
-	fsURL := config.FsURL()
-	switch fsURL.Scheme {
-	case config.SchemeFile:
-		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.DirName(), vfs.WebappsDirName))
-		return appfs.NewAferoFileServer(baseFS, nil)
-	case config.SchemeMem:
-		baseFS := vfsafero.GetMemFS("apps")
-		return appfs.NewAferoFileServer(baseFS, nil)
-	case config.SchemeSwift, config.SchemeSwiftSecure:
-		return appfs.NewSwiftFileServer(config.GetSwiftConnection(), consts.WebappType)
-	default:
-		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
-	}
-}
-
-// KonnectorsFileServer returns the web-application file server associated to this
-// instance.
-func (i *Instance) KonnectorsFileServer() appfs.FileServer {
-	fsURL := config.FsURL()
-	switch fsURL.Scheme {
-	case config.SchemeFile:
-		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.DirName(), vfs.KonnectorsDirName))
-		return appfs.NewAferoFileServer(baseFS, nil)
-	case config.SchemeMem:
-		baseFS := vfsafero.GetMemFS("apps")
-		return appfs.NewAferoFileServer(baseFS, nil)
-	case config.SchemeSwift, config.SchemeSwiftSecure:
-		return appfs.NewSwiftFileServer(config.GetSwiftConnection(), consts.KonnectorType)
-	default:
-		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
-	}
-}
-
-// ThumbsFS returns the hidden filesystem for storing the thumbnails of the
-// photos/image
-func (i *Instance) ThumbsFS() vfs.Thumbser {
-	fsURL := config.FsURL()
-	switch fsURL.Scheme {
-	case config.SchemeFile:
-		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.DirName(), vfs.ThumbsDirName))
-		return vfsafero.NewThumbsFs(baseFS)
-	case config.SchemeMem:
-		baseFS := vfsafero.GetMemFS(i.DomainName() + "-thumbs")
-		return vfsafero.NewThumbsFs(baseFS)
-	case config.SchemeSwift, config.SchemeSwiftSecure:
-		switch i.SwiftLayout {
-		case 0:
-			return vfsswift.NewThumbsFs(config.GetSwiftConnection(), i.Domain)
-		case 1:
-			return vfsswift.NewThumbsFsV2(config.GetSwiftConnection(), i)
-		case 2:
-			return vfsswift.NewThumbsFsV3(config.GetSwiftConnection(), i)
-		default:
-			panic(ErrInvalidSwiftLayout)
-		}
-	default:
-		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
-	}
 }
 
 // SettingsDocument returns the document with the settings of this instance

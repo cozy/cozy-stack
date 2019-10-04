@@ -63,7 +63,7 @@ func TestCreateShareSetByMobileRevokeByLinkedApp(t *testing.T) {
 	oauthLinkedClient.Create(testInstance)
 
 	// Install the app
-	installer, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+	installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
 		Operation:  app.Install,
 		Type:       consts.WebappType,
 		SourceURL:  "registry://drive",
@@ -123,7 +123,7 @@ func TestCreateShareSetByMobileRevokeByLinkedApp(t *testing.T) {
 	assert.NoError(t, err)
 	oauthLinkedClient.Delete(testInstance)
 
-	uninstaller, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
+	uninstaller, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance),
 		&app.InstallerOptions{
 			Operation:  app.Delete,
 			Type:       consts.WebappType,
@@ -144,7 +144,7 @@ func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Install the app
-	installer, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+	installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
 		Operation:  app.Install,
 		Type:       consts.WebappType,
 		SourceURL:  "registry://drive",
@@ -209,7 +209,7 @@ func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
 	assert.NoError(t, err)
 	oauthLinkedClient.Delete(testInstance)
 
-	uninstaller, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
+	uninstaller, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance),
 		&app.InstallerOptions{
 			Operation:  app.Delete,
 			Type:       consts.WebappType,
@@ -644,7 +644,7 @@ func TestCannotFindToken(t *testing.T) {
 
 func TestGetForOauth(t *testing.T) {
 	// Install app
-	installer, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+	installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
 		Operation:  app.Install,
 		Type:       consts.WebappType,
 		SourceURL:  "registry://settings",
@@ -799,7 +799,7 @@ func TestListPermission(t *testing.T) {
 
 func TestCreatePermissionWithoutMetadata(t *testing.T) {
 	// Install the app
-	installer, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+	installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
 		Operation:  app.Install,
 		Type:       consts.WebappType,
 		SourceURL:  "registry://drive",
@@ -846,7 +846,7 @@ func TestCreatePermissionWithoutMetadata(t *testing.T) {
 	assert.True(t, time.Since(meta.CreatedAt) < 5*time.Second)
 
 	// Clean
-	uninstaller, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
+	uninstaller, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance),
 		&app.InstallerOptions{
 			Operation:  app.Delete,
 			Type:       consts.WebappType,
@@ -863,7 +863,7 @@ func TestCreatePermissionWithoutMetadata(t *testing.T) {
 
 func TestCreatePermissionWithMetadata(t *testing.T) {
 	// Install the app
-	installer, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+	installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
 		Operation:  app.Install,
 		Type:       consts.WebappType,
 		SourceURL:  "registry://drive",
@@ -909,7 +909,7 @@ func TestCreatePermissionWithMetadata(t *testing.T) {
 	assert.Equal(t, 1, meta.MetadataVersion)
 
 	// Clean
-	uninstaller, err := app.NewInstaller(testInstance, testInstance.AppsCopier(consts.WebappType),
+	uninstaller, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance),
 		&app.InstallerOptions{
 			Operation:  app.Delete,
 			Type:       consts.WebappType,
