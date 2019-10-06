@@ -33,7 +33,7 @@ require (
 	github.com/ncw/swift v1.0.49
 	github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443
 	github.com/oschwald/maxminddb-golang v1.5.0
-	github.com/pelletier/go-toml v1.4.0 // indirect
+	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/pquerna/otp v1.2.0
 	github.com/prometheus/client_golang v1.1.0
@@ -50,7 +50,6 @@ require (
 	golang.org/x/image v0.0.0-20190910094157-69e4b8554b2a
 	golang.org/x/net v0.0.0-20190926025831-c00fd9afed17
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/tools v0.0.0-20190929041059-e7abfedfabcf
 	google.golang.org/appengine v1.6.4 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/dgrijalva/jwt-go.v3 v3.2.0
