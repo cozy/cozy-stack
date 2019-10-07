@@ -23,6 +23,7 @@ const numUpdatersSingleInstance = 4
 func init() {
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "updates",
+		Reserved:     true,
 		Concurrency:  1,
 		MaxExecCount: 1,
 		Timeout:      1 * time.Hour,

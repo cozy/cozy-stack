@@ -62,6 +62,10 @@ func (b *mockBroker) WorkerQueueLen(workerType string) (int, error) {
 	return count, nil
 }
 
+func (b *mockBroker) WorkerIsReserved(workerType string) (bool, error) {
+	return false, nil
+}
+
 func (b *mockBroker) WorkersTypes() []string {
 	return []string{}
 }

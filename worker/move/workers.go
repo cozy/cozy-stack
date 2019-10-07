@@ -15,7 +15,7 @@ func init() {
 		WorkerType:   "export",
 		Concurrency:  4,
 		MaxExecCount: 1,
-		Timeout:      5 * 60 * time.Second,
+		Timeout:      5 * time.Minute,
 		WorkerFunc:   ExportWorker,
 	})
 }

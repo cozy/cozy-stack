@@ -42,6 +42,7 @@ func init() {
 		WorkerType:   "thumbnail",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
+		Reserved:     true,
 		Timeout:      30 * time.Second,
 		WorkerFunc:   Worker,
 	})
@@ -50,6 +51,7 @@ func init() {
 		WorkerType:   "thumbnailck",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
+		Reserved:     true,
 		Timeout:      10 * time.Minute,
 		WorkerFunc:   WorkerCheck,
 	})

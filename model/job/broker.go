@@ -57,6 +57,9 @@ type (
 		// WorkerQueueLen returns the total element in the queue of the specified
 		// worker type.
 		WorkerQueueLen(workerType string) (int, error)
+		// WorkerIsReserved returns true if the given worker type is reserved
+		// (ie clients should not push jobs to it, only the stack).
+		WorkerIsReserved(workerType string) (bool, error)
 		// WorkersTypes returns the list of registered workers types.
 		WorkersTypes() []string
 	}
@@ -102,7 +105,6 @@ type (
 		Manual      bool
 		Debounced   bool
 		ForwardLogs bool
-		Admin       bool
 		Options     *JobOptions
 	}
 

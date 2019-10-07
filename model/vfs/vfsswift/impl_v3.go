@@ -284,7 +284,7 @@ func (sfs *swiftVFSV3) destroyDir(doc *vfs.DirDoc, push func(vfs.TrashJournal) e
 		}
 	}
 	if err = sfs.Indexer.BatchDeleteVersions(allVersions); err != nil {
-		sfs.log.Infof("%s failed on BatchDeleteVersions: %s", fn, err)
+		sfs.log.Warnf("%s failed on BatchDeleteVersions: %s", fn, err)
 	}
 	errb := push(vfs.TrashJournal{ObjectNames: objNames})
 	if err == nil && errb != nil {
@@ -327,12 +327,12 @@ func (sfs *swiftVFSV3) DestroyFile(doc *vfs.FileDoc) error {
 		}
 		err = sfs.Indexer.BatchDeleteVersions(versions)
 		if err != nil {
-			sfs.log.Infof("DestroyFile failed on BatchDeleteVersions: %s", err)
+			sfs.log.Warnf("DestroyFile failed on BatchDeleteVersions: %s", err)
 		}
 	}
 	_, errb := sfs.c.BulkDelete(sfs.container, objNames)
 	if errb == swift.Forbidden {
-		sfs.log.Infof("DestroyFile failed on BulkDelete: %s", err)
+		sfs.log.Warnf("DestroyFile failed on BulkDelete: %s", err)
 		errb = nil
 		for _, objName := range objNames {
 			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil && errd != nil {

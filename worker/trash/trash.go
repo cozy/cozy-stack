@@ -11,9 +11,10 @@ import (
 func init() {
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "trash-files",
-		Concurrency:  runtime.NumCPU(),
+		Concurrency:  runtime.NumCPU() * 4,
 		MaxExecCount: 2,
-		Timeout:      10 * time.Minute,
+		Reserved:     true,
+		Timeout:      2 * time.Hour,
 		WorkerFunc:   WorkerTrashFiles,
 	})
 }

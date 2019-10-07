@@ -13,6 +13,7 @@ func init() {
 		WorkerType:   "share-track",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
+		Reserved:     true,
 		Timeout:      30 * time.Second,
 		WorkerFunc:   WorkerTrack,
 	})
@@ -24,6 +25,7 @@ func init() {
 		// retry, but with MaxExecCount > 1, it can amplifies a lot the number
 		// of retries
 		MaxExecCount: 1,
+		Reserved:     true,
 		Timeout:      5 * time.Minute,
 		WorkerFunc:   WorkerReplicate,
 	})
@@ -35,6 +37,7 @@ func init() {
 		// retry, but with MaxExecCount > 1, it can amplifies a lot the number
 		// of retries
 		MaxExecCount: 1,
+		Reserved:     true,
 		Timeout:      1 * time.Hour,
 		WorkerFunc:   WorkerUpload,
 	})

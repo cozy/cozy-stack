@@ -191,9 +191,6 @@ func (b *redisBroker) PushJob(db prefixer.Prefixer, req *JobRequest) (*Job, erro
 	if worker == nil {
 		return nil, ErrUnknownWorker
 	}
-	if worker.Conf.AdminOnly && !req.Admin {
-		return nil, ErrUnknownWorker
-	}
 
 	// Check for limits
 	ct, err := GetCounterTypeFromWorkerType(req.WorkerType)
@@ -255,4 +252,13 @@ func (b *redisBroker) WorkerQueueLen(workerType string) (int, error) {
 		return 0, err
 	}
 	return int(l1 + l2), nil
+}
+
+func (b *redisBroker) WorkerIsReserved(workerType string) (bool, error) {
+	for _, w := range b.workers {
+		if w.Type == workerType {
+			return w.Conf.Reserved, nil
+		}
+	}
+	return false, ErrUnknownWorker
 }

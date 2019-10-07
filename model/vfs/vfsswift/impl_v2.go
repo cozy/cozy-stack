@@ -387,7 +387,7 @@ func (sfs *swiftVFSV2) EnsureErased(journal vfs.TrashJournal) error {
 	// No lock needed
 	_, err := sfs.c.BulkDelete(sfs.container, journal.ObjectNames)
 	if err == swift.Forbidden {
-		sfs.log.Infof("EnsureErased failed on BulkDelete: %s", err)
+		sfs.log.Warnf("EnsureErased failed on BulkDelete: %s", err)
 		err = nil
 		for _, objName := range journal.ObjectNames {
 			errd := sfs.c.ObjectDelete(sfs.container, objName)
