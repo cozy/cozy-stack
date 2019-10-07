@@ -45,7 +45,7 @@ class Stack
     puts cmd.join(" ").green
     return if system(cmd.join(" "))
     # Try again if the cozy-stack serve was too slow to listen
-    sleep 3
+    sleep 5
     Helpers.cat "stack-#{@port}.log"
     return if system(cmd.join(" "))
     raise StackError.new
