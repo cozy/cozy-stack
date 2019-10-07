@@ -482,23 +482,21 @@ func TestLocalDocuments(t *testing.T) {
 }
 
 func assertGotEvent(t *testing.T, eventType, id string) *realtime.Event {
+	t.Helper()
+
 	var event *realtime.Event
-	receivedEventsMutex.Lock()
-	_, ok := receivedEvents[eventType+id]
-	for i := 0; i < 100; i++ {
-		if ok {
-			break
-		}
-		receivedEventsMutex.Unlock()
-		time.Sleep(time.Millisecond)
+	var ok bool
+
+	for i := 0; i < 200; i++ {
 		receivedEventsMutex.Lock()
 		event, ok = receivedEvents[eventType+id]
+		receivedEventsMutex.Unlock()
+		if ok {
+			delete(receivedEvents, eventType+id)
+			break
+		}
+		time.Sleep(time.Millisecond)
 	}
-
-	if ok {
-		delete(receivedEvents, eventType+id)
-	}
-	receivedEventsMutex.Unlock()
 
 	assert.True(t, ok, "Expected event %s:%s", eventType, id)
 	return event
