@@ -68,7 +68,7 @@ type (
 		ErrorHook    JobErrorCheckerHook
 		Concurrency  int
 		MaxExecCount int
-		AdminOnly    bool
+		Reserved     bool // true when the clients must not push jobs for this worker
 		Timeout      time.Duration
 		RetryDelay   time.Duration
 	}

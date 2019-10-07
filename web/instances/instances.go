@@ -264,7 +264,6 @@ func updatesHandler(c echo.Context) error {
 	j, err := job.System().PushJob(prefixer.GlobalPrefixer, &job.JobRequest{
 		WorkerType:  "updates",
 		Message:     msg,
-		Admin:       true,
 		ForwardLogs: true,
 	})
 	if err != nil {

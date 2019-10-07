@@ -82,12 +82,14 @@ type Fs interface {
 	CreateFile(newdoc, olddoc *FileDoc) (File, error)
 	// DestroyDirContent destroys all directories and files contained in a
 	// directory.
-	DestroyDirContent(doc *DirDoc) error
+	DestroyDirContent(doc *DirDoc, push func(TrashJournal) error) error
 	// DestroyDirAndContent destroys all directories and files contained in a
 	// directory and the directory itself.
-	DestroyDirAndContent(doc *DirDoc) error
-	// DestroyFile  destroys a file from the trash.
+	DestroyDirAndContent(doc *DirDoc, push func(TrashJournal) error) error
+	// DestroyFile destroys a file from the trash.
 	DestroyFile(doc *FileDoc) error
+	// EnsureErased remove the files in Swift if they still exist.
+	EnsureErased(journal TrashJournal) error
 	// RevertFileVersion restores the content of a file from an old version.
 	// The current version of the content is not lost, but saved as another
 	// version.
@@ -457,7 +459,7 @@ func MkdirAll(fs VFS, name string) (*DirDoc, error) {
 }
 
 // Remove removes the specified named file or directory.
-func Remove(fs VFS, name string) error {
+func Remove(fs VFS, name string, push func(TrashJournal) error) error {
 	dir, file, err := fs.DirOrFileByPath(name)
 	if err != nil {
 		return err
@@ -472,17 +474,17 @@ func Remove(fs VFS, name string) error {
 	if !empty {
 		return ErrDirNotEmpty
 	}
-	return fs.DestroyDirAndContent(dir)
+	return fs.DestroyDirAndContent(dir, push)
 }
 
 // RemoveAll removes the specified name file or directory and its content.
-func RemoveAll(fs VFS, name string) error {
+func RemoveAll(fs VFS, name string, push func(TrashJournal) error) error {
 	dir, file, err := fs.DirOrFileByPath(name)
 	if err != nil {
 		return err
 	}
 	if dir != nil {
-		return fs.DestroyDirAndContent(dir)
+		return fs.DestroyDirAndContent(dir, push)
 	}
 	return fs.DestroyFile(file)
 }

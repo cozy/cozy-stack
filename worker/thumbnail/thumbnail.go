@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -41,6 +42,7 @@ func init() {
 		WorkerType:   "thumbnail",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
+		Reserved:     true,
 		Timeout:      30 * time.Second,
 		WorkerFunc:   Worker,
 	})
@@ -49,6 +51,7 @@ func init() {
 		WorkerType:   "thumbnailck",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
+		Reserved:     true,
 		Timeout:      10 * time.Minute,
 		WorkerFunc:   WorkerCheck,
 	})
@@ -109,7 +112,7 @@ func WorkerCheck(ctx *job.WorkerContext) error {
 		return err
 	}
 	fs := ctx.Instance.VFS()
-	fsThumb := ctx.Instance.ThumbsFS()
+	fsThumb := lifecycle.ThumbsFS(ctx.Instance)
 	var errm error
 	_ = vfs.Walk(fs, "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
 		if err != nil {
@@ -193,7 +196,7 @@ func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
 		return nil
 	}
 
-	fs := ctx.Instance.ThumbsFS()
+	fs := lifecycle.ThumbsFS(ctx.Instance)
 	var in io.Reader
 	in, err := ctx.Instance.VFS().OpenFile(img)
 	if err != nil {
@@ -298,5 +301,5 @@ func generateThumb(ctx *job.WorkerContext, in io.Reader, out io.Writer, fileID s
 }
 
 func removeThumbnails(i *instance.Instance, img *vfs.FileDoc) error {
-	return i.ThumbsFS().RemoveThumbs(img, FormatsNames)
+	return lifecycle.ThumbsFS(i).RemoveThumbs(img, FormatsNames)
 }

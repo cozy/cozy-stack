@@ -166,17 +166,17 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	err := vfs.Remove(fs, "foo/bar")
+	err := vfs.Remove(fs, "foo/bar", fs.EnsureErased)
 	assert.Error(t, err)
 	assert.Equal(t, vfs.ErrNonAbsolutePath, err)
 
-	err = vfs.Remove(fs, "/foo")
+	err = vfs.Remove(fs, "/foo", fs.EnsureErased)
 	assert.Error(t, err)
 	assert.Equal(t, "file does not exist", err.Error())
 
 	_, err = vfs.Mkdir(fs, "/removeme", nil)
 	if !assert.NoError(t, err) {
-		err = vfs.Remove(fs, "/removeme")
+		err = vfs.Remove(fs, "/removeme", fs.EnsureErased)
 		assert.NoError(t, err)
 	}
 }
@@ -200,7 +200,7 @@ func TestRemoveAll(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	err = vfs.RemoveAll(fs, "/removemeall")
+	err = vfs.RemoveAll(fs, "/removemeall", fs.EnsureErased)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -634,7 +634,7 @@ func TestArchive(t *testing.T) {
 		"test/bar/baz/two.png": nil,
 		"test/bar/z.gif":       nil,
 	}, zipfiles)
-	assert.NoError(t, fs.DestroyDirAndContent(dirdoc))
+	assert.NoError(t, fs.DestroyDirAndContent(dirdoc, fs.EnsureErased))
 }
 
 func TestCreateFileTooBig(t *testing.T) {
@@ -743,7 +743,7 @@ func TestCreateFileTooBig(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.NoError(t, fs.DestroyDirContent(root))
+	assert.NoError(t, fs.DestroyDirContent(root, fs.EnsureErased))
 }
 
 func TestMain(m *testing.M) {

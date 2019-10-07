@@ -38,6 +38,7 @@ func init() {
 		WorkerType:   "migrations",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
+		Reserved:     true,
 		WorkerFunc:   worker,
 		WorkerCommit: commit,
 		Timeout:      1 * time.Hour,

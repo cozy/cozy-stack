@@ -34,6 +34,7 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/push"
 	_ "github.com/cozy/cozy-stack/worker/share"
 	_ "github.com/cozy/cozy-stack/worker/thumbnail"
+	_ "github.com/cozy/cozy-stack/worker/trash"
 	_ "github.com/cozy/cozy-stack/worker/updates"
 )
 
@@ -170,6 +171,9 @@ func pushJob(c echo.Context) error {
 	if err := middlewares.Allow(c, permission.POST, jr); err != nil {
 		return err
 	}
+	if err := checkReservedWorker(jr.WorkerType); err != nil {
+		return err
+	}
 
 	permd, err := middlewares.GetPermission(c)
 	if err != nil {
@@ -232,6 +236,9 @@ func newTrigger(c echo.Context) error {
 	// 	return err
 	// }
 	if err = middlewares.Allow(c, permission.POST, t); err != nil {
+		return err
+	}
+	if err := checkReservedWorker(req.WorkerType); err != nil {
 		return err
 	}
 
@@ -610,4 +617,20 @@ func wrapJobsError(err error) error {
 		return jsonapi.BadRequest(err)
 	}
 	return err
+}
+
+// checkReservedWorker returns an error if the worker should only by used by
+// the stack, and the clients must not push jobs for it.
+func checkReservedWorker(worker string) error {
+	reserved, err := job.System().WorkerIsReserved(worker)
+	if err != nil {
+		if err == job.ErrUnknownWorker {
+			return echo.NewHTTPError(http.StatusNotFound)
+		}
+		return err
+	}
+	if reserved {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	return nil
 }

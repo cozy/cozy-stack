@@ -199,10 +199,11 @@ func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (
 			if dir.ID() == doc.ID() {
 				return nil
 			}
-			docs = append(docs, dir)
+			docs = append(docs, dir.Clone())
 		} else {
-			docs = append(docs, file)
-			files = append(files, file)
+			cloned := file.Clone()
+			docs = append(docs, cloned)
+			files = append(files, cloned.(*FileDoc))
 			n += file.ByteSize
 		}
 		return err

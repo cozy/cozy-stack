@@ -82,7 +82,7 @@ func Serve(c echo.Context) error {
 	}
 
 	if file == "" || file == route.Index {
-		webapp = app.DoLazyUpdate(i, webapp, i.AppsCopier(consts.WebappType), i.Registries()).(*app.WebappManifest)
+		webapp = app.DoLazyUpdate(i, webapp, app.Copier(consts.WebappType, i), i.Registries()).(*app.WebappManifest)
 	}
 
 	switch webapp.State() {
@@ -96,7 +96,7 @@ func Serve(c echo.Context) error {
 		}
 		fallthrough
 	case app.Ready:
-		return ServeAppFile(c, i, i.AppsFileServer(), webapp)
+		return ServeAppFile(c, i, app.AppsFileServer(i), webapp)
 	default:
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}

@@ -256,7 +256,7 @@ func orphanAccountFixer(c echo.Context) error {
 	}
 	jobsSystem := job.System()
 	log := inst.Logger().WithField("nspace", "fixer")
-	copier := inst.AppsCopier(consts.KonnectorType)
+	copier := app.Copier(consts.KonnectorType, inst)
 
 	for _, slug := range slugsToDelete {
 		opts := &app.InstallerOptions{

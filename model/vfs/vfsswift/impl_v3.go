@@ -248,65 +248,39 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 	}, nil
 }
 
-func (sfs *swiftVFSV3) destroyDir(doc *vfs.DirDoc, onlyContent bool) error {
+func (sfs *swiftVFSV3) destroyDir(doc *vfs.DirDoc, push func(vfs.TrashJournal) error, onlyContent bool) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	fn := "DestroyDirAndContent"
-	if onlyContent {
-		fn = "DestroyDirContent"
-	}
 	diskUsage, _ := sfs.Indexer.DiskUsage()
 	files, destroyed, err := sfs.Indexer.DeleteDirDocAndContent(doc, onlyContent)
 	if err != nil {
 		return err
 	}
-	objNames := make([]string, len(files))
-	for i, file := range files {
-		objNames[i] = MakeObjectNameV3(file.DocID, file.InternalID)
-	}
-	var allVersions []*vfs.Version
-	for _, file := range files {
-		if versions, err := vfs.VersionsFor(sfs, file.DocID); err == nil {
-			for _, v := range versions {
-				internalID := v.DocID
-				if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
-					internalID = parts[1]
-				}
-				objNames = append(objNames, MakeObjectNameV3(file.DocID, internalID))
-				destroyed += v.ByteSize
-			}
-			allVersions = append(allVersions, versions...)
-		}
-	}
-	if err = sfs.Indexer.BatchDeleteVersions(allVersions); err != nil {
-		sfs.log.Infof("%s failed on BatchDeleteVersions: %s", fn, err)
-	}
-	_, errb := sfs.c.BulkDelete(sfs.container, objNames)
-	if errb == swift.Forbidden {
-		sfs.log.Infof("%s failed on BulkDelete: %s", fn, errb)
-		errb = nil
-		for _, objName := range objNames {
-			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil && errd != nil {
-				sfs.log.Infof("%s failed on ObjectDelete: %s", fn, errd)
-				err = errd
-			}
-		}
-	}
-	if err == nil && errb != nil {
-		err = errb
+	if len(files) == 0 {
+		return nil
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
+	ids := make([]string, len(files))
+	objNames := make([]string, len(files))
+	for i, file := range files {
+		ids[i] = file.DocID
+		objNames[i] = MakeObjectNameV3(file.DocID, file.InternalID)
+	}
+	err = push(vfs.TrashJournal{
+		FileIDs:     ids,
+		ObjectNames: objNames,
+	})
 	return err
 }
 
-func (sfs *swiftVFSV3) DestroyDirContent(doc *vfs.DirDoc) error {
-	return sfs.destroyDir(doc, true)
+func (sfs *swiftVFSV3) DestroyDirContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
+	return sfs.destroyDir(doc, push, true)
 }
 
-func (sfs *swiftVFSV3) DestroyDirAndContent(doc *vfs.DirDoc) error {
-	return sfs.destroyDir(doc, false)
+func (sfs *swiftVFSV3) DestroyDirAndContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
+	return sfs.destroyDir(doc, push, false)
 }
 
 func (sfs *swiftVFSV3) DestroyFile(doc *vfs.FileDoc) error {
@@ -334,12 +308,12 @@ func (sfs *swiftVFSV3) DestroyFile(doc *vfs.FileDoc) error {
 		}
 		err = sfs.Indexer.BatchDeleteVersions(versions)
 		if err != nil {
-			sfs.log.Infof("DestroyFile failed on BatchDeleteVersions: %s", err)
+			sfs.log.Warnf("DestroyFile failed on BatchDeleteVersions: %s", err)
 		}
 	}
 	_, errb := sfs.c.BulkDelete(sfs.container, objNames)
 	if errb == swift.Forbidden {
-		sfs.log.Infof("DestroyFile failed on BulkDelete: %s", err)
+		sfs.log.Warnf("DestroyFile failed on BulkDelete: %s", err)
 		errb = nil
 		for _, objName := range objNames {
 			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil && errd != nil {
@@ -350,6 +324,44 @@ func (sfs *swiftVFSV3) DestroyFile(doc *vfs.FileDoc) error {
 	}
 	if err == nil && errb != nil {
 		err = errb
+	}
+	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
+	return err
+}
+
+func (sfs *swiftVFSV3) EnsureErased(journal vfs.TrashJournal) error {
+	// No lock needed
+	diskUsage, _ := sfs.Indexer.DiskUsage()
+	objNames := journal.ObjectNames
+	var destroyed int64
+	var allVersions []*vfs.Version
+	for _, fileID := range journal.FileIDs {
+		if versions, err := vfs.VersionsFor(sfs, fileID); err == nil {
+			for _, v := range versions {
+				internalID := v.DocID
+				if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
+					internalID = parts[1]
+				}
+				objNames = append(objNames, MakeObjectNameV3(fileID, internalID))
+				destroyed += v.ByteSize
+			}
+			allVersions = append(allVersions, versions...)
+		}
+	}
+	if err := sfs.Indexer.BatchDeleteVersions(allVersions); err != nil {
+		sfs.log.Warnf("EnsureErased failed on BatchDeleteVersions: %s", err)
+	}
+	_, err := sfs.c.BulkDelete(sfs.container, objNames)
+	if err == swift.Forbidden {
+		sfs.log.Infof("EnsureErased failed on BulkDelete: %s", err)
+		err = nil
+		for _, objName := range objNames {
+			errd := sfs.c.ObjectDelete(sfs.container, objName)
+			if err == nil && errd != nil && errd != swift.ObjectNotFound {
+				sfs.log.Infof("EnsureErased failed on ObjectDelete: %s", errd)
+				err = errd
+			}
+		}
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
 	return err

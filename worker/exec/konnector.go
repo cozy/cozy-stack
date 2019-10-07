@@ -151,7 +151,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 	w.msg = &msg
 
 	w.man, err = app.GetKonnectorBySlugAndUpdate(i, slug,
-		i.AppsCopier(consts.KonnectorType), i.Registries())
+		app.Copier(consts.KonnectorType, i), i.Registries())
 	if err == app.ErrNotFound {
 		return "", job.ErrBadTrigger{Err: err}
 	} else if err != nil {
@@ -186,7 +186,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 	}
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
-	fileServer := i.KonnectorsFileServer()
+	fileServer := app.KonnectorsFileServer(i)
 	tarFile, err := fileServer.Open(slug, man.Version(), man.Checksum(), app.KonnectorArchiveName)
 	if err == nil {
 		err = extractTar(workFS, tarFile)

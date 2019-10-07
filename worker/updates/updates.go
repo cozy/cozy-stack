@@ -23,6 +23,7 @@ const numUpdatersSingleInstance = 4
 func init() {
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "updates",
+		Reserved:     true,
 		Concurrency:  1,
 		MaxExecCount: 1,
 		Timeout:      1 * time.Hour,
@@ -335,7 +336,7 @@ func createInstaller(inst *instance.Instance, registries []*url.URL, man app.Man
 			}
 		}
 	}
-	return app.NewInstaller(inst, inst.AppsCopier(man.AppType()),
+	return app.NewInstaller(inst, app.Copier(man.AppType(), inst),
 		&app.InstallerOptions{
 			Operation:        app.Update,
 			Manifest:         man,

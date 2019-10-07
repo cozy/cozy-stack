@@ -248,7 +248,7 @@ func authorize(c echo.Context) error {
 			return err
 		}
 		slug := manifest.Slug()
-		installer, err := app.NewInstaller(instance, instance.AppsCopier(consts.WebappType), &app.InstallerOptions{
+		installer, err := app.NewInstaller(instance, app.Copier(consts.WebappType, instance), &app.InstallerOptions{
 			Operation:  app.Install,
 			Type:       consts.WebappType,
 			SourceURL:  softwareID,

@@ -130,7 +130,7 @@ func installHandler(installerType consts.AppType) echo.HandlerFunc {
 			w.WriteHeader(200)
 		}
 
-		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
+		inst, err := apps.NewInstaller(instance, app.Copier(installerType, instance),
 			&apps.InstallerOptions{
 				Operation:   apps.Install,
 				Type:        installerType,
@@ -186,7 +186,7 @@ func updateHandler(installerType consts.AppType) echo.HandlerFunc {
 		}
 
 		permissionsAcked, _ := strconv.ParseBool(c.QueryParam("PermissionsAcked"))
-		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
+		inst, err := apps.NewInstaller(instance, app.Copier(installerType, instance),
 			&apps.InstallerOptions{
 				Operation:  apps.Update,
 				Type:       installerType,
@@ -249,7 +249,7 @@ func deleteHandler(installerType consts.AppType) echo.HandlerFunc {
 			}
 		}
 
-		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
+		inst, err := apps.NewInstaller(instance, app.Copier(installerType, instance),
 			&apps.InstallerOptions{
 				Operation:  apps.Delete,
 				Type:       installerType,
@@ -351,7 +351,7 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManif
 				log.Errorf("Cannot delete the trigger: %v", err)
 			}
 		}
-		inst, err := apps.NewInstaller(instance, instance.AppsCopier(consts.KonnectorType),
+		inst, err := apps.NewInstaller(instance, app.Copier(consts.KonnectorType, instance),
 			&apps.InstallerOptions{
 				Operation:  apps.Delete,
 				Type:       consts.KonnectorType,
@@ -533,10 +533,10 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 		switch appType {
 		case consts.WebappType:
 			filepath = path.Join("/", app.(*apps.WebappManifest).Icon)
-			fs = instance.AppsFileServer()
+			fs = apps.AppsFileServer(instance)
 		case consts.KonnectorType:
 			filepath = path.Join("/", app.(*apps.KonnManifest).Icon)
-			fs = instance.KonnectorsFileServer()
+			fs = apps.KonnectorsFileServer(instance)
 		}
 
 		err = fs.ServeFileContent(c.Response(), c.Request(),

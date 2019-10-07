@@ -62,7 +62,7 @@ func TestUnknownApp(t *testing.T) {
 func TestBadFileExec(t *testing.T) {
 	folderToSave := "7890"
 
-	installer, err := app.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
+	installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
 		&app.InstallerOptions{
 			Operation: app.Install,
 			Type:      consts.KonnectorType,
@@ -123,7 +123,7 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		return
 	}
 
-	installer, err := app.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
+	installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
 		&app.InstallerOptions{
 			Operation: app.Install,
 			Type:      consts.KonnectorType,
@@ -235,7 +235,7 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 		}
 	}()
 
-	installer, err := app.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
+	installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
 		&app.InstallerOptions{
 			Operation: app.Install,
 			Type:      consts.KonnectorType,
@@ -313,7 +313,7 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 		return
 	}
 
-	installer, err := app.NewInstaller(inst, inst.AppsCopier(consts.KonnectorType),
+	installer, err := app.NewInstaller(inst, app.Copier(consts.KonnectorType, inst),
 		&app.InstallerOptions{
 			Operation: app.Install,
 			Type:      consts.KonnectorType,

@@ -300,7 +300,7 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 	}, nil
 }
 
-func (sfs *swiftVFSV2) DestroyDirContent(doc *vfs.DirDoc) error {
+func (sfs *swiftVFSV2) DestroyDirContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
@@ -311,26 +311,18 @@ func (sfs *swiftVFSV2) DestroyDirContent(doc *vfs.DirDoc) error {
 		return err
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
+	if len(files) == 0 {
+		return nil
+	}
 	objNames := make([]string, len(files))
 	for i, file := range files {
 		objNames[i] = MakeObjectName(file.DocID)
 		_ = sfs.destroyFileVersions(objNames[i])
 	}
-	_, err = sfs.c.BulkDelete(sfs.container, objNames)
-	if err == swift.Forbidden {
-		sfs.log.Infof("DestroyDirContent failed on BulkDelete: %s", err)
-		err = nil
-		for _, objName := range objNames {
-			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil && errd != nil {
-				sfs.log.Infof("DestroyDirContent failed on ObjectDelete: %s", errd)
-				err = errd
-			}
-		}
-	}
-	return err
+	return push(vfs.TrashJournal{ObjectNames: objNames})
 }
 
-func (sfs *swiftVFSV2) DestroyDirAndContent(doc *vfs.DirDoc) error {
+func (sfs *swiftVFSV2) DestroyDirAndContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
@@ -341,23 +333,15 @@ func (sfs *swiftVFSV2) DestroyDirAndContent(doc *vfs.DirDoc) error {
 		return err
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
+	if len(files) == 0 {
+		return nil
+	}
 	objNames := make([]string, len(files))
 	for i, file := range files {
 		objNames[i] = MakeObjectName(file.DocID)
 		_ = sfs.destroyFileVersions(objNames[i])
 	}
-	_, err = sfs.c.BulkDelete(sfs.container, objNames)
-	if err == swift.Forbidden {
-		sfs.log.Infof("DestroyDirAndContent failed on BulkDelete: %s", err)
-		err = nil
-		for _, objName := range objNames {
-			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil && errd != nil {
-				sfs.log.Infof("DestroyDirAndContent failed on ObjectDelete: %s", errd)
-				err = errd
-			}
-		}
-	}
-	return err
+	return push(vfs.TrashJournal{ObjectNames: objNames})
 }
 
 func (sfs *swiftVFSV2) DestroyFile(doc *vfs.FileDoc) error {
@@ -397,6 +381,23 @@ func (sfs *swiftVFSV2) destroyFileVersions(objName string) error {
 		return err
 	}
 	return nil
+}
+
+func (sfs *swiftVFSV2) EnsureErased(journal vfs.TrashJournal) error {
+	// No lock needed
+	_, err := sfs.c.BulkDelete(sfs.container, journal.ObjectNames)
+	if err == swift.Forbidden {
+		sfs.log.Warnf("EnsureErased failed on BulkDelete: %s", err)
+		err = nil
+		for _, objName := range journal.ObjectNames {
+			errd := sfs.c.ObjectDelete(sfs.container, objName)
+			if err == nil && errd != nil && errd != swift.ObjectNotFound {
+				sfs.log.Infof("EnsureErased failed on ObjectDelete: %s", errd)
+				err = errd
+			}
+		}
+	}
+	return err
 }
 
 func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {

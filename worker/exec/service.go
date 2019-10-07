@@ -46,7 +46,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 	name := opts.Name
 
 	man, err := app.GetWebappBySlugAndUpdate(i, slug,
-		i.AppsCopier(consts.WebappType), i.Registries())
+		app.Copier(consts.WebappType, i), i.Registries())
 	if err != nil {
 		if err == app.ErrNotFound {
 			err = job.ErrBadTrigger{Err: err}
@@ -115,7 +115,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 	}
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
-	fs := i.AppsFileServer()
+	fs := app.AppsFileServer(i)
 	src, err := fs.Open(man.Slug(), man.Version(), man.Checksum(), path.Join("/", service.File))
 	if err != nil {
 		return
