@@ -24,10 +24,14 @@ func init() {
 // of files from Swift can take some time.
 func WorkerTrashFiles(ctx *job.WorkerContext) error {
 	opts := vfs.TrashJournal{}
-	err := ctx.UnmarshalMessage(&opts)
-	if err != nil {
+	if err := ctx.UnmarshalMessage(&opts); err != nil {
 		return err
 	}
 	fs := ctx.Instance.VFS()
-	return fs.EnsureErased(opts)
+	if err := fs.EnsureErased(opts); err != nil {
+		ctx.Logger().WithField("critical", "true").
+			Errorf("Error: %s", err)
+		return err
+	}
+	return nil
 }
