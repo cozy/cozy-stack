@@ -8,7 +8,7 @@ class Stack
   attr_reader :port
 
   @stacks = {}
-  @next_port = 8080
+  @next_port = ENV.fetch("COZY_BASE_PORT", 8080).to_i
 
   def self.get(port = nil)
     port ||= (@next_port += 1)
