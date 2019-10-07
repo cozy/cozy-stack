@@ -60,13 +60,18 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 				})
 			}
 
+			contentType := AcceptedContentType(c)
 			if url, _ := i.ManagerURL(instance.ManagerBlockedURL); url != "" && IsLoggedIn(c) {
-				return c.Redirect(http.StatusFound, url)
+				switch contentType {
+				case jsonapi.ContentType, echo.MIMEApplicationJSON:
+					return c.JSON(returnCode, i.Warnings())
+				default:
+					return c.Redirect(http.StatusFound, url)
+				}
 			}
 
 			// Fallback by trying to determine the blocking reason
 			reason := i.BlockingReason
-
 			if reason == "" {
 				reason = i.Translate(instance.BlockedUnknown.Message)
 			} else if reason == instance.BlockedPaymentFailed.Code {
@@ -74,7 +79,6 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 				reason = i.Translate(instance.BlockedPaymentFailed.Message)
 			}
 
-			contentType := AcceptedContentType(c)
 			switch contentType {
 			case jsonapi.ContentType, echo.MIMEApplicationJSON:
 				return c.JSON(returnCode, i.Warnings())
@@ -133,7 +137,12 @@ func CheckTOSDeadlineExpired(next echo.HandlerFunc) echo.HandlerFunc {
 
 		notSigned, deadline := i.CheckTOSNotSignedAndDeadline()
 		if notSigned && deadline == instance.TOSBlocked {
-			return c.Redirect(http.StatusFound, redirect)
+			switch AcceptedContentType(c) {
+			case jsonapi.ContentType, echo.MIMEApplicationJSON:
+				return c.JSON(http.StatusPaymentRequired, i.Warnings())
+			default:
+				return c.Redirect(http.StatusFound, redirect)
+			}
 		}
 		return next(c)
 	}
