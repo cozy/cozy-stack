@@ -422,7 +422,8 @@ burst. It delays the creation of the job on the first input by the given time
 argument, and if the trigger has its condition matched again during this period,
 it won't create another job. It can be useful to combine it with the changes
 feed of couchdb with a last sequence number persisted by the worker, as it
-allows to have a nice diff between two executions of the worker.
+allows to have a nice diff between two executions of the worker. Its syntax is the
+one understood by go's [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration).
 
 #### Request
 
