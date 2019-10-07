@@ -62,5 +62,7 @@ describe "The VFS" do
     Folder.clear_trash inst
     sleep 5
     assert_equal inst.fsck, ""
+
+    inst.remove
   end
 end

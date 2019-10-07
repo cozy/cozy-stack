@@ -100,5 +100,8 @@ describe "A folder" do
                    Helpers::SHARED_WITH_ME, oneshot.rules.first.title
     diff = Helpers.fsdiff da, db
     diff.must_be_empty
+
+    inst.remove
+    inst_recipient.remove
   end
 end

@@ -26,7 +26,7 @@ class Stack
   def start
     vault = File.join Helpers.current_dir, "vault"
     FileUtils.mkdir_p vault
-    system("cozy-stack config gen-keys '#{vault}/key'")
+    system("cozy-stack config gen-keys '#{vault}/key'") unless File.exist?("#{vault}/key.enc")
     cmd = ["cozy-stack", "serve", "--log-level", "debug",
            "--mail-disable-tls", "--mail-port", "1025",
            "--port", @port, "--admin-port", @admin,
@@ -41,14 +41,21 @@ class Stack
     cmd = ["cozy-stack", "instances", "add", inst.domain,
            "--passphrase", inst.passphrase, "--public-name", inst.name,
            "--email", inst.email, "--settings", "context:test",
-           "--admin-port", @admin.to_s, "--locale", "fr"]
+           "--admin-port", @admin, "--locale", "fr"]
     puts cmd.join(" ").green
-    return if system(*cmd)
+    return if system(cmd.join(" "))
     # Try again if the cozy-stack serve was too slow to listen
     sleep 3
     Helpers.cat "stack-#{@port}.log"
-    return if system(*cmd)
+    return if system(cmd.join(" "))
     raise StackError.new
+  end
+
+  def remove_instance(inst)
+    cmd = ["cozy-stack", "instances", "rm", "--force", inst.domain,
+           "--admin-port", @admin]
+    puts cmd.join(" ").green
+    system cmd.join(" ")
   end
 
   def install_app(inst, app)
@@ -84,7 +91,8 @@ class Stack
   end
 
   def fsck(inst)
-    cmd = ["cozy-stack", "instances", "fsck", inst.domain, "--admin-port", @admin]
+    cmd = ["cozy-stack", "instances", "fsck", inst.domain,
+           "--admin-port", @admin]
     puts cmd.join(" ").green
     `#{cmd.join(" ")}`.chomp
   end

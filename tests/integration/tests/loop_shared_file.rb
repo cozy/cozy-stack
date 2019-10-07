@@ -46,5 +46,8 @@ describe "A sharing" do
     file_bob = CozyFile.find inst_bob, file_bob.couch_id
     assert_equal file.name, file_bob.name
     assert_equal file.md5sum, file_bob.md5sum
+
+    inst_alice.remove
+    inst_bob.remove
   end
 end

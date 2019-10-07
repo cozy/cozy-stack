@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 var failFast bool
@@ -55,6 +56,10 @@ func runTests(tests []string) error {
 			results <- result{test, err, out}
 			tokens <- k
 		}(i, test)
+
+		// Starting all the tests at the same time is not a good idea, the
+		// stack can create conflicts on the global databases.
+		time.Sleep(3 * time.Second)
 	}
 
 	var err error

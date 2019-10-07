@@ -76,5 +76,9 @@ describe "A folder" do
     sleep 6
     file1 = CozyFile.find inst_alice, file1.couch_id
     assert_equal name1c, file1.name
+
+    inst_alice.remove
+    inst_bob.remove
+    inst_charlie.remove
   end
 end

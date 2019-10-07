@@ -305,5 +305,10 @@ describe "A sharing" do
     file_charlie = Folder.find_by_path inst_charlie, file_path
     refute_equal file_bob.name, file.name
     refute_equal file_charlie.name, file.name
+
+    inst_alice.remove
+    inst_bob.remove
+    inst_charlie.remove
+    inst_dave.remove
   end
 end

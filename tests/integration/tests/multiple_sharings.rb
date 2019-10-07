@@ -105,5 +105,9 @@ describe "A folder" do
     diff.must_be_empty
     diff = Helpers.fsdiff da, dc
     diff.must_be_empty
+
+    inst_alice.remove
+    inst_bob.remove
+    inst_charlie.remove
   end
 end
