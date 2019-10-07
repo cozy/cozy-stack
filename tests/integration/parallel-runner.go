@@ -39,7 +39,7 @@ type result struct {
 }
 
 func runTests(tests []string) error {
-	results := make(chan result)
+	results := make(chan result, len(tests))
 	tokens := make(chan struct{}, nb)
 	for i := 0; i < nb; i++ {
 		tokens <- struct{}{}
