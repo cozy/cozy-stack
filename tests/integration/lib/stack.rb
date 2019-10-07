@@ -1,4 +1,10 @@
 class Stack
+  class StackError < StandardError
+    def message
+      "Stack is not available"
+    end
+  end
+
   attr_reader :port
 
   @stacks = {}
@@ -40,7 +46,9 @@ class Stack
     return if system(*cmd)
     # Try again if the cozy-stack serve was too slow to listen
     sleep 3
-    system(*cmd)
+    Helpers.cat "stack-#{@port}.log"
+    return if system(*cmd)
+    raise StackError.new
   end
 
   def install_app(inst, app)

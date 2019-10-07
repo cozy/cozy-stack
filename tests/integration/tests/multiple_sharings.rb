@@ -58,7 +58,7 @@ describe "A folder" do
     sharing.members = []
     sharing.members << inst_alice << contact_bob
     inst_alice.register sharing
-    sleep 1
+    sleep 2
     inst_charlie.accept sharing
 
     sleep 7

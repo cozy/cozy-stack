@@ -27,6 +27,10 @@ module Helpers
       puts "MailHog is not installed (or not in the PATH)".yellow
     end
 
+    def cat(filename)
+      puts File.read "#{@current_dir}/#{filename}"
+    end
+
     def spawn(cmd, opts = {})
       log_file_name = opts[:log] || "#{cmd.downcase}.log"
       puts "spawn #{cmd} &> #{log_file_name}".green
