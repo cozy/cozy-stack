@@ -925,7 +925,7 @@ used, for instance, to move many files in a single request.
 #### Request
 
 ```http
-PATCH /files/
+PATCH /files/ HTTP/1.1
 Content-Type: application/vnd.api+json
 ```
 
