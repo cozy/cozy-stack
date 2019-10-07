@@ -274,7 +274,15 @@ permission. It is done by adding this to the manifest:
 This worker is used only by the stack: when the user asks to clean the trash,
 the stack will delete the files from CouchDB and put a job for this worker. The
 deletion of files in Swift is slow, and can be done via this worker
-asynchronously.
+asynchronously. The behavior is not the same for all the VFS:
+
+- afero: all the work is done during the HTTP request, no job is pushed
+- Swift layout v1: all the work is done during the HTTP request, no job is pushed
+- Swift layout v2: the files are deleted in CouchDB during the HTTP request,
+  and they are deleted in Swift via the job
+- Swift layout v3: the files are deleted in CouchDB during the HTTP request,
+  the file versions are deleted in CouchDB via the job, and the files and their
+  versions are deleted in Swift via the job.
 
 ## share workers
 

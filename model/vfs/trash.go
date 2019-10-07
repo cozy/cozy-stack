@@ -4,5 +4,6 @@ package vfs
 // trash was cleared, but removing them from Swift is slow and should be done
 // later via the trash-files worker.
 type TrashJournal struct {
+	FileIDs     []string `json:"ids"`
 	ObjectNames []string `json:"objects"`
 }
