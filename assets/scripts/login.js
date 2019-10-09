@@ -85,11 +85,11 @@
           credentials: 'same-origin'
         })
       })
-      .then(function(response) {
+      .then(response => {
         const loginSuccess = response.status < 400
         response
           .json()
-          .then(function(body) {
+          .then(body => {
             if (loginSuccess) {
               submitButton.childNodes[1].innerHTML =
                 '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'

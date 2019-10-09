@@ -159,12 +159,20 @@ func passphraseRenew(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if middlewares.IsLoggedIn(c) {
 		redirect := inst.DefaultRedirection().String()
+		if wantsJSON(c) {
+			return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
+		}
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 	pass := []byte(c.FormValue("passphrase"))
 	iterations, _ := strconv.Atoi(c.FormValue("iterations"))
 	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
 	if err != nil {
+		if wantsJSON(c) {
+			return c.JSON(http.StatusUnauthorized, echo.Map{
+				"error": "Invalid reset token",
+			})
+		}
 		return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 	}
 	err = lifecycle.PassphraseRenew(inst, token, lifecycle.PassParameters{
@@ -176,6 +184,11 @@ func passphraseRenew(c echo.Context) error {
 	})
 	if err != nil {
 		if err == instance.ErrMissingToken {
+			if wantsJSON(c) {
+				return c.JSON(http.StatusUnauthorized, echo.Map{
+					"error": "Invalid reset token",
+				})
+			}
 			return renderError(c, http.StatusBadRequest, "Error Invalid reset token")
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -186,5 +199,10 @@ func passphraseRenew(c echo.Context) error {
 		inst.Logger().WithField("nspace", "bitwarden").
 			Warnf("Error on ciphers deletion after password reset: %s", err)
 	}
-	return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/login", nil))
+
+	redirect := inst.PageURL("/auth/login", nil)
+	if wantsJSON(c) {
+		return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
+	}
+	return c.Redirect(http.StatusSeeOther, redirect)
 }

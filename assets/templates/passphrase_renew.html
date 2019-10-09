@@ -41,12 +41,9 @@
       <main class="wizard">
         <form id="renew-passphrase-form" method="POST" action="/auth/passphrase_renew" class="wizard-wrapper" data-salt="{{.Salt}}">
           <h1 class="wizard-title u-mb-half u-mb-0-s u-mt-1-s">{{t "Passphrase renew Title"}}</h1>
-          <div role="region" class="wizard-main">
-            <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+          <div role="region" class="wizard-main" id="renew-field">
+            <input type="hidden" id="csrf_token" name="csrf_token" value="{{.CSRF}}" />
             <input type="hidden" id="renew-password-iterations" name="iterations" value="{{.Iterations}}" />
-            <input type="hidden" id="renew-password-key" name="key" value="" />
-            <input type="hidden" id="renew-password-public-key" name="public_key" value="" />
-            <input type="hidden" id="renew-password-private-key" name="private_key" value="" />
             <input type="hidden" id="passphrase-reset-token" name="passphrase_reset_token" value="{{.PassphraseResetToken}}" />
             <p class="wizard-notice u-coolGrey u-mt-1" id="login-password-tip">{{t "Passphrase renew Help"}}</p>
             <div class="o-field password-form u-m-0">
