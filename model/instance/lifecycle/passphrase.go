@@ -37,7 +37,7 @@ func registerPassphrase(inst *instance.Instance, tok []byte, params PassParamete
 	if err != nil {
 		return nil
 	}
-	if params.Iterations == 0 {
+	if params.Iterations == 0 || params.Key == "" {
 		if err := setDefaultParameters(inst, &params); err != nil {
 			return err
 		}
@@ -151,7 +151,7 @@ func PassphraseRenew(inst *instance.Instance, tok []byte, params PassParameters)
 	if err != nil {
 		return nil
 	}
-	if params.Iterations == 0 {
+	if params.Iterations == 0 || params.Key == "" {
 		if err := setDefaultParameters(inst, &params); err != nil {
 			return err
 		}

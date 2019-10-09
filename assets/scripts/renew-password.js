@@ -28,7 +28,7 @@
   }
 
   form.addEventListener('submit', function(event) {
-    if (passphraseInput.hasClass('is-error')) {
+    if (passphraseInput.classList.contains('is-error')) {
       return
     }
     event.preventDefault()
