@@ -232,10 +232,12 @@ func getInitialCredentials(c echo.Context) error {
 		return c.JSON(err.Code, err)
 	}
 	client.CouchID = client.ClientID
-	if err := session.SendNewRegistrationNotification(inst, client.ClientID); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": err.Error(),
-		})
+	if _, ok := middlewares.GetSession(c); !ok {
+		if err := session.SendNewRegistrationNotification(inst, client.ClientID); err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": err.Error(),
+			})
+		}
 	}
 
 	// Create the credentials
