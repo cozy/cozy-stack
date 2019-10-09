@@ -175,5 +175,8 @@ describe "A sharing" do
 
     diff = Helpers.fsdiff da, db
     diff.must_be_empty
+
+    inst.remove
+    inst_recipient.remove
   end
 end

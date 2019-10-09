@@ -240,5 +240,8 @@ describe "A folder" do
     assert_equal file.name, file_recipient.name
     assert_equal file.md5sum, file_recipient.md5sum
     assert_equal file.couch_rev, file_recipient.couch_rev
+
+    inst.remove
+    inst_recipient.remove
   end
 end

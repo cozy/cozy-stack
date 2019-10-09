@@ -58,7 +58,7 @@ describe "A folder" do
     sharing.members = []
     sharing.members << inst_alice << contact_bob
     inst_alice.register sharing
-    sleep 1
+    sleep 2
     inst_charlie.accept sharing
 
     sleep 7
@@ -105,5 +105,9 @@ describe "A folder" do
     diff.must_be_empty
     diff = Helpers.fsdiff da, dc
     diff.must_be_empty
+
+    inst_alice.remove
+    inst_bob.remove
+    inst_charlie.remove
   end
 end

@@ -31,6 +31,12 @@ your testing sessions, you can run this command:
 bundle exec ruby clean.rb
 ```
 
+You can also run the tests in parallel with:
+
+```sh
+go run parallel-runner.go -n 3 -fail-fast
+```
+
 
 ## Interactive mode
 

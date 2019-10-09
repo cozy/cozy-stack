@@ -157,5 +157,7 @@ describe "The bitwarden API of the stack" do
     assert_equal bw.sync, "Syncing complete."
     assert_equal bw.logout, "You have logged out."
     assert_equal bw2.logout, "You have logged out."
+
+    inst.remove
   end
 end

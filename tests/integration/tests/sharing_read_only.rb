@@ -73,8 +73,12 @@ describe "A folder" do
     sleep 1
     name1c = "#{Faker::DrWho.specie}.txt"
     file1_charlie.rename inst_charlie, name1c
-    sleep 6
+    sleep 8
     file1 = CozyFile.find inst_alice, file1.couch_id
     assert_equal name1c, file1.name
+
+    inst_alice.remove
+    inst_bob.remove
+    inst_charlie.remove
   end
 end

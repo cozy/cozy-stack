@@ -17,6 +17,10 @@ class Instance
     @email = opts[:email] || "#{@name.downcase}+test@cozy.tools"
   end
 
+  def remove
+    @stack.remove_instance self
+  end
+
   def install_app(slug)
     @stack.install_app self, slug
   end
@@ -71,7 +75,6 @@ class Instance
     @stack.install_app self, "home"
     Accept.new(sharing, sharer).on self
   end
-
 
   def fsck
     @stack.fsck self

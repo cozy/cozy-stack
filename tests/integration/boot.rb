@@ -24,5 +24,5 @@ FileUtils.cd base do
     require_relative f if File.file? f
   end
   Helpers.setup
-  Helpers.cleanup
+  Helpers.cleanup unless ENV['CI']
 end

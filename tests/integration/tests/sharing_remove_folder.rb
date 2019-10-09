@@ -87,5 +87,8 @@ describe "A shared folder" do
     assert f3_recipient.trashed
     f3_sharer = CozyFile.find inst, f3.couch_id
     refute f3_sharer.trashed
+
+    inst.remove
+    inst_recipient.remove
   end
 end

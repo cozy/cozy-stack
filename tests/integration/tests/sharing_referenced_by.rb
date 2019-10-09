@@ -115,5 +115,8 @@ describe "A photo" do
     file = CozyFile.find inst, file.couch_id
     refute file_has_album_reference(file, album.couch_id)
     refute file.trashed
+
+    inst.remove
+    inst_recipient.remove
   end
 end
