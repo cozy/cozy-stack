@@ -1769,6 +1769,7 @@ func TestMain(m *testing.M) {
 		Email:         "test@spam.cozycloud.cc",
 		Passphrase:    "MyPassphrase",
 		KdfIterations: 5000,
+		Key:           "xxx",
 	})
 
 	jar = setup.GetCookieJar()

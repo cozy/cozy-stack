@@ -192,6 +192,7 @@ func TestRegisterPassphraseCorrectToken(t *testing.T) {
 		"passphrase":     "MyFirstPassphrase",
 		"iterations":     5000,
 		"register_token": hex.EncodeToString(testInstance.RegisterToken),
+		"key":            "xxx",
 	})
 	res, err := http.Post(ts.URL+"/settings/passphrase", "application/json", bytes.NewReader(args))
 	assert.NoError(t, err)
