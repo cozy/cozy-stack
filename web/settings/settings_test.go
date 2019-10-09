@@ -196,7 +196,7 @@ func TestRegisterPassphraseCorrectToken(t *testing.T) {
 	res, err := http.Post(ts.URL+"/settings/passphrase", "application/json", bytes.NewReader(args))
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	assert.Equal(t, "204 No Content", res.Status)
+	assert.Equal(t, 200, res.StatusCode)
 	cookies := res.Cookies()
 	assert.Len(t, cookies, 1)
 	assert.Equal(t, cookies[0].Name, session.SessionCookieName)

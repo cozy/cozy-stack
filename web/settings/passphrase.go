@@ -111,10 +111,7 @@ func registerPassphrase(c echo.Context) error {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 
-	if acceptHTML {
-		return finishOnboarding(c)
-	}
-	return c.NoContent(http.StatusNoContent)
+	return finishOnboarding(c, acceptHTML)
 }
 
 func updatePassphrase(c echo.Context) error {
