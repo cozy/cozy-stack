@@ -16,7 +16,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -265,7 +264,7 @@ func TestLoginWithGoodPassphrase(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(results))
 		assert.Equal(t, "Go-http-client/1.1", results[0].UA)
-		assert.True(t, strings.HasPrefix(results[0].IP, "127.0.0.1:"))
+		assert.Equal(t, "127.0.0.1", results[0].IP)
 		assert.False(t, results[0].CreatedAt.IsZero())
 	}
 }
@@ -1767,6 +1766,7 @@ func TestMain(m *testing.M) {
 
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
 		Domain:        domain,
+		Email:         "test@spam.cozycloud.cc",
 		Passphrase:    "MyPassphrase",
 		KdfIterations: 5000,
 	})

@@ -104,7 +104,7 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
 	}
 	if ip == "" {
-		ip = req.RemoteAddr
+		ip = strings.Split(req.RemoteAddr, ":")[0]
 	}
 
 	city, country := lookupIP(ip, i.Locale)
@@ -150,6 +150,7 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 			mango.Equal("os", l.OS),
 			mango.Equal("browser", l.Browser),
 			mango.Equal("ip", l.IP),
+			mango.NotEqual("_id", l.ID()),
 		),
 		Limit: 1,
 	}
