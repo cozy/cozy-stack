@@ -28,6 +28,9 @@
   }
 
   form.addEventListener('submit', function(event) {
+    if (passphraseInput.hasClass('is-error')) {
+      return
+    }
     event.preventDefault()
     submitButton.setAttribute('disabled', true)
 

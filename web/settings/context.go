@@ -41,10 +41,10 @@ func onboarded(c echo.Context) error {
 	if !middlewares.IsLoggedIn(c) {
 		return c.Redirect(http.StatusSeeOther, i.PageURL("/auth/login", nil))
 	}
-	return finishOnboarding(c)
+	return finishOnboarding(c, true)
 }
 
-func finishOnboarding(c echo.Context) error {
+func finishOnboarding(c echo.Context, acceptHTML bool) error {
 	i := middlewares.GetInstance(c)
 	if !i.OnboardingFinished {
 		t := true
@@ -94,7 +94,10 @@ func finishOnboarding(c echo.Context) error {
 		}
 		redirect = i.PageURL("/auth/authorize", queryParams)
 	}
-	return c.Redirect(http.StatusSeeOther, redirect)
+	if acceptHTML {
+		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+	return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
 }
 
 func context(c echo.Context) error {
