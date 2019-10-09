@@ -12,6 +12,7 @@ title: Cozy-Stack documentation - Table of contents
 -   [Security](security.md)
 -   [Manpages of the command-line tool](cli/cozy-stack.md)
 -   [Using the admin API](admin.md)
+-   [Important changes](important-changes.md)
 
 ### For developers
 
