@@ -2,6 +2,7 @@ package dynamic
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/url"
@@ -61,6 +62,8 @@ func InitDynamicAssetFS() error {
 		if err != nil {
 			return err
 		}
+	default:
+		return fmt.Errorf("Invalid scheme %s for dynamic assets FS", scheme)
 	}
 
 	return nil
