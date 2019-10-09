@@ -16,7 +16,9 @@ jobs:
         with:
           go-version: '1.13.x'
       - name: Install
-        run: go install
+        run: |
+          echo ::add-path::$(go env GOPATH)/bin
+          go install
       - name: Build
         run: ./scripts/build.sh assets
       - uses: stefanzweifel/git-auto-commit-action@v2.1.0
