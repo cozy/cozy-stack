@@ -10,8 +10,8 @@ if git grep -l \
   exit 1
 fi
 
-curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.19.0
-bin/golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace --deadline 2m --max-same-issues 10
+curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.20.0
+bin/golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace --timeout 2m --max-same-issues 10
 
 npm install eslint@5.16.0 prettier eslint-plugin-prettier eslint-config-cozy-app
 ./node_modules/.bin/eslint "assets/scripts/**"
