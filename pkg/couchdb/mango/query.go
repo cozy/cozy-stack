@@ -14,34 +14,37 @@ import (
 // ValueOperator is an operator between a field and a value
 type ValueOperator string
 
-// Gt ($gt) checks that field > value
+// ne ($ne) checks that field != value
+const ne ValueOperator = "$ne"
+
+// gt ($gt) checks that field > value
 const gt ValueOperator = "$gt"
 
-// Gte ($gte) checks that field >= value
+// gte ($gte) checks that field >= value
 const gte ValueOperator = "$gte"
 
-// Lt ($lt) checks that field < value
+// lt ($lt) checks that field < value
 const lt ValueOperator = "$lt"
 
-// Lte ($lte) checks that field <= value
+// lte ($lte) checks that field <= value
 const lte ValueOperator = "$lte"
 
-// Exists ($exists) checks that the field exists (or is missing)
+// exists ($exists) checks that the field exists (or is missing)
 const exists ValueOperator = "$exists"
 
 // LogicOperator is an operator between two filters
 type LogicOperator string
 
-// And ($and) checks that filter && filter2
+// and ($and) checks that filter && filter2
 const and LogicOperator = "$and"
 
-// Not ($not) checks that !filter
+// not ($not) checks that !filter
 const not LogicOperator = "$not"
 
-// Or ($or) checks that filter1 || filter2 || ...
+// or ($or) checks that filter1 || filter2 || ...
 const or LogicOperator = "$or"
 
-// Nor ($nor) checks that !(filter1 || filter2 || ...)
+// nor ($nor) checks that !(filter1 || filter2 || ...)
 const nor LogicOperator = "$nor"
 
 // A Filter is a filter on documents, to be passed
@@ -137,6 +140,9 @@ func Exists(field string) Filter { return &valueFilter{field, exists, true} }
 
 // Equal returns a filter that check if a field == value
 func Equal(field string, value interface{}) Filter { return makeMap(field, value) }
+
+// NotEqual returns a filter that check if a field != value
+func NotEqual(field string, value interface{}) Filter { return &valueFilter{field, ne, value} }
 
 // Gt returns a filter that check if a field > value
 func Gt(field string, value interface{}) Filter { return &valueFilter{field, gt, value} }
