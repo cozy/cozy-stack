@@ -579,19 +579,6 @@ By default the `content-disposition` will be `inline`, but it will be
 GET /files/download?Path=/Documents/hello.txt&Dl=1 HTTP/1.1
 ```
 
-### GET /files/download/:file-id/:version-id
-
-Download an old version of the file content
-
-By default the `content-disposition` will be `inline`, but it will be
-`attachment` if the query string contains the parameter `Dl=1`
-
-#### Request
-
-```http
-GET /files/download/9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72 HTTP/1.1
-```
-
 ### GET /files/:file-id/thumbnails/:secret/:format
 
 Get a thumbnail of a file (for an image only). `:format` can be `small`
@@ -881,42 +868,6 @@ Location: https://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 }
 ```
 
-### POST /files/revert/:file-id/:version-id
-
-This endpoint can be used to revert to an old version of the content for a
-file.
-
-#### Request
-
-```http
-POST /files/revert/9152d568-7e7c-11e6-a377-37cbfb190b4b/2-fa3a3bec HTTP/1.1
-```
-
-### PATCH /files/:file-id/:version-id
-
-This endpoint can be used to edit the tags of a previous version of the file.
-
-#### Request
-
-```http
-PATCH /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72 HTTP/1.1
-Accept: application/vnd.api+json
-Content-Type: application/vnd.api+json
-```
-
-
-```json
-{
-  "data": {
-    "type": "io.cozy.files.versions",
-    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72",
-    "attributes": {
-      "tags": ["poem"]
-    }
-  }
-}
-```
-
 ### PATCH /files/
 
 Endpoint to update the metadata of files and directories in batch. It can be
@@ -1046,6 +997,90 @@ By default the `content-disposition` will be `inline`, but it will be
 `attachment` if the query string contains the parameter `Dl=1`
 
 **This route does not require Basic Authentification**
+
+## Versions
+
+### GET /files/download/:file-id/:version-id
+
+Download an old version of the file content
+
+By default the `content-disposition` will be `inline`, but it will be
+`attachment` if the query string contains the parameter `Dl=1`
+
+#### Request
+
+```http
+GET /files/download/9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72 HTTP/1.1
+```
+
+### POST /files/:file-id/versions
+
+Create a new version of a file, with the same content but new metadata. It
+requires a permission for PUT on the file, as it is equivalent to upload the
+same content of the file.
+
+#### Query-String
+
+| Parameter | Description        |
+| --------- | ------------------ |
+| Tags      | an array of tags   |
+
+#### Request
+
+```http
+POST /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/metadata HTTP/1.1
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files.metadata",
+    "attributes": {
+      "category": "report",
+      "subCategory": "theft",
+      "datetime": "2017-04-22T01:00:00-05:00",
+      "label": "foobar"
+    }
+  }
+}
+```
+
+### POST /files/revert/:file-id/:version-id
+
+This endpoint can be used to revert to an old version of the content for a
+file.
+
+#### Request
+
+```http
+POST /files/revert/9152d568-7e7c-11e6-a377-37cbfb190b4b/2-fa3a3bec HTTP/1.1
+```
+
+### PATCH /files/:file-id/:version-id
+
+This endpoint can be used to edit the tags of a previous version of the file.
+
+#### Request
+
+```http
+PATCH /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72 HTTP/1.1
+Accept: application/vnd.api+json
+Content-Type: application/vnd.api+json
+```
+
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files.versions",
+    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b/1-0e6d5b72",
+    "attributes": {
+      "tags": ["poem"]
+    }
+  }
+}
+```
 
 ## Trash
 
