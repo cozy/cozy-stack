@@ -3,16 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
 )
 
+var shuffle bool
 var failFast bool
 var nb int
 
 func main() {
+	flag.BoolVar(&shuffle, "shuffle", false, "Randomize the order of the tests")
 	flag.BoolVar(&failFast, "fail-fast", false, "Stop on the first test that fails")
 	flag.IntVar(&nb, "n", 4, "Number of tests to run in parallel")
 	flag.Parse()
@@ -29,7 +32,16 @@ func main() {
 }
 
 func listTests() ([]string, error) {
-	return filepath.Glob("tests/*.rb")
+	tests, err := filepath.Glob("tests/*.rb")
+	if err != nil {
+		return nil, err
+	}
+	if shuffle {
+		rand.Shuffle(len(tests), func(i, j int) {
+			tests[i], tests[j] = tests[j], tests[i]
+		})
+	}
+	return tests, nil
 }
 
 type result struct {
