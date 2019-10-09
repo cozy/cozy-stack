@@ -1112,6 +1112,7 @@ func TestMain(m *testing.M) {
 		PublicName:    "Bob",
 		Passphrase:    "MyPassphrase",
 		KdfIterations: 5000,
+		Key:           "xxx",
 	})
 	bobAppToken = generateAppToken(bobInstance, "testapp")
 	edwardContact = createContactWithCozyURL(bobInstance, "Edward", "https://edward.example.net/")
