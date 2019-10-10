@@ -73,7 +73,7 @@ func commit(ctx *job.WorkerContext, err error) error {
 	if err == nil {
 		log.Infof("Migration success")
 	} else {
-		log.Warningf("Migration error: %s", err)
+		log.Errorf("Migration error: %s", err)
 	}
 	return err
 }
@@ -117,7 +117,10 @@ func migrateToSwiftV3(domain string) error {
 	}
 	defer func() {
 		if err != nil {
-			_ = vfsswift.DeleteContainer(c, dstContainer)
+			if err := vfsswift.DeleteContainer(c, dstContainer); err != nil {
+				log := logger.WithDomain(inst.Domain).WithField("nspace", "migration")
+				log.Errorf("Failed to delete v3 container %s: %s", dstContainer, err)
+			}
 		}
 	}()
 
@@ -197,20 +200,20 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 				k := <-tokens
 				_, err := c.ObjectCopy(thumbsContainer, srcSmall, dst, dstSmall, nil)
 				if err != nil {
-					log.Infof("Cannot copy thumbnail small from %s %s to %s %s",
-						thumbsContainer, srcSmall, dst, dstSmall)
+					log.Infof("Cannot copy thumbnail small from %s %s to %s %s: %s",
+						thumbsContainer, srcSmall, dst, dstSmall, err)
 				}
 				ch <- nil
 				_, err = c.ObjectCopy(thumbsContainer, srcMedium, dst, dstMedium, nil)
 				if err != nil {
-					log.Infof("Cannot copy thumbnail medium from %s %s to %s %s",
-						thumbsContainer, srcMedium, dst, dstMedium)
+					log.Infof("Cannot copy thumbnail medium from %s %s to %s %s: %s",
+						thumbsContainer, srcMedium, dst, dstMedium, err)
 				}
 				ch <- nil
 				_, err = c.ObjectCopy(thumbsContainer, srcLarge, dst, dstLarge, nil)
 				if err != nil {
-					log.Infof("Cannot copy thumbnail large from %s %s to %s %s",
-						thumbsContainer, srcLarge, dst, dstLarge)
+					log.Infof("Cannot copy thumbnail large from %s %s to %s %s: %s",
+						thumbsContainer, srcLarge, dst, dstLarge, err)
 				}
 				ch <- nil
 				tokens <- k
