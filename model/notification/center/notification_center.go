@@ -1,6 +1,7 @@
 package center
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -197,15 +198,22 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 			if p != nil {
 				log := inst.Logger().WithField("nspace", "notifications")
 				log.Infof("Sending push %#v: %v", p, n.State)
-				if err := sendPush(inst, p, n); err != nil {
-					log.Errorf("Error while sending push %#v: %v", p, n.State)
-					errm = multierror.Append(errm, err)
+				err := sendPush(inst, p, n)
+				if err == nil {
+					return nil
 				}
-			}
-		case "mail":
-			if err := sendMail(inst, p, n); err != nil {
+				log.Errorf("Error while sending push %#v: %v", p, n.State)
 				errm = multierror.Append(errm, err)
 			}
+		case "mail":
+			err := sendMail(inst, p, n)
+			if err == nil {
+				return nil
+			}
+			errm = multierror.Append(errm, err)
+		default:
+			err := fmt.Errorf("Unknown channel for notification: %s", channel)
+			errm = multierror.Append(errm, err)
 		}
 	}
 	return errm
