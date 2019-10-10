@@ -56,6 +56,7 @@ type Notification struct {
 	Data     map[string]interface{} `json:"data,omitempty"`
 
 	PreferredChannels []string `json:"preferred_channels,omitempty"`
+	At                string   `json:"at,omitempty"`
 
 	// XXX retro-compatible fields for sending rich mail
 	Content     string `json:"content,omitempty"`

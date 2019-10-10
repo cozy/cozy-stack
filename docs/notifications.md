@@ -70,8 +70,8 @@ Notifications fields are:
 
 -   `category` (string): name of the notification category
 -   `category_id` (string): category name if the category is multiple
--   `title` (string): title of the notification (optionnal)
--   `message` (string): message of of the notification (optionnal)
+-   `title` (string): title of the notification (optional)
+-   `message` (string): message of of the notification (optional)
 -   `priority` (string): priority of the notification (`high` or `normal`), sent
     to the underlying channel to prioritize the notification
 -   `state` (string): state of the notification, used for `stateful`
@@ -82,6 +82,8 @@ Notifications fields are:
     try to send a mobile notification, and if it fails, it will try by mail.
 -   `data` (map): key/value map used to create the notification from its
     template, or sent in the notification payload for mobiles
+-   `at` (string): send the notification later, at this date formatted in
+    ISO-8601 (optional)
 
 #### Request
 
