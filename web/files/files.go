@@ -400,7 +400,7 @@ func CopyVersionHandler(c echo.Context) error {
 	}()
 
 	_, err = io.Copy(file, content)
-	return fileData(c, http.StatusOK, newdoc, true, nil)
+	return err
 }
 
 func getPatch(c echo.Context, docID, docPath string) (*docPatch, error) {
