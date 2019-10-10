@@ -14,6 +14,11 @@ jobs:
         image: apache/couchdb:2.3
         ports:
           - 5984:5984
+      mailhog:
+        image: mailhog/mailhog
+        ports:
+          - 1025:1025
+          - 8025:8025
     steps:
       - name: Checkout code
         uses: actions/checkout@v1

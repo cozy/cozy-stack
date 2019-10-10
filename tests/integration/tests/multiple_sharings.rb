@@ -61,7 +61,7 @@ describe "A folder" do
     sleep 2
     inst_charlie.accept sharing
 
-    sleep 7
+    sleep 10
 
     path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
     child1_bob = Folder.find_by_path inst_bob, path

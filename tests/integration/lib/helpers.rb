@@ -24,7 +24,7 @@ module Helpers
       `MailHog --version`
       spawn "MailHog"
     rescue Errno::ENOENT
-      puts "MailHog is not installed (or not in the PATH)".yellow
+      # Ignored
     end
 
     def cat(filename)
