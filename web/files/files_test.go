@@ -1202,6 +1202,68 @@ func TestRevertVersion(t *testing.T) {
 	assert.Equal(t, content, string(resbody))
 }
 
+func TestCopyVersion(t *testing.T) {
+	buf := strings.NewReader(`{
+    "data": {
+        "type": "io.cozy.files.metadata",
+        "attributes": {
+            "category": "report",
+            "label": "foo"
+        }
+    }
+}`)
+	req1, err := http.NewRequest("POST", ts.URL+"/files/upload/metadata", buf)
+	req1.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res1, err := http.DefaultClient.Do(req1)
+	assert.NoError(t, err)
+	defer res1.Body.Close()
+	assert.Equal(t, 201, res1.StatusCode)
+	var obj1 map[string]interface{}
+	err = extractJSONRes(res1, &obj1)
+	assert.NoError(t, err)
+	data1 := obj1["data"].(map[string]interface{})
+	secret := data1["id"].(string)
+
+	content := "should-be-the-same-after-copy"
+	u := "/files/?Type=file&Name=version-to-be-copied&MetadataID=" + secret
+	res2, body2 := upload(t, u, "text/plain", content, "")
+	assert.Equal(t, 201, res2.StatusCode)
+	data2 := body2["data"].(map[string]interface{})
+	fileID := data2["id"].(string)
+	attrs2 := data2["attributes"].(map[string]interface{})
+	meta2 := attrs2["metadata"].(map[string]interface{})
+	assert.Equal(t, "report", meta2["category"])
+	assert.Equal(t, "foo", meta2["label"])
+
+	buf = strings.NewReader(`{
+    "data": {
+        "type": "io.cozy.files.metadata",
+        "attributes": {
+            "label": "bar"
+        }
+    }
+}`)
+	req3, err := http.NewRequest("POST", ts.URL+"/files/"+fileID+"/versions?Tags=qux", buf)
+	req3.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res3, err := http.DefaultClient.Do(req3)
+	assert.NoError(t, err)
+	defer res3.Body.Close()
+	assert.Equal(t, 200, res3.StatusCode)
+	var obj3 map[string]interface{}
+	err = extractJSONRes(res3, &obj3)
+	assert.NoError(t, err)
+	data3 := obj3["data"].(map[string]interface{})
+	attrs3 := data3["attributes"].(map[string]interface{})
+	meta3 := attrs3["metadata"].(map[string]interface{})
+	assert.Nil(t, meta3["category"])
+	assert.Equal(t, "bar", meta3["label"])
+	assert.Len(t, attrs3["tags"], 1)
+	tags := attrs3["tags"].([]interface{})
+	assert.Equal(t, "qux", tags[0])
+}
+
 func TestArchiveNoFiles(t *testing.T) {
 	body := bytes.NewBufferString(`{
 		"data": {

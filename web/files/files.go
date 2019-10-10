@@ -348,6 +348,61 @@ func ModifyFileVersionMetadata(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, version, nil)
 }
 
+// CopyVersionHandler handles POST requests on /files/:file-id/versions.
+//
+// It can be used to create a new version of a file, with the same content but
+// new metadata.
+func CopyVersionHandler(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fs := inst.VFS()
+	fileID := c.Param("file-id")
+	olddoc, err := fs.FileByID(fileID)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	if olddoc == nil {
+		return WrapVfsError(vfs.ErrConflict)
+	}
+	if err = checkPerm(c, permission.PUT, nil, olddoc); err != nil {
+		return WrapVfsError(err)
+	}
+
+	meta := vfs.Metadata{}
+	if _, err := jsonapi.Bind(c.Request().Body, &meta); err != nil {
+		return err
+	}
+
+	newdoc := olddoc.Clone().(*vfs.FileDoc)
+	newdoc.Metadata = meta
+	newdoc.Tags = utils.SplitTrimString(c.QueryParam("Tags"), TagSeparator)
+	updateFileCozyMetadata(c, newdoc, true)
+
+	content, err := fs.OpenFile(olddoc)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	defer content.Close()
+
+	file, err := fs.CreateFile(newdoc, olddoc)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+		if err != nil {
+			err = WrapVfsError(err)
+			return
+		}
+		err = fileData(c, http.StatusOK, newdoc, true, nil)
+	}()
+
+	_, err = io.Copy(file, content)
+	return err
+}
+
 func getPatch(c echo.Context, docID, docPath string) (*docPatch, error) {
 	var patch docPatch
 	obj, err := jsonapi.Bind(c.Request().Body, &patch)
@@ -1162,6 +1217,7 @@ func Routes(router *echo.Group) {
 	router.GET("/download/:file-id/:version-id", ReadFileContentFromVersion)
 	router.POST("/revert/:file-id/:version-id", RevertFileVersion)
 	router.PATCH("/:file-id/:version-id", ModifyFileVersionMetadata)
+	router.POST("/:file-id/versions", CopyVersionHandler)
 
 	router.POST("/_find", FindFilesMango)
 
