@@ -171,16 +171,18 @@ func pushJob(c echo.Context) error {
 	if err := middlewares.Allow(c, permission.POST, jr); err != nil {
 		return err
 	}
-	if err := checkReservedWorker(jr.WorkerType); err != nil {
-		return err
-	}
 
 	permd, err := middlewares.GetPermission(c)
 	if err != nil {
 		return err
 	}
-	if jr.ForwardLogs && permd.Type != permission.TypeCLI {
-		return echo.NewHTTPError(http.StatusForbidden)
+	if permd.Type != permission.TypeCLI {
+		if jr.ForwardLogs {
+			return echo.NewHTTPError(http.StatusForbidden)
+		}
+		if err := checkReservedWorker(jr.WorkerType); err != nil {
+			return err
+		}
 	}
 
 	j, err := job.System().PushJob(instance, jr)
@@ -238,8 +240,14 @@ func newTrigger(c echo.Context) error {
 	if err = middlewares.Allow(c, permission.POST, t); err != nil {
 		return err
 	}
-	if err := checkReservedWorker(req.WorkerType); err != nil {
+	permd, err := middlewares.GetPermission(c)
+	if err != nil {
 		return err
+	}
+	if permd.Type != permission.TypeCLI {
+		if err := checkReservedWorker(req.WorkerType); err != nil {
+			return err
+		}
 	}
 
 	if err = sched.AddTrigger(t); err != nil {
