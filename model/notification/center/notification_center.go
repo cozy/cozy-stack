@@ -1,6 +1,7 @@
 package center
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -89,7 +90,9 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 		if !ok {
 			return ErrUnauthorized
 		}
+		n.Slug = ""
 		if slug := oauth.GetLinkedAppSlug(c.SoftwareID); slug != "" {
+			n.Slug = slug
 			m, err := app.GetWebappBySlug(inst, slug)
 			if err != nil || m.Notifications == nil {
 				return err
@@ -172,10 +175,8 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 		}
 	}
 
-	preferredChannels := n.PreferredChannels
-	if len(preferredChannels) == 0 {
-		preferredChannels = []string{"mail"}
-	}
+	preferredChannels := ensureMailFallback(n.PreferredChannels)
+	at := n.At
 
 	n.NID = ""
 	n.NRev = ""
@@ -183,6 +184,7 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 	n.CreatedAt = time.Now()
 	n.LastSent = lastSent
 	n.PreferredChannels = nil
+	n.At = ""
 
 	if err := couchdb.CreateDoc(inst, n); err != nil {
 		return err
@@ -198,7 +200,7 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 			if p != nil {
 				log := inst.Logger().WithField("nspace", "notifications")
 				log.Infof("Sending push %#v: %v", p, n.State)
-				err := sendPush(inst, p, n)
+				err := sendPush(inst, p, n, at)
 				if err == nil {
 					return nil
 				}
@@ -206,7 +208,7 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 				errm = multierror.Append(errm, err)
 			}
 		case "mail":
-			err := sendMail(inst, p, n)
+			err := sendMail(inst, p, n, at)
 			if err == nil {
 				return nil
 			}
@@ -240,7 +242,14 @@ func findLastNotification(inst *instance.Instance, source string) (*notification
 	return notifs[0], nil
 }
 
-func sendPush(inst *instance.Instance, p *notification.Properties, n *notification.Notification) error {
+func sendPush(inst *instance.Instance,
+	p *notification.Properties,
+	n *notification.Notification,
+	at string,
+) error {
+	if !hasNotifiableDevice(inst) {
+		return errors.New("No device with push notification")
+	}
 	push := PushMessage{
 		NotificationID: n.ID(),
 		Source:         n.Source(),
@@ -255,14 +264,14 @@ func sendPush(inst *instance.Instance, p *notification.Properties, n *notificati
 	if err != nil {
 		return err
 	}
-	_, err = job.System().PushJob(inst, &job.JobRequest{
-		WorkerType: "push",
-		Message:    msg,
-	})
-	return err
+	return pushJobOrTrigger(inst, msg, "push", at)
 }
 
-func sendMail(inst *instance.Instance, p *notification.Properties, n *notification.Notification) error {
+func sendMail(inst *instance.Instance,
+	p *notification.Properties,
+	n *notification.Notification,
+	at string,
+) error {
 	email := mail.Options{Mode: mail.ModeNoReply}
 
 	// Notifications from the stack have their own mail templates defined
@@ -288,9 +297,46 @@ func sendMail(inst *instance.Instance, p *notification.Properties, n *notificati
 	if err != nil {
 		return err
 	}
-	_, err = job.System().PushJob(inst, &job.JobRequest{
-		WorkerType: "sendmail",
-		Message:    msg,
-	})
-	return err
+	return pushJobOrTrigger(inst, msg, "sendmail", at)
+}
+
+func pushJobOrTrigger(inst *instance.Instance, msg job.Message, worker, at string) error {
+	if at == "" {
+		_, err := job.System().PushJob(inst, &job.JobRequest{
+			WorkerType: worker,
+			Message:    msg,
+		})
+		return err
+	}
+	t, err := job.NewTrigger(inst, job.TriggerInfos{
+		Type:       "@at",
+		WorkerType: worker,
+		Arguments:  at,
+	}, msg)
+	if err != nil {
+		return err
+	}
+	return job.System().AddTrigger(t)
+}
+
+func ensureMailFallback(channels []string) []string {
+	for _, c := range channels {
+		if c == "mail" {
+			return channels
+		}
+	}
+	return append(channels, "mail")
+}
+
+func hasNotifiableDevice(inst *instance.Instance) bool {
+	cs, err := oauth.GetNotifiables(inst)
+	if err != nil {
+		return false
+	}
+	for _, c := range cs {
+		if c.NotificationDeviceToken != "" {
+			return true
+		}
+	}
+	return false
 }
