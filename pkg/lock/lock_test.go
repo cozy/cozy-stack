@@ -84,7 +84,7 @@ func HammerMutex(m ErrorLocker, loops int, cdone chan bool) {
 	cdone <- true
 }
 
-var n = 1000
+var n = 100
 
 func TestMemLock(t *testing.T) {
 	if testing.Short() {
