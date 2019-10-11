@@ -14,11 +14,11 @@ describe "Notification" do
     later = Notification.create inst, at
     created = Notification.create inst
 
-    sleep 3
+    sleep 2
     received = Notification.received kind: "to", query: mail
     assert_equal created.title, received.first.title
 
-    sleep 3
+    sleep 4
     received = Notification.received kind: "to", query: mail
     assert_equal later.title, received.first.title
     assert_equal created.title, received.last.title
