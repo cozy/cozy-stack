@@ -175,7 +175,7 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 		}
 	}
 
-	preferredChannels := appendMailToChannels(n.PreferredChannels)
+	preferredChannels := ensureMailFallback(n.PreferredChannels)
 	at := n.At
 
 	n.NID = ""
@@ -319,9 +319,7 @@ func pushJobOrTrigger(inst *instance.Instance, msg job.Message, worker, at strin
 	return job.System().AddTrigger(t)
 }
 
-// Make sure the stack always fallback on mail when the other channels has
-// failed.
-func appendMailToChannels(channels []string) []string {
+func ensureMailFallback(channels []string) []string {
 	for _, c := range channels {
 		if c == "mail" {
 			return channels

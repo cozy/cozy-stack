@@ -24,7 +24,7 @@ module Helpers
       `MailHog --version`
       spawn "MailHog"
     rescue Errno::ENOENT
-      # Ignored
+      # Ignored: on our CI environment, MailHog is started as a docker service
     end
 
     def cat(filename)
