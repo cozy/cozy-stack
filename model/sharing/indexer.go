@@ -351,11 +351,11 @@ func (s *sharingIndexer) BatchDeleteVersions(versions []*vfs.Version) error {
 	return s.indexer.BatchDeleteVersions(versions)
 }
 
-func (s *sharingIndexer) CheckIndexIntegrity(predicate func(*vfs.FsckLog)) error {
+func (s *sharingIndexer) CheckIndexIntegrity(predicate func(*vfs.FsckLog), failFast bool) error {
 	return ErrInternalServerError
 }
 
-func (s *sharingIndexer) CheckTreeIntegrity(tree *vfs.Tree, predicate func(*vfs.FsckLog)) error {
+func (s *sharingIndexer) CheckTreeIntegrity(tree *vfs.Tree, predicate func(*vfs.FsckLog), failFast bool) error {
 	return ErrInternalServerError
 }
 

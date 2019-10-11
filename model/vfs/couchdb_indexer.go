@@ -553,15 +553,18 @@ func (c *couchdbIndexer) BatchDeleteVersions(versions []*Version) error {
 	return couchdb.BulkDeleteDocs(c.db, consts.FilesVersions, docs)
 }
 
-func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog)) error {
+func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog), failFast bool) error {
 	tree, err := c.BuildTree()
 	if err != nil {
 		return err
 	}
-	return c.CheckTreeIntegrity(tree, accumulate)
+	if err := c.CheckTreeIntegrity(tree, accumulate, failFast); err != nil && err != ErrFsckFailFail {
+		return err
+	}
+	return nil
 }
 
-func (c *couchdbIndexer) CheckTreeIntegrity(tree *Tree, accumulate func(*FsckLog)) error {
+func (c *couchdbIndexer) CheckTreeIntegrity(tree *Tree, accumulate func(*FsckLog), failFast bool) error {
 	if tree.Root == nil {
 		accumulate(&FsckLog{Type: IndexMissingRoot})
 		return nil
@@ -569,16 +572,23 @@ func (c *couchdbIndexer) CheckTreeIntegrity(tree *Tree, accumulate func(*FsckLog
 
 	if _, ok := tree.DirsMap[consts.TrashDirID]; !ok {
 		accumulate(&FsckLog{Type: IndexMissingTrash})
+		if failFast {
+			return nil
+		}
 	}
 
 	// cleanDirsMap browse the given root tree recursively into its children
 	// directories, removing them from the dirsmap table along the way. In the
 	// end, only trees with cycles should stay in the dirsmap.
-	cleanDirsMap(tree.Root, tree.DirsMap, accumulate)
+	if ok := cleanDirsMap(tree.Root, tree.DirsMap, accumulate, failFast); !ok {
+		return nil
+	}
 	for _, entries := range tree.Orphans {
 		for _, f := range entries {
 			if f.IsDir {
-				cleanDirsMap(f, tree.DirsMap, accumulate)
+				if ok := cleanDirsMap(f, tree.DirsMap, accumulate, failFast); !ok {
+					return nil
+				}
 			}
 		}
 	}
@@ -602,6 +612,9 @@ func (c *couchdbIndexer) CheckTreeIntegrity(tree *Tree, accumulate func(*FsckLog
 					IsFile: false,
 					DirDoc: orphan,
 				})
+			}
+			if failFast {
+				return nil
 			}
 		}
 	}
@@ -692,7 +705,7 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 	return
 }
 
-func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate func(*FsckLog)) {
+func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate func(*FsckLog), failFast bool) bool {
 	delete(dirsmap, parent.DocID)
 	for _, child := range parent.DirsChildren {
 		expected := path.Join(parent.Fullpath, child.DocName)
@@ -702,7 +715,13 @@ func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate fun
 				DirDoc:           child,
 				ExpectedFullpath: expected,
 			})
+			if failFast {
+				return false
+			}
 		}
-		cleanDirsMap(child, dirsmap, accumulate)
+		if ok := cleanDirsMap(child, dirsmap, accumulate, failFast); !ok {
+			return false
+		}
 	}
+	return true
 }

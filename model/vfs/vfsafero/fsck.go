@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -15,7 +16,9 @@ import (
 	"github.com/spf13/afero"
 )
 
-func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) error {
+var errFailFast = errors.New("fail fast")
+
+func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog), failFast bool) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	tree, err := afs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsOrphan {
@@ -25,13 +28,16 @@ func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog)) error {
 	if err != nil {
 		return err
 	}
-	if err = afs.CheckTreeIntegrity(tree, accumulate); err != nil {
+	if err = afs.CheckTreeIntegrity(tree, accumulate, failFast); err != nil {
+		if err == vfs.ErrFsckFailFail {
+			return nil
+		}
 		return err
 	}
-	return afs.checkFiles(entries, accumulate)
+	return afs.checkFiles(entries, accumulate, failFast)
 }
 
-func (afs *aferoVFS) CheckFilesConsistency(accumulate func(log *vfs.FsckLog)) error {
+func (afs *aferoVFS) CheckFilesConsistency(accumulate func(log *vfs.FsckLog), failFast bool) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err := afs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsOrphan {
@@ -41,12 +47,16 @@ func (afs *aferoVFS) CheckFilesConsistency(accumulate func(log *vfs.FsckLog)) er
 	if err != nil {
 		return err
 	}
-	return afs.checkFiles(entries, accumulate)
+	return afs.checkFiles(entries, accumulate, failFast)
 }
 
-func (afs *aferoVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate func(log *vfs.FsckLog)) (err error) {
+func (afs *aferoVFS) checkFiles(
+	entries map[string]*vfs.TreeFile,
+	accumulate func(log *vfs.FsckLog),
+	failFast bool,
+) error {
 	versions := make(map[string]*vfs.Version, 1024)
-	err = couchdb.ForeachDocs(afs, consts.FilesVersions, func(_ string, data json.RawMessage) error {
+	err := couchdb.ForeachDocs(afs, consts.FilesVersions, func(_ string, data json.RawMessage) error {
 		v := &vfs.Version{}
 		if erru := json.Unmarshal(data, v); erru != nil {
 			return erru
@@ -55,7 +65,7 @@ func (afs *aferoVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 		return nil
 	})
 	if err != nil {
-		return
+		return err
 	}
 
 	err = afero.Walk(afs.fs, "/", func(fullpath string, info os.FileInfo, err error) error {
@@ -92,6 +102,9 @@ func (afs *aferoVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 				IsFile:  true,
 				FileDoc: fileInfosToFileDoc(fullpath, info),
 			})
+			if failFast {
+				return errFailFast
+			}
 		} else if f.IsDir != info.IsDir() {
 			if f.IsDir {
 				accumulate(&vfs.FsckLog{
@@ -107,6 +120,9 @@ func (afs *aferoVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 					DirDoc:  f,
 					FileDoc: fileInfosToFileDoc(fullpath, info),
 				})
+			}
+			if failFast {
+				return errFailFast
 			}
 		} else if !f.IsDir {
 			var fd afero.File
@@ -135,13 +151,19 @@ func (afs *aferoVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 						MD5SumIndex: f.MD5Sum,
 					},
 				})
+				if failFast {
+					return errFailFast
+				}
 			}
 		}
 		delete(entries, fullpath)
 		return nil
 	})
 	if err != nil {
-		return
+		if err == errFailFast {
+			return nil
+		}
+		return err
 	}
 
 	for _, f := range entries {
@@ -158,6 +180,9 @@ func (afs *aferoVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 				FileDoc: f,
 			})
 		}
+		if failFast {
+			return nil
+		}
 	}
 
 	for _, v := range versions {
@@ -166,9 +191,12 @@ func (afs *aferoVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 			IsVersion:  true,
 			VersionDoc: v,
 		})
+		if failFast {
+			return nil
+		}
 	}
 
-	return
+	return nil
 }
 
 func fileInfosToDirDoc(fullpath string, fileinfo os.FileInfo) *vfs.TreeFile {
