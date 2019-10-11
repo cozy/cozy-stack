@@ -41,7 +41,7 @@ func init() {
 		Reserved:     true,
 		WorkerFunc:   worker,
 		WorkerCommit: commit,
-		Timeout:      1 * time.Hour,
+		Timeout:      6 * time.Hour,
 	})
 }
 
