@@ -134,7 +134,7 @@ func TestRandomBitFlipsCredentials(t *testing.T) {
 	assert.Equal(t, "X3hVYLJLRiUyCs", passwd)
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 1000; i++ {
 		copy(flipped, originalBuffer)
 		flipsLen := rng.Intn(30) + 1
 		flipsSet := make([]int, 0, flipsLen)
@@ -201,7 +201,7 @@ func TestRandomBitFlipsBuffer(t *testing.T) {
 	assert.True(t, bytes.Equal(plainBuffer, testBuffer))
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 1000; i++ {
 		copy(flipped, original)
 		flipsLen := rng.Intn(30) + 1
 		flipsSet := make([]int, 0, flipsLen)
