@@ -86,6 +86,9 @@ func TestAccessCodeOauthFlow(t *testing.T) {
 	err = couchdb.GetDoc(testInstance, consts.Accounts, finalURL.Query().Get("account"), &out)
 	assert.NoError(t, err)
 	assert.Equal(t, "the-access-token", out.M["oauth"].(map[string]interface{})["access_token"])
+	out.Type = consts.Accounts
+	out.M["manual_cleaning"] = true
+	_ = couchdb.DeleteDoc(testInstance, &out)
 }
 
 func TestRedirectURLOauthFlow(t *testing.T) {
@@ -142,6 +145,9 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 	err = couchdb.GetDoc(testInstance, consts.Accounts, finalURL.Query().Get("account"), &out)
 	assert.NoError(t, err)
 	assert.Equal(t, "the-access-token2", out.M["oauth"].(map[string]interface{})["access_token"])
+	out.Type = consts.Accounts
+	out.M["manual_cleaning"] = true
+	_ = couchdb.DeleteDoc(testInstance, &out)
 }
 
 func TestFixedRedirectURIOauthFlow(t *testing.T) {
@@ -219,6 +225,9 @@ func TestFixedRedirectURIOauthFlow(t *testing.T) {
 	err = couchdb.GetDoc(testInstance, consts.Accounts, finalURL.Query().Get("account"), &out)
 	assert.NoError(t, err)
 	assert.Equal(t, "the-access-token", out.M["oauth"].(map[string]interface{})["access_token"])
+	out.Type = consts.Accounts
+	out.M["manual_cleaning"] = true
+	_ = couchdb.DeleteDoc(testInstance, &out)
 }
 
 func TestMain(m *testing.M) {
