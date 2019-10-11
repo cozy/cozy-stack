@@ -29,7 +29,7 @@ var token string
 var orgaID, collID, folderID, cipherID string
 
 func TestPrelogin(t *testing.T) {
-	body := `{ "email": "me@cozy.example.net" }`
+	body := `{ "email": "me@bitwarden.example.net" }`
 	req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/accounts/prelogin", bytes.NewBufferString(body))
 	req.Header.Add("Content-Type", "application/json")
 	res, err := http.DefaultClient.Do(req)
@@ -460,7 +460,7 @@ func TestSync(t *testing.T) {
 	profile := result["Profile"].(map[string]interface{})
 	assert.NotEmpty(t, profile["Id"])
 	assert.Equal(t, "Pierre", profile["Name"])
-	assert.Equal(t, "me@cozy.example.net", profile["Email"])
+	assert.Equal(t, "me@bitwarden.example.net", profile["Email"])
 	assert.Equal(t, false, profile["EmailVerified"])
 	assert.Equal(t, true, profile["Premium"])
 	assert.Equal(t, nil, profile["MasterPasswordHint"])
@@ -644,7 +644,7 @@ func TestMain(m *testing.M) {
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "bitwarden_test")
 	inst = setup.GetTestInstance(&lifecycle.Options{
-		Domain:     "cozy.example.net",
+		Domain:     "bitwarden.example.net",
 		Passphrase: "cozy",
 		PublicName: "Pierre",
 	})
