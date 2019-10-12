@@ -129,7 +129,7 @@ func migrateToSwiftV3(domain string) error {
 	}
 
 	meta := &swift.Metadata{"cozy-migrated-from": migratedFrom}
-	_ = c.ContainerUpdate(srcContainer, meta.ContainerHeaders())
+	_ = c.ContainerUpdate(dstContainer, meta.ContainerHeaders())
 	if in, err := instance.GetFromCouch(domain); err == nil {
 		inst = in
 	}
