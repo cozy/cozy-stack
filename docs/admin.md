@@ -123,8 +123,11 @@ Accept: application/vnd.api+json
   "v2b": {
     "counter": 0
   },
-  "v3": {
+  "v3a": {
     "counter": 2
+  },
+  "v3b": {
+    "counter": 4
   }
 }
 ```
@@ -159,11 +162,20 @@ Accept: application/vnd.api+json
   "v2b": {
     "counter": 0
   },
-  "v3": {
+  "v3a": {
     "counter": 2,
     "domains": [
       "alice.cozy.tools:8081",
       "ru.cozy.tools:8081"
+    ]
+  },
+  "v3b": {
+    "counter": 4,
+    "domains": [
+      "foo.cozy.tools:8081",
+      "bar.cozy.tools:8081",
+      "baz.cozy.tools:8081",
+      "foobar.cozy.tools:8081"
     ]
   }
 }

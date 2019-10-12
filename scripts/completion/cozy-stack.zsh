@@ -1355,7 +1355,7 @@ function _cozy-stack_swift {
     commands=(
       "get:"
       "ls:"
-      "ls-layouts:Count layouts by types (v1, v2a, v2b, v3)"
+      "ls-layouts:Count layouts by types (v1, v2a, v2b, v3a, v3b)"
       "put:"
       "rm:"
     )
@@ -1505,4 +1505,3 @@ function _cozy-stack_version {
     '--host[server host]:' \
     '(-p --port)'{-p,--port}'[server port]:'
 }
-
