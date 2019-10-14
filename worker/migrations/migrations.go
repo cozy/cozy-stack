@@ -85,6 +85,8 @@ func migrateToSwiftV3(domain string) error {
 		return err
 	}
 
+	log := logger.WithDomain(inst.Domain).WithField("nspace", "migration")
+
 	var srcContainer, migratedFrom string
 	switch inst.SwiftLayout {
 	case 0: // layout v1
@@ -106,6 +108,8 @@ func migrateToSwiftV3(domain string) error {
 		return instance.ErrInvalidSwiftLayout
 	}
 
+	log.Infof("Migrating from swift layout %s to swift layout v3", migratedFrom)
+
 	vfs := inst.VFS()
 	root, err := vfs.DirByID(consts.RootDirID)
 	if err != nil {
@@ -125,7 +129,6 @@ func migrateToSwiftV3(domain string) error {
 	defer func() {
 		if err != nil {
 			if err := vfsswift.DeleteContainer(c, dstContainer); err != nil {
-				log := logger.WithDomain(inst.Domain).WithField("nspace", "migration")
 				log.Errorf("Failed to delete v3 container %s: %s", dstContainer, err)
 			}
 		}
@@ -144,7 +147,9 @@ func migrateToSwiftV3(domain string) error {
 	if err = couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
 		return err
 	}
-	_ = vfs.Delete()
+	if err = vfs.Delete(); err != nil {
+		log.Errorf("Failed to delete old %s containers: %s", migratedFrom, err)
+	}
 	return nil
 }
 
