@@ -317,6 +317,9 @@ func GetConfig() *Config {
 
 // GetVault returns the configured instance of Vault
 func GetVault() *Vault {
+	if vault == nil {
+		return &Vault{}
+	}
 	return vault
 }
 
