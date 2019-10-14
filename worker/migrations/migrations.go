@@ -92,7 +92,14 @@ func migrateToSwiftV3(domain string) error {
 		migratedFrom = "v1"
 	case 1: // layout v2
 		srcContainer = swiftV2ContainerPrefixCozy + inst.DBPrefix()
-		migratedFrom = "v2"
+		switch inst.DBPrefix() {
+		case inst.Domain:
+			migratedFrom = "v2a"
+		case inst.Prefix:
+			migratedFrom = "v2b"
+		default:
+			return instance.ErrInvalidSwiftLayout
+		}
 	case 2: // layout v3
 		return nil // Nothing to do!
 	default:
@@ -129,7 +136,7 @@ func migrateToSwiftV3(domain string) error {
 	}
 
 	meta := &swift.Metadata{"cozy-migrated-from": migratedFrom}
-	_ = c.ContainerUpdate(srcContainer, meta.ContainerHeaders())
+	_ = c.ContainerUpdate(dstContainer, meta.ContainerHeaders())
 	if in, err := instance.GetFromCouch(domain); err == nil {
 		inst = in
 	}
