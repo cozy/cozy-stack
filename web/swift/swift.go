@@ -20,7 +20,7 @@ func ListLayouts(c echo.Context) error {
 		Counter int      `json:"counter"`
 		Domains []string `json:"domains,omitempty"`
 	}
-	var layoutV1, layoutV2a, layoutV2b, layoutUnknown, layoutV3 layout
+	var layoutV1, layoutV2a, layoutV2b, layoutUnknown, layoutV3a, layoutV3b layout
 
 	flagShowDomains := false
 	flagParam := c.QueryParam("show_domains")
@@ -58,9 +58,22 @@ func ListLayouts(c echo.Context) error {
 				}
 			}
 		case 2:
-			layoutV3.Counter++
-			if flagShowDomains {
-				layoutV3.Domains = append(layoutV3.Domains, inst.Domain)
+			switch inst.DBPrefix() {
+			case inst.Domain:
+				layoutV3a.Counter++
+				if flagShowDomains {
+					layoutV3a.Domains = append(layoutV3a.Domains, inst.Domain)
+				}
+			case inst.Prefix:
+				layoutV3b.Counter++
+				if flagShowDomains {
+					layoutV3b.Domains = append(layoutV3b.Domains, inst.Domain)
+				}
+			default:
+				layoutUnknown.Counter++
+				if flagShowDomains {
+					layoutUnknown.Domains = append(layoutUnknown.Domains, inst.Domain)
+				}
 			}
 		default:
 			layoutUnknown.Counter++
@@ -75,8 +88,9 @@ func ListLayouts(c echo.Context) error {
 	output["v2a"] = layoutV2a
 	output["v2b"] = layoutV2b
 	output["unknown"] = layoutUnknown
-	output["v3"] = layoutV3
-	output["total"] = layoutV1.Counter + layoutV2a.Counter + layoutV2b.Counter + layoutUnknown.Counter + layoutV3.Counter
+	output["v3a"] = layoutV3a
+	output["v3b"] = layoutV3b
+	output["total"] = layoutV1.Counter + layoutV2a.Counter + layoutV2b.Counter + layoutUnknown.Counter + layoutV3a.Counter + layoutV3b.Counter
 
 	return c.JSON(http.StatusOK, output)
 }

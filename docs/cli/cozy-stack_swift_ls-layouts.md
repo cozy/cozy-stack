@@ -1,10 +1,10 @@
 ## cozy-stack swift ls-layouts
 
-Count layouts by types (v1, v2a, v2b, v3)
+Count layouts by types (v1, v2a, v2b, v3a, v3b)
 
 ### Synopsis
 
-Count layouts by types (v1, v2a, v2b, v3)
+Count layouts by types (v1, v2a, v2b, v3a, v3b)
 
 ```
 cozy-stack swift ls-layouts [flags]
@@ -36,4 +36,3 @@ $ cozy-stack swift ls-layouts
 ### SEE ALSO
 
 * [cozy-stack swift](cozy-stack_swift.md)	 - Interact directly with OpenStack Swift object storage
-
