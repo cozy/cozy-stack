@@ -54,7 +54,7 @@ func New(db prefixer.Prefixer, index vfs.Indexer, disk vfs.DiskThresholder, mu l
 		prefix:        db.DBPrefix(),
 		container:     swiftV1ContainerPrefix + db.DBPrefix(),
 		version:       swiftV1ContainerPrefix + db.DBPrefix() + versionSuffix,
-		dataContainer: swiftV1DataContainerPrefix + db.DBPrefix(),
+		dataContainer: swiftV1DataContainerPrefix + db.DomainName(),
 		mu:            mu,
 		log:           logger.WithDomain(db.DomainName()).WithField("nspace", "vfsswift"),
 	}, nil
