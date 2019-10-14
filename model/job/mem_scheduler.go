@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -61,6 +62,19 @@ func (i inst) DomainName() string {
 func (s *memScheduler) StartScheduler(b Broker) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.broker = b
+
+	// XXX The memory scheduler loads the triggers from CouchDB when the stack
+	// is started. This can cause some stability issues when running
+	// integration tests in parallel. To avoid that, an env variable
+	// COZY_SKIP_LOADING_TRIGGERS can be set to skip loading the triggers from
+	// CouchDB. It is correct for integration tests, as instances are created
+	// and destroyed by the same process. But, it should not be used elsewhere.
+	for _, env := range os.Environ() {
+		if strings.HasPrefix(env, "COZY_SKIP_LOADING_TRIGGERS=") {
+			return nil
+		}
+	}
 
 	var ts []*TriggerInfos
 	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(_ string, data json.RawMessage) error {
@@ -84,8 +98,6 @@ func (s *memScheduler) StartScheduler(b Broker) error {
 	if err != nil && !couchdb.IsNoDatabaseError(err) {
 		return err
 	}
-
-	s.broker = b
 
 	for _, infos := range ts {
 		t, err := fromTriggerInfos(infos)
