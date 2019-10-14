@@ -919,6 +919,7 @@ function _cozy-stack_instances_find-oauth-client {
 
 function _cozy-stack_instances_fsck {
   _arguments \
+    '--fail-fast[Stop the FSCK on the first error]' \
     '--files-consistency[Check the files consistency only (between CouchDB and Swift)]' \
     '--index-integrity[Check the index integrity only]' \
     '--json[Output more informations in JSON format]' \
@@ -1505,3 +1506,4 @@ function _cozy-stack_version {
     '--host[server host]:' \
     '(-p --port)'{-p,--port}'[server port]:'
 }
+

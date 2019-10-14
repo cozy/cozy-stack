@@ -1947,6 +1947,8 @@ _cozy-stack_instances_fsck()
     flags_with_completion=()
     flags_completion=()
 
+    flags+=("--fail-fast")
+    local_nonpersistent_flags+=("--fail-fast")
     flags+=("--files-consistency")
     local_nonpersistent_flags+=("--files-consistency")
     flags+=("--index-integrity")

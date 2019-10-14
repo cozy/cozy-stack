@@ -27,6 +27,7 @@ cozy-stack instances fsck <domain> [flags]
 ### Options
 
 ```
+      --fail-fast           Stop the FSCK on the first error
       --files-consistency   Check the files consistency only (between CouchDB and Swift)
   -h, --help                help for fsck
       --index-integrity     Check the index integrity only

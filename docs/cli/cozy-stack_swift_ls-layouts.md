@@ -36,3 +36,4 @@ $ cozy-stack swift ls-layouts
 ### SEE ALSO
 
 * [cozy-stack swift](cozy-stack_swift.md)	 - Interact directly with OpenStack Swift object storage
+
