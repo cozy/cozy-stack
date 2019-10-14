@@ -136,7 +136,12 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 
 	go serveGitRep()
-	time.Sleep(300 * time.Millisecond)
+	for i := 0; i < 400; i++ {
+		if err := exec.Command("git", "ls-remote", "git://localhost/").Run(); err == nil {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 
 	if err := couchdb.CheckStatus(); err != nil {
 		fmt.Println("This test need couchdb to run.")
