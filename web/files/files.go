@@ -1188,7 +1188,7 @@ func fsckHandler(c echo.Context) error {
 		case vfs.ContentMismatch:
 			logs = append(logs, log)
 		}
-	})
+	}, false)
 	if err != nil {
 		return err
 	}

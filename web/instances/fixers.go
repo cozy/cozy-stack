@@ -110,7 +110,7 @@ func getFSCK(inst *instance.Instance) (io.Reader, error) {
 	logCh := make(chan *vfs.FsckLog)
 	go func() {
 		fs := inst.VFS()
-		_ = fs.Fsck(func(log *vfs.FsckLog) { logCh <- log })
+		_ = fs.Fsck(func(log *vfs.FsckLog) { logCh <- log }, false)
 		close(logCh)
 	}()
 

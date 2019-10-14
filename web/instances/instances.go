@@ -203,16 +203,17 @@ func fsckHandler(c echo.Context) (err error) {
 
 	indexIntegrityCheck, _ := strconv.ParseBool(c.QueryParam("IndexIntegrity"))
 	filesConsistencyCheck, _ := strconv.ParseBool(c.QueryParam("FilesConsistency"))
+	failFast, _ := strconv.ParseBool(c.QueryParam("FailFast"))
 
 	logCh := make(chan *vfs.FsckLog)
 	go func() {
 		fs := i.VFS()
 		if indexIntegrityCheck {
-			err = fs.CheckIndexIntegrity(func(log *vfs.FsckLog) { logCh <- log })
+			err = fs.CheckIndexIntegrity(func(log *vfs.FsckLog) { logCh <- log }, failFast)
 		} else if filesConsistencyCheck {
-			err = fs.CheckFilesConsistency(func(log *vfs.FsckLog) { logCh <- log })
+			err = fs.CheckFilesConsistency(func(log *vfs.FsckLog) { logCh <- log }, failFast)
 		} else {
-			err = fs.Fsck(func(log *vfs.FsckLog) { logCh <- log })
+			err = fs.Fsck(func(log *vfs.FsckLog) { logCh <- log }, failFast)
 		}
 		close(logCh)
 	}()

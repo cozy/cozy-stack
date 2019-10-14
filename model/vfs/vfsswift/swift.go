@@ -1,6 +1,8 @@
 package vfsswift
 
 import (
+	"errors"
+
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift"
 )
@@ -12,6 +14,8 @@ const maxNbFilesToDelete = 8000
 // maxSimultaneousCalls is the maximal number of simultaneous calls to Swift to
 // delete files in the same container.
 const maxSimultaneousCalls = 8
+
+var errFailFast = errors.New("fail fast")
 
 // DeleteContainer removes all the files inside the given container, and then
 // deletes it.

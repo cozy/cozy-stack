@@ -96,8 +96,8 @@ type Fs interface {
 	RevertFileVersion(doc *FileDoc, version *Version) error
 
 	// Fsck return the list of inconsistencies in the VFS
-	Fsck(func(log *FsckLog)) (err error)
-	CheckFilesConsistency(func(*FsckLog)) error
+	Fsck(func(log *FsckLog), bool) (err error)
+	CheckFilesConsistency(func(*FsckLog), bool) error
 }
 
 // File is a reader, writer, seeker, closer iterface representing an opened
@@ -193,8 +193,8 @@ type Indexer interface {
 	DeleteVersion(*Version) error
 	BatchDeleteVersions([]*Version) error
 
-	CheckIndexIntegrity(func(*FsckLog)) error
-	CheckTreeIntegrity(*Tree, func(*FsckLog)) error
+	CheckIndexIntegrity(func(*FsckLog), bool) error
+	CheckTreeIntegrity(*Tree, func(*FsckLog), bool) error
 	BuildTree(each ...func(*TreeFile)) (tree *Tree, err error)
 }
 

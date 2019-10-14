@@ -11,7 +11,7 @@ import (
 	"github.com/ncw/swift"
 )
 
-func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) error {
+func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog), failFast bool) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	tree, err := sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsOrphan && f.DocID != consts.RootDirID && f.DocID != consts.TrashDirID {
@@ -21,13 +21,16 @@ func (sfs *swiftVFS) Fsck(accumulate func(log *vfs.FsckLog)) error {
 	if err != nil {
 		return err
 	}
-	if err = sfs.CheckTreeIntegrity(tree, accumulate); err != nil {
+	if err = sfs.CheckTreeIntegrity(tree, accumulate, failFast); err != nil {
+		if err == vfs.ErrFsckFailFail {
+			return nil
+		}
 		return err
 	}
-	return sfs.checkFiles(entries, accumulate)
+	return sfs.checkFiles(entries, accumulate, failFast)
 }
 
-func (sfs *swiftVFS) CheckFilesConsistency(accumulate func(log *vfs.FsckLog)) error {
+func (sfs *swiftVFS) CheckFilesConsistency(accumulate func(log *vfs.FsckLog), failFast bool) error {
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err := sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsOrphan && f.DocID != consts.RootDirID && f.DocID != consts.TrashDirID {
@@ -37,15 +40,18 @@ func (sfs *swiftVFS) CheckFilesConsistency(accumulate func(log *vfs.FsckLog)) er
 	if err != nil {
 		return err
 	}
-	return sfs.checkFiles(entries, accumulate)
+	return sfs.checkFiles(entries, accumulate, failFast)
 }
 
-func (sfs *swiftVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate func(log *vfs.FsckLog)) (err error) {
+func (sfs *swiftVFS) checkFiles(
+	entries map[string]*vfs.TreeFile,
+	accumulate func(log *vfs.FsckLog),
+	failFast bool,
+) error {
 	var orphansObjs []swift.Object
 
-	err = sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
-		var objs []swift.Object
-		objs, err = sfs.c.Objects(sfs.container, opts)
+	err := sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
+		objs, err := sfs.c.Objects(sfs.container, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -53,6 +59,9 @@ func (sfs *swiftVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 			f, ok := entries[obj.Name]
 			if !ok {
 				orphansObjs = append(orphansObjs, obj)
+				if failFast {
+					return nil, errFailFast
+				}
 			} else if f.IsDir != (obj.ContentType == dirContentType) {
 				if f.IsDir {
 					accumulate(&vfs.FsckLog{
@@ -68,6 +77,9 @@ func (sfs *swiftVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 						DirDoc:  f,
 						FileDoc: objectToFileDocV1(sfs.container, obj),
 					})
+				}
+				if failFast {
+					return nil, errFailFast
 				}
 			} else if !f.IsDir {
 				var md5sum []byte
@@ -87,12 +99,21 @@ func (sfs *swiftVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 							MD5SumIndex: f.MD5Sum,
 						},
 					})
+					if failFast {
+						return nil, errFailFast
+					}
 				}
 			}
 			delete(entries, obj.Name)
 		}
 		return objs, err
 	})
+	if err != nil {
+		if err == errFailFast {
+			return nil
+		}
+		return err
+	}
 
 	for _, f := range entries {
 		if f.IsDir {
@@ -107,6 +128,9 @@ func (sfs *swiftVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 				IsFile:  true,
 				FileDoc: f,
 			})
+		}
+		if failFast {
+			return nil
 		}
 	}
 
@@ -124,9 +148,12 @@ func (sfs *swiftVFS) checkFiles(entries map[string]*vfs.TreeFile, accumulate fun
 				FileDoc: objectToFileDocV1(sfs.container, obj),
 			})
 		}
+		if failFast {
+			return nil
+		}
 	}
 
-	return
+	return nil
 }
 
 func objectToFileDocV1(container string, object swift.Object) *vfs.TreeFile {

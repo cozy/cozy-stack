@@ -55,6 +55,7 @@ var flagExpire time.Duration
 var flagAllowLoginScope bool
 var flagFsckIndexIntegrity bool
 var flagFsckFilesConsistensy bool
+var flagFsckFailFast bool
 var flagAvailableFields bool
 var flagOnboardingSecret string
 var flagOnboardingApp string
@@ -642,6 +643,7 @@ the flags.
 			Queries: url.Values{
 				"IndexIntegrity":   {strconv.FormatBool(flagFsckIndexIntegrity)},
 				"FilesConsistency": {strconv.FormatBool(flagFsckFilesConsistensy)},
+				"FailFast":         {strconv.FormatBool(flagFsckFailFast)},
 			},
 		})
 		if err != nil {
@@ -1095,6 +1097,7 @@ func init() {
 	debugInstanceCmd.Flags().DurationVar(&flagTTL, "ttl", 24*time.Hour, "Specify how long the debug mode will last")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckIndexIntegrity, "index-integrity", false, "Check the index integrity only")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckFilesConsistensy, "files-consistency", false, "Check the files consistency only (between CouchDB and Swift)")
+	fsckInstanceCmd.Flags().BoolVar(&flagFsckFailFast, "fail-fast", false, "Stop the FSCK on the first error")
 	fsckInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagAllowLoginScope, "allow-login-scope", false, "Allow login scope")
