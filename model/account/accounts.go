@@ -141,6 +141,10 @@ func CleanAndWait(inst *instance.Instance, toClean []CleanEntry) error {
 	var errm error
 	for range toClean {
 		if err := <-ch; err != nil {
+			inst.Logger().
+				WithField("nspace", "accounts").
+				WithField("critical", "true").
+				Errorf("Error on delete_for_account: %v", err)
 			errm = multierror.Append(errm, err)
 		}
 	}

@@ -1,15 +1,14 @@
 package lifecycle
 
 import (
-	"time"
-
+	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	job "github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
 // Destroy is used to remove the instance. All the data linked to this
@@ -39,7 +38,9 @@ func DestroyWithoutHooks(domain string) error {
 
 	// Deleting accounts manually to invoke the "account deletion hook" which may
 	// launch a worker in order to clean the account.
-	deleteAccounts(inst)
+	if err := deleteAccounts(inst); err != nil {
+		return err
+	}
 
 	// Reload the instance, it can have been updated in CouchDB if the instance
 	// had at least one account and was not up-to-date for its indexes/views.
@@ -72,51 +73,38 @@ func DestroyWithoutHooks(domain string) error {
 	return couchdb.DeleteDoc(couchdb.GlobalDB, inst)
 }
 
-func deleteAccounts(inst *instance.Instance) {
-	var accounts []*couchdb.JSONDoc
-	if err := couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts); err != nil || len(accounts) == 0 {
-		return
-	}
-
-	ds := realtime.GetHub().Subscriber(inst)
-	defer ds.Close()
-
-	accountsCount := 0
-	for _, account := range accounts {
-		account.Type = consts.Accounts
-		if err := couchdb.DeleteDoc(inst, account); err == nil {
-			accountsCount++
+func deleteAccounts(inst *instance.Instance) error {
+	var accounts []*account.Account
+	if err := couchdb.GetAllDocs(inst, consts.Accounts, nil, &accounts); err != nil {
+		if couchdb.IsNoDatabaseError(err) {
+			return nil
 		}
-	}
-	if accountsCount == 0 {
-		return
+		return err
 	}
 
-	if err := ds.Subscribe(consts.Jobs); err != nil {
-		return
-	}
-
-	timeout := time.After(1 * time.Minute)
-	for {
-		select {
-		case e := <-ds.Channel:
-			state := job.Queued
-			deleted := true
-			if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
-				deleted, _ = doc.M["account_deleted"].(bool)
-				stateStr, _ := doc.M["state"].(string)
-				state = job.State(stateStr)
-			} else if doc, ok := e.Doc.(*job.Job); ok {
-				state = doc.State
-			}
-			if deleted && (state == job.Done || state == job.Errored) {
-				accountsCount--
-				if accountsCount == 0 {
-					return
-				}
-			}
-		case <-timeout:
-			return
+	var toClean []account.CleanEntry
+	for _, acc := range accounts {
+		// Accounts that are not tied to a konnector must not be deleted, and
+		// the aggregator accounts in particular.
+		slug := acc.AccountType
+		if slug == "" {
+			continue
 		}
+		man, err := app.GetKonnectorBySlug(inst, slug)
+		if err != nil {
+			return err
+		}
+		entry := account.CleanEntry{
+			Account:          acc,
+			Trigger:          nil, // We don't care, the triggers will all be deleted a bit later
+			ManifestOnDelete: man.OnDeleteAccount != "",
+			Slug:             slug,
+		}
+		toClean = append(toClean, entry)
 	}
+	if len(toClean) == 0 {
+		return nil
+	}
+
+	return account.CleanAndWait(inst, toClean)
 }
