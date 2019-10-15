@@ -268,19 +268,14 @@ func deleteHandler(installerType consts.AppType) echo.HandlerFunc {
 	}
 }
 
-type deletionEntry struct {
-	account *account.Account
-	trigger job.Trigger
-}
-
-func findAccountsToDelete(instance *instance.Instance, slug string) ([]deletionEntry, error) {
+func findAccountsToDelete(instance *instance.Instance, slug string) ([]account.CleanEntry, error) {
 	jobsSystem := job.System()
 	triggers, err := jobsSystem.GetAllTriggers(instance)
 	if err != nil {
 		return nil, err
 	}
 
-	var toDelete []deletionEntry
+	var toDelete []account.CleanEntry
 	for _, t := range triggers {
 		if t.Infos().WorkerType != "konnector" {
 			continue
@@ -294,7 +289,7 @@ func findAccountsToDelete(instance *instance.Instance, slug string) ([]deletionE
 		if err == nil && msg.Slug == slug && msg.Account != "" {
 			acc := &account.Account{}
 			if err := couchdb.GetDoc(instance, consts.Accounts, msg.Account, acc); err == nil {
-				entry := deletionEntry{acc, t}
+				entry := account.CleanEntry{Account: acc, Trigger: t}
 				toDelete = append(toDelete, entry)
 			}
 		}
@@ -302,7 +297,7 @@ func findAccountsToDelete(instance *instance.Instance, slug string) ([]deletionE
 	return toDelete, nil
 }
 
-func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManifest, toDelete []deletionEntry) {
+func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManifest, toDelete []account.CleanEntry) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -321,35 +316,15 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManif
 		}()
 
 		slug := man.Slug()
+		for i := range toDelete {
+			toDelete[i].ManifestOnDelete = man.OnDeleteAccount != ""
+			toDelete[i].Slug = slug
+		}
+
 		log := instance.Logger().WithField("nspace", "konnectors")
-		jobsSystem := job.System()
-		for _, entry := range toDelete {
-			acc := entry.account
-			acc.ManualCleaning = true
-			oldRev := acc.Rev() // The deletion job needs the rev just before the deletion
-			if err := couchdb.DeleteDoc(instance, acc); err != nil {
-				log.Errorf("Cannot delete account: %v", err)
-				return
-			}
-			// If the konnector has a field "on_delete_account", we need to execute a job
-			// for this konnector to clean the account on the remote API, and
-			// wait for this job to be done before uninstalling the konnector.
-			if man.OnDeleteAccount != "" {
-				j, err := account.PushAccountDeletedJob(jobsSystem, instance, acc.ID(), oldRev, slug)
-				if err != nil {
-					log.Errorf("Cannot push a job for account deletion: %v", err)
-					return
-				}
-				err = j.WaitUntilDone(instance)
-				if err != nil {
-					log.Error(err)
-					return
-				}
-			}
-			err := jobsSystem.DeleteTrigger(instance, entry.trigger.ID())
-			if err != nil {
-				log.Errorf("Cannot delete the trigger: %v", err)
-			}
+		if err := account.CleanAndWait(instance, toDelete); err != nil {
+			log.Errorf("Cannot clean accounts: %v", err)
+			return
 		}
 		inst, err := apps.NewInstaller(instance, app.Copier(consts.KonnectorType, instance),
 			&apps.InstallerOptions{
