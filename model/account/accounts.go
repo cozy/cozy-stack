@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/hashicorp/go-multierror"
 )
 
 // Account holds configuration information for an account
@@ -131,33 +132,47 @@ type CleanEntry struct {
 // "on_delete_account", a job is pushed and it waits for the job success to
 // continue. Finally, the associated trigger can be deleted.
 func CleanAndWait(inst *instance.Instance, toClean []CleanEntry) error {
+	ch := make(chan error)
+	for i := range toClean {
+		go func(entry CleanEntry) {
+			ch <- cleanAndWaitSingle(inst, entry)
+		}(toClean[i])
+	}
+	var errm error
+	for range toClean {
+		if err := <-ch; err != nil {
+			errm = multierror.Append(errm, err)
+		}
+	}
+	return errm
+}
+
+func cleanAndWaitSingle(inst *instance.Instance, entry CleanEntry) error {
 	jobsSystem := job.System()
-	for _, entry := range toClean {
-		acc := entry.Account
-		acc.ManualCleaning = true
-		oldRev := acc.Rev() // The deletion job needs the rev just before the deletion
-		if err := couchdb.DeleteDoc(inst, acc); err != nil {
+	acc := entry.Account
+	acc.ManualCleaning = true
+	oldRev := acc.Rev() // The deletion job needs the rev just before the deletion
+	if err := couchdb.DeleteDoc(inst, acc); err != nil {
+		return err
+	}
+	// If the konnector has a field "on_delete_account", we need to execute a job
+	// for this konnector to clean the account on the remote API, and
+	// wait for this job to be done before uninstalling the konnector.
+	if entry.ManifestOnDelete {
+		j, err := PushAccountDeletedJob(jobsSystem, inst, acc.ID(), oldRev, entry.Slug)
+		if err != nil {
 			return err
 		}
-		// If the konnector has a field "on_delete_account", we need to execute a job
-		// for this konnector to clean the account on the remote API, and
-		// wait for this job to be done before uninstalling the konnector.
-		if entry.ManifestOnDelete {
-			j, err := PushAccountDeletedJob(jobsSystem, inst, acc.ID(), oldRev, entry.Slug)
-			if err != nil {
-				return err
-			}
-			err = j.WaitUntilDone(inst)
-			if err != nil {
-				return err
-			}
+		err = j.WaitUntilDone(inst)
+		if err != nil {
+			return err
 		}
-		if entry.Trigger != nil {
-			err := jobsSystem.DeleteTrigger(inst, entry.Trigger.ID())
-			if err != nil {
-				inst.Logger().WithField("nspace", "accounts").
-					Errorf("Cannot delete the trigger: %v", err)
-			}
+	}
+	if entry.Trigger != nil {
+		err := jobsSystem.DeleteTrigger(inst, entry.Trigger.ID())
+		if err != nil {
+			inst.Logger().WithField("nspace", "accounts").
+				Errorf("Cannot delete the trigger: %v", err)
 		}
 	}
 	return nil
