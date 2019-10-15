@@ -88,9 +88,10 @@ func migrateToSwiftV3(domain string) error {
 	log := logger.WithDomain(inst.Domain).WithField("nspace", "migration")
 
 	var srcContainer, migratedFrom string
+	// TODO(XXX): Use ContainerNames() instead of duplicating the container names logic here
 	switch inst.SwiftLayout {
 	case 0: // layout v1
-		srcContainer = swiftV1ContainerPrefixCozy + domain
+		srcContainer = swiftV1ContainerPrefixCozy + inst.DBPrefix()
 		migratedFrom = "v1"
 	case 1: // layout v2
 		srcContainer = swiftV2ContainerPrefixCozy + inst.DBPrefix()
@@ -160,6 +161,7 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 		WithField("nspace", "migration")
 
 	var thumbsContainer string
+	// TODO(XXX): Use ContainerNames() instead of duplicating the container names logic here
 	switch inst.SwiftLayout {
 	case 0: // layout v1
 		thumbsContainer = swiftV1ContainerPrefixData + inst.Domain
