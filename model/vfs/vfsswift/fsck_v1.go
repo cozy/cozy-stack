@@ -58,10 +58,23 @@ func (sfs *swiftVFS) checkFiles(
 		for _, obj := range objs {
 			f, ok := entries[obj.Name]
 			if !ok {
-				orphansObjs = append(orphansObjs, obj)
 				if failFast {
+					if obj.ContentType == dirContentType {
+						accumulate(&vfs.FsckLog{
+							Type:   vfs.IndexMissing,
+							IsFile: false,
+							DirDoc: objectToFileDocV1(sfs.container, obj),
+						})
+					} else {
+						accumulate(&vfs.FsckLog{
+							Type:    vfs.IndexMissing,
+							IsFile:  true,
+							FileDoc: objectToFileDocV1(sfs.container, obj),
+						})
+					}
 					return nil, errFailFast
 				}
+				orphansObjs = append(orphansObjs, obj)
 			} else if f.IsDir != (obj.ContentType == dirContentType) {
 				if f.IsDir {
 					accumulate(&vfs.FsckLog{
