@@ -235,13 +235,24 @@ func fsckHandler(c echo.Context) (err error) {
 			log.DirDoc.Metadata = nil
 		}
 		if errenc := encoder.Encode(log); errenc != nil {
-			return errenc
+			i.Logger().WithField("nspace", "fsck").
+				Warnf("Cannot encode to JSON: %s (%v)", err, log)
 		}
 		if f, ok := w.(http.Flusher); ok {
 			f.Flush()
 		}
 	}
-	return err
+	if err != nil {
+		log := map[string]string{"error": err.Error()}
+		if errenc := encoder.Encode(log); errenc != nil {
+			i.Logger().WithField("nspace", "fsck").
+				Warnf("Cannot encode to JSON: %s (%v)", err, log)
+		}
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+	}
+	return nil
 }
 
 func updatesHandler(c echo.Context) error {
