@@ -148,8 +148,14 @@ func migrateToSwiftV3(domain string) error {
 	if err = couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
 		return err
 	}
-	if err = vfs.Delete(); err != nil {
-		log.Errorf("Failed to delete old %s containers: %s", migratedFrom, err)
+
+	// Migration done. Now clean-up oldies.
+
+	// WARNING: Don't call `err` any error below in this function or the defer func
+	//          will delete the new container even if the migration was successful
+
+	if deleteErr := vfs.Delete(); deleteErr != nil {
+		log.Errorf("Failed to delete old %s containers: %s", migratedFrom, deleteErr)
 	}
 	return nil
 }
