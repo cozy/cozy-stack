@@ -17,23 +17,27 @@ let options = {
   }
 }
 
-http.get(url, options, res => {
-  if (res.statusCode !== 200) {
-    throw new Error(`Status Code: ${res.statusCode}`)
-  }
-  res.setEncoding('utf8')
-  let rawData = ''
-  res.on('data', chunk => {
-    rawData += chunk
-  })
-  res.on('end', () => {
-    let data = JSON.parse(rawData)
-    url = instance + 'data/io.cozy.accounts/' + data.relationships.data._id
-    http.get(url, options, res2 => {
-      if (res2.statusCode !== 200) {
-        throw new Error(`Status Code: ${res2.statusCode}`)
-      }
-      res2.pipe(fs.createWriteStream(data.log))
+const main = () => {
+  http.get(url, options, res => {
+    if (res.statusCode !== 200) {
+      throw new Error(`Status Code: ${res.statusCode}`)
+    }
+    res.setEncoding('utf8')
+    let rawData = ''
+    res.on('data', chunk => {
+      rawData += chunk
+    })
+    res.on('end', () => {
+      let data = JSON.parse(rawData)
+      url = instance + 'data/io.cozy.accounts/' + data.relationships.data._id
+      http.get(url, options, res2 => {
+        if (res2.statusCode !== 200) {
+          throw new Error(`Status Code: ${res2.statusCode}`)
+        }
+        res2.pipe(fs.createWriteStream(data.log))
+      })
     })
   })
-})
+}
+
+setTimeout(main, 1000)
