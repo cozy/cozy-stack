@@ -4,8 +4,8 @@ require 'pry-rescue/minitest' unless ENV['CI']
 
 def wait_for_file(file)
   10.times do
-    sleep 1
     return if File.exist? file
+    sleep 1
   end
 end
 
@@ -20,6 +20,8 @@ describe "An io.cozy.accounts" do
 
     inst.install_konnector "bankone", source_url
     aggregator = Account.create inst, id: ["bank-aggregator", UUID.generate].sample
+    acczero = Account.create inst, type: "bankthree", aggregator: aggregator,
+                                   name: Faker::DrWho.specie
 
     # 1. When an account is deleted, it is cleaned.
     accone = Account.create inst, type: "bankone", aggregator: aggregator,
@@ -57,13 +59,24 @@ describe "An io.cozy.accounts" do
     assert_equal executed["_id"], aggregator.couch_id
 
     # 3. When the instance is deleted, the accounts are cleaned.
-    # accthree = Account.create inst, type: "bankone", aggregator: aggregator, name: Faker::Simpsons.character
-    # inst.install_konnector "bankthree", source_url
-    # other = Account.create inst, id: UUID.generate
-    # accfour = Account.create inst, type: "bankthree", aggregator: other, name: Faker::Friends.character
-    # assert inst.remove
+    inst.install_konnector "bankthree", source_url
+    other = Account.create inst, id: UUID.generate
+    accthree = Account.create inst, type: "bankthree", aggregator: other,
+                                    name: Faker::Friends.character
+    accfour = Account.create inst, type: "bankone", aggregator: aggregator,
+                                   name: Faker::Simpsons.character
+    assert inst.remove
 
-    # 4. When an instance is going to be deleted but the cleaning fails,
-    # the instance is kept and a mail is sent.
+    wait_for_file acczero.log
+    executed = JSON.parse File.read(accone.log)
+    assert_equal executed["_id"], aggregator.couch_id
+
+    wait_for_file accthree.log
+    executed = JSON.parse File.read(accthree.log)
+    assert_equal executed["_id"], other.couch_id
+
+    wait_for_file accfour.log
+    executed = JSON.parse File.read(accfour.log)
+    assert_equal executed["_id"], aggregator.couch_id
   end
 end
