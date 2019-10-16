@@ -29,6 +29,9 @@ const main = () => {
     })
     res.on('end', () => {
       let data = JSON.parse(rawData)
+      if (data.failure) {
+        throw new Error(data.failure)
+      }
       url = instance + 'data/io.cozy.accounts/' + data.relationships.data._id
       http.get(url, options, res2 => {
         if (res2.statusCode !== 200) {

@@ -12,6 +12,7 @@ class Account
     @name = (opts[:name] || Faker::DrWho.character).gsub(/[^A-Za-z]/, '_')
     @log = opts[:log] || "#{Helpers.current_dir}/account_#{@name}.log"
     @aggregator = opts[:aggregator]
+    @failure = opts[:failure]
     @type = opts[:type]
   end
 
@@ -19,6 +20,7 @@ class Account
     json = {
       name: @name,
       log: @log,
+      failure: @failure,
       account_type: @type
     }.compact
     if @aggregator
