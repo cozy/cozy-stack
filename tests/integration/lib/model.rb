@@ -7,8 +7,15 @@ module Model
     end
   end
 
-  def to_json
+  def to_json(*_args)
     JSON.generate as_json
+  end
+
+  def as_reference
+    {
+      doctype: doctype,
+      id: @couch_id
+    }
   end
 
   def save(inst)
@@ -25,6 +32,15 @@ module Model
     j = JSON.parse(res.body)
     @couch_id = j["id"]
     @couch_rev = j["rev"]
+  end
+
+  def delete(inst)
+    opts = {
+      accept: "application/vnd.api+json",
+      content_type: "application/vnd.api+json",
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    inst.client["/data/#{doctype}/#{@couch_id}?rev=#{@couch_rev}"].delete opts
   end
 
   def doctype

@@ -23,6 +23,10 @@ class Stack
     @tokens = {}
   end
 
+  def konnectors_cmd
+    File.expand_path "../../../scripts/konnector-node-run.sh", __dir__
+  end
+
   def start
     vault = File.join Helpers.current_dir, "vault"
     FileUtils.mkdir_p vault
@@ -32,7 +36,8 @@ class Stack
            "--port", @port, "--admin-port", @admin,
            "--fs-url", "file://#{Helpers.current_dir}/",
            "--vault-encryptor-key", "#{vault}/key.enc",
-           "--vault-decryptor-key", "#{vault}/key.dec"]
+           "--vault-decryptor-key", "#{vault}/key.dec",
+           "--konnectors-cmd", konnectors_cmd]
     Helpers.spawn cmd.join(" "), log: "stack-#{@port}.log"
     sleep 1
   end
@@ -66,6 +71,33 @@ class Stack
            "--domain", inst.domain, ">", "/dev/null"]
     puts cmd.join(" ").green
     @apps[key] = system cmd.join(" ")
+  end
+
+  def install_konnector(inst, slug, source_url = nil)
+    cmd = ["cozy-stack", "konnectors", "install",
+           slug, source_url,
+           "--port", @port, "--admin-port", @admin,
+           "--domain", inst.domain, ">", "/dev/null"].compact
+    puts cmd.join(" ").green
+    system cmd.join(" ")
+  end
+
+  def remove_konnector(inst, slug)
+    cmd = ["cozy-stack", "konnectors", "uninstall", slug,
+           "--port", @port, "--admin-port", @admin,
+           "--domain", inst.domain, ">", "/dev/null"]
+    puts cmd.join(" ").green
+    system cmd.join(" ")
+  end
+
+  def run_konnector(inst, slug, account_id)
+    cmd = ["cozy-stack", "konnectors", "run", slug,
+           "--account-id", account_id,
+           "--port", @port, "--admin-port", @admin,
+           "--domain", inst.domain]
+    puts cmd.join(" ").green
+    out = `#{cmd.join(" ")}`.chomp
+    Job.new JSON.parse(out)
   end
 
   def token_for(inst, doctypes)

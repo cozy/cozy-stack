@@ -56,11 +56,4 @@ class Album
       created_at: @created_at.rfc3339
     }
   end
-
-  def as_reference
-    {
-      doctype: doctype,
-      id: @couch_id
-    }
-  end
 end

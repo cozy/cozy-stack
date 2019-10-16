@@ -25,6 +25,18 @@ class Instance
     @stack.install_app self, slug
   end
 
+  def install_konnector(slug, source_url = nil)
+    @stack.install_konnector self, slug, source_url
+  end
+
+  def remove_konnector(slug)
+    @stack.remove_konnector self, slug
+  end
+
+  def run_konnector(slug, account_id)
+    @stack.run_konnector self, slug, account_id
+  end
+
   def client
     @client ||= RestClient::Resource.new url
   end
