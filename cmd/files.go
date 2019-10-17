@@ -125,6 +125,9 @@ var usageFilesCmd = &cobra.Command{
 		if quota, ok := info["quota"]; ok {
 			fmt.Printf("Quota: %v\n", quota)
 		}
+		if count, ok := info["doc_count"]; ok {
+			fmt.Printf("Documents count: %v\n", count)
+		}
 		return nil
 	},
 }
