@@ -2,6 +2,7 @@ package vfsswift
 
 import (
 	"errors"
+	"time"
 
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift"
@@ -36,7 +37,21 @@ func DeleteContainer(c *swift.Connection, container string) error {
 			return err
 		}
 	}
-	return c.ContainerDelete(container)
+
+	// XXX Swift has told us that all the files have been deleted on the bulk
+	// delete, but it only means that they have been deleted on one object
+	// server (at least). And, when we try to delete the container, Swift can
+	// send an error as some container servers will still have objects
+	// registered for this container. We will try several times to delete the
+	// container to work-around this limitation.
+	for i := 0; i < 5; i++ {
+		err = c.ContainerDelete(container)
+		if err == nil {
+			return nil
+		}
+		time.Sleep(5 * time.Second)
+	}
+	return err
 }
 
 func deleteContainerFiles(c *swift.Connection, container string, objectNames []string) error {
