@@ -32,7 +32,7 @@ jobs:
           ruby-version: '2.x'
       - name: Install
         run: |
-          curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
+          curl -X PUT http://127.0.0.1:5984/{_users,_replicator}
           echo ::add-path::$(go env GOPATH)/bin
           go install
       - name: Test

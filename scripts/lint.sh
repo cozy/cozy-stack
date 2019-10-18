@@ -14,4 +14,4 @@ curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | 
 bin/golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace --timeout 2m --max-same-issues 10
 
 npm install eslint@5.16.0 prettier eslint-plugin-prettier eslint-config-cozy-app
-./node_modules/.bin/eslint "assets/scripts/**"
+./node_modules/.bin/eslint "assets/scripts/**" tests/integration/konnector/*.js

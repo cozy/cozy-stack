@@ -49,8 +49,10 @@ account.
     "namePath": "Bankbank",
     "relationships": {
       "parent": {
-        "_id": "service-aggregator-account",
-        "_type": "io.cozy.accounts"
+        "data": {
+          "_id": "service-aggregator-account",
+          "_type": "io.cozy.accounts"
+        }
       }
     }
 }

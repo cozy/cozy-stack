@@ -10,6 +10,7 @@ require 'open3'
 require 'pbkdf2'
 require 'pry'
 require 'rest-client'
+require 'uuid'
 
 AwesomePrint.pry!
 Pry.config.history.file = File.expand_path "../tmp/.pry_history", __FILE__

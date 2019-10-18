@@ -1,0 +1,12 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	<img src="https://downcloud.cozycloud.cc/upload/icon-devices.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	{{t "Mail Alert Account Subject"}}
+</mj-text>
+<mj-text mj-class="title-h2 content-medium" align="center">
+	Instance : {{.Domain}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{.Error}}
+</mj-text>
+{{end}}

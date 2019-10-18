@@ -4,12 +4,14 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/hashicorp/go-multierror"
 )
 
 // Account holds configuration information for an account
@@ -116,6 +118,68 @@ func GetTriggers(jobsSystem job.JobSystem, db prefixer.Prefixer, accountID strin
 		}
 	}
 	return toDelete, nil
+}
+
+// CleanEntry is a struct with an account and its associated trigger.
+type CleanEntry struct {
+	Account          *Account
+	Trigger          job.Trigger
+	ManifestOnDelete bool // the manifest of the konnector has a field "on_delete_account"
+	Slug             string
+}
+
+// CleanAndWait deletes the accounts. If an account is for a konnector with
+// "on_delete_account", a job is pushed and it waits for the job success to
+// continue. Finally, the associated trigger can be deleted.
+func CleanAndWait(inst *instance.Instance, toClean []CleanEntry) error {
+	ch := make(chan error)
+	for i := range toClean {
+		go func(entry CleanEntry) {
+			ch <- cleanAndWaitSingle(inst, entry)
+		}(toClean[i])
+	}
+	var errm error
+	for range toClean {
+		if err := <-ch; err != nil {
+			inst.Logger().
+				WithField("nspace", "accounts").
+				WithField("critical", "true").
+				Errorf("Error on delete_for_account: %v", err)
+			errm = multierror.Append(errm, err)
+		}
+	}
+	return errm
+}
+
+func cleanAndWaitSingle(inst *instance.Instance, entry CleanEntry) error {
+	jobsSystem := job.System()
+	acc := entry.Account
+	acc.ManualCleaning = true
+	oldRev := acc.Rev() // The deletion job needs the rev just before the deletion
+	if err := couchdb.DeleteDoc(inst, acc); err != nil {
+		return err
+	}
+	// If the konnector has a field "on_delete_account", we need to execute a job
+	// for this konnector to clean the account on the remote API, and
+	// wait for this job to be done before uninstalling the konnector.
+	if entry.ManifestOnDelete {
+		j, err := PushAccountDeletedJob(jobsSystem, inst, acc.ID(), oldRev, entry.Slug)
+		if err != nil {
+			return err
+		}
+		err = j.WaitUntilDone(inst)
+		if err != nil {
+			return err
+		}
+	}
+	if entry.Trigger != nil {
+		err := jobsSystem.DeleteTrigger(inst, entry.Trigger.ID())
+		if err != nil {
+			inst.Logger().WithField("nspace", "accounts").
+				Errorf("Cannot delete the trigger: %v", err)
+		}
+	}
+	return nil
 }
 
 // PushAccountDeletedJob adds a job for the given account and konnector with

@@ -24,6 +24,7 @@ func initMailTemplates() {
 		"new_connection":               subjectEntry{"Mail New Connection Subject", []string{templateTitleVar}},
 		"new_registration":             subjectEntry{"Mail New Registration Subject", []string{templateTitleVar}},
 		"sharing_request":              subjectEntry{"Mail Sharing Request Subject", []string{"SharerPublicName"}},
+		"alert_account":                subjectEntry{"Mail Alert Account Subject", nil},
 		"notifications_diskquota":      subjectEntry{"Notifications Disk Quota Subject", nil},
 	}
 }

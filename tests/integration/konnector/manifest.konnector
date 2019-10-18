@@ -1,0 +1,24 @@
+{
+  "aggregator": {
+    "accountId": "bank-aggregator"
+  },
+  "description": "A konnector to test accounts cleaning",
+  "developer": {
+    "name": "Cozy Cloud",
+    "url": "https://cozy.io/"
+  },
+  "editor": "Cozy Cloud",
+  "language": "node",
+  "license": "MIT",
+  "name": "bankkonn",
+  "on_delete_account": "on_delete.js",
+  "permissions": {
+    "accounts": {
+      "description": "Required to read the aggregator account",
+      "type": "io.cozy.accounts"
+    }
+  },
+  "slug": "bankkonn",
+  "type": "konnector",
+  "version": "0.1.0"
+}

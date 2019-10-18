@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -427,7 +428,15 @@ func EnsureDBExist(db Database, doctype string) error {
 
 // CreateDB creates the necessary database for a doctype
 func CreateDB(db Database, doctype string) error {
-	return makeRequest(db, doctype, http.MethodPut, "", nil, nil)
+	// XXX On dev release of the stack, we force some parameters at the
+	// creation of a database. It helps CouchDB to have more acceptable
+	// performances inside Docker. Those parameters are not suitable for
+	// production, and we must not override the CouchDB configuration.
+	var reqbody interface{}
+	if build.IsDevRelease() {
+		reqbody = []byte(`{"q": 1, "n": 1}`)
+	}
+	return makeRequest(db, doctype, http.MethodPut, "", reqbody, nil)
 }
 
 // DeleteDB destroy the database for a doctype
