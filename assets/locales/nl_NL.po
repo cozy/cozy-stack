@@ -599,6 +599,9 @@ msgstr "met je delen!"
 msgid "Mail Sharing Request Button text"
 msgstr "Verzoek goedkeuren"
 
+msgid "Mail Alert Account Subject"
+msgstr "Instantieverwijdering mislukt tijdens opschonen van accounts"
+
 msgid "Sharing Connect to Cozy"
 msgstr "Verbinden met je Cozy"
 
