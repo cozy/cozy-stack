@@ -171,10 +171,16 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			sendErr(ctx, errc, missingType(cmd))
 			continue
 		}
+		// XXX: thumbnails is a synthetic doctype, listening to its events
+		// requires a permissions on io.cozy.files
+		permType := cmd.Payload.Type
+		if permType == consts.Thumbnails {
+			permType = consts.Files
+		}
 		// XXX: no permissions are required for io.cozy.sharings.initial-sync
 		if withAuthentication &&
 			cmd.Payload.Type != consts.SharingsInitialSync &&
-			!pdoc.Permissions.AllowWholeType(permission.GET, cmd.Payload.Type) {
+			!pdoc.Permissions.AllowWholeType(permission.GET, permType) {
 			sendErr(ctx, errc, forbidden(cmd))
 			continue
 		}

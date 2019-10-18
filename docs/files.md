@@ -1213,3 +1213,30 @@ Clear out the trash.
 
 All files that are inside the trash will have a `trashed: true` attribute. This
 attribute can be used in mango queries to only get "interesting" files.
+
+## Real-time via websockets
+
+In addition to the normal events for files, the stack also injects some events
+when a thumbnail is generated. A permission on `io.cozy.files` is required to
+subscribe to those events on `io.cozy.files.thumbnails`.
+
+### Example
+
+```
+client > {"method": "AUTH",
+          "payload": "xxAppOrAuthTokenxx="}
+client > {"method": "SUBSCRIBE",
+          "payload": {"type": "io.cozy.files.thumbnails" }
+server > {"event": "CREATED",
+          "payload": {"id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+                      "type": "io.cozy.files.thumbnails",
+                      "doc": {"format": "large"}}}
+server > {"event": "CREATED",
+          "payload": {"id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+                      "type": "io.cozy.files.thumbnails",
+                      "doc": {"format": "medium"}}}
+server > {"event": "CREATED",
+          "payload": {"id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+                      "type": "io.cozy.files.thumbnails",
+                      "doc": {"format": "small"}}}
+```

@@ -201,3 +201,11 @@ server > {"event": "error",
             "source": {"method": "SUBSCRIBE", "payload": {"type":"io.cozy.files"} }
           }}
 ```
+
+### Synthetic types
+
+The stack an inject some synthetic events for documents that are not persisted
+in CouchDB like classical doctypes:
+
+- [Initial sync for sharings](https://docs.cozy.io/en/cozy-stack/sharing/#real-time-via-websockets)
+- [Thumbnails for files](https://docs.cozy.io/en/cozy-stack/files/#real-time-via-websockets)
