@@ -1,11 +1,11 @@
 # Translators:
-# Pierre Vandekerckhove <pierre4vdk@gmail.com>, 2018
-# Yannick Lohse <yannick.lohse@cozycloud.cc>, 2018
-# Cyrille Perois <cyrille@cozycloud.cc>, 2018
-# Pierre Guillemot <pierrot@cozycloud.cc>, 2018
+# Pierre Vandekerckhove <pierre4vdk@gmail.com>, 2019
+# Nicolas Vinot <aeris@imirhil.fr>, 2019
+# Yannick Lohse <yannick.lohse@cozycloud.cc>, 2019
 # Maxime M <maxime@cozycloud.cc>, 2019
 # JC Pagnon <gooz@cozycloud.cc>, 2019
-# Nicolas Vinot <aeris@imirhil.fr>, 2019
+# Pierre Guillemot <pierrot@cozycloud.cc>, 2019
+# Cyrille Perois <cyrille@cozycloud.cc>, 2019
 # Bruno Michel, 2019
 # 
 msgid ""
@@ -76,8 +76,8 @@ msgstr ""
 "Nous vous avons envoyé par e-mail un lien (très) spécial. Cliquez sur ce "
 "lien pour réinitialiser votre mot de passe. Nous préférons vous prévenir : "
 "cet e-mail peut s’avérer un brin joueur et se faufiler dans les dossier "
-"Spam, Notifications ou Réseaux Sociaux. N’hésitez donc pas à jeter un oeil à"
-" tous vos dossiers pour le retrouver."
+"Spam, Notifications ou Réseaux Sociaux. N’hésitez donc pas à jeter un œil à "
+"tous vos dossiers pour le retrouver."
 
 msgid "Login Reconnect title"
 msgstr "Confirmez votre mot de passe"
@@ -609,6 +609,10 @@ msgstr "avec vous !"
 
 msgid "Mail Sharing Request Button text"
 msgstr "Accepter ce partage"
+
+msgid "Mail Alert Account Subject"
+msgstr ""
+"Le nettoyage des comptes a échoué lors de la suppression de l'instance"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Se connecter à votre Cozy"
