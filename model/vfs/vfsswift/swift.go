@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift"
 )
@@ -44,14 +45,13 @@ func DeleteContainer(c *swift.Connection, container string) error {
 	// send an error as some container servers will still have objects
 	// registered for this container. We will try several times to delete the
 	// container to work-around this limitation.
-	for i := 0; i < 5; i++ {
+	return utils.RetryWithExpBackoff(5, 2*time.Second, func() error {
 		err = c.ContainerDelete(container)
-		if err == nil {
+		if err == swift.ContainerNotFound {
 			return nil
 		}
-		time.Sleep(5 * time.Second)
-	}
-	return err
+		return err
+	})
 }
 
 func deleteContainerFiles(c *swift.Connection, container string, objectNames []string) error {
