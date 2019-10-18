@@ -1298,6 +1298,7 @@ function _cozy-stack_serve {
     '--lock-url[URL for the locks, redis or in-memory]:' \
     '--log-level[define the log level]:' \
     '--log-syslog[use the local syslog for logging]' \
+    '--mail-alert-address[mail address used for alerts (instance deletion failure for example)]:' \
     '--mail-disable-tls[disable smtp over tls]' \
     '--mail-host[mail smtp host]:' \
     '--mail-noreply-address[mail address used for sending mail as a noreply (forgot passwords for example)]:' \

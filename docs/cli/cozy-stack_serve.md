@@ -57,6 +57,7 @@ example), you can use the --appdir flag like this:
       --lock-url string                  URL for the locks, redis or in-memory
       --log-level string                 define the log level (default "info")
       --log-syslog                       use the local syslog for logging
+      --mail-alert-address string        mail address used for alerts (instance deletion failure for example)
       --mail-disable-tls                 disable smtp over tls
       --mail-host string                 mail smtp host (default "localhost")
       --mail-noreply-address string      mail address used for sending mail as a noreply (forgot passwords for example)
