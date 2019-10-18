@@ -2,7 +2,6 @@ class Email
   attr_reader :subject, :from, :to, :body
 
   def initialize(opts = {})
-    ap opts # FIXME
     @subject = opts[:subject]
     @from = opts[:from]
     @to = opts[:to]

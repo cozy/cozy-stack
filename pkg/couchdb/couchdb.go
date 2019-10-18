@@ -432,11 +432,11 @@ func CreateDB(db Database, doctype string) error {
 	// creation of a database. It helps CouchDB to have more acceptable
 	// performances inside Docker. Those parameters are not suitable for
 	// production, and we must not override the CouchDB configuration.
-	var reqbody interface{}
+	query := ""
 	if build.IsDevRelease() {
-		reqbody = []byte(`{"q": 1, "n": 1}`)
+		query = "?q=1&n=1"
 	}
-	return makeRequest(db, doctype, http.MethodPut, "", reqbody, nil)
+	return makeRequest(db, doctype, http.MethodPut, query, nil, nil)
 }
 
 // DeleteDB destroy the database for a doctype
