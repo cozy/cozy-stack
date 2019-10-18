@@ -321,6 +321,7 @@ func setAuthMode(c echo.Context) error {
 type diskUsageResult struct {
 	Used  int64 `json:"used,string"`
 	Quota int64 `json:"quota,string,omitempty"`
+	Count int   `json:"doc_count,omitempty"`
 }
 
 func diskUsage(c echo.Context) error {
@@ -338,6 +339,9 @@ func diskUsage(c echo.Context) error {
 	result := &diskUsageResult{}
 	result.Used = used
 	result.Quota = fs.DiskQuota()
+	if stats, err := couchdb.DBStatus(instance, consts.Files); err == nil {
+		result.Count = stats.DocCount
+	}
 	return c.JSON(http.StatusOK, result)
 }
 
