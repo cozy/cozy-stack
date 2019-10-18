@@ -133,7 +133,7 @@ func sendAlert(inst *instance.Instance, e error) {
 		Layout:         mail.CozyCloudLayout,
 	})
 	if err == nil {
-		_, err = job.System().PushJob(inst, &job.JobRequest{
+		_, _ = job.System().PushJob(inst, &job.JobRequest{
 			WorkerType: "sendmail",
 			Message:    msg,
 		})
