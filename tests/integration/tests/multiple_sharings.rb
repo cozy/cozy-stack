@@ -37,7 +37,7 @@ describe "A folder" do
     inst_bob.accept sharing
     inst_charlie.accept sharing
 
-    sleep 5
+    sleep 6
 
     # Check the folders are the same
     path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
@@ -61,7 +61,7 @@ describe "A folder" do
     sleep 2
     inst_charlie.accept sharing
 
-    sleep 10
+    sleep 12
 
     path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
     child1_bob = Folder.find_by_path inst_bob, path

@@ -182,7 +182,7 @@ describe "A sharing" do
     assert_equal 200, code
     sleep 1
     inst_dave.accept sharing, inst_bob
-    sleep 4
+    sleep 5
 
     # Get the clients id and triggers id on alice side
     doc = Helpers.couch.get_doc inst_alice.domain, Sharing.doctype, sharing.couch_id
@@ -253,7 +253,7 @@ describe "A sharing" do
     assert_no_oauth_client inst_bob, client_id_bob
 
     # Check that Charlie has all info about the members of this sharing
-    sleep 4
+    sleep 5
     doc = Helpers.couch.get_doc inst_charlie.domain, Sharing.doctype, sharing.couch_id
     owner = doc["members"].first
     assert_equal "owner", owner["status"]
