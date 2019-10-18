@@ -15,12 +15,12 @@ describe "Notification" do
     created = Notification.create inst
 
     sleep 2
-    received = Notification.received kind: "to", query: mail
-    assert_equal created.title, received.first.title
+    received = Email.received kind: "to", query: mail
+    assert_equal created.title, received.first.subject
 
     sleep 4
-    received = Notification.received kind: "to", query: mail
-    assert_equal later.title, received.first.title
-    assert_equal created.title, received.last.title
+    received = Email.received kind: "to", query: mail
+    assert_equal later.title, received.first.subject
+    assert_equal created.title, received.last.subject
   end
 end

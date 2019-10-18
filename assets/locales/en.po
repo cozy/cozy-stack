@@ -545,6 +545,9 @@ msgstr "with you!"
 msgid "Mail Sharing Request Button text"
 msgstr "Accept this sharing"
 
+msgid "Mail Alert Account Subject"
+msgstr "Instance deletion failed on cleaning accounts"
+
 msgid "Sharing Connect to Cozy"
 msgstr "Connect to your Cozy"
 

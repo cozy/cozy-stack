@@ -186,6 +186,9 @@ func init() {
 	flags.String("geodb", ".", "define the location of the database for IP -> City lookups")
 	checkNoErr(viper.BindPFlag("geodb", flags.Lookup("geodb")))
 
+	flags.String("mail-alert-address", "", "mail address used for alerts (instance deletion failure for example)")
+	checkNoErr(viper.BindPFlag("mail.alert_address", flags.Lookup("mail-alert-address")))
+
 	flags.String("mail-noreply-address", "", "mail address used for sending mail as a noreply (forgot passwords for example)")
 	checkNoErr(viper.BindPFlag("mail.noreply_address", flags.Lookup("mail-noreply-address")))
 

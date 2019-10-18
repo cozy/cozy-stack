@@ -1,4 +1,6 @@
 class Stack
+  ALERT_ADDR = "alert@spam.cozycloud.cc"
+
   class StackError < StandardError
     def message
       "Stack is not available"
@@ -37,6 +39,7 @@ class Stack
            "--fs-url", "file://#{Helpers.current_dir}/",
            "--vault-encryptor-key", "#{vault}/key.enc",
            "--vault-decryptor-key", "#{vault}/key.dec",
+           "--mail-alert-address", ALERT_ADDR,
            "--konnectors-cmd", konnectors_cmd]
     Helpers.spawn cmd.join(" "), log: "stack-#{@port}.log"
     sleep 1
@@ -46,7 +49,7 @@ class Stack
     cmd = ["cozy-stack", "instances", "add", inst.domain,
            "--passphrase", inst.passphrase, "--public-name", inst.name,
            "--email", inst.email, "--settings", "context:test",
-           "--admin-port", @admin, "--locale", "fr"]
+           "--admin-port", @admin, "--locale", inst.locale]
     puts cmd.join(" ").green
     return if system(cmd.join(" "))
     # Try again if the cozy-stack serve was too slow to listen

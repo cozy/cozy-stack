@@ -81,13 +81,17 @@ describe "An io.cozy.accounts" do
 
     # 4. When an instance is going to be deleted but the cleaning fails,
     # the instance is kept and a mail is sent.
-    inst = Instance.create name: "Julie"
+    inst = Instance.create name: "Julie", locale: "en"
     inst.install_konnector "bankfour", source_url
     aggregator = Account.create inst, id: "bank-aggregator"
     Account.create inst, type: "bankfour", aggregator: aggregator,
                          name: Faker::DrWho.specie,
                          failure: "Will fail for on_delete.js"
     refute inst.remove
-    # TODO check the mail
+
+    sleep 1
+    received = Email.received kind: "to", query: Stack::ALERT_ADDR
+    refute_empty received
+    assert_equal received[0].subject, "Instance deletion failed on cleaning accounts"
   end
 end

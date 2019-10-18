@@ -1,0 +1,5 @@
+{{t "Mail Alert Account Subject"}}
+
+Instance : {{.Domain}}
+
+{{.Error}}

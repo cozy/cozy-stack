@@ -1,15 +1,15 @@
 class Notification
   attr_reader :title
 
-  def initialize(title)
-    @title = title
+  def initialize(opts = {})
+    @title = opts[:title]
   end
 
   def self.doctype
     "io.cozy.notifications"
   end
 
-  def self.create(inst, at=nil)
+  def self.create(inst, at = nil)
     msg = Faker::Friends.quote
     title = Faker::DrWho.quote
     title = title.gsub(/\W+/, ' ')
@@ -28,15 +28,5 @@ class Notification
     }
     inst.client["/notifications"].post body, opts
     Notification.new(title: title)
-  end
-
-  def self.received(params)
-    url = "http://localhost:8025/api/v2" # MailHog
-    client = RestClient::Resource.new url
-    res = client["/search"].get params: params
-    JSON.parse(res.body)["items"].map do |item|
-      title = item.dig "Content", "Headers", "Subject", 0
-      Notification.new(title: title)
-    end
   end
 end

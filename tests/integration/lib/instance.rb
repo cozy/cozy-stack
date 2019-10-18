@@ -1,5 +1,5 @@
 class Instance
-  attr_reader :stack, :name, :domain, :passphrase, :email
+  attr_reader :stack, :name, :domain, :passphrase, :email, :locale
 
   def self.create(opts = {})
     stack = Stack.get opts.delete(:port)
@@ -15,6 +15,7 @@ class Instance
     @domain = opts[:domain] || "#{@name.downcase}.test.cozy.tools:#{stack.port}"
     @passphrase = opts[:passphrase] || "cozy"
     @email = opts[:email] || "#{@name.downcase}+test@cozy.tools"
+    @locale = opts[:locale] || "fr"
   end
 
   def remove

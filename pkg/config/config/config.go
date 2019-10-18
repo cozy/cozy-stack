@@ -95,6 +95,7 @@ type Config struct {
 	Assets                string
 	Doctypes              string
 	Subdomains            SubdomainType
+	AlertAddr             string
 	NoReplyAddr           string
 	NoReplyName           string
 	Hooks                 string
@@ -650,6 +651,7 @@ func UseViper(v *viper.Viper) error {
 		Subdomains:            subdomains,
 		Assets:                v.GetString("assets"),
 		Doctypes:              v.GetString("doctypes"),
+		AlertAddr:             v.GetString("mail.alert_address"),
 		NoReplyAddr:           v.GetString("mail.noreply_address"),
 		NoReplyName:           v.GetString("mail.noreply_name"),
 		Hooks:                 v.GetString("hooks"),

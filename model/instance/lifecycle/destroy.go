@@ -5,10 +5,12 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	job "github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/mail"
 )
 
 // Destroy is used to remove the instance. All the data linked to this
@@ -39,6 +41,7 @@ func DestroyWithoutHooks(domain string) error {
 	// Deleting accounts manually to invoke the "account deletion hook" which may
 	// launch a worker in order to clean the account.
 	if err := deleteAccounts(inst); err != nil {
+		sendAlert(inst, err)
 		return err
 	}
 
@@ -107,4 +110,32 @@ func deleteAccounts(inst *instance.Instance) error {
 	}
 
 	return account.CleanAndWait(inst, toClean)
+}
+
+func sendAlert(inst *instance.Instance, e error) {
+	alert := config.GetConfig().AlertAddr
+	if alert == "" {
+		return
+	}
+	addr := &mail.Address{
+		Name:  "Support",
+		Email: alert,
+	}
+	values := map[string]interface{}{
+		"Domain": inst.Domain,
+		"Error":  e.Error(),
+	}
+	msg, err := job.NewMessage(mail.Options{
+		Mode:           mail.ModeFrom,
+		To:             []*mail.Address{addr},
+		TemplateName:   "alert_account",
+		TemplateValues: values,
+		Layout:         mail.CozyCloudLayout,
+	})
+	if err == nil {
+		_, err = job.System().PushJob(inst, &job.JobRequest{
+			WorkerType: "sendmail",
+			Message:    msg,
+		})
+	}
 }
