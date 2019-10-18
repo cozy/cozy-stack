@@ -27,6 +27,9 @@ const (
 	FilesMetadata = "io.cozy.files.metadata"
 	// FilesVersions doc type for versioning file contents
 	FilesVersions = "io.cozy.files.versions"
+	// Thumbnails is a synthetic doctype for thumbnails, used for realtime
+	// events
+	Thumbnails = "io.cozy.files.thumbnails"
 	// PhotosAlbums doc type for photos albums
 	PhotosAlbums = "io.cozy.photos.albums"
 	// Intents doc type for intents persisted in couchdb

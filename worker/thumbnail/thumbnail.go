@@ -15,6 +15,9 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -243,6 +246,14 @@ func recGenerateThub(ctx *job.WorkerContext, in io.Reader, fs vfs.Thumbser, img 
 			_ = th.Abort()
 		} else {
 			_ = th.Commit()
+			doc := &couchdb.JSONDoc{
+				M: map[string]interface{}{
+					"_id":    img.ID(),
+					"format": format,
+				},
+				Type: consts.Thumbnails,
+			}
+			go realtime.GetHub().Publish(ctx.Instance, realtime.EventCreate, doc, nil)
 		}
 	}()
 	var buffer *bytes.Buffer

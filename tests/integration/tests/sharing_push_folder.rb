@@ -1,5 +1,7 @@
 require_relative '../boot'
 require 'minitest/autorun'
+require 'faye/websocket'
+require 'eventmachine'
 require 'pry-rescue/minitest' unless ENV['CI']
 
 def assert_same_thumbs(base_path_a, id_a, base_path_b, id_b)
@@ -24,12 +26,41 @@ describe "A folder" do
     cozy = [{ url: inst_recipient.url, primary: true }]
     contact = Contact.create inst, given_name: recipient_name, emails: [], cozy: cozy
 
-    # Create the folder with a file
+    # Create the folder with a photo, and checks that the photo has its
+    # thumbnails generated
     folder = Folder.create inst
     folder.couch_id.wont_be_empty
-    file_path = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
-    opts = CozyFile.options_from_fixture(file_path, dir_id: folder.couch_id)
-    file = CozyFile.create inst, opts
+    file = nil
+    formats = []
+    EM.run do
+      ws = Faye::WebSocket::Client.new("ws://#{inst.domain}/realtime/")
+
+      ws.on :open do
+        ws.send({ method: "AUTH", payload: inst.token_for("io.cozy.files") }.to_json)
+        ws.send({ method: "SUBSCRIBE", payload: { type: "io.cozy.files.thumbnails" } }.to_json)
+      end
+
+      ws.on :message do |event|
+        msg = JSON.parse(event.data)
+        formats << msg.dig("payload", "doc", "format")
+        ws.close if formats.size == 3
+      end
+
+      ws.on :close do
+        EM.stop
+      end
+
+      EM::Timer.new(30) do
+        EM.stop
+      end
+
+      EM::Timer.new(1) do
+        file_path = "../fixtures/wet-cozy_20160910__M4Dz.jpg"
+        opts = CozyFile.options_from_fixture(file_path, dir_id: folder.couch_id)
+        file = CozyFile.create inst, opts
+      end
+    end
+    assert_equal formats, %w[large medium small]
 
     # Create the sharing
     sharing = Sharing.new
