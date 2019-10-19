@@ -551,6 +551,9 @@ msgstr "あなたと!"
 msgid "Mail Sharing Request Button text"
 msgstr "この共有を承認"
 
+msgid "Mail Alert Account Subject"
+msgstr "アカウントのクリーニング時にインスタンスの削除に失敗しました"
+
 msgid "Sharing Connect to Cozy"
 msgstr "あなたの Cozy に接続"
 
