@@ -36,7 +36,7 @@ require (
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/pquerna/otp v1.2.0
-	github.com/prometheus/client_golang v1.1.0
+	github.com/prometheus/client_golang v1.2.1
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/sideshow/apns2 v0.19.0
 	github.com/sirupsen/logrus v1.4.2
