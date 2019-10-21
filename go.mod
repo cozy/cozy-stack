@@ -48,7 +48,7 @@ require (
 	github.com/ugorji/go/codec v1.1.7
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8
-	golang.org/x/net v0.0.0-20191011234655-491137f69257
+	golang.org/x/net v0.0.0-20191021124707-24d2ffbea1e8
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
