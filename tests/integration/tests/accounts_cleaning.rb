@@ -89,8 +89,12 @@ describe "An io.cozy.accounts" do
                          failure: "Will fail for on_delete.js"
     refute inst.remove
 
-    sleep 1
-    received = Email.received kind: "to", query: Stack::ALERT_ADDR
+    received = []
+    10.times do
+      sleep 1
+      received = Email.received kind: "to", query: Stack::ALERT_ADDR
+      break if received.any?
+    end
     refute_empty received
     assert_equal received[0].subject, "Instance deletion failed on cleaning accounts"
   end

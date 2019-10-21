@@ -47,6 +47,7 @@ module Helpers
     def cleanup
       clean_tmp
       couch.clean_test
+      Email.clear_inbox
     end
 
     def clean_tmp
