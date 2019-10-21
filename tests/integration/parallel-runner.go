@@ -78,7 +78,7 @@ func runTests(tests []string) error {
 	var err error
 	for range tests {
 		res := <-results
-		fmt.Printf("\n==== Run %s ====\n%s\n", res.Test, res.Out)
+		fmt.Fprintf(os.Stderr, "\n==== Run %s ====\n%s\n", res.Test, res.Out)
 		if res.Err != nil {
 			err = res.Err
 			if failFast {
