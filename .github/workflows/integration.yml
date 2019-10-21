@@ -8,20 +8,30 @@ on:
       - 'docs/**'
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     services:
-      couchdb:
-        image: apache/couchdb:2.3
-        ports:
-          - 5984:5984
       mailhog:
         image: mailhog/mailhog
         ports:
           - 1025:1025
           - 8025:8025
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v1
+      - name: Install CouchDB
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 379CE192D401AB61
+          echo "deb https://apache.bintray.com/couchdb-deb $(lsb_release -c -s) main" | sudo tee -a /etc/apt/sources.list
+          sudo apt-get update
+          sudo debconf-set-selections <<-EOF
+          	couchdb couchdb/mode select standalone
+          	couchdb couchdb/mode seen true
+          	couchdb couchdb/bindaddress string 127.0.0.1
+          	couchdb couchdb/bindaddress seen true
+          	couchdb couchdb/adminpass password
+          	couchdb couchdb/adminpass seen true
+          	couchdb couchdb/adminpass_again password
+          	couchdb couchdb/adminpass_again seen true
+          EOF
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --force-yes couchdb
       - name: Install Go
         uses: actions/setup-go@v1
         with:
@@ -30,6 +40,8 @@ jobs:
         uses: actions/setup-ruby@v1
         with:
           ruby-version: '2.x'
+      - name: Checkout code
+        uses: actions/checkout@v1
       - name: Install
         run: |
           curl -X PUT http://127.0.0.1:5984/{_users,_replicator}
