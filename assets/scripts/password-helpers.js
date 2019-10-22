@@ -79,13 +79,9 @@
     for (let i = 0; i < hashed.byteLength; i++) {
       binary += String.fromCharCode(hashed[i])
     }
-    let masterKey = ''
-    for (let i = 0; i < master.byteLength; i++) {
-      masterKey += String.fromCharCode(master[i])
-    }
     return Promise.resolve({
       hashed: w.btoa(binary),
-      masterKey: w.btoa(masterKey)
+      masterKey: master.buffer
     })
   }
 
