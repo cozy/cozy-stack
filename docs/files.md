@@ -55,8 +55,6 @@ Date: Mon, 19 Sep 2016 12:35:08 GMT
 - 201 Created, when the directory has been successfully created
 - 404 Not Found, when the parent directory does not exist
 - 409 Conflict, when a directory with the same name already exists
-- 413 Payload Too Large, when there is not enough available space on the cozy
-  to upload the file
 - 422 Unprocessable Entity, when the `Type` or `Name` parameter is missing or
   invalid
 
@@ -340,6 +338,8 @@ Hello world!
 - 409 Conflict, when a file with the same name already exists
 - 412 Precondition Failed, when the md5sum is `Content-MD5` is not equal to
   the md5sum computed by the server
+- 413 Payload Too Large, when there is not enough available space on the cozy
+  to upload the file
 - 422 Unprocessable Entity, when the sent data is invalid (for example, the
   parent doesn't exist, `Type` or `Name` parameter is missing or invalid,
   etc.)
