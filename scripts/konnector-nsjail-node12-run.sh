@@ -22,7 +22,7 @@ else
   exit 1
 fi
 
-NODE_OPTS="--max-http-header-size=16384"
+NODE_OPTS="--max-http-header-size=16384 --tls-min-v1.0"
 
 if [ -z "${COZY_JOB_ID}" ]; then
   COZY_JOB_ID="unknown"
