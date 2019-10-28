@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift"
 )
@@ -202,7 +203,10 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 		nb++
 		go func() {
 			k := <-tokens
-			_, err := c.ObjectCopy(src, srcName, dst, dstName, nil)
+			err := utils.RetryWithExpBackoff(3, 200*time.Millisecond, func() error {
+				_, err := c.ObjectCopy(src, srcName, dst, dstName, nil)
+				return err
+			})
 			if err != nil {
 				log.Warningf("Cannot copy file from %s %s to %s %s: %s",
 					src, srcName, dst, dstName, err)
