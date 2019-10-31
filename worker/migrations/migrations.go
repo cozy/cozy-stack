@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"time"
@@ -125,6 +126,10 @@ func migrateToSwiftV3(domain string) error {
 	defer mutex.Unlock()
 
 	dstContainer := swiftV3ContainerPrefix + inst.DBPrefix()
+	if _, _, err = c.Container(dstContainer); err != swift.ContainerNotFound {
+		log.Errorf("Destination container %s already exists or something went wrong. Migration canceled.", dstContainer)
+		return errors.New("Destination container busy")
+	}
 	if err = c.ContainerCreate(dstContainer, nil); err != nil {
 		return err
 	}
