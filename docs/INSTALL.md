@@ -73,7 +73,7 @@ The cozy-stack server listens on http://cozy.tools:8080/ by default. See
 `cozy-stack --help` for more informations.
 
 The above command will create an instance on http://cozy.tools:8080/ with the
-passphrase `cozy`.
+passphrase `cozy`. By default this will create a `storage/` entry in your current directory, containing all your instances by their URL. An instance "cozy.tools:8080" will have its stored files in `storage/cozy.tools:8080/`. Installed apps will be found in the `.cozy_apps/` directory of each instance.
 
 Make sure the full stack is up with:
 
