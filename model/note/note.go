@@ -64,6 +64,9 @@ func (d *Document) Create(inst *instance.Instance) (*vfs.FileDoc, error) {
 	}
 
 	fileDoc, err := d.newFileDoc(inst, content)
+	if err != nil {
+		return nil, err
+	}
 	if err := writeFile(inst.VFS(), fileDoc, content); err != nil {
 		return nil, err
 	}
@@ -81,17 +84,21 @@ func (d *Document) getInitialContent(inst *instance.Instance) ([]byte, error) {
 	schema, err := model.NewSchema(&spec)
 	if err != nil {
 		inst.Logger().WithField("nspace", "notes").
-			Infof("Cannot instanciate the schema: %s", err)
+			Infof("Cannot instantiate the schema: %s", err)
 		return nil, ErrInvalidSchema
 	}
 
+	// TODO this method is probably too weak to generate a valid node
 	node, err := schema.Node(schema.Spec.TopNode)
 	if err != nil {
 		inst.Logger().WithField("nspace", "notes").
 			Infof("The topNode cannot be created: %s", err)
 		return nil, ErrInvalidSchema
 	}
-	return []byte(node.String()), nil // TODO markdown
+
+	// TODO markdown
+	content := node.String()
+	return []byte(content), nil
 }
 
 func (d *Document) getDirID() (string, error) {
