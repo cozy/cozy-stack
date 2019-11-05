@@ -220,6 +220,11 @@ func (i *Instance) MakeVFS() error {
 	return err
 }
 
+// NoteLock returns a mutex for the notes on this instance.
+func (i *Instance) NotesLock() lock.ErrorRWLocker {
+	return lock.ReadWrite(i, "notes")
+}
+
 // SettingsDocument returns the document with the settings of this instance
 func (i *Instance) SettingsDocument() (*couchdb.JSONDoc, error) {
 	doc := &couchdb.JSONDoc{}

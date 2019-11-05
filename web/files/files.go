@@ -231,7 +231,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 			err = WrapVfsError(err)
 			return
 		}
-		err = fileData(c, http.StatusOK, newdoc, true, nil)
+		err = FileData(c, http.StatusOK, newdoc, true, nil)
 	}()
 
 	_, err = io.Copy(file, c.Request().Body)
@@ -396,7 +396,7 @@ func CopyVersionHandler(c echo.Context) error {
 			err = WrapVfsError(err)
 			return
 		}
-		err = fileData(c, http.StatusOK, newdoc, true, nil)
+		err = FileData(c, http.StatusOK, newdoc, true, nil)
 	}()
 
 	_, err = io.Copy(file, content)
@@ -510,7 +510,7 @@ func applyPatch(c echo.Context, fs vfs.VFS, patch *docPatch) (err error) {
 	if dir != nil {
 		return dirData(c, http.StatusOK, dir)
 	}
-	return fileData(c, http.StatusOK, file, false, nil)
+	return FileData(c, http.StatusOK, file, false, nil)
 }
 
 func applyPatches(c echo.Context, fs vfs.VFS, patches []*docPatch) (errors []*jsonapi.Error, err error) {
@@ -591,7 +591,7 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 	if dir != nil {
 		return dirData(c, http.StatusOK, dir)
 	}
-	return fileData(c, http.StatusOK, file, true, nil)
+	return FileData(c, http.StatusOK, file, true, nil)
 }
 
 // GetChildrenHandler returns a list of children of a folder
@@ -631,7 +631,7 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 	if dir != nil {
 		return dirData(c, http.StatusOK, dir)
 	}
-	return fileData(c, http.StatusOK, file, true, nil)
+	return FileData(c, http.StatusOK, file, true, nil)
 }
 
 // ReadFileContentFromIDHandler handles all GET requests on /files/:file-id
@@ -716,7 +716,7 @@ func RevertFileVersion(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
-	return fileData(c, http.StatusOK, doc, true, nil)
+	return FileData(c, http.StatusOK, doc, true, nil)
 }
 
 // HeadDirOrFile handles HEAD requests on directory or file to check their
@@ -937,7 +937,7 @@ func FileDownloadCreateHandler(c echo.Context) error {
 		Related: "/files/downloads/" + secret + "/" + filename,
 	}
 
-	return fileData(c, http.StatusOK, doc, false, links)
+	return FileData(c, http.StatusOK, doc, false, links)
 }
 
 // ArchiveDownloadHandler handles requests to /files/archive/:secret/whatever.zip
@@ -1050,7 +1050,7 @@ func TrashHandler(c echo.Context) error {
 	if errt != nil {
 		return WrapVfsError(errt)
 	}
-	return fileData(c, http.StatusOK, doc, false, nil)
+	return FileData(c, http.StatusOK, doc, false, nil)
 }
 
 // ReadTrashFilesHandler handle GET requests on /files/trash and return the
@@ -1102,7 +1102,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 	if errt != nil {
 		return WrapVfsError(errt)
 	}
-	return fileData(c, http.StatusOK, doc, false, nil)
+	return FileData(c, http.StatusOK, doc, false, nil)
 }
 
 // ClearTrashHandler handles DELETE request to clear the trash

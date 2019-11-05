@@ -12,6 +12,8 @@ enable the collaborative edition in real-time.
 
 It creates a note: it creates a files with the right metadata for collaborative edition.
 
+**Note:** a permission on `POST io.cozy.files` is required to use this route.
+
 #### Parameter
 
 | Parameter | Description                                                               |
@@ -31,7 +33,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.notes",
+    "type": "io.cozy.notes.documents",
     "attributes": {
       "title": "My new note",
       "dir_id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
@@ -164,14 +166,10 @@ Content-Type: application/vnd.api+json
         "doctypeVersion": "1",
         "metadataVersion": 1,
         "createdAt": "2019-11-05T12:38:04Z",
-        "createdByApp": "note",
         "createdOn": "https://alice.example.net/",
         "updatedAt": "2019-11-05T12:38:04Z",
         "uploadedAt": "2019-11-05T12:38:04Z",
-        "uploadedOn": "https://alice.example.net/",
-        "uploadedBy": {
-          "slug": "note"
-        }
+        "uploadedOn": "https://alice.example.net/"
       }
     },
     "relationships": {
