@@ -5,6 +5,7 @@ package notes
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -37,16 +38,37 @@ func CreateNote(c echo.Context) error {
 	return files.FileData(c, http.StatusCreated, file, false, nil)
 }
 
+// GetNote is the API handler for GET /notes/:id. It fetches the file with the
+// given id, and also includes the changes in the content that have been
+// accepted by the stack but not yet persisted on the file.
+func GetNote(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fileID := c.Param("id")
+	file, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
+		return err
+	}
+
+	// TODO fetch the updated content from redis
+
+	return files.FileData(c, http.StatusOK, file, false, nil)
+}
+
 // Routes sets the routing for the collaborative edition of notes.
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
+	router.GET("/:id", GetNote)
 }
 
 func wrapError(err error) *jsonapi.Error {
 	switch err {
 	case note.ErrInvalidSchema:
 		return jsonapi.InvalidAttribute("schema", err)
-	case vfs.ErrParentDoesNotExist, vfs.ErrParentInTrash:
+	case os.ErrNotExist, vfs.ErrParentDoesNotExist, vfs.ErrParentInTrash:
 		return jsonapi.NotFound(err)
 	case vfs.ErrFileTooBig:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)

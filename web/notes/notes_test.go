@@ -18,6 +18,7 @@ import (
 var ts *httptest.Server
 var inst *instance.Instance
 var token string
+var noteID string
 
 func TestCreateNote(t *testing.T) {
 	body := `
@@ -82,9 +83,30 @@ func TestCreateNote(t *testing.T) {
 	var result map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
+	assertInitialNote(t, result)
+}
+
+func TestGetNote(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/notes/"+noteID, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	assertInitialNote(t, result)
+}
+
+func assertInitialNote(t *testing.T, result map[string]interface{}) {
 	data, _ := result["data"].(map[string]interface{})
 	assert.Equal(t, "io.cozy.files", data["type"])
-	assert.Contains(t, data, "id")
+	if noteID == "" {
+		assert.Contains(t, data, "id")
+		noteID = data["id"].(string)
+	} else {
+		assert.Equal(t, noteID, data["id"])
+	}
 	attrs := data["attributes"].(map[string]interface{})
 	assert.Equal(t, "file", attrs["type"])
 	assert.Equal(t, "A super note.cozy-note", attrs["name"])
