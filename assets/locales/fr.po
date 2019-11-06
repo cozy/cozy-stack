@@ -21,6 +21,9 @@ msgstr "Administratif"
 msgid "Tree Photos"
 msgstr "Photos"
 
+msgid "Tree Notes"
+msgstr "Notes"
+
 msgid "Tree Uploaded from Cozy Photos"
 msgstr "Transférées depuis Cozy Photos"
 

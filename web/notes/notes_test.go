@@ -26,7 +26,6 @@ func TestCreateNote(t *testing.T) {
     "type": "io.cozy.notes.documents",
     "attributes": {
       "title": "A super note",
-      "dir_id": "io.cozy.files.root-dir",
       "schema": {
         "nodes": [
           ["doc", { "content": "block*" }],

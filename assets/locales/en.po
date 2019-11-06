@@ -9,6 +9,9 @@ msgstr "Administrative"
 msgid "Tree Photos"
 msgstr "Photos"
 
+msgid "Tree Notes"
+msgstr "Notes"
+
 msgid "Tree Uploaded from Cozy Photos"
 msgstr "Uploaded from Cozy Photos"
 

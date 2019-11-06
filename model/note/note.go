@@ -4,7 +4,6 @@ package note
 
 import (
 	"encoding/json"
-	"errors"
 	"strings"
 	"time"
 
@@ -101,12 +100,15 @@ func (d *Document) getInitialContent(inst *instance.Instance) ([]byte, error) {
 	return []byte(content), nil
 }
 
-func (d *Document) getDirID() (string, error) {
+func (d *Document) getDirID(inst *instance.Instance) (string, error) {
 	if d.DirID != "" {
 		return d.DirID, nil
 	}
-	// TODO add a fallback on a default directory
-	return "", errors.New("Not yet implemented")
+	parent, err := ensureNotesDir(inst)
+	if err != nil {
+		return "", err
+	}
+	return parent.ID(), nil
 }
 
 func (d *Document) filename() string {
@@ -118,7 +120,7 @@ func (d *Document) filename() string {
 }
 
 func (d *Document) newFileDoc(inst *instance.Instance, content []byte) (*vfs.FileDoc, error) {
-	dirID, err := d.getDirID()
+	dirID, err := d.getDirID(inst)
 	if err != nil {
 		return nil, err
 	}
@@ -146,6 +148,7 @@ func (d *Document) newFileDoc(inst *instance.Instance, content []byte) (*vfs.Fil
 
 func (d *Document) metadata() map[string]interface{} {
 	return map[string]interface{}{
+		"title":    d.Title,
 		"content":  d.Content,
 		"revision": d.Revision,
 		"schema":   d.Schema,
@@ -166,6 +169,50 @@ func writeFile(fs vfs.VFS, fileDoc *vfs.FileDoc, content []byte) (err error) {
 	}()
 	_, err = file.Write(content)
 	return
+}
+
+func ensureNotesDir(inst *instance.Instance) (*vfs.DirDoc, error) {
+	ref := couchdb.DocReference{
+		Type: consts.Apps,
+		ID:   consts.Apps + "/" + consts.NotesSlug,
+	}
+	key := []string{ref.Type, ref.ID}
+	end := []string{ref.Type, ref.ID, couchdb.MaxString}
+	req := &couchdb.ViewRequest{
+		StartKey:    key,
+		EndKey:      end,
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, req, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	fs := inst.VFS()
+	if len(res.Rows) > 0 {
+		return fs.DirByID(res.Rows[0].ID)
+	}
+	dirname := inst.Translate("Tree Notes")
+	dir, err := vfs.NewDirDocWithPath(dirname, consts.RootDirID, "/", nil)
+	if err != nil {
+		return nil, err
+	}
+	dir.AddReferencedBy(ref)
+	dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	if err = fs.CreateDir(dir); err != nil {
+		if !couchdb.IsConflictError(err) {
+			return nil, err
+		}
+		dir, err = fs.DirByPath(dir.Fullpath)
+		if err != nil {
+			return nil, err
+		}
+		olddoc := dir.Clone().(*vfs.DirDoc)
+		dir.AddReferencedBy(ref)
+		_ = fs.UpdateDirDoc(olddoc, dir)
+	}
+	return dir, nil
 }
 
 var _ couchdb.Doc = &Document{}
