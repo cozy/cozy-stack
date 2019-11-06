@@ -53,7 +53,33 @@ func GetNote(c echo.Context) error {
 		return err
 	}
 
-	// TODO fetch the updated content from redis
+	// TODO fetch the updated title and content from redis
+
+	return files.FileData(c, http.StatusOK, file, false, nil)
+}
+
+// ChangeTitle is the API handler for PUT /notes/:id/title. It updates the
+// title and renames the file.
+func ChangeTitle(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fileID := c.Param("id")
+	file, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	if err := middlewares.AllowVFS(c, permission.PUT, file); err != nil {
+		return err
+	}
+
+	doc := &note.Document{}
+	if _, err := jsonapi.Bind(c.Request().Body, doc); err != nil {
+		return err
+	}
+
+	if err := note.UpdateTitle(inst, file, doc.Title); err != nil {
+		return wrapError(err)
+	}
 
 	return files.FileData(c, http.StatusOK, file, false, nil)
 }
@@ -62,12 +88,15 @@ func GetNote(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
 	router.GET("/:id", GetNote)
+	router.PUT("/:id/title", ChangeTitle)
 }
 
 func wrapError(err error) *jsonapi.Error {
 	switch err {
 	case note.ErrInvalidSchema:
 		return jsonapi.InvalidAttribute("schema", err)
+	case note.ErrInvalidFile:
+		return jsonapi.NotFound(err)
 	case os.ErrNotExist, vfs.ErrParentDoesNotExist, vfs.ErrParentInTrash:
 		return jsonapi.NotFound(err)
 	case vfs.ErrFileTooBig:

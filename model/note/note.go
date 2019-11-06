@@ -38,8 +38,8 @@ func (d *Document) DocType() string { return consts.NotesDocuments }
 // Clone implements couchdb.Doc
 func (d *Document) Clone() couchdb.Doc {
 	cloned := *d
-	// XXX The schema is supposed to be immutable and, as such, is not cloned.
-	// TODO clone Content
+	// XXX The schema and the content are supposed to be immutable and, as
+	// such, are not cloned.
 	return &cloned
 }
 
@@ -118,11 +118,11 @@ func (d *Document) getDirID(inst *instance.Instance) (string, error) {
 	return parent.ID(), nil
 }
 
-func (d *Document) filename() string {
-	if d.Title == "" {
-		d.Title = "New note"
+func titleToFilename(title string) string {
+	if title == "" {
+		title = "New note"
 	}
-	name := strings.ReplaceAll(d.Title, "/", "-")
+	name := strings.ReplaceAll(title, "/", "-")
 	return name + ".cozy-note"
 }
 
@@ -133,7 +133,7 @@ func (d *Document) newFileDoc(inst *instance.Instance, content []byte) (*vfs.Fil
 	}
 
 	fileDoc, err := vfs.NewFileDoc(
-		d.filename(),
+		titleToFilename(d.Title),
 		dirID,
 		int64(len(content)),
 		nil, // Let the VFS compute the md5sum
@@ -220,6 +220,32 @@ func ensureNotesDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		_ = fs.UpdateDirDoc(olddoc, dir)
 	}
 	return dir, nil
+}
+
+// UpdateTitle changes the title of a note and renames the associated file.
+// TODO add debounce
+func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) error {
+	if len(file.Metadata) == 0 {
+		return ErrInvalidFile
+	}
+	old, _ := file.Metadata["title"].(string)
+	if old == title {
+		return nil
+	}
+
+	olddoc := file.Clone().(*vfs.FileDoc)
+	file.Metadata["title"] = title
+	file.UpdatedAt = time.Now()
+	file.CozyMetadata.UpdatedAt = file.UpdatedAt
+
+	// If the file was renamed manually before, we will keep its name. Else, we
+	// can rename with the new title.
+	if rename := titleToFilename(old) == file.DocName; rename {
+		file.DocName = titleToFilename(title)
+		file.ResetFullpath()
+	}
+
+	return inst.VFS().UpdateFileDoc(olddoc, file)
 }
 
 var _ couchdb.Doc = &Document{}
