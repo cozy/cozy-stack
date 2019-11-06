@@ -20,7 +20,11 @@ It creates a note: it creates a files with the right metadata for collaborative 
 | --------- | ------------------------------------------------------------------------- |
 | title     | The title of the note, that will also be used for the filename            |
 | dir_id    | The identifier of the directory where the file will be created (optional) |
-| schema    | The schema for prosemirror                                                |
+| schema    | The schema for prosemirror (with OrderedMap transformed as arrays)        |
+
+**Note:** if the `dir_id` is not given, the file will be created in a `Notes`
+directory (and this directory will have a referenced_by on the notes apps to
+allow to find this directory even if it is renamed or moved later).
 
 #### Request
 
@@ -111,7 +115,7 @@ Content-Type: application/vnd.api+json
       "tags": [],
       "metadata": {
         "title": "My new note",
-        "content": {},
+        "content": { "type": "doc", "content": [{ "type": "paragraph" }] },
         "revision": 0,
         "schema": {
           "nodes": [
@@ -190,6 +194,10 @@ Content-Type: application/vnd.api+json
 ### GET /notes/:id
 
 It fetches the information about a note.
+
+#### Request
+
+#### Response
 
 ### GET /notes/:id/steps?revision=xxx
 

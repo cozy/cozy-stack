@@ -94,8 +94,8 @@ func TestCreateNote(t *testing.T) {
 	meta, _ := attrs["metadata"].(map[string]interface{})
 	assert.Equal(t, "A super note", meta["title"])
 	assert.EqualValues(t, 0, meta["revision"])
-	assert.Contains(t, meta, "schema")
-	assert.Contains(t, meta, "content")
+	assert.NotNil(t, meta["schema"])
+	assert.NotNil(t, meta["content"])
 }
 
 func TestMain(m *testing.M) {

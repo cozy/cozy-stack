@@ -23,7 +23,7 @@ type Document struct {
 	DirID    string          `json:"dir_id,omitempty"`
 	Revision int             `json:"revision"`
 	Schema   json.RawMessage `json:"schema"`
-	Content  json.RawMessage `json:"content"`
+	Content  interface{}     `json:"content,omitempty"`
 }
 
 // ID returns the directory qualified identifier
@@ -62,18 +62,21 @@ func (d *Document) Create(inst *instance.Instance) (*vfs.FileDoc, error) {
 	if err != nil {
 		return nil, err
 	}
+	d.Content = content.ToJSON()
 
-	fileDoc, err := d.newFileDoc(inst, content)
+	// TODO markdown
+	markdown := []byte(content.String())
+	fileDoc, err := d.newFileDoc(inst, markdown)
 	if err != nil {
 		return nil, err
 	}
-	if err := writeFile(inst.VFS(), fileDoc, content); err != nil {
+	if err := writeFile(inst.VFS(), fileDoc, markdown); err != nil {
 		return nil, err
 	}
 	return fileDoc, nil
 }
 
-func (d *Document) getInitialContent(inst *instance.Instance) ([]byte, error) {
+func (d *Document) getInitialContent(inst *instance.Instance) (*model.Node, error) {
 	var spec model.SchemaSpec
 	if err := json.Unmarshal(d.Schema, &spec); err != nil {
 		inst.Logger().WithField("nspace", "notes").
@@ -89,10 +92,10 @@ func (d *Document) getInitialContent(inst *instance.Instance) ([]byte, error) {
 	}
 
 	// Create an empty document that matches the schema constraints.
-	typ, ok := schema.Nodes[schema.Spec.TopNode]
-	if !ok {
+	typ, err := schema.NodeType(schema.Spec.TopNode)
+	if err != nil {
 		inst.Logger().WithField("nspace", "notes").
-			Infof("The topNode is missing")
+			Infof("The schema is invalid: %s", err)
 		return nil, ErrInvalidSchema
 	}
 	node, err := typ.CreateAndFill()
@@ -101,10 +104,7 @@ func (d *Document) getInitialContent(inst *instance.Instance) ([]byte, error) {
 			Infof("The topNode cannot be created: %s", err)
 		return nil, ErrInvalidSchema
 	}
-
-	// TODO markdown
-	content := node.String()
-	return []byte(content), nil
+	return node, nil
 }
 
 func (d *Document) getDirID(inst *instance.Instance) (string, error) {
