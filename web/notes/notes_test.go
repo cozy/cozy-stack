@@ -120,6 +120,38 @@ func assertInitialNote(t *testing.T, result map[string]interface{}) {
 	assert.NotNil(t, meta["content"])
 }
 
+func TestChangeTitle(t *testing.T) {
+	body := `
+{
+  "data": {
+    "type": "io.cozy.notes.documents",
+    "attributes": {
+      "title": "A new title"
+    }
+  }
+}`
+	req, _ := http.NewRequest("PUT", ts.URL+"/notes/"+noteID+"/title", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+
+	data, _ := result["data"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.files", data["type"])
+	assert.Equal(t, noteID, data["id"])
+	attrs := data["attributes"].(map[string]interface{})
+	assert.Equal(t, "A new title.cozy-note", attrs["name"])
+	meta, _ := attrs["metadata"].(map[string]interface{})
+	assert.Equal(t, "A new title", meta["title"])
+	assert.EqualValues(t, 0, meta["revision"])
+	assert.NotNil(t, meta["schema"])
+	assert.NotNil(t, meta["content"])
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
