@@ -226,6 +226,12 @@ func ensureNotesDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 // UpdateTitle changes the title of a note and renames the associated file.
 // TODO add debounce
 func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) error {
+	lock := inst.NotesLock()
+	if err := lock.Lock(); err != nil {
+		return err
+	}
+	defer lock.Unlock()
+
 	if len(file.Metadata) == 0 {
 		return ErrInvalidFile
 	}
@@ -253,6 +259,12 @@ func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) error
 // all or nothing change: if there is one error, the note won't be changed.
 // TODO fetch last info for file (if debounce)
 func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, steps []couchdb.JSONDoc) error {
+	lock := inst.NotesLock()
+	if err := lock.Lock(); err != nil {
+		return err
+	}
+	defer lock.Unlock()
+
 	if len(steps) == 0 {
 		return ErrNoSteps
 	}

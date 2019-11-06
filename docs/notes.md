@@ -453,7 +453,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "stepType": "replace",
       "from": 1,
-      "to": 1
+      "to": 1,
       "slice": {
         "content": [{ "type": "text", "text": "H" }]
       }
@@ -463,7 +463,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "stepType": "replace",
       "from": 2,
-      "to": 2
+      "to": 2,
       "slice": {
         "content": [{ "type": "text", "text": "ello" }]
       }
