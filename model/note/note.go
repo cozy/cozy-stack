@@ -39,6 +39,7 @@ func (d *Document) DocType() string { return consts.NotesDocuments }
 func (d *Document) Clone() couchdb.Doc {
 	cloned := *d
 	// XXX The schema is supposed to be immutable and, as such, is not cloned.
+	// TODO clone Content
 	return &cloned
 }
 
@@ -87,8 +88,14 @@ func (d *Document) getInitialContent(inst *instance.Instance) ([]byte, error) {
 		return nil, ErrInvalidSchema
 	}
 
-	// TODO this method is probably too weak to generate a valid node
-	node, err := schema.Node(schema.Spec.TopNode)
+	// Create an empty document that matches the schema constraints.
+	typ, ok := schema.Nodes[schema.Spec.TopNode]
+	if !ok {
+		inst.Logger().WithField("nspace", "notes").
+			Infof("The topNode is missing")
+		return nil, ErrInvalidSchema
+	}
+	node, err := typ.CreateAndFill()
 	if err != nil {
 		inst.Logger().WithField("nspace", "notes").
 			Infof("The topNode cannot be created: %s", err)

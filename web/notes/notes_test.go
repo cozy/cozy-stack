@@ -28,7 +28,7 @@ func TestCreateNote(t *testing.T) {
       "title": "A super note",
       "schema": {
         "nodes": [
-          ["doc", { "content": "block*" }],
+          ["doc", { "content": "block+" }],
           ["paragraph", { "content": "inline*", "group": "block" }],
           ["blockquote", { "content": "block+", "group": "block" }],
           ["horizontal_rule", { "group": "block" }],
