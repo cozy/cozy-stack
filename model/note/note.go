@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/prosemirror-go/model"
+	"github.com/cozy/prosemirror-go/transform"
 )
 
 // Document is the note document in memory. It is persisted to the VFS as a
@@ -70,7 +71,7 @@ func (d *Document) Create(inst *instance.Instance) (*vfs.FileDoc, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := writeFile(inst.VFS(), fileDoc, markdown); err != nil {
+	if err := writeFile(inst.VFS(), fileDoc, nil, markdown); err != nil {
 		return nil, err
 	}
 	return fileDoc, nil
@@ -163,9 +164,9 @@ func (d *Document) metadata() map[string]interface{} {
 }
 
 // TODO retry if another file with the same name already exists
-func writeFile(fs vfs.VFS, fileDoc *vfs.FileDoc, content []byte) (err error) {
+func writeFile(fs vfs.VFS, fileDoc, oldDoc *vfs.FileDoc, content []byte) (err error) {
 	var file vfs.File
-	file, err = fs.CreateFile(fileDoc, nil)
+	file, err = fs.CreateFile(fileDoc, oldDoc)
 	if err != nil {
 		return
 	}
@@ -246,6 +247,63 @@ func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) error
 	}
 
 	return inst.VFS().UpdateFileDoc(olddoc, file)
+}
+
+// ApplySteps takes a note and some steps, and tries to apply them. It is an
+// all or nothing change: if there is one error, the note won't be changed.
+// TODO fetch last info for file (if debounce)
+func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, steps []couchdb.JSONDoc) error {
+	if len(steps) == 0 {
+		return ErrNoSteps
+	}
+
+	oldContent, ok := file.Metadata["content"].(map[string]interface{})
+	if !ok {
+		return ErrInvalidFile
+	}
+	schemaSpec, ok := file.Metadata["schema"].(map[string]interface{})
+	if !ok {
+		return ErrInvalidSchema
+	}
+
+	spec := model.SchemaSpecFromJSON(schemaSpec)
+	schema, err := model.NewSchema(&spec)
+	if err != nil {
+		inst.Logger().WithField("nspace", "notes").
+			Infof("Cannot instantiate the schema: %s", err)
+		return ErrInvalidSchema
+	}
+
+	doc, err := model.NodeFromJSON(schema, oldContent)
+	if err != nil {
+		inst.Logger().WithField("nspace", "notes").
+			Infof("Cannot instantiate the document: %s", err)
+		return ErrInvalidFile
+	}
+
+	for _, s := range steps {
+		step, err := transform.StepFromJSON(schema, s.M)
+		if err != nil {
+			inst.Logger().WithField("nspace", "notes").
+				Infof("Cannot instantiate a step: %s", err)
+			return ErrInvalidSteps
+		}
+		result := step.Apply(doc)
+		if result.Failed != "" {
+			inst.Logger().WithField("nspace", "notes").
+				Infof("Cannot apply a step: %s", err)
+			return ErrCannotApply
+		}
+		doc = result.Doc
+	}
+
+	olddoc := file.Clone().(*vfs.FileDoc)
+	file.Metadata["content"] = doc.ToJSON()
+	// TODO markdown
+	markdown := []byte(doc.String())
+
+	// TODO add debounce
+	return writeFile(inst.VFS(), file, olddoc, markdown)
 }
 
 var _ couchdb.Doc = &Document{}

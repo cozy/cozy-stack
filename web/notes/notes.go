@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -58,6 +59,32 @@ func GetNote(c echo.Context) error {
 	return files.FileData(c, http.StatusOK, file, false, nil)
 }
 
+// PatchNote is the API handler for PATCH /notes/:id. It applies some steps on
+// the note document.
+func PatchNote(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fileID := c.Param("id")
+	file, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	if err := middlewares.AllowVFS(c, permission.PATCH, file); err != nil {
+		return err
+	}
+
+	var steps []couchdb.JSONDoc
+	if _, err := jsonapi.Bind(c.Request().Body, steps); err != nil {
+		return err
+	}
+
+	if err := note.ApplySteps(inst, file, steps); err != nil {
+		return wrapError(err)
+	}
+
+	return files.FileData(c, http.StatusOK, file, false, nil)
+}
+
 // ChangeTitle is the API handler for PUT /notes/:id/title. It updates the
 // title and renames the file.
 func ChangeTitle(c echo.Context) error {
@@ -88,6 +115,7 @@ func ChangeTitle(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
 	router.GET("/:id", GetNote)
+	router.PATCH("/:id", PatchNote)
 	router.PUT("/:id/title", ChangeTitle)
 }
 
@@ -97,6 +125,10 @@ func wrapError(err error) *jsonapi.Error {
 		return jsonapi.InvalidAttribute("schema", err)
 	case note.ErrInvalidFile:
 		return jsonapi.NotFound(err)
+	case note.ErrNoSteps, note.ErrInvalidSteps:
+		return jsonapi.BadRequest(err)
+	case note.ErrCannotApply:
+		return jsonapi.Conflict(err)
 	case os.ErrNotExist, vfs.ErrParentDoesNotExist, vfs.ErrParentInTrash:
 		return jsonapi.NotFound(err)
 	case vfs.ErrFileTooBig:
