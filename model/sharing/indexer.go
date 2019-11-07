@@ -223,6 +223,9 @@ func (s *sharingIndexer) bulkForceUpdateDoc(doc *vfs.FileDoc) error {
 	if doc.CozyMetadata != nil {
 		docs[0]["cozyMetadata"] = doc.CozyMetadata
 	}
+	if doc.InternalID != "" {
+		docs[0]["internalID"] = doc.InternalID
+	}
 	doc.SetRev(s.bulkRevs.Rev)
 	docs[0]["_rev"] = s.bulkRevs.Rev
 	docs[0]["_revisions"] = s.bulkRevs.Revisions
