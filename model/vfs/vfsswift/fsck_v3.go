@@ -17,7 +17,7 @@ func (sfs *swiftVFSV3) Fsck(accumulate func(log *vfs.FsckLog), failFast bool) er
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	tree, err := sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsDir {
-			entries[f.DocID] = f
+			entries[f.DocID+"/"+f.InternalID] = f
 		}
 	})
 	if err != nil {
@@ -36,7 +36,7 @@ func (sfs *swiftVFSV3) CheckFilesConsistency(accumulate func(log *vfs.FsckLog), 
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err := sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsDir {
-			entries[f.DirID+"/"+f.DocName] = f
+			entries[f.DocID+"/"+f.InternalID] = f
 		}
 	})
 	if err != nil {
@@ -98,7 +98,7 @@ func (sfs *swiftVFSV3) checkFiles(
 				delete(versions, v.DocID)
 				continue
 			}
-			f, ok := entries[docID]
+			f, ok := entries[docID+"/"+internalID]
 			if !ok {
 				accumulate(&vfs.FsckLog{
 					Type:    vfs.IndexMissing,
@@ -130,7 +130,7 @@ func (sfs *swiftVFSV3) checkFiles(
 						return nil, errFailFast
 					}
 				}
-				delete(entries, docID)
+				delete(entries, docID+"/"+internalID)
 			}
 		}
 		return objs, nil
