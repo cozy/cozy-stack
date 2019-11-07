@@ -273,6 +273,11 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, steps []couchdb.JSON
 	if !ok {
 		return ErrInvalidFile
 	}
+	revision, ok := file.Metadata["revision"].(float64)
+	if !ok {
+		return ErrInvalidFile
+	}
+	rev := int(revision)
 	schemaSpec, ok := file.Metadata["schema"].(map[string]interface{})
 	if !ok {
 		return ErrInvalidSchema
@@ -294,6 +299,7 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, steps []couchdb.JSON
 	}
 
 	for _, s := range steps {
+		rev++
 		step, err := transform.StepFromJSON(schema, s.M)
 		if err != nil {
 			inst.Logger().WithField("nspace", "notes").
@@ -309,8 +315,11 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, steps []couchdb.JSON
 		doc = result.Doc
 	}
 
+	// TODO persist the steps
+
 	olddoc := file.Clone().(*vfs.FileDoc)
 	file.Metadata["content"] = doc.ToJSON()
+	file.Metadata["revision"] = rev
 	// TODO markdown
 	markdown := []byte(doc.String())
 
