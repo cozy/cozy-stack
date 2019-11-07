@@ -1,5 +1,5 @@
 class Stack
-  ALERT_ADDR = "alert@spam.cozycloud.cc"
+  ALERT_ADDR = "alert@spam.cozycloud.cc".freeze
 
   class StackError < StandardError
     def message
@@ -32,11 +32,16 @@ class Stack
   def start
     vault = File.join Helpers.current_dir, "vault"
     FileUtils.mkdir_p vault
+    fsurl = "file://#{Helpers.current_dir}/"
+    if ENV["COZY_SWIFTTEST"]
+      ap "SWIFT"
+      fsurl = "'swift://127.0.0.1:6006/v1.0?UserName=swifttest&Password=swifttest&AuthURL=http://127.0.0.1:6006/v1.0'"
+    end
     system("cozy-stack config gen-keys '#{vault}/key'") unless File.exist?("#{vault}/key.enc")
     cmd = ["cozy-stack", "serve", "--log-level", "debug",
            "--mail-disable-tls", "--mail-port", "1025",
            "--port", @port, "--admin-port", @admin,
-           "--fs-url", "file://#{Helpers.current_dir}/",
+           "--fs-url", fsurl,
            "--vault-encryptor-key", "#{vault}/key.enc",
            "--vault-decryptor-key", "#{vault}/key.dec",
            "--mail-alert-address", ALERT_ADDR,

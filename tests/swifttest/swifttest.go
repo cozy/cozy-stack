@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	srv, err := swifttest.NewSwiftServer("localhost")
+	srv, err := swifttest.NewSwiftServer("localhost:6006")
 	if err != nil {
 		panic(err)
 	}
