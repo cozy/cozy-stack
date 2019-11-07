@@ -57,6 +57,17 @@ b.accept
 b.recipients.first.open
 ```
 
+## Swift
+
+It's complicated to launch the tests with Swift, but it's possible to simulate
+it with swifttest:
+
+```sh
+$ go run ./tests/swifttest
+$ cd tests/integration
+$ export COZY_SWIFTTEST=1
+$ bundle exec ruby tests/sharing_push_folder.rb
+```
 
 ## Logs
 

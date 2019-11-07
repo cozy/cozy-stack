@@ -79,11 +79,13 @@ describe "A folder" do
     assert_equal folder_recipient.name, folder.name
 
     # Check that the files are the same on disk
-    da = File.join Helpers.current_dir, inst.domain, folder.name
-    db = File.join Helpers.current_dir, inst_recipient.domain,
-                   Helpers::SHARED_WITH_ME, sharing.rules.first.title
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
+    unless ENV['COZY_SWIFTTEST']
+      da = File.join Helpers.current_dir, inst.domain, folder.name
+      db = File.join Helpers.current_dir, inst_recipient.domain,
+                     Helpers::SHARED_WITH_ME, sharing.rules.first.title
+      diff = Helpers.fsdiff da, db
+      diff.must_be_empty
+    end
 
     # Check the metadata are the same
     file = CozyFile.find inst, file.couch_id
@@ -126,11 +128,16 @@ describe "A folder" do
     assert_equal folder_recipient.name, folder.name
 
     # Check that the files are the same on disk
-    da = File.join Helpers.current_dir, inst.domain, folder.name
-    db = File.join Helpers.current_dir, inst_recipient.domain,
-                   Helpers::SHARED_WITH_ME, oneshot.rules.first.title
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
+    unless ENV['COZY_SWIFTTEST']
+      da = File.join Helpers.current_dir, inst.domain, folder.name
+      db = File.join Helpers.current_dir, inst_recipient.domain,
+                     Helpers::SHARED_WITH_ME, oneshot.rules.first.title
+      diff = Helpers.fsdiff da, db
+      diff.must_be_empty
+    end
+
+    assert_equal inst.fsck, ""
+    assert_equal inst_recipient.fsck, ""
 
     inst.remove
     inst_recipient.remove
