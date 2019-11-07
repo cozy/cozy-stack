@@ -207,6 +207,9 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 		if exists {
 			return nil, os.ErrExist
 		}
+	}
+
+	if newdoc.DocID == "" {
 		if newdoc.DocID, err = couchdb.UUID(sfs); err != nil {
 			return nil, err
 		}
