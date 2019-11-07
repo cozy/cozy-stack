@@ -547,6 +547,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		if name != "" {
 			indexer.IncrementRevision()
 			newdoc.DocName = name
+			newdoc.ResetFullpath()
 		}
 		file, err = fs.CreateFile(newdoc, nil)
 	}
@@ -680,6 +681,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 
 	indexer.UnstashRevision(stash)
 	newdoc.DocRev = tmpdoc.DocRev
+	newdoc.InternalID = tmpdoc.InternalID
 	err = fs.UpdateFileDoc(tmpdoc, newdoc)
 	if err == os.ErrExist {
 		pth, errp := newdoc.Path(fs)
