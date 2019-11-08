@@ -235,29 +235,88 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 			tracking = t
 		}
 	}
+	var subdomainsType string
+	switch config.GetConfig().Subdomains {
+	case config.FlatSubdomains:
+		subdomainsType = "flat"
+	case config.NestedSubdomains:
+		subdomainsType = "nested"
+	}
 
 	res := c.Response()
 	res.Header().Set("Content-Type", "text/html; charset=utf-8")
 	res.Header().Set("Cache-Control", "private, no-store, must-revalidate")
 	res.WriteHeader(http.StatusOK)
-	subdomainsType := config.GetConfig().Subdomains
-	return tmpl.Execute(res, echo.Map{
-		"Token":         token,
-		"Domain":        i.ContextualDomain(),
-		"ContextName":   i.ContextName,
-		"Locale":        i.Locale,
-		"AppSlug":       webapp.Slug(),
-		"AppName":       webapp.NameLocalized(i.Locale),
-		"AppEditor":     webapp.Editor,
-		"AppNamePrefix": webapp.NamePrefix,
-		"IconPath":      webapp.Icon,
-		"CozyBar":       cozybar(i, isLoggedIn),
-		"CozyClientJS":  cozyclientjs(i),
-		"ThemeCSS":      middlewares.ThemeCSS(i),
-		"Tracking":      tracking,
-		"Favicon":       middlewares.Favicon(i),
-		"SubDomain":     subdomainsType,
+	return tmpl.Execute(res, serveParams{
+		Token:      token,
+		SubDomain:  subdomainsType,
+		Tracking:   tracking,
+		webapp:     webapp,
+		instance:   i,
+		isLoggedIn: isLoggedIn,
 	})
+}
+
+// serveParams is a struct used for rendering the index.html of webapps. A
+// struct is used, and not a map, to have some methods declared on it. It
+// allows to be lazy when constructing the paths of the assets: if an asset is
+// not used in the template, the method won't be called and the stack can avoid
+// checking if this asset is dynamically overridden in this instance context.
+type serveParams struct {
+	Token      string
+	SubDomain  string
+	Tracking   string
+	webapp     *app.WebappManifest
+	instance   *instance.Instance
+	isLoggedIn bool
+}
+
+func (s serveParams) Domain() string {
+	return s.instance.ContextualDomain()
+}
+
+func (s serveParams) ContextName() string {
+	return s.instance.ContextName
+}
+
+func (s serveParams) Locale() string {
+	return s.instance.Locale
+}
+
+func (s serveParams) AppSlug() string {
+	return s.webapp.Slug()
+}
+
+func (s serveParams) AppName() string {
+	return s.webapp.NameLocalized(s.instance.Locale)
+}
+
+func (s serveParams) AppEditor() string {
+	return s.webapp.Editor
+}
+
+func (s serveParams) AppNamePrefix() string {
+	return s.webapp.NamePrefix
+}
+
+func (s serveParams) IconPath() string {
+	return s.webapp.Icon
+}
+
+func (s serveParams) CozyBar() template.HTML {
+	return cozybar(s.instance, s.isLoggedIn)
+}
+
+func (s serveParams) CozyClientJS() template.HTML {
+	return cozyclientjs(s.instance)
+}
+
+func (s serveParams) ThemeCSS() template.HTML {
+	return middlewares.ThemeCSS(s.instance)
+}
+
+func (s serveParams) Favicon() template.HTML {
+	return middlewares.Favicon(s.instance)
 }
 
 func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug string) error {
