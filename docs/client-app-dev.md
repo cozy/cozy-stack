@@ -168,6 +168,7 @@ a template and will insert the relevant values.
     assets](https://docs.cozy.io/en/cozy-stack/cli/cozy-stack_config_insert-asset/)
     for more informations.
 -   `{{.Favicon}}` will be replaced by the favicon served by the stack.
+-   `{{.SubDomain}}` will be replaced by `flat` or `nested`.
 
 So, the `index.html` should probably looks like:
 

@@ -240,6 +240,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 	res.Header().Set("Content-Type", "text/html; charset=utf-8")
 	res.Header().Set("Cache-Control", "private, no-store, must-revalidate")
 	res.WriteHeader(http.StatusOK)
+	subdomainsType := config.GetConfig().Subdomains
 	return tmpl.Execute(res, echo.Map{
 		"Token":         token,
 		"Domain":        i.ContextualDomain(),
@@ -255,6 +256,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		"ThemeCSS":      middlewares.ThemeCSS(i),
 		"Tracking":      tracking,
 		"Favicon":       middlewares.Favicon(i),
+		"SubDomain":     subdomainsType,
 	})
 }
 
