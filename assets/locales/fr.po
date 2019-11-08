@@ -523,7 +523,7 @@ msgid "Mail Archive Button text"
 msgstr "Télécharger vos données"
 
 msgid "Mail Two Factor Subject"
-msgstr "Vérifier votre connexion à votre %s"
+msgstr "Code de connexion à usage unique"
 
 msgid "Mail Two Factor Intro"
 msgstr ""
