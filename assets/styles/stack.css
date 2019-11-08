@@ -292,7 +292,8 @@ li[class^='io.cozy.bank.settings']:before {
 li[class^='io.cozy.accounts']:before {
   background-image: url('../images/icon-accounts.svg');
 }
-li[class^='io.cozy.apps']:before {
+li[class^='io.cozy.apps']:before,
+li[class^='io.cozy.apps.suggestions']:before {
   background-image: url('../images/icon-apps.svg');
 }
 li[class^='io.cozy.bank.accounts']:before {
