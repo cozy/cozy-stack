@@ -19,7 +19,7 @@ func initMailTemplates() {
 	mailTemplater = MailTemplater{
 		"passphrase_reset":             subjectEntry{"Mail Reset Passphrase Subject", nil},
 		"archiver":                     subjectEntry{"Mail Archive Subject", nil},
-		"two_factor":                   subjectEntry{"Mail Two Factor Subject", []string{templateTitleVar}},
+		"two_factor":                   subjectEntry{"Mail Two Factor Subject", nil},
 		"two_factor_mail_confirmation": subjectEntry{"Mail Two Factor Mail Confirmation Subject", []string{templateTitleVar}},
 		"new_connection":               subjectEntry{"Mail New Connection Subject", []string{templateTitleVar}},
 		"new_registration":             subjectEntry{"Mail New Registration Subject", []string{templateTitleVar}},

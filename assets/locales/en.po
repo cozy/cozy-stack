@@ -467,7 +467,7 @@ msgid "Mail Archive Button text"
 msgstr "Download your data"
 
 msgid "Mail Two Factor Subject"
-msgstr "Verify your connection to your %s"
+msgstr "One-time connection code"
 
 msgid "Mail Two Factor Intro"
 msgstr "Two-factor authentication is enabled for your Cozy. Enter the following code to verify your identity:"
