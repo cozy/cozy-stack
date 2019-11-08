@@ -375,6 +375,9 @@ msgstr "Accounts"
 msgid "Permissions io.cozy.apps"
 msgstr "Lijst met geïnstalleerde apps"
 
+msgid "Permissions io.cozy.apps.suggestions"
+msgstr "App-suggesties"
+
 msgid "Permissions io.cozy.bank.accounts"
 msgstr "Bankrekeningen"
 
