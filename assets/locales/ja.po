@@ -349,6 +349,9 @@ msgstr "アカウント"
 msgid "Permissions io.cozy.apps"
 msgstr "インストールされたアプリケーションのリスト"
 
+msgid "Permissions io.cozy.apps.suggestions"
+msgstr "アプリケーションの提案"
+
 msgid "Permissions io.cozy.bank.accounts"
 msgstr "銀行口座"
 
