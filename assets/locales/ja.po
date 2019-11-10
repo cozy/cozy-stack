@@ -473,7 +473,7 @@ msgid "Mail Archive Button text"
 msgstr "データをダウンロード"
 
 msgid "Mail Two Factor Subject"
-msgstr "%s への接続を検証"
+msgstr "ワンタイム接続コード"
 
 msgid "Mail Two Factor Intro"
 msgstr "Cozy の二要素認証が有効になっています。 IDを確認するために次のコードを入力してください:"
