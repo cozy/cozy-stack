@@ -4,7 +4,6 @@ package note
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/prosemirror-go/model"
-	"github.com/cozy/prosemirror-go/transform"
 )
 
 // Document is the note document in memory. It is persisted to the VFS as a
@@ -23,7 +21,7 @@ type Document struct {
 	DocRev   string          `json:"_rev,omitempty"`
 	Title    string          `json:"title"`
 	DirID    string          `json:"dir_id,omitempty"`
-	Revision int             `json:"revision"`
+	Revision string          `json:"revision"`
 	Schema   json.RawMessage `json:"schema"`
 	Content  interface{}     `json:"content,omitempty"`
 }
@@ -45,10 +43,10 @@ func (d *Document) Clone() couchdb.Doc {
 	return &cloned
 }
 
-// SetID changes the directory qualified identifier
+// SetID changes the document qualified identifier
 func (d *Document) SetID(id string) { d.DocID = id }
 
-// SetRev changes the directory revision
+// SetRev changes the document revision
 func (d *Document) SetRev(rev string) { d.DocRev = rev }
 
 // Create the file in the VFS for this note.
@@ -59,7 +57,7 @@ func (d *Document) Create(inst *instance.Instance) (*vfs.FileDoc, error) {
 	}
 	defer lock.Unlock()
 
-	d.Revision = 0
+	d.Revision = "0"
 	content, err := d.getInitialContent(inst)
 	if err != nil {
 		return nil, err
@@ -254,84 +252,6 @@ func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) error
 	}
 
 	return inst.VFS().UpdateFileDoc(olddoc, file)
-}
-
-// ApplySteps takes a note and some steps, and tries to apply them. It is an
-// all or nothing change: if there is one error, the note won't be changed.
-// TODO fetch last info for file (if debounce)
-func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastRev string, steps []couchdb.JSONDoc) error {
-	lock := inst.NotesLock()
-	if err := lock.Lock(); err != nil {
-		return err
-	}
-	defer lock.Unlock()
-
-	if len(steps) == 0 {
-		return ErrNoSteps
-	}
-
-	oldContent, ok := file.Metadata["content"].(map[string]interface{})
-	if !ok {
-		return ErrInvalidFile
-	}
-	revision, ok := file.Metadata["revision"].(float64)
-	if !ok {
-		return ErrInvalidFile
-	}
-	rev := int(revision)
-	if lastRev != fmt.Sprintf("%d", rev) {
-		return ErrCannotApply
-	}
-
-	schemaSpec, ok := file.Metadata["schema"].(map[string]interface{})
-	if !ok {
-		return ErrInvalidSchema
-	}
-
-	spec := model.SchemaSpecFromJSON(schemaSpec)
-	schema, err := model.NewSchema(&spec)
-	if err != nil {
-		inst.Logger().WithField("nspace", "notes").
-			Infof("Cannot instantiate the schema: %s", err)
-		return ErrInvalidSchema
-	}
-
-	doc, err := model.NodeFromJSON(schema, oldContent)
-	if err != nil {
-		inst.Logger().WithField("nspace", "notes").
-			Infof("Cannot instantiate the document: %s", err)
-		return ErrInvalidFile
-	}
-
-	for _, s := range steps {
-		step, err := transform.StepFromJSON(schema, s.M)
-		if err != nil {
-			inst.Logger().WithField("nspace", "notes").
-				Infof("Cannot instantiate a step: %s", err)
-			return ErrInvalidSteps
-		}
-		result := step.Apply(doc)
-		if result.Failed != "" {
-			inst.Logger().WithField("nspace", "notes").
-				Infof("Cannot apply a step: %s (rev=%d)", result.Failed, rev)
-			return ErrCannotApply
-		}
-		doc = result.Doc
-		rev++
-	}
-
-	// TODO persist the steps
-
-	olddoc := file.Clone().(*vfs.FileDoc)
-	file.Metadata["content"] = doc.ToJSON()
-	file.Metadata["revision"] = rev
-	// TODO markdown
-	markdown := []byte(doc.String())
-
-	// TODO add debounce
-	file.ByteSize = int64(len(markdown))
-	file.MD5Sum = nil
-	return writeFile(inst.VFS(), file, olddoc, markdown)
 }
 
 var _ couchdb.Doc = &Document{}

@@ -116,7 +116,7 @@ Content-Type: application/vnd.api+json
       "metadata": {
         "title": "My new note",
         "content": { "type": "doc", "content": [{ "type": "paragraph" }] },
-        "revision": 0,
+        "revision": "0",
         "schema": {
           "nodes": [
             ["doc", { "content": "block+" }],
@@ -230,7 +230,7 @@ Content-Type: application/vnd.api+json
       "metadata": {
         "title": "My new note",
         "content": { "type": "doc", "content": [{ "type": "horizontal_rule" }] },
-        "revision": 3,
+        "revision": "3",
         "schema": {
           "nodes": [
             ["doc", { "content": "block+" }],
@@ -305,9 +305,153 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### GET /notes/:id/steps?revision=xxx
+### GET /notes/:id/steps?Revision=xxx
 
-It returns the steps since the given revision.
+It returns the steps since the given revision. If the revision is too old, and
+the steps are no longer available, it returns a 412 response with the whole
+document for the note.
+
+#### Request
+
+```http
+GET /notes/bf0dbdb0-e1ed-0137-8548-543d7eb8149c/steps?Revision=3 HTTP/1.1
+Host: alice.example.net
+Accept: application/vnd.api+json
+```
+
+#### Response (success)
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [{
+    "type": "io.cozy.notes.steps",
+    "attributes": {
+      "stepType": "replace",
+      "from": 1,
+      "to": 1,
+      "slice": {
+        "content": [{ "type": "text", "text": "H" }]
+      }
+    }
+  }, {
+    "type": "io.cozy.notes.steps",
+    "attributes": {
+      "stepType": "replace",
+      "from": 2,
+      "to": 2,
+      "slice": {
+        "content": [{ "type": "text", "text": "ello" }]
+      }
+    }
+  }]
+}
+```
+
+#### Response (failure)
+
+```http
+HTTP/1.1 412 Precondition Failed
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files",
+    "id": "bf0dbdb0-e1ed-0137-8548-543d7eb8149c",
+    "meta": {
+      "rev": "4-1482b88a"
+    },
+    "attributes": {
+      "type": "file",
+      "name": "My new note.cozy-note",
+      "trashed": false,
+      "md5sum": "NjhiMzI5ZGE5ODkzZTM0MDk5YzdkOGFkNWNiOWM5NDAgIC0K",
+      "created_at": "2019-11-05T12:38:04Z",
+      "updated_at": "2019-11-05T12:38:52Z",
+      "tags": [],
+      "metadata": {
+        "title": "My new note",
+        "content": { "type": "doc", "content": [{ "type": "horizontal_rule" }] },
+        "revision": "6",
+        "schema": {
+          "nodes": [
+            ["doc", { "content": "block+" }],
+            ["paragraph", { "content": "inline*", "group": "block" }],
+            ["blockquote", { "content": "block+", "group": "block" }],
+            ["horizontal_rule", { "group": "block" }],
+            [
+              "heading",
+              {
+                "content": "inline*",
+                "group": "block",
+                "attrs": { "level": { "default": 1 } }
+              }
+            ],
+            ["code_block", { "content": "text*", "marks": "", "group": "block" }],
+            ["text", { "group": "inline" }],
+            [
+              "image",
+              {
+                "group": "inline",
+                "inline": true,
+                "attrs": { "alt": {}, "src": {}, "title": {} }
+              }
+            ],
+            ["hard_break", { "group": "inline", "inline": true }],
+            [
+              "ordered_list",
+              {
+                "content": "list_item+",
+                "group": "block",
+                "attrs": { "order": { "default": 1 } }
+              }
+            ],
+            ["bullet_list", { "content": "list_item+", "group": "block" }],
+            ["list_item", { "content": "paragraph block*" }]
+          ],
+          "marks": [
+            ["link", { "attrs": { "href": {}, "title": {} }, "inclusive": false }],
+            ["em", {}],
+            ["strong", {}],
+            ["code", {}]
+          ],
+          "topNode": "doc"
+        }
+      },
+      "size": 4,
+      "executable": false,
+      "class": "text",
+      "mime": "text/markdown",
+      "cozyMetadata": {
+        "doctypeVersion": "1",
+        "metadataVersion": 1,
+        "createdAt": "2019-11-05T12:38:04Z",
+        "createdOn": "https://alice.example.net/",
+        "updatedAt": "2019-11-05T12:38:04Z",
+        "uploadedAt": "2019-11-05T12:38:04Z",
+        "uploadedOn": "https://alice.example.net/"
+      }
+    },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/f48d9370-e1ec-0137-8547-543d7eb8149c"
+        },
+        "data": {
+          "type": "io.cozy.files",
+          "id": "f48d9370-e1ec-0137-8547-543d7eb8149c"
+        }
+      }
+    }
+  }
+}
+```
 
 ### PUT /notes/:id/title
 
@@ -359,7 +503,7 @@ Content-Type: application/vnd.api+json
       "metadata": {
         "title": "A new title for my note",
         "content": { "type": "doc", "content": [{ "type": "horizontal_rule" }] },
-        "revision": 3,
+        "revision": "3",
         "schema": {
           "nodes": [
             ["doc", { "content": "block+" }],
@@ -444,7 +588,7 @@ note must be sent in the `If-Match` header to avoid conflicts.
 ```http
 PATCH /notes/bf0dbdb0-e1ed-0137-8548-543d7eb8149c HTTP/1.1
 Host: alice.example.net
-If-Match 3
+If-Match: 3
 Content-Type: application/vnd.api+json
 ```
 
@@ -503,7 +647,7 @@ Content-Type: application/vnd.api+json
           "type": "doc",
           "content": [{ "type": "paragraph", "text": "Hello" }]
         },
-        "revision": 5,
+        "revision": "5",
         "schema": {
           "nodes": [
             ["doc", { "content": "block+" }],

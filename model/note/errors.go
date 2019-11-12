@@ -15,4 +15,7 @@ var (
 	// ErrCannotApply is used when trying to apply some steps, but it fails
 	// because of a conflict. The client can try to rebase the steps.
 	ErrCannotApply = errors.New("Cannot apply the steps")
+	// ErrTooOld is used when the steps just after the given revision are no
+	// longer available.
+	ErrTooOld = errors.New("The revision is too old")
 )

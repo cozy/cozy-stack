@@ -12,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -60,6 +59,40 @@ func GetNote(c echo.Context) error {
 	return files.FileData(c, http.StatusOK, file, false, nil)
 }
 
+// GetSteps is the API handler for GET /notes/:id/steps?Revision=xxx. It
+// returns the steps since the given revision. If the revision is too old, and
+// the steps are no longer available, it returns a 412 response with the whole
+// document for the note.
+func GetSteps(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fileID := c.Param("id")
+	file, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
+		return err
+	}
+
+	rev := c.QueryParam("Revision")
+	steps, err := note.GetSteps(inst, file, rev)
+	if err == note.ErrTooOld {
+		// TODO fetch the updated title and content from redis
+		return files.FileData(c, http.StatusPreconditionFailed, file, false, nil)
+	}
+	if err != nil {
+		return wrapError(err)
+	}
+
+	objs := make([]jsonapi.Object, len(steps))
+	for i, step := range steps {
+		objs[i] = step
+	}
+
+	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+}
+
 // PatchNote is the API handler for PATCH /notes/:id. It applies some steps on
 // the note document.
 func PatchNote(c echo.Context) error {
@@ -78,7 +111,7 @@ func PatchNote(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	steps := make([]couchdb.JSONDoc, len(objs))
+	steps := make([]note.Step, len(objs))
 	for i, obj := range objs {
 		if obj.Attributes == nil {
 			return jsonapi.BadJSON()
@@ -86,7 +119,6 @@ func PatchNote(c echo.Context) error {
 		if err = json.Unmarshal(*obj.Attributes, &steps[i]); err != nil {
 			return wrapError(err)
 		}
-		steps[i].Type = consts.NotesSteps
 	}
 
 	ifMatch := c.Request().Header.Get("If-Match")
@@ -127,6 +159,7 @@ func ChangeTitle(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
 	router.GET("/:id", GetNote)
+	router.GET("/:id/steps", GetSteps)
 	router.PATCH("/:id", PatchNote)
 	router.PUT("/:id/title", ChangeTitle)
 }
