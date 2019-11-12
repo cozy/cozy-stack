@@ -374,6 +374,9 @@ msgstr "Cuentas"
 msgid "Permissions io.cozy.apps"
 msgstr "Lista de las aplicaciones instaladas"
 
+msgid "Permissions io.cozy.apps.suggestions"
+msgstr "Aplicaciones sugeridas"
+
 msgid "Permissions io.cozy.bank.accounts"
 msgstr "Cuentas bancarias"
 
@@ -501,7 +504,7 @@ msgid "Mail Archive Button text"
 msgstr "Descargar sus datos de Cozy"
 
 msgid "Mail Two Factor Subject"
-msgstr "Verificar su conexión a %s"
+msgstr "Código de conexión único"
 
 msgid "Mail Two Factor Intro"
 msgstr ""
@@ -594,6 +597,9 @@ msgstr "con usted!"
 
 msgid "Mail Sharing Request Button text"
 msgstr "Acepto compartir este documento"
+
+msgid "Mail Alert Account Subject"
+msgstr "Error en la eliminación de instancias durante la limpieza de cuentas"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Conectar a su Cozy"
