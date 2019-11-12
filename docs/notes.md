@@ -436,13 +436,15 @@ Content-Type: application/vnd.api+json
 
 ### PATCH /notes/:id
 
-It sends some steps to apply on the document.
+It sends some steps to apply on the document. The last known revision of the
+note must be sent in the `If-Match` header to avoid conflicts.
 
 #### Request
 
 ```http
 PATCH /notes/bf0dbdb0-e1ed-0137-8548-543d7eb8149c HTTP/1.1
 Host: alice.example.net
+If-Match 3
 Content-Type: application/vnd.api+json
 ```
 

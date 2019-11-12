@@ -4,6 +4,7 @@ package note
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -258,7 +259,7 @@ func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) error
 // ApplySteps takes a note and some steps, and tries to apply them. It is an
 // all or nothing change: if there is one error, the note won't be changed.
 // TODO fetch last info for file (if debounce)
-func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, steps []couchdb.JSONDoc) error {
+func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastRev string, steps []couchdb.JSONDoc) error {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
 		return err
@@ -278,6 +279,10 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, steps []couchdb.JSON
 		return ErrInvalidFile
 	}
 	rev := int(revision)
+	if lastRev != fmt.Sprintf("%d", rev) {
+		return ErrCannotApply
+	}
+
 	schemaSpec, ok := file.Metadata["schema"].(map[string]interface{})
 	if !ok {
 		return ErrInvalidSchema
@@ -299,7 +304,6 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, steps []couchdb.JSON
 	}
 
 	for _, s := range steps {
-		rev++
 		step, err := transform.StepFromJSON(schema, s.M)
 		if err != nil {
 			inst.Logger().WithField("nspace", "notes").
@@ -309,10 +313,11 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, steps []couchdb.JSON
 		result := step.Apply(doc)
 		if result.Failed != "" {
 			inst.Logger().WithField("nspace", "notes").
-				Infof("Cannot apply a step: %s", err)
+				Infof("Cannot apply a step: %s (rev=%d)", result.Failed, rev)
 			return ErrCannotApply
 		}
 		doc = result.Doc
+		rev++
 	}
 
 	// TODO persist the steps
@@ -324,6 +329,8 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, steps []couchdb.JSON
 	markdown := []byte(doc.String())
 
 	// TODO add debounce
+	file.ByteSize = int64(len(markdown))
+	file.MD5Sum = nil
 	return writeFile(inst.VFS(), file, olddoc, markdown)
 }
 

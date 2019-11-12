@@ -4,6 +4,7 @@
 package notes
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 
@@ -73,12 +74,23 @@ func PatchNote(c echo.Context) error {
 		return err
 	}
 
-	var steps []couchdb.JSONDoc
-	if _, err := jsonapi.Bind(c.Request().Body, steps); err != nil {
+	objs, err := jsonapi.BindCompound(c.Request().Body)
+	if err != nil {
 		return err
 	}
+	steps := make([]couchdb.JSONDoc, len(objs))
+	for i, obj := range objs {
+		if obj.Attributes == nil {
+			return jsonapi.BadJSON()
+		}
+		if err = json.Unmarshal(*obj.Attributes, &steps[i]); err != nil {
+			return wrapError(err)
+		}
+		steps[i].Type = consts.NotesSteps
+	}
 
-	if err := note.ApplySteps(inst, file, steps); err != nil {
+	ifMatch := c.Request().Header.Get("If-Match")
+	if err := note.ApplySteps(inst, file, ifMatch, steps); err != nil {
 		return wrapError(err)
 	}
 

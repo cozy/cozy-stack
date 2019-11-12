@@ -87,4 +87,6 @@ const (
 	// NotesDocuments doc type is used for manipulating the documents that
 	// represents a note before they are persisted to a file.
 	NotesDocuments = "io.cozy.notes.documents"
+	// NotesSteps doc type is used for patching a note.
+	NotesSteps = "io.cozy.notes.steps"
 )

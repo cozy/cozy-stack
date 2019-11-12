@@ -3,6 +3,7 @@ package notes
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,6 +13,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -131,7 +134,7 @@ func TestChangeTitle(t *testing.T) {
   }
 }`
 	req, _ := http.NewRequest("PUT", ts.URL+"/notes/"+noteID+"/title", bytes.NewBufferString(body))
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Content-Type", "application/vnd.api+json")
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
@@ -152,6 +155,69 @@ func TestChangeTitle(t *testing.T) {
 	assert.NotNil(t, meta["content"])
 }
 
+func TestPatchNote(t *testing.T) {
+	body := `{
+  "data": [{
+    "type": "io.cozy.notes.steps",
+    "attributes": {
+      "stepType": "replace",
+      "from": 1,
+      "to": 1,
+      "slice": {
+        "content": [{ "type": "text", "text": "H" }]
+      }
+    }
+  }, {
+    "type": "io.cozy.notes.steps",
+    "attributes": {
+      "stepType": "replace",
+      "from": 2,
+      "to": 2,
+      "slice": {
+        "content": [{ "type": "text", "text": "ello" }]
+      }
+    }
+  }]
+}`
+	req, _ := http.NewRequest("PATCH", ts.URL+"/notes/"+noteID, bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("If-Match", "0")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	if res.StatusCode != 200 {
+		fmt.Printf("result = %#v\n", result)
+		return
+	}
+
+	data, _ := result["data"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.files", data["type"])
+	assert.Equal(t, noteID, data["id"])
+	attrs := data["attributes"].(map[string]interface{})
+	meta, _ := attrs["metadata"].(map[string]interface{})
+	assert.EqualValues(t, 2, meta["revision"])
+	assert.NotNil(t, meta["schema"])
+	assert.NotNil(t, meta["content"])
+	fmt.Printf("content = %#v\n\n", meta["content"])
+
+	req, _ = http.NewRequest("PATCH", ts.URL+"/notes/"+noteID, bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("If-Match", "0")
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 409, res.StatusCode)
+
+	var result2 map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result2)
+	assert.NoError(t, err)
+	fmt.Printf("result = %#v\n", result2)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
@@ -160,5 +226,6 @@ func TestMain(m *testing.M) {
 	_, token = setup.GetTestClient(consts.Files)
 
 	ts = setup.GetTestServer("/notes", Routes)
+	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	os.Exit(setup.Run())
 }
