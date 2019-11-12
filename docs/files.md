@@ -986,6 +986,11 @@ see below.
 
 Also create a file download. But it takes the id of the file and not its path.
 
+### POST /files/downloads?VersionId=file_id/version_id
+
+This is a third way to create a file download. But, this time, it is for
+downloading an old version of a file.
+
 ### GET /files/downloads/:secret/:name
 
 Allows to download a file with a secret created from the route above.

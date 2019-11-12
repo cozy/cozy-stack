@@ -17,9 +17,11 @@ import (
 // archive, or a metadata object for an upcoming upload.
 type Store interface {
 	AddFile(db prefixer.Prefixer, filePath string) (string, error)
+	AddVersion(db prefixer.Prefixer, versionID string) (string, error)
 	AddArchive(db prefixer.Prefixer, archive *Archive) (string, error)
 	AddMetadata(db prefixer.Prefixer, metadata *Metadata) (string, error)
 	GetFile(db prefixer.Prefixer, key string) (string, error)
+	GetVersion(db prefixer.Prefixer, key string) (string, error)
 	GetArchive(db prefixer.Prefixer, key string) (*Archive, error)
 	GetMetadata(db prefixer.Prefixer, key string) (*Metadata, error)
 }
@@ -87,6 +89,17 @@ func (s *memStore) AddFile(db prefixer.Prefixer, filePath string) (string, error
 	return key, nil
 }
 
+func (s *memStore) AddVersion(db prefixer.Prefixer, versionID string) (string, error) {
+	key := makeSecret()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.vals[db.DBPrefix()+":"+key] = &memRef{
+		val: versionID,
+		exp: time.Now().Add(storeTTL),
+	}
+	return key, nil
+}
+
 func (s *memStore) AddArchive(db prefixer.Prefixer, archive *Archive) (string, error) {
 	key := makeSecret()
 	s.mu.Lock()
@@ -110,6 +123,25 @@ func (s *memStore) AddMetadata(db prefixer.Prefixer, metadata *Metadata) (string
 }
 
 func (s *memStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	key = db.DBPrefix() + ":" + key
+	ref, ok := s.vals[key]
+	if !ok {
+		return "", nil
+	}
+	if time.Now().After(ref.exp) {
+		delete(s.vals, key)
+		return "", nil
+	}
+	f, ok := ref.val.(string)
+	if !ok {
+		return "", nil
+	}
+	return f, nil
+}
+
+func (s *memStore) GetVersion(db prefixer.Prefixer, key string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key = db.DBPrefix() + ":" + key
@@ -182,6 +214,14 @@ func (s *redisStore) AddFile(db prefixer.Prefixer, filePath string) (string, err
 	return key, nil
 }
 
+func (s *redisStore) AddVersion(db prefixer.Prefixer, versionID string) (string, error) {
+	key := makeSecret()
+	if err := s.c.Set(db.DBPrefix()+":"+key, versionID, storeTTL).Err(); err != nil {
+		return "", err
+	}
+	return key, nil
+}
+
 func (s *redisStore) AddArchive(db prefixer.Prefixer, archive *Archive) (string, error) {
 	v, err := json.Marshal(archive)
 	if err != nil {
@@ -207,6 +247,17 @@ func (s *redisStore) AddMetadata(db prefixer.Prefixer, metadata *Metadata) (stri
 }
 
 func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
+	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return f, nil
+}
+
+func (s *redisStore) GetVersion(db prefixer.Prefixer, key string) (string, error) {
 	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
 	if err == redis.Nil {
 		return "", nil
