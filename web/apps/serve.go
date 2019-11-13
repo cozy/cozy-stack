@@ -319,6 +319,13 @@ func (s serveParams) Favicon() template.HTML {
 	return middlewares.Favicon(s.instance)
 }
 
+func (s serveParams) DefaultWallpaper() string {
+	return statik.AssetPath(
+		s.instance.ContextualDomain(),
+		"/images/default-wallpaper.jpg",
+		s.instance.ContextName)
+}
+
 func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug string) error {
 	u := *(c.Request().URL)
 	u.Scheme = i.Scheme()
