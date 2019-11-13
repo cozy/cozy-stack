@@ -654,7 +654,7 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 	if c.QueryParam("Dl") == "1" {
 		disposition = "attachment"
 	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, nil, disposition, c.Request(), c.Response())
+	err = vfs.ServeFileContent(instance.VFS(), doc, nil, "", disposition, c.Request(), c.Response())
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -686,7 +686,7 @@ func ReadFileContentFromVersion(c echo.Context) error {
 	if c.QueryParam("Dl") == "1" {
 		disposition = "attachment"
 	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, version, disposition, c.Request(), c.Response())
+	err = vfs.ServeFileContent(instance.VFS(), doc, version, "", disposition, c.Request(), c.Response())
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -814,7 +814,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	} else if !checkPermission {
 		addCSPRuleForDirectLink(c, doc.Class, doc.Mime)
 	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, nil, disposition, c.Request(), c.Response())
+	err = vfs.ServeFileContent(instance.VFS(), doc, nil, "", disposition, c.Request(), c.Response())
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -929,8 +929,12 @@ func FileDownloadCreateHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
+	filename := c.QueryParam("Filename")
+	if filename == "" {
+		filename = doc.DocName
+	}
 	links := &jsonapi.LinksList{
-		Related: "/files/downloads/" + secret + "/" + doc.DocName,
+		Related: "/files/downloads/" + secret + "/" + filename,
 	}
 
 	return fileData(c, http.StatusOK, doc, false, links)
@@ -996,7 +1000,8 @@ func versionDownloadHandler(c echo.Context, secret string) error {
 		addCSPRuleForDirectLink(c, doc.Class, doc.Mime)
 	}
 
-	err = vfs.ServeFileContent(instance.VFS(), doc, version, disposition, c.Request(), c.Response())
+	filename := c.Param("fake-name")
+	err = vfs.ServeFileContent(instance.VFS(), doc, version, filename, disposition, c.Request(), c.Response())
 	if err != nil {
 		return WrapVfsError(err)
 	}
