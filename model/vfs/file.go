@@ -213,11 +213,14 @@ func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class strin
 // non-ranged requests
 //
 // The content disposition is inlined.
-func ServeFileContent(fs VFS, doc *FileDoc, version *Version, disposition string, req *http.Request, w http.ResponseWriter) error {
+func ServeFileContent(fs VFS, doc *FileDoc, version *Version, filename, disposition string, req *http.Request, w http.ResponseWriter) error {
+	if filename == "" {
+		filename = doc.DocName
+	}
 	header := w.Header()
 	header.Set("Content-Type", doc.Mime)
 	if disposition != "" {
-		header.Set("Content-Disposition", ContentDisposition(disposition, doc.DocName))
+		header.Set("Content-Disposition", ContentDisposition(disposition, filename))
 	}
 
 	if header.Get("Range") == "" {
@@ -237,7 +240,7 @@ func ServeFileContent(fs VFS, doc *FileDoc, version *Version, disposition string
 	}
 	defer content.Close()
 
-	http.ServeContent(w, req, doc.DocName, doc.UpdatedAt, content)
+	http.ServeContent(w, req, filename, doc.UpdatedAt, content)
 	return nil
 }
 

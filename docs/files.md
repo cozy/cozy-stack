@@ -991,6 +991,9 @@ Also create a file download. But it takes the id of the file and not its path.
 This is a third way to create a file download. But, this time, it is for
 downloading an old version of a file.
 
+These 3 routes also accept a `Filename=...` parameter in the query-string to
+change the filename that will be used for the downloaded file.
+
 ### GET /files/downloads/:secret/:name
 
 Allows to download a file with a secret created from the route above.
@@ -1004,6 +1007,11 @@ By default the `content-disposition` will be `inline`, but it will be
 **This route does not require Basic Authentification**
 
 ## Versions
+
+The identifier of the `io.cozy.files.versions` is composed of the `file-id` and
+another string called the `version-id`, separated by a `/`. So, when a route
+makes reference to `/something/:file-id/:version-id`, you can use the identifier
+of the version document (without having to prepend the file identifier).
 
 ### GET /files/download/:file-id/:version-id
 
