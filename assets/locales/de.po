@@ -1,14 +1,14 @@
 # Translators:
+# Bruno Michel, 2019
 # Nos_ <n.schwirz@freenet.de>, 2019
 # Mario Angermann, 2019
 # Adrian Nöthlich <admin.noethlich@hgw-iserv.de>, 2019
 # Nils Jakobi <jakobi.nils@gmail.com>, 2019
-# Bruno Michel, 2019
-# James IndeedNot <indeednotjames@mailbox.org>, 2019
+# IndeedNotJames <indeednotjames@mailbox.org>, 2019
 # 
 msgid ""
 msgstr ""
-"Last-Translator: James IndeedNot <indeednotjames@mailbox.org>, 2019\n"
+"Last-Translator: IndeedNotJames <indeednotjames@mailbox.org>, 2019\n"
 "Language-Team: German (https://www.transifex.com/cozy/teams/39753/de/)\n"
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -36,7 +36,7 @@ msgstr "Das eingegebene Passwort ist falsch, bitte versuche es erneut."
 
 msgid "URL Discovery error"
 msgstr ""
-"Die Cozy URL, die du eingegeben hast ist falsch, bitte versuche es erneut"
+"Die Cozy URL, die du eingegeben hast, ist falsch. Bitte versuche es erneut"
 
 msgid "Login Welcome"
 msgstr "Willkommen!"
@@ -57,9 +57,7 @@ msgid "Login Password hide"
 msgstr "Verstecke Passwort"
 
 msgid "Login Long Session"
-msgstr ""
-"Speichere einen Cookie auf dem Gerät um mich das nächste mal automatisch "
-"anzumelden."
+msgstr "Angemeldet bleiben"
 
 msgid "Login Submit"
 msgstr "Anmelden"
@@ -77,13 +75,13 @@ msgstr ""
 "Schau also bitte dort nach, wenn du im Posteingang nichts findest."
 
 msgid "Login Reconnect title"
-msgstr "Bestätige dein Paswort"
+msgstr "Bestätige dein Passwort"
 
 msgid "Login Reconnect help"
 msgstr ""
-"Hallo! Sobald du dein Passwort bestätigt hast, bekommst du Zugriff auf die "
-"Übersicht der Rechte, um den Zugriff auf mobile Apps zu ermöglichen oder "
-"nicht. Es liegt an dir !"
+"Hallo! Sobald du dein Passwort bestätigt hast, gelangst du zur "
+"Rechteübersicht, um den Zugriff auf mobile Apps zu erlauben oder nicht. Es "
+"liegt an dir!"
 
 msgid "Login Connect from sharing title"
 msgstr "Hallo %s!"
@@ -125,7 +123,7 @@ msgstr ""
 "den Aktivierungslink, um mit der Installation fortzufahren."
 
 msgid "Onboarding Not activated Contact us"
-msgstr "Du hast Probleme? Fühl dich frei uns zu kontaktieren"
+msgstr "Du hast ein Problem? Zögere nicht, uns zu kontaktieren unter"
 
 msgid "Passphrase reset Title"
 msgstr "Passwort vergessen"
@@ -153,8 +151,8 @@ msgstr "Abschließen"
 
 msgid "Passphrase is reset Body"
 msgstr ""
-"Wir haben dir einen (sehr) speziellen E-Mail Link geschickt. Benutze diesen um dein Passwort zurückzusetzen. \n"
-"Warnung: Die E-Mail kann im Spam- oder Benachrichtigungs- Ordner landen. Schau also bitte dort nach, wenn du im Posteingang nichts findest."
+"Wir haben dir gerade einen (sehr) speziellen E-Mail Link geschickt. Benutze diesen, um dein Passwort zurückzusetzen. \n"
+"Wir warnen dich aber lieber vor, dass die E-Mail im Spam- oder Benachrichtigungsordner landen kann. Schau also bitte auch dort nach, um sie zu finden."
 
 msgid "Passphrase is reset Login Button"
 msgstr "Zurück zur Login Seite"
@@ -266,8 +264,8 @@ msgstr "Die Adresse von diesem Cozy existiert nicht"
 msgid "Error Instance not found Message"
 msgstr ""
 "Es ist möglich, dass du einen Schreibfehler bei der Adresse von deinem Cozy "
-"gemacht hast. Um sicher zu gehen, schau in der Mail nach, welche dir bei der"
-" Erstellung geschickt wurde."
+"gemacht hast. Um sicherzugehen, überprüfe deine Cozy-Adresse in der E-Mail, "
+"welche dir bei der Erstellung geschickt wurde."
 
 msgid "Error Application not found Title"
 msgstr "Anwendung noch nicht verfügbar"
@@ -383,6 +381,9 @@ msgstr "Konten"
 
 msgid "Permissions io.cozy.apps"
 msgstr "Liste der installierten Anwendungen"
+
+msgid "Permissions io.cozy.apps.suggestions"
+msgstr "Anwendungsvorschläge"
 
 msgid "Permissions io.cozy.bank.accounts"
 msgstr "Bankkonten"
@@ -511,7 +512,7 @@ msgid "Mail Archive Button text"
 msgstr "Deine Daten herunterladen"
 
 msgid "Mail Two Factor Subject"
-msgstr "Überprüfe deine Anmeldung an deinem %s"
+msgstr "Zugangscode für die einmalige Verbindung"
 
 msgid "Mail Two Factor Intro"
 msgstr ""
@@ -602,6 +603,10 @@ msgstr "teilen!"
 
 msgid "Mail Sharing Request Button text"
 msgstr "Freigabe akzeptieren"
+
+msgid "Mail Alert Account Subject"
+msgstr ""
+"Das Löschen der Instanz ist beim Bereinigen von Accounts fehlgeschlagen"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Verbinde dich mit deinem Cozy"
