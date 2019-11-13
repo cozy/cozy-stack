@@ -14,14 +14,14 @@ const iterMaxFetchSize = 256
 // iter is a struct allowing to iterate over the children of a
 // directory. The iterator is not thread-safe.
 type iter struct {
-	db     prefixer.Prefixer
-	sel    mango.Filter
-	opt    *IteratorOptions
-	list   []*DirOrFileDoc
-	path   string
-	offset int
-	index  int
-	done   bool
+	db       prefixer.Prefixer
+	sel      mango.Filter
+	opt      *IteratorOptions
+	list     []*DirOrFileDoc
+	path     string
+	bookmark string
+	index    int
+	done     bool
 }
 
 // NewIterator return a new iterator.
@@ -75,7 +75,6 @@ func (i *iter) fetch() error {
 		return ErrIteratorDone
 	}
 
-	i.offset += l
 	i.index = 0
 	i.list = i.list[:0]
 
@@ -83,14 +82,15 @@ func (i *iter) fetch() error {
 		UseIndex: "dir-children",
 		Selector: i.sel,
 		Limit:    i.opt.ByFetch,
-		Skip:     i.offset,
+		Bookmark: i.bookmark,
 	}
-	err := couchdb.FindDocs(i.db, consts.Files, req, &i.list)
+	resp, err := couchdb.FindDocsRaw(i.db, consts.Files, req, &i.list)
 	if err != nil {
 		return err
 	}
 	if len(i.list) == 0 {
 		return ErrIteratorDone
 	}
+	i.bookmark = resp.Bookmark
 	return nil
 }

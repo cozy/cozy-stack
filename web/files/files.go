@@ -1198,7 +1198,7 @@ func FindFilesMango(c echo.Context) error {
 	findRequest["limit"] = limit + 1
 
 	var results []vfs.DirOrFileDoc
-	err := couchdb.FindDocsRaw(instance, consts.Files, &findRequest, &results)
+	_, err := couchdb.FindDocsRaw(instance, consts.Files, &findRequest, &results)
 	if err != nil {
 		return err
 	}

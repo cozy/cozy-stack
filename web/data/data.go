@@ -343,15 +343,16 @@ func findDocuments(c echo.Context) error {
 	findRequest["limit"] = limit + 1
 
 	var results []couchdb.JSONDoc
-	err := couchdb.FindDocsRaw(instance, doctype, &findRequest, &results)
+	resp, err := couchdb.FindDocsRaw(instance, doctype, &findRequest, &results)
 	if err != nil {
 		return err
 	}
 
 	out := echo.Map{
-		"docs":  results,
-		"limit": limit,
-		"next":  false,
+		"docs":     results,
+		"limit":    limit,
+		"next":     false,
+		"bookmark": resp.Bookmark,
 	}
 	if len(results) > int(limit) {
 		out["docs"] = results[:len(results)-1]
