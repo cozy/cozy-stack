@@ -1000,7 +1000,7 @@ func versionDownloadHandler(c echo.Context, secret string) error {
 		addCSPRuleForDirectLink(c, doc.Class, doc.Mime)
 	}
 
-	filename := c.QueryParam("fake-name")
+	filename := c.Param("fake-name")
 	err = vfs.ServeFileContent(instance.VFS(), doc, version, filename, disposition, c.Request(), c.Response())
 	if err != nil {
 		return WrapVfsError(err)
