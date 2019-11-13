@@ -59,10 +59,10 @@ func GetNote(c echo.Context) error {
 	return files.FileData(c, http.StatusOK, file, false, nil)
 }
 
-// GetSteps is the API handler for GET /notes/:id/steps?Revision=xxx. It
-// returns the steps since the given revision. If the revision is too old, and
-// the steps are no longer available, it returns a 412 response with the whole
-// document for the note.
+// GetSteps is the API handler for GET /notes/:id/steps?Version=xxx. It returns
+// the steps since the given version. If the version is too old, and the steps
+// are no longer available, it returns a 412 response with the whole document
+// for the note.
 func GetSteps(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("id")
@@ -75,7 +75,7 @@ func GetSteps(c echo.Context) error {
 		return err
 	}
 
-	rev := c.QueryParam("Revision")
+	rev := c.QueryParam("Version")
 	steps, err := note.GetSteps(inst, file, rev)
 	if err == note.ErrTooOld {
 		// TODO fetch the updated title and content from redis

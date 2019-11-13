@@ -22,7 +22,7 @@ var ts *httptest.Server
 var inst *instance.Instance
 var token string
 var noteID string
-var revision string
+var version int64
 
 func TestCreateNote(t *testing.T) {
 	body := `
@@ -119,7 +119,7 @@ func assertInitialNote(t *testing.T, result map[string]interface{}) {
 	assert.Contains(t, fcm, "createdOn")
 	meta, _ := attrs["metadata"].(map[string]interface{})
 	assert.Equal(t, "A super note", meta["title"])
-	assert.Equal(t, "0", meta["revision"])
+	assert.EqualValues(t, 0, meta["version"])
 	assert.NotNil(t, meta["schema"])
 	assert.NotNil(t, meta["content"])
 }
@@ -151,7 +151,7 @@ func TestChangeTitle(t *testing.T) {
 	assert.Equal(t, "A new title.cozy-note", attrs["name"])
 	meta, _ := attrs["metadata"].(map[string]interface{})
 	assert.Equal(t, "A new title", meta["title"])
-	assert.Equal(t, "0", meta["revision"])
+	assert.EqualValues(t, 0, meta["version"])
 	assert.NotNil(t, meta["schema"])
 	assert.NotNil(t, meta["content"])
 }
@@ -196,9 +196,9 @@ func TestPatchNote(t *testing.T) {
 	assert.Equal(t, noteID, data["id"])
 	attrs := data["attributes"].(map[string]interface{})
 	meta, _ := attrs["metadata"].(map[string]interface{})
-	revision, _ = meta["revision"].(string)
-	assert.NotEqual(t, "", revision)
-	assert.NotEqual(t, "0", revision)
+	v, _ := meta["version"].(float64)
+	version = int64(v)
+	assert.Greater(t, version, int64(0))
 	assert.NotNil(t, meta["schema"])
 	assert.NotNil(t, meta["content"])
 
@@ -238,7 +238,7 @@ func TestGetSteps(t *testing.T) {
 	req, _ := http.NewRequest("PATCH", ts.URL+"/notes/"+noteID, bytes.NewBufferString(body))
 	req.Header.Add("Content-Type", "application/vnd.api+json")
 	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Add("If-Match", revision)
+	req.Header.Add("If-Match", fmt.Sprintf("%d", version))
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
@@ -248,9 +248,12 @@ func TestGetSteps(t *testing.T) {
 	data, _ := result["data"].(map[string]interface{})
 	attrs := data["attributes"].(map[string]interface{})
 	meta, _ := attrs["metadata"].(map[string]interface{})
-	rev, _ := meta["revision"].(string)
+	last, _ := meta["version"].(float64)
+	lastVersion := int64(last)
+	assert.Greater(t, lastVersion, int64(0))
 
-	req2, _ := http.NewRequest("GET", ts.URL+"/notes/"+noteID+"/steps?Revision="+revision, nil)
+	path2 := fmt.Sprintf("/notes/%s/steps?Version=%d", noteID, version)
+	req2, _ := http.NewRequest("GET", ts.URL+path2, nil)
 	req2.Header.Add("Authorization", "Bearer "+token)
 	res2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
@@ -258,9 +261,37 @@ func TestGetSteps(t *testing.T) {
 	var result2 map[string]interface{}
 	err = json.NewDecoder(res2.Body).Decode(&result2)
 	assert.NoError(t, err)
-	// TODO check it
+	meta2, _ := result2["meta"].(map[string]interface{})
+	assert.EqualValues(t, 2, meta2["count"])
+	data2, _ := result2["data"].([]interface{})
+	assert.Len(t, data2, 2)
+	first, _ := data2[0].(map[string]interface{})
+	assert.NotNil(t, first["id"])
+	attrsF, _ := first["attributes"].(map[string]interface{})
+	assert.Equal(t, "replace", attrsF["stepType"])
+	assert.EqualValues(t, 6, attrsF["from"])
+	assert.EqualValues(t, 6, attrsF["to"])
+	second, _ := data2[1].(map[string]interface{})
+	assert.NotNil(t, second["id"])
+	attrsS, _ := second["attributes"].(map[string]interface{})
+	assert.Equal(t, "replace", attrsS["stepType"])
+	assert.EqualValues(t, 7, attrsS["from"])
+	assert.EqualValues(t, 7, attrsS["to"])
 
-	fmt.Printf("rev = %v\n", rev) // TODO make another request with ?Revision=rev
+	path3 := fmt.Sprintf("/notes/%s/steps?Version=%d", noteID, lastVersion)
+	req3, _ := http.NewRequest("GET", ts.URL+path3, nil)
+	req3.Header.Add("Authorization", "Bearer "+token)
+	res3, err := http.DefaultClient.Do(req3)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res3.StatusCode)
+	var result3 map[string]interface{}
+	err = json.NewDecoder(res3.Body).Decode(&result3)
+	assert.NoError(t, err)
+	meta3, _ := result3["meta"].(map[string]interface{})
+	assert.EqualValues(t, 0, meta3["count"])
+	data3, ok := result3["data"].([]interface{})
+	assert.True(t, ok)
+	assert.Empty(t, data3)
 }
 
 func TestMain(m *testing.M) {

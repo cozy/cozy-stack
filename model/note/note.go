@@ -17,13 +17,13 @@ import (
 // Document is the note document in memory. It is persisted to the VFS as a
 // file, but with a debounce: the intermediate states are saved in Redis.
 type Document struct {
-	DocID    string          `json:"_id"`
-	DocRev   string          `json:"_rev,omitempty"`
-	Title    string          `json:"title"`
-	DirID    string          `json:"dir_id,omitempty"`
-	Revision string          `json:"revision"`
-	Schema   json.RawMessage `json:"schema"`
-	Content  interface{}     `json:"content,omitempty"`
+	DocID   string          `json:"_id"`
+	DocRev  string          `json:"_rev,omitempty"`
+	Title   string          `json:"title"`
+	DirID   string          `json:"dir_id,omitempty"`
+	Version int64           `json:"version"`
+	Schema  json.RawMessage `json:"schema"`
+	Content interface{}     `json:"content,omitempty"`
 }
 
 // ID returns the directory qualified identifier
@@ -57,7 +57,7 @@ func (d *Document) Create(inst *instance.Instance) (*vfs.FileDoc, error) {
 	}
 	defer lock.Unlock()
 
-	d.Revision = "0"
+	d.Version = 0
 	content, err := d.getInitialContent(inst)
 	if err != nil {
 		return nil, err
@@ -155,10 +155,10 @@ func (d *Document) newFileDoc(inst *instance.Instance, content []byte) (*vfs.Fil
 
 func (d *Document) metadata() map[string]interface{} {
 	return map[string]interface{}{
-		"title":    d.Title,
-		"content":  d.Content,
-		"revision": d.Revision,
-		"schema":   d.Schema,
+		"title":   d.Title,
+		"content": d.Content,
+		"version": d.Version,
+		"schema":  d.Schema,
 	}
 }
 

@@ -116,7 +116,7 @@ Content-Type: application/vnd.api+json
       "metadata": {
         "title": "My new note",
         "content": { "type": "doc", "content": [{ "type": "paragraph" }] },
-        "revision": "0",
+        "version": 0,
         "schema": {
           "nodes": [
             ["doc", { "content": "block+" }],
@@ -230,7 +230,7 @@ Content-Type: application/vnd.api+json
       "metadata": {
         "title": "My new note",
         "content": { "type": "doc", "content": [{ "type": "horizontal_rule" }] },
-        "revision": "3",
+        "version": 3,
         "schema": {
           "nodes": [
             ["doc", { "content": "block+" }],
@@ -305,16 +305,16 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### GET /notes/:id/steps?Revision=xxx
+### GET /notes/:id/steps?Version=xxx
 
-It returns the steps since the given revision. If the revision is too old, and
+It returns the steps since the given version. If the revision is too old, and
 the steps are no longer available, it returns a 412 response with the whole
 document for the note.
 
 #### Request
 
 ```http
-GET /notes/bf0dbdb0-e1ed-0137-8548-543d7eb8149c/steps?Revision=3 HTTP/1.1
+GET /notes/bf0dbdb0-e1ed-0137-8548-543d7eb8149c/steps?Version=3 HTTP/1.1
 Host: alice.example.net
 Accept: application/vnd.api+json
 ```
@@ -378,7 +378,7 @@ Content-Type: application/vnd.api+json
       "metadata": {
         "title": "My new note",
         "content": { "type": "doc", "content": [{ "type": "horizontal_rule" }] },
-        "revision": "6",
+        "version": 6,
         "schema": {
           "nodes": [
             ["doc", { "content": "block+" }],
@@ -503,7 +503,7 @@ Content-Type: application/vnd.api+json
       "metadata": {
         "title": "A new title for my note",
         "content": { "type": "doc", "content": [{ "type": "horizontal_rule" }] },
-        "revision": "3",
+        "version": 3,
         "schema": {
           "nodes": [
             ["doc", { "content": "block+" }],
@@ -580,7 +580,7 @@ Content-Type: application/vnd.api+json
 
 ### PATCH /notes/:id
 
-It sends some steps to apply on the document. The last known revision of the
+It sends some steps to apply on the document. The last known version of the
 note must be sent in the `If-Match` header to avoid conflicts.
 
 #### Request
@@ -647,7 +647,7 @@ Content-Type: application/vnd.api+json
           "type": "doc",
           "content": [{ "type": "paragraph", "text": "Hello" }]
         },
-        "revision": "5",
+        "version": 5,
         "schema": {
           "nodes": [
             ["doc", { "content": "block+" }],

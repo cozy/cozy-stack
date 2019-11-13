@@ -1,6 +1,8 @@
 package note
 
 import (
+	"fmt"
+
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -38,10 +40,22 @@ func (s Step) Clone() couchdb.Doc {
 }
 
 // SetID changes the step qualified identifier
-func (s Step) SetID(id string) { s["_id"] = id }
+func (s Step) SetID(id string) {
+	if id == "" {
+		delete(s, "_id")
+	} else {
+		s["_id"] = id
+	}
+}
 
 // SetRev changes the step revision
-func (s Step) SetRev(rev string) { s["_rev"] = rev }
+func (s Step) SetRev(rev string) {
+	if rev == "" {
+		delete(s, "_rev")
+	} else {
+		s["_rev"] = rev
+	}
+}
 
 // Included is part of the jsonapi.Object interface
 func (s Step) Included() []jsonapi.Object { return nil }
@@ -55,7 +69,7 @@ func (s Step) Relationships() jsonapi.RelationshipMap { return nil }
 // ApplySteps takes a note and some steps, and tries to apply them. It is an
 // all or nothing change: if there is one error, the note won't be changed.
 // TODO fetch last info for file (if debounce)
-func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastRev string, steps []Step) error {
+func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, steps []Step) error {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
 		return err
@@ -70,11 +84,12 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastRev string, step
 	if !ok {
 		return ErrInvalidFile
 	}
-	revision, ok := file.Metadata["revision"].(string)
+	v, ok := file.Metadata["version"].(float64)
 	if !ok {
 		return ErrInvalidFile
 	}
-	if lastRev != revision {
+	version := int64(v)
+	if lastVersion != fmt.Sprintf("%d", version) {
 		return ErrCannotApply
 	}
 
@@ -98,7 +113,7 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastRev string, step
 		return ErrInvalidFile
 	}
 
-	for _, s := range steps {
+	for i, s := range steps {
 		step, err := transform.StepFromJSON(schema, s)
 		if err != nil {
 			inst.Logger().WithField("nspace", "notes").
@@ -108,11 +123,12 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastRev string, step
 		result := step.Apply(doc)
 		if result.Failed != "" {
 			inst.Logger().WithField("nspace", "notes").
-				Infof("Cannot apply a step: %s (revision=%s)", result.Failed, revision)
+				Infof("Cannot apply a step: %s (version=%d)", result.Failed, version)
 			return ErrCannotApply
 		}
 		doc = result.Doc
-		revision += "1" // TODO
+		version++ // TODO
+		steps[i].SetID(fmt.Sprintf("%s/%d", file.DocID, version))
 	}
 
 	olds := make([]interface{}, len(steps))
@@ -135,7 +151,7 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastRev string, step
 
 	olddoc := file.Clone().(*vfs.FileDoc)
 	file.Metadata["content"] = doc.ToJSON()
-	file.Metadata["revision"] = revision
+	file.Metadata["version"] = version
 	// TODO markdown
 	markdown := []byte(doc.String())
 
@@ -145,20 +161,30 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastRev string, step
 	return writeFile(inst.VFS(), file, olddoc, markdown)
 }
 
-// GetSteps returns the steps for the given note, starting from the revision.
-func GetSteps(inst *instance.Instance, file *vfs.FileDoc, rev string) ([]Step, error) {
+// GetSteps returns the steps for the given note, starting from the version.
+func GetSteps(inst *instance.Instance, file *vfs.FileDoc, version string) ([]Step, error) {
+	lock := inst.NotesLock()
+	if err := lock.Lock(); err != nil {
+		return nil, err
+	}
+	defer lock.Unlock()
+
 	var steps []Step
 	req := couchdb.AllDocsRequest{
-		Limit: 1000,
-		// TODO StartKey: file.DocID + "/" + rev,
+		Limit:    1000,
+		StartKey: file.DocID + "/" + version,
 	}
 	if err := couchdb.GetAllDocs(inst, consts.NotesSteps, &req, &steps); err != nil {
 		return nil, err
 	}
-	// TODO
-	if len(steps) == 0 || len(steps) == 1000 {
+
+	// The first step plays the role of a sentinel: if it isn't here, the
+	// version is too old. Same if we have too many steps.
+	if len(steps) == 0 || len(steps) == req.Limit {
 		return nil, ErrTooOld
 	}
+
+	steps = steps[1:] // Discard the sentinel
 	return steps, nil
 }
 
