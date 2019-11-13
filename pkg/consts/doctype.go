@@ -89,4 +89,7 @@ const (
 	NotesDocuments = "io.cozy.notes.documents"
 	// NotesSteps doc type is used for patching a note.
 	NotesSteps = "io.cozy.notes.steps"
+	// NotesTelepointers doc type is used for the position of the cursor in a
+	// note.
+	NotesTelepointers = "io.cozy.notes.telepointers"
 )

@@ -744,6 +744,33 @@ Content-Type: application/vnd.api+json
 
 It updates the position of the pointer.
 
+#### Request
+
+```http
+PUT /notes/f48d9370-e1ec-0137-8547-543d7eb8149c/telepointer HTTP/1.1
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.notes.telepointers",
+    "id": "sessionID543781490137",
+    "attributes": {
+      "anchor": 7,
+      "head": 12,
+      "type": "textSelection"
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Real-time via websockets
 
 TODO:

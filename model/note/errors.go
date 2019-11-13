@@ -18,4 +18,6 @@ var (
 	// ErrTooOld is used when the steps just after the given revision are no
 	// longer available.
 	ErrTooOld = errors.New("The revision is too old")
+	// ErrMissingSessionID is used when a telepointer has no identifier.
+	ErrMissingSessionID = errors.New("The session id is missing")
 )

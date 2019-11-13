@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo/v4"
@@ -292,6 +295,48 @@ func TestGetSteps(t *testing.T) {
 	data3, ok := result3["data"].([]interface{})
 	assert.True(t, ok)
 	assert.Empty(t, data3)
+}
+
+func TestPutTelepointer(t *testing.T) {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		sub := realtime.GetHub().Subscriber(inst)
+		sub.Subscribe(consts.NotesTelepointers)
+		wg.Done()
+		e := <-sub.Channel
+		assert.Equal(t, "UPDATED", e.Verb)
+		assert.Equal(t, "sessionID543781490137", e.Doc.ID())
+		doc, ok := e.Doc.(note.Telepointer)
+		assert.True(t, ok)
+		assert.Equal(t, "textSelection", doc["type"])
+		assert.EqualValues(t, 7, doc["anchor"])
+		assert.EqualValues(t, 12, doc["head"])
+		wg.Done()
+	}()
+
+	// Wait that the goroutine has subscribed to the realtime
+	wg.Wait()
+	wg.Add(1)
+	body := `{
+  "data": {
+    "type": "io.cozy.notes.telepointers",
+    "id": "sessionID543781490137",
+    "attributes": {
+      "anchor": 7,
+      "head": 12,
+      "type": "textSelection"
+    }
+  }
+}`
+	req, _ := http.NewRequest("PUT", ts.URL+"/notes/"+noteID+"/telepointer", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
+	// Wait that the goroutine has received the telepointer update
+	wg.Wait()
 }
 
 func TestMain(m *testing.M) {

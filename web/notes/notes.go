@@ -155,6 +155,34 @@ func ChangeTitle(c echo.Context) error {
 	return files.FileData(c, http.StatusOK, file, false, nil)
 }
 
+// PutTelepointer is the API handler for PUT /notes/:id/telepointer. It updates
+// the position of a pointer.
+func PutTelepointer(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fileID := c.Param("id")
+	file, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	if err := middlewares.AllowVFS(c, permission.PUT, file); err != nil {
+		return err
+	}
+
+	pointer := note.Telepointer{}
+	obj, err := jsonapi.Bind(c.Request().Body, &pointer)
+	if err != nil {
+		return err
+	}
+	pointer.SetID(obj.ID)
+
+	if err := note.PutTelepointer(inst, pointer); err != nil {
+		return wrapError(err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Routes sets the routing for the collaborative edition of notes.
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
@@ -162,6 +190,7 @@ func Routes(router *echo.Group) {
 	router.GET("/:id/steps", GetSteps)
 	router.PATCH("/:id", PatchNote)
 	router.PUT("/:id/title", ChangeTitle)
+	router.PUT("/:id/telepointer", PutTelepointer)
 }
 
 func wrapError(err error) *jsonapi.Error {
@@ -174,6 +203,8 @@ func wrapError(err error) *jsonapi.Error {
 		return jsonapi.BadRequest(err)
 	case note.ErrCannotApply:
 		return jsonapi.Conflict(err)
+	case note.ErrInvalidSchema:
+		return jsonapi.InvalidAttribute("id", err)
 	case os.ErrNotExist, vfs.ErrParentDoesNotExist, vfs.ErrParentInTrash:
 		return jsonapi.NotFound(err)
 	case vfs.ErrFileTooBig:
