@@ -169,6 +169,7 @@ a template and will insert the relevant values.
     for more informations.
 -   `{{.Favicon}}` will be replaced by the favicon served by the stack.
 -   `{{.SubDomain}}` will be replaced by `flat` or `nested`.
+-   `{{.DefaultWallpaper}}` will be replaced by the URL to the default wallpaper.
 
 So, the `index.html` should probably looks like:
 
