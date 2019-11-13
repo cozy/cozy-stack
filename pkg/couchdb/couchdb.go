@@ -796,42 +796,44 @@ func DefineIndexes(db Database, indexes []*mango.Index) error {
 // FindDocs returns all documents matching the passed FindRequest
 // documents will be unmarshalled in the provided results slice.
 func FindDocs(db Database, doctype string, req *FindRequest, results interface{}) error {
-	return FindDocsRaw(db, doctype, req, results)
+	_, err := FindDocsRaw(db, doctype, req, results)
+	return err
 }
 
 // FindDocsUnoptimized allows search on non-indexed fields.
 // /!\ Use with care
-func FindDocsUnoptimized(db Database, doctype string, req interface{}, results interface{}) error {
-	return findDocsRaw(db, doctype, req, results, true)
+func FindDocsUnoptimized(db Database, doctype string, req *FindRequest, results interface{}) error {
+	_, err := findDocsRaw(db, doctype, req, results, true)
+	return err
 }
 
-func findDocsRaw(db Database, doctype string, req interface{}, results interface{}, ignoreUnoptimized bool) error {
+func findDocsRaw(db Database, doctype string, req interface{}, results interface{}, ignoreUnoptimized bool) (*FindResponse, error) {
 	url := "_find"
 	// prepare a structure to receive the results
-	var response findResponse
+	var response FindResponse
 	err := makeRequest(db, doctype, http.MethodPost, url, &req, &response)
 	if err != nil {
 		if isIndexError(err) {
 			jsonReq, errm := json.Marshal(req)
 			if errm != nil {
-				return err
+				return nil, err
 			}
 			errc := err.(*Error)
 			errc.Reason += fmt.Sprintf(" (original req: %s)", string(jsonReq))
-			return errc
+			return nil, errc
 		}
-		return err
+		return nil, err
 	}
 	if !ignoreUnoptimized && response.Warning != "" {
 		// Developer should not rely on unoptimized index.
-		return unoptimalError()
+		return nil, unoptimalError()
 	}
-	return json.Unmarshal(response.Docs, results)
+	return &response, json.Unmarshal(response.Docs, results)
 }
 
 // FindDocsRaw find documents
 // TODO: pagination
-func FindDocsRaw(db Database, doctype string, req interface{}, results interface{}) error {
+func FindDocsRaw(db Database, doctype string, req interface{}, results interface{}) (*FindResponse, error) {
 	return findDocsRaw(db, doctype, req, results, false)
 }
 
@@ -907,15 +909,18 @@ type UpdateResponse struct {
 	Ok  bool   `json:"ok"`
 }
 
-type findResponse struct {
-	Warning string          `json:"warning"`
-	Docs    json.RawMessage `json:"docs"`
+// FindResponse is the response from couchdb on a find request
+type FindResponse struct {
+	Warning  string          `json:"warning"`
+	Bookmark string          `json:"bookmark"`
+	Docs     json.RawMessage `json:"docs"`
 }
 
 // FindRequest is used to build a find request
 type FindRequest struct {
 	Selector mango.Filter `json:"selector"`
 	UseIndex string       `json:"use_index,omitempty"`
+	Bookmark string       `json:"bookmark,omitempty"`
 	Limit    int          `json:"limit,omitempty"`
 	Skip     int          `json:"skip,omitempty"`
 	Sort     mango.SortBy `json:"sort,omitempty"`
