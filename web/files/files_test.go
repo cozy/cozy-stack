@@ -1166,6 +1166,36 @@ func TestDownloadVersion(t *testing.T) {
 	assert.Equal(t, content, string(resbody))
 }
 
+func TestFileCreateAndDownloadByVersionID(t *testing.T) {
+	content := "one"
+	res1, body1 := upload(t, "/files/?Type=file&Name=direct-downloadme-versioned", "text/plain", content, "")
+	assert.Equal(t, 201, res1.StatusCode)
+	data := body1["data"].(map[string]interface{})
+	fileID := data["id"].(string)
+	meta := data["meta"].(map[string]interface{})
+	firstRev := meta["rev"].(string)
+
+	res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
+	assert.Equal(t, 200, res2.StatusCode)
+
+	req, err := http.NewRequest("POST", ts.URL+"/files/downloads?VersionId="+fileID+"/"+firstRev, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var data2 map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&data2)
+	assert.NoError(t, err)
+
+	displayURL := ts.URL + data2["links"].(map[string]interface{})["related"].(string)
+	res3, err := http.Get(displayURL)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res3.StatusCode)
+	disposition := res3.Header.Get("Content-Disposition")
+	assert.Equal(t, `inline; filename="direct-downloadme-versioned"`, disposition)
+}
+
 func TestRevertVersion(t *testing.T) {
 	content := "one"
 	res1, body1 := upload(t, "/files/?Type=file&Name=downloadme-reverted", "text/plain", content, "")

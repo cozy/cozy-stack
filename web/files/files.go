@@ -812,10 +812,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	if c.QueryParam("Dl") == "1" {
 		disposition = "attachment"
 	} else if !checkPermission {
-		// Allow some files to be displayed by the browser in the client-side apps
-		if doc.Mime == "text/plain" || doc.Class == "image" || doc.Class == "audio" || doc.Class == "video" || doc.Mime == "application/pdf" {
-			middlewares.AppendCSPRule(c, "frame-ancestors", "*")
-		}
+		addCSPRuleForDirectLink(c, doc.Class, doc.Mime)
 	}
 	err = vfs.ServeFileContent(instance.VFS(), doc, nil, disposition, c.Request(), c.Response())
 	if err != nil {
@@ -823,6 +820,13 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	}
 
 	return nil
+}
+
+func addCSPRuleForDirectLink(c echo.Context, class, mime string) {
+	// Allow some files to be displayed by the browser in the client-side apps
+	if mime == "text/plain" || class == "image" || class == "audio" || class == "video" || mime == "application/pdf" {
+		middlewares.AppendCSPRule(c, "frame-ancestors", "*")
+	}
 }
 
 // ReadFileContentFromPathHandler handles all GET request on /files/download
@@ -889,6 +893,7 @@ func FileDownloadCreateHandler(c echo.Context) error {
 	var doc *vfs.FileDoc
 	var err error
 	var path string
+	var versionID string
 
 	if path = c.QueryParam("Path"); path != "" {
 		if doc, err = instance.VFS().FileByPath(path); err != nil {
@@ -901,6 +906,11 @@ func FileDownloadCreateHandler(c echo.Context) error {
 		if path, err = doc.Path(instance.VFS()); err != nil {
 			return WrapVfsError(err)
 		}
+	} else if versionID = c.QueryParam("VersionId"); versionID != "" {
+		docID := strings.Split(versionID, "/")[0]
+		if doc, err = instance.VFS().FileByID(docID); err != nil {
+			return WrapVfsError(err)
+		}
 	}
 
 	err = checkPerm(c, "GET", nil, doc)
@@ -908,7 +918,13 @@ func FileDownloadCreateHandler(c echo.Context) error {
 		return err
 	}
 
-	secret, err := vfs.GetStore().AddFile(instance, path)
+	var secret string
+	if versionID == "" {
+		secret, err = vfs.GetStore().AddFile(instance, path)
+	} else {
+		secret, err = vfs.GetStore().AddVersion(instance, versionID)
+		secret = "v-" + secret
+	}
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -938,8 +954,11 @@ func ArchiveDownloadHandler(c echo.Context) error {
 // FileDownloadHandler send a file that have previously be defined
 // through FileDownloadCreateHandler
 func FileDownloadHandler(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
 	secret := c.Param("secret")
+	if strings.HasPrefix(secret, "v-") {
+		return versionDownloadHandler(c, strings.TrimPrefix(secret, "v-"))
+	}
+	instance := middlewares.GetInstance(c)
 	path, err := vfs.GetStore().GetFile(instance, secret)
 	if err != nil {
 		return WrapVfsError(err)
@@ -948,6 +967,40 @@ func FileDownloadHandler(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
 	return sendFileFromPath(c, path, false)
+}
+
+func versionDownloadHandler(c echo.Context, secret string) error {
+	instance := middlewares.GetInstance(c)
+	versionID, err := vfs.GetStore().GetVersion(instance, secret)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	if versionID == "" {
+		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
+	}
+
+	fileID := strings.Split(versionID, "/")[0]
+	doc, err := instance.VFS().FileByID(fileID)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	version, err := vfs.FindVersion(instance, versionID)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	disposition := "inline"
+	if c.QueryParam("Dl") == "1" {
+		disposition = "attachment"
+	} else {
+		addCSPRuleForDirectLink(c, doc.Class, doc.Mime)
+	}
+
+	err = vfs.ServeFileContent(instance.VFS(), doc, version, disposition, c.Request(), c.Response())
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	return nil
 }
 
 // TrashHandler handles all DELETE requests on /files/:file-id and
