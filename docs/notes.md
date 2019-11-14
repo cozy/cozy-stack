@@ -331,6 +331,7 @@ Content-Type: application/vnd.api+json
   "data": [{
     "type": "io.cozy.notes.steps",
     "attributes": {
+      "sessionID": "543781490137",
       "stepType": "replace",
       "from": 1,
       "to": 1,
@@ -342,6 +343,7 @@ Content-Type: application/vnd.api+json
   }, {
     "type": "io.cozy.notes.steps",
     "attributes": {
+      "sessionID": "543781490137",
       "stepType": "replace",
       "from": 2,
       "to": 2,
@@ -599,6 +601,7 @@ Content-Type: application/vnd.api+json
   "data": [{
     "type": "io.cozy.notes.steps",
     "attributes": {
+      "sessionID": "543781490137",
       "stepType": "replace",
       "from": 1,
       "to": 1,
@@ -609,6 +612,7 @@ Content-Type: application/vnd.api+json
   }, {
     "type": "io.cozy.notes.steps",
     "attributes": {
+      "sessionID": "543781490137",
       "stepType": "replace",
       "from": 2,
       "to": 2,
@@ -797,6 +801,7 @@ server > {"event": "CREATED",
           "payload": {"id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
                       "type": "io.cozy.notes.events",
                       "doc": {"doctype": "io.cozy.notes.steps",
+                              "sessionID": "543781490137",
                               "version": 6,
                               "stepType": "replace",
                               "from": 1,

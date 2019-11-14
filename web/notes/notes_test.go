@@ -167,6 +167,7 @@ func TestPatchNote(t *testing.T) {
   "data": [{
     "type": "io.cozy.notes.steps",
     "attributes": {
+      "sessionID": "543781490137",
       "stepType": "replace",
       "from": 1,
       "to": 1,
@@ -177,6 +178,7 @@ func TestPatchNote(t *testing.T) {
   }, {
     "type": "io.cozy.notes.steps",
     "attributes": {
+      "sessionID": "543781490137",
       "stepType": "replace",
       "from": 2,
       "to": 2,
@@ -222,6 +224,7 @@ func TestGetSteps(t *testing.T) {
   "data": [{
     "type": "io.cozy.notes.steps",
     "attributes": {
+      "sessionID": "543781490137",
       "stepType": "replace",
       "from": 6,
       "to": 6,
@@ -232,6 +235,7 @@ func TestGetSteps(t *testing.T) {
   }, {
     "type": "io.cozy.notes.steps",
     "attributes": {
+      "sessionID": "543781490137",
       "stepType": "replace",
       "from": 7,
       "to": 7,
@@ -274,6 +278,7 @@ func TestGetSteps(t *testing.T) {
 	first, _ := data2[0].(map[string]interface{})
 	assert.NotNil(t, first["id"])
 	attrsF, _ := first["attributes"].(map[string]interface{})
+	assert.Equal(t, "543781490137", attrsF["sessionID"])
 	assert.Equal(t, "replace", attrsF["stepType"])
 	assert.EqualValues(t, 6, attrsF["from"])
 	assert.EqualValues(t, 6, attrsF["to"])
@@ -281,6 +286,7 @@ func TestGetSteps(t *testing.T) {
 	second, _ := data2[1].(map[string]interface{})
 	assert.NotNil(t, second["id"])
 	attrsS, _ := second["attributes"].(map[string]interface{})
+	assert.Equal(t, "543781490137", attrsS["sessionID"])
 	assert.Equal(t, "replace", attrsS["stepType"])
 	assert.EqualValues(t, 7, attrsS["from"])
 	assert.EqualValues(t, 7, attrsS["to"])
@@ -422,8 +428,8 @@ func TestNoteRealtime(t *testing.T) {
 		},
 	}
 	steps := []note.Step{
-		{"stepType": "replace", "from": 2, "to": 2, "slice": slice},
-		{"stepType": "replace", "from": 3, "to": 3, "slice": slice},
+		{"sessionID": "543781490137", "stepType": "replace", "from": 2, "to": 2, "slice": slice},
+		{"sessionID": "543781490137", "stepType": "replace", "from": 3, "to": 3, "slice": slice},
 	}
 	err = note.ApplySteps(inst, file, fmt.Sprintf("%d", version), steps)
 	if !assert.NoError(t, err) {
@@ -439,6 +445,7 @@ func TestNoteRealtime(t *testing.T) {
 	assert.Equal(t, "io.cozy.notes.events", payload4["type"])
 	doc4, _ := payload4["doc"].(map[string]interface{})
 	assert.Equal(t, "io.cozy.notes.steps", doc4["doctype"])
+	assert.Equal(t, "543781490137", doc4["sessionID"])
 	assert.Equal(t, "replace", doc4["stepType"])
 	assert.EqualValues(t, 2, doc4["from"])
 	assert.EqualValues(t, 2, doc4["to"])
@@ -456,6 +463,7 @@ func TestNoteRealtime(t *testing.T) {
 	assert.Equal(t, "io.cozy.notes.events", payload5["type"])
 	doc5, _ := payload5["doc"].(map[string]interface{})
 	assert.Equal(t, "io.cozy.notes.steps", doc5["doctype"])
+	assert.Equal(t, "543781490137", doc5["sessionID"])
 	assert.Equal(t, "replace", doc5["stepType"])
 	assert.EqualValues(t, 3, doc5["from"])
 	assert.EqualValues(t, 3, doc5["to"])
