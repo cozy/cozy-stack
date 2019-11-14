@@ -129,6 +129,7 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, 
 		doc = result.Doc
 		version++ // TODO
 		steps[i].SetID(fmt.Sprintf("%s/%d", file.DocID, version))
+		steps[i]["version"] = version
 	}
 
 	olds := make([]interface{}, len(steps))
@@ -146,6 +147,12 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, 
 		if err := couchdb.BulkUpdateDocs(inst, consts.NotesSteps, docs, olds); err != nil {
 			return err
 		}
+	}
+	for _, s := range steps {
+		e := Event(s)
+		e["doctype"] = s.DocType()
+		e.SetID(file.ID())
+		e.Publish(inst)
 	}
 	// TODO purge the old steps
 

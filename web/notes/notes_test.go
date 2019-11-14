@@ -298,6 +298,7 @@ func TestGetSteps(t *testing.T) {
 	data3, ok := result3["data"].([]interface{})
 	assert.True(t, ok)
 	assert.Empty(t, data3)
+	version = lastVersion
 }
 
 func TestPutTelepointer(t *testing.T) {
@@ -412,6 +413,55 @@ func TestNoteRealtime(t *testing.T) {
 	doc3, _ := payload3["doc"].(map[string]interface{})
 	assert.Equal(t, "io.cozy.notes.documents", doc3["doctype"])
 	assert.Equal(t, "A very new title", doc3["title"])
+
+	slice := map[string]interface{}{
+		"content": []interface{}{
+			map[string]interface{}{"type": "text", "text": "X"},
+		},
+	}
+	steps := []note.Step{
+		{"stepType": "replace", "from": 2, "to": 2, "slice": slice},
+		{"stepType": "replace", "from": 3, "to": 3, "slice": slice},
+	}
+	err = note.ApplySteps(inst, file, fmt.Sprintf("%d", version), steps)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	var res4 map[string]interface{}
+	err = c.ReadJSON(&res4)
+	assert.NoError(t, err)
+	assert.Equal(t, "UPDATED", res4["event"])
+	payload4, _ := res4["payload"].(map[string]interface{})
+	assert.Equal(t, noteID, payload4["id"])
+	assert.Equal(t, "io.cozy.notes.events", payload4["type"])
+	doc4, _ := payload4["doc"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.notes.steps", doc4["doctype"])
+	assert.Equal(t, "replace", doc4["stepType"])
+	assert.EqualValues(t, 2, doc4["from"])
+	assert.EqualValues(t, 2, doc4["to"])
+	vers4, _ := doc4["version"].(float64)
+	v4 := int(vers4)
+	assert.NotEqual(t, 0, v4)
+	assert.NotEqual(t, version, v4)
+
+	var res5 map[string]interface{}
+	err = c.ReadJSON(&res5)
+	assert.NoError(t, err)
+	assert.Equal(t, "UPDATED", res5["event"])
+	payload5, _ := res5["payload"].(map[string]interface{})
+	assert.Equal(t, noteID, payload5["id"])
+	assert.Equal(t, "io.cozy.notes.events", payload5["type"])
+	doc5, _ := payload5["doc"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.notes.steps", doc5["doctype"])
+	assert.Equal(t, "replace", doc5["stepType"])
+	assert.EqualValues(t, 3, doc5["from"])
+	assert.EqualValues(t, 3, doc5["to"])
+	vers5, _ := doc5["version"].(float64)
+	v5 := int(vers5)
+	assert.NotEqual(t, 0, v5)
+	assert.NotEqual(t, v4, v5)
+	assert.NotEqual(t, version, v5)
 }
 
 func TestMain(m *testing.M) {
