@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -17,6 +18,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
+	webRealtime "github.com/cozy/cozy-stack/web/realtime"
+	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -302,13 +305,15 @@ func TestPutTelepointer(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		sub := realtime.GetHub().Subscriber(inst)
-		sub.Subscribe(consts.NotesTelepointers)
+		sub.Subscribe(consts.NotesEvents)
 		wg.Done()
 		e := <-sub.Channel
 		assert.Equal(t, "UPDATED", e.Verb)
-		assert.Equal(t, "sessionID543781490137", e.Doc.ID())
-		doc, ok := e.Doc.(note.Telepointer)
+		assert.Equal(t, noteID, e.Doc.ID())
+		doc, ok := e.Doc.(note.Event)
 		assert.True(t, ok)
+		assert.Equal(t, consts.NotesTelepointers, doc["doctype"])
+		assert.Equal(t, "543781490137", doc["sessionID"])
 		assert.Equal(t, "textSelection", doc["type"])
 		assert.EqualValues(t, 7, doc["anchor"])
 		assert.EqualValues(t, 12, doc["head"])
@@ -321,8 +326,8 @@ func TestPutTelepointer(t *testing.T) {
 	body := `{
   "data": {
     "type": "io.cozy.notes.telepointers",
-    "id": "sessionID543781490137",
     "attributes": {
+      "sessionID": "543781490137",
       "anchor": 7,
       "head": 12,
       "type": "textSelection"
@@ -339,6 +344,61 @@ func TestPutTelepointer(t *testing.T) {
 	wg.Wait()
 }
 
+func TestNoteRealtime(t *testing.T) {
+	u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
+	c, _, err := websocket.DefaultDialer.Dial(u, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer c.Close()
+
+	auth := fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, token)
+	err = c.WriteMessage(websocket.TextMessage, []byte(auth))
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	msg := `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.notes.events", "id": "` + noteID + `" }}`
+	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	// To check that the realtime has made the subscription, we send a fake
+	// message and wait for its response.
+	msg = `{"method": "PING"}`
+	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
+	if !assert.NoError(t, err) {
+		return
+	}
+	var res map[string]interface{}
+	err = c.ReadJSON(&res)
+	assert.NoError(t, err)
+
+	pointer := note.Event{
+		"sessionID": "543781490137",
+		"anchor":    7,
+		"head":      12,
+		"type":      "textSelection",
+	}
+	pointer.SetID(noteID)
+	err = note.PutTelepointer(inst, pointer)
+	assert.NoError(t, err)
+	var res2 map[string]interface{}
+	err = c.ReadJSON(&res2)
+	assert.NoError(t, err)
+	assert.Equal(t, "UPDATED", res2["event"])
+	payload2, _ := res2["payload"].(map[string]interface{})
+	assert.Equal(t, noteID, payload2["id"])
+	assert.Equal(t, "io.cozy.notes.events", payload2["type"])
+	doc2, _ := payload2["doc"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.notes.telepointers", doc2["doctype"])
+	assert.Equal(t, "543781490137", doc2["sessionID"])
+	assert.EqualValues(t, 7, doc2["anchor"])
+	assert.EqualValues(t, 12, doc2["head"])
+	assert.Equal(t, "textSelection", doc2["type"])
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
@@ -346,7 +406,10 @@ func TestMain(m *testing.M) {
 	inst = setup.GetTestInstance()
 	_, token = setup.GetTestClient(consts.Files)
 
-	ts = setup.GetTestServer("/notes", Routes)
+	ts = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/notes":    Routes,
+		"/realtime": webRealtime.Routes,
+	})
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 	os.Exit(setup.Run())
 }

@@ -169,12 +169,11 @@ func PutTelepointer(c echo.Context) error {
 		return err
 	}
 
-	pointer := note.Telepointer{}
-	obj, err := jsonapi.Bind(c.Request().Body, &pointer)
-	if err != nil {
+	pointer := note.Event{}
+	if _, err := jsonapi.Bind(c.Request().Body, &pointer); err != nil {
 		return err
 	}
-	pointer.SetID(obj.ID)
+	pointer.SetID(file.ID())
 
 	if err := note.PutTelepointer(inst, pointer); err != nil {
 		return wrapError(err)

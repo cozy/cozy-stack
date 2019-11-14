@@ -92,4 +92,7 @@ const (
 	// NotesTelepointers doc type is used for the position of the cursor in a
 	// note.
 	NotesTelepointers = "io.cozy.notes.telepointers"
+	// NotesEvents doc type is used for realtime events related to a note, like
+	// a change of title.
+	NotesEvents = "io.cozy.notes.events"
 )

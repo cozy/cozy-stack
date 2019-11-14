@@ -158,7 +158,10 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 		cmd := &command{}
 		if err = ws.ReadJSON(cmd); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
-				logger.WithDomain(ds.DomainName()).WithField("nspace", "realtime").Infof("Error: %s", err)
+				logger.
+					WithDomain(ds.DomainName()).
+					WithField("nspace", "realtime").
+					Debugf("Error: %s", err)
 			}
 			break
 		}
@@ -171,10 +174,10 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			sendErr(ctx, errc, missingType(cmd))
 			continue
 		}
-		// XXX: thumbnails is a synthetic doctype, listening to its events
-		// requires a permissions on io.cozy.files
 		permType := cmd.Payload.Type
-		if permType == consts.Thumbnails {
+		// XXX: thumbnails is a synthetic doctype, listening to its events
+		// requires a permissions on io.cozy.files. Same for note events.
+		if permType == consts.Thumbnails || permType == consts.NotesEvents {
 			permType = consts.Files
 		}
 		// XXX: no permissions are required for io.cozy.sharings.initial-sync
@@ -191,7 +194,10 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			err = ds.Watch(cmd.Payload.Type, cmd.Payload.ID)
 		}
 		if err != nil {
-			logger.WithDomain(ds.DomainName()).WithField("nspace", "realtime").Warnf("Error: %s", err)
+			logger.
+				WithDomain(ds.DomainName()).
+				WithField("nspace", "realtime").
+				Warnf("Error: %s", err)
 		}
 	}
 }
