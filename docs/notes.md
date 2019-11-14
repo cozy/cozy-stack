@@ -336,7 +336,8 @@ Content-Type: application/vnd.api+json
       "to": 1,
       "slice": {
         "content": [{ "type": "text", "text": "H" }]
-      }
+      },
+      "version": 4
     }
   }, {
     "type": "io.cozy.notes.steps",
@@ -346,7 +347,8 @@ Content-Type: application/vnd.api+json
       "to": 2,
       "slice": {
         "content": [{ "type": "text", "text": "ello" }]
-      }
+      },
+      "version": 5
     }
   }]
 }
