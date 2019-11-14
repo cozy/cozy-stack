@@ -397,6 +397,21 @@ func TestNoteRealtime(t *testing.T) {
 	assert.EqualValues(t, 7, doc2["anchor"])
 	assert.EqualValues(t, 12, doc2["head"])
 	assert.Equal(t, "textSelection", doc2["type"])
+
+	file, err := inst.VFS().FileByID(noteID)
+	assert.NoError(t, err)
+	err = note.UpdateTitle(inst, file, "A very new title")
+	assert.NoError(t, err)
+	var res3 map[string]interface{}
+	err = c.ReadJSON(&res3)
+	assert.NoError(t, err)
+	assert.Equal(t, "UPDATED", res3["event"])
+	payload3, _ := res3["payload"].(map[string]interface{})
+	assert.Equal(t, noteID, payload3["id"])
+	assert.Equal(t, "io.cozy.notes.events", payload3["type"])
+	doc3, _ := payload3["doc"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.notes.documents", doc3["doctype"])
+	assert.Equal(t, "A very new title", doc3["title"])
 }
 
 func TestMain(m *testing.M) {

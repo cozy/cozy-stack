@@ -239,6 +239,10 @@ func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) error
 		return nil
 	}
 
+	event := Event{"title": title, "doctype": consts.NotesDocuments}
+	event.SetID(file.ID())
+	event.Publish(inst)
+
 	olddoc := file.Clone().(*vfs.FileDoc)
 	file.Metadata["title"] = title
 	file.UpdatedAt = time.Now()
