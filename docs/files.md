@@ -1239,7 +1239,7 @@ subscribe to those events on `io.cozy.files.thumbnails`.
 client > {"method": "AUTH",
           "payload": "xxAppOrAuthTokenxx="}
 client > {"method": "SUBSCRIBE",
-          "payload": {"type": "io.cozy.files.thumbnails" }
+          "payload": {"type": "io.cozy.files.thumbnails"}}
 server > {"event": "CREATED",
           "payload": {"id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
                       "type": "io.cozy.files.thumbnails",

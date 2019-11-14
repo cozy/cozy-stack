@@ -1333,7 +1333,7 @@ sync will be done (`DELETED`).
 client > {"method": "AUTH",
           "payload": "xxAppOrAuthTokenxx="}
 client > {"method": "SUBSCRIBE",
-          "payload": {"type": "io.cozy.sharings.initial-sync", "id": "ce8835a061d0ef68947afe69a0046722"}
+          "payload": {"type": "io.cozy.sharings.initial-sync", "id": "ce8835a061d0ef68947afe69a0046722"}}
 server > {"event": "UPDATED",
           "payload": {"id": "ce8835a061d0ef68947afe69a0046722", "type": "io.cozy.sharings.initial-sync", "doc": {"count": 12}}}
 server > {"event": "UPDATED",

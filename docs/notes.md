@@ -755,8 +755,9 @@ Content-Type: application/vnd.api+json
 {
   "data": {
     "type": "io.cozy.notes.telepointers",
-    "id": "sessionID543781490137",
+    "id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
     "attributes": {
+      "sessionID": "543781490137",
       "anchor": 7,
       "head": 12,
       "type": "textSelection"
@@ -773,8 +774,34 @@ HTTP/1.1 204 No Content
 
 ## Real-time via websockets
 
-TODO:
+You can subscribe to the [realtime](realtime.md) API for a document with the
+`io.cozy.notes.events` doctype, and the id of a note file. It requires a permission
+on this file, and it will send the events for this notes: changes of the title, the
+steps applied, and the telepointer updates.
 
-- title
-- steps
-- telepointers
+### Example
+
+```
+client > {"method": "AUTH",
+          "payload": "xxAppOrAuthTokenxx="}
+client > {"method": "SUBSCRIBE",
+          "payload": {"type": "io.cozy.notes.events",
+                      "id": "f48d9370-e1ec-0137-8547-543d7eb8149c"}}
+server > {"event": "UPDATED",
+          "payload": {"id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
+                      "type": "io.cozy.notes.events",
+                      "doc": {"doctype": "io.cozy.notes.documents", "title": "this is the new title of this note"}}}
+server > {"event": "CREATED",
+          "payload": {"id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
+                      "type": "io.cozy.notes.events",
+                      "doc": {"doctype": "io.cozy.notes.steps",
+                              "version": 6,
+                              "stepType": "replace",
+                              "from": 1,
+                              "to": 1,
+                              "slice": {"content": [{"type": "text", "text": "H"}]}}}}
+server > {"event": "UPDATED",
+          "payload": {"id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
+                      "type": "io.cozy.notes.events",
+                      "doc": {"doctype": "io.cozy.notes.telepointers", "sessionID": "543781490137", "anchor": 7, "head": 12, "type": "textSelection"}}}
+```
