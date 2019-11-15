@@ -94,8 +94,6 @@ func GetSteps(inst *instance.Instance, fileID, version string) ([]Step, error) {
 
 // ApplySteps takes a note and some steps, and tries to apply them. It is an
 // all or nothing change: if there is one error, the note won't be changed.
-// TODO split this function
-// TODO fetch last info for file (if debounce)
 func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, steps []Step) (*vfs.FileDoc, error) {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
@@ -115,17 +113,31 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, 
 		return nil, ErrCannotApply
 	}
 
+	if err := apply(inst, doc, steps); err != nil {
+		return nil, err
+	}
+	if err := saveSteps(inst, steps); err != nil {
+		return nil, err
+	}
+	publishSteps(inst, file.ID(), steps)
+
+	// TODO debounce
+	return writeFile(inst, doc, file)
+}
+
+func apply(inst *instance.Instance, doc *Document, steps []Step) error {
 	schema, err := doc.Schema()
 	if err != nil {
 		inst.Logger().WithField("nspace", "notes").
 			Infof("Cannot instantiate the schema: %s", err)
-		return nil, ErrInvalidSchema
+		return ErrInvalidSchema
 	}
+
 	content, err := doc.Content()
 	if err != nil {
 		inst.Logger().WithField("nspace", "notes").
 			Infof("Cannot instantiate the document: %s", err)
-		return nil, ErrInvalidFile
+		return ErrInvalidFile
 	}
 
 	for i, s := range steps {
@@ -133,21 +145,24 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, 
 		if err != nil {
 			inst.Logger().WithField("nspace", "notes").
 				Infof("Cannot instantiate a step: %s", err)
-			return nil, ErrInvalidSteps
+			return ErrInvalidSteps
 		}
 		result := step.Apply(content)
 		if result.Failed != "" {
 			inst.Logger().WithField("nspace", "notes").
 				Infof("Cannot apply a step: %s (version=%d)", result.Failed, doc.Version)
-			return nil, ErrCannotApply
+			return ErrCannotApply
 		}
 		content = result.Doc
 		doc.Version++ // TODO
-		steps[i].SetID(fmt.Sprintf("%s/%d", file.DocID, doc.Version))
+		steps[i].SetID(fmt.Sprintf("%s/%d", doc.ID(), doc.Version))
 		steps[i]["version"] = doc.Version
 	}
 	doc.SetContent(content)
+	return nil
+}
 
+func saveSteps(inst *instance.Instance, steps []Step) error {
 	olds := make([]interface{}, len(steps))
 	news := make([]interface{}, len(steps))
 	for i, s := range steps {
@@ -155,29 +170,26 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, 
 	}
 	if err := couchdb.BulkUpdateDocs(inst, consts.NotesSteps, news, olds); err != nil {
 		if !couchdb.IsNoDatabaseError(err) {
-			return nil, err
+			return err
 		}
 		if err := couchdb.EnsureDBExist(inst, consts.NotesSteps); err != nil {
-			return nil, err
+			return err
 		}
 		if err := couchdb.BulkUpdateDocs(inst, consts.NotesSteps, news, olds); err != nil {
-			return nil, err
+			return err
 		}
 	}
+	// TODO purge the old steps
+	return nil
+}
+
+func publishSteps(inst *instance.Instance, fileID string, steps []Step) {
 	for _, s := range steps {
 		e := Event(s)
 		e["doctype"] = s.DocType()
-		e.SetID(file.ID())
+		e.SetID(fileID)
 		e.publish(inst)
 	}
-	// TODO purge the old steps
-
-	old := file
-	file = doc.asFile(old)
-	if err := writeFile(inst, file, old, doc.Markdown()); err != nil {
-		return nil, err
-	}
-	return file, nil
 }
 
 var _ jsonapi.Object = &Step{}

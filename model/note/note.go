@@ -111,7 +111,7 @@ func (d *Document) Content() (*model.Node, error) {
 func (d *Document) Markdown() []byte {
 	if len(d.markdown) == 0 {
 		if content, err := d.Content(); err != nil {
-			// TODO
+			// TODO markdown
 			d.markdown = []byte(content.String())
 		}
 	}
@@ -167,14 +167,7 @@ func Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	}
 	doc.SetContent(content)
 
-	fileDoc, err := newFileDoc(inst, doc)
-	if err != nil {
-		return nil, err
-	}
-	if err := writeFile(inst, fileDoc, nil, doc.Markdown()); err != nil {
-		return nil, err
-	}
-	return fileDoc, nil
+	return writeFile(inst, doc, nil)
 }
 
 func initialContent(inst *instance.Instance, doc *Document) (*model.Node, error) {
@@ -281,10 +274,18 @@ func ensureNotesDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	return dir, nil
 }
 
-// TODO refactor to writeFile(inst *instance.Instance, doc *Document, old *vfs.FileDoc) (*vfs.FileDoc, error)
-func writeFile(inst *instance.Instance, fileDoc, oldDoc *vfs.FileDoc, content []byte) (err error) {
-	var file vfs.File
+func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fileDoc *vfs.FileDoc, err error) {
+	if oldDoc == nil {
+		fileDoc, err = newFileDoc(inst, doc)
+		if err != nil {
+			return
+		}
+	} else {
+		fileDoc = doc.asFile(oldDoc)
+	}
+
 	fs := inst.VFS()
+	var file vfs.File
 	file, err = fs.CreateFile(fileDoc, oldDoc)
 	if err == os.ErrExist {
 		filename := path.Base(fileDoc.DocName)
@@ -303,7 +304,7 @@ func writeFile(inst *instance.Instance, fileDoc, oldDoc *vfs.FileDoc, content []
 			clearCache(inst, fileDoc.ID())
 		}
 	}()
-	_, err = file.Write(content)
+	_, err = file.Write(doc.Markdown())
 	return
 }
 
@@ -442,12 +443,13 @@ func Update(inst *instance.Instance, fileID string) error {
 		return err
 	}
 
-	// TODO if same title and same version, return nil
+	if doc.Title == old.Metadata["title"] && doc.Version == old.Metadata["version"] {
+		// Nothing to do
+		return nil
+	}
 
-	file := doc.asFile(old)
-
-	// TODO use writeFile to also update the content
-	return inst.VFS().UpdateFileDoc(old, file)
+	_, err = writeFile(inst, doc, old)
+	return err
 }
 
 var _ couchdb.Doc = &Document{}
