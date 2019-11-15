@@ -154,7 +154,10 @@ func GetNotifiables(i *instance.Instance) ([]*Client, error) {
 	var clients []*Client
 	req := &couchdb.FindRequest{
 		UseIndex: "by-notification-platform",
-		Selector: mango.Exists("notification_platform"),
+		Selector: mango.And(
+			mango.Exists("notification_platform"),
+			mango.Exists("notification_device_token"),
+		),
 	}
 	err := couchdb.FindDocs(i, consts.OAuthClients, req, &clients)
 	if err != nil {

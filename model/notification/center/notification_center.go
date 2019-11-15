@@ -330,13 +330,5 @@ func ensureMailFallback(channels []string) []string {
 
 func hasNotifiableDevice(inst *instance.Instance) bool {
 	cs, err := oauth.GetNotifiables(inst)
-	if err != nil {
-		return false
-	}
-	for _, c := range cs {
-		if c.NotificationDeviceToken != "" {
-			return true
-		}
-	}
-	return false
+	return err == nil && len(cs) > 0
 }

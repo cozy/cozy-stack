@@ -104,17 +104,19 @@ func Worker(ctx *job.WorkerContext) error {
 	if err != nil {
 		return err
 	}
+	if len(cs) > 10 {
+		ctx.Logger().Warnf("too many notifiable devices: %d", len(cs))
+		cs = cs[:10]
+	}
 	for _, c := range cs {
-		if c.NotificationDeviceToken != "" {
-			err = push(ctx, c, &msg)
-			if err != nil {
-				ctx.Logger().
-					WithFields(logrus.Fields{
-						"device_id":       c.ID(),
-						"device_platform": c.NotificationPlatform,
-					}).
-					Warnf("could not send notification on device: %s", err)
-			}
+		err = push(ctx, c, &msg)
+		if err != nil {
+			ctx.Logger().
+				WithFields(logrus.Fields{
+					"device_id":       c.ID(),
+					"device_platform": c.NotificationPlatform,
+				}).
+				Warnf("could not send notification on device: %s", err)
 		}
 	}
 	return nil
