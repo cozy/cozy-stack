@@ -62,7 +62,7 @@ func (e Event) Links() *jsonapi.LinksList { return nil }
 // Relationships is part of the jsonapi.Object interface
 func (e Event) Relationships() jsonapi.RelationshipMap { return nil }
 
-func (e Event) Publish(inst *instance.Instance) {
+func (e Event) publish(inst *instance.Instance) {
 	go realtime.GetHub().Publish(inst, realtime.EventUpdate, e, nil)
 }
 
@@ -72,7 +72,7 @@ func PutTelepointer(inst *instance.Instance, t Event) error {
 		return ErrMissingSessionID
 	}
 	t["doctype"] = consts.NotesTelepointers
-	t.Publish(inst)
+	t.publish(inst)
 	return nil
 }
 

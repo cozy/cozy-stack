@@ -154,12 +154,35 @@ func TestChangeTitle(t *testing.T) {
 	assert.Equal(t, "io.cozy.files", data["type"])
 	assert.Equal(t, noteID, data["id"])
 	attrs := data["attributes"].(map[string]interface{})
-	assert.Equal(t, "A new title.cozy-note", attrs["name"])
 	meta, _ := attrs["metadata"].(map[string]interface{})
 	assert.Equal(t, "A new title", meta["title"])
 	assert.EqualValues(t, 0, meta["version"])
 	assert.NotNil(t, meta["schema"])
 	assert.NotNil(t, meta["content"])
+
+	// The change was only made in cache, but we have to force persisting the
+	// change to the VFS to check that renaming the file works.
+	err = note.Update(inst, noteID)
+	assert.NoError(t, err)
+
+	req2, _ := http.NewRequest("GET", ts.URL+"/notes/"+noteID, nil)
+	req2.Header.Add("Authorization", "Bearer "+token)
+	res2, err := http.DefaultClient.Do(req2)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res2.StatusCode)
+	var result2 map[string]interface{}
+	err = json.NewDecoder(res2.Body).Decode(&result2)
+	assert.NoError(t, err)
+	data2, _ := result2["data"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.files", data2["type"])
+	assert.Equal(t, noteID, data2["id"])
+	attrs2 := data2["attributes"].(map[string]interface{})
+	assert.Equal(t, "A new title.cozy-note", attrs2["name"])
+	meta2, _ := attrs["metadata"].(map[string]interface{})
+	assert.Equal(t, "A new title", meta2["title"])
+	assert.EqualValues(t, 0, meta2["version"])
+	assert.NotNil(t, meta2["schema"])
+	assert.NotNil(t, meta2["content"])
 }
 
 func TestPatchNote(t *testing.T) {
@@ -314,7 +337,8 @@ func TestPutTelepointer(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		sub := realtime.GetHub().Subscriber(inst)
-		sub.Subscribe(consts.NotesEvents)
+		err := sub.Subscribe(consts.NotesEvents)
+		assert.NoError(t, err)
 		wg.Done()
 		e := <-sub.Channel
 		assert.Equal(t, "UPDATED", e.Verb)
@@ -409,7 +433,7 @@ func TestNoteRealtime(t *testing.T) {
 
 	file, err := inst.VFS().FileByID(noteID)
 	assert.NoError(t, err)
-	err = note.UpdateTitle(inst, file, "A very new title")
+	file, err = note.UpdateTitle(inst, file, "A very new title")
 	assert.NoError(t, err)
 	var res3 map[string]interface{}
 	err = c.ReadJSON(&res3)
@@ -431,7 +455,7 @@ func TestNoteRealtime(t *testing.T) {
 		{"sessionID": "543781490137", "stepType": "replace", "from": 2, "to": 2, "slice": slice},
 		{"sessionID": "543781490137", "stepType": "replace", "from": 3, "to": 3, "slice": slice},
 	}
-	err = note.ApplySteps(inst, file, fmt.Sprintf("%d", version), steps)
+	file, err = note.ApplySteps(inst, file, fmt.Sprintf("%d", version), steps)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -472,6 +496,7 @@ func TestNoteRealtime(t *testing.T) {
 	assert.NotEqual(t, 0, v5)
 	assert.NotEqual(t, v4, v5)
 	assert.NotEqual(t, version, v5)
+	assert.EqualValues(t, file.Metadata["version"], v5)
 }
 
 func TestMain(m *testing.M) {

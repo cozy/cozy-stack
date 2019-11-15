@@ -4,11 +4,15 @@ package note
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"path"
 	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/prosemirror-go/model"
@@ -17,13 +21,18 @@ import (
 // Document is the note document in memory. It is persisted to the VFS as a
 // file, but with a debounce: the intermediate states are saved in Redis.
 type Document struct {
-	DocID   string          `json:"_id"`
-	DocRev  string          `json:"_rev,omitempty"`
-	Title   string          `json:"title"`
-	DirID   string          `json:"dir_id,omitempty"`
-	Version int64           `json:"version"`
-	Schema  json.RawMessage `json:"schema"`
-	Content interface{}     `json:"content,omitempty"`
+	DocID      string                 `json:"_id"`
+	DocRev     string                 `json:"_rev,omitempty"`
+	DirID      string                 `json:"dir_id,omitempty"`
+	Title      string                 `json:"title"`
+	Version    int64                  `json:"version"`
+	SchemaSpec map[string]interface{} `json:"schema"`
+	RawContent map[string]interface{} `json:"content"`
+
+	// Use cache for some computed properties
+	schema   *model.Schema
+	content  *model.Node
+	markdown []byte
 }
 
 // ID returns the directory qualified identifier
@@ -49,42 +58,127 @@ func (d *Document) SetID(id string) { d.DocID = id }
 // SetRev changes the document revision
 func (d *Document) SetRev(rev string) { d.DocRev = rev }
 
+// Metadata returns the file metadata for this note.
+func (d *Document) Metadata() map[string]interface{} {
+	return map[string]interface{}{
+		"title":   d.Title,
+		"content": d.RawContent,
+		"version": d.Version,
+		"schema":  d.SchemaSpec,
+	}
+}
+
+// Schema returns the prosemirror schema for this note
+func (d *Document) Schema() (*model.Schema, error) {
+	if d.schema == nil {
+		spec := model.SchemaSpecFromJSON(d.SchemaSpec)
+		schema, err := model.NewSchema(&spec)
+		if err != nil {
+			return nil, ErrInvalidSchema
+		}
+		d.schema = schema
+	}
+	return d.schema, nil
+}
+
+// SetContent updates the content of this note, and clears the cache.
+func (d *Document) SetContent(content *model.Node) {
+	d.RawContent = content.ToJSON()
+	d.content = content
+	d.markdown = nil
+}
+
+// Content returns the prosemirror content for this note.
+func (d *Document) Content() (*model.Node, error) {
+	if d.content == nil {
+		if len(d.RawContent) == 0 {
+			return nil, ErrInvalidFile
+		}
+		schema, err := d.Schema()
+		if err != nil {
+			return nil, err
+		}
+		content, err := model.NodeFromJSON(schema, d.RawContent)
+		if err != nil {
+			return nil, err
+		}
+		d.content = content
+	}
+	return d.content, nil
+}
+
+// Markdown returns a markdown serialization of the content.
+func (d *Document) Markdown() []byte {
+	if len(d.markdown) == 0 {
+		if content, err := d.Content(); err != nil {
+			// TODO
+			d.markdown = []byte(content.String())
+		}
+	}
+	return d.markdown
+}
+
+func (d *Document) getDirID(inst *instance.Instance) (string, error) {
+	if d.DirID != "" {
+		return d.DirID, nil
+	}
+	parent, err := ensureNotesDir(inst)
+	if err != nil {
+		return "", err
+	}
+	d.DirID = parent.ID()
+	return d.DirID, nil
+}
+
+func (d *Document) asFile(old *vfs.FileDoc) *vfs.FileDoc {
+	file := old.Clone().(*vfs.FileDoc)
+	file.Metadata = d.Metadata()
+	file.ByteSize = int64(len(d.Markdown()))
+	file.MD5Sum = nil // Let the VFS compute the md5sum
+	if d.DirID != "" {
+		file.DirID = d.DirID
+	}
+
+	// If the file was renamed manually before, we will keep its name. Else, we
+	// can rename with the new title.
+	oldTitle, _ := old.Metadata["title"].(string)
+	if rename := titleToFilename(oldTitle) == old.DocName; rename {
+		file.DocName = titleToFilename(d.Title)
+		file.ResetFullpath()
+	}
+
+	file.UpdatedAt = time.Now()
+	file.CozyMetadata.UpdatedAt = file.UpdatedAt
+	return file
+}
+
 // Create the file in the VFS for this note.
-func (d *Document) Create(inst *instance.Instance) (*vfs.FileDoc, error) {
+func Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
 		return nil, err
 	}
 	defer lock.Unlock()
 
-	d.Version = 0
-	content, err := d.getInitialContent(inst)
+	doc.Version = 0
+	content, err := initialContent(inst, doc)
 	if err != nil {
 		return nil, err
 	}
-	d.Content = content.ToJSON()
+	doc.SetContent(content)
 
-	// TODO markdown
-	markdown := []byte(content.String())
-	fileDoc, err := d.newFileDoc(inst, markdown)
+	fileDoc, err := newFileDoc(inst, doc)
 	if err != nil {
 		return nil, err
 	}
-	if err := writeFile(inst.VFS(), fileDoc, nil, markdown); err != nil {
+	if err := writeFile(inst, fileDoc, nil, doc.Markdown()); err != nil {
 		return nil, err
 	}
 	return fileDoc, nil
 }
 
-func (d *Document) getInitialContent(inst *instance.Instance) (*model.Node, error) {
-	var spec model.SchemaSpec
-	if err := json.Unmarshal(d.Schema, &spec); err != nil {
-		inst.Logger().WithField("nspace", "notes").
-			Infof("Cannot read the schema: %s", err)
-		return nil, ErrInvalidSchema
-	}
-
-	schema, err := model.NewSchema(&spec)
+func initialContent(inst *instance.Instance, doc *Document) (*model.Node, error) {
+	schema, err := doc.Schema()
 	if err != nil {
 		inst.Logger().WithField("nspace", "notes").
 			Infof("Cannot instantiate the schema: %s", err)
@@ -107,33 +201,15 @@ func (d *Document) getInitialContent(inst *instance.Instance) (*model.Node, erro
 	return node, nil
 }
 
-func (d *Document) getDirID(inst *instance.Instance) (string, error) {
-	if d.DirID != "" {
-		return d.DirID, nil
-	}
-	parent, err := ensureNotesDir(inst)
-	if err != nil {
-		return "", err
-	}
-	return parent.ID(), nil
-}
-
-func titleToFilename(title string) string {
-	if title == "" {
-		title = "New note"
-	}
-	name := strings.ReplaceAll(title, "/", "-")
-	return name + ".cozy-note"
-}
-
-func (d *Document) newFileDoc(inst *instance.Instance, content []byte) (*vfs.FileDoc, error) {
-	dirID, err := d.getDirID(inst)
+func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
+	dirID, err := doc.getDirID(inst)
 	if err != nil {
 		return nil, err
 	}
+	content := doc.Markdown()
 
 	fileDoc, err := vfs.NewFileDoc(
-		titleToFilename(d.Title),
+		titleToFilename(doc.Title),
 		dirID,
 		int64(len(content)),
 		nil, // Let the VFS compute the md5sum
@@ -148,34 +224,17 @@ func (d *Document) newFileDoc(inst *instance.Instance, content []byte) (*vfs.Fil
 		return nil, err
 	}
 
-	fileDoc.Metadata = d.metadata()
+	fileDoc.Metadata = doc.Metadata()
 	fileDoc.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	return fileDoc, nil
 }
 
-func (d *Document) metadata() map[string]interface{} {
-	return map[string]interface{}{
-		"title":   d.Title,
-		"content": d.Content,
-		"version": d.Version,
-		"schema":  d.Schema,
+func titleToFilename(title string) string {
+	if title == "" {
+		title = "New note"
 	}
-}
-
-// TODO retry if another file with the same name already exists
-func writeFile(fs vfs.VFS, fileDoc, oldDoc *vfs.FileDoc, content []byte) (err error) {
-	var file vfs.File
-	file, err = fs.CreateFile(fileDoc, oldDoc)
-	if err != nil {
-		return
-	}
-	defer func() {
-		if cerr := file.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
-	_, err = file.Write(content)
-	return
+	name := strings.ReplaceAll(title, "/", "-")
+	return name + ".cozy-note"
 }
 
 func ensureNotesDir(inst *instance.Instance) (*vfs.DirDoc, error) {
@@ -222,40 +281,173 @@ func ensureNotesDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	return dir, nil
 }
 
+// TODO refactor to writeFile(inst *instance.Instance, doc *Document, old *vfs.FileDoc) (*vfs.FileDoc, error)
+func writeFile(inst *instance.Instance, fileDoc, oldDoc *vfs.FileDoc, content []byte) (err error) {
+	var file vfs.File
+	fs := inst.VFS()
+	file, err = fs.CreateFile(fileDoc, oldDoc)
+	if err == os.ErrExist {
+		filename := path.Base(fileDoc.DocName)
+		suffix := time.Now().Format(time.RFC3339)
+		fileDoc.DocName = fmt.Sprintf("%s - %s.cozy-note", filename, suffix)
+		file, err = fs.CreateFile(fileDoc, oldDoc)
+	}
+	if err != nil {
+		return
+	}
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+		if err == nil {
+			clearCache(inst, fileDoc.ID())
+		}
+	}()
+	_, err = file.Write(content)
+	return
+}
+
+// GetFile takes a file from the VFS as a note and returns its last version. It
+// is useful when some changes have not yet been persisted to the VFS.
+func GetFile(inst *instance.Instance, file *vfs.FileDoc) (*vfs.FileDoc, error) {
+	lock := inst.NotesLock()
+	if err := lock.Lock(); err != nil {
+		return nil, err
+	}
+	defer lock.Unlock()
+	doc, err := get(inst, file)
+	if err != nil {
+		return nil, err
+	}
+	return doc.asFile(file), nil
+}
+
+// get must be called with the notes lock already acquired. It will try to load
+// the last version if a note from the cache, and if it fails, it will replay
+// the new steps on the file from the VFS.
+func get(inst *instance.Instance, file *vfs.FileDoc) (*Document, error) {
+	if doc := getFromCache(inst, file.ID()); doc != nil {
+		return doc, nil
+	}
+	// TODO replay steps
+	return fromMetadata(file)
+}
+
+func fromMetadata(file *vfs.FileDoc) (*Document, error) {
+	var version int64
+	switch v := file.Metadata["version"].(type) {
+	case float64:
+		version = int64(v)
+	case int64:
+		version = v
+	default:
+		return nil, ErrInvalidFile
+	}
+	title, _ := file.Metadata["title"].(string)
+	schema, ok := file.Metadata["schema"].(map[string]interface{})
+	if !ok {
+		return nil, ErrInvalidFile
+	}
+	content, ok := file.Metadata["content"].(map[string]interface{})
+	if !ok {
+		return nil, ErrInvalidFile
+	}
+	return &Document{
+		DocID:      file.ID(),
+		DirID:      file.DirID,
+		Title:      title,
+		Version:    version,
+		SchemaSpec: schema,
+		RawContent: content,
+	}, nil
+}
+
+func getFromCache(inst *instance.Instance, noteID string) *Document {
+	cache := config.GetConfig().CacheStorage
+	buf, ok := cache.Get(cacheKey(inst, noteID))
+	if !ok {
+		return nil
+	}
+	var doc Document
+	if err := json.Unmarshal(buf, &doc); err != nil {
+		return nil
+	}
+	return &doc
+}
+
+func clearCache(inst *instance.Instance, noteID string) {
+	cache := config.GetConfig().CacheStorage
+	cache.Clear(cacheKey(inst, noteID))
+}
+
+func cacheKey(inst *instance.Instance, noteID string) string {
+	return fmt.Sprintf("note:%s:%s", inst.Domain, noteID)
+}
+
+func saveToCache(inst *instance.Instance, doc *Document) error {
+	cache := config.GetConfig().CacheStorage
+	buf, err := json.Marshal(doc)
+	if err != nil {
+		return err
+	}
+	cache.Set(cacheKey(inst, doc.ID()), buf, 30*time.Minute)
+	return nil
+}
+
 // UpdateTitle changes the title of a note and renames the associated file.
-// TODO add debounce
-func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) error {
+func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) (*vfs.FileDoc, error) {
+	lock := inst.NotesLock()
+	if err := lock.Lock(); err != nil {
+		return nil, err
+	}
+	defer lock.Unlock()
+
+	doc, err := get(inst, file)
+	if err != nil {
+		return nil, err
+	}
+
+	if doc.Title == title {
+		return file, nil
+	}
+	doc.Title = title
+	if err := saveToCache(inst, doc); err != nil {
+		return nil, err
+	}
+
+	publishUpdatedTitle(inst, file.ID(), title)
+	return doc.asFile(file), nil
+}
+
+func publishUpdatedTitle(inst *instance.Instance, fileID, title string) {
+	event := Event{"title": title, "doctype": consts.NotesDocuments}
+	event.SetID(fileID)
+	event.publish(inst)
+}
+
+// Update is used to persist changes on a note to its file in the VFS.
+func Update(inst *instance.Instance, fileID string) error {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
 		return err
 	}
 	defer lock.Unlock()
 
-	if len(file.Metadata) == 0 {
-		return ErrInvalidFile
+	old, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return err
 	}
-	old, _ := file.Metadata["title"].(string)
-	if old == title {
-		return nil
-	}
-
-	event := Event{"title": title, "doctype": consts.NotesDocuments}
-	event.SetID(file.ID())
-	event.Publish(inst)
-
-	olddoc := file.Clone().(*vfs.FileDoc)
-	file.Metadata["title"] = title
-	file.UpdatedAt = time.Now()
-	file.CozyMetadata.UpdatedAt = file.UpdatedAt
-
-	// If the file was renamed manually before, we will keep its name. Else, we
-	// can rename with the new title.
-	if rename := titleToFilename(old) == file.DocName; rename {
-		file.DocName = titleToFilename(title)
-		file.ResetFullpath()
+	doc, err := get(inst, old)
+	if err != nil {
+		return err
 	}
 
-	return inst.VFS().UpdateFileDoc(olddoc, file)
+	// TODO if same title and same version, return nil
+
+	file := doc.asFile(old)
+
+	// TODO use writeFile to also update the content
+	return inst.VFS().UpdateFileDoc(old, file)
 }
 
 var _ couchdb.Doc = &Document{}

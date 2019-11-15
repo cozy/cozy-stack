@@ -31,7 +31,7 @@ func CreateNote(c echo.Context) error {
 	}
 
 	inst := middlewares.GetInstance(c)
-	file, err := doc.Create(inst)
+	file, err := note.Create(inst, doc)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -54,7 +54,10 @@ func GetNote(c echo.Context) error {
 		return err
 	}
 
-	// TODO fetch the updated title and content from redis
+	file, err = note.GetFile(inst, file)
+	if err != nil {
+		return wrapError(err)
+	}
 
 	return files.FileData(c, http.StatusOK, file, false, nil)
 }
@@ -76,9 +79,12 @@ func GetSteps(c echo.Context) error {
 	}
 
 	rev := c.QueryParam("Version")
-	steps, err := note.GetSteps(inst, file, rev)
+	steps, err := note.GetSteps(inst, file.DocID, rev)
 	if err == note.ErrTooOld {
-		// TODO fetch the updated title and content from redis
+		file, err = note.GetFile(inst, file)
+		if err != nil {
+			return wrapError(err)
+		}
 		return files.FileData(c, http.StatusPreconditionFailed, file, false, nil)
 	}
 	if err != nil {
@@ -122,7 +128,7 @@ func PatchNote(c echo.Context) error {
 	}
 
 	ifMatch := c.Request().Header.Get("If-Match")
-	if err := note.ApplySteps(inst, file, ifMatch, steps); err != nil {
+	if file, err = note.ApplySteps(inst, file, ifMatch, steps); err != nil {
 		return wrapError(err)
 	}
 
@@ -148,7 +154,7 @@ func ChangeTitle(c echo.Context) error {
 		return err
 	}
 
-	if err := note.UpdateTitle(inst, file, doc.Title); err != nil {
+	if file, err = note.UpdateTitle(inst, file, doc.Title); err != nil {
 		return wrapError(err)
 	}
 
