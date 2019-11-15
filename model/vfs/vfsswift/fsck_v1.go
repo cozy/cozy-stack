@@ -173,7 +173,7 @@ func objectToFileDocV1(container string, object swift.Object) *vfs.TreeFile {
 	var dirID, name string
 	if dirIDAndName := strings.SplitN(object.Name, "/", 2); len(dirIDAndName) == 2 {
 		dirID = dirIDAndName[0]
-		name = dirIDAndName[0]
+		name = dirIDAndName[1]
 	}
 	docType := consts.FileType
 	if object.ContentType == dirContentType {
@@ -185,7 +185,6 @@ func objectToFileDocV1(container string, object swift.Object) *vfs.TreeFile {
 		DirOrFileDoc: vfs.DirOrFileDoc{
 			DirDoc: &vfs.DirDoc{
 				Type:      docType,
-				DocID:     makeDocID(object.Name),
 				DocName:   name,
 				DirID:     dirID,
 				CreatedAt: object.LastModified,
