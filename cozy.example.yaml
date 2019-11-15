@@ -111,6 +111,7 @@ jobs:
   #   - "export":          exporting data from a cozy instance
   #   - "konnector":       launching konnectors
   #   - "migrations":      transforming a VFS with Swift to layout v3
+  #   - "notes-persist":   saving notes to the VFS
   #   - "push":            sending push notifications
   #   - "sendmail":        sending mails
   #   - "service":         launching services

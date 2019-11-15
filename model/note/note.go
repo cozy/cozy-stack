@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -167,7 +168,14 @@ func Create(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	}
 	doc.SetContent(content)
 
-	return writeFile(inst, doc, nil)
+	file, err := writeFile(inst, doc, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err := setupTrigger(inst, file.ID()); err != nil {
+		return nil, err
+	}
+	return file, nil
 }
 
 func initialContent(inst *instance.Instance, doc *Document) (*model.Node, error) {
@@ -272,6 +280,27 @@ func ensureNotesDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		_ = fs.UpdateDirDoc(olddoc, dir)
 	}
 	return dir, nil
+}
+
+// DebounceMessage is used by the trigger for saving the note to the VFS with a
+// debounce.
+type DebounceMessage struct {
+	NoteID string `json:"note_id"`
+}
+
+func setupTrigger(inst *instance.Instance, fileID string) error {
+	sched := job.System()
+	msg := &DebounceMessage{NoteID: fileID}
+	t, err := job.NewTrigger(inst, job.TriggerInfos{
+		Type:       "@event",
+		WorkerType: "notes-save",
+		Arguments:  fmt.Sprintf("%s:UPDATED:%s", consts.NotesEvents, fileID),
+		Debounce:   "10m",
+	}, msg)
+	if err != nil {
+		return err
+	}
+	return sched.AddTrigger(t)
 }
 
 func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fileDoc *vfs.FileDoc, err error) {
