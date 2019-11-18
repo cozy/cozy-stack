@@ -260,6 +260,31 @@ func TestGetPassphraseParameters(t *testing.T) {
 	assert.Equal(t, float64(5000), attrs["iterations"])
 }
 
+func TestGetCapabilities(t *testing.T) {
+	res, err := http.Get(ts.URL + "/settings/instance")
+	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/capabilities", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	assert.NoError(t, err)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data, ok := result["data"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "io.cozy.settings", data["type"].(string))
+	assert.Equal(t, "io.cozy.settings.capabilities", data["id"].(string))
+	attrs, ok := data["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+	versioning, ok := attrs["file_versioning"].(bool)
+	assert.True(t, ok)
+	assert.True(t, versioning)
+}
+
 func TestGetInstance(t *testing.T) {
 	res, err := http.Get(ts.URL + "/settings/instance")
 	assert.NoError(t, err)
