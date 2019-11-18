@@ -29,8 +29,10 @@ func proxyReq(auth authType, clientPermanentCache bool, proxyCacheControl regist
 				}
 			}
 		case perms:
-			pdoc, err := middlewares.GetPermission(c)
-			if err != nil || pdoc.Type != permission.TypeWebapp {
+			// pdoc, err := middlewares.GetPermission(c)
+			// if err != nil || pdoc.Type != permission.TypeWebapp {
+			_, err := middlewares.GetPermission(c)
+			if err != nil {
 				return echo.NewHTTPError(http.StatusForbidden)
 			}
 		default:
@@ -67,11 +69,29 @@ func proxyListReq(c echo.Context) error {
 	return c.JSON(http.StatusOK, list)
 }
 
+func proxyMaintenanceReq(c echo.Context) error {
+	i := middlewares.GetInstance(c)
+	pdoc, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	if pdoc.Type != permission.TypeWebapp && pdoc.Type != permission.TypeOauth {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	req := c.Request()
+	list, err := registry.ProxyMaintenance(req, i.Registries())
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, list)
+}
+
 // Routes sets the routing for the registry
 func Routes(router *echo.Group) {
 	gzip := middleware.Gzip()
 	router.GET("", proxyListReq, gzip)
 	router.GET("/", proxyListReq, gzip)
+	router.GET("/maintenance", proxyMaintenanceReq, gzip)
 	router.GET("/:app", proxyReq(perms, false, registry.WithCache))
 	router.GET("/:app/icon", proxyReq(authed, false, registry.NoCache))
 	router.GET("/:app/partnership_icon", proxyReq(authed, false, registry.NoCache))
