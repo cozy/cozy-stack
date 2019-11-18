@@ -254,7 +254,10 @@ HTTP/1.1 204 No Content
 
 ### GET /settings/capabilities
 
-List the activated capabilities for this instance.
+List the activated capabilities for this instance. An unadvertised capability
+should be considered `false` and, for backward compatibility, if you can't get a
+valid response from this endpoint (in particular in case of a `404 Not found`
+error), all capabilities should be considered `false`.
 
 #### Request
 
