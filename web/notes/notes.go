@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -78,7 +79,10 @@ func GetSteps(c echo.Context) error {
 		return err
 	}
 
-	rev := c.QueryParam("Version")
+	rev, err := strconv.ParseInt(c.QueryParam("Version"), 10, 64)
+	if err != nil {
+		return jsonapi.InvalidParameter("Version", err)
+	}
 	steps, err := note.GetSteps(inst, file.DocID, rev)
 	if err == note.ErrTooOld {
 		file, err = note.GetFile(inst, file)

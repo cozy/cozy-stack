@@ -279,7 +279,7 @@ func TestGetSteps(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
 	data, _ := result["data"].(map[string]interface{})
-	attrs := data["attributes"].(map[string]interface{})
+	attrs, _ := data["attributes"].(map[string]interface{})
 	meta, _ := attrs["metadata"].(map[string]interface{})
 	last, _ := meta["version"].(float64)
 	lastVersion := int64(last)
@@ -297,7 +297,9 @@ func TestGetSteps(t *testing.T) {
 	meta2, _ := result2["meta"].(map[string]interface{})
 	assert.EqualValues(t, 2, meta2["count"])
 	data2, _ := result2["data"].([]interface{})
-	assert.Len(t, data2, 2)
+	if !assert.Len(t, data2, 2) {
+		return
+	}
 	first, _ := data2[0].(map[string]interface{})
 	assert.NotNil(t, first["id"])
 	attrsF, _ := first["attributes"].(map[string]interface{})

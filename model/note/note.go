@@ -19,6 +19,12 @@ import (
 	"github.com/cozy/prosemirror-go/model"
 )
 
+const (
+	persistenceDebouce = "10m"
+	cacheDuration      = 30 * time.Minute
+	cleanStepsAfter    = 24 * time.Hour
+)
+
 // Document is the note document in memory. It is persisted to the VFS as a
 // file, but with a debounce: the intermediate states are saved in Redis.
 type Document struct {
@@ -295,7 +301,7 @@ func setupTrigger(inst *instance.Instance, fileID string) error {
 		Type:       "@event",
 		WorkerType: "notes-save",
 		Arguments:  fmt.Sprintf("%s:UPDATED:%s", consts.NotesEvents, fileID),
-		Debounce:   "10m",
+		Debounce:   persistenceDebouce,
 	}, msg)
 	if err != nil {
 		return err
@@ -420,7 +426,7 @@ func saveToCache(inst *instance.Instance, doc *Document) error {
 	if err != nil {
 		return err
 	}
-	cache.Set(cacheKey(inst, doc.ID()), buf, 30*time.Minute)
+	cache.Set(cacheKey(inst, doc.ID()), buf, cacheDuration)
 	return nil
 }
 
