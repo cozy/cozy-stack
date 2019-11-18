@@ -252,7 +252,7 @@ for the same konnector & various accounts.
 
 The cozy-stack prepares the execution of the konnector by doing these steps:
 
-- it checks that the konnector is not in maintenance in the registry (execpt
+- it checks that the konnector is not in maintenance in the registry (except
   for manual execution)
 - it ensures that the konnector has a folder where it can write its files,
   and has the permission to write in this folder.
@@ -275,7 +275,7 @@ The konnector process can send events trough its stdout (newline separated JSON
 object), the konnector worker pass these events to the realtime hub as
 `io.cozy.jobs.events`.
 
--   Only JSON formatted events are forwarded to the client-side throught
+-   Only JSON formatted events are forwarded to the client-side through
     realtime
 -   Otherwise formatted lines (such as node Error) will be kept in some system
     logs.
@@ -357,13 +357,13 @@ as the associated scope
 
 `io.cozy.account_types` are not accessible to the applications: they are
 injected directly in CouchDB in a global database
-`secrets/io-cozy-accounts_type`.
+`secrets/io-cozy-account_types`.
 
 ### Secrets that are not OAuth
 
 The `io.cozy.account_types` doctype can also be used for storing secrets that
 are not related to OAuth. The document still need to be injected manually in
-`secrets/io-cozy-accounts_type`:
+`secrets/io-cozy-account_types`:
 
 ```
 {
@@ -450,7 +450,7 @@ client_secret=$CLIENT_SECRET
 
 #### Dynamic Registration Protocol
 
-A few services allows client to register programaticaly through the Dynamic
+A few services allows client to register programatically through the Dynamic
 Client Registration Protocol [RFC7591](https://tools.ietf.org/html/rfc7591), we
 should allow the Stack to register using this protocol when we first need to
 implement a Konnector connecting to such a Service.
