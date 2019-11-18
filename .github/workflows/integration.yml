@@ -1,6 +1,8 @@
 name: Integration tests
 on:
   push:
+    branches:
+      - master
     paths-ignore:
       - 'docs/**'
   pull_request:
