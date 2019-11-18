@@ -91,6 +91,7 @@ func getSteps(inst *instance.Instance, fileID string, version int64) ([]Step, er
 	req := couchdb.AllDocsRequest{
 		Limit:    1000,
 		StartKey: stepID(fileID, version),
+		EndKey:   fmt.Sprintf("%s/%s", fileID, couchdb.MaxString),
 	}
 	if err := couchdb.GetAllDocs(inst, consts.NotesSteps, &req, &steps); err != nil {
 		return nil, err
@@ -205,11 +206,13 @@ func saveSteps(inst *instance.Instance, steps []Step) error {
 
 func purgeOldSteps(inst *instance.Instance, fileID string) {
 	t := time.Now().Add(-cleanStepsAfter)
-	id := stepID(fileID, timeToVersion(t))
+	start := stepID(fileID, 0)
+	end := stepID(fileID, timeToVersion(t))
 	var steps []Step
 	req := couchdb.AllDocsRequest{
-		Limit:  1000,
-		EndKey: id,
+		Limit:    1000,
+		StartKey: start,
+		EndKey:   end,
 	}
 	if err := couchdb.GetAllDocs(inst, consts.NotesSteps, &req, &steps); err != nil {
 		inst.Logger().WithField("nspace", "notes").
