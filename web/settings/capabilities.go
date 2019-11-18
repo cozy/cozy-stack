@@ -14,7 +14,7 @@ import (
 )
 
 type apiCapabilities struct {
-	DocID          string `json:"_id"`
+	DocID          string `json:"_id,omitempty"`
 	FileVersioning bool   `json:"file_versioning"`
 }
 
