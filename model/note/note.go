@@ -42,10 +42,10 @@ type Document struct {
 	markdown []byte
 }
 
-// ID returns the directory qualified identifier
+// ID returns the document qualified identifier
 func (d *Document) ID() string { return d.DocID }
 
-// Rev returns the directory revision
+// Rev returns the document revision
 func (d *Document) Rev() string { return d.DocRev }
 
 // DocType returns the document type
@@ -476,12 +476,6 @@ func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) (*vfs
 
 	publishUpdatedTitle(inst, file.ID(), title)
 	return doc.asFile(file), nil
-}
-
-func publishUpdatedTitle(inst *instance.Instance, fileID, title string) {
-	event := Event{"title": title, "doctype": consts.NotesDocuments}
-	event.SetID(fileID)
-	event.publish(inst)
 }
 
 // Update is used to persist changes on a note to its file in the VFS.

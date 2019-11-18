@@ -15,13 +15,13 @@ import (
 // Step is a patch to apply on a note.
 type Step map[string]interface{}
 
-// ID returns the directory qualified identifier
+// ID returns the step qualified identifier
 func (s Step) ID() string {
 	id, _ := s["_id"].(string)
 	return id
 }
 
-// Rev returns the directory revision
+// Rev returns the step revision
 func (s Step) Rev() string {
 	rev, _ := s["_rev"].(string)
 	return rev
@@ -243,15 +243,6 @@ func purgeOldSteps(inst *instance.Instance, fileID string) {
 	if err := couchdb.BulkDeleteDocs(inst, consts.NotesSteps, docs); err != nil {
 		inst.Logger().WithField("nspace", "notes").
 			Warnf("Cannot purge old steps for file %s: %s", fileID, err)
-	}
-}
-
-func publishSteps(inst *instance.Instance, fileID string, steps []Step) {
-	for _, s := range steps {
-		e := Event(s)
-		e["doctype"] = s.DocType()
-		e.SetID(fileID)
-		e.publish(inst)
 	}
 }
 

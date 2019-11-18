@@ -220,7 +220,7 @@ func (i *Instance) MakeVFS() error {
 	return err
 }
 
-// NoteLock returns a mutex for the notes on this instance.
+// NotesLock returns a mutex for the notes on this instance.
 func (i *Instance) NotesLock() lock.ErrorRWLocker {
 	return lock.ReadWrite(i, "notes")
 }

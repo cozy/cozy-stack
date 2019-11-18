@@ -11,13 +11,13 @@ import (
 // Event is the position of a cursor inside a note.
 type Event map[string]interface{}
 
-// ID returns the directory qualified identifier
+// ID returns the event qualified identifier
 func (e Event) ID() string {
 	id, _ := e["_id"].(string)
 	return id
 }
 
-// Rev returns the directory revision
+// Rev returns the event revision
 func (e Event) Rev() string {
 	rev, _ := e["_rev"].(string)
 	return rev
@@ -74,6 +74,21 @@ func PutTelepointer(inst *instance.Instance, t Event) error {
 	t["doctype"] = consts.NotesTelepointers
 	t.publish(inst)
 	return nil
+}
+
+func publishUpdatedTitle(inst *instance.Instance, fileID, title string) {
+	event := Event{"title": title, "doctype": consts.NotesDocuments}
+	event.SetID(fileID)
+	event.publish(inst)
+}
+
+func publishSteps(inst *instance.Instance, fileID string, steps []Step) {
+	for _, s := range steps {
+		e := Event(s)
+		e["doctype"] = s.DocType()
+		e.SetID(fileID)
+		e.publish(inst)
+	}
 }
 
 var _ jsonapi.Object = &Event{}
