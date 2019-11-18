@@ -82,6 +82,11 @@ func GetSteps(inst *instance.Instance, fileID string, version int64) ([]Step, er
 	}
 	defer lock.Unlock()
 
+	return getSteps(inst, fileID, version)
+}
+
+// getSteps is the same as GetSteps, but with the notes lock already acquired
+func getSteps(inst *instance.Instance, fileID string, version int64) ([]Step, error) {
 	var steps []Step
 	req := couchdb.AllDocsRequest{
 		Limit:    1000,
@@ -122,6 +127,10 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, 
 		return nil, ErrCannotApply
 	}
 
+	if t := timeToVersion(time.Now()); t > doc.Version {
+		doc.Version = t
+	}
+
 	if err := apply(inst, doc, steps); err != nil {
 		return nil, err
 	}
@@ -150,10 +159,6 @@ func apply(inst *instance.Instance, doc *Document, steps []Step) error {
 		inst.Logger().WithField("nspace", "notes").
 			Infof("Cannot instantiate the document: %s", err)
 		return ErrInvalidFile
-	}
-
-	if t := timeToVersion(time.Now()); t > doc.Version {
-		doc.Version = t
 	}
 
 	for i, s := range steps {

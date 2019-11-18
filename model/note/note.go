@@ -365,19 +365,42 @@ func get(inst *instance.Instance, file *vfs.FileDoc) (*Document, error) {
 	if doc := getFromCache(inst, file.ID()); doc != nil {
 		return doc, nil
 	}
-	// TODO replay steps
-	return fromMetadata(file)
+	version, _ := versionFromMetadata(file)
+	steps, err := getSteps(inst, file.ID(), version)
+	if err != nil && err != ErrTooOld && !couchdb.IsNoDatabaseError(err) {
+		return nil, err
+	}
+	doc, err := fromMetadata(file)
+	if err != nil {
+		return nil, err
+	}
+	if len(steps) == 0 {
+		return doc, nil
+	}
+	if version, ok := steps[0]["version"].(float64); ok {
+		doc.Version = int64(version) - 1
+	}
+	if err := apply(inst, doc, steps); err != nil {
+		return nil, err
+	}
+	_ = saveToCache(inst, doc)
+	return doc, nil
+}
+
+func versionFromMetadata(file *vfs.FileDoc) (int64, error) {
+	switch v := file.Metadata["version"].(type) {
+	case float64:
+		return int64(v), nil
+	case int64:
+		return v, nil
+	}
+	return 0, ErrInvalidFile
 }
 
 func fromMetadata(file *vfs.FileDoc) (*Document, error) {
-	var version int64
-	switch v := file.Metadata["version"].(type) {
-	case float64:
-		version = int64(v)
-	case int64:
-		version = v
-	default:
-		return nil, ErrInvalidFile
+	version, err := versionFromMetadata(file)
+	if err != nil {
+		return nil, err
 	}
 	title, _ := file.Metadata["title"].(string)
 	schema, ok := file.Metadata["schema"].(map[string]interface{})
