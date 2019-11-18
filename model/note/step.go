@@ -66,12 +66,22 @@ func (s Step) Links() *jsonapi.LinksList { return nil }
 // Relationships is part of the jsonapi.Object interface
 func (s Step) Relationships() jsonapi.RelationshipMap { return nil }
 
-func timeToVersion(t time.Time) int64 {
-	return t.UnixNano() / 1000000
+func (s Step) timestamp() int64 {
+	switch t := s["timestamp"].(type) {
+	case float64:
+		return int64(t)
+	case int64:
+		return t
+	}
+	return 0
 }
 
 func stepID(noteID string, version int64) string {
-	return fmt.Sprintf("%s/%d", noteID, version)
+	return fmt.Sprintf("%s/%08d", noteID, version)
+}
+
+func endkey(noteID string) string {
+	return fmt.Sprintf("%s/%s", noteID, couchdb.MaxString)
 }
 
 // GetSteps returns the steps for the given note, starting from the version.
@@ -91,7 +101,7 @@ func getSteps(inst *instance.Instance, fileID string, version int64) ([]Step, er
 	req := couchdb.AllDocsRequest{
 		Limit:    1000,
 		StartKey: stepID(fileID, version),
-		EndKey:   fmt.Sprintf("%s/%s", fileID, couchdb.MaxString),
+		EndKey:   endkey(fileID),
 	}
 	if err := couchdb.GetAllDocs(inst, consts.NotesSteps, &req, &steps); err != nil {
 		return nil, err
@@ -128,10 +138,6 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, 
 		return nil, ErrCannotApply
 	}
 
-	if t := timeToVersion(time.Now()); t > doc.Version {
-		doc.Version = t
-	}
-
 	if err := apply(inst, doc, steps); err != nil {
 		return nil, err
 	}
@@ -139,7 +145,6 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, 
 		return nil, err
 	}
 	publishSteps(inst, file.ID(), steps)
-	purgeOldSteps(inst, file.ID())
 
 	if err := saveToCache(inst, doc); err != nil {
 		return nil, err
@@ -162,6 +167,7 @@ func apply(inst *instance.Instance, doc *Document, steps []Step) error {
 		return ErrInvalidFile
 	}
 
+	now := time.Now().Unix()
 	for i, s := range steps {
 		step, err := transform.StepFromJSON(schema, s)
 		if err != nil {
@@ -179,6 +185,7 @@ func apply(inst *instance.Instance, doc *Document, steps []Step) error {
 		doc.Version++
 		steps[i].SetID(stepID(doc.ID(), doc.Version))
 		steps[i]["version"] = doc.Version
+		steps[i]["timestamp"] = now
 	}
 	doc.SetContent(content)
 	return nil
@@ -205,26 +212,33 @@ func saveSteps(inst *instance.Instance, steps []Step) error {
 }
 
 func purgeOldSteps(inst *instance.Instance, fileID string) {
-	t := time.Now().Add(-cleanStepsAfter)
-	start := stepID(fileID, 0)
-	end := stepID(fileID, timeToVersion(t))
 	var steps []Step
 	req := couchdb.AllDocsRequest{
 		Limit:    1000,
-		StartKey: start,
-		EndKey:   end,
+		StartKey: stepID(fileID, 0),
+		EndKey:   endkey(fileID),
 	}
 	if err := couchdb.GetAllDocs(inst, consts.NotesSteps, &req, &steps); err != nil {
-		inst.Logger().WithField("nspace", "notes").
-			Warnf("Cannot purge old steps for file %s: %s", fileID, err)
+		if !couchdb.IsNoDatabaseError(err) {
+			inst.Logger().WithField("nspace", "notes").
+				Warnf("Cannot purge old steps for file %s: %s", fileID, err)
+		}
 		return
 	}
 	if len(steps) == 0 {
 		return
 	}
-	docs := make([]couchdb.Doc, len(steps))
+
+	limit := time.Now().Add(-cleanStepsAfter).Unix()
+	docs := make([]couchdb.Doc, 0, len(steps))
 	for i := range steps {
-		docs[i] = &steps[i]
+		if steps[i].timestamp() > limit {
+			break
+		}
+		docs = append(docs, &steps[i])
+	}
+	if len(docs) == 0 {
+		return
 	}
 	if err := couchdb.BulkDeleteDocs(inst, consts.NotesSteps, docs); err != nil {
 		inst.Logger().WithField("nspace", "notes").

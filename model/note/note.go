@@ -507,7 +507,11 @@ func Update(inst *instance.Instance, fileID string) error {
 	}
 
 	_, err = writeFile(inst, doc, old)
-	return err
+	if err != nil {
+		return err
+	}
+	purgeOldSteps(inst, fileID)
+	return nil
 }
 
 var _ couchdb.Doc = &Document{}
