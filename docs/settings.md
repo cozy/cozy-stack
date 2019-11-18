@@ -252,6 +252,40 @@ HTTP/1.1 204 No Content
 
 ## Instance
 
+### GET /settings/capabilities
+
+List the activated capabilities for this instance. An unadvertised capability
+should be considered `false` and, for backward compatibility, if you can't get a
+valid response from this endpoint (in particular in case of a `404 Not found`
+error), all capabilities should be considered `false`.
+
+#### Request
+
+```http
+GET /settings/capabilities HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```json
+{
+    "data": {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.capabilities",
+        "attributes": {
+            "file_versioning": true
+        }
+    }
+}
+```
+
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.settings` for the verb `GET`.
+
 ### GET /settings/instance
 
 If the user is logged in, display all instance settings. If the user is not

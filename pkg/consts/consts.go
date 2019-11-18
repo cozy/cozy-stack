@@ -43,6 +43,9 @@ const (
 	DiskUsageID = "io.cozy.settings.disk-usage"
 	// InstanceSettingsID is the id of settings document for the instance
 	InstanceSettingsID = "io.cozy.settings.instance"
+	// CapabilitiesSettingsID is the id of the settings document with the
+	// capabilities for a given instance
+	CapabilitiesSettingsID = "io.cozy.settings.capabilities"
 	// PassphraseParametersID is the id of settings document for the passphrase
 	// parameters used to hash the master password on client side.
 	PassphraseParametersID = "io.cozy.settings.passphrase"
