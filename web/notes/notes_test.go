@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -378,6 +379,20 @@ func TestPutTelepointer(t *testing.T) {
 	assert.Equal(t, 204, res.StatusCode)
 	// Wait that the goroutine has received the telepointer update
 	wg.Wait()
+}
+
+func TestNoteMarkdown(t *testing.T) {
+	// Force the changes to the VFS
+	err := note.Update(inst, noteID)
+	assert.NoError(t, err)
+	doc, err := inst.VFS().FileByID(noteID)
+	assert.NoError(t, err)
+	file, err := inst.VFS().OpenFile(doc)
+	assert.NoError(t, err)
+	defer file.Close()
+	buf, err := ioutil.ReadAll(file)
+	assert.NoError(t, err)
+	assert.Equal(t, "Hello world", string(buf))
 }
 
 func TestNoteRealtime(t *testing.T) {

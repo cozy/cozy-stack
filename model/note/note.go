@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/prosemirror-go/markdown"
 	"github.com/cozy/prosemirror-go/model"
 )
 
@@ -115,14 +116,16 @@ func (d *Document) Content() (*model.Node, error) {
 }
 
 // Markdown returns a markdown serialization of the content.
-func (d *Document) Markdown() []byte {
+func (d *Document) Markdown() ([]byte, error) {
 	if len(d.markdown) == 0 {
-		if content, err := d.Content(); err != nil {
-			// TODO markdown
-			d.markdown = []byte(content.String())
+		content, err := d.Content()
+		if err != nil {
+			return nil, err
 		}
+		md := markdown.DefaultSerializer.Serialize(content)
+		d.markdown = []byte(md)
 	}
-	return d.markdown
+	return d.markdown, nil
 }
 
 func (d *Document) getDirID(inst *instance.Instance) (string, error) {
@@ -138,9 +141,10 @@ func (d *Document) getDirID(inst *instance.Instance) (string, error) {
 }
 
 func (d *Document) asFile(old *vfs.FileDoc) *vfs.FileDoc {
+	md, _ := d.Markdown()
 	file := old.Clone().(*vfs.FileDoc)
 	file.Metadata = d.Metadata()
-	file.ByteSize = int64(len(d.Markdown()))
+	file.ByteSize = int64(len(md))
 	file.MD5Sum = nil // Let the VFS compute the md5sum
 	if d.DirID != "" {
 		file.DirID = d.DirID
@@ -213,7 +217,10 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	if err != nil {
 		return nil, err
 	}
-	content := doc.Markdown()
+	content, err := doc.Markdown()
+	if err != nil {
+		return nil, err
+	}
 
 	fileDoc, err := vfs.NewFileDoc(
 		titleToFilename(doc.Title),
@@ -310,6 +317,11 @@ func setupTrigger(inst *instance.Instance, fileID string) error {
 }
 
 func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fileDoc *vfs.FileDoc, err error) {
+	md, err := doc.Markdown()
+	if err != nil {
+		return nil, err
+	}
+
 	if oldDoc == nil {
 		fileDoc, err = newFileDoc(inst, doc)
 		if err != nil {
@@ -339,7 +351,7 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 			clearCache(inst, fileDoc.ID())
 		}
 	}()
-	_, err = file.Write(doc.Markdown())
+	_, err = file.Write(md)
 	return
 }
 
