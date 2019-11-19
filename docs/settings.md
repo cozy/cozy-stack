@@ -8,6 +8,7 @@
 
 Says how many bytes are available and used to store files. When not limited the
 `quota` field is omitted.
+Also says how many bytes are used by last version of files and how many bytes are taken by older versions.
 
 #### Request
 
@@ -33,7 +34,9 @@ Content-type: application/vnd.api+json
         "attributes": {
             "is_limited": true,
             "quota": "123456789",
-            "used": "12345678"
+            "used": "12345678",
+            "files": "10305070",
+            "versions": "2040608"
         }
     }
 }

@@ -127,6 +127,14 @@ func (s *sharingIndexer) DiskUsage() (int64, error) {
 	return s.indexer.DiskUsage()
 }
 
+func (s *sharingIndexer) FilesUsage() (int64, error) {
+	return s.indexer.FilesUsage()
+}
+
+func (s *sharingIndexer) VersionsUsage() (int64, error) {
+	return s.indexer.VersionsUsage()
+}
+
 func (s *sharingIndexer) CreateFileDoc(doc *vfs.FileDoc) error {
 	return ErrInternalServerError
 }

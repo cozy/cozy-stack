@@ -122,6 +122,14 @@ var usageFilesCmd = &cobra.Command{
 			return err
 		}
 		fmt.Printf("Usage: %v\n", info["used"])
+
+		if files, ok := info["files"]; ok {
+			fmt.Printf("  Including latest version of files: %v\n", files)
+		}
+		if versions, ok := info["versions"]; ok {
+			fmt.Printf("  Including older versions of files: %v\n", versions)
+		}
+
 		if quota, ok := info["quota"]; ok {
 			fmt.Printf("Quota: %v\n", quota)
 		}

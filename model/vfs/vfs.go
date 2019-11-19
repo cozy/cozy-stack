@@ -125,8 +125,15 @@ type Indexer interface {
 
 	FilePather
 
-	// DiskUsage computes the total size of the files contained in the VFS.
+	// DiskUsage computes the total size of the files contained in the VFS,
+	// including versions.
 	DiskUsage() (int64, error)
+	// FilesUsage computes the total size of the files contained in the VFS,
+	// excluding versions.
+	FilesUsage() (int64, error)
+	// VersionsUsage computes the total size of the old file versions contained
+	// in the VFS, not including latest version.
+	VersionsUsage() (int64, error)
 
 	// CreateFileDoc creates and add in the index a new file document.
 	CreateFileDoc(doc *FileDoc) error
