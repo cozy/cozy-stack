@@ -475,6 +475,7 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.notes.documents",
     "id": "bf0dbdb0-e1ed-0137-8548-543d7eb8149c",
     "attributes": {
+      "sessionID": "543781490137",
       "title": "A new title for my note"
     }
   }
@@ -796,7 +797,9 @@ client > {"method": "SUBSCRIBE",
 server > {"event": "UPDATED",
           "payload": {"id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
                       "type": "io.cozy.notes.events",
-                      "doc": {"doctype": "io.cozy.notes.documents", "title": "this is the new title of this note"}}}
+                      "doc": {"doctype": "io.cozy.notes.documents",
+                              "sessionID": "543781490137",
+                              "title": "this is the new title of this note"}}}
 server > {"event": "CREATED",
           "payload": {"id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
                       "type": "io.cozy.notes.events",

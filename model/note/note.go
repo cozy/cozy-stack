@@ -454,7 +454,7 @@ func saveToCache(inst *instance.Instance, doc *Document) error {
 }
 
 // UpdateTitle changes the title of a note and renames the associated file.
-func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) (*vfs.FileDoc, error) {
+func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title, sessionID string) (*vfs.FileDoc, error) {
 	lock := inst.NotesLock()
 	if err := lock.Lock(); err != nil {
 		return nil, err
@@ -474,7 +474,7 @@ func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title string) (*vfs
 		return nil, err
 	}
 
-	publishUpdatedTitle(inst, file.ID(), title)
+	publishUpdatedTitle(inst, file.ID(), title, sessionID)
 	return doc.asFile(file), nil
 }
 

@@ -8,7 +8,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
-// Event is the position of a cursor inside a note.
+// Event is a realtime event for a note (like the update of the position of a
+// pointer).
 type Event map[string]interface{}
 
 // ID returns the event qualified identifier
@@ -76,8 +77,12 @@ func PutTelepointer(inst *instance.Instance, t Event) error {
 	return nil
 }
 
-func publishUpdatedTitle(inst *instance.Instance, fileID, title string) {
-	event := Event{"title": title, "doctype": consts.NotesDocuments}
+func publishUpdatedTitle(inst *instance.Instance, fileID, title, sessionID string) {
+	event := Event{
+		"title":     title,
+		"doctype":   consts.NotesDocuments,
+		"sessionID": sessionID,
+	}
 	event.SetID(fileID)
 	event.publish(inst)
 }

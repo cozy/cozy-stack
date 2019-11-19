@@ -153,12 +153,14 @@ func ChangeTitle(c echo.Context) error {
 		return err
 	}
 
-	doc := &note.Document{}
-	if _, err := jsonapi.Bind(c.Request().Body, doc); err != nil {
+	event := note.Event{}
+	if _, err := jsonapi.Bind(c.Request().Body, &event); err != nil {
 		return err
 	}
 
-	if file, err = note.UpdateTitle(inst, file, doc.Title); err != nil {
+	title, _ := event["title"].(string)
+	sessID, _ := event["sessionID"].(string)
+	if file, err = note.UpdateTitle(inst, file, title, sessID); err != nil {
 		return wrapError(err)
 	}
 

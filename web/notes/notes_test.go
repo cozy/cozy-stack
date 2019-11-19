@@ -136,6 +136,7 @@ func TestChangeTitle(t *testing.T) {
   "data": {
     "type": "io.cozy.notes.documents",
     "attributes": {
+      "sessionID": "543781490137",
       "title": "A new title"
     }
   }
@@ -435,7 +436,7 @@ func TestNoteRealtime(t *testing.T) {
 
 	file, err := inst.VFS().FileByID(noteID)
 	assert.NoError(t, err)
-	file, err = note.UpdateTitle(inst, file, "A very new title")
+	file, err = note.UpdateTitle(inst, file, "A very new title", "543781490137")
 	assert.NoError(t, err)
 	var res3 map[string]interface{}
 	err = c.ReadJSON(&res3)
@@ -447,6 +448,7 @@ func TestNoteRealtime(t *testing.T) {
 	doc3, _ := payload3["doc"].(map[string]interface{})
 	assert.Equal(t, "io.cozy.notes.documents", doc3["doctype"])
 	assert.Equal(t, "A very new title", doc3["title"])
+	assert.Equal(t, "543781490137", doc3["sessionID"])
 
 	slice := map[string]interface{}{
 		"content": []interface{}{
