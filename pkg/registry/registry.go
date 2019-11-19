@@ -55,6 +55,11 @@ var (
 		Transport: httpcache.NewMemoryCacheTransport(32),
 	}
 
+	maintenanceClient = &http.Client{
+		Timeout:   10 * time.Second,
+		Transport: httpcache.NewMemoryCacheTransport(32),
+	}
+
 	appClient = &http.Client{
 		Timeout:   5 * time.Second,
 		Transport: httpcache.NewMemoryCacheTransport(256),
@@ -149,6 +154,28 @@ func Proxy(req *http.Request, registries []*url.URL, cache CacheControl) (*http.
 		return nil, echo.NewHTTPError(http.StatusNotFound)
 	}
 	return resp, nil
+}
+
+// ProxyMaintenance will proxy the given request to the registries to fetch all
+// the apps in maintenance.
+func ProxyMaintenance(req *http.Request, registries []*url.URL) ([]json.RawMessage, error) {
+	var apps []json.RawMessage
+	for _, r := range registries {
+		ref := &url.URL{Path: "/registry/maintenance"}
+		resp, ok, err := fetch(maintenanceClient, r, ref, WithCache)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			continue
+		}
+		var docs []json.RawMessage
+		if err = json.NewDecoder(resp.Body).Decode(&docs); err != nil {
+			return nil, err
+		}
+		apps = append(apps, docs...)
+	}
+	return apps, nil
 }
 
 // ProxyList will proxy the given request to the registries by aggregating the
