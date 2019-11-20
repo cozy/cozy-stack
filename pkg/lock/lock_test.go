@@ -13,9 +13,11 @@ import (
 	"runtime"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/stretchr/testify/assert"
 )
 
 var nb = 100
@@ -102,26 +104,22 @@ func hammerRW(t *testing.T, l ErrorRWLocker) {
 }
 
 func TestMemLock(t *testing.T) {
-	backconf := config.GetConfig().Lock
 	var err error
 	config.GetConfig().Lock, err = config.NewRedisConfig("")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { config.GetConfig().Lock = backconf }()
 	db := prefixer.NewPrefixer("cozy.local", "cozy.local")
 	l := ReadWrite(db, "test-mem")
 	hammerRW(t, l)
 }
 
 func TestRedisLock(t *testing.T) {
-	backconf := config.GetConfig().Lock
 	var err error
 	config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { config.GetConfig().Lock = backconf }()
 	db := prefixer.NewPrefixer("cozy.local", "cozy.local")
 	l := ReadWrite(db, "test-redis")
 	hammerRW(t, l)
@@ -132,6 +130,26 @@ func TestRedisLock(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		<-done
 	}
+	other := ReadWrite(db, "test-redis").(*redisLock)
+	assert.NoError(t, l.Lock())
+	assert.Error(t, other.LockWithTimeout(1*time.Second))
+	l.Unlock()
+}
+
+func TestLongLock(t *testing.T) {
+	var err error
+	config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db := prefixer.NewPrefixer("cozy.local", "cozy.local")
+	long := LongOperation(db, "test-long")
+	l := ReadWrite(db, "test-long").(*redisLock)
+	assert.NoError(t, long.Lock())
+	err = l.Lock()
+	assert.Error(t, err)
+	assert.Equal(t, ErrTooManyRetries, err)
+	l.Unlock()
 }
 
 func TestMain(m *testing.M) {
@@ -139,6 +157,10 @@ func TestMain(m *testing.M) {
 	if testing.Short() {
 		nb = 3
 	}
+
 	config.UseTestFile()
+	backconf := config.GetConfig().Lock
+	defer func() { config.GetConfig().Lock = backconf }()
+
 	os.Exit(m.Run())
 }

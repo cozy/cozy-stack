@@ -1,6 +1,9 @@
 package lock
 
 import (
+	"sync"
+	"time"
+
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
@@ -27,4 +30,53 @@ type ErrorRWLocker interface {
 	ErrorLocker
 	RLock() error
 	RUnlock()
+}
+
+// LongOperation returns a lock suitable for long operations. It will refresh
+// the lock in redis to avoid its automatic expiration.
+func LongOperation(db prefixer.Prefixer, name string) ErrorLocker {
+	return &longOperation{
+		lock: ReadWrite(db, name),
+	}
+}
+
+type longOperation struct {
+	lock ErrorLocker
+	mu   sync.Mutex
+	tick *time.Ticker
+}
+
+func (l *longOperation) Lock() error {
+	if err := l.lock.Lock(); err != nil {
+		return err
+	}
+	l.tick = time.NewTicker(LockTimeout / 3)
+	go func() {
+		for {
+			l.mu.Lock()
+			if l.tick == nil {
+				return
+			}
+			ch := l.tick.C
+			l.mu.Unlock()
+			<-ch
+			l.mu.Lock()
+			if l.tick == nil {
+				return
+			}
+			_ = l.lock.Lock()
+			l.mu.Unlock()
+		}
+	}()
+	return nil
+}
+
+func (l *longOperation) Unlock() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.tick != nil {
+		l.tick.Stop()
+		l.tick = nil
+	}
+	l.lock.Unlock()
 }

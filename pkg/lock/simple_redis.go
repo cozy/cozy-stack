@@ -58,11 +58,8 @@ type redisLock struct {
 	rng     *rand.Rand
 }
 
-func (rl *redisLock) extends(writing bool) (bool, error) {
-	if rl.token == "" {
-		return false, nil
-	}
-	if (writing && rl.readers > 0) || (!writing && rl.readers < 0) {
+func (rl *redisLock) extends() (bool, error) {
+	if rl.token == "" || rl.readers < 0 {
 		return false, nil
 	}
 
@@ -74,9 +71,7 @@ func (rl *redisLock) extends(writing bool) (bool, error) {
 	}
 
 	if ok == int64(1) {
-		if !writing {
-			rl.readers++
-		}
+		rl.readers++
 		return true, nil
 	}
 
@@ -102,26 +97,15 @@ func (rl *redisLock) obtains(writing bool, token string) (bool, error) {
 	return true, nil
 }
 
-func (rl *redisLock) extendsWriting() (bool, error) {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-	return rl.extends(true)
-}
-
 func (rl *redisLock) obtainsWriting(token string) (bool, error) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 	return rl.obtains(true, token)
 }
 
-func (rl *redisLock) Lock() error {
-	ok, err := rl.extendsWriting()
-	if err != nil || ok {
-		return err
-	}
-
+func (rl *redisLock) LockWithTimeout(timeout time.Duration) error {
 	// Calculate the timestamp we are willing to wait for
-	stop := time.Now().Add(LockTimeout)
+	stop := time.Now().Add(timeout)
 	token := utils.RandomStringFast(rl.rng, lockTokenSize)
 	for {
 		ok, err := rl.obtainsWriting(token)
@@ -137,10 +121,14 @@ func (rl *redisLock) Lock() error {
 	return ErrTooManyRetries
 }
 
+func (rl *redisLock) Lock() error {
+	return rl.LockWithTimeout(LockTimeout)
+}
+
 func (rl *redisLock) extendsOrObtainsReading(token string) (bool, error) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	if ok, err := rl.extends(false); err != nil || ok {
+	if ok, err := rl.extends(); err != nil || ok {
 		return ok, err
 	}
 	return rl.obtains(false, token)

@@ -119,7 +119,7 @@ func migrateToSwiftV3(domain string) error {
 		return err
 	}
 
-	mutex := lock.ReadWrite(inst, "vfs")
+	mutex := lock.LongOperation(inst, "vfs")
 	if err = mutex.Lock(); err != nil {
 		return err
 	}
