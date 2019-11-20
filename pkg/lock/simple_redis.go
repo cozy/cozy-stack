@@ -16,22 +16,9 @@ import (
 const luaRefresh = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("pexpire", KEYS[1], ARGV[2]) else return 0 end`
 const luaRelease = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end`
 
-type fakeRWLock struct {
-	ErrorLocker
-}
-
 type subRedisInterface interface {
 	SetNX(key string, value interface{}, expiration time.Duration) *redis.BoolCmd
 	Eval(script string, keys []string, args ...interface{}) *redis.Cmd
-}
-
-func (l fakeRWLock) Lock() error  { return l.ErrorLocker.Lock() }
-func (l fakeRWLock) RLock() error { return nil }
-func (l fakeRWLock) Unlock()      { l.ErrorLocker.Unlock() }
-func (l fakeRWLock) RUnlock()     {}
-
-func getRedisReadWriteLock(c subRedisInterface, name string) ErrorRWLocker {
-	return fakeRWLock{getRedisSimpleLock(c, name)}
 }
 
 const (
@@ -47,7 +34,7 @@ const (
 	LockTimeout = 15 * time.Second
 
 	// WaitTimeout maximum time to wait before returning control to caller.
-	WaitTimeout = 2 * time.Minute
+	WaitTimeout = 1 * time.Minute
 
 	// WaitRetry time to wait between retries
 	WaitRetry = 100 * time.Millisecond
@@ -64,45 +51,83 @@ type redisLock struct {
 	mu     sync.Mutex
 	key    string
 	token  string
-	log    *logrus.Entry
-	rng    *rand.Rand
+	// readers is the number of readers when the lock is acquired for reading
+	// or 0 when it is unlocked, or -1 when it is locked for writing.
+	readers int
+	log     *logrus.Entry
+	rng     *rand.Rand
+}
+
+func (rl *redisLock) extends(writing bool) (bool, error) {
+	if rl.token == "" {
+		return false, nil
+	}
+	if (writing && rl.readers > 0) || (!writing && rl.readers < 0) {
+		return false, nil
+	}
+
+	// we already have a lock, attempts to extends it
+	ttl := strconv.FormatInt(int64(LockTimeout/time.Millisecond), 10)
+	ok, err := rl.client.Eval(luaRefresh, []string{rl.key}, rl.token, ttl).Result()
+	if err != nil {
+		return false, err // most probably redis connectivity error
+	}
+
+	if ok == int64(1) {
+		if !writing {
+			rl.readers++
+		}
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (rl *redisLock) obtains(writing bool, token string) (bool, error) {
+	// Try to obtain a lock
+	ok, err := rl.client.SetNX(rl.key, token, LockTimeout).Result()
+	if err != nil {
+		return false, err // most probably redis connectivity error
+	}
+	if !ok {
+		return false, nil
+	}
+
+	rl.token = token
+	if writing {
+		rl.readers = -1
+	} else {
+		rl.readers++
+	}
+	return true, nil
+}
+
+func (rl *redisLock) extendsWriting() (bool, error) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	return rl.extends(true)
+}
+
+func (rl *redisLock) obtainsWriting(token string) (bool, error) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	return rl.obtains(true, token)
 }
 
 func (rl *redisLock) Lock() error {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	if rl.token != "" {
-		// we already have a lock, attempts to extends it
-		ttl := strconv.FormatInt(int64(LockTimeout/time.Millisecond), 10)
-		ok, err := rl.client.Eval(luaRefresh, []string{rl.key}, rl.token, ttl).Result()
-		if err != nil {
-			return err // most probably redis connectivity error
-		}
-
-		if ok == int64(1) {
-			return nil
-		}
-		// this lock is unavailable, fallback to creating it
-		rl.token = ""
+	ok, err := rl.extendsWriting()
+	if err != nil || ok {
+		return err
 	}
-
-	token := utils.RandomStringFast(rl.rng, lockTokenSize)
 
 	// Calculate the timestamp we are willing to wait for
 	stop := time.Now().Add(LockTimeout)
+	token := utils.RandomStringFast(rl.rng, lockTokenSize)
 	for {
-		// Try to obtain a lock
-		ok, err := rl.client.SetNX(rl.key, token, LockTimeout).Result()
-		if err != nil {
-			return err // most probably redis connectivity error
+		ok, err := rl.obtainsWriting(token)
+		if err != nil || ok {
+			return err
 		}
-
-		if ok {
-			rl.token = token
-			return nil
-		}
-
 		if time.Now().Add(WaitRetry).After(stop) {
 			break
 		}
@@ -112,14 +137,67 @@ func (rl *redisLock) Lock() error {
 	return ErrTooManyRetries
 }
 
-func (rl *redisLock) Unlock() {
+func (rl *redisLock) extendsOrObtainsReading(token string) (bool, error) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
+	if ok, err := rl.extends(false); err != nil || ok {
+		return ok, err
+	}
+	return rl.obtains(false, token)
+}
+
+func (rl *redisLock) RLock() error {
+	stop := time.Now().Add(LockTimeout)
+	token := utils.RandomStringFast(rl.rng, lockTokenSize)
+	for {
+		ok, err := rl.extendsOrObtainsReading(token)
+		if err != nil || ok {
+			return err
+		}
+		if time.Now().Add(WaitRetry).After(stop) {
+			break
+		}
+		time.Sleep(WaitRetry)
+	}
+
+	return ErrTooManyRetries
+}
+
+func (rl *redisLock) unlock(writing bool) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	if (writing && rl.readers > 0) || (!writing && rl.readers < 0) {
+		rl.log.Errorf("Invalid unlocking: %v %d", writing, rl.readers)
+		return
+	}
+
+	if !writing && rl.readers > 1 {
+		rl.readers--
+		return
+	}
+
 	_, err := rl.client.Eval(luaRelease, []string{rl.key}, rl.token).Result()
-	rl.token = ""
 	if err != nil {
 		rl.log.Warnf("Failed to unlock: %s", err.Error())
 	}
+
+	if writing {
+		rl.readers = 0
+	} else {
+		rl.readers--
+	}
+	if rl.readers == 0 {
+		rl.token = ""
+	}
+}
+
+func (rl *redisLock) Unlock() {
+	rl.unlock(true)
+}
+
+func (rl *redisLock) RUnlock() {
+	rl.unlock(false)
 }
 
 var redislocks map[string]*redisLock
@@ -134,16 +212,16 @@ func makeRedisSimpleLock(c subRedisInterface, ns string) *redisLock {
 	}
 }
 
-func getRedisSimpleLock(c subRedisInterface, ns string) ErrorLocker {
+func getRedisReadWriteLock(c subRedisInterface, name string) ErrorRWLocker {
 	redislocksMu.Lock()
 	defer redislocksMu.Unlock()
 	if redislocks == nil {
 		redislocks = make(map[string]*redisLock)
 	}
-	l, ok := redislocks[ns]
+	l, ok := redislocks[name]
 	if !ok {
-		redislocks[ns] = makeRedisSimpleLock(c, ns)
-		l = redislocks[ns]
+		redislocks[name] = makeRedisSimpleLock(c, name)
+		l = redislocks[name]
 	}
 	return l
 }
