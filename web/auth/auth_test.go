@@ -560,15 +560,6 @@ func TestRegisterSharingClientSuccess(t *testing.T) {
 	sharingClientID = client.ClientID
 }
 
-func TestDeleteClientInvalidClientID(t *testing.T) {
-	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/register/123456789", nil)
-	req.Host = domain
-	req.Header.Add("Authorization", "Bearer "+altRegistrationToken)
-	res, err := client.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, "404 Not Found", res.Status)
-}
-
 func TestDeleteClientNoToken(t *testing.T) {
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/register/"+altClientID, nil)
 	req.Host = domain
@@ -584,6 +575,11 @@ func TestDeleteClientSuccess(t *testing.T) {
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, "204 No Content", res.Status)
+
+	// And next calls should return a 204 too
+	res2, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "204 No Content", res2.Status)
 }
 
 func TestReadClientInvalidToken(t *testing.T) {
