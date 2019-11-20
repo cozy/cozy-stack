@@ -11,6 +11,8 @@ It can also take a list of settings to update.
 
 If you give a blank value, the setting will be removed.
 
+A setting prefixed with "feature." is treated as a feature flag.
+Defining a feature flag will erase every previously defined ones.
 
 ```
 cozy-stack settings [settings] [flags]
