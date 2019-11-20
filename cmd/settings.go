@@ -15,6 +15,7 @@ import (
 )
 
 var errSettingsMissingDomain = errors.New("Missing --domain flag")
+var featureFlagPrefix = "feature."
 
 var settingsCmd = &cobra.Command{
 	Use:   "settings [settings]",
@@ -84,15 +85,9 @@ func updateSettings(c *client.Client, obj map[string]interface{}, args string) (
 	if !ok {
 		return nil, errors.New("attributes not found")
 	}
-	for _, arg := range strings.Split(args, ",") {
-		parts := strings.SplitN(arg, ":", 2)
-		k := parts[0]
-		if len(parts) < 2 || parts[1] == "" {
-			delete(attrs, k)
-		} else {
-			attrs[k] = parts[1]
-		}
-	}
+
+	mergeSettings(args, attrs)
+
 	delete(obj, "links")
 	buf, err := json.Marshal(obj)
 	if err != nil {
@@ -110,6 +105,41 @@ func updateSettings(c *client.Client, obj map[string]interface{}, args string) (
 	defer res.Body.Close()
 	err = json.NewDecoder(res.Body).Decode(&obj)
 	return obj, err
+}
+
+func mergeSettings(args string, attrs map[string]interface{}) {
+	settings, featureFlag := parseSettingsAndDetectFeatureFlags(args)
+	if featureFlag {
+		// Feature flag detected, drop existing ones
+		for k, _ := range attrs {
+			if strings.HasPrefix(k, featureFlagPrefix) {
+				delete(attrs, k)
+			}
+		}
+	}
+	for k, v := range settings {
+		if v == "" {
+			delete(attrs, k)
+		} else {
+			attrs[k] = v
+		}
+	}
+}
+
+func parseSettingsAndDetectFeatureFlags(args string) (map[string]interface{}, bool) {
+	settings := make(map[string]interface{})
+	featureFlagPresent := false
+	for _, arg := range strings.Split(args, ",") {
+		parts := strings.SplitN(arg, ":", 2)
+		k := parts[0]
+		if len(parts) < 2 {
+			settings[k] = ""
+		} else {
+			settings[k] = parts[1]
+		}
+		featureFlagPresent = featureFlagPresent || strings.HasPrefix(k, featureFlagPrefix)
+	}
+	return settings, featureFlagPresent
 }
 
 func init() {
