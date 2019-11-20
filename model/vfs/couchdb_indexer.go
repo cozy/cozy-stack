@@ -58,17 +58,16 @@ func (c *couchdbIndexer) InitIndex() error {
 }
 
 func (c *couchdbIndexer) DiskUsage() (int64, error) {
-	files, err := c.FilesUsage()
+	used, err := c.FilesUsage()
 	if err != nil {
 		return 0, err
 	}
 
-	versions, err := c.VersionsUsage()
-	if err != nil {
-		return 0, err
+
+	if versions, err := c.VersionsUsage(); err == nil {
+		used += versions
 	}
 
-	used := files + versions
 	return int64(used), nil
 }
 
