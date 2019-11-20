@@ -314,6 +314,9 @@ li[class^='io.cozy.contacts']:before {
 li[class^='io.cozy.files']:before {
   background-image: url('../images/icon-files.svg');
 }
+li[class^='io.cozy.files.versions']:before {
+  background-image: url('../images/icon-files-versions.svg');
+}
 li[class^='io.cozy.identities']:before {
   background-image: url('../images/icon-identities.svg');
 }
