@@ -136,6 +136,9 @@ var usageFilesCmd = &cobra.Command{
 		if count, ok := info["doc_count"]; ok {
 			fmt.Printf("Documents count: %v\n", count)
 		}
+		if count, ok := info["versions_count"]; ok {
+			fmt.Printf("Versions Documents count: %v\n", count)
+		}
 		return nil
 	},
 }

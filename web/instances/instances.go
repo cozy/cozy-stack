@@ -319,11 +319,12 @@ func setAuthMode(c echo.Context) error {
 }
 
 type diskUsageResult struct {
-	Used     int64 `json:"used,string"`
-	Quota    int64 `json:"quota,string,omitempty"`
-	Count    int   `json:"doc_count,omitempty"`
-	Files    int64 `json:"files,string,omitempty"`
-	Versions int64 `json:"versions,string,omitempty"`
+	Used          int64 `json:"used,string"`
+	Quota         int64 `json:"quota,string,omitempty"`
+	Count         int   `json:"doc_count,omitempty"`
+	Files         int64 `json:"files,string,omitempty"`
+	Versions      int64 `json:"versions,string,omitempty"`
+	VersionsCount int   `json:"versions_count,string,omitempty"`
 }
 
 func diskUsage(c echo.Context) error {
@@ -338,18 +339,22 @@ func diskUsage(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
 	versions, err := fs.VersionsUsage()
 	if err != nil {
 		return err
 	}
-	used := files + versions
+
 	result := &diskUsageResult{}
-	result.Used = used
+	result.Used = files + versions
 	result.Files = files
 	result.Versions = versions
 	result.Quota = fs.DiskQuota()
 	if stats, err := couchdb.DBStatus(instance, consts.Files); err == nil {
 		result.Count = stats.DocCount
+	}
+	if stats, err := couchdb.DBStatus(instance, consts.FilesVersions); err == nil {
+		result.VersionsCount = stats.DocCount
 	}
 	return c.JSON(http.StatusOK, result)
 }
