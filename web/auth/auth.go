@@ -20,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"github.com/mssola/user_agent"
 )
 
@@ -502,7 +501,7 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, err
 
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
-	noCSRF := middleware.CSRFWithConfig(middleware.CSRFConfig{
+	noCSRF := middlewares.CSRFWithConfig(middlewares.CSRFConfig{
 		TokenLookup:    "form:csrf_token",
 		CookieMaxAge:   3600, // 1 hour
 		CookieHTTPOnly: true,
