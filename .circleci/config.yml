@@ -42,6 +42,7 @@ jobs:
           command: |
             git config --global user.email "circleci@spam.cozycloud.cc"
             git config --global user.name "CircleCI"
+            sudo apt-get install -y imagemagick
             go test -timeout 2m ./...
 
   test1_12:
@@ -58,4 +59,5 @@ jobs:
           command: |
             git config --global user.email "circleci@spam.cozycloud.cc"
             git config --global user.name "CircleCI"
+            sudo apt-get install -y imagemagick
             go test -timeout 2m ./...
