@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -65,8 +66,19 @@ func updateClient(c echo.Context) error {
 }
 
 func deleteClient(c echo.Context) error {
-	client := c.Get("client").(*oauth.Client)
 	instance := middlewares.GetInstance(c)
+	client, err := oauth.FindClient(instance, c.Param("client-id"))
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.NoContent(http.StatusNoContent)
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	if err := checkClientToken(c, client); err != nil {
+		return err
+	}
 	if err := client.Delete(instance); err != nil {
 		return c.JSON(err.Code, err)
 	}
@@ -75,12 +87,6 @@ func deleteClient(c echo.Context) error {
 
 func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		header := c.Request().Header.Get("Authorization")
-		if !strings.HasPrefix(header, "Bearer ") {
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": "invalid_token",
-			})
-		}
 		instance := middlewares.GetInstance(c)
 		client, err := oauth.FindClient(instance, c.Param("client-id"))
 		if err != nil {
@@ -88,14 +94,28 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 				"error": "Client not found",
 			})
 		}
-		token := header[len("Bearer "):]
-		_, ok := client.ValidToken(instance, consts.RegistrationTokenAudience, token)
-		if !ok {
-			return c.JSON(http.StatusUnauthorized, echo.Map{
-				"error": "invalid_token",
-			})
+		if err := checkClientToken(c, client); err != nil {
+			return err
 		}
 		c.Set("client", client)
 		return next(c)
 	}
+}
+
+func checkClientToken(c echo.Context, client *oauth.Client) error {
+	header := c.Request().Header.Get("Authorization")
+	if !strings.HasPrefix(header, "Bearer ") {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid_token",
+		})
+	}
+	token := header[len("Bearer "):]
+	instance := middlewares.GetInstance(c)
+	_, ok := client.ValidToken(instance, consts.RegistrationTokenAudience, token)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid_token",
+		})
+	}
+	return nil
 }
