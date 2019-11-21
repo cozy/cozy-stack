@@ -142,17 +142,21 @@ query results to a maximum of 100 documents. This limit can be raised up to
 The limit applied to a query is visible in the HTTP response.
 
 If the limit cause some docs to not be returned, the response will have a
-`next=true` top level values.
+`next=true` top level values. Then, the returned `bookmark` value can be used in
+the next query to get the missing docs. It is also possible to use `skip`,
+to paginate, although this is not recommended for performances. For more details, see the
+[CouchDB documentation](https://docs.couchdb.org/en/latest/api/database/find.html#pagination).
 
 ```json
 {
     "limit": 100,
     "next": true,
     "docs": ["... first hundred docs ..."]
+    "bookmark": "g1AAAAB2eJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorGKQYpVqaJRoZm1paWFiapFkamhknGpilJiampZkYJRmC9HHA9OUAdTASpS0rCwAlah76"
 }
 ```
 
-If the number of docs is lower or equal to the limit, next will be false
+If the number of docs is lower or equal to the limit, next will be false.
 
 ```json
 {
@@ -162,7 +166,6 @@ If the number of docs is lower or equal to the limit, next will be false
 }
 ```
 
-To paginate, the client should keep track of the value of the last index field.
 
 ### Example:
 
@@ -171,7 +174,7 @@ Index on io.cozy.events with fields `["calendar", "date"]`
 Try to get all events for a month:
 
 ```json
-selector: {
+"selector": {
   "calendar": "my-calendar",
   "date": { "$gt": "20161001", "$lt": "20161030" }
 }
@@ -181,12 +184,13 @@ If there is less than 100 events, the response `next` field will be false and
 there is nothing more to do. If there is more than 100 events for this month, we
 have a `next=true` in the response.
 
-To keep iterating, we can take the date from the last item we received in the
-results and use it as next request `$gte`
+To keep iterating, we can use the `bookmark` field we received in the next
+request.
 
 ```json
-selector: {
+"selector": {
   "calendar": "my-calendar",
-  "date": { "$gte": "20161023", "$lt": "20161030" }
-}
+  "date": { "$gte": "20161001", "$lt": "20161030" }
+},
+"bookmark": "g1AAAAB2eJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorGKQYpVqaJRoZm1paWFiapFkamhknGpilJiampZkYJRmC9HHA9OUAdTASpS0rCwAlah76"
 ```
