@@ -862,7 +862,7 @@ func NormalDocs(db Database, doctype string, skip, limit int, bookmark string) (
 	res := NormalDocsResponse{
 		Rows: findRes.Docs,
 	}
-	if skip > 0 && len(res.Rows) < limit {
+	if bookmark == "" && len(res.Rows) < limit {
 		res.Total = skip + len(res.Rows)
 	} else {
 		var designRes ViewResponse

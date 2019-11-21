@@ -151,7 +151,7 @@ to paginate, although this is not recommended for performances. For more details
 {
     "limit": 100,
     "next": true,
-    "docs": ["... first hundred docs ..."]
+    "docs": ["... first hundred docs ..."],
     "bookmark": "g1AAAAB2eJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorGKQYpVqaJRoZm1paWFiapFkamhknGpilJiampZkYJRmC9HHA9OUAdTASpS0rCwAlah76"
 }
 ```

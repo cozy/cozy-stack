@@ -462,7 +462,7 @@ See
 The `_all_docs` endpoint sends the design docs in the response. It makes it hard
 to use pagination on it. We have added a non-standard `_normal_docs` endpoint.
 This new endpoint skip the design docs (and does not count them in the
-`total_rows`). It only accepts three parameters in the query string: `limit`
+`total_rows`). It accepts three parameters in the query string: `limit`
 (default: 100), `skip` (default: 0),  and `bookmark` (default: '').
 
 Note that the response format is a bit different, it looks more like a `_find`
