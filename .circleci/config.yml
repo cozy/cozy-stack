@@ -16,7 +16,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
+          key: v1-gopkg
       - run:
           name: lint
           command: |
@@ -24,7 +24,7 @@ jobs:
             sudo cp ./bin/golangci-lint $GOPATH/bin/
             golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace
       - save_cache:
-          key: v1-gopkg-{{ .Environment.CIRCLE_SHA1 }}
+          key: v1-gopkg
           paths:
             - "/go/pkg"
 
@@ -36,7 +36,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
+          key: v1-gopkg
       - run:
           name: prepare
           command: |
@@ -56,7 +56,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
+          key: v1-gopkg
       - run:
           name: prepare
           command: |
