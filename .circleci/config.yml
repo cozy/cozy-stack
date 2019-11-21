@@ -5,36 +5,16 @@ workflows:
   version: 2
   ci:
     jobs:
-      - prepare
-      - lint:
-          requires:
-            - prepare
-      - test1_12:
-          requires:
-            - prepare
-      - test1_13:
-          requires:
-            - prepare
+      - lint
+      - test1_12
+      - test1_13
 
 jobs:
-  prepare:
-    docker:
-      # See https://circleci.com/docs/2.0/circleci-images/
-      - image: circleci/golang:1.13
-    steps:
-      - checkout
-      - restore_cache:
-          key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
-      - run: go install
-      - save_cache:
-          key: v1-gopkg-{{ .Environment.CIRCLE_SHA1 }}
-          paths:
-            - "/go/pkg"
-
   lint:
     docker:
       - image: circleci/golang:1.13
     steps:
+      - checkout
       - restore_cache:
           key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
       - run:
@@ -43,6 +23,10 @@ jobs:
             curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.21.0
             sudo cp ./bin/golangci-lint $GOPATH/bin/
             golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace
+      - save_cache:
+          key: v1-gopkg-{{ .Environment.CIRCLE_SHA1 }}
+          paths:
+            - "/go/pkg"
 
   test1_13:
     docker:
@@ -50,6 +34,7 @@ jobs:
       - image: circleci/redis:5.0
       - image: couchdb:2.3.1
     steps:
+      - checkout
       - restore_cache:
           key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
       - run:
@@ -65,6 +50,7 @@ jobs:
       - image: circleci/redis:5.0
       - image: couchdb:2.3.1
     steps:
+      - checkout
       - restore_cache:
           key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
       - run:
