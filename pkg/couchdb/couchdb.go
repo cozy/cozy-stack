@@ -839,14 +839,21 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 
 // NormalDocs returns all the documents from a database, with pagination, but
 // it excludes the design docs.
-func NormalDocs(db Database, doctype string, skip, limit int) (*NormalDocsResponse, error) {
+func NormalDocs(db Database, doctype string, skip, limit int, bookmark string) (*NormalDocsResponse, error) {
 	var findRes struct {
-		Docs []json.RawMessage `json:"docs"`
+		Docs     []json.RawMessage `json:"docs"`
+		Bookmark string            `json:"bookmark"`
 	}
 	req := FindRequest{
 		Selector: mango.Gte("_id", nil),
-		Skip:     skip,
 		Limit:    limit,
+	}
+	// Both bookmark and skip can be used for pagination, but bookmark is more efficient.
+	// See https://docs.couchdb.org/en/latest/api/database/find.html#pagination
+	if bookmark != "" {
+		req.Bookmark = bookmark
+	} else {
+		req.Skip = skip
 	}
 	err := makeRequest(db, doctype, http.MethodPost, "_find", &req, &findRes)
 	if err != nil {
@@ -855,7 +862,7 @@ func NormalDocs(db Database, doctype string, skip, limit int) (*NormalDocsRespon
 	res := NormalDocsResponse{
 		Rows: findRes.Docs,
 	}
-	if len(res.Rows) < limit {
+	if skip > 0 && len(res.Rows) < limit {
 		res.Total = skip + len(res.Rows)
 	} else {
 		var designRes ViewResponse
@@ -875,6 +882,7 @@ func NormalDocs(db Database, doctype string, skip, limit int) (*NormalDocsRespon
 		}
 		res.Total = total - len(designRes.Rows)
 	}
+	res.Bookmark = findRes.Bookmark
 	return &res, nil
 }
 
@@ -996,6 +1004,7 @@ type DBStatusResponse struct {
 
 // NormalDocsResponse is the response the stack send for _normal_docs queries
 type NormalDocsResponse struct {
-	Total int               `json:"total_rows"`
-	Rows  []json.RawMessage `json:"rows"`
+	Total    int               `json:"total_rows"`
+	Rows     []json.RawMessage `json:"rows"`
+	Bookmark string            `json:"bookmark"`
 }

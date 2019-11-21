@@ -386,11 +386,12 @@ func normalDocs(c echo.Context) error {
 	if err != nil || skip < 0 {
 		skip = 0
 	}
+	bookmark := c.QueryParam("bookmark")
 	limit, err := strconv.ParseInt(c.QueryParam("limit"), 10, 64)
 	if err != nil || limit < 0 || limit > consts.MaxItemsPerPageForMango {
 		limit = 100
 	}
-	res, err := couchdb.NormalDocs(instance, doctype, int(skip), int(limit))
+	res, err := couchdb.NormalDocs(instance, doctype, int(skip), int(limit), bookmark)
 	if err != nil {
 		return err
 	}
