@@ -63,12 +63,11 @@ func (c *couchdbIndexer) DiskUsage() (int64, error) {
 		return 0, err
 	}
 
-
 	if versions, err := c.VersionsUsage(); err == nil {
 		used += versions
 	}
 
-	return int64(used), nil
+	return used, nil
 }
 
 // Return files total size (without versions)
