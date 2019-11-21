@@ -58,6 +58,20 @@ func (c *couchdbIndexer) InitIndex() error {
 }
 
 func (c *couchdbIndexer) DiskUsage() (int64, error) {
+	used, err := c.FilesUsage()
+	if err != nil {
+		return 0, err
+	}
+
+	if versions, err := c.VersionsUsage(); err == nil {
+		used += versions
+	}
+
+	return used, nil
+}
+
+// Return files total size (without versions)
+func (c *couchdbIndexer) FilesUsage() (int64, error) {
 	var doc couchdb.ViewResponse
 	err := couchdb.ExecView(c.db, couchdb.DiskUsageView, &couchdb.ViewRequest{
 		Reduce: true,
@@ -74,14 +88,25 @@ func (c *couchdbIndexer) DiskUsage() (int64, error) {
 		return 0, ErrWrongCouchdbState
 	}
 
-	// Count also the disk used by the old versions
-	err = couchdb.ExecView(c.db, couchdb.OldVersionsDiskUsageView, &couchdb.ViewRequest{
+	return int64(used), nil
+}
+
+// Return old file versions total size (not including current version)
+func (c *couchdbIndexer) VersionsUsage() (int64, error) {
+	var doc couchdb.ViewResponse
+	err := couchdb.ExecView(c.db, couchdb.OldVersionsDiskUsageView, &couchdb.ViewRequest{
 		Reduce: true,
 	}, &doc)
-	if err == nil && len(doc.Rows) > 0 {
-		if more, ok := doc.Rows[0].Value.(float64); ok {
-			used += more
-		}
+	if err != nil {
+		return 0, err
+	}
+	if len(doc.Rows) == 0 {
+		return 0, nil
+	}
+	// Reduce of _count should give us a number value
+	used, ok := doc.Rows[0].Value.(float64)
+	if !ok {
+		return 0, ErrWrongCouchdbState
 	}
 
 	return int64(used), nil

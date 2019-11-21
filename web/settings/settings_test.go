@@ -163,6 +163,12 @@ func TestDiskUsage(t *testing.T) {
 	used, ok := attrs["used"].(string)
 	assert.True(t, ok)
 	assert.Equal(t, "0", used)
+	files, ok := attrs["files"].(string)
+	assert.True(t, ok)
+	assert.Equal(t, "0", files)
+	versions, ok := attrs["versions"].(string)
+	assert.True(t, ok)
+	assert.Equal(t, "0", versions)
 }
 
 func TestRegisterPassphraseWrongToken(t *testing.T) {

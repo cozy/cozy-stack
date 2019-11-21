@@ -14,8 +14,10 @@ import (
 )
 
 type apiDiskUsage struct {
-	Used  int64 `json:"used,string"`
-	Quota int64 `json:"quota,string,omitempty"`
+	Used     int64 `json:"used,string"`
+	Quota    int64 `json:"quota,string,omitempty"`
+	Files    int64 `json:"files,string"`
+	Versions int64 `json:"versions,string"`
 }
 
 func (j *apiDiskUsage) ID() string                             { return consts.DiskUsageID }
@@ -46,14 +48,23 @@ func diskUsage(c echo.Context) error {
 	}
 
 	fs := instance.VFS()
-	used, err := fs.DiskUsage()
+
+	versions, err := fs.VersionsUsage()
 	if err != nil {
 		return err
 	}
 
+	files, err := fs.FilesUsage()
+	if err != nil {
+		return err
+	}
+
+	used := files + versions
 	quota := fs.DiskQuota()
 
 	result.Used = used
 	result.Quota = quota
+	result.Files = files
+	result.Versions = versions
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
