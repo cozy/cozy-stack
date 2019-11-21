@@ -4,16 +4,17 @@ version: 2.1
 workflows:
   version: 2
   ci:
-    - prepare
-    - lint:
-      requires:
-        - prepare
-    - test1.12:
-      requires:
-        - prepare
-    - test1.13:
-      requires:
-        - prepare
+    jobs:
+      - prepare
+      - lint:
+          requires:
+            - prepare
+      - test1_12:
+          requires:
+            - prepare
+      - test1_13:
+          requires:
+            - prepare
 
 jobs:
   prepare:
@@ -23,15 +24,19 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
       - run: go install
       - save_cache:
-          key: v1-repo-{{ .Environment.CIRCLE_SHA1 }}
+          key: v1-gopkg-{{ .Environment.CIRCLE_SHA1 }}
+          paths:
+            - "/go/pkg"
 
   lint:
     docker:
       - image: circleci/golang:1.13
     steps:
+      - restore_cache:
+          key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: lint
           command: |
@@ -39,28 +44,32 @@ jobs:
             sudo cp ./bin/golangci-lint $GOPATH/bin/
             golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace
 
-  test1.13:
+  test1_13:
     docker:
       - image: circleci/golang:1.13
       - image: circleci/redis:5.0
       - image: couchdb:2.3.1
     steps:
+      - restore_cache:
+          key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
       - run:
-        name: test
-        command: |
-          git config --global user.email "circleci@spam.cozycloud.cc"
-          git config --global user.name "CircleCI"
-          go test -timeout 2m ./...
+          name: test
+          command: |
+            git config --global user.email "circleci@spam.cozycloud.cc"
+            git config --global user.name "CircleCI"
+            go test -timeout 2m ./...
 
-  test1.12:
+  test1_12:
     docker:
       - image: circleci/golang:1.12
       - image: circleci/redis:5.0
       - image: couchdb:2.3.1
     steps:
+      - restore_cache:
+          key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
       - run:
-        name: test
-        command: |
-          git config --global user.email "circleci@spam.cozycloud.cc"
-          git config --global user.name "CircleCI"
-          go test -timeout 2m ./...
+          name: test
+          command: |
+            git config --global user.email "circleci@spam.cozycloud.cc"
+            git config --global user.name "CircleCI"
+            go test -timeout 2m ./...
