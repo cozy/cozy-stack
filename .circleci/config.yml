@@ -38,12 +38,15 @@ jobs:
       - restore_cache:
           key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
       - run:
-          name: test
+          name: prepare
           command: |
             git config --global user.email "circleci@spam.cozycloud.cc"
             git config --global user.name "CircleCI"
             sudo apt-get install -y imagemagick
-            go test -timeout 2m ./...
+      - run:
+          name: test
+          command: |
+            go test -timeout 2m -p 1 ./...
 
   test1_12:
     docker:
@@ -55,9 +58,12 @@ jobs:
       - restore_cache:
           key: v1-gopkg{{ .Environment.CIRCLE_SHA1 }}
       - run:
-          name: test
+          name: prepare
           command: |
             git config --global user.email "circleci@spam.cozycloud.cc"
             git config --global user.name "CircleCI"
             sudo apt-get install -y imagemagick
-            go test -timeout 2m ./...
+      - run:
+          name: test
+          command: |
+            go test -timeout 2m -p 1 ./...
