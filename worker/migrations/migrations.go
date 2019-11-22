@@ -274,10 +274,12 @@ func getSrcName(inst *instance.Instance, f *vfs.FileDoc) string {
 	return srcName
 }
 
+// XXX the f FileDoc can be modified to add an InternalID
 func getDstName(inst *instance.Instance, f *vfs.FileDoc) string {
 	if f.InternalID == "" {
+		old := f.Clone().(*vfs.FileDoc)
 		f.InternalID = vfsswift.NewInternalID()
-		if err := couchdb.UpdateDoc(inst, f); err != nil {
+		if err := couchdb.UpdateDocWithOld(inst, f, old); err != nil {
 			return ""
 		}
 	}
