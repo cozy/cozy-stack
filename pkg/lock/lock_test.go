@@ -7,15 +7,20 @@
 package lock
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"runtime"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
+	"github.com/stretchr/testify/assert"
 )
+
+var nb = 100
 
 func reader(rwm ErrorRWLocker, iterations int, activity *int32, cdone chan bool) {
 	for i := 0; i < iterations; i++ {
@@ -73,8 +78,8 @@ func HammerRWMutex(locker ErrorRWLocker, gomaxprocs, numReaders, iterations int)
 	}
 }
 
-func HammerMutex(m ErrorLocker, loops int, cdone chan bool) {
-	for i := 0; i < loops; i++ {
+func HammerMutex(m ErrorLocker, cdone chan bool) {
+	for i := 0; i < nb; i++ {
 		err := m.Lock()
 		if err != nil {
 			panic(err)
@@ -84,59 +89,78 @@ func HammerMutex(m ErrorLocker, loops int, cdone chan bool) {
 	cdone <- true
 }
 
-var n = 100
+func hammerRW(t *testing.T, l ErrorRWLocker) {
+	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(-1))
+	HammerRWMutex(l, 1, 1, nb)
+	HammerRWMutex(l, 1, 3, nb)
+	HammerRWMutex(l, 1, 10, nb)
+	HammerRWMutex(l, 4, 1, nb)
+	HammerRWMutex(l, 4, 3, nb)
+	HammerRWMutex(l, 4, 10, nb)
+	HammerRWMutex(l, 10, 1, nb)
+	HammerRWMutex(l, 10, 3, nb)
+	HammerRWMutex(l, 10, 10, nb)
+	HammerRWMutex(l, 10, 5, nb)
+}
 
 func TestMemLock(t *testing.T) {
-	if testing.Short() {
-		n = 5
-	}
-	backconf := config.GetConfig().Lock
 	var err error
 	config.GetConfig().Lock, err = config.NewRedisConfig("")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { config.GetConfig().Lock = backconf }()
-	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(-1))
 	db := prefixer.NewPrefixer("cozy.local", "cozy.local")
 	l := ReadWrite(db, "test-mem")
-	HammerRWMutex(l, 1, 1, n)
-	HammerRWMutex(l, 1, 3, n)
-	HammerRWMutex(l, 1, 10, n)
-	HammerRWMutex(l, 4, 1, n)
-	HammerRWMutex(l, 4, 3, n)
-	HammerRWMutex(l, 4, 10, n)
-	HammerRWMutex(l, 10, 1, n)
-	HammerRWMutex(l, 10, 3, n)
-	HammerRWMutex(l, 10, 10, n)
-	HammerRWMutex(l, 10, 5, n)
+	hammerRW(t, l)
 }
 
 func TestRedisLock(t *testing.T) {
-	if testing.Short() {
-		n = 5
-	}
-	backconf := config.GetConfig().Lock
 	var err error
 	config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { config.GetConfig().Lock = backconf }()
-	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(-1))
 	db := prefixer.NewPrefixer("cozy.local", "cozy.local")
 	l := ReadWrite(db, "test-redis")
-	// @TODO use HammerRWMutex when redisLock is RW lock
+	hammerRW(t, l)
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
-		go HammerMutex(l, n, done)
+		go HammerMutex(l, done)
 	}
 	for i := 0; i < 10; i++ {
 		<-done
 	}
+	other := ReadWrite(db, "test-redis").(*redisLock)
+	assert.NoError(t, l.Lock())
+	assert.Error(t, other.LockWithTimeout(1*time.Second))
+	l.Unlock()
+}
+
+func TestLongLock(t *testing.T) {
+	var err error
+	config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db := prefixer.NewPrefixer("cozy.local", "cozy.local")
+	long := LongOperation(db, "test-long")
+	l := ReadWrite(db, "test-long").(*redisLock)
+	assert.NoError(t, long.Lock())
+	err = l.Lock()
+	assert.Error(t, err)
+	assert.Equal(t, ErrTooManyRetries, err)
+	l.Unlock()
 }
 
 func TestMain(m *testing.M) {
+	flag.Parse()
+	if testing.Short() {
+		nb = 3
+	}
+
 	config.UseTestFile()
+	backconf := config.GetConfig().Lock
+	defer func() { config.GetConfig().Lock = backconf }()
+
 	os.Exit(m.Run())
 }
