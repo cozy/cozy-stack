@@ -399,6 +399,9 @@ msgstr "Contactpersonen"
 msgid "Permissions io.cozy.files"
 msgstr "Bestanden"
 
+msgid "Permissions io.cozy.files.versions"
+msgstr "Bestandsversies"
+
 msgid "Permissions io.cozy.identities"
 msgstr "Identiteiten"
 
@@ -507,7 +510,7 @@ msgid "Mail Archive Button text"
 msgstr "Je gegevens downloaden"
 
 msgid "Mail Two Factor Subject"
-msgstr "Bevestig de koppeling met je %s"
+msgstr "Eenmalige koppelcode"
 
 msgid "Mail Two Factor Intro"
 msgstr ""
