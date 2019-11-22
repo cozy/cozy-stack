@@ -52,6 +52,7 @@ designing new services.
     -   [Apps registry](registry.md)
     -   [Konnectors](konnectors.md)
 -   `/bitwarden` - [Bitwarden](bitwarden.md)
+-   `/contacts` - [Contacts](contacts.md)
 -   `/data` - [Data System](data-system.md)
     -   [Mango](mango.md)
     -   [CouchDB Quirks](couchdb-quirks.md) &

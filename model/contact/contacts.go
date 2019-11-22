@@ -5,6 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
@@ -156,6 +157,42 @@ func FindByEmail(db couchdb.Database, email string) (*Contact, error) {
 	doc := &Contact{}
 	err = json.Unmarshal(res.Rows[0].Doc, &doc)
 	return doc, err
+}
+
+// CreateMyself creates the myself contact document from the instance settings.
+func CreateMyself(db couchdb.Database, settings *couchdb.JSONDoc) (*Contact, error) {
+	doc := New()
+	doc.JSONDoc.M["me"] = true
+	if name, ok := settings.M["public_name"]; ok {
+		doc.JSONDoc.M["fullname"] = name
+	}
+	if email, ok := settings.M["email"]; ok {
+		doc.JSONDoc.M["email"] = []map[string]interface{}{
+			{"address": email, "primary": true},
+		}
+	}
+	if err := couchdb.CreateDoc(db, doc); err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+// GetMyself returns the myself contact document, or an ErrNotFound error.
+func GetMyself(db couchdb.Database) (*Contact, error) {
+	var docs []*Contact
+	req := &couchdb.FindRequest{
+		UseIndex: "by-me",
+		Selector: mango.Equal("me", true),
+		Limit:    1,
+	}
+	err := couchdb.FindDocs(db, consts.Contacts, req, &docs)
+	if err != nil {
+		return nil, err
+	}
+	if len(docs) == 0 {
+		return nil, ErrNotFound
+	}
+	return docs[0], nil
 }
 
 var _ couchdb.Doc = &Contact{}
