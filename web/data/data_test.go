@@ -591,6 +591,58 @@ func TestFindDocumentsPaginated(t *testing.T) {
 	assert.Equal(t, true, out3.Next)
 }
 
+func TestFindDocumentsPaginatedBookmark(t *testing.T) {
+	_ = couchdb.ResetDB(testInstance, Type)
+
+	for i := 1; i <= 200; i++ {
+		_ = getDocForTest()
+	}
+
+	var def = M{"index": M{"fields": S{"test"}}}
+	var url = ts.URL + "/data/" + Type + "/_index"
+	req, _ := http.NewRequest("POST", url, jsonReader(&def))
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	var out indexCreationResponse
+	_, _, err := doRequest(req, &out)
+	assert.NoError(t, err)
+	assert.Empty(t, out.Error, "should have no error")
+
+	var query = M{"selector": M{"test": "value"}}
+	var url2 = ts.URL + "/data/" + Type + "/_find"
+	req, _ = http.NewRequest("POST", url2, jsonReader(&query))
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	var out2 struct {
+		Limit    int
+		Next     bool
+		Docs     []couchdb.JSONDoc `json:"docs"`
+		Bookmark string
+	}
+	_, res, err := doRequest(req, &out2)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	assert.Len(t, out2.Docs, 100, "should stop at 100 docs")
+	assert.Equal(t, 100, out2.Limit)
+	assert.Equal(t, true, out2.Next)
+	assert.NotEmpty(t, out2.Bookmark)
+
+	var query2 = M{"selector": M{"test": "value"}, "bookmark": out2.Bookmark}
+	req, _ = http.NewRequest("POST", url2, jsonReader(&query2))
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	var out3 struct {
+		Limit int
+		Next  bool
+		Docs  []couchdb.JSONDoc `json:"docs"`
+	}
+	_, res, err = doRequest(req, &out3)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	assert.Equal(t, 100, out3.Limit)
+	assert.Equal(t, false, out3.Next)
+}
+
 func TestFindDocumentsWithoutIndex(t *testing.T) {
 	var query = M{"selector": M{"no-index-for-this-field": "value"}}
 	var url2 = ts.URL + "/data/" + Type + "/_find"
@@ -825,8 +877,28 @@ function(doc) {
 	assert.NotEmpty(t, id)
 	value := row["test"].(string)
 	assert.Equal(t, "value", value)
+	bookmark := out["bookmark"].(string)
+	assert.NotEmpty(t, bookmark)
 
+	// skip pagination
 	url = ts.URL + "/data/" + Type + "/_normal_docs?limit=2&skip=2"
+	req, _ = http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	out, res, err = doRequest(req, nil)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	totalRows = out["total_rows"].(float64)
+	assert.Equal(t, float64(4), totalRows)
+	rows = out["rows"].([]interface{})
+	assert.Len(t, rows, 2)
+	row = rows[1].(map[string]interface{})
+	id = row["_id"].(string)
+	assert.NotEmpty(t, id)
+	value = row["test"].(string)
+	assert.Equal(t, "fourthvalue", value)
+
+	// bookmark pagination
+	url = ts.URL + "/data/" + Type + "/_normal_docs?bookmark=" + bookmark
 	req, _ = http.NewRequest("GET", url, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	out, res, err = doRequest(req, nil)
