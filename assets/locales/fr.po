@@ -417,6 +417,9 @@ msgstr "Contacts"
 msgid "Permissions io.cozy.files"
 msgstr "Fichiers"
 
+msgid "Permissions io.cozy.files.versions"
+msgstr "Versions des fichiers"
+
 msgid "Permissions io.cozy.identities"
 msgstr "Identités"
 
@@ -528,7 +531,7 @@ msgstr "Code de connexion à usage unique"
 msgid "Mail Two Factor Intro"
 msgstr ""
 "L'authentification en deux étapes est activée sur votre Cozy. Voici votre "
-"code d'activation de la double authentification :"
+"code de vérification de la seconde authentification :"
 
 msgid "Mail Two Factor Outro"
 msgstr "Besoin d'aide ? Ecrivez à l'adresse contact@cozycloud.cc"
