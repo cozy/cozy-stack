@@ -9,7 +9,7 @@ require (
 	github.com/cozy/goexif2 v0.0.0-20190919162732-41879c76f051
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20180914105234-d3dc4988de66
-	github.com/dhowden/tag v0.0.0-20190519100835-db0c67e351b1
+	github.com/dhowden/tag v0.0.0-20191122115059-7e5c04feccd8
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emersion/go-vcard v0.0.0-20190105225839-8856043f13c5
 	github.com/go-redis/redis/v7 v7.0.0-beta.4
