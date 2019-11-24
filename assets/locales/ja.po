@@ -373,6 +373,9 @@ msgstr "連絡先"
 msgid "Permissions io.cozy.files"
 msgstr "ファイル"
 
+msgid "Permissions io.cozy.files.versions"
+msgstr "ファイルのバージョン"
+
 msgid "Permissions io.cozy.identities"
 msgstr "ID"
 
