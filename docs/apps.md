@@ -48,9 +48,9 @@ filename for this file: `manifest.webapp`.
 ### Routes
 
 A route make the mapping between the requested paths and the files. It can have
-an index, which is an HTML file, with a token injected on it that identify both
-the application. This token must be used with the user cookies to use the
-services of the cozy-stack.
+an index, which is an HTML file, with a token injected on it that identify the
+application. This token must be used with the user cookies to use the services
+of the cozy-stack (except in the cases of a shared by link page).
 
 By default, a route can be only visited by the authenticated owner of the
 instance where the app is installed. But a route can be marked as public. In
@@ -72,7 +72,7 @@ public page on `/public`, and shared assets in `/assets`:
         "public": true
     },
     "/assets": {
-        "folder": "/assets",
+        "folder": "/public-assets",
         "public": true
     }
 }
@@ -94,6 +94,16 @@ route, this default one:
 **Note**: if you have a public route, it's probably better to put the app icon
 in it. So, the cozy-bar can display it for the users that go on the public part
 of the app.
+
+When the stack receives a request, it chooses the more specific route that
+matches, then it looks inside the associated folder to find the file, and send
+it. If the route is an exact match, the file will be the index, and it will be
+interpreted as a template, cf [the list of
+variables](https://docs.cozy.io/en/cozy-stack/client-app-dev/#good-practices-for-your-application).
+
+For example, with the previous routes, a request to `/admin` will use the file
+`/admin.html` as a template for the response. And a request to
+`/assets/css/theme.css` will use the file `/public-assets/css/theme.css`.
 
 ### Services
 
