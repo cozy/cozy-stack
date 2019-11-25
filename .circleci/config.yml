@@ -50,7 +50,7 @@ jobs:
 
   test1_12:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.13
       - image: circleci/redis:5.0
       - image: couchdb:2.3.1
     steps:
