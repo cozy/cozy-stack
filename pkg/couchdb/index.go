@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 24
+const IndexViewsVersion int = 25
 
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
@@ -34,6 +34,9 @@ var Indexes = []*mango.Index{
 	// Used to lookup notifications by their source, ordered by their creation
 	// date
 	mango.IndexOnFields(consts.Notifications, "by-source-id", []string{"source_id", "created_at"}),
+
+	// Used to find the myself document
+	mango.IndexOnFields(consts.Contacts, "by-me", []string{"me"}),
 
 	// Used to lookup the bitwarden ciphers in a folder
 	mango.IndexOnFields(consts.BitwardenCiphers, "by-folder-id", []string{"folder_id"}),

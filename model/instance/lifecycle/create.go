@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -179,6 +180,9 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		return nil, err
 	}
 	if err := createDefaultFilesTree(i); err != nil {
+		return nil, err
+	}
+	if _, err := contact.CreateMyself(i, settings); err != nil {
 		return nil, err
 	}
 	sched := job.System()

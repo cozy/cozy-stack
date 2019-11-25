@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/bitwarden"
 	"github.com/cozy/cozy-stack/web/compat"
+	"github.com/cozy/cozy-stack/web/contacts"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/files"
@@ -175,6 +176,7 @@ func SetupRoutes(router *echo.Echo) error {
 		registry.Routes(router.Group("/registry", mws...))
 		data.Routes(router.Group("/data", mws...))
 		files.Routes(router.Group("/files", mws...))
+		contacts.Routes(router.Group("/contacts", mws...))
 		intents.Routes(router.Group("/intents", mws...))
 		jobs.Routes(router.Group("/jobs", mws...))
 		notifications.Routes(router.Group("/notifications", mws...))
