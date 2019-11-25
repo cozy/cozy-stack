@@ -113,7 +113,9 @@ func getSteps(inst *instance.Instance, fileID string, version int64) ([]Step, er
 		return nil, ErrTooOld
 	}
 
-	steps = steps[1:] // Discard the sentinel
+	if version > 0 {
+		steps = steps[1:] // Discard the sentinel
+	}
 	return steps, nil
 }
 
