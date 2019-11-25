@@ -640,7 +640,7 @@ permission is required.
 
 A feature flag is a name and an associated value (boolean, number, string or a
 JSON) that can be interpreted by the apps. It can be used for giving access to
-paid features, or to enable progressively a feature on all the cozy instances
+paid features, or to enable a feature progressively on all the cozy instances
 of a context. The stack computes the feature flags from several sources (in
 order of decreasing priority):
 
@@ -652,12 +652,12 @@ order of decreasing priority):
 - the default value (`cozy-stack feature default`).
 
 For a given flag, the stack takes the value from the source with the highest
-priority.
+priority, and does not look at the other sources (no merge).
 
 ### GET /settings/flags
 
 This endpoint returns the computed list of feature flags for the given
-instance. It accepts a `include` parameter in the query string to see the
+instance. It accepts an `include` parameter in the query string to see the
 details of how the flags were computed.
 
 #### Request
