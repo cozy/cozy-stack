@@ -321,3 +321,6 @@ contexts:
     # Use a different noreply mail for this context
     noreply_address: noreply@cozy.beta
     noreply_name: My Cozy Beta
+    # Feature flags
+    features:
+      - hide_konnector_errors
