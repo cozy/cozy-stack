@@ -16,6 +16,9 @@ import (
 // structure is modified, update this value
 const DocTypeVersion = "1"
 
+// ErrMissingOrgKey is used when the organization key does not exist
+var ErrMissingOrgKey = errors.New("No organization key")
+
 // Settings is the struct that holds the birwarden settings
 type Settings struct {
 	CouchRev                string                 `json:"_rev,omitempty"`
@@ -114,7 +117,7 @@ func (s *Settings) EnsureCozyOrganization(inst *instance.Instance) error {
 // OrganizationKey returns the organization key (in clear, not encrypted).
 func (s *Settings) OrganizationKey() ([]byte, error) {
 	if len(s.EncryptedOrgKey) == 0 {
-		return nil, errors.New("No organization key")
+		return nil, ErrMissingOrgKey
 	}
 	decrypted, err := account.DecryptCredentialsData(s.EncryptedOrgKey)
 	if err != nil {

@@ -1,11 +1,16 @@
 package migrations
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/account"
+	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/bitwarden"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
@@ -13,8 +18,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift"
@@ -29,6 +36,8 @@ const (
 	swiftV2ContainerPrefixCozy = "cozy-v2-"
 	swiftV2ContainerPrefixData = "data-v2-"
 	swiftV3ContainerPrefix     = "cozy-v3-"
+
+	accountsToOrganization = "accounts-to-organization"
 )
 
 // maxSimultaneousCalls is the maximal number of simultaneous calls to Swift
@@ -65,6 +74,8 @@ func worker(ctx *job.WorkerContext) error {
 		return migrateToSwiftV3(ctx.Instance.Domain)
 	case swiftV1ToV2:
 		return fmt.Errorf("this migration type is no longer supported")
+	case accountsToOrganization:
+		return migrateAccountsToOrganization(ctx.Instance.Domain)
 	default:
 		return fmt.Errorf("unknown migration type %q", msg.Type)
 	}
@@ -78,6 +89,137 @@ func commit(ctx *job.WorkerContext, err error) error {
 		log.Errorf("Migration error: %s", err)
 	}
 	return err
+}
+
+// Migrate all the encrypted accounts to Bitwarden ciphers.
+// It decrypts each account, reencrypt the fields with the organization key,
+// and save it in the ciphers database.
+func migrateAccountsToOrganization(domain string) error {
+	inst, err := instance.GetFromCouch(domain)
+	if err != nil {
+		return err
+	}
+	setting, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
+	// Get org key
+	var orgKey []byte
+	orgKey, err = setting.OrganizationKey()
+	if err == settings.ErrMissingOrgKey {
+		// Create org key if missing
+		if err := setting.EnsureCozyOrganization(inst); err != nil {
+			return err
+		}
+		orgKey, err = setting.OrganizationKey()
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
+	// Iterate over all triggers to get the konnectors with the associated account
+	jobsSystem := job.System()
+	triggers, err := jobsSystem.GetAllTriggers(inst)
+	if err != nil {
+		return err
+	}
+	var msg struct {
+		Account string `json:"account"`
+		Slug    string `json:"konnector"`
+	}
+	for _, t := range triggers {
+		if t.Infos().WorkerType != "konnector" {
+			continue
+		}
+		err := t.Infos().Message.Unmarshal(&msg)
+		if err == nil && msg.Account != "" && msg.Slug != "" {
+			manifest, err := app.GetKonnectorBySlug(inst, msg.Slug)
+			if err != nil {
+				return err
+			}
+			vLink, err := json.Marshal(manifest.VendorLink)
+			if err != nil {
+				return err
+			}
+			link := string(vLink)
+			// Remove quotes
+			if len(link) > 0 && link[0] == '"' {
+				link = link[1:]
+			}
+			if len(link) > 0 && link[len(link)-1] == '"' {
+				link = link[:len(link)-1]
+			}
+			acc := &account.Account{}
+			if err := couchdb.GetDoc(inst, consts.Accounts, msg.Account, acc); err != nil {
+				return nil
+			}
+			encryptedCreds := acc.Basic.EncryptedCredentials
+			login, password, err := account.DecryptCredentials(encryptedCreds)
+			if err != nil {
+				return err
+			}
+			cipher, err := createCipher(orgKey, msg.Slug, login, password, string(link))
+			if err != nil {
+				return err
+			}
+			if err := couchdb.CreateDoc(inst, cipher); err != nil {
+				return err
+			}
+			settings.UpdateRevisionDate(inst, setting)
+		}
+	}
+	return nil
+}
+
+func createCipher(orgKey []byte, slug, username, password, url string) (*bitwarden.Cipher, error) {
+	key := orgKey[:32]
+	hmac := orgKey[32:]
+
+	ivURL := crypto.GenerateRandomBytes(16)
+	encURL, err := crypto.EncryptWithAES256HMAC(key, hmac, []byte(url), ivURL)
+	if err != nil {
+		return nil, err
+	}
+	u := bitwarden.LoginURI{URI: encURL, Match: nil}
+	uris := []bitwarden.LoginURI{u}
+
+	ivName := crypto.GenerateRandomBytes(16)
+	encName, err := crypto.EncryptWithAES256HMAC(key, hmac, []byte(slug), ivName)
+	if err != nil {
+		return nil, err
+	}
+
+	ivUsername := crypto.GenerateRandomBytes(16)
+	encUsername, err := crypto.EncryptWithAES256HMAC(key, hmac, []byte(username), ivUsername)
+	if err != nil {
+		return nil, err
+	}
+
+	ivPassword := crypto.GenerateRandomBytes(16)
+	encPassword, err := crypto.EncryptWithAES256HMAC(key, hmac, []byte(password), ivPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	login := &bitwarden.LoginData{
+		Username: encUsername,
+		Password: encPassword,
+		URIs:     uris,
+	}
+
+	md := metadata.New()
+	md.DocTypeVersion = bitwarden.DocTypeVersion
+
+	c := bitwarden.Cipher{
+		Type:           bitwarden.LoginType,
+		Name:           encName,
+		Login:          login,
+		SharedWithCozy: true,
+		Metadata:       md,
+	}
+	return &c, nil
 }
 
 func migrateToSwiftV3(domain string) error {

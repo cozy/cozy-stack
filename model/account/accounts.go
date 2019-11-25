@@ -47,9 +47,10 @@ type OauthInfo struct {
 
 // BasicInfo holds configuration information for an user/pass account
 type BasicInfo struct {
-	Login      string `json:"login,omitempty"`
-	Password   string `json:"password,omitempty"`
-	FolderPath string `json:"folderPath,omitempty"`
+	Login                string `json:"login,omitempty"`
+	Password             string `json:"password,omitempty"` // used when no encryption
+	EncryptedCredentials string `json:"credentials_encrypted"`
+	FolderPath           string `json:"folderPath,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface
