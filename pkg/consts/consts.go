@@ -51,12 +51,15 @@ const (
 	PassphraseParametersID = "io.cozy.settings.passphrase"
 	// FlagsSettingsID is the id of settings document with the feature flags.
 	FlagsSettingsID = "io.cozy.settings.flags"
-	// ContextFlagsSettingsID is the id of the settings documents with the
-	// feature flags defined in the contexts section of the configuration file.
-	ContextFlagsSettingsID = "io.cozy.settings.flags.context"
 	// InstanceFlagsSettingsID is the id of the settings documents with the
 	// feature flags specific to this instance.
 	InstanceFlagsSettingsID = "io.cozy.settings.flags.instance"
+	// ManagerFlagsSettingsID is the id of the settings documents with the
+	// feature flags coming from the manager (via the feature sets).
+	ManagerFlagsSettingsID = "io.cozy.settings.flags.manager"
+	// ContextFlagsSettingsID is the id of the settings documents with the
+	// feature flags defined in the contexts section of the configuration file.
+	ContextFlagsSettingsID = "io.cozy.settings.flags.context"
 )
 
 const (

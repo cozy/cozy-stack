@@ -16,6 +16,9 @@ const (
 	ManagerPremiumURL
 	// ManagerBlockedURL is the kind for a redirection of a blocked instance.
 	ManagerBlockedURL
+	// ManagerFeatureSetsURL is the kind for an API call to list the feature
+	// flags associated to some feature sets.
+	ManagerFeatureSetsURL
 )
 
 // ManagerURL returns an external string for the given ManagerURL kind.
@@ -29,12 +32,12 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
 		return "", nil
 	}
 
-	base, ok := config["manager_url"]
+	base, ok := config["manager_url"].(string)
 	if !ok {
 		return "", nil
 	}
 
-	baseURL, err := url.Parse(base.(string))
+	baseURL, err := url.Parse(base)
 	if err != nil {
 		return "", err
 	}
@@ -49,6 +52,8 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
 		path = fmt.Sprintf("/cozy/instances/%s/tos", url.PathEscape(i.UUID))
 	case ManagerBlockedURL:
 		path = fmt.Sprintf("/cozy/instances/%s/blocked", url.PathEscape(i.UUID))
+	case ManagerFeatureSetsURL:
+		path = "/api/v1/flags"
 	default:
 		panic("unknown ManagerURLKind")
 	}

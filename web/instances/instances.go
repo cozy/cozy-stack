@@ -457,6 +457,8 @@ func Routes(router *echo.Group) {
 	// Feature flags
 	router.GET("/:domain/feature/flags", getFeatureFlags)
 	router.PATCH("/:domain/feature/flags", patchFeatureFlags)
+	router.GET("/:domain/feature/sets", getFeatureSets)
+	router.PUT("/:domain/feature/sets", putFeatureSets)
 
 	// Advanced features for instances
 	router.GET("/:domain/fsck", fsckHandler)

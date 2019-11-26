@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -55,7 +56,60 @@ If you give a null value, the flag will be removed.
 	},
 }
 
+var featureSetCmd = &cobra.Command{
+	Use:   "sets",
+	Short: `Display and update the feature sets for an instance`,
+	Long: `
+cozy-stack feature sets displays the feature sets coming from the manager.
+
+It can also take a list of sets that will replace the previous list (no merge).
+
+All the sets can be removed by setting an empty list ('').
+`,
+	Example: `$ cozy-stack feature sets --domain cozy.tools:8080 'set1 set2'`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if flagDomain == "" {
+			errPrintfln("%s", errMissingDomain)
+			return cmd.Usage()
+		}
+		c := newAdminClient()
+		req := request.Options{
+			Method: "GET",
+			Path:   fmt.Sprintf("/instances/%s/feature/sets", flagDomain),
+		}
+		if len(args) > 0 {
+			list := args
+			if len(args) == 1 {
+				list = strings.Fields(args[0])
+			}
+			buf, err := json.Marshal(list)
+			if err != nil {
+				return err
+			}
+			req.Method = "PUT"
+			req.Body = bytes.NewReader(buf)
+		}
+		res, err := c.Req(&req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		var sets []string
+		if err = json.NewDecoder(res.Body).Decode(&sets); err != nil {
+			return err
+		}
+		for _, set := range sets {
+			fmt.Printf("- %v\n", set)
+		}
+		return nil
+	},
+}
+
 func init() {
+	featureFlagCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
+	featureSetCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
+
 	featureCmdGroup.AddCommand(featureFlagCmd)
+	featureCmdGroup.AddCommand(featureSetCmd)
 	RootCmd.AddCommand(featureCmdGroup)
 }

@@ -2,9 +2,15 @@ package feature
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -41,6 +47,9 @@ func GetFlags(inst *instance.Instance) (*Flags, error) {
 		Sources: sources,
 	}
 	flags.addInstanceFlags(inst)
+	if err := flags.addManager(inst); err != nil {
+		return nil, err
+	}
 	if err := flags.addContext(inst); err != nil {
 		return nil, err
 	}
@@ -65,6 +74,77 @@ func (f *Flags) addInstanceFlags(inst *instance.Instance) {
 			f.M[k] = v
 		}
 	}
+}
+
+func (f *Flags) addManager(inst *instance.Instance) error {
+	if len(inst.FeatureSets) == 0 {
+		return nil
+	}
+	m, err := getFlagsFromManager(inst)
+	if err != nil || len(m) == 0 {
+		return err
+	}
+	flags := &Flags{
+		DocID: consts.ManagerFlagsSettingsID,
+		M:     m,
+	}
+	f.Sources = append(f.Sources, flags)
+	for k, v := range flags.M {
+		if _, ok := f.M[k]; !ok {
+			f.M[k] = v
+		}
+	}
+	return nil
+}
+
+var (
+	cacheDuration      = 12 * time.Hour
+	managerHTTPClient  = &http.Client{Timeout: 5 * time.Second}
+	errInvalidResponse = errors.New("Invalid response from the manager")
+)
+
+func getFlagsFromManager(inst *instance.Instance) (map[string]interface{}, error) {
+	cache := config.GetConfig().CacheStorage
+	cacheKey := fmt.Sprintf("flags:%s:%v", inst.ContextName, inst.FeatureSets)
+	var flags map[string]interface{}
+	if buf, ok := cache.Get(cacheKey); ok {
+		if err := json.Unmarshal(buf, &flags); err == nil {
+			return flags, nil
+		}
+	}
+
+	managerURL, err := inst.ManagerURL(instance.ManagerFeatureSetsURL)
+	if err != nil {
+		return nil, err
+	}
+	if managerURL == "" {
+		return flags, nil
+	}
+	query := url.Values{
+		"sets":    {strings.Join(inst.FeatureSets, ",")},
+		"context": {inst.ContextName},
+	}.Encode()
+	res, err := managerHTTPClient.Get(fmt.Sprintf("%s?%s", managerURL, query))
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, errInvalidResponse
+	}
+	var data map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+	var ok bool
+	if flags, ok = data["flags"].(map[string]interface{}); !ok {
+		return nil, errInvalidResponse
+	}
+
+	if buf, err := json.Marshal(flags); err == nil {
+		cache.Set(cacheKey, buf, cacheDuration)
+	}
+	return flags, nil
 }
 
 func (f *Flags) addContext(inst *instance.Instance) error {
