@@ -135,6 +135,7 @@ func migrateAccountsToOrganization(domain string) error {
 		manifest, err := app.GetKonnectorBySlug(inst, msg.Slug)
 		if err != nil {
 			errm = multierror.Append(errm, err)
+			continue
 		}
 		var link string
 		if err := json.Unmarshal(*manifest.VendorLink, &link); err != nil {
@@ -144,13 +145,14 @@ func migrateAccountsToOrganization(domain string) error {
 		acc := &account.Account{}
 		if err := couchdb.GetDoc(inst, consts.Accounts, msg.Account, acc); err != nil {
 			errm = multierror.Append(errm, err)
+			continue
 		}
 		encryptedCreds := acc.Basic.EncryptedCredentials
 		login, password, err := account.DecryptCredentials(encryptedCreds)
 		if err != nil {
 			errm = multierror.Append(errm, err)
 		}
-		cipher, err := buildCipher(orgKey, msg.Slug, login, password, string(link))
+		cipher, err := buildCipher(orgKey, msg.Slug, login, password, link)
 		if err != nil {
 			errm = multierror.Append(errm, err)
 		}
