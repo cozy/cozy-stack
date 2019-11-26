@@ -105,6 +105,46 @@ All the sets can be removed by setting an empty list ('').
 	},
 }
 
+var featureContextCmd = &cobra.Command{
+	Use:   "context <context-name>",
+	Short: `Display and update the feature flags for a context`,
+	Long: `
+cozy-stack feature defaults displays the feature flags for a context.
+
+It can also create, update, or remove flags (with a ratio and value).
+
+To remove a flag, set it to an empty array (or null).
+`,
+	Example: `$ cozy-stack feature context beta '{"set_this_flag": [{"ratio": 0.1, "value": 1}, {"ratio": 0.9, "value": 2}] }'`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 || args[0] == "" {
+			return cmd.Usage()
+		}
+		c := newAdminClient()
+		req := request.Options{
+			Method: "GET",
+			Path:   fmt.Sprintf("/instances/feature/contexts/%s", args[0]),
+		}
+		if len(args) > 1 {
+			req.Method = "PATCH"
+			req.Body = strings.NewReader(args[1])
+		}
+		res, err := c.Req(&req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		var obj map[string]json.RawMessage
+		if err = json.NewDecoder(res.Body).Decode(&obj); err != nil {
+			return err
+		}
+		for k, v := range obj {
+			fmt.Printf("- %s: %s\n", k, string(v))
+		}
+		return nil
+	},
+}
+
 var featureDefaultCmd = &cobra.Command{
 	Use:   "defaults",
 	Short: `Display and update the default values for feature flags`,
@@ -148,6 +188,7 @@ func init() {
 
 	featureCmdGroup.AddCommand(featureFlagCmd)
 	featureCmdGroup.AddCommand(featureSetCmd)
+	featureCmdGroup.AddCommand(featureContextCmd)
 	featureCmdGroup.AddCommand(featureDefaultCmd)
 	RootCmd.AddCommand(featureCmdGroup)
 }

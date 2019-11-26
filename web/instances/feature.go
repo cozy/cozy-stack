@@ -2,6 +2,7 @@ package instances
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 
@@ -68,6 +69,54 @@ func putFeatureSets(c echo.Context) error {
 		return wrapError(err)
 	}
 	return c.JSON(http.StatusOK, inst.FeatureSets)
+}
+
+func getFeatureContext(c echo.Context) error {
+	id := fmt.Sprintf("%s.%s", consts.ContextFlagsSettingsID, c.Param("context"))
+	var flags feature.Flags
+	err := couchdb.GetDoc(couchdb.GlobalDB, consts.Settings, id, &flags)
+	if err != nil && !couchdb.IsNotFoundError(err) {
+		return wrapError(err)
+	}
+	return c.JSON(http.StatusOK, flags.M)
+}
+
+type contextParameters struct {
+	Ratio float64     `json:"ratio"`
+	Value interface{} `json:"value"`
+}
+
+func patchFeatureContext(c echo.Context) error {
+	id := fmt.Sprintf("%s.%s", consts.ContextFlagsSettingsID, c.Param("context"))
+	var flags couchdb.JSONDoc
+	err := couchdb.GetDoc(couchdb.GlobalDB, consts.Settings, id, &flags)
+	if err != nil && !couchdb.IsNotFoundError(err) {
+		return wrapError(err)
+	}
+
+	var patch map[string][]contextParameters
+	if err := json.NewDecoder(c.Request().Body).Decode(&patch); err != nil {
+		return wrapError(err)
+	}
+	if flags.M == nil {
+		flags.M = make(map[string]interface{})
+	}
+	flags.Type = consts.Settings
+	flags.SetID(id)
+	for k, v := range patch {
+		if len(v) == 0 {
+			delete(flags.M, k)
+		} else {
+			flags.M[k] = v
+		}
+	}
+	if err := couchdb.Upsert(couchdb.GlobalDB, &flags); err != nil {
+		return wrapError(err)
+	}
+
+	delete(flags.M, "_id")
+	delete(flags.M, "_rev")
+	return c.JSON(http.StatusOK, flags.M)
 }
 
 func getFeatureDefaults(c echo.Context) error {

@@ -459,6 +459,8 @@ func Routes(router *echo.Group) {
 	router.PATCH("/:domain/feature/flags", patchFeatureFlags)
 	router.GET("/:domain/feature/sets", getFeatureSets)
 	router.PUT("/:domain/feature/sets", putFeatureSets)
+	router.GET("/feature/contexts/:context", getFeatureContext)
+	router.PATCH("/feature/contexts/:context", patchFeatureContext)
 	router.GET("/feature/defaults", getFeatureDefaults)
 	router.PATCH("/feature/defaults", patchFeatureDefaults)
 

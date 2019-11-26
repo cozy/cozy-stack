@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"net/http"
 	"net/url"
 	"strings"
@@ -39,6 +40,22 @@ func (f *Flags) MarshalJSON() ([]byte, error) {
 	return json.Marshal(f.M)
 }
 
+func (f *Flags) UnmarshalJSON(bytes []byte) error {
+	err := json.Unmarshal(bytes, &f.M)
+	if err != nil {
+		return err
+	}
+	if id, ok := f.M["_id"].(string); ok {
+		f.SetID(id)
+		delete(f.M, "_id")
+	}
+	if rev, ok := f.M["_rev"].(string); ok {
+		f.SetRev(rev)
+		delete(f.M, "_rev")
+	}
+	return nil
+}
+
 func GetFlags(inst *instance.Instance) (*Flags, error) {
 	sources := make([]*Flags, 0)
 	m := make(map[string]interface{})
@@ -49,6 +66,9 @@ func GetFlags(inst *instance.Instance) (*Flags, error) {
 	}
 	flags.addInstanceFlags(inst)
 	if err := flags.addManager(inst); err != nil {
+		return nil, err
+	}
+	if err := flags.addConfig(inst); err != nil {
 		return nil, err
 	}
 	if err := flags.addContext(inst); err != nil {
@@ -151,7 +171,7 @@ func getFlagsFromManager(inst *instance.Instance) (map[string]interface{}, error
 	return flags, nil
 }
 
-func (f *Flags) addContext(inst *instance.Instance) error {
+func (f *Flags) addConfig(inst *instance.Instance) error {
 	ctx, err := inst.SettingsContext()
 	if err == instance.ErrContextNotFound {
 		return nil
@@ -167,7 +187,7 @@ func (f *Flags) addContext(inst *instance.Instance) error {
 		normalized[fmt.Sprintf("%v", k)] = v
 	}
 	ctxFlags := &Flags{
-		DocID: consts.ContextFlagsSettingsID,
+		DocID: consts.ConfigFlagsSettingsID,
 		M:     normalized,
 	}
 	f.Sources = append(f.Sources, ctxFlags)
@@ -175,6 +195,56 @@ func (f *Flags) addContext(inst *instance.Instance) error {
 		if _, ok := f.M[k]; !ok {
 			f.M[k] = v
 		}
+	}
+	return nil
+}
+
+func (f *Flags) addContext(inst *instance.Instance) error {
+	id := fmt.Sprintf("%s.%s", consts.ContextFlagsSettingsID, inst.ContextName)
+	var context Flags
+	err := couchdb.GetDoc(couchdb.GlobalDB, consts.Settings, id, &context)
+	if couchdb.IsNotFoundError(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	context.SetID(consts.ContextFlagsSettingsID)
+	f.Sources = append(f.Sources, &context)
+	for k, v := range context.M {
+		if _, ok := f.M[k]; !ok {
+			if value := applyRatio(inst, k, v); value != nil {
+				f.M[k] = value
+			}
+		}
+	}
+	return nil
+}
+
+const maxUint32 = 1<<32 - 1
+
+func applyRatio(inst *instance.Instance, key string, data interface{}) interface{} {
+	items, ok := data.([]interface{})
+	if !ok || len(items) == 0 {
+		return nil
+	}
+	sum := crc32.ChecksumIEEE([]byte(fmt.Sprintf("%s:%s", inst.ContextName, key)))
+	for i := range items {
+		item, ok := items[i].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		ratio, ok := item["ratio"].(float64)
+		if !ok || ratio == 0.0 {
+			continue
+		}
+		if ratio == 1.0 {
+			return item["value"]
+		}
+		computed := uint32(ratio * maxUint32)
+		if computed >= sum {
+			return item["value"]
+		}
+		sum -= computed
 	}
 	return nil
 }

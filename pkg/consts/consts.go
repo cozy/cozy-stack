@@ -57,8 +57,11 @@ const (
 	// ManagerFlagsSettingsID is the id of the settings documents with the
 	// feature flags coming from the manager (via the feature sets).
 	ManagerFlagsSettingsID = "io.cozy.settings.flags.manager"
-	// ContextFlagsSettingsID is the id of the settings documents with the
+	// ConfigFlagsSettingsID is the id of the settings documents with the
 	// feature flags defined in the contexts section of the configuration file.
+	ConfigFlagsSettingsID = "io.cozy.settings.flags.config"
+	// ContextFlagsSettingsID is the id of the settings documents with the
+	// feature flags defined with a ratio on the contexts.
 	ContextFlagsSettingsID = "io.cozy.settings.flags.context"
 	// DefaultFlagsSettingsID is the id of the settings documents with the
 	// default feature flags.
