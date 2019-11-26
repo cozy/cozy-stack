@@ -123,6 +123,7 @@ func migrateAccountsToOrganization(domain string) error {
 		Account string `json:"account"`
 		Slug    string `json:"konnector"`
 	}
+	var errm error
 	for _, t := range triggers {
 		if t.Infos().WorkerType != "konnector" {
 			continue
@@ -133,32 +134,32 @@ func migrateAccountsToOrganization(domain string) error {
 		}
 		manifest, err := app.GetKonnectorBySlug(inst, msg.Slug)
 		if err != nil {
-			return err
+			errm = multierror.Append(errm, err)
 		}
 		var link string
 		if err := json.Unmarshal(*manifest.VendorLink, &link); err != nil {
-			return err
+			errm = multierror.Append(errm, err)
 		}
 		link = strings.Trim(link, "'")
 		acc := &account.Account{}
 		if err := couchdb.GetDoc(inst, consts.Accounts, msg.Account, acc); err != nil {
-			return nil
+			errm = multierror.Append(errm, err)
 		}
 		encryptedCreds := acc.Basic.EncryptedCredentials
 		login, password, err := account.DecryptCredentials(encryptedCreds)
 		if err != nil {
-			return err
+			errm = multierror.Append(errm, err)
 		}
 		cipher, err := buildCipher(orgKey, msg.Slug, login, password, string(link))
 		if err != nil {
-			return err
+			errm = multierror.Append(errm, err)
 		}
 		if err := couchdb.CreateDoc(inst, cipher); err != nil {
-			return err
+			errm = multierror.Append(errm, err)
 		}
-		settings.UpdateRevisionDate(inst, setting)
 	}
-	return nil
+	settings.UpdateRevisionDate(inst, setting)
+	return errm
 }
 
 func buildCipher(orgKey []byte, slug, username, password, url string) (*bitwarden.Cipher, error) {
