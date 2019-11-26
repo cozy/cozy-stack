@@ -22,7 +22,6 @@ import (
 )
 
 var errFilesExec = errors.New("Bad usage of files exec")
-var errFilesMissingDomain = errors.New("Missing --domain flag")
 
 const filesExecUsage = `Available commands:
 
@@ -69,7 +68,7 @@ var execFilesCmd = &cobra.Command{
 			return cmd.Usage()
 		}
 		if flagDomain == "" {
-			errPrintfln("%s", errFilesMissingDomain)
+			errPrintfln("%s", errMissingDomain)
 			return cmd.Usage()
 		}
 		c := newClient(flagDomain, consts.Files)
@@ -87,7 +86,7 @@ var importFilesCmd = &cobra.Command{
 	Short: "Import the specified file or directory into cozy",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagDomain == "" {
-			errPrintfln("%s", errFilesMissingDomain)
+			errPrintfln("%s", errMissingDomain)
 			return cmd.Usage()
 		}
 		if flagImportFrom == "" || flagImportTo == "" {
@@ -113,7 +112,7 @@ var usageFilesCmd = &cobra.Command{
 	Short: "Show the usage and quota for the files of this instance",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagDomain == "" {
-			errPrintfln("%s", errFilesMissingDomain)
+			errPrintfln("%s", errMissingDomain)
 			return cmd.Usage()
 		}
 		c := newAdminClient()

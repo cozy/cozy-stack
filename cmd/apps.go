@@ -14,8 +14,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var errAppsMissingDomain = errors.New("Missing --domain flag, or COZY_DOMAIN env variable")
-
 var flagAllDomains bool
 var flagAppsDeactivated bool
 var flagSafeUpdate bool
@@ -189,7 +187,7 @@ var runKonnectorsCmd = &cobra.Command{
 	Long:  "Run a konnector named with specified slug using the specified options.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagDomain == "" {
-			errPrintfln("%s", errAppsMissingDomain)
+			errPrintfln("%s", errMissingDomain)
 			return cmd.Usage()
 		}
 		if len(args) < 1 {
@@ -296,7 +294,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 		})
 	}
 	if flagDomain == "" {
-		errPrintfln("%s", errAppsMissingDomain)
+		errPrintfln("%s", errMissingDomain)
 		return cmd.Usage()
 	}
 
@@ -353,7 +351,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 		})
 	}
 	if flagDomain == "" {
-		errPrintfln("%s", errAppsMissingDomain)
+		errPrintfln("%s", errMissingDomain)
 		return cmd.Usage()
 	}
 
@@ -387,7 +385,7 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 		return cmd.Usage()
 	}
 	if flagDomain == "" {
-		errPrintfln("%s", errAppsMissingDomain)
+		errPrintfln("%s", errMissingDomain)
 		return cmd.Usage()
 	}
 	c := newClient(flagDomain, appType)
@@ -408,7 +406,7 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 
 func showApp(cmd *cobra.Command, args []string, appType string) error {
 	if flagDomain == "" {
-		errPrintfln("%s", errAppsMissingDomain)
+		errPrintfln("%s", errMissingDomain)
 		return cmd.Usage()
 	}
 	if len(args) < 1 {
@@ -432,7 +430,7 @@ func showApp(cmd *cobra.Command, args []string, appType string) error {
 
 func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error {
 	if flagDomain == "" {
-		errPrintfln("%s", errAppsMissingDomain)
+		errPrintfln("%s", errMissingDomain)
 		return cmd.Usage()
 	}
 	if len(args) < 1 {
@@ -480,7 +478,7 @@ var listTriggerCmd = &cobra.Command{
 	Example: "$ cozy-stack triggers ls --domain cozy.tools:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagDomain == "" {
-			errPrintfln("%s", errAppsMissingDomain)
+			errPrintfln("%s", errMissingDomain)
 			return cmd.Usage()
 		}
 		c := newClient(flagDomain, consts.Triggers)
@@ -516,7 +514,7 @@ func launchTrigger(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
 	}
 	if flagDomain == "" {
-		errPrintfln("%s", errAppsMissingDomain)
+		errPrintfln("%s", errMissingDomain)
 		return cmd.Usage()
 	}
 
@@ -540,7 +538,7 @@ func launchTrigger(cmd *cobra.Command, args []string) error {
 
 func lsApps(cmd *cobra.Command, args []string, appType string) error {
 	if flagDomain == "" {
-		errPrintfln("%s", errAppsMissingDomain)
+		errPrintfln("%s", errMissingDomain)
 		return cmd.Usage()
 	}
 	c := newClient(flagDomain, appType)

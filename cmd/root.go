@@ -30,6 +30,8 @@ var cfgFile string
 // ErrUsage is returned by the cmd.Usage() method
 var ErrUsage = errors.New("Bad usage of command")
 
+var errMissingDomain = errors.New("Missing --domain flag, or COZY_DOMAIN env variable")
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "cozy-stack <command>",

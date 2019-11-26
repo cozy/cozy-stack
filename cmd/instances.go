@@ -876,7 +876,7 @@ updated.`,
 			})
 		}
 		if flagDomain == "" {
-			return errAppsMissingDomain
+			return errMissingDomain
 		}
 		return c.Updates(&client.UpdatesOptions{
 			Domain:             flagDomain,

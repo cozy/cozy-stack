@@ -454,6 +454,10 @@ func Routes(router *echo.Group) {
 	router.POST("/:domain/debug", enableDebug)
 	router.DELETE("/:domain/debug", disableDebug)
 
+	// Feature flags
+	router.GET("/:domain/feature/flags", getFeatureFlags)
+	router.PATCH("/:domain/feature/flags", patchFeatureFlags)
+
 	// Advanced features for instances
 	router.GET("/:domain/fsck", fsckHandler)
 	router.POST("/updates", updatesHandler)

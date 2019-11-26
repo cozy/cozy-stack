@@ -40,10 +40,31 @@ func GetFlags(inst *instance.Instance) (*Flags, error) {
 		M:       m,
 		Sources: sources,
 	}
+	flags.addInstanceFlags(inst)
 	if err := flags.addContext(inst); err != nil {
 		return nil, err
 	}
 	return flags, nil
+}
+
+func (f *Flags) addInstanceFlags(inst *instance.Instance) {
+	if len(inst.FeatureFlags) == 0 {
+		return
+	}
+	m := make(map[string]interface{})
+	for k, v := range inst.FeatureFlags {
+		m[k] = v
+	}
+	flags := &Flags{
+		DocID: consts.InstanceFlagsSettingsID,
+		M:     m,
+	}
+	f.Sources = append(f.Sources, flags)
+	for k, v := range flags.M {
+		if _, ok := f.M[k]; !ok {
+			f.M[k] = v
+		}
+	}
 }
 
 func (f *Flags) addContext(inst *instance.Instance) error {
@@ -67,7 +88,9 @@ func (f *Flags) addContext(inst *instance.Instance) error {
 	}
 	f.Sources = append(f.Sources, ctxFlags)
 	for k, v := range ctxFlags.M {
-		f.M[k] = v
+		if _, ok := f.M[k]; !ok {
+			f.M[k] = v
+		}
 	}
 	return nil
 }
