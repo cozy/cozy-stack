@@ -105,11 +105,49 @@ All the sets can be removed by setting an empty list ('').
 	},
 }
 
+var featureDefaultCmd = &cobra.Command{
+	Use:   "defaults",
+	Short: `Display and update the default values for feature flags`,
+	Long: `
+cozy-stack feature defaults displays the default values for feature flags.
+
+It can also take a list of flags to update.
+
+If you give a null value, the flag will be removed.
+`,
+	Example: `$ cozy-stack feature defaults '{"add_this_flag": true, "remove_this_flag": null}'`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c := newAdminClient()
+		req := request.Options{
+			Method: "GET",
+			Path:   "/instances/feature/defaults",
+		}
+		if len(args) > 0 {
+			req.Method = "PATCH"
+			req.Body = strings.NewReader(args[0])
+		}
+		res, err := c.Req(&req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		var obj map[string]interface{}
+		if err = json.NewDecoder(res.Body).Decode(&obj); err != nil {
+			return err
+		}
+		for k, v := range obj {
+			fmt.Printf("- %s: %v\n", k, v)
+		}
+		return nil
+	},
+}
+
 func init() {
 	featureFlagCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	featureSetCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 
 	featureCmdGroup.AddCommand(featureFlagCmd)
 	featureCmdGroup.AddCommand(featureSetCmd)
+	featureCmdGroup.AddCommand(featureDefaultCmd)
 	RootCmd.AddCommand(featureCmdGroup)
 }

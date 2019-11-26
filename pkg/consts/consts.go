@@ -60,6 +60,9 @@ const (
 	// ContextFlagsSettingsID is the id of the settings documents with the
 	// feature flags defined in the contexts section of the configuration file.
 	ContextFlagsSettingsID = "io.cozy.settings.flags.context"
+	// DefaultFlagsSettingsID is the id of the settings documents with the
+	// default feature flags.
+	DefaultFlagsSettingsID = "io.cozy.settings.flags.default"
 )
 
 const (

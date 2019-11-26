@@ -29,6 +29,7 @@ func (f *Flags) SetID(id string)   { f.DocID = id }
 func (f *Flags) SetRev(rev string) { f.DocRev = rev }
 func (f *Flags) Clone() couchdb.Doc {
 	clone := Flags{DocID: f.DocID, DocRev: f.DocRev}
+	clone.M = make(map[string]interface{})
 	for k, v := range f.M {
 		clone.M[k] = v
 	}
@@ -51,6 +52,9 @@ func GetFlags(inst *instance.Instance) (*Flags, error) {
 		return nil, err
 	}
 	if err := flags.addContext(inst); err != nil {
+		return nil, err
+	}
+	if err := flags.addDefaults(inst); err != nil {
 		return nil, err
 	}
 	return flags, nil
@@ -168,6 +172,24 @@ func (f *Flags) addContext(inst *instance.Instance) error {
 	}
 	f.Sources = append(f.Sources, ctxFlags)
 	for k, v := range ctxFlags.M {
+		if _, ok := f.M[k]; !ok {
+			f.M[k] = v
+		}
+	}
+	return nil
+}
+
+func (f *Flags) addDefaults(inst *instance.Instance) error {
+	var defaults Flags
+	err := couchdb.GetDoc(couchdb.GlobalDB, consts.Settings, consts.DefaultFlagsSettingsID, &defaults)
+	if couchdb.IsNotFoundError(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	defaults.SetID(consts.DefaultFlagsSettingsID)
+	f.Sources = append(f.Sources, &defaults)
+	for k, v := range defaults.M {
 		if _, ok := f.M[k]; !ok {
 			f.M[k] = v
 		}
