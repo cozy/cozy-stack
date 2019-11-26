@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/account"
@@ -104,18 +105,11 @@ func migrateAccountsToOrganization(domain string) error {
 		return err
 	}
 	// Get org key
-	var orgKey []byte
-	orgKey, err = setting.OrganizationKey()
-	if err == settings.ErrMissingOrgKey {
-		// Create org key if missing
-		if err := setting.EnsureCozyOrganization(inst); err != nil {
-			return err
-		}
-		orgKey, err = setting.OrganizationKey()
-		if err != nil {
-			return err
-		}
-	} else if err != nil {
+	if err := setting.EnsureCozyOrganization(inst); err != nil {
+		return err
+	}
+	orgKey, err := setting.OrganizationKey()
+	if err != nil {
 		return err
 	}
 
@@ -134,46 +128,40 @@ func migrateAccountsToOrganization(domain string) error {
 			continue
 		}
 		err := t.Infos().Message.Unmarshal(&msg)
-		if err == nil && msg.Account != "" && msg.Slug != "" {
-			manifest, err := app.GetKonnectorBySlug(inst, msg.Slug)
-			if err != nil {
-				return err
-			}
-			vLink, err := json.Marshal(manifest.VendorLink)
-			if err != nil {
-				return err
-			}
-			link := string(vLink)
-			// Remove quotes
-			if len(link) > 0 && link[0] == '"' {
-				link = link[1:]
-			}
-			if len(link) > 0 && link[len(link)-1] == '"' {
-				link = link[:len(link)-1]
-			}
-			acc := &account.Account{}
-			if err := couchdb.GetDoc(inst, consts.Accounts, msg.Account, acc); err != nil {
-				return nil
-			}
-			encryptedCreds := acc.Basic.EncryptedCredentials
-			login, password, err := account.DecryptCredentials(encryptedCreds)
-			if err != nil {
-				return err
-			}
-			cipher, err := createCipher(orgKey, msg.Slug, login, password, string(link))
-			if err != nil {
-				return err
-			}
-			if err := couchdb.CreateDoc(inst, cipher); err != nil {
-				return err
-			}
-			settings.UpdateRevisionDate(inst, setting)
+		if err != nil || msg.Account == "" || msg.Slug == "" {
+			continue
 		}
+		manifest, err := app.GetKonnectorBySlug(inst, msg.Slug)
+		if err != nil {
+			return err
+		}
+		var link string
+		if err := json.Unmarshal(*manifest.VendorLink, &link); err != nil {
+			return err
+		}
+		link = strings.Trim(link, "'")
+		acc := &account.Account{}
+		if err := couchdb.GetDoc(inst, consts.Accounts, msg.Account, acc); err != nil {
+			return nil
+		}
+		encryptedCreds := acc.Basic.EncryptedCredentials
+		login, password, err := account.DecryptCredentials(encryptedCreds)
+		if err != nil {
+			return err
+		}
+		cipher, err := buildCipher(orgKey, msg.Slug, login, password, string(link))
+		if err != nil {
+			return err
+		}
+		if err := couchdb.CreateDoc(inst, cipher); err != nil {
+			return err
+		}
+		settings.UpdateRevisionDate(inst, setting)
 	}
 	return nil
 }
 
-func createCipher(orgKey []byte, slug, username, password, url string) (*bitwarden.Cipher, error) {
+func buildCipher(orgKey []byte, slug, username, password, url string) (*bitwarden.Cipher, error) {
 	key := orgKey[:32]
 	hmac := orgKey[32:]
 

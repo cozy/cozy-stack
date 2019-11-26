@@ -49,7 +49,7 @@ type OauthInfo struct {
 type BasicInfo struct {
 	Login                string `json:"login,omitempty"`
 	Password             string `json:"password,omitempty"` // used when no encryption
-	EncryptedCredentials string `json:"credentials_encrypted"`
+	EncryptedCredentials string `json:"credentials_encrypted,omitempty"`
 	FolderPath           string `json:"folderPath,omitempty"`
 }
 
