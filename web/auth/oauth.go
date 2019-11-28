@@ -533,19 +533,21 @@ func secretExchange(c echo.Context) error {
 
 // CheckLinkedAppInstalled checks if a linked webapp has been installed to the
 // instance
-func CheckLinkedAppInstalled(instance *instance.Instance, slug string) error {
-	i := 0
-	for {
-		i++
-		_, err := app.GetWebappBySlug(instance, slug)
-		if err == nil {
+func CheckLinkedAppInstalled(inst *instance.Instance, slug string) error {
+	_, err := app.GetWebappBySlugAndUpdate(inst, slug,
+		app.Copier(consts.WebappType, inst), inst.Registries())
+	if err == nil {
+		return nil
+	}
+
+	const nbRetries = 10
+	for i := 0; i < nbRetries; i++ {
+		time.Sleep(3 * time.Second)
+		if _, err := app.GetWebappBySlug(inst, slug); err == nil {
 			return nil
 		}
-		if i == 10 {
-			return fmt.Errorf("%s is not installed", slug)
-		}
-		time.Sleep(3 * time.Second)
 	}
+	return fmt.Errorf("%s is not installed", slug)
 }
 
 // GetLinkedApp fetches the app manifest on the registry
