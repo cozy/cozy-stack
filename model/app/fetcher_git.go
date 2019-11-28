@@ -33,7 +33,7 @@ var (
 	// ghURLRegex is used to identify github
 	ghURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
 	// glURLRegex is used to identify gitlab
-	glURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
+	glURLRegex = regexp.MustCompile(`/(.+)/([^/]+).git`)
 )
 
 type gitFetcher struct {
@@ -59,7 +59,9 @@ func isGithub(src *url.URL) bool {
 }
 
 func isGitlab(src *url.URL) bool {
-	return src.Host == "framagit.org" || strings.Contains(src.Host, "gitlab")
+	return src.Host == "framagit.org" ||
+		src.Host == "forge.grandlyon.com" ||
+		strings.Contains(src.Host, "gitlab")
 }
 
 func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
