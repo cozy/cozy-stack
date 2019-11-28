@@ -65,16 +65,20 @@ func GetFlags(inst *instance.Instance) (*Flags, error) {
 	}
 	flags.addInstanceFlags(inst)
 	if err := flags.addManager(inst); err != nil {
-		return nil, err
+		inst.Logger().WithField("nspace", "flags").
+			Warnf("Cannot get the flags from the manager: %s", err)
 	}
 	if err := flags.addConfig(inst); err != nil {
-		return nil, err
+		inst.Logger().WithField("nspace", "flags").
+			Warnf("Cannot get the flags from the config: %s", err)
 	}
 	if err := flags.addContext(inst); err != nil {
-		return nil, err
+		inst.Logger().WithField("nspace", "flags").
+			Warnf("Cannot get the flags from the context: %s", err)
 	}
 	if err := flags.addDefaults(inst); err != nil {
-		return nil, err
+		inst.Logger().WithField("nspace", "flags").
+			Warnf("Cannot get the flags from the defaults: %s", err)
 	}
 	return flags, nil
 }
