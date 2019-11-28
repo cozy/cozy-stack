@@ -148,7 +148,7 @@ func NewInstaller(db prefixer.Prefixer, fs appfs.Copier, opts *InstallerOptions)
 
 	var fetcher Fetcher
 	switch src.Scheme {
-	case "git", "git+ssh", "ssh+git":
+	case "git", "git+ssh", "ssh+git", "git+https":
 		fetcher = newGitFetcher(manFilename, log)
 	case "http", "https":
 		fetcher = newHTTPFetcher(manFilename, log)
