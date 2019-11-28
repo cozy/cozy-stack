@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/spf13/cobra"
 )
+
+var flagWithSources bool
 
 var featureCmdGroup = &cobra.Command{
 	Use:     "features <command>",
@@ -30,10 +33,14 @@ cozy-stack feature show displays the feature flags that are shown by apps.
 			return cmd.Usage()
 		}
 		c := newClient(flagDomain, consts.Settings)
-		res, err := c.Req(&request.Options{
+		req := &request.Options{
 			Method: "GET",
 			Path:   "/settings/flags",
-		})
+		}
+		if flagWithSources {
+			req.Queries = url.Values{"include": {"source"}}
+		}
+		res, err := c.Req(req)
 		if err != nil {
 			return err
 		}
@@ -42,12 +49,25 @@ cozy-stack feature show displays the feature flags that are shown by apps.
 			Data struct {
 				Attributes map[string]json.RawMessage `json:"attributes"`
 			} `json:"data"`
+			Included []struct {
+				ID         string                     `json:"id"`
+				Attributes map[string]json.RawMessage `json:"attributes"`
+			} `json:"included"`
 		}
 		if err = json.NewDecoder(res.Body).Decode(&obj); err != nil {
 			return err
 		}
 		for k, v := range obj.Data.Attributes {
 			fmt.Printf("- %s: %s\n", k, string(v))
+		}
+		if len(obj.Included) > 0 {
+			fmt.Printf("\nSources:\n")
+			for _, source := range obj.Included {
+				fmt.Printf("- %s\n", source.ID)
+				for k, v := range source.Attributes {
+					fmt.Printf("\t- %s: %s\n", k, string(v))
+				}
+			}
 		}
 		return nil
 	},
@@ -223,6 +243,7 @@ If you give a null value, the flag will be removed.
 
 func init() {
 	featureShowCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
+	featureShowCmd.Flags().BoolVar(&flagWithSources, "source", false, "Show the sources of the feature flags")
 	featureFlagCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	featureSetCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	featureContextCmd.Flags().StringVar(&flagContext, "context", "", "The context for the feature flags")
