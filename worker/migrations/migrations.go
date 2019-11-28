@@ -151,10 +151,12 @@ func migrateAccountsToOrganization(domain string) error {
 		login, password, err := account.DecryptCredentials(encryptedCreds)
 		if err != nil {
 			errm = multierror.Append(errm, err)
+			continue
 		}
 		cipher, err := buildCipher(orgKey, msg.Slug, login, password, link)
 		if err != nil {
 			errm = multierror.Append(errm, err)
+			continue
 		}
 		if err := couchdb.CreateDoc(inst, cipher); err != nil {
 			errm = multierror.Append(errm, err)
