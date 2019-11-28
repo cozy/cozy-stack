@@ -7,12 +7,50 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/spf13/cobra"
 )
 
 var featureCmdGroup = &cobra.Command{
-	Use:   "feature <command>",
-	Short: "Manage the feature flags",
+	Use:     "features <command>",
+	Aliases: []string{"feature"},
+	Short:   "Manage the feature flags",
+}
+
+var featureShowCmd = &cobra.Command{
+	Use:   "show",
+	Short: `Display the computed feature flags for an instance`,
+	Long: `
+cozy-stack feature show displays the feature flags that are shown by apps.
+`,
+	Example: `$ cozy-stack feature show --domain cozy.tools:8080`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if flagDomain == "" {
+			errPrintfln("%s", errMissingDomain)
+			return cmd.Usage()
+		}
+		c := newClient(flagDomain, consts.Settings)
+		res, err := c.Req(&request.Options{
+			Method: "GET",
+			Path:   "/settings/flags",
+		})
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		var obj struct {
+			Data struct {
+				Attributes map[string]json.RawMessage `json:"attributes"`
+			} `json:"data"`
+		}
+		if err = json.NewDecoder(res.Body).Decode(&obj); err != nil {
+			return err
+		}
+		for k, v := range obj.Data.Attributes {
+			fmt.Printf("- %s: %s\n", k, string(v))
+		}
+		return nil
+	},
 }
 
 var featureFlagCmd = &cobra.Command{
@@ -45,12 +83,12 @@ If you give a null value, the flag will be removed.
 			return err
 		}
 		defer res.Body.Close()
-		var obj map[string]interface{}
+		var obj map[string]json.RawMessage
 		if err = json.NewDecoder(res.Body).Decode(&obj); err != nil {
 			return err
 		}
 		for k, v := range obj {
-			fmt.Printf("- %s: %v\n", k, v)
+			fmt.Printf("- %s: %s\n", k, string(v))
 		}
 		return nil
 	},
@@ -62,7 +100,8 @@ var featureSetCmd = &cobra.Command{
 	Long: `
 cozy-stack feature sets displays the feature sets coming from the manager.
 
-It can also take a list of sets that will replace the previous list (no merge).
+It can also take a space-separated list of sets that will replace the previous
+list (no merge).
 
 All the sets can be removed by setting an empty list ('').
 `,
@@ -109,25 +148,25 @@ var featureContextCmd = &cobra.Command{
 	Use:   "context <context-name>",
 	Short: `Display and update the feature flags for a context`,
 	Long: `
-cozy-stack feature defaults displays the feature flags for a context.
+cozy-stack feature context displays the feature flags for a context.
 
 It can also create, update, or remove flags (with a ratio and value).
 
 To remove a flag, set it to an empty array (or null).
 `,
-	Example: `$ cozy-stack feature context beta '{"set_this_flag": [{"ratio": 0.1, "value": 1}, {"ratio": 0.9, "value": 2}] }'`,
+	Example: `$ cozy-stack feature context --context beta '{"set_this_flag": [{"ratio": 0.1, "value": 1}, {"ratio": 0.9, "value": 2}] }'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 || args[0] == "" {
+		if flagContext == "" {
 			return cmd.Usage()
 		}
 		c := newAdminClient()
 		req := request.Options{
 			Method: "GET",
-			Path:   fmt.Sprintf("/instances/feature/contexts/%s", args[0]),
+			Path:   fmt.Sprintf("/instances/feature/contexts/%s", flagContext),
 		}
-		if len(args) > 1 {
+		if len(args) > 0 {
 			req.Method = "PATCH"
-			req.Body = strings.NewReader(args[1])
+			req.Body = strings.NewReader(args[0])
 		}
 		res, err := c.Req(&req)
 		if err != nil {
@@ -171,21 +210,24 @@ If you give a null value, the flag will be removed.
 			return err
 		}
 		defer res.Body.Close()
-		var obj map[string]interface{}
+		var obj map[string]json.RawMessage
 		if err = json.NewDecoder(res.Body).Decode(&obj); err != nil {
 			return err
 		}
 		for k, v := range obj {
-			fmt.Printf("- %s: %v\n", k, v)
+			fmt.Printf("- %s: %s\n", k, string(v))
 		}
 		return nil
 	},
 }
 
 func init() {
+	featureShowCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	featureFlagCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	featureSetCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
+	featureContextCmd.Flags().StringVar(&flagContext, "context", "", "The context for the feature flags")
 
+	featureCmdGroup.AddCommand(featureShowCmd)
 	featureCmdGroup.AddCommand(featureFlagCmd)
 	featureCmdGroup.AddCommand(featureSetCmd)
 	featureCmdGroup.AddCommand(featureContextCmd)

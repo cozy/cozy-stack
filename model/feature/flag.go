@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -123,7 +122,6 @@ func (f *Flags) addManager(inst *instance.Instance) error {
 
 var (
 	cacheDuration      = 12 * time.Hour
-	managerHTTPClient  = &http.Client{Timeout: 5 * time.Second}
 	errInvalidResponse = errors.New("Invalid response from the manager")
 )
 
@@ -137,27 +135,16 @@ func getFlagsFromManager(inst *instance.Instance) (map[string]interface{}, error
 		}
 	}
 
-	managerURL, err := inst.ManagerURL(instance.ManagerFeatureSetsURL)
-	if err != nil {
-		return nil, err
-	}
-	if managerURL == "" {
+	client := instance.APIManagerClient(inst)
+	if client == nil {
 		return flags, nil
 	}
 	query := url.Values{
 		"sets":    {strings.Join(inst.FeatureSets, ",")},
 		"context": {inst.ContextName},
 	}.Encode()
-	res, err := managerHTTPClient.Get(fmt.Sprintf("%s?%s", managerURL, query))
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		return nil, errInvalidResponse
-	}
 	var data map[string]interface{}
-	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+	if err := client.Get(fmt.Sprintf("/api/v1/flags?%s", query), &data); err != nil {
 		return nil, err
 	}
 	var ok bool
