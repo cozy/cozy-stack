@@ -218,7 +218,7 @@ func applyRatio(inst *instance.Instance, key string, data interface{}) interface
 	if !ok || len(items) == 0 {
 		return nil
 	}
-	sum := crc32.ChecksumIEEE([]byte(fmt.Sprintf("%s:%s", inst.ContextName, key)))
+	sum := crc32.ChecksumIEEE([]byte(fmt.Sprintf("%s:%s", inst.DocID, key)))
 	for i := range items {
 		item, ok := items[i].(map[string]interface{})
 		if !ok {
