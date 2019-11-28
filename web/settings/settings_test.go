@@ -729,7 +729,7 @@ func TestPatchInstanceRemoveParams(t *testing.T) {
 
 func TestFeatureFlags(t *testing.T) {
 	_ = couchdb.DeleteDB(couchdb.GlobalDB, consts.Settings)
-	defer couchdb.DeleteDB(couchdb.GlobalDB, consts.Settings)
+	defer func() { _ = couchdb.DeleteDB(couchdb.GlobalDB, consts.Settings) }()
 
 	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/flags", nil)
 	assert.NoError(t, err)
@@ -754,6 +754,7 @@ func TestFeatureFlags(t *testing.T) {
 	}
 	testInstance.FeatureSets = []string{"set1", "set2"}
 	err = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
+	assert.NoError(t, err)
 	cache := config.GetConfig().CacheStorage
 	cacheKey := fmt.Sprintf("flags:%s:%v", testInstance.ContextName, testInstance.FeatureSets)
 	buf, err := json.Marshal(map[string]interface{}{
@@ -762,7 +763,6 @@ func TestFeatureFlags(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	cache.Set(cacheKey, buf, 5*time.Second)
-	assert.NoError(t, err)
 	ctxFlags := couchdb.JSONDoc{Type: consts.Settings}
 	ctxFlags.M = map[string]interface{}{
 		"ratio_0": []map[string]interface{}{
