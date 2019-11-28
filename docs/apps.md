@@ -194,7 +194,7 @@ identifier on the building step of the application packages for all assets.
 Here is the available sources, defined by the scheme of the source URL:
 
 -   `registry://`: to install an application from the instance registries
--   `git://` or `git+ssh://`: to install an application from a git repository
+-   `git://`, `git+ssh://`, or `git+https://`: to install an application from a git repository
 -   `http://` or `https://`: to install an application from an http server (via
     a tarball)
 -   `file://`: to install an application from a local directory (for instance:

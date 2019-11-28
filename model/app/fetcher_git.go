@@ -33,7 +33,7 @@ var (
 	// ghURLRegex is used to identify github
 	ghURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
 	// glURLRegex is used to identify gitlab
-	glURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
+	glURLRegex = regexp.MustCompile(`/(.+)/([^/]+).git`)
 )
 
 type gitFetcher struct {
@@ -59,7 +59,9 @@ func isGithub(src *url.URL) bool {
 }
 
 func isGitlab(src *url.URL) bool {
-	return src.Host == "framagit.org" || strings.Contains(src.Host, "gitlab")
+	return src.Host == "framagit.org" ||
+		src.Host == "forge.grandlyon.com" ||
+		strings.Contains(src.Host, "gitlab")
 }
 
 func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
@@ -152,6 +154,9 @@ func (g *gitFetcher) Fetch(src *url.URL, fs appfs.Copier, man Manifest) (err err
 	defer func() { _ = osFs.RemoveAll(gitDir) }()
 
 	gitFs := afero.NewBasePathFs(osFs, gitDir)
+	if src.Scheme == "git+https" {
+		src.Scheme = "https"
+	}
 	// XXX Gitlab doesn't support the git protocol
 	if src.Scheme == "git" && isGitlab(src) {
 		src.Scheme = "https"
@@ -307,7 +312,7 @@ func resolveGitlabURL(src *url.URL, filename string) (string, error) {
 
 func resolveManifestURL(src *url.URL, filename string) (string, error) {
 	srccopy, _ := url.Parse(src.String())
-	srccopy.Scheme = "http"
+	srccopy.Scheme = "https"
 	if srccopy.Path == "" || srccopy.Path[len(srccopy.Path)-1] != '/' {
 		srccopy.Path += "/"
 	}
