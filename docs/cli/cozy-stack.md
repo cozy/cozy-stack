@@ -32,6 +32,7 @@ cozy-stack <command> [flags]
 * [cozy-stack completion](cozy-stack_completion.md)	 - Output shell completion code for the specified shell
 * [cozy-stack config](cozy-stack_config.md)	 - Show and manage configuration elements
 * [cozy-stack doc](cozy-stack_doc.md)	 - Print the documentation
+* [cozy-stack features](cozy-stack_features.md)	 - Manage the feature flags
 * [cozy-stack files](cozy-stack_files.md)	 - Interact with the cozy filesystem
 * [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
