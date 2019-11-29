@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo/v4"
 )
 
@@ -32,7 +33,7 @@ func Start(c echo.Context) error {
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL(inst, conf)
+	u, err := makeStartURL(inst.Domain, conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -51,7 +52,20 @@ func Redirect(c echo.Context) error {
 	if state == nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the session has expired.")
 	}
-	inst, err := lifecycle.GetInstance(state.Instance)
+
+	domain := state.Instance
+	if contextName, ok := FindLoginDomain(domain); ok {
+		conf, err := getConfig(contextName)
+		if err != nil || !conf.AllowOAuthToken {
+			return renderError(c, nil, http.StatusBadRequest, "No OpenID Connect is configured.")
+		}
+		token := c.QueryParam("access_token")
+		domain, err = getDomainFromUserInfo(conf, token)
+		if err != nil {
+			return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
+		}
+	}
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
 	}
@@ -288,12 +302,12 @@ func getConfig(context string) (*Config, error) {
 	return config, nil
 }
 
-func makeStartURL(inst *instance.Instance, conf *Config) (string, error) {
+func makeStartURL(domain string, conf *Config) (string, error) {
 	u, err := url.Parse(conf.AuthorizeURL)
 	if err != nil {
 		return "", err
 	}
-	state := newStateHolder(inst.Domain)
+	state := newStateHolder(domain)
 	if err = getStorage().Add(state); err != nil {
 		return "", err
 	}
@@ -406,4 +420,62 @@ func Routes(router *echo.Group) {
 	router.GET("/redirect", Redirect)
 	router.GET("/login", Login, middlewares.NeedInstance)
 	router.POST("/access_token", AccessToken, middlewares.NeedInstance)
+}
+
+// LoginDomainHandler is the handler for the requests on the login domain. It
+// shows a page with a login button (that can start the OIDC dance).
+func LoginDomainHandler(c echo.Context, contextName string) error {
+	r := c.Request()
+	if strings.HasPrefix(r.URL.Path, "/assets/") {
+		rndr, err := statik.NewRenderer()
+		if err != nil {
+			return err
+		}
+		rndr.ServeHTTP(c.Response(), r)
+		return nil
+	}
+
+	if r.Method != http.MethodPost {
+		i := &instance.Instance{Locale: "fr", ContextName: contextName}
+		title := i.Translate("Login Welcome")
+		return c.Render(http.StatusOK, "oidc_login.html", echo.Map{
+			"CozyUI":      middlewares.CozyUI(i),
+			"ThemeCSS":    middlewares.ThemeCSS(i),
+			"Favicon":     middlewares.Favicon(i),
+			"Domain":      i.ContextualDomain(),
+			"ContextName": i.ContextName,
+			"Locale":      i.Locale,
+			"Title":       title,
+		})
+	}
+
+	conf, err := getConfig(contextName)
+	if err != nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
+	}
+	u, err := makeStartURL(r.Host, conf)
+	if err != nil {
+		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
+	}
+	return c.Redirect(http.StatusSeeOther, u)
+}
+
+// FindLoginDomain returns the context name for which the login domain matches
+// the host.
+func FindLoginDomain(host string) (string, bool) {
+	for ctx, auth := range config.GetConfig().Authentication {
+		delegated, ok := auth.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		oidc, ok := delegated["oidc"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		domain, ok := oidc["login_domain"].(string)
+		if ok && domain == host {
+			return ctx, true
+		}
+	}
+	return "", false
 }

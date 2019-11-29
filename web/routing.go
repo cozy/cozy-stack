@@ -272,8 +272,22 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 	main.HideBanner = true
 	main.HidePort = true
 	main.Renderer = router.Renderer
-	main.Any("/*", func(c echo.Context) error {
-		if parent, slug, _ := middlewares.SplitHost(c.Request().Host); slug != "" {
+	main.Any("/*", firstRouting(router, appsHandler))
+
+	main.HTTPErrorHandler = errors.HTMLErrorHandler
+	return main, nil
+}
+
+// firstRouting receives the requests and use the domain to decide if we should
+// use the API router, serve an app, or use delegated authentication.
+func firstRouting(router *echo.Echo, appsHandler echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		host := c.Request().Host
+		if contextName, ok := oidc.FindLoginDomain(host); ok {
+			return oidc.LoginDomainHandler(c, contextName)
+		}
+
+		if parent, slug, _ := middlewares.SplitHost(host); slug != "" {
 			if i, err := lifecycle.GetInstance(parent); err == nil {
 				c.Set("instance", i.WithContextualDomain(parent))
 				c.Set("slug", slug)
@@ -283,10 +297,7 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 
 		router.ServeHTTP(c.Response(), c.Request())
 		return nil
-	})
-
-	main.HTTPErrorHandler = errors.HTMLErrorHandler
-	return main, nil
+	}
 }
 
 // setupRecover sets a recovering strategy of panics happening in handlers
