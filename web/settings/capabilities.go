@@ -16,6 +16,7 @@ import (
 type apiCapabilities struct {
 	DocID          string `json:"_id,omitempty"`
 	FileVersioning bool   `json:"file_versioning"`
+	FlatSubdomains bool   `json:"flat_subdomains"`
 }
 
 func (c *apiCapabilities) ID() string                             { return c.DocID }
@@ -39,9 +40,11 @@ func newCapabilities(inst *instance.Instance) *apiCapabilities {
 	case config.SchemeSwift, config.SchemeSwiftSecure:
 		versioning = inst.SwiftLayout >= 2
 	}
+	flat := config.GetConfig().Subdomains == config.FlatSubdomains
 	return &apiCapabilities{
 		DocID:          consts.CapabilitiesSettingsID,
 		FileVersioning: versioning,
+		FlatSubdomains: flat,
 	}
 }
 

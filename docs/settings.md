@@ -260,7 +260,13 @@ HTTP/1.1 204 No Content
 List the activated capabilities for this instance. An unadvertised capability
 should be considered `false` and, for backward compatibility, if you can't get a
 valid response from this endpoint (in particular in case of a `404 Not found`
-error), all capabilities should be considered `false`.
+error), all capabilities should be considered `false`. The current capabilities
+are:
+
+- `file_versioning` is true when the VFS can create
+  [old versions](https://docs.cozy.io/en/cozy-stack/files/#versions) of a file
+- `flat_subdomains` is true when the stack is configured to use flat subdomains
+  (not nested).
 
 #### Request
 
@@ -278,7 +284,11 @@ Accept: application/vnd.api+json
         "type": "io.cozy.settings",
         "id": "io.cozy.settings.capabilities",
         "attributes": {
-            "file_versioning": true
+            "file_versioning": true,
+            "flat_subdomains": false
+        },
+        "links": {
+            "self": "/settings/capabilities"
         }
     }
 }
