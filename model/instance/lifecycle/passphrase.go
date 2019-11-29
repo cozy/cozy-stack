@@ -60,6 +60,30 @@ func RegisterPassphrase(inst *instance.Instance, tok []byte, params PassParamete
 	return update(inst)
 }
 
+// SendHint sends by mail the hint for the passphrase.
+func SendHint(inst *instance.Instance) error {
+	if inst.RegisterToken != nil {
+		inst.Logger().Info("Send hint ignored: not registered")
+		return nil
+	}
+	publicName, err := inst.PublicName()
+	if err != nil {
+		return err
+	}
+	setting, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
+	return SendMail(inst, &Mail{
+		TemplateName: "passphrase_hint",
+		TemplateValues: map[string]interface{}{
+			"BaseURL":    inst.PageURL("/", nil),
+			"Hint":       setting.PassphraseHint,
+			"PublicName": publicName,
+		},
+	})
+}
+
 // RequestPassphraseReset generates a new registration token for the user to
 // renew its password.
 func RequestPassphraseReset(inst *instance.Instance) error {

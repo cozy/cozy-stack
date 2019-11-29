@@ -108,15 +108,25 @@ msgstr "Are you lost ? Feel free to contact us at"
 msgid "Passphrase reset Title"
 msgstr "Forgotten password"
 
+msgid "Passphrase reset Help hint"
+msgstr ""
+"By clicking this button, you will receive your hint by email.."
+
+msgid "Passphrase reset Submit hint"
+msgstr "Send me my hint"
+
 msgid "Passphrase reset Help"
 msgstr ""
 "By clicking this button, you will be sent a link by email to choose a new password."
 
 msgid "Passphrase reset Submit"
-msgstr "Next"
+msgstr "Change my password"
+
+msgid "Hint sent Title"
+msgstr "Check your emails!"
 
 msgid "Passphrase is reset Title"
-msgstr "Check your emails !"
+msgstr "Check your emails!"
 
 msgid "Passphrase Onboarding Title"
 msgstr "Choose your password"
@@ -132,6 +142,12 @@ msgstr "The hint will be sent to you by email if you forget it, choose a hint th
 
 msgid "Passphrase Onboarding Submit"
 msgstr "Finish"
+
+msgid "Hint sent Body"
+msgstr "We just sent your hint by mail. Does it ring a bell?"
+
+msgid "Hint sent Login Button"
+msgstr "Return to the login page"
 
 msgid "Passphrase is reset Body"
 msgstr ""
@@ -440,6 +456,15 @@ msgstr "Yours truly"
 
 msgid "Mail Cozy Team"
 msgstr "The Cozy Cloud Team"
+
+msgid "Mail Hint Subject"
+msgstr "Reset your password"
+
+msgid "Mail Hint Intro 1"
+msgstr "Hello %s,"
+
+msgid "Mail Hint Intro 2"
+msgstr "You asked the hint for your password (if you didn't, contact us by replying directly to this email)"
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Reset your password"

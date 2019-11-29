@@ -1,0 +1,4 @@
+{{t "Mail Hint Intro 1" .PublicName}}
+{{t "Mail Hint Intro 2"}}
+
+{{.Hint}}

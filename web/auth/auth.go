@@ -522,6 +522,7 @@ func Routes(router *echo.Group) {
 	router.GET("/passphrase_renew", passphraseRenewForm, noCSRF)
 	router.POST("/passphrase_renew", passphraseRenew, noCSRF)
 	router.GET("/passphrase", passphraseForm, noCSRF)
+	router.POST("/hint", sendHint)
 
 	// Register OAuth clients
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
