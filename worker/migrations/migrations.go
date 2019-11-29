@@ -123,6 +123,11 @@ func migrateAccountsToOrganization(domain string) error {
 		Account string `json:"account"`
 		Slug    string `json:"konnector"`
 	}
+	type VaultReference struct {
+		ID       string `json:"_id"`
+		Type     string `json:"_type"`
+		Protocol string `json:"_protocol"`
+	}
 	var errm error
 	for _, t := range triggers {
 		if t.Infos().WorkerType != "konnector" {
@@ -159,6 +164,22 @@ func migrateAccountsToOrganization(domain string) error {
 			continue
 		}
 		if err := couchdb.CreateDoc(inst, cipher); err != nil {
+			errm = multierror.Append(errm, err)
+		}
+		// Add vault relationship
+		vRef := VaultReference{
+			ID:       cipher.ID(),
+			Type:     consts.BitwardenCiphers,
+			Protocol: consts.BitwardenProtocol,
+		}
+		if acc.Relationships == nil {
+			acc.Relationships = make(map[string]interface{})
+		}
+		rel := make(map[string][]VaultReference)
+		rel["data"] = []VaultReference{vRef}
+		acc.Relationships[consts.BitwardenCipherRelationship] = rel
+
+		if err := couchdb.UpdateDoc(inst, acc); err != nil {
 			errm = multierror.Append(errm, err)
 		}
 	}
