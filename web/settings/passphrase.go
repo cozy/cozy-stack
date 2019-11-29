@@ -206,3 +206,28 @@ func updatePassphrase(c echo.Context) error {
 
 	return c.NoContent(http.StatusNoContent)
 }
+
+func updateHint(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := middlewares.AllowWholeType(c, permission.PUT, consts.Settings); err != nil {
+		return err
+	}
+
+	args := struct {
+		Hint string `json:"hint"`
+	}{}
+	if err := c.Bind(&args); err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	setting, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
+	setting.PassphraseHint = args.Hint
+	if err := setting.Save(inst); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
+}

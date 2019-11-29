@@ -253,6 +253,30 @@ Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp
 HTTP/1.1 204 No Content
 ```
 
+### PUT /settings/hint
+
+The user can change the hint for its passphrase.
+
+#### Request
+
+```http
+PUT /settings/hint HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "hint": "My passphrase is very complicated"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Instance
 
 ### GET /settings/capabilities

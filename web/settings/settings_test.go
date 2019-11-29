@@ -11,6 +11,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -242,6 +243,23 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 	assert.Len(t, cookies, 1)
 	assert.Equal(t, cookies[0].Name, session.SessionCookieName)
 	assert.NotEmpty(t, cookies[0].Value)
+}
+
+func TestUpdateHint(t *testing.T) {
+	args, _ := json.Marshal(&echo.Map{
+		"hint": "my updated hint",
+	})
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/hint", bytes.NewReader(args))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "204 No Content", res.Status)
+
+	setting, err := settings.Get(testInstance)
+	assert.NoError(t, err)
+	assert.Equal(t, "my updated hint", setting.PassphraseHint)
 }
 
 func TestGetPassphraseParameters(t *testing.T) {
@@ -614,6 +632,7 @@ func TestPatchInstanceSameParams(t *testing.T) {
 	// Assert no changes
 	assert.Equal(t, doc1.Rev(), doc2.Rev())
 }
+
 func TestPatchInstanceChangeParams(t *testing.T) {
 	doc, err := testInstance.SettingsDocument()
 	assert.NoError(t, err)
@@ -688,6 +707,7 @@ func TestPatchInstanceAddParam(t *testing.T) {
 	assert.Equal(t, "Europe/Berlin", doc2.M["tz"].(string))
 	assert.Equal(t, "alice@example.com", doc2.M["email"].(string))
 }
+
 func TestPatchInstanceRemoveParams(t *testing.T) {
 	doc1, err := testInstance.SettingsDocument()
 	assert.NoError(t, err)
