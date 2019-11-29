@@ -3,6 +3,7 @@
 
   const form = d.getElementById('onboarding-password-form')
   const passphraseInput = d.getElementById('password')
+  const hintInput = d.getElementById('hint')
   const submitButton = d.getElementById('onboarding-password-submit')
   const iterationsInput = d.getElementById('onboarding-password-iterations')
   const registerTokenInput = d.getElementById('register-token')
@@ -37,6 +38,7 @@
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
     headers.append('Accept', 'application/json')
 
+    const hint = hintInput.value
     const salt = form.dataset.salt
     const iterations = parseInt(iterationsInput.value, 10)
     const registerToken = registerTokenInput.value
@@ -60,6 +62,8 @@
           encodeURIComponent('' + iterations) +
           '&register_token=' +
           encodeURIComponent(registerToken) +
+          '&hint=' +
+          encodeURIComponent(hint) +
           '&key=' +
           encodeURIComponent(masterKey) +
           '&public_key=' +

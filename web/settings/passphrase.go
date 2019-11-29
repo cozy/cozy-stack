@@ -67,6 +67,7 @@ func registerPassphrase(c echo.Context) error {
 	args := struct {
 		Register   string `json:"register_token" form:"register_token"`
 		Passphrase string `json:"passphrase" form:"passphrase"`
+		Hint       string `json:"hint" form:"hint"`
 		Key        string `json:"key" form:"key"`
 		PublicKey  string `json:"public_key" form:"public_key"`
 		PrivateKey string `json:"private_key" form:"private_key"`
@@ -100,6 +101,17 @@ func registerPassphrase(c echo.Context) error {
 	})
 	if err != nil {
 		return jsonapi.BadRequest(err)
+	}
+
+	if args.Hint != "" {
+		setting, err := settings.Get(inst)
+		if err != nil {
+			return err
+		}
+		setting.PassphraseHint = args.Hint
+		if err := setting.Save(inst); err != nil {
+			return err
+		}
 	}
 
 	longRunSession := true

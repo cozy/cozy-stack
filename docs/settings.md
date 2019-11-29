@@ -137,6 +137,7 @@ Content-Type: application/json
 {
     "register_token": "37cddf40d7724988860fa0e03efd30fe",
     "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
+    "hint": "a hint to help me remember my passphrase",
     "key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
     "public_key": "MIIBIjANBgkqhkiG9w...AQAB",
     "private_key": "2.wZuKkufLV31Cpw1v1TQUDA==|u6bUNTaaGxu...y7s=",

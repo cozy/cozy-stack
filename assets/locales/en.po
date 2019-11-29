@@ -124,6 +124,12 @@ msgstr "Choose your password"
 msgid "Passphrase Onboarding Help"
 msgstr "Use at least eight characters with letters, digits and symbols."
 
+msgid "Passphrase Onboarding Hint Field"
+msgstr "Leave a hint (optional)"
+
+msgid "Passphrase Onboarding Hint Help"
+msgstr "The hint will be sent to you by email if you forget it, choose a hint that only one can understand."
+
 msgid "Passphrase Onboarding Submit"
 msgstr "Finish"
 
