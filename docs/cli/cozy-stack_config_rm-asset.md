@@ -6,14 +6,11 @@ Removes an asset
 
 Removes a custom asset in a specific context
 
+Deprecated: please use the command cozy-stack assets rm.
+
+
 ```
 cozy-stack config rm-asset [context] [name] [flags]
-```
-
-### Examples
-
-```
-$ cozy-stack config rm-asset foobar /foo/bar/baz.js
 ```
 
 ### Options

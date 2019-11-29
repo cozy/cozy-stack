@@ -287,10 +287,12 @@ func readKeyFromFile(filepath string) (*keymgmt.NACLKey, error) {
 }
 
 var insertAssetCmd = &cobra.Command{
-	Use:     "insert-asset --url <url> --name <name> --shasum <shasum> --context <context>",
-	Short:   "Inserts an asset",
-	Long:    "Inserts a custom asset in a specific context",
-	Example: "$ cozy-stack config insert-asset --url file:///foo/bar/baz.js --name /foo/bar/baz.js --shasum 0763d6c2cebee0880eb3a9cc25d38cd23db39b5c3802f2dc379e408c877a2788 --context foocontext",
+	Use:   "insert-asset --url <url> --name <name> --shasum <shasum> --context <context>",
+	Short: "Inserts an asset",
+	Long: `Inserts a custom asset in a specific context
+
+Deprecated: please use the command cozy-stack assets add.
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		errPrintfln("Please use cozy-stack assets add, this command has been deprecated")
 		return addAsset(cmd, args)
@@ -298,10 +300,12 @@ var insertAssetCmd = &cobra.Command{
 }
 
 var removeAssetCmd = &cobra.Command{
-	Use:     "rm-asset [context] [name]",
-	Short:   "Removes an asset",
-	Long:    "Removes a custom asset in a specific context",
-	Example: "$ cozy-stack config rm-asset foobar /foo/bar/baz.js",
+	Use:   "rm-asset [context] [name]",
+	Short: "Removes an asset",
+	Long: `Removes a custom asset in a specific context
+
+Deprecated: please use the command cozy-stack assets rm.
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		errPrintfln("Please use cozy-stack assets rm, this command has been deprecated")
 		return rmAsset(cmd, args)
@@ -309,10 +313,12 @@ var removeAssetCmd = &cobra.Command{
 }
 
 var listAssetCmd = &cobra.Command{
-	Use:     "ls-assets",
-	Short:   "List assets",
-	Long:    "List assets currently served by the stack",
-	Example: "$ cozy-stack config ls-assets",
+	Use:   "ls-assets",
+	Short: "List assets",
+	Long: `List assets currently served by the stack
+
+Deprecated: please use the command cozy-stack assets ls.
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		errPrintfln("Please use cozy-stack assets ls, this command has been deprecated")
 		return lsAssets(cmd, args)
