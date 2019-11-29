@@ -6,14 +6,11 @@ Inserts an asset
 
 Inserts a custom asset in a specific context
 
+Deprecated: please use the command cozy-stack assets add.
+
+
 ```
 cozy-stack config insert-asset --url <url> --name <name> --shasum <shasum> --context <context> [flags]
-```
-
-### Examples
-
-```
-$ cozy-stack config insert-asset --url file:///foo/bar/baz.js --name /foo/bar/baz.js --shasum 0763d6c2cebee0880eb3a9cc25d38cd23db39b5c3802f2dc379e408c877a2788 --context foocontext
 ```
 
 ### Options

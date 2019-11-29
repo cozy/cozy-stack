@@ -6,14 +6,11 @@ List assets
 
 List assets currently served by the stack
 
+Deprecated: please use the command cozy-stack assets ls.
+
+
 ```
 cozy-stack config ls-assets [flags]
-```
-
-### Examples
-
-```
-$ cozy-stack config ls-assets
 ```
 
 ### Options
