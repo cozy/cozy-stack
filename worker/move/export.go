@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/url"
 	"path"
@@ -55,9 +56,9 @@ type ExportDoc struct {
 	Error            string        `json:"error,omitempty"`
 }
 
-// PartsSize is the default size of a file bucket, to split the index into
-// equal-sized parts.
-const PartsSize = 100 * 1024 * 1024 // 100 MB
+// minimalPartsSize is the minimal size of a file bucket, to split the index
+// into equal-sized parts.
+const minimalPartsSize = 100 * 1024 * 1024 // 100 MB
 
 var (
 	// ErrExportNotFound is used when a export document could not be found
@@ -389,9 +390,17 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (exportDoc *ExportDoc, err error) {
 	createdAt := time.Now()
 
+	// The size of the buckets can be specified by the options. If it is not
+	// the case, it is computed from the disk usage. An instance with 4x more
+	// bytes than another instance will have 2x more buckets and the buckets
+	// will be 2x larger.
 	bucketSize := opts.PartsSize
-	if bucketSize == 0 || bucketSize > PartsSize {
-		bucketSize = PartsSize
+	if bucketSize < minimalPartsSize {
+		bucketSize = minimalPartsSize
+		if usage, err := i.VFS().DiskUsage(); err == nil && usage > bucketSize {
+			factor := math.Sqrt(float64(usage) / float64(minimalPartsSize))
+			bucketSize = int64(factor * float64(bucketSize))
+		}
 	}
 
 	maxAge := opts.MaxAge
