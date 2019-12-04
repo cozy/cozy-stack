@@ -109,18 +109,28 @@ msgid "Passphrase reset Title"
 msgstr "Forgotten password"
 
 msgid "Passphrase reset Help hint"
-msgstr ""
-"By clicking this button, you will receive your hint by email.."
+msgstr "You set a hint to recover your password. Click on the button below to receive it by email."
 
 msgid "Passphrase reset Submit hint"
 msgstr "Send me my hint"
 
+msgid "Passphrase reset Title"
+msgstr "As a last resort, you can reset your password:"
+
+msgid "Passphrase reset Help Warning"
+msgstr "Warning!"
+
 msgid "Passphrase reset Help"
-msgstr ""
-"By clicking this button, you will be sent a link by email to choose a new password."
+msgstr "Your current password is the only key to decode your passwords kept in your app \"cozy passwords\". If you reset it, you will lose that data. The rest of your data will remain accessible."
 
 msgid "Passphrase reset Submit"
-msgstr "Change my password"
+msgstr "Réinitialiser mon mot de passe"
+
+msgid "Passphrase reset Submit"
+msgstr "Réinitialiser mon mot de passe"
+
+msgid "Passphrase reset Submit"
+msgstr "Reset my password"
 
 msgid "Hint sent Title"
 msgstr "Check your emails!"
@@ -144,7 +154,9 @@ msgid "Passphrase Onboarding Submit"
 msgstr "Finish"
 
 msgid "Hint sent Body"
-msgstr "We just sent your hint by mail. Does it ring a bell?"
+msgstr ""
+"We just sent you your password hint link by mail. It will help you to remember your Cozy password.\n"
+"We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."
 
 msgid "Hint sent Login Button"
 msgstr "Return to the login page"

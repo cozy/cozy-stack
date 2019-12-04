@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+C<!DOCTYPE html>
 <html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
@@ -41,23 +41,20 @@
             </footer>
           </form>
           {{end}}
-          <form id="reset-passphrase-form" method="POST" action="/auth/passphrase_reset" class="wizard-main">
             <div role="region">
-              <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
-              <input type="hidden" name="redirect" value="{{.Redirect}}" />
-              <p class="wizard-notice u-mb-2 u-mt-1-half-s" id="login-password-tip">{{t "Passphrase reset Help"}}</p>
-            </div>
-            <footer claas="wizard-footer u-pb-half">
-              <button id="reset-submit" form="reset-passphrase-form" type="submit" class="c-btn c-btn--full wizard-button wizard-next">
-                <span>
+              <p><strong>{{t "Passphrase reset Title"}}</strong></p>
+              <p class="u-mt-1-half-s" id="login-password-tip">
+                <strong class="u-error">{{t "Passphrase reset Help Warning"}}</strong>
+                {{t "Passphrase reset Help"}}
+              </p>
+              <form id="reset-passphrase-form" method="POST" action="/auth/passphrase_reset">
+                <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+                <input type="hidden" name="redirect" value="{{.Redirect}}" />
+                <button type="submit" class="c-btn c-btn--text u-p-0 u-m-0">
                   <span>{{t "Passphrase reset Submit"}}</span>
-                  <svg width="16" height="16" aria-hidden="true" focusable="false">
-                    <use id="next-icon" xlink:href="#next"></use>
-                  </svg>
-                </span>
-              </button>
-            </footer>
-          </form>
+                </button>
+              </form>
+            </div>
         </div>
       </main>
     </div>
