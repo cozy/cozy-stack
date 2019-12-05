@@ -10,4 +10,7 @@
 <mj-text mj-class="content-large">
 	{{.Hint}}
 </mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Hint Outro"}}
+</mj-text>
 {{end}}

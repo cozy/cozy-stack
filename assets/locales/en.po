@@ -142,7 +142,9 @@ msgid "Passphrase Onboarding Hint Field"
 msgstr "Leave a hint (optional)"
 
 msgid "Passphrase Onboarding Hint Help"
-msgstr "The hint will be sent to you by email if you forget it, choose a hint that only one can understand."
+msgstr ""
+"The hint will be sent to you by email if you forget your password."
+"Choose a hint that only you can understand."
 
 msgid "Passphrase Onboarding Submit"
 msgstr "Finish"
@@ -464,13 +466,18 @@ msgid "Mail Cozy Team"
 msgstr "The Cozy Cloud Team"
 
 msgid "Mail Hint Subject"
-msgstr "Reset your password"
+msgstr "Forgoten password: your hint"
 
 msgid "Mail Hint Intro 1"
 msgstr "Hello %s,"
 
 msgid "Mail Hint Intro 2"
-msgstr "You asked the hint for your password (if you didn't, contact us by replying directly to this email)"
+msgstr "Please find below the hint that you requested to recall your Cozy password"
+
+msgid "Mail Hint Outro"
+msgstr ""
+"As a last resort, you can reset your password in the “forgot your password” section of your Cozy."
+"If you did not initiate this request please contact us at contact@cozycloud.cc"
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Reset your password"

@@ -2,3 +2,5 @@
 {{t "Mail Hint Intro 2"}}
 
 {{.Hint}}
+
+{{t "Mail Hint Outro"}}
