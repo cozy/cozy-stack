@@ -1,11 +1,10 @@
 # Translators:
 # Pierre Vandekerckhove <pierre4vdk@gmail.com>, 2019
-# Nicolas Vinot <aeris@imirhil.fr>, 2019
 # Yannick Lohse <yannick.lohse@cozycloud.cc>, 2019
 # Maxime M <maxime@cozycloud.cc>, 2019
+# Cyrille Perois <cyrille@cozycloud.cc>, 2019
 # JC Pagnon <gooz@cozycloud.cc>, 2019
 # Pierre Guillemot <pierrot@cozycloud.cc>, 2019
-# Cyrille Perois <cyrille@cozycloud.cc>, 2019
 # Bruno Michel, 2019
 # 
 msgid ""
@@ -133,16 +132,36 @@ msgstr "Vous êtes perdu.e ? N'hésitez pas à nous contacter à"
 msgid "Passphrase reset Title"
 msgstr "Mot de passe oublié"
 
+msgid "Passphrase reset Help hint"
+msgstr ""
+"Vous avez laissé un indice pour retrouver votre mot de passe. Cliquez sur le"
+" bouton ci-dessous pour le recevoir par email."
+
+msgid "Passphrase reset Submit hint"
+msgstr "Recevoir mon indice"
+
+msgid "Passphrase reset password Title"
+msgstr ""
+"En dernier recours, il vous est possible de réinitialiser votre mot de passe"
+" :"
+
+msgid "Passphrase reset Help Warning"
+msgstr "Attention !"
+
 msgid "Passphrase reset Help"
 msgstr ""
-"En cliquant sur le bouton ci-dessous, un lien vous sera envoyé par email "
-"pour choisir un nouveau mot de passe."
+"Votre mot de passe actuel est l'unique clé pour décoder vos mots de passe "
+"gardés par votre app « cozy mots de passe ». Si vous le réinitialisez, vous "
+"perdrez ces données. Le reste de vos données resteront accessibles."
 
 msgid "Passphrase reset Submit"
-msgstr "Continuer"
+msgstr "Je réinitialise mon mot de passe"
+
+msgid "Hint sent Title"
+msgstr "Consultez vos e-mails !"
 
 msgid "Passphrase is reset Title"
-msgstr "Vérifiez votre boite mail !"
+msgstr "Consultez vos e-mails !"
 
 msgid "Passphrase Onboarding Title"
 msgstr "Choisissez votre mot de passe"
@@ -152,8 +171,25 @@ msgstr ""
 "Utilisez au moins huit caractères avec des lettres, des chiffres et des "
 "symboles."
 
+msgid "Passphrase Onboarding Hint Field"
+msgstr "Laisser un indice (facultatif)"
+
+msgid "Passphrase Onboarding Hint Help"
+msgstr ""
+"L'indice vous sera envoyé par email en cas d'oubli de votre mot de passe, "
+"choisissez un indice que vous seul pourrez comprendre."
+
 msgid "Passphrase Onboarding Submit"
 msgstr "Terminer"
+
+msgid "Hint sent Body"
+msgstr ""
+"Nous vous avons envoyé votre indice par email. Il vous aidera à retrouver votre mot de passe Cozy.\n"
+"\n"
+"Nous préférons vous prévenir : cet e-mail peut s'avérer un brin joueur et se faufiler dans les dossiers Spam, Notifications ou Réseaux Sociaux. N'hésitez donc pas à jeter un œil à tous vos dossiers pour le retrouver. "
+
+msgid "Hint sent Login Button"
+msgstr "Aller à la page de connexion"
 
 msgid "Passphrase is reset Body"
 msgstr ""
@@ -485,6 +521,17 @@ msgstr "Merci de votre confiance"
 
 msgid "Mail Cozy Team"
 msgstr "L'équipe de Cozy Cloud"
+
+msgid "Mail Hint Subject"
+msgstr "Ré-initialisation du mot de passe"
+
+msgid "Mail Hint Intro 1"
+msgstr "Bonjour %s,"
+
+msgid "Mail Hint Intro 2"
+msgstr ""
+"Vous avez demandé l'indice pour votre mot de passe (si ce n'est pas vous, "
+"contactez-nous en réponse à ce mail)."
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Ré-initialisation du mot de passe"
