@@ -9,6 +9,8 @@ const Configs = "configs"
 const (
 	// Apps doc type for client-side application manifests
 	Apps = "io.cozy.apps"
+	// AppsSuggestion doc type for suggesting apps to the user
+	AppsSuggestion = "io.cozy.apps.suggestions"
 	// Konnectors doc type for konnector application manifests
 	Konnectors = "io.cozy.konnectors"
 	// Versions doc type for apps versions from the registries
