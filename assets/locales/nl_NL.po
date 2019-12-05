@@ -122,13 +122,31 @@ msgstr "Ben je het spoor bijster? Neem dan contact met ons op via"
 msgid "Passphrase reset Title"
 msgstr "Wachtwoord vergeten"
 
+msgid "Passphrase reset Help hint"
+msgstr ""
+"Je hebt een wachtwoordhint ingesteld. Klik op onderstaande knop om deze per "
+"e-mail te ontvangen."
+
+msgid "Passphrase reset Submit hint"
+msgstr "Wachtwoordhint versturen"
+
+msgid "Passphrase reset password Title"
+msgstr "Als laatste redmiddel kun je je wachtwoord opnieuw instellen:"
+
+msgid "Passphrase reset Help Warning"
+msgstr "Waarschuwing!"
+
 msgid "Passphrase reset Help"
 msgstr ""
-"Klik op deze knop om een e-mail te krijgen met een link voor het instellen "
-"van een nieuw wachtwoord."
+"Je huidige wachtwoord is de enige sleutel van de app 'Cozy Wachtwoorden'. "
+"Als je je wachtwoord opnieuw instelt, dan gaan die gegevens verloren. De "
+"rest van je je gegevens blijven toegankelijk."
 
 msgid "Passphrase reset Submit"
-msgstr "Volgende"
+msgstr "Mijn wachtwoord opnieuw instellen"
+
+msgid "Hint sent Title"
+msgstr "Controleer je Postvak IN!"
 
 msgid "Passphrase is reset Title"
 msgstr "Controleer je Postvak IN!"
@@ -140,8 +158,24 @@ msgid "Passphrase Onboarding Help"
 msgstr ""
 "Gebruik minimaal acht tekens, bestaande uit letters, cijfers en symbolen."
 
+msgid "Passphrase Onboarding Hint Field"
+msgstr "Wachtwoordhint instellen (optioneel)"
+
+msgid "Passphrase Onboarding Hint Help"
+msgstr ""
+"Deze hint wordt per e-mail aan je verstuurd als je je je wachtwoord vergeten"
+" bent. Kies een hint die alleen voor jóu te begrijpen is."
+
 msgid "Passphrase Onboarding Submit"
 msgstr "Afronden"
+
+msgid "Hint sent Body"
+msgstr ""
+"We hebben je wachtwoordhint per e-mail aan je verstuurd - hiermee kun je je wachtwoord raden.\n"
+"Waarschuwing: deze e-mail kan terechtkomen in je ongewenste berichten-map of in één van de andere speciale mappen. Controleer die dus ook!"
+
+msgid "Hint sent Login Button"
+msgstr "Terug naar de inlogpagina"
 
 msgid "Passphrase is reset Body"
 msgstr ""
@@ -469,6 +503,17 @@ msgstr "Met vriendelijke groet,"
 
 msgid "Mail Cozy Team"
 msgstr "Het Cozy Cloud-team"
+
+msgid "Mail Hint Subject"
+msgstr "Mijn wachtwoord opnieuw instellen"
+
+msgid "Mail Hint Intro 1"
+msgstr "Hallo %s,"
+
+msgid "Mail Hint Intro 2"
+msgstr ""
+"Je hebt je wachtwoordhint opgevraagd. Als dat niet zo is, beantwoord dan "
+"deze e-mail en laat het ons weten."
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Mijn wachtwoord opnieuw instellen"
