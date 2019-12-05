@@ -464,7 +464,7 @@ msgid "Mail Cozy Team"
 msgstr "The Cozy Cloud Team"
 
 msgid "Mail Hint Subject"
-msgstr "Reset your password"
+msgstr "Forgoten password: your hint"
 
 msgid "Mail Hint Intro 1"
 msgstr "Hello %s,"
