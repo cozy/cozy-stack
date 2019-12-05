@@ -470,7 +470,12 @@ msgid "Mail Hint Intro 1"
 msgstr "Hello %s,"
 
 msgid "Mail Hint Intro 2"
-msgstr "You asked the hint for your password (if you didn't, contact us by replying directly to this email)"
+msgstr "Please find below the hint that you requested to recall your Cozy password"
+
+msgid "Mail Hint Outro"
+msgstr ""
+"As a last resort, you can reset your password in the “forgot your password” section of your Cozy."
+"If you did not initiate this request please contact us at contact@cozycloud.cc"
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Reset your password"
