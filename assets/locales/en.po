@@ -149,7 +149,7 @@ msgstr "Finish"
 
 msgid "Hint sent Body"
 msgstr ""
-"We just sent you your password hint link by mail. It will help you to remember your Cozy password.\n"
+"We just sent you your password hint by mail. It will help you to remember your Cozy password.\n"
 "We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."
 
 msgid "Hint sent Login Button"
