@@ -524,7 +524,7 @@ msgid "Mail Cozy Team"
 msgstr "L'équipe de Cozy Cloud"
 
 msgid "Mail Hint Subject"
-msgstr "Mot de passe oublié : votre indice"
+msgstr "Mot de passe oublié : mon indice"
 
 msgid "Mail Hint Intro 1"
 msgstr "Bonjour %s,"
