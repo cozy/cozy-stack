@@ -10,21 +10,23 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/hashicorp/go-multierror"
 )
 
 // Account holds configuration information for an account
 type Account struct {
-	DocID       string                 `json:"_id,omitempty"`
-	DocRev      string                 `json:"_rev,omitempty"`
-	Name        string                 `json:"name"`
-	AccountType string                 `json:"account_type"`
-	FolderPath  string                 `json:"folderPath,omitempty"`
-	Basic       *BasicInfo             `json:"auth,omitempty"`
-	Oauth       *OauthInfo             `json:"oauth,omitempty"`
-	Extras      map[string]interface{} `json:"oauth_callback_results,omitempty"`
-
+	DocID         string                 `json:"_id,omitempty"`
+	DocRev        string                 `json:"_rev,omitempty"`
+	Name          string                 `json:"name"`
+	AccountType   string                 `json:"account_type"`
+	FolderPath    string                 `json:"folderPath,omitempty"`
+	Basic         *BasicInfo             `json:"auth,omitempty"`
+	Oauth         *OauthInfo             `json:"oauth,omitempty"`
+	Extras        map[string]interface{} `json:"oauth_callback_results,omitempty"`
+	Relationships map[string]interface{} `json:"relationships,omitempty"`
+	Metadata      *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 	// When an account is deleted, the stack cleans the triggers and calls its
 	// konnector to clean the account remotely (when available). It is done via
 	// a hook on deletion, but when the konnector is removed, this cleaning is
@@ -47,9 +49,10 @@ type OauthInfo struct {
 
 // BasicInfo holds configuration information for an user/pass account
 type BasicInfo struct {
-	Login      string `json:"login,omitempty"`
-	Password   string `json:"password,omitempty"`
-	FolderPath string `json:"folderPath,omitempty"`
+	Login                string `json:"login,omitempty"`
+	Password             string `json:"password,omitempty"` // used when no encryption
+	EncryptedCredentials string `json:"credentials_encrypted,omitempty"`
+	FolderPath           string `json:"folderPath,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface
@@ -81,6 +84,10 @@ func (ac *Account) Clone() couchdb.Doc {
 	cloned.Extras = make(map[string]interface{})
 	for k, v := range ac.Extras {
 		cloned.Extras[k] = v
+	}
+	cloned.Relationships = make(map[string]interface{})
+	for k, v := range ac.Relationships {
+		cloned.Relationships[k] = v
 	}
 	return &cloned
 }

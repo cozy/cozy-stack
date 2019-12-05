@@ -136,7 +136,6 @@ func DecryptCredentialsWithKey(decryptorKey *keymgmt.NACLKey, encryptedCreds []b
 
 	// skip the nonce
 	encryptedCreds = encryptedCreds[nonceLen:]
-
 	// decrypt the cipher text and check that the plain text is more the 4 bytes
 	// long, to contain the login length
 	creds, ok := box.Open(nil, encryptedCreds, &nonce, decryptorKey.PublicKey(), decryptorKey.PrivateKey())

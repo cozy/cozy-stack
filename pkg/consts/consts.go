@@ -58,6 +58,11 @@ const (
 	// BitwardenCozyCollectionName is the name of the collection used to
 	// share passwords between Cozy and Bitwarden clients.
 	BitwardenCozyCollectionName = "Cozy Connectors"
+
+	// BitwardenProtocol is the name of the bitwarden protocol
+	BitwardenProtocol = "Bitwarden"
+	// BitwardenCipherRelationship is the name of the account-cipher relationship
+	BitwardenCipherRelationship = "vaultCipher"
 )
 
 // MaxItemsPerPageForMango is the maximal value accepted for the limit
