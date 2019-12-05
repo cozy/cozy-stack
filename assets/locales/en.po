@@ -114,7 +114,7 @@ msgstr "You set a hint to recover your password. Click on the button below to re
 msgid "Passphrase reset Submit hint"
 msgstr "Send me my hint"
 
-msgid "Passphrase reset Title"
+msgid "Passphrase reset password Title"
 msgstr "As a last resort, you can reset your password:"
 
 msgid "Passphrase reset Help Warning"
@@ -122,12 +122,6 @@ msgstr "Warning!"
 
 msgid "Passphrase reset Help"
 msgstr "Your current password is the only key to decode your passwords kept in your app \"cozy passwords\". If you reset it, you will lose that data. The rest of your data will remain accessible."
-
-msgid "Passphrase reset Submit"
-msgstr "Réinitialiser mon mot de passe"
-
-msgid "Passphrase reset Submit"
-msgstr "Réinitialiser mon mot de passe"
 
 msgid "Passphrase reset Submit"
 msgstr "Reset my password"
