@@ -137,6 +137,7 @@ Content-Type: application/json
 {
     "register_token": "37cddf40d7724988860fa0e03efd30fe",
     "passphrase": "4f58133ea0f415424d0a856e0d3d2e0cd28e4358fce7e333cb524729796b2791",
+    "hint": "a hint to help me remember my passphrase",
     "key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ=",
     "public_key": "MIIBIjANBgkqhkiG9w...AQAB",
     "private_key": "2.wZuKkufLV31Cpw1v1TQUDA==|u6bUNTaaGxu...y7s=",
@@ -245,6 +246,30 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 ```http
 HTTP/1.1 204 No Content
 Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### PUT /settings/hint
+
+The user can change the hint for its passphrase.
+
+#### Request
+
+```http
+PUT /settings/hint HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "hint": "My passphrase is very complicated"
+}
 ```
 
 #### Response

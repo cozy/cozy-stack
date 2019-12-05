@@ -17,6 +17,7 @@ const templateTitleVar = "template_title"
 
 func initMailTemplates() {
 	mailTemplater = MailTemplater{
+		"passphrase_hint":              subjectEntry{"Mail Hint Subject", nil},
 		"passphrase_reset":             subjectEntry{"Mail Reset Passphrase Subject", nil},
 		"archiver":                     subjectEntry{"Mail Archive Subject", nil},
 		"two_factor":                   subjectEntry{"Mail Two Factor Subject", nil},

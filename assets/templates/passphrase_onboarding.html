@@ -68,6 +68,11 @@
               <progress id="password-strength" max="100" value="0" class="pw-indicator u-m-0"></progress>
             </div>
             <p id="password-tip" class="u-coolGrey u-m-1">{{t "Passphrase Onboarding Help"}}</p>
+            <div class="o-field password-form u-m-0">
+              <label for="hint" class="c-label">{{t "Passphrase Onboarding Hint Field"}}</label>
+              <input id="hint" class="c-input-text" name="hint" type="text" />
+              <p class="wizard-notice u-mb-2 u-mt-1-half-s" id="login-password-tip">{{t "Passphrase Onboarding Hint Help"}}</p>
+            </div>
           </div>
           <footer class="wizard-footer u-pb-2">
             <button id="onboarding-password-submit" class="c-btn c-btn--full wizard-button" form="onboarding-password-form" type="submit">

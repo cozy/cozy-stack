@@ -203,6 +203,15 @@ Content-Type: text/html
 Cookie: ...
 ```
 
+### POST /auth/hint
+
+Send the password hint by email.
+
+```http
+POST /auth/hint HTTP/1.1
+Host: cozy.example.org
+```
+
 ### POST /auth/passphrase_reset
 
 After the user has clicked on the reset button of the passphrase reset form, it

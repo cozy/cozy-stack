@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -20,6 +21,10 @@ func passphraseResetForm(c echo.Context) error {
 	if !instance.IsPasswordAuthenticationEnabled() {
 		return c.Redirect(http.StatusSeeOther, instance.PageURL("/oidc/start", nil))
 	}
+	hasHint := false
+	if setting, err := settings.Get(instance); err == nil {
+		hasHint = setting.PassphraseHint != ""
+	}
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
 		"Title":       instance.TemplateTitle(),
 		"CozyUI":      middlewares.CozyUI(instance),
@@ -30,6 +35,7 @@ func passphraseResetForm(c echo.Context) error {
 		"CSRF":        c.Get("csrf"),
 		"Favicon":     middlewares.Favicon(instance),
 		"Redirect":    c.QueryParam("redirect"),
+		"HasHint":     hasHint,
 	})
 }
 
@@ -77,6 +83,29 @@ func passphraseForm(c echo.Context) error {
 		"MatomoURL":      matomo.URL,
 		"MatomoSiteID":   matomo.SiteID,
 		"MatomoAppID":    matomo.OnboardingAppID,
+	})
+}
+
+func sendHint(c echo.Context) error {
+	i := middlewares.GetInstance(c)
+	if err := lifecycle.SendHint(i); err != nil {
+		return err
+	}
+	var u url.Values
+	if redirect := c.FormValue("redirect"); redirect != "" {
+		u = url.Values{"redirect": {redirect}}
+	}
+	return c.Render(http.StatusOK, "error.html", echo.Map{
+		"Title":       i.TemplateTitle(),
+		"CozyUI":      middlewares.CozyUI(i),
+		"ThemeCSS":    middlewares.ThemeCSS(i),
+		"Domain":      i.ContextualDomain(),
+		"ContextName": i.ContextName,
+		"ErrorTitle":  "Hint sent Title",
+		"Error":       "Hint sent Body",
+		"Button":      "Hint sent Login Button",
+		"ButtonLink":  i.PageURL("/auth/login", u),
+		"Favicon":     middlewares.Favicon(i),
 	})
 }
 
