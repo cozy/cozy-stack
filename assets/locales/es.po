@@ -125,13 +125,34 @@ msgstr "¿Está usted perdido? No dude en contactarnos en "
 msgid "Passphrase reset Title"
 msgstr "Contraseña olvidada"
 
+msgid "Passphrase reset Help hint"
+msgstr ""
+
+msgid "Passphrase reset Submit hint"
+msgstr ""
+
+msgid "Passphrase reset password Title"
+msgstr ""
+
+msgid "Passphrase reset Help Warning"
+msgstr ""
+
 msgid "Passphrase reset Help"
+msgstr ""
+
+msgid "Passphrase reset Help emptyVault"
 msgstr ""
 "Al hacer clic en este botón, usted enviará un email a su email para cambiar "
 "su contraseńa."
 
 msgid "Passphrase reset Submit"
-msgstr "Siguiente"
+msgstr "Reiniciar mi contraseña"
+
+msgid "Passphrase reset Submit emptyVault"
+msgstr "Cambiar mi contraseña"
+
+msgid "Hint sent Title"
+msgstr "¡Revise sus emails!"
 
 msgid "Passphrase is reset Title"
 msgstr "¡Revise sus emails!"
@@ -143,8 +164,20 @@ msgid "Passphrase Onboarding Help"
 msgstr ""
 "Usar al menos ocho caracteres que incluyan letras, números y símbolos. "
 
+msgid "Passphrase Onboarding Hint Field"
+msgstr ""
+
+msgid "Passphrase Onboarding Hint Help"
+msgstr ""
+
 msgid "Passphrase Onboarding Submit"
 msgstr "Terminar"
+
+msgid "Hint sent Body"
+msgstr ""
+
+msgid "Hint sent Login Button"
+msgstr "Volver a la página de inicio de sesión"
 
 msgid "Passphrase is reset Body"
 msgstr ""
@@ -398,6 +431,9 @@ msgstr "Contactos"
 msgid "Permissions io.cozy.files"
 msgstr "Archivos"
 
+msgid "Permissions io.cozy.files.versions"
+msgstr ""
+
 msgid "Permissions io.cozy.identities"
 msgstr "Identidades"
 
@@ -460,6 +496,18 @@ msgstr "Atentamente"
 
 msgid "Mail Cozy Team"
 msgstr "El equipo de Cozy Cloud"
+
+msgid "Mail Hint Subject"
+msgstr ""
+
+msgid "Mail Hint Intro 1"
+msgstr "Hola %s,"
+
+msgid "Mail Hint Intro 2"
+msgstr ""
+
+msgid "Mail Hint Outro"
+msgstr ""
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Reiniciar su contraseña"
