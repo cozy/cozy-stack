@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -88,8 +89,10 @@ func passphraseForm(c echo.Context) error {
 
 func sendHint(c echo.Context) error {
 	i := middlewares.GetInstance(c)
-	if err := lifecycle.SendHint(i); err != nil {
-		return err
+	if err := limits.CheckRateLimit(i, limits.SendHintByMail); err == nil {
+		if err := lifecycle.SendHint(i); err != nil {
+			return err
+		}
 	}
 	var u url.Values
 	if redirect := c.FormValue("redirect"); redirect != "" {
