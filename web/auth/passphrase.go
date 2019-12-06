@@ -11,6 +11,8 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -26,6 +28,10 @@ func passphraseResetForm(c echo.Context) error {
 	if setting, err := settings.Get(instance); err == nil {
 		hasHint = setting.PassphraseHint != ""
 	}
+	hasCiphers := true
+	if resp, err := couchdb.NormalDocs(instance, consts.BitwardenCiphers, 0, 1, ""); err == nil {
+		hasCiphers = resp.Total > 0
+	}
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
 		"Title":       instance.TemplateTitle(),
 		"CozyUI":      middlewares.CozyUI(instance),
@@ -37,6 +43,7 @@ func passphraseResetForm(c echo.Context) error {
 		"Favicon":     middlewares.Favicon(instance),
 		"Redirect":    c.QueryParam("redirect"),
 		"HasHint":     hasHint,
+		"HasCiphers":  hasCiphers,
 	})
 }
 

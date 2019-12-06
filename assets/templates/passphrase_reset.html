@@ -37,19 +37,33 @@
           </form>
           {{end}}
           <form id="reset-passphrase-form" method="POST" action="/auth/passphrase_reset" class="wizard-main u-mt-3">
+            <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+            <input type="hidden" name="redirect" value="{{.Redirect}}" />
             <div role="region">
+              {{if .HasCiphers}}
               <p><strong>{{t "Passphrase reset password Title"}}</strong></p>
               <p class="u-mt-1-half-s" id="login-password-tip">
                 <strong class="u-error">{{t "Passphrase reset Help Warning"}}</strong>
                 {{t "Passphrase reset Help"}}
               </p>
-              <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
-              <input type="hidden" name="redirect" value="{{.Redirect}}" />
-              <button type="submit" class="c-btn c-btn--text u-p-0 u-m-0">
-                <span>{{t "Passphrase reset Submit"}}</span>
-              </button>
-            </form>
-          </div>
+              {{else}}
+              <p class="wizard-notice u-mb-2 u-mt-1-half-s" id="login-password-tip">
+                {{t "Passphrase reset Help emptyVault"}}
+              </p>
+              {{end}}
+              <footer claas="wizard-footer u-pb-half">
+                <button type="submit" class="c-btn {{if .HasCiphers}}c-btn--text u-p-0 u-m-0{{else}}c-btn--full wizard-button wizard-next{{end}}">
+                  <span>
+                    {{if .HasHint}}
+                    {{t "Passphrase reset Submit"}}
+                    {{else}}
+                    {{t "Passphrase reset Submit emptyVault"}}
+                    {{end}}
+                  </span>
+                </button>
+              </footer>
+            </div>
+          </form>
         </div>
       </main>
     </div>
