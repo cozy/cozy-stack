@@ -463,11 +463,6 @@ msgstr "Anwendungsprotokolle"
 msgid "Mail Greeting"
 msgstr "Hallo"
 
-msgid "Mail Trouble Text"
-msgstr ""
-"Falls der Knopf fehlerhaft dargestellt wird, kopiere den Link unten in "
-"deinen Webbrowser."
-
 msgid "Mail Signature"
 msgstr "Vertrauensvolle Grüße"
 

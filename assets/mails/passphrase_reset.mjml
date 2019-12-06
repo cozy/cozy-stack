@@ -16,10 +16,4 @@
 <mj-text mj-class="content-large">
 	{{t "Mail Reset Passphrase Outro"}}
 </mj-text>
-<mj-text mj-class="content-small">
-	{{t "Mail Trouble Text"}}
-</mj-text>
-<mj-text align="left" font-size="12px" mj-class="content-medium highlight">
-	{{.PassphraseResetLink}}
-</mj-text>
 {{end}}
