@@ -36,6 +36,7 @@ var (
 		"error.html",
 		"login.html",
 		"need_onboarding.html",
+		"oidc_login.html",
 		"passphrase_reset.html",
 		"passphrase_renew.html",
 		"passphrase_onboarding.html",

@@ -38,6 +38,7 @@ authentication:
       client_id: aClientID
       client_secret: s3cret3
       scope: openid profile
+      login_domain: login.mycozy.cloud
       redirect_uri: https://oauthcallback.mycozy.cloud/oidc/redirect
       authorize_url: https://identity-prodiver/path/to/authorize
       token_url: https://identity-prodiver/path/to/token
@@ -59,6 +60,8 @@ And in the `oidc` section, we have:
 - `client_id` and `client_secret` are the OAuth client that will be used to
   talk to the identity provider
 - `scope` is the OAuth scope parameter (it is often `openid profile`)
+- `login_domain` is a domain that is not tied to an instance, but allows to
+  login with OIDC with the provider configured on this context
 - `redirect_uri` is where the user will be redirected by the identity provider
   after login (it must often be declared when creating the OAuth client, and we
   have to use a static hostname, not the hostname of a cozy instance)
