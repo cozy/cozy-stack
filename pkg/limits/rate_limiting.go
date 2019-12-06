@@ -2,6 +2,7 @@ package limits
 
 import (
 	"errors"
+	"strconv"
 	"sync"
 	"time"
 
@@ -246,15 +247,23 @@ func NewRedisCounter(client redis.UniversalClient) Counter {
 	return &redisCounter{client}
 }
 
+// incrWithTTL is a lua script for redis to increment a counter and sets a TTL
+// if it doesn't have one.
+const incrWithTTL = `
+local n = redis.call("INCR", KEYS[1])
+if redis.call("TTL", KEYS[1]) == -1 then
+  redis.call("EXPIRE", KEYS[1], KEYS[2])
+end
+return n
+`
+
 func (r *redisCounter) Increment(key string, timeLimit time.Duration) (int64, error) {
-	count, err := r.Client.Incr(key).Result()
+	ttl := strconv.FormatInt(int64(timeLimit/time.Second), 10)
+	count, err := r.Client.Eval(incrWithTTL, []string{key, ttl}).Result()
 	if err != nil {
 		return 0, err
 	}
-	if count == 1 {
-		r.Client.Expire(key, timeLimit)
-	}
-	return count, nil
+	return count.(int64), nil
 }
 
 func (r *redisCounter) Reset(key string) error {
