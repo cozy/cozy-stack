@@ -117,19 +117,21 @@ msgid "Passphrase reset Title"
 msgstr "パスワードを忘れた"
 
 msgid "Passphrase reset Help hint"
-msgstr ""
+msgstr "パスワードを回復するためのヒントを設定します。 下のボタンをクリックすると、メールで受信します。"
 
 msgid "Passphrase reset Submit hint"
-msgstr ""
+msgstr "自分にヒントを送信する"
 
 msgid "Passphrase reset password Title"
-msgstr ""
+msgstr "最後の手段として、パスワードをリセットできます:"
 
 msgid "Passphrase reset Help Warning"
-msgstr ""
+msgstr "警告!"
 
 msgid "Passphrase reset Help"
 msgstr ""
+"現在のパスワードは、お使いのアプリ「Cozy パスワード」に保存されているパスワードを復元する唯一の鍵です。 リセットすると、そのデータは失われます。 "
+"残りのデータには引き続きアクセスできます。"
 
 msgid "Passphrase reset Help emptyVault"
 msgstr "このボタンをクリックすると、新しいパスワードを選択するためのリンクがメールで送信されます。"
@@ -153,16 +155,18 @@ msgid "Passphrase Onboarding Help"
 msgstr "8 文字以上の英字、数字、記号で入力してください。"
 
 msgid "Passphrase Onboarding Hint Field"
-msgstr ""
+msgstr "ヒントを残す (オプション)"
 
 msgid "Passphrase Onboarding Hint Help"
-msgstr ""
+msgstr "パスワードを忘れた場合、ヒントがメールで送信されます。自分だけが理解できるヒントを選択してください。"
 
 msgid "Passphrase Onboarding Submit"
 msgstr "完了"
 
 msgid "Hint sent Body"
 msgstr ""
+"パスワードのヒントをメールで送信しました。 Cozy のパスワードを思い出すのに役立ちます。\n"
+"ご注意ください。このメールは、スパム、通知、またはソーシャルフォルダに入ることがあります。 メールを見つけるためにこれらのフォルダも確認してください。"
 
 msgid "Hint sent Login Button"
 msgstr "ログインページに戻る"
@@ -473,16 +477,19 @@ msgid "Mail Cozy Team"
 msgstr "Cozy クラウドチーム"
 
 msgid "Mail Hint Subject"
-msgstr ""
+msgstr "パスワードを忘れた: あなたのヒント"
 
 msgid "Mail Hint Intro 1"
 msgstr "%s さん、こんにちは。"
 
 msgid "Mail Hint Intro 2"
-msgstr ""
+msgstr "下をご覧ください。Cozy のパスワードを思い出ためのヒントがあります。"
 
 msgid "Mail Hint Outro"
 msgstr ""
+"最後の手段として、Cozy "
+"の「パスワードを忘れた」セクションでパスワードをリセットできます。このリクエストを行っていない場合は、contact@cozycloud.cc "
+"までご連絡ください"
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "お使いのパスワードをリセット"
