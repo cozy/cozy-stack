@@ -142,8 +142,16 @@ msgstr ""
 "Als je je wachtwoord opnieuw instelt, dan gaan die gegevens verloren. De "
 "rest van je je gegevens blijven toegankelijk."
 
+msgid "Passphrase reset Help emptyVault"
+msgstr ""
+"Klik op deze knop om een e-mail te krijgen met een link voor het instellen "
+"van een nieuw wachtwoord."
+
 msgid "Passphrase reset Submit"
 msgstr "Mijn wachtwoord opnieuw instellen"
+
+msgid "Passphrase reset Submit emptyVault"
+msgstr "Mijn wachtwoord wijzigen"
 
 msgid "Hint sent Title"
 msgstr "Controleer je Postvak IN!"
