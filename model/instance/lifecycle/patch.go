@@ -10,11 +10,8 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/ws"
-	"github.com/mitchellh/mapstructure"
 )
 
 var managerHTTPClient = &http.Client{Timeout: 30 * time.Second}
@@ -176,7 +173,7 @@ func managerUpdateSettings(inst *instance.Instance, changes map[string]interface
 		return
 	}
 
-	client := managerClient(inst)
+	client := instance.APIManagerClient(inst)
 	if client == nil {
 		return
 	}
@@ -283,49 +280,4 @@ func doManagerRequest(method string, url string, form url.Values, originalReq *h
 		req.Header.Set("X-Forwarded-For", ip)
 	}
 	return managerHTTPClient.Do(req)
-}
-
-type managerConfig struct {
-	API *struct {
-		URL   string
-		Token string
-	}
-}
-
-func getManagerConfig(inst *instance.Instance) *managerConfig {
-	contexts := config.GetConfig().Clouderies
-	context, ok := inst.GetFromContexts(contexts)
-	if !ok {
-		return nil
-	}
-
-	var config managerConfig
-	err := mapstructure.Decode(context, &config)
-	if err != nil {
-		return nil
-	}
-
-	return &config
-}
-
-func managerClient(inst *instance.Instance) *ws.OAuthRestJSONClient {
-	config := getManagerConfig(inst)
-	if config == nil {
-		return nil
-	}
-
-	api := config.API
-	if api == nil {
-		return nil
-	}
-
-	url := api.URL
-	token := api.Token
-	if url == "" || token == "" {
-		return nil
-	}
-
-	client := &ws.OAuthRestJSONClient{}
-	client.Init(url, token)
-	return client
 }

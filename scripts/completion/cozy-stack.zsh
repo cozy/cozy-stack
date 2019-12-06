@@ -22,6 +22,7 @@ function _cozy-stack {
       "completion:Output shell completion code for the specified shell"
       "config:Show and manage configuration elements"
       "doc:Print the documentation"
+      "features:Manage the feature flags"
       "files:Interact with the cozy filesystem"
       "fixer:A set of tools to fix issues or migrate content for retro-compatibility."
       "help:Help about any command"
@@ -57,6 +58,9 @@ function _cozy-stack {
     ;;
   doc)
     _cozy-stack_doc
+    ;;
+  features)
+    _cozy-stack_features
     ;;
   files)
     _cozy-stack_files
@@ -493,6 +497,101 @@ function _cozy-stack_doc_man {
 
 function _cozy-stack_doc_markdown {
   _arguments \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+
+function _cozy-stack_features {
+  local -a commands
+
+  _arguments -C \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:' \
+    "1: :->cmnds" \
+    "*::arg:->args"
+
+  case $state in
+  cmnds)
+    commands=(
+      "context:Display and update the feature flags for a context"
+      "defaults:Display and update the default values for feature flags"
+      "flags:Display and update the feature flags for an instance"
+      "sets:Display and update the feature sets for an instance"
+      "show:Display the computed feature flags for an instance"
+    )
+    _describe "command" commands
+    ;;
+  esac
+
+  case "$words[1]" in
+  context)
+    _cozy-stack_features_context
+    ;;
+  defaults)
+    _cozy-stack_features_defaults
+    ;;
+  flags)
+    _cozy-stack_features_flags
+    ;;
+  sets)
+    _cozy-stack_features_sets
+    ;;
+  show)
+    _cozy-stack_features_show
+    ;;
+  esac
+}
+
+function _cozy-stack_features_context {
+  _arguments \
+    '--context[The context for the feature flags]:' \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+function _cozy-stack_features_defaults {
+  _arguments \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+function _cozy-stack_features_flags {
+  _arguments \
+    '--domain[Specify the domain name of the instance]:' \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+function _cozy-stack_features_sets {
+  _arguments \
+    '--domain[Specify the domain name of the instance]:' \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+function _cozy-stack_features_show {
+  _arguments \
+    '--domain[Specify the domain name of the instance]:' \
+    '--source[Show the sources of the feature flags]' \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
     '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \

@@ -493,6 +493,8 @@ Content-Type: application/json
 Authorization: Bearer ...
 ```
 
+## Sessions
+
 ### GET /settings/sessions
 
 This route allows to get all the currently active sessions.
@@ -550,7 +552,7 @@ Authorization: Bearer oauth2-clients-token
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/json
+Content-type: application/vnd.api+json
 ```
 
 ```json
@@ -661,6 +663,145 @@ Cookie: sessionid=xxxx
             "self": "/settings/context"
         }
     }
+}
+```
+
+#### Permissions
+
+To use this endpoint, an application needs a valid token, but no explicit
+permission is required.
+
+## Feature flags
+
+A feature flag is a name and an associated value (boolean, number, string or a
+JSON) that can be interpreted by the apps. It can be used for giving access to
+paid features, or to enable a feature progressively on all the cozy instances
+of a context. The stack computes the feature flags from several sources (in
+order of decreasing priority):
+
+- the flags set on the instance by the command `cozy-stack feature flags`
+- the response of the manager for `GET /api/v1/flags?sets=s1,s2&context=ctx`
+  (where `s1,s2` has been set via `cozy-stack feature sets`)
+- the flags coming from the context configuration (`context.<name>.features`)
+- the flags set on the context by the command `cozy-stack feature ratio`
+- the default value (`cozy-stack feature default`).
+
+For a given flag, the stack takes the value from the source with the highest
+priority, and does not look at the other sources (no merge).
+
+### GET /settings/flags
+
+This endpoint returns the computed list of feature flags for the given
+instance. It accepts an `include` parameter in the query string to see the
+details of how the flags were computed.
+
+#### Request
+
+```http
+GET /settings/flags HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.settings",
+    "id": "io.cozy.settings.flags",
+    "attributes": {
+      "has_feature1": true,
+      "has_feature2": false,
+      "number_of_foos": 10,
+      "bar_config": { "qux": "quux" }
+    },
+    "links": {
+      "self": "/settings/flags"
+    }
+  }
+}
+```
+
+#### Request
+
+```http
+GET /settings/flags?include=source HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.settings",
+    "id": "io.cozy.settings.flags",
+    "attributes": {
+      "has_feature1": true,
+      "has_feature2": false,
+      "number_of_foos": 10,
+      "bar_config": { "qux": "quux" }
+    },
+    "included": [
+      {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.flags.instance",
+        "attributes": {
+          "number_of_foos": 10
+        }
+      },
+      {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.flags.manager",
+        "attributes": {
+          "sets": ["s1", "s2"],
+          "has_feature1": true,
+          "number_of_foos": 5
+        }
+      },
+      {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.flags.config",
+        "attributes": {
+          "number_of_foos": 2
+        }
+      },
+      {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.flags.context",
+        "attributes": {
+          "has_feature2": [{ "ratio": 0.1, "value": true }],
+          "bar_config": [
+            { "ratio": 0.2, "value": { "qux": "quux" } },
+            { "ratio": 0.8, "value": { "qux": "baz" } },
+          ]
+        }
+      },
+      {
+        "type": "io.cozy.settings",
+        "id": "io.cozy.settings.flags.default",
+        "attributes": {
+          "bar_config": { "qux": "courge" },
+          "number_of_foos": 2
+        }
+      }
+    ],
+    "links": {
+      "self": "/settings/flags"
+    }
+  }
 }
 ```
 

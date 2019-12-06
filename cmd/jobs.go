@@ -35,7 +35,7 @@ var jobsRunCmd = &cobra.Command{
 			return cmd.Help()
 		}
 		if flagDomain == "" {
-			return errAppsMissingDomain
+			return errMissingDomain
 		}
 		if flagJobJSONArg == "" {
 			return errors.New("The JSON argument is missing")

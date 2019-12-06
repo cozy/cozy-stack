@@ -85,6 +85,11 @@ type Instance struct {
 	// CLISecret is used to authenticate request from the CLI
 	CLISecret []byte `json:"cli_secret,omitempty"`
 
+	// FeatureFlags is the feature flags that are specific to this instance
+	FeatureFlags map[string]interface{} `json:"feature_flags,omitempty"`
+	// FeatureSets is a list of feature sets from the manager
+	FeatureSets []string `json:"feature_sets,omitempty"`
+
 	vfs              vfs.VFS
 	contextualDomain string
 }

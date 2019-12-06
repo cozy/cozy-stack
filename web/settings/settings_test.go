@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -18,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -744,14 +746,104 @@ func TestPatchInstanceRemoveParams(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestFeatureFlags(t *testing.T) {
+	_ = couchdb.DeleteDB(couchdb.GlobalDB, consts.Settings)
+	defer func() { _ = couchdb.DeleteDB(couchdb.GlobalDB, consts.Settings) }()
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/flags", nil)
+	assert.NoError(t, err)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data, _ := result["data"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.settings", data["type"])
+	assert.Equal(t, "io.cozy.settings.flags", data["id"])
+	attrs, ok := data["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Len(t, attrs, 0)
+
+	testInstance.FeatureFlags = map[string]interface{}{
+		"from_instance_flag":   true,
+		"from_multiple_source": "instance_flag",
+		"json_object":          map[string]interface{}{"foo": "bar"},
+	}
+	testInstance.FeatureSets = []string{"set1", "set2"}
+	err = couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
+	assert.NoError(t, err)
+	cache := config.GetConfig().CacheStorage
+	cacheKey := fmt.Sprintf("flags:%s:%v", testInstance.ContextName, testInstance.FeatureSets)
+	buf, err := json.Marshal(map[string]interface{}{
+		"from_feature_sets":    true,
+		"from_multiple_source": "manager",
+	})
+	assert.NoError(t, err)
+	cache.Set(cacheKey, buf, 5*time.Second)
+	ctxFlags := couchdb.JSONDoc{Type: consts.Settings}
+	ctxFlags.M = map[string]interface{}{
+		"ratio_0": []map[string]interface{}{
+			{"ratio": 0, "value": "context"},
+		},
+		"ratio_1": []map[string]interface{}{
+			{"ratio": 1, "value": "context"},
+		},
+		"ratio_0.001": []map[string]interface{}{
+			{"ratio": 0.001, "value": "context"},
+		},
+		"ratio_0.999": []map[string]interface{}{
+			{"ratio": 0.999, "value": "context"},
+		},
+	}
+	id := fmt.Sprintf("%s.%s", consts.ContextFlagsSettingsID, testInstance.ContextName)
+	ctxFlags.SetID(id)
+	err = couchdb.CreateNamedDocWithDB(couchdb.GlobalDB, &ctxFlags)
+	assert.NoError(t, err)
+	defFlags := couchdb.JSONDoc{Type: consts.Settings}
+	defFlags.M = map[string]interface{}{
+		"ratio_0":              "defaults",
+		"ratio_1":              "defaults",
+		"ratio_0.001":          "defaults",
+		"ratio_0.999":          "defaults",
+		"from_multiple_source": "defaults",
+		"from_defaults":        true,
+	}
+	defFlags.SetID(consts.DefaultFlagsSettingsID)
+	err = couchdb.CreateNamedDocWithDB(couchdb.GlobalDB, &defFlags)
+	assert.NoError(t, err)
+
+	res2, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res2.StatusCode)
+	var result2 map[string]interface{}
+	err = json.NewDecoder(res2.Body).Decode(&result2)
+	assert.NoError(t, err)
+	data2, _ := result2["data"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.settings", data2["type"])
+	assert.Equal(t, "io.cozy.settings.flags", data2["id"])
+	attrs2, _ := data2["attributes"].(map[string]interface{})
+	assert.Equal(t, true, attrs2["from_instance_flag"])
+	assert.Equal(t, true, attrs2["from_feature_sets"])
+	assert.Equal(t, true, attrs2["from_defaults"])
+	assert.EqualValues(t, testInstance.FeatureFlags["json_object"], attrs2["json_object"])
+	assert.Equal(t, "instance_flag", attrs2["from_multiple_source"])
+	assert.Equal(t, "defaults", attrs2["ratio_0"])
+	assert.Equal(t, "defaults", attrs2["ratio_0.001"])
+	assert.Equal(t, "context", attrs2["ratio_0.999"])
+	assert.Equal(t, "context", attrs2["ratio_1"])
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "settings_test")
 	testInstance = setup.GetTestInstance(&lifecycle.Options{
-		Locale:   "en",
-		Timezone: "Europe/Berlin",
-		Email:    "alice@example.com",
+		Locale:      "en",
+		Timezone:    "Europe/Berlin",
+		Email:       "alice@example.com",
+		ContextName: "test-context",
 	})
 	scope := consts.Settings + " " + consts.OAuthClients
 	_, token = setup.GetTestClient(scope)

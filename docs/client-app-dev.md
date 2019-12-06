@@ -170,6 +170,8 @@ a template and will insert the relevant values.
 -   `{{.Favicon}}` will be replaced by the favicon served by the stack.
 -   `{{.SubDomain}}` will be replaced by `flat` or `nested`.
 -   `{{.DefaultWallpaper}}` will be replaced by the URL to the default wallpaper.
+-   `{{.Flags}}` will be replaced by JSON with the
+    [feature flags](./settings.md#feature-flags).
 
 So, the `index.html` should probably looks like:
 
@@ -197,6 +199,7 @@ So, the `index.html` should probably looks like:
       data-cozy-app-name="{{.AppName}}"
       data-cozy-app-slug="{{.AppSlug}}"
       data-cozy-icon-path="{{.IconPath}}"
+      data-cozy-flags="{{.Flags}}"
       >
     </div>
     <script src="my-app.js"></script>

@@ -3,6 +3,10 @@ package instance
 import (
 	"fmt"
 	"net/url"
+
+	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/ws"
+	"github.com/mitchellh/mapstructure"
 )
 
 // ManagerURLKind is an enum type for the different kinds of manager URLs.
@@ -18,7 +22,8 @@ const (
 	ManagerBlockedURL
 )
 
-// ManagerURL returns an external string for the given ManagerURL kind.
+// ManagerURL returns an external string for the given ManagerURL kind. It is
+// used for redirecting the user to a manager URL.
 func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
 	if i.UUID == "" {
 		return "", nil
@@ -29,12 +34,12 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
 		return "", nil
 	}
 
-	base, ok := config["manager_url"]
+	base, ok := config["manager_url"].(string)
 	if !ok {
 		return "", nil
 	}
 
-	baseURL, err := url.Parse(base.(string))
+	baseURL, err := url.Parse(base)
 	if err != nil {
 		return "", err
 	}
@@ -55,4 +60,35 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
 	baseURL.Path = path
 
 	return baseURL.String(), nil
+}
+
+type managerConfig struct {
+	API struct {
+		URL   string
+		Token string
+	}
+}
+
+// APIManagerClient returns a client to talk to the manager via its API.
+func APIManagerClient(inst *Instance) *ws.OAuthRestJSONClient {
+	contexts := config.GetConfig().Clouderies
+	context, ok := inst.GetFromContexts(contexts)
+	if !ok {
+		return nil
+	}
+
+	var config managerConfig
+	err := mapstructure.Decode(context, &config)
+	if err != nil {
+		return nil
+	}
+
+	api := config.API
+	if api.URL == "" || api.Token == "" {
+		return nil
+	}
+
+	client := &ws.OAuthRestJSONClient{}
+	client.Init(api.URL, api.Token)
+	return client
 }

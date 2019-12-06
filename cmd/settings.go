@@ -14,8 +14,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var errSettingsMissingDomain = errors.New("Missing --domain flag")
-
 var settingsCmd = &cobra.Command{
 	Use:   "settings [settings]",
 	Short: "Display and update settings",
@@ -29,7 +27,7 @@ If you give a blank value, the setting will be removed.
 	Example: "$ cozy-stack settings --domain cozy.tools:8080 context:beta,public_name:John,to_remove:",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagDomain == "" {
-			errPrintfln("%s", errSettingsMissingDomain)
+			errPrintfln("%s", errMissingDomain)
 			return cmd.Usage()
 		}
 		c := newClient(flagDomain, consts.Settings)

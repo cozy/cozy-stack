@@ -49,6 +49,23 @@ const (
 	// PassphraseParametersID is the id of settings document for the passphrase
 	// parameters used to hash the master password on client side.
 	PassphraseParametersID = "io.cozy.settings.passphrase"
+	// FlagsSettingsID is the id of settings document with the feature flags.
+	FlagsSettingsID = "io.cozy.settings.flags"
+	// InstanceFlagsSettingsID is the id of the settings documents with the
+	// feature flags specific to this instance.
+	InstanceFlagsSettingsID = "io.cozy.settings.flags.instance"
+	// ManagerFlagsSettingsID is the id of the settings documents with the
+	// feature flags coming from the manager (via the feature sets).
+	ManagerFlagsSettingsID = "io.cozy.settings.flags.manager"
+	// ConfigFlagsSettingsID is the id of the settings documents with the
+	// feature flags defined in the contexts section of the configuration file.
+	ConfigFlagsSettingsID = "io.cozy.settings.flags.config"
+	// ContextFlagsSettingsID is the id of the settings documents with the
+	// feature flags defined with a ratio on the contexts.
+	ContextFlagsSettingsID = "io.cozy.settings.flags.context"
+	// DefaultFlagsSettingsID is the id of the settings documents with the
+	// default feature flags.
+	DefaultFlagsSettingsID = "io.cozy.settings.flags.default"
 )
 
 const (
