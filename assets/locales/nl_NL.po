@@ -493,11 +493,6 @@ msgstr "App-logbestanden"
 msgid "Mail Greeting"
 msgstr "Hallo"
 
-msgid "Mail Trouble Text"
-msgstr ""
-"Als je problemen ondervindt met de knop, kopieer dan onderstaande url en "
-"plak hem in je webbrowser."
-
 msgid "Mail Signature"
 msgstr "Met vriendelijke groet,"
 

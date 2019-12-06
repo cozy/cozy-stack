@@ -433,9 +433,6 @@ msgstr "アプリケーションモデル"
 msgid "Mail Greeting"
 msgstr "こんにちは"
 
-msgid "Mail Trouble Text"
-msgstr "ボタンが正しく表示されない場合は、下の URL をコピーしてウェブブラウザーに貼り付けてください。"
-
 msgid "Mail Signature"
 msgstr "敬具"
 

@@ -455,11 +455,6 @@ msgstr "Logs de la aplicación"
 msgid "Mail Greeting"
 msgstr "Hola"
 
-msgid "Mail Trouble Text"
-msgstr ""
-"Si el botón no se ve bien, copie y pegue la URL de abajo en su navegador "
-"web."
-
 msgid "Mail Signature"
 msgstr "Atentamente"
 

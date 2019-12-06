@@ -12,10 +12,4 @@
 <mj-button href="{{.SharingLink}}" align="left" mj-class="primary-button content-xlarge">
 	{{t "Mail Sharing Request Button text"}}
 </mj-button>
-<mj-text mj-class="content-small">
-	{{t "Mail Trouble Text"}}
-</mj-text>
-<mj-text align="left" font-size="12px" mj-class="content-medium highlight">
-	{{.SharingLink}}
-</mj-text>
 {{end}}

@@ -514,9 +514,6 @@ msgstr "Journaux de l'application"
 msgid "Mail Greeting"
 msgstr "Bonjour"
 
-msgid "Mail Trouble Text"
-msgstr "Si le bouton ne s’affiche pas, copiez/collez l’adresse suivante :"
-
 msgid "Mail Signature"
 msgstr "Merci de votre confiance"
 

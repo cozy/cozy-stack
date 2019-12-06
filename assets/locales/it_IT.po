@@ -419,9 +419,6 @@ msgstr ""
 msgid "Mail Greeting"
 msgstr "Ciao"
 
-msgid "Mail Trouble Text"
-msgstr ""
-
 msgid "Mail Signature"
 msgstr ""
 
