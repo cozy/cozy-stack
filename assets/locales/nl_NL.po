@@ -505,15 +505,21 @@ msgid "Mail Cozy Team"
 msgstr "Het Cozy Cloud-team"
 
 msgid "Mail Hint Subject"
-msgstr "Mijn wachtwoord opnieuw instellen"
+msgstr "Wachtwoordhint"
 
 msgid "Mail Hint Intro 1"
 msgstr "Hallo %s,"
 
 msgid "Mail Hint Intro 2"
 msgstr ""
-"Je hebt je wachtwoordhint opgevraagd. Als dat niet zo is, beantwoord dan "
-"deze e-mail en laat het ons weten."
+"Hieronder vind je de opgevraagde hint zodat je je wachtwoord boven water "
+"kunt halen"
+
+msgid "Mail Hint Outro"
+msgstr ""
+"Als laatste redmiddel kun je je wachtwoord opnieuw instellen inde sectie "
+"'Wachtwoord vergeten'. Als je dit verzoek niet hebt aangevraagd, neem dan "
+"contact met ons op: contact@cozycloud.cc"
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Mijn wachtwoord opnieuw instellen"
