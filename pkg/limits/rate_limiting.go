@@ -54,6 +54,8 @@ const (
 	JobServiceType
 	// JobNotificationType is used for mobile notifications pushing
 	JobNotificationType
+	// SendHintByMail is used for sending the password hint by email
+	SendHintByMail
 )
 
 type counterConfig struct {
@@ -152,6 +154,12 @@ var configs = []counterConfig{
 		Prefix: "job-push",
 		Limit:  30,
 		Period: 1 * time.Hour,
+	},
+	// SendHintByMail
+	{
+		Prefix: "send-hint",
+		Limit:  5,
+		Period: 24 * time.Hour,
 	},
 }
 
