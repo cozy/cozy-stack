@@ -4,13 +4,13 @@
 # Maxime M <maxime@cozycloud.cc>, 2019
 # Cyrille Perois <cyrille@cozycloud.cc>, 2019
 # JC Pagnon <gooz@cozycloud.cc>, 2019
-# Pierre Guillemot <pierrot@cozycloud.cc>, 2019
 # Bruno Michel, 2019
-# Nicolas Vinot <aeris@imirhil.fr>, 2019
+# Nicolas Vinot, 2019
+# Pierre Guillemot <pierrot@cozycloud.cc>, 2019
 # 
 msgid ""
 msgstr ""
-"Last-Translator: Nicolas Vinot <aeris@imirhil.fr>, 2019\n"
+"Last-Translator: Pierre Guillemot <pierrot@cozycloud.cc>, 2019\n"
 "Language-Team: French (https://www.transifex.com/cozy/teams/39753/fr/)\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -155,8 +155,16 @@ msgstr ""
 "gardés par votre app « cozy mots de passe ». Si vous le réinitialisez, vous "
 "perdrez ces données. Le reste de vos données resteront accessibles."
 
+msgid "Passphrase reset Help emptyVault"
+msgstr ""
+"En cliquant sur le bouton ci-dessous, un lien vous sera envoyé par email "
+"pour choisir un nouveau mot de passe."
+
 msgid "Passphrase reset Submit"
 msgstr "Réinitialiser mon mot de passe"
+
+msgid "Passphrase reset Submit emptyVault"
+msgstr "Changer mon mot de passe"
 
 msgid "Hint sent Title"
 msgstr "Consultez vos e-mails !"
