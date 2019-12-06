@@ -116,11 +116,32 @@ msgstr "なくしましたか? お気軽にお問い合わせください"
 msgid "Passphrase reset Title"
 msgstr "パスワードを忘れた"
 
+msgid "Passphrase reset Help hint"
+msgstr ""
+
+msgid "Passphrase reset Submit hint"
+msgstr ""
+
+msgid "Passphrase reset password Title"
+msgstr ""
+
+msgid "Passphrase reset Help Warning"
+msgstr ""
+
 msgid "Passphrase reset Help"
+msgstr ""
+
+msgid "Passphrase reset Help emptyVault"
 msgstr "このボタンをクリックすると、新しいパスワードを選択するためのリンクがメールで送信されます。"
 
 msgid "Passphrase reset Submit"
-msgstr "次へ"
+msgstr "パスワードをリセット"
+
+msgid "Passphrase reset Submit emptyVault"
+msgstr "パスワードを変更する"
+
+msgid "Hint sent Title"
+msgstr "メールをご確認ください!"
 
 msgid "Passphrase is reset Title"
 msgstr "メールをご確認ください!"
@@ -131,8 +152,20 @@ msgstr "パスワードを選択してください"
 msgid "Passphrase Onboarding Help"
 msgstr "8 文字以上の英字、数字、記号で入力してください。"
 
+msgid "Passphrase Onboarding Hint Field"
+msgstr ""
+
+msgid "Passphrase Onboarding Hint Help"
+msgstr ""
+
 msgid "Passphrase Onboarding Submit"
 msgstr "完了"
+
+msgid "Hint sent Body"
+msgstr ""
+
+msgid "Hint sent Login Button"
+msgstr "ログインページに戻る"
 
 msgid "Passphrase is reset Body"
 msgstr ""
@@ -438,6 +471,18 @@ msgstr "敬具"
 
 msgid "Mail Cozy Team"
 msgstr "Cozy クラウドチーム"
+
+msgid "Mail Hint Subject"
+msgstr ""
+
+msgid "Mail Hint Intro 1"
+msgstr "%s さん、こんにちは。"
+
+msgid "Mail Hint Intro 2"
+msgstr ""
+
+msgid "Mail Hint Outro"
+msgstr ""
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "お使いのパスワードをリセット"
