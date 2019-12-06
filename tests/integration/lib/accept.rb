@@ -44,5 +44,8 @@ class Accept
     body = { csrf_token: csrf_token, state: state, sharing_id: @sharing.couch_id }
     params = { cookies: res.cookies, accept: :json }
     client["/auth/authorize/sharing"].post body, params
+  rescue RestClient::Exception
+    sleep 3
+    client["/auth/authorize/sharing"].post body, params
   end
 end
