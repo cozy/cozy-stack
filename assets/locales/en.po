@@ -123,8 +123,14 @@ msgstr "Warning!"
 msgid "Passphrase reset Help"
 msgstr "Your current password is the only key to decode your passwords kept in your app \"cozy passwords\". If you reset it, you will lose that data. The rest of your data will remain accessible."
 
+msgid "Passphrase reset Help emptyVault"
+msgstr "By clicking this button, you will be sent a link by email to choose a new password."
+
 msgid "Passphrase reset Submit"
 msgstr "Reset my password"
+
+msgid "Passphrase reset Submit emptyVault"
+msgstr "Change my password"
 
 msgid "Hint sent Title"
 msgstr "Check your emails!"
