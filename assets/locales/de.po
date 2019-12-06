@@ -2,8 +2,8 @@
 # Bruno Michel, 2019
 # Nos_ <n.schwirz@freenet.de>, 2019
 # Mario Angermann, 2019
-# Adrian Nöthlich <admin.noethlich@hgw-iserv.de>, 2019
 # Nils Jakobi <jakobi.nils@gmail.com>, 2019
+# Adrian Nöthlich <admin.noethlich@hgw-iserv.de>, 2019
 # IndeedNotJames <indeednotjames@mailbox.org>, 2019
 # 
 msgid ""
@@ -128,13 +128,34 @@ msgstr "Du hast ein Problem? Zögere nicht, uns zu kontaktieren unter"
 msgid "Passphrase reset Title"
 msgstr "Passwort vergessen"
 
+msgid "Passphrase reset Help hint"
+msgstr ""
+
+msgid "Passphrase reset Submit hint"
+msgstr ""
+
+msgid "Passphrase reset password Title"
+msgstr ""
+
+msgid "Passphrase reset Help Warning"
+msgstr ""
+
 msgid "Passphrase reset Help"
+msgstr ""
+
+msgid "Passphrase reset Help emptyVault"
 msgstr ""
 "Durch klicken der Schaltfläche bekommst du einen Link per E-Mail, um ein "
 "neues Passwort festzulegen."
 
 msgid "Passphrase reset Submit"
-msgstr "Weiter"
+msgstr "Mein Passwort zurücksetzen"
+
+msgid "Passphrase reset Submit emptyVault"
+msgstr "Mein Passwort ändern"
+
+msgid "Hint sent Title"
+msgstr "Überprüfe deine E-Mails!"
 
 msgid "Passphrase is reset Title"
 msgstr "Überprüfe deine E-Mails!"
@@ -146,8 +167,20 @@ msgid "Passphrase Onboarding Help"
 msgstr ""
 "Nutze mindestens acht Zeichen mit Buchstaben, Ziffern und Sonderzeichen."
 
+msgid "Passphrase Onboarding Hint Field"
+msgstr ""
+
+msgid "Passphrase Onboarding Hint Help"
+msgstr ""
+
 msgid "Passphrase Onboarding Submit"
 msgstr "Abschließen"
+
+msgid "Hint sent Body"
+msgstr ""
+
+msgid "Hint sent Login Button"
+msgstr "Zurück zur Login Seite"
 
 msgid "Passphrase is reset Body"
 msgstr ""
@@ -406,6 +439,9 @@ msgstr "Kontakte"
 msgid "Permissions io.cozy.files"
 msgstr "Dateien"
 
+msgid "Permissions io.cozy.files.versions"
+msgstr ""
+
 msgid "Permissions io.cozy.identities"
 msgstr "Identitäten"
 
@@ -468,6 +504,18 @@ msgstr "Vertrauensvolle Grüße"
 
 msgid "Mail Cozy Team"
 msgstr "Dein Cozy Cloud Team"
+
+msgid "Mail Hint Subject"
+msgstr ""
+
+msgid "Mail Hint Intro 1"
+msgstr "Hallo %s,"
+
+msgid "Mail Hint Intro 2"
+msgstr ""
+
+msgid "Mail Hint Outro"
+msgstr ""
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Setze dein Passwort zurück"
