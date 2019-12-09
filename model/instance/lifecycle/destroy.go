@@ -126,7 +126,7 @@ func sendAlert(inst *instance.Instance, e error) {
 		"Error":  e.Error(),
 	}
 	msg, err := job.NewMessage(mail.Options{
-		Mode:           mail.ModeFrom,
+		Mode:           mail.ModeFromUser,
 		To:             []*mail.Address{addr},
 		TemplateName:   "alert_account",
 		TemplateValues: values,

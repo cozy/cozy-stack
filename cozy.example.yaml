@@ -166,6 +166,7 @@ mail:
   # mail noreply address - flags: --mail-noreply-address
   noreply_address: noreply@localhost
   noreply_name: My Cozy
+  reply_to: support@cozycloud.cc
   # mail smtp host - flags: --mail-host
   host: smtp.home
   # mail smtp port - flags: --mail-port
@@ -322,6 +323,7 @@ contexts:
     # Use a different noreply mail for this context
     noreply_address: noreply@cozy.beta
     noreply_name: My Cozy Beta
+    reply_to: support@cozy.beta
     # Feature flags
     features:
       - hide_konnector_errors

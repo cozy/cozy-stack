@@ -49,7 +49,7 @@ func ExportWorker(c *job.WorkerContext) error {
 		return err
 	}
 	mail := mail.Options{
-		Mode:         mail.ModeNoReply,
+		Mode:         mail.ModeFromStack,
 		TemplateName: "archiver",
 		TemplateValues: map[string]interface{}{
 			"ArchiveLink": link.String(),
