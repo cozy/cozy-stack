@@ -556,6 +556,52 @@ func TestUploadWithSourceAccount(t *testing.T) {
 	assert.Equal(t, identifier, fcm["sourceAccountIdentifier"])
 }
 
+func TestModifyMetadataByPath(t *testing.T) {
+	body := "foo"
+	res1, data1 := upload(t, "/files/?Type=file&Name=file-move-me-by-path", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	var ok bool
+	data1, ok = data1["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	fileID, ok := data1["id"].(string)
+	assert.True(t, ok)
+
+	res2, data2 := createDir(t, "/files/?Name=move-by-path&Type=directory")
+	assert.Equal(t, 201, res2.StatusCode)
+
+	data2, ok = data2["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	dirID, ok := data2["id"].(string)
+	assert.True(t, ok)
+
+	attrs := map[string]interface{}{
+		"tags":       []string{"bar", "bar", "baz"},
+		"name":       "moved",
+		"dir_id":     dirID,
+		"executable": true,
+	}
+
+	res3, data3 := patchFile(t, "/files/metadata?Path=/file-move-me-by-path", "file", fileID, attrs, nil)
+	assert.Equal(t, 200, res3.StatusCode)
+
+	data3, ok = data3["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	attrs3, ok := data3["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+
+	assert.Equal(t, "text/plain", attrs3["mime"])
+	assert.Equal(t, "moved", attrs3["name"])
+	assert.EqualValues(t, []interface{}{"bar", "baz"}, attrs3["tags"])
+	assert.Equal(t, "text", attrs3["class"])
+	assert.Equal(t, "rL0Y20zC+Fzt72VPzMSk2A==", attrs3["md5sum"])
+	assert.Equal(t, true, attrs3["executable"])
+	assert.Equal(t, "3", attrs3["size"])
+}
+
 func TestModifyMetadataFileMove(t *testing.T) {
 	body := "foo"
 	res1, data1 := upload(t, "/files/?Type=file&Name=filemoveme&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
