@@ -616,14 +616,20 @@ func wrapErrors(err error) error {
 		return jsonapi.InternalServerError(err)
 	case sharing.ErrMissingFileMetadata:
 		return jsonapi.NotFound(err)
-	case vfs.ErrInvalidHash:
-		return jsonapi.InvalidParameter("md5sum", err)
 	case sharing.ErrFolderNotFound:
 		return jsonapi.NotFound(err)
 	case sharing.ErrSafety:
 		return jsonapi.BadRequest(err)
 	case sharing.ErrAlreadyAccepted:
 		return jsonapi.Conflict(err)
+	case vfs.ErrInvalidHash:
+		return jsonapi.InvalidParameter("md5sum", err)
+	case vfs.ErrContentLengthMismatch:
+		return jsonapi.PreconditionFailed("Content-Length", err)
+	case vfs.ErrConflict:
+		return jsonapi.Conflict(err)
+	case vfs.ErrFileTooBig:
+		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	}
 	return err
 }
