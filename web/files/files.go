@@ -299,7 +299,7 @@ func ModifyMetadataByIDInBatchHandler(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// ModifyMetadataByPathHandler handles PATCH requests on /files/:file-id
+// ModifyMetadataByPathHandler handles PATCH requests on /files/metadata
 //
 // It can be used to modify the file or directory metadata, as well as
 // moving and renaming it in the filesystem.
