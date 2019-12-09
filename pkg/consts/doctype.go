@@ -84,4 +84,15 @@ const (
 	// BitwardenOrganizations doc type for Bitwarden organizations (and
 	// collections inside them)
 	BitwardenOrganizations = "com.bitwarden.organizations"
+	// NotesDocuments doc type is used for manipulating the documents that
+	// represents a note before they are persisted to a file.
+	NotesDocuments = "io.cozy.notes.documents"
+	// NotesSteps doc type is used for patching a note.
+	NotesSteps = "io.cozy.notes.steps"
+	// NotesTelepointers doc type is used for the position of the cursor in a
+	// note.
+	NotesTelepointers = "io.cozy.notes.telepointers"
+	// NotesEvents doc type is used for realtime events related to a note, like
+	// a change of title.
+	NotesEvents = "io.cozy.notes.events"
 )

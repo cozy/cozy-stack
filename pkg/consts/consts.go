@@ -12,6 +12,10 @@ const (
 	// DriveSlug is the slug of the drive app, where the user can be sent if
 	// the disk quota alert is raised.
 	DriveSlug = "drive"
+	// NotesSlug is the slug of notes app, which is used by the stack for
+	// referencing a directory that contains the notes with collaborative
+	// edition.
+	NotesSlug = "notes"
 )
 
 const (

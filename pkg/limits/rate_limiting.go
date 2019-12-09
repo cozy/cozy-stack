@@ -57,6 +57,8 @@ const (
 	JobNotificationType
 	// SendHintByMail is used for sending the password hint by email
 	SendHintByMail
+	// JobNotesPersistType is used for saving notes to the VFS
+	JobNotesPersistType
 )
 
 type counterConfig struct {
@@ -161,6 +163,12 @@ var configs = []counterConfig{
 		Prefix: "send-hint",
 		Limit:  5,
 		Period: 24 * time.Hour,
+	},
+	// JobNotesPersistType
+	{
+		Prefix: "job-notes-persist",
+		Limit:  100,
+		Period: 1 * time.Hour,
 	},
 }
 

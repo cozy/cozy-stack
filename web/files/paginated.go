@@ -207,7 +207,8 @@ func newFile(doc *vfs.FileDoc, i *instance.Instance) *file {
 	return &file{doc, i, nil, nil}
 }
 
-func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withVersions bool, links *jsonapi.LinksList) error {
+// FileData returns a jsonapi representation of the given file.
+func FileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withVersions bool, links *jsonapi.LinksList) error {
 	instance := middlewares.GetInstance(c)
 	f := newFile(doc, instance)
 	if withVersions {

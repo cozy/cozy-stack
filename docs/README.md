@@ -63,6 +63,7 @@ designing new services.
 -   `/jobs` - [Jobs](jobs.md)
     -   [Workers](workers.md)
 -   `/move` - [Move, export and import an instance](move.md)
+-   `/notes` - [Notes with collaborative edition](notes.md)
 -   `/notifications` - [Notifications](notifications.md)
 -   `/permissions` - [Permissions](permissions.md)
 -   `/public` - [Public](public.md)

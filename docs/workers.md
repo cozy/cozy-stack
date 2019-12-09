@@ -303,6 +303,14 @@ optionaly the old version of this document.
 The message is composed of a sharing ID and a count of the number of errors
 (i.e. the number of times this job was retried).
 
+## notes-save
+
+This is another worker for the interal usage of the stack. It allows to write
+to the VFS a note in an asynchronous way. Writing to the VFS after each tiny
+change would kill the performance for realtime collaboration, so the stack
+writes the note to a cache, and has a trigger with debounce to persist the note
+to the VFS later.
+
 ## migrations
 
 The `migrations` worker can be used to migrate a cozy instance. Currently, it

@@ -209,3 +209,4 @@ in CouchDB like classical doctypes:
 
 - [Initial sync for sharings](https://docs.cozy.io/en/cozy-stack/sharing/#real-time-via-websockets)
 - [Thumbnails for files](https://docs.cozy.io/en/cozy-stack/files/#real-time-via-websockets)
+- [Telepointers for notes](https://docs.cozy.io/en/cozy-stack/notes/#real-time-via-websockets)
