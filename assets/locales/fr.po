@@ -4,13 +4,13 @@
 # Maxime M <maxime@cozycloud.cc>, 2019
 # Cyrille Perois <cyrille@cozycloud.cc>, 2019
 # JC Pagnon <gooz@cozycloud.cc>, 2019
-# Bruno Michel, 2019
 # Nicolas Vinot, 2019
 # Pierre Guillemot <pierrot@cozycloud.cc>, 2019
+# Bruno Michel, 2019
 # 
 msgid ""
 msgstr ""
-"Last-Translator: Pierre Guillemot <pierrot@cozycloud.cc>, 2019\n"
+"Last-Translator: Bruno Michel, 2019\n"
 "Language-Team: French (https://www.transifex.com/cozy/teams/39753/fr/)\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -545,7 +545,7 @@ msgstr ""
 msgid "Mail Hint Outro"
 msgstr ""
 "En dernier recours la page mot de passe oublié vous permet de ré-initialiser votre mot de passe. "
-"Si vous n’êtes pas à l’origine de cette demande, contactez-nous à contact@cozycloud.cc"
+"Si vous n’êtes pas à l’origine de cette demande, contactez-nous en répondant directement à cet email."
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Ré-initialisation du mot de passe"
@@ -555,8 +555,8 @@ msgstr "Bonjour %s,"
 
 msgid "Mail Reset Passphrase Intro 2"
 msgstr ""
-"Vous avez demandé à changer votre mot de passe (si ce n'est pas vous, "
-"contactez-nous en réponse à ce mail)."
+"Vous avez demandé à changer votre mot de passe. Si ce n'est pas le cas, "
+"contactez-nous en réponse à ce mail."
 
 msgid "Mail Reset Passphrase Button instruction"
 msgstr "Cliquez sur ce bouton pour le changer en toute sécurité."
