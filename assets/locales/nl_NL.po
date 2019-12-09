@@ -525,7 +525,7 @@ msgid "Mail Hint Outro"
 msgstr ""
 "Als laatste redmiddel kun je je wachtwoord opnieuw instellen inde sectie "
 "'Wachtwoord vergeten'. Als je dit verzoek niet hebt aangevraagd, neem dan "
-"contact met ons op: contact@cozycloud.cc"
+"contact met ons op door deze e-mail te beantwoorden."
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Mijn wachtwoord opnieuw instellen"
