@@ -487,6 +487,22 @@ func TestNoteRealtime(t *testing.T) {
 	assert.Equal(t, noteID, payload4["id"])
 	assert.Equal(t, "io.cozy.notes.events", payload4["type"])
 	doc4, _ := payload4["doc"].(map[string]interface{})
+
+	var res5 map[string]interface{}
+	err = c.ReadJSON(&res5)
+	assert.NoError(t, err)
+	assert.Equal(t, "UPDATED", res5["event"])
+	payload5, _ := res5["payload"].(map[string]interface{})
+	assert.Equal(t, noteID, payload5["id"])
+	assert.Equal(t, "io.cozy.notes.events", payload5["type"])
+	doc5, _ := payload5["doc"].(map[string]interface{})
+
+	// In some cases, the steps can be received in the bad order because of the
+	// concurrency between the goroutines in the realtime hub.
+	if doc4["version"].(float64) > doc5["version"].(float64) {
+		doc4, doc5 = doc5, doc4
+	}
+
 	assert.Equal(t, "io.cozy.notes.steps", doc4["doctype"])
 	assert.Equal(t, "543781490137", doc4["sessionID"])
 	assert.Equal(t, "replace", doc4["stepType"])
@@ -497,14 +513,6 @@ func TestNoteRealtime(t *testing.T) {
 	assert.NotEqual(t, 0, v4)
 	assert.NotEqual(t, version, v4)
 
-	var res5 map[string]interface{}
-	err = c.ReadJSON(&res5)
-	assert.NoError(t, err)
-	assert.Equal(t, "UPDATED", res5["event"])
-	payload5, _ := res5["payload"].(map[string]interface{})
-	assert.Equal(t, noteID, payload5["id"])
-	assert.Equal(t, "io.cozy.notes.events", payload5["type"])
-	doc5, _ := payload5["doc"].(map[string]interface{})
 	assert.Equal(t, "io.cozy.notes.steps", doc5["doctype"])
 	assert.Equal(t, "543781490137", doc5["sessionID"])
 	assert.Equal(t, "replace", doc5["stepType"])
