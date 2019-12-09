@@ -2,7 +2,6 @@ package vfs
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"path"
 	"strings"
@@ -315,15 +314,9 @@ func (c *couchdbIndexer) DirByID(fileID string) (*DirDoc, error) {
 	doc := &DirDoc{}
 	err := couchdb.GetDoc(c.db, consts.Files, fileID, doc)
 	if couchdb.IsNotFoundError(err) {
-		err = os.ErrNotExist
+		return nil, os.ErrNotExist
 	}
 	if err != nil {
-		if fileID == consts.RootDirID {
-			return nil, errors.New("Root directory is not in database")
-		}
-		if fileID == consts.TrashDirID {
-			return nil, errors.New("Trash directory is not in database")
-		}
 		return nil, err
 	}
 	if doc.Type != consts.DirType {
@@ -348,9 +341,9 @@ func (c *couchdbIndexer) DirByPath(name string) (*DirDoc, error) {
 		return nil, err
 	}
 	if len(docs) == 0 {
-		if name == "/" {
-			return nil, errors.New("Root directory is not in database")
-		}
+		return nil, os.ErrNotExist
+	}
+	if docs[0].Type != consts.DirType {
 		return nil, os.ErrNotExist
 	}
 	return docs[0], nil
@@ -396,6 +389,9 @@ func (c *couchdbIndexer) FileByPath(name string) (*FileDoc, error) {
 
 	var fdoc FileDoc
 	err = json.Unmarshal(res.Rows[0].Doc, &fdoc)
+	if fdoc.Type != consts.FileType {
+		return nil, os.ErrNotExist
+	}
 	return &fdoc, err
 }
 
@@ -430,16 +426,13 @@ func (c *couchdbIndexer) DirOrFileByID(fileID string) (*DirDoc, *FileDoc, error)
 
 func (c *couchdbIndexer) DirOrFileByPath(name string) (*DirDoc, *FileDoc, error) {
 	dirDoc, err := c.DirByPath(name)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, nil, err
-	}
 	if err == nil {
 		return dirDoc, nil, nil
 	}
-	fileDoc, err := c.FileByPath(name)
-	if err != nil && !os.IsNotExist(err) {
+	if !os.IsNotExist(err) {
 		return nil, nil, err
 	}
+	fileDoc, err := c.FileByPath(name)
 	if err == nil {
 		return nil, fileDoc, nil
 	}
