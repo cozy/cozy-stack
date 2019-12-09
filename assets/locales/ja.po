@@ -15,6 +15,9 @@ msgstr "管理"
 msgid "Tree Photos"
 msgstr "写真"
 
+msgid "Tree Notes"
+msgstr "メモ"
+
 msgid "Tree Uploaded from Cozy Photos"
 msgstr "Cozy フォトからアップロードしました"
 
