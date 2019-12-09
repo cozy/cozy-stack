@@ -283,6 +283,12 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 		}
 		start = children[len(children)-1].Fullpath
 		for _, child := range children {
+			// XXX In theory, only the directories have a path, but in
+			// practice, it's safer to check it as we had already some bugs in
+			// the VFS.
+			if child.Type != consts.DirType {
+				continue
+			}
 			// XXX We can have documents that are not a child of the moved dir
 			// because of the comparison of strings used by CouchDB:
 			// /Photos/ < /PHOTOS/AAA < /Photos/bbb < /Photos0
