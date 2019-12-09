@@ -38,6 +38,7 @@ func SendMail(ctx *job.WorkerContext) error {
 	}
 	from := config.GetConfig().NoReplyAddr
 	name := config.GetConfig().NoReplyName
+	replyTo := config.GetConfig().ReplyTo
 	if from == "" {
 		from = "noreply@" + utils.StripPort(ctx.Instance.Domain)
 	}
@@ -48,17 +49,23 @@ func SendMail(ctx *job.WorkerContext) error {
 		if nname, ok := ctxSettings["noreply_name"].(string); ok && nname != "" {
 			name = nname
 		}
+		if reply, ok := ctxSettings["reply_to"].(string); ok && reply != "" {
+			replyTo = reply
+		}
 	}
 	switch opts.Mode {
-	case mail.ModeNoReply:
+	case mail.ModeFromStack:
 		toAddr, err := addressFromInstance(ctx.Instance)
 		if err != nil {
 			return err
 		}
 		opts.To = []*mail.Address{toAddr}
 		opts.From = &mail.Address{Name: name, Email: from}
+		if replyTo != "" {
+			opts.ReplyTo = &mail.Address{Name: name, Email: replyTo}
+		}
 		opts.RecipientName = toAddr.Name
-	case mail.ModeFrom:
+	case mail.ModeFromUser:
 		sender, err := addressFromInstance(ctx.Instance)
 		if err != nil {
 			return err

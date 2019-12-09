@@ -26,7 +26,7 @@ func exporter(c echo.Context) error {
 
 	link := fmt.Sprintf("http://%s%s%s", domain, c.Path(), filename)
 	msg, err := job.NewMessage(mail.Options{
-		Mode:         mail.ModeNoReply,
+		Mode:         mail.ModeFromStack,
 		TemplateName: "archiver",
 		TemplateValues: map[string]interface{}{
 			"ArchiveLink": link,

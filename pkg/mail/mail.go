@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	// ModeNoReply is the no-reply mode of a mail, to send mail "to" the
+	// ModeFromStack is the no-reply mode of a mail, to send mail "to" the
 	// user's mail, as a noreply@
-	ModeNoReply = "noreply"
-	// ModeFrom is the "from" mode of a mail, to send mail "from" the user's
+	ModeFromStack = "noreply"
+	// ModeFromUser is the "from" mode of a mail, to send mail "from" the user's
 	// mail.
-	ModeFrom = "from"
+	ModeFromUser = "from"
 
 	// DefaultLayout defines the default MJML layout to use
 	DefaultLayout = "layout"

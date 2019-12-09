@@ -272,7 +272,7 @@ func sendMail(inst *instance.Instance,
 	n *notification.Notification,
 	at string,
 ) error {
-	email := mail.Options{Mode: mail.ModeNoReply}
+	email := mail.Options{Mode: mail.ModeFromStack}
 
 	// Notifications from the stack have their own mail templates defined
 	if p != nil && p.MailTemplate != "" {
