@@ -19,9 +19,10 @@ const nonceLen = 24
 const plainPrefixLen = 4
 
 var (
-	errCannotDecrypt  = errors.New("accounts: cannot decrypt credentials")
-	errCannotEncrypt  = errors.New("accounts: cannot encrypt credentials")
-	errBadCredentials = errors.New("accounts: bad credentials")
+	errCannotDecrypt = errors.New("accounts: cannot decrypt credentials")
+	errCannotEncrypt = errors.New("accounts: cannot encrypt credentials")
+	// ErrBadCredentials is used when an account credentials cannot be decrypted
+	ErrBadCredentials = errors.New("accounts: bad credentials")
 )
 
 // EncryptCredentialsWithKey takes a login / password and encrypts their values using
@@ -120,14 +121,14 @@ func DecryptCredentials(encryptedData string) (login, password string, err error
 func DecryptCredentialsWithKey(decryptorKey *keymgmt.NACLKey, encryptedCreds []byte) (login, password string, err error) {
 	// check the cipher text starts with the cipher header
 	if !bytes.HasPrefix(encryptedCreds, []byte(cipherHeader)) {
-		return "", "", errBadCredentials
+		return "", "", ErrBadCredentials
 	}
 	// skip the cipher header
 	encryptedCreds = encryptedCreds[len(cipherHeader):]
 
 	// check the encrypted creds contains the space for the nonce as prefix
 	if len(encryptedCreds) < nonceLen {
-		return "", "", errBadCredentials
+		return "", "", ErrBadCredentials
 	}
 
 	// extrct the nonce from the first 24 bytes
@@ -140,7 +141,7 @@ func DecryptCredentialsWithKey(decryptorKey *keymgmt.NACLKey, encryptedCreds []b
 	// long, to contain the login length
 	creds, ok := box.Open(nil, encryptedCreds, &nonce, decryptorKey.PublicKey(), decryptorKey.PrivateKey())
 	if !ok {
-		return "", "", errBadCredentials
+		return "", "", ErrBadCredentials
 	}
 
 	// extract login length from 4 first bytes
@@ -151,7 +152,7 @@ func DecryptCredentialsWithKey(decryptorKey *keymgmt.NACLKey, encryptedCreds []b
 
 	// check credentials contains enough space to contain at least the login
 	if len(creds) < loginLen {
-		return "", "", errBadCredentials
+		return "", "", ErrBadCredentials
 	}
 
 	// split the credentials into login / password
@@ -185,7 +186,7 @@ func DecryptCredentialsData(encryptedData string) (interface{}, error) {
 func DecryptBufferWithKey(decryptorKey *keymgmt.NACLKey, encryptedBuffer []byte) ([]byte, error) {
 	// check the cipher text starts with the cipher header
 	if !bytes.HasPrefix(encryptedBuffer, []byte(cipherHeader)) {
-		return nil, errBadCredentials
+		return nil, ErrBadCredentials
 	}
 
 	// skip the cipher header
@@ -193,7 +194,7 @@ func DecryptBufferWithKey(decryptorKey *keymgmt.NACLKey, encryptedBuffer []byte)
 
 	// check the encrypted creds contains the space for the nonce as prefix
 	if len(encryptedBuffer) < nonceLen {
-		return nil, errBadCredentials
+		return nil, ErrBadCredentials
 	}
 
 	// extrct the nonce from the first 24 bytes
@@ -207,7 +208,7 @@ func DecryptBufferWithKey(decryptorKey *keymgmt.NACLKey, encryptedBuffer []byte)
 	// long, to contain the login length
 	plainBuffer, ok := box.Open(nil, encryptedBuffer, &nonce, decryptorKey.PublicKey(), decryptorKey.PrivateKey())
 	if !ok {
-		return nil, errBadCredentials
+		return nil, ErrBadCredentials
 	}
 
 	return plainBuffer, nil
