@@ -169,6 +169,9 @@ msgid "Passphrase Onboarding Help"
 msgstr ""
 "Gebruik minimaal acht tekens, bestaande uit letters, cijfers en symbolen."
 
+msgid "Passphrase Hint Error"
+msgstr "Je hint moet anders zijn dan je wachtwoord!"
+
 msgid "Passphrase Onboarding Hint Field"
 msgstr "Wachtwoordhint instellen (optioneel)"
 
