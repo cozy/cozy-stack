@@ -100,6 +100,8 @@ func migrateAccountsToOrganization(domain string) error {
 	if err != nil {
 		return err
 	}
+	log := logger.WithDomain(inst.Domain).WithField("nspace", "migration")
+
 	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
@@ -155,7 +157,11 @@ func migrateAccountsToOrganization(domain string) error {
 		encryptedCreds := acc.Basic.EncryptedCredentials
 		login, password, err := account.DecryptCredentials(encryptedCreds)
 		if err != nil {
-			errm = multierror.Append(errm, err)
+			if err == account.ErrBadCredentials {
+				log.Warningf("Bad credentials for account %s - %s", acc.ID(), acc.AccountType)
+			} else {
+				errm = multierror.Append(errm, err)
+			}
 			continue
 		}
 		cipher, err := buildCipher(orgKey, msg.Slug, login, password, link)
