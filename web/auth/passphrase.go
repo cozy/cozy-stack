@@ -220,6 +220,7 @@ func passphraseRenew(c echo.Context) error {
 		Key:        c.FormValue("key"),
 		PublicKey:  c.FormValue("public_key"),
 		PrivateKey: c.FormValue("private_key"),
+		Hint:       c.FormValue("hint"),
 	})
 	if err != nil {
 		if err == instance.ErrMissingToken {
