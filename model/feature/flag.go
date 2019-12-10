@@ -169,13 +169,23 @@ func (f *Flags) addConfig(inst *instance.Instance) error {
 	} else if err != nil {
 		return err
 	}
-	m, ok := ctx["features"].(map[interface{}]interface{})
-	if !ok {
-		return nil
-	}
 	normalized := make(map[string]interface{})
-	for k, v := range m {
-		normalized[fmt.Sprintf("%v", k)] = v
+	if m, ok := ctx["features"].(map[interface{}]interface{}); ok {
+		for k, v := range m {
+			normalized[fmt.Sprintf("%v", k)] = v
+		}
+	} else if items, ok := ctx["features"].([]interface{}); ok {
+		for _, item := range items {
+			if m, ok := item.(map[interface{}]interface{}); ok && len(m) == 1 {
+				for k, v := range m {
+					normalized[fmt.Sprintf("%v", k)] = v
+				}
+			} else {
+				normalized[fmt.Sprintf("%v", item)] = true
+			}
+		}
+	} else {
+		return nil
 	}
 	ctxFlags := &Flags{
 		DocID: consts.ConfigFlagsSettingsID,
