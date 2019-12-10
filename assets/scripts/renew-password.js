@@ -35,14 +35,20 @@
     event.preventDefault()
     submitButton.setAttribute('disabled', true)
 
-    let headers = new Headers()
-    headers.append('Content-Type', 'application/x-www-form-urlencoded')
-    headers.append('Accept', 'application/json')
-
+    const hint = hintInput.value
     const salt = form.dataset.salt
     const iterations = parseInt(iterationsInput.value, 10)
     const resetToken = resetTokenInput.value
+
+    if (hint === passphraseInput.value) {
+      showError(form.dataset.hintError)
+      return
+    }
+
     let hashed, masterKey
+    let headers = new Headers()
+    headers.append('Content-Type', 'application/x-www-form-urlencoded')
+    headers.append('Accept', 'application/json')
 
     w.password
       .hash(passphraseInput.value, salt, iterations)
@@ -59,7 +65,7 @@
           'passphrase=' +
           encodeURIComponent(hashed) +
           '&hint=' +
-          encodeURIComponent(hintInput.value) +
+          encodeURIComponent(hint) +
           '&iterations=' +
           encodeURIComponent('' + iterations) +
           '&passphrase_reset_token=' +

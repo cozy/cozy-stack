@@ -39,7 +39,7 @@
     </svg>
     <div role="application">
       <main class="wizard">
-        <form id="renew-passphrase-form" method="POST" action="/auth/passphrase_renew" class="wizard-wrapper" data-salt="{{.Salt}}">
+        <form id="renew-passphrase-form" method="POST" action="/auth/passphrase_renew" class="wizard-wrapper" data-salt="{{.Salt}}" data-hint-error="{{t "Passphrase Hint Error"}}">
           <h1 class="wizard-title u-mb-half u-mb-0-s u-mt-1-s">{{t "Passphrase renew Title"}}</h1>
           <div role="region" class="wizard-main" id="renew-field">
             <input type="hidden" id="csrf_token" name="csrf_token" value="{{.CSRF}}" />

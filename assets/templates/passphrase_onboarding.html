@@ -42,7 +42,7 @@
     </svg>
     <div role="application">
       <main class="wizard">
-        <form id="onboarding-password-form" method="POST" action="/settings/passphrase" class="wizard-wrapper" data-salt="{{.Salt}}">
+        <form id="onboarding-password-form" method="POST" action="/settings/passphrase" class="wizard-wrapper" data-salt="{{.Salt}}" data-hint-error="{{t "Passphrase Hint Error"}}">
           <div role="region" class="wizard-main" id="onboarding-password-field">
             <header class="wizard-header">
               <h1 class="wizard-title password-form">{{t "Passphrase Onboarding Title"}}</h1>
