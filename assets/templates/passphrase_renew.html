@@ -45,7 +45,6 @@
             <input type="hidden" id="csrf_token" name="csrf_token" value="{{.CSRF}}" />
             <input type="hidden" id="renew-password-iterations" name="iterations" value="{{.Iterations}}" />
             <input type="hidden" id="passphrase-reset-token" name="passphrase_reset_token" value="{{.PassphraseResetToken}}" />
-            <p class="wizard-notice u-coolGrey u-mt-1" id="login-password-tip">{{t "Passphrase renew Help"}}</p>
             <div class="o-field password-form u-m-0">
               <label for="password" aria-describedby="login-password-tip" class="c-label">{{t "Passphrase renew Field"}}</label>
               <button id="password-visibility-button" class="wizard-showbutton c-btn c-btn--secondary"
@@ -63,11 +62,12 @@
               </button>
               <input id="password" class="wizard-input c-input-text" name="passphrase" placeholder="Password" type="password" autofocus="true" autocomplete="new-password" />
               <progress id="password-strength" max="100" value="0" class="pw-indicator u-m-0"></progress>
+              <p class="wizard-notice u-coolGrey u-mt-1" id="login-password-tip">{{t "Passphrase renew Help"}}</p>
             </div>
             <div class="o-field password-form u-m-0">
               <label for="hint" class="c-label">{{t "Passphrase Onboarding Hint Field"}}</label>
               <input id="hint" class="c-input-text" name="hint" type="text" />
-              <p class="wizard-notice u-mb-2 u-mt-1-half-s">{{t "Passphrase Onboarding Hint Help"}}</p>
+              <p class="wizard-notice u-mb-2 u-mt-1 u-mt-1-half-s">{{t "Passphrase Onboarding Hint Help"}}</p>
             </div>
           </div>
           <footer class="wizard-footer u-pb-half">
