@@ -159,7 +159,7 @@ func Proxy(req *http.Request, registries []*url.URL, cache CacheControl) (*http.
 // ProxyMaintenance will proxy the given request to the registries to fetch all
 // the apps in maintenance.
 func ProxyMaintenance(req *http.Request, registries []*url.URL) ([]json.RawMessage, error) {
-	var apps []json.RawMessage
+	apps := make([]json.RawMessage, 0)
 	for _, r := range registries {
 		ref := &url.URL{Path: "/registry/maintenance"}
 		resp, ok, err := fetch(maintenanceClient, r, ref, WithCache)
