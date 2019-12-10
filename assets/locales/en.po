@@ -155,7 +155,7 @@ msgstr "Leave a hint (optional)"
 
 msgid "Passphrase Onboarding Hint Help"
 msgstr ""
-"The hint will be sent to you by email if you forget your password."
+"The hint will be sent to you by email if you forget your password. "
 "Choose a hint that only you can understand."
 
 msgid "Passphrase Onboarding Submit"
