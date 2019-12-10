@@ -1,10 +1,10 @@
 # Translators:
-# Bruno Michel, 2019
 # Heimen Stoffels <vistausss@outlook.com>, 2019
+# Bruno Michel, 2019
 # 
 msgid ""
 msgstr ""
-"Last-Translator: Heimen Stoffels <vistausss@outlook.com>, 2019\n"
+"Last-Translator: Bruno Michel, 2019\n"
 "Language-Team: Dutch (Netherlands) (https://www.transifex.com/cozy/teams/39753/nl_NL/)\n"
 "Language: nl_NL\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
