@@ -21,6 +21,7 @@ type PassParameters struct {
 	Key        string // Key is the encryption key (encrypted, and in CipherString format).
 	PublicKey  string // PublicKey is part of the key pair for bitwarden (encoded in base64).
 	PrivateKey string // PrivateKey is the other part (encrypted, in CipherString format).
+	Hint       string // Hint is the hint for the user to find again their password
 }
 
 func registerPassphrase(inst *instance.Instance, tok []byte, params PassParameters) error {
@@ -187,6 +188,7 @@ func PassphraseRenew(inst *instance.Instance, tok []byte, params PassParameters)
 	inst.PassphraseResetToken = nil
 	inst.PassphraseResetTime = nil
 	settings.SecurityStamp = NewSecurityStamp()
+	settings.PassphraseHint = params.Hint
 	setPassphraseKdfAndSecret(inst, settings, hash, params)
 	if err := settings.Save(inst); err != nil {
 		return err

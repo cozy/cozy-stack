@@ -260,6 +260,19 @@ Content-Type: application/x-www-form-urlencoded
 csrf_token=123456890&passphrase_reset_token=123456789&passphrase=mynewpassphrase
 ```
 
+#### Parameters
+
+| Form parameter         | Description                               |
+| ---------------------- | ----------------------------------------- |
+| passphrase_reset_token | the token to authenticate the request     |
+| csrf_token             | the token to protect against CSRF attacks |
+| passphrase             | the new password                          |
+| hint                   | the hint to find again the password       |
+| iterations             | the number of PBKDF2 iterations           |
+| key                    | the encrypted master key for bitwarden    |
+| public_key             | the public key for the cozy organization  |
+| private_key            | the private key for the cozy organization |
+
 ### GET /auth/passphrase
 
 This page renders a form to set the password for an onboarding instance. This

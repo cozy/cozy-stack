@@ -64,6 +64,11 @@
               <input id="password" class="wizard-input c-input-text" name="passphrase" placeholder="Password" type="password" autofocus="true" autocomplete="new-password" />
               <progress id="password-strength" max="100" value="0" class="pw-indicator u-m-0"></progress>
             </div>
+            <div class="o-field password-form u-m-0">
+              <label for="hint" class="c-label">{{t "Passphrase Onboarding Hint Field"}}</label>
+              <input id="hint" class="c-input-text" name="hint" type="text" />
+              <p class="wizard-notice u-mb-2 u-mt-1-half-s">{{t "Passphrase Onboarding Hint Help"}}</p>
+            </div>
           </div>
           <footer class="wizard-footer u-pb-half">
             <button id="renew-password-submit" form="renew-passphrase-form" type="submit" class="c-btn c-btn--full wizard-button" disabled>

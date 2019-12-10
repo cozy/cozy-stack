@@ -3,6 +3,7 @@
 
   const form = d.getElementById('renew-passphrase-form')
   const passphraseInput = d.getElementById('password')
+  const hintInput = d.getElementById('hint')
   const submitButton = d.getElementById('renew-password-submit')
   const iterationsInput = d.getElementById('renew-password-iterations')
   const resetTokenInput = d.getElementById('passphrase-reset-token')
@@ -57,6 +58,8 @@
         const reqBody =
           'passphrase=' +
           encodeURIComponent(hashed) +
+          '&hint=' +
+          encodeURIComponent(hintInput.value) +
           '&iterations=' +
           encodeURIComponent('' + iterations) +
           '&passphrase_reset_token=' +
