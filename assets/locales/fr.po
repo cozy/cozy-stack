@@ -183,6 +183,9 @@ msgstr ""
 "Utilisez au moins huit caractères avec des lettres, des chiffres et des "
 "symboles."
 
+msgid "Passphrase Hint Error"
+msgstr "Votre indice doit être différent de votre mot de passe !"
+
 msgid "Passphrase Onboarding Hint Field"
 msgstr "Laisser un indice (facultatif)"
 
@@ -545,7 +548,7 @@ msgstr ""
 msgid "Mail Hint Outro"
 msgstr ""
 "En dernier recours la page mot de passe oublié vous permet de ré-initialiser votre mot de passe. "
-"Si vous n’êtes pas à l’origine de cette demande, contactez-nous en répondant directement à cet email."
+"Si vous n’êtes pas à l’origine de cette demande, contactez-nous en réponse à cet email."
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Ré-initialisation du mot de passe"
