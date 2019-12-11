@@ -1186,41 +1186,6 @@ _cozy-stack_doc()
     noun_aliases=()
 }
 
-_cozy-stack_features_context()
-{
-    last_command="cozy-stack_features_context"
-
-    command_aliases=()
-
-    commands=()
-
-    flags=()
-    two_word_flags=()
-    local_nonpersistent_flags=()
-    flags_with_completion=()
-    flags_completion=()
-
-    flags+=("--context=")
-    two_word_flags+=("--context")
-    local_nonpersistent_flags+=("--context=")
-    flags+=("--admin-host=")
-    two_word_flags+=("--admin-host")
-    flags+=("--admin-port=")
-    two_word_flags+=("--admin-port")
-    flags+=("--config=")
-    two_word_flags+=("--config")
-    two_word_flags+=("-c")
-    flags+=("--host=")
-    two_word_flags+=("--host")
-    flags+=("--port=")
-    two_word_flags+=("--port")
-    two_word_flags+=("-p")
-
-    must_have_one_flag=()
-    must_have_one_noun=()
-    noun_aliases=()
-}
-
 _cozy-stack_features_defaults()
 {
     last_command="cozy-stack_features_defaults"
@@ -1270,6 +1235,41 @@ _cozy-stack_features_flags()
     flags+=("--domain=")
     two_word_flags+=("--domain")
     local_nonpersistent_flags+=("--domain=")
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_cozy-stack_features_ratio()
+{
+    last_command="cozy-stack_features_ratio"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--context=")
+    two_word_flags+=("--context")
+    local_nonpersistent_flags+=("--context=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
     flags+=("--admin-port=")
@@ -1367,9 +1367,17 @@ _cozy-stack_features()
     command_aliases=()
 
     commands=()
-    commands+=("context")
     commands+=("defaults")
     commands+=("flags")
+    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        command_aliases+=("flag")
+        aliashash["flag"]="flags"
+    fi
+    commands+=("ratio")
+    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        command_aliases+=("context")
+        aliashash["context"]="ratio"
+    fi
     commands+=("sets")
     commands+=("show")
 

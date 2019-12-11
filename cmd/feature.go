@@ -74,8 +74,9 @@ cozy-stack feature show displays the feature flags that are shown by apps.
 }
 
 var featureFlagCmd = &cobra.Command{
-	Use:   "flags",
-	Short: `Display and update the feature flags for an instance`,
+	Use:     "flags",
+	Aliases: []string{"flag"},
+	Short:   `Display and update the feature flags for an instance`,
 	Long: `
 cozy-stack feature flags displays the feature flags that are specific to an instance.
 
@@ -164,17 +165,18 @@ All the sets can be removed by setting an empty list ('').
 	},
 }
 
-var featureContextCmd = &cobra.Command{
-	Use:   "context <context-name>",
-	Short: `Display and update the feature flags for a context`,
+var featureRatioCmd = &cobra.Command{
+	Use:     "ratio <context-name>",
+	Aliases: []string{"context"},
+	Short:   `Display and update the feature flags for a context`,
 	Long: `
-cozy-stack feature context displays the feature flags for a context.
+cozy-stack feature ratio displays the feature flags for a context.
 
 It can also create, update, or remove flags (with a ratio and value).
 
 To remove a flag, set it to an empty array (or null).
 `,
-	Example: `$ cozy-stack feature context --context beta '{"set_this_flag": [{"ratio": 0.1, "value": 1}, {"ratio": 0.9, "value": 2}] }'`,
+	Example: `$ cozy-stack feature ratio --context beta '{"set_this_flag": [{"ratio": 0.1, "value": 1}, {"ratio": 0.9, "value": 2}] }'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagContext == "" {
 			return cmd.Usage()
@@ -246,12 +248,12 @@ func init() {
 	featureShowCmd.Flags().BoolVar(&flagWithSources, "source", false, "Show the sources of the feature flags")
 	featureFlagCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	featureSetCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
-	featureContextCmd.Flags().StringVar(&flagContext, "context", "", "The context for the feature flags")
+	featureRatioCmd.Flags().StringVar(&flagContext, "context", "", "The context for the feature flags")
 
 	featureCmdGroup.AddCommand(featureShowCmd)
 	featureCmdGroup.AddCommand(featureFlagCmd)
 	featureCmdGroup.AddCommand(featureSetCmd)
-	featureCmdGroup.AddCommand(featureContextCmd)
+	featureCmdGroup.AddCommand(featureRatioCmd)
 	featureCmdGroup.AddCommand(featureDefaultCmd)
 	RootCmd.AddCommand(featureCmdGroup)
 }
