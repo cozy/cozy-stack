@@ -147,8 +147,8 @@ func getFlagsFromManager(inst *instance.Instance) (map[string]interface{}, error
 		"sets":    {strings.Join(inst.FeatureSets, ",")},
 		"context": {inst.ContextName},
 	}.Encode()
-	var data map[string]interface{}
-	if err := client.Get(fmt.Sprintf("/api/v1/features?%s", query), &data); err != nil {
+	data, err := client.Get(fmt.Sprintf("/api/v1/features?%s", query))
+	if err != nil {
 		return nil, err
 	}
 	var ok bool
