@@ -5,7 +5,7 @@ Display and update the feature flags for a context
 ### Synopsis
 
 
-cozy-stack feature context displays the feature flags for a context.
+cozy-stack feature ratio displays the feature flags for a context.
 
 It can also create, update, or remove flags (with a ratio and value).
 
@@ -19,7 +19,7 @@ cozy-stack features context <context-name> [flags]
 ### Examples
 
 ```
-$ cozy-stack feature context --context beta '{"set_this_flag": [{"ratio": 0.1, "value": 1}, {"ratio": 0.9, "value": 2}] }'
+$ cozy-stack feature ratio --context beta '{"set_this_flag": [{"ratio": 0.1, "value": 1}, {"ratio": 0.9, "value": 2}] }'
 ```
 
 ### Options

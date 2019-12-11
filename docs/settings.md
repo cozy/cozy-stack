@@ -754,54 +754,54 @@ Content-type: application/vnd.api+json
       "number_of_foos": 10,
       "bar_config": { "qux": "quux" }
     },
-    "included": [
-      {
-        "type": "io.cozy.settings",
-        "id": "io.cozy.settings.flags.instance",
-        "attributes": {
-          "number_of_foos": 10
-        }
-      },
-      {
-        "type": "io.cozy.settings",
-        "id": "io.cozy.settings.flags.manager",
-        "attributes": {
-          "sets": ["s1", "s2"],
-          "has_feature1": true,
-          "number_of_foos": 5
-        }
-      },
-      {
-        "type": "io.cozy.settings",
-        "id": "io.cozy.settings.flags.config",
-        "attributes": {
-          "number_of_foos": 2
-        }
-      },
-      {
-        "type": "io.cozy.settings",
-        "id": "io.cozy.settings.flags.context",
-        "attributes": {
-          "has_feature2": [{ "ratio": 0.1, "value": true }],
-          "bar_config": [
-            { "ratio": 0.2, "value": { "qux": "quux" } },
-            { "ratio": 0.8, "value": { "qux": "baz" } },
-          ]
-        }
-      },
-      {
-        "type": "io.cozy.settings",
-        "id": "io.cozy.settings.flags.default",
-        "attributes": {
-          "bar_config": { "qux": "courge" },
-          "number_of_foos": 2
-        }
-      }
-    ],
     "links": {
       "self": "/settings/flags"
     }
-  }
+  },
+  "included": [
+    {
+      "type": "io.cozy.settings",
+      "id": "io.cozy.settings.flags.instance",
+      "attributes": {
+        "number_of_foos": 10
+      }
+    },
+    {
+      "type": "io.cozy.settings",
+      "id": "io.cozy.settings.flags.manager",
+      "attributes": {
+        "sets": ["s1", "s2"],
+        "has_feature1": true,
+        "number_of_foos": 5
+      }
+    },
+    {
+      "type": "io.cozy.settings",
+      "id": "io.cozy.settings.flags.config",
+      "attributes": {
+        "number_of_foos": 2
+      }
+    },
+    {
+      "type": "io.cozy.settings",
+      "id": "io.cozy.settings.flags.context",
+      "attributes": {
+        "has_feature2": [{ "ratio": 0.1, "value": true }],
+        "bar_config": [
+          { "ratio": 0.2, "value": { "qux": "quux" } },
+          { "ratio": 0.8, "value": { "qux": "baz" } },
+        ]
+      }
+    },
+    {
+      "type": "io.cozy.settings",
+      "id": "io.cozy.settings.flags.default",
+      "attributes": {
+        "bar_config": { "qux": "courge" },
+        "number_of_foos": 2
+      }
+    }
+  ]
 }
 ```
 

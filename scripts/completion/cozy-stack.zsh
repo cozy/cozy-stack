@@ -520,9 +520,9 @@ function _cozy-stack_features {
   case $state in
   cmnds)
     commands=(
-      "context:Display and update the feature flags for a context"
       "defaults:Display and update the default values for feature flags"
       "flags:Display and update the feature flags for an instance"
+      "ratio:Display and update the feature flags for a context"
       "sets:Display and update the feature sets for an instance"
       "show:Display the computed feature flags for an instance"
     )
@@ -531,14 +531,14 @@ function _cozy-stack_features {
   esac
 
   case "$words[1]" in
-  context)
-    _cozy-stack_features_context
-    ;;
   defaults)
     _cozy-stack_features_defaults
     ;;
   flags)
     _cozy-stack_features_flags
+    ;;
+  ratio)
+    _cozy-stack_features_ratio
     ;;
   sets)
     _cozy-stack_features_sets
@@ -547,16 +547,6 @@ function _cozy-stack_features {
     _cozy-stack_features_show
     ;;
   esac
-}
-
-function _cozy-stack_features_context {
-  _arguments \
-    '--context[The context for the feature flags]:' \
-    '--admin-host[administration server host]:' \
-    '--admin-port[administration server port]:' \
-    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
-    '--host[server host]:' \
-    '(-p --port)'{-p,--port}'[server port]:'
 }
 
 function _cozy-stack_features_defaults {
@@ -571,6 +561,16 @@ function _cozy-stack_features_defaults {
 function _cozy-stack_features_flags {
   _arguments \
     '--domain[Specify the domain name of the instance]:' \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+function _cozy-stack_features_ratio {
+  _arguments \
+    '--context[The context for the feature flags]:' \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
     '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
