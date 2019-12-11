@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
-	"github.com/cozy/cozy-stack/pkg/ws"
+	"github.com/cozy/cozy-stack/pkg/manager"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -70,7 +70,7 @@ type managerConfig struct {
 }
 
 // APIManagerClient returns a client to talk to the manager via its API.
-func APIManagerClient(inst *Instance) *ws.OAuthRestJSONClient {
+func APIManagerClient(inst *Instance) *manager.APIClient {
 	contexts := config.GetConfig().Clouderies
 	context, ok := inst.GetFromContexts(contexts)
 	if !ok {
@@ -88,7 +88,5 @@ func APIManagerClient(inst *Instance) *ws.OAuthRestJSONClient {
 		return nil
 	}
 
-	client := &ws.OAuthRestJSONClient{}
-	client.Init(api.URL, api.Token)
-	return client
+	return manager.NewAPIClient(api.URL, api.Token)
 }

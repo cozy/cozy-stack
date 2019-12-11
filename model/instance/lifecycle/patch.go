@@ -179,8 +179,7 @@ func managerUpdateSettings(inst *instance.Instance, changes map[string]interface
 	}
 
 	url := fmt.Sprintf("/api/v1/instances/%s", url.PathEscape(inst.UUID))
-	err := client.Put(url, changes, nil)
-	if err != nil {
+	if err := client.Put(url, changes); err != nil {
 		inst.Logger().Errorf("Error during cloudery settings update %s", err)
 	}
 }
