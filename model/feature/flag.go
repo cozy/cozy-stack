@@ -209,6 +209,9 @@ func (f *Flags) addContext(inst *instance.Instance) error {
 	} else if err != nil {
 		return err
 	}
+	if len(context.M) == 0 {
+		return nil
+	}
 	context.SetID(consts.ContextFlagsSettingsID)
 	f.Sources = append(f.Sources, &context)
 	for k, v := range context.M {
@@ -257,6 +260,9 @@ func (f *Flags) addDefaults(inst *instance.Instance) error {
 		return nil
 	} else if err != nil {
 		return err
+	}
+	if len(defaults.M) == 0 {
+		return nil
 	}
 	defaults.SetID(consts.DefaultFlagsSettingsID)
 	f.Sources = append(f.Sources, &defaults)
