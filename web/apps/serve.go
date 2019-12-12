@@ -276,7 +276,9 @@ type serveParams struct {
 func (s serveParams) CozyData() ([]byte, error) {
 	flags, err := feature.GetFlags(s.instance)
 	if err != nil {
-		return nil, err
+		flags = &feature.Flags{
+			M: map[string]interface{}{},
+		}
 	}
 	data := map[string]interface{}{
 		"token":     s.Token,
@@ -331,7 +333,7 @@ func (s serveParams) IconPath() string {
 func (s serveParams) Flags() ([]byte, error) {
 	flags, err := feature.GetFlags(s.instance)
 	if err != nil {
-		return nil, err
+		return []byte("{}"), err
 	}
 	return json.Marshal(flags)
 }
