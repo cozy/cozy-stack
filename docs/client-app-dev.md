@@ -159,6 +159,16 @@ a template and will insert the relevant values.
 -   `{{.AppNamePrefix}}`: will be replaced by the application name prefix.
 -   `{{.AppEditor}}`: will be replaced by the application's editor.
 -   `{{.IconPath}}`: will be replaced by the application's icon path.
+-   `{{.SubDomain}}` will be replaced by `flat` or `nested`.
+-   `{{.Tracking}}` will be replaced by a value to indicate if tracking is
+    enabled.
+-   `{{.Flags}}` will be replaced by JSON with the
+    [feature flags](./settings.md#feature-flags).
+
+All these values can also be injected as a single JSON with `{{.CozyData}}`.
+
+There are also some helpers to inject asset tags or URLs:
+
 -   `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.
 -   `{{.CozyClientJS}}` will be replaced by the JavaScript to inject the
     cozy-client-js.
@@ -168,10 +178,7 @@ a template and will insert the relevant values.
     assets](https://docs.cozy.io/en/cozy-stack/cli/cozy-stack_config_insert-asset/)
     for more informations.
 -   `{{.Favicon}}` will be replaced by the favicon served by the stack.
--   `{{.SubDomain}}` will be replaced by `flat` or `nested`.
 -   `{{.DefaultWallpaper}}` will be replaced by the URL to the default wallpaper.
--   `{{.Flags}}` will be replaced by JSON with the
-    [feature flags](./settings.md#feature-flags).
 
 So, the `index.html` should probably looks like:
 
