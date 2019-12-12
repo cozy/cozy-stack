@@ -746,25 +746,17 @@ func ThumbnailHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	secret := c.Param("secret")
-	path, err := vfs.GetStore().GetFile(instance, secret)
+	fileID, err := vfs.GetStore().GetThumb(instance, secret)
 	if err != nil {
 		return WrapVfsError(err)
 	}
-	if path == "" {
+	if fileID == "" || c.Param("file-id") != fileID {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
 
-	doc, err := instance.VFS().FileByID(c.Param("file-id"))
+	doc, err := instance.VFS().FileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)
-	}
-
-	expected, err := doc.Path(instance.VFS())
-	if err != nil {
-		return WrapVfsError(err)
-	}
-	if expected != path {
-		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
 
 	fs := lifecycle.ThumbsFS(instance)
