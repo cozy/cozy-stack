@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -251,6 +252,9 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 		case *AtTrigger:
 			job := t.Infos().JobRequest()
 			if _, err = s.broker.PushJob(t, job); err != nil {
+				if limits.IsLimitReachedOrExceeded(err) {
+					s.client.ZRem(SchedKey, results[0])
+				}
 				return err
 			}
 			if err = s.deleteTrigger(t); err != nil {
@@ -261,7 +265,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 			if _, err = s.broker.PushJob(t, job); err != nil {
 				// Remove the cron trigger from redis if it is invalid, as it
 				// may block other cron triggers
-				if err == ErrUnknownWorker {
+				if err == ErrUnknownWorker || limits.IsLimitReachedOrExceeded(err) {
 					s.client.ZRem(SchedKey, results[0])
 					continue
 				}
