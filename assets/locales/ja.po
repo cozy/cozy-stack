@@ -157,11 +157,14 @@ msgstr "パスワードを選択してください"
 msgid "Passphrase Onboarding Help"
 msgstr "8 文字以上の英字、数字、記号で入力してください。"
 
+msgid "Passphrase Hint Error"
+msgstr "ヒントはパスワードとは別のものにする必要があります!"
+
 msgid "Passphrase Onboarding Hint Field"
 msgstr "ヒントを残す (オプション)"
 
 msgid "Passphrase Onboarding Hint Help"
-msgstr "パスワードを忘れた場合、ヒントがメールで送信されます。自分だけが理解できるヒントを選択してください。"
+msgstr "パスワードを忘れた場合に、ヒントはメールで送信されます。 自分だけが理解できるヒントを選択してください。"
 
 msgid "Passphrase Onboarding Submit"
 msgstr "完了"
@@ -491,8 +494,7 @@ msgstr "下をご覧ください。Cozy のパスワードを思い出ための�
 msgid "Mail Hint Outro"
 msgstr ""
 "最後の手段として、Cozy "
-"の「パスワードを忘れた」セクションでパスワードをリセットできます。このリクエストを行っていない場合は、contact@cozycloud.cc "
-"までご連絡ください"
+"の「パスワードを忘れた」セクションでパスワードをリセットできます。このリクエストを行っていない場合は、このメールに直接返信してご連絡ください。"
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "お使いのパスワードをリセット"
@@ -501,7 +503,7 @@ msgid "Mail Reset Passphrase Intro 1"
 msgstr "%s さん、こんにちは。"
 
 msgid "Mail Reset Passphrase Intro 2"
-msgstr "あなたからパスワードを変更するように依頼されました (そうでない場合は、このメールに直接返信してご連絡ください)"
+msgstr "パスワードの変更を依頼されました。このリクエストを行っていない場合は、このメールに直接返信してお問い合わせください。"
 
 msgid "Mail Reset Passphrase Button instruction"
 msgstr "このボタンをクリックすると、安全に変更できます。"
