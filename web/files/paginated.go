@@ -312,12 +312,10 @@ func (f *file) MarshalJSON() ([]byte, error) {
 func (f *file) Links() *jsonapi.LinksList {
 	links := jsonapi.LinksList{Self: "/files/" + f.doc.DocID}
 	if f.doc.Class == "image" {
-		if path, err := f.doc.Path(f.instance.VFS()); err == nil {
-			if secret, err := vfs.GetStore().AddFile(f.instance, path); err == nil {
-				links.Small = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/small"
-				links.Medium = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/medium"
-				links.Large = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/large"
-			}
+		if secret, err := vfs.GetStore().AddThumb(f.instance, f.doc.DocID); err == nil {
+			links.Small = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/small"
+			links.Medium = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/medium"
+			links.Large = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/large"
 		}
 	}
 	return &links
