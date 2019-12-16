@@ -30,6 +30,7 @@ func CreateNote(c echo.Context) error {
 	if _, err := jsonapi.Bind(c.Request().Body, doc); err != nil {
 		return err
 	}
+	doc.CreatedBy = getCreatedBy(c)
 
 	inst := middlewares.GetInstance(c)
 	file, err := note.Create(inst, doc)
@@ -222,4 +223,14 @@ func wrapError(err error) *jsonapi.Error {
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	}
 	return jsonapi.InternalServerError(err)
+}
+
+func getCreatedBy(c echo.Context) string {
+	if claims, ok := c.Get("claims").(permission.Claims); ok {
+		switch claims.Audience {
+		case consts.AppAudience, consts.KonnectorAudience:
+			return claims.Subject
+		}
+	}
+	return ""
 }

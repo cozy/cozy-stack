@@ -31,6 +31,7 @@ const (
 type Document struct {
 	DocID      string                 `json:"_id"`
 	DocRev     string                 `json:"_rev,omitempty"`
+	CreatedBy  string                 `json:"-"`
 	DirID      string                 `json:"dir_id,omitempty"`
 	Title      string                 `json:"title"`
 	Version    int64                  `json:"version"`
@@ -245,6 +246,7 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 
 	fileDoc.Metadata = doc.Metadata()
 	fileDoc.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	fileDoc.CozyMetadata.CozyMetadata.CreatedByApp = doc.CreatedBy
 	return fileDoc, nil
 }
 
