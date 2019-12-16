@@ -152,9 +152,14 @@ func (d *Document) asFile(old *vfs.FileDoc) *vfs.FileDoc {
 
 	// If the file was renamed manually before, we will keep its name. Else, we
 	// can rename with the new title.
+	newTitle := titleToFilename(d.Title)
 	oldTitle, _ := old.Metadata["title"].(string)
-	if rename := titleToFilename(oldTitle) == old.DocName; rename {
-		file.DocName = titleToFilename(d.Title)
+	rename := titleToFilename(oldTitle) == old.DocName
+	if strings.Contains(old.DocName, " - conflict - ") && oldTitle != newTitle {
+		rename = true
+	}
+	if rename {
+		file.DocName = newTitle
 		file.ResetFullpath()
 	}
 
@@ -335,9 +340,9 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 	var file vfs.File
 	file, err = fs.CreateFile(fileDoc, oldDoc)
 	if err == os.ErrExist {
-		filename := path.Base(fileDoc.DocName)
+		filename := strings.TrimSuffix(path.Base(fileDoc.DocName), path.Ext(fileDoc.DocName))
 		suffix := time.Now().Format(time.RFC3339)
-		fileDoc.DocName = fmt.Sprintf("%s - %s.cozy-note", filename, suffix)
+		fileDoc.DocName = fmt.Sprintf("%s - conflict - %s.cozy-note", filename, suffix)
 		file, err = fs.CreateFile(fileDoc, oldDoc)
 	}
 	if err != nil {
