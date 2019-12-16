@@ -34,7 +34,6 @@ require (
 	github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443
 	github.com/oschwald/maxminddb-golang v1.5.0
 	github.com/pelletier/go-toml v1.5.0 // indirect
-	github.com/pkg/errors v0.8.1
 	github.com/pquerna/otp v1.2.0
 	github.com/prometheus/client_golang v1.2.1
 	github.com/robfig/cron/v3 v3.0.0
@@ -43,7 +42,7 @@ require (
 	github.com/spf13/afero v1.2.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/viper v1.5.0
+	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.4.0
 	github.com/ugorji/go/codec v1.1.7
 	golang.org/x/crypto v0.0.0-20191202143827-86a70503ff7e
