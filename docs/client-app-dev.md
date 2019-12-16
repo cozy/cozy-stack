@@ -149,7 +149,11 @@ So, the application needs such a token. It also needs to know where to send the
 requests for the stack (it can be guessed, but with the nested vs flat
 subdomains structures, it's better to get the information from the stack). To do
 that, when the application loads its HTML index file, the stack will parse it as
-a template and will insert the relevant values.
+a template and will insert the relevant values. The configuration can be injected
+as a JSON with `{{.CozyData}}`.
+
+If you need more control or have some compatibility issues, it is possible to
+inject the individual values with:
 
 -   `{{.Token}}` will be replaced by the token for the application.
 -   `{{.Domain}}` will be replaced by the stack hostname.
@@ -159,6 +163,14 @@ a template and will insert the relevant values.
 -   `{{.AppNamePrefix}}`: will be replaced by the application name prefix.
 -   `{{.AppEditor}}`: will be replaced by the application's editor.
 -   `{{.IconPath}}`: will be replaced by the application's icon path.
+-   `{{.SubDomain}}` will be replaced by `flat` or `nested`.
+-   `{{.Tracking}}` will be replaced by a value to indicate if tracking is
+    enabled.
+-   `{{.Flags}}` will be replaced by JSON with the
+    [feature flags](./settings.md#feature-flags).
+
+There are also some helpers to inject asset tags or URLs:
+
 -   `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.
 -   `{{.CozyClientJS}}` will be replaced by the JavaScript to inject the
     cozy-client-js.
@@ -168,10 +180,7 @@ a template and will insert the relevant values.
     assets](https://docs.cozy.io/en/cozy-stack/cli/cozy-stack_config_insert-asset/)
     for more informations.
 -   `{{.Favicon}}` will be replaced by the favicon served by the stack.
--   `{{.SubDomain}}` will be replaced by `flat` or `nested`.
 -   `{{.DefaultWallpaper}}` will be replaced by the URL to the default wallpaper.
--   `{{.Flags}}` will be replaced by JSON with the
-    [feature flags](./settings.md#feature-flags).
 
 So, the `index.html` should probably looks like:
 
@@ -190,18 +199,7 @@ So, the `index.html` should probably looks like:
     {{.CozyBar}}
   </head>
   <body>
-    <div
-      role="application"
-      data-cozy-token="{{.Token}}"
-      data-cozy-domain="{{.Domain}}"
-      data-cozy-locale="{{.Locale}}"
-      data-cozy-app-editor="{{.AppEditor}}"
-      data-cozy-app-name="{{.AppName}}"
-      data-cozy-app-slug="{{.AppSlug}}"
-      data-cozy-icon-path="{{.IconPath}}"
-      data-cozy-flags="{{.Flags}}"
-      >
-    </div>
+    <div role="application" data-cozy="{{.CozyData}}"></div>
     <script src="my-app.js"></script>
   </body>
 </html>
@@ -216,16 +214,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const app = document.querySelector("[role=application]");
   const data = app.dataset;
 
-  cozy.client.init({
-      cozyURL: "//" + data.cozyStack,
-      token: data.cozyToken
-  });
+  cozy.client.init(data.cozy);
 
   cozy.bar.init({
-    appEditor: data.cozyAppEditor,
-    appName: data.cozyAppName,
-    iconPath: data.cozyIconPath,
-    lang: data.cozyLocale
+    appEditor: data.cozy.app.editor,
+    appName: data.cozy.app.name,
+    iconPath: data.cozy.app.icon,
+    lang: data.cozy.locale
   });
 
   // ...

@@ -2,6 +2,7 @@ package apps
 
 import (
 	"bytes"
+	"encoding/json"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -12,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -271,6 +273,31 @@ type serveParams struct {
 	isLoggedIn bool
 }
 
+func (s serveParams) CozyData() ([]byte, error) {
+	flags, err := feature.GetFlags(s.instance)
+	if err != nil {
+		flags = &feature.Flags{
+			M: map[string]interface{}{},
+		}
+	}
+	data := map[string]interface{}{
+		"token":     s.Token,
+		"domain":    s.Domain(),
+		"subdomain": s.SubDomain,
+		"tracking":  s.Tracking,
+		"locale":    s.Locale(),
+		"app": map[string]interface{}{
+			"editor": s.AppEditor(),
+			"name":   s.AppName(),
+			"prefix": s.AppNamePrefix(),
+			"slug":   s.AppSlug(),
+			"icon":   s.IconPath(),
+		},
+		"flags": flags,
+	}
+	return json.Marshal(data)
+}
+
 func (s serveParams) Domain() string {
 	return s.instance.ContextualDomain()
 }
@@ -301,6 +328,14 @@ func (s serveParams) AppNamePrefix() string {
 
 func (s serveParams) IconPath() string {
 	return s.webapp.Icon
+}
+
+func (s serveParams) Flags() ([]byte, error) {
+	flags, err := feature.GetFlags(s.instance)
+	if err != nil {
+		return []byte("{}"), err
+	}
+	return json.Marshal(flags)
 }
 
 func (s serveParams) CozyBar() template.HTML {
