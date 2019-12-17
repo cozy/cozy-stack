@@ -37,7 +37,7 @@ func Fatal(msg ...interface{}) {
 
 // NeedCouchdb kill the process if there is no couchdb running
 func NeedCouchdb() {
-	if err := couchdb.CheckStatus(); err != nil {
+	if _, err := couchdb.CheckStatus(); err != nil {
 		Fatal("This test need couchdb to run.")
 	}
 }

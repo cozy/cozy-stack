@@ -18,26 +18,40 @@ func Status(c echo.Context) error {
 	couch := "healthy"
 	fs := "healthy"
 
+	latencies := map[string]string{}
+	var mu sync.Mutex
 	var wg sync.WaitGroup
 	wg.Add(3)
 
 	go func() {
 		cfg := config.GetConfig()
-		if err := cfg.CacheStorage.CheckStatus(); err != nil {
+		if lat, err := cfg.CacheStorage.CheckStatus(); err == nil {
+			mu.Lock()
+			latencies["cache"] = lat.String()
+			mu.Unlock()
+		} else {
 			cache = err.Error()
 		}
 		wg.Done()
 	}()
 
 	go func() {
-		if err := couchdb.CheckStatus(); err != nil {
+		if lat, err := couchdb.CheckStatus(); err == nil {
+			mu.Lock()
+			latencies["couchdb"] = lat.String()
+			mu.Unlock()
+		} else {
 			couch = err.Error()
 		}
 		wg.Done()
 	}()
 
 	go func() {
-		if err := dynamic.CheckStatus(); err != nil {
+		if lat, err := dynamic.CheckStatus(); err == nil {
+			mu.Lock()
+			latencies["fs"] = lat.String()
+			mu.Unlock()
+		} else {
 			fs = err.Error()
 		}
 		wg.Done()
@@ -56,6 +70,7 @@ func Status(c echo.Context) error {
 		"couchdb": couch,
 		"fs":      fs,
 		"status":  status,
+		"latency": latencies,
 		"message": status, // Legacy, kept for compatibility
 	})
 }

@@ -27,10 +27,10 @@ var assetsClient = &http.Client{
 }
 
 // CheckStatus checks that the FS for dynamic asset is available, or returns an
-// error if it is not the case.
-func CheckStatus() error {
+// error if it is not the case. It also returns the latency.
+func CheckStatus() (time.Duration, error) {
 	if assetFS == nil {
-		return nil
+		return 0, nil
 	}
 	return assetFS.CheckStatus()
 }

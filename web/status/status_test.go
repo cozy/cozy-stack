@@ -22,7 +22,7 @@ func testRequest(t *testing.T, url string) {
 	body, ioerr := ioutil.ReadAll(res.Body)
 	assert.NoError(t, ioerr)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
-	var data map[string]string
+	var data map[string]interface{}
 	err = json.Unmarshal(body, &data)
 	assert.NoError(t, err)
 	assert.Equal(t, "healthy", data["cache"])
@@ -30,6 +30,7 @@ func testRequest(t *testing.T, url string) {
 	assert.Equal(t, "healthy", data["fs"])
 	assert.Equal(t, "OK", data["status"])
 	assert.Equal(t, "OK", data["message"])
+	assert.Contains(t, data, "latency")
 }
 
 func TestRoutes(t *testing.T) {

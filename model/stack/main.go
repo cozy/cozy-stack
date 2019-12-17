@@ -52,7 +52,7 @@ security features. Please do not use this binary as your production server.
 	attempts := 8
 	attemptsSpacing := 1 * time.Second
 	for i := 0; i < attempts; i++ {
-		err = couchdb.CheckStatus()
+		_, err = couchdb.CheckStatus()
 		if err == nil {
 			break
 		}
