@@ -749,7 +749,7 @@ func TestCreateFileTooBig(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
-	err := couchdb.CheckStatus()
+	_, err := couchdb.CheckStatus()
 	if err != nil {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)

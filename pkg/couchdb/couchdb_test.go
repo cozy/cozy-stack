@@ -378,7 +378,7 @@ func TestUpdateJSONDoc(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
-	if err := CheckStatus(); err != nil {
+	if _, err := CheckStatus(); err != nil {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}

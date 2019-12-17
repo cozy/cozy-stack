@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -30,7 +31,7 @@ type AssetFS interface {
 	Get(string, string) ([]byte, error)
 	Remove(string, string) error
 	List() (map[string][]*model.Asset, error)
-	CheckStatus() error
+	CheckStatus() (time.Duration, error)
 }
 
 type SwiftFS struct {
@@ -140,9 +141,10 @@ func (a *AferoFS) Remove(context, name string) error {
 	return a.fs.Remove(filePath)
 }
 
-func (a *AferoFS) CheckStatus() error {
+func (a *AferoFS) CheckStatus() (time.Duration, error) {
+	before := time.Now()
 	_, err := a.fs.Stat("/")
-	return err
+	return time.Since(before), err
 }
 
 func (a *AferoFS) List() (map[string][]*model.Asset, error) {
@@ -233,7 +235,10 @@ func (s *SwiftFS) List() (map[string][]*model.Asset, error) {
 	return objs, nil
 }
 
-func (s *SwiftFS) CheckStatus() error {
-	_, _, err := s.swiftConn.Container(DynamicAssetsContainerName)
-	return err
+func (s *SwiftFS) CheckStatus() (time.Duration, error) {
+	before := time.Now()
+	if _, _, err := s.swiftConn.Container(DynamicAssetsContainerName); err != nil {
+		return 0, err
+	}
+	return time.Since(before), nil
 }

@@ -33,11 +33,15 @@ func New(client redis.UniversalClient) Cache {
 }
 
 // CheckStatus checks that the cache is ready, or returns an error.
-func (c Cache) CheckStatus() error {
+func (c Cache) CheckStatus() (time.Duration, error) {
 	if c.client == nil {
-		return nil
+		return 0, nil
 	}
-	return c.client.Ping().Err()
+	before := time.Now()
+	if err := c.client.Ping().Err(); err != nil {
+		return 0, err
+	}
+	return time.Since(before), nil
 }
 
 // Get fetch the cached asset at the given key, and returns true only if the
