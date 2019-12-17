@@ -739,6 +739,7 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 
 func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate func(*FsckLog), failFast bool) bool {
 	delete(dirsmap, parent.DocID)
+	names := make(map[string]struct{})
 	for _, file := range parent.FilesChildren {
 		if file.HasPath {
 			accumulate(&FsckLog{
@@ -749,8 +750,28 @@ func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate fun
 				return false
 			}
 		}
+		if _, ok := names[file.DocName]; ok {
+			accumulate(&FsckLog{
+				Type:    IndexDuplicateName,
+				FileDoc: file,
+			})
+			if failFast {
+				return false
+			}
+		}
+		names[file.DocName] = struct{}{}
 	}
 	for _, child := range parent.DirsChildren {
+		if _, ok := names[child.DocName]; ok {
+			accumulate(&FsckLog{
+				Type:   IndexDuplicateName,
+				DirDoc: child,
+			})
+			if failFast {
+				return false
+			}
+		}
+		names[child.DocName] = struct{}{}
 		expected := path.Join(parent.Fullpath, child.DocName)
 		if expected != child.Fullpath {
 			accumulate(&FsckLog{

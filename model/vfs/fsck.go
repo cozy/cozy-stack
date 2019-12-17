@@ -35,6 +35,9 @@ const (
 	// IndexFileWithPath is used when a file has a path in the index (only
 	// directories should have one).
 	IndexFileWithPath = "index_file_with_path"
+	// IndexDuplicateName is used when two files or directories have the same
+	// name inside the same folder (ie they have the same path).
+	IndexDuplicateName = "index_duplicate_name"
 )
 
 // FsckLog is a struct for an inconsistency in the VFS
