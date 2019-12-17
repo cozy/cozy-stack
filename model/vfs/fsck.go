@@ -32,6 +32,9 @@ const (
 	// FileMissing is used when a version is present for a file that is not in
 	// the index.
 	FileMissing FsckLogType = "file_missing"
+	// IndexFileWithPath is used when a file has a path in the index (only
+	// directories should have one).
+	IndexFileWithPath = "index_file_with_path"
 )
 
 // FsckLog is a struct for an inconsistency in the VFS
@@ -111,6 +114,7 @@ type TreeFile struct {
 	IsDir    bool `json:"is_dir"`
 	IsOrphan bool `json:"is_orphan"`
 	HasCycle bool `json:"has_cycle"`
+	HasPath  bool `json:"-"`
 }
 
 // AsFile returns the FileDoc part from this more complex struct
