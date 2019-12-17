@@ -694,7 +694,11 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 			} else {
 				parent.FilesChildren = append(parent.FilesChildren, f)
 				parent.FilesChildrenSize += f.ByteSize
-				f.Fullpath = path.Join(parent.Fullpath, f.DocName)
+				if f.Fullpath == "" {
+					f.Fullpath = path.Join(parent.Fullpath, f.DocName)
+				} else {
+					f.HasPath = true
+				}
 			}
 			each(f)
 		} else {
@@ -708,7 +712,11 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 					} else {
 						f.FilesChildren = append(f.FilesChildren, child)
 						f.FilesChildrenSize += child.ByteSize
-						child.Fullpath = path.Join(f.Fullpath, child.DocName)
+						if child.Fullpath == "" {
+							child.Fullpath = path.Join(f.Fullpath, child.DocName)
+						} else {
+							child.HasPath = true
+						}
 					}
 					each(child)
 				}
@@ -731,7 +739,39 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 
 func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate func(*FsckLog), failFast bool) bool {
 	delete(dirsmap, parent.DocID)
+	names := make(map[string]struct{})
+	for _, file := range parent.FilesChildren {
+		if file.HasPath {
+			accumulate(&FsckLog{
+				Type:    IndexFileWithPath,
+				FileDoc: file,
+			})
+			if failFast {
+				return false
+			}
+		}
+		if _, ok := names[file.DocName]; ok {
+			accumulate(&FsckLog{
+				Type:    IndexDuplicateName,
+				FileDoc: file,
+			})
+			if failFast {
+				return false
+			}
+		}
+		names[file.DocName] = struct{}{}
+	}
 	for _, child := range parent.DirsChildren {
+		if _, ok := names[child.DocName]; ok {
+			accumulate(&FsckLog{
+				Type:   IndexDuplicateName,
+				DirDoc: child,
+			})
+			if failFast {
+				return false
+			}
+		}
+		names[child.DocName] = struct{}{}
 		expected := path.Join(parent.Fullpath, child.DocName)
 		if expected != child.Fullpath {
 			accumulate(&FsckLog{
