@@ -119,7 +119,13 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	var claims permission.Claims
 	var err error
 
-	if isShortCode, _ := regexp.MatchString("^(\\w|\\d){12}$", token); isShortCode { // token is a shortcode
+	if isShortCode, _ := regexp.MatchString("^(\\w|\\d){12}\\.?$", token); isShortCode { // token is a shortcode
+		// XXX in theory, the shortcode is exactly 12 characters. But
+		// somethimes, when people shares a public link with this token, they
+		// can put a "." just after the link to finish their sentence, and this
+		// "." can be added to the token. So, it's better to accept a shortcode
+		// with a final ".", and clean it.
+		token = strings.TrimSuffix(token, ".")
 		token, err = permission.GetTokenFromShortcode(instance, token)
 		if err != nil {
 			return nil, err
