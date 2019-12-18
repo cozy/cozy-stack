@@ -735,8 +735,8 @@ msgstr "Ajouter de l'espace"
 
 msgid "Notifications Disk Quota free instructions"
 msgstr ""
-"Option 2 : Libérer de l'espace\n"
-"Libérez de l'espace dans votre Cozy en supprimant des fichiers ou en vidant votre corbeille"
+"Option 2 : Libérez de l'espace dans votre Cozy en supprimant des fichiers ou"
+" en vidant votre corbeille"
 
 msgid "Notifications Disk Quota free text"
 msgstr "Libérer de l'espace"
