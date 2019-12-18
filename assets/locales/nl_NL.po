@@ -711,15 +711,17 @@ msgid "Notifications Disk Quota Intro"
 msgstr "Je kunt twee dingen doen om meer ruimte te verkrijgen."
 
 msgid "Notifications Disk Quota offers instruction"
-msgstr "Optie 1: upgrade je Cozy naar een hoger abonnement met meer ruimte."
+msgstr ""
+"Optie 1:\n"
+"upgrade je Cozy naar een hoger abonnement met meer ruimte."
 
 msgid "Notifications Disk Quota offers text"
 msgstr "Nu upgraden"
 
 msgid "Notifications Disk Quota free instructions"
 msgstr ""
-"Optie 2: maak ruimte vrij.\n"
-"Bespaar ruimte door onnodige bestanden te verwijderen."
+"Optie 2:\n"
+"bespaar ruimte door onnodige bestanden te verwijderen."
 
 msgid "Notifications Disk Quota free text"
 msgstr "Opslagruimte vrijmaken"
