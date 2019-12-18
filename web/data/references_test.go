@@ -167,6 +167,115 @@ func TestRemoveReferencesHandler(t *testing.T) {
 	assert.Len(t, fdoc9.ReferencedBy, 1)
 }
 
+func TestReferencesWithSlash(t *testing.T) {
+	// Make File
+	name := "test-ref-with-slash.txt"
+	dirID := consts.RootDirID
+	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, false, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+	f, err := testInstance.VFS().CreateFile(filedoc, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+	if err = f.Close(); !assert.NoError(t, err) {
+		return
+	}
+
+	// Add a reference to io.cozy.apps/foobar
+	url := ts.URL + "/data/" + Type + "/io.cozy.apps%2ffoobar/relationships/references"
+	var in = jsonReader(jsonapi.Relationship{
+		Data: []couchdb.DocReference{
+			{
+				ID:   filedoc.ID(),
+				Type: filedoc.DocType(),
+			},
+		},
+	})
+	req, _ := http.NewRequest("POST", url, in)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 204, res.StatusCode)
+
+	fdoc, err := testInstance.VFS().FileByID(filedoc.ID())
+	assert.NoError(t, err)
+	assert.Len(t, fdoc.ReferencedBy, 1)
+	assert.Equal(t, "io.cozy.apps/foobar", fdoc.ReferencedBy[0].ID)
+
+	// Check that we can find the reference with /
+	var result struct {
+		Data []couchdb.DocReference `json:"data"`
+		Meta jsonapi.RelationshipMeta
+	}
+	req, _ = http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	_, res, err = doRequest(req, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, *result.Meta.Count, 1)
+	assert.Equal(t, fdoc.ID(), result.Data[0].ID)
+
+	// Add a dummy reference on io.cozy.apps%2ffoobaz
+	foobazRef := couchdb.DocReference{
+		ID:   "io.cozy.apps%2ffoobaz",
+		Type: Type,
+	}
+	fdoc.ReferencedBy = append(fdoc.ReferencedBy, foobazRef)
+	err = couchdb.UpdateDoc(testInstance, fdoc)
+	assert.NoError(t, err)
+
+	// Check that we can find the reference with %2f
+	url2 := ts.URL + "/data/" + Type + "/io.cozy.apps%2ffoobaz/relationships/references"
+	result.Data = result.Data[:0]
+	result.Meta = jsonapi.RelationshipMeta{}
+	req, _ = http.NewRequest("GET", url2, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	_, res, err = doRequest(req, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, *result.Meta.Count, 1)
+	assert.Equal(t, fdoc.ID(), result.Data[0].ID)
+
+	// Remove the reference with a /
+	in = jsonReader(jsonapi.Relationship{
+		Data: []couchdb.DocReference{
+			{ID: fdoc.ID(), Type: consts.Files},
+		},
+	})
+	req, _ = http.NewRequest("DELETE", url, in)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 204, res.StatusCode)
+
+	// Remove the reference with a %2f
+	in = jsonReader(jsonapi.Relationship{
+		Data: []couchdb.DocReference{
+			{ID: fdoc.ID(), Type: consts.Files},
+		},
+	})
+	req, _ = http.NewRequest("DELETE", url2, in)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 204, res.StatusCode)
+
+	// Check that both references have been removed
+	fdoc2, err := testInstance.VFS().FileByID(fdoc.ID())
+	assert.NoError(t, err)
+	assert.Len(t, fdoc2.ReferencedBy, 0)
+}
+
 func makeReferencedTestFile(t *testing.T, doc couchdb.Doc, name string) string {
 	dirID := consts.RootDirID
 	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, false, nil)

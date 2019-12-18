@@ -42,7 +42,7 @@ func rawMessageToObject(i *instance.Instance, bb json.RawMessage) (jsonapi.Objec
 func ListReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
-	id := c.Param("docid")
+	id := getDocID(c)
 	include := c.QueryParam("include")
 	includeDocs := include == "files"
 
@@ -69,6 +69,17 @@ func ListReferencesHandler(c echo.Context) error {
 	count := 0
 	if len(resCount.Rows) > 0 {
 		count = int(resCount.Rows[0].Value.(float64))
+	}
+
+	// XXX Some references can contains %2f instead of in the id (legacy),
+	// and to preserve compatibility, we try to find those documents if no
+	// documents with the correct reference are found.
+	if count == 0 && strings.Contains(id, "/") {
+		key[1] = strings.ReplaceAll(id, "/", "%2f")
+		err = couchdb.ExecView(instance, couchdb.FilesReferencedByView, reqCount, &resCount)
+		if err == nil && len(resCount.Rows) > 0 {
+			count = int(resCount.Rows[0].Value.(float64))
+		}
 	}
 
 	sort := c.QueryParam("sort")
@@ -144,7 +155,7 @@ func ListReferencesHandler(c echo.Context) error {
 func AddReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
-	id := c.Param("docid")
+	id := getDocID(c)
 
 	references, err := jsonapi.BindRelations(c.Request())
 	if err != nil {
@@ -197,7 +208,7 @@ func AddReferencesHandler(c echo.Context) error {
 func RemoveReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
-	id := c.Param("docid")
+	id := getDocID(c)
 
 	references, err := jsonapi.BindRelations(c.Request())
 	if err != nil {
@@ -207,6 +218,17 @@ func RemoveReferencesHandler(c echo.Context) error {
 	docRef := couchdb.DocReference{
 		Type: doctype,
 		ID:   id,
+	}
+
+	// XXX References with an ID that contains a / could have it encoded as %2F
+	// (legacy). We delete the references for both versions to preserve
+	// compatibility.
+	var altRef *couchdb.DocReference
+	if strings.Contains(id, "/") {
+		altRef = &couchdb.DocReference{
+			Type: doctype,
+			ID:   strings.ReplaceAll(id, "/", "%2f"),
+		}
 	}
 
 	if err := middlewares.AllowTypeAndID(c, permission.DELETE, doctype, id); err != nil {
@@ -222,10 +244,16 @@ func RemoveReferencesHandler(c echo.Context) error {
 		}
 		if dir != nil {
 			dir.RemoveReferencedBy(docRef)
+			if altRef != nil {
+				dir.RemoveReferencedBy(*altRef)
+			}
 			updateDirCozyMetadata(c, dir)
 			err = couchdb.UpdateDoc(instance, dir)
 		} else {
 			file.RemoveReferencedBy(docRef)
+			if altRef != nil {
+				file.RemoveReferencedBy(*altRef)
+			}
 			updateFileCozyMetadata(c, file, false)
 			err = couchdb.UpdateDoc(instance, file)
 		}
@@ -235,4 +263,9 @@ func RemoveReferencesHandler(c echo.Context) error {
 	}
 
 	return c.NoContent(204)
+}
+
+func getDocID(c echo.Context) string {
+	id := c.Param("docid")
+	return strings.ReplaceAll(id, "%2f", "/")
 }
