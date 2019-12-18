@@ -48,9 +48,14 @@ func Init() (err error) {
 	conf := config.GetConfig().Notifications
 
 	if conf.AndroidAPIKey != "" {
-		fcmClient, err = fcm.NewClient(conf.AndroidAPIKey)
+		if conf.FCMServer != "" {
+			fcmClient, err = fcm.NewClient(conf.AndroidAPIKey, fcm.WithEndpoint(conf.FCMServer))
+		} else {
+			fcmClient, err = fcm.NewClient(conf.AndroidAPIKey)
+		}
 		logger.WithNamespace("push").Infof("Initialized FCM client with Android API Key")
 		if err != nil {
+			logger.WithNamespace("push").Warnf("%s", err)
 			return
 		}
 	}

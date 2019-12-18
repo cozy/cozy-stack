@@ -256,6 +256,8 @@ notifications:
 
   # Firebase Cloud Messaging API Key for Android notifications
   # android_api_key: ""
+  # Use this key to run end to test with a fake FCM server
+  # fcm_server: "http://localhost:3001"
 
   # APNS/2 certificates for iOS notifications
   # ios_certificate_key_path: path/to/certificate.p12
