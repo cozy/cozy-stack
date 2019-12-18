@@ -220,12 +220,29 @@ func TestReferencesWithSlash(t *testing.T) {
 	assert.Equal(t, *result.Meta.Count, 1)
 	assert.Equal(t, fdoc.ID(), result.Data[0].ID)
 
-	// Add a dummy reference on io.cozy.apps%2ffoobaz
+	// Try again, but this time encode / as %2F instead of %2f
+	url = ts.URL + "/data/" + Type + "/io.cozy.apps%2Ffoobar/relationships/references"
+	result.Data = result.Data[:0]
+	result.Meta = jsonapi.RelationshipMeta{}
+	req, _ = http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	_, res, err = doRequest(req, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, *result.Meta.Count, 1)
+	assert.Equal(t, fdoc.ID(), result.Data[0].ID)
+
+	// Add dummy references on io.cozy.apps%2ffoobaz and io.cozy.apps%2Ffooqux
 	foobazRef := couchdb.DocReference{
 		ID:   "io.cozy.apps%2ffoobaz",
 		Type: Type,
 	}
-	fdoc.ReferencedBy = append(fdoc.ReferencedBy, foobazRef)
+	fooquxRef := couchdb.DocReference{
+		ID:   "io.cozy.apps%2Ffooqux",
+		Type: Type,
+	}
+	fdoc.ReferencedBy = append(fdoc.ReferencedBy, foobazRef, fooquxRef)
 	err = couchdb.UpdateDoc(testInstance, fdoc)
 	assert.NoError(t, err)
 
@@ -234,6 +251,19 @@ func TestReferencesWithSlash(t *testing.T) {
 	result.Data = result.Data[:0]
 	result.Meta = jsonapi.RelationshipMeta{}
 	req, _ = http.NewRequest("GET", url2, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	_, res, err = doRequest(req, &result)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Len(t, result.Data, 1)
+	assert.Equal(t, *result.Meta.Count, 1)
+	assert.Equal(t, fdoc.ID(), result.Data[0].ID)
+
+	// Check that we can find the reference with %2F
+	url3 := ts.URL + "/data/" + Type + "/io.cozy.apps%2Ffooqux/relationships/references"
+	result.Data = result.Data[:0]
+	result.Meta = jsonapi.RelationshipMeta{}
+	req, _ = http.NewRequest("GET", url3, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	_, res, err = doRequest(req, &result)
 	assert.NoError(t, err)
@@ -270,7 +300,21 @@ func TestReferencesWithSlash(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, 204, res.StatusCode)
 
-	// Check that both references have been removed
+	// Remove the reference with a %2F
+	in = jsonReader(jsonapi.Relationship{
+		Data: []couchdb.DocReference{
+			{ID: fdoc.ID(), Type: consts.Files},
+		},
+	})
+	req, _ = http.NewRequest("DELETE", url3, in)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 204, res.StatusCode)
+
+	// Check that all the references have been removed
 	fdoc2, err := testInstance.VFS().FileByID(fdoc.ID())
 	assert.NoError(t, err)
 	assert.Len(t, fdoc2.ReferencedBy, 0)

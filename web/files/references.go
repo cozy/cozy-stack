@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -75,7 +76,7 @@ func ListReferencesHandler(c echo.Context) error {
 	// and to preserve compatibility, we try to find those documents if no
 	// documents with the correct reference are found.
 	if count == 0 && strings.Contains(id, "/") {
-		key[1] = strings.ReplaceAll(id, "/", "%2f")
+		key[1] = c.Param("docid")
 		err = couchdb.ExecView(instance, couchdb.FilesReferencedByView, reqCount, &resCount)
 		if err == nil && len(resCount.Rows) > 0 {
 			count = int(resCount.Rows[0].Value.(float64))
@@ -227,7 +228,7 @@ func RemoveReferencesHandler(c echo.Context) error {
 	if strings.Contains(id, "/") {
 		altRef = &couchdb.DocReference{
 			Type: doctype,
-			ID:   strings.ReplaceAll(id, "/", "%2f"),
+			ID:   c.Param("docid"),
 		}
 	}
 
@@ -267,5 +268,8 @@ func RemoveReferencesHandler(c echo.Context) error {
 
 func getDocID(c echo.Context) string {
 	id := c.Param("docid")
-	return strings.ReplaceAll(id, "%2f", "/")
+	if docid, err := url.PathUnescape(id); err == nil {
+		return docid
+	}
+	return id
 }
