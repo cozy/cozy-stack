@@ -181,11 +181,17 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			permType = consts.Files
 		}
 		// XXX: no permissions are required for io.cozy.sharings.initial-sync
-		if withAuthentication &&
-			cmd.Payload.Type != consts.SharingsInitialSync &&
-			!pdoc.Permissions.AllowWholeType(permission.GET, permType) {
-			sendErr(ctx, errc, forbidden(cmd))
-			continue
+		if withAuthentication && cmd.Payload.Type != consts.SharingsInitialSync {
+			var authorized bool
+			if cmd.Payload.ID == "" {
+				authorized = pdoc.Permissions.AllowWholeType(permission.GET, permType)
+			} else {
+				authorized = pdoc.Permissions.AllowID(permission.GET, permType, cmd.Payload.ID)
+			}
+			if !authorized {
+				sendErr(ctx, errc, forbidden(cmd))
+				continue
+			}
 		}
 
 		if cmd.Payload.ID == "" {
