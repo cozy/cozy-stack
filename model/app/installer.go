@@ -627,5 +627,6 @@ func isPlatformApp(man Manifest) bool {
 		"store",
 		"banks",
 		"contacts",
+		"notes",
 	})
 }
