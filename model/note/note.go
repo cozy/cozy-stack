@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/prosemirror-go/markdown"
 	"github.com/cozy/prosemirror-go/model"
 )
@@ -24,6 +25,7 @@ const (
 	persistenceDebouce = "1m"
 	cacheDuration      = 30 * time.Minute
 	cleanStepsAfter    = 24 * time.Hour
+	noteMime           = "text/vnd.cozy.note+markdown"
 )
 
 // Document is the note document in memory. It is persisted to the VFS as a
@@ -238,7 +240,7 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 		dirID,
 		int64(len(content)),
 		nil, // Let the VFS compute the md5sum
-		"text/markdown",
+		noteMime,
 		"text",
 		cm.UpdatedAt,
 		false, // Not executable
@@ -369,6 +371,56 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 	}()
 	_, err = file.Write(md)
 	return
+}
+
+// List returns a list of notes sorted by descending updated_at. It uses
+// pagination via a mango bookmark.
+func List(inst *instance.Instance, bookmark string) ([]*vfs.FileDoc, string, error) {
+	lock := inst.NotesLock()
+	if err := lock.Lock(); err != nil {
+		return nil, "", err
+	}
+	defer lock.Unlock()
+
+	var docs []*vfs.FileDoc
+	req := &couchdb.FindRequest{
+		UseIndex: "by-mime-updated-at",
+		Selector: mango.And(
+			mango.Equal("mime", noteMime),
+			mango.Exists("updated_at"),
+		),
+		Sort: mango.SortBy{
+			{Field: "mime", Direction: mango.Desc},
+			{Field: "updated_at", Direction: mango.Desc},
+		},
+		Limit:    100,
+		Bookmark: bookmark,
+	}
+	res, err := couchdb.FindDocsRaw(inst, consts.Files, req, &docs)
+	if err != nil {
+		return nil, "", err
+	}
+
+	updateMetadataFromCache(inst, docs)
+	return docs, res.Bookmark, nil
+}
+
+func updateMetadataFromCache(inst *instance.Instance, docs []*vfs.FileDoc) {
+	keys := make([]string, len(docs))
+	for i, doc := range docs {
+		keys[i] = cacheKey(inst, doc.ID())
+	}
+	cache := config.GetConfig().CacheStorage
+	bufs := cache.MultiGet(keys)
+	for i, buf := range bufs {
+		if len(buf) == 0 {
+			continue
+		}
+		var note Document
+		if err := json.Unmarshal(buf, &note); err == nil {
+			docs[i].Metadata = note.Metadata()
+		}
+	}
 }
 
 // GetFile takes a file from the VFS as a note and returns its last version. It

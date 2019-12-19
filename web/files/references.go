@@ -34,7 +34,7 @@ func rawMessageToObject(i *instance.Instance, bb json.RawMessage) (jsonapi.Objec
 		return newDir(d), nil
 	}
 
-	return newFile(f, i), nil
+	return NewFile(f, i), nil
 }
 
 // ListReferencesHandler list all files referenced by a doc

@@ -120,7 +120,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 			Warnf("Error on uploading file (copy): %s (%d bytes written - expected %d)", err, n, cl)
 		return
 	}
-	f = newFile(doc, instance)
+	f = NewFile(doc, instance)
 	return
 }
 
@@ -1209,7 +1209,7 @@ func FindFilesMango(c echo.Context) error {
 		if d != nil {
 			out[i] = newDir(d)
 		} else {
-			out[i] = newFile(f, instance)
+			out[i] = NewFile(f, instance)
 		}
 	}
 

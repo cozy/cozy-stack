@@ -18,6 +18,8 @@ var Indexes = []*mango.Index{
 	mango.IndexOnFields(consts.Files, "dir-children", []string{"dir_id", "_id"}),
 	// Used to lookup a directory given its path
 	mango.IndexOnFields(consts.Files, "dir-by-path", []string{"path"}),
+	// Used to find notes
+	mango.IndexOnFields(consts.Files, "by-mime-updated-at", []string{"mime", "updated_at"}),
 
 	// Used to lookup a queued and running jobs
 	mango.IndexOnFields(consts.Jobs, "by-worker-and-state", []string{"worker", "state"}),

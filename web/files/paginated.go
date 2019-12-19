@@ -117,7 +117,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		if d != nil {
 			included = append(included, newDir(d))
 		} else {
-			included = append(included, newFile(f, instance))
+			included = append(included, NewFile(f, instance))
 		}
 	}
 
@@ -185,7 +185,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		if d != nil {
 			included = append(included, newDir(d))
 		} else {
-			included = append(included, newFile(f, instance))
+			included = append(included, NewFile(f, instance))
 		}
 	}
 
@@ -202,15 +202,15 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	return jsonapi.DataListWithTotal(c, statusCode, count, included, &links)
 }
 
-// newFile creates an instance of file struct from a vfs.FileDoc document.
-func newFile(doc *vfs.FileDoc, i *instance.Instance) *file {
+// NewFile creates an instance of file struct from a vfs.FileDoc document.
+func NewFile(doc *vfs.FileDoc, i *instance.Instance) *file {
 	return &file{doc, i, nil, nil}
 }
 
 // FileData returns a jsonapi representation of the given file.
 func FileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withVersions bool, links *jsonapi.LinksList) error {
 	instance := middlewares.GetInstance(c)
-	f := newFile(doc, instance)
+	f := NewFile(doc, instance)
 	if withVersions {
 		if versions, err := vfs.VersionsFor(instance, doc.ID()); err == nil {
 			f.versions = versions
