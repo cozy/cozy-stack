@@ -315,12 +315,13 @@ to the VFS later.
 
 The `migrations` worker can be used to migrate a cozy instance. Currently, it
 has a single option, `type`, with two supported values:
-* `to-swift-v3`: migrate a cozy instance that has files in swift from a V1 or V2 layout to a V3 layout.
+* `to-swift-v3`: migrate a cozy instance that has files in swift from a V1 or V2 layout to a V3 layout
 * `accounts-to-organization`: create [ciphers](https://docs.cozy.io/en/cozy-doctypes/docs/com.bitwarden.ciphers/)
- from [accounts](https://docs.cozy.io/en/cozy-doctypes/docs/io.cozy.accounts/),
- re-encrypted with the organization key.
-
-
+  from [accounts](https://docs.cozy.io/en/cozy-doctypes/docs/io.cozy.accounts/),
+  re-encrypted with the organization key
+* `notes-mime-type`: update the notes mime-type to
+  `text/vnd.cozy.note+markdown` to allow them to be listed in the cozy-notes
+  application.
 
 ### Example
 

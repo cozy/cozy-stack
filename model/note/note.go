@@ -402,11 +402,13 @@ func List(inst *instance.Instance, bookmark string) ([]*vfs.FileDoc, string, err
 		return nil, "", err
 	}
 
-	updateMetadataFromCache(inst, docs)
+	UpdateMetadataFromCache(inst, docs)
 	return docs, res.Bookmark, nil
 }
 
-func updateMetadataFromCache(inst *instance.Instance, docs []*vfs.FileDoc) {
+// UpdateMetadataFromCache update the metadata for a file/note with the
+// information in cache.
+func UpdateMetadataFromCache(inst *instance.Instance, docs []*vfs.FileDoc) {
 	keys := make([]string, len(docs))
 	for i, doc := range docs {
 		keys[i] = cacheKey(inst, doc.ID())
@@ -576,7 +578,9 @@ func Update(inst *instance.Instance, fileID string) error {
 		return err
 	}
 
-	if doc.Title == old.Metadata["title"] && doc.Version == old.Metadata["version"] {
+	if doc.Title == old.Metadata["title"] &&
+		doc.Version == old.Metadata["version"] &&
+		noteMime == old.Mime {
 		// Nothing to do
 		return nil
 	}

@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 25
+const IndexViewsVersion int = 26
 
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
