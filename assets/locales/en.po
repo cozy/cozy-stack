@@ -24,6 +24,9 @@ msgstr "Inbox of sharings"
 msgid "Tree No longer shared"
 msgstr "No longer shared"
 
+msgid "Notes New note"
+msgstr "New note"
+
 msgid "Login Credentials error"
 msgstr "The password you entered is incorrect, please try again."
 

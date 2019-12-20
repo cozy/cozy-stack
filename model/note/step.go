@@ -151,7 +151,7 @@ func ApplySteps(inst *instance.Instance, file *vfs.FileDoc, lastVersion string, 
 	if err := saveToCache(inst, doc); err != nil {
 		return nil, err
 	}
-	return doc.asFile(file), nil
+	return doc.asFile(inst, file), nil
 }
 
 func apply(inst *instance.Instance, doc *Document, steps []Step) error {

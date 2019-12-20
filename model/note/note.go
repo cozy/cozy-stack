@@ -141,7 +141,7 @@ func (d *Document) getDirID(inst *instance.Instance) (string, error) {
 	return d.DirID, nil
 }
 
-func (d *Document) asFile(old *vfs.FileDoc) *vfs.FileDoc {
+func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDoc {
 	md, _ := d.Markdown()
 	file := old.Clone().(*vfs.FileDoc)
 	file.Metadata = d.Metadata()
@@ -153,9 +153,12 @@ func (d *Document) asFile(old *vfs.FileDoc) *vfs.FileDoc {
 
 	// If the file was renamed manually before, we will keep its name. Else, we
 	// can rename with the new title.
-	newTitle := titleToFilename(d.Title)
+	newTitle := titleToFilename(inst, d.Title)
 	oldTitle, _ := old.Metadata["title"].(string)
-	rename := titleToFilename(oldTitle) == old.DocName
+	rename := titleToFilename(inst, oldTitle) == old.DocName
+	if old.DocName == "" {
+		rename = true
+	}
 	if strings.Contains(old.DocName, " - conflict - ") && oldTitle != newTitle {
 		rename = true
 	}
@@ -229,7 +232,7 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	}
 
 	fileDoc, err := vfs.NewFileDoc(
-		titleToFilename(doc.Title),
+		titleToFilename(inst, doc.Title),
 		dirID,
 		int64(len(content)),
 		nil, // Let the VFS compute the md5sum
@@ -250,11 +253,14 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	return fileDoc, nil
 }
 
-func titleToFilename(title string) string {
-	if title == "" {
-		title = "New note"
+func titleToFilename(inst *instance.Instance, title string) string {
+	name := title
+	if name == "" {
+		name = inst.Translate("Notes New note")
+		name += " " + time.Now().Format(time.RFC3339)
 	}
-	name := strings.ReplaceAll(title, "/", "-")
+	name = strings.ReplaceAll(name, "/", "-")
+	name = strings.ReplaceAll(name, ":", "-")
 	return name + ".cozy-note"
 }
 
@@ -335,7 +341,7 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 			return
 		}
 	} else {
-		fileDoc = doc.asFile(oldDoc)
+		fileDoc = doc.asFile(inst, oldDoc)
 	}
 
 	fs := inst.VFS()
@@ -344,7 +350,8 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 	if err == os.ErrExist {
 		filename := strings.TrimSuffix(path.Base(fileDoc.DocName), path.Ext(fileDoc.DocName))
 		suffix := time.Now().Format(time.RFC3339)
-		fileDoc.DocName = fmt.Sprintf("%s - conflict - %s.cozy-note", filename, suffix)
+		suffix = strings.ReplaceAll(suffix, ":", "-")
+		fileDoc.DocName = fmt.Sprintf("%s %s.cozy-note", filename, suffix)
 		file, err = fs.CreateFile(fileDoc, oldDoc)
 	}
 	if err != nil {
@@ -374,7 +381,7 @@ func GetFile(inst *instance.Instance, file *vfs.FileDoc) (*vfs.FileDoc, error) {
 	if err != nil {
 		return nil, err
 	}
-	return doc.asFile(file), nil
+	return doc.asFile(inst, file), nil
 }
 
 // get must be called with the notes lock already acquired. It will try to load
@@ -494,7 +501,7 @@ func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title, sessionID st
 	}
 
 	publishUpdatedTitle(inst, file.ID(), title, sessionID)
-	return doc.asFile(file), nil
+	return doc.asFile(inst, file), nil
 }
 
 // Update is used to persist changes on a note to its file in the VFS.
