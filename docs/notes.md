@@ -779,6 +779,23 @@ Content-Type: application/vnd.api+json
 HTTP/1.1 204 No Content
 ```
 
+### POST /notes/:id/sync
+
+It forces writing the note to the virtual file system. It may be used after the
+title has been changed, or when the user quits the note.
+
+#### Request
+
+```http
+POST /notes/f48d9370-e1ec-0137-8547-543d7eb8149c/sync HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Real-time via websockets
 
 You can subscribe to the [realtime](realtime.md) API for a document with the

@@ -131,7 +131,7 @@ func assertInitialNote(t *testing.T, result map[string]interface{}) {
 	assert.NotNil(t, meta["content"])
 }
 
-func TestChangeTitle(t *testing.T) {
+func TestChangeTitleAndSync(t *testing.T) {
 	body := `
 {
   "data": {
@@ -164,27 +164,30 @@ func TestChangeTitle(t *testing.T) {
 
 	// The change was only made in cache, but we have to force persisting the
 	// change to the VFS to check that renaming the file works.
-	err = note.Update(inst, noteID)
-	assert.NoError(t, err)
-
-	req2, _ := http.NewRequest("GET", ts.URL+"/notes/"+noteID, nil)
+	req2, _ := http.NewRequest("POST", ts.URL+"/notes/"+noteID+"/sync", nil)
 	req2.Header.Add("Authorization", "Bearer "+token)
 	res2, err := http.DefaultClient.Do(req2)
 	assert.NoError(t, err)
-	assert.Equal(t, 200, res2.StatusCode)
-	var result2 map[string]interface{}
-	err = json.NewDecoder(res2.Body).Decode(&result2)
+	assert.Equal(t, 204, res2.StatusCode)
+
+	req3, _ := http.NewRequest("GET", ts.URL+"/notes/"+noteID, nil)
+	req3.Header.Add("Authorization", "Bearer "+token)
+	res3, err := http.DefaultClient.Do(req3)
 	assert.NoError(t, err)
-	data2, _ := result2["data"].(map[string]interface{})
-	assert.Equal(t, "io.cozy.files", data2["type"])
-	assert.Equal(t, noteID, data2["id"])
-	attrs2 := data2["attributes"].(map[string]interface{})
-	assert.Equal(t, "A new title.cozy-note", attrs2["name"])
-	meta2, _ := attrs["metadata"].(map[string]interface{})
-	assert.Equal(t, "A new title", meta2["title"])
-	assert.EqualValues(t, 0, meta2["version"])
-	assert.NotNil(t, meta2["schema"])
-	assert.NotNil(t, meta2["content"])
+	assert.Equal(t, 200, res3.StatusCode)
+	var result3 map[string]interface{}
+	err = json.NewDecoder(res3.Body).Decode(&result3)
+	assert.NoError(t, err)
+	data3, _ := result3["data"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.files", data3["type"])
+	assert.Equal(t, noteID, data3["id"])
+	attrs3 := data3["attributes"].(map[string]interface{})
+	assert.Equal(t, "A new title.cozy-note", attrs3["name"])
+	meta3, _ := attrs["metadata"].(map[string]interface{})
+	assert.Equal(t, "A new title", meta3["title"])
+	assert.EqualValues(t, 0, meta3["version"])
+	assert.NotNil(t, meta3["schema"])
+	assert.NotNil(t, meta3["content"])
 }
 
 func TestPatchNote(t *testing.T) {
