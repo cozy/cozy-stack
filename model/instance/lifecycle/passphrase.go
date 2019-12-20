@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"crypto/subtle"
 	"encoding/hex"
+	"errors"
 	"net/url"
 	"time"
 
@@ -13,6 +14,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/gofrs/uuid"
 )
+
+// ErrHintSameAsPassword is used when trying to set an hint that is the same as
+// the password, which would defeat security (e.g. the hint is not encrypted in
+// CouchDB).
+var ErrHintSameAsPassword = errors.New("The hint cannot be the same as the password")
 
 // PassParameters are the parameters for setting a new passphrase
 type PassParameters struct {
@@ -334,7 +340,7 @@ func CreateKeyPair(symKey []byte) (string, string, error) {
 	return pubKey, encrypted, nil
 }
 
-// CheckPassphrase confirm an instance passport
+// CheckPassphrase confirm an instance password
 func CheckPassphrase(inst *instance.Instance, pass []byte) error {
 	if len(pass) == 0 {
 		return instance.ErrMissingPassphrase
@@ -357,6 +363,18 @@ func CheckPassphrase(inst *instance.Instance, pass []byte) error {
 	inst.PassphraseHash = newHash
 	if err = update(inst); err != nil {
 		inst.Logger().Error("Failed to update hash in db", err)
+	}
+	return nil
+}
+
+// CheckHint returns true if the hint is valid, ie it is not
+// the same as the password.
+func CheckHint(inst *instance.Instance, setting *settings.Settings, hint string) error {
+	salt := inst.PassphraseSalt()
+	iterations := setting.PassphraseKdfIterations
+	hashed, _ := crypto.HashPassWithPBKDF2([]byte(hint), salt, iterations)
+	if err := CheckPassphrase(inst, hashed); err == nil {
+		return ErrHintSameAsPassword
 	}
 	return nil
 }

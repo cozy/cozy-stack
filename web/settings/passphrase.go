@@ -237,6 +237,10 @@ func updateHint(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	if err := lifecycle.CheckHint(inst, setting, args.Hint); err != nil {
+		return jsonapi.InvalidParameter("hint", err)
+	}
+
 	setting.PassphraseHint = args.Hint
 	if err := setting.Save(inst); err != nil {
 		return err
