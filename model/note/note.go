@@ -148,6 +148,7 @@ func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDo
 	md, _ := d.Markdown()
 	file := old.Clone().(*vfs.FileDoc)
 	file.Metadata = d.Metadata()
+	file.Mime = noteMime
 	file.ByteSize = int64(len(md))
 	file.MD5Sum = nil // Let the VFS compute the md5sum
 	if d.DirID != "" {

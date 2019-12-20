@@ -60,9 +60,12 @@ func ListNotes(c echo.Context) error {
 		links.Next = "/notes?page[cursor]=" + bookmark
 	}
 
+	fp := vfs.NewFilePatherWithCache(inst.VFS())
 	objs := make([]jsonapi.Object, len(docs))
 	for i, doc := range docs {
-		objs[i] = files.NewFile(doc, inst)
+		f := files.NewFile(doc, inst)
+		f.IncludePath(fp)
+		objs[i] = f
 	}
 	return jsonapi.DataList(c, http.StatusOK, objs, &links)
 }

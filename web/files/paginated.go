@@ -27,8 +27,10 @@ type file struct {
 	doc      *vfs.FileDoc
 	instance *instance.Instance
 	versions []*vfs.Version
-	// XXX Hide the internal_vfs_id
-	InternalID *interface{} `json:"internal_vfs_id,omitempty"`
+	// fileJSON is used for marshaling to JSON and we keep a reference here to
+	// avoid many allocations.
+	jsonDoc     *fileJSON
+	includePath bool
 }
 
 type apiArchive struct {
@@ -204,7 +206,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 
 // NewFile creates an instance of file struct from a vfs.FileDoc document.
 func NewFile(doc *vfs.FileDoc, i *instance.Instance) *file {
-	return &file{doc, i, nil, nil}
+	return &file{doc, i, nil, &fileJSON{}, false}
 }
 
 // FileData returns a jsonapi representation of the given file.
@@ -257,6 +259,15 @@ func (m *apiMetadata) Included() []jsonapi.Object             { return nil }
 func (m *apiMetadata) MarshalJSON() ([]byte, error)           { return json.Marshal(m.Metadata) }
 func (m *apiMetadata) Links() *jsonapi.LinksList              { return nil }
 
+type fileJSON struct {
+	*vfs.FileDoc
+	// XXX Hide the internal_vfs_id and referenced_by
+	InternalID   *interface{} `json:"internal_vfs_id,omitempty"`
+	ReferencedBy *interface{} `json:"referenced_by,omitempty"`
+	// Include the path if asked for
+	Fullpath string `json:"path,omitempty"`
+}
+
 func (f *file) ID() string         { return f.doc.ID() }
 func (f *file) Rev() string        { return f.doc.Rev() }
 func (f *file) SetID(id string)    { f.doc.SetID(id) }
@@ -303,10 +314,11 @@ func (f *file) Included() []jsonapi.Object {
 	return included
 }
 func (f *file) MarshalJSON() ([]byte, error) {
-	ref := f.doc.ReferencedBy
-	f.doc.ReferencedBy = nil
-	res, err := json.Marshal(f.doc)
-	f.doc.ReferencedBy = ref
+	f.jsonDoc.FileDoc = f.doc
+	if f.includePath {
+		f.jsonDoc.Fullpath, _ = f.doc.Path(nil)
+	}
+	res, err := json.Marshal(f.jsonDoc)
 	return res, err
 }
 func (f *file) Links() *jsonapi.LinksList {
@@ -319,4 +331,8 @@ func (f *file) Links() *jsonapi.LinksList {
 		}
 	}
 	return &links
+}
+func (f *file) IncludePath(fp vfs.FilePather) {
+	f.includePath = true
+	_, _ = f.doc.Path(fp)
 }

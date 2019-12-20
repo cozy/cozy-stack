@@ -165,7 +165,7 @@ Content-Type: application/vnd.api+json
       "size": 1,
       "executable": false,
       "class": "text",
-      "mime": "text/markdown",
+      "mime": "text/vnd.cozy.note+markdown",
       "cozyMetadata": {
         "doctypeVersion": "1",
         "metadataVersion": 1,
@@ -193,7 +193,8 @@ Content-Type: application/vnd.api+json
 
 ### GET /notes
 
-It returns the list of notes, sorted by last update.
+It returns the list of notes, sorted by last update. It adds the path for the
+files in the response, as it can be convient for the notes application.
 
 **Note:** a permission on `GET io.cozy.files` is required to use this route.
 
@@ -225,6 +226,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "file",
       "name": "My new note.cozy-note",
+      "path": "/Notes/my new note.cozy-note",
       "trashed": false,
       "md5sum": "NjhiMzI5ZGE5ODkzZTM0MDk5YzdkOGFkNWNiOWM5NDAgIC0K",
       "created_at": "2019-11-05T12:38:04Z",
@@ -282,7 +284,7 @@ Content-Type: application/vnd.api+json
       "size": 1,
       "executable": false,
       "class": "text",
-      "mime": "text/markdown",
+      "mime": "text/vnd.cozy.note+markdown",
       "cozyMetadata": {
         "doctypeVersion": "1",
         "metadataVersion": 1,
@@ -397,7 +399,7 @@ Content-Type: application/vnd.api+json
       "size": 4,
       "executable": false,
       "class": "text",
-      "mime": "text/markdown",
+      "mime": "text/vnd.cozy.note+markdown",
       "cozyMetadata": {
         "doctypeVersion": "1",
         "metadataVersion": 1,
@@ -549,7 +551,7 @@ Content-Type: application/vnd.api+json
       "size": 4,
       "executable": false,
       "class": "text",
-      "mime": "text/markdown",
+      "mime": "text/vnd.cozy.note+markdown",
       "cozyMetadata": {
         "doctypeVersion": "1",
         "metadataVersion": 1,
@@ -675,7 +677,7 @@ Content-Type: application/vnd.api+json
       "size": 4,
       "executable": false,
       "class": "text",
-      "mime": "text/markdown",
+      "mime": "text/vnd.cozy.note+markdown",
       "cozyMetadata": {
         "doctypeVersion": "1",
         "metadataVersion": 1,
@@ -821,7 +823,7 @@ Content-Type: application/vnd.api+json
       "size": 6,
       "executable": false,
       "class": "text",
-      "mime": "text/markdown",
+      "mime": "text/vnd.cozy.note+markdown",
       "cozyMetadata": {
         "doctypeVersion": "1",
         "metadataVersion": 1,
