@@ -36,6 +36,9 @@ msgstr "Partages reçus"
 msgid "Tree No longer shared"
 msgstr "Retirés des partages"
 
+msgid "Notes New note"
+msgstr "Nouvelle note"
+
 msgid "Login Credentials error"
 msgstr ""
 "Les identifiants que vous avez saisis sont incorrects, veuillez ré-essayer."
