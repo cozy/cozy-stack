@@ -195,6 +195,27 @@ func PutTelepointer(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// ForceNoteSync is the API handler for POST /notes/:id/sync. It forces writing
+// the note to the VFS
+func ForceNoteSync(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fileID := c.Param("id")
+	file, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	if err := middlewares.AllowVFS(c, permission.PUT, file); err != nil {
+		return err
+	}
+
+	if err := note.Update(inst, file.ID()); err != nil {
+		return wrapError(err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Routes sets the routing for the collaborative edition of notes.
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
@@ -203,6 +224,7 @@ func Routes(router *echo.Group) {
 	router.PATCH("/:id", PatchNote)
 	router.PUT("/:id/title", ChangeTitle)
 	router.PUT("/:id/telepointer", PutTelepointer)
+	router.POST("/:id/sync", ForceNoteSync)
 }
 
 func wrapError(err error) *jsonapi.Error {
