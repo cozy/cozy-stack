@@ -145,6 +145,10 @@ func migrateAccountsToOrganization(domain string) error {
 			continue
 		}
 		var link string
+		if manifest.VendorLink == nil {
+			log.Warningf("No vendor_link in manifest for %s", msg.Slug)
+			continue
+		}
 		if err := json.Unmarshal(*manifest.VendorLink, &link); err != nil {
 			errm = multierror.Append(errm, err)
 		}
