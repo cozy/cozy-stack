@@ -30,6 +30,9 @@ msgstr "Gedeeld met mij"
 msgid "Tree No longer shared"
 msgstr "Niet langer gedeeld"
 
+msgid "Notes New note"
+msgstr "Nieuwe notitie"
+
 msgid "Login Credentials error"
 msgstr "Het ingevoerde wachtwoord is onjuist; probeer het opnieuw."
 
