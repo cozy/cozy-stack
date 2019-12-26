@@ -30,6 +30,9 @@ msgstr "私と共有"
 msgid "Tree No longer shared"
 msgstr "もう共有されていません"
 
+msgid "Notes New note"
+msgstr "新しいメモ"
+
 msgid "Login Credentials error"
 msgstr "入力した資格情報が間違っています。もう一度やり直してください。"
 
@@ -657,14 +660,16 @@ msgid "Notifications Disk Quota Intro"
 msgstr "容量を増やすには2つの方法があります。"
 
 msgid "Notifications Disk Quota offers instruction"
-msgstr "オプション 1: 新しい提案を選択して、Cozy をアップグレードし、さらに多くの容量を入手してください"
+msgstr ""
+"オプション 1:\n"
+"新しい提案を選択して Cozy をアップグレードし、さらに多くの容量を入手しましょう"
 
 msgid "Notifications Disk Quota offers text"
 msgstr "今すぐアップグレード"
 
 msgid "Notifications Disk Quota free instructions"
 msgstr ""
-"オプション 2: 容量を空ける\n"
+"オプション 2:\n"
 "不要なファイルを削除して容量を節約します"
 
 msgid "Notifications Disk Quota free text"
