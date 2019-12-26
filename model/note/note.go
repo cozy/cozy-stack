@@ -142,6 +142,7 @@ func (d *Document) getDirID(inst *instance.Instance) (string, error) {
 }
 
 func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDoc {
+	now := time.Now()
 	md, _ := d.Markdown()
 	file := old.Clone().(*vfs.FileDoc)
 	file.Metadata = d.Metadata()
@@ -153,9 +154,9 @@ func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDo
 
 	// If the file was renamed manually before, we will keep its name. Else, we
 	// can rename with the new title.
-	newTitle := titleToFilename(inst, d.Title)
+	newTitle := titleToFilename(inst, d.Title, now)
 	oldTitle, _ := old.Metadata["title"].(string)
-	rename := titleToFilename(inst, oldTitle) == old.DocName
+	rename := titleToFilename(inst, oldTitle, old.UpdatedAt) == old.DocName
 	if old.DocName == "" {
 		rename = true
 	}
@@ -167,7 +168,7 @@ func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDo
 		file.ResetFullpath()
 	}
 
-	file.UpdatedAt = time.Now()
+	file.UpdatedAt = now
 	file.CozyMetadata.UpdatedAt = file.UpdatedAt
 	return file
 }
@@ -230,15 +231,16 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	if err != nil {
 		return nil, err
 	}
+	cm := vfs.NewCozyMetadata(inst.PageURL("/", nil))
 
 	fileDoc, err := vfs.NewFileDoc(
-		titleToFilename(inst, doc.Title),
+		titleToFilename(inst, doc.Title, cm.UpdatedAt),
 		dirID,
 		int64(len(content)),
 		nil, // Let the VFS compute the md5sum
 		"text/markdown",
 		"text",
-		time.Now(),
+		cm.UpdatedAt,
 		false, // Not executable
 		false, // Not trashed
 		nil,   // No tags
@@ -248,16 +250,16 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 	}
 
 	fileDoc.Metadata = doc.Metadata()
-	fileDoc.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	fileDoc.CozyMetadata = cm
 	fileDoc.CozyMetadata.CozyMetadata.CreatedByApp = doc.CreatedBy
 	return fileDoc, nil
 }
 
-func titleToFilename(inst *instance.Instance, title string) string {
+func titleToFilename(inst *instance.Instance, title string, updatedAt time.Time) string {
 	name := title
 	if name == "" {
 		name = inst.Translate("Notes New note")
-		name += " " + time.Now().Format(time.RFC3339)
+		name += " " + updatedAt.Format(time.RFC3339)
 	}
 	name = strings.ReplaceAll(name, "/", "-")
 	name = strings.ReplaceAll(name, ":", "-")
