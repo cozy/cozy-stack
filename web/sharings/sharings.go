@@ -142,6 +142,7 @@ func GetSharingsInfoByDocType(c echo.Context) error {
 
 	sharings, err := sharing.GetSharingsByDocType(inst, docType)
 	if err != nil {
+		inst.Logger().WithField("nspace", "sharing").Errorf("GetSharingsByDocType error: %s", err)
 		return wrapErrors(err)
 	}
 	if len(sharings) == 0 {
@@ -158,6 +159,7 @@ func GetSharingsInfoByDocType(c echo.Context) error {
 	}
 	sDocs, err := sharing.GetSharedDocsBySharingIDs(inst, sharingIDs)
 	if err != nil {
+		inst.Logger().WithField("nspace", "sharing").Errorf("GetSharedDocsBySharingIDs error: %s", err)
 		return wrapErrors(err)
 	}
 
