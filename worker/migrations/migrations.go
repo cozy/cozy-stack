@@ -14,11 +14,13 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/model/vfs/vfsswift"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -39,6 +41,7 @@ const (
 	swiftV3ContainerPrefix     = "cozy-v3-"
 
 	accountsToOrganization = "accounts-to-organization"
+	notesMimeType          = "notes-mime-type"
 )
 
 // maxSimultaneousCalls is the maximal number of simultaneous calls to Swift
@@ -77,6 +80,8 @@ func worker(ctx *job.WorkerContext) error {
 		return fmt.Errorf("this migration type is no longer supported")
 	case accountsToOrganization:
 		return migrateAccountsToOrganization(ctx.Instance.Domain)
+	case notesMimeType:
+		return migrateNotesMimeType(ctx.Instance.Domain)
 	default:
 		return fmt.Errorf("unknown migration type %q", msg.Type)
 	}
@@ -92,6 +97,40 @@ func commit(ctx *job.WorkerContext, err error) error {
 	return err
 }
 
+func migrateNotesMimeType(domain string) error {
+	inst, err := instance.GetFromCouch(domain)
+	if err != nil {
+		return err
+	}
+	log := inst.Logger().WithField("nspace", "migration")
+
+	var docs []*vfs.FileDoc
+	req := &couchdb.FindRequest{
+		UseIndex: "by-mime-updated-at",
+		Selector: mango.And(
+			mango.Equal("mime", "text/markdown"),
+			mango.Exists("updated_at"),
+		),
+		Limit: 1000,
+	}
+	_, err = couchdb.FindDocsRaw(inst, consts.Files, req, &docs)
+	if err != nil {
+		return err
+	}
+	log.Infof("Found %d markdown files", len(docs))
+	for _, doc := range docs {
+		if _, ok := doc.Metadata["version"]; !ok {
+			log.Infof("Skip file %#v", doc)
+			continue
+		}
+		if err := note.Update(inst, doc.ID()); err != nil {
+			log.Warnf("Cannot change mime-type for note %s: %s", doc.ID(), err)
+		}
+	}
+
+	return nil
+}
+
 // Migrate all the encrypted accounts to Bitwarden ciphers.
 // It decrypts each account, reencrypt the fields with the organization key,
 // and save it in the ciphers database.
@@ -100,7 +139,7 @@ func migrateAccountsToOrganization(domain string) error {
 	if err != nil {
 		return err
 	}
-	log := logger.WithDomain(inst.Domain).WithField("nspace", "migration")
+	log := inst.Logger().WithField("nspace", "migration")
 
 	setting, err := settings.Get(inst)
 	if err != nil {
@@ -252,8 +291,7 @@ func migrateToSwiftV3(domain string) error {
 	if err != nil {
 		return err
 	}
-
-	log := logger.WithDomain(inst.Domain).WithField("nspace", "migration")
+	log := inst.Logger().WithField("nspace", "migration")
 
 	var srcContainer, migratedFrom string
 	// TODO(XXX): Use ContainerNames() instead of duplicating the container names logic here

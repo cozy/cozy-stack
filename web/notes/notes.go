@@ -41,6 +41,35 @@ func CreateNote(c echo.Context) error {
 	return files.FileData(c, http.StatusCreated, file, false, nil)
 }
 
+// ListNotes is the API handler for GET /notes. It returns the list of the
+// notes.
+func ListNotes(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Files); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	bookmark := c.QueryParam("page[cursor]")
+	docs, bookmark, err := note.List(inst, bookmark)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	var links jsonapi.LinksList
+	if bookmark != "" {
+		links.Next = "/notes?page[cursor]=" + bookmark
+	}
+
+	fp := vfs.NewFilePatherWithCache(inst.VFS())
+	objs := make([]jsonapi.Object, len(docs))
+	for i, doc := range docs {
+		f := files.NewFile(doc, inst)
+		f.IncludePath(fp)
+		objs[i] = f
+	}
+	return jsonapi.DataList(c, http.StatusOK, objs, &links)
+}
+
 // GetNote is the API handler for GET /notes/:id. It fetches the file with the
 // given id, and also includes the changes in the content that have been
 // accepted by the stack but not yet persisted on the file.
@@ -219,6 +248,7 @@ func ForceNoteSync(c echo.Context) error {
 // Routes sets the routing for the collaborative edition of notes.
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
+	router.GET("", ListNotes)
 	router.GET("/:id", GetNote)
 	router.GET("/:id/steps", GetSteps)
 	router.PATCH("/:id", PatchNote)

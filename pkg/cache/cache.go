@@ -64,6 +64,24 @@ func (c Cache) Get(key string) ([]byte, bool) {
 	return nil, false
 }
 
+// MultiGet can be used to fetch several keys at once.
+func (c Cache) MultiGet(keys []string) [][]byte {
+	results := make([][]byte, len(keys))
+	if c.client == nil {
+		for i, key := range keys {
+			results[i], _ = c.Get(key)
+		}
+	} else {
+		cmd := c.client.MGet(keys...)
+		for i, val := range cmd.Val() {
+			if buf, ok := val.(string); ok {
+				results[i] = []byte(buf)
+			}
+		}
+	}
+	return results
+}
+
 // Clear removes a key from the cache
 func (c Cache) Clear(key string) {
 	if c.client == nil {
