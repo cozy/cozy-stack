@@ -622,7 +622,7 @@ func TestArchive(t *testing.T) {
 	assert.NoError(t, err)
 	z, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 	assert.NoError(t, err)
-	assert.Equal(t, 5, len(z.File))
+	assert.Equal(t, 7, len(z.File))
 	zipfiles := H{}
 	for _, f := range z.File {
 		zipfiles[f.Name] = nil
@@ -630,6 +630,8 @@ func TestArchive(t *testing.T) {
 	assert.EqualValues(t, H{
 		"test/foobar.jpg":      nil,
 		"test/foo.jpg":         nil,
+		"test/bar/":            nil,
+		"test/bar/baz/":        nil,
 		"test/bar/baz/one.png": nil,
 		"test/bar/baz/two.png": nil,
 		"test/bar/z.gif":       nil,

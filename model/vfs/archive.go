@@ -11,7 +11,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/hashicorp/go-multierror"
 )
 
 // ZipMime is the content-type for zip archives
@@ -120,26 +119,25 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 		return err
 	}
 
-	var errm error
 	for _, entry := range entries {
 		base := filepath.Dir(entry.root)
 		err = walk(fs, entry.root, entry.Dir, entry.File, func(name string, dir *DirDoc, file *FileDoc, err error) error {
 			if err != nil {
 				return err
 			}
-			if dir != nil {
-				return nil
-			}
 			name, err = filepath.Rel(base, name)
 			if err != nil {
 				return fmt.Errorf("Invalid filepath <%s>: %s", name, err)
 			}
-			header := &zip.FileHeader{
-				Name:   a.Name + "/" + name,
-				Method: zip.Deflate,
-				Flags:  0x800, // bit 11 set to force utf-8
+			if dir != nil {
+				_, err = zw.Create(a.Name + "/" + name + "/")
+				return err
 			}
-			header.SetModTime(file.UpdatedAt) // nolint: megacheck
+			header := &zip.FileHeader{
+				Name:     a.Name + "/" + name,
+				Method:   zip.Deflate,
+				Modified: file.UpdatedAt,
+			}
 			ze, err := zw.CreateHeader(header)
 			if err != nil {
 				return fmt.Errorf("Can't create zip entry <%s>: %s", name, err)
@@ -153,11 +151,11 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 			return err
 		}, 0)
 		if err != nil {
-			errm = multierror.Append(errm, err)
+			return err
 		}
 	}
 
-	return errm
+	return nil
 }
 
 // ID makes Archive a jsonapi.Object
