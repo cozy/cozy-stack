@@ -30,6 +30,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
@@ -944,7 +945,10 @@ func ArchiveDownloadHandler(c echo.Context) error {
 	if archive == nil {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
-	return archive.Serve(instance.VFS(), c.Response())
+	if err := archive.Serve(instance.VFS(), c.Response()); err != nil {
+		return WrapVfsError(err)
+	}
+	return nil
 }
 
 // FileDownloadHandler send a file that have previously be defined
@@ -1349,6 +1353,9 @@ func wrapVfsError(err error) *jsonapi.Error {
 		return jsonapi.BadRequest(err)
 	case vfs.ErrFileTooBig:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
+	}
+	if _, ok := err.(*jsonapi.Error); !ok {
+		logger.WithNamespace("files").Warnf("Not wrapped error: %s", err)
 	}
 	return nil
 }
