@@ -289,8 +289,16 @@ func ensureNotesDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 
 	fs := inst.VFS()
 	if len(res.Rows) > 0 {
-		return fs.DirByID(res.Rows[0].ID)
+		dir, err := fs.DirByID(res.Rows[0].ID)
+		if err != nil {
+			return nil, err
+		}
+		if !strings.HasPrefix(dir.Fullpath, vfs.TrashDirName) {
+			return dir, nil
+		}
+		return vfs.RestoreDir(fs, dir)
 	}
+
 	dirname := inst.Translate("Tree Notes")
 	dir, err := vfs.NewDirDocWithPath(dirname, consts.RootDirID, "/", nil)
 	if err != nil {
@@ -299,9 +307,6 @@ func ensureNotesDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	dir.AddReferencedBy(ref)
 	dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	if err = fs.CreateDir(dir); err != nil {
-		if !couchdb.IsConflictError(err) {
-			return nil, err
-		}
 		dir, err = fs.DirByPath(dir.Fullpath)
 		if err != nil {
 			return nil, err
