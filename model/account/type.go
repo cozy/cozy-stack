@@ -126,21 +126,25 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, sta
 
 	redirectURI := at.RedirectURI(i)
 
+	// In theory, the scope is mandatory, but some services don't support it
+	// and can even have an error 500 if it is present.
+	// See https://forum.cozy.io/t/custom-oauth/6835/3
+	if scope != "" {
+		vv.Add("scope", scope)
+	}
+
 	switch at.GrantMode {
 	case AuthorizationCode:
-		vv.Add("scope", scope)
 		vv.Add("response_type", "code")
 		vv.Add("client_id", at.ClientID)
 		vv.Add("state", state)
 		vv.Add("redirect_uri", redirectURI)
 	case ImplicitGrant:
-		vv.Add("scope", scope)
 		vv.Add("response_type", "token")
 		vv.Add("client_id", at.ClientID)
 		vv.Add("state", state)
 		vv.Add("redirect_uri", redirectURI)
 	case ImplicitGrantRedirectURL:
-		vv.Add("scope", scope)
 		vv.Add("response_type", "token")
 		vv.Add("state", state)
 		vv.Add("redirect_url", redirectURI)
