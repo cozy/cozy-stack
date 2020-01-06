@@ -348,7 +348,7 @@ echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL}\"}"
 
 	wg.Wait()
 	wg.Add(1)
-	acc := &account.Account{FolderPath: "/Administrative/toto"}
+	acc := &account.Account{DefaultFolderPath: "/Administrative/toto"}
 	assert.NoError(t, couchdb.CreateDoc(inst, acc))
 	defer func() { _ = couchdb.DeleteDoc(inst, acc) }()
 	msg, err := job.NewMessage(map[string]interface{}{

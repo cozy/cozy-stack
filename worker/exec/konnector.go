@@ -10,7 +10,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
@@ -69,12 +68,33 @@ func (m *KonnectorMessage) ToJSON() string {
 	return string(m.data)
 }
 
-func (m *KonnectorMessage) updateFolderToSave(dir string) {
+// updateFolderToSave updates the message with the new dirID, and also the trigger
+func (m *KonnectorMessage) updateFolderToSave(inst *instance.Instance, dir string) {
 	m.FolderToSave = dir
 	var d map[string]interface{}
 	_ = json.Unmarshal(m.data, &d)
 	d["folder_to_save"] = dir
 	m.data, _ = json.Marshal(d)
+
+	couchdb.ForeachDocs(inst, consts.Triggers, func(_ string, data json.RawMessage) error {
+		var infos *job.TriggerInfos
+		if err := json.Unmarshal(data, &infos); err != nil {
+			return err
+		}
+		var msg map[string]interface{}
+		if err := json.Unmarshal(infos.Message, &msg); err != nil {
+			return err
+		}
+		if msg["account"] != m.Account || msg["konnector"] != m.Konnector {
+			return nil
+		}
+		msg["folder_to_save"] = dir
+		var err error
+		if infos.Message, err = json.Marshal(msg); err != nil {
+			return err
+		}
+		return couchdb.UpdateDoc(inst, infos)
+	})
 }
 
 func jobHookErrorCheckerKonnector(err error) bool {
@@ -234,71 +254,18 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 	fs := inst.VFS()
 	msg := w.msg
 
-	var normalizedFolderPath string
-	if acc != nil {
-		admin := inst.Translate("Tree Administrative")
-		r := strings.NewReplacer("&", "_", "/", "_", "\\", "_", "#", "_",
-			",", "_", "+", "_", "(", "_", ")", "_", "$", "_", "@", "_", "~",
-			"_", "%", "_", ".", "_", "'", "_", "\"", "_", ":", "_", "*", "_",
-			"?", "_", "<", "_", ">", "_", "{", "_", "}", "_")
-		accountName := r.Replace(acc.Name)
-		normalizedFolderPath = fmt.Sprintf("/%s/%s/%s", admin, strings.Title(w.slug), accountName)
-
-		// This is code to handle legacy: if the konnector does not actually require
-		// a directory (for instance because it does not upload files), but a folder
-		// has been created in the past by the stack which is still empty, then we
-		// delete it.
-		if msg.FolderToSave == "" && acc.FolderPath == "" && (acc.Basic == nil || acc.Basic.FolderPath == "") {
-			if dir, errp := fs.DirByPath(normalizedFolderPath); errp == nil {
-				if acc.Name == "" {
-					innerDirPath := path.Join(normalizedFolderPath, strings.Title(w.slug))
-					if innerDir, errp := fs.DirByPath(innerDirPath); errp == nil {
-						if isEmpty, _ := innerDir.IsEmpty(fs); isEmpty {
-							w.Logger(ctx).Warnf("Deleting empty directory for konnector: %q:%q", innerDir.ID(), normalizedFolderPath)
-							_ = fs.DeleteDirDoc(innerDir)
-						}
-					}
-				}
-				if isEmpty, _ := dir.IsEmpty(fs); isEmpty {
-					w.Logger(ctx).Warnf("Deleting empty directory for konnector: %q:%q", dir.ID(), normalizedFolderPath)
-					_ = fs.DeleteDirDoc(dir)
-				}
-			}
-		}
+	if msg.FolderToSave == "" {
+		return nil
 	}
 
 	// 1. Check if the folder identified by its ID exists
-	if msg.FolderToSave != "" {
-		dir, err := fs.DirByID(msg.FolderToSave)
-		if err == nil {
-			if !strings.HasPrefix(dir.Fullpath, vfs.TrashDirName) {
-				if len(dir.ReferencedBy) == 0 {
-					dir.AddReferencedBy(couchdb.DocReference{
-						Type: consts.Konnectors,
-						ID:   consts.Konnectors + "/" + w.slug,
-					})
-					now := time.Now()
-					if dir.CozyMetadata == nil {
-						dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
-						now = dir.CozyMetadata.CreatedAt
-					} else {
-						dir.CozyMetadata.UpdatedAt = now
-					}
-					if dir.CozyMetadata.CreatedByApp == "" {
-						dir.CozyMetadata.CreatedByApp = w.slug
-					}
-					dir.CozyMetadata.UpdatedByApp(&metadata.UpdatedByAppEntry{
-						Slug:     w.slug,
-						Date:     now,
-						Instance: inst.PageURL("/", nil),
-					})
-					_ = couchdb.UpdateDoc(inst, dir)
-				}
-				return nil
-			}
-		} else if !os.IsNotExist(err) {
-			return err
+	dir, err := fs.DirByID(msg.FolderToSave)
+	if err == nil {
+		if !strings.HasPrefix(dir.Fullpath, vfs.TrashDirName) {
+			return nil
 		}
+	} else if !os.IsNotExist(err) {
+		return err
 	}
 
 	// 2. Check if the konnector has a reference to a folder
@@ -315,6 +282,7 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 		dirID := ""
 		for _, row := range res.Rows {
 			dir := &vfs.DirDoc{}
+			fmt.Printf("row = %v\n", row)
 			if err := couchdb.GetDoc(inst, consts.Files, row.ID, dir); err == nil {
 				if !strings.HasPrefix(dir.Fullpath, vfs.TrashDirName) {
 					count++
@@ -323,7 +291,7 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 			}
 		}
 		if count == 1 {
-			msg.updateFolderToSave(dirID)
+			msg.updateFolderToSave(inst, dirID)
 			return nil
 		}
 	}
@@ -332,26 +300,27 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 	if acc == nil {
 		return nil
 	}
-	if msg.FolderToSave == "" && acc.FolderPath == "" && (acc.Basic == nil || acc.Basic.FolderPath == "") {
-		return nil
-	}
 
-	// 4. Recreate the folder
-	folderPath := acc.FolderPath
-	if folderPath == "" && acc.Basic != nil {
-		folderPath = acc.Basic.FolderPath
+	// 4. Find a name for the folder
+	folderPath := acc.DefaultFolderPath
+	if folderPath == "" {
+		folderPath = acc.FolderPath
 	}
 	if folderPath == "" {
-		folderPath = normalizedFolderPath
+		folderPath = computeFolderPath(inst, w.slug, acc)
 	}
 
-	dir, err := vfs.MkdirAll(fs, folderPath)
+	// 5. Try to recreate the folder
+	dir, err = vfs.MkdirAll(fs, folderPath)
 	if err != nil {
-		log := inst.Logger().WithField("nspace", "konnector")
-		log.Warnf("Can't create the default folder %s: %s", folderPath, err)
-		return err
+		dir, err = fs.DirByPath(folderPath)
+		if err != nil {
+			log := inst.Logger().WithField("nspace", "konnector")
+			log.Warnf("Can't create the default folder %s: %s", folderPath, err)
+			return err
+		}
 	}
-	msg.updateFolderToSave(dir.ID())
+	msg.updateFolderToSave(inst, dir.ID())
 	if len(dir.ReferencedBy) == 0 {
 		dir.AddReferencedBy(couchdb.DocReference{
 			Type: consts.Konnectors,
@@ -373,6 +342,16 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 		_ = couchdb.UpdateDoc(inst, dir)
 	}
 	return nil
+}
+
+func computeFolderPath(inst *instance.Instance, slug string, acc *account.Account) string {
+	admin := inst.Translate("Tree Administrative")
+	r := strings.NewReplacer("&", "_", "/", "_", "\\", "_", "#", "_",
+		",", "_", "+", "_", "(", "_", ")", "_", "$", "_", "@", "_", "~",
+		"_", "%", "_", ".", "_", "'", "_", "\"", "_", ":", "_", "*", "_",
+		"?", "_", "<", "_", ">", "_", "{", "_", "}", "_")
+	accountName := r.Replace(acc.Name)
+	return fmt.Sprintf("/%s/%s/%s", admin, strings.Title(slug), accountName)
 }
 
 // ensurePermissions checks that the konnector has the permissions to write
