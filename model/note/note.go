@@ -17,7 +17,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/prosemirror-go/markdown"
 	"github.com/cozy/prosemirror-go/model"
 )
 
@@ -125,7 +124,7 @@ func (d *Document) Markdown() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		md := markdown.DefaultSerializer.Serialize(content)
+		md := markdownSerializer().Serialize(content)
 		d.markdown = []byte(md)
 	}
 	return d.markdown, nil
