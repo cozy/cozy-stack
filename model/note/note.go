@@ -144,11 +144,9 @@ func (d *Document) getDirID(inst *instance.Instance) (string, error) {
 
 func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDoc {
 	now := time.Now()
-	md, _ := d.Markdown()
 	file := old.Clone().(*vfs.FileDoc)
 	file.Metadata = d.Metadata()
 	file.Mime = noteMime
-	file.ByteSize = int64(len(md))
 	file.MD5Sum = nil // Let the VFS compute the md5sum
 	if d.DirID != "" {
 		file.DirID = d.DirID
@@ -352,6 +350,7 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 	} else {
 		fileDoc = doc.asFile(inst, oldDoc)
 	}
+	fileDoc.ByteSize = int64(len(md))
 
 	fs := inst.VFS()
 	var file vfs.File
