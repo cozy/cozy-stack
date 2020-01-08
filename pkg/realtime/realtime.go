@@ -14,6 +14,7 @@ const (
 	EventCreate = "CREATED"
 	EventUpdate = "UPDATED"
 	EventDelete = "DELETED"
+	EventNotify = "NOTIFIED"
 )
 
 // Doc is an interface for a object with DocType, ID

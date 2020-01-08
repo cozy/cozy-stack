@@ -10,6 +10,8 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -208,7 +210,8 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 	}
 }
 
-func ws(c echo.Context) error {
+// Ws is the API handler for realtime via a websocket connection.
+func Ws(c echo.Context) error {
 	var db prefixer.Prefixer
 
 	// The realtime webservice can be plugged in a context without instance
@@ -283,7 +286,34 @@ func ws(c echo.Context) error {
 	}
 }
 
+// Notify is the API handler for POST /realtime/:doctype/:id: this route can be
+// used to send documents in the real-time without having to persist them in
+// CouchDB.
+func Notify(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	doctype := c.Param("doctype")
+	id := c.Param("id")
+
+	if err := permission.CheckReadable(doctype); err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	var payload couchdb.JSONDoc
+	if err := c.Bind(&payload); err != nil {
+		return jsonapi.BadRequest(err)
+	}
+	payload.SetID(id)
+	payload.Type = doctype
+	if err := middlewares.Allow(c, permission.POST, &payload); err != nil {
+		return err
+	}
+
+	realtime.GetHub().Publish(inst, realtime.EventNotify, &payload, nil)
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Routes set the routing for the realtime service
 func Routes(router *echo.Group) {
-	router.GET("/", ws)
+	router.GET("/", Ws)
+	router.POST("/:doctype/:id", Notify)
 }

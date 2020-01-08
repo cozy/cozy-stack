@@ -1,7 +1,9 @@
 package realtime
 
 import (
+	"bytes"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
@@ -166,12 +168,56 @@ func TestWSSuccess(t *testing.T) {
 	assert.Equal(t, "bar-one", payload["id"])
 }
 
+func TestWSNotify(t *testing.T) {
+	u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
+	c, _, err := websocket.DefaultDialer.Dial(u, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer c.Close()
+
+	auth := fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, token)
+	err = c.WriteMessage(websocket.TextMessage, []byte(auth))
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	msg := `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.bazs", "id": "baz-one" }}`
+	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	time.Sleep(30 * time.Millisecond)
+	body := `{"hello": "world"}`
+	req, _ := http.NewRequest("POST", ts.URL+"/realtime/io.cozy.bazs/baz-one", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	if !assert.Equal(t, http.StatusNoContent, res.StatusCode) {
+		return
+	}
+
+	var resp map[string]interface{}
+	err = c.ReadJSON(&resp)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, "NOTIFIED", resp["event"])
+	payload := resp["payload"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.bazs", payload["type"])
+	assert.Equal(t, "baz-one", payload["id"])
+	doc := payload["doc"].(map[string]interface{})
+	assert.Equal(t, "world", doc["hello"])
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "realtime_test")
 	inst = setup.GetTestInstance()
-	_, token = setup.GetTestClient("io.cozy.foos io.cozy.bars")
+	_, token = setup.GetTestClient("io.cozy.foos io.cozy.bars io.cozy.bazs")
 	ts = setup.GetTestServer("/realtime", Routes)
 	os.Exit(setup.Run())
 }
