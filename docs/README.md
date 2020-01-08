@@ -42,6 +42,7 @@ designing new services.
 -   [Golang Couchdb Plugins](archives/couchdb-plugins.md)
 -   [Konnectors design](archives/konnectors-design.md)
 -   [Replication](archives/replication.md)
+-   [Realtime design](archives/realtime.md)
 
 ## Reference
 
