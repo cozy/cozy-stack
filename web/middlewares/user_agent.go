@@ -35,6 +35,10 @@ var minEdgeVersion = 17
 // We don't support Firefox before version 52
 var minFirefoxVersion = 52
 
+// We don't support Safari before version 11, as window.crypto is not
+// available.
+var minSafariVersion = 11
+
 var rules = []browser{
 	{
 		name: InternetExplorer,
@@ -46,6 +50,10 @@ var rules = []browser{
 	{
 		name:       Firefox,
 		minVersion: &minFirefoxVersion,
+	},
+	{
+		name:       Safari,
+		minVersion: &minSafariVersion,
 	},
 }
 
