@@ -314,9 +314,9 @@ func (i *Installer) checkSkipPermissions() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	ctxSettings, err := inst.SettingsContext()
-	if err != nil {
-		return false, err
+	ctxSettings, ok := inst.SettingsContext()
+	if !ok {
+		return false, nil
 	}
 
 	sp, ok := ctxSettings["permissions_skip_verification"]

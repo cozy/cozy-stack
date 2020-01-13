@@ -71,14 +71,11 @@ func createDefaultFilesTree(inst *instance.Instance) error {
 
 	// Check if we create the "Photos" folder and its subfolders. By default, we
 	// are creating it, but some contexts may not want to create them.
-	ctxSettings, err := inst.SettingsContext()
-	if err != nil && err != instance.ErrContextNotFound {
-		return err
-	}
-
 	createPhotosFolder := true
-	if photosFolderParam, ok := ctxSettings["init_photos_folder"]; ok {
-		createPhotosFolder = photosFolderParam.(bool)
+	if ctxSettings, ok := inst.SettingsContext(); ok {
+		if photosFolderParam, ok := ctxSettings["init_photos_folder"]; ok {
+			createPhotosFolder = photosFolderParam.(bool)
+		}
 	}
 
 	if createPhotosFolder {

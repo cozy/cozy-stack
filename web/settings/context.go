@@ -2,12 +2,12 @@ package settings
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -103,17 +103,14 @@ func finishOnboarding(c echo.Context, acceptHTML bool) error {
 
 func context(c echo.Context) error {
 	i := middlewares.GetInstance(c)
-	ctx, err := i.SettingsContext()
-	if err == instance.ErrContextNotFound {
-		return jsonapi.NotFound(err)
-	}
-	if err != nil {
-		return err
+	ctx, ok := i.SettingsContext()
+	if !ok {
+		return jsonapi.NotFound(errors.New("No context defined in config"))
 	}
 
 	doc := &apiContext{normalize(ctx)}
 	// Any request with a token can ask for the context (no permissions are required)
-	if _, err = middlewares.GetPermission(c); err != nil {
+	if _, err := middlewares.GetPermission(c); err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 

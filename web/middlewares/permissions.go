@@ -348,8 +348,8 @@ func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v
 	case permission.TypeWebapp, permission.TypeKonnector:
 		if pdoc.SourceID != consts.Apps+"/"+consts.StoreSlug {
 			inst := GetInstance(c)
-			ctxSettings, err := inst.SettingsContext()
-			if err != nil || ctxSettings["allow_install_via_a_permission"] != true {
+			ctxSettings, ok := inst.SettingsContext()
+			if !ok || ctxSettings["allow_install_via_a_permission"] != true {
 				return ErrForbidden
 			}
 		}
@@ -362,8 +362,8 @@ func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v
 		// permission can also be used by mobile apps to install apps from the
 		// registry.
 		inst := GetInstance(c)
-		ctxSettings, err := inst.SettingsContext()
-		if err != nil || ctxSettings["allow_install_via_a_permission"] != true {
+		ctxSettings, ok := inst.SettingsContext()
+		if !ok || ctxSettings["allow_install_via_a_permission"] != true {
 			return ErrForbidden
 		}
 		if !strings.HasPrefix(sourceURL, "registry://") {

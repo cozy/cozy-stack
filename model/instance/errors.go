@@ -20,8 +20,6 @@ var (
 	// ErrInvalidTwoFactor is returned when the two-factor authentication
 	// verification is invalid.
 	ErrInvalidTwoFactor = errors.New("Invalid two-factor parameters")
-	// ErrContextNotFound is returned when the instance has no context
-	ErrContextNotFound = errors.New("Context not found")
 	// ErrResetAlreadyRequested is returned when a passphrase reset token is already set and valid
 	ErrResetAlreadyRequested = errors.New("The passphrase reset has already been requested")
 	// ErrUnknownAuthMode is returned when an unknown authentication mode is

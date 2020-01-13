@@ -42,7 +42,7 @@ func SendMail(ctx *job.WorkerContext) error {
 	if from == "" {
 		from = "noreply@" + utils.StripPort(ctx.Instance.Domain)
 	}
-	if ctxSettings, err := ctx.Instance.SettingsContext(); err == nil {
+	if ctxSettings, ok := ctx.Instance.SettingsContext(); !ok {
 		if addr, ok := ctxSettings["noreply_address"].(string); ok && addr != "" {
 			from = addr
 		}

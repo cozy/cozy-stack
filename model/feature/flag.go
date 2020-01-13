@@ -163,11 +163,9 @@ func getFlagsFromManager(inst *instance.Instance) (map[string]interface{}, error
 }
 
 func (f *Flags) addConfig(inst *instance.Instance) error {
-	ctx, err := inst.SettingsContext()
-	if err == instance.ErrContextNotFound {
+	ctx, ok := inst.SettingsContext()
+	if !ok {
 		return nil
-	} else if err != nil {
-		return err
 	}
 	normalized := make(map[string]interface{})
 	if m, ok := ctx["features"].(map[interface{}]interface{}); ok {
