@@ -93,6 +93,10 @@ func eventMatchRule(e *realtime.Event, rule *permission.Rule) bool {
 		return false
 	}
 
+	if e.Verb == realtime.EventNotify {
+		return false
+	}
+
 	if !rule.Verbs.Contains(permission.Verb(e.Verb)) {
 		return false
 	}

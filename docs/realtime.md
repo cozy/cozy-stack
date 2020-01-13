@@ -74,6 +74,15 @@ server > {"event": "error",
           }}
 ```
 
+## Response messages
+
+A message sent by the server after a subscribe will be a JSON object with two
+keys at root: `event` and `payload`. `event` will be one of `CREATED`,
+`UPDATED`, `DELETED` (when a document is written in CouchDB), `NOTIFIED` (see
+below), or `error`. The `payload` will be a map with `type`, `id`, and `doc`.
+The `payload` can also contain an optional `old` with the old values for the
+document in case of `UPDATED` or `DELETED`.
+
 ## Synthetic types
 
 The stack an inject some synthetic events for documents that are not persisted
@@ -82,3 +91,43 @@ in CouchDB like classical doctypes:
 - [Initial sync for sharings](https://docs.cozy.io/en/cozy-stack/sharing/#real-time-via-websockets)
 - [Thumbnails for files](https://docs.cozy.io/en/cozy-stack/files/#real-time-via-websockets)
 - [Telepointers for notes](https://docs.cozy.io/en/cozy-stack/notes/#real-time-via-websockets)
+
+## `POST /realtime/:doctype/:id`
+
+This route can be used to send documents in the real-time without having to
+persist them in CouchDB (and they can't be used for triggers).
+
+A permission on POST for the document `:doctype/:id` is required to use this
+endpoint.
+
+### Request
+
+```http
+POST /realtime/io.cozy.jobs/2c577f00-145a-0138-f569-543d7eb8149c HTTP/1.1
+Content-Type: application/json
+```
+
+```json
+{
+  "subtype": "progress",
+  "imported": 10,
+  "total": 42
+}
+```
+
+### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### Websocket
+
+```
+server > {"event": "NOTIFIED",
+          "payload": {"id": "2c577f00-145a-0138-f569-543d7eb8149c",
+                      "type": "io.cozy.jobs",
+                      "doc": {"subtype": "progress",
+                              "imported": 10,
+                              "total": 42}}}
+```
