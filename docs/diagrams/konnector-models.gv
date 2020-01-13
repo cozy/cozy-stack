@@ -6,8 +6,8 @@ digraph konnectors {
 	trigger [label="Trigger |<id> _id: [id] | worker: konnector | type: @cron | arguments: 0 31 0 * * 1 | { message | {<f_id> folder_to_save: [id] |<a_id> account: [id] |<k_slug> konnector: [slug] }}", shape="record"];
 	permissions [label="Permission |<id> id: [id] |<source_id> source_id: [id] |{ permissions | {<f_id> saveFolder: [id] | ... }}", shape="record"];
 	konnector [label="Konnector |<id> _id: io.cozy.konnectors/[slug] |<slug> slug: [slug] | ...", shape="record"];
-	account [label="Account |<id> _id: [id] | { auth | { login: [string] | password: [string ]}} | data: [object] |<f_path> folderPath: [string] |<f_name> namePath: [string] |<k_slug> account_type: [slug] | label: [string]", shape="record"];
-	folder [label="Folder |<id> _id: [id] | type: directory |<path> path: [string] |<name> name: [string] | {referenced_by: |<ref> [type] [id]}", shape="record"];
+	account [label="Account |<id> _id: [id] | { auth | { login: [string] | password: [string ]}} |<f_path> defaultFolderPath: [string] |<k_slug> account_type: [slug]", shape="record"];
+	folder [label="Folder |<id> _id: [id] | type: directory |<path> path: [string] | {referenced_by: |<ref> [type] [id]}", shape="record"];
 
 	trigger:k_slug -> konnector:slug;
 	trigger:a_id -> account:id;
@@ -15,7 +15,6 @@ digraph konnectors {
 	konnector:id -> permissions:source_id;
 	permissions:f_id -> folder:id;
 	account:k_slug -> konnector:slug;
-	account:f_path -> folder:path;
-	account:f_name -> folder:name;
+	account:f_path -> folder:path [style="dashed"];
 	folder:ref -> konnector:id;
 }

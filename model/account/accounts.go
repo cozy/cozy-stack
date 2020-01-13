@@ -17,16 +17,17 @@ import (
 
 // Account holds configuration information for an account
 type Account struct {
-	DocID         string                 `json:"_id,omitempty"`
-	DocRev        string                 `json:"_rev,omitempty"`
-	Name          string                 `json:"name"`
-	AccountType   string                 `json:"account_type"`
-	FolderPath    string                 `json:"folderPath,omitempty"`
-	Basic         *BasicInfo             `json:"auth,omitempty"`
-	Oauth         *OauthInfo             `json:"oauth,omitempty"`
-	Extras        map[string]interface{} `json:"oauth_callback_results,omitempty"`
-	Relationships map[string]interface{} `json:"relationships,omitempty"`
-	Metadata      *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
+	DocID             string                 `json:"_id,omitempty"`
+	DocRev            string                 `json:"_rev,omitempty"`
+	Name              string                 `json:"name"`
+	AccountType       string                 `json:"account_type"`
+	DefaultFolderPath string                 `json:"defaultFolderPath,omitempty"`
+	FolderPath        string                 `json:"folderPath,omitempty"` // Legacy
+	Basic             *BasicInfo             `json:"auth,omitempty"`
+	Oauth             *OauthInfo             `json:"oauth,omitempty"`
+	Extras            map[string]interface{} `json:"oauth_callback_results,omitempty"`
+	Relationships     map[string]interface{} `json:"relationships,omitempty"`
+	Metadata          *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
 	// When an account is deleted, the stack cleans the triggers and calls its
 	// konnector to clean the account remotely (when available). It is done via
 	// a hook on deletion, but when the konnector is removed, this cleaning is
@@ -52,7 +53,6 @@ type BasicInfo struct {
 	Login                string `json:"login,omitempty"`
 	Password             string `json:"password,omitempty"` // used when no encryption
 	EncryptedCredentials string `json:"credentials_encrypted,omitempty"`
-	FolderPath           string `json:"folderPath,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface
