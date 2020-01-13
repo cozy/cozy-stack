@@ -36,16 +36,16 @@ func (t *testDoc) MarshalJSON() ([]byte, error) {
 
 func TestWSNoAuth(t *testing.T) {
 	u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
-	c, _, err := websocket.DefaultDialer.Dial(u, nil)
+	ws, _, err := websocket.DefaultDialer.Dial(u, nil)
 	assert.NoError(t, err)
-	defer c.Close()
+	defer ws.Close()
 
 	msg := `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.foos" }}`
-	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
+	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
 	assert.NoError(t, err)
 
 	var res map[string]interface{}
-	err = c.ReadJSON(&res)
+	err = ws.ReadJSON(&res)
 	assert.NoError(t, err)
 	assert.Equal(t, "error", res["event"])
 	payload := res["payload"].(map[string]interface{})
@@ -56,16 +56,16 @@ func TestWSNoAuth(t *testing.T) {
 
 func TestWSInvalidToken(t *testing.T) {
 	u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
-	c, _, err := websocket.DefaultDialer.Dial(u, nil)
+	ws, _, err := websocket.DefaultDialer.Dial(u, nil)
 	assert.NoError(t, err)
-	defer c.Close()
+	defer ws.Close()
 
 	auth := `{"method": "AUTH", "payload": "123456789"}`
-	err = c.WriteMessage(websocket.TextMessage, []byte(auth))
+	err = ws.WriteMessage(websocket.TextMessage, []byte(auth))
 	assert.NoError(t, err)
 
 	var res map[string]interface{}
-	err = c.ReadJSON(&res)
+	err = ws.ReadJSON(&res)
 	assert.NoError(t, err)
 	assert.Equal(t, "error", res["event"])
 	payload := res["payload"].(map[string]interface{})
@@ -76,20 +76,20 @@ func TestWSInvalidToken(t *testing.T) {
 
 func TestWSNoPermissionsForADoctype(t *testing.T) {
 	u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
-	c, _, err := websocket.DefaultDialer.Dial(u, nil)
+	ws, _, err := websocket.DefaultDialer.Dial(u, nil)
 	assert.NoError(t, err)
-	defer c.Close()
+	defer ws.Close()
 
 	auth := fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, token)
-	err = c.WriteMessage(websocket.TextMessage, []byte(auth))
+	err = ws.WriteMessage(websocket.TextMessage, []byte(auth))
 	assert.NoError(t, err)
 
 	msg := `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.contacts" }}`
-	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
+	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
 	assert.NoError(t, err)
 
 	var res map[string]interface{}
-	err = c.ReadJSON(&res)
+	err = ws.ReadJSON(&res)
 	assert.NoError(t, err)
 	assert.Equal(t, "error", res["event"])
 	payload := res["payload"].(map[string]interface{})
@@ -100,26 +100,26 @@ func TestWSNoPermissionsForADoctype(t *testing.T) {
 
 func TestWSSuccess(t *testing.T) {
 	u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
-	c, _, err := websocket.DefaultDialer.Dial(u, nil)
+	ws, _, err := websocket.DefaultDialer.Dial(u, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer c.Close()
+	defer ws.Close()
 
 	auth := fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, token)
-	err = c.WriteMessage(websocket.TextMessage, []byte(auth))
+	err = ws.WriteMessage(websocket.TextMessage, []byte(auth))
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	msg := `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.foos" }}`
-	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
+	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	msg = `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.bars", "id": "bar-one" }}`
-	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
+	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -132,7 +132,7 @@ func TestWSSuccess(t *testing.T) {
 		doctype: "io.cozy.foos",
 		id:      "foo-one",
 	}, nil)
-	err = c.ReadJSON(&res)
+	err = ws.ReadJSON(&res)
 	assert.NoError(t, err)
 	assert.Equal(t, "UPDATED", res["event"])
 	payload := res["payload"].(map[string]interface{})
@@ -143,7 +143,7 @@ func TestWSSuccess(t *testing.T) {
 		doctype: "io.cozy.foos",
 		id:      "foo-two",
 	}, nil)
-	err = c.ReadJSON(&res)
+	err = ws.ReadJSON(&res)
 	assert.NoError(t, err)
 	assert.Equal(t, "DELETED", res["event"])
 	payload = res["payload"].(map[string]interface{})
@@ -160,7 +160,7 @@ func TestWSSuccess(t *testing.T) {
 		doctype: "io.cozy.bars",
 		id:      "bar-one",
 	}, nil)
-	err = c.ReadJSON(&res)
+	err = ws.ReadJSON(&res)
 	assert.NoError(t, err)
 	assert.Equal(t, "CREATED", res["event"])
 	payload = res["payload"].(map[string]interface{})
@@ -170,20 +170,20 @@ func TestWSSuccess(t *testing.T) {
 
 func TestWSNotify(t *testing.T) {
 	u := strings.Replace(ts.URL+"/realtime/", "http", "ws", 1)
-	c, _, err := websocket.DefaultDialer.Dial(u, nil)
+	ws, _, err := websocket.DefaultDialer.Dial(u, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer c.Close()
+	defer ws.Close()
 
 	auth := fmt.Sprintf(`{"method": "AUTH", "payload": "%s"}`, token)
-	err = c.WriteMessage(websocket.TextMessage, []byte(auth))
+	err = ws.WriteMessage(websocket.TextMessage, []byte(auth))
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	msg := `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.bazs", "id": "baz-one" }}`
-	err = c.WriteMessage(websocket.TextMessage, []byte(msg))
+	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -200,7 +200,7 @@ func TestWSNotify(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	err = c.ReadJSON(&resp)
+	err = ws.ReadJSON(&resp)
 	if !assert.NoError(t, err) {
 		return
 	}
