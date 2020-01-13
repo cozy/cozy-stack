@@ -281,21 +281,21 @@ func (i *Instance) GetFromContexts(contexts map[string]interface{}) (interface{}
 
 // SettingsContext returns the map from the config that matches the context of
 // this instance
-func (i *Instance) SettingsContext() (map[string]interface{}, error) {
+func (i *Instance) SettingsContext() (map[string]interface{}, bool) {
 	contexts := config.GetConfig().Contexts
 	context, ok := i.GetFromContexts(contexts)
 	if !ok {
-		return nil, ErrContextNotFound
+		return nil, false
 	}
 	settings := context.(map[string]interface{})
-	return settings, nil
+	return settings, true
 }
 
 // TemplateTitle returns the specific-context instance template title (if there
 // is one). Otherwise, returns the default one
 func (i *Instance) TemplateTitle() string {
-	ctxSettings, err := i.SettingsContext()
-	if err != nil {
+	ctxSettings, ok := i.SettingsContext()
+	if !ok {
 		return DefaultTemplateTitle
 	}
 	if title, ok := ctxSettings["templates_title"].(string); ok {
@@ -452,8 +452,8 @@ func (i *Instance) PublicName() (string, error) {
 }
 
 func (i *Instance) redirection(key, defaultSlug string) *url.URL {
-	context, err := i.SettingsContext()
-	if err != nil {
+	context, ok := i.SettingsContext()
+	if !ok {
 		return i.SubDomain(defaultSlug)
 	}
 	redirect, ok := context[key].(string)

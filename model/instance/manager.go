@@ -29,8 +29,8 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
 		return "", nil
 	}
 
-	config, err := i.SettingsContext()
-	if err != nil {
+	config, ok := i.SettingsContext()
+	if !ok {
 		return "", nil
 	}
 
