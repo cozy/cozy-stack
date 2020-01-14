@@ -63,6 +63,7 @@ func passphraseForm(c echo.Context) error {
 			"ContextName": inst.ContextName,
 			"Locale":      inst.Locale,
 			"Favicon":     middlewares.Favicon(inst),
+			"CozyUI":      middlewares.CozyUI(inst),
 		})
 	}
 
