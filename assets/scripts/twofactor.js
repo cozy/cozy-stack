@@ -102,13 +102,5 @@
       .catch(showError)
   }
 
-  // Responsive design
-  if (d.body.clientWidth > 1024) {
-    const avatars = d.getElementsByClassName('c-avatar')
-    for (const avatar of avatars) {
-      avatar.classList.add('c-avatar--xlarge')
-    }
-  }
-
   loginForm.addEventListener('submit', onSubmitTwoFactorCode)
 })(window, document)
