@@ -41,7 +41,7 @@ func migrateAccountsToCiphers(inst *instance.Instance) error {
 // hashing the master password.
 func Prelogin(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	log := inst.Logger().WithField("nspace", "pre-login")
+	log := inst.Logger().WithField("nspace", "bitwarden")
 	settings, err := settings.Get(inst)
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func Prelogin(c echo.Context) error {
 		// This is the first time the bitwarden extension is installed: make sure
 		// the user gets the existing accounts into the vault
 		if err := migrateAccountsToCiphers(inst); err != nil {
-			log.Errorf("Account migration failed : %s", err)
+			log.Errorf("Cannot push job for ciphers migration: %s", err)
 		}
 		settings.ExtensionInstalled = true
 		if err := settings.Save(inst); err != nil {
