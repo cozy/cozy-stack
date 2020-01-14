@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/bitwarden"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -40,6 +41,10 @@ func TestPrelogin(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 0, result["Kdf"])
 	assert.Equal(t, crypto.DefaultPBKDF2Iterations, result["KdfIterations"])
+
+	settings, err := settings.Get(inst)
+	assert.NoError(t, err)
+	assert.Equal(t, settings.ExtensionInstalled, true)
 }
 
 func TestConnect(t *testing.T) {
