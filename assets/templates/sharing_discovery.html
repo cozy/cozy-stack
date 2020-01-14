@@ -17,6 +17,9 @@
             {{if .URLError}}
               <p class="wizard-errors u-error">{{t "Sharing URL Discovery error"}}</p>
             {{end}}
+            {{if .NotEmailError}}
+              <p class="wizard-errors u-error">{{t "Sharing URL Not email error"}}</p>
+            {{end}}
             <input type="hidden" name="state" value="{{.State}}" />
             <input type="hidden" name="sharecode" value="{{.ShareCode}}" />
             <div class="c-avatar u-mh-auto u-mv-0-m u-mv-1">

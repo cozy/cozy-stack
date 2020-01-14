@@ -366,7 +366,8 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 		"SharingID":       sharingID,
 		"State":           state,
 		"ShareCode":       sharecode,
-		"URLError":        code != http.StatusOK,
+		"URLError":        code == http.StatusBadRequest,
+		"NotEmailError":   code == http.StatusPreconditionFailed,
 		"Favicon":         middlewares.Favicon(inst),
 	})
 }
@@ -461,6 +462,9 @@ func PostDiscovery(c echo.Context) error {
 			if err != nil {
 				return wrapErrors(err)
 			}
+		}
+		if strings.Contains(cozyURL, "@") {
+			return renderDiscoveryForm(c, inst, http.StatusPreconditionFailed, sharingID, state, sharecode, member)
 		}
 		email = member.Email
 		if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {
