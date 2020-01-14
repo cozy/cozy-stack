@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
@@ -22,13 +23,39 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+func migrateAccountsToCiphers(inst *instance.Instance) error {
+	msg, err := job.NewMessage(map[string]interface{}{
+		"type": "accounts-to-organization",
+	})
+	if err != nil {
+		return err
+	}
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "migrations",
+		Message:    msg,
+	})
+	return err
+}
+
 // Prelogin tells to the client how many KDF iterations it must apply when
 // hashing the master password.
 func Prelogin(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	log := inst.Logger().WithField("nspace", "pre-login")
 	settings, err := settings.Get(inst)
 	if err != nil {
 		return err
+	}
+	if !settings.ExtensionInstalled {
+		// This is the first time the bitwarden extension is installed: make sure
+		// the user gets the existing accounts into the vault
+		if err := migrateAccountsToCiphers(inst); err != nil {
+			log.Errorf("Account migration failed : %s", err)
+		}
+		settings.ExtensionInstalled = true
+		if err := settings.Save(inst); err != nil {
+			return err
+		}
 	}
 	return c.JSON(http.StatusOK, echo.Map{
 		"Kdf":           settings.PassphraseKdf,

@@ -35,6 +35,7 @@ type Settings struct {
 	EquivalentDomains       [][]string             `json:"equivalent_domains,omitempty"`
 	GlobalEquivalentDomains []int                  `json:"global_equivalent_domains,omitempty"`
 	Metadata                *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
+	ExtensionInstalled      bool                   `json:"extension_installed,omitempty"`
 }
 
 // ID returns the settings qualified identifier
