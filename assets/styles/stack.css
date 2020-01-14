@@ -35,61 +35,6 @@ a:focus {
   justify-content: center;
   min-height: 100%;
 }
-.btn {
-  box-sizing: border-box;
-  display: inline-block;
-  margin: 0;
-  border: 1px solid white;
-  border-radius: 3px;
-  height: 3rem;
-  padding: 0.8rem 1rem;
-  background: transparent;
-  vertical-align: top;
-  text-align: center;
-  font-size: 1rem;
-  line-height: 1;
-  text-transform: uppercase;
-  text-decoration: none;
-  cursor: pointer;
-}
-.btn[disabled],
-.btn[aria-disabled='true'] {
-  opacity: 0.5;
-  cursor: default;
-}
-.btn-primary {
-  border-color: #297ef2;
-  background-color: #297ef2;
-  color: white;
-}
-.btn-primary:active,
-.btn-primary:not([disabled]):not([aria-disabled='true']):hover,
-.btn-primary:focus {
-  border-color: #0b61d6;
-  background-color: #0b61d6;
-}
-.btn-secondary {
-  background-color: white;
-  color: black;
-  border: 1px solid #d6d8da;
-}
-.btn-secondary:active,
-.btn-secondary:not([disabled]):not([aria-disabled='true']):hover
-  .btn-secondary:focus {
-  background-color: #d6d8da;
-}
-.visuallyhidden {
-  position: absolute;
-  border: 0;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  padding: 0;
-  white-space: nowrap;
-  clip: rect(1px, 1px, 1px, 1px);
-  -webkit-clip-path: inset(50%);
-  clip-path: inset(50%);
-}
 
 /* Wrapper */
 .popup {
@@ -225,35 +170,6 @@ h1 {
   min-width: calc(50% - 0.5rem);
 }
 
-/* Toggle More */
-.toggleMore {
-  display: block;
-  overflow: hidden;
-  max-height: 20px;
-  text-transform: uppercase;
-  color: #297ef2;
-  font-weight: bold;
-  font-size: 0.875rem;
-  cursor: pointer;
-  opacity: 1;
-  transition: opacity 500ms, max-height 500ms;
-}
-.toggleMore svg {
-  vertical-align: text-bottom;
-}
-.toggleContent {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 1s;
-}
-#showMore:checked + .toggleMore {
-  max-height: 0;
-  opacity: 0;
-}
-#showMore:checked ~ .toggleContent {
-  max-height: 1000px;
-}
-
 /* Permissions */
 .c-chip img {
   max-height: 2rem;
@@ -371,6 +287,44 @@ li[class^='fr.maif.maifuser.sinistre']:before {
   background-image: url('../images/icon-sinister.svg');
 }
 
+/* Cozy URL component */
+.my-cozy-url {
+  display: flex;
+  align-items: stretch;
+}
+.my-cozy-url input,
+.my-cozy-url .protocol {
+  padding: 0.75em;
+  font-size: 1em;
+  line-height: 1.5;
+  border: 1px solid #d6d8da;
+  min-width: 0;
+}
+.my-cozy-url .protocol {
+  display: flex;
+  align-items: center;
+  background-color: #f5f6f7;
+  border-right: 0;
+  border-radius: 2px 0 0 2px;
+  color: #32363f;
+}
+.my-cozy-url .protocol svg {
+  position: relative;
+  top: -0.1em;
+  margin-right: 8px;
+  fill: #5d6165;
+}
+.my-cozy-url .field {
+  flex: 2 0 0;
+  border-radius: 0;
+}
+.my-cozy-url .domain {
+  flex: 1 0 0;
+  border-left: 0;
+  border-radius: 0 2px 2px 0;
+  color: #32363f;
+}
+
 @media (max-width: 35rem) {
   [role='application'] {
     height: auto;
@@ -387,5 +341,14 @@ li[class^='fr.maif.maifuser.sinistre']:before {
   }
   .hide-on-mobile {
     display: none;
+  }
+  .my-cozy-url .protocol {
+    display: none;
+  }
+  .my-cozy-url .field {
+    border-radius: 4px 0 0 4px;
+  }
+  .my-cozy-url input {
+    padding: 0.5em;
   }
 }

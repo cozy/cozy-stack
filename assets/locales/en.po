@@ -622,10 +622,7 @@ msgid "Sharing Empty description"
 msgstr "Surprise!"
 
 msgid "Sharing Discovery URL field"
-msgstr "URL"
-
-msgid "Sharing Discovery URL placeholder"
-msgstr "https://yourcozyaddress.cozy"
+msgstr "Your Cozy address"
 
 msgid "Sharing URL Discovery error"
 msgstr "The Cozy URL you entered is incorrect, please try again"
