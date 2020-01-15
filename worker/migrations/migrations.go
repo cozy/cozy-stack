@@ -178,9 +178,10 @@ func migrateAccountsToOrganization(domain string) error {
 		if err != nil || msg.Account == "" || msg.Slug == "" {
 			continue
 		}
+
 		manifest, err := app.GetKonnectorBySlug(inst, msg.Slug)
 		if err != nil {
-			errm = multierror.Append(errm, err)
+			log.Warningf("Could not get manifest for %s", msg.Slug)
 			continue
 		}
 		var link string
