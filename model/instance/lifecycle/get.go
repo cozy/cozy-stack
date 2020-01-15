@@ -33,7 +33,7 @@ func GetInstance(domain string) (*instance.Instance, error) {
 		}
 
 		i.Logger().Debugf("Indexes outdated: wanted %d; got %d", couchdb.IndexViewsVersion, i.IndexViewsVersion)
-		if err = defineViewsAndIndex(i); err != nil {
+		if err = DefineViewsAndIndex(i); err != nil {
 			i.Logger().Errorf("Could not re-define indexes and views: %s", err.Error())
 			return nil, err
 		}

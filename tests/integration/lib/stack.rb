@@ -39,7 +39,7 @@ class Stack
     end
     system("cozy-stack config gen-keys '#{vault}/key'") unless File.exist?("#{vault}/key.enc")
     cmd = ["cozy-stack", "serve", "--log-level", "debug",
-           "--mail-disable-tls", "--mail-port", "1025",
+           "--mailhog",
            "--port", @port, "--admin-port", @admin,
            "--fs-url", fsurl,
            "--vault-encryptor-key", "#{vault}/key.enc",

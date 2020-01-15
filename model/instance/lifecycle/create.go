@@ -176,7 +176,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	if err := couchdb.CreateNamedDocWithDB(i, settings); err != nil {
 		return nil, err
 	}
-	if err := defineViewsAndIndex(i); err != nil {
+	if err := DefineViewsAndIndex(i); err != nil {
 		return nil, err
 	}
 	if err := createDefaultFilesTree(i); err != nil {

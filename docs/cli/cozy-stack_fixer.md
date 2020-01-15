@@ -31,6 +31,7 @@ cozy-stack fixer <command> [flags]
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack fixer contact-emails](cozy-stack_fixer_contact-emails.md)	 - Detect and try to fix invalid emails on contacts
 * [cozy-stack fixer content-mismatch](cozy-stack_fixer_content-mismatch.md)	 - Fix the content mismatch differences for 64K issue
+* [cozy-stack fixer indexes](cozy-stack_fixer_indexes.md)	 - Rebuild the CouchDB views and indexes
 * [cozy-stack fixer jobs](cozy-stack_fixer_jobs.md)	 - Take a look at the consistency of the jobs
 * [cozy-stack fixer md5](cozy-stack_fixer_md5.md)	 - Fix missing md5 from contents in the vfs
 * [cozy-stack fixer mime](cozy-stack_fixer_mime.md)	 - Fix the class computed from the mime-type

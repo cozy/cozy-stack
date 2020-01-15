@@ -65,6 +65,7 @@ example), you can use the --appdir flag like this:
       --mail-password string             mail smtp password
       --mail-port int                    mail smtp port (default 465)
       --mail-username string             mail smtp username
+      --mailhog                          Alias of --mail-disable-tls --mail-port 1025, useful for MailHog
       --password-reset-interval string   minimal duration between two password reset (default "15m")
       --rate-limiting-url string         URL for rate-limiting counters, redis or in-memory
       --realtime-url string              URL for realtime in the browser via webocket, redis or in-memory

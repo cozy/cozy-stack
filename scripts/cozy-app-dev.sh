@@ -108,8 +108,7 @@ do_start() {
 		--port "${COZY_STACK_PORT}" \
 		--admin-port "${COZY_STACK_ADMIN_PORT}" \
 		--couchdb-url "${COUCHDB_URL}" \
-		--mail-port 1025 \
-		--mail-disable-tls \
+		--mailhog \
 		--fs-url "file://localhost${vfsdir}" &
 
 	wait_for "${COZY_STACK_HOST}:${COZY_STACK_PORT}/version/" "cozy-stack"

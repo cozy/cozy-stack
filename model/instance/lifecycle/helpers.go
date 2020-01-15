@@ -38,7 +38,9 @@ func installApp(inst *instance.Instance, slug string) error {
 	return err
 }
 
-func defineViewsAndIndex(inst *instance.Instance) error {
+// DefineViewsAndIndex can be used to ensure that the CouchDB views and indexes
+// used by the stack are correctly set.
+func DefineViewsAndIndex(inst *instance.Instance) error {
 	if err := couchdb.DefineIndexes(inst, couchdb.Indexes); err != nil {
 		return err
 	}
