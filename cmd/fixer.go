@@ -376,20 +376,36 @@ done, the konnector is uninstalled again.
 		if len(args) != 1 {
 			return cmd.Usage()
 		}
-
 		domain := args[0]
-
 		c := newAdminClient()
 		path := fmt.Sprintf("/instances/%s/fixers/orphan-account", domain)
 		_, err := c.Req(&request.Options{
 			Method: "POST",
 			Path:   path,
 		})
-		if err != nil {
-			return err
-		}
+		return err
+	},
+}
 
-		return nil
+var indexesFixer = &cobra.Command{
+	Use:   "indexes <domain>",
+	Short: "Rebuild the CouchDB views and indexes",
+	Long: `
+This fixer ensures that the CouchDB views and indexes used by the stack for
+this instance are correctly set.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		c := newAdminClient()
+		path := fmt.Sprintf("/instances/%s/fixers/indexes", domain)
+		_, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   path,
+		})
+		return err
 	},
 }
 
@@ -406,6 +422,7 @@ func init() {
 	fixerCmdGroup.AddCommand(contactEmailsFixer)
 	fixerCmdGroup.AddCommand(contentMismatch64Kfixer)
 	fixerCmdGroup.AddCommand(orphanAccountFixer)
+	fixerCmdGroup.AddCommand(indexesFixer)
 
 	RootCmd.AddCommand(fixerCmdGroup)
 }

@@ -301,5 +301,19 @@ func orphanAccountFixer(c echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusNoContent, nil)
+	return c.NoContent(http.StatusNoContent)
+}
+
+func indexesFixer(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := instance.GetFromCouch(domain)
+	if err != nil {
+		return err
+	}
+
+	if err := lifecycle.DefineViewsAndIndex(inst); err != nil {
+		return err
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
