@@ -24,6 +24,7 @@ import (
 var flagAllowRoot bool
 var flagAppdirs []string
 var flagDevMode bool
+var flagMailhog bool
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -80,6 +81,12 @@ example), you can use the --appdir flag like this:
 			if _, err := config.FindConfigFile(adminSecretFile); err != nil {
 				return err
 			}
+		}
+
+		if flagMailhog {
+			cfg := config.GetConfig()
+			cfg.Mail.DisableTLS = true
+			cfg.Mail.Port = 1025
 		}
 
 		processes, err := stack.Start()
@@ -213,6 +220,7 @@ func init() {
 	flags.String("password-reset-interval", "15m", "minimal duration between two password reset")
 	checkNoErr(viper.BindPFlag("password_reset_interval", flags.Lookup("password-reset-interval")))
 
+	flags.BoolVar(&flagMailhog, "mailhog", false, "Alias of --mail-disable-tls --mail-port 1025, useful for MailHog")
 	flags.BoolVar(&flagDevMode, "dev", false, "Allow to run in dev mode for a prod release (disabled by default)")
 	flags.BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
 	flags.StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
