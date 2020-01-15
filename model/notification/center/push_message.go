@@ -1,5 +1,7 @@
 package center
 
+import "github.com/cozy/cozy-stack/pkg/mail"
+
 // PushMessage contains a push notification request.
 type PushMessage struct {
 	NotificationID string `json:"notification_id"`
@@ -11,4 +13,6 @@ type PushMessage struct {
 	Collapsible    bool   `json:"collapsible,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty"`
+
+	MailFallback *mail.Options `json:"mail_fallback,omitempty"`
 }

@@ -250,6 +250,7 @@ func sendPush(inst *instance.Instance,
 	if !hasNotifiableDevice(inst) {
 		return errors.New("No device with push notification")
 	}
+	email := buildMailMessage(p, n)
 	push := PushMessage{
 		NotificationID: n.ID(),
 		Source:         n.Source(),
@@ -259,6 +260,7 @@ func sendPush(inst *instance.Instance,
 		Sound:          n.Sound,
 		Data:           n.Data,
 		Collapsible:    p.Collapsible,
+		MailFallback:   email,
 	}
 	msg, err := job.NewMessage(&push)
 	if err != nil {
@@ -272,6 +274,18 @@ func sendMail(inst *instance.Instance,
 	n *notification.Notification,
 	at string,
 ) error {
+	email := buildMailMessage(p, n)
+	if email == nil {
+		return nil
+	}
+	msg, err := job.NewMessage(&email)
+	if err != nil {
+		return err
+	}
+	return pushJobOrTrigger(inst, msg, "sendmail", at)
+}
+
+func buildMailMessage(p *notification.Properties, n *notification.Notification) *mail.Options {
 	email := mail.Options{Mode: mail.ModeFromStack}
 
 	// Notifications from the stack have their own mail templates defined
@@ -293,11 +307,7 @@ func sendMail(inst *instance.Instance,
 		return nil
 	}
 
-	msg, err := job.NewMessage(&email)
-	if err != nil {
-		return err
-	}
-	return pushJobOrTrigger(inst, msg, "sendmail", at)
+	return &email
 }
 
 func pushJobOrTrigger(inst *instance.Instance, msg job.Message, worker, at string) error {

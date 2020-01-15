@@ -12,11 +12,13 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification/center"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/sirupsen/logrus"
 
 	fcm "github.com/appleboy/go-fcm"
@@ -113,9 +115,11 @@ func Worker(ctx *job.WorkerContext) error {
 		ctx.Logger().Warnf("too many notifiable devices: %d", len(cs))
 		cs = cs[:10]
 	}
+	sent := false
 	for _, c := range cs {
-		err = push(ctx, c, &msg)
-		if err != nil {
+		if err := push(ctx, c, &msg); err == nil {
+			sent = true
+		} else {
 			ctx.Logger().
 				WithFields(logrus.Fields{
 					"device_id":       c.ID(),
@@ -123,6 +127,9 @@ func Worker(ctx *job.WorkerContext) error {
 				}).
 				Warnf("could not send notification on device: %s", err)
 		}
+	}
+	if !sent {
+		sendFallbackMail(ctx.Instance, msg.MailFallback)
 	}
 	return nil
 }
@@ -252,4 +259,18 @@ func hashSource(source string) []byte {
 	h := md5.New()
 	_, _ = h.Write([]byte(source))
 	return h.Sum(nil)
+}
+
+func sendFallbackMail(inst *instance.Instance, email *mail.Options) {
+	if inst == nil || email == nil {
+		return
+	}
+	msg, err := job.NewMessage(&email)
+	if err != nil {
+		return
+	}
+	_, _ = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
 }
