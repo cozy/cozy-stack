@@ -42,24 +42,22 @@ func migrateAccountsToCiphers(inst *instance.Instance) error {
 func Prelogin(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	log := inst.Logger().WithField("nspace", "bitwarden")
-	settings, err := settings.Get(inst)
+	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
-	if !settings.ExtensionInstalled {
+	if !setting.ExtensionInstalled {
 		// This is the first time the bitwarden extension is installed: make sure
 		// the user gets the existing accounts into the vault
 		if err := migrateAccountsToCiphers(inst); err != nil {
 			log.Errorf("Cannot push job for ciphers migration: %s", err)
 		}
-		settings.ExtensionInstalled = true
-		if err := settings.Save(inst); err != nil {
-			return err
-		}
+		setting.ExtensionInstalled = true
+		settings.UpdateRevisionDate(inst, setting)
 	}
 	return c.JSON(http.StatusOK, echo.Map{
-		"Kdf":           settings.PassphraseKdf,
-		"KdfIterations": settings.PassphraseKdfIterations,
+		"Kdf":           setting.PassphraseKdf,
+		"KdfIterations": setting.PassphraseKdfIterations,
 	})
 }
 

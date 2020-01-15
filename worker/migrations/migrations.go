@@ -233,7 +233,6 @@ func migrateAccountsToOrganization(domain string) error {
 			errm = multierror.Append(errm, err)
 		}
 	}
-	settings.UpdateRevisionDate(inst, setting)
 	return errm
 }
 
