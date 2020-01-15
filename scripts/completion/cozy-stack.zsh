@@ -689,6 +689,7 @@ function _cozy-stack_fixer {
     commands=(
       "contact-emails:Detect and try to fix invalid emails on contacts"
       "content-mismatch:Fix the content mismatch differences for 64K issue"
+      "indexes:Rebuild the CouchDB views and indexes"
       "jobs:Take a look at the consistency of the jobs"
       "md5:Fix missing md5 from contents in the vfs"
       "mime:Fix the class computed from the mime-type"
@@ -706,6 +707,9 @@ function _cozy-stack_fixer {
     ;;
   content-mismatch)
     _cozy-stack_fixer_content-mismatch
+    ;;
+  indexes)
+    _cozy-stack_fixer_indexes
     ;;
   jobs)
     _cozy-stack_fixer_jobs
@@ -740,6 +744,15 @@ function _cozy-stack_fixer_contact-emails {
 function _cozy-stack_fixer_content-mismatch {
   _arguments \
     '--no-dry-run[Do not dry run]' \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+function _cozy-stack_fixer_indexes {
+  _arguments \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
     '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
@@ -1405,6 +1418,7 @@ function _cozy-stack_serve {
     '--mail-password[mail smtp password]:' \
     '--mail-port[mail smtp port]:' \
     '--mail-username[mail smtp username]:' \
+    '--mailhog[Alias of --mail-disable-tls --mail-port 1025, useful for MailHog]' \
     '--password-reset-interval[minimal duration between two password reset]:' \
     '--rate-limiting-url[URL for rate-limiting counters, redis or in-memory]:' \
     '--realtime-url[URL for realtime in the browser via webocket, redis or in-memory]:' \

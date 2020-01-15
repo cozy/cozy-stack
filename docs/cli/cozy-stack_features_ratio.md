@@ -1,4 +1,4 @@
-## cozy-stack features context
+## cozy-stack features ratio
 
 Display and update the feature flags for a context
 
@@ -13,7 +13,7 @@ To remove a flag, set it to an empty array (or null).
 
 
 ```
-cozy-stack features context <context-name> [flags]
+cozy-stack features ratio <context-name> [flags]
 ```
 
 ### Examples
@@ -26,7 +26,7 @@ $ cozy-stack feature ratio --context beta '{"set_this_flag": [{"ratio": 0.1, "va
 
 ```
       --context string   The context for the feature flags
-  -h, --help             help for context
+  -h, --help             help for ratio
 ```
 
 ### Options inherited from parent commands

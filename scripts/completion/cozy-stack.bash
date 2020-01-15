@@ -1623,6 +1623,38 @@ _cozy-stack_fixer_content-mismatch()
     noun_aliases=()
 }
 
+_cozy-stack_fixer_indexes()
+{
+    last_command="cozy-stack_fixer_indexes"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
 _cozy-stack_fixer_jobs()
 {
     last_command="cozy-stack_fixer_jobs"
@@ -1828,6 +1860,7 @@ _cozy-stack_fixer()
     commands=()
     commands+=("contact-emails")
     commands+=("content-mismatch")
+    commands+=("indexes")
     commands+=("jobs")
     commands+=("md5")
     commands+=("mime")
@@ -3268,6 +3301,7 @@ _cozy-stack_serve()
     two_word_flags+=("--mail-port")
     flags+=("--mail-username=")
     two_word_flags+=("--mail-username")
+    flags+=("--mailhog")
     flags+=("--password-reset-interval=")
     two_word_flags+=("--password-reset-interval")
     flags+=("--rate-limiting-url=")
