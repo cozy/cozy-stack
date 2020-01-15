@@ -33,7 +33,7 @@ type Document struct {
 	DocID      string                 `json:"_id"`
 	DocRev     string                 `json:"_rev,omitempty"`
 	CreatedBy  string                 `json:"-"`
-	DirID      string                 `json:"dir_id,omitempty"`
+	DirID      string                 `json:"dir_id,omitempty"` // Only used at creation
 	Title      string                 `json:"title"`
 	Version    int64                  `json:"version"`
 	SchemaSpec map[string]interface{} `json:"schema"`
@@ -148,9 +148,6 @@ func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDo
 	file.Metadata = d.Metadata()
 	file.Mime = noteMime
 	file.MD5Sum = nil // Let the VFS compute the md5sum
-	if d.DirID != "" {
-		file.DirID = d.DirID
-	}
 
 	// If the file was renamed manually before, we will keep its name. Else, we
 	// can rename with the new title.
@@ -499,7 +496,6 @@ func fromMetadata(file *vfs.FileDoc) (*Document, error) {
 	}
 	return &Document{
 		DocID:      file.ID(),
-		DirID:      file.DirID,
 		Title:      title,
 		Version:    version,
 		SchemaSpec: schema,
