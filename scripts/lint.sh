@@ -11,7 +11,7 @@ if git grep -l \
 fi
 
 curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.22.1
-bin/golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace --timeout 2m --max-same-issues 10
+bin/golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace -D unused --timeout 2m --max-same-issues 10
 
 npm install eslint@5.16.0 prettier eslint-plugin-prettier eslint-config-cozy-app
 ./node_modules/.bin/eslint "assets/scripts/**" tests/integration/konnector/*.js
