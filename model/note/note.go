@@ -388,10 +388,12 @@ func List(inst *instance.Instance, bookmark string) ([]*vfs.FileDoc, string, err
 		UseIndex: "by-mime-updated-at",
 		Selector: mango.And(
 			mango.Equal("mime", noteMime),
+			mango.Equal("trashed", false),
 			mango.Exists("updated_at"),
 		),
 		Sort: mango.SortBy{
 			{Field: "mime", Direction: mango.Desc},
+			{Field: "trashed", Direction: mango.Desc},
 			{Field: "updated_at", Direction: mango.Desc},
 		},
 		Limit:    100,
