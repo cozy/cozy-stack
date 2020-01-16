@@ -20,6 +20,7 @@ const (
 	Opera            = "Opera"
 	Safari           = "Safari"
 	Android          = "Android"
+	Electron         = "Electron"
 )
 
 // browser is a struct with a name and a minimal version
@@ -110,8 +111,12 @@ func CryptoPolyfill(c echo.Context) bool {
 		return true
 	}
 	if build.IsDevRelease() {
-		// XXX electron is seen as Safari
-		return browser == Chrome || browser == Chromium || browser == Opera || browser == Safari || browser == Android
+		return browser == Chrome ||
+			browser == Chromium ||
+			browser == Opera ||
+			browser == Safari ||
+			browser == Android ||
+			browser == Electron
 	}
 	return false
 }
