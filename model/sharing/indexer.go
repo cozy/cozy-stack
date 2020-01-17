@@ -135,6 +135,10 @@ func (s *sharingIndexer) VersionsUsage() (int64, error) {
 	return s.indexer.VersionsUsage()
 }
 
+func (s *sharingIndexer) TrashUsage() (int64, error) {
+	return s.indexer.TrashUsage()
+}
+
 func (s *sharingIndexer) CreateFileDoc(doc *vfs.FileDoc) error {
 	return ErrInternalServerError
 }

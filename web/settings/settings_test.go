@@ -148,7 +148,7 @@ func TestDiskUsage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 401, res.StatusCode)
 
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/disk-usage", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/disk-usage?include=trash", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	assert.NoError(t, err)
 	res, err = http.DefaultClient.Do(req)
@@ -172,6 +172,9 @@ func TestDiskUsage(t *testing.T) {
 	versions, ok := attrs["versions"].(string)
 	assert.True(t, ok)
 	assert.Equal(t, "0", versions)
+	trash, ok := attrs["trash"].(string)
+	assert.True(t, ok)
+	assert.Equal(t, "0", trash)
 }
 
 func TestRegisterPassphraseWrongToken(t *testing.T) {
