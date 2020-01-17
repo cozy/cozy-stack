@@ -94,6 +94,8 @@ type Fs interface {
 	// The current version of the content is not lost, but saved as another
 	// version.
 	RevertFileVersion(doc *FileDoc, version *Version) error
+	// CleanOldVersion deletes an old version of a file.
+	CleanOldVersion(fileID string, version *Version) error
 
 	// Fsck return the list of inconsistencies in the VFS
 	Fsck(func(log *FsckLog), bool) (err error)

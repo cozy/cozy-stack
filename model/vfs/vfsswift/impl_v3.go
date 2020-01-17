@@ -698,7 +698,7 @@ func (f *swiftFileCreationV3) Close() (err error) {
 			_ = f.fs.c.ObjectDelete(f.fs.container, objName)
 		}
 		for _, old := range toClean {
-			cleanOldVersion(f.fs, newdoc.DocID, old)
+			_ = cleanOldVersion(f.fs, newdoc.DocID, old)
 		}
 	}
 
@@ -709,15 +709,24 @@ func (f *swiftFileCreationV3) Close() (err error) {
 	return nil
 }
 
-func cleanOldVersion(sfs *swiftVFSV3, fileID string, v *vfs.Version) {
-	if err := sfs.Indexer.DeleteVersion(v); err == nil {
-		internalID := v.DocID
-		if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
-			internalID = parts[1]
-		}
-		objName := MakeObjectNameV3(fileID, internalID)
-		_ = sfs.c.ObjectDelete(sfs.container, objName)
+func (sfs *swiftVFSV3) CleanOldVersion(fileID string, v *vfs.Version) error {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
+		return lockerr
 	}
+	defer sfs.mu.Unlock()
+	return cleanOldVersion(sfs, fileID, v)
+}
+
+func cleanOldVersion(sfs *swiftVFSV3, fileID string, v *vfs.Version) error {
+	if err := sfs.Indexer.DeleteVersion(v); err != nil {
+		return err
+	}
+	internalID := v.DocID
+	if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
+		internalID = parts[1]
+	}
+	objName := MakeObjectNameV3(fileID, internalID)
+	return sfs.c.ObjectDelete(sfs.container, objName)
 }
 
 type swiftFileOpenV3 struct {

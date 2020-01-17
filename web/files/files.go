@@ -349,6 +349,34 @@ func ModifyFileVersionMetadata(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, version, nil)
 }
 
+// DeleteFileVersionMetadata handles DELETE requests on /files/:file-id/:version-id
+//
+// It can be used to delete an old version of a file.
+func DeleteFileVersionMetadata(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fs := inst.VFS()
+	fileID := c.Param("file-id")
+	_, file, err := fs.DirOrFileByID(fileID)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	if file == nil {
+		return WrapVfsError(vfs.ErrConflict)
+	}
+	if err = checkPerm(c, permission.DELETE, nil, file); err != nil {
+		return WrapVfsError(err)
+	}
+	docID := fileID + "/" + c.Param("version-id")
+	version, err := vfs.FindVersion(inst, docID)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	if err := fs.CleanOldVersion(fileID, version); err != nil {
+		return WrapVfsError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // CopyVersionHandler handles POST requests on /files/:file-id/versions.
 //
 // It can be used to create a new version of a file, with the same content but
@@ -1271,6 +1299,7 @@ func Routes(router *echo.Group) {
 	router.GET("/download/:file-id/:version-id", ReadFileContentFromVersion)
 	router.POST("/revert/:file-id/:version-id", RevertFileVersion)
 	router.PATCH("/:file-id/:version-id", ModifyFileVersionMetadata)
+	router.DELETE("/:file-id/:version-id", DeleteFileVersionMetadata)
 	router.POST("/:file-id/versions", CopyVersionHandler)
 
 	router.POST("/_find", FindFilesMango)
