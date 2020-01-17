@@ -18,10 +18,10 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 			return next(c)
 		}
 		i, err := lifecycle.GetInstance(c.Request().Host)
-		if err != nil {
+		if err != nil || i.Deleting {
 			var errHTTP *echo.HTTPError
 			switch err {
-			case instance.ErrNotFound, instance.ErrIllegalDomain:
+			case instance.ErrNotFound, instance.ErrIllegalDomain, nil:
 				err = instance.ErrNotFound
 				errHTTP = echo.NewHTTPError(http.StatusNotFound, err)
 			default:
