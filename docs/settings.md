@@ -254,6 +254,25 @@ Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp
 HTTP/1.1 204 No Content
 ```
 
+### GET /settings/hint
+
+This route can be used to know if a hint has been chosen (but the hint won't be
+revealed). If there is a hint, the response will be a `204 No Content`. And, if
+not, it will be a `404 No Content`.
+
+#### Request
+
+```http
+GET /settings/hint HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### PUT /settings/hint
 
 The user can change the hint for its passphrase.

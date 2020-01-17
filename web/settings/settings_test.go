@@ -247,6 +247,26 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 	assert.NotEmpty(t, cookies[0].Value)
 }
 
+func TestGetHint(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/settings/hint", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "404 Not Found", res.Status)
+
+	setting, err := settings.Get(testInstance)
+	assert.NoError(t, err)
+	setting.PassphraseHint = "my hint"
+	err = couchdb.UpdateDoc(testInstance, setting)
+	assert.NoError(t, err)
+
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "204 No Content", res.Status)
+}
+
 func TestUpdateHint(t *testing.T) {
 	args, _ := json.Marshal(&echo.Map{
 		"hint": "my updated hint",
