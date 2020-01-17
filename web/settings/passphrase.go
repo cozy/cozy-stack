@@ -219,6 +219,25 @@ func updatePassphrase(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func getHint(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := middlewares.AllowWholeType(c, permission.GET, consts.Settings); err != nil {
+		return err
+	}
+
+	setting, err := settings.Get(inst)
+	if err != nil {
+		return err
+	}
+
+	if setting.PassphraseHint == "" {
+		return jsonapi.NotFound(errors.New("No hint"))
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 func updateHint(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
