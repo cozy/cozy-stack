@@ -52,8 +52,6 @@ func Prelogin(c echo.Context) error {
 		if err := migrateAccountsToCiphers(inst); err != nil {
 			log.Errorf("Cannot push job for ciphers migration: %s", err)
 		}
-		setting.ExtensionInstalled = true
-		settings.UpdateRevisionDate(inst, setting)
 	}
 	return c.JSON(http.StatusOK, echo.Map{
 		"Kdf":           setting.PassphraseKdf,

@@ -233,6 +233,12 @@ func migrateAccountsToOrganization(domain string) error {
 			errm = multierror.Append(errm, err)
 		}
 	}
+	// This flag is checked at the extension pre-login to run the migration or not
+	setting.ExtensionInstalled = true
+	settings.UpdateRevisionDate(inst, setting)
+	if err != nil {
+		errm = multierror.Append(errm, err)
+	}
 	return errm
 }
 
