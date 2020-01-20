@@ -29,6 +29,13 @@ saved in CouchDB, but we will show them as the konnectors will see them):
 
 Accounts are manipulated through the `/data/` API.
 
+#### Decryption
+
+The decryption of the credentials is reserved to requests coming from konnectors
+and services. For services, it is only available on
+`/data/io.cozy.acconts/:account-id` with an additional `include=credentials`
+parameter.
+
 #### Aggregator accounts
 
 Some konnectors are based on an aggregator service. An aggregator is declared
