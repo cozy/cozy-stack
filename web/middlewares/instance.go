@@ -29,6 +29,11 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 			errHTTP.Internal = err
 			return errHTTP
+		} else if i.Deleting {
+			err = instance.ErrNotFound
+			errHTTP := echo.NewHTTPError(http.StatusNotFound, err)
+			errHTTP.Internal = err
+			return errHTTP
 		}
 		c.Set("instance", i.WithContextualDomain(c.Request().Host))
 		return next(c)

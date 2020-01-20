@@ -29,4 +29,6 @@ var (
 	ErrBadTOSVersion = errors.New("Bad format for TOS version")
 	// ErrInvalidSwiftLayout is returned when the Swift layout is unknown.
 	ErrInvalidSwiftLayout = errors.New("Invalid Swift layout")
+	// ErrDeletionAlreadyRequested is returned when a deletion has already been requested.
+	ErrDeletionAlreadyRequested = errors.New("The deletion has already been requested")
 )

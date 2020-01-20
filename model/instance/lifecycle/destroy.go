@@ -21,20 +21,24 @@ func Destroy(domain string) error {
 		return err
 	}
 	return hooks.Execute("remove-instance", []string{domain}, func() error {
-		return DestroyWithoutHooks(domain)
+		return destroyWithoutHooks(domain)
 	})
 }
 
-// DestroyWithoutHooks is used to remove the instance. The difference with
+// destroyWithoutHooks is used to remove the instance. The difference with
 // Destroy is that scripts hooks are not executed for this function.
-func DestroyWithoutHooks(domain string) error {
-	var err error
-	domain, err = validateDomain(domain)
+func destroyWithoutHooks(domain string) error {
+	inst, err := instance.GetFromCouch(domain)
 	if err != nil {
 		return err
 	}
-	inst, err := instance.GetFromCouch(domain)
-	if err != nil {
+
+	// Check that we don't try to run twice the deletion of accounts
+	if inst.Deleting {
+		return instance.ErrDeletionAlreadyRequested
+	}
+	inst.Deleting = true
+	if err := couchdb.UpdateDoc(couchdb.GlobalDB, inst); err != nil {
 		return err
 	}
 
@@ -51,6 +55,8 @@ func DestroyWithoutHooks(domain string) error {
 	if err != nil {
 		return err
 	}
+	inst.Deleting = false
+	_ = couchdb.UpdateDoc(couchdb.GlobalDB, inst)
 
 	sched := job.System()
 	triggers, err := sched.GetAllTriggers(inst)
