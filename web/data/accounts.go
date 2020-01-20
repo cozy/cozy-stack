@@ -54,7 +54,9 @@ func getAccount(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if perm.Type == permission.TypeKonnector {
+	if perm.Type == permission.TypeKonnector ||
+		(c.QueryParam("include") == "credentials" && perm.Type == permission.TypeWebapp) {
+		// The account decryption is allowed for konnectors or for apps services
 		decryptAccount(out)
 	}
 
