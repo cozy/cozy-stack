@@ -282,7 +282,6 @@ func (w *konnectorWorker) ensureFolderToSave(ctx *job.WorkerContext, inst *insta
 		dirID := ""
 		for _, row := range res.Rows {
 			dir := &vfs.DirDoc{}
-			fmt.Printf("row = %v\n", row)
 			if err := couchdb.GetDoc(inst, consts.Files, row.ID, dir); err == nil {
 				if !strings.HasPrefix(dir.Fullpath, vfs.TrashDirName) {
 					count++

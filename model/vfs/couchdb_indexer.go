@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 )
 
@@ -248,8 +247,6 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 	docs := make([]interface{}, 0, limit)
 	olddocs := make([]interface{}, 0, limit)
 
-	logger.WithDomain(c.db.DomainName()).WithField("nspace", "vfs-indexer").
-		Infof("Move dir %s to %s", oldpath, newpath)
 	if oldpath+"/" == newpath {
 		return nil
 	}
