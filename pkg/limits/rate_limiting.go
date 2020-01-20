@@ -143,7 +143,7 @@ var configs = []counterConfig{
 	// JobSendMail
 	{
 		Prefix: "job-sendmail",
-		Limit:  30,
+		Limit:  100,
 		Period: 1 * time.Hour,
 	},
 	// JobService
