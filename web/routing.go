@@ -46,7 +46,7 @@ import (
 
 const (
 	// cspScriptSrcWhitelist is a whitelist for default allowed domains in CSP.
-	cspScriptSrcWhitelist = "https://piwik.cozycloud.cc https://matomo.cozycloud.cc"
+	cspScriptSrcWhitelist = "https://piwik.cozycloud.cc https://matomo.cozycloud.cc https://sentry.cozycloud.cc"
 
 	// cspImgSrcWhitelist is a whitelist of images domains that are allowed in
 	// CSP.
