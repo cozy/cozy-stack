@@ -362,6 +362,10 @@ func (s *sharingIndexer) DeleteVersion(v *vfs.Version) error {
 	return s.indexer.DeleteVersion(v)
 }
 
+func (s *sharingIndexer) AllVersions() ([]*vfs.Version, error) {
+	return s.indexer.AllVersions()
+}
+
 func (s *sharingIndexer) BatchDeleteVersions(versions []*vfs.Version) error {
 	return s.indexer.BatchDeleteVersions(versions)
 }

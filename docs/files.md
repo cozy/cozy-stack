@@ -1111,6 +1111,22 @@ DELETE /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/2-fa3a3bec HTTP/1.1
 HTTP/1.1 204 No Content
 ```
 
+### DELETE /files/versions
+
+Deletes all the old versions of all files to make space for new files.
+
+#### Request
+
+```http
+DELETE /files/versions HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 
 ## Trash
 

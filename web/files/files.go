@@ -432,6 +432,21 @@ func CopyVersionHandler(c echo.Context) error {
 	return err
 }
 
+// ClearOldVersions is the handler for DELETE /files/versions.
+// It deletes all the old versions of all files to make space for new files.
+func ClearOldVersions(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.Files); err != nil {
+		return err
+	}
+
+	fs := middlewares.GetInstance(c).VFS()
+	if err := fs.ClearOldVersions(); err != nil {
+		return WrapVfsError(err)
+	}
+
+	return c.NoContent(204)
+}
+
 func getPatch(c echo.Context, docID, docPath string) (*docPatch, error) {
 	var patch docPatch
 	obj, err := jsonapi.Bind(c.Request().Body, &patch)
@@ -1301,6 +1316,7 @@ func Routes(router *echo.Group) {
 	router.PATCH("/:file-id/:version-id", ModifyFileVersionMetadata)
 	router.DELETE("/:file-id/:version-id", DeleteFileVersionMetadata)
 	router.POST("/:file-id/versions", CopyVersionHandler)
+	router.DELETE("/versions", ClearOldVersions)
 
 	router.POST("/_find", FindFilesMango)
 

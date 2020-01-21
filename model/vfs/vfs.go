@@ -96,6 +96,8 @@ type Fs interface {
 	RevertFileVersion(doc *FileDoc, version *Version) error
 	// CleanOldVersion deletes an old version of a file.
 	CleanOldVersion(fileID string, version *Version) error
+	// ClearOldVersions deletes all the old versions of all files
+	ClearOldVersions() error
 
 	// Fsck return the list of inconsistencies in the VFS
 	Fsck(func(log *FsckLog), bool) (err error)
@@ -202,6 +204,7 @@ type Indexer interface {
 	CreateVersion(*Version) error
 	// DeleteVersion removes a version from the CouchDB index.
 	DeleteVersion(*Version) error
+	AllVersions() ([]*Version, error)
 	BatchDeleteVersions([]*Version) error
 
 	CheckIndexIntegrity(func(*FsckLog), bool) error

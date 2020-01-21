@@ -584,6 +584,19 @@ func (c *couchdbIndexer) DeleteVersion(v *Version) error {
 	return couchdb.DeleteDoc(c.db, v)
 }
 
+func (c *couchdbIndexer) AllVersions() ([]*Version, error) {
+	var versions []*Version
+	err := couchdb.ForeachDocs(c.db, consts.FilesVersions, func(_id string, doc json.RawMessage) error {
+		var v Version
+		if err := json.Unmarshal(doc, &v); err != nil {
+			return err
+		}
+		versions = append(versions, &v)
+		return nil
+	})
+	return versions, err
+}
+
 func (c *couchdbIndexer) BatchDeleteVersions(versions []*Version) error {
 	docs := make([]couchdb.Doc, len(versions))
 	for i, v := range versions {

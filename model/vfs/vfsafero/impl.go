@@ -805,6 +805,21 @@ func pathForVersions(fileID string) string {
 	return path.Join(vfs.VersionsDirName, fileID[:4], fileID[4:])
 }
 
+func (afs *aferoVFS) ClearOldVersions() error {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer afs.mu.Unlock()
+	versions, err := afs.Indexer.AllVersions()
+	if err != nil {
+		return err
+	}
+	if err := afs.Indexer.BatchDeleteVersions(versions); err != nil {
+		return err
+	}
+	return afs.fs.RemoveAll(vfs.VersionsDirName)
+}
+
 var (
 	_ vfs.VFS  = &aferoVFS{}
 	_ vfs.File = &aferoFileOpen{}
