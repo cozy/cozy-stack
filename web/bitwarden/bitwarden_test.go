@@ -619,7 +619,7 @@ func assertDomainsReponse(t *testing.T, res *http.Response) {
 	}
 }
 
-func TestChangeSecurityHash(t *testing.T) {
+func TestChangeSecurityStamp(t *testing.T) {
 	email := inst.PassphraseSalt()
 	iter := crypto.DefaultPBKDF2Iterations
 	pass, _ := crypto.HashPassWithPBKDF2([]byte("cozy"), email, iter)
