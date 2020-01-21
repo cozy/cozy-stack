@@ -148,6 +148,11 @@ func readPump(notifier *wsNotifier) {
 			Infof("Unexpected message: %v", msg)
 		return
 	}
+	if err := ds.Watch(consts.Settings, consts.BitwardenSettingsID); err != nil {
+		logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
+			Infof("Subscribe error: %s", err)
+		return
+	}
 	if err := ds.Subscribe(consts.BitwardenFolders); err != nil {
 		logger.WithDomain(ds.DomainName()).WithField("nspace", "bitwarden").
 			Infof("Subscribe error: %s", err)
@@ -245,7 +250,7 @@ const (
 	hubFolderUpdate = 8
 	hubCipherDelete = 9
 	// hubSettings     = 10
-	// hubLogOut       = 11
+	hubLogOut = 11
 )
 
 func buildNotification(e *realtime.Event, userID string, setting *settings.Settings) *notification {
@@ -256,7 +261,8 @@ func buildNotification(e *realtime.Event, userID string, setting *settings.Setti
 	doctype := e.Doc.DocType()
 	t := -1
 	var payload map[string]interface{}
-	if doctype == consts.BitwardenFolders {
+	switch doctype {
+	case consts.BitwardenFolders:
 		payload = buildFolderPayload(e, userID)
 		switch e.Verb {
 		case realtime.EventCreate:
@@ -266,7 +272,7 @@ func buildNotification(e *realtime.Event, userID string, setting *settings.Setti
 		case realtime.EventDelete:
 			t = hubFolderDelete
 		}
-	} else if doctype == consts.BitwardenCiphers {
+	case consts.BitwardenCiphers:
 		payload = buildCipherPayload(e, userID, setting)
 		switch e.Verb {
 		case realtime.EventCreate:
@@ -275,6 +281,11 @@ func buildNotification(e *realtime.Event, userID string, setting *settings.Setti
 			t = hubCipherUpdate
 		case realtime.EventDelete:
 			t = hubCipherDelete
+		}
+	case consts.Settings:
+		payload = buildLogoutPayload(e, userID)
+		if len(payload) > 0 {
+			t = hubLogOut
 		}
 	}
 	if t < 0 {
@@ -297,15 +308,31 @@ func buildNotification(e *realtime.Event, userID string, setting *settings.Setti
 }
 
 func buildFolderPayload(e *realtime.Event, userID string) map[string]interface{} {
+	if e.OldDoc == nil {
+		return nil
+	}
+
 	var updatedAt interface{}
 	var date string
 	if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
+		oldDoc, _ := e.OldDoc.(*couchdb.JSONDoc)
+		if oldDoc == nil || doc.M["security_stamp"] == oldDoc.M["security_stamp"] {
+			return nil
+		}
 		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
 		date, _ = meta["updatedAt"].(string)
 	} else if doc, ok := e.Doc.(*realtime.JSONDoc); ok {
+		oldDoc, _ := e.OldDoc.(*realtime.JSONDoc)
+		if oldDoc == nil || doc.M["security_stamp"] == oldDoc.M["security_stamp"] {
+			return nil
+		}
 		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
 		date, _ = meta["updatedAt"].(string)
-	} else if doc, ok := e.Doc.(*bitwarden.Folder); ok {
+	} else if doc, ok := e.Doc.(*settings.Settings); ok {
+		oldDoc, _ := e.OldDoc.(*settings.Settings)
+		if oldDoc == nil || doc.SecurityStamp == oldDoc.SecurityStamp {
+			return nil
+		}
 		if doc.Metadata != nil {
 			updatedAt = doc.Metadata.UpdatedAt
 		}
@@ -362,6 +389,34 @@ func buildCipherPayload(e *realtime.Event, userID string, setting *settings.Sett
 		"OrganizationId": orgID,
 		"CollectionIds":  collIDs,
 		"RevisionDate":   updatedAt,
+	}
+}
+
+func buildLogoutPayload(e *realtime.Event, userID string) map[string]interface{} {
+	var updatedAt interface{}
+	var date string
+	if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
+		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
+		date, _ = meta["updatedAt"].(string)
+	} else if doc, ok := e.Doc.(*realtime.JSONDoc); ok {
+		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
+		date, _ = meta["updatedAt"].(string)
+	} else if doc, ok := e.Doc.(*bitwarden.Cipher); ok {
+		if doc.Metadata != nil {
+			updatedAt = doc.Metadata.UpdatedAt
+		}
+	}
+	if date != "" {
+		if t, err := time.Parse(time.RFC3339, date); err == nil {
+			updatedAt = t
+		}
+	}
+	if updatedAt == nil {
+		updatedAt = time.Now()
+	}
+	return map[string]interface{}{
+		"UserId": userID,
+		"Date":   updatedAt,
 	}
 }
 
