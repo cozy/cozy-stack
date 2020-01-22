@@ -705,7 +705,7 @@ func (f *aferoFileCreation) Close() (err error) {
 			_ = f.afs.fs.Remove(vPath)
 		}
 		for _, old := range toClean {
-			cleanOldVersion(f.afs, old)
+			_ = cleanOldVersion(f.afs, old)
 		}
 	}
 
@@ -774,11 +774,20 @@ func extractContentTypeAndMD5(filename string) (contentType string, md5sum []byt
 	return
 }
 
-func cleanOldVersion(afs *aferoVFS, v *vfs.Version) {
-	if err := afs.Indexer.DeleteVersion(v); err == nil {
-		vPath := pathForVersion(v)
-		_ = afs.fs.Remove(vPath)
+func (afs *aferoVFS) CleanOldVersion(fileID string, version *vfs.Version) error {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
 	}
+	defer afs.mu.Unlock()
+	return cleanOldVersion(afs, version)
+}
+
+func cleanOldVersion(afs *aferoVFS, version *vfs.Version) error {
+	if err := afs.Indexer.DeleteVersion(version); err != nil {
+		return err
+	}
+	vPath := pathForVersion(version)
+	return afs.fs.Remove(vPath)
 }
 
 func pathForVersion(v *vfs.Version) string {
@@ -794,6 +803,21 @@ func pathForVersion(v *vfs.Version) string {
 func pathForVersions(fileID string) string {
 	// Avoid too many files in the same directory by using some sub-directories
 	return path.Join(vfs.VersionsDirName, fileID[:4], fileID[4:])
+}
+
+func (afs *aferoVFS) ClearOldVersions() error {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer afs.mu.Unlock()
+	versions, err := afs.Indexer.AllVersions()
+	if err != nil {
+		return err
+	}
+	if err := afs.Indexer.BatchDeleteVersions(versions); err != nil {
+		return err
+	}
+	return afs.fs.RemoveAll(vfs.VersionsDirName)
 }
 
 var (

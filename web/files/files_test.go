@@ -1278,6 +1278,38 @@ func TestRevertVersion(t *testing.T) {
 	assert.Equal(t, content, string(resbody))
 }
 
+func TestCleanOldVersion(t *testing.T) {
+	content := "one"
+	res1, body1 := upload(t, "/files/?Type=file&Name=downloadme-toclean", "text/plain", content, "")
+	assert.Equal(t, 201, res1.StatusCode)
+	data := body1["data"].(map[string]interface{})
+	fileID := data["id"].(string)
+
+	res2, _ := uploadMod(t, "/files/"+fileID, "text/plain", "two", "")
+	assert.Equal(t, 200, res2.StatusCode)
+
+	res3, _ := httpGet(ts.URL + "/files/" + fileID)
+	assert.Equal(t, 200, res3.StatusCode)
+	var body map[string]interface{}
+	assert.NoError(t, json.NewDecoder(res3.Body).Decode(&body))
+	data = body["data"].(map[string]interface{})
+	rels := data["relationships"].(map[string]interface{})
+	old := rels["old_versions"].(map[string]interface{})
+	refs := old["data"].([]interface{})
+	assert.Len(t, refs, 1)
+	version := refs[0].(map[string]interface{})
+	versionID := version["id"].(string)
+
+	req4, _ := http.NewRequest("DELETE", ts.URL+"/files/"+versionID, nil)
+	req4.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res4, err := http.DefaultClient.Do(req4)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res4.StatusCode)
+
+	res5, _ := download(t, "/files/download/"+versionID, "")
+	assert.Equal(t, 404, res5.StatusCode)
+}
+
 func TestCopyVersion(t *testing.T) {
 	buf := strings.NewReader(`{
     "data": {

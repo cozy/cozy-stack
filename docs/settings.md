@@ -7,13 +7,16 @@
 ### GET /settings/disk-usage
 
 Says how many bytes are available and used to store files. When not limited the
-`quota` field is omitted.
-Also says how many bytes are used by last version of files and how many bytes are taken by older versions.
+`quota` field is omitted. Also says how many bytes are used by last version of
+files and how many bytes are taken by older versions.
+
+If the `include=trash` parameter is added to the query string, it will also
+compute the size of the files in the trash.
 
 #### Request
 
 ```http
-GET /settings/disk-usage HTTP/1.1
+GET /settings/disk-usage?include=trash HTTP/1.1
 Host: alice.example.com
 Accept: application/vnd.api+json
 Authorization: Bearer ...
@@ -36,6 +39,7 @@ Content-type: application/vnd.api+json
             "quota": "123456789",
             "used": "12345678",
             "files": "10305070",
+            "trash": "456789",
             "versions": "2040608"
         }
     }

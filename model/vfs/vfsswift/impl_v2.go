@@ -426,6 +426,16 @@ func (sfs *swiftVFSV2) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version)
 	return os.ErrNotExist
 }
 
+func (sfs *swiftVFSV2) CleanOldVersion(fileID string, version *vfs.Version) error {
+	// The versioning is not implemented in Swift layout v2
+	return os.ErrNotExist
+}
+
+func (sfs *swiftVFSV2) ClearOldVersions() error {
+	// The versioning is not implemented in Swift layout v2
+	return os.ErrNotExist
+}
+
 // UpdateFileDoc calls the indexer UpdateFileDoc function and adds a few checks
 // before actually calling this method:
 //   - locks the filesystem for writing

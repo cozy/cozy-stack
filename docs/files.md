@@ -1095,6 +1095,39 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### DELETE /files/:file-id/:version-id
+
+This endpoint can be used to delete an old version of the content for a file.
+
+#### Request
+
+```http
+DELETE /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/2-fa3a3bec HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### DELETE /files/versions
+
+Deletes all the old versions of all files to make space for new files.
+
+#### Request
+
+```http
+DELETE /files/versions HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+
 ## Trash
 
 When a file is deleted, it is first moved to the trash. In the trash, it can be

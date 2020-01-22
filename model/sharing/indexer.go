@@ -135,6 +135,10 @@ func (s *sharingIndexer) VersionsUsage() (int64, error) {
 	return s.indexer.VersionsUsage()
 }
 
+func (s *sharingIndexer) TrashUsage() (int64, error) {
+	return s.indexer.TrashUsage()
+}
+
 func (s *sharingIndexer) CreateFileDoc(doc *vfs.FileDoc) error {
 	return ErrInternalServerError
 }
@@ -356,6 +360,10 @@ func (s *sharingIndexer) CreateVersion(v *vfs.Version) error {
 
 func (s *sharingIndexer) DeleteVersion(v *vfs.Version) error {
 	return s.indexer.DeleteVersion(v)
+}
+
+func (s *sharingIndexer) AllVersions() ([]*vfs.Version, error) {
+	return s.indexer.AllVersions()
 }
 
 func (s *sharingIndexer) BatchDeleteVersions(versions []*vfs.Version) error {

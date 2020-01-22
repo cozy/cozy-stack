@@ -14,10 +14,11 @@ import (
 )
 
 type apiDiskUsage struct {
-	Used     int64 `json:"used,string"`
-	Quota    int64 `json:"quota,string,omitempty"`
-	Files    int64 `json:"files,string"`
-	Versions int64 `json:"versions,string"`
+	Used     int64  `json:"used,string"`
+	Quota    int64  `json:"quota,string,omitempty"`
+	Files    int64  `json:"files,string"`
+	Trash    *int64 `json:"trash,string,omitempty"`
+	Versions int64  `json:"versions,string"`
 }
 
 func (j *apiDiskUsage) ID() string                             { return consts.DiskUsageID }
@@ -48,6 +49,11 @@ func diskUsage(c echo.Context) error {
 	}
 
 	fs := instance.VFS()
+	if c.QueryParam("include") == "trash" {
+		if trash, err := fs.TrashUsage(); err == nil {
+			result.Trash = &trash
+		}
+	}
 
 	versions, err := fs.VersionsUsage()
 	if err != nil {

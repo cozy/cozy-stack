@@ -94,6 +94,10 @@ type Fs interface {
 	// The current version of the content is not lost, but saved as another
 	// version.
 	RevertFileVersion(doc *FileDoc, version *Version) error
+	// CleanOldVersion deletes an old version of a file.
+	CleanOldVersion(fileID string, version *Version) error
+	// ClearOldVersions deletes all the old versions of all files
+	ClearOldVersions() error
 
 	// Fsck return the list of inconsistencies in the VFS
 	Fsck(func(log *FsckLog), bool) (err error)
@@ -134,6 +138,8 @@ type Indexer interface {
 	// VersionsUsage computes the total size of the old file versions contained
 	// in the VFS, not including latest version.
 	VersionsUsage() (int64, error)
+	// TrashUsage computes the total size of the files contained in the trash.
+	TrashUsage() (int64, error)
 
 	// CreateFileDoc creates and add in the index a new file document.
 	CreateFileDoc(doc *FileDoc) error
@@ -198,6 +204,7 @@ type Indexer interface {
 	CreateVersion(*Version) error
 	// DeleteVersion removes a version from the CouchDB index.
 	DeleteVersion(*Version) error
+	AllVersions() ([]*Version, error)
 	BatchDeleteVersions([]*Version) error
 
 	CheckIndexIntegrity(func(*FsckLog), bool) error

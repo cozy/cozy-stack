@@ -55,6 +55,7 @@ func (c *couchdbIndexer) InitIndex() error {
 	return nil
 }
 
+// DiskUsage returns the total size of the files (current + old versions).
 func (c *couchdbIndexer) DiskUsage() (int64, error) {
 	used, err := c.FilesUsage()
 	if err != nil {
@@ -68,7 +69,7 @@ func (c *couchdbIndexer) DiskUsage() (int64, error) {
 	return used, nil
 }
 
-// Return files total size (without versions)
+// FilesUsage returns the files total size (without versions)
 func (c *couchdbIndexer) FilesUsage() (int64, error) {
 	var doc couchdb.ViewResponse
 	err := couchdb.ExecView(c.db, couchdb.DiskUsageView, &couchdb.ViewRequest{
@@ -89,7 +90,8 @@ func (c *couchdbIndexer) FilesUsage() (int64, error) {
 	return int64(used), nil
 }
 
-// Return old file versions total size (not including current version)
+// VersionsUsage returns the total size for old file versions (not including
+// current version).
 func (c *couchdbIndexer) VersionsUsage() (int64, error) {
 	var doc couchdb.ViewResponse
 	err := couchdb.ExecView(c.db, couchdb.OldVersionsDiskUsageView, &couchdb.ViewRequest{
@@ -108,6 +110,22 @@ func (c *couchdbIndexer) VersionsUsage() (int64, error) {
 	}
 
 	return int64(used), nil
+}
+
+// TrashUsage returns the space taken by the files in the trash.
+func (c *couchdbIndexer) TrashUsage() (int64, error) {
+	var size int64
+	trash, err := c.DirByID(consts.TrashDirID)
+	if err != nil {
+		return 0, err
+	}
+	err = walk(c, trash.Name(), trash, nil, func(_ string, _ *DirDoc, file *FileDoc, err error) error {
+		if file != nil {
+			size += file.ByteSize
+		}
+		return err
+	}, 0)
+	return size, err
 }
 
 func (c *couchdbIndexer) prepareFileDoc(doc *FileDoc) error {
@@ -564,6 +582,19 @@ func (c *couchdbIndexer) CreateVersion(v *Version) error {
 
 func (c *couchdbIndexer) DeleteVersion(v *Version) error {
 	return couchdb.DeleteDoc(c.db, v)
+}
+
+func (c *couchdbIndexer) AllVersions() ([]*Version, error) {
+	var versions []*Version
+	err := couchdb.ForeachDocs(c.db, consts.FilesVersions, func(_id string, doc json.RawMessage) error {
+		var v Version
+		if err := json.Unmarshal(doc, &v); err != nil {
+			return err
+		}
+		versions = append(versions, &v)
+		return nil
+	})
+	return versions, err
 }
 
 func (c *couchdbIndexer) BatchDeleteVersions(versions []*Version) error {

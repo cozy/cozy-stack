@@ -300,7 +300,7 @@ func (sfs *swiftVFSV3) DestroyFile(doc *vfs.FileDoc) error {
 	}
 	destroyed := doc.ByteSize
 	var err error
-	if versions, err := vfs.VersionsFor(sfs, doc.DocID); err == nil {
+	if versions, errv := vfs.VersionsFor(sfs, doc.DocID); errv == nil {
 		for _, v := range versions {
 			internalID := v.DocID
 			if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
@@ -698,7 +698,7 @@ func (f *swiftFileCreationV3) Close() (err error) {
 			_ = f.fs.c.ObjectDelete(f.fs.container, objName)
 		}
 		for _, old := range toClean {
-			cleanOldVersion(f.fs, newdoc.DocID, old)
+			_ = cleanOldVersion(f.fs, newdoc.DocID, old)
 		}
 	}
 
@@ -709,15 +709,60 @@ func (f *swiftFileCreationV3) Close() (err error) {
 	return nil
 }
 
-func cleanOldVersion(sfs *swiftVFSV3, fileID string, v *vfs.Version) {
-	if err := sfs.Indexer.DeleteVersion(v); err == nil {
-		internalID := v.DocID
-		if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
-			internalID = parts[1]
-		}
-		objName := MakeObjectNameV3(fileID, internalID)
-		_ = sfs.c.ObjectDelete(sfs.container, objName)
+func (sfs *swiftVFSV3) CleanOldVersion(fileID string, v *vfs.Version) error {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
+		return lockerr
 	}
+	defer sfs.mu.Unlock()
+	return cleanOldVersion(sfs, fileID, v)
+}
+
+func cleanOldVersion(sfs *swiftVFSV3, fileID string, v *vfs.Version) error {
+	if err := sfs.Indexer.DeleteVersion(v); err != nil {
+		return err
+	}
+	internalID := v.DocID
+	if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
+		internalID = parts[1]
+	}
+	objName := MakeObjectNameV3(fileID, internalID)
+	return sfs.c.ObjectDelete(sfs.container, objName)
+}
+
+func (sfs *swiftVFSV3) ClearOldVersions() error {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer sfs.mu.Unlock()
+	diskUsage, _ := sfs.Indexer.DiskUsage()
+	versions, err := sfs.Indexer.AllVersions()
+	if err != nil {
+		return err
+	}
+	var objNames []string
+	var destroyed int64
+	for _, v := range versions {
+		if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
+			objNames = append(objNames, MakeObjectNameV3(parts[0], parts[1]))
+		}
+		destroyed += v.ByteSize
+	}
+	if err := sfs.Indexer.BatchDeleteVersions(versions); err != nil {
+		return err
+	}
+	_, err = sfs.c.BulkDelete(sfs.container, objNames)
+	if err == swift.Forbidden {
+		sfs.log.Warnf("ClearOldVersions failed on BulkDelete: %s", err)
+		err = nil
+		for _, objName := range objNames {
+			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil && errd != nil {
+				sfs.log.Infof("ClearOldVersions failed on ObjectDelete: %s", errd)
+				err = errd
+			}
+		}
+	}
+	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
+	return err
 }
 
 type swiftFileOpenV3 struct {

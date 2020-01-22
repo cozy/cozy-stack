@@ -424,6 +424,16 @@ func (sfs *swiftVFS) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version) e
 	return os.ErrNotExist
 }
 
+func (sfs *swiftVFS) CleanOldVersion(fileID string, version *vfs.Version) error {
+	// The versioning is not implemented in Swift layout v1
+	return os.ErrNotExist
+}
+
+func (sfs *swiftVFS) ClearOldVersions() error {
+	// The versioning is not implemented in Swift layout v1
+	return os.ErrNotExist
+}
+
 // UpdateFileDoc overrides the indexer's one since the swift fs indexes files
 // using their DirID + Name value to preserve atomicity of the hierarchy.
 //
