@@ -340,8 +340,8 @@ Accept: application/vnd.api+json
 
 #### Permissions
 
-To use this endpoint, an application needs a permission on the type
-`io.cozy.settings` for the verb `GET`.
+No permissions are required to access this route, but the request needs to be
+authenticated (webapp token, OAuth token, etc.).
 
 ### GET /settings/instance
 

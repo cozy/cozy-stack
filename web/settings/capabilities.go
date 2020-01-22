@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -49,10 +48,12 @@ func newCapabilities(inst *instance.Instance) *apiCapabilities {
 }
 
 func getCapabilities(c echo.Context) error {
+	// Any request with a token can ask for the capabilities (no permissions
+	// are required)
+	if _, err := middlewares.GetPermission(c); err != nil {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
 	inst := middlewares.GetInstance(c)
 	doc := newCapabilities(inst)
-	if err := middlewares.Allow(c, permission.GET, doc); err != nil {
-		return err
-	}
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
