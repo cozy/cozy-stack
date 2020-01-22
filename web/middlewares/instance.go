@@ -29,13 +29,21 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 			}
 			errHTTP.Internal = err
 			return errHTTP
-		} else if i.Deleting {
-			err = instance.ErrNotFound
+		}
+		c.Set("instance", i.WithContextualDomain(c.Request().Host))
+		return next(c)
+	}
+}
+
+func CheckInstanceDeleting(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		i := GetInstance(c)
+		if i.Deleting {
+			err := instance.ErrNotFound
 			errHTTP := echo.NewHTTPError(http.StatusNotFound, err)
 			errHTTP.Internal = err
 			return errHTTP
 		}
-		c.Set("instance", i.WithContextualDomain(c.Request().Host))
 		return next(c)
 	}
 }
