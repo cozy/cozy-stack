@@ -73,6 +73,7 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			DefaultContentTypeOffer: echo.MIMETextHTML,
 		}),
 		middlewares.CheckInstanceBlocked,
+		middlewares.CheckInstanceDeleting,
 		middlewares.CheckTOSDeadlineExpired,
 	}
 
@@ -156,6 +157,7 @@ func SetupRoutes(router *echo.Echo) error {
 			}),
 			middlewares.CheckUserAgent,
 			middlewares.CheckInstanceBlocked,
+			middlewares.CheckInstanceDeleting,
 		}
 
 		router.GET("/", auth.Home, mws...)
