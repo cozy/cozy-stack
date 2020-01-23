@@ -362,21 +362,27 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 	}
 
 	c := newClient(flagDomain, appType)
-	manifest, err := c.UpdateApp(&client.AppOptions{
+	opts := &client.AppOptions{
 		AppType:   appType,
 		Slug:      args[0],
 		SourceURL: src,
 
 		OverridenParameters: overridenParameters,
-	}, flagSafeUpdate)
+	}
+	manifest, err := c.GetApp(opts)
 	if err != nil {
 		return err
 	}
-	json, err := json.MarshalIndent(manifest.Attrs, "", "  ")
+	newManifest, err := c.UpdateApp(opts, flagSafeUpdate)
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(json))
+	msg := "%s is already up-to-date at %s\n"
+	if manifest.Attrs.Version < newManifest.Attrs.Version {
+		msg = "%s has been updated to %s\n"
+	}
+	fmt.Printf(msg, manifest.Attrs.Slug, manifest.Attrs.Version)
+
 	return nil
 }
 
