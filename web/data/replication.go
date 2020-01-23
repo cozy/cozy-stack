@@ -1,6 +1,7 @@
 package data
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -17,6 +18,9 @@ func proxy(c echo.Context, path string) error {
 	doctype := c.Get("doctype").(string)
 	instance := middlewares.GetInstance(c)
 	p := couchdb.Proxy(instance, doctype, path)
+	logger := instance.Logger().WithField("nspace", "data-proxy").Writer()
+	defer logger.Close()
+	p.ErrorLog = log.New(logger, "", 0)
 	p.ServeHTTP(c.Response(), c.Request())
 	return nil
 }

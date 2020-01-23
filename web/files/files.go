@@ -37,6 +37,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/worker/thumbnail"
 	"github.com/labstack/echo/v4"
+	"github.com/ncw/swift"
 )
 
 type docPatch struct {
@@ -1375,7 +1376,9 @@ func wrapVfsError(err error) *jsonapi.Error {
 	switch err {
 	case ErrDocTypeInvalid:
 		return jsonapi.InvalidAttribute("type", err)
-	case os.ErrNotExist:
+	case os.ErrExist:
+		return jsonapi.Conflict(err)
+	case os.ErrNotExist, swift.ObjectNotFound:
 		return jsonapi.NotFound(err)
 	case vfs.ErrParentDoesNotExist:
 		return jsonapi.NotFound(err)

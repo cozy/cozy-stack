@@ -633,6 +633,8 @@ func wrapErrors(err error) error {
 		return jsonapi.Conflict(err)
 	case vfs.ErrFileTooBig:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
+	case permission.ErrExpiredToken:
+		return jsonapi.BadRequest(err)
 	}
 	logger.WithNamespace("sharing").Warnf("Not wrapped error: %s", err)
 	return err
