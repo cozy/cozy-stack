@@ -31,7 +31,7 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mssola/user_agent v0.5.1
 	github.com/ncw/swift v1.0.49
-	github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443
+	github.com/nightlyone/lockfile v0.0.0-20200124072040-edb130adc195
 	github.com/oschwald/maxminddb-golang v1.6.0
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pquerna/otp v1.2.0
