@@ -916,6 +916,36 @@ POST /notes/f48d9370-e1ec-0137-8547-543d7eb8149c/sync HTTP/1.1
 HTTP/1.1 204 No Content
 ```
 
+### GET /notes/:id/open
+
+It return the URL where the note can be opened. It can be on the same cozy
+instance, or on another instance if the note is shared.
+
+#### Request
+
+```http
+GET /notes/f48d9370-e1ec-0137-8547-543d7eb8149c/open HTTP/1.1
+Host: bob.cozy.example
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.notes.open",
+    "id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
+    "attributes": {
+        "url": "https://alice.cozy.example/?sharecode=543d7eb8149c&username=bob#/n/05781bea244247fb38f2cd50262c07b5"
+    }
+}
+```
+
 ## Real-time via websockets
 
 You can subscribe to the [realtime](realtime.md) API for a document with the
