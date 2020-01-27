@@ -18,7 +18,7 @@ require (
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/gddo v0.0.0-20191216155521-fbfc0f5e7810
 	github.com/google/go-querystring v1.0.0
-	github.com/google/gops v0.3.6
+	github.com/google/gops v0.3.7
 	github.com/gorilla/websocket v1.4.1
 	github.com/h2non/filetype v1.0.10
 	github.com/hashicorp/go-multierror v1.0.0
