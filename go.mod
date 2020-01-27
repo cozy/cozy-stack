@@ -16,7 +16,7 @@ require (
 	github.com/go-redis/redis/v7 v7.0.0-beta.5
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
-	github.com/golang/gddo v0.0.0-20191216155521-fbfc0f5e7810
+	github.com/golang/gddo v0.0.0-20200123152501-87df31ab357f
 	github.com/google/go-querystring v1.0.0
 	github.com/google/gops v0.3.7
 	github.com/gorilla/websocket v1.4.1
