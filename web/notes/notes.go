@@ -245,6 +245,28 @@ func ForceNoteSync(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// OpenNoteURL is the API handler for GET /notes/:id/open. It returns the
+// parameters to build the URL where the note can be opened.
+func OpenNoteURL(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fileID := c.Param("id")
+	file, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
+		return err
+	}
+
+	doc, err := note.Open(inst, fileID)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	return jsonapi.Data(c, http.StatusOK, doc, nil)
+}
+
 // Routes sets the routing for the collaborative edition of notes.
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
@@ -255,6 +277,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:id/title", ChangeTitle)
 	router.PUT("/:id/telepointer", PutTelepointer)
 	router.POST("/:id/sync", ForceNoteSync)
+	router.GET("/:id/open", OpenNoteURL)
 }
 
 func wrapError(err error) *jsonapi.Error {

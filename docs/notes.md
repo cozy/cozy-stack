@@ -918,8 +918,8 @@ HTTP/1.1 204 No Content
 
 ### GET /notes/:id/open
 
-It return the URL where the note can be opened. It can be on the same cozy
-instance, or on another instance if the note is shared.
+It return the parameters to build the URL where the note can be opened. It can
+be on the same cozy instance, or on another instance if the note is shared.
 
 #### Request
 
@@ -938,11 +938,16 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.notes.open",
+    "type": "io.cozy.notes.url",
     "id": "f48d9370-e1ec-0137-8547-543d7eb8149c",
     "attributes": {
-        "url": "https://alice.cozy.example/?sharecode=543d7eb8149c&username=bob#/n/05781bea244247fb38f2cd50262c07b5"
+      "note_id": "05781bea244247fb38f2cd50262c07b5",
+      "subdomain": "flat",
+      "instance": "alice.cozy.example",
+      "sharecode": "543d7eb8149c",
+      "public_name": "Bob"
     }
+  }
 }
 ```
 

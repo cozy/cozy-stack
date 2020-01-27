@@ -95,4 +95,6 @@ const (
 	// NotesEvents doc type is used for realtime events related to a note, like
 	// a change of title.
 	NotesEvents = "io.cozy.notes.events"
+	// NotesURL doc type is used to return the URL where a note can be edited.
+	NotesURL = "io.cozy.notes.url"
 )
