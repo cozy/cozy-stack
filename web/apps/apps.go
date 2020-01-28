@@ -493,8 +493,10 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 			return err
 		}
 
-		if !middlewares.IsLoggedIn(c) && middlewares.Allow(c, permission.GET, app) != nil {
-			return echo.NewHTTPError(http.StatusUnauthorized, "Not logged in")
+		if !middlewares.IsLoggedIn(c) {
+			if err := middlewares.Allow(c, permission.GET, app); err != nil {
+				return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
+			}
 		}
 
 		if version != "" {
