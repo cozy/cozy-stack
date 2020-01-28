@@ -255,13 +255,23 @@ func OpenNoteURL(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
+	pdoc, err := middlewares.GetPermission(c)
+	if err != nil {
 		return err
+	}
+	if err := vfs.Allows(inst.VFS(), pdoc.Permissions, permission.GET, file); err != nil {
+		return middlewares.ErrForbidden
 	}
 
 	doc, err := note.Open(inst, fileID)
 	if err != nil {
 		return wrapError(err)
+	}
+
+	if pdoc.Type == permission.TypeOauth {
+		if sharingID := c.QueryParam("SharingID"); sharingID != "" {
+			note.AddSharecodeToNoteURL(inst, doc, sharingID, pdoc.SourceID)
+		}
 	}
 
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
