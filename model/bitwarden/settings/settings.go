@@ -21,6 +21,7 @@ var ErrMissingOrgKey = errors.New("No organization key")
 
 // Settings is the struct that holds the birwarden settings
 type Settings struct {
+	CouchID                 string                 `json:"_id,omitempty"`
 	CouchRev                string                 `json:"_rev,omitempty"`
 	PassphraseKdf           int                    `json:"passphrase_kdf,omitempty"`
 	PassphraseKdfIterations int                    `json:"passphrase_kdf_iterations,omitempty"`
@@ -39,7 +40,7 @@ type Settings struct {
 }
 
 // ID returns the settings qualified identifier
-func (s *Settings) ID() string { return consts.BitwardenSettingsID }
+func (s *Settings) ID() string { return s.CouchID }
 
 // Rev returns the settings revision
 func (s *Settings) Rev() string { return s.CouchRev }
@@ -57,13 +58,14 @@ func (s *Settings) Clone() couchdb.Doc {
 }
 
 // SetID changes the settings qualified identifier
-func (s *Settings) SetID(id string) { panic(errors.New("unsupported")) }
+func (s *Settings) SetID(id string) { s.CouchID = id }
 
 // SetRev changes the settings revision
 func (s *Settings) SetRev(rev string) { s.CouchRev = rev }
 
 // Save persists the settings document for bitwarden in CouchDB.
 func (s *Settings) Save(inst *instance.Instance) error {
+	s.CouchID = consts.BitwardenSettingsID
 	if s.Metadata == nil {
 		md := metadata.New()
 		md.DocTypeVersion = DocTypeVersion

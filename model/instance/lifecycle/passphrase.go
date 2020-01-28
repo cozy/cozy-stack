@@ -54,7 +54,6 @@ func registerPassphrase(inst *instance.Instance, tok []byte, params PassParamete
 		return err
 	}
 	inst.RegisterToken = nil
-	settings.SecurityStamp = NewSecurityStamp()
 	setPassphraseKdfAndSecret(inst, settings, hash, params)
 	return settings.Save(inst)
 }
@@ -193,7 +192,6 @@ func PassphraseRenew(inst *instance.Instance, tok []byte, params PassParameters)
 	}
 	inst.PassphraseResetToken = nil
 	inst.PassphraseResetTime = nil
-	settings.SecurityStamp = NewSecurityStamp()
 	settings.PassphraseHint = params.Hint
 	setPassphraseKdfAndSecret(inst, settings, hash, params)
 	if err := settings.Save(inst); err != nil {
@@ -260,7 +258,6 @@ func ForceUpdatePassphrase(inst *instance.Instance, newPassword []byte) error {
 	if err != nil {
 		return err
 	}
-	settings.SecurityStamp = NewSecurityStamp()
 	setPassphraseKdfAndSecret(inst, settings, hash, params)
 	if err := settings.Save(inst); err != nil {
 		return err
@@ -298,6 +295,7 @@ func emulateClientSideHashing(inst *instance.Instance, password []byte) ([]byte,
 
 func setPassphraseKdfAndSecret(inst *instance.Instance, settings *settings.Settings, hash []byte, params PassParameters) {
 	inst.PassphraseHash = hash
+	settings.SecurityStamp = NewSecurityStamp()
 	settings.PassphraseKdf = instance.PBKDF2_SHA256
 	settings.PassphraseKdfIterations = params.Iterations
 	inst.SessSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
