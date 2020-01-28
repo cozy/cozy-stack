@@ -80,12 +80,16 @@ client_id=browser&
 deviceType=3&
 deviceIdentifier=aac2e34a-44db-42ab-a733-5322dd582c3d&
 deviceName=firefox&
+clientName=Cozy&
 devicePushToken=
 ```
 
 If authentication with two factors is enabled on the instance, this request
 will fail with a 400 status, but it will send an email with the code. The
 request can be retried with an additional paramter: `twoFactorToken`.
+
+**Note:** the `clientName` parameter is optional, and is not sent by the
+official bitwarden clients (a default value is used).
 
 #### Request (refresh token)
 
