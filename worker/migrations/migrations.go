@@ -237,6 +237,12 @@ func migrateAccountsToOrganization(domain string) error {
 	setting.ExtensionInstalled = true
 	settings.UpdateRevisionDate(inst, setting)
 	if err != nil {
+		if couchdb.IsConflictError(err) {
+			// The settings have been updated elsewere: retry
+			setting, err = settings.Get(inst)
+			setting.ExtensionInstalled = true
+			settings.UpdateRevisionDate(inst, setting)
+		}
 		errm = multierror.Append(errm, err)
 	}
 	return errm
