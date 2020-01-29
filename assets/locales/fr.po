@@ -6,11 +6,11 @@
 # JC Pagnon <gooz@cozycloud.cc>, 2019
 # Nicolas Vinot, 2019
 # Pierre Guillemot <pierrot@cozycloud.cc>, 2019
-# Bruno Michel, 2019
+# Bruno Michel, 2020
 # 
 msgid ""
 msgstr ""
-"Last-Translator: Bruno Michel, 2019\n"
+"Last-Translator: Bruno Michel, 2020\n"
 "Language-Team: French (https://www.transifex.com/cozy/teams/39753/fr/)\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
