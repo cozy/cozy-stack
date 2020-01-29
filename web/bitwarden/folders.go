@@ -108,7 +108,7 @@ func CreateFolder(c echo.Context) error {
 		})
 	}
 
-	settings.UpdateRevisionDate(inst, nil)
+	_ = settings.UpdateRevisionDate(inst, nil)
 	res := newFolderResponse(folder)
 	return c.JSON(http.StatusOK, res)
 }
@@ -198,7 +198,7 @@ func RenameFolder(c echo.Context) error {
 		})
 	}
 
-	settings.UpdateRevisionDate(inst, nil)
+	_ = settings.UpdateRevisionDate(inst, nil)
 	res := newFolderResponse(folder)
 	return c.JSON(http.StatusOK, res)
 }
@@ -263,6 +263,6 @@ func DeleteFolder(c echo.Context) error {
 		})
 	}
 
-	settings.UpdateRevisionDate(inst, nil)
+	_ = settings.UpdateRevisionDate(inst, nil)
 	return c.NoContent(http.StatusOK)
 }

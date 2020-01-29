@@ -287,7 +287,7 @@ func CreateCipher(c echo.Context) error {
 		})
 	}
 
-	settings.UpdateRevisionDate(inst, setting)
+	_ = settings.UpdateRevisionDate(inst, setting)
 	res := newCipherResponse(cipher, setting)
 	return c.JSON(http.StatusOK, res)
 }
@@ -357,7 +357,7 @@ func CreateSharedCipher(c echo.Context) error {
 		})
 	}
 
-	settings.UpdateRevisionDate(inst, setting)
+	_ = settings.UpdateRevisionDate(inst, setting)
 	res := newCipherResponse(cipher, setting)
 	return c.JSON(http.StatusOK, res)
 }
@@ -476,7 +476,7 @@ func UpdateCipher(c echo.Context) error {
 		})
 	}
 
-	settings.UpdateRevisionDate(inst, setting)
+	_ = settings.UpdateRevisionDate(inst, setting)
 	res := newCipherResponse(cipher, setting)
 	return c.JSON(http.StatusOK, res)
 }
@@ -515,7 +515,7 @@ func DeleteCipher(c echo.Context) error {
 		})
 	}
 
-	settings.UpdateRevisionDate(inst, nil)
+	_ = settings.UpdateRevisionDate(inst, nil)
 	return c.NoContent(http.StatusOK)
 }
 
@@ -613,7 +613,7 @@ func ShareCipher(c echo.Context) error {
 		})
 	}
 
-	settings.UpdateRevisionDate(inst, setting)
+	_ = settings.UpdateRevisionDate(inst, setting)
 	res := newCipherResponse(cipher, setting)
 	return c.JSON(http.StatusOK, res)
 }
