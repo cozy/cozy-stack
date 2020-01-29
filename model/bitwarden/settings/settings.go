@@ -146,7 +146,7 @@ func Get(inst *instance.Instance) (*Settings, error) {
 // UpdateRevisionDate updates the updatedAt field of the bitwarden settings
 // document. This field is used to know by some clients to know the date of the
 // last change on the server before doing a full sync.
-func UpdateRevisionDate(inst *instance.Instance, settings *Settings) {
+func UpdateRevisionDate(inst *instance.Instance, settings *Settings) error {
 	var err error
 	if settings == nil {
 		settings, err = Get(inst)
@@ -158,6 +158,7 @@ func UpdateRevisionDate(inst *instance.Instance, settings *Settings) {
 		inst.Logger().WithField("nspace", "bitwarden").
 			Infof("Cannot update revision date: %s", err)
 	}
+	return err
 }
 
 var _ couchdb.Doc = &Settings{}

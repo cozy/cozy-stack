@@ -233,17 +233,31 @@ func migrateAccountsToOrganization(domain string) error {
 			errm = multierror.Append(errm, err)
 		}
 	}
+	// Reload the setting in case the revision changed
+	setting, err = settings.Get(inst)
+	if err != nil {
+		errm = multierror.Append(errm, err)
+		return errm
+	}
 	// This flag is checked at the extension pre-login to run the migration or not
 	setting.ExtensionInstalled = true
-	settings.UpdateRevisionDate(inst, setting)
+	err = settings.UpdateRevisionDate(inst, setting)
 	if err != nil {
-		if couchdb.IsConflictError(err) {
-			// The settings have been updated elsewere: retry
-			setting, err = settings.Get(inst)
-			setting.ExtensionInstalled = true
-			settings.UpdateRevisionDate(inst, setting)
+		if !couchdb.IsConflictError(err) {
+			errm = multierror.Append(errm, err)
+			return errm
 		}
-		errm = multierror.Append(errm, err)
+		// The settings have been updated elsewhere: retry
+		setting, err = settings.Get(inst)
+		if err != nil {
+			errm = multierror.Append(errm, err)
+			return errm
+		}
+		setting.ExtensionInstalled = true
+		err = settings.UpdateRevisionDate(inst, setting)
+		if err != nil {
+			errm = multierror.Append(errm, err)
+		}
 	}
 	return errm
 }
