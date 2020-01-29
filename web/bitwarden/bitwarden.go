@@ -245,9 +245,13 @@ func getInitialCredentials(c echo.Context) error {
 
 	// Register the client
 	kind, softwareID := bitwarden.ParseBitwardenDeviceType(c.FormValue("deviceType"))
+	clientName := c.FormValue("clientName")
+	if clientName == "" {
+		clientName = "Bitwarden " + c.FormValue("deviceName")
+	}
 	client := &oauth.Client{
 		RedirectURIs: []string{"https://cozy.io/"},
-		ClientName:   "Bitwarden " + c.FormValue("deviceName"),
+		ClientName:   clientName,
 		ClientKind:   kind,
 		SoftwareID:   softwareID,
 	}
