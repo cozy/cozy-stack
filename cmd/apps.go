@@ -316,11 +316,8 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 	if err != nil {
 		return err
 	}
-	json, err := json.MarshalIndent(manifest.Attrs, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(json))
+	fmt.Printf("%s has been installed (%s)\n", manifest.Attrs.Slug, manifest.Attrs.Version)
+
 	return nil
 }
 
@@ -402,11 +399,7 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 	if err != nil {
 		return err
 	}
-	json, err := json.MarshalIndent(manifest.Attrs, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(json))
+	fmt.Printf("%s has been uninstalled\n", manifest.Attrs.Slug)
 	return nil
 }
 
