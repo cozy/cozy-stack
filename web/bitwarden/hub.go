@@ -308,31 +308,15 @@ func buildNotification(e *realtime.Event, userID string, setting *settings.Setti
 }
 
 func buildFolderPayload(e *realtime.Event, userID string) map[string]interface{} {
-	if e.OldDoc == nil {
-		return nil
-	}
-
 	var updatedAt interface{}
 	var date string
 	if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
-		oldDoc, _ := e.OldDoc.(*couchdb.JSONDoc)
-		if oldDoc == nil || doc.M["security_stamp"] == oldDoc.M["security_stamp"] {
-			return nil
-		}
 		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
 		date, _ = meta["updatedAt"].(string)
 	} else if doc, ok := e.Doc.(*realtime.JSONDoc); ok {
-		oldDoc, _ := e.OldDoc.(*realtime.JSONDoc)
-		if oldDoc == nil || doc.M["security_stamp"] == oldDoc.M["security_stamp"] {
-			return nil
-		}
 		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
 		date, _ = meta["updatedAt"].(string)
 	} else if doc, ok := e.Doc.(*settings.Settings); ok {
-		oldDoc, _ := e.OldDoc.(*settings.Settings)
-		if oldDoc == nil || doc.SecurityStamp == oldDoc.SecurityStamp {
-			return nil
-		}
 		if doc.Metadata != nil {
 			updatedAt = doc.Metadata.UpdatedAt
 		}
@@ -393,15 +377,31 @@ func buildCipherPayload(e *realtime.Event, userID string, setting *settings.Sett
 }
 
 func buildLogoutPayload(e *realtime.Event, userID string) map[string]interface{} {
+	if e.OldDoc == nil {
+		return nil
+	}
+
 	var updatedAt interface{}
 	var date string
 	if doc, ok := e.Doc.(*couchdb.JSONDoc); ok {
+		oldDoc, _ := e.OldDoc.(*couchdb.JSONDoc)
+		if oldDoc == nil || doc.M["security_stamp"] == oldDoc.M["security_stamp"] {
+			return nil
+		}
 		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
 		date, _ = meta["updatedAt"].(string)
 	} else if doc, ok := e.Doc.(*realtime.JSONDoc); ok {
+		oldDoc, _ := e.OldDoc.(*realtime.JSONDoc)
+		if oldDoc == nil || doc.M["security_stamp"] == oldDoc.M["security_stamp"] {
+			return nil
+		}
 		meta, _ := doc.M["cozyMetadata"].(map[string]interface{})
 		date, _ = meta["updatedAt"].(string)
-	} else if doc, ok := e.Doc.(*bitwarden.Cipher); ok {
+	} else if doc, ok := e.Doc.(*settings.Settings); ok {
+		oldDoc, _ := e.OldDoc.(*settings.Settings)
+		if oldDoc == nil || doc.SecurityStamp == oldDoc.SecurityStamp {
+			return nil
+		}
 		if doc.Metadata != nil {
 			updatedAt = doc.Metadata.UpdatedAt
 		}
