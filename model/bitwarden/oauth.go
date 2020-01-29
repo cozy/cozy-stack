@@ -114,7 +114,7 @@ func CreateAccessJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 // Bitwarden apps. It is a refresh token, with an additional security stamp.
 func CreateRefreshJWT(i *instance.Instance, c *oauth.Client) (string, error) {
 	var stamp string
-	if settings, err := settings.Get(i); err != nil {
+	if settings, err := settings.Get(i); err == nil {
 		stamp = settings.SecurityStamp
 	}
 	token, err := crypto.NewJWT(i.OAuthSecret, permission.Claims{
