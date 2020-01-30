@@ -19,7 +19,7 @@ $ cozy-stack instances token-oauth cozy.tools:8080 727e677187a51d14ccd59cc0bd000
 ### Options
 
 ```
-      --expire duration   Make the token expires in this amount of time
+      --expire duration   Make the token expires in this amount of time, as a duration string, e.g. "1h"
   -h, --help              help for token-oauth
 ```
 
@@ -36,4 +36,3 @@ $ cozy-stack instances token-oauth cozy.tools:8080 727e677187a51d14ccd59cc0bd000
 ### SEE ALSO
 
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
-
