@@ -1105,7 +1105,7 @@ func init() {
 	oauthClientInstanceCmd.Flags().StringVar(&flagOnboardingApp, "onboarding-app", "", "Specify an OnboardingApp")
 	oauthClientInstanceCmd.Flags().StringVar(&flagOnboardingPermissions, "onboarding-permissions", "", "Specify an OnboardingPermissions")
 	oauthClientInstanceCmd.Flags().StringVar(&flagOnboardingState, "onboarding-state", "", "Specify an OnboardingState")
-	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
+	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time, as a duration string, e.g. \"1h\"")
 	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	lsInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Show each line as a json representation of the instance")
 	lsInstanceCmd.Flags().StringSliceVar(&flagListFields, "fields", nil, "Arguments shown for each line in the list")
