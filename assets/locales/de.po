@@ -4,11 +4,11 @@
 # Mario Angermann, 2019
 # Nils Jakobi <jakobi.nils@gmail.com>, 2019
 # Adrian Nöthlich <admin.noethlich@hgw-iserv.de>, 2019
-# IndeedNotJames <indeednotjames@mailbox.org>, 2019
+# IndeedNotJames <indeednotjames@mailbox.org>, 2020
 # 
 msgid ""
 msgstr ""
-"Last-Translator: IndeedNotJames <indeednotjames@mailbox.org>, 2019\n"
+"Last-Translator: IndeedNotJames <indeednotjames@mailbox.org>, 2020\n"
 "Language-Team: German (https://www.transifex.com/cozy/teams/39753/de/)\n"
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -18,6 +18,9 @@ msgstr "Administrativ"
 
 msgid "Tree Photos"
 msgstr "Fotos"
+
+msgid "Tree Notes"
+msgstr "Notizen"
 
 msgid "Tree Uploaded from Cozy Photos"
 msgstr "Hochgeladen von Cozy Fotos"
@@ -30,6 +33,9 @@ msgstr "Posteingang der Freigaben"
 
 msgid "Tree No longer shared"
 msgstr "Nicht mehr geteilt"
+
+msgid "Notes New note"
+msgstr "Neue Notiz"
 
 msgid "Login Credentials error"
 msgstr "Das eingegebene Passwort ist falsch, bitte versuche es erneut."
@@ -130,18 +136,23 @@ msgstr "Passwort vergessen"
 
 msgid "Passphrase reset Help hint"
 msgstr ""
+"Du hast einen Hinweis zur Wiederherstellung deines Passworts gesetzt. Klicke"
+" auf den Knopf um ihn via E-Mail zu erhalten."
 
 msgid "Passphrase reset Submit hint"
-msgstr ""
+msgstr "Sende mir einen Hinweis"
 
 msgid "Passphrase reset password Title"
-msgstr ""
+msgstr "Im schlimmsten Fall kannst du dein Passwort zurücksetzen:"
 
 msgid "Passphrase reset Help Warning"
-msgstr ""
+msgstr "Warnung!"
 
 msgid "Passphrase reset Help"
 msgstr ""
+"Dein aktuelles Passwort ist der einzige Schlüssel zum Entschlüsseln der "
+"Passwörter in der \"Cozy Passwörter\" App. Alle anderen Daten bleiben "
+"weiterhin zugänglich."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
@@ -167,17 +178,24 @@ msgid "Passphrase Onboarding Help"
 msgstr ""
 "Nutze mindestens acht Zeichen mit Buchstaben, Ziffern und Sonderzeichen."
 
+msgid "Passphrase Hint Error"
+msgstr "Dein Hinweis muss sich von deinem Passwort unterscheiden!"
+
 msgid "Passphrase Onboarding Hint Field"
-msgstr ""
+msgstr "Hinterlasse einen Hinweis (optional)"
 
 msgid "Passphrase Onboarding Hint Help"
 msgstr ""
+"Der Hinweis wird dir via E-Mail gesendet, falls du dein Passwort vergisst. "
+"Wähle einen Hinweis, den nur du verstehen kannst."
 
 msgid "Passphrase Onboarding Submit"
 msgstr "Abschließen"
 
 msgid "Hint sent Body"
 msgstr ""
+"Wir haben dir soeben deinen Passworthinweis per E-Mail zugesandt. Er wird dir helfen, dich an dein Cozy Passwort zu erinnern.\n"
+"Wir warnen dich aber lieber vor, dass die E-Mail im Spam- oder Benachrichtigungsordner landen kann. Schau also bitte auch dort nach, um sie zu finden."
 
 msgid "Hint sent Login Button"
 msgstr "Zurück zur Login Seite"
@@ -440,7 +458,7 @@ msgid "Permissions io.cozy.files"
 msgstr "Dateien"
 
 msgid "Permissions io.cozy.files.versions"
-msgstr ""
+msgstr "Dateiversionen"
 
 msgid "Permissions io.cozy.identities"
 msgstr "Identitäten"
@@ -506,16 +524,21 @@ msgid "Mail Cozy Team"
 msgstr "Dein Cozy Cloud Team"
 
 msgid "Mail Hint Subject"
-msgstr ""
+msgstr "Vergessenes Passwort: Dein Hinweis"
 
 msgid "Mail Hint Intro 1"
 msgstr "Hallo %s,"
 
 msgid "Mail Hint Intro 2"
 msgstr ""
+"Unten befindet sich der angefragte Hinweis, um dich an dein Cozy Passwort zu"
+" erinnern"
 
 msgid "Mail Hint Outro"
 msgstr ""
+"Im schlimmsten Fall kannst du dein Passwort im \"Passwort vergessen\" "
+"Abschnitt deines Cozy zurücksetzen. Wenn du das nicht warst, wende dich "
+"bitte direkt an uns, indem du auf diese E-Mail antwortest. "
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Setze dein Passwort zurück"
@@ -525,8 +548,8 @@ msgstr "Hallo %s,"
 
 msgid "Mail Reset Passphrase Intro 2"
 msgstr ""
-"Du hast uns gebeten, dein Passwort zu ändern (Falls nicht, kontaktiere uns, "
-"indem du direkt auf diese E-Mail antwortest)"
+"Du hast darum gebeten, dein Passwort zu ändern. Wenn du das nicht warst, "
+"wende dich bitte direkt an uns, indem du auf diese E-Mail antwortest."
 
 msgid "Mail Reset Passphrase Button instruction"
 msgstr "Klick diesen Knopf um es sicher zu ändern."
@@ -696,15 +719,15 @@ msgstr "Du hast zwei Möglichkeiten, um mehr Speicherplatz zu bekommen."
 
 msgid "Notifications Disk Quota offers instruction"
 msgstr ""
-"Option 1: Vergrößere dein Cozy durch ein neues Angebot, um viel mehr "
-"Speicherplatz zu erhalten"
+"Option 1:\n"
+"Vergrößere dein Cozy durch ein neues Angebot, um viel mehr Speicherplatz zu erhalten"
 
 msgid "Notifications Disk Quota offers text"
 msgstr "Jetzt aufrüsten"
 
 msgid "Notifications Disk Quota free instructions"
 msgstr ""
-"Option 2: Platz schaffen\n"
+"Option 2:\n"
 "Spare Speicherplatz durch löschen nicht benötigter Dateien"
 
 msgid "Notifications Disk Quota free text"
