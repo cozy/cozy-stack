@@ -109,6 +109,25 @@ func TestGetNote(t *testing.T) {
 	assertInitialNote(t, result)
 }
 
+func TestOpenNote(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/notes/"+noteID+"/open", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var doc map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&doc)
+	assert.NoError(t, err)
+	data, _ := doc["data"].(map[string]interface{})
+	assert.Equal(t, consts.NotesURL, data["type"])
+	assert.Equal(t, noteID, data["id"])
+	attrs, _ := data["attributes"].(map[string]interface{})
+	assert.Equal(t, noteID, attrs["note_id"])
+	assert.Equal(t, "nested", attrs["subdomain"])
+	assert.Equal(t, inst.Domain, attrs["instance"])
+	assert.NotEmpty(t, attrs["public_name"])
+}
+
 func assertInitialNote(t *testing.T, result map[string]interface{}) {
 	data, _ := result["data"].(map[string]interface{})
 	assert.Equal(t, "io.cozy.files", data["type"])

@@ -5,13 +5,8 @@ class CozyFile
   attr_reader :name, :dir_id, :mime, :trashed, :md5sum, :referenced_by,
               :metadata, :size, :executable, :file_class, :cozy_metadata
 
-  def self.load_from_url(inst, path)
-    opts = {
-      accept: "application/vnd.api+json",
-      authorization: "Bearer #{inst.token_for doctype}"
-    }
-    res = inst.client[path].get opts
-    j = JSON.parse(res.body)["data"]
+  def self.parse_jsonapi(body)
+    j = JSON.parse(body)["data"]
     id = j["id"]
     rev = j.dig "meta", "rev"
     referenced_by = j.dig "relationships", "referenced_by", "data"
@@ -31,6 +26,15 @@ class CozyFile
     f.couch_id = id
     f.couch_rev = rev
     f
+  end
+
+  def self.load_from_url(inst, path)
+    opts = {
+      accept: "application/vnd.api+json",
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    res = inst.client[path].get opts
+    parse_jsonapi res.body
   end
 
   def restore_from_trash(inst)

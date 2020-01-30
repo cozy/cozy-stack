@@ -735,6 +735,7 @@ func TestListPermission(t *testing.T) {
 		return
 	}
 	defer res.Body.Close()
+	assert.Equal(t, 200, res.StatusCode)
 	body, err := ioutil.ReadAll(res.Body)
 	if !assert.NoError(t, err) {
 		return
@@ -742,6 +743,9 @@ func TestListPermission(t *testing.T) {
 	var out jsonapi.Document
 	err = json.Unmarshal(body, &out)
 	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NotNil(t, out.Data) {
 		return
 	}
 	var results []refAndVerb

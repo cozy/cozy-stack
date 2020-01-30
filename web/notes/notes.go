@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -245,6 +246,39 @@ func ForceNoteSync(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// OpenNoteURL is the API handler for GET /notes/:id/open. It returns the
+// parameters to build the URL where the note can be opened.
+func OpenNoteURL(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fileID := c.Param("id")
+	file, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	pdoc, err := middlewares.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	var code string
+	if err := vfs.Allows(inst.VFS(), pdoc.Permissions, permission.GET, file); err != nil {
+		sharingID := c.QueryParam("SharingID")
+		if sharingID != "" && pdoc.Type == permission.TypeOauth {
+			code, err = sharing.GetSharecode(inst, sharingID, pdoc.SourceID)
+		}
+		if err != nil {
+			return middlewares.ErrForbidden
+		}
+	}
+
+	doc, err := note.Open(inst, file, code)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	return jsonapi.Data(c, http.StatusOK, doc, nil)
+}
+
 // Routes sets the routing for the collaborative edition of notes.
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
@@ -255,6 +289,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:id/title", ChangeTitle)
 	router.PUT("/:id/telepointer", PutTelepointer)
 	router.POST("/:id/sync", ForceNoteSync)
+	router.GET("/:id/open", OpenNoteURL)
 }
 
 func wrapError(err error) *jsonapi.Error {
@@ -273,6 +308,8 @@ func wrapError(err error) *jsonapi.Error {
 		return jsonapi.NotFound(err)
 	case vfs.ErrFileTooBig:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
+	case sharing.ErrMemberNotFound:
+		return jsonapi.NotFound(err)
 	}
 	return jsonapi.InternalServerError(err)
 }
