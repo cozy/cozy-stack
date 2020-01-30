@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -259,19 +260,20 @@ func OpenNoteURL(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	var code string
 	if err := vfs.Allows(inst.VFS(), pdoc.Permissions, permission.GET, file); err != nil {
-		return middlewares.ErrForbidden
+		sharingID := c.QueryParam("SharingID")
+		if sharingID != "" && pdoc.Type == permission.TypeOauth {
+			code, err = sharing.GetSharecode(inst, sharingID, pdoc.SourceID)
+		}
+		if err != nil {
+			return middlewares.ErrForbidden
+		}
 	}
 
-	doc, err := note.Open(inst, fileID)
+	doc, err := note.Open(inst, file, code)
 	if err != nil {
 		return wrapError(err)
-	}
-
-	if pdoc.Type == permission.TypeOauth {
-		if sharingID := c.QueryParam("SharingID"); sharingID != "" {
-			note.AddSharecodeToNoteURL(inst, doc, sharingID, pdoc.SourceID)
-		}
 	}
 
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
@@ -306,6 +308,8 @@ func wrapError(err error) *jsonapi.Error {
 		return jsonapi.NotFound(err)
 	case vfs.ErrFileTooBig:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
+	case sharing.ErrMemberNotFound:
+		return jsonapi.NotFound(err)
 	}
 	return jsonapi.InternalServerError(err)
 }

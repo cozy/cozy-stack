@@ -62,6 +62,9 @@ describe "A folder" do
     end
     assert_equal formats, %w[large medium small]
 
+    # Add a note in the folder
+    note = Note.create inst, dir_id: folder.couch_id
+
     # Create the sharing
     sharing = Sharing.new
     sharing.rules << Rule.push(folder)
@@ -87,7 +90,7 @@ describe "A folder" do
       diff.must_be_empty
     end
 
-    # Check the metadata are the same
+    # Check the metadata are the same for the photo
     file = CozyFile.find inst, file.couch_id
     file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
     file_recipient = CozyFile.find_by_path inst_recipient, file_path
@@ -105,6 +108,16 @@ describe "A folder" do
     base_path_a = File.join Helpers.current_dir, inst.domain, ".thumbs", short_id_a
     base_path_b = File.join Helpers.current_dir, inst_recipient.domain, ".thumbs", short_id_b
     assert_same_thumbs base_path_a, file.couch_id, base_path_b, file_recipient.couch_id
+
+    # Check that the recipient can open the note
+    note_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{note.file.name}"
+    note_recipient = CozyFile.find_by_path inst_recipient, note_path
+    parameters = Note.open inst_recipient, note_recipient.couch_id
+    assert_equal note.file.couch_id, parameters["note_id"]
+    assert %w[flat nested].include? parameters["subdomain"]
+    assert_equal inst.domain, parameters["instance"]
+    refute_nil parameters["sharecode"]
+    assert_equal recipient_name, parameters["public_name"]
 
     # Create a "one-shot" sharing
     folder = Folder.create inst

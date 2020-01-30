@@ -921,6 +921,9 @@ HTTP/1.1 204 No Content
 It return the parameters to build the URL where the note can be opened. It can
 be on the same cozy instance, or on another instance if the note is shared.
 
+If the identifier doesn't give a note, the response will be a `404 Page not
+found`.
+
 #### Request
 
 ```http

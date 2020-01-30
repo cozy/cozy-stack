@@ -3,6 +3,7 @@ package permission
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -232,7 +233,11 @@ func getFromSource(db prefixer.Prefixer, permType, docType, slug string) (*Permi
 		}
 	}
 	if len(res) == 0 {
-		return nil, fmt.Errorf("no permission doc for %v", slug)
+		return nil, &couchdb.Error{
+			StatusCode: http.StatusNotFound,
+			Name:       "not_found",
+			Reason:     fmt.Sprintf("no permission doc for %v", slug),
+		}
 	}
 	perm := &res[0]
 	if perm.Expired() {

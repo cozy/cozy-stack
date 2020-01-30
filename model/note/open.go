@@ -6,8 +6,8 @@ import (
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -35,7 +35,14 @@ func (n *apiNoteURL) Links() *jsonapi.LinksList              { return nil }
 func (n *apiNoteURL) Fetch(field string) []string            { return nil }
 
 // Open returns the parameters to create the URL where the note can be opened.
-func Open(inst *instance.Instance, fileID string) (*apiNoteURL, error) {
+func Open(inst *instance.Instance, file *vfs.FileDoc, code string) (*apiNoteURL, error) {
+	// Check that the file is a note
+	if _, err := fromMetadata(file); err != nil {
+		return nil, err
+	}
+
+	// Looks if the note is shared
+	fileID := file.ID()
 	sharing, err := getSharing(inst, fileID)
 	if err != nil {
 		return nil, err
@@ -43,7 +50,7 @@ func Open(inst *instance.Instance, fileID string) (*apiNoteURL, error) {
 
 	var doc *apiNoteURL
 	if sharing == nil || sharing.Owner {
-		doc = openLocalNote(inst, fileID)
+		doc = openLocalNote(inst, fileID, code)
 	} else {
 		doc, err = openSharedNote(inst, sharing, fileID)
 		if err != nil {
@@ -51,6 +58,7 @@ func Open(inst *instance.Instance, fileID string) (*apiNoteURL, error) {
 		}
 	}
 
+	// Enforce DocID and PublicName with local values
 	doc.DocID = fileID
 	if name, err := inst.PublicName(); err == nil {
 		doc.PublicName = name
@@ -94,7 +102,7 @@ func openSharedNote(inst *instance.Instance, s *sharing.Sharing, fileID string) 
 		Method:  http.MethodGet,
 		Scheme:  u.Scheme,
 		Domain:  u.Host,
-		Path:    "/notes/" + xoredID,
+		Path:    "/notes/" + xoredID + "/open",
 		Queries: url.Values{"SharingID": {s.ID()}},
 		Headers: request.Headers{
 			"Accept":        "application/vnd.api+json",
@@ -106,12 +114,9 @@ func openSharedNote(inst *instance.Instance, s *sharing.Sharing, fileID string) 
 		res, err = sharing.RefreshToken(inst, s, &s.Members[0], c, opts, nil)
 	}
 	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
 		return nil, sharing.ErrInternalServerError
 	}
+	defer res.Body.Close()
 	var doc apiNoteURL
 	if _, err := jsonapi.Bind(res.Body, &doc); err != nil {
 		return nil, err
@@ -119,10 +124,11 @@ func openSharedNote(inst *instance.Instance, s *sharing.Sharing, fileID string) 
 	return &doc, nil
 }
 
-func openLocalNote(inst *instance.Instance, fileID string) *apiNoteURL {
+func openLocalNote(inst *instance.Instance, fileID, code string) *apiNoteURL {
 	doc := &apiNoteURL{
-		NoteID:   fileID,
-		Instance: inst.ContextualDomain(),
+		NoteID:    fileID,
+		Instance:  inst.ContextualDomain(),
+		Sharecode: code,
 	}
 	switch config.GetConfig().Subdomains {
 	case config.FlatSubdomains:
@@ -131,26 +137,4 @@ func openLocalNote(inst *instance.Instance, fileID string) *apiNoteURL {
 		doc.Subdomain = "nested"
 	}
 	return doc
-}
-
-// AddSharecodeToNoteURL adds a sharecode to allow recipients to open a shared
-// note.
-func AddSharecodeToNoteURL(inst *instance.Instance, n *apiNoteURL, sharingID, clientID string) {
-	var s sharing.Sharing
-	if err := couchdb.GetDoc(inst, consts.Sharings, sharingID, &s); err != nil {
-		return
-	}
-	member, err := s.FindMemberByInboundClientID(clientID)
-	if err != nil {
-		return
-	}
-	preview, err := permission.GetForSharePreview(inst, sharingID)
-	if err != nil {
-		return
-	}
-	for key, code := range preview.Codes {
-		if key == member.Instance || key == member.Email {
-			n.Sharecode = code
-		}
-	}
 }

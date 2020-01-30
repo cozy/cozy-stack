@@ -597,4 +597,35 @@ func (s *Sharing) EndInitial(inst *instance.Instance) error {
 	return nil
 }
 
+// GetSharecode returns a sharecode for the given client that can be used to
+// preview the sharing.
+func GetSharecode(inst *instance.Instance, sharingID, clientID string) (string, error) {
+	var s Sharing
+	if err := couchdb.GetDoc(inst, consts.Sharings, sharingID, &s); err != nil {
+		return "", err
+	}
+	member, err := s.FindMemberByInboundClientID(clientID)
+	if err != nil {
+		return "", err
+	}
+	var codes map[string]string
+	preview, err := permission.GetForSharePreview(inst, sharingID)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			codes, err = s.CreatePreviewPermissions(inst)
+		}
+		if err != nil {
+			return "", err
+		}
+	} else {
+		codes = preview.Codes
+	}
+	for key, code := range codes {
+		if key == member.Instance || key == member.Email {
+			return code, nil
+		}
+	}
+	return "", ErrMemberNotFound
+}
+
 var _ couchdb.Doc = &Sharing{}
