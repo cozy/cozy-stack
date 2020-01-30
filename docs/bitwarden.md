@@ -57,7 +57,7 @@ Content-Type: application/json
 ```json
 {
   "Kdf": 0,
-  "KdfIterations": 10000,
+  "KdfIterations": 10000
 }
 ```
 
@@ -90,6 +90,25 @@ request can be retried with an additional paramter: `twoFactorToken`.
 
 **Note:** the `clientName` parameter is optional, and is not sent by the
 official bitwarden clients (a default value is used).
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "client_id": "f05671e159450b44d5c78cebbd0260b5",
+  "registration_access_token": "J9l-ZhwP[...omitted for brevity...]",
+  "access_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IkJDMz[...](JWT string)",
+  "expires_in": 3600,
+  "token_type": "Bearer",
+  "refresh_token": "28fb1911ef6db24025ce1bae5aa940e117eb09dfe609b425b69bff73d73c03bf",
+  "Key": "0.uRcMe+Mc2nmOet4yWx9BwA==|PGQhpYUlTUq/vBEDj1KOHVMlTIH1eecMl0j80+Zu0VRVfFa7X/MWKdVM6OM/NfSZicFEwaLWqpyBlOrBXhR+trkX/dPRnfwJD2B93hnLNGQ="
+}
+```
 
 #### Request (refresh token)
 

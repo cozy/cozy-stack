@@ -70,6 +70,8 @@ func TestConnect(t *testing.T) {
 	}
 	assert.NotEmpty(t, result["refresh_token"])
 	assert.NotEmpty(t, result["Key"])
+	assert.NotEmpty(t, result["client_id"])
+	assert.NotEmpty(t, result["registration_access_token"])
 }
 
 func TestGetCozyOrg(t *testing.T) {
