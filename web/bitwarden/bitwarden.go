@@ -41,17 +41,9 @@ func migrateAccountsToCiphers(inst *instance.Instance) error {
 // hashing the master password.
 func Prelogin(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	log := inst.Logger().WithField("nspace", "bitwarden")
 	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
-	}
-	if !setting.ExtensionInstalled {
-		// This is the first time the bitwarden extension is installed: make sure
-		// the user gets the existing accounts into the vault
-		if err := migrateAccountsToCiphers(inst); err != nil {
-			log.Errorf("Cannot push job for ciphers migration: %s", err)
-		}
 	}
 	return c.JSON(http.StatusOK, echo.Map{
 		"Kdf":           setting.PassphraseKdf,
@@ -114,6 +106,7 @@ func UpdateProfile(c echo.Context) error {
 // SetKeyPair is the handler for setting the key pair: public and private keys.
 func SetKeyPair(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	log := inst.Logger().WithField("nspace", "bitwarden")
 	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenProfiles); err != nil {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "invalid token",
@@ -133,10 +126,21 @@ func SetKeyPair(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	if _, err := setting.OrganizationKey(); err == settings.ErrMissingOrgKey {
+		// The organization key should exist at this moment as it is created at the
+		// instance creation or at the login-hashed migration.
+		log.Warningf("Organization key does not exist")
+	}
 	if err := setting.SetKeyPair(inst, data.Public, data.Private); err != nil {
-		inst.Logger().WithField("nspace", "bitwarden").
-			Infof("Cannot set key pair: %s", err)
+		log.Errorf("Cannot set key pair: %s", err)
 		return err
+	}
+	if !setting.ExtensionInstalled {
+		// This is the first time the bitwarden extension is installed: make sure
+		// the user gets the existing accounts into the vault
+		if err := migrateAccountsToCiphers(inst); err != nil {
+			log.Errorf("Cannot push job for ciphers migration: %s", err)
+		}
 	}
 	profile, err := newProfileResponse(inst, setting)
 	if err != nil {
