@@ -124,6 +124,7 @@ func TestOpenNote(t *testing.T) {
 	attrs, _ := data["attributes"].(map[string]interface{})
 	assert.Equal(t, noteID, attrs["note_id"])
 	assert.Equal(t, "nested", attrs["subdomain"])
+	assert.Contains(t, attrs["protocol"], "http")
 	assert.Equal(t, inst.Domain, attrs["instance"])
 	assert.NotEmpty(t, attrs["public_name"])
 }

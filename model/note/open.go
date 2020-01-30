@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -17,6 +18,7 @@ import (
 type apiNoteURL struct {
 	DocID      string `json:"_id,omitempty"`
 	NoteID     string `json:"note_id"`
+	Protocol   string `json:"protocol"`
 	Subdomain  string `json:"subdomain"`
 	Instance   string `json:"instance"`
 	Sharecode  string `json:"sharecode,omitempty"`
@@ -135,6 +137,10 @@ func openLocalNote(inst *instance.Instance, fileID, code string) *apiNoteURL {
 		doc.Subdomain = "flat"
 	case config.NestedSubdomains:
 		doc.Subdomain = "nested"
+	}
+	doc.Protocol = "https"
+	if build.IsDevRelease() {
+		doc.Protocol = "http"
 	}
 	return doc
 }

@@ -946,6 +946,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "note_id": "05781bea244247fb38f2cd50262c07b5",
       "subdomain": "flat",
+      "protocol": "https",
       "instance": "alice.cozy.example",
       "sharecode": "543d7eb8149c",
       "public_name": "Bob"

@@ -115,6 +115,7 @@ describe "A folder" do
     parameters = Note.open inst_recipient, note_recipient.couch_id
     assert_equal note.file.couch_id, parameters["note_id"]
     assert %w[flat nested].include? parameters["subdomain"]
+    assert %w[http https].include? parameters["protocol"]
     assert_equal inst.domain, parameters["instance"]
     refute_nil parameters["sharecode"]
     assert_equal recipient_name, parameters["public_name"]
