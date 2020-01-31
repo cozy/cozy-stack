@@ -169,10 +169,11 @@ func (r Rule) TriggerArgs() string {
 	if r.Local {
 		return ""
 	}
-	verbs := make([]string, 0, 3)
-	if r.Add == ActionRuleSync || r.Add == ActionRulePush {
-		verbs = append(verbs, "CREATED")
-	}
+	verbs := make([]string, 1, 3)
+	// We always need the CREATED verb to have io.cozy.shared for all the
+	// shared documents, as the io.cozy.shared documents are needed to
+	// accept the updates and deletes later.
+	verbs[0] = "CREATED"
 	if r.Update == ActionRuleSync || r.Update == ActionRulePush {
 		verbs = append(verbs, "UPDATED")
 	}
