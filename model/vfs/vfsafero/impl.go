@@ -204,8 +204,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	}
 
 	if olddoc == nil {
-		var exists bool
-		exists, err = afs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
+		exists, err := afs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
 		if err != nil {
 			return nil, err
 		}
@@ -651,6 +650,18 @@ func (f *aferoFileCreation) Close() (err error) {
 		return lockerr
 	}
 	defer f.afs.mu.Unlock()
+
+	// Check again that a file with the same path does not exist. It can happen
+	// when the same file is uploaded twice in parallel.
+	if olddoc == nil {
+		exists, err := f.afs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return os.ErrExist
+		}
+	}
 
 	var newpath string
 	newpath, err = f.afs.Indexer.FilePath(newdoc)
