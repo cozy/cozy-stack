@@ -359,7 +359,7 @@ func (s *Sharing) AddUploadTrigger(inst *instance.Instance) error {
 		Type:       "@event",
 		WorkerType: "share-upload",
 		Arguments:  args,
-		Debounce:   "5s",
+		Debounce:   "10s",
 	}, msg)
 	inst.Logger().WithField("nspace", "sharing").Infof("Create trigger %#v", t)
 	if err != nil {

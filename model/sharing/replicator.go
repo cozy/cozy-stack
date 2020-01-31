@@ -19,11 +19,11 @@ import (
 )
 
 // MaxRetries is the maximal number of retries for a replicator
-const MaxRetries = 10
+const MaxRetries = 5
 
 // InitialBackoffPeriod is the initial duration to wait for the first retry
 // (each next retry will wait 4 times longer than its previous retry)
-const InitialBackoffPeriod = 15 * time.Second
+const InitialBackoffPeriod = 1 * time.Minute
 
 // BatchSize is the maximal number of documents mainpulated at once by the replicator
 const BatchSize = 100

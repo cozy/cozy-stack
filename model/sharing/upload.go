@@ -49,13 +49,14 @@ func (s *Sharing) Upload(inst *instance.Instance, errors int) error {
 		}
 	}
 
+	lastTry := errors+1 == MaxRetries
 	for i := 0; i < BatchSize; i++ {
 		if len(members) == 0 {
 			break
 		}
 		m := members[0]
 		members = members[1:]
-		more, err := s.UploadTo(inst, m)
+		more, err := s.UploadTo(inst, m, lastTry)
 		if err != nil {
 			errm = multierror.Append(errm, err)
 		}
@@ -82,7 +83,7 @@ func (s *Sharing) InitialUpload(inst *instance.Instance, m *Member) error {
 	defer mu.Unlock()
 
 	for i := 0; i < BatchSize; i++ {
-		more, err := s.UploadTo(inst, m)
+		more, err := s.UploadTo(inst, m, false)
 		if err != nil {
 			return err
 		}
@@ -125,7 +126,7 @@ func (s *Sharing) sendInitialEndNotif(inst *instance.Instance, m *Member) error 
 
 // UploadTo uploads one file to the given member. It returns false if there
 // are no more files to upload to this member currently.
-func (s *Sharing) UploadTo(inst *instance.Instance, m *Member) (bool, error) {
+func (s *Sharing) UploadTo(inst *instance.Instance, m *Member, lastTry bool) (bool, error) {
 	if m.Instance == "" {
 		return false, ErrInvalidURL
 	}
@@ -152,6 +153,9 @@ func (s *Sharing) UploadTo(inst *instance.Instance, m *Member) (bool, error) {
 	}
 
 	if err = s.uploadFile(inst, m, file, ruleIndex); err != nil {
+		if lastTry {
+			_ = s.UpdateLastSequenceNumber(inst, m, "upload", seq)
+		}
 		return false, err
 	}
 
@@ -511,7 +515,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		}
 		if err != nil {
 			inst.Logger().WithField("nspace", "upload").
-				Debugf("Conflict for parent on file upload: %s", err)
+				Infof("Conflict for parent on file upload: %s", err)
 		}
 	} else if target.DocID == rule.Values[0] {
 		parent, err = EnsureSharedWithMeDir(inst)

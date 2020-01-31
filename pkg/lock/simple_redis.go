@@ -43,7 +43,7 @@ const (
 var (
 	// ErrTooManyRetries is the error returned when despite several tries
 	// we never managed to get a lock
-	ErrTooManyRetries = errors.New("too many retry")
+	ErrTooManyRetries = errors.New("abort after too many failures without getting the lock")
 )
 
 type redisLock struct {
