@@ -681,13 +681,13 @@ msgid "Sharing Empty description"
 msgstr "Verassing!"
 
 msgid "Sharing Discovery URL field"
-msgstr "URL"
-
-msgid "Sharing Discovery URL placeholder"
-msgstr "https://jecozyadres.cozy"
+msgstr "Mijn Cozy-adres"
 
 msgid "Sharing URL Discovery error"
 msgstr "De ingevoerde Cozy-url is onjuist. Probeer het opnieuw."
+
+msgid "Sharing URL Not email error"
+msgstr "De Cozy-url is niet je e-mailadres."
 
 msgid "Sharing Discovery Submit"
 msgstr "Versturen"
