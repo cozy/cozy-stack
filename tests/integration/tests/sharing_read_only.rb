@@ -2,9 +2,9 @@ require_relative '../boot'
 require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
 
-describe "A folder" do
+describe "A file or folder" do
   it "can be shared in read-only mode" do
-    Helpers.scenario "revoke_sharing"
+    Helpers.scenario "read_only"
     Helpers.start_mailhog
 
     bob = "Bob"
@@ -76,6 +76,29 @@ describe "A folder" do
     sleep 8
     file1 = CozyFile.find inst_alice, file1.couch_id
     assert_equal name1c, file1.name
+
+    # Create a note and share it
+    note = Note.create inst_alice
+    sharing = Sharing.new
+    sharing.rules << Rule.sync(note.file)
+    sharing.members << inst_alice << contact_bob
+    inst_alice.register sharing
+
+    # Accept the sharing
+    sleep 1
+    inst_bob.accept sharing
+
+    # Check that the recipient can open the note
+    sleep 7
+    note_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{note.file.name}"
+    note_bob = CozyFile.find_by_path inst_bob, note_path
+    parameters = Note.open inst_bob, note_bob.couch_id
+    assert_equal note.file.couch_id, parameters["note_id"]
+    assert %w[flat nested].include? parameters["subdomain"]
+    assert %w[http https].include? parameters["protocol"]
+    assert_equal inst_alice.domain, parameters["instance"]
+    refute_nil parameters["sharecode"]
+    assert_equal bob, parameters["public_name"]
 
     inst_alice.remove
     inst_bob.remove
