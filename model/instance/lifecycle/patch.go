@@ -45,6 +45,11 @@ func Patch(i *instance.Instance, opts *Options) error {
 			needUpdate = true
 		}
 
+		if opts.Deleting != nil && *opts.Deleting != i.Deleting {
+			i.Deleting = *opts.Deleting
+			needUpdate = true
+		}
+
 		if opts.BlockingReason != "" && opts.BlockingReason != i.BlockingReason {
 			i.BlockingReason = opts.BlockingReason
 			needUpdate = true

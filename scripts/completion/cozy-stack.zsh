@@ -1070,6 +1070,7 @@ function _cozy-stack_instances_modify {
   _arguments \
     '--blocked[Block the instance]' \
     '--context-name[New context name]:' \
+    '--deleting[Set (or remove) the deleting flag]' \
     '--disk-quota[Specify a new disk quota]:' \
     '*--domain-aliases[Specify one or more aliases domain for the instance (separated by '\'','\'')]:' \
     '--email[New email]:' \
@@ -1181,7 +1182,7 @@ function _cozy-stack_instances_token-konnector {
 
 function _cozy-stack_instances_token-oauth {
   _arguments \
-    '--expire[Make the token expires in this amount of time]:' \
+    '--expire[Make the token expires in this amount of time, as a duration string, e.g. "1h"]:' \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
     '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \

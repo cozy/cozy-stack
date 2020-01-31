@@ -36,3 +36,4 @@ $ cozy-stack instances token-oauth cozy.tools:8080 727e677187a51d14ccd59cc0bd000
 ### SEE ALSO
 
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
+
