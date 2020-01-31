@@ -155,6 +155,9 @@ func modifyHandler(c echo.Context) error {
 	if blocked, err := strconv.ParseBool(c.QueryParam("Blocked")); err == nil {
 		opts.Blocked = &blocked
 	}
+	if deleting, err := strconv.ParseBool(c.QueryParam("Deleting")); err == nil {
+		opts.Deleting = &deleting
+	}
 	i, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return wrapError(err)

@@ -61,6 +61,7 @@ type InstanceOptions struct {
 	KdfIterations      int
 	Debug              *bool
 	Blocked            *bool
+	Deleting           *bool
 	OnboardingFinished *bool
 }
 
@@ -202,6 +203,9 @@ func (c *Client) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
 	}
 	if opts.Blocked != nil {
 		q.Add("Blocked", strconv.FormatBool(*opts.Blocked))
+	}
+	if opts.Deleting != nil {
+		q.Add("Deleting", strconv.FormatBool(*opts.Deleting))
 	}
 	if opts.OnboardingFinished != nil {
 		q.Add("OnboardingFinished", strconv.FormatBool(*opts.OnboardingFinished))

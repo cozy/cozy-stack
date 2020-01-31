@@ -18,6 +18,7 @@ cozy-stack instances modify <domain> [flags]
 ```
       --blocked                  Block the instance
       --context-name string      New context name
+      --deleting                 Set (or remove) the deleting flag
       --disk-quota string        Specify a new disk quota
       --domain-aliases strings   Specify one or more aliases domain for the instance (separated by ',')
       --email string             New email

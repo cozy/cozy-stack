@@ -35,6 +35,7 @@ var flagSettings string
 var flagDiskQuota string
 var flagApps []string
 var flagBlocked bool
+var flagDeleting bool
 var flagDev bool
 var flagPassphrase string
 var flagForce bool
@@ -257,6 +258,9 @@ settings for a specified domain.
 		}
 		if flag := cmd.Flag("blocked"); flag.Changed {
 			opts.Blocked = &flagBlocked
+		}
+		if flag := cmd.Flag("deleting"); flag.Changed {
+			opts.Deleting = &flagDeleting
 		}
 		if flagOnboardingFinished {
 			opts.OnboardingFinished = &flagOnboardingFinished
@@ -1091,6 +1095,7 @@ func init() {
 	modifyInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "New list of settings (eg offer:premium)")
 	modifyInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "Specify a new disk quota")
 	modifyInstanceCmd.Flags().BoolVar(&flagBlocked, "blocked", false, "Block the instance")
+	modifyInstanceCmd.Flags().BoolVar(&flagDeleting, "deleting", false, "Set (or remove) the deleting flag")
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
 	debugInstanceCmd.Flags().StringVar(&flagDomain, "domain", cozyDomain(), "Specify the domain name of the instance")

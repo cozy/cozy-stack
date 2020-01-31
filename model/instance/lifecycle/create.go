@@ -41,6 +41,7 @@ type Options struct {
 	Apps           []string
 	AutoUpdate     *bool
 	Debug          *bool
+	Deleting       *bool
 	Blocked        *bool
 	BlockingReason string
 
