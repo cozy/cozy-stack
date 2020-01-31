@@ -697,14 +697,14 @@ msgid "Sharing Empty description"
 msgstr "Surprise !"
 
 msgid "Sharing Discovery URL field"
-msgstr "URL"
-
-msgid "Sharing Discovery URL placeholder"
-msgstr "https://adressedevotrecozy.cozy"
+msgstr "L'adresse de votre Cozy"
 
 msgid "Sharing URL Discovery error"
 msgstr ""
 "L'adresse du Cozy que vous avez saisie est incorrecte, veuillez ré-essayer."
+
+msgid "Sharing URL Not email error"
+msgstr "L'URL de votre Cozy n'est pas votre adresse email."
 
 msgid "Sharing Discovery Submit"
 msgstr "Envoyer"
