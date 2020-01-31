@@ -291,13 +291,13 @@ func TestDiscovery(t *testing.T) {
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "Connect to your Cozy")
-	assert.Contains(t, string(body), `<input id="url" name="url"`)
+	assert.Contains(t, string(body), `<input type="text" class="field" name="slug" id="slug"`)
 	assert.Contains(t, string(body), `<input type="hidden" name="state" value="`+state)
 
 	u.RawQuery = ""
 	v := &url.Values{
 		"state": {state},
-		"url":   {tsB.URL},
+		"slug":  {tsB.URL},
 	}
 	req, err = http.NewRequest(http.MethodPost, u.String(), bytes.NewBufferString(v.Encode()))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")

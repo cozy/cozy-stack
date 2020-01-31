@@ -76,6 +76,7 @@ func Home(c echo.Context) error {
 				"ContextName": instance.ContextName,
 				"Locale":      instance.Locale,
 				"Favicon":     middlewares.Favicon(instance),
+				"CozyUI":      middlewares.CozyUI(instance),
 			})
 		}
 		return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/passphrase", c.QueryParams()))

@@ -96,8 +96,8 @@ const ShortCodeLen = 12
 // KnownFlatDomains is a list of top-domains that can hosts cozy instances with
 // flat sub-domains.
 var KnownFlatDomains = []string{
-	"cozy.rocks",
 	"mycozy.cloud",
+	"cozy.rocks",
 }
 
 // DefaultLocale is the default locale when creating an instance and for i18n.

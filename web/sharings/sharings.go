@@ -345,21 +345,30 @@ func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL stri
 
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state, sharecode string, m *sharing.Member) error {
 	publicName, _ := inst.PublicName()
+	fqdn := strings.TrimPrefix(m.Instance, "https://")
+	slug, domain := "", consts.KnownFlatDomains[0]
+	if strings.HasPrefix(m.Instance, "http://") {
+		slug, domain = m.Instance, ""
+	} else if parts := strings.SplitN(fqdn, ".", 2); len(parts) == 2 {
+		slug, domain = parts[0], parts[1]
+	}
 	return c.Render(code, "sharing_discovery.html", echo.Map{
-		"Title":         inst.TemplateTitle(),
-		"CozyUI":        middlewares.CozyUI(inst),
-		"ThemeCSS":      middlewares.ThemeCSS(inst),
-		"Domain":        inst.ContextualDomain(),
-		"ContextName":   inst.ContextName,
-		"Locale":        inst.Locale,
-		"PublicName":    publicName,
-		"RecipientCozy": m.Instance,
-		"RecipientName": m.Name,
-		"SharingID":     sharingID,
-		"State":         state,
-		"ShareCode":     sharecode,
-		"URLError":      code != http.StatusOK,
-		"Favicon":       middlewares.Favicon(inst),
+		"Title":           inst.TemplateTitle(),
+		"CozyUI":          middlewares.CozyUI(inst),
+		"ThemeCSS":        middlewares.ThemeCSS(inst),
+		"Domain":          inst.ContextualDomain(),
+		"ContextName":     inst.ContextName,
+		"Locale":          inst.Locale,
+		"PublicName":      publicName,
+		"RecipientSlug":   slug,
+		"RecipientDomain": domain,
+		"RecipientName":   m.Name,
+		"SharingID":       sharingID,
+		"State":           state,
+		"ShareCode":       sharecode,
+		"URLError":        code == http.StatusBadRequest,
+		"NotEmailError":   code == http.StatusPreconditionFailed,
+		"Favicon":         middlewares.Favicon(inst),
 	})
 }
 
@@ -421,7 +430,18 @@ func PostDiscovery(c echo.Context) error {
 	state := c.FormValue("state")
 	sharecode := c.FormValue("sharecode")
 	cozyURL := c.FormValue("url")
-	cozyURL = strings.Replace(cozyURL, "mycosy.cloud", "mycozy.cloud", 1)
+	if cozyURL == "" {
+		cozyURL = c.FormValue("slug")
+	}
+	if !strings.HasPrefix(cozyURL, "http://") && !strings.HasPrefix(cozyURL, "https://") {
+		cozyURL = "https://" + cozyURL + "."
+	}
+	if domain := c.FormValue("domain"); domain != "" {
+		if domain == "mycosy.cloud" {
+			domain = "mycozy.cloud"
+		}
+		cozyURL = cozyURL + domain
+	}
 
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
@@ -442,6 +462,9 @@ func PostDiscovery(c echo.Context) error {
 			if err != nil {
 				return wrapErrors(err)
 			}
+		}
+		if strings.Contains(cozyURL, "@") {
+			return renderDiscoveryForm(c, inst, http.StatusPreconditionFailed, sharingID, state, sharecode, member)
 		}
 		email = member.Email
 		if err = s.RegisterCozyURL(inst, member, cozyURL); err != nil {

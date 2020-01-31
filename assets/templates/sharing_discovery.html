@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <title>{{.Title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css"}}">
     {{.CozyUI}}
     {{.ThemeCSS}}
     {{.Favicon}}
@@ -16,12 +17,30 @@
             {{if .URLError}}
               <p class="wizard-errors u-error">{{t "Sharing URL Discovery error"}}</p>
             {{end}}
+            {{if .NotEmailError}}
+              <p class="wizard-errors u-error">{{t "Sharing URL Not email error"}}</p>
+            {{end}}
             <input type="hidden" name="state" value="{{.State}}" />
             <input type="hidden" name="sharecode" value="{{.ShareCode}}" />
+            <div class="c-avatar u-mh-auto u-mv-0-m u-mv-1">
+              <img class="c-avatar-image" src="/public/avatar" alt="" />
+            </div>
             <h1 class="wizard-title u-mb-half u-mb-0-s u-mt-1-s">{{t "Sharing Connect to Cozy"}}</h1>
             <div class="o-field">
-              <label class="c-label" for="URL"> {{t "Sharing Discovery URL field"}}</label>
-              <input id="url" name="url" class="wizard-input c-input-text" placeholder="{{t "Sharing Discovery URL placeholder"}}" type="text" autofocus="true" value="{{.RecipientCozy}}" />
+              <label class="c-label" for="slug"> {{t "Sharing Discovery URL field"}}</label>
+              <div class="my-cozy-url">
+                <div class="protocol">
+                  <svg width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                    <defs></defs>
+                    <g id="icon-lock" stroke="none" stroke-width="1" fill-rule="evenodd">
+                      <path d="M2,15.0046024 C2,15.5543453 2.45576096,16 3.00247329,16 L12.9975267,16 C13.5511774,16 14,15.5443356 14,15.0046024 L14,6.99539757 C14,6.44565467 13.5561352,6 13,6 L12,6 L12,4 C12,1.794 10.2053333,0 8,0 C5.794,0 4,1.794 4,4 L4,6 L3,6 C2.44771525,6 2,6.4556644 2,6.99539757 L2,15.0046024 Z M6,4.5 C6,3.1215 6.8968,2 8,2 C9.1028,2 10,3.1215 10,4.5 L10,6 L6,6 L6,4.5 Z M8,8.5 C8.8265,8.5 9.5,9.172 9.5,10 C9.5,10.552 9.1955,11.032 8.75,11.29 L8.75,13.75 C8.75,14.1625 8.4125,14.5 8,14.5 C7.586,14.5 7.25,14.1625 7.25,13.75 L7.25,11.29 C6.803,11.032 6.5,10.552 6.5,10 C6.5,9.172 7.172,8.5 8,8.5 Z" id="Mask"></path>
+                    </g>
+                  </svg>
+                  <span>https://</span>
+                </div>
+                <input type="text" class="field" name="slug" id="slug" value="{{.RecipientSlug}}" placeholder="claude" autofocus="true" />
+                <input type="text" class="domain" name="domain" id="domain" value="{{.RecipientDomain}}" placeholder="mycozy.cloud" />
+              </div>
             </div>
           </div>
           <footer class="wizard-footer">
@@ -43,5 +62,6 @@
         </form>
       </main>
     </div>
+    <script src="{{asset .Domain "/scripts/responsive.js"}}"></script>
   </body>
 </html>

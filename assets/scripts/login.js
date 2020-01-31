@@ -111,12 +111,4 @@
   loginForm.addEventListener('submit', onSubmitPassphrase)
   passphraseInput.focus()
   submitButton.removeAttribute('disabled')
-
-  // Responsive design
-  if (d.body.clientWidth > 1024) {
-    const avatars = d.getElementsByClassName('c-avatar')
-    for (const avatar of avatars) {
-      avatar.classList.add('c-avatar--xlarge')
-    }
-  }
 })(window, document)
