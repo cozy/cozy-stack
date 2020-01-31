@@ -669,6 +669,18 @@ func (f *swiftFileCreationV3) Close() (err error) {
 	}
 	defer f.fs.mu.Unlock()
 
+	// Check again that a file with the same path does not exist. It can happen
+	// when the same file is uploaded twice in parallel.
+	if olddoc == nil {
+		exists, err := f.fs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return os.ErrExist
+		}
+	}
+
 	var v *vfs.Version
 	if olddoc != nil {
 		v = vfs.NewVersion(olddoc)
