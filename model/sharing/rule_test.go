@@ -174,7 +174,7 @@ func TestTriggersArgs(t *testing.T) {
 		Values:   []string{"io.cozy.playlists/list1"},
 		Update:   "sync",
 	}
-	expected := "io.cozy.files:UPDATED:io.cozy.playlists/list1:referenced_by"
+	expected := "io.cozy.files:CREATED,UPDATED:io.cozy.playlists/list1:referenced_by"
 	assert.Equal(t, expected, r.TriggerArgs())
 
 	doctype := "io.cozy.test.foos"
