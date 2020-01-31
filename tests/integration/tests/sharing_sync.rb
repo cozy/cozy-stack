@@ -127,7 +127,7 @@ describe "A folder" do
     opts[:mime] = 'text/plain'
     file.overwrite inst, opts
     file.rename inst, "#{Faker::Internet.slug}.txt"
-    sleep 7
+    sleep 12
 
     child1_recipient = Folder.find inst_recipient, child1_id_recipient
     child2_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
@@ -151,7 +151,7 @@ describe "A folder" do
     file_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
     file_recipient.overwrite inst_recipient, content: "New content from recipient"
 
-    sleep 7
+    sleep 12
     child1 = Folder.find inst, child1.couch_id
     child3_path = CGI.escape "/#{folder.name}/#{child3_recipient.name}"
     child3 = Folder.find_by_path inst, child3_path
@@ -211,7 +211,7 @@ describe "A folder" do
     # Accept the sharing
     sleep 1
     inst_recipient.accept sharing
-    sleep 7
+    sleep 12
 
     # Check the files are the same
     file = CozyFile.find inst, file.couch_id
@@ -224,7 +224,7 @@ describe "A folder" do
     # Check the sync sharer -> recipient
     file.overwrite inst, mime: 'text/plain'
     file.rename inst, "#{Faker::Internet.slug}.txt"
-    sleep 7
+    sleep 12
     file = CozyFile.find inst, file.couch_id
     file_recipient = CozyFile.find inst_recipient, file_id_recipient
     assert_equal file.name, file_recipient.name
@@ -234,7 +234,7 @@ describe "A folder" do
     # Check the sync recipient -> sharer
     file_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
     file_recipient.overwrite inst_recipient, content: "New content from recipient"
-    sleep 7
+    sleep 12
     file = CozyFile.find inst, file.couch_id
     file_recipient = CozyFile.find inst_recipient, file_id_recipient
     assert_equal file.name, file_recipient.name

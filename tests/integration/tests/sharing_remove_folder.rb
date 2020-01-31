@@ -65,7 +65,7 @@ describe "A shared folder" do
     # Remove a directory containing a binary
     child1.remove inst
 
-    sleep 7
+    sleep 12
 
     f2_recipient = CozyFile.find inst_recipient, f2_recipient_id
     assert_equal true, f2_recipient.trashed
@@ -82,7 +82,7 @@ describe "A shared folder" do
 
     # Check that when a folder is moved out of a sharing, the retroaction
     # doesn't trash the files inside it
-    sleep 7
+    sleep 12
     f3_recipient = CozyFile.find inst_recipient, f3_recipient_id
     assert f3_recipient.trashed
     f3_sharer = CozyFile.find inst, f3.couch_id

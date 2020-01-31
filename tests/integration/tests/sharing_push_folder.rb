@@ -76,7 +76,7 @@ describe "A folder" do
     inst_recipient.accept sharing
 
     # Check the recipient's folder is the same as the sender's
-    sleep 7
+    sleep 12
     path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
     folder_recipient = Folder.find_by_path inst_recipient, path
     assert_equal folder_recipient.name, folder.name
@@ -136,7 +136,7 @@ describe "A folder" do
     inst_recipient.accept oneshot
 
     # Check the recipient's folder is the same as the sender's
-    sleep 7
+    sleep 12
     path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
     folder_recipient = Folder.find_by_path inst_recipient, path
     assert_equal folder_recipient.name, folder.name

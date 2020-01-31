@@ -49,7 +49,7 @@ describe "A file or folder" do
     file1_charlie.rename inst_charlie, name1b
     code = sharing.read_only inst_bob, 2
     assert_equal 204, code
-    sleep 8
+    sleep 12
     name2b = "#{Faker::DrWho.villian}.txt"
     file2_charlie.rename inst_charlie, name2b
     sleep 8
@@ -89,7 +89,7 @@ describe "A file or folder" do
     inst_bob.accept sharing
 
     # Check that the recipient can open the note
-    sleep 7
+    sleep 12
     note_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{note.file.name}"
     note_bob = CozyFile.find_by_path inst_bob, note_path
     parameters = Note.open inst_bob, note_bob.couch_id

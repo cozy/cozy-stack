@@ -41,7 +41,7 @@ describe "A sharing" do
     file.overwrite inst_alice, content: Faker::BackToTheFuture.quote
 
     # Check that the changes are applied on Bob's instance
-    sleep 22
+    sleep 30
     file = CozyFile.find inst_alice, file.couch_id
     file_bob = CozyFile.find inst_bob, file_bob.couch_id
     assert_equal file.name, file_bob.name
