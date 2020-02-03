@@ -16,7 +16,7 @@ require (
 	github.com/go-redis/redis/v7 v7.0.0-beta.6
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
-	github.com/golang/gddo v0.0.0-20200123152501-87df31ab357f
+	github.com/golang/gddo v0.0.0-20200127195332-7365cb292b8b
 	github.com/google/go-querystring v1.0.0
 	github.com/google/gops v0.3.7
 	github.com/gorilla/websocket v1.4.1
@@ -49,7 +49,6 @@ require (
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/dgrijalva/jwt-go.v3 v3.2.0
 )
