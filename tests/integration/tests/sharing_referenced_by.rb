@@ -59,7 +59,7 @@ describe "A photo" do
 
     # Make an update on the recipient's file and check on the sharer
     file_recipient.rename inst_recipient, "#{Faker::Internet.slug}.jpg"
-    sleep 5
+    sleep 11
     file = CozyFile.find inst, file.couch_id
     assert_equal file_recipient.name, file.name
     refute file_has_album_reference(file, album_recipient.couch_id)
