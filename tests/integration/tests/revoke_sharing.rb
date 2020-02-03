@@ -306,9 +306,11 @@ describe "A sharing" do
     refute_equal file_bob.name, file.name
     refute_equal file_charlie.name, file.name
 
-    inst_alice.remove
-    inst_bob.remove
-    inst_charlie.remove
-    inst_dave.remove
+    instances = [inst_alice, inst_bob, inst_charlie, inst_dave]
+    instances.each do |inst|
+      Folder.clear_trash inst
+      inst.fsck
+    end
+    instances.each(&:remove)
   end
 end
