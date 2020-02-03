@@ -880,6 +880,11 @@ func (s *Sharing) prepareDirWithAncestors(inst *instance.Instance, dir *vfs.DirD
 func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface{}, dir *vfs.DirDoc, ref *SharedRef) error {
 	inst.Logger().WithField("nspace", "replicator").
 		Debugf("UpdateDir %v (%#v)", target["_id"], target)
+	if strings.HasPrefix(dir.Fullpath+"/", vfs.TrashDirName+"/") {
+		// Don't update a directory in the trash
+		return nil
+	}
+
 	name, indexer, err := extractNameAndIndexer(inst, target, ref)
 	if err != nil {
 		return err
