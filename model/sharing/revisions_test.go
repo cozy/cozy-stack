@@ -159,6 +159,21 @@ func TestRevsTreeInsertChain(t *testing.T) {
 	assert.Len(t, sub.Branches, 0)
 }
 
+func TestRevsTreeInsertChainStartingBefore(t *testing.T) {
+	tree := &RevsTree{Rev: "2-bbb"}
+	three := RevsTree{Rev: "3-ccc"}
+	tree.Branches = []RevsTree{three}
+	tree.InsertChain([]string{"1-aaa", "2-bbb", "3-ccc", "4-ddd"})
+	assert.Equal(t, tree.Rev, "2-bbb")
+	assert.Len(t, tree.Branches, 1)
+	sub := tree.Branches[0]
+	assert.Equal(t, sub.Rev, "3-ccc")
+	assert.Len(t, sub.Branches, 1)
+	sub = sub.Branches[0]
+	assert.Equal(t, sub.Rev, "4-ddd")
+	assert.Len(t, sub.Branches, 0)
+}
+
 func TestRevGeneration(t *testing.T) {
 	assert.Equal(t, 1, RevGeneration("1-aaa"))
 	assert.Equal(t, 3, RevGeneration("3-123"))

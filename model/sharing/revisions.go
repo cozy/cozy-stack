@@ -152,11 +152,19 @@ func (rt *RevsTree) InsertChain(chain []string) {
 	if len(chain) == 0 {
 		return
 	}
-	subtree, _ := rt.Find(chain[0])
+	common := 0
+	var subtree *RevsTree
+	for i, rev := range chain {
+		subtree, _ = rt.Find(rev)
+		if subtree != nil {
+			common = i
+			break
+		}
+	}
 	if subtree == nil {
 		subtree = rt.Add(chain[0])
 	}
-	for _, rev := range chain[1:] {
+	for _, rev := range chain[common+1:] {
 		if len(subtree.Branches) > 0 {
 			found := false
 			for i := range subtree.Branches {
