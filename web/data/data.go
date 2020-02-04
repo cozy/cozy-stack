@@ -338,25 +338,20 @@ func findDocuments(c echo.Context) error {
 	if !hasLimit || limit > consts.MaxItemsPerPageForMango {
 		limit = 100
 	}
-
-	// add 1 so we know if there is more.
-	findRequest["limit"] = limit + 1
+	findRequest["limit"] = limit
 
 	var results []couchdb.JSONDoc
 	resp, err := couchdb.FindDocsRaw(instance, doctype, &findRequest, &results)
 	if err != nil {
 		return err
 	}
-
+	// There might be more docs next when the returned docs reached the limit
+	next := len(results) >= int(limit)
 	out := echo.Map{
 		"docs":     results,
 		"limit":    limit,
-		"next":     false,
+		"next":     next,
 		"bookmark": resp.Bookmark,
-	}
-	if len(results) > int(limit) {
-		out["docs"] = results[:len(results)-1]
-		out["next"] = true
 	}
 
 	return c.JSON(http.StatusOK, out)

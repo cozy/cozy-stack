@@ -631,16 +631,23 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 	req, _ = http.NewRequest("POST", url2, jsonReader(&query2))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
-	var out3 struct {
-		Limit int
-		Next  bool
-		Docs  []couchdb.JSONDoc `json:"docs"`
-	}
-	_, res, err = doRequest(req, &out3)
+
+	_, res, err = doRequest(req, &out2)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	assert.NoError(t, err)
-	assert.Equal(t, 100, out3.Limit)
-	assert.Equal(t, false, out3.Next)
+	assert.Len(t, out2.Docs, 100)
+	assert.Equal(t, 100, out2.Limit)
+	assert.Equal(t, true, out2.Next)
+
+	var query3 = M{"selector": M{"test": "value"}, "bookmark": out2.Bookmark}
+	req, _ = http.NewRequest("POST", url2, jsonReader(&query3))
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	_, res, err = doRequest(req, &out2)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	assert.Len(t, out2.Docs, 0)
+	assert.Equal(t, false, out2.Next)
 }
 
 func TestFindDocumentsWithoutIndex(t *testing.T) {
