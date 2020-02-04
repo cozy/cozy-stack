@@ -156,7 +156,7 @@ to paginate, although this is not recommended for performances. For more details
 }
 ```
 
-If the number of docs is lower or equal to the limit, next will be false.
+If the number of docs is lower than the limit, next will be false.
 
 ```json
 {
