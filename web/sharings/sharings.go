@@ -420,7 +420,8 @@ func GetDiscovery(c echo.Context) error {
 			})
 		}
 		if m.Status != sharing.MemberStatusMailNotSent &&
-			m.Status != sharing.MemberStatusPendingInvitation {
+			m.Status != sharing.MemberStatusPendingInvitation &&
+			m.Status != sharing.MemberStatusSeen {
 			return renderAlreadyAccepted(c, inst, m.Instance)
 		}
 	}

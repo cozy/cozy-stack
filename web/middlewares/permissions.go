@@ -226,6 +226,12 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 			if member.Status == sharing.MemberStatusRevoked {
 				return nil, permission.ErrInvalidToken
 			}
+
+			if member.Status == sharing.MemberStatusMailNotSent ||
+				member.Status == sharing.MemberStatusPendingInvitation {
+				member.Status = sharing.MemberStatusSeen
+				_ = couchdb.UpdateDoc(instance, sharingDoc)
+			}
 		}
 
 		return pdoc, nil

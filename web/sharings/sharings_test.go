@@ -735,8 +735,15 @@ func TestRevokedSharingWithPreview(t *testing.T) {
 	defer res2.Body.Close()
 	assert.Equal(t, http.StatusOK, res2.StatusCode)
 
-	// Now, revoking the fresh user from the sharing
+	// Check the member status has been updated to "seen"
+	sharingDoc, err = sharing.FindSharing(aliceInstance, sharingID)
+	assert.NoError(t, err)
 	member, err := sharingDoc.FindMemberBySharecode(aliceInstance, fooShareCode)
+	assert.NoError(t, err)
+	assert.Equal(t, "seen", member.Status)
+
+	// Now, revoking the fresh user from the sharing
+	member, err = sharingDoc.FindMemberBySharecode(aliceInstance, fooShareCode)
 	assert.NoError(t, err)
 	index := 0
 	for i := range sharingDoc.Members {

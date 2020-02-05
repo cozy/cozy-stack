@@ -28,8 +28,11 @@ const (
 	// the mail invitation is sent
 	MemberStatusMailNotSent = "mail-not-sent"
 	// MemberStatusPendingInvitation is for a recipient that has not (yet)
-	// accepted the sharing, but the invitation mail was sent
+	// seen the preview of the sharing, but the invitation mail was sent
 	MemberStatusPendingInvitation = "pending"
+	// MemberStatusSeen is for a recipient that has seen the preview of the
+	// sharing, but not accepted it (yet)
+	MemberStatusSeen = "seen"
 	// MemberStatusReady is for recipient that have accepted the sharing
 	MemberStatusReady = "ready"
 	// MemberStatusRevoked is for a revoked member
