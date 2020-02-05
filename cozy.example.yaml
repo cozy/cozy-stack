@@ -67,6 +67,7 @@ fs:
   # client_key: /client_key
   # pinned_key: 57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6
   # insecure_skip_validation: true
+  # can_query_info: true
   # default_layout: 2 # 1 for layout v2 and 2 for layout v3
 
   # versioning:
