@@ -163,6 +163,7 @@ type Fs struct {
 	URL           *url.URL
 	Transport     http.RoundTripper
 	DefaultLayout int
+	CanQueryInfo  bool
 	Versioning    FsVersioning
 }
 
@@ -670,6 +671,7 @@ func UseViper(v *viper.Viper) error {
 			URL:           fsURL,
 			Transport:     fsClient.Transport,
 			DefaultLayout: defaultLayout,
+			CanQueryInfo:  v.GetBool("fs.can_query_info"),
 			Versioning: FsVersioning{
 				MaxNumberToKeep:            v.GetInt("fs.versioning.max_number_of_versions_to_keep"),
 				MinDelayBetweenTwoVersions: v.GetDuration("fs.versioning.min_delay_between_two_versions"),

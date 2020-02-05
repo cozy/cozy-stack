@@ -237,7 +237,13 @@ func (s *SwiftFS) List() (map[string][]*model.Asset, error) {
 
 func (s *SwiftFS) CheckStatus() (time.Duration, error) {
 	before := time.Now()
-	if _, _, err := s.swiftConn.Container(DynamicAssetsContainerName); err != nil {
+	var err error
+	if config.GetConfig().Fs.CanQueryInfo {
+		_, err = s.swiftConn.QueryInfo()
+	} else {
+		_, _, err = s.swiftConn.Container(DynamicAssetsContainerName)
+	}
+	if err != nil {
 		return 0, err
 	}
 	return time.Since(before), nil
