@@ -288,6 +288,9 @@ msgstr "We are sorry. This application is not yet available in your Cozy."
 msgid "Error Application not found Action"
 msgstr "Go to your home"
 
+msgid "Error Application not found Button"
+msgstr "Install this application"
+
 msgid "Error Contact us"
 msgstr "A problem, a question ? Contact us at"
 

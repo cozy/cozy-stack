@@ -23,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
@@ -54,13 +55,8 @@ func Serve(c echo.Context) error {
 
 	webapp, err := app.GetWebappBySlug(i, slug)
 	if err != nil {
-		// Used for the "collect" => "home" renaming
-		if err == app.ErrNotFound && slug == "collect" {
-			return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
-		}
-		// Used for the deprecated "onboarding" app
-		if err == app.ErrNotFound && slug == "onboarding" {
-			return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
+		if err == app.ErrNotFound {
+			return handleAppNotFound(c, i, slug)
 		}
 		return err
 	}
@@ -102,6 +98,36 @@ func Serve(c echo.Context) error {
 	default:
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
+}
+
+// handleAppNotFound is used to render the error page when the user wants to
+// access an app that is not yet installed
+func handleAppNotFound(c echo.Context, i *instance.Instance, slug string) error {
+	// Used for the "collect" => "home" renaming
+	if slug == "collect" {
+		return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
+	}
+	// Used for the deprecated "onboarding" app
+	if slug == "onboarding" {
+		return c.Redirect(http.StatusMovedPermanently, i.DefaultRedirection().String())
+	}
+	if _, err := registry.GetApplication(slug, i.Registries()); err != nil {
+		return app.ErrNotFound
+	}
+	link := i.SubDomain(consts.StoreSlug)
+	link.Fragment = "/discover/" + slug
+	return c.Render(http.StatusNotFound, "error.html", echo.Map{
+		"Title":       instance.DefaultTemplateTitle,
+		"CozyUI":      middlewares.CozyUI(i),
+		"ThemeCSS":    middlewares.ThemeCSS(i),
+		"Favicon":     middlewares.Favicon(i),
+		"Domain":      i.ContextualDomain(),
+		"ContextName": i.ContextName,
+		"ErrorTitle":  "Error Application not found Title",
+		"Error":       "Error Application not found Message",
+		"Button":      "Error Application not found Button",
+		"ButtonLink":  link.String(),
+	})
 }
 
 // handleIntent will allow iframes from another app if the current app is
