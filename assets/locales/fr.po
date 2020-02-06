@@ -341,6 +341,9 @@ msgstr ""
 msgid "Error Application not found Action"
 msgstr "Retourner à votre accueil"
 
+msgid "Error Application not found Button"
+msgstr "Installer cette application"
+
 msgid "Error Contact us"
 msgstr "Un problème, une suggestion ? Contactez-nous à"
 
