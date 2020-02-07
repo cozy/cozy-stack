@@ -77,17 +77,3 @@ func TestCandidateIcons(t *testing.T) {
 	assert.Equal(t, candidates[0], "https://example.com/images/favicon.png")
 	assert.Equal(t, candidates[1], "https://static.example.org/apple-touch-icon.png")
 }
-
-func TestDownloadIcon(t *testing.T) {
-	icon, err := downloadFavicon("github.com")
-	assert.NoError(t, err)
-	assert.Equal(t, icon.Mime, "image/x-icon")
-
-	icon, err = downloadIcon("https://github.githubassets.com/favicon.ico")
-	assert.NoError(t, err)
-	assert.Equal(t, icon.Mime, "image/vnd.microsoft.icon")
-
-	icon, err = fetchIcon("github.com")
-	assert.NoError(t, err)
-	assert.Equal(t, icon.Mime, "image/vnd.microsoft.icon")
-}
