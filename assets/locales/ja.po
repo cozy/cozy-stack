@@ -1,10 +1,10 @@
 # Translators:
 # Bruno Michel, 2019
-# Naofumi <naofum@gmail.com>, 2019
+# Naofumi <naofum@gmail.com>, 2020
 # 
 msgid ""
 msgstr ""
-"Last-Translator: Naofumi <naofum@gmail.com>, 2019\n"
+"Last-Translator: Naofumi <naofum@gmail.com>, 2020\n"
 "Language-Team: Japanese (https://www.transifex.com/cozy/teams/39753/ja/)\n"
 "Language: ja\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -295,6 +295,9 @@ msgstr "申し訳ありません。このアプリケーションはまだお使
 
 msgid "Error Application not found Action"
 msgstr "ホームに移動"
+
+msgid "Error Application not found Button"
+msgstr "このアプリケーションをインストール"
 
 msgid "Error Contact us"
 msgstr "問題、質問? お問い合わせは"
@@ -627,13 +630,13 @@ msgid "Sharing Empty description"
 msgstr "サプライズ!"
 
 msgid "Sharing Discovery URL field"
-msgstr "URL"
-
-msgid "Sharing Discovery URL placeholder"
-msgstr "https://yourcozyaddress.cozy"
+msgstr "あなたの Cozy アドレス"
 
 msgid "Sharing URL Discovery error"
 msgstr "入力した Cozy URL が間違っています。もう一度やり直してください"
+
+msgid "Sharing URL Not email error"
+msgstr "Cozy の URL はメールアドレスではありません。"
 
 msgid "Sharing Discovery Submit"
 msgstr "送信"
