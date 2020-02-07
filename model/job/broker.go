@@ -351,6 +351,7 @@ func GetQueuedJobs(db prefixer.Prefixer, workerType string) ([]*Job, error) {
 	return results, nil
 }
 
+// GetAllJobs returns the list of all the jobs on the given instance.
 func GetAllJobs(db prefixer.Prefixer) ([]*Job, error) {
 	var startkey string
 	var lastJob *Job

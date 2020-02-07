@@ -14,8 +14,13 @@ import (
 // CounterType os an enum for the type of counters used by rate-limiting.
 type CounterType int
 
-var ErrRateLimitExceeded = errors.New("Rate limit exceeded")
+// ErrRateLimitReached is the error returned when we were under the limit
+// before the check, and reach the limit.
 var ErrRateLimitReached = errors.New("Rate limit reached")
+
+// ErrRateLimitExceeded is the error returned when the limit was already
+// reached before the check.
+var ErrRateLimitExceeded = errors.New("Rate limit exceeded")
 
 const (
 	// AuthType is used for counting the number of login attempts.

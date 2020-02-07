@@ -35,6 +35,8 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+// CheckInstanceDeleting is a middleware that blocks the routing access for
+// instances with the deleting flag set.
 func CheckInstanceDeleting(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := GetInstance(c)

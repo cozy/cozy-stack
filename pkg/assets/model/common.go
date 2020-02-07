@@ -56,6 +56,7 @@ func (f *Asset) GzipReader() *bytes.Reader {
 	return bytes.NewReader(f.zippedData)
 }
 
+// GetUnzippedData returns the raw data as a slice of bytes.
 func (f *Asset) GetUnzippedData() []byte {
 	return f.unzippedData
 }

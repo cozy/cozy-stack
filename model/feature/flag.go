@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
+// Flags is a struct for a set of feature flags.
 type Flags struct {
 	DocID   string
 	DocRev  string
@@ -22,11 +23,22 @@ type Flags struct {
 	Sources []*Flags
 }
 
-func (f *Flags) ID() string        { return f.DocID }
-func (f *Flags) Rev() string       { return f.DocRev }
-func (f *Flags) DocType() string   { return consts.Settings }
-func (f *Flags) SetID(id string)   { f.DocID = id }
+// ID is part of the couchdb.Document interface
+func (f *Flags) ID() string { return f.DocID }
+
+// Rev is part of the couchdb.Document interface
+func (f *Flags) Rev() string { return f.DocRev }
+
+// DocType is part of the couchdb.Document interface
+func (f *Flags) DocType() string { return consts.Settings }
+
+// SetID is part of the couchdb.Document interface
+func (f *Flags) SetID(id string) { f.DocID = id }
+
+// SetRev is part of the couchdb.Document interface
 func (f *Flags) SetRev(rev string) { f.DocRev = rev }
+
+// Clone is part of the couchdb.Document interface
 func (f *Flags) Clone() couchdb.Doc {
 	clone := Flags{DocID: f.DocID, DocRev: f.DocRev}
 	clone.M = make(map[string]interface{})
@@ -35,10 +47,13 @@ func (f *Flags) Clone() couchdb.Doc {
 	}
 	return &clone
 }
+
+// MarshalJSON is used for marshalling to JSON.
 func (f *Flags) MarshalJSON() ([]byte, error) {
 	return json.Marshal(f.M)
 }
 
+// UnmarshalJSON is used to parse JSON.
 func (f *Flags) UnmarshalJSON(bytes []byte) error {
 	err := json.Unmarshal(bytes, &f.M)
 	if err != nil {
@@ -55,6 +70,7 @@ func (f *Flags) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
+// GetFlags returns the list of feature flags for the given instance.
 func GetFlags(inst *instance.Instance) (*Flags, error) {
 	sources := make([]*Flags, 0)
 	m := make(map[string]interface{})
