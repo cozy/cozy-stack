@@ -316,7 +316,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s has been installed (%s)\n", manifest.Attrs.Slug, manifest.Attrs.Version)
+	fmt.Printf("%s has been installed (%s)\n", slug, manifest.Attrs.Version)
 
 	return nil
 }
@@ -378,7 +378,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 	if manifest.Attrs.Version < newManifest.Attrs.Version {
 		msg = "%s has been updated to %s\n"
 	}
-	fmt.Printf(msg, manifest.Attrs.Slug, manifest.Attrs.Version)
+	fmt.Printf(msg, args[0], newManifest.Attrs.Version)
 
 	return nil
 }
