@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
-	"github.com/cozy/cozy-stack/pkg/utils"
 
 	"github.com/nightlyone/lockfile"
 )
@@ -41,7 +40,11 @@ func NewFileStorage() *FileStorage {
 // Load reads from the OAuth file and the states stored for the specified
 // domain.
 func (s *FileStorage) Load(domain string) (client *Client, token *AccessToken, err error) {
-	filename := filepath.Join(utils.UserHomeDir(), fmt.Sprintf(TokenFileFmt, domain))
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, nil, err
+	}
+	filename := filepath.Join(homeDir, fmt.Sprintf(TokenFileFmt, domain))
 	l, err := newFileLock(filename)
 	if err != nil {
 		return nil, nil, err
@@ -75,7 +78,11 @@ func (s *FileStorage) Load(domain string) (client *Client, token *AccessToken, e
 
 // Save writes the authentication states to a file for the specified domain.
 func (s *FileStorage) Save(domain string, client *Client, token *AccessToken) error {
-	filename := filepath.Join(utils.UserHomeDir(), fmt.Sprintf(TokenFileFmt, domain))
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	filename := filepath.Join(homeDir, fmt.Sprintf(TokenFileFmt, domain))
 	l, err := newFileLock(filename)
 	if err != nil {
 		return err

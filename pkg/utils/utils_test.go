@@ -90,7 +90,8 @@ func TestFileExists(t *testing.T) {
 }
 
 func TestAbsPath(t *testing.T) {
-	home := UserHomeDir()
+	home, err := os.UserHomeDir()
+	assert.NoError(t, err)
 	assert.NotEmpty(t, home)
 	assert.Equal(t, home, AbsPath("~"))
 	foo := AbsPath("foo")

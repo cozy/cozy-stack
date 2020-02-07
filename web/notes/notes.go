@@ -302,8 +302,6 @@ func wrapError(err error) *jsonapi.Error {
 		return jsonapi.BadRequest(err)
 	case note.ErrCannotApply:
 		return jsonapi.Conflict(err)
-	case note.ErrInvalidSchema:
-		return jsonapi.InvalidAttribute("id", err)
 	case os.ErrNotExist, vfs.ErrParentDoesNotExist, vfs.ErrParentInTrash:
 		return jsonapi.NotFound(err)
 	case vfs.ErrFileTooBig:

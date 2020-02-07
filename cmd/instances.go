@@ -817,7 +817,7 @@ var findOauthClientCmd = &cobra.Command{
 	Short: "Find an OAuth client",
 	Long:  `Search an OAuth client from its SoftwareID`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) < 1 {
+		if len(args) < 2 {
 			return cmd.Usage()
 		}
 		var v interface{}

@@ -159,9 +159,17 @@ func UserHomeDir() string {
 // AbsPath returns an absolute path relative.
 func AbsPath(inPath string) string {
 	if strings.HasPrefix(inPath, "~") {
-		inPath = UserHomeDir() + inPath[len("~"):]
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		inPath = home + inPath[len("~"):]
 	} else if strings.HasPrefix(inPath, "$HOME") {
-		inPath = UserHomeDir() + inPath[len("$HOME"):]
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		inPath = home + inPath[len("$HOME"):]
 	}
 
 	if strings.HasPrefix(inPath, "$") {
