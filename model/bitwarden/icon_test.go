@@ -21,12 +21,6 @@ func TestValidateDomain(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestGetPage(t *testing.T) {
-	page, err := getPage("github.com")
-	assert.NoError(t, err)
-	page.Close()
-}
-
 func TestCandidateIcons(t *testing.T) {
 	html := `<html><head><title>Foo</title></head><body><h1>Foo</h1></body></html>`
 	candidates := getCandidateIcons("example.com", strings.NewReader(html))
