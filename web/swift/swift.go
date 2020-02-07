@@ -15,6 +15,7 @@ import (
 	"github.com/ncw/swift"
 )
 
+// ListLayouts returns the number of instances for each Swift layouts.
 func ListLayouts(c echo.Context) error {
 	type layout struct {
 		Counter int      `json:"counter"`

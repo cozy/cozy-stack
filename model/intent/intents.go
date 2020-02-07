@@ -22,6 +22,8 @@ type Service struct {
 	Href string `json:"href"`
 }
 
+// AvailableApp is a struct for the apps that are in the apps registry but not
+// installed, and can be used for the intent.
 type AvailableApp struct {
 	Slug string `json:"slug"`
 	Name string `json:"name"`
@@ -106,7 +108,7 @@ func (in *Intent) FillServices(instance *instance.Instance) error {
 	return nil
 }
 
-type JsonAPIWebapp struct {
+type jsonAPIWebapp struct {
 	Data  []*app.WebappManifest `json:"data"`
 	Count int                   `json:"count"`
 }
@@ -114,7 +116,7 @@ type JsonAPIWebapp struct {
 // GetInstanceWebapps returns the list of available webapps for the instance by
 // iterating over its registries
 func GetInstanceWebapps(inst *instance.Instance) ([]string, error) {
-	man := JsonAPIWebapp{}
+	man := jsonAPIWebapp{}
 	apps := []string{}
 
 	for _, regURL := range inst.Registries() {

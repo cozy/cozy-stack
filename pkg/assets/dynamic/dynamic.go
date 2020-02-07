@@ -20,6 +20,8 @@ import (
 	"github.com/ncw/swift"
 )
 
+// ErrDynAssetNotFound is the error returned when a dynamic asset cannot be
+// found.
 var ErrDynAssetNotFound = errors.New("Dynamic asset was not found")
 
 var assetsClient = &http.Client{
@@ -35,7 +37,7 @@ func CheckStatus() (time.Duration, error) {
 	return assetFS.CheckStatus()
 }
 
-// List dynamic assets
+// ListAssets returns the list of the dynamic assets.
 func ListAssets() (map[string][]*model.Asset, error) {
 	return assetFS.List()
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package fs contains an HTTP file system that works with zip contents.
+// Package statik contains an HTTP file system that works with zip contents.
 package statik
 
 import (
@@ -89,6 +89,7 @@ func UnstoreAsset(asset *model.Asset) {
 	globalAssets.Delete(asset.Name)
 }
 
+// GetAsset returns the asset with the given name.
 func GetAsset(name string) *model.Asset {
 	if v, ok := globalAssets.Load(name); ok {
 		return v.(*model.Asset)

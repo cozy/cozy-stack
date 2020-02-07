@@ -66,7 +66,7 @@ func NewSetup(testingM *testing.M, name string) *TestSetup {
 	return &setup
 }
 
-// CleanupAndDie cleanup the TestSetup, prints a message and 	close the process
+// CleanupAndDie cleanup the TestSetup, prints a message and close the process
 func (c *TestSetup) CleanupAndDie(msg ...interface{}) {
 	c.cleanup()
 	Fatal(msg...)
@@ -77,6 +77,7 @@ func (c *TestSetup) Cleanup() {
 	c.cleanup()
 }
 
+// SetupSwiftTest can be used to start an in-memory Swift server for tests.
 func (c *TestSetup) SetupSwiftTest() error {
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
 	if err != nil {

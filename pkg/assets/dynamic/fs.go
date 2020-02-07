@@ -18,15 +18,15 @@ import (
 	"github.com/spf13/afero"
 )
 
-var assetFS AssetFS
+var assetFS assetsFS
 
 // DynamicAssetsContainerName is the Swift container name for dynamic assets
 const DynamicAssetsContainerName = "__dyn-assets__"
 
-// DynamicAssetsContainerName is the folder name for dynamic assets
+// DynamicAssetsFolderName is the folder name for dynamic assets
 const DynamicAssetsFolderName = "dyn-assets"
 
-type AssetFS interface {
+type assetsFS interface {
 	Add(string, string, *model.Asset) error
 	Get(string, string) ([]byte, error)
 	Remove(string, string) error
@@ -34,20 +34,20 @@ type AssetFS interface {
 	CheckStatus() (time.Duration, error)
 }
 
-type SwiftFS struct {
+type swiftFS struct {
 	swiftConn *swift.Connection
 }
 
-type AferoFS struct {
+type aferoFS struct {
 	fs     afero.Fs
 	folder *url.URL
 }
 
-func (a *AferoFS) GetAssetFolderName(context, name string) string {
+func (a *aferoFS) GetAssetFolderName(context, name string) string {
 	return filepath.Join(a.folder.Path, context, name)
 }
 
-// Initializes de dynamic asset fs
+// InitDynamicAssetFS initializes the dynamic asset FS.
 func InitDynamicAssetFS() error {
 	var err error
 	scheme := config.FsURL().Scheme
@@ -59,7 +59,7 @@ func InitDynamicAssetFS() error {
 			return err
 		}
 	case config.SchemeSwift, config.SchemeSwiftSecure:
-		assetFS, err = newSwiftFS()
+		assetFS, err = newswiftFS()
 		if err != nil {
 			return err
 		}
@@ -70,7 +70,7 @@ func InitDynamicAssetFS() error {
 	return nil
 }
 
-func newOsFS() (*AferoFS, error) {
+func newOsFS() (*aferoFS, error) {
 	tmp := config.FsURL().String()
 	folder, err := url.Parse(tmp)
 	folder.Path = filepath.Join(folder.Path, DynamicAssetsFolderName)
@@ -79,15 +79,15 @@ func newOsFS() (*AferoFS, error) {
 		return nil, err
 	}
 
-	aferoFS := &AferoFS{fs: afero.NewOsFs(), folder: folder}
+	aferoFS := &aferoFS{fs: afero.NewOsFs(), folder: folder}
 	if err := aferoFS.fs.MkdirAll(aferoFS.folder.Path, 0755); err != nil && !os.IsExist(err) {
 		return nil, err
 	}
 	return aferoFS, nil
 }
 
-func newSwiftFS() (*SwiftFS, error) {
-	swiftFS := &SwiftFS{swiftConn: config.GetSwiftConnection()}
+func newswiftFS() (*swiftFS, error) {
+	swiftFS := &swiftFS{swiftConn: config.GetSwiftConnection()}
 	err := swiftFS.swiftConn.ContainerCreate(DynamicAssetsContainerName, nil)
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func newSwiftFS() (*SwiftFS, error) {
 	return swiftFS, nil
 }
 
-func (a *AferoFS) Add(context, name string, asset *model.Asset) error {
+func (a *aferoFS) Add(context, name string, asset *model.Asset) error {
 	filePath := a.GetAssetFolderName(context, name)
 
 	// Creates the asset folder
@@ -119,7 +119,7 @@ func (a *AferoFS) Add(context, name string, asset *model.Asset) error {
 	return f.Close()
 }
 
-func (a *AferoFS) Get(context, name string) ([]byte, error) {
+func (a *aferoFS) Get(context, name string) ([]byte, error) {
 	filePath := a.GetAssetFolderName(context, name)
 
 	f, err := a.fs.Open(filePath)
@@ -136,18 +136,18 @@ func (a *AferoFS) Get(context, name string) ([]byte, error) {
 	return buf.Bytes(), f.Close()
 }
 
-func (a *AferoFS) Remove(context, name string) error {
+func (a *aferoFS) Remove(context, name string) error {
 	filePath := a.GetAssetFolderName(context, name)
 	return a.fs.Remove(filePath)
 }
 
-func (a *AferoFS) CheckStatus() (time.Duration, error) {
+func (a *aferoFS) CheckStatus() (time.Duration, error) {
 	before := time.Now()
 	_, err := a.fs.Stat("/")
 	return time.Since(before), err
 }
 
-func (a *AferoFS) List() (map[string][]*model.Asset, error) {
+func (a *aferoFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
 	// List contexts
@@ -177,7 +177,7 @@ func (a *AferoFS) List() (map[string][]*model.Asset, error) {
 	return objs, nil
 }
 
-func (s *SwiftFS) Add(context, name string, asset *model.Asset) error {
+func (s *swiftFS) Add(context, name string, asset *model.Asset) error {
 	objectName := path.Join(asset.Context, asset.Name)
 	swiftConn := s.swiftConn
 	f, err := swiftConn.ObjectCreate(DynamicAssetsContainerName, objectName, true, "", "", nil)
@@ -193,7 +193,7 @@ func (s *SwiftFS) Add(context, name string, asset *model.Asset) error {
 	return f.Close()
 }
 
-func (s *SwiftFS) Get(context, name string) ([]byte, error) {
+func (s *swiftFS) Get(context, name string) ([]byte, error) {
 	objectName := path.Join(context, name)
 	assetContent := new(bytes.Buffer)
 
@@ -205,13 +205,13 @@ func (s *SwiftFS) Get(context, name string) ([]byte, error) {
 	return assetContent.Bytes(), nil
 }
 
-func (s *SwiftFS) Remove(context, name string) error {
+func (s *swiftFS) Remove(context, name string) error {
 	objectName := path.Join(context, name)
 
 	return s.swiftConn.ObjectDelete(DynamicAssetsContainerName, objectName)
 }
 
-func (s *SwiftFS) List() (map[string][]*model.Asset, error) {
+func (s *swiftFS) List() (map[string][]*model.Asset, error) {
 	objs := map[string][]*model.Asset{}
 
 	objNames, err := s.swiftConn.ObjectNamesAll(DynamicAssetsContainerName, nil)
@@ -235,7 +235,7 @@ func (s *SwiftFS) List() (map[string][]*model.Asset, error) {
 	return objs, nil
 }
 
-func (s *SwiftFS) CheckStatus() (time.Duration, error) {
+func (s *swiftFS) CheckStatus() (time.Duration, error) {
 	before := time.Now()
 	var err error
 	if config.GetConfig().Fs.CanQueryInfo {

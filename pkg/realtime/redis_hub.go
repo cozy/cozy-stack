@@ -37,8 +37,14 @@ type JSONDoc struct {
 	Type string
 }
 
-func (j JSONDoc) ID() string      { id, _ := j.M["_id"].(string); return id }
+// ID returns the ID of the document
+func (j JSONDoc) ID() string { id, _ := j.M["_id"].(string); return id }
+
+// DocType returns the DocType of the document
 func (j JSONDoc) DocType() string { return j.Type }
+
+// MarshalJSON is used for marshalling the document to JSON, with the doctype
+// as _type.
 func (j *JSONDoc) MarshalJSON() ([]byte, error) {
 	m := map[string]interface{}{"_type": j.Type}
 	if j.M != nil {
