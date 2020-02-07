@@ -320,6 +320,9 @@ msgstr "Sorry, deze app is nog niet beschikbaar op je Cozy."
 msgid "Error Application not found Action"
 msgstr "Ga naar je startpagina"
 
+msgid "Error Application not found Button"
+msgstr "Deze app installeren"
+
 msgid "Error Contact us"
 msgstr "Problemen? Vragen? Neem contact met ons op:"
 
