@@ -30,7 +30,7 @@ require (
 	github.com/leonelquinteros/gotext v1.4.0
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mssola/user_agent v0.5.1
-	github.com/ncw/swift v1.0.49
+	github.com/ncw/swift v1.0.50
 	github.com/nightlyone/lockfile v0.0.0-20200124072040-edb130adc195
 	github.com/oschwald/maxminddb-golang v1.6.0
 	github.com/pelletier/go-toml v1.5.0 // indirect
