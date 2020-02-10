@@ -756,7 +756,20 @@ func ExecView(db Database, view *View, req *ViewRequest, results interface{}) er
 	if req.Keys != nil {
 		return makeRequest(db, view.Doctype, http.MethodPost, viewurl, req, &results)
 	}
-	return makeRequest(db, view.Doctype, http.MethodGet, viewurl, nil, &results)
+	err = makeRequest(db, view.Doctype, http.MethodGet, viewurl, nil, &results)
+	if IsInternalServerError(err) {
+		time.Sleep(1 * time.Second)
+		// Retry the error on 500, sa it may be just that CouchDB is slow to build the view
+		err = makeRequest(db, view.Doctype, http.MethodGet, viewurl, nil, &results)
+		if IsInternalServerError(err) {
+			logger.
+				WithDomain(db.DomainName()).
+				WithField("nspace", "couchdb").
+				WithField("critical", "true").
+				Errorf("500 on requesting view: %s", err)
+		}
+	}
+	return err
 }
 
 // DefineIndex define the index on the doctype database

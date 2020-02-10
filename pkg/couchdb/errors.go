@@ -14,7 +14,8 @@ import (
 // 503 Service Unavailable when the stack cant connect to couchdb or when
 // 		 couchdb response is interrupted mid-stream
 // 500 When the viper provided configuration does not allow us to properly
-// 		 call http.newRequest, ie. wrong couchdbURL config
+// 		 call http.newRequest, ie. wrong couchdbURL config,
+//       or when CouchDB has a bug
 
 // Possible native couchdb errors
 // 400 Bad Request : Bad request structure. The error can indicate an error
