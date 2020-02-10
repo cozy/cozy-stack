@@ -126,21 +126,9 @@ func SetKeyPair(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if _, err := setting.OrganizationKey(); err == settings.ErrMissingOrgKey {
-		// The organization key should exist at this moment as it is created at the
-		// instance creation or at the login-hashed migration.
-		log.Warningf("Organization key does not exist")
-	}
 	if err := setting.SetKeyPair(inst, data.Public, data.Private); err != nil {
 		log.Errorf("Cannot set key pair: %s", err)
 		return err
-	}
-	if !setting.ExtensionInstalled {
-		// This is the first time the bitwarden extension is installed: make sure
-		// the user gets the existing accounts into the vault
-		if err := migrateAccountsToCiphers(inst); err != nil {
-			log.Errorf("Cannot push job for ciphers migration: %s", err)
-		}
 	}
 	profile, err := newProfileResponse(inst, setting)
 	if err != nil {
@@ -234,6 +222,7 @@ type AccessTokenReponse struct {
 
 func getInitialCredentials(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	log := inst.Logger().WithField("nspace", "bitwarden")
 	pass := []byte(c.FormValue("password"))
 
 	// Authentication
@@ -291,6 +280,28 @@ func getInitialCredentials(c echo.Context) error {
 		return err
 	}
 	key := setting.Key
+
+	if _, err := setting.OrganizationKey(); err == settings.ErrMissingOrgKey {
+		// The organization key should exist at this moment as it is created at the
+		// instance creation or at the login-hashed migration.
+		log.Warningf("Organization key does not exist")
+		err := setting.EnsureCozyOrganization(inst)
+		if err != nil {
+			return err
+		}
+		err = couchdb.UpdateDoc(inst, setting)
+		if err != nil {
+			return err
+		}
+	}
+	if client.ClientKind != "web" && !setting.ExtensionInstalled {
+		// This is the first time the bitwarden extension is installed: make sure
+		// the user gets the existing accounts into the vault.
+		// ClientKind is "web" for web apps, e.g. Settings
+		if err := migrateAccountsToCiphers(inst); err != nil {
+			log.Errorf("Cannot push job for ciphers migration: %s", err)
+		}
+	}
 
 	// Send the response
 	out := AccessTokenReponse{
