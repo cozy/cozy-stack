@@ -45,6 +45,13 @@ func TestPrelogin(t *testing.T) {
 }
 
 func TestConnect(t *testing.T) {
+	testLogger := test.NewGlobal()
+	setting, err := settings.Get(inst)
+	assert.NoError(t, err)
+	setting.EncryptedOrgKey = ""
+	err = setting.Save(inst)
+	assert.NoError(t, err)
+
 	email := inst.PassphraseSalt()
 	iter := crypto.DefaultPBKDF2Iterations
 	pass, _ := crypto.HashPassWithPBKDF2([]byte("cozy"), email, iter)
@@ -72,6 +79,15 @@ func TestConnect(t *testing.T) {
 	assert.NotEmpty(t, result["Key"])
 	assert.NotEmpty(t, result["client_id"])
 	assert.NotEmpty(t, result["registration_access_token"])
+
+	assert.NotZero(t, len(testLogger.Entries))
+	assert.Equal(t, "Organization key does not exist", testLogger.Entries[0].Message)
+
+	setting, err = settings.Get(inst)
+	assert.NoError(t, err)
+	orgKey, err := setting.OrganizationKey()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, orgKey)
 }
 
 func TestGetCozyOrg(t *testing.T) {
@@ -561,14 +577,6 @@ func TestSharedCipher(t *testing.T) {
 }
 
 func TestSetKeyPair(t *testing.T) {
-	testLogger := test.NewGlobal()
-
-	setting, err := settings.Get(inst)
-	assert.NoError(t, err)
-	setting.EncryptedOrgKey = ""
-	err = setting.Save(inst)
-	assert.NoError(t, err)
-
 	body, _ := json.Marshal(map[string]string{
 		"encryptedPrivateKey": "2.demXNYbv8o47sG+fhYYvhg==|jXpxet7AApeIzrC3Yr752LwmjBdCZn6HJl6SjEOVP3rrOpGu5qV2rN0dBH5yXXWHusfxM7IvXkdC/fzBUAmFFOU5ubTp9kHFBqIn51tiJG6BRs5aTm7kF6TYSHVDIP5kUdX4O7DcmD23dqtq/8211DSAFR/DK1QDm5Da77Clh7NHxQE9Z9RTW1PBGV56DfzrY3N06H6vI+V6fTZ6HJRD2pdPczR2ZNC0ziQP7qCUYNlSjEv70O4VoYMSUsdb4UUE1YetcSdZ+dIAy+V2KHfoHmTFYI4DtMCW6WpDzp0ufPvszFjt1EwaMr78hujMrQr1gFWxgN8kOLJyYCrd1F5aIxWXHghBH/t+QU31gyQOxCdj18f10ssfuY/y7vocSJQ9pTRRPNh4beGAijV1AETaXWLK1L6oMnkbdhr9ZA2I6cZaHNCaHIynHQH7NUqKKQUJL/FyZ8rBv4YNnxCMRi9p88IoTb0oPsUCoNCaIZ2cvzXz+0VpU6zxj4ke7H6Bu7H46MSB1P+YHzGLtFNzZJVsUBEkz7dotUDeTeqlYKnq7oldWJ4HlqODevzCev+FRnYgrYpoXmYC/dxa1R5IlKCu6rEmP05A7Nw4h9cymnTwRMEoZRSppJ2O5FlSx/Go9Jz12g2Tfiaf+RvO7nkIb2qKiz7Jo2aJgakL5lMOlEdBA2+dsYSyX4Tvu8Ua4p0GcYaGOgSjXH27lQ73ZpHSicf4Q1kAooVl+6zTOPAqgMXOnyyVSRqBPse28HuDwGtmD8BAeVDIfkMW+a+PlWa+yoEWKfDHRduoxNod7Pc9xlNFt6eOeGoBQTEIiF7ccBDtNiSU1yfvqBZEgI8QF0QiGUo9eP7+59so5eu9/DuzjdqFMmGPtG3zHifMxuMzO5+E9UxTyHuCwvxuH93F4vmPC8zzXXn8/ErhEeqmYl1lxZbfJDm1qcjTkJibNKJ9+CXUeP0hq8yi07SEN1xJSZpupf90EUjrdFd3impz3gZKummEjTvzr3J1JX4gC/wD0mGkROHQwb0jCTDJNC18cX4usPYtNr3FxLZmxCGgPmZhkzFjF0qppN1aXTxQskdorEejQUwLL5EnWJySd9/W2P6PmjkJTAwKYUNHsmVUAfbMA7y7QBIjVFFWS4xYy0GJcc8NaLKkFMkGv/oluw552prWAJZ4aM2asoNgyv/JARrAF+JbOPSpax+CtUMO+LCFlBITHopbkHz0TwI1UMj/vIOh9wxDiMqe3YBiviymudX+B7awCaUPTLubWW1jwC4kBnXmRGAKyyIvzgOvwkdcKfQRxoTxq7JFTL/hWk7x4HlQqviSWGY166CLIp6SydCT+cqHMf3MHhe8AQZVC+nIDVNQZWfpFbOFb3nNDwlT+laWrtsiuX7hHiL0VLaCU4xzup5m4zvi59/Qxj0+d8n6M/3GP3/Tvp/bKY9m7CHoeimtGF9Ai2QFJFMOEQw3S1SUBL62ZsezKgBap6y1RqmMzdz/h3f5mhHxRMoQ0kgzZwMNWJvi2acGoIttcmBU7Cn6fqxYNi11dg17M7cFJAQCMicvd4pEwl8IBrm7uFrzbLvuLeolyiDx8GX3jfIo//Ceqa6P/RIqN8jKzH3nTSePuVqkXYiIdxhlAeF//EYW0CwOjd3GEoc=|aUt6NKqrLW4HeprkbwjuBzSQbR84imTujhUPxK17eX4=",
 		"publicKey":           "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmAYrTtY4FBJL/TeTGqr1uHCoMCzUDgwvgq7gBGiNrk24gPbb3xreM+HxubBvkzTlgoS6m1KKKKtD4tWrLU33Xc+PevbKSZDLvBfUe+golGU1XKFxUcIkgINtB0i8LmCVCShiCrlhn2VorcAbekR/1RXtoJqpqq1urhI+RdGVXy8HBBoULA7BoV7wC8dBdkRtnQMNuvGyHclV7yjgealKGqgxz4aNcgsfybquKvYg6PUj8dAxUy7KlmMR7klPyO8nahYqyhpQ/t0xle0WyCkdx5YuYhRSA67Tok+E8fCW5WXOPfIdPZDXS+6/wW1NhcQEa5j6EW11PF/Xq0awBUFwnwIDAQAB",
@@ -581,10 +589,7 @@ func TestSetKeyPair(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 
-	assert.NotZero(t, len(testLogger.Entries))
-	assert.Equal(t, "Organization key does not exist", testLogger.Entries[0].Message)
-
-	setting, err = settings.Get(inst)
+	setting, err := settings.Get(inst)
 	assert.NoError(t, err)
 	orgKey, err := setting.OrganizationKey()
 	assert.NoError(t, err)
