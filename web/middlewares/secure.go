@@ -7,6 +7,7 @@ import (
 	"time"
 
 	build "github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/labstack/echo/v4"
 )
 
@@ -113,7 +114,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 				h.Set(echo.HeaderStrictTransportSecurity, hstsHeader)
 			}
 			var cspHeader string
-			parent, _, siblings := SplitHost(c.Request().Host)
+			parent, _, siblings := config.SplitCozyHost(c.Request().Host)
 			if len(conf.CSPDefaultSrc) > 0 {
 				cspHeader += makeCSPHeader(parent, siblings, "default-src", conf.CSPDefaultSrcWhitelist, conf.CSPDefaultSrc, isSecure)
 			}

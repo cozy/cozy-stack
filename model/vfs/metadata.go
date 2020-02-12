@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -22,6 +23,9 @@ import (
 	_ "golang.org/x/image/webp"
 
 	"github.com/bradfitz/latlong"
+	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/shortcut"
 	"github.com/cozy/goexif2/exif"
 	"github.com/cozy/goexif2/tiff"
 	"github.com/dhowden/tag"
@@ -74,6 +78,12 @@ func NewMetaExtractor(doc *FileDoc) *MetaExtractor {
 		e = NewImageExtractor(doc.CreatedAt)
 	case "audio/mp3", "audio/mpeg", "audio/ogg", "audio/x-m4a", "audio/flac":
 		e = NewAudioExtractor()
+	case consts.ShortcutMimeType:
+		var instance string
+		if doc.CozyMetadata != nil {
+			instance = doc.CozyMetadata.CreatedOn
+		}
+		e = NewShortcutExtractor(instance)
 	}
 	if e != nil {
 		return &e
@@ -412,4 +422,103 @@ func (e *AudioExtractor) Result() Metadata {
 		}
 	}
 	return m
+}
+
+// ShortcutExtractor is used to extract information from .url files
+type ShortcutExtractor struct {
+	w        *io.PipeWriter
+	r        *io.PipeReader
+	ch       chan interface{}
+	instance string
+}
+
+// NewShortcutExtractor returns an extractor for .url files
+func NewShortcutExtractor(instance string) *ShortcutExtractor {
+	e := &ShortcutExtractor{}
+	e.instance = instance
+	e.r, e.w = io.Pipe()
+	e.ch = make(chan interface{})
+	go e.Start()
+	return e
+}
+
+// Start is used in a goroutine to start the metadata extraction
+func (e *ShortcutExtractor) Start() {
+	var link shortcut.Result
+	var err error
+	defer func() {
+		r := recover()
+		if errc := e.r.Close(); err == nil {
+			err = errc
+		}
+		if r != nil {
+			e.ch <- fmt.Errorf("metadata: recovered from shortcut decoding: %s", r)
+		} else if err != nil {
+			e.ch <- err
+		} else {
+			e.ch <- link
+		}
+	}()
+	link, err = shortcut.Parse(e.r)
+}
+
+// Write is called to push some bytes to the extractor
+func (e *ShortcutExtractor) Write(p []byte) (n int, err error) {
+	return e.w.Write(p)
+}
+
+// Close is called when all the bytes has been pushed, to finalize the extraction
+func (e *ShortcutExtractor) Close() error {
+	err := e.w.Close()
+	if err != nil {
+		<-e.ch
+	}
+	return err
+}
+
+// Abort is called when the extractor can be discarded
+func (e *ShortcutExtractor) Abort(err error) {
+	_ = e.w.CloseWithError(err)
+	<-e.ch
+}
+
+// Result is called to get the extracted metadata
+func (e *ShortcutExtractor) Result() Metadata {
+	m := NewMetadata()
+	link := <-e.ch
+	switch link := link.(type) {
+	case shortcut.Result:
+		cozy, app := extractCozyLink(link, e.instance)
+		if cozy != "" {
+			target := map[string]interface{}{
+				"cozyMetadata": map[string]interface{}{
+					"instance": cozy,
+				},
+			}
+			if app != "" {
+				target["app"] = app
+			}
+			m["target"] = target
+		}
+	}
+	return m
+}
+
+func extractCozyLink(link shortcut.Result, instance string) (string, string) {
+	if link.URL == "" {
+		return "", ""
+	}
+	u, err := url.Parse(link.URL)
+	if err != nil {
+		return "", ""
+	}
+	v, err := url.Parse(instance)
+	if err != nil {
+		return "", ""
+	}
+	host, slug, _ := config.SplitCozyHost(u.Host)
+	if host == v.Host {
+		return host, slug
+	}
+	return "", ""
 }

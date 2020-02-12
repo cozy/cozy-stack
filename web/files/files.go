@@ -1435,9 +1435,13 @@ func FileDocFromReq(c echo.Context, name, dirID string) (*vfs.FileDoc, error) {
 	if contentType == "" {
 		mime, class = vfs.ExtractMimeAndClassFromFilename(name)
 	} else {
+		ext := strings.ToLower(path.Ext(name))
+		// Force the mime-type for .url files
+		if ext == ".url" {
+			contentType = consts.ShortcutMimeType
+		}
 		// Some browsers may use Mime-Type sniffing and they may sent an
 		// inaccurate Content-Type.
-		ext := strings.ToLower(path.Ext(name))
 		if contentType == "application/octet-stream" {
 			switch ext {
 			case ".heif":

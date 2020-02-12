@@ -291,7 +291,7 @@ func firstRouting(router *echo.Echo, appsHandler echo.HandlerFunc) echo.HandlerF
 			return oidc.LoginDomainHandler(c, contextName)
 		}
 
-		if parent, slug, _ := middlewares.SplitHost(host); slug != "" {
+		if parent, slug, _ := config.SplitCozyHost(host); slug != "" {
 			if i, err := lifecycle.GetInstance(parent); err == nil {
 				c.Set("instance", i.WithContextualDomain(parent))
 				c.Set("slug", slug)
