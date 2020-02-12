@@ -20,5 +20,9 @@ const (
 	NoLongerSharedDirID = "io.cozy.files.no-longer-shared-dir"
 )
 
-// ShortcutMimeType is the mime-type for the .url files.
-const ShortcutMimeType = "application/internet-shortcut"
+const (
+	// ShortcutMimeType is the mime-type for the .url files.
+	ShortcutMimeType = "application/internet-shortcut"
+	// NoteMimeType is the mime-type for the .cozy-note files.
+	NoteMimeType = "text/vnd.cozy.note+markdown"
+)

@@ -24,7 +24,6 @@ const (
 	persistenceDebouce = "1m"
 	cacheDuration      = 30 * time.Minute
 	cleanStepsAfter    = 24 * time.Hour
-	noteMime           = "text/vnd.cozy.note+markdown"
 )
 
 // Document is the note document in memory. It is persisted to the VFS as a
@@ -146,7 +145,7 @@ func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDo
 	now := time.Now()
 	file := old.Clone().(*vfs.FileDoc)
 	file.Metadata = d.Metadata()
-	file.Mime = noteMime
+	file.Mime = consts.NoteMimeType
 	file.MD5Sum = nil // Let the VFS compute the md5sum
 
 	// If the file was renamed manually before, we will keep its name. Else, we
@@ -235,7 +234,7 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 		dirID,
 		int64(len(content)),
 		nil, // Let the VFS compute the md5sum
-		noteMime,
+		consts.NoteMimeType,
 		"text",
 		cm.UpdatedAt,
 		false, // Not executable
@@ -387,7 +386,7 @@ func List(inst *instance.Instance, bookmark string) ([]*vfs.FileDoc, string, err
 	req := &couchdb.FindRequest{
 		UseIndex: "by-mime-updated-at",
 		Selector: mango.And(
-			mango.Equal("mime", noteMime),
+			mango.Equal("mime", consts.NoteMimeType),
 			mango.Equal("trashed", false),
 			mango.Exists("updated_at"),
 		),
@@ -581,7 +580,7 @@ func Update(inst *instance.Instance, fileID string) error {
 
 	if doc.Title == old.Metadata["title"] &&
 		doc.Version == old.Metadata["version"] &&
-		noteMime == old.Mime {
+		consts.NoteMimeType == old.Mime {
 		// Nothing to do
 		return nil
 	}
