@@ -5,6 +5,7 @@ package shortcuts
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -54,6 +55,15 @@ func (s *Shortcut) SetID(id string) { s.DocID = id }
 
 // SetRev changes the shortcut revision
 func (s *Shortcut) SetRev(rev string) { s.DocRev = rev }
+
+// Relationships is a method of the jsonapi.Document interface
+func (s *Shortcut) Relationships() jsonapi.RelationshipMap { return nil }
+
+// Included is a method of the jsonapi.Document interface
+func (s *Shortcut) Included() []jsonapi.Object { return nil }
+
+// Links is a method of the jsonapi.Document interface
+func (s *Shortcut) Links() *jsonapi.LinksList { return nil }
 
 // Create is the API handler for POST /shortcuts. It can be used to create a
 // shortcut from a JSON description.
@@ -117,9 +127,61 @@ func Create(c echo.Context) error {
 	return files.FileData(c, http.StatusCreated, fileDoc, false, nil)
 }
 
+// Get is the API handler for GET /shortcuts/:id. It follows the link or send a
+// JSON-API response with information about the shortcut, depending on the
+// Accept header.
+func Get(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	fs := inst.VFS()
+	fileID := c.Param("id")
+	file, err := fs.FileByID(fileID)
+	if err != nil {
+		fmt.Printf("1. err = %s\n", err)
+		return wrapError(err)
+	}
+
+	if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
+		fmt.Printf("2. err = %s\n", err)
+		return err
+	}
+
+	f, err := fs.OpenFile(file)
+	if err != nil {
+		fmt.Printf("3. err = %s\n", err)
+		return wrapError(err)
+	}
+	defer f.Close()
+	link, err := shortcut.Parse(f)
+	if err != nil {
+		fmt.Printf("4. err = %s\n", err)
+		return wrapError(err)
+	}
+	if link.URL == "" {
+		fmt.Printf("5. err = %s\n", err)
+		return jsonapi.BadRequest(errors.New("No URL found"))
+	}
+
+	accept := c.Request().Header.Get(echo.HeaderAccept)
+	if strings.Contains(accept, echo.MIMEApplicationJSON) ||
+		strings.Contains(accept, jsonapi.ContentType) {
+		doc := &Shortcut{
+			DocID:    file.DocID,
+			DocRev:   file.DocRev,
+			Name:     file.DocName,
+			DirID:    file.DirID,
+			URL:      link.URL,
+			Metadata: file.Metadata,
+		}
+		return jsonapi.Data(c, http.StatusOK, doc, nil)
+	}
+
+	return c.Redirect(http.StatusSeeOther, link.URL)
+}
+
 // Routes set the routing for the shortcuts.
 func Routes(router *echo.Group) {
 	router.POST("", Create)
+	router.GET("/:id", Get)
 }
 
 func wrapError(err error) *jsonapi.Error {
@@ -128,6 +190,8 @@ func wrapError(err error) *jsonapi.Error {
 		return jsonapi.NotFound(err)
 	case vfs.ErrFileTooBig:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
+	case shortcut.ErrInvalidShortcut:
+		return jsonapi.BadRequest(err)
 	}
 	return jsonapi.InternalServerError(err)
 }

@@ -89,3 +89,66 @@ Content-Type: application/vnd.api+json
   }
 }
 ```
+
+## GET /shortcuts/:id
+
+This route can be used to get information about a shortcut. A permission to
+read the file is required to use it. There are two variants, depending on the
+`Accept` header.
+
+### Request (JSON variant)
+
+If the `Accept` header is `application/vnd.api+json` (or `application/json`),
+the information are returned in JSON-API format.
+
+```http
+GET /shortcuts/629fb233be550a21174ac8e19f0043af HTTP/1.1
+Host: alice.cozy.example
+Accept: application/vnd.api+json
+```
+
+## Response (JSON variant)
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "629fb233be550a21174ac8e19f0043af",
+    "type": "io.cozy.files.shortcuts",
+    "attributes": {
+      "name": "sunset.jpg.url",
+      "dir_id": "629fb233be550a21174ac8e19f003e4a",
+      "url": "https://alice-photos.cozy.example/#/photos/629fb233be550a21174ac8e19f0043af",
+      "metadata": {
+        "target": {
+          "cozyMetadata": {
+            "instance": "https://alice.cozy.example/"
+          },
+          "app": "photos",
+          "_type": "io.cozy.files",
+          "mime": "image/jpg"
+        }
+      }
+    }
+  }
+}
+```
+
+### Request (Redirection variant)
+
+```http
+GET /shortcuts/629fb233be550a21174ac8e19f0043af HTTP/1.1
+Host: alice.cozy.example
+Accept: text/html
+```
+
+### Response (Redirection variant)
+
+```http
+HTTP/1.1 303 See Other
+Location: https://alice-photos.cozy.example/#/photos/629fb233be550a21174ac8e19f0043af
+```
