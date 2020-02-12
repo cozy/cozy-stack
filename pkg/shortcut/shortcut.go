@@ -30,7 +30,7 @@ func Parse(r io.Reader) (Result, error) {
 	if err != nil {
 		return result, err
 	}
-	if len(buf) < len(section) || bytes.Compare(buf[:len(section)], section) != 0 {
+	if len(buf) < len(section) || !bytes.Equal(buf[:len(section)], section) {
 		return result, ErrInvalidShortcut
 	}
 	buf = buf[len(section):]
@@ -38,9 +38,29 @@ func Parse(r io.Reader) (Result, error) {
 	for _, line := range lines {
 		line = bytes.TrimPrefix(line, []byte("\n"))
 		parts := bytes.SplitN(line, []byte("="), 2)
-		if len(parts) == 2 && bytes.Compare(parts[0], urlField) == 0 {
+		if len(parts) == 2 && bytes.Equal(parts[0], urlField) {
 			result.URL = string(parts[1])
 		}
 	}
 	return result, nil
+}
+
+// Generate creates the content of a .url file for the given destination URL.
+func Generate(url string) []byte {
+	u := []byte(url)
+	n := len(section) + len(urlField) + 1 + len(u) + 2
+	buf := make([]byte, n)
+	i := 0
+	copy(buf[i:i+len(section)], section)
+	i += len(section)
+	copy(buf[i:i+len(urlField)], urlField)
+	i += len(urlField)
+	buf[i] = '='
+	i++
+	copy(buf[i:i+len(u)], u)
+	i += len(u)
+	buf[i] = '\r'
+	i++
+	buf[i] = '\n'
+	return buf
 }

@@ -73,3 +73,4 @@ designing new services.
 -   `/settings` - [Settings](settings.md)
     -   [Terms of Services](user-action-required.md)
 -   `/sharings` - [Sharing](sharing.md)
+-   `/shortcuts` - [Shortcuts](shortcuts.md)

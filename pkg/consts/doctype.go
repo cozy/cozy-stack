@@ -29,6 +29,8 @@ const (
 	FilesMetadata = "io.cozy.files.metadata"
 	// FilesVersions doc type for versioning file contents
 	FilesVersions = "io.cozy.files.versions"
+	// FilesShortcuts doc type for high-level information about .url files
+	FilesShortcuts = "io.cozy.files.shortcuts"
 	// Thumbnails is a synthetic doctype for thumbnails, used for realtime
 	// events
 	Thumbnails = "io.cozy.files.thumbnails"
