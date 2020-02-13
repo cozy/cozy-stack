@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -142,18 +141,6 @@ func DirExists(name string) (bool, error) {
 		return false, fmt.Errorf("Path %s is not a directory", name)
 	}
 	return true, nil
-}
-
-// UserHomeDir returns the user's home directory
-func UserHomeDir() string {
-	if runtime.GOOS == "windows" {
-		home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
-		if home == "" {
-			home = os.Getenv("USERPROFILE")
-		}
-		return home
-	}
-	return os.Getenv("HOME")
 }
 
 // AbsPath returns an absolute path relative.
