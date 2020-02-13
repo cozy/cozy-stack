@@ -434,13 +434,13 @@ func PostDiscovery(c echo.Context) error {
 		cozyURL = c.FormValue("slug")
 	}
 	if !strings.HasPrefix(cozyURL, "http://") && !strings.HasPrefix(cozyURL, "https://") {
-		cozyURL = "https://" + cozyURL + "."
+		cozyURL = "https://" + cozyURL
 	}
-	if domain := c.FormValue("domain"); domain != "" {
+	if domain := c.FormValue("domain"); domain != "" && !strings.Contains(cozyURL, ".") {
 		if domain == "mycosy.cloud" {
 			domain = "mycozy.cloud"
 		}
-		cozyURL = cozyURL + domain
+		cozyURL = cozyURL + "." + domain
 	}
 
 	s, err := sharing.FindSharing(inst, sharingID)
