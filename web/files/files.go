@@ -1228,28 +1228,28 @@ func FindFilesMango(c echo.Context) error {
 	if !hasLimit || limit > consts.MaxItemsPerPageForMango {
 		limit = 100
 	}
+	findRequest["limit"] = limit
+
 	skip := 0
 	skipF64, hasSkip := findRequest["skip"].(float64)
 	if hasSkip {
 		skip = int(skipF64)
 	}
 
-	// add 1 so we know if there is more.
-	findRequest["limit"] = limit + 1
-
 	var results []vfs.DirOrFileDoc
-	_, err := couchdb.FindDocsRaw(instance, consts.Files, &findRequest, &results)
+	resp, err := couchdb.FindDocsRaw(instance, consts.Files, &findRequest, &results)
 	if err != nil {
 		return err
 	}
 
 	var total int
-	if len(results) > int(limit) {
-		total = math.MaxInt32 - 1          // we dont know the actual number
-		results = results[:len(results)-1] // loose the last item
+	if len(results) >= int(limit) {
+		total = math.MaxInt32 - 1 // we dont know the actual number
 	} else {
 		total = skip + len(results) // let the client know its done.
 	}
+	var links jsonapi.LinksList
+	links.Next = "/files?page[cursor]=" + resp.Bookmark
 
 	out := make([]jsonapi.Object, len(results))
 	for i, dof := range results {
@@ -1261,7 +1261,7 @@ func FindFilesMango(c echo.Context) error {
 		}
 	}
 
-	return jsonapi.DataListWithTotal(c, http.StatusOK, total, out, nil)
+	return jsonapi.DataListWithTotal(c, http.StatusOK, total, out, &links)
 }
 
 func fsckHandler(c echo.Context) error {
