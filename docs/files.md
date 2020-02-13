@@ -264,6 +264,143 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST `/files/_find`
+
+Find allows to find documents using a mango selector. You can read more about mango selectors [here](http://docs.couchdb.org/en/stable/api/database/find.html#selector-syntax).
+
+Note that it returns a [bookmark](https://github.com/cozy/cozy-stack/blob/master/docs/mango.md#pagination-cookbook) in the `links`, useful to paginate.
+
+
+### Request
+
+```http
+POST /files/_find HTTP/1.1
+```
+
+
+```json
+{
+    "selector": {
+        "class": "image",
+        "trashed": false
+    },
+    "limit": 2,
+    "bookmark": "g1AAAABjeJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorpFokG5qaGVqYmCWbGxuYGFkYWhgkmqaZJZsZGpibWhiA9HHA9OWATAJpY83MTUxPTWFgTUvMKU7NygIA7IYZzA",
+    "use_index": "_design/a5f4711fc9448864a13c81dc71e660b524d7410c"
+}
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Date: Mon, 27 Sept 2016 12:28:53 GMT
+Content-Length: ...
+Content-Type: application/json
+```
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.files",
+      "id": "e8c1561846c730428180a5f6c6107914",
+      "attributes": {
+        "type": "file",
+        "name": "nicepic1.jpg",
+        "dir_id": "f49b4087cbf946dfc759214394009a6c",
+        "created_at": "2020-02-13T16:35:47.568155477+01:00",
+        "updated_at": "2020-02-13T16:35:47.568155477+01:00",
+        "size": "345385",
+        "md5sum": "12cGYwT+RiNjFxf4f7AmzQ==",
+        "mime": "image/jpeg",
+        "class": "image",
+        "executable": false,
+        "trashed": false,
+        "tags": [],
+        "metadata": {
+          "datetime": "2020-02-13T16:35:47.568155477+01:00",
+          "extractor_version": 2,
+          "height": 1080,
+          "width": 1920
+        },
+      },
+      "meta": {
+        "rev": "2-235e715b1d82a93285be1b0bd691b779"
+      },
+      "links": {
+        "self": "/files/e8c1561846c730428180a5f6c6107914",
+        "small": "/files/e8c1561846c730428180a5f6c6107914/thumbnails/377327a8e20d6a50/small",
+        "medium": "/files/e8c1561846c730428180a5f6c6107914/thumbnails/377327a8e20d6a50/medium",
+        "large": "/files/e8c1561846c730428180a5f6c6107914/thumbnails/377327a8e20d6a50/large"
+      },
+      "relationships": {
+        "parent": {
+          "links": {
+            "related": "/files/f49b4087cbf946dfc759214394009a6c"
+          },
+          "data": {
+            "id": "f49b4087cbf946dfc759214394009a6c",
+            "type": "io.cozy.files"
+          }
+        }
+      }
+    },
+    {
+      "type": "io.cozy.files",
+      "id": "e8c1561846c730428180a5f6c6109007",
+      "attributes": {
+        "type": "file",
+        "name": "nicepic2.jpg",
+        "dir_id": "f49b4087cbf946dfc759214394009a6c",
+        "created_at": "2020-02-13T16:35:47.845049743+01:00",
+        "updated_at": "2020-02-13T16:35:47.845049743+01:00",
+        "size": "323009",
+        "md5sum": "Fla3ucNXuW2Xw/TK8pfsPA==",
+        "mime": "image/jpeg",
+        "class": "image",
+        "executable": false,
+        "trashed": false,
+        "tags": [],
+        "metadata": {
+          "datetime": "2020-02-13T16:35:47.845049743+01:00",
+          "extractor_version": 2,
+          "height": 1080,
+          "width": 1920
+        },
+      },
+      "meta": {
+        "rev": "2-4883d6b8ccad32f8fb056af9b7f8b37f"
+      },
+      "links": {
+        "self": "/files/e8c1561846c730428180a5f6c6109007",
+        "small": "/files/e8c1561846c730428180a5f6c6109007/thumbnails/58a4aea31b00c99d/small",
+        "medium": "/files/e8c1561846c730428180a5f6c6109007/thumbnails/58a4aea31b00c99d/medium",
+        "large": "/files/e8c1561846c730428180a5f6c6109007/thumbnails/58a4aea31b00c99d/large"
+      },
+      "relationships": {
+        "parent": {
+          "links": {
+            "related": "/files/f49b4087cbf946dfc759214394009a6c"
+          },
+          "data": {
+            "id": "f49b4087cbf946dfc759214394009a6c",
+            "type": "io.cozy.files"
+          }
+        }
+      }
+    }
+  ],
+  "links": {
+    "next": "/files?page[cursor]=g1AAAABjeJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorpFokG5qaGVqYmCWbGxuYGFkYWhgkmqaZJZsZGlgaGJiD9HHA9OWATAJpY83MTUxPTWFgTUvMKU7NygIA694ZyA"
+  },
+  "meta": {
+    "count": 2147483646
+  }
+}
+```
+
+
 ### DELETE /files/:dir-id
 
 Put a directory and its subtree in the trash. It requires the permissions on
