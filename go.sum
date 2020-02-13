@@ -45,8 +45,8 @@ github.com/cozy/httpcache v0.0.0-20180914105234-d3dc4988de66 h1:b7VTmlsWlhYzJqGL
 github.com/cozy/httpcache v0.0.0-20180914105234-d3dc4988de66/go.mod h1:rLnjIcybyvs+PoCzi4+GmpOVp0+q+qdcuZKnKUKJoF4=
 github.com/cozy/prosemirror-go v0.4.6 h1:sRcnuB3xNJgFx61tX2I8xIMs77LDm2nV+MZ1doS76/M=
 github.com/cozy/prosemirror-go v0.4.6/go.mod h1:v15sN6s5qGHCgb1cgVGk2ZZ53lLzefVmFVwX53E3Lb8=
-github.com/cozy/user_agent v0.5.2 h1:UhoSV7uzlKHmqYcp/5OX4o8E/MS9fCvD43TKU0z2/Ig=
-github.com/cozy/user_agent v0.5.2/go.mod h1:TTPno8LPY3wAIEKRpAtkdMT0f8SE24pLRGPahjCH4uw=
+github.com/cozy/user_agent v0.5.3 h1:O3IFuuap1lT7bJr/9ehdcG+lQp868o976tESAhBZjDo=
+github.com/cozy/user_agent v0.5.3/go.mod h1:TTPno8LPY3wAIEKRpAtkdMT0f8SE24pLRGPahjCH4uw=
 github.com/cpuguy83/go-md2man v1.0.10 h1:BSKMNlYxDvnunlTymqtgONjNnaRV1sTpcovwwjF22jk=
 github.com/cpuguy83/go-md2man v1.0.10/go.mod h1:SmD6nW6nTyfqj6ABTjUi3V3JVMnlJmwcJI5acqYI6dE=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
