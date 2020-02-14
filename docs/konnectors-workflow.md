@@ -4,8 +4,9 @@
 
 ![Konnectors workflow](diagrams/konnector-workflow.png)
 
-![Konnectors models](diagrams/konnector-models.png)
+![Mermaid source file for diagram above](./diagrams/konnector-workflow.mmdc)
 
+![Konnectors models](diagrams/konnector-models.png)
 
 ## Types
 
