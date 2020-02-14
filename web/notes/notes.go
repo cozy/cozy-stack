@@ -270,6 +270,11 @@ func OpenNoteURL(c echo.Context) error {
 			return middlewares.ErrForbidden
 		}
 	}
+	// If a directory is shared by link and contains a note, the note can be
+	// opened with the same sharecode as the directory.
+	if pdoc.Type == permission.TypeShareByLink {
+		code = middlewares.GetRequestToken(c)
+	}
 
 	doc, err := note.Open(inst, file, code)
 	if err != nil {
