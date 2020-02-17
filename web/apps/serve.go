@@ -374,11 +374,11 @@ func (s serveParams) Flags() (string, error) {
 	return string(bytes), nil
 }
 
-func (s serveParams) CozyBar() template.HTML {
+func (s serveParams) CozyBar() (template.HTML, error) {
 	return cozybar(s.instance, s.isLoggedIn)
 }
 
-func (s serveParams) CozyClientJS() template.HTML {
+func (s serveParams) CozyClientJS() (template.HTML, error) {
 	return cozyclientjs(s.instance)
 }
 
@@ -464,19 +464,19 @@ func BuildTemplates() {
 	))
 }
 
-func cozyclientjs(i *instance.Instance) template.HTML {
+func cozyclientjs(i *instance.Instance) (template.HTML, error) {
 	buf := new(bytes.Buffer)
 	err := clientTemplate.Execute(buf, echo.Map{
 		"Domain":      i.ContextualDomain(),
 		"ContextName": i.ContextName,
 	})
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return template.HTML(buf.String())
+	return template.HTML(buf.String()), nil
 }
 
-func cozybar(i *instance.Instance, loggedIn bool) template.HTML {
+func cozybar(i *instance.Instance, loggedIn bool) (template.HTML, error) {
 	buf := new(bytes.Buffer)
 	err := barTemplate.Execute(buf, echo.Map{
 		"Domain":      i.ContextualDomain(),
@@ -485,7 +485,7 @@ func cozybar(i *instance.Instance, loggedIn bool) template.HTML {
 		"LoggedIn":    loggedIn,
 	})
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	return template.HTML(buf.String())
+	return template.HTML(buf.String()), nil
 }
