@@ -93,7 +93,7 @@ sharing from).
     we do not need, has
     [better server support (92% users)](http://caniuse.com/#feat=websockets) but
     is impossible to polyfill client side, more popular, there is a better
-    [golang package](https://godoc.org/github.com/gorilla/websocket)
+    [golang package](https://pkg.go.dev/github.com/gorilla/websocket)
 -   **SockJS & cie** they are **a lot** of packages which imitate Websocket API
     while using complicated client&server polyfill to allow support of older
     browser. [SockJS](https://github.com/sockjs/) is a drop-in websocket

@@ -857,7 +857,7 @@ The derived password is stored on the server in a secure fashion, with a
 password hashing function. The hashing function and its parameter are stored
 with the hash, in order to make it possible to change the algorithm and/or the
 parameters later if we had any suspicion that it became too weak. The initial
-algorithm is [scrypt](https://godoc.org/golang.org/x/crypto/scrypt).
+algorithm is [scrypt](https://pkg.go.dev/golang.org/x/crypto/scrypt).
 
 The access code is valid only once, and will expire after 5 minutes
 
