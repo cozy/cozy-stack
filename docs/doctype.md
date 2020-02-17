@@ -17,6 +17,9 @@ If you have several related doctypes, it is common to nest them. For example,
 `io.cozy.contacts.accounts` is the accounts of external services used to
 synchronize the `io.cozy.accounts`.
 
+The name of the doctype must be composed of only lowercase letters, digits, `.`
+and `_` characters.
+
 ## Add documentation about your doctype
 
 The doctypes are documented on https://docs.cozy.io/en/cozy-doctypes/docs/

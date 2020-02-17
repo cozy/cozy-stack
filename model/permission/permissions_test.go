@@ -10,6 +10,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCheckDoctypeName(t *testing.T) {
+	assert.NoError(t, CheckDoctypeName("io.cozy.files"))
+	assert.NoError(t, CheckDoctypeName("io.cozy.account_types"))
+	assert.Error(t, CheckDoctypeName("IO.COZY.FILES"))
+	assert.Error(t, CheckDoctypeName("io.cozy.account-types"))
+	assert.Error(t, CheckDoctypeName("io.cozy.files.*"))
+}
+
 func TestVerbToString(t *testing.T) {
 	vs := Verbs(GET, DELETE)
 	assert.Equal(t, "GET,DELETE", vs.String())

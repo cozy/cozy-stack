@@ -290,6 +290,8 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 			for _, r := range patch.Permissions {
 				if r.Type == "" {
 					toPatch.RemoveRule(r)
+				} else if err := permission.CheckDoctypeName(r.Type); err != nil {
+					return err
 				} else if current.Permissions.RuleInSubset(r) {
 					toPatch.AddRules(r)
 				} else {

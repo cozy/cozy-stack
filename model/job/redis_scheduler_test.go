@@ -294,7 +294,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 
 	evTrigger := jobs.TriggerInfos{
 		Type:       "@event",
-		Arguments:  "io.cozy.event-test:CREATED",
+		Arguments:  "io.cozy.event.test:CREATED",
 		WorkerType: "incr",
 	}
 
@@ -303,7 +303,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 	assert.NoError(t, sch.AddTrigger(tri))
 
 	realtime.GetHub().Publish(testInstance, realtime.EventCreate,
-		&testDoc{id: "foo", doctype: "io.cozy.event-test"}, nil)
+		&testDoc{id: "foo", doctype: "io.cozy.event.test"}, nil)
 
 	time.Sleep(1 * time.Second)
 
@@ -327,10 +327,10 @@ func TestRedisTriggerEvent(t *testing.T) {
 	assert.Equal(t, evt.Verb, "CREATED")
 
 	realtime.GetHub().Publish(testInstance, realtime.EventUpdate,
-		&testDoc{id: "foo", doctype: "io.cozy.event-test"}, nil)
+		&testDoc{id: "foo", doctype: "io.cozy.event.test"}, nil)
 
 	realtime.GetHub().Publish(testInstance, realtime.EventCreate,
-		&testDoc{id: "foo", doctype: "io.cozy.event-test.bad"}, nil)
+		&testDoc{id: "foo", doctype: "io.cozy.event.test.bad"}, nil)
 
 	time.Sleep(10 * time.Millisecond)
 
@@ -467,7 +467,7 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 
 	evTrigger := jobs.TriggerInfos{
 		Type:       "@event",
-		Arguments:  "io.cozy.debounce-test:CREATED io.cozy.debounce-more:CREATED",
+		Arguments:  "io.cozy.debounce.test:CREATED io.cozy.debounce.more:CREATED",
 		WorkerType: "incr",
 		Debounce:   "4s",
 	}
@@ -477,7 +477,7 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 
 	doc := testDoc{
 		id:      "foo",
-		doctype: "io.cozy.debounce-test",
+		doctype: "io.cozy.debounce.test",
 	}
 
 	for i := 0; i < 10; i++ {
@@ -490,7 +490,7 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 	assert.Equal(t, 2, count)
 
 	realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
-	doc.doctype = "io.cozy.debounce-more"
+	doc.doctype = "io.cozy.debounce.more"
 	realtime.GetHub().Publish(testInstance, realtime.EventCreate, &doc, nil)
 	time.Sleep(5000 * time.Millisecond)
 	count, _ = bro.WorkerQueueLen("incr")

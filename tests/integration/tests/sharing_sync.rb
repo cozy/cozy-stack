@@ -82,7 +82,7 @@ describe "A folder" do
         }.to_json)
         ws.send({
           method: "SUBSCRIBE",
-          payload: { type: "io.cozy.sharings.initial-sync", id: sharing.couch_id }
+          payload: { type: "io.cozy.sharings.initial_sync", id: sharing.couch_id }
         }.to_json)
       end
 

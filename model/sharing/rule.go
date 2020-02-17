@@ -52,7 +52,10 @@ func (s *Sharing) ValidateRules() error {
 		return ErrNoRules
 	}
 	for i, rule := range s.Rules {
-		if rule.Title == "" || rule.DocType == "" || len(rule.Values) == 0 {
+		if rule.Title == "" || len(rule.Values) == 0 {
+			return ErrInvalidRule
+		}
+		if permission.CheckDoctypeName(rule.DocType) != nil {
 			return ErrInvalidRule
 		}
 		if rule.DocType == consts.Files {

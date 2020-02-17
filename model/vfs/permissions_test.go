@@ -189,7 +189,7 @@ func TestPermissions(t *testing.T) {
 
 	psetWrongType := permission.Set{
 		permission.Rule{
-			Type:   "io.cozy.not-files",
+			Type:   "io.cozy.not.files",
 			Verbs:  permission.ALL,
 			Values: []string{A.ID()},
 		},
