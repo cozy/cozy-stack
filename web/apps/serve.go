@@ -299,7 +299,7 @@ type serveParams struct {
 	isLoggedIn bool
 }
 
-func (s serveParams) CozyData() ([]byte, error) {
+func (s serveParams) CozyData() (string, error) {
 	flags, err := feature.GetFlags(s.instance)
 	if err != nil {
 		flags = &feature.Flags{
@@ -321,7 +321,13 @@ func (s serveParams) CozyData() ([]byte, error) {
 		},
 		"flags": flags,
 	}
-	return json.Marshal(data)
+	bytes, err := json.Marshal(data)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
 }
 
 func (s serveParams) Domain() string {
@@ -356,12 +362,16 @@ func (s serveParams) IconPath() string {
 	return s.webapp.Icon
 }
 
-func (s serveParams) Flags() ([]byte, error) {
+func (s serveParams) Flags() (string, error) {
 	flags, err := feature.GetFlags(s.instance)
 	if err != nil {
-		return []byte("{}"), err
+		return "{}", err
 	}
-	return json.Marshal(flags)
+	bytes, err := json.Marshal(flags)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
 }
 
 func (s serveParams) CozyBar() template.HTML {
