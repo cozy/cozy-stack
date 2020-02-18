@@ -6,6 +6,7 @@ import (
 	"mime"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	ftype "github.com/h2non/filetype"
 )
 
@@ -16,6 +17,9 @@ const DefaultType = "application/octet-stream"
 // keep only the type and subtype.
 // Example: text/html
 func ByExtension(ext string) string {
+	if ext == ".url" {
+		return consts.ShortcutMimeType
+	}
 	mimeParts := strings.SplitN(mime.TypeByExtension(ext), ";", 2)
 	return strings.TrimSpace(mimeParts[0])
 }

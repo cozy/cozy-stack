@@ -644,6 +644,8 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 	case "application/x-7z-compressed", "application/x-rar-compressed",
 		"application/zip", "application/gzip", "application/x-tar":
 		class = "zip"
+	case consts.ShortcutMimeType:
+		class = "shortcut"
 	default:
 		slashIndex := strings.Index(mime, "/")
 		if slashIndex >= 0 {
@@ -661,7 +663,11 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 // filename.
 func ExtractMimeAndClassFromFilename(name string) (mime, class string) {
 	ext := path.Ext(name)
-	return ExtractMimeAndClass(filetype.ByExtension(ext))
+	mimetype := filetype.ByExtension(ext)
+	if ext == ".url" {
+		mimetype = consts.ShortcutMimeType
+	}
+	return ExtractMimeAndClass(mimetype)
 }
 
 var cbDiskQuotaAlert func(domain string, exceeded bool)

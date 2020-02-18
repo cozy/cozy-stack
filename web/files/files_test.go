@@ -429,6 +429,21 @@ func TestUploadImage(t *testing.T) {
 	assert.Contains(t, attrs["created_at"], "2016-09-10T")
 }
 
+func TestUploadShortcut(t *testing.T) {
+	f, err := os.Open("../../tests/fixtures/shortcut.url")
+	assert.NoError(t, err)
+	defer f.Close()
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=shortcut.url", f)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, obj := doUploadOrMod(t, req, "application/octet-stream", "Zmko77UB8tJqERoef4MMlg==")
+	assert.Equal(t, 201, res.StatusCode)
+	data := obj["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	assert.Equal(t, "application/internet-shortcut", attrs["mime"])
+	assert.Equal(t, "shortcut", attrs["class"])
+}
+
 func TestUploadWithParentSuccess(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Name=fileparent&Type=directory")
 	assert.Equal(t, 201, res1.StatusCode)
