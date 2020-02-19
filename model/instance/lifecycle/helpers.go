@@ -95,14 +95,19 @@ func createDefaultFilesTree(inst *instance.Instance) error {
 }
 
 func checkAliases(inst *instance.Instance, aliases []string) ([]string, error) {
-	if aliases == nil {
+	if len(aliases) == 0 {
 		return nil, nil
 	}
 	aliases = utils.UniqueStrings(aliases)
+	kept := make([]string, 0, len(aliases))
 	for _, alias := range aliases {
 		alias = strings.TrimSpace(alias)
 		if alias == "" {
 			continue
+		}
+		alias, err := validateDomain(alias)
+		if err != nil {
+			return nil, err
 		}
 		if alias == inst.Domain {
 			return nil, instance.ErrExists
@@ -116,8 +121,9 @@ func checkAliases(inst *instance.Instance, aliases []string) ([]string, error) {
 				return nil, instance.ErrExists
 			}
 		}
+		kept = append(kept, alias)
 	}
-	return aliases, nil
+	return kept, nil
 }
 
 const illegalChars = " /,;&?#@|='\"\t\r\n\x00"
