@@ -41,7 +41,7 @@ stack. It is defined by four components.
 
 ### Type
 
-`type` is the attribute used in JSON-API or the `docType` for the Data System.
+`type` is the attribute used in JSON-API or the `doctype` for the Data System.
 
 It is the only mandatory component. If just the `type` is specified, it gives
 access to all the operations on this `type`. For example, a permission on type
@@ -57,6 +57,11 @@ Some known types:
 -   `io.cozy.jobs` and `io.cozy.triggers`, for [jobs](jobs.md)
 -   `io.cozy.oauth.clients`, to list and revoke [OAuth 2 clients](auth.md)
 
+It is also possible to use a wildcard to use a doctype and its sub-doctypes.
+For example, `io.cozy.bank.*` will give access to `io.cozy.bank`,
+`io.cozy.bank.accounts`, `io.cozy.bank.accounts.stats`,
+`io.cozy.bank.settings`, etc.
+
 ### Verbs
 
 It says which HTTP verbs can be used for requests to the cozy-stack. `GET` will
@@ -70,7 +75,7 @@ informations about the permission when it answers the request.
 
 ### Values
 
-It's possible to restrict the permissions to only some documents of a docType,
+It's possible to restrict the permissions to only some documents of a doctype,
 or to just some files and folders. You can give a list of ids in `values`.
 
 **Note**: a permission for a folder also gives permissions with same verbs for
@@ -505,9 +510,9 @@ Accept: application/vnd.api+json
 ```json
 {
   "data": [
-    { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
-    { "type": "io.cozy.files", "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863" }
-    { "type": "io.cozy.files", "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6" }
+    { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" },
+    { "type": "io.cozy.files", "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863" },
+    { "type": "io.cozy.files", "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6" },
     { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
   ]
 }
@@ -524,7 +529,7 @@ Content-Type: application/vnd.api+json
 {
   "data": [
     { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4",
-      "verbs":["GET"] }
+      "verbs":["GET"] },
     { "type": "io.cozy.files", "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
       "verbs":["GET", "POST"] }
   ]

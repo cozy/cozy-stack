@@ -493,6 +493,13 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 	}
 	newManifest.SetState(state)
 
+	set := newManifest.Permissions()
+	for _, rule := range set {
+		if err := permission.CheckDoctypeName(rule.Type, true); err != nil {
+			return nil, err
+		}
+	}
+
 	shouldOverrideParameters := (i.overridenParameters != nil &&
 		i.man.AppType() == consts.KonnectorType &&
 		i.src.Scheme != "registry")

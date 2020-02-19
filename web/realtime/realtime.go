@@ -182,7 +182,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 		if permType == consts.Thumbnails || permType == consts.NotesEvents {
 			permType = consts.Files
 		}
-		// XXX: no permissions are required for io.cozy.sharings.initial-sync
+		// XXX: no permissions are required for io.cozy.sharings.initial_sync
 		if withAuthentication && cmd.Payload.Type != consts.SharingsInitialSync {
 			var authorized bool
 			if cmd.Payload.ID == "" {

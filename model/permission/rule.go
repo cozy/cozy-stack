@@ -73,7 +73,7 @@ func UnmarshalRuleString(in string) (Rule, error) {
 		out.Verbs = VerbSplit(parts[1])
 		fallthrough
 	case 1:
-		if parts[0] == "" {
+		if CheckDoctypeName(parts[0], true) != nil {
 			return out, ErrBadScope
 		}
 		out.Type = parts[0]

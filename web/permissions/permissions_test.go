@@ -379,7 +379,7 @@ func TestBadPatchAddRuleForbidden(t *testing.T) {
 	    "attributes": {
 					"permissions": {
 						"otherperm": {
-							"type":"io.cozy.token-cant-do-this"
+							"type":"io.cozy.token.cant.do.this"
 						}
 					}
 				}
