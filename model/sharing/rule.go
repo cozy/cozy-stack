@@ -55,7 +55,7 @@ func (s *Sharing) ValidateRules() error {
 		if rule.Title == "" || len(rule.Values) == 0 {
 			return ErrInvalidRule
 		}
-		if permission.CheckDoctypeName(rule.DocType) != nil {
+		if permission.CheckDoctypeName(rule.DocType, false) != nil {
 			return ErrInvalidRule
 		}
 		if rule.DocType == consts.Files {

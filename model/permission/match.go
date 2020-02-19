@@ -1,5 +1,7 @@
 package permission
 
+import "strings"
+
 // Fetcher is an interface for an object to see if it matches a rule.
 type Fetcher interface {
 	ID() string
@@ -37,8 +39,19 @@ func matchOnFields(r Rule, o Fetcher, fields ...string) bool {
 	return r.ValuesMatch(o)
 }
 
-func matchVerbAndType(r Rule, v Verb, doctype string) bool {
-	return r.Verbs.Contains(v) && r.Type == doctype
+func matchVerb(r Rule, v Verb) bool {
+	return r.Verbs.Contains(v)
+}
+
+func matchType(r Rule, doctype string) bool {
+	if r.Type == doctype {
+		return true
+	}
+	if !isWildcard(r.Type) {
+		return false
+	}
+	typ := trimWildcard(r.Type)
+	return typ == doctype || strings.HasPrefix(doctype, typ+".")
 }
 
 func matchWholeType(r Rule) bool {
@@ -53,21 +66,27 @@ func matchID(r Rule, id string) bool {
 // document from the given doctypes (ie. r.values == 0)
 func (s Set) AllowWholeType(v Verb, doctype string) bool {
 	return s.Some(func(r Rule) bool {
-		return matchVerbAndType(r, v, doctype) && matchWholeType(r)
+		return matchVerb(r, v) &&
+			matchType(r, doctype) &&
+			matchWholeType(r)
 	})
 }
 
 // AllowID returns true if the set allows to apply verb to given type & id
 func (s Set) AllowID(v Verb, doctype, id string) bool {
 	return s.Some(func(r Rule) bool {
-		return matchVerbAndType(r, v, doctype) && (matchWholeType(r) || matchID(r, id))
+		return matchVerb(r, v) &&
+			matchType(r, doctype) &&
+			(matchWholeType(r) || matchID(r, id))
 	})
 }
 
 // Allow returns true if the set allows to apply verb to given doc
 func (s Set) Allow(v Verb, o Fetcher) bool {
 	return s.Some(func(r Rule) bool {
-		return matchVerbAndType(r, v, o.DocType()) && matchValues(r, o)
+		return matchVerb(r, v) &&
+			matchType(r, o.DocType()) &&
+			matchValues(r, o)
 	})
 }
 
@@ -75,6 +94,8 @@ func (s Set) Allow(v Verb, o Fetcher) bool {
 // the specified fields.
 func (s Set) AllowOnFields(v Verb, o Fetcher, fields ...string) bool {
 	return s.Some(func(r Rule) bool {
-		return matchVerbAndType(r, v, o.DocType()) && matchOnFields(r, o, fields...)
+		return matchVerb(r, v) &&
+			matchType(r, o.DocType()) &&
+			matchOnFields(r, o, fields...)
 	})
 }

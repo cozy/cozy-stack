@@ -495,7 +495,7 @@ func (i *Installer) ReadManifest(state State) (Manifest, error) {
 
 	set := newManifest.Permissions()
 	for _, rule := range set {
-		if err := permission.CheckDoctypeName(rule.Type); err != nil {
+		if err := permission.CheckDoctypeName(rule.Type, true); err != nil {
 			return nil, err
 		}
 	}

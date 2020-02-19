@@ -57,6 +57,11 @@ Some known types:
 -   `io.cozy.jobs` and `io.cozy.triggers`, for [jobs](jobs.md)
 -   `io.cozy.oauth.clients`, to list and revoke [OAuth 2 clients](auth.md)
 
+It is also possible to use a wildcard to use a doctype and its sub-doctypes.
+For example, `io.cozy.bank.*` will give access to `io.cozy.bank`,
+`io.cozy.bank.accounts`, `io.cozy.bank.accounts.stats`,
+`io.cozy.bank.settings`, etc.
+
 ### Verbs
 
 It says which HTTP verbs can be used for requests to the cozy-stack. `GET` will

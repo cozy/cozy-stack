@@ -11,11 +11,20 @@ import (
 )
 
 func TestCheckDoctypeName(t *testing.T) {
-	assert.NoError(t, CheckDoctypeName("io.cozy.files"))
-	assert.NoError(t, CheckDoctypeName("io.cozy.account_types"))
-	assert.Error(t, CheckDoctypeName("IO.COZY.FILES"))
-	assert.Error(t, CheckDoctypeName("io.cozy.account-types"))
-	assert.Error(t, CheckDoctypeName("io.cozy.files.*"))
+	assert.NoError(t, CheckDoctypeName("io.cozy.files", false))
+	assert.NoError(t, CheckDoctypeName("io.cozy.account_types", false))
+	assert.Error(t, CheckDoctypeName("IO.COZY.FILES", false))
+	assert.Error(t, CheckDoctypeName("io.cozy.account-types", false))
+	assert.Error(t, CheckDoctypeName(".io.cozy.files", false))
+	assert.Error(t, CheckDoctypeName("io.cozy.files.", false))
+	assert.Error(t, CheckDoctypeName("io.cozy.files.*", false))
+	assert.Error(t, CheckDoctypeName("io..cozy..files", false))
+
+	assert.NoError(t, CheckDoctypeName("io.cozy.files", true))
+	assert.NoError(t, CheckDoctypeName("io.cozy.banks.*", true))
+	assert.NoError(t, CheckDoctypeName("io.cozy.files.*", true))
+	assert.Error(t, CheckDoctypeName("io.cozy.*", true))
+	assert.Error(t, CheckDoctypeName("com.bitwarden.*", true))
 }
 
 func TestVerbToString(t *testing.T) {
@@ -250,6 +259,18 @@ func TestAllowType(t *testing.T) {
 	assert.True(t, s.Allow(GET, &validable{doctype: "io.cozy.contacts"}))
 	assert.True(t, s.Allow(DELETE, &validable{doctype: "io.cozy.contacts"}))
 	assert.False(t, s.Allow(GET, &validable{doctype: "io.cozy.files"}))
+}
+
+func TestAllowWildcard(t *testing.T) {
+	s := Set{Rule{Type: "io.cozy.bank.*"}}
+	assert.True(t, s.Allow(GET, &validable{doctype: "io.cozy.bank"}))
+	assert.True(t, s.Allow(DELETE, &validable{doctype: "io.cozy.bank.accounts"}))
+	assert.True(t, s.Allow(DELETE, &validable{doctype: "io.cozy.bank.accounts.stats"}))
+	assert.True(t, s.Allow(DELETE, &validable{doctype: "io.cozy.bank.settings"}))
+	assert.False(t, s.Allow(GET, &validable{doctype: "io.cozy.files"}))
+	assert.False(t, s.Allow(GET, &validable{doctype: "io.cozy.files.bank"}))
+	assert.False(t, s.Allow(GET, &validable{doctype: "io.cozy.banks"}))
+	assert.False(t, s.Allow(GET, &validable{doctype: "io.cozy.bankrupts"}))
 }
 
 func TestAllowVerbs(t *testing.T) {
