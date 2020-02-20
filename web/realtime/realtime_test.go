@@ -124,6 +124,12 @@ func TestWSSuccess(t *testing.T) {
 		return
 	}
 
+	msg = `{"method": "SUBSCRIBE", "payload": { "type": "io.cozy.bars", "id": "bar-two" }}`
+	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
+	if !assert.NoError(t, err) {
+		return
+	}
+
 	h := realtime.GetHub()
 	var res map[string]interface{}
 	time.Sleep(30 * time.Millisecond)
@@ -152,7 +158,7 @@ func TestWSSuccess(t *testing.T) {
 
 	h.Publish(inst, realtime.EventCreate, &testDoc{
 		doctype: "io.cozy.bars",
-		id:      "bar-two",
+		id:      "bar-three",
 	}, nil)
 	// No event
 
@@ -166,6 +172,30 @@ func TestWSSuccess(t *testing.T) {
 	payload = res["payload"].(map[string]interface{})
 	assert.Equal(t, "io.cozy.bars", payload["type"])
 	assert.Equal(t, "bar-one", payload["id"])
+
+	msg = `{"method": "UNSUBSCRIBE", "payload": { "type": "io.cozy.bars", "id": "bar-one" }}`
+	err = ws.WriteMessage(websocket.TextMessage, []byte(msg))
+	if !assert.NoError(t, err) {
+		return
+	}
+	time.Sleep(30 * time.Millisecond)
+
+	h.Publish(inst, realtime.EventUpdate, &testDoc{
+		doctype: "io.cozy.bars",
+		id:      "bar-one",
+	}, nil)
+	// No event
+
+	h.Publish(inst, realtime.EventUpdate, &testDoc{
+		doctype: "io.cozy.bars",
+		id:      "bar-two",
+	}, nil)
+	err = ws.ReadJSON(&res)
+	assert.NoError(t, err)
+	assert.Equal(t, "UPDATED", res["event"])
+	payload = res["payload"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.bars", payload["type"])
+	assert.Equal(t, "bar-two", payload["id"])
 }
 
 func TestWSNotify(t *testing.T) {

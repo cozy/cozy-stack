@@ -37,6 +37,8 @@ server > {"event": "UPDATED",
           "payload": {"id": "idA", "rev": "2-705...", "type": "io.cozy.contacts", "doc": {embeded doc ...}}}
 server > {"event": "DELETED",
           "payload": {"id": "idA", "rev": "3-541...", "type": "io.cozy.contacts"}}
+client > {"method": "UNSUBSCRIBE",
+          "payload": {"type": "io.cozy.contacts"}}
 server > {"event": "UPDATED",
           "payload": {"id": "idB", "rev": "6-457...", "type": "io.cozy.files", "doc": {embeded doc ...}}}
 ```
@@ -72,6 +74,16 @@ server > {"event": "error",
             "title":"The Application can't subscribe to io.cozy.files"
             "source": {"method": "SUBSCRIBE", "payload": {"type":"io.cozy.files"} }
           }}
+```
+
+## UNSUBSCRIBE
+
+A client can send an UNSUBSCRIBE request to no longer be notified of changes
+from a previous request.
+
+```
+{"method": "UNSUBSCRIBE", "payload": {"type": "[desired doctype]"}}
+{"method": "UNSUBSCRIBE", "payload": {"type": "[desired doctype]", "id": "idA"}}
 ```
 
 ## Response messages

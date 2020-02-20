@@ -105,6 +105,16 @@ func (ds *DynamicSubscriber) Subscribe(doctype string) error {
 	return nil
 }
 
+// Unsubscribe removes a listener for events on a whole doctype
+func (ds *DynamicSubscriber) Unsubscribe(doctype string) error {
+	if ds.Closed() || ds.hub == nil {
+		return errors.New("Can't unsubscribe")
+	}
+	t := ds.hub.GetTopic(ds, doctype)
+	ds.removeTopic(t, "")
+	return nil
+}
+
 // Watch adds a listener for events for a specific document (doctype+id)
 func (ds *DynamicSubscriber) Watch(doctype, id string) error {
 	if ds.Closed() || ds.hub == nil {
@@ -112,6 +122,16 @@ func (ds *DynamicSubscriber) Watch(doctype, id string) error {
 	}
 	t := ds.hub.GetTopic(ds, doctype)
 	ds.addTopic(t, id)
+	return nil
+}
+
+// Unwatch removes a listener for events for a specific document (doctype+id)
+func (ds *DynamicSubscriber) Unwatch(doctype, id string) error {
+	if ds.Closed() || ds.hub == nil {
+		return errors.New("Can't unsubscribe")
+	}
+	t := ds.hub.GetTopic(ds, doctype)
+	ds.removeTopic(t, id)
 	return nil
 }
 
@@ -127,6 +147,14 @@ func (ds *DynamicSubscriber) addTopic(t *topic, id string) {
 		ds.topics = append(ds.topics, t)
 	}
 	t.subscribe <- &toWatch{&ds.Channel, id}
+}
+
+func (ds *DynamicSubscriber) removeTopic(t *topic, id string) {
+	for _, topic := range ds.topics {
+		if t == topic {
+			t.unsubscribe <- &toWatch{&ds.Channel, id}
+		}
+	}
 }
 
 // Closed returns true if it will no longer send events in its channel
@@ -146,7 +174,7 @@ func (ds *DynamicSubscriber) Close() error {
 		go func(t *topic) {
 			for {
 				select {
-				case t.unsubscribe <- &ds.Channel:
+				case t.unsubscribe <- &toWatch{&ds.Channel, ""}:
 					wg.Done()
 					return
 				case <-ds.Channel:
