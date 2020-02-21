@@ -22,10 +22,11 @@ func init() {
 
 // ExportOptions contains the options for launching the export worker.
 type ExportOptions struct {
-	PartsSize    int64         `json:"parts_size"`
-	MaxAge       time.Duration `json:"max_age"`
-	WithDoctypes []string      `json:"with_doctypes,omitempty"`
-	WithoutFiles bool          `json:"without_files,omitempty"`
+	PartsSize        int64         `json:"parts_size"`
+	MaxAge           time.Duration `json:"max_age"`
+	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
+	WithoutFiles     bool          `json:"without_files,omitempty"`
+	ContextualDomain string        `json:"contextual_domain,omitempty"`
 }
 
 // ExportWorker is the worker responsible for creating an export of the
@@ -34,6 +35,10 @@ func ExportWorker(c *job.WorkerContext) error {
 	var opts ExportOptions
 	if err := c.UnmarshalMessage(&opts); err != nil {
 		return err
+	}
+
+	if opts.ContextualDomain != "" {
+		c.Instance = c.Instance.WithContextualDomain(opts.ContextualDomain)
 	}
 
 	exportDoc, err := Export(c.Instance, opts, SystemArchiver())

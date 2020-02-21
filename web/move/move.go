@@ -67,6 +67,10 @@ func createExport(c echo.Context) error {
 		return err
 	}
 
+	// The contextual domain is used to send a link on the correct domain when
+	// the user is accessing their cozy from a backup URL.
+	exportOptions.ContextualDomain = inst.ContextualDomain()
+
 	msg, err := job.NewMessage(exportOptions)
 	if err != nil {
 		return err
