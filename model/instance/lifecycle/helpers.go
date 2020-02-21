@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
+	"golang.org/x/net/idna"
 )
 
 func update(inst *instance.Instance) error {
@@ -130,6 +131,10 @@ const illegalChars = " /,;&?#@|='\"\t\r\n\x00"
 const illegalFirstChars = "0123456789."
 
 func validateDomain(domain string) (string, error) {
+	var err error
+	if domain, err = idna.ToUnicode(domain); err != nil {
+		return "", instance.ErrIllegalDomain
+	}
 	domain = strings.TrimSpace(domain)
 	if domain == "" || domain == ".." || domain == "." {
 		return "", instance.ErrIllegalDomain

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"golang.org/x/net/idna"
 )
 
 func init() {
@@ -69,6 +71,16 @@ func StripPort(domain string) string {
 		return cleaned
 	}
 	return domain
+}
+
+// CookieDomain removes the port and does IDNA encoding.
+func CookieDomain(domain string) string {
+	domain = StripPort(domain)
+	ascii, err := idna.ToASCII(domain)
+	if err != nil {
+		return domain
+	}
+	return ascii
 }
 
 // SplitTrimString slices s into all substrings a s separated by sep, like
