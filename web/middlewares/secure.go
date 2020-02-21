@@ -9,6 +9,7 @@ import (
 	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/net/idna"
 )
 
 type (
@@ -114,7 +115,15 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 				h.Set(echo.HeaderStrictTransportSecurity, hstsHeader)
 			}
 			var cspHeader string
-			parent, _, siblings := config.SplitCozyHost(c.Request().Host)
+			host, err := idna.ToUnicode(c.Request().Host)
+			if err != nil {
+				return err
+			}
+			parent, _, siblings := config.SplitCozyHost(host)
+			parent, err = idna.ToASCII(parent)
+			if err != nil {
+				return err
+			}
 			if len(conf.CSPDefaultSrc) > 0 {
 				cspHeader += makeCSPHeader(parent, siblings, "default-src", conf.CSPDefaultSrcWhitelist, conf.CSPDefaultSrc, isSecure)
 			}

@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/net/idna"
 )
 
 // NeedInstance is an echo middleware which will display an error
@@ -17,7 +18,11 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 		if c.Get("instance") != nil {
 			return next(c)
 		}
-		i, err := lifecycle.GetInstance(c.Request().Host)
+		host, err := idna.ToUnicode(c.Request().Host)
+		if err != nil {
+			return err
+		}
+		i, err := lifecycle.GetInstance(host)
 		if err != nil {
 			var errHTTP *echo.HTTPError
 			switch err {
@@ -30,7 +35,7 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 			errHTTP.Internal = err
 			return errHTTP
 		}
-		c.Set("instance", i.WithContextualDomain(c.Request().Host))
+		c.Set("instance", i.WithContextualDomain(host))
 		return next(c)
 	}
 }

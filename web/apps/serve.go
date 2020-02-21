@@ -3,6 +3,7 @@ package apps
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -28,6 +29,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/net/idna"
 )
 
 // Serve is an handler for serving files from the VFS for a client-side app
@@ -400,7 +402,12 @@ func (s serveParams) DefaultWallpaper() string {
 func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug string) error {
 	u := *(c.Request().URL)
 	u.Scheme = i.Scheme()
-	u.Host = c.Request().Host
+	host, err := idna.ToUnicode(c.Request().Host)
+	if err != nil {
+		return err
+	}
+	u.Host = host
+	fmt.Printf("u.Host = %s\n", u.Host)
 	if code := session.FindCode(value, u.Host); code != nil {
 		sess, err := session.Get(i, code.SessionID)
 		if err == nil {
@@ -427,7 +434,7 @@ func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
 
 	redirect := *(c.Request().URL)
 	redirect.Scheme = i.Scheme()
-	redirect.Host = c.Request().Host
+	redirect.Host = i.ContextualDomain()
 
 	queries := make(url.Values)
 	for k, v := range redirect.Query() {

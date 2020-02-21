@@ -289,7 +289,7 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 // use the API router, serve an app, or use delegated authentication.
 func firstRouting(router *echo.Echo, appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		host, err := idna.ToASCII(c.Request().Host)
+		host, err := idna.ToUnicode(c.Request().Host)
 		if err != nil {
 			return err
 		}
