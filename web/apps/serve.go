@@ -422,7 +422,7 @@ func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
 		Value:  "",
 		MaxAge: -1,
 		Path:   "/",
-		Domain: utils.StripPort(i.ContextualDomain()),
+		Domain: utils.CookieDomain(i.ContextualDomain()),
 	})
 
 	redirect := *(c.Request().URL)

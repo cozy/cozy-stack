@@ -43,6 +43,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/net/idna"
 )
 
 const (
@@ -288,7 +289,10 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 // use the API router, serve an app, or use delegated authentication.
 func firstRouting(router *echo.Echo, appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		host := c.Request().Host
+		host, err := idna.ToASCII(c.Request().Host)
+		if err != nil {
+			return err
+		}
 		if contextName, ok := oidc.FindLoginDomain(host); ok {
 			return oidc.LoginDomainHandler(c, contextName)
 		}
