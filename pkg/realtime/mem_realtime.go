@@ -77,7 +77,7 @@ type topic struct {
 
 	// chans for subscribe/unsubscribe requests
 	subscribe   chan *toWatch
-	unsubscribe chan *MemSub
+	unsubscribe chan *toWatch
 	broadcast   chan *Event
 
 	// set of this topic subs, it should only be manipulated by the topic
@@ -89,7 +89,7 @@ func newTopic(key string) *topic {
 	topic := &topic{
 		key:         key,
 		subscribe:   make(chan *toWatch),
-		unsubscribe: make(chan *MemSub),
+		unsubscribe: make(chan *toWatch),
 		broadcast:   make(chan *Event, 10),
 		subs:        make(map[*MemSub]filter),
 	}
@@ -100,8 +100,18 @@ func newTopic(key string) *topic {
 func (t *topic) loop() {
 	for {
 		select {
-		case s := <-t.unsubscribe:
-			delete(t.subs, s)
+		case w := <-t.unsubscribe:
+			if w.id == "" {
+				delete(t.subs, w.sub)
+			} else if f, ok := t.subs[w.sub]; ok {
+				ids := f.ids[:0]
+				for _, id := range f.ids {
+					if id != w.id {
+						ids = append(ids, id)
+					}
+				}
+				f.ids = ids
+			}
 		case w := <-t.subscribe:
 			f := t.subs[w.sub]
 			if w.id == "" {

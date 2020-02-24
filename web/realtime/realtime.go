@@ -168,7 +168,8 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			break
 		}
 
-		if strings.ToUpper(cmd.Method) != "SUBSCRIBE" {
+		method := strings.ToUpper(cmd.Method)
+		if method != "SUBSCRIBE" && method != "UNSUBSCRIBE" {
 			sendErr(ctx, errc, unknownMethod(cmd.Method, cmd))
 			continue
 		}
@@ -196,10 +197,18 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 			}
 		}
 
-		if cmd.Payload.ID == "" {
-			err = ds.Subscribe(cmd.Payload.Type)
-		} else {
-			err = ds.Watch(cmd.Payload.Type, cmd.Payload.ID)
+		if method == "SUBSCRIBE" {
+			if cmd.Payload.ID == "" {
+				err = ds.Subscribe(cmd.Payload.Type)
+			} else {
+				err = ds.Watch(cmd.Payload.Type, cmd.Payload.ID)
+			}
+		} else if method == "UNSUBSCRIBE" {
+			if cmd.Payload.ID == "" {
+				err = ds.Unsubscribe(cmd.Payload.Type)
+			} else {
+				err = ds.Unwatch(cmd.Payload.Type, cmd.Payload.ID)
+			}
 		}
 		if err != nil {
 			logger.
