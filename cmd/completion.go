@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// completionCmdGroup represents the completion command
 var completionCmd = &cobra.Command{
 	Use:   "completion <shell>",
 	Short: "Output shell completion code for the specified shell",
@@ -27,7 +26,7 @@ following line to the .bash_profile
 
     $ source $(brew --prefix)/etc/bash_completion`,
 	Example:   `# cozy-stack completion bash > /etc/bash_completion.d/cozy-stack`,
-	ValidArgs: []string{"bash"},
+	ValidArgs: []string{"bash", "zsh"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return cmd.Usage()
