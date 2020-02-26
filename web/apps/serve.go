@@ -3,7 +3,6 @@ package apps
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -407,7 +406,6 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug st
 		return err
 	}
 	u.Host = host
-	fmt.Printf("u.Host = %s\n", u.Host)
 	if code := session.FindCode(value, u.Host); code != nil {
 		sess, err := session.Get(i, code.SessionID)
 		if err == nil {

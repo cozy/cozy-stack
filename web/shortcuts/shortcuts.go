@@ -5,7 +5,6 @@ package shortcuts
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -136,28 +135,23 @@ func Get(c echo.Context) error {
 	fileID := c.Param("id")
 	file, err := fs.FileByID(fileID)
 	if err != nil {
-		fmt.Printf("1. err = %s\n", err)
 		return wrapError(err)
 	}
 
 	if err := middlewares.AllowVFS(c, permission.GET, file); err != nil {
-		fmt.Printf("2. err = %s\n", err)
 		return err
 	}
 
 	f, err := fs.OpenFile(file)
 	if err != nil {
-		fmt.Printf("3. err = %s\n", err)
 		return wrapError(err)
 	}
 	defer f.Close()
 	link, err := shortcut.Parse(f)
 	if err != nil {
-		fmt.Printf("4. err = %s\n", err)
 		return wrapError(err)
 	}
 	if link.URL == "" {
-		fmt.Printf("5. err = %s\n", err)
 		return jsonapi.BadRequest(errors.New("No URL found"))
 	}
 
