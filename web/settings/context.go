@@ -2,7 +2,6 @@ package settings
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -102,18 +101,17 @@ func finishOnboarding(c echo.Context, acceptHTML bool) error {
 }
 
 func context(c echo.Context) error {
-	i := middlewares.GetInstance(c)
-	ctx, ok := i.SettingsContext()
-	if !ok {
-		return jsonapi.NotFound(errors.New("No context defined in config"))
-	}
-
-	doc := &apiContext{normalize(ctx)}
 	// Any request with a token can ask for the context (no permissions are required)
 	if _, err := middlewares.GetPermission(c); err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
+	i := middlewares.GetInstance(c)
+	ctx, ok := i.SettingsContext()
+	if !ok {
+		ctx = map[string]interface{}{}
+	}
+	doc := &apiContext{normalize(ctx)}
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
