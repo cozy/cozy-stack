@@ -19,7 +19,7 @@ type Result struct {
 }
 
 var (
-	section  = []byte("[InternetShortcut]\r\n")
+	section  = []byte("[InternetShortcut]")
 	urlField = []byte("URL")
 )
 
@@ -30,14 +30,14 @@ func Parse(r io.Reader) (Result, error) {
 	if err != nil {
 		return result, err
 	}
-	if len(buf) < len(section) || !bytes.Equal(buf[:len(section)], section) {
+	lines := bytes.Split(buf, []byte{'\n'})
+	firstLine := bytes.TrimSuffix(lines[0], []byte{'\r'})
+	if len(lines) < 2 || !bytes.Equal(firstLine, section) {
 		return result, ErrInvalidShortcut
 	}
-	buf = buf[len(section):]
-	lines := bytes.Split(buf, []byte("\r"))
-	for _, line := range lines {
-		line = bytes.TrimPrefix(line, []byte("\n"))
-		parts := bytes.SplitN(line, []byte("="), 2)
+	for _, line := range lines[1:] {
+		line = bytes.TrimSuffix(line, []byte{'\r'})
+		parts := bytes.SplitN(line, []byte{'='}, 2)
 		if len(parts) == 2 && bytes.Equal(parts[0], urlField) {
 			result.URL = string(parts[1])
 		}
@@ -48,11 +48,15 @@ func Parse(r io.Reader) (Result, error) {
 // Generate creates the content of a .url file for the given destination URL.
 func Generate(url string) []byte {
 	u := []byte(url)
-	n := len(section) + len(urlField) + 1 + len(u) + 2
+	n := len(section) + 2 + len(urlField) + 1 + len(u) + 2
 	buf := make([]byte, n)
 	i := 0
 	copy(buf[i:i+len(section)], section)
 	i += len(section)
+	buf[i] = '\r'
+	i++
+	buf[i] = '\n'
+	i++
 	copy(buf[i:i+len(urlField)], urlField)
 	i += len(urlField)
 	buf[i] = '='
