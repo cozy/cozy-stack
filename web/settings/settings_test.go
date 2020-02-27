@@ -36,6 +36,15 @@ var instanceRev string
 var token string
 var oauthClientID string
 
+func TestGetContext(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/settings/context", nil)
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+}
+
 func TestPatchWithGoodRev(t *testing.T) {
 	// We are going to patch an instance with newer values, and give the good rev
 	body := `{
