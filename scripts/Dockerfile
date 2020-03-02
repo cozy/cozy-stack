@@ -32,8 +32,8 @@ FROM debian:stretch-slim
 ENV COZY_STACK_HOST=cozy.tools \
 	COZY_STACK_PORT=8080 \
 	COZY_STACK_PATH=cozy-stack \
-	COUCHDB_SRC_URL=https://dist.apache.org/repos/dist/release/couchdb/source/2.3.0/apache-couchdb-2.3.0.tar.gz \
-	COUCHDB_SRC_SHA256=0b3868d042b158d9fd2f504804abd93cd22681c033952f832ce846672c31f352 \
+	COUCHDB_SRC_URL=https://dist.apache.org/repos/dist/release/couchdb/source/2.3.1/apache-couchdb-2.3.1.tar.gz \
+	COUCHDB_SRC_SHA256=43eb8cec41eb52871bf22d35f3e2c2ce5b806ebdbce3594cf6b0438f2534227d \
 	PATH="$PATH:/usr/local/couchdb/bin"
 
 ARG DEBIAN_FRONTEND=noninteractive
