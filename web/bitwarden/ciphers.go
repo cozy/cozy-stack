@@ -76,6 +76,15 @@ func (r *cipherRequest) toCipher() (*bitwarden.Cipher, error) {
 	return &c, nil
 }
 
+type importCipherRequest struct {
+	Ciphers             []cipherRequest `json:"ciphers"`
+	Folders             []folderRequest `json:"folders"`
+	FolderRelationships []struct {
+		Cipher int `json:"key"`
+		Folder int `json:"value"`
+	} `json:"folderRelationships"`
+}
+
 type uriResponse struct {
 	URI   string      `json:"Uri"`
 	Match interface{} `json:"Match"`
@@ -616,4 +625,67 @@ func ShareCipher(c echo.Context) error {
 	_ = settings.UpdateRevisionDate(inst, setting)
 	res := newCipherResponse(cipher, setting)
 	return c.JSON(http.StatusOK, res)
+}
+
+// ImportCiphers is used to import ciphers and folders in bulk.
+func ImportCiphers(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.BitwardenCiphers); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	var req importCipherRequest
+	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid JSON",
+		})
+	}
+
+	// Import the folders
+	folders := make([]interface{}, len(req.Folders))
+	olds := make([]interface{}, len(req.Folders))
+	for i, folder := range req.Folders {
+		folders[i] = folder.toFolder()
+	}
+	if err := couchdb.BulkUpdateDocs(inst, consts.BitwardenFolders, folders, olds); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	// Import the ciphers
+	ciphers := make([]interface{}, len(req.Ciphers))
+	olds = make([]interface{}, len(req.Ciphers))
+	for i, cipherReq := range req.Ciphers {
+		cipher, err := cipherReq.toCipher()
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": err.Error(),
+			})
+		}
+		for _, kv := range req.FolderRelationships {
+			if kv.Cipher == i && kv.Folder < len(folders) {
+				cipher.FolderID = folders[kv.Folder].(*bitwarden.Folder).ID()
+			}
+		}
+		ciphers[i] = cipher
+	}
+	if err := couchdb.BulkUpdateDocs(inst, consts.BitwardenCiphers, ciphers, olds); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	// Update the revision date
+	setting, err := settings.Get(inst)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	_ = settings.UpdateRevisionDate(inst, setting)
+
+	return c.NoContent(http.StatusNoContent)
 }
