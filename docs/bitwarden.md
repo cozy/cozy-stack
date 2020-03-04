@@ -329,7 +329,7 @@ Content-Type: application/json
   "equivalentDomains": [
     ["stackoverflow.com", "serverfault.com", "superuser.com"]
   ],
-  "globalEquivalentDomains": [42, 69],
+  "globalEquivalentDomains": [42, 69]
 }
 ```
 
@@ -346,10 +346,10 @@ Content-Type: application/json
     ["stackoverflow.com", "serverfault.com", "superuser.com"]
   ],
   "GlobalEquivalentDomains": [
-    { Type: 2, Domains: ["ameritrade.com", "tdameritrade.com"], Excluded: false },
-    { Type: 3, Domains: ["bankofamerica.com", "bofa.com", "mbna.com", "usecfo.com"], Excluded: false },
-    { Type: 42, Domains: ["playstation.com", "sonyentertainmentnetwork.com"], Excluded: true },
-    { Type: 69, Domains: ["morganstanley.com", "morganstanleyclientserv.com"], Excluded: true }
+    { "Type": 2, "Domains": ["ameritrade.com", "tdameritrade.com"], "Excluded": false },
+    { "Type": 3, "Domains": ["bankofamerica.com", "bofa.com", "mbna.com", "usecfo.com"], "Excluded": false },
+    { "Type": 42, "Domains": ["playstation.com", "sonyentertainmentnetwork.com"], "Excluded": true },
+    { "Type": 69, "Domains": ["morganstanley.com", "morganstanleyclientserv.com"], "Excluded": true }
   ],
   "Object": "domains"
 }
@@ -377,10 +377,10 @@ Content-Type: application/json
     ["stackoverflow.com", "serverfault.com", "superuser.com"]
   ],
   "GlobalEquivalentDomains": [
-    { Type: 2, Domains: ["ameritrade.com", "tdameritrade.com"], Excluded: false },
-    { Type: 3, Domains: ["bankofamerica.com", "bofa.com", "mbna.com", "usecfo.com"], Excluded: false },
-    { Type: 42, Domains: ["playstation.com", "sonyentertainmentnetwork.com"], Excluded: true },
-    { Type: 69, Domains: ["morganstanley.com", "morganstanleyclientserv.com"], Excluded: true }
+    { "Type": 2, "Domains": ["ameritrade.com", "tdameritrade.com"], "Excluded": false },
+    { "Type": 3, "Domains": ["bankofamerica.com", "bofa.com", "mbna.com", "usecfo.com"], "Excluded": false },
+    { "Type": 42, "Domains": ["playstation.com", "sonyentertainmentnetwork.com"], "Excluded": true },
+    { "Type": 69, "Domains": ["morganstanley.com", "morganstanleyclientserv.com"], "Excluded": true }
   ],
   "Object": "domains"
 }
@@ -464,12 +464,12 @@ Content-Type: application/json
 				"Uris": [
 					{
 						"Uri": "2.6DmdNKlm3a+9k/5DFg+pTg==|7q1Arwz/ZfKEx+fksV3yo0HMQdypHJvyiix6hzgF3gY=|7lSXqjfq5rD3/3ofNZVpgv1ags696B2XXJryiGjDZvk=",
-						"Match": null,
-					},
+						"Match": null
+					}
 				],
 				"Username": "2.4Dwitdv4Br85MABzhMJ4hg==|0BJtHtXbfZWwQXbFcBn0aA==|LM4VC+qNpezmub1f4l1TMLDb9g/Q+sIis2vDbU32ZGA=",
 				"Password":"2.OOlWRBGib6G8WRvBOziKzQ==|Had/obAdd2/6y4qzM1Kc/A==|LtHXwZc5PkiReFhkzvEHIL01NrsWGvintQbmqwxoXSI=",
-				"Totp":null,
+				"Totp":null
 			},
 			"Name": "2.zAgCKbTvGowtaRn1er5WGA==|oVaVLIjfBQoRr5EvHTwfhQ==|lHSTUO5Rgfkjl3J/zGJVRfL8Ab5XrepmyMv9iZL5JBE=",
 			"Notes": "2.NLkXMHtgR8u9azASR4XPOQ==|6/9QPcnoeQJDKBZTjcBAjVYJ7U/ArTch0hUSHZns6v8=|p55cl9FQK/Hef+7yzM7Cfe0w07q5hZI9tTbxupZepyM=",
@@ -530,9 +530,9 @@ Content-Type: application/json
         "Uris": [
           {
             "Uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-            "Match": null,
-          },
-        ],
+            "Match": null
+          }
+        ]
       },
       "Username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
       "Password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
@@ -599,9 +599,9 @@ Content-Type: application/json
 		"Uris": [
 			{
 				"Uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-				"Match": null,
-			},
-		],
+				"Match": null
+			}
+		]
 	},
 	"Username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
 	"Password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
@@ -668,9 +668,9 @@ Content-Type: application/json
 		"Uris": [
 			{
 				"Uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-				"Match": null,
-			},
-		],
+				"Match": null
+			}
+		]
 	},
 	"Username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
 	"Password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
@@ -712,9 +712,9 @@ Content-Type: application/json
 		"Uris": [
 			{
 				"Uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
-				"Match": null,
-			},
-		],
+				"Match": null
+			}
+		]
 	},
 	"Username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
 	"Password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
