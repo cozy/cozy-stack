@@ -860,8 +860,8 @@ HTTP/1.1 204 No Content
 
 This route can be used to import several ciphers and folders in bulk.
 
-In `FolderRelationships`, the `Key` is the index of the cipher in the `Ciphers`
-list, and the `Value` is the index of the folder in the `Folders` list.
+In `folderRelationships`, the `key` is the index of the cipher in the `ciphers`
+list, and the `value` is the index of the folder in the `folders` list.
 
 #### Request
 
