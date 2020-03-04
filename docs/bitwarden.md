@@ -856,6 +856,62 @@ Host: alice.example.com
 HTTP/1.1 204 No Content
 ```
 
+### POST /bitwarden/api/ciphers/import
+
+This route can be used to import several ciphers and folders in bulk.
+
+In `folderRelationships`, the `key` is the index of the cipher in the `ciphers`
+list, and the `value` is the index of the folder in the `folders` list.
+
+#### Request
+
+```http
+POST /bitwarden/api/ciphers/import HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "ciphers": [{
+    "type": 2,
+    "favorite": true,
+    "name": "2.G38TIU3t1pGOfkzjCQE7OQ==|Xa1RupttU7zrWdzIT6oK+w==|J3C6qU1xDrfTgyJD+OrDri1GjgGhU2nmRK75FbZHXoI=",
+    "folderId": null,
+    "organizationId": null,
+    "notes": "2.rSw0uVQEFgUCEmOQx0JnDg==|MKqHLD25aqaXYHeYJPH/mor7l3EeSQKsI7A/R+0bFTI=|ODcUScISzKaZWHlUe4MRGuTT2S7jpyDmbOHl7d+6HiM=",
+    "secureNote": {
+      "type": 0
+    }
+  }, {
+    "type": 1,
+    "favorite": false,
+    "name": "2.d7MttWzJTSSKx1qXjHUxlQ==|01Ath5UqFZHk7csk5DVtkQ==|EMLoLREgCUP5Cu4HqIhcLqhiZHn+NsUDp8dAg1Xu0Io=",
+    "folderId": null,
+    "organizationId": null,
+    "notes": null,
+    "login": {
+      "uri": "2.T57BwAuV8ubIn/sZPbQC+A==|EhUSSpJWSzSYOdJ/AQzfXuUXxwzcs/6C4tOXqhWAqcM=|OWV2VIqLfoWPs9DiouXGUOtTEkVeklbtJQHkQFIXkC8=",
+      "username": "2.JbFkAEZPnuMm70cdP44wtA==|fsN6nbT+udGmOWv8K4otgw==|JbtwmNQa7/48KszT2hAdxpmJ6DRPZst0EDEZx5GzesI=",
+      "password": "2.e83hIsk6IRevSr/H1lvZhg==|48KNkSCoTacopXRmIZsbWg==|CIcWgNbaIN2ix2Fx1Gar6rWQeVeboehp4bioAwngr0o=",
+      "totp": null
+    }
+  }],
+  "folders": [{
+    "name": "2.FQAwIBaDbczEGnEJw4g4hw==|7KreXaC0duAj0ulzZJ8ncA==|nu2sEvotjd4zusvGF8YZJPnS9SiJPDqc1VIfCrfve/o="
+  }],
+  "folderRelationships": [
+    {"key": 1, "value": 0}
+  ]
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Routes for folders
 
 ### GET /bitwarden/api/folders
