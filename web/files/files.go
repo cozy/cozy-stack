@@ -795,7 +795,7 @@ func ThumbnailHandler(c echo.Context) error {
 	if err != nil {
 		return WrapVfsError(err)
 	}
-	if fileID == "" || c.Param("file-id") != fileID {
+	if c.Param("file-id") != fileID {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
 
@@ -986,9 +986,6 @@ func ArchiveDownloadHandler(c echo.Context) error {
 	if err != nil {
 		return WrapVfsError(err)
 	}
-	if archive == nil {
-		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
-	}
 	if err := archive.Serve(instance.VFS(), c.Response()); err != nil {
 		return WrapVfsError(err)
 	}
@@ -1007,9 +1004,6 @@ func FileDownloadHandler(c echo.Context) error {
 	if err != nil {
 		return WrapVfsError(err)
 	}
-	if path == "" {
-		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
-	}
 	return sendFileFromPath(c, path, false)
 }
 
@@ -1018,9 +1012,6 @@ func versionDownloadHandler(c echo.Context, secret string) error {
 	versionID, err := vfs.GetStore().GetVersion(instance, secret)
 	if err != nil {
 		return WrapVfsError(err)
-	}
-	if versionID == "" {
-		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
 
 	fileID := strings.Split(versionID, "/")[0]
@@ -1401,6 +1392,8 @@ func wrapVfsError(err error) *jsonapi.Error {
 		return jsonapi.BadRequest(err)
 	case vfs.ErrFileTooBig:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
+	case vfs.ErrWrongToken:
+		return jsonapi.BadRequest(err)
 	}
 	if _, ok := err.(*jsonapi.Error); !ok {
 		logger.WithNamespace("files").Warnf("Not wrapped error: %s", err)
