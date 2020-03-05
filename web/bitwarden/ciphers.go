@@ -687,5 +687,5 @@ func ImportCiphers(c echo.Context) error {
 	}
 	_ = settings.UpdateRevisionDate(inst, setting)
 
-	return c.NoContent(http.StatusNoContent)
+	return c.NoContent(http.StatusOK)
 }

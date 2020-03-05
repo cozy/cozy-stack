@@ -689,7 +689,7 @@ func TestImportCiphers(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 204, res.StatusCode)
+	assert.Equal(t, 200, res.StatusCode)
 	nb, err := couchdb.CountAllDocs(inst, consts.BitwardenCiphers)
 	assert.NoError(t, err)
 	assert.Equal(t, nbCiphers+2, nb)
