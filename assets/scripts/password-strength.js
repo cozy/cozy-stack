@@ -3,7 +3,7 @@
   const passInput = d.getElementById('password')
   const indicator = d.getElementById('password-strength')
   const passTip = d.getElementById('password-tip')
-  const submitButton = form.querySelector('button')
+  const submitButton = form.querySelector('button[type=submit]')
 
   passInput.addEventListener(
     'input',
