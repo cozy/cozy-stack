@@ -141,15 +141,15 @@ func (s *memStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
 	key = db.DBPrefix() + ":" + key
 	ref, ok := s.vals[key]
 	if !ok {
-		return "", nil
+		return "", ErrWrongToken
 	}
 	if time.Now().After(ref.exp) {
 		delete(s.vals, key)
-		return "", nil
+		return "", ErrWrongToken
 	}
 	f, ok := ref.val.(string)
 	if !ok {
-		return "", nil
+		return "", ErrWrongToken
 	}
 	return f, nil
 }
@@ -160,15 +160,15 @@ func (s *memStore) GetThumb(db prefixer.Prefixer, key string) (string, error) {
 	key = db.DBPrefix() + ":" + key
 	ref, ok := s.vals[key]
 	if !ok {
-		return "", nil
+		return "", ErrWrongToken
 	}
 	if time.Now().After(ref.exp) {
 		delete(s.vals, key)
-		return "", nil
+		return "", ErrWrongToken
 	}
 	f, ok := ref.val.(string)
 	if !ok {
-		return "", nil
+		return "", ErrWrongToken
 	}
 	return f, nil
 }
@@ -179,15 +179,15 @@ func (s *memStore) GetVersion(db prefixer.Prefixer, key string) (string, error) 
 	key = db.DBPrefix() + ":" + key
 	ref, ok := s.vals[key]
 	if !ok {
-		return "", nil
+		return "", ErrWrongToken
 	}
 	if time.Now().After(ref.exp) {
 		delete(s.vals, key)
-		return "", nil
+		return "", ErrWrongToken
 	}
 	f, ok := ref.val.(string)
 	if !ok {
-		return "", nil
+		return "", ErrWrongToken
 	}
 	return f, nil
 }
@@ -198,15 +198,15 @@ func (s *memStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, error
 	key = db.DBPrefix() + ":" + key
 	ref, ok := s.vals[key]
 	if !ok {
-		return nil, nil
+		return nil, ErrWrongToken
 	}
 	if time.Now().After(ref.exp) {
 		delete(s.vals, key)
-		return nil, nil
+		return nil, ErrWrongToken
 	}
 	a, ok := ref.val.(*Archive)
 	if !ok {
-		return nil, nil
+		return nil, ErrWrongToken
 	}
 	return a, nil
 }
@@ -217,15 +217,15 @@ func (s *memStore) GetMetadata(db prefixer.Prefixer, key string) (*Metadata, err
 	key = db.DBPrefix() + ":" + key
 	ref, ok := s.vals[key]
 	if !ok {
-		return nil, nil
+		return nil, ErrWrongToken
 	}
 	if time.Now().After(ref.exp) {
 		delete(s.vals, key)
-		return nil, nil
+		return nil, ErrWrongToken
 	}
 	m, ok := ref.val.(*Metadata)
 	if !ok {
-		return nil, nil
+		return nil, ErrWrongToken
 	}
 	return m, nil
 }
@@ -289,7 +289,7 @@ func (s *redisStore) AddMetadata(db prefixer.Prefixer, metadata *Metadata) (stri
 func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
 	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
 	if err == redis.Nil {
-		return "", nil
+		return "", ErrWrongToken
 	}
 	if err != nil {
 		return "", err
@@ -300,7 +300,7 @@ func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
 func (s *redisStore) GetThumb(db prefixer.Prefixer, key string) (string, error) {
 	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
 	if err == redis.Nil {
-		return "", nil
+		return "", ErrWrongToken
 	}
 	if err != nil {
 		return "", err
@@ -311,7 +311,7 @@ func (s *redisStore) GetThumb(db prefixer.Prefixer, key string) (string, error) 
 func (s *redisStore) GetVersion(db prefixer.Prefixer, key string) (string, error) {
 	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
 	if err == redis.Nil {
-		return "", nil
+		return "", ErrWrongToken
 	}
 	if err != nil {
 		return "", err
@@ -322,7 +322,7 @@ func (s *redisStore) GetVersion(db prefixer.Prefixer, key string) (string, error
 func (s *redisStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, error) {
 	b, err := s.c.Get(db.DBPrefix() + ":" + key).Bytes()
 	if err == redis.Nil {
-		return nil, nil
+		return nil, ErrWrongToken
 	}
 	if err != nil {
 		return nil, err
@@ -337,7 +337,7 @@ func (s *redisStore) GetArchive(db prefixer.Prefixer, key string) (*Archive, err
 func (s *redisStore) GetMetadata(db prefixer.Prefixer, key string) (*Metadata, error) {
 	b, err := s.c.Get(db.DBPrefix() + ":" + key).Bytes()
 	if err == redis.Nil {
-		return nil, nil
+		return nil, ErrWrongToken
 	}
 	if err != nil {
 		return nil, err

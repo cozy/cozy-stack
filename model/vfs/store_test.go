@@ -23,7 +23,7 @@ func TestStoreInMemory(t *testing.T) {
 	assert.NoError(t, err)
 
 	path2, err := store.GetFile(dbB, key1)
-	assert.NoError(t, err)
+	assert.Equal(t, ErrWrongToken, err)
 	assert.Zero(t, path2, "Inter-instances store leaking")
 
 	path3, err := store.GetFile(dbA, key1)
@@ -33,7 +33,7 @@ func TestStoreInMemory(t *testing.T) {
 	time.Sleep(2 * storeTTL)
 
 	path4, err := store.GetFile(dbA, key1)
-	assert.NoError(t, err)
+	assert.Equal(t, ErrWrongToken, err)
 	assert.Zero(t, path4, "no expiration")
 
 	a := &Archive{
@@ -53,7 +53,7 @@ func TestStoreInMemory(t *testing.T) {
 	time.Sleep(2 * storeTTL)
 
 	a3, err := store.GetArchive(dbA, key2)
-	assert.NoError(t, err)
+	assert.Equal(t, ErrWrongToken, err)
 	assert.Nil(t, a3, "no expiration")
 
 	m := &Metadata{"foo": "bar"}
@@ -67,7 +67,7 @@ func TestStoreInMemory(t *testing.T) {
 	time.Sleep(2 * storeTTL)
 
 	m3, err := store.GetArchive(dbA, key3)
-	assert.NoError(t, err)
+	assert.Equal(t, ErrWrongToken, err)
 	assert.Nil(t, m3, "no expiration")
 }
 
@@ -88,7 +88,7 @@ func TestStoreInRedis(t *testing.T) {
 	assert.NoError(t, err)
 
 	path2, err := store.GetFile(dbB, key1)
-	assert.NoError(t, err)
+	assert.Equal(t, ErrWrongToken, err)
 	assert.Zero(t, path2, "Inter-instances store leaking")
 
 	path3, err := store.GetFile(dbA, key1)
@@ -98,7 +98,7 @@ func TestStoreInRedis(t *testing.T) {
 	time.Sleep(2 * storeTTL)
 
 	path4, err := store.GetFile(dbA, key1)
-	assert.NoError(t, err)
+	assert.Equal(t, ErrWrongToken, err)
 	assert.Zero(t, path4, "no expiration")
 
 	a := &Archive{
@@ -118,7 +118,7 @@ func TestStoreInRedis(t *testing.T) {
 	time.Sleep(2 * storeTTL)
 
 	a3, err := store.GetArchive(dbA, key2)
-	assert.NoError(t, err)
+	assert.Equal(t, ErrWrongToken, err)
 	assert.Nil(t, a3, "no expiration")
 
 	m := &Metadata{"foo": "bar"}
@@ -132,6 +132,6 @@ func TestStoreInRedis(t *testing.T) {
 	time.Sleep(2 * storeTTL)
 
 	m3, err := store.GetArchive(dbA, key3)
-	assert.NoError(t, err)
+	assert.Equal(t, ErrWrongToken, err)
 	assert.Nil(t, m3, "no expiration")
 }
