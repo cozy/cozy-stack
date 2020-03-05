@@ -207,6 +207,7 @@ func BulkUpdateDocs(db Database, doctype string, docs, olddocs []interface{}) er
 			event := realtime.EventUpdate
 			if d.Rev() == "" {
 				event = realtime.EventCreate
+				d.SetID(res[i].ID)
 			}
 			d.SetRev(res[i].Rev)
 			if old, ok := olddocs[i].(Doc); ok {
