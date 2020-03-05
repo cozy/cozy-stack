@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/metadata"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -686,6 +687,18 @@ func ImportCiphers(c echo.Context) error {
 		})
 	}
 	_ = settings.UpdateRevisionDate(inst, setting)
+
+	// Send in the realtime hub an event to force a sync
+	go func() {
+		time.Sleep(1 * time.Second)
+		payload := couchdb.JSONDoc{
+			M: map[string]interface{}{
+				"import": true,
+			},
+			Type: consts.BitwardenCiphers,
+		}
+		realtime.GetHub().Publish(inst, realtime.EventNotify, &payload, nil)
+	}()
 
 	return c.NoContent(http.StatusOK)
 }

@@ -244,7 +244,7 @@ const (
 	// hubLoginDelete  = 2
 	hubFolderDelete = 3
 	// hubCiphers      = 4
-	// hubVault        = 5
+	hubVault = 5
 	// hubOrgKeys      = 6
 	hubFolderCreate = 7
 	hubFolderUpdate = 8
@@ -281,6 +281,8 @@ func buildNotification(e *realtime.Event, userID string, setting *settings.Setti
 			t = hubCipherUpdate
 		case realtime.EventDelete:
 			t = hubCipherDelete
+		case realtime.EventNotify:
+			t = hubVault
 		}
 	case consts.Settings:
 		payload = buildLogoutPayload(e, userID)
@@ -337,6 +339,13 @@ func buildFolderPayload(e *realtime.Event, userID string) map[string]interface{}
 }
 
 func buildCipherPayload(e *realtime.Event, userID string, setting *settings.Settings) map[string]interface{} {
+	if e.Verb == realtime.EventNotify {
+		return map[string]interface{}{
+			"UserId":       userID,
+			"RevisionDate": time.Now(),
+		}
+	}
+
 	var sharedWithCozy bool
 	var updatedAt interface{}
 	var date string
