@@ -1,5 +1,5 @@
 ;(function(d) {
-  var passwordVisibility = false
+  var passwordIsVisible = false
   var passwordInput = d.getElementById('password')
   var passwordVisibilityButton = d.getElementById('password-visibility-button')
   var passwordIconDisplay = d.getElementById('display-icon')
@@ -7,14 +7,14 @@
 
   passwordVisibilityButton.addEventListener('click', function(event) {
     event.preventDefault()
-    passwordVisibility = !passwordVisibility
-    passwordInput.type = passwordVisibility ? 'text' : 'password'
+    passwordIsVisible = !passwordIsVisible
+    passwordInput.type = passwordIsVisible ? 'text' : 'password'
     passwordInput.setAttribute(
       'autocomplete',
-      passwordVisibility ? 'off' : 'current-password'
+      passwordIsVisible ? 'off' : 'current-password'
     )
 
-    if (passwordVisibility === true) {
+    if (passwordIsVisible) {
       passwordIconDisplay.setAttribute('class', '')
       passwordIconHide.setAttribute('class', 'u-hide')
     } else {
@@ -24,7 +24,7 @@
 
     passwordVisibilityButton.setAttribute(
       'title',
-      passwordVisibility
+      passwordIsVisible
         ? passwordVisibilityButton.getAttribute('data-hide')
         : passwordVisibilityButton.getAttribute('data-show')
     )
