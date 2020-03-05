@@ -204,11 +204,15 @@ func BulkUpdateDocs(db Database, doctype string, docs, olddocs []interface{}) er
 	}
 	for i, doc := range docs {
 		if d, ok := doc.(Doc); ok {
+			event := realtime.EventUpdate
+			if d.Rev() == "" {
+				event = realtime.EventCreate
+			}
 			d.SetRev(res[i].Rev)
 			if old, ok := olddocs[i].(Doc); ok {
 				RTEvent(db, realtime.EventUpdate, d, old)
 			} else {
-				RTEvent(db, realtime.EventUpdate, d, nil)
+				RTEvent(db, event, d, nil)
 			}
 		}
 	}
