@@ -31,11 +31,11 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mssola/user_agent v0.5.1
 	github.com/ncw/swift v1.0.50
-	github.com/nightlyone/lockfile v0.0.0-20200124072040-edb130adc195
+	github.com/nightlyone/lockfile v1.0.0
 	github.com/oschwald/maxminddb-golang v1.6.0
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pquerna/otp v1.2.0
-	github.com/prometheus/client_golang v1.4.1
+	github.com/prometheus/client_golang v1.5.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sideshow/apns2 v0.20.0
 	github.com/sirupsen/logrus v1.4.2
@@ -45,7 +45,7 @@ require (
 	github.com/spf13/viper v1.6.2
 	github.com/stretchr/testify v1.5.1
 	github.com/ugorji/go/codec v1.1.7
-	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
+	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
