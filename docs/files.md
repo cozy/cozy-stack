@@ -323,7 +323,7 @@ Content-Type: application/json
           "extractor_version": 2,
           "height": 1080,
           "width": 1920
-        },
+        }
       },
       "meta": {
         "rev": "2-235e715b1d82a93285be1b0bd691b779"
@@ -367,7 +367,7 @@ Content-Type: application/json
           "extractor_version": 2,
           "height": 1080,
           "width": 1920
-        },
+        }
       },
       "meta": {
         "rev": "2-4883d6b8ccad32f8fb056af9b7f8b37f"
@@ -392,7 +392,7 @@ Content-Type: application/json
     }
   ],
   "links": {
-    "next": "/files?page[cursor]=g1AAAABjeJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorpFokG5qaGVqYmCWbGxuYGFkYWhgkmqaZJZsZGlgaGJiD9HHA9OWATAJpY83MTUxPTWFgTUvMKU7NygIA694ZyA"
+    "next": "/files/_find?page[cursor]=g1AAAABjeJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorpFokG5qaGVqYmCWbGxuYGFkYWhgkmqaZJZsZGlgaGJiD9HHA9OWATAJpY83MTUxPTWFgTUvMKU7NygIA694ZyA"
   },
   "meta": {
     "count": 2147483646

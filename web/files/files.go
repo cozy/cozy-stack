@@ -1222,9 +1222,12 @@ func FindFilesMango(c echo.Context) error {
 	findRequest["limit"] = limit
 
 	skip := 0
-	skipF64, hasSkip := findRequest["skip"].(float64)
-	if hasSkip {
+	if skipF64, ok := findRequest["skip"].(float64); ok {
 		skip = int(skipF64)
+	}
+
+	if bookmark := c.QueryParam("cursor"); bookmark != "" {
+		findRequest["bookmark"] = bookmark
 	}
 
 	var results []vfs.DirOrFileDoc
@@ -1239,8 +1242,13 @@ func FindFilesMango(c echo.Context) error {
 	} else {
 		total = skip + len(results) // let the client know its done.
 	}
+
+	// XXX: in theory, we should avoid pagination link for POST requests, but
+	// it is here and used, so let's keep it for compatibility.
 	var links jsonapi.LinksList
-	links.Next = "/files?page[cursor]=" + resp.Bookmark
+	if resp.Bookmark != "" {
+		links.Next = "/files/_find?page[cursor]=" + resp.Bookmark
+	}
 
 	out := make([]jsonapi.Object, len(results))
 	for i, dof := range results {
