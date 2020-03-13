@@ -1015,9 +1015,10 @@ HTTP/1.1 204 No Content
 
 ### DELETE /sharings/:sharing-id/recipients/:index
 
-This route is used to revoke only one recipient of the sharing. The parameter is
-the index of this recipient in the `members` array of the sharing. The status
-for this member will be set to `revoked`, its cozy will be informed of the
+This route can be only be called on the cozy instance of the sharer to revoke
+only one recipient of the sharing. The parameter is the index of this recipient 
+in the `members` array of the sharing. 
+The status for this member will be set to `revoked`, its cozy will be informed of the
 revokation, and the credentials for this cozy will be deleted.
 
 **Note**: 0 is not accepted for `index`, as it is the sharer him-self.
