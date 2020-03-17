@@ -234,6 +234,45 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 	return codes, nil
 }
 
+// CreateInteractPermissions creates the permissions doc for reading and
+// writing a note inside this sharing.
+func (s *Sharing) CreateInteractPermissions(inst *instance.Instance, m *Member) (string, error) {
+	key := m.Email
+	if key == "" {
+		key = m.Instance
+	}
+	code, err := inst.CreateShareCode(key)
+	if err != nil {
+		return "", err
+	}
+	codes := map[string]string{key: code}
+
+	set := make(permission.Set, len(s.Rules))
+	getVerb := permission.ALL
+	for i, rule := range s.Rules {
+		set[i] = permission.Rule{
+			Type:     rule.DocType,
+			Title:    rule.Title,
+			Verbs:    getVerb,
+			Selector: rule.Selector,
+			Values:   rule.Values,
+		}
+	}
+
+	md := metadata.New()
+	md.CreatedByApp = s.AppSlug
+	doc := permission.Permission{
+		Permissions: set,
+		Metadata:    md,
+	}
+
+	_, err = permission.CreateShareInteractSet(inst, s.SID, codes, doc)
+	if err != nil {
+		return "", err
+	}
+	return code, nil
+}
+
 // Create checks that the sharing is OK and it persists it in CouchDB if it is the case.
 func (s *Sharing) Create(inst *instance.Instance) (map[string]string, error) {
 	if err := s.ValidateRules(); err != nil {

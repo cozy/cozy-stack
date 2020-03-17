@@ -251,7 +251,7 @@ func ForceNoteSync(c echo.Context) error {
 func OpenNoteURL(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	fileID := c.Param("id")
-	file, err := inst.VFS().FileByID(fileID)
+	open, err := note.Open(inst, fileID)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -260,23 +260,22 @@ func OpenNoteURL(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	var code string
-	if err := vfs.Allows(inst.VFS(), pdoc.Permissions, permission.GET, file); err != nil {
-		sharingID := c.QueryParam("SharingID")
-		if sharingID != "" && pdoc.Type == permission.TypeOauth {
-			code, err = sharing.GetSharecode(inst, sharingID, pdoc.SourceID)
-		}
-		if err != nil {
-			return middlewares.ErrForbidden
-		}
-	}
+
 	// If a directory is shared by link and contains a note, the note can be
 	// opened with the same sharecode as the directory.
 	if pdoc.Type == permission.TypeShareByLink {
-		code = middlewares.GetRequestToken(c)
+		code := middlewares.GetRequestToken(c)
+		open.AddShareByLinkCode(code)
 	}
 
-	doc, err := note.Open(inst, file, code)
+	sharingID := c.QueryParam("SharingID") // Cozy to Cozy sharing
+	if err := open.CheckPermission(pdoc, sharingID); err != nil {
+		return middlewares.ErrForbidden
+	}
+
+	memberIndex, _ := strconv.Atoi(c.QueryParam("MemberIndex"))
+	readOnly := c.QueryParam("ReadOnly") == "true"
+	doc, err := open.GetResult(memberIndex, readOnly)
 	if err != nil {
 		return wrapError(err)
 	}
