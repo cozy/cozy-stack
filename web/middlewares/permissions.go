@@ -213,7 +213,12 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 				return nil, err
 			}
 
-			member, err := sharingDoc.FindMemberBySharecode(instance, token)
+			var member *sharing.Member
+			if pdoc.Type == permission.TypeSharePreview {
+				member, err = sharingDoc.FindMemberBySharecode(instance, token)
+			} else {
+				member, err = sharingDoc.FindMemberByInteractCode(instance, token)
+			}
 			if err != nil {
 				return nil, err
 			}

@@ -422,15 +422,26 @@ func (s *Sharing) FindMemberByState(state string) (*Member, error) {
 // FindMemberBySharecode returns the member that is linked to the sharing by
 // the given sharecode
 func (s *Sharing) FindMemberBySharecode(db prefixer.Prefixer, sharecode string) (*Member, error) {
-	if !s.Owner {
-		return nil, ErrInvalidSharing
-	}
 	perms, err := permission.GetForSharePreview(db, s.SID)
 	if err != nil {
 		return nil, err
 	}
+	return s.findMemberByCode(perms.Codes, sharecode)
+}
+
+// FindMemberByInteractCode returns the member that is linked to the sharing by
+// the given sharecode via a share-interact permission.
+func (s *Sharing) FindMemberByInteractCode(db prefixer.Prefixer, sharecode string) (*Member, error) {
+	perms, err := permission.GetForShareInteract(db, s.SID)
+	if err != nil {
+		return nil, err
+	}
+	return s.findMemberByCode(perms.Codes, sharecode)
+}
+
+func (s *Sharing) findMemberByCode(codes map[string]string, sharecode string) (*Member, error) {
 	var emailOrInstance string
-	for e, code := range perms.Codes {
+	for e, code := range codes {
 		if code == sharecode {
 			emailOrInstance = e
 			break
