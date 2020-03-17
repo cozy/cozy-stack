@@ -206,7 +206,7 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 		}
 
 		// A share token is only valid if the user has not been revoked
-		if pdoc.Type == permission.TypeSharePreview {
+		if pdoc.Type == permission.TypeSharePreview || pdoc.Type == permission.TypeShareInteract {
 			sharingID := strings.Split(pdoc.SourceID, "/")
 			sharingDoc, err := sharing.FindSharing(instance, sharingID[1])
 			if err != nil {

@@ -150,6 +150,7 @@ describe "A folder" do
     child1_recipient.move_to inst_recipient, child3_recipient.couch_id
     file_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
     file_recipient.overwrite inst_recipient, content: "New content from recipient"
+    note_recipient = Note.create inst_recipient, dir_id: child3_recipient.couch_id
 
     sleep 12
     child1 = Folder.find inst, child1.couch_id
@@ -162,6 +163,16 @@ describe "A folder" do
     assert_equal file_recipient.name, file.name
     assert_equal file_recipient.md5sum, file.md5sum
     assert_equal file_recipient.couch_rev, file.couch_rev
+
+    note_path = CGI.escape "/#{folder.name}/#{child3.name}/#{note_recipient.file.name}"
+    note = CozyFile.find_by_path inst, note_path
+    parameters = Note.open inst, note.couch_id
+    assert_equal note_recipient.file.couch_id, parameters["note_id"]
+    assert %w[flat nested].include? parameters["subdomain"]
+    assert %w[http https].include? parameters["protocol"]
+    assert_equal inst_recipient.domain, parameters["instance"]
+    refute_nil parameters["sharecode"]
+    assert_equal "Alice", parameters["public_name"]
 
     # Check that the files are the same on disk
     da = File.join Helpers.current_dir, inst.domain, folder.name

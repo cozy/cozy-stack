@@ -58,6 +58,10 @@ const (
 	// TypeSharePreview is the value of Permission.Type to preview a
 	// cozy-to-cozy sharing
 	TypeSharePreview = "share-preview"
+
+	// TypeShareInteract is the value of Permission.Type for reading and
+	// writing a note in a shared folder.
+	TypeShareInteract = "share-interact"
 )
 
 // ID implements jsonapi.Doc
@@ -208,6 +212,12 @@ func GetForKonnector(db prefixer.Prefixer, slug string) (*Permission, error) {
 // GetForSharePreview retrieves the Permission doc for a given sharing preview
 func GetForSharePreview(db prefixer.Prefixer, sharingID string) (*Permission, error) {
 	return getFromSource(db, TypeSharePreview, consts.Sharings, sharingID)
+}
+
+// GetForShareInteract retrieves the Permission doc for a given sharing to
+// read/write a note
+func GetForShareInteract(db prefixer.Prefixer, sharingID string) (*Permission, error) {
+	return getFromSource(db, TypeShareInteract, consts.Sharings, sharingID)
 }
 
 func getFromSource(db prefixer.Prefixer, permType, docType, slug string) (*Permission, error) {
@@ -489,6 +499,23 @@ func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, c
 func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes map[string]string, subdoc Permission) (*Permission, error) {
 	doc := &Permission{
 		Type:        TypeSharePreview,
+		Permissions: subdoc.Permissions,
+		Codes:       codes,
+		SourceID:    consts.Sharings + "/" + sharingID,
+		Metadata:    subdoc.Metadata,
+	}
+	err := couchdb.CreateDoc(db, doc)
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+// CreateShareInteractSet creates a Permission doc for reading/writing a note
+// inside a sharing
+func CreateShareInteractSet(db prefixer.Prefixer, sharingID string, codes map[string]string, subdoc Permission) (*Permission, error) {
+	doc := &Permission{
+		Type:        TypeShareInteract,
 		Permissions: subdoc.Permissions,
 		Codes:       codes,
 		SourceID:    consts.Sharings + "/" + sharingID,
