@@ -140,8 +140,11 @@ func (o *Opener) shouldOpenLocally() bool {
 	if o.sharing == nil {
 		return true
 	}
-	domain := o.file.CozyMetadata.CreatedOn
-	return o.inst.HasDomain(domain)
+	u, err := url.Parse(o.file.CozyMetadata.CreatedOn)
+	if err != nil {
+		return true
+	}
+	return o.inst.HasDomain(u.Host)
 }
 
 func (o *Opener) openLocalNote(memberIndex int, readOnly bool) (*apiNoteURL, error) {
@@ -180,7 +183,7 @@ func (o *Opener) openSharedNote() (*apiNoteURL, error) {
 			if i == 0 {
 				continue // Skip the owner
 			}
-			if m.Instance == domain {
+			if m.Instance == domain || m.Instance+"/" == domain {
 				creds = &s.Credentials[i-1]
 				creator = &s.Members[i]
 			}
@@ -245,7 +248,7 @@ func (o *Opener) openSharedNote() (*apiNoteURL, error) {
 
 func (o *Opener) getSharecode(memberIndex int, readOnly bool) (string, error) {
 	s := o.sharing
-	if s == nil {
+	if s == nil || o.clientID == "" {
 		return o.code, nil
 	}
 
