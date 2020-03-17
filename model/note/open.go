@@ -3,6 +3,7 @@ package note
 import (
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -170,6 +171,9 @@ func (o *Opener) openSharedNote() (*apiNoteURL, error) {
 	s := o.sharing
 	var creds *sharing.Credentials
 	var creator *sharing.Member
+	var memberIndex int
+	readOnly := s.ReadOnlyRules()
+
 	if s.Owner {
 		domain := o.file.CozyMetadata.CreatedOn
 		for i, m := range s.Members {
@@ -181,13 +185,27 @@ func (o *Opener) openSharedNote() (*apiNoteURL, error) {
 				creator = &s.Members[i]
 			}
 		}
+		if o.clientID != "" && !readOnly {
+			for i, c := range s.Credentials {
+				if c.InboundClientID == o.clientID {
+					memberIndex = i + 1
+					readOnly = s.Members[i+1].ReadOnly
+				}
+			}
+		}
 	} else {
 		creds = &s.Credentials[0]
 		creator = &s.Members[0]
 	}
 
 	if creator == nil || creator.Status == sharing.MemberStatusRevoked {
-		return nil, ErrInvalidFile
+		// If the creator of the note is no longer in the sharing, the owner of
+		// the sharing takes the lead, and if the sharing is revoked, any
+		// member can edit the note on their instance.
+		if o.clientID == "" {
+			o.sharing = nil
+		}
+		return o.openLocalNote(memberIndex, readOnly)
 	}
 
 	xoredID := sharing.XorID(o.file.ID(), creds.XorKey)
@@ -196,11 +214,15 @@ func (o *Opener) openSharedNote() (*apiNoteURL, error) {
 		return nil, err
 	}
 	opts := &request.Options{
-		Method:  http.MethodGet,
-		Scheme:  u.Scheme,
-		Domain:  u.Host,
-		Path:    "/notes/" + xoredID + "/open",
-		Queries: url.Values{"SharingID": {s.ID()}},
+		Method: http.MethodGet,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/notes/" + xoredID + "/open",
+		Queries: url.Values{
+			"SharingID":   {s.ID()},
+			"MemberIndex": {strconv.FormatInt(int64(memberIndex), 10)},
+			"ReadOnly":    {strconv.FormatBool(readOnly)},
+		},
 		Headers: request.Headers{
 			"Accept":        "application/vnd.api+json",
 			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
