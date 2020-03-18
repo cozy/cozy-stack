@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -41,11 +42,12 @@ func (n *apiNoteURL) Fetch(field string) []string            { return nil }
 // Opener can be used to find the parameters for creating the URL where the
 // note can be opened.
 type Opener struct {
-	inst     *instance.Instance
-	file     *vfs.FileDoc
-	sharing  *sharing.Sharing // can be nil
-	clientID string
-	code     string
+	inst      *instance.Instance
+	file      *vfs.FileDoc
+	sharing   *sharing.Sharing // can be nil
+	code      string
+	clientID  string
+	memberKey string
 }
 
 // Open will return an Opener for the given file.
@@ -103,6 +105,31 @@ func (o *Opener) AddShareByLinkCode(code string) {
 // CheckPermission takes the permission doc, and checks that the user has the
 // right to open the note.
 func (o *Opener) CheckPermission(pdoc *permission.Permission, sharingID string) error {
+	// If a note is opened from a preview of a sharing, and nobody has accepted
+	// the sharing until now, the io.cozy.shared document for the note has not
+	// been created, and we need to fill the sharing by another way.
+	if o.sharing == nil && pdoc.Type == permission.TypeSharePreview {
+		parts := strings.SplitN(pdoc.SourceID, "/", 2)
+		if len(parts) != 2 {
+			return sharing.ErrInvalidSharing
+		}
+		sharingID := parts[1]
+		var sharing sharing.Sharing
+		if err := couchdb.GetDoc(o.inst, consts.Sharings, sharingID, &sharing); err != nil {
+			return err
+		}
+		o.sharing = &sharing
+		preview, err := permission.GetForSharePreview(o.inst, sharingID)
+		if err != nil {
+			return err
+		}
+		for k, v := range preview.Codes {
+			if v == o.code {
+				o.memberKey = k
+			}
+		}
+	}
+
 	// If a note is opened via a token for cozy-to-cozy sharing, then the note
 	// must be in this sharing, or the stack should refuse to open the note.
 	if sharingID != "" && o.sharing != nil && o.sharing.ID() == sharingID {
@@ -248,13 +275,28 @@ func (o *Opener) openSharedNote() (*apiNoteURL, error) {
 
 func (o *Opener) getSharecode(memberIndex int, readOnly bool) (string, error) {
 	s := o.sharing
-	if s == nil || o.clientID == "" {
+	if s == nil || (o.clientID == "" && o.memberKey == "") {
 		return o.code, nil
 	}
 
 	var member *sharing.Member
 	var err error
-	if s.Owner {
+	if o.memberKey != "" {
+		// Preview of a cozy-to-cozy sharing
+		for i, m := range s.Members {
+			if m.Instance == o.memberKey || m.Email == o.memberKey {
+				member = &s.Members[i]
+			}
+		}
+		if member == nil {
+			return "", sharing.ErrMemberNotFound
+		}
+		if member.ReadOnly {
+			readOnly = true
+		} else {
+			readOnly = s.ReadOnlyRules()
+		}
+	} else if s.Owner {
 		member, err = s.FindMemberByInboundClientID(o.clientID)
 		if err != nil {
 			return "", err
