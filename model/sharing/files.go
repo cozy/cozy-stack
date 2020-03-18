@@ -493,7 +493,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		inst.Logger().WithField("nspace", "replicator").
 			Warnf("Error on apply bulk files: %s", errm)
 	}
-	return nil
+	return errm
 }
 
 func removeReferencesFromRule(file *vfs.FileDoc, rule *Rule) {
@@ -912,9 +912,9 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 
 	err = fs.UpdateDirDoc(oldDoc, dir)
 	if err == os.ErrExist {
-		name, errr := s.resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
-		if errr != nil {
-			return errr
+		name, errb := s.resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
+		if errb != nil {
+			return errb
 		}
 		if name != "" {
 			indexer.IncrementRevision()
