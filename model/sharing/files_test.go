@@ -122,7 +122,7 @@ func TestCreateDir(t *testing.T) {
 		},
 		"name": "Foo",
 	}
-	assert.NoError(t, s.CreateDir(inst, target))
+	assert.NoError(t, s.CreateDir(inst, target, resolveResolution))
 	dir, err := inst.VFS().DirByID(idFoo)
 	assert.NoError(t, err)
 	if assert.NotNil(t, dir) {
@@ -149,7 +149,7 @@ func TestCreateDir(t *testing.T) {
 		"updated_at": "2018-04-13T15:08:32.581420274+01:00",
 		"tags":       []interface{}{"qux", "courge"},
 	}
-	assert.NoError(t, s.CreateDir(inst, target))
+	assert.NoError(t, s.CreateDir(inst, target, resolveResolution))
 	dir, err = inst.VFS().DirByID(idBar)
 	assert.NoError(t, err)
 	if assert.NotNil(t, dir) {
@@ -190,7 +190,7 @@ func TestUpdateDir(t *testing.T) {
 		"updated_at": "2018-04-13T15:08:32.581420274+01:00",
 		"tags":       []interface{}{"qux", "courge"},
 	}
-	assert.NoError(t, s.CreateDir(inst, target))
+	assert.NoError(t, s.CreateDir(inst, target, resolveResolution))
 	dir, err := inst.VFS().DirByID(idFoo)
 	assert.NoError(t, err)
 	if assert.NotNil(t, dir) {
@@ -218,7 +218,7 @@ func TestUpdateDir(t *testing.T) {
 	var ref SharedRef
 	err = couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+idFoo, &ref)
 	assert.NoError(t, err)
-	assert.NoError(t, s.UpdateDir(inst, target, dir, &ref))
+	assert.NoError(t, s.UpdateDir(inst, target, dir, &ref, resolveResolution))
 	dir, err = inst.VFS().DirByID(idFoo)
 	assert.NoError(t, err)
 	if assert.NotNil(t, dir) {

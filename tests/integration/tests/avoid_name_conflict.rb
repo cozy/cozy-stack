@@ -39,13 +39,13 @@ describe "A file or folder" do
     assert_equal two.name, two_bob.name
 
     # Rename the directories and check that we have no conflict
-    two.rename inst_alice, "baz"
-    one.rename inst_alice, "bar"
+    one.rename inst_alice, "foobar"
+    two.rename inst_alice, "foo"
     sleep 12
     one_bob = Folder.find inst_bob, one_bob.couch_id
     two_bob = Folder.find inst_bob, two_bob.couch_id
-    assert_equal "bar", one_bob.name
-    assert_equal "baz", two_bob.name
+    assert_equal "foobar", one_bob.name
+    assert_equal "foo", two_bob.name
 
     assert_equal inst_alice.fsck, ""
     assert_equal inst_bob.fsck, ""
