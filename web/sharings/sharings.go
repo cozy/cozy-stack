@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
 )
 
@@ -619,6 +620,9 @@ func checkGetPermissions(c echo.Context, s *sharing.Sharing) error {
 
 // wrapErrors returns a formatted error
 func wrapErrors(err error) error {
+	if merr, ok := err.(*multierror.Error); ok {
+		err = merr.WrappedErrors()[0]
+	}
 	switch err {
 	case contact.ErrNoMailAddress:
 		return jsonapi.InvalidAttribute("recipients", err)

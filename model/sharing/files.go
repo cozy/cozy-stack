@@ -424,7 +424,14 @@ func (s *Sharing) GetFolder(inst *instance.Instance, m *Member, xoredID string) 
 // ApplyBulkFiles takes a list of documents for the io.cozy.files doctype and
 // will apply changes to the VFS according to those documents.
 func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
+	type retryOp struct {
+		target map[string]interface{}
+		dir    *vfs.DirDoc
+		ref    *SharedRef
+	}
+
 	var errm error
+	var retries []retryOp
 	fs := inst.VFS()
 
 	for _, target := range docs {
@@ -472,15 +479,33 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 				err = s.TrashFile(inst, file, &s.Rules[infos.Rule])
 			}
 		} else if file != nil {
-			err = multierror.Append(errm, ErrSafety)
+			err = ErrSafety
 		} else if ref != nil && infos.Removed {
 			continue
 		} else if dir == nil {
-			err = s.CreateDir(inst, target)
+			err = s.CreateDir(inst, target, delayResolution)
+			if err == os.ErrExist {
+				retries = append(retries, retryOp{
+					target: target,
+				})
+				err = nil
+			}
 		} else if ref == nil {
-			err = multierror.Append(errm, ErrSafety)
+			err = ErrSafety
 		} else {
-			err = s.UpdateDir(inst, target, dir, ref)
+			// XXX we have to clone the dir document as it is modified by the
+			// UpdateDir function and retrying the operation won't work with
+			// the modified doc
+			cloned := dir.Clone().(*vfs.DirDoc)
+			err = s.UpdateDir(inst, target, dir, ref, delayResolution)
+			if err == os.ErrExist {
+				retries = append(retries, retryOp{
+					target: target,
+					dir:    cloned,
+					ref:    ref,
+				})
+				err = nil
+			}
 		}
 		if err != nil {
 			inst.Logger().WithField("nspace", "replicator").
@@ -489,11 +514,25 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		}
 	}
 
+	for _, op := range retries {
+		var err error
+		if op.dir == nil {
+			err = s.CreateDir(inst, op.target, resolveResolution)
+		} else {
+			err = s.UpdateDir(inst, op.target, op.dir, op.ref, resolveResolution)
+		}
+		if err != nil {
+			inst.Logger().WithField("nspace", "replicator").
+				Debugf("Error on apply bulk file: %s (%#v - %#v)", err, op.target, op.ref)
+			errm = multierror.Append(errm, err)
+		}
+	}
+
 	if errm != nil {
 		inst.Logger().WithField("nspace", "replicator").
 			Warnf("Error on apply bulk files: %s", errm)
 	}
-	return nil
+	return errm
 }
 
 func removeReferencesFromRule(file *vfs.FileDoc, rule *Rule) {
@@ -781,9 +820,16 @@ func extractNameAndIndexer(inst *instance.Instance, target map[string]interface{
 	return name, indexer, nil
 }
 
+type nameConflictResolution int
+
+const (
+	delayResolution nameConflictResolution = iota
+	resolveResolution
+)
+
 // CreateDir creates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
-func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}) error {
+func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface{}, resolution nameConflictResolution) error {
 	inst.Logger().WithField("nspace", "replicator").
 		Debugf("CreateDir %v (%#v)", target["_id"], target)
 	ref := SharedRef{
@@ -828,7 +874,7 @@ func (s *Sharing) CreateDir(inst *instance.Instance, target map[string]interface
 	}
 	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex}
 	err = fs.CreateDir(dir)
-	if err == os.ErrExist {
+	if err == os.ErrExist && resolution == resolveResolution {
 		name, errr := s.resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
 		if errr != nil {
 			return errr
@@ -877,7 +923,13 @@ func (s *Sharing) prepareDirWithAncestors(inst *instance.Instance, dir *vfs.DirD
 
 // UpdateDir updates a directory on this cozy to reflect a change on another
 // cozy instance of this sharing.
-func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface{}, dir *vfs.DirDoc, ref *SharedRef) error {
+func (s *Sharing) UpdateDir(
+	inst *instance.Instance,
+	target map[string]interface{},
+	dir *vfs.DirDoc,
+	ref *SharedRef,
+	resolution nameConflictResolution,
+) error {
 	inst.Logger().WithField("nspace", "replicator").
 		Debugf("UpdateDir %v (%#v)", target["_id"], target)
 	if strings.HasPrefix(dir.Fullpath+"/", vfs.TrashDirName+"/") {
@@ -911,10 +963,10 @@ func (s *Sharing) UpdateDir(inst *instance.Instance, target map[string]interface
 	copySafeFieldsToDir(target, dir)
 
 	err = fs.UpdateDirDoc(oldDoc, dir)
-	if err == os.ErrExist {
-		name, errr := s.resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
-		if errr != nil {
-			return errr
+	if err == os.ErrExist && resolution == resolveResolution {
+		name, errb := s.resolveConflictSamePath(inst, dir.DocID, dir.Fullpath)
+		if errb != nil {
+			return errb
 		}
 		if name != "" {
 			indexer.IncrementRevision()
