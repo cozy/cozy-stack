@@ -51,6 +51,13 @@ func Prelogin(c echo.Context) error {
 	})
 }
 
+// SendHint is the handler for sending the hint when the user has forgot their
+// password.
+func SendHint(c echo.Context) error {
+	i := middlewares.GetInstance(c)
+	return lifecycle.SendHint(i)
+}
+
 // GetProfile is the handler for the route to get profile information.
 func GetProfile(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -459,6 +466,7 @@ func Routes(router *echo.Group) {
 
 	accounts := api.Group("/accounts")
 	accounts.POST("/prelogin", Prelogin)
+	accounts.POST("/password-hint", SendHint)
 	accounts.GET("/profile", GetProfile)
 	accounts.POST("/profile", UpdateProfile)
 	accounts.PUT("/profile", UpdateProfile)
