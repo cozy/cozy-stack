@@ -83,14 +83,14 @@ rules are based on
 Don't forget to add tests and be sure they are green:
 
 ```
-$ go test -v ./...
+$ make unit-tests
 ```
 
 If you want to play with the modified cozy-stack (for example, testing it with a
 webapp), you can build it locally and start it with this command:
 
 ```
-$ go build && ./cozy-stack serve
+$ make run
 ```
 
 #### Step 5: Commit

@@ -20,7 +20,7 @@ jobs:
           echo ::add-path::$(go env GOPATH)/bin
           go install
       - name: Build
-        run: ./scripts/build.sh assets
+        run: make assets
       - uses: stefanzweifel/git-auto-commit-action@v2.1.0
         with:
           commit_message: Build assets

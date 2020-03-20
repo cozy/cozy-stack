@@ -20,11 +20,7 @@ jobs:
           echo ::add-path::$(go env GOPATH)/bin
           go install
       - name: Build
-        run: |
-          rm -rf docs/cli/*
-          cozy-stack doc markdown docs/cli
-          cozy-stack completion bash > scripts/completion/cozy-stack.bash
-          cozy-stack completion zsh > scripts/completion/cozy-stack.zsh
+        run: make cli
       - uses: stefanzweifel/git-auto-commit-action@v2.1.0
         with:
           commit_message: Build CLI docs and shell completions
