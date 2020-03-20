@@ -718,6 +718,15 @@ func TestChangeSecurityStamp(t *testing.T) {
 	assert.Equal(t, 401, res.StatusCode)
 }
 
+func TestSendHint(t *testing.T) {
+	body := `{ "email": "me@bitwarden.example.net" }`
+	req, _ := http.NewRequest("POST", ts.URL+"/bitwarden/api/accounts/password-hint", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
@@ -726,6 +735,7 @@ func TestMain(m *testing.M) {
 		Domain:     "bitwarden.example.net",
 		Passphrase: "cozy",
 		PublicName: "Pierre",
+		Email:      "pierre@cozy.tools",
 	})
 
 	ts = setup.GetTestServer("/bitwarden", Routes)

@@ -141,6 +141,28 @@ Content-Type: application/json
 }
 ```
 
+### POST /bitwarden/api/accounts/password-hint
+
+#### Request
+
+```http
+POST /bitwarden/api/accounts/password-hint HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "email": "me@alice.example.com"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+```
+
 ### GET /bitwarden/api/accounts/profile
 
 #### Request
