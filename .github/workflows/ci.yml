@@ -51,6 +51,6 @@ jobs:
           go install
       - name: Lint
         if: matrix.go-version == '1.14.x'
-        run: ./scripts/lint.sh
+        run: make lint jslint
       - name: Unit tests
-        run: go test -timeout 2m ./...
+        run: make unit-tests

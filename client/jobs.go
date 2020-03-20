@@ -198,7 +198,7 @@ func (c *Client) GetTrigger(triggerID string) (*Trigger, error) {
 func (c *Client) GetTriggers(worker string) ([]*Trigger, error) {
 	res, err := c.Req(&request.Options{
 		Method:  "GET",
-		Path:    fmt.Sprintf("/jobs/triggers"),
+		Path:    "/jobs/triggers",
 		Queries: url.Values{"Worker": {worker}},
 	})
 	if err != nil {
@@ -231,7 +231,7 @@ func (c *Client) TriggerLaunch(triggerID string) (*Job, error) {
 func (c *Client) ListTriggers() ([]*Trigger, error) {
 	res, err := c.Req(&request.Options{
 		Method: "GET",
-		Path:   fmt.Sprintf("/jobs/triggers"),
+		Path:   "/jobs/triggers",
 	})
 	if err != nil {
 		return nil, err

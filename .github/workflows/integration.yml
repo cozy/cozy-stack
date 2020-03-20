@@ -50,4 +50,4 @@ jobs:
           echo ::add-path::$(go env GOPATH)/bin
           go install
       - name: Test
-        run: ./scripts/integration-test.sh
+        run: make integration-tests

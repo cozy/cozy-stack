@@ -41,7 +41,7 @@ executable bit (`chmod +x cozy-stack`) and put it in your `$PATH`.
 installed and configured, you can run the following command:
 
 ```
-go get github.com/cozy/cozy-stack
+make
 ```
 
 This will fetch the sources and build a binary in `$GOPATH/bin/cozy-stack`.
@@ -66,7 +66,7 @@ cozy-stack serve
 And then create an instance for development:
 
 ```bash
-cozy-stack instances add --apps home,drive,settings,store --passphrase cozy "cozy.tools:8080"
+make instance
 ```
 
 The cozy-stack server listens on http://cozy.tools:8080/ by default. See

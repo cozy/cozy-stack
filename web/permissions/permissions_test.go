@@ -814,7 +814,7 @@ func TestCreatePermissionWithoutMetadata(t *testing.T) {
 	_, err = installer.RunSync()
 	assert.NoError(t, err)
 
-	bodyReq := fmt.Sprintf(`{"data": {"type": "io.cozy.permissions","attributes": {"permissions": {"files": {"type": "io.cozy.files","verbs": ["GET"]}}}}}`)
+	bodyReq := `{"data": {"type": "io.cozy.permissions","attributes": {"permissions": {"files": {"type": "io.cozy.files","verbs": ["GET"]}}}}}`
 	tok, err := testInstance.MakeJWT(permission.TypeWebapp,
 		"drive", "io.cozy.files", "", time.Now())
 	assert.NoError(t, err)
@@ -878,7 +878,7 @@ func TestCreatePermissionWithMetadata(t *testing.T) {
 	_, err = installer.RunSync()
 	assert.NoError(t, err)
 
-	bodyReq := fmt.Sprintf(`{"data":{"type":"io.cozy.permissions","attributes":{"permissions":{"files":{"type":"io.cozy.files","verbs":["GET"]}},"cozyMetadata":{"createdByApp":"foobar"}}}}`)
+	bodyReq := `{"data":{"type":"io.cozy.permissions","attributes":{"permissions":{"files":{"type":"io.cozy.files","verbs":["GET"]}},"cozyMetadata":{"createdByApp":"foobar"}}}}`
 	tok, err := testInstance.MakeJWT(permission.TypeWebapp,
 		"drive", "io.cozy.files", "", time.Now())
 	assert.NoError(t, err)
