@@ -48,12 +48,12 @@ assets: web/statik/statik.go
 .PHONY: assets
 
 web/statik/statik.go:
-	@if ! [ -x "$$(command -v statik)" ]; go get github.com/cozy/cozy-stack/pkg/statik; fi
+	@if ! [ -x "$$(command -v statik)" ]; thne go get github.com/cozy/cozy-stack/pkg/statik; fi
 	@scripts/build.sh assets
 
 ## cli: builds the CLI documentation and shell completions
 cli:
-	@if ! [ -x "$$(command -v cozy-stack)" ]; make build; fi
+	@if ! [ -x "$$(command -v cozy-stack)" ]; then make build; fi
 	@scripts/build.sh assets
 	@rm -rf docs/cli/*
 	@cozy-stack doc markdown docs/cli
