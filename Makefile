@@ -33,6 +33,7 @@ bin/golangci-lint: Makefile
 ## jslint: enforce a consistent code style for Js code
 jslint: ./node_modules/.bin/eslint
 	@./node_modules/.bin/eslint "assets/scripts/**" tests/integration/konnector/*.js
+.PHONY: jslint
 
 ./node_modules/.bin/eslint: Makefile
 	@npm install eslint@5.16.0 prettier@2.0.1 eslint-plugin-prettier@3.1.2 eslint-config-cozy-app@1.5.0
@@ -45,11 +46,9 @@ pretty:
 
 ## assets: package the assets as go code
 assets: web/statik/statik.go
-.PHONY: assets
-
-web/statik/statik.go:
-	@if ! [ -x "$$(command -v statik)" ]; thne go get github.com/cozy/cozy-stack/pkg/statik; fi
+	@if ! [ -x "$$(command -v statik)" ]; then go get github.com/cozy/cozy-stack/pkg/statik; fi
 	@scripts/build.sh assets
+.PHONY: assets
 
 ## cli: builds the CLI documentation and shell completions
 cli:
@@ -59,16 +58,17 @@ cli:
 	@cozy-stack doc markdown docs/cli
 	@cozy-stack completion bash > scripts/completion/cozy-stack.bash
 	@cozy-stack completion zsh > scripts/completion/cozy-stack.zsh
+.PHONY: cli
 
 ## unit-tests: run the tests
 unit-tests:
 	@go test -p 1 -timeout 2m ./...
-.PHONY: tests
+.PHONY: unit-tests
 
 ## integration-tests: run the tests
 integration-tests:
 	@scripts/integration-test.sh
-.PHONY: tests
+.PHONY: integration-tests
 
 ## clean: clean the generated files and directories
 clean:
