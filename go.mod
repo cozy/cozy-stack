@@ -19,7 +19,7 @@ require (
 	github.com/golang/gddo v0.0.0-20200310004957-95ce5a452273
 	github.com/google/go-querystring v1.0.0
 	github.com/google/gops v0.3.7
-	github.com/gorilla/websocket v1.4.1
+	github.com/gorilla/websocket v1.4.2
 	github.com/h2non/filetype v1.0.12
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
