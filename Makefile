@@ -35,7 +35,7 @@ jslint: ./node_modules/.bin/eslint
 	@./node_modules/.bin/eslint "assets/scripts/**" tests/integration/konnector/*.js
 
 ./node_modules/.bin/eslint: Makefile
-	@npm install eslint@5.16.0 prettier eslint-plugin-prettier eslint-config-cozy-app
+	@npm install eslint@5.16.0 prettier@2.0.1 eslint-plugin-prettier@3.1.2 eslint-config-cozy-app@1.5.0
 
 ## pretty: make the assets more prettier
 pretty:

@@ -1,4 +1,4 @@
-;(function(w, d) {
+;(function (w, d) {
   if (!w.fetch || !w.Headers) return
 
   const form = d.getElementById('onboarding-password-form')
@@ -10,7 +10,7 @@
 
   let errorPanel
   const renewField = d.getElementById('onboarding-password-field')
-  const showError = function(error) {
+  const showError = function (error) {
     if (error) {
       error = '' + error
     } else {
@@ -27,7 +27,7 @@
     submitButton.removeAttribute('disabled')
   }
 
-  form.addEventListener('submit', function(event) {
+  form.addEventListener('submit', function (event) {
     if (passphraseInput.classList.contains('is-error')) {
       return
     }
@@ -51,15 +51,15 @@
 
     w.password
       .hash(passphraseInput.value, salt, iterations)
-      .then(pass => {
+      .then((pass) => {
         hashed = pass.hashed
         return w.password.makeEncKey(pass.masterKey)
       })
-      .then(key => {
+      .then((key) => {
         masterKey = key.cipherString
         return w.password.makeKeyPair(key.key)
       })
-      .then(pair => {
+      .then((pair) => {
         const reqBody =
           'passphrase=' +
           encodeURIComponent(hashed) +
@@ -80,14 +80,14 @@
           method: 'POST',
           headers: headers,
           body: reqBody,
-          credentials: 'same-origin'
+          credentials: 'same-origin',
         })
       })
-      .then(response => {
+      .then((response) => {
         const success = response.status < 400
         response
           .json()
-          .then(body => {
+          .then((body) => {
             if (success) {
               submitButton.childNodes[1].innerHTML =
                 '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'

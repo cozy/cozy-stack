@@ -1,11 +1,11 @@
-;(function(d) {
+;(function (d) {
   var passwordIsVisible = false
   var passwordInput = d.getElementById('password')
   var passwordVisibilityButton = d.getElementById('password-visibility-button')
   var passwordIconDisplay = d.getElementById('display-icon')
   var passwordIconHide = d.getElementById('hide-icon')
 
-  passwordVisibilityButton.addEventListener('click', function(event) {
+  passwordVisibilityButton.addEventListener('click', function (event) {
     event.preventDefault()
     passwordIsVisible = !passwordIsVisible
     passwordInput.type = passwordIsVisible ? 'text' : 'password'

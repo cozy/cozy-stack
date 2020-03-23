@@ -8,7 +8,7 @@ function _createHiddenIframe(target, uri) {
 }
 
 function openUriWithHiddenFrame(uri, failCb) {
-  const timeout = setTimeout(function() {
+  const timeout = setTimeout(function () {
     failCb()
     handler.remove()
   }, 500)
@@ -28,7 +28,7 @@ function openUriWithHiddenFrame(uri, failCb) {
 }
 
 function openUriWithTimeoutHack(uri, failCb) {
-  const timeout = setTimeout(function() {
+  const timeout = setTimeout(function () {
     failCb()
     handler.remove()
   }, 500)
@@ -69,7 +69,7 @@ function checkBrowser() {
     isSafari,
     isIOS,
     isIOS122,
-    isChrome: !!window.chrome && !isOpera
+    isChrome: !!window.chrome && !isOpera,
   }
 }
 
@@ -90,12 +90,12 @@ function check(uri, failCb) {
   }
 }
 
-;(function(window) {
+;(function (window) {
   let params = new URLSearchParams(document.location.search.substring(1))
 
   const fallbackUri = params.get('fallback_uri')
   const form = document.getElementById('authorizeform')
-  form.addEventListener('submit', function(e) {
+  form.addEventListener('submit', function (e) {
     /*
       We want to call manually the /authorize route
       in order to get a JSON response containing the deeplink
@@ -120,14 +120,14 @@ function check(uri, failCb) {
       body: bodyString,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Accept: 'application/json'
-      }
+        Accept: 'application/json',
+      },
     })
-      .then(function(response) {
+      .then(function (response) {
         return response.json()
       })
-      .then(function(json) {
-        check(json.deeplink, function() {
+      .then(function (json) {
+        check(json.deeplink, function () {
           window.location.href = fallbackUri
         })
       })

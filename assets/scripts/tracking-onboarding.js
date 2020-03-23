@@ -1,4 +1,4 @@
-;(function(w, d) {
+;(function (w, d) {
   try {
     const data = d.currentScript.dataset
     const tracker = w.Piwik.getTracker(data.matomoUrl, data.matomoSiteId)

@@ -1,4 +1,4 @@
-;(function(w) {
+;(function (w) {
   // Return given password strength as an object {percentage, label}
   function getStrength(password) {
     if (!password && password !== '') {
@@ -16,10 +16,10 @@
       // digit
       { regexp: /[0-9]/g, size: 10 },
       // special
-      { regexp: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/g, size: 30 }
+      { regexp: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/g, size: 30 },
     ]
 
-    const possibleChars = charsets.reduce(function(possibleChars, charset) {
+    const possibleChars = charsets.reduce(function (possibleChars, charset) {
       if (charset.regexp.test(password)) possibleChars += charset.size
       return possibleChars
     }, 0)
@@ -81,7 +81,7 @@
     }
     return Promise.resolve({
       hashed: w.btoa(binary),
-      masterKey: master.buffer
+      masterKey: master.buffer,
     })
   }
 
@@ -95,26 +95,26 @@
       name: 'PBKDF2',
       salt: saltBuf,
       iterations: iterations,
-      hash: { name: 'SHA-256' }
+      hash: { name: 'SHA-256' },
     }
     const second = {
       name: 'PBKDF2',
       salt: passwordBuf,
       iterations: 1,
-      hash: { name: 'SHA-256' }
+      hash: { name: 'SHA-256' },
     }
     let masterKey
     return subtle
       .importKey('raw', passwordBuf, { name: 'PBKDF2' }, false, ['deriveBits'])
-      .then(material => subtle.deriveBits(first, material, 256))
-      .then(key => {
+      .then((material) => subtle.deriveBits(first, material, 256))
+      .then((key) => {
         masterKey = key
         return subtle.importKey('raw', key, { name: 'PBKDF2' }, false, [
-          'deriveBits'
+          'deriveBits',
         ])
       })
-      .then(material => subtle.deriveBits(second, material, 256))
-      .then(hashed => {
+      .then((material) => subtle.deriveBits(second, material, 256))
+      .then((hashed) => {
         let binary = ''
         const bytes = new Uint8Array(hashed)
         for (let i = 0; i < bytes.byteLength; i++) {
@@ -147,16 +147,16 @@
     const iv = randomBytes(16)
     return subtle
       .importKey('raw', masterKey, { name: 'AES-CBC' }, false, ['encrypt'])
-      .then(impKey =>
+      .then((impKey) =>
         subtle.encrypt({ name: 'AES-CBC', iv: iv }, impKey, encKey)
       )
-      .then(encrypted => {
+      .then((encrypted) => {
         const iv64 = fromBufferToB64(iv)
         const data = fromBufferToB64(encrypted)
         return {
           // 0 means AesCbc256_B64
           cipherString: `0.${iv64}|${data}`,
-          key: encKey
+          key: encKey,
         }
       })
   }
@@ -172,38 +172,38 @@
       name: 'RSA-OAEP',
       modulusLength: 2048,
       publicExponent: new Uint8Array([0x01, 0x00, 0x01]), // 65537
-      hash: { name: 'SHA-1' }
+      hash: { name: 'SHA-1' },
     }
     const hmacParams = { name: 'HMAC', hash: 'SHA-256' }
     let publicKey, privateKey, encryptedKey
     return subtle
       .generateKey(rsaParams, true, ['encrypt', 'decrypt'])
-      .then(pair => {
+      .then((pair) => {
         const publicPromise = subtle.exportKey('spki', pair.publicKey)
         const privatePromise = subtle.exportKey('pkcs8', pair.privateKey)
         return Promise.all([publicPromise, privatePromise])
       })
-      .then(keys => {
+      .then((keys) => {
         publicKey = keys[0]
         privateKey = keys[1]
         return subtle.importKey('raw', encKey, { name: 'AES-CBC' }, false, [
-          'encrypt'
+          'encrypt',
         ])
       })
-      .then(impKey =>
+      .then((impKey) =>
         subtle.encrypt({ name: 'AES-CBC', iv: iv }, impKey, privateKey)
       )
-      .then(encrypted => {
+      .then((encrypted) => {
         encryptedKey = encrypted
         return subtle.importKey('raw', macKey, hmacParams, false, ['sign'])
       })
-      .then(impKey => {
+      .then((impKey) => {
         const macData = new Uint8Array(iv.byteLength + encryptedKey.byteLength)
         macData.set(new Uint8Array(iv), 0)
         macData.set(new Uint8Array(encryptedKey), iv.byteLength)
         return subtle.sign(hmacParams, impKey, macData)
       })
-      .then(mac => {
+      .then((mac) => {
         const public64 = fromBufferToB64(publicKey)
         const iv64 = fromBufferToB64(iv)
         const priv = fromBufferToB64(encryptedKey)
@@ -211,7 +211,7 @@
         return {
           publicKey: public64,
           // 2 means AesCbc256_HmacSha256_B64
-          privateKey: `2.${iv64}|${priv}|${mac64}`
+          privateKey: `2.${iv64}|${priv}|${mac64}`,
         }
       })
   }
@@ -222,6 +222,6 @@
     getStrength: getStrength,
     hash: hash,
     makeEncKey: makeEncKey,
-    makeKeyPair: makeKeyPair
+    makeKeyPair: makeKeyPair,
   }
 })(window)

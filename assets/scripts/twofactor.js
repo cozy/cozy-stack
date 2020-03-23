@@ -1,5 +1,5 @@
 /* global Headers, fetch */
-;(function(w, d) {
+;(function (w, d) {
   if (!w.fetch || !w.Headers) return
 
   const loginForm = d.getElementById('login-form')
@@ -23,7 +23,7 @@
     // do nothing
   }
 
-  const showError = function(error) {
+  const showError = function (error) {
     if (error) {
       error = '' + error
     } else {
@@ -40,7 +40,7 @@
     submitButton.removeAttribute('disabled')
   }
 
-  const onSubmitTwoFactorCode = function(event) {
+  const onSubmitTwoFactorCode = function (event) {
     event.preventDefault()
     submitButton.setAttribute('disabled', true)
 
@@ -70,14 +70,14 @@
       method: 'POST',
       headers: headers,
       body: reqBody,
-      credentials: 'same-origin'
+      credentials: 'same-origin',
     })
-      .then(function(response) {
+      .then(function (response) {
         const loginSuccess = response.status < 400
 
         response
           .json()
-          .then(function(body) {
+          .then(function (body) {
             if (loginSuccess) {
               if (
                 localStorage &&

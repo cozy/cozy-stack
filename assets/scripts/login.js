@@ -1,4 +1,4 @@
-;(function(w, d) {
+;(function (w, d) {
   if (!w.fetch || !w.Headers) return
 
   const loginForm = d.getElementById('login-form')
@@ -24,7 +24,7 @@
 
   let errorPanel = loginForm.querySelector('.wizard-errors')
   const loginField = d.getElementById('login-field')
-  const showError = function(error) {
+  const showError = function (error) {
     if (error) {
       error = '' + error
     } else {
@@ -41,7 +41,7 @@
     submitButton.removeAttribute('disabled')
   }
 
-  const onSubmitPassphrase = function(event) {
+  const onSubmitPassphrase = function (event) {
     event.preventDefault()
     submitButton.setAttribute('disabled', true)
 
@@ -65,7 +65,7 @@
     }
 
     passPromise
-      .then(pass => {
+      .then((pass) => {
         const reqBody =
           'passphrase=' +
           encodeURIComponent(pass) +
@@ -82,14 +82,14 @@
           method: 'POST',
           headers: headers,
           body: reqBody,
-          credentials: 'same-origin'
+          credentials: 'same-origin',
         })
       })
-      .then(response => {
+      .then((response) => {
         const loginSuccess = response.status < 400
         response
           .json()
-          .then(body => {
+          .then((body) => {
             if (loginSuccess) {
               submitButton.childNodes[1].innerHTML =
                 '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'

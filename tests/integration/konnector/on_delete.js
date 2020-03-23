@@ -13,18 +13,18 @@ let url =
   fields.account_rev
 let options = {
   headers: {
-    Authorization: `Bearer ${credentials}`
-  }
+    Authorization: `Bearer ${credentials}`,
+  },
 }
 
 const main = () => {
-  http.get(url, options, res => {
+  http.get(url, options, (res) => {
     if (res.statusCode !== 200) {
       throw new Error(`Status Code: ${res.statusCode}`)
     }
     res.setEncoding('utf8')
     let rawData = ''
-    res.on('data', chunk => {
+    res.on('data', (chunk) => {
       rawData += chunk
     })
     res.on('end', () => {
@@ -33,7 +33,7 @@ const main = () => {
         throw new Error(data.failure)
       }
       url = instance + 'data/io.cozy.accounts/' + data.relationships.data._id
-      http.get(url, options, res2 => {
+      http.get(url, options, (res2) => {
         if (res2.statusCode !== 200) {
           throw new Error(`Status Code: ${res2.statusCode}`)
         }
