@@ -252,7 +252,7 @@ func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
 }
 
 func titleToFilename(inst *instance.Instance, title string, updatedAt time.Time) string {
-	name := title
+	name := strings.SplitN(title, "\n", 2)[0]
 	if name == "" {
 		name = inst.Translate("Notes New note")
 		name += " " + updatedAt.Format(time.RFC3339)
