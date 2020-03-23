@@ -152,7 +152,7 @@ func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDo
 	// can rename with the new title.
 	newTitle := titleToFilename(inst, d.Title, now)
 	oldTitle, _ := old.Metadata["title"].(string)
-	rename := titleToFilename(inst, oldTitle, old.UpdatedAt) == old.DocName
+	rename := d.Title != "" && titleToFilename(inst, oldTitle, old.UpdatedAt) == old.DocName
 	if old.DocName == "" {
 		rename = true
 	}
@@ -578,8 +578,9 @@ func Update(inst *instance.Instance, fileID string) error {
 		return err
 	}
 
+	oldVersion, _ := old.Metadata["version"].(float64)
 	if doc.Title == old.Metadata["title"] &&
-		doc.Version == old.Metadata["version"] &&
+		doc.Version == int64(oldVersion) &&
 		consts.NoteMimeType == old.Mime {
 		// Nothing to do
 		return nil
