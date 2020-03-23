@@ -152,7 +152,7 @@ func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDo
 	// can rename with the new title.
 	newTitle := titleToFilename(inst, d.Title, now)
 	oldTitle, _ := old.Metadata["title"].(string)
-	rename := titleToFilename(inst, oldTitle, old.UpdatedAt) == old.DocName
+	rename := d.Title != "" && titleToFilename(inst, oldTitle, old.UpdatedAt) == old.DocName
 	if old.DocName == "" {
 		rename = true
 	}
