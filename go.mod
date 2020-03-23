@@ -28,7 +28,7 @@ require (
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.6
 	github.com/leonelquinteros/gotext v1.4.0
-	github.com/mitchellh/mapstructure v1.1.2
+	github.com/mitchellh/mapstructure v1.2.2
 	github.com/mssola/user_agent v0.5.1
 	github.com/ncw/swift v1.0.50
 	github.com/nightlyone/lockfile v1.0.0
