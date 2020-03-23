@@ -347,29 +347,36 @@ func renderAlreadyAccepted(c echo.Context, inst *instance.Instance, cozyURL stri
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state, sharecode string, m *sharing.Member) error {
 	publicName, _ := inst.PublicName()
 	fqdn := strings.TrimPrefix(m.Instance, "https://")
-	slug, domain := "", consts.KnownFlatDomains[0]
+	slug, placeholder := "", consts.KnownFlatDomains[0]
+	if context, ok := inst.SettingsContext(); ok {
+		if domain, ok := context["sharing_domain"].(string); ok {
+			placeholder = domain
+		}
+	}
+	domain := placeholder
 	if strings.HasPrefix(m.Instance, "http://") {
 		slug, domain = m.Instance, ""
 	} else if parts := strings.SplitN(fqdn, ".", 2); len(parts) == 2 {
 		slug, domain = parts[0], parts[1]
 	}
 	return c.Render(code, "sharing_discovery.html", echo.Map{
-		"Title":           inst.TemplateTitle(),
-		"CozyUI":          middlewares.CozyUI(inst),
-		"ThemeCSS":        middlewares.ThemeCSS(inst),
-		"Domain":          inst.ContextualDomain(),
-		"ContextName":     inst.ContextName,
-		"Locale":          inst.Locale,
-		"PublicName":      publicName,
-		"RecipientSlug":   slug,
-		"RecipientDomain": domain,
-		"RecipientName":   m.Name,
-		"SharingID":       sharingID,
-		"State":           state,
-		"ShareCode":       sharecode,
-		"URLError":        code == http.StatusBadRequest,
-		"NotEmailError":   code == http.StatusPreconditionFailed,
-		"Favicon":         middlewares.Favicon(inst),
+		"Title":             inst.TemplateTitle(),
+		"CozyUI":            middlewares.CozyUI(inst),
+		"ThemeCSS":          middlewares.ThemeCSS(inst),
+		"Domain":            inst.ContextualDomain(),
+		"ContextName":       inst.ContextName,
+		"Locale":            inst.Locale,
+		"PublicName":        publicName,
+		"RecipientName":     m.Name,
+		"RecipientSlug":     slug,
+		"RecipientDomain":   domain,
+		"PlaceholderDomain": placeholder,
+		"SharingID":         sharingID,
+		"State":             state,
+		"ShareCode":         sharecode,
+		"URLError":          code == http.StatusBadRequest,
+		"NotEmailError":     code == http.StatusPreconditionFailed,
+		"Favicon":           middlewares.Favicon(inst),
 	})
 }
 
