@@ -578,8 +578,9 @@ func Update(inst *instance.Instance, fileID string) error {
 		return err
 	}
 
+	oldVersion, _ := old.Metadata["version"].(float64)
 	if doc.Title == old.Metadata["title"] &&
-		doc.Version == old.Metadata["version"] &&
+		doc.Version == int64(oldVersion) &&
 		consts.NoteMimeType == old.Mime {
 		// Nothing to do
 		return nil
