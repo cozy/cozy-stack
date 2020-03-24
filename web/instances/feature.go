@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/feature"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/labstack/echo/v4"
@@ -69,6 +70,51 @@ func putFeatureSets(c echo.Context) error {
 		return wrapError(err)
 	}
 	return c.JSON(http.StatusOK, inst.FeatureSets)
+}
+
+func getContextFromConfig(context string) (interface{}, error) {
+	contexts := config.GetConfig().Contexts
+
+	if context != "" {
+		ctx, ok := contexts[context]
+		if ok {
+			return ctx, nil
+		}
+	}
+
+	ctx, ok := contexts[config.DefaultInstanceContext]
+	if ok && ctx != nil {
+		return ctx, nil
+	}
+
+	return nil, fmt.Errorf("Unable to get context %q from config", context)
+}
+
+func getFeatureConfig(c echo.Context) error {
+	context, err := getContextFromConfig(c.Param("context"))
+	if err != nil {
+		return wrapError(err)
+	}
+	ctx := context.(map[string]interface{})
+
+	normalized := make(map[string]interface{})
+	if m, ok := ctx["features"].(map[interface{}]interface{}); ok {
+		for k, v := range m {
+			normalized[fmt.Sprintf("%v", k)] = v
+		}
+	} else if items, ok := ctx["features"].([]interface{}); ok {
+		for _, item := range items {
+			if m, ok := item.(map[interface{}]interface{}); ok && len(m) == 1 {
+				for k, v := range m {
+					normalized[fmt.Sprintf("%v", k)] = v
+				}
+			} else {
+				normalized[fmt.Sprintf("%v", item)] = true
+			}
+		}
+	}
+
+	return c.JSON(http.StatusOK, normalized)
 }
 
 func getFeatureContext(c echo.Context) error {
