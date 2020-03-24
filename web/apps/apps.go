@@ -107,7 +107,7 @@ func installHandler(installerType consts.AppType) echo.HandlerFunc {
 		slug := c.Param("slug")
 		source := c.QueryParam("Source")
 		if source == "" {
-			source = "registry://" + slug
+			source = "registry://" + slug + "/stable"
 		}
 		if err := middlewares.AllowInstallApp(c, installerType, source, permission.POST); err != nil {
 			return err

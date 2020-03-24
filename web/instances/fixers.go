@@ -262,7 +262,7 @@ func orphanAccountFixer(c echo.Context) error {
 		opts := &app.InstallerOptions{
 			Operation:  app.Install,
 			Type:       consts.KonnectorType,
-			SourceURL:  "registry://" + slug,
+			SourceURL:  "registry://" + slug + "/stable",
 			Slug:       slug,
 			Registries: inst.Registries(),
 		}
