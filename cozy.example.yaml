@@ -294,6 +294,9 @@ contexts:
     onboarded_redirection: collect/#/discovery/?intro
     # Redirect to the photos application after login
     default_redirection: drive/#/files
+    # This domain will be used as a suggestion for the members of a sharing
+    # when they are asked for the URL of their Cozy instance
+    sharing_domain: mycozy.cloud
     # Allow to customize the cozy-bar link to the help
     help_link: https://forum.cozy.io/
     # claudy actions list
