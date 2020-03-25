@@ -12,6 +12,7 @@ import (
 	"path"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
@@ -373,7 +374,7 @@ func pollInstaller(c echo.Context, instance *instance.Instance, isEventStream bo
 		}
 		buf := new(bytes.Buffer)
 		if err := jsonapi.WriteData(buf, &apiApp{man}, nil); err == nil {
-			writeStream(w, "state", buf.String())
+			writeStream(w, "state", strings.TrimSuffix(buf.String(), "\n"))
 		}
 		if done {
 			break
