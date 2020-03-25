@@ -1194,6 +1194,41 @@ _cozy-stack_doc()
     noun_aliases=()
 }
 
+_cozy-stack_features_config()
+{
+    last_command="cozy-stack_features_config"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--context=")
+    two_word_flags+=("--context")
+    local_nonpersistent_flags+=("--context=")
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
 _cozy-stack_features_defaults()
 {
     last_command="cozy-stack_features_defaults"
@@ -1375,6 +1410,7 @@ _cozy-stack_features()
     command_aliases=()
 
     commands=()
+    commands+=("config")
     commands+=("defaults")
     commands+=("flags")
     if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then

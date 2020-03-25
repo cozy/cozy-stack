@@ -206,6 +206,40 @@ To remove a flag, set it to an empty array (or null).
 	},
 }
 
+var featureConfigCmd = &cobra.Command{
+	Use:   "config <context-name>",
+	Short: `Display the feature flags from configuration for a context`,
+	Long: `
+cozy-stack feature config displays the feature flags from configuration for a context.
+
+These flags are read only and can only be updated by changing configuration and restarting the stack.
+`,
+	Example: `$ cozy-stack feature config --context beta`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if flagContext == "" {
+			return cmd.Usage()
+		}
+		c := newAdminClient()
+		req := request.Options{
+			Method: "GET",
+			Path:   fmt.Sprintf("/instances/feature/config/%s", flagContext),
+		}
+		res, err := c.Req(&req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		var obj map[string]json.RawMessage
+		if err = json.NewDecoder(res.Body).Decode(&obj); err != nil {
+			return err
+		}
+		for k, v := range obj {
+			fmt.Printf("- %s: %s\n", k, string(v))
+		}
+		return nil
+	},
+}
+
 var featureDefaultCmd = &cobra.Command{
 	Use:   "defaults",
 	Short: `Display and update the default values for feature flags`,
@@ -249,11 +283,13 @@ func init() {
 	featureFlagCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	featureSetCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	featureRatioCmd.Flags().StringVar(&flagContext, "context", "", "The context for the feature flags")
+	featureConfigCmd.Flags().StringVar(&flagContext, "context", "", "The context for the feature flags")
 
 	featureCmdGroup.AddCommand(featureShowCmd)
 	featureCmdGroup.AddCommand(featureFlagCmd)
 	featureCmdGroup.AddCommand(featureSetCmd)
 	featureCmdGroup.AddCommand(featureRatioCmd)
+	featureCmdGroup.AddCommand(featureConfigCmd)
 	featureCmdGroup.AddCommand(featureDefaultCmd)
 	RootCmd.AddCommand(featureCmdGroup)
 }

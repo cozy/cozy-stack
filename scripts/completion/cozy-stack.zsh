@@ -520,6 +520,7 @@ function _cozy-stack_features {
   case $state in
   cmnds)
     commands=(
+      "config:Display the feature flags from configuration for a context"
       "defaults:Display and update the default values for feature flags"
       "flags:Display and update the feature flags for an instance"
       "ratio:Display and update the feature flags for a context"
@@ -531,6 +532,9 @@ function _cozy-stack_features {
   esac
 
   case "$words[1]" in
+  config)
+    _cozy-stack_features_config
+    ;;
   defaults)
     _cozy-stack_features_defaults
     ;;
@@ -547,6 +551,16 @@ function _cozy-stack_features {
     _cozy-stack_features_show
     ;;
   esac
+}
+
+function _cozy-stack_features_config {
+  _arguments \
+    '--context[The context for the feature flags]:' \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
 }
 
 function _cozy-stack_features_defaults {
