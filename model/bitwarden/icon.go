@@ -243,5 +243,8 @@ func downloadIcon(u string) (*Icon, error) {
 		Mime: res.Header.Get("Content-Type"),
 		Body: b,
 	}
+	if strings.Split(ico.Mime, "/")[0] != "image" {
+		return nil, errors.New("Invalid mime-type")
+	}
 	return &ico, nil
 }
