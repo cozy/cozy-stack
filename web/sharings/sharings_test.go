@@ -1080,6 +1080,54 @@ func TestRevocationFromRecipient(t *testing.T) {
 	assertLastRecipientIsRevoked(t, s, sharedRefs)
 }
 
+func TestCreateShortcut(t *testing.T) {
+	targetURL := "https://alice.cozy.example/sharings/c7804bdb4f9f8dae5a363cb9a30dd8/discovery"
+	body := `
+{
+  "data": {
+    "type": "io.cozy.files.shortcuts",
+    "attributes": {
+      "name": "sunset.jpg.url",
+      "url": "` + targetURL + `",
+      "metadata": {
+        "sharing": {
+          "status": "new"
+        },
+        "target": {
+          "cozyMetadata": {
+            "instance": "https://alice.cozy.example/"
+          },
+          "_type": "io.cozy.files",
+          "mime": "image/jpg"
+        }
+      }
+    }
+  }
+}`
+	req, _ := http.NewRequest("POST", tsB.URL+"/sharings/shortcuts", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
+
+	dir, err := sharing.EnsureSharedWithMeDir(bobInstance)
+	assert.NoError(t, err)
+	file, err := bobInstance.VFS().FileByPath("/" + dir.DocName + "/sunset.jpg.url")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.Equal(t, "file", file.Type)
+	assert.Equal(t, "sunset.jpg.url", file.DocName)
+	assert.Equal(t, "application/internet-shortcut", file.Mime)
+	assert.Equal(t, consts.SharedWithMeDirID, file.DirID)
+	status, _ := file.Metadata["sharing"].(map[string]interface{})
+	assert.Equal(t, "new", status["status"])
+	target, _ := file.Metadata["target"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.files", target["_type"])
+	assert.Equal(t, "image/jpg", target["mime"])
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"

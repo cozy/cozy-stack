@@ -154,6 +154,43 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /sharings/shortcuts
+
+This route can be used to create a shortcut for a Cozy to Cozy sharing that has
+not yet been accepted.
+
+### Request
+
+```http
+POST /sharings/shortcuts HTTP/1.1
+Host: bob.cozy.example
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.files.shortcuts",
+    "attributes": {
+      "name": "sunset.jpg.url",
+      "url": "https://alice.cozy.example/sharings/c7804bdb4f9f8dae5a363cb9a30dd8/discovery",
+      "metadata": {
+        "sharing": {
+          "status": "new"
+        },
+        "target": {
+          "cozyMetadata": {
+            "instance": "https://alice.cozy.example/"
+          },
+          "_type": "io.cozy.files",
+          "mime": "image/jpg"
+        }
+      }
+    }
+  }
+}
+```
+
 ### GET /sharings/:sharing-id/discovery
 
 If no preview_path is set, it's an URL to this route that will be sent to the

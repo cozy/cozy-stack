@@ -113,8 +113,6 @@ func Create(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
-	defer func() {
-	}()
 	_, err = file.Write(body)
 	if cerr := file.Close(); cerr != nil && err == nil {
 		err = cerr
