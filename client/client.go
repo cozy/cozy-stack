@@ -66,9 +66,9 @@ func (c *Client) init() {
 		c.Retries = 3
 	}
 	if c.Transport == nil {
-		c.Transport = &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-		}
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.Proxy = http.ProxyFromEnvironment
+		c.Transport = transport
 	}
 	if c.AuthStorage == nil {
 		c.AuthStorage = auth.NewFileStorage()

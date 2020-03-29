@@ -104,16 +104,17 @@ func NewHTTPClient(opt HTTPEndpoint) (client *http.Client, u *url.URL, err error
 	if opt.InsecureSkipValidation {
 		c.SetInsecureSkipValidation()
 	}
-	tr := http.Transport{TLSClientConfig: c.Config()}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = c.Config()
 	if opt.MaxIdleConnsPerHost > 0 {
-		tr.MaxIdleConnsPerHost = opt.MaxIdleConnsPerHost
+		transport.MaxIdleConnsPerHost = opt.MaxIdleConnsPerHost
 	}
 	if opt.DisableCompression {
-		tr.DisableCompression = true
+		transport.DisableCompression = true
 	}
 	client = &http.Client{
 		Timeout:   opt.Timeout,
-		Transport: &tr,
+		Transport: transport,
 	}
 	return
 }
