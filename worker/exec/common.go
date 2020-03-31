@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"math"
-	"os"
 	"runtime"
 	"strconv"
 	"time"
@@ -50,7 +49,7 @@ func init() {
 
 type execWorker interface {
 	Slug() string
-	PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (workDir string, err error)
+	PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (workDir string, cleanDir func(), err error)
 	PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instance) (cmd string, env []string, err error)
 	ScanOutput(ctx *job.WorkerContext, i *instance.Instance, line []byte) error
 	Error(i *instance.Instance, err error) error
@@ -65,12 +64,12 @@ func worker(ctx *job.WorkerContext) (err error) {
 		return instance.ErrNotFound
 	}
 
-	workDir, err := worker.PrepareWorkDir(ctx, ctx.Instance)
+	workDir, cleanDir, err := worker.PrepareWorkDir(ctx, ctx.Instance)
+	defer cleanDir()
 	if err != nil {
 		worker.Logger(ctx).Errorf("PrepareWorkDir: %s", err)
 		return err
 	}
-	defer os.RemoveAll(workDir)
 
 	cmdStr, env, err := worker.PrepareCmdEnv(ctx, ctx.Instance)
 	if err != nil {
