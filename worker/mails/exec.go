@@ -16,7 +16,8 @@ import (
 func execMjml(ctx *job.WorkerContext, template []byte) ([]byte, error) {
 	log := ctx.Logger()
 
-	workDir, err := prepareWorkDir()
+	workDir, cleanDir, err := prepareWorkDir()
+	defer cleanDir()
 	if err != nil {
 		log.Errorf("PrepareWorkDir: %s", err)
 		return nil, err
@@ -45,26 +46,30 @@ func execMjml(ctx *job.WorkerContext, template []byte) ([]byte, error) {
 	return out, nil
 }
 
-func prepareWorkDir() (string, error) {
+func prepareWorkDir() (string, func(), error) {
+	cleanDir := func() {}
 	osFS := afero.NewOsFs()
 	workDir, err := afero.TempDir(osFS, "", "mjml")
 	if err != nil {
-		return "", err
+		return "", cleanDir, err
+	}
+	cleanDir = func() {
+		_ = os.RemoveAll(workDir)
 	}
 	workFS := afero.NewBasePathFs(osFS, workDir)
 	dst, err := workFS.OpenFile("index.js", os.O_CREATE|os.O_WRONLY, 0640)
 	if err != nil {
-		return "", err
+		return "", cleanDir, err
 	}
 	f, err := assets.Open("/js/cozy-mjml.js", config.DefaultInstanceContext)
 	if err != nil {
-		return "", err
+		return "", cleanDir, err
 	}
 	_, _ = io.Copy(dst, f)
 	if err = dst.Close(); err != nil {
-		return "", err
+		return "", cleanDir, err
 	}
-	return workDir, err
+	return workDir, cleanDir, err
 }
 
 func prepareCmdEnv(ctx *job.WorkerContext) (string, []string) {

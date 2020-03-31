@@ -150,7 +150,9 @@ func beforeHookKonnector(j *job.Job) (bool, error) {
 	return true, nil
 }
 
-func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (string, error) {
+func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (string, func(), error) {
+	cleanDir := func() {}
+
 	// Reset the errors from previous runs on retries
 	w.err = nil
 	w.lastErr = nil
@@ -159,10 +161,10 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 	var data json.RawMessage
 	var msg KonnectorMessage
 	if err = ctx.UnmarshalMessage(&data); err != nil {
-		return "", err
+		return "", cleanDir, err
 	}
 	if err = json.Unmarshal(data, &msg); err != nil {
-		return "", err
+		return "", cleanDir, err
 	}
 	msg.data = data
 
@@ -173,9 +175,9 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 	w.man, err = app.GetKonnectorBySlugAndUpdate(i, slug,
 		app.Copier(consts.KonnectorType, i), i.Registries())
 	if err == app.ErrNotFound {
-		return "", job.ErrBadTrigger{Err: err}
+		return "", cleanDir, job.ErrBadTrigger{Err: err}
 	} else if err != nil {
-		return "", err
+		return "", cleanDir, err
 	}
 
 	// Check that the associated account is present.
@@ -184,25 +186,28 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 		acc = &account.Account{}
 		err = couchdb.GetDoc(i, consts.Accounts, msg.Account, acc)
 		if couchdb.IsNotFoundError(err) {
-			return "", job.ErrBadTrigger{Err: err}
+			return "", cleanDir, job.ErrBadTrigger{Err: err}
 		}
 	}
 
 	man := w.man
 	// Upgrade "installed" to "ready"
 	if err := app.UpgradeInstalledState(i, man); err != nil {
-		return "", err
+		return "", cleanDir, err
 	}
 
 	if man.State() != app.Ready {
-		return "", errors.New("Konnector is not ready")
+		return "", cleanDir, errors.New("Konnector is not ready")
 	}
 
 	var workDir string
 	osFS := afero.NewOsFs()
 	workDir, err = afero.TempDir(osFS, "", "konnector-"+slug)
 	if err != nil {
-		return "", err
+		return "", cleanDir, err
+	}
+	cleanDir = func() {
+		_ = os.RemoveAll(workDir)
 	}
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
@@ -217,17 +222,17 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 		err = copyFiles(workFS, fileServer, slug, man.Version(), man.Checksum())
 	}
 	if err != nil {
-		return "", err
+		return "", cleanDir, err
 	}
 
 	// Create the folder in which the konnector has the right to write.
 	if err = w.ensureFolderToSave(ctx, i, acc); err != nil {
-		return "", err
+		return "", cleanDir, err
 	}
 
 	// Make sure the konnector can write to this folder
 	if err = w.ensurePermissions(i); err != nil {
-		return "", err
+		return "", cleanDir, err
 	}
 
 	// If we get the AccountDeleted flag on, we check if the konnector manifest
@@ -240,12 +245,12 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Ins
 		fileExecPath := path.Join("/", path.Clean(w.man.OnDeleteAccount))
 		fileExecPath = fileExecPath[1:]
 		if fileExecPath == "" {
-			return "", job.ErrAbort
+			return "", cleanDir, job.ErrAbort
 		}
 		workDir = path.Join(workDir, fileExecPath)
 	}
 
-	return workDir, nil
+	return workDir, cleanDir, nil
 }
 
 // ensureFolderToSave tries hard to give a folder to the konnector where it can

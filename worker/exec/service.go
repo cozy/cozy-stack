@@ -33,7 +33,8 @@ type serviceWorker struct {
 	name string
 }
 
-func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (workDir string, err error) {
+func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Instance) (workDir string, cleanDir func(), err error) {
+	cleanDir = func() {}
 	opts := &ServiceOptions{}
 	if err = ctx.UnmarshalMessage(&opts); err != nil {
 		return
@@ -58,8 +59,8 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 	w.name = name
 
 	// Upgrade "installed" to "ready"
-	if err := app.UpgradeInstalledState(i, man); err != nil {
-		return "", err
+	if err = app.UpgradeInstalledState(i, man); err != nil {
+		return
 	}
 
 	if man.State() != app.Ready {
@@ -113,6 +114,9 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 	if err != nil {
 		return
 	}
+	cleanDir = func() {
+		_ = os.RemoveAll(workDir)
+	}
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fs := app.AppsFileServer(i)
@@ -133,7 +137,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 		return
 	}
 
-	return workDir, nil
+	return workDir, cleanDir, nil
 }
 
 func (w *serviceWorker) Slug() string {
