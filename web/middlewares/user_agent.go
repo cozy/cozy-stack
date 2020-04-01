@@ -10,6 +10,8 @@ import (
 	"github.com/mssola/user_agent"
 )
 
+const maxInt = int(^uint(0) >> 1)
+
 // Some constants for the browser names
 const (
 	InternetExplorer = "Internet Explorer"
@@ -23,38 +25,72 @@ const (
 	Electron         = "Electron"
 )
 
-// browser is a struct with a name and a minimal version
-type browser struct {
+type iPhoneState int
+
+const (
+	iPhoneOrNotIPhone iPhoneState = iota
+	notIphone
+	onlyIphone
+)
+
+// browserRule is a rule for saying which browser is accepted based on the
+// user-agent.
+type browserRule struct {
 	name       string
-	minVersion *int
+	iPhone     iPhoneState
+	minVersion int
 }
 
-// We don't support Edge before version 17, because some webapps (like Drive)
-// needs URLSearchParams.
-var minEdgeVersion = 17
+func (rule *browserRule) canApply(browser string, iPhone bool) bool {
+	if rule.name != browser {
+		return false
+	}
+	if rule.iPhone == notIphone && iPhone {
+		return false
+	}
+	if rule.iPhone == onlyIphone && !iPhone {
+		return false
+	}
+	return true
+}
 
-// We don't support Firefox before version 52
-var minFirefoxVersion = 52
+func (rule *browserRule) acceptVersion(rawVersion string) bool {
+	version, ok := getMajorVersion(rawVersion)
+	if !ok {
+		return true
+	}
+	return version >= rule.minVersion
+}
 
-// We don't support Safari before version 11, as window.crypto is not
-// available.
-var minSafariVersion = 11
-
-var rules = []browser{
+var rules = []browserRule{
+	// We don't support IE
 	{
-		name: InternetExplorer,
+		name:       InternetExplorer,
+		minVersion: maxInt,
 	},
+	// We don't support Edge before version 17, because some webapps (like Drive)
+	// needs URLSearchParams.
 	{
 		name:       Edge,
-		minVersion: &minEdgeVersion,
+		minVersion: 17,
+	},
+	// We don't support Firefox before version 52, except on iOS where the
+	// webkit engine is used on the version numbers are not the same.
+	{
+		name:       Firefox,
+		iPhone:     notIphone,
+		minVersion: 52,
 	},
 	{
 		name:       Firefox,
-		minVersion: &minFirefoxVersion,
+		iPhone:     onlyIphone,
+		minVersion: 7, // Firefox Focus has a lower version number than Firefox for iOS
 	},
+	// We don't support Safari before version 11, as window.crypto is not
+	// available.
 	{
 		name:       Safari,
-		minVersion: &minSafariVersion,
+		minVersion: 11,
 	},
 }
 
@@ -64,13 +100,13 @@ func CheckUserAgent(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ua := user_agent.New(c.Request().UserAgent())
 		browser, rawVersion := ua.Browser()
+		iPhone := ua.Platform() == "iPhone"
 		acceptHeader := c.Request().Header.Get(echo.HeaderAccept)
 
 		if strings.Contains(acceptHeader, echo.MIMETextHTML) {
 			for _, rule := range rules {
-				if browser == rule.name {
-					version, ok := getMajorVersion(rawVersion)
-					if !ok || (rule.minVersion != nil && !(version < *rule.minVersion)) {
+				if rule.canApply(browser, iPhone) {
+					if rule.acceptVersion(rawVersion) {
 						return next(c)
 					}
 

@@ -52,6 +52,11 @@ func TestUserAgent(t *testing.T) {
 	h4 := CheckUserAgent(echo.NotFoundHandler)
 	err4 := h4(c)
 	assert.Error(t, err4, nil)
+
+	req.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU OS 13_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/24.1  Mobile/15E148 Safari/605.1.15") // Firefox for iOS
+	h5 := CheckUserAgent(echo.NotFoundHandler)
+	err5 := h5(c)
+	assert.Error(t, err5, nil)
 }
 
 func TestParseEdgeVersion(t *testing.T) {
