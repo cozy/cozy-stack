@@ -66,12 +66,14 @@ var rules = []browserRule{
 	// We don't support IE
 	{
 		name:       InternetExplorer,
+		iPhone:     iPhoneOrNotIPhone,
 		minVersion: maxInt,
 	},
 	// We don't support Edge before version 17, because some webapps (like Drive)
 	// needs URLSearchParams.
 	{
 		name:       Edge,
+		iPhone:     iPhoneOrNotIPhone,
 		minVersion: 17,
 	},
 	// We don't support Firefox before version 52, except on iOS where the
@@ -90,6 +92,7 @@ var rules = []browserRule{
 	// available.
 	{
 		name:       Safari,
+		iPhone:     iPhoneOrNotIPhone,
 		minVersion: 11,
 	},
 }
