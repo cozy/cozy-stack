@@ -24,7 +24,8 @@ will be logged in, and redirected to its default application.
 
 ## Open ID Connect
 
-OpenID Connect can also be used, and is more adapted when the
+OpenID Connect can also be used, and is more adapted when the users don't
+always come from the authentication provider.
 
 For OpenID Connect, there are more configuration parameters and they must be
 configured per context. A context is set of configuration parameters and each
