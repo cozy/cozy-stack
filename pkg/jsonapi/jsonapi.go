@@ -102,17 +102,15 @@ func DataListWithTotal(c echo.Context, statusCode, total int, objs []Object, lin
 
 // DataRelations can be called to send a Relations page,
 // a list of ResourceIdentifier
-func DataRelations(c echo.Context, statusCode int, refs []couchdb.DocReference, total int, links *LinksList, included []Object) error {
+func DataRelations(c echo.Context, statusCode int, refs []couchdb.DocReference, meta *RelationshipMeta, links *LinksList, included []Object) error {
 	data, err := json.Marshal(refs)
 	if err != nil {
 		return InternalServerError(err)
 	}
 
 	doc := Document{
-		Data: (*json.RawMessage)(&data),
-		Meta: &RelationshipMeta{
-			Count: &total,
-		},
+		Data:  (*json.RawMessage)(&data),
+		Meta:  meta,
 		Links: links,
 	}
 

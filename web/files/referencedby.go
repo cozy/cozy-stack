@@ -33,21 +33,30 @@ func AddReferencedHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
+	var newRev string
+	var refs []couchdb.DocReference
 	if dir != nil {
 		dir.AddReferencedBy(references...)
 		updateDirCozyMetadata(c, dir)
 		err = couchdb.UpdateDoc(instance, dir)
+		newRev = dir.Rev()
+		refs = dir.ReferencedBy
 	} else {
 		file.AddReferencedBy(references...)
 		updateFileCozyMetadata(c, file, false)
 		err = couchdb.UpdateDoc(instance, file)
+		newRev = file.Rev()
+		refs = file.ReferencedBy
 	}
 
 	if err != nil {
 		return WrapVfsError(err)
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	count := len(refs)
+	meta := jsonapi.RelationshipMeta{Rev: newRev, Count: &count}
+
+	return jsonapi.DataRelations(c, http.StatusOK, refs, &meta, nil, nil)
 }
 
 // RemoveReferencedHandler is the echo.handler for removing referenced_by to
@@ -73,19 +82,28 @@ func RemoveReferencedHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
+	var newRev string
+	var refs []couchdb.DocReference
 	if dir != nil {
 		dir.RemoveReferencedBy(references...)
 		updateDirCozyMetadata(c, dir)
 		err = couchdb.UpdateDoc(instance, dir)
+		newRev = dir.Rev()
+		refs = dir.ReferencedBy
 	} else {
 		file.RemoveReferencedBy(references...)
 		updateFileCozyMetadata(c, file, false)
 		err = couchdb.UpdateDoc(instance, file)
+		newRev = file.Rev()
+		refs = file.ReferencedBy
 	}
 
 	if err != nil {
 		return WrapVfsError(err)
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	count := len(refs)
+	meta := jsonapi.RelationshipMeta{Rev: newRev, Count: &count}
+
+	return jsonapi.DataRelations(c, http.StatusOK, refs, &meta, nil, nil)
 }
