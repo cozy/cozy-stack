@@ -113,6 +113,10 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
+    "meta": {
+        "rev": "2-de8d0ba2",
+        "count": 2
+    },
     "data": [
         {
             "type": "io.cozy.playlists",
@@ -152,8 +156,23 @@ Accept: application/vnd.api+json
 #### Response
 
 ```http
-HTTP/1.1 204 No Content
+HTTP/1.1 200 OK
 Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "meta": {
+        "rev": "3-7ab812c0",
+        "count": 1
+    },
+    "data": [
+        {
+            "type": "io.cozy.playlists",
+            "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
+        }
+    ]
+}
 ```
 
 ### GET /data/:type/:doc-id/relationships/references

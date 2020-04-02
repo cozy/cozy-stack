@@ -82,6 +82,7 @@ func ListReferencesHandler(c echo.Context) error {
 			count = int(resCount.Rows[0].Value.(float64))
 		}
 	}
+	meta := &jsonapi.RelationshipMeta{Count: &count}
 
 	sort := c.QueryParam("sort")
 	descending := strings.HasPrefix(sort, "-")
@@ -147,7 +148,7 @@ func ListReferencesHandler(c echo.Context) error {
 		}
 	}
 
-	return jsonapi.DataRelations(c, http.StatusOK, refs, count, links, docs)
+	return jsonapi.DataRelations(c, http.StatusOK, refs, meta, links, docs)
 }
 
 // AddReferencesHandler add some files references to a doc

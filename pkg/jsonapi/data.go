@@ -19,9 +19,12 @@ type Meta struct {
 	Rev string `json:"rev,omitempty"`
 }
 
-// RelationshipMeta is a container for the total number of elements
+// RelationshipMeta is a container for the total number of elements in a
+// relationship list and optionally the couchdb revision of the owner
+// document in case we're returning an updated list outside an Object.
 type RelationshipMeta struct {
-	Count *int `json:"count,omitempty"`
+	Rev   string `json:"rev,omitempty"`
+	Count *int   `json:"count,omitempty"`
 }
 
 // LinksList is the common links used in JSON-API for the top-level or a
