@@ -29,7 +29,7 @@ func TestListReferencesHandler(t *testing.T) {
 	var result struct {
 		Links jsonapi.LinksList
 		Data  []couchdb.DocReference `json:"data"`
-		Meta  jsonapi.RelationshipMeta
+		Meta  jsonapi.Meta
 	}
 	_, res, err := doRequest(req, &result)
 
@@ -209,7 +209,7 @@ func TestReferencesWithSlash(t *testing.T) {
 	// Check that we can find the reference with /
 	var result struct {
 		Data []couchdb.DocReference `json:"data"`
-		Meta jsonapi.RelationshipMeta
+		Meta jsonapi.Meta
 	}
 	req, _ = http.NewRequest("GET", url, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
@@ -223,7 +223,7 @@ func TestReferencesWithSlash(t *testing.T) {
 	// Try again, but this time encode / as %2F instead of %2f
 	url = ts.URL + "/data/" + Type + "/io.cozy.apps%2Ffoobar/relationships/references"
 	result.Data = result.Data[:0]
-	result.Meta = jsonapi.RelationshipMeta{}
+	result.Meta = jsonapi.Meta{}
 	req, _ = http.NewRequest("GET", url, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	_, res, err = doRequest(req, &result)
@@ -249,7 +249,7 @@ func TestReferencesWithSlash(t *testing.T) {
 	// Check that we can find the reference with %2f
 	url2 := ts.URL + "/data/" + Type + "/io.cozy.apps%2ffoobaz/relationships/references"
 	result.Data = result.Data[:0]
-	result.Meta = jsonapi.RelationshipMeta{}
+	result.Meta = jsonapi.Meta{}
 	req, _ = http.NewRequest("GET", url2, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	_, res, err = doRequest(req, &result)
@@ -262,7 +262,7 @@ func TestReferencesWithSlash(t *testing.T) {
 	// Check that we can find the reference with %2F
 	url3 := ts.URL + "/data/" + Type + "/io.cozy.apps%2Ffooqux/relationships/references"
 	result.Data = result.Data[:0]
-	result.Meta = jsonapi.RelationshipMeta{}
+	result.Meta = jsonapi.Meta{}
 	req, _ = http.NewRequest("GET", url3, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	_, res, err = doRequest(req, &result)

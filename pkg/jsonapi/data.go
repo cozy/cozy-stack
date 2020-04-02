@@ -14,15 +14,9 @@ type Object interface {
 	Included() []Object
 }
 
-// Meta is a container for the couchdb revision, in JSON-API land
+// Meta is a container for the couchdb revision and the total number of items,
+// in JSON-API land
 type Meta struct {
-	Rev string `json:"rev,omitempty"`
-}
-
-// RelationshipMeta is a container for the total number of elements in a
-// relationship list and optionally the couchdb revision of the owner
-// document in case we're returning an updated list outside an Object.
-type RelationshipMeta struct {
 	Rev   string `json:"rev,omitempty"`
 	Count *int   `json:"count,omitempty"`
 }
@@ -49,9 +43,9 @@ type LinksList struct {
 // Data can be a single ResourceIdentifier for to-one relationships,
 // or an array of them for to-many relationships.
 type Relationship struct {
-	Links *LinksList        `json:"links,omitempty"`
-	Meta  *RelationshipMeta `json:"meta,omitempty"`
-	Data  interface{}       `json:"data"`
+	Links *LinksList  `json:"links,omitempty"`
+	Meta  *Meta       `json:"meta,omitempty"`
+	Data  interface{} `json:"data"`
 }
 
 // ResourceIdentifier returns the resource identifier of the relationship.

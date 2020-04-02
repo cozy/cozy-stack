@@ -82,7 +82,7 @@ func ListReferencesHandler(c echo.Context) error {
 			count = int(resCount.Rows[0].Value.(float64))
 		}
 	}
-	meta := &jsonapi.RelationshipMeta{Count: &count}
+	meta := &jsonapi.Meta{Count: &count}
 
 	sort := c.QueryParam("sort")
 	descending := strings.HasPrefix(sort, "-")

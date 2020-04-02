@@ -20,11 +20,11 @@ const ContentType = "application/vnd.api+json"
 // application/vnd.api+json
 // See http://jsonapi.org/format/#document-structure
 type Document struct {
-	Data     *json.RawMessage  `json:"data,omitempty"`
-	Errors   ErrorList         `json:"errors,omitempty"`
-	Links    *LinksList        `json:"links,omitempty"`
-	Meta     *RelationshipMeta `json:"meta,omitempty"`
-	Included []interface{}     `json:"included,omitempty"`
+	Data     *json.RawMessage `json:"data,omitempty"`
+	Errors   ErrorList        `json:"errors,omitempty"`
+	Links    *LinksList       `json:"links,omitempty"`
+	Meta     *Meta            `json:"meta,omitempty"`
+	Included []interface{}    `json:"included,omitempty"`
 }
 
 // WriteData can be called to write an answer with a JSON-API document
@@ -90,7 +90,7 @@ func DataListWithTotal(c echo.Context, statusCode, total int, objs []Object, lin
 
 	doc := Document{
 		Data:  (*json.RawMessage)(&data),
-		Meta:  &RelationshipMeta{Count: &total},
+		Meta:  &Meta{Count: &total},
 		Links: links,
 	}
 
@@ -102,7 +102,7 @@ func DataListWithTotal(c echo.Context, statusCode, total int, objs []Object, lin
 
 // DataRelations can be called to send a Relations page,
 // a list of ResourceIdentifier
-func DataRelations(c echo.Context, statusCode int, refs []couchdb.DocReference, meta *RelationshipMeta, links *LinksList, included []Object) error {
+func DataRelations(c echo.Context, statusCode int, refs []couchdb.DocReference, meta *Meta, links *LinksList, included []Object) error {
 	data, err := json.Marshal(refs)
 	if err != nil {
 		return InternalServerError(err)

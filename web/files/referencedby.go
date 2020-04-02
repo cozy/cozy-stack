@@ -54,7 +54,7 @@ func AddReferencedHandler(c echo.Context) error {
 	}
 
 	count := len(refs)
-	meta := jsonapi.RelationshipMeta{Rev: newRev, Count: &count}
+	meta := jsonapi.Meta{Rev: newRev, Count: &count}
 
 	return jsonapi.DataRelations(c, http.StatusOK, refs, &meta, nil, nil)
 }
@@ -103,7 +103,7 @@ func RemoveReferencedHandler(c echo.Context) error {
 	}
 
 	count := len(refs)
-	meta := jsonapi.RelationshipMeta{Rev: newRev, Count: &count}
+	meta := jsonapi.Meta{Rev: newRev, Count: &count}
 
 	return jsonapi.DataRelations(c, http.StatusOK, refs, &meta, nil, nil)
 }
