@@ -49,6 +49,7 @@ designing new services.
 ### List of services
 
 -   `/auth` - [Authentication & OAuth](auth.md)
+    -   [Delegated authentication](delegated-auth.md)
 -   `/apps` - [Applications Management](apps.md)
     -   [Apps registry](registry.md)
     -   [Konnectors](konnectors.md)

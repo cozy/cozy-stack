@@ -17,6 +17,7 @@
   - "Workflow of the konnectors": ./konnectors-workflow.md
 - List of services:
   - "/auth - Authentication & OAuth": ./auth.md
+  - " /oidc - Delegated authentication": ./delegated-auth.md
   - "/apps - Applications Management": ./apps.md
   - " /apps - Apps registry": ./registry.md
   - " /apps - Konnectors": ./konnectors.md
