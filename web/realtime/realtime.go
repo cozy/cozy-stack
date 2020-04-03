@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -128,6 +129,25 @@ func sendErr(ctx context.Context, errc chan *wsError, e *wsError) {
 	}
 }
 
+func authorized(i *instance.Instance, perms permission.Set, permType, id string) bool {
+	if perms.AllowWholeType(permission.GET, permType) {
+		return true
+	} else if id == "" {
+		return false
+	} else if permType == consts.Files {
+		fs := i.VFS()
+		dir, file, err := fs.DirOrFileByID(id)
+		if dir != nil {
+			err = vfs.Allows(fs, perms, permission.GET, dir)
+		} else if file != nil {
+			err = vfs.Allows(fs, perms, permission.GET, file)
+		}
+		return err == nil
+	} else {
+		return perms.AllowID(permission.GET, permType, id)
+	}
+}
+
 func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *websocket.Conn,
 	ds *realtime.DynamicSubscriber, errc chan *wsError, withAuthentication bool) {
 	defer close(errc)
@@ -185,13 +205,7 @@ func readPump(ctx context.Context, c echo.Context, i *instance.Instance, ws *web
 		}
 		// XXX: no permissions are required for io.cozy.sharings.initial_sync
 		if withAuthentication && cmd.Payload.Type != consts.SharingsInitialSync {
-			var authorized bool
-			if cmd.Payload.ID == "" {
-				authorized = pdoc.Permissions.AllowWholeType(permission.GET, permType)
-			} else {
-				authorized = pdoc.Permissions.AllowID(permission.GET, permType, cmd.Payload.ID)
-			}
-			if !authorized {
+			if !authorized(i, pdoc.Permissions, permType, cmd.Payload.ID) {
 				sendErr(ctx, errc, forbidden(cmd))
 				continue
 			}
