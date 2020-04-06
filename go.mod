@@ -21,7 +21,7 @@ require (
 	github.com/google/gops v0.3.7
 	github.com/gorilla/websocket v1.4.2
 	github.com/h2non/filetype v1.0.12
-	github.com/hashicorp/go-multierror v1.0.0
+	github.com/hashicorp/go-multierror v1.1.0
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
 	github.com/jonas-p/go-shp v0.1.1 // indirect
 	github.com/justincampbell/bigduration v0.0.0-20160531141349-e45bf03c0666
