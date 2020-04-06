@@ -55,4 +55,4 @@ require (
 
 replace github.com/spf13/afero => github.com/cozy/afero v1.2.3
 
-replace github.com/mssola/user_agent => github.com/cozy/user_agent v0.5.3
+replace github.com/mssola/user_agent => github.com/cozy/user_agent v0.5.4
