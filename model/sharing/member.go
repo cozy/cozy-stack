@@ -463,9 +463,15 @@ func (s *Sharing) findMemberByCode(codes map[string]string, sharecode string) (*
 // FindMemberByInboundClientID returns the member that have used this client
 // ID to make a request on the given sharing
 func (s *Sharing) FindMemberByInboundClientID(clientID string) (*Member, error) {
-	for i, c := range s.Credentials {
-		if c.InboundClientID == clientID {
-			return &s.Members[i+1], nil
+	if s.Owner {
+		for i, c := range s.Credentials {
+			if c.InboundClientID == clientID {
+				return &s.Members[i+1], nil
+			}
+		}
+	} else {
+		if s.Credentials[0].InboundClientID == clientID {
+			return &s.Members[0], nil
 		}
 	}
 	return nil, ErrMemberNotFound
