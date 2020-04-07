@@ -801,6 +801,11 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 	doc.SetRev("")
 	err = fs.CreateDir(doc)
 	if err != nil {
+		// Maybe the directory has been created concurrently, so let's try
+		// again to fetch it from the database
+		if err == os.ErrExist {
+			return fs.DirByID(dirID)
+		}
 		return nil, err
 	}
 	return doc, nil
