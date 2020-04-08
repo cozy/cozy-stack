@@ -382,6 +382,12 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 // prepareFileWithAncestors find the parent directory for file, and recreates it
 // if it is missing.
 func (s *Sharing) prepareFileWithAncestors(inst *instance.Instance, newdoc *vfs.FileDoc, dirID string) error {
+	// Case 1: there is a rule for sharing this file
+	if s.hasExplicitRuleForFile(newdoc) {
+		return nil
+	}
+
+	// Case 2: the file is in a directory that is shared
 	if dirID == "" {
 		parent, err := s.GetSharingDir(inst)
 		if err != nil {
