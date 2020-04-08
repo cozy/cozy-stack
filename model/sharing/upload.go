@@ -382,6 +382,12 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 // prepareFileWithAncestors find the parent directory for file, and recreates it
 // if it is missing.
 func (s *Sharing) prepareFileWithAncestors(inst *instance.Instance, newdoc *vfs.FileDoc, dirID string) error {
+	// Case 1: there is a rule for sharing this file
+	if s.hasExplicitRuleForFile(newdoc) {
+		return nil
+	}
+
+	// Case 2: the file is in a directory that is shared
 	if dirID == "" {
 		parent, err := s.GetSharingDir(inst)
 		if err != nil {
@@ -641,8 +647,9 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, olddoc, rule)
 	copySafeFieldsToFile(target.FileDoc, newdoc)
 	newdoc.DocName = target.DocName
-	// TODO check the error
-	_ = s.prepareFileWithAncestors(inst, newdoc, target.DirID)
+	if err := s.prepareFileWithAncestors(inst, newdoc, target.DirID); err != nil {
+		return err
+	}
 	newdoc.ResetFullpath()
 	newdoc.ByteSize = target.ByteSize
 	newdoc.MD5Sum = target.MD5Sum

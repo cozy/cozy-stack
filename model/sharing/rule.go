@@ -256,6 +256,23 @@ func (s *Sharing) findRuleForNewFile(file *vfs.FileDoc) (*Rule, int) {
 	return nil, 0
 }
 
+func (s *Sharing) hasExplicitRuleForFile(file *vfs.FileDoc) bool {
+	for _, rule := range s.Rules {
+		if rule.Local || rule.DocType != consts.Files {
+			continue
+		}
+		if rule.Selector != "" {
+			continue
+		}
+		for _, id := range rule.Values {
+			if id == file.DocID {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // HasSync returns true if the rule has a sync behaviour
 func (r *Rule) HasSync() bool {
 	return r.Add == ActionRuleSync || r.Update == ActionRuleSync ||

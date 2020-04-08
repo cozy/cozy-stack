@@ -444,26 +444,28 @@ func (t *task) run() (err error) {
 		t.endTime = time.Now()
 
 		// Incrementing timeouts counter
-		var slug string
-		var msg map[string]interface{}
+		if t.job.Message != nil {
+			var slug string
+			var msg map[string]interface{}
 
-		if errd := json.Unmarshal(t.job.Message, &msg); errd != nil {
-			ctx.Logger().Errorf("Cannot unmarshal job message %s", t.job.Message)
-		} else {
-			switch t.w.Type {
-			case "konnector":
-				slug, _ = msg["konnector"].(string)
-			case "service":
-				slug, _ = msg["slug"].(string)
-			default:
-				slug = ""
-			}
+			if errd := json.Unmarshal(t.job.Message, &msg); errd != nil {
+				ctx.Logger().Errorf("Cannot unmarshal job message %s", t.job.Message)
+			} else {
+				switch t.w.Type {
+				case "konnector":
+					slug, _ = msg["konnector"].(string)
+				case "service":
+					slug, _ = msg["slug"].(string)
+				default:
+					slug = ""
+				}
 
-			// Forcing the timeout counter to 0 if it has not been initialized
-			metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug)
+				// Forcing the timeout counter to 0 if it has not been initialized
+				metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug)
 
-			if err == context.DeadlineExceeded { // This is a timeout
-				metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug).Inc()
+				if err == context.DeadlineExceeded { // This is a timeout
+					metrics.WorkerExecTimeoutsCounter.WithLabelValues(t.w.Type, slug).Inc()
+				}
 			}
 		}
 

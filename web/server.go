@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/apps"
+	"github.com/sirupsen/logrus"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -120,8 +121,12 @@ func ListenAndServe() (*Servers, error) {
 	}
 
 	if build.IsDevRelease() {
+		timeFormat := "time_rfc3339"
+		if logrus.GetLevel() == logrus.DebugLevel {
+			timeFormat = "time_rfc3339_nano"
+		}
 		major.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
-			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
+			Format: "time=${" + timeFormat + "}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
 		}))
 	}
 

@@ -150,6 +150,7 @@ describe "A folder" do
     child1_recipient.move_to inst_recipient, child3_recipient.couch_id
     file_recipient.rename inst_recipient, "#{Faker::Internet.slug}.txt"
     file_recipient.overwrite inst_recipient, content: "New content from recipient"
+    sleep 3
     note_recipient = Note.create inst_recipient, dir_id: child3_recipient.couch_id
 
     sleep 12

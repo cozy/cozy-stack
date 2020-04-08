@@ -430,6 +430,20 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		ref    *SharedRef
 	}
 
+	// XXX: we need to make the changes for live documents before the _deleted
+	// ones to avoid deleting too much files. For example, if the A folder is
+	// deleted, and the B/A file is moved outside of B, we must make the move
+	// before deleting A and its children.
+	sort.SliceStable(docs, func(i, j int) bool {
+		if _, ok := docs[j]["_deleted"]; ok {
+			return true
+		}
+		if _, ok := docs[i]["_deleted"]; ok {
+			return false
+		}
+		return true
+	})
+
 	var errm error
 	var retries []retryOp
 	fs := inst.VFS()
@@ -787,6 +801,11 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 	doc.SetRev("")
 	err = fs.CreateDir(doc)
 	if err != nil {
+		// Maybe the directory has been created concurrently, so let's try
+		// again to fetch it from the database
+		if err == os.ErrExist {
+			return fs.DirByID(dirID)
+		}
 		return nil, err
 	}
 	return doc, nil
