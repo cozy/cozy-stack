@@ -129,7 +129,6 @@ func Login(c echo.Context) error {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 	redirect := inst.DefaultRedirection()
-	redirect = auth.AddCodeToRedirect(redirect, inst.Domain, sessionID)
 	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 

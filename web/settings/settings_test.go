@@ -221,7 +221,7 @@ func TestRegisterPassphraseCorrectToken(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 	cookies := res.Cookies()
 	assert.Len(t, cookies, 1)
-	assert.Equal(t, cookies[0].Name, session.SessionCookieName)
+	assert.Equal(t, cookies[0].Name, session.CookieName(testInstance))
 	assert.NotEmpty(t, cookies[0].Value)
 }
 
@@ -255,7 +255,7 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 	assert.Equal(t, "204 No Content", res.Status)
 	cookies := res.Cookies()
 	assert.Len(t, cookies, 1)
-	assert.Equal(t, cookies[0].Name, session.SessionCookieName)
+	assert.Equal(t, cookies[0].Name, session.CookieName(testInstance))
 	assert.NotEmpty(t, cookies[0].Value)
 }
 

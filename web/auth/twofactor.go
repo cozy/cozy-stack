@@ -113,8 +113,7 @@ func twoFactor(c echo.Context) error {
 	}
 
 	// Generate a new session
-	sessionID, err := newSession(c, inst, redirect, longRunSession)
-	if err != nil {
+	if err := newSession(c, inst, redirect, longRunSession); err != nil {
 		return err
 	}
 	// Check if the user trusts its device
@@ -130,7 +129,6 @@ func twoFactor(c echo.Context) error {
 		return c.JSON(http.StatusOK, result)
 	}
 
-	redirect = AddCodeToRedirect(redirect, inst.ContextualDomain(), sessionID)
 	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 

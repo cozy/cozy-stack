@@ -17,18 +17,15 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/intent"
 	"github.com/cozy/cozy-stack/model/permission"
-	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/registry"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo/v4"
-	"golang.org/x/net/idna"
 )
 
 // Serve is an handler for serving files from the VFS for a client-side app
@@ -43,15 +40,6 @@ func Serve(c echo.Context) error {
 
 	if !i.OnboardingFinished {
 		return c.Redirect(http.StatusFound, i.PageURL("/", nil))
-	}
-
-	if config.GetConfig().Subdomains == config.FlatSubdomains {
-		if code := c.QueryParam("code"); code != "" {
-			return tryAuthWithSessionCode(c, i, code, slug)
-		}
-		if disconnect := c.QueryParam("disconnect"); disconnect == "true" || disconnect == "1" {
-			return deleteAppCookie(c, i, slug)
-		}
 	}
 
 	webapp, err := app.GetWebappBySlug(i, slug)
@@ -396,56 +384,6 @@ func (s serveParams) DefaultWallpaper() string {
 		s.instance.ContextualDomain(),
 		"/images/default-wallpaper.jpg",
 		s.instance.ContextName)
-}
-
-func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug string) error {
-	u := *(c.Request().URL)
-	u.Scheme = i.Scheme()
-	host, err := idna.ToUnicode(c.Request().Host)
-	if err != nil {
-		return err
-	}
-	u.Host = host
-	if code := session.FindCode(value, u.Host); code != nil {
-		sess, err := session.Get(i, code.SessionID)
-		if err == nil {
-			cookie, err := sess.ToAppCookie(u.Host, slug)
-			if err == nil {
-				c.SetCookie(cookie)
-			}
-		}
-	}
-	q := u.Query()
-	q.Del("code")
-	u.RawQuery = q.Encode()
-	return c.Redirect(http.StatusFound, u.String())
-}
-
-func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
-	c.SetCookie(&http.Cookie{
-		Name:   session.SessionCookieName,
-		Value:  "",
-		MaxAge: -1,
-		Path:   "/",
-		Domain: utils.CookieDomain(i.ContextualDomain()),
-	})
-
-	redirect := *(c.Request().URL)
-	redirect.Scheme = i.Scheme()
-	redirect.Host = i.ContextualDomain()
-
-	queries := make(url.Values)
-	for k, v := range redirect.Query() {
-		if k != "disconnect" {
-			queries[k] = v
-		}
-	}
-	redirect.RawQuery = queries.Encode()
-
-	u := i.PageURL("/auth/login", url.Values{
-		"redirect": {redirect.String()},
-	})
-	return c.Redirect(http.StatusFound, u)
 }
 
 var clientTemplate *template.Template

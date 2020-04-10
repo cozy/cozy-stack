@@ -69,7 +69,7 @@ var hstsMaxAge = 365 * 24 * time.Hour // 1 year
 // handler.
 func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	mws := []echo.MiddlewareFunc{
-		middlewares.LoadAppSession,
+		middlewares.LoadSession,
 		middlewares.CheckUserAgent,
 		middlewares.Accept(middlewares.AcceptOptions{
 			DefaultContentTypeOffer: echo.MIMETextHTML,

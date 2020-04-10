@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -236,56 +235,6 @@ func TestServeWithAnIntents(t *testing.T) {
 	assert.Contains(t, h, "frame-ancestors 'self' https://test-app.cozywithapps.example.net/;")
 }
 
-func TestServeAppsWithACode(t *testing.T) {
-	config.GetConfig().Subdomains = config.FlatSubdomains
-	appHost := "cozywithapps-mini.example.net"
-
-	appURL, _ := url.Parse("https://" + appHost + "/")
-	j, _ := cookiejar.New(nil)
-	ja := &testutils.CookieJar{Jar: j, URL: appURL}
-	c := &http.Client{Jar: ja, CheckRedirect: noRedirect}
-
-	req, _ := http.NewRequest("GET", ts.URL+"/foo", nil)
-	req.Host = appHost
-	res, err := c.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 302, res.StatusCode)
-	location, err := url.Parse(res.Header.Get("Location"))
-	assert.NoError(t, err)
-	assert.Equal(t, testInstance.Domain, location.Host)
-	assert.Equal(t, "/auth/login", location.Path)
-	assert.NotEmpty(t, location.Query().Get("redirect"))
-
-	longRunSession := true
-	sess, _ := session.New(testInstance, longRunSession)
-	code := session.BuildCode(sess.ID(), appHost)
-
-	req, _ = http.NewRequest("GET", ts.URL+"/foo?code="+code.Value, nil)
-	req.Host = appHost
-	res, err = c.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 302, res.StatusCode)
-	location, err = url.Parse(res.Header.Get("Location"))
-	assert.NoError(t, err)
-	assert.Equal(t, appHost, location.Host)
-	assert.Equal(t, "/foo", location.Path)
-	assert.Empty(t, location.Query().Get("redirect"))
-	assert.Empty(t, location.Query().Get("code"))
-	cookies := res.Cookies()
-	assert.Len(t, cookies, 1)
-	assert.Equal(t, cookies[0].Name, session.SessionCookieName)
-	assert.NotEmpty(t, cookies[0].Value)
-
-	req, _ = http.NewRequest("GET", ts.URL+"/foo", nil)
-	req.Host = appHost
-	res, err = c.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, res.StatusCode)
-	body, _ := ioutil.ReadAll(res.Body)
-	expected := `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`
-	assert.Contains(t, string(body), expected)
-}
-
 func TestFaviconWithContext(t *testing.T) {
 	context := "foo"
 
@@ -312,30 +261,7 @@ func TestFaviconWithContext(t *testing.T) {
 	}))
 	assert.NoError(t, err)
 
-	config.GetConfig().Subdomains = config.FlatSubdomains
-	appHost := "cozywithapps-mini.example.net"
-	appURL, _ := url.Parse("https://" + appHost + "/")
-	j, _ := cookiejar.New(nil)
-	ja := &testutils.CookieJar{Jar: j, URL: appURL}
-	c := &http.Client{Jar: ja, CheckRedirect: noRedirect}
-
-	longRunSession := true
-	sess, _ := session.New(testInstance, longRunSession)
-	code := session.BuildCode(sess.ID(), appHost)
-
-	req, _ := http.NewRequest("GET", ts.URL+"/foo?code="+code.Value, nil)
-	req.Host = appHost
-	res, err := c.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 302, res.StatusCode)
-	cookies := res.Cookies()
-	assert.Len(t, cookies, 1)
-	assert.Equal(t, cookies[0].Name, session.SessionCookieName)
-	assert.NotEmpty(t, cookies[0].Value)
-
-	req, _ = http.NewRequest("GET", ts.URL+"/foo", nil)
-	req.Host = appHost
-	res, err = c.Do(req)
+	res, err := doGet("/foo", true)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
