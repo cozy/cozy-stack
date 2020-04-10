@@ -140,8 +140,8 @@ func getMajorVersion(rawVersion string) (int, bool) {
 }
 
 // CryptoPolyfill returns true if the browser can't use its window.crypto API
-// to hash the password with PBKDF2. It is the case for Edge, but also for
-// Chrome in development mode, because this API is only available in secure
+// to hash the password with PBKDF2. It is the case for Edge, but also for most
+// browsers in development mode, because this API is only available in secure
 // more (HTTPS).
 func CryptoPolyfill(c echo.Context) bool {
 	ua := user_agent.New(c.Request().UserAgent())
@@ -149,13 +149,5 @@ func CryptoPolyfill(c echo.Context) bool {
 	if browser == Edge {
 		return true
 	}
-	if build.IsDevRelease() {
-		return browser == Chrome ||
-			browser == Chromium ||
-			browser == Opera ||
-			browser == Safari ||
-			browser == Android ||
-			browser == Electron
-	}
-	return false
+	return build.IsDevRelease()
 }
