@@ -1,10 +1,10 @@
 # Translators:
 # Bruno Michel, 2019
-# hernando franco <hfrancod@lautaro.fr>, 2019
+# hernando franco <hfrancod@lautaro.fr>, 2020
 # 
 msgid ""
 msgstr ""
-"Last-Translator: hernando franco <hfrancod@lautaro.fr>, 2019\n"
+"Last-Translator: hernando franco <hfrancod@lautaro.fr>, 2020\n"
 "Language-Team: Spanish (https://www.transifex.com/cozy/teams/39753/es/)\n"
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -14,6 +14,9 @@ msgstr "Administrativo"
 
 msgid "Tree Photos"
 msgstr "Fotos"
+
+msgid "Tree Notes"
+msgstr "Notas"
 
 msgid "Tree Uploaded from Cozy Photos"
 msgstr "Cargado desde Cozy Fotos"
@@ -26,6 +29,9 @@ msgstr "Compartido conmigo"
 
 msgid "Tree No longer shared"
 msgstr "Ya no se compart"
+
+msgid "Notes New note"
+msgstr "Nueva nota"
 
 msgid "Login Credentials error"
 msgstr ""
@@ -127,18 +133,23 @@ msgstr "Contraseña olvidada"
 
 msgid "Passphrase reset Help hint"
 msgstr ""
+"Ha establecido una pista para recuperar su contraseña. Haga clic en el botón"
+" de abajo para recibirla por correo electrónico."
 
 msgid "Passphrase reset Submit hint"
-msgstr ""
+msgstr "Envíeme una sugerencia"
 
 msgid "Passphrase reset password Title"
-msgstr ""
+msgstr "Como último recurso, puede restablecer su contraseña:"
 
 msgid "Passphrase reset Help Warning"
-msgstr ""
+msgstr "¡Atención!"
 
 msgid "Passphrase reset Help"
 msgstr ""
+"Su contraseña actual es la única clave para decodificar sus contraseñas "
+"guardadas en su aplicación \"Cozy Contraseñas\". Si la reinicia, perderá "
+"esos datos. El resto de sus datos seguirán siendo accesibles."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
@@ -164,17 +175,24 @@ msgid "Passphrase Onboarding Help"
 msgstr ""
 "Usar al menos ocho caracteres que incluyan letras, números y símbolos. "
 
+msgid "Passphrase Hint Error"
+msgstr "¡Su pista debe ser diferente de su contraseña!"
+
 msgid "Passphrase Onboarding Hint Field"
-msgstr ""
+msgstr "Deje una pista (opcional)"
 
 msgid "Passphrase Onboarding Hint Help"
 msgstr ""
+"La pista se le enviará por correo electrónico si usted olvida su contraseña."
+" Elija una pista que sólo usted pueda entender."
 
 msgid "Passphrase Onboarding Submit"
 msgstr "Terminar"
 
 msgid "Hint sent Body"
 msgstr ""
+"Le acabamos de enviar su pista para recuperar su contraseña por correo. Le ayudará a recordar su contraseña de Cozy.\n"
+"Preferimos advertirle, este correo se puede encontrar en las carpetas de Spam, Notificación o Social. No dude en echar un vistazo a estas carpetas para encontrarlo."
 
 msgid "Hint sent Login Button"
 msgstr "Volver a la página de inicio de sesión"
@@ -291,9 +309,9 @@ msgstr "La dirección de este Cozy no existe"
 
 msgid "Error Instance not found Message"
 msgstr ""
-"Es posible que haya introducido una dirección incorrecta o un haya cometido "
-"un error de escritura. Para estar seguro, por favor, compruebe la dirección "
-"de su Cozy que le enviamos por correo electrónico durante su creación."
+"Es posible que haya introducido una dirección incorrecta o haya cometido un "
+"error de escritura. Para estar seguro, por favor, compruebe la dirección de "
+"su Cozy que le enviamos por correo electrónico durante su creación."
 
 msgid "Error Application not found Title"
 msgstr "Esta a plicación no está disponible aún."
@@ -303,6 +321,9 @@ msgstr "Lo sentimos. Esta aplicación no está disponible aún en su Cozy."
 
 msgid "Error Application not found Action"
 msgstr "Ir a Inicio"
+
+msgid "Error Application not found Button"
+msgstr "Instalar esta aplicación"
 
 msgid "Error Contact us"
 msgstr "¿Tiene un problema, una duda? Contáctenos en"
@@ -432,7 +453,7 @@ msgid "Permissions io.cozy.files"
 msgstr "Archivos"
 
 msgid "Permissions io.cozy.files.versions"
-msgstr ""
+msgstr "Versiones de archivos"
 
 msgid "Permissions io.cozy.identities"
 msgstr "Identidades"
@@ -498,16 +519,21 @@ msgid "Mail Cozy Team"
 msgstr "El equipo de Cozy Cloud"
 
 msgid "Mail Hint Subject"
-msgstr ""
+msgstr "Contraseña olvidada: su pista"
 
 msgid "Mail Hint Intro 1"
 msgstr "Hola %s,"
 
 msgid "Mail Hint Intro 2"
 msgstr ""
+"A continuación encontrará la pista que solicitó para recordar su contraseña "
+"Cozy"
 
 msgid "Mail Hint Outro"
 msgstr ""
+"Como último recurso, puede restablecer su contraseña en la sección \"Olvidé "
+"mi contraseña\" de su Cozy. Si usted no inició esta solicitud, contáctenos "
+"respondiendo directamente a este correo electrónico."
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Reiniciar su contraseña"
@@ -517,8 +543,8 @@ msgstr "Hola %s,"
 
 msgid "Mail Reset Passphrase Intro 2"
 msgstr ""
-"Usted pidió cambiar su contraseña (si no lo hizo, póngase en contacto con "
-"nosotros respondiendo directamente a este correo electrónico)"
+"Usted pidió cambiar su contraseña. Si usted no inició esta solicitud, por "
+"favor contáctenos respondiendo directamente a este correo electrónico."
 
 msgid "Mail Reset Passphrase Button instruction"
 msgstr "Haga clic en este botón para cambiarlo de forma segura."
@@ -654,13 +680,13 @@ msgid "Sharing Empty description"
 msgstr "¡Sorpresa!"
 
 msgid "Sharing Discovery URL field"
-msgstr "URL"
-
-msgid "Sharing Discovery URL placeholder"
-msgstr "https://yourcozyaddress.cozy"
+msgstr "La dirección de su correo electrónico"
 
 msgid "Sharing URL Discovery error"
 msgstr "La URL de Cozy que usted ha puesto es incorrecta, vuelva a ensayar"
+
+msgid "Sharing URL Not email error"
+msgstr "La URL de su Cozy no es la dirección de su correo electrónico"
 
 msgid "Sharing Discovery Submit"
 msgstr "Enviar"
@@ -675,29 +701,29 @@ msgid "Sharing Discover Cozy"
 msgstr "¡Descubra Cozy ahora!"
 
 msgid "Sharing Forgotten URL"
-msgstr "¿Ha olvidado la URL? No hay que panicar."
+msgstr "¿Ha olvidado la URL? No hay que tener miedo alguno."
 
 msgid "Sharing Forgotten URL email"
 msgstr "Busque en la bandeja de entrada de su correo electrónico \"Cozy\"."
 
 msgid "Notifications Disk Quota Subject"
-msgstr "Usted ha alcanzado el 90% de su espacio Coozy."
+msgstr "Usted ha alcanzado el 90% de su espacio Cozy."
 
 msgid "Notifications Disk Quota Intro"
 msgstr "Usté tiene dos opciones para disponer de más espacio."
 
 msgid "Notifications Disk Quota offers instruction"
 msgstr ""
-"Opción 1: Actualizar su cuenta\n"
-"Actualice su Cozy eligiendo una nueva oferta para obtener mucho más espacio"
+"Opción 1:\n"
+"Actualice su Cozy cambiando a una nueva oferta para disponer de más espacio disco"
 
 msgid "Notifications Disk Quota offers text"
 msgstr "Actualizar ahora"
 
 msgid "Notifications Disk Quota free instructions"
 msgstr ""
-"Opción 2: Liberar espacio\n"
-"Ahorre espacio eliminando archivos innecesarios"
+"Opción 2:\n"
+"Gane espacio borrando archivos innecesarios"
 
 msgid "Notifications Disk Quota free text"
 msgstr "Liberar espacio de almacenamiento"
