@@ -169,6 +169,11 @@ type Indexer interface {
 	// were removed.
 	DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) ([]*FileDoc, int64, error)
 
+	// MoveDir is an internal call to update the fullpath of the subdirectories
+	// of a renamed/moved directory. It is exported to allow the sharing
+	// indexer to call this method on the couchdb indexer of the VFS.
+	MoveDir(oldpath, newpath string) error
+
 	// DirByID returns the directory document information associated with the
 	// specified identifier.
 	DirByID(fileID string) (*DirDoc, error)

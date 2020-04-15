@@ -9,9 +9,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/sirupsen/logrus"
 )
 
 type bulkRevs struct {
@@ -24,6 +24,7 @@ type sharingIndexer struct {
 	indexer  vfs.Indexer
 	bulkRevs *bulkRevs
 	shared   *SharedRef
+	log      *logrus.Entry
 }
 
 // newSharingIndexer creates an Indexer for the special purpose of the sharing.
@@ -35,6 +36,7 @@ func newSharingIndexer(inst *instance.Instance, bulkRevs *bulkRevs, shared *Shar
 		indexer:  vfs.NewCouchdbIndexer(inst),
 		bulkRevs: bulkRevs,
 		shared:   shared,
+		log:      inst.Logger().WithField("nspace", "sharing-indexer"),
 	}
 }
 
@@ -120,6 +122,7 @@ func (s *sharingIndexer) CreateBogusPrevRev() {
 }
 
 func (s *sharingIndexer) InitIndex() error {
+	s.log.Errorf("Unexpected call to InitIndex")
 	return ErrInternalServerError
 }
 
@@ -140,6 +143,7 @@ func (s *sharingIndexer) TrashUsage() (int64, error) {
 }
 
 func (s *sharingIndexer) CreateFileDoc(doc *vfs.FileDoc) error {
+	s.log.Errorf("Unexpected call to CreateFileDoc")
 	return ErrInternalServerError
 }
 
@@ -154,8 +158,7 @@ func (s *sharingIndexer) CreateNamedFileDoc(doc *vfs.FileDoc) error {
 	if !doc.Trashed {
 		// Ensure that fullpath is filled because it's used in realtime/@events
 		if _, err := doc.Path(s); err != nil {
-			logger.WithNamespace("sharing-indexer").
-				Errorf("Cannot compute fullpath for %#v: %s", doc, err)
+			s.log.Errorf("Cannot compute fullpath for %#v: %s", doc, err)
 			return err
 		}
 		if err := s.bulkForceUpdateDoc(doc); err != nil {
@@ -250,6 +253,7 @@ func (s *sharingIndexer) DeleteFileDoc(doc *vfs.FileDoc) error {
 }
 
 func (s *sharingIndexer) CreateDirDoc(doc *vfs.DirDoc) error {
+	s.log.Errorf("Unexpected call to CreateDirDoc")
 	return ErrInternalServerError
 }
 
@@ -257,9 +261,17 @@ func (s *sharingIndexer) CreateNamedDirDoc(doc *vfs.DirDoc) error {
 	return s.UpdateDirDoc(nil, doc)
 }
 
+// TODO check if this function should also update the trashed attribute for
+// files in the updated directory
 func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	if s.bulkRevs == nil {
 		return s.indexer.UpdateDirDoc(olddoc, doc)
+	}
+
+	if olddoc != nil && doc.Fullpath != olddoc.Fullpath {
+		if err := s.indexer.MoveDir(olddoc.Fullpath, doc.Fullpath); err != nil {
+			return err
+		}
 	}
 
 	docs := make([]map[string]interface{}, 1)
@@ -299,14 +311,22 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 }
 
 func (s *sharingIndexer) DeleteDirDoc(doc *vfs.DirDoc) error {
+	s.log.Errorf("Unexpected call to DeleteDirDoc")
 	return ErrInternalServerError
 }
 
 func (s *sharingIndexer) DeleteDirDocAndContent(doc *vfs.DirDoc, onlyContent bool) (files []*vfs.FileDoc, n int64, err error) {
+	s.log.Errorf("Unexpected call to DeleteDirDocAndContent")
 	return nil, 0, ErrInternalServerError
 }
 
+func (s *sharingIndexer) MoveDir(oldpath, newpath string) error {
+	s.log.Errorf("Unexpected call to MoveDir")
+	return ErrInternalServerError
+}
+
 func (s *sharingIndexer) BatchDelete(docs []couchdb.Doc) error {
+	s.log.Errorf("Unexpected call to BatchDelete")
 	return ErrInternalServerError
 }
 
@@ -371,14 +391,17 @@ func (s *sharingIndexer) BatchDeleteVersions(versions []*vfs.Version) error {
 }
 
 func (s *sharingIndexer) CheckIndexIntegrity(predicate func(*vfs.FsckLog), failFast bool) error {
+	s.log.Errorf("Unexpected call to CheckIndexIntegrity")
 	return ErrInternalServerError
 }
 
 func (s *sharingIndexer) CheckTreeIntegrity(tree *vfs.Tree, predicate func(*vfs.FsckLog), failFast bool) error {
+	s.log.Errorf("Unexpected call to CheckTreeIntegrity")
 	return ErrInternalServerError
 }
 
 func (s *sharingIndexer) BuildTree(each ...func(*vfs.TreeFile)) (t *vfs.Tree, err error) {
+	s.log.Errorf("Unexpected call to BuildTree")
 	return nil, ErrInternalServerError
 }
 
