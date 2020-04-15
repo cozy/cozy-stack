@@ -205,7 +205,7 @@ func (c *couchdbIndexer) UpdateDirDoc(olddoc, newdoc *DirDoc) error {
 	}
 
 	if newdoc.Fullpath != olddoc.Fullpath {
-		if err := c.moveDir(olddoc.Fullpath, newdoc.Fullpath); err != nil {
+		if err := c.MoveDir(olddoc.Fullpath, newdoc.Fullpath); err != nil {
 			return err
 		}
 	}
@@ -259,7 +259,7 @@ func (c *couchdbIndexer) BatchDelete(docs []couchdb.Doc) error {
 	return couchdb.BulkDeleteDocs(c.db, consts.Files, docs)
 }
 
-func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
+func (c *couchdbIndexer) MoveDir(oldpath, newpath string) error {
 	limit := 256
 	var children []*DirDoc
 	docs := make([]interface{}, 0, limit)
