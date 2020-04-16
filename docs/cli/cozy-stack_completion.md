@@ -5,13 +5,12 @@ Output shell completion code for the specified shell
 ### Synopsis
 
 
-Output shell completion code for the specified shell (bash or zsh).
-The shell code must be evalutated to provide interactive
-completion of cozy-stack commands.  This can be done by sourcing it from
-the .bash_profile.
+Output shell completion code for the specified shell (bash, zsh, or fish). The
+shell code must be evalutated to provide interactive completion of cozy-stack
+commands.  This can be done by sourcing it from the .bash_profile.
 
-Note: this requires the bash-completion framework, which is not installed
-by default on Mac.  This can be installed by using homebrew:
+Note: this requires the bash-completion framework, which is not installed by
+default on Mac.  This can be installed by using homebrew:
 
     $ brew install bash-completion
 

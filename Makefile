@@ -58,6 +58,7 @@ cli:
 	@cozy-stack doc markdown docs/cli
 	@cozy-stack completion bash > scripts/completion/cozy-stack.bash
 	@cozy-stack completion zsh > scripts/completion/cozy-stack.zsh
+	@cozy-stack completion fish > scripts/completion/cozy-stack.fish
 .PHONY: cli
 
 ## unit-tests: run the tests
