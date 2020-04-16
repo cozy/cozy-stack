@@ -165,7 +165,7 @@ trashed, the sharing is automatically revoked. As it is not a reversible action,
 a confirmation is asked before doing that.
 
 **Note:** we will forbid the sharing of the root of the virtual file system, of
-the trash and trashed files/folders, and of the `Shared with me` folder.
+the trash and trashed files/folders, and of course the `Shared with me` folder.
 
 The step 3 described above, aka the replicator, will be more complicated for
 folders and files. First change, it will work on two phases: 1. what can be
