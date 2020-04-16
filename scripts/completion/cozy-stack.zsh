@@ -291,7 +291,7 @@ function _cozy-stack_completion {
     '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
     '--host[server host]:' \
     '(-p --port)'{-p,--port}'[server port]:' \
-    '1: :("bash" "zsh")'
+    '1: :("bash" "zsh" "fish")'
 }
 
 
