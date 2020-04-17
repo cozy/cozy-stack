@@ -208,6 +208,10 @@ func migrateAccountsToOrganization(domain string) error {
 			}
 			continue
 		}
+		// Special case if the email field is used instead of login
+		if login == "" && acc.Basic.Email != "" {
+			login = acc.Basic.Email
+		}
 		cipher, err := buildCipher(orgKey, msg.Slug, login, password, link)
 		if err != nil {
 			errm = multierror.Append(errm, err)
