@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -16,11 +17,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// SessionCookieName is name of the cookie created by cozy
-const SessionCookieName = "cozysessid"
-
 // SessionMaxAge is the maximum duration of the session in seconds
 const SessionMaxAge = 30 * 24 * time.Hour
+
+// defaultCookieName is name of the cookie created by cozy on nested subdomains
+const defaultCookieName = "cozysessid"
 
 var (
 	// ErrNoCookie is returned by GetSession if there is no cookie
@@ -33,12 +34,12 @@ var (
 
 // A Session is an instance opened in a browser
 type Session struct {
-	Instance  *instance.Instance `json:"-"`
-	DocID     string             `json:"_id,omitempty"`
-	DocRev    string             `json:"_rev,omitempty"`
-	CreatedAt time.Time          `json:"created_at"`
-	LastSeen  time.Time          `json:"last_seen"`
-	LongRun   bool               `json:"long_run"`
+	instance  *instance.Instance
+	DocID     string    `json:"_id,omitempty"`
+	DocRev    string    `json:"_rev,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	LastSeen  time.Time `json:"last_seen"`
+	LongRun   bool      `json:"long_run"`
 }
 
 // DocType implements couchdb.Doc
@@ -59,9 +60,9 @@ func (s *Session) SetRev(v string) { s.DocRev = v }
 // Clone implements couchdb.Doc
 func (s *Session) Clone() couchdb.Doc {
 	cloned := *s
-	if cloned.Instance != nil {
-		tmp := *s.Instance
-		cloned.Instance = &tmp
+	if cloned.instance != nil {
+		tmp := *s.instance
+		cloned.instance = &tmp
 	}
 	return &cloned
 }
@@ -78,7 +79,7 @@ func (s *Session) OlderThan(t time.Duration) bool {
 func New(i *instance.Instance, longRun bool) (*Session, error) {
 	now := time.Now()
 	s := &Session{
-		Instance:  i,
+		instance:  i,
 		LastSeen:  now,
 		CreatedAt: now,
 		LongRun:   longRun,
@@ -99,7 +100,7 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.Instance = i
+	s.instance = i
 
 	// If the session is older than the session max age, it has expired and
 	// should be deleted.
@@ -126,14 +127,64 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	return s, nil
 }
 
+// CookieName returns the name of the cookie used for the given instance.
+func CookieName(i *instance.Instance) string {
+	if config.GetConfig().Subdomains == config.FlatSubdomains {
+		return "sess-" + i.DBPrefix()
+	}
+	return defaultCookieName
+}
+
+// CookieDomain returns the domain on which the cookie will be set. On nested
+// subdomains, the cookie is put on the domain of the instance, but for flat
+// subdomains, we need to put it one level higher (eg .mycozy.cloud instead of
+// .example.mycozy.cloud) to make the cookie available when the user visits
+// their apps.
+func CookieDomain(i *instance.Instance) string {
+	domain := i.ContextualDomain()
+	if config.GetConfig().Subdomains == config.FlatSubdomains {
+		parts := strings.SplitN(domain, ".", 2)
+		if len(parts) > 1 {
+			domain = parts[1]
+		}
+	}
+	return utils.CookieDomain("." + domain)
+}
+
 // FromCookie retrieves the session from a echo.Context cookies.
 func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
-	cookie, err := c.Cookie(SessionCookieName)
+	cookie, err := c.Cookie(CookieName(i))
 	if err != nil || cookie.Value == "" {
+		// TODO 2020-05-15 Remove this migration code {{{
+		if config.GetConfig().Subdomains == config.FlatSubdomains {
+			cookie, err = c.Cookie(defaultCookieName)
+			if err != nil || cookie.Value == "" {
+				return nil, ErrNoCookie
+			}
+			cfg := crypto.MACConfig{
+				Name:   defaultCookieName,
+				MaxLen: 256,
+			}
+			sessionID, err := crypto.DecodeAuthMessage(cfg, i.SessionSecret(), []byte(cookie.Value), nil)
+			if err != nil {
+				return nil, err
+			}
+			sess, err := Get(i, string(sessionID))
+			if err != nil {
+				return nil, err
+			}
+			cookie, err := sess.ToCookie()
+			if err != nil {
+				return nil, err
+			}
+			c.SetCookie(cookie)
+			return sess, nil
+		}
+		// }}}
 		return nil, ErrNoCookie
 	}
 
-	sessionID, err := crypto.DecodeAuthMessage(cookieSessionMACConfig, i.SessionSecret(),
+	sessionID, err := crypto.DecodeAuthMessage(cookieSessionMACConfig(i), i.SessionSecret(),
 		[]byte(cookie.Value), nil)
 	if err != nil {
 		return nil, err
@@ -142,30 +193,14 @@ func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
 	return Get(i, string(sessionID))
 }
 
-// FromAppCookie retrives the session from an application submain cookie.
-func FromAppCookie(c echo.Context, i *instance.Instance, slug string) (*Session, error) {
-	if config.GetConfig().Subdomains == config.FlatSubdomains {
-		cookie, err := c.Cookie(SessionCookieName)
-		if err != nil || cookie.Value == "" {
-			return nil, ErrNoCookie
-		}
-
-		sessionID, err := crypto.DecodeAuthMessage(cookieAppMACConfig, i.SessionSecret(),
-			[]byte(cookie.Value), []byte(slug))
-		if err != nil {
-			return nil, err
-		}
-
-		return Get(i, string(sessionID))
-	}
-	return FromCookie(c, i)
-}
-
 // GetAll returns all the active sessions
 func GetAll(inst *instance.Instance) ([]*Session, error) {
 	var sessions []*Session
 	if err := couchdb.GetAllDocs(inst, consts.Sessions, nil, &sessions); err != nil {
 		return nil, err
+	}
+	for _, sess := range sessions {
+		sess.instance = inst
 	}
 	return sessions, nil
 }
@@ -178,17 +213,18 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 		i.Logger().Error("[session] Failed to delete session:", err)
 	}
 	return &http.Cookie{
-		Name:   SessionCookieName,
+		Name:   CookieName(i),
 		Value:  "",
 		MaxAge: -1,
 		Path:   "/",
-		Domain: utils.CookieDomain("." + i.ContextualDomain()),
+		Domain: CookieDomain(i),
 	}
 }
 
 // ToCookie returns an http.Cookie for this Session
 func (s *Session) ToCookie() (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieSessionMACConfig, s.Instance.SessionSecret(), []byte(s.ID()), nil)
+	inst := s.instance
+	encoded, err := crypto.EncodeAuthMessage(cookieSessionMACConfig(inst), inst.SessionSecret(), []byte(s.ID()), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -199,29 +235,11 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 	}
 
 	return &http.Cookie{
-		Name:     SessionCookieName,
+		Name:     CookieName(inst),
 		Value:    string(encoded),
 		MaxAge:   maxAge,
 		Path:     "/",
-		Domain:   utils.CookieDomain("." + s.Instance.ContextualDomain()),
-		Secure:   !build.IsDevRelease(),
-		HttpOnly: true,
-	}, nil
-}
-
-// ToAppCookie returns an http.Cookie for this Session on an app subdomain
-func (s *Session) ToAppCookie(domain, slug string) (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieAppMACConfig, s.Instance.SessionSecret(), []byte(s.ID()), []byte(slug))
-	if err != nil {
-		return nil, err
-	}
-
-	return &http.Cookie{
-		Name:     SessionCookieName,
-		Value:    string(encoded),
-		MaxAge:   0, // "session cookie", expiring when the browser is closed
-		Path:     "/",
-		Domain:   utils.CookieDomain(domain),
+		Domain:   CookieDomain(inst),
 		Secure:   !build.IsDevRelease(),
 		HttpOnly: true,
 	}, nil
@@ -249,7 +267,8 @@ func DeleteOthers(i *instance.Instance, selfSessionID string) error {
 	return nil
 }
 
-// cookieMACConfig returns the options to authenticate the session cookie.
+// cookieSessionMACConfig returns the options to authenticate the session
+// cookie.
 //
 // We rely on a MACed cookie value, without additional encryption of the
 // message since it should not contain critical private informations and is
@@ -264,14 +283,9 @@ func DeleteOthers(i *instance.Instance, selfSessionID string) error {
 //   < 200 bytes
 //
 // 256 bytes should be sufficient enough to support any type of session.
-//
-var cookieAppMACConfig = crypto.MACConfig{
-	Name:   SessionCookieName,
-	MaxAge: SessionMaxAge,
-	MaxLen: 256,
-}
-
-var cookieSessionMACConfig = crypto.MACConfig{
-	Name:   SessionCookieName,
-	MaxLen: 256,
+func cookieSessionMACConfig(i *instance.Instance) crypto.MACConfig {
+	return crypto.MACConfig{
+		Name:   CookieName(i),
+		MaxLen: 256,
+	}
 }

@@ -22,22 +22,6 @@ func LoadSession(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// LoadAppSession is a middlewares that loads the session, from an application
-// subdmail, and stores it the request context.
-func LoadAppSession(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		i, ok := GetInstanceSafe(c)
-		if ok {
-			slug := c.Get("slug").(string)
-			sess, err := session.FromAppCookie(c, i, slug)
-			if err == nil {
-				c.Set(sessionKey, sess)
-			}
-		}
-		return next(c)
-	}
-}
-
 // IsLoggedIn returns true if the context has a valid session cookie.
 func IsLoggedIn(c echo.Context) bool {
 	_, ok := GetSession(c)

@@ -57,14 +57,8 @@ func renderError(c echo.Context, code int, msg string) error {
 func Home(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	if session, ok := middlewares.GetSession(c); ok {
+	if middlewares.IsLoggedIn(c) {
 		redirect := instance.DefaultRedirection()
-		redirect = AddCodeToRedirect(redirect, instance.ContextualDomain(), session.ID())
-		cookie, err := session.ToCookie()
-		if err != nil {
-			return err
-		}
-		c.SetCookie(cookie)
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
@@ -87,27 +81,6 @@ func Home(c echo.Context) error {
 		params = url.Values{"jwt": {jwt}}
 	}
 	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", params))
-}
-
-// AddCodeToRedirect adds a code to a redirect URL to transfer the session.
-// With the nested subdomains structure, the cookie set on the main domain can
-// also be used to authentify the user on the apps subdomain. But with the flat
-// subdomains structure, a new cookie is needed. To transfer the session, we
-// add a code parameter to the redirect URL that can be exchanged to the
-// cookie. The code can be used only once, is valid only one minute, and is
-// specific to the app (it can't be used by another app).
-func AddCodeToRedirect(redirect *url.URL, domain, sessionID string) *url.URL {
-	// TODO add rate-limiting on the number of session codes generated
-	if config.GetConfig().Subdomains == config.FlatSubdomains {
-		redirect = utils.CloneURL(redirect)
-		if redirect.Host != domain {
-			q := redirect.Query()
-			q.Set("code", session.BuildCode(sessionID, redirect.Host).Value)
-			redirect.RawQuery = q.Encode()
-			return redirect
-		}
-	}
-	return redirect
 }
 
 // SetCookieForNewSession creates a new session and sets the cookie on echo context
@@ -208,17 +181,10 @@ func loginForm(c echo.Context) error {
 		return err
 	}
 
-	sess, ok := middlewares.GetSession(c)
-	if ok {
+	if middlewares.IsLoggedIn(c) {
 		if redirect == nil {
 			redirect = instance.DefaultRedirection()
 		}
-		redirect = AddCodeToRedirect(redirect, instance.ContextualDomain(), sess.ID())
-		cookie, err := sess.ToCookie()
-		if err != nil {
-			return err
-		}
-		c.SetCookie(cookie)
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 	// Delegated JWT
@@ -237,21 +203,17 @@ func loginForm(c echo.Context) error {
 			if redirect == nil {
 				redirect = instance.DefaultRedirection()
 			}
-			redirect = AddCodeToRedirect(redirect, instance.ContextualDomain(), sessionID)
 			return c.Redirect(http.StatusSeeOther, redirect.String())
 		}
 	}
 	return renderLoginForm(c, instance, http.StatusOK, "", redirect)
 }
 
-// newSession generates a new session, and returns its ID
-func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, longRunSession bool) (string, error) {
-	var sessionID string
-	var err error
-
-	// Generate a session
-	if sessionID, err = SetCookieForNewSession(c, longRunSession); err != nil {
-		return "", err
+// newSession generates a new session, and puts a cookie for it
+func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, longRunSession bool) error {
+	sessionID, err := SetCookieForNewSession(c, longRunSession)
+	if err != nil {
+		return err
 	}
 
 	var clientID string
@@ -270,7 +232,7 @@ func newSession(c echo.Context, inst *instance.Instance, redirect *url.URL, long
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 
-	return sessionID, nil
+	return nil
 }
 
 func migrateToHashedPassphrase(inst *instance.Instance, settings *settings.Settings, passphrase []byte, iterations int) {
@@ -375,14 +337,13 @@ func login(c echo.Context) error {
 	}
 
 	// Successful authentication
-	// User is now logged-in, generate a new sessions
+	// User is now logged-in, generate a new session
 	if sessionID == "" {
-		sessionID, err = newSession(c, inst, redirect, longRunSession)
+		err := newSession(c, inst, redirect, longRunSession)
 		if err != nil {
 			return err
 		}
 	}
-	redirect = AddCodeToRedirect(redirect, inst.ContextualDomain(), sessionID)
 	if wantsJSON(c) {
 		return c.JSON(http.StatusOK, echo.Map{
 			"redirect": redirect.String(),
@@ -408,6 +369,17 @@ func logout(c echo.Context) error {
 	session, ok := middlewares.GetSession(c)
 	if ok {
 		c.SetCookie(session.Delete(instance))
+		// TODO 2020-05-15 Remove this migration code {{{
+		if config.GetConfig().Subdomains == config.FlatSubdomains {
+			c.SetCookie(&http.Cookie{
+				Name:   "cozysessid",
+				Value:  "",
+				MaxAge: -1,
+				Path:   "/",
+				Domain: utils.CookieDomain("." + instance.ContextualDomain()),
+			})
+		}
+		// }}}
 	}
 
 	return c.NoContent(http.StatusNoContent)

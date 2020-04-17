@@ -64,7 +64,7 @@ var linkedCode string
 
 func getSessionID(cookies []*http.Cookie) string {
 	for _, c := range cookies {
-		if c.Name == "cozysessid" {
+		if c.Name == session.CookieName(testInstance) {
 			b, err := base64.RawURLEncoding.DecodeString(c.Value)
 			if err != nil {
 				return ""
@@ -251,7 +251,7 @@ func TestLoginWithGoodPassphrase(t *testing.T) {
 		assert.Len(t, cookies, 2)
 		assert.Equal(t, cookies[0].Name, "_csrf")
 		assert.Equal(t, cookies[0].Value, token)
-		assert.Equal(t, cookies[1].Name, session.SessionCookieName)
+		assert.Equal(t, cookies[1].Name, session.CookieName(testInstance))
 		assert.NotEmpty(t, cookies[1].Value)
 
 		var results []*session.LoginEntry
@@ -311,69 +311,6 @@ func TestDelegatedJWTLoginWithRedirect(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
-}
-
-func TestLoginWithSessionCode(t *testing.T) {
-	cfg := config.GetConfig()
-	cfg.Subdomains = config.FlatSubdomains
-	defer func() { cfg.Subdomains = config.NestedSubdomains }()
-
-	// Logout
-	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
-	req.Host = domain
-	res, err := client.Do(req)
-	assert.NoError(t, err)
-	res.Body.Close()
-
-	// Login
-	res, err = postForm("/auth/login", &url.Values{
-		"passphrase": {"MyPassphrase"},
-		"redirect":   {"https://cozy-app.example.net/private"},
-		"csrf_token": {getLoginCSRFToken(client, t)},
-	})
-	assert.NoError(t, err)
-	res.Body.Close()
-	if assert.Equal(t, "303 See Other", res.Status) {
-		location, err2 := url.Parse(res.Header.Get("Location"))
-		assert.NoError(t, err2)
-		assert.Equal(t, "cozy-app.example.net", location.Host)
-		assert.Equal(t, "/private", location.Path)
-		code2 := location.Query().Get("code")
-		assert.Len(t, code2, 22)
-	}
-
-	// Already logged-in (GET)
-	req, err = http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("https://cozy-app.example.net/private"), nil)
-	assert.NoError(t, err)
-	req.Host = domain
-	res, err = client.Do(req)
-	assert.NoError(t, err)
-	res.Body.Close()
-	if assert.Equal(t, "303 See Other", res.Status) {
-		location, err2 := url.Parse(res.Header.Get("Location"))
-		assert.NoError(t, err2)
-		assert.Equal(t, "cozy-app.example.net", location.Host)
-		assert.Equal(t, "/private", location.Path)
-		code2 := location.Query().Get("code")
-		assert.Len(t, code2, 22)
-	}
-
-	// Already logged-in (POST)
-	res, err = postForm("/auth/login", &url.Values{
-		"passphrase": {"MyPassphrase"},
-		"redirect":   {"https://cozy-app.example.net/private"},
-		"csrf_token": {getLoginCSRFToken(client, t)},
-	})
-	assert.NoError(t, err)
-	res.Body.Close()
-	if assert.Equal(t, "303 See Other", res.Status) {
-		location, err2 := url.Parse(res.Header.Get("Location"))
-		assert.NoError(t, err2)
-		assert.Equal(t, "cozy-app.example.net", location.Host)
-		assert.Equal(t, "/private", location.Path)
-		code2 := location.Query().Get("code")
-		assert.Len(t, code2, 22)
-	}
 }
 
 func TestIsLoggedInAfterLogin(t *testing.T) {
