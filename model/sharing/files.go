@@ -797,7 +797,6 @@ func (s *Sharing) recreateParent(inst *instance.Instance, dirID string) (*vfs.Di
 	}
 	doc.DirID = parent.DocID
 	doc.Fullpath = path.Join(parent.Fullpath, doc.DocName)
-	doc.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	doc.SetRev("")
 	err = fs.CreateDir(doc)
 	if err != nil {
