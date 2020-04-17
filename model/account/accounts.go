@@ -51,6 +51,7 @@ type OauthInfo struct {
 // BasicInfo holds configuration information for an user/pass account
 type BasicInfo struct {
 	Login                string `json:"login,omitempty"`
+	Email                string `json:"email,omitempty"`    // used in some accounts instead of login
 	Password             string `json:"password,omitempty"` // used when no encryption
 	EncryptedCredentials string `json:"credentials_encrypted,omitempty"`
 }
