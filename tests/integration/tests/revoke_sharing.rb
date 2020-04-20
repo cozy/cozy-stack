@@ -153,7 +153,9 @@ describe "A sharing" do
     old_name = file.name
     file.rename inst_alice, Faker::Internet.slug
     sleep 3
-    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{old_name}"
+    # XXX: the folder name was changed after the sharing was revoked
+    folder_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name} #{Folder::CANCELLED_SUFFIX}"
+    file_path = CGI.escape "#{folder_path}/#{old_name}"
     file_recipient = Folder.find_by_path inst_bob, file_path
     refute_equal file_recipient.name, file.name
 
@@ -300,7 +302,9 @@ describe "A sharing" do
     old_name = file.name
     file.rename inst_alice, Faker::Internet.slug
     sleep 3
-    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{old_name}"
+    # XXX: the folder name was changed after the sharing was revoked
+    folder_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name} #{Folder::CANCELLED_SUFFIX}"
+    file_path = CGI.escape "#{folder_path}/#{old_name}"
     file_bob = Folder.find_by_path inst_bob, file_path
     file_charlie = Folder.find_by_path inst_charlie, file_path
     refute_equal file_bob.name, file.name

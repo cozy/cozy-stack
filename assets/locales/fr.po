@@ -36,6 +36,9 @@ msgstr "Partages reçus"
 msgid "Tree No longer shared"
 msgstr "Retirés des partages"
 
+msgid "Tree Revoked sharing suffix"
+msgstr "partage annulé"
+
 msgid "Notes New note"
 msgstr "Nouvelle note"
 

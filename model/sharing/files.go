@@ -2,10 +2,12 @@ package sharing
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -242,16 +244,17 @@ func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) (*vfs
 		Type: consts.Sharings,
 	})
 	dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
-	if err = fs.CreateDir(dir); err != nil {
-		dir.DocName = conflictName(dir.DocName, "")
-		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
-		if err = fs.CreateDir(dir); err != nil {
-			inst.Logger().WithField("nspace", "sharing").
-				Errorf("Cannot create the sharing directory: %s", err)
-			return nil, err
+	basename := dir.DocName
+	for i := 2; i < 100; i++ {
+		if err = fs.CreateDir(dir); err == nil {
+			return dir, nil
 		}
+		dir.DocName = fmt.Sprintf("%s (%d)", basename, i)
+		dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
 	}
-	return dir, err
+	inst.Logger().WithField("nspace", "sharing").
+		Errorf("Cannot create the sharing directory: %s", err)
+	return nil, err
 }
 
 // AddReferenceForSharingDir adds a reference to the sharing on the sharing directory
@@ -307,8 +310,11 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 	return inst.VFS().DirByID(res.Rows[0].ID)
 }
 
-// RemoveSharingDir removes the reference on the sharing directory.
-// It should be called when a sharing is revoked, on the recipient Cozy.
+// RemoveSharingDir removes the reference on the sharing directory, and adds a
+// suffix to its name: the suffix will help make the user understand that the
+// sharing has been revoked, and it will avoid conflicts if the user accepts a
+// new sharing for the same folder. It should be called when a sharing is
+// revoked, on the recipient Cozy.
 func (s *Sharing) RemoveSharingDir(inst *instance.Instance) error {
 	dir, err := s.GetSharingDir(inst)
 	if couchdb.IsNotFoundError(err) {
@@ -322,7 +328,18 @@ func (s *Sharing) RemoveSharingDir(inst *instance.Instance) error {
 		Type: consts.Sharings,
 	})
 	dir.CozyMetadata.UpdatedAt = time.Now()
-	return inst.VFS().UpdateDirDoc(olddoc, dir)
+	suffix := inst.Translate("Tree Revoked sharing suffix")
+	parentPath := filepath.Dir(dir.Fullpath)
+	basename := fmt.Sprintf("%s (%s)", dir.DocName, suffix)
+	dir.DocName = basename
+	for i := 2; i < 100; i++ {
+		dir.Fullpath = path.Join(parentPath, dir.DocName)
+		if err = inst.VFS().UpdateDirDoc(olddoc, dir); err == nil {
+			return nil
+		}
+		dir.DocName = fmt.Sprintf("%s (%d)", basename, i)
+	}
+	return err
 }
 
 // GetNoLongerSharedDir returns the directory used for files and folders that

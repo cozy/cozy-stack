@@ -3,6 +3,7 @@ class Folder
   TRASH_DIR = "io.cozy.files.trash-dir".freeze
   TRASH_PATH = "/.cozy_trash/".freeze
   NO_LONGER_SHARED_DIR = "io.cozy.files.no-longer-shared-dir".freeze
+  CANCELLED_SUFFIX = "(partage annulé)".freeze
 
   include Model::Files
 

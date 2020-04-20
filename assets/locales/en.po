@@ -24,6 +24,9 @@ msgstr "Inbox of sharings"
 msgid "Tree No longer shared"
 msgstr "No longer shared"
 
+msgid "Tree Revoked sharing suffix"
+msgstr "cancelled sharing"
+
 msgid "Notes New note"
 msgstr "New note"
 
