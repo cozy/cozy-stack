@@ -66,7 +66,7 @@ describe "A photo" do
 
     # Remove the sharer's file
     file.remove inst
-    sleep 5
+    sleep 6
     file = CozyFile.find inst, file.couch_id
     assert file.trashed
 
