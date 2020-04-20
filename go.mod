@@ -29,7 +29,7 @@ require (
 	github.com/labstack/echo/v4 v4.1.6
 	github.com/leonelquinteros/gotext v1.4.0
 	github.com/mitchellh/mapstructure v1.2.2
-	github.com/mssola/user_agent v0.5.1
+	github.com/mssola/user_agent v0.5.2
 	github.com/ncw/swift v1.0.50
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/oschwald/maxminddb-golang v1.6.0
@@ -54,5 +54,3 @@ require (
 )
 
 replace github.com/spf13/afero => github.com/cozy/afero v1.2.3
-
-replace github.com/mssola/user_agent => github.com/cozy/user_agent v0.5.4
