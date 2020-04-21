@@ -30,6 +30,9 @@ msgstr "Gedeeld met mij"
 msgid "Tree No longer shared"
 msgstr "Niet langer gedeeld"
 
+msgid "Tree Revoked sharing suffix"
+msgstr "Delen afgebroken"
+
 msgid "Notes New note"
 msgstr "Nieuwe notitie"
 
@@ -520,7 +523,7 @@ msgid "Mail Cozy Team"
 msgstr "Het Cozy Cloud-team"
 
 msgid "Mail Hint Subject"
-msgstr "Wachtwoordhint"
+msgstr "Wachtwoord vergeten: hint"
 
 msgid "Mail Hint Intro 1"
 msgstr "Hallo %s,"
@@ -532,7 +535,7 @@ msgstr ""
 
 msgid "Mail Hint Outro"
 msgstr ""
-"Als laatste redmiddel kun je je wachtwoord opnieuw instellen inde sectie "
+"Als laatste redmiddel kun je je wachtwoord opnieuw instellen in de sectie "
 "'Wachtwoord vergeten'. Als je dit verzoek niet hebt aangevraagd, neem dan "
 "contact met ons op door deze e-mail te beantwoorden."
 
