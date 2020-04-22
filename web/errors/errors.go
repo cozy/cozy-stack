@@ -80,20 +80,21 @@ func ErrorHandler(err error, c echo.Context) {
 // per-se.
 func HTMLErrorHandler(err error, c echo.Context) {
 	status := http.StatusInternalServerError
-
 	req := c.Request()
 
-	var log *logrus.Entry
-	inst, ok := middlewares.GetInstanceSafe(c)
-	if ok {
-		log = inst.Logger().WithField("nspace", "http")
-	} else {
-		log = logger.WithNamespace("http")
+	if build.IsDevRelease() {
+		var log *logrus.Entry
+		inst, ok := middlewares.GetInstanceSafe(c)
+		if ok {
+			log = inst.Logger().WithField("nspace", "http")
+		} else {
+			log = logger.WithNamespace("http")
+		}
+		log.Errorf("%s %s %s", req.Method, req.URL.Path, err)
 	}
-	log.Errorf("%s %s %s", req.Method, req.URL.Path, err)
 
-	var he *echo.HTTPError
-	if he, ok = err.(*echo.HTTPError); ok {
+	he, ok := err.(*echo.HTTPError)
+	if ok {
 		status = he.Code
 		if he.Internal != nil {
 			err = he.Internal
@@ -165,7 +166,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		err = c.String(status, fmt.Sprintf("%v", he.Message))
 	}
 
-	if err != nil && log != nil {
-		log.Errorf("%s %s %s", req.Method, req.URL.Path, err)
+	if err != nil {
+		logger.WithNamespace("http").Errorf("%s %s %s", req.Method, req.URL.Path, err)
 	}
 }
