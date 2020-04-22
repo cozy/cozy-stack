@@ -352,7 +352,7 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 	var deleted []*Service
 	var created []*Service
 
-	var clone = make(Services)
+	clone := make(Services)
 	for newName, newService := range newServices {
 		clone[newName] = newService
 		newService.name = newName

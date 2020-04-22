@@ -48,7 +48,6 @@ var lsLayoutsCmd = &cobra.Command{
 			return err
 		}
 		json, err := json.MarshalIndent(buf, "", "  ")
-
 		if err != nil {
 			return err
 		}
@@ -86,7 +85,6 @@ var swiftGetCmd = &cobra.Command{
 		fmt.Println(string(out))
 
 		return nil
-
 	},
 }
 
@@ -101,7 +99,7 @@ expected on the standard input.`,
 		}
 
 		c := newAdminClient()
-		var buf = new(bytes.Buffer)
+		buf := new(bytes.Buffer)
 
 		_, err := io.Copy(buf, os.Stdin)
 		if err != nil {

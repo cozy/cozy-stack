@@ -30,7 +30,7 @@ func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) er
 	}
 
 	for i, m := range s.Members {
-		if i == 0 || m.Status != MemberStatusMailNotSent { //i == 0 is for the owner
+		if i == 0 || m.Status != MemberStatusMailNotSent { // i == 0 is for the owner
 			continue
 		}
 		link := m.MailLink(inst, s, s.Credentials[i-1].State, codes)

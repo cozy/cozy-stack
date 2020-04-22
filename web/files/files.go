@@ -179,7 +179,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 // OverwriteFileContentHandler handles PUT requests on /files/:file-id
 // to overwrite the content of a file given its identifier.
 func OverwriteFileContentHandler(c echo.Context) (err error) {
-	var instance = middlewares.GetInstance(c)
+	instance := middlewares.GetInstance(c)
 	var olddoc *vfs.FileDoc
 	var newdoc *vfs.FileDoc
 

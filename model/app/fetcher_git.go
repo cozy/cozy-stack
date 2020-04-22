@@ -324,6 +324,4 @@ func isGitSSHScheme(scheme string) bool {
 	return scheme == "git+ssh" || scheme == "ssh+git"
 }
 
-var (
-	_ Fetcher = &gitFetcher{}
-)
+var _ Fetcher = &gitFetcher{}

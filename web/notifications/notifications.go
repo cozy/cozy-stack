@@ -29,6 +29,7 @@ func (n *apiNotif) Included() []jsonapi.Object             { return nil }
 func (n *apiNotif) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/notifications/" + n.n.ID()}
 }
+
 func (n *apiNotif) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.n)
 }

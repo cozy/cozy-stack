@@ -118,7 +118,7 @@ func ListReferencesHandler(c echo.Context) error {
 
 	cursor.UpdateFrom(&res)
 
-	var links = &jsonapi.LinksList{}
+	links := &jsonapi.LinksList{}
 	if cursor.HasMore() {
 		params, err2 := jsonapi.PaginationCursorToParams(cursor)
 		if err2 != nil {
@@ -128,7 +128,7 @@ func ListReferencesHandler(c echo.Context) error {
 			c.Request().URL.Path, params.Encode())
 	}
 
-	var refs = make([]couchdb.DocReference, len(res.Rows))
+	refs := make([]couchdb.DocReference, len(res.Rows))
 	var docs []jsonapi.Object
 	if includeDocs {
 		docs = make([]jsonapi.Object, len(res.Rows))

@@ -604,6 +604,4 @@ func BuildLinkedAppScope(slug string) string {
 	return fmt.Sprintf("@%s/%s", consts.Apps, slug)
 }
 
-var (
-	_ couchdb.Doc = &Client{}
-)
+var _ couchdb.Doc = &Client{}

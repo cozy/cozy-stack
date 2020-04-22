@@ -245,6 +245,7 @@ func manifestKonnector2() string {
   "version": "2.0.0"
 }`
 }
+
 func TestKonnectorUpdateSkipPerms(t *testing.T) {
 	// Generating test instance
 	finished := true

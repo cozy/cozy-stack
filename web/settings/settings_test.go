@@ -152,6 +152,7 @@ func TestPatchWithBadRevAndChanges(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusConflict, res.StatusCode)
 }
+
 func TestDiskUsage(t *testing.T) {
 	res, err := http.Get(ts.URL + "/settings/disk-usage")
 	assert.NoError(t, err)

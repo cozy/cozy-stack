@@ -17,6 +17,7 @@ type apiFlags struct {
 func (f *apiFlags) Relationships() jsonapi.RelationshipMap {
 	return nil
 }
+
 func (f *apiFlags) Included() []jsonapi.Object {
 	if !f.include {
 		return nil
@@ -27,6 +28,7 @@ func (f *apiFlags) Included() []jsonapi.Object {
 	}
 	return included
 }
+
 func (f *apiFlags) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/settings/flags"}
 }

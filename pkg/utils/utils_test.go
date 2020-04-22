@@ -36,7 +36,7 @@ func TestRandomStringConcurrentAccess(t *testing.T) {
 	ms := make(map[string]struct{})
 	var mu sync.Mutex
 
-	var gotDup = false
+	gotDup := false
 
 	for i := 0; i < n; i++ {
 		go func() {

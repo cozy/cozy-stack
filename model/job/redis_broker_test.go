@@ -35,7 +35,7 @@ func TestRedisJobs(t *testing.T) {
 	var w sync.WaitGroup
 	w.Add(2*n + 1)
 
-	var workersTestList = jobs.WorkersList{
+	workersTestList := jobs.WorkersList{
 		{
 			WorkerType:  "test",
 			Concurrency: 4,
@@ -115,7 +115,7 @@ func TestRedisJobs(t *testing.T) {
 func TestRedisAddJobRateLimitExceeded(t *testing.T) {
 	opts1, _ := redis.ParseURL(redisURL1)
 	client1 := redis.NewClient(opts1)
-	var workersTestList = jobs.WorkersList{
+	workersTestList := jobs.WorkersList{
 		{
 			WorkerType:  "thumbnail",
 			Concurrency: 4,

@@ -69,7 +69,7 @@ func TestInMemoryJobs(t *testing.T) {
 
 	var w sync.WaitGroup
 
-	var workersTestList = jobs.WorkersList{
+	workersTestList := jobs.WorkersList{
 		{
 			WorkerType:  "test",
 			Concurrency: 4,
@@ -304,7 +304,7 @@ func TestPanic(t *testing.T) {
 }
 
 func TestMemAddJobRateLimitExceeded(t *testing.T) {
-	var workersTestList = jobs.WorkersList{
+	workersTestList := jobs.WorkersList{
 		{
 			WorkerType:  "thumbnail",
 			Concurrency: 4,

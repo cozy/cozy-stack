@@ -215,7 +215,7 @@ func unoptimalError() error {
 }
 
 func newCouchdbError(statusCode int, couchdbJSON []byte) error {
-	var err = &Error{
+	err := &Error{
 		CouchdbJSON: couchdbJSON,
 	}
 	parseErr := json.Unmarshal(couchdbJSON, err)

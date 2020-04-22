@@ -179,7 +179,6 @@ func (c *TestSetup) GetTestClient(scopes string) (*oauth.Client, string) {
 	client.Create(inst)
 	token, err := c.inst.MakeJWT(consts.AccessTokenAudience,
 		client.ClientID, scopes, "", time.Now())
-
 	if err != nil {
 		c.CleanupAndDie("Cannot create oauth token", err)
 	}

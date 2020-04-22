@@ -248,6 +248,4 @@ func (b *memBroker) WorkersTypes() []string {
 	return b.workersTypes
 }
 
-var (
-	_ Broker = &memBroker{}
-)
+var _ Broker = &memBroker{}

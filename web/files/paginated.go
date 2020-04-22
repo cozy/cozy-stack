@@ -306,6 +306,7 @@ func (f *file) Relationships() jsonapi.RelationshipMap {
 	}
 	return rels
 }
+
 func (f *file) Included() []jsonapi.Object {
 	var included []jsonapi.Object
 	for _, version := range f.versions {
@@ -313,6 +314,7 @@ func (f *file) Included() []jsonapi.Object {
 	}
 	return included
 }
+
 func (f *file) MarshalJSON() ([]byte, error) {
 	f.jsonDoc.FileDoc = f.doc
 	if f.includePath {
@@ -321,6 +323,7 @@ func (f *file) MarshalJSON() ([]byte, error) {
 	res, err := json.Marshal(f.jsonDoc)
 	return res, err
 }
+
 func (f *file) Links() *jsonapi.LinksList {
 	links := jsonapi.LinksList{Self: "/files/" + f.doc.DocID}
 	if f.doc.Class == "image" {
@@ -332,6 +335,7 @@ func (f *file) Links() *jsonapi.LinksList {
 	}
 	return &links
 }
+
 func (f *file) IncludePath(fp vfs.FilePather) {
 	f.includePath = true
 	_, _ = f.doc.Path(fp)

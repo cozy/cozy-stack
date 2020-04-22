@@ -208,6 +208,7 @@ type memRef struct {
 	val int64
 	exp time.Time
 }
+
 type memCounter struct {
 	mu   sync.Mutex
 	vals map[string]*memRef

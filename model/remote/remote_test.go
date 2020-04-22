@@ -13,7 +13,7 @@ import (
 const doctype = "org.example.request"
 
 func TestParseRawRequest(t *testing.T) {
-	var raw = `GET`
+	raw := `GET`
 	_, err := ParseRawRequest(doctype, raw)
 	assert.Equal(t, ErrInvalidRequest, err)
 

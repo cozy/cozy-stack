@@ -381,7 +381,7 @@ func UpdateFileShared(db couchdb.Database, ref *SharedRef, revs RevsStruct) erro
 
 // RemoveSharedRefs deletes the references containing the sharingid
 func RemoveSharedRefs(inst *instance.Instance, sharingID string) error {
-	var req = &couchdb.ViewRequest{
+	req := &couchdb.ViewRequest{
 		Key:         sharingID,
 		IncludeDocs: true,
 	}
@@ -418,7 +418,7 @@ func GetSharedDocsBySharingIDs(inst *instance.Instance, sharingIDs []string) (ma
 	for i, id := range sharingIDs {
 		keys[i] = id
 	}
-	var req = &couchdb.ViewRequest{
+	req := &couchdb.ViewRequest{
 		Keys:        keys,
 		IncludeDocs: true,
 	}

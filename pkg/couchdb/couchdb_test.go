@@ -70,7 +70,7 @@ func makeTestDoc() Doc {
 func TestCreateDoc(t *testing.T) {
 	var err error
 
-	var doc = makeTestDoc()
+	doc := makeTestDoc()
 	assert.Empty(t, doc.Rev(), doc.ID())
 
 	// Create the document
@@ -236,11 +236,11 @@ func TestChangesSuccess(t *testing.T) {
 	err := ResetDB(TestPrefix, TestDoctype)
 	assert.NoError(t, err)
 
-	var request = &ChangesRequest{
+	request := &ChangesRequest{
 		DocType: TestDoctype,
 	}
 	response, err := GetChanges(TestPrefix, request)
-	var seqnoAfterCreates = response.LastSeq
+	seqnoAfterCreates := response.LastSeq
 	assert.NoError(t, err)
 	assert.Len(t, response.Results, 0)
 

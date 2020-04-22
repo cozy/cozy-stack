@@ -149,7 +149,7 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instan
 		Doc interface{} `json:"doc"`
 	}
 	var doc serviceEvent
-	var marshaled = []byte{}
+	marshaled := []byte{}
 
 	if err := ctx.UnmarshalEvent(&doc); err == nil {
 		marshaled, err = json.Marshal(doc.Doc)

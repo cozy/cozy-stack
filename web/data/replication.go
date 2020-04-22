@@ -174,7 +174,7 @@ var allowedChangesParams = map[string]bool{
 
 func changesFeed(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	var doctype = c.Get("doctype").(string)
+	doctype := c.Get("doctype").(string)
 
 	// Drop a clear error for parameters not supported by stack
 	for key := range c.QueryParams() {

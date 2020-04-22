@@ -20,7 +20,7 @@ func makeMessage(t *testing.T, msg string) jobs.Message {
 
 func TestTriggerEvent(t *testing.T) {
 	var wg sync.WaitGroup
-	var called = make(map[string]bool)
+	called := make(map[string]bool)
 	verb := "CREATED"
 
 	bro := jobs.NewMemBroker()

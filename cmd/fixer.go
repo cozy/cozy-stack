@@ -199,7 +199,6 @@ var contactEmailsFixer = &cobra.Command{
 		mailto := regexp.MustCompile("^mailto:")
 
 		fixEmails := func(domain string) error {
-
 			c, err := newClientSafe(domain, consts.Contacts)
 			if err != nil {
 				return err

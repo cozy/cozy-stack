@@ -103,7 +103,7 @@ func TestAddReferencesHandler(t *testing.T) {
 	}
 
 	// update it
-	var in = jsonReader(jsonapi.Relationship{
+	in := jsonReader(jsonapi.Relationship{
 		Data: []couchdb.DocReference{
 			{
 				ID:   filedoc.ID(),
@@ -137,7 +137,7 @@ func TestRemoveReferencesHandler(t *testing.T) {
 	f9 := makeReferencedTestFile(t, doc, "testtoref9.txt")
 
 	// update it
-	var in = jsonReader(jsonapi.Relationship{
+	in := jsonReader(jsonapi.Relationship{
 		Data: []couchdb.DocReference{
 			{ID: f8, Type: consts.Files},
 			{ID: f6, Type: consts.Files},
@@ -185,7 +185,7 @@ func TestReferencesWithSlash(t *testing.T) {
 
 	// Add a reference to io.cozy.apps/foobar
 	url := ts.URL + "/data/" + Type + "/io.cozy.apps%2ffoobar/relationships/references"
-	var in = jsonReader(jsonapi.Relationship{
+	in := jsonReader(jsonapi.Relationship{
 		Data: []couchdb.DocReference{
 			{
 				ID:   filedoc.ID(),

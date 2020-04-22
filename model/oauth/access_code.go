@@ -49,6 +49,4 @@ func CreateAccessCode(i *instance.Instance, clientID, scope string) (*AccessCode
 	return ac, nil
 }
 
-var (
-	_ couchdb.Doc = &AccessCode{}
-)
+var _ couchdb.Doc = &AccessCode{}

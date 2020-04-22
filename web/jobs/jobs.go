@@ -80,6 +80,7 @@ func (j apiJob) Included() []jsonapi.Object             { return nil }
 func (j apiJob) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/jobs/" + j.j.WorkerType + "/" + j.j.ID()}
 }
+
 func (j apiJob) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j.j)
 }
@@ -105,6 +106,7 @@ func (t apiTrigger) Included() []jsonapi.Object             { return nil }
 func (t apiTrigger) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/jobs/triggers/" + t.ID()}
 }
+
 func (t apiTrigger) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.t)
 }
@@ -120,6 +122,7 @@ func (t apiTriggerState) Included() []jsonapi.Object             { return nil }
 func (t apiTriggerState) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/jobs/triggers/" + t.ID() + "/state"}
 }
+
 func (t apiTriggerState) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.s)
 }

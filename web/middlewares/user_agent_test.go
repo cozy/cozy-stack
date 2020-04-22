@@ -18,6 +18,7 @@ type stupidRenderer struct{}
 func (sr *stupidRenderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
 	return nil
 }
+
 func TestUserAgent(t *testing.T) {
 	// middleware instance
 	e := echo.New()

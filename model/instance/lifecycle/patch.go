@@ -193,7 +193,6 @@ func managerUpdateSettings(inst *instance.Instance, changes map[string]interface
 // bunch of settings and tells if it needs an update
 func needsSettingsUpdate(inst *instance.Instance, newSettings map[string]interface{}) (bool, error) {
 	oldSettings, err := inst.SettingsDocument()
-
 	if err != nil {
 		return false, err
 	}

@@ -518,7 +518,6 @@ func secretExchange(c echo.Context) error {
 	}
 
 	doc, err := oauth.FindClientByOnBoardingSecret(instance, e.Secret)
-
 	if err != nil {
 		return jsonapi.NotFound(err)
 	}

@@ -122,7 +122,7 @@ func (h *scryptHash) NeedUpdate() bool {
 // If the parameters provided are less than the minimum acceptable values,
 // an error will be returned.
 func GenerateFromPassphrase(passphrase []byte) ([]byte, error) {
-	var h = &scryptHash{n: defaultN, r: defaultR, p: defaultP}
+	h := &scryptHash{n: defaultN, r: defaultR, p: defaultP}
 	var err error
 
 	h.salt = GenerateRandomBytes(defaultSaltLen)
@@ -144,7 +144,7 @@ func GenerateFromPassphrase(passphrase []byte) ([]byte, error) {
 // needUpdate boolean indicating whether or not the passphrase hash has
 // outdated parameters and should be recomputed.
 func CompareHashAndPassphrase(hash []byte, passphrase []byte) (needUpdate bool, err error) {
-	var h = &scryptHash{}
+	h := &scryptHash{}
 	if err = h.UnmarshalText(hash); err != nil {
 		return false, err
 	}

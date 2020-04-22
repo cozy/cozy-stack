@@ -29,7 +29,7 @@ func TestTrashIsSkipped(t *testing.T) {
 		upload(t, "/files/io.cozy.files.root-dir?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	}
 
-	var opts = &url.Values{}
+	opts := &url.Values{}
 	opts.Add("page[limit]", "5")
 	var result struct {
 		Data struct {
@@ -132,7 +132,7 @@ func TestListDirPaginated(t *testing.T) {
 		upload(t, "/files/"+parentID+"?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	}
 
-	var opts = &url.Values{}
+	opts := &url.Values{}
 	opts.Add("page[limit]", "7")
 	var result struct {
 		Data struct {
@@ -213,7 +213,7 @@ func TestListDirPaginatedSkip(t *testing.T) {
 		upload(t, "/files/"+parentID+"?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	}
 
-	var opts = &url.Values{}
+	opts := &url.Values{}
 	opts.Add("page[limit]", "7")
 	opts.Add("page[skip]", "0")
 	var result struct {

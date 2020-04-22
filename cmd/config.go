@@ -128,7 +128,6 @@ keyfiles written in:
 		decryptorFilename := filename + ".dec"
 
 		marshaledEncryptorKey, marshaledDecryptorKey, err := keymgmt.GenerateEncodedNACLKeyPair()
-
 		if err != nil {
 			return nil
 		}

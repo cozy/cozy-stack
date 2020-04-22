@@ -49,7 +49,7 @@ func Allows(fs VFS, pset permission.Set, v permission.Verb, fd Fetcher) error {
 		}
 
 		// permission by attributes values (tags, mime ...) on self
-		var valid = func(value string) bool {
+		valid := func(value string) bool {
 			candidates := fd.Fetch(r.Selector)
 			for _, candidate := range candidates {
 				if value == candidate {
@@ -71,7 +71,7 @@ func Allows(fs VFS, pset permission.Set, v permission.Verb, fd Fetcher) error {
 	// We have some rules on IDs, let's fetch their paths and check if they are
 	// ancestors of current object
 	if len(allowedIDs) > 0 {
-		var selfPath, err = fd.Path(fs)
+		selfPath, err := fd.Path(fs)
 		if err != nil {
 			return err
 		}

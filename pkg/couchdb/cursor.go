@@ -37,6 +37,7 @@ type baseCursor struct {
 // HasMore returns true if there is more document after the current batch.
 // This value is meaning full only after UpdateFrom
 func (c *baseCursor) HasMore() bool { return !c.Done }
+
 func (c *baseCursor) updateFrom(res *ViewResponse) {
 	lrows := len(res.Rows)
 	if lrows <= c.Limit {

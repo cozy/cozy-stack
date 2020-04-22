@@ -988,7 +988,7 @@ type ViewResponse struct {
 	Rows   []*ViewResponseRow `json:"rows"`
 }
 
-//UUIDResponse is the response from _uuids
+// UUIDResponse is the response from _uuids
 type UUIDResponse struct {
 	UUIDs []string `json:"uuids"`
 }

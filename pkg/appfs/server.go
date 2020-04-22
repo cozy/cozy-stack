@@ -200,6 +200,7 @@ func (s *aferoServer) Open(slug, version, shasum, file string) (io.ReadCloser, e
 	}
 	return f, nil
 }
+
 func (s *aferoServer) open(filepath string) (io.ReadCloser, error) {
 	return s.fs.Open(filepath)
 }
@@ -208,6 +209,7 @@ func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	filepath := s.mkPath(slug, version, shasum, file)
 	return s.serveFileContent(w, req, filepath)
 }
+
 func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request, filepath string) error {
 	isGzipped := true
 	rc, err := s.fs.Open(filepath + ".gz")

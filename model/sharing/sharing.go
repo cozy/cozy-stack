@@ -535,7 +535,7 @@ func FindSharing(db prefixer.Prefixer, sharingID string) (*Sharing, error) {
 
 // FindSharings retrieves an array of sharing documents from their IDs
 func FindSharings(db prefixer.Prefixer, sharingIDs []string) ([]*Sharing, error) {
-	var req = &couchdb.AllDocsRequest{
+	req := &couchdb.AllDocsRequest{
 		Keys: sharingIDs,
 	}
 	var res []*Sharing
@@ -548,7 +548,7 @@ func FindSharings(db prefixer.Prefixer, sharingIDs []string) ([]*Sharing, error)
 
 // GetSharingsByDocType returns all the sharings for the given doctype
 func GetSharingsByDocType(inst *instance.Instance, docType string) (map[string]*Sharing, error) {
-	var req = &couchdb.ViewRequest{
+	req := &couchdb.ViewRequest{
 		Key:         docType,
 		IncludeDocs: true,
 	}

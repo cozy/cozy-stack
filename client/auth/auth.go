@@ -290,7 +290,6 @@ func (r *Request) retrieveToken(c *Client, t *AccessToken, q url.Values) (*Acces
 	}
 
 	res, err := r.req(opts)
-
 	if err != nil {
 		return nil, err
 	}

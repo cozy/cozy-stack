@@ -158,7 +158,7 @@ func TestGetDesign(t *testing.T) {
 }
 
 func TestVFSDoctype(t *testing.T) {
-	var in = jsonReader(&map[string]interface{}{
+	in := jsonReader(&map[string]interface{}{
 		"wrong-vfs": "structure",
 	})
 	req, _ := http.NewRequest("POST", ts.URL+"/data/io.cozy.files/", in)
@@ -201,7 +201,7 @@ func TestWrongHost(t *testing.T) {
 }
 
 func TestSuccessCreateKnownDoctype(t *testing.T) {
-	var in = jsonReader(&map[string]interface{}{
+	in := jsonReader(&map[string]interface{}{
 		"somefield": "avalue",
 	})
 	var sur stackUpdateResponse
@@ -222,7 +222,7 @@ func TestSuccessCreateKnownDoctype(t *testing.T) {
 }
 
 func TestSuccessCreateUnknownDoctype(t *testing.T) {
-	var in = jsonReader(&map[string]interface{}{
+	in := jsonReader(&map[string]interface{}{
 		"somefield": "avalue",
 	})
 	var sur stackUpdateResponse
@@ -244,7 +244,7 @@ func TestSuccessCreateUnknownDoctype(t *testing.T) {
 }
 
 func TestWrongCreateWithID(t *testing.T) {
-	var in = jsonReader(&map[string]interface{}{
+	in := jsonReader(&map[string]interface{}{
 		"_id":       "this-should-not-be-an-id",
 		"somefield": "avalue",
 	})
@@ -262,7 +262,7 @@ func TestSuccessUpdate(t *testing.T) {
 	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
 
 	// update it
-	var in = jsonReader(&map[string]interface{}{
+	in := jsonReader(&map[string]interface{}{
 		"_id":       doc.ID(),
 		"_rev":      doc.Rev(),
 		"test":      doc.Get("test"),
@@ -291,7 +291,7 @@ func TestWrongIDInDocUpdate(t *testing.T) {
 	// Get revision
 	doc := getDocForTest()
 	// update it
-	var in = jsonReader(&map[string]interface{}{
+	in := jsonReader(&map[string]interface{}{
 		"_id":       "this is not the id in the URL",
 		"_rev":      doc.Rev(),
 		"test":      doc.M["test"],
@@ -309,7 +309,7 @@ func TestWrongIDInDocUpdate(t *testing.T) {
 // Test for having an inexisting id at all
 func TestCreateDocWithAFixedID(t *testing.T) {
 	// update it
-	var in = jsonReader(&map[string]interface{}{
+	in := jsonReader(&map[string]interface{}{
 		"test":      "value",
 		"somefield": "anewvalue",
 	})
@@ -335,7 +335,7 @@ func TestNoRevInDocUpdate(t *testing.T) {
 	// Get revision
 	doc := getDocForTest()
 	// update it
-	var in = jsonReader(&map[string]interface{}{
+	in := jsonReader(&map[string]interface{}{
 		"_id":       doc.ID(),
 		"test":      doc.M["test"],
 		"somefield": "anewvalue",
@@ -356,7 +356,7 @@ func TestPreviousRevInDocUpdate(t *testing.T) {
 	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
 
 	// correcly update it
-	var in = jsonReader(&map[string]interface{}{
+	in := jsonReader(&map[string]interface{}{
 		"_id":       doc.ID(),
 		"_rev":      doc.Rev(),
 		"somefield": "anewvalue",
@@ -369,7 +369,7 @@ func TestPreviousRevInDocUpdate(t *testing.T) {
 	assert.Equal(t, "200 OK", res.Status, "first update should work")
 
 	// update it
-	var in2 = jsonReader(&map[string]interface{}{
+	in2 := jsonReader(&map[string]interface{}{
 		"_id":       doc.ID(),
 		"_rev":      firstRev,
 		"somefield": "anewvalue2",
@@ -457,8 +457,8 @@ type indexCreationResponse struct {
 }
 
 func TestDefineIndex(t *testing.T) {
-	var def = M{"index": M{"fields": S{"foo"}}}
-	var url = ts.URL + "/data/" + Type + "/_index"
+	def := M{"index": M{"fields": S{"foo"}}}
+	url := ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -474,8 +474,8 @@ func TestDefineIndex(t *testing.T) {
 }
 
 func TestReDefineIndex(t *testing.T) {
-	var def = M{"index": M{"fields": S{"foo"}}}
-	var url = ts.URL + "/data/" + Type + "/_index"
+	def := M{"index": M{"fields": S{"foo"}}}
+	url := ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer "+token)
@@ -493,8 +493,8 @@ func TestReDefineIndex(t *testing.T) {
 func TestDefineIndexUnexistingDoctype(t *testing.T) {
 	_ = couchdb.DeleteDB(testInstance, "io.cozy.nottype")
 
-	var def = M{"index": M{"fields": S{"foo"}}}
-	var url = ts.URL + "/data/io.cozy.nottype/_index"
+	def := M{"index": M{"fields": S{"foo"}}}
+	url := ts.URL + "/data/io.cozy.nottype/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -516,8 +516,8 @@ func TestFindDocuments(t *testing.T) {
 	_ = getDocForTest()
 	_ = getDocForTest()
 
-	var def = M{"index": M{"fields": S{"test"}}}
-	var url = ts.URL + "/data/" + Type + "/_index"
+	def := M{"index": M{"fields": S{"test"}}}
+	url := ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -526,8 +526,8 @@ func TestFindDocuments(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, out.Error, "should have no error")
 
-	var query = M{"selector": M{"test": "value"}}
-	var url2 = ts.URL + "/data/" + Type + "/_find"
+	query := M{"selector": M{"test": "value"}}
+	url2 := ts.URL + "/data/" + Type + "/_find"
 	req, _ = http.NewRequest("POST", url2, jsonReader(&query))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -547,8 +547,8 @@ func TestFindDocumentsPaginated(t *testing.T) {
 		_ = getDocForTest()
 	}
 
-	var def = M{"index": M{"fields": S{"test"}}}
-	var url = ts.URL + "/data/" + Type + "/_index"
+	def := M{"index": M{"fields": S{"test"}}}
+	url := ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -557,8 +557,8 @@ func TestFindDocumentsPaginated(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, out.Error, "should have no error")
 
-	var query = M{"selector": M{"test": "value"}}
-	var url2 = ts.URL + "/data/" + Type + "/_find"
+	query := M{"selector": M{"test": "value"}}
+	url2 := ts.URL + "/data/" + Type + "/_find"
 	req, _ = http.NewRequest("POST", url2, jsonReader(&query))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -574,7 +574,7 @@ func TestFindDocumentsPaginated(t *testing.T) {
 	assert.Equal(t, 100, out2.Limit)
 	assert.Equal(t, true, out2.Next)
 
-	var query2 = M{"selector": M{"test": "value"}, "limit": 10}
+	query2 := M{"selector": M{"test": "value"}, "limit": 10}
 	req, _ = http.NewRequest("POST", url2, jsonReader(&query2))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -598,8 +598,8 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 		_ = getDocForTest()
 	}
 
-	var def = M{"index": M{"fields": S{"test"}}}
-	var url = ts.URL + "/data/" + Type + "/_index"
+	def := M{"index": M{"fields": S{"test"}}}
+	url := ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -608,8 +608,8 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, out.Error, "should have no error")
 
-	var query = M{"selector": M{"test": "value"}}
-	var url2 = ts.URL + "/data/" + Type + "/_find"
+	query := M{"selector": M{"test": "value"}}
+	url2 := ts.URL + "/data/" + Type + "/_find"
 	req, _ = http.NewRequest("POST", url2, jsonReader(&query))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -627,7 +627,7 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 	assert.Equal(t, true, out2.Next)
 	assert.NotEmpty(t, out2.Bookmark)
 
-	var query2 = M{"selector": M{"test": "value"}, "bookmark": out2.Bookmark}
+	query2 := M{"selector": M{"test": "value"}, "bookmark": out2.Bookmark}
 	req, _ = http.NewRequest("POST", url2, jsonReader(&query2))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -639,7 +639,7 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 	assert.Equal(t, 100, out2.Limit)
 	assert.Equal(t, true, out2.Next)
 
-	var query3 = M{"selector": M{"test": "value"}, "bookmark": out2.Bookmark}
+	query3 := M{"selector": M{"test": "value"}, "bookmark": out2.Bookmark}
 	req, _ = http.NewRequest("POST", url2, jsonReader(&query3))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -651,8 +651,8 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 }
 
 func TestFindDocumentsWithoutIndex(t *testing.T) {
-	var query = M{"selector": M{"no-index-for-this-field": "value"}}
-	var url2 = ts.URL + "/data/" + Type + "/_find"
+	query := M{"selector": M{"no-index-for-this-field": "value"}}
+	url2 := ts.URL + "/data/" + Type + "/_find"
 	req, _ := http.NewRequest("POST", url2, jsonReader(&query))
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -676,7 +676,7 @@ func TestGetChanges(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	assert.NoError(t, err)
-	var seqno = out["last_seq"].(string)
+	seqno := out["last_seq"].(string)
 
 	// creates 3 docs
 	_ = getDocForTest()

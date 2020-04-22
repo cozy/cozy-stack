@@ -32,6 +32,7 @@ func (c *apiContext) Included() []jsonapi.Object             { return nil }
 func (c *apiContext) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/settings/context"}
 }
+
 func (c *apiContext) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.doc)
 }

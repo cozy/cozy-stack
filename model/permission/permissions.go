@@ -615,7 +615,7 @@ func GetPermissionsForIDs(db prefixer.Prefixer, doctype string, ids []string) (m
 // type (shared-with-me by example) that have at least one rule for the given
 // doctype. The cursor will be modified in place.
 func GetPermissionsByDoctype(db prefixer.Prefixer, permType, doctype string, cursor couchdb.Cursor) ([]Permission, error) {
-	var req = &couchdb.ViewRequest{
+	req := &couchdb.ViewRequest{
 		Key:         [2]interface{}{doctype, permType},
 		IncludeDocs: true,
 	}
