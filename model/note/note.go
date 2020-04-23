@@ -162,6 +162,7 @@ func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDo
 	if rename {
 		file.DocName = newTitle
 		file.ResetFullpath()
+		_, _ = file.Path(inst.VFS()) // Prefill the fullpath
 	}
 
 	file.UpdatedAt = now
@@ -345,21 +346,31 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 		}
 	} else {
 		fileDoc = doc.asFile(inst, oldDoc)
+		// XXX if the name has changed, we have to rename the doc before
+		// writing the content (2 revisions in CouchDB) to ensure that changes
+		// are correctly propagated in Cozy to Cozy sharings.
+		if fileDoc.DocName != oldDoc.DocName {
+			oldDoc, err = forceRename(inst, oldDoc, fileDoc)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	fileDoc.ByteSize = int64(len(md))
 
 	fs := inst.VFS()
+	basename := fileDoc.DocName
 	var file vfs.File
-	file, err = fs.CreateFile(fileDoc, oldDoc)
-	if err == os.ErrExist {
-		filename := strings.TrimSuffix(path.Base(fileDoc.DocName), path.Ext(fileDoc.DocName))
-		suffix := time.Now().Format(time.RFC3339)
-		suffix = strings.ReplaceAll(suffix, ":", "-")
-		fileDoc.DocName = fmt.Sprintf("%s %s.cozy-note", filename, suffix)
+	for i := 2; i < 100; i++ {
 		file, err = fs.CreateFile(fileDoc, oldDoc)
-	}
-	if err != nil {
-		return
+		if err == nil {
+			break
+		} else if err != os.ErrExist {
+			return
+		}
+		filename := strings.TrimSuffix(path.Base(basename), path.Ext(basename))
+		fileDoc.DocName = fmt.Sprintf("%s (%d).cozy-note", filename, i)
+		fileDoc.ResetFullpath()
 	}
 	defer func() {
 		if cerr := file.Close(); cerr != nil && err == nil {
@@ -371,6 +382,25 @@ func writeFile(inst *instance.Instance, doc *Document, oldDoc *vfs.FileDoc) (fil
 	}()
 	_, err = file.Write(md)
 	return
+}
+
+// forceRename will update the FileDoc in CouchDB with the new name (but the
+// old content). It will return the updated doc, or an error if it fails.
+func forceRename(inst *instance.Instance, old *vfs.FileDoc, file *vfs.FileDoc) (*vfs.FileDoc, error) {
+	// We clone file, and not old, to keep the fullpath (1 less CouchDB request)
+	tmp := file.Clone().(*vfs.FileDoc)
+	tmp.ByteSize = old.ByteSize
+	tmp.MD5Sum = make([]byte, len(old.MD5Sum))
+	copy(tmp.MD5Sum, old.MD5Sum)
+	tmp.Metadata = make(vfs.Metadata, len(old.Metadata))
+	for k, v := range old.Metadata {
+		tmp.Metadata[k] = v
+	}
+
+	if err := inst.VFS().UpdateFileDoc(old, tmp); err != nil {
+		return nil, err
+	}
+	return tmp, nil
 }
 
 // List returns a list of notes sorted by descending updated_at. It uses
