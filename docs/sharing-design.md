@@ -195,9 +195,12 @@ We have several cases of conflicts:
 For 1. and 2., we will reconciliate the changes except for a file with two
 versions having a distinct binary (we rely on `size` and `checksum` to detect
 that). In such a case, we create a copy of the file with one version, while
-keeping the other version in the original file.
+keeping the other version in the original file (the higher revision wins).
 
-For 3., we rename the file or folder with the smaller `id`.
+For 3., we say that the owner instance wins: the file with the name in conflict
+on the owner instance will keep its name, and the other file with the same name
+will be renamed. This rule helps to minimize the number of exchanges between
+the cozy instances, which is a factor of stability to avoid more conflicts.
 
 For 4., we restore the trashed parent, or recreate it if it the trash was
 emptied.

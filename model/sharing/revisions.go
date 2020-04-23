@@ -2,9 +2,9 @@ package sharing
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type conflictStatus int
@@ -294,11 +294,23 @@ func MixupChainToResolveConflict(rev string, chain []string) []string {
 
 // conflictName generates a new name for a file/folder in conflict with another
 // that has the same path.
-func conflictName(name, suffix string) string {
-	if suffix == "" {
-		suffix = fmt.Sprintf("%d", time.Now().Unix())
+func conflictName(name string, isFile bool) string {
+	base, ext := name, ""
+	if isFile {
+		ext = filepath.Ext(name)
+		base = strings.TrimSuffix(base, ext)
 	}
-	return fmt.Sprintf("%s - conflict - %s", name, suffix)
+	i := 2
+	if strings.HasSuffix(base, ")") {
+		if idx := strings.LastIndex(base, " ("); idx > 0 {
+			num, err := strconv.Atoi(base[idx+2 : len(base)-1])
+			if err == nil {
+				i = num + 1
+				base = base[0:idx]
+			}
+		}
+	}
+	return fmt.Sprintf("%s (%d)%s", base, i, ext)
 }
 
 // conflictID generates a new ID for a file/folder that has a conflict between

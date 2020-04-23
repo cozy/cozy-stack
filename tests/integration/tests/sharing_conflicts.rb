@@ -8,13 +8,15 @@ def children_by_parent_id(inst, parent_id)
 end
 
 def assert_conflict_children(inst_a, inst_b, parent_id_a, parent_id_b, filename)
+  basename = File.basename filename, File.extname(filename)
+
   _, children_a = children_by_parent_id inst_a, parent_id_a
   assert 2, children_a.length
-  children_a.each { |child| assert child.name.include? filename }
+  children_a.each { |child| assert child.name.include? basename }
 
   _, children_b = children_by_parent_id inst_b, parent_id_b
   assert 2, children_b.length
-  children_b.each { |child| assert child.name.include? filename }
+  children_b.each { |child| assert child.name.include? basename }
 
   assert_equal children_a[0].name, children_b[0].name
   assert_equal children_a[1].name, children_b[1].name
@@ -163,7 +165,7 @@ describe "A sharing" do
     sleep 30
     # Check the conflicted files
     _, files = Folder.children inst, parent_file.path
-    conflict_file = files.find { |c| c.name.include? "conflict" }
+    conflict_file = files.find { |c| c.name =~ / \(\d+\)/ }
     refute_nil conflict_file
     path = CGI.escape "#{parent_file_recipient.path}/#{conflict_file.name}"
     conflict_file_recipient = CozyFile.find_by_path inst_recipient, path

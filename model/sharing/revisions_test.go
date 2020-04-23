@@ -321,6 +321,17 @@ func TestIndexerCreateBogusPrevRev(t *testing.T) {
 	assert.Equal(t, indexer.bulkRevs.Rev, rev)
 }
 
+func TestConflictName(t *testing.T) {
+	assert.Equal(t, "foo (2)", conflictName("foo", false))
+	assert.Equal(t, "foo (3)", conflictName("foo (2)", false))
+	assert.Equal(t, "foo (1000)", conflictName("foo (999)", false))
+	assert.Equal(t, "foo () (2)", conflictName("foo ()", false))
+
+	assert.Equal(t, "bar (2)", conflictName("bar", true))
+	assert.Equal(t, "bar (2).txt", conflictName("bar.txt", true))
+	assert.Equal(t, "bar (3).txt", conflictName("bar (2).txt", true))
+}
+
 func TestConflictID(t *testing.T) {
 	id := "d9dfd293577eea9f6d29d140259fa71d"
 	rev := "3-bf26bb2d42b0abf6a715ccf949d8e5f4"

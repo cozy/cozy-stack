@@ -687,10 +687,12 @@ func copySafeFieldsToDir(target map[string]interface{}, dir *vfs.DirDoc) {
 
 // resolveConflictSamePath is used when two files/folders are in conflict
 // because they have the same path. To resolve the conflict, we take the
-// file/folder with the greatest id as the winner and rename the other.
+// file/folder from the owner instance as the winner and rename the other.
 //
-// Note: on the recipients, we have to transform the identifiers (XOR) to make
-// sure the comparison will have the same results that on the owner's cozy.
+// Note: previously, the rule was that the higher id wins, but the rule has
+// been changed. The new rule helps to minimize the number of exchanges needed
+// between the cozy instance to converge, and, as such, it helps to avoid
+// creating more conflicts.
 //
 // If the winner is the new file/folder from the other cozy, this function
 // rename the local file/folder and let the caller retry its operation.
@@ -705,28 +707,14 @@ func (s *Sharing) resolveConflictSamePath(inst *instance.Instance, visitorID, pt
 	if err != nil {
 		return "", err
 	}
-	name := conflictName(path.Base(pth), "")
-	xorKey := s.Credentials[0].XorKey
+	name := conflictName(path.Base(pth), f != nil)
+	if s.Owner {
+		return name, nil
+	}
 	if d != nil {
-		homeID := d.DocID
-		if !s.Owner {
-			homeID = XorID(homeID, xorKey)
-			visitorID = XorID(visitorID, xorKey)
-		}
-		if homeID > visitorID {
-			return name, nil
-		}
 		old := d.Clone().(*vfs.DirDoc)
 		d.DocName = name
 		return "", fs.UpdateDirDoc(old, d)
-	}
-	homeID := f.DocID
-	if !s.Owner {
-		homeID = XorID(homeID, xorKey)
-		visitorID = XorID(visitorID, xorKey)
-	}
-	if homeID > visitorID {
-		return name, nil
 	}
 	old := f.Clone().(*vfs.FileDoc)
 	f.DocName = name
