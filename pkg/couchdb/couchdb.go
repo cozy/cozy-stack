@@ -841,6 +841,10 @@ func findDocsRaw(db Database, doctype string, req interface{}, results interface
 		// Developer should not rely on unoptimized index.
 		return nil, unoptimalError()
 	}
+	if response.Bookmark == "nil" {
+		// CouchDB surprisingly returns "nil" when there is no doc
+		response.Bookmark = ""
+	}
 	return &response, json.Unmarshal(response.Docs, results)
 }
 
@@ -896,6 +900,10 @@ func NormalDocs(db Database, doctype string, skip, limit int, bookmark string) (
 		res.Total = total - len(designRes.Rows)
 	}
 	res.Bookmark = findRes.Bookmark
+	if res.Bookmark == "nil" {
+		// CouchDB surprisingly returns "nil" when there is no doc
+		res.Bookmark = ""
+	}
 	return &res, nil
 }
 
