@@ -251,6 +251,9 @@ func DeleteOAuthClient(inst *instance.Instance, m *Member, cred *Credentials) er
 	}
 	client, err := oauth.FindClient(inst, clientID)
 	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil
+		}
 		return err
 	}
 	if cerr := client.Delete(inst); cerr != nil {

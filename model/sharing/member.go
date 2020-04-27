@@ -801,7 +801,8 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 		}
 	}
 	m.Status = MemberStatusRevoked
-	// Do not remove the credential to preserve the members / credentials order
+	// Do not remove the credentials from the array to preserve the members /
+	// credentials order, just empty them
 	*c = Credentials{}
 
 	return couchdb.UpdateDoc(inst, s)
