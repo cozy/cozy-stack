@@ -788,7 +788,10 @@ func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int)
 }
 
 // RevokeMember revoke the access granted to a member and contact it
-func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credentials) error {
+func (s *Sharing) RevokeMember(inst *instance.Instance, index int) error {
+	m := &s.Members[index]
+	c := &s.Credentials[index-1]
+
 	// No need to contact the revoked member if the sharing is not ready
 	if m.Status == MemberStatusReady {
 		if err := s.NotifyMemberRevocation(inst, m, c); err != nil {
@@ -800,12 +803,29 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, m *Member, c *Credential
 			return err
 		}
 	}
-	m.Status = MemberStatusRevoked
-	// Do not remove the credentials from the array to preserve the members /
-	// credentials order, just empty them
-	*c = Credentials{}
 
-	return couchdb.UpdateDoc(inst, s)
+	// We may have concurrency issues where RevokeMember is called several
+	// times on different goroutines/processes. So, we may need to retry the
+	// operation several times.
+	leftRetries := 3
+	for {
+		m.Status = MemberStatusRevoked
+		// Do not remove the credentials from the array to preserve the members /
+		// credentials order, just empty them
+		*c = Credentials{}
+
+		err := couchdb.UpdateDoc(inst, s)
+		if !couchdb.IsConflictError(err) || leftRetries == 0 {
+			return err
+		}
+
+		if errg := couchdb.GetDoc(inst, consts.Sharings, s.SID, s); errg != nil {
+			return err
+		}
+		m = &s.Members[index]
+		c = &s.Credentials[index-1]
+		leftRetries--
+	}
 }
 
 // RevokeOwner revoke the access granted to the owner and notify it
