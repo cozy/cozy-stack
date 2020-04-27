@@ -225,7 +225,7 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 
 	// Do not try to send a trashed file, the trash status will be synchronized
 	// via the CouchDB replication protocol
-	if file["trashed"].(bool) {
+	if trashed, _ := file["trashed"].(bool); trashed {
 		return nil
 	}
 
