@@ -339,7 +339,7 @@ func (s *Sharing) Revoke(inst *instance.Instance) error {
 		return ErrInvalidSharing
 	}
 	for i := range s.Credentials {
-		if err := s.RevokeMember(inst, &s.Members[i+1], &s.Credentials[i]); err != nil {
+		if err := s.RevokeMember(inst, i+1); err != nil {
 			errm = multierror.Append(errm, err)
 		}
 		if err := s.ClearLastSequenceNumbers(inst, &s.Members[i+1]); err != nil {
@@ -383,7 +383,7 @@ func (s *Sharing) RevokeRecipient(inst *instance.Instance, index int) error {
 	if !s.Owner {
 		return ErrInvalidSharing
 	}
-	if err := s.RevokeMember(inst, &s.Members[index], &s.Credentials[index-1]); err != nil {
+	if err := s.RevokeMember(inst, index); err != nil {
 		return err
 	}
 	if err := s.ClearLastSequenceNumbers(inst, &s.Members[index]); err != nil {

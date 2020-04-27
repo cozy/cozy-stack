@@ -738,7 +738,14 @@ func TestRevokedSharingWithPreview(t *testing.T) {
 	// Now, revoking the fresh user from the sharing
 	member, err := sharingDoc.FindMemberBySharecode(aliceInstance, fooShareCode)
 	assert.NoError(t, err)
-	err = sharingDoc.RevokeMember(aliceInstance, member, &sharing.Credentials{})
+	index := 0
+	for i := range sharingDoc.Members {
+		if member == &sharingDoc.Members[i] {
+			index = i
+			break
+		}
+	}
+	err = sharingDoc.RevokeMember(aliceInstance, index)
 	assert.NoError(t, err)
 	assert.Equal(t, "revoked", member.Status)
 
