@@ -161,7 +161,7 @@ func containsReferencedBy(haystack []couchdb.DocReference, needle couchdb.DocRef
 	return false
 }
 
-// RemoveReferencedBy adds referenced_by to the file
+// RemoveReferencedBy removes one or several referenced_by to the file
 func (f *FileDoc) RemoveReferencedBy(ri ...couchdb.DocReference) {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	referenced := f.ReferencedBy[:0]

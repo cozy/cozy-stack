@@ -116,7 +116,7 @@ func (d *DirDoc) AddReferencedBy(ri ...couchdb.DocReference) {
 	d.ReferencedBy = append(d.ReferencedBy, ri...)
 }
 
-// RemoveReferencedBy adds referenced_by to the directory
+// RemoveReferencedBy removes one or several referenced_by to the directory
 func (d *DirDoc) RemoveReferencedBy(ri ...couchdb.DocReference) {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	referenced := d.ReferencedBy[:0]
