@@ -393,7 +393,7 @@ func (s *Sharing) RevokeRecipient(inst *instance.Instance, index int) error {
 }
 
 // RevokeRecipientBySelf revoke the sharing on the recipient side
-func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance) error {
+func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance, sharingDirTrashed bool) error {
 	if s.Owner {
 		return ErrInvalidSharing
 	}
@@ -409,7 +409,7 @@ func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance) error {
 	if err := RemoveSharedRefs(inst, s.SID); err != nil {
 		return err
 	}
-	if s.FirstFilesRule() != nil {
+	if !sharingDirTrashed && s.FirstFilesRule() != nil {
 		if err := s.RemoveSharingDir(inst); err != nil {
 			return err
 		}

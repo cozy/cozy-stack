@@ -102,7 +102,7 @@ func RevokeRecipientBySelf(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
-	if err = s.RevokeRecipientBySelf(inst); err != nil {
+	if err = s.RevokeRecipientBySelf(inst, sharing.SharingDirNotTrashed); err != nil {
 		return wrapErrors(err)
 	}
 	return c.NoContent(http.StatusNoContent)
