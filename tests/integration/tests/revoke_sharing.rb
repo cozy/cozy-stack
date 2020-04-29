@@ -69,6 +69,7 @@ describe "A sharing" do
     bob = "Bob"
     charlie = "Charlie"
     dave = "Dave"
+    emily = "Emily"
     lastname = Faker::Name.last_name
 
     # Create the instances
@@ -76,6 +77,7 @@ describe "A sharing" do
     inst_bob = Instance.create name: bob
     inst_charlie = Instance.create name: charlie
     inst_dave = Instance.create name: dave
+    inst_emily = Instance.create name: emily
 
     # Create the contacts
     contact_bob = Contact.create inst_alice, given_name: bob
@@ -88,6 +90,8 @@ describe "A sharing" do
                              email: contact_charlie.primary_email
     contact_dave = Contact.create inst_bob, given_name: dave,
                                             family_name: lastname
+    contact_emily = Contact.create inst_bob, given_name: emily,
+                                             family_name: lastname
 
     # Create the folder
     folder = Folder.create inst_alice
@@ -174,7 +178,7 @@ describe "A sharing" do
     inst_bob.accept sharing
     sleep 2
 
-    # Add Charlie and Dave to the sharing
+    # Add Charlie, Dave, and Emily to the sharing
     code = sharing.add_members inst_alice, [contact_charlie], Folder.doctype
     assert_equal 200, code
     sleep 1
@@ -182,8 +186,11 @@ describe "A sharing" do
     sleep 4
     code = sharing.add_members inst_bob, [contact_dave], Folder.doctype
     assert_equal 200, code
+    code = sharing.add_members inst_bob, [contact_emily], Folder.doctype
+    assert_equal 200, code
     sleep 1
     inst_dave.accept sharing, inst_bob
+    inst_emily.accept sharing, inst_bob
     sleep 5
 
     # Get the clients id and triggers id on alice side
@@ -231,6 +238,12 @@ describe "A sharing" do
     assert_equal contact_dave.primary_email, recpt3["email"]
     assert_equal "Dave #{lastname}", recpt3["name"]
     assert_nil recpt3["instance"]
+    recpt4 = doc["members"][4]
+    assert_equal "ready", recpt4["status"]
+    assert_equal "Emily", recpt4["public_name"]
+    assert_equal contact_emily.primary_email, recpt4["email"]
+    assert_equal "Emily #{lastname}", recpt4["name"]
+    assert_nil recpt4["instance"]
 
     # Get the clients id and triggers id on charlie side
     doc = Helpers.couch.get_doc inst_charlie.domain, Sharing.doctype, sharing.couch_id
@@ -280,12 +293,23 @@ describe "A sharing" do
     assert_equal "Dave", recpt3["public_name"]
     assert_equal contact_dave.primary_email, recpt3["email"]
     assert_nil recpt3["instance"]
+    recpt4 = doc["members"][4]
+    assert_equal "ready", recpt4["status"]
+    assert_equal "Emily", recpt4["public_name"]
+    assert_equal contact_emily.primary_email, recpt4["email"]
+    assert_nil recpt4["instance"]
 
     # Revoke charlie and dave by alice
     code = sharing.revoke_recipient_by_sharer inst_alice, Folder.doctype, 2
     assert_equal 204, code
     code = sharing.revoke_recipient_by_sharer inst_alice, Folder.doctype, 3
     assert_equal 204, code
+
+    # Emily puts the shared folder in the trashed
+    folder_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
+    folder_emily = Folder.find_by_path inst_emily, folder_path
+    folder_emily.remove inst_emily
+    sleep 1
 
     # Check the sharing on alice
     assert_sharing_revoked inst_alice, sharing.couch_id, true
@@ -297,6 +321,9 @@ describe "A sharing" do
     assert_sharing_revoked inst_charlie, sharing.couch_id, false
     assert_no_triggers inst_charlie, tri_ids_charlie
     assert_no_oauth_client inst_charlie, client_id_charlie
+
+    # Check the sharing on emily
+    assert_sharing_revoked inst_emily, sharing.couch_id, false
 
     # Make an update: it should not be propagated
     old_name = file.name

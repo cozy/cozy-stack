@@ -163,10 +163,15 @@ func (c *couchdbIndexer) UpdateFileDoc(olddoc, newdoc *FileDoc) error {
 	if err := c.prepareFileDoc(newdoc); err != nil {
 		return err
 	}
-	// Ensure that fullpath is filled because it's used in realtime/@events
-	if _, err := olddoc.Path(c); err != nil {
+
+	fullpath, err := olddoc.Path(c)
+	if err != nil {
 		return err
 	}
+	if strings.HasPrefix(fullpath, TrashDirName) {
+		c.checkTrashedFileIsShared(newdoc)
+	}
+
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
 	return couchdb.UpdateDocWithOld(c.db, newdoc, olddoc)
@@ -199,6 +204,7 @@ func (c *couchdbIndexer) UpdateDirDoc(olddoc, newdoc *DirDoc) error {
 	isTrashed := !oldTrashed && newTrashed
 
 	if isTrashed {
+		c.checkTrashedDirIsShared(newdoc)
 		if err := c.setTrashedForFilesInsideDir(olddoc, true); err != nil {
 			return err
 		}
@@ -260,14 +266,15 @@ func (c *couchdbIndexer) BatchDelete(docs []couchdb.Doc) error {
 }
 
 func (c *couchdbIndexer) MoveDir(oldpath, newpath string) error {
+	if oldpath+"/" == newpath {
+		return nil
+	}
+
 	limit := 256
 	var children []*DirDoc
 	docs := make([]interface{}, 0, limit)
 	olddocs := make([]interface{}, 0, limit)
-
-	if oldpath+"/" == newpath {
-		return nil
-	}
+	isTrashed := strings.HasPrefix(newpath, TrashDirName)
 
 	// We limit the stack to 128 bulk updates to avoid infinite loops, as we
 	// had a case in the past.
@@ -313,6 +320,9 @@ func (c *couchdbIndexer) MoveDir(oldpath, newpath string) error {
 				continue
 			}
 			cloned := child.Clone()
+			if isTrashed {
+				c.checkTrashedDirIsShared(cloned.(*DirDoc))
+			}
 			olddocs = append(olddocs, cloned)
 			child.Fullpath = path.Join(newpath, child.Fullpath[len(oldpath)+1:])
 			docs = append(docs, child)
@@ -558,6 +568,7 @@ func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) 
 			fullpath := path.Join(parent.Fullpath, file.DocName)
 			fullpath = strings.TrimPrefix(fullpath, TrashDirName)
 			if trashed {
+				c.checkTrashedFileIsShared(cloned)
 				cloned.fullpath = fullpath
 				file.fullpath = TrashDirName + fullpath
 			} else {
@@ -603,6 +614,56 @@ func (c *couchdbIndexer) BatchDeleteVersions(versions []*Version) error {
 		docs[i] = v
 	}
 	return couchdb.BulkDeleteDocs(c.db, consts.FilesVersions, docs)
+}
+
+// checkTrashedDirIsShared will look for a dir going to the trash if it was the
+// main dir of a sharing. If it is the case, the sharing is revoked and the
+// reference to the sharing is removed.
+func (c *couchdbIndexer) checkTrashedDirIsShared(doc *DirDoc) {
+	refs := doc.ReferencedBy[:0]
+	for _, ref := range doc.ReferencedBy {
+		if ref.Type == consts.Sharings {
+			c.revokeSharing(ref.ID)
+		} else {
+			refs = append(refs, ref)
+		}
+	}
+	doc.ReferencedBy = refs
+}
+
+// checkTrashedFileIsShared will look for a file going to the trash if it was
+// the main file of a sharing. If it is the case, the sharing is revoked and
+// the reference to the sharing is removed.
+func (c *couchdbIndexer) checkTrashedFileIsShared(doc *FileDoc) {
+	refs := doc.ReferencedBy[:0]
+	for _, ref := range doc.ReferencedBy {
+		if ref.Type == consts.Sharings {
+			c.revokeSharing(ref.ID)
+		} else {
+			refs = append(refs, ref)
+		}
+	}
+	doc.ReferencedBy = refs
+}
+
+// RevokeSharingFunc does nothing. It will will be overridden from the sharing
+// package.
+var RevokeSharingFunc = func(db prefixer.Prefixer, sharingID string) {}
+
+// revokeSharing is called when the main file/dir of a sharing is trashed, in
+// order to revoke the sharing.
+//
+// Note: we don't want to rely on triggers/jobs, as they are asynchronous and
+// if they are executed a bit late, the trashing of the files inside the shared
+// directory can be replicated to the other members before the sharing is
+// revoked.
+//
+// Technically, it isn't straightforward, as we are in the VFS and we can't
+// call functions in the sharing module (it would cause cyclic import error).
+// And, we don't have an instance, just a CouchDB indexer. So, it is a bit
+// hackish.
+func (c *couchdbIndexer) revokeSharing(sharingID string) {
+	RevokeSharingFunc(c.db, sharingID)
 }
 
 func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog), failFast bool) error {
