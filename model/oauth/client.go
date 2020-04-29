@@ -170,8 +170,6 @@ func GetNotifiables(i *instance.Instance) ([]*Client, error) {
 func FindClient(i *instance.Instance, id string) (*Client, error) {
 	var c Client
 	if err := couchdb.GetDoc(i, consts.OAuthClients, id, &c); err != nil {
-		i.Logger().WithField("nspace", "oauth").
-			Errorf("Failed to find the client %s: %s", id, err)
 		return nil, err
 	}
 	if c.ClientID == "" {
