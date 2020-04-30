@@ -394,7 +394,7 @@ func (s *Sharing) RevokeRecipient(inst *instance.Instance, index int) error {
 
 // RevokeRecipientBySelf revoke the sharing on the recipient side
 func (s *Sharing) RevokeRecipientBySelf(inst *instance.Instance, sharingDirTrashed bool) error {
-	if s.Owner {
+	if s.Owner || len(s.Members) == 0 {
 		return ErrInvalidSharing
 	}
 	if err := s.RevokeOwner(inst); err != nil {

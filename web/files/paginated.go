@@ -337,6 +337,6 @@ func (f *file) Links() *jsonapi.LinksList {
 }
 
 func (f *file) IncludePath(fp vfs.FilePather) {
-	f.includePath = true
-	_, _ = f.doc.Path(fp)
+	_, err := f.doc.Path(fp)
+	f.includePath = err == nil
 }
