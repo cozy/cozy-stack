@@ -25,7 +25,6 @@ require (
 	github.com/howeyc/gopass v0.0.0-20190910152052-7cb4b85ec19c
 	github.com/jonas-p/go-shp v0.1.1 // indirect
 	github.com/justincampbell/bigduration v0.0.0-20160531141349-e45bf03c0666
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.6
 	github.com/leonelquinteros/gotext v1.4.0
 	github.com/mitchellh/mapstructure v1.3.0
@@ -38,7 +37,7 @@ require (
 	github.com/prometheus/client_golang v1.6.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sideshow/apns2 v0.20.0
-	github.com/sirupsen/logrus v1.5.0
+	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/afero v1.2.2
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
