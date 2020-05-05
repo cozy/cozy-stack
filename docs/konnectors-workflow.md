@@ -212,7 +212,7 @@ HTTP/1.1 200 OK
     "_rev": "1-asasasasa",
     "account_type": "trainline",
     "auth": {
-        "login": "xxxx",
+        "login": "xxxx"
     },
     "folderPath": "/Administrative/Trainline"
 }
@@ -508,6 +508,11 @@ grant_type=authorization_code&
   client_id=CLIENT_ID&
   client_secret=CLIENT_SECRET
 ```
+
+Note: the stack will also send the `state` parameter on this request. It is not
+mandatory per the OAuth 2.0 spec, and the `skip_state_on_token` option can be
+used to cancel this behavior if the provider throw an error if this parameter
+is present.
 
 D. The Service responds (server side) with:
 
