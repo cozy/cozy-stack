@@ -66,6 +66,7 @@ type AccountType struct {
 	Slug                  string            `json:"slug,omitempty"`
 	Secret                interface{}       `json:"secret,omitempty"`
 	SkipRedirectURI       bool              `json:"skip_redirect_uri_on_authorize,omitempty"`
+	SkipState             bool              `json:"skip_state_on_token,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface
@@ -161,13 +162,23 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, sta
 
 // RequestAccessToken asks the service an access token
 // https://tools.ietf.org/html/rfc6749#section-4
-func (at *AccountType) RequestAccessToken(i *instance.Instance, accessCode, stateCode, stateNonce string) (*Account, error) {
+func (at *AccountType) RequestAccessToken(i *instance.Instance, accessCode, state, nonce string) (*Account, error) {
 	data := url.Values{
 		"grant_type":   []string{AuthorizationCode},
 		"code":         []string{accessCode},
 		"redirect_uri": []string{at.RedirectURI(i)},
-		"state":        []string{stateCode},
-		"nonce":        []string{stateNonce},
+	}
+
+	// Some OAuth providers require the state, and some others throw an error
+	// if it present. By default, the stack adds the state to the access token
+	// request, but this behavior can be disabled with an option on the account
+	// type. See https://forum.cozy.io/t/custom-oauth/6835/15
+	if !at.SkipState {
+		data.Add("state", state)
+	}
+
+	if nonce != "" {
+		data.Add("nonce", nonce)
 	}
 
 	if at.TokenAuthMode != BasicTokenAuthMode {
