@@ -620,7 +620,7 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 		Bookmark string
 	}
 	_, res, err := doRequest(req, &out2)
-	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.Equal(t, 200, res.StatusCode)
 	assert.NoError(t, err)
 	assert.Len(t, out2.Docs, 100, "should stop at 100 docs")
 	assert.Equal(t, 100, out2.Limit)
@@ -633,7 +633,7 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	_, res, err = doRequest(req, &out2)
-	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.Equal(t, 200, res.StatusCode)
 	assert.NoError(t, err)
 	assert.Len(t, out2.Docs, 100)
 	assert.Equal(t, 100, out2.Limit)
@@ -644,7 +644,7 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	_, res, err = doRequest(req, &out2)
-	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.Equal(t, 200, res.StatusCode)
 	assert.NoError(t, err)
 	assert.Len(t, out2.Docs, 0)
 	assert.Equal(t, false, out2.Next)
@@ -655,7 +655,7 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	_, res, err = doRequest(req, &out2)
 	assert.NoError(t, err)
-	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.Equal(t, 200, res.StatusCode)
 	assert.Len(t, out2.Docs, 0)
 	assert.Equal(t, "", out2.Bookmark)
 }
