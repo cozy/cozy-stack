@@ -67,10 +67,6 @@ func (s *Shortcut) Links() *jsonapi.LinksList { return nil }
 // Create is the API handler for POST /shortcuts. It can be used to create a
 // shortcut from a JSON description.
 func Create(c echo.Context) error {
-	if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
-		return err
-	}
-
 	doc := &Shortcut{}
 	if _, err := jsonapi.Bind(c.Request().Body, doc); err != nil {
 		return err
@@ -107,6 +103,10 @@ func Create(c echo.Context) error {
 	}
 	fileDoc.Metadata = doc.Metadata
 	fileDoc.CozyMetadata = cm
+
+	if err := middlewares.AllowVFS(c, permission.POST, fileDoc); err != nil {
+		return err
+	}
 
 	inst := middlewares.GetInstance(c)
 	file, err := inst.VFS().CreateFile(fileDoc, nil)

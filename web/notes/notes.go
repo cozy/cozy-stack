@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -23,17 +24,42 @@ import (
 // CreateNote is the API handler for POST /notes. It creates a note, aka a file
 // with a set of metadata to enable collaborative edition.
 func CreateNote(c echo.Context) error {
-	if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
-		return err
-	}
-
+	inst := middlewares.GetInstance(c)
 	doc := &note.Document{}
 	if _, err := jsonapi.Bind(c.Request().Body, doc); err != nil {
 		return err
 	}
 	doc.CreatedBy = getCreatedBy(c)
 
-	inst := middlewares.GetInstance(c)
+	// We first look if we have a permission on the whole doctype, as it is
+	// cheap. If not, we look on more finer permissions, which is a bit more
+	// complicated and costly, but is needed for creating a note in a shared by
+	// link folder for example.
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Files); err != nil {
+		dirID, errd := doc.GetDirID(inst)
+		if errd != nil {
+			return err
+		}
+		fileDoc, errf := vfs.NewFileDoc(
+			"tmp.cozy-note", // We don't care, but it can't be empty
+			dirID,
+			0,   // We don't care
+			nil, // Let the VFS compute the md5sum
+			consts.NoteMimeType,
+			"text",
+			time.Now(),
+			false, // Not executable
+			false, // Not trashed
+			nil,   // No tags
+		)
+		if errf != nil {
+			return err
+		}
+		if err := middlewares.AllowVFS(c, permission.POST, fileDoc); err != nil {
+			return err
+		}
+	}
+
 	file, err := note.Create(inst, doc)
 	if err != nil {
 		return wrapError(err)

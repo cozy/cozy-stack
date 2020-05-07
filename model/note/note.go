@@ -129,7 +129,8 @@ func (d *Document) Markdown() ([]byte, error) {
 	return d.markdown, nil
 }
 
-func (d *Document) getDirID(inst *instance.Instance) (string, error) {
+// GetDirID returns the ID of the directory where the note will be created.
+func (d *Document) GetDirID(inst *instance.Instance) (string, error) {
 	if d.DirID != "" {
 		return d.DirID, nil
 	}
@@ -220,7 +221,7 @@ func initialContent(inst *instance.Instance, doc *Document) (*model.Node, error)
 }
 
 func newFileDoc(inst *instance.Instance, doc *Document) (*vfs.FileDoc, error) {
-	dirID, err := doc.getDirID(inst)
+	dirID, err := doc.GetDirID(inst)
 	if err != nil {
 		return nil, err
 	}
