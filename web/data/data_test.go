@@ -620,7 +620,7 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 		Bookmark string
 	}
 	_, res, err := doRequest(req, &out2)
-	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.Equal(t, 200, res.StatusCode)
 	assert.NoError(t, err)
 	assert.Len(t, out2.Docs, 100, "should stop at 100 docs")
 	assert.Equal(t, 100, out2.Limit)
@@ -633,7 +633,7 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	_, res, err = doRequest(req, &out2)
-	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.Equal(t, 200, res.StatusCode)
 	assert.NoError(t, err)
 	assert.Len(t, out2.Docs, 100)
 	assert.Equal(t, 100, out2.Limit)
@@ -644,10 +644,20 @@ func TestFindDocumentsPaginatedBookmark(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	_, res, err = doRequest(req, &out2)
-	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.Equal(t, 200, res.StatusCode)
 	assert.NoError(t, err)
 	assert.Len(t, out2.Docs, 0)
 	assert.Equal(t, false, out2.Next)
+
+	var query4 = M{"selector": M{"test": "novalue"}}
+	req, _ = http.NewRequest("POST", url2, jsonReader(&query4))
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	_, res, err = doRequest(req, &out2)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Len(t, out2.Docs, 0)
+	assert.Equal(t, "", out2.Bookmark)
 }
 
 func TestFindDocumentsWithoutIndex(t *testing.T) {
@@ -920,4 +930,17 @@ function(doc) {
 	assert.NotEmpty(t, id)
 	value = row["test"].(string)
 	assert.Equal(t, "fourthvalue", value)
+
+	emptyType := "io.cozy.anothertype"
+	_ = couchdb.ResetDB(testInstance, emptyType)
+	url = ts.URL + "/data/" + emptyType + "/_normal_docs"
+	req, _ = http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	out, res, err = doRequest(req, nil)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	totalRows = out["total_rows"].(float64)
+	assert.Equal(t, float64(0), totalRows)
+	bookmark = out["bookmark"].(string)
+	assert.Equal(t, "", bookmark)
 }
