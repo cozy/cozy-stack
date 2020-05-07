@@ -669,9 +669,6 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 func ExtractMimeAndClassFromFilename(name string) (mime, class string) {
 	ext := path.Ext(name)
 	mimetype := filetype.ByExtension(ext)
-	if ext == ".url" {
-		mimetype = consts.ShortcutMimeType
-	}
 	return ExtractMimeAndClass(mimetype)
 }
 

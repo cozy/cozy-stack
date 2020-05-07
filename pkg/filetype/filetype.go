@@ -17,7 +17,10 @@ const DefaultType = "application/octet-stream"
 // keep only the type and subtype.
 // Example: text/html
 func ByExtension(ext string) string {
-	if ext == ".url" {
+	switch ext {
+	case ".cozy-note":
+		return consts.NoteMimeType
+	case ".url":
 		return consts.ShortcutMimeType
 	}
 	mimeParts := strings.SplitN(mime.TypeByExtension(ext), ";", 2)
