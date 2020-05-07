@@ -41,7 +41,7 @@ func CreateNote(c echo.Context) error {
 			return err
 		}
 		fileDoc, errf := vfs.NewFileDoc(
-			doc.Title,
+			"tmp.cozy-note", // We don't care, but it can't be empty
 			dirID,
 			0,   // We don't care
 			nil, // Let the VFS compute the md5sum
