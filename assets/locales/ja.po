@@ -1,3 +1,4 @@
+# 
 # Translators:
 # Bruno Michel, 2019
 # Naofumi <naofum@gmail.com>, 2020
@@ -29,6 +30,9 @@ msgstr "私と共有"
 
 msgid "Tree No longer shared"
 msgstr "もう共有されていません"
+
+msgid "Tree Revoked sharing suffix"
+msgstr "共有を解除しました"
 
 msgid "Notes New note"
 msgstr "新しいメモ"
@@ -500,7 +504,7 @@ msgstr "下をご覧ください。Cozy のパスワードを思い出ための�
 msgid "Mail Hint Outro"
 msgstr ""
 "最後の手段として、Cozy "
-"の「パスワードを忘れた」セクションでパスワードをリセットできます。このリクエストを行っていない場合は、このメールに直接返信してご連絡ください。"
+"の「パスワードを忘れた」セクションでパスワードをリセットすることができます。このリクエストを行っていない場合は、このメールに直接返信してご連絡ください。"
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "お使いのパスワードをリセット"
@@ -509,7 +513,7 @@ msgid "Mail Reset Passphrase Intro 1"
 msgstr "%s さん、こんにちは。"
 
 msgid "Mail Reset Passphrase Intro 2"
-msgstr "パスワードの変更を依頼されました。このリクエストを行っていない場合は、このメールに直接返信してお問い合わせください。"
+msgstr "あなたからパスワードを変更するように依頼されました。 このリクエストを行っていない場合は、このメールに直接返信してご連絡ください。"
 
 msgid "Mail Reset Passphrase Button instruction"
 msgstr "このボタンをクリックすると、安全に変更できます。"
