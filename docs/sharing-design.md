@@ -287,6 +287,46 @@ The resolution takes 4 steps:
 4. The two files are sent to Alice's Cozy: 5-5bb is accepted just to resolve the
    conflict, and id2 is uploaded as a new file.
 
+### Special case: out and in again
+
+Let's look at a special case. Alice shares a folder with Bob and Charlie. It
+contains a directory, with a few files inside it. This directory has been
+synchronized, and Bob decides to move it somewhere else on its cozy instance
+that is not inside the shared folder, let's say at the root. The sharing
+synchronization will move the directory to the trash for Alice and Charlie. Bob
+can continue to work on the files in this directory. If Charlie restores the
+directory from the trash, it will be put again in the sharing. And we can see
+that we have an issue: on Bob instance, we will have two copies on the files,
+at two different locations, but technically, they should have the same
+identifiers. It is not possible.
+
+To avoid that, we have to change the identifier, or more precisely, delete a
+file and recreate it with a new identifier. It means losing historical versions
+and some other things like sharing by links. It is an operation that takes a
+lot of resources. So, we need to be careful in how we do that. And, like usual
+for the sharing, we need to take care of the stability and convergence of the
+replication algorithm.
+
+With these constraints, what looks like the wiser approach is to mark files and
+directory put in the trash by the sharing replication, and when a file or
+directory with such a mark is restored, to change its identifier (deleting the
+file, and recreating a new one with the last known content and metadata).
+
+It means that, in our example, Bob will keep the directory and files with the
+same identifier. They will preserve the historical versions of the files and
+the eventual sharing links. If it was a mistake, and the directory is put again
+in the sharing by Bob, the replication algorithm can easily resynchronize the
+cozy instances without having to upload files. But, if it is Alice or Charlie
+that restores the files from the trash, those files will have new identifier
+and will be reuploaded by the sharing replication.
+
+This is a good approach, but it has an important limitation. If Alice and Bob
+moves a file from the shared directory to somewhere else at the same time, and
+later, one of them is moving again the file inside the shared directory, we will
+be in a bad situation, where the replication algorithm can't synchronize the file.
+For the moment, we prefer to advance with this limitation, but we will have to
+take care of it later.
+
 ## Schema
 
 ### Description of a sharing
