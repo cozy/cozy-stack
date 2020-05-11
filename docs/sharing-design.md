@@ -407,6 +407,45 @@ The resolution takes 4 steps:
 4. The two files are sent to Alice's Cozy: 5-5bb is accepted just to resolve the
    conflict, and id2 is uploaded as a new file.
 
+### Special case: out and in again
+
+Let's look at a special case. Alice shares a folder with Bob and Charlie. It
+contains a directory, with a few files inside it. This directory has been
+synchronized, and Bob decides to move it somewhere else on its cozy instance
+that is not inside the shared folder, let's say at the root. The sharing
+synchronization will move the directory to the trash for Alice and Charlie. Bob
+can continue to work on the files in this directory. If Charlie restores the
+directory from the trash, it will be put again in the sharing. And we can see
+that we have an issue: on Bob instance, we will have two copies on the files,
+at two different locations, but technically, they should have the same
+identifiers. It is not possible.
+
+To avoid that, we have to change the identifier, or more precisely, delete a
+file and recreate it with a new identifier. It means losing historical versions
+and some other things like sharing by links. It is an operation that takes a
+lot of resources. So, we need to be careful in how we do that. And, like usual
+for the sharing, we need to take care of the stability and convergence of the
+replication algorithm.
+
+With these constraints, the approache we have chosen is to put a copy a file
+that was moved out of the sharing in the trash when this operation is
+replicated. For the member of the sharing that has made the operation, the file
+will be the same (no need to change how the VFS work), and it is only later,
+when this change is replicated to the other members that we will put a copy of
+the file in the trash and delete the file (this is managed by the sharing
+layer). Thus, the other members of the sharing will have a copy of the file,
+but not the original file (sharing by links won't work on the copy for
+example), and the old versions of the file will be lost. We think it is an
+acceptable tradeoff between complexity, reliability, and matching the user
+expectations.
+
+Still, it has an important limitation. If Alice and Bob moves a file from the
+shared directory to somewhere else at the same time, and later, one of them is
+moving again the file inside the shared directory, we will be in a bad
+situation, where the replication algorithm can't synchronize the file. For the
+moment, we prefer to advance with this limitation, but we will have to take
+care of it later.
+
 ## Schema
 
 ### Description of a sharing
