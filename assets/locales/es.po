@@ -1,3 +1,4 @@
+# 
 # Translators:
 # Bruno Michel, 2019
 # hernando franco <hfrancod@lautaro.fr>, 2020
@@ -28,7 +29,10 @@ msgid "Tree Shared with me"
 msgstr "Compartido conmigo"
 
 msgid "Tree No longer shared"
-msgstr "Ya no se compart"
+msgstr "Ya no se comparte"
+
+msgid "Tree Revoked sharing suffix"
+msgstr "Se ha cancelado el compartir"
 
 msgid "Notes New note"
 msgstr "Nueva nota"
