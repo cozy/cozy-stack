@@ -428,8 +428,12 @@ The `created_at` field will be the first valid value in this list:
 
 The `updated_at` field will be the first value in this list:
 
+- the `UpdatedAt` parameter from the query-string
 - the `Date` HTTP header
 - the current time from the server.
+
+/!\ If the `updated_at` filed is older than the `created_at` one, 
+then the `updated_at` will be set with the value of the `created_at`.
 
 #### Query-String
 
@@ -441,7 +445,8 @@ The `updated_at` field will be the first value in this list:
 | Executable              | `true` if the file is executable (UNIX permission)             |
 | Metadata                | a JSON with metadata on this file (_deprecated_)               |
 | MetadataID              | the identifier of a metadata object                            |
-| CreatedAt               | the creation date of the file                                  |
+| CreatedAt               | the creation date of the file  
+| UpdatedAt               | the modification date of the file
 | SourceAccount           | the id of the source account used by a konnector               |
 | SourceAccountIdentifier | the unique identifier of the account targeted by the connector |
 
