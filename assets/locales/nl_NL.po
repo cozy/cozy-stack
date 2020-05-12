@@ -1,3 +1,4 @@
+# 
 # Translators:
 # Bruno Michel, 2019
 # Heimen Stoffels <vistausss@outlook.com>, 2020
@@ -446,6 +447,9 @@ msgstr "Banktransacties"
 
 msgid "Permissions io.cozy.bank.settings"
 msgstr "App-instellingen"
+
+msgid "Permissions io.cozy.bank.recurrence"
+msgstr "Incassogroepen"
 
 msgid "Permissions io.cozy.bills"
 msgstr "Rekeningen"
