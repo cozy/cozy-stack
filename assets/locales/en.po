@@ -408,6 +408,9 @@ msgstr "Bank transactions"
 msgid "Permissions io.cozy.bank.settings"
 msgstr "Application settings"
 
+msgid "Permissions io.cozy.bank.recurrence"
+msgstr "Banking recurrencing groups"
+
 msgid "Permissions io.cozy.bills"
 msgstr "Bills"
 

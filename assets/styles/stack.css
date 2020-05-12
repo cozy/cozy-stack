@@ -221,6 +221,9 @@ li[class^='io.cozy.bank.groups']:before {
 li[class^='io.cozy.bank.operations']:before {
   background-image: url('../images/icon-bank-operations.svg');
 }
+li[class^='io.cozy.bank.recurrence']:before {
+  background-image: url('../images/icon-bank-recurrence.svg');
+}
 li[class^='io.cozy.bills']:before {
   background-image: url('../images/icon-bill.svg');
 }
