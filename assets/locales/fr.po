@@ -1,3 +1,4 @@
+# 
 # Translators:
 # Pierre Vandekerckhove <pierre4vdk@gmail.com>, 2019
 # Yannick Lohse <yannick.lohse@cozycloud.cc>, 2019
@@ -467,6 +468,9 @@ msgstr "Transactions bancaires"
 
 msgid "Permissions io.cozy.bank.settings"
 msgstr "Paramètres de l'application"
+
+msgid "Permissions io.cozy.bank.recurrence"
+msgstr "Groupes de récurrence bancaire"
 
 msgid "Permissions io.cozy.bills"
 msgstr "Factures"
