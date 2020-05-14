@@ -1020,6 +1020,7 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 		dir.CozyMetadata.UpdatedAt = time.Now()
 	}
 	if len(dir.ReferencedBy) == 0 {
+		dir.RestoreSharingID = s.SID
 		_, err := vfs.TrashDir(inst.VFS(), dir)
 		return err
 	}
@@ -1054,6 +1055,7 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 		return inst.VFS().UpdateFileDoc(olddoc, file)
 	}
 	if len(file.ReferencedBy) == 0 {
+		file.RestoreSharingID = s.SID
 		_, err := vfs.TrashFile(inst.VFS(), file)
 		return err
 	}

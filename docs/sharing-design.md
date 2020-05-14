@@ -320,12 +320,20 @@ cozy instances without having to upload files. But, if it is Alice or Charlie
 that restores the files from the trash, those files will have new identifier
 and will be reuploaded by the sharing replication.
 
-This is a good approach, but it has an important limitation. If Alice and Bob
-moves a file from the shared directory to somewhere else at the same time, and
-later, one of them is moving again the file inside the shared directory, we will
-be in a bad situation, where the replication algorithm can't synchronize the file.
-For the moment, we prefer to advance with this limitation, but we will have to
-take care of it later.
+This is a good approach, but it has some important limitations that should be
+lifted on the long-term:
+
+1. If Alice and Bob moves a file from the shared directory to somewhere else at
+   the same time, and later, one of them is moving again the file inside the
+   shared directory, we will be in a bad situation, where the replication
+   algorithm can't synchronize the file. For the moment, we prefer to advance
+   with this limitation, but we will have to take care of it later.
+
+2. If Bob adds a photo to an album, and later, Alice moves this photo outside
+   of the sharing folder, the photo will be not be trashed on Bob's instance,
+   but moved to a special directory (the no longer shared directory). If Alice
+   moves again the photo to the sharing folder, it won't be moved back on Bob's
+   instance.
 
 ## Schema
 

@@ -24,8 +24,9 @@ type DirDoc struct {
 	// Directory name
 	DocName string `json:"name"`
 	// Parent directory identifier
-	DirID       string `json:"dir_id"`
-	RestorePath string `json:"restore_path,omitempty"`
+	DirID            string `json:"dir_id"`
+	RestorePath      string `json:"restore_path,omitempty"`
+	RestoreSharingID string `json:"restore_sharing_id,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
