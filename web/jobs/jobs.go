@@ -132,10 +132,6 @@ func getQueue(c echo.Context) error {
 	workerType := c.Param("worker-type")
 
 	o := apiQueue{workerType: workerType}
-	// TODO: uncomment to restric jobs permissions.
-	// if err := middlewares.AllowOnFields(c, permission.GET, o, "worker"); err != nil {
-	// 	return err
-	// }
 	if err := middlewares.Allow(c, permission.GET, o); err != nil {
 		return err
 	}
@@ -168,10 +164,6 @@ func pushJob(c echo.Context) error {
 		Message:     job.Message(req.Arguments),
 	}
 
-	// TODO: uncomment to restric jobs permissions.
-	// if err := middlewares.AllowOnFields(c, permission.POST, jr, "worker"); err != nil {
-	// 	return err
-	// }
 	if err := middlewares.Allow(c, permission.POST, jr); err != nil {
 		return err
 	}
@@ -237,10 +229,6 @@ func newTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	// TODO: uncomment to restric jobs permissions.
-	// if err = middlewares.AllowOnFields(c, permission.POST, t, "worker"); err != nil {
-	// 	return err
-	// }
 	if err = middlewares.Allow(c, permission.POST, t); err != nil {
 		return err
 	}
@@ -437,7 +425,6 @@ func getAllTriggers(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 
-	// TODO: we could potentially benefit from an index on 'worker_type' field.
 	objs := make([]jsonapi.Object, 0, len(ts))
 	for _, t := range ts {
 		tInfos := t.Infos()

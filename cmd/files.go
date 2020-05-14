@@ -453,7 +453,6 @@ func importFiles(c *client.Client, from, to string, match *regexp.Regexp) error 
 
 	fmt.Printf("Importing from %s to cozy://%s\n", from, to)
 
-	// TODO: symlinks ?
 	return filepath.Walk(from, func(localname string, f os.FileInfo, err error) error {
 		if err != nil {
 			return err

@@ -15,9 +15,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// TODO: make specific routes for managing accounts. The overriding of the
-// /data/io.cozy.accounts/* routes is here mainly for retro-compatible reasons,
-// but specific routes would improve the API.
+// XXX: it would be better to have specific routes for managing accounts. The
+// overriding of the /data/io.cozy.accounts/* routes is here mainly for
+// retro-compatible reasons, but specific routes would improve the API.
 
 func getAccount(c echo.Context) error {
 	instance := middlewares.GetInstance(c)

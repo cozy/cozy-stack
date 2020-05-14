@@ -36,8 +36,6 @@ func NewIterator(db prefixer.Prefixer, dir *DirDoc, opt *IteratorOptions) DirIte
 	if opt.AfterID == "" {
 		sel = mango.And(sel, mango.Exists("_id"))
 	} else {
-		// TODO: adapt this code when filtering and sorting are added to the
-		// iterator
 		sel = mango.And(sel, mango.Gt("_id", opt.AfterID))
 	}
 	return &iter{

@@ -698,9 +698,6 @@ func (f *swiftFileCreation) Close() (err error) {
 	err = f.fs.Indexer.UpdateFileDoc(olddoc, newdoc)
 	// If we reach a conflict error, the document has been modified while
 	// uploading the content of the file.
-	//
-	// TODO: remove dep on couchdb, with a generalized conflict error for
-	// UpdateFileDoc/UpdateDirDoc.
 	if couchdb.IsConflictError(err) {
 		resdoc, err := f.fs.Indexer.FileByID(olddoc.ID())
 		if err != nil {

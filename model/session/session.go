@@ -155,32 +155,6 @@ func CookieDomain(i *instance.Instance) string {
 func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
 	cookie, err := c.Cookie(CookieName(i))
 	if err != nil || cookie.Value == "" {
-		// TODO 2020-05-15 Remove this migration code {{{
-		if config.GetConfig().Subdomains == config.FlatSubdomains {
-			cookie, err = c.Cookie(defaultCookieName)
-			if err != nil || cookie.Value == "" {
-				return nil, ErrNoCookie
-			}
-			cfg := crypto.MACConfig{
-				Name:   defaultCookieName,
-				MaxLen: 256,
-			}
-			sessionID, err := crypto.DecodeAuthMessage(cfg, i.SessionSecret(), []byte(cookie.Value), nil)
-			if err != nil {
-				return nil, err
-			}
-			sess, err := Get(i, string(sessionID))
-			if err != nil {
-				return nil, err
-			}
-			cookie, err := sess.ToCookie()
-			if err != nil {
-				return nil, err
-			}
-			c.SetCookie(cookie)
-			return sess, nil
-		}
-		// }}}
 		return nil, ErrNoCookie
 	}
 

@@ -559,7 +559,6 @@ func lsApps(cmd *cobra.Command, args []string, appType string) error {
 
 func foreachDomains(predicate func(*client.Instance) error) error {
 	c := newAdminClient()
-	// TODO(pagination): Make this iteration more robust
 	list, err := c.ListInstances()
 	if err != nil {
 		return nil

@@ -22,7 +22,6 @@ func paramIsTrue(c echo.Context, param string) bool {
 
 // ValidDoctype validates the doctype and sets it in the context of the request.
 func ValidDoctype(next echo.HandlerFunc) echo.HandlerFunc {
-	// TODO extends me to verify characters allowed in db name.
 	return func(c echo.Context) error {
 		doctype := c.Param("doctype")
 		if doctype == "" {

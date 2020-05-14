@@ -142,7 +142,6 @@ func parseJSONAPIError(res *http.Response, b []byte) error {
 			Detail: string(b),
 		}
 	}
-	// TODO: handle multi-error
 	return errs.Errors[0]
 }
 

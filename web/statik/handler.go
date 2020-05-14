@@ -300,8 +300,6 @@ func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *modelAsse
 // GetLanguageFromHeader return the language tag given the Accept-Language
 // header.
 func GetLanguageFromHeader(header http.Header) (lang string) {
-	// TODO: improve language detection with a package like
-	// "golang.org/x/text/language"
 	lang = consts.DefaultLocale
 	acceptHeader := header.Get("Accept-Language")
 	if acceptHeader == "" {

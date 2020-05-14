@@ -686,9 +686,6 @@ func (f *swiftFileCreationV2) Close() (err error) {
 	err = f.fs.Indexer.UpdateFileDoc(olddoc, newdoc)
 	// If we reach a conflict error, the document has been modified while
 	// uploading the content of the file.
-	//
-	// TODO: remove dep on couchdb, with a generalized conflict error for
-	// UpdateFileDoc/UpdateDirDoc.
 	if couchdb.IsConflictError(err) {
 		resdoc, err := f.fs.Indexer.FileByID(olddoc.ID())
 		if err != nil {
@@ -711,7 +708,6 @@ func (f *swiftFileOpenV2) Read(p []byte) (int, error) {
 }
 
 func (f *swiftFileOpenV2) ReadAt(p []byte, off int64) (int, error) {
-	// TODO find something smarter than keeping the whole file in memory
 	if f.br == nil {
 		buf, err := ioutil.ReadAll(f.f)
 		if err != nil {

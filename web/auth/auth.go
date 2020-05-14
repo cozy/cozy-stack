@@ -17,7 +17,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/limits"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 	"github.com/mssola/user_agent"
@@ -369,17 +368,6 @@ func logout(c echo.Context) error {
 	session, ok := middlewares.GetSession(c)
 	if ok {
 		c.SetCookie(session.Delete(instance))
-		// TODO 2020-05-15 Remove this migration code {{{
-		if config.GetConfig().Subdomains == config.FlatSubdomains {
-			c.SetCookie(&http.Cookie{
-				Name:   "cozysessid",
-				Value:  "",
-				MaxAge: -1,
-				Path:   "/",
-				Domain: utils.CookieDomain("." + instance.ContextualDomain()),
-			})
-		}
-		// }}}
 	}
 
 	return c.NoContent(http.StatusNoContent)

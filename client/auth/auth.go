@@ -309,7 +309,6 @@ func parseError(res *http.Response, b []byte) error {
 			Detail: string(b),
 		}
 	}
-	// TODO: handle multi-error
 	return &err
 }
 

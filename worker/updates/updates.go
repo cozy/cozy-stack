@@ -133,7 +133,6 @@ func UpdateAll(ctx *job.WorkerContext, opts *Options) error {
 
 	go func() {
 		count := 0
-		// TODO: filter instances that are AutoUpdate only
 		errf := instance.ForeachInstances(func(inst *instance.Instance) error {
 			if opts.DomainsWithContext != "" &&
 				inst.ContextName != opts.DomainsWithContext {

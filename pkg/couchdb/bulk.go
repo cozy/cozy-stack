@@ -97,9 +97,6 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 			docs = append(docs, row.Doc)
 		}
 	}
-	// TODO: better way to unmarshal returned data. For now we re-
-	// marshal the doc fields a a json array before unmarshalling it
-	// again...
 	data, err := json.Marshal(docs)
 	if err != nil {
 		return err
