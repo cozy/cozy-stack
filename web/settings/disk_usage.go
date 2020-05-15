@@ -36,16 +36,28 @@ func (j *apiDiskUsage) Links() *jsonapi.LinksList {
 // Settings objects permissions are only on ID
 func (j *apiDiskUsage) Fetch(field string) []string { return nil }
 
+// checkAccessToDiskUsage validates the access control for the disk-usage. It
+// checks if there is an explicit permission on this document, but also allow
+// every request from the logged-in user as this route is used by the cozy-bar
+// from all the client-side apps. And there is a third case where it is
+// allowed: when an anonymous user comes from a shared by link directory with
+// write access.
+func checkAccessToDiskUsage(c echo.Context, result *apiDiskUsage) error {
+	if err := middlewares.Allow(c, permission.GET, result); err == nil {
+		return nil
+	}
+	if middlewares.IsLoggedIn(c) && middlewares.HasWebAppToken(c) {
+		return nil
+	}
+	return middlewares.CanWriteToAnyDirectory(c)
+}
+
 func diskUsage(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	var result apiDiskUsage
 
-	// Check permissions, but also allow every request from the logged-in user
-	// as this route is used by the cozy-bar from all the client-side apps
-	if err := middlewares.Allow(c, permission.GET, &result); err != nil {
-		if !middlewares.IsLoggedIn(c) || !middlewares.HasWebAppToken(c) {
-			return err
-		}
+	if err := checkAccessToDiskUsage(c, &result); err != nil {
+		return err
 	}
 
 	fs := instance.VFS()

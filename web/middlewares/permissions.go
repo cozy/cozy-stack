@@ -327,6 +327,21 @@ func AllowVFS(c echo.Context, v permission.Verb, o vfs.Fetcher) error {
 	return nil
 }
 
+// CanWriteToAnyDirectory checks that the context permission allows to write to
+// a directory on the VFS.
+func CanWriteToAnyDirectory(c echo.Context) error {
+	pdoc, err := GetPermission(c)
+	if err != nil {
+		return err
+	}
+	for _, rule := range pdoc.Permissions {
+		if rule.Type == consts.Files && rule.Verbs.Contains(permission.POST) {
+			return nil
+		}
+	}
+	return ErrForbidden
+}
+
 // AllowInstallApp checks that the current context is tied to the store app,
 // which is the only app authorized to install or update other apps.
 // It also allow the cozy-stack apps commands to work (CLI).
