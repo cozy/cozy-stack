@@ -74,20 +74,23 @@ func XorID(id string, key []byte) string {
 //   directory, we must create directory before the file)
 // - directories are sorted by increasing depth (if a sub-folder is created
 //   in a new directory, we must create the parent before the child)
+// - deleted elements must come at the end, to efficently cope with moves.
+//	 For example, if we have A->B->C hierarchy and C is moved elsewhere
+//	 and B deleted, we must make the move before deleting B and its children.
 func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 	sort.SliceStable(files, func(i, j int) bool {
 		a, b := files[i], files[j]
+		if removed, ok := a["_deleted"].(bool); ok && removed {
+			return false
+		}
+		if removed, ok := b["_deleted"].(bool); ok && removed {
+			return true
+		}
 		if a["type"] == consts.FileType {
 			return false
 		}
 		if b["type"] == consts.FileType {
 			return true
-		}
-		if removed, ok := a["_deleted"].(bool); ok && removed {
-			return true
-		}
-		if removed, ok := b["_deleted"].(bool); ok && removed {
-			return false
 		}
 		p, ok := a["path"].(string)
 		if !ok {
@@ -446,20 +449,6 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		dir    *vfs.DirDoc
 		ref    *SharedRef
 	}
-
-	// XXX: we need to make the changes for live documents before the _deleted
-	// ones to avoid deleting too much files. For example, if the A folder is
-	// deleted, and the B/A file is moved outside of B, we must make the move
-	// before deleting A and its children.
-	sort.SliceStable(docs, func(i, j int) bool {
-		if _, ok := docs[j]["_deleted"]; ok {
-			return true
-		}
-		if _, ok := docs[i]["_deleted"]; ok {
-			return false
-		}
-		return true
-	})
 
 	var errm error
 	var retries []retryOp
