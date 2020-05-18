@@ -53,7 +53,7 @@ func TestSortFilesToSent(t *testing.T) {
 	filec := map[string]interface{}{"type": "file", "name": "filec"}
 	files := []map[string]interface{}{filea, foobar, foobarbaz, dela, delb, fileb, filec, foo}
 	s.SortFilesToSent(files)
-	expected := []map[string]interface{}{delb, dela, foo, foobar, foobarbaz, filea, fileb, filec}
+	expected := []map[string]interface{}{foo, foobar, foobarbaz, filea, fileb, filec, dela, delb}
 	assert.Equal(t, expected, files)
 }
 
