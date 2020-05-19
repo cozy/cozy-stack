@@ -447,6 +447,9 @@ msgstr "Transacciones bancarias"
 msgid "Permissions io.cozy.bank.settings"
 msgstr "Configuración de aplicaciones"
 
+msgid "Permissions io.cozy.bank.recurrence"
+msgstr "Grupos bancarios recurrentes"
+
 msgid "Permissions io.cozy.bills"
 msgstr "Facturas"
 
