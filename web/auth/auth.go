@@ -105,7 +105,11 @@ func isTrustedDevice(c echo.Context, inst *instance.Instance) bool {
 
 func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors string, redirect *url.URL) error {
 	if !i.IsPasswordAuthenticationEnabled() {
-		return c.Redirect(http.StatusSeeOther, i.PageURL("/oidc/start", nil))
+		var q url.Values
+		if redirect := c.QueryParam("redirect"); redirect != "" {
+			q = url.Values{"redirect": {redirect}}
+		}
+		return c.Redirect(http.StatusSeeOther, i.PageURL("/oidc/start", q))
 	}
 
 	publicName, err := i.PublicName()

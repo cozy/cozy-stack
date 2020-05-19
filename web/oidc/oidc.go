@@ -33,7 +33,7 @@ func Start(c echo.Context) error {
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL(inst.Domain, conf)
+	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -70,10 +70,14 @@ func Redirect(c echo.Context) error {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the cozy was not found.")
 	}
 
-	redirect := inst.PageURL("/oidc/login", url.Values{
+	u := url.Values{
 		"code":  {code},
 		"state": {stateID},
-	})
+	}
+	if state.Redirect != "" {
+		u.Add("redirect", state.Redirect)
+	}
+	redirect := inst.PageURL("/oidc/login", u)
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
@@ -116,6 +120,9 @@ func Login(c echo.Context) error {
 		v := url.Values{}
 		v.Add("two_factor_token", string(twoFactorToken))
 		v.Add("trusted_device_checkbox", "false")
+		if redirect := c.QueryParam("redirect"); redirect != "" {
+			v.Add("redirect", redirect)
+		}
 		// We can not cleanly check the trusted_device option for external
 		// login. Therefore, we do not provide the checkbox
 		return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
@@ -128,8 +135,11 @@ func Login(c echo.Context) error {
 	if err = session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), true); err != nil {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
-	redirect := inst.DefaultRedirection()
-	return c.Redirect(http.StatusSeeOther, redirect.String())
+	redirect := c.QueryParam("redirect")
+	if redirect == "" {
+		redirect = inst.DefaultRedirection().String()
+	}
+	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
 // AccessToken delivers an access_token and a refresh_token if the client gives
@@ -301,12 +311,12 @@ func getConfig(context string) (*Config, error) {
 	return config, nil
 }
 
-func makeStartURL(domain string, conf *Config) (string, error) {
+func makeStartURL(domain, redirect string, conf *Config) (string, error) {
 	u, err := url.Parse(conf.AuthorizeURL)
 	if err != nil {
 		return "", err
 	}
-	state := newStateHolder(domain)
+	state := newStateHolder(domain, redirect)
 	if err = getStorage().Add(state); err != nil {
 		return "", err
 	}
@@ -452,7 +462,7 @@ func LoginDomainHandler(c echo.Context, contextName string) error {
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL(r.Host, conf)
+	u, err := makeStartURL(r.Host, "", conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
