@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/go-redis/redis/v7"
 	"github.com/sirupsen/logrus"
 )
@@ -57,6 +58,9 @@ func Init(opt Options) error {
 		}
 		logrus.AddHook(hook)
 		logrus.SetOutput(ioutil.Discard)
+	} else if build.IsDevRelease() && logLevel == logrus.DebugLevel {
+		formatter := logrus.StandardLogger().Formatter.(*logrus.TextFormatter)
+		formatter.TimestampFormat = time.RFC3339Nano
 	}
 	if cli := opt.Redis; cli != nil {
 		go subscribeLoggersDebug(cli)
