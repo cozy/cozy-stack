@@ -52,4 +52,11 @@ class Couch
     doctype = doctype.gsub(/\W/, '-')
     @client["/#{prefix domain}%2F#{doctype}/#{id}"].put(doc.to_json, opts)
   end
+
+  def all_docs(domain, doctype)
+    doctype = doctype.gsub(/\W/, '-')
+    res = @client["/#{prefix domain}%2F#{doctype}/_all_docs?include_docs=true"].get
+    rows = JSON.parse(res.body)["rows"]
+    rows.map { |r| r["doc"] }
+  end
 end
