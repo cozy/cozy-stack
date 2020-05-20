@@ -74,7 +74,7 @@ func XorID(id string, key []byte) string {
 //   directory, we must create directory before the file)
 // - directories are sorted by increasing depth (if a sub-folder is created
 //   in a new directory, we must create the parent before the child)
-// - deleted elements must come at the end, to efficently cope with moves.
+// - deleted elements must come at the end, to efficiently cope with moves.
 //	 For example, if we have A->B->C hierarchy and C is moved elsewhere
 //	 and B deleted, we must make the move before deleting B and its children.
 func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
@@ -92,13 +92,13 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 		if b["type"] == consts.FileType {
 			return true
 		}
-		p, ok := a["path"].(string)
-		if !ok {
-			return true
-		}
 		q, ok := b["path"].(string)
 		if !ok {
 			return false
+		}
+		p, ok := a["path"].(string)
+		if !ok {
+			return true
 		}
 		return strings.Count(p, "/") < strings.Count(q, "/")
 	})

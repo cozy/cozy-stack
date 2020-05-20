@@ -46,8 +46,8 @@ func TestSortFilesToSent(t *testing.T) {
 	foo := map[string]interface{}{"type": "directory", "name": "foo", "path": "/foo"}
 	foobar := map[string]interface{}{"type": "directory", "name": "bar", "path": "/foo/bar"}
 	foobarbaz := map[string]interface{}{"type": "directory", "name": "baz", "path": "/foo/bar/baz"}
-	dela := map[string]interface{}{"_deleted": true, "name": "dela"}
-	delb := map[string]interface{}{"_deleted": true, "name": "delb"}
+	dela := map[string]interface{}{"_deleted": true, "_id": "dela"} // No type, name, or path on deleted docs
+	delb := map[string]interface{}{"_deleted": true, "_id": "delb"}
 	filea := map[string]interface{}{"type": "file", "name": "filea"}
 	fileb := map[string]interface{}{"type": "file", "name": "fileb"}
 	filec := map[string]interface{}{"type": "file", "name": "filec"}
