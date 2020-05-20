@@ -55,6 +55,7 @@ describe "A shared directory" do
     # ...and delete it
     subdir.remove inst
     sleep 12
+    # Debug.visualize_tree [inst, inst_recipient], sharing
 
     # Check that no children have been lost
     path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"

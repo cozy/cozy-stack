@@ -2,6 +2,7 @@ class Folder
   ROOT_DIR = "io.cozy.files.root-dir".freeze
   TRASH_DIR = "io.cozy.files.trash-dir".freeze
   TRASH_PATH = "/.cozy_trash/".freeze
+  SHARED_WITH_ME_DIR = "io.cozy.files.shared-with-me-dir".freeze
   NO_LONGER_SHARED_DIR = "io.cozy.files.no-longer-shared-dir".freeze
   CANCELLED_SUFFIX = "(partage annulé)".freeze
 

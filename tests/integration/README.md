@@ -57,6 +57,15 @@ b.accept
 b.recipients.first.open
 ```
 
+## Compare trees
+
+It can be useful for debugging to compare tree with a visual representation.
+You can generate an image with this ruby code:
+
+```ruby
+Debug.visualize_tree [inst, inst_recipient], sharing
+```
+
 ## Swift
 
 It's complicated to launch the tests with Swift, but it's possible to simulate
