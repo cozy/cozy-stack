@@ -47,10 +47,16 @@ describe "A shared directory" do
     diff.must_be_empty
 
     # Move what is in subdir out of it...
+    file3.move_to inst, folder.couch_id
+    # TODO remove this sleep. Files move/rename are currently managed from the
+    # worker share_upload, not with the directories in share_replicate. It is
+    # something that should be changed in the future. The triggers for the 2
+    # workers have different debounce values, which is why the sleep was added
+    # as a temporary workaround.
+    sleep 6
     child1.move_to inst, folder.couch_id
     child2.move_to inst, folder.couch_id
     child3.move_to inst, folder.couch_id
-    file3.move_to inst, folder.couch_id
 
     # ...and delete it
     subdir.remove inst
