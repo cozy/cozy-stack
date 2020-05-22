@@ -18,15 +18,17 @@ type stateHolder struct {
 	id        string
 	expiresAt int64
 	Instance  string
+	Redirect  string
 	Nonce     string
 }
 
-func newStateHolder(domain string) *stateHolder {
+func newStateHolder(domain, redirect string) *stateHolder {
 	id := hex.EncodeToString(crypto.GenerateRandomBytes(16))
 	nonce := hex.EncodeToString(crypto.GenerateRandomBytes(16))
 	return &stateHolder{
 		id:       id,
 		Instance: domain,
+		Redirect: redirect,
 		Nonce:    nonce,
 	}
 }
