@@ -13,7 +13,7 @@ require (
 	github.com/dhowden/tag v0.0.0-20200412032933-5d76b8eaae27
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emersion/go-vcard v0.0.0-20200508080525-dd3110a24ec2
-	github.com/go-redis/redis/v7 v7.2.0
+	github.com/go-redis/redis/v7 v7.3.0
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/gddo v0.0.0-20200519224240-a4ebd2f7e574
