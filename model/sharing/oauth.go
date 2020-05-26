@@ -423,7 +423,21 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 
 			s.Active = true
 			if err := couchdb.UpdateDoc(inst, s); err != nil {
-				return nil, err
+				if !couchdb.IsConflictError(err) {
+					return nil, err
+				}
+				// A conflict can occur when several users accept a sharing at
+				// the same time, and we should just retry in that case
+				s2, err2 := FindSharing(inst, s.SID)
+				if err2 != nil {
+					return nil, err
+				}
+				s2.Members[i+1] = s.Members[i+1]
+				s2.Credentials[i] = s.Credentials[i]
+				if err2 := couchdb.UpdateDoc(inst, s2); err2 != nil {
+					return nil, err
+				}
+				s = s2
 			}
 			go s.Setup(inst, &s.Members[i+1])
 			return &ac, nil
