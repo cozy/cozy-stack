@@ -33,7 +33,7 @@ func (sfs *swiftVFSV2) CheckFilesConsistency(accumulate func(log *vfs.FsckLog), 
 	entries := make(map[string]*vfs.TreeFile, 1024)
 	_, err := sfs.BuildTree(func(f *vfs.TreeFile) {
 		if !f.IsDir {
-			entries[f.DirID+"/"+f.DocName] = f
+			entries[f.DocID] = f
 		}
 	})
 	if err != nil {
