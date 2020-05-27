@@ -16,7 +16,10 @@ import (
 	"golang.org/x/net/html"
 )
 
-const cacheTTL = 7 * 24 * time.Hour // 1 week
+const (
+	cacheTTL = 7 * 24 * time.Hour // 1 week
+	maxSize  = 100000             // 100kb
+)
 
 var iconClient = &http.Client{
 	Timeout: 10 * time.Second,
@@ -238,6 +241,9 @@ func downloadIcon(u string) (*Icon, error) {
 	b, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
+	}
+	if len(b) > maxSize {
+		return nil, errors.New("Max size exceeded")
 	}
 	ico := Icon{
 		Mime: res.Header.Get("Content-Type"),
