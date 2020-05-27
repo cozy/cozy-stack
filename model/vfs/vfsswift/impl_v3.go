@@ -351,20 +351,13 @@ func (sfs *swiftVFSV3) EnsureErased(journal vfs.TrashJournal) error {
 			allVersions = append(allVersions, versions...)
 		}
 	}
-	if err := sfs.Indexer.BatchDeleteVersions(allVersions); err != nil {
+	var err error
+	if err = sfs.Indexer.BatchDeleteVersions(allVersions); err != nil {
 		sfs.log.Warnf("EnsureErased failed on BatchDeleteVersions: %s", err)
 	}
-	_, err := sfs.c.BulkDelete(sfs.container, objNames)
-	if err == swift.Forbidden {
-		sfs.log.Infof("EnsureErased failed on BulkDelete: %s", err)
-		err = nil
-		for _, objName := range objNames {
-			errd := sfs.c.ObjectDelete(sfs.container, objName)
-			if err == nil && errd != nil && errd != swift.ObjectNotFound {
-				sfs.log.Infof("EnsureErased failed on ObjectDelete: %s", errd)
-				err = errd
-			}
-		}
+	if err2 := deleteContainerFiles(sfs.c, sfs.container, objNames); err2 != nil {
+		err = err2
+		sfs.log.Infof("EnsureErased failed on deleteContainerFiles: %s", err)
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
 	return err
