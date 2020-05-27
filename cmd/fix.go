@@ -27,8 +27,9 @@ var withMetadataFlag bool
 var noDryRunFlag bool
 
 var fixerCmdGroup = &cobra.Command{
-	Use:   "fixer <command>",
-	Short: "A set of tools to fix issues or migrate content for retro-compatibility.",
+	Use:     "fix <command>",
+	Aliases: []string{"fixer"},
+	Short:   "A set of tools to fix issues or migrate content.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
 	},

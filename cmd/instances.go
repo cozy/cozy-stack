@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -54,9 +53,6 @@ var flagOnboardingFinished bool
 var flagTTL time.Duration
 var flagExpire time.Duration
 var flagAllowLoginScope bool
-var flagFsckIndexIntegrity bool
-var flagFsckFilesConsistensy bool
-var flagFsckFailFast bool
 var flagAvailableFields bool
 var flagOnboardingSecret string
 var flagOnboardingApp string
@@ -630,43 +626,11 @@ By default, both operations are done, but you can choose one or the other via
 the flags.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		errPrintfln("Please use cozy-stack check fs, this command has been deprecated")
 		if len(args) == 0 {
 			return cmd.Usage()
 		}
-		domain := args[0]
-
-		if flagFsckFilesConsistensy && flagFsckIndexIntegrity {
-			flagFsckIndexIntegrity = false
-			flagFsckFilesConsistensy = false
-		}
-
-		c := newAdminClient()
-		res, err := c.Req(&request.Options{
-			Method: "GET",
-			Path:   "/instances/" + url.PathEscape(domain) + "/fsck",
-			Queries: url.Values{
-				"IndexIntegrity":   {strconv.FormatBool(flagFsckIndexIntegrity)},
-				"FilesConsistency": {strconv.FormatBool(flagFsckFilesConsistensy)},
-				"FailFast":         {strconv.FormatBool(flagFsckFailFast)},
-			},
-		})
-		if err != nil {
-			return err
-		}
-
-		hasLogs := false
-		scanner := bufio.NewScanner(res.Body)
-		for scanner.Scan() {
-			hasLogs = true
-			fmt.Println(string(scanner.Bytes()))
-		}
-		if err := scanner.Err(); err != nil {
-			return err
-		}
-		if hasLogs {
-			os.Exit(1)
-		}
-		return nil
+		return fsck(args[0])
 	},
 }
 
@@ -1100,9 +1064,9 @@ func init() {
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
 	debugInstanceCmd.Flags().StringVar(&flagDomain, "domain", cozyDomain(), "Specify the domain name of the instance")
 	debugInstanceCmd.Flags().DurationVar(&flagTTL, "ttl", 24*time.Hour, "Specify how long the debug mode will last")
-	fsckInstanceCmd.Flags().BoolVar(&flagFsckIndexIntegrity, "index-integrity", false, "Check the index integrity only")
-	fsckInstanceCmd.Flags().BoolVar(&flagFsckFilesConsistensy, "files-consistency", false, "Check the files consistency only (between CouchDB and Swift)")
-	fsckInstanceCmd.Flags().BoolVar(&flagFsckFailFast, "fail-fast", false, "Stop the FSCK on the first error")
+	fsckInstanceCmd.Flags().BoolVar(&flagCheckFSIndexIntegrity, "index-integrity", false, "Check the index integrity only")
+	fsckInstanceCmd.Flags().BoolVar(&flagCheckFSFilesConsistensy, "files-consistency", false, "Check the files consistency only (between CouchDB and Swift)")
+	fsckInstanceCmd.Flags().BoolVar(&flagCheckFSFailFast, "fail-fast", false, "Stop the FSCK on the first error")
 	fsckInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagAllowLoginScope, "allow-login-scope", false, "Allow login scope")
