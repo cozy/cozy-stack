@@ -116,6 +116,9 @@ describe "A photo" do
     refute file_has_album_reference(file, album.couch_id)
     refute file.trashed
 
+    assert_equal inst.check, []
+    assert_equal inst_recipient.check, []
+
     inst.remove
     inst_recipient.remove
   end

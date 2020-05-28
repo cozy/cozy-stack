@@ -134,6 +134,17 @@ class Stack
     cmd = ["cozy-stack", "check", "fs", inst.domain,
            "--admin-port", @admin]
     puts cmd.join(" ").green
-    `#{cmd.join(" ")}`.chomp
+    `#{cmd.join(" ")}`.chomp.lines
+  end
+
+  def check_shared(inst)
+    cmd = ["cozy-stack", "check", "shared", inst.domain,
+           "--admin-port", @admin]
+    puts cmd.join(" ").green
+    `#{cmd.join(" ")}`.chomp.lines
+  end
+
+  def check(inst)
+    [fsck(inst), check_shared(inst)].flatten
   end
 end

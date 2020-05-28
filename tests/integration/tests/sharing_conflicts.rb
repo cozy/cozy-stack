@@ -182,8 +182,8 @@ describe "A sharing" do
       diff.must_be_empty
     end
 
-    assert_equal inst.fsck, ""
-    assert_equal inst_recipient.fsck, ""
+    assert_equal inst.check, []
+    assert_equal inst_recipient.check, []
 
     inst.remove
     inst_recipient.remove

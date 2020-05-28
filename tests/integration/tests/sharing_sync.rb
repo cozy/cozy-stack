@@ -187,11 +187,12 @@ describe "A folder" do
 
     # Create a folder on the recipient side, with a fixed id being the
     # xor_id of the child2 folder
+    name = Faker::Internet.slug
     doc = {
       type: "directory",
       name: name,
       dir_id: Folder::ROOT_DIR,
-      path: "/#{Faker::Internet.slug}",
+      path: "/#{name}",
       created_at: "2018-05-11T12:18:37.558389182+02:00",
       updated_at: "2018-05-11T12:18:37.558389182+02:00"
     }
@@ -252,6 +253,9 @@ describe "A folder" do
     assert_equal file.name, file_recipient.name
     assert_equal file.md5sum, file_recipient.md5sum
     assert_equal file.couch_rev, file_recipient.couch_rev
+
+    assert_equal inst.check, []
+    # XXX we don't check the FS of inst_recipient as we have played directly with CouchDB on it
 
     inst.remove
     inst_recipient.remove
