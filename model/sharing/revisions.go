@@ -86,6 +86,9 @@ func (rt *RevsTree) Find(rev string) (*RevsTree, int) {
 
 // Add inserts the given revision in the main branch
 func (rt *RevsTree) Add(rev string) *RevsTree {
+	if rev == rt.Rev {
+		return rt
+	}
 	// TODO check generations (conflicts)
 	if len(rt.Branches) > 0 {
 		// XXX This condition shouldn't be true, but it can help to limit
