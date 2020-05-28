@@ -12,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
-	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -195,67 +194,6 @@ func deleteHandler(c echo.Context) error {
 		return wrapError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
-}
-
-func fsckHandler(c echo.Context) (err error) {
-	domain := c.Param("domain")
-	i, err := lifecycle.GetInstance(domain)
-	if err != nil {
-		return wrapError(err)
-	}
-
-	indexIntegrityCheck, _ := strconv.ParseBool(c.QueryParam("IndexIntegrity"))
-	filesConsistencyCheck, _ := strconv.ParseBool(c.QueryParam("FilesConsistency"))
-	failFast, _ := strconv.ParseBool(c.QueryParam("FailFast"))
-
-	logCh := make(chan *vfs.FsckLog)
-	go func() {
-		fs := i.VFS()
-		if indexIntegrityCheck {
-			err = fs.CheckIndexIntegrity(func(log *vfs.FsckLog) { logCh <- log }, failFast)
-		} else if filesConsistencyCheck {
-			err = fs.CheckFilesConsistency(func(log *vfs.FsckLog) { logCh <- log }, failFast)
-		} else {
-			err = fs.Fsck(func(log *vfs.FsckLog) { logCh <- log }, failFast)
-		}
-		close(logCh)
-	}()
-
-	w := c.Response().Writer
-	w.WriteHeader(200)
-	encoder := json.NewEncoder(w)
-	for log := range logCh {
-		// XXX do not serialize to JSON the children and the cozyMetadata, as
-		// it can take more than 64ko and scanner will ignore such lines.
-		if log.FileDoc != nil {
-			log.FileDoc.DirsChildren = nil  // It can be filled on type mismatch
-			log.FileDoc.FilesChildren = nil // Idem
-			log.FileDoc.Metadata = nil
-		}
-		if log.DirDoc != nil {
-			log.DirDoc.DirsChildren = nil
-			log.DirDoc.FilesChildren = nil
-			log.DirDoc.Metadata = nil
-		}
-		if errenc := encoder.Encode(log); errenc != nil {
-			i.Logger().WithField("nspace", "fsck").
-				Warnf("Cannot encode to JSON: %s (%v)", err, log)
-		}
-		if f, ok := w.(http.Flusher); ok {
-			f.Flush()
-		}
-	}
-	if err != nil {
-		log := map[string]string{"error": err.Error()}
-		if errenc := encoder.Encode(log); errenc != nil {
-			i.Logger().WithField("nspace", "fsck").
-				Warnf("Cannot encode to JSON: %s (%v)", err, log)
-		}
-		if f, ok := w.(http.Flusher); ok {
-			f.Flush()
-		}
-	}
-	return nil
 }
 
 func updatesHandler(c echo.Context) error {
@@ -469,7 +407,6 @@ func Routes(router *echo.Group) {
 	router.PATCH("/feature/defaults", patchFeatureDefaults)
 
 	// Advanced features for instances
-	router.GET("/:domain/fsck", fsckHandler)
 	router.POST("/updates", updatesHandler)
 	router.POST("/token", createToken)
 	router.GET("/oauth_client", findClientBySoftwareID)
@@ -488,6 +425,10 @@ func Routes(router *echo.Group) {
 	router.DELETE("/assets/:context/*", deleteAssets)
 	router.GET("/contexts", lsContexts)
 	router.GET("/with-app-version/:slug/:version", appVersion)
+
+	// Checks
+	router.GET("/:domain/fsck", fsckHandler)
+	router.POST("/:domain/checks/shared", checkShared)
 
 	// Fixers
 	router.POST("/:domain/fixers/content-mismatch", contentMismatchFixer)

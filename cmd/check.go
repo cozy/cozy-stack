@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -84,8 +85,48 @@ func fsck(domain string) error {
 	return nil
 }
 
+var checkSharedCmd = &cobra.Command{
+	Use:   "shared <domain>",
+	Short: "Check the io.cozy.shared documents",
+	Long: `
+The io.cozy.shared documents have a tree of revisions. This command will check
+that all revisions in this tree are either the root or their parent have a
+generation smaller than their generation.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+
+		c := newAdminClient()
+		res, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   "/instances/" + url.PathEscape(domain) + "/checks/shared",
+		})
+		if err != nil {
+			return err
+		}
+
+		var result []map[string]interface{}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		if err != nil {
+			return err
+		}
+
+		if len(result) > 0 {
+			for _, r := range result {
+				fmt.Printf("- %#v\n", r)
+			}
+			os.Exit(1)
+		}
+		return nil
+	},
+}
+
 func init() {
 	checkCmdGroup.AddCommand(checkFSCmd)
+	checkCmdGroup.AddCommand(checkSharedCmd)
 	checkFSCmd.Flags().BoolVar(&flagCheckFSIndexIntegrity, "index-integrity", false, "Check the index integrity only")
 	checkFSCmd.Flags().BoolVar(&flagCheckFSFilesConsistensy, "files-consistency", false, "Check the files consistency only (between CouchDB and Swift)")
 	checkFSCmd.Flags().BoolVar(&flagCheckFSFailFast, "fail-fast", false, "Stop the FSCK on the first error")

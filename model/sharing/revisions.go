@@ -330,3 +330,35 @@ func conflictID(id, rev string) string {
 	}
 	return XorID(id, key)
 }
+
+// CheckError is the type used when checking the io.cozy.shared, and one
+// document has two revisions where a child don't its generation equal to the
+// generation of the parent plus one.
+type CheckError struct {
+	ID     string `json:"_id"`
+	Parent string `json:"parent_rev"`
+	Child  string `json:"child_rev"`
+}
+
+func (rt *RevsTree) check() *CheckError {
+	if len(rt.Branches) == 0 {
+		return nil
+	}
+
+	gen := RevGeneration(rt.Rev)
+	for _, b := range rt.Branches {
+		if RevGeneration(b.Rev) != gen+1 {
+			return &CheckError{
+				Parent: rt.Rev,
+				Child:  b.Rev,
+			}
+		}
+	}
+
+	for _, b := range rt.Branches {
+		if check := b.check(); check != nil {
+			return check
+		}
+	}
+	return nil
+}
