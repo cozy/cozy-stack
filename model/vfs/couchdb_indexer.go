@@ -671,7 +671,7 @@ func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog), failFast
 	if err != nil {
 		return err
 	}
-	if err := c.CheckTreeIntegrity(tree, accumulate, failFast); err != nil && err != ErrFsckFailFail {
+	if err := c.CheckTreeIntegrity(tree, accumulate, failFast); err != nil && err != ErrFsckFailFast {
 		return err
 	}
 	return nil
@@ -826,10 +826,34 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 	return
 }
 
-func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate func(*FsckLog), failFast bool) bool {
+func cleanDirsMap(
+	parent *TreeFile,
+	dirsmap map[string]*TreeFile,
+	accumulate func(*FsckLog),
+	failFast bool,
+) bool {
 	delete(dirsmap, parent.DocID)
 	names := make(map[string]struct{})
+	inTrash := strings.HasPrefix(parent.Fullpath, TrashDirName)
+
 	for _, file := range parent.FilesChildren {
+		if inTrash != file.Trashed {
+			if file.Trashed {
+				accumulate(&FsckLog{
+					Type:    TrashedNotInTrash,
+					FileDoc: file,
+				})
+			} else {
+				accumulate(&FsckLog{
+					Type:    NotTrashedInTrash,
+					FileDoc: file,
+				})
+			}
+			if failFast {
+				return false
+			}
+		}
+
 		if file.HasPath {
 			accumulate(&FsckLog{
 				Type:    IndexFileWithPath,
@@ -850,6 +874,7 @@ func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate fun
 		}
 		names[file.DocName] = struct{}{}
 	}
+
 	for _, child := range parent.DirsChildren {
 		if _, ok := names[child.DocName]; ok {
 			accumulate(&FsckLog{

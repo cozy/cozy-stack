@@ -24,7 +24,7 @@ func (sfs *swiftVFSV3) Fsck(accumulate func(log *vfs.FsckLog), failFast bool) er
 		return err
 	}
 	if err = sfs.CheckTreeIntegrity(tree, accumulate, failFast); err != nil {
-		if err == vfs.ErrFsckFailFail {
+		if err == vfs.ErrFsckFailFast {
 			return nil
 		}
 		return err
