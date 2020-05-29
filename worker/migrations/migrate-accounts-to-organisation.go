@@ -74,6 +74,18 @@ func buildCipher(orgKey []byte, slug, username, password, url string) (*bitwarde
     return &c, nil
 }
 
+func getCipherLinkFromManifest(manifest *app.KonnManifest) (string, error) {
+    var link string
+    if manifest.VendorLink == nil {
+        return "", nil
+    }
+    if err := json.Unmarshal(*manifest.VendorLink, &link); err != nil {
+        return "", err
+    }
+    link = strings.Trim(link, "'")
+    return link, nil
+}
+
 // Migrates all the encrypted accounts to Bitwarden ciphers.
 // It decrypts each account, reencrypt the fields with the organization key,
 // and save it in the ciphers database.
@@ -123,15 +135,19 @@ func migrateAccountsToOrganization(domain string) error {
             log.Warningf("Could not get manifest for %s", msg.Slug)
             continue
         }
-        var link string
-        if manifest.VendorLink == nil {
+
+        link, err := getCipherLinkFromManifest(manifest)
+
+        if (err != nil) {
+            errm = multierror.Append(errm, err)
+            continue
+        }
+
+        if link != "" {
             log.Warningf("No vendor_link in manifest for %s", msg.Slug)
             continue
         }
-        if err := json.Unmarshal(*manifest.VendorLink, &link); err != nil {
-            errm = multierror.Append(errm, err)
-        }
-        link = strings.Trim(link, "'")
+
         acc := &account.Account{}
         if err := couchdb.GetDoc(inst, consts.Accounts, msg.Account, acc); err != nil {
             errm = multierror.Append(errm, err)
