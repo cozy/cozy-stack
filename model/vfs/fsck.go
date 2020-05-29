@@ -44,6 +44,9 @@ const (
 	// NotTrashedInTrash is used when a file has trashed: false but its parent
 	// directory is the trash or a directory in the trash.
 	NotTrashedInTrash = "not_trashed_in_trash"
+	// ConflictInIndex is used when there is a conflict in CouchDB with 2
+	// branches of revisions.
+	ConflictInIndex = "conflict_in_index"
 )
 
 // FsckLog is a struct for an inconsistency in the VFS

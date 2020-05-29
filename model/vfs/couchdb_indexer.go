@@ -678,6 +678,13 @@ func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog), failFast
 }
 
 func (c *couchdbIndexer) CheckTreeIntegrity(tree *Tree, accumulate func(*FsckLog), failFast bool) error {
+	if err := c.checkNoConflicts(accumulate, failFast); err != nil {
+		if err == ErrFsckFailFast {
+			return nil
+		}
+		return err
+	}
+
 	if tree.Root == nil {
 		accumulate(&FsckLog{Type: IndexMissingRoot})
 		return nil
@@ -902,4 +909,35 @@ func cleanDirsMap(
 		}
 	}
 	return true
+}
+
+func (c *couchdbIndexer) checkNoConflicts(accumulate func(*FsckLog), failFast bool) error {
+	var docs []DirOrFileDoc
+	req := &couchdb.FindRequest{
+		UseIndex: "with-conflicts",
+		Selector: mango.Exists("_conflicts"),
+		Limit:    1000,
+	}
+	_, err := couchdb.FindDocsRaw(c.db, consts.Files, req, &docs)
+	if err != nil {
+		return err
+	}
+	for _, doc := range docs {
+		if doc.Type != consts.DirType {
+			accumulate(&FsckLog{
+				Type:   ConflictInIndex,
+				DirDoc: &TreeFile{DirOrFileDoc: doc},
+			})
+		} else {
+			accumulate(&FsckLog{
+				Type:    ConflictInIndex,
+				FileDoc: &TreeFile{DirOrFileDoc: doc},
+				IsFile:  true,
+			})
+		}
+		if failFast {
+			return ErrFsckFailFast
+		}
+	}
+	return nil
 }
