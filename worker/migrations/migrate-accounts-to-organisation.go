@@ -14,6 +14,7 @@ import (
     "github.com/cozy/cozy-stack/pkg/couchdb"
     "github.com/cozy/cozy-stack/pkg/crypto"
     "github.com/cozy/cozy-stack/pkg/metadata"
+    "github.com/sirupsen/logrus"
 
     multierror "github.com/hashicorp/go-multierror"
 )
@@ -25,7 +26,18 @@ type VaultReference struct {
     Protocol string `json:"_protocol"`
 }
 
-func buildCipher(orgKey []byte, slug, username, password, url string) (*bitwarden.Cipher, error) {
+func buildCipher(orgKey []byte, slug string, acc *account.Account, url string, logger *logrus.Entry) (*bitwarden.Cipher, error) {
+
+    encryptedCreds := acc.Basic.EncryptedCredentials
+    username, password, err := account.DecryptCredentials(encryptedCreds)
+    if err != nil {
+        return nil, err
+    }
+    // Special case if the email field is used instead of login
+    if username == "" && acc.Basic.Email != "" {
+        username = acc.Basic.Email
+    }
+
     key := orgKey[:32]
     hmac := orgKey[32:]
 
@@ -153,23 +165,14 @@ func migrateAccountsToOrganization(domain string) error {
             errm = multierror.Append(errm, err)
             continue
         }
-        encryptedCreds := acc.Basic.EncryptedCredentials
-        login, password, err := account.DecryptCredentials(encryptedCreds)
+
+        cipher, err := buildCipher(orgKey, msg.Slug, acc, link, log)
         if err != nil {
             if err == account.ErrBadCredentials {
                 log.Warningf("Bad credentials for account %s - %s", acc.ID(), acc.AccountType)
             } else {
                 errm = multierror.Append(errm, err)
             }
-            continue
-        }
-        // Special case if the email field is used instead of login
-        if login == "" && acc.Basic.Email != "" {
-            login = acc.Basic.Email
-        }
-        cipher, err := buildCipher(orgKey, msg.Slug, login, password, link)
-        if err != nil {
-            errm = multierror.Append(errm, err)
             continue
         }
         if err := couchdb.CreateDoc(inst, cipher); err != nil {
