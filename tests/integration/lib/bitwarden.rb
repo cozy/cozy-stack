@@ -112,7 +112,7 @@ class Bitwarden
   end
 
   def delete(object, id)
-    exec "delete #{object} #{id}"
+    exec "delete #{object} #{id} --permanent"
   end
 
   def delete_folder(id)
