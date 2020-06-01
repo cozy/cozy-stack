@@ -44,7 +44,7 @@ func getAccount(c echo.Context) error {
 		return err
 	}
 
-	if encryptAccount(out) {
+	if EncryptAccount(out) {
 		if err = couchdb.UpdateDoc(instance, &out); err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func getAccount(c echo.Context) error {
 	if perm.Type == permission.TypeKonnector ||
 		(c.QueryParam("include") == "credentials" && perm.Type == permission.TypeWebapp) {
 		// The account decryption is allowed for konnectors or for apps services
-		decryptAccount(out)
+		DecryptAccount(out)
 	}
 
 	return c.JSON(http.StatusOK, out.ToMapWithType())
@@ -109,7 +109,7 @@ func updateAccount(c echo.Context) error {
 		}
 	}
 
-	encryptAccount(doc)
+	EncryptAccount(doc)
 
 	errUpdate := couchdb.UpdateDoc(instance, &doc)
 	if errUpdate != nil {
@@ -121,7 +121,7 @@ func updateAccount(c echo.Context) error {
 		return err
 	}
 	if perm.Type == permission.TypeKonnector {
-		decryptAccount(doc)
+		DecryptAccount(doc)
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
@@ -133,14 +133,14 @@ func updateAccount(c echo.Context) error {
 	})
 }
 
-func encryptAccount(doc couchdb.JSONDoc) bool {
+func EncryptAccount(doc couchdb.JSONDoc) bool {
 	if config.GetVault().CredentialsEncryptorKey() != nil {
 		return encryptMap(doc.M)
 	}
 	return false
 }
 
-func decryptAccount(doc couchdb.JSONDoc) bool {
+func DecryptAccount(doc couchdb.JSONDoc) bool {
 	if config.GetVault().CredentialsDecryptorKey() != nil {
 		return decryptMap(doc.M)
 	}
@@ -241,7 +241,7 @@ func createAccount(c echo.Context) error {
 		return err
 	}
 
-	encryptAccount(doc)
+	EncryptAccount(doc)
 
 	if err := couchdb.CreateDoc(instance, &doc); err != nil {
 		return err

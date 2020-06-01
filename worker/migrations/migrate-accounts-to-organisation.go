@@ -4,7 +4,6 @@ import (
     "encoding/json"
     "strings"
 
-    "github.com/cozy/cozy-stack/model/account"
     "github.com/cozy/cozy-stack/model/app"
     "github.com/cozy/cozy-stack/model/bitwarden"
     "github.com/cozy/cozy-stack/model/bitwarden/settings"
@@ -14,11 +13,11 @@ import (
     "github.com/cozy/cozy-stack/pkg/couchdb"
     "github.com/cozy/cozy-stack/pkg/crypto"
     "github.com/cozy/cozy-stack/pkg/metadata"
+    "github.com/cozy/cozy-stack/web/data"
     "github.com/sirupsen/logrus"
 
     multierror "github.com/hashicorp/go-multierror"
 )
-
 
 type VaultReference struct {
     ID       string `json:"_id"`
@@ -26,16 +25,28 @@ type VaultReference struct {
     Protocol string `json:"_protocol"`
 }
 
-func buildCipher(orgKey []byte, slug string, acc *account.Account, url string, logger *logrus.Entry) (*bitwarden.Cipher, error) {
+func isAdditionalField(fieldName string) bool {
+    return !(
+        fieldName == "login" ||
+        fieldName == "password" ||
+        fieldName == "advancedFields")
+}
 
-    encryptedCreds := acc.Basic.EncryptedCredentials
-    username, password, err := account.DecryptCredentials(encryptedCreds)
-    if err != nil {
-        return nil, err
-    }
+// Builds a cipher from an io.cozy.account
+// 
+// A raw JSONDoc is used to be able to access auth.fields
+func buildCipher(orgKey []byte, manifest *app.KonnManifest, account couchdb.JSONDoc, url string, logger *logrus.Entry) (*bitwarden.Cipher, error) {
+    logger.Infof("Building ciphers...")
+
+    auth, _ := account.M["auth"].(map[string]interface{})
+
+    username, _ := auth["login"].(string)
+    password, _ := auth["password"].(string)
+    email, _ := auth["email"].(string)
+
     // Special case if the email field is used instead of login
-    if username == "" && acc.Basic.Email != "" {
-        username = acc.Basic.Email
+    if username == "" && email != "" {
+        username = email
     }
 
     key := orgKey[:32]
@@ -50,7 +61,7 @@ func buildCipher(orgKey []byte, slug string, acc *account.Account, url string, l
     uris := []bitwarden.LoginURI{u}
 
     ivName := crypto.GenerateRandomBytes(16)
-    encName, err := crypto.EncryptWithAES256HMAC(key, hmac, []byte(slug), ivName)
+    encName, err := crypto.EncryptWithAES256HMAC(key, hmac, []byte(manifest.Name), ivName)
     if err != nil {
         return nil, err
     }
@@ -76,12 +87,45 @@ func buildCipher(orgKey []byte, slug string, acc *account.Account, url string, l
     md := metadata.New()
     md.DocTypeVersion = bitwarden.DocTypeVersion
 
+    bitwardenFields := make([]bitwarden.Field, 0)
+
+    for name, rawValue := range auth {
+        value, ok := rawValue.(string)
+        if (!ok) {
+            continue
+        }
+        if !isAdditionalField(name) {
+            continue
+        }
+
+        ivName := crypto.GenerateRandomBytes(16)
+        encName, err := crypto.EncryptWithAES256HMAC(key, hmac, []byte(name), ivName)
+        if err != nil {
+            return nil, err
+        }
+
+        ivValue := crypto.GenerateRandomBytes(16)
+        encValue, err := crypto.EncryptWithAES256HMAC(key, hmac, []byte(value), ivValue)
+        if err != nil {
+            return nil, err
+        }
+
+        logger.Infof("Adding field %s = %s", name, value)
+        field := bitwarden.Field{
+            Name: encName,
+            Value: encValue,
+            Type: bitwarden.FieldTypeText,
+        }
+        bitwardenFields = append(bitwardenFields, field)
+    }
+
     c := bitwarden.Cipher{
         Type:           bitwarden.LoginType,
         Name:           encName,
         Login:          login,
         SharedWithCozy: true,
         Metadata:       md,
+        Fields:         bitwardenFields,
     }
     return &c, nil
 }
@@ -98,7 +142,8 @@ func getCipherLinkFromManifest(manifest *app.KonnManifest) (string, error) {
     return link, nil
 }
 
-func updateSettings(inst * instance.Instance, attempt int) (error) {
+func updateSettings(inst * instance.Instance, attempt int, logger *logrus.Entry) (error) {
+    logger.Infof("Updating bitwarden settings after migration...")
     // Reload the setting in case the revision changed
     setting, err := settings.Get(inst)
     if err != nil {
@@ -109,7 +154,7 @@ func updateSettings(inst * instance.Instance, attempt int) (error) {
     err = settings.UpdateRevisionDate(inst, setting)
     if err != nil {
         if couchdb.IsConflictError(err) && attempt < 2 {
-            err = updateSettings(inst, attempt + 1)
+            err = updateSettings(inst, attempt + 1, logger)
         }
 
         if err != nil {
@@ -119,20 +164,24 @@ func updateSettings(inst * instance.Instance, attempt int) (error) {
     return nil
 }
 
-func linkAccountToCipher(acc * account.Account, cipher * bitwarden.Cipher) {
+func linkAccountToCipher(acc couchdb.JSONDoc, cipher * bitwarden.Cipher) {
     vRef := VaultReference{
         ID:       cipher.ID(),
         Type:     consts.BitwardenCiphers,
         Protocol: consts.BitwardenProtocol,
     }
 
-    if acc.Relationships == nil {
-        acc.Relationships = make(map[string]interface{})
+    relationships := acc.M["relationships"].(map[string]interface{})
+    if relationships == nil {
+        relationships = make(map[string]interface{})
     }
 
     rel := make(map[string][]VaultReference)
     rel["data"] = []VaultReference{vRef}
-    acc.Relationships[consts.BitwardenCipherRelationship] = rel
+
+    relationships[consts.BitwardenCipherRelationship] = rel
+
+    acc.M["relationships"] = relationships
 }
 
 // Migrates all the encrypted accounts to Bitwarden ciphers.
@@ -192,38 +241,42 @@ func migrateAccountsToOrganization(domain string) error {
             continue
         }
 
-        if link != "" {
+        if link == "" {
             log.Warningf("No vendor_link in manifest for %s", msg.Slug)
             continue
         }
 
-        acc := &account.Account{}
-        if err := couchdb.GetDoc(inst, consts.Accounts, msg.Account, acc); err != nil {
+        var accJson couchdb.JSONDoc
+
+        if err := couchdb.GetDoc(inst, consts.Accounts, msg.Account, &accJson); err != nil {
             errm = multierror.Append(errm, err)
             continue
         }
 
-        cipher, err := buildCipher(orgKey, msg.Slug, acc, link, log)
+        accJson.Type = consts.Accounts
+
+        data.DecryptAccount(accJson)
+
+        cipher, err := buildCipher(orgKey, manifest, accJson, link, log)
         if err != nil {
-            if err == account.ErrBadCredentials {
-                log.Warningf("Bad credentials for account %s - %s", acc.ID(), acc.AccountType)
-            } else {
-                errm = multierror.Append(errm, err)
-            }
+            errm = multierror.Append(errm, err)
             continue
         }
         if err := couchdb.CreateDoc(inst, cipher); err != nil {
             errm = multierror.Append(errm, err)
         }
 
-        linkAccountToCipher(acc, cipher)
+        linkAccountToCipher(accJson, cipher)
 
-        if err := couchdb.UpdateDoc(inst, acc); err != nil {
+        data.EncryptAccount(accJson)
+
+        log.Infof("Updating doc %s", accJson)
+        if err := couchdb.UpdateDoc(inst, &accJson); err != nil {
             errm = multierror.Append(errm, err)
         }
     }
 
-    err = updateSettings(inst, 0)
+    err = updateSettings(inst, 0, log)
     if (err != nil) {
         errm = multierror.Append(errm, err)
     }
