@@ -163,7 +163,7 @@ func updateSettings(inst *instance.Instance, attempt int, logger *logrus.Entry) 
 	return nil
 }
 
-func linkAccountToCipher(acc couchdb.JSONDoc, cipher *bitwarden.Cipher) {
+func addCipherRelationshipToAccount(acc couchdb.JSONDoc, cipher *bitwarden.Cipher) {
 	vRef := VaultReference{
 		ID:       cipher.ID(),
 		Type:     consts.BitwardenCiphers,
@@ -265,7 +265,7 @@ func migrateAccountsToOrganization(domain string) error {
 			errm = multierror.Append(errm, err)
 		}
 
-		linkAccountToCipher(accJson, cipher)
+		addCipherRelationshipToAccount(accJson, cipher)
 
 		data.EncryptAccount(accJson)
 
