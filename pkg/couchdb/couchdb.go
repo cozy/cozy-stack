@@ -386,8 +386,8 @@ func AllDoctypes(db Database) ([]string, error) {
 	return doctypes, nil
 }
 
-// GetDoc fetches a document by its docType
-// It fills with the document by json.Unmarshal-ing
+// GetDoc fetches a document by its docType and id
+// It fills with out by json.Unmarshal-ing
 func GetDoc(db Database, doctype, id string, out Doc) error {
 	var err error
 	id, err = validateDocID(id)

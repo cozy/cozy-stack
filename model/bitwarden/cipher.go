@@ -27,6 +27,7 @@ const (
 	IdentityType   = 4
 )
 
+// Possible types for ciphers additional fields
 const (
 	FieldTypeText    = 0
 	FieldTypeHidden  = 1
