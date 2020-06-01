@@ -258,6 +258,7 @@ func migrateAccountsToOrganization(domain string) error {
 		}
 		if err := couchdb.CreateDoc(inst, cipher); err != nil {
 			errm = multierror.Append(errm, err)
+			continue
 		}
 
 		addCipherRelationshipToAccount(accJson, cipher)
@@ -267,6 +268,7 @@ func migrateAccountsToOrganization(domain string) error {
 		log.Infof("Updating doc %s", accJson)
 		if err := couchdb.UpdateDoc(inst, &accJson); err != nil {
 			errm = multierror.Append(errm, err)
+			continue
 		}
 	}
 
