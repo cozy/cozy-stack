@@ -1,19 +1,19 @@
-## cozy-stack fixer mime
+## cozy-stack fix md5
 
-Fix the class computed from the mime-type
+Fix missing md5 from contents in the vfs
 
 ### Synopsis
 
-Fix the class computed from the mime-type
+Fix missing md5 from contents in the vfs
 
 ```
-cozy-stack fixer mime <domain> [flags]
+cozy-stack fix md5 <domain> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for mime
+  -h, --help   help for md5
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +28,5 @@ cozy-stack fixer mime <domain> [flags]
 
 ### SEE ALSO
 
-* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
+* [cozy-stack fix](cozy-stack_fix.md)	 - A set of tools to fix issues or migrate content.
 

@@ -1,21 +1,22 @@
-## cozy-stack fixer thumbnails
+## cozy-stack fix indexes
 
-Rebuild thumbnails image for images files
+Rebuild the CouchDB views and indexes
 
 ### Synopsis
 
-Rebuild thumbnails image for images files
+
+This fixer ensures that the CouchDB views and indexes used by the stack for
+this instance are correctly set.
+
 
 ```
-cozy-stack fixer thumbnails <domain> [flags]
+cozy-stack fix indexes <domain> [flags]
 ```
 
 ### Options
 
 ```
-      --dry-run         Dry run
-  -h, --help            help for thumbnails
-      --with-metadata   Recalculate images metadata
+  -h, --help   help for indexes
 ```
 
 ### Options inherited from parent commands
@@ -30,5 +31,5 @@ cozy-stack fixer thumbnails <domain> [flags]
 
 ### SEE ALSO
 
-* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
+* [cozy-stack fix](cozy-stack_fix.md)	 - A set of tools to fix issues or migrate content.
 

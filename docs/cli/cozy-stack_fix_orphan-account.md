@@ -1,4 +1,4 @@
-## cozy-stack fixer orphan-account
+## cozy-stack fix orphan-account
 
 Remove the orphan accounts
 
@@ -15,7 +15,7 @@ done, the konnector is uninstalled again.
 
 
 ```
-cozy-stack fixer orphan-account <domain> [flags]
+cozy-stack fix orphan-account <domain> [flags]
 ```
 
 ### Options
@@ -36,5 +36,5 @@ cozy-stack fixer orphan-account <domain> [flags]
 
 ### SEE ALSO
 
-* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
+* [cozy-stack fix](cozy-stack_fix.md)	 - A set of tools to fix issues or migrate content.
 

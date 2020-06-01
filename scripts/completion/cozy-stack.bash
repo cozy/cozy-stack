@@ -734,6 +734,110 @@ _cozy-stack_bug()
     noun_aliases=()
 }
 
+_cozy-stack_check_fs()
+{
+    last_command="cozy-stack_check_fs"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--fail-fast")
+    local_nonpersistent_flags+=("--fail-fast")
+    flags+=("--files-consistency")
+    local_nonpersistent_flags+=("--files-consistency")
+    flags+=("--index-integrity")
+    local_nonpersistent_flags+=("--index-integrity")
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_cozy-stack_check_shared()
+{
+    last_command="cozy-stack_check_shared"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_cozy-stack_check()
+{
+    last_command="cozy-stack_check"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("fs")
+    commands+=("shared")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
 _cozy-stack_completion()
 {
     last_command="cozy-stack_completion"
@@ -1667,9 +1771,9 @@ _cozy-stack_files()
     noun_aliases=()
 }
 
-_cozy-stack_fixer_contact-emails()
+_cozy-stack_fix_contact-emails()
 {
-    last_command="cozy-stack_fixer_contact-emails"
+    last_command="cozy-stack_fix_contact-emails"
 
     command_aliases=()
 
@@ -1699,9 +1803,9 @@ _cozy-stack_fixer_contact-emails()
     noun_aliases=()
 }
 
-_cozy-stack_fixer_content-mismatch()
+_cozy-stack_fix_content-mismatch()
 {
-    last_command="cozy-stack_fixer_content-mismatch"
+    last_command="cozy-stack_fix_content-mismatch"
 
     command_aliases=()
 
@@ -1733,9 +1837,9 @@ _cozy-stack_fixer_content-mismatch()
     noun_aliases=()
 }
 
-_cozy-stack_fixer_indexes()
+_cozy-stack_fix_indexes()
 {
-    last_command="cozy-stack_fixer_indexes"
+    last_command="cozy-stack_fix_indexes"
 
     command_aliases=()
 
@@ -1765,9 +1869,9 @@ _cozy-stack_fixer_indexes()
     noun_aliases=()
 }
 
-_cozy-stack_fixer_jobs()
+_cozy-stack_fix_jobs()
 {
-    last_command="cozy-stack_fixer_jobs"
+    last_command="cozy-stack_fix_jobs"
 
     command_aliases=()
 
@@ -1797,9 +1901,9 @@ _cozy-stack_fixer_jobs()
     noun_aliases=()
 }
 
-_cozy-stack_fixer_md5()
+_cozy-stack_fix_md5()
 {
-    last_command="cozy-stack_fixer_md5"
+    last_command="cozy-stack_fix_md5"
 
     command_aliases=()
 
@@ -1829,9 +1933,9 @@ _cozy-stack_fixer_md5()
     noun_aliases=()
 }
 
-_cozy-stack_fixer_mime()
+_cozy-stack_fix_mime()
 {
-    last_command="cozy-stack_fixer_mime"
+    last_command="cozy-stack_fix_mime"
 
     command_aliases=()
 
@@ -1861,9 +1965,9 @@ _cozy-stack_fixer_mime()
     noun_aliases=()
 }
 
-_cozy-stack_fixer_orphan-account()
+_cozy-stack_fix_orphan-account()
 {
-    last_command="cozy-stack_fixer_orphan-account"
+    last_command="cozy-stack_fix_orphan-account"
 
     command_aliases=()
 
@@ -1893,9 +1997,9 @@ _cozy-stack_fixer_orphan-account()
     noun_aliases=()
 }
 
-_cozy-stack_fixer_redis()
+_cozy-stack_fix_redis()
 {
-    last_command="cozy-stack_fixer_redis"
+    last_command="cozy-stack_fix_redis"
 
     command_aliases=()
 
@@ -1925,9 +2029,9 @@ _cozy-stack_fixer_redis()
     noun_aliases=()
 }
 
-_cozy-stack_fixer_thumbnails()
+_cozy-stack_fix_thumbnails()
 {
-    last_command="cozy-stack_fixer_thumbnails"
+    last_command="cozy-stack_fix_thumbnails"
 
     command_aliases=()
 
@@ -1961,9 +2065,9 @@ _cozy-stack_fixer_thumbnails()
     noun_aliases=()
 }
 
-_cozy-stack_fixer()
+_cozy-stack_fix()
 {
-    last_command="cozy-stack_fixer"
+    last_command="cozy-stack_fix"
 
     command_aliases=()
 
@@ -3899,6 +4003,7 @@ _cozy-stack_root_command()
     commands+=("apps")
     commands+=("assets")
     commands+=("bug")
+    commands+=("check")
     commands+=("completion")
     commands+=("config")
     commands+=("doc")
@@ -3908,7 +4013,11 @@ _cozy-stack_root_command()
         aliashash["feature"]="features"
     fi
     commands+=("files")
-    commands+=("fixer")
+    commands+=("fix")
+    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        command_aliases+=("fixer")
+        aliashash["fixer"]="fix"
+    fi
     commands+=("instances")
     if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
         command_aliases+=("instance")

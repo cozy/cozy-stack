@@ -1,19 +1,19 @@
-## cozy-stack fixer md5
+## cozy-stack fix contact-emails
 
-Fix missing md5 from contents in the vfs
+Detect and try to fix invalid emails on contacts
 
 ### Synopsis
 
-Fix missing md5 from contents in the vfs
+Detect and try to fix invalid emails on contacts
 
 ```
-cozy-stack fixer md5 <domain> [flags]
+cozy-stack fix contact-emails [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for md5
+  -h, --help   help for contact-emails
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +28,5 @@ cozy-stack fixer md5 <domain> [flags]
 
 ### SEE ALSO
 
-* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
+* [cozy-stack fix](cozy-stack_fix.md)	 - A set of tools to fix issues or migrate content.
 

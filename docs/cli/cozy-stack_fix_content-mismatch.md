@@ -1,19 +1,20 @@
-## cozy-stack fixer contact-emails
+## cozy-stack fix content-mismatch
 
-Detect and try to fix invalid emails on contacts
+Fix the content mismatch differences for 64K issue
 
 ### Synopsis
 
-Detect and try to fix invalid emails on contacts
+Fix the content mismatch differences for 64K issue
 
 ```
-cozy-stack fixer contact-emails [flags]
+cozy-stack fix content-mismatch <domain> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for contact-emails
+  -h, --help         help for content-mismatch
+      --no-dry-run   Do not dry run
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +29,5 @@ cozy-stack fixer contact-emails [flags]
 
 ### SEE ALSO
 
-* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
+* [cozy-stack fix](cozy-stack_fix.md)	 - A set of tools to fix issues or migrate content.
 

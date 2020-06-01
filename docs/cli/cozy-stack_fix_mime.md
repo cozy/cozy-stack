@@ -1,19 +1,19 @@
-## cozy-stack fixer redis
+## cozy-stack fix mime
 
-Rebuild scheduling data strucutures in redis
+Fix the class computed from the mime-type
 
 ### Synopsis
 
-Rebuild scheduling data strucutures in redis
+Fix the class computed from the mime-type
 
 ```
-cozy-stack fixer redis [flags]
+cozy-stack fix mime <domain> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for redis
+  -h, --help   help for mime
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +28,5 @@ cozy-stack fixer redis [flags]
 
 ### SEE ALSO
 
-* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
+* [cozy-stack fix](cozy-stack_fix.md)	 - A set of tools to fix issues or migrate content.
 

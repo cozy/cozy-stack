@@ -1,22 +1,19 @@
-## cozy-stack fixer indexes
+## cozy-stack fix jobs
 
-Rebuild the CouchDB views and indexes
+Take a look at the consistency of the jobs
 
 ### Synopsis
 
-
-This fixer ensures that the CouchDB views and indexes used by the stack for
-this instance are correctly set.
-
+Take a look at the consistency of the jobs
 
 ```
-cozy-stack fixer indexes <domain> [flags]
+cozy-stack fix jobs <domain> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for indexes
+  -h, --help   help for jobs
 ```
 
 ### Options inherited from parent commands
@@ -31,5 +28,5 @@ cozy-stack fixer indexes <domain> [flags]
 
 ### SEE ALSO
 
-* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
+* [cozy-stack fix](cozy-stack_fix.md)	 - A set of tools to fix issues or migrate content.
 

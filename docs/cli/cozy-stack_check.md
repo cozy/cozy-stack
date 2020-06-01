@@ -1,20 +1,19 @@
-## cozy-stack fixer content-mismatch
+## cozy-stack check
 
-Fix the content mismatch differences for 64K issue
+A set of tools to check that instances are in the expected state.
 
 ### Synopsis
 
-Fix the content mismatch differences for 64K issue
+A set of tools to check that instances are in the expected state.
 
 ```
-cozy-stack fixer content-mismatch <domain> [flags]
+cozy-stack check <command> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help         help for content-mismatch
-      --no-dry-run   Do not dry run
+  -h, --help   help for check
 ```
 
 ### Options inherited from parent commands
@@ -29,5 +28,7 @@ cozy-stack fixer content-mismatch <domain> [flags]
 
 ### SEE ALSO
 
-* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
+* [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
+* [cozy-stack check fs](cozy-stack_check_fs.md)	 - Check a vfs
+* [cozy-stack check shared](cozy-stack_check_shared.md)	 - Check the io.cozy.shared documents
 

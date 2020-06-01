@@ -19,12 +19,13 @@ function _cozy-stack {
       "apps:Interact with the applications"
       "assets:Show and manage dynamic assets"
       "bug:start a bug report"
+      "check:A set of tools to check that instances are in the expected state."
       "completion:Output shell completion code for the specified shell"
       "config:Show and manage configuration elements"
       "doc:Print the documentation"
       "features:Manage the feature flags"
       "files:Interact with the cozy filesystem"
-      "fixer:A set of tools to fix issues or migrate content for retro-compatibility."
+      "fix:A set of tools to fix issues or migrate content."
       "help:Help about any command"
       "instances:Manage instances of a stack"
       "jobs:Launch and manage jobs and workers"
@@ -50,6 +51,9 @@ function _cozy-stack {
   bug)
     _cozy-stack_bug
     ;;
+  check)
+    _cozy-stack_check
+    ;;
   completion)
     _cozy-stack_completion
     ;;
@@ -65,8 +69,8 @@ function _cozy-stack {
   files)
     _cozy-stack_files
     ;;
-  fixer)
-    _cozy-stack_fixer
+  fix)
+    _cozy-stack_fix
     ;;
   help)
     _cozy-stack_help
@@ -275,6 +279,60 @@ function _cozy-stack_assets_rm {
 }
 
 function _cozy-stack_bug {
+  _arguments \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+
+function _cozy-stack_check {
+  local -a commands
+
+  _arguments -C \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:' \
+    "1: :->cmnds" \
+    "*::arg:->args"
+
+  case $state in
+  cmnds)
+    commands=(
+      "fs:Check a vfs"
+      "shared:Check the io.cozy.shared documents"
+    )
+    _describe "command" commands
+    ;;
+  esac
+
+  case "$words[1]" in
+  fs)
+    _cozy-stack_check_fs
+    ;;
+  shared)
+    _cozy-stack_check_shared
+    ;;
+  esac
+}
+
+function _cozy-stack_check_fs {
+  _arguments \
+    '--fail-fast[Stop the FSCK on the first error]' \
+    '--files-consistency[Check the files consistency only (between CouchDB and Swift)]' \
+    '--index-integrity[Check the index integrity only]' \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+function _cozy-stack_check_shared {
   _arguments \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
@@ -686,7 +744,7 @@ function _cozy-stack_files_usage {
 }
 
 
-function _cozy-stack_fixer {
+function _cozy-stack_fix {
   local -a commands
 
   _arguments -C \
@@ -717,36 +775,36 @@ function _cozy-stack_fixer {
 
   case "$words[1]" in
   contact-emails)
-    _cozy-stack_fixer_contact-emails
+    _cozy-stack_fix_contact-emails
     ;;
   content-mismatch)
-    _cozy-stack_fixer_content-mismatch
+    _cozy-stack_fix_content-mismatch
     ;;
   indexes)
-    _cozy-stack_fixer_indexes
+    _cozy-stack_fix_indexes
     ;;
   jobs)
-    _cozy-stack_fixer_jobs
+    _cozy-stack_fix_jobs
     ;;
   md5)
-    _cozy-stack_fixer_md5
+    _cozy-stack_fix_md5
     ;;
   mime)
-    _cozy-stack_fixer_mime
+    _cozy-stack_fix_mime
     ;;
   orphan-account)
-    _cozy-stack_fixer_orphan-account
+    _cozy-stack_fix_orphan-account
     ;;
   redis)
-    _cozy-stack_fixer_redis
+    _cozy-stack_fix_redis
     ;;
   thumbnails)
-    _cozy-stack_fixer_thumbnails
+    _cozy-stack_fix_thumbnails
     ;;
   esac
 }
 
-function _cozy-stack_fixer_contact-emails {
+function _cozy-stack_fix_contact-emails {
   _arguments \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
@@ -755,7 +813,7 @@ function _cozy-stack_fixer_contact-emails {
     '(-p --port)'{-p,--port}'[server port]:'
 }
 
-function _cozy-stack_fixer_content-mismatch {
+function _cozy-stack_fix_content-mismatch {
   _arguments \
     '--no-dry-run[Do not dry run]' \
     '--admin-host[administration server host]:' \
@@ -765,7 +823,7 @@ function _cozy-stack_fixer_content-mismatch {
     '(-p --port)'{-p,--port}'[server port]:'
 }
 
-function _cozy-stack_fixer_indexes {
+function _cozy-stack_fix_indexes {
   _arguments \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
@@ -774,7 +832,7 @@ function _cozy-stack_fixer_indexes {
     '(-p --port)'{-p,--port}'[server port]:'
 }
 
-function _cozy-stack_fixer_jobs {
+function _cozy-stack_fix_jobs {
   _arguments \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
@@ -783,7 +841,7 @@ function _cozy-stack_fixer_jobs {
     '(-p --port)'{-p,--port}'[server port]:'
 }
 
-function _cozy-stack_fixer_md5 {
+function _cozy-stack_fix_md5 {
   _arguments \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
@@ -792,7 +850,7 @@ function _cozy-stack_fixer_md5 {
     '(-p --port)'{-p,--port}'[server port]:'
 }
 
-function _cozy-stack_fixer_mime {
+function _cozy-stack_fix_mime {
   _arguments \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
@@ -801,7 +859,7 @@ function _cozy-stack_fixer_mime {
     '(-p --port)'{-p,--port}'[server port]:'
 }
 
-function _cozy-stack_fixer_orphan-account {
+function _cozy-stack_fix_orphan-account {
   _arguments \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
@@ -810,7 +868,7 @@ function _cozy-stack_fixer_orphan-account {
     '(-p --port)'{-p,--port}'[server port]:'
 }
 
-function _cozy-stack_fixer_redis {
+function _cozy-stack_fix_redis {
   _arguments \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
@@ -819,7 +877,7 @@ function _cozy-stack_fixer_redis {
     '(-p --port)'{-p,--port}'[server port]:'
 }
 
-function _cozy-stack_fixer_thumbnails {
+function _cozy-stack_fix_thumbnails {
   _arguments \
     '--dry-run[Dry run]' \
     '--with-metadata[Recalculate images metadata]' \

@@ -1,19 +1,23 @@
-## cozy-stack fixer jobs
+## cozy-stack check shared
 
-Take a look at the consistency of the jobs
+Check the io.cozy.shared documents
 
 ### Synopsis
 
-Take a look at the consistency of the jobs
+
+The io.cozy.shared documents have a tree of revisions. This command will check
+that all revisions in this tree are either the root or their parent have a
+generation smaller than their generation.
+
 
 ```
-cozy-stack fixer jobs <domain> [flags]
+cozy-stack check shared <domain> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for jobs
+  -h, --help   help for shared
 ```
 
 ### Options inherited from parent commands
@@ -28,5 +32,5 @@ cozy-stack fixer jobs <domain> [flags]
 
 ### SEE ALSO
 
-* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
+* [cozy-stack check](cozy-stack_check.md)	 - A set of tools to check that instances are in the expected state.
 

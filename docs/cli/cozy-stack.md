@@ -29,12 +29,13 @@ cozy-stack <command> [flags]
 * [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the applications
 * [cozy-stack assets](cozy-stack_assets.md)	 - Show and manage dynamic assets
 * [cozy-stack bug](cozy-stack_bug.md)	 - start a bug report
+* [cozy-stack check](cozy-stack_check.md)	 - A set of tools to check that instances are in the expected state.
 * [cozy-stack completion](cozy-stack_completion.md)	 - Output shell completion code for the specified shell
 * [cozy-stack config](cozy-stack_config.md)	 - Show and manage configuration elements
 * [cozy-stack doc](cozy-stack_doc.md)	 - Print the documentation
 * [cozy-stack features](cozy-stack_features.md)	 - Manage the feature flags
 * [cozy-stack files](cozy-stack_files.md)	 - Interact with the cozy filesystem
-* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
+* [cozy-stack fix](cozy-stack_fix.md)	 - A set of tools to fix issues or migrate content.
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 * [cozy-stack jobs](cozy-stack_jobs.md)	 - Launch and manage jobs and workers
 * [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the konnectors
