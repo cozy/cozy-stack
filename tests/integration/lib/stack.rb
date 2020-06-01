@@ -108,6 +108,16 @@ class Stack
     Job.new JSON.parse(out)
   end
 
+  def run_job(inst, type, args)
+    cmd = ["cozy-stack", "jobs", "run", type,
+           "--json", "'#{JSON.generate(args)}'",
+           "--port", @port, "--admin-port", @admin,
+           "--domain", inst.domain]
+    puts cmd.join(" ").green
+    out = `#{cmd.join(" ")}`.chomp
+    Job.new JSON.parse(out)
+  end
+
   def token_for(inst, doctypes)
     key = inst.domain + "/" + doctypes.join(" ")
     @tokens[key] ||= generate_token_for(inst, doctypes)
