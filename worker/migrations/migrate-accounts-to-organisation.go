@@ -98,6 +98,27 @@ func getCipherLinkFromManifest(manifest *app.KonnManifest) (string, error) {
     return link, nil
 }
 
+func updateSettings(inst * instance.Instance, attempt int) (error) {
+    // Reload the setting in case the revision changed
+    setting, err := settings.Get(inst)
+    if err != nil {
+        return err
+    }
+    // This flag is checked at the extension pre-login to run the migration or not
+    setting.ExtensionInstalled = true
+    err = settings.UpdateRevisionDate(inst, setting)
+    if err != nil {
+        if couchdb.IsConflictError(err) && attempt < 2 {
+            err = updateSettings(inst, attempt + 1)
+        }
+
+        if err != nil {
+            return err
+        }
+    }
+    return nil
+}
+
 func linkAccountToCipher(acc * account.Account, cipher * bitwarden.Cipher) {
     vRef := VaultReference{
         ID:       cipher.ID(),
@@ -201,31 +222,10 @@ func migrateAccountsToOrganization(domain string) error {
             errm = multierror.Append(errm, err)
         }
     }
-    // Reload the setting in case the revision changed
-    setting, err = settings.Get(inst)
-    if err != nil {
+
+    err = updateSettings(inst, 0)
+    if (err != nil) {
         errm = multierror.Append(errm, err)
-        return errm
-    }
-    // This flag is checked at the extension pre-login to run the migration or not
-    setting.ExtensionInstalled = true
-    err = settings.UpdateRevisionDate(inst, setting)
-    if err != nil {
-        if !couchdb.IsConflictError(err) {
-            errm = multierror.Append(errm, err)
-            return errm
-        }
-        // The settings have been updated elsewhere: retry
-        setting, err = settings.Get(inst)
-        if err != nil {
-            errm = multierror.Append(errm, err)
-            return errm
-        }
-        setting.ExtensionInstalled = true
-        err = settings.UpdateRevisionDate(inst, setting)
-        if err != nil {
-            errm = multierror.Append(errm, err)
-        }
     }
     return errm
 }
