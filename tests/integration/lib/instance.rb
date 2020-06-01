@@ -93,6 +93,10 @@ class Instance
     @stack.fsck self
   end
 
+  def check
+    @stack.check self
+  end
+
   # See https://github.com/jcs/rubywarden/blob/master/API.md#example
   def hashed_passphrase
     key = PBKDF2.new do |p|

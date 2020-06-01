@@ -100,6 +100,10 @@ describe "A file or folder" do
     refute_nil parameters["sharecode"]
     assert_equal bob, parameters["public_name"]
 
+    assert_equal inst_alice.check, []
+    assert_equal inst_bob.check, []
+    assert_equal inst_charlie.check, []
+
     inst_alice.remove
     inst_bob.remove
     inst_charlie.remove

@@ -47,8 +47,8 @@ describe "A file or folder" do
     assert_equal "foobar", one_bob.name
     assert_equal "foo", two_bob.name
 
-    assert_equal inst_alice.fsck, ""
-    assert_equal inst_bob.fsck, ""
+    assert_equal inst_alice.fsck, []
+    assert_equal inst_bob.fsck, []
 
     inst_alice.remove
     inst_bob.remove

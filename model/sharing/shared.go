@@ -459,5 +459,23 @@ func extractDocReferenceFromID(id string) *couchdb.DocReference {
 	return &ref
 }
 
+// CheckShared will scan all the io.cozy.shared documents and check their
+// revision tree for inconsistencies.
+func CheckShared(inst *instance.Instance) ([]*CheckError, error) {
+	checks := []*CheckError{}
+	err := couchdb.ForeachDocs(inst, consts.Shared, func(_ string, data json.RawMessage) error {
+		s := &SharedRef{}
+		if err := json.Unmarshal(data, s); err != nil {
+			return err
+		}
+		if check := s.Revisions.check(); check != nil {
+			check.ID = s.SID
+			checks = append(checks, check)
+		}
+		return nil
+	})
+	return checks, err
+}
+
 var _ couchdb.Doc = &SharedRef{}
 var _ permission.Fetcher = &SharedRef{}

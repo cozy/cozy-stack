@@ -671,13 +671,20 @@ func (c *couchdbIndexer) CheckIndexIntegrity(accumulate func(*FsckLog), failFast
 	if err != nil {
 		return err
 	}
-	if err := c.CheckTreeIntegrity(tree, accumulate, failFast); err != nil && err != ErrFsckFailFail {
+	if err := c.CheckTreeIntegrity(tree, accumulate, failFast); err != nil && err != ErrFsckFailFast {
 		return err
 	}
 	return nil
 }
 
 func (c *couchdbIndexer) CheckTreeIntegrity(tree *Tree, accumulate func(*FsckLog), failFast bool) error {
+	if err := c.checkNoConflicts(accumulate, failFast); err != nil {
+		if err == ErrFsckFailFast {
+			return nil
+		}
+		return err
+	}
+
 	if tree.Root == nil {
 		accumulate(&FsckLog{Type: IndexMissingRoot})
 		return nil
@@ -826,10 +833,34 @@ func (c *couchdbIndexer) BuildTree(eaches ...func(*TreeFile)) (t *Tree, err erro
 	return
 }
 
-func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate func(*FsckLog), failFast bool) bool {
+func cleanDirsMap(
+	parent *TreeFile,
+	dirsmap map[string]*TreeFile,
+	accumulate func(*FsckLog),
+	failFast bool,
+) bool {
 	delete(dirsmap, parent.DocID)
 	names := make(map[string]struct{})
+	inTrash := strings.HasPrefix(parent.Fullpath, TrashDirName)
+
 	for _, file := range parent.FilesChildren {
+		if inTrash != file.Trashed {
+			if file.Trashed {
+				accumulate(&FsckLog{
+					Type:    TrashedNotInTrash,
+					FileDoc: file,
+				})
+			} else {
+				accumulate(&FsckLog{
+					Type:    NotTrashedInTrash,
+					FileDoc: file,
+				})
+			}
+			if failFast {
+				return false
+			}
+		}
+
 		if file.HasPath {
 			accumulate(&FsckLog{
 				Type:    IndexFileWithPath,
@@ -850,6 +881,7 @@ func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate fun
 		}
 		names[file.DocName] = struct{}{}
 	}
+
 	for _, child := range parent.DirsChildren {
 		if _, ok := names[child.DocName]; ok {
 			accumulate(&FsckLog{
@@ -877,4 +909,35 @@ func cleanDirsMap(parent *TreeFile, dirsmap map[string]*TreeFile, accumulate fun
 		}
 	}
 	return true
+}
+
+func (c *couchdbIndexer) checkNoConflicts(accumulate func(*FsckLog), failFast bool) error {
+	var docs []DirOrFileDoc
+	req := &couchdb.FindRequest{
+		UseIndex: "with-conflicts",
+		Selector: mango.Exists("_conflicts"),
+		Limit:    1000,
+	}
+	_, err := couchdb.FindDocsRaw(c.db, consts.Files, req, &docs)
+	if err != nil {
+		return err
+	}
+	for _, doc := range docs {
+		if doc.Type != consts.DirType {
+			accumulate(&FsckLog{
+				Type:   ConflictInIndex,
+				DirDoc: &TreeFile{DirOrFileDoc: doc},
+			})
+		} else {
+			accumulate(&FsckLog{
+				Type:    ConflictInIndex,
+				FileDoc: &TreeFile{DirOrFileDoc: doc},
+				IsFile:  true,
+			})
+		}
+		if failFast {
+			return ErrFsckFailFast
+		}
+	}
+	return nil
 }

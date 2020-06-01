@@ -47,6 +47,9 @@ describe "A sharing" do
     assert_equal file.name, file_bob.name
     assert_equal file.md5sum, file_bob.md5sum
 
+    assert_equal inst_alice.check, []
+    assert_equal inst_bob.check, []
+
     inst_alice.remove
     inst_bob.remove
   end

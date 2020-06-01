@@ -29,7 +29,7 @@ func (afs *aferoVFS) Fsck(accumulate func(log *vfs.FsckLog), failFast bool) erro
 		return err
 	}
 	if err = afs.CheckTreeIntegrity(tree, accumulate, failFast); err != nil {
-		if err == vfs.ErrFsckFailFail {
+		if err == vfs.ErrFsckFailFast {
 			return nil
 		}
 		return err

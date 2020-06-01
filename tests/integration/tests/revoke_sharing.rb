@@ -340,7 +340,7 @@ describe "A sharing" do
     instances = [inst_alice, inst_bob, inst_charlie, inst_dave]
     instances.each do |inst|
       Folder.clear_trash inst
-      inst.fsck
+      assert_equal inst.check, []
     end
     instances.each(&:remove)
   end

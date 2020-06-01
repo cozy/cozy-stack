@@ -38,6 +38,15 @@ const (
 	// IndexDuplicateName is used when two files or directories have the same
 	// name inside the same folder (ie they have the same path).
 	IndexDuplicateName = "index_duplicate_name"
+	// TrashedNotInTrash is used when a file has trashed: true but its parent
+	// directory is not the trash, not is in the trash.
+	TrashedNotInTrash = "trashed_not_in_trash"
+	// NotTrashedInTrash is used when a file has trashed: false but its parent
+	// directory is the trash or a directory in the trash.
+	NotTrashedInTrash = "not_trashed_in_trash"
+	// ConflictInIndex is used when there is a conflict in CouchDB with 2
+	// branches of revisions.
+	ConflictInIndex = "conflict_in_index"
 )
 
 // FsckLog is a struct for an inconsistency in the VFS
