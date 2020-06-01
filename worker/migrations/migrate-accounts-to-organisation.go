@@ -153,11 +153,7 @@ func updateSettings(inst *instance.Instance, attempt int, logger *logrus.Entry) 
 	err = settings.UpdateRevisionDate(inst, setting)
 	if err != nil {
 		if couchdb.IsConflictError(err) && attempt < 2 {
-			err = updateSettings(inst, attempt+1, logger)
-		}
-
-		if err != nil {
-			return err
+			return updateSettings(inst, attempt+1, logger)
 		}
 	}
 	return nil
@@ -234,7 +230,6 @@ func migrateAccountsToOrganization(domain string) error {
 		}
 
 		link, err := getCipherLinkFromManifest(manifest)
-
 		if err != nil {
 			errm = multierror.Append(errm, err)
 			continue
