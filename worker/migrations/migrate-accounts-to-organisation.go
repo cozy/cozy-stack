@@ -98,6 +98,22 @@ func getCipherLinkFromManifest(manifest *app.KonnManifest) (string, error) {
     return link, nil
 }
 
+func linkAccountToCipher(acc * account.Account, cipher * bitwarden.Cipher) {
+    vRef := VaultReference{
+        ID:       cipher.ID(),
+        Type:     consts.BitwardenCiphers,
+        Protocol: consts.BitwardenProtocol,
+    }
+
+    if acc.Relationships == nil {
+        acc.Relationships = make(map[string]interface{})
+    }
+
+    rel := make(map[string][]VaultReference)
+    rel["data"] = []VaultReference{vRef}
+    acc.Relationships[consts.BitwardenCipherRelationship] = rel
+}
+
 // Migrates all the encrypted accounts to Bitwarden ciphers.
 // It decrypts each account, reencrypt the fields with the organization key,
 // and save it in the ciphers database.
@@ -178,18 +194,8 @@ func migrateAccountsToOrganization(domain string) error {
         if err := couchdb.CreateDoc(inst, cipher); err != nil {
             errm = multierror.Append(errm, err)
         }
-        // Add vault relationship
-        vRef := VaultReference{
-            ID:       cipher.ID(),
-            Type:     consts.BitwardenCiphers,
-            Protocol: consts.BitwardenProtocol,
-        }
-        if acc.Relationships == nil {
-            acc.Relationships = make(map[string]interface{})
-        }
-        rel := make(map[string][]VaultReference)
-        rel["data"] = []VaultReference{vRef}
-        acc.Relationships[consts.BitwardenCipherRelationship] = rel
+
+        linkAccountToCipher(acc, cipher)
 
         if err := couchdb.UpdateDoc(inst, acc); err != nil {
             errm = multierror.Append(errm, err)
