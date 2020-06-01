@@ -28,9 +28,9 @@ const (
 )
 
 const (
-    FieldTypeText = 0
-    FieldTypeHidden = 1
-    FieldTypeBoolean = 2
+	FieldTypeText    = 0
+	FieldTypeHidden  = 1
+	FieldTypeBoolean = 2
 )
 
 // LoginURI is a field for an URI.

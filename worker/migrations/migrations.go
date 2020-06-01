@@ -124,10 +124,6 @@ func migrateNotesMimeType(domain string) error {
 	return nil
 }
 
-
-
-
-
 func migrateToSwiftV3(domain string) error {
 	c := config.GetSwiftConnection()
 	inst, err := instance.GetFromCouch(domain)
