@@ -166,8 +166,8 @@ func addCipherRelationshipToAccount(acc couchdb.JSONDoc, cipher *bitwarden.Ciphe
 		Protocol: consts.BitwardenProtocol,
 	}
 
-	relationships := acc.M["relationships"].(map[string]interface{})
-	if relationships == nil {
+	relationships, ok := acc.M["relationships"].(map[string]interface{})
+	if !ok {
 		relationships = make(map[string]interface{})
 	}
 
