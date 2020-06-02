@@ -76,10 +76,7 @@ describe "Copying accounts to bitwarden ciphers" do
     bw = res[:bw]
     cipher = bw.items[0]
 
-    db_prefix = inst.db_prefix()
-    couch_client = RestClient::Resource.new "http://localhost:5984/"
-    res = couch_client["#{URI.escape(db_prefix)}%2Fio-cozy-accounts/#{account.couch_id}"].get()
-    account = JSON.parse(res.body)
+    account = Helpers.couch.get_doc inst.domain, Account.doctype, account.couch_id
 
     # Check that the cipher has been linked
     assert_equal account["relationships"]["vaultCipher"]["data"]["_id"], cipher[:id]
