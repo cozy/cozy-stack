@@ -3,7 +3,6 @@ require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
 
 def setup_ciphers(override_account_attrs = {})
-  puts "1"
   inst = Instance.create name: "Alice"
 
   bw = Bitwarden.new inst
