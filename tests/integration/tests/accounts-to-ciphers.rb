@@ -64,4 +64,29 @@ describe "Copying accounts to bitwarden ciphers" do
     assert_equal cipher[:fields][0][:name], "zipcode"
     assert_equal cipher[:fields][0][:value], "64000"
   end
+
+  it "links account to cipher and keeps auth attributes" do
+    Helpers.scenario "account-to-ciphers"
+    Helpers.start_mailhog
+
+    res = setup_ciphers()
+    account = res[:account]
+    inst = res[:inst]
+
+    bw = res[:bw]
+    cipher = bw.items[0]
+
+    db_prefix = inst.db_prefix()
+    couch_client = RestClient::Resource.new "http://localhost:5984/"
+    res = couch_client["#{URI.escape(db_prefix)}%2Fio-cozy-accounts/#{account.couch_id}"].get()
+    account = JSON.parse(res.body)
+
+    # Check that the cipher has been linked
+    assert_equal account["relationships"]["vaultCipher"]["data"]["_id"], cipher[:id]
+
+    # Check that the account auth fields have not been removed 
+    assert_equal account["auth"]["login"], "Isabelle"
+    assert_equal account["auth"]["zipcode"], "64000"
+
+  end
 end

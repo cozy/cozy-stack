@@ -171,8 +171,7 @@ func addCipherRelationshipToAccount(acc couchdb.JSONDoc, cipher *bitwarden.Ciphe
 		relationships = make(map[string]interface{})
 	}
 
-	rel := make(map[string][]VaultReference)
-	rel["data"] = []VaultReference{vRef}
+	rel := map[string]VaultReference{"data": vRef}
 
 	relationships[consts.BitwardenCipherRelationship] = rel
 

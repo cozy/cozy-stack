@@ -42,7 +42,6 @@ class Instance
     @stack.run_job self, type, args
   end
 
-
   def client
     @client ||= RestClient::Resource.new url
   end
