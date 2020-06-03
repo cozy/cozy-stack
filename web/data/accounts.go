@@ -133,6 +133,8 @@ func updateAccount(c echo.Context) error {
 	})
 }
 
+// Encrypts sensitive fields inside the account. The document
+// is modified in place.
 func EncryptAccount(doc couchdb.JSONDoc) bool {
 	if config.GetVault().CredentialsEncryptorKey() != nil {
 		return encryptMap(doc.M)
@@ -140,6 +142,8 @@ func EncryptAccount(doc couchdb.JSONDoc) bool {
 	return false
 }
 
+// Decrypts sensitive fields inside the account. The document
+// is modified in place.
 func DecryptAccount(doc couchdb.JSONDoc) bool {
 	if config.GetVault().CredentialsDecryptorKey() != nil {
 		return decryptMap(doc.M)
