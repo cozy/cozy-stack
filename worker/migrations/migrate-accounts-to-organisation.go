@@ -19,7 +19,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 )
 
-type VaultReference struct {
+type vaultReference struct {
 	ID       string `json:"_id"`
 	Type     string `json:"_type"`
 	Protocol string `json:"_protocol"`
@@ -109,7 +109,6 @@ func buildCipher(orgKey []byte, manifest *app.KonnManifest, account couchdb.JSON
 			return nil, err
 		}
 
-		logger.Infof("Adding field %s = %s", name, value)
 		field := bitwarden.Field{
 			Name:  encName,
 			Value: encValue,
@@ -160,7 +159,7 @@ func updateSettings(inst *instance.Instance, attempt int, logger *logrus.Entry) 
 }
 
 func addCipherRelationshipToAccount(acc couchdb.JSONDoc, cipher *bitwarden.Cipher) {
-	vRef := VaultReference{
+	vRef := vaultReference{
 		ID:       cipher.ID(),
 		Type:     consts.BitwardenCiphers,
 		Protocol: consts.BitwardenProtocol,
@@ -171,7 +170,7 @@ func addCipherRelationshipToAccount(acc couchdb.JSONDoc, cipher *bitwarden.Ciphe
 		relationships = make(map[string]interface{})
 	}
 
-	rel := map[string]VaultReference{"data": vRef}
+	rel := map[string]vaultReference{"data": vRef}
 
 	relationships[consts.BitwardenCipherRelationship] = rel
 
