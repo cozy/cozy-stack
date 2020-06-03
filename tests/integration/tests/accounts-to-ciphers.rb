@@ -13,9 +13,9 @@ def setup_ciphers(override_account_attrs = {})
   inst.install_konnector "bankone", source_url
 
   account_attrs = {
-    :type => "bankone",
-    :name => "Bank one",
-    :auth => {:login => "Isabelle", :zipcode => "64000"}
+    type: "bankone",
+    name: "Bank one",
+    auth: {login: "Isabelle", zipcode: "64000"}
   }
 
   account_attrs = account_attrs.merge(override_account_attrs)
