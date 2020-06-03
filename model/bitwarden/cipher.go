@@ -27,6 +27,13 @@ const (
 	IdentityType   = 4
 )
 
+// Possible types for ciphers additional fields
+const (
+	FieldTypeText    = 0
+	FieldTypeHidden  = 1
+	FieldTypeBoolean = 2
+)
+
 // LoginURI is a field for an URI.
 // See https://github.com/bitwarden/jslib/blob/master/src/models/api/loginUriApi.ts
 type LoginURI struct {

@@ -14,6 +14,7 @@ class Account
     @aggregator = opts[:aggregator]
     @failure = opts[:failure]
     @type = opts[:type]
+    @auth = opts[:auth]
   end
 
   def as_json
@@ -21,7 +22,8 @@ class Account
       name: @name,
       log: @log,
       failure: @failure,
-      account_type: @type
+      account_type: @type,
+      auth: @auth
     }.compact
     if @aggregator
       json[:relationships] = {
