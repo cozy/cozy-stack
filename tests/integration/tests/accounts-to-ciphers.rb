@@ -55,27 +55,19 @@ describe "Copying accounts to bitwarden ciphers" do
 
     res = setup_ciphers()
     bw = res[:bw]
+    inst = res[:inst]
+    account = res[:account]
 
     items = bw.items
     assert_equal items.length, 1
 
+    # Check cipher integrity
     cipher = items[0]
-    assert_equal cipher[:fields].length(), 1
+    assert_equal cipher[:fields].length, 1
     assert_equal cipher[:fields][0][:name], "zipcode"
     assert_equal cipher[:fields][0][:value], "64000"
-  end
 
-  it "links account to cipher and keeps auth attributes" do
-    Helpers.scenario "account-to-ciphers"
-    Helpers.start_mailhog
-
-    res = setup_ciphers()
-    account = res[:account]
-    inst = res[:inst]
-
-    bw = res[:bw]
-    cipher = bw.items[0]
-
+    # Check account integrity
     account = Helpers.couch.get_doc inst.domain, Account.doctype, account.couch_id
 
     # Check that the cipher has been linked
