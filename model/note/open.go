@@ -228,7 +228,7 @@ func (o *Opener) openSharedNote() (*apiNoteURL, error) {
 		creator = &s.Members[0]
 	}
 
-	if creator == nil || creator.Status == sharing.MemberStatusRevoked {
+	if creator == nil || creator.Status != sharing.MemberStatusReady {
 		// If the creator of the note is no longer in the sharing, the owner of
 		// the sharing takes the lead, and if the sharing is revoked, any
 		// member can edit the note on their instance.
