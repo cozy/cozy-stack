@@ -43,6 +43,7 @@ type Instance struct {
 	Prefix         string   `json:"prefix,omitempty"`     // Possible database prefix
 	Locale         string   `json:"locale"`               // The locale used on the server
 	UUID           string   `json:"uuid,omitempty"`       // UUID associated with the instance
+	OIDCID         string   `json:"oidc_id,omitempty"`    // An identifier to check authentication from OIDC
 	ContextName    string   `json:"context,omitempty"`    // The context attached to the instance
 	TOSSigned      string   `json:"tos,omitempty"`        // Terms of Service signed version
 	TOSLatest      string   `json:"tos_latest,omitempty"` // Terms of Service latest version

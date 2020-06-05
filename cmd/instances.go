@@ -45,6 +45,7 @@ var flagForceRegistry bool
 var flagOnlyRegistry bool
 var flagSwiftLayout int
 var flagUUID string
+var flagOIDCID string
 var flagTOSSigned string
 var flagTOS string
 var flagTOSLatest string
@@ -172,6 +173,7 @@ be used as the error message.
 			DomainAliases: flagDomainAliases,
 			Locale:        flagLocale,
 			UUID:          flagUUID,
+			OIDCID:        flagOIDCID,
 			TOSSigned:     flagTOSSigned,
 			Timezone:      flagTimezone,
 			ContextName:   flagContextName,
@@ -243,6 +245,7 @@ settings for a specified domain.
 			DomainAliases: flagDomainAliases,
 			Locale:        flagLocale,
 			UUID:          flagUUID,
+			OIDCID:        flagOIDCID,
 			TOSSigned:     flagTOS,
 			TOSLatest:     flagTOSLatest,
 			Timezone:      flagTimezone,
@@ -1036,6 +1039,7 @@ func init() {
 	addInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", consts.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "The UUID of the instance")
+	addInstanceCmd.Flags().StringVar(&flagOIDCID, "oidc_id", "", "The identifier for checking authentication from OIDC")
 	addInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "The TOS version signed")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagContextName, "context-name", "", "Context name of the instance")
@@ -1050,6 +1054,7 @@ func init() {
 	modifyInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	modifyInstanceCmd.Flags().StringVar(&flagLocale, "locale", "", "New locale")
 	modifyInstanceCmd.Flags().StringVar(&flagUUID, "uuid", "", "New UUID")
+	modifyInstanceCmd.Flags().StringVar(&flagOIDCID, "oidc_id", "", "New identifier for checking authentication from OIDC")
 	modifyInstanceCmd.Flags().StringVar(&flagTOS, "tos", "", "Update the TOS version signed")
 	modifyInstanceCmd.Flags().StringVar(&flagTOSLatest, "tos-latest", "", "Update the latest TOS version")
 	modifyInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "New timezone")

@@ -51,6 +51,7 @@ func getInstance(c echo.Context) error {
 	doc.M["tos"] = inst.TOSSigned
 	doc.M["tos_latest"] = inst.TOSLatest
 	doc.M["uuid"] = inst.UUID
+	doc.M["oidc_id"] = inst.OIDCID
 	doc.M["context"] = inst.ContextName
 
 	if err = middlewares.Allow(c, permission.GET, doc); err != nil {
@@ -84,6 +85,7 @@ func updateInstance(c echo.Context) error {
 		delete(doc.M, "tos_latest")
 		delete(doc.M, "uuid")
 		delete(doc.M, "context")
+		delete(doc.M, "oidc_id")
 	}
 
 	if err := lifecycle.Patch(inst, &lifecycle.Options{SettingsObj: doc}); err != nil {
@@ -97,6 +99,7 @@ func updateInstance(c echo.Context) error {
 	doc.M["tos"] = inst.TOSSigned
 	doc.M["tos_latest"] = inst.TOSLatest
 	doc.M["uuid"] = inst.UUID
+	doc.M["oidc_id"] = inst.OIDCID
 	doc.M["context"] = inst.ContextName
 
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)

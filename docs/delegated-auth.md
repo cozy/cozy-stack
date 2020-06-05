@@ -47,6 +47,7 @@ authentication:
       userinfo_instance_field: cozy_number
       userinfo_instance_prefix: name
       userinfo_instance_suffix: .mycozy.cloud
+      allow_custom_instance: false
       allow_oauth_token: false
 ```
 
@@ -75,11 +76,18 @@ And in the `oidc` section, we have:
 - `userinfo_instance_prefix` and `userinfo_instance_suffix` are optional, and
   will be put before and after the field fetched from the UserInfo response to
   give the complete instance URL
+- `allow_custom_instance` can be set to true to let the user chooses their
+  instance name
 - `allow_oauth_token` must be set to true to enable the
   `POST /oidc/access_token` route (see below for more details).
 
 With the example config, if the UserInfo response contains `"cozy_number":
 "00001"`, the user can login on the instance `name00001.mycozy.cloud`.
+
+When `allow_custom_instance` is set to true, the stack will look at the `sub`
+field in the UserInfo response, and checks that it matches the `oidc_id` set
+on this instance (and the `userinfo_instance_*` and `login_domain` fields are
+ignored).
 
 ### Routes
 
