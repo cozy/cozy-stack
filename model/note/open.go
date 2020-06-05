@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
 type apiNoteURL struct {
@@ -228,7 +229,9 @@ func (o *Opener) openSharedNote() (*apiNoteURL, error) {
 		creator = &s.Members[0]
 	}
 
-	if creator == nil || creator.Status != sharing.MemberStatusReady {
+	logger.WithNamespace("foobar").Warnf("creator.Status = %v", creator.Status)
+	if creator == nil ||
+		(creator.Status != sharing.MemberStatusReady && creator.Status != sharing.MemberStatusOwner) {
 		// If the creator of the note is no longer in the sharing, the owner of
 		// the sharing takes the lead, and if the sharing is revoked, any
 		// member can edit the note on their instance.
