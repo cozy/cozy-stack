@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative '../boot'
 require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
@@ -28,15 +30,15 @@ def assert_conflict_children(inst_a, inst_b, parent_id_a, parent_id_b, filename)
   assert_equal children_a[1].couch_rev, children_b[1].couch_rev
 end
 
-describe "A sharing" do
-  it "can handle conflicts" do
-    Helpers.scenario "conflicts"
+describe 'A sharing' do
+  it 'can handle conflicts' do
+    Helpers.scenario 'conflicts'
     Helpers.start_mailhog
 
-    recipient_name = "Bob"
+    recipient_name = 'Bob'
 
     # Create the instance
-    inst = Instance.create name: "Alice"
+    inst = Instance.create name: 'Alice'
     inst_recipient = Instance.create name: recipient_name
 
     # Create hierarchy
@@ -187,5 +189,89 @@ describe "A sharing" do
 
     inst.remove
     inst_recipient.remove
+  end
+
+  it 'does not create couchdb conflicts' do
+    Helpers.scenario 'couch-conflicts'
+    Helpers.start_mailhog
+
+    members_name = %w[Alice Bob Charlie]
+
+    # Create the instance
+    inst_a = Instance.create name: members_name[0]
+    inst_b = Instance.create name: members_name[1]
+    inst_c = Instance.create name: members_name[2]
+
+    # Create hierarchy
+    folder_name = 'folder'
+    folder = Folder.create inst_a, name: folder_name
+    folder.couch_id.wont_be_empty
+    child1 = Folder.create inst_a, dir_id: folder.couch_id
+    Folder.create inst_a, dir_id: folder.couch_id
+    child1_1 = Folder.create inst_a, dir_id: child1.couch_id
+    Folder.create inst_a, dir_id: child1.couch_id
+    child1_1_1 = Folder.create inst_a, dir_id: child1_1.couch_id
+    Folder.create inst_a, dir_id: child1_1.couch_id
+    Folder.create inst_a, dir_id: child1_1.couch_id
+
+    # Create the sharing
+    sharing = Sharing.new
+    sharing.rules << Rule.sync(folder)
+    sharing.members << inst_a
+    contact_b = Contact.create inst_a, given_name: members_name[1]
+    contact_c = Contact.create inst_a, given_name: members_name[2]
+    sharing.members << contact_b
+    sharing.members << contact_c
+    inst_a.register sharing
+
+    # Accept the sharing
+    sleep 1
+    inst_b.accept sharing
+    sleep 1
+    inst_c.accept sharing
+    sleep 10
+
+    # Rename directories
+    child1_b = Folder.find_by_path(
+      inst_b,
+      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"))
+    child1_1b = Folder.find_by_path(
+      inst_b,
+      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}"))
+    child1_1_1b = Folder.find_by_path(
+      inst_b,
+      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder_name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"))
+    child1_1_1c = Folder.find_by_path(
+      inst_c,
+      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder_name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"))
+
+    child1_b.rename inst_b, Faker::Internet.slug
+    sleep 12
+    child1_b.rename inst_b, Faker::Internet.slug
+    sleep 12
+    child1_1b.rename inst_b, Faker::Internet.slug
+    child1_1_1b.rename inst_b, Faker::Internet.slug
+    child1_1_1c.rename inst_c, Faker::Internet.slug
+
+    sleep 30
+
+    # Check that the files have been synchronized
+    da = File.join Helpers.current_dir, inst_a.domain, folder.name
+    db = File.join Helpers.current_dir, inst_b.domain,
+                   Helpers::SHARED_WITH_ME, folder.name
+    dc = File.join Helpers.current_dir, inst_c.domain,
+                   Helpers::SHARED_WITH_ME, folder.name
+    diff_ab = Helpers.fsdiff da, db
+    diff_ac = Helpers.fsdiff da, dc
+    diff_ab.must_be_empty
+    diff_ac.must_be_empty
+
+    # Check there is no conflict
+    conflicts_a = Couch.new.find_conflicts inst_a.domain, 'io-cozy-files'
+    conflicts_b = Couch.new.find_conflicts inst_b.domain, 'io-cozy-files'
+    conflicts_c = Couch.new.find_conflicts inst_c.domain, 'io-cozy-files'
+    assert_empty conflicts_a
+    assert_empty conflicts_b
+    assert_empty conflicts_c
   end
 end
