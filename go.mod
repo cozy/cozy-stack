@@ -44,7 +44,7 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.6.0
 	github.com/ugorji/go/codec v1.1.7
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
+	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/image v0.0.0-20200430140353-33d19683fad8
 	golang.org/x/net v0.0.0-20200528225125-3c3fba18258b
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
