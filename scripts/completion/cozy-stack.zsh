@@ -1023,6 +1023,7 @@ function _cozy-stack_instances_add {
     '*--domain-aliases[Specify one or more aliases domain for the instance (separated by '\'','\'')]:' \
     '--email[The email of the owner]:' \
     '--locale[Locale of the new cozy instance]:' \
+    '--oidc_id[The identifier for checking authentication from OIDC]:' \
     '--passphrase[Register the instance with this passphrase (useful for tests)]:' \
     '--public-name[The public name of the owner]:' \
     '--settings[A list of settings (eg context:foo,offer:premium)]:' \
@@ -1147,6 +1148,7 @@ function _cozy-stack_instances_modify {
     '*--domain-aliases[Specify one or more aliases domain for the instance (separated by '\'','\'')]:' \
     '--email[New email]:' \
     '--locale[New locale]:' \
+    '--oidc_id[New identifier for checking authentication from OIDC]:' \
     '--onboarding-finished[Force the finishing of the onboarding]' \
     '--public-name[New public name]:' \
     '--settings[New list of settings (eg offer:premium)]:' \

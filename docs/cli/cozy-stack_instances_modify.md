@@ -24,6 +24,7 @@ cozy-stack instances modify <domain> [flags]
       --email string             New email
   -h, --help                     help for modify
       --locale string            New locale
+      --oidc_id string           New identifier for checking authentication from OIDC
       --onboarding-finished      Force the finishing of the onboarding
       --public-name string       New public name
       --settings string          New list of settings (eg offer:premium)
