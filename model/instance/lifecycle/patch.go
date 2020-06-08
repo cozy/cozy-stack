@@ -68,6 +68,11 @@ func Patch(i *instance.Instance, opts *Options) error {
 			needUpdate = true
 		}
 
+		if opts.OIDCID != "" && opts.OIDCID != i.OIDCID {
+			i.OIDCID = opts.OIDCID
+			needUpdate = true
+		}
+
 		if opts.ContextName != "" && opts.ContextName != i.ContextName {
 			i.ContextName = opts.ContextName
 			needUpdate = true

@@ -25,6 +25,7 @@ type Instance struct {
 		Prefix               string    `json:"prefix,omitempty"`
 		Locale               string    `json:"locale"`
 		UUID                 string    `json:"uuid,omitempty"`
+		OIDCID               string    `json:"oidc_id,omitempty"`
 		ContextName          string    `json:"context,omitempty"`
 		TOSSigned            string    `json:"tos,omitempty"`
 		TOSLatest            string    `json:"tos_latest,omitempty"`
@@ -47,6 +48,7 @@ type InstanceOptions struct {
 	DomainAliases      []string
 	Locale             string
 	UUID               string
+	OIDCID             string
 	TOSSigned          string
 	TOSLatest          string
 	Timezone           string
@@ -135,6 +137,7 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 		"Domain":        {opts.Domain},
 		"Locale":        {opts.Locale},
 		"UUID":          {opts.UUID},
+		"OIDCID":        {opts.OIDCID},
 		"TOSSigned":     {opts.TOSSigned},
 		"Timezone":      {opts.Timezone},
 		"ContextName":   {opts.ContextName},
@@ -186,6 +189,7 @@ func (c *Client) ModifyInstance(opts *InstanceOptions) (*Instance, error) {
 	q := url.Values{
 		"Locale":      {opts.Locale},
 		"UUID":        {opts.UUID},
+		"OIDCID":      {opts.OIDCID},
 		"TOSSigned":   {opts.TOSSigned},
 		"TOSLatest":   {opts.TOSLatest},
 		"Timezone":    {opts.Timezone},

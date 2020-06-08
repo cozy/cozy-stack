@@ -48,7 +48,7 @@ func TestCreateInstanceWithFewSettings(t *testing.T) {
 		PublicName:  "Alice",
 		Passphrase:  "password",
 		SwiftLayout: 1,
-		Settings:    "offer:freemium,context:my_context,auth_mode:two_factor_mail,uuid:XXX,locale:en,tos:20151111",
+		Settings:    "offer:freemium,context:my_context,auth_mode:two_factor_mail,uuid:XXX,locale:en,tos:20151111,oidc_id:oidc_42",
 	})
 
 	assert.NoError(t, err)
@@ -61,6 +61,7 @@ func TestCreateInstanceWithFewSettings(t *testing.T) {
 	assert.Equal(t, "Alice", doc.M["public_name"].(string))
 
 	assert.Equal(t, inst.UUID, "XXX")
+	assert.Equal(t, inst.OIDCID, "oidc_42")
 	assert.Equal(t, inst.Locale, "en")
 	assert.Equal(t, inst.TOSSigned, "1.0.0-20151111")
 	assert.Equal(t, inst.ContextName, "my_context")
@@ -72,6 +73,7 @@ func TestCreateInstanceWithMoreSettings(t *testing.T) {
 	inst, err := lifecycle.Create(&lifecycle.Options{
 		Domain:      "test3.cozycloud.cc",
 		UUID:        "XXX",
+		OIDCID:      "oidc_42",
 		Locale:      "en",
 		TOSSigned:   "20151111",
 		TOSLatest:   "1.0.0-20151111",
@@ -94,6 +96,8 @@ func TestCreateInstanceWithMoreSettings(t *testing.T) {
 	assert.Equal(t, "freemium", doc.M["offer"].(string))
 	assert.Equal(t, "Alice", doc.M["public_name"].(string))
 
+	assert.Equal(t, inst.UUID, "XXX")
+	assert.Equal(t, inst.OIDCID, "oidc_42")
 	assert.Equal(t, inst.Locale, "en")
 	assert.Equal(t, inst.TOSSigned, "1.0.0-20151111")
 	assert.Equal(t, inst.ContextName, "my_context")

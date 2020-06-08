@@ -102,14 +102,8 @@ func Login(c echo.Context) error {
 		}
 	}
 
-	domain, err := getDomainFromUserInfo(conf, token)
-	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
-		return renderError(c, inst, http.StatusBadGateway, "Error from the identity provider.")
-	}
-	if domain != inst.Domain {
-		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
-		return renderError(c, inst, http.StatusBadRequest, "Sorry, the cozy was not found.")
+	if err := checkDomainFromUserInfo(conf, inst, token); err != nil {
+		return renderError(c, inst, http.StatusBadRequest, err.Error())
 	}
 
 	if inst.HasAuthMode(instance.TwoFactorMail) {
@@ -164,17 +158,9 @@ func AccessToken(c echo.Context) error {
 	}
 
 	// Check the token from the remote URL.
-	domain, err := getDomainFromUserInfo(conf, reqBody.OIDCToken)
-	if err != nil {
-		logger.WithNamespace("oidc").Errorf("Error from the Identity Provider: %s", err)
+	if err := checkDomainFromUserInfo(conf, inst, reqBody.OIDCToken); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "the Identity Provider didn't respond",
-		})
-	}
-	if domain != inst.Domain {
-		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "the oidc_token is invalid",
+			"error": err.Error(),
 		})
 	}
 
@@ -232,17 +218,18 @@ func AccessToken(c echo.Context) error {
 // Config is the config to log in a user with an OpenID Connect identity
 // provider.
 type Config struct {
-	AllowOAuthToken bool
-	ClientID        string
-	ClientSecret    string
-	Scope           string
-	RedirectURI     string
-	AuthorizeURL    string
-	TokenURL        string
-	UserInfoURL     string
-	UserInfoField   string
-	UserInfoPrefix  string
-	UserInfoSuffix  string
+	AllowOAuthToken     bool
+	AllowCustomInstance bool
+	ClientID            string
+	ClientSecret        string
+	Scope               string
+	RedirectURI         string
+	AuthorizeURL        string
+	TokenURL            string
+	UserInfoURL         string
+	UserInfoField       string
+	UserInfoPrefix      string
+	UserInfoSuffix      string
 }
 
 func getConfig(context string) (*Config, error) {
@@ -292,21 +279,23 @@ func getConfig(context string) (*Config, error) {
 
 	/* Optional fields */
 	allowOAuthToken, _ := oidc["allow_oauth_token"].(bool)
+	allowCustomInstance, _ := oidc["allow_custom_instance"].(bool)
 	userInfoPrefix, _ := oidc["userinfo_instance_prefix"].(string)
 	userInfoSuffix, _ := oidc["userinfo_instance_suffix"].(string)
 
 	config := &Config{
-		AllowOAuthToken: allowOAuthToken,
-		ClientID:        clientID,
-		ClientSecret:    clientSecret,
-		Scope:           scope,
-		RedirectURI:     redirectURI,
-		AuthorizeURL:    authorizeURL,
-		TokenURL:        tokenURL,
-		UserInfoURL:     userInfoURL,
-		UserInfoField:   userInfoField,
-		UserInfoPrefix:  userInfoPrefix,
-		UserInfoSuffix:  userInfoSuffix,
+		AllowOAuthToken:     allowOAuthToken,
+		AllowCustomInstance: allowCustomInstance,
+		ClientID:            clientID,
+		ClientSecret:        clientSecret,
+		Scope:               scope,
+		RedirectURI:         redirectURI,
+		AuthorizeURL:        authorizeURL,
+		TokenURL:            tokenURL,
+		UserInfoURL:         userInfoURL,
+		UserInfoField:       userInfoField,
+		UserInfoPrefix:      userInfoPrefix,
+		UserInfoSuffix:      userInfoSuffix,
 	}
 	return config, nil
 }
@@ -375,35 +364,76 @@ func getToken(conf *Config, code string) (string, error) {
 }
 
 func getDomainFromUserInfo(conf *Config, token string) (string, error) {
-	req, err := http.NewRequest("GET", conf.UserInfoURL, nil)
+	if conf.AllowCustomInstance {
+		return "", errors.New("invalid configuration")
+	}
+	params, err := getUserInfo(conf, token)
 	if err != nil {
 		return "", err
+	}
+	return extractDomain(conf, params)
+}
+
+func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string) error {
+	params, err := getUserInfo(conf, token)
+	if err != nil {
+		return err
+	}
+
+	if conf.AllowCustomInstance {
+		sub, ok := params["sub"].(string)
+		if !ok || sub == "" || sub != inst.OIDCID {
+			logger.WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, inst.OIDCID)
+			return errors.New("the cozy was not found")
+		}
+		return nil
+	}
+
+	domain, err := extractDomain(conf, params)
+	if err != nil {
+		return err
+	}
+	if domain != inst.Domain {
+		logger.WithNamespace("oidc").Errorf("Invalid domains: %s != %s", domain, inst.Domain)
+		return errors.New("the cozy was not found")
+	}
+	return nil
+}
+
+func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
+	req, err := http.NewRequest("GET", conf.UserInfoURL, nil)
+	if err != nil {
+		return nil, errors.New("invalid configuration")
 	}
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := oidcClient.Do(req)
 	if err != nil {
-		return "", err
+		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
+		return nil, errors.New("error from the identity provider")
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return "", fmt.Errorf("OIDC service responded with %d", res.StatusCode)
-	}
-	resBody, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("OIDC service responded with %d", res.StatusCode)
 	}
 
-	var out map[string]interface{}
-	err = json.Unmarshal(resBody, &out)
+	var params map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&params)
 	if err != nil {
-		return "", err
+		logger.WithNamespace("oidc").Errorf("Error on getDomainFromUserInfo: %s", err)
+		return nil, errors.New("Invalid response from the identity provider")
 	}
-	if domain, ok := out[conf.UserInfoField].(string); ok {
-		domain = strings.Replace(domain, "-", "", -1) // We don't want - in cozy instance
-		domain = strings.ToLower(domain)              // The domain is case insensitive
-		return conf.UserInfoPrefix + domain + conf.UserInfoSuffix, nil
+	return params, nil
+}
+
+func extractDomain(conf *Config, params map[string]interface{}) (string, error) {
+	domain, ok := params[conf.UserInfoField].(string)
+	if !ok {
+		return "", errors.New("the cozy was not found")
 	}
-	return "", errors.New("No domain was found")
+	domain = strings.Replace(domain, "-", "", -1) // We don't want - in cozy instance
+	domain = strings.ToLower(domain)              // The domain is case insensitive
+	domain = conf.UserInfoPrefix + domain + conf.UserInfoSuffix
+	return domain, nil
 }
 
 func renderError(c echo.Context, inst *instance.Instance, code int, msg string) error {

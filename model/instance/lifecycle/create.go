@@ -24,6 +24,7 @@ type Options struct {
 	DomainAliases  []string
 	Locale         string
 	UUID           string
+	OIDCID         string
 	TOSSigned      string
 	TOSLatest      string
 	Timezone       string
@@ -93,6 +94,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	i.Prefix = "cozy" + hex.EncodeToString(prefix[:16])
 	i.Locale = locale
 	i.UUID = opts.UUID
+	i.OIDCID = opts.OIDCID
 	i.TOSSigned = opts.TOSSigned
 	i.TOSLatest = opts.TOSLatest
 	i.ContextName = opts.ContextName
@@ -237,6 +239,10 @@ func buildSettings(opts *Options) *couchdb.JSONDoc {
 	if uuid, ok := settings.M["uuid"].(string); ok {
 		opts.UUID = uuid
 		delete(settings.M, "uuid")
+	}
+	if oidcID, ok := settings.M["oidc_id"].(string); ok {
+		opts.OIDCID = oidcID
+		delete(settings.M, "oidc_id")
 	}
 	if tos, ok := settings.M["tos"].(string); ok {
 		opts.TOSSigned = tos
