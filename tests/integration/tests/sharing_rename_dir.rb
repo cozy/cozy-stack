@@ -45,16 +45,16 @@ describe "A directory in a sharing" do
     sleep 12
 
     # Check that no children have been lost
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{subdir.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{subdir.name}"
     subdir_recipient = Folder.find_by_path inst_recipient, path
     refute subdir_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{subdir.name}/#{child1.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{subdir.name}/#{child1.name}"
     child1_recipient = Folder.find_by_path inst_recipient, path
     refute child1_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{subdir.name}/#{child2.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{subdir.name}/#{child2.name}"
     child2_recipient = Folder.find_by_path inst_recipient, path
     refute child2_recipient.trashed
-    path = CGI.escape "/#{child2_recipient.path}/#{child3.name}"
+    path = "/#{child2_recipient.path}/#{child3.name}"
     child3_recipient = Folder.find_by_path inst_recipient, path
     refute child3_recipient.trashed
 

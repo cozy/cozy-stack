@@ -77,7 +77,7 @@ describe "A folder" do
 
     # Check the recipient's folder is the same as the sender's
     sleep 12
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
     folder_recipient = Folder.find_by_path inst_recipient, path
     assert_equal folder_recipient.name, folder.name
 
@@ -89,7 +89,7 @@ describe "A folder" do
 
     # Check the metadata are the same for the photo
     file = CozyFile.find inst, file.couch_id
-    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
+    file_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
     file_recipient = CozyFile.find_by_path inst_recipient, file_path
     assert_equal file.md5sum, file_recipient.md5sum
     assert_equal file.mime, file_recipient.mime
@@ -107,7 +107,7 @@ describe "A folder" do
     assert_same_thumbs base_path_a, file.couch_id, base_path_b, file_recipient.couch_id
 
     # Check that the recipient can open the note
-    note_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{note.file.name}"
+    note_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{note.file.name}"
     note_recipient = CozyFile.find_by_path inst_recipient, note_path
     parameters = Note.open inst_recipient, note_recipient.couch_id
     assert_equal note.file.couch_id, parameters["note_id"]
@@ -134,7 +134,7 @@ describe "A folder" do
 
     # Check the recipient's folder is the same as the sender's
     sleep 12
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
     folder_recipient = Folder.find_by_path inst_recipient, path
     assert_equal folder_recipient.name, folder.name
 

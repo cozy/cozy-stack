@@ -64,7 +64,7 @@ module Model
       end
 
       def find_by_path(inst, path)
-        load_from_url inst, "/files/metadata?Path=#{path}"
+        load_from_url inst, "/files/metadata?Path=#{CGI.escape path}"
       end
 
       def find(inst, id)

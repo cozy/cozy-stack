@@ -63,22 +63,22 @@ describe "A shared directory" do
     # Debug.visualize_tree [inst, inst_recipient], sharing
 
     # Check that no children have been lost
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
     child1_recipient = Folder.find_by_path inst_recipient, path
     refute child1_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
     child2_recipient = Folder.find_by_path inst_recipient, path
     refute child2_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child3.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child3.name}"
     child3_recipient = Folder.find_by_path inst_recipient, path
     refute child3_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{file1.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{file1.name}"
     file1_recipient = CozyFile.find_by_path inst_recipient, path
     refute file1_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}/#{file2.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}/#{file2.name}"
     file2_recipient = CozyFile.find_by_path inst_recipient, path
     refute file2_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file3.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file3.name}"
     file3_recipient = CozyFile.find_by_path inst_recipient, path
     refute file3_recipient.trashed
 

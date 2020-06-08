@@ -46,7 +46,7 @@ describe "A photo" do
     sleep 2
 
     # Check there is no reference on the recipient's file
-    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
+    file_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
     file_recipient = CozyFile.find_by_path inst_recipient, file_path
     assert_equal file.name, file_recipient.name
     assert_nil file_recipient.referenced_by
@@ -102,7 +102,7 @@ describe "A photo" do
     # Check the recipient has the shared album and photo
     album_recipient = Album.find inst_recipient, album.couch_id
     assert_equal album.name, album_recipient.name
-    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{album.name}/#{file.name}"
+    file_path = "/#{Helpers::SHARED_WITH_ME}/#{album.name}/#{file.name}"
     file_recipient = CozyFile.find_by_path inst_recipient, file_path
     assert_equal file.name, file_recipient.name
     assert file_has_album_reference(file_recipient, album.couch_id)

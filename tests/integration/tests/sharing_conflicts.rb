@@ -4,7 +4,7 @@ require 'pry-rescue/minitest' unless ENV['CI']
 
 def children_by_parent_id(inst, parent_id)
   parent = Folder.find inst, parent_id
-  Folder.children inst, CGI.escape(parent.path)
+  Folder.children inst, parent.path
 end
 
 def assert_conflict_children(inst_a, inst_b, parent_id_a, parent_id_b, filename)
@@ -63,19 +63,19 @@ describe 'A sharing' do
     sleep 1
     inst_recipient.accept sharing
     sleep 2
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file1.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file1.name}"
     file1_recipient = CozyFile.find_by_path inst_recipient, path
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file2.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file2.name}"
     file2_recipient = CozyFile.find_by_path inst_recipient, path
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
     child1_recipient = Folder.find_by_path inst_recipient, path
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
     child2_recipient = Folder.find_by_path inst_recipient, path
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child3.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child3.name}"
     child3_recipient = Folder.find_by_path inst_recipient, path
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child4.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child4.name}"
     child4_recipient = Folder.find_by_path inst_recipient, path
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child5.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child5.name}"
     child5_recipient = Folder.find_by_path inst_recipient, path
 
     # Create and trash a file for later use
@@ -165,7 +165,7 @@ describe 'A sharing' do
     _, files = Folder.children inst, parent_file.path
     conflict_file = files.find { |c| c.name =~ / \(\d+\)/ }
     refute_nil conflict_file
-    path = CGI.escape "#{parent_file_recipient.path}/#{conflict_file.name}"
+    path = "#{parent_file_recipient.path}/#{conflict_file.name}"
     conflict_file_recipient = CozyFile.find_by_path inst_recipient, path
     assert_equal conflict_file_recipient.name, conflict_file.name
     assert_equal conflict_file_recipient.couch_rev, conflict_file.couch_rev
@@ -224,18 +224,14 @@ describe 'A sharing' do
     sleep 10
 
     # Rename directories
-    child1_b = Folder.find_by_path(
-      inst_b,
-      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"))
-    child1_1b = Folder.find_by_path(
-      inst_b,
-      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}"))
-    child1_1_1b = Folder.find_by_path(
-      inst_b,
-      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"))
-    child1_1_1c = Folder.find_by_path(
-      inst_c,
-      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"))
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
+    child1_b = Folder.find_by_path inst_b, path
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}"
+    child1_1b = Folder.find_by_path inst_b, path
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"
+    child1_1_1b = Folder.find_by_path inst_b, path
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"
+    child1_1_1c = Folder.find_by_path inst_c, path
 
     child1_b.rename inst_b, Faker::Internet.slug
     sleep 12

@@ -31,9 +31,9 @@ describe "A file or folder" do
     one = Folder.create inst_alice, name: "foo", dir_id: folder.couch_id
     two = Folder.create inst_alice, name: "bar", dir_id: folder.couch_id
     sleep 12
-    one_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{one.name}"
+    one_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{one.name}"
     one_bob = Folder.find_by_path inst_bob, one_path
-    two_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{two.name}"
+    two_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{two.name}"
     two_bob = Folder.find_by_path inst_bob, two_path
     assert_equal one.name, one_bob.name
     assert_equal two.name, two_bob.name

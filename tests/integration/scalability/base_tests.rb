@@ -58,7 +58,7 @@ def create_hierarchy(inst, root, n_elements, max_filesize = nil)
 end
 
 def get_hierarchy(inst, root)
-  dirs, files = Folder.children inst, CGI.escape(root.path)
+  dirs, files = Folder.children inst, root.path
 
   if dirs.length > 0
     dirs.each do |dir|

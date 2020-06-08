@@ -39,9 +39,9 @@ describe "A file or folder" do
     sleep 1
     inst_charlie.accept sharing
     sleep 1
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file1.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file1.name}"
     file1_charlie = CozyFile.find_by_path inst_charlie, path
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file2.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file2.name}"
     file2_charlie = CozyFile.find_by_path inst_charlie, path
 
     # Rename a file and downgrade Charlie to read-only
@@ -90,7 +90,7 @@ describe "A file or folder" do
 
     # Check that the recipient can open the note
     sleep 12
-    note_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{note.file.name}"
+    note_path = "/#{Helpers::SHARED_WITH_ME}/#{note.file.name}"
     note_bob = CozyFile.find_by_path inst_bob, note_path
     parameters = Note.open inst_bob, note_bob.couch_id
     assert_equal note.file.couch_id, parameters["note_id"]

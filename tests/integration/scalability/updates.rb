@@ -26,7 +26,7 @@ db = File.join Helpers.current_dir, inst_b.domain, path_folder_b
 poll_for_diff da, db
 
 # Generate updates from both sides
-_, files_b = Folder.children inst_b, CGI.escape(path_folder_b)
+_, files_b = Folder.children inst_b, path_folder_b
 
 generate_updates insts, N_UPDATES, files_a, files_b
 poll_for_diff da, db

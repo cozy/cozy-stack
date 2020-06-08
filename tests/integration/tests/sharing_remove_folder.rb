@@ -40,19 +40,19 @@ describe "A shared folder" do
     sleep 7
 
     # Get id for all dir/files to retrieve after delete
-    child2_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
+    child2_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
     child2_recipient_id = Folder.get_id_from_path inst_recipient, child2_path
 
     child3_path = "#{child2_path}/#{child3.name}"
     child3_recipient_id = Folder.get_id_from_path inst_recipient, child3_path
 
-    f1_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{f1.name}"
+    f1_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{f1.name}"
     f1_recipient_id = CozyFile.get_id_from_path inst_recipient, f1_path
 
-    f2_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{f2.name}"
+    f2_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{f2.name}"
     f2_recipient_id = CozyFile.get_id_from_path inst_recipient, f2_path
 
-    f3_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}/#{f3.name}"
+    f3_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}/#{f3.name}"
     f3_recipient_id = CozyFile.get_id_from_path inst_recipient, f3_path
 
     # Remove a single file

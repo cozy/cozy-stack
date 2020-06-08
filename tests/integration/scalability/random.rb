@@ -46,7 +46,7 @@ N_SHARINGS.times do |i|
   recs.each do |rec|
     drec = File.join Helpers.current_dir, rec.domain, path_folder
     poll_for_diff da, drec
-    folder_rec = Folder.find_by_path rec, CGI.escape(path_folder)
+    folder_rec = Folder.find_by_path rec, path_folder
     dirs[sid][rec.name], files[sid][rec.name] = get_hierarchy rec, folder_rec
   end
 end

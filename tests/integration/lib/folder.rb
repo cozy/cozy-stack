@@ -34,7 +34,7 @@ class Folder
   end
 
   def self.children(inst, path)
-    path = "/files/metadata?Path=#{path}"
+    path = "/files/metadata?Path=#{CGI.escape path}"
     opts = {
       content_type: :json,
       accept: :json,

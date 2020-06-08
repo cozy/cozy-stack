@@ -29,7 +29,7 @@ describe "A sharing" do
     inst_bob.accept sharing
     sleep 1
     file = CozyFile.find inst_alice, file.couch_id
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
     file_bob = CozyFile.find_by_path inst_bob, path
     assert_equal file.md5sum, file_bob.md5sum
 
