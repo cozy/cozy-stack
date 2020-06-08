@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require_relative '../boot'
 require 'minitest/autorun'
 require 'pry-rescue/minitest' unless ENV['CI']
@@ -192,19 +190,18 @@ describe 'A sharing' do
   end
 
   it 'does not create couchdb conflicts' do
-    Helpers.scenario 'couch-conflicts'
+    Helpers.scenario 'couchdb-conflicts'
     Helpers.start_mailhog
 
     members_name = %w[Alice Bob Charlie]
 
-    # Create the instance
+    # Create the instances
     inst_a = Instance.create name: members_name[0]
     inst_b = Instance.create name: members_name[1]
     inst_c = Instance.create name: members_name[2]
 
     # Create hierarchy
-    folder_name = 'folder'
-    folder = Folder.create inst_a, name: folder_name
+    folder = Folder.create inst_a, name: 'shared-folder'
     folder.couch_id.wont_be_empty
     child1 = Folder.create inst_a, dir_id: folder.couch_id
     Folder.create inst_a, dir_id: folder.couch_id
@@ -240,10 +237,10 @@ describe 'A sharing' do
       CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}"))
     child1_1_1b = Folder.find_by_path(
       inst_b,
-      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder_name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"))
+      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"))
     child1_1_1c = Folder.find_by_path(
       inst_c,
-      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder_name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"))
+      CGI.escape("/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"))
 
     child1_b.rename inst_b, Faker::Internet.slug
     sleep 12
@@ -267,11 +264,9 @@ describe 'A sharing' do
     diff_ac.must_be_empty
 
     # Check there is no conflict
-    conflicts_a = Couch.new.find_conflicts inst_a.domain, 'io-cozy-files'
-    conflicts_b = Couch.new.find_conflicts inst_b.domain, 'io-cozy-files'
-    conflicts_c = Couch.new.find_conflicts inst_c.domain, 'io-cozy-files'
-    assert_empty conflicts_a
-    assert_empty conflicts_b
-    assert_empty conflicts_c
+    [inst_a, inst_b, inst_c].each do |inst|
+      assert_equal inst.check, []
+      inst.remove
+    end
   end
 end
