@@ -82,13 +82,10 @@ describe "A folder" do
     assert_equal folder_recipient.name, folder.name
 
     # Check that the files are the same on disk
-    unless ENV['COZY_SWIFTTEST']
-      da = File.join Helpers.current_dir, inst.domain, folder.name
-      db = File.join Helpers.current_dir, inst_recipient.domain,
-                     Helpers::SHARED_WITH_ME, sharing.rules.first.title
-      diff = Helpers.fsdiff da, db
-      diff.must_be_empty
-    end
+    da = File.join Helpers.current_dir, inst.domain, folder.name
+    db = File.join Helpers.current_dir, inst_recipient.domain,
+                   Helpers::SHARED_WITH_ME, sharing.rules.first.title
+    Helpers.fsdiff(da, db).must_be_empty
 
     # Check the metadata are the same for the photo
     file = CozyFile.find inst, file.couch_id
@@ -142,13 +139,10 @@ describe "A folder" do
     assert_equal folder_recipient.name, folder.name
 
     # Check that the files are the same on disk
-    unless ENV['COZY_SWIFTTEST']
-      da = File.join Helpers.current_dir, inst.domain, folder.name
-      db = File.join Helpers.current_dir, inst_recipient.domain,
-                     Helpers::SHARED_WITH_ME, oneshot.rules.first.title
-      diff = Helpers.fsdiff da, db
-      diff.must_be_empty
-    end
+    da = File.join Helpers.current_dir, inst.domain, folder.name
+    db = File.join Helpers.current_dir, inst_recipient.domain,
+                   Helpers::SHARED_WITH_ME, oneshot.rules.first.title
+    Helpers.fsdiff(da, db)
 
     assert_equal inst.check, []
     assert_equal inst_recipient.check, []

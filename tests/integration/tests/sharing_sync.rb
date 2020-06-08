@@ -179,8 +179,7 @@ describe "A folder" do
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_recipient.domain,
                    Helpers::SHARED_WITH_ME, sharing.rules.first.title
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
 
     # Create a new folder
     child2 = Folder.create inst, dir_id: folder.couch_id

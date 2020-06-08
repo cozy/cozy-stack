@@ -126,17 +126,15 @@ describe 'A sharing' do
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_recipient.domain,
                    Helpers::SHARED_WITH_ME, folder.name
-    unless ENV['COZY_SWIFTTEST']
-      diff = Helpers.fsdiff da, db
-      if diff.any?
-        ap '<<<'
-        ap `LANG=C ls -alR '#{da}'`.lines.map(&:chomp)
-        ap '---'
-        ap `LANG=C ls -alR '#{db}'`.lines.map(&:chomp)
-        ap '>>>'
-      end
-      diff.must_be_empty
+    diff = Helpers.fsdiff da, db
+    if diff.any?
+      ap '<<<'
+      ap `LANG=C ls -alR '#{da}'`.lines.map(&:chomp)
+      ap '---'
+      ap `LANG=C ls -alR '#{db}'`.lines.map(&:chomp)
+      ap '>>>'
     end
+    diff.must_be_empty
 
     # Generate conflicts with no reconciliation
 
@@ -177,10 +175,7 @@ describe 'A sharing' do
     assert_conflict_children inst, inst_recipient, child4.couch_id, child4_recipient.couch_id, file6.name
     assert_conflict_children inst, inst_recipient, child5.couch_id, child5_recipient.couch_id, file_to_trash.name
 
-    unless ENV['COZY_SWIFTTEST']
-      diff = Helpers.fsdiff da, db
-      diff.must_be_empty
-    end
+    Helpers.fsdiff(da, db).must_be_empty
 
     assert_equal inst.check, []
     assert_equal inst_recipient.check, []
@@ -258,10 +253,8 @@ describe 'A sharing' do
                    Helpers::SHARED_WITH_ME, folder.name
     dc = File.join Helpers.current_dir, inst_c.domain,
                    Helpers::SHARED_WITH_ME, folder.name
-    diff_ab = Helpers.fsdiff da, db
-    diff_ac = Helpers.fsdiff da, dc
-    diff_ab.must_be_empty
-    diff_ac.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
+    Helpers.fsdiff(da, dc).must_be_empty
 
     # Check there is no conflict
     [inst_a, inst_b, inst_c].each do |inst|

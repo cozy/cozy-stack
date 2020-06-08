@@ -43,8 +43,7 @@ describe "A shared directory" do
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_recipient.domain,
                    Helpers::SHARED_WITH_ME, folder.name
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
 
     # Move what is in subdir out of it...
     file3.move_to inst, folder.couch_id
@@ -84,8 +83,7 @@ describe "A shared directory" do
     refute file3_recipient.trashed
 
     # Check that we have no surprise
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
 
     assert_equal inst.check, []
     assert_equal inst_recipient.check, []

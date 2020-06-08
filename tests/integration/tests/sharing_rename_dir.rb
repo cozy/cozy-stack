@@ -37,8 +37,7 @@ describe "A directory in a sharing" do
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_recipient.domain,
                    Helpers::SHARED_WITH_ME, folder.name
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
 
     # Rename the directory
     subdir.rename inst, "9.1_#{subdir.name}"
@@ -60,8 +59,7 @@ describe "A directory in a sharing" do
     refute child3_recipient.trashed
 
     # Check that we have no surprise
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
 
     assert_equal inst.check, []
     assert_equal inst_recipient.check, []

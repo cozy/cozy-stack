@@ -101,10 +101,8 @@ describe "A folder" do
                    Helpers::SHARED_WITH_ME, sharing.rules.first.title
     dc = File.join Helpers.current_dir, inst_charlie.domain,
                    Helpers::SHARED_WITH_ME, sharing.rules.first.title
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
-    diff = Helpers.fsdiff da, dc
-    diff.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
+    Helpers.fsdiff(da, dc).must_be_empty
 
     assert_equal inst_alice.check, []
     assert_equal inst_bob.check, []
