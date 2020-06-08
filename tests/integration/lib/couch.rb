@@ -31,9 +31,10 @@ class Couch
     "cozy" + Digest::SHA256.hexdigest(db)[0...32]
   end
 
-  def get_doc(domain, doctype, id)
+  def get_doc(domain, doctype, id, opts = {})
+    params = { params: opts }
     doctype = doctype.gsub(/\W/, '-')
-    JSON.parse @client["/#{prefix domain}%2F#{doctype}/#{id}"].get.body
+    JSON.parse @client["/#{prefix domain}%2F#{doctype}/#{id}"].get(params).body
   end
 
   def create_named_doc(domain, doctype, id, doc)
@@ -58,5 +59,22 @@ class Couch
     res = @client["/#{prefix domain}%2F#{doctype}/_all_docs?include_docs=true"].get
     rows = JSON.parse(res.body)["rows"]
     rows.map { |r| r["doc"] }
+  end
+
+  def find_conflicts(domain, doctype)
+    opts = {
+      content_type: "application/json"
+    }
+    body = {
+      selector: {
+        "_conflicts": {
+          "$exists": true
+        }
+      },
+      "conflicts": true
+    }
+    doctype = doctype.gsub(/\W/, '-')
+    res = @client["/#{prefix domain}%2F#{doctype}/_find"].post(body.to_json, opts)
+    JSON.parse(res.body)["docs"]
   end
 end
