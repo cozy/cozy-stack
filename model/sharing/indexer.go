@@ -293,7 +293,21 @@ func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	}
 	doc.SetRev(s.bulkRevs.Rev)
 	docs[0]["_rev"] = s.bulkRevs.Rev
-	docs[0]["_revisions"] = s.bulkRevs.Revisions
+	if olddoc != nil {
+		/*
+			XXX We cannot directly apply the revision chain as received by the remote
+			instance because it might create a CouchDB conflict if a rev does not
+			exist on the local instance. Therefore, we start from the last local rev
+			and apply all the higher revs received from the remote.
+		*/
+		chain := revsStructToChain(s.bulkRevs.Revisions)
+		newChain := MixupChainToResolveConflict(olddoc.DocRev, chain)
+		newRevs := revsChainToStruct(newChain)
+		docs[0]["_revisions"] = newRevs
+	} else {
+		docs[0]["_revisions"] = s.bulkRevs.Revisions
+	}
+
 	if err := couchdb.BulkForceUpdateDocs(s.db, consts.Files, docs); err != nil {
 		return err
 	}
