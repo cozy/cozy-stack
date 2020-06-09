@@ -60,6 +60,10 @@ module Helpers
     end
 
     def fsdiff(a, b)
+      if ENV['COZY_SWIFTTEST']
+        puts "fsdiff is not available with COZY_SWIFTTEST".yellow
+        return []
+      end
       diff = `LANG=C diff -qr '#{a}' '#{b}'`
       diff.lines.map(&:chomp)
     end

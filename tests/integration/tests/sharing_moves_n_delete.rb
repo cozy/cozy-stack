@@ -43,8 +43,7 @@ describe "A shared directory" do
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_recipient.domain,
                    Helpers::SHARED_WITH_ME, folder.name
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
 
     # Move what is in subdir out of it...
     file3.move_to inst, folder.couch_id
@@ -64,28 +63,27 @@ describe "A shared directory" do
     # Debug.visualize_tree [inst, inst_recipient], sharing
 
     # Check that no children have been lost
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
     child1_recipient = Folder.find_by_path inst_recipient, path
     refute child1_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
     child2_recipient = Folder.find_by_path inst_recipient, path
     refute child2_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child3.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child3.name}"
     child3_recipient = Folder.find_by_path inst_recipient, path
     refute child3_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{file1.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{file1.name}"
     file1_recipient = CozyFile.find_by_path inst_recipient, path
     refute file1_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}/#{file2.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}/#{file2.name}"
     file2_recipient = CozyFile.find_by_path inst_recipient, path
     refute file2_recipient.trashed
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file3.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file3.name}"
     file3_recipient = CozyFile.find_by_path inst_recipient, path
     refute file3_recipient.trashed
 
     # Check that we have no surprise
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
 
     assert_equal inst.check, []
     assert_equal inst_recipient.check, []

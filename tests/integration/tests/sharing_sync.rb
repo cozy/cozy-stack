@@ -109,11 +109,11 @@ describe "A folder" do
     assert_nil doc["initial_number_of_files_to_sync"]
 
     # Check the folders are the same
-    child1_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
+    child1_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
     child1_recipient = Folder.find_by_path inst_recipient, child1_path
     child1_id_recipient = child1_recipient.couch_id
     folder_id_recipient = child1_recipient.dir_id
-    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
+    file_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
     file_recipient = CozyFile.find_by_path inst_recipient, file_path
     file_id_recipient = file_recipient.couch_id
     assert_equal child1.name, child1_recipient.name
@@ -130,7 +130,7 @@ describe "A folder" do
     sleep 12
 
     child1_recipient = Folder.find inst_recipient, child1_id_recipient
-    child2_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
+    child2_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
     child2_recipient = Folder.find_by_path inst_recipient, child2_path
     file = CozyFile.find inst, file.couch_id
     file_recipient = CozyFile.find inst_recipient, file_id_recipient
@@ -155,7 +155,7 @@ describe "A folder" do
 
     sleep 12
     child1 = Folder.find inst, child1.couch_id
-    child3_path = CGI.escape "/#{folder.name}/#{child3_recipient.name}"
+    child3_path = "/#{folder.name}/#{child3_recipient.name}"
     child3 = Folder.find_by_path inst, child3_path
     file = CozyFile.find inst, file.couch_id
     assert_equal child1_recipient.name, child1.name
@@ -165,7 +165,7 @@ describe "A folder" do
     assert_equal file_recipient.md5sum, file.md5sum
     assert_equal file_recipient.couch_rev, file.couch_rev
 
-    note_path = CGI.escape "/#{folder.name}/#{child3.name}/#{note_recipient.file.name}"
+    note_path = "/#{folder.name}/#{child3.name}/#{note_recipient.file.name}"
     note = CozyFile.find_by_path inst, note_path
     parameters = Note.open inst, note.couch_id
     assert_equal note_recipient.file.couch_id, parameters["note_id"]
@@ -179,8 +179,7 @@ describe "A folder" do
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_recipient.domain,
                    Helpers::SHARED_WITH_ME, sharing.rules.first.title
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
 
     # Create a new folder
     child2 = Folder.create inst, dir_id: folder.couch_id
@@ -228,7 +227,7 @@ describe "A folder" do
 
     # Check the files are the same
     file = CozyFile.find inst, file.couch_id
-    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{file.name}"
+    file_path = "/#{Helpers::SHARED_WITH_ME}/#{file.name}"
     file_recipient = CozyFile.find_by_path inst_recipient, file_path
     file_id_recipient = file_recipient.couch_id
     assert_equal file.name, file_recipient.name

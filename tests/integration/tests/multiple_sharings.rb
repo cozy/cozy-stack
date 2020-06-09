@@ -40,7 +40,7 @@ describe "A folder" do
     sleep 6
 
     # Check the folders are the same
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}"
     folder_bob = Folder.find_by_path inst_bob, path
     assert_equal folder_bob.name, folder.name
     folder_charlie = Folder.find_by_path inst_charlie, path
@@ -63,7 +63,7 @@ describe "A folder" do
 
     sleep 12
 
-    path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
     child1_bob = Folder.find_by_path inst_bob, path
     child1_charlie = Folder.find_by_path inst_charlie, path
     child1_bob_id = child1_bob.couch_id
@@ -77,7 +77,7 @@ describe "A folder" do
     file = CozyFile.create inst_alice, opts
 
     sleep 12
-    file_path = CGI.escape "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
+    file_path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file.name}"
     child1_bob = Folder.find inst_bob, child1_bob_id
     file_bob = CozyFile.find_by_path inst_bob, file_path
     file_charlie = CozyFile.find_by_path inst_charlie, file_path
@@ -101,10 +101,8 @@ describe "A folder" do
                    Helpers::SHARED_WITH_ME, sharing.rules.first.title
     dc = File.join Helpers.current_dir, inst_charlie.domain,
                    Helpers::SHARED_WITH_ME, sharing.rules.first.title
-    diff = Helpers.fsdiff da, db
-    diff.must_be_empty
-    diff = Helpers.fsdiff da, dc
-    diff.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
+    Helpers.fsdiff(da, dc).must_be_empty
 
     assert_equal inst_alice.check, []
     assert_equal inst_bob.check, []

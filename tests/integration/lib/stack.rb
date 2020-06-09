@@ -34,7 +34,6 @@ class Stack
     FileUtils.mkdir_p vault
     fsurl = "file://#{Helpers.current_dir}/"
     if ENV["COZY_SWIFTTEST"]
-      ap "SWIFT"
       fsurl = "'swift://127.0.0.1:6006/v1.0?UserName=swifttest&Password=swifttest&AuthURL=http://127.0.0.1:6006/v1.0'"
     end
     system("cozy-stack config gen-keys '#{vault}/key'") unless File.exist?("#{vault}/key.enc")
