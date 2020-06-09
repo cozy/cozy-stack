@@ -947,13 +947,14 @@ type FindResponse struct {
 
 // FindRequest is used to build a find request
 type FindRequest struct {
-	Selector mango.Filter `json:"selector"`
-	UseIndex string       `json:"use_index,omitempty"`
-	Bookmark string       `json:"bookmark,omitempty"`
-	Limit    int          `json:"limit,omitempty"`
-	Skip     int          `json:"skip,omitempty"`
-	Sort     mango.SortBy `json:"sort,omitempty"`
-	Fields   []string     `json:"fields,omitempty"`
+	Selector  mango.Filter `json:"selector"`
+	UseIndex  string       `json:"use_index,omitempty"`
+	Bookmark  string       `json:"bookmark,omitempty"`
+	Limit     int          `json:"limit,omitempty"`
+	Skip      int          `json:"skip,omitempty"`
+	Sort      mango.SortBy `json:"sort,omitempty"`
+	Fields    []string     `json:"fields,omitempty"`
+	Conflicts bool         `json:"conflicts,omitempty"`
 }
 
 // ViewRequest are all params that can be passed to a view
