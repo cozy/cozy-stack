@@ -914,9 +914,10 @@ func cleanDirsMap(
 func (c *couchdbIndexer) checkNoConflicts(accumulate func(*FsckLog), failFast bool) error {
 	var docs []DirOrFileDoc
 	req := &couchdb.FindRequest{
-		UseIndex: "with-conflicts",
-		Selector: mango.Exists("_conflicts"),
-		Limit:    1000,
+		UseIndex:  "with-conflicts",
+		Selector:  mango.Exists("_conflicts"),
+		Limit:     1000,
+		Conflicts: true,
 	}
 	_, err := couchdb.FindDocsRaw(c.db, consts.Files, req, &docs)
 	if err != nil {
