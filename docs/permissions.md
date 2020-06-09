@@ -57,10 +57,11 @@ Some known types:
 -   `io.cozy.jobs` and `io.cozy.triggers`, for [jobs](jobs.md)
 -   `io.cozy.oauth.clients`, to list and revoke [OAuth 2 clients](auth.md)
 
-It is also possible to use a wildcard to use a doctype and its sub-doctypes.
+It is also possible to use a wildcard to use a doctype and its sub-doctypes if 
+the doctype contains at least 3 `.`.
 For example, `io.cozy.bank.*` will give access to `io.cozy.bank`,
 `io.cozy.bank.accounts`, `io.cozy.bank.accounts.stats`,
-`io.cozy.bank.settings`, etc.
+`io.cozy.bank.settings`, etc. `io.cozy.*` will give you an error.
 
 ### Verbs
 
