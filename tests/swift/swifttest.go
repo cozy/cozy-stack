@@ -1,6 +1,6 @@
 // This script can be used to start a Swift-like server that keeps in memory
-// its files. It can be stared with `go run ./tests/swifttest`. The username
-// and API key to use are both 'swiftest'.
+// its files. It can be stared with `go run ./tests/swift`. The username and
+// API key to use are both 'swiftest'.
 
 package main
 

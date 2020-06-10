@@ -72,7 +72,7 @@ It's complicated to launch the tests with Swift, but it's possible to simulate
 it with swifttest:
 
 ```sh
-$ go run ./tests/swifttest
+$ go run ./tests/swift
 $ cd tests/integration
 $ export COZY_SWIFTTEST=1
 $ bundle exec ruby tests/sharing_push_folder.rb
