@@ -199,12 +199,14 @@ describe 'A sharing' do
     folder = Folder.create inst_a, name: 'shared-folder'
     folder.couch_id.wont_be_empty
     child1 = Folder.create inst_a, dir_id: folder.couch_id
-    Folder.create inst_a, dir_id: folder.couch_id
+    child2 = Folder.create inst_a, dir_id: folder.couch_id
     child1_1 = Folder.create inst_a, dir_id: child1.couch_id
     Folder.create inst_a, dir_id: child1.couch_id
     child1_1_1 = Folder.create inst_a, dir_id: child1_1.couch_id
     Folder.create inst_a, dir_id: child1_1.couch_id
     Folder.create inst_a, dir_id: child1_1.couch_id
+    file1 = CozyFile.create inst_a, dir_id: child1_1_1.couch_id
+    file2 = CozyFile.create inst_a, dir_id: child1_1_1.couch_id
 
     # Create the sharing
     sharing = Sharing.new
@@ -226,22 +228,62 @@ describe 'A sharing' do
     # Rename directories
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
     child1_b = Folder.find_by_path inst_b, path
+    child1_c = Folder.find_by_path inst_c, path
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
+    child2_b = Folder.find_by_path inst_b, path
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}"
     child1_1b = Folder.find_by_path inst_b, path
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"
     child1_1_1b = Folder.find_by_path inst_b, path
-    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}"
     child1_1_1c = Folder.find_by_path inst_c, path
 
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}/#{file1.name}"
+    file1_b = CozyFile.find_by_path inst_b, path
+
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}/#{file1.name}"
+    file1_c = CozyFile.find_by_path inst_c, path
+
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}/#{file2.name}"
+    file2_b = CozyFile.find_by_path inst_b, path
+
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{child1_1.name}/#{child1_1_1.name}/#{file2.name}"
+    file2_c = CozyFile.find_by_path inst_c, path
+
+    # Try to create CouchDB conflicts on directories
     child1_b.rename inst_b, Faker::Internet.slug
     sleep 12
     child1_b.rename inst_b, Faker::Internet.slug
     sleep 12
     child1_1b.rename inst_b, Faker::Internet.slug
     child1_1_1b.rename inst_b, Faker::Internet.slug
-    child1_1_1c.rename inst_c, Faker::Internet.slug
 
-    sleep 30
+    # Try to create CouchDB conflicts on files
+    file1_b.rename inst_b, Faker::Internet.slug
+    file1_b.rename inst_b, Faker::Internet.slug
+    file1_b.rename inst_b, Faker::Internet.slug
+    file1_b.overwrite inst_b, content: Faker::Friends.quote
+
+    file1_b.rename inst_b, Faker::Internet.slug
+    file1_b.rename inst_b, Faker::Internet.slug
+    file1_c.rename inst_c, Faker::Internet.slug
+    file1_c.overwrite inst_c, content: Faker::GameOfThrones.quote
+
+    file2_b.rename inst_b, Faker::Internet.slug
+    file1.rename inst_a, Faker::Internet.slug
+    file1.rename inst_a, Faker::Internet.slug
+    file2.rename inst_a, Faker::Internet.slug
+    child1_1_1c.move_to inst_c, child1_c.couch_id
+    child1_1_1c.rename inst_c, Faker::Internet.slug
+    child1_1_1b.move_to inst_b, child2_b.couch_id
+    file2_b.overwrite inst_b, content: Faker::Friends.quote
+    file2_c.rename inst_c, Faker::Internet.slug
+    file2_c.overwrite inst_c, content: Faker::GameOfThrones.quote
+
+    file1.overwrite inst_a, content: Faker::SiliconValley.quote
+    file1.overwrite inst_a, content: Faker::SiliconValley.quote
+    file2.overwrite inst_a, content: Faker::SiliconValley.quote
+
+    sleep 75
 
     # Check that the files have been synchronized
     da = File.join Helpers.current_dir, inst_a.domain, folder.name
@@ -254,7 +296,9 @@ describe 'A sharing' do
 
     # Check there is no conflict
     [inst_a, inst_b, inst_c].each do |inst|
-      assert_equal inst.check, []
+      # TODO: we should use inst.check that includes more verifications than just conflicts
+      # However, for now, this test might break on the io.cozy.shared check
+      assert_equal Couch.new.find_conflicts(inst.domain, 'io-cozy-files'), []
       inst.remove
     end
   end
