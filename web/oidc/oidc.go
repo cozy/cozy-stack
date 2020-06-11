@@ -243,7 +243,7 @@ func getConfig(context string) (*Config, error) {
 		return nil, errors.New("No OIDC is configured for this context")
 	}
 
-	/* Mandatory fields */
+	// Mandatory fields
 	clientID, ok := oidc["client_id"].(string)
 	if !ok {
 		return nil, errors.New("The client_id is missing for this context")
@@ -277,7 +277,7 @@ func getConfig(context string) (*Config, error) {
 		return nil, errors.New("The userinfo_instance_field is missing for this context")
 	}
 
-	/* Optional fields */
+	// Optional fields
 	allowOAuthToken, _ := oidc["allow_oauth_token"].(bool)
 	allowCustomInstance, _ := oidc["allow_custom_instance"].(bool)
 	userInfoPrefix, _ := oidc["userinfo_instance_prefix"].(string)

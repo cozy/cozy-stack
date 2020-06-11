@@ -103,13 +103,38 @@ func isTrustedDevice(c echo.Context, inst *instance.Instance) bool {
 	return inst.ValidateTwoFactorTrustedDeviceSecret(c.Request(), trustedDeviceToken)
 }
 
+func getLogoutURL(context string) string {
+	auth := config.GetConfig().Authentication
+	delegated, _ := auth[context].(map[string]interface{})
+	oidc, _ := delegated["oidc"].(map[string]interface{})
+	u, _ := oidc["logout_url"].(string)
+	return u
+}
+
+func redirectOIDC(c echo.Context, inst *instance.Instance) error {
+	if u := getLogoutURL(inst.ContextName); u != "" {
+		cookie, err := c.Cookie("logout")
+		if err == nil && cookie.Value == "1" {
+			c.SetCookie(&http.Cookie{
+				Name:   "logout",
+				Value:  "",
+				MaxAge: -1,
+				Domain: session.CookieDomain(inst),
+			})
+			return c.Redirect(http.StatusSeeOther, u)
+		}
+	}
+
+	var q url.Values
+	if redirect := c.QueryParam("redirect"); redirect != "" {
+		q = url.Values{"redirect": {redirect}}
+	}
+	return c.Redirect(http.StatusSeeOther, inst.PageURL("/oidc/start", q))
+}
+
 func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors string, redirect *url.URL) error {
 	if !i.IsPasswordAuthenticationEnabled() {
-		var q url.Values
-		if redirect := c.QueryParam("redirect"); redirect != "" {
-			q = url.Values{"redirect": {redirect}}
-		}
-		return c.Redirect(http.StatusSeeOther, i.PageURL("/oidc/start", q))
+		return redirectOIDC(c, i)
 	}
 
 	publicName, err := i.PublicName()
@@ -356,13 +381,31 @@ func login(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 
+// addLogoutCookie adds a cookie for logged-out users on instances in a context
+// where OIDC is configured. It allows to redirects the user on the next request
+// to a special page instead of sending them to the OIDC page (which can logs
+// in the user again automatically).
+func addLogoutCookie(c echo.Context, inst *instance.Instance) {
+	if u := getLogoutURL(inst.ContextName); u == "" {
+		return
+	}
+	c.SetCookie(&http.Cookie{
+		Name:     "logout",
+		Value:    "1",
+		MaxAge:   10,
+		Domain:   session.CookieDomain(inst),
+		Secure:   !build.IsDevRelease(),
+		HttpOnly: true,
+	})
+}
+
 func logout(c echo.Context) error {
 	res := c.Response()
 	origin := c.Request().Header.Get(echo.HeaderOrigin)
 	res.Header().Set(echo.HeaderAccessControlAllowOrigin, origin)
 	res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
 
-	instance := middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
 	if !middlewares.AllowLogout(c) {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "The user can logout only from client-side apps",
@@ -371,8 +414,10 @@ func logout(c echo.Context) error {
 
 	session, ok := middlewares.GetSession(c)
 	if ok {
-		c.SetCookie(session.Delete(instance))
+		c.SetCookie(session.Delete(inst))
 	}
+
+	addLogoutCookie(c, inst)
 
 	return c.NoContent(http.StatusNoContent)
 }
