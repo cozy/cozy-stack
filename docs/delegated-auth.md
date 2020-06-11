@@ -67,6 +67,8 @@ And in the `oidc` section, we have:
 - `redirect_uri` is where the user will be redirected by the identity provider
   after login (it must often be declared when creating the OAuth client, and we
   have to use a static hostname, not the hostname of a cozy instance)
+- `logout_url` can be set to redirect the user to this URL after they have been
+  logged out
 - `token_url`, `authorize_url`, and `userinfo_url` are the URLs used to talk to
   the identity provider (they ofter can be found by the discovery mechanism of
   OpenID Connect with the names `token_endpoint`, `authorization_endpoint`, and

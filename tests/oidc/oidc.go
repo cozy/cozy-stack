@@ -44,6 +44,7 @@ authentication:
       client_secret: my-client-secret
       scope: "openid profile"
       redirect_uri: http://cozy.tools:8080/oidc/redirect
+      logout_url: http://localhost:7007/
       authorize_url: http://localhost:7007/authorize
       token_url: http://localhost:7007/token
       userinfo_url: http://localhost:7007/userinfo
