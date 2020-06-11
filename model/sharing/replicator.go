@@ -578,6 +578,12 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 
 // ApplyBulkDocs is a multi-doctypes version of the POST _bulk_docs endpoint of CouchDB
 func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) error {
+	mu := lock.ReadWrite(inst, "sharings/"+s.SID+"/_bulk_docs")
+	if err := mu.Lock(); err != nil {
+		return err
+	}
+	defer mu.Unlock()
+
 	var refs []*SharedRef
 
 	for doctype, docs := range payload {
