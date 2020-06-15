@@ -31,7 +31,7 @@ require (
 	github.com/mssola/user_agent v0.5.2
 	github.com/ncw/swift v1.0.52
 	github.com/nightlyone/lockfile v1.0.0
-	github.com/oschwald/maxminddb-golang v1.6.0
+	github.com/oschwald/maxminddb-golang v1.7.0
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pquerna/otp v1.2.0
 	github.com/prometheus/client_golang v1.6.0
@@ -42,7 +42,7 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.7.0
-	github.com/stretchr/testify v1.6.0
+	github.com/stretchr/testify v1.6.1
 	github.com/ugorji/go/codec v1.1.7
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/image v0.0.0-20200609002522-3f4726a040e8
