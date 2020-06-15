@@ -275,7 +275,7 @@ describe 'A sharing' do
     file1.overwrite inst_a, content: Faker::SiliconValley.quote
     file2.overwrite inst_a, content: Faker::SiliconValley.quote
 
-    sleep 60
+    sleep 180 # TODO can we decrease this timeout?
 
     # Check that the files have been synchronized
     da = File.join Helpers.current_dir, inst_a.domain, folder.name
@@ -288,9 +288,7 @@ describe 'A sharing' do
 
     # Check there is no conflict
     [inst_a, inst_b, inst_c].each do |inst|
-      # TODO: we should use inst.check that includes more verifications than just conflicts
-      # However, for now, this test might break on the io.cozy.shared check
-      assert_equal Couch.new.find_conflicts(inst.domain, 'io-cozy-files'), []
+      assert_equal inst.check, []
       inst.remove
     end
   end

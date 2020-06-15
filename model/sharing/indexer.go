@@ -214,7 +214,6 @@ func (s *sharingIndexer) UpdateFileDoc(olddoc, doc *vfs.FileDoc) error {
 
 func (s *sharingIndexer) setDirOrFileRevisions(oldDocDir *vfs.DirDoc, oldDocFile *vfs.FileDoc, doc map[string]interface{}) {
 	doc["_rev"] = s.bulkRevs.Rev
-	newRevs := s.bulkRevs.Revisions
 	var oldDocRev string
 	if oldDocDir != nil {
 		oldDocRev = oldDocDir.DocRev
@@ -225,12 +224,13 @@ func (s *sharingIndexer) setDirOrFileRevisions(oldDocDir *vfs.DirDoc, oldDocFile
 		// XXX We cannot directly apply the revision chain as received by the remote
 		// instance because it might create a CouchDB conflict if a rev does not
 		// exist on the local instance. Therefore, we start from the last local rev
-		// and apply all the higher revs received from the remote.
-		chain := revsStructToChain(newRevs)
+		// and apply all the higher revs received from the remote. And the modified
+		// revisions in s.bulkRevs will also be used to update the io.cozy.shared.
+		chain := revsStructToChain(s.bulkRevs.Revisions)
 		newChain := MixupChainToResolveConflict(oldDocRev, chain)
-		newRevs = revsChainToStruct(newChain)
+		s.bulkRevs.Revisions = revsChainToStruct(newChain)
 	}
-	doc["_revisions"] = newRevs
+	doc["_revisions"] = s.bulkRevs.Revisions
 }
 
 func (s *sharingIndexer) bulkForceUpdateDoc(olddoc, doc *vfs.FileDoc) error {
