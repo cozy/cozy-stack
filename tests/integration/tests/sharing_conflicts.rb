@@ -126,15 +126,7 @@ describe 'A sharing' do
     da = File.join Helpers.current_dir, inst.domain, folder.name
     db = File.join Helpers.current_dir, inst_recipient.domain,
                    Helpers::SHARED_WITH_ME, folder.name
-    diff = Helpers.fsdiff da, db
-    if diff.any?
-      ap '<<<'
-      ap `LANG=C ls -alR '#{da}'`.lines.map(&:chomp)
-      ap '---'
-      ap `LANG=C ls -alR '#{db}'`.lines.map(&:chomp)
-      ap '>>>'
-    end
-    diff.must_be_empty
+    Helpers.fsdiff(da, db).must_be_empty
 
     # Generate conflicts with no reconciliation
 
@@ -283,7 +275,7 @@ describe 'A sharing' do
     file1.overwrite inst_a, content: Faker::SiliconValley.quote
     file2.overwrite inst_a, content: Faker::SiliconValley.quote
 
-    sleep 180
+    sleep 60
 
     # Check that the files have been synchronized
     da = File.join Helpers.current_dir, inst_a.domain, folder.name
