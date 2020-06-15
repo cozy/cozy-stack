@@ -283,7 +283,7 @@ describe 'A sharing' do
     file1.overwrite inst_a, content: Faker::SiliconValley.quote
     file2.overwrite inst_a, content: Faker::SiliconValley.quote
 
-    sleep 120
+    sleep 180
 
     # Check that the files have been synchronized
     da = File.join Helpers.current_dir, inst_a.domain, folder.name
