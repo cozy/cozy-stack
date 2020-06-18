@@ -339,15 +339,16 @@ func (s *Sharing) createUploadKey(inst *instance.Instance, target *FileDocWithRe
 // it will return a key to upload the content.
 func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions) (*KeyToUpload, error) {
 	inst.Logger().WithField("nspace", "upload").Debugf("SyncFile %#v", target)
-	mu := lock.ReadWrite(inst, "shared")
-	if err := mu.Lock(); err != nil {
-		return nil, err
-	}
-	defer mu.Unlock()
 
 	if len(target.MD5Sum) == 0 {
 		return nil, vfs.ErrInvalidHash
 	}
+	sid := consts.Files + "/" + target.DocID
+	mu := lock.ReadWrite(inst, "shared/"+sid)
+	if err := mu.Lock(); err != nil {
+		return nil, err
+	}
+	defer mu.Unlock()
 	current, err := inst.VFS().FileByID(target.DocID)
 	if err != nil {
 		if err == os.ErrNotExist {
@@ -359,7 +360,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 		return nil, err
 	}
 	var ref SharedRef
-	err = couchdb.GetDoc(inst, consts.Shared, consts.Files+"/"+target.DocID, &ref)
+	err = couchdb.GetDoc(inst, consts.Shared, sid, &ref)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
 			return nil, ErrSafety
@@ -476,7 +477,8 @@ func (s *Sharing) HandleFileUpload(inst *instance.Instance, key string, body io.
 	if target == nil {
 		return ErrMissingFileMetadata
 	}
-	mu := lock.ReadWrite(inst, "shared")
+	sid := consts.Files + "/" + target.DocID
+	mu := lock.ReadWrite(inst, "shared/"+sid)
 	if err = mu.Lock(); err != nil {
 		return err
 	}
