@@ -415,6 +415,22 @@ func GetDocRev(db Database, doctype, id, rev string, out Doc) error {
 	return makeRequest(db, doctype, http.MethodGet, url, nil, out)
 }
 
+// GetDocWithRevs fetches a document by its docType and ID.
+// out is filled with the document by json.Unmarshal-ing and contains the list
+// of all revisions
+func GetDocWithRevs(db Database, doctype, id string, out Doc) error {
+	var err error
+	id, err = validateDocID(id)
+	if err != nil {
+		return err
+	}
+	if id == "" {
+		return fmt.Errorf("Missing ID for GetDoc")
+	}
+	url := url.PathEscape(id) + "?revs=true"
+	return makeRequest(db, doctype, http.MethodGet, url, nil, out)
+}
+
 // EnsureDBExist creates the database for the doctype if it doesn't exist
 func EnsureDBExist(db Database, doctype string) error {
 	if _, err := DBStatus(db, doctype); IsNoDatabaseError(err) {

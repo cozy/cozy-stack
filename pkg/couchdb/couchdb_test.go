@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -138,6 +139,29 @@ func TestGetAllDocs(t *testing.T) {
 		assert.Equal(t, results[0].Test, "all_1")
 		assert.Equal(t, results[1].Test, "all_2")
 	}
+}
+
+func TestGetDocRevs(t *testing.T) {
+	doc := &testDoc{Test: "1"}
+	assert.NoError(t, CreateDoc(TestPrefix, doc))
+	rev1 := doc.TestRev
+	doc.Test = "2"
+	assert.NoError(t, UpdateDoc(TestPrefix, doc))
+	rev2 := doc.TestRev
+
+	res := &JSONDoc{}
+	err := GetDocWithRevs(TestPrefix, TestDoctype, doc.TestID, res)
+	revisions := res.M["_revisions"].(map[string]interface{})
+	ids := revisions["ids"].([]interface{})
+	assert.NoError(t, err)
+	assert.Len(t, ids, 2)
+	sliceRev1 := strings.SplitN(rev1, "-", 2)
+	assert.Len(t, sliceRev1, 2)
+	sliceRev2 := strings.SplitN(rev2, "-", 2)
+	assert.Len(t, sliceRev2, 2)
+
+	assert.Equal(t, ids[0].(string), sliceRev2[1])
+	assert.Equal(t, ids[1].(string), sliceRev1[1])
 }
 
 func TestBulkUpdateDocs(t *testing.T) {
