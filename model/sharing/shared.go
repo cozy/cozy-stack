@@ -346,8 +346,11 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 			Warnf("Updating an io.cozy.shared with no previous revision: %v %v\n", evt, ref)
 		ref.Revisions.Add(rev)
 	} else {
-		oldrev := evt.OldDoc.Rev()
-		ref.Revisions.InsertAfter(rev, oldrev)
+		chain, err := addMissingRevsToChain(inst, &ref, []string{rev})
+		if err != nil {
+			return err
+		}
+		ref.Revisions.InsertChain(chain)
 	}
 	if err := couchdb.UpdateDoc(inst, &ref); err != nil {
 		return err
@@ -375,6 +378,10 @@ func UpdateFileShared(db couchdb.Database, ref *SharedRef, revs RevsStruct) erro
 		ref.Revisions = &RevsTree{Rev: chain[0]}
 		ref.Revisions.InsertChain(chain)
 		return couchdb.CreateNamedDoc(db, ref)
+	}
+	chain, err := addMissingRevsToChain(db, ref, chain)
+	if err != nil {
+		return err
 	}
 	ref.Revisions.InsertChain(chain)
 	return couchdb.UpdateDoc(db, ref)

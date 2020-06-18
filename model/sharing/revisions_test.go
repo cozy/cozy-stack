@@ -5,6 +5,7 @@ import (
 	"testing"
 	"unicode"
 
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -213,6 +214,31 @@ func TestMixupChainToResolveConflict(t *testing.T) {
 	altered := MixupChainToResolveConflict("3-abc", chain)
 	expected := []string{"3-abc", "4-ddd", "5-eee"}
 	assert.Equal(t, expected, altered)
+}
+
+func TestAddMissingRevsToChain(t *testing.T) {
+	doc := &couchdb.JSONDoc{
+		Type: "io.cozy.test",
+		M: map[string]interface{}{
+			"test": "1",
+		},
+	}
+	assert.NoError(t, couchdb.CreateDoc(inst, doc))
+	rev1 := doc.Rev()
+	assert.NoError(t, couchdb.UpdateDoc(inst, doc))
+	rev2 := doc.Rev()
+
+	tree := &RevsTree{Rev: rev1}
+	ref := &SharedRef{
+		SID:       "io.cozy.test/" + doc.ID(),
+		Revisions: tree,
+	}
+
+	chain := []string{"3-ccc", "4-ddd"}
+	newChain, err := addMissingRevsToChain(inst, ref, chain)
+	assert.NoError(t, err)
+	expectedChain := []string{rev2, chain[0], chain[1]}
+	assert.Equal(t, expectedChain, newChain)
 }
 
 func TestIndexerIncrementRevisions(t *testing.T) {
