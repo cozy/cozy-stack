@@ -263,14 +263,15 @@ func updateRemovedForFiles(inst *instance.Instance, sharingID, dirID string, rul
 // UpdateShared updates the io.cozy.shared database when a document is
 // created/update/removed
 func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) error {
-	mu := lock.ReadWrite(inst, "shared")
+	evt.Doc.Type = msg.DocType
+	sid := evt.Doc.Type + "/" + evt.Doc.ID()
+
+	mu := lock.ReadWrite(inst, "shared/"+sid)
 	if err := mu.Lock(); err != nil {
 		return err
 	}
 	defer mu.Unlock()
 
-	evt.Doc.Type = msg.DocType
-	sid := evt.Doc.Type + "/" + evt.Doc.ID()
 	var ref SharedRef
 	if err := couchdb.GetDoc(inst, consts.Shared, sid, &ref); err != nil {
 		if !couchdb.IsNotFoundError(err) {
