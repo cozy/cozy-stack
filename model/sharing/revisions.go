@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 type conflictStatus int
@@ -293,6 +295,35 @@ func MixupChainToResolveConflict(rev string, chain []string) []string {
 		}
 	}
 	return mixed
+}
+
+// addMissingRevsToChain includes the missing doc revisions to the chain, i.e.
+// all the doc revisions between the highest revision saved in the
+// revisions tree, and the lowest revision of the chain.
+// This can occur when both local and remote updates are made to the same doc,
+// with the remote ones saved before the local ones.
+func addMissingRevsToChain(db couchdb.Database, ref *SharedRef, chain []string) ([]string, error) {
+	refHighestGen := ref.Revisions.Generation()
+	chainLowestGen := RevGeneration(chain[0])
+	if refHighestGen >= chainLowestGen-1 {
+		return chain, nil
+	}
+	docRef := extractDocReferenceFromID(ref.SID)
+	doc := &couchdb.JSONDoc{}
+	err := couchdb.GetDocWithRevs(db, docRef.Type, docRef.ID, doc)
+	if err != nil {
+		return chain, err
+	}
+	revisions := revsMapToStruct(doc.M["_revisions"])
+	var oldRevs []string
+	for i := refHighestGen + 1; i < chainLowestGen; i++ {
+		revID := revisions.IDs[len(revisions.IDs)-i]
+		revGen := strconv.Itoa(i)
+		rev := revGen + "-" + revID
+		oldRevs = append(oldRevs, rev)
+	}
+	chain = append(oldRevs, chain...)
+	return chain, nil
 }
 
 // conflictName generates a new name for a file/folder in conflict with another

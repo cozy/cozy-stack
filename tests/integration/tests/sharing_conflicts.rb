@@ -193,7 +193,7 @@ describe 'A sharing' do
     child1 = Folder.create inst_a, dir_id: folder.couch_id
     child2 = Folder.create inst_a, dir_id: folder.couch_id
     child1_1 = Folder.create inst_a, dir_id: child1.couch_id
-    Folder.create inst_a, dir_id: child1.couch_id
+    child1_2 = Folder.create inst_a, dir_id: child1.couch_id
     child1_1_1 = Folder.create inst_a, dir_id: child1_1.couch_id
     Folder.create inst_a, dir_id: child1_1.couch_id
     Folder.create inst_a, dir_id: child1_1.couch_id
@@ -264,9 +264,14 @@ describe 'A sharing' do
     file1.rename inst_a, Faker::Internet.slug
     file1.rename inst_a, Faker::Internet.slug
     file2.rename inst_a, Faker::Internet.slug
+
     child1_1_1c.move_to inst_c, child1_c.couch_id
     child1_1_1c.rename inst_c, Faker::Internet.slug
     child1_1_1b.move_to inst_b, child2_b.couch_id
+
+    child1_1_1.move_to inst_a, child1_2.couch_id
+    child1_1_1.rename inst_a, Faker::Internet.slug
+
     file2_b.overwrite inst_b, content: Faker::Friends.quote
     file2_c.rename inst_c, Faker::Internet.slug
     file2_c.overwrite inst_c, content: Faker::GameOfThrones.quote
@@ -275,7 +280,7 @@ describe 'A sharing' do
     file1.overwrite inst_a, content: Faker::SiliconValley.quote
     file2.overwrite inst_a, content: Faker::SiliconValley.quote
 
-    sleep 180 # TODO can we decrease this timeout?
+    sleep 80
 
     # Check that the files have been synchronized
     da = File.join Helpers.current_dir, inst_a.domain, folder.name
