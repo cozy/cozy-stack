@@ -830,6 +830,10 @@ func (s *Sharing) RevokeMember(inst *instance.Instance, index int) error {
 
 // RevokeOwner revoke the access granted to the owner and notify it
 func (s *Sharing) RevokeOwner(inst *instance.Instance) error {
+	if s.Credentials == nil { // Already revoked
+		return nil
+	}
+
 	m := &s.Members[0]
 	c := &s.Credentials[0]
 
