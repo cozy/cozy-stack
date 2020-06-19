@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
@@ -327,8 +328,9 @@ func addMissingRevsToChain(db couchdb.Database, ref *SharedRef, chain []string) 
 }
 
 // conflictName generates a new name for a file/folder in conflict with another
-// that has the same path.
-func conflictName(name string, isFile bool) string {
+// that has the same path. A conflicted file `foo` will be renamed foo (2),
+// then foo (3), etc.
+func conflictName(indexer vfs.Indexer, dirID, name string, isFile bool) string {
 	base, ext := name, ""
 	if isFile {
 		ext = filepath.Ext(name)
@@ -343,6 +345,14 @@ func conflictName(name string, isFile bool) string {
 				base = base[0:idx]
 			}
 		}
+	}
+	for j := 0; j < 1000; j++ {
+		newname := fmt.Sprintf("%s (%d)%s", base, i, ext)
+		exists, err := indexer.DirChildExists(dirID, newname)
+		if err != nil || !exists {
+			return newname
+		}
+		i++
 	}
 	return fmt.Sprintf("%s (%d)%s", base, i, ext)
 }
