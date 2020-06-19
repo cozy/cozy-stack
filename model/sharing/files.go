@@ -696,7 +696,14 @@ func (s *Sharing) resolveConflictSamePath(inst *instance.Instance, visitorID, pt
 	if err != nil {
 		return "", err
 	}
-	name := conflictName(path.Base(pth), f != nil)
+	indexer := vfs.NewCouchdbIndexer(inst)
+	var dirID string
+	if d != nil {
+		dirID = d.DirID
+	} else {
+		dirID = f.DirID
+	}
+	name := conflictName(indexer, dirID, path.Base(pth), f != nil)
 	if s.Owner {
 		return name, nil
 	}

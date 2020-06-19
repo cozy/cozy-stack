@@ -732,7 +732,7 @@ func (s *Sharing) uploadLostConflict(inst *instance.Instance, target *FileDocWit
 		body.Close()
 		return nil
 	}
-	newdoc.DocName = conflictName(newdoc.DocName, true)
+	newdoc.DocName = conflictName(indexer, newdoc.DirID, newdoc.DocName, true)
 	newdoc.DocRev = ""
 	newdoc.ResetFullpath()
 	file, err := fs.CreateFile(newdoc, nil)
@@ -758,7 +758,7 @@ func (s *Sharing) uploadWonConflict(inst *instance.Instance, src *vfs.FileDoc) e
 	if _, err := fs.FileByID(dst.DocID); err != os.ErrNotExist {
 		return err
 	}
-	dst.DocName = conflictName(dst.DocName, true)
+	dst.DocName = conflictName(indexer, dst.DirID, dst.DocName, true)
 	dst.ResetFullpath()
 	content, err := fs.OpenFile(src)
 	if err != nil {
