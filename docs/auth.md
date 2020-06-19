@@ -529,7 +529,7 @@ The parameters are:
     (like `io.cozy.files:GET` for read-only access to files).
 
 ```http
-GET /auth/authorize?client_id=oauth-client-1&response_type=code&scope=io.cozy.files:GET%20io.cozy.contacts&state=Eh6ahshepei5Oojo&redirect_uri=https%3A%2F%2Fclient.org%2F HTTP/1.1
+GET /auth/authorize?client_id=oauth-client-1&response_type=code&scope=io.cozy.files%3AGET%20io.cozy.contacts&state=Eh6ahshepei5Oojo&redirect_uri=https%3A%2F%2Fclient.org%2F HTTP/1.1
 Host: cozy.example.org
 ```
 
@@ -545,7 +545,7 @@ POST /auth/authorize HTTP/1.1
 Host: cozy.example.org
 Content-Type: application/x-www-form-urlencoded
 
-state=Eh6ahshepei5Oojo&client_id=oauth-client-1&scope=io.cozy.files:GET%20io.cozy.contacts&csrf_token=johw6Sho&response_type=code&redirect_uri=https%3A%2F%2Fclient.org%2F
+state=Eh6ahshepei5Oojo&client_id=oauth-client-1&scope=io.cozy.files%3AGET%20io.cozy.contacts&csrf_token=johw6Sho&response_type=code&redirect_uri=https%3A%2F%2Fclient.org%2F
 ```
 
 **Note**: this endpoint is protected against CSRF attacks.
