@@ -42,6 +42,24 @@ func registerClient(c echo.Context) error {
 	return c.JSON(http.StatusCreated, client)
 }
 
+func registerClientPreflight(c echo.Context) error {
+	req := c.Request()
+	res := c.Response()
+	origin := req.Header.Get(echo.HeaderOrigin)
+
+	res.Header().Add(echo.HeaderVary, echo.HeaderOrigin)
+	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestMethod)
+	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestHeaders)
+	res.Header().Set(echo.HeaderAccessControlAllowOrigin, origin)
+	res.Header().Set(echo.HeaderAccessControlAllowMethods, "OPTIONS, POST")
+	res.Header().Set(echo.HeaderAccessControlMaxAge, middlewares.MaxAgeCORS)
+	if h := req.Header.Get(echo.HeaderAccessControlRequestHeaders); h != "" {
+		res.Header().Set(echo.HeaderAccessControlAllowHeaders, h)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 func readClient(c echo.Context) error {
 	client := c.Get("client").(*oauth.Client)
 	client.TransformIDAndRev()

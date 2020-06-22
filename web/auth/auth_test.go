@@ -331,6 +331,24 @@ func TestHomeWhenLoggedIn(t *testing.T) {
 	}
 }
 
+func TestRegisterClientPreflight(t *testing.T) {
+	req, _ := http.NewRequest("OPTIONS", ts.URL+"/auth/register", nil)
+	req.Host = domain
+	req.Header.Set(echo.HeaderOrigin, "http://foo.example")
+	req.Header.Set(echo.HeaderAccessControlRequestHeaders,
+		"Accept, Content-Type, Whatever")
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "204 No Content", res.Status)
+	assert.Equal(t, "http://foo.example",
+		res.Header.Get(echo.HeaderAccessControlAllowOrigin))
+	assert.Equal(t, "OPTIONS, POST",
+		res.Header.Get(echo.HeaderAccessControlAllowMethods))
+	assert.Equal(t, "Accept, Content-Type, Whatever",
+		res.Header.Get(echo.HeaderAccessControlAllowHeaders))
+	res.Body.Close()
+}
+
 func TestRegisterClientNotJSON(t *testing.T) {
 	res, err := postForm("/auth/register", &url.Values{"foo": {"bar"}})
 	assert.NoError(t, err)
