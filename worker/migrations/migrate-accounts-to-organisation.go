@@ -238,18 +238,18 @@ func migrateAccountsToOrganization(domain string) error {
 			continue
 		}
 
-		var accJson couchdb.JSONDoc
+		var accJSON couchdb.JSONDoc
 
-		if err := couchdb.GetDoc(inst, consts.Accounts, msg.Account, &accJson); err != nil {
+		if err := couchdb.GetDoc(inst, consts.Accounts, msg.Account, &accJSON); err != nil {
 			errm = multierror.Append(errm, err)
 			continue
 		}
 
-		accJson.Type = consts.Accounts
+		accJSON.Type = consts.Accounts
 
-		data.DecryptAccount(accJson)
+		data.DecryptAccount(accJSON)
 
-		cipher, err := buildCipher(orgKey, manifest, accJson, link, log)
+		cipher, err := buildCipher(orgKey, manifest, accJSON, link, log)
 		if err != nil {
 			errm = multierror.Append(errm, err)
 			continue
@@ -259,12 +259,12 @@ func migrateAccountsToOrganization(domain string) error {
 			continue
 		}
 
-		addCipherRelationshipToAccount(accJson, cipher)
+		addCipherRelationshipToAccount(accJSON, cipher)
 
-		data.EncryptAccount(accJson)
+		data.EncryptAccount(accJSON)
 
-		log.Infof("Updating doc %s", accJson)
-		if err := couchdb.UpdateDoc(inst, &accJson); err != nil {
+		log.Infof("Updating doc %s", accJSON)
+		if err := couchdb.UpdateDoc(inst, &accJSON); err != nil {
 			errm = multierror.Append(errm, err)
 			continue
 		}

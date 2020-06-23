@@ -14,17 +14,17 @@ type Set []Rule
 
 // MarshalScopeString transforms a Set into a string for Oauth Scope
 // (a space separated concatenation of its rules)
-func (ps Set) MarshalScopeString() (string, error) {
+func (s Set) MarshalScopeString() (string, error) {
 	out := ""
-	if len(ps) == 0 {
+	if len(s) == 0 {
 		return "", nil
 	}
-	for _, r := range ps {
-		s, err := r.MarshalScopeString()
+	for _, r := range s {
+		scope, err := r.MarshalScopeString()
 		if err != nil {
 			return "", err
 		}
-		out += " " + s
+		out += " " + scope
 	}
 	return out[1:], nil
 }
@@ -54,13 +54,13 @@ func UnmarshalScopeString(in string) (Set, error) {
 // slice. In theory, JSON objects have no order on their keys, but here, we try
 // to keep the same order on decoding/encoding.
 // See docs/permissions.md for more details on the structure.
-func (ps Set) MarshalJSON() ([]byte, error) {
-	if len(ps) == 0 {
+func (s Set) MarshalJSON() ([]byte, error) {
+	if len(s) == 0 {
 		return []byte("{}"), nil
 	}
 	buf := make([]byte, 0, 4096)
 
-	for i, r := range ps {
+	for i, r := range s {
 		title := r.Title
 		if title == "" {
 			title = "rule" + strconv.Itoa(i)
@@ -85,7 +85,7 @@ func (ps Set) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON parses a json formated permission set
-func (ps *Set) UnmarshalJSON(j []byte) error {
+func (s *Set) UnmarshalJSON(j []byte) error {
 	var raws map[string]json.RawMessage
 	err := json.Unmarshal(j, &raws)
 	if err != nil {
@@ -96,7 +96,7 @@ func (ps *Set) UnmarshalJSON(j []byte) error {
 		return err
 	}
 
-	*ps = make(Set, 0)
+	*s = make(Set, 0)
 	for _, title := range titles {
 		raw := raws[title]
 		var r Rule
@@ -105,7 +105,7 @@ func (ps *Set) UnmarshalJSON(j []byte) error {
 			return err
 		}
 		r.Title = title
-		*ps = append(*ps, r)
+		*s = append(*s, r)
 	}
 	return nil
 }
@@ -136,8 +136,8 @@ func extractJSONKeys(j []byte) ([]string, error) {
 }
 
 // Some returns true if the predicate return true for any of the rule.
-func (ps Set) Some(predicate func(Rule) bool) bool {
-	for _, r := range ps {
+func (s Set) Some(predicate func(Rule) bool) bool {
+	for _, r := range s {
 		if predicate(r) {
 			return true
 		}
@@ -147,8 +147,8 @@ func (ps Set) Some(predicate func(Rule) bool) bool {
 
 // RuleInSubset returns true if any document allowed by the rule
 // is allowed by the set.
-func (ps *Set) RuleInSubset(r2 Rule) bool {
-	for _, r := range *ps {
+func (s *Set) RuleInSubset(r2 Rule) bool {
+	for _, r := range *s {
 		if r.Type != r2.Type {
 			continue
 		}
@@ -175,8 +175,8 @@ func (ps *Set) RuleInSubset(r2 Rule) bool {
 
 // IsSubSetOf returns true if any document allowed by the set
 // would have been allowed by parent.
-func (ps *Set) IsSubSetOf(parent Set) bool {
-	for _, r := range *ps {
+func (s *Set) IsSubSetOf(parent Set) bool {
+	for _, r := range *s {
 		if !parent.RuleInSubset(r) {
 			return false
 		}
@@ -186,12 +186,12 @@ func (ps *Set) IsSubSetOf(parent Set) bool {
 }
 
 // HasSameRules returns true if the two sets have exactly the same rules.
-func (ps Set) HasSameRules(other Set) bool {
-	if len(ps) != len(other) {
+func (s Set) HasSameRules(other Set) bool {
+	if len(s) != len(other) {
 		return false
 	}
 
-	for _, rule := range ps {
+	for _, rule := range s {
 		match := false
 		for _, otherRule := range other {
 			if reflect.DeepEqual(rule.Values, otherRule.Values) &&

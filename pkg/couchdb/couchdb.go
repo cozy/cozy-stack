@@ -663,7 +663,7 @@ func Upsert(db Database, doc Doc) error {
 	return UpdateDoc(db, doc)
 }
 
-func createDocOrDb(db Database, doc Doc, response interface{}) error {
+func createDocOrDB(db Database, doc Doc, response interface{}) error {
 	doctype := doc.DocType()
 	err := makeRequest(db, doctype, http.MethodPost, "", doc, response)
 	if err == nil || !IsNoDatabaseError(err) {
@@ -687,7 +687,7 @@ func CreateDoc(db Database, doc Doc) error {
 		return newDefinedIDError()
 	}
 
-	err := createDocOrDb(db, doc, &res)
+	err := createDocOrDB(db, doc, &res)
 	if err != nil {
 		return err
 	} else if !res.Ok {
