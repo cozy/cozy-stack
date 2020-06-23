@@ -16,7 +16,6 @@ import (
 
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
-	apps "github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -35,7 +34,7 @@ const JSMimeType = "application/javascript"
 const typeTextEventStream = "text/event-stream"
 
 type apiApp struct {
-	apps.Manifest
+	app.Manifest
 }
 
 func (man *apiApp) MarshalJSON() ([]byte, error) {
@@ -46,22 +45,22 @@ func (man *apiApp) MarshalJSON() ([]byte, error) {
 func (man *apiApp) Links() *jsonapi.LinksList {
 	var route string
 	links := jsonapi.LinksList{}
-	switch app := man.Manifest.(type) {
-	case (*apps.WebappManifest):
+	switch a := man.Manifest.(type) {
+	case (*app.WebappManifest):
 		route = "/apps/"
-		if app.Icon != "" {
-			links.Icon = "/apps/" + app.Slug() + "/icon/" + app.Version()
+		if a.Icon != "" {
+			links.Icon = "/apps/" + a.Slug() + "/icon/" + a.Version()
 		}
-		if (app.State() == apps.Ready || app.State() == apps.Installed) &&
-			app.Instance != nil {
-			links.Related = app.Instance.SubDomain(app.Slug()).String()
+		if (a.State() == app.Ready || a.State() == app.Installed) &&
+			a.Instance != nil {
+			links.Related = a.Instance.SubDomain(a.Slug()).String()
 		}
-	case (*apps.KonnManifest):
+	case (*app.KonnManifest):
 		route = "/konnectors/"
-		if app.Icon != "" {
-			links.Icon = "/konnectors/" + app.Slug() + "/icon/" + app.Version()
+		if a.Icon != "" {
+			links.Icon = "/konnectors/" + a.Slug() + "/icon/" + a.Version()
 		}
-		links.Perms = "/permissions/konnectors/" + app.Slug()
+		links.Perms = "/permissions/konnectors/" + a.Slug()
 	}
 	if route != "" {
 		links.Self = route + man.Manifest.Slug()
@@ -86,14 +85,14 @@ func getHandler(appType consts.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
-		man, err := apps.GetBySlug(instance, slug, appType)
+		man, err := app.GetBySlug(instance, slug, appType)
 		if err != nil {
 			return wrapAppsError(err)
 		}
 		if err := middlewares.Allow(c, permission.GET, man); err != nil {
 			return err
 		}
-		if webapp, ok := man.(*apps.WebappManifest); ok {
+		if webapp, ok := man.(*app.WebappManifest); ok {
 			webapp.Instance = instance
 		}
 		return jsonapi.Data(c, http.StatusOK, &apiApp{man}, nil)
@@ -131,9 +130,9 @@ func installHandler(installerType consts.AppType) echo.HandlerFunc {
 			w.WriteHeader(200)
 		}
 
-		inst, err := apps.NewInstaller(instance, app.Copier(installerType, instance),
-			&apps.InstallerOptions{
-				Operation:   apps.Install,
+		inst, err := app.NewInstaller(instance, app.Copier(installerType, instance),
+			&app.InstallerOptions{
+				Operation:   app.Install,
 				Type:        installerType,
 				SourceURL:   source,
 				Slug:        slug,
@@ -187,9 +186,9 @@ func updateHandler(installerType consts.AppType) echo.HandlerFunc {
 		}
 
 		permissionsAcked, _ := strconv.ParseBool(c.QueryParam("PermissionsAcked"))
-		inst, err := apps.NewInstaller(instance, app.Copier(installerType, instance),
-			&apps.InstallerOptions{
-				Operation:  apps.Update,
+		inst, err := app.NewInstaller(instance, app.Copier(installerType, instance),
+			&app.InstallerOptions{
+				Operation:  app.Update,
 				Type:       installerType,
 				SourceURL:  source,
 				Slug:       slug,
@@ -230,7 +229,7 @@ func deleteHandler(installerType consts.AppType) echo.HandlerFunc {
 		if installerType == consts.WebappType {
 			oauthClient, err := oauth.FindClientBySoftwareID(instance, "registry://"+slug)
 			if err == nil && oauthClient != nil {
-				return wrapAppsError(apps.ErrLinkedAppExists)
+				return wrapAppsError(app.ErrLinkedAppExists)
 			}
 		}
 
@@ -250,9 +249,9 @@ func deleteHandler(installerType consts.AppType) echo.HandlerFunc {
 			}
 		}
 
-		inst, err := apps.NewInstaller(instance, app.Copier(installerType, instance),
-			&apps.InstallerOptions{
-				Operation:  apps.Delete,
+		inst, err := app.NewInstaller(instance, app.Copier(installerType, instance),
+			&app.InstallerOptions{
+				Operation:  app.Delete,
 				Type:       installerType,
 				Slug:       slug,
 				Registries: instance.Registries(),
@@ -327,9 +326,9 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManif
 			log.Errorf("Cannot clean accounts: %v", err)
 			return
 		}
-		inst, err := apps.NewInstaller(instance, app.Copier(consts.KonnectorType, instance),
-			&apps.InstallerOptions{
-				Operation:  apps.Delete,
+		inst, err := app.NewInstaller(instance, app.Copier(consts.KonnectorType, instance),
+			&app.InstallerOptions{
+				Operation:  app.Delete,
 				Type:       consts.KonnectorType,
 				Slug:       slug,
 				Registries: instance.Registries(),
@@ -346,7 +345,7 @@ func deleteKonnectorWithAccounts(instance *instance.Instance, man *app.KonnManif
 	}()
 }
 
-func pollInstaller(c echo.Context, instance *instance.Instance, isEventStream bool, w http.ResponseWriter, slug string, inst *apps.Installer) error {
+func pollInstaller(c echo.Context, instance *instance.Instance, isEventStream bool, w http.ResponseWriter, slug string, inst *app.Installer) error {
 	if !isEventStream {
 		man, _, err := inst.Poll()
 		if err != nil {
@@ -413,7 +412,7 @@ func listWebappsHandler(c echo.Context) error {
 		}
 	}
 
-	docs, next, err := apps.ListWebappsWithPagination(instance, limit, startKey)
+	docs, next, err := app.ListWebappsWithPagination(instance, limit, startKey)
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -450,7 +449,7 @@ func listKonnectorsHandler(c echo.Context) error {
 			limit = converted
 		}
 	}
-	docs, next, err := apps.ListKonnectorsWithPagination(instance, limit, startKey)
+	docs, next, err := app.ListKonnectorsWithPagination(instance, limit, startKey)
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -489,13 +488,13 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
 		version := c.Param("version")
-		app, err := apps.GetBySlug(instance, slug, appType)
+		a, err := app.GetBySlug(instance, slug, appType)
 		if err != nil {
 			return err
 		}
 
 		if !middlewares.IsLoggedIn(c) {
-			if err := middlewares.Allow(c, permission.GET, app); err != nil {
+			if err := middlewares.Allow(c, permission.GET, a); err != nil {
 				return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
 			}
 		}
@@ -510,15 +509,15 @@ func iconHandler(appType consts.AppType) echo.HandlerFunc {
 		var filepath string
 		switch appType {
 		case consts.WebappType:
-			filepath = path.Join("/", app.(*apps.WebappManifest).Icon)
-			fs = apps.AppsFileServer(instance)
+			filepath = path.Join("/", a.(*app.WebappManifest).Icon)
+			fs = app.AppsFileServer(instance)
 		case consts.KonnectorType:
-			filepath = path.Join("/", app.(*apps.KonnManifest).Icon)
-			fs = apps.KonnectorsFileServer(instance)
+			filepath = path.Join("/", a.(*app.KonnManifest).Icon)
+			fs = app.KonnectorsFileServer(instance)
 		}
 
 		err = fs.ServeFileContent(c.Response(), c.Request(),
-			app.Slug(), app.Version(), app.Checksum(), filepath)
+			a.Slug(), a.Version(), a.Checksum(), filepath)
 		if os.IsNotExist(err) {
 			return echo.NewHTTPError(http.StatusNotFound, err)
 		}
@@ -550,23 +549,23 @@ func KonnectorRoutes(router *echo.Group) {
 
 func wrapAppsError(err error) error {
 	switch err {
-	case apps.ErrInvalidSlugName:
+	case app.ErrInvalidSlugName:
 		return jsonapi.InvalidParameter("slug", err)
-	case apps.ErrAlreadyExists:
+	case app.ErrAlreadyExists:
 		return jsonapi.Conflict(err)
-	case apps.ErrNotFound:
+	case app.ErrNotFound:
 		return jsonapi.NotFound(err)
-	case apps.ErrNotSupportedSource:
+	case app.ErrNotSupportedSource:
 		return jsonapi.InvalidParameter("Source", err)
-	case apps.ErrManifestNotReachable:
+	case app.ErrManifestNotReachable:
 		return jsonapi.NotFound(err)
-	case apps.ErrSourceNotReachable:
+	case app.ErrSourceNotReachable:
 		return jsonapi.BadRequest(err)
-	case apps.ErrBadManifest:
+	case app.ErrBadManifest:
 		return jsonapi.BadRequest(err)
-	case apps.ErrMissingSource:
+	case app.ErrMissingSource:
 		return jsonapi.BadRequest(err)
-	case apps.ErrLinkedAppExists:
+	case app.ErrLinkedAppExists:
 		return jsonapi.BadRequest(err)
 	}
 	if _, ok := err.(*url.Error); ok {

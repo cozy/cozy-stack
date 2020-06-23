@@ -33,7 +33,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	web_utils "github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/worker/thumbnail"
 	"github.com/labstack/echo/v4"
@@ -833,7 +832,7 @@ func serveThumbnailPlaceholder(res http.ResponseWriter, req *http.Request, doc *
 		return os.ErrNotExist
 	}
 	etag := f.Etag
-	if web_utils.CheckPreconditions(res, req, etag) {
+	if utils.CheckPreconditions(res, req, etag) {
 		return nil
 	}
 	res.Header().Set("Etag", etag)

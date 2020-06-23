@@ -21,7 +21,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	web_utils "github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 
@@ -264,7 +263,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeFile can be used to respond with an asset file to an HTTP request
 func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request, f *modelAsset.Asset, checkETag bool) {
-	if checkETag && web_utils.CheckPreconditions(w, r, f.Etag) {
+	if checkETag && utils.CheckPreconditions(w, r, f.Etag) {
 		return
 	}
 
