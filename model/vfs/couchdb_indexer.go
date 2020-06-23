@@ -924,7 +924,7 @@ func (c *couchdbIndexer) checkNoConflicts(accumulate func(*FsckLog), failFast bo
 		return err
 	}
 	for _, doc := range docs {
-		if doc.Type != consts.DirType {
+		if doc.Type == consts.DirType {
 			accumulate(&FsckLog{
 				Type:   ConflictInIndex,
 				DirDoc: &TreeFile{DirOrFileDoc: doc},
