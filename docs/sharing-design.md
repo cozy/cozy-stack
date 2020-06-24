@@ -1,35 +1,61 @@
-# Request for comments about the sharings
+# Sharing design
 
-## Hypothesis
+## Baseline
 
-1. A sharer may not know the adresses of the recipients' cozy instances, but
-   he/she has a way to send them an URL on his/her cozy to start the process.
-2. A user can preview a sharing before accepting it if the application supports
-   this option. Else, he/she will have only the description and rules to make
-   his/her mind about accepting or refusing the sharing.
-3. The data is duplicated: it is both on the owner's cozy, and on the
-   recipients' cozy (no cloud federation like NextCloud).
-4. The applications say what is shared, the stack synchronizes that. The stack
-   does the low-level stuff and gives primitives to the applications. The
-   applications must use them in a responsible manner, and in particular, to
-   avoid transitivity issues.
-5. The CouchDB replication will be used to synchronize the documents. It means
-   that the documents will be same on the owner and on the recipients ("symetric
-   sharing").
-6. For files and folders, the replicator will be customized to handle the
-   specificities of the `io.cozy.files` doctype.
-7. The applications must be able to work with broken relationships between
-   documents.
-8. The applications should know how to deal with CouchDB conflicts. At least,
-   the default choice of a winner for conflicts by CouchDB should be acceptable
-   if the applications don't do anything to detect and resolve conflicts.
-9. First safety principle: when a user B accepts a sharing from user A, the
-   documents that were on the user B's cozy before the sharing are not sent to
-   user A without an explicit action of user B (like moving a file to a shared
-   directory).
-10. Second safety principle: when two users, A and B, are sharing documents, a
-    change of a document on the user A's cozy can't make an exiting document of
-    user B enter in the sharing.
+Here we detail the baseline of the Cozy sharing design and provide some core
+statements.
+
+### Data sync
+
+- The shared data is duplicated among members: it is both on the sharer's cozy
+  (the owner), and on the recipients' cozy. This is a core difference compared
+  to a federated sharing such as the one in
+  [NextCloud](https://docs.nextcloud.com/server/latest/user_manual/files/federated_cloud_sharing.html).
+- The [CouchDB replication
+  protocol](https://docs.couchdb.org/en/stable/replication/protocol.html) is
+  used to synchronize the documents. It means that the documents will be same
+  on the owner side and on the recipients side ("symmetric sharing").
+- The applications say what is shared, the cozy stack synchronizes that. The
+  stack does the low-level work and gives primitives to the applications. The
+  applications must use them in a responsible manner, and in particular, to
+  avoid transitivity issues.
+- The applications should know how to deal with documents' conflicts, e.g. what
+  to do with a document updated by several members at the same time with
+  different content. At least, the default [CouchDB
+  behaviour](https://docs.couchdb.org/en/stable/replication/conflicts.html) to
+  handle conflicts and select winning revisions should be acceptable if the
+  applications don't do anything to detect and resolve conflicts.
+
+### Contacts discovery
+
+- A sharer may not know the addresses of the recipients' cozy instances, but
+  he/she has a way to send them an URL on his/her cozy to start the process.
+
+### Recipient preview
+
+- A recipient can preview a sharing before accepting it if the application
+  supports this option. Else, he/she will have only the description and rules to
+  make his/her mind about accepting or refusing the sharing.
+
+### Specific data type support
+
+- For files and folders, the documents replication process (the replicator) is
+  customized to handle the specificities of the
+  [io.cozy.files](https://github.com/cozy/cozy-doctypes/blob/master/docs/io.cozy.files.md)
+  doctype.
+- The applications must be able to work with broken
+  [relationships](https://github.com/cozy/cozy-doctypes/#relationships) between
+  documents, which can happen if one shares a document without its relationships.
+
+### Safety principles
+
+- _First safety principle_: when a user B accepts a sharing from user A, the
+  documents that were on the user B's cozy before the sharing are not sent to
+  user A without an explicit action of user B (like moving a file to a shared
+  directory).
+- _Second safety principle_: when two users, A and B, are sharing documents, a
+  change of a document on the user A's cozy can't make an exiting document of
+  user B enter in the sharing.
 
 ## Setup of a sharing
 
