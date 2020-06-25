@@ -1,0 +1,46 @@
+sequenceDiagram
+    %% https://mermaidjs.github.io/
+    participant B as Bob
+    participant A as Alice
+    participant C as Charlie
+
+    Note over B,C: io.cozy.todos/todo1<br /> revs: 1-a
+
+    A-->>A: Update todo1<br />rev: 2-a
+    A-->>A: Update todo1<br />rev: 3-a
+
+    C-->>C: Update todo1<br />rev: 2-c
+
+
+    A-->>A: Update io.cozy.shared
+    note right of A: io.cozy.todos/todo1<br /> revs: 1-a --> 2-a --> 3-a
+
+    C-->>C: Update io.cozy.shared
+    note right of C: io.cozy.todos/todo1<br /> revs: 1-a --> 2-c
+
+    par Replicate to Bob
+      A-->>B: replication: [todo1: revs: [2-a, 3-a]]
+      B-->>B: Apply changes
+      B-->>B: Update todo1<br />rev: 3-a
+      B-->>B: Update io.cozy.shared
+      note right of B: io.cozy.todos/todo1<br /> revs: 1-a --> 2-a --> 3-a
+    and Replicate to Charlie
+      A-->>C: replication: [todo1: revs: [2-a, 3-a]]
+      C-->>C: Apply changes
+      C-->>C: Detect conflict for todo1: 2-a vs 2-c<br/>2-a wins
+      C-->>C: Update todo1<br/>rev: 3-a<br/>
+      C-->>C: Update io.cozy.shared
+      note right of C: io.cozy.todos/todo1<br /> revs: 1-a --> 2-a --> 3-a<br />1-a --> 2-c
+    end
+
+    C-->>A: replication: [todo1: revs: [2-c, 3-a]]
+    A-->>A: Apply changes
+    A-->>A: Detect conflict for todo1: 2-a vs 2-c<br/>2-a wins
+    A-->>A: Update todo1<br/>rev: 3-a<br/>
+  A-->>A: Update io.cozy.shared
+    note right of A: io.cozy.todos/todo1<br /> revs: 1-a --> 2-a --> 3-a<br />1-a --> 2-c
+
+    A-->>B: replication: [todo1: revs: [2-c, 3-a]]
+    B-->>B: Apply same treatment...
+
+    Note over B,C: io.cozy.todos/todo1<br /> revs: 1-a --> 2-a --> 3-a<br />1-a --> 2-c
