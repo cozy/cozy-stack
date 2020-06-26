@@ -109,7 +109,7 @@ be replicated unless Bob accepts to in his _Todo_ application. Triggers are also
 added on Bob’s instance for filling the `io.cozy.shared` database, and to call
 the replicator after that.
 
-**Note:** there is be a lock around the initial filling of the
+**Note:** there is a lock around the initial filling of the
 `io.cozy.shared` database to avoid concurrency issues if two recipients accept
 the sharing at the same time.
 
