@@ -213,6 +213,27 @@ same revisions histories.
 
 ![Revisions sync between Alice, Bob and Charlie](diagrams/sharing-revisions.png)
 
+### CouchDB conflicts
+
+A [CouchDB
+conflict](https://docs.couchdb.org/en/stable/replication/conflicts.html) is when
+a document has conflicting revisions, i.e. it has at least two revisions
+branches in its revision history. Hence, these conflicts are made on the
+database level.
+[By
+design](https://docs.couchdb.org/en/stable/replication/protocol.html#upload-batch-of-changed-documents),
+CouchDB can produce conflicts in its replication protocol, as the revision
+history is replicated and forced among nodes.
+
+We detail [here](https://docs.cozy.io/en/cozy-stack/couchdb-quirks/#conflicts)
+how a CouchDB conflict can be made.
+
+In the particular case of files and folders, we implemented specific strategies
+to avoid having to deal with conflicts at the application level: the stack is
+able to prevent CouchDB conflicts for `io.cozy.files` documents and enforce
+[reconciliation](#conflict-resolution) when possible. We also detail what is
+done when [no reconciliation](#conflict-with-no-reconciliation) can be made.
+
 ## Files and folders
 
 ### Why are they special?
@@ -243,12 +264,12 @@ from a sharing replication.
 
 We will continue to have a replication as close to the CouchDB replication as
 possible. It means we synchronize a state, and not looking for the history of
-operations like cozy-desktop does. It is less accurate and can lead more often
-to conflicts. The cozy instances are expected to be online most of the time and
-have a short delay for replications: we think that the conflicts will happen
-only on rares occasions. This make acceptable to take this shortcut. And, in
-case of conflicts, we will preserve the content of the files (no data loss),
-even if it means duplicating the files.
+operations like [cozy-desktop](https://github.com/cozy-labs/cozy-desktop/) does.
+It is less accurate and can lead more often to conflicts. The cozy instances are
+expected to be online most of the time and have a short delay for replications:
+we think that the conflicts will happen only on rares occasions. This make
+acceptable to take this shortcut. And, in case of conflicts, we will preserve
+the content of the files (no data loss), even if it means duplicating the files.
 
 ### How a sharing involving files works?
 
@@ -278,7 +299,9 @@ conflicts for files and folder by using a special conflict resolution process.
 
 ### Conflict resolution
 
-We have several cases of conflicts:
+In the case of `io.cozy.files` documents, we prevent CouchDB conflicts to happen
+by implementing specific strategies. Here, we detail the conflicts situations
+where a resolution is possible:
 
 1. When two cozy instances have modified the same file concurrently
 2. Same for a folder
