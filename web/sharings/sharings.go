@@ -441,6 +441,7 @@ func PostDiscovery(c echo.Context) error {
 	if cozyURL == "" {
 		cozyURL = c.FormValue("slug")
 	}
+	cozyURL = strings.TrimSuffix(cozyURL, ".")
 	if !strings.HasPrefix(cozyURL, "http://") && !strings.HasPrefix(cozyURL, "https://") {
 		cozyURL = "https://" + cozyURL
 	}
