@@ -22,7 +22,7 @@ instance:
 
 ## lint: enforce a consistent code style and detect code smells
 lint: bin/golangci-lint
-	@bin/golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace -D unused --max-same-issues 10
+	@bin/golangci-lint run -E gofmt -E unconvert -E misspell -E whitespace -E exportloopref -D unused --max-same-issues 10
 .PHONY: lint
 
 bin/golangci-lint: Makefile
