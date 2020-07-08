@@ -208,6 +208,12 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 		return WrapVfsError(err)
 	}
 
+	if updated := c.QueryParam("UpdatedAt"); updated != "" {
+		if at, err2 := time.Parse(time.RFC3339, updated); err2 == nil {
+			newdoc.UpdatedAt = at
+		}
+	}
+
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 
 	if err = CheckIfMatch(c, olddoc.Rev()); err != nil {
