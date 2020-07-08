@@ -983,6 +983,81 @@ func TestModifyContentWithSourceAccount(t *testing.T) {
 	assert.Equal(t, identifier, fcm["sourceAccountIdentifier"])
 }
 
+func TestModifyContentWithCreatedAt(t *testing.T) {
+	buf := strings.NewReader("foo")
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=old-file-with-c", buf)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res.StatusCode)
+	data := obj["data"].(map[string]interface{})
+	fileID, ok := data["id"].(string)
+	assert.True(t, ok)
+	attrs := data["attributes"].(map[string]interface{})
+	createdAt := attrs["created_at"].(string)
+	updatedAt := attrs["updated_at"].(string)
+
+	createdAt2 := "2017-11-16T13:37:01.345Z"
+	newcontent := "updated by a client with a new CreatedAt"
+	res2, obj2 := uploadMod(t, "/files/"+fileID+"?CreatedAt="+createdAt2, "text/plain", newcontent, "")
+	assert.Equal(t, 200, res2.StatusCode)
+	data2 := obj2["data"].(map[string]interface{})
+	attrs2 := data2["attributes"].(map[string]interface{})
+	createdAt3 := attrs2["created_at"].(string)
+	updatedAt2 := attrs2["updated_at"].(string)
+	assert.Equal(t, createdAt3, createdAt)
+	assert.NotEqual(t, updatedAt2, updatedAt)
+}
+
+func TestModifyContentWithUpdatedAt(t *testing.T) {
+	buf := strings.NewReader("foo")
+	createdAt := "2017-11-16T13:37:01.345Z"
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=old-file-with-u&CreatedAt="+createdAt, buf)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res.StatusCode)
+	data := obj["data"].(map[string]interface{})
+	fileID, ok := data["id"].(string)
+	assert.True(t, ok)
+
+	updatedAt2 := "2017-12-16T13:37:01.345Z"
+	newcontent := "updated by a client with a new UpdatedAt"
+	res2, obj2 := uploadMod(t, "/files/"+fileID+"?UpdatedAt="+updatedAt2, "text/plain", newcontent, "")
+	assert.Equal(t, 200, res2.StatusCode)
+	data2 := obj2["data"].(map[string]interface{})
+	attrs2 := data2["attributes"].(map[string]interface{})
+	createdAt2 := attrs2["created_at"].(string)
+	updatedAt3 := attrs2["updated_at"].(string)
+	assert.Equal(t, createdAt2, createdAt)
+	assert.Equal(t, updatedAt3, updatedAt2)
+}
+
+func TestModifyContentWithUpdatedAtAndCreatedAt(t *testing.T) {
+	buf := strings.NewReader("foo")
+	createdAt := "2017-11-16T13:37:01.345Z"
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=old-file-with-u-and-c&CreatedAt="+createdAt, buf)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+	res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res.StatusCode)
+	data := obj["data"].(map[string]interface{})
+	fileID, ok := data["id"].(string)
+	assert.True(t, ok)
+
+	createdAt2 := "2017-10-16T13:37:01.345Z"
+	updatedAt2 := "2017-12-16T13:37:01.345Z"
+	newcontent := "updated by a client with a CreatedAt older than UpdatedAt"
+	res2, obj2 := uploadMod(t, "/files/"+fileID+"?CreatedAt="+createdAt2+"&UpdatedAt="+updatedAt2, "text/plain", newcontent, "")
+	assert.Equal(t, 200, res2.StatusCode)
+	data2 := obj2["data"].(map[string]interface{})
+	attrs2 := data2["attributes"].(map[string]interface{})
+	createdAt3 := attrs2["created_at"].(string)
+	updatedAt3 := attrs2["updated_at"].(string)
+	assert.Equal(t, createdAt3, createdAt)
+	assert.Equal(t, updatedAt3, updatedAt2)
+}
+
 func TestModifyContentConcurrently(t *testing.T) {
 	type result struct {
 		rev string
