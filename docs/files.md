@@ -428,6 +428,7 @@ The `created_at` field will be the first valid value in this list:
 
 The `updated_at` field will be the first value in this list:
 
+- the datetime extracted from the EXIF for a photo if it is greater than the other values
 - the `UpdatedAt` parameter from the query-string
 - the `Date` HTTP header
 - the current time from the server.
@@ -730,12 +731,21 @@ Get a thumbnail of a file (for an image only). `:format` can be `small`
 
 Overwrite a file
 
+The `updated_at` field will be the first value in this list:
+
+- the datetime extracted from the EXIF for a photo if it is greater than the other values
+- the `UpdatedAt` parameter from the query-string
+- the `Date` HTTP header
+- the current time from the server.
+
 #### Query-String
 
-| Parameter  | Description                         |
-| ---------- | ----------------------------------- |
-| Tags       | an array of tags                    |
-| MetadataID | the identifier of a metadata object |
+| Parameter  | Description                                        |
+| ---------- | -------------------------------------------------- |
+| Tags       | an array of tags                                   |
+| Executable | `true` if the file is executable (UNIX permission) |
+| MetadataID | the identifier of a metadata object                |
+| UpdatedAt  | the modification date of the file                  |
 
 #### HTTP headers
 
