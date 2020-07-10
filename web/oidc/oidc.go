@@ -31,6 +31,7 @@ func Start(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	conf, err := getConfig(inst.ContextName)
 	if err != nil {
+		inst.Logger().WithField("nspace", "oidc").Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
 	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), conf)
@@ -243,6 +244,12 @@ func getConfig(context string) (*Config, error) {
 		return nil, errors.New("No OIDC is configured for this context")
 	}
 
+	// Optional fields
+	allowOAuthToken, _ := oidc["allow_oauth_token"].(bool)
+	allowCustomInstance, _ := oidc["allow_custom_instance"].(bool)
+	userInfoPrefix, _ := oidc["userinfo_instance_prefix"].(string)
+	userInfoSuffix, _ := oidc["userinfo_instance_suffix"].(string)
+
 	// Mandatory fields
 	clientID, ok := oidc["client_id"].(string)
 	if !ok {
@@ -273,15 +280,9 @@ func getConfig(context string) (*Config, error) {
 		return nil, errors.New("The userinfo_url is missing for this context")
 	}
 	userInfoField, ok := oidc["userinfo_instance_field"].(string)
-	if !ok {
+	if !ok && !allowCustomInstance {
 		return nil, errors.New("The userinfo_instance_field is missing for this context")
 	}
-
-	// Optional fields
-	allowOAuthToken, _ := oidc["allow_oauth_token"].(bool)
-	allowCustomInstance, _ := oidc["allow_custom_instance"].(bool)
-	userInfoPrefix, _ := oidc["userinfo_instance_prefix"].(string)
-	userInfoSuffix, _ := oidc["userinfo_instance_suffix"].(string)
 
 	config := &Config{
 		AllowOAuthToken:     allowOAuthToken,
