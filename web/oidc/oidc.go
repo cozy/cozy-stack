@@ -384,7 +384,7 @@ func checkDomainFromUserInfo(conf *Config, inst *instance.Instance, token string
 	if conf.AllowCustomInstance {
 		sub, ok := params["sub"].(string)
 		if !ok || sub == "" || sub != inst.OIDCID {
-			logger.WithNamespace("oidc").Errorf("Invalid sub: %s != %s", sub, inst.OIDCID)
+			inst.Logger().WithField("nspace", "oidc").Errorf("Invalid sub: %s != %s", sub, inst.OIDCID)
 			return errors.New("the cozy was not found")
 		}
 		return nil
