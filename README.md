@@ -1,7 +1,7 @@
 Cozy Cloud
 ==========
 
-[![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/cozy/cozy-stack)
+[![go.dev reference](https://pkg.go.dev/badge/github.com/cozy/cozy-stack)](https://pkg.go.dev/github.com/cozy/cozy-stack)
 [![Build Status](https://github.com/cozy/cozy-stack/workflows/CI/badge.svg)](https://github.com/cozy/cozy-stack/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cozy/cozy-stack)](https://goreportcard.com/report/github.com/cozy/cozy-stack)
 
