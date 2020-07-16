@@ -53,7 +53,7 @@ func fsckHandler(c echo.Context) (err error) {
 		}
 		if errenc := encoder.Encode(log); errenc != nil {
 			i.Logger().WithField("nspace", "fsck").
-				Warnf("Cannot encode to JSON: %s (%v)", err, log)
+				Warnf("Cannot encode to JSON: %s (%v)", errenc, log)
 		}
 		if f, ok := w.(http.Flusher); ok {
 			f.Flush()
@@ -63,7 +63,7 @@ func fsckHandler(c echo.Context) (err error) {
 		log := map[string]string{"error": err.Error()}
 		if errenc := encoder.Encode(log); errenc != nil {
 			i.Logger().WithField("nspace", "fsck").
-				Warnf("Cannot encode to JSON: %s (%v)", err, log)
+				Warnf("Cannot encode to JSON: %s (%v)", errenc, log)
 		}
 		if f, ok := w.(http.Flusher); ok {
 			f.Flush()

@@ -80,17 +80,27 @@ func (f *FsckLog) String() string {
 			return "the file is present in the index but not on the filesystem"
 		}
 		return "the directory is present in the index but not on the filesystem"
+	case IndexMissing:
+		return "the document is present on the local filesystem but not in the index"
 	case TypeMismatch:
 		if f.IsFile {
 			return "it's a file in the index but a directory on the filesystem"
 		}
 		return "it's a directory in the index but a file on the filesystem"
-	case IndexMissing:
-		return "the document is present on the local filesystem but not in the index"
 	case ContentMismatch:
 		return "the document content does not match the store content checksum"
 	case FileMissing:
 		return "the document is a version whose file is not present in the index"
+	case IndexFileWithPath:
+		return "the file document in CouchDB has a path field"
+	case IndexDuplicateName:
+		return "two documents have the same name inside the same folder"
+	case TrashedNotInTrash:
+		return "a file document has trashed set to true but its parent is not in the trash"
+	case NotTrashedInTrash:
+		return "a file document has trashed set tot false but its parent is in the trash"
+	case ConflictInIndex:
+		return "this document has a conflict in CouchDB between two branches of revisions"
 	}
 	panic("bad FsckLog type")
 }
