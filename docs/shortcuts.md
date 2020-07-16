@@ -107,7 +107,7 @@ Host: alice.cozy.example
 Accept: application/vnd.api+json
 ```
 
-## Response (JSON variant)
+### Response (JSON variant)
 
 ```http
 HTTP/1.1 200 OK
