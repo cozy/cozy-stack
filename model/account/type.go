@@ -336,12 +336,15 @@ func (at *AccountType) RefreshAccount(a Account) error {
 }
 
 // TypeInfo returns the AccountType document for a given id
-func TypeInfo(id string) (*AccountType, error) {
+func TypeInfo(id, contextName string) (*AccountType, error) {
 	if id == "" {
 		return nil, errors.New("no account type id provided")
 	}
 	var a AccountType
-	err := couchdb.GetDoc(couchdb.GlobalSecretsDB, consts.AccountTypes, id, &a)
+	err := couchdb.GetDoc(couchdb.GlobalSecretsDB, consts.AccountTypes, contextName+"/"+id, &a)
+	if couchdb.IsNotFoundError(err) {
+		err = couchdb.GetDoc(couchdb.GlobalSecretsDB, consts.AccountTypes, id, &a)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +352,7 @@ func TypeInfo(id string) (*AccountType, error) {
 }
 
 // FindAccountTypesBySlug returns the AccountType documents for the given slug
-func FindAccountTypesBySlug(slug string) ([]*AccountType, error) {
+func FindAccountTypesBySlug(slug, contextName string) ([]*AccountType, error) {
 	var docs []*AccountType
 	req := &couchdb.FindRequest{
 		UseIndex: "by-slug",
@@ -360,4 +363,35 @@ func FindAccountTypesBySlug(slug string) ([]*AccountType, error) {
 		return nil, err
 	}
 	return docs, nil
+}
+
+func filterByContext(types []*AccountType, contextName string) []*AccountType {
+	var filtered []*AccountType
+
+	// First, take the account types specific to this context
+	for _, t := range types {
+		parts := strings.SplitN(t.DocID, "/", 2)
+		if len(parts) == 2 && parts[0] == contextName {
+			filtered = append(filtered, t)
+		}
+	}
+
+	// Then, take the global account types that have not been overloaded
+	for _, t := range types {
+		parts := strings.SplitN(t.DocID, "/", 2)
+		if len(parts) == 1 {
+			overloaded := false
+			for _, typ := range filtered {
+				if typ.DocID == contextName+"/"+t.DocID {
+					overloaded = true
+					break
+				}
+			}
+			if !overloaded {
+				filtered = append(filtered, t)
+			}
+		}
+	}
+
+	return filtered
 }

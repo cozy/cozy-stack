@@ -34,7 +34,7 @@ func start(c echo.Context) error {
 	clientState := c.QueryParam("state")
 	nonce := c.QueryParam("nonce")
 	accountTypeID := c.Param("accountType")
-	accountType, err := account.TypeInfo(accountTypeID)
+	accountType, err := account.TypeInfo(accountTypeID, instance.ContextName)
 	if err != nil {
 		return err
 	}
@@ -79,10 +79,6 @@ func redirect(c echo.Context) error {
 	accessCode := c.QueryParam("code")
 	accessToken := c.QueryParam("access_token")
 	accountTypeID := c.Param("accountType")
-	accountType, err := account.TypeInfo(accountTypeID)
-	if err != nil {
-		return err
-	}
 
 	i, _ := lifecycle.GetInstance(c.Request().Host)
 	clientState := ""
@@ -109,10 +105,16 @@ func redirect(c echo.Context) error {
 			return errors.New("bad state")
 		}
 		if i == nil {
+			var err error
 			i, err = lifecycle.GetInstance(state.InstanceDomain)
 			if err != nil {
 				return errors.New("bad state")
 			}
+		}
+
+		accountType, err := account.TypeInfo(accountTypeID, i.ContextName)
+		if err != nil {
+			return err
 		}
 
 		if accountType.TokenEndpoint == "" {
@@ -136,8 +138,7 @@ func redirect(c echo.Context) error {
 		clientState = state.ClientState
 	}
 
-	err = couchdb.CreateDoc(i, acc)
-	if err != nil {
+	if err := couchdb.CreateDoc(i, acc); err != nil {
 		return err
 	}
 
@@ -160,7 +161,7 @@ func refresh(c echo.Context) error {
 		return err
 	}
 
-	accountType, err := account.TypeInfo(acc.AccountType)
+	accountType, err := account.TypeInfo(acc.AccountType, instance.ContextName)
 	if err != nil {
 		return err
 	}
