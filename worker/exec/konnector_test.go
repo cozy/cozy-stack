@@ -229,7 +229,7 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 	assert.NoError(t, err)
 	defer func() {
 		// Clean the account types
-		ats, _ := account.FindAccountTypesBySlug("my-konnector-1")
+		ats, _ := account.FindAccountTypesBySlug("my-konnector-1", "all-contexts")
 		for _, at = range ats {
 			_ = couchdb.DeleteDoc(couchdb.GlobalSecretsDB, at)
 		}

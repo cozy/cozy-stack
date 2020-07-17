@@ -465,7 +465,7 @@ func (w *konnectorWorker) Slug() string {
 func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
 	var parameters interface{} = w.man.Parameters
 
-	accountTypes, err := account.FindAccountTypesBySlug(w.slug)
+	accountTypes, err := account.FindAccountTypesBySlug(w.slug, i.ContextName)
 	if err == nil && len(accountTypes) == 1 && accountTypes[0].GrantMode == "secret" {
 		secret := accountTypes[0].Secret
 		if w.man.Parameters == nil {

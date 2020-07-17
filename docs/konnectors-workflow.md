@@ -388,6 +388,21 @@ secrets are needed for this service.
 
 The secret is given to the konnector in the `COZY_PARAMETERS` env variable.
 
+### Overloading an account type for a given context
+
+It is possible to use a different account type for a given context, by creating
+a new document with an id prefix by the context name and `/`. For example, a
+different secret can be used in the `foobar` context by injecting this document
+in `secrets/io-cozy-account_types`:
+
+```
+{
+    "_id": "foobar/service.example",
+    "grant_mode": "secret",
+    "slug": "service",
+    "secret": "th1$_1$_n0t_th3_s4m3_s3cr3t!"
+}
+```
 
 ### Reminder OAuth flow
 
