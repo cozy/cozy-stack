@@ -203,8 +203,7 @@ Authorization: Token AbCdE
     "description": {
         "en": "The drive application"
     },
-    "repository": "https://github.com/cozy/cozy-drive",
-    "tags": ["foo", "bar", "baz"]
+    "repository": "https://github.com/cozy/cozy-drive"
 }
 ```
 
@@ -330,21 +329,13 @@ Filtering is allowed on the following fields:
 
 -   `type`
 -   `editor`
--   `category`
--   `tags`
-
-Filtering is allowed on multiple tags with the `,` separator. For example:
-`filter[tags]=foo,bar` will match the applications with both `foo` and `bar` as
-tags.
 
 Sorting is allowed on the following fields:
 
 -   `slug`
 -   `type`
 -   `editor`
--   `category`
 -   `created_at`
--   `updated_at`
 
 #### Query-String
 
