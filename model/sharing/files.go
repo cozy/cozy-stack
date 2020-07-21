@@ -330,7 +330,11 @@ func (s *Sharing) RemoveSharingDir(inst *instance.Instance) error {
 		ID:   s.SID,
 		Type: consts.Sharings,
 	})
-	dir.CozyMetadata.UpdatedAt = time.Now()
+	if dir.CozyMetadata == nil {
+		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+	} else {
+		dir.CozyMetadata.UpdatedAt = time.Now()
+	}
 	suffix := inst.Translate("Tree Revoked sharing suffix")
 	parentPath := filepath.Dir(dir.Fullpath)
 	basename := fmt.Sprintf("%s (%s)", dir.DocName, suffix)
