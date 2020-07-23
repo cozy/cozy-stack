@@ -132,6 +132,18 @@ func FileHandler(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// ReuploadHandler is used to try sending again files
+func ReuploadHandler(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	sharing.PushUploadJob(s, inst)
+	return c.NoContent(http.StatusNoContent)
+}
+
 // EndInitial is used for ending the initial sync phase of a sharing
 func EndInitial(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -154,6 +166,7 @@ func replicatorRoutes(router *echo.Group) {
 	group.GET("/:sharing-id/io.cozy.files/:id", GetFolder, checkSharingReadPermissions)
 	group.PUT("/:sharing-id/io.cozy.files/:id/metadata", SyncFile, checkSharingWritePermissions)
 	group.PUT("/:sharing-id/io.cozy.files/:id", FileHandler, checkSharingWritePermissions)
+	group.POST("/:sharing-id/reupload", ReuploadHandler, checkSharingReadPermissions)
 	group.DELETE("/:sharing-id/initial", EndInitial, checkSharingWritePermissions)
 }
 

@@ -16,6 +16,12 @@ import (
 
 var managerHTTPClient = &http.Client{Timeout: 30 * time.Second}
 
+// AskReupload is the function that will be called when the disk quota is
+// increased to ask reuploading files from the sharings. A package variable is
+// used to avoid a dependency on the model/sharing package (which would lead to
+// circular import issue).
+var AskReupload func(*instance.Instance) error
+
 // Patch updates the given instance with the specified options if necessary. It
 // can also update the settings document if provided in the options.
 func Patch(i *instance.Instance, opts *Options) error {
@@ -34,6 +40,8 @@ func Patch(i *instance.Instance, opts *Options) error {
 		}
 
 		needUpdate := false
+		needSharingReupload := false
+
 		if opts.Locale != "" && opts.Locale != i.Locale {
 			i.Locale = opts.Locale
 			clouderyChanges["locale"] = i.Locale
@@ -91,8 +99,9 @@ func Patch(i *instance.Instance, opts *Options) error {
 		}
 
 		if opts.DiskQuota > 0 && opts.DiskQuota != i.BytesDiskQuota {
-			i.BytesDiskQuota = opts.DiskQuota
 			needUpdate = true
+			needSharingReupload = opts.DiskQuota > i.BytesDiskQuota
+			i.BytesDiskQuota = opts.DiskQuota
 		} else if opts.DiskQuota == -1 {
 			i.BytesDiskQuota = 0
 			needUpdate = true
@@ -144,6 +153,15 @@ func Patch(i *instance.Instance, opts *Options) error {
 		}
 		if err != nil {
 			return err
+		}
+		if needSharingReupload && AskReupload != nil {
+			go func() {
+				inst := i.Clone().(*instance.Instance)
+				if err := AskReupload(inst); err != nil {
+					inst.Logger().WithField("nspace", "lifecycle").
+						Warnf("sharing.AskReupload failed with %s", err)
+				}
+			}()
 		}
 		break
 	}
