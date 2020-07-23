@@ -1303,6 +1303,26 @@ Authorization: Bearer ...
 HTTP/1.1 204 No Content
 ```
 
+### POST /sharings/:sharing-id/reupload
+
+This is an internal route for the stack. It is called when the disk quota of an
+instance is increased to ask for the others instances on this sharing to try to
+reupload files without waiting for the normal retry period.
+
+#### Request
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/reupload HTTP/1.1
+Host: bob.example.net
+Authorization: Bearer ...
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### DELETE /sharings/:sharing-id/initial
 
 This internal route is used by the sharer to inform a recipient's cozy that the
