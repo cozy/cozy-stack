@@ -35,6 +35,10 @@ describe "A folder" do
     EM.run do
       ws = Faye::WebSocket::Client.new("ws://#{inst.domain}/realtime/")
 
+      ws.on :error do |err|
+        puts err
+      end
+
       ws.on :open do
         ws.send({ method: "AUTH", payload: inst.token_for("io.cozy.files") }.to_json)
         ws.send({ method: "SUBSCRIBE", payload: { type: "io.cozy.files.thumbnails" } }.to_json)
