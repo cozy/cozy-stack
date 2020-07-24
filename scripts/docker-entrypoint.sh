@@ -26,6 +26,6 @@ else
 	fi
 fi
 
-/usr/bin/cozy-app-dev.sh \
+COZY_KONNECTORS_CMD="/usr/bin/konnector-node-run.sh" /usr/bin/cozy-app-dev.sh \
 	-d "${appdir}" \
 	-f /data/cozy-storage
