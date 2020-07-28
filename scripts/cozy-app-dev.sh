@@ -8,6 +8,7 @@ set -m
 [ -z "${COZY_STACK_PASS}" ] && COZY_STACK_PASS="cozy"
 [ -z "${COZY_STACK_ADMIN_PORT}" ] && COZY_STACK_ADMIN_PORT="6060"
 [ -z "${COUCHDB_URL}" ] && COUCHDB_URL="http://localhost:5984/"
+[ -n "${COZY_KONNECTORS_CMD}" ] && COZY_KONNECTORS_CMD_OPTION="--konnectors-cmd $COZY_KONNECTORS_CMD"
 
 if [ -d "${COZY_STACK_PATH}" ] && [ -f "${COZY_STACK_PATH}/cozy-stack" ]; then
 	COZY_STACK_PATH="${COZY_STACK_PATH}/cozy-stack"
@@ -109,6 +110,7 @@ do_start() {
 		--admin-port "${COZY_STACK_ADMIN_PORT}" \
 		--couchdb-url "${COUCHDB_URL}" \
 		--mailhog \
+		${COZY_KONNECTORS_CMD_OPTION} \
 		--fs-url "file://localhost${vfsdir}" &
 
 	wait_for "${COZY_STACK_HOST}:${COZY_STACK_PORT}/version/" "cozy-stack"
