@@ -362,7 +362,7 @@ func FindAccountTypesBySlug(slug, contextName string) ([]*AccountType, error) {
 	if err != nil {
 		return nil, err
 	}
-	return docs, nil
+	return filterByContext(docs, contextName), nil
 }
 
 func filterByContext(types []*AccountType, contextName string) []*AccountType {
