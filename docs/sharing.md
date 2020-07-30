@@ -844,34 +844,6 @@ Content-Type: application/json
 }
 ```
 
-### POST /sharings/invite
-
-This internal route is used on the cozy of a recipient to send them an
-invitation mail for a sharing. It is called by the cozy of the sharer, when the
-sharer has only the URL of the Cozy, and not the email, of the recipient.
-
-#### Request
-
-```http
-POST /sharings/invite HTTP/1.1
-Host: edward.example.net
-Content-Type: application/json
-```
-
-```json
-{
-  "sharer_public_name": "Alice",
-  "description": "sharing test",
-  "sharing_link": "https://alice-drive.example.net/preview-sharing"
-}
-```
-
-#### Response
-
-```http
-http/1.1 204 No Content
-```
-
 ### PUT /sharings/:sharing-id/recipients
 
 This internal route is used to update the list of members, their states, emails

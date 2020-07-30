@@ -621,7 +621,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
-	router.POST("/invite", Invite)
+	router.POST("/invite", Invite) // TODO 2020-10-01 Remove this deprecated route
 	router.POST("/shortcuts", CreateShortcut)
 
 	// Managing recipients
