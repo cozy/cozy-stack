@@ -139,6 +139,8 @@ The `trigger` field should follow the available triggers described in the
 [jobs documentation](./jobs.md). The `file` field should specify the service
 code run and the `type` field describe the code type (only `"node"` for now).
 
+If you need to know more about how to develop a service, please check the [how-to documentation here](https://github.com/cozy/cozy.github.io/blob/dev/src/howTos/dev/services.md).
+
 ### Available fields to the service
 During the service execution, the stack will give some environment variables to the service if you need to use them.
 
