@@ -89,7 +89,7 @@ func (s *Sharing) AddContacts(inst *instance.Instance, contactIDs map[string]boo
 			return err
 		}
 	}
-	if err = s.SendMails(inst, codes); err != nil {
+	if err = s.SendInvitations(inst, codes); err != nil {
 		return err
 	}
 	cloned := s.Clone().(*Sharing)
@@ -301,7 +301,7 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return err
 	}
-	return s.SendMailsToMembers(inst, api.members, states)
+	return s.SendInvitationsToMembers(inst, api.members, states)
 }
 
 // AddDelegatedContact adds a contact on the owner cozy, but for a contact from

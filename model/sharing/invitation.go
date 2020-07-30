@@ -10,13 +10,14 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/mail"
 )
 
-// SendMails sends invitation mails to the recipients that were in the
+// SendInvitations sends invitation mails to the recipients that were in the
 // mail-not-sent status (owner only)
-func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) error {
+func (s *Sharing) SendInvitations(inst *instance.Instance, codes map[string]string) error {
 	if !s.Owner {
 		return ErrInvalidSharing
 	}
@@ -24,29 +25,26 @@ func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) er
 		return ErrInvalidSharing
 	}
 	sharer, desc := s.getSharerAndDescription(inst)
-	invite := &InviteMsg{
-		Sharer:      sharer,
-		Description: desc,
-	}
+	shortcut := newShortcutMsg(s, inst, desc)
 
 	for i, m := range s.Members {
 		if i == 0 || m.Status != MemberStatusMailNotSent { // i == 0 is for the owner
 			continue
 		}
-		link := m.MailLink(inst, s, s.Credentials[i-1].State, codes)
-		if m.Email == "" {
-			invite.Link = link
-			if err := m.CallInvite(inst, invite); err != nil {
-				inst.Logger().WithField("nspace", "sharing").
-					Errorf("Can't call invite for %#v: %s", m.Instance, err)
+		link := m.InvitationLink(inst, s, s.Credentials[i-1].State, codes)
+		if m.Instance != "" {
+			shortcut.addLink(link)
+			if err := m.SendShortcut(inst, shortcut); err == nil {
 				continue
 			}
-		} else {
-			if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
-				inst.Logger().WithField("nspace", "sharing").
-					Errorf("Can't send email for %#v: %s", m.Email, err)
-				return ErrMailNotSent
-			}
+		}
+		if m.Email == "" {
+			return ErrInvitationNotSent
+		}
+		if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Errorf("Can't send email for %#v: %s", m.Email, err)
+			return ErrInvitationNotSent
 		}
 		s.Members[i].Status = MemberStatusPendingInvitation
 	}
@@ -54,34 +52,31 @@ func (s *Sharing) SendMails(inst *instance.Instance, codes map[string]string) er
 	return couchdb.UpdateDoc(inst, s)
 }
 
-// SendMailsToMembers sends mails from a recipient (open_sharing) to their
-// contacts to invite them
-func (s *Sharing) SendMailsToMembers(inst *instance.Instance, members []Member, states map[string]string) error {
+// SendInvitationsToMembers sends mails from a recipient (open_sharing) to
+// their contacts to invite them
+func (s *Sharing) SendInvitationsToMembers(inst *instance.Instance, members []Member, states map[string]string) error {
 	sharer, desc := s.getSharerAndDescription(inst)
-	invite := &InviteMsg{
-		Sharer:      sharer,
-		Description: desc,
-	}
+	shortcut := newShortcutMsg(s, inst, desc)
 
 	for _, m := range members {
 		key := m.Email
 		if key == "" {
 			key = m.Instance
 		}
-		link := m.MailLink(inst, s, states[key], nil)
-		if m.Email == "" {
-			invite.Link = link
-			if err := m.CallInvite(inst, invite); err != nil {
-				inst.Logger().WithField("nspace", "sharing").
-					Errorf("Can't call invite for %#v: %s", m.Instance, err)
+		link := m.InvitationLink(inst, s, states[key], nil)
+		if m.Instance != "" {
+			shortcut.addLink(link)
+			if err := m.SendShortcut(inst, shortcut); err == nil {
 				continue
 			}
-		} else {
-			if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
-				inst.Logger().WithField("nspace", "sharing").
-					Errorf("Can't send email for %#v: %s", m.Email, err)
-				return ErrMailNotSent
-			}
+		}
+		if m.Email == "" {
+			return ErrInvitationNotSent
+		}
+		if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Errorf("Can't send email for %#v: %s", m.Email, err)
+			return ErrInvitationNotSent
 		}
 		for i, member := range s.Members {
 			if i == 0 {
@@ -114,9 +109,9 @@ func (s *Sharing) getSharerAndDescription(inst *instance.Instance) (string, stri
 	return sharer, desc
 }
 
-// MailLink generates an HTTP link where the recipient can start the process of
-// accepting the sharing
-func (m *Member) MailLink(inst *instance.Instance, s *Sharing, state string, codes map[string]string) string {
+// InvitationLink generates an HTTP link where the recipient can start the
+// process of accepting the sharing
+func (m *Member) InvitationLink(inst *instance.Instance, s *Sharing, state string, codes map[string]string) string {
 	if s.Owner && s.PreviewPath != "" && codes != nil {
 		if code, ok := codes[m.Email]; ok {
 			u := inst.SubDomain(s.AppSlug)
@@ -161,21 +156,72 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 	return err
 }
 
-// InviteMsg is the struct for calling the invite route
-type InviteMsg struct {
-	Sharer      string `json:"sharer_public_name"`
-	Description string `json:"description"`
-	Link        string `json:"sharing_link"`
+type shortcutMsg struct {
+	Data shortcutData `json:"data"`
 }
 
-// CallInvite sends the HTTP request to the cozy of the recipient for sending
-// the invitation by mail.
-func (m *Member) CallInvite(inst *instance.Instance, invite *InviteMsg) error {
+type shortcutData struct {
+	Typ   string        `json:"type"`
+	Attrs shortcutAttrs `json:"attributes"`
+}
+
+type shortcutAttrs struct {
+	Name string                 `json:"name"`
+	URL  string                 `json:"url"`
+	Meta map[string]interface{} `json:"metadata"`
+}
+
+func newShortcutMsg(s *Sharing, inst *instance.Instance, name string) *shortcutMsg {
+	doctype := ""
+	if len(s.Rules) > 0 {
+		doctype = s.Rules[0].DocType
+	}
+	target := map[string]interface{}{
+		"cozyMetadata": map[string]interface{}{
+			"instance": inst.PageURL("/", nil),
+		},
+		"_type": doctype,
+	}
+	if doctype == consts.Files {
+		if s.Rules[0].FilesByID() && len(s.Rules[0].Values) > 0 {
+			fileDoc, err := inst.VFS().FileByID(s.Rules[0].Values[0])
+			if err == nil {
+				target["mime"] = fileDoc.Mime
+			}
+			// err != nil probably means that the target is a directory and not
+			// a file, and we leave the mime as blank in that case.
+		}
+	}
+	meta := map[string]interface{}{
+		"sharing": map[string]interface{}{
+			"status": "new",
+		},
+		"target": target,
+	}
+	return &shortcutMsg{
+		Data: shortcutData{
+			Typ: consts.FilesShortcuts,
+			Attrs: shortcutAttrs{
+				Name: name + ".url",
+				Meta: meta,
+			},
+		},
+	}
+}
+
+func (s *shortcutMsg) addLink(link string) {
+	s.Data.Attrs.URL = link
+}
+
+// SendShortcut sends the HTTP request to the cozy of the recipient for adding
+// a shortcut on the recipient's instance.
+// TODO add a test
+func (m *Member) SendShortcut(inst *instance.Instance, shortcut *shortcutMsg) error {
 	u, err := url.Parse(m.Instance)
 	if err != nil {
 		return err
 	}
-	body, err := json.Marshal(invite)
+	body, err := json.Marshal(shortcut)
 	if err != nil {
 		return err
 	}
@@ -183,7 +229,7 @@ func (m *Member) CallInvite(inst *instance.Instance, invite *InviteMsg) error {
 		Method: http.MethodPost,
 		Scheme: u.Scheme,
 		Domain: u.Host,
-		Path:   "/sharings/invite",
+		Path:   "/sharings/shortcuts",
 		Body:   bytes.NewReader(body),
 	}
 	res, err := request.Req(opts)
@@ -192,6 +238,13 @@ func (m *Member) CallInvite(inst *instance.Instance, invite *InviteMsg) error {
 	}
 	res.Body.Close()
 	return nil
+}
+
+// InviteMsg is the struct for the invite route
+type InviteMsg struct {
+	Sharer      string `json:"sharer_public_name"`
+	Description string `json:"description"`
+	Link        string `json:"sharing_link"`
 }
 
 // SendInviteMail will send an invitation email to the owner of this cozy.

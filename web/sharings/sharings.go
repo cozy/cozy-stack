@@ -73,7 +73,7 @@ func CreateSharing(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	if err = s.SendMails(inst, codes); err != nil {
+	if err = s.SendInvitations(inst, codes); err != nil {
 		return wrapErrors(err)
 	}
 	as := &sharing.APISharing{
@@ -209,14 +209,14 @@ func Invite(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	err := limits.CheckRateLimit(inst, limits.SharingInviteType)
 	if limits.IsLimitReachedOrExceeded(err) {
-		return wrapErrors(sharing.ErrMailNotSent)
+		return wrapErrors(sharing.ErrInvitationNotSent)
 	}
 	var body sharing.InviteMsg
 	if err := json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
 		return wrapErrors(err)
 	}
 	if body.Sharer == "" || body.Description == "" || body.Link == "" {
-		return wrapErrors(sharing.ErrMailNotSent)
+		return wrapErrors(sharing.ErrInvitationNotSent)
 	}
 	if err := sharing.SendInviteMail(inst, &body); err != nil {
 		return wrapErrors(err)
@@ -746,7 +746,7 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case sharing.ErrMemberNotFound:
 		return jsonapi.NotFound(err)
-	case sharing.ErrMailNotSent:
+	case sharing.ErrInvitationNotSent:
 		return jsonapi.BadRequest(err)
 	case sharing.ErrRequestFailed:
 		return jsonapi.BadGateway(err)
