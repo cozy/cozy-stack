@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/sirupsen/logrus"
@@ -185,12 +186,22 @@ func migrateAccountsToOrganization(domain string) error {
 	if err != nil {
 		return err
 	}
+	mu := lock.ReadWrite(inst, "migrate-accounts")
+	if err := mu.Lock(); err != nil {
+		return err
+	}
+	defer mu.Unlock()
 	log := inst.Logger().WithField("nspace", "migration")
 
 	setting, err := settings.Get(inst)
 	if err != nil {
 		return err
 	}
+	if setting.ExtensionInstalled {
+		// The migration has already been run
+		return nil
+	}
+
 	// Get org key
 	if err := setting.EnsureCozyOrganization(inst); err != nil {
 		return err
