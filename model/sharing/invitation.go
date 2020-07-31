@@ -215,7 +215,6 @@ func (s *shortcutMsg) addLink(link string) {
 
 // SendShortcut sends the HTTP request to the cozy of the recipient for adding
 // a shortcut on the recipient's instance.
-// TODO add a test
 func (m *Member) SendShortcut(inst *instance.Instance, shortcut *shortcutMsg) error {
 	u, err := url.Parse(m.Instance)
 	if err != nil {

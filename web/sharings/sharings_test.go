@@ -42,7 +42,7 @@ const iocozytests = "io.cozy.tests"
 var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
-var bobContact, charlieContact, daveContact, edwardContact *contact.Contact
+var charlieContact, daveContact, edwardContact *contact.Contact
 var sharingID, state, aliceAccessToken string
 
 // Things that live on Bob's Cozy
@@ -138,6 +138,7 @@ func assertInvitationMailWasSent(t *testing.T) string {
 }
 
 func TestCreateSharingSuccess(t *testing.T) {
+	bobContact := createBobContact()
 	assert.NotEmpty(t, aliceAppToken)
 	assert.NotNil(t, bobContact)
 
@@ -459,7 +460,7 @@ func assertSharingByAliceToBobDaveAndEdward(t *testing.T, members []interface{})
 	assert.Equal(t, dave["read_only"], true)
 	edward := members[3].(map[string]interface{})
 	assert.Equal(t, edward["name"], "Edward")
-	assert.Equal(t, edward["instance"], "https://edward.example.net/")
+	assert.Equal(t, edward["email"], "edward@example.net")
 }
 
 func TestDelegateAddRecipientByCozyURL(t *testing.T) {
@@ -532,6 +533,7 @@ func assertSharingWithPreviewIsCorrect(t *testing.T, body io.Reader) {
 }
 
 func TestCreateSharingWithPreview(t *testing.T) {
+	bobContact := createBobContact()
 	assert.NotEmpty(t, aliceAppToken)
 	assert.NotNil(t, bobContact)
 
@@ -764,6 +766,9 @@ func TestRevokedSharingWithPreview(t *testing.T) {
 }
 
 func TestCheckPermissions(t *testing.T) {
+	bobContact := createBobContact()
+	assert.NotNil(t, bobContact)
+
 	v := echo.Map{
 		"data": echo.Map{
 			"type": consts.Sharings,
@@ -1143,7 +1148,6 @@ func TestMain(m *testing.M) {
 		PublicName: "Alice",
 	})
 	aliceAppToken = generateAppToken(aliceInstance, "testapp")
-	bobContact = createContact(aliceInstance, "Bob", "bob@example.net")
 	charlieContact = createContact(aliceInstance, "Charlie", "charlie@example.net")
 	daveContact = createContact(aliceInstance, "Dave", "dave@example.net")
 	tsA = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
@@ -1170,7 +1174,7 @@ func TestMain(m *testing.M) {
 		Key:           "xxx",
 	})
 	bobAppToken = generateAppToken(bobInstance, "testapp")
-	edwardContact = createContactWithCozyURL(bobInstance, "Edward", "https://edward.example.net/")
+	edwardContact = createContact(bobInstance, "Edward", "edward@example.net")
 	tsB = bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/auth": func(g *echo.Group) {
 			g.Use(middlewares.LoadSession)
@@ -1196,6 +1200,10 @@ func TestMain(m *testing.M) {
 	os.Exit(setup.Run())
 }
 
+func createBobContact() *contact.Contact {
+	return createContact(aliceInstance, "Bob", "bob@example.net")
+}
+
 func createContact(inst *instance.Instance, name, email string) *contact.Contact {
 	mail := map[string]interface{}{"address": email}
 	c := contact.New()
@@ -1208,19 +1216,10 @@ func createContact(inst *instance.Instance, name, email string) *contact.Contact
 	return c
 }
 
-func createContactWithCozyURL(inst *instance.Instance, name, instanceURL string) *contact.Contact {
-	cozy := map[string]interface{}{"url": instanceURL}
-	c := contact.New()
-	c.M["fullname"] = name
-	c.M["cozy"] = []interface{}{cozy}
-	err := couchdb.CreateDoc(inst, c)
-	if err != nil {
-		return nil
-	}
-	return c
-}
-
 func createSharing(t *testing.T, inst *instance.Instance, values []string) *sharing.Sharing {
+	bobContact := createBobContact()
+	assert.NotNil(t, bobContact)
+
 	r := sharing.Rule{
 		Title:   "test",
 		DocType: iocozytests,
