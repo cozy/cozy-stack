@@ -142,7 +142,7 @@ code run and the `type` field describe the code type (only `"node"` for now).
 If you need to know more about how to develop a service, please check the [how-to documentation here](https://github.com/cozy/cozy.github.io/blob/dev/src/howTos/dev/services.md).
 
 ### Available fields to the service
-During the service execution, the stack will give some environment variables to the service if you need to use them.
+During the service execution, the stack will give some environment variables to the service if you need to use them, available with `process.env[FIELD]`. Once again, it's the **stack** that gives those variables. So if you're developing a service and using a script to execute/test your service, you won't get those variables.
 
 ```bash
 - "COZY_URL" # Cozy URL
