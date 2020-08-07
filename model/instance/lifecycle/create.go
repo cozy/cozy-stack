@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"strconv"
 	"strings"
 
@@ -105,9 +106,13 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	i.OAuthSecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
 	i.CLISecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
 
-	if 0 <= opts.SwiftLayout && opts.SwiftLayout <= 2 {
+	switch opts.SwiftLayout {
+	case 0:
+		err = errors.New("Swift layout v1 disabled for instance creation")
+		return nil, err
+	case 1, 2:
 		i.SwiftLayout = opts.SwiftLayout
-	} else {
+	default:
 		i.SwiftLayout = config.GetConfig().Fs.DefaultLayout
 	}
 
