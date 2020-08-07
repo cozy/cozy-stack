@@ -79,6 +79,8 @@ func createHandler(c echo.Context) error {
 		if err != nil {
 			return wrapError(err)
 		}
+	} else {
+		opts.SwiftLayout = -1
 	}
 	if diskQuota := c.QueryParam("DiskQuota"); diskQuota != "" {
 		opts.DiskQuota, err = strconv.ParseInt(diskQuota, 10, 64)
