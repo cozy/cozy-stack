@@ -65,7 +65,7 @@ RUN set -eux; apt-get update \
   && mv ./rel/couchdb /usr/local \
   && cd / \
   && rm -rf /usr/src/couchdb \
-  && curl -fsSL --compressed https://nodejs.org/dist/v12.9.1/node-v12.9.1-linux-x64.tar.xz \
+  && curl -fsSL https://nodejs.org/dist/v12.9.1/node-v12.9.1-linux-x64.tar.xz -o node-v12.9.1-linux-x64.tar.xz \
   && tar -xJf "node-v12.9.1-linux-x64.tar.xz" -C /usr/local --strip-components=1 --no-same-owner \
   && rm "node-v12.9.1-linux-x64.tar.xz" \
   && ln -s /usr/local/bin/node /usr/local/bin/nodejs \
