@@ -800,7 +800,7 @@ need to add filtering per applications: for instance one queue per applications.
 
 We should also have an explicit check on the permissions of the applications
 before launching a job scheduled by an application. For more information, refer
-to our [permission document](./permissions).
+to our [permission document](../permissions).
 
 ## Multi-stack
 
