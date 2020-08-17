@@ -42,7 +42,7 @@ func SendMail(ctx *job.WorkerContext) error {
 	if from == "" {
 		from = "noreply@" + utils.StripPort(ctx.Instance.Domain)
 	}
-	if ctxSettings, ok := ctx.Instance.SettingsContext(); !ok {
+	if ctxSettings, ok := ctx.Instance.SettingsContext(); ok {
 		if addr, ok := ctxSettings["noreply_address"].(string); ok && addr != "" {
 			from = addr
 		}
@@ -51,6 +51,32 @@ func SendMail(ctx *job.WorkerContext) error {
 		}
 		if reply, ok := ctxSettings["reply_to"].(string); ok && reply != "" {
 			replyTo = reply
+		}
+		if ctxMail, ok := ctxSettings["mail"].(map[string]interface{}); ok {
+			if addr, ok := ctxMail["noreply_address"].(string); ok && addr != "" {
+				from = addr
+			}
+			if nname, ok := ctxMail["noreply_name"].(string); ok && nname != "" {
+				name = nname
+			}
+			if reply, ok := ctxMail["reply_to"].(string); ok && reply != "" {
+				replyTo = reply
+			}
+			if host, ok := ctxMail["host"].(string); ok && host != "" {
+				port, _ := ctxMail["port"].(int)
+				username, _ := ctxMail["username"].(string)
+				password, _ := ctxMail["username"].(string)
+				disableTLS, _ := ctxMail["disable_tls"].(bool)
+				skipCertValid, _ := ctxMail["skip_certificate_validation"].(bool)
+				opts.Dialer = &gomail.DialerOptions{
+					Host:                      host,
+					Port:                      port,
+					Username:                  username,
+					Password:                  password,
+					DisableTLS:                disableTLS,
+					SkipCertificateValidation: skipCertValid,
+				}
+			}
 		}
 	}
 	switch opts.Mode {
