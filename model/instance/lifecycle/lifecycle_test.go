@@ -42,13 +42,12 @@ func TestCreateInstance(t *testing.T) {
 
 func TestCreateInstanceWithFewSettings(t *testing.T) {
 	inst, err := lifecycle.Create(&lifecycle.Options{
-		Domain:      "test2.cozycloud.cc",
-		Timezone:    "Europe/Berlin",
-		Email:       "alice@example.com",
-		PublicName:  "Alice",
-		Passphrase:  "password",
-		SwiftLayout: 1,
-		Settings:    "offer:freemium,context:my_context,auth_mode:two_factor_mail,uuid:XXX,locale:en,tos:20151111,oidc_id:oidc_42",
+		Domain:     "test2.cozycloud.cc",
+		Timezone:   "Europe/Berlin",
+		Email:      "alice@example.com",
+		PublicName: "Alice",
+		Passphrase: "password",
+		Settings:   "offer:freemium,context:my_context,auth_mode:two_factor_mail,uuid:XXX,locale:en,tos:20151111,oidc_id:oidc_42",
 	})
 
 	assert.NoError(t, err)
@@ -66,7 +65,6 @@ func TestCreateInstanceWithFewSettings(t *testing.T) {
 	assert.Equal(t, inst.TOSSigned, "1.0.0-20151111")
 	assert.Equal(t, inst.ContextName, "my_context")
 	assert.Equal(t, inst.AuthMode, instance.TwoFactorMail)
-	assert.Equal(t, inst.SwiftLayout, 1)
 }
 
 func TestCreateInstanceWithMoreSettings(t *testing.T) {
@@ -83,7 +81,6 @@ func TestCreateInstanceWithMoreSettings(t *testing.T) {
 		PublicName:  "Alice",
 		AuthMode:    "two_factor_mail",
 		Passphrase:  "password",
-		SwiftLayout: 2,
 		Settings:    "offer:freemium",
 	})
 
@@ -102,7 +99,6 @@ func TestCreateInstanceWithMoreSettings(t *testing.T) {
 	assert.Equal(t, inst.TOSSigned, "1.0.0-20151111")
 	assert.Equal(t, inst.ContextName, "my_context")
 	assert.Equal(t, inst.AuthMode, instance.TwoFactorMail)
-	assert.Equal(t, inst.SwiftLayout, 2)
 }
 
 func TestCreateInstanceBadDomain(t *testing.T) {

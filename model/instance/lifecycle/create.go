@@ -106,14 +106,16 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	i.OAuthSecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
 	i.CLISecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
 
-	switch opts.SwiftLayout {
-	case 0:
-		err = errors.New("Swift layout v1 disabled for instance creation")
-		return nil, err
-	case 1, 2:
-		i.SwiftLayout = opts.SwiftLayout
-	default:
-		i.SwiftLayout = config.GetConfig().Fs.DefaultLayout
+	switch config.FsURL().Scheme {
+	case config.SchemeSwift, config.SchemeSwiftSecure:
+		switch opts.SwiftLayout {
+		case 0:
+			return nil, errors.New("Swift layout v1 disabled for instance creation")
+		case 1, 2:
+			i.SwiftLayout = opts.SwiftLayout
+		default:
+			i.SwiftLayout = config.GetConfig().Fs.DefaultLayout
+		}
 	}
 
 	if opts.AuthMode != "" {
