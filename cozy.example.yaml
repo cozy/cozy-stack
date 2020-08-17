@@ -320,6 +320,7 @@ contexts:
     templates_title: "My Personal Cloud"
     # Use a different config for mails for this context
     mail:
+      # If the host is set to "-", no mail will be sent on this context
       host: smtp.cozy.beta
       port: 465
       username: {{.Env.COZY_BETA_MAIL_USERNAME}}

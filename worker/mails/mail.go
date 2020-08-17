@@ -139,6 +139,9 @@ func doSendMail(ctx *job.WorkerContext, opts *mail.Options, domain string) error
 	if dialerOptions == nil {
 		dialerOptions = config.GetConfig().Mail
 	}
+	if dialerOptions.Host == "-" {
+		return nil
+	}
 	var date time.Time
 	if opts.Date == nil {
 		date = time.Now()
