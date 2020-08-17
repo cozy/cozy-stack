@@ -41,7 +41,7 @@ require (
 	github.com/spf13/afero v1.3.4
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/viper v1.7.0
+	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
 	github.com/ugorji/go/codec v1.1.7
 	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
