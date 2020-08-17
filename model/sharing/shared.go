@@ -448,7 +448,9 @@ func GetSharedDocsBySharingIDs(inst *instance.Instance, sharingIDs []string) (ma
 		// Filter out the removed docs
 		if !doc.Infos[sID].Removed {
 			docRef := extractDocReferenceFromID(doc.ID())
-			result[sID] = append(result[sID], *docRef)
+			if docRef != nil {
+				result[sID] = append(result[sID], *docRef)
+			}
 		}
 	}
 	return result, nil
