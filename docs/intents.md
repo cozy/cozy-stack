@@ -467,17 +467,12 @@ Here is a non exhaustive list of situations that _may_ use intents:
 
 ### Bibliography & Prior Art
 
--   Prior art:
-    https://forum.cozy.io/t/cozy-tech-topic-inter-app-communication-architecture/2287
--   Web intents: http://webintents.org/
--   WebActivities: https://wiki.mozilla.org/WebAPI/WebActivities and
-    https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/API/Web_Activities
--   Siri Intents:
-    https://developer.apple.com/library/content/documentation/Intents/Conceptual/SiriIntegrationGuide/ResolvingandHandlingIntents.html#//apple_ref/doc/uid/TP40016875-CH5-SW1
--   Android Intents:
-    https://developer.android.com/reference/android/content/Intent.html
--   iOS extensions:
-    https://developer.apple.com/library/content/documentation/General/Conceptual/ExtensibilityPG/index.html
+-   [Prior art](https://forum.cozy.io/t/cozy-tech-topic-inter-app-communication-architecture/2287)
+-   [Web intents](http://webintents.org/)
+-   [WebActivities](https://wiki.mozilla.org/WebAPI/WebActivities) and [WebActivities on FirefoxOS (archive)](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/API/Web_Activities)
+-   [Siri Intents](https://developer.apple.com/library/content/documentation/Intents/Conceptual/SiriIntegrationGuide/)ResolvingandHandlingIntents.html#//apple_ref/doc/uid/TP40016875-CH5-SW1
+-   [Android Intents](https://developer.android.com/reference/android/content/Intent.html)
+-   [iOS extensions](https://developer.apple.com/library/content/documentation/General/Conceptual/ExtensibilityPG/index.html)
 
 ### Discarded Ideas
 
