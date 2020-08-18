@@ -18,7 +18,7 @@ key used to connect to firebase is set in the configuration file, via the
 firebase accounts when there are several applications developed by several
 organizations. In that case, it is possible to tell the stack to use a particular
 key for a given app by creating a CouchDB document inside the
-`secrets/account_types` database, like this:
+`secrets/io-cozy-account_types` database, like this:
 
 ```json
 {
