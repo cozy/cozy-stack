@@ -108,14 +108,15 @@ type Config struct {
 
 	RemoteAssets map[string]string
 
-	Fs            Fs
-	CouchDB       CouchDB
-	Jobs          Jobs
-	Konnectors    Konnectors
-	Mail          *gomail.DialerOptions
-	Matomo        Matomo
-	Notifications Notifications
-	Logger        logger.Options
+	Fs             Fs
+	CouchDB        CouchDB
+	Jobs           Jobs
+	Konnectors     Konnectors
+	Mail           *gomail.DialerOptions
+	MailPerContext map[string]interface{}
+	Matomo         Matomo
+	Notifications  Notifications
+	Logger         logger.Options
 
 	Lock                RedisConfig
 	SessionStorage      RedisConfig
@@ -722,6 +723,7 @@ func UseViper(v *viper.Viper) error {
 			DisableTLS:                v.GetBool("mail.disable_tls"),
 			SkipCertificateValidation: v.GetBool("mail.skip_certificate_validation"),
 		},
+		MailPerContext: v.GetStringMap("mail.contexts"),
 		Contexts:       v.GetStringMap("contexts"),
 		Authentication: v.GetStringMap("authentication"),
 		Registries:     regs,

@@ -180,6 +180,14 @@ mail:
   disable_tls: false
   # skip the certificate validation (may be useful on localhost)
   skip_certificate_validation: false
+  # It is also possible to override the mail server per context.
+  contexts:
+    beta:
+      # If the host is set to "-", no mail will be sent on this context
+      host: smtp.cozy.beta
+      port: 465
+      username: {{.Env.COZY_BETA_MAIL_USERNAME}}
+      password: {{.Env.COZY_BETA_MAIL_PASSWORD}}
 
 # directory with the hooks scripts - flags: --hooks
 hooks: ./scripts/hooks
