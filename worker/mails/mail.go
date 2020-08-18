@@ -52,30 +52,23 @@ func SendMail(ctx *job.WorkerContext) error {
 		if reply, ok := ctxSettings["reply_to"].(string); ok && reply != "" {
 			replyTo = reply
 		}
-		if ctxMail, ok := ctxSettings["mail"].(map[string]interface{}); ok {
-			if addr, ok := ctxMail["noreply_address"].(string); ok && addr != "" {
-				from = addr
-			}
-			if nname, ok := ctxMail["noreply_name"].(string); ok && nname != "" {
-				name = nname
-			}
-			if reply, ok := ctxMail["reply_to"].(string); ok && reply != "" {
-				replyTo = reply
-			}
-			if host, ok := ctxMail["host"].(string); ok && host != "" {
-				port, _ := ctxMail["port"].(int)
-				username, _ := ctxMail["username"].(string)
-				password, _ := ctxMail["username"].(string)
-				disableTLS, _ := ctxMail["disable_tls"].(bool)
-				skipCertValid, _ := ctxMail["skip_certificate_validation"].(bool)
-				opts.Dialer = &gomail.DialerOptions{
-					Host:                      host,
-					Port:                      port,
-					Username:                  username,
-					Password:                  password,
-					DisableTLS:                disableTLS,
-					SkipCertificateValidation: skipCertValid,
-				}
+	}
+	ctxName := ctx.Instance.ContextName
+	cfgPerContext := config.GetConfig().MailPerContext
+	if ctxConfig, ok := cfgPerContext[ctxName].(map[string]interface{}); ok {
+		if host, ok := ctxConfig["host"].(string); ok && host != "" {
+			port, _ := ctxConfig["port"].(int)
+			username, _ := ctxConfig["username"].(string)
+			password, _ := ctxConfig["username"].(string)
+			disableTLS, _ := ctxConfig["disable_tls"].(bool)
+			skipCertValid, _ := ctxConfig["skip_certificate_validation"].(bool)
+			opts.Dialer = &gomail.DialerOptions{
+				Host:                      host,
+				Port:                      port,
+				Username:                  username,
+				Password:                  password,
+				DisableTLS:                disableTLS,
+				SkipCertificateValidation: skipCertValid,
 			}
 		}
 	}
