@@ -112,7 +112,7 @@ func GetObject(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, buf.String())
+	return c.Blob(http.StatusOK, "application/octet-stream", buf.Bytes())
 }
 
 // PutObject puts an object into Swift

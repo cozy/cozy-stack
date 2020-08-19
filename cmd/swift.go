@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strconv"
@@ -77,14 +76,8 @@ var swiftGetCmd = &cobra.Command{
 		defer res.Body.Close()
 
 		// Read the body and print it
-		out, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-
-		fmt.Println(string(out))
-
-		return nil
+		_, err = io.Copy(os.Stdout, res.Body)
+		return err
 	},
 }
 
