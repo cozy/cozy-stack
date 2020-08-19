@@ -516,6 +516,7 @@ func Routes(router *echo.Group) {
 		CookieMaxAge:   3600, // 1 hour
 		CookieHTTPOnly: true,
 		CookieSecure:   !build.IsDevRelease(),
+		CookieSameSite: http.SameSiteStrictMode,
 	})
 
 	// Login/logout
