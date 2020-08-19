@@ -360,7 +360,7 @@ func AllowInstallApp(c echo.Context, appType consts.AppType, sourceURL string, v
 	}
 
 	if docType == "" {
-		return fmt.Errorf("unknown application type %s", string(appType))
+		return fmt.Errorf("unknown application type %s", appType.String())
 	}
 	switch pdoc.Type {
 	case permission.TypeCLI:
