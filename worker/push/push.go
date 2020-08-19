@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification/center"
@@ -148,7 +149,9 @@ func push(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) erro
 // Firebase Cloud Messaging HTTP Protocol
 // https://firebase.google.com/docs/cloud-messaging/http-server-ref
 func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {
-	if fcmClient == nil {
+	client := getFirebaseClient(msg.Slug(), ctx.Instance.ContextName)
+
+	if client == nil {
 		ctx.Logger().Warn("Could not send android notification: not configured")
 		return nil
 	}
@@ -199,7 +202,7 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 	}
 
 	ctx.Logger().Infof("FCM send: %#v", notification)
-	res, err := fcmClient.Send(notification)
+	res, err := client.Send(notification)
 	if err != nil {
 		ctx.Logger().Warnf("Error during fcm send: %s", err)
 		return err
@@ -214,6 +217,21 @@ func pushToFirebase(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMes
 		}
 	}
 	return nil
+}
+
+func getFirebaseClient(slug, contextName string) *fcm.Client {
+	if slug == "" {
+		return fcmClient
+	}
+	typ, err := account.TypeInfo(slug, contextName)
+	if err == nil && typ.AndroidAPIKey != "" {
+		client, err := fcm.NewClient(typ.AndroidAPIKey)
+		if err != nil {
+			return nil
+		}
+		return client
+	}
+	return fcmClient
 }
 
 func pushToAPNS(ctx *job.WorkerContext, c *oauth.Client, msg *center.PushMessage) error {

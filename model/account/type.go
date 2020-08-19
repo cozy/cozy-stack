@@ -53,8 +53,11 @@ var ErrUnrefreshable = errors.New("this account can not be refreshed")
 
 // AccountType holds configuration information for
 type AccountType struct {
-	DocID                 string            `json:"_id,omitempty"`
-	DocRev                string            `json:"_rev,omitempty"`
+	DocID  string `json:"_id,omitempty"`
+	DocRev string `json:"_rev,omitempty"`
+	Slug   string `json:"slug,omitempty"`
+
+	// OAuth parameters
 	GrantMode             string            `json:"grant_mode,omitempty"`
 	ClientID              string            `json:"client_id,omitempty"`
 	ClientSecret          string            `json:"client_secret,omitempty"`
@@ -63,10 +66,14 @@ type AccountType struct {
 	TokenAuthMode         string            `json:"token_mode,omitempty"`
 	RegisteredRedirectURI string            `json:"redirect_uri,omitempty"`
 	ExtraAuthQuery        map[string]string `json:"extras,omitempty"`
-	Slug                  string            `json:"slug,omitempty"`
-	Secret                interface{}       `json:"secret,omitempty"`
 	SkipRedirectURI       bool              `json:"skip_redirect_uri_on_authorize,omitempty"`
 	SkipState             bool              `json:"skip_state_on_token,omitempty"`
+
+	// Other secrets that can be used by the konnectors
+	Secret interface{} `json:"secret,omitempty"`
+
+	// For sending notifications via Firebase Cloud Messaging
+	AndroidAPIKey string `json:"android_api_key"`
 }
 
 // ID is used to implement the couchdb.Doc interface

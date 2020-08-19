@@ -10,6 +10,35 @@ These notifications are part of a "Notification Center" where the user can
 configure the behavior of these notifications and the channel in which they are
 sent.
 
+## Firebase configuration
+
+The push notifications can be sent via Firebase to smartphones. By default, the
+key used to connect to firebase is set in the configuration file, via the
+`notifications.android_api_key` parameter. But it can be useful to have several
+firebase accounts when there are several applications developed by several
+organizations. In that case, it is possible to tell the stack to use a particular
+key for a given app by creating a CouchDB document inside the
+`secrets/io-cozy-account_types` database, like this:
+
+```json
+{
+    "_id": "myapp",
+    "slug": "myapp",
+    "android_api_key": "th3_f1r3b4s3_k3y"
+}
+```
+
+And we can go further to restrict this to a context, by prefixing the `_id`
+with the context name and `/`:
+
+```json
+{
+    "_id": "mycontext/myapp",
+    "slug": "myapp",
+    "android_api_key": "th3_0th3r_f1r3b4s3_k3y"
+}
+```
+
 ## Declare application's notifications
 
 Each application have to declare in its manifest the notifications it needs to
