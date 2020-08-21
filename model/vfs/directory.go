@@ -219,6 +219,9 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 
 	var newdoc *DirDoc
 	if *patch.DirID != olddoc.DirID {
+		if strings.HasPrefix(olddoc.Fullpath, TrashDirName) {
+			return nil, ErrFileInTrash
+		}
 		newdoc, err = NewDirDoc(fs, *patch.Name, *patch.DirID, *patch.Tags)
 	} else {
 		newdoc, err = NewDirDocWithPath(*patch.Name, olddoc.DirID, path.Dir(olddoc.Fullpath), *patch.Tags)

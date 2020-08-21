@@ -1858,6 +1858,26 @@ func TestFileTrash(t *testing.T) {
 	}
 }
 
+func TestForbidMovingTrashedFile(t *testing.T) {
+	body := "foo,bar"
+	res1, data1 := upload(t, "/files/?Type=file&Name=forbidmovingtrashedfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	fileID, _ := extractDirData(t, data1)
+	res2, _ := trash(t, "/files/"+fileID)
+	if !assert.Equal(t, 200, res2.StatusCode) {
+		return
+	}
+
+	attrs := map[string]interface{}{
+		"dir_id": consts.RootDirID,
+	}
+	res3, _ := patchFile(t, "/files/"+fileID, "file", fileID, attrs, nil)
+	assert.Equal(t, 400, res3.StatusCode)
+}
+
 func TestFileRestore(t *testing.T) {
 	body := "foo,bar"
 	res1, data1 := upload(t, "/files/?Type=file&Name=torestorefile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")

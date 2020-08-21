@@ -279,6 +279,10 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 		mime, class = olddoc.Mime, olddoc.Class
 	}
 
+	if trashed && olddoc.DirID != *patch.DirID {
+		return nil, ErrFileInTrash
+	}
+
 	newdoc, err := NewFileDoc(
 		newname,
 		*patch.DirID,
