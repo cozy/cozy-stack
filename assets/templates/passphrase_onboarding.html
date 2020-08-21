@@ -50,7 +50,7 @@
             <input type="hidden" id="register-token" name="register_token" value={{.RegisterToken}}>
             <input type="hidden" id="onboarding-password-iterations" name="iterations" value="{{.Iterations}}" />
             <div class="o-field password-form u-m-0">
-              <label for="password" class="c-label">{{t "Login Password field"}}</label>
+              <label for="password" class="c-label c-label--block u-mt-1">{{t "Login Password field"}}</label>
               <button id="password-visibility-button" class="wizard-showbutton c-btn c-btn--secondary"
                 type="button"
                 name="password-visibility"
@@ -69,7 +69,7 @@
             </div>
             <p id="password-tip" class="u-coolGrey u-m-1">{{t "Passphrase Onboarding Help"}}</p>
             <div class="o-field password-form u-m-0">
-              <label for="hint" class="c-label">{{t "Passphrase Onboarding Hint Field"}}</label>
+              <label for="hint" class="c-label c-label--block u-mt-1">{{t "Passphrase Onboarding Hint Field"}}</label>
               <input id="hint" class="c-input-text" name="hint" type="text" />
               <p class="wizard-notice u-mb-2 u-mt-1-half-s" id="login-password-tip">{{t "Passphrase Onboarding Hint Help"}}</p>
             </div>
