@@ -216,6 +216,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 		Domain:   CookieDomain(inst),
 		Secure:   !build.IsDevRelease(),
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
 	}, nil
 }
 
