@@ -138,18 +138,16 @@ func ForeachDocsWithCustomPagination(db Database, doctype string, limit int, fn 
 			return err
 		}
 
-		var count int
 		startKey = ""
 		for _, row := range res.Rows {
 			if !strings.HasPrefix(row.ID, "_design") {
 				if err = fn(row.ID, row.Doc); err != nil {
 					return err
 				}
-				startKey = row.ID
-				count++
 			}
+			startKey = row.ID
 		}
-		if count == 0 || len(res.Rows) < limit {
+		if len(res.Rows) < limit {
 			break
 		}
 	}
