@@ -316,6 +316,9 @@ func addMissingRevsToChain(db couchdb.Database, ref *SharedRef, chain []string) 
 		return chain, err
 	}
 	revisions := revsMapToStruct(doc.M["_revisions"])
+	if len(revisions.IDs) < chainLowestGen-1 {
+		return nil, fmt.Errorf("Cannot add the missing revs to io.cozy.shared %s", docRef.ID)
+	}
 	var oldRevs []string
 	for i := refHighestGen + 1; i < chainLowestGen; i++ {
 		revID := revisions.IDs[len(revisions.IDs)-i]
