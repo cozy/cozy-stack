@@ -42,6 +42,19 @@ func NeedCouchdb() {
 	}
 }
 
+// TODO can be used as a reminder to do something in the future. The test that
+// calls TODO will fail after the limit date, which is an efficient way to not
+// forget about it.
+func TODO(t *testing.T, date string, args ...interface{}) {
+	now := time.Now()
+	limit, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		t.Errorf("Invalid date for TODO: %s", err)
+	} else if now.After(limit) {
+		t.Error(args...)
+	}
+}
+
 // TestSetup is a wrapper around a testing.M which handles
 // setting up instance, client, VFSContext, testserver
 // and cleaning up after itself

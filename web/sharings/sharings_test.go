@@ -1133,6 +1133,10 @@ func TestCreateShortcut(t *testing.T) {
 	assert.Equal(t, "image/jpg", target["mime"])
 }
 
+func TestRemoveTheDeprecatedInviteRoute(t *testing.T) {
+	testutils.TODO(t, "2020-11-01", "Remove the deprecated route /sharings/invite")
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
