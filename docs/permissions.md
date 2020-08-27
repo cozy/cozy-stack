@@ -227,7 +227,7 @@ Create a new set of permissions. It can also associates one or more codes to it,
 via the `codes` parameter in the query string. These codes can then be sent to
 other people as a way to give these permissions (sharing by links). For each
 `code` created, a corresponding `shortcode` is generated and can be used to
-shorten links for sharing. The `code` parameter is a comma separed list of
+shorten links for sharing. The `codes` parameter is a comma separed list of
 values. The role of these values is to identify the codes if you want to revoke
 some of them later. A `ttl` parameter can also be given to make the codes
 expires after a delay ([bigduration
