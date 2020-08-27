@@ -320,10 +320,11 @@ It can also send the optional fields:
 -   `notification_platform`, to activate notifications on the associated device,
     this field specify the platform used to send notifications:
     -   `"android"`: for Android devices with notifications via Firebase Cloud
-        Messageing
-    -   `"ios"`: for iOS devices with notifications via APNS/2.
+        Messaging
+    -   `"ios"`: for iOS devices with notifications via Firebase Cloud
+        Messaging or APNS/2
 -   `notification_device_token`, the token used to identify the mobile device
-    for notifications
+    for notifications.
 
 The server gives to the client the previous fields and these informations:
 
