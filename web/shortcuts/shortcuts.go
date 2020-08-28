@@ -64,18 +64,18 @@ func (s *Shortcut) Included() []jsonapi.Object { return nil }
 // Links is a method of the jsonapi.Document interface
 func (s *Shortcut) Links() *jsonapi.LinksList { return nil }
 
-// Create is the API handler for POST /shortcuts. It can be used to create a
-// shortcut from a JSON description.
-func Create(c echo.Context) error {
+// FromJSONAPI parses a JSON-API payload for a shortcut and returns a FileDoc
+// and body for it.
+func FromJSONAPI(c echo.Context) (*vfs.FileDoc, []byte, error) {
 	doc := &Shortcut{}
 	if _, err := jsonapi.Bind(c.Request().Body, doc); err != nil {
-		return err
+		return nil, nil, err
 	}
 	if doc.URL == "" {
-		return jsonapi.InvalidAttribute("url", errors.New("No URL"))
+		return nil, nil, jsonapi.InvalidAttribute("url", errors.New("No URL"))
 	}
 	if doc.Name == "" {
-		return jsonapi.InvalidAttribute("name", errors.New("No name"))
+		return nil, nil, jsonapi.InvalidAttribute("name", errors.New("No name"))
 	}
 	if !strings.HasSuffix(doc.Name, ".url") {
 		doc.Name = doc.Name + ".url"
@@ -99,10 +99,20 @@ func Create(c echo.Context) error {
 		nil,   // No tags
 	)
 	if err != nil {
-		return wrapError(err)
+		return nil, nil, wrapError(err)
 	}
 	fileDoc.Metadata = doc.Metadata
 	fileDoc.CozyMetadata = cm
+	return fileDoc, body, nil
+}
+
+// Create is the API handler for POST /shortcuts. It can be used to create a
+// shortcut from a JSON description.
+func Create(c echo.Context) error {
+	fileDoc, body, err := FromJSONAPI(c)
+	if err != nil {
+		return err
+	}
 
 	if err := middlewares.AllowVFS(c, permission.POST, fileDoc); err != nil {
 		return err

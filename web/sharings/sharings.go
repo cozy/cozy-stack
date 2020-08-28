@@ -19,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/shortcut"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/shortcuts"
 	"github.com/hashicorp/go-multierror"
@@ -227,18 +226,9 @@ func Invite(c echo.Context) error {
 // CreateShortcut is used to create a shortcut for a Cozy to Cozy sharing that
 // has not yet been accepted.
 func CreateShortcut(c echo.Context) error {
-	doc := &shortcuts.Shortcut{}
-	if _, err := jsonapi.Bind(c.Request().Body, doc); err != nil {
+	fileDoc, body, err := shortcuts.FromJSONAPI(c)
+	if err != nil {
 		return err
-	}
-	if doc.URL == "" {
-		return jsonapi.InvalidAttribute("url", errors.New("No URL"))
-	}
-	if doc.Name == "" {
-		return jsonapi.InvalidAttribute("name", errors.New("No name"))
-	}
-	if !strings.HasSuffix(doc.Name, ".url") {
-		doc.Name = doc.Name + ".url"
 	}
 
 	inst := middlewares.GetInstance(c)
@@ -246,29 +236,11 @@ func CreateShortcut(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-
-	cm := vfs.NewCozyMetadata(inst.PageURL("/", nil))
-	body := shortcut.Generate(doc.URL)
-	fileDoc, err := vfs.NewFileDoc(
-		doc.Name,
-		dir.DocID,
-		int64(len(body)),
-		nil, // Let the VFS compute the md5sum
-		consts.ShortcutMimeType,
-		"shortcut",
-		cm.UpdatedAt,
-		false, // Not executable
-		false, // Not trashed
-		nil,   // No tags
-	)
-	if err != nil {
-		return wrapErrors(err)
-	}
+	fileDoc.DirID = dir.DocID
 	fileDoc.Metadata = vfs.Metadata{
-		"sharing": doc.Metadata["sharing"],
-		"target":  doc.Metadata["target"],
+		"sharing": fileDoc.Metadata["sharing"],
+		"target":  fileDoc.Metadata["target"],
 	}
-	fileDoc.CozyMetadata = cm
 
 	file, err := inst.VFS().CreateFile(fileDoc, nil)
 	if err != nil {
