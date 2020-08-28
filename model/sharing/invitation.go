@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/mail"
@@ -198,6 +200,9 @@ func newShortcutMsg(s *Sharing, inst *instance.Instance, name string) *shortcutM
 		},
 		"target": target,
 	}
+	if sharer, err := inst.PublicName(); err == nil {
+		meta["sharer"] = sharer
+	}
 	return &shortcutMsg{
 		Data: shortcutData{
 			Typ: consts.FilesShortcuts,
@@ -237,6 +242,40 @@ func (m *Member) SendShortcut(inst *instance.Instance, shortcut *shortcutMsg) er
 	}
 	res.Body.Close()
 	return nil
+}
+
+// SendShortcutMail will send a notification mail after a shortcut for a
+// sharing has been created.
+func SendShortcutMail(inst *instance.Instance, sharerName string, fileDoc *vfs.FileDoc) error {
+	if sharerName == "" {
+		sharerName = inst.Translate("Sharing Empty name")
+	}
+	name, _ := inst.PublicName()
+	if name == "" {
+		name = inst.Translate("Sharing Empty name")
+	}
+	u := inst.SubDomain(consts.DriveSlug)
+	u.Fragment = "/folder/" + fileDoc.DirID
+	mailValues := map[string]interface{}{
+		"RecipientName":    name,
+		"SharerPublicName": sharerName,
+		"Description":      strings.TrimSuffix(fileDoc.DocName, ".url"),
+		"SharingLink":      u.String(),
+	}
+	msg, err := job.NewMessage(mail.Options{
+		Mode:           "noreply",
+		TemplateName:   "sharing_request",
+		TemplateValues: mailValues,
+		Layout:         mail.CozyCloudLayout,
+	})
+	if err != nil {
+		return err
+	}
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	return err
 }
 
 // InviteMsg is the struct for the invite route

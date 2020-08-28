@@ -57,11 +57,12 @@ func init() {
 				"CozyDriveLink": cozyDriveLink.String(),
 			},
 		}
-		_ = pushStack(domain, NotificationDiskQuota, n)
+		_ = PushStack(domain, NotificationDiskQuota, n)
 	})
 }
 
-func pushStack(domain string, category string, n *notification.Notification) error {
+// PushStack creates and sends a new notification where the source is the stack.
+func PushStack(domain string, category string, n *notification.Notification) error {
 	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
@@ -75,7 +76,7 @@ func pushStack(domain string, category string, n *notification.Notification) err
 	return makePush(inst, p, n)
 }
 
-// Push creates and send a new notification in database. This method verifies
+// Push creates and sends a new notification in database. This method verifies
 // the permissions associated with this creation in order to check that it is
 // granted to create a notification and to extract its source.
 func Push(inst *instance.Instance, perm *permission.Permission, n *notification.Notification) error {

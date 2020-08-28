@@ -237,6 +237,7 @@ func CreateShortcut(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	fileDoc.DirID = dir.DocID
+	sharerName, _ := fileDoc.Metadata["sharer"].(string)
 	fileDoc.Metadata = vfs.Metadata{
 		"sharing": fileDoc.Metadata["sharing"],
 		"target":  fileDoc.Metadata["target"],
@@ -251,6 +252,10 @@ func CreateShortcut(c echo.Context) error {
 		err = cerr
 	}
 	if err != nil {
+		return wrapErrors(err)
+	}
+
+	if err := sharing.SendShortcutMail(inst, sharerName, fileDoc); err != nil {
 		return wrapErrors(err)
 	}
 
