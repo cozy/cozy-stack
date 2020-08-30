@@ -10,7 +10,7 @@ require (
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20180914105234-d3dc4988de66
 	github.com/cozy/prosemirror-go v0.4.6
-	github.com/dhowden/tag v0.0.0-20200412032933-5d76b8eaae27
+	github.com/dhowden/tag v0.0.0-20200828214007-46e57f75dbfc
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emersion/go-vcard v0.0.0-20200508080525-dd3110a24ec2
 	github.com/go-redis/redis/v7 v7.4.0

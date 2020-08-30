@@ -71,8 +71,8 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
-github.com/dhowden/tag v0.0.0-20200412032933-5d76b8eaae27 h1:Z6xaGRBbqfLR797upHuzQ6w4zg33BLKfAKtVCcmMDgg=
-github.com/dhowden/tag v0.0.0-20200412032933-5d76b8eaae27/go.mod h1:SniNVYuaD1jmdEEvi+7ywb1QFR7agjeTdGKyFb0p7Rw=
+github.com/dhowden/tag v0.0.0-20200828214007-46e57f75dbfc h1:8ndBJ8cTZwp5Qtl5fnG5bM/ekMnm1GFdUSMTGiN09K0=
+github.com/dhowden/tag v0.0.0-20200828214007-46e57f75dbfc/go.mod h1:SniNVYuaD1jmdEEvi+7ywb1QFR7agjeTdGKyFb0p7Rw=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/emersion/go-vcard v0.0.0-20200508080525-dd3110a24ec2 h1:g1RgqggIPPkEBubnOxAbIglxjMsP0aHPO2ryigBHu2s=
