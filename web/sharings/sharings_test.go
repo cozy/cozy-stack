@@ -124,14 +124,13 @@ func assertInvitationMailWasSent(t *testing.T) string {
 	// Ignore the mail sent to Dave
 	err = json.Unmarshal(jobs[0].Message, &msg)
 	assert.NoError(t, err)
-	if msg["template_values"].(map[string]interface{})["RecipientName"] == "Dave" {
+	if msg["recipient_name"] == "Dave" {
 		err = json.Unmarshal(jobs[1].Message, &msg)
 		assert.NoError(t, err)
 	}
 	assert.Equal(t, msg["mode"], "from")
 	assert.Equal(t, msg["template_name"], "sharing_request")
 	values := msg["template_values"].(map[string]interface{})
-	assert.Equal(t, values["RecipientName"], "Bob")
 	assert.Equal(t, values["SharerPublicName"], "Alice")
 	discoveryLink = values["SharingLink"].(string)
 	return values["Description"].(string)
