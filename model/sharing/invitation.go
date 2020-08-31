@@ -134,10 +134,20 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 		Email: m.Email,
 		Name:  m.PrimaryName(),
 	}
+	sharerMail, _ := inst.SettingsEMail()
+	var action string
+	if s.ReadOnlyRules() {
+		action = inst.Translate("Mail Sharing Request Action Read")
+	} else {
+		action = inst.Translate("Mail Sharing Request Action Write")
+	}
+	docType := getDocumentType(inst, s)
 	mailValues := map[string]interface{}{
-		"RecipientName":    addr.Name,
 		"SharerPublicName": sharer,
+		"SharerEmail":      sharerMail,
+		"Action":           action,
 		"Description":      description,
+		"DocType":          docType,
 		"SharingLink":      link,
 	}
 	msg, err := job.NewMessage(mail.Options{
@@ -156,6 +166,18 @@ func (m *Member) SendMail(inst *instance.Instance, s *Sharing, sharer, descripti
 		Message:    msg,
 	})
 	return err
+}
+
+func getDocumentType(inst *instance.Instance, s *Sharing) string {
+	rule := s.FirstFilesRule()
+	if rule == nil {
+		return inst.Translate("Notification Sharing Type Document")
+	}
+	_, err := inst.VFS().FileByID(rule.Values[0])
+	if err != nil {
+		return inst.Translate("Notification Sharing Type Directory")
+	}
+	return inst.Translate("Notification Sharing Type File")
 }
 
 type shortcutMsg struct {
@@ -295,14 +317,14 @@ type InviteMsg struct {
 
 // SendInviteMail will send an invitation email to the owner of this cozy.
 func SendInviteMail(inst *instance.Instance, invite *InviteMsg) error {
-	name, _ := inst.PublicName()
-	if name == "" {
-		name = inst.Translate("Sharing Empty name")
-	}
+	action := inst.Translate("Mail Sharing Request Action Read")
+	docType := inst.Translate("Notification Sharing Type Directory")
 	mailValues := map[string]interface{}{
-		"RecipientName":    name,
 		"SharerPublicName": invite.Sharer,
+		"SharerEmail":      "",
+		"Action":           action,
 		"Description":      invite.Description,
+		"DocType":          docType,
 		"SharingLink":      invite.Link,
 	}
 	msg, err := job.NewMessage(mail.Options{

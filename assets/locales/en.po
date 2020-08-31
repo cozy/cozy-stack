@@ -607,16 +607,19 @@ msgid "Mail Sharing Request Subject"
 msgstr "New sharing from %s"
 
 msgid "Mail Sharing Request Intro"
-msgstr "Hello %s,"
+msgstr "Hello,"
 
-msgid "Mail Sharing Request Description 1"
-msgstr "%s wants to share"
+msgid "Mail Sharing Request Description"
+msgstr "%s (%s) invites you to %s the %s %s on their personal space, Cozy."
 
-msgid "Mail Sharing Request Description 2"
-msgstr "with you!"
+msgid "Mail Sharing Request Action Read"
+msgstr "access"
+
+msgid "Mail Sharing Request Action Write"
+msgstr "update"
 
 msgid "Mail Sharing Request Button text"
-msgstr "Accept this sharing"
+msgstr "Access to this %s"
 
 msgid "Mail Alert Account Subject"
 msgstr "Instance deletion failed on cleaning accounts"
