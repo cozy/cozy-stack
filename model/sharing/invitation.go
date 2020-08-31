@@ -250,21 +250,18 @@ func SendShortcutMail(inst *instance.Instance, sharerName string, fileDoc *vfs.F
 	if sharerName == "" {
 		sharerName = inst.Translate("Sharing Empty name")
 	}
-	name, _ := inst.PublicName()
-	if name == "" {
-		name = inst.Translate("Sharing Empty name")
-	}
 	u := inst.SubDomain(consts.DriveSlug)
 	u.Fragment = "/folder/" + fileDoc.DirID
+	targetType := getTargetType(inst, fileDoc.Metadata)
 	mailValues := map[string]interface{}{
-		"RecipientName":    name,
 		"SharerPublicName": sharerName,
-		"Description":      strings.TrimSuffix(fileDoc.DocName, ".url"),
-		"SharingLink":      u.String(),
+		"TargetType":       targetType,
+		"TargetName":       strings.TrimSuffix(fileDoc.DocName, ".url"),
+		"SharingsLink":     u.String(),
 	}
 	msg, err := job.NewMessage(mail.Options{
 		Mode:           "noreply",
-		TemplateName:   "sharing_request",
+		TemplateName:   "notifications_sharing",
 		TemplateValues: mailValues,
 		Layout:         mail.CozyCloudLayout,
 	})
@@ -276,6 +273,17 @@ func SendShortcutMail(inst *instance.Instance, sharerName string, fileDoc *vfs.F
 		Message:    msg,
 	})
 	return err
+}
+
+func getTargetType(inst *instance.Instance, metadata map[string]interface{}) string {
+	target, _ := metadata["target"].(map[string]interface{})
+	if target["_type"] != consts.Files {
+		return inst.Translate("Notification Sharing Type Document")
+	}
+	if target["mime"] == nil || target["mime"] == "" {
+		return inst.Translate("Notification Sharing Type Directory")
+	}
+	return inst.Translate("Notification Sharing Type File")
 }
 
 // InviteMsg is the struct for the invite route

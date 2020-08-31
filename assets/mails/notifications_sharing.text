@@ -1,0 +1,5 @@
+{{t "Notification Sharing Subject"}}
+
+{{t "Notification Sharing Description" .SharerPublicName .TargetType .TargetName}}
+
+{{.SharingsLink}}

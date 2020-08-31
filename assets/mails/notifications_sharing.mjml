@@ -1,0 +1,12 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	<img src="https://downcloud.cozycloud.cc/upload/icon-share.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	{{t "Notification Sharing Subject"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Notification Sharing Description" .SharerPublicName .TargetType .TargetName}}
+</mj-text>
+<mj-button href="{{.SharingsLink}}" align="left" mj-class="primary-button content-xlarge">
+	{{t "Notification Sharing Button text"}}
+</mj-button>
+{{end}}

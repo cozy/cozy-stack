@@ -604,7 +604,7 @@ msgid "Mail New Registration Revoke text"
 msgstr "Revoke this device"
 
 msgid "Mail Sharing Request Subject"
-msgstr "New sharing request from %s"
+msgstr "New sharing from %s"
 
 msgid "Mail Sharing Request Intro"
 msgstr "Hello %s,"
@@ -620,6 +620,24 @@ msgstr "Accept this sharing"
 
 msgid "Mail Alert Account Subject"
 msgstr "Instance deletion failed on cleaning accounts"
+
+msgid "Notification Sharing Subject"
+msgstr "A new sharing is available in your Cozy"
+
+msgid "Notification Sharing Description"
+msgstr "%s invites you to access the %s %s"
+
+msgid "Notification Sharing Type Document"
+msgstr "document"
+
+msgid "Notification Sharing Type Directory"
+msgstr "directory"
+
+msgid "Notification Sharing Type File"
+msgstr "file"
+
+msgid "Notification Sharing Button text"
+msgstr "See my sharings"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Connect to your Cozy"
