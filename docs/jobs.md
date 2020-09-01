@@ -574,7 +574,7 @@ Accept: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.jobs.state",
+    "type": "io.cozy.triggers.state",
     "id": "123123",
     "attributes": {
       "status": "done",
