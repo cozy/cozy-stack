@@ -6,7 +6,7 @@
 -   A SMTP server
 -   CouchDB 2
 -   Git
--   Image Magick
+-   Image Magick (and the Lato font)
 
 To install CouchDB 2 through Docker, take a look at our
 [Docker specific documentation](docker.md).
