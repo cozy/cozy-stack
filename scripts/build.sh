@@ -192,7 +192,7 @@ download_debug_asset() {
 		if [ "${3}" != "${dgst}" ]; then
 			echo "failed"
 			echo_err "Checksum SHA256 does not match for asset ${1} downloaded on ${2}:"
-			echo_err "  expecting \"${dgst}\", got \"${3}\"."
+			echo_err "  expecting \"${3}\", got \"${dgst}\"."
 			exit 1
 		fi
 	fi

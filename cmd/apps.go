@@ -376,7 +376,9 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 	}
 	msg := "%s is already up-to-date at %s\n"
 	if manifest.Attrs.Version < newManifest.Attrs.Version {
-		msg = "%s has been updated to %s\n"
+		msg = "%s has been upgraded to %s\n"
+	} else if manifest.Attrs.Version > newManifest.Attrs.Version {
+		msg = "%s has been downgraded to %s\n"
 	}
 	fmt.Printf(msg, args[0], newManifest.Attrs.Version)
 
