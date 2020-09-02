@@ -885,6 +885,22 @@ Content-Type: application/vnd.api+json
 HTTP/1.1 204 No Content
 ```
 
+### GET /sharings/:sharing-id/recipients/:index/avatar
+
+This route can be used to get an image that shows the avatar of a member of
+this sharing. No permission is required to use this route, you just need to
+know the sharing-id to use it.
+
+**Note**: 0 for the index means the sharer.
+
+#### Request
+
+```http
+GET /sharings/ce8835a061d0ef68947afe69a0046722/recipients/2/avatar HTTP/1.1
+Host: bob.example.net
+Accept: image/*
+```
+
 ### POST /sharings/:sharing-id/recipients/:index/readonly
 
 This route is used to add the read-only flag on a recipient of a sharing.
