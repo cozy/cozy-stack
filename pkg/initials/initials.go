@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -15,17 +16,29 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
+const (
+	cacheTTL    = 30 * 24 * time.Hour // 1 month
+	contentType = "image/png"
+)
+
 // Image returns an image with the initials for the given name (and the
 // content-type to use for the HTTP response).
-// TODO add cache
 func Image(publicName string) ([]byte, string, error) {
 	name := strings.TrimSpace(publicName)
 	info := extractInfo(name)
+	cache := config.GetConfig().CacheStorage
+	key := "initials:" + info.initials + info.color
+
+	if bytes, ok := cache.Get(key); ok {
+		return bytes, contentType, nil
+	}
+
 	bytes, err := draw(info)
 	if err != nil {
 		return nil, "", err
 	}
-	return bytes, "image/png", nil
+	cache.Set(key, bytes, cacheTTL)
+	return bytes, contentType, nil
 }
 
 // See https://github.com/cozy/cozy-ui/blob/master/react/Avatar/index.jsx#L9-L26
