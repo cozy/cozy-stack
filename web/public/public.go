@@ -18,7 +18,7 @@ import (
 // Avatar returns the default avatar currently.
 func Avatar(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	switch c.QueryParam("default") {
+	switch c.QueryParam("fallback") {
 	case "404":
 		// Nothing
 	case "initials":
@@ -26,9 +26,9 @@ func Avatar(c echo.Context) error {
 		if err != nil {
 			publicName = strings.Split(inst.Domain, ".")[0]
 		}
-		img, err := initials.Image(publicName)
+		img, mime, err := initials.Image(publicName)
 		if err == nil {
-			return c.Blob(http.StatusOK, "image/png", img)
+			return c.Blob(http.StatusOK, mime, img)
 		}
 	default:
 		f, ok := assets.Get("/images/default-avatar.png", inst.ContextName)

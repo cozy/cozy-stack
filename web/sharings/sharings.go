@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/contact"
@@ -14,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/initials"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -513,6 +515,42 @@ func PostDiscovery(c echo.Context) error {
 	return c.Redirect(http.StatusFound, redirectURL)
 }
 
+// GetAvatar returns the avatar of the given member of the sharing.
+func GetAvatar(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	index, err := strconv.Atoi(c.Param("index"))
+	if err != nil {
+		return jsonapi.InvalidParameter("index", err)
+	}
+	if index > len(s.Members) {
+		return jsonapi.NotFound(errors.New("member not found"))
+	}
+	m := s.Members[index]
+
+	// Use the local avatar
+	if m.Instance == "" || m.Instance == inst.PageURL("", nil) {
+		img, mime, err := initials.Image(m.PublicName)
+		if err != nil {
+			return wrapErrors(err)
+		}
+		return c.Blob(http.StatusOK, mime, img)
+	}
+
+	// Use the public avatar from the member's instance
+	res, err := http.Get(m.Instance + "/public/avatar?fallback=initials")
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	return c.Stream(res.StatusCode, res.Header.Get("Content-Type"), res.Body)
+}
+
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	// Create a sharing
@@ -538,7 +576,9 @@ func Routes(router *echo.Group) {
 	// Delegated routes for open sharing
 	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingWritePermissions)
 
+	// Misc
 	router.GET("/doctype/:doctype", GetSharingsInfoByDocType)
+	router.GET("/:sharing-id/recipients/:index/avatar", GetAvatar)
 
 	// Register the URL of their Cozy for recipients
 	router.GET("/:sharing-id/discovery", GetDiscovery)

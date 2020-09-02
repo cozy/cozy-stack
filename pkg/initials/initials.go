@@ -15,12 +15,17 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
-// Image returns a PNG image with the initials for the given name.
+// Image returns an image with the initials for the given name (and the
+// content-type to use for the HTTP response).
 // TODO add cache
-func Image(publicName string) ([]byte, error) {
+func Image(publicName string) ([]byte, string, error) {
 	name := strings.TrimSpace(publicName)
 	info := extractInfo(name)
-	return draw(info)
+	bytes, err := draw(info)
+	if err != nil {
+		return nil, "", err
+	}
+	return bytes, "image/png", nil
 }
 
 // See https://github.com/cozy/cozy-ui/blob/master/react/Avatar/index.jsx#L9-L26
