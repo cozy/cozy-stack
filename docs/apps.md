@@ -501,6 +501,43 @@ Content-Type: application/vnd.api+json
 
 ### GET /apps/:slug
 
+#### Request
+
+```http
+GET /apps/calendar HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+    "type": "io.cozy.apps",
+    "meta": {
+      "rev": "2-bbfb0fc32dfcdb5333b28934f195b96a"
+    },
+    "attributes": {
+      "name": "calendar",
+      "state": "ready",
+      "slug": "calendar",
+      ...
+    },
+    "links": {
+      "self": "/apps/calendar",
+      "icon": "/apps/calendar/icon",
+      "related": "https://calendar.alice.example.com/"
+    }
+  }
+}
+```
+
 ## Get the icon of an application
 
 ### GET /apps/:slug/icon
