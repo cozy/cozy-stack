@@ -5,9 +5,11 @@ package public
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/assets"
+	"github.com/cozy/cozy-stack/pkg/initials"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo/v4"
@@ -16,13 +18,27 @@ import (
 // Avatar returns the default avatar currently.
 func Avatar(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	f, ok := assets.Get("/images/default-avatar.png", inst.ContextName)
-	if !ok {
-		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
+	switch c.QueryParam("fallback") {
+	case "404":
+		// Nothing
+	case "initials":
+		publicName, err := inst.PublicName()
+		if err != nil {
+			publicName = strings.Split(inst.Domain, ".")[0]
+		}
+		img, mime, err := initials.Image(publicName)
+		if err == nil {
+			return c.Blob(http.StatusOK, mime, img)
+		}
+	default:
+		f, ok := assets.Get("/images/default-avatar.png", inst.ContextName)
+		if ok {
+			handler := statik.NewHandler()
+			handler.ServeFile(c.Response(), c.Request(), f, true)
+			return nil
+		}
 	}
-	handler := statik.NewHandler()
-	handler.ServeFile(c.Response(), c.Request(), f, true)
-	return nil
+	return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 }
 
 // Routes sets the routing for the public service
