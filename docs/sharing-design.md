@@ -420,7 +420,7 @@ The resolution takes 4 steps:
         seconds)
     -   `pending` for a member with an invitation sent, but who has not clicked
         on the link
-    -   `seen` for a member that has clicked on the inviation link, but has not
+    -   `seen` for a member that has clicked on the invitation link, but has not
         setup the Cozy to Cozy replication for the sharing
     -   `ready` for a member where the Cozy to Cozy replication has been set up
     -   `revoked` for a member who is on longer in the sharing

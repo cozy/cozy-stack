@@ -321,6 +321,9 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 		if errb != nil {
 			return errb
 		}
+		if old.Owner {
+			return ErrInvalidSharing
+		}
 		if old.Active {
 			return ErrAlreadyAccepted
 		}
