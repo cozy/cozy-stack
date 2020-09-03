@@ -535,7 +535,12 @@ func GetAvatar(c echo.Context) error {
 
 	// Use the local avatar
 	if m.Instance == "" || m.Instance == inst.PageURL("", nil) {
-		img, mime, err := initials.Image(m.PublicName)
+		name := m.PublicName
+		if name == "" {
+			name = strings.Split(m.Email, "@")[0]
+		}
+		name = strings.ToUpper(name)
+		img, mime, err := initials.Image(name)
 		if err != nil {
 			return wrapErrors(err)
 		}
