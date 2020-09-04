@@ -68,7 +68,7 @@ func TestSharingDir(t *testing.T) {
 			},
 		},
 	}
-	d1, err := s.CreateDirForSharing(inst, &s.Rules[0])
+	d1, err := s.CreateDirForSharing(inst, &s.Rules[0], "")
 	assert.NoError(t, err)
 
 	d2, err := s.GetSharingDir(inst)
