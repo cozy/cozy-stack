@@ -154,43 +154,6 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### POST /sharings/shortcuts
-
-This route can be used to create a shortcut for a Cozy to Cozy sharing that has
-not yet been accepted.
-
-### Request
-
-```http
-POST /sharings/shortcuts HTTP/1.1
-Host: bob.cozy.example
-Content-Type: application/vnd.api+json
-```
-
-```json
-{
-  "data": {
-    "type": "io.cozy.files.shortcuts",
-    "attributes": {
-      "name": "sunset.jpg.url",
-      "url": "https://alice.cozy.example/sharings/c7804bdb4f9f8dae5a363cb9a30dd8/discovery",
-      "metadata": {
-        "sharing": {
-          "status": "new"
-        },
-        "target": {
-          "cozyMetadata": {
-            "instance": "https://alice.cozy.example/"
-          },
-          "_type": "io.cozy.files",
-          "mime": "image/jpg"
-        }
-      }
-    }
-  }
-}
-```
-
 ### GET /sharings/:sharing-id/discovery
 
 If no preview_path is set, it's an URL to this route that will be sent to the
@@ -524,9 +487,13 @@ Content-Type: application/vnd.api+json
 ### PUT /sharings/:sharing-id
 
 The sharer's cozy sends a request to this route on the recipient's cozy to
-create a sharing request, with most of the information about the sharing. This
-request will be displayed to the recipient just before its final acceptation of
-the sharing, to be sure he/she knows what will be shared.
+create a sharing request, with information about the sharing. This request can
+be used for two scenarios:
+
+1. This request will be displayed to the recipient just before its final
+   acceptation of the sharing, to be sure they know what will be shared.
+2. This request will be used to create a shortcut (in that case, a query-string
+   parameter `shortcut=true` will be added).
 
 #### Request
 

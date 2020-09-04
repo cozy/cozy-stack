@@ -79,7 +79,7 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 	if err != nil {
 		return err
 	}
-	res, err := request.Req(&request.Options{
+	opts := request.Options{
 		Method: http.MethodPut,
 		Scheme: u.Scheme,
 		Domain: u.Host,
@@ -88,8 +88,10 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 			"Accept":       "application/vnd.api+json",
 			"Content-Type": "application/vnd.api+json",
 		},
-		Body: bytes.NewReader(body),
-	})
+		Queries: u.Query(),
+		Body:    bytes.NewReader(body),
+	}
+	res, err := request.Req(&opts)
 	if res != nil && res.StatusCode == http.StatusConflict {
 		return ErrAlreadyAccepted
 	}

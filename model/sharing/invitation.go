@@ -1,20 +1,16 @@
 package sharing
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
-	"strings"
 
-	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/mail"
+	"github.com/cozy/cozy-stack/pkg/shortcut"
 )
 
 // SendInvitations sends invitation mails to the recipients that were in the
@@ -27,7 +23,6 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, codes map[string]stri
 		return ErrInvalidSharing
 	}
 	sharer, desc := s.getSharerAndDescription(inst)
-	shortcut := newShortcutMsg(s, inst, desc)
 
 	for i, m := range s.Members {
 		if i == 0 || m.Status != MemberStatusMailNotSent { // i == 0 is for the owner
@@ -35,8 +30,7 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, codes map[string]stri
 		}
 		link := m.InvitationLink(inst, s, s.Credentials[i-1].State, codes)
 		if m.Instance != "" {
-			shortcut.addLink(link)
-			if err := m.SendShortcut(inst, shortcut); err == nil {
+			if err := m.SendShortcut(inst, s, link); err == nil {
 				continue
 			}
 		}
@@ -58,7 +52,6 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, codes map[string]stri
 // their contacts to invite them
 func (s *Sharing) SendInvitationsToMembers(inst *instance.Instance, members []Member, states map[string]string) error {
 	sharer, desc := s.getSharerAndDescription(inst)
-	shortcut := newShortcutMsg(s, inst, desc)
 
 	for _, m := range members {
 		key := m.Email
@@ -67,8 +60,7 @@ func (s *Sharing) SendInvitationsToMembers(inst *instance.Instance, members []Me
 		}
 		link := m.InvitationLink(inst, s, states[key], nil)
 		if m.Instance != "" {
-			shortcut.addLink(link)
-			if err := m.SendShortcut(inst, shortcut); err == nil {
+			if err := m.SendShortcut(inst, s, link); err == nil {
 				continue
 			}
 		}
@@ -180,95 +172,97 @@ func getDocumentType(inst *instance.Instance, s *Sharing) string {
 	return inst.Translate("Notification Sharing Type File")
 }
 
-type shortcutMsg struct {
-	Data shortcutData `json:"data"`
-}
-
-type shortcutData struct {
-	Typ   string        `json:"type"`
-	Attrs shortcutAttrs `json:"attributes"`
-}
-
-type shortcutAttrs struct {
-	Name string                 `json:"name"`
-	URL  string                 `json:"url"`
-	Meta map[string]interface{} `json:"metadata"`
-}
-
-func newShortcutMsg(s *Sharing, inst *instance.Instance, name string) *shortcutMsg {
-	doctype := ""
-	if len(s.Rules) > 0 {
-		doctype = s.Rules[0].DocType
+// CreateShortcut is used to create a shortcut for a Cozy to Cozy sharing that
+// has not yet been accepted.
+func (s *Sharing) CreateShortcut(inst *instance.Instance, discoveryURL, mime string) error {
+	dir, err := EnsureSharedWithMeDir(inst)
+	if err != nil {
+		return err
 	}
-	target := map[string]interface{}{
-		"cozyMetadata": map[string]interface{}{
-			"instance": inst.PageURL("/", nil),
-		},
-		"_type": doctype,
+
+	body := shortcut.Generate(discoveryURL)
+	cm := vfs.NewCozyMetadata(s.Members[0].Instance)
+	fileDoc, err := vfs.NewFileDoc(
+		s.Description+".url",
+		dir.DocID,
+		int64(len(body)),
+		nil, // Let the VFS compute the md5sum
+		consts.ShortcutMimeType,
+		"shortcut",
+		cm.UpdatedAt,
+		false, // Not executable
+		false, // Not trashed
+		nil,   // No tags
+	)
+	if err != nil {
+		return err
 	}
-	if doctype == consts.Files {
-		if s.Rules[0].FilesByID() && len(s.Rules[0].Values) > 0 {
-			fileDoc, err := inst.VFS().FileByID(s.Rules[0].Values[0])
-			if err == nil {
-				target["mime"] = fileDoc.Mime
-			}
-			// err != nil probably means that the target is a directory and not
-			// a file, and we leave the mime as blank in that case.
-		}
-	}
-	meta := map[string]interface{}{
+	fileDoc.CozyMetadata = cm
+	fileDoc.Metadata = vfs.Metadata{
 		"sharing": map[string]interface{}{
 			"status": "new",
 		},
-		"target": target,
-	}
-	if sharer, err := inst.PublicName(); err == nil {
-		meta["sharer"] = sharer
-	}
-	return &shortcutMsg{
-		Data: shortcutData{
-			Typ: consts.FilesShortcuts,
-			Attrs: shortcutAttrs{
-				Name: name + ".url",
-				Meta: meta,
+		"target": map[string]interface{}{
+			"cozyMetadata": map[string]interface{}{
+				"instance": s.Members[0].Instance,
 			},
+			"_type": s.Rules[0].DocType,
+			"mime":  mime,
 		},
 	}
-}
+	fileDoc.AddReferencedBy(couchdb.DocReference{
+		ID:   s.SID,
+		Type: consts.Sharings,
+	})
 
-func (s *shortcutMsg) addLink(link string) {
-	s.Data.Attrs.URL = link
+	file, err := inst.VFS().CreateFile(fileDoc, nil)
+	if err != nil {
+		return err
+	}
+	_, err = file.Write(body)
+	if cerr := file.Close(); cerr != nil && err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return err
+	}
+
+	return s.SendShortcutMail(inst, fileDoc)
 }
 
 // SendShortcut sends the HTTP request to the cozy of the recipient for adding
 // a shortcut on the recipient's instance.
-func (m *Member) SendShortcut(inst *instance.Instance, shortcut *shortcutMsg) error {
+func (m *Member) SendShortcut(inst *instance.Instance, s *Sharing, link string) error {
 	u, err := url.Parse(m.Instance)
-	if err != nil {
-		return err
+	if err != nil || u.Host == "" {
+		return ErrInvalidURL
 	}
-	body, err := json.Marshal(shortcut)
-	if err != nil {
-		return err
+
+	creds := s.FindCredentials(m)
+	if creds == nil {
+		return ErrInvalidSharing
 	}
-	opts := &request.Options{
-		Method: http.MethodPost,
-		Scheme: u.Scheme,
-		Domain: u.Host,
-		Path:   "/sharings/shortcuts",
-		Body:   bytes.NewReader(body),
+
+	v := url.Values{}
+	v.Add("shortcut", "true")
+	v.Add("url", link)
+	if s.Rules[0].FilesByID() && len(s.Rules[0].Values) > 0 {
+		fileDoc, err := inst.VFS().FileByID(s.Rules[0].Values[0])
+		// err != nil probably means that the target is a directory and not
+		// a file, and we leave the mime as blank in that case.
+		if err == nil {
+			v.Add("mime", fileDoc.Mime)
+		}
 	}
-	res, err := request.Req(opts)
-	if err != nil {
-		return err
-	}
-	res.Body.Close()
-	return nil
+
+	u.RawQuery = v.Encode()
+	return m.CreateSharingRequest(inst, s, creds, u)
 }
 
 // SendShortcutMail will send a notification mail after a shortcut for a
 // sharing has been created.
-func SendShortcutMail(inst *instance.Instance, sharerName string, fileDoc *vfs.FileDoc) error {
+func (s *Sharing) SendShortcutMail(inst *instance.Instance, fileDoc *vfs.FileDoc) error {
+	sharerName := s.Members[0].PublicName
 	if sharerName == "" {
 		sharerName = inst.Translate("Sharing Empty name")
 	}
@@ -278,7 +272,7 @@ func SendShortcutMail(inst *instance.Instance, sharerName string, fileDoc *vfs.F
 	mailValues := map[string]interface{}{
 		"SharerPublicName": sharerName,
 		"TargetType":       targetType,
-		"TargetName":       strings.TrimSuffix(fileDoc.DocName, ".url"),
+		"TargetName":       s.Description,
 		"SharingsLink":     u.String(),
 	}
 	msg, err := job.NewMessage(mail.Options{

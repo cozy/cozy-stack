@@ -20,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/shortcuts"
 	"github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
 )
@@ -97,6 +96,15 @@ func PutSharing(c echo.Context) error {
 	if err := s.CreateRequest(inst); err != nil {
 		return wrapErrors(err)
 	}
+
+	if c.QueryParam("shortcut") == "true" {
+		u := c.QueryParam("url")
+		mime := c.QueryParam("mime")
+		if err := s.CreateShortcut(inst, u, mime); err != nil {
+			return wrapErrors(err)
+		}
+	}
+
 	as := &sharing.APISharing{
 		Sharing:     &s,
 		Credentials: nil,
@@ -220,45 +228,6 @@ func Invite(c echo.Context) error {
 	if err := sharing.SendInviteMail(inst, &body); err != nil {
 		return wrapErrors(err)
 	}
-	return c.NoContent(http.StatusNoContent)
-}
-
-// CreateShortcut is used to create a shortcut for a Cozy to Cozy sharing that
-// has not yet been accepted.
-func CreateShortcut(c echo.Context) error {
-	fileDoc, body, err := shortcuts.FromJSONAPI(c)
-	if err != nil {
-		return err
-	}
-
-	inst := middlewares.GetInstance(c)
-	dir, err := sharing.EnsureSharedWithMeDir(inst)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	fileDoc.DirID = dir.DocID
-	sharerName, _ := fileDoc.Metadata["sharer"].(string)
-	fileDoc.Metadata = vfs.Metadata{
-		"sharing": fileDoc.Metadata["sharing"],
-		"target":  fileDoc.Metadata["target"],
-	}
-
-	file, err := inst.VFS().CreateFile(fileDoc, nil)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	_, err = file.Write(body)
-	if cerr := file.Close(); cerr != nil && err == nil {
-		err = cerr
-	}
-	if err != nil {
-		return wrapErrors(err)
-	}
-
-	if err := sharing.SendShortcutMail(inst, sharerName, fileDoc); err != nil {
-		return wrapErrors(err)
-	}
-
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -600,7 +569,6 @@ func Routes(router *echo.Group) {
 	router.GET("/:sharing-id", GetSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
 	router.POST("/invite", Invite) // TODO Remove this route (cf TestRemoveTheDeprecatedInviteRoute)
-	router.POST("/shortcuts", CreateShortcut)
 
 	// Managing recipients
 	router.POST("/:sharing-id/recipients", AddRecipients)
