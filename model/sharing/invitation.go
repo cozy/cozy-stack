@@ -227,6 +227,11 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, discoveryURL, mime str
 		return err
 	}
 
+	s.ShortcutID = fileDoc.DocID
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		inst.Logger().Warnf("Cannot save shortcut id %s: %s", s.ShortcutID, err)
+	}
+
 	return s.SendShortcutMail(inst, fileDoc)
 }
 

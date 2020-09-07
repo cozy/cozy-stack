@@ -439,6 +439,8 @@ The resolution takes 4 steps:
 -   A number of files to synchronize for the initial sync,
     `initial_number_of_files_to_sync` (if there are no files to sync or the
     initial replication has finished, the field won't be here)
+-   A `shortcut_id` with the identifier of the shortcut file (when the
+    recipient doesn't want to synchronize the documents on their Cozy instance)
 -   A list of sharing `rules`, each rule being composed of:
     -   a `title`, that will be displayed to the recipients before they accept
         the sharing

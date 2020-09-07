@@ -47,6 +47,7 @@ type Sharing struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	NbFiles     int       `json:"initial_number_of_files_to_sync,omitempty"`
+	ShortcutID  string    `json:"shortcut_id,omitempty"`
 
 	Rules []Rule `json:"rules"`
 
