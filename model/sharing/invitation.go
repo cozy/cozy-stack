@@ -174,7 +174,7 @@ func getDocumentType(inst *instance.Instance, s *Sharing) string {
 
 // CreateShortcut is used to create a shortcut for a Cozy to Cozy sharing that
 // has not yet been accepted.
-func (s *Sharing) CreateShortcut(inst *instance.Instance, discoveryURL, mime string) error {
+func (s *Sharing) CreateShortcut(inst *instance.Instance, discoveryURL string) error {
 	dir, err := EnsureSharedWithMeDir(inst)
 	if err != nil {
 		return err
@@ -207,7 +207,7 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, discoveryURL, mime str
 				"instance": s.Members[0].Instance,
 			},
 			"_type": s.Rules[0].DocType,
-			"mime":  mime,
+			"mime":  s.Rules[0].Mime,
 		},
 	}
 	fileDoc.AddReferencedBy(couchdb.DocReference{
@@ -251,15 +251,6 @@ func (m *Member) SendShortcut(inst *instance.Instance, s *Sharing, link string) 
 	v := url.Values{}
 	v.Add("shortcut", "true")
 	v.Add("url", link)
-	if s.Rules[0].FilesByID() && len(s.Rules[0].Values) > 0 {
-		fileDoc, err := inst.VFS().FileByID(s.Rules[0].Values[0])
-		// err != nil probably means that the target is a directory and not
-		// a file, and we leave the mime as blank in that case.
-		if err == nil {
-			v.Add("mime", fileDoc.Mime)
-		}
-	}
-
 	u.RawQuery = v.Encode()
 	return m.CreateSharingRequest(inst, s, creds, u)
 }

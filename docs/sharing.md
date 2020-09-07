@@ -493,7 +493,7 @@ be used for two scenarios:
 1. This request will be displayed to the recipient just before its final
    acceptation of the sharing, to be sure they know what will be shared.
 2. This request will be used to create a shortcut (in that case, a query-string
-   parameter `shortcut=true` will be added).
+   parameter `shortcut=true&url=...` will be added).
 
 #### Request
 

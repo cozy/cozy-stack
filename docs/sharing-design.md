@@ -444,7 +444,7 @@ The resolution takes 4 steps:
 -   A list of sharing `rules`, each rule being composed of:
     -   a `title`, that will be displayed to the recipients before they accept
         the sharing
-    -   a `doctype`
+    -   a `doctype` (and a `mime` if the doctype is `io.cozy.files`)
     -   a `selector` (by default, it’s the `id`) and `values` (one identifier, a
         list of identifiers, files and folders inside a folder, files that are
         referenced by the same document, documents bound to a previous sharing

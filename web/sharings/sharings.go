@@ -100,8 +100,7 @@ func PutSharing(c echo.Context) error {
 
 	if c.QueryParam("shortcut") == "true" {
 		u := c.QueryParam("url")
-		mime := c.QueryParam("mime")
-		if err := s.CreateShortcut(inst, u, mime); err != nil {
+		if err := s.CreateShortcut(inst, u); err != nil {
 			return wrapErrors(err)
 		}
 	}

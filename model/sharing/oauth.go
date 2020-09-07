@@ -31,6 +31,13 @@ func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, c *Cr
 			continue
 		}
 		if rule.FilesByID() {
+			if len(rule.Values) > 0 {
+				if fileDoc, err := inst.VFS().FileByID(rule.Values[0]); err == nil {
+					// err != nil means that the target is a directory and not
+					// a file, and we leave the mime blank in that case.
+					rule.Mime = fileDoc.Mime
+				}
+			}
 			values := make([]string, len(rule.Values))
 			for i, v := range rule.Values {
 				values[i] = XorID(v, c.XorKey)
