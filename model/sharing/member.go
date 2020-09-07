@@ -920,8 +920,8 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 	time.Sleep(3 * time.Second)
 
 	active := false
-	for i, m := range s.Members {
-		if i > 0 && m.Status == MemberStatusReady && &s.Members[i] != except {
+	for i := range s.Members {
+		if shouldNotifyMember(s, i, except) {
 			active = true
 			break
 		}
@@ -951,7 +951,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 	}
 
 	for i, m := range s.Members {
-		if i == 0 || m.Status != MemberStatusReady || &s.Members[i] == except {
+		if !shouldNotifyMember(s, i, except) {
 			continue
 		}
 		u, err := url.Parse(m.Instance)
@@ -961,6 +961,15 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			continue
 		}
 		c := &s.Credentials[i-1]
+		var token string
+		if m.Status == MemberStatusReady {
+			token = c.AccessToken.AccessToken
+		} else {
+			perms, err := permission.GetForSharePreview(inst, s.SID)
+			if err == nil {
+				token = perms.Codes[m.Email]
+			}
+		}
 		opts := &request.Options{
 			Method: http.MethodPut,
 			Scheme: u.Scheme,
@@ -969,7 +978,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 			Headers: request.Headers{
 				"Accept":        "application/vnd.api+json",
 				"Content-Type":  "application/vnd.api+json",
-				"Authorization": "Bearer " + c.AccessToken.AccessToken,
+				"Authorization": "Bearer " + token,
 			},
 			Body: bytes.NewReader(body),
 		}
@@ -984,4 +993,21 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 		}
 		res.Body.Close()
 	}
+}
+
+func shouldNotifyMember(s *Sharing, i int, except *Member) bool {
+	if i == 0 { // Don't notify the owner
+		return false
+	}
+	if &s.Members[i] == except {
+		return false
+	}
+	m := s.Members[i]
+	if m.Status == MemberStatusReady {
+		return true
+	}
+	if m.Status != MemberStatusPendingInvitation && m.Status != MemberStatusSeen {
+		return false
+	}
+	return m.Instance != ""
 }

@@ -229,7 +229,7 @@ describe "A folder" do
     target = shortcut.metadata["target"]
     assert_equal target["_type"], "io.cozy.files"
     assert_equal target["mime"], "image/jpeg"
-    assert_equal target["cozyMetadata"]["instance"], "http://#{inst.domain}/"
+    assert_equal target["cozyMetadata"]["instance"], "http://#{inst.domain}"
 
     # Accept the sharing
     inst_recipient.accept sharing

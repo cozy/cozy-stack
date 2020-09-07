@@ -814,7 +814,9 @@ Content-Type: application/json
 ### PUT /sharings/:sharing-id/recipients
 
 This internal route is used to update the list of members, their states, emails
-and names, on the recipients cozy.
+and names, on the recipients cozy. The token used for this route can be the
+access token for a sharing where synchronization is active, or the sharecode
+for a member who has only a shortcut to the sharing on their Cozy instance.
 
 #### Request
 

@@ -328,6 +328,23 @@ func PutRecipients(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
+
+	if s.Active {
+		// If the sharing is active, we check the access token for a permission
+		// on the sharing
+		if err := hasSharingWritePermissions(c); err != nil {
+			return err
+		}
+	} else {
+		// If there is no synchronization, it means that we have a shortcut for
+		// this sharing, and we can check the sharecode.
+		token := middlewares.GetRequestToken(c)
+		sharecode, err := s.GetSharecodeFromShortcut(inst)
+		if err != nil || token != sharecode {
+			return middlewares.ErrForbidden
+		}
+	}
+
 	var body struct {
 		Members []sharing.Member `json:"data"`
 	}
@@ -572,7 +589,7 @@ func Routes(router *echo.Group) {
 
 	// Managing recipients
 	router.POST("/:sharing-id/recipients", AddRecipients)
-	router.PUT("/:sharing-id/recipients", PutRecipients, checkSharingWritePermissions)
+	router.PUT("/:sharing-id/recipients", PutRecipients)
 	router.DELETE("/:sharing-id/recipients", RevokeSharing)                                                  // On the sharer
 	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                                         // On the sharer
 	router.POST("/:sharing-id/recipients/:index/readonly", AddReadOnly)                                      // On the sharer
