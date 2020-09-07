@@ -92,6 +92,7 @@ func PutSharing(c echo.Context) error {
 		return jsonapi.BadJSON()
 	}
 	s.SID = obj.ID
+	s.ShortcutID = ""
 
 	if err := s.CreateRequest(inst); err != nil {
 		return wrapErrors(err)

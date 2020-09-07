@@ -717,3 +717,18 @@ func (s *Sharing) GetSharecodeFromShortcut(inst *instance.Instance) (string, err
 	}
 	return code, nil
 }
+
+func (s *Sharing) cleanShortcutID(inst *instance.Instance) {
+	if s.ShortcutID == "" {
+		return
+	}
+
+	fs := inst.VFS()
+	if file, err := fs.FileByID(s.ShortcutID); err == nil {
+		if err := fs.DestroyFile(file); err != nil {
+			return
+		}
+	}
+	s.ShortcutID = ""
+	_ = couchdb.UpdateDoc(inst, s)
+}
