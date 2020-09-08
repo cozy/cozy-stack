@@ -71,7 +71,7 @@ func CreateSharing(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	if err = s.SendMails(inst, codes); err != nil {
+	if err = s.SendInvitations(inst, codes); err != nil {
 		return wrapErrors(err)
 	}
 	as := &sharing.APISharing{
@@ -92,10 +92,19 @@ func PutSharing(c echo.Context) error {
 		return jsonapi.BadJSON()
 	}
 	s.SID = obj.ID
+	s.ShortcutID = ""
 
 	if err := s.CreateRequest(inst); err != nil {
 		return wrapErrors(err)
 	}
+
+	if c.QueryParam("shortcut") == "true" {
+		u := c.QueryParam("url")
+		if err := s.CreateShortcut(inst, u); err != nil {
+			return wrapErrors(err)
+		}
+	}
+
 	as := &sharing.APISharing{
 		Sharing:     &s,
 		Credentials: nil,
@@ -207,14 +216,14 @@ func Invite(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	err := limits.CheckRateLimit(inst, limits.SharingInviteType)
 	if limits.IsLimitReachedOrExceeded(err) {
-		return wrapErrors(sharing.ErrMailNotSent)
+		return wrapErrors(sharing.ErrInvitationNotSent)
 	}
 	var body sharing.InviteMsg
 	if err := json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
 		return wrapErrors(err)
 	}
 	if body.Sharer == "" || body.Description == "" || body.Link == "" {
-		return wrapErrors(sharing.ErrMailNotSent)
+		return wrapErrors(sharing.ErrInvitationNotSent)
 	}
 	if err := sharing.SendInviteMail(inst, &body); err != nil {
 		return wrapErrors(err)
@@ -319,6 +328,23 @@ func PutRecipients(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
+
+	if s.Active {
+		// If the sharing is active, we check the access token for a permission
+		// on the sharing
+		if err := hasSharingWritePermissions(c); err != nil {
+			return err
+		}
+	} else {
+		// If there is no synchronization, it means that we have a shortcut for
+		// this sharing, and we can check the sharecode.
+		token := middlewares.GetRequestToken(c)
+		sharecode, err := s.GetSharecodeFromShortcut(inst)
+		if err != nil || token != sharecode {
+			return middlewares.ErrForbidden
+		}
+	}
+
 	var body struct {
 		Members []sharing.Member `json:"data"`
 	}
@@ -422,7 +448,8 @@ func GetDiscovery(c echo.Context) error {
 			})
 		}
 		if m.Status != sharing.MemberStatusMailNotSent &&
-			m.Status != sharing.MemberStatusPendingInvitation {
+			m.Status != sharing.MemberStatusPendingInvitation &&
+			m.Status != sharing.MemberStatusSeen {
 			return renderAlreadyAccepted(c, inst, m.Instance)
 		}
 	}
@@ -563,11 +590,11 @@ func Routes(router *echo.Group) {
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
-	router.POST("/invite", Invite)
+	router.POST("/invite", Invite) // TODO Remove this route (cf TestRemoveTheDeprecatedInviteRoute)
 
 	// Managing recipients
 	router.POST("/:sharing-id/recipients", AddRecipients)
-	router.PUT("/:sharing-id/recipients", PutRecipients, checkSharingWritePermissions)
+	router.PUT("/:sharing-id/recipients", PutRecipients)
 	router.DELETE("/:sharing-id/recipients", RevokeSharing)                                                  // On the sharer
 	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                                         // On the sharer
 	router.POST("/:sharing-id/recipients/:index/readonly", AddReadOnly)                                      // On the sharer
@@ -687,7 +714,7 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case sharing.ErrMemberNotFound:
 		return jsonapi.NotFound(err)
-	case sharing.ErrMailNotSent:
+	case sharing.ErrInvitationNotSent:
 		return jsonapi.BadRequest(err)
 	case sharing.ErrRequestFailed:
 		return jsonapi.BadGateway(err)

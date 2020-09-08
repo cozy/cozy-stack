@@ -102,7 +102,7 @@ func Init() (err error) {
 	return
 }
 
-// Worker is the worker that just logs its message (useful for debugging)
+// Worker is the worker that send push messages.
 func Worker(ctx *job.WorkerContext) error {
 	var msg center.PushMessage
 	if err := ctx.UnmarshalMessage(&msg); err != nil {

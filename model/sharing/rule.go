@@ -27,6 +27,7 @@ const (
 type Rule struct {
 	Title    string   `json:"title"`
 	DocType  string   `json:"doctype"`
+	Mime     string   `json:"mime,omitempty"`
 	Selector string   `json:"selector,omitempty"`
 	Values   []string `json:"values"`
 	Local    bool     `json:"local,omitempty"`
@@ -279,7 +280,7 @@ func (r *Rule) HasSync() bool {
 		r.Remove == ActionRuleSync
 }
 
-// HasPush returns true if the rule has a sync behaviour
+// HasPush returns true if the rule has a push behaviour
 func (r *Rule) HasPush() bool {
 	return r.Add == ActionRulePush || r.Update == ActionRulePush ||
 		r.Remove == ActionRulePush

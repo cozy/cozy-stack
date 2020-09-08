@@ -487,9 +487,13 @@ Content-Type: application/vnd.api+json
 ### PUT /sharings/:sharing-id
 
 The sharer's cozy sends a request to this route on the recipient's cozy to
-create a sharing request, with most of the information about the sharing. This
-request will be displayed to the recipient just before its final acceptation of
-the sharing, to be sure he/she knows what will be shared.
+create a sharing request, with information about the sharing. This request can
+be used for two scenarios:
+
+1. This request will be displayed to the recipient just before its final
+   acceptation of the sharing, to be sure they know what will be shared.
+2. This request will be used to create a shortcut (in that case, a query-string
+   parameter `shortcut=true&url=...` will be added).
 
 #### Request
 
@@ -807,38 +811,12 @@ Content-Type: application/json
 }
 ```
 
-### POST /sharings/invite
-
-This internal route is used on the cozy of a recipient to send them an
-invitation mail for a sharing. It is called by the cozy of the sharer, when the
-sharer has only the URL of the Cozy, and not the email, of the recipient.
-
-#### Request
-
-```http
-POST /sharings/invite HTTP/1.1
-Host: edward.example.net
-Content-Type: application/json
-```
-
-```json
-{
-  "sharer_public_name": "Alice",
-  "description": "sharing test",
-  "sharing_link": "https://alice-drive.example.net/preview-sharing"
-}
-```
-
-#### Response
-
-```http
-http/1.1 204 No Content
-```
-
 ### PUT /sharings/:sharing-id/recipients
 
 This internal route is used to update the list of members, their states, emails
-and names, on the recipients cozy.
+and names, on the recipients cozy. The token used for this route can be the
+access token for a sharing where synchronization is active, or the sharecode
+for a member who has only a shortcut to the sharing on their Cozy instance.
 
 #### Request
 

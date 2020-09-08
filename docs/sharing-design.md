@@ -413,28 +413,38 @@ The resolution takes 4 steps:
 -   A list of `members`. The first one is the owner. For each member, we have
     the URL of the cozy, a contact name, a public name, an email, a status, a
     read-only flag, and some credentials to authorize the transfer of data
-    between the owner and the recipients
+    between the owner and the recipients. The status can be:
+    -   `owner` for the member that has created the sharing
+    -   `mail-not-sent` for a member that has been added, but its invitation
+        has not yet been sent (often, this status is used only for a few
+        seconds)
+    -   `pending` for a member with an invitation sent, but who has not clicked
+        on the link
+    -   `seen` for a member that has clicked on the invitation link, but has not
+        setup the Cozy to Cozy replication for the sharing
+    -   `ready` for a member where the Cozy to Cozy replication has been set up
+    -   `revoked` for a member who is on longer in the sharing
 -   A `description` (one sentence that will help people understand what is
     shared and why)
-
-*   a flag `active` that says if the sharing is currently active for at least
+-   A flag `active` that says if the sharing is currently active for at least
     one member
-*   a flag `owner`, true for the document on the cozy of the sharer, and false
+-   A flag `owner`, true for the document on the cozy of the sharer, and false
     on the other cozy instance
-
--   a flag `open_sharing`:
+-   A flag `open_sharing`:
     -   `true` if any member of the sharing except the read-only ones can add a
         new recipient
     -   `false` if only the owner can add a new recipient
 -   Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`,
     `triggers`, `credentials`)
--   a number of files to synchronize for the initial sync,
+-   A number of files to synchronize for the initial sync,
     `initial_number_of_files_to_sync` (if there are no files to sync or the
     initial replication has finished, the field won't be here)
+-   A `shortcut_id` with the identifier of the shortcut file (when the
+    recipient doesn't want to synchronize the documents on their Cozy instance)
 -   A list of sharing `rules`, each rule being composed of:
     -   a `title`, that will be displayed to the recipients before they accept
         the sharing
-    -   a `doctype`
+    -   a `doctype` (and a `mime` if the doctype is `io.cozy.files`)
     -   a `selector` (by default, it’s the `id`) and `values` (one identifier, a
         list of identifiers, files and folders inside a folder, files that are
         referenced by the same document, documents bound to a previous sharing

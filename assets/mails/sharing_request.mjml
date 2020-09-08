@@ -4,12 +4,12 @@
 	{{t "Mail Sharing Request Subject" .SharerPublicName}}
 </mj-text>
 <mj-text mj-class="content-medium">
-	{{t "Mail Sharing Request Intro" .RecipientName}}
+	{{t "Mail Sharing Request Intro"}}
 </mj-text>
 <mj-text mj-class="content-medium">
-	{{t "Mail Sharing Request Description 1" .SharerPublicName}} <strong>{{.Description}}</strong> {{t "Mail Sharing Request Description 2"}}
+	{{t "Mail Sharing Request Description" .SharerPublicName .SharerEmail .Action .DocType .Description}}
 </mj-text>
 <mj-button href="{{.SharingLink}}" align="left" mj-class="primary-button content-xlarge">
-	{{t "Mail Sharing Request Button text"}}
+	{{t "Mail Sharing Request Button text" .TargetType}}
 </mj-button>
 {{end}}

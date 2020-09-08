@@ -230,12 +230,18 @@ func EnsureSharedWithMeDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 
 // CreateDirForSharing creates the directory where files for this sharing will
 // be put. This directory will be initially inside the Shared with me folder.
-func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule) (*vfs.DirDoc, error) {
-	parent, err := EnsureSharedWithMeDir(inst)
+func (s *Sharing) CreateDirForSharing(inst *instance.Instance, rule *Rule, parentID string) (*vfs.DirDoc, error) {
+	fs := inst.VFS()
+	var err error
+	var parent *vfs.DirDoc
+	if parentID == "" {
+		parent, err = EnsureSharedWithMeDir(inst)
+	} else {
+		parent, err = fs.DirByID(parentID)
+	}
 	if err != nil {
 		return nil, err
 	}
-	fs := inst.VFS()
 	dir, err := vfs.NewDirDocWithParent(rule.Title, parent, []string{"from-sharing-" + s.SID})
 	parts := strings.Split(rule.Values[0], "/")
 	dir.DocID = parts[len(parts)-1]
@@ -303,14 +309,25 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 			Warnf("Sharing dir not found: %v (%s)", err, s.SID)
 		return nil, ErrInternalServerError
 	}
-	if len(res.Rows) == 0 {
-		rule := s.FirstFilesRule()
-		if rule == nil {
-			return nil, ErrInternalServerError
+	var parentID string
+	if len(res.Rows) > 0 {
+		dir, file, err := inst.VFS().DirOrFileByID(res.Rows[0].ID)
+		if err != nil || dir != nil {
+			return dir, err
 		}
-		return s.CreateDirForSharing(inst, rule)
+		// file is a shortcut
+		parentID = file.DirID
+		if err := inst.VFS().DestroyFile(file); err != nil {
+			return nil, err
+		}
+		s.ShortcutID = ""
+		_ = couchdb.UpdateDoc(inst, s)
 	}
-	return inst.VFS().DirByID(res.Rows[0].ID)
+	rule := s.FirstFilesRule()
+	if rule == nil {
+		return nil, ErrInternalServerError
+	}
+	return s.CreateDirForSharing(inst, rule, parentID)
 }
 
 // RemoveSharingDir removes the reference on the sharing directory, and adds a

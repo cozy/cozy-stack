@@ -219,9 +219,19 @@ describe "A folder" do
     sharing.rules << Rule.sync(file)
     sharing.members << inst << contact
     inst.register sharing
+    sleep 1
+
+    # On the second sharing with the same recipient, a shortcut should have
+    # been sent to their cozy instance
+    shortcut_path = "/#{Helpers::SHARED_WITH_ME}/#{sharing.description}.url"
+    shortcut = CozyFile.find_by_path inst_recipient, shortcut_path
+    assert_equal shortcut.metadata["sharing"]["status"], "new"
+    target = shortcut.metadata["target"]
+    assert_equal target["_type"], "io.cozy.files"
+    assert_equal target["mime"], "image/jpeg"
+    assert_equal target["cozyMetadata"]["instance"], "http://#{inst.domain}"
 
     # Accept the sharing
-    sleep 1
     inst_recipient.accept sharing
     sleep 12
 

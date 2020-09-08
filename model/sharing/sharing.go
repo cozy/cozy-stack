@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/url"
 	"strings"
@@ -46,6 +47,7 @@ type Sharing struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	NbFiles     int       `json:"initial_number_of_files_to_sync,omitempty"`
+	ShortcutID  string    `json:"shortcut_id,omitempty"`
 
 	Rules []Rule `json:"rules"`
 
@@ -321,9 +323,13 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 		if errb != nil {
 			return errb
 		}
+		if old.Owner {
+			return ErrInvalidSharing
+		}
 		if old.Active {
 			return ErrAlreadyAccepted
 		}
+		s.ShortcutID = old.ShortcutID
 		s.SRev = old.SRev
 		err = couchdb.UpdateDoc(inst, s)
 	}
@@ -668,3 +674,65 @@ func GetSharecode(inst *instance.Instance, sharingID, clientID string) (string, 
 }
 
 var _ couchdb.Doc = &Sharing{}
+
+// GetSharecodeFromShortcut returns the sharecode from the shortcut for this sharing.
+func (s *Sharing) GetSharecodeFromShortcut(inst *instance.Instance) (string, error) {
+	key := []string{consts.Sharings, s.SID}
+	end := []string{key[0], key[1], couchdb.MaxString}
+	req := &couchdb.ViewRequest{
+		StartKey:    key,
+		EndKey:      end,
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(inst, couchdb.FilesReferencedByView, req, &res)
+	if err != nil {
+		return "", ErrInternalServerError
+	}
+	if len(res.Rows) == 0 {
+		return "", ErrInvalidSharing
+	}
+
+	fs := inst.VFS()
+	file, err := fs.FileByID(res.Rows[0].ID)
+	if err != nil || file.Mime != consts.ShortcutMimeType {
+		return "", ErrInvalidSharing
+	}
+	f, err := fs.OpenFile(file)
+	if err != nil {
+		return "", ErrInternalServerError
+	}
+	defer f.Close()
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(f)
+	if err != nil {
+		return "", ErrInternalServerError
+	}
+	u, err := url.Parse(buf.String())
+	if err != nil {
+		return "", ErrInternalServerError
+	}
+	code := u.Query().Get("sharecode")
+	if code == "" {
+		return "", ErrInvalidSharing
+	}
+	return code, nil
+}
+
+func (s *Sharing) cleanShortcutID(inst *instance.Instance) string {
+	if s.ShortcutID == "" {
+		return ""
+	}
+
+	var parentID string
+	fs := inst.VFS()
+	if file, err := fs.FileByID(s.ShortcutID); err == nil {
+		parentID = file.DirID
+		if err := fs.DestroyFile(file); err != nil {
+			return ""
+		}
+	}
+	s.ShortcutID = ""
+	_ = couchdb.UpdateDoc(inst, s)
+	return parentID
+}
