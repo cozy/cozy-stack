@@ -679,23 +679,44 @@ msgid "Mail New Registration Revoke text"
 msgstr "Révoquer cet appareil"
 
 msgid "Mail Sharing Request Subject"
-msgstr "Nouveau partage de %s"
+msgstr "Accepter le partage de %s ?"
 
 msgid "Mail Sharing Request Intro"
-msgstr "Bonjour %s,"
+msgstr "Bonjour,"
 
-msgid "Mail Sharing Request Description 1"
-msgstr "%s voudrait partager"
+msgid "Mail Sharing Request Description"
+msgstr "%s (%s) vous invite à %s le %s %s sur son espace personnel, Cozy."
 
-msgid "Mail Sharing Request Description 2"
-msgstr "avec vous !"
+msgid "Mail Sharing Request Action Read"
+msgstr "consulter"
+
+msgid "Mail Sharing Request Action Write"
+msgstr "modifier"
 
 msgid "Mail Sharing Request Button text"
-msgstr "Accepter ce partage"
+msgstr "Accéder au %s"
 
 msgid "Mail Alert Account Subject"
 msgstr ""
 "Le nettoyage des comptes a échoué lors de la suppression de l'instance"
+
+msgid "Notification Sharing Subject"
+msgstr "Vous avez un nouveau partage disponible dans votre Cozy"
+
+msgid "Notification Sharing Description"
+msgstr "%s vous invite à modifier le %s %s"
+
+msgid "Notification Sharing Type Document"
+msgstr "document"
+
+msgid "Notification Sharing Type Directory"
+msgstr "répertoire"
+
+msgid "Notification Sharing Type File"
+msgstr "fichier"
+
+msgid "Notification Sharing Button text"
+msgstr "Voir mes partages"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Se connecter à votre Cozy"
@@ -717,7 +738,7 @@ msgid "Sharing URL Not email error"
 msgstr "L'URL de votre Cozy n'est pas votre adresse email."
 
 msgid "Sharing Discovery Submit"
-msgstr "Envoyer"
+msgstr "Synchroniser dans mon Cozy"
 
 msgid "Sharing No Cozy"
 msgstr "Pas encore de Cozy ?"
