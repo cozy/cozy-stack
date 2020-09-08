@@ -526,14 +526,18 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 				Infof("Conflict for parent on file upload: %s", err)
 		}
 	} else if target.DocID == rule.Values[0] {
-		parent, err = EnsureSharedWithMeDir(inst)
+		parentID := s.cleanShortcutID(inst)
+		if parentID != "" {
+			parent, err = fs.DirByID(parentID)
+		} else {
+			parent, err = EnsureSharedWithMeDir(inst)
+		}
 	} else {
 		parent, err = s.GetSharingDir(inst)
 	}
 	if err != nil {
 		return err
 	}
-	s.cleanShortcutID(inst)
 
 	newdoc, err := vfs.NewFileDoc(target.DocName, parent.DocID, target.Size(), target.MD5Sum,
 		target.Mime, target.Class, target.CreatedAt, target.Executable, false, target.Tags)

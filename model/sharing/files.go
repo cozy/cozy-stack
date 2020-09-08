@@ -320,6 +320,8 @@ func (s *Sharing) GetSharingDir(inst *instance.Instance) (*vfs.DirDoc, error) {
 		if err := inst.VFS().DestroyFile(file); err != nil {
 			return nil, err
 		}
+		s.ShortcutID = ""
+		_ = couchdb.UpdateDoc(inst, s)
 	}
 	rule := s.FirstFilesRule()
 	if rule == nil {

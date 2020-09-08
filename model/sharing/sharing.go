@@ -329,6 +329,7 @@ func (s *Sharing) CreateRequest(inst *instance.Instance) error {
 		if old.Active {
 			return ErrAlreadyAccepted
 		}
+		s.ShortcutID = old.ShortcutID
 		s.SRev = old.SRev
 		err = couchdb.UpdateDoc(inst, s)
 	}
@@ -718,17 +719,20 @@ func (s *Sharing) GetSharecodeFromShortcut(inst *instance.Instance) (string, err
 	return code, nil
 }
 
-func (s *Sharing) cleanShortcutID(inst *instance.Instance) {
+func (s *Sharing) cleanShortcutID(inst *instance.Instance) string {
 	if s.ShortcutID == "" {
-		return
+		return ""
 	}
 
+	var parentID string
 	fs := inst.VFS()
 	if file, err := fs.FileByID(s.ShortcutID); err == nil {
+		parentID = file.DirID
 		if err := fs.DestroyFile(file); err != nil {
-			return
+			return ""
 		}
 	}
 	s.ShortcutID = ""
 	_ = couchdb.UpdateDoc(inst, s)
+	return parentID
 }
