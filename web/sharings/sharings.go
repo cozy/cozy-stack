@@ -454,6 +454,18 @@ func GetDiscovery(c echo.Context) error {
 		}
 	}
 
+	if m.Instance != "" {
+		if m.Status != sharing.MemberStatusSeen {
+			err = s.RegisterCozyURL(inst, m, m.Instance)
+		}
+		if err == nil {
+			redirectURL, err := m.GenerateOAuthURL(s)
+			if err == nil {
+				return c.Redirect(http.StatusFound, redirectURL)
+			}
+		}
+	}
+
 	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, state, sharecode, m)
 }
 
