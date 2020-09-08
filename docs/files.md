@@ -1324,8 +1324,10 @@ Content-Type: application/vnd.api+json
       },
       "attributes": {
         "type": "file",
+        "dir_id": "io.cozy.files.trash-dir",
         "name": "foo.txt",
         "trashed": true,
+        "restore_path": "/previous_parent",
         "md5sum": "YjAxMzQxZTc4MDNjODAwYwo=",
         "created_at": "2016-09-19T12:38:04Z",
         "updated_at": "2016-09-19T12:38:04Z",
@@ -1360,8 +1362,10 @@ Content-Type: application/vnd.api+json
       },
       "attributes": {
         "type": "file",
+        "dir_id": "io.cozy.files.trash-dir",
         "name": "bar.txt",
         "trashed": true,
+        "restore_path": "/other_parent",
         "md5sum": "YWVhYjg3ZWI0OWQzZjRlMAo=",
         "created_at": "2016-09-19T12:38:04Z",
         "updated_at": "2016-09-19T12:38:04Z",
@@ -1394,7 +1398,7 @@ Content-Type: application/vnd.api+json
 
 ### POST /files/trash/:file-id
 
-Restore the file with the `file-id` identifiant. If a file already exists at the previous path, a suffix will be added to avoid any conflict.
+Restore the file with the `file-id` identifiant into its `restore_path`. If a file already exists at the restore path with the same name, a suffix will be added to avoid any conflict.
 
 The file's `trashed` attributes will be set to false.
 
