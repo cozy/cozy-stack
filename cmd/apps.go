@@ -316,7 +316,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s has been installed (%s)\n", slug, manifest.Attrs.Version)
+	fmt.Printf("%s (%s) has been installed on %s\n", slug, manifest.Attrs.Version, flagDomain)
 
 	return nil
 }
