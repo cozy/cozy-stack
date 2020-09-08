@@ -31,6 +31,7 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, codes map[string]stri
 		link := m.InvitationLink(inst, s, s.Credentials[i-1].State, codes)
 		if m.Instance != "" {
 			if err := m.SendShortcut(inst, s, link); err == nil {
+				s.Members[i].Status = MemberStatusPendingInvitation
 				continue
 			}
 		}
@@ -58,19 +59,22 @@ func (s *Sharing) SendInvitationsToMembers(inst *instance.Instance, members []Me
 		if key == "" {
 			key = m.Instance
 		}
+		sent := false
 		link := m.InvitationLink(inst, s, states[key], nil)
 		if m.Instance != "" {
-			if err := m.SendShortcut(inst, s, link); err == nil {
-				continue
+			if err := m.SendShortcut(inst, s, link); err != nil {
+				sent = true
 			}
 		}
-		if m.Email == "" {
-			return ErrInvitationNotSent
-		}
-		if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
-			inst.Logger().WithField("nspace", "sharing").
-				Errorf("Can't send email for %#v: %s", m.Email, err)
-			return ErrInvitationNotSent
+		if !sent {
+			if m.Email == "" {
+				return ErrInvitationNotSent
+			}
+			if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
+				inst.Logger().WithField("nspace", "sharing").
+					Errorf("Can't send email for %#v: %s", m.Email, err)
+				return ErrInvitationNotSent
+			}
 		}
 		for i, member := range s.Members {
 			if i == 0 {
