@@ -2,6 +2,25 @@
 title: Cozy-Stack documentation - Table of contents
 ---
 
+## What is the Cozy-Stack?
+
+The cozy-stack is the main backend server for the Cozy platform.
+
+[Full Cozy-Stack documentation here](https://docs.cozy.io/en/cozy-stack/).
+
+The Cozy-Stack is in charge of serving / running the applications users have installed on their Cozy.
+
+It is in charge of:
+
+ - creating, updating, deleting documents inside the database;
+ - authenticating users and client applications;
+ - sending emails;
+ - launching jobs on the server. Connectors that import data from remote websites are jobs. Jobs can be one time tasks (sending a message) or periodic tasks. Jobs that require executing third party code on the server side (like connectors), are sandboxed;
+ - database replication API, allowing to sync documents between the server and local databases, for example in mobile clients.
+
+Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new) for questions and suggestions.
+
+
 ## How-to guides
 
 ### Usage
