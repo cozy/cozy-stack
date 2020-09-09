@@ -123,6 +123,7 @@ type cipherResponse struct {
 	Card           map[string]interface{} `json:"Card,omitempty"`
 	Identity       map[string]interface{} `json:"Identity,omitempty"`
 	Date           time.Time              `json:"RevisionDate"`
+	DeletedDate    *time.Time             `json:"DeletedDate,omitempty"`
 	Edit           bool                   `json:"Edit"`
 	UseOTP         bool                   `json:"OrganizationUseTotp"`
 }
@@ -149,6 +150,11 @@ func newCipherResponse(c *bitwarden.Cipher, setting *settings.Settings) *cipherR
 		Edit:     true,
 		UseOTP:   false,
 	}
+	if c.DeletedDate != nil {
+		date := c.DeletedDate.UTC()
+		r.DeletedDate = &date
+	}
+
 	if c.Notes != "" {
 		r.Notes = &c.Notes
 	}
@@ -491,7 +497,7 @@ func UpdateCipher(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
-// DeleteCipher is the handler for the route to delete a folder.
+// DeleteCipher is the handler for the route to delete a cipher.
 func DeleteCipher(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if err := middlewares.AllowWholeType(c, permission.DELETE, consts.BitwardenCiphers); err != nil {
@@ -526,6 +532,82 @@ func DeleteCipher(c echo.Context) error {
 	}
 
 	_ = settings.UpdateRevisionDate(inst, nil)
+	return c.NoContent(http.StatusOK)
+}
+
+// SoftDeleteCipher is the handler for the route to soft delete a cipher.
+// See https://github.com/bitwarden/server/pull/684 for the bitwarden implementation
+func SoftDeleteCipher(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.PUT, consts.BitwardenCiphers); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	cipher := &bitwarden.Cipher{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenCiphers, id, cipher); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	cipher.Metadata.ChangeUpdatedAt()
+	cipher.DeletedDate = &cipher.Metadata.UpdatedAt
+	if err := couchdb.UpdateDoc(inst, cipher); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	return c.NoContent(http.StatusOK)
+}
+
+// RestoreCipher is the handler for the route to restore a soft-deleted cipher.
+// See https://github.com/bitwarden/server/pull/684 for the bitwarden implementation
+func RestoreCipher(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if err := middlewares.AllowWholeType(c, permission.PUT, consts.BitwardenCiphers); err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid token",
+		})
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusNotFound, echo.Map{
+			"error": "missing id",
+		})
+	}
+
+	cipher := &bitwarden.Cipher{}
+	if err := couchdb.GetDoc(inst, consts.BitwardenCiphers, id, cipher); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "not found",
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+	cipher.DeletedDate = nil
+	cipher.Metadata.ChangeUpdatedAt()
+	if err := couchdb.UpdateDoc(inst, cipher); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
 	return c.NoContent(http.StatusOK)
 }
 
