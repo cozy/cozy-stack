@@ -163,6 +163,12 @@ func Get(c echo.Context) error {
 		return jsonapi.BadRequest(errors.New("No URL found"))
 	}
 
+	if meta, ok := file.Metadata["sharing"].(map[string]interface{}); ok && meta["status"] != "seen" {
+		old := file.Clone().(*vfs.FileDoc)
+		meta["status"] = "seen"
+		_ = fs.UpdateFileDoc(old, file)
+	}
+
 	accept := c.Request().Header.Get(echo.HeaderAccept)
 	if strings.Contains(accept, echo.MIMEApplicationJSON) ||
 		strings.Contains(accept, jsonapi.ContentType) {
