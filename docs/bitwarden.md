@@ -878,6 +878,43 @@ Host: alice.example.com
 HTTP/1.1 204 No Content
 ```
 
+### PUT /bitwarden/api/ciphers/:id/delete
+
+This route is used to soft delete a cipher, by adding a `deletedDate`
+attribute on it.
+
+#### Request
+
+```http
+PUT /bitwarden/api/ciphers/4c2869dd-0e1c-499f-b116-a824016df251/delete HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+### PUT /bitwarden/api/ciphers/:id/restore
+
+This route is used to restore a soft-deleted cipher, by removing the
+`deletedDate` attribute.
+
+#### Request
+
+```http
+PUT /bitwarden/api/ciphers/4c2869dd-0e1c-499f-b116-a824016df251/restore HTTP/1.1
+Host: alice.example.com
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+
 ### POST /bitwarden/api/ciphers/import
 
 This route can be used to import several ciphers and folders in bulk.
