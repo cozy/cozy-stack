@@ -53,7 +53,10 @@ func MergeMetadata(doc *FileDoc, meta Metadata) {
 		doc.Metadata = meta
 	} else {
 		for k, v := range meta {
-			doc.Metadata[k] = v
+			// XXX: do not overwrite the target metadata for sharing shortcuts
+			if k != "target" || doc.Metadata[k] == nil {
+				doc.Metadata[k] = v
+			}
 		}
 	}
 }
