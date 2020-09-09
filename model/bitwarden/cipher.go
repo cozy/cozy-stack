@@ -2,6 +2,7 @@ package bitwarden
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -76,6 +77,7 @@ type Cipher struct {
 	Data           *MapData               `json:"data,omitempty"`
 	Fields         []Field                `json:"fields"`
 	Metadata       *metadata.CozyMetadata `json:"cozyMetadata,omitempty"`
+	DeletedDate    *time.Time             `json:"deletedDate,omitempty"`
 }
 
 // ID returns the cipher qualified identifier

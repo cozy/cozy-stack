@@ -488,6 +488,8 @@ func Routes(router *echo.Group) {
 	ciphers.PUT("/:id", UpdateCipher)
 	ciphers.DELETE("/:id", DeleteCipher)
 	ciphers.POST("/:id/delete", DeleteCipher)
+	ciphers.PUT("/:id/delete", SoftDeleteCipher)
+	ciphers.PUT("/:id/restore", RestoreCipher)
 	ciphers.POST("/:id/share", ShareCipher)
 	ciphers.PUT("/:id/share", ShareCipher)
 	ciphers.POST("/import", ImportCiphers)
