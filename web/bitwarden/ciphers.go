@@ -563,6 +563,14 @@ func SoftDeleteCipher(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
+
+	setting, err := settings.Get(inst)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
 	cipher.Metadata.ChangeUpdatedAt()
 	cipher.DeletedDate = &cipher.Metadata.UpdatedAt
 	if err := couchdb.UpdateDoc(inst, cipher); err != nil {
@@ -570,6 +578,8 @@ func SoftDeleteCipher(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
+	_ = settings.UpdateRevisionDate(inst, setting)
+
 	return c.NoContent(http.StatusOK)
 }
 
@@ -601,6 +611,14 @@ func RestoreCipher(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
+
+	setting, err := settings.Get(inst)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
 	cipher.DeletedDate = nil
 	cipher.Metadata.ChangeUpdatedAt()
 	if err := couchdb.UpdateDoc(inst, cipher); err != nil {
@@ -608,6 +626,7 @@ func RestoreCipher(c echo.Context) error {
 			"error": err.Error(),
 		})
 	}
+	_ = settings.UpdateRevisionDate(inst, setting)
 	return c.NoContent(http.StatusOK)
 }
 
