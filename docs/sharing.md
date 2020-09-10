@@ -248,6 +248,38 @@ Content-Type: application/json
 }
 ```
 
+### POST /sharings/:sharing-id/preview-url
+
+This internal route can be used by the stack to get the URL where a member can
+preview the sharing.
+
+#### Request
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/discovery-url HTTP/1.1
+Host: alice.example.net
+Content-Type: application/json
+```
+
+```json
+{
+  "state": "eiJ3iepoaihohz1Y"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "url": "https://drive.alice.example.net/preview?sharecode=..."
+}
+```
+
 ### GET /sharings/:sharing-id
 
 Get the information about a sharing. This includes the content of the rules, the

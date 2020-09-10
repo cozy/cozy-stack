@@ -201,8 +201,11 @@ msgstr "I forgot my password"
 msgid "Authorize Title"
 msgstr "Authorize %s to access your profile"
 
-msgid "Authorize Sharing Title"
-msgstr "New sharing from %s"
+msgid "Authorize Sharing Title Synchronize"
+msgstr "Synchronize into my Cozy"
+
+msgid "Authorize Sharing Title Add"
+msgstr "Add to my Cozy"
 
 msgid "Authorize Client presentation"
 msgstr "would like permission to access your Cozy"
@@ -222,14 +225,8 @@ msgstr "view and change it"
 msgid "Authorize Sharing Permission end"
 msgstr "by confirming the sharing."
 
-msgid "Authorize Sharing Sync"
-msgstr "Changes will be instantly available in both Cozy:"
-
-msgid "Authorize Sharing Self"
-msgstr "Your Cozy: %s"
-
-msgid "Authorize Sharing Client"
-msgstr "Your contact's Cozy: %s"
+msgid "Authorize Sharing Synchronize label"
+msgstr "Synchronize into my Cozy"
 
 msgid "Authorize Policy sentence"
 msgstr "You can read its policy about the usage it will make of your data "

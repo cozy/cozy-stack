@@ -100,7 +100,7 @@ func PutSharing(c echo.Context) error {
 
 	if c.QueryParam("shortcut") == "true" {
 		u := c.QueryParam("url")
-		if err := s.CreateShortcut(inst, u); err != nil {
+		if err := s.CreateShortcut(inst, u, false); err != nil {
 			return wrapErrors(err)
 		}
 	}
@@ -554,6 +554,46 @@ func PostDiscovery(c echo.Context) error {
 	return c.Redirect(http.StatusFound, redirectURL)
 }
 
+// GetPreviewURL returns the preview URL for the member identified by their
+// state parameter.
+func GetPreviewURL(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	s, err := sharing.FindSharing(inst, c.Param("sharing-id"))
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if !s.Owner {
+		return wrapErrors(sharing.ErrInvalidSharing)
+	}
+
+	args := struct {
+		State string `json:"state"`
+	}{}
+	if err := c.Bind(&args); err != nil {
+		return wrapErrors(err)
+	}
+	if args.State == "" {
+		return jsonapi.BadJSON()
+	}
+	m, err := s.FindMemberByState(args.State)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	if m.Status != sharing.MemberStatusMailNotSent &&
+		m.Status != sharing.MemberStatusPendingInvitation &&
+		m.Status != sharing.MemberStatusSeen {
+		return wrapErrors(sharing.ErrAlreadyAccepted)
+	}
+
+	perm, err := permission.GetForSharePreview(inst, s.SID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	previewURL := m.InvitationLink(inst, s, args.State, perm.Codes)
+	return c.JSON(http.StatusOK, map[string]string{"url": previewURL})
+}
+
 // GetAvatar returns the avatar of the given member of the sharing.
 func GetAvatar(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
@@ -627,6 +667,7 @@ func Routes(router *echo.Group) {
 	// Register the URL of their Cozy for recipients
 	router.GET("/:sharing-id/discovery", GetDiscovery)
 	router.POST("/:sharing-id/discovery", PostDiscovery)
+	router.POST("/:sharing-id/preview-url", GetPreviewURL)
 
 	// Replicator routes
 	replicatorRoutes(router)

@@ -356,8 +356,6 @@ func assertAuthorizePageShowsTheSharing(t *testing.T, body string) {
 		csrfToken = matches[1]
 	}
 	assert.Contains(t, body, `<li class="io.cozy.tests">test one</li>`)
-	assert.Contains(t, body, `<li>Your Cozy: `+bobInstance.Domain+`</li>`)
-	assert.Contains(t, body, `<li>Your contact&#39;s Cozy: 127.0.0.1:`)
 }
 
 func assertCredentialsHasBeenExchanged(t *testing.T) {

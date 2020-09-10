@@ -16,7 +16,7 @@ class Accept
   def extract_state_code
     doctype = "io-cozy-sharings"
     doc = Couch.new.get_doc @owner.domain, doctype, @sharing.couch_id
-    idx = doc["members"].find_index { |m| %w(pending mail-not-sent).include? m["status"] }
+    idx = doc["members"].find_index { |m| %w(pending mail-not-sent seen).include? m["status"] }
     doc["credentials"][idx-1]["state"] if idx
   end
 
@@ -41,7 +41,12 @@ class Accept
     res = RestClient.get location, cookies: { cozysessid: sessid }
     csrf_token = res.cookies["_csrf"]
     client = RestClient::Resource.new @inst.url
-    body = { csrf_token: csrf_token, state: state, sharing_id: @sharing.couch_id }
+    body = {
+      csrf_token: csrf_token,
+      state: state,
+      sharing_id: @sharing.couch_id,
+      synchronize: "true"
+    }
     params = { cookies: res.cookies, accept: :json }
     client["/auth/authorize/sharing"].post body, params
   rescue RestClient::Exception

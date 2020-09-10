@@ -13,11 +13,11 @@
     <main role="application">
       <section class="popup">
         <header class="u-ta-center">
-          <span class="shield">
-            <span class="c-avatar c-avatar--large">
-              <img class="c-avatar-image" src="/public/avatar" alt="" />
-            </span>
-          </span>
+          {{if .HasShortcut}}
+          <img class="u-w-3" src="{{asset .Domain "/images/icons-32-cloud-sync.svg"}}" alt="" />
+          {{else}}
+          <img class="u-w-3" src="{{asset .Domain "/images/icons-32-cloud-import.svg"}}" alt="" />
+          {{end}}
         </header>
         <div class="container">
           <form method="POST" action="/auth/authorize/sharing" class="login auth">
@@ -25,7 +25,13 @@
             <input type="hidden" name="sharing_id" value="{{.Sharing.SID}}" />
             <input type="hidden" name="state" value="{{.State}}" />
             <div role="region">
-              <h1>{{t "Authorize Sharing Title" .SharerName}}</h1>
+              <h1 class="u-mt-0">
+                {{if .HasShortcut}}
+                {{t "Authorize Sharing Title Synchronize"}}
+                {{else}}
+                {{t "Authorize Sharing Title Add"}}
+                {{end}}
+              </h1>
               <p class="help">
                 {{- t "Authorize Sharing Request" .SharerName -}}
               </p>
@@ -47,11 +53,14 @@
                 </strong>
                 {{t "Authorize Sharing Permission end"}}
               </p>
-              <p>{{t "Authorize Sharing Sync"}}</p>
-              <ul>
-                <li>{{t "Authorize Sharing Self" .Domain}}</li>
-                <li>{{t "Authorize Sharing Client" .SharerDomain}}</li>
-              </ul>
+              {{if .HasShortcut}}
+              <input type="hidden" name="synchronize" value="true" />
+              {{else}}
+              <label class="c-input-checkbox u-mb-1">
+                <input type="checkbox" name="synchronize" checked="checked" />
+                <span><strong>{{t "Authorize Sharing Synchronize label"}}</strong></span>
+              </label>
+              {{end}}
             </div>
             <footer>
               <div class="controls">

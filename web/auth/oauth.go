@@ -348,6 +348,7 @@ func authorizeSharingForm(c echo.Context) error {
 		"Sharing":      s,
 		"CSRF":         c.Get("csrf"),
 		"Favicon":      middlewares.Favicon(instance),
+		"HasShortcut":  s.ShortcutID != "",
 	})
 }
 
@@ -373,6 +374,16 @@ func authorizeSharing(c echo.Context) error {
 	}
 	if s.Owner || len(s.Members) < 2 {
 		return sharing.ErrInvalidSharing
+	}
+
+	if c.FormValue("synchronize") == "" {
+		if err = s.AddShortcut(instance, params.state); err != nil {
+			return err
+		}
+		u := instance.SubDomain(consts.DriveSlug)
+		u.RawQuery = "sharing=" + s.SID
+		u.Fragment = "/folder/" + consts.SharedWithMeDirID
+		return c.Redirect(http.StatusSeeOther, u.String())
 	}
 
 	if !s.Active {
