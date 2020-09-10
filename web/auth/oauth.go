@@ -395,6 +395,24 @@ func authorizeSharing(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 
+func cancelAuthorizeSharing(c echo.Context) error {
+	if !middlewares.IsLoggedIn(c) {
+		return renderError(c, http.StatusUnauthorized, "Error Must be authenticated")
+	}
+
+	inst := middlewares.GetInstance(c)
+	s, err := sharing.FindSharing(inst, c.Param("sharing-id"))
+	if err != nil || s.Owner || len(s.Members) < 2 {
+		return c.Redirect(http.StatusSeeOther, inst.SubDomain(consts.HomeSlug).String())
+	}
+
+	previewURL, err := s.GetPreviewURL(inst, c.QueryParam("state"))
+	if err != nil {
+		return c.Redirect(http.StatusSeeOther, inst.SubDomain(consts.HomeSlug).String())
+	}
+	return c.Redirect(http.StatusSeeOther, previewURL)
+}
+
 // AccessTokenReponse is the stuct used for serializing to JSON the response
 // for an access token.
 type AccessTokenReponse struct {

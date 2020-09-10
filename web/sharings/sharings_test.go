@@ -424,9 +424,10 @@ func TestAuthorizeSharing(t *testing.T) {
 	assertAuthorizePageShowsTheSharing(t, string(body))
 
 	v := &url.Values{
-		"state":      {state},
-		"sharing_id": {sharingID},
-		"csrf_token": {csrfToken},
+		"state":       {state},
+		"sharing_id":  {sharingID},
+		"csrf_token":  {csrfToken},
+		"synchronize": {"true"},
 	}
 	buf := bytes.NewBufferString(v.Encode())
 	req, err := http.NewRequest(http.MethodPost, tsB.URL+"/auth/authorize/sharing", buf)

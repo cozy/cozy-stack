@@ -228,6 +228,9 @@ msgstr "by confirming the sharing."
 msgid "Authorize Sharing Synchronize label"
 msgstr "Synchronize into my Cozy"
 
+msgid "Authorize Sharing Cancel"
+msgstr "Cancel"
+
 msgid "Authorize Policy sentence"
 msgstr "You can read its policy about the usage it will make of your data "
 

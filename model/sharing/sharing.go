@@ -741,15 +741,15 @@ func (s *Sharing) cleanShortcutID(inst *instance.Instance) string {
 	return parentID
 }
 
-// AddShortcut creates a shortcut for this sharing on the local instance.
-func (s *Sharing) AddShortcut(inst *instance.Instance, state string) error {
+// GetPreviewURL asks the owner's Cozy the URL for previewing the sharing.
+func (s *Sharing) GetPreviewURL(inst *instance.Instance, state string) (string, error) {
 	u, err := url.Parse(s.Members[0].Instance)
 	if s.Members[0].Instance == "" || err != nil {
-		return ErrInvalidSharing
+		return "", ErrInvalidSharing
 	}
 	body, err := json.Marshal(map[string]interface{}{"state": state})
 	if err != nil {
-		return err
+		return "", err
 	}
 	res, err := request.Req(&request.Options{
 		Method: http.MethodPost,
@@ -763,18 +763,27 @@ func (s *Sharing) AddShortcut(inst *instance.Instance, state string) error {
 		Body: bytes.NewReader(body),
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer res.Body.Close()
 
 	var data map[string]interface{}
 	if err = json.NewDecoder(res.Body).Decode(&data); err != nil {
-		return ErrRequestFailed
+		return "", ErrRequestFailed
 	}
 
 	previewURL, ok := data["url"].(string)
 	if !ok || previewURL == "" {
-		return ErrRequestFailed
+		return "", ErrRequestFailed
+	}
+	return previewURL, nil
+}
+
+// AddShortcut creates a shortcut for this sharing on the local instance.
+func (s *Sharing) AddShortcut(inst *instance.Instance, state string) error {
+	previewURL, err := s.GetPreviewURL(inst, state)
+	if err != nil {
+		return err
 	}
 	return s.CreateShortcut(inst, previewURL, true)
 }

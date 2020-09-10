@@ -63,8 +63,9 @@
               {{end}}
             </div>
             <footer>
-              <div class="controls">
-                <button type="submit" class="c-btn c-btn--full wizard-button"><span><span>{{- t "Authorize Submit Sharing" -}}</span></span></button>
+              <div class="controls u-flex u-flex-wrap-reverse">
+                <a href="/auth/authorize/sharing/{{.Sharing.SID}}/cancel?state={{.State}}" type="cancel" class="u-flex-shrink-1 u-flex-grow-1 c-btn c-btn--secondary"><span><span>{{t "Authorize Sharing Cancel"}}</span></span></a>
+                <button type="submit" class="u-flex-shrink-1 u-flex-grow-1 c-btn"><span><span>{{- t "Authorize Submit Sharing" -}}</span></span></button>
               </div>
             </footer>
           </form>
