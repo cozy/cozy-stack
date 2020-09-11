@@ -327,12 +327,19 @@ func authorizeSharingForm(c echo.Context) error {
 		return renderError(c, http.StatusUnauthorized, "Error Invalid sharing")
 	}
 
-	var sharerDomain string
+	var sharerDomain, targetType string
 	sharerURL, err := url.Parse(s.Members[0].Instance)
 	if err != nil {
 		sharerDomain = s.Members[0].Instance
 	} else {
 		sharerDomain = sharerURL.Host
+	}
+	if s.Rules[0].DocType != consts.Files {
+		targetType = instance.Translate("Notification Sharing Type Document")
+	} else if s.Rules[0].Mime == "" {
+		targetType = instance.Translate("Notification Sharing Type Directory")
+	} else {
+		targetType = instance.Translate("Notification Sharing Type File")
 	}
 
 	return c.Render(http.StatusOK, "authorize_sharing.html", echo.Map{
@@ -348,6 +355,8 @@ func authorizeSharingForm(c echo.Context) error {
 		"Sharing":      s,
 		"CSRF":         c.Get("csrf"),
 		"Favicon":      middlewares.Favicon(instance),
+		"HasShortcut":  s.ShortcutID != "",
+		"TargetType":   targetType,
 	})
 }
 
@@ -375,6 +384,16 @@ func authorizeSharing(c echo.Context) error {
 		return sharing.ErrInvalidSharing
 	}
 
+	if c.FormValue("synchronize") == "" {
+		if err = s.AddShortcut(instance, params.state); err != nil {
+			return err
+		}
+		u := instance.SubDomain(consts.DriveSlug)
+		u.RawQuery = "sharing=" + s.SID
+		u.Fragment = "/folder/" + consts.SharedWithMeDirID
+		return c.Redirect(http.StatusSeeOther, u.String())
+	}
+
 	if !s.Active {
 		if err = s.SendAnswer(instance, params.state); err != nil {
 			return err
@@ -382,6 +401,24 @@ func authorizeSharing(c echo.Context) error {
 	}
 	redirect := s.RedirectAfterAuthorizeURL(instance)
 	return c.Redirect(http.StatusSeeOther, redirect.String())
+}
+
+func cancelAuthorizeSharing(c echo.Context) error {
+	if !middlewares.IsLoggedIn(c) {
+		return renderError(c, http.StatusUnauthorized, "Error Must be authenticated")
+	}
+
+	inst := middlewares.GetInstance(c)
+	s, err := sharing.FindSharing(inst, c.Param("sharing-id"))
+	if err != nil || s.Owner || len(s.Members) < 2 {
+		return c.Redirect(http.StatusSeeOther, inst.SubDomain(consts.HomeSlug).String())
+	}
+
+	previewURL, err := s.GetPreviewURL(inst, c.QueryParam("state"))
+	if err != nil {
+		return c.Redirect(http.StatusSeeOther, inst.SubDomain(consts.HomeSlug).String())
+	}
+	return c.Redirect(http.StatusSeeOther, previewURL)
 }
 
 // AccessTokenReponse is the stuct used for serializing to JSON the response

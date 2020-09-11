@@ -13,11 +13,11 @@
     <main role="application">
       <section class="popup">
         <header class="u-ta-center">
-          <span class="shield">
-            <span class="c-avatar c-avatar--large">
-              <img class="c-avatar-image" src="/public/avatar" alt="" />
-            </span>
-          </span>
+          {{if .HasShortcut}}
+          <img class="u-w-3" src="{{asset .Domain "/images/icons-32-cloud-sync.svg"}}" alt="" />
+          {{else}}
+          <img class="u-w-3" src="{{asset .Domain "/images/icons-32-cloud-import.svg"}}" alt="" />
+          {{end}}
         </header>
         <div class="container">
           <form method="POST" action="/auth/authorize/sharing" class="login auth">
@@ -25,37 +25,56 @@
             <input type="hidden" name="sharing_id" value="{{.Sharing.SID}}" />
             <input type="hidden" name="state" value="{{.State}}" />
             <div role="region">
-              <h1>{{t "Authorize Sharing Title" .SharerName}}</h1>
-              <p class="help">
-                {{- t "Authorize Sharing Request" .SharerName -}}
-              </p>
-              <ul class="perm-list">
-                {{range $index, $rule := .Sharing.Rules}}
-                <li class="{{ $rule.DocType }}">
-                  {{- $rule.Title -}}
-                </li>
+              <h1 class="u-mt-0 u-ta-center">
+                {{if .HasShortcut}}
+                {{t "Authorize Sharing Title Synchronize"}}
+                {{else}}
+                {{t "Authorize Sharing Title Add"}}
                 {{end}}
-              </ul>
-              <p>
-                {{t "Authorize Sharing Permission start"}}
-                <strong>
-                  {{- if .Sharing.ReadOnly}}
-                    {{t "Authorize Sharing Permission readonly"}}
+              </h1>
+              <div class="u-br-silver u-bdrs-4 u-p-1 u-mb-1">
+                <p class="help u-mt-0">
+                  <span class="c-avatar c-avatar--sharing u-mr-half">
+                    <img class="c-avatar-image" src="/sharings/{{.Sharing.SID}}/recipients/0/avatar" alt="" />
+                  </span><span><strong>{{.SharerName}} ({{.SharerDomain}})</strong>
+                    {{t "Authorize Sharing Request"}}
+                  </span>
+                </p>
+                <ul class="u-br-grey u-bdrs-4 u-ph-1 u-pv-0 u-mb-0 u-bs-grey perm-list">
+                  {{range $index, $rule := .Sharing.Rules}}
+                  {{if $rule.Mime }}
+                  <li class="filetype-{{filetype $rule.Mime}} u-mv-1">{{basename $rule.Title}}<span class="u-coolGrey">{{ext $rule.Title}}</span></li>
                   {{else}}
-                    {{t "Authorize Sharing Permission readwrite"}}
-                  {{end -}}
-                </strong>
-                {{t "Authorize Sharing Permission end"}}
+                  <li class="{{$rule.DocType}} u-mv-1">{{$rule.Title}}</li>
+                  {{end}}
+                  {{end}}
+                </ul>
+              </div>
+              {{if .HasShortcut}}
+              <input type="hidden" name="synchronize" value="true" />
+              {{else}}
+              <label class="c-input-checkbox u-mb-1">
+                <input type="checkbox" name="synchronize" checked="checked" />
+                <span><strong>{{t "Authorize Sharing Synchronize label"}}</strong></span>
+              </label>
+              {{end}}
+              <p {{if not .HasShortcut}}class="u-ml-1-half"{{end}}>
+                {{t "Authorize Sharing Description start" .SharerName .TargetType}}
               </p>
-              <p>{{t "Authorize Sharing Sync"}}</p>
-              <ul>
-                <li>{{t "Authorize Sharing Self" .Domain}}</li>
-                <li>{{t "Authorize Sharing Client" .SharerDomain}}</li>
-              </ul>
+              <p {{if not .HasShortcut}}class="u-ml-1-half"{{end}}>
+                {{t "Authorize Sharing Description end" .TargetType .SharerName}}
+              </p>
             </div>
-            <footer>
-              <div class="controls">
-                <button type="submit" class="c-btn c-btn--full wizard-button"><span><span>{{- t "Authorize Submit Sharing" -}}</span></span></button>
+            <footer class="u-mt-2">
+              <div class="controls u-flex u-flex-wrap-reverse">
+                <a href="/auth/authorize/sharing/{{.Sharing.SID}}/cancel?state={{.State}}" type="cancel" class="u-flex-shrink-1 u-flex-grow-1 c-btn c-btn--secondary"><span><span>{{t "Authorize Sharing Cancel"}}</span></span></a>
+                <button type="submit" class="u-flex-shrink-1 u-flex-grow-1 c-btn"><span><span>
+                  {{if .HasShortcut}}
+                  {{t "Authorize Sharing Submit Synchronize"}}
+                  {{else}}
+                  {{t "Authorize Sharing Submit Add"}}
+                  {{end}}
+                </span></span></button>
               </div>
             </footer>
           </form>

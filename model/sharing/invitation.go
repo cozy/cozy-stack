@@ -178,13 +178,13 @@ func getDocumentType(inst *instance.Instance, s *Sharing) string {
 
 // CreateShortcut is used to create a shortcut for a Cozy to Cozy sharing that
 // has not yet been accepted.
-func (s *Sharing) CreateShortcut(inst *instance.Instance, discoveryURL string) error {
+func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, seen bool) error {
 	dir, err := EnsureSharedWithMeDir(inst)
 	if err != nil {
 		return err
 	}
 
-	body := shortcut.Generate(discoveryURL)
+	body := shortcut.Generate(previewURL)
 	cm := vfs.NewCozyMetadata(s.Members[0].Instance)
 	fileDoc, err := vfs.NewFileDoc(
 		s.Description+".url",
@@ -202,9 +202,13 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, discoveryURL string) e
 		return err
 	}
 	fileDoc.CozyMetadata = cm
+	status := "new"
+	if seen {
+		status = "seen"
+	}
 	fileDoc.Metadata = vfs.Metadata{
 		"sharing": map[string]interface{}{
-			"status": "new",
+			"status": status,
 		},
 		"target": map[string]interface{}{
 			"cozyMetadata": map[string]interface{}{

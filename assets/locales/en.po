@@ -201,35 +201,37 @@ msgstr "I forgot my password"
 msgid "Authorize Title"
 msgstr "Authorize %s to access your profile"
 
-msgid "Authorize Sharing Title"
-msgstr "New sharing from %s"
+msgid "Authorize Sharing Title Synchronize"
+msgstr "Synchronize into my Cozy"
+
+msgid "Authorize Sharing Title Add"
+msgstr "Add to my Cozy"
 
 msgid "Authorize Client presentation"
 msgstr "would like permission to access your Cozy"
 
 msgid "Authorize Sharing Request"
-msgstr "%s would like to share the following data with you:"
+msgstr "has shared with you:"
 
-msgid "Authorize Sharing Permission start"
-msgstr "You can"
+msgid "Authorize Sharing Description start"
+msgstr ""
+"%s and you can collaborate by editing the %s. "
+"Each change will be sent automatically between your Cozys."
 
-msgid "Authorize Sharing Permission readonly"
-msgstr "view it"
+msgid "Authorize Sharing Description end"
+msgstr "You will keep the %s in your Cozy, even if the sharing is cancelled by %s."
 
-msgid "Authorize Sharing Permission readwrite"
-msgstr "view and change it"
+msgid "Authorize Sharing Synchronize label"
+msgstr "Synchronize into my Cozy"
 
-msgid "Authorize Sharing Permission end"
-msgstr "by confirming the sharing."
+msgid "Authorize Sharing Submit Synchronize"
+msgstr "Synchronize"
 
-msgid "Authorize Sharing Sync"
-msgstr "Changes will be instantly available in both Cozy:"
+msgid "Authorize Sharing Submit Add"
+msgstr "Add"
 
-msgid "Authorize Sharing Self"
-msgstr "Your Cozy: %s"
-
-msgid "Authorize Sharing Client"
-msgstr "Your contact's Cozy: %s"
+msgid "Authorize Sharing Cancel"
+msgstr "Cancel"
 
 msgid "Authorize Policy sentence"
 msgstr "You can read its policy about the usage it will make of your data "
@@ -248,9 +250,6 @@ msgstr ", you accept that the application obtains access to your data, and in co
 
 msgid "Authorize Submit"
 msgstr "Authorize"
-
-msgid "Authorize Submit Sharing"
-msgstr "Confirm"
 
 msgid "Authorize Cancel"
 msgstr "Deny"

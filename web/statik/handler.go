@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	modelAsset "github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -91,7 +92,10 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 		// XXX We are using assetPath (and not AssetPath) here to avoid caching
 		// the assets via the sum in the URL. But it means that we have no
 		// fallback to the default context.
-		"asset": assetPath,
+		"asset":    assetPath,
+		"ext":      fileExtension,
+		"basename": basename,
+		"filetype": filetype,
 	}
 
 	var err error
@@ -109,9 +113,12 @@ func NewRenderer() (AssetRenderer, error) {
 	t := template.New("stub")
 
 	middlewares.FuncsMap = template.FuncMap{
-		"t":     fmt.Sprintf,
-		"split": strings.Split,
-		"asset": AssetPath,
+		"t":        fmt.Sprintf,
+		"split":    strings.Split,
+		"asset":    AssetPath,
+		"ext":      fileExtension,
+		"basename": basename,
+		"filetype": filetype,
 	}
 
 	for _, name := range templatesList {
@@ -361,4 +368,24 @@ func isLongHexString(s string) bool {
 		}
 	}
 	return true
+}
+
+func fileExtension(filename string) string {
+	return path.Ext(filename)
+}
+
+func basename(filename string) string {
+	ext := fileExtension(filename)
+	return strings.TrimSuffix(filename, ext)
+}
+
+func filetype(mime string) string {
+	if mime == consts.NoteMimeType {
+		return "note"
+	}
+	_, class := vfs.ExtractMimeAndClass(mime)
+	if class == "shortcut" || class == "application" {
+		return "files"
+	}
+	return class
 }

@@ -547,6 +547,7 @@ func Routes(router *echo.Group) {
 	authorizeGroup.POST("", authorize)
 	authorizeGroup.GET("/sharing", authorizeSharingForm)
 	authorizeGroup.POST("/sharing", authorizeSharing)
+	authorizeGroup.GET("/sharing/:sharing-id/cancel", cancelAuthorizeSharing)
 
 	router.POST("/access_token", accessToken)
 	router.POST("/secret_exchange", secretExchange)

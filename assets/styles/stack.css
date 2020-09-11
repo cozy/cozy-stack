@@ -23,7 +23,7 @@ a:focus {
   text-decoration: underline;
 }
 
-[role='application'] {
+[role="application"] {
   display: -webkit-flex;
   display: -ms-flexbox;
   display: flex;
@@ -34,6 +34,17 @@ a:focus {
   -ms-flex-pack: center;
   justify-content: center;
   min-height: 100%;
+}
+
+/* Utilities */
+.u-br-silver {
+  border: solid 1px var(--silver);
+}
+.u-br-grey {
+  border: solid 1px rgba(0, 0, 0, 0.08);
+}
+.u-bs-grey {
+  box-shadow: 0 0.25rem 0.75rem 0 rgba(0, 0, 0, 0.08);
 }
 
 /* Wrapper */
@@ -70,20 +81,20 @@ header a {
   margin: 0 auto;
   width: 3rem;
   height: 3rem;
-  background: url('../images/cozy-bubble.svg') center center no-repeat;
+  background: url("../images/cozy-bubble.svg") center center no-repeat;
 }
 header .shield {
   position: relative;
 }
 header .shield:after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -15%;
   right: -15%;
   width: 1.4rem;
   height: 1.4rem;
   border-radius: 50%;
-  background: var(--grannyApple) url('../images/locked.svg') center center / 60%
+  background: var(--grannyApple) url("../images/locked.svg") center center / 60%
     auto no-repeat;
 }
 h1 {
@@ -146,14 +157,14 @@ h1 {
   list-style: none;
 }
 .compat-tips li:before {
-  content: '';
+  content: "";
   position: relative;
   top: 0.1rem;
   display: inline-block;
   width: 1rem;
   height: 1rem;
   margin-right: 0.5rem;
-  background: url('../images/icon-check-circle.svg') center center no-repeat;
+  background: url("../images/icon-check-circle.svg") center center no-repeat;
 }
 .compat-help {
   margin-top: 2rem;
@@ -186,108 +197,151 @@ h1 {
   padding: 0;
   list-style: none;
 }
-.perm-list li {
-  margin-bottom: 16px;
+.perm-list li + li {
+  margin-top: 1rem;
 }
 .perm-list li:before {
-  content: '';
+  content: "";
   display: inline-block;
-  width: 32px;
-  height: 32px;
-  margin-right: 16px;
-  background-image: url('../images/icon-fallback.svg');
+  width: 2rem;
+  height: 2rem;
+  margin-right: 1rem;
+  background-image: url("../images/icon-fallback.svg");
   background-position: center center;
   background-repeat: no-repeat;
   background-size: contain;
   vertical-align: -9px;
 }
-li[class^='io.cozy.settings']:before,
-li[class^='io.cozy.bank.settings']:before {
-  background-image: url('../images/icon-settings.svg');
+li[class^="io.cozy.settings"]:before,
+li[class^="io.cozy.bank.settings"]:before {
+  background-image: url("../images/icon-settings.svg");
 }
-li[class^='io.cozy.accounts']:before {
-  background-image: url('../images/icon-accounts.svg');
+li[class^="io.cozy.accounts"]:before {
+  background-image: url("../images/icon-accounts.svg");
 }
-li[class^='io.cozy.apps']:before,
-li[class^='io.cozy.apps.suggestions']:before {
-  background-image: url('../images/icon-apps.svg');
+li[class^="io.cozy.apps"]:before,
+li[class^="io.cozy.apps.suggestions"]:before {
+  background-image: url("../images/icon-apps.svg");
 }
-li[class^='io.cozy.bank.accounts']:before {
-  background-image: url('../images/icon-bank-accounts.svg');
+li[class^="io.cozy.bank.accounts"]:before {
+  background-image: url("../images/icon-bank-accounts.svg");
 }
-li[class^='io.cozy.bank.groups']:before {
-  background-image: url('../images/icon-bank-groups.svg');
+li[class^="io.cozy.bank.groups"]:before {
+  background-image: url("../images/icon-bank-groups.svg");
 }
-li[class^='io.cozy.bank.operations']:before {
-  background-image: url('../images/icon-bank-operations.svg');
+li[class^="io.cozy.bank.operations"]:before {
+  background-image: url("../images/icon-bank-operations.svg");
 }
-li[class^='io.cozy.bank.recurrence']:before {
-  background-image: url('../images/icon-bank-recurrence.svg');
+li[class^="io.cozy.bank.recurrence"]:before {
+  background-image: url("../images/icon-bank-recurrence.svg");
 }
-li[class^='io.cozy.bills']:before {
-  background-image: url('../images/icon-bill.svg');
+li[class^="io.cozy.bills"]:before {
+  background-image: url("../images/icon-bill.svg");
 }
-li[class^='io.cozy.contacts']:before {
-  background-image: url('../images/icon-contacts.svg');
+li[class^="io.cozy.contacts"]:before {
+  background-image: url("../images/icon-contacts.svg");
 }
-li[class^='io.cozy.files']:before {
-  background-image: url('../images/icon-files.svg');
+li[class^="io.cozy.files"]:before {
+  background-image: url("../images/icon-files.svg");
 }
-li[class^='io.cozy.files.versions']:before {
-  background-image: url('../images/icon-files-versions.svg');
+li[class^="io.cozy.files.versions"]:before {
+  background-image: url("../images/icon-files-versions.svg");
 }
-li[class^='io.cozy.identities']:before {
-  background-image: url('../images/icon-identities.svg');
+li[class^="io.cozy.identities"]:before {
+  background-image: url("../images/icon-identities.svg");
 }
-li[class^='io.cozy.konnectors']:before {
-  background-image: url('../images/icon-konnectors.svg');
+li[class^="io.cozy.konnectors"]:before {
+  background-image: url("../images/icon-konnectors.svg");
 }
-li[class^='io.cozy.notifications']:before {
-  background-image: url('../images/icon-notifications.svg');
+li[class^="io.cozy.notifications"]:before {
+  background-image: url("../images/icon-notifications.svg");
 }
-li[class^='io.cozy.photos.albums']:before {
-  background-image: url('../images/icon-photos-album.svg');
+li[class^="io.cozy.photos.albums"]:before {
+  background-image: url("../images/icon-photos-album.svg");
 }
-li[class^='io.cozy.jobs']:before {
-  background-image: url('../images/icon-triggers.svg');
+li[class^="io.cozy.jobs"]:before {
+  background-image: url("../images/icon-triggers.svg");
 }
-li[class^='io.cozy.triggers']:before {
-  background-image: url('../images/icon-triggers.svg');
+li[class^="io.cozy.triggers"]:before {
+  background-image: url("../images/icon-triggers.svg");
 }
-li[class^='io.cozy.permissions']:before {
-  background-image: url('../images/icon-permissions.svg');
+li[class^="io.cozy.permissions"]:before {
+  background-image: url("../images/icon-permissions.svg");
 }
-li[class^='io.cozy.oauth.clients']:before {
-  background-image: url('../images/icon-device.svg');
+li[class^="io.cozy.oauth.clients"]:before {
+  background-image: url("../images/icon-device.svg");
 }
-li[class^='org.fing.mesinfos.client']:before,
-li[class^='fr.maif.maifuser.societaire']:before {
-  background-image: url('../images/icon-profile.svg');
+li[class^="org.fing.mesinfos.client"]:before,
+li[class^="fr.maif.maifuser.societaire"]:before {
+  background-image: url("../images/icon-profile.svg");
 }
-li[class^='org.fing.mesinfos.consumptionstatement']:before {
-  background-image: url('../images/icon-consumption.svg');
+li[class^="org.fing.mesinfos.consumptionstatement"]:before {
+  background-image: url("../images/icon-consumption.svg");
 }
-li[class^='org.fing.mesinfos.contract']:before,
-li[class^='fr.maif.maifuser.contrat']:before {
-  background-image: url('../images/icon-contract.svg');
+li[class^="org.fing.mesinfos.contract"]:before,
+li[class^="fr.maif.maifuser.contrat"]:before {
+  background-image: url("../images/icon-contract.svg");
 }
-li[class^='org.fing.mesinfos.energybreakdown']:before {
-  background-image: url('../images/icon-energybreakdown.svg');
+li[class^="org.fing.mesinfos.energybreakdown"]:before {
+  background-image: url("../images/icon-energybreakdown.svg");
 }
-li[class^='org.fing.mesinfos.home']:before,
-li[class^='fr.maif.maifuser.home']:before {
-  background-image: url('../images/icon-home.svg');
+li[class^="org.fing.mesinfos.home"]:before,
+li[class^="fr.maif.maifuser.home"]:before {
+  background-image: url("../images/icon-home.svg");
 }
-li[class^='org.fing.mesinfos.paymentterms']:before,
-li[class^='fr.maif.maifuser.paymentterms']:before {
-  background-image: url('../images/icon-files-pen.svg');
+li[class^="org.fing.mesinfos.paymentterms"]:before,
+li[class^="fr.maif.maifuser.paymentterms"]:before {
+  background-image: url("../images/icon-files-pen.svg");
 }
-li[class^='fr.maif.maifuser.foyer']:before {
-  background-image: url('../images/icon-family.svg');
+li[class^="fr.maif.maifuser.foyer"]:before {
+  background-image: url("../images/icon-family.svg");
 }
-li[class^='org.fing.mesinfos.insuranceclaim']:before,
-li[class^='fr.maif.maifuser.sinistre']:before {
-  background-image: url('../images/icon-sinister.svg');
+li[class^="org.fing.mesinfos.insuranceclaim"]:before,
+li[class^="fr.maif.maifuser.sinistre"]:before {
+  background-image: url("../images/icon-sinister.svg");
+}
+li.filetype-audio:before {
+  background-image: url("../images/filetypes/audio.svg");
+}
+li.filetype-bin:before {
+  background-image: url("../images/filetypes/bin.svg");
+}
+li.filetype-code:before {
+  background-image: url("../images/filetypes/code.svg");
+}
+li.filetype-files:before {
+  background-image: url("../images/filetypes/files.svg");
+}
+li.filetype-image:before {
+  background-image: url("../images/filetypes/image.svg");
+}
+li.filetype-note:before {
+  background-image: url("../images/filetypes/note.svg");
+}
+li.filetype-pdf:before {
+  background-image: url("../images/filetypes/pdf.svg");
+}
+li.filetype-sheet:before {
+  background-image: url("../images/filetypes/sheet.svg");
+}
+li.filetype-slide:before {
+  background-image: url("../images/filetypes/slide.svg");
+}
+li.filetype-text:before {
+  background-image: url("../images/filetypes/text.svg");
+}
+li.filetype-video:before {
+  background-image: url("../images/filetypes/video.svg");
+}
+li.filetype-zip:before {
+  background-image: url("../images/filetypes/zip.svg");
+}
+.c-avatar.c-avatar--sharing {
+  width: 1.5rem;
+  height: 1.5rem;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  vertical-align: -0.375rem;
 }
 
 /* Cozy URL component */
@@ -329,7 +383,7 @@ li[class^='fr.maif.maifuser.sinistre']:before {
 }
 
 @media (max-width: 35rem) {
-  [role='application'] {
+  [role="application"] {
     height: auto;
   }
   .popup {

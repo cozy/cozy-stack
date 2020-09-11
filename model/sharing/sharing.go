@@ -3,10 +3,12 @@ package sharing
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -622,7 +624,9 @@ func (s *Sharing) RedirectAfterAuthorizeURL(inst *instance.Instance) *url.URL {
 	if webapp == nil {
 		return inst.DefaultRedirection()
 	}
-	return inst.SubDomain(webapp.Slug())
+	u := inst.SubDomain(webapp.Slug())
+	u.RawQuery = "sharing=" + s.SID
+	return u
 }
 
 // EndInitial is used to finish the initial sync phase of a sharing
@@ -735,4 +739,51 @@ func (s *Sharing) cleanShortcutID(inst *instance.Instance) string {
 	s.ShortcutID = ""
 	_ = couchdb.UpdateDoc(inst, s)
 	return parentID
+}
+
+// GetPreviewURL asks the owner's Cozy the URL for previewing the sharing.
+func (s *Sharing) GetPreviewURL(inst *instance.Instance, state string) (string, error) {
+	u, err := url.Parse(s.Members[0].Instance)
+	if s.Members[0].Instance == "" || err != nil {
+		return "", ErrInvalidSharing
+	}
+	body, err := json.Marshal(map[string]interface{}{"state": state})
+	if err != nil {
+		return "", err
+	}
+	res, err := request.Req(&request.Options{
+		Method: http.MethodPost,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID + "/preview-url",
+		Headers: request.Headers{
+			"Accept":       "application/json",
+			"Content-Type": "application/json",
+		},
+		Body: bytes.NewReader(body),
+	})
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	var data map[string]interface{}
+	if err = json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return "", ErrRequestFailed
+	}
+
+	previewURL, ok := data["url"].(string)
+	if !ok || previewURL == "" {
+		return "", ErrRequestFailed
+	}
+	return previewURL, nil
+}
+
+// AddShortcut creates a shortcut for this sharing on the local instance.
+func (s *Sharing) AddShortcut(inst *instance.Instance, state string) error {
+	previewURL, err := s.GetPreviewURL(inst, state)
+	if err != nil {
+		return err
+	}
+	return s.CreateShortcut(inst, previewURL, true)
 }
