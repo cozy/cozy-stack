@@ -2,9 +2,11 @@ package bitwarden
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -111,6 +113,25 @@ func (c *Cipher) Clone() couchdb.Doc {
 	return &cloned
 }
 
+// Fetch implements permissions.Fetcher
+func (c *Cipher) Fetch(field string) []string {
+	switch field {
+	case "deletedDate":
+		if c.DeletedDate != nil {
+			date := *c.DeletedDate
+			return []string{date.String()}
+		}
+		return []string{""}
+	case "shared_with_cozy":
+		return []string{strconv.FormatBool(c.SharedWithCozy)}
+	case "type":
+		return []string{strconv.FormatInt(int64(c.Type), 32)}
+	case "name":
+		return []string{c.Name}
+	}
+	return nil
+}
+
 // SetID changes the cipher qualified identifier
 func (c *Cipher) SetID(id string) { c.CouchID = id }
 
@@ -156,3 +177,4 @@ func DeleteUnrecoverableCiphers(inst *instance.Instance) error {
 }
 
 var _ couchdb.Doc = &Cipher{}
+var _ permission.Fetcher = &Cipher{}
