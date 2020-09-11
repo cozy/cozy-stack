@@ -1,7 +1,6 @@
 # 
 # Translators:
 # Pierre Vandekerckhove <pierre4vdk@gmail.com>, 2019
-# Yannick Lohse <yannick.lohse@cozycloud.cc>, 2019
 # Maxime M <maxime@cozycloud.cc>, 2019
 # Cyrille Perois <cyrille@cozycloud.cc>, 2019
 # JC Pagnon <gooz@cozycloud.cc>, 2019
@@ -241,37 +240,37 @@ msgstr "J'ai oublié mon mot de passe"
 msgid "Authorize Title"
 msgstr "Autoriser %s à accéder à votre profil ?"
 
-msgid "Authorize Sharing Title"
-msgstr "Accepter le partage de %s ?"
+msgid "Authorize Sharing Title Synchronize"
+msgstr "Synchroniser dans mon Cozy"
+
+msgid "Authorize Sharing Title Add"
+msgstr "Ajouter à mon Cozy"
 
 msgid "Authorize Client presentation"
 msgstr "voudrait accéder aux données suivantes du cozy "
 
 msgid "Authorize Sharing Request"
-msgstr "%s a partagé les données suivantes avec vous :"
+msgstr "a partagé avec vous :"
 
-msgid "Authorize Sharing Permission start"
-msgstr "Vous pourrez"
-
-msgid "Authorize Sharing Permission readonly"
-msgstr "les consulter"
-
-msgid "Authorize Sharing Permission readwrite"
-msgstr "les consulter et les modifier"
-
-msgid "Authorize Sharing Permission end"
-msgstr "en les ajoutant à votre Cozy."
-
-msgid "Authorize Sharing Sync"
+msgid "Authorize Sharing Description start"
 msgstr ""
-"Pour rappel, les modifications seront automatiquement visibles dans vos deux"
-" Cozy :"
+"%s et vous pouvez collaborer en modifiant le %s. Chaque modification sera "
+"transmise automatiquement entre vos Cozy."
 
-msgid "Authorize Sharing Self"
-msgstr "votre Cozy : %s"
+msgid "Authorize Sharing Description end"
+msgstr "Vous conserverez le %s dans votre Cozy, même si %s annule le partage."
 
-msgid "Authorize Sharing Client"
-msgstr "le Cozy de votre contact : %s"
+msgid "Authorize Sharing Synchronize label"
+msgstr "Synchroniser dans mon Cozy"
+
+msgid "Authorize Sharing Submit Synchronize"
+msgstr "Synchroniser"
+
+msgid "Authorize Sharing Submit Add"
+msgstr "Ajouter"
+
+msgid "Authorize Sharing Cancel"
+msgstr "Annuler"
 
 msgid "Authorize Policy sentence"
 msgstr ""
@@ -293,9 +292,6 @@ msgstr ""
 
 msgid "Authorize Submit"
 msgstr "Autoriser"
-
-msgid "Authorize Submit Sharing"
-msgstr "Confirmer le partage"
 
 msgid "Authorize Cancel"
 msgstr "Refuser"
