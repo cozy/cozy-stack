@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <g fill="none" fill-rule="evenodd" transform="translate(3)">
+    <path fill="#E6D5FF" d="M0,2.00174332 C0,0.89621101 0.890925393,0 1.99742191,0 L19,0 L26,7 L26,29.9964051 C26,31.10296 25.1050211,32 24.0029953,32 L1.99700466,32 C0.89408944,32 0,31.1107383 0,29.9982567 L0,2.00174332 Z"/>
+    <path fill="#9C59FF" d="M18.5,8.57092175e-14 C18.2238576,1.33045111e-13 18,0.230796814 18,0.500435829 L18,8 L25.4995642,8 C25.7759472,8 26,7.76806641 26,7.5 L26,7 L19,0 L18.5,8.57092175e-14 Z"/>
+    <g stroke="#9C59FF" stroke-width="2" transform="translate(5 11)">
+      <polyline points="4 11 0 7 4 3" stroke-linejoin="round"/>
+      <polyline points="16 11 12 7 16 3" stroke-linejoin="round" transform="matrix(-1 0 0 1 28 0)"/>
+      <path d="M6,14 L10,0"/>
+    </g>
+  </g>
+</svg>

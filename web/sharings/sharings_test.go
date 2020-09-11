@@ -347,7 +347,7 @@ func fakeAliceInstance(t *testing.T) {
 }
 
 func assertAuthorizePageShowsTheSharing(t *testing.T, body string) {
-	assert.Contains(t, body, "would like to share the following data with you")
+	assert.Contains(t, body, "and you can collaborate by editing the document")
 	assert.Contains(t, body, `<input type="hidden" name="sharing_id" value="`+sharingID)
 	assert.Contains(t, body, `<input type="hidden" name="state" value="`+state)
 	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
@@ -355,7 +355,7 @@ func assertAuthorizePageShowsTheSharing(t *testing.T, body string) {
 	if assert.Len(t, matches, 2) {
 		csrfToken = matches[1]
 	}
-	assert.Contains(t, body, `<li class="io.cozy.tests">test one</li>`)
+	assert.Contains(t, body, `<li class="io.cozy.tests u-mv-1">test one</li>`)
 }
 
 func assertCredentialsHasBeenExchanged(t *testing.T) {

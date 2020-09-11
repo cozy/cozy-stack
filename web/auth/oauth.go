@@ -327,12 +327,19 @@ func authorizeSharingForm(c echo.Context) error {
 		return renderError(c, http.StatusUnauthorized, "Error Invalid sharing")
 	}
 
-	var sharerDomain string
+	var sharerDomain, targetType string
 	sharerURL, err := url.Parse(s.Members[0].Instance)
 	if err != nil {
 		sharerDomain = s.Members[0].Instance
 	} else {
 		sharerDomain = sharerURL.Host
+	}
+	if s.Rules[0].DocType != consts.Files {
+		targetType = instance.Translate("Notification Sharing Type Document")
+	} else if s.Rules[0].Mime == "" {
+		targetType = instance.Translate("Notification Sharing Type Directory")
+	} else {
+		targetType = instance.Translate("Notification Sharing Type File")
 	}
 
 	return c.Render(http.StatusOK, "authorize_sharing.html", echo.Map{
@@ -349,6 +356,7 @@ func authorizeSharingForm(c echo.Context) error {
 		"CSRF":         c.Get("csrf"),
 		"Favicon":      middlewares.Favicon(instance),
 		"HasShortcut":  s.ShortcutID != "",
+		"TargetType":   targetType,
 	})
 }
 
