@@ -458,10 +458,18 @@ func (c *Client) RebuildRedis() error {
 }
 
 // DiskUsage returns the information about disk usage and quota
-func (c *Client) DiskUsage(domain string) (map[string]interface{}, error) {
+func (c *Client) DiskUsage(domain string, includeTrash bool) (map[string]interface{}, error) {
+	var q map[string][]string
+	if includeTrash {
+		q = url.Values{
+			"include": {"trash"},
+		}
+	}
+
 	res, err := c.Req(&request.Options{
-		Method: "GET",
-		Path:   "/instances/" + domain + "/disk-usage",
+		Method:  "GET",
+		Path:    "/instances/" + url.PathEscape(domain) + "/disk-usage",
+		Queries: q,
 	})
 	if err != nil {
 		return nil, err

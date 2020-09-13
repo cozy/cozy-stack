@@ -270,6 +270,7 @@ type diskUsageResult struct {
 	Files         int64 `json:"files,string,omitempty"`
 	Versions      int64 `json:"versions,string,omitempty"`
 	VersionsCount int   `json:"versions_count,string,omitempty"`
+	Trashed       int64 `json:"trashed,string,omitempty"`
 }
 
 func diskUsage(c echo.Context) error {
@@ -294,6 +295,15 @@ func diskUsage(c echo.Context) error {
 	result.Used = files + versions
 	result.Files = files
 	result.Versions = versions
+
+	if c.QueryParam("include") == "trash" {
+		trashed, err := fs.TrashUsage()
+		if err != nil {
+			return err
+		}
+		result.Trashed = trashed
+	}
+
 	result.Quota = fs.DiskQuota()
 	if stats, err := couchdb.DBStatus(instance, consts.Files); err == nil {
 		result.Count = stats.DocCount
