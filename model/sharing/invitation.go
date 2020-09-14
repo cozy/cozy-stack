@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -15,7 +16,7 @@ import (
 
 // SendInvitations sends invitation mails to the recipients that were in the
 // mail-not-sent status (owner only)
-func (s *Sharing) SendInvitations(inst *instance.Instance, codes map[string]string) error {
+func (s *Sharing) SendInvitations(inst *instance.Instance, perms *permission.Permission) error {
 	if !s.Owner {
 		return ErrInvalidSharing
 	}
@@ -28,7 +29,7 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, codes map[string]stri
 		if i == 0 || m.Status != MemberStatusMailNotSent { // i == 0 is for the owner
 			continue
 		}
-		link := m.InvitationLink(inst, s, s.Credentials[i-1].State, codes)
+		link := m.InvitationLink(inst, s, s.Credentials[i-1].State, perms)
 		if m.Instance != "" {
 			if err := m.SendShortcut(inst, s, link); err == nil {
 				s.Members[i].Status = MemberStatusPendingInvitation
@@ -109,9 +110,20 @@ func (s *Sharing) getSharerAndDescription(inst *instance.Instance) (string, stri
 
 // InvitationLink generates an HTTP link where the recipient can start the
 // process of accepting the sharing
-func (m *Member) InvitationLink(inst *instance.Instance, s *Sharing, state string, codes map[string]string) string {
-	if s.Owner && s.PreviewPath != "" && codes != nil {
-		if code, ok := codes[m.Email]; ok {
+func (m *Member) InvitationLink(inst *instance.Instance, s *Sharing, state string, perms *permission.Permission) string {
+	if s.Owner && s.PreviewPath != "" && perms != nil {
+		var code string
+		if perms.Codes != nil {
+			if c, ok := perms.Codes[m.Email]; ok {
+				code = c
+			}
+		}
+		if perms.ShortCodes != nil {
+			if c, ok := perms.ShortCodes[m.Email]; ok {
+				code = c
+			}
+		}
+		if code != "" {
 			u := inst.SubDomain(s.AppSlug)
 			u.Path = s.PreviewPath
 			u.RawQuery = url.Values{"sharecode": {code}}.Encode()

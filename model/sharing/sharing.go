@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -169,18 +170,19 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 
 // CreatePreviewPermissions creates the permissions doc for previewing this sharing,
 // or updates it with the new codes if the document already exists
-func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]string, error) {
+func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (*permission.Permission, error) {
 	doc, _ := permission.GetForSharePreview(inst, s.SID)
 
 	codes := make(map[string]string, len(s.Members)-1)
+	shortcodes := make(map[string]string, len(s.Members)-1)
 
 	for i, m := range s.Members {
 		if i == 0 {
 			continue
 		}
 		var err error
-		var previousVal string
-		var okShare bool
+		var previousCode, previousShort string
+		var okCode, okShort bool
 		key := m.Email
 		if key == "" {
 			key = m.Instance
@@ -188,16 +190,22 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 
 		// Checks that we don't already have a sharing code
 		if doc != nil {
-			previousVal, okShare = doc.Codes[key]
+			previousCode, okCode = doc.Codes[key]
+			previousShort, okShort = doc.ShortCodes[key]
 		}
 
-		if !okShare {
+		if !okCode {
 			codes[key], err = inst.CreateShareCode(key)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			codes[key] = previousVal
+			codes[key] = previousCode
+		}
+		if !okShort {
+			shortcodes[key] = crypto.GenerateRandomString(consts.ShortCodeLen)
+		} else {
+			shortcodes[key] = previousShort
 		}
 	}
 
@@ -213,30 +221,28 @@ func (s *Sharing) CreatePreviewPermissions(inst *instance.Instance) (map[string]
 		}
 	}
 
-	if doc != nil {
-		if doc.Metadata != nil {
-			err := doc.Metadata.UpdatedByApp(s.AppSlug, "")
-			if err != nil {
-				return nil, err
-			}
-		}
-		doc.Codes = codes
-		if err := couchdb.UpdateDoc(inst, doc); err != nil {
-			return nil, err
-		}
-	} else {
+	if doc == nil {
 		md := metadata.New()
 		md.CreatedByApp = s.AppSlug
 		subdoc := permission.Permission{
 			Permissions: set,
 			Metadata:    md,
 		}
-		_, err := permission.CreateSharePreviewSet(inst, s.SID, codes, subdoc)
+		return permission.CreateSharePreviewSet(inst, s.SID, codes, shortcodes, subdoc)
+	}
+
+	if doc.Metadata != nil {
+		err := doc.Metadata.UpdatedByApp(s.AppSlug, "")
 		if err != nil {
 			return nil, err
 		}
 	}
-	return codes, nil
+	doc.Codes = codes
+	doc.ShortCodes = shortcodes
+	if err := couchdb.UpdateDoc(inst, doc); err != nil {
+		return nil, err
+	}
+	return doc, nil
 }
 
 // CreateInteractPermissions creates the permissions doc for reading and
@@ -279,7 +285,7 @@ func (s *Sharing) CreateInteractPermissions(inst *instance.Instance, m *Member) 
 }
 
 // Create checks that the sharing is OK and it persists it in CouchDB if it is the case.
-func (s *Sharing) Create(inst *instance.Instance) (map[string]string, error) {
+func (s *Sharing) Create(inst *instance.Instance) (*permission.Permission, error) {
 	if err := s.ValidateRules(); err != nil {
 		return nil, err
 	}
@@ -658,19 +664,22 @@ func GetSharecode(inst *instance.Instance, sharingID, clientID string) (string, 
 	if err != nil {
 		return "", err
 	}
-	var codes map[string]string
 	preview, err := permission.GetForSharePreview(inst, sharingID)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
-			codes, err = s.CreatePreviewPermissions(inst)
+			preview, err = s.CreatePreviewPermissions(inst)
 		}
 		if err != nil {
 			return "", err
 		}
-	} else {
-		codes = preview.Codes
 	}
-	for key, code := range codes {
+
+	for key, code := range preview.ShortCodes {
+		if key == member.Instance || key == member.Email {
+			return code, nil
+		}
+	}
+	for key, code := range preview.Codes {
 		if key == member.Instance || key == member.Email {
 			return code, nil
 		}
