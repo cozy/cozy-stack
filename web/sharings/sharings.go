@@ -147,6 +147,26 @@ func GetSharing(c echo.Context) error {
 	return jsonapiSharingWithDocs(c, s)
 }
 
+// CountNewShortcuts returns the number of shortcuts to a sharing that have not
+// been seen.
+func CountNewShortcuts(c echo.Context) error {
+	if _, err := middlewares.GetPermission(c); err != nil {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
+	inst := middlewares.GetInstance(c)
+	count, err := sharing.CountNewShortcuts(inst)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	body := map[string]interface{}{
+		"meta": map[string]int{
+			"count": count,
+		},
+	}
+	return c.JSON(http.StatusOK, body)
+}
+
 // GetSharingsInfoByDocType returns, for a given doctype, all the sharing
 // information, i.e. the involved sharings and the shared documents
 func GetSharingsInfoByDocType(c echo.Context) error {
@@ -661,6 +681,7 @@ func Routes(router *echo.Group) {
 	router.POST("/:sharing-id/recipients/delegated", AddRecipientsDelegated, checkSharingWritePermissions)
 
 	// Misc
+	router.GET("/news", CountNewShortcuts)
 	router.GET("/doctype/:doctype", GetSharingsInfoByDocType)
 	router.GET("/:sharing-id/recipients/:index/avatar", GetAvatar)
 

@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 28
+const IndexViewsVersion int = 29
 
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
@@ -22,6 +22,8 @@ var Indexes = []*mango.Index{
 	mango.IndexOnFields(consts.Files, "by-mime-updated-at", []string{"mime", "trashed", "updated_at"}),
 	// Used by the FSCK to detect conflicts
 	mango.IndexOnFields(consts.Files, "with-conflicts", []string{"_conflicts"}),
+	// Used to count the shortuts to a sharing that have not been seen
+	mango.IndexOnFields(consts.Files, "by-sharing-status", []string{"metadata.sharing.status"}),
 
 	// Used to lookup a queued and running jobs
 	mango.IndexOnFields(consts.Jobs, "by-worker-and-state", []string{"worker", "state"}),
