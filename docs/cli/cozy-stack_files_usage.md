@@ -7,13 +7,14 @@ Show the usage and quota for the files of this instance
 Show the usage and quota for the files of this instance
 
 ```
-cozy-stack files usage [--domain domain] [flags]
+cozy-stack files usage [--domain domain] [--trash] [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for usage
+  -h, --help    help for usage
+      --trash   Include trashed files total size
 ```
 
 ### Options inherited from parent commands

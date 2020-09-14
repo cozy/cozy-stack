@@ -735,6 +735,7 @@ function _cozy-stack_files_import {
 
 function _cozy-stack_files_usage {
   _arguments \
+    '--trash[Include trashed files total size]' \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
     '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
