@@ -262,7 +262,22 @@ func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (
 }
 
 func (c *couchdbIndexer) BatchDelete(docs []couchdb.Doc) error {
-	return couchdb.BulkDeleteDocs(c.db, consts.Files, docs)
+	remaining := docs[:]
+	for len(remaining) > 0 {
+		n := 1000
+		if len(remaining) < n {
+			n = len(remaining)
+		}
+		toDelete := remaining[:n]
+		remaining = remaining[n:]
+		if err := couchdb.BulkDeleteDocs(c.db, consts.Files, toDelete); err != nil {
+			// If it fails once, try again
+			if err := couchdb.BulkDeleteDocs(c.db, consts.Files, toDelete); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (c *couchdbIndexer) MoveDir(oldpath, newpath string) error {
@@ -609,11 +624,25 @@ func (c *couchdbIndexer) AllVersions() ([]*Version, error) {
 }
 
 func (c *couchdbIndexer) BatchDeleteVersions(versions []*Version) error {
-	docs := make([]couchdb.Doc, len(versions))
+	remaining := make([]couchdb.Doc, len(versions))
 	for i, v := range versions {
-		docs[i] = v
+		remaining[i] = v
 	}
-	return couchdb.BulkDeleteDocs(c.db, consts.FilesVersions, docs)
+	for len(remaining) > 0 {
+		n := 1000
+		if len(remaining) < n {
+			n = len(remaining)
+		}
+		toDelete := remaining[:n]
+		remaining = remaining[n:]
+		if err := couchdb.BulkDeleteDocs(c.db, consts.Files, toDelete); err != nil {
+			// If it fails once, try again
+			if err := couchdb.BulkDeleteDocs(c.db, consts.Files, toDelete); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // checkTrashedDirIsShared will look for a dir going to the trash if it was the
