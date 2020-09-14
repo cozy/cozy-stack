@@ -379,6 +379,33 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### GET /sharings/news
+
+It returns the number of shortcuts to a sharing that have not been seen.
+
+#### Request
+
+```http
+GET /sharings/news HTTP/1.1
+Host: alice.example.net
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "meta": {
+    "count": 5
+  }
+}
+```
+
 ### GET /sharings/doctype/:doctype
 
 Get information about all the sharings that have a rule for the given doctype.

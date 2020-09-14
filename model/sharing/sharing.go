@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -786,4 +787,30 @@ func (s *Sharing) AddShortcut(inst *instance.Instance, state string) error {
 		return err
 	}
 	return s.CreateShortcut(inst, previewURL, true)
+}
+
+// CountNewShortcuts returns the number of shortcuts to a sharing that have not
+// been seen.
+func CountNewShortcuts(inst *instance.Instance) (int, error) {
+	count := 0
+	perPage := 1000
+	list := make([]couchdb.JSONDoc, 0, perPage)
+	var bookmark string
+	for {
+		req := &couchdb.FindRequest{
+			UseIndex: "by-sharing-status",
+			Selector: mango.Equal("metadata.sharing.status", "new"),
+			Limit:    perPage,
+			Bookmark: bookmark,
+		}
+		res, err := couchdb.FindDocsRaw(inst, consts.Files, req, &list)
+		if err != nil {
+			return 0, err
+		}
+		count += len(list)
+		if len(list) < perPage {
+			return count, nil
+		}
+		bookmark = res.Bookmark
+	}
 }
