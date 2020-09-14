@@ -355,7 +355,7 @@ func assertAuthorizePageShowsTheSharing(t *testing.T, body string) {
 	if assert.Len(t, matches, 2) {
 		csrfToken = matches[1]
 	}
-	assert.Contains(t, body, `<li class="io.cozy.tests u-mv-1">test one</li>`)
+	assert.Contains(t, body, `<li class="io.cozy.tests">test one</li>`)
 }
 
 func assertCredentialsHasBeenExchanged(t *testing.T) {
