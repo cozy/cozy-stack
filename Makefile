@@ -39,7 +39,8 @@ jslint: ./node_modules/.bin/eslint
 ## pretty: make the assets more prettier
 pretty:
 	@if ! [ -x "$$(command -v prettier)" ]; then echo "Install prettier with 'npm install -g prettier'"; exit 1; fi
-	@prettier --write --no-semi --single-quote assets/*/*.{css,js}
+	@prettier --write --no-semi --single-quote assets/*/*.js
+	@prettier --write assets/*/*.css
 .PHONY: pretty
 
 ## assets: package the assets as go code

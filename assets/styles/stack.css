@@ -37,6 +37,7 @@ a:focus {
 }
 
 /* Utilities */
+/* TODO https://github.com/cozy/cozy-ui/issues/1555 */
 .u-br-silver {
   border: solid 1px var(--silver);
 }
@@ -179,6 +180,11 @@ h1 {
 .controls .c-btn {
   margin-bottom: 4px;
   min-width: calc(50% - 0.5rem);
+}
+.controls a:hover,
+.controls a:active,
+.controls a:focus {
+  text-decoration: none;
 }
 
 /* Permissions */

@@ -25,14 +25,14 @@
             <input type="hidden" name="sharing_id" value="{{.Sharing.SID}}" />
             <input type="hidden" name="state" value="{{.State}}" />
             <div role="region">
-              <h1 class="u-mt-0 u-ta-center">
+              <h1 class="u-title-h1 u-mt-0 u-mb-2 u-ta-center">
                 {{if .HasShortcut}}
                 {{t "Authorize Sharing Title Synchronize"}}
                 {{else}}
                 {{t "Authorize Sharing Title Add"}}
                 {{end}}
               </h1>
-              <div class="u-br-silver u-bdrs-4 u-p-1 u-mb-1">
+              <div class="u-br-silver u-bdrs-4 u-p-1-half u-mb-1">
                 <p class="help u-mt-0">
                   <span class="c-avatar c-avatar--sharing u-mr-half">
                     <img class="c-avatar-image" src="/sharings/{{.Sharing.SID}}/recipients/0/avatar" alt="" />
@@ -40,12 +40,12 @@
                     {{t "Authorize Sharing Request"}}
                   </span>
                 </p>
-                <ul class="u-br-grey u-bdrs-4 u-ph-1 u-pv-0 u-mb-0 u-bs-grey perm-list">
+                <ul class="u-br-grey u-bdrs-4 u-bs-grey u-stack-l u-mb-0 u-p-1 perm-list">
                   {{range $index, $rule := .Sharing.Rules}}
                   {{if $rule.Mime }}
-                  <li class="filetype-{{filetype $rule.Mime}} u-mv-1">{{basename $rule.Title}}<span class="u-coolGrey">{{ext $rule.Title}}</span></li>
+                  <li class="filetype-{{filetype $rule.Mime}}">{{basename $rule.Title}}<span class="u-coolGrey">{{ext $rule.Title}}</span></li>
                   {{else}}
-                  <li class="{{$rule.DocType}} u-mv-1">{{$rule.Title}}</li>
+                  <li class="{{$rule.DocType}}">{{$rule.Title}}</li>
                   {{end}}
                   {{end}}
                 </ul>
@@ -58,10 +58,10 @@
                 <span><strong>{{t "Authorize Sharing Synchronize label"}}</strong></span>
               </label>
               {{end}}
-              <p {{if not .HasShortcut}}class="u-ml-1-half"{{end}}>
+              <p class="{{if not .HasShortcut}}u-ml-1-half {{end}}u-fz-small">
                 {{t "Authorize Sharing Description start" .SharerName .TargetType}}
               </p>
-              <p {{if not .HasShortcut}}class="u-ml-1-half"{{end}}>
+              <p class="{{if not .HasShortcut}}u-ml-1-half {{end}}u-fz-small">
                 {{t "Authorize Sharing Description end" .TargetType .SharerName}}
               </p>
             </div>
