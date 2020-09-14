@@ -41,6 +41,7 @@ var flagImportFrom string
 var flagImportTo string
 var flagImportDryRun bool
 var flagImportMatch string
+var flagIncludeTrash bool
 
 // filesCmdGroup represents the instances command
 var filesCmdGroup = &cobra.Command{
@@ -108,7 +109,7 @@ var importFilesCmd = &cobra.Command{
 }
 
 var usageFilesCmd = &cobra.Command{
-	Use:   "usage [--domain domain]",
+	Use:   "usage [--domain domain] [--trash]",
 	Short: "Show the usage and quota for the files of this instance",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagDomain == "" {
@@ -116,7 +117,7 @@ var usageFilesCmd = &cobra.Command{
 			return cmd.Usage()
 		}
 		c := newAdminClient()
-		info, err := c.DiskUsage(flagDomain)
+		info, err := c.DiskUsage(flagDomain, flagIncludeTrash)
 		if err != nil {
 			return err
 		}
@@ -127,6 +128,12 @@ var usageFilesCmd = &cobra.Command{
 		}
 		if versions, ok := info["versions"]; ok {
 			fmt.Printf("  Including older versions of files: %v\n", versions)
+		}
+
+		if flagIncludeTrash {
+			if trashed, ok := info["trashed"]; ok {
+				fmt.Printf("  Including trashed files: %v\n", trashed)
+			}
 		}
 
 		if quota, ok := info["quota"]; ok {
@@ -511,6 +518,8 @@ func init() {
 	_ = importFilesCmd.MarkFlagRequired("to")
 	importFilesCmd.Flags().BoolVar(&flagImportDryRun, "dry-run", false, "do not actually import the files")
 	importFilesCmd.Flags().StringVar(&flagImportMatch, "match", "", "pattern that the imported files must match")
+
+	usageFilesCmd.Flags().BoolVar(&flagIncludeTrash, "trash", false, "Include trashed files total size")
 
 	filesCmdGroup.AddCommand(execFilesCmd)
 	filesCmdGroup.AddCommand(importFilesCmd)
