@@ -496,11 +496,12 @@ func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, c
 }
 
 // CreateSharePreviewSet creates a Permission doc for previewing a sharing
-func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes map[string]string, subdoc Permission) (*Permission, error) {
+func CreateSharePreviewSet(db prefixer.Prefixer, sharingID string, codes, shortcodes map[string]string, subdoc Permission) (*Permission, error) {
 	doc := &Permission{
 		Type:        TypeSharePreview,
 		Permissions: subdoc.Permissions,
 		Codes:       codes,
+		ShortCodes:  shortcodes,
 		SourceID:    consts.Sharings + "/" + sharingID,
 		Metadata:    subdoc.Metadata,
 	}

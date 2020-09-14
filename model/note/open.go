@@ -324,20 +324,22 @@ func (o *Opener) getSharecode(memberIndex int, readOnly bool) (string, error) {
 // getPreviewCode returns a sharecode that can be used for reading the note. It
 // uses a share-preview token.
 func (o *Opener) getPreviewCode(member *sharing.Member) (string, error) {
-	var codes map[string]string
 	preview, err := permission.GetForSharePreview(o.inst, o.sharing.ID())
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
-			codes, err = o.sharing.CreatePreviewPermissions(o.inst)
+			preview, err = o.sharing.CreatePreviewPermissions(o.inst)
 		}
 		if err != nil {
 			return "", err
 		}
-	} else {
-		codes = preview.Codes
 	}
 
-	for key, code := range codes {
+	for key, code := range preview.ShortCodes {
+		if key == member.Instance || key == member.Email {
+			return code, nil
+		}
+	}
+	for key, code := range preview.Codes {
 		if key == member.Instance || key == member.Email {
 			return code, nil
 		}

@@ -67,11 +67,11 @@ func CreateSharing(c echo.Context) error {
 		}
 	}
 
-	codes, err := s.Create(inst)
+	perms, err := s.Create(inst)
 	if err != nil {
 		return wrapErrors(err)
 	}
-	if err = s.SendInvitations(inst, codes); err != nil {
+	if err = s.SendInvitations(inst, perms); err != nil {
 		return wrapErrors(err)
 	}
 	as := &sharing.APISharing{
@@ -610,7 +610,7 @@ func GetPreviewURL(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	previewURL := m.InvitationLink(inst, s, args.State, perm.Codes)
+	previewURL := m.InvitationLink(inst, s, args.State, perm)
 	return c.JSON(http.StatusOK, map[string]string{"url": previewURL})
 }
 

@@ -86,13 +86,13 @@ func (s *Sharing) AddContacts(inst *instance.Instance, contactIDs map[string]boo
 		}
 	}
 	var err error
-	var codes map[string]string
+	var perms *permission.Permission
 	if s.PreviewPath != "" {
-		if codes, err = s.CreatePreviewPermissions(inst); err != nil {
+		if perms, err = s.CreatePreviewPermissions(inst); err != nil {
 			return err
 		}
 	}
-	if err = s.SendInvitations(inst, codes); err != nil {
+	if err = s.SendInvitations(inst, perms); err != nil {
 		return err
 	}
 	cloned := s.Clone().(*Sharing)
@@ -429,7 +429,7 @@ func (s *Sharing) FindMemberBySharecode(db prefixer.Prefixer, sharecode string) 
 	if err != nil {
 		return nil, err
 	}
-	return s.findMemberByCode(perms.Codes, sharecode)
+	return s.findMemberByCode(perms, sharecode)
 }
 
 // FindMemberByInteractCode returns the member that is linked to the sharing by
@@ -439,17 +439,29 @@ func (s *Sharing) FindMemberByInteractCode(db prefixer.Prefixer, sharecode strin
 	if err != nil {
 		return nil, err
 	}
-	return s.findMemberByCode(perms.Codes, sharecode)
+	return s.findMemberByCode(perms, sharecode)
 }
 
-func (s *Sharing) findMemberByCode(codes map[string]string, sharecode string) (*Member, error) {
+func (s *Sharing) findMemberByCode(perms *permission.Permission, sharecode string) (*Member, error) {
 	var emailOrInstance string
-	for e, code := range codes {
+	for e, code := range perms.Codes {
 		if code == sharecode {
 			emailOrInstance = e
 			break
 		}
 	}
+	if emailOrInstance == "" {
+		for e, code := range perms.ShortCodes {
+			if code == sharecode {
+				emailOrInstance = e
+				break
+			}
+		}
+	}
+	if emailOrInstance == "" {
+		return nil, ErrMemberNotFound
+	}
+
 	for i, m := range s.Members {
 		if m.Email == emailOrInstance {
 			return &s.Members[i], nil
