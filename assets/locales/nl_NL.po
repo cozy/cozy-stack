@@ -38,10 +38,10 @@ msgid "Notes New note"
 msgstr "Nieuwe notitie"
 
 msgid "Login Credentials error"
-msgstr "Het ingevoerde wachtwoord is onjuist; probeer het opnieuw."
+msgstr "Het ingevoerde wachtwoord is onjuist. Probeer het opnieuw."
 
 msgid "URL Discovery error"
-msgstr "De ingevoerde Cozy-url is onjuist; probeer het opnieuw."
+msgstr "De ingevoerde Cozy-url is onjuist. Probeer het opnieuw."
 
 msgid "Login Welcome"
 msgstr "Welkom!"
@@ -225,35 +225,37 @@ msgstr "Ik ben mijn wachtwoord vergeten"
 msgid "Authorize Title"
 msgstr "Machtig %s om toegang te krijgen tot je profiel"
 
-msgid "Authorize Sharing Title"
-msgstr "Nieuw deelverzoek van %s"
+msgid "Authorize Sharing Title Synchronize"
+msgstr "Synchroniseren naar mijn Cozy"
+
+msgid "Authorize Sharing Title Add"
+msgstr "Toevoegen aan mijn Cozy"
 
 msgid "Authorize Client presentation"
 msgstr "wil gemachtigd worden om toegang te krijgen tot je Cozy"
 
 msgid "Authorize Sharing Request"
-msgstr "%s wil de volgende gegevens met je delen:"
+msgstr "heeft iets met je gedeeld:"
 
-msgid "Authorize Sharing Permission start"
-msgstr "Je kunt het"
+msgid "Authorize Sharing Description start"
+msgstr ""
+"%s en jij kunnen samenwerken door %s aan te passen. Elke aanpassing wordt "
+"automatisch opgeslagen op jullie Cozy's."
 
-msgid "Authorize Sharing Permission readonly"
-msgstr "bekijken"
+msgid "Authorize Sharing Description end"
+msgstr "Je behoudt %s, zelfs als het delen wordt gestopt door %s."
 
-msgid "Authorize Sharing Permission readwrite"
-msgstr "bekijken en aanpassen"
+msgid "Authorize Sharing Synchronize label"
+msgstr "Synchroniseren naar mijn Cozy"
 
-msgid "Authorize Sharing Permission end"
-msgstr "door het deelverzoek te bevestigen."
+msgid "Authorize Sharing Submit Synchronize"
+msgstr "Synchroniseren"
 
-msgid "Authorize Sharing Sync"
-msgstr "Aanpassingen zijn direct zichtbaar in beide Cozies:"
+msgid "Authorize Sharing Submit Add"
+msgstr "Toevoegen"
 
-msgid "Authorize Sharing Self"
-msgstr "Jouw Cozy: %s"
-
-msgid "Authorize Sharing Client"
-msgstr "De Cozy van je contactpersoon: %s"
+msgid "Authorize Sharing Cancel"
+msgstr "Annuleren"
 
 msgid "Authorize Policy sentence"
 msgstr ""
@@ -276,9 +278,6 @@ msgstr ""
 
 msgid "Authorize Submit"
 msgstr "Machtigen"
-
-msgid "Authorize Submit Sharing"
-msgstr "Bevestigen"
 
 msgid "Authorize Cancel"
 msgstr "Weigeren"
@@ -667,19 +666,41 @@ msgid "Mail Sharing Request Subject"
 msgstr "Nieuw deelverzoek van %s"
 
 msgid "Mail Sharing Request Intro"
-msgstr "Hallo %s,"
+msgstr "Hallo,"
 
-msgid "Mail Sharing Request Description 1"
-msgstr "%s wil"
+msgid "Mail Sharing Request Description"
+msgstr ""
+"%s (%s) wil dat je iets %s (%s %s) in zijn/haar persoonlijke ruimte, Cozy."
 
-msgid "Mail Sharing Request Description 2"
-msgstr "met je delen!"
+msgid "Mail Sharing Request Action Read"
+msgstr "bekijkt"
+
+msgid "Mail Sharing Request Action Write"
+msgstr "bijwerkt"
 
 msgid "Mail Sharing Request Button text"
-msgstr "Verzoek goedkeuren"
+msgstr "Toegang tot deze %s"
 
 msgid "Mail Alert Account Subject"
 msgstr "Instantieverwijdering mislukt tijdens opschonen van accounts"
+
+msgid "Notification Sharing Subject"
+msgstr "Er is een gedeeld item beschikbaar op je Cozy"
+
+msgid "Notification Sharing Description"
+msgstr "%s heeft een %s %s met je gedeeld"
+
+msgid "Notification Sharing Type Document"
+msgstr "document"
+
+msgid "Notification Sharing Type Directory"
+msgstr "map"
+
+msgid "Notification Sharing Type File"
+msgstr "bestand"
+
+msgid "Notification Sharing Button text"
+msgstr "Gedeelde items bekijken"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Verbinden met je Cozy"
@@ -700,7 +721,7 @@ msgid "Sharing URL Not email error"
 msgstr "De Cozy-url is niet je e-mailadres."
 
 msgid "Sharing Discovery Submit"
-msgstr "Versturen"
+msgstr "Synchroniseren naar mijn Cozy"
 
 msgid "Sharing No Cozy"
 msgstr "Heb je nog geen Cozy?"
