@@ -36,18 +36,6 @@ a:focus {
   min-height: 100%;
 }
 
-/* Utilities */
-/* TODO https://github.com/cozy/cozy-ui/issues/1555 */
-.u-br-silver {
-  border: solid 1px var(--silver);
-}
-.u-br-grey {
-  border: solid 1px rgba(0, 0, 0, 0.08);
-}
-.u-bs-grey {
-  box-shadow: 0 0.25rem 0.75rem 0 rgba(0, 0, 0, 0.08);
-}
-
 /* Wrapper */
 .popup {
   -webkit-flex: 0 0 30rem;
@@ -55,13 +43,11 @@ a:focus {
   flex: 0 0 30rem;
   padding: 1em 0;
 }
-
 .popup--large {
   -webkit-flex: 0 0 32rem;
   -ms-flex: 0 0 32rem;
   flex: 0 0 32rem;
 }
-
 .popup-btn,
 a.popup-btn {
   display: block;
@@ -73,6 +59,23 @@ a.popup-btn {
   color: black;
   text-transform: uppercase;
   border: 1px solid #d6d8da;
+}
+
+.with-sticky-footer {
+  -webkit-flex: 0 1 32rem;
+  -ms-flex: 0 1 32rem;
+  flex: 0 1 32rem;
+  height: 100vh;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.with-sticky-footer footer {
+  padding: 0.5rem;
+  box-shadow: 0 -2px 2px 0 rgba(0, 0, 0, 0.06);
+}
+.with-sticky-footer .controls .c-btn {
+  margin-bottom: 0;
 }
 
 /* Header */
@@ -188,6 +191,10 @@ h1 {
 }
 
 /* Permissions */
+.logo-avatar {
+  width: 4rem;
+  margin-bottom: 0.5rem;
+}
 .c-chip img {
   max-height: 2rem;
 }
@@ -402,6 +409,10 @@ li.filetype-zip:before {
   h1 {
     font-size: 1.5rem;
   }
+  .logo-avatar {
+    width: 3rem;
+    margin-bottom: 0.25rem;
+  }
   .hide-on-mobile {
     display: none;
   }
@@ -413,5 +424,12 @@ li.filetype-zip:before {
   }
   .my-cozy-url input {
     padding: 0.5em;
+  }
+}
+
+@media (min-width: 32rem) {
+  .with-sticky-footer footer {
+    margin: 0 calc(-1 * (100vw - 32rem) / 2);
+    padding: 1rem calc((100vw - 32rem) / 2 + 1rem);
   }
 }
