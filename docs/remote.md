@@ -169,7 +169,7 @@ in the previous example), and the application that has made the request.
 
 If you are a developer and you want to use a new remote doctype, it can be
 difficult to first make it available in the github.com/cozy/cozy-doctypes
-repository and only then test it. So, the cozy-stack serve command will have a
+repository and only then test it. So, the cozy-stack serve command has a
 `--doctypes` option to gives a local directory with the doctypes. You can fork
 the repository, clone it, work on a new doctype inside, test it locally, and
 when OK, make a pull request for it.
