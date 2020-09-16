@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -15,39 +16,54 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/hooks"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
 // Options holds the parameters to create a new instance.
 type Options struct {
-	Domain         string
-	DomainAliases  []string
-	Locale         string
-	UUID           string
-	OIDCID         string
-	TOSSigned      string
-	TOSLatest      string
-	Timezone       string
-	ContextName    string
-	Email          string
-	PublicName     string
-	Settings       string
-	SettingsObj    *couchdb.JSONDoc
-	AuthMode       string
-	Passphrase     string
-	Key            string
-	KdfIterations  int
-	SwiftLayout    int
-	DiskQuota      int64
-	Apps           []string
-	AutoUpdate     *bool
-	Debug          *bool
-	Deleting       *bool
-	Blocked        *bool
-	BlockingReason string
-
+	Domain             string
+	DomainAliases      []string
+	Locale             string
+	UUID               string
+	OIDCID             string
+	TOSSigned          string
+	TOSLatest          string
+	Timezone           string
+	ContextName        string
+	Email              string
+	PublicName         string
+	Settings           string
+	SettingsObj        *couchdb.JSONDoc
+	AuthMode           string
+	Passphrase         string
+	Key                string
+	KdfIterations      int
+	SwiftLayout        int
+	DiskQuota          int64
+	Apps               []string
+	AutoUpdate         *bool
+	Debug              *bool
+	Deleting           *bool
+	Traced             *bool
 	OnboardingFinished *bool
+	Blocked            *bool
+	BlockingReason     string
+}
+
+func (opts *Options) trace(name string, do func()) {
+	if opts.Traced != nil && *opts.Traced {
+		t := time.Now()
+		defer func() {
+			elapsed := time.Since(t)
+			logger.
+				WithDomain("admin").
+				WithField("nspace", "trace").
+				Printf("%s: %v", name, elapsed)
+		}()
+	}
+	do()
 }
 
 // Create builds an instance and initializes it
@@ -68,11 +84,18 @@ func Create(opts *Options) (*instance.Instance, error) {
 // CreateWithoutHooks builds an instance and initializes it. The difference
 // with Create is that script hooks are not executed for this function.
 func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
-	domain, err := validateDomain(opts.Domain)
+	domain := opts.Domain
+	var err error
+	opts.trace("validate domain", func() {
+		domain, err = validateDomain(domain)
+	})
 	if err != nil {
 		return nil, err
 	}
-	if _, err = instance.GetFromCouch(domain); err != instance.ErrNotFound {
+	opts.trace("check if instance already exist", func() {
+		_, err = instance.GetFromCouch(domain)
+	})
+	if err != instance.ErrNotFound {
 		if err == nil {
 			err = instance.ErrExists
 		}
@@ -101,10 +124,12 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	i.ContextName = opts.ContextName
 	i.BytesDiskQuota = opts.DiskQuota
 	i.IndexViewsVersion = couchdb.IndexViewsVersion
-	i.RegisterToken = crypto.GenerateRandomBytes(instance.RegisterTokenLen)
-	i.SessSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
-	i.OAuthSecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
-	i.CLISecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
+	opts.trace("generate secrets", func() {
+		i.RegisterToken = crypto.GenerateRandomBytes(instance.RegisterTokenLen)
+		i.SessSecret = crypto.GenerateRandomBytes(instance.SessionSecretLen)
+		i.OAuthSecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
+		i.CLISecret = crypto.GenerateRandomBytes(instance.OauthSecretLen)
+	})
 
 	switch config.FsURL().Scheme {
 	case config.SchemeSwift, config.SchemeSwiftSecure:
@@ -135,10 +160,12 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	}
 
 	if opts.Passphrase != "" {
-		err = registerPassphrase(i, i.RegisterToken, PassParameters{
-			Pass:       []byte(opts.Passphrase),
-			Iterations: opts.KdfIterations,
-			Key:        opts.Key,
+		opts.trace("register passphrase", func() {
+			err = registerPassphrase(i, i.RegisterToken, PassParameters{
+				Pass:       []byte(opts.Passphrase),
+				Iterations: opts.KdfIterations,
+				Key:        opts.Key,
+			})
 		})
 		if err != nil {
 			return nil, err
@@ -156,60 +183,82 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		i.NoAutoUpdate = !(*opts.AutoUpdate)
 	}
 
-	if err := couchdb.CreateDoc(couchdb.GlobalDB, i); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.Files); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.Apps); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.Konnectors); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.OAuthClients); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.Permissions); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateDB(i, consts.Sharings); err != nil {
-		return nil, err
-	}
-	if err := i.MakeVFS(); err != nil {
-		return nil, err
-	}
-	if err := i.VFS().InitFs(); err != nil {
-		return nil, err
-	}
-	if err := couchdb.CreateNamedDocWithDB(i, settings); err != nil {
-		return nil, err
-	}
-	if err := DefineViewsAndIndex(i); err != nil {
-		return nil, err
-	}
-	if err := createDefaultFilesTree(i); err != nil {
-		return nil, err
-	}
-	if _, err := contact.CreateMyself(i, settings); err != nil {
-		return nil, err
-	}
-	sched := job.System()
-	for _, trigger := range Triggers(i) {
-		t, err := job.NewTrigger(i, trigger, nil)
-		if err != nil {
-			return nil, err
+	opts.trace("init couchdb", func() {
+		if err = couchdb.CreateDoc(couchdb.GlobalDB, i); err != nil {
+			return
 		}
-		if err = sched.AddTrigger(t); err != nil {
-			return nil, err
+		if err = couchdb.CreateDB(i, consts.Files); err != nil {
+			return
 		}
-	}
-	for _, app := range opts.Apps {
-		if err := installApp(i, app); err != nil {
-			i.Logger().Errorf("Failed to install %s: %s", app, err)
+		if err = couchdb.CreateDB(i, consts.Apps); err != nil {
+			return
 		}
+		if err = couchdb.CreateDB(i, consts.Konnectors); err != nil {
+			return
+		}
+		if err = couchdb.CreateDB(i, consts.OAuthClients); err != nil {
+			return
+		}
+		if err = couchdb.CreateDB(i, consts.Permissions); err != nil {
+			return
+		}
+		if err = couchdb.CreateDB(i, consts.Sharings); err != nil {
+			return
+		}
+		if err = couchdb.CreateNamedDocWithDB(i, settings); err != nil {
+			return
+		}
+		_, err = contact.CreateMyself(i, settings)
+	})
+	if err != nil {
+		return nil, err
 	}
+
+	opts.trace("init VFS", func() {
+		if err = i.MakeVFS(); err != nil {
+			return
+		}
+		if err = i.VFS().InitFs(); err != nil {
+			return
+		}
+		err = createDefaultFilesTree(i)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	opts.trace("define views and indexes", func() {
+		err = DefineViewsAndIndex(i)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	opts.trace("add triggers", func() {
+		sched := job.System()
+		for _, trigger := range Triggers(i) {
+			var t job.Trigger
+			t, err = job.NewTrigger(i, trigger, nil)
+			if err != nil {
+				return
+			}
+			if err = sched.AddTrigger(t); err != nil {
+				return
+			}
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	opts.trace("install apps", func() {
+		for _, app := range opts.Apps {
+			if err := installApp(i, app); err != nil {
+				i.Logger().Errorf("Failed to install %s: %s", app, err)
+			}
+		}
+	})
+
 	return i, nil
 }
 

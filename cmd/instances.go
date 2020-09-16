@@ -36,6 +36,7 @@ var flagApps []string
 var flagBlocked bool
 var flagDeleting bool
 var flagDev bool
+var flagTrace bool
 var flagPassphrase string
 var flagForce bool
 var flagJSON bool
@@ -184,6 +185,7 @@ be used as the error message.
 			DiskQuota:     diskQuota,
 			Apps:          flagApps,
 			Passphrase:    flagPassphrase,
+			Trace:         &flagTrace,
 		})
 		if err != nil {
 			errPrintfln(
@@ -1050,6 +1052,7 @@ func init() {
 	addInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "The quota allowed to the instance's VFS")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance (deprecated)")
+	addInstanceCmd.Flags().BoolVar(&flagTrace, "trace", false, "Show where time is spent")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
 	modifyInstanceCmd.Flags().StringSliceVar(&flagDomainAliases, "domain-aliases", nil, "Specify one or more aliases domain for the instance (separated by ',')")
 	modifyInstanceCmd.Flags().StringVar(&flagLocale, "locale", "", "New locale")
