@@ -1030,6 +1030,7 @@ function _cozy-stack_instances_add {
     '--settings[A list of settings (eg context:foo,offer:premium)]:' \
     '--swift-layout[Specify the layout to use for Swift (from 0 for layout V1 to 2 for layout V3, -1 means the default)]:' \
     '--tos[The TOS version signed]:' \
+    '--trace[Show where time is spent]' \
     '--tz[The timezone for the user]:' \
     '--uuid[The UUID of the instance]:' \
     '--admin-host[administration server host]:' \
