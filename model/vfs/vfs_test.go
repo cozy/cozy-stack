@@ -3,6 +3,7 @@ package vfs_test
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/ncw/swift/swifttest"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
 )
 
 var fs vfs.VFS
@@ -813,12 +815,10 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 		return nil, nil, err
 	}
 
-	err = couchdb.DefineIndexes(db, couchdb.IndexesByDoctype(consts.Files))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err = couchdb.DefineViews(db, couchdb.ViewsByDoctype(consts.Files)); err != nil {
+	g, _ := errgroup.WithContext(context.Background())
+	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Files))
+	couchdb.DefineViews(g, db, couchdb.ViewsByDoctype(consts.Files))
+	if err = g.Wait(); err != nil {
 		return nil, nil, err
 	}
 
@@ -873,12 +873,10 @@ func makeSwiftFS(layout int) (vfs.VFS, func(), error) {
 		return nil, nil, err
 	}
 
-	err = couchdb.DefineIndexes(db, couchdb.IndexesByDoctype(consts.Files))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err = couchdb.DefineViews(db, couchdb.ViewsByDoctype(consts.Files)); err != nil {
+	g, _ := errgroup.WithContext(context.Background())
+	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Files))
+	couchdb.DefineViews(g, db, couchdb.ViewsByDoctype(consts.Files))
+	if err = g.Wait(); err != nil {
 		return nil, nil, err
 	}
 

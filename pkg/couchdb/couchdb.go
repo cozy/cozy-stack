@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 // MaxString is the unicode character "\uFFFF", useful in query as
@@ -701,41 +702,55 @@ func CreateDoc(db Database, doc Doc) error {
 }
 
 // DefineViews creates a design doc with some views
-func DefineViews(db Database, views []*View) error {
-	for _, v := range views {
-		id := "_design/" + v.Name
-		url := url.PathEscape(id)
-		doc := &ViewDesignDoc{
-			ID:    id,
-			Lang:  "javascript",
-			Views: map[string]*View{v.Name: v},
-		}
-		err := makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
-		if IsNoDatabaseError(err) {
-			err = CreateDB(db, v.Doctype)
-			if err != nil {
-				return err
+func DefineViews(g *errgroup.Group, db Database, views []*View) {
+	for i := range views {
+		v := views[i]
+		g.Go(func() error {
+			id := "_design/" + v.Name
+			url := url.PathEscape(id)
+			doc := &ViewDesignDoc{
+				ID:    id,
+				Lang:  "javascript",
+				Views: map[string]*View{v.Name: v},
 			}
-			err = makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
-		}
-		if IsConflictError(err) {
-			var old ViewDesignDoc
-			err = makeRequest(db, v.Doctype, http.MethodGet, url, nil, &old)
-			if err != nil {
-				return err
-			}
-			if !equalViews(&old, doc) {
-				doc.Rev = old.Rev
+			err := makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
+			if IsNoDatabaseError(err) {
+				err = CreateDB(db, v.Doctype)
+				if err != nil && !IsFileExists(err) {
+					if err != nil {
+						logger.WithDomain(db.DomainName()).
+							Printf("Cannot create view %s %s: cannot create DB - %s",
+								db.DBPrefix(), v.Doctype, err)
+					}
+					return err
+				}
 				err = makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
-			} else {
-				err = nil
 			}
-		}
-		if err != nil {
+			if IsConflictError(err) {
+				var old ViewDesignDoc
+				err = makeRequest(db, v.Doctype, http.MethodGet, url, nil, &old)
+				if err != nil {
+					if err != nil {
+						logger.WithDomain(db.DomainName()).
+							Printf("Cannot create view %s %s: conflict - %s",
+								db.DBPrefix(), v.Doctype, err)
+					}
+					return err
+				}
+				if !equalViews(&old, doc) {
+					doc.Rev = old.Rev
+					err = makeRequest(db, v.Doctype, http.MethodPut, url, &doc, nil)
+				} else {
+					err = nil
+				}
+			}
+			if err != nil {
+				logger.WithDomain(db.DomainName()).
+					Printf("Cannot create view %s %s: %s", db.DBPrefix(), v.Doctype, err)
+			}
 			return err
-		}
+		})
 	}
-	return nil
 }
 
 func equalViews(v1 *ViewDesignDoc, v2 *ViewDesignDoc) bool {
@@ -792,6 +807,10 @@ func ExecView(db Database, view *View, req *ViewRequest, results interface{}) er
 // see query package on how to define an index
 func DefineIndex(db Database, index *mango.Index) error {
 	_, err := DefineIndexRaw(db, index.Doctype, index.Request)
+	if err != nil {
+		logger.WithDomain(db.DomainName()).
+			Printf("Cannot create index %s %s: %s", db.DBPrefix(), index.Doctype, err)
+	}
 	return err
 }
 
@@ -801,7 +820,7 @@ func DefineIndexRaw(db Database, doctype string, index interface{}) (*IndexCreat
 	response := &IndexCreationResponse{}
 	err := makeRequest(db, doctype, http.MethodPost, url, &index, &response)
 	if IsNoDatabaseError(err) {
-		if err = CreateDB(db, doctype); err != nil {
+		if err = CreateDB(db, doctype); err != nil && !IsFileExists(err) {
 			return nil, err
 		}
 		err = makeRequest(db, doctype, http.MethodPost, url, &index, &response)
@@ -813,13 +832,11 @@ func DefineIndexRaw(db Database, doctype string, index interface{}) (*IndexCreat
 }
 
 // DefineIndexes defines a list of indexes
-func DefineIndexes(db Database, indexes []*mango.Index) error {
-	for _, index := range indexes {
-		if err := DefineIndex(db, index); err != nil {
-			return err
-		}
+func DefineIndexes(g *errgroup.Group, db Database, indexes []*mango.Index) {
+	for i := range indexes {
+		index := indexes[i]
+		g.Go(func() error { return DefineIndex(db, index) })
 	}
-	return nil
 }
 
 // FindDocs returns all documents matching the passed FindRequest

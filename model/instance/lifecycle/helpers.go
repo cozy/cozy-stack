@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"context"
 	"os"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"golang.org/x/net/idna"
+	"golang.org/x/sync/errgroup"
 )
 
 func update(inst *instance.Instance) error {
@@ -42,10 +44,10 @@ func installApp(inst *instance.Instance, slug string) error {
 // DefineViewsAndIndex can be used to ensure that the CouchDB views and indexes
 // used by the stack are correctly set.
 func DefineViewsAndIndex(inst *instance.Instance) error {
-	if err := couchdb.DefineIndexes(inst, couchdb.Indexes); err != nil {
-		return err
-	}
-	if err := couchdb.DefineViews(inst, couchdb.Views); err != nil {
+	g, _ := errgroup.WithContext(context.Background())
+	couchdb.DefineIndexes(g, inst, couchdb.Indexes)
+	couchdb.DefineViews(g, inst, couchdb.Views)
+	if err := g.Wait(); err != nil {
 		return err
 	}
 	inst.IndexViewsVersion = couchdb.IndexViewsVersion
