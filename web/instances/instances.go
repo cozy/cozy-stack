@@ -103,6 +103,9 @@ func createHandler(c echo.Context) error {
 		}
 		opts.KdfIterations = iter
 	}
+	if traced, err := strconv.ParseBool(c.QueryParam("Trace")); err == nil {
+		opts.Traced = &traced
+	}
 	in, err := lifecycle.Create(opts)
 	if err != nil {
 		return wrapError(err)

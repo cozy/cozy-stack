@@ -65,6 +65,7 @@ type InstanceOptions struct {
 	Blocked            *bool
 	Deleting           *bool
 	OnboardingFinished *bool
+	Trace              *bool
 }
 
 // TokenOptions is a struct holding all the options to generate a token.
@@ -152,6 +153,9 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 	}
 	if opts.DomainAliases != nil {
 		q.Add("DomainAliases", strings.Join(opts.DomainAliases, ","))
+	}
+	if opts.Trace != nil && *opts.Trace {
+		q.Add("Trace", "true")
 	}
 	res, err := c.Req(&request.Options{
 		Method:  "POST",

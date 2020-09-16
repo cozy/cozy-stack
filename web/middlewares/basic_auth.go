@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -21,6 +22,17 @@ import (
 func BasicAuth(secretFileName string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			if c.QueryParam("Trace") == "true" {
+				t := time.Now()
+				defer func() {
+					elapsed := time.Since(t)
+					logger.
+						WithDomain("admin").
+						WithField("nspace", "trace").
+						Printf("Check basic auth: %v", elapsed)
+				}()
+			}
+
 			_, passphrase, ok := c.Request().BasicAuth()
 			if !ok {
 				return echo.NewHTTPError(http.StatusUnauthorized, "missing basic auth")
