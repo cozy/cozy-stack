@@ -252,10 +252,17 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	}
 
 	opts.trace("install apps", func() {
+		done := make(chan struct{})
 		for _, app := range opts.Apps {
-			if err := installApp(i, app); err != nil {
-				i.Logger().Errorf("Failed to install %s: %s", app, err)
-			}
+			go func(app string) {
+				if err := installApp(i, app); err != nil {
+					i.Logger().Errorf("Failed to install %s: %s", app, err)
+				}
+				done <- struct{}{}
+			}(app)
+		}
+		for range opts.Apps {
+			<-done
 		}
 	})
 
