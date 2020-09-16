@@ -214,6 +214,13 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		return nil, err
 	}
 
+	opts.trace("define views and indexes", func() {
+		err = DefineViewsAndIndex(i)
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	opts.trace("init VFS", func() {
 		if err = i.MakeVFS(); err != nil {
 			return
@@ -222,13 +229,6 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 			return
 		}
 		err = createDefaultFilesTree(i)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	opts.trace("define views and indexes", func() {
-		err = DefineViewsAndIndex(i)
 	})
 	if err != nil {
 		return nil, err
