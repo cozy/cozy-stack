@@ -1,8 +1,11 @@
 package couchdb
 
 import (
+	"context"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"golang.org/x/sync/errgroup"
 )
 
 // IndexViewsVersion is the version of current definition of views & indexes.
@@ -308,11 +311,9 @@ var globalViews = []*View{
 // InitGlobalDB defines views and indexes on the global databases. It is called
 // on every startup of the stack.
 func InitGlobalDB() error {
-	if err := DefineIndexes(GlobalSecretsDB, secretIndexes); err != nil {
-		return err
-	}
-	if err := DefineIndexes(GlobalDB, globalIndexes); err != nil {
-		return err
-	}
-	return DefineViews(GlobalDB, globalViews)
+	g, _ := errgroup.WithContext(context.Background())
+	DefineIndexes(g, GlobalSecretsDB, secretIndexes)
+	DefineIndexes(g, GlobalDB, globalIndexes)
+	DefineViews(g, GlobalDB, globalViews)
+	return g.Wait()
 }

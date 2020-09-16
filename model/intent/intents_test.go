@@ -1,6 +1,7 @@
 package intent
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
 )
 
 var ins *instance.Instance
@@ -137,7 +139,9 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	if err := couchdb.DefineIndexes(ins, couchdb.IndexesByDoctype(consts.Apps)); err != nil {
+	g, _ := errgroup.WithContext(context.Background())
+	couchdb.DefineIndexes(g, ins, couchdb.IndexesByDoctype(consts.Apps))
+	if err := g.Wait(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

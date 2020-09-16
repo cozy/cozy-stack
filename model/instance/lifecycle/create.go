@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -19,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"golang.org/x/sync/errgroup"
 )
 
 // Options holds the parameters to create a new instance.
@@ -184,31 +186,24 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	}
 
 	opts.trace("init couchdb", func() {
-		if err = couchdb.CreateDoc(couchdb.GlobalDB, i); err != nil {
-			return
-		}
-		if err = couchdb.CreateDB(i, consts.Files); err != nil {
-			return
-		}
-		if err = couchdb.CreateDB(i, consts.Apps); err != nil {
-			return
-		}
-		if err = couchdb.CreateDB(i, consts.Konnectors); err != nil {
-			return
-		}
-		if err = couchdb.CreateDB(i, consts.OAuthClients); err != nil {
-			return
-		}
-		if err = couchdb.CreateDB(i, consts.Permissions); err != nil {
-			return
-		}
-		if err = couchdb.CreateDB(i, consts.Sharings); err != nil {
-			return
-		}
-		if err = couchdb.CreateNamedDocWithDB(i, settings); err != nil {
-			return
-		}
-		_, err = contact.CreateMyself(i, settings)
+		g, _ := errgroup.WithContext(context.Background())
+		g.Go(func() error { return couchdb.CreateDoc(couchdb.GlobalDB, i) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Files) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Apps) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Konnectors) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.OAuthClients) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Jobs) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Permissions) })
+		g.Go(func() error { return couchdb.CreateDB(i, consts.Sharings) })
+		g.Go(func() error {
+			var errg error
+			if errg = couchdb.CreateNamedDocWithDB(i, settings); errg != nil {
+				return err
+			}
+			_, errg = contact.CreateMyself(i, settings)
+			return errg
+		})
+		err = g.Wait()
 	})
 	if err != nil {
 		return nil, err

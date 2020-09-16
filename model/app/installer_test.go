@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -20,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/spf13/afero"
+	"golang.org/x/sync/errgroup"
 )
 
 var localGitCmd *exec.Cmd
@@ -200,14 +202,10 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndexes(db, couchdb.IndexesByDoctype(consts.Files))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = couchdb.DefineIndexes(db, couchdb.IndexesByDoctype(consts.Permissions))
-	if err != nil {
+	g, _ := errgroup.WithContext(context.Background())
+	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Files))
+	couchdb.DefineIndexes(g, db, couchdb.IndexesByDoctype(consts.Permissions))
+	if err = g.Wait(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

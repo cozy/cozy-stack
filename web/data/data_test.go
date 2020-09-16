@@ -2,6 +2,7 @@ package data
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -15,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
 )
 
 var client = &http.Client{}
@@ -867,10 +869,11 @@ function(doc) {
 }
 		`,
 	}
-	err := couchdb.DefineViews(testInstance, []*couchdb.View{view})
-	assert.NoError(t, err)
+	g, _ := errgroup.WithContext(context.Background())
+	couchdb.DefineViews(g, testInstance, []*couchdb.View{view})
+	assert.NoError(t, g.Wait())
 
-	err = couchdb.CreateNamedDoc(testInstance, &couchdb.JSONDoc{
+	err := couchdb.CreateNamedDoc(testInstance, &couchdb.JSONDoc{
 		Type: Type,
 		M: map[string]interface{}{
 			"_id":  "four",
