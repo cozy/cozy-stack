@@ -225,11 +225,19 @@ h1 {
   background-size: contain;
   vertical-align: -9px;
 }
+li[class^="com.bitwarden.ciphers"]:before,
+li[class^="com.bitwarden.folders"]:before,
+li[class^="com.bitwarden.organizations"]:before,
+li[class^="com.bitwarden.profiles"]:before
+ {
+  background-image: url("../images/icon-permissions.svg");
+}
 li[class^="io.cozy.settings"]:before,
 li[class^="io.cozy.bank.settings"]:before {
   background-image: url("../images/icon-settings.svg");
 }
-li[class^="io.cozy.accounts"]:before {
+li[class^="io.cozy.accounts"]:before,
+li[class^="io.cozy.accounts.stats"]:before {
   background-image: url("../images/icon-accounts.svg");
 }
 li[class^="io.cozy.apps"]:before,
@@ -244,6 +252,9 @@ li[class^="io.cozy.bank.groups"]:before {
 }
 li[class^="io.cozy.bank.operations"]:before {
   background-image: url("../images/icon-bank-operations.svg");
+}
+li[class^="io.cozy.bank.recipients"]:before {
+  background-image: url("../images/icon-contacts.svg");
 }
 li[class^="io.cozy.bank.recurrence"]:before {
   background-image: url("../images/icon-bank-recurrence.svg");
