@@ -386,6 +386,18 @@ msgstr "Storing a message in the system logs"
 msgid "Permissions worker sendmail"
 msgstr "Sending a mail"
 
+msgid "Permissions com.bitwarden.profiles"
+msgstr "Password manager profiles"
+
+msgid "Permissions com.bitwarden.ciphers"
+msgstr "Password manager entries"
+
+msgid "Permissions com.bitwarden.folders"
+msgstr "Password manager folders"
+
+msgid "Permissions com.bitwarden.organizations"
+msgstr "Password manager organizations"
+
 msgid "Permissions io.cozy.accounts"
 msgstr "Accounts"
 
@@ -398,6 +410,9 @@ msgstr "Suggestions of applications"
 msgid "Permissions io.cozy.bank.accounts"
 msgstr "Banking accounts"
 
+msgid "Permissions io.cozy.bank.accounts.stats"
+msgstr "Banking accounts stats"
+
 msgid "Permissions io.cozy.bank.groups"
 msgstr "Banking groups"
 
@@ -406,6 +421,9 @@ msgstr "Bank transactions"
 
 msgid "Permissions io.cozy.bank.settings"
 msgstr "Application settings"
+
+msgid "Permissions io.cozy.bank.recipients"
+msgstr "Banking transfer recipients"
 
 msgid "Permissions io.cozy.bank.recurrence"
 msgstr "Banking recurrencing groups"

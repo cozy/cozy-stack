@@ -444,6 +444,18 @@ msgstr "Stockage d'un message dans les journaux système"
 msgid "Permissions worker sendmail"
 msgstr "Envoi d'un email"
 
+msgid "Permissions com.bitwarden.profiles"
+msgstr "Profils du gestionnaire de mot de passe"
+
+msgid "Permissions com.bitwarden.ciphers"
+msgstr "Entrées du gestionnaire de mot de passe"
+
+msgid "Permissions com.bitwarden.folders"
+msgstr "Dossiers du gestionnaire de mot de passe"
+
+msgid "Permissions com.bitwarden.organizations"
+msgstr "Organisations du gestionnaire de mot de passe"
+
 msgid "Permissions io.cozy.accounts"
 msgstr "Comptes"
 
@@ -455,6 +467,9 @@ msgstr "Suggestions d'applications à installer"
 
 msgid "Permissions io.cozy.bank.accounts"
 msgstr "Comptes bancaires"
+
+msgid "Permissions io.cozy.bank.accounts.stats"
+msgstr "Statistiques sur les comptes bancaires"
 
 msgid "Permissions io.cozy.bank.groups"
 msgstr "Groupes de comptes bancaires"
