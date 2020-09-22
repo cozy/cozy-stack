@@ -105,6 +105,7 @@ describe "A folder" do
       doc = Helpers.couch.get_doc inst_recipient.domain, Sharing.doctype, sharing.couch_id
       assert_equal 2, doc["initial_number_of_files_to_sync"]
     end
+    sleep 1
     doc = Helpers.couch.get_doc inst_recipient.domain, Sharing.doctype, sharing.couch_id
     assert_nil doc["initial_number_of_files_to_sync"]
 
