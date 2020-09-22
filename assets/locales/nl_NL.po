@@ -426,6 +426,18 @@ msgstr "Bezig met opslaan van een bericht in de logbestanden..."
 msgid "Permissions worker sendmail"
 msgstr "Bezig met versturen van een e-mail..."
 
+msgid "Permissions com.bitwarden.profiles"
+msgstr "Wachtwoordbeheerprofielen"
+
+msgid "Permissions com.bitwarden.ciphers"
+msgstr "Wachtwoordbeheeritems"
+
+msgid "Permissions com.bitwarden.folders"
+msgstr "Wachtwoordbeheermappen"
+
+msgid "Permissions com.bitwarden.organizations"
+msgstr "Wachtwoordbeheerorganisaties"
+
 msgid "Permissions io.cozy.accounts"
 msgstr "Accounts"
 
@@ -438,6 +450,9 @@ msgstr "App-suggesties"
 msgid "Permissions io.cozy.bank.accounts"
 msgstr "Bankrekeningen"
 
+msgid "Permissions io.cozy.bank.accounts.stats"
+msgstr "Bankrekeningstatistieken"
+
 msgid "Permissions io.cozy.bank.groups"
 msgstr "Bankgroepen"
 
@@ -446,6 +461,9 @@ msgstr "Banktransacties"
 
 msgid "Permissions io.cozy.bank.settings"
 msgstr "App-instellingen"
+
+msgid "Permissions io.cozy.bank.recipients"
+msgstr "Banktransactie-ontvangers"
 
 msgid "Permissions io.cozy.bank.recurrence"
 msgstr "Incassogroepen"
