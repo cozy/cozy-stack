@@ -480,6 +480,9 @@ msgstr "Transactions bancaires"
 msgid "Permissions io.cozy.bank.settings"
 msgstr "Paramètres de l'application"
 
+msgid "Permissions io.cozy.bank.recipients"
+msgstr "Destinataires de transferts bancaires"
+
 msgid "Permissions io.cozy.bank.recurrence"
 msgstr "Groupes de récurrence bancaire"
 
