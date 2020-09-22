@@ -640,37 +640,56 @@ msgstr ""
 "contacter à l'adresse contact@cozycloud.cc."
 
 msgid "Mail New Connection Subject"
-msgstr "Nous venons de détecter une connexion à votre %s"
+msgstr "Nouvelle connexion à votre %s"
 
 msgid "Mail New Connection Intro"
 msgstr ""
-"Nous venons de détecter une connexion à votre Cozy.\n"
-"Voici les détails de cette connexion :"
+"Ceci est un message provenant de votre Cozy.\n"
+"Un nouvel appareil s’est connecté à votre compte Cozy récemment. "
+"Examinez les informations sur cette nouvelle connexion pour vérifier si c’est bien vous."
 
 msgid "Mail New Connection Place"
-msgstr "Lieu"
+msgstr "Lieu :"
+
+msgid "Mail New Connection Near"
+msgstr "proche de"
+
+msgid "Mail New Connection Time"
+msgstr "Heure :"
 
 msgid "Mail New Connection IP"
-msgstr "Adresse IP"
+msgstr "Adresse IP :"
 
 msgid "Mail New Connection Browser"
-msgstr "Navigateur"
+msgstr "Navigateur :"
 
 msgid "Mail New Connection OS"
-msgstr "Système d'exploitation"
+msgstr "Appareil :"
 
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
-"Vous confirmez que c'était bien vous? Super ! Nous voilà rassurés. Nous sommes désolés de vous avoir dérangé pour rien mais mieux vaut prévenir que guérir.\n"
-"Dans le cas contraire, modifiez dès maintenant votre mot de passe en cliquant sur ce bouton :"
+"Vous confirmez en être l’initiateur ? Si oui, profitez de ce nouvel accès !\n"
+"Dans le cas contraire, réinitialisez dès maintenant votre mot de passe."
 
 msgid "Mail New Connection Change Passphrase text"
 msgstr "Changer mon mot de passe"
 
+msgid "Mail New Connection Bonus instruction"
+msgstr ""
+"Mieux sécuriser votre compte ? "
+"Nous vous conseillons d’activer l’authentification à double facteur sur votre compte afin de renforcer sa sécurité."
+
+msgid "Mail New Connection Bonus text"
+msgstr "Activer l’authentification à double facteur"
+
 msgid "Mail New Connection Outro"
 msgstr ""
-"Pourquoi cet e-mail? La sécurité de votre Cozy est notre priorité et nous "
-"veillons à vous prévenir de la moindre connexion inhabituelle."
+"Pourquoi cet email ? Tout comportement inhabituel dans vos connexions vous sera notifié afin d’assurer la sécurité de vos données."
+
+msgid "Mail New Connection Signature"
+msgstr ""
+"À bientôt,\n"
+"Votre Cozy"
 
 msgid "Mail New Registration Subject"
 msgstr "Un nouvel appareil connecté à votre %s"

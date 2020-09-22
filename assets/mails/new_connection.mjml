@@ -7,18 +7,34 @@
 	{{t "Mail New Connection Intro"}}
 </mj-text>
 <mj-text mj-class="content-medium">
-	{{t "Mail New Connection Place"}}: {{.City}}, {{.Country}}
-	{{t "Mail New Connection IP"}}: {{.IP}}
-	{{t "Mail New Connection Browser"}}: {{.Browser}}
-	{{t "Mail New Connection OS"}}: {{.OS}}
+	<ul style="margin: 0">
+		<li>{{t "Mail New Connection Place"}} {{.Subdivision}}, {{.Country}} ({{t "Mail New Connection Near"}} {{.City}})</li>
+		<li>{{t "Mail New Connection Time"}} {{.Time}}</li>
+		<li>{{t "Mail New Connection Browser"}} {{.Browser}}</li>
+		<li>{{t "Mail New Connection OS"}} {{.OS}}</li>
+		<li>{{t "Mail New Connection IP"}} {{.IP}}</li>
+	</ul>
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{t "Mail New Connection Change Passphrase instruction"}}
 </mj-text>
+{{if .ChangePassphraseLink}}
 <mj-button href="{{.ChangePassphraseLink}}" align="left" mj-class="primary-button content-xlarge">
 	{{t "Mail New Connection Change Passphrase text"}}
 </mj-button>
+{{end}}
+{{if .ActivateTwoFALink}}
+<mj-text mj-class="content-medium">
+	{{t "Mail New Connection Bonus instruction"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	<a href="{{.ActivateTwoFALink}}" class="primary-link">{{t "Mail New Connection Bonus text"}}</a>
+</mj-text>
+{{end}}
 <mj-text mj-class="content-medium">
 	{{t "Mail New Connection Outro"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail New Connection Signature"}}
 </mj-text>
 {{end}}

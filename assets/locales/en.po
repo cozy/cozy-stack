@@ -572,35 +572,55 @@ msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr "If you have not made this change, please contact us at contact@cozycloud.cc"
 
 msgid "Mail New Connection Subject"
-msgstr "We just detected a connection to your %s"
+msgstr "New connection to your %s"
 
 msgid "Mail New Connection Intro"
 msgstr ""
-"We just detected a connection to your Cozy.\n"
-"Here are the details of this connection:"
+"This is a message from your Cozy.\n"
+"A new device has recently logged into your Cozy account. "
+"Check out the below connection information to confirm that is yours."
 
 msgid "Mail New Connection Place"
-msgstr "Location"
+msgstr "Location:"
+
+msgid "Mail New Connection Near"
+msgstr "near"
+
+msgid "Mail New Connection Time"
+msgstr "Time:"
 
 msgid "Mail New Connection IP"
-msgstr "IP Address"
+msgstr "IP Address:"
 
 msgid "Mail New Connection Browser"
-msgstr "Browser"
+msgstr "Browser:"
 
 msgid "Mail New Connection OS"
-msgstr "Operating System"
+msgstr "Device:"
 
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
-"That was you ? Great ! We are reassured. Sorry for the inconvenience."
-"If not, change your password now by clicking on the following button:"
+"If you are behind this new connection, you can ignore this message and enjoy your Cozy.\n"
+"If not, we suggest to reset your password now."
 
 msgid "Mail New Connection Change Passphrase text"
 msgstr "Change my password"
 
+msgid "Mail New Connection Bonus instruction"
+msgstr ""
+"Do you want to reinforce the security of your account? "
+"We advise you to activate two-factor authentication on your account."
+
+msgid "Mail New Connection Bonus text"
+msgstr "Activate two-factor authentication"
+
 msgid "Mail New Connection Outro"
-msgstr "Why this e-mail? The safety of your Cozy is our priority and we take care to warn you of any unusual connection."
+msgstr "Why the email? For any unusual behaviour in your connections you will be notified in order to ensure the security of all your data."
+
+msgid "Mail New Connection Signature"
+msgstr ""
+"See you soon,\n"
+"Your Cozy"
 
 msgid "Mail New Registration Subject"
 msgstr "A new device connected to your %s"
