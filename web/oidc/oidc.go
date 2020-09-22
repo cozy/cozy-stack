@@ -347,6 +347,8 @@ func getToken(conf *Config, code string) (string, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
+		logger.WithNamespace("oidc").
+			Infof("Invalid status code %d for %s", res.StatusCode, conf.TokenURL)
 		return "", fmt.Errorf("OIDC service responded with %d", res.StatusCode)
 	}
 	resBody, err := ioutil.ReadAll(res.Body)
@@ -414,6 +416,8 @@ func getUserInfo(conf *Config, token string) (map[string]interface{}, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
+		logger.WithNamespace("oidc").
+			Infof("Invalid status code %d for %s", res.StatusCode, conf.UserInfoURL)
 		return nil, fmt.Errorf("OIDC service responded with %d", res.StatusCode)
 	}
 
