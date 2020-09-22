@@ -22,12 +22,13 @@ import (
 // provide the user with informations about the history of all the logins that
 // may have happened on its domain.
 type LoginEntry struct {
-	DocID     string `json:"_id,omitempty"`
-	DocRev    string `json:"_rev,omitempty"`
-	SessionID string `json:"session_id"`
-	IP        string `json:"ip"`
-	City      string `json:"city,omitempty"`
-	Country   string `json:"country,omitempty"`
+	DocID       string `json:"_id,omitempty"`
+	DocRev      string `json:"_rev,omitempty"`
+	SessionID   string `json:"session_id"`
+	IP          string `json:"ip"`
+	City        string `json:"city,omitempty"`
+	Subdivision string `json:"subdivision,omitempty"`
+	Country     string `json:"country,omitempty"`
 	// XXX No omitempty on os and browser, because they are indexed in couchdb
 	UA                 string    `json:"user_agent"`
 	OS                 string    `json:"os"`
@@ -57,7 +58,7 @@ func (l *LoginEntry) Clone() couchdb.Doc {
 	return &clone
 }
 
-func lookupIP(ip, locale string) (city, country string) {
+func lookupIP(ip, locale string) (city, subdivision, country string) {
 	geodb := config.GetConfig().GeoDB
 	if geodb == "" {
 		return
@@ -73,6 +74,9 @@ func lookupIP(ip, locale string) (city, country string) {
 		City struct {
 			Names map[string]string `maxminddb:"names"`
 		} `maxminddb:"city"`
+		Subdivisions []struct {
+			Names map[string]string `maxminddb:"names"`
+		} `maxminddb:"subdivisions"`
 		Country struct {
 			Names map[string]string `maxminddb:"names"`
 		} `maxminddb:"country"`
@@ -87,6 +91,13 @@ func lookupIP(ip, locale string) (city, country string) {
 		city = c
 	} else if c, ok := record.City.Names["en"]; ok {
 		city = c
+	}
+	if len(record.Subdivisions) > 0 {
+		if s, ok := record.Subdivisions[0].Names[locale]; ok {
+			subdivision = s
+		} else if s, ok := record.Subdivisions[0].Names["en"]; ok {
+			city = s
+		}
 	}
 	if c, ok := record.Country.Names[locale]; ok {
 		country = c
@@ -107,7 +118,7 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 		ip = strings.Split(req.RemoteAddr, ":")[0]
 	}
 
-	city, country := lookupIP(ip, i.Locale)
+	city, subdivision, country := lookupIP(ip, i.Locale)
 	ua := user_agent.New(req.UserAgent())
 
 	browser, _ := ua.Browser()
@@ -115,8 +126,9 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 
 	l := &LoginEntry{
 		IP:                 ip,
-		City:               city,
 		SessionID:          sessionID,
+		City:               city,
+		Subdivision:        subdivision,
 		Country:            country,
 		UA:                 req.UserAgent(),
 		OS:                 os,
@@ -160,16 +172,28 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 		return nil
 	}
 
-	changePassphraseURL := i.SubDomain(consts.SettingsSlug)
-	// TODO: changePassphraseURL.Fragment = "/profile/changePassphrase"
-	changePassphraseURL.Fragment = "/profile"
+	settingsURL := i.SubDomain(consts.SettingsSlug)
+	var changePassphraseLink string
+	if i.IsPasswordAuthenticationEnabled() {
+		settingsURL.Fragment = "/profile/password"
+		changePassphraseLink = settingsURL.String()
+	}
+	var activateTwoFALink string
+	if !i.HasAuthMode(instance.TwoFactorMail) {
+		settingsURL.Fragment = "/profile"
+		activateTwoFALink = settingsURL.String()
+	}
+
 	templateValues := map[string]interface{}{
 		"City":                 l.City,
+		"Subdivision":          l.Subdivision,
 		"Country":              l.Country,
+		"Time":                 l.CreatedAt.Format("2006-01-02 15:04:05Z07:00"),
 		"IP":                   l.IP,
 		"Browser":              l.Browser,
 		"OS":                   l.OS,
-		"ChangePassphraseLink": changePassphraseURL.String(),
+		"ChangePassphraseLink": changePassphraseLink,
+		"ActivateTwoFALink":    activateTwoFALink,
 	}
 
 	// TODO: use notifications
@@ -180,7 +204,7 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 }
 
 // SendNewRegistrationNotification is used to send a notification to the user
-// when a new OAuth client is registred.
+// when a new OAuth client is registered.
 func SendNewRegistrationNotification(i *instance.Instance, clientRegistrationID string) error {
 	devicesLink := i.SubDomain(consts.SettingsSlug)
 	devicesLink.Fragment = "/connectedDevices"
