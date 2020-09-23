@@ -30,8 +30,9 @@ import (
 )
 
 const (
-	konnErrorLoginFailed      = "LOGIN_FAILED"
-	konnErrorUserActionNeeded = "USER_ACTION_NEEDED"
+	konnErrorLoginFailed         = "LOGIN_FAILED"
+	konnErrorUserActionNeeded    = "USER_ACTION_NEEDED"
+	konnErrorUserActionNeededCgu = "USER_ACTION_NEEDED.CGU_FORM"
 )
 
 type konnectorWorker struct {
@@ -105,7 +106,8 @@ func jobHookErrorCheckerKonnector(err error) bool {
 
 	lastError := err.Error()
 	if strings.HasPrefix(lastError, konnErrorLoginFailed) ||
-		strings.HasPrefix(lastError, konnErrorUserActionNeeded) {
+		strings.HasPrefix(lastError, konnErrorUserActionNeeded) &&
+			lastError != konnErrorUserActionNeededCgu {
 		return false
 	}
 	return true
