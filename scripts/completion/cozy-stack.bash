@@ -1231,6 +1231,10 @@ _cozy-stack_config()
     commands+=("insert-asset")
     commands+=("ls-assets")
     commands+=("ls-contexts")
+    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        command_aliases+=("list-contexts")
+        aliashash["list-contexts"]="ls-contexts"
+    fi
     commands+=("passwd")
     if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
         command_aliases+=("pass")
@@ -3010,11 +3014,19 @@ _cozy-stack_instances()
 
     commands=()
     commands+=("add")
+    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        command_aliases+=("create")
+        aliashash["create"]="add"
+    fi
     commands+=("auth-mode")
     commands+=("client-oauth")
     commands+=("debug")
     commands+=("destroy")
     if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        command_aliases+=("delete")
+        aliashash["delete"]="destroy"
+        command_aliases+=("remove")
+        aliashash["remove"]="destroy"
         command_aliases+=("rm")
         aliashash["rm"]="destroy"
     fi
@@ -3023,6 +3035,10 @@ _cozy-stack_instances()
     commands+=("fsck")
     commands+=("import")
     commands+=("ls")
+    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        command_aliases+=("list")
+        aliashash["list"]="ls"
+    fi
     commands+=("modify")
     commands+=("refresh-token-oauth")
     commands+=("set-disk-quota")
@@ -3799,9 +3815,21 @@ _cozy-stack_swift()
 
     commands=()
     commands+=("get")
+    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        command_aliases+=("download")
+        aliashash["download"]="get"
+    fi
     commands+=("ls")
+    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        command_aliases+=("list")
+        aliashash["list"]="ls"
+    fi
     commands+=("ls-layouts")
     commands+=("put")
+    if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+        command_aliases+=("upload")
+        aliashash["upload"]="put"
+    fi
     commands+=("rm")
     if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
         command_aliases+=("delete")
