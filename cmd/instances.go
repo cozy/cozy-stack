@@ -136,8 +136,9 @@ given domain. The prefix is used for databases and VFS prefixing.
 }
 
 var addInstanceCmd = &cobra.Command{
-	Use:   "add <domain>",
-	Short: "Manage instances of a stack",
+	Use:     "add <domain>",
+	Aliases: []string{"create"},
+	Short:   "Manage instances of a stack",
 	Long: `
 cozy-stack instances add allows to create an instance on the cozy for a
 given domain.
@@ -412,8 +413,9 @@ specific domain.
 }
 
 var lsInstanceCmd = &cobra.Command{
-	Use:   "ls",
-	Short: "List instances",
+	Use:     "ls",
+	Aliases: []string{"list"},
+	Short:   "List instances",
 	Long: `
 cozy-stack instances ls allows to list all the instances that can be served
 by this server.
@@ -569,7 +571,7 @@ var destroyInstanceCmd = &cobra.Command{
 cozy-stack instances destroy allows to remove an instance
 and all its data.
 `,
-	Aliases: []string{"rm"},
+	Aliases: []string{"rm", "delete", "remove"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if reason := os.Getenv("COZY_DISABLE_INSTANCES_ADD_RM"); reason != "" {
 			return fmt.Errorf("Sorry, instances add is disabled: %s", reason)

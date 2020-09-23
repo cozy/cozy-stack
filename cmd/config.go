@@ -326,6 +326,7 @@ Deprecated: please use the command cozy-stack assets ls.
 
 var listContextsCmd = &cobra.Command{
 	Use:     "ls-contexts",
+	Aliases: []string{"list-contexts"},
 	Short:   "List contexts",
 	Long:    "List contexts currently used by the stack",
 	Example: "$ cozy-stack config ls-contexts",

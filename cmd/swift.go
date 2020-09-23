@@ -57,7 +57,8 @@ var lsLayoutsCmd = &cobra.Command{
 }
 
 var swiftGetCmd = &cobra.Command{
-	Use: "get <domain> <object-name>",
+	Use:     "get <domain> <object-name>",
+	Aliases: []string{"download"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
 			return cmd.Usage()
@@ -82,7 +83,8 @@ var swiftGetCmd = &cobra.Command{
 }
 
 var swiftPutCmd = &cobra.Command{
-	Use: "put <domain> <object-name>",
+	Use:     "put <domain> <object-name>",
+	Aliases: []string{"upload"},
 	Long: `cozy-stack swift put can be used to create or update an object in
 the swift container associated to the given domain. The content of the file is
 expected on the standard input.`,
@@ -138,7 +140,8 @@ var swiftDeleteCmd = &cobra.Command{
 }
 
 var swiftLsCmd = &cobra.Command{
-	Use: "ls <domain>",
+	Use:     "ls <domain>",
+	Aliases: []string{"list"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			return cmd.Usage()
