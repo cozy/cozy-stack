@@ -63,6 +63,11 @@ func (sfs *swiftVFSV3) checkFiles(
 		return err
 	}
 
+	fileIDs := make(map[string]struct{}, len(entries))
+	for _, f := range entries {
+		fileIDs[f.DocID] = struct{}{}
+	}
+
 	err = sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
 		objs, err := sfs.c.Objects(sfs.container, opts)
 		if err != nil {
@@ -70,6 +75,26 @@ func (sfs *swiftVFSV3) checkFiles(
 		}
 		for _, obj := range objs {
 			if strings.HasPrefix(obj.Name, "thumbs/") {
+				objName := strings.Split(strings.TrimPrefix(obj.Name, "thumbs/"), "-")[0]
+				fileID := makeDocID(objName)
+				if _, ok := fileIDs[fileID]; !ok {
+					accumulate(&vfs.FsckLog{
+						Type:   vfs.ThumbnailWithNoFile,
+						IsFile: true,
+						FileDoc: &vfs.TreeFile{
+							DirOrFileDoc: vfs.DirOrFileDoc{
+								DirDoc: &vfs.DirDoc{
+									Type:    consts.FileType,
+									DocID:   fileID,
+									DocName: obj.Name,
+								},
+							},
+						},
+					})
+					if failFast {
+						return nil, errFailFast
+					}
+				}
 				continue
 			}
 			docID, internalID := makeDocIDV3(obj.Name)

@@ -47,6 +47,9 @@ const (
 	// ConflictInIndex is used when there is a conflict in CouchDB with 2
 	// branches of revisions.
 	ConflictInIndex = "conflict_in_index"
+	// ThumbnailWithNoFile is used when there is a thumbnail but not the file
+	// that was used to create it.
+	ThumbnailWithNoFile = "thumbnail_with_no_file"
 )
 
 // FsckLog is a struct for an inconsistency in the VFS
