@@ -626,39 +626,56 @@ msgstr ""
 "contact@cozycloud.cc"
 
 msgid "Mail New Connection Subject"
-msgstr "We hebben een koppeling gedetecteerd met je %s"
+msgstr "Nieuwe koppeling met je %s"
 
 msgid "Mail New Connection Intro"
 msgstr ""
-"We hebben een verbinding met je Cozy gedetecteerd.\n"
-"Hier zijn de verbindingsgegevens:"
+"Dit is een bericht van je Cozy.\n"
+"Er is ingelogd op je Cozy-account vanaf een nieuw apparaat. Controleer middels onderstaande verbindingsinformatie of jíj degene was die inlogde."
 
 msgid "Mail New Connection Place"
-msgstr "Locatie"
+msgstr "Locatie:"
+
+msgid "Mail New Connection Near"
+msgstr "in de buurt van"
+
+msgid "Mail New Connection Time"
+msgstr "Tijdstip:"
 
 msgid "Mail New Connection IP"
-msgstr "IP-adres"
+msgstr "IP-adres:"
 
 msgid "Mail New Connection Browser"
-msgstr "Webbrowser"
+msgstr "Webbrowser:"
 
 msgid "Mail New Connection OS"
-msgstr "Besturingssysteem"
+msgstr "Apparaat:"
 
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
-"Was je dit zelf? Mooi zo; we zijn gerustgesteld. Excuses voor het ongemak. "
-"Als je dit niet zelf was, wijzig dan nu je wachtwoord door te klikken op de "
-"volgende knop:"
+"Was je dit zelf? Dan kun je dit bericht negeren.\n"
+"Als je dit niet zelf was, wijzig dan nu je wachtwoord."
 
 msgid "Mail New Connection Change Passphrase text"
 msgstr "Mijn wachtwoord wijzigen"
 
+msgid "Mail New Connection Bonus instruction"
+msgstr ""
+"Wil je je accountbeveiliging opschroeven? Dan raden we aan authenticatie in "
+"twee stappen in te schakelen."
+
+msgid "Mail New Connection Bonus text"
+msgstr "Authenticatie in twee stappen in schakelen"
+
 msgid "Mail New Connection Outro"
 msgstr ""
-"Waarom deze e-mail? De veiligheid van je Cozy heeft onze hoogste prioriteit "
-"en we nemen graag de tijd om je te waarschuwen over ongebruikelijke "
-"verbindingen."
+"Waarom deze e-mail? De veiligheid van je Cozy heeft onze hoogste prioriteit,"
+" dus willen we zeker weten dat je account niet wordt misbruikt."
+
+msgid "Mail New Connection Signature"
+msgstr ""
+"Tot snel! Liefs,\n"
+"je Cozy"
 
 msgid "Mail New Registration Subject"
 msgstr "Nieuw apparaat gekoppeld aan je %s"
