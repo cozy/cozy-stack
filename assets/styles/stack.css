@@ -228,8 +228,7 @@ h1 {
 li[class^="com.bitwarden.ciphers"]:before,
 li[class^="com.bitwarden.folders"]:before,
 li[class^="com.bitwarden.organizations"]:before,
-li[class^="com.bitwarden.profiles"]:before
- {
+li[class^="com.bitwarden.profiles"]:before {
   background-image: url("../images/icon-permissions.svg");
 }
 li[class^="io.cozy.settings"]:before,

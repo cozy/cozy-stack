@@ -192,6 +192,9 @@ msgstr ""
 msgid "Passphrase Hint Error"
 msgstr "Votre indice doit être différent de votre mot de passe !"
 
+msgid "Passphrase Onboarding Show hint form"
+msgstr "Laisser un indice"
+
 msgid "Passphrase Onboarding Hint Field"
 msgstr "Laisser un indice (facultatif)"
 
