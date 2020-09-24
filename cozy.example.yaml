@@ -114,6 +114,7 @@ jobs:
   #   - "migrations":      transforming a VFS with Swift to layout v3
   #   - "notes-persist":   saving notes to the VFS
   #   - "push":            sending push notifications
+  #   - "sms":             sending SMS notifications
   #   - "sendmail":        sending mails
   #   - "service":         launching services
   #   - "share-replicate": for cozy to cozy sharing
@@ -151,6 +152,7 @@ jobs:
     #   timeout: 200s
 
     # push:     false
+    # sms:      false
     # sendmail: false
 
   # Sets the default duration of jobs database documents to keep
@@ -273,6 +275,13 @@ notifications:
   # ios_certificate_password: mycertificatepasswordifany
   # ios_key_id: my_key_id_if_any
   # ios_team_id: my_team_id_if_any
+
+  # Configure the SMS per context
+  contexts:
+    beta:
+      provider: api_sen
+      url: https://sms.cozy.beta/api/send
+      token: {{.Env.COZY_BETA_SMS_TOKEN}}
 
 # whitelisted domains for the CSP policy used in hosted web applications
 csp_whitelist:

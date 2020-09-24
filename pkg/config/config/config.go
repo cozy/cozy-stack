@@ -218,6 +218,15 @@ type Notifications struct {
 	IOSCertificatePassword string
 	IOSKeyID               string
 	IOSTeamID              string
+
+	Contexts map[string]SMS
+}
+
+// SMS contains the configuration to send notifications by SMS.
+type SMS struct {
+	Provider string
+	URL      string
+	Token    string
 }
 
 // Worker contains the configuration fields for a specific worker type.
@@ -702,6 +711,8 @@ func UseViper(v *viper.Viper) error {
 			IOSCertificatePassword: v.GetString("notifications.ios_certificate_password"),
 			IOSKeyID:               v.GetString("notifications.ios_key_id"),
 			IOSTeamID:              v.GetString("notifications.ios_team_id"),
+
+			Contexts: makeSMS(v.GetStringMap("notifications.contexts")),
 		},
 		Lock:                lockRedis,
 		SessionStorage:      sessionsRedis,
@@ -850,6 +861,24 @@ func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {
 	}
 
 	return regs, nil
+}
+
+func makeSMS(raw map[string]interface{}) map[string]SMS {
+	sms := make(map[string]SMS)
+	for name, val := range raw {
+		entry, ok := val.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		provider, _ := entry["provider"].(string)
+		if provider == "" {
+			continue
+		}
+		url, _ := entry["url"].(string)
+		token, _ := entry["token"].(string)
+		sms[name] = SMS{Provider: provider, URL: url, Token: token}
+	}
+	return sms
 }
 
 func createTestViper() *viper.Viper {

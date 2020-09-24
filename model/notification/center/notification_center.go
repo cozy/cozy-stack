@@ -195,11 +195,11 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 	}
 
 	var errm error
+	log := inst.Logger().WithField("nspace", "notifications")
 	for _, channel := range preferredChannels {
 		switch channel {
 		case "mobile":
 			if p != nil {
-				log := inst.Logger().WithField("nspace", "notifications")
 				log.Infof("Sending push %#v: %v", p, n.State)
 				err := sendPush(inst, p, n, at)
 				if err == nil {
@@ -213,6 +213,14 @@ func makePush(inst *instance.Instance, p *notification.Properties, n *notificati
 			if err == nil {
 				return nil
 			}
+			errm = multierror.Append(errm, err)
+		case "sms":
+			log.Infof("Sending SMS: %v", n.State)
+			err := sendSMS(inst, p, n, at)
+			if err == nil {
+				return nil
+			}
+			log.Errorf("Error while sending sms: %s", err)
 			errm = multierror.Append(errm, err)
 		default:
 			err := fmt.Errorf("Unknown channel for notification: %s", channel)
@@ -284,6 +292,23 @@ func sendMail(inst *instance.Instance,
 		return err
 	}
 	return pushJobOrTrigger(inst, msg, "sendmail", at)
+}
+
+func sendSMS(inst *instance.Instance,
+	p *notification.Properties,
+	n *notification.Notification,
+	at string,
+) error {
+	email := buildMailMessage(p, n)
+	msg, err := job.NewMessage(&SMS{
+		NotificationID: n.ID(),
+		Message:        n.Message,
+		MailFallback:   email,
+	})
+	if err != nil {
+		return err
+	}
+	return pushJobOrTrigger(inst, msg, "sms", at)
 }
 
 func buildMailMessage(p *notification.Properties, n *notification.Notification) *mail.Options {

@@ -106,9 +106,10 @@ Notifications fields are:
 -   `state` (string): state of the notification, used for `stateful`
     notification categories, to distinguish notifications
 -   `preferred_channels` (array of string): to select a list of preferred
-    channels for this notification: either `"mobile"` or `"mail"`. The stack may
-    chose another channels. `["mobile", "mail"]` means that the stack will first
-    try to send a mobile notification, and if it fails, it will try by mail.
+    channels for this notification: either `"mobile"`, `"sms"` or `"mail"`. The
+    stack may chose another channels. `["mobile", "mail"]` means that the stack
+    will first try to send a mobile push notification, and if it fails, it will
+    try by mail.
 -   `data` (map): key/value map used to create the notification from its
     template, or sent in the notification payload for mobiles
 -   `at` (string): send the notification later, at this date formatted in

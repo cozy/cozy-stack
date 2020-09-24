@@ -53,22 +53,13 @@ options are:
 
 ### Permissions
 
-To use this worker from a client-side application, you will need to ask the
-permission. It is done by adding this to the manifest:
+To use this worker from a client-side application, you should use
+[the notifications API](./notifications.md).
 
-```json
-{
-    "permissions": {
-        "push-notification": {
-            "description": "Required to send notifications",
-            "type": "io.cozy.jobs",
-            "verbs": ["POST"],
-            "selector": "worker",
-            "values": ["push"]
-        }
-    }
-}
-```
+## sms worker
+
+The `sms` worker can be used to send SMS notifications to a user, via
+[the notifications API](./notifications.md).
 
 ## unzip worker
 
