@@ -84,6 +84,33 @@ func (c *Contact) PrimaryName() string {
 	return primary
 }
 
+// PrimaryPhoneNumber returns the preferred phone number,
+// or a blank string if the contact has no known phone number.
+func (c *Contact) PrimaryPhoneNumber() string {
+	phones, ok := c.Get("phone").([]interface{})
+	if !ok || len(phones) == 0 {
+		return ""
+	}
+	var number string
+	for i := range phones {
+		phone, ok := phones[i].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		n, ok := phone["number"].(string)
+		if !ok {
+			continue
+		}
+		if primary, ok := phone["primary"].(bool); ok && primary {
+			number = n
+		}
+		if number == "" {
+			number = n
+		}
+	}
+	return number
+}
+
 // PrimaryCozyURL returns the URL of the primary cozy,
 // or a blank string if the contact has no known cozy.
 func (c *Contact) PrimaryCozyURL() string {
