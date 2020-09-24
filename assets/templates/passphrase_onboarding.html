@@ -67,11 +67,12 @@
               <input id="password" class="wizard-password c-input-text" name="passphrase" type="password" autofocus autocomplete="current-password" />
               <progress id="password-strength" max="100" value="0" class="pw-indicator u-m-0"></progress>
             </div>
-            <p id="password-tip" class="u-coolGrey u-m-1">{{t "Passphrase Onboarding Help"}}</p>
-            <div class="o-field password-form u-m-0">
-              <label for="hint" class="c-label c-label--block u-mt-1">{{t "Passphrase Onboarding Hint Field"}}</label>
+            <p id="password-tip" class="u-text u-coolGrey u-mv-1 u-fs-italic">{{t "Passphrase Onboarding Help"}}</p>
+            <a href="#password-hint" id="show-password-hint" class="u-text u-link u-uppercase u-fw-bold u-mv-half">+ {{t "Passphrase Onboarding Show hint form"}}</a>
+            <div id="password-hint" class="u-hide o-field password-form u-m-0">
+              <label for="hint" class="c-label c-label--block">{{t "Passphrase Onboarding Hint Field"}}</label>
               <input id="hint" class="c-input-text" name="hint" type="text" />
-              <p class="wizard-notice u-mb-2 u-mt-1-half-s" id="login-password-tip">{{t "Passphrase Onboarding Hint Help"}}</p>
+              <p class="u-text u-coolGrey u-mv-1 u-fs-italic" id="login-password-tip">{{t "Passphrase Onboarding Hint Help"}}</p>
             </div>
           </div>
           <footer class="wizard-footer u-pb-2">
