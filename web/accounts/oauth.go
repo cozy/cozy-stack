@@ -30,7 +30,6 @@ func (a *apiAccount) Links() *jsonapi.LinksList {
 func start(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	scope := c.QueryParam("scope")
 	accountTypeID := c.Param("accountType")
 	accountType, err := account.TypeInfo(accountTypeID, instance.ContextName)
 	if err != nil {
@@ -48,7 +47,7 @@ func start(c echo.Context) error {
 		return err
 	}
 
-	url, err := accountType.MakeOauthStartURL(instance, scope, state)
+	url, err := accountType.MakeOauthStartURL(instance, state, c.QueryParams())
 	if err != nil {
 		return err
 	}

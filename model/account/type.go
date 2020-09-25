@@ -28,11 +28,13 @@ var accountsClient = &http.Client{
 // - AuthorizationCode is the server-side grant type.
 // - ImplicitGrant is the implicit grant type
 // - ImplicitGrantRedirectURL is the implicit grant type but with redirect_url
-//    											  instead of redirect_uri
+//   instead of redirect_uri
+// - BIWebauth is the specific webauth protocol from Budget Insight
 const (
 	AuthorizationCode        = "authorization_code"
 	ImplicitGrant            = "token"
 	ImplicitGrantRedirectURL = "token_redirect_url"
+	BIWebauth                = "bi_webauth"
 )
 
 // Token Request authentication modes for AuthorizationCode grant type
@@ -126,7 +128,7 @@ func (at *AccountType) RedirectURI(i *instance.Instance) string {
 
 // MakeOauthStartURL returns the url at which direct the user to start
 // the oauth flow
-func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, state string) (string, error) {
+func (at *AccountType) MakeOauthStartURL(i *instance.Instance, state string, params url.Values) (string, error) {
 	u, err := url.Parse(at.AuthEndpoint)
 	if err != nil {
 		return "", err
@@ -137,7 +139,7 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, sta
 	// In theory, the scope and redirect_uri are mandatory, but some services
 	// don't support them and can even have an error 500 if they are present.
 	// See https://forum.cozy.io/t/custom-oauth/6835/3
-	if scope != "" {
+	if scope := params.Get("scope"); scope != "" {
 		vv.Add("scope", scope)
 	}
 	if !at.SkipRedirectURI && at.GrantMode != ImplicitGrantRedirectURL {
@@ -154,6 +156,18 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, sta
 	case ImplicitGrantRedirectURL:
 		vv.Add("response_type", "token")
 		vv.Add("redirect_url", redirectURI)
+	case BIWebauth:
+		vv.Add("client_id", at.ClientID)
+		vv.Add("token", params.Get("token"))
+		if source := params.Get("source"); source != "" {
+			vv.Add("source", source)
+		}
+		if id := params.Get("id_connector"); id != "" {
+			vv.Add("id_connector", id)
+		}
+		if id := params.Get("id_connection"); id != "" {
+			vv.Add("id_connection", id)
+		}
 	default:
 		return "", errors.New("Wrong account type")
 	}
