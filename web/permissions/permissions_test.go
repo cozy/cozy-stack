@@ -179,7 +179,7 @@ func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&perm)
 	assert.NoError(t, err)
 
-	// // Create OAuthLinkedClient
+	// Create OAuthLinkedClient
 	oauthLinkedClient := &oauth.Client{
 		ClientName:   "test-linked-shareset2",
 		RedirectURIs: []string{"https://foobar"},
@@ -187,15 +187,15 @@ func TestCreateShareSetByLinkedAppRevokeByMobile(t *testing.T) {
 	}
 	oauthLinkedClient.Create(testInstance)
 
-	// // Generate a token for the client
+	// Generate a token for the client
 	tok, err := testInstance.MakeJWT(consts.AccessTokenAudience,
 		oauthLinkedClient.ClientID, "@io.cozy.apps/drive", "", time.Now())
 	assert.NoError(t, err)
 
-	// // Assert the permission received does not have the clientID as source_id
-	// assert.NotEqual(t, perm.Data.Attributes.SourceID, oauthLinkedClient.ClientID)
+	// Assert the permission received does not have the clientID as source_id
+	assert.NotEqual(t, perm.Data.Attributes.SourceID, oauthLinkedClient.ClientID)
 
-	// // Login to webapp and try to delete the shared link
+	// Login to webapp and try to delete the shared link
 	delReq, err := http.NewRequest("DELETE", ts.URL+"/permissions/"+perm.Data.ID, nil)
 	delReq.Host = testInstance.Domain
 	delReq.Header.Add("Authorization", "Bearer "+tok)
@@ -506,6 +506,45 @@ func TestRevoke(t *testing.T) {
 	out, err := doRequest("DELETE", ts.URL+"/permissions/"+id, token, "")
 	assert.NoError(t, err)
 	assert.Nil(t, out)
+}
+
+func TestRevokeByAnotherApp(t *testing.T) {
+	id, _, err := createTestSubPermissions(token, "roger")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	installer, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance), &app.InstallerOptions{
+		Operation:  app.Install,
+		Type:       consts.WebappType,
+		SourceURL:  "registry://notes",
+		Slug:       "notes",
+		Registries: testInstance.Registries(),
+	})
+	assert.NoError(t, err)
+	_, err = installer.RunSync()
+	assert.NoError(t, err)
+
+	notesToken, err := testInstance.MakeJWT(consts.AppAudience, "notes", "", "", time.Now())
+	assert.NoError(t, err)
+
+	out, err := doRequest("DELETE", ts.URL+"/permissions/"+id, notesToken, "")
+	assert.NoError(t, err)
+	assert.Nil(t, out)
+
+	// Cleaning
+	uninstaller, err := app.NewInstaller(testInstance, app.Copier(consts.WebappType, testInstance),
+		&app.InstallerOptions{
+			Operation:  app.Delete,
+			Type:       consts.WebappType,
+			Slug:       "notes",
+			SourceURL:  "registry://notes",
+			Registries: testInstance.Registries(),
+		},
+	)
+	assert.NoError(t, err)
+	_, err = uninstaller.RunSync()
+	assert.NoError(t, err)
 }
 
 func createTestSubPermissions(tok string, codes string) (string, map[string]interface{}, error) {
