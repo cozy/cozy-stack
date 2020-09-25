@@ -280,7 +280,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 		}
 
 		if patchCodes {
-			if !current.ParentOf(toPatch) {
+			if !current.CanUpdateShareByLink(toPatch) {
 				return permission.ErrNotParent
 			}
 			toPatch.PatchCodes(patch.Codes)
@@ -336,18 +336,7 @@ func revokePermission(c echo.Context) error {
 		return err
 	}
 
-	// Check if the permission is linked to an OAuth Client
-	if current.Client != nil {
-		oauthClient := current.Client.(*oauth.Client)
-
-		if slug := oauth.GetLinkedAppSlug(oauthClient.SoftwareID); slug != "" {
-			// Changing the sourceID from the OAuth clientID to the classic
-			// io.cozy.apps/slug one
-			current.SourceID = consts.Apps + "/" + slug
-		}
-	}
-
-	if !current.ParentOf(toRevoke) {
+	if !current.CanUpdateShareByLink(toRevoke) {
 		return permission.ErrNotParent
 	}
 

@@ -152,11 +152,16 @@ func (p *Permission) Revoke(db prefixer.Prefixer) error {
 	return couchdb.DeleteDoc(db, p)
 }
 
-// ParentOf check if child has been created by p
-func (p *Permission) ParentOf(child *Permission) bool {
-	canBeParent := p.Type == TypeWebapp || p.Type == TypeOauth
-	return child.Type == TypeShareByLink && canBeParent &&
-		child.SourceID == p.SourceID
+// CanUpdateShareByLink check if the child permissions can be updated by p
+// (p can be the parent or it has a superset of the permissions).
+func (p *Permission) CanUpdateShareByLink(child *Permission) bool {
+	if child.Type != TypeShareByLink {
+		return false
+	}
+	if p.Type != TypeWebapp && p.Type != TypeOauth {
+		return false
+	}
+	return child.SourceID == p.SourceID || child.Permissions.IsSubSetOf(p.Permissions)
 }
 
 // GetByID fetch a permission by its ID
