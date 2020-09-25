@@ -179,6 +179,9 @@ msgstr ""
 msgid "Passphrase Hint Error"
 msgstr "Je hint moet anders zijn dan je wachtwoord!"
 
+msgid "Passphrase Onboarding Show hint form"
+msgstr "Wachtwoordhint instellen"
+
 msgid "Passphrase Onboarding Hint Field"
 msgstr "Wachtwoordhint instellen (optioneel)"
 
