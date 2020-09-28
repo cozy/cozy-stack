@@ -12,7 +12,7 @@ GEM
     eventmachine (1.2.7)
     faker (1.8.7)
       i18n (>= 0.7)
-    faye-websocket (0.10.9)
+    faye-websocket (0.11.0)
       eventmachine (>= 0.12.0)
       websocket-driver (>= 0.5.1)
     http-accept (1.7.0)
