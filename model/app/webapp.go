@@ -383,8 +383,10 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 
 	sched := job.System()
 	for _, service := range deleted {
-		if err := sched.DeleteTrigger(db, service.TriggerID); err != nil && err != job.ErrNotFoundTrigger {
-			return err
+		if service.TriggerID != "" {
+			if err := sched.DeleteTrigger(db, service.TriggerID); err != nil && err != job.ErrNotFoundTrigger {
+				return err
+			}
 		}
 	}
 
@@ -398,14 +400,20 @@ func diffServices(db prefixer.Prefixer, slug string, oldServices, newServices Se
 		if len(triggerOpts) > 1 {
 			triggerArgs = strings.TrimSpace(triggerOpts[1])
 		}
-		msg := map[string]string{
-			"slug": slug,
-			"name": service.name,
+
+		// Do not create triggers for services called programmatically
+		if triggerType == "" || service.TriggerOptions == "@at 2000-01-01T00:00:00.000Z" {
+			continue
 		}
+
 		// Add metadata
 		md, err := metadata.NewWithApp(slug, "", job.DocTypeVersionTrigger)
 		if err != nil {
 			return err
+		}
+		msg := map[string]string{
+			"slug": slug,
+			"name": service.name,
 		}
 		trigger, err := job.NewTrigger(db, job.TriggerInfos{
 			Type:       triggerType,
