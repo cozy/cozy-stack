@@ -31,8 +31,6 @@ func start(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	scope := c.QueryParam("scope")
-	clientState := c.QueryParam("state")
-	nonce := c.QueryParam("nonce")
 	accountTypeID := c.Param("accountType")
 	accountType, err := account.TypeInfo(accountTypeID, instance.ContextName)
 	if err != nil {
@@ -42,8 +40,9 @@ func start(c echo.Context) error {
 	state, err := getStorage().Add(&stateHolder{
 		InstanceDomain: instance.Domain,
 		AccountType:    accountType.ID(),
-		ClientState:    clientState,
-		Nonce:          nonce,
+		ClientState:    c.QueryParam("state"),
+		Nonce:          c.QueryParam("nonce"),
+		Slug:           c.QueryParam("slug"),
 	})
 	if err != nil {
 		return err
@@ -57,9 +56,12 @@ func start(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, url)
 }
 
-func redirectToApp(c echo.Context, acc *account.Account, clientState string) error {
+func redirectToApp(c echo.Context, acc *account.Account, clientState, slug string) error {
 	instance := middlewares.GetInstance(c)
-	u := instance.SubDomain(consts.HomeSlug)
+	if slug == "" {
+		slug = consts.HomeSlug
+	}
+	u := instance.SubDomain(slug)
 	vv := &url.Values{}
 	vv.Add("account", acc.ID())
 	if clientState != "" {
@@ -81,7 +83,7 @@ func redirect(c echo.Context) error {
 	accountTypeID := c.Param("accountType")
 
 	i, _ := lifecycle.GetInstance(c.Request().Host)
-	clientState := ""
+	var clientState, slug string
 	var acc *account.Account
 
 	if accessToken != "" {
@@ -136,6 +138,7 @@ func redirect(c echo.Context) error {
 		}
 
 		clientState = state.ClientState
+		slug = state.Slug
 	}
 
 	if err := couchdb.CreateDoc(i, acc); err != nil {
@@ -143,7 +146,7 @@ func redirect(c echo.Context) error {
 	}
 
 	c.Set("instance", i.WithContextualDomain(c.Request().Host))
-	return redirectToApp(c, acc, clientState)
+	return redirectToApp(c, acc, clientState, slug)
 }
 
 // refresh is an internal route used by konnectors to refresh accounts

@@ -19,6 +19,7 @@ type stateHolder struct {
 	AccountType    string
 	ClientState    string
 	Nonce          string
+	Slug           string
 	ExpiresAt      int64
 }
 
