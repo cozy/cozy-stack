@@ -147,6 +147,7 @@ func (f *swiftCopier) Commit() (err error) {
 		dstObjectName := path.Join(f.appObj, strings.TrimPrefix(srcObjectName, f.tmpObj))
 		_, err = f.c.ObjectCopy(f.container, srcObjectName, f.container, dstObjectName, nil)
 		if err != nil {
+			logger.WithNamespace("appfs").Errorf("Cannot copy file: %s", err)
 			return err
 		}
 	}
