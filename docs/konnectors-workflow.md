@@ -495,13 +495,16 @@ A. In the cozy app (Home) give a link
   state=1234zyx">
 ```
 
-**NOTE** the scope may depends on other fields being configured (checkboxes),
-this will be described in json in the konnectors manifest. The format will be
-determined upon implementation.
+**Notes:**
 
-**NOTE** To limit bandwidth and risk of state corruption, the cozy app should
+- the scope may depends on other fields being configured (checkboxes),
+this will be described in json in the konnectors manifest. The format will be
+determined upon implementation;
+- to limit bandwidth and risk of state corruption, the cozy app should
 save its state under a random key into localStorage, the key is then passed as
-the state in this query.
+the state in this query;
+- a third parameter, `slug`, can be added to redirect to this app instead of
+  the home.
 
 B. Service lets the user login, allows or denies the scope, then redirects to
 
