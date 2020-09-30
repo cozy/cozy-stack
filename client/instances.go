@@ -168,6 +168,23 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 	return readInstance(res)
 }
 
+// CountInstances returns the number of instances.
+func (c *Client) CountInstances() (int, error) {
+	res, err := c.Req(&request.Options{
+		Method: "GET",
+		Path:   "/instances/count",
+	})
+	if err != nil {
+		return 0, err
+	}
+	defer res.Body.Close()
+	var data map[string]int
+	if err = json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return 0, err
+	}
+	return data["count"], nil
+}
+
 // ListInstances returns the list of instances recorded on the stack.
 func (c *Client) ListInstances() ([]*Instance, error) {
 	res, err := c.Req(&request.Options{
