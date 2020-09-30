@@ -110,4 +110,13 @@
   })
 
   submitButton.removeAttribute('disabled')
+
+  let showHintButton = d.getElementById('show-password-hint')
+  let hintForm = d.getElementById('password-hint')
+
+  showHintButton.addEventListener('click', function (event) {
+    event.preventDefault()
+    hintForm.classList.remove('u-hide')
+    showHintButton.classList.add('u-hide')
+  })
 })(window, document)
