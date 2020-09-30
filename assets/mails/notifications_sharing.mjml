@@ -4,7 +4,7 @@
 	{{t "Notification Sharing Subject"}}
 </mj-text>
 <mj-text mj-class="content-medium">
-	{{t "Notification Sharing Description" .SharerPublicName .TargetType .TargetName}}
+	{{t "Notification Sharing Description" .SharerPublicName .Action .TargetType .TargetName}}
 </mj-text>
 <mj-button href="{{.SharingsLink}}" align="left" mj-class="primary-button content-xlarge">
 	{{t "Notification Sharing Button text"}}

@@ -741,7 +741,7 @@ msgid "Notification Sharing Subject"
 msgstr "Vous avez un nouveau partage disponible dans votre Cozy"
 
 msgid "Notification Sharing Description"
-msgstr "%s vous invite à modifier le %s %s"
+msgstr "%s vous invite à %s le %s %s"
 
 msgid "Notification Sharing Type Document"
 msgstr "document"
