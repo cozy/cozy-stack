@@ -511,6 +511,9 @@ func (s *Sharing) FindCredentials(m *Member) *Credentials {
 // Refresh will refresh the access token, and persist the new access token in
 // the sharing
 func (c *Credentials) Refresh(inst *instance.Instance, s *Sharing, m *Member) error {
+	if c.Client == nil || c.AccessToken == nil {
+		return ErrNoOAuthClient
+	}
 	u, err := url.Parse(m.Instance)
 	if err != nil {
 		return err
@@ -1000,7 +1003,7 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 		}
 		if err != nil {
 			inst.Logger().WithField("nspace", "sharing").
-				Infof("Can't notify %#v about the updated members list: %s", m, err)
+				Debugf("Can't notify %#v about the updated members list: %s", m, err)
 			continue
 		}
 		res.Body.Close()
