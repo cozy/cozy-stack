@@ -194,6 +194,16 @@ func listHandler(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
+func countHandler(c echo.Context) error {
+	count, err := couchdb.CountNormalDocs(couchdb.GlobalDB, consts.Instances)
+	if couchdb.IsNoDatabaseError(err) {
+		count = 0
+	} else if err != nil {
+		return wrapError(err)
+	}
+	return c.JSON(http.StatusOK, echo.Map{"count": count})
+}
+
 func deleteHandler(c echo.Context) error {
 	domain := c.Param("domain")
 	err := lifecycle.Destroy(domain)
@@ -403,6 +413,7 @@ func Routes(router *echo.Group) {
 	// CRUD for instances
 	router.GET("", listHandler)
 	router.POST("", createHandler)
+	router.GET("/count", countHandler)
 	router.GET("/:domain", showHandler)
 	router.PATCH("/:domain", modifyHandler)
 	router.DELETE("/:domain", deleteHandler)

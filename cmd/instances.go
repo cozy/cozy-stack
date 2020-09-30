@@ -412,6 +412,25 @@ specific domain.
 	},
 }
 
+var countInstanceCmd = &cobra.Command{
+	Use:     "count",
+	Short:   "Count the instances",
+	Example: "$ cozy-stack instances count",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c := newAdminClient()
+		count, err := c.CountInstances()
+		if err != nil {
+			return err
+		}
+		if count == 1 {
+			fmt.Printf("%d instance\n", count)
+		} else {
+			fmt.Printf("%d instances\n", count)
+		}
+		return nil
+	},
+}
+
 var lsInstanceCmd = &cobra.Command{
 	Use:     "ls",
 	Aliases: []string{"list"},
@@ -1021,6 +1040,7 @@ func init() {
 	instanceCmdGroup.AddCommand(showDBPrefixInstanceCmd)
 	instanceCmdGroup.AddCommand(addInstanceCmd)
 	instanceCmdGroup.AddCommand(modifyInstanceCmd)
+	instanceCmdGroup.AddCommand(countInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
 	instanceCmdGroup.AddCommand(quotaInstanceCmd)
 	instanceCmdGroup.AddCommand(debugInstanceCmd)

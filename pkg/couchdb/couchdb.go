@@ -915,22 +915,11 @@ func NormalDocs(db Database, doctype string, skip, limit int, bookmark string) (
 	if bookmark == "" && len(res.Rows) < limit {
 		res.Total = skip + len(res.Rows)
 	} else {
-		var designRes ViewResponse
-		err = makeRequest(db, doctype, http.MethodGet, "_design_docs", nil, &designRes)
+		total, err := CountNormalDocs(db, doctype)
 		if err != nil {
 			return nil, err
 		}
-		total := designRes.Total
-		// CouchDB response for the total_rows on the _design_docs endpoint:
-		// - is the total number of documents on CouchDB 2.2 (and before)
-		// - is the total number of design documents on CouchDB 2.3+
-		// See https://github.com/apache/couchdb/issues/1603
-		if total == len(designRes.Rows) {
-			if total, err = CountAllDocs(db, doctype); err != nil {
-				return nil, err
-			}
-		}
-		res.Total = total - len(designRes.Rows)
+		res.Total = total
 	}
 	res.Bookmark = findRes.Bookmark
 	if res.Bookmark == "nil" {

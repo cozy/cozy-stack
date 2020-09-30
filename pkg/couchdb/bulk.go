@@ -60,6 +60,27 @@ func CountAllDocs(db Database, doctype string) (int, error) {
 	return response.TotalRows, nil
 }
 
+// CountNormalDocs returns the number of documents of the given doctype,
+// and excludes the design docs from the count.
+func CountNormalDocs(db Database, doctype string) (int, error) {
+	var designRes ViewResponse
+	err := makeRequest(db, doctype, http.MethodGet, "_design_docs", nil, &designRes)
+	if err != nil {
+		return 0, err
+	}
+	total := designRes.Total
+	// CouchDB response for the total_rows on the _design_docs endpoint:
+	// - is the total number of documents on CouchDB 2.2 (and before)
+	// - is the total number of design documents on CouchDB 2.3+
+	// See https://github.com/apache/couchdb/issues/1603
+	if total == len(designRes.Rows) {
+		if total, err = CountAllDocs(db, doctype); err != nil {
+			return 0, err
+		}
+	}
+	return total - len(designRes.Rows), nil
+}
+
 // GetAllDocs returns all documents of a specified doctype. It filters
 // out the possible _design document.
 func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) (err error) {
