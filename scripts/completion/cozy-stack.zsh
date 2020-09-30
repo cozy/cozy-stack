@@ -917,6 +917,7 @@ function _cozy-stack_instances {
       "add:Manage instances of a stack"
       "auth-mode:Set instance auth-mode"
       "client-oauth:Register a new OAuth client"
+      "count:Count the instances"
       "debug:Activate or deactivate debugging of the instance"
       "destroy:Remove instance"
       "export:Export an instance to a tarball"
@@ -951,6 +952,9 @@ function _cozy-stack_instances {
     ;;
   client-oauth)
     _cozy-stack_instances_client-oauth
+    ;;
+  count)
+    _cozy-stack_instances_count
     ;;
   debug)
     _cozy-stack_instances_debug
@@ -1057,6 +1061,15 @@ function _cozy-stack_instances_client-oauth {
     '--onboarding-permissions[Specify an OnboardingPermissions]:' \
     '--onboarding-secret[Specify an OnboardingSecret]:' \
     '--onboarding-state[Specify an OnboardingState]:' \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+function _cozy-stack_instances_count {
+  _arguments \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \
     '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \

@@ -41,6 +41,7 @@ cozy-stack instances <command> [flags]
 * [cozy-stack instances add](cozy-stack_instances_add.md)	 - Manage instances of a stack
 * [cozy-stack instances auth-mode](cozy-stack_instances_auth-mode.md)	 - Set instance auth-mode
 * [cozy-stack instances client-oauth](cozy-stack_instances_client-oauth.md)	 - Register a new OAuth client
+* [cozy-stack instances count](cozy-stack_instances_count.md)	 - Count the instances
 * [cozy-stack instances debug](cozy-stack_instances_debug.md)	 - Activate or deactivate debugging of the instance
 * [cozy-stack instances destroy](cozy-stack_instances_destroy.md)	 - Remove instance
 * [cozy-stack instances export](cozy-stack_instances_export.md)	 - Export an instance to a tarball
