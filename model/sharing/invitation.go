@@ -284,9 +284,16 @@ func (s *Sharing) SendShortcutMail(inst *instance.Instance, fileDoc *vfs.FileDoc
 	}
 	u := inst.SubDomain(consts.DriveSlug)
 	u.Fragment = "/folder/" + fileDoc.DirID
+	var action string
+	if s.ReadOnlyRules() {
+		action = inst.Translate("Mail Sharing Request Action Read")
+	} else {
+		action = inst.Translate("Mail Sharing Request Action Write")
+	}
 	targetType := getTargetType(inst, fileDoc.Metadata)
 	mailValues := map[string]interface{}{
 		"SharerPublicName": sharerName,
+		"Action":           action,
 		"TargetType":       targetType,
 		"TargetName":       s.Description,
 		"SharingsLink":     u.String(),

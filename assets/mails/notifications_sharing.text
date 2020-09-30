@@ -1,5 +1,5 @@
 {{t "Notification Sharing Subject"}}
 
-{{t "Notification Sharing Description" .SharerPublicName .TargetType .TargetName}}
+{{t "Notification Sharing Description" .SharerPublicName .Action .TargetType .TargetName}}
 
 {{.SharingsLink}}
