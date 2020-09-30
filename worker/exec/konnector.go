@@ -468,7 +468,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Inst
 	var parameters interface{} = w.man.Parameters
 
 	accountTypes, err := account.FindAccountTypesBySlug(w.slug, i.ContextName)
-	if err == nil && len(accountTypes) == 1 && accountTypes[0].GrantMode == "secret" {
+	if err == nil && len(accountTypes) == 1 && accountTypes[0].HasSecretGrant() {
 		secret := accountTypes[0].Secret
 		if w.man.Parameters == nil {
 			parameters = map[string]interface{}{"secret": secret}

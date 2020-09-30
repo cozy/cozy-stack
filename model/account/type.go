@@ -30,11 +30,15 @@ var accountsClient = &http.Client{
 // - ImplicitGrantRedirectURL is the implicit grant type but with redirect_url
 //   instead of redirect_uri
 // - BIWebauth is the specific webauth protocol from Budget Insight
+// - SecretGrant is for other secrets (not OAuth)
+// - BIWebauthAndSecret is a combination of BIWebauth and SecretGrant
 const (
 	AuthorizationCode        = "authorization_code"
 	ImplicitGrant            = "token"
 	ImplicitGrantRedirectURL = "token_redirect_url"
 	BIWebauth                = "bi_webauth"
+	BIWebauthAndSecret       = "bi_webauth+secret"
+	SecretGrant              = "secret"
 )
 
 // Token Request authentication modes for AuthorizationCode grant type
@@ -106,6 +110,11 @@ func (at *AccountType) Clone() couchdb.Doc {
 // ensure AccountType implements couchdb.Doc
 var _ couchdb.Doc = (*AccountType)(nil)
 
+// HasSecretGrant tells if the account type has non-OAuth secrets.
+func (at *AccountType) HasSecretGrant() bool {
+	return at.GrantMode == SecretGrant || at.GrantMode == BIWebauthAndSecret
+}
+
 type tokenEndpointResponse struct {
 	RefreshToken     string `json:"refresh_token"`
 	AccessToken      string `json:"access_token"`
@@ -156,7 +165,7 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, state string, par
 	case ImplicitGrantRedirectURL:
 		vv.Add("response_type", "token")
 		vv.Add("redirect_url", redirectURI)
-	case BIWebauth:
+	case BIWebauth, BIWebauthAndSecret:
 		vv.Add("client_id", at.ClientID)
 		vv.Add("token", params.Get("token"))
 		if source := params.Get("source"); source != "" {

@@ -221,7 +221,7 @@ echo "{\"type\": \"params\", \"message\": ${SECRET} }"
 	}
 
 	at := &account.AccountType{
-		GrantMode: "secret",
+		GrantMode: account.SecretGrant,
 		Slug:      "my-konnector-1",
 		Secret:    "s3cr3t",
 	}
