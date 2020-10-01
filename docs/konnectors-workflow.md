@@ -382,9 +382,9 @@ are not related to OAuth. The document still need to be injected manually in
 }
 ```
 
-**Note**: `grant_mode` must be `secret`, `slug` must be the slug of the
-konnector,  but `secret` can be a map instead of a simple string if several
-secrets are needed for this service.
+**Note**: `grant_mode` must be `secret` (or `bi_webauth+secret`), `slug` must
+be the slug of the konnector,  but `secret` can be a map instead of a simple
+string if several secrets are needed for this service.
 
 The secret is given to the konnector in the `COZY_PARAMETERS` env variable.
 
@@ -645,3 +645,16 @@ allowing non-cozy developped OAuth konnectors.
 -   MAIF konnector uses the webserver flow without redirect_uri validation
 -   Orange konnector uses the client-side proxy but hosted on their own servers
     (/!\ redirect_uri vs redirect_url)
+
+### Webauth
+
+For some banks integration (Paypal, Orange Bank, Revolut…), Budget Insight has
+a workflow similar to OAuth called
+[Webauth](https://docs.budget-insight.com/reference/connections#webauth).
+
+It is possible to use this workflow for konnectors by registering an account
+type with the following parameter:
+
+- `grant_mode`, with `bi_webauth` as the value (or `bi_webauth+secret` if there is also a secret)
+- `redirect_uri`, with an URL like `https://oauthcallback.mycozy.cloud/accounts/paypal/redirect`
+- `client_id`, with the client ID given by Budget Insight.

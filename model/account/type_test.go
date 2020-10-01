@@ -10,19 +10,19 @@ func TestFilterByContext(t *testing.T) {
 	bar := &AccountType{
 		DocID:     "bar.example",
 		Slug:      "my-konnector",
-		GrantMode: "secret",
+		GrantMode: SecretGrant,
 		Secret:    "bar",
 	}
 	foobar := &AccountType{
 		DocID:     "foo/bar.example",
 		Slug:      "my-konnector",
-		GrantMode: "secret",
+		GrantMode: SecretGrant,
 		Secret:    "foobar",
 	}
 	qux := &AccountType{
 		DocID:     "qux.example",
 		Slug:      "my-konnector",
-		GrantMode: "secret",
+		GrantMode: SecretGrant,
 		Secret:    "qux",
 	}
 	types := []*AccountType{bar, foobar, qux}
