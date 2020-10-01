@@ -726,7 +726,7 @@ msgid "Notification Sharing Subject"
 msgstr "Er is een gedeeld item beschikbaar op je Cozy"
 
 msgid "Notification Sharing Description"
-msgstr "%s heeft een %s %s met je gedeeld"
+msgstr "%s (%s) wil dat je iets %s (%s %s)"
 
 msgid "Notification Sharing Type Document"
 msgstr "document"
