@@ -6,8 +6,9 @@
 
 A Cozy's user can ask at any time to export a snapshot of all its data and
 metadata. This export takes place asynchronously and is separated in two parts:
-_ a metadata tarball containing the in a JSON format all the doctypes _
-multi-part files tarballs containing the files (or a subpart of the files)
+
+- a metadata tarball containing the in a JSON format all the doctypes
+- multi-part files tarballs containing the files (or a subpart of the files).
 
 The export process is part of a worker described in the
 [workers section](./workers.md#export) of the documentation.
@@ -24,8 +25,7 @@ Exports options fields are:
 -   `parts_size` (optional) (int): the size in bytes of a tarball files part.
 -   `max_age` (optional) (duration / nanosecs): the maximum age of the export
     data.
--   `with_doctypes` (optional) (string array): the list of whitelisted exported
-    doctypes
+-   `with_doctypes` (optional) (string array): the list of exported doctypes
 -   `without_files` (optional) (boolean): whether or not the export contains the
     files index (if false, it is not possible to generate files tarball).
 
@@ -60,7 +60,7 @@ Exports fields are:
 -   `parts_cursors` (string array): the list of cursors to access to the
     different files parts.
 -   `parts_length` (int): number of parts
--   `with_doctypes` (string array): the list of whitelisted exported doctypes
+-   `with_doctypes` (string array): the list of exported doctypes
     (if empty of null, all doctypes are exported)
 -   `without_files` (boolean): whether or not the export contains the files
     index (if false, it is not possible to generate files tarball).

@@ -105,12 +105,12 @@ precompiled modules.
 #### vm/sandbox for Nodejs
 
 [vm2](https://github.com/patriksimek/vm2) is a sandbox that can run untrusted
-code with whitelisted Node's built-in modules.
+code with allowed Node's built-in modules.
 
 #### Mock net
 
 We can mock the net module of nodejs to add some restrictions on what it can do.
-For example, we can check that it does only http/https, and blacklist connection
+For example, we can check that it does only http/https, and block connection
 to localhost:6060. It is only effective if the konnector has no way to start a
 new node processus.
 
@@ -300,7 +300,7 @@ cause some nasty bugs that are difficult to track.
 #### Running a connector
 
 A path dedicated to run the konnectors with a predefined list of node packages
-available (the net module could be mocked with special limitations to blacklist
+available (the net module could be mocked with special limitations to block
 some urls)
 
 A script will run the node container giving as option the script to launch. The

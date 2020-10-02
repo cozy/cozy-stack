@@ -13,7 +13,7 @@ import (
 var readable = true
 var none = false
 
-var blackList = map[string]bool{
+var blockList = map[string]bool{
 	consts.Instances:        none,
 	consts.Sessions:         none,
 	consts.Permissions:      none,
@@ -44,8 +44,8 @@ func CheckReadable(doctype string) error {
 		return err
 	}
 
-	readable, inblacklist := blackList[doctype]
-	if !inblacklist || readable {
+	readable, inblocklist := blockList[doctype]
+	if !inblocklist || readable {
 		return nil
 	}
 
@@ -62,8 +62,8 @@ func CheckWritable(doctype string) error {
 		return err
 	}
 
-	_, inblacklist := blackList[doctype]
-	if !inblacklist {
+	_, inblocklist := blockList[doctype]
+	if !inblocklist {
 		return nil
 	}
 

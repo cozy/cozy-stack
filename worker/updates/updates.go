@@ -97,7 +97,7 @@ func Worker(ctx *job.WorkerContext) error {
 }
 
 // UpdateAll starts the auto-updates process for all instances. The slugs
-// parameters can be used optionnaly to filter (whitelist) the applications'
+// parameters can be used optionnaly to filter (allowlist) the applications'
 // slug to update.
 func UpdateAll(ctx *job.WorkerContext, opts *Options) error {
 	insc := make(chan *app.Installer)
@@ -180,7 +180,7 @@ func UpdateAll(ctx *job.WorkerContext, opts *Options) error {
 }
 
 // UpdateInstance starts the auto-update process on the given instance. The
-// slugs parameters can be used to filter (whitelist) the applications' slug
+// slugs parameters can be used to filter (allowlist) the applications' slug
 func UpdateInstance(ctx *job.WorkerContext, inst *instance.Instance, opts *Options) error {
 	insc := make(chan *app.Installer)
 	errc := make(chan *updateError)

@@ -47,20 +47,20 @@ import (
 )
 
 const (
-	// cspScriptSrcWhitelist is a whitelist for default allowed domains in CSP.
-	cspScriptSrcWhitelist = "https://piwik.cozycloud.cc https://matomo.cozycloud.cc https://sentry.cozycloud.cc"
+	// cspScriptSrcAllowList is an allowlist for default allowed domains in CSP.
+	cspScriptSrcAllowList = "https://piwik.cozycloud.cc https://matomo.cozycloud.cc https://sentry.cozycloud.cc"
 
-	// cspImgSrcWhitelist is a whitelist of images domains that are allowed in
+	// cspImgSrcAllowList is an allowlist of images domains that are allowed in
 	// CSP.
-	cspImgSrcWhitelist = "https://piwik.cozycloud.cc https://matomo.cozycloud.cc " +
+	cspImgSrcAllowList = "https://piwik.cozycloud.cc https://matomo.cozycloud.cc " +
 		"https://*.tile.openstreetmap.org https://*.tile.osm.org " +
 		"https://*.tiles.mapbox.com https://api.mapbox.com"
 
-	// cspFrameSrcWhiteList is a whitelist of custom protocols that are allowed
+	// cspFrameSrcAllowList is an allowlist of custom protocols that are allowed
 	// in the CSP. We are using iframes on these custom protocols to open
 	// deeplinks to them and have a fallback if the mobile apps are not
 	// available.
-	cspFrameSrcWhiteList = "cozydrive: cozybanks:"
+	cspFrameSrcAllowList = "cozydrive: cozybanks:"
 )
 
 var hstsMaxAge = 365 * 24 * time.Hour // 1 year
@@ -89,13 +89,13 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPFrameSrc:       []middlewares.CSPSource{middlewares.CSPSrcSiblings},
 			CSPFrameAncestors: []middlewares.CSPSource{middlewares.CSPSrcSelf},
 
-			CSPDefaultSrcWhitelist: config.GetConfig().CSPWhitelist["default"],
-			CSPImgSrcWhitelist:     config.GetConfig().CSPWhitelist["img"] + " " + cspImgSrcWhitelist,
-			CSPScriptSrcWhitelist:  config.GetConfig().CSPWhitelist["script"] + " " + cspScriptSrcWhitelist,
-			CSPConnectSrcWhitelist: config.GetConfig().CSPWhitelist["connect"] + " " + cspScriptSrcWhitelist,
-			CSPStyleSrcWhitelist:   config.GetConfig().CSPWhitelist["style"],
-			CSPFontSrcWhitelist:    config.GetConfig().CSPWhitelist["font"],
-			CSPFrameSrcWhitelist:   config.GetConfig().CSPWhitelist["frame"] + " " + cspFrameSrcWhiteList,
+			CSPDefaultSrcAllowList: config.GetConfig().CSPAllowList["default"],
+			CSPImgSrcAllowList:     config.GetConfig().CSPAllowList["img"] + " " + cspImgSrcAllowList,
+			CSPScriptSrcAllowList:  config.GetConfig().CSPAllowList["script"] + " " + cspScriptSrcAllowList,
+			CSPConnectSrcAllowList: config.GetConfig().CSPAllowList["connect"] + " " + cspScriptSrcAllowList,
+			CSPStyleSrcAllowList:   config.GetConfig().CSPAllowList["style"],
+			CSPFontSrcAllowList:    config.GetConfig().CSPAllowList["font"],
+			CSPFrameSrcAllowList:   config.GetConfig().CSPAllowList["frame"] + " " + cspFrameSrcAllowList,
 		})
 		mws = append([]echo.MiddlewareFunc{secure}, mws...)
 	}
@@ -146,7 +146,7 @@ func SetupRoutes(router *echo.Echo) error {
 	}
 
 	router.Use(middlewares.CORS(middlewares.CORSOptions{
-		BlackList: []string{"/auth/"},
+		BlockList: []string{"/auth/"},
 	}))
 
 	// non-authentified HTML routes for authentication (login, OAuth, ...)
