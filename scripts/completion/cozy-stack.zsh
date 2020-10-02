@@ -1485,7 +1485,7 @@ function _cozy-stack_serve {
     '*--appdir[Mount a directory as the '\''app'\'' application]:' \
     '--assets[path to the directory with the assets (use the packed assets by default)]:' \
     '--couchdb-url[CouchDB URL]:' \
-    '--csp-whitelist[Whitelisted domains for the default allowed origins of the Content Secury Policy]:' \
+    '--csp-allowlist[Add domains for the default allowed origins of the Content Secury Policy]:' \
     '--dev[Allow to run in dev mode for a prod release (disabled by default)]' \
     '--disable-csp[Disable the Content Security Policy (only available for development)]' \
     '--doctypes[path to the directory with the doctypes (for developing/testing a remote doctype)]:' \

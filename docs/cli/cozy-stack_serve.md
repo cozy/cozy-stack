@@ -41,7 +41,7 @@ example), you can use the --appdir flag like this:
       --appdir strings                   Mount a directory as the 'app' application
       --assets string                    path to the directory with the assets (use the packed assets by default)
       --couchdb-url string               CouchDB URL (default "http://localhost:5984/")
-      --csp-whitelist string             Whitelisted domains for the default allowed origins of the Content Secury Policy
+      --csp-allowlist string             Add domains for the default allowed origins of the Content Secury Policy
       --dev                              Allow to run in dev mode for a prod release (disabled by default)
       --disable-csp                      Disable the Content Security Policy (only available for development)
       --doctypes string                  path to the directory with the doctypes (for developing/testing a remote doctype)
