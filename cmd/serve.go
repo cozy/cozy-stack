@@ -228,8 +228,8 @@ func init() {
 	flags.Bool("disable-csp", false, "Disable the Content Security Policy (only available for development)")
 	checkNoErr(viper.BindPFlag("disable_csp", flags.Lookup("disable-csp")))
 
-	flags.String("csp-whitelist", "", "Whitelisted domains for the default allowed origins of the Content Secury Policy")
-	checkNoErr(viper.BindPFlag("csp_whitelist", flags.Lookup("csp-whitelist")))
+	flags.String("csp-allowlist", "", "Add domains for the default allowed origins of the Content Secury Policy")
+	checkNoErr(viper.BindPFlag("csp_allowlist", flags.Lookup("csp-allowlist")))
 
 	flags.String("vault-decryptor-key", "", "the path to the key used to decrypt credentials")
 	checkNoErr(viper.BindPFlag("vault.credentials_decryptor_key", flags.Lookup("vault-decryptor-key")))

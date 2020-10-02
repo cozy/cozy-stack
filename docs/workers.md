@@ -225,8 +225,7 @@ Its options are:
 -   `parts_size`: the size in bytes of the sizes index splitting done for
     multi-part download of files data
 -   `max_age`: the maximum age duration of the archive before it expires
--   `with_doctypes`: list of string for a whitelist of doctypes to exports
-    (exports all doctypes if empty)
+-   `with_doctypes`: the list of exported doctypes (exports all doctypes if empty)
 -   `without_files`: boolean to avoid exporting the index (preventing download
     file data)
 

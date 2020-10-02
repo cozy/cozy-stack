@@ -15,7 +15,7 @@ const MaxAgeCORS = "43200"
 // CORSOptions contains different options to create a CORS middleware.
 type CORSOptions struct {
 	MaxAge         time.Duration
-	BlackList      []string
+	BlockList      []string
 	AllowedMethods []string
 }
 
@@ -54,7 +54,7 @@ func CORS(opts CORSOptions) echo.MiddlewareFunc {
 			}
 
 			path := c.Path()
-			for _, route := range opts.BlackList {
+			for _, route := range opts.BlockList {
 				if strings.HasPrefix(path, route) {
 					return next(c)
 				}

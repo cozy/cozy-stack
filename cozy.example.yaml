@@ -92,11 +92,11 @@ jobs:
   # path to the imagemagick convert binary
   # imagemagick_convert_cmd: convert
 
-  # Specify whether the given list of jobs is a whitelist or blacklist. In case
-  # of a whitelist, all jobs are deactivated by default and only the listed one
+  # Specify whether the given list of jobs is an allowlist or blocklist. In case
+  # of an allowlist, all jobs are deactivated by default and only the listed one
   # are activated.
   #
-  # whitelist: false
+  # allowlist: false
 
   # workers individual configrations.
   #
@@ -283,12 +283,12 @@ notifications:
       url: https://sms.cozy.beta/api/send
       token: {{.Env.COZY_BETA_SMS_TOKEN}}
 
-# whitelisted domains for the CSP policy used in hosted web applications
-csp_whitelist:
-  # script: https://whitelisted1.domain.com/ https://whitelisted2.domain.com/
-  # img:    https://whitelisted.domain.com/
-  # style:  https://whitelisted.domain.com/
-  # font:   https://whitelisted.domain.com/
+# Allowed domains for the CSP policy used in hosted web applications
+csp_allowlist:
+  # script: https://allowed1.domain.com/ https://allowed2.domain.com/
+  # img:    https://allowed.domain.com/
+  # style:  https://allowed.domain.com/
+  # font:   https://allowed.domain.com/
 
 # It can useful to disable the CSP policy to debug and test things in local
 # disable_csp: true

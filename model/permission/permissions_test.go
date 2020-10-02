@@ -352,7 +352,7 @@ func TestSubset(t *testing.T) {
 	assert.False(t, s5.IsSubSetOf(s6))
 }
 
-func TestCreateShareSetBlacklist(t *testing.T) {
+func TestCreateShareSetBlocklist(t *testing.T) {
 	s := Set{Rule{Type: "io.cozy.notifications"}}
 	subdoc := Permission{
 		Permissions: s,

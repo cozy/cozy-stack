@@ -133,7 +133,7 @@ type Config struct {
 	Clouderies     map[string]interface{}
 
 	CSPDisabled  bool
-	CSPWhitelist map[string]string
+	CSPAllowList map[string]string
 
 	AssetsPollingDisabled bool
 	AssetsPollingInterval time.Duration
@@ -186,7 +186,7 @@ type CouchDB struct {
 type Jobs struct {
 	RedisConfig
 	NoWorkers             bool
-	WhiteList             bool
+	AllowList             bool
 	Workers               []Worker
 	ImageMagickConvertCmd string
 	// XXX for retro-compatibility
@@ -589,9 +589,11 @@ func UseViper(v *viper.Viper) error {
 		DefaultDurationToKeep: v.GetString("jobs.defaultDurationToKeep"),
 	}
 	{
-		isWhiteList := v.GetBool("jobs.whitelist")
-		if isWhiteList {
-			jobs.WhiteList = true
+		if allow := v.GetBool("jobs.allowlist"); allow {
+			jobs.AllowList = true
+		}
+		if allow := v.GetBool("jobs.whitelist"); allow { // For compatibility
+			jobs.AllowList = true
 		}
 		if nbWorkers := v.GetInt("jobs.workers"); nbWorkers > 0 {
 			jobs.NbWorkers = nbWorkers
@@ -740,10 +742,15 @@ func UseViper(v *viper.Viper) error {
 		Registries:     regs,
 		Clouderies:     v.GetStringMap("clouderies"),
 
-		CSPWhitelist: v.GetStringMapString("csp_whitelist"),
+		CSPAllowList: v.GetStringMapString("csp_allowlist"),
 
 		AssetsPollingDisabled: v.GetBool("assets_polling_disabled"),
 		AssetsPollingInterval: v.GetDuration("assets_polling_interval"),
+	}
+
+	// For compatibility
+	if len(config.CSPAllowList) == 0 {
+		config.CSPAllowList = v.GetStringMapString("csp_whitelist")
 	}
 
 	if build.IsDevRelease() && v.GetBool("disable_csp") {

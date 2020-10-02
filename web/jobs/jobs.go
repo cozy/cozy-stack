@@ -314,12 +314,12 @@ func extractKonnectorPermissions(c echo.Context, i *instance.Instance, t job.Tri
 }
 
 func intersectPermissions(rules1, rules2 permission.Set) bool {
-	doctypeBlacklist := []string{consts.Settings}
+	doctypeBlocklist := []string{consts.Settings}
 	// This rule intersection only cross permissions on whole doctypes (no
 	// values).
 	wholeDoctypes := make(map[string]struct{})
 	for _, rule := range rules1 {
-		if len(rule.Values) == 0 && !utils.IsInArray(rule.Type, doctypeBlacklist) {
+		if len(rule.Values) == 0 && !utils.IsInArray(rule.Type, doctypeBlocklist) {
 			wholeDoctypes[rule.Type] = struct{}{}
 		}
 	}

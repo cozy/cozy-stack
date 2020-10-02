@@ -39,7 +39,7 @@ func GetWorkersList() ([]*WorkerConfig, error) {
 					found = true
 				}
 			}
-			if jobsConf.WhiteList && !found {
+			if jobsConf.AllowList && !found {
 				zero := 0
 				w = applyWorkerConfig(w, config.Worker{Concurrency: &zero})
 			}

@@ -27,7 +27,7 @@ func TestValidatesRules(t *testing.T) {
 	assert.Equal(t, ErrInvalidRule, s.ValidateRules())
 	s.Rules = []Rule{
 		{
-			Title:   "doctype is blacklisted",
+			Title:   "doctype is blocked",
 			DocType: consts.Jobs,
 			Values:  []string{"foo"},
 		},
