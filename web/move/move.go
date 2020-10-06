@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/worker/move"
+	"github.com/cozy/cozy-stack/worker/moves"
 	"github.com/labstack/echo/v4"
 )
 
@@ -26,7 +26,7 @@ func createExport(c echo.Context) error {
 		return err
 	}
 
-	var exportOptions move.ExportOptions
+	var exportOptions moves.ExportOptions
 	if _, err := jsonapi.Bind(c.Request().Body, &exportOptions); err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func exportHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	exportDoc, err := move.GetExport(inst, exportMAC)
+	exportDoc, err := moves.GetExport(inst, exportMAC)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func exportDataHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	return move.ExportCopyData(c.Response(), inst, move.SystemArchiver(), exportMAC,
+	return moves.ExportCopyData(c.Response(), inst, moves.SystemArchiver(), exportMAC,
 		c.QueryParam("cursor"))
 }
 

@@ -30,7 +30,7 @@ import (
 	_ "github.com/cozy/cozy-stack/worker/log"
 	_ "github.com/cozy/cozy-stack/worker/mails"
 	_ "github.com/cozy/cozy-stack/worker/migrations"
-	_ "github.com/cozy/cozy-stack/worker/move"
+	_ "github.com/cozy/cozy-stack/worker/moves"
 	_ "github.com/cozy/cozy-stack/worker/notes"
 	_ "github.com/cozy/cozy-stack/worker/push"
 	_ "github.com/cozy/cozy-stack/worker/share"

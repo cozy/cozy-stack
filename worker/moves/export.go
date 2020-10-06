@@ -1,4 +1,4 @@
-package move
+package moves
 
 import (
 	"archive/tar"
