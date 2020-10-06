@@ -85,3 +85,17 @@ func checkShared(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, results)
 }
+
+func checkSharings(c echo.Context) error {
+	domain := c.Param("domain")
+	i, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	results, err := sharing.CheckSharings(i)
+	if err != nil {
+		return wrapError(err)
+	}
+	return c.JSON(http.StatusOK, results)
+}

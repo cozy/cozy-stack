@@ -457,6 +457,7 @@ func Routes(router *echo.Group) {
 	// Checks
 	router.GET("/:domain/fsck", fsckHandler)
 	router.POST("/:domain/checks/shared", checkShared)
+	router.POST("/:domain/checks/sharings", checkSharings)
 
 	// Fixers
 	router.POST("/:domain/fixers/content-mismatch", contentMismatchFixer)

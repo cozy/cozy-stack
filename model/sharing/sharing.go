@@ -531,11 +531,11 @@ func (s *Sharing) NoMoreRecipient(inst *instance.Instance) error {
 	if err := s.RemoveTriggers(inst); err != nil {
 		return err
 	}
-	if err := RemoveSharedRefs(inst, s.SID); err != nil {
+	s.Active = false
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return err
 	}
-	s.Active = false
-	return couchdb.UpdateDoc(inst, s)
+	return RemoveSharedRefs(inst, s.SID)
 }
 
 // FindSharing retrieves a sharing document from its ID
@@ -822,4 +822,207 @@ func CountNewShortcuts(inst *instance.Instance) (int, error) {
 		}
 		bookmark = res.Bookmark
 	}
+}
+
+// CheckSharings will scan all the io.cozy.sharings documents and check their
+// triggers and members/credentials.
+func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
+	checks := []map[string]interface{}{}
+	err := couchdb.ForeachDocs(inst, consts.Sharings, func(_ string, data json.RawMessage) error {
+		s := &Sharing{}
+		if err := json.Unmarshal(data, s); err != nil {
+			return err
+		}
+
+		if err := s.ValidateRules(); err != nil {
+			checks = append(checks, map[string]interface{}{
+				"id":    s.SID,
+				"type":  "invalid_rules",
+				"error": err.Error(),
+			})
+		}
+
+		// Check triggers
+		if s.Active {
+			if s.Triggers.TrackID == "" {
+				checks = append(checks, map[string]interface{}{
+					"id":      s.SID,
+					"type":    "missing_trigger_on_active_sharing",
+					"trigger": "track",
+				})
+			} else {
+				err := couchdb.GetDoc(inst, consts.Triggers, s.Triggers.TrackID, nil)
+				if couchdb.IsNotFoundError(err) {
+					checks = append(checks, map[string]interface{}{
+						"id":         s.SID,
+						"type":       "missing_trigger_on_active_sharing",
+						"trigger":    "track",
+						"trigger_id": s.Triggers.TrackID,
+					})
+				}
+			}
+
+			if s.Owner || !s.ReadOnly() {
+				if s.Triggers.ReplicateID == "" {
+					checks = append(checks, map[string]interface{}{
+						"id":      s.SID,
+						"type":    "missing_trigger_on_active_sharing",
+						"trigger": "replicate",
+					})
+				} else {
+					err := couchdb.GetDoc(inst, consts.Triggers, s.Triggers.ReplicateID, nil)
+					if couchdb.IsNotFoundError(err) {
+						checks = append(checks, map[string]interface{}{
+							"id":         s.SID,
+							"type":       "missing_trigger_on_active_sharing",
+							"trigger":    "replicate",
+							"trigger_id": s.Triggers.ReplicateID,
+						})
+					}
+				}
+
+				if s.FirstFilesRule() != nil {
+					if s.Triggers.UploadID == "" {
+						checks = append(checks, map[string]interface{}{
+							"id":      s.SID,
+							"type":    "missing_trigger_on_active_sharing",
+							"trigger": "upload",
+						})
+					} else {
+						err := couchdb.GetDoc(inst, consts.Triggers, s.Triggers.UploadID, nil)
+						if couchdb.IsNotFoundError(err) {
+							checks = append(checks, map[string]interface{}{
+								"id":         s.SID,
+								"type":       "missing_trigger_on_active_sharing",
+								"trigger":    "upload",
+								"trigger_id": s.Triggers.UploadID,
+							})
+						}
+					}
+				}
+			}
+		} else {
+			if s.Triggers.TrackID != "" {
+				checks = append(checks, map[string]interface{}{
+					"id":         s.SID,
+					"type":       "trigger_on_inactive_sharing",
+					"trigger":    "track",
+					"trigger_id": s.Triggers.TrackID,
+				})
+			}
+			if s.Triggers.ReplicateID != "" {
+				checks = append(checks, map[string]interface{}{
+					"id":         s.SID,
+					"type":       "trigger_on_inactive_sharing",
+					"trigger":    "replicate",
+					"trigger_id": s.Triggers.TrackID,
+				})
+			}
+			if s.Triggers.UploadID != "" {
+				checks = append(checks, map[string]interface{}{
+					"id":         s.SID,
+					"type":       "trigger_on_inactive_sharing",
+					"trigger":    "upload",
+					"trigger_id": s.Triggers.TrackID,
+				})
+			}
+		}
+
+		// Check members and credentials
+		if len(s.Members) < 2 {
+			checks = append(checks, map[string]interface{}{
+				"id":         s.SID,
+				"type":       "not_enough_members",
+				"nb_members": len(s.Members),
+			})
+			return nil
+		}
+
+		for i, m := range s.Members {
+			isFirst := i == 0
+			isOwner := m.Status == MemberStatusOwner
+			if isFirst != isOwner {
+				checks = append(checks, map[string]interface{}{
+					"id":     s.SID,
+					"type":   "invalid_member_status",
+					"member": i,
+					"status": m.Status,
+				})
+			}
+		}
+
+		if !s.Active {
+			return nil
+		}
+
+		if s.Owner {
+			for i, m := range s.Members {
+				if i == 0 || m.Status != MemberStatusReady {
+					continue
+				}
+				if s.Credentials[i-1].Client == nil {
+					checks = append(checks, map[string]interface{}{
+						"id":     s.SID,
+						"type":   "missing_oauth_client",
+						"member": i,
+						"owner":  true,
+					})
+				}
+				if s.Credentials[i-1].AccessToken == nil {
+					checks = append(checks, map[string]interface{}{
+						"id":     s.SID,
+						"type":   "missing_access_token",
+						"member": i,
+						"owner":  true,
+					})
+				}
+				if m.Instance == "" {
+					checks = append(checks, map[string]interface{}{
+						"id":     s.SID,
+						"type":   "missing_instance_for_member",
+						"member": i,
+					})
+				}
+			}
+
+			if len(s.Credentials)+1 != len(s.Members) {
+				checks = append(checks, map[string]interface{}{
+					"id":         s.SID,
+					"type":       "invalid_number_of_credentials",
+					"owner":      true,
+					"nb_members": len(s.Credentials),
+				})
+				return nil
+			}
+		} else {
+			if len(s.Credentials) != 1 {
+				checks = append(checks, map[string]interface{}{
+					"id":         s.SID,
+					"type":       "invalid_number_of_credentials",
+					"owner":      false,
+					"nb_members": len(s.Credentials),
+				})
+				return nil
+			}
+
+			if s.Credentials[0].InboundClientID == "" {
+				checks = append(checks, map[string]interface{}{
+					"id":    s.SID,
+					"type":  "missing_inbound_client_id",
+					"owner": false,
+				})
+			}
+
+			if !s.ReadOnly() && s.Members[0].Instance == "" {
+				checks = append(checks, map[string]interface{}{
+					"id":     s.SID,
+					"type":   "missing_instance_for_member",
+					"member": 0,
+				})
+			}
+		}
+
+		return nil
+	})
+	return checks, err
 }
