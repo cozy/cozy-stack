@@ -41,7 +41,6 @@ var flagPassphrase string
 var flagForce bool
 var flagJSON bool
 var flagDirectory string
-var flagIncreaseQuota bool
 var flagForceRegistry bool
 var flagOnlyRegistry bool
 var flagSwiftLayout int
@@ -902,9 +901,8 @@ var importCmd = &cobra.Command{
 			return errors.New("The path to the tarball is missing")
 		}
 		return c.Import(flagDomain, &client.ImportOptions{
-			Filename:      args[0],
-			Destination:   flagDirectory,
-			IncreaseQuota: flagIncreaseQuota,
+			Filename:    args[0],
+			Destination: flagDirectory,
 		})
 	},
 }
@@ -1117,7 +1115,6 @@ func init() {
 	exportCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	importCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	importCmd.Flags().StringVar(&flagDirectory, "directory", "", "Put the imported files inside this directory")
-	importCmd.Flags().BoolVar(&flagIncreaseQuota, "increase-quota", false, "Increase the disk quota if needed for importing all the files")
 	_ = exportCmd.MarkFlagRequired("domain")
 	_ = importCmd.MarkFlagRequired("domain")
 	RootCmd.AddCommand(instanceCmdGroup)

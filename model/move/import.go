@@ -15,7 +15,6 @@ import (
 
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
-	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -290,7 +289,7 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 }
 
 // Import is used to import a tarball with files, photos, contacts to an instance
-func Import(i *instance.Instance, filename, destination string, increaseQuota bool) error {
+func Import(i *instance.Instance, filename, destination string) error {
 	r, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -316,25 +315,6 @@ func Import(i *instance.Instance, filename, destination string, increaseQuota bo
 			logger.WithDomain(i.Domain).Errorf("Can't find destination directory %s: %s", destination, err)
 			return err
 		}
-	}
-
-	// If increaseQuota flag is activated, the disk quota limit is lifted for
-	// the import, and when finished, we put it again a quota (the old one if
-	// it is enough or a new one based on the usage if we need to increase it)
-	oldQuota := i.BytesDiskQuota
-	if increaseQuota && oldQuota != 0 {
-		i.BytesDiskQuota = 0
-		defer func() {
-			i.BytesDiskQuota = oldQuota
-			usage, err := fs.DiskUsage()
-			if err != nil {
-				return
-			}
-			usage = (usage/1e9 + 1) * 1e9 // Round to the superior Go
-			if usage > oldQuota {
-				_ = lifecycle.Patch(i, &lifecycle.Options{DiskQuota: usage})
-			}
-		}()
 	}
 
 	return untar(r, dst, i)
