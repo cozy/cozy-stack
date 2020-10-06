@@ -1,4 +1,4 @@
-package moves
+package move
 
 import (
 	"fmt"

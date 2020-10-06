@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/mail"
 )
@@ -28,19 +29,10 @@ func init() {
 	})
 }
 
-// ExportOptions contains the options for launching the export worker.
-type ExportOptions struct {
-	PartsSize        int64         `json:"parts_size"`
-	MaxAge           time.Duration `json:"max_age"`
-	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
-	WithoutFiles     bool          `json:"without_files,omitempty"`
-	ContextualDomain string        `json:"contextual_domain,omitempty"`
-}
-
 // ExportWorker is the worker responsible for creating an export of the
 // instance.
 func ExportWorker(c *job.WorkerContext) error {
-	var opts ExportOptions
+	var opts move.ExportOptions
 	if err := c.UnmarshalMessage(&opts); err != nil {
 		return err
 	}
@@ -49,7 +41,8 @@ func ExportWorker(c *job.WorkerContext) error {
 		c.Instance = c.Instance.WithContextualDomain(opts.ContextualDomain)
 	}
 
-	exportDoc, err := Export(c.Instance, opts, SystemArchiver())
+	archiver := move.SystemArchiver()
+	exportDoc, err := move.Export(c.Instance, opts, archiver)
 	if err != nil {
 		return err
 	}
@@ -82,16 +75,10 @@ func ExportWorker(c *job.WorkerContext) error {
 	return err
 }
 
-// ImportOptions contains the options for launching the import worker.
-// TODO document it in docs/workers.md
-type ImportOptions struct {
-	ManifestURL string `json:"manifest_url"`
-}
-
 // ImportWorker is the worker responsible for inserting the data from an export
 // inside an instance.
 func ImportWorker(c *job.WorkerContext) error {
-	var opts ImportOptions
+	var opts move.ImportOptions
 	if err := c.UnmarshalMessage(&opts); err != nil {
 		return err
 	}

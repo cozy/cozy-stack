@@ -5,7 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
-	"github.com/cozy/cozy-stack/worker/moves"
+	"github.com/cozy/cozy-stack/model/move"
 	"github.com/labstack/echo/v4"
 )
 
@@ -17,7 +17,7 @@ func exporter(c echo.Context) error {
 	}
 
 	// TODO we should export the data to the local disk and return the list of zips
-	options := moves.ExportOptions{
+	options := move.ExportOptions{
 		ContextualDomain: domain,
 	}
 	msg, err := job.NewMessage(options)
@@ -44,7 +44,7 @@ func importer(c echo.Context) error {
 	}
 
 	// TODO we should import a list of zips from the local disk
-	options := moves.ImportOptions{
+	options := move.ImportOptions{
 		ManifestURL: c.QueryParam("manifest_url"),
 	}
 	msg, err := job.NewMessage(options)

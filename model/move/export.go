@@ -1,4 +1,4 @@
-package moves
+package move
 
 import (
 	"archive/tar"
@@ -21,13 +21,22 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/labstack/echo/v4"
 )
+
+// ExportOptions contains the options for launching the export worker.
+type ExportOptions struct {
+	PartsSize        int64         `json:"parts_size"`
+	MaxAge           time.Duration `json:"max_age"`
+	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
+	WithoutFiles     bool          `json:"without_files,omitempty"`
+	ContextualDomain string        `json:"contextual_domain,omitempty"`
+}
+
+// minimalPartsSize is the minimal size of a file bucket, to split the index
+// into equal-sized parts.
+const minimalPartsSize = 100 * 1024 * 1024 // 100 MB
 
 const (
 	// ExportFilesDir is the directory for storing the files in the export
@@ -37,153 +46,6 @@ const (
 	// archive.
 	ExportMetasDir = "My Cozy/Metadata"
 )
-
-// ExportDoc is a documents storing the metadata of an export.
-type ExportDoc struct {
-	DocID     string `json:"_id,omitempty"`
-	DocRev    string `json:"_rev,omitempty"`
-	Domain    string `json:"domain"`
-	PartsSize int64  `json:"parts_size,omitempty"`
-
-	PartsCursors     []string      `json:"parts_cursors,omitempty"`
-	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
-	WithoutFiles     bool          `json:"without_files,omitempty"`
-	State            string        `json:"state"`
-	CreatedAt        time.Time     `json:"created_at"`
-	ExpiresAt        time.Time     `json:"expires_at"`
-	TotalSize        int64         `json:"total_size,omitempty"`
-	CreationDuration time.Duration `json:"creation_duration,omitempty"`
-	Error            string        `json:"error,omitempty"`
-}
-
-// minimalPartsSize is the minimal size of a file bucket, to split the index
-// into equal-sized parts.
-const minimalPartsSize = 100 * 1024 * 1024 // 100 MB
-
-var (
-	// ErrExportNotFound is used when a export document could not be found
-	ErrExportNotFound = echo.NewHTTPError(http.StatusNotFound, "exports: not found")
-	// ErrExportExpired is used when the export document has expired along with
-	// its associated data.
-	ErrExportExpired = echo.NewHTTPError(http.StatusNotFound, "exports: has expired")
-	// ErrMACInvalid is used when the given MAC is not valid.
-	ErrMACInvalid = echo.NewHTTPError(http.StatusUnauthorized, "exports: invalid mac")
-	// ErrExportConflict is used when an export is already being perfomed.
-	ErrExportConflict = echo.NewHTTPError(http.StatusConflict, "export: an archive is already being created")
-	// ErrExportDoesNotContainIndex is used when we could not find the index data
-	// in the archive.
-	ErrExportDoesNotContainIndex = echo.NewHTTPError(http.StatusBadRequest, "export: archive does not contain index data")
-	// ErrExportInvalidCursor is used when the given index cursor is invalid
-	ErrExportInvalidCursor = echo.NewHTTPError(http.StatusBadRequest, "export: cursor is invalid")
-)
-
-const (
-	// ExportStateExporting is the state used when the export document is being
-	// created.
-	ExportStateExporting = "exporting"
-	// ExportStateDone is used when the export document is finished, without
-	// error.
-	ExportStateDone = "done"
-	// ExportStateError is used when the export document is finshed with error.
-	ExportStateError = "error"
-)
-
-// DocType implements the couchdb.Doc interface
-func (e *ExportDoc) DocType() string { return consts.Exports }
-
-// ID implements the couchdb.Doc interface
-func (e *ExportDoc) ID() string { return e.DocID }
-
-// Rev implements the couchdb.Doc interface
-func (e *ExportDoc) Rev() string { return e.DocRev }
-
-// SetID implements the couchdb.Doc interface
-func (e *ExportDoc) SetID(id string) { e.DocID = id }
-
-// SetRev implements the couchdb.Doc interface
-func (e *ExportDoc) SetRev(rev string) { e.DocRev = rev }
-
-// Clone implements the couchdb.Doc interface
-func (e *ExportDoc) Clone() couchdb.Doc {
-	clone := *e
-
-	clone.PartsCursors = make([]string, len(e.PartsCursors))
-	copy(clone.PartsCursors, e.PartsCursors)
-
-	clone.WithDoctypes = make([]string, len(e.WithDoctypes))
-	copy(clone.WithDoctypes, e.WithDoctypes)
-
-	return &clone
-}
-
-// Links implements the jsonapi.Object interface
-func (e *ExportDoc) Links() *jsonapi.LinksList { return nil }
-
-// Relationships implements the jsonapi.Object interface
-func (e *ExportDoc) Relationships() jsonapi.RelationshipMap { return nil }
-
-// Included implements the jsonapi.Object interface
-func (e *ExportDoc) Included() []jsonapi.Object { return nil }
-
-// HasExpired returns whether or not the export document has expired.
-func (e *ExportDoc) HasExpired() bool {
-	return time.Until(e.ExpiresAt) <= 0
-}
-
-var _ jsonapi.Object = &ExportDoc{}
-
-// GenerateAuthMessage generates a MAC authentificating the access to the
-// export data.
-func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
-	mac, err := crypto.EncodeAuthMessage(archiveMACConfig, i.SessionSecret(), []byte(e.ID()), nil)
-	if err != nil {
-		panic(fmt.Errorf("could not generate archive auth message: %s", err))
-	}
-	return mac
-}
-
-// verifyAuthMessage verifies the given MAC to authenticate and grant the
-// access to the export data.
-func verifyAuthMessage(i *instance.Instance, mac []byte) (string, bool) {
-	exportID, err := crypto.DecodeAuthMessage(archiveMACConfig, i.SessionSecret(), mac, nil)
-	return string(exportID), err == nil
-}
-
-// GetExport returns an Export document associated with the given instance and
-// with the given MAC message.
-func GetExport(inst *instance.Instance, mac []byte) (*ExportDoc, error) {
-	exportID, ok := verifyAuthMessage(inst, mac)
-	if !ok {
-		return nil, ErrMACInvalid
-	}
-	var exportDoc ExportDoc
-	if err := couchdb.GetDoc(couchdb.GlobalDB, consts.Exports, exportID, &exportDoc); err != nil {
-		if couchdb.IsNotFoundError(err) || couchdb.IsNoDatabaseError(err) {
-			return nil, ErrExportNotFound
-		}
-		return nil, err
-	}
-	return &exportDoc, nil
-}
-
-// GetExports returns the list of exported documents.
-func GetExports(domain string) ([]*ExportDoc, error) {
-	var docs []*ExportDoc
-	req := &couchdb.FindRequest{
-		UseIndex: "by-domain",
-		Selector: mango.Equal("domain", domain),
-		Sort: mango.SortBy{
-			{Field: "domain", Direction: mango.Desc},
-			{Field: "created_at", Direction: mango.Desc},
-		},
-		Limit: 256,
-	}
-	err := couchdb.FindDocs(couchdb.GlobalDB, consts.Exports, req, &docs)
-	if err != nil && !couchdb.IsNoDatabaseError(err) {
-		return nil, err
-	}
-	return docs, nil
-}
 
 // ExportData returns a io.ReadCloser of the metadata archive.
 func ExportData(inst *instance.Instance, archiver Archiver, mac []byte) (io.ReadCloser, int64, error) {

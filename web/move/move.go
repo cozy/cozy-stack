@@ -6,12 +6,12 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/worker/moves"
 	"github.com/labstack/echo/v4"
 )
 
@@ -26,7 +26,7 @@ func createExport(c echo.Context) error {
 		return err
 	}
 
-	var exportOptions moves.ExportOptions
+	var exportOptions move.ExportOptions
 	if _, err := jsonapi.Bind(c.Request().Body, &exportOptions); err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func exportHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	exportDoc, err := moves.GetExport(inst, exportMAC)
+	exportDoc, err := move.GetExport(inst, exportMAC)
 	if err != nil {
 		return err
 	}
@@ -88,8 +88,9 @@ func exportDataHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	return moves.ExportCopyData(c.Response(), inst, moves.SystemArchiver(), exportMAC,
-		c.QueryParam("cursor"))
+	archiver := move.SystemArchiver()
+	cursor := c.QueryParam("cursor")
+	return move.ExportCopyData(c.Response(), inst, archiver, exportMAC, cursor)
 }
 
 // Routes defines the routing layout for the /move module.
