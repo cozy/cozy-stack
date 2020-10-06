@@ -1,43 +1,33 @@
 package instances
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/move"
-	"github.com/cozy/cozy-stack/pkg/mail"
+	"github.com/cozy/cozy-stack/worker/moves"
 	"github.com/labstack/echo/v4"
 )
 
 func exporter(c echo.Context) error {
 	domain := c.Param("domain")
-	instance, err := lifecycle.GetInstance(domain)
-	if err != nil {
-		return err
-	}
-	filename, err := move.Export(instance)
+	inst, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return err
 	}
 
-	link := fmt.Sprintf("http://%s%s%s", domain, c.Path(), filename)
-	msg, err := job.NewMessage(mail.Options{
-		Mode:         mail.ModeFromStack,
-		TemplateName: "archiver",
-		TemplateValues: map[string]interface{}{
-			"ArchiveLink": link,
-		},
-	})
+	exportOptions := moves.ExportOptions{
+		ContextualDomain: domain,
+	}
+	msg, err := job.NewMessage(exportOptions)
 	if err != nil {
 		return err
 	}
 
-	broker := job.System()
-	_, err = broker.PushJob(instance, &job.JobRequest{
-		WorkerType: "sendmail",
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "export",
 		Message:    msg,
 	})
 	if err != nil {
