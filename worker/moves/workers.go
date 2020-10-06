@@ -18,6 +18,14 @@ func init() {
 		Timeout:      5 * time.Minute,
 		WorkerFunc:   ExportWorker,
 	})
+
+	job.AddWorker(&job.WorkerConfig{
+		WorkerType:   "import",
+		Concurrency:  4,
+		MaxExecCount: 1,
+		Timeout:      5 * time.Minute,
+		WorkerFunc:   ExportWorker,
+	})
 }
 
 // ExportOptions contains the options for launching the export worker.
@@ -72,4 +80,22 @@ func ExportWorker(c *job.WorkerContext) error {
 		Message:    msg,
 	})
 	return err
+}
+
+// ImportOptions contains the options for launching the import worker.
+// TODO document it in docs/workers.md
+type ImportOptions struct {
+	ManifestURL string `json:"manifest_url"`
+}
+
+// ImportWorker is the worker responsible for inserting the data from an export
+// inside an instance.
+func ImportWorker(c *job.WorkerContext) error {
+	var opts ImportOptions
+	if err := c.UnmarshalMessage(&opts); err != nil {
+		return err
+	}
+
+	fmt.Printf("manifest_url = %q\n", opts.ManifestURL)
+	return nil
 }

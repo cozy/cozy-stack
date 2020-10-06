@@ -103,8 +103,7 @@ type UpdatesOptions struct {
 
 // ImportOptions is a struct with the options for importing a tarball.
 type ImportOptions struct {
-	Filename    string
-	Destination string
+	ManifestURL string
 }
 
 // DBPrefix returns the database prefix for the instance
@@ -454,8 +453,7 @@ func (c *Client) Import(domain string, opts *ImportOptions) error {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
 	q := url.Values{
-		"filename":    {opts.Filename},
-		"destination": {opts.Destination},
+		"manifest_url": {opts.ManifestURL},
 	}
 	_, err := c.Req(&request.Options{
 		Method:     "POST",

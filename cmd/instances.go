@@ -40,7 +40,6 @@ var flagTrace bool
 var flagPassphrase string
 var flagForce bool
 var flagJSON bool
-var flagDirectory string
 var flagForceRegistry bool
 var flagOnlyRegistry bool
 var flagSwiftLayout int
@@ -883,8 +882,8 @@ updated.`,
 
 var exportCmd = &cobra.Command{
 	Use:   "export",
-	Short: "Export an instance to a tarball",
-	Long:  `Export the files and photos albums to a tarball (.tar.gz)`,
+	Short: "Export an instance",
+	Long:  `Export the files, documents, and settings`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newAdminClient()
 		return c.Export(flagDomain)
@@ -898,11 +897,10 @@ var importCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newAdminClient()
 		if len(args) < 1 {
-			return errors.New("The path to the tarball is missing")
+			return errors.New("The URL to the manifest with the exported data is missing")
 		}
 		return c.Import(flagDomain, &client.ImportOptions{
-			Filename:    args[0],
-			Destination: flagDirectory,
+			ManifestURL: args[0],
 		})
 	},
 }
@@ -1114,7 +1112,6 @@ func init() {
 	updateCmd.Flags().BoolVar(&flagOnlyRegistry, "only-registry", false, "Only update applications installed from the registry")
 	exportCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	importCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
-	importCmd.Flags().StringVar(&flagDirectory, "directory", "", "Put the imported files inside this directory")
 	_ = exportCmd.MarkFlagRequired("domain")
 	_ = importCmd.MarkFlagRequired("domain")
 	RootCmd.AddCommand(instanceCmdGroup)
