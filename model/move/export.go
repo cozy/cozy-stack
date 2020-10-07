@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -361,6 +362,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 	size += n
 
 	if !opts.WithoutFiles {
+		_ = note.FlushPendings(i)
 		var tree *vfs.Tree
 		tree, err = i.VFS().BuildTree()
 		if err != nil {

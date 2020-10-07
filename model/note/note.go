@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/prosemirror-go/model"
+	"github.com/hashicorp/go-multierror"
 )
 
 const (
@@ -567,6 +568,17 @@ func saveToCache(inst *instance.Instance, doc *Document) error {
 	return nil
 }
 
+func getListFromCache(inst *instance.Instance) []string {
+	cache := config.GetConfig().CacheStorage
+	prefix := fmt.Sprintf("note:%s:", inst.Domain)
+	keys := cache.Keys(prefix)
+	fileIDs := make([]string, len(keys))
+	for i, key := range keys {
+		fileIDs[i] = strings.TrimPrefix(key, prefix)
+	}
+	return fileIDs
+}
+
 // UpdateTitle changes the title of a note and renames the associated file.
 func UpdateTitle(inst *instance.Instance, file *vfs.FileDoc, title, sessionID string) (*vfs.FileDoc, error) {
 	lock := inst.NotesLock()
@@ -623,6 +635,17 @@ func Update(inst *instance.Instance, fileID string) error {
 	}
 	purgeOldSteps(inst, fileID)
 	return nil
+}
+
+func FlushPendings(inst *instance.Instance) error {
+	var errm error
+	list := getListFromCache(inst)
+	for _, fileID := range list {
+		if err := Update(inst, fileID); err != nil {
+			errm = multierror.Append(errm, err)
+		}
+	}
+	return errm
 }
 
 var _ couchdb.Doc = &Document{}
