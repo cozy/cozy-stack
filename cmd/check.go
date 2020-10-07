@@ -116,7 +116,8 @@ generation smaller than their generation.
 
 		if len(result) > 0 {
 			for _, r := range result {
-				fmt.Printf("- %#v\n", r)
+				j, _ := json.Marshal(r)
+				fmt.Printf("%s\n", j)
 			}
 			os.Exit(1)
 		}
@@ -155,7 +156,8 @@ an active member.
 
 		if len(result) > 0 {
 			for _, r := range result {
-				fmt.Printf("- %#v\n", r)
+				j, _ := json.Marshal(r)
+				fmt.Printf("%s\n", j)
 			}
 			os.Exit(1)
 		}

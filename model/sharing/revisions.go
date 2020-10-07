@@ -382,6 +382,7 @@ func conflictID(id, rev string) string {
 // document has two revisions where a child don't its generation equal to the
 // generation of the parent plus one.
 type CheckSharedError struct {
+	Type   string `json:"type"`
 	ID     string `json:"_id"`
 	Parent string `json:"parent_rev"`
 	Child  string `json:"child_rev"`
@@ -396,6 +397,7 @@ func (rt *RevsTree) check() *CheckSharedError {
 	for _, b := range rt.Branches {
 		if RevGeneration(b.Rev) != gen+1 {
 			return &CheckSharedError{
+				Type:   "invalid_revs_suite",
 				Parent: rt.Rev,
 				Child:  b.Rev,
 			}
