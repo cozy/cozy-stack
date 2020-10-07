@@ -36,7 +36,7 @@ type ExportOptions struct {
 
 // minimalPartsSize is the minimal size of a file bucket, to split the index
 // into equal-sized parts.
-const minimalPartsSize = 100 * 1024 * 1024 // 100 MB
+const minimalPartsSize = 1024 * 1024 * 1024 // 1 GB
 
 const (
 	// ExportFilesDir is the directory for storing the files in the export
