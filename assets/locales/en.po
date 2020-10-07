@@ -562,6 +562,9 @@ msgstr "You can download it by clicking on the following link."
 msgid "Mail Archive Button text"
 msgstr "Download your data"
 
+msgid "Mail Archive Alternative text"
+msgstr "Copy download link: "
+
 msgid "Mail Two Factor Subject"
 msgstr "One-time connection code"
 
