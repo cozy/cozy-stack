@@ -305,6 +305,7 @@ function _cozy-stack_check {
     commands=(
       "fs:Check a vfs"
       "shared:Check the io.cozy.shared documents"
+      "sharings:Check the io.cozy.sharings documents"
     )
     _describe "command" commands
     ;;
@@ -316,6 +317,9 @@ function _cozy-stack_check {
     ;;
   shared)
     _cozy-stack_check_shared
+    ;;
+  sharings)
+    _cozy-stack_check_sharings
     ;;
   esac
 }
@@ -333,6 +337,15 @@ function _cozy-stack_check_fs {
 }
 
 function _cozy-stack_check_shared {
+  _arguments \
+    '--admin-host[administration server host]:' \
+    '--admin-port[administration server port]:' \
+    '(-c --config)'{-c,--config}'[configuration file (default "$HOME/.cozy.yaml")]:' \
+    '--host[server host]:' \
+    '(-p --port)'{-p,--port}'[server port]:'
+}
+
+function _cozy-stack_check_sharings {
   _arguments \
     '--admin-host[administration server host]:' \
     '--admin-port[administration server port]:' \

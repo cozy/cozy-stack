@@ -31,4 +31,5 @@ cozy-stack check <command> [flags]
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack check fs](cozy-stack_check_fs.md)	 - Check a vfs
 * [cozy-stack check shared](cozy-stack_check_shared.md)	 - Check the io.cozy.shared documents
+* [cozy-stack check sharings](cozy-stack_check_sharings.md)	 - Check the io.cozy.sharings documents
 
