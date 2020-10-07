@@ -65,7 +65,9 @@ func displayPermissions(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	doc.Codes = nil // XXX hides the codes in the response
+	// XXX hides the codes in the response
+	doc.Codes = nil
+	doc.ShortCodes = nil
 	return jsonapi.Data(c, http.StatusOK, &APIPermission{doc}, nil)
 }
 

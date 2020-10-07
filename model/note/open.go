@@ -359,9 +359,23 @@ func (o *Opener) getInteractCode(member *sharing.Member) (string, error) {
 		return "", err
 	}
 
+	// Check if the sharing has not been revoked and accepted again, in which
+	// case, we need to update the permission set.
+	needUpdate := false
+	set := o.sharing.CreateInteractSet()
+	if !set.HasSameRules(interact.Permissions) {
+		interact.Permissions = set
+		needUpdate = true
+	}
+
 	// If we already have a code for this member, let's use it
 	for key, code := range interact.Codes {
 		if key == member.Instance || key == member.Email {
+			if needUpdate {
+				if err := couchdb.UpdateDoc(o.inst, interact); err != nil {
+					return "", err
+				}
+			}
 			return code, nil
 		}
 	}
