@@ -600,22 +600,9 @@ and all its data.
 		domain := args[0]
 
 		if !flagForce {
-			reader := bufio.NewReader(os.Stdin)
-			fmt.Printf(`Are you sure you want to remove instance for domain %s?
-All data associated with this domain will be permanently lost.
-Type again the domain to confirm: `, domain)
-
-			str, err := reader.ReadString('\n')
-			if err != nil {
+			if err := confirmDomain("remove", domain); err != nil {
 				return err
 			}
-
-			str = strings.ToLower(strings.TrimSpace(str))
-			if str != domain {
-				return errors.New("Aborted")
-			}
-
-			fmt.Println()
 		}
 
 		c := newAdminClient()
@@ -629,6 +616,26 @@ Type again the domain to confirm: `, domain)
 		fmt.Printf("Instance for domain %s has been destroyed with success\n", domain)
 		return nil
 	},
+}
+
+func confirmDomain(action, domain string) error {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf(`Are you sure you want to %s instance for domain %s?
+All data associated with this domain will be permanently lost.
+Type again the domain to confirm: `, action, domain)
+
+	str, err := reader.ReadString('\n')
+	if err != nil {
+		return err
+	}
+
+	str = strings.ToLower(strings.TrimSpace(str))
+	if str != domain {
+		return errors.New("Aborted")
+	}
+
+	fmt.Println()
+	return nil
 }
 
 var fsckInstanceCmd = &cobra.Command{
@@ -891,14 +898,21 @@ var exportCmd = &cobra.Command{
 }
 
 var importCmd = &cobra.Command{
-	Use:   "import <tarball>",
-	Short: "Import a tarball",
-	Long:  `Import a tarball with files, photos albums and contacts to an instance`,
+	Use:   "import <URL>",
+	Short: "Import data from an export link",
+	Long:  "This command will reset the Cozy instance and import data from an export link",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := newAdminClient()
 		if len(args) < 1 {
-			return errors.New("The URL to the manifest with the exported data is missing")
+			return errors.New("The URL to the exported data is missing")
 		}
+
+		if !flagForce {
+			if err := confirmDomain("reset", flagDomain); err != nil {
+				return err
+			}
+		}
+
 		return c.Import(flagDomain, &client.ImportOptions{
 			ManifestURL: args[0],
 		})
@@ -1112,6 +1126,7 @@ func init() {
 	updateCmd.Flags().BoolVar(&flagOnlyRegistry, "only-registry", false, "Only update applications installed from the registry")
 	exportCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	importCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
+	importCmd.Flags().BoolVar(&flagForce, "force", false, "Force the import without asking for confirmation")
 	_ = exportCmd.MarkFlagRequired("domain")
 	_ = importCmd.MarkFlagRequired("domain")
 	RootCmd.AddCommand(instanceCmdGroup)
