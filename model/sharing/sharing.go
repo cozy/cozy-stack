@@ -257,18 +257,7 @@ func (s *Sharing) CreateInteractPermissions(inst *instance.Instance, m *Member) 
 		return "", err
 	}
 	codes := map[string]string{key: code}
-
-	set := make(permission.Set, len(s.Rules))
-	getVerb := permission.ALL
-	for i, rule := range s.Rules {
-		set[i] = permission.Rule{
-			Type:     rule.DocType,
-			Title:    rule.Title,
-			Verbs:    getVerb,
-			Selector: rule.Selector,
-			Values:   rule.Values,
-		}
-	}
+	set := s.CreateInteractSet()
 
 	md := metadata.New()
 	md.CreatedByApp = s.AppSlug
@@ -282,6 +271,23 @@ func (s *Sharing) CreateInteractPermissions(inst *instance.Instance, m *Member) 
 		return "", err
 	}
 	return code, nil
+}
+
+// CreateInteractSet returns a set of permissions that can be used for
+// share-interact.
+func (s *Sharing) CreateInteractSet() permission.Set {
+	set := make(permission.Set, len(s.Rules))
+	getVerb := permission.ALL
+	for i, rule := range s.Rules {
+		set[i] = permission.Rule{
+			Type:     rule.DocType,
+			Title:    rule.Title,
+			Verbs:    getVerb,
+			Selector: rule.Selector,
+			Values:   rule.Values,
+		}
+	}
+	return set
 }
 
 // Create checks that the sharing is OK and it persists it in CouchDB if it is the case.
