@@ -323,7 +323,10 @@ func TrashFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 		return nil, err
 	}
 
-	if strings.HasPrefix(oldpath, TrashDirName) {
+	// If there is only the trashed attribute or the parent in trash, but not
+	// both, we can try again to move the file to the trash to fix the
+	// inconsistency.
+	if olddoc.Trashed && strings.HasPrefix(oldpath, TrashDirName) {
 		return nil, ErrFileInTrash
 	}
 
