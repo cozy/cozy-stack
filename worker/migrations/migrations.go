@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -18,8 +19,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift"
 )
 
@@ -133,7 +135,6 @@ func migrateToSwiftV3(domain string) error {
 	log := inst.Logger().WithField("nspace", "migration")
 
 	var srcContainer, migratedFrom string
-	// TODO(XXX): Use ContainerNames() instead of duplicating the container names logic here
 	switch inst.SwiftLayout {
 	case 0: // layout v1
 		srcContainer = swiftV1ContainerPrefixCozy + inst.DBPrefix()
@@ -210,13 +211,13 @@ func migrateToSwiftV3(domain string) error {
 }
 
 func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *vfs.DirDoc, src, dst string) error {
-	nb := 0
-	ch := make(chan error)
 	log := logger.WithDomain(inst.Domain).
 		WithField("nspace", "migration")
+	sem := semaphore.NewWeighted(maxSimultaneousCalls)
+	g, ctx := errgroup.WithContext(context.Background())
+	fs := inst.VFS()
 
 	var thumbsContainer string
-	// TODO(XXX): Use ContainerNames() instead of duplicating the container names logic here
 	switch inst.SwiftLayout {
 	case 0: // layout v1
 		thumbsContainer = swiftV1ContainerPrefixData + inst.Domain
@@ -226,31 +227,24 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 		return instance.ErrInvalidSwiftLayout
 	}
 
-	// Use a system of tokens to limit the number of simultaneous calls to
-	// Swift: only a goroutine that has a token can make a call.
-	tokens := make(chan int, maxSimultaneousCalls)
-	for k := 0; k < maxSimultaneousCalls; k++ {
-		tokens <- k
-	}
-
-	fs := inst.VFS()
-	errm := vfs.WalkAlreadyLocked(fs, root, func(_ string, d *vfs.DirDoc, f *vfs.FileDoc, err error) error {
+	errw := vfs.WalkAlreadyLocked(fs, root, func(_ string, d *vfs.DirDoc, f *vfs.FileDoc, err error) error {
 		if err != nil {
 			return err
 		}
 		if f == nil {
 			return nil
 		}
-
 		srcName := getSrcName(inst, f)
 		dstName := getDstName(inst, f)
 		if srcName == "" || dstName == "" {
 			return fmt.Errorf("Unexpected copy: %q -> %q", srcName, dstName)
 		}
 
-		nb++
-		go func() {
-			k := <-tokens
+		if err := sem.Acquire(ctx, 1); err != nil {
+			return err
+		}
+		g.Go(func() error {
+			defer sem.Release(1)
 			err := utils.RetryWithExpBackoff(3, 200*time.Millisecond, func() error {
 				_, err := c.ObjectCopy(src, srcName, dst, dstName, nil)
 				return err
@@ -259,51 +253,43 @@ func copyTheFilesToSwiftV3(inst *instance.Instance, c *swift.Connection, root *v
 				log.Warningf("Cannot copy file from %s %s to %s %s: %s",
 					src, srcName, dst, dstName, err)
 			}
-			ch <- err
-			tokens <- k
-		}()
+			return err
+		})
 
 		// Copy the thumbnails
 		if f.Class == "image" {
 			srcSmall, srcMedium, srcLarge := getThumbsSrcNames(inst, f)
 			dstSmall, dstMedium, dstLarge := getThumbsDstNames(inst, f)
-			nb += 3
-			go func() {
-				k := <-tokens
+			if err := sem.Acquire(ctx, 1); err != nil {
+				return err
+			}
+			g.Go(func() error {
+				defer sem.Release(1)
 				_, err := c.ObjectCopy(thumbsContainer, srcSmall, dst, dstSmall, nil)
 				if err != nil {
 					log.Infof("Cannot copy thumbnail small from %s %s to %s %s: %s",
 						thumbsContainer, srcSmall, dst, dstSmall, err)
 				}
-				ch <- nil
 				_, err = c.ObjectCopy(thumbsContainer, srcMedium, dst, dstMedium, nil)
 				if err != nil {
 					log.Infof("Cannot copy thumbnail medium from %s %s to %s %s: %s",
 						thumbsContainer, srcMedium, dst, dstMedium, err)
 				}
-				ch <- nil
 				_, err = c.ObjectCopy(thumbsContainer, srcLarge, dst, dstLarge, nil)
 				if err != nil {
 					log.Infof("Cannot copy thumbnail large from %s %s to %s %s: %s",
 						thumbsContainer, srcLarge, dst, dstLarge, err)
 				}
-				ch <- nil
-				tokens <- k
-			}()
+				return nil
+			})
 		}
 		return nil
 	})
 
-	for i := 0; i < nb; i++ {
-		if err := <-ch; err != nil {
-			errm = multierror.Append(errm, err)
-		}
+	if err := g.Wait(); err != nil {
+		return err
 	}
-	// Get back the tokens to ensure that each goroutine can finish.
-	for k := 0; k < maxSimultaneousCalls; k++ {
-		<-tokens
-	}
-	return errm
+	return errw
 }
 
 func getSrcName(inst *instance.Instance, f *vfs.FileDoc) string {
