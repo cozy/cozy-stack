@@ -60,6 +60,13 @@ func InitSwiftConnection(fs Fs) error {
 		endpointType = swift.EndpointTypeAdmin
 	}
 
+	timeout := 300 * time.Second
+	if param := q.Get("Timeout"); param != "" {
+		if t, err := time.ParseDuration(param); err == nil {
+			timeout = t
+		}
+	}
+
 	swiftConn = &swift.Connection{
 		UserName:       username,
 		ApiKey:         password,
@@ -73,8 +80,8 @@ func InitSwiftConnection(fs Fs) error {
 		EndpointType:   endpointType,
 		// Copying a file needs a long timeout on large files
 		Transport:      fs.Transport,
-		ConnectTimeout: 300 * time.Second,
-		Timeout:        300 * time.Second,
+		ConnectTimeout: timeout,
+		Timeout:        timeout,
 	}
 
 	if err = swiftConn.Authenticate(); err != nil {
