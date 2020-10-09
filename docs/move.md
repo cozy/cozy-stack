@@ -33,7 +33,7 @@ Exports options fields are:
 
 ```http
 POST /move/exports HTTP/1.1
-Host: alice.cozy.tools
+Host: source.cozy.tools
 Authorization: Bearer ...
 Content-Type: application/vnd.api+json
 ```
@@ -77,7 +77,7 @@ Exports fields are:
 
 ```http
 GET /move/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX HTTP/1.1
-Host: alice.cozy.tools
+Host: source.cozy.tools
 Authorization: Bearer ...
 Content-Type: application/vnd.api+json
 ```
@@ -113,3 +113,69 @@ user, as part of a multi-part download. The cursor given should be one of the
 defined in the export document `parts_cursors`.
 
 Only the first part of the data contains the metadata.
+
+## Import
+
+### POST /move/imports/precheck
+
+This endpoint can be use to check that an export can be imported from the given
+URL, before doing the real import.
+
+#### Request
+
+```http
+POST /move/imports/precheck HTTP/1.1
+Host: destination.cozy.tools
+Authorization: Bearer ...
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "data": {
+        "attributes": {
+            "url": "https://settings.source.cozy.tools/#/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        }
+    }
+}
+```
+
+#### Responses
+
+- `204 No Content` if every thing is fine
+- `404 Not Found` if no archive can be found at the given URL
+- `422 Entity Too Large` if the quota is too small to import the files
+
+### POST /move/imports
+
+This endpoint can be used to really start an import.
+
+#### Request
+
+```http
+POST /move/imports HTTP/1.1
+Host: destination.cozy.tools
+Authorization: Bearer ...
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "data": {
+        "attributes": {
+            "url": "https://settings.source.cozy.tools/#/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        }
+    }
+}
+```
+
+#### Responses
+
+```http
+HTTP/1.1 303 See Other
+Location: https://destination.cozy.tools/move/importing
+```
+
+### GET /move/importing
+
+This shows a page for the user to wait that the import finishes.

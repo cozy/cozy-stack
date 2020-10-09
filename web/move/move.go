@@ -93,9 +93,80 @@ func exportDataHandler(c echo.Context) error {
 	return move.ExportCopyData(c.Response(), inst, archiver, exportMAC, cursor)
 }
 
+func precheckImport(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Imports); err != nil {
+		return err
+	}
+
+	var options move.ImportOptions
+	if _, err := jsonapi.Bind(c.Request().Body, &options); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	if err := move.CheckImport(inst, options.SettingsURL); err != nil {
+		return wrapError(err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
+func createImport(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Imports); err != nil {
+		return err
+	}
+
+	var options move.ImportOptions
+	if _, err := jsonapi.Bind(c.Request().Body, &options); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	if err := move.ScheduleImport(inst, options); err != nil {
+		return c.Render(http.StatusInternalServerError, "error.html", echo.Map{
+			"CozyUI":      middlewares.CozyUI(inst),
+			"ThemeCSS":    middlewares.ThemeCSS(inst),
+			"Domain":      inst.ContextualDomain(),
+			"ContextName": inst.ContextName,
+			"Error":       err.Error(),
+			"Favicon":     middlewares.Favicon(inst),
+		})
+	}
+
+	to := inst.PageURL("/move/importing", nil)
+	return c.Redirect(http.StatusSeeOther, to)
+}
+
+func waitImportHasFinished(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	return c.Render(http.StatusOK, "error.html", echo.Map{
+		"CozyUI":      middlewares.CozyUI(inst),
+		"ThemeCSS":    middlewares.ThemeCSS(inst),
+		"Domain":      inst.ContextualDomain(),
+		"ContextName": inst.ContextName,
+		"Error":       "importing...",
+		"Favicon":     middlewares.Favicon(inst),
+	})
+}
+
 // Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
 	g.POST("/exports", createExport)
 	g.GET("/exports/:export-mac", exportHandler)
 	g.GET("/exports/data/:export-mac", exportDataHandler)
+
+	g.POST("/imports/precheck", precheckImport)
+	g.POST("/imports", createImport)
+
+	g.GET("/importing", waitImportHasFinished)
+}
+
+func wrapError(err error) error {
+	switch err {
+	case move.ErrExportNotFound:
+		return jsonapi.NotFound(err)
+	case move.ErrNotEnoughSpace:
+		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
+	}
+	return err
 }

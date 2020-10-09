@@ -21,4 +21,6 @@ var (
 	ErrExportDoesNotContainIndex = echo.NewHTTPError(http.StatusBadRequest, "export: archive does not contain index data")
 	// ErrExportInvalidCursor is used when the given index cursor is invalid
 	ErrExportInvalidCursor = echo.NewHTTPError(http.StatusBadRequest, "export: cursor is invalid")
+	// ErrNotEnoughSpace is used when the quota is too small to import the files
+	ErrNotEnoughSpace = echo.NewHTTPError(http.StatusRequestEntityTooLarge, "import: not enough disk space")
 )
