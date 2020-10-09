@@ -139,13 +139,13 @@ func createImport(c echo.Context) error {
 
 func waitImportHasFinished(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	return c.Render(http.StatusOK, "error.html", echo.Map{
+	return c.Render(http.StatusOK, "import.html", echo.Map{
 		"CozyUI":      middlewares.CozyUI(inst),
 		"ThemeCSS":    middlewares.ThemeCSS(inst),
+		"Favicon":     middlewares.Favicon(inst),
 		"Domain":      inst.ContextualDomain(),
 		"ContextName": inst.ContextName,
-		"Error":       "importing...",
-		"Favicon":     middlewares.Favicon(inst),
+		"Title":       inst.Translate("Import Title"),
 	})
 }
 

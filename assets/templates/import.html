@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}" class="u-h-100">
+  <head>
+    <meta charset="utf-8">
+    <title>{{.Title}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    {{.CozyUI}}
+    {{.ThemeCSS}}
+    {{.Favicon}}
+  </head>
+  <body class="u-h-100">
+    <main role="application" class="u-h-100 u-bg-dodgerBlue u-flex u-flex-column u-flex-items-center u-flex-justify-center">
+      <img src="{{asset .Domain "/images/relocation-animated.svg"}}" alt="" class="u-mah-4" >
+      <h2 class="u-maw-6 u-m-1 u-title-h1 u-white">{{.Title}}</h2>
+      <p class="u-maw-6 u-mh-1 u-mt-0 u-mb-3 u-text u-fz-small u-white u-o-60">{{t "Import Description" }}</p>
+    </main>
+  </body>
+</html>

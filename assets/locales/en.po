@@ -275,6 +275,12 @@ msgstr "It requests access to your Cozy:"
 msgid "Authorize Linked Help"
 msgstr "By authorizing, the application will be able to acces to these data in your Cozy:"
 
+msgid "Import Title"
+msgstr "Import in progress"
+
+msgid "Import Description"
+msgstr "Importing data may take time. You can close this screen, an email will be sent to you once the import is complete."
+
 msgid "Error Title"
 msgstr "Sorry, an error occurred."
 

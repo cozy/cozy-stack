@@ -34,6 +34,8 @@ var (
 		"authorize_sharing.html",
 		"compat.html",
 		"error.html",
+		"import.html",
+		"instance_blocked.html",
 		"login.html",
 		"need_onboarding.html",
 		"oidc_login.html",
@@ -41,7 +43,6 @@ var (
 		"passphrase_renew.html",
 		"passphrase_onboarding.html",
 		"sharing_discovery.html",
-		"instance_blocked.html",
 	}
 )
 

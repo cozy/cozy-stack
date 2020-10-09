@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 128" height="128" width="256">
+<style type="text/css">
+
+#truck {
+  animation: truck 2.0s 0s ease infinite;
+}
+
+@keyframes truck {
+  0% {
+    transform: translate(55px, 32.014px);
+  }
+  20% {
+    transform: translate(55px, 32.014px);
+  }
+  30% {
+    transform: translate(55px, 33.5px);
+  }
+  40% {
+    transform: translate(55px, 31.5px);
+  }
+  45% {
+    transform: translate(55px, 33px);
+  }
+  50% {
+    transform: translate(55px, 32.014px);
+  }
+  60% {
+    transform: translate(55px, 33px);
+  }
+  70% {
+    transform: translate(55px, 31.5px);
+  }
+  75% {
+    transform: translate(55px, 32.5px);
+  }
+  80% {
+    transform: translate(55px, 31.5px);
+  }
+  85% {
+    transform: translate(55px, 32.014px);
+  }
+  100% {
+    transform: translate(55px, 32.014px);
+  }
+}
+
+#city {
+  animation: city 20.0s 0s linear infinite;
+}
+
+@keyframes city {
+  0% {
+    transform: translate(0px, 0px);
+  }
+  100% {
+    transform: translate(-336px, 0px);
+  }
+}
+
+#wind {
+  animation: wind 1.5s 0s linear infinite;
+}
+
+@keyframes wind {
+  0% {
+    transform: translate(336px, 0px);
+  }
+  100% {
+    transform: translate(-336px, 0px);
+  }
+}
+
+
+#fence {
+  animation: fence 3s 0s linear infinite;
+}
+
+@keyframes fence {
+  0% {
+    transform: translate(0px, -1px);
+  }
+  100% {
+    transform: translate(-264px, -1px);
+  }
+}
+
+</style>
+
+<mask id="mask1">
+  <defs><linearGradient id="gradient1" x1="0%" x2="100%" y1="0%" y2="0%"><stop offset="0%" stop-color="#000000"/><stop offset="6.31%" stop-color="#FFFFFF"/><stop offset="93.7%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#000000"/></linearGradient></defs><rect width="256" height="128" fill="url(#gradient1)"/>
+</mask>
+
+<mask id="mask2">
+ <defs><linearGradient id="gradient2" x1="0%" x2="100%" y1="0%" y2="0%"><stop offset="0%" stop-color="#666666"/><stop offset="28.25%" stop-color="#E6E6E6"/><stop offset="50.08%" stop-color="#FFFFFF"/><stop offset="72.13%" stop-color="#E6E6E6"/><stop offset="100%" stop-color="#666666"/></linearGradient></defs><rect width="256" height="128" fill="url(#gradient2)" fill-rule="evenodd"/>
+</mask>
+
+<g mask="url(#mask1)">
+
+   <g mask="url(#mask2)">
+
+	   <path id="city" fill="#32363F" fill-rule="evenodd" d="M0 125V48a16 16 0 1 1 32 0v46h16V4a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v12h12a4 4 0 0 1 4 4v12h12a4 4 0 0 1 4 4v60h16V16a16 16 0 1 1 32 0v16h32V8.4a4 4 0 0 1 6.52-3.1l24 19.5a4 4 0 0 1 1.48 3.1V80a16 16 0 1 1 32 0v16h16V68a4 4 0 0 1 4-4h12V52a4 4 0 0 1 4-4h12V36a4 4 0 0 1 4-4h24a4 4 0 0 1 4 4v60h16V48a16 16 0 1 1 32 0v46h16V4a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v12h12a4 4 0 0 1 4 4v12h12a4 4 0 0 1 4 4v60h16V16a16 16 0 1 1 32 0v16h32V8.4a4 4 0 0 1 6.52-3.1l24 19.5a4 4 0 0 1 1.48 3.1V80a16 16 0 1 1 32 0v16h16V68a4 4 0 0 1 4-4h12V52a4 4 0 0 1 4-4h12V36a4 4 0 0 1 4-4h24a4 4 0 0 1 4 4v60h16v29H0z" opacity=".16"/>
+
+	   <path id="fence" fill="#32363F" fill-rule="evenodd" d="M256 108v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18H80v18h-6v-18H58v18h-6v-18H36v18h-6v-18H14v18H8v-18H0v-6h528v6h-8v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16v18h-6v-18h-16z" opacity=".16"/>
+     
+   </g>
+
+	 <g fill="none" fill-rule="evenodd" transform="translate(55 32.014)" id="truck">
+		 <path fill="#FFB15C" d="M68 79.99v-61h45.5c2.87 0 6 1.7 7.8 4.33A173.68 173.68 0 0 1 132.95 43h4.48a8.27 8.27 0 0 1 7.97 7.1c.79 7.58.79 15.22 0 22.79a8.27 8.27 0 0 1-7.97 7.1H68z"/><path fill="#3281EE" d="M110.48 23.99a8.33 8.33 0 0 1 6.79 3.75c3.19 5 6.14 10.07 8.73 15.17-7.34.01-16.2.07-23.54.08-.26-6.36.6-12.74-.46-18.99l8.48-.01z"/><path fill="#7DB3FF" d="M52 .02L54.61 0C73-.01 87.6.85 94.64 1.19a8.55 8.55 0 0 1 7.8 7.41 328.25 328.25 0 0 1 0 63.77 8.55 8.55 0 0 1-7.8 7.41C87.6 80.12 73 80.98 52 80.96c-20 .03-35.59-.84-42.64-1.18a8.55 8.55 0 0 1-7.8-7.41 328.25 328.25 0 0 1 0-63.77 8.55 8.55 0 0 1 7.8-7.41C16.4.85 32-.01 52 .02z"/><path fill="#297EF1" d="M53.6 16.99c1.17.04 2.35.2 3.52.52A14.83 14.83 0 0 1 68.08 30c3.57.35 6.92 2.37 9.25 4.87a13.79 13.79 0 0 1 3.8 8.19 15.67 15.67 0 0 1-1.98 8.32c-2.45 4.2-6.65 5.95-11.85 6.85-2.86.49-5.59.79-13.44.79h-.54c-7.85 0-10.58-.3-13.45-.8-5.2-.9-9.4-2.63-11.85-6.85a15.68 15.68 0 0 1-1.98-8.31 13.78 13.78 0 0 1 3.8-8.2c2.33-2.5 5.69-4.5 9.26-4.85.7-5.81 4.9-10.9 10.96-12.51a15.6 15.6 0 0 1 3.51-.52h.04zm-7.72 23.65c-.64.08-1.04.59-.96 1.2.09.72-.53 1.22-1.34 1.8-.36.27-.54.67-.5 1.1.06.43.34.82.73.98a1.16 1.16 0 0 0 1.1-.14l.67-.5a16.48 16.48 0 0 0 8.28 2.12c2.74 0 5.48-.62 7.8-1.86.17.15.35.3.55.45.22.15.47.23.7.23.35 0 .69-.16.92-.47.39-.5.4-1.3-.25-1.76-.58-.42-1.26-1.25-1.24-1.66a1.1 1.1 0 0 0-.51-1.02 1.36 1.36 0 0 0-1.3-.06c-.4.2-.64.57-.67 1.01-.03.6.15 1.11.42 1.57-4.05 2.07-9.44 1.99-13.26-.23a3 3 0 0 0 .29-1.71c-.1-.74-.82-1.12-1.43-1.05z"/>
+	 </g>
+
+   <g fill="none" fill-rule="evenodd" transform="translate(48 97)">
+		 <path fill="#BBD9FD" d="M3.18 28.95c6.35.76 22.67 1.42 35.82 1.69 35.9.72 86.08.34 107.34-.99 21.43-1.34 22.39-3.36-32.1-4.37-46.37-.86-100.5.36-112.08 2.17-3.11.48-2.94 1.02 1.02 1.5"/><path fill="#6B6B6B" d="M128 0a14 14 0 1 1 0 28 14 14 0 0 1 0-28"/><path fill="#BBD9FD" d="M128 7a7 7 0 1 0 0 14 7 7 0 0 0 0-14"/><path fill="#6B6B6B" d="M32 0a14 14 0 1 1 0 28 14 14 0 0 1 0-28"/><path fill="#BBD9FD" d="M32 7a7 7 0 1 0 0 14 7 7 0 0 0 0-14"/>
+	 </g>
+
+	 <path id="wind" fill="#FFFFFF" fill-rule="evenodd" d="M2 73h65a2 2 0 1 1 0 4H2a2 2 0 1 1 0-4zm168-27h45a2 2 0 0 1 0 4h-45a2 2 0 0 1 0-4zm78 50h32a2 2 0 0 1 0 4h-32a2 2 0 0 1 0-4zm-29 0h22a2 2 0 0 1 0 4h-22a2 2 0 0 1 0-4zM75 73h16a2 2 0 1 1 0 4H75a2 2 0 1 1 0-4zm213 23h6a2 2 0 0 1 0 4h-6a2 2 0 0 1 0-4z"/>
+  
+</g>
+
+</svg>
