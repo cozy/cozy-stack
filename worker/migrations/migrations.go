@@ -83,11 +83,20 @@ func worker(ctx *job.WorkerContext) error {
 }
 
 func commit(ctx *job.WorkerContext, err error) error {
+	var msg message
+	var migrationType string
+
+	if msgerr := ctx.UnmarshalMessage(&msg); msgerr != nil {
+		migrationType = ""
+	} else {
+		migrationType = msg.Type
+	}
+
 	log := logger.WithDomain(ctx.Instance.Domain).WithField("nspace", "migration")
 	if err == nil {
-		log.Infof("Migration success")
+		log.Infof("Migration %s success", migrationType)
 	} else {
-		log.Errorf("Migration error: %s", err)
+		log.Errorf("Migration %s error: %s", migrationType, err)
 	}
 	return err
 }
