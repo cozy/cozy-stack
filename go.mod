@@ -48,7 +48,7 @@ require (
 	golang.org/x/image v0.0.0-20200927104501-e162460cd6b5
 	golang.org/x/net v0.0.0-20201010224723-4f7140c49acb
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
-	golang.org/x/sync v0.0.0-20200930132711-30421366ff76
+	golang.org/x/sync v0.0.0-20201008141435-b3e1573b7520
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/dgrijalva/jwt-go.v3 v3.2.0
 )
