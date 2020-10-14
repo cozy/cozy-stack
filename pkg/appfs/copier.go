@@ -27,11 +27,12 @@ type Copier interface {
 }
 
 type swiftCopier struct {
-	c         *swift.Connection
-	appObj    string
-	tmpObj    string
-	container string
-	started   bool
+	c           *swift.Connection
+	appObj      string
+	tmpObj      string
+	container   string
+	started     bool
+	objectNames []string
 }
 
 type aferoCopier struct {
@@ -67,6 +68,7 @@ func (f *swiftCopier) Start(slug, version, shasum string) (bool, error) {
 		}
 	}
 	f.tmpObj = "tmp-" + utils.RandomString(20) + "/"
+	f.objectNames = []string{}
 	f.started = true
 	return false, err
 }
@@ -87,6 +89,7 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 		contentType, src = filetype.FromReader(src)
 	}
 
+	f.objectNames = append(f.objectNames, objName)
 	file, err := f.c.ObjectCreate(f.container, objName, true, "",
 		contentType, objMeta.ObjectHeaders())
 	if err != nil {
@@ -113,26 +116,13 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 }
 
 func (f *swiftCopier) Abort() error {
-	objectNames, err := f.c.ObjectNamesAll(f.container, &swift.ObjectsOpts{
-		Prefix:  f.tmpObj,
-		Headers: swift.Headers{"X-Newest": "true"},
-	})
-	if err != nil {
-		return err
-	}
-	_, err = f.c.BulkDelete(f.container, objectNames)
+	_, err := f.c.BulkDelete(f.container, f.objectNames)
 	return err
 }
 
 func (f *swiftCopier) Commit() (err error) {
-	objectNames, err := f.c.ObjectNamesAll(f.container, &swift.ObjectsOpts{
-		Prefix: f.tmpObj,
-	})
-	if err != nil {
-		return err
-	}
 	defer func() {
-		_, errc := f.c.BulkDelete(f.container, objectNames)
+		_, errc := f.c.BulkDelete(f.container, f.objectNames)
 		if errc != nil {
 			logger.WithNamespace("appfs").Errorf("Cannot BulkDelete after commit: %s", errc)
 		}
@@ -143,7 +133,7 @@ func (f *swiftCopier) Commit() (err error) {
 	if err == nil {
 		return nil
 	}
-	for _, srcObjectName := range objectNames {
+	for _, srcObjectName := range f.objectNames {
 		dstObjectName := path.Join(f.appObj, strings.TrimPrefix(srcObjectName, f.tmpObj))
 		_, err = f.c.ObjectCopy(f.container, srcObjectName, f.container, dstObjectName, nil)
 		if err != nil {
