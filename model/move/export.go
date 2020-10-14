@@ -48,18 +48,6 @@ const (
 	ExportMetasDir = "My Cozy/Metadata"
 )
 
-// ExportData returns a io.ReadCloser of the metadata archive.
-func ExportData(inst *instance.Instance, archiver Archiver, mac []byte) (io.ReadCloser, int64, error) {
-	exportDoc, err := GetExport(inst, mac)
-	if err != nil {
-		return nil, 0, err
-	}
-	if exportDoc.HasExpired() {
-		return nil, 0, ErrExportExpired
-	}
-	return archiver.OpenArchive(inst, exportDoc)
-}
-
 // ExportCopyData does an HTTP copy of a part of the file indexes.
 func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Archiver, mac []byte, cursorStr string) (err error) {
 	exportDoc, err := GetExport(inst, mac)
@@ -132,11 +120,10 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 
 		var zipFileWriter io.Writer
 		zipFileHdr := &zip.FileHeader{
-			Name:   path.Join(ExportMetasDir, hdr.Name),
-			Method: zip.Deflate,
-			Flags:  0x800, // bit 11 set to force utf-8
+			Name:     path.Join(ExportMetasDir, hdr.Name),
+			Method:   zip.Deflate,
+			Modified: now,
 		}
-		zipFileHdr.SetModTime(now) // nolint: megacheck
 		zipFileHdr.SetMode(0750)
 
 		isIndexFile := hdr.Typeflag == tar.TypeReg && hdr.Name == "files-index.json"
@@ -203,11 +190,10 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 			}
 			size := file.rangeEnd - file.rangeStart
 			hdr := &zip.FileHeader{
-				Name:   path.Join(ExportFilesDir, file.file.Fullpath),
-				Method: zip.Deflate,
-				Flags:  0x800, // bit 11 set to force utf-8
+				Name:     path.Join(ExportFilesDir, file.file.Fullpath),
+				Method:   zip.Deflate,
+				Modified: fileDoc.UpdatedAt,
 			}
-			hdr.SetModTime(fileDoc.UpdatedAt) // nolint: megacheck
 			if fileDoc.Executable {
 				hdr.SetMode(0750)
 			} else {
@@ -233,12 +219,11 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 			}
 		} else {
 			hdr := &zip.FileHeader{
-				Name:   path.Join(ExportFilesDir, dirDoc.Fullpath) + "/",
-				Method: zip.Deflate,
-				Flags:  0x800, // bit 11 set to force utf-8
+				Name:     path.Join(ExportFilesDir, dirDoc.Fullpath) + "/",
+				Method:   zip.Deflate,
+				Modified: dirDoc.UpdatedAt,
 			}
 			hdr.SetMode(0750)
-			hdr.SetModTime(dirDoc.UpdatedAt) // nolint: megacheck
 			_, err = zw.CreateHeader(hdr)
 			if err != nil {
 				return
@@ -282,23 +267,8 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		PartsSize:    bucketSize,
 	}
 
-	// Cleanup previously archived exports.
-	{
-		var exportedDocs []*ExportDoc
-		exportedDocs, err = GetExports(i.Domain)
-		if err != nil {
-			return
-		}
-		notRemovedDocs := exportedDocs[:0]
-		for _, e := range exportedDocs {
-			if e.State == ExportStateExporting && time.Since(e.CreatedAt) < 24*time.Hour {
-				return nil, ErrExportConflict
-			}
-			notRemovedDocs = append(notRemovedDocs, e)
-		}
-		if len(notRemovedDocs) > 0 {
-			_ = archiver.RemoveArchives(notRemovedDocs)
-		}
+	if err = exportDoc.CleanPreviousExports(archiver); err != nil {
+		return
 	}
 
 	var size, n int64
@@ -307,20 +277,12 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 	}
 	realtime.GetHub().Publish(i, realtime.EventCreate, exportDoc.Clone(), nil)
 	defer func() {
-		newExportDoc := exportDoc.Clone().(*ExportDoc)
-		newExportDoc.CreationDuration = time.Since(createdAt)
-		if err == nil {
-			newExportDoc.State = ExportStateDone
-			newExportDoc.TotalSize = size
-		} else {
-			newExportDoc.State = ExportStateError
-			newExportDoc.Error = err.Error()
-		}
-		if erru := couchdb.UpdateDoc(couchdb.GlobalDB, newExportDoc); err == nil {
+		old := exportDoc.Clone()
+		if erru := exportDoc.MarksAsFinished(i, size, err); erru == nil {
+			realtime.GetHub().Publish(i, realtime.EventUpdate, exportDoc, old)
+		} else if err == nil {
 			err = erru
 		}
-		realtime.GetHub().Publish(i, realtime.EventUpdate,
-			newExportDoc.Clone(), exportDoc.Clone())
 	}()
 
 	out, err := archiver.CreateArchive(exportDoc)

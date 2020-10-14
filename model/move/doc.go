@@ -85,6 +85,19 @@ func (e *ExportDoc) HasExpired() bool {
 
 var _ jsonapi.Object = &ExportDoc{}
 
+// MarksAsFinished saves the document when the export is done.
+func (e *ExportDoc) MarksAsFinished(i *instance.Instance, size int64, err error) error {
+	e.CreationDuration = time.Since(e.CreatedAt)
+	if err == nil {
+		e.State = ExportStateDone
+		e.TotalSize = size
+	} else {
+		e.State = ExportStateError
+		e.Error = err.Error()
+	}
+	return couchdb.UpdateDoc(couchdb.GlobalDB, e)
+}
+
 // GenerateAuthMessage generates a MAC authentificating the access to the
 // export data.
 func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
@@ -93,6 +106,25 @@ func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
 		panic(fmt.Errorf("could not generate archive auth message: %s", err))
 	}
 	return mac
+}
+
+// CleanPreviousExports ensures that we have no old exports (or clean them).
+func (e *ExportDoc) CleanPreviousExports(archiver Archiver) error {
+	exportedDocs, err := GetExports(e.Domain)
+	if err != nil {
+		return err
+	}
+	notRemovedDocs := exportedDocs[:0]
+	for _, e := range exportedDocs {
+		if e.State == ExportStateExporting && time.Since(e.CreatedAt) < 24*time.Hour {
+			return ErrExportConflict
+		}
+		notRemovedDocs = append(notRemovedDocs, e)
+	}
+	if len(notRemovedDocs) > 0 {
+		_ = archiver.RemoveArchives(notRemovedDocs)
+	}
+	return nil
 }
 
 // verifyAuthMessage verifies the given MAC to authenticate and grant the
