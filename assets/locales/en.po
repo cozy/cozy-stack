@@ -569,7 +569,41 @@ msgid "Mail Archive Button text"
 msgstr "Download your data"
 
 msgid "Mail Archive Alternative text"
-msgstr "Copy download link: "
+msgstr "The download link for your Cozy is as follows:"
+
+msgid "Mail Import Success Subject"
+msgstr "Good news! Your Cozy has been successfully imported"
+
+msgid "Mail Import Success Intro 1"
+msgstr "Hello %s,"
+
+msgid "Mail Import Success Intro 2"
+msgstr "The import of all your data into your Cozy has succeeded."
+
+msgid "Mail Import Success Button instruction"
+msgstr "You can now access your data in your Cozy by clicking on the following button:"
+
+msgid "Mail Import Success Button text"
+msgstr "Access my Cozy"
+
+msgid "Mail Import Success Apps not installed"
+msgstr "For information, the %s services could not be re-installed. "
+"However, all the associated data have been well imported."
+
+msgid "Mail Import Success Outro"
+msgstr "See you soon, your Cozy"
+
+msgid "Mail Import Error Subject"
+msgstr "⚠ The import into your Cozy has failed"
+
+msgid "Mail Import Error Text"
+msgstr ""
+"The import of the data into your Cozy encounters a problem. "
+"The archive transmitted to your Cozy does not seem valid. "
+"Can you renew the operation from the beginning?"
+
+msgid "Mail Import Error Outro"
+msgstr "If the problem persists, contact customer support."
 
 msgid "Mail Two Factor Subject"
 msgstr "One-time connection code"

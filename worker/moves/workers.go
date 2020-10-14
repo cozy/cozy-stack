@@ -3,6 +3,7 @@ package moves
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/job"
@@ -16,7 +17,7 @@ func init() {
 		WorkerType:   "export",
 		Concurrency:  4,
 		MaxExecCount: 1,
-		Timeout:      5 * time.Minute,
+		Timeout:      1 * time.Hour,
 		WorkerFunc:   ExportWorker,
 	})
 
@@ -24,8 +25,8 @@ func init() {
 		WorkerType:   "import",
 		Concurrency:  4,
 		MaxExecCount: 1,
-		Timeout:      5 * time.Minute,
-		WorkerFunc:   ExportWorker,
+		Timeout:      1 * time.Hour,
+		WorkerFunc:   ImportWorker,
 	})
 }
 
@@ -50,10 +51,7 @@ func ExportWorker(c *job.WorkerContext) error {
 	mac := base64.URLEncoding.EncodeToString(exportDoc.GenerateAuthMessage(c.Instance))
 	link := c.Instance.SubDomain(consts.SettingsSlug)
 	link.Fragment = fmt.Sprintf("/exports/%s", mac)
-	publicName, err := c.Instance.PublicName()
-	if err != nil {
-		return err
-	}
+	publicName, _ := c.Instance.PublicName()
 	mail := mail.Options{
 		Mode:         mail.ModeFromStack,
 		TemplateName: "archiver",
@@ -84,5 +82,35 @@ func ImportWorker(c *job.WorkerContext) error {
 	}
 
 	fmt.Printf("manifest_url = %q\n", opts.ManifestURL)
-	return nil
+	notInstalled, err := move.Import(c.Instance, opts)
+
+	var email mail.Options
+	if err == nil {
+		publicName, _ := c.Instance.PublicName()
+		link := c.Instance.SubDomain(consts.HomeSlug)
+		email = mail.Options{
+			Mode:         mail.ModeFromStack,
+			TemplateName: "import_success",
+			TemplateValues: map[string]interface{}{
+				"AppsNotInstalled": strings.Join(notInstalled, ", "),
+				"CozyLink":         link.String(),
+				"PublicName":       publicName,
+			},
+		}
+	} else {
+		email = mail.Options{
+			Mode:         mail.ModeFromStack,
+			TemplateName: "import_error",
+		}
+	}
+
+	msg, err := job.NewMessage(&email)
+	if err != nil {
+		return err
+	}
+	_, err = job.System().PushJob(c.Instance, &job.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	return err
 }

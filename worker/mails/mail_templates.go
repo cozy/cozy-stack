@@ -20,6 +20,8 @@ func initMailTemplates() {
 		"passphrase_hint":              subjectEntry{"Mail Hint Subject", nil},
 		"passphrase_reset":             subjectEntry{"Mail Reset Passphrase Subject", nil},
 		"archiver":                     subjectEntry{"Mail Archive Subject", nil},
+		"import_success":               subjectEntry{"Mail Import Success Subject", nil},
+		"import_error":                 subjectEntry{"Mail Import Error Subject", nil},
 		"two_factor":                   subjectEntry{"Mail Two Factor Subject", nil},
 		"two_factor_mail_confirmation": subjectEntry{"Mail Two Factor Mail Confirmation Subject", []string{templateTitleVar}},
 		"new_connection":               subjectEntry{"Mail New Connection Subject", []string{templateTitleVar}},
@@ -68,7 +70,11 @@ func (m MailTemplater) Execute(ctx *job.WorkerContext, name, layout, locale stri
 
 	subject := i18n.Translate(entry.Key, locale, vars...)
 	context := ctx.Instance.ContextName
-	data["Locale"] = locale
+	if data == nil {
+		data = map[string]interface{}{"Locale": locale}
+	} else {
+		data["Locale"] = locale
+	}
 	if ctx.Instance != nil {
 		data["InstanceURL"] = ctx.Instance.PageURL("/", nil)
 	}

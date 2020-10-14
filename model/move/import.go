@@ -17,8 +17,16 @@ func CheckImport(inst *instance.Instance, settingsURL string) error {
 	return nil
 }
 
-// Import blocks the instance and adds a job to import the data from the given
-// URL.
+// ScheduleImport blocks the instance and adds a job to import the data from
+// the given URL.
 func ScheduleImport(inst *instance.Instance, options ImportOptions) error {
 	return nil
+}
+
+// Import downloads the documents and files from an export and add them to the
+// local instance. It returns the list of slugs for apps/konnectors that have
+// not been installed.
+func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
+	notInstalled := []string{}
+	return notInstalled, nil
 }

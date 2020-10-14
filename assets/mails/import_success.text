@@ -1,0 +1,10 @@
+{{t "Mail Import Success Intro 1" .PublicName}}
+
+{{t "Mail Import Success Intro 2"}}
+
+{{t "Mail Import Success Button instruction"}}
+{{.CozyLink}}
+{{if .AppsNotInstalled}}
+{{t "Mail Import Success Apps not installed" .AppsNotInstalled}}
+{{end}}
+{{t "Mail Import Success Outro"}}
