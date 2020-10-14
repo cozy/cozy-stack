@@ -874,6 +874,10 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 	if m.Instance == "" || err != nil {
 		return ErrInvalidSharing
 	}
+	if c.Client == nil || c.AccessToken == nil {
+		return ErrNoOAuthClient
+	}
+
 	var path string
 	if m.Status == MemberStatusOwner {
 		path = "/sharings/" + s.SID + "/answer"
