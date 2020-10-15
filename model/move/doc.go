@@ -2,6 +2,7 @@ package move
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -125,6 +126,39 @@ func (e *ExportDoc) CleanPreviousExports(archiver Archiver) error {
 		_ = archiver.RemoveArchives(notRemovedDocs)
 	}
 	return nil
+}
+
+func prepareExportDoc(i *instance.Instance, opts ExportOptions) *ExportDoc {
+	createdAt := time.Now()
+
+	// The size of the buckets can be specified by the options. If it is not
+	// the case, it is computed from the disk usage. An instance with 4x more
+	// bytes than another instance will have 2x more buckets and the buckets
+	// will be 2x larger.
+	bucketSize := opts.PartsSize
+	if bucketSize < minimalPartsSize {
+		bucketSize = minimalPartsSize
+		if usage, err := i.VFS().DiskUsage(); err == nil && usage > bucketSize {
+			factor := math.Sqrt(float64(usage) / float64(minimalPartsSize))
+			bucketSize = int64(factor * float64(bucketSize))
+		}
+	}
+
+	maxAge := opts.MaxAge
+	if maxAge == 0 || maxAge > archiveMaxAge {
+		maxAge = archiveMaxAge
+	}
+
+	return &ExportDoc{
+		Domain:       i.Domain,
+		State:        ExportStateExporting,
+		CreatedAt:    createdAt,
+		ExpiresAt:    createdAt.Add(maxAge),
+		WithDoctypes: opts.WithDoctypes,
+		WithoutFiles: opts.WithoutFiles,
+		TotalSize:    -1,
+		PartsSize:    bucketSize,
+	}
 }
 
 // verifyAuthMessage verifies the given MAC to authenticate and grant the
