@@ -38,7 +38,7 @@ func start(c echo.Context) error {
 
 	state, err := getStorage().Add(&stateHolder{
 		InstanceDomain: instance.Domain,
-		AccountType:    accountType.ID(),
+		AccountType:    accountType.ServiceID(),
 		ClientState:    c.QueryParam("state"),
 		Nonce:          c.QueryParam("nonce"),
 		Slug:           c.QueryParam("slug"),

@@ -110,6 +110,12 @@ func (at *AccountType) Clone() couchdb.Doc {
 // ensure AccountType implements couchdb.Doc
 var _ couchdb.Doc = (*AccountType)(nil)
 
+// ServiceID is the ID, without the (optional) context prefix
+func (at *AccountType) ServiceID() string {
+	parts := strings.SplitN(at.DocID, "/", 2)
+	return parts[len(parts)-1]
+}
+
 // HasSecretGrant tells if the account type has non-OAuth secrets.
 func (at *AccountType) HasSecretGrant() bool {
 	return at.GrantMode == SecretGrant || at.GrantMode == BIWebauthAndSecret
