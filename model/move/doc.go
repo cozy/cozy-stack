@@ -33,7 +33,6 @@ type ExportDoc struct {
 
 	PartsCursors     []string      `json:"parts_cursors,omitempty"`
 	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
-	WithoutFiles     bool          `json:"without_files,omitempty"`
 	State            string        `json:"state"`
 	CreatedAt        time.Time     `json:"created_at"`
 	ExpiresAt        time.Time     `json:"expires_at"`
@@ -85,6 +84,20 @@ func (e *ExportDoc) HasExpired() bool {
 }
 
 var _ jsonapi.Object = &ExportDoc{}
+
+// AcceptDoctype returns true if the documents of the given doctype must be
+// exported.
+func (e *ExportDoc) AcceptDoctype(doctype string) bool {
+	if len(e.WithDoctypes) == 0 {
+		return true
+	}
+	for _, typ := range e.WithDoctypes {
+		if typ == doctype {
+			return true
+		}
+	}
+	return false
+}
 
 // MarksAsFinished saves the document when the export is done.
 func (e *ExportDoc) MarksAsFinished(i *instance.Instance, size int64, err error) error {
@@ -155,7 +168,6 @@ func prepareExportDoc(i *instance.Instance, opts ExportOptions) *ExportDoc {
 		CreatedAt:    createdAt,
 		ExpiresAt:    createdAt.Add(maxAge),
 		WithDoctypes: opts.WithDoctypes,
-		WithoutFiles: opts.WithoutFiles,
 		TotalSize:    -1,
 		PartsSize:    bucketSize,
 	}

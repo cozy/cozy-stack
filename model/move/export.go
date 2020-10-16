@@ -30,7 +30,6 @@ type ExportOptions struct {
 	PartsSize        int64         `json:"parts_size"`
 	MaxAge           time.Duration `json:"max_age"`
 	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
-	WithoutFiles     bool          `json:"without_files,omitempty"`
 	ContextualDomain string        `json:"contextual_domain,omitempty"`
 }
 
@@ -39,12 +38,15 @@ type ExportOptions struct {
 const minimalPartsSize = 1024 * 1024 * 1024 // 1 GB
 
 const (
-	// ExportFilesDir is the directory for storing the files in the export
-	// archive.
+	// ExportDataDir is the directory for storing the documents from CouchDB in
+	// the export archive.
+	ExportDataDir = "My Cozy/Data"
+	// ExportFilesDir is the directory for storing the content of the files in
+	// the export archive.
 	ExportFilesDir = "My Cozy/Files"
-	// ExportMetasDir is the directory for storing the metadata in the export
-	// archive.
-	ExportMetasDir = "My Cozy/Metadata"
+	// ExportVersionsDir is the directory for storing the content of the old
+	// versions of the files in the export archive.
+	ExportVersionsDir = "My Cozy/Versions"
 )
 
 // ExportCopyData does an HTTP copy of a part of the file indexes.
@@ -69,7 +71,7 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 		if partNumber == 0 {
 			return ErrExportInvalidCursor
 		}
-	} else if exportDoc.WithoutFiles {
+	} else if exportDoc.AcceptDoctype(consts.Files) {
 		return ErrExportDoesNotContainIndex
 	}
 
@@ -119,7 +121,7 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 
 		var zipFileWriter io.Writer
 		zipFileHdr := &zip.FileHeader{
-			Name:     path.Join(ExportMetasDir, hdr.Name),
+			Name:     path.Join(ExportDataDir, hdr.Name),
 			Method:   zip.Deflate,
 			Modified: now,
 		}
@@ -127,7 +129,7 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 
 		isIndexFile := hdr.Typeflag == tar.TypeReg && hdr.Name == "files-index.json"
 
-		if isIndexFile && !exportDoc.WithoutFiles {
+		if isIndexFile && exportDoc.AcceptDoctype(consts.Files) {
 			var jsonData []byte
 			jsonData, err = ioutil.ReadAll(tr)
 			if err != nil {
@@ -168,7 +170,7 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 	if errc := archive.Close(); err == nil {
 		err = errc
 	}
-	if err != nil || exportDoc.WithoutFiles {
+	if err != nil || !exportDoc.AcceptDoctype(consts.Files) {
 		return
 	}
 
@@ -233,8 +235,12 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 	return
 }
 
-// Export is used to create a tarball with files and photos from an instance
-func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (exportDoc *ExportDoc, err error) {
+// CreateExport is used to create a tarball with the data from an instance.
+//
+// Note: the tarball is a .tar.gz and not a .zip to allow streaming from Swift
+// to the stack, and from the stack to the client, as .tar.gz can be read
+// sequentially and reading a .zip need to seek.
+func CreateExport(i *instance.Instance, opts ExportOptions, archiver Archiver) (exportDoc *ExportDoc, err error) {
 	exportDoc = prepareExportDoc(i, opts)
 	createdAt := exportDoc.CreatedAt
 	if err = exportDoc.CleanPreviousExports(archiver); err != nil {
@@ -255,7 +261,8 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		}
 	}()
 
-	out, err := archiver.CreateArchive(exportDoc)
+	var out io.WriteCloser
+	out, err = archiver.CreateArchive(exportDoc)
 	if err != nil {
 		return
 	}
@@ -265,7 +272,8 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 		}
 	}()
 
-	gw, err := gzip.NewWriterLevel(out, gzip.BestCompression)
+	var gw io.WriteCloser
+	gw, err = gzip.NewWriterLevel(out, gzip.BestCompression)
 	if err != nil {
 		return
 	}
@@ -284,7 +292,8 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 	}
 	size += n
 
-	settings, err := i.SettingsDocument()
+	var settings *couchdb.JSONDoc
+	settings, err = i.SettingsDocument()
 	if err != nil {
 		return
 	}
@@ -293,7 +302,7 @@ func Export(i *instance.Instance, opts ExportOptions, archiver Archiver) (export
 	}
 	size += n
 
-	if !opts.WithoutFiles {
+	if exportDoc.AcceptDoctype(consts.Files) {
 		_ = note.FlushPendings(i)
 		var tree *vfs.Tree
 		tree, err = i.VFS().BuildTree()

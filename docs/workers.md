@@ -226,8 +226,6 @@ Its options are:
     multi-part download of files data
 -   `max_age`: the maximum age duration of the archive before it expires
 -   `with_doctypes`: the list of exported doctypes (exports all doctypes if empty)
--   `without_files`: boolean to avoid exporting the index (preventing download
-    file data)
 
 ### Example
 
@@ -235,8 +233,7 @@ Its options are:
 {
     "parts_size": 52428800,
     "max_age": 60000000000, // 1 minute
-    "with_doctypes": ["io.cozy.accounts"], // empty or null means all doctypes
-    "without_files": false
+    "with_doctypes": ["io.cozy.accounts", "io.cozy.files"] // empty or null means all doctypes
 }
 ```
 

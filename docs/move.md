@@ -26,8 +26,6 @@ Exports options fields are:
 -   `max_age` (optional) (duration / nanosecs): the maximum age of the export
     data.
 -   `with_doctypes` (optional) (string array): the list of exported doctypes
--   `without_files` (optional) (boolean): whether or not the export contains the
-    files index (if false, it is not possible to generate files tarball).
 
 #### Request
 
@@ -43,8 +41,7 @@ Content-Type: application/vnd.api+json
     "data": {
         "attributes": {
             "parts_size": 10240,
-            "with_doctypes": [],
-            "without_files": false
+            "with_doctypes": []
         }
     }
 }
@@ -62,8 +59,6 @@ Exports fields are:
 -   `parts_length` (int): number of parts
 -   `with_doctypes` (string array): the list of exported doctypes
     (if empty of null, all doctypes are exported)
--   `without_files` (boolean): whether or not the export contains the files
-    index (if false, it is not possible to generate files tarball).
 -   `state` (string): the state of the export (`"exporting"` / `"done"` /
     `"error"`).
 -   `created_at` (string / time): the date of creation of the export
@@ -94,7 +89,6 @@ Content-Type: application/vnd.api+json
             "parts_size": 10240,
             "parts_cursors": ["AAA", "BBB", "CCC"],
             "with_doctypes": [],
-            "without_files": false,
             "state": "done",
             "created_at": "2018-05-04T08:59:37.530693972+02:00",
             "expires_at": "2018-05-11T08:59:37.530693972+02:00",
