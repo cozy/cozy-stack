@@ -182,6 +182,9 @@ msgstr ""
 msgid "Passphrase Hint Error"
 msgstr "¡Su pista debe ser diferente de su contraseña!"
 
+msgid "Passphrase Onboarding Show hint form"
+msgstr "Deje una pista"
+
 msgid "Passphrase Onboarding Hint Field"
 msgstr "Deje una pista (opcional)"
 
@@ -228,35 +231,39 @@ msgstr "He olvidado mi contraseña"
 msgid "Authorize Title"
 msgstr "Autorizar a %s a acceder a su perfil"
 
-msgid "Authorize Sharing Title"
-msgstr "Nueva solicitud para compartir de  %s"
+msgid "Authorize Sharing Title Synchronize"
+msgstr "Sincronizar en mi Cozy"
+
+msgid "Authorize Sharing Title Add"
+msgstr "Añadir a mi Cozy"
 
 msgid "Authorize Client presentation"
 msgstr "quisiera tener el permiso para acceder a su Cozy"
 
 msgid "Authorize Sharing Request"
-msgstr "%s  desea compartir los siguientes datos con usted:"
+msgstr "ha compartido con usted:"
 
-msgid "Authorize Sharing Permission start"
-msgstr "Usted puede"
+msgid "Authorize Sharing Description start"
+msgstr ""
+"%s y usted pueden colaborar editando el %s. Cada cambio se enviará "
+"automáticamente entre sus Cozy."
 
-msgid "Authorize Sharing Permission readonly"
-msgstr "verlo"
+msgid "Authorize Sharing Description end"
+msgstr ""
+"Usted guardará el %s en su Cozy, aún si se el compartir ha sido cancelado "
+"por %s."
 
-msgid "Authorize Sharing Permission readwrite"
-msgstr "verlo y cambiarlo"
+msgid "Authorize Sharing Synchronize label"
+msgstr "Sincronizar en mi Cozy"
 
-msgid "Authorize Sharing Permission end"
-msgstr "cuando confirme la compartición."
+msgid "Authorize Sharing Submit Synchronize"
+msgstr "Sincronizar"
 
-msgid "Authorize Sharing Sync"
-msgstr "Los cambios serán instantaneos  en ambos Cozy:"
+msgid "Authorize Sharing Submit Add"
+msgstr "Añadir"
 
-msgid "Authorize Sharing Self"
-msgstr "Su Cozy: %s"
-
-msgid "Authorize Sharing Client"
-msgstr "Su contacto de Cozy: %s"
+msgid "Authorize Sharing Cancel"
+msgstr "Anular"
 
 msgid "Authorize Policy sentence"
 msgstr "Usted puede leer la política del uso de sus datos en esta dirección"
@@ -278,9 +285,6 @@ msgstr ""
 
 msgid "Authorize Submit"
 msgstr "Autorizar"
-
-msgid "Authorize Submit Sharing"
-msgstr "Confirmar"
 
 msgid "Authorize Cancel"
 msgstr "Denegar"
@@ -426,6 +430,18 @@ msgstr "Guardar un mensaje en los diarios del sistema"
 msgid "Permissions worker sendmail"
 msgstr "Envío de un email"
 
+msgid "Permissions com.bitwarden.profiles"
+msgstr "Perfiles del administrador de contraseñas"
+
+msgid "Permissions com.bitwarden.ciphers"
+msgstr "Entradas del administrador de contraseñas"
+
+msgid "Permissions com.bitwarden.folders"
+msgstr "Carpetas del administrador de contraseñas"
+
+msgid "Permissions com.bitwarden.organizations"
+msgstr "Organizaciones del administrador de contraseñas"
+
 msgid "Permissions io.cozy.accounts"
 msgstr "Cuentas"
 
@@ -438,6 +454,9 @@ msgstr "Aplicaciones sugeridas"
 msgid "Permissions io.cozy.bank.accounts"
 msgstr "Cuentas bancarias"
 
+msgid "Permissions io.cozy.bank.accounts.stats"
+msgstr "Estadísticas de las cuentas bancarias"
+
 msgid "Permissions io.cozy.bank.groups"
 msgstr "Grupos bancarios"
 
@@ -446,6 +465,9 @@ msgstr "Transacciones bancarias"
 
 msgid "Permissions io.cozy.bank.settings"
 msgstr "Configuración de aplicaciones"
+
+msgid "Permissions io.cozy.bank.recipients"
+msgstr "Receptores de transferencias bancarias"
 
 msgid "Permissions io.cozy.bank.recurrence"
 msgstr "Grupos bancarios recurrentes"
@@ -606,37 +628,57 @@ msgstr ""
 "contact@cozycloud.cc"
 
 msgid "Mail New Connection Subject"
-msgstr "Acabamos de detectar una conexión a su %s"
+msgstr "Nueva conexión a su %s"
 
 msgid "Mail New Connection Intro"
 msgstr ""
-"Hemos detectado una conexión a su Cozy.\n"
-"Estos son los detalles de esa conexión:"
+"Este es un mensaje de su Cozy.\n"
+"Un nuevo dispositivo se ha conectado recientemente a su cuenta de Cozy. Revise la siguiente información de conexión para confirmar que es suyo."
 
 msgid "Mail New Connection Place"
-msgstr "Ubicación"
+msgstr "Ubicación:"
+
+msgid "Mail New Connection Near"
+msgstr "Cerca"
+
+msgid "Mail New Connection Time"
+msgstr "Hora:"
 
 msgid "Mail New Connection IP"
-msgstr "Dirección IP"
+msgstr "Dirección IP:"
 
 msgid "Mail New Connection Browser"
-msgstr "Navegador"
+msgstr "Navegador:"
 
 msgid "Mail New Connection OS"
-msgstr "Sistema operacional"
+msgstr "Dispositivo:"
 
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
-"¿Es usted? ¡Magnífico! Estamos tranquilos. Lamentamos las molestias causadas. Si no es así, cambie su contraseña ahora mismo. \n"
-"Si no es así, cambie su contraseña ahora haciendo clic en el botón siguiente:"
+"Si está detrás de esta nueva conexión, puede ignorar este mensaje y disfrutar de su Cozy.\n"
+"Si no, le sugerimos que modifique su contraseña ahora."
 
 msgid "Mail New Connection Change Passphrase text"
 msgstr "Cambiar mi contraseña"
 
+msgid "Mail New Connection Bonus instruction"
+msgstr ""
+"¿Quiere reforzar la seguridad de su cuenta? Le aconsejamos que active en su "
+"cuenta la autenticación de dos factores."
+
+msgid "Mail New Connection Bonus text"
+msgstr "Activar la autenticación de dos factores"
+
 msgid "Mail New Connection Outro"
 msgstr ""
-"¿Por qué este e-mail? La seguridad de su Cozy es nuestra prioridad y nos "
-"encargamos de advertirle de cualquier conexión inusual."
+"¿Por qué el correo electrónico? Para cualquier comportamiento inusual en sus"
+" conexiones se le notificará para garantizar la seguridad de todos sus "
+"datos."
+
+msgid "Mail New Connection Signature"
+msgstr ""
+"Hasta pronto,\n"
+"Su Cozy"
 
 msgid "Mail New Registration Subject"
 msgstr "A su %s se ha conectado un nuevo periférico"
@@ -660,22 +702,43 @@ msgid "Mail New Registration Revoke text"
 msgstr "Revocar este aparato"
 
 msgid "Mail Sharing Request Subject"
-msgstr "Nueva solicitud de uso compartido de %s"
+msgstr "Nueva solicitud para compartir desde  %s"
 
 msgid "Mail Sharing Request Intro"
-msgstr "Hola %s,"
+msgstr "Hola,"
 
-msgid "Mail Sharing Request Description 1"
-msgstr "%squiere compartir"
+msgid "Mail Sharing Request Description"
+msgstr " %s (%s) le invita a %s el %s %s de su espacio Cozy personal."
 
-msgid "Mail Sharing Request Description 2"
-msgstr "con usted!"
+msgid "Mail Sharing Request Action Read"
+msgstr "acceso"
+
+msgid "Mail Sharing Request Action Write"
+msgstr "actualizar"
 
 msgid "Mail Sharing Request Button text"
-msgstr "Acepto compartir este documento"
+msgstr "Acceso a este %s"
 
 msgid "Mail Alert Account Subject"
 msgstr "Error en la eliminación de instancias durante la limpieza de cuentas"
+
+msgid "Notification Sharing Subject"
+msgstr "Una nueva manera de intercambiar está disponible en su Cozy"
+
+msgid "Notification Sharing Description"
+msgstr "%s le invita a %s el %s %s"
+
+msgid "Notification Sharing Type Document"
+msgstr "documento"
+
+msgid "Notification Sharing Type Directory"
+msgstr "directorio"
+
+msgid "Notification Sharing Type File"
+msgstr "archivo"
+
+msgid "Notification Sharing Button text"
+msgstr "Ver mi uso compartido"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Conectar a su Cozy"
@@ -696,7 +759,7 @@ msgid "Sharing URL Not email error"
 msgstr "La URL de su Cozy no es la dirección de su correo electrónico"
 
 msgid "Sharing Discovery Submit"
-msgstr "Enviar"
+msgstr "Sincronizar en mi Cozy"
 
 msgid "Sharing No Cozy"
 msgstr "¿Todavía no tiene una Cozy?"
