@@ -63,7 +63,7 @@ Exports fields are:
     `"error"`).
 -   `created_at` (string / time): the date of creation of the export
 -   `expires_at` (string / time): the date of expiration of the export
--   `total_size` (int): the total size of the export metadata
+-   `total_size` (int): the total size of the exported documents from CouchDB
 -   `creation_duration` (int): the amount of nanoseconds taken for the creation
     of the export
 -   `error` (string): an error string if the export is in an `"error"` state

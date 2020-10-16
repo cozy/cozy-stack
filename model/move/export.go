@@ -22,7 +22,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
 // ExportOptions contains the options for launching the export worker.
@@ -292,16 +291,6 @@ func CreateExport(i *instance.Instance, opts ExportOptions, archiver Archiver) (
 	}
 	size += n
 
-	var settings *couchdb.JSONDoc
-	settings, err = i.SettingsDocument()
-	if err != nil {
-		return
-	}
-	if n, err = writeDoc("", "settings", settings, createdAt, tw); err != nil {
-		return
-	}
-	size += n
-
 	if exportDoc.AcceptDoctype(consts.Files) {
 		_ = note.FlushPendings(i)
 		var tree *vfs.Tree
@@ -318,7 +307,7 @@ func CreateExport(i *instance.Instance, opts ExportOptions, archiver Archiver) (
 		exportDoc.PartsCursors, _ = splitFilesIndex(tree.Root, nil, nil, exportDoc.PartsSize, exportDoc.PartsSize)
 	}
 
-	n, err = exportDocs(i, opts.WithDoctypes, createdAt, tw)
+	n, err = exportDocuments(i, exportDoc, createdAt, tw)
 	if err == nil {
 		size += n
 	}
@@ -499,43 +488,38 @@ func parseCursor(cursor string) (c indexCursor, err error) {
 	return
 }
 
-func exportDocs(in *instance.Instance, withDoctypes []string, now time.Time, tw *tar.Writer) (size int64, err error) {
+func exportDocuments(in *instance.Instance, doc *ExportDoc, now time.Time, tw *tar.Writer) (int64, error) {
 	doctypes, err := couchdb.AllDoctypes(in)
 	if err != nil {
-		return
+		return 0, err
 	}
+
+	var size int64
 	for _, doctype := range doctypes {
-		if len(withDoctypes) > 0 && !utils.IsInArray(doctype, withDoctypes) {
+		if !doc.AcceptDoctype(doctype) {
 			continue
 		}
 		switch doctype {
-		case consts.KonnectorLogs, consts.Archives,
-			consts.Sessions, consts.OAuthClients, consts.OAuthAccessCodes:
-			// ignore these doctypes
-		case consts.Sharings, consts.SharingsAnswer, consts.Shared:
-			// ignore sharings ? TBD
-		case consts.Files, consts.Settings:
-			// already written out in a special file
-		default:
-			dir := url.PathEscape(doctype)
-			err = couchdb.ForeachDocs(in, doctype,
-				func(id string, doc json.RawMessage) error {
-					n, errw := writeMarshaledDoc(dir, id, doc, now, tw)
-					if errw == nil {
-						size += n
-					}
-					return errw
-				})
-			if err != nil {
-				return
+		case consts.Files, consts.FilesVersions:
+			// we have code specific to those doctypes
+			continue
+		}
+		dir := url.PathEscape(doctype)
+		err := couchdb.ForeachDocs(in, doctype, func(id string, doc json.RawMessage) error {
+			n, err := writeMarshaledDoc(dir, id, doc, now, tw)
+			if err == nil {
+				size += n
 			}
+			return err
+		})
+		if err != nil {
+			return 0, err
 		}
 	}
-	return
+	return size, nil
 }
 
-func writeInstanceDoc(in *instance.Instance, name string,
-	now time.Time, tw *tar.Writer) (int64, error) {
+func writeInstanceDoc(in *instance.Instance, name string, now time.Time, tw *tar.Writer) (int64, error) {
 	clone := in.Clone().(*instance.Instance)
 	clone.PassphraseHash = nil
 	clone.PassphraseResetToken = nil
@@ -544,12 +528,12 @@ func writeInstanceDoc(in *instance.Instance, name string,
 	clone.SessSecret = nil
 	clone.OAuthSecret = nil
 	clone.CLISecret = nil
-	clone.SwiftLayout = -1
+	clone.SwiftLayout = 0
+	clone.IndexViewsVersion = 0
 	return writeDoc("", name, clone, now, tw)
 }
 
-func writeDoc(dir, name string, data interface{},
-	now time.Time, tw *tar.Writer) (int64, error) {
+func writeDoc(dir, name string, data interface{}, now time.Time, tw *tar.Writer) (int64, error) {
 	doc, err := json.Marshal(data)
 	if err != nil {
 		return 0, err
@@ -557,8 +541,7 @@ func writeDoc(dir, name string, data interface{},
 	return writeMarshaledDoc(dir, name, doc, now, tw)
 }
 
-func writeMarshaledDoc(dir, name string, doc json.RawMessage,
-	now time.Time, tw *tar.Writer) (int64, error) {
+func writeMarshaledDoc(dir, name string, doc json.RawMessage, now time.Time, tw *tar.Writer) (int64, error) {
 	hdr := &tar.Header{
 		Name:     path.Join(dir, name+".json"),
 		Mode:     0640,
