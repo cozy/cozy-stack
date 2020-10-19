@@ -753,7 +753,7 @@ msgid "Notification Sharing Type File"
 msgstr "fichier"
 
 msgid "Notification Sharing Button text"
-msgstr "Voir mes partages"
+msgstr "Voir le partage"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Se connecter à votre Cozy"

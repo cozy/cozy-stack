@@ -252,7 +252,7 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, see
 		inst.Logger().Warnf("Cannot save shortcut id %s: %s", s.ShortcutID, err)
 	}
 
-	return s.SendShortcutMail(inst, fileDoc)
+	return s.SendShortcutMail(inst, fileDoc, previewURL)
 }
 
 // SendShortcut sends the HTTP request to the cozy of the recipient for adding
@@ -277,13 +277,11 @@ func (m *Member) SendShortcut(inst *instance.Instance, s *Sharing, link string) 
 
 // SendShortcutMail will send a notification mail after a shortcut for a
 // sharing has been created.
-func (s *Sharing) SendShortcutMail(inst *instance.Instance, fileDoc *vfs.FileDoc) error {
+func (s *Sharing) SendShortcutMail(inst *instance.Instance, fileDoc *vfs.FileDoc, previewURL string) error {
 	sharerName := s.Members[0].PublicName
 	if sharerName == "" {
 		sharerName = inst.Translate("Sharing Empty name")
 	}
-	u := inst.SubDomain(consts.DriveSlug)
-	u.Fragment = "/folder/" + fileDoc.DirID
 	var action string
 	if s.ReadOnlyRules() {
 		action = inst.Translate("Mail Sharing Request Action Read")
@@ -296,7 +294,7 @@ func (s *Sharing) SendShortcutMail(inst *instance.Instance, fileDoc *vfs.FileDoc
 		"Action":           action,
 		"TargetType":       targetType,
 		"TargetName":       s.Description,
-		"SharingsLink":     u.String(),
+		"SharingLink":      previewURL,
 	}
 	msg, err := job.NewMessage(mail.Options{
 		Mode:           "noreply",
