@@ -564,7 +564,7 @@ Location: https://client.org/?state=Eh6ahshepei5Oojo&code=Aih7ohth#
 They are similar to `/auth/authorize`: they also make the user accept an OAuth
 thing, but it is specialized for sharing. They are a few differences, like the
 scope format (sharing rules, not permissions) and the redirection after the
-POST.
+POST (with `sharing=<sharing-id>` in the query string).
 
 ### POST /auth/access_token
 
