@@ -680,7 +680,7 @@ msgid "Notification Sharing Type File"
 msgstr "file"
 
 msgid "Notification Sharing Button text"
-msgstr "See my sharings"
+msgstr "See the sharing"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Connect to your Cozy"

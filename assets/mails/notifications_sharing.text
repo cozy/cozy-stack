@@ -2,4 +2,4 @@
 
 {{t "Notification Sharing Description" .SharerPublicName .Action .TargetType .TargetName}}
 
-{{.SharingsLink}}
+{{.SharingLink}}
