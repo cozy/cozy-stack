@@ -221,6 +221,56 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+#### Special case
+
+The token can be a sharecode when a member of a sharing is previewing a
+sharing. When it is the case, the member information from the sharing is
+included in the response, like this:
+
+```json
+{
+	"data": {
+		"type": "io.cozy.permissions",
+		"id": "bf716babb70b73b89c870fccce00233f",
+		"attributes": {
+			"type": "share-preview",
+			"source_id": "io.cozy.sharings/bf716babb70b73b89c870fccce00233a",
+			"permissions": {
+				"Essai": {
+					"type": "io.cozy.files",
+					"verbs": ["GET"],
+					"values": ["c2930bef3705096d63f5c8fb60019cc0"]
+				}
+			},
+			"cozyMetadata": {
+				"doctypeVersion": "",
+				"metadataVersion": 1,
+				"createdAt": "2020-10-19T16:12:31.440253797+02:00",
+				"createdByApp": "drive",
+				"updatedAt": "2020-10-19T16:12:31.440253797+02:00"
+			}
+		},
+		"meta": {
+			"rev": "1-18c3bc158cf5039f60fefe5fc2fcad67"
+		},
+		"links": {
+			"self": "/permissions/bf716babb70b73b89c870fccce00233f",
+			"related": "/sharings/bf716babb70b73b89c870fccce00233a"
+		}
+	},
+	"included": [
+		{
+			"type": "io.cozy.sharings.members",
+			"attributes": {
+				"status": "seen",
+				"name": "Bob",
+				"email": "bob@cozy.tools"
+			}
+		}
+	]
+}
+```
+
 ### POST /permissions
 
 Create a new set of permissions. It can also associates one or more codes to it,

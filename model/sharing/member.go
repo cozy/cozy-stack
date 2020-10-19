@@ -429,7 +429,7 @@ func (s *Sharing) FindMemberBySharecode(db prefixer.Prefixer, sharecode string) 
 	if err != nil {
 		return nil, err
 	}
-	return s.findMemberByCode(perms, sharecode)
+	return s.FindMemberByCode(perms, sharecode)
 }
 
 // FindMemberByInteractCode returns the member that is linked to the sharing by
@@ -439,10 +439,12 @@ func (s *Sharing) FindMemberByInteractCode(db prefixer.Prefixer, sharecode strin
 	if err != nil {
 		return nil, err
 	}
-	return s.findMemberByCode(perms, sharecode)
+	return s.FindMemberByCode(perms, sharecode)
 }
 
-func (s *Sharing) findMemberByCode(perms *permission.Permission, sharecode string) (*Member, error) {
+// FindMemberByCode returns the member that is linked to the sharing by the
+// given code.
+func (s *Sharing) FindMemberByCode(perms *permission.Permission, sharecode string) (*Member, error) {
 	var emailOrInstance string
 	for e, code := range perms.Codes {
 		if code == sharecode {
