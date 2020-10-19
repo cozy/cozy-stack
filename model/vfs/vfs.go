@@ -46,9 +46,9 @@ const (
 	conflictFormat = "%s (__cozy__: %s)"
 )
 
-// maxWalkRecursive is the maximum amount of recursion allowed for the
-// recursive walk process.
-const maxWalkRecursive = 512
+// MaxDepth is the maximum amount of recursion allowed for the recursive walk
+// process.
+const MaxDepth = 512
 
 // ErrSkipDir is used in WalkFn as an error to skip the current
 // directory. It is not returned by any function of the package.
@@ -573,7 +573,7 @@ func WalkAlreadyLocked(fs Indexer, dir *DirDoc, walkFn WalkFn) error {
 }
 
 func walk(fs Indexer, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn, count int) error {
-	if count >= maxWalkRecursive {
+	if count >= MaxDepth {
 		return ErrWalkOverflow
 	}
 	err := walkFn(name, dir, file, nil)
@@ -785,6 +785,14 @@ func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error
 func checkFileName(str string) error {
 	if str == "" || strings.ContainsAny(str, ForbiddenFilenameChars) {
 		return ErrIllegalFilename
+	}
+	return nil
+}
+
+func checkDepth(fullpath string) error {
+	depth := strings.Count(fullpath, "/")
+	if depth >= MaxDepth {
+		return ErrIllegalPath
 	}
 	return nil
 }

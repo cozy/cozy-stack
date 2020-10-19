@@ -130,10 +130,6 @@ func (d *DirDoc) RemoveReferencedBy(ri ...couchdb.DocReference) {
 
 // NewDirDoc is the DirDoc constructor. The given name is validated.
 func NewDirDoc(index Indexer, name, dirID string, tags []string) (*DirDoc, error) {
-	if err := checkFileName(name); err != nil {
-		return nil, err
-	}
-
 	if dirID == "" {
 		dirID = consts.RootDirID
 	}
@@ -155,21 +151,7 @@ func NewDirDoc(index Indexer, name, dirID string, tags []string) (*DirDoc, error
 // NewDirDocWithParent returns an instance of DirDoc from a parent document.
 // The given name is validated.
 func NewDirDocWithParent(name string, parent *DirDoc, tags []string) (*DirDoc, error) {
-	if err := checkFileName(name); err != nil {
-		return nil, err
-	}
-
-	createDate := time.Now()
-	return &DirDoc{
-		Type:    consts.DirType,
-		DocName: name,
-		DirID:   parent.DocID,
-
-		CreatedAt: createDate,
-		UpdatedAt: createDate,
-		Tags:      uniqueTags(tags),
-		Fullpath:  path.Join(parent.Fullpath, name),
-	}, nil
+	return NewDirDocWithPath(name, parent.DocID, parent.Fullpath, tags)
 }
 
 // NewDirDocWithPath returns an instance of DirDoc its directory ID and path.
@@ -179,10 +161,15 @@ func NewDirDocWithPath(name, dirID, dirPath string, tags []string) (*DirDoc, err
 		return nil, err
 	}
 
-	createDate := time.Now()
 	if dirPath == "" || dirPath == "." {
 		dirPath = "/"
 	}
+	fullpath := path.Join(dirPath, name)
+	if err := checkDepth(fullpath); err != nil {
+		return nil, err
+	}
+
+	createDate := time.Now()
 	return &DirDoc{
 		Type:    consts.DirType,
 		DocName: name,
@@ -191,7 +178,7 @@ func NewDirDocWithPath(name, dirID, dirPath string, tags []string) (*DirDoc, err
 		CreatedAt: createDate,
 		UpdatedAt: createDate,
 		Tags:      uniqueTags(tags),
-		Fullpath:  path.Join(dirPath, name),
+		Fullpath:  fullpath,
 	}, nil
 }
 
