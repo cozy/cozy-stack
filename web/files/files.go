@@ -1402,6 +1402,8 @@ func wrapVfsError(err error) *jsonapi.Error {
 		return jsonapi.PreconditionFailed("dir-id", err)
 	case vfs.ErrIllegalFilename:
 		return jsonapi.InvalidParameter("name", err)
+	case vfs.ErrIllegalPath:
+		return jsonapi.InvalidParameter("path", err)
 	case vfs.ErrIllegalTime:
 		return jsonapi.InvalidParameter("UpdatedAt", err)
 	case vfs.ErrInvalidHash:
