@@ -755,19 +755,8 @@ func (sfs *swiftVFSV3) ClearOldVersions() error {
 	if err := sfs.Indexer.BatchDeleteVersions(versions); err != nil {
 		return err
 	}
-	_, err = sfs.c.BulkDelete(sfs.container, objNames)
-	if err == swift.Forbidden {
-		sfs.log.Warnf("ClearOldVersions failed on BulkDelete: %s", err)
-		err = nil
-		for _, objName := range objNames {
-			if errd := sfs.c.ObjectDelete(sfs.container, objName); err == nil && errd != nil {
-				sfs.log.Infof("ClearOldVersions failed on ObjectDelete: %s", errd)
-				err = errd
-			}
-		}
-	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
-	return err
+	return deleteContainerFiles(sfs.c, sfs.container, objNames)
 }
 
 type swiftFileOpenV3 struct {
