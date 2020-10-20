@@ -194,6 +194,9 @@ func GetExport(inst *instance.Instance, mac []byte) (*ExportDoc, error) {
 		}
 		return nil, err
 	}
+	if exportDoc.HasExpired() {
+		return nil, ErrExportExpired
+	}
 	return &exportDoc, nil
 }
 

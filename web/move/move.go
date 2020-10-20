@@ -2,6 +2,7 @@ package move
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -21,7 +22,6 @@ func createExport(c echo.Context) error {
 	if limits.IsLimitReachedOrExceeded(err) {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}
-
 	if err := middlewares.AllowWholeType(c, permission.POST, consts.Exports); err != nil {
 		return err
 	}
@@ -30,7 +30,6 @@ func createExport(c echo.Context) error {
 	if _, err := jsonapi.Bind(c.Request().Body, &exportOptions); err != nil {
 		return err
 	}
-
 	// The contextual domain is used to send a link on the correct domain when
 	// the user is accessing their cozy from a backup URL.
 	exportOptions.ContextualDomain = inst.ContextualDomain()
@@ -39,7 +38,6 @@ func createExport(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-
 	_, err = job.System().PushJob(inst, &job.JobRequest{
 		WorkerType: "export",
 		Message:    msg,
@@ -47,23 +45,20 @@ func createExport(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-
 	return c.NoContent(http.StatusCreated)
 }
 
 func exportHandler(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Exports); err != nil {
 		return err
 	}
 
-	exportMAC, err := base64.URLEncoding.DecodeString(c.Param("export-mac"))
+	mac, err := base64.URLEncoding.DecodeString(c.Param("export-mac"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
-
-	exportDoc, err := move.GetExport(inst, exportMAC)
+	inst := middlewares.GetInstance(c)
+	exportDoc, err := move.GetExport(inst, mac)
 	if err != nil {
 		return err
 	}
@@ -80,17 +75,38 @@ func exportDataHandler(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, u)
 	}
 
-	from := inst.SubDomain(consts.SettingsSlug).String()
-	middlewares.AppendCSPRule(c, "frame-ancestors", from)
-
-	exportMAC, err := base64.URLEncoding.DecodeString(c.Param("export-mac"))
+	mac, err := base64.URLEncoding.DecodeString(c.Param("export-mac"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
+	exportDoc, err := move.GetExport(inst, mac)
+	if err != nil {
+		return err
+	}
 
 	archiver := move.SystemArchiver()
-	cursor := c.QueryParam("cursor")
-	return move.ExportCopyData(c.Response(), inst, archiver, exportMAC, cursor)
+	archive, err := archiver.OpenArchive(inst, exportDoc)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = archive.Close()
+	}()
+
+	cursor, err := move.ParseCursor(exportDoc, c.QueryParam("cursor"))
+	if err != nil {
+		return err
+	}
+
+	from := inst.SubDomain(consts.SettingsSlug).String()
+	middlewares.AppendCSPRule(c, "frame-ancestors", from)
+
+	w := c.Response()
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=cozy-export.part%03d.zip", cursor.Number()))
+	w.WriteHeader(http.StatusOK)
+
+	return move.ExportCopyData(w, inst, exportDoc, archive, cursor)
 }
 
 func precheckImport(c echo.Context) error {

@@ -9,11 +9,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"path"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -49,76 +46,34 @@ const (
 )
 
 // ExportCopyData does an HTTP copy of a part of the file indexes.
-func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Archiver, mac []byte, cursorStr string) (err error) {
-	exportDoc, err := GetExport(inst, mac)
-	if err != nil {
-		return err
-	}
-	if exportDoc.HasExpired() {
-		return ErrExportExpired
-	}
-
-	partNumber := 0
-	// check that the given cursor is part of our pre-defined list of cursors.
-	if cursorStr != "" {
-		for i, c := range exportDoc.PartsCursors {
-			if c == cursorStr {
-				partNumber = i + 1
-				break
-			}
-		}
-		if partNumber == 0 {
-			return ErrExportInvalidCursor
-		}
-	} else if exportDoc.AcceptDoctype(consts.Files) {
-		return ErrExportDoesNotContainIndex
-	}
-
-	exportMetadata := partNumber == 0
-	cursor, err := parseCursor(cursorStr)
-	if err != nil {
-		return ErrExportInvalidCursor
-	}
-
-	archive, err := archiver.OpenArchive(inst, exportDoc)
-	if err != nil {
-		return err
-	}
-
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=cozy-export.part%03d.zip", partNumber))
-	w.WriteHeader(http.StatusOK)
+func ExportCopyData(w io.Writer, inst *instance.Instance, exportDoc *ExportDoc, archive io.Reader, cursor Cursor) error {
+	exportMetadata := cursor.Number() == 0
 
 	zw := zip.NewWriter(w)
 	defer func() {
-		if errc := zw.Close(); err == nil {
-			err = errc
-		}
+		_ = zw.Close()
 	}()
 
-	var root *vfs.TreeFile
 	gr, err := gzip.NewReader(archive)
 	if err != nil {
 		return err
 	}
-
 	now := time.Now()
 	tr := tar.NewReader(gr)
+
+	var root *vfs.TreeFile
 	for {
-		var hdr *tar.Header
-		hdr, err = tr.Next()
+		hdr, err := tr.Next()
 		if err == io.EOF {
-			err = nil
 			break
 		}
 		if err != nil {
-			return
+			return err
 		}
 		if hdr.Typeflag != tar.TypeReg && hdr.Typeflag != tar.TypeDir {
 			continue
 		}
 
-		var zipFileWriter io.Writer
 		zipFileHdr := &zip.FileHeader{
 			Name:     path.Join(ExportDataDir, hdr.Name),
 			Method:   zip.Deflate,
@@ -129,32 +84,31 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 		isIndexFile := hdr.Typeflag == tar.TypeReg && hdr.Name == "files-index.json"
 
 		if isIndexFile && exportDoc.AcceptDoctype(consts.Files) {
-			var jsonData []byte
-			jsonData, err = ioutil.ReadAll(tr)
+			jsonData, err := ioutil.ReadAll(tr)
 			if err != nil {
-				return
+				return err
 			}
-			if err = json.NewDecoder(bytes.NewReader(jsonData)).Decode(&root); err != nil {
-				return
+			if err := json.NewDecoder(bytes.NewReader(jsonData)).Decode(&root); err != nil {
+				return err
 			}
 			if exportMetadata {
-				zipFileWriter, err = zw.CreateHeader(zipFileHdr)
+				zipFileWriter, err := zw.CreateHeader(zipFileHdr)
 				if err != nil {
-					return
+					return err
 				}
 				_, err = io.Copy(zipFileWriter, bytes.NewReader(jsonData))
 				if err != nil {
-					return
+					return err
 				}
 			}
 		} else if exportMetadata {
-			zipFileWriter, err = zw.CreateHeader(zipFileHdr)
+			zipFileWriter, err := zw.CreateHeader(zipFileHdr)
 			if err != nil {
-				return
+				return err
 			}
 			_, err = io.Copy(zipFileWriter, tr)
 			if err != nil {
-				return
+				return err
 			}
 		}
 
@@ -163,30 +117,25 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 		}
 	}
 
-	if errc := gr.Close(); err == nil {
-		err = errc
+	if err := gr.Close(); err != nil {
+		return err
 	}
-	if errc := archive.Close(); err == nil {
-		err = errc
+	if !exportDoc.AcceptDoctype(consts.Files) {
+		return nil
 	}
-	if err != nil || !exportDoc.AcceptDoctype(consts.Files) {
-		return
-	}
-
 	if root == nil {
 		return ErrExportDoesNotContainIndex
 	}
 
 	fs := inst.VFS()
-	list, _ := listFilesIndex(root, nil, indexCursor{}, cursor,
+	list, _ := listFilesIndex(root, nil, indexCursor{}, cursor.index,
 		exportDoc.PartsSize, exportDoc.PartsSize)
 	for _, file := range list {
 		dirDoc, fileDoc := file.file.Refine()
 		if fileDoc != nil {
-			var f vfs.File
-			f, err = fs.OpenFile(fileDoc)
+			f, err := fs.OpenFile(fileDoc)
 			if err != nil {
-				return
+				return err
 			}
 			size := file.rangeEnd - file.rangeStart
 			hdr := &zip.FileHeader{
@@ -202,20 +151,19 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 			if size < file.file.ByteSize {
 				hdr.Name += fmt.Sprintf(".range%d-%d", file.rangeStart, file.rangeEnd)
 			}
-			var zipFileWriter io.Writer
-			zipFileWriter, err = zw.CreateHeader(hdr)
+			zipFileWriter, err := zw.CreateHeader(hdr)
 			if err != nil {
-				return
+				return err
 			}
 			if file.rangeStart > 0 {
 				_, err = f.Seek(file.rangeStart, 0)
 				if err != nil {
-					return
+					return err
 				}
 			}
 			_, err = io.CopyN(zipFileWriter, f, size)
 			if err != nil {
-				return
+				return err
 			}
 		} else {
 			hdr := &zip.FileHeader{
@@ -226,12 +174,12 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 			hdr.SetMode(0750)
 			_, err = zw.CreateHeader(hdr)
 			if err != nil {
-				return
+				return err
 			}
 		}
 	}
 
-	return
+	return nil
 }
 
 // CreateExport is used to create a tarball with the data from an instance.
@@ -310,180 +258,6 @@ func CreateExport(i *instance.Instance, opts ExportOptions, archiver Archiver) (
 	n, err = exportDocuments(i, exportDoc, createdAt, tw)
 	if err == nil {
 		size += n
-	}
-	return
-}
-
-// splitFilesIndex devides the index into equal size bucket of maximum size
-// `bucketSize`. Files can be splitted into multiple parts to accommodate the
-// bucket size, using a range. It is used to be able to download the files into
-// separate chunks.
-//
-// The method returns a list of cursor into the index tree for each beginning
-// of a new bucket. A cursor has the following format:
-//
-//    ${dirname}/../${filename}-${byterange-start}
-func splitFilesIndex(root *vfs.TreeFile, cursor []string, cursors []string, bucketSize, sizeLeft int64) ([]string, int64) {
-	for childIndex, child := range root.FilesChildren {
-		size := child.ByteSize
-		if size <= sizeLeft {
-			sizeLeft -= size
-			continue
-		}
-		size -= sizeLeft
-		for size > 0 {
-			rangeStart := (child.ByteSize - size)
-			cursorStr := strings.Join(append(cursor, strconv.Itoa(childIndex)), "/")
-			cursorStr += ":" + strconv.FormatInt(rangeStart, 10)
-			cursorStr = "/" + cursorStr
-			cursors = append(cursors, cursorStr)
-			size -= bucketSize
-		}
-		sizeLeft = -size
-	}
-	for dirIndex, dir := range root.DirsChildren {
-		cursors, sizeLeft = splitFilesIndex(dir, append(cursor, strconv.Itoa(dirIndex)),
-			cursors, bucketSize, sizeLeft)
-	}
-	return cursors, sizeLeft
-}
-
-type fileRanged struct {
-	file       *vfs.TreeFile
-	rangeStart int64
-	rangeEnd   int64
-}
-
-// listFilesIndex browse the index with the given cursor and returns the
-// flatting list of file entering the bucket.
-func listFilesIndex(root *vfs.TreeFile, list []fileRanged, currentCursor, cursor indexCursor, bucketSize, sizeLeft int64) ([]fileRanged, int64) {
-	if sizeLeft < 0 {
-		return list, sizeLeft
-	}
-
-	cursorDiff := cursor.diff(currentCursor)
-	cursorEqual := cursorDiff == 0 && currentCursor.equal(cursor)
-
-	if cursorDiff >= 0 {
-		for childIndex, child := range root.FilesChildren {
-			var fileRangeStart, fileRangeEnd int64
-			if cursorEqual {
-				if childIndex < cursor.fileCursor {
-					continue
-				} else if childIndex == cursor.fileCursor {
-					fileRangeStart = cursor.fileRangeStart
-				}
-			}
-			if sizeLeft <= 0 {
-				return list, sizeLeft
-			}
-			size := child.ByteSize - fileRangeStart
-			if sizeLeft-size < 0 {
-				fileRangeEnd = fileRangeStart + sizeLeft
-			} else {
-				fileRangeEnd = child.ByteSize
-			}
-			list = append(list, fileRanged{child, fileRangeStart, fileRangeEnd})
-			sizeLeft -= size
-			if sizeLeft < 0 {
-				return list, sizeLeft
-			}
-		}
-
-		// append empty directory so that we explicitly create them in the tarball
-		if len(root.DirsChildren) == 0 && len(root.FilesChildren) == 0 {
-			list = append(list, fileRanged{root, 0, 0})
-		}
-	}
-
-	for dirIndex, dir := range root.DirsChildren {
-		list, sizeLeft = listFilesIndex(dir, list, currentCursor.next(dirIndex),
-			cursor, bucketSize, sizeLeft)
-	}
-
-	return list, sizeLeft
-}
-
-type indexCursor struct {
-	dirCursor      []int
-	fileCursor     int
-	fileRangeStart int64
-}
-
-func (c indexCursor) diff(d indexCursor) int {
-	l := len(d.dirCursor)
-	if len(c.dirCursor) < l {
-		l = len(c.dirCursor)
-	}
-	for i := 0; i < l; i++ {
-		if diff := d.dirCursor[i] - c.dirCursor[i]; diff != 0 {
-			return diff
-		}
-	}
-	if len(d.dirCursor) > len(c.dirCursor) {
-		return 1
-	} else if len(d.dirCursor) < len(c.dirCursor) {
-		return -1
-	}
-	return 0
-}
-
-func (c indexCursor) equal(d indexCursor) bool {
-	l := len(d.dirCursor)
-	if l != len(c.dirCursor) {
-		return false
-	}
-	for i := 0; i < l; i++ {
-		if d.dirCursor[i] != c.dirCursor[i] {
-			return false
-		}
-	}
-	return true
-}
-
-func (c indexCursor) next(dirIndex int) (next indexCursor) {
-	next.dirCursor = append(c.dirCursor, dirIndex)
-	next.fileCursor = 0
-	next.fileRangeStart = 0
-	return
-}
-
-func parseCursor(cursor string) (c indexCursor, err error) {
-	if cursor == "" {
-		return
-	}
-	ss := strings.Split(cursor, "/")
-	if len(ss) < 2 {
-		err = ErrExportInvalidCursor
-		return
-	}
-	if ss[0] != "" {
-		err = ErrExportInvalidCursor
-		return
-	}
-	ss = ss[1:]
-	c.dirCursor = make([]int, len(ss)-1)
-	for i, s := range ss {
-		if i == len(ss)-1 {
-			rangeSplit := strings.SplitN(s, ":", 2)
-			if len(rangeSplit) != 2 {
-				err = ErrExportInvalidCursor
-				return
-			}
-			c.fileCursor, err = strconv.Atoi(rangeSplit[0])
-			if err != nil {
-				return
-			}
-			c.fileRangeStart, err = strconv.ParseInt(rangeSplit[1], 10, 64)
-			if err != nil {
-				return
-			}
-		} else {
-			c.dirCursor[i], err = strconv.Atoi(s)
-			if err != nil {
-				return
-			}
-		}
 	}
 	return
 }
