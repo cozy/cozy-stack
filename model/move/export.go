@@ -80,7 +80,7 @@ func ExportCopyData(w http.ResponseWriter, inst *instance.Instance, archiver Arc
 		return ErrExportInvalidCursor
 	}
 
-	archive, _, err := archiver.OpenArchive(inst, exportDoc)
+	archive, err := archiver.OpenArchive(inst, exportDoc)
 	if err != nil {
 		return err
 	}
