@@ -187,79 +187,97 @@ func ExportCopyData(w io.Writer, inst *instance.Instance, exportDoc *ExportDoc, 
 // Note: the tarball is a .tar.gz and not a .zip to allow streaming from Swift
 // to the stack, and from the stack to the client, as .tar.gz can be read
 // sequentially and reading a .zip need to seek.
-func CreateExport(i *instance.Instance, opts ExportOptions, archiver Archiver) (exportDoc *ExportDoc, err error) {
-	exportDoc = prepareExportDoc(i, opts)
-	createdAt := exportDoc.CreatedAt
-	if err = exportDoc.CleanPreviousExports(archiver); err != nil {
-		return
+func CreateExport(i *instance.Instance, opts ExportOptions, archiver Archiver) (*ExportDoc, error) {
+	exportDoc := prepareExportDoc(i, opts)
+	if err := exportDoc.CleanPreviousExports(archiver); err != nil {
+		return nil, err
 	}
 
-	var size, n int64
-	if err = couchdb.CreateDoc(couchdb.GlobalDB, exportDoc); err != nil {
-		return
+	if err := couchdb.CreateDoc(couchdb.GlobalDB, exportDoc); err != nil {
+		return nil, err
 	}
 	realtime.GetHub().Publish(i, realtime.EventCreate, exportDoc.Clone(), nil)
-	defer func() {
-		old := exportDoc.Clone()
-		if erru := exportDoc.MarksAsFinished(i, size, err); erru == nil {
-			realtime.GetHub().Publish(i, realtime.EventUpdate, exportDoc, old)
-		} else if err == nil {
-			err = erru
-		}
-	}()
 
-	var out io.WriteCloser
-	out, err = archiver.CreateArchive(exportDoc)
+	size, err := writeArchive(i, exportDoc, archiver)
+	old := exportDoc.Clone()
+	errf := exportDoc.MarksAsFinished(i, size, err)
+	realtime.GetHub().Publish(i, realtime.EventUpdate, exportDoc, old)
 	if err != nil {
-		return
+		return nil, err
 	}
-	defer func() {
-		if errc := out.Close(); err == nil {
-			err = errc
-		}
-	}()
+	return exportDoc, errf
+}
 
-	var gw io.WriteCloser
-	gw, err = gzip.NewWriterLevel(out, gzip.BestCompression)
+func writeArchive(i *instance.Instance, exportDoc *ExportDoc, archiver Archiver) (int64, error) {
+	out, err := archiver.CreateArchive(exportDoc)
 	if err != nil {
-		return
+		return 0, err
+	}
+	size, err := writeArchiveContent(i, exportDoc, out)
+	if err != nil {
+		return 0, err
+	}
+	return size, out.Close()
+}
+
+func writeArchiveContent(i *instance.Instance, exportDoc *ExportDoc, out io.Writer) (int64, error) {
+	gw, err := gzip.NewWriterLevel(out, gzip.BestCompression)
+	if err != nil {
+		return 0, err
 	}
 	tw := tar.NewWriter(gw)
-	defer func() {
-		if errc := tw.Close(); err == nil {
-			err = errc
-		}
-		if errc := gw.Close(); err == nil {
-			err = errc
-		}
-	}()
+	size, err := writeDocuments(i, exportDoc, tw)
+	if err != nil {
+		return 0, err
+	}
+	if err := tw.Close(); err != nil {
+		return 0, err
+	}
+	if err := gw.Close(); err != nil {
+		return 0, err
+	}
+	return size, nil
+}
 
-	if n, err = writeInstanceDoc(i, "instance", createdAt, tw); err != nil {
-		return
+func writeDocuments(i *instance.Instance, exportDoc *ExportDoc, tw *tar.Writer) (int64, error) {
+	var size int64
+	createdAt := exportDoc.CreatedAt
+
+	n, err := writeInstanceDoc(i, "instance", createdAt, tw)
+	if err != nil {
+		return 0, err
+	}
+	size += n
+
+	n, err = exportDocuments(i, exportDoc, createdAt, tw)
+	if err != nil {
+		return 0, err
 	}
 	size += n
 
 	if exportDoc.AcceptDoctype(consts.Files) {
-		_ = note.FlushPendings(i)
-		var tree *vfs.Tree
-		tree, err = i.VFS().BuildTree()
+		n, err := exportFiles(i, exportDoc, tw)
 		if err != nil {
-			return
-		}
-		n, err = writeDoc("", "files-index", tree.Root, createdAt, tw)
-		if err != nil {
-			return
+			return 0, err
 		}
 		size += n
-
-		exportDoc.PartsCursors, _ = splitFilesIndex(tree.Root, nil, nil, exportDoc.PartsSize, exportDoc.PartsSize)
 	}
 
-	n, err = exportDocuments(i, exportDoc, createdAt, tw)
-	if err == nil {
-		size += n
+	return size, nil
+}
+
+func exportFiles(i *instance.Instance, exportDoc *ExportDoc, tw *tar.Writer) (int64, error) {
+	_ = note.FlushPendings(i)
+	tree, err := i.VFS().BuildTree()
+	if err != nil {
+		return 0, err
 	}
-	return
+	size, err := writeDoc("", "files-index", tree.Root, exportDoc.CreatedAt, tw)
+	if err != nil {
+		return 0, err
+	}
+	exportDoc.PartsCursors, _ = splitFilesIndex(tree.Root, nil, nil, exportDoc.PartsSize, exportDoc.PartsSize)
+	return size, nil
 }
 
 func exportDocuments(in *instance.Instance, doc *ExportDoc, now time.Time, tw *tar.Writer) (int64, error) {

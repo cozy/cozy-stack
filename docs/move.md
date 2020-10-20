@@ -56,7 +56,6 @@ Exports fields are:
 -   `parts_size` (int): the size in bytes of a tarball files part.
 -   `parts_cursors` (string array): the list of cursors to access to the
     different files parts.
--   `parts_length` (int): number of parts
 -   `with_doctypes` (string array): the list of exported doctypes
     (if empty of null, all doctypes are exported)
 -   `state` (string): the state of the export (`"exporting"` / `"done"` /
