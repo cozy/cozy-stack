@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -35,6 +36,7 @@ const ContextClaims = "token_claims"
 // JSON-API
 type APIPermission struct {
 	*permission.Permission
+	included []jsonapi.Object
 }
 
 // MarshalJSON implements jsonapi.Doc
@@ -46,7 +48,7 @@ func (p *APIPermission) MarshalJSON() ([]byte, error) {
 func (p *APIPermission) Relationships() jsonapi.RelationshipMap { return nil }
 
 // Included implements jsonapi.Doc
-func (p *APIPermission) Included() []jsonapi.Object { return nil }
+func (p *APIPermission) Included() []jsonapi.Object { return p.included }
 
 // Links implements jsonapi.Doc
 func (p *APIPermission) Links() *jsonapi.LinksList {
@@ -58,6 +60,20 @@ func (p *APIPermission) Links() *jsonapi.LinksList {
 	return links
 }
 
+type apiMember struct {
+	*sharing.Member
+}
+
+func (m *apiMember) ID() string                             { return "" }
+func (m *apiMember) Rev() string                            { return "" }
+func (m *apiMember) SetID(id string)                        {}
+func (m *apiMember) SetRev(rev string)                      {}
+func (m *apiMember) DocType() string                        { return consts.SharingsMembers }
+func (m *apiMember) Clone() couchdb.Doc                     { cloned := *m; return &cloned }
+func (m *apiMember) Relationships() jsonapi.RelationshipMap { return nil }
+func (m *apiMember) Included() []jsonapi.Object             { return nil }
+func (m *apiMember) Links() *jsonapi.LinksList              { return nil }
+
 type getPermsFunc func(db prefixer.Prefixer, id string) (*permission.Permission, error)
 
 func displayPermissions(c echo.Context) error {
@@ -65,10 +81,24 @@ func displayPermissions(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// Include the sharing member (when relevant)
+	var included []jsonapi.Object
+	if doc.Type == permission.TypeSharePreview {
+		inst := middlewares.GetInstance(c)
+		sharingID := strings.TrimPrefix(doc.SourceID, consts.Sharings+"/")
+		if s, err := sharing.FindSharing(inst, sharingID); err == nil {
+			sharecode := middlewares.GetRequestToken(c)
+			if member, err := s.FindMemberByCode(doc, sharecode); err == nil {
+				included = []jsonapi.Object{&apiMember{member}}
+			}
+		}
+	}
+
 	// XXX hides the codes in the response
 	doc.Codes = nil
 	doc.ShortCodes = nil
-	return jsonapi.Data(c, http.StatusOK, &APIPermission{doc}, nil)
+	return jsonapi.Data(c, http.StatusOK, &APIPermission{doc, included}, nil)
 }
 
 func createPermission(c echo.Context) error {
@@ -153,7 +183,7 @@ func createPermission(c echo.Context) error {
 		return err
 	}
 
-	return jsonapi.Data(c, http.StatusOK, &APIPermission{pdoc}, nil)
+	return jsonapi.Data(c, http.StatusOK, &APIPermission{pdoc, nil}, nil)
 }
 
 const (
@@ -200,7 +230,7 @@ func listPermissionsByDoctype(c echo.Context, route, permType string) error {
 
 	out := make([]jsonapi.Object, len(perms))
 	for i := range perms {
-		out[i] = &APIPermission{&perms[i]}
+		out[i] = &APIPermission{&perms[i], nil}
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, out, links)
@@ -321,7 +351,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 			return err
 		}
 
-		return jsonapi.Data(c, http.StatusOK, &APIPermission{toPatch}, nil)
+		return jsonapi.Data(c, http.StatusOK, &APIPermission{toPatch, nil}, nil)
 	}
 }
 

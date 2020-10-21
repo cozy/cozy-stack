@@ -64,6 +64,8 @@ const (
 	Shared = "io.cozy.shared"
 	// Sharings doc type for document and file sharing
 	Sharings = "io.cozy.sharings"
+	// SharingsMembers doc type for members of a sharing
+	SharingsMembers = "io.cozy.sharings.members"
 	// SharingsAnswer doc type for credentials exchange for sharings
 	SharingsAnswer = "io.cozy.sharings.answer"
 	// SharingsInitialSync doc type for real-time events for initial sync of a
