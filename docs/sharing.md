@@ -58,6 +58,8 @@ Create a new sharing. The sharing rules and recipients must be specified. The
 `description`, `preview_path`, and `open_sharing` fields are optional. The
 `app_slug` field is optional and is the slug of the web app by default.
 
+[See the doc on io.cozy.sharings for in-depth explanation of all attributes](https://docs.cozy.io/en/cozy-doctypes/docs/io.cozy.sharings/).
+
 To create a sharing, no permissions on `io.cozy.sharings` are needed: an
 application can create a sharing on the documents for whose it has a permission.
 
