@@ -51,6 +51,7 @@ RUN set -eux; apt-get update \
     libicu-dev \
     libmozjs185-dev \
     openssl \
+	fonts-lato \
     imagemagick \
     git \
   && rm -rf /var/lib/apt/lists/* \
