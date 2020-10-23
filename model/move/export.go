@@ -125,7 +125,10 @@ func copyFiles(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc, cu
 	for _, file := range files {
 		f, err := fs.OpenFile(file)
 		if err != nil {
-			return err
+			// Ignore missing file, as it may happen that a file is deleted
+			// while an export is running as we are not always locking the
+			// VFS or blocking the instance (or the file system is not clean)
+			continue
 		}
 		fullpath, err := file.Path(filepather)
 		if err != nil {
