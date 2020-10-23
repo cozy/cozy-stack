@@ -25,10 +25,9 @@ type Stats struct {
 	Files     map[string][]byte
 }
 
-func createFile(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc, stats *Stats) int64 {
+func createFile(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc) int64 {
 	size := 1 + rand.Intn(25)
 	name := crypto.GenerateRandomString(8)
-
 	doc, err := vfs.NewFileDoc(name, parent.DocID, -1, nil, "application/octet-stream", "application", time.Now(), false, false, nil)
 	assert.NoError(t, err)
 	file, err := fs.CreateFile(doc, nil)
@@ -37,15 +36,10 @@ func createFile(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc, stats *Stats) int6
 	_, err = file.Write(buf)
 	assert.NoError(t, err)
 	assert.NoError(t, file.Close())
-
-	fullpath, err := doc.Path(fs)
-	assert.NoError(t, err)
-	stats.Files[fullpath] = make([]byte, doc.ByteSize)
-
 	return doc.ByteSize
 }
 
-func populateTree(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc, nb int, stats *Stats) {
+func populateTree(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc, nb int) {
 	nbDirs := rand.Intn(5)
 	if nbDirs > nb {
 		nbDirs = nbDirs % (nb + 1)
@@ -57,15 +51,14 @@ func populateTree(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc, nb int, stats *S
 		fullpath := path.Join(parent.Fullpath, name)
 		dir, err := vfs.Mkdir(fs, fullpath, nil)
 		assert.NoError(t, err)
-		stats.Dirs[fullpath] = struct{}{}
 		nbFiles := rand.Intn(nb)
-		populateTree(t, fs, dir, nbFiles, stats)
+		populateTree(t, fs, dir, nbFiles)
 		nb -= nbFiles
 	}
 
 	// Create some files
 	for j := 0; j < nb; j++ {
-		stats.TotalSize += createFile(t, fs, parent, stats)
+		createFile(t, fs, parent)
 	}
 }
 
@@ -74,17 +67,14 @@ func TestExportFiles(t *testing.T) {
 
 	// The partsSize is voluntary really small to have a lot of parts,
 	// which can help to test the edge cases
-	var partsSize int64 = 10
+	exportDoc := &ExportDoc{
+		PartsSize: 10,
+	}
 
 	nbFiles := rand.Intn(100)
 	root, err := fs.DirByID(consts.RootDirID)
 	assert.NoError(t, err)
-	stats := &Stats{
-		TotalSize: 0,
-		Dirs:      make(map[string]struct{}),
-		Files:     make(map[string][]byte),
-	}
-	populateTree(t, fs, root, nbFiles, stats)
+	populateTree(t, fs, root, nbFiles)
 
 	// /* Uncomment this section for debug */
 	// vfs.Walk(fs, root.Fullpath, func(fpath string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
@@ -112,49 +102,25 @@ func TestExportFiles(t *testing.T) {
 	// 	}
 	// 	return err
 	// })
-	// fmt.Printf("total size = %d // nb dirs = %d // nb files = %d\n", stats.TotalSize, len(stats.Dirs), len(stats.Files))
+	// fmt.Printf("nb files = %d\n", nbFiles)
 
 	// Build the cursors
-	tree, err := fs.BuildTree()
+	_, err = exportFiles(inst, exportDoc, nil)
 	assert.NoError(t, err)
-	cursors, _ := splitFilesIndex(tree.Root, nil, nil, partsSize, partsSize)
-	assert.Equal(t, (stats.TotalSize-1)/partsSize, int64(len(cursors)))
 
-	cursors = append(cursors, "")
+	cursors := append(exportDoc.PartsCursors, "")
+	fileIDs := map[string]bool{}
 	for _, c := range cursors {
-		cursor, err := parseCursor(c)
+		cursor, err := ParseCursor(exportDoc, c)
 		assert.NoError(t, err)
-		list, _ := listFilesIndex(tree.Root, nil, indexCursor{}, cursor, partsSize, partsSize)
+		list, err := listFilesFromCursor(inst, exportDoc, cursor)
+		assert.NoError(t, err)
 		for _, f := range list {
-			dirDoc, fileDoc := f.file.Refine()
-			if dirDoc != nil {
-				fullpath := dirDoc.Fullpath
-				delete(stats.Dirs, fullpath)
-				for fullpath != "/" {
-					fullpath = path.Dir(fullpath)
-					delete(stats.Dirs, fullpath)
-				}
-			} else {
-				fpath, err := fileDoc.Path(fs)
-				assert.NoError(t, err)
-				for i := f.rangeStart; i < f.rangeEnd; i++ {
-					stats.Files[fpath][i] = '1'
-				}
-				for fpath != "/" {
-					fpath = path.Dir(fpath)
-					delete(stats.Dirs, fpath)
-				}
-			}
+			assert.False(t, fileIDs[f.DocID])
+			fileIDs[f.DocID] = true
 		}
 	}
-	assert.Empty(t, stats.Dirs)
-	for f, bytes := range stats.Files {
-		for _, b := range bytes {
-			if assert.NotEqual(t, 0, b, fmt.Sprintf("Failure for file %s", f)) {
-				break
-			}
-		}
-	}
+	assert.Len(t, fileIDs, nbFiles)
 }
 
 func TestMain(m *testing.M) {

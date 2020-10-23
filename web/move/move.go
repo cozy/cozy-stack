@@ -84,15 +84,6 @@ func exportDataHandler(c echo.Context) error {
 		return err
 	}
 
-	archiver := move.SystemArchiver()
-	archive, err := archiver.OpenArchive(inst, exportDoc)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = archive.Close()
-	}()
-
 	cursor, err := move.ParseCursor(exportDoc, c.QueryParam("cursor"))
 	if err != nil {
 		return err
@@ -103,10 +94,11 @@ func exportDataHandler(c echo.Context) error {
 
 	w := c.Response()
 	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=cozy-export.part%03d.zip", cursor.Number()))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=cozy-export.part%03d.zip", cursor.Number))
 	w.WriteHeader(http.StatusOK)
 
-	return move.ExportCopyData(w, inst, exportDoc, archive, cursor)
+	archiver := move.SystemArchiver()
+	return move.ExportCopyData(w, inst, exportDoc, archiver, cursor)
 }
 
 func precheckImport(c echo.Context) error {

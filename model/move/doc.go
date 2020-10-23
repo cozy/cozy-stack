@@ -31,7 +31,7 @@ type ExportDoc struct {
 	Domain    string `json:"domain"`
 	PartsSize int64  `json:"parts_size,omitempty"`
 
-	PartsCursors     []string      `json:"parts_cursors,omitempty"`
+	PartsCursors     []string      `json:"parts_cursors"`
 	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
 	State            string        `json:"state"`
 	CreatedAt        time.Time     `json:"created_at"`

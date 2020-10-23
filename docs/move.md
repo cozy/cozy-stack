@@ -105,7 +105,10 @@ This endpoint will download an archive containing the metadata and files of the
 user, as part of a multi-part download. The cursor given should be one of the
 defined in the export document `parts_cursors`.
 
-Only the first part of the data contains the metadata.
+Only the first part of the archive contains the metadata.
+
+To get all the parts, this endpoint must be called one time with no cursor, and
+one time for each cursor in `parts_cursors`.
 
 ## Import
 
