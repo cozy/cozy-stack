@@ -158,11 +158,16 @@ msgstr ""
 msgid "Passphrase reset Help Warning"
 msgstr "Attention !"
 
-msgid "Passphrase reset Help"
+msgid "Passphrase reset Help 1"
 msgstr ""
-"Votre mot de passe actuel est l'unique clé pour décoder vos mots de passe "
-"gardés par votre app « cozy mots de passe ». Si vous le réinitialisez, vous "
-"perdrez ces données. Le reste de vos données resteront accessibles."
+"Votre mot de passe actuel est l'unique moyen pour accéder aux mots de passe "
+"gardés par votre app « Cozy Pass ». Si vous le réinitialisez, "
+
+msgid "Passphrase reset Help 2"
+msgstr "vous perdrez ces données."
+
+msgid "Passphrase reset Help 3"
+msgstr "Le reste de vos données resteront accessibles."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
