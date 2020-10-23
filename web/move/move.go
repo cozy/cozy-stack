@@ -94,7 +94,11 @@ func exportDataHandler(c echo.Context) error {
 
 	w := c.Response()
 	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=cozy-export.part%03d.zip", cursor.Number))
+	filename := "My Cozy.zip"
+	if len(exportDoc.PartsCursors) > 0 {
+		filename = fmt.Sprintf("My Cozy - part%03d.zip", cursor.Number)
+	}
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 	w.WriteHeader(http.StatusOK)
 
 	archiver := move.SystemArchiver()
