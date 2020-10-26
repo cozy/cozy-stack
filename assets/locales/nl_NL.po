@@ -146,11 +146,16 @@ msgstr "Als laatste redmiddel kun je je wachtwoord opnieuw instellen:"
 msgid "Passphrase reset Help Warning"
 msgstr "Waarschuwing!"
 
-msgid "Passphrase reset Help"
+msgid "Passphrase reset Help 1"
 msgstr ""
 "Je huidige wachtwoord is de enige sleutel van de app 'Cozy Wachtwoorden'. "
-"Als je je wachtwoord opnieuw instelt, dan gaan die gegevens verloren. De "
-"rest van je je gegevens blijven toegankelijk."
+"Als je je wachtwoord opnieuw instelt,"
+
+msgid "Passphrase reset Help 2"
+msgstr "dan gaan die gegevens verloren."
+
+msgid "Passphrase reset Help 3"
+msgstr "De rest van je je gegevens blijven toegankelijk."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
@@ -738,7 +743,7 @@ msgid "Notification Sharing Type File"
 msgstr "bestand"
 
 msgid "Notification Sharing Button text"
-msgstr "Gedeelde items bekijken"
+msgstr "Gedeeld item bekijken"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Verbinden met je Cozy"
