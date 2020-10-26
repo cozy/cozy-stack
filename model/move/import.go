@@ -2,6 +2,7 @@ package move
 
 import (
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 )
 
 // ImportOptions contains the options for launching the import worker.
@@ -27,6 +28,10 @@ func ScheduleImport(inst *instance.Instance, options ImportOptions) error {
 // local instance. It returns the list of slugs for apps/konnectors that have
 // not been installed.
 func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
+	if err := lifecycle.Reset(inst); err != nil {
+		return nil, err
+	}
+
 	notInstalled := []string{}
 	return notInstalled, nil
 }

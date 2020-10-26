@@ -198,7 +198,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		g.Go(func() error {
 			var errg error
 			if errg = couchdb.CreateNamedDocWithDB(i, settings); errg != nil {
-				return err
+				return errg
 			}
 			_, errg = contact.CreateMyself(i, settings)
 			return errg
@@ -230,17 +230,7 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	}
 
 	opts.trace("add triggers", func() {
-		sched := job.System()
-		for _, trigger := range Triggers(i) {
-			var t job.Trigger
-			t, err = job.NewTrigger(i, trigger, nil)
-			if err != nil {
-				return
-			}
-			if err = sched.AddTrigger(t); err != nil {
-				return
-			}
-		}
+		err = addTriggers(i)
 	})
 	if err != nil {
 		return nil, err
@@ -337,6 +327,20 @@ func buildSettings(opts *Options) *couchdb.JSONDoc {
 	}
 
 	return settings
+}
+
+func addTriggers(i *instance.Instance) error {
+	sched := job.System()
+	for _, trigger := range Triggers(i) {
+		t, err := job.NewTrigger(i, trigger, nil)
+		if err != nil {
+			return err
+		}
+		if err = sched.AddTrigger(t); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Triggers returns the list of the triggers to add when an instance is created
