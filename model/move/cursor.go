@@ -45,36 +45,42 @@ func parseCursor(number int, cursorStr string) (Cursor, error) {
 	return Cursor{number, parts[0], parts[1]}, nil
 }
 
-func splitFiles(partsSize int64, filesizes map[string]int64) []string {
-	ids := make([]string, 0, len(filesizes))
-	for id := range filesizes {
+func splitFiles(partsSize, remaining int64, sizesByID map[string]int64, doctype string) ([]string, int64) {
+	ids := make([]string, 0, len(sizesByID))
+	for id := range sizesByID {
 		ids = append(ids, id)
 	}
 	sort.Strings(ids)
 
 	cursors := make([]string, 0)
-	remaining := partsSize
 	for _, id := range ids {
-		size := filesizes[id]
+		size := sizesByID[id]
 		if size > remaining && remaining != partsSize {
 			remaining = partsSize
-			cursor := Cursor{0, consts.Files, id}.String()
+			cursor := Cursor{0, doctype, id}.String()
 			cursors = append(cursors, cursor)
 		}
 		remaining -= size
 	}
 
-	return cursors
+	return cursors, remaining
 }
 
 func listFilesFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start Cursor) ([]*vfs.FileDoc, error) {
-	end := Cursor{len(exportDoc.PartsCursors), consts.Files, couchdb.MaxString}
+	if start.Doctype != consts.Files {
+		return []*vfs.FileDoc{}, nil
+	}
+
+	var end Cursor
 	if start.Number < len(exportDoc.PartsCursors) {
 		c, err := parseCursor(start.Number+1, exportDoc.PartsCursors[start.Number])
 		if err != nil {
 			return nil, err
 		}
 		end = c
+	}
+	if end.Doctype != consts.Files {
+		end = Cursor{len(exportDoc.PartsCursors), consts.Files, couchdb.MaxString}
 	}
 
 	var files []*vfs.FileDoc
@@ -104,4 +110,50 @@ func listFilesFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start Cu
 	}
 
 	return files, nil
+}
+
+func listVersionsFromCursor(inst *instance.Instance, exportDoc *ExportDoc, start Cursor) ([]*vfs.Version, error) {
+	var end Cursor
+	if start.Number < len(exportDoc.PartsCursors) {
+		c, err := parseCursor(start.Number+1, exportDoc.PartsCursors[start.Number])
+		if err != nil {
+			return nil, err
+		}
+		end = c
+	}
+	if end.Doctype == consts.Files {
+		return []*vfs.Version{}, nil
+	} else if end.Doctype == "" {
+		end = Cursor{len(exportDoc.PartsCursors), consts.FilesVersions, couchdb.MaxString}
+	}
+
+	if start.Doctype != consts.FilesVersions {
+		start = Cursor{start.Number, consts.FilesVersions, ""}
+	}
+
+	var versions []*vfs.Version
+	req := couchdb.AllDocsRequest{
+		StartKeyDocID: start.ID,
+		EndKeyDocID:   end.ID,
+		Limit:         1000,
+	}
+	for {
+		var results []*vfs.Version
+		if err := couchdb.GetAllDocs(inst, consts.FilesVersions, &req, &results); err != nil {
+			return nil, err
+		}
+		if len(results) == 0 {
+			break
+		}
+		for _, res := range results {
+			if res.DocID == end.ID {
+				return versions, nil
+			}
+			versions = append(versions, res)
+		}
+		req.StartKeyDocID = results[len(results)-1].DocID
+		req.Skip = 1 // Do not fetch again the last file from this page
+	}
+
+	return versions, nil
 }

@@ -56,11 +56,19 @@ func ExportCopyData(w io.Writer, inst *instance.Instance, exportDoc *ExportDoc, 
 		}
 	}
 
-	if !exportDoc.AcceptDoctype(consts.Files) {
-		return nil
+	if exportDoc.AcceptDoctype(consts.Files) {
+		if err := copyFiles(zw, inst, exportDoc, cursor); err != nil {
+			return err
+		}
 	}
 
-	return copyFiles(zw, inst, exportDoc, cursor)
+	if exportDoc.AcceptDoctype(consts.FilesVersions) {
+		if err := copyVersions(zw, inst, exportDoc, cursor); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func copyJSONData(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc, archiver Archiver) error {
@@ -123,6 +131,24 @@ func copyFiles(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc, cu
 	filepather := vfs.NewFilePatherWithCache(fs)
 
 	for _, file := range files {
+		metaHeader := &zip.FileHeader{
+			Name:     path.Join(ExportDataDir, file.DocID),
+			Method:   zip.Deflate,
+			Modified: file.UpdatedAt,
+		}
+		metaHeader.SetMode(0640)
+		metaWriter, err := zw.CreateHeader(metaHeader)
+		if err != nil {
+			return err
+		}
+		doc, err := json.Marshal(file)
+		if err != nil {
+			return err
+		}
+		if _, err = metaWriter.Write(doc); err != nil {
+			return err
+		}
+
 		f, err := fs.OpenFile(file)
 		if err != nil {
 			// Ignore missing file, as it may happen that a file is deleted
@@ -130,21 +156,89 @@ func copyFiles(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc, cu
 			// VFS or blocking the instance (or the file system is not clean)
 			continue
 		}
+		defer func() {
+			_ = f.Close()
+		}()
 		fullpath, err := file.Path(filepather)
 		if err != nil {
 			return err
 		}
-		header := &zip.FileHeader{
+		fileHeader := &zip.FileHeader{
 			Name:     path.Join(ExportFilesDir, fullpath),
 			Method:   zip.Deflate,
 			Modified: file.UpdatedAt,
 		}
 		if file.Executable {
-			header.SetMode(0750)
+			fileHeader.SetMode(0750)
 		} else {
-			header.SetMode(0640)
+			fileHeader.SetMode(0640)
 		}
-		zipFileWriter, err := zw.CreateHeader(header)
+		zipFileWriter, err := zw.CreateHeader(fileHeader)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(zipFileWriter, f)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func copyVersions(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc, cursor Cursor) error {
+	versions, err := listVersionsFromCursor(inst, exportDoc, cursor)
+	if err != nil {
+		return err
+	}
+
+	fs := inst.VFS()
+	finder := newFileFinderWithCache(fs)
+
+	for _, version := range versions {
+		metaHeader := &zip.FileHeader{
+			Name:     path.Join(ExportDataDir, version.DocID),
+			Method:   zip.Deflate,
+			Modified: version.UpdatedAt,
+		}
+		metaHeader.SetMode(0640)
+		metaWriter, err := zw.CreateHeader(metaHeader)
+		if err != nil {
+			return err
+		}
+		doc, err := json.Marshal(version)
+		if err != nil {
+			return err
+		}
+		if _, err = metaWriter.Write(doc); err != nil {
+			return err
+		}
+
+		file, err := finder.Find(version.DocID)
+		if err != nil {
+			// Ignore missing file, as it may happen that a file is deleted
+			// while an export is running as we are not always locking the
+			// VFS or blocking the instance (or the file system is not clean)
+			continue
+		}
+
+		f, err := fs.OpenFileVersion(file, version)
+		if err != nil {
+			// Ignore missing version, as it may happen that a version is
+			// deleted while an export is running as we are not always locking
+			// the VFS or blocking the instance (or the file system is not clean)
+			continue
+		}
+		defer func() {
+			_ = f.Close()
+		}()
+		fileHeader := &zip.FileHeader{
+			Name:     path.Join(ExportFilesDir, version.DocID),
+			Method:   zip.Deflate,
+			Modified: version.UpdatedAt,
+		}
+		fileHeader.SetMode(0640)
+		zipFileWriter, err := zw.CreateHeader(fileHeader)
 		if err != nil {
 			return err
 		}
@@ -262,7 +356,27 @@ func exportFiles(i *instance.Instance, exportDoc *ExportDoc, tw *tar.Writer) (in
 		return 0, err
 	}
 
-	exportDoc.PartsCursors = splitFiles(exportDoc.PartsSize, filesizes)
+	versions := make(map[string]int64)
+	err = couchdb.ForeachDocs(i, consts.FilesVersions, func(id string, raw json.RawMessage) error {
+		var doc vfs.Version
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			return err
+		}
+		versions[id] = doc.ByteSize
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	remaining := exportDoc.PartsSize
+	var cursors []string
+	cursors, remaining = splitFiles(exportDoc.PartsSize, remaining, filesizes, consts.Files)
+	exportDoc.PartsCursors = cursors
+	cursors, _ = splitFiles(exportDoc.PartsSize, remaining, versions, consts.FilesVersions)
+	if len(cursors) > 0 {
+		exportDoc.PartsCursors = append(exportDoc.PartsCursors, cursors...)
+	}
 	return size, nil
 }
 
