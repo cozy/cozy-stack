@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -81,8 +83,23 @@ func ImportWorker(c *job.WorkerContext) error {
 		return err
 	}
 
-	fmt.Printf("manifest_url = %q\n", opts.ManifestURL)
+	if err := lifecycle.Block(c.Instance, instance.BlockedImporting.Code); err != nil {
+		return err
+	}
+
 	notInstalled, err := move.Import(c.Instance, opts)
+
+	if erru := lifecycle.Unblock(c.Instance); erru != nil {
+		// Try again
+		time.Sleep(10 * time.Second)
+		inst, errg := instance.GetFromCouch(c.Instance.Domain)
+		if errg == nil {
+			erru = lifecycle.Unblock(inst)
+		}
+		if err == nil {
+			err = erru
+		}
+	}
 
 	var email mail.Options
 	if err == nil {

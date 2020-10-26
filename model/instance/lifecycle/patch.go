@@ -261,6 +261,15 @@ func Block(inst *instance.Instance, reason ...string) error {
 	})
 }
 
+// Unblock reverts the blocking of an instance
+func Unblock(inst *instance.Instance) error {
+	blocked := false
+	return Patch(inst, &Options{
+		Blocked:        &blocked,
+		BlockingReason: "",
+	})
+}
+
 // ManagerSignTOS make a request to the manager in order to finalize the TOS
 // signing flow.
 func ManagerSignTOS(inst *instance.Instance, originalReq *http.Request) error {
