@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -101,6 +102,12 @@ func (im *importer) importZip(zr zip.Reader) error {
 		case consts.Sessions:
 			// We don't want to import the sessions from another instance
 			continue
+		case consts.Settings:
+			// Keep the email, public name and stuff related to the cloudery
+			// from the destination Cozy
+			if id == consts.InstanceSettingsID {
+				continue
+			}
 		case consts.Sharings, consts.Shared, consts.Permissions:
 			// Sharings cannot be imported, they need to be migrated
 			continue
@@ -110,9 +117,6 @@ func (im *importer) importZip(zr zip.Reader) error {
 			continue
 		case consts.Apps, consts.Konnectors:
 			im.installApp(id)
-			continue
-		case consts.Settings:
-			// TODO not yet implemented
 			continue
 		case consts.Triggers:
 			// TODO not yet implemented, they need to be filtered to avoid duplicated,
@@ -137,7 +141,27 @@ func (im *importer) importZip(zr zip.Reader) error {
 		im.docs = append(im.docs, doc)
 	}
 
-	return im.flush()
+	if err := im.flush(); err != nil {
+		return err
+	}
+
+	// Reinject the email address from the destination Cozy in the myself
+	// contact document
+	if myself, err := contact.GetMyself(im.inst); err == nil {
+		if email, err := im.inst.SettingsEMail(); err == nil && email != "" {
+			addr, _ := myself.ToMailAddress()
+			if addr == nil || addr.Email != email {
+				myself.JSONDoc.M["email"] = []map[string]interface{}{
+					{
+						"address": email,
+						"primary": true,
+					},
+				}
+				_ = couchdb.UpdateDoc(im.inst, myself)
+			}
+		}
+	}
+	return nil
 }
 
 func (im *importer) flush() error {
