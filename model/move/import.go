@@ -82,7 +82,6 @@ func transformSettingsURLToManifestURL(settingsURL string) (string, error) {
 	u.Path = "/move/exports/" + mac
 	u.RawPath = ""
 	u.RawQuery = ""
-	u.RawFragment = ""
 	return u.String(), nil
 }
 
@@ -109,10 +108,28 @@ func fetchManifest(manifestURL string) (*ExportDoc, error) {
 // local instance. It returns the list of slugs for apps/konnectors that have
 // not been installed.
 func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
-	if err := lifecycle.Reset(inst); err != nil {
+	doc, err := fetchManifest(options.ManifestURL)
+	if err != nil {
 		return nil, err
 	}
 
-	notInstalled := []string{}
-	return notInstalled, nil
+	if err = lifecycle.Reset(inst); err != nil {
+		return nil, err
+	}
+
+	im := &importer{
+		inst:    inst,
+		options: options,
+		doc:     doc,
+	}
+	if err = im.importPart(""); err != nil {
+		return nil, err
+	}
+	for _, cursor := range doc.PartsCursors {
+		if err = im.importPart(cursor); err != nil {
+			return nil, err
+		}
+	}
+
+	return im.appsNotInstalled, nil
 }
