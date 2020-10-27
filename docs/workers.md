@@ -237,6 +237,25 @@ Its options are:
 }
 ```
 
+## import
+
+The `import` worker can be used to import the data from an export. The instance
+will be reset before importing data to avoid complex logic of reconciliation.
+The instance is blocked during the import, and a mail is sent at the end of the
+import, when the instance can be accessed again.
+
+Its options are:
+
+- `manifest_url`: the URL of the manifest for the exported data.
+
+### Example
+
+```json
+{
+  "manifest_url": "http://cozy.tools:8080/move/exports/QUFBQUFGLVg5b3c0WTJNNU9HRmpPR0V4WlRnd01XVTJZMlU0T0RjeE5UaGpNVEF3TWpKbVplblFfRWZWUVAtRGJXU0lnV2tIZ3NsVHN5dUR6V0ZIdVdSeERLb196X3A0"
+}
+```
+
 ### Permissions
 
 To use this worker from a client-side application, you will need to ask the
