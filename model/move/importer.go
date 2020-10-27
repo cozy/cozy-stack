@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -90,9 +91,15 @@ func (im *importer) importZip(zr zip.Reader) error {
 			return fmt.Errorf("Invalid filename: %s", name)
 		}
 		doctype := parts[0]
+		id := parts[1]
+
+		// Special cases
 		switch doctype {
 		case consts.Exports:
 			// Importing exports would just be a mess, so skip them
+			continue
+		case consts.Sessions:
+			// We don't want to import the sessions from another instance
 			continue
 		case consts.Sharings, consts.Shared, consts.Permissions:
 			// Sharings cannot be imported, they need to be migrated
@@ -102,9 +109,9 @@ func (im *importer) importZip(zr zip.Reader) error {
 			// as raw documents
 			continue
 		case consts.Apps, consts.Konnectors:
-			// TODO not yet implemented, they need to be installed
+			im.installApp(id)
 			continue
-		case consts.Sessions, consts.Settings:
+		case consts.Settings:
 			// TODO not yet implemented
 			continue
 		case consts.Triggers:
@@ -115,6 +122,8 @@ func (im *importer) importZip(zr zip.Reader) error {
 			// TODO not yet implemented, as they have an associated content
 			continue
 		}
+
+		// Normal documents
 		if doctype != im.doctype || len(im.docs) >= 1000 {
 			if err := im.flush(); err != nil {
 				return err
@@ -160,4 +169,34 @@ func (im *importer) readDoc(zf *zip.File) (json.RawMessage, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func (im *importer) installApp(id string) {
+	parts := strings.SplitN(id, "/", 2)
+	if len(parts) != 2 {
+		return
+	}
+	doctype := parts[0]
+	apptype := consts.WebappType
+	if doctype == consts.Konnectors {
+		apptype = consts.KonnectorType
+	}
+	slug := parts[1]
+	source := "registry://" + slug + "/stable"
+
+	installer, err := app.NewInstaller(im.inst, app.Copier(apptype, im.inst),
+		&app.InstallerOptions{
+			Operation:  app.Install,
+			Type:       apptype,
+			SourceURL:  source,
+			Slug:       slug,
+			Registries: im.inst.Registries(),
+		},
+	)
+	if err == nil {
+		_, err = installer.RunSync()
+	}
+	if err != nil {
+		im.appsNotInstalled = append(im.appsNotInstalled, slug)
+	}
 }
