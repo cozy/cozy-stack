@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/move"
@@ -49,10 +48,6 @@ func createExport(c echo.Context) error {
 }
 
 func exportHandler(c echo.Context) error {
-	if err := middlewares.AllowWholeType(c, permission.GET, consts.Exports); err != nil {
-		return err
-	}
-
 	mac, err := base64.URLEncoding.DecodeString(c.Param("export-mac"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
@@ -67,18 +62,11 @@ func exportHandler(c echo.Context) error {
 }
 
 func exportDataHandler(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	if !middlewares.IsLoggedIn(c) {
-		u := inst.PageURL("/auth/login", url.Values{
-			"redirect": {inst.FromURL(c.Request().URL)},
-		})
-		return c.Redirect(http.StatusSeeOther, u)
-	}
-
 	mac, err := base64.URLEncoding.DecodeString(c.Param("export-mac"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
+	inst := middlewares.GetInstance(c)
 	exportDoc, err := move.GetExport(inst, mac)
 	if err != nil {
 		return err
