@@ -139,7 +139,7 @@ Content-Type: application/vnd.api+json
 #### Responses
 
 - `204 No Content` if every thing is fine
-- `404 Not Found` if no archive can be found at the given URL
+- `412 Precondition Failed` if no archive can be found at the given URL
 - `422 Entity Too Large` if the quota is too small to import the files
 
 ### POST /move/imports

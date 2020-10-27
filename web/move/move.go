@@ -176,7 +176,7 @@ func Routes(g *echo.Group) {
 func wrapError(err error) error {
 	switch err {
 	case move.ErrExportNotFound:
-		return jsonapi.NotFound(err)
+		return jsonapi.PreconditionFailed("url", err)
 	case move.ErrNotEnoughSpace:
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	}
