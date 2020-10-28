@@ -149,11 +149,16 @@ msgstr "Como último recurso, puede restablecer su contraseña:"
 msgid "Passphrase reset Help Warning"
 msgstr "¡Atención!"
 
-msgid "Passphrase reset Help"
+msgid "Passphrase reset Help 1"
 msgstr ""
 "Su contraseña actual es la única clave para decodificar sus contraseñas "
-"guardadas en su aplicación \"Cozy Contraseñas\". Si la reinicia, perderá "
-"esos datos. El resto de sus datos seguirán siendo accesibles."
+"guardadas en su aplicación \"Cozy Pass\". Si la reinicia, "
+
+msgid "Passphrase reset Help 2"
+msgstr "usted perderá esos datos"
+
+msgid "Passphrase reset Help 3"
+msgstr "El resto de sus datos seguirá siendo accesible"
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
@@ -738,7 +743,7 @@ msgid "Notification Sharing Type File"
 msgstr "archivo"
 
 msgid "Notification Sharing Button text"
-msgstr "Ver mi uso compartido"
+msgstr "Ver la compartición"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Conectar a su Cozy"
