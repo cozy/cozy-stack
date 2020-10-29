@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"context"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -27,6 +28,11 @@ func Reset(inst *instance.Instance) error {
 		return err
 	}
 
+	// XXX CouchDB is eventually consistent, which means that we have a small
+	// risk that recreating a database just after the deletion can fail
+	// silently. So, we wait 2 seconds to limit the risk.
+	time.Sleep(2 * time.Second)
+
 	g, _ := errgroup.WithContext(context.Background())
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Files) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Apps) })
@@ -36,6 +42,7 @@ func Reset(inst *instance.Instance) error {
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Permissions) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Sharings) })
 	g.Go(func() error {
+		settings.SetRev("")
 		return couchdb.CreateNamedDocWithDB(inst, settings)
 		// The myself contact is created by the import, not here, so that this
 		// document has the same ID than on the source instance.

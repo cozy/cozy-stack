@@ -115,6 +115,8 @@ func ImportWorker(c *job.WorkerContext) error {
 			},
 		}
 	} else {
+		c.Instance.Logger().WithField("nspace", "move").
+			Warnf("Import failed: %s", err)
 		email = mail.Options{
 			Mode:         mail.ModeFromStack,
 			TemplateName: "import_error",

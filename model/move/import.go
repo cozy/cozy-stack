@@ -1,7 +1,6 @@
 package move
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -11,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 )
 
 // ImportOptions contains the options for launching the import worker.
@@ -95,7 +95,7 @@ func fetchManifest(manifestURL string) (*ExportDoc, error) {
 		return nil, ErrExportNotFound
 	}
 	doc := &ExportDoc{}
-	if err = json.NewDecoder(res.Body).Decode(doc); err != nil {
+	if _, err = jsonapi.Bind(res.Body, doc); err != nil {
 		return nil, err
 	}
 	if doc.State != ExportStateDone {

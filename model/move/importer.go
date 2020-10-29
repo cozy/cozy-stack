@@ -2,9 +2,7 @@ package move
 
 import (
 	"archive/zip"
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -83,13 +81,13 @@ func (im *importer) downloadFile(cursor string) error {
 
 func (im *importer) importZip(zr zip.Reader) error {
 	for _, file := range zr.File {
-		if !strings.HasPrefix(file.FileHeader.Name, ExportDataDir) {
+		if !strings.HasPrefix(file.FileHeader.Name, ExportDataDir+"/") {
 			continue
 		}
-		name := strings.TrimPrefix(file.FileHeader.Name, ExportDataDir)
+		name := strings.TrimPrefix(file.FileHeader.Name, ExportDataDir+"/")
 		parts := strings.SplitN(name, "/", 2)
 		if len(parts) != 2 {
-			return fmt.Errorf("Invalid filename: %s", name)
+			continue // "instance.json" for example
 		}
 		doctype := parts[0]
 		id := parts[1]
@@ -108,6 +106,7 @@ func (im *importer) importZip(zr zip.Reader) error {
 			if id == consts.InstanceSettingsID {
 				continue
 			}
+			// TODO bitwarden
 		case consts.Sharings, consts.Shared, consts.Permissions:
 			// Sharings cannot be imported, they need to be migrated
 			continue
@@ -137,6 +136,7 @@ func (im *importer) importZip(zr zip.Reader) error {
 		if err != nil {
 			return err
 		}
+		delete(doc, "_rev")
 		im.doctype = doctype
 		im.docs = append(im.docs, doc)
 	}
@@ -170,8 +170,17 @@ func (im *importer) flush() error {
 	}
 
 	olds := make([]interface{}, len(im.docs))
+	im.inst.Logger().Warnf("importer.flush %s (%d)", im.doctype, len(im.docs))
 	if err := couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds); err != nil {
-		return err
+		if couchdb.IsNoDatabaseError(err) {
+			if errc := couchdb.CreateDB(im.inst, im.doctype); errc != nil {
+				return errc
+			}
+			err = couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds)
+		}
+		if err != nil {
+			return err
+		}
 	}
 
 	im.doctype = ""
@@ -179,20 +188,20 @@ func (im *importer) flush() error {
 	return nil
 }
 
-func (im *importer) readDoc(zf *zip.File) (json.RawMessage, error) {
+func (im *importer) readDoc(zf *zip.File) (map[string]interface{}, error) {
 	r, err := zf.Open()
 	if err != nil {
 		return nil, err
 	}
-	var buf bytes.Buffer
-	_, err = buf.ReadFrom(r)
+	var doc map[string]interface{}
+	err = json.NewDecoder(r).Decode(&doc)
 	if errc := r.Close(); errc != nil {
 		return nil, errc
 	}
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	return doc, nil
 }
 
 func (im *importer) installApp(id string) {
