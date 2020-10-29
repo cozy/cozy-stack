@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem "awesome_print"
+gem "amazing_print"
 gem "faker"
 gem "faye-websocket"
 gem "mimemagic"
