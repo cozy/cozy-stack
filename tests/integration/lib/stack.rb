@@ -122,6 +122,11 @@ class Stack
     @tokens[key] ||= generate_token_for(inst, doctypes)
   end
 
+  def reset_tokens
+    @oauth_client_id = nil
+    @tokens = {}
+  end
+
   def generate_token_for(inst, doctypes)
     @oauth_client_id ||= generate_client_id(inst)
     cmd = ["cozy-stack", "instances", "token-oauth", inst.domain,
