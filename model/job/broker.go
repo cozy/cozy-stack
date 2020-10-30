@@ -198,7 +198,7 @@ func (j *Job) Logger() *logrus.Entry {
 // AckConsumed sets the job infos state to Running an sends the new job infos
 // on the channel.
 func (j *Job) AckConsumed() error {
-	j.Logger().Debugf("ack_consume %s ", j.ID())
+	j.Logger().Debugf("ack_consume %s", j.ID())
 	j.StartedAt = time.Now()
 	j.State = Running
 	return j.Update()
@@ -207,7 +207,7 @@ func (j *Job) AckConsumed() error {
 // Ack sets the job infos state to Done an sends the new job infos on the
 // channel.
 func (j *Job) Ack() error {
-	j.Logger().Debugf("ack %s ", j.ID())
+	j.Logger().Debugf("ack %s", j.ID())
 	j.FinishedAt = time.Now()
 	j.State = Done
 	j.Event = nil
@@ -217,7 +217,7 @@ func (j *Job) Ack() error {
 // Nack sets the job infos state to Errored, set the specified error has the
 // error field and sends the new job infos on the channel.
 func (j *Job) Nack(err error) error {
-	j.Logger().Debugf("nack %s ", j.ID())
+	j.Logger().Debugf("nack %s", j.ID())
 	j.FinishedAt = time.Now()
 	j.State = Errored
 	j.Error = err.Error()
@@ -227,7 +227,14 @@ func (j *Job) Nack(err error) error {
 
 // Update updates the job in couchdb
 func (j *Job) Update() error {
-	return couchdb.UpdateDoc(j, j)
+	err := couchdb.UpdateDoc(j, j)
+	// XXX When a job for an import runs, the database for io.cozy.jobs is
+	// deleted, and we need to recreate the job, not just update it.
+	if couchdb.IsNotFoundError(err) {
+		j.SetRev("")
+		return j.Create()
+	}
+	return err
 }
 
 // Create creates the job in couchdb

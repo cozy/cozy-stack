@@ -170,7 +170,6 @@ func (im *importer) flush() error {
 	}
 
 	olds := make([]interface{}, len(im.docs))
-	im.inst.Logger().Warnf("importer.flush %s (%d)", im.doctype, len(im.docs))
 	if err := couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds); err != nil {
 		if couchdb.IsNoDatabaseError(err) {
 			if errc := couchdb.CreateDB(im.inst, im.doctype); errc != nil {
