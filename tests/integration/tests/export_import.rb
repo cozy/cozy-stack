@@ -9,6 +9,7 @@ describe "Export and import" do
 
     source = Instance.create name: "source"
     dest = Instance.create name: "dest"
+    source.install_app "photos"
 
     # Create an album with some photos
     CozyFile.ensure_photos_in_cache
@@ -33,6 +34,10 @@ describe "Export and import" do
     # Check that everything has been moved
     moved = Album.find dest, album.couch_id
     assert_equal moved.name, album.name
+    triggers = Trigger.all dest
+    refute_nil(triggers.detect do |t|
+      t.attributes.dig("message", "name") == "onPhotoUpload"
+    end) # It's a service for the photos app
 
     # Check that the email from the destination was kept
     contacts = Contact.all dest

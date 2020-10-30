@@ -90,7 +90,7 @@ func (im *importer) importZip(zr zip.Reader) error {
 			continue // "instance.json" for example
 		}
 		doctype := parts[0]
-		id := parts[1]
+		id := strings.TrimSuffix(parts[1], ".json")
 
 		// Special cases
 		switch doctype {
@@ -102,11 +102,11 @@ func (im *importer) importZip(zr zip.Reader) error {
 			continue
 		case consts.Settings:
 			// Keep the email, public name and stuff related to the cloudery
-			// from the destination Cozy
-			if id == consts.InstanceSettingsID {
+			// from the destination Cozy. Same for the bitwarden settings
+			// derived from the passphrase.
+			if id == consts.InstanceSettingsID || id == consts.BitwardenSettingsID {
 				continue
 			}
-			// TODO bitwarden
 		case consts.Sharings, consts.Shared, consts.Permissions:
 			// Sharings cannot be imported, they need to be migrated
 			continue

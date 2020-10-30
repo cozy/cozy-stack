@@ -1,6 +1,8 @@
 class Trigger
   include Model
 
+  attr_reader :attributes
+
   def self.doctype
     "io.cozy.triggers"
   end
@@ -22,5 +24,9 @@ class Trigger
 
   def as_json
     { data: { attributes: @attributes } }
+  end
+
+  def self.from_json(j)
+    Trigger.new j
   end
 end

@@ -5,6 +5,26 @@ module Model
       obj.save inst
       obj
     end
+
+    def find(inst, id)
+      opts = {
+        accept: :json,
+        authorization: "Bearer #{inst.token_for doctype}"
+      }
+      res = inst.client["/data/#{doctype}/#{id}"].get opts
+      from_json JSON.parse(res.body)
+    end
+
+    def all(inst)
+      opts = {
+        accept: :json,
+        authorization: "Bearer #{inst.token_for doctype}"
+      }
+      res = inst.client["/data/#{doctype}/_all_docs?include_docs=true"].get opts
+      JSON.parse(res.body)["rows"]
+          .reject { |r| r["id"] =~ /^_design/ }
+          .map { |r| from_json r["doc"] }
+    end
   end
 
   def to_json(*_args)
