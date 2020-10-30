@@ -1,14 +1,16 @@
+# 
 # Translators:
 # Bruno Michel, 2019
 # Nos_ <n.schwirz@freenet.de>, 2019
 # Mario Angermann, 2019
 # Nils Jakobi <jakobi.nils@gmail.com>, 2019
-# Adrian Nöthlich <admin.noethlich@hgw-iserv.de>, 2019
 # IndeedNotJames <indeednotjames@mailbox.org>, 2020
+# Adrian Nöthlich <admin.noethlich@hgw-iserv.de>, 2020
+# J Variance <ltjiri76j@relay.firefox.com>, 2020
 # 
 msgid ""
 msgstr ""
-"Last-Translator: IndeedNotJames <indeednotjames@mailbox.org>, 2020\n"
+"Last-Translator: J Variance <ltjiri76j@relay.firefox.com>, 2020\n"
 "Language-Team: German (https://www.transifex.com/cozy/teams/39753/de/)\n"
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -33,6 +35,9 @@ msgstr "Posteingang der Freigaben"
 
 msgid "Tree No longer shared"
 msgstr "Nicht mehr geteilt"
+
+msgid "Tree Revoked sharing suffix"
+msgstr "Freigabe abgebrochen"
 
 msgid "Notes New note"
 msgstr "Neue Notiz"
@@ -148,11 +153,16 @@ msgstr "Im schlimmsten Fall kannst du dein Passwort zurücksetzen:"
 msgid "Passphrase reset Help Warning"
 msgstr "Warnung!"
 
-msgid "Passphrase reset Help"
+msgid "Passphrase reset Help 1"
 msgstr ""
-"Dein aktuelles Passwort ist der einzige Schlüssel zum Entschlüsseln der "
-"Passwörter in der \"Cozy Passwörter\" App. Alle anderen Daten bleiben "
-"weiterhin zugänglich."
+"Dein aktuelles Passwort ist der einzige Schlüssel zur Entschlüsselung deiner"
+" Passwörter aus deiner \"Cozy Pass\" App. Wenn du es ersetzt,"
+
+msgid "Passphrase reset Help 2"
+msgstr "wirst du diese Daten verlieren."
+
+msgid "Passphrase reset Help 3"
+msgstr "Der Rest deiner Daten bleibt zugänglich"
 
 msgid "Passphrase reset Help emptyVault"
 msgstr ""
@@ -180,6 +190,9 @@ msgstr ""
 
 msgid "Passphrase Hint Error"
 msgstr "Dein Hinweis muss sich von deinem Passwort unterscheiden!"
+
+msgid "Passphrase Onboarding Show hint form"
+msgstr "Hinterlasse einen Hinweis"
 
 msgid "Passphrase Onboarding Hint Field"
 msgstr "Hinterlasse einen Hinweis (optional)"
@@ -227,35 +240,39 @@ msgstr "Ich habe mein Passwort vergessen"
 msgid "Authorize Title"
 msgstr "Erlaube %s auf dein Profil zuzugreifen"
 
-msgid "Authorize Sharing Title"
-msgstr "Neue Freigabe von %s erteilt"
+msgid "Authorize Sharing Title Synchronize"
+msgstr "In mein Cozy synchronisieren"
+
+msgid "Authorize Sharing Title Add"
+msgstr "Meinem Cozy hinzufügen"
 
 msgid "Authorize Client presentation"
 msgstr "möchte die Erlaubnis haben, auf dein Cozy zuzugreifen"
 
 msgid "Authorize Sharing Request"
-msgstr "%s möchte mit dir die folgende Datei teilen:"
+msgstr "hat mit dir geteilt:"
 
-msgid "Authorize Sharing Permission start"
-msgstr "Du kannst"
+msgid "Authorize Sharing Description start"
+msgstr ""
+"%sund du könnt zusammenarbeiten beim Bearbeiten der %s. Jede Änderung wird "
+"automatisch zwischen euren Cozys versendet."
 
-msgid "Authorize Sharing Permission readonly"
-msgstr "es lesen"
+msgid "Authorize Sharing Description end"
+msgstr ""
+"Du wirst das %sin deinem Cozy behalten, selbst wenn die Freigabe von "
+"%sabgebrochen wird."
 
-msgid "Authorize Sharing Permission readwrite"
-msgstr "es lesen und bearbeiten"
+msgid "Authorize Sharing Synchronize label"
+msgstr "In mein Cozy synchronisieren"
 
-msgid "Authorize Sharing Permission end"
-msgstr "beim Bestätigen der Freigabe."
+msgid "Authorize Sharing Submit Synchronize"
+msgstr "Synchronisieren"
 
-msgid "Authorize Sharing Sync"
-msgstr "Änderungen werden sofort in beiden Cozys verfügbar sein:"
+msgid "Authorize Sharing Submit Add"
+msgstr "Hinzufügen"
 
-msgid "Authorize Sharing Self"
-msgstr "Dein Cozy: %s"
-
-msgid "Authorize Sharing Client"
-msgstr "Cozy deines Kontakts: %s"
+msgid "Authorize Sharing Cancel"
+msgstr "Abbrechen"
 
 msgid "Authorize Policy sentence"
 msgstr "Du kannst ihre Regeln über die Verwendung deiner Daten lesen"
@@ -277,9 +294,6 @@ msgstr ""
 
 msgid "Authorize Submit"
 msgstr "Zugriff"
-
-msgid "Authorize Submit Sharing"
-msgstr "Bestätigen"
 
 msgid "Authorize Cancel"
 msgstr "Ablehnen"
@@ -326,6 +340,9 @@ msgstr "Leider ist diese Anwendung noch nicht in deinem Cozy verfügbar."
 
 msgid "Error Application not found Action"
 msgstr "Gehe zu dir nach Hause"
+
+msgid "Error Application not found Button"
+msgstr "Diese Anwendung installieren"
 
 msgid "Error Contact us"
 msgstr "Ein Problem, eine Frage? Kontaktiere uns über"
@@ -427,6 +444,18 @@ msgstr "Nachricht im Systemlog speichern"
 msgid "Permissions worker sendmail"
 msgstr "Eine E-mail senden"
 
+msgid "Permissions com.bitwarden.profiles"
+msgstr "Passwortmanager Profile"
+
+msgid "Permissions com.bitwarden.ciphers"
+msgstr "Passwortmanager Einträge"
+
+msgid "Permissions com.bitwarden.folders"
+msgstr "Passwortmanager Ordner"
+
+msgid "Permissions com.bitwarden.organizations"
+msgstr "Passwortmanager Organisationen"
+
 msgid "Permissions io.cozy.accounts"
 msgstr "Konten"
 
@@ -439,6 +468,9 @@ msgstr "Anwendungsvorschläge"
 msgid "Permissions io.cozy.bank.accounts"
 msgstr "Bankkonten"
 
+msgid "Permissions io.cozy.bank.accounts.stats"
+msgstr "Bankkonten Statistiken"
+
 msgid "Permissions io.cozy.bank.groups"
 msgstr "Bankengruppen"
 
@@ -447,6 +479,12 @@ msgstr "Finanztransaktionen"
 
 msgid "Permissions io.cozy.bank.settings"
 msgstr "Anwendungseinstellungen"
+
+msgid "Permissions io.cozy.bank.recipients"
+msgstr "Bank Überweisungsempfänger"
+
+msgid "Permissions io.cozy.bank.recurrence"
+msgstr "Bank Überweisungsvorlagen"
 
 msgid "Permissions io.cozy.bills"
 msgstr "Rechnungen"
@@ -524,7 +562,7 @@ msgid "Mail Cozy Team"
 msgstr "Dein Cozy Cloud Team"
 
 msgid "Mail Hint Subject"
-msgstr "Vergessenes Passwort: Dein Hinweis"
+msgstr "Vergessenes Passwort: dein Hinweis"
 
 msgid "Mail Hint Intro 1"
 msgstr "Hallo %s,"
@@ -536,9 +574,9 @@ msgstr ""
 
 msgid "Mail Hint Outro"
 msgstr ""
-"Im schlimmsten Fall kannst du dein Passwort im \"Passwort vergessen\" "
-"Abschnitt deines Cozy zurücksetzen. Wenn du das nicht warst, wende dich "
-"bitte direkt an uns, indem du auf diese E-Mail antwortest. "
+"Als letzten Ausweg kannst du dein Passwort im \"Passwort vergessen\" Bereich"
+" zurücksetzen. Falls du diese Anfrage nicht veranlasst hast, kontaktiere uns"
+" bitte per direkter Antwort auf diese E-Mail."
 
 msgid "Mail Reset Passphrase Subject"
 msgstr "Setze dein Passwort zurück"
@@ -548,7 +586,7 @@ msgstr "Hallo %s,"
 
 msgid "Mail Reset Passphrase Intro 2"
 msgstr ""
-"Du hast darum gebeten, dein Passwort zu ändern. Wenn du das nicht warst, "
+"Du hast die Änderung deines Passworts beantragt. Wenn du das nicht warst, "
 "wende dich bitte direkt an uns, indem du auf diese E-Mail antwortest."
 
 msgid "Mail Reset Passphrase Button instruction"
@@ -600,38 +638,56 @@ msgstr ""
 "contact@cozycloud.cc"
 
 msgid "Mail New Connection Subject"
-msgstr "Wir haben gerade eben eine neue Verbindung zu deinem %s festgestellt"
+msgstr "Neue Verbindung zu deinem %s"
 
 msgid "Mail New Connection Intro"
 msgstr ""
-"Wir haben gerade eben eine neue Verbindung zu deinem Cozy festgestellt.\n"
-"Hier sind die Details:"
+"Dies ist eine Nachricht deines Cozys:\n"
+"Ein neues Gerät hat sich kürzlich in deinem Cozykonto angemeldet. Überprüfe die Verbindungsinformationen unten, um zu bestätigen, dass es deines ist."
 
 msgid "Mail New Connection Place"
-msgstr "Ort"
+msgstr "Ort:"
+
+msgid "Mail New Connection Near"
+msgstr "nahe"
+
+msgid "Mail New Connection Time"
+msgstr "Zeit:"
 
 msgid "Mail New Connection IP"
-msgstr "IP Adresse"
+msgstr "IP Adresse:"
 
 msgid "Mail New Connection Browser"
-msgstr "Browser"
+msgstr "Browser:"
 
 msgid "Mail New Connection OS"
-msgstr "Betriebssystem"
+msgstr "Gerät:"
 
 msgid "Mail New Connection Change Passphrase instruction"
 msgstr ""
-"Das warst du? Klasse! Dann sind wir beruhigt. Entschuldige die "
-"Unannehmlichkeit. Wenn nicht, ändere sofort dein Passwort über den folgenden"
-" Knopf:"
+"Wenn du hinter dieser neuen Verbindung steckst, kannst du diese Nachricht ignorieren und dein Cozy genießen.\n"
+"Wenn nicht, empfehlen wir dir dein Passwort umgehend zu erneuern."
 
 msgid "Mail New Connection Change Passphrase text"
 msgstr "Mein Passwort ändern"
 
+msgid "Mail New Connection Bonus instruction"
+msgstr ""
+"Möchtest du die Sicherheit deines Kontos verstärken? Wir raten dir, die "
+"Zwei-Faktor-Authentifizierung in deinem Konto zu aktivieren."
+
+msgid "Mail New Connection Bonus text"
+msgstr "Zwei-Faktor-Authentifizierung aktivieren"
+
 msgid "Mail New Connection Outro"
 msgstr ""
-"Wofür diese E-Mail? Die Sicherheit von deinem Cozy ist uns wichtig und wir "
-"warnen dich vor jeder unüblichen Verbindung."
+"Warum die E-Mail? Für jedes ungewöhnliche Verhalten bei deinen Verbindungen,"
+" wirst du benachrichtigt, um die Sicherheit deiner Daten sicherzustellen."
+
+msgid "Mail New Connection Signature"
+msgstr ""
+"Bis bald,\n"
+"Dein Cozy"
 
 msgid "Mail New Registration Subject"
 msgstr "Ein neues Gerät hat sich mit deinem %s verbunden"
@@ -656,23 +712,45 @@ msgid "Mail New Registration Revoke text"
 msgstr "Dieses Gerät wiederrufen"
 
 msgid "Mail Sharing Request Subject"
-msgstr "Neue Freigabeanfrage von %s"
+msgstr "Neue Freigabe von %s erteilt"
 
 msgid "Mail Sharing Request Intro"
-msgstr "Hallo %s,"
+msgstr "Hallo,"
 
-msgid "Mail Sharing Request Description 1"
-msgstr "%smöchte mit dir"
+msgid "Mail Sharing Request Description"
+msgstr ""
+"%s(%s) lädt dich ein zum %s der %s%sauf ihrem persönlichen Raum, Cozy."
 
-msgid "Mail Sharing Request Description 2"
-msgstr "teilen!"
+msgid "Mail Sharing Request Action Read"
+msgstr "abrufen"
+
+msgid "Mail Sharing Request Action Write"
+msgstr "aktualisieren"
 
 msgid "Mail Sharing Request Button text"
-msgstr "Freigabe akzeptieren"
+msgstr "Zugriff auf dieses %s"
 
 msgid "Mail Alert Account Subject"
 msgstr ""
 "Das Löschen der Instanz ist beim Bereinigen von Accounts fehlgeschlagen"
+
+msgid "Notification Sharing Subject"
+msgstr "Eine neue Freigabe ist in deinem Cozy verfügbar"
+
+msgid "Notification Sharing Description"
+msgstr "%slädt dich ein zum %sder %s%s"
+
+msgid "Notification Sharing Type Document"
+msgstr "Dokument"
+
+msgid "Notification Sharing Type Directory"
+msgstr "Verzeichnis"
+
+msgid "Notification Sharing Type File"
+msgstr "Datei"
+
+msgid "Notification Sharing Button text"
+msgstr "Die Freigabe ansehen"
 
 msgid "Sharing Connect to Cozy"
 msgstr "Verbinde dich mit deinem Cozy"
@@ -684,17 +762,17 @@ msgid "Sharing Empty description"
 msgstr "Überraschung!"
 
 msgid "Sharing Discovery URL field"
-msgstr "URL"
-
-msgid "Sharing Discovery URL placeholder"
-msgstr "https://deinecozyadresse.cozy"
+msgstr "Deine Cozy Adresse"
 
 msgid "Sharing URL Discovery error"
 msgstr ""
 "Die Cozy URL, die du eingegeben hast ist falsch, bitte versuche es erneut"
 
+msgid "Sharing URL Not email error"
+msgstr "Die Cozy URL ist nicht deine E-Mail-Adresse"
+
 msgid "Sharing Discovery Submit"
-msgstr "Senden"
+msgstr "In mein Cozy synchronisieren"
 
 msgid "Sharing No Cozy"
 msgstr "Hast du noch kein Cozy?"
