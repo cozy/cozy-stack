@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -13,8 +14,12 @@ import (
 // Reset will clean all the data from the instances, and most apps. It should
 // be used only just before an import.
 func Reset(inst *instance.Instance) error {
-	settings, err := inst.SettingsDocument()
+	instanceSettings, err := inst.SettingsDocument()
 	if err != nil {
+		return err
+	}
+	bitwardenSettings, err := settings.Get(inst)
+	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
 	}
 	if err = deleteAccounts(inst); err != nil {
@@ -42,8 +47,14 @@ func Reset(inst *instance.Instance) error {
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Permissions) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Sharings) })
 	g.Go(func() error {
-		settings.SetRev("")
-		return couchdb.CreateNamedDocWithDB(inst, settings)
+		if bitwardenSettings != nil {
+			bitwardenSettings.SetRev("")
+			if err := bitwardenSettings.Save(inst); err != nil {
+				return err
+			}
+		}
+		instanceSettings.SetRev("")
+		return couchdb.CreateNamedDocWithDB(inst, instanceSettings)
 		// The myself contact is created by the import, not here, so that this
 		// document has the same ID than on the source instance.
 	})
