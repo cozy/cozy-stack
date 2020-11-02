@@ -457,11 +457,6 @@ func TestUninstallAppWithoutLinkedClient(t *testing.T) {
 	assert.Nil(t, errc)
 }
 
-func TestRemoveFakeTriggersFromBanksManifest(t *testing.T) {
-	testutils.TODO(t, "2020-11-01",
-		"Remove the triggers from the bank manifest for services called programmatically")
-}
-
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"

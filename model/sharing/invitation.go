@@ -322,38 +322,3 @@ func getTargetType(inst *instance.Instance, metadata map[string]interface{}) str
 	}
 	return inst.Translate("Notification Sharing Type File")
 }
-
-// InviteMsg is the struct for the invite route
-type InviteMsg struct {
-	Sharer      string `json:"sharer_public_name"`
-	Description string `json:"description"`
-	Link        string `json:"sharing_link"`
-}
-
-// SendInviteMail will send an invitation email to the owner of this cozy.
-func SendInviteMail(inst *instance.Instance, invite *InviteMsg) error {
-	action := inst.Translate("Mail Sharing Request Action Read")
-	docType := inst.Translate("Notification Sharing Type Directory")
-	mailValues := map[string]interface{}{
-		"SharerPublicName": invite.Sharer,
-		"SharerEmail":      "",
-		"Action":           action,
-		"Description":      invite.Description,
-		"DocType":          docType,
-		"SharingLink":      invite.Link,
-	}
-	msg, err := job.NewMessage(mail.Options{
-		Mode:           "noreply",
-		TemplateName:   "sharing_request",
-		TemplateValues: mailValues,
-		Layout:         mail.CozyCloudLayout,
-	})
-	if err != nil {
-		return err
-	}
-	_, err = job.System().PushJob(inst, &job.JobRequest{
-		WorkerType: "sendmail",
-		Message:    msg,
-	})
-	return err
-}
