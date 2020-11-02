@@ -1090,10 +1090,6 @@ func TestRevocationFromRecipient(t *testing.T) {
 	assertLastRecipientIsRevoked(t, s, sharedRefs)
 }
 
-func TestRemoveTheDeprecatedInviteRoute(t *testing.T) {
-	testutils.TODO(t, "2020-11-01", "Remove the deprecated route /sharings/invite")
-}
-
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"

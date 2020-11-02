@@ -17,7 +17,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/initials"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
-	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/hashicorp/go-multierror"
@@ -228,27 +227,6 @@ func AnswerSharing(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	return jsonapi.Data(c, http.StatusOK, ac, nil)
-}
-
-// Invite is used on a recipient to send them a mail inviation when the sharer
-// only knows their instance, and not their email address.
-func Invite(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-	err := limits.CheckRateLimit(inst, limits.SharingInviteType)
-	if limits.IsLimitReachedOrExceeded(err) {
-		return wrapErrors(sharing.ErrInvitationNotSent)
-	}
-	var body sharing.InviteMsg
-	if err := json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
-		return wrapErrors(err)
-	}
-	if body.Sharer == "" || body.Description == "" || body.Link == "" {
-		return wrapErrors(sharing.ErrInvitationNotSent)
-	}
-	if err := sharing.SendInviteMail(inst, &body); err != nil {
-		return wrapErrors(err)
-	}
-	return c.NoContent(http.StatusNoContent)
 }
 
 func addRecipientsToSharing(inst *instance.Instance, s *sharing.Sharing, rel *jsonapi.Relationship, readOnly bool) error {
@@ -662,7 +640,6 @@ func Routes(router *echo.Group) {
 	router.PUT("/:sharing-id", PutSharing) // On a recipient
 	router.GET("/:sharing-id", GetSharing)
 	router.POST("/:sharing-id/answer", AnswerSharing)
-	router.POST("/invite", Invite) // TODO Remove this route (cf TestRemoveTheDeprecatedInviteRoute)
 
 	// Managing recipients
 	router.POST("/:sharing-id/recipients", AddRecipients)
