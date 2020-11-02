@@ -101,8 +101,8 @@ func NewTrigger(db prefixer.Prefixer, infos TriggerInfos, data interface{}) (Tri
 		if err != nil {
 			return nil, err
 		}
+		infos.Message = msg
 	}
-	infos.Message = msg
 	infos.Prefix = db.DBPrefix()
 	infos.Domain = db.DomainName()
 
@@ -203,6 +203,14 @@ func (t *TriggerInfos) Fetch(field string) []string {
 		return []string{t.WorkerType}
 	}
 	return nil
+}
+
+func createTrigger(t Trigger) error {
+	infos := t.Infos()
+	if infos.TID != "" {
+		return couchdb.CreateNamedDoc(t, infos)
+	}
+	return couchdb.CreateDoc(t, infos)
 }
 
 // GetJobs returns the jobs launched by the given trigger.

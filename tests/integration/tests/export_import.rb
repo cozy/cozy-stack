@@ -38,6 +38,7 @@ describe "Export and import" do
       ws.on :message do |event|
         msg = JSON.parse(event.data)
         finished = msg.key? "redirect"
+        ap msg unless finished
         ws.close
       end
 
@@ -47,6 +48,7 @@ describe "Export and import" do
 
       # Add a timeout after 1 minute to avoid being stuck
       EM::Timer.new(60) do
+        flunk "timeout"
         EM.stop
       end
     end

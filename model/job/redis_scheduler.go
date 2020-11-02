@@ -290,8 +290,7 @@ func (s *redisScheduler) PollScheduler(now int64) error {
 // AddTrigger a trigger to the system, by persisting it and using redis for
 // scheduling its jobs
 func (s *redisScheduler) AddTrigger(t Trigger) error {
-	infos := t.Infos()
-	if err := couchdb.CreateDoc(t, infos); err != nil {
+	if err := createTrigger(t); err != nil {
 		return err
 	}
 	return s.addToRedis(t, time.Now())

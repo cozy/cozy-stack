@@ -72,7 +72,7 @@ func ScheduleImport(inst *instance.Instance, options ImportOptions) error {
 }
 
 func transformSettingsURLToManifestURL(settingsURL string) (string, error) {
-	u, err := url.Parse(settingsURL)
+	u, err := url.Parse(strings.TrimSpace(settingsURL))
 	if err != nil {
 		return "", err
 	}

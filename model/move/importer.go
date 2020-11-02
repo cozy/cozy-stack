@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -118,8 +119,21 @@ func (im *importer) importZip(zr zip.Reader) error {
 			im.installApp(id)
 			continue
 		case consts.Triggers:
-			// TODO not yet implemented, they need to be filtered to avoid duplicated,
-			// and also injected in redis/memory
+			doc, err := im.readTrigger(file)
+			if err != nil {
+				return err
+			}
+			if doc.WorkerType != "konnector" {
+				continue
+			}
+			doc.SetRev("")
+			t, err := job.NewTrigger(im.inst, *doc, nil)
+			if err != nil {
+				return err
+			}
+			if err = job.System().AddTrigger(t); err != nil {
+				return err
+			}
 			continue
 		case consts.Files, consts.FilesVersions:
 			// TODO not yet implemented, as they have an associated content
@@ -194,6 +208,22 @@ func (im *importer) readDoc(zf *zip.File) (map[string]interface{}, error) {
 	}
 	var doc map[string]interface{}
 	err = json.NewDecoder(r).Decode(&doc)
+	if errc := r.Close(); errc != nil {
+		return nil, errc
+	}
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+func (im *importer) readTrigger(zf *zip.File) (*job.TriggerInfos, error) {
+	r, err := zf.Open()
+	if err != nil {
+		return nil, err
+	}
+	doc := &job.TriggerInfos{}
+	err = json.NewDecoder(r).Decode(doc)
 	if errc := r.Close(); errc != nil {
 		return nil, errc
 	}
