@@ -49,8 +49,10 @@ func AskReupload(inst *instance.Instance) error {
 				}
 			}
 		} else {
-			if err := askReuploadTo(inst, s, &s.Members[0], &s.Credentials[0]); err != nil {
-				errm = multierror.Append(errm, err)
+			if len(s.Credentials) > 0 {
+				if err := askReuploadTo(inst, s, &s.Members[0], &s.Credentials[0]); err != nil {
+					errm = multierror.Append(errm, err)
+				}
 			}
 		}
 	}
