@@ -215,13 +215,10 @@ func wsImporting(c echo.Context) error {
 			}
 			worker := doc.Fetch("worker")
 			state := doc.Fetch("state")
-			inst.Logger().Warnf("worker = %#v // state = %#v", worker, state)
-			if len(worker) != 1 || worker[0] != "import" || len(state) == 1 {
+			if len(worker) != 1 || worker[0] != "import" || len(state) != 1 {
 				continue
 			}
-			s := job.State(state[0])
-			inst.Logger().Warnf("s = %#v", s)
-			if s != job.Done && s != job.Errored {
+			if s := job.State(state[0]); s != job.Done && s != job.Errored {
 				continue
 			}
 			wsDone(ws, inst)

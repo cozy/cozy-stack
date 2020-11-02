@@ -1,5 +1,7 @@
 require_relative '../boot'
 require 'minitest/autorun'
+require 'faye/websocket'
+require 'eventmachine'
 require 'pry-rescue/minitest' unless ENV['CI']
 
 describe "Export and import" do
@@ -27,7 +29,29 @@ describe "Export and import" do
     import = Import.new(dest, link)
     import.precheck
     import.run
-    import.wait_done
+
+    # Wait that the import has finished via the websocket
+    finished = false
+    EM.run do
+      ws = Faye::WebSocket::Client.new("ws://#{dest.domain}/move/importing/realtime")
+
+      ws.on :message do |event|
+        msg = JSON.parse(event.data)
+        finished = msg.key? "redirect"
+        ws.close
+      end
+
+      ws.on :close do
+        EM.stop
+      end
+
+      # Add a timeout after 1 minute to avoid being stuck
+      EM::Timer.new(60) do
+        EM.stop
+      end
+    end
+    assert finished
+    import.get_mail
 
     dest.stack.reset_tokens
 

@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 )
 
@@ -57,7 +58,17 @@ func ScheduleImport(inst *instance.Instance, options ImportOptions) error {
 		WorkerType: "import",
 		Message:    msg,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	settings, err := inst.SettingsDocument()
+	if err != nil {
+		return nil
+	}
+	settings.M["importing"] = true
+	_ = couchdb.UpdateDoc(inst, settings)
+	return nil
 }
 
 func transformSettingsURLToManifestURL(settingsURL string) (string, error) {
@@ -108,6 +119,14 @@ func fetchManifest(manifestURL string) (*ExportDoc, error) {
 // local instance. It returns the list of slugs for apps/konnectors that have
 // not been installed.
 func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
+	defer func() {
+		settings, err := inst.SettingsDocument()
+		if err == nil {
+			delete(settings.M, "importing")
+			_ = couchdb.UpdateDoc(inst, settings)
+		}
+	}()
+
 	doc, err := fetchManifest(options.ManifestURL)
 	if err != nil {
 		return nil, err
@@ -132,4 +151,14 @@ func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
 	}
 
 	return im.appsNotInstalled, nil
+}
+
+// ImportIsFinished returns true unless an import is running
+func ImportIsFinished(inst *instance.Instance) bool {
+	settings, err := inst.SettingsDocument()
+	if err != nil {
+		return false
+	}
+	importing, _ := settings.M["importing"].(bool)
+	return !importing
 }
