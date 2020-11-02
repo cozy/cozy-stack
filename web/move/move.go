@@ -4,14 +4,18 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 )
 
@@ -149,6 +153,90 @@ func waitImportHasFinished(c echo.Context) error {
 	})
 }
 
+const (
+	// Time allowed to write a message to the peer
+	writeWait = 10 * time.Second
+
+	// Time allowed to read the next pong message from the peer
+	pongWait = 60 * time.Second
+
+	// Send pings to peer with this period (must be less than pongWait)
+	pingPeriod = (pongWait * 9) / 10
+)
+
+var upgrader = websocket.Upgrader{
+	// Don't check the origin of the connexion
+	CheckOrigin:     func(r *http.Request) bool { return true },
+	Subprotocols:    []string{"io.cozy.websocket"},
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+func wsDone(ws *websocket.Conn, inst *instance.Instance) {
+	redirect := inst.PageURL("/auth/login", nil)
+	_ = ws.SetWriteDeadline(time.Now().Add(writeWait))
+	_ = ws.WriteJSON(echo.Map{"redirect": redirect})
+}
+
+func wsImporting(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
+	if err != nil {
+		return err
+	}
+	defer ws.Close()
+
+	if move.ImportIsFinished(inst) {
+		wsDone(ws, inst)
+		return nil
+	}
+
+	if err = ws.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		return err
+	}
+	ws.SetPongHandler(func(string) error {
+		return ws.SetReadDeadline(time.Now().Add(pongWait))
+	})
+
+	ticker := time.NewTicker(pingPeriod)
+	defer ticker.Stop()
+	ds := realtime.GetHub().Subscriber(inst)
+	defer ds.Close()
+	if err = ds.Subscribe(consts.Jobs); err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case e := <-ds.Channel:
+			doc, ok := e.Doc.(permission.Fetcher)
+			if !ok {
+				continue
+			}
+			worker := doc.Fetch("worker")
+			state := doc.Fetch("state")
+			inst.Logger().Warnf("worker = %#v // state = %#v", worker, state)
+			if len(worker) != 1 || worker[0] != "import" || len(state) == 1 {
+				continue
+			}
+			s := job.State(state[0])
+			inst.Logger().Warnf("s = %#v", s)
+			if s != job.Done && s != job.Errored {
+				continue
+			}
+			wsDone(ws, inst)
+			return nil
+		case <-ticker.C:
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return err
+			}
+			if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 // Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
 	g.POST("/exports", createExport)
@@ -159,6 +247,7 @@ func Routes(g *echo.Group) {
 	g.POST("/imports", createImport)
 
 	g.GET("/importing", waitImportHasFinished)
+	g.GET("/importing/realtime", wsImporting)
 }
 
 func wrapError(err error) error {

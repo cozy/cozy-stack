@@ -175,3 +175,12 @@ Location: https://destination.cozy.tools/move/importing
 ### GET /move/importing
 
 This shows a page for the user to wait that the import finishes.
+
+### GET /move/importing/realtime
+
+This is a websocket endpoint that can be used to wait for the end of the
+import. The server will send an event when it is done (or errored):
+
+```
+server> {"redirect": "http://cozy.tools:8080/auth/login"}
+```
