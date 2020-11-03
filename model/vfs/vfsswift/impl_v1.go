@@ -182,7 +182,7 @@ func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
 	return sfs.Indexer.CreateNamedDirDoc(doc)
 }
 
-func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
+func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateOptions) (vfs.File, error) {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return nil, lockerr
 	}
@@ -225,7 +225,9 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 	if strings.HasPrefix(newpath, vfs.TrashDirName+"/") {
-		return nil, vfs.ErrParentInTrash
+		if !vfs.OptionsAllowCreationInTrash(opts) {
+			return nil, vfs.ErrParentInTrash
+		}
 	}
 
 	// Avoid storing negative size in the index.

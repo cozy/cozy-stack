@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 type importer struct {
@@ -84,6 +85,8 @@ func (im *importer) downloadFile(cursor string) error {
 }
 
 func (im *importer) importZip(zr zip.Reader) error {
+	var errm error
+
 	for i, file := range zr.File {
 		if !strings.HasPrefix(file.FileHeader.Name, ExportDataDir+"/") {
 			continue
@@ -123,7 +126,7 @@ func (im *importer) importZip(zr zip.Reader) error {
 			continue
 		case consts.Triggers:
 			if err := im.importTrigger(file); err != nil {
-				return err
+				errm = multierror.Append(errm, err)
 			}
 			continue
 		case consts.Files:
@@ -132,7 +135,7 @@ func (im *importer) importZip(zr zip.Reader) error {
 				content = zr.File[i+1]
 			}
 			if err := im.importFile(file, content); err != nil {
-				return err
+				errm = multierror.Append(errm, err)
 			}
 			continue
 		case consts.FilesVersions:
@@ -140,7 +143,7 @@ func (im *importer) importZip(zr zip.Reader) error {
 				continue
 			}
 			if err := im.importFileVersion(file, zr.File[i+1]); err != nil {
-				return err
+				errm = multierror.Append(errm, err)
 			}
 			continue
 		}
@@ -148,12 +151,15 @@ func (im *importer) importZip(zr zip.Reader) error {
 		// Normal documents
 		if doctype != im.doctype || len(im.docs) >= 1000 {
 			if err := im.flush(); err != nil {
-				return err
+				errm = multierror.Append(errm, err)
+				im.docs = nil
+				im.doctype = ""
 			}
 		}
 		doc, err := im.readDoc(file)
 		if err != nil {
-			return err
+			errm = multierror.Append(errm, err)
+			continue
 		}
 		delete(doc, "_rev")
 		im.doctype = doctype
@@ -161,7 +167,7 @@ func (im *importer) importZip(zr zip.Reader) error {
 	}
 
 	if err := im.flush(); err != nil {
-		return err
+		errm = multierror.Append(errm, err)
 	}
 
 	// Reinject the email address from the destination Cozy in the myself
@@ -180,7 +186,7 @@ func (im *importer) importZip(zr zip.Reader) error {
 			}
 		}
 	}
-	return nil
+	return errm
 }
 
 func (im *importer) flush() error {
@@ -302,7 +308,7 @@ func (im *importer) importFile(zdoc, zcontent *zip.File) error {
 		return errors.New("No content for file")
 	}
 	fileDoc.SetRev("")
-	f, err := im.fs.CreateFile(fileDoc, nil)
+	f, err := im.fs.CreateFile(fileDoc, nil, vfs.AllowCreationInTrash)
 	if err != nil {
 		return err
 	}

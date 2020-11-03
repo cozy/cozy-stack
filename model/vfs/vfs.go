@@ -58,6 +58,15 @@ var ErrSkipDir = errors.New("skip directories")
 // recursivity allowed is reached when browsing the index tree.
 var ErrWalkOverflow = errors.New("vfs: walk overflow")
 
+// CreateOptions is used for options on the create file operation
+type CreateOptions int
+
+const (
+	// AllowCreationInTrash is an option to allow bypassing the rule that
+	// forbids the creation of file in the trash.
+	AllowCreationInTrash CreateOptions = 1 + iota
+)
+
 // Fs is an interface providing a set of high-level methods to interact with
 // the file-system binaries and metadata.
 type Fs interface {
@@ -79,7 +88,7 @@ type Fs interface {
 	// version of the file.
 	//
 	// Warning: you MUST call the Close() method and check for its error.
-	CreateFile(newdoc, olddoc *FileDoc) (File, error)
+	CreateFile(newdoc, olddoc *FileDoc, opts ...CreateOptions) (File, error)
 	// DestroyDirContent destroys all directories and files contained in a
 	// directory.
 	DestroyDirContent(doc *DirDoc, push func(TrashJournal) error) error
@@ -815,4 +824,14 @@ func uniqueTags(tags []string) []string {
 		}
 	}
 	return clone
+}
+
+// OptionsAllowCreationInTrash returns true if one of the given option says so.
+func OptionsAllowCreationInTrash(opts []CreateOptions) bool {
+	for _, opt := range opts {
+		if opt == AllowCreationInTrash {
+			return true
+		}
+	}
+	return false
 }
