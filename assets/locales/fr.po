@@ -3,9 +3,10 @@
 # Pierre Vandekerckhove <pierre4vdk@gmail.com>, 2019
 # Maxime M <maxime@cozycloud.cc>, 2019
 # Cyrille Perois <cyrille@cozycloud.cc>, 2019
-# JC Pagnon <gooz@cozycloud.cc>, 2019
 # Nicolas Vinot, 2019
 # Pierre Guillemot <pierrot@cozycloud.cc>, 2019
+# Paul Tran-Van <paul@cozycloud.cc>, 2020
+# JC Pagnon <gooz@cozycloud.cc>, 2020
 # Bruno Michel, 2020
 # 
 msgid ""
@@ -318,6 +319,14 @@ msgstr ""
 "En l'autorisant, l'application pourra accéder aux données suivantes de votre"
 " Cozy :"
 
+msgid "Import Title"
+msgstr "Import en cours"
+
+msgid "Import Description"
+msgstr ""
+"L'import des données peut prendre du temps. Vous pouvez fermer cet écran en "
+"toute tranquillité, un mail vous sera envoyé une fois l'import terminé."
+
 msgid "Error Title"
 msgstr "Désolé, une erreur est survenue."
 
@@ -626,6 +635,47 @@ msgstr "Vous pouvez la télécharger en cliquant sur ce lien."
 
 msgid "Mail Archive Button text"
 msgstr "Télécharger vos données"
+
+msgid "Mail Archive Alternative text"
+msgstr "Le lien de téléchargement de votre Cozy est le suivant :"
+
+msgid "Mail Import Success Subject"
+msgstr "Bonne nouvelle ! L'import dans votre Cozy est terminé"
+
+msgid "Mail Import Success Intro 1"
+msgstr "Bonjour %s,"
+
+msgid "Mail Import Success Intro 2"
+msgstr ""
+"L'import de toutes vos données dans votre Cozy s'est déroulé avec succès."
+
+msgid "Mail Import Success Button instruction"
+msgstr ""
+"Vous pouvez dès à présent accéder à vos données dans votre Cozy en cliquant "
+"sur le bouton suivant :"
+
+msgid "Mail Import Success Button text"
+msgstr "Accéder à mon Cozy"
+
+msgid "Mail Import Success Apps not installed"
+msgstr ""
+"Pour information, les services %s n'ont pas pu être ré-installés. Toutefois,"
+" les données associées ont bien été importées."
+
+msgid "Mail Import Success Outro"
+msgstr "A bientôt, votre Cozy"
+
+msgid "Mail Import Error Subject"
+msgstr "⚠ L'import dans votre Cozy n'a pas abouti"
+
+msgid "Mail Import Error Text"
+msgstr ""
+"L'import des données dans votre Cozy a rencontré un souci. L'archive "
+"transmise à votre Cozy ne semble pas valide. Pouvez-vous renouveler "
+"l'opération depuis le début ?"
+
+msgid "Mail Import Error Outro"
+msgstr "Si le souci persiste, contactez le support client."
 
 msgid "Mail Two Factor Subject"
 msgstr "Code de connexion à usage unique"
