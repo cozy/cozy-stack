@@ -40,6 +40,12 @@ __cozy-stack_handle_go_custom_completion()
 {
     __cozy-stack_debug "${FUNCNAME[0]}: cur is ${cur}, words[*] is ${words[*]}, #words[@] is ${#words[@]}"
 
+    local shellCompDirectiveError=1
+    local shellCompDirectiveNoSpace=2
+    local shellCompDirectiveNoFileComp=4
+    local shellCompDirectiveFilterFileExt=8
+    local shellCompDirectiveFilterDirs=16
+
     local out requestComp lastParam lastChar comp directive args
 
     # Prepare the command to request completions for the program.
@@ -73,24 +79,50 @@ __cozy-stack_handle_go_custom_completion()
     __cozy-stack_debug "${FUNCNAME[0]}: the completion directive is: ${directive}"
     __cozy-stack_debug "${FUNCNAME[0]}: the completions are: ${out[*]}"
 
-    if [ $((directive & 1)) -ne 0 ]; then
+    if [ $((directive & shellCompDirectiveError)) -ne 0 ]; then
         # Error code.  No completion.
         __cozy-stack_debug "${FUNCNAME[0]}: received error from custom completion go code"
         return
     else
-        if [ $((directive & 2)) -ne 0 ]; then
+        if [ $((directive & shellCompDirectiveNoSpace)) -ne 0 ]; then
             if [[ $(type -t compopt) = "builtin" ]]; then
                 __cozy-stack_debug "${FUNCNAME[0]}: activating no space"
                 compopt -o nospace
             fi
         fi
-        if [ $((directive & 4)) -ne 0 ]; then
+        if [ $((directive & shellCompDirectiveNoFileComp)) -ne 0 ]; then
             if [[ $(type -t compopt) = "builtin" ]]; then
                 __cozy-stack_debug "${FUNCNAME[0]}: activating no file completion"
                 compopt +o default
             fi
         fi
+    fi
 
+    if [ $((directive & shellCompDirectiveFilterFileExt)) -ne 0 ]; then
+        # File extension filtering
+        local fullFilter filter filteringCmd
+        # Do not use quotes around the $out variable or else newline
+        # characters will be kept.
+        for filter in ${out[*]}; do
+            fullFilter+="$filter|"
+        done
+
+        filteringCmd="_filedir $fullFilter"
+        __cozy-stack_debug "File filtering command: $filteringCmd"
+        $filteringCmd
+    elif [ $((directive & shellCompDirectiveFilterDirs)) -ne 0 ]; then
+        # File completion for directories only
+        local subDir
+        # Use printf to strip any trailing newline
+        subdir=$(printf "%s" "${out[0]}")
+        if [ -n "$subdir" ]; then
+            __cozy-stack_debug "Listing directories in $subdir"
+            __cozy-stack_handle_subdirs_in_dir_flag "$subdir"
+        else
+            __cozy-stack_debug "Listing directories in ."
+            _filedir -d
+        fi
+    else
         while IFS='' read -r comp; do
             COMPREPLY+=("$comp")
         done < <(compgen -W "${out[*]}" -- "$cur")
@@ -159,10 +191,9 @@ __cozy-stack_handle_reply()
     local completions
     completions=("${commands[@]}")
     if [[ ${#must_have_one_noun[@]} -ne 0 ]]; then
-        completions=("${must_have_one_noun[@]}")
+        completions+=("${must_have_one_noun[@]}")
     elif [[ -n "${has_completion_function}" ]]; then
         # if a go completion function is provided, defer to that function
-        completions=()
         __cozy-stack_handle_go_custom_completion
     fi
     if [[ ${#must_have_one_flag[@]} -ne 0 ]]; then
@@ -563,15 +594,19 @@ _cozy-stack_assets_add()
 
     flags+=("--context=")
     two_word_flags+=("--context")
+    local_nonpersistent_flags+=("--context")
     local_nonpersistent_flags+=("--context=")
     flags+=("--name=")
     two_word_flags+=("--name")
+    local_nonpersistent_flags+=("--name")
     local_nonpersistent_flags+=("--name=")
     flags+=("--shasum=")
     two_word_flags+=("--shasum")
+    local_nonpersistent_flags+=("--shasum")
     local_nonpersistent_flags+=("--shasum=")
     flags+=("--url=")
     two_word_flags+=("--url")
+    local_nonpersistent_flags+=("--url")
     local_nonpersistent_flags+=("--url=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -888,6 +923,7 @@ _cozy-stack_completion()
     flags+=("--help")
     flags+=("-h")
     local_nonpersistent_flags+=("--help")
+    local_nonpersistent_flags+=("-h")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
     flags+=("--admin-port=")
@@ -1085,15 +1121,19 @@ _cozy-stack_config_insert-asset()
 
     flags+=("--context=")
     two_word_flags+=("--context")
+    local_nonpersistent_flags+=("--context")
     local_nonpersistent_flags+=("--context=")
     flags+=("--name=")
     two_word_flags+=("--name")
+    local_nonpersistent_flags+=("--name")
     local_nonpersistent_flags+=("--name=")
     flags+=("--shasum=")
     two_word_flags+=("--shasum")
+    local_nonpersistent_flags+=("--shasum")
     local_nonpersistent_flags+=("--shasum=")
     flags+=("--url=")
     two_word_flags+=("--url")
+    local_nonpersistent_flags+=("--url")
     local_nonpersistent_flags+=("--url=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -1417,6 +1457,7 @@ _cozy-stack_features_config()
 
     flags+=("--context=")
     two_word_flags+=("--context")
+    local_nonpersistent_flags+=("--context")
     local_nonpersistent_flags+=("--context=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -1484,6 +1525,7 @@ _cozy-stack_features_flags()
 
     flags+=("--domain=")
     two_word_flags+=("--domain")
+    local_nonpersistent_flags+=("--domain")
     local_nonpersistent_flags+=("--domain=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -1519,6 +1561,7 @@ _cozy-stack_features_ratio()
 
     flags+=("--context=")
     two_word_flags+=("--context")
+    local_nonpersistent_flags+=("--context")
     local_nonpersistent_flags+=("--context=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -1554,6 +1597,7 @@ _cozy-stack_features_sets()
 
     flags+=("--domain=")
     two_word_flags+=("--domain")
+    local_nonpersistent_flags+=("--domain")
     local_nonpersistent_flags+=("--domain=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -1589,6 +1633,7 @@ _cozy-stack_features_show()
 
     flags+=("--domain=")
     two_word_flags+=("--domain")
+    local_nonpersistent_flags+=("--domain")
     local_nonpersistent_flags+=("--domain=")
     flags+=("--source")
     local_nonpersistent_flags+=("--source")
@@ -1708,12 +1753,15 @@ _cozy-stack_files_import()
     local_nonpersistent_flags+=("--dry-run")
     flags+=("--from=")
     two_word_flags+=("--from")
+    local_nonpersistent_flags+=("--from")
     local_nonpersistent_flags+=("--from=")
     flags+=("--match=")
     two_word_flags+=("--match")
+    local_nonpersistent_flags+=("--match")
     local_nonpersistent_flags+=("--match=")
     flags+=("--to=")
     two_word_flags+=("--to")
+    local_nonpersistent_flags+=("--to")
     local_nonpersistent_flags+=("--to=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -2145,6 +2193,39 @@ _cozy-stack_fix()
     noun_aliases=()
 }
 
+_cozy-stack_help()
+{
+    last_command="cozy-stack_help"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    has_completion_function=1
+    noun_aliases=()
+}
+
 _cozy-stack_instances_add()
 {
     last_command="cozy-stack_instances_add"
@@ -2161,49 +2242,63 @@ _cozy-stack_instances_add()
 
     flags+=("--apps=")
     two_word_flags+=("--apps")
+    local_nonpersistent_flags+=("--apps")
     local_nonpersistent_flags+=("--apps=")
     flags+=("--context-name=")
     two_word_flags+=("--context-name")
+    local_nonpersistent_flags+=("--context-name")
     local_nonpersistent_flags+=("--context-name=")
     flags+=("--dev")
     local_nonpersistent_flags+=("--dev")
     flags+=("--disk-quota=")
     two_word_flags+=("--disk-quota")
+    local_nonpersistent_flags+=("--disk-quota")
     local_nonpersistent_flags+=("--disk-quota=")
     flags+=("--domain-aliases=")
     two_word_flags+=("--domain-aliases")
+    local_nonpersistent_flags+=("--domain-aliases")
     local_nonpersistent_flags+=("--domain-aliases=")
     flags+=("--email=")
     two_word_flags+=("--email")
+    local_nonpersistent_flags+=("--email")
     local_nonpersistent_flags+=("--email=")
     flags+=("--locale=")
     two_word_flags+=("--locale")
+    local_nonpersistent_flags+=("--locale")
     local_nonpersistent_flags+=("--locale=")
     flags+=("--oidc_id=")
     two_word_flags+=("--oidc_id")
+    local_nonpersistent_flags+=("--oidc_id")
     local_nonpersistent_flags+=("--oidc_id=")
     flags+=("--passphrase=")
     two_word_flags+=("--passphrase")
+    local_nonpersistent_flags+=("--passphrase")
     local_nonpersistent_flags+=("--passphrase=")
     flags+=("--public-name=")
     two_word_flags+=("--public-name")
+    local_nonpersistent_flags+=("--public-name")
     local_nonpersistent_flags+=("--public-name=")
     flags+=("--settings=")
     two_word_flags+=("--settings")
+    local_nonpersistent_flags+=("--settings")
     local_nonpersistent_flags+=("--settings=")
     flags+=("--swift-layout=")
     two_word_flags+=("--swift-layout")
+    local_nonpersistent_flags+=("--swift-layout")
     local_nonpersistent_flags+=("--swift-layout=")
     flags+=("--tos=")
     two_word_flags+=("--tos")
+    local_nonpersistent_flags+=("--tos")
     local_nonpersistent_flags+=("--tos=")
     flags+=("--trace")
     local_nonpersistent_flags+=("--trace")
     flags+=("--tz=")
     two_word_flags+=("--tz")
+    local_nonpersistent_flags+=("--tz")
     local_nonpersistent_flags+=("--tz=")
     flags+=("--uuid=")
     two_word_flags+=("--uuid")
+    local_nonpersistent_flags+=("--uuid")
     local_nonpersistent_flags+=("--uuid=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -2275,15 +2370,19 @@ _cozy-stack_instances_client-oauth()
     local_nonpersistent_flags+=("--json")
     flags+=("--onboarding-app=")
     two_word_flags+=("--onboarding-app")
+    local_nonpersistent_flags+=("--onboarding-app")
     local_nonpersistent_flags+=("--onboarding-app=")
     flags+=("--onboarding-permissions=")
     two_word_flags+=("--onboarding-permissions")
+    local_nonpersistent_flags+=("--onboarding-permissions")
     local_nonpersistent_flags+=("--onboarding-permissions=")
     flags+=("--onboarding-secret=")
     two_word_flags+=("--onboarding-secret")
+    local_nonpersistent_flags+=("--onboarding-secret")
     local_nonpersistent_flags+=("--onboarding-secret=")
     flags+=("--onboarding-state=")
     two_word_flags+=("--onboarding-state")
+    local_nonpersistent_flags+=("--onboarding-state")
     local_nonpersistent_flags+=("--onboarding-state=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -2351,9 +2450,11 @@ _cozy-stack_instances_debug()
 
     flags+=("--domain=")
     two_word_flags+=("--domain")
+    local_nonpersistent_flags+=("--domain")
     local_nonpersistent_flags+=("--domain=")
     flags+=("--ttl=")
     two_word_flags+=("--ttl")
+    local_nonpersistent_flags+=("--ttl")
     local_nonpersistent_flags+=("--ttl=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -2423,6 +2524,7 @@ _cozy-stack_instances_export()
 
     flags+=("--domain=")
     two_word_flags+=("--domain")
+    local_nonpersistent_flags+=("--domain")
     local_nonpersistent_flags+=("--domain=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -2529,14 +2631,12 @@ _cozy-stack_instances_import()
     flags_with_completion=()
     flags_completion=()
 
-    flags+=("--directory=")
-    two_word_flags+=("--directory")
-    local_nonpersistent_flags+=("--directory=")
     flags+=("--domain=")
     two_word_flags+=("--domain")
+    local_nonpersistent_flags+=("--domain")
     local_nonpersistent_flags+=("--domain=")
-    flags+=("--increase-quota")
-    local_nonpersistent_flags+=("--increase-quota")
+    flags+=("--force")
+    local_nonpersistent_flags+=("--force")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
     flags+=("--admin-port=")
@@ -2574,6 +2674,7 @@ _cozy-stack_instances_ls()
     local_nonpersistent_flags+=("--available-fields")
     flags+=("--fields=")
     two_word_flags+=("--fields")
+    local_nonpersistent_flags+=("--fields")
     local_nonpersistent_flags+=("--fields=")
     flags+=("--json")
     local_nonpersistent_flags+=("--json")
@@ -2613,43 +2714,55 @@ _cozy-stack_instances_modify()
     local_nonpersistent_flags+=("--blocked")
     flags+=("--context-name=")
     two_word_flags+=("--context-name")
+    local_nonpersistent_flags+=("--context-name")
     local_nonpersistent_flags+=("--context-name=")
     flags+=("--deleting")
     local_nonpersistent_flags+=("--deleting")
     flags+=("--disk-quota=")
     two_word_flags+=("--disk-quota")
+    local_nonpersistent_flags+=("--disk-quota")
     local_nonpersistent_flags+=("--disk-quota=")
     flags+=("--domain-aliases=")
     two_word_flags+=("--domain-aliases")
+    local_nonpersistent_flags+=("--domain-aliases")
     local_nonpersistent_flags+=("--domain-aliases=")
     flags+=("--email=")
     two_word_flags+=("--email")
+    local_nonpersistent_flags+=("--email")
     local_nonpersistent_flags+=("--email=")
     flags+=("--locale=")
     two_word_flags+=("--locale")
+    local_nonpersistent_flags+=("--locale")
     local_nonpersistent_flags+=("--locale=")
     flags+=("--oidc_id=")
     two_word_flags+=("--oidc_id")
+    local_nonpersistent_flags+=("--oidc_id")
     local_nonpersistent_flags+=("--oidc_id=")
     flags+=("--onboarding-finished")
     local_nonpersistent_flags+=("--onboarding-finished")
     flags+=("--public-name=")
     two_word_flags+=("--public-name")
+    local_nonpersistent_flags+=("--public-name")
     local_nonpersistent_flags+=("--public-name=")
     flags+=("--settings=")
     two_word_flags+=("--settings")
+    local_nonpersistent_flags+=("--settings")
     local_nonpersistent_flags+=("--settings=")
     flags+=("--tos=")
     two_word_flags+=("--tos")
+    local_nonpersistent_flags+=("--tos")
     local_nonpersistent_flags+=("--tos=")
     flags+=("--tos-latest=")
     two_word_flags+=("--tos-latest")
+    local_nonpersistent_flags+=("--tos-latest")
     local_nonpersistent_flags+=("--tos-latest=")
     flags+=("--tz=")
     two_word_flags+=("--tz")
+    local_nonpersistent_flags+=("--tz")
     local_nonpersistent_flags+=("--tz=")
     flags+=("--uuid=")
     two_word_flags+=("--uuid")
+    local_nonpersistent_flags+=("--uuid")
     local_nonpersistent_flags+=("--uuid=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -2909,6 +3022,7 @@ _cozy-stack_instances_token-app()
 
     flags+=("--expire=")
     two_word_flags+=("--expire")
+    local_nonpersistent_flags+=("--expire")
     local_nonpersistent_flags+=("--expire=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -3008,6 +3122,7 @@ _cozy-stack_instances_token-oauth()
 
     flags+=("--expire=")
     two_word_flags+=("--expire")
+    local_nonpersistent_flags+=("--expire")
     local_nonpersistent_flags+=("--expire=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -3045,9 +3160,11 @@ _cozy-stack_instances_update()
     local_nonpersistent_flags+=("--all-domains")
     flags+=("--context-name=")
     two_word_flags+=("--context-name")
+    local_nonpersistent_flags+=("--context-name")
     local_nonpersistent_flags+=("--context-name=")
     flags+=("--domain=")
     two_word_flags+=("--domain")
+    local_nonpersistent_flags+=("--domain")
     local_nonpersistent_flags+=("--domain=")
     flags+=("--force-registry")
     local_nonpersistent_flags+=("--force-registry")
@@ -3163,9 +3280,11 @@ _cozy-stack_jobs_purge-old-jobs()
 
     flags+=("--duration=")
     two_word_flags+=("--duration")
+    local_nonpersistent_flags+=("--duration")
     local_nonpersistent_flags+=("--duration=")
     flags+=("--workers=")
     two_word_flags+=("--workers")
+    local_nonpersistent_flags+=("--workers")
     local_nonpersistent_flags+=("--workers=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -3203,6 +3322,7 @@ _cozy-stack_jobs_run()
 
     flags+=("--json=")
     two_word_flags+=("--json")
+    local_nonpersistent_flags+=("--json")
     local_nonpersistent_flags+=("--json=")
     flags+=("--logs")
     local_nonpersistent_flags+=("--logs")
@@ -3822,6 +3942,7 @@ _cozy-stack_swift_put()
 
     flags+=("--content-type=")
     two_word_flags+=("--content-type")
+    local_nonpersistent_flags+=("--content-type")
     local_nonpersistent_flags+=("--content-type=")
     flags+=("--admin-host=")
     two_word_flags+=("--admin-host")
@@ -4122,6 +4243,7 @@ _cozy-stack_root_command()
         command_aliases+=("fixer")
         aliashash["fixer"]="fix"
     fi
+    commands+=("help")
     commands+=("instances")
     if [[ -z "${BASH_VERSION}" || "${BASH_VERSINFO[0]}" -gt 3 ]]; then
         command_aliases+=("instance")

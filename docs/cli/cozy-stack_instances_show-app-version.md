@@ -2,10 +2,6 @@
 
 Show instances that have a particular app version
 
-### Synopsis
-
-Show instances that have a particular app version
-
 ```
 cozy-stack instances show-app-version [app-slug] [version] [flags]
 ```

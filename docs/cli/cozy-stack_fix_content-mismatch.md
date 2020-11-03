@@ -2,10 +2,6 @@
 
 Fix the content mismatch differences for 64K issue
 
-### Synopsis
-
-Fix the content mismatch differences for 64K issue
-
 ```
 cozy-stack fix content-mismatch <domain> [flags]
 ```

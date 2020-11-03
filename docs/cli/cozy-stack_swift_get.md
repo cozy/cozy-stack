@@ -2,10 +2,6 @@
 
 
 
-### Synopsis
-
-
-
 ```
 cozy-stack swift get <domain> <object-name> [flags]
 ```

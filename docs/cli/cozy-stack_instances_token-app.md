@@ -2,10 +2,6 @@
 
 Generate a new application token
 
-### Synopsis
-
-Generate a new application token
-
 ```
 cozy-stack instances token-app <domain> <slug> [flags]
 ```

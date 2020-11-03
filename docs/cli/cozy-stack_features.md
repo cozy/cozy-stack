@@ -2,10 +2,6 @@
 
 Manage the feature flags
 
-### Synopsis
-
-Manage the feature flags
-
 ### Options
 
 ```

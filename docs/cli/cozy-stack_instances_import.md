@@ -1,22 +1,21 @@
 ## cozy-stack instances import
 
-Import a tarball
+Import data from an export link
 
 ### Synopsis
 
-Import a tarball with files, photos albums and contacts to an instance
+This command will reset the Cozy instance and import data from an export link
 
 ```
-cozy-stack instances import <tarball> [flags]
+cozy-stack instances import <URL> [flags]
 ```
 
 ### Options
 
 ```
-      --directory string   Put the imported files inside this directory
-      --domain string      Specify the domain name of the instance
-  -h, --help               help for import
-      --increase-quota     Increase the disk quota if needed for importing all the files
+      --domain string   Specify the domain name of the instance
+      --force           Force the import without asking for confirmation
+  -h, --help            help for import
 ```
 
 ### Options inherited from parent commands

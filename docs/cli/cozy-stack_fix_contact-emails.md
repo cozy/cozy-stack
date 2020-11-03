@@ -2,10 +2,6 @@
 
 Detect and try to fix invalid emails on contacts
 
-### Synopsis
-
-Detect and try to fix invalid emails on contacts
-
 ```
 cozy-stack fix contact-emails [flags]
 ```

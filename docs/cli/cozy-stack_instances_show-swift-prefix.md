@@ -2,10 +2,6 @@
 
 Show the instance swift prefix of the specified domain
 
-### Synopsis
-
-Show the instance swift prefix of the specified domain
-
 ```
 cozy-stack instances show-swift-prefix <domain> [flags]
 ```

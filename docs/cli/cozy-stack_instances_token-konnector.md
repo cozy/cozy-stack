@@ -2,10 +2,6 @@
 
 Generate a new konnector token
 
-### Synopsis
-
-Generate a new konnector token
-
 ```
 cozy-stack instances token-konnector <domain> <slug> [flags]
 ```

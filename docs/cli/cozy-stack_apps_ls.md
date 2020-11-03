@@ -2,10 +2,6 @@
 
 List the installed applications.
 
-### Synopsis
-
-List the installed applications.
-
 ```
 cozy-stack apps ls [flags]
 ```

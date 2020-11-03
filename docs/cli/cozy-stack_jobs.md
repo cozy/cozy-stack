@@ -2,10 +2,6 @@
 
 Launch and manage jobs and workers
 
-### Synopsis
-
-Launch and manage jobs and workers
-
 ### Options
 
 ```

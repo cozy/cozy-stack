@@ -2,10 +2,6 @@
 
 A set of tools to fix issues or migrate content.
 
-### Synopsis
-
-A set of tools to fix issues or migrate content.
-
 ```
 cozy-stack fix <command> [flags]
 ```

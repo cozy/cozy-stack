@@ -2,10 +2,6 @@
 
 Interact directly with OpenStack Swift object storage
 
-### Synopsis
-
-Interact directly with OpenStack Swift object storage
-
 ```
 cozy-stack swift <command> [flags]
 ```

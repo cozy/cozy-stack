@@ -2,10 +2,6 @@
 
 Fix the class computed from the mime-type
 
-### Synopsis
-
-Fix the class computed from the mime-type
-
 ```
 cozy-stack fix mime <domain> [flags]
 ```

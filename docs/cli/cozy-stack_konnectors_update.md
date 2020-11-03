@@ -2,10 +2,6 @@
 
 Update the konnector with the specified slug name.
 
-### Synopsis
-
-Update the konnector with the specified slug name.
-
 ```
 cozy-stack konnectors update <slug> [sourceurl] [flags]
 ```

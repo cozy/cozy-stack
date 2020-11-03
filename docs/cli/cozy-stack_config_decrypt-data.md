@@ -2,10 +2,6 @@
 
 Decrypt data with the specified decryption keyfile.
 
-### Synopsis
-
-Decrypt data with the specified decryption keyfile.
-
 ```
 cozy-stack config decrypt-data <decoding keyfile> <ciphertext> [flags]
 ```

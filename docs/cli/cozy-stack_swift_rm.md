@@ -2,10 +2,6 @@
 
 
 
-### Synopsis
-
-
-
 ```
 cozy-stack swift rm <domain> <object-name> [flags]
 ```

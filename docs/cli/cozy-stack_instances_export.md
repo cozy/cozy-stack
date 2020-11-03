@@ -1,10 +1,10 @@
 ## cozy-stack instances export
 
-Export an instance to a tarball
+Export an instance
 
 ### Synopsis
 
-Export the files and photos albums to a tarball (.tar.gz)
+Export the files, documents, and settings
 
 ```
 cozy-stack instances export [flags]

@@ -2,10 +2,6 @@
 
 Show the application attributes
 
-### Synopsis
-
-Show the application attributes
-
 ```
 cozy-stack konnectors show <slug> [flags]
 ```

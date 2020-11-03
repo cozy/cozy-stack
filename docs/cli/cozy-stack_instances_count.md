@@ -2,10 +2,6 @@
 
 Count the instances
 
-### Synopsis
-
-Count the instances
-
 ```
 cozy-stack instances count [flags]
 ```

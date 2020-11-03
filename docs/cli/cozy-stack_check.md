@@ -2,10 +2,6 @@
 
 A set of tools to check that instances are in the expected state.
 
-### Synopsis
-
-A set of tools to check that instances are in the expected state.
-
 ```
 cozy-stack check <command> [flags]
 ```

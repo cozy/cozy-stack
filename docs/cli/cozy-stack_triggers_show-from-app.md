@@ -2,10 +2,6 @@
 
 Show the application triggers
 
-### Synopsis
-
-Show the application triggers
-
 ```
 cozy-stack triggers show-from-app <slug> [flags]
 ```

@@ -2,10 +2,6 @@
 
 Rebuild thumbnails image for images files
 
-### Synopsis
-
-Rebuild thumbnails image for images files
-
 ```
 cozy-stack fix thumbnails <domain> [flags]
 ```

@@ -2,10 +2,6 @@
 
 Decrypt the given credentials cipher text with the specified decryption keyfile.
 
-### Synopsis
-
-Decrypt the given credentials cipher text with the specified decryption keyfile.
-
 ```
 cozy-stack config decrypt-creds <keyfile> <ciphertext> [flags]
 ```

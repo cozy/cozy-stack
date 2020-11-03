@@ -2,10 +2,6 @@
 
 Creates a job from a specific trigger
 
-### Synopsis
-
-Creates a job from a specific trigger
-
 ```
 cozy-stack triggers launch [triggerId] [flags]
 ```

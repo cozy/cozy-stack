@@ -2,10 +2,6 @@
 
 Rebuild scheduling data strucutures in redis
 
-### Synopsis
-
-Rebuild scheduling data strucutures in redis
-
 ```
 cozy-stack fix redis [flags]
 ```

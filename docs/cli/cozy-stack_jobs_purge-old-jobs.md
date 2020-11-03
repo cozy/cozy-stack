@@ -2,10 +2,6 @@
 
 Purge old jobs from an instance
 
-### Synopsis
-
-Purge old jobs from an instance
-
 ```
 cozy-stack jobs purge-old-jobs <domain> [flags]
 ```

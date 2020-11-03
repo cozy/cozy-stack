@@ -2,10 +2,6 @@
 
 Take a look at the consistency of the jobs
 
-### Synopsis
-
-Take a look at the consistency of the jobs
-
 ```
 cozy-stack fix jobs <domain> [flags]
 ```

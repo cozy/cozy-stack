@@ -2,10 +2,6 @@
 
 List the installed konnectors.
 
-### Synopsis
-
-List the installed konnectors.
-
 ```
 cozy-stack konnectors ls [flags]
 ```

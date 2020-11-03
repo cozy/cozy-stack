@@ -2,10 +2,6 @@
 
 Change the passphrase of the instance
 
-### Synopsis
-
-Change the passphrase of the instance
-
 ```
 cozy-stack instances set-passphrase <domain> <new-passphrase> [flags]
 ```

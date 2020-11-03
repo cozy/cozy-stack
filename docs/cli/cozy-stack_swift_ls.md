@@ -2,10 +2,6 @@
 
 
 
-### Synopsis
-
-
-
 ```
 cozy-stack swift ls <domain> [flags]
 ```

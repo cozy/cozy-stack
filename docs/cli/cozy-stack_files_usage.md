@@ -2,10 +2,6 @@
 
 Show the usage and quota for the files of this instance
 
-### Synopsis
-
-Show the usage and quota for the files of this instance
-
 ```
 cozy-stack files usage [--domain domain] [--trash] [flags]
 ```

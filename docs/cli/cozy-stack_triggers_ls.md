@@ -2,10 +2,6 @@
 
 List triggers
 
-### Synopsis
-
-List triggers
-
 ```
 cozy-stack triggers ls [flags]
 ```

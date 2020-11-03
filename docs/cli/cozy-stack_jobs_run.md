@@ -2,10 +2,6 @@
 
 
 
-### Synopsis
-
-
-
 ```
 cozy-stack jobs run <worker> [flags]
 ```

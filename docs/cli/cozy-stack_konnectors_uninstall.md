@@ -2,10 +2,6 @@
 
 Uninstall the konnector with the specified slug name.
 
-### Synopsis
-
-Uninstall the konnector with the specified slug name.
-
 ```
 cozy-stack konnectors uninstall <slug> [flags]
 ```

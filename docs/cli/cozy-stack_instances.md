@@ -44,10 +44,10 @@ cozy-stack instances <command> [flags]
 * [cozy-stack instances count](cozy-stack_instances_count.md)	 - Count the instances
 * [cozy-stack instances debug](cozy-stack_instances_debug.md)	 - Activate or deactivate debugging of the instance
 * [cozy-stack instances destroy](cozy-stack_instances_destroy.md)	 - Remove instance
-* [cozy-stack instances export](cozy-stack_instances_export.md)	 - Export an instance to a tarball
+* [cozy-stack instances export](cozy-stack_instances_export.md)	 - Export an instance
 * [cozy-stack instances find-oauth-client](cozy-stack_instances_find-oauth-client.md)	 - Find an OAuth client
 * [cozy-stack instances fsck](cozy-stack_instances_fsck.md)	 - Check a vfs
-* [cozy-stack instances import](cozy-stack_instances_import.md)	 - Import a tarball
+* [cozy-stack instances import](cozy-stack_instances_import.md)	 - Import data from an export link
 * [cozy-stack instances ls](cozy-stack_instances_ls.md)	 - List instances
 * [cozy-stack instances modify](cozy-stack_instances_modify.md)	 - Modify the instance properties
 * [cozy-stack instances refresh-token-oauth](cozy-stack_instances_refresh-token-oauth.md)	 - Generate a new OAuth refresh token

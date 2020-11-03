@@ -2,10 +2,6 @@
 
 Encrypt the given credentials with the specified decryption keyfile.
 
-### Synopsis
-
-Encrypt the given credentials with the specified decryption keyfile.
-
 ```
 cozy-stack config encrypt-creds <keyfile> <login> <password> [flags]
 ```
