@@ -374,16 +374,8 @@ func (afs *aferoVFS) ImportFileVersion(version *vfs.Version, content io.ReadClos
 
 	vPath := pathForVersion(version)
 	_ = afs.fs.MkdirAll(filepath.Dir(vPath), 0755)
-	f, err := afs.fs.Open(vPath)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(f, content)
+	err := afero.WriteReader(afs.fs, vPath, content)
 	if errc := content.Close(); err == nil {
-		err = errc
-	}
-	if errc := f.Close(); err == nil {
 		err = errc
 	}
 	if err != nil {

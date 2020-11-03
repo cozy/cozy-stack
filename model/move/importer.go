@@ -3,6 +3,7 @@ package move
 import (
 	"archive/zip"
 	"encoding/json"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -126,10 +127,11 @@ func (im *importer) importZip(zr zip.Reader) error {
 			}
 			continue
 		case consts.Files:
-			if i >= len(zr.File)-1 {
-				continue
+			var content *zip.File
+			if i < len(zr.File)-1 {
+				content = zr.File[i+1]
 			}
-			if err := im.importFile(file, zr.File[i+1]); err != nil {
+			if err := im.importFile(file, content); err != nil {
 				return err
 			}
 			continue
@@ -287,7 +289,20 @@ func (im *importer) importFile(zdoc, zcontent *zip.File) error {
 	if err != nil {
 		return err
 	}
-	f, err := im.fs.CreateFile(doc, nil)
+	dirDoc, fileDoc := doc.Refine()
+	if dirDoc != nil {
+		dirDoc.SetRev("")
+		if dirDoc.DocID == consts.RootDirID || dirDoc.DocID == consts.TrashDirID {
+			return nil
+		}
+		return im.fs.CreateDir(dirDoc)
+	}
+
+	if zcontent == nil {
+		return errors.New("No content for file")
+	}
+	fileDoc.SetRev("")
+	f, err := im.fs.CreateFile(fileDoc, nil)
 	if err != nil {
 		return err
 	}
@@ -303,12 +318,12 @@ func (im *importer) importFile(zdoc, zcontent *zip.File) error {
 	return err
 }
 
-func (im *importer) readFileDoc(zf *zip.File) (*vfs.FileDoc, error) {
+func (im *importer) readFileDoc(zf *zip.File) (*vfs.DirOrFileDoc, error) {
 	r, err := zf.Open()
 	if err != nil {
 		return nil, err
 	}
-	var doc vfs.FileDoc
+	var doc vfs.DirOrFileDoc
 	err = json.NewDecoder(r).Decode(&doc)
 	if errc := r.Close(); errc != nil {
 		return nil, errc
@@ -328,6 +343,7 @@ func (im *importer) importFileVersion(zdoc, zcontent *zip.File) error {
 	if err != nil {
 		return err
 	}
+	doc.SetRev("")
 	return im.fs.ImportFileVersion(doc, content)
 }
 

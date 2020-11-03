@@ -3,12 +3,14 @@ class CozyFile
   include Model::Files
 
   attr_reader :name, :dir_id, :mime, :trashed, :md5sum, :referenced_by,
-              :metadata, :size, :executable, :file_class, :cozy_metadata
+              :metadata, :size, :executable, :file_class, :cozy_metadata,
+              :old_versions
 
   def self.parse_jsonapi(body)
     j = JSON.parse(body)["data"]
     id = j["id"]
     rev = j.dig "meta", "rev"
+    old_versions = j.dig "relationships", "old_versions", "data"
     referenced_by = j.dig "relationships", "referenced_by", "data"
     j = j["attributes"]
     f = CozyFile.new(
@@ -18,9 +20,11 @@ class CozyFile
       md5sum: j["md5sum"],
       size: j["size"],
       executable: j["executable"],
+      mime: j["mime"],
       file_class: j["class"],
       metadata: j["metadata"],
       cozy_metadata: j["cozyMetadata"],
+      old_versions: old_versions,
       referenced_by: referenced_by
     )
     f.couch_id = id
@@ -51,7 +55,7 @@ class CozyFile
     opts = opts.dup
     opts[:content] = File.read filename
     opts[:name] ||= "#{Faker::Internet.slug}#{File.extname(filename)}"
-    opts[:mime] ||= MimeMagic.by_path filename
+    opts[:mime] ||= MimeMagic.by_path(filename).type
     opts
   end
 
@@ -79,6 +83,7 @@ class CozyFile
     @file_class = opts[:file_class]
     @cozy_metadata = opts[:cozy_metadata]
     @referenced_by = opts[:referenced_by]
+    @old_versions = opts[:old_versions] || []
   end
 
   def save(inst)

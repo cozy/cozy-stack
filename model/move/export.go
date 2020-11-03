@@ -132,7 +132,7 @@ func copyFiles(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc, cu
 
 	for _, file := range files {
 		metaHeader := &zip.FileHeader{
-			Name:     path.Join(ExportDataDir, file.DocID),
+			Name:     path.Join(ExportDataDir, consts.Files, file.DocID+".json"),
 			Method:   zip.Deflate,
 			Modified: file.UpdatedAt,
 		}
@@ -197,7 +197,7 @@ func copyVersions(zw *zip.Writer, inst *instance.Instance, exportDoc *ExportDoc,
 
 	for _, version := range versions {
 		metaHeader := &zip.FileHeader{
-			Name:     path.Join(ExportDataDir, version.DocID),
+			Name:     path.Join(ExportDataDir, consts.FilesVersions, version.DocID+".json"),
 			Method:   zip.Deflate,
 			Modified: version.UpdatedAt,
 		}

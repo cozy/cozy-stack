@@ -11,6 +11,12 @@ describe "Export and import" do
     dest = Instance.create name: "dest"
     source.install_app "photos"
 
+    # Create a file with an old version
+    folder = Folder.create source
+    folder.couch_id.wont_be_empty
+    file = CozyFile.create source, dir_id: folder.couch_id
+    file.overwrite source, mime: 'text/plain'
+
     # Create an album with some photos
     CozyFile.ensure_photos_in_cache
     folder = Folder.create source
@@ -38,6 +44,19 @@ describe "Export and import" do
     refute_nil(triggers.detect do |t|
       t.attributes.dig("message", "name") == "onPhotoUpload"
     end) # It's a service for the photos app
+
+    dir = Folder.find dest, folder.couch_id
+    %i[couch_id name dir_id path].each do |prop|
+      assert_equal dir.send(prop), folder.send(prop)
+    end
+    photos.each do |p|
+      photo = CozyFile.find dest, p.couch_id
+      %i[couch_id name dir_id mime].each do |prop|
+        assert_equal photo.send(prop), p.send(prop)
+      end
+    end
+    f = CozyFile.find dest, file.couch_id
+    assert_equal f.old_versions.length, 1
 
     # Check that the email from the destination was kept
     contacts = Contact.all dest
