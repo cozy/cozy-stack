@@ -27,7 +27,7 @@ class Import
     @inst.client["/move/imports"].post body, opts
   end
 
-  def get_mail(timeout = 60)
+  def wait_done(timeout = 60)
     timeout.times do
       sleep 1
       received = Email.received kind: "to", query: @inst.email
