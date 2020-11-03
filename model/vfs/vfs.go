@@ -99,6 +99,10 @@ type Fs interface {
 	// ClearOldVersions deletes all the old versions of all files
 	ClearOldVersions() error
 
+	// ImportFileVersion returns a file handler that can be used to write a
+	// version.
+	ImportFileVersion(version *Version, content io.ReadCloser) error
+
 	// Fsck return the list of inconsistencies in the VFS
 	Fsck(func(log *FsckLog), bool) (err error)
 	CheckFilesConsistency(func(*FsckLog), bool) error

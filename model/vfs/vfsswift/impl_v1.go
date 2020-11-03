@@ -419,6 +419,14 @@ func (sfs *swiftVFS) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vf
 	return nil, os.ErrNotExist
 }
 
+func (sfs *swiftVFS) ImportFileVersion(version *vfs.Version, content io.ReadCloser) error {
+	if err := content.Close(); err != nil {
+		return err
+	}
+	// The versioning is not implemented in Swift layout v1
+	return os.ErrNotExist
+}
+
 func (sfs *swiftVFS) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version) error {
 	// The versioning is not implemented in Swift layout v1
 	return os.ErrNotExist

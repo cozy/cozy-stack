@@ -355,6 +355,37 @@ func (afs *aferoVFS) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vf
 	return &aferoFileOpen{f}, nil
 }
 
+func (afs *aferoVFS) ImportFileVersion(version *vfs.Version, content io.ReadCloser) error {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer afs.mu.Unlock()
+
+	// TODO check quota
+
+	vPath := pathForVersion(version)
+	_ = afs.fs.MkdirAll(filepath.Dir(vPath), 0755)
+	f, err := afs.fs.Open(vPath)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(f, content)
+	if errc := content.Close(); err == nil {
+		err = errc
+	}
+	if errc := f.Close(); err == nil {
+		err = errc
+	}
+	if err != nil {
+		// remove the temporary file if an error occurred
+		_ = afs.fs.Remove(vPath)
+		return err
+	}
+
+	return afs.Indexer.CreateVersion(version)
+}
+
 func (afs *aferoVFS) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version) error {
 	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
