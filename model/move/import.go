@@ -138,6 +138,7 @@ func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
 
 	im := &importer{
 		inst:    inst,
+		fs:      inst.VFS(),
 		options: options,
 		doc:     doc,
 	}

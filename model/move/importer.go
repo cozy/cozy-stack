@@ -14,12 +14,14 @@ import (
 	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 type importer struct {
 	inst             *instance.Instance
+	fs               vfs.VFS
 	options          ImportOptions
 	doc              *ExportDoc
 	appsNotInstalled []string
@@ -81,7 +83,7 @@ func (im *importer) downloadFile(cursor string) error {
 }
 
 func (im *importer) importZip(zr zip.Reader) error {
-	for _, file := range zr.File {
+	for i, file := range zr.File {
 		if !strings.HasPrefix(file.FileHeader.Name, ExportDataDir+"/") {
 			continue
 		}
@@ -119,24 +121,25 @@ func (im *importer) importZip(zr zip.Reader) error {
 			im.installApp(id)
 			continue
 		case consts.Triggers:
-			doc, err := im.readTrigger(file)
-			if err != nil {
-				return err
-			}
-			if doc.WorkerType != "konnector" {
-				continue
-			}
-			doc.SetRev("")
-			t, err := job.NewTrigger(im.inst, *doc, nil)
-			if err != nil {
-				return err
-			}
-			if err = job.System().AddTrigger(t); err != nil {
+			if err := im.importTrigger(file); err != nil {
 				return err
 			}
 			continue
-		case consts.Files, consts.FilesVersions:
-			// TODO not yet implemented, as they have an associated content
+		case consts.Files:
+			if i >= len(zr.File)-1 {
+				continue
+			}
+			if err := im.importFile(file, zr.File[i+1]); err != nil {
+				return err
+			}
+			continue
+		case consts.FilesVersions:
+			if i >= len(zr.File)-1 {
+				continue
+			}
+			if err := im.importFileVersion(file, zr.File[i+1]); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -233,6 +236,22 @@ func (im *importer) readTrigger(zf *zip.File) (*job.TriggerInfos, error) {
 	return doc, nil
 }
 
+func (im *importer) importTrigger(zf *zip.File) error {
+	doc, err := im.readTrigger(zf)
+	if err != nil {
+		return err
+	}
+	if doc.WorkerType != "konnector" {
+		return nil
+	}
+	doc.SetRev("")
+	t, err := job.NewTrigger(im.inst, *doc, nil)
+	if err != nil {
+		return err
+	}
+	return job.System().AddTrigger(t)
+}
+
 func (im *importer) installApp(id string) {
 	parts := strings.SplitN(id, "/", 2)
 	if len(parts) != 2 {
@@ -261,4 +280,69 @@ func (im *importer) installApp(id string) {
 	if err != nil {
 		im.appsNotInstalled = append(im.appsNotInstalled, slug)
 	}
+}
+
+func (im *importer) importFile(zdoc, zcontent *zip.File) error {
+	doc, err := im.readFileDoc(zdoc)
+	if err != nil {
+		return err
+	}
+	f, err := im.fs.CreateFile(doc, nil)
+	if err != nil {
+		return err
+	}
+
+	content, err := zcontent.Open()
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(f, content)
+	if errc := f.Close(); err == nil {
+		err = errc
+	}
+	return err
+}
+
+func (im *importer) readFileDoc(zf *zip.File) (*vfs.FileDoc, error) {
+	r, err := zf.Open()
+	if err != nil {
+		return nil, err
+	}
+	var doc vfs.FileDoc
+	err = json.NewDecoder(r).Decode(&doc)
+	if errc := r.Close(); errc != nil {
+		return nil, errc
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &doc, nil
+}
+
+func (im *importer) importFileVersion(zdoc, zcontent *zip.File) error {
+	doc, err := im.readVersion(zdoc)
+	if err != nil {
+		return err
+	}
+	content, err := zcontent.Open()
+	if err != nil {
+		return err
+	}
+	return im.fs.ImportFileVersion(doc, content)
+}
+
+func (im *importer) readVersion(zf *zip.File) (*vfs.Version, error) {
+	r, err := zf.Open()
+	if err != nil {
+		return nil, err
+	}
+	var doc vfs.Version
+	err = json.NewDecoder(r).Decode(&doc)
+	if errc := r.Close(); errc != nil {
+		return nil, errc
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &doc, nil
 }
