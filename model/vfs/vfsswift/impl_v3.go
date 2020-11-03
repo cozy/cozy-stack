@@ -405,7 +405,16 @@ func (sfs *swiftVFSV3) ImportFileVersion(version *vfs.Version, content io.ReadCl
 	}
 	defer sfs.mu.Unlock()
 
-	// TODO check quota
+	diskQuota := sfs.DiskQuota()
+	if diskQuota > 0 {
+		diskUsage, err := sfs.DiskUsage()
+		if err != nil {
+			return err
+		}
+		if diskUsage+version.ByteSize > diskQuota {
+			return vfs.ErrFileTooBig
+		}
+	}
 
 	parts := strings.SplitN(version.DocID, "/", 2)
 	if len(parts) != 2 {

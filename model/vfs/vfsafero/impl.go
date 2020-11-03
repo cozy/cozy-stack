@@ -361,7 +361,16 @@ func (afs *aferoVFS) ImportFileVersion(version *vfs.Version, content io.ReadClos
 	}
 	defer afs.mu.Unlock()
 
-	// TODO check quota
+	diskQuota := afs.DiskQuota()
+	if diskQuota > 0 {
+		diskUsage, err := afs.DiskUsage()
+		if err != nil {
+			return err
+		}
+		if diskUsage+version.ByteSize > diskQuota {
+			return vfs.ErrFileTooBig
+		}
+	}
 
 	vPath := pathForVersion(version)
 	_ = afs.fs.MkdirAll(filepath.Dir(vPath), 0755)
