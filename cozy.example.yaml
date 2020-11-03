@@ -110,6 +110,7 @@ jobs:
   # List of available workers:
   #
   #   - "export":          exporting data from a cozy instance
+  #   - "import":          importing data into a cozy instance
   #   - "konnector":       launching konnectors
   #   - "migrations":      transforming a VFS with Swift to layout v3
   #   - "notes-persist":   saving notes to the VFS

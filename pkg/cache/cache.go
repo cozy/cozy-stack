@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -79,6 +80,24 @@ func (c Cache) MultiGet(keys []string) [][]byte {
 			}
 		}
 	}
+	return results
+}
+
+// Keys returns the list of keys with the given prefix.
+// Note: it can be slow and should be used carefully.
+func (c Cache) Keys(prefix string) []string {
+	if c.client != nil {
+		cmd := c.client.Keys(prefix + "*")
+		return cmd.Val()
+	}
+	results := make([]string, 0)
+	c.m.Range(func(key, _ interface{}) bool {
+		k := key.(string)
+		if strings.HasPrefix(k, prefix) {
+			results = append(results, k)
+		}
+		return true
+	})
 	return results
 }
 

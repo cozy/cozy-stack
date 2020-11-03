@@ -33,7 +33,7 @@ function openUriWithTimeoutHack(uri, failCb) {
     handler.remove()
   }, 500)
 
-  //handle page running in an iframe (blur must be registered with top level window)
+  // handle page running in an iframe (blur must be registered with top level window)
   let target = window
   while (target != target.parent) {
     target = target.parent
@@ -75,7 +75,7 @@ function checkBrowser() {
 
 function check(uri, failCb) {
   if (navigator.msLaunchUri) {
-    //for IE and Edge in Win 8 and Win 10
+    // for IE and Edge in Win 8 and Win 10
     openUriWithMsLaunchUri(uri, failCb)
   } else {
     const browser = checkBrowser()

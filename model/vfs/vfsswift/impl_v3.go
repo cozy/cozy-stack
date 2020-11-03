@@ -156,7 +156,7 @@ func (sfs *swiftVFSV3) CreateDir(doc *vfs.DirDoc) error {
 	return sfs.Indexer.CreateNamedDirDoc(doc)
 }
 
-func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
+func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateOptions) (vfs.File, error) {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return nil, lockerr
 	}
@@ -195,7 +195,9 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 		return nil, err
 	}
 	if strings.HasPrefix(newpath, vfs.TrashDirName+"/") {
-		return nil, vfs.ErrParentInTrash
+		if !vfs.OptionsAllowCreationInTrash(opts) {
+			return nil, vfs.ErrParentInTrash
+		}
 	}
 
 	if olddoc == nil {
@@ -397,6 +399,59 @@ func (sfs *swiftVFSV3) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (
 		return nil, err
 	}
 	return &swiftFileOpenV3{f, nil}, nil
+}
+
+func (sfs *swiftVFSV3) ImportFileVersion(version *vfs.Version, content io.ReadCloser) error {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer sfs.mu.Unlock()
+
+	diskQuota := sfs.DiskQuota()
+	if diskQuota > 0 {
+		diskUsage, err := sfs.DiskUsage()
+		if err != nil {
+			return err
+		}
+		if diskUsage+version.ByteSize > diskQuota {
+			return vfs.ErrFileTooBig
+		}
+	}
+
+	parts := strings.SplitN(version.DocID, "/", 2)
+	if len(parts) != 2 {
+		return vfs.ErrIllegalFilename
+	}
+	objName := MakeObjectNameV3(parts[0], parts[1])
+
+	hash := hex.EncodeToString(version.MD5Sum)
+	f, err := sfs.c.ObjectCreate(
+		sfs.container,
+		objName,
+		true,
+		hash,
+		"application/octet-stream",
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(f, content)
+	if errc := content.Close(); err == nil {
+		err = errc
+	}
+	if errc := f.Close(); err == nil {
+		err = errc
+	}
+	if err != nil {
+		if err == swift.ObjectCorrupted {
+			err = vfs.ErrInvalidHash
+		}
+		return err
+	}
+
+	return sfs.Indexer.CreateVersion(version)
 }
 
 func (sfs *swiftVFSV3) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version) error {

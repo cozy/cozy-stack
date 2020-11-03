@@ -367,6 +367,9 @@ msgstr "Le Cozy a été bloqué à cause de trop nombreux essais de connexion"
 msgid "Instance Blocked Payment"
 msgstr "Le Cozy nécessite un paiement"
 
+msgid "Instance Blocked Importing"
+msgstr "Le Cozy importe des données"
+
 msgid "Instance Blocked Unknown"
 msgstr "Le Cozy a été bloqué pour une raison inconnue"
 

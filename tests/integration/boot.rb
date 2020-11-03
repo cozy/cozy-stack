@@ -1,4 +1,4 @@
-require 'awesome_print'
+require 'amazing_print'
 require 'base64'
 require 'date'
 require 'digest'
@@ -12,11 +12,10 @@ require 'pry'
 require 'rest-client'
 require 'uuid'
 
-AwesomePrint.pry!
-Pry.config.history.file = File.expand_path "../tmp/.pry_history", __FILE__
+AmazingPrint.pry!
+Pry.config.history_file = File.expand_path "tmp/.pry_history", __dir__
 
-base = File.expand_path "..", __FILE__
-FileUtils.cd base do
+FileUtils.cd __dir__ do
   Faker::Config.locale = :fr
   FileUtils.mkdir_p "tmp/"
   require_relative "lib/test/timeout.rb" if ENV['CI']

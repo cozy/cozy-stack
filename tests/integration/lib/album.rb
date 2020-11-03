@@ -35,7 +35,6 @@ class Album
 
   def self.find(inst, id)
     opts = {
-      content_type: :json,
       accept: :json,
       authorization: "Bearer #{inst.token_for doctype}"
     }

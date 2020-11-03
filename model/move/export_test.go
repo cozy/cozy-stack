@@ -1,10 +1,10 @@
 package move
 
 import (
-	"archive/tar"
-	"compress/gzip"
-	"io"
+	"fmt"
+	"math/rand"
 	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -13,147 +13,158 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 var inst *instance.Instance
-var filename string
 
-func TestTardir(t *testing.T) {
-	fs := inst.VFS()
+type Stats struct {
+	TotalSize int64
+	Dirs      map[string]struct{}
+	Files     map[string][]byte
+}
 
-	fd, err := os.Open("../../tests/fixtures/logos.zip")
+func createFile(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc) {
+	size := 1 + rand.Intn(25)
+	name := crypto.GenerateRandomString(8)
+	doc, err := vfs.NewFileDoc(name, parent.DocID, -1, nil, "application/octet-stream", "application", time.Now(), false, false, nil)
 	assert.NoError(t, err)
-	defer fd.Close()
-	zip, err := vfs.NewFileDoc("logos.zip", consts.RootDirID, -1, nil, "application/zip", "application", time.Now(), false, false, nil)
+	doc.CozyMetadata = vfs.NewCozyMetadata("")
+	file, err := fs.CreateFile(doc, nil)
 	assert.NoError(t, err)
-	file, err := fs.CreateFile(zip, nil)
-	assert.NoError(t, err)
-	_, err = io.Copy(file, fd)
+	buf := make([]byte, size)
+	_, err = file.Write(buf)
 	assert.NoError(t, err)
 	assert.NoError(t, file.Close())
 
-	_, err = fs.OpenFile(zip)
-	assert.NoError(t, err)
-
-	//album
-	testJsondoc := &couchdb.JSONDoc{
-		Type: consts.PhotosAlbums,
-	}
-	testJsondoc.M = make(map[string]interface{})
-	m := testJsondoc.ToMapWithType()
-	m["name"] = "albumTest"
-	delete(testJsondoc.M, "_type")
-	err = couchdb.CreateDoc(inst, testJsondoc)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, testJsondoc.Rev(), testJsondoc.ID())
-
-	testAlbumref := &couchdb.DocReference{
-		ID:   testJsondoc.ID(),
-		Type: testJsondoc.DocType(),
-	}
-
-	fd, err = os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
-	assert.NoError(t, err)
-	defer fd.Close()
-
-	image, err := vfs.NewFileDoc("wet-cozy_20160910__M4Dz.jpg", consts.RootDirID, -1, nil, "application/image", "application", time.Now(), false, false, nil)
-	assert.NoError(t, err)
-	photo, err := fs.CreateFile(image, nil)
-	assert.NoError(t, err)
-	_, err = io.Copy(photo, fd)
-	assert.NoError(t, err)
-	assert.NoError(t, photo.Close())
-
-	_, err = fs.OpenFile(image)
-	assert.NoError(t, err)
-
-	image.AddReferencedBy(*testAlbumref)
-	err = couchdb.UpdateDoc(inst, image)
-	assert.NoError(t, err)
-
-	filename, err = Export(inst)
-	assert.NoError(t, err)
-
-	r, err := os.Open(filename)
-	assert.NoError(t, err)
-	defer r.Close()
-
-	gr, err := gzip.NewReader(r)
-	assert.NoError(t, err)
-	defer gr.Close()
-
-	tr := tar.NewReader(gr)
-
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
+	// Create some file versions
+	nb := rand.Intn(3)
+	for i := 0; i < nb; i++ {
+		size = 1 + rand.Intn(25)
+		olddoc := doc.Clone().(*vfs.FileDoc)
+		doc.CozyMetadata = olddoc.CozyMetadata.Clone()
+		doc.CozyMetadata.UpdatedAt = doc.CozyMetadata.UpdatedAt.Add(1 * time.Hour)
+		doc.MD5Sum = nil
+		doc.ByteSize = int64(size)
+		file, err = fs.CreateFile(doc, olddoc)
 		assert.NoError(t, err)
-		if hdr.Name == "files/logos.zip" {
-			assert.Equal(t, int64(2814), hdr.Size)
-		}
-		if hdr.Name == "albums/" {
-			for {
-				hdr, err := tr.Next()
-				if err == io.EOF {
-					break
-				}
-				assert.NoError(t, err)
-				if hdr.Name == "albums.json" {
-					assert.NotNil(t, hdr.Size)
-				}
-				if hdr.Name == "references.json" {
-					assert.NotNil(t, hdr.Size)
-				}
-			}
-		}
+		buf := make([]byte, size)
+		_, err = file.Write(buf)
+		assert.NoError(t, err)
+		assert.NoError(t, file.Close())
 	}
 }
 
-func TestImport(t *testing.T) {
-	fs := inst.VFS()
-
-	r, err := os.Open(filename)
-	assert.NoError(t, err)
-	defer r.Close()
-
-	dst, err := vfs.Mkdir(fs, "/destination", nil)
-	assert.NoError(t, err)
-
-	err = untar(r, dst, inst)
-	assert.NoError(t, err)
-
-	logo, err := fs.FileByPath("/destination/logos.zip")
-	assert.NoError(t, err)
-	assert.Equal(t, int64(2814), logo.Size())
-
-	photo, err := fs.FileByPath("/destination/wet-cozy_20160910__M4Dz.jpg")
-	assert.NoError(t, err)
-	assert.NotNil(t, photo.ReferencedBy)
-
-	var results []map[string]interface{}
-	err = couchdb.GetAllDocs(inst, consts.PhotosAlbums, &couchdb.AllDocsRequest{}, &results)
-	assert.NoError(t, err)
-
-	for _, val := range results {
-		if val["_id"] == photo.ReferencedBy[0].ID {
-			assert.Equal(t, "albumTest", val["name"])
-		}
+func populateTree(t *testing.T, fs vfs.VFS, parent *vfs.DirDoc, nb int) {
+	nbDirs := rand.Intn(5)
+	if nbDirs > nb {
+		nbDirs = nbDirs % (nb + 1)
 	}
 
-	err = os.Remove(filename)
+	// Create the sub-directories
+	for i := 0; i < nbDirs; i++ {
+		name := crypto.GenerateRandomString(6)
+		fullpath := path.Join(parent.Fullpath, name)
+		dir, err := vfs.Mkdir(fs, fullpath, nil)
+		assert.NoError(t, err)
+		nbFiles := rand.Intn(nb)
+		populateTree(t, fs, dir, nbFiles)
+		nb -= nbFiles
+	}
+
+	// Create some files
+	for j := 0; j < nb; j++ {
+		createFile(t, fs, parent)
+	}
+}
+
+func TestExportFiles(t *testing.T) {
+	fs := inst.VFS()
+
+	// The partsSize is voluntary really small to have a lot of parts,
+	// which can help to test the edge cases
+	exportDoc := &ExportDoc{
+		PartsSize: 10,
+	}
+
+	nbFiles := rand.Intn(100)
+	root, err := fs.DirByID(consts.RootDirID)
 	assert.NoError(t, err)
+	populateTree(t, fs, root, nbFiles)
+
+	nbVersions, err := couchdb.CountNormalDocs(inst, consts.FilesVersions)
+	assert.NoError(t, err)
+
+	// /* Uncomment this section for debug */
+	// vfs.Walk(fs, root.Fullpath, func(fpath string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if fpath == root.Fullpath {
+	// 		return nil
+	// 	}
+	// 	level := strings.Count(fpath, "/")
+	// 	for i := 0; i < level; i++ {
+	// 		if i == level-1 {
+	// 			_, err = fmt.Printf("└── ")
+	// 		} else {
+	// 			_, err = fmt.Printf("|  ")
+	// 		}
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// 	if dir != nil {
+	// 		_, err = fmt.Println(dir.DocName)
+	// 	} else {
+	// 		_, err = fmt.Printf("%s (%d)\n", file.DocName, file.ByteSize)
+	// 	}
+	// 	return err
+	// })
+	// fmt.Printf("nb files = %d\n", nbFiles)
+
+	// Build the cursors
+	_, err = exportFiles(inst, exportDoc, nil)
+	assert.NoError(t, err)
+
+	// Check files
+	cursors := append(exportDoc.PartsCursors, "")
+	fileIDs := map[string]bool{}
+	for _, c := range cursors {
+		cursor, err := ParseCursor(exportDoc, c)
+		assert.NoError(t, err)
+		list, err := listFilesFromCursor(inst, exportDoc, cursor)
+		assert.NoError(t, err)
+		for _, f := range list {
+			assert.False(t, fileIDs[f.DocID])
+			fileIDs[f.DocID] = true
+		}
+	}
+	assert.Len(t, fileIDs, nbFiles)
+
+	// Check file versions
+	versionsIDs := map[string]bool{}
+	for _, c := range cursors {
+		cursor, err := ParseCursor(exportDoc, c)
+		assert.NoError(t, err)
+		list, err := listVersionsFromCursor(inst, exportDoc, cursor)
+		assert.NoError(t, err)
+		for _, v := range list {
+			assert.False(t, versionsIDs[v.DocID])
+			versionsIDs[v.DocID] = true
+		}
+	}
+	assert.Len(t, versionsIDs, nbVersions)
 }
 
 func TestMain(m *testing.M) {
+	seed := time.Now().UTC().Unix()
+	fmt.Printf("seed = %d\n", seed)
+	rand.Seed(seed)
 	config.UseTestFile()
-	testutils.NeedCouchdb()
-
 	setup := testutils.NewSetup(m, "export_test")
 	inst = setup.GetTestInstance()
-
 	os.Exit(setup.Run())
 }

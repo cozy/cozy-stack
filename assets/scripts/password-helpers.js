@@ -20,8 +20,9 @@
     ]
 
     const possibleChars = charsets.reduce(function (possibleChars, charset) {
-      if (charset.regexp.test(password)) possibleChars += charset.size
-      return possibleChars
+      let chars = possibleChars
+      if (charset.regexp.test(password)) chars += charset.size
+      return chars
     }, 0)
 
     const passwordStrength =

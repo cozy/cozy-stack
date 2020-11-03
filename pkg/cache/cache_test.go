@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"sort"
 	"testing"
 	"time"
 
@@ -33,4 +34,22 @@ func TestMultiGet(t *testing.T) {
 	assert.Equal(t, []byte("1"), bufs[0])
 	assert.Equal(t, []byte("2"), bufs[1])
 	assert.Nil(t, bufs[2])
+}
+
+func TestKeys(t *testing.T) {
+	test := func(client redis.UniversalClient) {
+		c := New(client)
+		c.Set("foo:one", []byte("1"), 10*time.Millisecond)
+		c.Set("foo:two", []byte("2"), 10*time.Millisecond)
+		c.Set("bar:baz", []byte("3"), 10*time.Millisecond)
+		keys := c.Keys("foo:")
+		sort.Strings(keys)
+		assert.Equal(t, []string{"foo:one", "foo:two"}, keys)
+	}
+
+	redisURL := "redis://localhost:6379/0"
+	opts, _ := redis.ParseURL(redisURL)
+	client := redis.NewClient(opts)
+	test(client)
+	test(nil) // In-memory
 }

@@ -11,11 +11,10 @@
 
   let errorPanel
   const renewField = d.getElementById('renew-field')
-  const showError = function (error) {
-    if (error) {
-      error = '' + error
-    } else {
-      error = 'The Cozy server is unavailable. Do you have network?'
+  const showError = function (message) {
+    let error = 'The Cozy server is unavailable. Do you have network?'
+    if (message) {
+      error = '' + message
     }
 
     if (!errorPanel) {

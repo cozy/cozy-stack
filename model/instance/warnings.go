@@ -20,6 +20,8 @@ var (
 	BlockedLoginFailed = BlockingReason{Code: "LOGIN_FAILED", Message: "Instance Blocked Login"}
 	// BlockedPaymentFailed is used when a payment is missing for the instance
 	BlockedPaymentFailed = BlockingReason{Code: "PAYMENT_FAILED", Message: "Instance Blocked Payment"}
+	// BlockedImporting is used when importing the data from another instance
+	BlockedImporting = BlockingReason{Code: "IMPORTING", Message: "Instance Blocked Importing"}
 	// BlockedUnknown is used when an instance is blocked but the reason is unknown
 	BlockedUnknown = BlockingReason{Code: "UNKNOWN", Message: "Instance Blocked Unknown"}
 )

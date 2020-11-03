@@ -55,7 +55,7 @@ type Instance struct {
 
 	OnboardingFinished bool  `json:"onboarding_finished,omitempty"` // Whether or not the onboarding is complete.
 	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"`   // The total size in bytes allowed to the user
-	IndexViewsVersion  int   `json:"indexes_version"`
+	IndexViewsVersion  int   `json:"indexes_version,omitempty"`
 
 	// Swift layout number:
 	// - 0 for layout v1

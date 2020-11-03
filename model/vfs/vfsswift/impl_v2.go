@@ -192,7 +192,7 @@ func (sfs *swiftVFSV2) CreateDir(doc *vfs.DirDoc) error {
 	return sfs.Indexer.CreateNamedDirDoc(doc)
 }
 
-func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
+func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateOptions) (vfs.File, error) {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return nil, lockerr
 	}
@@ -235,7 +235,9 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 		return nil, err
 	}
 	if strings.HasPrefix(newpath, vfs.TrashDirName+"/") {
-		return nil, vfs.ErrParentInTrash
+		if !vfs.OptionsAllowCreationInTrash(opts) {
+			return nil, vfs.ErrParentInTrash
+		}
 	}
 
 	// Avoid storing negative size in the index.
@@ -419,6 +421,14 @@ func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 func (sfs *swiftVFSV2) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vfs.File, error) {
 	// The versioning is not implemented in Swift layout v2
 	return nil, os.ErrNotExist
+}
+
+func (sfs *swiftVFSV2) ImportFileVersion(version *vfs.Version, content io.ReadCloser) error {
+	if err := content.Close(); err != nil {
+		return err
+	}
+	// The versioning is not implemented in Swift layout v1
+	return os.ErrNotExist
 }
 
 func (sfs *swiftVFSV2) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version) error {

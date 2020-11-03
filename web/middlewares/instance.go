@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -66,55 +67,74 @@ func CheckInstanceBlocked(next echo.HandlerFunc) echo.HandlerFunc {
 			return next(c)
 		}
 		if i.CheckInstanceBlocked() {
-			returnCode := http.StatusServiceUnavailable
-			// Standard checks
-			if i.BlockingReason == instance.BlockedLoginFailed.Code {
-				return c.Render(returnCode, "instance_blocked.html", echo.Map{
-					"Title":       i.TemplateTitle(),
-					"Domain":      i.ContextualDomain(),
-					"ContextName": i.ContextName,
-					"Locale":      i.Locale,
-					"ThemeCSS":    ThemeCSS(i),
-					"Reason":      i.Translate(instance.BlockedLoginFailed.Message),
-					"Favicon":     Favicon(i),
-				})
-			}
-
-			contentType := AcceptedContentType(c)
-			if url, _ := i.ManagerURL(instance.ManagerBlockedURL); url != "" && IsLoggedIn(c) {
-				switch contentType {
-				case jsonapi.ContentType, echo.MIMEApplicationJSON:
-					return c.JSON(returnCode, i.Warnings())
-				default:
-					return c.Redirect(http.StatusFound, url)
-				}
-			}
-
-			// Fallback by trying to determine the blocking reason
-			reason := i.BlockingReason
-			if reason == "" {
-				reason = i.Translate(instance.BlockedUnknown.Message)
-			} else if reason == instance.BlockedPaymentFailed.Code {
-				returnCode = http.StatusPaymentRequired
-				reason = i.Translate(instance.BlockedPaymentFailed.Message)
-			}
-
-			switch contentType {
-			case jsonapi.ContentType, echo.MIMEApplicationJSON:
-				return c.JSON(returnCode, i.Warnings())
-			default:
-				return c.Render(returnCode, "instance_blocked.html", echo.Map{
-					"Title":       i.TemplateTitle(),
-					"Domain":      i.ContextualDomain(),
-					"ContextName": i.ContextName,
-					"Locale":      i.Locale,
-					"ThemeCSS":    ThemeCSS(i),
-					"Reason":      reason,
-					"Favicon":     Favicon(i),
-				})
-			}
+			return handleBlockedInstance(c, i, next)
 		}
 		return next(c)
+	}
+}
+
+func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.HandlerFunc) error {
+	returnCode := http.StatusServiceUnavailable
+	contentType := AcceptedContentType(c)
+
+	// Standard checks
+	if i.BlockingReason == instance.BlockedLoginFailed.Code {
+		return c.Render(returnCode, "instance_blocked.html", echo.Map{
+			"Title":       i.TemplateTitle(),
+			"Domain":      i.ContextualDomain(),
+			"ContextName": i.ContextName,
+			"Locale":      i.Locale,
+			"ThemeCSS":    ThemeCSS(i),
+			"Reason":      i.Translate(instance.BlockedLoginFailed.Message),
+			"Favicon":     Favicon(i),
+		})
+	}
+
+	if i.BlockingReason == instance.BlockedImporting.Code {
+		// Allow requests to the importing page
+		if strings.HasPrefix(c.Request().URL.Path, "/move/importing") {
+			return next(c)
+		}
+		switch contentType {
+		case jsonapi.ContentType, echo.MIMEApplicationJSON:
+			reason := i.Translate(instance.BlockedPaymentFailed.Message)
+			return c.JSON(returnCode, echo.Map{"error": reason})
+		default:
+			return c.Redirect(http.StatusFound, i.PageURL("/move/importing", nil))
+		}
+	}
+
+	if url, _ := i.ManagerURL(instance.ManagerBlockedURL); url != "" && IsLoggedIn(c) {
+		switch contentType {
+		case jsonapi.ContentType, echo.MIMEApplicationJSON:
+			return c.JSON(returnCode, i.Warnings())
+		default:
+			return c.Redirect(http.StatusFound, url)
+		}
+	}
+
+	// Fallback by trying to determine the blocking reason
+	reason := i.BlockingReason
+	if reason == "" {
+		reason = i.Translate(instance.BlockedUnknown.Message)
+	} else if reason == instance.BlockedPaymentFailed.Code {
+		returnCode = http.StatusPaymentRequired
+		reason = i.Translate(instance.BlockedPaymentFailed.Message)
+	}
+
+	switch contentType {
+	case jsonapi.ContentType, echo.MIMEApplicationJSON:
+		return c.JSON(returnCode, i.Warnings())
+	default:
+		return c.Render(returnCode, "instance_blocked.html", echo.Map{
+			"Title":       i.TemplateTitle(),
+			"Domain":      i.ContextualDomain(),
+			"ContextName": i.ContextName,
+			"Locale":      i.Locale,
+			"ThemeCSS":    ThemeCSS(i),
+			"Reason":      reason,
+			"Favicon":     Favicon(i),
+		})
 	}
 }
 

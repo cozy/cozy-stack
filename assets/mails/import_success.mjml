@@ -1,0 +1,22 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	<img src="https://downcloud.cozycloud.cc/upload/icon-download.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	{{t "Mail Import Success Subject"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Import Success Intro 1" .PublicName}}<br />
+	{{t "Mail Import Success Intro 2"}}
+	{{t "Mail Import Success Button instruction"}}
+</mj-text>
+<mj-button href="{{.CozyLink}}" align="left" mj-class="primary-button content-xlarge">
+	{{t "Mail Import Success Button text"}}
+</mj-button>
+{{if .AppsNotInstalled}}
+<mj-text mj-class="content-medium">
+	{{t "Mail Import Success Apps not installed" .AppsNotInstalled}}
+</mj-text>
+{{end}}
+<mj-text mj-class="content-medium">
+	{{t "Mail Import Success Outro"}}
+</mj-text>
+{{end}}

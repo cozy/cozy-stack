@@ -64,6 +64,8 @@ const (
 	SendHintByMail
 	// JobNotesPersistType is used for saving notes to the VFS
 	JobNotesPersistType
+	// ExportType is used for creating an export of the data
+	ExportType
 )
 
 type counterConfig struct {
@@ -174,6 +176,12 @@ var configs = []counterConfig{
 		Prefix: "job-notes-persist",
 		Limit:  100,
 		Period: 1 * time.Hour,
+	},
+	// ExportType
+	{
+		Prefix: "export",
+		Limit:  5,
+		Period: 24 * time.Hour,
 	},
 }
 

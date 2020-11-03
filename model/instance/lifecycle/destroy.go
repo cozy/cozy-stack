@@ -58,16 +58,7 @@ func destroyWithoutHooks(domain string) error {
 	inst.Deleting = false
 	_ = couchdb.UpdateDoc(couchdb.GlobalDB, inst)
 
-	sched := job.System()
-	triggers, err := sched.GetAllTriggers(inst)
-	if err == nil {
-		for _, t := range triggers {
-			if err = sched.DeleteTrigger(inst, t.Infos().TID); err != nil {
-				logger.WithDomain(domain).Error(
-					"Failed to remove trigger: ", err)
-			}
-		}
-	}
+	removeTriggers(inst)
 
 	if err = couchdb.DeleteAllDBs(inst); err != nil {
 		inst.Logger().Errorf("Could not delete all CouchDB databases: %s", err.Error())
@@ -143,5 +134,18 @@ func sendAlert(inst *instance.Instance, e error) {
 			WorkerType: "sendmail",
 			Message:    msg,
 		})
+	}
+}
+
+func removeTriggers(inst *instance.Instance) {
+	sched := job.System()
+	triggers, err := sched.GetAllTriggers(inst)
+	if err == nil {
+		for _, t := range triggers {
+			if err = sched.DeleteTrigger(inst, t.Infos().TID); err != nil {
+				logger.WithDomain(inst.Domain).Error(
+					"Failed to remove trigger: ", err)
+			}
+		}
 	}
 }

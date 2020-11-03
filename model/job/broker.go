@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sort"
 	"time"
 
@@ -36,11 +37,6 @@ var defaultMaxLimits map[State]int = map[State]int{
 	Done:    50,
 	Errored: 50,
 }
-
-const (
-	// WorkerType is the key in JSON for the type of worker
-	WorkerType = "worker"
-)
 
 type (
 	// Broker interface is used to represent a job broker associated to a
@@ -169,8 +165,10 @@ func (j *Job) SetRev(rev string) { j.JobRev = rev }
 // Fetch implements the permission.Fetcher interface
 func (j *Job) Fetch(field string) []string {
 	switch field {
-	case WorkerType:
+	case "worker":
 		return []string{j.WorkerType}
+	case "state":
+		return []string{fmt.Sprintf("%v", j.State)}
 	}
 	return nil
 }
@@ -184,7 +182,7 @@ func (jr *JobRequest) DocType() string { return consts.Jobs }
 // Fetch implements the permission.Fetcher interface
 func (jr *JobRequest) Fetch(field string) []string {
 	switch field {
-	case WorkerType:
+	case "worker":
 		return []string{jr.WorkerType}
 	}
 	return nil
@@ -198,7 +196,7 @@ func (j *Job) Logger() *logrus.Entry {
 // AckConsumed sets the job infos state to Running an sends the new job infos
 // on the channel.
 func (j *Job) AckConsumed() error {
-	j.Logger().Debugf("ack_consume %s ", j.ID())
+	j.Logger().Debugf("ack_consume %s", j.ID())
 	j.StartedAt = time.Now()
 	j.State = Running
 	return j.Update()
@@ -207,7 +205,7 @@ func (j *Job) AckConsumed() error {
 // Ack sets the job infos state to Done an sends the new job infos on the
 // channel.
 func (j *Job) Ack() error {
-	j.Logger().Debugf("ack %s ", j.ID())
+	j.Logger().Debugf("ack %s", j.ID())
 	j.FinishedAt = time.Now()
 	j.State = Done
 	j.Event = nil
@@ -217,7 +215,7 @@ func (j *Job) Ack() error {
 // Nack sets the job infos state to Errored, set the specified error has the
 // error field and sends the new job infos on the channel.
 func (j *Job) Nack(err error) error {
-	j.Logger().Debugf("nack %s ", j.ID())
+	j.Logger().Debugf("nack %s", j.ID())
 	j.FinishedAt = time.Now()
 	j.State = Errored
 	j.Error = err.Error()
@@ -227,7 +225,15 @@ func (j *Job) Nack(err error) error {
 
 // Update updates the job in couchdb
 func (j *Job) Update() error {
-	return couchdb.UpdateDoc(j, j)
+	err := couchdb.UpdateDoc(j, j)
+	// XXX When a job for an import runs, the database for io.cozy.jobs is
+	// deleted, and we need to recreate the job, not just update it.
+	if couchdb.IsNotFoundError(err) {
+		j.SetID("")
+		j.SetRev("")
+		return j.Create()
+	}
+	return err
 }
 
 // Create creates the job in couchdb

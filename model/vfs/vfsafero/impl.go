@@ -164,7 +164,7 @@ func (afs *aferoVFS) CreateDir(doc *vfs.DirDoc) error {
 	return err
 }
 
-func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
+func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateOptions) (vfs.File, error) {
 	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return nil, lockerr
 	}
@@ -200,7 +200,9 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 	if strings.HasPrefix(newpath, vfs.TrashDirName+"/") {
-		return nil, vfs.ErrParentInTrash
+		if !vfs.OptionsAllowCreationInTrash(opts) {
+			return nil, vfs.ErrParentInTrash
+		}
 	}
 
 	if olddoc == nil {
@@ -353,6 +355,38 @@ func (afs *aferoVFS) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vf
 		return nil, err
 	}
 	return &aferoFileOpen{f}, nil
+}
+
+func (afs *aferoVFS) ImportFileVersion(version *vfs.Version, content io.ReadCloser) error {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer afs.mu.Unlock()
+
+	diskQuota := afs.DiskQuota()
+	if diskQuota > 0 {
+		diskUsage, err := afs.DiskUsage()
+		if err != nil {
+			return err
+		}
+		if diskUsage+version.ByteSize > diskQuota {
+			return vfs.ErrFileTooBig
+		}
+	}
+
+	vPath := pathForVersion(version)
+	_ = afs.fs.MkdirAll(filepath.Dir(vPath), 0755)
+	err := afero.WriteReader(afs.fs, vPath, content)
+	if errc := content.Close(); err == nil {
+		err = errc
+	}
+	if err != nil {
+		// remove the temporary file if an error occurred
+		_ = afs.fs.Remove(vPath)
+		return err
+	}
+
+	return afs.Indexer.CreateVersion(version)
 }
 
 func (afs *aferoVFS) RevertFileVersion(doc *vfs.FileDoc, version *vfs.Version) error {

@@ -26,14 +26,12 @@ Exports options fields are:
 -   `max_age` (optional) (duration / nanosecs): the maximum age of the export
     data.
 -   `with_doctypes` (optional) (string array): the list of exported doctypes
--   `without_files` (optional) (boolean): whether or not the export contains the
-    files index (if false, it is not possible to generate files tarball).
 
 #### Request
 
 ```http
 POST /move/exports HTTP/1.1
-Host: alice.cozy.tools
+Host: source.cozy.tools
 Authorization: Bearer ...
 Content-Type: application/vnd.api+json
 ```
@@ -43,8 +41,7 @@ Content-Type: application/vnd.api+json
     "data": {
         "attributes": {
             "parts_size": 10240,
-            "with_doctypes": [],
-            "without_files": false
+            "with_doctypes": []
         }
     }
 }
@@ -59,16 +56,13 @@ Exports fields are:
 -   `parts_size` (int): the size in bytes of a tarball files part.
 -   `parts_cursors` (string array): the list of cursors to access to the
     different files parts.
--   `parts_length` (int): number of parts
 -   `with_doctypes` (string array): the list of exported doctypes
     (if empty of null, all doctypes are exported)
--   `without_files` (boolean): whether or not the export contains the files
-    index (if false, it is not possible to generate files tarball).
 -   `state` (string): the state of the export (`"exporting"` / `"done"` /
     `"error"`).
 -   `created_at` (string / time): the date of creation of the export
 -   `expires_at` (string / time): the date of expiration of the export
--   `total_size` (int): the total size of the export metadata
+-   `total_size` (int): the total size of the exported documents from CouchDB
 -   `creation_duration` (int): the amount of nanoseconds taken for the creation
     of the export
 -   `error` (string): an error string if the export is in an `"error"` state
@@ -77,7 +71,7 @@ Exports fields are:
 
 ```http
 GET /move/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX HTTP/1.1
-Host: alice.cozy.tools
+Host: source.cozy.tools
 Authorization: Bearer ...
 Content-Type: application/vnd.api+json
 ```
@@ -94,7 +88,6 @@ Content-Type: application/vnd.api+json
             "parts_size": 10240,
             "parts_cursors": ["AAA", "BBB", "CCC"],
             "with_doctypes": [],
-            "without_files": false,
             "state": "done",
             "created_at": "2018-05-04T08:59:37.530693972+02:00",
             "expires_at": "2018-05-11T08:59:37.530693972+02:00",
@@ -112,4 +105,82 @@ This endpoint will download an archive containing the metadata and files of the
 user, as part of a multi-part download. The cursor given should be one of the
 defined in the export document `parts_cursors`.
 
-Only the first part of the data contains the metadata.
+Only the first part of the archive contains the metadata.
+
+To get all the parts, this endpoint must be called one time with no cursor, and
+one time for each cursor in `parts_cursors`.
+
+## Import
+
+### POST /move/imports/precheck
+
+This endpoint can be use to check that an export can be imported from the given
+URL, before doing the real import.
+
+#### Request
+
+```http
+POST /move/imports/precheck HTTP/1.1
+Host: destination.cozy.tools
+Authorization: Bearer ...
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "data": {
+        "attributes": {
+            "url": "https://settings.source.cozy.tools/#/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        }
+    }
+}
+```
+
+#### Responses
+
+- `204 No Content` if every thing is fine
+- `412 Precondition Failed` if no archive can be found at the given URL
+- `422 Entity Too Large` if the quota is too small to import the files
+
+### POST /move/imports
+
+This endpoint can be used to really start an import.
+
+#### Request
+
+```http
+POST /move/imports HTTP/1.1
+Host: destination.cozy.tools
+Authorization: Bearer ...
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "data": {
+        "attributes": {
+            "url": "https://settings.source.cozy.tools/#/exports/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        }
+    }
+}
+```
+
+#### Responses
+
+```http
+HTTP/1.1 303 See Other
+Location: https://destination.cozy.tools/move/importing
+```
+
+### GET /move/importing
+
+This shows a page for the user to wait that the import finishes.
+
+### GET /move/importing/realtime
+
+This is a websocket endpoint that can be used to wait for the end of the
+import. The server will send an event when it is done (or errored):
+
+```
+server> {"redirect": "http://cozy.tools:8080/auth/login"}
+```

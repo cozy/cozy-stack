@@ -130,7 +130,7 @@ func (s *memScheduler) ShutdownScheduler(ctx context.Context) error {
 func (s *memScheduler) AddTrigger(t Trigger) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if err := couchdb.CreateDoc(t, t.Infos()); err != nil {
+	if err := createTrigger(t); err != nil {
 		return err
 	}
 	s.ts[t.DBPrefix()+"/"+t.Infos().TID] = t

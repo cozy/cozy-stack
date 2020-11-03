@@ -226,8 +226,6 @@ Its options are:
     multi-part download of files data
 -   `max_age`: the maximum age duration of the archive before it expires
 -   `with_doctypes`: the list of exported doctypes (exports all doctypes if empty)
--   `without_files`: boolean to avoid exporting the index (preventing download
-    file data)
 
 ### Example
 
@@ -235,8 +233,26 @@ Its options are:
 {
     "parts_size": 52428800,
     "max_age": 60000000000, // 1 minute
-    "with_doctypes": ["io.cozy.accounts"], // empty or null means all doctypes
-    "without_files": false
+    "with_doctypes": ["io.cozy.accounts", "io.cozy.files"] // empty or null means all doctypes
+}
+```
+
+## import
+
+The `import` worker can be used to import the data from an export. The instance
+will be reset before importing data to avoid complex logic of reconciliation.
+The instance is blocked during the import, and a mail is sent at the end of the
+import, when the instance can be accessed again.
+
+Its options are:
+
+- `manifest_url`: the URL of the manifest for the exported data.
+
+### Example
+
+```json
+{
+  "manifest_url": "http://cozy.tools:8080/move/exports/QUFBQUFGLVg5b3c0WTJNNU9HRmpPR0V4WlRnd01XVTJZMlU0T0RjeE5UaGpNVEF3TWpKbVplblFfRWZWUVAtRGJXU0lnV2tIZ3NsVHN5dUR6V0ZIdVdSeERLb196X3A0"
 }
 ```
 

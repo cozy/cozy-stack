@@ -1,7 +1,7 @@
 class Contact
   include Model
 
-  attr_reader :name, :fullname, :emails, :addresses, :phones, :cozy
+  attr_reader :name, :fullname, :emails, :addresses, :phones, :cozy, :me
 
   def self.doctype
     "io.cozy.contacts"
@@ -25,23 +25,18 @@ class Contact
     phone = opts[:phone] || Faker::PhoneNumber.cell_phone
     @phones = [{ number: phone }]
     @cozy = opts[:cozy]
+    @me = opts[:me] || false
   end
 
-  def self.find(inst, id)
-    opts = {
-      content_type: :json,
-      accept: :json,
-      authorization: "Bearer #{inst.token_for doctype}"
-    }
-    res = inst.client["/data/#{doctype}/#{id}"].get opts
-    j = JSON.parse(res.body)
+  def self.from_json(j)
     contact = Contact.new(
-      name: j["name"],
-      fullname: j["fullname"],
-      email: j["email"],
-      cozy: j["cozy"],
-      addresses: j["address"],
-      phone: j["phone"]
+      name: j["name"] || {},
+      fullname: j["fullname"] || "",
+      emails: j["email"] || "",
+      cozy: j["cozy"] || [],
+      addresses: j["address"] || [],
+      phone: j["phone"] || "",
+      me: j["me"]
     )
     contact.couch_id = j["_id"]
     contact.couch_rev = j["_rev"]
