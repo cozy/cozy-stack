@@ -3,6 +3,7 @@ package moves
 import (
 	"encoding/base64"
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 func init() {
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "export",
-		Concurrency:  4,
+		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
 		Timeout:      1 * time.Hour,
 		WorkerFunc:   ExportWorker,
@@ -25,7 +26,7 @@ func init() {
 
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "import",
-		Concurrency:  4,
+		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
 		Timeout:      1 * time.Hour,
 		WorkerFunc:   ImportWorker,
