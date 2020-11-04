@@ -4,8 +4,8 @@
 # Nos_ <n.schwirz@freenet.de>, 2019
 # Mario Angermann, 2019
 # Nils Jakobi <jakobi.nils@gmail.com>, 2019
-# IndeedNotJames <indeednotjames@mailbox.org>, 2020
 # Adrian Nöthlich <admin.noethlich@hgw-iserv.de>, 2020
+# IndeedNotJames <indeednotjames@mailbox.org>, 2020
 # J Variance <ltjiri76j@relay.firefox.com>, 2020
 # 
 msgid ""
@@ -312,6 +312,15 @@ msgstr ""
 "Durch die Authentifizierung bekommt die Anwendung Zugriff diese Daten in "
 "deinem Cozy:"
 
+msgid "Import Title"
+msgstr "Import im Gange"
+
+msgid "Import Description"
+msgstr ""
+"Das Importieren von Daten kann etwas dauern. Du kannst diesen Bildschirm "
+"schließen, eine E-Mail wird an dich gesendet sobald der Import "
+"fertiggestellt ist."
+
 msgid "Error Title"
 msgstr "Entschuldigung, ein Fehler ist aufgetreten."
 
@@ -358,6 +367,9 @@ msgstr "Der Cozy wurde wegen zu vieler Anmeldeversuche blockiert"
 
 msgid "Instance Blocked Payment"
 msgstr "Die Cozy benötigt eine Zahlung"
+
+msgid "Instance Blocked Importing"
+msgstr "Cozy importiert gerade Daten"
 
 msgid "Instance Blocked Unknown"
 msgstr "Der Cozy wurde wegen eines unbekannten Grundes blockiert."
@@ -614,6 +626,46 @@ msgstr "Du kannst es durch einen Klick auf den folgenden Link herunterladen."
 
 msgid "Mail Archive Button text"
 msgstr "Deine Daten herunterladen"
+
+msgid "Mail Archive Alternative text"
+msgstr "Der Downloadlink für dein Cozy lautet wie folgt:"
+
+msgid "Mail Import Success Subject"
+msgstr "Gute Neuigkeiten! Dein Cozy wurde erfolgreich importiert"
+
+msgid "Mail Import Success Intro 1"
+msgstr "Hallo %s,"
+
+msgid "Mail Import Success Intro 2"
+msgstr "Der Import all deiner Daten in dein Cozy war erfolgreich."
+
+msgid "Mail Import Success Button instruction"
+msgstr ""
+"Du kannst nun auf deine Daten in deinem Cozy zugreifen, indem du auf den "
+"folgenden Button klickst:"
+
+msgid "Mail Import Success Button text"
+msgstr "Mein Cozy betreten"
+
+msgid "Mail Import Success Apps not installed"
+msgstr ""
+"Zur Information, die %s Dienste konnten nicht neuinstalliert werden. Wie dem"
+" auch sei: alle zugehörigen Daten wurden erfolgreich importiert."
+
+msgid "Mail Import Success Outro"
+msgstr "Bis bald, dein Cozy"
+
+msgid "Mail Import Error Subject"
+msgstr "⚠ Der Import in dein Cozy ist fehlgeschlagen"
+
+msgid "Mail Import Error Text"
+msgstr ""
+"Beim Import deiner Daten in dein Cozy gab es ein Problem. Das zu deinem Cozy"
+" übermittelte Archiv scheint nicht gültig zu sein. Kannst du den Vorgang "
+"wiederholen?"
+
+msgid "Mail Import Error Outro"
+msgstr "Wenn das Problem bestehen bleibt, kontaktiere unseren Kundendienst."
 
 msgid "Mail Two Factor Subject"
 msgstr "Zugangscode für die einmalige Verbindung"
