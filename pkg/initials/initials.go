@@ -68,7 +68,7 @@ type info struct {
 }
 
 func extractInfo(name string) info {
-	initials := getInitials(name)
+	initials := strings.ToUpper(getInitials(name))
 	color := getColor(name)
 	return info{initials: initials, color: color}
 }
