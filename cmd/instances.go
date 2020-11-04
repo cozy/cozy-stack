@@ -728,6 +728,9 @@ var oauthTokenInstanceCmd = &cobra.Command{
 		if len(args) < 3 {
 			return cmd.Usage()
 		}
+		if args[1] == "" {
+			return errors.New("Missing clientID")
+		}
 		if strings.Contains(args[2], ",") {
 			fmt.Fprintf(os.Stderr, "Warning: the delimiter for the scopes is a space!\n")
 		}
