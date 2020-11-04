@@ -82,7 +82,7 @@ func transformSettingsURLToManifestURL(settingsURL string) (string, error) {
 	} else {
 		// Flat subdomains
 		parts := strings.Split(u.Host, ".")
-		parts[0] = strings.TrimSuffix(u.Host, "-"+consts.SettingsSlug)
+		parts[0] = strings.TrimSuffix(parts[0], "-"+consts.SettingsSlug)
 		u.Host = strings.Join(parts, ".")
 	}
 	if !strings.HasPrefix(u.Fragment, "/exports/") {
