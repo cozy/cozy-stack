@@ -303,6 +303,14 @@ msgid "Authorize Linked Help"
 msgstr ""
 "Door te machtigen krijgt de app toegang tot de volgende gegevens op je Cozy:"
 
+msgid "Import Title"
+msgstr "Bezig met importeren..."
+
+msgid "Import Description"
+msgstr ""
+"Het importeren kan enige tijd duren. Je kunt dit scherm sluiten - je "
+"ontvangt een e-mail als het importeren voltooid is."
+
 msgid "Error Title"
 msgstr "Sorry, er is een fout opgetreden."
 
@@ -348,6 +356,9 @@ msgstr "De Cozy is geblokkeerd wegens teveel inlogpogingen"
 
 msgid "Instance Blocked Payment"
 msgstr "De Cozy vereist een betaling"
+
+msgid "Instance Blocked Importing"
+msgstr "Cozy is bezig gegevens te importeren"
 
 msgid "Instance Blocked Unknown"
 msgstr "De Cozy is om onbekende reden geblokkeerd"
@@ -606,6 +617,43 @@ msgstr "Je kunt het downloaden door te klikken op de volgende link:"
 
 msgid "Mail Archive Button text"
 msgstr "Je gegevens downloaden"
+
+msgid "Mail Archive Alternative text"
+msgstr "De downloadlink van je Cozy is:"
+
+msgid "Mail Import Success Subject"
+msgstr "Goed nieuws: je Cozy is geïmporteerd!"
+
+msgid "Mail Import Success Intro 1"
+msgstr "Hallo %s,"
+
+msgid "Mail Import Success Intro 2"
+msgstr "Het importeren van je gegevens is voltooid."
+
+msgid "Mail Import Success Button instruction"
+msgstr "Klik op de volgende knop om je gegevens te bekijken."
+
+msgid "Mail Import Success Button text"
+msgstr "Ga naar mijn Cozy"
+
+msgid "Mail Import Success Apps not installed"
+msgstr ""
+"Let op: de %s-diensten kunnen niet opnieuw worden ingesteld. Alle "
+"bijbehorende gegevens zijn echter geïmporteerd."
+
+msgid "Mail Import Success Outro"
+msgstr "Tot snel! Liefs, je Cozy"
+
+msgid "Mail Import Error Subject"
+msgstr "⚠ Het importeren is mislukt"
+
+msgid "Mail Import Error Text"
+msgstr ""
+"Er heeft zich een probleem voorgedaan tijdens het importeren: het "
+"archiefbestand lijkt ongeldig te zijn. Probeer het opnieuw."
+
+msgid "Mail Import Error Outro"
+msgstr "Als het probleem zich blijft voordoen, neem dan contact met ons op."
 
 msgid "Mail Two Factor Subject"
 msgstr "Eenmalige koppelcode"
