@@ -659,9 +659,9 @@ func (c *couchdbIndexer) BatchDeleteVersions(versions []*Version) error {
 		}
 		toDelete := remaining[:n]
 		remaining = remaining[n:]
-		if err := couchdb.BulkDeleteDocs(c.db, consts.Files, toDelete); err != nil {
+		if err := couchdb.BulkDeleteDocs(c.db, consts.FilesVersions, toDelete); err != nil {
 			// If it fails once, try again
-			if err := couchdb.BulkDeleteDocs(c.db, consts.Files, toDelete); err != nil {
+			if err := couchdb.BulkDeleteDocs(c.db, consts.FilesVersions, toDelete); err != nil {
 				return err
 			}
 		}
