@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/ncw/swift"
 	"github.com/sirupsen/logrus"
 )
@@ -338,31 +339,38 @@ func (sfs *swiftVFSV3) EnsureErased(journal vfs.TrashJournal) error {
 	// No lock needed
 	diskUsage, _ := sfs.Indexer.DiskUsage()
 	objNames := journal.ObjectNames
+	var errm error
 	var destroyed int64
 	var allVersions []*vfs.Version
 	for _, fileID := range journal.FileIDs {
-		if versions, err := vfs.VersionsFor(sfs, fileID); err == nil {
-			for _, v := range versions {
-				internalID := v.DocID
-				if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
-					internalID = parts[1]
-				}
-				objNames = append(objNames, MakeObjectNameV3(fileID, internalID))
-				destroyed += v.ByteSize
+		versions, err := vfs.VersionsFor(sfs, fileID)
+		if err != nil {
+			if !couchdb.IsNoDatabaseError(err) {
+				sfs.log.Warnf("EnsureErased failed on VersionsFor(%s): %s", fileID, err)
+				errm = multierror.Append(errm, err)
 			}
-			allVersions = append(allVersions, versions...)
+			continue
 		}
+		for _, v := range versions {
+			internalID := v.DocID
+			if parts := strings.SplitN(v.DocID, "/", 2); len(parts) > 1 {
+				internalID = parts[1]
+			}
+			objNames = append(objNames, MakeObjectNameV3(fileID, internalID))
+			destroyed += v.ByteSize
+		}
+		allVersions = append(allVersions, versions...)
 	}
-	var err error
-	if err = sfs.Indexer.BatchDeleteVersions(allVersions); err != nil {
+	if err := sfs.Indexer.BatchDeleteVersions(allVersions); err != nil {
 		sfs.log.Warnf("EnsureErased failed on BatchDeleteVersions: %s", err)
+		errm = multierror.Append(errm, err)
 	}
-	if err2 := deleteContainerFiles(sfs.c, sfs.container, objNames); err2 != nil {
-		err = err2
-		sfs.log.Infof("EnsureErased failed on deleteContainerFiles: %s", err)
+	if err := deleteContainerFiles(sfs.c, sfs.container, objNames); err != nil {
+		sfs.log.Warnf("EnsureErased failed on deleteContainerFiles: %s", err)
+		errm = multierror.Append(errm, err)
 	}
 	vfs.DiskQuotaAfterDestroy(sfs, diskUsage, destroyed)
-	return err
+	return errm
 }
 
 func (sfs *swiftVFSV3) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
