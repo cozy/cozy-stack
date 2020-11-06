@@ -624,8 +624,13 @@ func GetAvatar(c echo.Context) error {
 		return c.Blob(http.StatusOK, mime, img)
 	}
 
+	fallback := "initials"
+	if c.QueryParam("fallback") == "404" {
+		fallback = "404"
+	}
+
 	// Use the public avatar from the member's instance
-	res, err := http.Get(m.Instance + "/public/avatar?fallback=initials")
+	res, err := http.Get(m.Instance + "/public/avatar?fallback=" + fallback)
 	if err != nil {
 		return err
 	}
