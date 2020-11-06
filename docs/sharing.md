@@ -931,7 +931,7 @@ this sharing. No permission is required to use this route, you just need to
 know the sharing-id to use it. If no image has been chosen, a fallback will be
 used, depending of the `fallback` parameter in the query-string:
 
-- `initials`: a generated image with the initials of the owner's public name
+- `initials`: a generated image with the initials of the owner's public name. This is the default behavior.
 - `404`: just a 404 - Not found error.
 
 **Note**: 0 for the index means the sharer.
