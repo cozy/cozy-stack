@@ -12,13 +12,12 @@ require (
 	github.com/cozy/prosemirror-go v0.4.6
 	github.com/dhowden/tag v0.0.0-20200828214007-46e57f75dbfc
 	github.com/dustin/go-humanize v1.0.0
-	github.com/emersion/go-vcard v0.0.0-20200508080525-dd3110a24ec2
 	github.com/go-redis/redis/v7 v7.4.0
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/gddo v0.0.0-20200831202555-721e228c7686
 	github.com/google/go-querystring v1.0.0
-	github.com/google/gops v0.3.12
+	github.com/google/gops v0.3.13
 	github.com/gorilla/websocket v1.4.2
 	github.com/h2non/filetype v1.1.0
 	github.com/hashicorp/go-multierror v1.1.0
