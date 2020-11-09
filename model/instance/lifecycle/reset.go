@@ -46,6 +46,7 @@ func Reset(inst *instance.Instance) error {
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Jobs) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Permissions) })
 	g.Go(func() error { return couchdb.CreateDB(inst, consts.Sharings) })
+	g.Go(func() error { return couchdb.CreateDB(inst, consts.Contacts) })
 	g.Go(func() error {
 		if bitwardenSettings != nil {
 			bitwardenSettings.SetRev("")

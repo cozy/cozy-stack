@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
@@ -149,7 +150,7 @@ func (im *importer) importZip(zr zip.Reader) error {
 		}
 
 		// Normal documents
-		if doctype != im.doctype || len(im.docs) >= 1000 {
+		if doctype != im.doctype || len(im.docs) >= 200 {
 			if err := im.flush(); err != nil {
 				errm = multierror.Append(errm, err)
 				im.docs = nil
@@ -195,16 +196,19 @@ func (im *importer) flush() error {
 	}
 
 	olds := make([]interface{}, len(im.docs))
-	if err := couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds); err != nil {
-		if couchdb.IsNoDatabaseError(err) {
-			if errc := couchdb.CreateDB(im.inst, im.doctype); errc != nil {
-				return errc
-			}
-			err = couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds)
+	err := couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds)
+	if couchdb.IsNoDatabaseError(err) {
+		if errc := couchdb.CreateDB(im.inst, im.doctype); errc != nil {
+			return errc
 		}
-		if err != nil {
-			return err
-		}
+		err = couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds)
+	}
+	if err != nil {
+		time.Sleep(1 * time.Second)
+		err = couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds)
+	}
+	if err != nil {
+		return err
 	}
 
 	im.doctype = ""
