@@ -245,10 +245,11 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 		return err
 	}
 	opts := &request.Options{
-		Method: http.MethodPut,
-		Scheme: u.Scheme,
-		Domain: u.Host,
-		Path:   "/sharings/" + s.SID + "/io.cozy.files/" + xoredFileID + "/metadata",
+		Method:  http.MethodPut,
+		Scheme:  u.Scheme,
+		Domain:  u.Host,
+		Path:    "/sharings/" + s.SID + "/io.cozy.files/" + xoredFileID + "/metadata",
+		Queries: url.Values{"from": {inst.ContextualDomain()}},
 		Headers: request.Headers{
 			"Accept":        "application/json",
 			"Content-Type":  "application/json",
@@ -289,10 +290,11 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 	defer content.Close()
 
 	res2, err := request.Req(&request.Options{
-		Method: http.MethodPut,
-		Scheme: u.Scheme,
-		Domain: u.Host,
-		Path:   "/sharings/" + s.SID + "/io.cozy.files/" + resBody.Key,
+		Method:  http.MethodPut,
+		Scheme:  u.Scheme,
+		Domain:  u.Host,
+		Path:    "/sharings/" + s.SID + "/io.cozy.files/" + resBody.Key,
+		Queries: url.Values{"from": {inst.ContextualDomain()}},
 		Headers: request.Headers{
 			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 			"Content-Type":  fileDoc.Mime,
