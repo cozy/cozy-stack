@@ -44,12 +44,17 @@ func fsckHandler(c echo.Context) (err error) {
 		if log.FileDoc != nil {
 			log.FileDoc.DirsChildren = nil  // It can be filled on type mismatch
 			log.FileDoc.FilesChildren = nil // Idem
+			log.FileDoc.FilesChildrenSize = 0
 			log.FileDoc.Metadata = nil
 		}
 		if log.DirDoc != nil {
 			log.DirDoc.DirsChildren = nil
 			log.DirDoc.FilesChildren = nil
+			log.DirDoc.FilesChildrenSize = 0
 			log.DirDoc.Metadata = nil
+		}
+		if log.VersionDoc != nil {
+			log.VersionDoc.Metadata = nil
 		}
 		if errenc := encoder.Encode(log); errenc != nil {
 			i.Logger().WithField("nspace", "fsck").

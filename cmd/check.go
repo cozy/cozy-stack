@@ -72,6 +72,8 @@ func fsck(domain string) error {
 
 	hasLogs := false
 	scanner := bufio.NewScanner(res.Body)
+	buf := make([]byte, 512*1024) // The default buffer can be too short for some lines
+	scanner.Buffer(buf, len(buf))
 	for scanner.Scan() {
 		hasLogs = true
 		fmt.Println(string(scanner.Bytes()))
