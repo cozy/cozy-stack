@@ -26,3 +26,10 @@ const (
 	// NoteMimeType is the mime-type for the .cozy-note files.
 	NoteMimeType = "text/vnd.cozy.note+markdown"
 )
+
+const (
+	// CarbonCopyKey is the metadata key for a carbon copy (certified)
+	CarbonCopyKey = "carbonCopy"
+	// ElectronicSafeKey is the metadata key for an electronic safe (certified)
+	ElectronicSafeKey = "electronicSafe"
+)
