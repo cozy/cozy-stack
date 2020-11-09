@@ -70,6 +70,9 @@ a.popup-btn {
   display: flex;
   flex-direction: column;
 }
+.with-sticky-footer [role="region"] {
+  margin-top: max(0px, calc((100vh - 36rem) / 2.4));
+}
 .with-sticky-footer footer {
   padding: 0.5rem;
   box-shadow: 0 -2px 2px 0 rgba(0, 0, 0, 0.06);

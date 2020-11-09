@@ -31,7 +31,7 @@
               {{t "Authorize Sharing Title Add"}}
               {{end}}
             </h1>
-            <div class="u-card u-p-1-half u-mb-2">
+            <div class="u-card u-p-1 u-mb-2">
               <p class="help u-mt-0 u-text">
                 <span class="c-avatar c-avatar--sharing u-mr-half">
                   <img class="c-avatar-image" src="/sharings/{{.Sharing.SID}}/recipients/0/avatar" alt="" />
@@ -55,7 +55,7 @@
               {{else}}
               <label class="c-input-checkbox">
                 <input type="checkbox" name="synchronize" checked="checked" />
-                <span class="u-title-h2 u-pl-2">{{t "Authorize Sharing Synchronize label"}}</span>
+                <span class="u-title-h4 u-pl-2">{{t "Authorize Sharing Synchronize label"}}</span>
               </label>
               {{end}}
               <p class="{{if not .HasShortcut}}u-pl-2 {{end}}u-text u-fz-small u-mb-0">
@@ -68,7 +68,9 @@
           </div>
           <footer class="sticky-footer">
             <div class="controls u-flex u-flex-wrap-reverse">
-              <a href="/auth/authorize/sharing/{{.Sharing.SID}}/cancel?state={{.State}}" type="cancel" class="u-flex-shrink-1 u-flex-grow-1 c-btn c-btn--secondary"><span><span>{{t "Authorize Sharing Cancel"}}</span></span></a>
+              <a href="/auth/authorize/sharing/{{.Sharing.SID}}/cancel?state={{.State}}" type="cancel" class="u-flex-shrink-1 u-flex-grow-1 u-charcoalGrey c-btn c-btn--secondary">
+                <span><span>{{t "Authorize Sharing Cancel"}}</span></span>
+              </a>
               <button type="submit" class="u-flex-shrink-1 u-flex-grow-1 c-btn"><span><span>
                 {{if .HasShortcut}}
                 {{t "Authorize Sharing Submit Synchronize"}}
