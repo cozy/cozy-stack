@@ -237,7 +237,17 @@ func (s *Sharing) CreateShortcut(inst *instance.Instance, previewURL string, see
 
 	file, err := inst.VFS().CreateFile(fileDoc, nil)
 	if err != nil {
-		return err
+		basename := fileDoc.DocName
+		for i := 2; i < 100; i++ {
+			fileDoc.DocName = fmt.Sprintf("%s (%d)", basename, i)
+			file, err = inst.VFS().CreateFile(fileDoc, nil)
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			return err
+		}
 	}
 	_, err = file.Write(body)
 	if cerr := file.Close(); cerr != nil && err == nil {
