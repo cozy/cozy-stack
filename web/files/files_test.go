@@ -32,6 +32,7 @@ import (
 
 var ts *httptest.Server
 var testInstance *instance.Instance
+var setup *testutils.TestSetup
 var token string
 var clientID string
 var imgID string
@@ -624,6 +625,18 @@ func TestUploadWithSourceAccount(t *testing.T) {
 	fcm := attrs["cozyMetadata"].(map[string]interface{})
 	assert.Equal(t, account, fcm["sourceAccount"])
 	assert.Equal(t, identifier, fcm["sourceAccountIdentifier"])
+}
+
+func TestUploadWithWildcardPermission(t *testing.T) {
+	_, wildToken := setup.GetTestClient(consts.Files + ".*")
+	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
+	assert.NoError(t, err)
+	defer f.Close()
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=wet2.jpg", f)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+wildToken)
+	res, _ := doUploadOrMod(t, req, "image/jpeg", "tHWYYuXBBflJ8wXgJ2c2yg==")
+	assert.Equal(t, 201, res.StatusCode)
 }
 
 func TestModifyMetadataByPath(t *testing.T) {
@@ -2367,7 +2380,7 @@ func TestGetFileByPublicLinkRateExceeded(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "files_test")
+	setup = testutils.NewSetup(m, "files_test")
 
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
