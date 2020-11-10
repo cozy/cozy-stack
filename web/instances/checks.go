@@ -88,7 +88,9 @@ func checkShared(c echo.Context) error {
 	results, err := sharing.CheckShared(i)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
-			return c.JSON(http.StatusOK, echo.Map{"err": err.Error()})
+			return c.JSON(http.StatusOK, []map[string]interface{}{
+				{"error": err.Error()},
+			})
 		}
 		return wrapError(err)
 	}
@@ -105,7 +107,9 @@ func checkSharings(c echo.Context) error {
 	results, err := sharing.CheckSharings(i)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
-			return c.JSON(http.StatusOK, echo.Map{"err": err.Error()})
+			return c.JSON(http.StatusOK, []map[string]interface{}{
+				{"error": err.Error()},
+			})
 		}
 		return wrapError(err)
 	}
