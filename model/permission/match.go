@@ -50,7 +50,7 @@ func matchType(r Rule, doctype string) bool {
 	if !isWildcard(r.Type) {
 		return false
 	}
-	typ := trimWildcard(r.Type)
+	typ := TrimWildcard(r.Type)
 	return typ == doctype || strings.HasPrefix(doctype, typ+".")
 }
 

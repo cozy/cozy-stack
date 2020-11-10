@@ -91,7 +91,7 @@ func CheckDoctypeName(doctype string, authorizeWildcard bool) error {
 		if strings.Count(doctype, ".") < 3 {
 			return err
 		}
-		doctype = trimWildcard(doctype)
+		doctype = TrimWildcard(doctype)
 	}
 
 	for _, c := range doctype {
@@ -119,6 +119,7 @@ func isWildcard(doctype string) bool {
 	return strings.HasSuffix(doctype, wildcardSuffix)
 }
 
-func trimWildcard(doctype string) string {
+// TrimWildcard returns the given doctype without the wildcard suffix
+func TrimWildcard(doctype string) string {
 	return strings.TrimSuffix(doctype, wildcardSuffix)
 }
