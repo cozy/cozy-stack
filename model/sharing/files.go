@@ -608,7 +608,7 @@ func buildReferencedBy(target, file *vfs.FileDoc, rule *Rule) []couchdb.DocRefer
 
 func copySafeFieldsToFile(target, file *vfs.FileDoc) {
 	file.Tags = target.Tags
-	file.Metadata = target.Metadata
+	file.Metadata = target.Metadata.RemoveCertifiedMetadata()
 	file.CreatedAt = target.CreatedAt
 	file.UpdatedAt = target.UpdatedAt
 	file.Mime = target.Mime
@@ -1141,7 +1141,7 @@ func fileToJSONDoc(file *vfs.FileDoc, instanceURL string) couchdb.JSONDoc {
 		doc.M["restore_path"] = file.RestorePath
 	}
 	if len(file.Metadata) > 0 {
-		doc.M["metadata"] = file.Metadata
+		doc.M["metadata"] = file.Metadata.RemoveCertifiedMetadata()
 	}
 	fcm := file.CozyMetadata
 	if fcm == nil {

@@ -36,6 +36,12 @@ const (
 	// Thumbnails is a synthetic doctype for thumbnails, used for realtime
 	// events
 	Thumbnails = "io.cozy.files.thumbnails"
+	// CertifiedCarbonCopy is a synthetic doctype, used for given permission to
+	// add the carbonCopy metadata on files
+	CertifiedCarbonCopy = "io.cozy.certified.carbonCopy"
+	// CertifiedElectronicSafe is a synthetic doctype, used for given
+	// permission to add the electronicSafe metadata on files
+	CertifiedElectronicSafe = "io.cozy.certified.electronicSafe"
 	// PhotosAlbums doc type for photos albums
 	PhotosAlbums = "io.cozy.photos.albums"
 	// Intents doc type for intents persisted in couchdb

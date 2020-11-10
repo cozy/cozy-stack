@@ -61,6 +61,23 @@ func MergeMetadata(doc *FileDoc, meta Metadata) {
 	}
 }
 
+// RemoveCertifiedMetadata returns a metadata map where the keys that are
+// certified have been removed. It can be useful for sharing, as certified
+// metadata are only valid localy.
+func (m Metadata) RemoveCertifiedMetadata() Metadata {
+	if len(m) == 0 {
+		return Metadata{}
+	}
+	result := make(Metadata, len(m))
+	for k, v := range m {
+		if k == consts.CarbonCopyKey || k == consts.ElectronicSafeKey {
+			continue
+		}
+		result[k] = v
+	}
+	return result
+}
+
 // MetaExtractor is an interface for extracting metadata from a file
 type MetaExtractor interface {
 	io.WriteCloser

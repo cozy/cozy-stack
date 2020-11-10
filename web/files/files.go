@@ -1510,6 +1510,19 @@ func FileDocFromReq(c echo.Context, name, dirID string) (*vfs.FileDoc, error) {
 		doc.Metadata = *meta
 	}
 
+	if len(doc.Metadata) > 0 {
+		if _, ok := doc.Metadata[consts.CarbonCopyKey]; ok {
+			if err := middlewares.AllowWholeType(c, permission.POST, consts.CertifiedCarbonCopy); err != nil {
+				delete(doc.Metadata, consts.CarbonCopyKey)
+			}
+		}
+		if _, ok := doc.Metadata[consts.ElectronicSafeKey]; ok {
+			if err := middlewares.AllowWholeType(c, permission.POST, consts.CertifiedElectronicSafe); err != nil {
+				delete(doc.Metadata, consts.ElectronicSafeKey)
+			}
+		}
+	}
+
 	return doc, nil
 }
 
