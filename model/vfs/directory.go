@@ -36,7 +36,8 @@ type DirDoc struct {
 	// DirDoc is the base of the DirOrFile struct.
 	Fullpath string `json:"path,omitempty"`
 
-	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
+	ReferencedBy      []couchdb.DocReference `json:"referenced_by,omitempty"`
+	NotSynchronizedOn []couchdb.DocReference `json:"not_synchronized_on,omitempty"`
 
 	CozyMetadata *FilesCozyMetadata `json:"cozyMetadata,omitempty"`
 }
@@ -57,6 +58,8 @@ func (d *DirDoc) Clone() couchdb.Doc {
 	copy(cloned.Tags, d.Tags)
 	cloned.ReferencedBy = make([]couchdb.DocReference, len(d.ReferencedBy))
 	copy(cloned.ReferencedBy, d.ReferencedBy)
+	cloned.NotSynchronizedOn = make([]couchdb.DocReference, len(d.NotSynchronizedOn))
+	copy(cloned.NotSynchronizedOn, d.NotSynchronizedOn)
 	if d.CozyMetadata != nil {
 		cloned.CozyMetadata = d.CozyMetadata.Clone()
 	}
@@ -121,11 +124,29 @@ func (d *DirDoc) RemoveReferencedBy(ri ...couchdb.DocReference) {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	referenced := d.ReferencedBy[:0]
 	for _, ref := range d.ReferencedBy {
-		if !containsReferencedBy(ri, ref) {
+		if !containsDocReference(ri, ref) {
 			referenced = append(referenced, ref)
 		}
 	}
 	d.ReferencedBy = referenced
+}
+
+// AddNotSynchronizedOn adds not_synchronized_on to the directory
+func (d *DirDoc) AddNotSynchronizedOn(refs ...couchdb.DocReference) {
+	d.NotSynchronizedOn = append(d.NotSynchronizedOn, refs...)
+}
+
+// RemoveNotSynchronizedOn removes one or several not_synchronized_on to the
+// directory
+func (d *DirDoc) RemoveNotSynchronizedOn(refs ...couchdb.DocReference) {
+	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
+	references := d.NotSynchronizedOn[:0]
+	for _, ref := range d.NotSynchronizedOn {
+		if !containsDocReference(refs, ref) {
+			references = append(references, ref)
+		}
+	}
+	d.NotSynchronizedOn = references
 }
 
 // NewDirDoc is the DirDoc constructor. The given name is validated.
@@ -221,6 +242,7 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 	newdoc.CreatedAt = cdate
 	newdoc.UpdatedAt = *patch.UpdatedAt
 	newdoc.ReferencedBy = olddoc.ReferencedBy
+	newdoc.NotSynchronizedOn = olddoc.NotSynchronizedOn
 	newdoc.CozyMetadata = olddoc.CozyMetadata
 
 	if err = fs.UpdateDirDoc(olddoc, newdoc); err != nil {

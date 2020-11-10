@@ -114,6 +114,7 @@ func (s *Sharing) SortFilesToSent(files []map[string]interface{}) {
 func (s *Sharing) TransformFileToSent(doc map[string]interface{}, xorKey []byte, ruleIndex int) {
 	if doc["type"] == consts.DirType {
 		delete(doc, "path")
+		delete(doc, "not_synchronized_on")
 	}
 	id := doc["_id"].(string)
 	doc["_id"] = XorID(id, xorKey)

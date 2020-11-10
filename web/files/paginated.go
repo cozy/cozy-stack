@@ -143,6 +143,12 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 				Self: "/files/" + doc.DocID + "/relationships/contents",
 			},
 			Data: relsData},
+		"not_synchronized_on": jsonapi.Relationship{
+			Links: &jsonapi.LinksList{
+				Self: "/files/" + doc.ID() + "/relationships/not_synchronized_on",
+			},
+			Data: doc.NotSynchronizedOn,
+		},
 		"referenced_by": jsonapi.Relationship{
 			Links: &jsonapi.LinksList{
 				Self: "/files/" + doc.ID() + "/relationships/references",

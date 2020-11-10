@@ -145,14 +145,14 @@ func SameReferences(a, b []couchdb.DocReference) bool {
 		return false
 	}
 	for _, ref := range a {
-		if !containsReferencedBy(b, ref) {
+		if !containsDocReference(b, ref) {
 			return false
 		}
 	}
 	return true
 }
 
-func containsReferencedBy(haystack []couchdb.DocReference, needle couchdb.DocReference) bool {
+func containsDocReference(haystack []couchdb.DocReference, needle couchdb.DocReference) bool {
 	for _, ref := range haystack {
 		if ref.ID == needle.ID && ref.Type == needle.Type {
 			return true
@@ -166,7 +166,7 @@ func (f *FileDoc) RemoveReferencedBy(ri ...couchdb.DocReference) {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	referenced := f.ReferencedBy[:0]
 	for _, ref := range f.ReferencedBy {
-		if !containsReferencedBy(ri, ref) {
+		if !containsDocReference(ri, ref) {
 			referenced = append(referenced, ref)
 		}
 	}
