@@ -26,6 +26,13 @@ func TestCreateDirBadType(t *testing.T) {
 	assert.Equal(t, 403, res.StatusCode)
 }
 
+func TestCreateDirWildCard(t *testing.T) {
+	wildTok, _ := testInstance.MakeJWT(consts.AccessTokenAudience, clientID, "io.cozy.files.*", "", time.Now())
+	res, err := request("POST", "/files/?Name=icantcreateyou&Type=directory", wildTok, strings.NewReader(""))
+	assert.NoError(t, err)
+	assert.Equal(t, 201, res.StatusCode)
+}
+
 func TestCreateDirLimitedScope(t *testing.T) {
 	res, data := createDir(t, "/files/?Name=permissionholder&Type=directory")
 	assert.Equal(t, 201, res.StatusCode)
