@@ -626,19 +626,6 @@ func TestUploadWithSourceAccount(t *testing.T) {
 	assert.Equal(t, account, fcm["sourceAccount"])
 	assert.Equal(t, identifier, fcm["sourceAccountIdentifier"])
 }
-
-func TestUploadWithWildcardPermission(t *testing.T) {
-	_, wildToken := setup.GetTestClient(consts.Files + ".*")
-	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__M4Dz.jpg")
-	assert.NoError(t, err)
-	defer f.Close()
-	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=wet2.jpg", f)
-	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+wildToken)
-	res, _ := doUploadOrMod(t, req, "image/jpeg", "tHWYYuXBBflJ8wXgJ2c2yg==")
-	assert.Equal(t, 201, res.StatusCode)
-}
-
 func TestModifyMetadataByPath(t *testing.T) {
 	body := "foo"
 	res1, data1 := upload(t, "/files/?Type=file&Name=file-move-me-by-path", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
