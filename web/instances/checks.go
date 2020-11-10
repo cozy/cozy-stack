@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/labstack/echo/v4"
 )
 
@@ -86,6 +87,9 @@ func checkShared(c echo.Context) error {
 
 	results, err := sharing.CheckShared(i)
 	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusOK, echo.Map{"err": err.Error()})
+		}
 		return wrapError(err)
 	}
 	return c.JSON(http.StatusOK, results)
@@ -100,6 +104,9 @@ func checkSharings(c echo.Context) error {
 
 	results, err := sharing.CheckSharings(i)
 	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusOK, echo.Map{"err": err.Error()})
+		}
 		return wrapError(err)
 	}
 	return c.JSON(http.StatusOK, results)
