@@ -29,11 +29,11 @@ func Allows(fs VFS, pset permission.Set, v permission.Verb, fd Fetcher) error {
 	// First pass, we iterate over the rules, check if we have an easy match
 	// keep a short list of useful rules and allowed IDs.
 	for _, r := range pset {
-		isFileDoctype := false
-		if r.Type == consts.Files || permission.TrimWildcard(r.Type) == consts.Files {
-			isFileDoctype = true
+		typ := permission.TrimWildcard(r.Type)
+		if typ != consts.Files && !strings.HasPrefix(consts.Files, typ+".") {
+			continue
 		}
-		if !isFileDoctype || !r.Verbs.Contains(v) {
+		if !r.Verbs.Contains(v) {
 			continue
 		}
 
