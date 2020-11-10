@@ -51,6 +51,7 @@ type Sharing struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	NbFiles     int       `json:"initial_number_of_files_to_sync,omitempty"`
+	Initial     bool      `json:"initial_sync,omitempty"`
 	ShortcutID  string    `json:"shortcut_id,omitempty"`
 
 	Rules []Rule `json:"rules"`
@@ -648,6 +649,7 @@ func (s *Sharing) EndInitial(inst *instance.Instance) error {
 		return nil
 	}
 	s.NbFiles = 0
+	s.Initial = false
 	if err := couchdb.UpdateDoc(inst, s); err != nil {
 		return err
 	}

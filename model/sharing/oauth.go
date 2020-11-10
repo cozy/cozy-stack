@@ -390,6 +390,7 @@ func (s *Sharing) SendAnswer(inst *instance.Instance, state string) error {
 	s.Credentials[0].AccessToken = creds.AccessToken
 	s.Credentials[0].Client = creds.Client
 	s.Active = true
+	s.Initial = s.NbFiles > 0
 	return couchdb.UpdateDoc(inst, s)
 }
 
