@@ -436,6 +436,8 @@ The resolution takes 4 steps:
     -   `false` if only the owner can add a new recipient
 -   Some technical data (`created_at`, `updated_at`, `app_slug`, `preview_path`,
     `triggers`, `credentials`)
+-   A flag `initial_sync` present only when the initial replication is still
+    running
 -   A number of files to synchronize for the initial sync,
     `initial_number_of_files_to_sync` (if there are no files to sync or the
     initial replication has finished, the field won't be here)
