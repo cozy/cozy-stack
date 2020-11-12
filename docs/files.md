@@ -642,8 +642,8 @@ more informations about the references field.
 Send a metadata object that can be associated to a file uploaded after that,
 via the `MetadataID` query parameter.
 
-**Note:** a special permission on `io.cozy.certified.carbonCopy` is required to
-send a request with `carbonCopy` as key in the `attributes` map. Same for
+**Note:** a special permission on `io.cozy.certified.carbon_copy` is required
+to send a request with `carbonCopy` as key in the `attributes` map. Same for
 `electronicSafe`.
 
 #### Request
