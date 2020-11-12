@@ -306,6 +306,15 @@ msgstr "Solicita el acceso a su Cozy:"
 msgid "Authorize Linked Help"
 msgstr "Al autorizarlo, la aplicación podrá acceder a estos datos en su Cozy:"
 
+msgid "Import Title"
+msgstr "Importación en curso"
+
+msgid "Import Description"
+msgstr ""
+"La importación de datos puede tomar tiempo. Puede cerrar esta pantalla, se "
+"le enviará un correo electrónico una vez que la importación se haya "
+"completado."
+
 msgid "Error Title"
 msgstr "Lo siento, se ha producido un error."
 
@@ -352,6 +361,9 @@ msgstr "El Cozy fue bloqueado debido a demasiados intentos de acceso"
 
 msgid "Instance Blocked Payment"
 msgstr "El Cozy requiere que usted pague"
+
+msgid "Instance Blocked Importing"
+msgstr "Cozy está importando datos"
 
 msgid "Instance Blocked Unknown"
 msgstr "El Cozy está bloqueado por razones desconocidas"
@@ -605,6 +617,47 @@ msgstr "Usted puede descargar haciendo clic en el siguiente enlace."
 
 msgid "Mail Archive Button text"
 msgstr "Descargar sus datos de Cozy"
+
+msgid "Mail Archive Alternative text"
+msgstr "El enlace para descargar de su Cozy  es el siguiente:"
+
+msgid "Mail Import Success Subject"
+msgstr "¡Enhorabuena! Su Cozy ha sido importado exitosamente."
+
+msgid "Mail Import Success Intro 1"
+msgstr "Hola %s,"
+
+msgid "Mail Import Success Intro 2"
+msgstr "La importación de todos sus datos a su Cozy ha sido exitosa."
+
+msgid "Mail Import Success Button instruction"
+msgstr ""
+"Usted puede ahora acceder a los datos en su Cozy haciendo clic en el "
+"siguiente botón:"
+
+msgid "Mail Import Success Button text"
+msgstr "Acceder a mi Cozy"
+
+msgid "Mail Import Success Apps not installed"
+msgstr ""
+"A título informativo, los %sservicios no pudieron ser reinstalados. Sin "
+"embargo, todos los datos asociados han sido importados satisfactoriamente."
+
+msgid "Mail Import Success Outro"
+msgstr "Hasta pronto, su Cozy"
+
+msgid "Mail Import Error Subject"
+msgstr "La importación a su Cozy ha fallado"
+
+msgid "Mail Import Error Text"
+msgstr ""
+"La importación de los datos a su Cozy encuentra un problema. El archivo "
+"transmitido a su Cozy no parece válido. ¿Puede renovar la operación desde el"
+" principio?"
+
+msgid "Mail Import Error Outro"
+msgstr ""
+"Si el problema persiste, contactar con el servicio de atención al cliente."
 
 msgid "Mail Two Factor Subject"
 msgstr "Código de conexión único"
