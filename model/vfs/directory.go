@@ -116,7 +116,11 @@ func (d *DirDoc) IsEmpty(fs VFS) (bool, error) {
 
 // AddReferencedBy adds referenced_by to the directory
 func (d *DirDoc) AddReferencedBy(ri ...couchdb.DocReference) {
-	d.ReferencedBy = append(d.ReferencedBy, ri...)
+	for _, ref := range ri {
+		if !containsDocReference(d.ReferencedBy, ref) {
+			d.ReferencedBy = append(d.ReferencedBy, ref)
+		}
+	}
 }
 
 // RemoveReferencedBy removes one or several referenced_by to the directory
@@ -133,7 +137,11 @@ func (d *DirDoc) RemoveReferencedBy(ri ...couchdb.DocReference) {
 
 // AddNotSynchronizedOn adds not_synchronized_on to the directory
 func (d *DirDoc) AddNotSynchronizedOn(refs ...couchdb.DocReference) {
-	d.NotSynchronizedOn = append(d.NotSynchronizedOn, refs...)
+	for _, ref := range refs {
+		if !containsDocReference(d.NotSynchronizedOn, ref) {
+			d.NotSynchronizedOn = append(d.NotSynchronizedOn, ref)
+		}
+	}
 }
 
 // RemoveNotSynchronizedOn removes one or several not_synchronized_on to the

@@ -80,24 +80,57 @@ func TestListReferencesHandler(t *testing.T) {
 	assert.NotEmpty(t, result4.Included[0].(map[string]interface{})["id"])
 }
 
-func makeNotSynchronzedOnTestDir(t *testing.T, doc couchdb.Doc, name string) string {
+func TestAddNotSynchronizedOn(t *testing.T) {
+	// Make doc
+	doc := getDocForTest()
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "/relationships/not_synchronized_on"
+
+	// Make dir
+	dir := makeNotSynchronzedOnTestDir(t, nil, "test_not_sync_on")
+
+	// update it
+	in := jsonReader(jsonapi.Relationship{
+		Data: []couchdb.DocReference{
+			{
+				ID:   dir.ID(),
+				Type: dir.DocType(),
+			},
+		},
+	})
+	req, _ := http.NewRequest("POST", url, in)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 204, res.StatusCode)
+
+	dirdoc, err := testInstance.VFS().DirByID(dir.ID())
+	assert.NoError(t, err)
+	assert.Len(t, dirdoc.NotSynchronizedOn, 1)
+}
+
+func makeNotSynchronzedOnTestDir(t *testing.T, doc couchdb.Doc, name string) *vfs.DirDoc {
 	fs := testInstance.VFS()
 	dirID := consts.RootDirID
 	dir, err := vfs.NewDirDoc(fs, name, dirID, nil)
 	if !assert.NoError(t, err) {
-		return ""
+		return nil
 	}
 
-	dir.NotSynchronizedOn = []couchdb.DocReference{
-		{
-			ID:   doc.ID(),
-			Type: doc.DocType(),
-		},
+	if doc != nil {
+		dir.NotSynchronizedOn = []couchdb.DocReference{
+			{
+				ID:   doc.ID(),
+				Type: doc.DocType(),
+			},
+		}
 	}
 
 	err = fs.CreateDir(dir)
 	if !assert.NoError(t, err) {
-		return ""
+		return nil
 	}
-	return dir.ID()
+	return dir
 }

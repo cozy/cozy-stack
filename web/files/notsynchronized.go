@@ -1,6 +1,7 @@
 package files
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -148,7 +149,56 @@ func ListNotSynchronizedOn(c echo.Context) error {
 	return jsonapi.DataRelations(c, http.StatusOK, refs, meta, links, docs)
 }
 
+// AddBulkNotSynchronizedOn add some not_synchronized_on for a device
+// POST /data/:type/:id/relationships/not_synchronized_on
+// Beware, this is actually used in the web/data Routes
+func AddBulkNotSynchronizedOn(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	doctype := c.Param("doctype")
+	id := getDocID(c)
+
+	references, err := jsonapi.BindRelations(c.Request())
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	docRef := couchdb.DocReference{
+		Type: doctype,
+		ID:   id,
+	}
+
+	if err = middlewares.AllowTypeAndID(c, permission.PUT, doctype, id); err != nil {
+		if middlewares.AllowWholeType(c, permission.PATCH, consts.Files) != nil {
+			return err
+		}
+	}
+	docs := make([]interface{}, len(references))
+	oldDocs := make([]interface{}, len(references))
+
+	for i, fRef := range references {
+		dir, _, err := instance.VFS().DirOrFileByID(fRef.ID)
+		if err != nil {
+			return WrapVfsError(err)
+		}
+		if dir != nil {
+			oldDocs[i] = dir.Clone()
+			dir.AddNotSynchronizedOn(docRef)
+			updateDirCozyMetadata(c, dir)
+			docs[i] = dir
+		} else {
+			return jsonapi.BadRequest(errors.New("Cannot add not_synchronized_on on files"))
+		}
+	}
+	// Use bulk update for better performances
+	err = couchdb.BulkUpdateDocs(instance, consts.Files, docs, oldDocs)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	return c.NoContent(204)
+}
+
 // NotSynchronizedOnRoutes adds the /data/:doctype/:docid/relationships/not_synchronized_on routes.
 func NotSynchronizedOnRoutes(router *echo.Group) {
 	router.GET("/:docid/relationships/not_synchronized_on", ListNotSynchronizedOn)
+	router.POST("/:docid/relationships/not_synchronized_on", AddBulkNotSynchronizedOn)
 }
