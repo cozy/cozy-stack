@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/contact"
@@ -196,18 +195,7 @@ func (im *importer) flush() error {
 	}
 
 	olds := make([]interface{}, len(im.docs))
-	err := couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds)
-	if couchdb.IsNoDatabaseError(err) {
-		if errc := couchdb.CreateDB(im.inst, im.doctype); errc != nil {
-			return errc
-		}
-		err = couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds)
-	}
-	if err != nil {
-		time.Sleep(1 * time.Second)
-		err = couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds)
-	}
-	if err != nil {
+	if err := couchdb.BulkUpdateDocs(im.inst, im.doctype, im.docs, olds); err != nil {
 		return err
 	}
 

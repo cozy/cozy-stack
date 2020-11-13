@@ -604,26 +604,7 @@ func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) 
 }
 
 func (c *couchdbIndexer) BatchUpdate(docs, oldDocs []interface{}) error {
-	remaining := docs[:]
-	olds := oldDocs[:]
-	for len(remaining) > 0 {
-		n := 1000
-		if len(remaining) < n {
-			n = len(remaining)
-		}
-		bulkDocs := docs[:n]
-		remaining = remaining[n:]
-		bulkOlds := olds[:n]
-		olds = olds[n:]
-		if err := couchdb.BulkUpdateDocs(c.db, consts.Files, bulkDocs, bulkOlds); err != nil {
-			// If it fails once, try again
-			time.Sleep(1 * time.Second)
-			if err := couchdb.BulkUpdateDocs(c.db, consts.Files, bulkDocs, bulkOlds); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	return couchdb.BulkUpdateDocs(c.db, consts.Files, docs, oldDocs)
 }
 
 func (c *couchdbIndexer) CreateVersion(v *Version) error {

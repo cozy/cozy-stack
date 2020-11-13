@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/google/go-querystring/query"
@@ -206,6 +207,35 @@ func BulkUpdateDocs(db Database, doctype string, docs, olddocs []interface{}) er
 	if len(docs) == 0 {
 		return nil
 	}
+
+	remaining := docs[:]
+	olds := olddocs[:]
+	for len(remaining) > 0 {
+		n := 1000
+		if len(remaining) < n {
+			n = len(remaining)
+		}
+		bulkDocs := docs[:n]
+		remaining = remaining[n:]
+		bulkOlds := olds[:n]
+		olds = olds[n:]
+		if err := bulkUpdateDocs(db, doctype, bulkDocs, bulkOlds); err != nil {
+			if IsNoDatabaseError(err) {
+				if err := EnsureDBExist(db, doctype); err != nil {
+					return err
+				}
+			}
+			// If it fails once, try again
+			time.Sleep(1 * time.Second)
+			if err := bulkUpdateDocs(db, doctype, bulkDocs, bulkOlds); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func bulkUpdateDocs(db Database, doctype string, docs, olddocs []interface{}) error {
 	body := struct {
 		Docs []interface{} `json:"docs"`
 	}{
