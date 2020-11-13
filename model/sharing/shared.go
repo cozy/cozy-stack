@@ -221,6 +221,7 @@ func isTheSharingDirectory(inst *instance.Instance, msg TrackMessage, evt TrackE
 func updateRemovedForFiles(inst *instance.Instance, sharingID, dirID string, rule int, removed bool) error {
 	dir := &vfs.DirDoc{DocID: dirID}
 	cursor := couchdb.NewSkipCursor(100, 0)
+	var docs []interface{}
 	for cursor.HasMore() {
 		children, err := inst.VFS().DirBatch(dir, cursor)
 		if err != nil {
@@ -248,16 +249,15 @@ func updateRemovedForFiles(inst *instance.Instance, sharingID, dirID string, rul
 			rev := file.Rev()
 			if ref.Rev() == "" {
 				ref.Revisions = &RevsTree{Rev: rev}
-				err = couchdb.CreateNamedDoc(inst, &ref)
-			} else {
-				err = couchdb.UpdateDoc(inst, &ref)
 			}
-			if err != nil {
-				return err
-			}
+			docs = append(docs, ref)
 		}
 	}
-	return nil
+	if len(docs) == 0 {
+		return nil
+	}
+	olds := make([]interface{}, len(docs))
+	return couchdb.BulkUpdateDocs(inst, consts.Shared, docs, olds)
 }
 
 // UpdateShared updates the io.cozy.shared database when a document is
@@ -286,17 +286,16 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		if sub, _ := ref.Revisions.Find(rev); sub != nil {
 			return nil
 		}
-	} else {
-		ref.Infos[msg.SharingID] = SharedInfo{
-			Rule: msg.RuleIndex,
-		}
 	}
 
 	// If a document was in a sharing, was removed of the sharing, and comes
 	// back inside it, we need to clear the Removed flag.
 	needToUpdateFiles := false
 	removed := false
-	wasRemoved := ref.Infos[msg.SharingID].Removed
+	wasRemoved := true
+	if rule, ok := ref.Infos[msg.SharingID]; ok {
+		wasRemoved = rule.Removed
+	}
 	ref.Infos[msg.SharingID] = SharedInfo{
 		Rule:    ref.Infos[msg.SharingID].Rule,
 		Binary:  evt.Doc.Type == consts.Files && evt.Doc.Get("type") == consts.FileType,
@@ -339,21 +338,24 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 
 	if ref.Rev() == "" {
 		ref.Revisions = &RevsTree{Rev: rev}
-		return couchdb.CreateNamedDoc(inst, &ref)
-	}
-	if evt.OldDoc == nil {
-		inst.Logger().WithField("nspace", "sharing").
-			Warnf("Updating an io.cozy.shared with no previous revision: %v %v\n", evt, ref)
-		ref.Revisions.Add(rev)
-	} else {
-		chain, err := addMissingRevsToChain(inst, &ref, []string{rev})
-		if err != nil {
+		if err := couchdb.CreateNamedDoc(inst, &ref); err != nil {
 			return err
 		}
-		ref.Revisions.InsertChain(chain)
-	}
-	if err := couchdb.UpdateDoc(inst, &ref); err != nil {
-		return err
+	} else {
+		if evt.OldDoc == nil {
+			inst.Logger().WithField("nspace", "sharing").
+				Warnf("Updating an io.cozy.shared with no previous revision: %v %v", evt, ref)
+			ref.Revisions.Add(rev)
+		} else {
+			chain, err := addMissingRevsToChain(inst, &ref, []string{rev})
+			if err != nil {
+				return err
+			}
+			ref.Revisions.InsertChain(chain)
+		}
+		if err := couchdb.UpdateDoc(inst, &ref); err != nil {
+			return err
+		}
 	}
 
 	// For a directory, we have to update the Removed flag for the files inside
@@ -363,7 +365,7 @@ func UpdateShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) err
 		err := updateRemovedForFiles(inst, msg.SharingID, evt.Doc.ID(), ruleIdx, removed)
 		if err != nil {
 			inst.Logger().WithField("nspace", "sharing").
-				Warnf("Error on updateRemovedForFiles for %v: %s\n", evt, err)
+				Warnf("Error on updateRemovedForFiles for %v: %s", evt, err)
 		}
 	}
 

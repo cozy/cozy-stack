@@ -199,18 +199,7 @@ func saveSteps(inst *instance.Instance, steps []Step) error {
 	for i, s := range steps {
 		news[i] = s
 	}
-	if err := couchdb.BulkUpdateDocs(inst, consts.NotesSteps, news, olds); err != nil {
-		if !couchdb.IsNoDatabaseError(err) {
-			return err
-		}
-		if err := couchdb.EnsureDBExist(inst, consts.NotesSteps); err != nil {
-			return err
-		}
-		if err := couchdb.BulkUpdateDocs(inst, consts.NotesSteps, news, olds); err != nil {
-			return err
-		}
-	}
-	return nil
+	return couchdb.BulkUpdateDocs(inst, consts.NotesSteps, news, olds)
 }
 
 func purgeOldSteps(inst *instance.Instance, fileID string) {
