@@ -243,3 +243,37 @@ Content-Type: application/vnd.api+json
 **Note**: if one of the id is a file, the response will be a 400 Bad Request.
 References are only for directories.
 
+### DELETE /data/:type/:doc-id/relationships/not_synchronized_on
+
+This bulk deletion of not_synchronized_on on many directories can be useful
+when configuring a device.
+
+#### Request
+
+```http
+DELETE /data/io.cozy.oauth.clients/653dfdb0-0595-0139-92df-543d7eb8149c/relationships/not_synchronized_on HTTP/1.1
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+    "data": [
+        {
+            "type": "io.cozy.files",
+            "id": "38086350-07c0-0139-4fe9-543d7eb8149c"
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "3d447470-07c0-0139-4fea-543d7eb8149c"
+        }
+    ]
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+Content-Type: application/vnd.api+json
+```

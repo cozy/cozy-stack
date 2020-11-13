@@ -111,6 +111,48 @@ func TestAddNotSynchronizedOn(t *testing.T) {
 	assert.Len(t, dirdoc.NotSynchronizedOn, 1)
 }
 
+func TestRemoveNotSynchronizedOn(t *testing.T) {
+	// Make doc
+	doc := getDocForTest()
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "/relationships/not_synchronized_on"
+
+	// Make directories
+	d6 := makeNotSynchronzedOnTestDir(t, doc, "test_not_sync_on_6").ID()
+	d7 := makeNotSynchronzedOnTestDir(t, doc, "test_not_sync_on_7").ID()
+	d8 := makeNotSynchronzedOnTestDir(t, doc, "test_not_sync_on_8").ID()
+	d9 := makeNotSynchronzedOnTestDir(t, doc, "test_not_sync_on_9").ID()
+
+	// update it
+	in := jsonReader(jsonapi.Relationship{
+		Data: []couchdb.DocReference{
+			{ID: d8, Type: consts.Files},
+			{ID: d6, Type: consts.Files},
+		},
+	})
+	req, _ := http.NewRequest("DELETE", url, in)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 204, res.StatusCode)
+
+	doc6, err := testInstance.VFS().DirByID(d6)
+	assert.NoError(t, err)
+	assert.Len(t, doc6.NotSynchronizedOn, 0)
+	doc8, err := testInstance.VFS().DirByID(d8)
+	assert.NoError(t, err)
+	assert.Len(t, doc8.NotSynchronizedOn, 0)
+
+	doc7, err := testInstance.VFS().DirByID(d7)
+	assert.NoError(t, err)
+	assert.Len(t, doc7.NotSynchronizedOn, 1)
+	doc9, err := testInstance.VFS().DirByID(d9)
+	assert.NoError(t, err)
+	assert.Len(t, doc9.NotSynchronizedOn, 1)
+}
+
 func makeNotSynchronzedOnTestDir(t *testing.T, doc couchdb.Doc, name string) *vfs.DirDoc {
 	fs := testInstance.VFS()
 	dirID := consts.RootDirID

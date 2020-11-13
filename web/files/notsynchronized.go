@@ -172,23 +172,74 @@ func AddBulkNotSynchronizedOn(c echo.Context) error {
 			return err
 		}
 	}
+
 	docs := make([]interface{}, len(references))
 	oldDocs := make([]interface{}, len(references))
 
-	for i, fRef := range references {
-		dir, _, err := instance.VFS().DirOrFileByID(fRef.ID)
+	for i, ref := range references {
+		dir, _, err := instance.VFS().DirOrFileByID(ref.ID)
 		if err != nil {
 			return WrapVfsError(err)
 		}
-		if dir != nil {
-			oldDocs[i] = dir.Clone()
-			dir.AddNotSynchronizedOn(docRef)
-			updateDirCozyMetadata(c, dir)
-			docs[i] = dir
-		} else {
+		if dir == nil {
 			return jsonapi.BadRequest(errors.New("Cannot add not_synchronized_on on files"))
 		}
+		oldDocs[i] = dir.Clone()
+		dir.AddNotSynchronizedOn(docRef)
+		updateDirCozyMetadata(c, dir)
+		docs[i] = dir
 	}
+
+	// Use bulk update for better performances
+	err = couchdb.BulkUpdateDocs(instance, consts.Files, docs, oldDocs)
+	if err != nil {
+		return WrapVfsError(err)
+	}
+	return c.NoContent(204)
+}
+
+// RemoveBulkNotSynchronizedOn removes some not_synchronized_on for several
+// directories.
+// DELETE /data/:type/:id/relationships/not_synchronized_on
+// Beware, this is actually used in the web/data Routes
+func RemoveBulkNotSynchronizedOn(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	doctype := c.Param("doctype")
+	id := getDocID(c)
+
+	references, err := jsonapi.BindRelations(c.Request())
+	if err != nil {
+		return WrapVfsError(err)
+	}
+
+	docRef := couchdb.DocReference{
+		Type: doctype,
+		ID:   id,
+	}
+
+	if err := middlewares.AllowTypeAndID(c, permission.DELETE, doctype, id); err != nil {
+		if middlewares.AllowWholeType(c, permission.PATCH, consts.Files) != nil {
+			return err
+		}
+	}
+
+	docs := make([]interface{}, len(references))
+	oldDocs := make([]interface{}, len(references))
+
+	for i, ref := range references {
+		dir, _, err := instance.VFS().DirOrFileByID(ref.ID)
+		if err != nil {
+			return WrapVfsError(err)
+		}
+		if dir == nil {
+			return jsonapi.BadRequest(errors.New("Cannot add not_synchronized_on on files"))
+		}
+		oldDocs[i] = dir.Clone()
+		dir.RemoveNotSynchronizedOn(docRef)
+		updateDirCozyMetadata(c, dir)
+		docs[i] = dir
+	}
+
 	// Use bulk update for better performances
 	err = couchdb.BulkUpdateDocs(instance, consts.Files, docs, oldDocs)
 	if err != nil {
@@ -201,4 +252,5 @@ func AddBulkNotSynchronizedOn(c echo.Context) error {
 func NotSynchronizedOnRoutes(router *echo.Group) {
 	router.GET("/:docid/relationships/not_synchronized_on", ListNotSynchronizedOn)
 	router.POST("/:docid/relationships/not_synchronized_on", AddBulkNotSynchronizedOn)
+	router.DELETE("/:docid/relationships/not_synchronized_on", RemoveBulkNotSynchronizedOn)
 }
