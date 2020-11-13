@@ -5,7 +5,7 @@
 The client side applications in Cozy are constrained and cannot speak with
 external websites to avoid leaking personal data. Technically, it is made with
 the Content Security Policy. These rules are very strict and it would be a pity
-to now allow a client side app to load public informations from a source like
+to not allow a client side app to load public informations from a source like
 Wikipedia. Our proposal is to make client side apps able to query external
 websites of their choices, but these requests will be made via the cozy-stack
 (as a proxy) and will be logged to check later that no personal data was leaked
