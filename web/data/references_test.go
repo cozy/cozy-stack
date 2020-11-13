@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestListReferencesHandler(t *testing.T) {
+func TestListNotSynchronizedOn(t *testing.T) {
 	// Make doc
 	doc := getDocForTest()
 	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "/relationships/references"

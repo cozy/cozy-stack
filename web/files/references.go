@@ -274,3 +274,10 @@ func getDocID(c echo.Context) string {
 	}
 	return id
 }
+
+// ReferencesRoutes adds the /data/:doctype/:docid/relationships/references routes.
+func ReferencesRoutes(router *echo.Group) {
+	router.GET("/:docid/relationships/references", ListReferencesHandler)
+	router.POST("/:docid/relationships/references", AddReferencesHandler)
+	router.DELETE("/:docid/relationships/references", RemoveReferencesHandler)
+}

@@ -163,3 +163,45 @@ Content-Type: application/vnd.api+json
     ]
 }
 ```
+
+### GET /data/:type/:doc-id/relationships/not_synchronized_on
+
+Returns all the directory ids that are not synchronized on the given device.
+
+Contents is paginated following [jsonapi conventions](jsonapi.md#pagination).
+The default limit is 100 entries. The maximal number of entries per page is
+1000.
+
+It is possible to include the whole documents for the directories by adding
+`include=files` to the query string.
+
+#### Request
+
+```http
+GET /data/io.cozy.oauth.clients/653dfdb0-0595-0139-92df-543d7eb8149c/relationships/references HTTP/1.1
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "data": [
+        {
+            "type": "io.cozy.files",
+            "id": "11400320-07b7-0139-4fe8-543d7eb8149c"
+        },
+        {
+            "type": "io.cozy.files",
+            "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
+        }
+    ]
+}
+```
+
