@@ -221,6 +221,7 @@ func isTheSharingDirectory(inst *instance.Instance, msg TrackMessage, evt TrackE
 func updateRemovedForFiles(inst *instance.Instance, sharingID, dirID string, rule int, removed bool) error {
 	dir := &vfs.DirDoc{DocID: dirID}
 	cursor := couchdb.NewSkipCursor(100, 0)
+	var docs []interface{}
 	for cursor.HasMore() {
 		children, err := inst.VFS().DirBatch(dir, cursor)
 		if err != nil {
@@ -248,16 +249,15 @@ func updateRemovedForFiles(inst *instance.Instance, sharingID, dirID string, rul
 			rev := file.Rev()
 			if ref.Rev() == "" {
 				ref.Revisions = &RevsTree{Rev: rev}
-				err = couchdb.CreateNamedDoc(inst, &ref)
-			} else {
-				err = couchdb.UpdateDoc(inst, &ref)
 			}
-			if err != nil {
-				return err
-			}
+			docs = append(docs, ref)
 		}
 	}
-	return nil
+	if len(docs) == 0 {
+		return nil
+	}
+	olds := make([]interface{}, len(docs))
+	return couchdb.BulkUpdateDocs(inst, consts.Shared, docs, olds)
 }
 
 // UpdateShared updates the io.cozy.shared database when a document is
