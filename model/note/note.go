@@ -332,6 +332,9 @@ func setupTrigger(inst *instance.Instance, fileID string) error {
 	if err != nil {
 		return err
 	}
+	if sched.HasEventTrigger(t) {
+		return nil
+	}
 	return sched.AddTrigger(t)
 }
 
@@ -637,6 +640,7 @@ func Update(inst *instance.Instance, fileID string) error {
 	return nil
 }
 
+// FlushPendings is used to persist all the notes before an export.
 func FlushPendings(inst *instance.Instance) error {
 	var errm error
 	list := getListFromCache(inst)

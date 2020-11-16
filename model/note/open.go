@@ -164,14 +164,20 @@ func (o *Opener) GetResult(memberIndex int, readOnly bool) (jsonapi.Object, erro
 }
 
 func (o *Opener) shouldOpenLocally() bool {
-	if o.sharing == nil {
-		return true
-	}
 	u, err := url.Parse(o.file.CozyMetadata.CreatedOn)
 	if err != nil {
 		return true
 	}
-	return o.inst.HasDomain(u.Host)
+	if o.inst.HasDomain(u.Host) {
+		return true
+	}
+	if o.sharing != nil {
+		return false
+	}
+	// If the note came from another cozy via a sharing that is now revoked, we
+	// may need to recreate the trigger.
+	_ = setupTrigger(o.inst, o.file.ID())
+	return true
 }
 
 func (o *Opener) openLocalNote(memberIndex int, readOnly bool) (*apiNoteURL, error) {

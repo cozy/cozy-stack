@@ -396,6 +396,32 @@ func (s *redisScheduler) GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error)
 	return v, nil
 }
 
+// HasEventTrigger returns true if the given @event trigger already exists.
+func (s *redisScheduler) HasEventTrigger(trigger Trigger) bool {
+	infos := trigger.Infos()
+	key := eventsKey(trigger)
+	m, err := s.client.HGetAll(key).Result()
+	if err != nil {
+		s.log.Errorf("Could not fetch redis set %s: %s", key, err)
+		return false
+	}
+	for triggerID, args := range m {
+		if args != infos.Arguments {
+			continue
+		}
+		t, err := s.GetTrigger(trigger, triggerID)
+		if err != nil {
+			s.log.Warnf("Could not fetch @event trigger %s %s: %s",
+				trigger.DomainName(), triggerID, err.Error())
+			continue
+		}
+		if t.Infos().WorkerType == infos.WorkerType {
+			return true
+		}
+	}
+	return false
+}
+
 // CleanRedis removes clean redis by removing the two sets holding the triggers
 // states.
 func (s *redisScheduler) CleanRedis() error {
