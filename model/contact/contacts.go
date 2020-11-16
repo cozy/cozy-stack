@@ -2,6 +2,7 @@ package contact
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -134,6 +135,9 @@ func (c *Contact) PrimaryCozyURL() string {
 		if url == "" {
 			url = u
 		}
+	}
+	if url != "" && !strings.HasPrefix(url, "http") {
+		url = "https://" + url
 	}
 	return url
 }
