@@ -76,6 +76,16 @@ func (s Step) timestamp() int64 {
 	return 0
 }
 
+func (s Step) version() int64 {
+	switch v := s["version"].(type) {
+	case float64:
+		return int64(v)
+	case int64:
+		return v
+	}
+	return 0
+}
+
 func stepID(noteID string, version int64) string {
 	return fmt.Sprintf("%s/%08d", noteID, version)
 }
@@ -113,7 +123,7 @@ func getSteps(inst *instance.Instance, fileID string, version int64) ([]Step, er
 		return nil, ErrTooOld
 	}
 
-	if version > 0 {
+	if version > 0 && version == steps[0].version() {
 		steps = steps[1:] // Discard the sentinel
 	}
 	return steps, nil

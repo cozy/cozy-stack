@@ -637,6 +637,7 @@ func Update(inst *instance.Instance, fileID string) error {
 	return nil
 }
 
+// FlushPendings is used to persist all the notes before an export.
 func FlushPendings(inst *instance.Instance) error {
 	var errm error
 	list := getListFromCache(inst)
