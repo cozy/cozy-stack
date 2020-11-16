@@ -224,6 +224,7 @@ func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 		filename := path.Join(config.GetConfig().Doctypes, doctype, "request")
 		bytes, err := ioutil.ReadFile(filename)
 		if err != nil {
+			log.Infof("Cannot read file %s: %s", filename, err)
 			return nil, ErrNotFoundRemote
 		}
 		raw = string(bytes)
