@@ -277,3 +277,11 @@ Accept: application/vnd.api+json
 HTTP/1.1 204 No Content
 Content-Type: application/vnd.api+json
 ```
+
+## Usage
+
+When an OAuth client makes a request for the changes feed on the
+`io.cozy.files` doctype (via `/data/io.cozy.files/_changes`), the output will
+be filtered. If a directory or file is inside a directory with the
+`not_synchronized_on` attribute set on for this client, the document will be
+replaced by a fake entry with `_deleted: true`.

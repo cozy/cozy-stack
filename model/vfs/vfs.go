@@ -225,6 +225,8 @@ type Indexer interface {
 	AllVersions() ([]*Version, error)
 	BatchDeleteVersions([]*Version) error
 
+	ListNotSynchronizedOn(clientID string) ([]DirDoc, error)
+
 	CheckIndexIntegrity(func(*FsckLog), bool) error
 	CheckTreeIntegrity(*Tree, func(*FsckLog), bool) error
 	BuildTree(each ...func(*TreeFile)) (tree *Tree, err error)

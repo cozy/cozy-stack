@@ -3,6 +3,7 @@ package vfs
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -318,6 +319,89 @@ func RestoreDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 	}
 
 	return newdoc, nil
+}
+
+// FilterNotSynchronizedDocs filters a changes feed to replace documents in
+// not_synchronized_on directories with deleted: true entries.
+func FilterNotSynchronizedDocs(fs VFS, clientID string, changes *couchdb.ChangesResponse) error {
+	if len(changes.Results) == 0 {
+		return nil
+	}
+
+	notSynchronizedDirs, err := fetchNotSynchronizedOn(fs, clientID)
+	if err != nil {
+		return err
+	}
+	if len(notSynchronizedDirs.byID) == 0 {
+		return nil
+	}
+
+	fp := NewFilePatherWithCache(fs)
+	for i := range changes.Results {
+		doc := changes.Results[i].Doc
+		if isNotSynchronized(fp, notSynchronizedDirs, doc) {
+			var rev string
+			if len(changes.Results[i].Changes) > 0 {
+				rev = changes.Results[i].Changes[0].Rev
+			}
+			docID := changes.Results[i].DocID
+			changes.Results[i].Doc = couchdb.JSONDoc{
+				M: map[string]interface{}{
+					"id":       docID,
+					"rev":      rev,
+					"_deleted": true,
+				},
+				Type: consts.Files,
+			}
+			changes.Results[i].Deleted = true
+		}
+	}
+
+	return nil
+}
+
+type notSynchronizedMap struct {
+	byID   map[string]struct{}
+	byPath map[string]struct{}
+}
+
+func fetchNotSynchronizedOn(fs VFS, clientID string) (notSynchronizedMap, error) {
+	m := notSynchronizedMap{}
+	docs, err := fs.ListNotSynchronizedOn(clientID)
+	if err != nil || len(docs) == 0 {
+		return m, err
+	}
+
+	m.byID = make(map[string]struct{})
+	m.byPath = make(map[string]struct{})
+	for _, doc := range docs {
+		m.byID[doc.DocID] = struct{}{}
+		m.byPath[doc.Fullpath] = struct{}{}
+	}
+	return m, nil
+}
+
+func isNotSynchronized(fp FilePather, notSynchronizedDirs notSynchronizedMap, doc couchdb.JSONDoc) bool {
+	docID := doc.ID()
+	if _, ok := notSynchronizedDirs.byID[docID]; ok {
+		return true
+	}
+
+	fpath, _ := doc.M["path"].(string)
+	if doc.M["type"] == consts.FileType {
+		dirID, _ := doc.M["dir_id"].(string)
+		fpath, _ = fp.FilePath(&FileDoc{DocID: docID, DirID: dirID})
+	}
+
+	for {
+		if _, ok := notSynchronizedDirs.byPath[fpath]; ok {
+			return true
+		}
+		if fpath == "" || fpath == "/" {
+			return false
+		}
+		fpath = filepath.Dir(fpath)
+	}
 }
 
 var (
