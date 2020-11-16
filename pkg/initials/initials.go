@@ -16,19 +16,30 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
+// Options can be used to give options for the generated image
+type Options int
+
 const (
 	cacheTTL    = 30 * 24 * time.Hour // 1 month
 	contentType = "image/png"
+
+	// GreyBackground is an option to force a grey background
+	GreyBackground Options = 1 + iota
 )
 
 // Image returns an image with the initials for the given name (and the
 // content-type to use for the HTTP response).
-func Image(publicName string) ([]byte, string, error) {
+func Image(publicName string, opts ...Options) ([]byte, string, error) {
 	name := strings.TrimSpace(publicName)
 	info := extractInfo(name)
+	for _, opt := range opts {
+		if opt == GreyBackground {
+			info.color = charcoalGrey
+		}
+	}
+
 	cache := config.GetConfig().CacheStorage
 	key := "initials:" + info.initials + info.color
-
 	if bytes, ok := cache.Get(key); ok {
 		return bytes, contentType, nil
 	}
@@ -61,6 +72,8 @@ var colors = []string{
 	"#FFC644",
 	"#FC4C83",
 }
+
+var charcoalGrey = "#32363F"
 
 type info struct {
 	initials string

@@ -934,6 +934,9 @@ used, depending of the `fallback` parameter in the query-string:
 - `initials`: a generated image with the initials of the owner's public name. This is the default behavior.
 - `404`: just a 404 - Not found error.
 
+If the `initials` fallback is used and the member has not yet seen the sharing,
+the background of the image will be grey.
+
 **Note**: 0 for the index means the sharer.
 
 #### Request

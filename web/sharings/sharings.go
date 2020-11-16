@@ -612,30 +612,37 @@ func GetAvatar(c echo.Context) error {
 
 	// Use the local avatar
 	if m.Instance == "" || m.Instance == inst.PageURL("", nil) {
-		name := m.PublicName
-		if name == "" {
-			name = strings.Split(m.Email, "@")[0]
-		}
-		name = strings.ToUpper(name)
-		img, mime, err := initials.Image(name)
-		if err != nil {
-			return wrapErrors(err)
-		}
-		return c.Blob(http.StatusOK, mime, img)
-	}
-
-	fallback := "initials"
-	if c.QueryParam("fallback") == "404" {
-		fallback = "404"
+		return localAvatar(c, m)
 	}
 
 	// Use the public avatar from the member's instance
-	res, err := http.Get(m.Instance + "/public/avatar?fallback=" + fallback)
+	res, err := http.Get(m.Instance + "/public/avatar?fallback=404")
 	if err != nil {
 		return err
 	}
 	defer res.Body.Close()
+	if res.StatusCode == http.StatusNotFound && c.QueryParam("fallback") != "404" {
+		return localAvatar(c, m)
+	}
 	return c.Stream(res.StatusCode, res.Header.Get("Content-Type"), res.Body)
+}
+
+func localAvatar(c echo.Context, m sharing.Member) error {
+	name := m.PublicName
+	if name == "" {
+		name = strings.Split(m.Email, "@")[0]
+	}
+	name = strings.ToUpper(name)
+	var options []initials.Options
+	if m.Status == sharing.MemberStatusMailNotSent ||
+		m.Status == sharing.MemberStatusPendingInvitation {
+		options = append(options, initials.GreyBackground)
+	}
+	img, mime, err := initials.Image(name, options...)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	return c.Blob(http.StatusOK, mime, img)
 }
 
 // Routes sets the routing for the sharing service
