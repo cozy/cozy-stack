@@ -177,6 +177,20 @@ func (s *memScheduler) GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error) {
 	return v, nil
 }
 
+// HasEventTrigger returns true if the given @event trigger already exists.
+func (s *memScheduler) HasEventTrigger(trigger Trigger) bool {
+	infos := trigger.Infos()
+	for _, t := range s.ts {
+		i := t.Infos()
+		if t.Type() == "@event" &&
+			i.WorkerType == infos.WorkerType &&
+			i.Arguments == infos.Arguments {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *memScheduler) schedule(t Trigger) {
 	s.log.Debugf("trigger %s(%s): Starting trigger",
 		t.Type(), t.Infos().TID)

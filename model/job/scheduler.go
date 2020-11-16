@@ -42,6 +42,7 @@ type (
 		GetTrigger(db prefixer.Prefixer, id string) (Trigger, error)
 		DeleteTrigger(db prefixer.Prefixer, id string) error
 		GetAllTriggers(db prefixer.Prefixer) ([]Trigger, error)
+		HasEventTrigger(trigger Trigger) bool
 		CleanRedis() error
 		RebuildRedis(db prefixer.Prefixer) error
 	}

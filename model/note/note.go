@@ -332,6 +332,9 @@ func setupTrigger(inst *instance.Instance, fileID string) error {
 	if err != nil {
 		return err
 	}
+	if sched.HasEventTrigger(t) {
+		return nil
+	}
 	return sched.AddTrigger(t)
 }
 
