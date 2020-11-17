@@ -7,7 +7,7 @@ class Stack
     end
   end
 
-  attr_reader :port
+  attr_reader :port, :oauth_client_id
 
   @stacks = {}
   @next_port = ENV.fetch("COZY_BASE_PORT", 8080).to_i

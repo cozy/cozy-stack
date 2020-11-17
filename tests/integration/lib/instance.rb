@@ -93,6 +93,11 @@ class Instance
     Accept.new(sharing, sharer).on self
   end
 
+  def version
+    res = @client["/version/"].get accept: "application/json"
+    JSON.parse(res.body)
+  end
+
   def fsck
     @stack.fsck self
   end
