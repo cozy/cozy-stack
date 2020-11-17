@@ -95,6 +95,10 @@ func (sfs *swiftVFSV3) DomainName() string {
 	return sfs.domain
 }
 
+func (sfs *swiftVFSV3) GetIndexer() vfs.Indexer {
+	return sfs.Indexer
+}
+
 func (sfs *swiftVFSV3) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
 	return &swiftVFSV3{
 		Indexer:         index,

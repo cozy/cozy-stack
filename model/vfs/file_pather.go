@@ -7,15 +7,15 @@ import (
 )
 
 type filePatherWithCache struct {
-	vfs   VFS
+	fs    Indexer
 	cache map[string]string // dirID -> parentPath
 }
 
 // NewFilePatherWithCache creates a FilePather that will cache the calls to
 // CouchDB for finding the parent directories.
-func NewFilePatherWithCache(vfs VFS) FilePather {
+func NewFilePatherWithCache(fs Indexer) FilePather {
 	return &filePatherWithCache{
-		vfs:   vfs,
+		fs:    fs,
 		cache: make(map[string]string),
 	}
 }
@@ -29,7 +29,7 @@ func (fp *filePatherWithCache) FilePath(doc *FileDoc) (string, error) {
 	} else if cachedPath, ok := fp.cache[doc.DirID]; ok {
 		parentPath = cachedPath
 	} else {
-		parent, err := fp.vfs.DirByID(doc.DirID)
+		parent, err := fp.fs.DirByID(doc.DirID)
 		if err != nil {
 			return "", ErrParentDoesNotExist
 		}

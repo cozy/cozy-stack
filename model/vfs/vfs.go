@@ -265,9 +265,14 @@ type VFS interface {
 	DiskThresholder
 	Fs
 
-	// UseSharingIndexer returns a new Fs with an overload indexer that can be
-	// used for the special purpose of the sharing.
+	// UseSharingIndexer returns a new Fs with an overloaded indexer that can
+	// be used for the special purpose of the sharing.
 	UseSharingIndexer(Indexer) VFS
+
+	// GetIndexer returns the indexer without the overloaded operations from
+	// VFSAfero / VFSSwift. Its result can be used for FilePatherWithCache with
+	// a VFS that is already locked.
+	GetIndexer() Indexer
 }
 
 // ErrIteratorDone is returned by the Next() method of the iterator when

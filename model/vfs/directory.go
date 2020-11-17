@@ -336,7 +336,7 @@ func FilterNotSynchronizedDocs(fs VFS, clientID string, changes *couchdb.Changes
 		return nil
 	}
 
-	fp := NewFilePatherWithCache(fs)
+	fp := NewFilePatherWithCache(fs.GetIndexer())
 	for i := range changes.Results {
 		doc := changes.Results[i].Doc
 		if isNotSynchronized(fp, notSynchronizedDirs, doc) {

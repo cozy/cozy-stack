@@ -98,6 +98,10 @@ func (afs *aferoVFS) DBPrefix() string {
 	return afs.prefix
 }
 
+func (afs *aferoVFS) GetIndexer() vfs.Indexer {
+	return afs.Indexer
+}
+
 func (afs *aferoVFS) UseSharingIndexer(index vfs.Indexer) vfs.VFS {
 	return &aferoVFS{
 		Indexer:         index,
