@@ -12,7 +12,5 @@ jobs:
           fetch-depth: 1
       - name: Build
         run: |
-          echo "::stop-commands::`echo -n ${{ github.token }} | sha256sum | head -c 64`"
           make assets
           go run . --help
-          echo "::`echo -n ${{ github.token }} | sha256sum | head -c 64`::"

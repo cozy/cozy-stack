@@ -47,10 +47,8 @@ jobs:
       - name: Install
         run: |
           curl -X PUT http://127.0.0.1:5984/{_users,_replicator}
-          echo ::add-path::$(go env GOPATH)/bin
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
           go install
       - name: Test
         run: |
-          echo "::stop-commands::`echo -n ${{ github.token }} | sha256sum | head -c 64`"
           make integration-tests
-          echo "::`echo -n ${{ github.token }} | sha256sum | head -c 64`::"
