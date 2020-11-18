@@ -37,11 +37,13 @@ import (
 )
 
 const iocozytests = "io.cozy.tests"
+const iocozytestswildcard = "io.cozy.tests.*"
 
 // Things that live on Alice's Cozy
 var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
+var aliceAppTokenWildcard string
 var charlieContact, daveContact, edwardContact *contact.Contact
 var sharingID, state, aliceAccessToken string
 
@@ -880,6 +882,15 @@ func TestCheckSharingInfoByDocType(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, res2.StatusCode)
 	res2.Body.Close()
+
+	req3, err := http.NewRequest(http.MethodGet, tsA.URL+"/sharings/doctype/"+iocozytests, nil)
+	assert.NoError(t, err)
+	req3.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
+	req3.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppTokenWildcard)
+	res3, err := http.DefaultClient.Do(req3)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res3.StatusCode)
+	res3.Body.Close()
 }
 
 func TestRevokeSharing(t *testing.T) {
@@ -1104,7 +1115,8 @@ func TestMain(m *testing.M) {
 		Email:      "alice@example.net",
 		PublicName: "Alice",
 	})
-	aliceAppToken = generateAppToken(aliceInstance, "testapp")
+	aliceAppToken = generateAppToken(aliceInstance, "testapp", iocozytests)
+	aliceAppTokenWildcard = generateAppToken(aliceInstance, "testapp2", iocozytestswildcard)
 	charlieContact = createContact(aliceInstance, "Charlie", "charlie@example.net")
 	daveContact = createContact(aliceInstance, "Dave", "dave@example.net")
 	tsA = setup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
@@ -1130,7 +1142,7 @@ func TestMain(m *testing.M) {
 		KdfIterations: 5000,
 		Key:           "xxx",
 	})
-	bobAppToken = generateAppToken(bobInstance, "testapp")
+	bobAppToken = generateAppToken(bobInstance, "testapp", iocozytests)
 	edwardContact = createContact(bobInstance, "Edward", "edward@example.net")
 	tsB = bobSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
 		"/auth": func(g *echo.Group) {
@@ -1220,10 +1232,10 @@ func createSharedDoc(inst *instance.Instance, id, sharingID string) (*sharing.Sh
 	return ref, nil
 }
 
-func generateAppToken(inst *instance.Instance, slug string) string {
+func generateAppToken(inst *instance.Instance, slug, doctype string) string {
 	rules := permission.Set{
 		permission.Rule{
-			Type:  iocozytests,
+			Type:  doctype,
 			Verbs: permission.ALL,
 		},
 	}

@@ -149,7 +149,7 @@ func (s Set) Some(predicate func(Rule) bool) bool {
 // is allowed by the set.
 func (s *Set) RuleInSubset(r2 Rule) bool {
 	for _, r := range *s {
-		if r.Type != r2.Type {
+		if !matchType(r, r2.Type) {
 			continue
 		}
 
