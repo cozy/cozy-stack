@@ -225,6 +225,9 @@ func init() {
 	flags.BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
 	flags.StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
 
+	flags.Bool("remote-allow-custom-port", false, "Allow to specify a port in request files for remote doctypes")
+	checkNoErr(viper.BindPFlag("remote_allow_custom_port", flags.Lookup("remote-allow-custom-port")))
+
 	flags.Bool("disable-csp", false, "Disable the Content Security Policy (only available for development)")
 	checkNoErr(viper.BindPFlag("disable_csp", flags.Lookup("disable-csp")))
 

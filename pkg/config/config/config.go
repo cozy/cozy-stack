@@ -132,6 +132,8 @@ type Config struct {
 	Registries     map[string][]*url.URL
 	Clouderies     map[string]interface{}
 
+	RemoteAllowCustomPort bool
+
 	CSPDisabled  bool
 	CSPAllowList map[string]string
 
@@ -755,6 +757,10 @@ func UseViper(v *viper.Viper) error {
 
 	if build.IsDevRelease() && v.GetBool("disable_csp") {
 		config.CSPDisabled = true
+	}
+
+	if v.GetBool("remote_allow_custom_port") {
+		config.RemoteAllowCustomPort = true
 	}
 
 	if err = logger.Init(config.Logger); err != nil {

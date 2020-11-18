@@ -55,6 +55,10 @@ The format for the request file is:
 -   then some lines that describe the HTTP headers
 -   then a blank line and the body if the request is a POST
 
+The URL can only use the default port. But, for development and testing in
+local, this rule can be disabled with the `--remote-allow-custom-port` flag
+of the `cozy-stack serve` command.
+
 For the path, the query-string, the headers, and the body, it's possible to have
 some dynamic part by using `{{`, a variable name, and `}}`.
 
