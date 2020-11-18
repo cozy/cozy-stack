@@ -795,6 +795,22 @@ msgid "Mail Alert Account Subject"
 msgstr ""
 "Le nettoyage des comptes a échoué lors de la suppression de l'instance"
 
+msgid "Mail Support Confirmation Subject"
+msgstr "[cozy-support] Votre demande a bien été prise en compte"
+
+msgid "Mail Support Confirmation Intro 1"
+msgstr "Bonjour %s,"
+
+msgid "Mail Support Confirmation Intro 2"
+msgstr "Notre équipe examine votre demande."
+
+msgid "Mail Support Confirmation Outro"
+msgstr ""
+"Vous recevrez une réponse de ma part par e-mail dans les plus brefs délais."
+
+msgid "Mail Support Confirmation Signature"
+msgstr "Claude - Service Client chez Cozy Cloud"
+
 msgid "Notification Sharing Subject"
 msgstr "Vous avez un nouveau partage disponible dans votre Cozy"
 
