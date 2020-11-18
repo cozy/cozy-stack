@@ -646,6 +646,8 @@ via the `MetadataID` query parameter.
 to send a request with `carbonCopy` as key in the `attributes` map. Same for
 `electronicSafe`.
 
+See the [metadata doctype](https://docs.cozy.io/en/cozy-doctypes/docs/io.cozy.files_metadata/) to know more about metadata attributes that can be set, notably for images and document qualification.
+
 #### Request
 
 ```http
@@ -658,10 +660,12 @@ Content-Type: application/vnd.api+json
   "data": {
     "type": "io.cozy.files.metadata",
     "attributes": {
-      "category": "report",
-      "subCategory": "theft",
+      "qualification": {
+        "label": "telecom_invoice",
+        "purpose": "invoice",
+        "sourceCategory": "telecom"
+      },
       "datetime": "2017-04-22T01:00:00-05:00",
-      "label": "foobar"
     }
   }
 }
@@ -680,10 +684,12 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.files.metadata",
     "id": "42E6BD48",
     "attributes": {
-      "category": "report",
-      "subCategory": "theft",
+      "qualification": {
+        "label": "telecom_invoice",
+        "purpose": "invoice",
+        "sourceCategory": "telecom"
+      },
       "datetime": "2017-04-22T01:00:00-05:00",
-      "label": "foobar"
     }
   }
 }
@@ -1206,10 +1212,12 @@ Content-Type: application/vnd.api+json
   "data": {
     "type": "io.cozy.files.metadata",
     "attributes": {
-      "category": "report",
-      "subCategory": "theft",
+      "qualification": {
+        "label": "telecom_invoice",
+        "purpose": "invoice",
+        "sourceCategory": "telecom"
+      },
       "datetime": "2017-04-22T01:00:00-05:00",
-      "label": "foobar"
     }
   }
 }
