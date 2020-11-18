@@ -69,6 +69,7 @@ example), you can use the --appdir flag like this:
       --password-reset-interval string   minimal duration between two password reset (default "15m")
       --rate-limiting-url string         URL for rate-limiting counters, redis or in-memory
       --realtime-url string              URL for realtime in the browser via webocket, redis or in-memory
+      --remote-allow-custom-port         Allow to specify a port in request files for remote doctypes
       --sessions-url string              URL for the sessions storage, redis or in-memory
       --subdomains string                how to structure the subdomains for apps (can be nested or flat) (default "nested")
       --vault-decryptor-key string       the path to the key used to decrypt credentials
