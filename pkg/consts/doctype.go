@@ -50,6 +50,8 @@ const (
 	Jobs = "io.cozy.jobs"
 	// JobEvents doc type for real time events sent by jobs
 	JobEvents = "io.cozy.jobs.events"
+	// Support doc type for sending mail to the support
+	Support = "io.cozy.support"
 	// Notifications doc type for notifications
 	Notifications = "io.cozy.notifications"
 	// OAuthAccessCodes doc type for OAuth2 access codes

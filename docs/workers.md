@@ -154,6 +154,8 @@ file at the root of this repository.
 -   `mode`: string specifying the mode of the send:
     -   `noreply` to send a notification mail to the user
     -   `from` to send a mail from the user
+    -   `support` to send both an email to the support and a confirmation to
+        the user
 -   `to`: list of object `{name, email}` representing the addresses of the
     recipients. (should not be used in `noreply` mode)
 -   `subject`: string specifying the subject of the mail
