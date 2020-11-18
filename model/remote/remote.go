@@ -347,9 +347,11 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 	}
 
 	// Sanitize the remote URL
-	if strings.Contains(remote.URL.Host, ":") {
-		log.Infof("Invalid host for remote doctype %s: %s", doctype, remote.URL.Host)
-		return ErrInvalidRequest
+	if !config.GetConfig().RemoteAllowCustomPort {
+		if strings.Contains(remote.URL.Host, ":") {
+			log.Infof("Invalid host for remote doctype %s: %s", doctype, remote.URL.Host)
+			return ErrInvalidRequest
+		}
 	}
 	remote.URL.User = nil
 	remote.URL.Fragment = ""
