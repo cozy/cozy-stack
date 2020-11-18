@@ -92,6 +92,7 @@ func (s *Sharing) AddContacts(inst *instance.Instance, contactIDs map[string]boo
 			return err
 		}
 	}
+	_ = couchdb.UpdateDoc(inst, s)
 	if err = s.SendInvitations(inst, perms); err != nil {
 		return err
 	}

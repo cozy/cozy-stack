@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/shortcut"
+	"golang.org/x/sync/errgroup"
 )
 
 // SendInvitations sends invitation mails to the recipients that were in the
@@ -25,29 +27,38 @@ func (s *Sharing) SendInvitations(inst *instance.Instance, perms *permission.Per
 	}
 	sharer, desc := s.getSharerAndDescription(inst)
 
-	for i, m := range s.Members {
+	g, _ := errgroup.WithContext(context.Background())
+	for i := range s.Members {
+		m := &s.Members[i]
 		if i == 0 || m.Status != MemberStatusMailNotSent { // i == 0 is for the owner
 			continue
 		}
-		link := m.InvitationLink(inst, s, s.Credentials[i-1].State, perms)
-		if m.Instance != "" {
-			if err := m.SendShortcut(inst, s, link); err == nil {
-				s.Members[i].Status = MemberStatusPendingInvitation
-				continue
+		state := s.Credentials[i-1].State
+		g.Go(func() error {
+			link := m.InvitationLink(inst, s, state, perms)
+			if m.Instance != "" {
+				if err := m.SendShortcut(inst, s, link); err == nil {
+					m.Status = MemberStatusPendingInvitation
+					return nil
+				}
 			}
-		}
-		if m.Email == "" {
-			return ErrInvitationNotSent
-		}
-		if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
-			inst.Logger().WithField("nspace", "sharing").
-				Errorf("Can't send email for %#v: %s", m.Email, err)
-			return ErrInvitationNotSent
-		}
-		s.Members[i].Status = MemberStatusPendingInvitation
+			if m.Email == "" {
+				return ErrInvitationNotSent
+			}
+			if err := m.SendMail(inst, s, sharer, desc, link); err != nil {
+				inst.Logger().WithField("nspace", "sharing").
+					Errorf("Can't send email for %#v: %s", m.Email, err)
+				return ErrInvitationNotSent
+			}
+			m.Status = MemberStatusPendingInvitation
+			return nil
+		})
 	}
-
-	return couchdb.UpdateDoc(inst, s)
+	errg := g.Wait()
+	if err := couchdb.UpdateDoc(inst, s); err != nil {
+		return err
+	}
+	return errg
 }
 
 // SendInvitationsToMembers sends mails from a recipient (open_sharing) to
