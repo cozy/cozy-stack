@@ -17,7 +17,7 @@ var nb int
 func main() {
 	flag.BoolVar(&shuffle, "shuffle", false, "Randomize the order of the tests")
 	flag.BoolVar(&failFast, "fail-fast", false, "Stop on the first test that fails")
-	flag.IntVar(&nb, "n", 4, "Number of tests to run in parallel")
+	flag.IntVar(&nb, "n", 8, "Number of tests to run in parallel")
 	flag.Parse()
 
 	tests, err := listTests()
