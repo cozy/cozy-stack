@@ -1,0 +1,13 @@
+{{define "content"}}
+<mj-text mj-class="content-medium">
+	{{t "Mail Support Confirmation Intro 1" .Name}}<br/>
+	{{t "Mail Support Confirmation Intro 2"}}
+</mj-text>
+<mj-text mj-class="content-large">
+	{{.Body}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Support Confirmation Outro"}}<br/>
+	{{t "Mail Support Confirmation Signature"}}
+</mj-text>
+{{end}}

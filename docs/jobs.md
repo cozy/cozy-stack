@@ -348,6 +348,39 @@ allowed):
 }
 ```
 
+### POST /jobs/support
+
+Send a mail to the support. It requires a permission on `io.cozy.support` (a
+permission on `io.cozy.jobs:POST:sendmail:worker`, or larger, is also accepted
+to ease the transition from sending manually a mail to the support via the
+sendmail queue).
+
+#### Request
+
+```http
+POST /jobs/support HTTP/1.1
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "attributes": {
+      "arguments": {
+        "subject": "Cozy is so cool!",
+        "body": "I really love Cozy. Thank you so much!"
+      }
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### GET /jobs/queue/:worker-type
 
 List the jobs in the queue.

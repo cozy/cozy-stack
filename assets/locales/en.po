@@ -716,6 +716,21 @@ msgstr "Access to this %s"
 msgid "Mail Alert Account Subject"
 msgstr "Instance deletion failed on cleaning accounts"
 
+msgid "Mail Support Confirmation Subject"
+msgstr "[cozy-support] Your request is already on our way!"
+
+msgid "Mail Support Confirmation Intro 1"
+msgstr "Hello %s,"
+
+msgid "Mail Support Confirmation Intro 2"
+msgstr "Our team examines your request."
+
+msgid "Mail Support Confirmation Outro"
+msgstr "I will respond by e-mail as soon as possible."
+
+msgid "Mail Support Confirmation Signature"
+msgstr "Claude - Customer Service at Cozy Cloud"
+
 msgid "Notification Sharing Subject"
 msgstr "A new sharing is available in your Cozy"
 

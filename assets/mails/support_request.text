@@ -1,0 +1,7 @@
+{{t "Mail Support Confirmation Intro 1" .Name}}
+{{t "Mail Support Confirmation Intro 2"}}
+
+{{.Body}}
+
+{{t "Mail Support Confirmation Outro"}}
+{{t "Mail Support Confirmation Signature"}}

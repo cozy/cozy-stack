@@ -13,6 +13,9 @@ const (
 	// ModeFromUser is the "from" mode of a mail, to send mail "from" the user's
 	// mail.
 	ModeFromUser = "from"
+	// ModeSupport is used to send both a request to the support and a
+	// confirmation to the user.
+	ModeSupport = "support"
 
 	// DefaultLayout defines the default MJML layout to use
 	DefaultLayout = "layout"

@@ -92,6 +92,20 @@ func SendMail(ctx *job.WorkerContext) error {
 		name = sender.Name
 		opts.ReplyTo = sender
 		opts.From = &mail.Address{Name: name, Email: from}
+	case mail.ModeSupport:
+		toAddr, err := addressFromInstance(ctx.Instance)
+		if err != nil {
+			return err
+		}
+		opts.To = []*mail.Address{toAddr}
+		opts.From = &mail.Address{Name: name, Email: from}
+		if replyTo != "" {
+			opts.ReplyTo = &mail.Address{Name: name, Email: replyTo}
+		}
+		opts.RecipientName = toAddr.Name
+		if err := sendSupportMail(ctx, &opts, ctx.Instance.Domain); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("Mail sent with unknown mode %s", opts.Mode)
 	}
@@ -213,4 +227,44 @@ func addPart(mail *gomail.Message, part *mail.Part) error {
 	}
 	mail.AddAlternative(contentType, part.Body)
 	return nil
+}
+
+func sendSupportMail(ctx *job.WorkerContext, opts *mail.Options, domain string) error {
+	email := gomail.NewMessage()
+	dialerOptions := opts.Dialer
+	if dialerOptions == nil {
+		dialerOptions = config.GetConfig().Mail
+	}
+	if dialerOptions.Host == "-" {
+		return nil
+	}
+	var date time.Time
+	if opts.Date == nil {
+		date = time.Now()
+	} else {
+		date = *opts.Date
+	}
+	headers := map[string][]string{
+		"From":    {email.FormatAddress(opts.To[0].Email, opts.To[0].Name)},
+		"To":      {email.FormatAddress(opts.ReplyTo.Email, opts.ReplyTo.Name)},
+		"Subject": {opts.Subject},
+		"X-Cozy":  {domain},
+	}
+	if opts.ReplyTo != nil {
+		headers["Reply-To"] = []string{
+			email.FormatAddress(opts.ReplyTo.Email, opts.ReplyTo.Name),
+		}
+	}
+	email.SetHeaders(headers)
+	email.SetDateHeader("Date", date)
+
+	intro := fmt.Sprintf("Demande de support pour %s:\n\n", domain)
+	body, _ := opts.TemplateValues["Body"].(string)
+	email.AddAlternative("text/plain", intro+body+"\n")
+
+	dialer := gomail.NewDialer(dialerOptions)
+	if deadline, ok := ctx.Deadline(); ok {
+		dialer.SetDeadline(deadline)
+	}
+	return dialer.DialAndSend(email)
 }

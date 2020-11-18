@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -48,6 +49,9 @@ type (
 		Arguments   json.RawMessage `json:"arguments"`
 		ForwardLogs bool            `json:"forward_logs"`
 		Options     *job.JobOptions `json:"options"`
+	}
+	apiSupport struct {
+		Arguments map[string]string `json:"arguments"`
 	}
 	apiQueue struct {
 		workerType string
@@ -188,6 +192,42 @@ func pushJob(c echo.Context) error {
 	}
 
 	return jsonapi.Data(c, http.StatusAccepted, apiJob{j}, nil)
+}
+
+func contactSupport(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	req := apiSupport{}
+	if _, err := jsonapi.Bind(c.Request().Body, &req); err != nil {
+		return wrapJobsError(err)
+	}
+
+	name, _ := inst.PublicName()
+	msg, err := job.NewMessage(mail.Options{
+		Mode:         mail.ModeSupport,
+		TemplateName: "support_request",
+		TemplateValues: map[string]interface{}{
+			"Name": name,
+			"Body": req.Arguments["body"],
+		},
+		Subject: req.Arguments["subject"],
+		Layout:  mail.CozyCloudLayout,
+	})
+	if err != nil {
+		return err
+	}
+	jr := &job.JobRequest{WorkerType: "sendmail", Message: msg}
+
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Support); err != nil {
+		if middlewares.Allow(c, permission.POST, jr) != nil {
+			return err
+		}
+	}
+
+	if _, err = job.System().PushJob(inst, jr); err != nil {
+		return wrapJobsError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 func newTrigger(c echo.Context) error {
@@ -590,6 +630,7 @@ func purgeJobs(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("/queue/:worker-type", getQueue)
 	router.POST("/queue/:worker-type", pushJob)
+	router.POST("/support", contactSupport)
 
 	router.POST("/triggers", newTrigger)
 	router.GET("/triggers", getAllTriggers)
