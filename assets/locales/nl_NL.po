@@ -775,6 +775,21 @@ msgstr "Toegang tot deze %s"
 msgid "Mail Alert Account Subject"
 msgstr "Instantieverwijdering mislukt tijdens opschonen van accounts"
 
+msgid "Mail Support Confirmation Subject"
+msgstr "[cozy-support] Je verzoek is al onze kant op gestuurd!"
+
+msgid "Mail Support Confirmation Intro 1"
+msgstr "Hallo %s,"
+
+msgid "Mail Support Confirmation Intro 2"
+msgstr "Ons team bestudeert je verzoek."
+
+msgid "Mail Support Confirmation Outro"
+msgstr "Ik antwoord je per e-mail zodra ik meer weet."
+
+msgid "Mail Support Confirmation Signature"
+msgstr "Claude - klantenservice van Cozy Cloud"
+
 msgid "Notification Sharing Subject"
 msgstr "Er is een gedeeld item beschikbaar op je Cozy"
 
