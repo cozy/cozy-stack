@@ -5,6 +5,13 @@ let fields = JSON.parse(process.env['COZY_FIELDS'])
 let credentials = process.env['COZY_CREDENTIALS']
 let instance = process.env['COZY_URL']
 
+let payload
+try {
+  payload = JSON.parse(process.env['COZY_PAYLOAD'])
+} catch (e) {
+  payload = { error: e }
+}
+
 let url = instance + 'data/io.cozy.accounts/' + fields.account
 let options = {
   headers: {
@@ -22,7 +29,8 @@ http.get(url, options, (res) => {
     rawData += chunk
   })
   res.on('end', () => {
-    let data = JSON.parse(rawData)
-    fs.writeFileSync(data.log, JSON.stringify(data, null, '  '))
+    let account = JSON.parse(rawData)
+    let data = { account, fields, payload }
+    fs.writeFileSync(account.log, JSON.stringify(data, null, '  '))
   })
 })

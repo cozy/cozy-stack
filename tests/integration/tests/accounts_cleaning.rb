@@ -38,7 +38,7 @@ describe "An io.cozy.accounts" do
     end
     assert done
     executed = JSON.parse File.read(accone.log)
-    assert_equal executed["_id"], accone.couch_id
+    assert_equal executed["account"]["_id"], accone.couch_id
     File.delete accone.log
 
     accone.delete inst

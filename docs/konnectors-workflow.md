@@ -30,7 +30,7 @@ saved in CouchDB, but we will show them as the konnectors will see them):
 
 Accounts are manipulated through the `/data/` API.
 
-#### Decryption
+#### Decryption
 
 The decryption of the credentials is reserved to requests coming from konnectors
 and services. For services, it is only available on
@@ -706,6 +706,7 @@ Content-Type: application/vnd.api+json
       "type": "@webhook",
       "worker": "konnector",
       "message": {
+        "konnector": "mykonnector",
         "param_from_trigger": "foo"
       }
     },
