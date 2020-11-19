@@ -454,6 +454,11 @@ func deleteTrigger(c echo.Context) error {
 
 func fireWebhook(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	err := limits.CheckRateLimit(inst, limits.WebhookTriggerType)
+	if limits.IsLimitReachedOrExceeded(err) {
+		return echo.NewHTTPError(http.StatusNotFound, "Not found")
+	}
+
 	t, err := job.System().GetTrigger(inst, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
