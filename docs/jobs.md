@@ -350,10 +350,12 @@ allowed):
 
 ### POST /jobs/support
 
-Send a mail to the support. It requires a permission on `io.cozy.support` (a
-permission on `io.cozy.jobs:POST:sendmail:worker`, or larger, is also accepted
-to ease the transition from sending manually a mail to the support via the
-sendmail queue).
+Send a mail to the support (email address defined by `mail.reply_to` in the
+config file, or overwritten by context with `contexts.<name>.reply_to`).
+
+It requires a permission on `io.cozy.support` (a permission on
+`io.cozy.jobs:POST:sendmail:worker`, or larger, is also accepted to ease the
+transition from sending manually a mail to the support via the sendmail queue).
 
 #### Request
 
