@@ -11,7 +11,6 @@ import (
 
 type jobOptions struct {
 	MaxExecCount int            `json:"max_exec_count,omitempty"`
-	MaxExecTime  *time.Duration `json:"max_exec_time,omitempty"`
 	Timeout      *time.Duration `json:"timeout,omitempty"`
 }
 
@@ -20,7 +19,6 @@ type JobOptions struct {
 	Worker       string
 	Arguments    interface{}
 	MaxExecCount int
-	MaxExecTime  *time.Duration
 	Timeout      *time.Duration
 	Logs         chan *JobLog
 }
@@ -69,7 +67,6 @@ type Trigger struct {
 		Message    json.RawMessage `json:"message"`
 		Options    *struct {
 			MaxExecCount int           `json:"max_exec_count"`
-			MaxExecTime  time.Duration `json:"max_exec_time"`
 			Timeout      time.Duration `json:"timeout"`
 		} `json:"options"`
 	} `json:"attributes"`
@@ -91,9 +88,6 @@ func (c *Client) JobPush(r *JobOptions) (*Job, error) {
 	opt := &jobOptions{}
 	if r.MaxExecCount > 0 {
 		opt.MaxExecCount = r.MaxExecCount
-	}
-	if r.MaxExecTime != nil {
-		opt.MaxExecTime = r.MaxExecTime
 	}
 	if r.Timeout != nil {
 		opt.Timeout = r.Timeout

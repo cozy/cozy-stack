@@ -290,7 +290,6 @@ Accept: application/vnd.api+json
   "data": {
     "attributes": {
       "options": {
-        "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       },
@@ -311,7 +310,6 @@ Accept: application/vnd.api+json
       "domain": "me.cozy.tools",
       "worker": "sendmail",
       "options": {
-        "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       },
@@ -477,7 +475,6 @@ Accept: application/vnd.api+json
       "worker": "sendmail",
       "message": {},
       "options": {
-        "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       }
@@ -502,7 +499,6 @@ latter version still works but is deprecated, you should use `message` instead.
       "debounce": "10m",
       "worker": "sendmail",
       "options": {
-        "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       }
@@ -557,7 +553,6 @@ Accept: application/vnd.api+json
       "arguments": "30m10s",
       "worker": "sendmail",
       "options": {
-        "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       },

@@ -107,7 +107,6 @@ type (
 	// JobOptions struct contains the execution properties of the jobs.
 	JobOptions struct {
 		MaxExecCount int           `json:"max_exec_count"`
-		MaxExecTime  time.Duration `json:"max_exec_time"`
 		Timeout      time.Duration `json:"timeout"`
 	}
 )
