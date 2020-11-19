@@ -780,6 +780,21 @@ msgstr "Acceso a este %s"
 msgid "Mail Alert Account Subject"
 msgstr "Error en la eliminación de instancias durante la limpieza de cuentas"
 
+msgid "Mail Support Confirmation Subject"
+msgstr "[cozy-support] ¡Su solicitud está en curso!"
+
+msgid "Mail Support Confirmation Intro 1"
+msgstr "Hola %s,"
+
+msgid "Mail Support Confirmation Intro 2"
+msgstr "Nuestro equipo examina su solicitud."
+
+msgid "Mail Support Confirmation Outro"
+msgstr "Usted recibirá una respuesta lo antes posible."
+
+msgid "Mail Support Confirmation Signature"
+msgstr "Claude - Departamento de atención al cliente de Cozy Cloud"
+
 msgid "Notification Sharing Subject"
 msgstr "Una nueva manera de intercambiar está disponible en su Cozy"
 
