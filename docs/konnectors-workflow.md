@@ -658,3 +658,93 @@ type with the following parameter:
 - `grant_mode`, with `bi_webauth` as the value (or `bi_webauth+secret` if there is also a secret)
 - `redirect_uri`, with an URL like `https://oauthcallback.mycozy.cloud/accounts/paypal/redirect`
 - `client_id`, with the client ID given by Budget Insight.
+
+## Webhook triggers
+
+![Webhook trigger for a konnector](diagrams/konnector-webhook.jpeg)
+
+1. The cloudery (or an application) can install the konnector and create an account
+
+2. It can also create the webhook trigger via a `POST /jobs/triggers`
+
+Request:
+
+```http
+POST /jobs/triggers HTTP/1.1
+Host: jane.cozy.example
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "attributes": {
+      "type": "@webhook",
+      "worker": "konnector",
+      "message": {
+        "param_from_trigger": "foo"
+      }
+    }
+  }
+}
+```
+
+Response:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.triggers",
+    "id": "0915b6b0-0c97-0139-5af7-543d7eb8149c",
+    "attributes": {
+      "type": "@webhook",
+      "worker": "konnector",
+      "message": {
+        "param_from_trigger": "foo"
+      }
+    },
+    "links": {
+      "self": "/jobs/triggers/0915b6b0-0c97-0139-5af7-543d7eb8149c",
+      "webhook": "https://jane.cozy.example/jobs/webhooks/0915b6b0-0c97-0139-5af7-543d7eb8149c"
+    }
+  }
+}
+```
+
+3. The cloudery can then give the webhook URL to the external service
+
+4. When the external service has new documents to import, it can call the webhook
+
+Request:
+
+```http
+POST /jobs/webhooks/0915b6b0-0c97-0139-5af7-543d7eb8149c HTTP/1.1
+Host: jane.cozy.example
+Content-Type: application/json
+```
+
+```json
+{"param_from_http_body": "bar"}
+```
+
+Response:
+
+```http
+HTTP/1.1 204 No Content
+```
+
+5. The stack will put a job in its queue for the konnector
+
+6. The stack executes the konnector with:
+
+- `COZY_FIELDS={"param_from_trigger": "foo"}`
+- `COZY_PAYLOAD={"param_from_http_body": "bar"}`
+- etc.
+
+7. The konnector will fetch the documents from the external service and save
+   them in the Cozy.

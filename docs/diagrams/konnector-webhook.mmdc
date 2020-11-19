@@ -1,0 +1,15 @@
+sequenceDiagram
+    %% https://mermaidjs.github.io/
+    participant N as Cloudery / App
+    participant C as Cozy-Stack
+    participant K as Konnector
+    participant S as External service
+
+    N ->> C: create the account
+    N ->> C: create the @webhook trigger
+	N ->> S: give the webhook URL
+
+	S ->> C: call the webhook URL
+    C ->> K: start the konnector
+    K ->> S: fetch data
+    K ->> C: save documents and files
