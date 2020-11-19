@@ -59,7 +59,16 @@ To use this worker from a client-side application, you should use
 ## sms worker
 
 The `sms` worker can be used to send SMS notifications to a user, via
-[the notifications API](./notifications.md).
+[the notifications API](./notifications.md). 
+
+The phone number used is the `primary phone number` registered in 
+the contact that has the flag `me: true` (see [contact doctype](https://github.com/cozy/cozy-doctypes/blob/master/docs/io.cozy.contacts.md) )
+
+Note: If an error happens during the send of the sms (for instance no phone number on the cozy or SMS provider not available), the content will be send by email as fallback.
+
+To use the sms worker, you need to configure your SMS provider:
+- first enable sms worker in your [stack configuration](https://github.com/cozy/cozy-stack/blob/master/cozy.example.yaml#L156)
+- configure the [notification configuration](https://github.com/cozy/cozy-stack/blob/master/cozy.example.yaml#L281-L285) by setting your provider's informations.
 
 ## unzip worker
 

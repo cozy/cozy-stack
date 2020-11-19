@@ -115,6 +115,10 @@ Notifications fields are:
 -   `at` (string): send the notification later, at this date formatted in
     ISO-8601 (optional)
 
+Note that if you send a notification by sms, only the `message` attribute 
+will be sent. Also, keep in mind that, depending on your sms provider, the length 
+of the message cannot be longer than 160 characters. 
+
 #### Request
 
 ```http
