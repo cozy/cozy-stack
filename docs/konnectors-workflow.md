@@ -272,6 +272,7 @@ Start the konnector through nsjail, passing as ENV variables:
     - `COZY_URL`:          the starting instance URL
     - `COZY_CREDENTIALS`:  security token to communicate with Cozy
     - `COZY_FIELDS`:       JSON-encoded message with the arguments from the trigger
+    - `COZY_PAYLOAD`:      JSON-encoded payload from the HTTP request (@webhook trigger)
     - `COZY_PARAMETERS`:   JSON-encoded parameters from the konnector manifest
     - `COZY_LANGUAGE`:     the language field of the konnector (eg. "node" etc.)
     - `COZY_LOCALE`:       the locale of the user (eg. "en" etc.)
@@ -710,7 +711,7 @@ Content-Type: application/vnd.api+json
     },
     "links": {
       "self": "/jobs/triggers/0915b6b0-0c97-0139-5af7-543d7eb8149c",
-      "webhook": "https://jane.cozy.example/jobs/webhooks/0915b6b0-0c97-0139-5af7-543d7eb8149c"
+      "webhook": "/jobs/webhooks/0915b6b0-0c97-0139-5af7-543d7eb8149c"
     }
   }
 }

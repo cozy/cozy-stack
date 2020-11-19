@@ -494,12 +494,21 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Inst
 	fieldsJSON := w.msg.ToJSON()
 	token := i.BuildKonnectorToken(w.man.Slug())
 
+	payload := []byte{}
+	if p, err := ctx.UnmarshalPayload(); err == nil {
+		payload, err = json.Marshal(p)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
 	cmd = config.GetConfig().Konnectors.Cmd
 	env = []string{
 		"COZY_URL=" + i.PageURL("/", nil),
 		"COZY_CREDENTIALS=" + token,
 		"COZY_FIELDS=" + fieldsJSON,
 		"COZY_PARAMETERS=" + string(paramsJSON),
+		"COZY_PAYLOAD=" + string(payload),
 		"COZY_LANGUAGE=" + language,
 		"COZY_LOCALE=" + i.Locale,
 		"COZY_TIME_LIMIT=" + ctxToTimeLimit(ctx),

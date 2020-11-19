@@ -195,6 +195,9 @@ func (s *memScheduler) schedule(t Trigger) {
 	s.log.Debugf("trigger %s(%s): Starting trigger",
 		t.Type(), t.Infos().TID)
 	ch := t.Schedule()
+	if ch == nil {
+		return
+	}
 	var debounced <-chan time.Time
 	var originalReq *JobRequest
 	var d time.Duration

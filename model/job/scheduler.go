@@ -131,6 +131,8 @@ func fromTriggerInfos(infos *TriggerInfos) (Trigger, error) {
 		return NewEveryTrigger(infos)
 	case "@event":
 		return NewEventTrigger(infos)
+	case "@webhook":
+		return NewWebhookTrigger(infos)
 	default:
 		return nil, ErrUnknownTrigger
 	}

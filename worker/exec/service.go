@@ -148,11 +148,19 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instan
 	type serviceEvent struct {
 		Doc interface{} `json:"doc"`
 	}
+
 	var doc serviceEvent
 	marshaled := []byte{}
-
 	if err := ctx.UnmarshalEvent(&doc); err == nil {
 		marshaled, err = json.Marshal(doc.Doc)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
+	payload := []byte{}
+	if p, err := ctx.UnmarshalPayload(); err == nil {
+		payload, err = json.Marshal(p)
 		if err != nil {
 			return "", nil, err
 		}
@@ -168,6 +176,7 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *job.WorkerContext, i *instance.Instan
 		"COZY_TIME_LIMIT=" + ctxToTimeLimit(ctx),
 		"COZY_JOB_ID=" + ctx.ID(),
 		"COZY_COUCH_DOC=" + string(marshaled),
+		"COZY_PAYLOAD=" + string(payload),
 	}
 	return
 }

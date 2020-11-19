@@ -31,6 +31,7 @@ type LinksList struct {
 	Next    string `json:"next,omitempty"`
 	Icon    string `json:"icon,omitempty"`
 	Perms   string `json:"permissions,omitempty"`
+	Webhook string `json:"webhook,omitempty"`
 	// Thumbnails
 	Small  string `json:"small,omitempty"`
 	Medium string `json:"medium,omitempty"`

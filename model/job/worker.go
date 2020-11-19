@@ -197,6 +197,15 @@ func (c *WorkerContext) UnmarshalEvent(v interface{}) error {
 	return c.job.Event.Unmarshal(v)
 }
 
+// UnmarshalPayload unmarshals the payload contained in the worker context.
+func (c *WorkerContext) UnmarshalPayload() (map[string]interface{}, error) {
+	var payload map[string]interface{}
+	if err := c.job.Payload.Unmarshal(&payload); err != nil {
+		return nil, err
+	}
+	return payload, nil
+}
+
 // TriggerID returns the possible trigger identifier responsible for launching
 // the job.
 func (c *WorkerContext) TriggerID() (string, bool) {
