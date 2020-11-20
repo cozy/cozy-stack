@@ -850,8 +850,15 @@ func CheckSharings(inst *instance.Instance) ([]map[string]interface{}, error) {
 			})
 		}
 
+		accepted := false
+		for _, m := range s.Members {
+			if m.Status == MemberStatusReady {
+				accepted = true
+			}
+		}
+
 		// Check triggers
-		if s.Active {
+		if s.Active && accepted {
 			if s.Triggers.TrackID == "" {
 				checks = append(checks, map[string]interface{}{
 					"id":      s.SID,
