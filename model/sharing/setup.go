@@ -98,9 +98,11 @@ func (s *Sharing) Setup(inst *instance.Instance, m *Member) {
 		inst.Logger().WithField("nspace", "sharing").
 			Warnf("Error on setup of track triggers (%s): %s", s.SID, err)
 	}
-	for i, rule := range s.Rules {
-		if err := s.InitialCopy(inst, rule, i); err != nil {
-			inst.Logger().Warnf("Error on initial copy for %s (%s): %s", rule.Title, s.SID, err)
+	if s.Triggers.ReplicateID == "" {
+		for i, rule := range s.Rules {
+			if err := s.InitialCopy(inst, rule, i); err != nil {
+				inst.Logger().Warnf("Error on initial copy for %s (%s): %s", rule.Title, s.SID, err)
+			}
 		}
 	}
 	if err := s.AddReplicateTrigger(inst); err != nil {
