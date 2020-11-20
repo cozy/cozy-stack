@@ -10,7 +10,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 29
+const IndexViewsVersion int = 30
 
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
@@ -76,6 +76,22 @@ function(doc) {
 }
 `,
 	Reduce: "_sum",
+}
+
+// DirNotSynchronizedOnView is the view used for fetching directories that are
+// not synchronized on a given device.
+var DirNotSynchronizedOnView = &View{
+	Name:    "not-synchronized-on",
+	Doctype: consts.Files,
+	Reduce:  "_count",
+	Map: `
+function(doc) {
+  if (doc.type === "directory" && isArray(doc.not_synchronized_on)) {
+    for (var i = 0; i < doc.not_synchronized_on.length; i++) {
+      emit([doc.not_synchronized_on[i].type, doc.not_synchronized_on[i].id]);
+    }
+  }
+}`,
 }
 
 // FilesReferencedByView is the view used for fetching files referenced by a
@@ -239,6 +255,7 @@ function(doc) {
 var Views = []*View{
 	DiskUsageView,
 	OldVersionsDiskUsageView,
+	DirNotSynchronizedOnView,
 	FilesReferencedByView,
 	ReferencedBySortedByDatetimeView,
 	FilesByParentView,

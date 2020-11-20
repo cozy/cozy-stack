@@ -650,6 +650,37 @@ func (c *couchdbIndexer) BatchDeleteVersions(versions []*Version) error {
 	return nil
 }
 
+func (c *couchdbIndexer) ListNotSynchronizedOn(clientID string) ([]DirDoc, error) {
+	req := couchdb.ViewRequest{
+		StartKey:    []string{consts.OAuthClients, clientID},
+		EndKey:      []string{consts.OAuthClients, clientID},
+		IncludeDocs: true,
+	}
+	var docs []DirDoc
+
+	cursor := couchdb.NewKeyCursor(100, nil, "")
+	for cursor.HasMore() {
+		cursor.ApplyTo(&req)
+		var res couchdb.ViewResponse
+		err := couchdb.ExecView(c.db, couchdb.DirNotSynchronizedOnView, &req, &res)
+		if err != nil {
+			return nil, err
+		}
+		cursor.UpdateFrom(&res)
+
+		for _, row := range res.Rows {
+			var doc DirDoc
+			err := json.Unmarshal(row.Doc, &doc)
+			if err != nil {
+				return nil, err
+			}
+			docs = append(docs, doc)
+		}
+	}
+
+	return docs, nil
+}
+
 // checkTrashedDirIsShared will look for a dir going to the trash if it was the
 // main dir of a sharing. If it is the case, the sharing is revoked and the
 // reference to the sharing is removed.

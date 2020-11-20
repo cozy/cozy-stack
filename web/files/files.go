@@ -1361,6 +1361,9 @@ func Routes(router *echo.Group) {
 	router.POST("/:file-id/relationships/referenced_by", AddReferencedHandler)
 	router.DELETE("/:file-id/relationships/referenced_by", RemoveReferencedHandler)
 
+	router.POST("/:file-id/relationships/not_synchronized_on", AddNotSynchronizedOn)
+	router.DELETE("/:file-id/relationships/not_synchronized_on", RemoveNotSynchronizedOn)
+
 	router.GET("/trash", ReadTrashFilesHandler)
 	router.DELETE("/trash", ClearTrashHandler)
 

@@ -119,7 +119,8 @@ type ChangesResponse struct {
 type Change struct {
 	DocID   string  `json:"id"`
 	Seq     string  `json:"seq"`
-	Doc     JSONDoc `json:"doc"`
+	Doc     JSONDoc `json:"doc,omitempty"`
+	Deleted bool    `json:"deleted,omitempty"`
 	Changes []struct {
 		Rev string `json:"rev"`
 	} `json:"changes"`

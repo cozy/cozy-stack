@@ -25,6 +25,17 @@ module Model
           .reject { |r| r["id"] =~ /^_design/ }
           .map { |r| from_json r["doc"] }
     end
+
+    def changes(inst, since = nil)
+      opts = {
+        accept: :json,
+        authorization: "Bearer #{inst.token_for doctype}"
+      }
+      url = "/data/#{doctype}/_changes?include_docs=true"
+      url = "#{url}&since=#{since}" if since
+      res = inst.client[url].get opts
+      JSON.parse(res.body)
+    end
   end
 
   def to_json(*_args)

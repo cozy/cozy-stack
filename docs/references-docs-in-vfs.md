@@ -267,9 +267,6 @@ HTTP/1.1 204 No Content
 Content-Type: application/vnd.api+json
 ```
 
-**Note**: if one of the id is a directory, the response will be a 400 Bad
-Request. References are only for files.
-
 ### DELETE /data/:type/:doc-id/relationships/references
 
 This bulk deletion of references on many files can be useful when an album or

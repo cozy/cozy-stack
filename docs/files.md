@@ -99,6 +99,17 @@ Location: https://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
           "type": "io.cozy.files",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
+      },
+      "not_synchronized_on": {
+        "links": {
+          "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee/relationships/not_synchronized_on"
+        },
+        "data": [
+          {
+            "type": "io.cozy.oauth.clients",
+            "id": "653dfdb0-0595-0139-92df-543d7eb8149c"
+          }
+        ]
       }
     },
     "links": {
@@ -107,6 +118,9 @@ Location: https://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
   }
 }
 ```
+
+**Note**: see [not synchronized directories](not-synchronized-vfs.md) for
+more informations about the `not_synchronized_on` field.
 
 ### GET /files/:file-id
 

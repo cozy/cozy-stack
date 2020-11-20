@@ -121,4 +121,26 @@ class Folder
   def trashed
     @path.start_with? TRASH_PATH
   end
+
+  def not_synchronized_on(inst, client_id)
+    opts = {
+      accept: "application/vnd.api+json",
+      :"content-type" => "application/vnd.api+json",
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    body = JSON.generate data: [{ type: "io.cozy.oauth.clients", id: client_id }]
+    url = "/files/#{@couch_id}/relationships/not_synchronized_on"
+    inst.client[url].post body, opts
+  end
+
+  def synchronized_on(inst, client_id)
+    opts = {
+      accept: "application/vnd.api+json",
+      :"content-type" => "application/vnd.api+json",
+      authorization: "Bearer #{inst.token_for doctype}"
+    }
+    body = JSON.generate data: [{ type: "io.cozy.oauth.clients", id: client_id }]
+    url = "http://#{inst.domain}/files/#{@couch_id}/relationships/not_synchronized_on"
+    RestClient::Request.execute method: :delete, url: url, payload: body, headers: opts
+  end
 end

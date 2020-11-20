@@ -79,6 +79,7 @@ designing new services.
     -   [CouchDB Quirks](couchdb-quirks.md) &
         [PouchDB Quirks](pouchdb-quirks.md)
 -   `/files` - [Virtual File System](files.md)
+    -   [Not synchronized directories](not-synchronized-vfs.md)
     -   [References of documents in VFS](references-docs-in-vfs.md)
 -   `/intents` - [Intents](intents.md)
 -   `/jobs` - [Jobs](jobs.md)

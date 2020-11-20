@@ -411,6 +411,10 @@ func (s *sharingIndexer) BatchDeleteVersions(versions []*vfs.Version) error {
 	return s.indexer.BatchDeleteVersions(versions)
 }
 
+func (s *sharingIndexer) ListNotSynchronizedOn(clientID string) ([]vfs.DirDoc, error) {
+	return s.indexer.ListNotSynchronizedOn(clientID)
+}
+
 func (s *sharingIndexer) CheckIndexIntegrity(predicate func(*vfs.FsckLog), failFast bool) error {
 	s.log.Errorf("Unexpected call to CheckIndexIntegrity")
 	return ErrInternalServerError

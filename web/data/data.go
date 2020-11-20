@@ -432,17 +432,16 @@ func Routes(router *echo.Group) {
 	router.GET("/", dataAPIWelcome)
 	router.GET("/_all_doctypes", allDoctypes)
 
+	// API Routes under /:doctype
 	group := router.Group("/:doctype", ValidDoctype)
 
 	replicationRoutes(group)
+	files.ReferencesRoutes(group)
+	files.NotSynchronizedOnRoutes(group)
 
-	// API Routes under /:doctype
 	group.GET("/:docid", getDoc)
 	group.PUT("/:docid", UpdateDoc)
 	group.DELETE("/:docid", DeleteDoc)
-	group.GET("/:docid/relationships/references", files.ListReferencesHandler)
-	group.POST("/:docid/relationships/references", files.AddReferencesHandler)
-	group.DELETE("/:docid/relationships/references", files.RemoveReferencesHandler)
 	group.POST("/", createDoc)
 	group.GET("/_all_docs", allDocs)
 	group.POST("/_all_docs", allDocs)
