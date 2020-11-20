@@ -302,8 +302,13 @@ func generateThumb(ctx *job.WorkerContext, in io.Reader, out io.Writer, fileID s
 	cmd.Stdout = out
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
+		// Truncate very long messages
+		msg := stderr.String()
+		if len(msg) > 4000 {
+			msg = msg[:4000]
+		}
 		ctx.Logger().
-			WithField("stderr", stderr.String()).
+			WithField("stderr", msg).
 			WithField("file_id", fileID).
 			Errorf("imagemagick failed: %s", err)
 		return err
