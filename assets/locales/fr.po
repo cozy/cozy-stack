@@ -515,6 +515,12 @@ msgstr "Contacts"
 msgid "Permissions io.cozy.files"
 msgstr "Fichiers"
 
+msgid "Permissions io.cozy.certified.carbon_copy"
+msgstr "Copie carbone"
+
+msgid "Permissions io.cozy.certified.electronic_safe"
+msgstr "Coffre-fort numérique"
+
 msgid "Permissions io.cozy.files.versions"
 msgstr "Versions des fichiers"
 
