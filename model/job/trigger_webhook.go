@@ -1,12 +1,12 @@
 package job
 
-// WebhookTrigger implements the @webhook triggers. It schedules a hob when an
+// WebhookTrigger implements the @webhook triggers. It schedules a job when an
 // HTTP request is made at this webhook.
 type WebhookTrigger struct {
 	*TriggerInfos
 }
 
-// NewWebhookTrigger returns a new new instance of WebhookTrigger.
+// NewWebhookTrigger returns a new instance of WebhookTrigger.
 func NewWebhookTrigger(infos *TriggerInfos) (*WebhookTrigger, error) {
 	return &WebhookTrigger{infos}, nil
 }
