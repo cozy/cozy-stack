@@ -27,7 +27,7 @@ const filesExecUsage = `Available commands:
 
     mkdir <name>               Creates a directory with specified name
     ls [-l] [-a] [-h] <name>   Prints the children of the specified directory
-    tree <name>                Prints the tree structure of the specified directory
+    tree [-l] <name>           Prints the tree structure of the specified directory
     attrs <name>               Prints the attributes of the specified file or directory
     cat <name>                 Echo the file content in stdout
     mv <from> <to>             Rename a file or directory
@@ -168,11 +168,13 @@ func execCommand(c *client.Client, command string, w io.Writer) error {
 
 	switch cmdname {
 	case "mkdir":
-		fset.BoolVar(&flagMkdirP, "p", false, "Create imtermediary directories")
+		fset.BoolVar(&flagMkdirP, "p", false, "Create intermediary directories")
 	case "ls":
 		fset.BoolVar(&flagLsVerbose, "l", false, "List in with additional attributes")
 		fset.BoolVar(&flagLsHuman, "h", false, "Print size in human readable format")
 		fset.BoolVar(&flagLsAll, "a", false, "Print hidden directories")
+	case "tree":
+		fset.BoolVar(&flagLsVerbose, "l", false, "List in with additional attributes")
 	case "rm":
 		fset.BoolVar(&flagRmForce, "f", false, "Delete file or directory permanently")
 		fset.BoolVar(&flagRmRecur, "r", false, "Delete directory and all its contents")
@@ -193,7 +195,7 @@ func execCommand(c *client.Client, command string, w io.Writer) error {
 	case "ls":
 		return lsCmd(c, args[0], w, flagLsVerbose, flagLsHuman, flagLsAll)
 	case "tree":
-		return treeCmd(c, args[0], w)
+		return treeCmd(c, args[0], w, flagLsVerbose)
 	case "attrs":
 		return attrsCmd(c, args[0], w)
 	case "cat":
@@ -224,6 +226,7 @@ func mkdirCmd(c *client.Client, name string, mkdirP bool) error {
 
 func lsCmd(c *client.Client, root string, w io.Writer, verbose, human, all bool) error {
 	type filePrint struct {
+		id    string
 		typ   string
 		name  string
 		size  string
@@ -248,9 +251,9 @@ func lsCmd(c *client.Client, root string, w io.Writer, verbose, human, all bool)
 		}
 
 		attrs := doc.Attrs
-		var typ, name, size, mdate, exec string
-
-		name = attrs.Name
+		var typ, size, mdate, exec string
+		name := attrs.Name
+		id := doc.ID
 
 		if now.Year() == attrs.UpdatedAt.Year() {
 			mdate = attrs.UpdatedAt.Format("Jan 02 15:04")
@@ -262,7 +265,7 @@ func lsCmd(c *client.Client, root string, w io.Writer, verbose, human, all bool)
 			typ = "d"
 			exec = "x"
 		} else {
-			typ = ""
+			typ = "-"
 			if attrs.Executable {
 				exec = "x"
 			} else {
@@ -285,6 +288,7 @@ func lsCmd(c *client.Client, root string, w io.Writer, verbose, human, all bool)
 
 		if all || len(name) == 0 || name[0] != '.' {
 			prints = append(prints, &filePrint{
+				id:    id,
 				typ:   typ,
 				name:  name,
 				size:  size,
@@ -316,8 +320,8 @@ func lsCmd(c *client.Client, root string, w io.Writer, verbose, human, all bool)
 	smaxnamelen := strconv.Itoa(maxnamelen)
 
 	for _, fp := range prints {
-		_, err = fmt.Fprintf(w, "%1s%s  %"+smaxsizelen+"s %s %-"+smaxnamelen+"s\n",
-			fp.typ, fp.exec, fp.size, fp.mdate, fp.name)
+		_, err = fmt.Fprintf(w, "%s %s%s  %"+smaxsizelen+"s %s %-"+smaxnamelen+"s\n",
+			fp.id, fp.typ, fp.exec, fp.size, fp.mdate, fp.name)
 		if err != nil {
 			return err
 		}
@@ -326,12 +330,15 @@ func lsCmd(c *client.Client, root string, w io.Writer, verbose, human, all bool)
 	return nil
 }
 
-func treeCmd(c *client.Client, root string, w io.Writer) error {
+func treeCmd(c *client.Client, root string, w io.Writer, verbose bool) error {
 	root = path.Clean(root)
 
 	return c.WalkByPath(root, func(name string, doc *client.DirOrFile, err error) error {
 		if err != nil {
 			return err
+		}
+		if verbose {
+			fmt.Printf("%s ", doc.ID)
 		}
 
 		attrs := doc.Attrs
