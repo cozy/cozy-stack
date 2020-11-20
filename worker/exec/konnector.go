@@ -532,6 +532,11 @@ func (w *konnectorWorker) ScanOutput(ctx *job.WorkerContext, i *instance.Instanc
 		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
 	}
 
+	// Truncate very long messages
+	if len(msg.Message) > 4000 {
+		msg.Message = msg.Message[:4000]
+	}
+
 	log := w.Logger(ctx)
 	switch msg.Type {
 	case konnectorMsgTypeDebug, konnectorMsgTypeInfo:

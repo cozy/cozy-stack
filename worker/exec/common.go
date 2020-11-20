@@ -122,7 +122,7 @@ func worker(ctx *job.WorkerContext) (err error) {
 	go func() {
 		for scanOut.Scan() {
 			if errOut := worker.ScanOutput(ctx, ctx.Instance, scanOut.Bytes()); errOut != nil {
-				log.Error(errOut)
+				log.Debug(errOut)
 			}
 		}
 		if errs := scanOut.Err(); errs != nil {
