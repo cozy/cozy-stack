@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -184,6 +185,10 @@ func TestMain(m *testing.M) {
 	ts.Config.Handler.(*echo.Echo).Renderer = render
 	ts.Config.Handler.(*echo.Echo).HTTPErrorHandler = errors.ErrorHandler
 
+	err := dynamic.InitDynamicAssetFS()
+	if err != nil {
+		panic("Could not init dynamic FS")
+	}
 	os.Exit(testSetup.Run())
 }
 

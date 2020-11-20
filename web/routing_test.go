@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -146,5 +147,9 @@ func TestMain(m *testing.M) {
 	setup := testutils.NewSetup(m, "routing_test")
 	inst := setup.GetTestInstance()
 	domain = inst.Domain
+	err := dynamic.InitDynamicAssetFS()
+	if err != nil {
+		panic("Could not init dynamic FS")
+	}
 	os.Exit(setup.Run())
 }
