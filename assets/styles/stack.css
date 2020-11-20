@@ -273,6 +273,12 @@ li[class^="io.cozy.files"]:before {
 li[class^="io.cozy.files.versions"]:before {
   background-image: url("../images/icon-files-versions.svg");
 }
+li[class^="io.cozy.certified.carbon_copy"]:before {
+  background-image: url("../images/icon-certified.svg");
+}
+li[class^="io.cozy.certified.electronic_safe"]:before {
+  background-image: url("../images/icon-safe.svg");
+}
 li[class^="io.cozy.identities"]:before {
   background-image: url("../images/icon-identities.svg");
 }
