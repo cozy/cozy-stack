@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
+	"github.com/cozy/cozy-stack/pkg/assets/dynamic"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -1161,6 +1162,10 @@ func TestMain(m *testing.M) {
 		"/sharings": sharings.Routes,
 	})
 
+	err := dynamic.InitDynamicAssetFS()
+	if err != nil {
+		panic("Could not init dynamic FS")
+	}
 	setup.AddCleanup(func() error {
 		bobSetup.Cleanup()
 		replSetup.Cleanup()
