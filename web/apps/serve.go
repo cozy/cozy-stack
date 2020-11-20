@@ -55,10 +55,7 @@ func Serve(c echo.Context) error {
 	if webapp.FromAppsDir {
 		// Save permissions in couchdb before loading an index page
 		if file == "" && webapp.Permissions() != nil {
-			err := permission.ForceWebapp(i, webapp.Slug(), webapp.Permissions())
-			if err != nil {
-				return err
-			}
+			_ = permission.ForceWebapp(i, webapp.Slug(), webapp.Permissions())
 		}
 
 		fs := app.FSForAppDir(slug)
