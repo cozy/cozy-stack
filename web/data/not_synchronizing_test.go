@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestListReferencesHandler(t *testing.T) {
+func TestListNotSynchronizingHandler(t *testing.T) {
 	// Make doc
 	doc := getDocForTest()
-	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "/relationships/not_synchronized_on"
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "/relationships/not_synchronizing"
 
 	// Make directories
 	makeNotSynchronzedOnTestDir(t, doc, "test_not_sync_on_1")
@@ -80,10 +80,10 @@ func TestListReferencesHandler(t *testing.T) {
 	assert.NotEmpty(t, result4.Included[0].(map[string]interface{})["id"])
 }
 
-func TestAddNotSynchronizedOn(t *testing.T) {
+func TestAddNotSynchronizing(t *testing.T) {
 	// Make doc
 	doc := getDocForTest()
-	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "/relationships/not_synchronized_on"
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "/relationships/not_synchronizing"
 
 	// Make dir
 	dir := makeNotSynchronzedOnTestDir(t, nil, "test_not_sync_on")
@@ -111,10 +111,10 @@ func TestAddNotSynchronizedOn(t *testing.T) {
 	assert.Len(t, dirdoc.NotSynchronizedOn, 1)
 }
 
-func TestRemoveNotSynchronizedOn(t *testing.T) {
+func TestRemoveNotSynchronizing(t *testing.T) {
 	// Make doc
 	doc := getDocForTest()
-	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "/relationships/not_synchronized_on"
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "/relationships/not_synchronizing"
 
 	// Make directories
 	d6 := makeNotSynchronzedOnTestDir(t, doc, "test_not_sync_on_6").ID()

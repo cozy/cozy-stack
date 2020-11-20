@@ -80,7 +80,7 @@ func RemoveNotSynchronizedOn(c echo.Context) error {
 }
 
 // ListNotSynchronizedOn list all directories not synchronized on a device
-// GET /data/:type/:id/relationships/not_synchronized_on
+// GET /data/:type/:id/relationships/not_synchronizing
 // Beware, this is actually used in the web/data Routes
 func ListNotSynchronizedOn(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -150,7 +150,7 @@ func ListNotSynchronizedOn(c echo.Context) error {
 }
 
 // AddBulkNotSynchronizedOn add some not_synchronized_on for a device
-// POST /data/:type/:id/relationships/not_synchronized_on
+// POST /data/:type/:id/relationships/not_synchronizing
 // Beware, this is actually used in the web/data Routes
 func AddBulkNotSynchronizedOn(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -200,7 +200,7 @@ func AddBulkNotSynchronizedOn(c echo.Context) error {
 
 // RemoveBulkNotSynchronizedOn removes some not_synchronized_on for several
 // directories.
-// DELETE /data/:type/:id/relationships/not_synchronized_on
+// DELETE /data/:type/:id/relationships/not_synchronizing
 // Beware, this is actually used in the web/data Routes
 func RemoveBulkNotSynchronizedOn(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -248,9 +248,9 @@ func RemoveBulkNotSynchronizedOn(c echo.Context) error {
 	return c.NoContent(204)
 }
 
-// NotSynchronizedOnRoutes adds the /data/:doctype/:docid/relationships/not_synchronized_on routes.
+// NotSynchronizedOnRoutes adds the /data/:doctype/:docid/relationships/not_synchronizing routes.
 func NotSynchronizedOnRoutes(router *echo.Group) {
-	router.GET("/:docid/relationships/not_synchronized_on", ListNotSynchronizedOn)
-	router.POST("/:docid/relationships/not_synchronized_on", AddBulkNotSynchronizedOn)
-	router.DELETE("/:docid/relationships/not_synchronized_on", RemoveBulkNotSynchronizedOn)
+	router.GET("/:docid/relationships/not_synchronizing", ListNotSynchronizedOn)
+	router.POST("/:docid/relationships/not_synchronizing", AddBulkNotSynchronizedOn)
+	router.DELETE("/:docid/relationships/not_synchronizing", RemoveBulkNotSynchronizedOn)
 }

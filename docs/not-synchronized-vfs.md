@@ -164,7 +164,7 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### GET /data/:type/:doc-id/relationships/not_synchronized_on
+### GET /data/:type/:doc-id/relationships/not_synchronizing
 
 Returns all the directory ids that are not synchronized on the given device.
 
@@ -178,7 +178,7 @@ It is possible to include the whole documents for the directories by adding
 #### Request
 
 ```http
-GET /data/io.cozy.oauth.clients/653dfdb0-0595-0139-92df-543d7eb8149c/relationships/references HTTP/1.1
+GET /data/io.cozy.oauth.clients/653dfdb0-0595-0139-92df-543d7eb8149c/relationships/not_synchronizing HTTP/1.1
 Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json
 ```
@@ -205,15 +205,15 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### POST /data/:type/:doc-id/relationships/not_synchronized_on
+### POST /data/:type/:doc-id/relationships/not_synchronizing
 
-When configuring a device, it's tedious to add the not_synchronized_on for each
-directory individually. This route allows to make it in bulk.
+When configuring a device, it's tedious to add the `not_synchronized_on` for
+each directory individually. This route allows to make it in bulk.
 
 #### Request
 
 ```http
-POST /data/io.cozy.oauth.clients/653dfdb0-0595-0139-92df-543d7eb8149c/relationships/not_synchronized_on HTTP/1.1
+POST /data/io.cozy.oauth.clients/653dfdb0-0595-0139-92df-543d7eb8149c/relationships/not_synchronizing HTTP/1.1
 Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json
 ```
@@ -243,7 +243,7 @@ Content-Type: application/vnd.api+json
 **Note**: if one of the id is a file, the response will be a 400 Bad Request.
 References are only for directories.
 
-### DELETE /data/:type/:doc-id/relationships/not_synchronized_on
+### DELETE /data/:type/:doc-id/relationships/not_synchronizing
 
 This bulk deletion of not_synchronized_on on many directories can be useful
 when configuring a device.
@@ -251,7 +251,7 @@ when configuring a device.
 #### Request
 
 ```http
-DELETE /data/io.cozy.oauth.clients/653dfdb0-0595-0139-92df-543d7eb8149c/relationships/not_synchronized_on HTTP/1.1
+DELETE /data/io.cozy.oauth.clients/653dfdb0-0595-0139-92df-543d7eb8149c/relationships/not_synchronizing HTTP/1.1
 Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json
 ```
