@@ -310,6 +310,8 @@ func (s *redisScheduler) addToRedis(t Trigger, prev time.Time) error {
 		if timestamp.Before(now) {
 			timestamp = t.NextExecution(now)
 		}
+	case *WebhookTrigger:
+		return nil
 	default:
 		return errors.New("Not implemented yet")
 	}

@@ -66,6 +66,8 @@ const (
 	JobNotesPersistType
 	// ExportType is used for creating an export of the data
 	ExportType
+	// WebhookTriggerType is used for calling a webhook trigger
+	WebhookTriggerType
 )
 
 type counterConfig struct {
@@ -182,6 +184,12 @@ var configs = []counterConfig{
 		Prefix: "export",
 		Limit:  5,
 		Period: 24 * time.Hour,
+	},
+	// WebhookTriggerType
+	{
+		Prefix: "webhook-trigger",
+		Limit:  30,
+		Period: 1 * time.Hour,
 	},
 }
 

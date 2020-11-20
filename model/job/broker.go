@@ -66,8 +66,11 @@ type (
 	// Message is a json encoded job message.
 	Message json.RawMessage
 
-	// Event is a json encoded value of a realtime.Event
+	// Event is a json encoded value of a realtime.Event.
 	Event json.RawMessage
+
+	// Payload is a json encode value of a webhook payload.
+	Payload json.RawMessage
 
 	// Job contains all the metadata informations of a Job. It can be
 	// marshalled in JSON.
@@ -80,6 +83,7 @@ type (
 		TriggerID   string      `json:"trigger_id,omitempty"`
 		Message     Message     `json:"message"`
 		Event       Event       `json:"event"`
+		Payload     Payload     `json:"payload,omitempty"`
 		Manual      bool        `json:"manual_execution,omitempty"`
 		Debounced   bool        `json:"debounced,omitempty"`
 		Options     *JobOptions `json:"options,omitempty"`
@@ -98,6 +102,7 @@ type (
 		Trigger     Trigger
 		Message     Message
 		Event       Event
+		Payload     Payload
 		Manual      bool
 		Debounced   bool
 		ForwardLogs bool
@@ -107,7 +112,6 @@ type (
 	// JobOptions struct contains the execution properties of the jobs.
 	JobOptions struct {
 		MaxExecCount int           `json:"max_exec_count"`
-		MaxExecTime  time.Duration `json:"max_exec_time"`
 		Timeout      time.Duration `json:"timeout"`
 	}
 )
@@ -149,6 +153,11 @@ func (j *Job) Clone() couchdb.Doc {
 		tmp := j.Event
 		j.Event = make([]byte, len(tmp))
 		copy(j.Event[:], tmp)
+	}
+	if j.Payload != nil {
+		tmp := j.Payload
+		j.Payload = make([]byte, len(tmp))
+		copy(j.Payload[:], tmp)
 	}
 	return &cloned
 }
@@ -209,6 +218,7 @@ func (j *Job) Ack() error {
 	j.FinishedAt = time.Now()
 	j.State = Done
 	j.Event = nil
+	j.Payload = nil
 	return j.Update()
 }
 
@@ -220,6 +230,7 @@ func (j *Job) Nack(err error) error {
 	j.State = Errored
 	j.Error = err.Error()
 	j.Event = nil
+	j.Payload = nil
 	return j.Update()
 }
 
@@ -316,6 +327,7 @@ func NewJob(db prefixer.Prefixer, req *JobRequest) *Job {
 		Message:     req.Message,
 		Debounced:   req.Debounced,
 		Event:       req.Event,
+		Payload:     req.Payload,
 		Options:     req.Options,
 		ForwardLogs: req.ForwardLogs,
 		State:       Queued,
@@ -483,6 +495,18 @@ func (e Event) Unmarshal(evt interface{}) error {
 		return ErrMessageNil
 	}
 	if err := json.Unmarshal(e, &evt); err != nil {
+		return ErrMessageUnmarshal
+	}
+	return nil
+}
+
+// Unmarshal can be used to unmarshal the encoded message value in the
+// specified interface's type.
+func (p Payload) Unmarshal(evt interface{}) error {
+	if p == nil {
+		return ErrMessageNil
+	}
+	if err := json.Unmarshal(p, &evt); err != nil {
 		return ErrMessageUnmarshal
 	}
 	return nil

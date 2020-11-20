@@ -25,4 +25,22 @@ class Job
     j = JSON.parse(res.body)
     j.dig("data", "attributes", "state")
   end
+
+  module Webhook
+    def self.create(inst, message)
+      opts = {
+        :"content-type" => 'application/json',
+        authorization: "Bearer #{inst.token_for 'io.cozy.triggers'}"
+      }
+      attrs = {
+        type: "@webhook",
+        worker: "konnector",
+        message: message
+      }
+      body = JSON.generate data: { attributes: attrs }
+      res = inst.client["/jobs/triggers"].post body, opts
+      j = JSON.parse(res)
+      j.dig "data", "links", "webhook"
+    end
+  end
 end

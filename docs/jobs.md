@@ -24,16 +24,17 @@ Jobs can be queued up via the `/jobs/queue/:worker-type` API, for a direct
 execution. But it can also be convenient to schedule jobs on some conditions,
 and the triggers are the way to do that.
 
-Jobs can be launched by five different types of triggers:
+Jobs can be launched by six different types of triggers:
 
 - `@at` to schedule a one-time job executed after at a specific time in the
   future
 - `@in` to schedule a one-time job executed after a specific amount of time
 - `@every` to schedule periodic jobs executed at a given fix interval
 - `@cron` to schedule recurring jobs scheduled at specific times
-- `@event` to launch a job after a change on documents in the cozy.
+- `@event` to launch a job after a change on documents in the cozy
+- `@webhook` to launch a job when an HTTP request hit a specific URL.
 
-These five triggers have specific syntaxes to describe when jobs should be
+These triggers have specific syntaxes to describe when jobs should be
 scheduled. See below for more informations.
 
 ### `@at` syntax
@@ -160,6 +161,18 @@ Examples:
 @event io.cozy.bank.operations:CREATED io.cozy.bank.bills:CREATED // a bank operation or a bill
 @event io.cozy.bank.operations:CREATED,UPDATED // a bank operation created or updated
 @event io.cozy.bank.operations:UPDATED:!=:category // a change of category for a bank operation
+```
+
+### `@webhook` syntax
+
+It takes no parameter. The URL to hit is not controlled by the request, but is
+chosen by the server (and is returned as `webhook` in the `links` JSON-API
+response).
+
+Example:
+
+```
+@webhook
 ```
 
 ## Error Handling
@@ -290,7 +303,6 @@ Accept: application/vnd.api+json
   "data": {
     "attributes": {
       "options": {
-        "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       },
@@ -311,7 +323,6 @@ Accept: application/vnd.api+json
       "domain": "me.cozy.tools",
       "worker": "sendmail",
       "options": {
-        "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       },
@@ -477,7 +488,6 @@ Accept: application/vnd.api+json
       "worker": "sendmail",
       "message": {},
       "options": {
-        "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       }
@@ -502,7 +512,6 @@ latter version still works but is deprecated, you should use `message` instead.
       "debounce": "10m",
       "worker": "sendmail",
       "options": {
-        "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       }
@@ -557,7 +566,6 @@ Accept: application/vnd.api+json
       "arguments": "30m10s",
       "worker": "sendmail",
       "options": {
-        "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       },
@@ -818,6 +826,32 @@ Accept: application/vnd.api+json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.triggers` for the verb `GET`. When used on a specific worker, the
 permission can be specified on the `worker` field.
+
+### POST /jobs/webhooks/:trigger-id
+
+This endpoint is used for creating a job (for example executing a konnector).
+It requires no permission, but a trigger of type `@webhook` must have been
+created before using this endpoint. Its body must be a JSON that will be
+available to the konnector with the `COZY_PAYLOAD` env variable.
+
+#### Request
+
+```http
+POST /jobs/webhooks/f34c74d0-0c91-0139-5af5-543d7eb8149c HTTP/1.1
+Content-Type: application/json
+```
+
+```json
+{
+  "account_id": "0672e560"
+}
+```
+
+#### Response
+
+```
+HTTP/1.1 204 No Content
+```
 
 ## Worker pool
 

@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"encoding/json"
+	"errors"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -109,7 +111,11 @@ func (t apiTrigger) SetRev(_ string)                        {}
 func (t apiTrigger) Relationships() jsonapi.RelationshipMap { return nil }
 func (t apiTrigger) Included() []jsonapi.Object             { return nil }
 func (t apiTrigger) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/jobs/triggers/" + t.ID()}
+	links := &jsonapi.LinksList{Self: "/jobs/triggers/" + t.ID()}
+	if t.t.Type == "@webhook" {
+		links.Webhook = "/jobs/webhooks/" + t.ID()
+	}
+	return links
 }
 
 func (t apiTrigger) MarshalJSON() ([]byte, error) {
@@ -446,6 +452,34 @@ func deleteTrigger(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func fireWebhook(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	err := limits.CheckRateLimit(inst, limits.WebhookTriggerType)
+	if limits.IsLimitReachedOrExceeded(err) {
+		return echo.NewHTTPError(http.StatusNotFound, "Not found")
+	}
+
+	t, err := job.System().GetTrigger(inst, c.Param("trigger-id"))
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	if t.Type() != "@webhook" {
+		return jsonapi.InvalidAttribute("Type", errors.New("Not a webhook"))
+	}
+
+	req := t.Infos().JobRequest()
+	req.Payload, err = ioutil.ReadAll(c.Request().Body)
+	if err != nil {
+		return wrapJobsError(err)
+	}
+
+	_, err = job.System().PushJob(inst, req)
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerType := c.QueryParam("Worker")
@@ -639,6 +673,8 @@ func Routes(router *echo.Group) {
 	router.GET("/triggers/:trigger-id/jobs", getTriggerJobs)
 	router.POST("/triggers/:trigger-id/launch", launchTrigger)
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
+
+	router.POST("/webhooks/:trigger-id", fireWebhook)
 
 	router.POST("/clean", cleanJobs)
 	router.DELETE("/purge", purgeJobs)
