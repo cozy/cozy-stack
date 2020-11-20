@@ -496,6 +496,12 @@ msgstr "Contactpersonen"
 msgid "Permissions io.cozy.files"
 msgstr "Bestanden"
 
+msgid "Permissions io.cozy.certified.carbon_copy"
+msgstr "Carbon copy"
+
+msgid "Permissions io.cozy.certified.electronic_safe"
+msgstr "Elektronische kluis"
+
 msgid "Permissions io.cozy.files.versions"
 msgstr "Bestandsversies"
 
@@ -782,7 +788,7 @@ msgid "Mail Support Confirmation Intro 1"
 msgstr "Hallo %s,"
 
 msgid "Mail Support Confirmation Intro 2"
-msgstr "Ons team bestudeert je verzoek."
+msgstr "Ons team bestudeert momenteel je verzoek."
 
 msgid "Mail Support Confirmation Outro"
 msgstr "Ik antwoord je per e-mail zodra ik meer weet."
