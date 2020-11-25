@@ -109,7 +109,7 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 	case permission.TypeWebapp:
 		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")
 		m, err := app.GetWebappBySlug(inst, slug)
-		if err != nil || m.Notifications == nil {
+		if err != nil {
 			return err
 		}
 		var ok bool
@@ -122,7 +122,7 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 	case permission.TypeKonnector:
 		slug := strings.TrimPrefix(perm.SourceID, consts.Apps+"/")
 		m, err := app.GetKonnectorBySlug(inst, slug)
-		if err != nil || m.Notifications == nil {
+		if err != nil {
 			return err
 		}
 		var ok bool
