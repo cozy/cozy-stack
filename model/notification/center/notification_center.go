@@ -112,6 +112,9 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 		if err != nil {
 			return err
 		}
+		if m.Notifications == nil {
+			return ErrUnauthorized
+		}
 		var ok bool
 		p, ok = m.Notifications[n.Category]
 		if !ok {
@@ -124,6 +127,9 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 		m, err := app.GetKonnectorBySlug(inst, slug)
 		if err != nil {
 			return err
+		}
+		if m.Notifications == nil {
+			return ErrUnauthorized
 		}
 		var ok bool
 		p, ok = m.Notifications[n.Category]
