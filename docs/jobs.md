@@ -289,7 +289,7 @@ This route requires a specific permission on the worker-type. A global
 permission on the global `io.cozy.jobs` doctype is not allowed.
 
 Each [worker](./workers.md) accepts different arguments. For konnectors, the
-arguments will be given in the `COZY_FIELDS` env variable.
+arguments will be given in the `process.env['COZY_FIELDS']` variable.
 
 #### Request
 
@@ -829,10 +829,12 @@ permission can be specified on the `worker` field.
 
 ### POST /jobs/webhooks/:trigger-id
 
-This endpoint is used for creating a job (for example executing a konnector).
+This endpoint is used for creating a job (for example executing a konnector
+or a service).
 It requires no permission, but a trigger of type `@webhook` must have been
 created before using this endpoint. Its body must be a JSON that will be
-available to the konnector with the `COZY_PAYLOAD` env variable.
+available to the konnector or to the service through the 
+`process.env['COZY_PAYLOAD']` variable.
 
 #### Request
 
