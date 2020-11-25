@@ -9,6 +9,7 @@ user, in an asynchronous manner.
 These notifications are part of a "Notification Center" where the user can
 configure the behavior of these notifications and the channel in which they are
 sent.
+ 
 
 ## Firebase configuration
 
@@ -50,8 +51,9 @@ notifications, with the following properties:
     for a user's bank account: such notification is only useful as its last
     value.
 -   `stateful` (boolean): defines a notification storing a piece of state: for
-    each new notification, the stack will check that the last sent notification
-    has a different state.
+    each new notification, the stack will check that if the last sent notification
+    has a different state before sending it. If not, the notification will not
+    be resent
 -   `multiple` (boolean): specify the possibility for a notification to have
     different sub-categories, defined by a programmable/dynamic identifier.
     `collapsible` and `stateful` properties are inherited for each sub-
@@ -99,17 +101,17 @@ Notifications fields are:
 
 -   `category` (string): name of the notification category
 -   `category_id` (string): category name if the category is multiple
--   `title` (string): title of the notification (optional)
+-   `title` (string): title of the notification
 -   `message` (string): message of of the notification (optional)
 -   `priority` (string): priority of the notification (`high` or `normal`), sent
     to the underlying channel to prioritize the notification
--   `state` (string): state of the notification, used for `stateful`
-    notification categories, to distinguish notifications
+-   `state` (string): state of the notification. Only needed if your 
+    notification is `stateful`, to distinguish notifications
 -   `preferred_channels` (array of string): to select a list of preferred
     channels for this notification: either `"mobile"`, `"sms"` or `"mail"`. The
     stack may chose another channels. `["mobile", "mail"]` means that the stack
     will first try to send a mobile push notification, and if it fails, it will
-    try by mail.
+    try by mail
 -   `data` (map): key/value map used to create the notification from its
     template, or sent in the notification payload for mobiles
 -   `at` (string): send the notification later, at this date formatted in
