@@ -353,7 +353,6 @@ func TestSubset(t *testing.T) {
 }
 
 func TestShareSetPermissions(t *testing.T) {
-
 	setFiles := Set{Rule{Type: "io.cozy.files"}}
 	setFilesWildCard := Set{Rule{Type: "io.cozy.files.*"}}
 	setEvents := Set{Rule{Type: "io.cozy.events"}}
