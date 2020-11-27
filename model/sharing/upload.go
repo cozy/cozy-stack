@@ -518,6 +518,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 
 	var err error
 	var parent *vfs.DirDoc
+	var addReferencedBy bool
 	if target.DirID != "" {
 		parent, err = fs.DirByID(target.DirID)
 		if err == os.ErrNotExist {
@@ -534,6 +535,7 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		} else {
 			parent, err = EnsureSharedWithMeDir(inst)
 		}
+		addReferencedBy = true
 	} else {
 		parent, err = s.GetSharingDir(inst)
 	}
@@ -552,6 +554,13 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 
 	ref.Infos[s.SID] = SharedInfo{Rule: ruleIndex, Binary: true}
 	newdoc.ReferencedBy = buildReferencedBy(target.FileDoc, nil, rule)
+	if addReferencedBy {
+		ref := couchdb.DocReference{
+			ID:   s.SID,
+			Type: consts.Sharings,
+		}
+		newdoc.ReferencedBy = append(newdoc.ReferencedBy, ref)
+	}
 
 	file, err := fs.CreateFile(newdoc, nil)
 	if err == os.ErrExist {

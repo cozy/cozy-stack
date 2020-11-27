@@ -92,6 +92,9 @@ describe "A file or folder" do
     sleep 12
     note_path = "/#{Helpers::SHARED_WITH_ME}/#{note.file.name}"
     note_bob = CozyFile.find_by_path inst_bob, note_path
+    assert_equal note_bob.referenced_by.length, 1
+    assert_equal note_bob.referenced_by[0]["type"], Sharing.doctype
+    assert_equal note_bob.referenced_by[0]["id"], sharing.couch_id
     parameters = Note.open inst_bob, note_bob.couch_id
     assert_equal note.file.couch_id, parameters["note_id"]
     assert %w[flat nested].include? parameters["subdomain"]
