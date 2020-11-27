@@ -460,27 +460,31 @@ func updateAppSet(db prefixer.Prefixer, doc *Permission, typ, docType, slug stri
 	return doc, nil
 }
 
-// CreateShareSet creates a Permission doc for sharing by link
-func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, codes, shortcodes map[string]string, subdoc Permission, expiresAt *time.Time) (*Permission, error) {
-	set := subdoc.Permissions
+func checkSetPermissions(set Set, parent *Permission) error {
 	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
-		return nil, ErrOnlyAppCanCreateSubSet
+		return ErrOnlyAppCanCreateSubSet
 	}
-
 	if !set.IsSubSetOf(parent.Permissions) {
-		return nil, ErrNotSubset
+		return ErrNotSubset
 	}
-
 	for _, rule := range set {
 		// XXX io.cozy.files is allowed and handled with specific code for sharings
-		if rule.Type == consts.Files {
+		if MatchType(rule, consts.Files) {
 			continue
 		}
 		if err := CheckWritable(rule.Type); err != nil {
-			return nil, err
+			return err
 		}
 	}
+	return nil
+}
 
+// CreateShareSet creates a Permission doc for sharing by link
+func CreateShareSet(db prefixer.Prefixer, parent *Permission, sourceID string, codes, shortcodes map[string]string, subdoc Permission, expiresAt *time.Time) (*Permission, error) {
+	set := subdoc.Permissions
+	if err := checkSetPermissions(set, parent); err != nil {
+		return nil, err
+	}
 	// SourceID stays the same, allow quick destruction of all children permissions
 	doc := &Permission{
 		Type:        TypeShareByLink,
