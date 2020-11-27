@@ -43,7 +43,8 @@ func matchVerb(r Rule, v Verb) bool {
 	return r.Verbs.Contains(v)
 }
 
-func matchType(r Rule, doctype string) bool {
+// MatchType returns true if the rule type matches the given doctype
+func MatchType(r Rule, doctype string) bool {
 	if r.Type == doctype {
 		return true
 	}
@@ -67,7 +68,7 @@ func matchID(r Rule, id string) bool {
 func (s Set) AllowWholeType(v Verb, doctype string) bool {
 	return s.Some(func(r Rule) bool {
 		return matchVerb(r, v) &&
-			matchType(r, doctype) &&
+			MatchType(r, doctype) &&
 			matchWholeType(r)
 	})
 }
@@ -76,7 +77,7 @@ func (s Set) AllowWholeType(v Verb, doctype string) bool {
 func (s Set) AllowID(v Verb, doctype, id string) bool {
 	return s.Some(func(r Rule) bool {
 		return matchVerb(r, v) &&
-			matchType(r, doctype) &&
+			MatchType(r, doctype) &&
 			(matchWholeType(r) || matchID(r, id))
 	})
 }
@@ -85,7 +86,7 @@ func (s Set) AllowID(v Verb, doctype, id string) bool {
 func (s Set) Allow(v Verb, o Fetcher) bool {
 	return s.Some(func(r Rule) bool {
 		return matchVerb(r, v) &&
-			matchType(r, o.DocType()) &&
+			MatchType(r, o.DocType()) &&
 			matchValues(r, o)
 	})
 }
@@ -95,7 +96,7 @@ func (s Set) Allow(v Verb, o Fetcher) bool {
 func (s Set) AllowOnFields(v Verb, o Fetcher, fields ...string) bool {
 	return s.Some(func(r Rule) bool {
 		return matchVerb(r, v) &&
-			matchType(r, o.DocType()) &&
+			MatchType(r, o.DocType()) &&
 			matchOnFields(r, o, fields...)
 	})
 }

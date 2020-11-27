@@ -352,6 +352,32 @@ func TestSubset(t *testing.T) {
 	assert.False(t, s5.IsSubSetOf(s6))
 }
 
+func TestShareSetPermissions(t *testing.T) {
+
+	setFiles := Set{Rule{Type: "io.cozy.files"}}
+	setFilesWildCard := Set{Rule{Type: "io.cozy.files.*"}}
+	setEvents := Set{Rule{Type: "io.cozy.events"}}
+
+	parent := &Permission{Type: TypeCLI, Permissions: setEvents}
+	err := checkSetPermissions(setFiles, parent)
+	assert.Error(t, err)
+
+	parent.Type = TypeWebapp
+	err = checkSetPermissions(setFiles, parent)
+	assert.Error(t, err)
+
+	parent.Permissions = setFiles
+	err = checkSetPermissions(setFiles, parent)
+	assert.NoError(t, err)
+
+	err = checkSetPermissions(setFilesWildCard, parent)
+	assert.Error(t, err)
+
+	parent.Permissions = setFilesWildCard
+	err = checkSetPermissions(setFilesWildCard, parent)
+	assert.NoError(t, err)
+}
+
 func TestCreateShareSetBlocklist(t *testing.T) {
 	s := Set{Rule{Type: "io.cozy.notifications"}}
 	subdoc := Permission{
