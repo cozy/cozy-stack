@@ -1,6 +1,8 @@
 package lifecycle
 
 import (
+	"time"
+
 	"github.com/cozy/cozy-stack/model/account"
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
@@ -70,7 +72,16 @@ func destroyWithoutHooks(domain string) error {
 		return err
 	}
 
-	return couchdb.DeleteDoc(couchdb.GlobalDB, inst)
+	err = couchdb.DeleteDoc(couchdb.GlobalDB, inst)
+	if couchdb.IsConflictError(err) {
+		// We may need to try again as CouchDB can return an old version of
+		// this document when we have concurrent updates for indexes/views
+		// version and deleting flag.
+		time.Sleep(3 * time.Second)
+		inst, _ = instance.GetFromCouch(domain)
+		err = couchdb.DeleteDoc(couchdb.GlobalDB, inst)
+	}
+	return err
 }
 
 func deleteAccounts(inst *instance.Instance) error {
