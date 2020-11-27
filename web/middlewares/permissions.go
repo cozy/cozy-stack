@@ -341,7 +341,7 @@ func CanWriteToAnyDirectory(c echo.Context) error {
 		return err
 	}
 	for _, rule := range pdoc.Permissions {
-		if rule.Type == consts.Files && rule.Verbs.Contains(permission.POST) {
+		if permission.MatchType(rule, consts.Files) && rule.Verbs.Contains(permission.POST) {
 			return nil
 		}
 	}
