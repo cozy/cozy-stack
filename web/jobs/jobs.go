@@ -11,8 +11,6 @@ import (
 
 	"github.com/justincampbell/bigduration"
 
-	"github.com/cozy/cozy-stack/model/app"
-	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -22,14 +20,12 @@ import (
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/metadata"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
 
 	// import workers
 	_ "github.com/cozy/cozy-stack/worker/archive"
-	"github.com/cozy/cozy-stack/worker/exec"
 	_ "github.com/cozy/cozy-stack/worker/log"
 	_ "github.com/cozy/cozy-stack/worker/mails"
 	_ "github.com/cozy/cozy-stack/worker/migrations"
@@ -320,15 +316,8 @@ func getTriggerState(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-
 	if err = middlewares.Allow(c, permission.GET, t); err != nil {
-		// For konnector trigger, we have a specific logic to check for
-		// permissions: if the application permissions and the konnector
-		// permissions intersect on one or more doctypes, we give the right to the
-		// application to read the trigger state.
-		if ok := extractKonnectorPermissions(c, instance, t); !ok {
-			return middlewares.ErrForbidden
-		}
+		return err
 	}
 
 	state, err := job.GetTriggerState(t, t.ID())
@@ -336,47 +325,6 @@ func getTriggerState(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 	return jsonapi.Data(c, http.StatusOK, apiTriggerState{t: t.Infos(), s: state}, nil)
-}
-
-func extractKonnectorPermissions(c echo.Context, i *instance.Instance, t job.Trigger) (ok bool) {
-	if t.Infos().WorkerType != "konnector" {
-		return
-	}
-	reqDoc, err := middlewares.GetPermission(c)
-	if err != nil {
-		return
-	}
-	var msg exec.KonnectorMessage
-	if err = t.Infos().Message.Unmarshal(&msg); err != nil {
-		return
-	}
-	var man *app.KonnManifest
-	if man, err = app.GetKonnectorBySlug(i, msg.Konnector); err != nil {
-		return
-	}
-	reqRules := reqDoc.Permissions
-	appRules := man.Permissions()
-	return intersectPermissions(reqRules, appRules)
-}
-
-func intersectPermissions(rules1, rules2 permission.Set) bool {
-	doctypeBlocklist := []string{consts.Settings}
-	// This rule intersection only cross permissions on whole doctypes (no
-	// values).
-	wholeDoctypes := make(map[string]struct{})
-	for _, rule := range rules1 {
-		if len(rule.Values) == 0 && !utils.IsInArray(rule.Type, doctypeBlocklist) {
-			wholeDoctypes[rule.Type] = struct{}{}
-		}
-	}
-	for _, rule := range rules2 {
-		if len(rule.Values) == 0 {
-			if _, ok := wholeDoctypes[rule.Type]; ok {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func getTriggerJobs(c echo.Context) error {
@@ -440,11 +388,7 @@ func deleteTrigger(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 	if err := middlewares.Allow(c, permission.DELETE, t); err != nil {
-		// See getTriggerState: we have a specific permissions rule to allow an
-		// application to read or delete a trigger
-		if ok := extractKonnectorPermissions(c, instance, t); !ok {
-			return middlewares.ErrForbidden
-		}
+		return err
 	}
 	if err := sched.DeleteTrigger(instance, c.Param("trigger-id")); err != nil {
 		return wrapJobsError(err)
