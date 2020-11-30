@@ -30,7 +30,7 @@ require (
 	github.com/mssola/user_agent v0.5.2
 	github.com/ncw/swift v1.0.52
 	github.com/nightlyone/lockfile v1.0.0
-	github.com/oschwald/maxminddb-golang v1.7.0
+	github.com/oschwald/maxminddb-golang v1.8.0
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pquerna/otp v1.3.0
 	github.com/prometheus/client_golang v1.8.0
