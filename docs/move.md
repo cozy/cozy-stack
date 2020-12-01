@@ -202,5 +202,23 @@ Server: source.cozy.example
 
 ```http
 HTTP/1.1 302 Found
-Location: https://move.cozycloud.cc/source?code=543d7eb8149c&url=https://source.cozy.example/&used=123456&quota=5000000&state=8d560d60
+Location: https://move.cozycloud.cc/source?code=543d7eb8149c&used=123456&quota=5000000&state=8d560d60
+```
+
+### POST /move/initialize
+
+This endpoint is used by the settings application to open the move wizard.
+
+#### Request
+
+```http
+POST /move/initialize HTTP/1.1
+Server: source.cozy.example
+```
+
+#### Response
+
+```http
+HTTP/1.1 307 Temporary Redirect
+Location: https://move.cozycloud.cc/source?code=834d7eb8149c&url=https://source.cozy.example&used=123456&quota=5000000
 ```

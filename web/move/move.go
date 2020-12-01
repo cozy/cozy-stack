@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
@@ -257,12 +258,7 @@ func getAuthorizeCode(c echo.Context) error {
 		return err
 	}
 
-	fs := inst.VFS()
-	versions, err := fs.VersionsUsage()
-	if err != nil {
-		return err
-	}
-	files, err := fs.FilesUsage()
+	used, quota, err := diskInfo(inst.VFS())
 	if err != nil {
 		return err
 	}
@@ -270,12 +266,44 @@ func getAuthorizeCode(c echo.Context) error {
 	q := u.Query()
 	q.Set("state", c.QueryParam("state"))
 	q.Set("code", access.Code)
-	q.Set("used", fmt.Sprintf("%d", files+versions))
-	q.Set("quota", fmt.Sprintf("%d", fs.DiskQuota()))
+	q.Set("used", used)
+	q.Set("quota", quota)
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
 	location := u.String() + "#"
 	return c.Redirect(http.StatusSeeOther, location)
+}
+
+func initializeMove(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	err := limits.CheckRateLimit(inst, limits.ExportType)
+	if limits.IsLimitReachedOrExceeded(err) {
+		return echo.NewHTTPError(http.StatusNotFound, "Not found")
+	}
+
+	u, err := url.Parse(c.QueryParam("redirect_uri"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
+	}
+
+	used, quota, err := diskInfo(inst.VFS())
+	if err != nil {
+		return err
+	}
+
+	scope := consts.ExportsRequests + " " + consts.ImportsRequests
+	access, err := oauth.CreateAccessCode(inst, "move", scope)
+	if err != nil {
+		return err
+	}
+
+	q := u.Query()
+	q.Set("code", access.Code)
+	q.Set("used", used)
+	q.Set("quota", quota)
+	q.Set("url", inst.PageURL("/", nil))
+	u.RawQuery = q.Encode()
+	return c.Redirect(http.StatusTemporaryRedirect, u.String())
 }
 
 // Routes defines the routing layout for the /move module.
@@ -291,6 +319,7 @@ func Routes(g *echo.Group) {
 	g.GET("/importing/realtime", wsImporting)
 
 	g.GET("/authorize", getAuthorizeCode)
+	g.POST("/initialize", initializeMove)
 }
 
 func wrapError(err error) error {
@@ -301,4 +330,19 @@ func wrapError(err error) error {
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	}
 	return err
+}
+
+func diskInfo(fs vfs.VFS) (string, string, error) {
+	versions, err := fs.VersionsUsage()
+	if err != nil {
+		return "", "", err
+	}
+	files, err := fs.FilesUsage()
+	if err != nil {
+		return "", "", err
+	}
+
+	used := fmt.Sprintf("%d", files+versions)
+	quota := fmt.Sprintf("%d", fs.DiskQuota())
+	return used, quota, nil
 }
