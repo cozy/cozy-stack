@@ -184,3 +184,23 @@ import. The server will send an event when it is done (or errored):
 ```
 server> {"redirect": "http://cozy.tools:8080/auth/login"}
 ```
+
+### GET /move/authorize
+
+This endpoint is used by cozy-move to select the cozy source. If the user is
+already logged in, we don't ask its password again, as the delivered token will
+still need a confirmation by mail to start moving the Cozy.
+
+#### Request
+
+```http
+GET /move/authorize?state=8d560d60&redirect_uri=https://move.cozycloud.cc/source HTTP/1.1
+Server: source.cozy.example
+```
+
+#### Response
+
+```http
+HTTP/1.1 302 Found
+Location: https://move.cozycloud.cc/source?code=543d7eb8149c&url=https://source.cozy.example/&used=123456&quota=5000000&state=8d560d60
+```

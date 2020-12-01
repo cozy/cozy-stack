@@ -4,11 +4,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/move"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -234,6 +236,48 @@ func wsImporting(c echo.Context) error {
 	}
 }
 
+func getAuthorizeCode(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	err := limits.CheckRateLimit(inst, limits.ExportType)
+	if limits.IsLimitReachedOrExceeded(err) {
+		return echo.NewHTTPError(http.StatusNotFound, "Not found")
+	}
+
+	u, err := url.Parse(c.QueryParam("redirect_uri"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
+	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return echo.NewHTTPError(http.StatusBadRequest, "bad url: bad scheme")
+	}
+
+	access, err := oauth.CreateAccessCode(inst, "move", consts.ExportsRequests)
+	if err != nil {
+		return err
+	}
+
+	fs := inst.VFS()
+	versions, err := fs.VersionsUsage()
+	if err != nil {
+		return err
+	}
+	files, err := fs.FilesUsage()
+	if err != nil {
+		return err
+	}
+
+	q := u.Query()
+	q.Set("state", c.QueryParam("state"))
+	q.Set("code", access.Code)
+	q.Set("used", fmt.Sprintf("%d", files+versions))
+	q.Set("quota", fmt.Sprintf("%d", fs.DiskQuota()))
+	u.RawQuery = q.Encode()
+	u.Fragment = ""
+	location := u.String() + "#"
+	return c.Redirect(http.StatusSeeOther, location)
+}
+
 // Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
 	g.POST("/exports", createExport)
@@ -245,6 +289,8 @@ func Routes(g *echo.Group) {
 
 	g.GET("/importing", waitImportHasFinished)
 	g.GET("/importing/realtime", wsImporting)
+
+	g.GET("/authorize", getAuthorizeCode)
 }
 
 func wrapError(err error) error {

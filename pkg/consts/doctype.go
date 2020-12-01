@@ -21,6 +21,8 @@ const (
 	Archives = "io.cozy.files.archives"
 	// Exports doc type for global exports archives
 	Exports = "io.cozy.exports"
+	// ExportsRequests doc type for a request to move to another Cozy
+	ExportsRequests = "io.cozy.exports.requests"
 	// Imports doc type for global exports archives
 	Imports = "io.cozy.imports"
 	// Doctypes doc type for doctype list
