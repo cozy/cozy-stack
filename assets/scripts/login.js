@@ -77,7 +77,7 @@
           '&csrf_token=' +
           encodeURIComponent(csrfTokenInput.value)
 
-        return fetch('/auth/login', {
+        return fetch(loginForm.action, {
           method: 'POST',
           headers: headers,
           body: reqBody,

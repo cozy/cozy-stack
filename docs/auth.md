@@ -566,6 +566,51 @@ thing, but it is specialized for sharing. They are a few differences, like the
 scope format (sharing rules, not permissions) and the redirection after the
 POST (with `sharing=<sharing-id>` in the query string).
 
+### GET /auth/authorize/move & POST /auth/authorize/move
+
+They are similar to `/auth/authorize`, but instead of a page that lists the
+permissions, the user will be asked to type their password to confirm the
+action (even if they are already logged-in). If the 2FA is activated, the code
+will be asked too. This strong action seems adequate for authorizing to erase
+the data in the Cozy before importing data from another Cozy.
+
+#### Request GET
+
+```http
+GET /auth/authorize/move?state=8d560d60&redirect_uri=https://move.cozycloud.cc/target HTTP/1.1
+Server: target.cozy.example
+```
+
+#### Response GET
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/html
+```
+
+#### Request POST
+
+```http
+POST /auth/authorize/move HTTP/1.1
+Server: target.cozy.example
+Content-Type: application/x-www-form-urlencoded
+
+state=8d560d60&client_id=oauth-client-2&csrf_token=johw6Sho&redirect_uri=https%3A%2F%2Fmove.cozycloud.cc%2Ftarget
+```
+
+#### Response POST
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "redirect": "https://move.cozycloud.cc/source?code=543d7eb8149c&used=123456&quota=5000000&state=8d560d60"
+}
+```
+
 ### POST /auth/access_token
 
 Now, the client can check that the state is correct, and if it is the case, ask
@@ -595,7 +640,9 @@ grant_type=authorization_code&code=Aih7ohth&client_id=oauth-client-1&client_secr
 ```http
 HTTP/1.1 200 OK
 Content-type: application/json
+```
 
+```json
 {
   "access_token": "ooch1Yei",
   "token_type": "bearer",
@@ -627,7 +674,9 @@ Content-Type: application/json
 ```http
 HTTP/1.1 200 OK
 Content-type: application/json
+```
 
+```json
 {
   "client_id": "cf60f07cd7e00d0c0f86cd3f29240477",
   "client_secret": "NNSLTid18EATInQWyg2XGKd_vs0e3zUC",

@@ -12,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
-	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -22,11 +21,6 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
-)
-
-const (
-	fromSettingsScope = consts.ExportsRequests + " " + consts.ImportsRequests
-	moveClientID      = "move"
 )
 
 func createExport(c echo.Context) error {
@@ -260,12 +254,12 @@ func getAuthorizeCode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "bad url: bad scheme")
 	}
 
-	access, err := oauth.CreateAccessCode(inst, moveClientID, consts.ExportsRequests)
+	access, err := oauth.CreateAccessCode(inst, auth.MoveClientID, consts.ExportsRequests)
 	if err != nil {
 		return err
 	}
 
-	used, quota, err := diskInfo(inst.VFS())
+	used, quota, err := auth.DiskInfo(inst.VFS())
 	if err != nil {
 		return err
 	}
@@ -293,12 +287,12 @@ func initializeMove(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
 	}
 
-	used, quota, err := diskInfo(inst.VFS())
+	used, quota, err := auth.DiskInfo(inst.VFS())
 	if err != nil {
 		return err
 	}
 
-	access, err := oauth.CreateAccessCode(inst, moveClientID, fromSettingsScope)
+	access, err := oauth.CreateAccessCode(inst, auth.MoveClientID, auth.MoveScope)
 	if err != nil {
 		return err
 	}
@@ -307,7 +301,7 @@ func initializeMove(c echo.Context) error {
 	q.Set("code", access.Code)
 	q.Set("used", used)
 	q.Set("quota", quota)
-	q.Set("url", inst.PageURL("/", nil))
+	q.Set("cozy_url", inst.PageURL("/", nil))
 	u.RawQuery = q.Encode()
 	return c.Redirect(http.StatusTemporaryRedirect, u.String())
 }
@@ -328,13 +322,13 @@ func accessToken(c echo.Context) error {
 	}
 
 	// Forbid getting access token with code goten from /auth/authorize
-	if accessCode.Scope != fromSettingsScope {
+	if accessCode.Scope != auth.MoveScope {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid code",
 		})
 	}
 
-	client := &oauth.Client{CouchID: moveClientID}
+	client := &oauth.Client{CouchID: auth.MoveClientID}
 	token, err := client.CreateJWT(inst, consts.AccessTokenAudience, accessCode.Scope)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
@@ -381,19 +375,4 @@ func wrapError(err error) error {
 		return jsonapi.Errorf(http.StatusRequestEntityTooLarge, "%s", err)
 	}
 	return err
-}
-
-func diskInfo(fs vfs.VFS) (string, string, error) {
-	versions, err := fs.VersionsUsage()
-	if err != nil {
-		return "", "", err
-	}
-	files, err := fs.FilesUsage()
-	if err != nil {
-		return "", "", err
-	}
-
-	used := fmt.Sprintf("%d", files+versions)
-	quota := fmt.Sprintf("%d", fs.DiskQuota())
-	return used, quota, nil
 }

@@ -220,7 +220,7 @@ Server: source.cozy.example
 
 ```http
 HTTP/1.1 307 Temporary Redirect
-Location: https://move.cozycloud.cc/source?code=834d7eb8149c&url=https://source.cozy.example&used=123456&quota=5000000
+Location: https://move.cozycloud.cc/source?code=834d7eb8149c&cozy_url=https://source.cozy.example&used=123456&quota=5000000
 ```
 
 ### POST /move/access_token
