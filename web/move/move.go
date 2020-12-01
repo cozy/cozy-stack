@@ -14,12 +14,19 @@ import (
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
+)
+
+const (
+	fromSettingsScope = consts.ExportsRequests + " " + consts.ImportsRequests
+	moveClientID      = "move"
 )
 
 func createExport(c echo.Context) error {
@@ -253,7 +260,7 @@ func getAuthorizeCode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "bad url: bad scheme")
 	}
 
-	access, err := oauth.CreateAccessCode(inst, "move", consts.ExportsRequests)
+	access, err := oauth.CreateAccessCode(inst, moveClientID, consts.ExportsRequests)
 	if err != nil {
 		return err
 	}
@@ -291,8 +298,7 @@ func initializeMove(c echo.Context) error {
 		return err
 	}
 
-	scope := consts.ExportsRequests + " " + consts.ImportsRequests
-	access, err := oauth.CreateAccessCode(inst, "move", scope)
+	access, err := oauth.CreateAccessCode(inst, moveClientID, fromSettingsScope)
 	if err != nil {
 		return err
 	}
@@ -304,6 +310,50 @@ func initializeMove(c echo.Context) error {
 	q.Set("url", inst.PageURL("/", nil))
 	u.RawQuery = q.Encode()
 	return c.Redirect(http.StatusTemporaryRedirect, u.String())
+}
+
+func accessToken(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	code := c.FormValue("code")
+	if code == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the code parameter is mandatory",
+		})
+	}
+	accessCode := &oauth.AccessCode{}
+	if err := couchdb.GetDoc(inst, consts.OAuthAccessCodes, code, accessCode); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid code",
+		})
+	}
+
+	// Forbid getting access token with code goten from /auth/authorize
+	if accessCode.Scope != fromSettingsScope {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid code",
+		})
+	}
+
+	client := &oauth.Client{CouchID: moveClientID}
+	token, err := client.CreateJWT(inst, consts.AccessTokenAudience, accessCode.Scope)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate access token",
+		})
+	}
+	out := auth.AccessTokenReponse{
+		Type:   "bearer",
+		Scope:  accessCode.Scope,
+		Access: token,
+	}
+
+	// Delete the access code, it can be used only once
+	err = couchdb.DeleteDoc(inst, accessCode)
+	if err != nil {
+		inst.Logger().Errorf("[oauth] Failed to delete the access code: %s", err)
+	}
+
+	return c.JSON(http.StatusOK, out)
 }
 
 // Routes defines the routing layout for the /move module.
@@ -320,6 +370,7 @@ func Routes(g *echo.Group) {
 
 	g.GET("/authorize", getAuthorizeCode)
 	g.POST("/initialize", initializeMove)
+	g.POST("/access_token", accessToken)
 }
 
 func wrapError(err error) error {

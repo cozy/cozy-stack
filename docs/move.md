@@ -222,3 +222,34 @@ Server: source.cozy.example
 HTTP/1.1 307 Temporary Redirect
 Location: https://move.cozycloud.cc/source?code=834d7eb8149c&url=https://source.cozy.example&used=123456&quota=5000000
 ```
+
+### POST /move/access_token
+
+This endpoint is used by cozy-move to get an access token from code of the POST
+/move/initialize endpoint.
+
+#### Request
+
+```http
+POST /move/access_token HTTP/1.1
+Server: source.cozy.example
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+code=834d7eb8149c
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-type: application/json
+```
+
+```json
+{
+  "access_token": "ef290360543d7eb8149c",
+  "token_type": "bearer",
+  "scope": "io.cozy.exports.requests io.cozy.imports.requests"
+}
+```
