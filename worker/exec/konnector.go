@@ -370,7 +370,7 @@ func (w *konnectorWorker) ensurePermissions(inst *instance.Instance) error {
 	}
 	value := consts.Konnectors + "/" + w.slug
 	for _, rule := range perms.Permissions {
-		if permission.MatchType(rule, consts.Files) && rule.Selector == couchdb.SelectorReferencedBy {
+		if rule.Type == consts.Files && rule.Selector == couchdb.SelectorReferencedBy {
 			for _, val := range rule.Values {
 				if val == value {
 					return nil
