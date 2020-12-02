@@ -268,7 +268,9 @@ func getAuthorizeCode(c echo.Context) error {
 	q.Set("state", c.QueryParam("state"))
 	q.Set("code", access.Code)
 	q.Set("used", used)
-	q.Set("quota", quota)
+	if quota != "" {
+		q.Set("quota", quota)
+	}
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
 	location := u.String() + "#"
@@ -286,7 +288,7 @@ func initializeMove(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
 	}
-	u.Path = "/redirect/source"
+	u.Path = "/initialize"
 
 	used, quota, err := auth.DiskInfo(inst.VFS())
 	if err != nil {
@@ -301,7 +303,9 @@ func initializeMove(c echo.Context) error {
 	q := u.Query()
 	q.Set("code", access.Code)
 	q.Set("used", used)
-	q.Set("quota", quota)
+	if quota != "" {
+		q.Set("quota", quota)
+	}
 	q.Set("cozy_url", inst.PageURL("/", nil))
 	u.RawQuery = q.Encode()
 	return c.Redirect(http.StatusTemporaryRedirect, u.String())

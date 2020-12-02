@@ -577,7 +577,7 @@ the data in the Cozy before importing data from another Cozy.
 #### Request GET
 
 ```http
-GET /auth/authorize/move?state=8d560d60&redirect_uri=https://move.cozycloud.cc/redirect/target HTTP/1.1
+GET /auth/authorize/move?state=8d560d60&client_id=oauth-client-2&redirect_uri=https://move.cozycloud.cc/callback/target HTTP/1.1
 Server: target.cozy.example
 ```
 
@@ -595,7 +595,7 @@ POST /auth/authorize/move HTTP/1.1
 Server: target.cozy.example
 Content-Type: application/x-www-form-urlencoded
 
-state=8d560d60&client_id=oauth-client-2&csrf_token=johw6Sho&redirect_uri=https%3A%2F%2Fmove.cozycloud.cc%2Fredirect%2Ftarget
+state=8d560d60&client_id=oauth-client-2&csrf_token=johw6Sho&redirect_uri=https%3A%2F%2Fmove.cozycloud.cc%2Fcallback%2Ftarget
 ```
 
 #### Response POST
@@ -607,7 +607,7 @@ Content-Type: application/json
 
 ```json
 {
-  "redirect": "https://move.cozycloud.cc/redirect/target?code=543d7eb8149c&used=123456&quota=5000000&state=8d560d60"
+  "redirect": "https://move.cozycloud.cc/callback/target?code=543d7eb8149c&used=123456&quota=5000000&state=8d560d60"
 }
 ```
 

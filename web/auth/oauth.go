@@ -556,7 +556,9 @@ func authorizeMove(c echo.Context) error {
 	q.Set("state", c.FormValue("state"))
 	q.Set("code", access.Code)
 	q.Set("used", used)
-	q.Set("quota", quota)
+	if quota != "" {
+		q.Set("quota", quota)
+	}
 	u.RawQuery = q.Encode()
 	return c.JSON(http.StatusOK, echo.Map{
 		"redirect": u.String(),
@@ -575,7 +577,10 @@ func DiskInfo(fs vfs.VFS) (string, string, error) {
 	}
 
 	used := fmt.Sprintf("%d", files+versions)
-	quota := fmt.Sprintf("%d", fs.DiskQuota())
+	var quota string
+	if q := fs.DiskQuota(); q > 0 {
+		quota = fmt.Sprintf("%d", q)
+	}
 	return used, quota, nil
 }
 
