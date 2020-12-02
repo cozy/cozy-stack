@@ -306,6 +306,17 @@ func (i *Instance) TemplateTitle() string {
 	return DefaultTemplateTitle
 }
 
+// MoveURL returns URL for move wizard.
+func (i *Instance) MoveURL() string {
+	moveURL := config.GetConfig().Move.URL
+	if settings, ok := i.SettingsContext(); ok {
+		if u, ok := settings["move_url"].(string); ok {
+			moveURL = u
+		}
+	}
+	return moveURL
+}
+
 // Registries returns the list of registries associated with the instance.
 func (i *Instance) Registries() []*url.URL {
 	contexts := config.GetConfig().Registries

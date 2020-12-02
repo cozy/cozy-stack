@@ -115,6 +115,7 @@ type Config struct {
 	Mail           *gomail.DialerOptions
 	MailPerContext map[string]interface{}
 	Matomo         Matomo
+	Move           Move
 	Notifications  Notifications
 	Logger         logger.Options
 
@@ -206,6 +207,11 @@ type Matomo struct {
 	URL             string
 	SiteID          int
 	OnboardingAppID int
+}
+
+// Move contains the configuration for the move wizard
+type Move struct {
+	URL string
 }
 
 // Notifications contains the configuration for the mobile push-notification
@@ -704,6 +710,9 @@ func UseViper(v *viper.Viper) error {
 			URL:             v.GetString("matomo.url"),
 			SiteID:          v.GetInt("matomo.siteid"),
 			OnboardingAppID: v.GetInt("matomo.onboarding_app_id"),
+		},
+		Move: Move{
+			URL: v.GetString("move.url"),
 		},
 		Notifications: Notifications{
 			Development: v.GetBool("notifications.development"),

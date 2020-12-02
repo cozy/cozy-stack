@@ -282,10 +282,11 @@ func initializeMove(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound, "Not found")
 	}
 
-	u, err := url.Parse(c.QueryParam("redirect_uri"))
+	u, err := url.Parse(inst.MoveURL())
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
 	}
+	u.Path = "/redirect/source"
 
 	used, quota, err := auth.DiskInfo(inst.VFS())
 	if err != nil {

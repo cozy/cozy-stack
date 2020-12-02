@@ -220,6 +220,9 @@ func init() {
 	flags.Bool("mail-disable-tls", false, "disable smtp over tls")
 	checkNoErr(viper.BindPFlag("mail.disable_tls", flags.Lookup("mail-disable-tls")))
 
+	flags.String("move-url", "https://move.cozycloud.cc/", "URL for the move wizard")
+	checkNoErr(viper.BindPFlag("move.url", flags.Lookup("move-url")))
+
 	flags.String("password-reset-interval", "15m", "minimal duration between two password reset")
 	checkNoErr(viper.BindPFlag("password_reset_interval", flags.Lookup("password-reset-interval")))
 
