@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
@@ -26,14 +27,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
-)
-
-const (
-	// MoveScope is the scope requested for a move (when we don't know yet if
-	// the cozy will the source or the target).
-	MoveScope = consts.ExportsRequests + " " + consts.ImportsRequests
-	// MoveClientID is the fake OAuth client ID used for some move endpoints.
-	MoveClientID = "move"
 )
 
 type webappParams struct {
@@ -547,7 +540,7 @@ func authorizeMove(c echo.Context) error {
 	if err := couchdb.GetDoc(inst, consts.OAuthClients, clientID, &client); err != nil {
 		return err
 	}
-	access, err := oauth.CreateAccessCode(inst, clientID, MoveScope)
+	access, err := oauth.CreateAccessCode(inst, clientID, move.MoveScope)
 	if err != nil {
 		return err
 	}

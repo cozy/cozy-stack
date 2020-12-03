@@ -22,6 +22,7 @@ func initMailTemplates() {
 		"archiver":                     subjectEntry{"Mail Archive Subject", nil},
 		"import_success":               subjectEntry{"Mail Import Success Subject", nil},
 		"import_error":                 subjectEntry{"Mail Import Error Subject", nil},
+		"move_confirm":                 subjectEntry{"Mail Move Confirm Subject", nil},
 		"two_factor":                   subjectEntry{"Mail Two Factor Subject", nil},
 		"two_factor_mail_confirmation": subjectEntry{"Mail Two Factor Mail Confirmation Subject", []string{templateTitleVar}},
 		"new_connection":               subjectEntry{"Mail New Connection Subject", []string{templateTitleVar}},

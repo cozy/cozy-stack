@@ -253,3 +253,32 @@ Content-type: application/json
   "scope": "io.cozy.exports.requests io.cozy.imports.requests"
 }
 ```
+
+### POST /move/request
+
+This endpoint is used after the user has selected both instances on cozy-move
+to prepare the export and send the confirmation mail.
+
+#### Request
+
+```http
+POST /move/request HTTP/1.1
+Content-type: application/x-www-form-urlencoded
+
+code=834d7eb8149c
+&target_url=https://target.cozy.example/
+&target_token=M2EwYjlhZjAtMTc3OC0wMTM5LWYwYWMtNTQzZDdlYjgxNDlj
+&target_client_id=09136b00-1778-0139-f0a7-543d7eb8149c
+&target_client_secret=NDkyZTEzMDA
+```
+
+**Note:** instead of `code`, we can have `token`, `client_id`, and
+`client_secret` (depending if the user has started the workflow from the
+settings app or from cozy-move).
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/html
+```

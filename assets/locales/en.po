@@ -281,6 +281,15 @@ msgstr "Import in progress"
 msgid "Import Description"
 msgstr "Importing data may take time. You can close this screen, an email will be sent to you once the import is complete."
 
+msgid "Move Confirm Title"
+msgstr "The move request has been sent"
+
+msgid "Move Confirm Box"
+msgstr "A mail has been sent to %s to confirm the move."
+
+msgid "Move Confirm Description"
+msgstr "You don't have received this email? Please check your mail inbox, and the spam folder, or contact us at support@cozycloud.cc."
+
 msgid "Error Title"
 msgstr "Sorry, an error occurred."
 
@@ -613,6 +622,21 @@ msgstr ""
 
 msgid "Mail Import Error Outro"
 msgstr "If the problem persists, contact customer support."
+
+msgid "Mail Move Confirm Subject"
+msgstr "Would you like to move your Cozy now?"
+
+msgid "Mail Move Confirm Intro 1"
+msgstr "Hello %s,"
+
+msgid "Mail Move Confirm Intro 2"
+msgstr "A request has been made to move your data from %s to %s."
+
+msgid "Mail Move Confirm Button instruction"
+msgstr "If you request it, click below:"
+
+msgid "Mail Move Confirm Button text"
+msgstr "Accept the move"
 
 msgid "Mail Two Factor Subject"
 msgstr "One-time connection code"

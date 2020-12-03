@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -254,7 +255,7 @@ func getAuthorizeCode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "bad url: bad scheme")
 	}
 
-	access, err := oauth.CreateAccessCode(inst, auth.MoveClientID, consts.ExportsRequests)
+	access, err := oauth.CreateAccessCode(inst, move.ClientID, consts.ExportsRequests)
 	if err != nil {
 		return err
 	}
@@ -295,7 +296,7 @@ func initializeMove(c echo.Context) error {
 		return err
 	}
 
-	access, err := oauth.CreateAccessCode(inst, auth.MoveClientID, auth.MoveScope)
+	access, err := oauth.CreateAccessCode(inst, move.ClientID, move.MoveScope)
 	if err != nil {
 		return err
 	}
@@ -327,13 +328,13 @@ func accessToken(c echo.Context) error {
 	}
 
 	// Forbid getting access token with code goten from /auth/authorize
-	if accessCode.Scope != auth.MoveScope {
+	if accessCode.Scope != move.MoveScope {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid code",
 		})
 	}
 
-	client := &oauth.Client{CouchID: auth.MoveClientID}
+	client := &oauth.Client{CouchID: move.ClientID}
 	token, err := client.CreateJWT(inst, consts.AccessTokenAudience, accessCode.Scope)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
@@ -355,6 +356,61 @@ func accessToken(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
+func requestMove(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	var request *move.Request
+	params, err := c.FormParams()
+	if err == nil {
+		request, err = move.CreateRequest(inst, params)
+	}
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Title":       instance.DefaultTemplateTitle,
+			"CozyUI":      middlewares.CozyUI(inst),
+			"ThemeCSS":    middlewares.ThemeCSS(inst),
+			"Domain":      inst.ContextualDomain(),
+			"ContextName": inst.ContextName,
+			"ErrorTitle":  "Error Title",
+			"Error":       err.Error(),
+			"Favicon":     middlewares.Favicon(inst),
+		})
+	}
+
+	publicName, _ := inst.PublicName()
+	mail := mail.Options{
+		Mode:         mail.ModeFromStack,
+		TemplateName: "move_confirm",
+		TemplateValues: map[string]interface{}{
+			"ConfirmLink": request.Link,
+			"PublicName":  publicName,
+			"Source":      inst.ContextualDomain(),
+			"Target":      request.TargetHost(),
+		},
+	}
+	msg, err := job.NewMessage(&mail)
+	if err != nil {
+		return err
+	}
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	if err != nil {
+		return err
+	}
+
+	email, _ := inst.SettingsEMail()
+	return c.Render(http.StatusOK, "move_confirm.html", echo.Map{
+		"CozyUI":      middlewares.CozyUI(inst),
+		"ThemeCSS":    middlewares.ThemeCSS(inst),
+		"Favicon":     middlewares.Favicon(inst),
+		"Domain":      inst.ContextualDomain(),
+		"ContextName": inst.ContextName,
+		"Title":       inst.Translate("Move Confirm Title"),
+		"Email":       email,
+	})
+}
+
 // Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
 	g.POST("/exports", createExport)
@@ -370,6 +426,8 @@ func Routes(g *echo.Group) {
 	g.GET("/authorize", getAuthorizeCode)
 	g.POST("/initialize", initializeMove)
 	g.POST("/access_token", accessToken)
+
+	g.POST("/request", requestMove)
 }
 
 func wrapError(err error) error {
