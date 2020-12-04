@@ -281,6 +281,15 @@ msgstr "Import in progress"
 msgid "Import Description"
 msgstr "Importing data may take time. You can close this screen, an email will be sent to you once the import is complete."
 
+msgid "Move in progress Title"
+msgstr "Moving in progress"
+
+msgid "Move in progress Box"
+msgstr "From %s to %s"
+
+msgid "Move in progress Description"
+msgstr "Moving data can take time. You can close this screen, an email will be sent to you once the move is complete."
+
 msgid "Move Confirm Title"
 msgstr "The move request has been sent"
 

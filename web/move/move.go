@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/mail"
@@ -152,6 +153,18 @@ func blockForImport(c echo.Context) error {
 	}
 
 	inst := middlewares.GetInstance(c)
+	if source := c.QueryParam("source"); source != "" {
+		doc, err := inst.SettingsDocument()
+		if err != nil {
+			return err
+		}
+		doc.SetID(consts.InstanceSettingsID)
+		doc.M["move_from"] = source
+		if err := couchdb.UpdateDoc(inst, doc); err != nil {
+			return err
+		}
+	}
+
 	if err := lifecycle.Block(inst, instance.BlockedMoving.Code); err != nil {
 		return err
 	}
@@ -160,13 +173,27 @@ func blockForImport(c echo.Context) error {
 
 func waitImportHasFinished(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	return c.Render(http.StatusOK, "import.html", echo.Map{
+	template := "import.html"
+	title := "Import Title"
+	source := "?"
+	if inst.BlockingReason == instance.BlockedMoving.Code {
+		template = "move_in_progress.html"
+		title = "Move in progress Title"
+		doc, err := inst.SettingsDocument()
+		if err == nil {
+			if from, ok := doc.M["move_from"].(string); ok {
+				source = from
+			}
+		}
+	}
+	return c.Render(http.StatusOK, template, echo.Map{
 		"CozyUI":      middlewares.CozyUI(inst),
 		"ThemeCSS":    middlewares.ThemeCSS(inst),
 		"Favicon":     middlewares.Favicon(inst),
 		"Domain":      inst.ContextualDomain(),
 		"ContextName": inst.ContextName,
-		"Title":       inst.Translate("Import Title"),
+		"Title":       inst.Translate(title),
+		"Source":      source,
 	})
 }
 

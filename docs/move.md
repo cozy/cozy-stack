@@ -175,7 +175,8 @@ Location: https://destination.cozy.tools/move/importing
 ### POST /move/importing
 
 This endpoint is called on the target Cozy by the source Cozy to block the
-instance during the move.
+instance during the move. A `source` parameter can be put in the query-string,
+with the domain of the Cozy source (for information).
 
 ### GET /move/importing
 
