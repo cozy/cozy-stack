@@ -172,6 +172,11 @@ HTTP/1.1 303 See Other
 Location: https://destination.cozy.tools/move/importing
 ```
 
+### POST /move/importing
+
+This endpoint is called on the target Cozy by the source Cozy to block the
+instance during the move.
+
 ### GET /move/importing
 
 This shows a page for the user to wait that the import finishes.

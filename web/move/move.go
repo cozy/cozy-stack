@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/oauth"
@@ -143,6 +144,18 @@ func createImport(c echo.Context) error {
 
 	to := inst.PageURL("/move/importing", nil)
 	return c.Redirect(http.StatusSeeOther, to)
+}
+
+func blockForImport(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Imports); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	if err := lifecycle.Block(inst, instance.BlockedMoving.Code); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 func waitImportHasFinished(c echo.Context) error {
@@ -395,6 +408,7 @@ func Routes(g *echo.Group) {
 	g.POST("/imports/precheck", precheckImport)
 	g.POST("/imports", createImport)
 
+	g.POST("/importing", blockForImport)
 	g.GET("/importing", waitImportHasFinished)
 	g.GET("/importing/realtime", wsImporting)
 

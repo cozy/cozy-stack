@@ -335,6 +335,9 @@ msgstr "The Cozy requires a payment"
 msgid "Instance Blocked Importing"
 msgstr "The Cozy is importing data"
 
+msgid "Instance Blocked Moving"
+msgstr "Moving in progress"
+
 msgid "Instance Blocked Unknown"
 msgstr "The Cozy is blocked for an unknown reason"
 
