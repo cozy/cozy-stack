@@ -95,15 +95,18 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 		if slug := oauth.GetLinkedAppSlug(c.SoftwareID); slug != "" {
 			n.Slug = slug
 			m, err := app.GetWebappBySlug(inst, slug)
-			if err != nil || m.Notifications == nil {
+			if err != nil {
 				return err
+			}
+			if m.Notifications == nil {
+				return ErrNoCategory
 			}
 			p, ok = m.Notifications[n.Category]
 		} else if c.Notifications != nil {
 			p, ok = c.Notifications[n.Category]
 		}
 		if !ok {
-			return ErrUnauthorized
+			return ErrCategoryNotFound
 		}
 		n.Originator = "oauth"
 	case permission.TypeWebapp:
@@ -113,12 +116,12 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 			return err
 		}
 		if m.Notifications == nil {
-			return ErrUnauthorized
+			return ErrNoCategory
 		}
 		var ok bool
 		p, ok = m.Notifications[n.Category]
 		if !ok {
-			return ErrUnauthorized
+			return ErrCategoryNotFound
 		}
 		n.Slug = m.Slug()
 		n.Originator = "app"
@@ -129,12 +132,12 @@ func Push(inst *instance.Instance, perm *permission.Permission, n *notification.
 			return err
 		}
 		if m.Notifications == nil {
-			return ErrUnauthorized
+			return ErrNoCategory
 		}
 		var ok bool
 		p, ok = m.Notifications[n.Category]
 		if !ok {
-			return ErrUnauthorized
+			return ErrCategoryNotFound
 		}
 		n.Slug = m.Slug()
 		n.Originator = "konnector"

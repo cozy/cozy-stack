@@ -59,6 +59,10 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case center.ErrUnauthorized:
 		return jsonapi.Forbidden(err)
+	case center.ErrNoCategory:
+		return jsonapi.Forbidden(err)
+	case center.ErrCategoryNotFound:
+		return jsonapi.Forbidden(err)
 	case app.ErrNotFound:
 		return jsonapi.NotFound(err)
 	}
