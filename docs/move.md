@@ -257,3 +257,22 @@ settings app or from cozy-move).
 HTTP/1.1 200 OK
 Content-Type: application/html
 ```
+
+### GET /move/go
+
+This endpoint is used to confirm the move. It will ask the other Cozy to block
+its-self during the move and pushs a job for the export.
+
+#### Request
+
+```http
+GET /move/go?secret=tNTQzZDdlYjgxNDlj HTTP/1.1
+Server: source.cozy.example
+```
+
+#### Reponse
+
+```http
+HTTP/1.1 303 See Other
+Location: https://target.cozy.example/move/importing
+```

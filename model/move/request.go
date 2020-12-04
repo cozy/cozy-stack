@@ -2,9 +2,11 @@ package move
 
 import (
 	"errors"
+	"net/http"
 	"net/url"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -44,6 +46,20 @@ func (r *Request) TargetHost() string {
 		return u.Host
 	}
 	return r.Target
+}
+
+// ImportingURL returns the URL on the target for the page to wait until
+// the move is done.
+func (r *Request) ImportingURL() string {
+	u, err := url.Parse(r.Target)
+	if err != nil {
+		u, err = url.Parse("https://" + r.Target)
+	}
+	if err != nil {
+		return r.Target
+	}
+	u.Path = "/move/importing"
+	return u.String()
 }
 
 // CreateRequestClient creates an OAuth client that can be used for move requests.
@@ -101,6 +117,9 @@ func CreateRequest(inst *instance.Instance, params url.Values) (*Request, error)
 	cozyURL := params.Get("target_url")
 	if cozyURL == "" {
 		return nil, errors.New("No target_url")
+	}
+	if inst.HasDomain(cozyURL) {
+		return nil, errors.New("Invalid target_url")
 	}
 	target.Token = params.Get("target_token")
 	if target.Token == "" {
@@ -175,4 +194,32 @@ func checkSourceCode(inst *instance.Instance, code string) error {
 		return permission.ErrInvalidToken
 	}
 	return nil
+}
+
+// StartMove checks that the secret is known, sends a request to the other Cozy
+// to block it during the move, and pushs a job for the export.
+func StartMove(inst *instance.Instance, secret string) (*Request, error) {
+	req, err := getStore().Get(inst, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	u := req.ImportingURL() + "?source=" + inst.ContextualDomain()
+	_, err = http.Post(u, "application/json", nil)
+	if err != nil {
+		return nil, errors.New("Cannot reach the other Cozy")
+	}
+
+	options := ExportOptions{
+		ContextualDomain: inst.ContextualDomain(),
+	}
+	msg, err := job.NewMessage(options)
+	if err != nil {
+		return nil, err
+	}
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "export",
+		Message:    msg,
+	})
+	return req, err
 }

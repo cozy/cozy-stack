@@ -373,6 +373,10 @@ func initializeMove(c echo.Context) error {
 
 func requestMove(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
+	if !middlewares.IsLoggedIn(c) {
+		return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
+	}
+
 	var request *move.Request
 	params, err := c.FormParams()
 	if err == nil {
@@ -426,6 +430,29 @@ func requestMove(c echo.Context) error {
 	})
 }
 
+func startMove(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if !middlewares.IsLoggedIn(c) {
+		return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
+	}
+
+	request, err := move.StartMove(inst, c.QueryParam("secret"))
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Title":       instance.DefaultTemplateTitle,
+			"CozyUI":      middlewares.CozyUI(inst),
+			"ThemeCSS":    middlewares.ThemeCSS(inst),
+			"Domain":      inst.ContextualDomain(),
+			"ContextName": inst.ContextName,
+			"ErrorTitle":  "Error Title",
+			"Error":       err.Error(),
+			"Favicon":     middlewares.Favicon(inst),
+		})
+	}
+
+	return c.Redirect(http.StatusSeeOther, request.ImportingURL())
+}
+
 // Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
 	g.POST("/exports", createExport)
@@ -443,6 +470,7 @@ func Routes(g *echo.Group) {
 	g.POST("/initialize", initializeMove)
 
 	g.POST("/request", requestMove)
+	g.GET("/go", startMove)
 }
 
 func wrapError(err error) error {
