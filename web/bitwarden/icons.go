@@ -26,10 +26,14 @@ func serveDefaultIcon(c echo.Context) error {
 func GetIcon(c echo.Context) error {
 	domain := c.Param("domain")
 	ico, err := bitwarden.GetIcon(domain)
-	if err != nil {
-		inst := middlewares.GetInstance(c)
-		inst.Logger().WithField("nspace", "bitwarden").Debugf("Error for icon %s: %s", domain, err)
-		return serveDefaultIcon(c)
+	if err == nil {
+		return c.Blob(http.StatusOK, ico.Mime, ico.Body)
 	}
-	return c.Blob(http.StatusOK, ico.Mime, ico.Body)
+
+	inst := middlewares.GetInstance(c)
+	inst.Logger().WithField("nspace", "bitwarden").Debugf("Error for icon %s: %s", domain, err)
+	if c.QueryParam("fallback") == "404" {
+		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
+	}
+	return serveDefaultIcon(c)
 }
