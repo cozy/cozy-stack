@@ -17,9 +17,9 @@ import (
 const (
 	// MoveScope is the scope requested for a move (when we don't know yet if
 	// the cozy will the source or the target).
-	MoveScope = consts.ExportsRequests + " " + consts.ImportsRequests
-	// ClientID is the fake OAuth client ID used for some move endpoints.
-	ClientID = "move"
+	MoveScope = consts.ExportsRequests + " " + consts.Imports
+	// SourceClientID is the fake OAuth client ID used for some move endpoints.
+	SourceClientID = "move"
 )
 
 // Request is a struct for confirming a move to another Cozy.
@@ -44,6 +44,19 @@ func (r *Request) TargetHost() string {
 		return u.Host
 	}
 	return r.Target
+}
+
+// CreateRequestClient creates an OAuth client that can be used for move requests.
+func CreateRequestClient(inst *instance.Instance) (*oauth.Client, error) {
+	client := &oauth.Client{
+		RedirectURIs: []string{config.GetConfig().Move.URL + "/fake"},
+		ClientName:   "cozy-stack",
+		SoftwareID:   "github.com/cozy/cozy-stack",
+	}
+	if err := client.Create(inst); err != nil {
+		return nil, errors.New(err.Error)
+	}
+	return client, nil
 }
 
 // CreateRequest checks if the parameters are OK for moving, and if yes, it
@@ -71,13 +84,9 @@ func CreateRequest(inst *instance.Instance, params url.Values) (*Request, error)
 		if err := checkSourceCode(inst, code); err != nil {
 			return nil, err
 		}
-		client := &oauth.Client{
-			RedirectURIs: []string{config.GetConfig().Move.URL + "/fake"},
-			ClientName:   "cozy-stack",
-			SoftwareID:   "github.com/cozy/cozy-stack",
-		}
-		if err := client.Create(inst); err != nil {
-			return nil, errors.New(err.Error)
+		client, err := CreateRequestClient(inst)
+		if err != nil {
+			return nil, err
 		}
 		token, err := client.CreateJWT(inst, consts.AccessTokenAudience, MoveScope)
 		if err != nil {
@@ -159,7 +168,7 @@ func checkSourceCode(inst *instance.Instance, code string) error {
 	if err := couchdb.GetDoc(inst, consts.OAuthAccessCodes, code, accessCode); err != nil {
 		return permission.ErrInvalidToken
 	}
-	if accessCode.ClientID != ClientID {
+	if accessCode.ClientID != SourceClientID {
 		return permission.ErrInvalidToken
 	}
 	if accessCode.Scope != consts.ExportsRequests {
