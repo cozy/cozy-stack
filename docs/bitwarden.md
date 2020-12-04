@@ -1153,6 +1153,12 @@ Content-Type: application/json
 This route returns an icon for the given domain, that can be used by the
 bitwarden clients. No authorization token is required.
 
+If no favicon has been found for the domain, a fallback will be used, depending
+of the `fallback` parameter in the query-string:
+
+- `default`: a default icon is returned
+- `404`: just a 404 - Not found error.
+
 #### Request
 
 ```http
