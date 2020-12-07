@@ -475,7 +475,7 @@ func authorizeMoveForm(c echo.Context) error {
 		iterations = settings.PassphraseKdfIterations
 	}
 
-	return c.Render(http.StatusOK, "login.html", echo.Map{
+	return c.Render(http.StatusOK, "authorize_move.html", echo.Map{
 		"TemplateTitle":  inst.TemplateTitle(),
 		"CozyUI":         middlewares.CozyUI(inst),
 		"ThemeCSS":       middlewares.ThemeCSS(inst),
@@ -525,7 +525,7 @@ func authorizeMove(c echo.Context) error {
 
 	// TODO check 2FA
 
-	u, err := url.Parse(c.FormValue("redirect_uri"))
+	u, err := url.Parse(c.FormValue("redirect"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
 	}
@@ -535,7 +535,7 @@ func authorizeMove(c echo.Context) error {
 		return err
 	}
 
-	clientID := c.QueryParam("client_id")
+	clientID := c.FormValue("client_id")
 	client := oauth.Client{}
 	if err := couchdb.GetDoc(inst, consts.OAuthClients, clientID, &client); err != nil {
 		return err

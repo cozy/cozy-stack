@@ -517,6 +517,7 @@ func Routes(router *echo.Group) {
 		CookieHTTPOnly: true,
 		CookieSecure:   !build.IsDevRelease(),
 		CookieSameSite: http.SameSiteStrictMode,
+		CookiePath:     "/auth",
 	})
 
 	// Login/logout
@@ -548,8 +549,8 @@ func Routes(router *echo.Group) {
 	authorizeGroup.GET("/sharing", authorizeSharingForm)
 	authorizeGroup.POST("/sharing", authorizeSharing)
 	authorizeGroup.GET("/sharing/:sharing-id/cancel", cancelAuthorizeSharing)
-	authorizeGroup.GET("/move", authorizeMoveForm, noCSRF)
-	authorizeGroup.POST("/move", authorizeMove, noCSRF)
+	authorizeGroup.GET("/move", authorizeMoveForm)
+	authorizeGroup.POST("/move", authorizeMove)
 
 	router.POST("/access_token", accessToken)
 	router.POST("/secret_exchange", secretExchange)

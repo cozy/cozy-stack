@@ -47,8 +47,10 @@
     const passphrase = passphraseInput.value
     const redirectInput = d.getElementById('redirect')
     const longRunSession = longRunSessionCheckbox.checked ? '1' : '0'
-    const redirect = redirectInput.value + w.location.hash
+    const redirect = redirectInput && redirectInput.value + w.location.hash
     const csrfTokenInput = d.getElementById('csrf_token')
+    const stateInput = d.getElementById('state')
+    const clientIdInput = d.getElementById('client_id')
 
     let headers = new Headers()
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
@@ -65,7 +67,7 @@
 
     passPromise
       .then((pass) => {
-        const reqBody =
+        let reqBody =
           'passphrase=' +
           encodeURIComponent(pass) +
           '&two-factor-trusted-device-token=' +
@@ -76,6 +78,14 @@
           encodeURIComponent(redirect) +
           '&csrf_token=' +
           encodeURIComponent(csrfTokenInput.value)
+
+        // For the /auth/authorize/move page
+        if (stateInput) {
+          reqBody += '&state=' + encodeURIComponent(stateInput.value)
+        }
+        if (clientIdInput) {
+          reqBody += '&client_id=' + encodeURIComponent(clientIdInput.value)
+        }
 
         return fetch(loginForm.action, {
           method: 'POST',

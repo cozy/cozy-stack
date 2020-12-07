@@ -49,9 +49,9 @@
             </div>
             <h1 class="wizard-title password-form">{{.Title}}</h1>
             <h2 class="password-form wizard-subtitle u-coolGrey">{{.Domain}}</h2>
-            <input id="state" type="hidden" name="redirect" value="{{.State}}" />
-            <input id="client_id" type="hidden" name="redirect" value="{{.ClientID}}" />
-            <input id="redirect_uri" type="hidden" name="redirect" value="{{.RedirectURI}}" />
+            <input id="state" type="hidden" name="state" value="{{.State}}" />
+            <input id="client_id" type="hidden" name="client_id" value="{{.ClientID}}" />
+            <input id="redirect" type="hidden" name="redirect" value="{{.RedirectURI}}" />
             <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
             <input id="two-factor-trusted-device-token" type="hidden" name="two-factor-trusted-device-token" value="" />
             <div class="o-field password-form u-m-0">
