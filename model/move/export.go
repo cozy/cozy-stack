@@ -35,6 +35,20 @@ type MoveToOptions struct {
 	ClientSecret string `json:"client_secret"`
 }
 
+// ImportsURL returns the URL on the target for sending the download link to
+// the export tarballs.
+func (m *MoveToOptions) ImportsURL() string {
+	u, err := url.Parse(m.URL)
+	if err != nil {
+		u, err = url.Parse("https://" + m.URL)
+	}
+	if err != nil {
+		return m.URL
+	}
+	u.Path = "/move/imports"
+	return u.String()
+}
+
 // minimalPartsSize is the minimal size of a file bucket, to split the index
 // into equal-sized parts.
 const minimalPartsSize = 1024 * 1024 * 1024 // 1 GB

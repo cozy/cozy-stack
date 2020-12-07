@@ -1,8 +1,6 @@
 package moves
 
 import (
-	"encoding/base64"
-	"fmt"
 	"runtime"
 	"strings"
 	"time"
@@ -51,29 +49,11 @@ func ExportWorker(c *job.WorkerContext) error {
 		return err
 	}
 
-	mac := base64.URLEncoding.EncodeToString(exportDoc.GenerateAuthMessage(c.Instance))
-	link := c.Instance.SubDomain(consts.SettingsSlug)
-	link.Fragment = fmt.Sprintf("/exports/%s", mac)
-	publicName, _ := c.Instance.PublicName()
-	mail := mail.Options{
-		Mode:         mail.ModeFromStack,
-		TemplateName: "archiver",
-		TemplateValues: map[string]interface{}{
-			"ArchiveLink": link.String(),
-			"PublicName":  publicName,
-		},
+	if opts.MoveTo == nil {
+		return exportDoc.SendExportMail(c.Instance)
 	}
 
-	msg, err := job.NewMessage(&mail)
-	if err != nil {
-		return err
-	}
-
-	_, err = job.System().PushJob(c.Instance, &job.JobRequest{
-		WorkerType: "sendmail",
-		Message:    msg,
-	})
-	return err
+	return exportDoc.NotifyTarget(c.Instance, opts.MoveTo)
 }
 
 // ImportWorker is the worker responsible for inserting the data from an export
