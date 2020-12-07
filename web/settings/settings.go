@@ -54,7 +54,7 @@ func warnings(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	// Any request with a token can ask for the context (no permissions are required)
-	if _, err := middlewares.GetPermission(c); err != nil {
+	if _, err := middlewares.GetPermission(c); err != nil && err != permission.ErrMoved {
 		return err
 	}
 

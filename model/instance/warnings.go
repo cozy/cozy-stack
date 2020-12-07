@@ -30,6 +30,14 @@ var (
 
 // Warnings returns a list of possible warnings associated with the instance.
 func (i *Instance) Warnings() (warnings []*jsonapi.Error) {
+	if i.Moved {
+		warnings = append(warnings, &jsonapi.Error{
+			Status: http.StatusPaymentRequired,
+			Title:  "Cozy has been moved",
+			Code:   "moved",
+			Detail: i.Translate("The Cozy has been moved to a new address"),
+		})
+	}
 	notSigned, deadline := i.CheckTOSNotSignedAndDeadline()
 	if notSigned && deadline >= TOSWarning {
 		tosLink, _ := i.ManagerURL(ManagerTOSURL)

@@ -11,9 +11,10 @@ most of its API until the user read and sign new terms of services.
 In some cases the stack will return a 402 error to API requests. 402 will be
 used to denote error that require an user's action.
 
-For now, the only use case is a Terms Of Services update, but some other use
-cases might appear in the future. The specific cause of this error will be
-provided within the body of the response (see examples below).
+For now, the only use cases are a Terms Of Services update or an instance moved
+to somewhere else. But some other use cases might appear in the future. The
+specific cause of this error will be provided within the body of the response
+(see examples below).
 
 ```http
 HTTP/1.1 402 Payment Required
@@ -32,6 +33,21 @@ Content-Type: application/vnd.api+json
             "links": {
                 "self": "https://manager.cozycloud.cc/cozy/tos?domain=..."
             }
+        }
+    ]
+}
+```
+
+or
+
+```json
+{
+    "errors": [
+        {
+            "status": "402",
+            "title": "Cozy has been moved",
+            "code": "moved",
+            "detail": "The Cozy has been moved to a new address"
         }
     ]
 }

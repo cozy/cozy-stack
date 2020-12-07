@@ -26,18 +26,18 @@ const (
 
 // Request is a struct for confirming a move to another Cozy.
 type Request struct {
-	SourceCreds RequestCredentials
-	TargetCreds RequestCredentials
-	Target      string
-	Link        string `json:"-"`
+	SourceCreds RequestCredentials `json:"source_credentials"`
+	TargetCreds RequestCredentials `json:"target_credentials"`
+	Target      string             `json:"target"`
+	Link        string             `json:"-"`
 }
 
 // RequestCredentials is struct for OAuth credentials (access_token, client_id
 // and client_secret).
 type RequestCredentials struct {
-	Token        string
-	ClientID     string
-	ClientSecret string
+	Token        string `json:"token"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
 }
 
 // TargetHost returns the host part of the target instance address.
@@ -212,6 +212,12 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 
 	options := ExportOptions{
 		ContextualDomain: inst.ContextualDomain(),
+		MoveTo: &MoveToOptions{
+			URL:          req.Target,
+			Token:        req.TargetCreds.Token,
+			ClientID:     req.TargetCreds.ClientID,
+			ClientSecret: req.TargetCreds.ClientSecret,
+		},
 	}
 	msg, err := job.NewMessage(options)
 	if err != nil {

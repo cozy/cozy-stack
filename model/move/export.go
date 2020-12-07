@@ -20,10 +20,19 @@ import (
 
 // ExportOptions contains the options for launching the export worker.
 type ExportOptions struct {
-	PartsSize        int64         `json:"parts_size"`
-	MaxAge           time.Duration `json:"max_age"`
-	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
-	ContextualDomain string        `json:"contextual_domain,omitempty"`
+	PartsSize        int64          `json:"parts_size"`
+	MaxAge           time.Duration  `json:"max_age"`
+	WithDoctypes     []string       `json:"with_doctypes,omitempty"`
+	ContextualDomain string         `json:"contextual_domain,omitempty"`
+	MoveTo           *MoveToOptions `json:"move_to,omitempty"`
+}
+
+// MoveToOptions is used when the export must be sent to another Cozy.
+type MoveToOptions struct {
+	URL          string `json:"url"`
+	Token        string `json:"token"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
 }
 
 // minimalPartsSize is the minimal size of a file bucket, to split the index

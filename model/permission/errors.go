@@ -38,4 +38,9 @@ var (
 	// ErrNotParent is used when the permissions should have a specific parent.
 	ErrNotParent = echo.NewHTTPError(http.StatusForbidden,
 		"Permissions can be updated only by its parent")
+
+	// ErrMoved is used when the instance has been moved to a new
+	// domain/hoster.
+	ErrMoved = echo.NewHTTPError(http.StatusGone,
+		"The Cozy has been moved to a new address")
 )

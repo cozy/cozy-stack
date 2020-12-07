@@ -49,6 +49,7 @@ type Instance struct {
 	TOSLatest      string   `json:"tos_latest,omitempty"` // Terms of Service latest version
 	AuthMode       AuthMode `json:"auth_mode,omitempty"`
 	Deleting       bool     `json:"deleting,omitempty"`
+	Moved          bool     `json:"moved,omitempty"`           // If the instance has been moved to a new place
 	Blocked        bool     `json:"blocked,omitempty"`         // Whether or not the instance is blocked
 	BlockingReason string   `json:"blocking_reason,omitempty"` // Why the instance is blocked
 	NoAutoUpdate   bool     `json:"no_auto_update,omitempty"`  // Whether or not the instance has auto updates for its applications
