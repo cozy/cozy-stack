@@ -454,6 +454,18 @@ func startMove(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, request.ImportingURL())
 }
 
+func finalizeMove(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Imports); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	if err := move.Finalize(inst); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func abortMove(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.POST, consts.Imports); err != nil {
 		return err
@@ -484,6 +496,7 @@ func Routes(g *echo.Group) {
 
 	g.POST("/request", requestMove)
 	g.GET("/go", startMove)
+	g.POST("/finalize", finalizeMove)
 	g.POST("/abort", abortMove)
 }
 

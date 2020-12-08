@@ -277,6 +277,23 @@ HTTP/1.1 303 See Other
 Location: https://target.cozy.tools/move/importing
 ```
 
+### POST /move/finalize
+
+When the move has finished successfully, the target Cozy calls this endpoint on
+the source Cozy so that it can stop the konnectors and unblock the instance.
+
+#### Request
+
+```http
+POST /move/finalize HTTP/1.1
+Host: source.cozy.tools
+```
+#### Reponse
+
+```
+HTTP/1.1 204 No Content
+```
+
 ### POST /move/abort
 
 If the export or the import fails during a move, the stack will call this

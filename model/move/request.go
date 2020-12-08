@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -13,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	multierror "github.com/hashicorp/go-multierror"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
@@ -230,6 +232,34 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 	return req, err
 }
 
+// Finalize makes the last steps on the source Cozy after the data has been
+// successfully imported:
+// - stop the konnectors
+// - warn the OAuth clients
+// - unblock the instance
+func Finalize(inst *instance.Instance) error {
+	var errm error
+	sched := job.System()
+	triggers, err := sched.GetAllTriggers(inst)
+	if err == nil {
+		for _, t := range triggers {
+			infos := t.Infos()
+			if infos.WorkerType == "konnector" {
+				if err = sched.DeleteTrigger(inst, infos.TID); err != nil {
+					errm = multierror.Append(errm, err)
+				}
+			}
+		}
+	} else {
+		errm = multierror.Append(errm, err)
+	}
+	inst.Moved = true
+	if err := lifecycle.Unblock(inst); err != nil {
+		errm = multierror.Append(errm, err)
+	}
+	return errm
+}
+
 // Abort will call the /move/abort endpoint on the other instance to unblock it
 // after a failed export or import during a move.
 func Abort(inst *instance.Instance, otherURL, token string) {
@@ -265,5 +295,4 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 			WithField("url", otherURL).
 			Warnf("Cannort abort: code=%d", res.StatusCode)
 	}
-	return
 }
