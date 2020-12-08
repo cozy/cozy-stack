@@ -24,6 +24,7 @@ type ExportOptions struct {
 	MaxAge           time.Duration  `json:"max_age"`
 	WithDoctypes     []string       `json:"with_doctypes,omitempty"`
 	ContextualDomain string         `json:"contextual_domain,omitempty"`
+	TokenSource      string         `json:"token_source,omitempty"`
 	MoveTo           *MoveToOptions `json:"move_to,omitempty"`
 }
 

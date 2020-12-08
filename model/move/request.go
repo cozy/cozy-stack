@@ -214,6 +214,7 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 
 	options := ExportOptions{
 		ContextualDomain: inst.ContextualDomain(),
+		TokenSource:      req.SourceCreds.Token,
 		MoveTo: &MoveToOptions{
 			URL:          req.Target,
 			Token:        req.TargetCreds.Token,
@@ -230,6 +231,43 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 		Message:    msg,
 	})
 	return req, err
+}
+
+// CallFinalize will call the /move/finalize endpoint on the other instance to
+// unblock it after a successful move.
+func CallFinalize(inst *instance.Instance, otherURL, token string) {
+	u, err := url.Parse(otherURL)
+	if err != nil {
+		u, err = url.Parse("https://" + otherURL)
+	}
+	if err != nil {
+		return
+	}
+	u.Path = "/move/finalize"
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		inst.Logger().
+			WithField("nspace", "move").
+			WithField("url", otherURL).
+			Warnf("Cannort finalize: %s", err)
+		return
+	}
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		inst.Logger().
+			WithField("nspace", "move").
+			WithField("url", otherURL).
+			Warnf("Cannort finalize: %s", err)
+		return
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 204 {
+		inst.Logger().
+			WithField("nspace", "move").
+			WithField("url", otherURL).
+			Warnf("Cannort finalize: code=%d", res.StatusCode)
+	}
 }
 
 // Finalize makes the last steps on the source Cozy after the data has been
@@ -289,7 +327,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 		return
 	}
 	defer res.Body.Close()
-	if res.StatusCode != 200 {
+	if res.StatusCode != 204 {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).

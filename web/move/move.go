@@ -43,6 +43,7 @@ func createExport(c echo.Context) error {
 	// the user is accessing their cozy from a backup URL.
 	exportOptions.ContextualDomain = inst.ContextualDomain()
 	exportOptions.MoveTo = nil
+	exportOptions.TokenSource = ""
 
 	msg, err := job.NewMessage(exportOptions)
 	if err != nil {

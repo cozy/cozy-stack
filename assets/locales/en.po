@@ -650,6 +650,28 @@ msgstr "If you request it, click below:"
 msgid "Mail Move Confirm Button text"
 msgstr "Accept the move"
 
+msgid "Mail Move Success Subject"
+msgstr "Good news! Your Cozy has been successfully moved"
+
+msgid "Mail Move Success Intro 1"
+msgstr "Hello %s,"
+
+msgid "Mail Move Success Intro 2"
+msgstr "The move of all your data into your Cozy has succeeded."
+
+msgid "Mail Move Success Button instruction"
+msgstr "You can now access your data in your Cozy by clicking on the following button:"
+
+msgid "Mail Move Success Button text"
+msgstr "Access my Cozy"
+
+msgid "Mail Move Success Apps not installed"
+msgstr "For information, the %s services could not be re-installed. "
+"However, all the associated data have been well imported."
+
+msgid "Mail Move Success Outro"
+msgstr "See you soon, your Cozy"
+
 msgid "Mail Two Factor Subject"
 msgstr "One-time connection code"
 

@@ -2,15 +2,12 @@ package moves
 
 import (
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/move"
-	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/mail"
 )
 
 func init() {
@@ -56,7 +53,7 @@ func ExportWorker(c *job.WorkerContext) error {
 		return exportDoc.SendExportMail(c.Instance)
 	}
 
-	return exportDoc.NotifyTarget(c.Instance, opts.MoveTo)
+	return exportDoc.NotifyTarget(c.Instance, opts.MoveTo, opts.TokenSource)
 }
 
 // ImportWorker is the worker responsible for inserting the data from an export
@@ -85,35 +82,21 @@ func ImportWorker(c *job.WorkerContext) error {
 		}
 	}
 
-	var email mail.Options
-	if err == nil {
-		publicName, _ := c.Instance.PublicName()
-		link := c.Instance.SubDomain(consts.HomeSlug)
-		email = mail.Options{
-			Mode:         mail.ModeFromStack,
-			TemplateName: "import_success",
-			TemplateValues: map[string]interface{}{
-				"AppsNotInstalled": strings.Join(notInstalled, ", "),
-				"CozyLink":         link.String(),
-				"PublicName":       publicName,
-			},
-		}
-	} else {
+	status := move.StatusImportSuccess
+	if err != nil {
+		status = move.StatusFailure
 		c.Instance.Logger().WithField("nspace", "move").
 			Warnf("Import failed: %s", err)
-		email = mail.Options{
-			Mode:         mail.ModeFromStack,
-			TemplateName: "import_error",
+	}
+
+	if opts.MoveFrom != nil {
+		if err == nil {
+			status = move.StatusMoveSuccess
+			move.CallFinalize(c.Instance, opts.MoveFrom.URL, opts.MoveFrom.Token)
+		} else {
+			move.Abort(c.Instance, opts.MoveFrom.URL, opts.MoveFrom.Token)
 		}
 	}
 
-	msg, err := job.NewMessage(&email)
-	if err != nil {
-		return err
-	}
-	_, err = job.System().PushJob(c.Instance, &job.JobRequest{
-		WorkerType: "sendmail",
-		Message:    msg,
-	})
-	return err
+	return move.SendImportDoneMail(c.Instance, status, notInstalled)
 }

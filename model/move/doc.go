@@ -146,11 +146,15 @@ func (e *ExportDoc) SendExportMail(inst *instance.Instance) error {
 
 // NotifyTarget sends an HTTP request to the target so that it can start
 // importing the tarballs.
-func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions) error {
+func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions, token string) error {
 	link := e.GenerateLink(inst)
 	u := to.ImportsURL()
 	payload, err := json.Marshal(map[string]interface{}{
 		"url": link,
+		"move_from": map[string]interface{}{
+			"url":   inst.PageURL("/", nil),
+			"token": token,
+		},
 	})
 	if err != nil {
 		return err
