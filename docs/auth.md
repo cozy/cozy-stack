@@ -639,7 +639,7 @@ grant_type=authorization_code&code=Aih7ohth&client_id=oauth-client-1&client_secr
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/json
+Content-Type: application/json
 ```
 
 ```json
@@ -673,7 +673,7 @@ Content-Type: application/json
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/json
+Content-Type: application/json
 ```
 
 ```json

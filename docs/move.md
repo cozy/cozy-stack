@@ -201,7 +201,7 @@ still need a confirmation by mail to start moving the Cozy.
 
 ```http
 GET /move/authorize?state=8d560d60&redirect_uri=https://move.cozycloud.cc/callback/source HTTP/1.1
-Server: source.cozy.example
+Server: source.cozy.tools
 ```
 
 #### Response
@@ -219,14 +219,14 @@ This endpoint is used by the settings application to open the move wizard.
 
 ```http
 POST /move/initialize HTTP/1.1
-Server: source.cozy.example
+Host: source.cozy.tools
 ```
 
 #### Response
 
 ```http
 HTTP/1.1 307 Temporary Redirect
-Location: https://move.cozycloud.cc/initialize?code=834d7eb8149c&cozy_url=https://source.cozy.example&used=123456&quota=5000000&client_id=09136b00-1778-0139-f0a7-543d7eb8149c&client_secret=NDkyZTEzMDA
+Location: https://move.cozycloud.cc/initialize?code=834d7eb8149c&cozy_url=https://source.cozy.tools&used=123456&quota=5000000&client_id=09136b00-1778-0139-f0a7-543d7eb8149c&client_secret=NDkyZTEzMDA
 ```
 
 ### POST /move/request
@@ -238,10 +238,10 @@ to prepare the export and send the confirmation mail.
 
 ```http
 POST /move/request HTTP/1.1
-Content-type: application/x-www-form-urlencoded
+Content-Type: application/x-www-form-urlencoded
 
 code=834d7eb8149c
-&target_url=https://target.cozy.example/
+&target_url=https://target.cozy.tools/
 &target_token=M2EwYjlhZjAtMTc3OC0wMTM5LWYwYWMtNTQzZDdlYjgxNDlj
 &target_client_id=09136b00-1778-0139-f0a7-543d7eb8149c
 &target_client_secret=NDkyZTEzMDA
@@ -267,12 +267,29 @@ its-self during the move and pushs a job for the export.
 
 ```http
 GET /move/go?secret=tNTQzZDdlYjgxNDlj HTTP/1.1
-Server: source.cozy.example
+Host: source.cozy.tools
 ```
 
 #### Reponse
 
 ```http
 HTTP/1.1 303 See Other
-Location: https://target.cozy.example/move/importing
+Location: https://target.cozy.tools/move/importing
+```
+
+### POST /move/abort
+
+If the export or the import fails during a move, the stack will call this
+endpoint for the other instance to unblock it.
+
+#### Request
+
+```http
+POST /move/abort HTTP/1.1
+Host: source.cozy.tools
+```
+#### Reponse
+
+```
+HTTP/1.1 204 No Content
 ```

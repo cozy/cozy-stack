@@ -454,6 +454,18 @@ func startMove(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, request.ImportingURL())
 }
 
+func abortMove(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Imports); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	if err := lifecycle.Unblock(inst); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
 	g.POST("/exports", createExport)
@@ -472,6 +484,7 @@ func Routes(g *echo.Group) {
 
 	g.POST("/request", requestMove)
 	g.GET("/go", startMove)
+	g.POST("/abort", abortMove)
 }
 
 func wrapError(err error) error {

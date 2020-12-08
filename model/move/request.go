@@ -18,7 +18,7 @@ import (
 
 const (
 	// MoveScope is the scope requested for a move (when we don't know yet if
-	// the cozy will the source or the target).
+	// the cozy will be the source or the target).
 	MoveScope = consts.ExportsRequests + " " + consts.Imports
 	// SourceClientID is the fake OAuth client ID used for some move endpoints.
 	SourceClientID = "move"
@@ -228,4 +228,42 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 		Message:    msg,
 	})
 	return req, err
+}
+
+// Abort will call the /move/abort endpoint on the other instance to unblock it
+// after a failed export or import during a move.
+func Abort(inst *instance.Instance, otherURL, token string) {
+	u, err := url.Parse(otherURL)
+	if err != nil {
+		u, err = url.Parse("https://" + otherURL)
+	}
+	if err != nil {
+		return
+	}
+	u.Path = "/move/abort"
+	req, err := http.NewRequest("POST", u.String(), nil)
+	if err != nil {
+		inst.Logger().
+			WithField("nspace", "move").
+			WithField("url", otherURL).
+			Warnf("Cannort abort: %s", err)
+		return
+	}
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		inst.Logger().
+			WithField("nspace", "move").
+			WithField("url", otherURL).
+			Warnf("Cannort abort: %s", err)
+		return
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		inst.Logger().
+			WithField("nspace", "move").
+			WithField("url", otherURL).
+			Warnf("Cannort abort: code=%d", res.StatusCode)
+	}
+	return
 }

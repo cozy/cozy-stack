@@ -26,7 +26,7 @@ Authorization: Bearer ...
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 ```
 
 ```json
@@ -73,7 +73,7 @@ Authorization: Bearer ...
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 ```
 
 ```json
@@ -397,7 +397,7 @@ If the user is logged in, allow to set the instance fields
 POST /settings/instance HTTP/1.1
 Host: alice.example.com
 Accept: application/vnd.api+json
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 Cookie: sessionid=xxxxx
 Authorization: Bearer settings-token
 ```
@@ -425,7 +425,7 @@ Authorization: Bearer settings-token
 
 ```
 HTTP/1.1 200 OK
-Content-type: application/json
+Content-Type: application/json
 ```
 
 ```json
@@ -575,7 +575,7 @@ Authorization: Bearer oauth2-clients-token
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 ```
 
 ```json
@@ -730,7 +730,7 @@ Accept: application/vnd.api+json
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 ```
 
 ```json
@@ -763,7 +763,7 @@ Accept: application/vnd.api+json
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 ```
 
 ```json

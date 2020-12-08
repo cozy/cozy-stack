@@ -155,7 +155,13 @@ func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions) err
 	if err != nil {
 		return err
 	}
-	res, err := http.Post(u, "application/json", bytes.NewReader(payload))
+	req, err := http.NewRequest("POST", u, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+to.Token)
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}

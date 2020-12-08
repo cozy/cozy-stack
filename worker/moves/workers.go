@@ -46,6 +46,9 @@ func ExportWorker(c *job.WorkerContext) error {
 	archiver := move.SystemArchiver()
 	exportDoc, err := move.CreateExport(c.Instance, opts, archiver)
 	if err != nil {
+		if opts.MoveTo != nil {
+			move.Abort(c.Instance, opts.MoveTo.URL, opts.MoveTo.Token)
+		}
 		return err
 	}
 
