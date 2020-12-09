@@ -523,13 +523,33 @@ func authorizeMove(c echo.Context) error {
 		})
 	}
 
-	// TODO check 2FA
+	if inst.HasAuthMode(instance.TwoFactorMail) && !isTrustedDevice(c, inst) {
+		twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+		if err != nil {
+			return err
+		}
+		v := url.Values{}
+		v.Add("two_factor_token", string(twoFactorToken))
+		v.Add("state", c.FormValue("state"))
+		v.Add("client_id", c.FormValue("client_id"))
+		v.Add("redirect", c.FormValue("redirect"))
+		v.Add("trusted_device_checkbox", "false")
 
+		return c.JSON(http.StatusOK, echo.Map{
+			"redirect": inst.PageURL("/auth/twofactor", v),
+		})
+	}
+
+	return moveSuccess(c)
+}
+
+func moveSuccess(c echo.Context) error {
 	u, err := url.Parse(c.FormValue("redirect"))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
 	}
 
+	inst := middlewares.GetInstance(c)
 	used, quota, err := DiskInfo(inst.VFS())
 	if err != nil {
 		return err

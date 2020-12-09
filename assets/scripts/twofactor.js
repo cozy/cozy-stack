@@ -4,6 +4,8 @@
   const loginForm = d.getElementById('login-form')
   const loginField = d.getElementById('login-field')
   const redirectInput = d.getElementById('redirect')
+  const stateInput = d.getElementById('state')
+  const clientIdInput = d.getElementById('client_id')
   const submitButton = d.getElementById('login-submit')
   const twoFactorPasscodeInput = d.getElementById('two-factor-passcode')
   const twoFactorTokenInput = d.getElementById('two-factor-token')
@@ -53,7 +55,7 @@
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
     headers.append('Accept', 'application/json')
 
-    const reqBody =
+    let reqBody =
       'two-factor-passcode=' +
       encodeURIComponent(passcode) +
       '&long-run-session=' +
@@ -64,6 +66,15 @@
       encodeURIComponent(trustDevice) +
       '&redirect=' +
       encodeURIComponent(redirect)
+
+    // When 2FA is checked for moving a Cozy to this instance
+    if (stateInput) {
+      reqBody += '&state=' + encodeURIComponent(stateInput.value)
+    }
+    if (clientIdInput) {
+      reqBody += '&client_id=' + encodeURIComponent(clientIdInput.value)
+    }
+
     fetch('/auth/twofactor', {
       method: 'POST',
       headers: headers,

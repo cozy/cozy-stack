@@ -342,8 +342,7 @@ func login(c echo.Context) error {
 
 			if wantsJSON(c) {
 				return c.JSON(http.StatusOK, echo.Map{
-					"redirect":         inst.PageURL("/auth/twofactor", v),
-					"two_factor_token": string(twoFactorToken),
+					"redirect": inst.PageURL("/auth/twofactor", v),
 				})
 			}
 			return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))

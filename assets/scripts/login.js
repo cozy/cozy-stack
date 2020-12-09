@@ -18,9 +18,7 @@
   const twoFactorTrustedDeviceToken =
     (storage && storage.getItem('two-factor-trusted-device-token')) || ''
   twoFactorTrustedDomainInput.value = twoFactorTrustedDeviceToken
-
   const longRunSessionCheckbox = d.getElementById('long-run-session')
-  longRunSessionCheckbox.value = longRunSessionCheckbox.checked ? '1' : '0'
 
   let errorPanel = loginForm.querySelector('.wizard-errors')
   const loginField = d.getElementById('login-field')
@@ -46,7 +44,8 @@
 
     const passphrase = passphraseInput.value
     const redirectInput = d.getElementById('redirect')
-    const longRunSession = longRunSessionCheckbox.checked ? '1' : '0'
+    const longRunSession =
+      longRunSessionCheckbox && longRunSessionCheckbox.checked ? '1' : '0'
     const redirect = redirectInput && redirectInput.value + w.location.hash
     const csrfTokenInput = d.getElementById('csrf_token')
     const stateInput = d.getElementById('state')
