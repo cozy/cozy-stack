@@ -375,10 +375,6 @@ func initializeMove(c echo.Context) error {
 
 func requestMove(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	if !middlewares.IsLoggedIn(c) {
-		return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
-	}
-
 	var request *move.Request
 	params, err := c.FormParams()
 	if err == nil {
