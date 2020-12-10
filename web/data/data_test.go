@@ -534,12 +534,44 @@ func TestFindDocuments(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	var out2 struct {
-		Docs []couchdb.JSONDoc `json:"docs"`
+		Docs           []couchdb.JSONDoc       `json:"docs"`
+		ExecutionStats *couchdb.ExecutionStats `json:"execution_stats,omitempty"`
 	}
 	_, res, err := doRequest(req, &out2)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	assert.NoError(t, err)
 	assert.Len(t, out2.Docs, 3, "should have found 3 docs")
+	assert.Nil(t, out2.ExecutionStats)
+}
+
+func TestFindDocumentsWithStats(t *testing.T) {
+	_ = couchdb.ResetDB(testInstance, Type)
+
+	_ = getDocForTest()
+
+	def := M{"index": M{"fields": S{"test"}}}
+	url := ts.URL + "/data/" + Type + "/_index"
+	req, _ := http.NewRequest("POST", url, jsonReader(&def))
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	var out indexCreationResponse
+	_, _, err := doRequest(req, &out)
+	assert.NoError(t, err)
+	assert.Empty(t, out.Error, "should have no error")
+
+	query := M{"selector": M{"test": "value"}, "execution_stats": true}
+	url2 := ts.URL + "/data/" + Type + "/_find"
+	req, _ = http.NewRequest("POST", url2, jsonReader(&query))
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	var out2 struct {
+		Docs           []couchdb.JSONDoc       `json:"docs"`
+		ExecutionStats *couchdb.ExecutionStats `json:"execution_stats,omitempty"`
+	}
+	_, res, err := doRequest(req, &out2)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, out2.ExecutionStats)
 }
 
 func TestFindDocumentsPaginated(t *testing.T) {
@@ -899,6 +931,8 @@ function(doc) {
 	assert.Equal(t, "value", value)
 	bookmark := out["bookmark"].(string)
 	assert.NotEmpty(t, bookmark)
+	executionStats := out["execution_stats"]
+	assert.Nil(t, executionStats)
 
 	// skip pagination
 	url = ts.URL + "/data/" + Type + "/_normal_docs?limit=2&skip=2"
@@ -946,4 +980,14 @@ function(doc) {
 	assert.Equal(t, float64(0), totalRows)
 	bookmark = out["bookmark"].(string)
 	assert.Equal(t, "", bookmark)
+
+	// execution stats
+	url = ts.URL + "/data/" + emptyType + "/_normal_docs?execution_stats=true"
+	req, _ = http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	out, res, err = doRequest(req, nil)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	executionStats = out["execution_stats"].(interface{})
+	assert.NotEmpty(t, executionStats)
 }
