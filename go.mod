@@ -9,7 +9,7 @@ require (
 	github.com/cozy/goexif2 v0.0.0-20200819113101-00e1cc8cc9d3
 	github.com/cozy/gomail v0.0.0-20170313100128-1395d9a6a6c0
 	github.com/cozy/httpcache v0.0.0-20180914105234-d3dc4988de66
-	github.com/cozy/prosemirror-go v0.4.6
+	github.com/cozy/prosemirror-go v0.4.8
 	github.com/dhowden/tag v0.0.0-20201120070457-d52dcb253c63
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-redis/redis/v7 v7.4.0
