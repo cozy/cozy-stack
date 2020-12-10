@@ -289,13 +289,14 @@ func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) (Mani
 
 // Create is part of the Manifest interface
 func (m *WebappManifest) Create(db prefixer.Prefixer) error {
-	if err := diffServices(db, m.Slug(), nil, m.Services); err != nil {
-		return err
-	}
 	m.DocID = consts.Apps + "/" + m.DocSlug
 	m.CreatedAt = time.Now()
 	m.UpdatedAt = time.Now()
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
+		return err
+	}
+
+	if err := diffServices(db, m.Slug(), nil, m.Services); err != nil {
 		return err
 	}
 
