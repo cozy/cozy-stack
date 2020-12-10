@@ -29,7 +29,7 @@ func passphraseResetForm(c echo.Context) error {
 		hasHint = setting.PassphraseHint != ""
 	}
 	hasCiphers := true
-	if resp, err := couchdb.NormalDocs(instance, consts.BitwardenCiphers, 0, 1, ""); err == nil {
+	if resp, err := couchdb.NormalDocs(instance, consts.BitwardenCiphers, 0, 1, "", false); err == nil {
 		hasCiphers = resp.Total > 0
 	}
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{

@@ -352,7 +352,9 @@ func findDocuments(c echo.Context) error {
 		"next":     next,
 		"bookmark": resp.Bookmark,
 	}
-
+	if resp.ExecutionStats != nil {
+		out["execution_stats"] = resp.ExecutionStats
+	}
 	return c.JSON(http.StatusOK, out)
 }
 
@@ -385,7 +387,11 @@ func normalDocs(c echo.Context) error {
 	if err != nil || limit < 0 || limit > consts.MaxItemsPerPageForMango {
 		limit = 100
 	}
-	res, err := couchdb.NormalDocs(instance, doctype, int(skip), int(limit), bookmark)
+	executionStats, err := strconv.ParseBool(c.QueryParam("execution_stats"))
+	if err != nil {
+		executionStats = false
+	}
+	res, err := couchdb.NormalDocs(instance, doctype, int(skip), int(limit), bookmark, executionStats)
 	if err != nil {
 		return err
 	}
