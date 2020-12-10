@@ -284,6 +284,8 @@ Find allows to find documents using a mango selector. You can read more about ma
 
 Note that it returns a [bookmark](https://github.com/cozy/cozy-stack/blob/master/docs/mango.md#pagination-cookbook) in the `links`, useful to paginate.
 
+It is possible to pass a `execution_stats` parameter to get some information about the query execution. See [here](https://docs.couchdb.org/en/stable/api/database/find.html#execution-statistics) for more details.
+
 
 ### Request
 
@@ -300,7 +302,8 @@ POST /files/_find HTTP/1.1
     },
     "limit": 2,
     "bookmark": "g1AAAABjeJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorpFokG5qaGVqYmCWbGxuYGFkYWhgkmqaZJZsZGpibWhiA9HHA9OWATAJpY83MTUxPTWFgTUvMKU7NygIA7IYZzA",
-    "use_index": "_design/a5f4711fc9448864a13c81dc71e660b524d7410c"
+    "use_index": "_design/a5f4711fc9448864a13c81dc71e660b524d7410c",
+    "execution_stats": true
 }
 ```
 
@@ -409,7 +412,12 @@ Content-Type: application/json
     "next": "/files/_find?page[cursor]=g1AAAABjeJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorpFokG5qaGVqYmCWbGxuYGFkYWhgkmqaZJZsZGlgaGJiD9HHA9OWATAJpY83MTUxPTWFgTUvMKU7NygIA694ZyA"
   },
   "meta": {
-    "count": 2147483646
+    "count": 2147483646,
+    "execution_stats": {
+      "total_docs_examined": 11,
+      "results_returned": 2,
+      "execution_time_ms": 8.833
+    },
   }
 }
 ```
