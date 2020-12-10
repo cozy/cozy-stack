@@ -404,6 +404,100 @@ func TestGetSteps(t *testing.T) {
 	version = lastVersion
 }
 
+func TestPutSchema(t *testing.T) {
+	body := `
+{
+  "data": {
+    "type": "io.cozy.notes.documents",
+    "attributes": {
+      "schema": {
+        "nodes": [
+          ["doc", { "content": "block+" }],
+          [
+            "panel",
+            {
+              "content": "(paragraph | heading | bullet_list | ordered_list)+",
+              "group": "block",
+              "attrs": { "panelType": { "default": "info" } }
+            }
+          ],
+          ["paragraph", { "content": "inline*", "group": "block" }],
+          ["blockquote", { "content": "block+", "group": "block" }],
+          ["horizontal_rule", { "group": "block" }],
+          [
+            "heading",
+            {
+              "content": "inline*",
+              "group": "block",
+              "attrs": { "level": { "default": 1 } }
+            }
+          ],
+          ["code_block", { "content": "text*", "marks": "", "group": "block" }],
+          ["text", { "group": "inline" }],
+          [
+            "image",
+            {
+              "group": "inline",
+              "inline": true,
+              "attrs": { "alt": {}, "src": {}, "title": {} }
+            }
+          ],
+          ["hard_break", { "group": "inline", "inline": true }],
+          [
+            "ordered_list",
+            {
+              "content": "list_item+",
+              "group": "block",
+              "attrs": { "order": { "default": 1 } }
+            }
+          ],
+          ["bullet_list", { "content": "list_item+", "group": "block" }],
+          ["list_item", { "content": "paragraph block*" }]
+        ],
+        "marks": [
+          ["link", { "attrs": { "href": {}, "title": {} }, "inclusive": false }],
+          ["em", {}],
+          ["strong", {}],
+          ["code", {}]
+        ],
+        "version": 2,
+        "topNode": "doc"
+      }
+    }
+  }
+}`
+	req, _ := http.NewRequest("PUT", ts.URL+"/notes/"+noteID+"/schema", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+
+	data, _ := result["data"].(map[string]interface{})
+	assert.Equal(t, "io.cozy.files", data["type"])
+	assert.Equal(t, noteID, data["id"])
+	attrs := data["attributes"].(map[string]interface{})
+	meta, _ := attrs["metadata"].(map[string]interface{})
+	schema := meta["schema"].(map[string]interface{})
+	assert.EqualValues(t, 2, schema["version"])
+	nodes, _ := schema["nodes"].([]interface{})
+	panel, _ := nodes[1].([]interface{})
+	assert.EqualValues(t, "panel", panel[0])
+
+	path2 := fmt.Sprintf("/notes/%s/steps?Version=%d", noteID, version)
+	req2, _ := http.NewRequest("GET", ts.URL+path2, nil)
+	req2.Header.Add("Authorization", "Bearer "+token)
+	res2, err := http.DefaultClient.Do(req2)
+	assert.NoError(t, err)
+	assert.Equal(t, 412, res2.StatusCode)
+
+	v, _ := meta["version"].(float64)
+	version = int64(v)
+}
+
 func TestPutTelepointer(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
