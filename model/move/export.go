@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
@@ -474,4 +476,21 @@ func writeMarshaledDoc(dir, name string, doc json.RawMessage, now time.Time, tw 
 	}
 	n, err := tw.Write(doc)
 	return int64(n), err
+}
+
+// SendExportFailureMail sends an email to the user when the export has failed.
+func SendExportFailureMail(inst *instance.Instance) error {
+	email := mail.Options{
+		Mode:         mail.ModeFromStack,
+		TemplateName: "export_error",
+	}
+	msg, err := job.NewMessage(&email)
+	if err != nil {
+		return err
+	}
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	return err
 }

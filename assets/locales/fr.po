@@ -683,6 +683,17 @@ msgstr ""
 msgid "Mail Import Error Outro"
 msgstr "Si le souci persiste, contactez le support client."
 
+msgid "Mail Export Error Subject"
+msgstr "⚠ L'export dans votre Cozy n'a pas abouti"
+
+msgid "Mail Export Error Text"
+msgstr ""
+"L'export des données de votre Cozy a rencontré un souci. "
+"Pouvez-vous renouveler l'opération depuis le début ?"
+
+msgid "Mail Export Error Outro"
+msgstr "Si le souci persiste, contactez le support client."
+
 msgid "Mail Two Factor Subject"
 msgstr "Code de connexion à usage unique"
 

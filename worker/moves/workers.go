@@ -46,6 +46,9 @@ func ExportWorker(c *job.WorkerContext) error {
 		if opts.MoveTo != nil {
 			move.Abort(c.Instance, opts.MoveTo.URL, opts.MoveTo.Token)
 		}
+		c.Instance.Logger().WithField("nspace", "move").
+			Warnf("Export failed: %s", err)
+		_ = move.SendExportFailureMail(c.Instance)
 		return err
 	}
 
@@ -98,5 +101,6 @@ func ImportWorker(c *job.WorkerContext) error {
 		}
 	}
 
-	return move.SendImportDoneMail(c.Instance, status, notInstalled)
+	_ = move.SendImportDoneMail(c.Instance, status, notInstalled)
+	return err
 }

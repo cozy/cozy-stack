@@ -635,6 +635,17 @@ msgstr ""
 msgid "Mail Import Error Outro"
 msgstr "If the problem persists, contact customer support."
 
+msgid "Mail Export Error Subject"
+msgstr "⚠ The export into your Cozy has failed"
+
+msgid "Mail Export Error Text"
+msgstr ""
+"The export of the data from your Cozy encounters a problem. "
+"Can you renew the operation from the beginning?"
+
+msgid "Mail Export Error Outro"
+msgstr "If the problem persists, contact customer support."
+
 msgid "Mail Move Confirm Subject"
 msgstr "Would you like to move your Cozy now?"
 
