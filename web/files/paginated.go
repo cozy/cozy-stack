@@ -207,7 +207,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		links.Next = next
 	}
 
-	return jsonapi.DataListWithTotal(c, statusCode, count, included, &links)
+	return jsonapi.DataListWithTotal(c, statusCode, count, included, &links, nil)
 }
 
 // NewFile creates an instance of file struct from a vfs.FileDoc document.
