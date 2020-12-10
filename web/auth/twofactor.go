@@ -107,7 +107,13 @@ func twoFactor(c echo.Context) error {
 	// Special case when the 2FA validation if for moving a Cozy to this
 	// instance.
 	if c.FormValue("client_id") != "" {
-		return moveSuccess(c)
+		u, err := moveSuccessURI(c)
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, echo.Map{
+			"redirect": u,
+		})
 	}
 
 	// Generate a new session

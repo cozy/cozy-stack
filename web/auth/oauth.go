@@ -449,13 +449,27 @@ func authorizeMoveForm(c echo.Context) error {
 	}
 
 	if !inst.IsPasswordAuthenticationEnabled() {
-		return c.Render(http.StatusNotFound, "error.html", echo.Map{
-			"CozyUI":      middlewares.CozyUI(inst),
-			"ThemeCSS":    middlewares.ThemeCSS(inst),
-			"Domain":      inst.ContextualDomain(),
-			"ContextName": inst.ContextName,
-			"Error":       "Sorry, this is not yet supported",
-			"Favicon":     middlewares.Favicon(inst),
+		if !middlewares.IsLoggedIn(c) {
+			q := url.Values{"redirect": {c.Request().URL.String()}}
+			return c.Redirect(http.StatusSeeOther, inst.PageURL("/oidc/start", q))
+		}
+		twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+		if err != nil {
+			return err
+		}
+		mail, _ := inst.SettingsEMail()
+		return c.Render(http.StatusNotFound, "move_delegated_auth.html", echo.Map{
+			"CozyUI":           middlewares.CozyUI(inst),
+			"ThemeCSS":         middlewares.ThemeCSS(inst),
+			"Domain":           inst.ContextualDomain(),
+			"ContextName":      inst.ContextName,
+			"Favicon":          middlewares.Favicon(inst),
+			"TwoFactorToken":   string(twoFactorToken),
+			"CredentialsError": "",
+			"Email":            mail,
+			"State":            state,
+			"ClientID":         clientID,
+			"Redirect":         redirectURI,
 		})
 	}
 
@@ -498,14 +512,34 @@ func authorizeMoveForm(c echo.Context) error {
 func authorizeMove(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if !inst.IsPasswordAuthenticationEnabled() {
-		return c.Render(http.StatusNotFound, "error.html", echo.Map{
-			"CozyUI":      middlewares.CozyUI(inst),
-			"ThemeCSS":    middlewares.ThemeCSS(inst),
-			"Domain":      inst.ContextualDomain(),
-			"ContextName": inst.ContextName,
-			"Error":       "Sorry, this is not yet supported",
-			"Favicon":     middlewares.Favicon(inst),
-		})
+		if !middlewares.IsLoggedIn(c) {
+			return renderError(c, http.StatusUnauthorized, "Error Must be authenticated")
+		}
+		token := []byte(c.FormValue("two-factor-token"))
+		passcode := c.FormValue("two-factor-passcode")
+		correctPasscode := inst.ValidateTwoFactorPasscode(token, passcode)
+		if !correctPasscode {
+			errorMessage := inst.Translate(TwoFactorErrorKey)
+			mail, _ := inst.SettingsEMail()
+			return c.Render(http.StatusNotFound, "move_delegated_auth.html", echo.Map{
+				"CozyUI":           middlewares.CozyUI(inst),
+				"ThemeCSS":         middlewares.ThemeCSS(inst),
+				"Domain":           inst.ContextualDomain(),
+				"ContextName":      inst.ContextName,
+				"Favicon":          middlewares.Favicon(inst),
+				"TwoFactorToken":   string(token),
+				"CredentialsError": errorMessage,
+				"Email":            mail,
+				"State":            c.FormValue("state"),
+				"ClientID":         c.FormValue("client_id"),
+				"Redirect":         c.FormValue("redirect"),
+			})
+		}
+		u, err := moveSuccessURI(c)
+		if err != nil {
+			return err
+		}
+		return c.Redirect(http.StatusSeeOther, u)
 	}
 
 	// Check passphrase
@@ -540,29 +574,35 @@ func authorizeMove(c echo.Context) error {
 		})
 	}
 
-	return moveSuccess(c)
+	u, err := moveSuccessURI(c)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"redirect": u,
+	})
 }
 
-func moveSuccess(c echo.Context) error {
+func moveSuccessURI(c echo.Context) (string, error) {
 	u, err := url.Parse(c.FormValue("redirect"))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
+		return "", echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
 	}
 
 	inst := middlewares.GetInstance(c)
 	used, quota, err := DiskInfo(inst.VFS())
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	clientID := c.FormValue("client_id")
 	client := oauth.Client{}
 	if err := couchdb.GetDoc(inst, consts.OAuthClients, clientID, &client); err != nil {
-		return err
+		return "", err
 	}
 	access, err := oauth.CreateAccessCode(inst, clientID, move.MoveScope)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	q := u.Query()
@@ -573,9 +613,7 @@ func moveSuccess(c echo.Context) error {
 		q.Set("quota", quota)
 	}
 	u.RawQuery = q.Encode()
-	return c.JSON(http.StatusOK, echo.Map{
-		"redirect": u.String(),
-	})
+	return u.String(), nil
 }
 
 // DiskInfo returns the used and quota disk space for the given VFS.

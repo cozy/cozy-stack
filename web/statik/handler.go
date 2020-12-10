@@ -39,6 +39,7 @@ var (
 		"instance_blocked.html",
 		"login.html",
 		"move_confirm.html",
+		"move_delegated_auth.html",
 		"need_onboarding.html",
 		"oidc_login.html",
 		"passphrase_reset.html",

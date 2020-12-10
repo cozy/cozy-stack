@@ -275,6 +275,12 @@ msgstr "It requests access to your Cozy:"
 msgid "Authorize Linked Help"
 msgstr "By authorizing, the application will be able to acces to these data in your Cozy:"
 
+msgid "Move delegated auth Title"
+msgstr "Move confirmation"
+
+msgid "Move delegated auth Help"
+msgstr "A code has been sent by mail to the address %s."
+
 msgid "Import Title"
 msgstr "Import in progress"
 
