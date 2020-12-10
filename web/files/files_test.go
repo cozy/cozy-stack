@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -2362,6 +2363,64 @@ func TestGetFileByPublicLinkRateExceeded(t *testing.T) {
 	resbody, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Contains(t, string(resbody), "Rate limit exceeded")
+}
+
+func TestFind(t *testing.T) {
+
+	type M map[string]interface{}
+	type S []interface{}
+
+	defIndex := M{"index": M{"fields": S{"_id"}}}
+	_, err := couchdb.DefineIndexRaw(testInstance, "io.cozy.files", &defIndex)
+	assert.NoError(t, err)
+
+	query := strings.NewReader(`{
+		"selector": {
+			"_id": {
+				"$gt": null
+			}
+		},
+		"limit": 1
+	}`)
+	req, _ := http.NewRequest("POST", ts.URL+"/files/_find", query)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	var obj map[string]interface{}
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+
+	data := obj["data"].([]interface{})
+	meta := obj["meta"].(map[string]interface{})
+	assert.Equal(t, len(data), 1)
+	assert.NotNil(t, meta)
+	assert.Nil(t, meta["execution_stats"])
+
+	query2 := strings.NewReader(`{
+		"selector": {
+			"_id": {
+				"$gt": null
+			}
+		},
+		"limit": 1,
+		"execution_stats": true
+	}`)
+	req, _ = http.NewRequest("POST", ts.URL+"/files/_find", query2)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+
+	data = obj["data"].([]interface{})
+	meta = obj["meta"].(map[string]interface{})
+	assert.Equal(t, len(data), 1)
+	assert.NotNil(t, meta)
+	assert.NotEmpty(t, meta["execution_stats"])
 }
 
 func TestMain(m *testing.M) {
