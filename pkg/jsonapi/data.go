@@ -17,8 +17,9 @@ type Object interface {
 // Meta is a container for the couchdb revision and the total number of items,
 // in JSON-API land
 type Meta struct {
-	Rev   string `json:"rev,omitempty"`
-	Count *int   `json:"count,omitempty"`
+	Rev            string                  `json:"rev,omitempty"`
+	Count          *int                    `json:"count,omitempty"`
+	ExecutionStats *couchdb.ExecutionStats `json:"execution_stats,omitempty"`
 }
 
 // LinksList is the common links used in JSON-API for the top-level or a

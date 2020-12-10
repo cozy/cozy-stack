@@ -1275,7 +1275,7 @@ func FindFilesMango(c echo.Context) error {
 		}
 	}
 
-	return jsonapi.DataListWithTotal(c, http.StatusOK, total, out, &links)
+	return jsonapi.DataListWithTotal(c, http.StatusOK, total, out, &links, resp.ExecutionStats)
 }
 
 func fsckHandler(c echo.Context) error {
