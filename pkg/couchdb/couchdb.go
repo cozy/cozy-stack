@@ -889,14 +889,16 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 
 // NormalDocs returns all the documents from a database, with pagination, but
 // it excludes the design docs.
-func NormalDocs(db Database, doctype string, skip, limit int, bookmark string) (*NormalDocsResponse, error) {
+func NormalDocs(db Database, doctype string, skip, limit int, bookmark string, executionStats bool) (*NormalDocsResponse, error) {
 	var findRes struct {
-		Docs     []json.RawMessage `json:"docs"`
-		Bookmark string            `json:"bookmark"`
+		Docs           []json.RawMessage `json:"docs"`
+		Bookmark       string            `json:"bookmark"`
+		ExecutionStats *ExecutionStats   `json:"execution_stats,omitempty"`
 	}
 	req := FindRequest{
-		Selector: mango.Gte("_id", nil),
-		Limit:    limit,
+		Selector:       mango.Gte("_id", nil),
+		Limit:          limit,
+		ExecutionStats: executionStats,
 	}
 	// Both bookmark and skip can be used for pagination, but bookmark is more efficient.
 	// See https://docs.couchdb.org/en/latest/api/database/find.html#pagination
@@ -910,7 +912,8 @@ func NormalDocs(db Database, doctype string, skip, limit int, bookmark string) (
 		return nil, err
 	}
 	res := NormalDocsResponse{
-		Rows: findRes.Docs,
+		Rows:           findRes.Docs,
+		ExecutionStats: findRes.ExecutionStats,
 	}
 	if bookmark == "" && len(res.Rows) < limit {
 		res.Total = skip + len(res.Rows)
@@ -962,21 +965,32 @@ type UpdateResponse struct {
 
 // FindResponse is the response from couchdb on a find request
 type FindResponse struct {
-	Warning  string          `json:"warning"`
-	Bookmark string          `json:"bookmark"`
-	Docs     json.RawMessage `json:"docs"`
+	Warning        string          `json:"warning"`
+	Bookmark       string          `json:"bookmark"`
+	Docs           json.RawMessage `json:"docs"`
+	ExecutionStats *ExecutionStats `json:"execution_stats,omitempty"`
+}
+
+// ExecutionStats is returned by CouchDB on _find queries
+type ExecutionStats struct {
+	TotalKeysExamined       int     `json:"total_keys_examined,omitempty"`
+	TotalDocsExamined       int     `json:"total_docs_examined,omitempty"`
+	TotalQuorumDocsExamined int     `json:"total_quorum_docs_examined,omitempty"`
+	ResultsReturned         int     `json:"results_returned,omitempty"`
+	ExecutionTimeMs         float32 `json:"execution_time_ms,omitempty"`
 }
 
 // FindRequest is used to build a find request
 type FindRequest struct {
-	Selector  mango.Filter `json:"selector"`
-	UseIndex  string       `json:"use_index,omitempty"`
-	Bookmark  string       `json:"bookmark,omitempty"`
-	Limit     int          `json:"limit,omitempty"`
-	Skip      int          `json:"skip,omitempty"`
-	Sort      mango.SortBy `json:"sort,omitempty"`
-	Fields    []string     `json:"fields,omitempty"`
-	Conflicts bool         `json:"conflicts,omitempty"`
+	Selector       mango.Filter `json:"selector"`
+	UseIndex       string       `json:"use_index,omitempty"`
+	Bookmark       string       `json:"bookmark,omitempty"`
+	Limit          int          `json:"limit,omitempty"`
+	Skip           int          `json:"skip,omitempty"`
+	Sort           mango.SortBy `json:"sort,omitempty"`
+	Fields         []string     `json:"fields,omitempty"`
+	Conflicts      bool         `json:"conflicts,omitempty"`
+	ExecutionStats bool         `json:"execution_stats,omitempty"`
 }
 
 // ViewRequest are all params that can be passed to a view
@@ -1048,7 +1062,8 @@ type DBStatusResponse struct {
 
 // NormalDocsResponse is the response the stack send for _normal_docs queries
 type NormalDocsResponse struct {
-	Total    int               `json:"total_rows"`
-	Rows     []json.RawMessage `json:"rows"`
-	Bookmark string            `json:"bookmark"`
+	Total          int               `json:"total_rows"`
+	Rows           []json.RawMessage `json:"rows"`
+	Bookmark       string            `json:"bookmark"`
+	ExecutionStats *ExecutionStats   `json:"execution_stats,omitempty"`
 }
