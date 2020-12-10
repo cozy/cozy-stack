@@ -90,9 +90,9 @@ Content-Type: application/json
         "date": { "$gt": "20161001T00:00:00" }
     },
     "limit": 2,
-    "skip": 3,
     "sort": ["calendar", "date"],
     "fields": ["_id", "_type", "_date"],
+    "execution_stats": true,
     "use_index": "_design/a5f4711fc9448864a13c81dc71e660b524d7410c"
 }
 ```
@@ -119,7 +119,15 @@ Content-Type: application/json
             "_type": "io.cozy.events",
             "date": "20161013T160000Z"
         }
-    ]
+    ],
+    "execution_stats": {
+        "total_docs_examined": 10,
+        "results_returned": 2,
+        "execution_time_ms": 8.833
+    },
+    "bookmark": "g1AAAAB2eJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJB",
+    "limit": 2,
+    "next": true
 }
 ```
 
@@ -132,6 +140,7 @@ Content-Type: application/json
     `sort:[{"calendar":"desc"}, {"date": "desc"}]` but **all fields** must be
     sorted in same direction.
 -   `use_index` is optional but recommended.
+-   `execution_stats` is false by default. It gives execution information about the query. See [here](https://docs.couchdb.org/en/stable/api/database/find.html#execution-statistics) for more details.
 
 ## Pagination cookbook
 
