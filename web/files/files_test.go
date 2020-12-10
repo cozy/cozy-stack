@@ -2366,7 +2366,6 @@ func TestGetFileByPublicLinkRateExceeded(t *testing.T) {
 }
 
 func TestFind(t *testing.T) {
-
 	type M map[string]interface{}
 	type S []interface{}
 
