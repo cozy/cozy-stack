@@ -268,6 +268,12 @@ func CallFinalize(inst *instance.Instance, otherURL, token string) {
 			WithField("url", otherURL).
 			Warnf("Cannort finalize: code=%d", res.StatusCode)
 	}
+
+	doc, err := inst.SettingsDocument()
+	if err == nil {
+		doc.M["moved_from"] = u.Host
+		_ = couchdb.UpdateDoc(inst, doc)
+	}
 }
 
 // Finalize makes the last steps on the source Cozy after the data has been
