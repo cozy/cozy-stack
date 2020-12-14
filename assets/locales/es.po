@@ -498,6 +498,12 @@ msgstr "Contactos"
 msgid "Permissions io.cozy.files"
 msgstr "Archivos"
 
+msgid "Permissions io.cozy.certified.carbon_copy"
+msgstr "Copia carbón"
+
+msgid "Permissions io.cozy.certified.electronic_safe"
+msgstr "Seguro electrónico"
+
 msgid "Permissions io.cozy.files.versions"
 msgstr "Versiones de archivos"
 
