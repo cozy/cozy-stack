@@ -26,7 +26,10 @@ var AskReupload func(*instance.Instance) error
 // can also update the settings document if provided in the options.
 func Patch(i *instance.Instance, opts *Options) error {
 	opts.Domain = i.Domain
-	settings := buildSettings(opts)
+	settings, err := buildSettings(i, opts)
+	if err != nil {
+		return err
+	}
 
 	clouderyChanges := make(map[string]interface{})
 
@@ -167,7 +170,7 @@ func Patch(i *instance.Instance, opts *Options) error {
 	}
 
 	// Update the settings doc
-	if ok, err := needsSettingsUpdate(i, settings.M); settings.Rev() != "" && err == nil && ok {
+	if ok := needsSettingsUpdate(i, settings.M); ok {
 		if err := couchdb.UpdateDoc(i, settings); err != nil {
 			return err
 		}
@@ -214,14 +217,14 @@ func managerUpdateSettings(inst *instance.Instance, changes map[string]interface
 
 // needsSettingsUpdate compares the old instance io.cozy.settings with the new
 // bunch of settings and tells if it needs an update
-func needsSettingsUpdate(inst *instance.Instance, newSettings map[string]interface{}) (bool, error) {
+func needsSettingsUpdate(inst *instance.Instance, newSettings map[string]interface{}) bool {
 	oldSettings, err := inst.SettingsDocument()
 	if err != nil {
-		return false, err
+		return false
 	}
 
 	if oldSettings.M == nil {
-		return true, nil
+		return true
 	}
 
 	for k, newValue := range newSettings {
@@ -231,7 +234,7 @@ func needsSettingsUpdate(inst *instance.Instance, newSettings map[string]interfa
 		// Check if we have the key in old settings and the value is different,
 		// or if we don't have the key at all
 		if oldValue, ok := oldSettings.M[k]; !ok || !reflect.DeepEqual(oldValue, newValue) {
-			return true, nil
+			return true
 		}
 	}
 
@@ -239,11 +242,11 @@ func needsSettingsUpdate(inst *instance.Instance, newSettings map[string]interfa
 	// settings, and therefore needs an update
 	for oldKey := range oldSettings.M {
 		if _, ok := newSettings[oldKey]; !ok {
-			return true, nil
+			return true
 		}
 	}
 
-	return false, nil
+	return false
 }
 
 // Block function blocks an instance with an optional reason parameter

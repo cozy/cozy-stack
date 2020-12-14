@@ -61,7 +61,10 @@ func TestPatchWithGoodRev(t *testing.T) {
 			}
 		}
 	}`
-	body = fmt.Sprintf(body, instanceRev)
+
+	doc1, err := testInstance.SettingsDocument()
+	assert.NoError(t, err)
+	body = fmt.Sprintf(body, doc1.Rev())
 	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
 	req.Header.Add("Content-Type", "application/vnd.api+json")
 	req.Header.Add("Accept", "application/vnd.api+json")
@@ -83,9 +86,9 @@ func TestPatchWithBadRev(t *testing.T) {
 				"rev": "%s"
 			},
 			"attributes": {
-				"tz": "Europe/London",
-				"email": "alice@example.org",
-				"locale": "fr"
+				"tz": "Europe/Berlin",
+				"email": "alice@example.com",
+				"locale": "en"
 			}
 		}
 	}`
@@ -110,9 +113,9 @@ func TestPatchWithBadRevNoChanges(t *testing.T) {
 				"rev": "%s"
 			},
 			"attributes": {
-				"tz": "Europe/Berlin",
-				"email": "alice@example.com",
-				"locale": "en"
+				"tz": "Europe/London",
+				"email": "alice@example.org",
+				"locale": "fr"
 			}
 		}
 	}`
@@ -376,10 +379,10 @@ func TestGetInstance(t *testing.T) {
 	assert.True(t, ok)
 	email, ok := attrs["email"].(string)
 	assert.True(t, ok)
-	assert.Equal(t, "alice@example.com", email)
+	assert.Equal(t, "alice@example.org", email)
 	tz, ok := attrs["tz"].(string)
 	assert.True(t, ok)
-	assert.Equal(t, "Europe/Berlin", tz)
+	assert.Equal(t, "Europe/London", tz)
 	locale, ok := attrs["locale"].(string)
 	assert.True(t, ok)
 	assert.Equal(t, "en", locale)
@@ -407,10 +410,10 @@ func TestUpdateInstance(t *testing.T) {
 		assert.True(t, ok)
 		email, ok := attrs["email"].(string)
 		assert.True(t, ok)
-		assert.Equal(t, "alice@example.org", email)
+		assert.Equal(t, "alice@example.net", email)
 		tz, ok := attrs["tz"].(string)
 		assert.True(t, ok)
-		assert.Equal(t, "Europe/London", tz)
+		assert.Equal(t, "Europe/Paris", tz)
 		locale, ok := attrs["locale"].(string)
 		assert.True(t, ok)
 		assert.Equal(t, "fr", locale)
@@ -424,8 +427,8 @@ func TestUpdateInstance(t *testing.T) {
 				"rev": "%s"
 			},
 			"attributes": {
-				"tz": "Europe/London",
-				"email": "alice@example.org",
+				"tz": "Europe/Paris",
+				"email": "alice@example.net",
 				"locale": "fr"
 			}
 		}
@@ -644,9 +647,9 @@ func TestPatchInstanceSameParams(t *testing.T) {
 					"rev": "%s"
 				},
 				"attributes": {
-					"tz": "Europe/London",
-					"email": "alice@example.org",
-					"locale": "en"
+					"tz": "Europe/Paris",
+					"email": "alice@example.net",
+					"locale": "fr"
 				}
 			}
 		}`

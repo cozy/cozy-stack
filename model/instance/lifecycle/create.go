@@ -109,7 +109,14 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 		locale = consts.DefaultLocale
 	}
 
-	settings := buildSettings(opts)
+	if opts.SettingsObj == nil {
+		opts.SettingsObj = &couchdb.JSONDoc{M: make(map[string]interface{})}
+	}
+
+	settings, err := buildSettings(nil, opts)
+	if err != nil {
+		return nil, err
+	}
 	prefix := sha256.Sum256([]byte(domain))
 	i := &instance.Instance{}
 	i.Domain = domain
@@ -254,12 +261,16 @@ func CreateWithoutHooks(opts *Options) (*instance.Instance, error) {
 	return i, nil
 }
 
-func buildSettings(opts *Options) *couchdb.JSONDoc {
+func buildSettings(inst *instance.Instance, opts *Options) (*couchdb.JSONDoc, error) {
 	var settings *couchdb.JSONDoc
 	if opts.SettingsObj != nil {
 		settings = opts.SettingsObj
 	} else {
-		settings = &couchdb.JSONDoc{M: make(map[string]interface{})}
+		var err error
+		settings, err = inst.SettingsDocument()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	settings.Type = consts.Settings
@@ -326,7 +337,7 @@ func buildSettings(opts *Options) *couchdb.JSONDoc {
 		opts.TOSSigned = "1.0.0-" + opts.TOSSigned
 	}
 
-	return settings
+	return settings, nil
 }
 
 func addTriggers(i *instance.Instance) error {
