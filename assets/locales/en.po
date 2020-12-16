@@ -297,13 +297,13 @@ msgid "Move in progress Description"
 msgstr "Moving data can take time. You can close this screen, an email will be sent to you once the move is complete."
 
 msgid "Move Confirm Title"
-msgstr "The move request has been sent"
+msgstr "Your moving request has been received"
 
 msgid "Move Confirm Box"
-msgstr "A mail has been sent to %s to confirm the move."
+msgstr "An e-mail has been sent to %s to accept the move."
 
 msgid "Move Confirm Description"
-msgstr "You don't have received this email? Please check your mail inbox, and the spam folder, or contact us at support@cozycloud.cc."
+msgstr "You haven't recevied this e-mail? Check your SPAM or send us an e-mail to claude@cozycloud.cc."
 
 msgid "Error Title"
 msgstr "Sorry, an error occurred."
@@ -662,7 +662,7 @@ msgid "Mail Move Confirm Intro 2"
 msgstr "A request has been made to move your data from %s to %s."
 
 msgid "Mail Move Confirm Button instruction"
-msgstr "If you request it, click below:"
+msgstr "If you request it, click below to start the move."
 
 msgid "Mail Move Confirm Button text"
 msgstr "Accept the move"

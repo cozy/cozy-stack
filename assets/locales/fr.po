@@ -319,6 +319,12 @@ msgstr ""
 "En l'autorisant, l'application pourra accéder aux données suivantes de votre"
 " Cozy :"
 
+msgid "Move delegated auth Title"
+msgstr "Confirmation du déménagement"
+
+msgid "Move delegated auth Help"
+msgstr "Un code de confirmation a été envoyé par email à l'adresse %s."
+
 msgid "Import Title"
 msgstr "Import en cours"
 
@@ -326,6 +332,24 @@ msgid "Import Description"
 msgstr ""
 "L'import des données peut prendre du temps. Vous pouvez fermer cet écran en "
 "toute tranquillité, un mail vous sera envoyé une fois l'import terminé."
+
+msgid "Move in progress Title"
+msgstr "Déménagement en cours"
+
+msgid "Move in progress Box"
+msgstr "Depuis %s vers %s"
+
+msgid "Move in progress Description"
+msgstr "Le déménagement des données peut prendre du temps. Vous pouvez fermer cet écran en toute tranquillité, un mail vous sera envoyé une fois le déménagement terminé."
+
+msgid "Move Confirm Title"
+msgstr "Votre demande de déménagement a bien été transmise"
+
+msgid "Move Confirm Box"
+msgstr "Un email vous a été envoyé à %s pour accepter le déménagement."
+
+msgid "Move Confirm Description"
+msgstr "Vous n'avez pas reçu cet e-mail ? Vérifiez vos SPAM et indésirables ou contactez-nous à claude@cozycloud.cc."
 
 msgid "Error Title"
 msgstr "Désolé, une erreur est survenue."
@@ -378,6 +402,9 @@ msgstr "Le Cozy nécessite un paiement"
 
 msgid "Instance Blocked Importing"
 msgstr "Le Cozy importe des données"
+
+msgid "Instance Blocked Moving"
+msgstr "Déménagement en cours"
 
 msgid "Instance Blocked Unknown"
 msgstr "Le Cozy a été bloqué pour une raison inconnue"
@@ -693,6 +720,44 @@ msgstr ""
 
 msgid "Mail Export Error Outro"
 msgstr "Si le souci persiste, contactez le support client."
+
+msgid "Mail Move Confirm Subject"
+msgstr "Souhaitez-vous vraiment déménager votre Cozy ?"
+
+msgid "Mail Move Confirm Intro 1"
+msgstr "Bonjour %s,"
+
+msgid "Mail Move Confirm Intro 2"
+msgstr "Une demande a été faite pour déménager vos données depuis %s vers %s."
+
+msgid "Mail Move Confirm Button instruction"
+msgstr "Si vous êtes bien à l'origine de cette demande, cliquez ci-dessous pour lancer le déménagement."
+
+msgid "Mail Move Confirm Button text"
+msgstr "Accepter le déménagement"
+
+msgid "Mail Move Success Subject"
+msgstr "Bonne nouvelle ! Le déménagement dans votre Cozy est terminé"
+
+msgid "Mail Move Success Intro 1"
+msgstr "Bonjour %s,"
+
+msgid "Mail Move Success Intro 2"
+msgstr "Le déménagement de toutes vos données dans votre nouveau Cozy s'est déroulé avec succès."
+
+msgid "Mail Move Success Button instruction"
+msgstr "Vous pouvez dès à présent accéder à vos données dans votre Cozy en cliquant sur le bouton suivant :"
+
+msgid "Mail Move Success Button text"
+msgstr "Accéder à mon Cozy"
+
+msgid "Mail Move Success Apps not installed"
+msgstr ""
+"Pour information, les services %s n'ont pas pu être ré-installés. Toutefois,"
+" les données associées ont bien été importées."
+
+msgid "Mail Move Success Outro"
+msgstr "À bientôt, votre Cozy"
 
 msgid "Mail Two Factor Subject"
 msgstr "Code de connexion à usage unique"
