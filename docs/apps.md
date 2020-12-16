@@ -358,7 +358,7 @@ Content-Type: application/vnd.api+json
 #### Advanced usage
 
 Two optional query parameters are available for an app update:
--   `PermissionsAcked`: (defaults to `true`)
+-   `PermissionsAcked`: (defaults to `false`)
       - Tells that the user accepted the permissions/ToS. It is useful if there are
     newer permissions or Terms Of Service and you want to be sure they were read
     or accepted. If set to `false`, the update will be blocked and the user will
@@ -378,7 +378,7 @@ Two optional query parameters are available for an app update:
   to a particular `beta` version:
 
 ```http
-PUT /apps/emails?Source=https://<apps-repository>/emails/1.0.0-beta HTTP/1.1
+PUT /apps/emails?Source=registry://drive/1.0.0-beta HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
