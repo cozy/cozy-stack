@@ -458,7 +458,7 @@ func authorizeMoveForm(c echo.Context) error {
 			return err
 		}
 		mail, _ := inst.SettingsEMail()
-		return c.Render(http.StatusNotFound, "move_delegated_auth.html", echo.Map{
+		return c.Render(http.StatusOK, "move_delegated_auth.html", echo.Map{
 			"CozyUI":           middlewares.CozyUI(inst),
 			"ThemeCSS":         middlewares.ThemeCSS(inst),
 			"Domain":           inst.ContextualDomain(),
@@ -521,7 +521,7 @@ func authorizeMove(c echo.Context) error {
 		if !correctPasscode {
 			errorMessage := inst.Translate(TwoFactorErrorKey)
 			mail, _ := inst.SettingsEMail()
-			return c.Render(http.StatusNotFound, "move_delegated_auth.html", echo.Map{
+			return c.Render(http.StatusOK, "move_delegated_auth.html", echo.Map{
 				"CozyUI":           middlewares.CozyUI(inst),
 				"ThemeCSS":         middlewares.ThemeCSS(inst),
 				"Domain":           inst.ContextualDomain(),

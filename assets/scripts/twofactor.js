@@ -9,9 +9,7 @@
   const submitButton = d.getElementById('login-submit')
   const twoFactorPasscodeInput = d.getElementById('two-factor-passcode')
   const twoFactorTokenInput = d.getElementById('two-factor-token')
-  const twoFactorTrustDeviceCheckbox = d.getElementById(
-    'two-factor-trust-device'
-  )
+  const trustDeviceCheckbox = d.getElementById('two-factor-trust-device')
   const longRunSessionCheckbox = d.getElementById('long-run-session')
 
   let errorPanel = loginForm && loginForm.querySelector('.wizard-errors')
@@ -48,7 +46,8 @@
       longRunSessionCheckbox && longRunSessionCheckbox.checked ? '1' : '0'
     const passcode = twoFactorPasscodeInput.value
     const token = twoFactorTokenInput.value
-    const trustDevice = twoFactorTrustDeviceCheckbox.checked ? '1' : '0'
+    const trustDevice =
+      trustDeviceCheckbox && trustDeviceCheckbox.checked ? '1' : '0'
     const redirect = redirectInput.value + w.location.hash
 
     const headers = new Headers()
