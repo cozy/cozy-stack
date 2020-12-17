@@ -87,6 +87,45 @@ func fsck(domain string) error {
 	return nil
 }
 
+var checkTriggers = &cobra.Command{
+	Use:   "triggers <domain>",
+	Short: "Check the triggers",
+	Long: `
+This command checks that the instance doesn't have duplicate triggers: several
+triggers of the same type, for the same worker, and with the same arguments.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+
+		c := newAdminClient()
+		res, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   "/instances/" + url.PathEscape(domain) + "/checks/triggers",
+		})
+		if err != nil {
+			return err
+		}
+
+		var result []map[string]interface{}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		if err != nil {
+			return err
+		}
+
+		if len(result) > 0 {
+			for _, r := range result {
+				j, _ := json.Marshal(r)
+				fmt.Printf("%s\n", j)
+			}
+			os.Exit(1)
+		}
+		return nil
+	},
+}
+
 var checkSharedCmd = &cobra.Command{
 	Use:   "shared <domain>",
 	Short: "Check the io.cozy.shared documents",
@@ -169,6 +208,7 @@ an active member.
 
 func init() {
 	checkCmdGroup.AddCommand(checkFSCmd)
+	checkCmdGroup.AddCommand(checkTriggers)
 	checkCmdGroup.AddCommand(checkSharedCmd)
 	checkCmdGroup.AddCommand(checkSharingsCmd)
 	checkFSCmd.Flags().BoolVar(&flagCheckFSIndexIntegrity, "index-integrity", false, "Check the index integrity only")
