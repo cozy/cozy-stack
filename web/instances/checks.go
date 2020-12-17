@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -76,6 +77,58 @@ func fsckHandler(c echo.Context) (err error) {
 		}
 	}
 	return nil
+}
+
+func checkTriggers(c echo.Context) error {
+	domain := c.Param("domain")
+	inst, err := lifecycle.GetInstance(domain)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	triggers, err := job.System().GetAllTriggers(inst)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return c.JSON(http.StatusOK, []map[string]interface{}{
+				{"error": err.Error()},
+			})
+		}
+		return wrapError(err)
+	}
+
+	var results []map[string]interface{}
+	for i, left := range triggers {
+		for j, right := range triggers {
+			if i >= j {
+				continue
+			}
+			if left.Type() != right.Type() {
+				continue
+			}
+			lInfos := left.Infos()
+			rInfos := right.Infos()
+			if lInfos.WorkerType != rInfos.WorkerType {
+				continue
+			}
+			if lInfos.Arguments != rInfos.Arguments {
+				continue
+			}
+			if lInfos.Debounce != rInfos.Debounce {
+				continue
+			}
+			results = append(results, map[string]interface{}{
+				"type":      "duplicate",
+				"_id":       lInfos.ID(),
+				"other_id":  rInfos.ID(),
+				"trigger":   left.Type(),
+				"worker":    lInfos.WorkerType,
+				"arguments": lInfos.Arguments,
+				"debounce":  lInfos.Debounce,
+			})
+		}
+	}
+
+	return c.JSON(http.StatusOK, results)
 }
 
 func checkShared(c echo.Context) error {
