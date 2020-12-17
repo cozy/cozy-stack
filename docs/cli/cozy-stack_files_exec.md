@@ -9,7 +9,7 @@ Available commands:
 
     mkdir <name>               Creates a directory with specified name
     ls [-l] [-a] [-h] <name>   Prints the children of the specified directory
-    tree <name>                Prints the tree structure of the specified directory
+    tree [-l] <name>           Prints the tree structure of the specified directory
     attrs <name>               Prints the attributes of the specified file or directory
     cat <name>                 Echo the file content in stdout
     mv <from> <to>             Rename a file or directory

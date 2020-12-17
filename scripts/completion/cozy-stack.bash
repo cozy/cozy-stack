@@ -871,6 +871,38 @@ _cozy-stack_check_sharings()
     noun_aliases=()
 }
 
+_cozy-stack_check_triggers()
+{
+    last_command="cozy-stack_check_triggers"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
 _cozy-stack_check()
 {
     last_command="cozy-stack_check"
@@ -881,6 +913,7 @@ _cozy-stack_check()
     commands+=("fs")
     commands+=("shared")
     commands+=("sharings")
+    commands+=("triggers")
 
     flags=()
     two_word_flags=()
