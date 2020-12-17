@@ -59,10 +59,7 @@ func Serve(c echo.Context) error {
 		}
 
 		fs := app.FSForAppDir(slug)
-		f := appfs.NewAferoFileServer(fs, func(_, _, _, file string) string {
-			return path.Join("/", file)
-		})
-		return ServeAppFile(c, i, f, webapp)
+		return ServeAppFile(c, i, fs, webapp)
 	}
 
 	if file == "" || file == route.Index {

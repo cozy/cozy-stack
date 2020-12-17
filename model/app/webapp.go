@@ -501,7 +501,14 @@ func SetupAppsDir(apps map[string]string) {
 }
 
 // FSForAppDir returns a FS for the webapp in development.
-func FSForAppDir(slug string) afero.Fs {
+func FSForAppDir(slug string) appfs.FileServer {
+	base := baseFSForAppDir(slug)
+	return appfs.NewAferoFileServer(base, func(_, _, _, file string) string {
+		return path.Join("/", file)
+	})
+}
+
+func baseFSForAppDir(slug string) afero.Fs {
 	return afero.NewBasePathFs(afero.NewOsFs(), appsdir[slug])
 }
 
@@ -511,7 +518,7 @@ func loadManifestFromDir(slug string) (*WebappManifest, error) {
 	if !ok {
 		return nil, ErrNotFound
 	}
-	fs := FSForAppDir(slug)
+	fs := baseFSForAppDir(slug)
 	manFile, err := fs.Open(WebappManifestName)
 	if err != nil {
 		if os.IsNotExist(err) {

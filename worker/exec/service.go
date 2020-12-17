@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/model/app"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
+	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -119,7 +120,12 @@ func (w *serviceWorker) PrepareWorkDir(ctx *job.WorkerContext, i *instance.Insta
 	}
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
-	fs := app.AppsFileServer(i)
+	var fs appfs.FileServer
+	if man.FromAppsDir {
+		fs = app.FSForAppDir(man.Slug())
+	} else {
+		fs = app.AppsFileServer(i)
+	}
 	src, err := fs.Open(man.Slug(), man.Version(), man.Checksum(), path.Join("/", service.File))
 	if err != nil {
 		return
