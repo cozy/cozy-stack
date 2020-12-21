@@ -257,20 +257,16 @@ func Block(inst *instance.Instance, reason ...string) error {
 	} else {
 		r = instance.BlockedUnknown.Code
 	}
-	blocked := true
-	return Patch(inst, &Options{
-		Blocked:        &blocked,
-		BlockingReason: r,
-	})
+	inst.Blocked = true
+	inst.BlockingReason = r
+	return update(inst)
 }
 
 // Unblock reverts the blocking of an instance
 func Unblock(inst *instance.Instance) error {
-	blocked := false
-	return Patch(inst, &Options{
-		Blocked:        &blocked,
-		BlockingReason: "",
-	})
+	inst.Blocked = false
+	inst.BlockingReason = ""
+	return update(inst)
 }
 
 // ManagerSignTOS make a request to the manager in order to finalize the TOS
