@@ -88,6 +88,13 @@ $ cat ~/.cozy/cozy-admin-passphrase
 scrypt$16384$8$1$936bd62faf633b5f946f653c21161a9b$4e0d11dfa5fc1676ed329938b11a6584d30e603e0d06b8a63a99e8cec392d682
 ```
 
+## Temporary files
+
+The stack can use some temporary directories and files (execution of Image
+Magick, konnectors and services for example). And they can take several GB for
+the case of importing a Cozy. If needed, it is possible to configure the
+directory where they will be created via the `TMPDIR` environment variable.
+
 ## Hooks
 
 Cozy-stack can run scripts on some events to customize it. The scripts must be
