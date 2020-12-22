@@ -1,7 +1,9 @@
 package instances
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -102,6 +104,11 @@ func checkTriggers(c echo.Context) error {
 			if i >= j {
 				continue
 			}
+			if left.Type() == "@in" {
+				// It doesn't make sense to compare @in triggers as they can
+				// have scheduled at different times
+				continue
+			}
 			if left.Type() != right.Type() {
 				continue
 			}
@@ -116,6 +123,16 @@ func checkTriggers(c echo.Context) error {
 			if lInfos.Debounce != rInfos.Debounce {
 				continue
 			}
+			lHasMessage := lInfos.Message != nil
+			rHasMessage := rInfos.Message != nil
+			if lHasMessage != rHasMessage {
+				continue
+			}
+			if lHasMessage && rHasMessage {
+				if !bytes.Equal(lInfos.Message, rInfos.Message) {
+					continue
+				}
+			}
 			results = append(results, map[string]interface{}{
 				"type":      "duplicate",
 				"_id":       lInfos.ID(),
@@ -124,6 +141,7 @@ func checkTriggers(c echo.Context) error {
 				"worker":    lInfos.WorkerType,
 				"arguments": lInfos.Arguments,
 				"debounce":  lInfos.Debounce,
+				"message":   fmt.Sprintf("%s", lInfos.Message),
 			})
 		}
 	}
