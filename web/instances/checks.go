@@ -96,7 +96,7 @@ func checkTriggers(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	var results []map[string]interface{}
+	results := []map[string]interface{}{}
 	for i, left := range triggers {
 		for j, right := range triggers {
 			if i >= j {
