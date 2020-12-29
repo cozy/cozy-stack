@@ -8,9 +8,9 @@ import (
 	"strconv"
 
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
-	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/model/vfs"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/labstack/echo/v4"
 )
@@ -88,7 +88,23 @@ func checkTriggers(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	triggers, err := job.System().GetAllTriggers(inst)
+	type TriggerInfo struct {
+		TID        string          `json:"_id"`
+		Type       string          `json:"type"`
+		WorkerType string          `json:"worker"`
+		Arguments  string          `json:"arguments"`
+		Debounce   string          `json:"debounce"`
+		Message    json.RawMessage `json:"message"`
+	}
+	var triggers []*TriggerInfo
+	err = couchdb.ForeachDocs(inst, consts.Triggers, func(_ string, data json.RawMessage) error {
+		var t *TriggerInfo
+		if err := json.Unmarshal(data, &t); err != nil {
+			return err
+		}
+		triggers = append(triggers, t)
+		return nil
+	})
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
 			return c.JSON(http.StatusOK, []map[string]interface{}{
@@ -104,44 +120,42 @@ func checkTriggers(c echo.Context) error {
 			if i >= j {
 				continue
 			}
-			if left.Type() == "@in" {
+			if left.Type == "@in" {
 				// It doesn't make sense to compare @in triggers as they can
 				// have scheduled at different times
 				continue
 			}
-			if left.Type() != right.Type() {
+			if left.Type != right.Type {
 				continue
 			}
-			lInfos := left.Infos()
-			rInfos := right.Infos()
-			if lInfos.WorkerType != rInfos.WorkerType {
+			if left.WorkerType != right.WorkerType {
 				continue
 			}
-			if lInfos.Arguments != rInfos.Arguments {
+			if left.Arguments != right.Arguments {
 				continue
 			}
-			if lInfos.Debounce != rInfos.Debounce {
+			if left.Debounce != right.Debounce {
 				continue
 			}
-			lHasMessage := lInfos.Message != nil
-			rHasMessage := rInfos.Message != nil
+			lHasMessage := left.Message != nil
+			rHasMessage := right.Message != nil
 			if lHasMessage != rHasMessage {
 				continue
 			}
 			if lHasMessage && rHasMessage {
-				if !bytes.Equal(lInfos.Message, rInfos.Message) {
+				if !bytes.Equal(left.Message, right.Message) {
 					continue
 				}
 			}
 			results = append(results, map[string]interface{}{
 				"type":      "duplicate",
-				"_id":       lInfos.ID(),
-				"other_id":  rInfos.ID(),
-				"trigger":   left.Type(),
-				"worker":    lInfos.WorkerType,
-				"arguments": lInfos.Arguments,
-				"debounce":  lInfos.Debounce,
-				"message":   fmt.Sprintf("%s", lInfos.Message),
+				"_id":       left.TID,
+				"other_id":  right.TID,
+				"trigger":   left.Type,
+				"worker":    left.WorkerType,
+				"arguments": left.Arguments,
+				"debounce":  left.Debounce,
+				"message":   fmt.Sprintf("%s", left.Message),
 			})
 			break
 		}
