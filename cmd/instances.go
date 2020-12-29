@@ -1102,7 +1102,7 @@ func init() {
 	modifyInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "New list of settings (eg offer:premium)")
 	modifyInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "Specify a new disk quota")
 	modifyInstanceCmd.Flags().BoolVar(&flagBlocked, "blocked", false, "Block the instance")
-	modifyInstanceCmd.Flags().BoolVar(&flagDeleting, "deleting", false, "Set (or remove) the deleting flag")
+	modifyInstanceCmd.Flags().BoolVar(&flagDeleting, "deleting", false, "Set (or remove) the deleting flag (ex: `--deleting=false`)")
 	modifyInstanceCmd.Flags().BoolVar(&flagOnboardingFinished, "onboarding-finished", false, "Force the finishing of the onboarding")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
 	debugInstanceCmd.Flags().StringVar(&flagDomain, "domain", cozyDomain(), "Specify the domain name of the instance")
