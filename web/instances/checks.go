@@ -143,6 +143,7 @@ func checkTriggers(c echo.Context) error {
 				"debounce":  lInfos.Debounce,
 				"message":   fmt.Sprintf("%s", lInfos.Message),
 			})
+			break
 		}
 	}
 
