@@ -5,6 +5,7 @@ import (
 	"html/template"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	build "github.com/cozy/cozy-stack/pkg/config"
 	"github.com/labstack/echo/v4"
 )
 
@@ -26,9 +27,13 @@ func BuildTemplates() {
 	))
 	faviconTemplate = template.Must(template.New("favicon").Funcs(FuncsMap).Parse(`
 	<link rel="icon" href="{{asset .Domain "/favicon.ico" .ContextName}}">
-	<link rel="icon" type="image/png" href="{{asset .Domain "/favicon-16x16.png" .ContextName}}" sizes="16x16">
-	<link rel="icon" type="image/png" href="{{asset .Domain "/favicon-32x32.png" .ContextName}}" sizes="32x32">
+	{{if .Dev}}
+	<link rel="icon" href="{{asset .Domain "/images/cozy-dev.svg"}}" type="image/svg+xml" sizes="any">
+	{{else}}
+	<link rel="icon" href="{{asset .Domain "/icon.svg"}}" type="image/svg+xml" sizes="any">
+	{{end}}
 	<link rel="apple-touch-icon" sizes="180x180" href="{{asset .Domain "/apple-touch-icon.png" .ContextName}}"/>
+	<link rel="manifest" href="{{asset .Domain "/manifest.webmanifest"}}">
 		`))
 }
 
@@ -65,6 +70,7 @@ func Favicon(i *instance.Instance) template.HTML {
 	err := faviconTemplate.Execute(buf, echo.Map{
 		"Domain":      i.ContextualDomain(),
 		"ContextName": i.ContextName,
+		"Dev":         build.IsDevRelease(),
 	})
 	if err != nil {
 		panic(err)

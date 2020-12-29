@@ -238,7 +238,7 @@ func TestServeWithAnIntents(t *testing.T) {
 func TestFaviconWithContext(t *testing.T) {
 	context := "foo"
 
-	asset, ok := assets.Get("/favicon-32x32.png", context)
+	asset, ok := assets.Get("/favicon.ico", context)
 	if ok {
 		_ = assets.Remove(asset.Name, asset.Context)
 	}
@@ -249,7 +249,7 @@ func TestFaviconWithContext(t *testing.T) {
 
 	assetsOptions := []model.AssetOption{{
 		URL:     fmt.Sprintf("file://%s", filepath.Join(tmpdir, "custom_favicon.png")),
-		Name:    "/favicon-32x32.png",
+		Name:    "/favicon.ico",
 		Context: context,
 	}}
 	err = dynamic.RegisterCustomExternals(assetsOptions, 1)
@@ -267,8 +267,8 @@ func TestFaviconWithContext(t *testing.T) {
 	body, _ := ioutil.ReadAll(res.Body)
 	expected := `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`
 	assert.Contains(t, string(body), expected)
-	assert.Contains(t, string(body), fmt.Sprintf("/assets/ext/%s/favicon-32x32.png", context))
-	assert.NotContains(t, string(body), "/assets/favicon-32x32.png")
+	assert.Contains(t, string(body), fmt.Sprintf("/assets/ext/%s/favicon.ico", context))
+	assert.NotContains(t, string(body), "/assets/favicon.ico")
 }
 
 func TestServeAppsWithJWTNotLogged(t *testing.T) {
