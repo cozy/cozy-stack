@@ -16,22 +16,22 @@ cozy-stack instances modify <domain> [flags]
 ### Options
 
 ```
-      --blocked                  Block the instance
-      --context-name string      New context name
-      --deleting                 Set (or remove) the deleting flag (ex: `--deleting=false`)
-      --disk-quota string        Specify a new disk quota
-      --domain-aliases strings   Specify one or more aliases domain for the instance (separated by ',')
-      --email string             New email
-  -h, --help                     help for modify
-      --locale string            New locale
-      --oidc_id string           New identifier for checking authentication from OIDC
-      --onboarding-finished      Force the finishing of the onboarding
-      --public-name string       New public name
-      --settings string          New list of settings (eg offer:premium)
-      --tos string               Update the TOS version signed
-      --tos-latest string        Update the latest TOS version
-      --tz string                New timezone
-      --uuid string              New UUID
+      --blocked                     Block the instance
+      --context-name string         New context name
+      --deleting --deleting=false   Set (or remove) the deleting flag (ex: --deleting=false)
+      --disk-quota string           Specify a new disk quota
+      --domain-aliases strings      Specify one or more aliases domain for the instance (separated by ',')
+      --email string                New email
+  -h, --help                        help for modify
+      --locale string               New locale
+      --oidc_id string              New identifier for checking authentication from OIDC
+      --onboarding-finished         Force the finishing of the onboarding
+      --public-name string          New public name
+      --settings string             New list of settings (eg offer:premium)
+      --tos string                  Update the TOS version signed
+      --tos-latest string           Update the latest TOS version
+      --tz string                   New timezone
+      --uuid string                 New UUID
 ```
 
 ### Options inherited from parent commands
