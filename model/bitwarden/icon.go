@@ -242,6 +242,9 @@ func downloadIcon(u string) (*Icon, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(b) == 0 {
+		return nil, errors.New("Empty icon")
+	}
 	if len(b) > maxSize {
 		return nil, errors.New("Max size exceeded")
 	}
