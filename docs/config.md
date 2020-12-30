@@ -176,7 +176,9 @@ Here are a small list of assets that you may want to customize:
 
 - `/styles/theme.css`: a CSS file where you can override the colors and put
   other CSS rules
-- `/favicon-16x16.png` and `/favicon-32x32.png`: the two variants of the
+- `/favicon.ico`: the old-school favicon
+- `/icon.svg`: the favicon in SVG format
+- `/icon-192.png` and `/icon-512.png`: the two variants of the
   favicon
 - `/apple-touch-icon.png`: the same but for Apple
 - `/images/default-avatar.png`: the image to use as the default avatar.
