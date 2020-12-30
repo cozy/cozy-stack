@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -462,6 +463,7 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 // the new URL.
 func (s *Sharing) ChangeOwnerAddress(inst *instance.Instance, newInstance string) error {
 	s.Members[0].Instance = newInstance
+	updateContactAddress(inst, s.Members[0].Email, newInstance)
 	return couchdb.UpdateDoc(inst, s)
 }
 
@@ -469,7 +471,19 @@ func (s *Sharing) ChangeOwnerAddress(inst *instance.Instance, newInstance string
 // instance to a new URL and the owner if informed of the new URL.
 func (s *Sharing) ChangeMemberAddress(inst *instance.Instance, m *Member, newInstance string) error {
 	m.Instance = newInstance
+	updateContactAddress(inst, m.Email, newInstance)
 	return couchdb.UpdateDoc(inst, s)
+}
+
+func updateContactAddress(inst *instance.Instance, email, newInstance string) {
+	if email == "" {
+		return
+	}
+	c, err := contact.FindByEmail(inst, email)
+	if err != nil {
+		return
+	}
+	_ = c.ChangeCozyURL(inst, newInstance)
 }
 
 // RefreshToken is used after a failed request with a 4xx error code.

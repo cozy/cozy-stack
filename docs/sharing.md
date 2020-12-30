@@ -1171,7 +1171,7 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.sharings.moved",
     "id": "ce8835a061d0ef68947afe69a0046722",
     "attributes": {
-      "new_instance": "alice.newcozy.example"
+      "new_instance": "https://alice.newcozy.example"
     }
   }
 }
