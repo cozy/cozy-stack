@@ -229,6 +229,35 @@ func AnswerSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, ac, nil)
 }
 
+// ChangeCozyAddress is called when a Cozy has been moved to a new address.
+func ChangeCozyAddress(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	var moved sharing.APIMoved
+	if _, err = jsonapi.Bind(c.Request().Body, &moved); err != nil {
+		return jsonapi.BadJSON()
+	}
+
+	member, err := requestMember(c, s)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	if s.Owner {
+		err = s.ChangeMemberAddress(inst, member, moved.NewInstance)
+	} else {
+		err = s.ChangeOwnerAddress(inst, moved.NewInstance)
+	}
+	if err != nil {
+		return wrapErrors(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func addRecipientsToSharing(inst *instance.Instance, s *sharing.Sharing, rel *jsonapi.Relationship, readOnly bool) error {
 	var err error
 	if data, ok := rel.Data.([]interface{}); ok {
@@ -656,8 +685,9 @@ func Routes(router *echo.Group) {
 	// Managing recipients
 	router.POST("/:sharing-id/recipients", AddRecipients)
 	router.PUT("/:sharing-id/recipients", PutRecipients)
-	router.DELETE("/:sharing-id/recipients", RevokeSharing)                                                  // On the sharer
-	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient)                                         // On the sharer
+	router.DELETE("/:sharing-id/recipients", RevokeSharing)          // On the sharer
+	router.DELETE("/:sharing-id/recipients/:index", RevokeRecipient) // On the sharer
+	router.POST("/:sharing-id/recipients/self/moved", ChangeCozyAddress)
 	router.POST("/:sharing-id/recipients/:index/readonly", AddReadOnly)                                      // On the sharer
 	router.POST("/:sharing-id/recipients/self/readonly", DowngradeToReadOnly, checkSharingWritePermissions)  // On the recipient
 	router.DELETE("/:sharing-id/recipients/:index/readonly", RemoveReadOnly)                                 // On the sharer

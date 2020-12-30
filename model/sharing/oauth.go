@@ -457,6 +457,21 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 	return nil, ErrMemberNotFound
 }
 
+// ChangeOwnerAddress is used when the owner of the sharing has moved their
+// instance to a new URL and the other members of the sharing are informed of
+// the new URL.
+func (s *Sharing) ChangeOwnerAddress(inst *instance.Instance, newInstance string) error {
+	s.Members[0].Instance = newInstance
+	return couchdb.UpdateDoc(inst, s)
+}
+
+// ChangeMemberAddress is used when a recipient of the sharing has moved their
+// instance to a new URL and the owner if informed of the new URL.
+func (s *Sharing) ChangeMemberAddress(inst *instance.Instance, m *Member, newInstance string) error {
+	m.Instance = newInstance
+	return couchdb.UpdateDoc(inst, s)
+}
+
 // RefreshToken is used after a failed request with a 4xx error code.
 // It renews the access token and retries the request
 func RefreshToken(inst *instance.Instance, s *Sharing, m *Member, creds *Credentials, opts *request.Options, body []byte) (*http.Response, error) {
