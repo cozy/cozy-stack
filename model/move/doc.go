@@ -150,10 +150,14 @@ func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions, tok
 	link := e.GenerateLink(inst)
 	u := to.ImportsURL()
 	payload, err := json.Marshal(map[string]interface{}{
-		"url": link,
-		"move_from": map[string]interface{}{
-			"url":   inst.PageURL("/", nil),
-			"token": token,
+		"data": map[string]interface{}{
+			"attributes": map[string]interface{}{
+				"url": link,
+				"move_from": map[string]interface{}{
+					"url":   inst.PageURL("/", nil),
+					"token": token,
+				},
+			},
 		},
 	})
 	if err != nil {
@@ -163,7 +167,7 @@ func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions, tok
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Content-Type", "application/vnd.api+json")
 	req.Header.Add("Authorization", "Bearer "+to.Token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
