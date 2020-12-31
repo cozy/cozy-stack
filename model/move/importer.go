@@ -33,6 +33,7 @@ type importer struct {
 	tmpFile          string
 	doctype          string
 	docs             []interface{}
+	triggers         []*job.TriggerInfos
 }
 
 func (im *importer) importPart(cursor string) error {
@@ -191,6 +192,12 @@ func (im *importer) importZip(zr zip.Reader) error {
 		errm = multierror.Append(errm, err)
 	}
 
+	// Import the triggers at the end to avoid creating many jobs when
+	// importing the files.
+	if err := im.importTriggers(); err != nil {
+		errm = multierror.Append(errm, err)
+	}
+
 	// Reinject the email address from the destination Cozy in the myself
 	// contact document
 	if myself, err := contact.GetMyself(im.inst); err == nil {
@@ -273,12 +280,26 @@ func (im *importer) importTrigger(zf *zip.File) error {
 	default:
 		return nil
 	}
-	doc.SetRev("")
-	t, err := job.NewTrigger(im.inst, *doc, nil)
-	if err != nil {
-		return err
+	// We don't import triggers now, but wait after files has been imported to
+	// avoid creating many jobs when importing shared files.
+	im.triggers = append(im.triggers, doc)
+	return nil
+}
+
+func (im *importer) importTriggers() error {
+	var errm error
+	for _, doc := range im.triggers {
+		doc.SetRev("")
+		t, err := job.NewTrigger(im.inst, *doc, nil)
+		if err != nil {
+			errm = multierror.Append(errm, err)
+			continue
+		}
+		if err = job.System().AddTrigger(t); err != nil {
+			errm = multierror.Append(errm, err)
+		}
 	}
-	return job.System().AddTrigger(t)
+	return errm
 }
 
 func (im *importer) installApp(id string) {
