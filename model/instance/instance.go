@@ -3,6 +3,7 @@ package instance
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/i18n"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 
@@ -615,6 +617,27 @@ func (i *Instance) CreateShareCode(subject string) (string, error) {
 	scope := ""
 	sessionID := ""
 	return i.MakeJWT(consts.ShareAudience, subject, scope, sessionID, time.Now())
+}
+
+// MovedError is used to return an error when the instance has been moved to a
+// new domain/hoster.
+func (i *Instance) MovedError() *jsonapi.Error {
+	if !i.Moved {
+		return nil
+	}
+	jerr := jsonapi.Error{
+		Status: http.StatusGone,
+		Title:  "Cozy has been moved",
+		Code:   "moved",
+		Detail: i.Translate("The Cozy has been moved to a new address"),
+	}
+	doc, err := i.SettingsDocument()
+	if err == nil {
+		if to, ok := doc.M["moved_to"].(string); ok {
+			jerr.Links = &jsonapi.LinksList{Related: to}
+		}
+	}
+	return &jerr
 }
 
 // ensure Instance implements couchdb.Doc

@@ -171,6 +171,9 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 
 	switch claims.Audience {
 	case consts.AccessTokenAudience:
+		if err := instance.MovedError(); err != nil {
+			return nil, err
+		}
 		// An OAuth2 token is only valid if the client has not been revoked
 		c, err := oauth.FindClient(instance, claims.Subject)
 		if err != nil {
@@ -178,9 +181,6 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 				return nil, err
 			}
 			return nil, permission.ErrInvalidToken
-		}
-		if instance.Moved {
-			return nil, permission.ErrMoved
 		}
 		return GetForOauth(instance, &claims, c)
 

@@ -213,6 +213,12 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 		return nil, errors.New("Cannot reach the other Cozy")
 	}
 
+	doc, err := inst.SettingsDocument()
+	if err == nil {
+		doc.M["moved_to"] = req.Target
+		_ = couchdb.UpdateDoc(inst, doc)
+	}
+
 	options := ExportOptions{
 		ContextualDomain: inst.ContextualDomain(),
 		TokenSource:      req.SourceCreds.Token,
