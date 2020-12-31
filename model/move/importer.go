@@ -408,7 +408,7 @@ func (im *importer) importSharing(zf *zip.File) error {
 			}
 		}
 	}
-	return couchdb.CreateDoc(im.inst, s)
+	return couchdb.CreateNamedDoc(im.inst, s)
 }
 
 func (im *importer) readSharing(zf *zip.File) (*sharing.Sharing, error) {
@@ -437,7 +437,7 @@ func (im *importer) importPermission(zf *zip.File) error {
 		return nil
 	}
 	doc.SetRev("")
-	return couchdb.CreateDoc(im.inst, doc)
+	return couchdb.CreateNamedDoc(im.inst, doc)
 }
 
 func (im *importer) readPermission(zf *zip.File) (*permission.Permission, error) {
