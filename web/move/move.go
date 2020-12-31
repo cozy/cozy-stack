@@ -183,7 +183,7 @@ func waitImportHasFinished(c echo.Context) error {
 		title = "Move in progress Title"
 		doc, err := inst.SettingsDocument()
 		if err == nil {
-			if from, ok := doc.M["move_from"].(string); ok {
+			if from, ok := doc.M["moved_from"].(string); ok {
 				source = from
 			}
 		}
