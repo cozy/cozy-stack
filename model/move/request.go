@@ -106,6 +106,7 @@ func CreateRequest(inst *instance.Instance, params url.Values) (*Request, error)
 		if err != nil {
 			return nil, err
 		}
+		client.CouchID = client.ClientID
 		token, err := client.CreateJWT(inst, consts.AccessTokenAudience, MoveScope)
 		if err != nil {
 			return nil, err
