@@ -93,7 +93,7 @@ func notifyMember(inst *instance.Instance, s *sharing.Sharing, index int) error 
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = sharing.RefreshToken(inst, s, &s.Members[index], &s.Credentials[credIndex], opts, body)
+		res, err = sharing.RefreshToken(inst, res, s, &s.Members[index], &s.Credentials[credIndex], opts, body)
 	}
 	if err != nil {
 		return err

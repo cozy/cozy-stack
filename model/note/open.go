@@ -267,7 +267,7 @@ func (o *Opener) openSharedNote() (*apiNoteURL, error) {
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = sharing.RefreshToken(o.inst, s, creator, creds, opts, nil)
+		res, err = sharing.RefreshToken(o.inst, res, s, creator, creds, opts, nil)
 	}
 	if err != nil {
 		return nil, sharing.ErrInternalServerError

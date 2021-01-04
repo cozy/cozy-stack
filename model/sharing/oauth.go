@@ -487,8 +487,24 @@ func updateContactAddress(inst *instance.Instance, email, newInstance string) {
 }
 
 // RefreshToken is used after a failed request with a 4xx error code.
-// It renews the access token and retries the request
-func RefreshToken(inst *instance.Instance, s *Sharing, m *Member, creds *Credentials, opts *request.Options, body []byte) (*http.Response, error) {
+// It checks if the targeted instance has moved, and tries on the new instance
+// if it is the case. And, if needed, it renews the access token and retries
+// the request.
+func RefreshToken(
+	inst *instance.Instance,
+	resp *http.Response,
+	s *Sharing,
+	m *Member,
+	creds *Credentials,
+	opts *request.Options,
+	body []byte,
+) (*http.Response, error) {
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusGone {
+		tryUpdateMemberInstance(resp, m, opts)
+	}
+
 	if err := creds.Refresh(inst, s, m); err != nil {
 		return nil, err
 	}
@@ -504,4 +520,21 @@ func RefreshToken(inst *instance.Instance, s *Sharing, m *Member, creds *Credent
 		return nil, err
 	}
 	return res, nil
+}
+
+func tryUpdateMemberInstance(res *http.Response, m *Member, opts *request.Options) {
+	var list jsonapi.ErrorList
+	if err := json.NewDecoder(res.Body).Decode(&list); err != nil {
+		return
+	}
+	if len(list) != 1 || list[0].Links == nil || list[0].Links.Related == "" {
+		return
+	}
+	m.Instance = list[0].Links.Related
+	u, err := url.Parse(m.Instance)
+	if err != nil {
+		return
+	}
+	opts.Scheme = u.Scheme
+	opts.Domain = u.Host
 }
