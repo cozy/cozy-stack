@@ -208,7 +208,9 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 	}
 
 	u := req.ImportingURL() + "?source=" + inst.ContextualDomain()
-	_, err = http.Post(u, "application/json", nil)
+	r, err := http.NewRequest("POST", u, nil)
+	r.Header.Add("Authorization", "Bearer "+req.TargetCreds.Token)
+	_, err = http.DefaultClient.Do(r)
 	if err != nil {
 		return nil, errors.New("Cannot reach the other Cozy")
 	}
