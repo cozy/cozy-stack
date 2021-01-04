@@ -102,5 +102,12 @@ func ImportWorker(c *job.WorkerContext) error {
 	}
 
 	_ = move.SendImportDoneMail(c.Instance, status, notInstalled)
-	return err
+	if err != nil {
+		return err
+	}
+
+	if opts.MoveFrom == nil {
+		return nil
+	}
+	return move.NotifySharings(c.Instance)
 }
