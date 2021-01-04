@@ -759,10 +759,11 @@ func (s *Sharing) getDirDocFromInstance(inst *instance.Instance, m *Member, cred
 			"Accept":        "application/json",
 			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 		},
+		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, res, s, m, creds, opts, nil)
+		res, err = RefreshToken(inst, err, s, m, creds, opts, nil)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode/100 == 5 {

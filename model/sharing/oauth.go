@@ -492,17 +492,15 @@ func updateContactAddress(inst *instance.Instance, email, newInstance string) {
 // the request.
 func RefreshToken(
 	inst *instance.Instance,
-	resp *http.Response,
+	reqErr error,
 	s *Sharing,
 	m *Member,
 	creds *Credentials,
 	opts *request.Options,
 	body []byte,
 ) (*http.Response, error) {
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusGone {
-		tryUpdateMemberInstance(resp, m, opts)
+	if err, ok := reqErr.(*request.Error); ok && err.Status == http.StatusText(http.StatusGone) {
+		tryUpdateMemberInstance(err, m, opts)
 	}
 
 	if err := creds.Refresh(inst, s, m); err != nil {
@@ -522,19 +520,44 @@ func RefreshToken(
 	return res, nil
 }
 
-func tryUpdateMemberInstance(res *http.Response, m *Member, opts *request.Options) {
-	var list jsonapi.ErrorList
-	if err := json.NewDecoder(res.Body).Decode(&list); err != nil {
-		return
-	}
-	if len(list) != 1 || list[0].Links == nil || list[0].Links.Related == "" {
-		return
-	}
-	m.Instance = list[0].Links.Related
+func tryUpdateMemberInstance(reqErr *request.Error, m *Member, opts *request.Options) {
+	m.Instance = reqErr.Title
 	u, err := url.Parse(m.Instance)
 	if err != nil {
 		return
 	}
 	opts.Scheme = u.Scheme
 	opts.Domain = u.Host
+}
+
+// ParseRequestError is used to parse an error in a request.Options, and it
+// keeps the new instance URL when a Cozy has moved in Title.
+func ParseRequestError(res *http.Response, body []byte) error {
+	if res.StatusCode != http.StatusGone {
+		return &request.Error{
+			Status: http.StatusText(res.StatusCode),
+			Title:  http.StatusText(res.StatusCode),
+			Detail: string(body),
+		}
+	}
+
+	var errors struct {
+		List jsonapi.ErrorList `json:"errors"`
+	}
+	if err := json.Unmarshal(body, &errors); err != nil {
+		return &request.Error{
+			Status: http.StatusText(res.StatusCode),
+			Title:  http.StatusText(res.StatusCode),
+			Detail: string(body),
+		}
+	}
+	var newInstance string
+	if len(errors.List) == 1 && errors.List[0].Links != nil && errors.List[0].Links.Related != "" {
+		newInstance = errors.List[0].Links.Related
+	}
+	return &request.Error{
+		Status: http.StatusText(res.StatusCode),
+		Title:  newInstance,
+		Detail: string(body),
+	}
 }

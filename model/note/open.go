@@ -264,10 +264,11 @@ func (o *Opener) openSharedNote() (*apiNoteURL, error) {
 			"Accept":        "application/vnd.api+json",
 			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 		},
+		ParseError: sharing.ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = sharing.RefreshToken(o.inst, res, s, creator, creds, opts, nil)
+		res, err = sharing.RefreshToken(o.inst, err, s, creator, creds, opts, nil)
 	}
 	if err != nil {
 		return nil, sharing.ErrInternalServerError
