@@ -168,3 +168,24 @@ func updateInstanceAuthMode(c echo.Context) error {
 
 	return c.NoContent(http.StatusNoContent)
 }
+
+func clearMovedFrom(c echo.Context) error {
+	if !middlewares.IsLoggedIn(c) {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+
+	inst := middlewares.GetInstance(c)
+	doc, err := inst.SettingsDocument()
+	if err != nil {
+		return err
+	}
+
+	if doc.M["moved_from"] != nil {
+		delete(doc.M, "moved_from")
+		if err := couchdb.UpdateDoc(inst, doc); err != nil {
+			return err
+		}
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}

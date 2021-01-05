@@ -26,7 +26,7 @@ Authorization: Bearer ...
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 ```
 
 ```json
@@ -73,7 +73,7 @@ Authorization: Bearer ...
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 ```
 
 ```json
@@ -387,6 +387,32 @@ Cookie: sessionid=xxxx
 To use this endpoint, an application needs a permission on the type
 `io.cozy.settings` for the verb `GET`.
 
+### DELETE /settings/instance/moved_from
+
+When there is an attribute `moved_from` in the instance settings, it means that
+the Cozy has been moved from the given address. The Home application uses this
+information to display a modal to alert the user. And when they dismiss the modal,
+a request is made to this route to remove this information (and avoid showing
+this modal again the next time they will open the Home again).
+
+#### Request
+
+```http
+DELETE /settings/instance/moved_from HTTP/1.1
+Host: target.cozy.tools
+Cookie: sessionid=xxxxx
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
+#### Permissions
+
+No permission is required to use this route, only that the user is logged-in.
+
 ### PUT /settings/instance
 
 If the user is logged in, allow to set the instance fields
@@ -397,7 +423,7 @@ If the user is logged in, allow to set the instance fields
 POST /settings/instance HTTP/1.1
 Host: alice.example.com
 Accept: application/vnd.api+json
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 Cookie: sessionid=xxxxx
 Authorization: Bearer settings-token
 ```
@@ -425,7 +451,7 @@ Authorization: Bearer settings-token
 
 ```
 HTTP/1.1 200 OK
-Content-type: application/json
+Content-Type: application/json
 ```
 
 ```json
@@ -575,7 +601,7 @@ Authorization: Bearer oauth2-clients-token
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 ```
 
 ```json
@@ -730,7 +756,7 @@ Accept: application/vnd.api+json
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 ```
 
 ```json
@@ -763,7 +789,7 @@ Accept: application/vnd.api+json
 
 ```http
 HTTP/1.1 200 OK
-Content-type: application/vnd.api+json
+Content-Type: application/vnd.api+json
 ```
 
 ```json

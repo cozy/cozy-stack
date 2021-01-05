@@ -11,14 +11,19 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/model/sharing"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
@@ -419,6 +424,215 @@ func cancelAuthorizeSharing(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, inst.SubDomain(consts.HomeSlug).String())
 	}
 	return c.Redirect(http.StatusSeeOther, previewURL)
+}
+
+func authorizeMoveForm(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	state := c.QueryParam("state")
+	if state == "" {
+		return renderError(c, http.StatusBadRequest, "Error No state parameter")
+	}
+	clientID := c.QueryParam("client_id")
+	if clientID == "" {
+		return renderError(c, http.StatusBadRequest, "Error No client_id parameter")
+	}
+	redirectURI := c.QueryParam("redirect_uri")
+	if redirectURI == "" {
+		return renderError(c, http.StatusBadRequest, "Error No redirect_uri parameter")
+	}
+	client := oauth.Client{}
+	if err := couchdb.GetDoc(inst, consts.OAuthClients, clientID, &client); err != nil {
+		return renderError(c, http.StatusBadRequest, "Error No registered client")
+	}
+	if !client.AcceptRedirectURI(redirectURI) {
+		return renderError(c, http.StatusBadRequest, "Error Incorrect redirect_uri")
+	}
+
+	if !inst.IsPasswordAuthenticationEnabled() {
+		if !middlewares.IsLoggedIn(c) {
+			q := url.Values{"redirect": {c.Request().URL.String()}}
+			return c.Redirect(http.StatusSeeOther, inst.PageURL("/oidc/start", q))
+		}
+		twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+		if err != nil {
+			return err
+		}
+		mail, _ := inst.SettingsEMail()
+		return c.Render(http.StatusOK, "move_delegated_auth.html", echo.Map{
+			"CozyUI":           middlewares.CozyUI(inst),
+			"ThemeCSS":         middlewares.ThemeCSS(inst),
+			"Domain":           inst.ContextualDomain(),
+			"ContextName":      inst.ContextName,
+			"Favicon":          middlewares.Favicon(inst),
+			"TwoFactorToken":   string(twoFactorToken),
+			"CredentialsError": "",
+			"Email":            mail,
+			"State":            state,
+			"ClientID":         clientID,
+			"Redirect":         redirectURI,
+		})
+	}
+
+	publicName, err := inst.PublicName()
+	if err != nil {
+		publicName = ""
+	}
+	var title string
+	if publicName == "" {
+		title = inst.Translate("Login Welcome")
+	} else {
+		title = inst.Translate("Login Welcome name", publicName)
+	}
+	help := inst.Translate("Login Password help")
+	iterations := 0
+	if settings, err := settings.Get(inst); err == nil {
+		iterations = settings.PassphraseKdfIterations
+	}
+
+	return c.Render(http.StatusOK, "authorize_move.html", echo.Map{
+		"TemplateTitle":  inst.TemplateTitle(),
+		"CozyUI":         middlewares.CozyUI(inst),
+		"ThemeCSS":       middlewares.ThemeCSS(inst),
+		"Domain":         inst.ContextualDomain(),
+		"ContextName":    inst.ContextName,
+		"Locale":         inst.Locale,
+		"Iterations":     iterations,
+		"Salt":           string(inst.PassphraseSalt()),
+		"Title":          title,
+		"PasswordHelp":   help,
+		"CSRF":           c.Get("csrf"),
+		"Favicon":        middlewares.Favicon(inst),
+		"CryptoPolyfill": middlewares.CryptoPolyfill(c),
+		"State":          state,
+		"ClientID":       clientID,
+		"RedirectURI":    redirectURI,
+	})
+}
+
+func authorizeMove(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if !inst.IsPasswordAuthenticationEnabled() {
+		if !middlewares.IsLoggedIn(c) {
+			return renderError(c, http.StatusUnauthorized, "Error Must be authenticated")
+		}
+		token := []byte(c.FormValue("two-factor-token"))
+		passcode := c.FormValue("two-factor-passcode")
+		correctPasscode := inst.ValidateTwoFactorPasscode(token, passcode)
+		if !correctPasscode {
+			errorMessage := inst.Translate(TwoFactorErrorKey)
+			mail, _ := inst.SettingsEMail()
+			return c.Render(http.StatusOK, "move_delegated_auth.html", echo.Map{
+				"CozyUI":           middlewares.CozyUI(inst),
+				"ThemeCSS":         middlewares.ThemeCSS(inst),
+				"Domain":           inst.ContextualDomain(),
+				"ContextName":      inst.ContextName,
+				"Favicon":          middlewares.Favicon(inst),
+				"TwoFactorToken":   string(token),
+				"CredentialsError": errorMessage,
+				"Email":            mail,
+				"State":            c.FormValue("state"),
+				"ClientID":         c.FormValue("client_id"),
+				"Redirect":         c.FormValue("redirect"),
+			})
+		}
+		u, err := moveSuccessURI(c)
+		if err != nil {
+			return err
+		}
+		return c.Redirect(http.StatusSeeOther, u)
+	}
+
+	// Check passphrase
+	passphrase := []byte(c.FormValue("passphrase"))
+	if lifecycle.CheckPassphrase(inst, passphrase) != nil {
+		errorMessage := inst.Translate(CredentialsErrorKey)
+		err := limits.CheckRateLimit(inst, limits.AuthType)
+		if limits.IsLimitReachedOrExceeded(err) {
+			if err = LoginRateExceeded(inst); err != nil {
+				inst.Logger().WithField("nspace", "auth").Warning(err)
+			}
+		}
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": errorMessage,
+		})
+	}
+
+	if inst.HasAuthMode(instance.TwoFactorMail) && !isTrustedDevice(c, inst) {
+		twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+		if err != nil {
+			return err
+		}
+		v := url.Values{}
+		v.Add("two_factor_token", string(twoFactorToken))
+		v.Add("state", c.FormValue("state"))
+		v.Add("client_id", c.FormValue("client_id"))
+		v.Add("redirect", c.FormValue("redirect"))
+		v.Add("trusted_device_checkbox", "false")
+
+		return c.JSON(http.StatusOK, echo.Map{
+			"redirect": inst.PageURL("/auth/twofactor", v),
+		})
+	}
+
+	u, err := moveSuccessURI(c)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"redirect": u,
+	})
+}
+
+func moveSuccessURI(c echo.Context) (string, error) {
+	u, err := url.Parse(c.FormValue("redirect"))
+	if err != nil {
+		return "", echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
+	}
+
+	inst := middlewares.GetInstance(c)
+	used, quota, err := DiskInfo(inst.VFS())
+	if err != nil {
+		return "", err
+	}
+
+	clientID := c.FormValue("client_id")
+	client := oauth.Client{}
+	if err := couchdb.GetDoc(inst, consts.OAuthClients, clientID, &client); err != nil {
+		return "", err
+	}
+	access, err := oauth.CreateAccessCode(inst, clientID, move.MoveScope)
+	if err != nil {
+		return "", err
+	}
+
+	q := u.Query()
+	q.Set("state", c.FormValue("state"))
+	q.Set("code", access.Code)
+	q.Set("used", used)
+	if quota != "" {
+		q.Set("quota", quota)
+	}
+	u.RawQuery = q.Encode()
+	return u.String(), nil
+}
+
+// DiskInfo returns the used and quota disk space for the given VFS.
+func DiskInfo(fs vfs.VFS) (string, string, error) {
+	versions, err := fs.VersionsUsage()
+	if err != nil {
+		return "", "", err
+	}
+	files, err := fs.FilesUsage()
+	if err != nil {
+		return "", "", err
+	}
+
+	used := fmt.Sprintf("%d", files+versions)
+	var quota string
+	if q := fs.DiskQuota(); q > 0 {
+		quota = fmt.Sprintf("%d", q)
+	}
+	return used, quota, nil
 }
 
 // AccessTokenReponse is the stuct used for serializing to JSON the response

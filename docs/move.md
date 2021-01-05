@@ -172,6 +172,12 @@ HTTP/1.1 303 See Other
 Location: https://destination.cozy.tools/move/importing
 ```
 
+### POST /move/importing
+
+This endpoint is called on the target Cozy by the source Cozy to block the
+instance during the move. A `source` parameter can be put in the query-string,
+with the domain of the Cozy source (for information).
+
 ### GET /move/importing
 
 This shows a page for the user to wait that the import finishes.
@@ -183,4 +189,124 @@ import. The server will send an event when it is done (or errored):
 
 ```
 server> {"redirect": "http://cozy.tools:8080/auth/login"}
+```
+
+### GET /move/authorize
+
+This endpoint is used by cozy-move to select the cozy source. If the user is
+already logged in, we don't ask its password again, as the delivered token will
+still need a confirmation by mail to start moving the Cozy.
+
+#### Request
+
+```http
+GET /move/authorize?state=8d560d60&redirect_uri=https://move.cozycloud.cc/callback/source HTTP/1.1
+Server: source.cozy.tools
+```
+
+#### Response
+
+```http
+HTTP/1.1 302 Found
+Location: https://move.cozycloud.cc/callback/source?code=543d7eb8149c&used=123456&quota=5000000&state=8d560d60
+```
+
+### POST /move/initialize
+
+This endpoint is used by the settings application to open the move wizard.
+
+#### Request
+
+```http
+POST /move/initialize HTTP/1.1
+Host: source.cozy.tools
+```
+
+#### Response
+
+```http
+HTTP/1.1 307 Temporary Redirect
+Location: https://move.cozycloud.cc/initialize?code=834d7eb8149c&cozy_url=https://source.cozy.tools&used=123456&quota=5000000&client_id=09136b00-1778-0139-f0a7-543d7eb8149c&client_secret=NDkyZTEzMDA
+```
+
+### POST /move/request
+
+This endpoint is used after the user has selected both instances on cozy-move
+to prepare the export and send the confirmation mail.
+
+#### Request
+
+```http
+POST /move/request HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+code=834d7eb8149c
+&target_url=https://target.cozy.tools/
+&target_token=M2EwYjlhZjAtMTc3OC0wMTM5LWYwYWMtNTQzZDdlYjgxNDlj
+&target_client_id=09136b00-1778-0139-f0a7-543d7eb8149c
+&target_client_secret=NDkyZTEzMDA
+```
+
+**Note:** instead of `code`, we can have `token`, `client_id`, and
+`client_secret` (depending if the user has started the workflow from the
+settings app or from cozy-move).
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/html
+```
+
+### GET /move/go
+
+This endpoint is used to confirm the move. It will ask the other Cozy to block
+its-self during the move and pushs a job for the export.
+
+#### Request
+
+```http
+GET /move/go?secret=tNTQzZDdlYjgxNDlj HTTP/1.1
+Host: source.cozy.tools
+```
+
+#### Reponse
+
+```http
+HTTP/1.1 303 See Other
+Location: https://target.cozy.tools/move/importing
+```
+
+### POST /move/finalize
+
+When the move has finished successfully, the target Cozy calls this endpoint on
+the source Cozy so that it can stop the konnectors and unblock the instance.
+
+#### Request
+
+```http
+POST /move/finalize HTTP/1.1
+Host: source.cozy.tools
+```
+#### Reponse
+
+```
+HTTP/1.1 204 No Content
+```
+
+### POST /move/abort
+
+If the export or the import fails during a move, the stack will call this
+endpoint for the other instance to unblock it.
+
+#### Request
+
+```http
+POST /move/abort HTTP/1.1
+Host: source.cozy.tools
+```
+#### Reponse
+
+```
+HTTP/1.1 204 No Content
 ```

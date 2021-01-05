@@ -272,7 +272,7 @@ func (j *CookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 // the setup instance URL instead.
 func (c *TestSetup) GetCookieJar() http.CookieJar {
 	instance := c.GetTestInstance()
-	instanceURL, err := url.Parse("https://" + instance.Domain + "/")
+	instanceURL, err := url.Parse("https://" + instance.Domain + "/auth")
 	if err != nil {
 		c.CleanupAndDie("Cant create cookie jar url", err)
 	}

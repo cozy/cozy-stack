@@ -1,0 +1,6 @@
+{{t "Mail Move Confirm Intro 1" .PublicName}}
+
+{{t "Mail Move Confirm Intro 2" .Source .Target}}
+
+{{t "Mail Move Confirm Button instruction"}}
+{{.ConfirmLink}}

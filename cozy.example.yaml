@@ -249,6 +249,10 @@ registries:
   default:
     - https://apps-registry.cozycloud.cc/
 
+# Wizard used for moving a Cozy from one place/hoster to another
+move:
+  url: https://move.cozycloud.cc/
+
 # [internal usage] Cloudery configuration
 clouderies:
   default:
@@ -340,6 +344,8 @@ contexts:
     noreply_address: noreply@cozy.beta
     noreply_name: My Cozy Beta
     reply_to: support@cozy.beta
+    # Use a different wizard for moving a Cozy
+    move_url: htts://move.cozy.beta/
     # Feature flags
     features:
       - hide_konnector_errors

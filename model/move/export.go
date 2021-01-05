@@ -11,19 +11,45 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/note"
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
 // ExportOptions contains the options for launching the export worker.
 type ExportOptions struct {
-	PartsSize        int64         `json:"parts_size"`
-	MaxAge           time.Duration `json:"max_age"`
-	WithDoctypes     []string      `json:"with_doctypes,omitempty"`
-	ContextualDomain string        `json:"contextual_domain,omitempty"`
+	PartsSize        int64          `json:"parts_size"`
+	MaxAge           time.Duration  `json:"max_age"`
+	WithDoctypes     []string       `json:"with_doctypes,omitempty"`
+	ContextualDomain string         `json:"contextual_domain,omitempty"`
+	TokenSource      string         `json:"token_source,omitempty"`
+	MoveTo           *MoveToOptions `json:"move_to,omitempty"`
+}
+
+// MoveToOptions is used when the export must be sent to another Cozy.
+type MoveToOptions struct {
+	URL          string `json:"url"`
+	Token        string `json:"token"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+}
+
+// ImportsURL returns the URL on the target for sending the download link to
+// the export tarballs.
+func (m *MoveToOptions) ImportsURL() string {
+	u, err := url.Parse(m.URL)
+	if err != nil {
+		u, err = url.Parse("https://" + m.URL)
+	}
+	if err != nil {
+		return m.URL
+	}
+	u.Path = "/move/imports"
+	return u.String()
 }
 
 // minimalPartsSize is the minimal size of a file bucket, to split the index
@@ -450,4 +476,21 @@ func writeMarshaledDoc(dir, name string, doc json.RawMessage, now time.Time, tw 
 	}
 	n, err := tw.Write(doc)
 	return int64(n), err
+}
+
+// SendExportFailureMail sends an email to the user when the export has failed.
+func SendExportFailureMail(inst *instance.Instance) error {
+	email := mail.Options{
+		Mode:         mail.ModeFromStack,
+		TemplateName: "export_error",
+	}
+	msg, err := job.NewMessage(&email)
+	if err != nil {
+		return err
+	}
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	return err
 }

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}" class="u-h-100">
+  <head>
+    <meta charset="utf-8">
+    <title>{{.Title}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    {{.CozyUI}}
+    {{.ThemeCSS}}
+    {{.Favicon}}
+  </head>
+ <body class="u-h-100">
+    <main role="application" class="u-h-100 u-bg-dodgerBlue u-flex u-flex-column u-flex-items-center u-flex-justify-center">
+      <header class="u-dn-s u-pos-absolute u-top-m u-left-m u-h-2 u-flex u-flex-items-center">
+        <img src="{{asset .Domain "/images/icon-cozy-home.svg"}}" alt="" class="u-mh-half" >
+        <h2 class="u-title-h2 u-white" class="u-ml-half">Cozy</h2>
+      </header>
+      <img src="{{asset .Domain "/images/relocation-animated.svg"}}" alt="" class="u-mah-4" >
+      <h1 class="u-maw-6 u-m-1 u-title-h1 u-white u-bxz">{{.Title}}</h1>
+      <div class="u-pos-relative u-maw-6 u-m-1 u-mt-0 u-p-1 u-text u-fz-small u-white">
+        {{t "Move in progress Box" .Source .Domain }}
+        <div class="u-pos-absolute u-top-0 u-left-0 u-bottom-0 u-right-0 u-bg-white u-bdrs-4 u-o-30"></div>
+      </div>
+      <p class="u-maw-6 u-mh-1 u-mt-0 u-mb-3 u-text u-fz-small u-white u-o-60">{{t "Move in progress Description" }}</p>
+    </main>
+  </body>
+</html>

@@ -12,12 +12,20 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/mail"
 )
 
 // ImportOptions contains the options for launching the import worker.
 type ImportOptions struct {
-	SettingsURL string `json:"url,omitempty"`
-	ManifestURL string `json:"manifest_url,omitempty"`
+	SettingsURL string       `json:"url,omitempty"`
+	ManifestURL string       `json:"manifest_url,omitempty"`
+	MoveFrom    *FromOptions `json:"move_from,omitempty"`
+}
+
+// FromOptions is used when the import finishes to notify the source Cozy.
+type FromOptions struct {
+	URL   string `json:"url"`
+	Token string `json:"token"`
 }
 
 // CheckImport returns an error if an exports cannot be found at the given URL,
@@ -162,4 +170,59 @@ func ImportIsFinished(inst *instance.Instance) bool {
 	}
 	importing, _ := settings.M["importing"].(bool)
 	return !importing
+}
+
+// Status is a type for the status of an import.
+type Status int
+
+const (
+	// StatusMoveSuccess is the status when a move has been successful.
+	StatusMoveSuccess Status = iota + 1
+	// StatusImportSuccess is the status when a import of a tarball has been
+	// successful.
+	StatusImportSuccess
+	// StatusFailure is the status when the import/move has failed.
+	StatusFailure
+)
+
+// SendImportDoneMail sends an email to the user when the import is done. The
+// content will depend if the import has been successful or not, and if it was
+// a move or just a import of a tarball.
+func SendImportDoneMail(inst *instance.Instance, status Status, notInstalled []string) error {
+	var email mail.Options
+	switch status {
+	case StatusMoveSuccess, StatusImportSuccess:
+		tmpl := "import_success"
+		if status == StatusMoveSuccess {
+			tmpl = "move_success"
+		}
+		publicName, _ := inst.PublicName()
+		link := inst.SubDomain(consts.HomeSlug)
+		email = mail.Options{
+			Mode:         mail.ModeFromStack,
+			TemplateName: tmpl,
+			TemplateValues: map[string]interface{}{
+				"AppsNotInstalled": strings.Join(notInstalled, ", "),
+				"CozyLink":         link.String(),
+				"PublicName":       publicName,
+			},
+		}
+	case StatusFailure:
+		email = mail.Options{
+			Mode:         mail.ModeFromStack,
+			TemplateName: "import_error",
+		}
+	default:
+		return fmt.Errorf("Unknown import status: %v", status)
+	}
+
+	msg, err := job.NewMessage(&email)
+	if err != nil {
+		return err
+	}
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	return err
 }

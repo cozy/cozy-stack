@@ -18,9 +18,7 @@
   const twoFactorTrustedDeviceToken =
     (storage && storage.getItem('two-factor-trusted-device-token')) || ''
   twoFactorTrustedDomainInput.value = twoFactorTrustedDeviceToken
-
   const longRunSessionCheckbox = d.getElementById('long-run-session')
-  longRunSessionCheckbox.value = longRunSessionCheckbox.checked ? '1' : '0'
 
   let errorPanel = loginForm.querySelector('.wizard-errors')
   const loginField = d.getElementById('login-field')
@@ -46,9 +44,12 @@
 
     const passphrase = passphraseInput.value
     const redirectInput = d.getElementById('redirect')
-    const longRunSession = longRunSessionCheckbox.checked ? '1' : '0'
-    const redirect = redirectInput.value + w.location.hash
+    const longRunSession =
+      longRunSessionCheckbox && longRunSessionCheckbox.checked ? '1' : '0'
+    const redirect = redirectInput && redirectInput.value + w.location.hash
     const csrfTokenInput = d.getElementById('csrf_token')
+    const stateInput = d.getElementById('state')
+    const clientIdInput = d.getElementById('client_id')
 
     let headers = new Headers()
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
@@ -65,7 +66,7 @@
 
     passPromise
       .then((pass) => {
-        const reqBody =
+        let reqBody =
           'passphrase=' +
           encodeURIComponent(pass) +
           '&two-factor-trusted-device-token=' +
@@ -77,7 +78,15 @@
           '&csrf_token=' +
           encodeURIComponent(csrfTokenInput.value)
 
-        return fetch('/auth/login', {
+        // For the /auth/authorize/move page
+        if (stateInput) {
+          reqBody += '&state=' + encodeURIComponent(stateInput.value)
+        }
+        if (clientIdInput) {
+          reqBody += '&client_id=' + encodeURIComponent(clientIdInput.value)
+        }
+
+        return fetch(loginForm.action, {
           method: 'POST',
           headers: headers,
           body: reqBody,

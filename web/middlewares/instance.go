@@ -90,9 +90,10 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 		})
 	}
 
-	if i.BlockingReason == instance.BlockedImporting.Code {
+	if i.BlockingReason == instance.BlockedImporting.Code ||
+		i.BlockingReason == instance.BlockedMoving.Code {
 		// Allow requests to the importing page
-		if strings.HasPrefix(c.Request().URL.Path, "/move/importing") {
+		if strings.HasPrefix(c.Request().URL.Path, "/move/") {
 			return next(c)
 		}
 		switch contentType {

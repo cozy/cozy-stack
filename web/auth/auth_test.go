@@ -1280,8 +1280,8 @@ func TestLogoutSuccess(t *testing.T) {
 func TestLogoutOthers(t *testing.T) {
 	var anonymousClient1, anonymousClient2 *http.Client
 	{
-		u1, _ := url.Parse(testInstance.PageURL("/", nil))
-		u2, _ := url.Parse(testInstance.PageURL("/", nil))
+		u1, _ := url.Parse(testInstance.PageURL("/auth", nil))
+		u2, _ := url.Parse(testInstance.PageURL("/auth", nil))
 		jar1, _ := cookiejar.New(nil)
 		jar2, _ := cookiejar.New(nil)
 		anonymousClient1 = &http.Client{

@@ -1,0 +1,14 @@
+{{define "content"}}
+<mj-text mj-class="title content-medium">
+	<img src="https://downcloud.cozycloud.cc/upload/icon-archive.png" width="16" height="16" style="vertical-align:sub;"/>&nbsp;
+	{{t "Mail Move Confirm Subject"}}
+</mj-text>
+<mj-text mj-class="content-medium">
+	{{t "Mail Move Confirm Intro 1" .PublicName}}<br />
+	{{t "Mail Move Confirm Intro 2" .Source .Target}}
+	{{t "Mail Move Confirm Button instruction"}}
+</mj-text>
+<mj-button href="{{.ConfirmLink}}" align="left" mj-class="primary-button content-xlarge">
+	{{t "Mail Move Confirm Button text"}}
+</mj-button>
+{{end}}

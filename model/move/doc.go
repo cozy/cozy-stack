@@ -1,16 +1,22 @@
 package move
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math"
+	"net/http"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/mail"
 )
 
 const (
@@ -112,14 +118,78 @@ func (e *ExportDoc) MarksAsFinished(i *instance.Instance, size int64, err error)
 	return couchdb.UpdateDoc(couchdb.GlobalDB, e)
 }
 
-// GenerateAuthMessage generates a MAC authentificating the access to the
-// export data.
-func (e *ExportDoc) GenerateAuthMessage(i *instance.Instance) []byte {
+// SendExportMail sends a mail to the user with a link where they can download
+// the export tarballs.
+func (e *ExportDoc) SendExportMail(inst *instance.Instance) error {
+	link := e.GenerateLink(inst)
+	publicName, _ := inst.PublicName()
+	mail := mail.Options{
+		Mode:         mail.ModeFromStack,
+		TemplateName: "archiver",
+		TemplateValues: map[string]interface{}{
+			"ArchiveLink": link,
+			"PublicName":  publicName,
+		},
+	}
+
+	msg, err := job.NewMessage(&mail)
+	if err != nil {
+		return err
+	}
+
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	return err
+}
+
+// NotifyTarget sends an HTTP request to the target so that it can start
+// importing the tarballs.
+func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions, token string) error {
+	link := e.GenerateLink(inst)
+	u := to.ImportsURL()
+	payload, err := json.Marshal(map[string]interface{}{
+		"data": map[string]interface{}{
+			"attributes": map[string]interface{}{
+				"url": link,
+				"move_from": map[string]interface{}{
+					"url":   inst.PageURL("/", nil),
+					"token": token,
+				},
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", u, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+to.Token)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return fmt.Errorf("Cannot notify target: %d", res.StatusCode)
+	}
+	return nil
+}
+
+// GenerateLink generates a link to download the export with a MAC.
+func (e *ExportDoc) GenerateLink(i *instance.Instance) string {
 	mac, err := crypto.EncodeAuthMessage(archiveMACConfig, i.SessionSecret(), []byte(e.ID()), nil)
 	if err != nil {
 		panic(fmt.Errorf("could not generate archive auth message: %s", err))
 	}
-	return mac
+	encoded := base64.URLEncoding.EncodeToString(mac)
+	link := i.SubDomain(consts.SettingsSlug)
+	link.Fragment = fmt.Sprintf("/exports/%s", encoded)
+	return link.String()
 }
 
 // CleanPreviousExports ensures that we have no old exports (or clean them).

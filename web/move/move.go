@@ -4,16 +4,22 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/move"
+	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/mail"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -36,6 +42,8 @@ func createExport(c echo.Context) error {
 	// The contextual domain is used to send a link on the correct domain when
 	// the user is accessing their cozy from a backup URL.
 	exportOptions.ContextualDomain = inst.ContextualDomain()
+	exportOptions.MoveTo = nil
+	exportOptions.TokenSource = ""
 
 	msg, err := job.NewMessage(exportOptions)
 	if err != nil {
@@ -141,15 +149,53 @@ func createImport(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, to)
 }
 
+func blockForImport(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Imports); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	if source := c.QueryParam("source"); source != "" {
+		doc, err := inst.SettingsDocument()
+		if err != nil {
+			return err
+		}
+		doc.SetID(consts.InstanceSettingsID)
+		doc.M["move_from"] = source
+		if err := couchdb.UpdateDoc(inst, doc); err != nil {
+			return err
+		}
+	}
+
+	if err := lifecycle.Block(inst, instance.BlockedMoving.Code); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func waitImportHasFinished(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
-	return c.Render(http.StatusOK, "import.html", echo.Map{
+	template := "import.html"
+	title := "Import Title"
+	source := "?"
+	if inst.BlockingReason == instance.BlockedMoving.Code {
+		template = "move_in_progress.html"
+		title = "Move in progress Title"
+		doc, err := inst.SettingsDocument()
+		if err == nil {
+			if from, ok := doc.M["moved_from"].(string); ok {
+				source = from
+			}
+		}
+	}
+	return c.Render(http.StatusOK, template, echo.Map{
 		"CozyUI":      middlewares.CozyUI(inst),
 		"ThemeCSS":    middlewares.ThemeCSS(inst),
 		"Favicon":     middlewares.Favicon(inst),
 		"Domain":      inst.ContextualDomain(),
 		"ContextName": inst.ContextName,
-		"Title":       inst.Translate("Import Title"),
+		"Title":       inst.Translate(title),
+		"Source":      source,
 	})
 }
 
@@ -234,6 +280,201 @@ func wsImporting(c echo.Context) error {
 	}
 }
 
+func getAuthorizeCode(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if !middlewares.IsLoggedIn(c) {
+		u := inst.PageURL("/auth/login", url.Values{
+			"redirect": {inst.FromURL(c.Request().URL)},
+		})
+		return c.Redirect(http.StatusSeeOther, u)
+	}
+
+	err := limits.CheckRateLimit(inst, limits.ExportType)
+	if limits.IsLimitReachedOrExceeded(err) {
+		return echo.NewHTTPError(http.StatusNotFound, "Not found")
+	}
+
+	u, err := url.Parse(c.QueryParam("redirect_uri"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
+	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return echo.NewHTTPError(http.StatusBadRequest, "bad url: bad scheme")
+	}
+
+	access, err := oauth.CreateAccessCode(inst, move.SourceClientID, consts.ExportsRequests)
+	if err != nil {
+		return err
+	}
+
+	used, quota, err := auth.DiskInfo(inst.VFS())
+	if err != nil {
+		return err
+	}
+
+	q := u.Query()
+	q.Set("state", c.QueryParam("state"))
+	q.Set("code", access.Code)
+	q.Set("used", used)
+	if quota != "" {
+		q.Set("quota", quota)
+	}
+	u.RawQuery = q.Encode()
+	u.Fragment = ""
+	location := u.String() + "#"
+	return c.Redirect(http.StatusSeeOther, location)
+}
+
+func initializeMove(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if !middlewares.IsLoggedIn(c) {
+		u := inst.PageURL("/auth/login", url.Values{
+			"redirect": {inst.SubDomain(consts.SettingsSlug).String()},
+		})
+		return c.Redirect(http.StatusSeeOther, u)
+	}
+
+	err := limits.CheckRateLimit(inst, limits.ExportType)
+	if limits.IsLimitReachedOrExceeded(err) {
+		return echo.NewHTTPError(http.StatusNotFound, "Not found")
+	}
+
+	u, err := url.Parse(inst.MoveURL())
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "bad url: could not parse")
+	}
+	u.Path = "/initialize"
+
+	used, quota, err := auth.DiskInfo(inst.VFS())
+	if err != nil {
+		return err
+	}
+
+	client, err := move.CreateRequestClient(inst)
+	if err != nil {
+		return err
+	}
+	access, err := oauth.CreateAccessCode(inst, client.ClientID, move.MoveScope)
+	if err != nil {
+		return err
+	}
+
+	q := u.Query()
+	q.Set("client_id", client.ClientID)
+	q.Set("client_secret", client.ClientSecret)
+	q.Set("code", access.Code)
+	q.Set("used", used)
+	if quota != "" {
+		q.Set("quota", quota)
+	}
+	q.Set("cozy_url", inst.PageURL("/", nil))
+	u.RawQuery = q.Encode()
+	return c.Redirect(http.StatusTemporaryRedirect, u.String())
+}
+
+func requestMove(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	var request *move.Request
+	params, err := c.FormParams()
+	if err == nil {
+		request, err = move.CreateRequest(inst, params)
+	}
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Title":       instance.DefaultTemplateTitle,
+			"CozyUI":      middlewares.CozyUI(inst),
+			"ThemeCSS":    middlewares.ThemeCSS(inst),
+			"Domain":      inst.ContextualDomain(),
+			"ContextName": inst.ContextName,
+			"ErrorTitle":  "Error Title",
+			"Error":       err.Error(),
+			"Favicon":     middlewares.Favicon(inst),
+		})
+	}
+
+	publicName, _ := inst.PublicName()
+	mail := mail.Options{
+		Mode:         mail.ModeFromStack,
+		TemplateName: "move_confirm",
+		TemplateValues: map[string]interface{}{
+			"ConfirmLink": request.Link,
+			"PublicName":  publicName,
+			"Source":      inst.ContextualDomain(),
+			"Target":      request.TargetHost(),
+		},
+	}
+	msg, err := job.NewMessage(&mail)
+	if err != nil {
+		return err
+	}
+	_, err = job.System().PushJob(inst, &job.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	if err != nil {
+		return err
+	}
+
+	email, _ := inst.SettingsEMail()
+	return c.Render(http.StatusOK, "move_confirm.html", echo.Map{
+		"CozyUI":      middlewares.CozyUI(inst),
+		"ThemeCSS":    middlewares.ThemeCSS(inst),
+		"Favicon":     middlewares.Favicon(inst),
+		"Domain":      inst.ContextualDomain(),
+		"ContextName": inst.ContextName,
+		"Title":       inst.Translate("Move Confirm Title"),
+		"Email":       email,
+	})
+}
+
+func startMove(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if !middlewares.IsLoggedIn(c) {
+		return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
+	}
+
+	request, err := move.StartMove(inst, c.QueryParam("secret"))
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Title":       instance.DefaultTemplateTitle,
+			"CozyUI":      middlewares.CozyUI(inst),
+			"ThemeCSS":    middlewares.ThemeCSS(inst),
+			"Domain":      inst.ContextualDomain(),
+			"ContextName": inst.ContextName,
+			"ErrorTitle":  "Error Title",
+			"Error":       err.Error(),
+			"Favicon":     middlewares.Favicon(inst),
+		})
+	}
+
+	return c.Redirect(http.StatusSeeOther, request.ImportingURL())
+}
+
+func finalizeMove(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Imports); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	if err := move.Finalize(inst); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func abortMove(c echo.Context) error {
+	if err := middlewares.AllowWholeType(c, permission.POST, consts.Imports); err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	if err := lifecycle.Unblock(inst); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
 	g.POST("/exports", createExport)
@@ -243,8 +484,17 @@ func Routes(g *echo.Group) {
 	g.POST("/imports/precheck", precheckImport)
 	g.POST("/imports", createImport)
 
+	g.POST("/importing", blockForImport)
 	g.GET("/importing", waitImportHasFinished)
 	g.GET("/importing/realtime", wsImporting)
+
+	g.GET("/authorize", getAuthorizeCode)
+	g.POST("/initialize", initializeMove)
+
+	g.POST("/request", requestMove)
+	g.GET("/go", startMove)
+	g.POST("/finalize", finalizeMove)
+	g.POST("/abort", abortMove)
 }
 
 func wrapError(err error) error {
