@@ -1,11 +1,11 @@
 # 
 # Translators:
 # Bruno Michel, 2019
-# Heimen Stoffels <vistausss@outlook.com>, 2020
+# Heimen Stoffels <vistausss@outlook.com>, 2021
 # 
 msgid ""
 msgstr ""
-"Last-Translator: Heimen Stoffels <vistausss@outlook.com>, 2020\n"
+"Last-Translator: Heimen Stoffels <vistausss@outlook.com>, 2021\n"
 "Language-Team: Dutch (Netherlands) (https://www.transifex.com/cozy/teams/39753/nl_NL/)\n"
 "Language: nl_NL\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -303,6 +303,12 @@ msgid "Authorize Linked Help"
 msgstr ""
 "Door te machtigen krijgt de app toegang tot de volgende gegevens op je Cozy:"
 
+msgid "Move delegated auth Title"
+msgstr "Verplaatsbevestiging"
+
+msgid "Move delegated auth Help"
+msgstr "Er is een code verstuurd naar het e-mailadres \"%s\"."
+
 msgid "Import Title"
 msgstr "Bezig met importeren..."
 
@@ -310,6 +316,28 @@ msgid "Import Description"
 msgstr ""
 "Het importeren kan enige tijd duren. Je kunt dit scherm sluiten - je "
 "ontvangt een e-mail als het importeren voltooid is."
+
+msgid "Move in progress Title"
+msgstr "Bezig met verplaatsen..."
+
+msgid "Move in progress Box"
+msgstr "Van %s naar %s"
+
+msgid "Move in progress Description"
+msgstr ""
+"Het verplaatsen kan enige tijd duren. Je kunt dit scherm sluiten - je "
+"ontvangt een e-mail als het importeren voltooid is."
+
+msgid "Move Confirm Title"
+msgstr "Je verplaatsverzoek is in goede orde ontvangen"
+
+msgid "Move Confirm Box"
+msgstr "Er is een e-mail verstuurd naar %s om de verplaatsing goed te keuren."
+
+msgid "Move Confirm Description"
+msgstr ""
+"Heb je geen e-mail ontvangen? Controleer de map met Ongewenste berichten of "
+"stuur een e-mail naar claude@cozycloud.cc"
 
 msgid "Error Title"
 msgstr "Sorry, er is een fout opgetreden."
@@ -359,6 +387,9 @@ msgstr "De Cozy vereist een betaling"
 
 msgid "Instance Blocked Importing"
 msgstr "Cozy is bezig gegevens te importeren"
+
+msgid "Instance Blocked Moving"
+msgstr "Bezig met verplaatsen..."
 
 msgid "Instance Blocked Unknown"
 msgstr "De Cozy is om onbekende reden geblokkeerd"
@@ -660,6 +691,56 @@ msgstr ""
 
 msgid "Mail Import Error Outro"
 msgstr "Als het probleem zich blijft voordoen, neem dan contact met ons op."
+
+msgid "Mail Export Error Subject"
+msgstr "⚠ Het exporteren is mislukt"
+
+msgid "Mail Export Error Text"
+msgstr ""
+"Er heeft zich een probleem voorgedaan tijdens het exporteren. Probeer het "
+"opnieuw."
+
+msgid "Mail Export Error Outro"
+msgstr "Als het probleem zich blijft voordoen, neem dan contact met ons op."
+
+msgid "Mail Move Confirm Subject"
+msgstr "Wil je je Cozy nu verplaatsen?"
+
+msgid "Mail Move Confirm Intro 1"
+msgstr "Hallo %s,"
+
+msgid "Mail Move Confirm Intro 2"
+msgstr ""
+"Er is een verzoek verstuurd om je gegevens te verplaatsen van %s naar %s."
+
+msgid "Mail Move Confirm Button instruction"
+msgstr "Als je het zeker weet, klik dan hieronder om te starten."
+
+msgid "Mail Move Confirm Button text"
+msgstr "Verplaatsing goedkeuren"
+
+msgid "Mail Move Success Subject"
+msgstr "Goed nieuws: je Cozy is verplaatst!"
+
+msgid "Mail Move Success Intro 1"
+msgstr "Hallo %s,"
+
+msgid "Mail Move Success Intro 2"
+msgstr "Alle gegevens zijn verplaatst naar je Cozy."
+
+msgid "Mail Move Success Button instruction"
+msgstr "Klik op de volgende knop om je gegevens te bekijken."
+
+msgid "Mail Move Success Button text"
+msgstr "Ga naar mijn Cozy"
+
+msgid "Mail Move Success Apps not installed"
+msgstr ""
+"Let op: de %s-diensten kunnen niet opnieuw worden ingesteld. Alle "
+"bijbehorende gegevens zijn echter geïmporteerd."
+
+msgid "Mail Move Success Outro"
+msgstr "Tot snel! Liefs, je Cozy"
 
 msgid "Mail Two Factor Subject"
 msgstr "Eenmalige koppelcode"
