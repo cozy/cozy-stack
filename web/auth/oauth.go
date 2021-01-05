@@ -720,7 +720,11 @@ func accessToken(c echo.Context) error {
 		}
 
 	case "refresh_token":
-		claims, ok := client.ValidToken(instance, consts.RefreshTokenAudience, c.FormValue("refresh_token"))
+		token := c.FormValue("refresh_token")
+		claims, ok := client.ValidToken(instance, consts.RefreshTokenAudience, token)
+		if !ok && client.ClientKind == "sharing" {
+			out.Refresh, claims, ok = sharing.TryTokenForMovedSharing(instance, client, token)
+		}
 		if !ok {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid refresh token",

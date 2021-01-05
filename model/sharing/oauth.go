@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
@@ -18,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 // CreateSharingRequest sends information about the sharing to the recipient's cozy
@@ -560,4 +562,74 @@ func ParseRequestError(res *http.Response, body []byte) error {
 		Title:  newInstance,
 		Detail: string(body),
 	}
+}
+
+// TryTokenForMovedSharing is used when a Cozy has been moved, and a sharing
+// was not updated on the other Cozy for some reasons. When the other Cozy will
+// try to make a request to the source Cozy, it will get a 410 Gone error. This
+// error will also tell it the URL of the new Cozy. Thus, it can try to refresh
+// the token on the destination Cozy. And, as the refresh token was emitted on
+// the source Cozy (and not the target Cozy), we need to do some tricks to
+// manage this refresh. This function is here for that.
+func TryTokenForMovedSharing(i *instance.Instance, c *oauth.Client, token string) (string, permission.Claims, bool) {
+	// Extract the sharing ID from the scope of the refresh token
+	claims := permission.Claims{}
+	if token == "" {
+		return "", claims, false
+	}
+	_, _, err := new(jwt.Parser).ParseUnverified(token, &claims)
+	if err != nil {
+		return "", claims, false
+	}
+	parts := strings.Split(claims.Scope, ":")
+	if len(parts) != 3 || parts[0] != consts.Sharings {
+		return "", claims, false
+	}
+
+	// Find the sharing and check that it has been moved from another instance
+	s, err := FindSharing(i, parts[2])
+	if err != nil || s.MovedFrom == "" {
+		return "", claims, false
+	}
+	validUntil := s.UpdatedAt.Add(consts.AccessTokenValidityDuration)
+	if validUntil.Before(time.Now().UTC()) {
+		// This trick is only accepted in the week following the move, not after
+		return "", claims, false
+	}
+
+	// Call the other instance and check the response
+	q := url.Values{
+		"grant_type":    {"refresh_token"},
+		"refresh_token": {token},
+		"client_id":     {c.ClientID},
+		"client_secret": {c.ClientSecret},
+	}
+	if c.ClientID == "" {
+		q.Set("client_id", c.CouchID)
+	}
+	payload := strings.NewReader(q.Encode())
+	req, err := http.NewRequest("POST", s.MovedFrom+"/auth/access_token", payload)
+	if err != nil {
+		return "", claims, false
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Accept", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil || res.StatusCode != http.StatusOK {
+		return "", claims, false
+	}
+	defer res.Body.Close()
+	body := &auth.AccessToken{}
+	if err = json.NewDecoder(res.Body).Decode(&body); err != nil || body.AccessToken == "" {
+		return "", claims, false
+	}
+	other := permission.Claims{}
+	_, _, err = new(jwt.Parser).ParseUnverified(body.AccessToken, &other)
+	if err != nil {
+		return "", claims, false
+	}
+
+	// Create a new refresh token
+	refresh, err := c.CreateJWT(i, consts.RefreshTokenAudience, claims.Scope)
+	return refresh, claims, err == nil
 }

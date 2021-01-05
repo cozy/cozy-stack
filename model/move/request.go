@@ -261,7 +261,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort finalize: %s", err)
+			Warnf("Cannot finalize: %s", err)
 		return
 	}
 	req.Header.Add("Authorization", "Bearer "+token)
@@ -270,7 +270,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort finalize: %s", err)
+			Warnf("Cannot finalize: %s", err)
 		return
 	}
 	defer res.Body.Close()
@@ -278,7 +278,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort finalize: code=%d", res.StatusCode)
+			Warnf("Cannot finalize: code=%d", res.StatusCode)
 	}
 
 	doc, err := inst.SettingsDocument()
@@ -332,7 +332,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort abort: %s", err)
+			Warnf("Cannot abort: %s", err)
 		return
 	}
 	req.Header.Add("Authorization", "Bearer "+token)
@@ -341,7 +341,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort abort: %s", err)
+			Warnf("Cannot abort: %s", err)
 		return
 	}
 	defer res.Body.Close()
@@ -349,6 +349,6 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort abort: code=%d", res.StatusCode)
+			Warnf("Cannot abort: code=%d", res.StatusCode)
 	}
 }

@@ -53,6 +53,7 @@ type Sharing struct {
 	NbFiles     int       `json:"initial_number_of_files_to_sync,omitempty"`
 	Initial     bool      `json:"initial_sync,omitempty"`
 	ShortcutID  string    `json:"shortcut_id,omitempty"`
+	MovedFrom   string    `json:"moved_from,omitempty"`
 
 	Rules []Rule `json:"rules"`
 

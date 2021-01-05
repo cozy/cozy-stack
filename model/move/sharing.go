@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
@@ -20,7 +21,9 @@ import (
 // instance has moved, and will tell them to the new URL to use for the
 // sharing.
 func NotifySharings(inst *instance.Instance) error {
-	time.Sleep(1 * time.Second)
+	// Let the dust settle a bit before starting the notifications
+	time.Sleep(3 * time.Second)
+
 	var sharings []*sharing.Sharing
 	req := couchdb.AllDocsRequest{Limit: 1000}
 	if err := couchdb.GetAllDocs(inst, consts.Sharings, &req, &sharings); err != nil {
@@ -29,6 +32,9 @@ func NotifySharings(inst *instance.Instance) error {
 
 	var errm error
 	for _, s := range sharings {
+		if strings.HasPrefix(s.ID(), "_design") {
+			continue
+		}
 		time.Sleep(100 * time.Millisecond)
 		if err := notifySharing(inst, s); err != nil {
 			errm = multierror.Append(errm, err)
@@ -61,7 +67,7 @@ func notifyMember(inst *instance.Instance, s *sharing.Sharing, index int) error 
 	}
 
 	moved := sharing.APIMoved{
-		NewInstance: inst.PageURL("/", nil),
+		NewInstance: inst.PageURL("", nil),
 		SharingID:   s.ID(),
 	}
 	data, err := jsonapi.MarshalObject(&moved)

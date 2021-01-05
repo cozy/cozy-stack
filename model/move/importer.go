@@ -421,10 +421,13 @@ func (im *importer) importSharing(zf *zip.File) error {
 	s.UpdatedAt = time.Now()
 	s.SetRev("")
 	if s.Owner {
+		s.MovedFrom = s.Members[0].Instance
 		s.Members[0].Instance = im.inst.PageURL("", nil)
 	} else {
+		targetURL := strings.TrimSuffix(im.options.MoveFrom.URL, "/")
 		for i, m := range s.Members {
-			if m.Instance == im.options.MoveFrom.URL {
+			if m.Instance == targetURL {
+				s.MovedFrom = s.Members[i].Instance
 				s.Members[i].Instance = im.inst.PageURL("", nil)
 			}
 		}
