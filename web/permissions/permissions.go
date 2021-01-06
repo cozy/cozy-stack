@@ -135,7 +135,8 @@ func createPermission(c echo.Context) error {
 		if d, errd := bigduration.ParseDuration(ttl); errd == nil {
 			ex := time.Now().Add(d)
 			expiresAt = &ex
-			if d.Hours() > 1.0 {
+			if d.Hours() > 1.0 && tiny {
+				instance.Logger().Info("Tiny can not be set to true since duration > 1h")
 				tiny = false
 			}
 		}
