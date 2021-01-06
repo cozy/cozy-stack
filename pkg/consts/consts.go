@@ -73,6 +73,9 @@ const MaxItemsPerPageForMango = 1000
 // ShortCodeLen is the number of chars for the shortcode
 const ShortCodeLen = 12
 
+// TinyCodeLen is the number of digits for the tinycode
+const TinyCodeLen = 6
+
 // KnownFlatDomains is a list of top-domains that can hosts cozy instances with
 // flat sub-domains.
 var KnownFlatDomains = []string{

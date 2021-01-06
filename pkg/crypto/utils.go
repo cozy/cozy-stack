@@ -3,7 +3,9 @@ package crypto
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"io"
+	math "math/rand"
 	"time"
 )
 
@@ -50,4 +52,10 @@ func GenerateRandomString(n int) string {
 	}
 
 	return string(bytes)
+}
+
+// GenerateRandomSixDigits returns a random string made of 6 digits
+func GenerateRandomSixDigits() string {
+	n := math.Intn(999999)
+	return fmt.Sprintf("%06d", n+1)
 }

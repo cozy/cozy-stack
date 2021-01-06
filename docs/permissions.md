@@ -283,6 +283,9 @@ some of them later. A `ttl` parameter can also be given to make the codes
 expires after a delay ([bigduration
 format](https://github.com/justincampbell/bigduration/blob/master/README.md)).
 
+If the `ttl` does not exceed 1 hour, it is possible to add a `tinycode=true`
+parameter to the query-string to have a shortcode of 6 digits.
+
 **Note**: it is only possible to create a strict subset of the permissions
 associated to the sent token.
 

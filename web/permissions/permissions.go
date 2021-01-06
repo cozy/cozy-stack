@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -105,6 +106,7 @@ func createPermission(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	names := strings.Split(c.QueryParam("codes"), ",")
 	ttl := c.QueryParam("ttl")
+	tiny, _ := strconv.ParseBool(c.QueryParam("tiny"))
 
 	parent, err := middlewares.GetPermission(c)
 	if err != nil {
@@ -128,6 +130,18 @@ func createPermission(c echo.Context) error {
 		return err
 	}
 
+	var expiresAt *time.Time
+	if ttl != "" {
+		if d, errd := bigduration.ParseDuration(ttl); errd == nil {
+			ex := time.Now().Add(d)
+			expiresAt = &ex
+			if d.Hours() > 1.0 && tiny {
+				instance.Logger().Info("Tiny can not be set to true since duration > 1h")
+				tiny = false
+			}
+		}
+	}
+
 	var codes map[string]string
 	var shortcodes map[string]string
 
@@ -136,7 +150,7 @@ func createPermission(c echo.Context) error {
 		shortcodes = make(map[string]string, len(names))
 		for _, name := range names {
 			longcode, err := instance.CreateShareCode(name)
-			shortcode := crypto.GenerateRandomString(consts.ShortCodeLen)
+			shortcode := createShortCode(tiny)
 
 			codes[name] = longcode
 			shortcodes[name] = shortcode
@@ -148,14 +162,6 @@ func createPermission(c echo.Context) error {
 
 	if parent == nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "no parent")
-	}
-
-	var expiresAt *time.Time
-	if ttl != "" {
-		if d, errd := bigduration.ParseDuration(ttl); errd == nil {
-			ex := time.Now().Add(d)
-			expiresAt = &ex
-		}
 	}
 
 	// Getting the slug from the token if it has not been retrieved before
@@ -184,6 +190,13 @@ func createPermission(c echo.Context) error {
 	}
 
 	return jsonapi.Data(c, http.StatusOK, &APIPermission{pdoc, nil}, nil)
+}
+
+func createShortCode(tiny bool) string {
+	if tiny {
+		return crypto.GenerateRandomSixDigits()
+	}
+	return crypto.GenerateRandomString(consts.ShortCodeLen)
 }
 
 const (

@@ -579,6 +579,33 @@ func createTestSubPermissions(tok string, codes string) (string, map[string]inte
 	return id, result, nil
 }
 
+func createTestTinyCode(tok string, codes string, ttl string) (string, map[string]interface{}, error) {
+	out, err := doRequest("POST", ts.URL+"/permissions?codes="+codes+"&tiny=true&ttl="+ttl, tok, `{
+"data": {
+	"type": "io.cozy.permissions",
+	"attributes": {
+		"permissions": {
+			"whatever": {
+				"type":   "io.cozy.files",
+				"verbs":  ["GET"],
+				"values": ["id.`+codes+`"]
+		  }
+		}
+	}
+}
+	}`)
+
+	if err != nil {
+		return "", nil, err
+	}
+
+	data := out["data"].(map[string]interface{})
+	id := data["id"].(string)
+	attrs := data["attributes"].(map[string]interface{})
+	result := attrs["shortcodes"].(map[string]interface{})
+	return id, result, nil
+}
+
 func doRequest(method, url, tok, body string) (map[string]interface{}, error) {
 	reqbody := strings.NewReader(body)
 	req, _ := http.NewRequest(method, url, reqbody)
@@ -679,6 +706,31 @@ func TestCannotFindToken(t *testing.T) {
 	_, err := permission.GetTokenFromShortcode(testInstance, perm.ShortCodes["alice"])
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "Cannot find token for shortcode")
+}
+
+func TestTinyShortCodeOK(t *testing.T) {
+	id, codes, _ := createTestTinyCode(token, "elise", "30m")
+	code := codes["elise"]
+	assert.Len(t, code, 6)
+
+	perm, _ := permission.GetByID(testInstance, id)
+	assert.Equal(t, code, perm.ShortCodes["elise"])
+
+	assert.NotNil(t, perm.ShortCodes)
+
+	req1, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
+	req1.Header.Add("Authorization", "Bearer "+perm.ShortCodes["elise"])
+	res1, _ := http.DefaultClient.Do(req1)
+	assert.Equal(t, res1.StatusCode, http.StatusOK)
+
+	token, _ := permission.GetTokenFromShortcode(testInstance, perm.ShortCodes["elise"])
+	assert.Equal(t, perm.Codes["elise"], token)
+}
+
+func TestTinyShortCodeInvalid(t *testing.T) {
+	_, codes, _ := createTestTinyCode(token, "fanny", "24h")
+	code := codes["fanny"]
+	assert.Len(t, code, 12)
 }
 
 func TestGetForOauth(t *testing.T) {
