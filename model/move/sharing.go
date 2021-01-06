@@ -68,11 +68,11 @@ func notifyMember(inst *instance.Instance, s *sharing.Sharing, index int) error 
 		return err
 	}
 
-	client := s.Credentials[0].Client
+	clientID := s.Credentials[0].InboundClientID
 	if index > 0 {
-		client = s.Credentials[index-1].Client
+		clientID = s.Credentials[index-1].InboundClientID
 	}
-	cli := &oauth.Client{ClientID: client.ClientID}
+	cli := &oauth.Client{ClientID: clientID}
 	newToken, err := sharing.CreateAccessToken(inst, cli, s.ID(), permission.ALL)
 	if err != nil {
 		return err
