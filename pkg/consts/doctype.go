@@ -80,6 +80,8 @@ const (
 	SharingsMembers = "io.cozy.sharings.members"
 	// SharingsAnswer doc type for credentials exchange for sharings
 	SharingsAnswer = "io.cozy.sharings.answer"
+	// SharingsMoved doc type for when a Cozy is moved to a new address
+	SharingsMoved = "io.cozy.sharings.moved"
 	// SharingsInitialSync doc type for real-time events for initial sync of a
 	// sharing
 	SharingsInitialSync = "io.cozy.sharings.initial_sync"

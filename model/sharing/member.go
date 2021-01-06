@@ -260,11 +260,12 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 			"Content-Type":  "application/vnd.api+json",
 			"Authorization": "Bearer " + c.AccessToken.AccessToken,
 		},
-		Body: bytes.NewReader(body),
+		Body:       bytes.NewReader(body),
+		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, s, &s.Members[0], c, opts, body)
+		res, err = RefreshToken(inst, err, s, &s.Members[0], c, opts, body)
 	}
 	if err != nil {
 		return err
@@ -350,11 +351,12 @@ func (s *Sharing) DelegateDiscovery(inst *instance.Instance, state, cozyURL stri
 			"Content-Type":  "application/x-www-form-urlencoded",
 			"Authorization": "Bearer " + c.AccessToken.AccessToken,
 		},
-		Body: bytes.NewReader(body),
+		Body:       bytes.NewReader(body),
+		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, s, &s.Members[0], c, opts, body)
+		res, err = RefreshToken(inst, err, s, &s.Members[0], c, opts, body)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode == http.StatusBadRequest {
@@ -600,11 +602,12 @@ func (s *Sharing) AddReadOnlyFlag(inst *instance.Instance, index int) error {
 			"Content-Type":  "application/vnd.api+json",
 			"Authorization": "Bearer " + s.Credentials[index-1].AccessToken.AccessToken,
 		},
-		Body: bytes.NewReader(body),
+		Body:       bytes.NewReader(body),
+		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, s, &s.Members[index], &s.Credentials[index-1], opts, body)
+		res, err = RefreshToken(inst, err, s, &s.Members[index], &s.Credentials[index-1], opts, body)
 	}
 	if err != nil {
 		if res != nil {
@@ -633,10 +636,11 @@ func (s *Sharing) DelegateAddReadOnlyFlag(inst *instance.Instance, index int) er
 		Headers: request.Headers{
 			"Authorization": "Bearer " + c.AccessToken.AccessToken,
 		},
+		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, s, &s.Members[0], c, opts, nil)
+		res, err = RefreshToken(inst, err, s, &s.Members[0], c, opts, nil)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode == http.StatusBadRequest {
@@ -740,11 +744,12 @@ func (s *Sharing) RemoveReadOnlyFlag(inst *instance.Instance, index int) error {
 			"Content-Type":  "application/vnd.api+json",
 			"Authorization": "Bearer " + s.Credentials[index-1].AccessToken.AccessToken,
 		},
-		Body: bytes.NewReader(body),
+		Body:       bytes.NewReader(body),
+		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, s, &s.Members[index], &s.Credentials[index-1], opts, body)
+		res, err = RefreshToken(inst, err, s, &s.Members[index], &s.Credentials[index-1], opts, body)
 	}
 	if err != nil {
 		return err
@@ -793,10 +798,11 @@ func (s *Sharing) DelegateRemoveReadOnlyFlag(inst *instance.Instance, index int)
 		Headers: request.Headers{
 			"Authorization": "Bearer " + c.AccessToken.AccessToken,
 		},
+		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, s, &s.Members[0], c, opts, nil)
+		res, err = RefreshToken(inst, err, s, &s.Members[0], c, opts, nil)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode == http.StatusBadRequest {
@@ -896,10 +902,11 @@ func (s *Sharing) NotifyMemberRevocation(inst *instance.Instance, m *Member, c *
 		Headers: request.Headers{
 			"Authorization": "Bearer " + c.AccessToken.AccessToken,
 		},
+		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, s, m, c, opts, nil)
+		res, err = RefreshToken(inst, err, s, m, c, opts, nil)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode/100 == 5 {
@@ -1002,11 +1009,12 @@ func (s *Sharing) NotifyRecipients(inst *instance.Instance, except *Member) {
 				"Content-Type":  "application/vnd.api+json",
 				"Authorization": "Bearer " + token,
 			},
-			Body: bytes.NewReader(body),
+			Body:       bytes.NewReader(body),
+			ParseError: ParseRequestError,
 		}
 		res, err := request.Req(opts)
 		if res != nil && res.StatusCode/100 == 4 {
-			res, err = RefreshToken(inst, s, &s.Members[i], c, opts, body)
+			res, err = RefreshToken(inst, err, s, &s.Members[i], c, opts, body)
 		}
 		if err != nil {
 			inst.Logger().WithField("nspace", "sharing").

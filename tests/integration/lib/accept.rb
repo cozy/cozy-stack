@@ -9,7 +9,7 @@ class Accept
     @inst = inst
     state = extract_state_code
     location = do_discovery state
-    sessid = connect_to_instance
+    sessid = @inst.open_session
     click_on_accept state, location, sessid
   end
 
@@ -25,16 +25,6 @@ class Accept
     body = { state: code, url: @inst.url }
     res = @sharer.client["/sharings/#{@sharing.couch_id}/discovery"].post body, accept: :json
     JSON.parse(res.body)["redirect"]
-  end
-
-  def connect_to_instance
-    client = RestClient::Resource.new @inst.url
-    res = client["/auth/login"].get
-    csrf_token = res.cookies["_csrf"]
-    body = { csrf_token: csrf_token, passphrase: @inst.hashed_passphrase }
-    params = { cookies: res.cookies, accept: :json }
-    res2 = client["/auth/login"].post body, params
-    res2.cookies["cozysessid"]
   end
 
   def click_on_accept(state, location, sessid)

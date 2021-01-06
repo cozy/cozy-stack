@@ -83,13 +83,6 @@ func CreateRequest(inst *instance.Instance, params url.Values) (*Request, error)
 	var source RequestCredentials
 	code := params.Get("code")
 	if code == "" {
-		source.Token = params.Get("token")
-		if source.Token == "" {
-			return nil, errors.New("No core or token")
-		}
-		if err := checkSourceToken(inst, source); err != nil {
-			return nil, err
-		}
 		source.ClientID = params.Get("client_id")
 		if source.ClientID == "" {
 			return nil, errors.New("No client_id")
@@ -97,6 +90,13 @@ func CreateRequest(inst *instance.Instance, params url.Values) (*Request, error)
 		source.ClientSecret = params.Get("client_secret")
 		if source.ClientSecret == "" {
 			return nil, errors.New("No client_secret")
+		}
+		source.Token = params.Get("token")
+		if source.Token == "" {
+			return nil, errors.New("No code or token")
+		}
+		if err := checkSourceToken(inst, source); err != nil {
+			return nil, err
 		}
 	} else {
 		if err := checkSourceCode(inst, code); err != nil {
@@ -155,7 +155,7 @@ func CreateRequest(inst *instance.Instance, params url.Values) (*Request, error)
 func checkSourceToken(inst *instance.Instance, source RequestCredentials) error {
 	var claims permission.Claims
 	err := crypto.ParseJWT(source.Token, func(token *jwt.Token) (interface{}, error) {
-		return consts.AccessTokenAudience, nil
+		return inst.PickKey(consts.AccessTokenAudience)
 	}, &claims)
 	if err != nil {
 		return permission.ErrInvalidToken
@@ -206,11 +206,25 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 	if err != nil {
 		return nil, err
 	}
+	if req == nil {
+		return nil, errors.New("Invalid secret")
+	}
 
 	u := req.ImportingURL() + "?source=" + inst.ContextualDomain()
-	_, err = http.Post(u, "application/json", nil)
+	r, err := http.NewRequest("POST", u, nil)
 	if err != nil {
 		return nil, errors.New("Cannot reach the other Cozy")
+	}
+	r.Header.Add("Authorization", "Bearer "+req.TargetCreds.Token)
+	_, err = http.DefaultClient.Do(r)
+	if err != nil {
+		return nil, errors.New("Cannot reach the other Cozy")
+	}
+
+	doc, err := inst.SettingsDocument()
+	if err == nil {
+		doc.M["moved_to"] = req.Target
+		_ = couchdb.UpdateDoc(inst, doc)
 	}
 
 	options := ExportOptions{
@@ -250,7 +264,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort finalize: %s", err)
+			Warnf("Cannot finalize: %s", err)
 		return
 	}
 	req.Header.Add("Authorization", "Bearer "+token)
@@ -259,7 +273,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort finalize: %s", err)
+			Warnf("Cannot finalize: %s", err)
 		return
 	}
 	defer res.Body.Close()
@@ -267,7 +281,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort finalize: code=%d", res.StatusCode)
+			Warnf("Cannot finalize: code=%d", res.StatusCode)
 	}
 
 	doc, err := inst.SettingsDocument()
@@ -321,7 +335,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort abort: %s", err)
+			Warnf("Cannot abort: %s", err)
 		return
 	}
 	req.Header.Add("Authorization", "Bearer "+token)
@@ -330,7 +344,7 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort abort: %s", err)
+			Warnf("Cannot abort: %s", err)
 		return
 	}
 	defer res.Body.Close()
@@ -338,6 +352,6 @@ func Abort(inst *instance.Instance, otherURL, token string) {
 		inst.Logger().
 			WithField("nspace", "move").
 			WithField("url", otherURL).
-			Warnf("Cannort abort: code=%d", res.StatusCode)
+			Warnf("Cannot abort: code=%d", res.StatusCode)
 	}
 }

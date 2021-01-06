@@ -412,12 +412,13 @@ func (s *Sharing) callRevsDiff(inst *instance.Instance, m *Member, creds *Creden
 			"Content-Type":  "application/json",
 			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 		},
-		Body: bytes.NewReader(body),
+		Body:       bytes.NewReader(body),
+		ParseError: ParseRequestError,
 	}
 	var res *http.Response
 	res, err = request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, s, m, creds, opts, body)
+		res, err = RefreshToken(inst, err, s, m, creds, opts, body)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode/100 == 5 {
@@ -560,11 +561,12 @@ func (s *Sharing) sendBulkDocs(inst *instance.Instance, m *Member, creds *Creden
 			"Content-Type":  "application/json",
 			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 		},
-		Body: bytes.NewReader(body),
+		Body:       bytes.NewReader(body),
+		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, s, m, creds, opts, body)
+		res, err = RefreshToken(inst, err, s, m, creds, opts, body)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode/100 == 5 {

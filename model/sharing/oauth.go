@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/model/contact"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -17,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 // CreateSharingRequest sends information about the sharing to the recipient's cozy
@@ -457,9 +460,62 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 	return nil, ErrMemberNotFound
 }
 
+// ChangeOwnerAddress is used when the owner of the sharing has moved their
+// instance to a new URL and the other members of the sharing are informed of
+// the new URL.
+func (s *Sharing) ChangeOwnerAddress(inst *instance.Instance, params APIMoved) error {
+	s.Members[0].Instance = params.NewInstance
+	s.Credentials[0].AccessToken.AccessToken = params.AccessToken
+	s.Credentials[0].AccessToken.RefreshToken = params.RefreshToken
+	updateContactAddress(inst, s.Members[0].Email, params.NewInstance)
+	return couchdb.UpdateDoc(inst, s)
+}
+
+// ChangeMemberAddress is used when a recipient of the sharing has moved their
+// instance to a new URL and the owner if informed of the new URL.
+func (s *Sharing) ChangeMemberAddress(inst *instance.Instance, m *Member, params APIMoved) error {
+	m.Instance = params.NewInstance
+	for i := range s.Members {
+		if i == 0 {
+			continue
+		}
+		if s.Members[i] == *m {
+			s.Credentials[i-1].AccessToken.AccessToken = params.AccessToken
+			s.Credentials[i-1].AccessToken.RefreshToken = params.RefreshToken
+		}
+	}
+	updateContactAddress(inst, m.Email, params.NewInstance)
+	return couchdb.UpdateDoc(inst, s)
+}
+
+func updateContactAddress(inst *instance.Instance, email, newInstance string) {
+	if email == "" {
+		return
+	}
+	c, err := contact.FindByEmail(inst, email)
+	if err != nil {
+		return
+	}
+	_ = c.ChangeCozyURL(inst, newInstance)
+}
+
 // RefreshToken is used after a failed request with a 4xx error code.
-// It renews the access token and retries the request
-func RefreshToken(inst *instance.Instance, s *Sharing, m *Member, creds *Credentials, opts *request.Options, body []byte) (*http.Response, error) {
+// It checks if the targeted instance has moved, and tries on the new instance
+// if it is the case. And, if needed, it renews the access token and retries
+// the request.
+func RefreshToken(
+	inst *instance.Instance,
+	reqErr error,
+	s *Sharing,
+	m *Member,
+	creds *Credentials,
+	opts *request.Options,
+	body []byte,
+) (*http.Response, error) {
+	if err, ok := reqErr.(*request.Error); ok && err.Status == http.StatusText(http.StatusGone) {
+		tryUpdateMemberInstance(err, m, opts)
+	}
+
 	if err := creds.Refresh(inst, s, m); err != nil {
 		return nil, err
 	}
@@ -475,4 +531,116 @@ func RefreshToken(inst *instance.Instance, s *Sharing, m *Member, creds *Credent
 		return nil, err
 	}
 	return res, nil
+}
+
+func tryUpdateMemberInstance(reqErr *request.Error, m *Member, opts *request.Options) {
+	m.Instance = reqErr.Title
+	u, err := url.Parse(m.Instance)
+	if err != nil {
+		return
+	}
+	opts.Scheme = u.Scheme
+	opts.Domain = u.Host
+}
+
+// ParseRequestError is used to parse an error in a request.Options, and it
+// keeps the new instance URL when a Cozy has moved in Title.
+func ParseRequestError(res *http.Response, body []byte) error {
+	if res.StatusCode != http.StatusGone {
+		return &request.Error{
+			Status: http.StatusText(res.StatusCode),
+			Title:  http.StatusText(res.StatusCode),
+			Detail: string(body),
+		}
+	}
+
+	var errors struct {
+		List jsonapi.ErrorList `json:"errors"`
+	}
+	if err := json.Unmarshal(body, &errors); err != nil {
+		return &request.Error{
+			Status: http.StatusText(res.StatusCode),
+			Title:  http.StatusText(res.StatusCode),
+			Detail: string(body),
+		}
+	}
+	var newInstance string
+	if len(errors.List) == 1 && errors.List[0].Links != nil && errors.List[0].Links.Related != "" {
+		newInstance = errors.List[0].Links.Related
+	}
+	return &request.Error{
+		Status: http.StatusText(res.StatusCode),
+		Title:  newInstance,
+		Detail: string(body),
+	}
+}
+
+// TryTokenForMovedSharing is used when a Cozy has been moved, and a sharing
+// was not updated on the other Cozy for some reasons. When the other Cozy will
+// try to make a request to the source Cozy, it will get a 410 Gone error. This
+// error will also tell it the URL of the new Cozy. Thus, it can try to refresh
+// the token on the destination Cozy. And, as the refresh token was emitted on
+// the source Cozy (and not the target Cozy), we need to do some tricks to
+// manage this refresh. This function is here for that.
+func TryTokenForMovedSharing(i *instance.Instance, c *oauth.Client, token string) (string, permission.Claims, bool) {
+	// Extract the sharing ID from the scope of the refresh token
+	claims := permission.Claims{}
+	if token == "" {
+		return "", claims, false
+	}
+	_, _, err := new(jwt.Parser).ParseUnverified(token, &claims)
+	if err != nil {
+		return "", claims, false
+	}
+	parts := strings.Split(claims.Scope, ":")
+	if len(parts) != 3 || parts[0] != consts.Sharings {
+		return "", claims, false
+	}
+
+	// Find the sharing and check that it has been moved from another instance
+	s, err := FindSharing(i, parts[2])
+	if err != nil || s.MovedFrom == "" {
+		return "", claims, false
+	}
+	validUntil := s.UpdatedAt.Add(consts.AccessTokenValidityDuration)
+	if validUntil.Before(time.Now().UTC()) {
+		// This trick is only accepted in the week following the move, not after
+		return "", claims, false
+	}
+
+	// Call the other instance and check the response
+	q := url.Values{
+		"grant_type":    {"refresh_token"},
+		"refresh_token": {token},
+		"client_id":     {c.ClientID},
+		"client_secret": {c.ClientSecret},
+	}
+	if c.ClientID == "" {
+		q.Set("client_id", c.CouchID)
+	}
+	payload := strings.NewReader(q.Encode())
+	req, err := http.NewRequest("POST", s.MovedFrom+"/auth/access_token", payload)
+	if err != nil {
+		return "", claims, false
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Accept", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil || res.StatusCode != http.StatusOK {
+		return "", claims, false
+	}
+	defer res.Body.Close()
+	body := &auth.AccessToken{}
+	if err = json.NewDecoder(res.Body).Decode(&body); err != nil || body.AccessToken == "" {
+		return "", claims, false
+	}
+	other := permission.Claims{}
+	_, _, err = new(jwt.Parser).ParseUnverified(body.AccessToken, &other)
+	if err != nil {
+		return "", claims, false
+	}
+
+	// Create a new refresh token
+	refresh, err := c.CreateJWT(i, consts.RefreshTokenAudience, claims.Scope)
+	return refresh, claims, err == nil
 }

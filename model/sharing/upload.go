@@ -255,12 +255,13 @@ func (s *Sharing) uploadFile(inst *instance.Instance, m *Member, file map[string
 			"Content-Type":  "application/json",
 			"Authorization": "Bearer " + creds.AccessToken.AccessToken,
 		},
-		Body: bytes.NewReader(body),
+		Body:       bytes.NewReader(body),
+		ParseError: ParseRequestError,
 	}
 	var res *http.Response
 	res, err = request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, s, m, creds, opts, body)
+		res, err = RefreshToken(inst, err, s, m, creds, opts, body)
 	}
 	if err != nil {
 		if res != nil && res.StatusCode/100 == 5 {

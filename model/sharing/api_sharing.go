@@ -89,3 +89,43 @@ func (c *APICredentials) Relationships() jsonapi.RelationshipMap { return nil }
 func (c *APICredentials) Links() *jsonapi.LinksList { return nil }
 
 var _ jsonapi.Object = (*APICredentials)(nil)
+
+// APIMoved is used when a Cozy has been moved to a new address to inform the
+// other members of the sharing of this new URL.
+type APIMoved struct {
+	SharingID    string `json:"id"`
+	NewInstance  string `json:"new_instance"`
+	AccessToken  string `json:"access_token,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+}
+
+// ID returns the sharing qualified identifier
+func (m *APIMoved) ID() string { return m.SharingID }
+
+// Rev returns the sharing revision
+func (m *APIMoved) Rev() string { return "" }
+
+// DocType returns the sharing document type
+func (m *APIMoved) DocType() string { return consts.SharingsMoved }
+
+// SetID changes the sharing qualified identifier
+func (m *APIMoved) SetID(id string) { m.SharingID = id }
+
+// SetRev changes the sharing revision
+func (m *APIMoved) SetRev(rev string) {}
+
+// Clone is part of jsonapi.Object interface
+func (m *APIMoved) Clone() couchdb.Doc {
+	panic("APIMoved must not be cloned")
+}
+
+// Included is part of jsonapi.Object interface
+func (m *APIMoved) Included() []jsonapi.Object { return nil }
+
+// Relationships is part of jsonapi.Object interface
+func (m *APIMoved) Relationships() jsonapi.RelationshipMap { return nil }
+
+// Links is part of jsonapi.Object interface
+func (m *APIMoved) Links() *jsonapi.LinksList { return nil }
+
+var _ jsonapi.Object = (*APIMoved)(nil)

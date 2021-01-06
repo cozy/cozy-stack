@@ -54,7 +54,7 @@ func warnings(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	// Any request with a token can ask for the context (no permissions are required)
-	if _, err := middlewares.GetPermission(c); err != nil && err != permission.ErrMoved {
+	if _, err := middlewares.GetPermission(c); err != nil && !isMovedError(err) {
 		return err
 	}
 
@@ -73,6 +73,11 @@ func warnings(c echo.Context) error {
 	}
 
 	return jsonapi.DataErrorList(c, warnings...)
+}
+
+func isMovedError(err error) bool {
+	j, ok := err.(*jsonapi.Error)
+	return ok && j.Code == "moved"
 }
 
 // Routes sets the routing for the settings service

@@ -595,7 +595,7 @@ POST /auth/authorize/move HTTP/1.1
 Server: target.cozy.example
 Content-Type: application/x-www-form-urlencoded
 
-state=8d560d60&client_id=oauth-client-2&csrf_token=johw6Sho&redirect_uri=https%3A%2F%2Fmove.cozycloud.cc%2Fcallback%2Ftarget
+passphrase=hashed&state=8d560d60&client_id=oauth-client-2&csrf_token=johw6Sho&redirect_uri=https%3A%2F%2Fmove.cozycloud.cc%2Fcallback%2Ftarget
 ```
 
 #### Response POST

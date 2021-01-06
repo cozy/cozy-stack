@@ -106,6 +106,16 @@ class Instance
     @stack.check self
   end
 
+  def open_session
+    client = RestClient::Resource.new url
+    res = client["/auth/login"].get
+    csrf_token = res.cookies["_csrf"]
+    body = { csrf_token: csrf_token, passphrase: hashed_passphrase }
+    params = { cookies: res.cookies, accept: :json }
+    res2 = client["/auth/login"].post body, params
+    res2.cookies["cozysessid"]
+  end
+
   # See https://github.com/jcs/rubywarden/blob/master/API.md#example
   def hashed_passphrase
     key = PBKDF2.new do |p|

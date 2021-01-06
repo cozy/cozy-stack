@@ -164,6 +164,13 @@ func (c *Contact) AddCozyURL(db prefixer.Prefixer, cozyURL string) error {
 	return couchdb.UpdateDoc(db, c)
 }
 
+// ChangeCozyURL is used when a contact has moved their Cozy to a new URL.
+func (c *Contact) ChangeCozyURL(db prefixer.Prefixer, cozyURL string) error {
+	cozy := map[string]interface{}{"url": cozyURL}
+	c.M["cozy"] = []interface{}{cozy}
+	return couchdb.UpdateDoc(db, c)
+}
+
 // Find returns the contact stored in database from a given ID
 func Find(db prefixer.Prefixer, contactID string) (*Contact, error) {
 	doc := &Contact{}

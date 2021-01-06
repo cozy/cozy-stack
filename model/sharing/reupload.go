@@ -75,10 +75,11 @@ func askReuploadTo(inst *instance.Instance, s *Sharing, m *Member, c *Credential
 		Headers: request.Headers{
 			"Authorization": "Bearer " + c.AccessToken.AccessToken,
 		},
+		ParseError: ParseRequestError,
 	}
 	res, err := request.Req(opts)
 	if res != nil && res.StatusCode/100 == 4 {
-		res, err = RefreshToken(inst, s, m, c, opts, nil)
+		res, err = RefreshToken(inst, err, s, m, c, opts, nil)
 	}
 	if err != nil {
 		return err

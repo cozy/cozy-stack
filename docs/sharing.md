@@ -1152,6 +1152,39 @@ Host: alice.example.net
 HTTP/1.1 204 No Content
 ```
 
+### POST /sharings/:sharing-id/recipients/self/moved
+
+This route can be used to inform that a Cozy has been moved to a new address.
+
+#### Request
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/recipients/self/moved HTTP/1.1
+Host: bob.example.net
+Authorization: Bearer ...
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings.moved",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "attributes": {
+      "new_instance": "https://alice.newcozy.example",
+      "access_token": "xxx",
+      "refresh_token": "xxx"
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ### POST /sharings/:sharing-id/\_revs_diff
 
 This endpoint is used by the sharing replicator of the stack to know which
