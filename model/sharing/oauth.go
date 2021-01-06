@@ -463,17 +463,28 @@ func (s *Sharing) ProcessAnswer(inst *instance.Instance, creds *APICredentials) 
 // ChangeOwnerAddress is used when the owner of the sharing has moved their
 // instance to a new URL and the other members of the sharing are informed of
 // the new URL.
-func (s *Sharing) ChangeOwnerAddress(inst *instance.Instance, newInstance string) error {
-	s.Members[0].Instance = newInstance
-	updateContactAddress(inst, s.Members[0].Email, newInstance)
+func (s *Sharing) ChangeOwnerAddress(inst *instance.Instance, params APIMoved) error {
+	s.Members[0].Instance = params.NewInstance
+	s.Credentials[0].AccessToken.AccessToken = params.AccessToken
+	s.Credentials[0].AccessToken.RefreshToken = params.RefreshToken
+	updateContactAddress(inst, s.Members[0].Email, params.NewInstance)
 	return couchdb.UpdateDoc(inst, s)
 }
 
 // ChangeMemberAddress is used when a recipient of the sharing has moved their
 // instance to a new URL and the owner if informed of the new URL.
-func (s *Sharing) ChangeMemberAddress(inst *instance.Instance, m *Member, newInstance string) error {
-	m.Instance = newInstance
-	updateContactAddress(inst, m.Email, newInstance)
+func (s *Sharing) ChangeMemberAddress(inst *instance.Instance, m *Member, params APIMoved) error {
+	m.Instance = params.NewInstance
+	for i := range s.Members {
+		if i == 0 {
+			continue
+		}
+		if s.Members[i] == *m {
+			s.Credentials[i-1].AccessToken.AccessToken = params.AccessToken
+			s.Credentials[i-1].AccessToken.RefreshToken = params.RefreshToken
+		}
+	}
+	updateContactAddress(inst, m.Email, params.NewInstance)
 	return couchdb.UpdateDoc(inst, s)
 }
 

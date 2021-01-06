@@ -93,8 +93,10 @@ var _ jsonapi.Object = (*APICredentials)(nil)
 // APIMoved is used when a Cozy has been moved to a new address to inform the
 // other members of the sharing of this new URL.
 type APIMoved struct {
-	NewInstance string `json:"new_instance"`
-	SharingID   string `json:"id"`
+	SharingID    string `json:"id"`
+	NewInstance  string `json:"new_instance"`
+	AccessToken  string `json:"access_token,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
 }
 
 // ID returns the sharing qualified identifier

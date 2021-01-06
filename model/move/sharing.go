@@ -10,6 +10,8 @@ import (
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/model/instance"
+	"github.com/cozy/cozy-stack/model/oauth"
+	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/model/sharing"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -66,9 +68,20 @@ func notifyMember(inst *instance.Instance, s *sharing.Sharing, index int) error 
 		return err
 	}
 
+	client := s.Credentials[0].Client
+	if index > 0 {
+		client = s.Credentials[index-1].Client
+	}
+	cli := &oauth.Client{ClientID: client.ClientID}
+	newToken, err := sharing.CreateAccessToken(inst, cli, s.ID(), permission.ALL)
+	if err != nil {
+		return err
+	}
 	moved := sharing.APIMoved{
-		NewInstance: inst.PageURL("", nil),
-		SharingID:   s.ID(),
+		SharingID:    s.ID(),
+		NewInstance:  inst.PageURL("", nil),
+		AccessToken:  newToken.AccessToken,
+		RefreshToken: newToken.RefreshToken,
 	}
 	data, err := jsonapi.MarshalObject(&moved)
 	if err != nil {

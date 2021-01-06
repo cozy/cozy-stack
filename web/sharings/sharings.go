@@ -248,9 +248,9 @@ func ChangeCozyAddress(c echo.Context) error {
 	}
 
 	if s.Owner {
-		err = s.ChangeMemberAddress(inst, member, moved.NewInstance)
+		err = s.ChangeMemberAddress(inst, member, moved)
 	} else {
-		err = s.ChangeOwnerAddress(inst, moved.NewInstance)
+		err = s.ChangeOwnerAddress(inst, moved)
 	}
 	if err != nil {
 		return wrapErrors(err)
