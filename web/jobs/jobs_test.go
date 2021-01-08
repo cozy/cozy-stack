@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -285,7 +286,7 @@ func TestAddTriggerWithMetadata(t *testing.T) {
 	body, _ := json.Marshal(&jsonapiReq{
 		Data: &jsonapiData{
 			Attributes: map[string]interface{}{
-				"type":      "@at",
+				"type":      "@webhook",
 				"arguments": at,
 				"worker":    "print",
 				"message":   "foo",
@@ -308,6 +309,7 @@ func TestAddTriggerWithMetadata(t *testing.T) {
 			ID         string            `json:"id"`
 			Type       string            `json:"type"`
 			Attributes *job.TriggerInfos `json:"attributes"`
+			Links      jsonapi.LinksList `json:"links"`
 		}
 	}
 
@@ -320,7 +322,8 @@ func TestAddTriggerWithMetadata(t *testing.T) {
 	}
 	triggerID := v.Data.ID
 	assert.Equal(t, consts.Triggers, v.Data.Type)
-	assert.Equal(t, "@at", v.Data.Attributes.Type)
+	assert.Equal(t, "@webhook", v.Data.Attributes.Type)
+	assert.Equal(t, "https://"+testInstance.Domain+"/jobs/webhooks/"+triggerID, v.Data.Links.Webhook)
 	assert.Equal(t, at, v.Data.Attributes.Arguments)
 	assert.Equal(t, "print", v.Data.Attributes.WorkerType)
 

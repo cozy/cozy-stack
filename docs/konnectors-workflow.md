@@ -712,7 +712,7 @@ Content-Type: application/vnd.api+json
     },
     "links": {
       "self": "/jobs/triggers/0915b6b0-0c97-0139-5af7-543d7eb8149c",
-      "webhook": "/jobs/webhooks/0915b6b0-0c97-0139-5af7-543d7eb8149c"
+      "webhook": "https://jane.cozy.example/jobs/webhooks/0915b6b0-0c97-0139-5af7-543d7eb8149c"
     }
   }
 }

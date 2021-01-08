@@ -11,6 +11,7 @@ import (
 
 	"github.com/justincampbell/bigduration"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -55,7 +56,8 @@ type (
 		workerType string
 	}
 	apiTrigger struct {
-		t *job.TriggerInfos
+		t    *job.TriggerInfos
+		inst *instance.Instance
 	}
 	apiTriggerState struct {
 		t *job.TriggerInfos
@@ -109,7 +111,7 @@ func (t apiTrigger) Included() []jsonapi.Object             { return nil }
 func (t apiTrigger) Links() *jsonapi.LinksList {
 	links := &jsonapi.LinksList{Self: "/jobs/triggers/" + t.ID()}
 	if t.t.Type == "@webhook" {
-		links.Webhook = "/jobs/webhooks/" + t.ID()
+		links.Webhook = t.inst.PageURL("/jobs/webhooks/"+t.ID(), nil)
 	}
 	return links
 }
@@ -288,7 +290,7 @@ func newTrigger(c echo.Context) error {
 	if err = sched.AddTrigger(t); err != nil {
 		return wrapJobsError(err)
 	}
-	return jsonapi.Data(c, http.StatusCreated, apiTrigger{t.Infos()}, nil)
+	return jsonapi.Data(c, http.StatusCreated, apiTrigger{t.Infos(), instance}, nil)
 }
 
 func getTrigger(c echo.Context) error {
@@ -306,7 +308,7 @@ func getTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	return jsonapi.Data(c, http.StatusOK, apiTrigger{tInfos}, nil)
+	return jsonapi.Data(c, http.StatusOK, apiTrigger{tInfos, instance}, nil)
 }
 
 func getTriggerState(c echo.Context) error {
@@ -452,7 +454,7 @@ func getAllTriggers(c echo.Context) error {
 			if err != nil {
 				return wrapJobsError(err)
 			}
-			objs = append(objs, apiTrigger{tInfos})
+			objs = append(objs, apiTrigger{tInfos, instance})
 		}
 	}
 
