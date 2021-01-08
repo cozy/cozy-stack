@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -590,6 +591,7 @@ func moveSuccessURI(c echo.Context) (string, error) {
 	}
 
 	inst := middlewares.GetInstance(c)
+	vault := HasVault(inst)
 	used, quota, err := DiskInfo(inst.VFS())
 	if err != nil {
 		return "", err
@@ -608,6 +610,7 @@ func moveSuccessURI(c echo.Context) (string, error) {
 	q := u.Query()
 	q.Set("state", c.FormValue("state"))
 	q.Set("code", access.Code)
+	q.Set("vault", strconv.FormatBool(vault))
 	q.Set("used", used)
 	if quota != "" {
 		q.Set("quota", quota)
@@ -633,6 +636,15 @@ func DiskInfo(fs vfs.VFS) (string, string, error) {
 		quota = fmt.Sprintf("%d", q)
 	}
 	return used, quota, nil
+}
+
+// HasVault returns true if a pass/bitwarden has been used on this instance.
+func HasVault(inst *instance.Instance) bool {
+	bitwardenSettings, err := settings.Get(inst)
+	if err != nil {
+		return false
+	}
+	return bitwardenSettings.ExtensionInstalled
 }
 
 // AccessTokenReponse is the stuct used for serializing to JSON the response

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -308,6 +309,7 @@ func getAuthorizeCode(c echo.Context) error {
 		return err
 	}
 
+	vault := auth.HasVault(inst)
 	used, quota, err := auth.DiskInfo(inst.VFS())
 	if err != nil {
 		return err
@@ -316,6 +318,7 @@ func getAuthorizeCode(c echo.Context) error {
 	q := u.Query()
 	q.Set("state", c.QueryParam("state"))
 	q.Set("code", access.Code)
+	q.Set("vault", strconv.FormatBool(vault))
 	q.Set("used", used)
 	if quota != "" {
 		q.Set("quota", quota)
@@ -346,6 +349,7 @@ func initializeMove(c echo.Context) error {
 	}
 	u.Path = "/initialize"
 
+	vault := auth.HasVault(inst)
 	used, quota, err := auth.DiskInfo(inst.VFS())
 	if err != nil {
 		return err
@@ -364,6 +368,7 @@ func initializeMove(c echo.Context) error {
 	q.Set("client_id", client.ClientID)
 	q.Set("client_secret", client.ClientSecret)
 	q.Set("code", access.Code)
+	q.Set("vault", strconv.FormatBool(vault))
 	q.Set("used", used)
 	if quota != "" {
 		q.Set("quota", quota)
