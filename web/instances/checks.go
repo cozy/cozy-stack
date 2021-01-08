@@ -70,6 +70,9 @@ func fsckHandler(c echo.Context) (err error) {
 	}
 	if err != nil {
 		log := map[string]string{"error": err.Error()}
+		if couchdb.IsNotFoundError(err) {
+			log = map[string]string{"type": "no_database", "error": err.Error()}
+		}
 		if errenc := encoder.Encode(log); errenc != nil {
 			i.Logger().WithField("nspace", "fsck").
 				Warnf("Cannot encode to JSON: %s (%v)", errenc, log)
@@ -108,7 +111,7 @@ func checkTriggers(c echo.Context) error {
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
 			return c.JSON(http.StatusOK, []map[string]interface{}{
-				{"error": err.Error()},
+				{"type": "no_database", "error": err.Error()},
 			})
 		}
 		return wrapError(err)
@@ -175,7 +178,7 @@ func checkShared(c echo.Context) error {
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
 			return c.JSON(http.StatusOK, []map[string]interface{}{
-				{"error": err.Error()},
+				{"type": "no_database", "error": err.Error()},
 			})
 		}
 		return wrapError(err)
@@ -194,7 +197,7 @@ func checkSharings(c echo.Context) error {
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
 			return c.JSON(http.StatusOK, []map[string]interface{}{
-				{"error": err.Error()},
+				{"type": "no_database", "error": err.Error()},
 			})
 		}
 		return wrapError(err)
