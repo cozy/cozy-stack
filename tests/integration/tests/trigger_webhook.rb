@@ -13,11 +13,11 @@ describe "A webhook trigger" do
     inst.install_konnector konnector_name, source_url
     account = Account.create inst, type: konnector_name, name: Faker::DrWho.character
     args = { "konnector" => konnector_name, "account" => account.couch_id, "foo" => "bar" }
-    webhook_url = Job::Webhook.create inst, args
+    webhook_url = Trigger::Webhook.create inst, args
 
     opts = { :"content-type" => 'application/json' }
     body = { "quote" => Faker::DrWho.quote }
-    inst.client[webhook_url].post JSON.generate(body), opts
+    RestClient.post webhook_url, JSON.generate(body), opts
 
     done = false
     10.times do

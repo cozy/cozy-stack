@@ -1,7 +1,7 @@
 class Trigger
   include Model
 
-  attr_reader :attributes
+  attr_reader :attributes, :links
 
   def self.doctype
     "io.cozy.triggers"
@@ -20,6 +20,7 @@ class Trigger
     res = inst.client["/jobs/triggers"].post to_json, opts
     j = JSON.parse(res.body)
     @couch_id = j["data"]["id"]
+    @links = j["data"]["links"]
   end
 
   def as_json
@@ -28,5 +29,17 @@ class Trigger
 
   def self.from_json(j)
     Trigger.new j
+  end
+
+  module Webhook
+    def self.create(inst, message)
+      attrs = {
+        type: "@webhook",
+        worker: "konnector",
+        message: message
+      }
+      t = Trigger.create inst, attrs
+      t.links["webhook"]
+    end
   end
 end
