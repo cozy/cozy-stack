@@ -1,6 +1,9 @@
 package note
 
 import (
+	"strconv"
+	"time"
+
 	"github.com/cozy/prosemirror-go/markdown"
 	"github.com/cozy/prosemirror-go/model"
 )
@@ -46,13 +49,29 @@ func markdownSerializer() *markdown.Serializer {
 			state.Write("|")
 			state.RenderContent(node)
 		},
+		"status": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			if txt, ok := node.Attrs["text"].(string); ok {
+				state.Text(txt)
+			}
+		},
+		"date": func(state *markdown.SerializerState, node, _parent *model.Node, _index int) {
+			if ts, ok := node.Attrs["timestamp"].(string); ok {
+				if seconds, err := strconv.ParseInt(ts, 10, 64); err == nil {
+					txt := time.Unix(seconds/1000, 0).Format("2006-01-02")
+					state.Text(txt)
+				}
+			}
+		},
 	}
 	marks := map[string]markdown.MarkSerializerSpec{
-		"em":     vanilla.Marks["em"],
-		"strong": vanilla.Marks["strong"],
-		"link":   vanilla.Marks["link"],
-		"code":   vanilla.Marks["code"],
-		"strike": {Open: "~~", Close: "~~", ExpelEnclosingWhitespace: true},
+		"em":          vanilla.Marks["em"],
+		"strong":      vanilla.Marks["strong"],
+		"link":        vanilla.Marks["link"],
+		"code":        vanilla.Marks["code"],
+		"strike":      {Open: "~~", Close: "~~", ExpelEnclosingWhitespace: true},
+		"indentation": {Open: "    ", Close: "", ExpelEnclosingWhitespace: true},
+		"alignement":  {Open: "", Close: "", ExpelEnclosingWhitespace: true},
+		"breakout":    {Open: "", Close: "", ExpelEnclosingWhitespace: true},
 	}
 	return markdown.NewSerializer(nodes, marks)
 }
