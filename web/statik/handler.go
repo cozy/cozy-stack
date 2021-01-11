@@ -40,12 +40,15 @@ var (
 		"login.html",
 		"move_confirm.html",
 		"move_delegated_auth.html",
+		"move_in_progress.html",
+		"move_vault.html",
 		"need_onboarding.html",
 		"oidc_login.html",
-		"passphrase_reset.html",
-		"passphrase_renew.html",
 		"passphrase_onboarding.html",
+		"passphrase_renew.html",
+		"passphrase_reset.html",
 		"sharing_discovery.html",
+		"twofactor.html",
 	}
 )
 

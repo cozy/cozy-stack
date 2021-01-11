@@ -480,6 +480,33 @@ func abortMove(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func importVault(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if !middlewares.IsLoggedIn(c) {
+		u := inst.PageURL("/auth/login", url.Values{
+			"redirect": {inst.FromURL(c.Request().URL)},
+		})
+		return c.Redirect(http.StatusSeeOther, u)
+	}
+
+	doc, err := inst.SettingsDocument()
+	if err != nil {
+		return err
+	}
+	delete(doc.M, "import_vault")
+	_ = couchdb.UpdateDoc(inst, doc)
+
+	return c.Render(http.StatusOK, "move_vault.html", echo.Map{
+		"CozyUI":      middlewares.CozyUI(inst),
+		"ThemeCSS":    middlewares.ThemeCSS(inst),
+		"Favicon":     middlewares.Favicon(inst),
+		"Domain":      inst.ContextualDomain(),
+		"ContextName": inst.ContextName,
+		"Title":       inst.Translate("Move Vault Title"),
+		"Link":        inst.DefaultRedirection(),
+	})
+}
+
 // Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
 	g.POST("/exports", createExport)
@@ -500,6 +527,7 @@ func Routes(g *echo.Group) {
 	g.GET("/go", startMove)
 	g.POST("/finalize", finalizeMove)
 	g.POST("/abort", abortMove)
+	g.GET("/vault", importVault)
 }
 
 func wrapError(err error) error {

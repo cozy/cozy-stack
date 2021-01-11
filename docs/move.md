@@ -310,3 +310,7 @@ Host: source.cozy.tools
 ```
 HTTP/1.1 204 No Content
 ```
+
+### GET /move/vault
+
+This shows a page for the user with instructions about how to import their vault.

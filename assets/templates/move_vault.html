@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}" class="u-h-100">
+  <head>
+    <meta charset="utf-8">
+    <title>{{.Title}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    {{.CozyUI}}
+    {{.ThemeCSS}}
+    {{.Favicon}}
+  </head>
+  <body>
+    <main role="application" class="u-flex u-flex-column u-flex-items-center u-flex-justify-center">
+      <header class="u-dn-s u-pos-absolute u-top-m u-left-m u-h-2 u-flex u-flex-items-center">
+        <img src="{{asset .Domain "/images/icon-cozy-home.svg"}}" alt="" class="u-mh-half" >
+        <h2 class="u-title-h2" class="u-ml-half">Cozy</h2>
+      </header>
+      <h1 class="u-maw-6 u-m-1 u-title-h1 u-bxz">{{.Title}}</h1>
+      <h2 class="u-maw-6 u-m-1 u-title-h4 u-mb-half">{{t "Move Vault Description"}}</h2>
+      <ol class="u-maw-6 u-m-1 u-bg-paleGrey u-bdrs-4 u-stack-m u-pv-1 u-pr-1 u-bxz">
+        <li class="u-text">{{t "Move Vault Step 1"}}</li>
+        <li class="u-text">{{t "Move Vault Step 2"}} <strong class="u-fs-italic">{{.Domain}}</strong></li>
+        <li class="u-text">{{t "Move Vault Step 3"}}</li>
+        <li class="u-text">{{t "Move Vault Step 4"}}</li>
+        <li class="u-text">{{t "Move Vault Step 5"}}</li>
+      </ol>
+      <footer class="u-maw-6 u-m-1 u-flex u-flex-wrap-reverse">
+          <a href="{{.Link}}" class="c-btn c-btn--full c-btn--secondary wizard-button u-mt-half">{{t "Move Vault Ignore"}}</a>
+          <a href="{{.Link}}" class="c-btn c-btn--full u-pr-3 wizard-button">{{t "Move Vault Link"}}</a>
+      </footer>
+    </main>
+    <script src="{{asset .Domain "/scripts/responsive.js"}}"></script>
+  </body>
+</html>
