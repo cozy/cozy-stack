@@ -28,6 +28,7 @@ const (
 
 // Request is a struct for confirming a move to another Cozy.
 type Request struct {
+	IgnoreVault bool               `json:"ignore_vault,omitempty"`
 	SourceCreds RequestCredentials `json:"source_credentials"`
 	TargetCreds RequestCredentials `json:"target_credentials"`
 	Target      string             `json:"target"`
@@ -136,11 +137,13 @@ func CreateRequest(inst *instance.Instance, params url.Values) (*Request, error)
 	if target.ClientSecret == "" {
 		return nil, errors.New("No target_client_secret")
 	}
+	ignoreVault := params.Get("ignore_vault") != ""
 
 	req := &Request{
 		SourceCreds: source,
 		TargetCreds: target,
 		Target:      cozyURL,
+		IgnoreVault: ignoreVault,
 	}
 
 	secret, err := getStore().Save(inst, req)
@@ -236,6 +239,7 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 			ClientID:     req.TargetCreds.ClientID,
 			ClientSecret: req.TargetCreds.ClientSecret,
 		},
+		IgnoreVault: req.IgnoreVault,
 	}
 	msg, err := job.NewMessage(options)
 	if err != nil {

@@ -56,7 +56,7 @@ func ExportWorker(c *job.WorkerContext) error {
 		return exportDoc.SendExportMail(c.Instance)
 	}
 
-	return exportDoc.NotifyTarget(c.Instance, opts.MoveTo, opts.TokenSource)
+	return exportDoc.NotifyTarget(c.Instance, opts.MoveTo, opts.TokenSource, opts.IgnoreVault)
 }
 
 // ImportWorker is the worker responsible for inserting the data from an export

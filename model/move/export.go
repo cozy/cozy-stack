@@ -27,6 +27,7 @@ type ExportOptions struct {
 	WithDoctypes     []string       `json:"with_doctypes,omitempty"`
 	ContextualDomain string         `json:"contextual_domain,omitempty"`
 	TokenSource      string         `json:"token_source,omitempty"`
+	IgnoreVault      bool           `json:"ignore_vault,omitempty"`
 	MoveTo           *MoveToOptions `json:"move_to,omitempty"`
 }
 

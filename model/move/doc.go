@@ -147,14 +147,18 @@ func (e *ExportDoc) SendExportMail(inst *instance.Instance) error {
 
 // NotifyTarget sends an HTTP request to the target so that it can start
 // importing the tarballs.
-func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions, token string) error {
+func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions, token string, ignoreVault bool) error {
 	link := e.GenerateLink(inst)
 	u := to.ImportsURL()
+	vault := false
+	if !ignoreVault {
+		vault = settings.HasVault(inst)
+	}
 	payload, err := json.Marshal(map[string]interface{}{
 		"data": map[string]interface{}{
 			"attributes": map[string]interface{}{
 				"url":   link,
-				"vault": settings.HasVault(inst),
+				"vault": vault,
 				"move_from": map[string]interface{}{
 					"url":   inst.PageURL("/", nil),
 					"token": token,
