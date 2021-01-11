@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -152,7 +153,8 @@ func (e *ExportDoc) NotifyTarget(inst *instance.Instance, to *MoveToOptions, tok
 	payload, err := json.Marshal(map[string]interface{}{
 		"data": map[string]interface{}{
 			"attributes": map[string]interface{}{
-				"url": link,
+				"url":   link,
+				"vault": settings.HasVault(inst),
 				"move_from": map[string]interface{}{
 					"url":   inst.PageURL("/", nil),
 					"token": token,

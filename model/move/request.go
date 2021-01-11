@@ -250,7 +250,7 @@ func StartMove(inst *instance.Instance, secret string) (*Request, error) {
 
 // CallFinalize will call the /move/finalize endpoint on the other instance to
 // unblock it after a successful move.
-func CallFinalize(inst *instance.Instance, otherURL, token string) {
+func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 	u, err := url.Parse(otherURL)
 	if err != nil {
 		u, err = url.Parse("https://" + otherURL)
@@ -287,6 +287,9 @@ func CallFinalize(inst *instance.Instance, otherURL, token string) {
 	doc, err := inst.SettingsDocument()
 	if err == nil {
 		doc.M["moved_from"] = u.Host
+		if vault {
+			doc.M["import_vault"] = true
+		}
 		_ = couchdb.UpdateDoc(inst, doc)
 	}
 }

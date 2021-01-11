@@ -143,6 +143,15 @@ func Get(inst *instance.Instance) (*Settings, error) {
 	return settings, nil
 }
 
+// HasVault returns true if a pass/bitwarden has been used on this instance.
+func HasVault(inst *instance.Instance) bool {
+	bitwardenSettings, err := Get(inst)
+	if err != nil {
+		return false
+	}
+	return bitwardenSettings.ExtensionInstalled
+}
+
 // UpdateRevisionDate updates the updatedAt field of the bitwarden settings
 // document. This field is used to know by some clients to know the date of the
 // last change on the server before doing a full sync.

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
@@ -309,7 +310,7 @@ func getAuthorizeCode(c echo.Context) error {
 		return err
 	}
 
-	vault := auth.HasVault(inst)
+	vault := settings.HasVault(inst)
 	used, quota, err := auth.DiskInfo(inst.VFS())
 	if err != nil {
 		return err
@@ -349,7 +350,7 @@ func initializeMove(c echo.Context) error {
 	}
 	u.Path = "/initialize"
 
-	vault := auth.HasVault(inst)
+	vault := settings.HasVault(inst)
 	used, quota, err := auth.DiskInfo(inst.VFS())
 	if err != nil {
 		return err

@@ -95,7 +95,7 @@ func ImportWorker(c *job.WorkerContext) error {
 	if opts.MoveFrom != nil {
 		if err == nil {
 			status = move.StatusMoveSuccess
-			move.CallFinalize(c.Instance, opts.MoveFrom.URL, opts.MoveFrom.Token)
+			move.CallFinalize(c.Instance, opts.MoveFrom.URL, opts.MoveFrom.Token, opts.Vault)
 		} else {
 			move.Abort(c.Instance, opts.MoveFrom.URL, opts.MoveFrom.Token)
 		}
