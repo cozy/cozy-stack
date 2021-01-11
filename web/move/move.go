@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/oauth"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/session"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
@@ -154,7 +155,11 @@ func blockForImport(c echo.Context) error {
 		return err
 	}
 
+	// Force the logout for all sessions before blocking the instance
 	inst := middlewares.GetInstance(c)
+	_ = session.DeleteOthers(inst, "")
+	time.Sleep(100 * time.Millisecond)
+
 	if source := c.QueryParam("source"); source != "" {
 		doc, err := inst.SettingsDocument()
 		if err != nil {
