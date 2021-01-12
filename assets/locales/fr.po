@@ -357,15 +357,20 @@ msgstr ""
 "contactez-nous à claude@cozycloud.cc."
 
 msgid "Move Link Title"
-msgstr "%s a déménagé son Cozy"
+msgstr "%s a changé l'adresse de son Cozy"
 
 msgid "Move Link Description"
 msgstr ""
-"Le lien par lequel vous souhaitez accéder au partage de %s cessera bientôt de fonctionner. "
-"Un nouveau lien a été généré :"
+"Ce lien ne sera bientôt plus disponible, un nouveau a été généré :"
 
 msgid "Move Link More"
-msgstr "Conservez précieusement ce nouveau lien avant de ne plus pouvoir accéder à cette page."
+msgstr "Copiez / collez ce nouveau lien afin de le conserver précieusement avant de ne plus pouvoir accéder à cette page."
+
+msgid "Move Link FAQ URL"
+msgstr "https://support.cozy.io/article/490-comment-retrouver-un-lien-de-partage"
+
+msgid "Move Link FAQ Text"
+msgstr "Comment retrouver un lien de partage en cas de changement d'adresse ?"
 
 msgid "Move Vault Title"
 msgstr "Importer mes mots de passe"

@@ -301,7 +301,6 @@ func renderMovedLink(c echo.Context, i *instance.Instance, to, subdomainType str
 		"Favicon":     middlewares.Favicon(i),
 		"Domain":      i.ContextualDomain(),
 		"ContextName": i.ContextName,
-		"PublicName":  name,
 		"Link":        link.String(),
 	})
 }

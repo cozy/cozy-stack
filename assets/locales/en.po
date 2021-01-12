@@ -306,15 +306,20 @@ msgid "Move Confirm Description"
 msgstr "You haven't recevied this e-mail? Check your SPAM or send us an e-mail to claude@cozycloud.cc."
 
 msgid "Move Link Title"
-msgstr "%s has moved their Cozy"
+msgstr "%s changed the address of his/her Cozy"
 
 msgid "Move Link Description"
 msgstr ""
-"The link by which you want to access %s's sharing will soon stop to work. "
-"A new link has been generated:"
+"This link will soon no longer be available, a new one has been generated:"
 
 msgid "Move Link More"
-msgstr "Keep this new link safe before no longer being able to come back to this page."
+msgstr "Copy/paste this new link to keep it preciously before you can no longer access this page."
+
+msgid "Move Link FAQ URL"
+msgstr "https://help.cozy.io/article/491-how-to-retrieve-a-share-link"
+
+msgid "Move Link FAQ Text"
+msgstr "How do I find a share link in case of a change of address?"
 
 msgid "Move Vault Title"
 msgstr "Import my passwords"
