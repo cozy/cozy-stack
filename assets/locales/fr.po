@@ -6,12 +6,12 @@
 # Nicolas Vinot, 2019
 # Pierre Guillemot <pierrot@cozycloud.cc>, 2019
 # Paul Tran-Van <paul@cozycloud.cc>, 2020
-# JC Pagnon <gooz@cozycloud.cc>, 2020
-# Bruno Michel, 2020
+# JC Pagnon <gooz@cozycloud.cc>, 2021
+# Bruno Michel, 2021
 # 
 msgid ""
 msgstr ""
-"Last-Translator: Bruno Michel, 2020\n"
+"Last-Translator: Bruno Michel, 2021\n"
 "Language-Team: French (https://www.transifex.com/cozy/teams/39753/fr/)\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -340,7 +340,10 @@ msgid "Move in progress Box"
 msgstr "Depuis %s vers %s"
 
 msgid "Move in progress Description"
-msgstr "Le déménagement des données peut prendre du temps. Vous pouvez fermer cet écran en toute tranquillité, un mail vous sera envoyé une fois le déménagement terminé."
+msgstr ""
+"Le déménagement des données peut prendre du temps. Vous pouvez fermer cet "
+"écran en toute tranquillité, un mail vous sera envoyé une fois le "
+"déménagement terminé."
 
 msgid "Move Confirm Title"
 msgstr "Votre demande de déménagement a bien été transmise"
@@ -349,7 +352,43 @@ msgid "Move Confirm Box"
 msgstr "Un email vous a été envoyé à %s pour accepter le déménagement."
 
 msgid "Move Confirm Description"
-msgstr "Vous n'avez pas reçu cet e-mail ? Vérifiez vos SPAM et indésirables ou contactez-nous à claude@cozycloud.cc."
+msgstr ""
+"Vous n'avez pas reçu cet e-mail ? Vérifiez vos SPAM et indésirables ou "
+"contactez-nous à claude@cozycloud.cc."
+
+msgid "Move Vault Title"
+msgstr "Importer mes mots de passe"
+
+msgid "Move Vault Description"
+msgstr ""
+"Suivez les étapes ci-dessous pour importer les mots de passe que vous venez "
+"d'exporter :"
+
+msgid "Move Vault Step 1"
+msgstr "Ouvrez l'extension Cozy installée sur votre navigateur"
+
+msgid "Move Vault Step 2"
+msgstr ""
+"Déconnectez-vous, puis connectez-vous à l'extension avec l'URL de votre "
+"nouveau Cozy"
+
+msgid "Move Vault Step 3"
+msgstr "Cliquez sur « Paramètres » en bas puis sur « Importer des éléments »"
+
+msgid "Move Vault Step 4"
+msgstr ""
+"Sélectionnez le format source « Bitwarden (json) » cliquez sur « choisir un "
+"fichier » et sélectionnez le fichier que vous avez exporté depuis votre "
+"extension au début du déménagement"
+
+msgid "Move Vault Step 5"
+msgstr "Cliquez sur « Importer »"
+
+msgid "Move Vault Link"
+msgstr "J'ai importé mes mots de passe"
+
+msgid "Move Vault Ignore"
+msgstr "Ignorer cette étape"
 
 msgid "Error Title"
 msgstr "Désolé, une erreur est survenue."
@@ -715,8 +754,8 @@ msgstr "⚠ L'export dans votre Cozy n'a pas abouti"
 
 msgid "Mail Export Error Text"
 msgstr ""
-"L'export des données de votre Cozy a rencontré un souci. "
-"Pouvez-vous renouveler l'opération depuis le début ?"
+"L'export des données de votre Cozy a rencontré un souci. Pouvez-vous "
+"renouveler l'opération depuis le début ?"
 
 msgid "Mail Export Error Outro"
 msgstr "Si le souci persiste, contactez le support client."
@@ -731,7 +770,9 @@ msgid "Mail Move Confirm Intro 2"
 msgstr "Une demande a été faite pour déménager vos données depuis %s vers %s."
 
 msgid "Mail Move Confirm Button instruction"
-msgstr "Si vous êtes bien à l'origine de cette demande, cliquez ci-dessous pour lancer le déménagement."
+msgstr ""
+"Si vous êtes bien à l'origine de cette demande, cliquez ci-dessous pour "
+"lancer le déménagement."
 
 msgid "Mail Move Confirm Button text"
 msgstr "Accepter le déménagement"
@@ -743,10 +784,14 @@ msgid "Mail Move Success Intro 1"
 msgstr "Bonjour %s,"
 
 msgid "Mail Move Success Intro 2"
-msgstr "Le déménagement de toutes vos données dans votre nouveau Cozy s'est déroulé avec succès."
+msgstr ""
+"Le déménagement de toutes vos données dans votre nouveau Cozy s'est déroulé "
+"avec succès."
 
 msgid "Mail Move Success Button instruction"
-msgstr "Vous pouvez dès à présent accéder à vos données dans votre Cozy en cliquant sur le bouton suivant :"
+msgstr ""
+"Vous pouvez dès à présent accéder à vos données dans votre Cozy en cliquant "
+"sur le bouton suivant :"
 
 msgid "Mail Move Success Button text"
 msgstr "Accéder à mon Cozy"
@@ -757,7 +802,7 @@ msgstr ""
 " les données associées ont bien été importées."
 
 msgid "Mail Move Success Outro"
-msgstr "À bientôt, votre Cozy"
+msgstr "A bientôt, votre Cozy"
 
 msgid "Mail Two Factor Subject"
 msgstr "Code de connexion à usage unique"
