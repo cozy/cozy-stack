@@ -237,6 +237,12 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		token = i.BuildAppToken(webapp.Slug(), session.ID())
 	} else {
 		token = c.QueryParam("sharecode")
+		doc, err := i.SettingsDocument()
+		if err == nil {
+			if to, ok := doc.M["moved_to"].(string); ok && to != "" {
+				return renderMovedLink(c, i, to)
+			}
+		}
 	}
 
 	tracking := "false"
@@ -265,6 +271,32 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		webapp:     webapp,
 		instance:   i,
 		isLoggedIn: isLoggedIn,
+	})
+}
+
+func renderMovedLink(c echo.Context, i *instance.Instance, to string) error {
+	name, _ := i.PublicName()
+	link := *c.Request().URL
+	if u, err := url.Parse(to); err == nil {
+		parts := strings.SplitN(c.Request().Host, ".", 2)
+		app := parts[0]
+		if config.GetConfig().Subdomains == config.FlatSubdomains {
+			parts = strings.SplitN(app, "-", 2)
+			app = parts[len(parts)-1]
+		}
+		link.Host = app + "." + u.Host
+		link.Scheme = u.Scheme
+	}
+
+	return c.Render(http.StatusGone, "move_link.html", echo.Map{
+		"Title":       i.Translate("Move Link Title", name),
+		"CozyUI":      middlewares.CozyUI(i),
+		"ThemeCSS":    middlewares.ThemeCSS(i),
+		"Favicon":     middlewares.Favicon(i),
+		"Domain":      i.ContextualDomain(),
+		"ContextName": i.ContextName,
+		"PublicName":  name,
+		"Link":        link.String(),
 	})
 }
 

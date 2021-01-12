@@ -305,6 +305,17 @@ msgstr "An e-mail has been sent to %s to accept the move."
 msgid "Move Confirm Description"
 msgstr "You haven't recevied this e-mail? Check your SPAM or send us an e-mail to claude@cozycloud.cc."
 
+msgid "Move Link Title"
+msgstr "%s has moved their Cozy"
+
+msgid "Move Link Description"
+msgstr ""
+"The link by which you want to access %s's sharing will soon stop to work. "
+"A new link has been generated:"
+
+msgid "Move Link More"
+msgstr "Keep this new link safe before no longer being able to come back to this page."
+
 msgid "Move Vault Title"
 msgstr "Import my passwords"
 

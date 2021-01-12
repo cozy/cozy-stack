@@ -356,6 +356,17 @@ msgstr ""
 "Vous n'avez pas reçu cet e-mail ? Vérifiez vos SPAM et indésirables ou "
 "contactez-nous à claude@cozycloud.cc."
 
+msgid "Move Link Title"
+msgstr "%s a déménagé son Cozy"
+
+msgid "Move Link Description"
+msgstr ""
+"Le lien par lequel vous souhaitez accéder au partage de %s cessera bientôt de fonctionner. "
+"Un nouveau lien a été généré :"
+
+msgid "Move Link More"
+msgstr "Conservez précieusement ce nouveau lien avant de ne plus pouvoir accéder à cette page."
+
 msgid "Move Vault Title"
 msgstr "Importer mes mots de passe"
 

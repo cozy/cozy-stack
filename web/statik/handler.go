@@ -41,6 +41,7 @@ var (
 		"move_confirm.html",
 		"move_delegated_auth.html",
 		"move_in_progress.html",
+		"move_link.html",
 		"move_vault.html",
 		"need_onboarding.html",
 		"oidc_login.html",
