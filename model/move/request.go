@@ -263,6 +263,11 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 		return
 	}
 	u.Path = "/move/finalize"
+	subdomainType := "flat"
+	if config.GetConfig().Subdomains == config.NestedSubdomains {
+		subdomainType = "nested"
+	}
+	u.RawQuery = url.Values{"subdomain": {subdomainType}}.Encode()
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		inst.Logger().
@@ -303,7 +308,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 // - stop the konnectors
 // - warn the OAuth clients
 // - unblock the instance
-func Finalize(inst *instance.Instance) error {
+func Finalize(inst *instance.Instance, subdomainType string) error {
 	var errm error
 	sched := job.System()
 	triggers, err := sched.GetAllTriggers(inst)
@@ -323,6 +328,16 @@ func Finalize(inst *instance.Instance) error {
 	if err := lifecycle.Unblock(inst); err != nil {
 		errm = multierror.Append(errm, err)
 	}
+
+	doc, err := inst.SettingsDocument()
+	if err == nil {
+		doc.M["moved_to_subdomain_type"] = subdomainType
+		err = couchdb.UpdateDoc(inst, doc)
+	}
+	if err != nil {
+		errm = multierror.Append(errm, err)
+	}
+
 	return errm
 }
 

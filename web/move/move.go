@@ -468,7 +468,7 @@ func finalizeMove(c echo.Context) error {
 	}
 
 	inst := middlewares.GetInstance(c)
-	if err := move.Finalize(inst); err != nil {
+	if err := move.Finalize(inst, c.QueryParam("subdomain")); err != nil {
 		return err
 	}
 	return c.NoContent(http.StatusNoContent)

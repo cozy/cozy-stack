@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}" class="u-h-100">
+  <head>
+    <meta charset="utf-8">
+    <title>{{.Title}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    {{.CozyUI}}
+    {{.ThemeCSS}}
+    {{.Favicon}}
+  </head>
+  <body class="u-flex u-h-100">
+    <main role="application" class="u-flex u-flex-column u-flex-items-center u-flex-justify-center">
+      <header class="u-pos-absolute u-top-m u-left-m u-h-2 u-flex u-flex-items-center">
+        <img src="{{asset .Domain "/images/icon-cozy-home.svg"}}" alt="" class="u-mh-half" >
+        <h2 class="u-title-h2" class="u-ml-half">Cozy</h2>
+      </header>
+      <h1 class="u-maw-6 u-m-1 u-title-h1 u-bxz">{{.Title}}</h1>
+      <p class="u-maw-6 u-m-1 u-text">{{t "Move Link Description"}}</p>
+      <div class="u-maw-6 u-m-1 u-bg-paleGrey u-bdrs-4 u-stack-m u-p-1 u-bxz">
+        <a href="{{.Link}}" class="u-link">{{.Link}}</a>
+      </div>
+      <p class="u-maw-6 u-m-1 u-text">{{t "Move Link More"}}</p>
+      <p class="u-maw-6 u-m-1">
+        <a href="{{t "Move Link FAQ URL"}}" class="u-link">{{t "Move Link FAQ Text"}}</a>
+      </p>
+    </main>
+  </body>
+</html>

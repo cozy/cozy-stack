@@ -285,7 +285,7 @@ the source Cozy so that it can stop the konnectors and unblock the instance.
 #### Request
 
 ```http
-POST /move/finalize HTTP/1.1
+POST /move/finalize?subdomain=flat HTTP/1.1
 Host: source.cozy.tools
 ```
 #### Reponse
