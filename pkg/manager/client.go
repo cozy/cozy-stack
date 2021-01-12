@@ -87,3 +87,18 @@ func (c *APIClient) Put(url string, params map[string]interface{}) error {
 	}
 	return nil
 }
+
+// Delete makes a DELETE request to the manager API
+func (c *APIClient) Delete(url string) error {
+	res, err := c.Do(http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	if err := res.Body.Close(); err != nil {
+		return err
+	}
+	if res.StatusCode >= 400 {
+		return errors.New(res.Status)
+	}
+	return nil
+}
