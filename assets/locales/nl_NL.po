@@ -339,6 +339,37 @@ msgstr ""
 "Heb je geen e-mail ontvangen? Controleer de map met Ongewenste berichten of "
 "stuur een e-mail naar claude@cozycloud.cc"
 
+msgid "Move Vault Title"
+msgstr "Wachtwoorden importeren"
+
+msgid "Move Vault Description"
+msgstr ""
+"Doorloop de volgende stappen om de zojuist geëxporteerde wachtwoorden te "
+"importeren:"
+
+msgid "Move Vault Step 1"
+msgstr "Open de Cozy-extensie van je browser"
+
+msgid "Move Vault Step 2"
+msgstr "Log uit op de extensie en log weer in met de url van je nieuwe Cozy"
+
+msgid "Move Vault Step 3"
+msgstr "Klik op 'Instellingen' en vervolgens op 'Items importeren'"
+
+msgid "Move Vault Step 4"
+msgstr ""
+"Kies als bronformaat 'Bitwarden (json)', klik op 'Bestand kiezen' en kies "
+"het zojuist geëxporteerde bestand"
+
+msgid "Move Vault Step 5"
+msgstr "Klik op 'Importeren'"
+
+msgid "Move Vault Link"
+msgstr "Ik heb mijn wachtwoorden geïmporteerd"
+
+msgid "Move Vault Ignore"
+msgstr "Stap overslaan"
+
 msgid "Error Title"
 msgstr "Sorry, er is een fout opgetreden."
 
