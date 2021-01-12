@@ -469,8 +469,21 @@ func logoutPreflight(c echo.Context) error {
 // checkRedirectParam returns the optional redirect query parameter. If not
 // empty, we check that the redirect is a subdomain of the cozy-instance.
 func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, error) {
+	instance := middlewares.GetInstance(c)
 	redirect := c.FormValue("redirect")
 	if redirect == "" {
+		// If the Cozy was moved from another address and the owner had a vault,
+		// we will show them instructions about how to import their vault.
+		settings, err := instance.SettingsDocument()
+		if err == nil && settings.M["import_vault"] == true {
+			u := url.URL{
+				Scheme: instance.Scheme(),
+				Host:   instance.ContextualDomain(),
+				Path:   "/move/vault",
+			}
+			return &u, nil
+		}
+
 		if defaultRedirect == nil {
 			return defaultRedirect, nil
 		}
@@ -488,7 +501,6 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, err
 			"bad url: bad scheme")
 	}
 
-	instance := middlewares.GetInstance(c)
 	if !instance.HasDomain(u.Host) {
 		instanceHost, appSlug, _ := config.SplitCozyHost(u.Host)
 		if !instance.HasDomain(instanceHost) || appSlug == "" {

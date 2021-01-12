@@ -607,7 +607,7 @@ Content-Type: application/json
 
 ```json
 {
-  "redirect": "https://move.cozycloud.cc/callback/target?code=543d7eb8149c&used=123456&quota=5000000&state=8d560d60"
+  "redirect": "https://move.cozycloud.cc/callback/target?code=543d7eb8149c&used=123456&quota=5000000&state=8d560d60&vault=true"
 }
 ```
 

@@ -208,7 +208,7 @@ Server: source.cozy.tools
 
 ```http
 HTTP/1.1 302 Found
-Location: https://move.cozycloud.cc/callback/source?code=543d7eb8149c&used=123456&quota=5000000&state=8d560d60
+Location: https://move.cozycloud.cc/callback/source?code=543d7eb8149c&used=123456&quota=5000000&state=8d560d60&vault=false
 ```
 
 ### POST /move/initialize
@@ -226,7 +226,7 @@ Host: source.cozy.tools
 
 ```http
 HTTP/1.1 307 Temporary Redirect
-Location: https://move.cozycloud.cc/initialize?code=834d7eb8149c&cozy_url=https://source.cozy.tools&used=123456&quota=5000000&client_id=09136b00-1778-0139-f0a7-543d7eb8149c&client_secret=NDkyZTEzMDA
+Location: https://move.cozycloud.cc/initialize?code=834d7eb8149c&cozy_url=https://source.cozy.tools&used=123456&quota=5000000&client_id=09136b00-1778-0139-f0a7-543d7eb8149c&client_secret=NDkyZTEzMDA&vault=false
 ```
 
 ### POST /move/request
@@ -310,3 +310,7 @@ Host: source.cozy.tools
 ```
 HTTP/1.1 204 No Content
 ```
+
+### GET /move/vault
+
+This shows a page for the user with instructions about how to import their vault.

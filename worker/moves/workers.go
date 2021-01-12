@@ -56,7 +56,7 @@ func ExportWorker(c *job.WorkerContext) error {
 		return exportDoc.SendExportMail(c.Instance)
 	}
 
-	return exportDoc.NotifyTarget(c.Instance, opts.MoveTo, opts.TokenSource)
+	return exportDoc.NotifyTarget(c.Instance, opts.MoveTo, opts.TokenSource, opts.IgnoreVault)
 }
 
 // ImportWorker is the worker responsible for inserting the data from an export
@@ -95,7 +95,7 @@ func ImportWorker(c *job.WorkerContext) error {
 	if opts.MoveFrom != nil {
 		if err == nil {
 			status = move.StatusMoveSuccess
-			move.CallFinalize(c.Instance, opts.MoveFrom.URL, opts.MoveFrom.Token)
+			move.CallFinalize(c.Instance, opts.MoveFrom.URL, opts.MoveFrom.Token, opts.Vault)
 		} else {
 			move.Abort(c.Instance, opts.MoveFrom.URL, opts.MoveFrom.Token)
 		}

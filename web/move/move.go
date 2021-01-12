@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/model/job"
@@ -313,6 +315,7 @@ func getAuthorizeCode(c echo.Context) error {
 		return err
 	}
 
+	vault := settings.HasVault(inst)
 	used, quota, err := auth.DiskInfo(inst.VFS())
 	if err != nil {
 		return err
@@ -321,6 +324,7 @@ func getAuthorizeCode(c echo.Context) error {
 	q := u.Query()
 	q.Set("state", c.QueryParam("state"))
 	q.Set("code", access.Code)
+	q.Set("vault", strconv.FormatBool(vault))
 	q.Set("used", used)
 	if quota != "" {
 		q.Set("quota", quota)
@@ -351,6 +355,7 @@ func initializeMove(c echo.Context) error {
 	}
 	u.Path = "/initialize"
 
+	vault := settings.HasVault(inst)
 	used, quota, err := auth.DiskInfo(inst.VFS())
 	if err != nil {
 		return err
@@ -369,6 +374,7 @@ func initializeMove(c echo.Context) error {
 	q.Set("client_id", client.ClientID)
 	q.Set("client_secret", client.ClientSecret)
 	q.Set("code", access.Code)
+	q.Set("vault", strconv.FormatBool(vault))
 	q.Set("used", used)
 	if quota != "" {
 		q.Set("quota", quota)
@@ -480,6 +486,33 @@ func abortMove(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func importVault(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	if !middlewares.IsLoggedIn(c) {
+		u := inst.PageURL("/auth/login", url.Values{
+			"redirect": {inst.FromURL(c.Request().URL)},
+		})
+		return c.Redirect(http.StatusSeeOther, u)
+	}
+
+	doc, err := inst.SettingsDocument()
+	if err != nil {
+		return err
+	}
+	delete(doc.M, "import_vault")
+	_ = couchdb.UpdateDoc(inst, doc)
+
+	return c.Render(http.StatusOK, "move_vault.html", echo.Map{
+		"CozyUI":      middlewares.CozyUI(inst),
+		"ThemeCSS":    middlewares.ThemeCSS(inst),
+		"Favicon":     middlewares.Favicon(inst),
+		"Domain":      inst.ContextualDomain(),
+		"ContextName": inst.ContextName,
+		"Title":       inst.Translate("Move Vault Title"),
+		"Link":        inst.DefaultRedirection(),
+	})
+}
+
 // Routes defines the routing layout for the /move module.
 func Routes(g *echo.Group) {
 	g.POST("/exports", createExport)
@@ -500,6 +533,7 @@ func Routes(g *echo.Group) {
 	g.GET("/go", startMove)
 	g.POST("/finalize", finalizeMove)
 	g.POST("/abort", abortMove)
+	g.GET("/vault", importVault)
 }
 
 func wrapError(err error) error {

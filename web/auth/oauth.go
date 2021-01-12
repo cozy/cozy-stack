@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -590,6 +591,7 @@ func moveSuccessURI(c echo.Context) (string, error) {
 	}
 
 	inst := middlewares.GetInstance(c)
+	vault := settings.HasVault(inst)
 	used, quota, err := DiskInfo(inst.VFS())
 	if err != nil {
 		return "", err
@@ -608,6 +610,7 @@ func moveSuccessURI(c echo.Context) (string, error) {
 	q := u.Query()
 	q.Set("state", c.FormValue("state"))
 	q.Set("code", access.Code)
+	q.Set("vault", strconv.FormatBool(vault))
 	q.Set("used", used)
 	if quota != "" {
 		q.Set("quota", quota)
