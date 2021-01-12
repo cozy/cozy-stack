@@ -240,7 +240,8 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 		doc, err := i.SettingsDocument()
 		if err == nil {
 			if to, ok := doc.M["moved_to"].(string); ok && to != "" {
-				return renderMovedLink(c, i, to)
+				subdomainType, _ := doc.M["moved_to_subdomain_type"].(string)
+				return renderMovedLink(c, i, to, subdomainType)
 			}
 		}
 	}
@@ -274,7 +275,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs appfs.FileServer, web
 	})
 }
 
-func renderMovedLink(c echo.Context, i *instance.Instance, to string) error {
+func renderMovedLink(c echo.Context, i *instance.Instance, to, subdomainType string) error {
 	name, _ := i.PublicName()
 	link := *c.Request().URL
 	if u, err := url.Parse(to); err == nil {
@@ -284,7 +285,12 @@ func renderMovedLink(c echo.Context, i *instance.Instance, to string) error {
 			parts = strings.SplitN(app, "-", 2)
 			app = parts[len(parts)-1]
 		}
-		link.Host = app + "." + u.Host
+		if subdomainType == "nested" {
+			link.Host = app + "." + u.Host
+		} else {
+			parts := strings.SplitN(u.Host, ".", 2)
+			link.Host = parts[0] + "-" + app + "." + parts[1]
+		}
 		link.Scheme = u.Scheme
 	}
 
