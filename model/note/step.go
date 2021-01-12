@@ -1,6 +1,7 @@
 package note
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -244,6 +245,33 @@ func purgeOldSteps(inst *instance.Instance, fileID string) {
 	if err := couchdb.BulkDeleteDocs(inst, consts.NotesSteps, docs); err != nil {
 		inst.Logger().WithField("nspace", "notes").
 			Warnf("Cannot purge old steps for file %s: %s", fileID, err)
+	}
+}
+
+func purgeAllSteps(inst *instance.Instance, fileID string) {
+	var docs []couchdb.Doc
+	err := couchdb.ForeachDocs(inst, consts.NotesSteps, func(_ string, raw json.RawMessage) error {
+		var doc Step
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			return err
+		}
+		docs = append(docs, doc)
+		return nil
+	})
+	if err != nil {
+		if !couchdb.IsNoDatabaseError(err) {
+			inst.Logger().WithField("nspace", "notes").
+				Warnf("Cannot purge all steps for file %s: %s", fileID, err)
+		}
+		return
+	}
+	if len(docs) == 0 {
+		return
+	}
+
+	if err := couchdb.BulkDeleteDocs(inst, consts.NotesSteps, docs); err != nil {
+		inst.Logger().WithField("nspace", "notes").
+			Warnf("Cannot purge all steps for file %s: %s", fileID, err)
 	}
 }
 

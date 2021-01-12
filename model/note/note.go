@@ -640,6 +640,28 @@ func Update(inst *instance.Instance, fileID string) error {
 	return nil
 }
 
+// UpdateSchema updates the schema of a note, and invalidates the previous steps.
+func UpdateSchema(inst *instance.Instance, file *vfs.FileDoc, schema map[string]interface{}) (*vfs.FileDoc, error) {
+	lock := inst.NotesLock()
+	if err := lock.Lock(); err != nil {
+		return nil, err
+	}
+	defer lock.Unlock()
+
+	doc, err := get(inst, file)
+	if err != nil {
+		return nil, err
+	}
+
+	doc.SchemaSpec = schema
+	updated, err := writeFile(inst, doc, file)
+	if err != nil {
+		return nil, err
+	}
+	purgeAllSteps(inst, doc.ID())
+	return updated, nil
+}
+
 // FlushPendings is used to persist all the notes before an export.
 func FlushPendings(inst *instance.Instance) error {
 	var errm error

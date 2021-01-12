@@ -310,6 +310,33 @@ func OpenNoteURL(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
+// UpdateNoteSchema is the API handler for PUT /notes/:id:/schema. It updates
+// the schema of the note and invalidates the previous steps.
+func UpdateNoteSchema(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	doc := &note.Document{}
+	if _, err := jsonapi.Bind(c.Request().Body, doc); err != nil {
+		return err
+	}
+
+	fileID := c.Param("id")
+	file, err := inst.VFS().FileByID(fileID)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	if err := middlewares.AllowVFS(c, permission.PUT, file); err != nil {
+		return err
+	}
+
+	file, err = note.UpdateSchema(inst, file, doc.SchemaSpec)
+	if err != nil {
+		return wrapError(err)
+	}
+
+	return files.FileData(c, http.StatusOK, file, false, nil)
+}
+
 // Routes sets the routing for the collaborative edition of notes.
 func Routes(router *echo.Group) {
 	router.POST("", CreateNote)
@@ -321,6 +348,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:id/telepointer", PutTelepointer)
 	router.POST("/:id/sync", ForceNoteSync)
 	router.GET("/:id/open", OpenNoteURL)
+	router.PUT("/:id/schema", UpdateNoteSchema)
 }
 
 func wrapError(err error) *jsonapi.Error {
