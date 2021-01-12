@@ -123,7 +123,7 @@ class Move
 
   def confirm_mail(mail)
     scanned = mail.body.scan(/secret=3D(\w+)/)
-    raise "No secret in #{mail.body}" unless scanned
+    raise "No secret in #{mail.body}" if scanned.empty?
     secret = scanned.last.last
     opts = { cookies: { cozysessid: @source.open_session } }
     @source.client["/move/go?secret=#{secret}"].get opts
