@@ -339,6 +339,25 @@ msgstr ""
 "Heb je geen e-mail ontvangen? Controleer de map met Ongewenste berichten of "
 "stuur een e-mail naar claude@cozycloud.cc"
 
+msgid "Move Link Title"
+msgstr "%s heeft het adres van zijn/haar Cozy gewijzigd"
+
+msgid "Move Link Description"
+msgstr ""
+"Deze link is binnenkort niet meer beschikbaar - er is een nieuwe "
+"gegenereerd:"
+
+msgid "Move Link More"
+msgstr ""
+"Sla het adres van deze link ergens veilig op voordat je geen toegang meer "
+"hebt tot deze pagina."
+
+msgid "Move Link FAQ URL"
+msgstr "https://help.cozy.io/article/491-how-to-retrieve-a-share-link"
+
+msgid "Move Link FAQ Text"
+msgstr "Hoe vind ik een gedeelde link als het adres ervan gewijzigd is?"
+
 msgid "Move Vault Title"
 msgstr "Wachtwoorden importeren"
 
@@ -368,7 +387,7 @@ msgid "Move Vault Link"
 msgstr "Ik heb mijn wachtwoorden geïmporteerd"
 
 msgid "Move Vault Ignore"
-msgstr "Stap overslaan"
+msgstr "Deze stap overslaan"
 
 msgid "Error Title"
 msgstr "Sorry, er is een fout opgetreden."
