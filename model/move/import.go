@@ -141,7 +141,13 @@ func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
 		return nil, err
 	}
 
+	if err = GetStore().SetAllowDeleteAccounts(inst); err != nil {
+		return nil, err
+	}
 	if err = lifecycle.Reset(inst); err != nil {
+		return nil, err
+	}
+	if err = GetStore().ClearAllowDeleteAccounts(inst); err != nil {
 		return nil, err
 	}
 

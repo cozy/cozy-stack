@@ -146,7 +146,7 @@ func CreateRequest(inst *instance.Instance, params url.Values) (*Request, error)
 		IgnoreVault: ignoreVault,
 	}
 
-	secret, err := getStore().SaveRequest(inst, req)
+	secret, err := GetStore().SaveRequest(inst, req)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +205,7 @@ func checkSourceCode(inst *instance.Instance, code string) error {
 // StartMove checks that the secret is known, sends a request to the other Cozy
 // to block it during the move, and pushs a job for the export.
 func StartMove(inst *instance.Instance, secret string) (*Request, error) {
-	req, err := getStore().GetRequest(inst, secret)
+	req, err := GetStore().GetRequest(inst, secret)
 	if err != nil {
 		return nil, err
 	}
