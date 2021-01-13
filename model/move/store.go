@@ -14,8 +14,8 @@ import (
 
 // Store is essentially an object to store and retrieve move requests
 type Store interface {
-	Get(db prefixer.Prefixer, key string) (*Request, error)
-	Save(db prefixer.Prefixer, req *Request) (string, error)
+	GetRequest(db prefixer.Prefixer, key string) (*Request, error)
+	SaveRequest(db prefixer.Prefixer, req *Request) (string, error)
 }
 
 // storeTTL is the time an entry stay alive
@@ -69,7 +69,7 @@ func (s *memStore) cleaner() {
 	}
 }
 
-func (s *memStore) Get(db prefixer.Prefixer, key string) (*Request, error) {
+func (s *memStore) GetRequest(db prefixer.Prefixer, key string) (*Request, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key = db.DBPrefix() + ":" + key
@@ -83,7 +83,7 @@ func (s *memStore) Get(db prefixer.Prefixer, key string) (*Request, error) {
 	return ref.val, nil
 }
 
-func (s *memStore) Save(db prefixer.Prefixer, req *Request) (string, error) {
+func (s *memStore) SaveRequest(db prefixer.Prefixer, req *Request) (string, error) {
 	key := makeSecret()
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -98,7 +98,7 @@ type redisStore struct {
 	c redis.UniversalClient
 }
 
-func (s *redisStore) Get(db prefixer.Prefixer, key string) (*Request, error) {
+func (s *redisStore) GetRequest(db prefixer.Prefixer, key string) (*Request, error) {
 	b, err := s.c.Get(db.DBPrefix() + ":" + key).Bytes()
 	if err == redis.Nil {
 		return nil, nil
@@ -113,7 +113,7 @@ func (s *redisStore) Get(db prefixer.Prefixer, key string) (*Request, error) {
 	return &req, nil
 }
 
-func (s *redisStore) Save(db prefixer.Prefixer, req *Request) (string, error) {
+func (s *redisStore) SaveRequest(db prefixer.Prefixer, req *Request) (string, error) {
 	v, err := json.Marshal(req)
 	if err != nil {
 		return "", err
