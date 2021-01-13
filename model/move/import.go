@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -152,10 +153,11 @@ func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
 	}
 
 	im := &importer{
-		inst:    inst,
-		fs:      inst.VFS(),
-		options: options,
-		doc:     doc,
+		inst:            inst,
+		fs:              inst.VFS(),
+		options:         options,
+		doc:             doc,
+		servicesInError: make(map[string]bool),
 	}
 	if err = im.importPart(""); err != nil {
 		return nil, err
@@ -166,7 +168,12 @@ func Import(inst *instance.Instance, options ImportOptions) ([]string, error) {
 		}
 	}
 
-	return im.appsNotInstalled, nil
+	var inError []string
+	for slug := range im.servicesInError {
+		inError = append(inError, slug)
+	}
+	sort.Strings(inError)
+	return inError, nil
 }
 
 // ImportIsFinished returns true unless an import is running
