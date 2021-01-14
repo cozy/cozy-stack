@@ -358,18 +358,19 @@ Content-Type: application/vnd.api+json
 #### Advanced usage
 
 Two optional query parameters are available for an app update:
+
 -   `PermissionsAcked`: (defaults to `false`)
-      - Tells that the user accepted the permissions/ToS. It is useful if there are
+    - Tells that the user accepted the permissions/ToS. It is useful if there are
     newer permissions or Terms Of Service and you want to be sure they were read
     or accepted. If set to `false`, the update will be blocked and the user will
-    be told that a new app version is available.\
-        > Note: `PermissionsAcked` can be skipped. \
-        If an instance is in a `context` configured with the parameter
-        `permissions_skip_verification` sets to `true`, permissions
-        verification will be ignored.
+    be told that a new app version is available.
+
+    Note: `PermissionsAcked` can be skipped. If an instance is in a `context`
+    configured with the parameter `permissions_skip_verification` sets to
+    `true`, permissions verification will be ignored.
 
 -   `Source` (defaults to `SourceURL` installation parameter):
-      - Use a different source to update this app (e.g. to install a `beta` or `dev`
+    - Use a different source to update this app (e.g. to install a `beta` or `dev`
     app version)
 
 ##### Examples:
