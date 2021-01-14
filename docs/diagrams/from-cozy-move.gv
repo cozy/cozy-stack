@@ -1,0 +1,77 @@
+digraph bitwarden {
+	graph [splines=true];
+	node [shape="box", fontname="lato", fontsize=11, margin=0.12, color="#297EF2", fontcolor="#32363F"];
+	edge [color="#32363F"];
+	ranksep=0.45; nodesep=1.5;
+
+	// Hidden, to order the clusters
+	s_export_2 -> m_edit_1 [style="invis"]
+
+	subgraph cluster_source {
+		label="Cozy source"; labeljust="l"; fontname="lato"; fontsize=12; margin=24; rankdir=TB;
+		s_export [label="User authenticated?"]
+		s_export_2 [label="Ask password"]
+		s_export_3 [label="Check password (and 2FA)"]
+	}
+
+	subgraph cluster_move {
+		label="cozy-move"; labeljust="l"; fontname="lato"; fontsize=12; margin=24;
+		m_init [label="Link sent by mail"; shape="Mdiamond"]
+		m_index_1 [label="Show summary"]
+		m_edit_1 [label="Ask Cozy URL"]
+		m_post_1 [label="Redirect to Cozy"]
+		m_source [label="Get info for Cozy source"]
+		m_intro [label="Show intro"]
+		m_index_2 [label="Show summary"]
+		m_select [label="Has a Cozy?"]
+		m_edit_2 [label="Ask Cozy URL"]
+		m_post_2 [label="Redirect to Cozy"]
+		m_target [label="Get info for Cozy target"]
+		m_index_3 [label="Show summary"]
+		m_warning [label="Ask confirmation"]
+		m_confirm [label="Confirm"]
+		m_fake [style="invis"]
+	}
+
+	subgraph cluster_target {
+		label="Cozy target"; labeljust="l"; fontname="lato"; fontsize=12; margin=24;
+		t_register [label="Create an OAuth client"]
+		t_export [label="Ask password (and 2FA)"]
+		t_export_2 [label="Check password"]
+		t_token [label="Token for target"]
+	}
+
+	same [label="Same as previous\nworkflow..."; shape="Msquare"]
+
+	// User
+	m_init -> m_intro [label="GET /"]
+	m_intro -> m_index_1 [label="GET /:locale/instances"]
+	m_index_1 -> m_edit_1 [label="GET /:locale/source/edit"]
+	m_edit_1 -> m_post_1 [label="POST /source"]
+	m_post_1 -> s_export [label="GET /move/authorize"]
+	s_export -> s_export_2 [label="no: GET /auth/login"; constraint=false]
+	s_export_2 -> s_export_3 [label="POST /auth/login"]
+	s_export_3 -> s_export [label="GET /move/authorize"]
+	s_export -> m_source [label="yes: GET /callback/source?code"]
+	m_source -> m_index_2 [label="GET /:locale/instances"]
+	m_index_2 -> m_select [label="GET /:locale/target/select"]
+	m_select -> m_edit_2 [label="GET /:locale/target/edit"]
+	m_edit_2 -> m_post_2 [label="POST /target"]
+	m_post_2 -> t_export [label="GET /auth/authorize/move"]
+	t_export -> t_export_2 [label="POST /auth/authorize/move"]
+	t_export_2 -> m_target [label="GET /callback/target\ncode"]
+	m_target -> m_index_3 [label="GET /:locale/instances"]
+	m_index_3 -> m_warning [label="(modal)"]
+	m_warning -> m_confirm [label="POST /instances"]
+	m_confirm -> same
+
+	// Server to server
+	m_post_2 -> t_register [label="POST /auth/register"; style="dashed"]
+	m_target -> t_token [label="POST /auth/access_token"; style="dashed"]
+
+	// Hidden, just to preserve order between nodes inside clusters
+	m_post_1 -> m_source [style="invis"]
+	m_post_2 -> m_fake -> m_target [style="invis"]
+	t_register -> t_export [style="invis"]
+	t_export_2 -> t_token [style="invis"]
+}

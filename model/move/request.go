@@ -137,6 +137,10 @@ func CreateRequest(inst *instance.Instance, params url.Values) (*Request, error)
 	if target.ClientSecret == "" {
 		return nil, errors.New("No target_client_secret")
 	}
+
+	// If the user has clicked on the "Ignore this step" button in cozy-move at
+	// the export the passwords page, we keep this information to not show them
+	// how to import the passwords on the target instance.
 	ignoreVault := params.Get("ignore_vault") != ""
 
 	req := &Request{

@@ -1,0 +1,87 @@
+digraph bitwarden {
+	graph [splines=true];
+	node [shape="box", fontname="lato", fontsize=11, margin=0.12, color="#297EF2", fontcolor="#32363F"];
+	edge [color="#32363F"];
+	ranksep=0.45; nodesep=1.5;
+
+	subgraph cluster_source {
+		label="Cozy source"; labeljust="l"; fontname="lato"; fontsize=12; margin=24; rankdir=TB;
+		s_settings [label="App settings"; shape="Mdiamond"]
+		s_start [label="Redirect to move.cozycloud.cc"]
+		s_token [label="Token for source"]
+		s_confirm [label="Send mail for confirmation"]
+		s_mail [label="Click on mail link"]
+		s_ready [label="Export ready"]
+		s_data [label="Send archive"]
+		s_unblock [label="Unblock the Cozy"]
+		s_fake_1, s_fake_2, s_fake_3, s_fake_4, s_fake_5, s_fake_6, s_fake_7, s_fake_8 [style="invis"]
+	}
+
+	subgraph cluster_move {
+		label="cozy-move"; labeljust="l"; fontname="lato"; fontsize=12; margin=24;
+		m_source [label="Get info for Cozy source"]
+		m_intro [label="Show intro"]
+		m_index_1 [label="Show summary"]
+		m_select [label="Has a Cozy?"]
+		m_edit [label="Ask Cozy URL"]
+		m_post [label="Redirect to Cozy"]
+		m_target [label="Get info for Cozy target"]
+		m_index_2 [label="Show summary"]
+		m_warning [label="Ask confirmation"]
+		m_confirm [label="Confirm"]
+	}
+
+	subgraph cluster_target {
+		label="Cozy target"; labeljust="l"; fontname="lato"; fontsize=12; margin=24;
+		t_register [label="Create an OAuth client"]
+		t_export [label="Ask password (and 2FA)"]
+		t_export_2 [label="Check password"]
+		t_token [label="Token for target"]
+		t_block [label="Block the Cozy"]
+		t_run [label="Start the moving"]
+		t_wait [label="Show waiting page"]
+		t_done [label="Send mail\nwhen finished"; shape="Msquare"]
+		t_fake_1, t_fake_2, t_fake_3, t_fake_4 [style="invis"]
+	}
+
+	// User
+	s_settings -> s_start [label="POST /move/initialize"]
+	s_start -> m_source [label="POST /initialize\ncozy_url code client_id client_secret"]
+	m_source -> m_intro [label="GET /"]
+	m_intro -> m_index_1 [label="GET /:locale/instances"]
+	m_index_1 -> m_select [label="GET /:locale/target/select"]
+	m_select -> m_edit [label="GET /:locale/target/edit"]
+	m_edit -> m_post [label="POST /target"]
+	m_post -> t_export [label="GET /auth/authorize/move"]
+	t_export -> t_export_2 [label="POST /auth/authorize/move"]
+	t_export_2 -> m_target [label="GET /callback/target\ncode"]
+	m_target -> m_index_2 [label="GET /:locale/instances"]
+	m_index_2 -> m_warning [label="(modal)"]
+	m_warning -> m_confirm [label="POST /instances"]
+	m_confirm -> s_confirm [label="POST /move/request"]
+	s_confirm -> s_mail [label="GET /move/go"]
+	s_mail -> t_wait [label="GET /move/importing"]
+
+	// Server to server
+	m_source -> s_token [label="POST /auth/access_token"; style="dashed"]
+	m_post -> t_register [label="POST /auth/register"; style="dashed"]
+	m_target -> t_token [label="POST /auth/access_token"; style="dashed"]
+	s_mail -> t_block [label="POST /move/importing"; style="dashed"]
+	s_mail -> s_ready [label="(prepare export)"]
+	s_ready -> t_run [label="POST /move/imports"; style="dashed"]
+	t_run -> s_data [label="GET /move/exports/data/:id"; style="dashed"]
+	t_run -> s_data [style="dashed"]
+	t_run -> s_data [style="dashed"]
+	t_run -> s_unblock [label="POST /move/finalize"; style="dashed"]
+	t_run -> t_done [label="(import done)"; style="dashed"]
+
+	// Hidden, just to preserve order between nodes inside clusters
+	s_start -> s_token [style="invis"]
+	s_token -> s_fake_1 -> s_fake_2 -> s_fake_3 -> s_fake_4 -> s_fake_5 -> s_fake_6 -> s_fake_7 -> s_fake_8 -> s_confirm [style="invis"]
+	m_post -> m_target [style="invis"]
+	t_register -> t_export [style="invis"]
+	t_export_2 -> t_token [style="invis"]
+	t_token -> t_fake_1 -> t_fake_2 -> t_fake_3 -> t_block [style="invis"]
+	t_block -> t_wait -> t_run -> t_fake_4 -> t_done [style="invis"]
+	s_ready -> s_data -> s_unblock [style="invis"]
+}

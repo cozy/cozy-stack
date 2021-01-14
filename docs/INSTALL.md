@@ -1,3 +1,5 @@
+[Table of contents](README.md#table-of-contents)
+
 # How to install Cozy-stack?
 
 ## Dependencies

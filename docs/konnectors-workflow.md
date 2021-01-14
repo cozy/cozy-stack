@@ -1,3 +1,5 @@
+[Table of contents](README.md#table-of-contents)
+
 # Konnectors workflow
 
 ## TL;DR
