@@ -9,6 +9,13 @@ def wait_for_file(file)
   end
 end
 
+def assert_account_not_found(inst, id)
+  assert_raises RestClient::NotFound do
+    Helpers.couch.get_doc inst.domain, Account.doctype, id
+  end
+end
+
+
 describe "An io.cozy.accounts" do
   it "is cleaned via on_delete_account" do
     Helpers.scenario "accounts_cleaning"
@@ -97,5 +104,44 @@ describe "An io.cozy.accounts" do
     end
     refute_empty received
     assert_equal received[0].subject, "Instance deletion failed on cleaning accounts"
+
+    # 5. When a Cozy is moved to a new address:
+    # - the accounts that must be cleaned on the source instance are not imported
+    # - the accounts on the target instance are correctly cleaned before the import
+    source = Instance.create name: "konnsource"
+    source.install_konnector "bankfive", source_url
+    aggsource = Account.create source, id: "bank-aggregator"
+    accfive = Account.create source, type: "banksix", aggregator: aggsource,
+                                     name: Faker::Hobbit.thorins_company
+    Trigger.create inst, worker: "konnector", type: "@cron", arguments: "@monthly",
+                         message: { konnector: "bankfive", account: accfive.couch_id }
+
+    target = Instance.create name: "konntarget"
+    target.install_konnector "banksix", source_url
+    aggtarget = Account.create target, id: "bank-aggregator"
+    accsix = Account.create target, type: "banksix", aggregator: aggtarget,
+                                    name: Faker::Hobbit.thorins_company
+    Trigger.create inst, worker: "konnector", type: "@cron", arguments: "@monthly",
+                         message: { konnector: "banksix", account: accsix.couch_id }
+
+    sleep 1
+    move = Move.new(source, target)
+    move.get_initialize_token
+    move.get_target_token
+    move.run
+    move.confirm
+    move.wait_done
+    target.stack.reset_tokens
+
+    assert_account_not_found target, aggsource.couch_id
+    assert_account_not_found target, accfive.couch_id
+
+    executed = JSON.parse File.read(accsix.log)
+    assert_equal executed["_id"], aggtarget.couch_id
+
+    assert_equal source.check, []
+    assert_equal target.check, []
+    source.remove
+    target.remove
   end
 end

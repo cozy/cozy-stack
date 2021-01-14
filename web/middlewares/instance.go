@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/model/move"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
 	"github.com/labstack/echo/v4"
@@ -88,6 +89,15 @@ func handleBlockedInstance(c echo.Context, i *instance.Instance, next echo.Handl
 			"Reason":      i.Translate(instance.BlockedLoginFailed.Message),
 			"Favicon":     Favicon(i),
 		})
+	}
+
+	// Allow konnectors to be run for the delete accounts hook just before
+	// moving a Cozy.
+	if move.GetStore().AllowDeleteAccounts(i) {
+		perms, err := GetPermission(c)
+		if err == nil && perms.Type == permission.TypeKonnector {
+			return next(c)
+		}
 	}
 
 	if i.BlockingReason == instance.BlockedImporting.Code ||

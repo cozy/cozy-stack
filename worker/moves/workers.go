@@ -71,7 +71,7 @@ func ImportWorker(c *job.WorkerContext) error {
 		return err
 	}
 
-	notInstalled, err := move.Import(c.Instance, opts)
+	inError, err := move.Import(c.Instance, opts)
 
 	if erru := lifecycle.Unblock(c.Instance); erru != nil {
 		// Try again
@@ -101,7 +101,7 @@ func ImportWorker(c *job.WorkerContext) error {
 		}
 	}
 
-	_ = move.SendImportDoneMail(c.Instance, status, notInstalled)
+	_ = move.SendImportDoneMail(c.Instance, status, inError)
 	if err != nil {
 		return err
 	}

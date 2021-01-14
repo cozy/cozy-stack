@@ -25,15 +25,15 @@ import (
 )
 
 type importer struct {
-	inst             *instance.Instance
-	fs               vfs.VFS
-	options          ImportOptions
-	doc              *ExportDoc
-	appsNotInstalled []string
-	tmpFile          string
-	doctype          string
-	docs             []interface{}
-	triggers         []*job.TriggerInfos
+	inst            *instance.Instance
+	fs              vfs.VFS
+	options         ImportOptions
+	doc             *ExportDoc
+	servicesInError map[string]bool // a map, not a slice, to have unique values
+	tmpFile         string
+	doctype         string
+	docs            []interface{}
+	triggers        []*job.TriggerInfos
 }
 
 func (im *importer) importPart(cursor string) error {
@@ -146,6 +146,11 @@ func (im *importer) importZip(zr zip.Reader) error {
 		case consts.Apps, consts.Konnectors:
 			im.installApp(id)
 			continue
+		case consts.Accounts:
+			if err := im.importAccount(file); err != nil {
+				errm = multierror.Append(errm, err)
+			}
+			continue
 		case consts.Triggers:
 			if err := im.importTrigger(file); err != nil {
 				errm = multierror.Append(errm, err)
@@ -248,6 +253,27 @@ func (im *importer) readDoc(zf *zip.File) (map[string]interface{}, error) {
 	return doc, nil
 }
 
+func (im *importer) importAccount(zf *zip.File) error {
+	doc, err := im.readDoc(zf)
+	if err != nil {
+		return err
+	}
+
+	// Note: the slug will be empty for aggregator accounts, and it won't be
+	// imported as an aggregator account is used by other accounts with a hook
+	// on deletion.
+	slug, _ := doc["account_type"].(string)
+	man, err := app.GetKonnectorBySlug(im.inst, slug)
+	if err != nil || man.OnDeleteAccount != "" {
+		im.servicesInError[slug] = true
+		return nil
+	}
+
+	docs := []interface{}{doc}
+	olds := make([]interface{}, len(docs))
+	return couchdb.BulkUpdateDocs(im.inst, consts.Accounts, docs, olds)
+}
+
 func (im *importer) readTrigger(zf *zip.File) (*job.TriggerInfos, error) {
 	r, err := zf.Open()
 	if err != nil {
@@ -328,7 +354,7 @@ func (im *importer) installApp(id string) {
 		_, err = installer.RunSync()
 	}
 	if err != nil {
-		im.appsNotInstalled = append(im.appsNotInstalled, slug)
+		im.servicesInError[slug] = true
 	}
 }
 
