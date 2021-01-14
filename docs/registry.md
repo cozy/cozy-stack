@@ -1,3 +1,5 @@
+[Table of contents](README.md#table-of-contents)
+
 # Apps registry
 
 The apps registry is a place where developers can submit their applications,

@@ -46,6 +46,7 @@ Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new) for 
 
 ### Up-to-date
 
+-   [Move design](move-design.md)
 -   [Sharing design](sharing-design.md)
 -   [Workflow of the konnectors](konnectors-workflow.md)
 

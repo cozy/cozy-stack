@@ -1,3 +1,5 @@
+[Table of contents](README.md#table-of-contents)
+
 # Pouchdb Mango Quirks
 
 The findings below were obtained while working on sorting performance in Cozy
