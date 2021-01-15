@@ -18,11 +18,13 @@ import (
 type Store interface {
 	AddFile(db prefixer.Prefixer, filePath string) (string, error)
 	AddThumb(db prefixer.Prefixer, fileID string) (string, error)
+	AddPreview(db prefixer.Prefixer, fileID string) (string, error)
 	AddVersion(db prefixer.Prefixer, versionID string) (string, error)
 	AddArchive(db prefixer.Prefixer, archive *Archive) (string, error)
 	AddMetadata(db prefixer.Prefixer, metadata *Metadata) (string, error)
 	GetFile(db prefixer.Prefixer, key string) (string, error)
 	GetThumb(db prefixer.Prefixer, key string) (string, error)
+	GetPreview(db prefixer.Prefixer, key string) (string, error)
 	GetVersion(db prefixer.Prefixer, key string) (string, error)
 	GetArchive(db prefixer.Prefixer, key string) (*Archive, error)
 	GetMetadata(db prefixer.Prefixer, key string) (*Metadata, error)
@@ -102,6 +104,17 @@ func (s *memStore) AddThumb(db prefixer.Prefixer, fileID string) (string, error)
 	return key, nil
 }
 
+func (s *memStore) AddPreview(db prefixer.Prefixer, fileID string) (string, error) {
+	key := makeSecret()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.vals[db.DBPrefix()+":"+key] = &memRef{
+		val: fileID,
+		exp: time.Now().Add(storeTTL),
+	}
+	return key, nil
+}
+
 func (s *memStore) AddVersion(db prefixer.Prefixer, versionID string) (string, error) {
 	key := makeSecret()
 	s.mu.Lock()
@@ -155,6 +168,25 @@ func (s *memStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
 }
 
 func (s *memStore) GetThumb(db prefixer.Prefixer, key string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	key = db.DBPrefix() + ":" + key
+	ref, ok := s.vals[key]
+	if !ok {
+		return "", ErrWrongToken
+	}
+	if time.Now().After(ref.exp) {
+		delete(s.vals, key)
+		return "", ErrWrongToken
+	}
+	f, ok := ref.val.(string)
+	if !ok {
+		return "", ErrWrongToken
+	}
+	return f, nil
+}
+
+func (s *memStore) GetPreview(db prefixer.Prefixer, key string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key = db.DBPrefix() + ":" + key
@@ -254,6 +286,14 @@ func (s *redisStore) AddThumb(db prefixer.Prefixer, fileID string) (string, erro
 	return key, nil
 }
 
+func (s *redisStore) AddPreview(db prefixer.Prefixer, fileID string) (string, error) {
+	key := makeSecret()
+	if err := s.c.Set(db.DBPrefix()+":"+key, fileID, storeTTL).Err(); err != nil {
+		return "", err
+	}
+	return key, nil
+}
+
 func (s *redisStore) AddVersion(db prefixer.Prefixer, versionID string) (string, error) {
 	key := makeSecret()
 	if err := s.c.Set(db.DBPrefix()+":"+key, versionID, storeTTL).Err(); err != nil {
@@ -298,6 +338,17 @@ func (s *redisStore) GetFile(db prefixer.Prefixer, key string) (string, error) {
 }
 
 func (s *redisStore) GetThumb(db prefixer.Prefixer, key string) (string, error) {
+	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
+	if err == redis.Nil {
+		return "", ErrWrongToken
+	}
+	if err != nil {
+		return "", err
+	}
+	return f, nil
+}
+
+func (s *redisStore) GetPreview(db prefixer.Prefixer, key string) (string, error) {
 	f, err := s.c.Get(db.DBPrefix() + ":" + key).Result()
 	if err == redis.Nil {
 		return "", ErrWrongToken

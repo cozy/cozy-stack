@@ -339,6 +339,11 @@ func (f *file) Links() *jsonapi.LinksList {
 			links.Large = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/large"
 		}
 	}
+	if f.doc.Class == "pdf" {
+		if secret, err := vfs.GetStore().AddPreview(f.instance, f.doc.DocID); err == nil {
+			links.Preview = "/files/" + f.doc.DocID + "/preview/" + secret
+		}
+	}
 	return &links
 }
 

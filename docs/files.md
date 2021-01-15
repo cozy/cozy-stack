@@ -417,7 +417,7 @@ Content-Type: application/json
       "total_docs_examined": 11,
       "results_returned": 2,
       "execution_time_ms": 8.833
-    },
+    }
   }
 }
 ```
@@ -687,7 +687,7 @@ Content-Type: application/vnd.api+json
         "purpose": "invoice",
         "sourceCategory": "telecom"
       },
-      "datetime": "2017-04-22T01:00:00-05:00",
+      "datetime": "2017-04-22T01:00:00-05:00"
     }
   }
 }
@@ -711,7 +711,7 @@ Content-Type: application/vnd.api+json
         "purpose": "invoice",
         "sourceCategory": "telecom"
       },
-      "datetime": "2017-04-22T01:00:00-05:00",
+      "datetime": "2017-04-22T01:00:00-05:00"
     }
   }
 }
@@ -753,6 +753,10 @@ By default the `content-disposition` will be `inline`, but it will be
 ```http
 GET /files/download?Path=/Documents/hello.txt&Dl=1 HTTP/1.1
 ```
+
+### GET /files/:file-id/preview/:secret
+
+Get an image that shows the first page of a PDF (at most 720x1280).
 
 ### GET /files/:file-id/thumbnails/:secret/:format
 
@@ -821,7 +825,7 @@ Content-Type: application/vnd.api+json
     },
     "attributes": {
       "type": "file",
-      "name": "hello.txt",
+      "name": "hello.pdf",
       "trashed": false,
       "md5sum": "YjU5YmMzN2Q2NDQxZDk2Nwo=",
       "created_at": "2016-09-19T12:38:04Z",
@@ -829,8 +833,8 @@ Content-Type: application/vnd.api+json
       "tags": [],
       "size": 12,
       "executable": false,
-      "class": "document",
-      "mime": "text/plain",
+      "class": "pdf",
+      "mime": "application/pdf",
       "cozyMetadata": {
         "doctypeVersion": "1",
         "metadataVersion": 1,
@@ -857,7 +861,8 @@ Content-Type: application/vnd.api+json
       }
     },
     "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
+      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
+      "preview": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/preview/77e117e0"
     }
   }
 }
