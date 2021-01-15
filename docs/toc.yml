@@ -13,6 +13,7 @@
   - "Build a release": ./release.md
   - "The contributing guide": ./CONTRIBUTING.md
 - Explanations:
+  - "Move design": ./move-design.md
   - "Sharing design": ./sharing-design.md
   - "Workflow of the konnectors": ./konnectors-workflow.md
 - List of services:
@@ -34,7 +35,6 @@
   - "/jobs - Jobs": ./jobs.md
   - " /jobs - Workers": ./workers.md
   - "/move - Move, export and import an instance": ./move.md
-  - " /move - Move design": ./move-design.md
   - "/notes - Notes for collaborative edition": ./notes.md
   - "/notifications - Notifications": ./notifications.md
   - "/public - Public": ./public.md

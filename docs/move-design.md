@@ -13,8 +13,8 @@ But, first, let's define what moving a Cozy means. When you have an instance,
 the "source", and another instance, the "target", the user can move their usage
 from the source to the target. The data is exported from the source instance,
 and imported on the target instance. But there is more than that. For example,
-the Cozy to Cozy sharings will be updated to work the target instance instead
-of the source instance.
+the Cozy to Cozy sharings ([documentation](./sharing-design.md)) will be
+updated to work the target instance instead of the source instance.
 
 
 ## Workflows
@@ -48,16 +48,16 @@ forbid swapping instances on Cozy-Move.
 The token exchanges are inspired by OAuth 2.0, but don't follow OAuth 2.0 as it
 would have made the user experience really awkwards with lots of redirections
 and meaningless screens. The confirmation mail is really important, as it is
-a safeguard if the worflows are not as robust as I think they are.
+a safeguard if the worflows are not as robust as we think they are.
 
 
 ## Source instance
 
 Exporting the data from a Cozy was a feature already implemented in the stack.
 The user can ask an export of their Cozy: the stack will send a mail with a
-link, and after the following the link, the user can download the data as a
-zip. If the VFS takes a lot of space, the zip will be split in several
-parts.
+link, and after following the link, the user can download the data as a zip. If
+the VFS ([Virtual File System](./files.md#virtual-file-system)) takes a lot of
+space, the zip will be split in several parts.
 
 When an export if part of a move, the instance is blocked to avoid any change
 that could increase the risk of inconsistencies during the move.
