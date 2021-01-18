@@ -35,4 +35,5 @@ cozy-stack config allows to print and generate some parts of the configuration
 * [cozy-stack config ls-contexts](cozy-stack_config_ls-contexts.md)	 - List contexts
 * [cozy-stack config passwd](cozy-stack_config_passwd.md)	 - Generate an admin passphrase
 * [cozy-stack config rm-asset](cozy-stack_config_rm-asset.md)	 - Removes an asset
+* [cozy-stack config show-context](cozy-stack_config_show-context.md)	 - Show a context
 

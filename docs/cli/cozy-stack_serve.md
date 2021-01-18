@@ -67,6 +67,7 @@ example), you can use the --appdir flag like this:
       --mail-reply-to string             mail address used to the reply-to (support for example)
       --mail-username string             mail smtp username
       --mailhog                          Alias of --mail-disable-tls --mail-port 1025, useful for MailHog
+      --move-url string                  URL for the move wizard (default "https://move.cozycloud.cc/")
       --password-reset-interval string   minimal duration between two password reset (default "15m")
       --rate-limiting-url string         URL for rate-limiting counters, redis or in-memory
       --realtime-url string              URL for realtime in the browser via webocket, redis or in-memory

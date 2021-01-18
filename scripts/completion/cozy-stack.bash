@@ -1314,6 +1314,38 @@ _cozy-stack_config_rm-asset()
     noun_aliases=()
 }
 
+_cozy-stack_config_show-context()
+{
+    last_command="cozy-stack_config_show-context"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--admin-host=")
+    two_word_flags+=("--admin-host")
+    flags+=("--admin-port=")
+    two_word_flags+=("--admin-port")
+    flags+=("--config=")
+    two_word_flags+=("--config")
+    two_word_flags+=("-c")
+    flags+=("--host=")
+    two_word_flags+=("--host")
+    flags+=("--port=")
+    two_word_flags+=("--port")
+    two_word_flags+=("-p")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
 _cozy-stack_config()
 {
     last_command="cozy-stack_config"
@@ -1351,6 +1383,7 @@ _cozy-stack_config()
         aliashash["password"]="passwd"
     fi
     commands+=("rm-asset")
+    commands+=("show-context")
 
     flags=()
     two_word_flags=()
@@ -3765,6 +3798,8 @@ _cozy-stack_serve()
     flags+=("--mail-username=")
     two_word_flags+=("--mail-username")
     flags+=("--mailhog")
+    flags+=("--move-url=")
+    two_word_flags+=("--move-url")
     flags+=("--password-reset-interval=")
     two_word_flags+=("--password-reset-interval")
     flags+=("--rate-limiting-url=")
