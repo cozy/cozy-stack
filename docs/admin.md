@@ -104,6 +104,110 @@ POST /instances/alice.cozy.tools/fixers/orphan-account HTTP/1.1
 ```
 
 
+## Contexts
+
+### GET /instances/contexts
+
+This endpoint returns the list of the contexts, with their name, config,
+registries, and cloudery endpoints.
+
+#### Request
+
+```
+GET /instances/contexts HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+```
+
+```json
+[
+  {
+    "config": {
+      "claudy_actions": [
+        "desktop",
+        "mobile",
+        "support"
+      ],
+      "debug": true,
+      "features": [
+        {
+          "foo": "bar"
+        },
+        {
+          "baz": [
+            "qux",
+            "quux"
+          ]
+        }
+      ],
+      "help_link": "https://forum.cozy.io/",
+      "noreply_address": "noreply@cozy.beta",
+      "noreply_name": "My Cozy Beta",
+      "sharing_domain": "cozy.tools"
+    },
+    "context": "dev",
+    "registries": [
+      "https://apps-registry.cozycloud.cc/"
+    ],
+    "cloudery_endpoint": ""
+  }
+]
+```
+
+### GET /instances/contexts/:name
+
+This endpoint returns the config of a given context.
+
+#### Request
+
+```
+GET /instances/contexts/dev HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+```
+
+```json
+{
+  "config": {
+    "claudy_actions": [
+      "desktop",
+      "mobile",
+      "support"
+    ],
+    "debug": true,
+    "features": [
+      {
+        "foo": "bar"
+      },
+      {
+        "baz": [
+          "qux",
+          "quux"
+        ]
+      }
+    ],
+    "help_link": "https://forum.cozy.io/",
+    "noreply_address": "noreply@cozy.beta",
+    "noreply_name": "My Cozy Beta",
+    "sharing_domain": "cozy.tools"
+  },
+  "context": "dev",
+  "registries": [
+    "https://apps-registry.cozycloud.cc/"
+  ],
+  "cloudery_endpoint": ""
+}
+```
+
+
 ## Checkers
 
 ### GET /instances/:domain/fsck

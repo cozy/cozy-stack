@@ -324,6 +324,42 @@ Deprecated: please use the command cozy-stack assets ls.
 	},
 }
 
+var showContextCmd = &cobra.Command{
+	Use:     "show-context",
+	Short:   "Show a context",
+	Example: "$ cozy-stack config show-context cozy_demo",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return cmd.Usage()
+		}
+		c := newAdminClient()
+		req := &request.Options{
+			Method: "GET",
+			Path:   "instances/contexts/" + args[0],
+		}
+		res, err := c.Req(req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+
+		var v interface{}
+
+		err = json.NewDecoder(res.Body).Decode(&v)
+		if err != nil {
+			return err
+		}
+
+		json, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(json))
+		return nil
+	},
+}
+
 var listContextsCmd = &cobra.Command{
 	Use:     "ls-contexts",
 	Aliases: []string{"list-contexts"},
@@ -369,6 +405,7 @@ func init() {
 	configCmdGroup.AddCommand(insertAssetCmd)
 	configCmdGroup.AddCommand(listAssetCmd)
 	configCmdGroup.AddCommand(removeAssetCmd)
+	configCmdGroup.AddCommand(showContextCmd)
 	configCmdGroup.AddCommand(listContextsCmd)
 	RootCmd.AddCommand(configCmdGroup)
 	insertAssetCmd.Flags().StringVar(&flagURL, "url", "", "The URL of the asset")

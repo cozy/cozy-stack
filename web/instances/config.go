@@ -3,13 +3,11 @@ package instances
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/assets"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
-	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/labstack/echo/v4"
 )
 
@@ -62,54 +60,4 @@ func deleteAssets(c echo.Context) error {
 		return wrapError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
-}
-
-func lsContexts(c echo.Context) error {
-	type contextAPI struct {
-		Context          string   `json:"context"`
-		Registries       []string `json:"registries"`
-		ClouderyEndpoint string   `json:"cloudery_endpoint"`
-	}
-
-	contexts := config.GetConfig().Contexts
-	clouderies := config.GetConfig().Clouderies
-	registries := config.GetConfig().Registries
-
-	result := []contextAPI{}
-	for contextName := range contexts {
-		var clouderyEndpoint string
-		var registriesList []string
-
-		// Clouderies
-		var cloudery interface{}
-
-		cloudery, ok := clouderies[contextName]
-
-		if !ok {
-			cloudery = clouderies["default"]
-		}
-
-		if cloudery != nil {
-			api := cloudery.(map[string]interface{})["api"]
-			clouderyEndpoint = api.(map[string]interface{})["url"].(string)
-		}
-
-		// Registries
-		var registryURLs []*url.URL
-
-		// registriesURLs contains context-specific urls and default ones
-		if registryURLs, ok = registries[contextName]; !ok {
-			registryURLs = registries["default"]
-		}
-		for _, url := range registryURLs {
-			registriesList = append(registriesList, url.String())
-		}
-
-		result = append(result, contextAPI{
-			Context:          contextName,
-			Registries:       registriesList,
-			ClouderyEndpoint: clouderyEndpoint,
-		})
-	}
-	return c.JSON(http.StatusOK, result)
 }
