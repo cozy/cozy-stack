@@ -5,8 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/config/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -131,4 +135,36 @@ Accept-Language: {{lang}},en
 	assert.NoError(t, err)
 	err = injectVariables(r, vars)
 	assert.Equal(t, ErrMissingVar, err)
+}
+
+func TestInjectSecret(t *testing.T) {
+	doctype := "cc.cozycloud.foobar"
+	doc := couchdb.JSONDoc{
+		Type: consts.RemoteSecrets,
+		M: map[string]interface{}{
+			"_id":   doctype,
+			"token": "123456789",
+		},
+	}
+	err := couchdb.CreateNamedDocWithDB(couchdb.GlobalSecretsDB, &doc)
+	assert.NoError(t, err)
+	defer func() {
+		_ = couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &doc)
+	}()
+
+	raw := `POST https://example.org/foo/
+Authorization: Bearer {{secret_token}}
+
+{ "bar": "baz" }
+`
+	r, err := ParseRawRequest(doctype, raw)
+	assert.NoError(t, err)
+	err = injectVariables(r, map[string]string{})
+	assert.NoError(t, err)
+	assert.Equal(t, "Bearer 123456789", r.Headers["Authorization"])
+}
+
+func TestMain(m *testing.M) {
+	config.UseTestFile()
+	os.Exit(m.Run())
 }

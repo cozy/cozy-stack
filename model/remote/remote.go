@@ -125,6 +125,7 @@ func (r *Request) Clone() couchdb.Doc {
 
 // Remote is the struct used to call a remote website for a doctype
 type Remote struct {
+	Doctype string
 	Verb    string
 	URL     *url.URL
 	Headers map[string]string
@@ -144,7 +145,7 @@ func ParseRawRequest(doctype, raw string) (*Remote, error) {
 		log.Infof("%s cannot be used as a remote doctype", doctype)
 		return nil, ErrInvalidRequest
 	}
-	var remote Remote
+	remote := Remote{Doctype: doctype}
 	remote.Verb = parts[0]
 	if remote.Verb != echo.GET && remote.Verb != echo.POST {
 		log.Infof("Invalid verb for remote doctype %s: %s", doctype, remote.Verb)
@@ -251,9 +252,19 @@ func extractVariables(verb string, in *http.Request) (map[string]string, error) 
 	return vars, nil
 }
 
+func findSecret(doctype, secretName string) (string, bool) {
+	var doc couchdb.JSONDoc
+	err := couchdb.GetDoc(couchdb.GlobalSecretsDB, consts.RemoteSecrets, doctype, &doc)
+	if err != nil {
+		return "", false
+	}
+	secret, ok := doc.M[secretName].(string)
+	return secret, ok
+}
+
 var injectionRegexp = regexp.MustCompile(`{{[0-9A-Za-z_ ]+}}`)
 
-func injectVar(src string, vars map[string]string, defautFunc string) (string, error) {
+func injectVar(src string, vars map[string]string, defautFunc, doctype string) (string, error) {
 	var err error
 	result := injectionRegexp.ReplaceAllStringFunc(src, func(m string) string {
 		m = strings.TrimSpace(m[2 : len(m)-2])
@@ -274,6 +285,9 @@ func injectVar(src string, vars map[string]string, defautFunc string) (string, e
 		}
 
 		val, ok := vars[varname]
+		if !ok && strings.HasPrefix(varname, "secret_") {
+			val, ok = findSecret(doctype, strings.TrimPrefix(varname, "secret_"))
+		}
 		if !ok {
 			err = ErrMissingVar
 			return ""
@@ -310,33 +324,33 @@ func injectVar(src string, vars map[string]string, defautFunc string) (string, e
 func injectVariables(remote *Remote, vars map[string]string) error {
 	var err error
 	if strings.Contains(remote.URL.Path, "{{") {
-		remote.URL.Path, err = injectVar(remote.URL.Path, vars, "path")
+		remote.URL.Path, err = injectVar(remote.URL.Path, vars, "path", remote.Doctype)
 		if err != nil {
 			return err
 		}
 	}
 	if strings.Contains(remote.URL.RawQuery, "{{") {
-		remote.URL.RawQuery, err = injectVar(remote.URL.RawQuery, vars, "query")
+		remote.URL.RawQuery, err = injectVar(remote.URL.RawQuery, vars, "query", remote.Doctype)
 		if err != nil {
 			return err
 		}
 	}
 	for k, v := range remote.Headers {
 		if strings.Contains(v, "{{") {
-			remote.Headers[k], err = injectVar(v, vars, "header")
+			remote.Headers[k], err = injectVar(v, vars, "header", remote.Doctype)
 			if err != nil {
 				return err
 			}
 		}
 	}
 	if strings.Contains(remote.Body, "{{") {
-		remote.Body, err = injectVar(remote.Body, vars, "")
+		remote.Body, err = injectVar(remote.Body, vars, "", remote.Doctype)
 	}
 	return err
 }
 
 // ProxyTo calls the external website and proxy the response
-func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.ResponseWriter, in *http.Request) error {
+func (remote *Remote) ProxyTo(ins *instance.Instance, rw http.ResponseWriter, in *http.Request) error {
 	vars, err := extractVariables(remote.Verb, in)
 	if err != nil {
 		log.Infof("Error on extracting variables: %s", err)
@@ -349,7 +363,7 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 	// Sanitize the remote URL
 	if !config.GetConfig().RemoteAllowCustomPort {
 		if strings.Contains(remote.URL.Host, ":") {
-			log.Infof("Invalid host for remote doctype %s: %s", doctype, remote.URL.Host)
+			log.Infof("Invalid host for remote doctype %s: %s", remote.Doctype, remote.URL.Host)
 			return ErrInvalidRequest
 		}
 	}
@@ -397,7 +411,7 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 	}
 
 	logged := &Request{
-		RemoteDoctype: doctype,
+		RemoteDoctype: remote.Doctype,
 		Verb:          remote.Verb,
 		URL:           remote.URL.String(),
 		ResponseCode:  res.StatusCode,
