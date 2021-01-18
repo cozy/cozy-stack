@@ -217,19 +217,19 @@ func generateThumbnails(ctx *job.WorkerContext, img *vfs.FileDoc) error {
 		}
 	}
 
-	in, err = recGenerateThub(ctx, in, fs, img, "large", env, false)
+	in, err = recGenerateThumb(ctx, in, fs, img, "large", env, false)
 	if err != nil {
 		return err
 	}
-	in, err = recGenerateThub(ctx, in, fs, img, "medium", env, false)
+	in, err = recGenerateThumb(ctx, in, fs, img, "medium", env, false)
 	if err != nil {
 		return err
 	}
-	_, err = recGenerateThub(ctx, in, fs, img, "small", env, true)
+	_, err = recGenerateThumb(ctx, in, fs, img, "small", env, true)
 	return err
 }
 
-func recGenerateThub(ctx *job.WorkerContext, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string, env []string, noOuput bool) (r io.Reader, err error) {
+func recGenerateThumb(ctx *job.WorkerContext, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string, env []string, noOuput bool) (r io.Reader, err error) {
 	defer func() {
 		if inCloser, ok := in.(io.Closer); ok {
 			if errc := inCloser.Close(); errc != nil && err == nil {
