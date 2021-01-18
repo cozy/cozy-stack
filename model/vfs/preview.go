@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/previewfs"
 )
 
 // ServePDFPreview will send the preview image for a PDF.
@@ -19,12 +20,23 @@ func ServePDFPreview(w http.ResponseWriter, req *http.Request, fs VFS, doc *File
 	if doc.CozyMetadata != nil && doc.CozyMetadata.UploadedAt != nil {
 		modtime = *doc.CozyMetadata.UploadedAt
 	}
-	buf, err := generatePreview(fs, doc)
+	buf, err := preview(fs, doc)
 	if err != nil {
 		return err
 	}
 	http.ServeContent(w, req, name, modtime, bytes.NewReader(buf.Bytes()))
 	return nil
+}
+
+func preview(fs VFS, doc *FileDoc) (*bytes.Buffer, error) {
+	cache := previewfs.SystemCache()
+	if buf, err := cache.Get(doc.MD5Sum); err == nil {
+		return buf, nil
+	}
+
+	buf, err := generatePreview(fs, doc)
+	_ = cache.Set(doc.MD5Sum, buf)
+	return buf, err
 }
 
 func generatePreview(fs VFS, doc *FileDoc) (*bytes.Buffer, error) {
