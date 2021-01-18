@@ -452,6 +452,7 @@ func Routes(router *echo.Group) {
 	router.POST("/assets", addAssets)
 	router.DELETE("/assets/:context/*", deleteAssets)
 	router.GET("/contexts", lsContexts)
+	router.GET("/contexts/:name", showContext)
 	router.GET("/with-app-version/:slug/:version", appVersion)
 
 	// Checks
