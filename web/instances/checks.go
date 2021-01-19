@@ -187,6 +187,15 @@ func checkTriggers(c echo.Context) error {
 					"message": fmt.Sprintf("%s", t.Message),
 				})
 			}
+			if slug, _ := msg["slug"].(string); slug == "" {
+				results = append(results, map[string]interface{}{
+					"type":    "missing_slug",
+					"_id":     t.TID,
+					"trigger": t.Type,
+					"worker":  t.WorkerType,
+					"message": fmt.Sprintf("%s", t.Message),
+				})
+			}
 		}
 	}
 
