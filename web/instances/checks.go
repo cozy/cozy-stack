@@ -164,6 +164,32 @@ func checkTriggers(c echo.Context) error {
 		}
 	}
 
+	for _, t := range triggers {
+		if t.Type == "@event" && t.WorkerType == "service" {
+			var msg map[string]interface{}
+			err := json.Unmarshal(t.Message, &msg)
+			if err != nil {
+				results = append(results, map[string]interface{}{
+					"type":    "invalid_message",
+					"_id":     t.TID,
+					"trigger": t.Type,
+					"worker":  t.WorkerType,
+					"message": fmt.Sprintf("%s", t.Message),
+				})
+				continue
+			}
+			if name, _ := msg["name"].(string); name == "" {
+				results = append(results, map[string]interface{}{
+					"type":    "missing_name",
+					"_id":     t.TID,
+					"trigger": t.Type,
+					"worker":  t.WorkerType,
+					"message": fmt.Sprintf("%s", t.Message),
+				})
+			}
+		}
+	}
+
 	return c.JSON(http.StatusOK, results)
 }
 
