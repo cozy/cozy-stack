@@ -39,6 +39,8 @@ const (
 	MemberStatusRevoked = "revoked"
 )
 
+const maximalNumberOfMembers = 50
+
 // Member contains the information about a recipient (or the sharer) for a sharing
 type Member struct {
 	Status     string `json:"status"`
@@ -146,6 +148,9 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 		}
 	}
 	if idx < 1 {
+		if len(s.Members) >= maximalNumberOfMembers {
+			return ErrTooManyMembers
+		}
 		s.Members = append(s.Members, m)
 	}
 	state := crypto.Base64Encode(crypto.GenerateRandomBytes(StateLen))
@@ -311,7 +316,11 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 
 // AddDelegatedContact adds a contact on the owner cozy, but for a contact from
 // a recipient (open_sharing: true only)
-func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email, instanceURL string, readOnly bool) string {
+func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email, instanceURL string, readOnly bool) (string, error) {
+	if len(s.Members) >= maximalNumberOfMembers {
+		return "", ErrTooManyMembers
+	}
+
 	m := Member{
 		Status:   MemberStatusPendingInvitation,
 		Email:    email,
@@ -325,7 +334,7 @@ func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email, instanceUR
 		XorKey: MakeXorKey(),
 	}
 	s.Credentials = append(s.Credentials, creds)
-	return creds.State
+	return creds.State, nil
 }
 
 // DelegateDiscovery delegates the POST discovery when a recipient has invited
