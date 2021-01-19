@@ -349,3 +349,7 @@ contexts:
     # Feature flags
     features:
       - hide_konnector_errors
+    # List of applications that can be automatically updated even if the
+    # permissions have changed
+    additional_platform_apps:
+      - superapp

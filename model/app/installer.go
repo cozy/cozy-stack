@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/appfs"
+	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -48,9 +49,10 @@ type Installer struct {
 	overridenParameters *json.RawMessage
 	permissionsAcked    bool
 
-	man  Manifest
-	src  *url.URL
-	slug string
+	man     Manifest
+	src     *url.URL
+	slug    string
+	context string
 
 	manc chan Manifest
 	log  *logrus.Entry
@@ -86,8 +88,8 @@ type Fetcher interface {
 }
 
 // NewInstaller creates a new Installer
-func NewInstaller(db prefixer.Prefixer, fs appfs.Copier, opts *InstallerOptions) (*Installer, error) {
-	man, err := initManifest(db, opts)
+func NewInstaller(in *instance.Instance, fs appfs.Copier, opts *InstallerOptions) (*Installer, error) {
+	man, err := initManifest(in, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +133,7 @@ func NewInstaller(db prefixer.Prefixer, fs appfs.Copier, opts *InstallerOptions)
 		installType = "delete"
 	}
 
-	log := logger.WithDomain(db.DomainName()).WithFields(logrus.Fields{
+	log := logger.WithDomain(in.DomainName()).WithFields(logrus.Fields{
 		"nspace":        "apps",
 		"slug":          man.Slug(),
 		"version_start": man.Version(),
@@ -163,16 +165,17 @@ func NewInstaller(db prefixer.Prefixer, fs appfs.Copier, opts *InstallerOptions)
 	return &Installer{
 		fetcher:  fetcher,
 		op:       opts.Operation,
-		db:       db,
+		db:       in,
 		fs:       fs,
 		endState: endState,
 
 		overridenParameters: opts.OverridenParameters,
 		permissionsAcked:    opts.PermissionsAcked,
 
-		man:  man,
-		src:  src,
-		slug: man.Slug(),
+		man:     man,
+		src:     src,
+		slug:    man.Slug(),
+		context: in.ContextName,
 
 		manc: make(chan Manifest, 2),
 		log:  log,
@@ -361,7 +364,7 @@ func (i *Installer) update() error {
 	// verifyPermissions flag is activated (for non manual updates for example),
 	// we cancel out the update and mark the UpdateAvailable field of the
 	// application instead of actually updating.
-	if makeUpdate && !isPlatformApp(oldManifest) {
+	if makeUpdate && !isPlatformApp(oldManifest, i.context) {
 		oldPermissions := oldManifest.Permissions()
 		newPermissions := newManifest.Permissions()
 		samePermissions := newPermissions != nil && oldPermissions != nil &&
@@ -549,7 +552,7 @@ func (i *Installer) Poll() (Manifest, bool, error) {
 }
 
 // DoLazyUpdate tries to update an application before using it
-func DoLazyUpdate(db prefixer.Prefixer, man Manifest, copier appfs.Copier, registries []*url.URL) Manifest {
+func DoLazyUpdate(in *instance.Instance, man Manifest, copier appfs.Copier, registries []*url.URL) Manifest {
 	src, err := url.Parse(man.Source())
 	if err != nil || src.Scheme != "registry" {
 		return man
@@ -580,7 +583,7 @@ func DoLazyUpdate(db prefixer.Prefixer, man Manifest, copier appfs.Copier, regis
 		// the same as the current version
 		if man.AvailableVersion() != "" {
 			man.SetAvailableVersion("")
-			_ = man.Update(db, nil)
+			_ = man.Update(in, nil)
 		}
 		return man
 	}
@@ -591,7 +594,7 @@ func DoLazyUpdate(db prefixer.Prefixer, man Manifest, copier appfs.Copier, regis
 	if channel == "stable" && !isMoreRecent(man.Version(), v.Version) {
 		return man
 	}
-	inst, err := NewInstaller(db, copier, &InstallerOptions{
+	inst, err := NewInstaller(in, copier, &InstallerOptions{
 		Operation:  Update,
 		Manifest:   man,
 		Registries: registries,
@@ -620,11 +623,11 @@ func isMoreRecent(a, b string) bool {
 	return vB.GreaterThan(vA)
 }
 
-func isPlatformApp(man Manifest) bool {
+func isPlatformApp(man Manifest, contextName string) bool {
 	if man.AppType() != consts.WebappType {
 		return false
 	}
-	return utils.IsInArray(man.Slug(), []string{
+	if utils.IsInArray(man.Slug(), []string{
 		"banks",
 		"contacts",
 		"drive",
@@ -634,5 +637,29 @@ func isPlatformApp(man Manifest) bool {
 		"photos",
 		"settings",
 		"store",
-	})
+	}) {
+		return true
+	}
+
+	contexts := config.GetConfig().Contexts
+	if contexts == nil {
+		return false
+	}
+	context, ok := contexts[contextName].(map[string]interface{})
+	if !ok {
+		context, ok = contexts[config.DefaultInstanceContext].(map[string]interface{})
+	}
+	if !ok {
+		return false
+	}
+	additional, ok := context["additional_platform_apps"].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, slug := range additional {
+		if slug == man.Slug() {
+			return true
+		}
+	}
+	return false
 }
