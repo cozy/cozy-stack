@@ -330,7 +330,10 @@ func AddRecipientsDelegated(c echo.Context) error {
 				email, _ := contact["email"].(string)
 				cozy, _ := contact["instance"].(string)
 				ro, _ := contact["read_only"].(bool)
-				state := s.AddDelegatedContact(inst, email, cozy, ro)
+				state, err := s.AddDelegatedContact(inst, email, cozy, ro)
+				if err != nil {
+					return wrapErrors(err)
+				}
 				if email == "" {
 					states[cozy] = state
 				} else {
@@ -800,6 +803,8 @@ func wrapErrors(err error) error {
 	case contact.ErrNoMailAddress:
 		return jsonapi.InvalidAttribute("recipients", err)
 	case sharing.ErrNoRecipients, sharing.ErrNoRules:
+		return jsonapi.BadRequest(err)
+	case sharing.ErrTooManyMembers:
 		return jsonapi.BadRequest(err)
 	case sharing.ErrInvalidURL:
 		return jsonapi.InvalidParameter("url", err)

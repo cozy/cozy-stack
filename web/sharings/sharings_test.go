@@ -715,7 +715,8 @@ func TestRevokedSharingWithPreview(t *testing.T) {
 	sharingDoc, err := sharing.FindSharing(aliceInstance, sharingID)
 	assert.NoError(t, err)
 
-	sharingDoc.AddDelegatedContact(aliceInstance, newMemberMail, "", true)
+	_, err = sharingDoc.AddDelegatedContact(aliceInstance, newMemberMail, "", true)
+	assert.NoError(t, err)
 	perms, err := permission.GetForSharePreview(aliceInstance, sharingID)
 	assert.NoError(t, err)
 	fooShareCode, err := aliceInstance.CreateShareCode(newMemberMail)
