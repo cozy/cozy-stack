@@ -625,16 +625,14 @@ func isPlatformApp(man Manifest) bool {
 		return false
 	}
 	return utils.IsInArray(man.Slug(), []string{
-		"onboarding",
-		"settings",
-		"collect",
-		"home",
-		"photos",
-		"drive",
-		"store",
 		"banks",
 		"contacts",
+		"drive",
+		"home",
 		"notes",
 		"passwords",
+		"photos",
+		"settings",
+		"store",
 	})
 }
