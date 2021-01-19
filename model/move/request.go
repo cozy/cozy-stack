@@ -2,8 +2,10 @@ package move
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
@@ -312,6 +314,7 @@ func CallFinalize(inst *instance.Instance, otherURL, token string, vault bool) {
 // - stop the konnectors
 // - warn the OAuth clients
 // - unblock the instance
+// - ask the manager to delete the instance in one month
 func Finalize(inst *instance.Instance, subdomainType string) error {
 	var errm error
 	sched := job.System()
@@ -342,7 +345,30 @@ func Finalize(inst *instance.Instance, subdomainType string) error {
 		errm = multierror.Append(errm, err)
 	}
 
+	if err := askManagerToDeleteInstance(inst); err != nil {
+		errm = multierror.Append(errm, err)
+	}
+
 	return errm
+}
+
+// DelayBeforeInstanceDeletionAfterMoved is the one month delay before an
+// instance is deleted after it has been moved to a new address.
+const DelayBeforeInstanceDeletionAfterMoved = 30 * 24 * time.Hour
+
+func askManagerToDeleteInstance(inst *instance.Instance) error {
+	if inst.UUID == "" {
+		return nil
+	}
+
+	client := instance.APIManagerClient(inst)
+	if client == nil {
+		return nil
+	}
+
+	ts := time.Now().Add(DelayBeforeInstanceDeletionAfterMoved)
+	url := fmt.Sprintf("/api/v1/instances/%s?date=%d", url.PathEscape(inst.UUID), ts.Unix())
+	return client.Delete(url)
 }
 
 // Abort will call the /move/abort endpoint on the other instance to unblock it
