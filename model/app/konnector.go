@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -272,12 +273,12 @@ func GetKonnectorBySlug(db prefixer.Prefixer, slug string) (*KonnManifest, error
 // GetKonnectorBySlugAndUpdate fetch the KonnManifest and perform an update of
 // the konnector if necessary and if the konnector was installed from the
 // registry.
-func GetKonnectorBySlugAndUpdate(db prefixer.Prefixer, slug string, copier appfs.Copier, registries []*url.URL) (*KonnManifest, error) {
-	man, err := GetKonnectorBySlug(db, slug)
+func GetKonnectorBySlugAndUpdate(in *instance.Instance, slug string, copier appfs.Copier, registries []*url.URL) (*KonnManifest, error) {
+	man, err := GetKonnectorBySlug(in, slug)
 	if err != nil {
 		return nil, err
 	}
-	return DoLazyUpdate(db, man, copier, registries).(*KonnManifest), nil
+	return DoLazyUpdate(in, man, copier, registries).(*KonnManifest), nil
 }
 
 // ListKonnectorsWithPagination returns the list of installed konnectors with a

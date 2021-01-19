@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/model/notification"
 	"github.com/cozy/cozy-stack/model/permission"
@@ -561,12 +562,12 @@ func GetWebappBySlug(db prefixer.Prefixer, slug string) (*WebappManifest, error)
 // GetWebappBySlugAndUpdate fetch the WebappManifest and perform an update of
 // the application if necessary and if the application was installed from the
 // registry.
-func GetWebappBySlugAndUpdate(db prefixer.Prefixer, slug string, copier appfs.Copier, registries []*url.URL) (*WebappManifest, error) {
-	man, err := GetWebappBySlug(db, slug)
+func GetWebappBySlugAndUpdate(in *instance.Instance, slug string, copier appfs.Copier, registries []*url.URL) (*WebappManifest, error) {
+	man, err := GetWebappBySlug(in, slug)
 	if err != nil {
 		return nil, err
 	}
-	return DoLazyUpdate(db, man, copier, registries).(*WebappManifest), nil
+	return DoLazyUpdate(in, man, copier, registries).(*WebappManifest), nil
 }
 
 // ListWebappsWithPagination returns the list of installed web applications with

@@ -14,12 +14,12 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/model/app"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/stack"
 	"github.com/cozy/cozy-stack/pkg/appfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/prefixer"
 	"github.com/spf13/afero"
 	"golang.org/x/sync/errgroup"
 )
@@ -130,7 +130,7 @@ git checkout master`
 	}
 }
 
-var db prefixer.Prefixer
+var db *instance.Instance
 var fs appfs.Copier
 var baseFS afero.Fs
 
@@ -164,7 +164,10 @@ func TestMain(m *testing.M) {
 		_, _ = io.WriteString(w, manGen())
 	}))
 
-	db = prefixer.NewPrefixer("", "app-test")
+	db = &instance.Instance{
+		ContextName: "foo",
+		Prefix:      "app-test",
+	}
 
 	err = couchdb.ResetDB(db, consts.Apps)
 	if err != nil {
