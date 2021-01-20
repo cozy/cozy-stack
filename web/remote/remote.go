@@ -21,7 +21,7 @@ func remoteGet(c echo.Context) error {
 	if remote.Verb != "GET" {
 		return jsonapi.MethodNotAllowed("GET")
 	}
-	err = remote.ProxyTo(doctype, instance, c.Response(), c.Request())
+	err = remote.ProxyTo(instance, c.Response(), c.Request())
 	if err != nil {
 		return wrapRemoteErr(err)
 	}
@@ -41,7 +41,7 @@ func remotePost(c echo.Context) error {
 	if remote.Verb != "POST" {
 		return jsonapi.MethodNotAllowed("POST")
 	}
-	err = remote.ProxyTo(doctype, instance, c.Response(), c.Request())
+	err = remote.ProxyTo(instance, c.Response(), c.Request())
 	if err != nil {
 		return wrapRemoteErr(err)
 	}

@@ -66,6 +66,8 @@ const (
 	Contacts = "io.cozy.contacts"
 	// RemoteRequests doc type for logging requests to remote websites
 	RemoteRequests = "io.cozy.remote.requests"
+	// RemoteSecrets doc type for secrets used by remote doctypes
+	RemoteSecrets = "io.cozy.remote.secrets"
 	// Sessions doc type for sessions identifying a connection
 	Sessions = "io.cozy.sessions"
 	// SessionsLogins doc type for sessions identifying a connection

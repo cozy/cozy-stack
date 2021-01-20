@@ -169,6 +169,33 @@ The requests are logged as the `io.cozy.remote.requests` doctype, with the
 doctype asked, the parameter (even those that have not been used, like `comment`
 in the previous example), and the application that has made the request.
 
+## Secrets
+
+It is possible to make the stack inject a secret in a request. For example, if
+we want to make the stack add a `token`, we can use `{{secret_token}}` in the
+remote doctype declation:
+
+```http
+GET https://foobar.com/baz/
+Authorization: Bearer {{secret_token}}
+
+{
+  "foo": "{{json foo}}",
+  "bar": "{{json bar}}"
+}
+```
+
+And the secret must be stored in CouchDB, in the
+`secrets/io-cozy-remote-secrets` database. The document must have the remote
+doctype as an id, and the secret in another field, like this:
+
+```json
+{
+  "_id": "cc.cozycloud.foobar",
+  "token": "1c7f3ba03bd801391a91543d7eb8149c"
+}
+```
+
 ## For developers
 
 If you are a developer and you want to use a new remote doctype, it can be
