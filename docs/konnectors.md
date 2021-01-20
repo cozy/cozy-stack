@@ -279,6 +279,45 @@ Content-Type: application/vnd.api+json
 
 ### GET /konnectors/:slug
 
+#### Request
+
+```http
+GET /konnectors/pajemploi HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.konnectors",
+    "id": "io.cozy.konnectors/pajemploi",
+    "attributes": {
+      "name": "Pajemploi",
+      "editor": "Cozy",
+      "icon": "icon.svg",
+      "type": "konnector",
+      "language": "node",
+      ...
+    },
+    "meta": {
+      "rev": "8-1197cab1c9ecc89cef676567410cf7c5"
+    },
+    "links": {
+      "self": "/konnectors/pajemploi",
+      "icon": "/konnectors/pajemploi/icon/1.5.2",
+      "permissions": "/permissions/konnectors/pajemploi"
+    }
+  }
+}
+```
+
 ## Uninstall a konnector
 
 ### DELETE /konnectors/:slug
