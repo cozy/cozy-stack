@@ -78,8 +78,12 @@ func destroyWithoutHooks(domain string) error {
 		// this document when we have concurrent updates for indexes/views
 		// version and deleting flag.
 		time.Sleep(3 * time.Second)
-		inst, _ = instance.GetFromCouch(domain)
-		err = couchdb.DeleteDoc(couchdb.GlobalDB, inst)
+		inst, errg := instance.GetFromCouch(domain)
+		if couchdb.IsNotFoundError(errg) {
+			err = nil
+		} else if inst != nil {
+			err = couchdb.DeleteDoc(couchdb.GlobalDB, inst)
+		}
 	}
 	return err
 }
