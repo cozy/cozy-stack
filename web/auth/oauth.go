@@ -184,11 +184,6 @@ func authorizeForm(c echo.Context) error {
 		}
 	}
 
-	email, err := instance.SettingsEMail()
-	if err != nil {
-		email = instance.ContextualDomain()
-	}
-
 	slugname, instanceDomain := instance.SlugAndDomain()
 
 	hasFallback := c.QueryParam("fallback_uri") != ""
@@ -199,7 +194,6 @@ func authorizeForm(c echo.Context) error {
 		"Domain":           instance.ContextualDomain(),
 		"InstanceSlugName": slugname,
 		"InstanceDomain":   instanceDomain,
-		"Email":            email,
 		"ContextName":      instance.ContextName,
 		"ClientDomain":     clientDomain,
 		"Locale":           instance.Locale,
