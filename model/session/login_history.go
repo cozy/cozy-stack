@@ -172,14 +172,13 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 		return nil
 	}
 
-	settingsURL := i.SubDomain(consts.SettingsSlug)
 	var changePassphraseLink string
 	if i.IsPasswordAuthenticationEnabled() {
-		settingsURL.Fragment = "/profile/password"
-		changePassphraseLink = settingsURL.String()
+		changePassphraseLink = i.ChangePasswordURL()
 	}
 	var activateTwoFALink string
 	if !i.HasAuthMode(instance.TwoFactorMail) {
+		settingsURL := i.SubDomain(consts.SettingsSlug)
 		settingsURL.Fragment = "/profile"
 		activateTwoFALink = settingsURL.String()
 	}
