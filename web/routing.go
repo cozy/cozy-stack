@@ -40,6 +40,7 @@ import (
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/swift"
 	"github.com/cozy/cozy-stack/web/version"
+	"github.com/cozy/cozy-stack/web/wellknown"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus"
@@ -164,6 +165,7 @@ func SetupRoutes(router *echo.Echo) error {
 
 		router.GET("/", auth.Home, mws...)
 		auth.Routes(router.Group("/auth", mws...))
+		wellknown.Routes(router.Group("/.well-known", mws...))
 	}
 
 	// authentified JSON API routes

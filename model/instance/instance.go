@@ -425,6 +425,14 @@ func (i *Instance) SubDomain(s string) *url.URL {
 	}
 }
 
+// ChangePasswordURL returns the URL of the settings page that can be used by
+// the user to change their password.
+func (i *Instance) ChangePasswordURL() string {
+	u := i.SubDomain(consts.SettingsSlug)
+	u.Fragment = "/profile/password"
+	return u.String()
+}
+
 // FromURL normalizes a given url with the scheme and domain of the instance.
 func (i *Instance) FromURL(u *url.URL) string {
 	u2 := url.URL{

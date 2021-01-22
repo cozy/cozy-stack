@@ -96,3 +96,4 @@ designing new services.
     -   [Terms of Services](user-action-required.md)
 -   `/sharings` - [Sharing](sharing.md)
 -   `/shortcuts` - [Shortcuts](shortcuts.md)
+-   `/.well-known` - [Well-known](wellknown.md)
