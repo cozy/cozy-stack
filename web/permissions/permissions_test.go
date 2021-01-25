@@ -522,8 +522,11 @@ func TestRevokeByAnotherApp(t *testing.T) {
 		Registries: testInstance.Registries(),
 	})
 	assert.NoError(t, err)
-	_, err = installer.RunSync()
-	assert.NoError(t, err)
+	manifest, err := installer.RunSync()
+	if !assert.NoError(t, err) {
+		fmt.Printf("manifest = %#v\n", manifest)
+		return
+	}
 
 	notesToken, err := testInstance.MakeJWT(consts.AppAudience, "notes", "", "", time.Now())
 	assert.NoError(t, err)
