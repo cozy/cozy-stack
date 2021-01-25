@@ -216,6 +216,11 @@ func checkShared(c echo.Context) error {
 				{"type": "no_database", "error": err.Error()},
 			})
 		}
+		if _, ok := err.(*json.SyntaxError); ok {
+			return c.JSON(http.StatusOK, []map[string]interface{}{
+				{"type": "invalid_json", "error": err.Error()},
+			})
+		}
 		return wrapError(err)
 	}
 	return c.JSON(http.StatusOK, results)
