@@ -3,12 +3,21 @@ package files
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/permission"
+	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jsonapi"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
+
+func lockVFS(inst *instance.Instance) func() {
+	mu := lock.ReadWrite(inst, "vfs")
+	_ = mu.Lock()
+	return mu.Unlock
+}
 
 // AddReferencedHandler is the echo.handler for adding referenced_by to
 // a file
@@ -17,8 +26,8 @@ func AddReferencedHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	fileID := c.Param("file-id")
-
-	dir, file, err := instance.VFS().DirOrFileByID(fileID)
+	fs := instance.VFS()
+	dir, file, err := fs.DirOrFileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -33,6 +42,15 @@ func AddReferencedHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
+	var oldFile *vfs.FileDoc
+	if file != nil {
+		oldFile = file.Clone().(*vfs.FileDoc)
+		// Ensure the fullpaths are filled to realtime
+		_, _ = file.Path(fs)
+		_, _ = oldFile.Path(fs)
+	}
+	defer lockVFS(instance)()
+
 	var newRev string
 	var refs []couchdb.DocReference
 	if dir != nil {
@@ -44,7 +62,7 @@ func AddReferencedHandler(c echo.Context) error {
 	} else {
 		file.AddReferencedBy(references...)
 		updateFileCozyMetadata(c, file, false)
-		err = couchdb.UpdateDoc(instance, file)
+		err = couchdb.UpdateDocWithOld(instance, file, oldFile)
 		newRev = file.Rev()
 		refs = file.ReferencedBy
 	}
@@ -66,8 +84,8 @@ func RemoveReferencedHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	fileID := c.Param("file-id")
-
-	dir, file, err := instance.VFS().DirOrFileByID(fileID)
+	fs := instance.VFS()
+	dir, file, err := fs.DirOrFileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -82,6 +100,15 @@ func RemoveReferencedHandler(c echo.Context) error {
 		return WrapVfsError(err)
 	}
 
+	var oldFile *vfs.FileDoc
+	if file != nil {
+		oldFile = file.Clone().(*vfs.FileDoc)
+		// Ensure the fullpaths are filled to realtime
+		_, _ = file.Path(fs)
+		_, _ = oldFile.Path(fs)
+	}
+	defer lockVFS(instance)()
+
 	var newRev string
 	var refs []couchdb.DocReference
 	if dir != nil {
@@ -93,7 +120,7 @@ func RemoveReferencedHandler(c echo.Context) error {
 	} else {
 		file.RemoveReferencedBy(references...)
 		updateFileCozyMetadata(c, file, false)
-		err = couchdb.UpdateDoc(instance, file)
+		err = couchdb.UpdateDocWithOld(instance, file, oldFile)
 		newRev = file.Rev()
 		refs = file.ReferencedBy
 	}
