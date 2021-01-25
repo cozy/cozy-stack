@@ -475,10 +475,11 @@ func extractDocReferenceFromID(id string) *couchdb.DocReference {
 // revision tree for inconsistencies.
 func CheckShared(inst *instance.Instance) ([]*CheckSharedError, error) {
 	checks := []*CheckSharedError{}
-	err := couchdb.ForeachDocs(inst, consts.Shared, func(_ string, data json.RawMessage) error {
+	err := couchdb.ForeachDocs(inst, consts.Shared, func(id string, data json.RawMessage) error {
 		s := &SharedRef{}
 		if err := json.Unmarshal(data, s); err != nil {
-			return err
+			checks = append(checks, &CheckSharedError{Type: "invalid_json", ID: id})
+			return nil
 		}
 		if check := s.Revisions.check(); check != nil {
 			check.ID = s.SID
