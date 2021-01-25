@@ -28,7 +28,7 @@ require (
 	github.com/leonelquinteros/gotext v1.4.0
 	github.com/mitchellh/mapstructure v1.4.0
 	github.com/mssola/user_agent v0.5.2
-	github.com/ncw/swift v1.0.52
+	github.com/ncw/swift v1.0.53
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/oschwald/maxminddb-golang v1.8.0
 	github.com/pelletier/go-toml v1.5.0 // indirect
