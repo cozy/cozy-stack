@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/note"
@@ -487,6 +488,7 @@ func TestPutSchema(t *testing.T) {
 	panel, _ := nodes[1].([]interface{})
 	assert.EqualValues(t, "panel", panel[0])
 
+	time.Sleep(1 * time.Second)
 	path2 := fmt.Sprintf("/notes/%s/steps?Version=%d", noteID, version)
 	req2, _ := http.NewRequest("GET", ts.URL+path2, nil)
 	req2.Header.Add("Authorization", "Bearer "+token)
