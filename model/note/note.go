@@ -152,9 +152,9 @@ func (d *Document) asFile(inst *instance.Instance, old *vfs.FileDoc) *vfs.FileDo
 
 	// If the file was renamed manually before, we will keep its name. Else, we
 	// can rename with the new title.
-	newTitle := titleToFilename(inst, d.Title, now)
+	newTitle := titleToFilename(inst, d.Title, old.CreatedAt)
 	oldTitle, _ := old.Metadata["title"].(string)
-	rename := d.Title != "" && titleToFilename(inst, oldTitle, old.UpdatedAt) == old.DocName
+	rename := d.Title != "" && titleToFilename(inst, oldTitle, old.CreatedAt) == old.DocName
 	if old.DocName == "" {
 		rename = true
 	}
