@@ -139,13 +139,17 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 		} else {
 			found = m.Email == member.Email
 		}
-		if found && member.Status != MemberStatusReady {
-			idx = i
-			s.Members[i].Status = m.Status
-			s.Members[i].Name = m.Name
-			s.Members[i].Instance = m.Instance
-			s.Members[i].ReadOnly = m.ReadOnly
+		if !found {
+			continue
 		}
+		if member.Status != MemberStatusReady {
+			return nil
+		}
+		idx = i
+		s.Members[i].Status = m.Status
+		s.Members[i].Name = m.Name
+		s.Members[i].Instance = m.Instance
+		s.Members[i].ReadOnly = m.ReadOnly
 	}
 	if idx < 1 {
 		if len(s.Members) >= maximalNumberOfMembers {
@@ -289,14 +293,12 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 			if i == 0 {
 				continue // skip the owner
 			}
-			var same bool
 			if m.Email == "" {
-				same = m.Instance == member.Instance
+				found = m.Instance == member.Instance
 			} else {
-				same = m.Email == member.Email
+				found = m.Email == member.Email
 			}
-			if same && member.Status != MemberStatusReady {
-				found = true
+			if found && member.Status != MemberStatusReady {
 				s.Members[i].Status = m.Status
 				s.Members[i].Name = m.Name
 				s.Members[i].Instance = m.Instance
