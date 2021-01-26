@@ -161,12 +161,19 @@ func modifyHandler(c echo.Context) error {
 	if blocked, err := strconv.ParseBool(c.QueryParam("Blocked")); err == nil {
 		opts.Blocked = &blocked
 	}
-	if deleting, err := strconv.ParseBool(c.QueryParam("Deleting")); err == nil {
-		opts.Deleting = &deleting
-	}
 	i, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return wrapError(err)
+	}
+	// XXX we cannot use the lifecycle.Patch function to update the deleting
+	// flag, as we may need to update this flag for an instance that no longer
+	// has its settings database.
+	if deleting, err := strconv.ParseBool(c.QueryParam("Deleting")); err == nil {
+		i.Deleting = deleting
+		if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
+			return wrapError(err)
+		}
+		return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
 	}
 	if err = lifecycle.Patch(i, opts); err != nil {
 		return wrapError(err)

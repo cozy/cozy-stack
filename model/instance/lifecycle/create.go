@@ -47,7 +47,6 @@ type Options struct {
 	Apps               []string
 	AutoUpdate         *bool
 	Debug              *bool
-	Deleting           *bool
 	Traced             *bool
 	OnboardingFinished *bool
 	Blocked            *bool
