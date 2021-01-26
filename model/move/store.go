@@ -14,7 +14,7 @@ import (
 
 // Store is essentially an object to store and retrieve move requests
 type Store interface {
-	GetRequest(db prefixer.Prefixer, key string) (*Request, error)
+	GetRequest(db prefixer.Prefixer, secret string) (*Request, error)
 	SaveRequest(db prefixer.Prefixer, req *Request) (string, error)
 	SetAllowDeleteAccounts(db prefixer.Prefixer) error
 	ClearAllowDeleteAccounts(db prefixer.Prefixer) error
@@ -73,10 +73,10 @@ func (s *memStore) cleaner() {
 	}
 }
 
-func (s *memStore) GetRequest(db prefixer.Prefixer, key string) (*Request, error) {
+func (s *memStore) GetRequest(db prefixer.Prefixer, secret string) (*Request, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	key = db.DBPrefix() + ":req:" + key
+	key := requestKey(db, secret)
 	ref, ok := s.vals[key]
 	if !ok {
 		return nil, nil
@@ -89,20 +89,22 @@ func (s *memStore) GetRequest(db prefixer.Prefixer, key string) (*Request, error
 }
 
 func (s *memStore) SaveRequest(db prefixer.Prefixer, req *Request) (string, error) {
-	key := makeSecret()
+	secret := makeSecret()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.vals[db.DBPrefix()+":req:"+key] = &memRef{
+	key := requestKey(db, secret)
+	s.vals[key] = &memRef{
 		val: req,
 		exp: time.Now().Add(storeTTL),
 	}
-	return key, nil
+	return secret, nil
 }
 
 func (s *memStore) SetAllowDeleteAccounts(db prefixer.Prefixer) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.vals[db.DBPrefix()+":allow_delete_accounts"] = &memRef{
+	key := deleteAccountsKey(db)
+	s.vals[key] = &memRef{
 		val: nil,
 		exp: time.Now().Add(storeTTL),
 	}
@@ -112,14 +114,15 @@ func (s *memStore) SetAllowDeleteAccounts(db prefixer.Prefixer) error {
 func (s *memStore) ClearAllowDeleteAccounts(db prefixer.Prefixer) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.vals, db.DBPrefix()+":allow_delete_accounts")
+	key := deleteAccountsKey(db)
+	delete(s.vals, key)
 	return nil
 }
 
 func (s *memStore) AllowDeleteAccounts(db prefixer.Prefixer) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	key := db.DBPrefix() + ":allow_delete_accounts"
+	key := deleteAccountsKey(db)
 	ref, ok := s.vals[key]
 	if !ok {
 		return false
@@ -135,8 +138,9 @@ type redisStore struct {
 	c redis.UniversalClient
 }
 
-func (s *redisStore) GetRequest(db prefixer.Prefixer, key string) (*Request, error) {
-	b, err := s.c.Get(db.DBPrefix() + ":req:" + key).Bytes()
+func (s *redisStore) GetRequest(db prefixer.Prefixer, secret string) (*Request, error) {
+	key := requestKey(db, secret)
+	b, err := s.c.Get(key).Bytes()
 	if err == redis.Nil {
 		return nil, nil
 	}
@@ -155,30 +159,39 @@ func (s *redisStore) SaveRequest(db prefixer.Prefixer, req *Request) (string, er
 	if err != nil {
 		return "", err
 	}
-	key := makeSecret()
-	if err = s.c.Set(db.DBPrefix()+":req:"+key, v, storeTTL).Err(); err != nil {
+	secret := makeSecret()
+	key := requestKey(db, secret)
+	if err = s.c.Set(key, v, storeTTL).Err(); err != nil {
 		return "", err
 	}
-	return key, nil
+	return secret, nil
 }
 
 func (s *redisStore) SetAllowDeleteAccounts(db prefixer.Prefixer) error {
-	key := db.DBPrefix() + ":allow_delete_accounts"
+	key := deleteAccountsKey(db)
 	return s.c.Set(key, true, storeTTL).Err()
 }
 
 func (s *redisStore) ClearAllowDeleteAccounts(db prefixer.Prefixer) error {
-	key := db.DBPrefix() + ":allow_delete_accounts"
+	key := deleteAccountsKey(db)
 	return s.c.Del(key).Err()
 }
 
 func (s *redisStore) AllowDeleteAccounts(db prefixer.Prefixer) bool {
-	key := db.DBPrefix() + ":allow_delete_accounts"
-	r, err := s.c.Exists(db.DBPrefix() + ":req:" + key).Result()
+	key := deleteAccountsKey(db)
+	r, err := s.c.Exists(key).Result()
 	if err != nil {
 		return false
 	}
 	return r > 0
+}
+
+func requestKey(db prefixer.Prefixer, suffix string) string {
+	return db.DBPrefix() + ":req:" + suffix
+}
+
+func deleteAccountsKey(db prefixer.Prefixer) string {
+	return db.DBPrefix() + ":allow_delete_accounts"
 }
 
 func makeSecret() string {
