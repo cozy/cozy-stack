@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 	"time"
 
@@ -658,7 +659,28 @@ func UpdateSchema(inst *instance.Instance, file *vfs.FileDoc, schema map[string]
 	if err != nil {
 		return nil, err
 	}
-	purgeAllSteps(inst, doc.ID())
+
+	// Purging all steps can take a few seconds, so it is better to do that in
+	// a goroutine to avoid blocking the user that wants to read their note.
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				var err error
+				switch r := r.(type) {
+				case error:
+					err = r
+				default:
+					err = fmt.Errorf("%v", r)
+				}
+				stack := make([]byte, 4<<10) // 4 KB
+				length := runtime.Stack(stack, false)
+				log := inst.Logger().WithField("panic", true).WithField("nspace", "note")
+				log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
+			}
+		}()
+		purgeAllSteps(inst, doc.ID())
+	}()
+
 	return updated, nil
 }
 
