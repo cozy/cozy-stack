@@ -168,7 +168,7 @@ func blockForImport(c echo.Context) error {
 			return err
 		}
 		doc.SetID(consts.InstanceSettingsID)
-		doc.M["move_from"] = source
+		doc.M["moved_from"] = source
 		if err := couchdb.UpdateDoc(inst, doc); err != nil {
 			return err
 		}
