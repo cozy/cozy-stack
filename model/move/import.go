@@ -195,8 +195,10 @@ const (
 	// StatusImportSuccess is the status when a import of a tarball has been
 	// successful.
 	StatusImportSuccess
-	// StatusFailure is the status when the import/move has failed.
-	StatusFailure
+	// StatusMoveFailure is the status when the move has failed.
+	StatusMoveFailure
+	// StatusImportFailure is the status when the import has failed.
+	StatusImportFailure
 )
 
 // SendImportDoneMail sends an email to the user when the import is done. The
@@ -221,7 +223,12 @@ func SendImportDoneMail(inst *instance.Instance, status Status, notInstalled []s
 				"PublicName":       publicName,
 			},
 		}
-	case StatusFailure:
+	case StatusMoveFailure:
+		email = mail.Options{
+			Mode:         mail.ModeFromStack,
+			TemplateName: "move_error",
+		}
+	case StatusImportFailure:
 		email = mail.Options{
 			Mode:         mail.ModeFromStack,
 			TemplateName: "import_error",

@@ -820,6 +820,17 @@ msgstr ""
 msgid "Mail Move Success Outro"
 msgstr "A bientôt, votre Cozy"
 
+msgid "Mail Move Error Subject"
+msgstr "⚠ Le déménagement de votre Cozy n'a pas abouti"
+
+msgid "Mail Move Error Text"
+msgstr ""
+"Le déménagement de votre Cozy a rencontré un souci. "
+"Pouvez-vous renouveler l'opération depuis le début ?"
+
+msgid "Mail Move Error Outro"
+msgstr "Si le souci persiste, contactez le support client."
+
 msgid "Mail Two Factor Subject"
 msgstr "Code de connexion à usage unique"
 

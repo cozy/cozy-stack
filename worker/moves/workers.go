@@ -87,7 +87,10 @@ func ImportWorker(c *job.WorkerContext) error {
 
 	status := move.StatusImportSuccess
 	if err != nil {
-		status = move.StatusFailure
+		status = move.StatusImportFailure
+		if opts.MoveFrom != nil {
+			status = move.StatusMoveFailure
+		}
 		c.Instance.Logger().WithField("nspace", "move").
 			Warnf("Import failed: %s", err)
 	}
