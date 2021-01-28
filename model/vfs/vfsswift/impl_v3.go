@@ -258,6 +258,32 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.Creat
 	}, nil
 }
 
+func (sfs *swiftVFSV3) DissociateFile(src, dst *vfs.FileDoc) error {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer sfs.mu.Unlock()
+
+	// Copy the file
+	srcName := MakeObjectNameV3(src.DocID, src.InternalID)
+	dstName := MakeObjectNameV3(dst.DocID, dst.InternalID)
+	headers := swift.Metadata{
+		"creation-name":  src.Name(),
+		"created-at":     src.CreatedAt.Format(time.RFC3339),
+		"dissociated-of": src.ID(),
+	}.ObjectHeaders()
+	if _, err := sfs.c.ObjectCopy(sfs.container, srcName, sfs.container, dstName, headers); err != nil {
+		return err
+	}
+	if err := sfs.Indexer.CreateFileDoc(dst); err != nil {
+		_ = sfs.c.ObjectDelete(sfs.container, dstName)
+		return err
+	}
+
+	// Remove the source
+	return sfs.destroyFileLocked(src)
+}
+
 func (sfs *swiftVFSV3) destroyDir(doc *vfs.DirDoc, push func(vfs.TrashJournal) error, onlyContent bool) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
@@ -298,6 +324,10 @@ func (sfs *swiftVFSV3) DestroyFile(doc *vfs.FileDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
+	return sfs.destroyFileLocked(doc)
+}
+
+func (sfs *swiftVFSV3) destroyFileLocked(doc *vfs.FileDoc) error {
 	diskUsage, _ := sfs.Indexer.DiskUsage()
 	objNames := []string{
 		MakeObjectNameV3(doc.DocID, doc.InternalID),

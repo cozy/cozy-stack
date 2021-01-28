@@ -422,6 +422,32 @@ func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &swiftFileOpenV2{f, nil}, nil
 }
 
+func (sfs *swiftVFSV2) DissociateFile(src, dst *vfs.FileDoc) error {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer sfs.mu.Unlock()
+
+	// Copy the file
+	srcName := MakeObjectName(src.DocID)
+	dstName := MakeObjectName(dst.DocID)
+	headers := swift.Metadata{
+		"creation-name":  src.Name(),
+		"created-at":     src.CreatedAt.Format(time.RFC3339),
+		"dissociated-of": src.ID(),
+	}.ObjectHeaders()
+	if _, err := sfs.c.ObjectCopy(sfs.container, srcName, sfs.container, dstName, headers); err != nil {
+		return err
+	}
+	if err := sfs.Indexer.CreateFileDoc(dst); err != nil {
+		_ = sfs.c.ObjectDelete(sfs.container, dstName)
+		return err
+	}
+
+	// Remove the source
+	return sfs.c.ObjectDelete(sfs.container, srcName)
+}
+
 func (sfs *swiftVFSV2) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vfs.File, error) {
 	// The versioning is not implemented in Swift layout v2
 	return nil, os.ErrNotExist

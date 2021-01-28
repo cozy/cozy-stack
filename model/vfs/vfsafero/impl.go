@@ -243,6 +243,41 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateO
 	}, nil
 }
 
+func (afs *aferoVFS) DissociateFile(src, dst *vfs.FileDoc) error {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer afs.mu.Unlock()
+
+	// Move the source file to the destination
+	from, err := afs.Indexer.FilePath(src)
+	if err != nil {
+		return err
+	}
+	to, err := afs.Indexer.FilePath(dst)
+	if err != nil {
+		return err
+	}
+	if err = afs.fs.Rename(from, to); err != nil {
+		return err
+	}
+	if err = afs.Indexer.CreateFileDoc(dst); err != nil {
+		_ = afs.fs.Rename(to, from)
+		return err
+	}
+
+	// Clean the source file and its versions
+	if err = afs.Indexer.DeleteFileDoc(src); err != nil {
+		return err
+	}
+	versions, err := vfs.VersionsFor(afs, src.DocID)
+	if err != nil {
+		return err
+	}
+	_ = afs.fs.RemoveAll(pathForVersions(src.DocID))
+	return afs.Indexer.BatchDeleteVersions(versions)
+}
+
 func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
 	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
