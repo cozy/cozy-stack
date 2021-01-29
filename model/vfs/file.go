@@ -330,13 +330,11 @@ func TrashFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 		return nil, ErrFileInTrash
 	}
 
-	trashDirID := consts.TrashDirID
-	restorePath := path.Dir(oldpath)
-
 	var newdoc *FileDoc
+	restorePath := path.Dir(oldpath)
 	err = tryOrUseSuffix(olddoc.DocName, conflictFormat, func(name string) error {
 		newdoc = olddoc.Clone().(*FileDoc)
-		newdoc.DirID = trashDirID
+		newdoc.DirID = consts.TrashDirID
 		newdoc.RestorePath = restorePath
 		newdoc.DocName = name
 		newdoc.Trashed = true

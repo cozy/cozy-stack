@@ -1073,8 +1073,15 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 		return dissociate(inst, olddoc, file)
 	}
 	if len(file.ReferencedBy) == 0 {
-		_, err := vfs.TrashFile(inst.VFS(), file)
-		return err
+		oldpath, err := olddoc.Path(inst.VFS())
+		if err != nil {
+			return err
+		}
+		file.RestorePath = path.Dir(oldpath)
+		file.Trashed = true
+		file.DirID = consts.TrashDirID
+		file.ResetFullpath()
+		return dissociate(inst, olddoc, file)
 	}
 	parent, err := s.GetNoLongerSharedDir(inst)
 	if err != nil {
