@@ -258,8 +258,10 @@ func (afs *aferoVFS) DissociateFile(src, dst *vfs.FileDoc) error {
 	if err != nil {
 		return err
 	}
-	if err = afs.fs.Rename(from, to); err != nil {
-		return err
+	if from != to {
+		if err = afs.fs.Rename(from, to); err != nil {
+			return err
+		}
 	}
 	if err = afs.Indexer.CreateFileDoc(dst); err != nil {
 		_ = afs.fs.Rename(to, from)
@@ -270,12 +272,15 @@ func (afs *aferoVFS) DissociateFile(src, dst *vfs.FileDoc) error {
 	if err = afs.Indexer.DeleteFileDoc(src); err != nil {
 		return err
 	}
+	_ = afs.fs.RemoveAll(pathForVersions(src.DocID))
 	versions, err := vfs.VersionsFor(afs, src.DocID)
 	if err != nil {
-		return err
+		return nil
 	}
-	_ = afs.fs.RemoveAll(pathForVersions(src.DocID))
-	return afs.Indexer.BatchDeleteVersions(versions)
+	if from != to {
+		_ = afs.Indexer.BatchDeleteVersions(versions)
+	}
+	return nil
 }
 
 func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
