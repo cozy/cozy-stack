@@ -113,7 +113,14 @@ func extractReferencedBy(doc *couchdb.JSONDoc) []couchdb.DocReference {
 	slice, _ := doc.Get(couchdb.SelectorReferencedBy).([]interface{})
 	refs := make([]couchdb.DocReference, len(slice))
 	for i, ref := range slice {
-		refs[i], _ = ref.(couchdb.DocReference)
+		switch r := ref.(type) {
+		case couchdb.DocReference:
+			refs[i] = r
+		case map[string]interface{}:
+			id, _ := r["id"].(string)
+			typ, _ := r["type"].(string)
+			refs[i] = couchdb.DocReference{ID: id, Type: typ}
+		}
 	}
 	return refs
 }
