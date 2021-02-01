@@ -398,6 +398,15 @@ func normalDocs(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+func getDesignDoc(c echo.Context) error {
+	docid := c.Param("designdocid")
+	doctype := c.Get("doctype").(string)
+
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
+		return err
+	}
+	return proxy(c, "_design/"+docid)
+}
 // mostly just to prevent couchdb crash on replications
 func dataAPIWelcome(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
@@ -454,4 +463,5 @@ func Routes(router *echo.Group) {
 	group.GET("/_normal_docs", normalDocs)
 	group.POST("/_index", defineIndex)
 	group.POST("/_find", findDocuments)
+	group.GET("/_design/:designdocid", getDesignDoc)
 }
