@@ -282,8 +282,6 @@ func (s *sharingIndexer) CreateNamedDirDoc(doc *vfs.DirDoc) error {
 	return s.UpdateDirDoc(nil, doc)
 }
 
-// TODO check if this function should also update the trashed attribute for
-// files in the updated directory
 func (s *sharingIndexer) UpdateDirDoc(olddoc, doc *vfs.DirDoc) error {
 	if s.bulkRevs == nil {
 		return s.indexer.UpdateDirDoc(olddoc, doc)

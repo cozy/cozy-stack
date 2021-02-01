@@ -129,7 +129,7 @@ func extractReferencedBy(doc *couchdb.JSONDoc) []couchdb.DocReference {
 // rule of a sharing, but no longer does.
 func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) (bool, error) {
 	if msg.DocType != consts.Files {
-		return false, nil // TODO rules for documents with a selector
+		return false, nil
 	}
 
 	// Optim: if dir_id and referenced_by have not changed, the file can't have
