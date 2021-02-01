@@ -216,7 +216,7 @@ func (s Set) HasSameRules(other Set) bool {
 // Useful to see what rules had been added between a original manifest
 // permissions and now.
 //
-// TODO: We are ignoring removed values/verbs between rule 1 and rule 2.
+// We are ignoring removed values/verbs between rule 1 and rule 2.
 // - At the moment, it onlys show the added values, verbs and rules
 func Diff(set1, set2 Set) (Set, error) {
 	// If sets are the same, do not compute

@@ -140,7 +140,6 @@ func (r Rule) ValuesChanged(old, current Fetcher) bool {
 // description of this rule
 func (r Rule) TranslationKey() string {
 	switch r.Type {
-	// TODO a specific folder (io.cozy.files)
 	case consts.Settings:
 		if r.Verbs.ReadOnly() && len(r.Values) == 1 && r.Values[0] == consts.DiskUsageID {
 			return "Permissions disk usage"

@@ -882,7 +882,6 @@ func findDocsRaw(db Database, doctype string, req interface{}, results interface
 }
 
 // FindDocsRaw find documents
-// TODO: pagination
 func FindDocsRaw(db Database, doctype string, req interface{}, results interface{}) (*FindResponse, error) {
 	return findDocsRaw(db, doctype, req, results, false)
 }

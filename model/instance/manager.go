@@ -46,8 +46,6 @@ func (i *Instance) ManagerURL(k ManagerURLKind) (string, error) {
 
 	var path string
 	switch k {
-	// TODO: we may want to rely on the contexts to avoid hardcoding the path
-	// values of these kinds.
 	case ManagerPremiumURL:
 		path = fmt.Sprintf("/cozy/instances/%s/premium", url.PathEscape(i.UUID))
 	case ManagerTOSURL:

@@ -16,7 +16,6 @@ func exporter(c echo.Context) error {
 		return err
 	}
 
-	// TODO we should export the data to the local disk and return the list of zips
 	options := move.ExportOptions{
 		ContextualDomain: domain,
 	}
@@ -43,7 +42,6 @@ func importer(c echo.Context) error {
 		return err
 	}
 
-	// TODO we should import a list of zips from the local disk
 	options := move.ImportOptions{
 		ManifestURL: c.QueryParam("manifest_url"),
 	}

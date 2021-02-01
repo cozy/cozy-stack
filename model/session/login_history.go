@@ -195,7 +195,6 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 		"ActivateTwoFALink":    activateTwoFALink,
 	}
 
-	// TODO: use notifications
 	return lifecycle.SendMail(i, &lifecycle.Mail{
 		TemplateName:   "new_connection",
 		TemplateValues: templateValues,
@@ -214,7 +213,6 @@ func SendNewRegistrationNotification(i *instance.Instance, clientRegistrationID 
 		"RevokeLink":  revokeLink.String(),
 	}
 
-	// TODO: use notifications
 	return lifecycle.SendMail(i, &lifecycle.Mail{
 		TemplateName:   "new_registration",
 		TemplateValues: templateValues,

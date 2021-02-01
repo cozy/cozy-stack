@@ -82,9 +82,8 @@ func Allows(fs VFS, pset permission.Set, v permission.Verb, fd Fetcher) error {
 
 		for _, id := range allowedIDs {
 			allowedPath, err := pathFromID(fs, id)
-			// tested is children of allowed
-			// err is ignored, it most probably means a permissions on a
-			// deleted directory. @TODO We will want to clean this up.
+			// tested is children of allowed ( err is ignored, it most probably
+			// means a permissions on a deleted directory)
 			if err == nil && strings.HasPrefix(selfPath, allowedPath+"/") {
 				return nil
 			}
