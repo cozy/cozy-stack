@@ -538,6 +538,7 @@ Content-Type: application/json
 ## Access a design document
 
 A design document is a special CouchDB document that represents a view or Mango index definition.
+
 ### Request
 
 ```http
