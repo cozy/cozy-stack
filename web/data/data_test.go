@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/cozy/cozy-stack/model/instance"
@@ -145,14 +146,6 @@ func TestWrongDoctype(t *testing.T) {
 
 func TestUnderscoreName(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/_foo", nil)
-	req.Header.Add("Authorization", "Bearer "+token)
-	_, res, err := doRequest(req, nil)
-	assert.NoError(t, err)
-	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
-}
-
-func TestGetDesign(t *testing.T) {
-	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/_design/test", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
@@ -990,4 +983,118 @@ function(doc) {
 	assert.NoError(t, err)
 	executionStats = out["execution_stats"].(interface{})
 	assert.NotEmpty(t, executionStats)
+}
+
+func TestGetDesignDocs(t *testing.T) {
+	def := M{"index": M{"fields": S{"foo"}}}
+	_, err := couchdb.DefineIndexRaw(testInstance, Type, &def)
+	assert.NoError(t, err)
+
+	url := ts.URL + "/data/" + Type + "/_design_docs"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	out, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+	rows := out["rows"].([]interface{})
+	nDesignDocs := len(rows)
+	assert.Greater(t, nDesignDocs, 0)
+	firstRow := rows[0].(map[string]interface{})
+	id := firstRow["id"].(string)
+	rev := firstRow["value"].(map[string]interface{})["rev"].(string)
+	assert.NotEmpty(t, id)
+	assert.NotEmpty(t, rev)
+}
+
+func TestGetDesignDoc(t *testing.T) {
+	ddoc := "myindex"
+	def := M{"index": M{"fields": S{"foo"}}, "ddoc": ddoc}
+	_, err := couchdb.DefineIndexRaw(testInstance, Type, &def)
+	assert.NoError(t, err)
+
+	url := ts.URL + "/data/" + Type + "/_design/" + ddoc
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	out, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+
+	id := out["_id"].(string)
+	rev := out["_rev"].(string)
+
+	assert.Equal(t, "_design/"+ddoc, id)
+	assert.NotEmpty(t, rev)
+}
+
+func TestDeleteDesignDoc(t *testing.T) {
+	def := M{"index": M{"fields": S{"foo"}}}
+	_, err := couchdb.DefineIndexRaw(testInstance, Type, &def)
+	assert.NoError(t, err)
+
+	url := ts.URL + "/data/" + Type + "/_design_docs"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	out, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+	rows := out["rows"].([]interface{})
+	nDesignDocs := len(rows)
+	assert.Greater(t, nDesignDocs, 0)
+	firstRow := rows[0].(map[string]interface{})
+	id := firstRow["id"].(string)
+	ddoc := strings.Split(id, "/")[1]
+	rev := firstRow["value"].(map[string]interface{})["rev"].(string)
+
+	url = ts.URL + "/data/" + Type + "/_design/" + ddoc + "?rev=" + rev
+	req, _ = http.NewRequest("DELETE", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	out, res, err = doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+
+	url = ts.URL + "/data/" + Type + "/_design_docs"
+	req, _ = http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	out, res, err = doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+
+	rows = out["rows"].([]interface{})
+	assert.Less(t, len(rows), nDesignDocs)
+}
+
+func TestCopyDesignDoc(t *testing.T) {
+	srcDdoc := "indextocopy"
+	targetID := "_design/indexcopied"
+	def := M{"index": M{"fields": S{"foo"}}, "ddoc": srcDdoc}
+	_, err := couchdb.DefineIndexRaw(testInstance, Type, &def)
+	assert.NoError(t, err)
+
+	url := ts.URL + "/data/" + Type + "/_design/" + srcDdoc
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	out, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+
+	rev := out["_rev"].(string)
+
+	url = ts.URL + "/data/" + Type + "/_design/" + srcDdoc + "/copy?rev=" + rev
+	req, _ = http.NewRequest("POST", url, nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Destination", targetID)
+	out, res, err = doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "201 Created", res.Status)
+
+	assert.Equal(t, targetID, out["id"].(string))
+	assert.Equal(t, rev, out["rev"].(string))
+
 }
