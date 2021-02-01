@@ -399,14 +399,61 @@ func normalDocs(c echo.Context) error {
 }
 
 func getDesignDoc(c echo.Context) error {
-	docid := c.Param("designdocid")
 	doctype := c.Get("doctype").(string)
+	ddoc := c.Param("designdocid")
 
 	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
-	return proxy(c, "_design/"+docid)
+	return proxy(c, "_design/"+ddoc)
 }
+
+func getDesignDocs(c echo.Context) error {
+	doctype := c.Get("doctype").(string)
+	if err := permission.CheckReadable(doctype); err != nil {
+		return err
+	}
+	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
+		return err
+	}
+	return proxy(c, "_design_docs")
+}
+
+func copyDesignDoc(c echo.Context) error {
+	doctype := c.Param("doctype")
+	ddoc := c.Param("designdocid")
+
+	c.Request().Method = "COPY"
+	header := c.Request().Header
+
+	newDdoc := header.Get("Destination")
+	if newDdoc == "" {
+		return c.JSON(http.StatusBadRequest, "You must set a Destination header")
+	}
+	if err := permission.CheckReadable(doctype); err != nil {
+		return err
+	}
+	if err := middlewares.AllowWholeType(c, permission.POST, doctype); err != nil {
+		return err
+	}
+	return proxy(c, "_design/"+ddoc)
+}
+
+func deleteDesignDoc(c echo.Context) error {
+	ddoc := c.Param("designdocid")
+	doctype := c.Param("doctype")
+
+	if err := middlewares.AllowWholeType(c, permission.DELETE, doctype); err != nil {
+		return err
+	}
+	if c.QueryParam("rev") == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "You must pass a rev param",
+		})
+	}
+	return proxy(c, "_design/"+ddoc)
+}
+
 // mostly just to prevent couchdb crash on replications
 func dataAPIWelcome(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
@@ -463,5 +510,10 @@ func Routes(router *echo.Group) {
 	group.GET("/_normal_docs", normalDocs)
 	group.POST("/_index", defineIndex)
 	group.POST("/_find", findDocuments)
+
 	group.GET("/_design/:designdocid", getDesignDoc)
+	group.GET("/_design_docs", getDesignDocs)
+	group.POST("/_design/:designdocid/copy", copyDesignDoc)
+	group.DELETE("/_design/:designdocid", deleteDesignDoc)
+
 }
