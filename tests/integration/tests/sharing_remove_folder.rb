@@ -39,7 +39,11 @@ describe "A shared folder" do
     inst_recipient.accept sharing
     sleep 7
 
-    # Remove a single file
+    # Remove a single file (after putting another file in the recipient trash
+    # with the same name)
+    opts = CozyFile.options_from_fixture(file_path, name: f2.name)
+    f4 = CozyFile.create inst_recipient, opts
+    f4.remove inst_recipient
     f2.remove inst
 
     # Move a dir out of the shared folder and update it

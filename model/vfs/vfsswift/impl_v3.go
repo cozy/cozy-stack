@@ -264,6 +264,16 @@ func (sfs *swiftVFSV3) DissociateFile(src, dst *vfs.FileDoc) error {
 	}
 	defer sfs.mu.Unlock()
 
+	if src.DirID != dst.DirID || src.DocName != dst.DocName {
+		exists, err := sfs.Indexer.DirChildExists(dst.DirID, dst.DocName)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return os.ErrExist
+		}
+	}
+
 	// Copy the file
 	srcName := MakeObjectNameV3(src.DocID, src.InternalID)
 	dstName := MakeObjectNameV3(dst.DocID, dst.InternalID)

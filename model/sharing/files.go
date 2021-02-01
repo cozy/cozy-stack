@@ -1093,10 +1093,16 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 }
 
 func dissociate(inst *instance.Instance, olddoc, newdoc *vfs.FileDoc) error {
+	fs := inst.VFS()
+
 	newdoc.SetID("")
 	newdoc.SetRev("")
-	if err := inst.VFS().DissociateFile(olddoc, newdoc); err != nil {
-		return err
+	if err := fs.DissociateFile(olddoc, newdoc); err != nil {
+		newdoc.DocName = conflictName(fs, newdoc.DirID, newdoc.DocName, true)
+		newdoc.ResetFullpath()
+		if err := fs.DissociateFile(olddoc, newdoc); err != nil {
+			return err
+		}
 	}
 
 	sid := olddoc.DocType() + "/" + olddoc.ID()

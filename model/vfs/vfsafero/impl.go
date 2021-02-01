@@ -259,7 +259,7 @@ func (afs *aferoVFS) DissociateFile(src, dst *vfs.FileDoc) error {
 		return err
 	}
 	if from != to {
-		if err = afs.fs.Rename(from, to); err != nil {
+		if err = safeRenameFile(afs.fs, from, to); err != nil {
 			return err
 		}
 	}
