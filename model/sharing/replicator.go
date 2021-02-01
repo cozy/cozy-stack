@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,7 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
-	multierror "github.com/hashicorp/go-multierror"
+	"golang.org/x/sync/errgroup"
 )
 
 // MaxRetries is the maximal number of retries for a replicator
@@ -43,30 +44,37 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 	defer mu.Unlock()
 
 	pending := false
-	var errm error
+	var err error
 	if !s.Owner {
-		pending, errm = s.ReplicateTo(inst, &s.Members[0], false)
+		pending, err = s.ReplicateTo(inst, &s.Members[0], false)
 	} else {
-		for i, m := range s.Members {
+		g, _ := errgroup.WithContext(context.Background())
+		for i := range s.Members {
 			if i == 0 {
 				continue
 			}
-			if m.Status == MemberStatusReady {
-				p, err := s.ReplicateTo(inst, &s.Members[i], false)
-				if err != nil {
-					errm = multierror.Append(errm, err)
-				} else if p {
-					pending = true
+			m := &s.Members[i]
+			g.Go(func() error {
+				if m.Status == MemberStatusReady {
+					p, err := s.ReplicateTo(inst, m, false)
+					if err != nil {
+						return err
+					}
+					if p {
+						pending = true
+					}
 				}
-			}
+				return nil
+			})
 		}
+		err = g.Wait()
 	}
-	if errm != nil {
+	if err != nil {
 		s.retryWorker(inst, "share-replicate", errors)
 	} else if pending {
 		s.pushJob(inst, "share-replicate")
 	}
-	return errm
+	return err
 }
 
 // pushJob adds a new job to continue on the pending documents in the changes feed
