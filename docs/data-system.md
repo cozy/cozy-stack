@@ -533,3 +533,141 @@ Content-Type: application/json
 -   The creation and usage of [Mango indexes](mango.md) is possible.
 -   CouchDB behaviors are not always straight forward: see
     [some quirks](couchdb-quirks.md) for more details.
+
+
+## Access a design document
+
+A design document is a special CouchDB document that represents a view or Mango index definition.
+### Request
+
+```http
+GET /data/:type/_design/:ddoc HTTP/1.1
+```
+
+```http
+GET /data/io.cozy.events/_design/c4a8fa4a4660b8eed43137881500265c HTTP/1.1
+```
+
+### Response OK
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "_id": "_design/c4a8fa4a4660b8eed43137881500265c",
+  "_rev": "1-56cf55098fc69450f84a22a632ffafb9",
+  "language": "query",
+  "views": {
+    "by-startdate-and-enddate": {
+      "map": {
+        "fields": {
+          "startdate": "asc",
+          "enddate": "asc",
+        },
+        "partial_filter_selector": {}
+      },
+      "reduce": "_count",
+      "options": {
+        "def": {
+          "fields": [
+            "startdate",
+            "enddate",
+            "metadata.datetime"
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+## Access all design documents for a doctype
+
+### Request
+
+```http
+GET /data/:type/_design_docs HTTP/1.1
+```
+
+```http
+GET /data/io.cozy.events/_design_docs HTTP/1.1
+```
+
+### Response OK
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "total_rows": 123,
+  "offset": 57,
+  "rows": [
+      ...
+  ]
+}
+```
+
+## Delete a design document
+
+### Request
+
+```http
+DELETE /data/:type/_design/:ddoc HTTP/1.1
+```
+
+```http
+DELETE /data/io.cozy.events/_design/c4a8fa4a4660b8eed43137881500265c?rev=1-1aa097a2eef904db9b1842342e6c6f50 HTTP/1.1
+```
+
+### Response OK
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "ok": true,
+  "id": "_design/c4a8fa4a4660b8eed43137881500265c",
+  "rev": "1-56cf55098fc69450f84a22a632ffafb9"
+}
+```
+
+## Copy a design document
+
+This is useful to duplicate a view or Mango index definition, without having to recompute the whole B-Tree. The original and the copy will both use the same index on disk. 
+
+
+### Request
+
+```http
+POST /data/:type/_design/:ddoc/copy HTTP/1.1
+
+```
+
+```http
+DELETE /data/io.cozy.events/_design/c4a8fa4a4660b8eed43137881500265c/copy?rev=1-1aa097a2eef904db9b1842342e6c6f50 HTTP/1.1
+Destination: _design/d7349ab71c0859c408a725ebbfd453b18aa94ec7
+```
+
+### Response OK
+
+```http
+HTTP/1.1 201 CREATED
+Content-Type: application/json
+```
+
+```json
+{
+  "ok": true,
+  "id": "_design/d7349ab71c0859c408a725ebbfd453b18aa94ec7",
+  "rev": "1-1aa097a2eef904db9b1842342e6c6f50"
+}
+```
