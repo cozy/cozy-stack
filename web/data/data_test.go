@@ -1052,7 +1052,7 @@ func TestDeleteDesignDoc(t *testing.T) {
 	req, _ = http.NewRequest("DELETE", url, nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
-	out, res, err = doRequest(req, nil)
+	_, res, err = doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
 
@@ -1096,5 +1096,4 @@ func TestCopyDesignDoc(t *testing.T) {
 
 	assert.Equal(t, targetID, out["id"].(string))
 	assert.Equal(t, rev, out["rev"].(string))
-
 }

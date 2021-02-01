@@ -515,5 +515,4 @@ func Routes(router *echo.Group) {
 	group.GET("/_design_docs", getDesignDocs)
 	group.POST("/_design/:designdocid/copy", copyDesignDoc)
 	group.DELETE("/_design/:designdocid", deleteDesignDoc)
-
 }
