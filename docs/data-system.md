@@ -637,7 +637,7 @@ Content-Type: application/json
 {
   "ok": true,
   "id": "_design/c4a8fa4a4660b8eed43137881500265c",
-  "rev": "1-56cf55098fc69450f84a22a632ffafb9"
+  "rev": "2-2ad11c9dc32df12a4b24f994807408ba"
 }
 ```
 
@@ -654,14 +654,14 @@ POST /data/:type/_design/:ddoc/copy HTTP/1.1
 ```
 
 ```http
-DELETE /data/io.cozy.events/_design/c4a8fa4a4660b8eed43137881500265c/copy?rev=1-1aa097a2eef904db9b1842342e6c6f50 HTTP/1.1
+POST /data/io.cozy.events/_design/c4a8fa4a4660b8eed43137881500265c/copy?rev=1-1aa097a2eef904db9b1842342e6c6f50 HTTP/1.1
 Destination: _design/d7349ab71c0859c408a725ebbfd453b18aa94ec7
 ```
 
 ### Response OK
 
 ```http
-HTTP/1.1 201 CREATED
+HTTP/1.1 201 Created
 Content-Type: application/json
 ```
 
