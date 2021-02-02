@@ -281,21 +281,19 @@ func buildCouchRequest(db Database, doctype, method, path string, reqjson []byte
 }
 
 func handleResponseError(db Database, resp *http.Response) error {
-	log := logger.WithDomain(db.DomainName()).WithField("nspace", "couchdb")
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		var body []byte
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			err = newIOReadError(err)
-			log.Error(err.Error())
-		} else {
-			err = newCouchdbError(resp.StatusCode, body)
-			log.Debug(err.Error())
-		}
-		return err
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil
 	}
-	return nil
+	log := logger.WithDomain(db.DomainName()).WithField("nspace", "couchdb")
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		err = newIOReadError(err)
+		log.Error(err.Error())
+	} else {
+		err = newCouchdbError(resp.StatusCode, body)
+		log.Debug(err.Error())
+	}
+	return err
 }
 
 func makeRequest(db Database, doctype, method, path string, reqbody interface{}, resbody interface{}) error {
@@ -859,9 +857,7 @@ func DefineIndexes(g *errgroup.Group, db Database, indexes []*mango.Index) {
 
 // Copy copies an existing doc to a specified destination
 func Copy(db Database, doctype, path, destination string) (map[string]interface{}, error) {
-	headers := make(map[string]string)
-	headers["Destination"] = destination
-	headers["Content-Type"] = "application/json"
+	headers := map[string]string{"Destination": destination}
 	// COPY is not a standard HTTP method
 	req, err := buildCouchRequest(db, doctype, "COPY", path, nil, headers)
 	if err != nil {
