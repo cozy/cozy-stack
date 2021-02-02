@@ -341,9 +341,6 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*chang
 		if !ok {
 			continue
 		}
-		if _, ok = info["binary"]; ok {
-			continue
-		}
 		if _, ok = info["removed"]; ok {
 			res.Changes.Removed[r.DocID] = struct{}{}
 		}

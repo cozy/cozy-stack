@@ -521,10 +521,11 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 				err = s.TrashFile(inst, file, &s.Rules[infos.Rule])
 			}
 		} else if file != nil {
-			err = ErrSafety
+			// Let the upload worker manages this file
+			continue
 		} else if ref != nil && infos.Removed {
 			continue
-		} else if dir == nil {
+		} else if dir == nil && target["type"] == consts.DirType {
 			err = s.CreateDir(inst, target, delayResolution)
 			if err == os.ErrExist {
 				retries = append(retries, retryOp{
@@ -533,7 +534,9 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 				err = nil
 			}
 		} else if ref == nil {
-			err = ErrSafety
+			// If it is a file: let the upload worker manages this file
+			// If it is a dir: ignore this (safety rule)
+			continue
 		} else {
 			// XXX we have to clone the dir document as it is modified by the
 			// UpdateDir function and retrying the operation won't work with
