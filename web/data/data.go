@@ -423,14 +423,13 @@ func getDesignDocs(c echo.Context) error {
 }
 
 func copyDesignDoc(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
 	doctype := c.Param("doctype")
 	ddoc := c.Param("designdocid")
 
-	c.Request().Method = "COPY"
 	header := c.Request().Header
-
-	newDdoc := header.Get("Destination")
-	if newDdoc == "" {
+	destination := header.Get("Destination")
+	if destination == "" {
 		return c.JSON(http.StatusBadRequest, "You must set a Destination header")
 	}
 	if err := permission.CheckWritable(doctype); err != nil {
@@ -439,7 +438,12 @@ func copyDesignDoc(c echo.Context) error {
 	if err := middlewares.AllowWholeType(c, permission.POST, doctype); err != nil {
 		return err
 	}
-	return proxy(c, "_design/"+ddoc)
+	path := "_design/" + ddoc
+	res, err := couchdb.Copy(instance, doctype, path, destination)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusCreated, res)
 }
 
 func deleteDesignDoc(c echo.Context) error {

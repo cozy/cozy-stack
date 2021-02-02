@@ -251,9 +251,56 @@ func dbNameHasPrefix(dbname, dbprefix string) (bool, string) {
 	return true, strings.Replace(dbname, dbprefix, "", 1)
 }
 
+func buildCouchRequest(db Database, doctype, method, path string, reqjson []byte, headers map[string]string) (*http.Request, error) {
+	if doctype != "" {
+		path = makeDBName(db, doctype) + "/" + path
+	}
+	req, err := http.NewRequest(
+		method,
+		config.CouchURL().String()+path,
+		bytes.NewReader(reqjson),
+	)
+	// Possible err = wrong method, unparsable url
+	if err != nil {
+		return nil, newRequestError(err)
+	}
+	req.Header.Add("Accept", "application/json")
+	if len(reqjson) > 0 {
+		req.Header.Add("Content-Type", "application/json")
+	}
+	for k, v := range headers {
+		req.Header.Add(k, v)
+	}
+	auth := config.GetConfig().CouchDB.Auth
+	if auth != nil {
+		if p, ok := auth.Password(); ok {
+			req.SetBasicAuth(auth.Username(), p)
+		}
+	}
+	return req, nil
+}
+
+func handleResponseError(db Database, resp *http.Response) error {
+	log := logger.WithDomain(db.DomainName()).WithField("nspace", "couchdb")
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		var body []byte
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			err = newIOReadError(err)
+			log.Error(err.Error())
+		} else {
+			err = newCouchdbError(resp.StatusCode, body)
+			log.Debug(err.Error())
+		}
+		return err
+	}
+	return nil
+}
+
 func makeRequest(db Database, doctype, method, path string, reqbody interface{}, resbody interface{}) error {
-	var reqjson []byte
 	var err error
+	var reqjson []byte
 
 	if reqbody != nil {
 		reqjson, err = json.Marshal(reqbody)
@@ -261,11 +308,6 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 			return err
 		}
 	}
-
-	if doctype != "" {
-		path = makeDBName(db, doctype) + "/" + path
-	}
-
 	log := logger.WithDomain(db.DomainName()).WithField("nspace", "couchdb")
 
 	// We do not log the account doctype to avoid printing account informations
@@ -275,27 +317,11 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 	if logDebug {
 		log.Debugf("request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
 	}
-
-	req, err := http.NewRequest(
-		method,
-		config.CouchURL().String()+path,
-		bytes.NewReader(reqjson),
-	)
-	// Possible err = wrong method, unparsable url
+	req, err := buildCouchRequest(db, doctype, method, path, reqjson, nil)
 	if err != nil {
-		return newRequestError(err)
-	}
-	req.Header.Add("Accept", "application/json")
-	if reqbody != nil {
-		req.Header.Add("Content-Type", "application/json")
+		return err
 	}
 
-	auth := config.GetConfig().CouchDB.Auth
-	if auth != nil {
-		if p, ok := auth.Password(); ok {
-			req.SetBasicAuth(auth.Username(), p)
-		}
-	}
 	start := time.Now()
 	resp, err := config.GetConfig().CouchDB.Client.Do(req)
 	elapsed := time.Since(start)
@@ -311,16 +337,8 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 		log.Printf("slow request on %s %s (%s)", method, path, elapsed)
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		var body []byte
-		body, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			err = newIOReadError(err)
-			log.Error(err.Error())
-		} else {
-			err = newCouchdbError(resp.StatusCode, body)
-			log.Debug(err.Error())
-		}
+	err = handleResponseError(db, resp)
+	if err != nil {
 		return err
 	}
 	if resbody == nil {
@@ -837,6 +855,30 @@ func DefineIndexes(g *errgroup.Group, db Database, indexes []*mango.Index) {
 		index := indexes[i]
 		g.Go(func() error { return DefineIndex(db, index) })
 	}
+}
+
+// Copy copies an existing doc to a specified destination
+func Copy(db Database, doctype, path, destination string) (map[string]interface{}, error) {
+	headers := make(map[string]string)
+	headers["Destination"] = destination
+	headers["Content-Type"] = "application/json"
+	// COPY is not a standard HTTP method
+	req, err := buildCouchRequest(db, doctype, "COPY", path, nil, headers)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := config.GetConfig().CouchDB.Client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	err = handleResponseError(db, resp)
+	if err != nil {
+		return nil, err
+	}
+	var results map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&results)
+	return results, err
 }
 
 // FindDocs returns all documents matching the passed FindRequest
