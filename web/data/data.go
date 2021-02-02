@@ -399,9 +399,12 @@ func normalDocs(c echo.Context) error {
 }
 
 func getDesignDoc(c echo.Context) error {
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 	ddoc := c.Param("designdocid")
 
+	if err := permission.CheckReadable(doctype); err != nil {
+		return err
+	}
 	if err := middlewares.AllowWholeType(c, permission.GET, doctype); err != nil {
 		return err
 	}
@@ -409,7 +412,7 @@ func getDesignDoc(c echo.Context) error {
 }
 
 func getDesignDocs(c echo.Context) error {
-	doctype := c.Get("doctype").(string)
+	doctype := c.Param("doctype")
 	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
@@ -430,7 +433,7 @@ func copyDesignDoc(c echo.Context) error {
 	if newDdoc == "" {
 		return c.JSON(http.StatusBadRequest, "You must set a Destination header")
 	}
-	if err := permission.CheckReadable(doctype); err != nil {
+	if err := permission.CheckWritable(doctype); err != nil {
 		return err
 	}
 	if err := middlewares.AllowWholeType(c, permission.POST, doctype); err != nil {
@@ -440,9 +443,12 @@ func copyDesignDoc(c echo.Context) error {
 }
 
 func deleteDesignDoc(c echo.Context) error {
-	ddoc := c.Param("designdocid")
 	doctype := c.Param("doctype")
+	ddoc := c.Param("designdocid")
 
+	if err := permission.CheckWritable(doctype); err != nil {
+		return err
+	}
 	if err := middlewares.AllowWholeType(c, permission.DELETE, doctype); err != nil {
 		return err
 	}
