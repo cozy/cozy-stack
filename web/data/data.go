@@ -432,7 +432,7 @@ func copyDesignDoc(c echo.Context) error {
 	if destination == "" {
 		return c.JSON(http.StatusBadRequest, "You must set a Destination header")
 	}
-	if err := permission.CheckWritable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
 	if err := middlewares.AllowWholeType(c, permission.POST, doctype); err != nil {
@@ -450,7 +450,7 @@ func deleteDesignDoc(c echo.Context) error {
 	doctype := c.Param("doctype")
 	ddoc := c.Param("designdocid")
 
-	if err := permission.CheckWritable(doctype); err != nil {
+	if err := permission.CheckReadable(doctype); err != nil {
 		return err
 	}
 	if err := middlewares.AllowWholeType(c, permission.DELETE, doctype); err != nil {
