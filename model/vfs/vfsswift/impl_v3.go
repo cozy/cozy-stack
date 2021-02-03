@@ -294,6 +294,28 @@ func (sfs *swiftVFSV3) DissociateFile(src, dst *vfs.FileDoc) error {
 	return sfs.destroyFileLocked(src)
 }
 
+func (sfs *swiftVFSV3) DissociateDir(src, dst *vfs.DirDoc) error {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer sfs.mu.Unlock()
+
+	if dst.DirID != src.DirID || dst.DocName != src.DocName {
+		exists, err := sfs.Indexer.DirChildExists(dst.DirID, dst.DocName)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return os.ErrExist
+		}
+	}
+
+	if err := sfs.Indexer.CreateDirDoc(dst); err != nil {
+		return err
+	}
+	return sfs.Indexer.DeleteDirDoc(src)
+}
+
 func (sfs *swiftVFSV3) destroyDir(doc *vfs.DirDoc, push func(vfs.TrashJournal) error, onlyContent bool) error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr

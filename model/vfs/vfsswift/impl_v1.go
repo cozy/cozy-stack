@@ -447,6 +447,11 @@ func (sfs *swiftVFS) DissociateFile(src, dst *vfs.FileDoc) error {
 	return sfs.c.ObjectDelete(sfs.container, srcName)
 }
 
+func (sfs *swiftVFS) DissociateDir(src, dst *vfs.DirDoc) error {
+	// This function is not implemented in Swift layout v1
+	return os.ErrNotExist
+}
+
 func (sfs *swiftVFS) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vfs.File, error) {
 	// The versioning is not implemented in Swift layout v1
 	return nil, os.ErrNotExist

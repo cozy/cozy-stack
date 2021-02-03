@@ -94,6 +94,8 @@ type Fs interface {
 	// with all of its version. It is used by the sharings to change the ID
 	// of the document to avoid later conflicts.
 	DissociateFile(src, dst *FileDoc) error
+	// DissociateDir is like DissociateFile but for directories.
+	DissociateDir(src, dst *DirDoc) error
 
 	// DestroyDirContent destroys all directories and files contained in a
 	// directory.

@@ -264,7 +264,9 @@ func (afs *aferoVFS) DissociateFile(src, dst *vfs.FileDoc) error {
 		}
 	}
 	if err = afs.Indexer.CreateFileDoc(dst); err != nil {
-		_ = afs.fs.Rename(to, from)
+		if from != to {
+			_ = afs.fs.Rename(to, from)
+		}
 		return err
 	}
 
@@ -281,6 +283,28 @@ func (afs *aferoVFS) DissociateFile(src, dst *vfs.FileDoc) error {
 		_ = afs.Indexer.BatchDeleteVersions(versions)
 	}
 	return nil
+}
+
+func (afs *aferoVFS) DissociateDir(src, dst *vfs.DirDoc) error {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer afs.mu.Unlock()
+
+	from := src.Fullpath
+	to := dst.Fullpath
+	if from != to {
+		if err := safeRenameDir(afs, from, to); err != nil {
+			return err
+		}
+	}
+	if err := afs.Indexer.CreateDirDoc(dst); err != nil {
+		if from != to {
+			_ = afs.fs.Rename(to, from)
+		}
+		return err
+	}
+	return afs.Indexer.DeleteDirDoc(src)
 }
 
 func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
