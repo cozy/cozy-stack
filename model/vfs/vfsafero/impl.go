@@ -250,21 +250,25 @@ func (afs *aferoVFS) DissociateFile(src, dst *vfs.FileDoc) error {
 	defer afs.mu.Unlock()
 
 	// Move the source file to the destination
+	needRename := true
 	from, err := afs.Indexer.FilePath(src)
-	if err != nil {
+	if err == vfs.ErrParentDoesNotExist {
+		needRename = false // The parent directory has already been dissociated
+	} else if err != nil {
 		return err
 	}
 	to, err := afs.Indexer.FilePath(dst)
 	if err != nil {
 		return err
 	}
-	if from != to {
+
+	if needRename {
 		if err = safeRenameFile(afs.fs, from, to); err != nil {
 			return err
 		}
 	}
 	if err = afs.Indexer.CreateFileDoc(dst); err != nil {
-		if from != to {
+		if needRename {
 			_ = afs.fs.Rename(to, from)
 		}
 		return err
@@ -293,13 +297,19 @@ func (afs *aferoVFS) DissociateDir(src, dst *vfs.DirDoc) error {
 
 	from := src.Fullpath
 	to := dst.Fullpath
-	if from != to {
+	needRename := from != to
+	if needRename {
+		if _, err := afs.fs.Stat(from); os.IsNotExist(err) {
+			needRename = false // The parent directory of the dir was moved
+		}
+	}
+	if needRename {
 		if err := safeRenameDir(afs, from, to); err != nil {
 			return err
 		}
 	}
 	if err := afs.Indexer.CreateDirDoc(dst); err != nil {
-		if from != to {
+		if needRename {
 			_ = afs.fs.Rename(to, from)
 		}
 		return err

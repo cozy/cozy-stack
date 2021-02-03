@@ -1043,6 +1043,7 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 		newdir.CozyMetadata.UpdatedAt = time.Now()
 	}
 
+	newdir.DirID = consts.TrashDirID
 	fs := inst.VFS()
 	exists, err := fs.DirChildExists(newdir.DirID, newdir.DocName)
 	if err != nil {
@@ -1051,7 +1052,6 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 	if exists {
 		newdir.DocName = conflictName(fs, newdir.DirID, newdir.DocName, true)
 	}
-	newdir.DirID = consts.TrashDirID
 	newdir.Fullpath = path.Join(vfs.TrashDirName, newdir.DocName)
 	newdir.RestorePath = path.Dir(dir.Fullpath)
 	return dissociateDir(inst, dir, newdir)
