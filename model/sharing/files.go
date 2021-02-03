@@ -1027,8 +1027,7 @@ func (s *Sharing) UpdateDir(
 	return nil
 }
 
-// TrashDir puts the directory in the trash (except if the directory has a
-// reference, in which case, we keep it in a special folder)
+// TrashDir puts the directory in the trash
 func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 	inst.Logger().WithField("nspace", "replicator").
 		Debugf("TrashDir %s (%#v)", dir.DocID, dir)
@@ -1036,23 +1035,73 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 		// nothing to do if the directory is already in the trash
 		return nil
 	}
-	if dir.CozyMetadata == nil {
-		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+
+	newdir := dir.Clone().(*vfs.DirDoc)
+	if newdir.CozyMetadata == nil {
+		newdir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	} else {
-		dir.CozyMetadata.UpdatedAt = time.Now()
+		newdir.CozyMetadata.UpdatedAt = time.Now()
 	}
-	if len(dir.ReferencedBy) == 0 {
-		_, err := vfs.TrashDir(inst.VFS(), dir)
-		return err
-	}
-	olddoc := dir.Clone().(*vfs.DirDoc)
-	parent, err := s.GetNoLongerSharedDir(inst)
+
+	fs := inst.VFS()
+	exists, err := fs.DirChildExists(newdir.DirID, newdir.DocName)
 	if err != nil {
 		return err
 	}
-	dir.DirID = parent.DocID
-	dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
-	return inst.VFS().UpdateDirDoc(olddoc, dir)
+	if exists {
+		newdir.DocName = conflictName(fs, newdir.DirID, newdir.DocName, true)
+	}
+	newdir.DirID = consts.TrashDirID
+	newdir.Fullpath = path.Join(vfs.TrashDirName, newdir.DocName)
+	newdir.RestorePath = path.Dir(dir.Fullpath)
+	return dissociateDir(inst, dir, newdir)
+}
+
+func dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.DirDoc) error {
+	fs := inst.VFS()
+
+	newdoc.SetID("")
+	newdoc.SetRev("")
+	if err := fs.DissociateDir(olddoc, newdoc); err != nil {
+		newdoc.DocName = conflictName(fs, newdoc.DirID, newdoc.DocName, true)
+		if err := fs.DissociateDir(olddoc, newdoc); err != nil {
+			return err
+		}
+	}
+
+	sid := olddoc.DocType() + "/" + olddoc.ID()
+	var ref SharedRef
+	if err := couchdb.GetDoc(inst, consts.Shared, sid, &ref); err == nil {
+		_ = couchdb.DeleteDoc(inst, &ref)
+	}
+
+	var errm error
+	iter := fs.DirIterator(olddoc, nil)
+	for {
+		d, f, err := iter.Next()
+		if err == vfs.ErrIteratorDone {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if f != nil {
+			newf := f.Clone().(*vfs.FileDoc)
+			newf.DirID = newdoc.DocID
+			newf.Trashed = true
+			newf.ResetFullpath()
+			err = dissociateFile(inst, f, newf)
+		} else {
+			newd := d.Clone().(*vfs.DirDoc)
+			newd.DirID = newdoc.DocID
+			newd.Fullpath = path.Join(newdoc.Fullpath, newd.DocName)
+			err = dissociateDir(inst, d, newd)
+		}
+		if err != nil {
+			errm = multierror.Append(errm, err)
+		}
+	}
+	return errm
 }
 
 // TrashFile puts the file in the trash (except if the file has a reference, in
@@ -1073,7 +1122,7 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 	removeReferencesFromRule(file, rule)
 	if s.Owner && rule.Selector == couchdb.SelectorReferencedBy {
 		// Do not move/trash photos removed from an album for the owner
-		return dissociate(inst, olddoc, file)
+		return dissociateFile(inst, olddoc, file)
 	}
 	if len(file.ReferencedBy) == 0 {
 		oldpath, err := olddoc.Path(inst.VFS())
@@ -1084,7 +1133,7 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 		file.Trashed = true
 		file.DirID = consts.TrashDirID
 		file.ResetFullpath()
-		return dissociate(inst, olddoc, file)
+		return dissociateFile(inst, olddoc, file)
 	}
 	parent, err := s.GetNoLongerSharedDir(inst)
 	if err != nil {
@@ -1092,10 +1141,10 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 	}
 	file.DirID = parent.DocID
 	file.ResetFullpath()
-	return dissociate(inst, olddoc, file)
+	return dissociateFile(inst, olddoc, file)
 }
 
-func dissociate(inst *instance.Instance, olddoc, newdoc *vfs.FileDoc) error {
+func dissociateFile(inst *instance.Instance, olddoc, newdoc *vfs.FileDoc) error {
 	fs := inst.VFS()
 
 	newdoc.SetID("")
