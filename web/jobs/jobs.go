@@ -428,13 +428,20 @@ func fireWebhook(c echo.Context) error {
 
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	workerType := c.QueryParam("Worker")
+
+	var workerTypes, triggerTypes []string
+	if str := c.QueryParam("Worker"); str != "" {
+		workerTypes = strings.Split(str, ",")
+	}
+	if str := c.QueryParam("Type"); str != "" {
+		triggerTypes = strings.Split(str, ",")
+	}
 
 	if err := middlewares.AllowWholeType(c, permission.GET, consts.Triggers); err != nil {
-		if workerType == "" {
+		if len(workerTypes) != 1 {
 			return err
 		}
-		o := &job.TriggerInfos{WorkerType: workerType}
+		o := &job.TriggerInfos{WorkerType: workerTypes[0]}
 		if err := middlewares.AllowOnFields(c, permission.GET, o, "worker"); err != nil {
 			return err
 		}
@@ -449,7 +456,7 @@ func getAllTriggers(c echo.Context) error {
 	objs := make([]jsonapi.Object, 0, len(ts))
 	for _, t := range ts {
 		tInfos := t.Infos()
-		if workerType == "" || tInfos.WorkerType == workerType {
+		if hasWorker(tInfos, workerTypes) && hasType(tInfos, triggerTypes) {
 			tInfos.CurrentState, err = job.GetTriggerState(t, t.ID())
 			if err != nil {
 				return wrapJobsError(err)
@@ -459,6 +466,30 @@ func getAllTriggers(c echo.Context) error {
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+}
+
+func hasWorker(infos *job.TriggerInfos, workers []string) bool {
+	if len(workers) == 0 {
+		return true
+	}
+	for _, w := range workers {
+		if infos.WorkerType == w {
+			return true
+		}
+	}
+	return false
+}
+
+func hasType(infos *job.TriggerInfos, triggerTypes []string) bool {
+	if len(triggerTypes) == 0 {
+		return true
+	}
+	for _, typ := range triggerTypes {
+		if infos.Type == typ {
+			return true
+		}
+	}
+	return false
 }
 
 func getJob(c echo.Context) error {
