@@ -34,7 +34,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/metadata"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/worker/thumbnail"
 	"github.com/labstack/echo/v4"
 	"github.com/ncw/swift"
 )
@@ -851,7 +850,7 @@ func ThumbnailHandler(c echo.Context) error {
 }
 
 func serveThumbnailPlaceholder(res http.ResponseWriter, req *http.Request, doc *vfs.FileDoc, format string) error {
-	if !utils.IsInArray(format, thumbnail.FormatsNames) {
+	if !utils.IsInArray(format, vfs.ThumbnailFormatNames) {
 		return echo.NewHTTPError(http.StatusNotFound, "Format does not exist")
 	}
 	f := statik.GetAsset("/placeholders/thumbnail-" + format + ".png")

@@ -33,13 +33,6 @@ var formats = map[string]string{
 	"large":  "1920x1080",
 }
 
-// FormatsNames is the list of supported thumbnail formats
-var FormatsNames = []string{
-	"small",
-	"medium",
-	"large",
-}
-
 func init() {
 	job.AddWorker(&job.WorkerConfig{
 		WorkerType:   "thumbnail",
@@ -125,7 +118,7 @@ func WorkerCheck(ctx *job.WorkerContext) error {
 			return nil
 		}
 		allExists := true
-		for _, format := range FormatsNames {
+		for _, format := range vfs.ThumbnailFormatNames {
 			var exists bool
 			exists, err = fsThumb.ThumbExists(img, format)
 			if err != nil {
@@ -317,5 +310,5 @@ func generateThumb(ctx *job.WorkerContext, in io.Reader, out io.Writer, fileID s
 }
 
 func removeThumbnails(i *instance.Instance, img *vfs.FileDoc) error {
-	return lifecycle.ThumbsFS(i).RemoveThumbs(img, FormatsNames)
+	return lifecycle.ThumbsFS(i).RemoveThumbs(img, vfs.ThumbnailFormatNames)
 }

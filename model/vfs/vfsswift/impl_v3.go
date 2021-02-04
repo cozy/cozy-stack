@@ -297,6 +297,8 @@ func (sfs *swiftVFSV3) DissociateFile(src, dst *vfs.FileDoc) error {
 	}
 
 	// Remove the source
+	thumbsFS := &thumbsV2{c: sfs.c, container: sfs.container}
+	_ = thumbsFS.RemoveThumbs(src, vfs.ThumbnailFormatNames)
 	return sfs.destroyFileLocked(src)
 }
 
