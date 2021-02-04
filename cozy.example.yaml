@@ -344,6 +344,8 @@ contexts:
     noreply_address: noreply@cozy.beta
     noreply_name: My Cozy Beta
     reply_to: support@cozy.beta
+    # Change the limit on the number of members for a sharing
+    max_members_per_sharing: 50
     # Use a different wizard for moving a Cozy
     move_url: htts://move.cozy.beta/
     # Feature flags

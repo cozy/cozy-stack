@@ -39,7 +39,16 @@ const (
 	MemberStatusRevoked = "revoked"
 )
 
-const maximalNumberOfMembers = 50
+const maximalNumberOfMembers = 90
+
+func maxNumberOfMembers(inst *instance.Instance) int {
+	if settings, ok := inst.SettingsContext(); ok {
+		if max, ok := settings["max_members_per_sharing"].(float64); ok {
+			return int(max)
+		}
+	}
+	return maximalNumberOfMembers
+}
 
 // Member contains the information about a recipient (or the sharer) for a sharing
 type Member struct {
@@ -152,7 +161,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 		s.Members[i].ReadOnly = m.ReadOnly
 	}
 	if idx < 1 {
-		if len(s.Members) >= maximalNumberOfMembers {
+		if len(s.Members) >= maxNumberOfMembers(inst) {
 			return ErrTooManyMembers
 		}
 		s.Members = append(s.Members, m)
@@ -319,7 +328,7 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 // AddDelegatedContact adds a contact on the owner cozy, but for a contact from
 // a recipient (open_sharing: true only)
 func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email, instanceURL string, readOnly bool) (string, error) {
-	if len(s.Members) >= maximalNumberOfMembers {
+	if len(s.Members) >= maxNumberOfMembers(inst) {
 		return "", ErrTooManyMembers
 	}
 
