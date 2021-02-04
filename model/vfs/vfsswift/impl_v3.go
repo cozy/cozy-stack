@@ -274,6 +274,12 @@ func (sfs *swiftVFSV3) DissociateFile(src, dst *vfs.FileDoc) error {
 		}
 	}
 
+	uuid, err := couchdb.UUID(sfs)
+	if err != nil {
+		return err
+	}
+	dst.DocID = uuid
+
 	// Copy the file
 	srcName := MakeObjectNameV3(src.DocID, src.InternalID)
 	dstName := MakeObjectNameV3(dst.DocID, dst.InternalID)
@@ -285,7 +291,7 @@ func (sfs *swiftVFSV3) DissociateFile(src, dst *vfs.FileDoc) error {
 	if _, err := sfs.c.ObjectCopy(sfs.container, srcName, sfs.container, dstName, headers); err != nil {
 		return err
 	}
-	if err := sfs.Indexer.CreateFileDoc(dst); err != nil {
+	if err := sfs.Indexer.CreateNamedFileDoc(dst); err != nil {
 		_ = sfs.c.ObjectDelete(sfs.container, dstName)
 		return err
 	}
