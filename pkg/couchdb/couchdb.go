@@ -450,13 +450,12 @@ func GetDocWithRevs(db Database, doctype, id string, out Doc) error {
 
 // EnsureDBExist creates the database for the doctype if it doesn't exist
 func EnsureDBExist(db Database, doctype string) error {
-	if _, err := DBStatus(db, doctype); IsNoDatabaseError(err) {
-		if err = CreateDB(db, doctype); err != nil {
-			_, err = DBStatus(db, doctype)
-			return err
-		}
+	_, err := DBStatus(db, doctype)
+	if IsNoDatabaseError(err) {
+		_ = CreateDB(db, doctype)
+		_, err = DBStatus(db, doctype)
 	}
-	return nil
+	return err
 }
 
 // CreateDB creates the necessary database for a doctype
