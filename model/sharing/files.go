@@ -520,12 +520,12 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			} else {
 				err = s.TrashFile(inst, file, &s.Rules[infos.Rule])
 			}
-		} else if file != nil {
+		} else if target["type"] != consts.DirType {
 			// Let the upload worker manages this file
 			continue
 		} else if ref != nil && infos.Removed {
 			continue
-		} else if dir == nil && target["type"] == consts.DirType {
+		} else if dir == nil {
 			err = s.CreateDir(inst, target, delayResolution)
 			if err == os.ErrExist {
 				retries = append(retries, retryOp{
