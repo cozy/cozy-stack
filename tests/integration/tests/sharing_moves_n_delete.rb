@@ -20,18 +20,20 @@ describe "A shared directory" do
     child1 = Folder.create inst, dir_id: subdir.couch_id
     child2 = Folder.create inst, dir_id: subdir.couch_id
     child3 = Folder.create inst, dir_id: subdir.couch_id
-    filename1 = "#{Faker::Internet.slug}.txt"
-    filename2 = "#{Faker::Internet.slug}.txt"
-    filename3 = "#{Faker::Internet.slug}.txt"
+    filename1 = "#{Faker::Internet.slug}1.txt"
+    filename2 = "#{Faker::Internet.slug}2.txt"
+    filename3 = "#{Faker::Internet.slug}3.txt"
+    filename4 = "#{Faker::Internet.slug}4.txt"
     file1 = CozyFile.create inst, name: filename1, dir_id: child1.couch_id
     file2 = CozyFile.create inst, name: filename2, dir_id: child2.couch_id
-    file3 = CozyFile.create inst, name: filename3, dir_id: subdir.couch_id
+    file3 = CozyFile.create inst, name: filename3, dir_id: child3.couch_id
+    file4 = CozyFile.create inst, name: filename4, dir_id: subdir.couch_id
     other = Folder.create inst
     subother = Folder.create inst, dir_id: other.couch_id
-    filename4 = "#{Faker::Internet.slug}.txt"
-    filename5 = "#{Faker::Internet.slug}.txt"
-    file4 = CozyFile.create inst, name: filename4, dir_id: other.couch_id
-    file5 = CozyFile.create inst, name: filename5, dir_id: subother.couch_id
+    filename5 = "#{Faker::Internet.slug}5.txt"
+    filename6 = "#{Faker::Internet.slug}6.txt"
+    file5 = CozyFile.create inst, name: filename5, dir_id: other.couch_id
+    file6 = CozyFile.create inst, name: filename6, dir_id: subother.couch_id
 
     # Create the sharing
     contact = Contact.create inst, given_name: recipient_name
@@ -52,15 +54,15 @@ describe "A shared directory" do
     Helpers.fsdiff(da, db).must_be_empty
 
     # Move what is in subdir out of it...
-    file3.move_to inst, folder.couch_id
+    file4.move_to inst, folder.couch_id
     child1.move_to inst, folder.couch_id
     child2.move_to inst, folder.couch_id
-    child3.move_to inst, folder.couch_id
+    child3.move_to inst, other.couch_id
 
     # ...and delete it
     subdir.remove inst
     sleep 12
-    # Debug.visualize_tree [inst, inst_recipient], sharing
+    Debug.visualize_tree [inst, inst_recipient], sharing
 
     # Check that no children have been lost
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}"
@@ -69,30 +71,31 @@ describe "A shared directory" do
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}"
     child2_recipient = Folder.find_by_path inst_recipient, path
     refute child2_recipient.trashed
-    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child3.name}"
-    child3_recipient = Folder.find_by_path inst_recipient, path
-    refute child3_recipient.trashed
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child1.name}/#{file1.name}"
     file1_recipient = CozyFile.find_by_path inst_recipient, path
     refute file1_recipient.trashed
     path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{child2.name}/#{file2.name}"
     file2_recipient = CozyFile.find_by_path inst_recipient, path
     refute file2_recipient.trashed
-    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file3.name}"
-    file3_recipient = CozyFile.find_by_path inst_recipient, path
-    refute file3_recipient.trashed
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{file4.name}"
+    file4_recipient = CozyFile.find_by_path inst_recipient, path
+    refute file4_recipient.trashed
 
     # Move the other directory inside the shared folder
     other.move_to inst, folder.couch_id
     sleep 12
+    Debug.visualize_tree [inst, inst_recipient], sharing
 
     # Check that the files have been added on the recipient
-    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{other.name}/#{file4.name}"
-    child4_recipient = Folder.find_by_path inst_recipient, path
-    refute child4_recipient.trashed
-    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{other.name}/#{subother.name}/#{file5.name}"
-    child5_recipient = Folder.find_by_path inst_recipient, path
-    refute child5_recipient.trashed
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{other.name}/#{child3.name}/#{file3.name}"
+    file3_recipient = Folder.find_by_path inst_recipient, path
+    refute file3_recipient.trashed
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{other.name}/#{file5.name}"
+    file5_recipient = Folder.find_by_path inst_recipient, path
+    refute file5_recipient.trashed
+    path = "/#{Helpers::SHARED_WITH_ME}/#{folder.name}/#{other.name}/#{subother.name}/#{file6.name}"
+    file6_recipient = Folder.find_by_path inst_recipient, path
+    refute file6_recipient.trashed
 
     # Check that we have no surprise
     Helpers.fsdiff(da, db).must_be_empty
