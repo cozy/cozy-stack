@@ -271,6 +271,9 @@ func (im *importer) importAccount(zf *zip.File) error {
 
 	docs := []interface{}{doc}
 	olds := make([]interface{}, len(docs))
+	if err := couchdb.EnsureDBExist(im.inst, consts.Accounts); err != nil {
+		return err
+	}
 	return couchdb.BulkUpdateDocs(im.inst, consts.Accounts, docs, olds)
 }
 

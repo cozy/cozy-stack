@@ -25,6 +25,7 @@ func initMailTemplates() {
 		"export_error":                 subjectEntry{"Mail Export Error Subject", nil},
 		"move_confirm":                 subjectEntry{"Mail Move Confirm Subject", nil},
 		"move_success":                 subjectEntry{"Mail Move Success Subject", nil},
+		"move_error":                   subjectEntry{"Mail Move Error Subject", nil},
 		"two_factor":                   subjectEntry{"Mail Two Factor Subject", nil},
 		"two_factor_mail_confirmation": subjectEntry{"Mail Two Factor Mail Confirmation Subject", []string{templateTitleVar}},
 		"new_connection":               subjectEntry{"Mail New Connection Subject", []string{templateTitleVar}},
