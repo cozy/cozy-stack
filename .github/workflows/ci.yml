@@ -19,6 +19,12 @@ jobs:
     strategy:
       matrix:
         go-version: [1.13.x, 1.14.x, 1.15.x]
+        couchdb-version: [2.3.1, 3.0.0]
+        exclude:
+          - go-version: 1.13.x
+            couchdb-version: 3.0.0
+          - go-version: 1.14.x
+            couchdb-version: 3.0.0
     steps:
       - name: Install CouchDB
         run: |
@@ -30,12 +36,13 @@ jobs:
           	couchdb couchdb/mode seen true
           	couchdb couchdb/bindaddress string 127.0.0.1
           	couchdb couchdb/bindaddress seen true
-          	couchdb couchdb/adminpass password
+          	couchdb couchdb/adminpass password password
           	couchdb couchdb/adminpass seen true
-          	couchdb couchdb/adminpass_again password
+          	couchdb couchdb/adminpass_again password password
           	couchdb couchdb/adminpass_again seen true
           EOF
-          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --force-yes couchdb=2.3.1*
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --force-yes couchdb=${{ matrix.couchdb-version }}*
+          echo "COZY_COUCHDB_URL=http://admin:password@localhost:5984/" >> $GITHUB_ENV
       - name: Install Go
         uses: actions/setup-go@v1
         with:
@@ -46,7 +53,6 @@ jobs:
         run: |
           git config --global user.email "github@spam.cozycloud.cc"
           git config --global user.name "github actions"
-          curl -X PUT http://127.0.0.1:5984/{_users,_replicator}
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
           go install
       - name: Lint

@@ -9,7 +9,7 @@ on:
     paths-ignore:
       - 'docs/**'
 jobs:
-  test:
+  integration:
     runs-on: ubuntu-18.04
     services:
       mailhog:

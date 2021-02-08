@@ -6,7 +6,7 @@ on:
     paths:
       - 'assets/**'
 jobs:
-  build:
+  build_assets:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

@@ -6,7 +6,7 @@ on:
     paths:
       - 'cmd/*.go'
 jobs:
-  build:
+  build_cli:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
