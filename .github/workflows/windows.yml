@@ -3,7 +3,7 @@ on:
   schedule:
     - cron: '8 8 * * 3'  # https://crontab.guru/#8_8_*_*_3
 jobs:
-  build:
+  windows:
     runs-on: windows-latest
     steps:
       - name: Checkout code

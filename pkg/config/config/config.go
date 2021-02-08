@@ -907,6 +907,7 @@ func createTestViper() *viper.Viper {
 	v := viper.New()
 	v.SetConfigName("cozy.test")
 	v.AddConfigPath("$HOME/.cozy")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.SetEnvPrefix("cozy")
 	v.AutomaticEnv()
 	v.SetDefault("host", "localhost")
