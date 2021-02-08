@@ -137,6 +137,11 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 		Instance: cozyURL,
 		ReadOnly: readOnly,
 	}
+	_, err = s.addMember(inst, m)
+	return err
+}
+
+func (s *Sharing) addMember(inst *instance.Instance, m Member) (string, error) {
 	idx := -1
 	for i, member := range s.Members {
 		if i == 0 {
@@ -152,7 +157,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 			continue
 		}
 		if member.Status == MemberStatusReady {
-			return nil
+			return "", nil
 		}
 		idx = i
 		s.Members[i].Status = m.Status
@@ -163,7 +168,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 	}
 	if idx < 1 {
 		if len(s.Members) >= maxNumberOfMembers(inst) {
-			return ErrTooManyMembers
+			return "", ErrTooManyMembers
 		}
 		s.Members = append(s.Members, m)
 	}
@@ -177,7 +182,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 	} else {
 		s.Credentials[idx-1] = creds
 	}
-	return nil
+	return creds.State, nil
 }
 
 // APIDelegateAddContacts is used to serialize a request to add contacts to
@@ -329,24 +334,20 @@ func (s *Sharing) DelegateAddContacts(inst *instance.Instance, contactIDs map[st
 // AddDelegatedContact adds a contact on the owner cozy, but for a contact from
 // a recipient (open_sharing: true only)
 func (s *Sharing) AddDelegatedContact(inst *instance.Instance, email, instanceURL string, readOnly bool) (string, error) {
-	if len(s.Members) >= maxNumberOfMembers(inst) {
-		return "", ErrTooManyMembers
-	}
-
 	m := Member{
 		Status:   MemberStatusPendingInvitation,
 		Email:    email,
 		Instance: instanceURL,
 		ReadOnly: readOnly,
 	}
-	s.Members = append(s.Members, m)
-	state := crypto.Base64Encode(crypto.GenerateRandomBytes(StateLen))
-	creds := Credentials{
-		State:  string(state),
-		XorKey: MakeXorKey(),
+	state, err := s.addMember(inst, m)
+	if err != nil {
+		return "", err
 	}
-	s.Credentials = append(s.Credentials, creds)
-	return creds.State, nil
+	if state == "" {
+		return "", ErrAlreadyAccepted
+	}
+	return state, nil
 }
 
 // DelegateDiscovery delegates the POST discovery when a recipient has invited
