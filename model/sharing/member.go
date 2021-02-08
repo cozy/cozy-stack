@@ -151,7 +151,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 		if !found {
 			continue
 		}
-		if member.Status != MemberStatusReady {
+		if member.Status == MemberStatusReady {
 			return nil
 		}
 		idx = i
@@ -159,6 +159,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string, readOnly
 		s.Members[i].Name = m.Name
 		s.Members[i].Instance = m.Instance
 		s.Members[i].ReadOnly = m.ReadOnly
+		break
 	}
 	if idx < 1 {
 		if len(s.Members) >= maxNumberOfMembers(inst) {
