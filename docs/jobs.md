@@ -770,16 +770,22 @@ permissions to delete the trigger, even without permissions on the
 
 ### GET /jobs/triggers
 
-Get the list of triggers. This route only accept `Worker` query parameters and returns the trigger but also in `attributes` its `current_state` (the same `current_state` returned by [GET /jobs/triggers/:trigger-id](jobs/#get-jobstriggerstrigger-id)). Be warned that `/data/io.cozy.triggers/_find` does not return this `current_state` attribute and you'll need to query `/jobs/triggers/:trigger-id` to have it.
+Get the list of triggers. This route only accept `Worker` and `Type` query
+parameters and returns the trigger but also in `attributes` its `current_state`
+(the same `current_state` returned by [GET
+/jobs/triggers/:trigger-id](jobs/#get-jobstriggerstrigger-id)). Be warned that
+`/data/io.cozy.triggers/_find` does not return this `current_state` attribute
+and you'll need to query `/jobs/triggers/:trigger-id` to have it.
 
-Query parameters:
+Query parameters (with comma-separated values):
 
+- `Type`: to filter on the trigger type (`@cron`, `@in`, etc.)
 - `Worker`: to filter only triggers associated with a specific worker.
 
 #### Request
 
 ```http
-GET /jobs/triggers?Worker=konnector HTTP/1.1
+GET /jobs/triggers?Worker=konnector&Type=@cron,@in,@at HTTP/1.1
 Accept: application/vnd.api+json
 ```
 

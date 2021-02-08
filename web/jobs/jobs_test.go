@@ -464,6 +464,27 @@ func TestGetAllJobs(t *testing.T) {
 		return
 	}
 	assert.Len(t, v.Data, 0)
+
+	req6, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?Type=@in", nil)
+	assert.NoError(t, err)
+	req6.Header.Add("Authorization", "Bearer "+tokenTriggers)
+	res6, err := http.DefaultClient.Do(req6)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, http.StatusOK, res6.StatusCode)
+
+	err = json.NewDecoder(res6.Body).Decode(&v)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	if assert.Len(t, v.Data, 1) {
+		assert.Equal(t, consts.Triggers, v.Data[0].Type)
+		assert.Equal(t, "@in", v.Data[0].Attributes.Type)
+		assert.Equal(t, "10s", v.Data[0].Attributes.Arguments)
+		assert.Equal(t, "print", v.Data[0].Attributes.WorkerType)
+	}
 }
 
 func TestMain(m *testing.M) {
