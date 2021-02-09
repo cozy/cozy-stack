@@ -427,7 +427,7 @@ lot of resources. So, we need to be careful in how we do that. And, like usual
 for the sharing, we need to take care of the stability and convergence of the
 replication algorithm.
 
-With these constraints, the approache we have chosen is to put a copy a file
+With these constraints, the approache we have chosen is to put a copy of a file
 that was moved out of the sharing in the trash when this operation is
 replicated. For the member of the sharing that has made the operation, the file
 will be the same (no need to change how the VFS work), and it is only later,
