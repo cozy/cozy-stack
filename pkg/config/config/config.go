@@ -135,8 +135,9 @@ type Config struct {
 
 	RemoteAllowCustomPort bool
 
-	CSPDisabled  bool
-	CSPAllowList map[string]string
+	CSPDisabled   bool
+	CSPAllowList  map[string]string
+	CSPPerContext map[string]map[string]string
 
 	AssetsPollingDisabled bool
 	AssetsPollingInterval time.Duration
@@ -663,6 +664,27 @@ func UseViper(v *viper.Viper) error {
 		}
 	}
 
+	cspAllowList := map[string]string{}
+	cspPerContext := map[string]map[string]string{}
+	cspList := v.GetStringMap("csp_allowlist")
+	for key, value := range cspList {
+		if val, ok := value.(string); ok {
+			cspAllowList[key] = val
+		} else if val, ok := value.(map[string]interface{}); ok && key == "contexts" {
+			for ctx, rules := range val {
+				if rule, ok := rules.(map[string]interface{}); ok {
+					forContext := map[string]string{}
+					for src, list := range rule {
+						if l, ok := list.(string); ok {
+							forContext[src] = l
+						}
+					}
+					cspPerContext[ctx] = forContext
+				}
+			}
+		}
+	}
+
 	config = &Config{
 		Host: v.GetString("host"),
 		Port: v.GetInt("port"),
@@ -753,7 +775,8 @@ func UseViper(v *viper.Viper) error {
 		Registries:     regs,
 		Clouderies:     v.GetStringMap("clouderies"),
 
-		CSPAllowList: v.GetStringMapString("csp_allowlist"),
+		CSPAllowList:  cspAllowList,
+		CSPPerContext: cspPerContext,
 
 		AssetsPollingDisabled: v.GetBool("assets_polling_disabled"),
 		AssetsPollingInterval: v.GetDuration("assets_polling_interval"),

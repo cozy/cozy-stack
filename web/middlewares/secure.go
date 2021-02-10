@@ -46,6 +46,9 @@ type (
 		CSPStyleSrcAllowList       string
 		CSPWorkerSrcAllowList      string
 		CSPFrameAncestorsAllowList string
+
+		// context_name -> source -> allow_list
+		CSPPerContext map[string]map[string]string
 	}
 )
 
@@ -124,42 +127,29 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 			if err != nil {
 				return err
 			}
-			if len(conf.CSPDefaultSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "default-src", conf.CSPDefaultSrcAllowList, conf.CSPDefaultSrc, isSecure)
+			var contextName string
+			if conf.CSPPerContext != nil {
+				contextName = GetInstance(c).ContextName
 			}
-			if len(conf.CSPScriptSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "script-src", conf.CSPScriptSrcAllowList, conf.CSPScriptSrc, isSecure)
+			b := cspBuilder{
+				parent:      parent,
+				siblings:    siblings,
+				isSecure:    isSecure,
+				contextName: contextName,
+				perContext:  conf.CSPPerContext,
 			}
-			if len(conf.CSPFrameSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "frame-src", conf.CSPFrameSrcAllowList, conf.CSPFrameSrc, isSecure)
-			}
-			if len(conf.CSPConnectSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "connect-src", conf.CSPConnectSrcAllowList, conf.CSPConnectSrc, isSecure)
-			}
-			if len(conf.CSPFontSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "font-src", conf.CSPFontSrcAllowList, conf.CSPFontSrc, isSecure)
-			}
-			if len(conf.CSPImgSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "img-src", conf.CSPImgSrcAllowList, conf.CSPImgSrc, isSecure)
-			}
-			if len(conf.CSPManifestSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "manifest-src", conf.CSPManifestSrcAllowList, conf.CSPManifestSrc, isSecure)
-			}
-			if len(conf.CSPMediaSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "media-src", conf.CSPMediaSrcAllowList, conf.CSPMediaSrc, isSecure)
-			}
-			if len(conf.CSPObjectSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "object-src", conf.CSPObjectSrcAllowList, conf.CSPObjectSrc, isSecure)
-			}
-			if len(conf.CSPStyleSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "style-src", conf.CSPStyleSrcAllowList, conf.CSPStyleSrc, isSecure)
-			}
-			if len(conf.CSPWorkerSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "worker-src", conf.CSPWorkerSrcAllowList, conf.CSPWorkerSrc, isSecure)
-			}
-			if len(conf.CSPFrameAncestors) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "frame-ancestors", conf.CSPFrameAncestorsAllowList, conf.CSPFrameAncestors, isSecure)
-			}
+			cspHeader += b.makeCSPHeader("default-src", conf.CSPDefaultSrcAllowList, conf.CSPDefaultSrc)
+			cspHeader += b.makeCSPHeader("script-src", conf.CSPScriptSrcAllowList, conf.CSPScriptSrc)
+			cspHeader += b.makeCSPHeader("frame-src", conf.CSPFrameSrcAllowList, conf.CSPFrameSrc)
+			cspHeader += b.makeCSPHeader("connect-src", conf.CSPConnectSrcAllowList, conf.CSPConnectSrc)
+			cspHeader += b.makeCSPHeader("font-src", conf.CSPFontSrcAllowList, conf.CSPFontSrc)
+			cspHeader += b.makeCSPHeader("img-src", conf.CSPImgSrcAllowList, conf.CSPImgSrc)
+			cspHeader += b.makeCSPHeader("manifest-src", conf.CSPManifestSrcAllowList, conf.CSPManifestSrc)
+			cspHeader += b.makeCSPHeader("media-src", conf.CSPMediaSrcAllowList, conf.CSPMediaSrc)
+			cspHeader += b.makeCSPHeader("object-src", conf.CSPObjectSrcAllowList, conf.CSPObjectSrc)
+			cspHeader += b.makeCSPHeader("style-src", conf.CSPStyleSrcAllowList, conf.CSPStyleSrc)
+			cspHeader += b.makeCSPHeader("worker-src", conf.CSPWorkerSrcAllowList, conf.CSPWorkerSrc)
+			cspHeader += b.makeCSPHeader("frame-ancestors", conf.CSPFrameAncestorsAllowList, conf.CSPFrameAncestors)
 			if cspHeader != "" {
 				h.Set(echo.HeaderContentSecurityPolicy, cspHeader)
 			}
@@ -223,8 +213,16 @@ func validCSPList(sources, defaults []CSPSource, allowList string) ([]CSPSource,
 	return sourcesUnique, allowList
 }
 
-func makeCSPHeader(parent, siblings, header, cspAllowList string, sources []CSPSource, isSecure bool) string {
-	headers := make([]string, len(sources))
+type cspBuilder struct {
+	parent      string
+	siblings    string
+	contextName string
+	perContext  map[string]map[string]string
+	isSecure    bool
+}
+
+func (b cspBuilder) makeCSPHeader(header, cspAllowList string, sources []CSPSource) string {
+	headers := make([]string, len(sources), len(sources)+1)
 	for i, src := range sources {
 		switch src {
 		case CSPSrcSelf:
@@ -236,22 +234,22 @@ func makeCSPHeader(parent, siblings, header, cspAllowList string, sources []CSPS
 		case CSPSrcBlob:
 			headers[i] = "blob:"
 		case CSPSrcParent:
-			if isSecure {
-				headers[i] = "https://" + parent
+			if b.isSecure {
+				headers[i] = "https://" + b.parent
 			} else {
-				headers[i] = "http://" + parent
+				headers[i] = "http://" + b.parent
 			}
 		case CSPSrcWS:
-			if isSecure {
-				headers[i] = "wss://" + parent
+			if b.isSecure {
+				headers[i] = "wss://" + b.parent
 			} else {
-				headers[i] = "ws://" + parent
+				headers[i] = "ws://" + b.parent
 			}
 		case CSPSrcSiblings:
-			if isSecure {
-				headers[i] = "https://" + siblings
+			if b.isSecure {
+				headers[i] = "https://" + b.siblings
 			} else {
-				headers[i] = "http://" + siblings
+				headers[i] = "http://" + b.siblings
 			}
 		case CSPSrcAny:
 			headers[i] = "*"
@@ -260,6 +258,33 @@ func makeCSPHeader(parent, siblings, header, cspAllowList string, sources []CSPS
 		case CSPAllowList:
 			headers[i] = cspAllowList
 		}
+	}
+	if b.contextName != "" {
+		if context, ok := b.perContext[b.contextName]; ok {
+			var src string
+			switch header {
+			case "default-src":
+				src = "default"
+			case "img-src":
+				src = "img"
+			case "script-src":
+				src = "script"
+			case "connect-src":
+				src = "connect"
+			case "style-src":
+				src = "style"
+			case "font-src":
+				src = "font"
+			case "frame-src":
+				src = "frame"
+			}
+			if list, ok := context[src]; ok && list != "" {
+				headers = append(headers, list)
+			}
+		}
+	}
+	if len(headers) == 0 {
+		return ""
 	}
 	return header + " " + strings.Join(headers, " ") + ";"
 }
