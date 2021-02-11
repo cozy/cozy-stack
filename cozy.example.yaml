@@ -295,6 +295,8 @@ csp_allowlist:
   # style:  https://allowed.domain.com/
   # font:   https://allowed.domain.com/
 
+  # It is also possible to configure the CSP policy per context. The values are
+  # cumulative with the global csp allowlist.
   contexts:
     beta:
       img: https://allowed2.domain.com/
