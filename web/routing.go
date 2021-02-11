@@ -97,6 +97,8 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPStyleSrcAllowList:   config.GetConfig().CSPAllowList["style"],
 			CSPFontSrcAllowList:    config.GetConfig().CSPAllowList["font"],
 			CSPFrameSrcAllowList:   config.GetConfig().CSPAllowList["frame"] + " " + cspFrameSrcAllowList,
+
+			CSPPerContext: config.GetConfig().CSPPerContext,
 		})
 		mws = append([]echo.MiddlewareFunc{secure}, mws...)
 	}

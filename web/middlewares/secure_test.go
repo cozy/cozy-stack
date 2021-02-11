@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -56,9 +57,28 @@ func TestSecureMiddlewareCSP(t *testing.T) {
 	})(echo.NotFoundHandler)
 	_ = h3(c3)
 
+	e4 := echo.New()
+	req4, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
+	rec4 := httptest.NewRecorder()
+	c4 := e4.NewContext(req4, rec4)
+	c4.Set("instance", &instance.Instance{ContextName: "test"})
+	h4 := Secure(&SecureConfig{
+		CSPConnectSrc: nil,
+		CSPFrameSrc:   []CSPSource{CSPSrcAny},
+		CSPScriptSrc:  []CSPSource{CSPSrcSelf},
+		CSPPerContext: map[string]map[string]string{
+			"test": {
+				"frame":   "https://example.net",
+				"connect": "https://example.com",
+			},
+		},
+	})(echo.NotFoundHandler)
+	_ = h4(c4)
+
 	assert.Equal(t, "", rec1.Header().Get(echo.HeaderContentSecurityPolicy))
 	assert.Equal(t, "script-src 'self';frame-src *;", rec2.Header().Get(echo.HeaderContentSecurityPolicy))
 	assert.Equal(t, "script-src https://*.cozy.local;frame-src *;connect-src https://cozy.local 'self';", rec3.Header().Get(echo.HeaderContentSecurityPolicy))
+	assert.Equal(t, "script-src 'self';frame-src * https://example.net;connect-src https://example.com;", rec4.Header().Get(echo.HeaderContentSecurityPolicy))
 }
 
 func TestAppendCSPRule(t *testing.T) {
