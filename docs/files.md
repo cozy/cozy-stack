@@ -464,12 +464,13 @@ then the `updated_at` will be set with the value of the `created_at`.
 | ----------------------- | -------------------------------------------------------------- |
 | Type                    | `file`                                                         |
 | Name                    | the file name                                                  |
+| Size                    | the file size (when `Content-Length` can't be used)            |
 | Tags                    | an array of tags                                               |
 | Executable              | `true` if the file is executable (UNIX permission)             |
 | Metadata                | a JSON with metadata on this file (_deprecated_)               |
 | MetadataID              | the identifier of a metadata object                            |
-| CreatedAt               | the creation date of the file  
-| UpdatedAt               | the modification date of the file
+| CreatedAt               | the creation date of the file                                  |
+| UpdatedAt               | the modification date of the file                              |
 | SourceAccount           | the id of the source account used by a konnector               |
 | SourceAccountIdentifier | the unique identifier of the account targeted by the connector |
 
