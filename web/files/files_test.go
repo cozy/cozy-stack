@@ -106,9 +106,12 @@ func doUploadOrMod(t *testing.T, req *http.Request, contentType, hash string) (r
 func upload(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
 	buf := strings.NewReader(body)
 	req, err := http.NewRequest("POST", ts.URL+path, buf)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	if !assert.NoError(t, err) {
 		return
+	}
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	if strings.Contains(path, "Size=") {
+		req.ContentLength = -1
 	}
 	return doUploadOrMod(t, req, contentType, hash)
 }
@@ -408,6 +411,16 @@ func TestUploadToTrashedFolder(t *testing.T) {
 	assert.Equal(t, 200, res2.StatusCode)
 	res3, _ := upload(t, "/files/"+dirID+"?Type=file&Name=trashed-parent", "text/plain", "foo", "")
 	assert.Equal(t, 404, res3.StatusCode)
+}
+
+func TestUploadBadSize(t *testing.T) {
+	body := "foo"
+	res, _ := upload(t, "/files/?Type=file&Name=badsize&Size=42", "text/plain", body, "")
+	assert.Equal(t, 412, res.StatusCode)
+
+	storage := testInstance.VFS()
+	_, err := readFile(storage, "/badsize")
+	assert.Error(t, err)
 }
 
 func TestUploadBadHash(t *testing.T) {
