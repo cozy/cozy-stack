@@ -97,19 +97,35 @@ func handleAppNotFound(c echo.Context, i *instance.Instance, slug string) error 
 	if _, err := registry.GetApplication(slug, i.Registries()); err != nil {
 		return app.ErrNotFound
 	}
-	link := i.SubDomain(consts.StoreSlug)
-	link.Fragment = "/discover/" + slug
+
+	var buttonLink, supportEmail string
+	button := "Error Application not found Button"
+	if ctxSettings, ok := i.SettingsContext(); ok {
+		if email, ok := ctxSettings["support_address"].(string); ok {
+			supportEmail = email
+		}
+		if hide, ok := ctxSettings["hide_button_on_app_not_found"].(bool); ok && hide {
+			button = ""
+		}
+	}
+	if button != "" {
+		link := i.SubDomain(consts.StoreSlug)
+		link.Fragment = "/discover/" + slug
+		buttonLink = link.String()
+	}
+
 	return c.Render(http.StatusNotFound, "error.html", echo.Map{
-		"Title":       instance.DefaultTemplateTitle,
-		"CozyUI":      middlewares.CozyUI(i),
-		"ThemeCSS":    middlewares.ThemeCSS(i),
-		"Favicon":     middlewares.Favicon(i),
-		"Domain":      i.ContextualDomain(),
-		"ContextName": i.ContextName,
-		"ErrorTitle":  "Error Application not found Title",
-		"Error":       "Error Application not found Message",
-		"Button":      "Error Application not found Button",
-		"ButtonLink":  link.String(),
+		"Title":        instance.DefaultTemplateTitle,
+		"CozyUI":       middlewares.CozyUI(i),
+		"ThemeCSS":     middlewares.ThemeCSS(i),
+		"Favicon":      middlewares.Favicon(i),
+		"Domain":       i.ContextualDomain(),
+		"ContextName":  i.ContextName,
+		"ErrorTitle":   "Error Application not found Title",
+		"Error":        "Error Application not found Message",
+		"Button":       button,
+		"ButtonLink":   buttonLink,
+		"SupportEmail": supportEmail,
 	})
 }
 

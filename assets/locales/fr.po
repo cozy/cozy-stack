@@ -430,9 +430,7 @@ msgid "Error Application not found Title"
 msgstr "Application pas encore disponible"
 
 msgid "Error Application not found Message"
-msgstr ""
-"Nous sommes désolés. Cette application n'est pas encore disponible dans "
-"votre Cozy."
+msgstr "Nous sommes désolés. Cette application n'est pas encore disponible."
 
 msgid "Error Application not found Action"
 msgstr "Retourner à votre accueil"
