@@ -218,13 +218,15 @@ func GetToken(c echo.Context) error {
 // AccessTokenReponse is the stuct used for serializing to JSON the response
 // for an access token.
 type AccessTokenReponse struct {
-	ClientID  string `json:"client_id,omitempty"`
-	RegToken  string `json:"registration_access_token,omitempty"`
-	Type      string `json:"token_type"`
-	ExpiresIn int    `json:"expires_in"`
-	Access    string `json:"access_token"`
-	Refresh   string `json:"refresh_token"`
-	Key       string `json:"Key"`
+	ClientID   string `json:"client_id,omitempty"`
+	RegToken   string `json:"registration_access_token,omitempty"`
+	Type       string `json:"token_type"`
+	ExpiresIn  int    `json:"expires_in"`
+	Access     string `json:"access_token"`
+	Refresh    string `json:"refresh_token"`
+	Key        string `json:"Key"`
+	Kdf        int    `json:"Kdf"`
+	Iterations int    `json:"KdfIterations"`
 }
 
 func getInitialCredentials(c echo.Context) error {
@@ -312,13 +314,15 @@ func getInitialCredentials(c echo.Context) error {
 
 	// Send the response
 	out := AccessTokenReponse{
-		ClientID:  client.ClientID,
-		RegToken:  client.RegistrationToken,
-		Type:      "Bearer",
-		ExpiresIn: int(consts.AccessTokenValidityDuration.Seconds()),
-		Access:    access,
-		Refresh:   refresh,
-		Key:       key,
+		ClientID:   client.ClientID,
+		RegToken:   client.RegistrationToken,
+		Type:       "Bearer",
+		ExpiresIn:  int(consts.AccessTokenValidityDuration.Seconds()),
+		Access:     access,
+		Refresh:    refresh,
+		Key:        key,
+		Kdf:        setting.PassphraseKdf,
+		Iterations: setting.PassphraseKdfIterations,
 	}
 	return c.JSON(http.StatusOK, out)
 }
@@ -416,11 +420,13 @@ func refreshToken(c echo.Context) error {
 
 	// Send the response
 	out := AccessTokenReponse{
-		Type:      "Bearer",
-		ExpiresIn: int(consts.AccessTokenValidityDuration.Seconds()),
-		Access:    access,
-		Refresh:   refresh,
-		Key:       key,
+		Type:       "Bearer",
+		ExpiresIn:  int(consts.AccessTokenValidityDuration.Seconds()),
+		Access:     access,
+		Refresh:    refresh,
+		Key:        key,
+		Kdf:        setting.PassphraseKdf,
+		Iterations: setting.PassphraseKdfIterations,
 	}
 	return c.JSON(http.StatusOK, out)
 }
