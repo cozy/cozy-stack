@@ -16,6 +16,74 @@ The default port for the admin endpoints is `6060`. If you want to customize the
 
 ## Instance
 
+### GET /instances
+
+Returns the list of all instances. By default, there is no pagination, but it
+is possible to add a `page[limit]` parameter in the query-string to paginate (
+cf [JSON-API pagination](./jsonapi.md#pagination)). A `page[skip]` parameter in
+the query-string is also supported, but CouchDB may be slow on requests with a
+skip on large collections.
+
+#### Request
+
+```http
+GET /instances HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "data": [
+        {
+            "type": "instances",
+            "id": "3af6ed68a6d9146b3529d2584a001d98",
+            "attributes": {
+                "domain": "alice.cozy.tools:8080",
+                "prefix": "cozy7d3d5947e7f3b0c674d1b8644646348e",
+                "locale": "fr",
+                "context": "dev",
+                "onboarding_finished": true,
+                "indexes_version": 30
+            },
+            "meta": {
+                "rev": "1-32c855c989e8f6def0bc0cc417d8b3b4"
+            },
+            "links": {
+                "self": "/instances/3af6ed68a6d9146b3529d2584a001d98"
+            }
+        },
+        {
+            "type": "instances",
+            "id": "3af6ed68a6d9146b3529d2584a01d557",
+            "attributes": {
+                "domain": "bob.cozy.tools:8080",
+                "prefix": "cozybf682065ca3c7d64f2dafc6cc12fe702",
+                "locale": "fr",
+                "context": "dev",
+                "onboarding_finished": true,
+                "indexes_version": 30
+            },
+            "meta": {
+                "rev": "1-ab6f77dbfdb3aab5b70b022e37fe231f"
+            },
+            "links": {
+                "self": "/instances/3af6ed68a6d9146b3529d2584a01d557"
+            }
+        }
+    ],
+    "meta": {
+        "count": 2
+    }
+}
+```
+
+
 ### GET /instances/with-app-version/:slug/:version
 
 Returns all the instances using slug/version pair

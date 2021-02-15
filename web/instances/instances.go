@@ -110,6 +110,7 @@ func createHandler(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
+	in.CLISecret = nil
 	in.OAuthSecret = nil
 	in.SessSecret = nil
 	in.PassphraseHash = nil
@@ -118,11 +119,15 @@ func createHandler(c echo.Context) error {
 
 func showHandler(c echo.Context) error {
 	domain := c.Param("domain")
-	i, err := lifecycle.GetInstance(domain)
+	in, err := lifecycle.GetInstance(domain)
 	if err != nil {
 		return wrapError(err)
 	}
-	return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
+	in.CLISecret = nil
+	in.OAuthSecret = nil
+	in.SessSecret = nil
+	in.PassphraseHash = nil
+	return jsonapi.Data(c, http.StatusOK, &apiInstance{in}, nil)
 }
 
 func modifyHandler(c echo.Context) error {
@@ -182,7 +187,35 @@ func modifyHandler(c echo.Context) error {
 }
 
 func listHandler(c echo.Context) error {
-	is, err := instance.List()
+	var instances []*instance.Instance
+	var links *jsonapi.LinksList
+	var err error
+
+	var limit int
+	if l := c.QueryParam("page[limit]"); l != "" {
+		if converted, err := strconv.Atoi(l); err == nil {
+			limit = converted
+		}
+	}
+
+	var skip int
+	if s := c.QueryParam("page[skip]"); s != "" {
+		if converted, err := strconv.Atoi(s); err == nil {
+			skip = converted
+		}
+	}
+
+	if limit > 0 {
+		cursor := c.QueryParam("page[cursor]")
+		instances, cursor, err = instance.PaginatedList(limit, cursor, skip)
+		if cursor != "" {
+			links = &jsonapi.LinksList{
+				Next: fmt.Sprintf("/instances?page[limit]=%d&page[cursor]=%s", limit, cursor),
+			}
+		}
+	} else {
+		instances, err = instance.List()
+	}
 	if err != nil {
 		if couchdb.IsNoDatabaseError(err) {
 			return jsonapi.DataList(c, http.StatusOK, nil, nil)
@@ -190,15 +223,16 @@ func listHandler(c echo.Context) error {
 		return wrapError(err)
 	}
 
-	objs := make([]jsonapi.Object, len(is))
-	for i, in := range is {
+	objs := make([]jsonapi.Object, len(instances))
+	for i, in := range instances {
+		in.CLISecret = nil
 		in.OAuthSecret = nil
 		in.SessSecret = nil
 		in.PassphraseHash = nil
 		objs[i] = &apiInstance{in}
 	}
 
-	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+	return jsonapi.DataList(c, http.StatusOK, objs, links)
 }
 
 func countHandler(c echo.Context) error {
