@@ -144,23 +144,32 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			}
 		}
 
-		var buttonTitle, buttonURL string
+		var buttonTitle, buttonURL, supportEmail string
 		if ok && err == app.ErrNotFound {
 			buttonURL = i.DefaultRedirection().String()
 			buttonTitle = "Error Application not found Action"
+			if ctxSettings, ok := i.SettingsContext(); ok {
+				if email, ok := ctxSettings["support_address"].(string); ok {
+					supportEmail = email
+				}
+				if hide, ok := ctxSettings["hide_button_on_app_not_found"].(bool); ok && hide {
+					buttonTitle = ""
+				}
+			}
 		}
 
 		err = c.Render(status, "error.html", echo.Map{
-			"Title":       instance.DefaultTemplateTitle,
-			"CozyUI":      middlewares.CozyUI(i),
-			"ThemeCSS":    middlewares.ThemeCSS(i),
-			"Domain":      i.ContextualDomain(),
-			"ContextName": i.ContextName,
-			"ErrorTitle":  title,
-			"Error":       value,
-			"Button":      buttonTitle,
-			"ButtonLink":  buttonURL,
-			"Favicon":     middlewares.Favicon(i),
+			"Title":        i.TemplateTitle(),
+			"CozyUI":       middlewares.CozyUI(i),
+			"ThemeCSS":     middlewares.ThemeCSS(i),
+			"Domain":       i.ContextualDomain(),
+			"ContextName":  i.ContextName,
+			"ErrorTitle":   title,
+			"Error":        value,
+			"Button":       buttonTitle,
+			"ButtonLink":   buttonURL,
+			"Favicon":      middlewares.Favicon(i),
+			"SupportEmail": supportEmail,
 		})
 	} else {
 		err = c.String(status, fmt.Sprintf("%v", he.Message))
