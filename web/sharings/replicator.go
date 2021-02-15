@@ -1,6 +1,7 @@
 package sharings
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -21,7 +22,7 @@ func RevsDiff(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	var changed sharing.Changed
-	if err = c.Bind(&changed); err != nil {
+	if err = json.NewDecoder(c.Request().Body).Decode(&changed); err != nil {
 		inst.Logger().WithField("nspace", "replicator").Infof("Changes cannot be bound: %s", err)
 		return wrapErrors(err)
 	}
@@ -47,7 +48,7 @@ func BulkDocs(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	var docs sharing.DocsByDoctype
-	if err = c.Bind(&docs); err != nil {
+	if err = json.NewDecoder(c.Request().Body).Decode(&docs); err != nil {
 		inst.Logger().WithField("nspace", "replicator").Infof("Docs cannot be bound: %s", err)
 		return wrapErrors(err)
 	}
@@ -96,7 +97,7 @@ func SyncFile(c echo.Context) error {
 		inst.Logger().WithField("nspace", "replicator").Infof("Sharing was not found: %s", err)
 		return wrapErrors(err)
 	}
-	var fileDoc *sharing.FileDocWithRevisions
+	var fileDoc sharing.FileDocWithRevisions
 	if err = c.Bind(&fileDoc); err != nil {
 		inst.Logger().WithField("nspace", "replicator").Infof("File cannot be bound: %s", err)
 		return wrapErrors(err)
@@ -105,7 +106,7 @@ func SyncFile(c echo.Context) error {
 		err = errors.New("The identifiers in the URL and in the doc are not the same")
 		return jsonapi.InvalidAttribute("id", err)
 	}
-	key, err := s.SyncFile(inst, fileDoc)
+	key, err := s.SyncFile(inst, &fileDoc)
 	if err != nil {
 		inst.Logger().WithField("nspace", "replicator").Infof("Error on sync file: %s", err)
 		return wrapErrors(err)
