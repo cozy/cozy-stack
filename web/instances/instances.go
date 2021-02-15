@@ -198,9 +198,16 @@ func listHandler(c echo.Context) error {
 		}
 	}
 
+	var skip int
+	if s := c.QueryParam("page[skip]"); s != "" {
+		if converted, err := strconv.Atoi(s); err == nil {
+			skip = converted
+		}
+	}
+
 	if limit > 0 {
 		cursor := c.QueryParam("page[cursor]")
-		instances, cursor, err = instance.PaginatedList(limit, cursor)
+		instances, cursor, err = instance.PaginatedList(limit, cursor, skip)
 		if cursor != "" {
 			links = &jsonapi.LinksList{
 				Next: fmt.Sprintf("/instances?page[limit]=%d&page[cursor]=%s", limit, cursor),

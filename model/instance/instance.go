@@ -566,13 +566,14 @@ func ForeachInstances(fn func(*Instance) error) error {
 }
 
 // PaginatedList can be used to list the instances, with pagination.
-func PaginatedList(limit int, startKey string) ([]*Instance, string, error) {
+func PaginatedList(limit int, startKey string, skip int) ([]*Instance, string, error) {
 	var docs []*Instance
 	req := &couchdb.AllDocsRequest{
 		// Also get the following document for the next key,
 		// and a few more because of the design docs
 		Limit:    limit + 10,
 		StartKey: startKey,
+		Skip:     skip,
 	}
 	err := couchdb.GetAllDocs(couchdb.GlobalDB, consts.Instances, req, &docs)
 	if err != nil {
@@ -580,8 +581,8 @@ func PaginatedList(limit int, startKey string) ([]*Instance, string, error) {
 	}
 
 	if len(docs) > limit { // There are still documents to fetch
-		nextDoc := docs[len(docs)-1]
-		docs = docs[:len(docs)-1]
+		nextDoc := docs[limit]
+		docs = docs[:limit]
 		return docs, nextDoc.ID(), nil
 	}
 	return docs, "", nil
