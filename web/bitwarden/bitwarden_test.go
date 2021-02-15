@@ -80,6 +80,8 @@ func TestConnect(t *testing.T) {
 	assert.NotEmpty(t, result["Key"])
 	assert.NotEmpty(t, result["client_id"])
 	assert.NotEmpty(t, result["registration_access_token"])
+	assert.NotNil(t, result["Kdf"])
+	assert.NotNil(t, result["KdfIterations"])
 
 	assert.NotZero(t, len(testLogger.Entries))
 	assert.Equal(t, "Organization key does not exist", testLogger.Entries[0].Message)
