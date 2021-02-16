@@ -8,10 +8,11 @@
 # Paul Tran-Van <paul@cozycloud.cc>, 2020
 # JC Pagnon <gooz@cozycloud.cc>, 2021
 # Bruno Michel, 2021
+# Matthieu AMBRY <matthieu@ambry.eu>, 2021
 # 
 msgid ""
 msgstr ""
-"Last-Translator: Bruno Michel, 2021\n"
+"Last-Translator: Matthieu AMBRY <matthieu@ambry.eu>, 2021\n"
 "Language-Team: French (https://www.transifex.com/cozy/teams/39753/fr/)\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -361,16 +362,19 @@ msgstr "%s a changé l'adresse de son Cozy"
 
 msgid "Move Link Description"
 msgstr ""
-"Ce lien ne sera bientôt plus disponible, un nouveau a été généré :"
+"Ce lien ne sera bientôt plus disponible, un nouveau lien a été généré:"
 
 msgid "Move Link More"
-msgstr "Copiez / collez ce nouveau lien afin de le conserver précieusement avant de ne plus pouvoir accéder à cette page."
+msgstr ""
+"Copiez/collez ce nouveau lien pour le conserver précieusement avant que vous"
+" ne puissiez plus accéder à cette page."
 
 msgid "Move Link FAQ URL"
-msgstr "https://support.cozy.io/article/490-comment-retrouver-un-lien-de-partage"
+msgstr "https://help.cozy.io/article/491-comment-retrouver-un-lien-de-partage"
 
 msgid "Move Link FAQ Text"
-msgstr "Comment retrouver un lien de partage en cas de changement d'adresse ?"
+msgstr ""
+"Comment puis-je trouver une lien de partage en cas de changement d'adresse ?"
 
 msgid "Move Vault Title"
 msgstr "Importer mes mots de passe"
@@ -430,7 +434,9 @@ msgid "Error Application not found Title"
 msgstr "Application pas encore disponible"
 
 msgid "Error Application not found Message"
-msgstr "Nous sommes désolés. Cette application n'est pas encore disponible."
+msgstr ""
+"Nous sommes désolés. Cette application n'est pas encore disponible dans "
+"votre Cozy."
 
 msgid "Error Application not found Action"
 msgstr "Retourner à votre accueil"
@@ -749,7 +755,7 @@ msgstr ""
 " les données associées ont bien été importées."
 
 msgid "Mail Import Success Outro"
-msgstr "A bientôt, votre Cozy"
+msgstr "À bientôt, votre Cozy"
 
 msgid "Mail Import Error Subject"
 msgstr "⚠ L'import dans votre Cozy n'a pas abouti"
@@ -816,15 +822,15 @@ msgstr ""
 " les données associées ont bien été importées."
 
 msgid "Mail Move Success Outro"
-msgstr "A bientôt, votre Cozy"
+msgstr "À bientôt, votre Cozy"
 
 msgid "Mail Move Error Subject"
-msgstr "⚠ Le déménagement de votre Cozy n'a pas abouti"
+msgstr "⚠ Le déplacement de votre Cozy a échoué"
 
 msgid "Mail Move Error Text"
 msgstr ""
-"Le déménagement de votre Cozy a rencontré un souci. "
-"Pouvez-vous renouveler l'opération depuis le début ?"
+"Le déplacement de votre Cozy rencontre un problème. Pouvez-vous renouveler "
+"l'opération depuis le début ?"
 
 msgid "Mail Move Error Outro"
 msgstr "Si le souci persiste, contactez le support client."
