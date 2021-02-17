@@ -52,7 +52,7 @@ func (im *importer) importPart(cursor string) error {
 	if err != nil {
 		return err
 	}
-	err = im.importZip(zr.Reader)
+	err = im.importZip(&zr.Reader)
 	if errc := zr.Close(); err == nil {
 		err = errc
 	}
@@ -88,7 +88,7 @@ func (im *importer) downloadFile(cursor string) error {
 	return err
 }
 
-func (im *importer) importZip(zr zip.Reader) error {
+func (im *importer) importZip(zr *zip.Reader) error {
 	var errm error
 
 	for i, file := range zr.File {
