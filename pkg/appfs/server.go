@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/andybalholm/brotli"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	web_utils "github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/ncw/swift"
@@ -38,6 +39,26 @@ type swiftServer struct {
 type aferoServer struct {
 	mkPath func(slug, version, shasum, file string) string
 	fs     afero.Fs
+}
+
+type brotliReadCloser struct {
+	br *brotli.Reader
+	cl io.Closer
+}
+
+// brotli.Reader has no Close method. This little wrapper adds a method to
+// close the underlying reader.
+func newBrotliReadCloser(r io.ReadCloser) (io.ReadCloser, error) {
+	br := brotli.NewReader(r)
+	return brotliReadCloser{br: br, cl: r}, nil
+}
+
+func (r brotliReadCloser) Read(b []byte) (int, error) {
+	return r.br.Read(b)
+}
+
+func (r brotliReadCloser) Close() error {
+	return r.cl.Close()
 }
 
 type gzipReadCloser struct {
@@ -87,7 +108,10 @@ func (s *swiftServer) Open(slug, version, shasum, file string) (io.ReadCloser, e
 		return nil, wrapSwiftErr(err)
 	}
 	o := h.ObjectMetadata()
-	if contentEncoding := o["content-encoding"]; contentEncoding == "gzip" {
+	contentEncoding := o["content-encoding"]
+	if contentEncoding == "br" {
+		return newBrotliReadCloser(f)
+	} else if contentEncoding == "gzip" {
 		return newGzipReadCloser(f)
 	}
 	return f, nil
@@ -113,7 +137,15 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	contentLength := h["Content-Length"]
 	contentType := h["Content-Type"]
 	o := h.ObjectMetadata()
-	if contentEncoding := o["content-encoding"]; contentEncoding == "gzip" {
+	contentEncoding := o["content-encoding"]
+	if contentEncoding == "br" {
+		if acceptBrotliEncoding(req) {
+			w.Header().Set("Content-Encoding", "br")
+		} else {
+			contentLength = o["original-content-length"]
+			r = brotli.NewReader(f)
+		}
+	} else if contentEncoding == "gzip" {
 		if acceptGzipEncoding(req) {
 			w.Header().Set("Content-Encoding", "gzip")
 		} else {
@@ -185,12 +217,12 @@ func NewAferoFileServer(fs afero.Fs, makePath func(slug, version, shasum, file s
 }
 
 func (s *aferoServer) Open(slug, version, shasum, file string) (io.ReadCloser, error) {
-	isGzipped := true
+	isGzipped := false
 	filepath := s.mkPath(slug, version, shasum, file)
-	f, err := s.open(filepath + ".gz")
+	f, err := s.open(filepath + ".br")
 	if os.IsNotExist(err) {
-		isGzipped = false
-		f, err = s.open(filepath)
+		isGzipped = true
+		f, err = s.open(filepath + ".gz")
 	}
 	if err != nil {
 		return nil, err
@@ -198,7 +230,7 @@ func (s *aferoServer) Open(slug, version, shasum, file string) (io.ReadCloser, e
 	if isGzipped {
 		return newGzipReadCloser(f)
 	}
-	return f, nil
+	return newBrotliReadCloser(f)
 }
 
 func (s *aferoServer) open(filepath string) (io.ReadCloser, error) {
@@ -211,24 +243,23 @@ func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 }
 
 func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request, filepath string) error {
-	isGzipped := true
-	rc, err := s.fs.Open(filepath + ".gz")
+	isGzipped := false
+	f, err := s.fs.Open(filepath + ".br")
 	if os.IsNotExist(err) {
-		isGzipped = false
-		rc, err = s.fs.Open(filepath)
+		isGzipped = true
+		f, err = s.fs.Open(filepath + ".gz")
 	}
 	if err != nil {
 		return err
 	}
-	defer rc.Close()
+	defer f.Close()
 
 	var content io.Reader
 	var size int64
 	if checkEtag := req.Header.Get("Cache-Control") == ""; checkEtag {
 		var b []byte
 		h := md5.New()
-		r := io.TeeReader(rc, h)
-		b, err = ioutil.ReadAll(r)
+		b, err = ioutil.ReadAll(f)
 		if err != nil {
 			return err
 		}
@@ -240,15 +271,15 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 		size = int64(len(b))
 		content = bytes.NewReader(b)
 	} else {
-		size, err = rc.Seek(0, io.SeekEnd)
+		size, err = f.Seek(0, io.SeekEnd)
 		if err != nil {
 			return err
 		}
-		_, err = rc.Seek(0, io.SeekStart)
-		if err != nil {
-			return err
-		}
-		content = rc
+		content = f
+	}
+	_, err = f.Seek(0, io.SeekStart)
+	if err != nil {
+		return err
 	}
 
 	if isGzipped {
@@ -263,6 +294,19 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 			}
 			defer gr.Close()
 			b, err = ioutil.ReadAll(gr)
+			if err != nil {
+				return err
+			}
+			size = int64(len(b))
+			content = bytes.NewReader(b)
+		}
+	} else {
+		if acceptBrotliEncoding(req) {
+			w.Header().Set("Content-Encoding", "br")
+		} else {
+			var b []byte
+			br := brotli.NewReader(content)
+			b, err = ioutil.ReadAll(br)
 			if err != nil {
 				return err
 			}
@@ -285,7 +329,7 @@ func (s *aferoServer) FilesList(slug, version, shasum string) ([]string, error) 
 		}
 		if !infos.IsDir() {
 			name := strings.TrimPrefix(path, rootPath)
-			name = strings.TrimSuffix(name, ".gz")
+			name = strings.TrimSuffix(name, ".br")
 			names = append(names, name)
 		}
 		return nil
@@ -300,6 +344,10 @@ func defaultMakePath(slug, version, shasum, file string) string {
 	}
 	filepath := path.Join("/", file)
 	return path.Join(basepath, filepath)
+}
+
+func acceptBrotliEncoding(req *http.Request) bool {
+	return strings.Contains(req.Header.Get("Accept-Encoding"), "br")
 }
 
 func acceptGzipEncoding(req *http.Request) bool {

@@ -1,7 +1,6 @@
 package appfs
 
 import (
-	"compress/gzip"
 	"io"
 	"os"
 	"path"
@@ -9,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/andybalholm/brotli"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/filetype"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -80,7 +80,7 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 
 	objName := path.Join(f.tmpObj, stat.Name())
 	objMeta := swift.Metadata{
-		"content-encoding":        "gzip",
+		"content-encoding":        "br",
 		"original-content-length": strconv.FormatInt(stat.Size(), 10),
 	}
 
@@ -101,17 +101,11 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 		}
 	}()
 
-	gw, err := gzip.NewWriterLevel(file, gzip.BestCompression)
-	if err != nil {
-		return err
+	bw := brotli.NewWriter(file)
+	_, err = io.Copy(bw, src)
+	if errc := bw.Close(); errc != nil && err == nil {
+		err = errc
 	}
-	defer func() {
-		if errc := gw.Close(); errc != nil && err == nil {
-			err = errc
-		}
-	}()
-
-	_, err = io.Copy(gw, src)
 	return err
 }
 
@@ -176,7 +170,7 @@ func (f *aferoCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 		panic("copier should call Start() before Copy()")
 	}
 
-	fullpath := path.Join(f.tmpDir, stat.Name()) + ".gz"
+	fullpath := path.Join(f.tmpDir, stat.Name()) + ".br"
 	dir := path.Dir(fullpath)
 	if err = f.fs.MkdirAll(dir, 0755); err != nil {
 		return err
@@ -192,17 +186,11 @@ func (f *aferoCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 		}
 	}()
 
-	gw, err := gzip.NewWriterLevel(dst, gzip.BestCompression)
-	if err != nil {
-		return err
+	bw := brotli.NewWriter(dst)
+	_, err = io.Copy(bw, src)
+	if errc := bw.Close(); errc != nil && err == nil {
+		err = errc
 	}
-	defer func() {
-		if errc := gw.Close(); errc != nil && err == nil {
-			err = errc
-		}
-	}()
-
-	_, err = io.Copy(gw, src)
 	return err
 }
 
