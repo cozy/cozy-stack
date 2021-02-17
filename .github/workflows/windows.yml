@@ -12,5 +12,4 @@ jobs:
           fetch-depth: 1
       - name: Build
         run: |
-          make assets
           go run . --help
