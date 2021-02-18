@@ -216,25 +216,46 @@ func NewAferoFileServer(fs afero.Fs, makePath func(slug, version, shasum, file s
 	}
 }
 
-func (s *aferoServer) Open(slug, version, shasum, file string) (io.ReadCloser, error) {
-	isGzipped := false
-	filepath := s.mkPath(slug, version, shasum, file)
-	f, err := s.open(filepath + ".br")
+const (
+	uncompressed = iota + 1
+	gzipped
+	brotlied
+)
+
+// openFile opens the give filepath. By default, it is a file compressed with
+// brotli (.br), but it can be a file compressed with gzip (.gz, for apps that
+// were installed before brotli compression was enabled), or uncompressed (for
+// app development with cozy-stack serve --appdir).
+func (s *aferoServer) openFile(filepath string) (afero.File, int, error) {
+	compression := brotlied
+	f, err := s.fs.Open(filepath + ".br")
 	if os.IsNotExist(err) {
-		isGzipped = true
-		f, err = s.open(filepath + ".gz")
+		compression = gzipped
+		f, err = s.fs.Open(filepath + ".gz")
 	}
+	if os.IsNotExist(err) {
+		compression = uncompressed
+		f, err = s.fs.Open(filepath)
+	}
+	return f, compression, err
+}
+
+func (s *aferoServer) Open(slug, version, shasum, file string) (io.ReadCloser, error) {
+	filepath := s.mkPath(slug, version, shasum, file)
+	f, compression, err := s.openFile(filepath)
 	if err != nil {
 		return nil, err
 	}
-	if isGzipped {
+	switch compression {
+	case uncompressed:
+		return f, nil
+	case gzipped:
 		return newGzipReadCloser(f)
+	case brotlied:
+		return newBrotliReadCloser(f)
+	default:
+		panic(fmt.Errorf("Unknown compression type: %v", compression))
 	}
-	return newBrotliReadCloser(f)
-}
-
-func (s *aferoServer) open(filepath string) (io.ReadCloser, error) {
-	return s.fs.Open(filepath)
 }
 
 func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, shasum, file string) error {
@@ -243,12 +264,7 @@ func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 }
 
 func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request, filepath string) error {
-	isGzipped := false
-	f, err := s.fs.Open(filepath + ".br")
-	if os.IsNotExist(err) {
-		isGzipped = true
-		f, err = s.fs.Open(filepath + ".gz")
-	}
+	f, compression, err := s.openFile(filepath)
 	if err != nil {
 		return err
 	}
@@ -277,12 +293,11 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 		}
 		content = f
 	}
-	_, err = f.Seek(0, io.SeekStart)
-	if err != nil {
-		return err
-	}
 
-	if isGzipped {
+	switch compression {
+	case uncompressed:
+		// Nothing to do
+	case gzipped:
 		if acceptGzipEncoding(req) {
 			w.Header().Set("Content-Encoding", "gzip")
 		} else {
@@ -300,7 +315,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 			size = int64(len(b))
 			content = bytes.NewReader(b)
 		}
-	} else {
+	case brotlied:
 		if acceptBrotliEncoding(req) {
 			w.Header().Set("Content-Encoding", "br")
 		} else {
@@ -313,6 +328,8 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 			size = int64(len(b))
 			content = bytes.NewReader(b)
 		}
+	default:
+		panic(fmt.Errorf("Unknown compression type: %v", compression))
 	}
 
 	contentType := mime.TypeByExtension(path.Ext(filepath))
