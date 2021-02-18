@@ -503,7 +503,7 @@ func TestDeleteClientNoToken(t *testing.T) {
 	req.Host = domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "401 Unauthorized", res.Status)
 }
 
 func TestDeleteClientSuccess(t *testing.T) {
@@ -520,10 +520,23 @@ func TestDeleteClientSuccess(t *testing.T) {
 	assert.Equal(t, "204 No Content", res2.Status)
 }
 
+func TestReadClientNoToken(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/register/"+clientID, nil)
+	req.Host = domain
+	req.Header.Add("Accept", "application/json")
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "401 Unauthorized", res.Status)
+	buf, _ := ioutil.ReadAll(res.Body)
+	assert.NotContains(t, string(buf), clientSecret)
+}
+
 func TestReadClientInvalidToken(t *testing.T) {
 	res, err := getJSON("/auth/register/"+clientID, altRegistrationToken)
 	assert.NoError(t, err)
 	assert.Equal(t, "401 Unauthorized", res.Status)
+	buf, _ := ioutil.ReadAll(res.Body)
+	assert.NotContains(t, string(buf), clientSecret)
 }
 
 func TestReadClientInvalidClientID(t *testing.T) {

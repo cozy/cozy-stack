@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -77,7 +78,9 @@ func deleteClient(c echo.Context) error {
 		})
 	}
 	if err := checkClientToken(c, client); err != nil {
-		return err
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": err.Error(),
+		})
 	}
 	if err := client.Delete(instance); err != nil {
 		return c.JSON(err.Code, err)
@@ -95,7 +98,9 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 			})
 		}
 		if err := checkClientToken(c, client); err != nil {
-			return err
+			return c.JSON(http.StatusUnauthorized, echo.Map{
+				"error": err.Error(),
+			})
 		}
 		c.Set("client", client)
 		return next(c)
@@ -105,17 +110,13 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 func checkClientToken(c echo.Context, client *oauth.Client) error {
 	header := c.Request().Header.Get("Authorization")
 	if !strings.HasPrefix(header, "Bearer ") {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "invalid_token",
-		})
+		return errors.New("invalid_token")
 	}
 	token := header[len("Bearer "):]
 	instance := middlewares.GetInstance(c)
 	_, ok := client.ValidToken(instance, consts.RegistrationTokenAudience, token)
 	if !ok {
-		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": "invalid_token",
-		})
+		return errors.New("invalid_token")
 	}
 	return nil
 }
