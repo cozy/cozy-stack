@@ -268,7 +268,7 @@ func (i *Installer) run() (err error) {
 			i.log.Infof("Successful installer process: %s", i.man.Version())
 		}
 	}()
-	i.log.Info("Start")
+	i.log.Infof("Start installer process: %s", i.man.Version())
 	switch i.op {
 	case Install:
 		return i.install()
