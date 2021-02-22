@@ -198,6 +198,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"OAuth":            hasOAuth,
 		"Favicon":          middlewares.Favicon(i),
 		"CryptoPolyfill":   middlewares.CryptoPolyfill(c),
+		"BottomNavBar":     middlewares.BottomNavigationBar(c),
 	})
 }
 

@@ -60,6 +60,12 @@ msgstr "Bienvenue !"
 msgid "Login Welcome name"
 msgstr "%s"
 
+msgid "Login Password best practice"
+msgstr "Bonne pratique :"
+
+msgid "Login Password tip"
+msgstr "n’entrez votre mot de passe que si l’adresse ci-dessus correspond bien à celle de votre Cozy et qu’un cadenas l’accompagne."
+
 msgid "Login Password help"
 msgstr "Saisissez votre mot de passe pour accéder à votre Cozy"
 

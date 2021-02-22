@@ -151,3 +151,11 @@ func CryptoPolyfill(c echo.Context) bool {
 	}
 	return build.IsDevRelease()
 }
+
+// BottomNavigationBar returns true if the navigation bar of the browser is at
+// the bottom of the screen (Firefox Mobile).
+func BottomNavigationBar(c echo.Context) bool {
+	ua := user_agent.New(c.Request().UserAgent())
+	browser, _ := ua.Browser()
+	return browser == Firefox && ua.Mobile()
+}

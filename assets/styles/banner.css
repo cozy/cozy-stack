@@ -1,0 +1,32 @@
+.wizard {
+  display: flex;
+  flex-direction: column;
+}
+
+.banner {
+  width: 100%;
+  padding: 1rem 2rem;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.33;
+  font-style: italic;
+  color: var(--charcoal-grey);
+  background-color: var(--paleGrey);
+}
+
+.banner img {
+  fill: currentColor;
+}
+
+.bottom-navigation-bar {
+  order: 2;
+}
+
+.bottom-navigation-bar img {
+  transform: scaleY(-1);
+}
+
+.wizard > .banner + * {
+  flex: 1 1 100%;
+  margin-top: 1rem;
+}

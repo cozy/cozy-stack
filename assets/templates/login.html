@@ -6,6 +6,7 @@
     <title>{{.TemplateTitle}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/banner.css"}}">
     {{.CozyUI}}
     {{.ThemeCSS}}
     {{.Favicon}}
@@ -42,6 +43,11 @@
     </svg>
     <div role="application">
       <main class="wizard">
+        <aside class="banner{{if .BottomNavBar}} bottom-navigation-bar{{end}}">
+          <img src="{{asset .Domain "/images/icon-arrow.svg"}}" alt="" />
+          <strong>{{t "Login Password best practice"}}</strong>
+          {{t "Login Password tip"}}
+        </aside>
         <form id="login-form" method="POST" action="/auth/login" class="wizard-wrapper" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
           <div role="region" class="wizard-main" id="login-field">
             {{if .CredentialsError}}
