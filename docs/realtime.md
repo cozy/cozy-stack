@@ -100,6 +100,7 @@ document in case of `UPDATED` or `DELETED`.
 The stack an inject some synthetic events for documents that are not persisted
 in CouchDB like classical doctypes:
 
+- [Auth confirmations](https://docs.cozy.io/en/cozy-stack/auth/#real-time-via-websockets)
 - [Initial sync for sharings](https://docs.cozy.io/en/cozy-stack/sharing/#real-time-via-websockets)
 - [Thumbnails for files](https://docs.cozy.io/en/cozy-stack/files/#real-time-via-websockets)
 - [Telepointers for notes](https://docs.cozy.io/en/cozy-stack/notes/#real-time-via-websockets)

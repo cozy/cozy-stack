@@ -548,6 +548,10 @@ func Routes(router *echo.Group) {
 	router.GET("/passphrase", passphraseForm, noCSRF)
 	router.POST("/hint", sendHint)
 
+	// Confirmation by typing
+	router.GET("/confirm", confirmForm, noCSRF)
+	router.POST("/confirm", confirmAuth, noCSRF)
+
 	// Register OAuth clients
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)

@@ -26,7 +26,32 @@
   transform: scaleY(-1);
 }
 
+.banner.u-white img {
+  filter: invert(1);
+}
+
 .wizard > .banner + * {
   flex: 1 1 100%;
   margin-top: 1rem;
+}
+
+.u-primary-300 {
+  color: #b3d3ff;
+}
+
+.u-bg-primary-700 {
+  background-color: #0f5cc7;
+}
+
+/* Some hacks for the inverted theme with the wizard */
+.u-bg-dodgerBlue .wizard-main {
+  background: transparent !important;
+}
+
+.u-bg-dodgerBlue .u-error {
+  color: #ffd3d3 !important;
+}
+
+.u-bg-dodgerBlue .c-input-text.is-error {
+  border-color: #ffd3d3 !important;
 }

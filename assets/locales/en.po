@@ -216,6 +216,15 @@ msgstr "Save"
 msgid "Login Forgot password"
 msgstr "I forgot my password"
 
+msgid "Login Confirm Title"
+msgstr "Authentication"
+
+msgid "Login Confirm Help"
+msgstr "By security, please confirm your identity"
+
+msgid "Login Confirm Submit"
+msgstr "Confirm"
+
 msgid "Authorize Title"
 msgstr "Authorize %s to access your profile"
 

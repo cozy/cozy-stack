@@ -78,7 +78,7 @@
           '&csrf_token=' +
           encodeURIComponent(csrfTokenInput.value)
 
-        // For the /auth/authorize/move page
+        // For the /auth/authorize/move && /auth/confirm pages
         if (stateInput) {
           reqBody += '&state=' + encodeURIComponent(stateInput.value)
         }

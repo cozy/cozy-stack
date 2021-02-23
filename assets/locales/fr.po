@@ -255,6 +255,15 @@ msgstr "Enregistrer"
 msgid "Login Forgot password"
 msgstr "J'ai oublié mon mot de passe"
 
+msgid "Login Confirm Title"
+msgstr "Authentification"
+
+msgid "Login Confirm Help"
+msgstr "Par sécurité, merci de confirmer votre identité"
+
+msgid "Login Confirm Submit"
+msgstr "Confirmer"
+
 msgid "Authorize Title"
 msgstr "Autoriser %s à accéder à votre profil ?"
 
