@@ -117,4 +117,7 @@ const (
 	NotesEvents = "io.cozy.notes.events"
 	// NotesURL doc type is used to return the URL where a note can be edited.
 	NotesURL = "io.cozy.notes.url"
+	// AuthConfirmations doc type used for realtime events when confirming
+	// authentication.
+	AuthConfirmations = "io.cozy.auth.confirmations"
 )

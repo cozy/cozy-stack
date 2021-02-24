@@ -8,7 +8,10 @@ import (
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/limits"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo/v4"
 )
@@ -88,7 +91,13 @@ func confirmAuth(c echo.Context) error {
 }
 
 func confirmSuccess(c echo.Context, inst *instance.Instance) error {
-	// TODO send real-time event
+	doc := couchdb.JSONDoc{
+		Type: consts.AuthConfirmations,
+		M: map[string]interface{}{
+			"_id": c.FormValue("state"),
+		},
+	}
+	realtime.GetHub().Publish(inst, realtime.EventCreate, &doc, nil)
 
 	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
 	if err != nil {

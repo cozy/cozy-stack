@@ -24,6 +24,12 @@ var blockList = map[string]bool{
 	consts.Sharings:         none,
 	consts.Shared:           none,
 
+	// Synthetic doctypes (realtime events only)
+	consts.AuthConfirmations:   none,
+	consts.SharingsInitialSync: none,
+	consts.NotesEvents:         none,
+	consts.Thumbnails:          none,
+
 	consts.Jobs:           readable,
 	consts.Triggers:       readable,
 	consts.TriggersState:  readable,
