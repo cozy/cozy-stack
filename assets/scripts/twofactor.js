@@ -5,6 +5,7 @@
   const loginField = d.getElementById('login-field')
   const redirectInput = d.getElementById('redirect')
   const stateInput = d.getElementById('state')
+  const confirmInput = d.getElementById('confirm')
   const clientIdInput = d.getElementById('client_id')
   const submitButton = d.getElementById('login-submit')
   const twoFactorPasscodeInput = d.getElementById('two-factor-passcode')
@@ -72,6 +73,11 @@
     }
     if (clientIdInput) {
       reqBody += '&client_id=' + encodeURIComponent(clientIdInput.value)
+    }
+
+    // When 2FA is checked for confirming authentication
+    if (confirmInput && confirmInput.value === "true") {
+      reqBody += '&confirm=true'
     }
 
     fetch('/auth/twofactor', {

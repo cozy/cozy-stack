@@ -49,6 +49,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, credsEr
 		"Title":                 title,
 		"CredentialsError":      credsError,
 		"Redirect":              redirect.String(),
+		"Confirm":               c.FormValue("confirm"),
 		"State":                 c.FormValue("state"),
 		"ClientID":              c.FormValue("client_id"),
 		"LongRunSession":        longRunSession,
@@ -102,6 +103,12 @@ func twoFactor(c echo.Context) error {
 	correctPasscode := inst.ValidateTwoFactorPasscode(token, passcode)
 	if !correctPasscode {
 		return twoFactorFailed(c, inst, token)
+	}
+
+	// Special case when the 2FA validation is for confirming authentication,
+	// not creating a new session.
+	if c.FormValue("confirm") == "true" {
+		return confirmSuccess(c, inst)
 	}
 
 	// Special case when the 2FA validation if for moving a Cozy to this

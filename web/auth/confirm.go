@@ -3,8 +3,10 @@ package auth
 import (
 	"errors"
 	"net/http"
+	"net/url"
 
 	"github.com/cozy/cozy-stack/model/bitwarden/settings"
+	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/model/instance/lifecycle"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -65,7 +67,27 @@ func confirmAuth(c echo.Context) error {
 		})
 	}
 
-	// TODO check 2fa
+	if inst.HasAuthMode(instance.TwoFactorMail) && !isTrustedDevice(c, inst) {
+		twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
+		if err != nil {
+			return err
+		}
+		v := url.Values{}
+		v.Add("two_factor_token", string(twoFactorToken))
+		v.Add("state", c.FormValue("state"))
+		v.Add("redirect", c.FormValue("redirect"))
+		v.Add("confirm", "true")
+		v.Add("trusted_device_checkbox", "false")
+
+		return c.JSON(http.StatusOK, echo.Map{
+			"redirect": inst.PageURL("/auth/twofactor", v),
+		})
+	}
+
+	return confirmSuccess(c, inst)
+}
+
+func confirmSuccess(c echo.Context, inst *instance.Instance) error {
 	// TODO send real-time event
 
 	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
