@@ -108,7 +108,7 @@ func twoFactor(c echo.Context) error {
 	// Special case when the 2FA validation is for confirming authentication,
 	// not creating a new session.
 	if c.FormValue("confirm") == "true" {
-		return confirmSuccess(c, inst)
+		return ConfirmSuccess(c, inst, c.FormValue("state"))
 	}
 
 	// Special case when the 2FA validation if for moving a Cozy to this

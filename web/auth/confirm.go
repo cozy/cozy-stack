@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"errors"
 	"net/http"
 	"net/url"
 
@@ -24,7 +23,8 @@ func confirmForm(c echo.Context) error {
 		return renderError(c, http.StatusBadRequest, "Error No state parameter")
 	}
 	if !inst.IsPasswordAuthenticationEnabled() {
-		return errors.New("Not yet supported") // TODO delegated auth
+		q := url.Values{"redirect": {redirect}, "confirm_state": {state}}
+		return c.Redirect(http.StatusSeeOther, inst.PageURL("/oidc/start", q))
 	}
 
 	iterations := 0
@@ -52,8 +52,9 @@ func confirmForm(c echo.Context) error {
 func confirmAuth(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	if !inst.IsPasswordAuthenticationEnabled() {
-		return errors.New("Not yet supported") // TODO delegated auth
+		return c.NoContent(http.StatusBadRequest)
 	}
+	state := c.FormValue("state")
 
 	// Check passphrase
 	passphrase := []byte(c.FormValue("passphrase"))
@@ -77,7 +78,7 @@ func confirmAuth(c echo.Context) error {
 		}
 		v := url.Values{}
 		v.Add("two_factor_token", string(twoFactorToken))
-		v.Add("state", c.FormValue("state"))
+		v.Add("state", state)
 		v.Add("redirect", c.FormValue("redirect"))
 		v.Add("confirm", "true")
 		v.Add("trusted_device_checkbox", "false")
@@ -87,14 +88,16 @@ func confirmAuth(c echo.Context) error {
 		})
 	}
 
-	return confirmSuccess(c, inst)
+	return ConfirmSuccess(c, inst, state)
 }
 
-func confirmSuccess(c echo.Context, inst *instance.Instance) error {
+// ConfirmSuccess can be used to send a response after a successful identity
+// confirmation.
+func ConfirmSuccess(c echo.Context, inst *instance.Instance, state string) error {
 	doc := couchdb.JSONDoc{
 		Type: consts.AuthConfirmations,
 		M: map[string]interface{}{
-			"_id": c.FormValue("state"),
+			"_id": state,
 		},
 	}
 	realtime.GetHub().Publish(inst, realtime.EventCreate, &doc, nil)
@@ -110,7 +113,7 @@ func confirmSuccess(c echo.Context, inst *instance.Instance) error {
 	}
 	q := redirect.Query()
 	q.Set("code", code)
-	q.Set("state", c.FormValue("state"))
+	q.Set("state", state)
 	redirect.RawQuery = q.Encode()
 
 	if wantsJSON(c) {

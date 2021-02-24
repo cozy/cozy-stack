@@ -473,6 +473,9 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, err
 	instance := middlewares.GetInstance(c)
 	redirect := c.FormValue("redirect")
 	if redirect == "" {
+		redirect = c.QueryParam("redirect")
+	}
+	if redirect == "" {
 		// If the Cozy was moved from another address and the owner had a vault,
 		// we will show them instructions about how to import their vault.
 		settings, err := instance.SettingsDocument()

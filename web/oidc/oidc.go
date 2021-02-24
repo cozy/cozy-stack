@@ -34,7 +34,7 @@ func Start(c echo.Context) error {
 		inst.Logger().WithField("nspace", "oidc").Infof("Start error: %s", err)
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), conf)
+	u, err := makeStartURL(inst.Domain, c.QueryParam("redirect"), c.QueryParam("confirm_state"), conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
@@ -78,6 +78,9 @@ func Redirect(c echo.Context) error {
 	if state.Redirect != "" {
 		u.Add("redirect", state.Redirect)
 	}
+	if state.Confirm != "" {
+		u.Add("confirm_state", state.Confirm)
+	}
 	redirect := inst.PageURL("/oidc/login", u)
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
@@ -89,6 +92,8 @@ func Login(c echo.Context) error {
 	if err != nil {
 		return renderError(c, inst, http.StatusBadRequest, "No OpenID Connect is configured.")
 	}
+	redirect := c.QueryParam("redirect")
+	confirm := c.QueryParam("confirm_state")
 
 	var token string
 	if conf.AllowOAuthToken {
@@ -107,20 +112,31 @@ func Login(c echo.Context) error {
 		return renderError(c, inst, http.StatusBadRequest, err.Error())
 	}
 
+	// Check 2FA if enabled
 	if inst.HasAuthMode(instance.TwoFactorMail) {
 		twoFactorToken, err := lifecycle.SendTwoFactorPasscode(inst)
 		if err != nil {
 			return err
 		}
 		v := url.Values{}
-		v.Add("two_factor_token", string(twoFactorToken))
-		v.Add("trusted_device_checkbox", "false")
-		if redirect := c.QueryParam("redirect"); redirect != "" {
-			v.Add("redirect", redirect)
-		}
 		// We can not cleanly check the trusted_device option for external
 		// login. Therefore, we do not provide the checkbox
+		v.Add("trusted_device_checkbox", "false")
+		v.Add("two_factor_token", string(twoFactorToken))
+		if redirect != "" {
+			v.Add("redirect", redirect)
+		}
+		if confirm != "" {
+			v.Add("confirm", "true")
+			v.Add("state", confirm)
+		}
 		return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/twofactor", v))
+	}
+
+	// The OIDC danse has been made to confirm the identity of the user, not
+	// for creating a new session.
+	if confirm != "" {
+		return auth.ConfirmSuccess(c, inst, confirm)
 	}
 
 	sessionID, err := auth.SetCookieForNewSession(c, false)
@@ -130,7 +146,6 @@ func Login(c echo.Context) error {
 	if err = session.StoreNewLoginEntry(inst, sessionID, "", c.Request(), true); err != nil {
 		inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
-	redirect := c.QueryParam("redirect")
 	if redirect == "" {
 		redirect = inst.DefaultRedirection().String()
 	}
@@ -301,12 +316,12 @@ func getConfig(context string) (*Config, error) {
 	return config, nil
 }
 
-func makeStartURL(domain, redirect string, conf *Config) (string, error) {
+func makeStartURL(domain, redirect, confirm string, conf *Config) (string, error) {
 	u, err := url.Parse(conf.AuthorizeURL)
 	if err != nil {
 		return "", err
 	}
-	state := newStateHolder(domain, redirect)
+	state := newStateHolder(domain, redirect, confirm)
 	if err = getStorage().Add(state); err != nil {
 		return "", err
 	}
@@ -497,7 +512,7 @@ func LoginDomainHandler(c echo.Context, contextName string) error {
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the context was not found.")
 	}
-	u, err := makeStartURL(r.Host, "", conf)
+	u, err := makeStartURL(r.Host, "", "", conf)
 	if err != nil {
 		return renderError(c, nil, http.StatusNotFound, "Sorry, the server is not configured for OpenID Connect.")
 	}
