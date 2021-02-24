@@ -103,10 +103,42 @@ func confirmSuccess(c echo.Context, inst *instance.Instance) error {
 	if err != nil {
 		return err
 	}
+	code, err := GetStore().AddCode(inst)
+	if err != nil {
+		inst.Logger().Warnf("Cannot add confirm code: %s", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	q := redirect.Query()
+	q.Set("code", code)
+	q.Set("state", c.FormValue("state"))
+	redirect.RawQuery = q.Encode()
+
 	if wantsJSON(c) {
 		return c.JSON(http.StatusOK, echo.Map{
 			"redirect": redirect.String(),
 		})
 	}
 	return c.Redirect(http.StatusSeeOther, redirect.String())
+}
+
+func confirmCode(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	code := c.Param("code")
+	if code == "" {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "no code",
+		})
+	}
+	ok, err := GetStore().GetCode(inst, code)
+	if err != nil {
+		inst.Logger().Warnf("Cannot get confirm code: %s", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "invalid code",
+		})
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }

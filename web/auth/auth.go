@@ -551,6 +551,7 @@ func Routes(router *echo.Group) {
 	// Confirmation by typing
 	router.GET("/confirm", confirmForm, noCSRF)
 	router.POST("/confirm", confirmAuth, noCSRF)
+	router.GET("/confirm/:code", confirmCode)
 
 	// Register OAuth clients
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
