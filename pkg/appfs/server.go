@@ -291,6 +291,10 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 		if err != nil {
 			return err
 		}
+		_, err = f.Seek(0, io.SeekStart)
+		if err != nil {
+			return err
+		}
 		content = f
 	}
 
