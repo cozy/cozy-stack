@@ -6,6 +6,7 @@
     <title>{{.TemplateTitle}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    {{if .Confirm}}<link rel="stylesheet" href="{{asset .Domain "/styles/banner.css"}}">{{end}}
     {{.CozyUI}}
     {{.ThemeCSS}}
     {{.Favicon}}
@@ -41,7 +42,7 @@
       </defs>
     </svg>
     <div role="application">
-      <main class="wizard">
+      <main class="wizard{{if .Confirm}} u-bg-dodgerBlue{{end}}">
         <form id="login-form" method="POST" action="/auth/twofactor" class="wizard-wrapper">
           <div role="region" class="wizard-main" id="login-field">
             {{if .CredentialsError}}
@@ -52,9 +53,9 @@
             <div class="c-avatar u-mh-auto u-mv-0-m u-mv-1">
               <img class="c-avatar-image" src="/public/avatar" alt="" />
             </div>
-            <h1 class="wizard-title two-factor-form">{{t "Login Two factor title"}}</h1>
-            <h2 class="password-form wizard-subtitle u-coolGrey">{{.Domain}}</h2>
-            <p class="two-factor-form wizard-header-help" id="login-two-factor-passcode-tip">{{t "Login Two factor help"}}</p>
+            <h1 class="wizard-title two-factor-form{{if .Confirm}} u-white{{end}}">{{t "Login Two factor title"}}</h1>
+            <h2 class="password-form wizard-subtitle {{if .Confirm}}u-primary-300{{else}}u-coolGrey{{end}}">{{.Domain}}</h2>
+            <p class="two-factor-form wizard-header-help {{if .Confirm}}u-primary-300{{end}}" id="login-two-factor-passcode-tip">{{t "Login Two factor help"}}</p>
             <input id="state" type="hidden" name="state" value="{{.State}}" />
             <input id="client_id" type="hidden" name="client_id" value="{{.ClientID}}" />
             <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
@@ -77,7 +78,7 @@
             <input id="long-run-session" name="long-run-session" type="hidden" value="{{.LongRunSession}}" />
           </div>
           <footer class="wizard-footer u-pb-half-m u-pb-2">
-            <button id="login-submit" class="c-btn c-btn--full wizard-button" form="login-form" type="submit">
+            <button id="login-submit" class="c-btn c-btn--full wizard-button{{if .Confirm}} u-bg-white u-dodgerBlue u-bdw-0{{end}}" form="login-form" type="submit">
               <span class="two-factor-form">{{t "Login Confirm"}}</span>
             </button>
           </footer>

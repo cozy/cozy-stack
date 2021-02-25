@@ -76,7 +76,7 @@
     }
 
     // When 2FA is checked for confirming authentication
-    if (confirmInput && confirmInput.value === "true") {
+    if (confirmInput && confirmInput.value === 'true') {
       reqBody += '&confirm=true'
     }
 

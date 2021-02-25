@@ -11,7 +11,7 @@
     {{.ThemeCSS}}
     {{.Favicon}}
   </head>
-  <body class="">
+  <body>
     <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
       <defs>
         <symbol viewBox="0 0 1792 1792" id="fa-check">
@@ -50,8 +50,11 @@
         </aside>
         <form id="login-form" method="POST" action="/auth/confirm" class="wizard-wrapper" data-iterations="{{.Iterations}}" data-salt="{{.Salt}}">
           <div role="region" class="wizard-main" id="login-field">
-            <div class="c-avatar u-mh-auto u-mv-0-m u-mv-1">
+            <div class="c-avatar u-mh-auto u-mv-0-m u-mv-1 u-pos-relative u-ov-visible">
               <img class="c-avatar-image" src="/public/avatar" alt="" />
+              <div class="badge">
+                <img src="{{asset .Domain "/images/icon-lock.svg"}}" alt="" />
+              </div>
             </div>
             <h1 class="wizard-title password-form u-white">{{t "Login Confirm Title"}}</h1>
             <h2 class="password-form wizard-subtitle u-primary-300">{{t "Login Confirm Help"}}</h2>
