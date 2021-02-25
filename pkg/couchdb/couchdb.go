@@ -840,6 +840,12 @@ func DefineIndexRaw(db Database, doctype string, index interface{}) (*IndexCreat
 		}
 		err = makeRequest(db, doctype, http.MethodPost, url, &index, &response)
 	}
+	// XXX when creating the same index twice at the same time, CouchDB respond
+	// with a 500, so let's just retry as a work-around...
+	if IsInternalServerError(err) {
+		time.Sleep(100 * time.Millisecond)
+		err = makeRequest(db, doctype, http.MethodPost, url, &index, &response)
+	}
 	if err != nil {
 		return nil, err
 	}

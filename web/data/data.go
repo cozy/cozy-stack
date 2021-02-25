@@ -304,11 +304,6 @@ func defineIndex(c echo.Context) error {
 	}
 
 	result, err := couchdb.DefineIndexRaw(instance, doctype, &definitionRequest)
-	if couchdb.IsNoDatabaseError(err) {
-		if err = couchdb.CreateDB(instance, doctype); err == nil || couchdb.IsFileExists(err) {
-			result, err = couchdb.DefineIndexRaw(instance, doctype, &definitionRequest)
-		}
-	}
 	if err != nil {
 		return err
 	}
