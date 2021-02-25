@@ -62,6 +62,7 @@ var refreshToken string
 var linkedClientID string
 var linkedClientSecret string
 var linkedCode string
+var confirmCode string
 
 func getSessionID(cookies []*http.Cookie) string {
 	for _, c := range cookies {
@@ -1695,6 +1696,102 @@ func TestLoginOnboardingNotFinished(t *testing.T) {
 	content, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Contains(t, string(content), "Your Cozy has not been yet activated.")
+}
+
+func TestShowConfirmForm(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/confirm?state=342dd650-599b-0139-cfb0-543d7eb8149c", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.NotContains(t, string(body), "myfragment")
+	assert.Contains(t, string(body), `<input id="state" type="hidden" name="state" value="342dd650-599b-0139-cfb0-543d7eb8149c" />`)
+}
+
+func getConfirmCSRFToken(c *http.Client, t *testing.T) string {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/confirm?state=123", nil)
+	req.Host = domain
+	res, err := c.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	return res.Cookies()[0].Value
+}
+
+func TestSendConfirmBadCSRFToken(t *testing.T) {
+	payload := url.Values{
+		"passphrase": {"MyPassphrase"},
+		"csrf_token": {"123456"},
+		"state":      {"342dd650-599b-0139-cfb0-543d7eb8149c"},
+	}.Encode()
+	req, _ := http.NewRequest("POST", ts.URL+"/auth/confirm", bytes.NewBufferString(payload))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Accept", "application/json")
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 403, res.StatusCode)
+}
+
+func TestSendConfirmBadPass(t *testing.T) {
+	token := getConfirmCSRFToken(client, t)
+	payload := url.Values{
+		"passphrase": {"InvalidPassphrase"},
+		"csrf_token": {token},
+		"state":      {"342dd650-599b-0139-cfb0-543d7eb8149c"},
+	}.Encode()
+	req, _ := http.NewRequest("POST", ts.URL+"/auth/confirm", bytes.NewBufferString(payload))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Accept", "application/json")
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
+}
+
+func TestSendConfirmOK(t *testing.T) {
+	token := getConfirmCSRFToken(client, t)
+	payload := url.Values{
+		"passphrase": {"MyPassphrase"},
+		"csrf_token": {token},
+		"state":      {"342dd650-599b-0139-cfb0-543d7eb8149c"},
+	}.Encode()
+	req, _ := http.NewRequest("POST", ts.URL+"/auth/confirm", bytes.NewBufferString(payload))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Accept", "application/json")
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var body map[string]string
+	err = json.NewDecoder(res.Body).Decode(&body)
+	assert.NoError(t, err)
+	redirect := body["redirect"]
+	assert.NotEmpty(t, redirect)
+	u, err := url.Parse(redirect)
+	assert.NoError(t, err)
+	confirmCode = u.Query().Get("code")
+	assert.NotEmpty(t, confirmCode)
+	state := u.Query().Get("state")
+	assert.Equal(t, "342dd650-599b-0139-cfb0-543d7eb8149c", state)
+}
+
+func TestConfirmBadCode(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/confirm/123456", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
+}
+
+func TestConfirmCodeOK(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/confirm/"+confirmCode, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
 }
 
 func TestMain(m *testing.M) {
