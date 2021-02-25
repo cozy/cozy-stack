@@ -549,16 +549,19 @@ care of it later.
 This doctype is an internal one for the stack. It is used to track what
 documents are shared, and to replicate changes from one Cozy to the others.
 
--   `_id`: its identifier is the doctype and id of the referenced objet,
-    separated by a `/` (e.g.
-    `io.cozy.contacts/c1f5dae4-0d87-11e8-b91b-1f41c005768b`)
--   `_rev`: the CouchDB default revision for this document (not very meaningful,
-    it’s here to avoid concurrency issues)
--   `revisions`: a tree with the last known `_rev`s of the referenced object
--   `infos`, a map of sharing ids → `{rule, removed, binary}`
-    -   `rule` says which rule from the sharing must be applied for this
-        document
-    -   `removed` will be true for a deleted document, a trashed file, or if the
-        document does no longer match the sharing rule
-    -   `binary` is a boolean flag that is true only for files (and not even
-        folders) with `removed: false`
+- `_id`: its identifier is the doctype and id of the referenced objet,
+  separated by a `/` (e.g.
+  `io.cozy.contacts/c1f5dae4-0d87-11e8-b91b-1f41c005768b`)
+- `_rev`: the CouchDB default revision for this document (not very meaningful,
+  it’s here to avoid concurrency issues)
+- `revisions`: a tree with the last known `_rev`s of the referenced object
+- `infos`, a map of sharing ids → `{rule, removed, binary}`
+  - `rule` says which rule from the sharing must be applied for this
+    document
+  - `removed` will be true for a deleted document, a trashed file, or if the
+    document does no longer match the sharing rule
+  - `binary` is a boolean flag that is true only for files (and not even
+    folders) with `removed: false`
+  - `dissociated` is a boolean flag that can be true only for files and folders
+    when they have been removed from the sharing but can be put again (only on
+    the Cozy instance of the owner)

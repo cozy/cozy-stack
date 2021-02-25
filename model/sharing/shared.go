@@ -41,6 +41,11 @@ type SharedInfo struct {
 	// Binary is a boolean flag that is true only for files (and not even
 	// folders) with `removed: false`
 	Binary bool `json:"binary,omitempty"`
+
+	// Dissociated is a boolean flag that can be true only for files and
+	// folders when they have been removed from the sharing but can be put
+	// again (only on the Cozy instance of the owner)
+	Dissociated bool `json:"dissociated,omitempty"`
 }
 
 // SharedRef is the struct for the documents in io.cozy.shared.

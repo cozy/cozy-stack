@@ -370,7 +370,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 		}
 		return nil, err
 	}
-	if infos, ok := ref.Infos[s.SID]; !ok || infos.Removed {
+	if infos, ok := ref.Infos[s.SID]; !ok || (infos.Removed && !infos.Dissociated) {
 		return nil, ErrSafety
 	}
 	if sub, _ := ref.Revisions.Find(target.DocRev); sub != nil {
@@ -675,7 +675,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	olddoc := newdoc.Clone().(*vfs.FileDoc)
 
 	infos, ok := ref.Infos[s.SID]
-	if !ok || infos.Removed {
+	if !ok || (infos.Removed && !infos.Dissociated) {
 		return ErrSafety
 	}
 	rule := &s.Rules[infos.Rule]

@@ -523,7 +523,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 		} else if target["type"] != consts.DirType {
 			// Let the upload worker manages this file
 			continue
-		} else if ref != nil && infos.Removed {
+		} else if ref != nil && infos.Removed && !infos.Dissociated {
 			continue
 		} else if dir == nil {
 			err = s.CreateDir(inst, target, delayResolution)
@@ -533,7 +533,7 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 				})
 				err = nil
 			}
-		} else if ref == nil {
+		} else if ref == nil || infos.Dissociated {
 			// If it is a file: let the upload worker manages this file
 			// If it is a dir: ignore this (safety rule)
 			continue
@@ -1054,10 +1054,10 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 	}
 	newdir.Fullpath = path.Join(vfs.TrashDirName, newdir.DocName)
 	newdir.RestorePath = path.Dir(dir.Fullpath)
-	return dissociateDir(inst, dir, newdir)
+	return s.dissociateDir(inst, dir, newdir)
 }
 
-func dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.DirDoc) error {
+func (s *Sharing) dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.DirDoc) error {
 	fs := inst.VFS()
 
 	newdoc.SetID("")
@@ -1072,7 +1072,17 @@ func dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.DirDoc) error {
 	sid := olddoc.DocType() + "/" + olddoc.ID()
 	var ref SharedRef
 	if err := couchdb.GetDoc(inst, consts.Shared, sid, &ref); err == nil {
-		_ = couchdb.DeleteDoc(inst, &ref)
+		if s.Owner {
+			ref.Infos[s.SID] = SharedInfo{
+				Rule:        ref.Infos[s.SID].Rule,
+				Binary:      false,
+				Removed:     true,
+				Dissociated: true,
+			}
+			_ = couchdb.UpdateDoc(inst, &ref)
+		} else {
+			_ = couchdb.DeleteDoc(inst, &ref)
+		}
 	}
 
 	var errm error
@@ -1090,12 +1100,12 @@ func dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.DirDoc) error {
 			newf.DirID = newdoc.DocID
 			newf.Trashed = true
 			newf.ResetFullpath()
-			err = dissociateFile(inst, f, newf)
+			err = s.dissociateFile(inst, f, newf)
 		} else {
 			newd := d.Clone().(*vfs.DirDoc)
 			newd.DirID = newdoc.DocID
 			newd.Fullpath = path.Join(newdoc.Fullpath, newd.DocName)
-			err = dissociateDir(inst, d, newd)
+			err = s.dissociateDir(inst, d, newd)
 		}
 		if err != nil {
 			errm = multierror.Append(errm, err)
@@ -1122,7 +1132,7 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 	removeReferencesFromRule(file, rule)
 	if s.Owner && rule.Selector == couchdb.SelectorReferencedBy {
 		// Do not move/trash photos removed from an album for the owner
-		return dissociateFile(inst, olddoc, file)
+		return s.dissociateFile(inst, olddoc, file)
 	}
 	if len(file.ReferencedBy) == 0 {
 		oldpath, err := olddoc.Path(inst.VFS())
@@ -1133,7 +1143,7 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 		file.Trashed = true
 		file.DirID = consts.TrashDirID
 		file.ResetFullpath()
-		return dissociateFile(inst, olddoc, file)
+		return s.dissociateFile(inst, olddoc, file)
 	}
 	parent, err := s.GetNoLongerSharedDir(inst)
 	if err != nil {
@@ -1141,10 +1151,10 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 	}
 	file.DirID = parent.DocID
 	file.ResetFullpath()
-	return dissociateFile(inst, olddoc, file)
+	return s.dissociateFile(inst, olddoc, file)
 }
 
-func dissociateFile(inst *instance.Instance, olddoc, newdoc *vfs.FileDoc) error {
+func (s *Sharing) dissociateFile(inst *instance.Instance, olddoc, newdoc *vfs.FileDoc) error {
 	fs := inst.VFS()
 
 	newdoc.SetID("")
@@ -1165,7 +1175,16 @@ func dissociateFile(inst *instance.Instance, olddoc, newdoc *vfs.FileDoc) error 
 		}
 		return err
 	}
-	return couchdb.DeleteDoc(inst, &ref)
+	if !s.Owner {
+		return couchdb.DeleteDoc(inst, &ref)
+	}
+	ref.Infos[s.SID] = SharedInfo{
+		Rule:        ref.Infos[s.SID].Rule,
+		Binary:      false,
+		Removed:     true,
+		Dissociated: true,
+	}
+	return couchdb.UpdateDoc(inst, &ref)
 }
 
 func dirToJSONDoc(dir *vfs.DirDoc, instanceURL string) couchdb.JSONDoc {
