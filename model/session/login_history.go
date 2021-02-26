@@ -202,6 +202,7 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 
 	templateValues := map[string]interface{}{
 		"Time":                 time,
+		"Country":              l.Country,
 		"IP":                   l.IP,
 		"Browser":              l.Browser,
 		"OS":                   l.OS,
