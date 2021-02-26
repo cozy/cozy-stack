@@ -174,6 +174,14 @@ func isIndexError(err error) bool {
 	return strings.Contains(couchErr.Reason, "mango_idx")
 }
 
+func isBadArgError(err error) bool {
+	couchErr, isCouchErr := IsCouchError(err)
+	if !isCouchErr {
+		return false
+	}
+	return strings.Contains(couchErr.Reason, "badarg")
+}
+
 func newRequestError(originalError error) error {
 	return &Error{
 		StatusCode: http.StatusServiceUnavailable,
