@@ -1,6 +1,6 @@
 {{t "Mail New Connection Intro"}}
 
-{{t "Mail New Connection Place"}} {{.Subdivision}}, {{.Country}} ({{t "Mail New Connection Near"}} {{.City}})
+{{t "Mail New Connection Place"}} {{.Country}}
 {{t "Mail New Connection Time"}} {{.Time}}
 {{t "Mail New Connection Browser"}} {{.Browser}}
 {{t "Mail New Connection OS"}} {{.OS}}

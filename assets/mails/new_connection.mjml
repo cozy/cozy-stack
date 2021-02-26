@@ -8,7 +8,7 @@
 </mj-text>
 <mj-text mj-class="content-medium">
 	<ul style="margin: 0">
-		<li>{{t "Mail New Connection Place"}} {{.Subdivision}}, {{.Country}} ({{t "Mail New Connection Near"}} {{.City}})</li>
+		<li>{{t "Mail New Connection Place"}} {{.Country}}</li>
 		<li>{{t "Mail New Connection Time"}} {{.Time}}</li>
 		<li>{{t "Mail New Connection Browser"}} {{.Browser}}</li>
 		<li>{{t "Mail New Connection OS"}} {{.OS}}</li>

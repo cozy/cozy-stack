@@ -1,6 +1,7 @@
 package session
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/mssola/user_agent"
 	maxminddb "github.com/oschwald/maxminddb-golang"
@@ -58,7 +60,7 @@ func (l *LoginEntry) Clone() couchdb.Doc {
 	return &clone
 }
 
-func lookupIP(ip, locale string) (city, subdivision, country string) {
+func lookupIP(ip, locale string) (city, subdivision, country, timezone string) {
 	geodb := config.GetConfig().GeoDB
 	if geodb == "" {
 		return
@@ -80,6 +82,9 @@ func lookupIP(ip, locale string) (city, subdivision, country string) {
 		Country struct {
 			Names map[string]string `maxminddb:"names"`
 		} `maxminddb:"country"`
+		Location struct {
+			TimeZone string `maxminddb:"time_zone"`
+		} `maxminddb:"location"`
 	}
 
 	err = db.Lookup(net.ParseIP(ip), &record)
@@ -104,6 +109,7 @@ func lookupIP(ip, locale string) (city, subdivision, country string) {
 	} else if c, ok := record.Country.Names["en"]; ok {
 		country = c
 	}
+	timezone = record.Location.TimeZone
 	return
 }
 
@@ -118,11 +124,19 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 		ip = strings.Split(req.RemoteAddr, ":")[0]
 	}
 
-	city, subdivision, country := lookupIP(ip, i.Locale)
+	city, subdivision, country, timezone := lookupIP(ip, i.Locale)
 	ua := user_agent.New(req.UserAgent())
 
 	browser, _ := ua.Browser()
 	os := ua.OS()
+
+	createdAt := time.Now()
+	if timezone != "" {
+		if loc, err := time.LoadLocation(timezone); err == nil {
+			createdAt = createdAt.In(loc)
+			fmt.Printf("createdAt = %v\n", createdAt)
+		}
+	}
 
 	l := &LoginEntry{
 		IP:                 ip,
@@ -134,7 +148,7 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 		OS:                 os,
 		Browser:            browser,
 		ClientRegistration: clientID != "",
-		CreatedAt:          time.Now(),
+		CreatedAt:          createdAt,
 	}
 
 	if err := couchdb.CreateDoc(i, l); err != nil {
@@ -183,11 +197,12 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 		activateTwoFALink = settingsURL.String()
 	}
 
+	layout := i.Translate("Time Format Long")
+	time := i18n.LocalizeTime(l.CreatedAt, i.Locale, layout)
+
 	templateValues := map[string]interface{}{
-		"City":                 l.City,
-		"Subdivision":          l.Subdivision,
+		"Time":                 time,
 		"Country":              l.Country,
-		"Time":                 l.CreatedAt.Format("2006-01-02 15:04:05Z07:00"),
 		"IP":                   l.IP,
 		"Browser":              l.Browser,
 		"OS":                   l.OS,

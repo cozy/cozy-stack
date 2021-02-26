@@ -3,6 +3,9 @@ msgstr ""
 
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+msgid "Time Format Long"
+msgstr "the Jan 2 2006 at 15h04"
+
 msgid "Tree Administrative"
 msgstr "Administrative"
 

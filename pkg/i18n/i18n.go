@@ -3,9 +3,11 @@ package i18n
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/goodsign/monday"
 	"github.com/leonelquinteros/gotext"
 )
 
@@ -45,4 +47,33 @@ func Translate(key, locale string, vars ...interface{}) string {
 		key = strings.Replace(key, "Permissions ", "", 1)
 	}
 	return fmt.Sprintf(key, vars...)
+}
+
+// LocalizeTime transforms a date+time in a string for the given locale.
+// The layout is in the same format as the one given to time.Format.
+func LocalizeTime(t time.Time, locale, layout string) string {
+	return monday.Format(t, layout, mondayLocale(locale))
+}
+
+func mondayLocale(locale string) monday.Locale {
+	switch locale {
+	case "de", "de_DE":
+		return monday.LocaleDeDE
+	case "es", "es_ES":
+		return monday.LocaleEsES
+	case "fr", "fr_FR":
+		return monday.LocaleFrFR
+	case "it", "it_IT":
+		return monday.LocaleItIT
+	case "ja", "ja_JP":
+		return monday.LocaleJaJP
+	case "nl", "nl_NL":
+		return monday.LocaleNlNL
+	case "pt", "pt_PT":
+		return monday.LocalePtPT
+	case "ru", "ru_RU":
+		return monday.LocaleRuRU
+	default:
+		return monday.LocaleEnUS
+	}
 }
