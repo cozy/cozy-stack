@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -224,21 +223,8 @@ func (sfs *swiftVFSV3) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.Creat
 
 	newdoc.InternalID = NewInternalID()
 	objName := MakeObjectNameV3(newdoc.DocID, newdoc.InternalID)
-	objMeta := swift.Metadata{
-		"creation-name": newdoc.Name(),
-		"created-at":    newdoc.CreatedAt.Format(time.RFC3339),
-		"exec":          strconv.FormatBool(newdoc.Executable),
-	}
-
 	hash := hex.EncodeToString(newdoc.MD5Sum)
-	f, err := sfs.c.ObjectCreate(
-		sfs.container,
-		objName,
-		true,
-		hash,
-		newdoc.Mime,
-		objMeta.ObjectHeaders(),
-	)
+	f, err := sfs.c.ObjectCreate(sfs.container, objName, true, hash, newdoc.Mime, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -507,14 +493,7 @@ func (sfs *swiftVFSV3) ImportFileVersion(version *vfs.Version, content io.ReadCl
 	objName := MakeObjectNameV3(parts[0], parts[1])
 
 	hash := hex.EncodeToString(version.MD5Sum)
-	f, err := sfs.c.ObjectCreate(
-		sfs.container,
-		objName,
-		true,
-		hash,
-		"application/octet-stream",
-		nil,
-	)
+	f, err := sfs.c.ObjectCreate(sfs.container, objName, true, hash, "application/octet-stream", nil)
 	if err != nil {
 		return err
 	}
