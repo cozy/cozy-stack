@@ -16,6 +16,9 @@ msgstr ""
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
+msgid "Time Format Long"
+msgstr "le 2 Jan 2006 à 15h04"
+
 msgid "Tree Administrative"
 msgstr "Administratif"
 
