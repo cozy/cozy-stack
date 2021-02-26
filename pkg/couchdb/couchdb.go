@@ -291,7 +291,11 @@ func handleResponseError(db Database, resp *http.Response) error {
 		log.Error(err.Error())
 	} else {
 		err = newCouchdbError(resp.StatusCode, body)
-		log.Debug(err.Error())
+		if isBadArgError(err) {
+			log.Error(err.Error())
+		} else {
+			log.Debug(err.Error())
+		}
 	}
 	return err
 }

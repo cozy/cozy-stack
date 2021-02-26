@@ -454,6 +454,10 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 }
 
 func TestRedisSchedulerWithDebounce(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
 	err := client.Del(jobs.TriggersKey, jobs.SchedKey).Err()

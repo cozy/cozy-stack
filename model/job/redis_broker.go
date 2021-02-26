@@ -122,6 +122,12 @@ func (b *redisBroker) ShutdownWorkers(ctx context.Context) error {
 
 var redisBRPopTimeout = 10 * time.Second
 
+// SetRedisTimeoutForTest is used by unit test to avoid waiting 10 seconds on
+// cleanup.
+func SetRedisTimeoutForTest() {
+	redisBRPopTimeout = 1 * time.Second
+}
+
 func (b *redisBroker) pollLoop(key string, ch chan<- *Job) {
 	defer func() {
 		b.closed <- struct{}{}

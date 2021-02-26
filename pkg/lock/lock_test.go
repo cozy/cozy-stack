@@ -20,6 +20,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// If you want to test harder the lock, you can set nb = 1000 but it is too
+// slow for CI, and the lock package has very few commits in the last years.
 var nb = 100
 
 func reader(rwm ErrorRWLocker, iterations int, activity *int32, cdone chan bool) {
@@ -137,6 +139,10 @@ func TestRedisLock(t *testing.T) {
 }
 
 func TestLongLock(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
 	var err error
 	config.GetConfig().Lock, err = config.NewRedisConfig("redis://localhost:6379/0")
 	if err != nil {

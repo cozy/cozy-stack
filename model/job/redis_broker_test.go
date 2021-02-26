@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/model/job"
 	jobs "github.com/cozy/cozy-stack/model/job"
 	"github.com/cozy/cozy-stack/pkg/limits"
 	"github.com/go-redis/redis/v7"
@@ -23,7 +24,7 @@ func randomMicro(min, max int) time.Duration {
 }
 
 func TestRedisJobs(t *testing.T) {
-	// redisBRPopTimeout = 1 * time.Second
+	job.SetRedisTimeoutForTest()
 	opts1, _ := redis.ParseURL(redisURL1)
 	opts2, _ := redis.ParseURL(redisURL2)
 	client1 := redis.NewClient(opts1)

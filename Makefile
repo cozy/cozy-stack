@@ -62,7 +62,7 @@ cli:
 
 ## unit-tests: run the tests
 unit-tests:
-	@go test -p 1 -timeout 2m ./...
+	@go test -p 1 -timeout 2m -short ./...
 .PHONY: unit-tests
 
 ## integration-tests: run the tests

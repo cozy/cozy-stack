@@ -35,6 +35,10 @@ func TestTriggersBadArguments(t *testing.T) {
 }
 
 func TestMemSchedulerWithDebounce(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+
 	called := 0
 	bro := jobs.NewMemBroker()
 	assert.NoError(t, bro.StartWorkers(jobs.WorkersList{
