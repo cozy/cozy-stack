@@ -10,22 +10,22 @@ on:
       - 'docs/**'
 jobs:
   test:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     services:
       redis:
         image: redis
         ports:
           - 6379:6379
     strategy:
+      fail-fast: false
       matrix:
-        go-version: [1.13.x, 1.14.x, 1.15.x, 1.16.x]
-        couchdb-version: [2.3.1, 3.0.0]
-        exclude:
+        include:
+          # Recommended version
+          - go-version: 1.16.x
+            couchdb-version: 2.3.1
+            lint: true
+          # More exotic version
           - go-version: 1.13.x
-            couchdb-version: 3.0.0
-          - go-version: 1.14.x
-            couchdb-version: 3.0.0
-          - go-version: 1.15.x
             couchdb-version: 3.0.0
     steps:
       - name: Install CouchDB
@@ -58,7 +58,7 @@ jobs:
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
           go install
       - name: Lint
-        if: matrix.go-version == '1.16.x'
+        if: ${{ matrix.lint }}
         run: |
           make lint jslint
       - name: Unit tests
