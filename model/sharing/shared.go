@@ -41,6 +41,11 @@ type SharedInfo struct {
 	// Binary is a boolean flag that is true only for files (and not even
 	// folders) with `removed: false`
 	Binary bool `json:"binary,omitempty"`
+
+	// Dissociated is a boolean flag that can be true only for files and
+	// folders when they have been removed from the sharing but can be put
+	// again (only on the Cozy instance of the owner)
+	Dissociated bool `json:"dissociated,omitempty"`
 }
 
 // SharedRef is the struct for the documents in io.cozy.shared.
@@ -113,7 +118,14 @@ func extractReferencedBy(doc *couchdb.JSONDoc) []couchdb.DocReference {
 	slice, _ := doc.Get(couchdb.SelectorReferencedBy).([]interface{})
 	refs := make([]couchdb.DocReference, len(slice))
 	for i, ref := range slice {
-		refs[i], _ = ref.(couchdb.DocReference)
+		switch r := ref.(type) {
+		case couchdb.DocReference:
+			refs[i] = r
+		case map[string]interface{}:
+			id, _ := r["id"].(string)
+			typ, _ := r["type"].(string)
+			refs[i] = couchdb.DocReference{ID: id, Type: typ}
+		}
 	}
 	return refs
 }
@@ -122,7 +134,7 @@ func extractReferencedBy(doc *couchdb.JSONDoc) []couchdb.DocReference {
 // rule of a sharing, but no longer does.
 func isNoLongerShared(inst *instance.Instance, msg TrackMessage, evt TrackEvent) (bool, error) {
 	if msg.DocType != consts.Files {
-		return false, nil // TODO rules for documents with a selector
+		return false, nil
 	}
 
 	// Optim: if dir_id and referenced_by have not changed, the file can't have

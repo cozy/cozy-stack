@@ -243,6 +243,83 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc, opts ...vfs.CreateO
 	}, nil
 }
 
+func (afs *aferoVFS) DissociateFile(src, dst *vfs.FileDoc) error {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer afs.mu.Unlock()
+
+	// Move the source file to the destination
+	needRename := true
+	from, err := afs.Indexer.FilePath(src)
+	if err == vfs.ErrParentDoesNotExist {
+		needRename = false // The parent directory has already been dissociated
+	} else if err != nil {
+		return err
+	}
+	to, err := afs.Indexer.FilePath(dst)
+	if err != nil {
+		return err
+	}
+	if from == to {
+		needRename = false
+	}
+
+	if needRename {
+		if err = safeRenameFile(afs.fs, from, to); err != nil {
+			return err
+		}
+	}
+	if err = afs.Indexer.CreateFileDoc(dst); err != nil {
+		if needRename {
+			_ = afs.fs.Rename(to, from)
+		}
+		return err
+	}
+
+	// Clean the source file and its versions
+	if err = afs.Indexer.DeleteFileDoc(src); err != nil {
+		return err
+	}
+	_ = afs.fs.RemoveAll(pathForVersions(src.DocID))
+	versions, err := vfs.VersionsFor(afs, src.DocID)
+	if err != nil {
+		return nil
+	}
+	if from != to {
+		_ = afs.Indexer.BatchDeleteVersions(versions)
+	}
+	return nil
+}
+
+func (afs *aferoVFS) DissociateDir(src, dst *vfs.DirDoc) error {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer afs.mu.Unlock()
+
+	from := src.Fullpath
+	to := dst.Fullpath
+	needRename := from != to
+	if needRename {
+		if _, err := afs.fs.Stat(from); os.IsNotExist(err) {
+			needRename = false // The parent directory of the dir was moved
+		}
+	}
+	if needRename {
+		if err := safeRenameDir(afs, from, to); err != nil {
+			return err
+		}
+	}
+	if err := afs.Indexer.CreateDirDoc(dst); err != nil {
+		if needRename {
+			_ = afs.fs.Rename(to, from)
+		}
+		return err
+	}
+	return afs.Indexer.DeleteDirDoc(src)
+}
+
 func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc, push func(vfs.TrashJournal) error) error {
 	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr

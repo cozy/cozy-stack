@@ -520,9 +520,10 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 			} else {
 				err = s.TrashFile(inst, file, &s.Rules[infos.Rule])
 			}
-		} else if file != nil {
-			err = ErrSafety
-		} else if ref != nil && infos.Removed {
+		} else if target["type"] != consts.DirType {
+			// Let the upload worker manages this file
+			continue
+		} else if ref != nil && infos.Removed && !infos.Dissociated {
 			continue
 		} else if dir == nil {
 			err = s.CreateDir(inst, target, delayResolution)
@@ -532,8 +533,10 @@ func (s *Sharing) ApplyBulkFiles(inst *instance.Instance, docs DocsList) error {
 				})
 				err = nil
 			}
-		} else if ref == nil {
-			err = ErrSafety
+		} else if ref == nil || infos.Dissociated {
+			// If it is a file: let the upload worker manages this file
+			// If it is a dir: ignore this (safety rule)
+			continue
 		} else {
 			// XXX we have to clone the dir document as it is modified by the
 			// UpdateDir function and retrying the operation won't work with
@@ -1024,8 +1027,7 @@ func (s *Sharing) UpdateDir(
 	return nil
 }
 
-// TrashDir puts the directory in the trash (except if the directory has a
-// reference, in which case, we keep it in a special folder)
+// TrashDir puts the directory in the trash
 func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 	inst.Logger().WithField("nspace", "replicator").
 		Debugf("TrashDir %s (%#v)", dir.DocID, dir)
@@ -1033,23 +1035,83 @@ func (s *Sharing) TrashDir(inst *instance.Instance, dir *vfs.DirDoc) error {
 		// nothing to do if the directory is already in the trash
 		return nil
 	}
-	if dir.CozyMetadata == nil {
-		dir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
+
+	newdir := dir.Clone().(*vfs.DirDoc)
+	if newdir.CozyMetadata == nil {
+		newdir.CozyMetadata = vfs.NewCozyMetadata(inst.PageURL("/", nil))
 	} else {
-		dir.CozyMetadata.UpdatedAt = time.Now()
+		newdir.CozyMetadata.UpdatedAt = time.Now()
 	}
-	if len(dir.ReferencedBy) == 0 {
-		_, err := vfs.TrashDir(inst.VFS(), dir)
-		return err
-	}
-	olddoc := dir.Clone().(*vfs.DirDoc)
-	parent, err := s.GetNoLongerSharedDir(inst)
+
+	newdir.DirID = consts.TrashDirID
+	fs := inst.VFS()
+	exists, err := fs.DirChildExists(newdir.DirID, newdir.DocName)
 	if err != nil {
 		return err
 	}
-	dir.DirID = parent.DocID
-	dir.Fullpath = path.Join(parent.Fullpath, dir.DocName)
-	return inst.VFS().UpdateDirDoc(olddoc, dir)
+	if exists {
+		newdir.DocName = conflictName(fs, newdir.DirID, newdir.DocName, true)
+	}
+	newdir.Fullpath = path.Join(vfs.TrashDirName, newdir.DocName)
+	newdir.RestorePath = path.Dir(dir.Fullpath)
+	return s.dissociateDir(inst, dir, newdir)
+}
+
+func (s *Sharing) dissociateDir(inst *instance.Instance, olddoc, newdoc *vfs.DirDoc) error {
+	fs := inst.VFS()
+
+	newdoc.SetID("")
+	newdoc.SetRev("")
+	if err := fs.DissociateDir(olddoc, newdoc); err != nil {
+		newdoc.DocName = conflictName(fs, newdoc.DirID, newdoc.DocName, true)
+		if err := fs.DissociateDir(olddoc, newdoc); err != nil {
+			return err
+		}
+	}
+
+	sid := olddoc.DocType() + "/" + olddoc.ID()
+	var ref SharedRef
+	if err := couchdb.GetDoc(inst, consts.Shared, sid, &ref); err == nil {
+		if s.Owner {
+			ref.Infos[s.SID] = SharedInfo{
+				Rule:        ref.Infos[s.SID].Rule,
+				Binary:      false,
+				Removed:     true,
+				Dissociated: true,
+			}
+			_ = couchdb.UpdateDoc(inst, &ref)
+		} else {
+			_ = couchdb.DeleteDoc(inst, &ref)
+		}
+	}
+
+	var errm error
+	iter := fs.DirIterator(olddoc, nil)
+	for {
+		d, f, err := iter.Next()
+		if err == vfs.ErrIteratorDone {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if f != nil {
+			newf := f.Clone().(*vfs.FileDoc)
+			newf.DirID = newdoc.DocID
+			newf.Trashed = true
+			newf.ResetFullpath()
+			err = s.dissociateFile(inst, f, newf)
+		} else {
+			newd := d.Clone().(*vfs.DirDoc)
+			newd.DirID = newdoc.DocID
+			newd.Fullpath = path.Join(newdoc.Fullpath, newd.DocName)
+			err = s.dissociateDir(inst, d, newd)
+		}
+		if err != nil {
+			errm = multierror.Append(errm, err)
+		}
+	}
+	return errm
 }
 
 // TrashFile puts the file in the trash (except if the file has a reference, in
@@ -1058,7 +1120,7 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 	inst.Logger().WithField("nspace", "replicator").
 		Debugf("TrashFile %s (%#v)", file.DocID, file)
 	if file.Trashed {
-		// Nothing to do if the directory is already in the trash
+		// Nothing to do if the file is already in the trash
 		return nil
 	}
 	if file.CozyMetadata == nil {
@@ -1070,11 +1132,18 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 	removeReferencesFromRule(file, rule)
 	if s.Owner && rule.Selector == couchdb.SelectorReferencedBy {
 		// Do not move/trash photos removed from an album for the owner
-		return inst.VFS().UpdateFileDoc(olddoc, file)
+		return s.dissociateFile(inst, olddoc, file)
 	}
 	if len(file.ReferencedBy) == 0 {
-		_, err := vfs.TrashFile(inst.VFS(), file)
-		return err
+		oldpath, err := olddoc.Path(inst.VFS())
+		if err != nil {
+			return err
+		}
+		file.RestorePath = path.Dir(oldpath)
+		file.Trashed = true
+		file.DirID = consts.TrashDirID
+		file.ResetFullpath()
+		return s.dissociateFile(inst, olddoc, file)
 	}
 	parent, err := s.GetNoLongerSharedDir(inst)
 	if err != nil {
@@ -1082,7 +1151,40 @@ func (s *Sharing) TrashFile(inst *instance.Instance, file *vfs.FileDoc, rule *Ru
 	}
 	file.DirID = parent.DocID
 	file.ResetFullpath()
-	return inst.VFS().UpdateFileDoc(olddoc, file)
+	return s.dissociateFile(inst, olddoc, file)
+}
+
+func (s *Sharing) dissociateFile(inst *instance.Instance, olddoc, newdoc *vfs.FileDoc) error {
+	fs := inst.VFS()
+
+	newdoc.SetID("")
+	newdoc.SetRev("")
+	if err := fs.DissociateFile(olddoc, newdoc); err != nil {
+		newdoc.DocName = conflictName(fs, newdoc.DirID, newdoc.DocName, true)
+		newdoc.ResetFullpath()
+		if err := fs.DissociateFile(olddoc, newdoc); err != nil {
+			return err
+		}
+	}
+
+	sid := olddoc.DocType() + "/" + olddoc.ID()
+	var ref SharedRef
+	if err := couchdb.GetDoc(inst, consts.Shared, sid, &ref); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil
+		}
+		return err
+	}
+	if !s.Owner {
+		return couchdb.DeleteDoc(inst, &ref)
+	}
+	ref.Infos[s.SID] = SharedInfo{
+		Rule:        ref.Infos[s.SID].Rule,
+		Binary:      false,
+		Removed:     true,
+		Dissociated: true,
+	}
+	return couchdb.UpdateDoc(inst, &ref)
 }
 
 func dirToJSONDoc(dir *vfs.DirDoc, instanceURL string) couchdb.JSONDoc {

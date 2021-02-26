@@ -127,6 +127,17 @@ func IsNotFoundError(err error) bool {
 		couchErr.Reason == "Database does not exist.")
 }
 
+// IsDeletedError checks if the given error is a couch not_found
+// error, with the deleted reason. It means that a document has existed but is
+// now deleted.
+func IsDeletedError(err error) bool {
+	couchErr, isCouchErr := IsCouchError(err)
+	if !isCouchErr {
+		return false
+	}
+	return couchErr.Name == "not_found" && couchErr.Reason == "deleted"
+}
+
 // IsFileExists checks if the given error is a couch conflict error
 func IsFileExists(err error) bool {
 	couchErr, isCouchErr := IsCouchError(err)

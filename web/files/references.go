@@ -42,6 +42,8 @@ func rawMessageToObject(i *instance.Instance, bb json.RawMessage) (jsonapi.Objec
 // Beware, this is actually used in the web/data Routes
 func ListReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	defer lockVFS(instance)()
+
 	doctype := c.Get("doctype").(string)
 	id := getDocID(c)
 	include := c.QueryParam("include")
@@ -156,6 +158,7 @@ func ListReferencesHandler(c echo.Context) error {
 // Beware, this is actually used in the web/data Routes
 func AddReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+
 	doctype := c.Get("doctype").(string)
 	id := getDocID(c)
 
@@ -177,8 +180,9 @@ func AddReferencesHandler(c echo.Context) error {
 	docs := make([]interface{}, len(references))
 	oldDocs := make([]interface{}, len(references))
 
+	fs := instance.VFS()
 	for i, fRef := range references {
-		dir, file, errd := instance.VFS().DirOrFileByID(fRef.ID)
+		dir, file, errd := fs.DirOrFileByID(fRef.ID)
 		if errd != nil {
 			return WrapVfsError(errd)
 		}
@@ -189,14 +193,17 @@ func AddReferencesHandler(c echo.Context) error {
 			docs[i] = dir
 			oldDocs[i] = oldDir
 		} else {
-			oldFile := file.Clone()
+			oldFile := file.Clone().(*vfs.FileDoc)
 			file.AddReferencedBy(docRef)
 			updateFileCozyMetadata(c, file, false)
+			_, _ = file.Path(fs)    // Ensure the fullpath is filled to realtime
+			_, _ = oldFile.Path(fs) // Ensure the fullpath is filled to realtime
 			docs[i] = file
 			oldDocs[i] = oldFile
 		}
 	}
 	// Use bulk update for better performances
+	defer lockVFS(instance)()
 	err = couchdb.BulkUpdateDocs(instance, consts.Files, docs, oldDocs)
 	if err != nil {
 		return WrapVfsError(err)
@@ -209,6 +216,7 @@ func AddReferencesHandler(c echo.Context) error {
 // Beware, this is actually used in the web/data Routes
 func RemoveReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+
 	doctype := c.Get("doctype").(string)
 	id := getDocID(c)
 
@@ -238,32 +246,43 @@ func RemoveReferencesHandler(c echo.Context) error {
 			return err
 		}
 	}
+	docs := make([]interface{}, len(references))
+	oldDocs := make([]interface{}, len(references))
 
-	for _, fRef := range references {
-		dir, file, err := instance.VFS().DirOrFileByID(fRef.ID)
+	fs := instance.VFS()
+	for i, fRef := range references {
+		dir, file, err := fs.DirOrFileByID(fRef.ID)
 		if err != nil {
 			return WrapVfsError(err)
 		}
 		if dir != nil {
+			oldDir := dir.Clone()
 			dir.RemoveReferencedBy(docRef)
 			if altRef != nil {
 				dir.RemoveReferencedBy(*altRef)
 			}
 			updateDirCozyMetadata(c, dir)
-			err = couchdb.UpdateDoc(instance, dir)
+			docs[i] = dir
+			oldDocs[i] = oldDir
 		} else {
+			oldFile := file.Clone().(*vfs.FileDoc)
 			file.RemoveReferencedBy(docRef)
 			if altRef != nil {
 				file.RemoveReferencedBy(*altRef)
 			}
 			updateFileCozyMetadata(c, file, false)
-			err = couchdb.UpdateDoc(instance, file)
-		}
-		if err != nil {
-			return WrapVfsError(err)
+			_, _ = file.Path(fs)    // Ensure the fullpath is filled to realtime
+			_, _ = oldFile.Path(fs) // Ensure the fullpath is filled to realtime
+			docs[i] = file
+			oldDocs[i] = oldFile
 		}
 	}
-
+	// Use bulk update for better performances
+	defer lockVFS(instance)()
+	err = couchdb.BulkUpdateDocs(instance, consts.Files, docs, oldDocs)
+	if err != nil {
+		return WrapVfsError(err)
+	}
 	return c.NoContent(204)
 }
 

@@ -573,22 +573,29 @@ func (c *couchdbIndexer) DirChildExists(dirID, name string) (bool, error) {
 
 func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) error {
 	var files, olddocs []interface{}
-	parent := doc
-	err := walk(c, doc.Name(), doc, nil, func(name string, dir *DirDoc, file *FileDoc, err error) error {
+	dirs := map[string]string{
+		doc.DocID: doc.Fullpath,
+	}
+	err := walk(c, doc.Fullpath, doc, nil, func(name string, dir *DirDoc, file *FileDoc, err error) error {
 		if dir != nil {
-			parent = dir
+			dirs[dir.DocID] = dir.Fullpath
 		}
 		if file != nil && file.Trashed != trashed {
 			// Fullpath is used by event triggers and should be pre-filled here
 			cloned := file.Clone().(*FileDoc)
-			fullpath := path.Join(parent.Fullpath, file.DocName)
+			parentPath, ok := dirs[file.DirID]
+			if !ok {
+				return ErrParentDoesNotExist
+			}
+			fullpath := path.Join(parentPath, file.DocName)
 			fullpath = strings.TrimPrefix(fullpath, TrashDirName)
+			trashpath := strings.Replace(fullpath, doc.Fullpath, TrashDirName, 1)
 			if trashed {
 				c.checkTrashedFileIsShared(cloned)
 				cloned.fullpath = fullpath
-				file.fullpath = TrashDirName + fullpath
+				file.fullpath = trashpath
 			} else {
-				cloned.fullpath = TrashDirName + fullpath
+				cloned.fullpath = trashpath
 				file.fullpath = fullpath
 			}
 			file.Trashed = trashed

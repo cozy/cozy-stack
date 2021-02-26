@@ -87,12 +87,34 @@ func (rt *RevsTree) Find(rev string) (*RevsTree, int) {
 	return nil, 0
 }
 
+// ensureMaxDepth will remove the first nodes of the branch that contains parent.
+func (rt *RevsTree) ensureMaxDepth(parent string, depth int) {
+	current := rt
+	for depth > MaxDepth {
+		if len(current.Branches) == 0 {
+			break
+		} else if len(current.Branches) == 1 {
+			next := current.Branches[0]
+			current.Rev = next.Rev
+			current.Branches = next.Branches
+			depth--
+		} else {
+			for i := range current.Branches {
+				b := &current.Branches[i]
+				if sub, _ := b.Find(parent); sub != nil {
+					current = b
+					break
+				}
+			}
+		}
+	}
+}
+
 // Add inserts the given revision in the main branch
 func (rt *RevsTree) Add(rev string) *RevsTree {
 	if rev == rt.Rev {
 		return rt
 	}
-	// TODO check generations (conflicts)
 	if len(rt.Branches) > 0 {
 		// XXX This condition shouldn't be true, but it can help to limit
 		// damage in case bugs happen.
@@ -120,25 +142,7 @@ func (rt *RevsTree) InsertAfter(rev, parent string) {
 		subtree = rt.Add(parent)
 	}
 
-	current := rt
-	for depth >= MaxDepth {
-		if len(current.Branches) == 0 {
-			break
-		} else if len(current.Branches) == 1 {
-			next := current.Branches[0]
-			current.Rev = next.Rev
-			current.Branches = next.Branches
-			depth--
-		} else {
-			for i := range current.Branches {
-				b := &current.Branches[i]
-				if sub, _ := b.Find(parent); sub != nil {
-					current = b
-					break
-				}
-			}
-		}
-	}
+	rt.ensureMaxDepth(parent, depth+1)
 
 	for _, b := range subtree.Branches {
 		if b.Rev == rev {
@@ -146,7 +150,6 @@ func (rt *RevsTree) InsertAfter(rev, parent string) {
 		}
 	}
 	subtree.Branches = append(subtree.Branches, RevsTree{Rev: rev})
-	// TODO rebalance (conflicts)
 }
 
 // InsertChain inserts a chain of revisions, ie the first revision is the
@@ -160,9 +163,11 @@ func (rt *RevsTree) InsertChain(chain []string) {
 	}
 	common := 0
 	var subtree *RevsTree
+	var depth int
 	for i, rev := range chain {
-		subtree, _ = rt.Find(rev)
+		subtree, depth = rt.Find(rev)
 		if subtree != nil {
+			depth += len(chain) - i
 			common = i
 			break
 		}
@@ -170,6 +175,9 @@ func (rt *RevsTree) InsertChain(chain []string) {
 	if subtree == nil {
 		subtree = rt.Add(chain[0])
 	}
+
+	rt.ensureMaxDepth(subtree.Rev, depth)
+
 	for _, rev := range chain[common+1:] {
 		if len(subtree.Branches) > 0 {
 			found := false
@@ -187,7 +195,6 @@ func (rt *RevsTree) InsertChain(chain []string) {
 		subtree.Branches = append(subtree.Branches, RevsTree{Rev: rev})
 		subtree = &subtree.Branches[0]
 	}
-	// TODO rebalance (conflicts)
 }
 
 // RevGeneration returns the number before the hyphen, called the generation of a revision

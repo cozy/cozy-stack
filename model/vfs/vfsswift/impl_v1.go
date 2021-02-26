@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/vfs"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -418,6 +419,37 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 	return &swiftFileOpen{f, nil}, nil
+}
+
+func (sfs *swiftVFS) DissociateFile(src, dst *vfs.FileDoc) error {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
+	defer sfs.mu.Unlock()
+
+	// Copy the file
+	srcName := src.DirID + "/" + src.DocName
+	dstName := dst.DirID + "/" + dst.DocName
+	headers := swift.Metadata{
+		"creation-name":  src.Name(),
+		"created-at":     src.CreatedAt.Format(time.RFC3339),
+		"dissociated-of": src.ID(),
+	}.ObjectHeaders()
+	if _, err := sfs.c.ObjectCopy(sfs.container, srcName, sfs.container, dstName, headers); err != nil {
+		return err
+	}
+	if err := sfs.Indexer.CreateFileDoc(dst); err != nil {
+		_ = sfs.c.ObjectDelete(sfs.container, dstName)
+		return err
+	}
+
+	// Remove the source
+	return sfs.c.ObjectDelete(sfs.container, srcName)
+}
+
+func (sfs *swiftVFS) DissociateDir(src, dst *vfs.DirDoc) error {
+	// This function is not implemented in Swift layout v1
+	return os.ErrNotExist
 }
 
 func (sfs *swiftVFS) OpenFileVersion(doc *vfs.FileDoc, version *vfs.Version) (vfs.File, error) {

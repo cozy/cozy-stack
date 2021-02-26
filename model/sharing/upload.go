@@ -370,7 +370,7 @@ func (s *Sharing) SyncFile(inst *instance.Instance, target *FileDocWithRevisions
 		}
 		return nil, err
 	}
-	if infos, ok := ref.Infos[s.SID]; !ok || infos.Removed {
+	if infos, ok := ref.Infos[s.SID]; !ok || (infos.Removed && !infos.Dissociated) {
 		return nil, ErrSafety
 	}
 	if sub, _ := ref.Revisions.Find(target.DocRev); sub != nil {
@@ -544,6 +544,22 @@ func (s *Sharing) UploadNewFile(inst *instance.Instance, target *FileDocWithRevi
 		return err
 	}
 
+	// XXX In some cases, we have to add a fake revision to the created file
+	// because it was already known by CouchDB. For example:
+	// - Alice has a shared folder with Bob
+	// - inside this folder, there is a directory named foo
+	// - there is a file named bar inside foo, at the revision 1-123
+	// - Alice moves foo outside of the sharing
+	// - the sharing replication deletes bar on Bob's instance (revision 2-456)
+	// - later, Alice moves again foo inside the sharing (with bar)
+	// - we are in this function for bar, and if we try to recreate the file
+	//   with revision 1-123, it will still be seen as deleted by CouchDB
+	//   (revision 2-456 wins) => so, we create a revision 2-789.
+	var fake couchdb.JSONDoc
+	if err := couchdb.GetDoc(inst, consts.Files, target.DocID, &fake); couchdb.IsDeletedError(err) {
+		indexer.IncrementRevision()
+	}
+
 	newdoc, err := vfs.NewFileDoc(target.DocName, parent.DocID, target.Size(), target.MD5Sum,
 		target.Mime, target.Class, target.CreatedAt, target.Executable, false, target.Tags)
 	if err != nil {
@@ -659,7 +675,7 @@ func (s *Sharing) UploadExistingFile(inst *instance.Instance, target *FileDocWit
 	olddoc := newdoc.Clone().(*vfs.FileDoc)
 
 	infos, ok := ref.Infos[s.SID]
-	if !ok || infos.Removed {
+	if !ok || (infos.Removed && !infos.Dissociated) {
 		return ErrSafety
 	}
 	rule := &s.Rules[infos.Rule]

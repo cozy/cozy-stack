@@ -89,6 +89,14 @@ type Fs interface {
 	//
 	// Warning: you MUST call the Close() method and check for its error.
 	CreateFile(newdoc, olddoc *FileDoc, opts ...CreateOptions) (File, error)
+	// DissociateFile creates a copy of the source file with the name and
+	// directory of the destination file doc, and then remove the source file
+	// with all of its version. It is used by the sharings to change the ID
+	// of the document to avoid later conflicts.
+	DissociateFile(src, dst *FileDoc) error
+	// DissociateDir is like DissociateFile but for directories.
+	DissociateDir(src, dst *DirDoc) error
+
 	// DestroyDirContent destroys all directories and files contained in a
 	// directory.
 	DestroyDirContent(doc *DirDoc, push func(TrashJournal) error) error
@@ -99,6 +107,7 @@ type Fs interface {
 	DestroyFile(doc *FileDoc) error
 	// EnsureErased remove the files in Swift if they still exist.
 	EnsureErased(journal TrashJournal) error
+
 	// RevertFileVersion restores the content of a file from an old version.
 	// The current version of the content is not lost, but saved as another
 	// version.
@@ -107,7 +116,6 @@ type Fs interface {
 	CleanOldVersion(fileID string, version *Version) error
 	// ClearOldVersions deletes all the old versions of all files
 	ClearOldVersions() error
-
 	// ImportFileVersion returns a file handler that can be used to write a
 	// version.
 	ImportFileVersion(version *Version, content io.ReadCloser) error

@@ -71,9 +71,10 @@ describe "A photo" do
     assert file.trashed
 
     # The recipient still has the file, but in a special folder
-    file_recipient = CozyFile.find inst_recipient, file_recipient.couch_id
+    no_longer_shared = Folder.find inst_recipient, Folder::NO_LONGER_SHARED_DIR
+    file_path = "#{no_longer_shared.path}/#{file.name}"
+    file_recipient = CozyFile.find_by_path inst_recipient, file_path
     refute file_recipient.trashed
-    assert_equal Folder::NO_LONGER_SHARED_DIR, file_recipient.dir_id
     assert file_has_album_reference(file_recipient, album_recipient.couch_id)
 
     # Create a picture
@@ -109,12 +110,23 @@ describe "A photo" do
 
     # Remove the photo from the recipient's album
     album_recipient.remove_photo inst_recipient, file_recipient
+    file_recipient.rename inst_recipient, "#{Faker::Internet.slug}.jpg"
     sleep 5
 
     # The photo should still exist, but not in the sharer's album anymore
-    file = CozyFile.find inst, file.couch_id
+    file = CozyFile.find_by_path inst, "/#{file.name}"
     refute file_has_album_reference(file, album.couch_id)
     refute file.trashed
+
+    # Add again the photo in the album
+    album.add inst, file
+    sleep 12
+
+    # Check that the recipient has received again the photo
+    file_path = "/#{Helpers::SHARED_WITH_ME}/#{album.name}/#{file.name}"
+    file_recipient = CozyFile.find_by_path inst_recipient, file_path
+    assert_equal file.name, file_recipient.name
+    assert file_has_album_reference(file_recipient, album.couch_id)
 
     assert_equal inst.check, []
     assert_equal inst_recipient.check, []

@@ -110,7 +110,7 @@ describe 'A sharing' do
     file2 = CozyFile.find inst, file2.couch_id
     parent_file = Folder.find inst, file1.dir_id
     file1_recipient = CozyFile.find inst_recipient, file1_recipient.couch_id
-    file2_recipient = CozyFile.find inst_recipient, file2_recipient.couch_id
+    file2_recipient = CozyFile.find_by_path inst_recipient, "#{Folder::TRASH_PATH}#{file2.name}"
     parent_file_recipient = Folder.find inst_recipient, file1_recipient.dir_id
     child1 = Folder.find inst, child1.couch_id
     child1_recipient = Folder.find inst_recipient, child1_recipient.couch_id

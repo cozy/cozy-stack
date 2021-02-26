@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,7 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
-	multierror "github.com/hashicorp/go-multierror"
+	"golang.org/x/sync/errgroup"
 )
 
 // MaxRetries is the maximal number of retries for a replicator
@@ -43,30 +44,37 @@ func (s *Sharing) Replicate(inst *instance.Instance, errors int) error {
 	defer mu.Unlock()
 
 	pending := false
-	var errm error
+	var err error
 	if !s.Owner {
-		pending, errm = s.ReplicateTo(inst, &s.Members[0], false)
+		pending, err = s.ReplicateTo(inst, &s.Members[0], false)
 	} else {
-		for i, m := range s.Members {
+		g, _ := errgroup.WithContext(context.Background())
+		for i := range s.Members {
 			if i == 0 {
 				continue
 			}
-			if m.Status == MemberStatusReady {
-				p, err := s.ReplicateTo(inst, &s.Members[i], false)
-				if err != nil {
-					errm = multierror.Append(errm, err)
-				} else if p {
-					pending = true
+			m := &s.Members[i]
+			g.Go(func() error {
+				if m.Status == MemberStatusReady {
+					p, err := s.ReplicateTo(inst, m, false)
+					if err != nil {
+						return err
+					}
+					if p {
+						pending = true
+					}
 				}
-			}
+				return nil
+			})
 		}
+		err = g.Wait()
 	}
-	if errm != nil {
+	if err != nil {
 		s.retryWorker(inst, "share-replicate", errors)
 	} else if pending {
 		s.pushJob(inst, "share-replicate")
 	}
-	return errm
+	return err
 }
 
 // pushJob adds a new job to continue on the pending documents in the changes feed
@@ -131,8 +139,6 @@ func (s *Sharing) retryWorker(inst *instance.Instance, worker string, errors int
 // ReplicateTo starts a replicator on this sharing to the given member.
 // http://docs.couchdb.org/en/stable/replication/protocol.html
 // https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js
-// TODO pouch use the pending property of changes for its replicator
-// https://github.com/pouchdb/pouchdb/blob/master/packages/node_modules/pouchdb-replication/src/replicate.js#L298-L301
 func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) (bool, error) {
 	if m.Instance == "" {
 		return false, ErrInvalidURL
@@ -156,7 +162,6 @@ func (s *Sharing) ReplicateTo(inst *instance.Instance, m *Member, initial bool) 
 		return false, nil
 	}
 	inst.Logger().WithField("nspace", "replicator").Debugf("changes = %#v", feed.Changes)
-	// TODO filter the changes according to the sharing rules
 
 	changes := &feed.Changes
 	if len(changes.Changed) > 0 {
@@ -276,7 +281,6 @@ type Changes struct {
 }
 
 func extractLastRevision(doc couchdb.JSONDoc) string {
-	// TODO conflicts
 	var rev string
 	subtree := doc.Get("revisions")
 	for {
@@ -309,7 +313,6 @@ type changesResponse struct {
 
 // callChangesFeed fetches the last changes from the changes feed
 // http://docs.couchdb.org/en/stable/api/database/changes.html
-// TODO add a filter on the sharing
 func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*changesResponse, error) {
 	response, err := couchdb.GetChanges(inst, &couchdb.ChangesRequest{
 		DocType:     consts.Shared,
@@ -336,9 +339,6 @@ func (s *Sharing) callChangesFeed(inst *instance.Instance, since string) (*chang
 		}
 		info, ok := infos[s.SID].(map[string]interface{})
 		if !ok {
-			continue
-		}
-		if _, ok = info["binary"]; ok {
 			continue
 		}
 		if _, ok = info["removed"]; ok {
@@ -492,7 +492,6 @@ type DocsByDoctype map[string]DocsList
 
 // getMissingDocs fetches the documents in bulk, partitionned by their doctype.
 // https://github.com/apache/couchdb-documentation/pull/263/files
-// TODO what if we fetch an old revision on a compacted database?
 func (s *Sharing) getMissingDocs(inst *instance.Instance, missings *Missings, changes *Changes) (*DocsByDoctype, error) {
 	docs := make(DocsByDoctype)
 	queries := make(map[string][]couchdb.IDRev) // doctype -> payload for _bulk_get
@@ -625,7 +624,6 @@ func (s *Sharing) ApplyBulkDocs(inst *instance.Instance, payload DocsByDoctype) 
 		}
 	}
 
-	// TODO call rtevent for docs
 	refsToUpdate := make([]interface{}, len(refs))
 	for i, ref := range refs {
 		refsToUpdate[i] = ref
@@ -682,7 +680,6 @@ func (s *Sharing) filterDocsToAdd(inst *instance.Instance, doctype string, docs 
 			}
 		}
 		if r >= 0 {
-			// TODO _rev is enough or should we use _revisions? conflicts?
 			ref := SharedRef{
 				SID:       doctype + "/" + doc["_id"].(string),
 				Revisions: &RevsTree{Rev: doc["_rev"].(string)},
