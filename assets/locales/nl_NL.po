@@ -10,6 +10,9 @@ msgstr ""
 "Language: nl_NL\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+msgid "Time Format Long"
+msgstr "2 januari 2006 om 15:04"
+
 msgid "Tree Administrative"
 msgstr "Administratief"
 
