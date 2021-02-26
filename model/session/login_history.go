@@ -184,9 +184,6 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry) error {
 	}
 
 	templateValues := map[string]interface{}{
-		"City":                 l.City,
-		"Subdivision":          l.Subdivision,
-		"Country":              l.Country,
 		"Time":                 l.CreatedAt.Format("2006-01-02 15:04:05Z07:00"),
 		"IP":                   l.IP,
 		"Browser":              l.Browser,
