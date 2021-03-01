@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/model/instance"
 	"github.com/cozy/cozy-stack/pkg/config/config"
@@ -117,6 +118,10 @@ func getSharedRef(t *testing.T, doctype, id string) *SharedRef {
 
 func assertNbSharedRef(t *testing.T, expected int) {
 	nb, err := couchdb.CountAllDocs(inst, consts.Shared)
+	if err != nil {
+		time.Sleep(1 * time.Second)
+		nb, err = couchdb.CountAllDocs(inst, consts.Shared)
+	}
 	assert.NoError(t, err)
 	assert.Equal(t, expected, nb)
 }
@@ -124,7 +129,10 @@ func assertNbSharedRef(t *testing.T, expected int) {
 func TestInitialCopy(t *testing.T) {
 	// Start with an empty io.cozy.shared database
 	_ = couchdb.DeleteDB(inst, consts.Shared)
-	_ = couchdb.CreateDB(inst, consts.Shared)
+	if err := couchdb.CreateDB(inst, consts.Shared); err != nil {
+		time.Sleep(1 * time.Second)
+		_ = couchdb.CreateDB(inst, consts.Shared)
+	}
 
 	// Create some documents that are not shared
 	for i := 0; i < 10; i++ {
