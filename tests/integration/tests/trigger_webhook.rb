@@ -32,6 +32,7 @@ describe "A webhook trigger" do
     assert_equal executed["fields"], args
     assert_equal executed["payload"], body
 
+    account.delete inst
     inst.remove
   end
 end

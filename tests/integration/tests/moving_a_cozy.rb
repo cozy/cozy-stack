@@ -7,8 +7,8 @@ describe "Moving a Cozy" do
     Helpers.scenario "moving_a_cozy"
     Helpers.start_mailhog
 
-    alices = Instance.create name: "alicesource"
-    alicet = Instance.create name: "alicetarget"
+    alices = Instance.create name: "alicesource", locale: "en"
+    alicet = Instance.create name: "alicetarget", locale: "en"
     bobs = Instance.create name: "bobsource"
     bobt = Instance.create name: "bobtarget"
     charlie = Instance.create name: "charlie"

@@ -116,6 +116,7 @@ class Move
     timeout.times do
       sleep 1
       received = Email.received kind: "to", query: @source.email
+      received.reject! { |e| e.subject =~ "New connection" }
       return confirm_mail received.first if received.any?
     end
     raise "Confirmation mail for moving was not received after #{timeout} seconds"
