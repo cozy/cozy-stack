@@ -625,6 +625,9 @@ msgstr "Paramètres"
 msgid "Permissions io.cozy.jobs"
 msgstr "Tâches à exécuter"
 
+msgid "Permissions io.cozy.timeseries.geojson"
+msgstr "Déplacements"
+
 msgid "Permissions io.cozy.triggers"
 msgstr "Planification de tâches à exécuter dans le futur"
 

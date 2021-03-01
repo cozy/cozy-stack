@@ -549,6 +549,9 @@ msgstr "Application notifications preferences"
 msgid "Permissions io.cozy.photos.albums"
 msgstr "Photo albums"
 
+msgid "Permissions io.cozy.timeseries.geojson"
+msgstr "Trips"
+
 msgid "Permissions io.cozy.settings"
 msgstr "Settings"
 
