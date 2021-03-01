@@ -350,6 +350,7 @@ func (s *aferoServer) FilesList(slug, version, shasum string) ([]string, error) 
 		}
 		if !infos.IsDir() {
 			name := strings.TrimPrefix(path, rootPath)
+			name = strings.TrimSuffix(name, ".gz")
 			name = strings.TrimSuffix(name, ".br")
 			names = append(names, name)
 		}
