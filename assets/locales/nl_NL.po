@@ -10,6 +10,9 @@ msgstr ""
 "Language: nl_NL\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+msgid "Time Format Long"
+msgstr "2 januari 2006 om 15:04"
+
 msgid "Tree Administrative"
 msgstr "Administratief"
 
@@ -597,6 +600,9 @@ msgstr "App-meldingsvoorkeuren"
 
 msgid "Permissions io.cozy.photos.albums"
 msgstr "Foto-albums"
+
+msgid "Permissions io.cozy.timeseries.geojson"
+msgstr "Reizen"
 
 msgid "Permissions io.cozy.settings"
 msgstr "Instellingen"
