@@ -291,6 +291,9 @@ li[class^="io.cozy.notifications"]:before {
 li[class^="io.cozy.photos.albums"]:before {
   background-image: url("../images/icon-photos-album.svg");
 }
+li[class^="io.cozy.timeseries.geojson"]:before {
+  background-image: url("../images/icon-location.svg");
+}
 li[class^="io.cozy.jobs"]:before {
   background-image: url("../images/icon-triggers.svg");
 }
