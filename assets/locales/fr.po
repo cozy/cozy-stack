@@ -60,6 +60,12 @@ msgstr "Bienvenue !"
 msgid "Login Welcome name"
 msgstr "%s"
 
+msgid "Login Password best practice"
+msgstr "Bonne pratique :"
+
+msgid "Login Password tip"
+msgstr "n’entrez votre mot de passe que si l’adresse ci-dessus correspond bien à celle de votre Cozy et qu’un cadenas l’accompagne."
+
 msgid "Login Password help"
 msgstr "Saisissez votre mot de passe pour accéder à votre Cozy"
 
@@ -248,6 +254,15 @@ msgstr "Enregistrer"
 
 msgid "Login Forgot password"
 msgstr "J'ai oublié mon mot de passe"
+
+msgid "Login Confirm Title"
+msgstr "Authentification"
+
+msgid "Login Confirm Help"
+msgstr "Par sécurité, merci de confirmer votre identité"
+
+msgid "Login Confirm Submit"
+msgstr "Confirmer"
 
 msgid "Authorize Title"
 msgstr "Autoriser %s à accéder à votre profil ?"

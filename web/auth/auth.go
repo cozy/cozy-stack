@@ -198,6 +198,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"OAuth":            hasOAuth,
 		"Favicon":          middlewares.Favicon(i),
 		"CryptoPolyfill":   middlewares.CryptoPolyfill(c),
+		"BottomNavBar":     middlewares.BottomNavigationBar(c),
 	})
 }
 
@@ -472,6 +473,9 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, err
 	instance := middlewares.GetInstance(c)
 	redirect := c.FormValue("redirect")
 	if redirect == "" {
+		redirect = c.QueryParam("redirect")
+	}
+	if redirect == "" {
 		// If the Cozy was moved from another address and the owner had a vault,
 		// we will show them instructions about how to import their vault.
 		settings, err := instance.SettingsDocument()
@@ -546,6 +550,11 @@ func Routes(router *echo.Group) {
 	router.POST("/passphrase_renew", passphraseRenew, noCSRF)
 	router.GET("/passphrase", passphraseForm, noCSRF)
 	router.POST("/hint", sendHint)
+
+	// Confirmation by typing
+	router.GET("/confirm", confirmForm, noCSRF)
+	router.POST("/confirm", confirmAuth, noCSRF)
+	router.GET("/confirm/:code", confirmCode)
 
 	// Register OAuth clients
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)

@@ -289,6 +289,62 @@ Host: cozy.example.org
 Content-Type: text/html
 ```
 
+### GET /auth/confirm
+
+An application can ask the user to re-authenticate them-selves before making an
+important action (like erasing a pin code). To do that, the application will
+sent the user to this page where the stack will show a form.
+
+Two parameters in the query string can be sent:
+
+- `state` (mandatory), which can be seen as an identifier for the confirmation
+- `redirect` (optional), where the user will be redirected after the confirmation.
+
+```http
+GET /auth/confirm?state=51814f30-5818-0139-9348-543d7eb8149c&redirect=http://banks.cozy.tools:8080/ HTTP/1.1
+```
+
+The application can know the user has confirmed their identity by subscribing
+to a real-time event or by looking at the URL after the redirection. The URL
+must contain the state given by the app, and a code that can be checked by
+calling `POST /auth/confirm/code` (see below).
+
+### POST /auth/confirm
+
+Send the hashed password for confirming the authentication.
+
+#### Redirection
+
+```http
+HTTP/1.1 302 Moved Temporarily
+Location: http://banks.cozy.tools:8080/?state=51814f30-5818-0139-9348-543d7eb8149c&code=543d7eb8149c
+```
+
+#### Real-time via websockets
+
+If it succeeds, a real-time event will be sent:
+
+```
+client > {"method": "AUTH",
+          "payload": "xxAppOrAuthTokenxx="}
+client > {"method": "SUBSCRIBE",
+          "payload": {"type": "io.cozy.auth.confirmations"}}
+server > {"event": "CREATED",
+          "payload": {"id": "51814f30-5818-0139-9348-543d7eb8149c",
+                      "type": "io.cozy.auth.confirmations"}}
+```
+
+### GET /auth/confirm/:code
+
+Send the code from the URL to check that the user has really confirmed their
+identity (and not just typed the URL them-self).
+
+```http
+POST /auth/confirm/543d7eb8149c HTTP/1.1
+```
+
+The response will be a 204 No Content if the code is valid (and a 401 else).
+
 ### POST /auth/register
 
 This route is used by OAuth2 clients to dynamically register them-selves.

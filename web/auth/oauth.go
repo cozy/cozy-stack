@@ -497,6 +497,7 @@ func authorizeMoveForm(c echo.Context) error {
 		"PasswordHelp":   help,
 		"CSRF":           c.Get("csrf"),
 		"Favicon":        middlewares.Favicon(inst),
+		"BottomNavBar":   middlewares.BottomNavigationBar(c),
 		"CryptoPolyfill": middlewares.CryptoPolyfill(c),
 		"State":          state,
 		"ClientID":       clientID,
