@@ -249,12 +249,7 @@ type Config struct {
 }
 
 func getConfig(context string) (*Config, error) {
-	auth := config.GetConfig().Authentication
-	delegated, ok := auth[context].(map[string]interface{})
-	if !ok {
-		return nil, errors.New("No authentication is configured for this context")
-	}
-	oidc, ok := delegated["oidc"].(map[string]interface{})
+	oidc, ok := config.GetOIDC(context)
 	if !ok {
 		return nil, errors.New("No OIDC is configured for this context")
 	}

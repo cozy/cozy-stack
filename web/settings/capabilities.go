@@ -43,15 +43,8 @@ func newCapabilities(inst *instance.Instance) *apiCapabilities {
 	}
 	flat := config.GetConfig().Subdomains == config.FlatSubdomains
 
-	password := true
-	oidc := false
-	auth, ok := config.GetConfig().Authentication[inst.ContextName].(map[string]interface{})
-	if ok {
-		_, oidc = auth["oidc"].(map[string]interface{})
-		if disabled, ok := auth["disable_password_authentication"].(bool); ok {
-			password = !disabled
-		}
-	}
+	password := inst.IsPasswordAuthenticationEnabled()
+	_, oidc := config.GetOIDC(inst.ContextName)
 
 	return &apiCapabilities{
 		DocID:          consts.CapabilitiesSettingsID,
