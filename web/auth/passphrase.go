@@ -21,9 +21,6 @@ import (
 
 func passphraseResetForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if !instance.IsPasswordAuthenticationEnabled() {
-		return c.Redirect(http.StatusSeeOther, instance.PageURL("/oidc/start", nil))
-	}
 	hasHint := false
 	if setting, err := settings.Get(instance); err == nil {
 		hasHint = setting.PassphraseHint != ""
@@ -32,6 +29,7 @@ func passphraseResetForm(c echo.Context) error {
 	if resp, err := couchdb.NormalDocs(instance, consts.BitwardenCiphers, 0, 1, "", false); err == nil {
 		hasCiphers = resp.Total > 0
 	}
+	passwordAuth := instance.IsPasswordAuthenticationEnabled()
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
 		"Title":       instance.TemplateTitle(),
 		"CozyUI":      middlewares.CozyUI(instance),
@@ -44,6 +42,7 @@ func passphraseResetForm(c echo.Context) error {
 		"Redirect":    c.QueryParam("redirect"),
 		"HasHint":     hasHint,
 		"HasCiphers":  hasCiphers,
+		"CozyPass":    !passwordAuth,
 	})
 }
 

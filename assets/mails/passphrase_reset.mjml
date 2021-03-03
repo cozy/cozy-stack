@@ -5,7 +5,11 @@
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{t "Mail Reset Passphrase Intro 1" .PublicName}}<br />
+	{{if .CozyPass}}
+	{{t "Mail Reset Passphrase Intro 2 Cozy Pass"}}
+	{{else}}
 	{{t "Mail Reset Passphrase Intro 2"}}
+	{{end}}
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{t "Mail Reset Passphrase Button instruction"}}
