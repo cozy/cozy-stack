@@ -314,7 +314,15 @@ are:
 - `file_versioning` is true when the VFS can create
   [old versions](https://docs.cozy.io/en/cozy-stack/files/#versions) of a file
 - `flat_subdomains` is true when the stack is configured to use flat subdomains
-  (not nested).
+  (not nested)
+- `can_auth_with_password` is true when authentication with a Cozy password is
+  possible
+- `can_auth_with_oidc` is true when delegated authentication with OIDC is
+  possible for this instance.
+
+**Note:** both `can_auth_with_password` and `can_auth_with_oidc` can be true
+for an instance where the choice is given to the user of how they want to
+authenticate.
 
 #### Request
 
