@@ -30,11 +30,7 @@
           </div>
           {{if .Button}}
           <footer class="wizard-footer u-pb-half">
-            <!--
-              TODO remove u-primaryColor when wizard-button uses var(--primaryColor) instead of var(--dodgerBlue)
-              To remove when https://github.com/cozy/cozy-ui/pull/1741 is merged and when the stack has updated cozy-ui
-             -->
-            <a class="c-btn c-btn--full wizard-button u-primaryColor" href="{{.ButtonLink}}"><span>{{t .Button}}</span></a>
+            <a class="c-btn c-btn--full wizard-button" href="{{.ButtonLink}}"><span>{{t .Button}}</span></a>
           </footer>
           {{end}}
         </section>
