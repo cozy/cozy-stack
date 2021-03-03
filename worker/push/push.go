@@ -117,7 +117,12 @@ func Worker(ctx *job.WorkerContext) error {
 		cs = cs[:10]
 	}
 	sent := false
+	seen := make(map[string]struct{})
 	for _, c := range cs {
+		if _, ok := seen[c.NotificationDeviceToken]; ok {
+			continue
+		}
+		seen[c.NotificationDeviceToken] = struct{}{}
 		if err := push(ctx, c, &msg); err == nil {
 			sent = true
 		} else {
