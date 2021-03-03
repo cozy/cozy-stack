@@ -29,7 +29,7 @@ type CacheOptions struct {
 func CacheControl(opts CacheOptions) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			cache := ""
+			cache := "public"
 			if opts.Private {
 				cache = "private"
 			}
