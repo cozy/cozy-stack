@@ -383,6 +383,11 @@ func (im *importer) importFile(zdoc, zcontent *zip.File) error {
 		return errors.New("No content for file")
 	}
 	fileDoc.SetRev("")
+	// Do not trust carbon copy and electronic safe flags on import
+	if fileDoc.Metadata != nil {
+		delete(fileDoc.Metadata, consts.CarbonCopyKey)
+		delete(fileDoc.Metadata, consts.ElectronicSafeKey)
+	}
 	f, err := im.fs.CreateFile(fileDoc, nil, vfs.AllowCreationInTrash)
 	if err != nil {
 		return err
