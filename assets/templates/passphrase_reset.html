@@ -27,7 +27,13 @@
           <form id="send-hint-form" method="POST" action="/auth/hint" class="wizard-main">
             <div role="region">
               <input type="hidden" name="redirect" value="{{.Redirect}}" />
-              <p class="wizard-notice u-mb-2 u-mt-1-half-s">{{t "Passphrase reset Help hint"}}</p>
+              <p class="wizard-notice u-mb-2 u-mt-1-half-s">
+                {{if .CozyPass}}
+                {{t "Passphrase reset Help hint Cozy Pass"}}
+                {{else}}
+                {{t "Passphrase reset Help hint"}}
+                {{end}}
+              </p>
             </div>
             <footer claas="wizard-footer u-pb-half">
               <button id="send-hint-submit" form="send-hint-form" type="submit" class="c-btn c-btn--full wizard-button wizard-next">
@@ -41,7 +47,13 @@
             <input type="hidden" name="redirect" value="{{.Redirect}}" />
             <div role="region">
               {{if .HasCiphers}}
-              <p><strong>{{t "Passphrase reset password Title"}}</strong></p>
+              <p><strong>
+                {{if .CozyPass}}
+                {{t "Passphrase reset password Title Cozy Pass"}}
+                {{else}}
+                {{t "Passphrase reset password Title"}}
+                {{end}}
+              </strong></p>
               <p class="u-mt-1-half-s" id="login-password-tip">
                 <strong class="u-error">{{t "Passphrase reset Help Warning"}}</strong>
                 {{t "Passphrase reset Help 1"}}
@@ -50,7 +62,11 @@
               </p>
               {{else}}
               <p class="wizard-notice u-mb-2 u-mt-1-half-s" id="login-password-tip">
+                {{if .CozyPass}}
+                {{t "Passphrase reset Help emptyVault Cozy Pass"}}
+                {{else}}
                 {{t "Passphrase reset Help emptyVault"}}
+                {{end}}
               </p>
               {{end}}
               <footer claas="wizard-footer u-pb-half">

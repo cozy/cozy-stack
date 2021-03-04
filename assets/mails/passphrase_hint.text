@@ -1,5 +1,9 @@
 {{t "Mail Hint Intro 1" .PublicName}}
+{{if .CozyPass}}
+{{t "Mail Hint Intro 2 Cozy Pass"}}
+{{else}}
 {{t "Mail Hint Intro 2"}}
+{{end}}
 
 {{.Hint}}
 

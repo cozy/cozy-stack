@@ -345,6 +345,12 @@ func TestGetCapabilities(t *testing.T) {
 	versioning, ok := attrs["file_versioning"].(bool)
 	assert.True(t, ok)
 	assert.True(t, versioning)
+	pass, ok := attrs["can_auth_with_password"].(bool)
+	assert.True(t, ok)
+	assert.True(t, pass)
+	oidc, ok := attrs["can_auth_with_oidc"].(bool)
+	assert.True(t, ok)
+	assert.False(t, oidc)
 }
 
 func TestGetInstance(t *testing.T) {

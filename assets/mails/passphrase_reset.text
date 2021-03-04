@@ -1,5 +1,9 @@
 {{t "Mail Reset Passphrase Intro 1" .PublicName}}
+{{if .CozyPass}}
+{{t "Mail Reset Passphrase Intro 2 Cozy Pass"}}
+{{else}}
 {{t "Mail Reset Passphrase Intro 2"}}
+{{end}}
 
 {{t "Mail Reset Passphrase Button instruction"}}
 {{.PassphraseResetLink}}

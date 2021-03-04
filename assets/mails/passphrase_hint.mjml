@@ -5,7 +5,11 @@
 </mj-text>
 <mj-text mj-class="content-medium">
 	{{t "Mail Hint Intro 1" .PublicName}}<br />
+	{{if .CozyPass}}
+	{{t "Mail Hint Intro 2 Cozy Pass"}}
+	{{else}}
 	{{t "Mail Hint Intro 2"}}
+	{{end}}
 </mj-text>
 <mj-text mj-class="content-large">
 	{{.Hint}}

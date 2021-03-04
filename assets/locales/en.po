@@ -127,13 +127,23 @@ msgid "Passphrase reset Title"
 msgstr "Forgotten password"
 
 msgid "Passphrase reset Help hint"
-msgstr "You set a hint to recover your password. Click on the button below to receive it by email."
+msgstr ""
+"You set a hint to recover your password. "
+"Click on the button below to receive it by email."
+
+msgid "Passphrase reset Help hint Cozy Pass"
+msgstr ""
+"You set a hint to recover your password for Cozy Pass. "
+"Click on the button below to receive it by email."
 
 msgid "Passphrase reset Submit hint"
 msgstr "Send me my hint"
 
 msgid "Passphrase reset password Title"
 msgstr "As a last resort, you can reset your password:"
+
+msgid "Passphrase reset password Title Cozy Pass"
+msgstr "As a last resort, you can reset your password for Cozy Pass:"
 
 msgid "Passphrase reset Help Warning"
 msgstr "Warning!"
@@ -145,10 +155,13 @@ msgid "Passphrase reset Help 2"
 msgstr "you will lose that data."
 
 msgid "Passphrase reset Help 3"
-msgstr "The rest of your data will remain accessible.
+msgstr "The rest of your data will remain accessible."
 
 msgid "Passphrase reset Help emptyVault"
 msgstr "By clicking this button, you will be sent a link by email to choose a new password."
+
+msgid "Passphrase reset Help emptyVault Cozy Pass"
+msgstr "By clicking this button, you will be sent a link by email to choose a new password for Cozy Pass."
 
 msgid "Passphrase reset Submit"
 msgstr "Reset my password"
@@ -627,6 +640,9 @@ msgstr "Hello %s,"
 msgid "Mail Hint Intro 2"
 msgstr "Please find below the hint that you requested to recall your Cozy password"
 
+msgid "Mail Hint Intro 2 Cozy Pass"
+msgstr "Please find below the hint that you requested to recall your password for Cozy Pass"
+
 msgid "Mail Hint Outro"
 msgstr ""
 "As a last resort, you can reset your password in the “forgot your password” section of your Cozy. "
@@ -641,6 +657,11 @@ msgstr "Hello %s,"
 msgid "Mail Reset Passphrase Intro 2"
 msgstr ""
 "You asked to change your password. "
+"If you didn't initiate this request, please contact us by replying directly to this email."
+
+msgid "Mail Reset Passphrase Intro 2 Cozy Pass"
+msgstr ""
+"You asked to change your password for Cozy Pass. "
 "If you didn't initiate this request, please contact us by replying directly to this email."
 
 msgid "Mail Reset Passphrase Button instruction"

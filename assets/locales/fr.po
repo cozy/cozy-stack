@@ -157,6 +157,11 @@ msgstr ""
 "Vous avez laissé un indice pour retrouver votre mot de passe. Cliquez sur le"
 " bouton ci-dessous pour le recevoir par email."
 
+msgid "Passphrase reset Help hint Cozy Pass"
+msgstr ""
+"Vous avez laissé un indice pour retrouver votre mot de passe Cozy pass. "
+"Cliquez sur le bouton ci-dessous pour le recevoir par email."
+
 msgid "Passphrase reset Submit hint"
 msgstr "Recevoir mon indice"
 
@@ -164,6 +169,11 @@ msgid "Passphrase reset password Title"
 msgstr ""
 "En dernier recours, il vous est possible de réinitialiser votre mot de passe"
 " :"
+
+msgid "Passphrase reset password Title Cozy Pass"
+msgstr ""
+"En dernier recours, il vous est possible de réinitialiser votre mot de passe"
+"Cozy Pass :"
 
 msgid "Passphrase reset Help Warning"
 msgstr "Attention !"
@@ -183,6 +193,11 @@ msgid "Passphrase reset Help emptyVault"
 msgstr ""
 "En cliquant sur le bouton ci-dessous, un lien vous sera envoyé par email "
 "pour choisir un nouveau mot de passe."
+
+msgid "Passphrase reset Help emptyVault Cozy Pass"
+msgstr ""
+"En cliquant sur le bouton ci-dessous, un lien vous sera envoyé par email "
+"pour choisir un nouveau mot de passe Cozy Pass."
 
 msgid "Passphrase reset Submit"
 msgstr "Réinitialiser mon mot de passe"
@@ -696,12 +711,17 @@ msgstr "Bonjour %s,"
 
 msgid "Mail Hint Intro 2"
 msgstr ""
-"Vous avez demandé l’indice du mot de passe de votre Cozy."
-" Le voici ci-dessous :"
+"Vous avez demandé l’indice du mot de passe de votre Cozy. "
+"Le voici ci-dessous :"
+
+msgid "Mail Hint Intro 2 Cozy Pass"
+msgstr ""
+"Vous avez demandé l’indice du mot de passe Cozy Pass. "
+"Le voici ci-dessous :"
 
 msgid "Mail Hint Outro"
 msgstr ""
-"En dernier recours la page mot de passe oublié vous permet de ré-initialiser votre mot de passe. "
+"En dernier recours la page mot de passe oublié vous permet de ré-initialiser votre mot de passe. "
 "Si vous n’êtes pas à l’origine de cette demande, contactez-nous en réponse à cet email."
 
 msgid "Mail Reset Passphrase Subject"
@@ -715,6 +735,11 @@ msgstr ""
 "Vous avez demandé à changer votre mot de passe. Si ce n'est pas le cas, "
 "contactez-nous en réponse à ce mail."
 
+msgid "Mail Reset Passphrase Intro 2 Cozy Pass"
+msgstr ""
+"Vous avez demandé à changer votre mot de passe Coyz Pass. "
+"Si ce n'est pas le cas, contactez-nous en réponse à ce mail."
+
 msgid "Mail Reset Passphrase Button instruction"
 msgstr "Cliquez sur ce bouton pour le changer en toute sécurité."
 
@@ -723,7 +748,7 @@ msgstr "Je réinitialise mon mot de passe"
 
 msgid "Mail Reset Passphrase Outro"
 msgstr ""
-"Vous disposez de 15 minutes pour choisir votre nouveau mot de passe, passé "
+"Vous disposez de 15 minutes pour choisir votre nouveau mot de passe. Passé "
 "ce délai, vous devrez réitérer votre demande."
 
 msgid "Mail Archive Subject"

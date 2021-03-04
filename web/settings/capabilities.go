@@ -16,6 +16,8 @@ type apiCapabilities struct {
 	DocID          string `json:"_id,omitempty"`
 	FileVersioning bool   `json:"file_versioning"`
 	FlatSubdomains bool   `json:"flat_subdomains"`
+	PasswordAuth   bool   `json:"can_auth_with_password"`
+	OIDCAuth       bool   `json:"can_auth_with_oidc"`
 }
 
 func (c *apiCapabilities) ID() string                             { return c.DocID }
@@ -40,10 +42,16 @@ func newCapabilities(inst *instance.Instance) *apiCapabilities {
 		versioning = inst.SwiftLayout >= 2
 	}
 	flat := config.GetConfig().Subdomains == config.FlatSubdomains
+
+	password := inst.IsPasswordAuthenticationEnabled()
+	_, oidc := config.GetOIDC(inst.ContextName)
+
 	return &apiCapabilities{
 		DocID:          consts.CapabilitiesSettingsID,
 		FileVersioning: versioning,
 		FlatSubdomains: flat,
+		PasswordAuth:   password,
+		OIDCAuth:       oidc,
 	}
 }
 
