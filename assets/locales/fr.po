@@ -7,6 +7,7 @@
 # Pierre Guillemot <pierrot@cozycloud.cc>, 2019
 # Paul Tran-Van <paul@cozycloud.cc>, 2020
 # JC Pagnon <gooz@cozycloud.cc>, 2021
+# Matthieu AMBRY <matthieu@ambry.eu>, 2021
 # Bruno Michel, 2021
 # 
 msgid ""
@@ -64,7 +65,9 @@ msgid "Login Password best practice"
 msgstr "Bonne pratique :"
 
 msgid "Login Password tip"
-msgstr "n’entrez votre mot de passe que si l’adresse ci-dessus correspond bien à celle de votre Cozy et qu’un cadenas l’accompagne."
+msgstr ""
+"n’entrez votre mot de passe que si l’adresse ci-dessus correspond bien à "
+"celle de votre Cozy et qu’un cadenas l’accompagne."
 
 msgid "Login Password help"
 msgstr "Saisissez votre mot de passe pour accéder à votre Cozy"
@@ -173,7 +176,7 @@ msgstr ""
 msgid "Passphrase reset password Title Cozy Pass"
 msgstr ""
 "En dernier recours, il vous est possible de réinitialiser votre mot de passe"
-"Cozy Pass :"
+" Cozy Pass :"
 
 msgid "Passphrase reset Help Warning"
 msgstr "Attention !"
@@ -393,17 +396,20 @@ msgid "Move Link Title"
 msgstr "%s a changé l'adresse de son Cozy"
 
 msgid "Move Link Description"
-msgstr ""
-"Ce lien ne sera bientôt plus disponible, un nouveau a été généré :"
+msgstr "Ce lien ne sera bientôt plus disponible, un nouveau a été généré :"
 
 msgid "Move Link More"
-msgstr "Copiez / collez ce nouveau lien afin de le conserver précieusement avant de ne plus pouvoir accéder à cette page."
+msgstr ""
+"Copiez/collez ce nouveau lien pour le conserver précieusement avant que vous"
+" ne puissiez plus accéder à cette page."
 
 msgid "Move Link FAQ URL"
-msgstr "https://support.cozy.io/article/490-comment-retrouver-un-lien-de-partage"
+msgstr ""
+"https://support.cozy.io/article/490-comment-retrouver-un-lien-de-partage"
 
 msgid "Move Link FAQ Text"
-msgstr "Comment retrouver un lien de partage en cas de changement d'adresse ?"
+msgstr ""
+"Comment puis-je trouver une lien de partage en cas de changement d'adresse ?"
 
 msgid "Move Vault Title"
 msgstr "Importer mes mots de passe"
@@ -649,14 +655,14 @@ msgstr "Préférences de notifications de l'application"
 msgid "Permissions io.cozy.photos.albums"
 msgstr "Albums photos"
 
+msgid "Permissions io.cozy.timeseries.geojson"
+msgstr "Déplacements"
+
 msgid "Permissions io.cozy.settings"
 msgstr "Paramètres"
 
 msgid "Permissions io.cozy.jobs"
 msgstr "Tâches à exécuter"
-
-msgid "Permissions io.cozy.timeseries.geojson"
-msgstr "Déplacements"
 
 msgid "Permissions io.cozy.triggers"
 msgstr "Planification de tâches à exécuter dans le futur"
@@ -711,17 +717,16 @@ msgstr "Bonjour %s,"
 
 msgid "Mail Hint Intro 2"
 msgstr ""
-"Vous avez demandé l’indice du mot de passe de votre Cozy. "
-"Le voici ci-dessous :"
+"Vous avez demandé l’indice du mot de passe de votre Cozy."
+" Le voici ci-dessous :"
 
 msgid "Mail Hint Intro 2 Cozy Pass"
 msgstr ""
-"Vous avez demandé l’indice du mot de passe Cozy Pass. "
-"Le voici ci-dessous :"
+"Vous avez demandé l’indice du mot de passe Cozy Pass. Le voici ci-dessous :"
 
 msgid "Mail Hint Outro"
 msgstr ""
-"En dernier recours la page mot de passe oublié vous permet de ré-initialiser votre mot de passe. "
+"En dernier recours la page mot de passe oublié vous permet de ré-initialiser votre mot de passe. "
 "Si vous n’êtes pas à l’origine de cette demande, contactez-nous en réponse à cet email."
 
 msgid "Mail Reset Passphrase Subject"
@@ -737,8 +742,8 @@ msgstr ""
 
 msgid "Mail Reset Passphrase Intro 2 Cozy Pass"
 msgstr ""
-"Vous avez demandé à changer votre mot de passe Coyz Pass. "
-"Si ce n'est pas le cas, contactez-nous en réponse à ce mail."
+"Vous avez demandé à changer votre mot de passe Coyz Pass. Si ce n'est pas le"
+" cas, contactez-nous en réponse à ce mail."
 
 msgid "Mail Reset Passphrase Button instruction"
 msgstr "Cliquez sur ce bouton pour le changer en toute sécurité."
@@ -795,7 +800,7 @@ msgstr ""
 " les données associées ont bien été importées."
 
 msgid "Mail Import Success Outro"
-msgstr "A bientôt, votre Cozy"
+msgstr "À bientôt, votre Cozy"
 
 msgid "Mail Import Error Subject"
 msgstr "⚠ L'import dans votre Cozy n'a pas abouti"
@@ -862,15 +867,15 @@ msgstr ""
 " les données associées ont bien été importées."
 
 msgid "Mail Move Success Outro"
-msgstr "A bientôt, votre Cozy"
+msgstr "À bientôt, votre Cozy"
 
 msgid "Mail Move Error Subject"
 msgstr "⚠ Le déménagement de votre Cozy n'a pas abouti"
 
 msgid "Mail Move Error Text"
 msgstr ""
-"Le déménagement de votre Cozy a rencontré un souci. "
-"Pouvez-vous renouveler l'opération depuis le début ?"
+"Le déménagement de votre Cozy a rencontré un souci. Pouvez-vous renouveler "
+"l'opération depuis le début ?"
 
 msgid "Mail Move Error Outro"
 msgstr "Si le souci persiste, contactez le support client."
