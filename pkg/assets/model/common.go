@@ -30,35 +30,35 @@ type Asset struct {
 	NameWithSum string `json:"name_with_sum"`
 	Mime        string `json:"mime"`
 
-	zippedData   []byte
-	zippedSize   string
-	unzippedData []byte
-	unzippedSize string
+	brotliData []byte
+	brotliSize string
+	rawData    []byte
+	rawSize    string
+}
+
+// GetData returns the raw data as a slice of bytes.
+func (f *Asset) GetData() []byte {
+	return f.rawData
 }
 
 // Size returns the size in bytes of the asset (no compression).
 func (f *Asset) Size() string {
-	return f.unzippedSize
+	return f.rawSize
 }
 
 // Reader returns a bytes.Reader for the asset content (no compression).
 func (f *Asset) Reader() *bytes.Reader {
-	return bytes.NewReader(f.unzippedData)
+	return bytes.NewReader(f.rawData)
 }
 
-// GzipSize returns the size of the gzipped version of the asset.
-func (f *Asset) GzipSize() string {
-	return f.zippedSize
+// BrotliSize returns the size of the compressed version of the asset.
+func (f *Asset) BrotliSize() string {
+	return f.brotliSize
 }
 
-// GzipReader returns a bytes.Reader for the gzipped content of the asset.
-func (f *Asset) GzipReader() *bytes.Reader {
-	return bytes.NewReader(f.zippedData)
-}
-
-// GetUnzippedData returns the raw data as a slice of bytes.
-func (f *Asset) GetUnzippedData() []byte {
-	return f.unzippedData
+// BrotliReader returns a bytes.Reader for the compressed content of the asset.
+func (f *Asset) BrotliReader() *bytes.Reader {
+	return bytes.NewReader(f.brotliData)
 }
 
 // NameWithSum returns the filename with its shasum
@@ -80,10 +80,10 @@ func NormalizeAssetName(name string) string {
 }
 
 // NewAsset creates a new asset
-func NewAsset(opt AssetOption, zippedData, unzippedData []byte) *Asset {
+func NewAsset(opt AssetOption, rawData, brotliData []byte) *Asset {
 	mime := filetype.ByExtension(path.Ext(opt.Name))
 	if mime == "" {
-		mime = filetype.Match(unzippedData)
+		mime = filetype.Match(rawData)
 	}
 
 	opt.Name = NormalizeAssetName(opt.Name)
@@ -97,10 +97,10 @@ func NewAsset(opt AssetOption, zippedData, unzippedData []byte) *Asset {
 		Etag:        etag,
 		NameWithSum: nameWithSum,
 		Mime:        mime,
-		zippedData:  zippedData,
-		zippedSize:  strconv.Itoa(len(zippedData)),
+		brotliData:  brotliData,
+		brotliSize:  strconv.Itoa(len(brotliData)),
 
-		unzippedData: unzippedData,
-		unzippedSize: strconv.Itoa(len(unzippedData)),
+		rawData: rawData,
+		rawSize: strconv.Itoa(len(rawData)),
 	}
 }

@@ -2,7 +2,6 @@ package dynamic
 
 import (
 	"bytes"
-	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -14,6 +13,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/andybalholm/brotli"
 	"github.com/cozy/cozy-stack/pkg/assets/model"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/hashicorp/go-multierror"
@@ -61,21 +61,22 @@ func GetAsset(context, name string) (*model.Asset, error) {
 	suma := h.Sum(nil)
 	sumx := hex.EncodeToString(suma)
 
-	zippedDataBuf := new(bytes.Buffer)
-	gw := gzip.NewWriter(zippedDataBuf)
-	_, err = gw.Write(content)
-	if err != nil {
+	buf := new(bytes.Buffer)
+	bw := brotli.NewWriter(buf)
+	if _, err = bw.Write(content); err != nil {
 		return nil, err
 	}
-	gw.Close()
-	zippedContent := zippedDataBuf.Bytes()
+	if err = bw.Close(); err != nil {
+		return nil, err
+	}
+	brotliContent := buf.Bytes()
 
 	asset := model.NewAsset(model.AssetOption{
 		Shasum:   sumx,
 		Name:     name,
 		Context:  context,
 		IsCustom: true,
-	}, zippedContent, content)
+	}, content, brotliContent)
 
 	return asset, nil
 }
@@ -175,15 +176,15 @@ func registerCustomExternal(opt model.AssetOption) error {
 	}
 
 	h := sha256.New()
-	zippedDataBuf := new(bytes.Buffer)
-	gw := gzip.NewWriter(zippedDataBuf)
+	brotliBuf := new(bytes.Buffer)
+	bw := brotli.NewWriter(brotliBuf)
 
-	teeReader := io.TeeReader(body, io.MultiWriter(h, gw))
-	unzippedData, err := ioutil.ReadAll(teeReader)
+	teeReader := io.TeeReader(body, io.MultiWriter(h, bw))
+	rawData, err := ioutil.ReadAll(teeReader)
 	if err != nil {
 		return err
 	}
-	if errc := gw.Close(); errc != nil {
+	if errc := bw.Close(); errc != nil {
 		return errc
 	}
 
@@ -201,7 +202,7 @@ func registerCustomExternal(opt model.AssetOption) error {
 			opt.Shasum, sum, assetURL)
 	}
 
-	asset := model.NewAsset(opt, zippedDataBuf.Bytes(), unzippedData)
+	asset := model.NewAsset(opt, rawData, brotliBuf.Bytes())
 
 	err = assetFS.Add(asset.Context, asset.Name, asset)
 	if err != nil {
